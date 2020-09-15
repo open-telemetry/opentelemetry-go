@@ -19,7 +19,7 @@ import (
 	"net/url"
 	"strings"
 
-	"go.opentelemetry.io/otel/api/propagation"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 )
 
@@ -32,16 +32,16 @@ const baggageHeader = "otcorrelations"
 // nolint:golint
 type Baggage struct{}
 
-var _ propagation.HTTPPropagator = Baggage{}
+var _ otel.HTTPPropagator = Baggage{}
 
 // DefaultHTTPPropagator returns the default context correlation HTTP
 // propagator.
-func DefaultHTTPPropagator() propagation.HTTPPropagator {
+func DefaultHTTPPropagator() otel.HTTPPropagator {
 	return Baggage{}
 }
 
 // Inject implements HTTPInjector.
-func (b Baggage) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
+func (b Baggage) Inject(ctx context.Context, supplier otel.HTTPSupplier) {
 	baggageMap := MapFromContext(ctx)
 	firstIter := true
 	var headerValueBuilder strings.Builder
@@ -62,7 +62,7 @@ func (b Baggage) Inject(ctx context.Context, supplier propagation.HTTPSupplier) 
 }
 
 // Extract implements HTTPExtractor.
-func (b Baggage) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
+func (b Baggage) Extract(ctx context.Context, supplier otel.HTTPSupplier) context.Context {
 	baggage := supplier.Get(baggageHeader)
 	if baggage == "" {
 		return ctx

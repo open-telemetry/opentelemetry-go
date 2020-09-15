@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package propagation
+package otel
 
 import (
 	"context"
@@ -90,8 +90,8 @@ type propagators struct {
 	config Config
 }
 
-// New returns a standard Propagators implementation.
-func New(options ...Option) Propagators {
+// NewPropagators returns a standard Propagators implementation.
+func NewPropagators(options ...Option) Propagators {
 	config := Config{}
 	for _, opt := range options {
 		opt(&config)

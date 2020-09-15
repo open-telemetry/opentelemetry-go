@@ -15,17 +15,17 @@
 package propagators_test
 
 import (
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/propagators"
 )
 
 func ExampleB3() {
 	b3 := propagators.B3{}
 	// Register the B3 propagator globally.
-	global.SetPropagators(propagation.New(
-		propagation.WithExtractors(b3),
-		propagation.WithInjectors(b3),
+	global.SetPropagators(otel.NewPropagators(
+		otel.WithExtractors(b3),
+		otel.WithInjectors(b3),
 	))
 }
 
@@ -35,8 +35,8 @@ func ExampleB3_injectEncoding() {
 	b3 := propagators.B3{
 		InjectEncoding: propagators.B3MultipleHeader | propagators.B3SingleHeader,
 	}
-	global.SetPropagators(propagation.New(
-		propagation.WithExtractors(b3),
-		propagation.WithInjectors(b3),
+	global.SetPropagators(otel.NewPropagators(
+		otel.WithExtractors(b3),
+		otel.WithInjectors(b3),
 	))
 }

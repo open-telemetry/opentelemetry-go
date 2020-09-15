@@ -15,18 +15,18 @@
 package global
 
 import (
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global/internal"
-	"go.opentelemetry.io/otel/api/propagation"
 )
 
 // Propagators returns the registered global propagators instance.  If
 // none is registered then an instance of propagators.NoopPropagators
 // is returned.
-func Propagators() propagation.Propagators {
+func Propagators() otel.Propagators {
 	return internal.Propagators()
 }
 
 // SetPropagators registers `p` as the global propagators instance.
-func SetPropagators(p propagation.Propagators) {
+func SetPropagators(p otel.Propagators) {
 	internal.SetPropagators(p)
 }

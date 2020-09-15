@@ -21,7 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/otel/api/propagation"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/internal/trace/noop"
 	"go.opentelemetry.io/otel/propagators"
@@ -44,7 +44,7 @@ func TestExtractB3(t *testing.T) {
 
 	for _, tg := range testGroup {
 		propagator := propagators.B3{}
-		props := propagation.New(propagation.WithExtractors(propagator))
+		props := otel.NewPropagators(otel.WithExtractors(propagator))
 
 		for _, tt := range tg.tests {
 			t.Run(tt.name, func(t *testing.T) {
@@ -54,7 +54,7 @@ func TestExtractB3(t *testing.T) {
 				}
 
 				ctx := context.Background()
-				ctx = propagation.ExtractHTTP(ctx, props, req.Header)
+				ctx = otel.ExtractHTTP(ctx, props, req.Header)
 				gotSc := trace.RemoteSpanContextFromContext(ctx)
 				if diff := cmp.Diff(gotSc, tt.wantSc); diff != "" {
 					t.Errorf("%s: %s: -got +want %s", tg.name, tt.name, diff)

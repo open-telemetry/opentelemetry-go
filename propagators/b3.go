@@ -19,7 +19,7 @@ import (
 	"errors"
 	"strings"
 
-	"go.opentelemetry.io/otel/api/propagation"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
@@ -92,12 +92,12 @@ type B3 struct {
 	InjectEncoding B3Encoding
 }
 
-var _ propagation.HTTPPropagator = B3{}
+var _ otel.HTTPPropagator = B3{}
 
 // Inject injects a context into the supplier as B3 HTTP headers.
 // The parent span ID is omitted because it is not tracked in the
 // SpanContext.
-func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
+func (b3 B3) Inject(ctx context.Context, supplier otel.HTTPSupplier) {
 	sc := trace.SpanFromContext(ctx).SpanContext()
 
 	if b3.InjectEncoding.supports(B3SingleHeader) {
@@ -140,7 +140,7 @@ func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 
 // Extract extracts a context from the supplier if it contains B3 HTTP
 // headers.
-func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
+func (b3 B3) Extract(ctx context.Context, supplier otel.HTTPSupplier) context.Context {
 	var (
 		sc  trace.SpanContext
 		err error

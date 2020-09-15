@@ -18,9 +18,9 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/baggage"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/propagators"
 )
@@ -35,7 +35,7 @@ type (
 	}
 
 	propagatorsHolder struct {
-		pr propagation.Propagators
+		pr otel.Propagators
 	}
 )
 
@@ -93,12 +93,12 @@ func SetMeterProvider(mp metric.Provider) {
 }
 
 // Propagators is the internal implementation for global.Propagators.
-func Propagators() propagation.Propagators {
+func Propagators() otel.Propagators {
 	return globalPropagators.Load().(propagatorsHolder).pr
 }
 
 // SetPropagators is the internal implementation for global.SetPropagators.
-func SetPropagators(pr propagation.Propagators) {
+func SetPropagators(pr otel.Propagators) {
 	globalPropagators.Store(propagatorsHolder{pr: pr})
 }
 
@@ -122,12 +122,12 @@ func defaultPropagatorsValue() *atomic.Value {
 
 // getDefaultPropagators returns a default Propagators, configured
 // with W3C trace and baggage propagation.
-func getDefaultPropagators() propagation.Propagators {
+func getDefaultPropagators() otel.Propagators {
 	tcPropagator := propagators.TraceContext{}
 	bagPropagator := baggage.Baggage{}
-	return propagation.New(
-		propagation.WithExtractors(tcPropagator, bagPropagator),
-		propagation.WithInjectors(tcPropagator, bagPropagator),
+	return otel.NewPropagators(
+		otel.WithExtractors(tcPropagator, bagPropagator),
+		otel.WithInjectors(tcPropagator, bagPropagator),
 	)
 }
 

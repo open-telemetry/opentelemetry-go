@@ -22,13 +22,13 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/baggage"
-	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/label"
 )
 
 func TestExtractValidBaggageFromHTTPReq(t *testing.T) {
-	props := propagation.New(propagation.WithExtractors(baggage.Baggage{}))
+	props := otel.NewPropagators(otel.WithExtractors(baggage.Baggage{}))
 	tests := []struct {
 		name    string
 		header  string
@@ -90,7 +90,7 @@ func TestExtractValidBaggageFromHTTPReq(t *testing.T) {
 			req.Header.Set("otcorrelations", tt.header)
 
 			ctx := context.Background()
-			ctx = propagation.ExtractHTTP(ctx, props, req.Header)
+			ctx = otel.ExtractHTTP(ctx, props, req.Header)
 			gotBaggage := baggage.MapFromContext(ctx)
 			wantBaggage := baggage.NewMap(baggage.MapUpdate{MultiKV: tt.wantKVs})
 			if gotBaggage.Len() != wantBaggage.Len() {
@@ -117,7 +117,7 @@ func TestExtractValidBaggageFromHTTPReq(t *testing.T) {
 }
 
 func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
-	props := propagation.New(propagation.WithExtractors(baggage.Baggage{}))
+	props := otel.NewPropagators(otel.WithExtractors(baggage.Baggage{}))
 	tests := []struct {
 		name   string
 		header string
@@ -152,7 +152,7 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 
 			ctx := baggage.NewContext(context.Background(), tt.hasKVs...)
 			wantBaggage := baggage.MapFromContext(ctx)
-			ctx = propagation.ExtractHTTP(ctx, props, req.Header)
+			ctx = otel.ExtractHTTP(ctx, props, req.Header)
 			gotBaggage := baggage.MapFromContext(ctx)
 			if gotBaggage.Len() != wantBaggage.Len() {
 				t.Errorf(
@@ -176,7 +176,7 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 
 func TestInjectBaggageToHTTPReq(t *testing.T) {
 	propagator := baggage.Baggage{}
-	props := propagation.New(propagation.WithInjectors(propagator))
+	props := otel.NewPropagators(otel.WithInjectors(propagator))
 	tests := []struct {
 		name         string
 		kvs          []label.KeyValue
@@ -229,7 +229,7 @@ func TestInjectBaggageToHTTPReq(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
 			ctx := baggage.ContextWithMap(context.Background(), baggage.NewMap(baggage.MapUpdate{MultiKV: tt.kvs}))
-			propagation.InjectHTTP(ctx, props, req.Header)
+			otel.InjectHTTP(ctx, props, req.Header)
 
 			gotHeader := req.Header.Get("otcorrelations")
 			wantedLen := len(strings.Join(tt.wantInHeader, ","))
