@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package apitest
+// Package oteltest provides a test harness and utilities to test the
+// OpenTelemetry API.
+package oteltest
 
 import (
 	"context"

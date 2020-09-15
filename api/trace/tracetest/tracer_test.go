@@ -22,17 +22,17 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/api/apitest"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/api/trace/tracetest"
 	"go.opentelemetry.io/otel/internal/matchers"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/oteltest"
 )
 
 func TestTracer(t *testing.T) {
 	tp := tracetest.NewProvider()
 
-	apitest.NewHarness(t).TestTracer(func() func() trace.Tracer {
+	oteltest.NewHarness(t).TestTracer(func() func() trace.Tracer {
 		tp := tracetest.NewProvider()
 		var i uint64
 		return func() trace.Tracer {
