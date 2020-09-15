@@ -19,7 +19,7 @@ import (
 	"sort"
 	"sync"
 
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
@@ -36,7 +36,7 @@ type (
 	Aggregator struct {
 		lock       sync.Mutex
 		boundaries []float64
-		kind       metric.NumberKind
+		kind       otel.NumberKind
 		state      state
 	}
 
@@ -45,7 +45,7 @@ type (
 	// the less than equal bucket count for the pre-determined boundaries.
 	state struct {
 		bucketCounts []float64
-		sum          metric.Number
+		sum          otel.Number
 		count        int64
 	}
 )
@@ -63,7 +63,7 @@ var _ aggregation.Histogram = &Aggregator{}
 // Note that this aggregator maintains each value using independent
 // atomic operations, which introduces the possibility that
 // checkpoints are inconsistent.
-func New(cnt int, desc *metric.Descriptor, boundaries []float64) []Aggregator {
+func New(cnt int, desc *otel.Descriptor, boundaries []float64) []Aggregator {
 	aggs := make([]Aggregator, cnt)
 
 	// Boundaries MUST be ordered otherwise the histogram could not
@@ -94,7 +94,7 @@ func (c *Aggregator) Kind() aggregation.Kind {
 }
 
 // Sum returns the sum of all values in the checkpoint.
-func (c *Aggregator) Sum() (metric.Number, error) {
+func (c *Aggregator) Sum() (otel.Number, error) {
 	return c.state.sum, nil
 }
 
@@ -115,7 +115,7 @@ func (c *Aggregator) Histogram() (aggregation.Buckets, error) {
 // the empty set.  Since no locks are taken, there is a chance that
 // the independent Sum, Count and Bucket Count are not consistent with each
 // other.
-func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descriptor) error {
+func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *otel.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)
@@ -134,7 +134,7 @@ func emptyState(boundaries []float64) state {
 }
 
 // Update adds the recorded measurement to the current data set.
-func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metric.Descriptor) error {
+func (c *Aggregator) Update(_ context.Context, number otel.Number, desc *otel.Descriptor) error {
 	kind := desc.NumberKind()
 	asFloat := number.CoerceToFloat64(kind)
 
@@ -168,7 +168,7 @@ func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metri
 }
 
 // Merge combines two histograms that have the same buckets into a single one.
-func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
+func (c *Aggregator) Merge(oa export.Aggregator, desc *otel.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)

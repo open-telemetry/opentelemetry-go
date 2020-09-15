@@ -26,7 +26,7 @@ import (
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
 	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
 
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -91,22 +91,22 @@ func TestStringKeyValues(t *testing.T) {
 }
 
 func TestMinMaxSumCountValue(t *testing.T) {
-	mmsc, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &metric.Descriptor{}))
+	mmsc, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &otel.Descriptor{}))
 
-	assert.NoError(t, mmsc.Update(context.Background(), 1, &metric.Descriptor{}))
-	assert.NoError(t, mmsc.Update(context.Background(), 10, &metric.Descriptor{}))
+	assert.NoError(t, mmsc.Update(context.Background(), 1, &otel.Descriptor{}))
+	assert.NoError(t, mmsc.Update(context.Background(), 10, &otel.Descriptor{}))
 
 	// Prior to checkpointing ErrNoData should be returned.
 	_, _, _, _, err := minMaxSumCountValues(ckpt.(aggregation.MinMaxSumCount))
 	assert.EqualError(t, err, aggregation.ErrNoData.Error())
 
 	// Checkpoint to set non-zero values
-	require.NoError(t, mmsc.SynchronizedMove(ckpt, &metric.Descriptor{}))
+	require.NoError(t, mmsc.SynchronizedMove(ckpt, &otel.Descriptor{}))
 	min, max, sum, count, err := minMaxSumCountValues(ckpt.(aggregation.MinMaxSumCount))
 	if assert.NoError(t, err) {
-		assert.Equal(t, min, metric.NewInt64Number(1))
-		assert.Equal(t, max, metric.NewInt64Number(10))
-		assert.Equal(t, sum, metric.NewInt64Number(11))
+		assert.Equal(t, min, otel.NewInt64Number(1))
+		assert.Equal(t, max, otel.NewInt64Number(10))
+		assert.Equal(t, sum, otel.NewInt64Number(11))
 		assert.Equal(t, count, int64(2))
 	}
 }
@@ -114,19 +114,19 @@ func TestMinMaxSumCountValue(t *testing.T) {
 func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 	tests := []struct {
 		name        string
-		metricKind  metric.Kind
+		metricKind  otel.Kind
 		description string
 		unit        unit.Unit
-		numberKind  metric.NumberKind
+		numberKind  otel.NumberKind
 		labels      []label.KeyValue
 		expected    *metricpb.MetricDescriptor
 	}{
 		{
 			"mmsc-test-a",
-			metric.ValueRecorderKind,
+			otel.ValueRecorderKind,
 			"test-a-description",
 			unit.Dimensionless,
-			metric.Int64NumberKind,
+			otel.Int64NumberKind,
 			[]label.KeyValue{},
 			&metricpb.MetricDescriptor{
 				Name:        "mmsc-test-a",
@@ -137,10 +137,10 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 		},
 		{
 			"mmsc-test-b",
-			metric.CounterKind, // This shouldn't change anything.
+			otel.CounterKind, // This shouldn't change anything.
 			"test-b-description",
 			unit.Bytes,
-			metric.Float64NumberKind, // This shouldn't change anything.
+			otel.Float64NumberKind, // This shouldn't change anything.
 			[]label.KeyValue{label.String("A", "1")},
 			&metricpb.MetricDescriptor{
 				Name:        "mmsc-test-b",
@@ -152,15 +152,15 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	mmsc, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &metric.Descriptor{}))
-	if !assert.NoError(t, mmsc.Update(ctx, 1, &metric.Descriptor{})) {
+	mmsc, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &otel.Descriptor{}))
+	if !assert.NoError(t, mmsc.Update(ctx, 1, &otel.Descriptor{})) {
 		return
 	}
-	require.NoError(t, mmsc.SynchronizedMove(ckpt, &metric.Descriptor{}))
+	require.NoError(t, mmsc.SynchronizedMove(ckpt, &otel.Descriptor{}))
 	for _, test := range tests {
-		desc := metric.NewDescriptor(test.name, test.metricKind, test.numberKind,
-			metric.WithDescription(test.description),
-			metric.WithUnit(test.unit))
+		desc := otel.NewDescriptor(test.name, test.metricKind, test.numberKind,
+			otel.WithDescription(test.description),
+			otel.WithUnit(test.unit))
 		labels := label.NewSet(test.labels...)
 		record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
 		got, err := minMaxSumCount(record, ckpt.(aggregation.MinMaxSumCount))
@@ -171,7 +171,7 @@ func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 }
 
 func TestMinMaxSumCountDatapoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderKind, metric.Int64NumberKind)
+	desc := otel.NewDescriptor("", otel.ValueRecorderKind, otel.Int64NumberKind)
 	labels := label.NewSet()
 	mmsc, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &desc))
 
@@ -210,7 +210,7 @@ func TestMinMaxSumCountPropagatesErrors(t *testing.T) {
 	// ErrNoData should be returned by both the Min and Max values of
 	// a MinMaxSumCount Aggregator. Use this fact to check the error is
 	// correctly returned.
-	mmsc := &minmaxsumcount.New(1, &metric.Descriptor{})[0]
+	mmsc := &minmaxsumcount.New(1, &otel.Descriptor{})[0]
 	_, _, _, _, err := minMaxSumCountValues(mmsc)
 	assert.Error(t, err)
 	assert.Equal(t, aggregation.ErrNoData, err)
@@ -219,19 +219,19 @@ func TestMinMaxSumCountPropagatesErrors(t *testing.T) {
 func TestSumMetricDescriptor(t *testing.T) {
 	tests := []struct {
 		name        string
-		metricKind  metric.Kind
+		metricKind  otel.Kind
 		description string
 		unit        unit.Unit
-		numberKind  metric.NumberKind
+		numberKind  otel.NumberKind
 		labels      []label.KeyValue
 		expected    *metricpb.MetricDescriptor
 	}{
 		{
 			"sum-test-a",
-			metric.CounterKind,
+			otel.CounterKind,
 			"test-a-description",
 			unit.Dimensionless,
-			metric.Int64NumberKind,
+			otel.Int64NumberKind,
 			[]label.KeyValue{},
 			&metricpb.MetricDescriptor{
 				Name:        "sum-test-a",
@@ -242,10 +242,10 @@ func TestSumMetricDescriptor(t *testing.T) {
 		},
 		{
 			"sum-test-b",
-			metric.ValueRecorderKind, // This shouldn't change anything.
+			otel.ValueRecorderKind, // This shouldn't change anything.
 			"test-b-description",
 			unit.Milliseconds,
-			metric.Float64NumberKind,
+			otel.Float64NumberKind,
 			[]label.KeyValue{label.String("A", "1")},
 			&metricpb.MetricDescriptor{
 				Name:        "sum-test-b",
@@ -257,9 +257,9 @@ func TestSumMetricDescriptor(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		desc := metric.NewDescriptor(test.name, test.metricKind, test.numberKind,
-			metric.WithDescription(test.description),
-			metric.WithUnit(test.unit),
+		desc := otel.NewDescriptor(test.name, test.metricKind, test.numberKind,
+			otel.WithDescription(test.description),
+			otel.WithUnit(test.unit),
 		)
 		labels := label.NewSet(test.labels...)
 		emptyAgg := &sumAgg.New(1)[0]
@@ -272,10 +272,10 @@ func TestSumMetricDescriptor(t *testing.T) {
 }
 
 func TestSumInt64DataPoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderKind, metric.Int64NumberKind)
+	desc := otel.NewDescriptor("", otel.ValueRecorderKind, otel.Int64NumberKind)
 	labels := label.NewSet()
 	s, ckpt := metrictest.Unslice2(sumAgg.New(2))
-	assert.NoError(t, s.Update(context.Background(), metric.Number(1), &desc))
+	assert.NoError(t, s.Update(context.Background(), otel.Number(1), &desc))
 	require.NoError(t, s.SynchronizedMove(ckpt, &desc))
 	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
 	if m, err := sum(record, ckpt.(aggregation.Sum)); assert.NoError(t, err) {
@@ -291,10 +291,10 @@ func TestSumInt64DataPoints(t *testing.T) {
 }
 
 func TestSumFloat64DataPoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderKind, metric.Float64NumberKind)
+	desc := otel.NewDescriptor("", otel.ValueRecorderKind, otel.Float64NumberKind)
 	labels := label.NewSet()
 	s, ckpt := metrictest.Unslice2(sumAgg.New(2))
-	assert.NoError(t, s.Update(context.Background(), metric.NewFloat64Number(1), &desc))
+	assert.NoError(t, s.Update(context.Background(), otel.NewFloat64Number(1), &desc))
 	require.NoError(t, s.SynchronizedMove(ckpt, &desc))
 	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
 	if m, err := sum(record, ckpt.(aggregation.Sum)); assert.NoError(t, err) {
@@ -310,7 +310,7 @@ func TestSumFloat64DataPoints(t *testing.T) {
 }
 
 func TestSumErrUnknownValueType(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderKind, metric.NumberKind(-1))
+	desc := otel.NewDescriptor("", otel.ValueRecorderKind, otel.NumberKind(-1))
 	labels := label.NewSet()
 	s := &sumAgg.New(1)[0]
 	record := export.NewRecord(&desc, &labels, nil, s, intervalStart, intervalEnd)

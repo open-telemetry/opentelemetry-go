@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
+package otel
 
 import (
 	"context"
@@ -20,77 +20,76 @@ import (
 	"go.opentelemetry.io/otel/label"
 )
 
-// Float64UpDownCounter is a metric instrument that sums floating
-// point values.
-type Float64UpDownCounter struct {
+// Float64Counter is a metric that accumulates float64 values.
+type Float64Counter struct {
 	syncInstrument
 }
 
-// Int64UpDownCounter is a metric instrument that sums integer values.
-type Int64UpDownCounter struct {
+// Int64Counter is a metric that accumulates int64 values.
+type Int64Counter struct {
 	syncInstrument
 }
 
-// BoundFloat64UpDownCounter is a bound instrument for Float64UpDownCounter.
+// BoundFloat64Counter is a bound instrument for Float64Counter.
 //
 // It inherits the Unbind function from syncBoundInstrument.
-type BoundFloat64UpDownCounter struct {
+type BoundFloat64Counter struct {
 	syncBoundInstrument
 }
 
-// BoundInt64UpDownCounter is a boundInstrument for Int64UpDownCounter.
+// BoundInt64Counter is a boundInstrument for Int64Counter.
 //
 // It inherits the Unbind function from syncBoundInstrument.
-type BoundInt64UpDownCounter struct {
+type BoundInt64Counter struct {
 	syncBoundInstrument
 }
 
 // Bind creates a bound instrument for this counter. The labels are
 // associated with values recorded via subsequent calls to Record.
-func (c Float64UpDownCounter) Bind(labels ...label.KeyValue) (h BoundFloat64UpDownCounter) {
+func (c Float64Counter) Bind(labels ...label.KeyValue) (h BoundFloat64Counter) {
 	h.syncBoundInstrument = c.bind(labels)
 	return
 }
 
 // Bind creates a bound instrument for this counter. The labels are
 // associated with values recorded via subsequent calls to Record.
-func (c Int64UpDownCounter) Bind(labels ...label.KeyValue) (h BoundInt64UpDownCounter) {
+func (c Int64Counter) Bind(labels ...label.KeyValue) (h BoundInt64Counter) {
 	h.syncBoundInstrument = c.bind(labels)
 	return
 }
 
 // Measurement creates a Measurement object to use with batch
 // recording.
-func (c Float64UpDownCounter) Measurement(value float64) Measurement {
+func (c Float64Counter) Measurement(value float64) Measurement {
 	return c.float64Measurement(value)
 }
 
 // Measurement creates a Measurement object to use with batch
 // recording.
-func (c Int64UpDownCounter) Measurement(value int64) Measurement {
+func (c Int64Counter) Measurement(value int64) Measurement {
 	return c.int64Measurement(value)
 }
 
 // Add adds the value to the counter's sum. The labels should contain
 // the keys and values to be associated with this value.
-func (c Float64UpDownCounter) Add(ctx context.Context, value float64, labels ...label.KeyValue) {
+func (c Float64Counter) Add(ctx context.Context, value float64, labels ...label.KeyValue) {
 	c.directRecord(ctx, NewFloat64Number(value), labels)
 }
 
 // Add adds the value to the counter's sum. The labels should contain
 // the keys and values to be associated with this value.
-func (c Int64UpDownCounter) Add(ctx context.Context, value int64, labels ...label.KeyValue) {
+func (c Int64Counter) Add(ctx context.Context, value int64, labels ...label.KeyValue) {
 	c.directRecord(ctx, NewInt64Number(value), labels)
 }
 
 // Add adds the value to the counter's sum using the labels
 // previously bound to this counter via Bind()
-func (b BoundFloat64UpDownCounter) Add(ctx context.Context, value float64) {
+func (b BoundFloat64Counter) Add(ctx context.Context, value float64) {
 	b.directRecord(ctx, NewFloat64Number(value))
 }
 
 // Add adds the value to the counter's sum using the labels
 // previously bound to this counter via Bind()
-func (b BoundInt64UpDownCounter) Add(ctx context.Context, value int64) {
+func (b BoundInt64Counter) Add(ctx context.Context, value int64) {
 	b.directRecord(ctx, NewInt64Number(value))
 }

@@ -14,7 +14,7 @@
 
 //go:generate stringer -type=Kind
 
-package metric
+package otel
 
 // Kind describes the kind of instrument.
 type Kind int8

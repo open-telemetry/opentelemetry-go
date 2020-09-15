@@ -27,7 +27,7 @@ import (
 	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
 	resourcepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/resource/v1"
 
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -231,7 +231,7 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 	return rms, nil
 }
 
-// Record transforms a Record into an OTLP Metric. An ErrUnimplementedAgg
+// Record transforms a Record into an OTLP otel. An ErrUnimplementedAgg
 // error is returned if the Record Aggregator is not supported.
 func Record(r export.Record) (*metricpb.Metric, error) {
 	switch a := r.Aggregation().(type) {
@@ -244,7 +244,7 @@ func Record(r export.Record) (*metricpb.Metric, error) {
 	}
 }
 
-// sum transforms a Sum Aggregator into an OTLP Metric.
+// sum transforms a Sum Aggregator into an OTLP otel.
 func sum(record export.Record, a aggregation.Sum) (*metricpb.Metric, error) {
 	desc := record.Descriptor()
 	labels := record.Labels()
@@ -262,7 +262,7 @@ func sum(record export.Record, a aggregation.Sum) (*metricpb.Metric, error) {
 	}
 
 	switch n := desc.NumberKind(); n {
-	case metric.Int64NumberKind:
+	case otel.Int64NumberKind:
 		m.MetricDescriptor.Type = metricpb.MetricDescriptor_INT64
 		m.Int64DataPoints = []*metricpb.Int64DataPoint{
 			{
@@ -272,7 +272,7 @@ func sum(record export.Record, a aggregation.Sum) (*metricpb.Metric, error) {
 				TimeUnixNano:      uint64(record.EndTime().UnixNano()),
 			},
 		}
-	case metric.Float64NumberKind:
+	case otel.Float64NumberKind:
 		m.MetricDescriptor.Type = metricpb.MetricDescriptor_DOUBLE
 		m.DoubleDataPoints = []*metricpb.DoubleDataPoint{
 			{
@@ -291,7 +291,7 @@ func sum(record export.Record, a aggregation.Sum) (*metricpb.Metric, error) {
 
 // minMaxSumCountValue returns the values of the MinMaxSumCount Aggregator
 // as discret values.
-func minMaxSumCountValues(a aggregation.MinMaxSumCount) (min, max, sum metric.Number, count int64, err error) {
+func minMaxSumCountValues(a aggregation.MinMaxSumCount) (min, max, sum otel.Number, count int64, err error) {
 	if min, err = a.Min(); err != nil {
 		return
 	}
@@ -307,7 +307,7 @@ func minMaxSumCountValues(a aggregation.MinMaxSumCount) (min, max, sum metric.Nu
 	return
 }
 
-// minMaxSumCount transforms a MinMaxSumCount Aggregator into an OTLP Metric.
+// minMaxSumCount transforms a MinMaxSumCount Aggregator into an OTLP otel.
 func minMaxSumCount(record export.Record, a aggregation.MinMaxSumCount) (*metricpb.Metric, error) {
 	desc := record.Descriptor()
 	labels := record.Labels()

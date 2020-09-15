@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"sync"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/label"
 )
 
@@ -32,7 +32,7 @@ var ErrInvalidAsyncRunner = errors.New("unknown async runner type")
 // the SDK to provide support for running observer callbacks.
 type AsyncCollector interface {
 	// CollectAsync passes a batch of observations to the MeterImpl.
-	CollectAsync([]label.KeyValue, ...metric.Observation)
+	CollectAsync([]label.KeyValue, ...otel.Observation)
 }
 
 // AsyncInstrumentState manages an ordered set of asynchronous
@@ -60,18 +60,18 @@ type AsyncInstrumentState struct {
 
 	// instruments maintains the set of instruments in the order
 	// they were registered.
-	instruments []metric.AsyncImpl
+	instruments []otel.AsyncImpl
 }
 
 // asyncRunnerPair is a map entry for Observer callback runners.
 type asyncRunnerPair struct {
 	// runner is used as a map key here.  The API ensures
 	// that all callbacks are pointers for this reason.
-	runner metric.AsyncRunner
+	runner otel.AsyncRunner
 
 	// inst refers to a non-nil instrument when `runner` is a
 	// AsyncSingleRunner.
-	inst metric.AsyncImpl
+	inst otel.AsyncImpl
 }
 
 // NewAsyncInstrumentState returns a new *AsyncInstrumentState, for
@@ -86,7 +86,7 @@ func NewAsyncInstrumentState() *AsyncInstrumentState {
 // Instruments returns the asynchronous instruments managed by this
 // object, the set that should be checkpointed after observers are
 // run.
-func (a *AsyncInstrumentState) Instruments() []metric.AsyncImpl {
+func (a *AsyncInstrumentState) Instruments() []otel.AsyncImpl {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 	return a.instruments
@@ -96,7 +96,7 @@ func (a *AsyncInstrumentState) Instruments() []metric.AsyncImpl {
 // object.  This should be called during NewAsyncInstrument() and
 // assumes that errors (e.g., duplicate registration) have already
 // been checked.
-func (a *AsyncInstrumentState) Register(inst metric.AsyncImpl, runner metric.AsyncRunner) {
+func (a *AsyncInstrumentState) Register(inst otel.AsyncImpl, runner otel.AsyncRunner) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -110,7 +110,7 @@ func (a *AsyncInstrumentState) Register(inst metric.AsyncImpl, runner metric.Asy
 	rp := asyncRunnerPair{
 		runner: runner,
 	}
-	if _, ok := runner.(metric.AsyncSingleRunner); ok {
+	if _, ok := runner.(otel.AsyncSingleRunner); ok {
 		rp.inst = inst
 	}
 
@@ -131,12 +131,12 @@ func (a *AsyncInstrumentState) Run(ctx context.Context, collector AsyncCollector
 		// other implementations are possible because the
 		// interface has un-exported methods.
 
-		if singleRunner, ok := rp.runner.(metric.AsyncSingleRunner); ok {
+		if singleRunner, ok := rp.runner.(otel.AsyncSingleRunner); ok {
 			singleRunner.Run(ctx, rp.inst, collector.CollectAsync)
 			continue
 		}
 
-		if multiRunner, ok := rp.runner.(metric.AsyncBatchRunner); ok {
+		if multiRunner, ok := rp.runner.(otel.AsyncBatchRunner); ok {
 			multiRunner.Run(ctx, collector.CollectAsync)
 			continue
 		}

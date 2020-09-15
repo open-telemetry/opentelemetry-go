@@ -28,7 +28,7 @@ import (
 	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
 	resourcepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/resource/v1"
 
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -93,10 +93,10 @@ func (m *checkpointSet) ForEach(_ metricsdk.ExportKindSelector, fn func(metricsd
 
 type record struct {
 	name     string
-	mKind    metric.Kind
-	nKind    metric.NumberKind
+	mKind    otel.Kind
+	nKind    otel.NumberKind
 	resource *resource.Resource
-	opts     []metric.InstrumentOption
+	opts     []otel.InstrumentOption
 	labels   []label.KeyValue
 }
 
@@ -165,16 +165,16 @@ func TestNoGroupingExport(t *testing.T) {
 		[]record{
 			{
 				"int64-count",
-				metric.CounterKind,
-				metric.Int64NumberKind,
+				otel.CounterKind,
+				otel.Int64NumberKind,
 				nil,
 				nil,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
-				metric.CounterKind,
-				metric.Int64NumberKind,
+				otel.CounterKind,
+				otel.Int64NumberKind,
 				nil,
 				nil,
 				append(baseKeyValues, cpuKey.Int(2)),
@@ -214,8 +214,8 @@ func TestNoGroupingExport(t *testing.T) {
 func TestValuerecorderMetricGroupingExport(t *testing.T) {
 	r := record{
 		"valuerecorder",
-		metric.ValueRecorderKind,
-		metric.Int64NumberKind,
+		otel.ValueRecorderKind,
+		otel.Int64NumberKind,
 		nil,
 		nil,
 		append(baseKeyValues, cpuKey.Int(1)),
@@ -293,15 +293,15 @@ func TestValuerecorderMetricGroupingExport(t *testing.T) {
 	}
 	runMetricExportTests(t, []record{r, r}, expected)
 	//changing the number kind should make no difference.
-	r.nKind = metric.Float64NumberKind
+	r.nKind = otel.Float64NumberKind
 	runMetricExportTests(t, []record{r, r}, expected)
 }
 
 func TestCountInt64MetricGroupingExport(t *testing.T) {
 	r := record{
 		"int64-count",
-		metric.CounterKind,
-		metric.Int64NumberKind,
+		otel.CounterKind,
+		otel.Int64NumberKind,
 		nil,
 		nil,
 		append(baseKeyValues, cpuKey.Int(1)),
@@ -343,8 +343,8 @@ func TestCountInt64MetricGroupingExport(t *testing.T) {
 func TestCountFloat64MetricGroupingExport(t *testing.T) {
 	r := record{
 		"float64-count",
-		metric.CounterKind,
-		metric.Float64NumberKind,
+		otel.CounterKind,
+		otel.Float64NumberKind,
 		nil,
 		nil,
 		append(baseKeyValues, cpuKey.Int(1)),
@@ -410,32 +410,32 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 		[]record{
 			{
 				"int64-count",
-				metric.CounterKind,
-				metric.Int64NumberKind,
+				otel.CounterKind,
+				otel.Int64NumberKind,
 				testInstA,
 				nil,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
-				metric.CounterKind,
-				metric.Int64NumberKind,
+				otel.CounterKind,
+				otel.Int64NumberKind,
 				testInstA,
 				nil,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
-				metric.CounterKind,
-				metric.Int64NumberKind,
+				otel.CounterKind,
+				otel.Int64NumberKind,
 				testInstA,
 				nil,
 				append(baseKeyValues, cpuKey.Int(2)),
 			},
 			{
 				"int64-count",
-				metric.CounterKind,
-				metric.Int64NumberKind,
+				otel.CounterKind,
+				otel.Int64NumberKind,
 				testInstB,
 				nil,
 				append(baseKeyValues, cpuKey.Int(1)),
@@ -499,64 +499,64 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 }
 
 func TestResourceInstLibMetricGroupingExport(t *testing.T) {
-	countingLib1 := []metric.InstrumentOption{
-		metric.WithInstrumentationName("counting-lib"),
-		metric.WithInstrumentationVersion("v1"),
+	countingLib1 := []otel.InstrumentOption{
+		otel.WithInstrumentationName("counting-lib"),
+		otel.WithInstrumentationVersion("v1"),
 	}
-	countingLib2 := []metric.InstrumentOption{
-		metric.WithInstrumentationName("counting-lib"),
-		metric.WithInstrumentationVersion("v2"),
+	countingLib2 := []otel.InstrumentOption{
+		otel.WithInstrumentationName("counting-lib"),
+		otel.WithInstrumentationVersion("v2"),
 	}
-	summingLib := []metric.InstrumentOption{
-		metric.WithInstrumentationName("summing-lib"),
+	summingLib := []otel.InstrumentOption{
+		otel.WithInstrumentationName("summing-lib"),
 	}
 	runMetricExportTests(
 		t,
 		[]record{
 			{
 				"int64-count",
-				metric.CounterKind,
-				metric.Int64NumberKind,
+				otel.CounterKind,
+				otel.Int64NumberKind,
 				testInstA,
 				countingLib1,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
-				metric.CounterKind,
-				metric.Int64NumberKind,
+				otel.CounterKind,
+				otel.Int64NumberKind,
 				testInstA,
 				countingLib2,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
-				metric.CounterKind,
-				metric.Int64NumberKind,
+				otel.CounterKind,
+				otel.Int64NumberKind,
 				testInstA,
 				countingLib1,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
-				metric.CounterKind,
-				metric.Int64NumberKind,
+				otel.CounterKind,
+				otel.Int64NumberKind,
 				testInstA,
 				countingLib1,
 				append(baseKeyValues, cpuKey.Int(2)),
 			},
 			{
 				"int64-count",
-				metric.CounterKind,
-				metric.Int64NumberKind,
+				otel.CounterKind,
+				otel.Int64NumberKind,
 				testInstA,
 				summingLib,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
-				metric.CounterKind,
-				metric.Int64NumberKind,
+				otel.CounterKind,
+				otel.Int64NumberKind,
 				testInstB,
 				countingLib1,
 				append(baseKeyValues, cpuKey.Int(1)),
@@ -682,12 +682,12 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 	recs := map[label.Distinct][]metricsdk.Record{}
 	resources := map[label.Distinct]*resource.Resource{}
 	for _, r := range rs {
-		desc := metric.NewDescriptor(r.name, r.mKind, r.nKind, r.opts...)
+		desc := otel.NewDescriptor(r.name, r.mKind, r.nKind, r.opts...)
 		labs := label.NewSet(r.labels...)
 
 		var agg, ckpt metricsdk.Aggregator
 		switch r.mKind {
-		case metric.CounterKind:
+		case otel.CounterKind:
 			agg, ckpt = metrictest.Unslice2(sum.New(2))
 		default:
 			agg, ckpt = metrictest.Unslice2(minmaxsumcount.New(2, &desc))
@@ -695,12 +695,12 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 
 		ctx := context.Background()
 		switch r.nKind {
-		case metric.Int64NumberKind:
-			require.NoError(t, agg.Update(ctx, metric.NewInt64Number(1), &desc))
-			require.NoError(t, agg.Update(ctx, metric.NewInt64Number(10), &desc))
-		case metric.Float64NumberKind:
-			require.NoError(t, agg.Update(ctx, metric.NewFloat64Number(1), &desc))
-			require.NoError(t, agg.Update(ctx, metric.NewFloat64Number(10), &desc))
+		case otel.Int64NumberKind:
+			require.NoError(t, agg.Update(ctx, otel.NewInt64Number(1), &desc))
+			require.NoError(t, agg.Update(ctx, otel.NewInt64Number(10), &desc))
+		case otel.Float64NumberKind:
+			require.NoError(t, agg.Update(ctx, otel.NewFloat64Number(1), &desc))
+			require.NoError(t, agg.Update(ctx, otel.NewFloat64Number(10), &desc))
 		default:
 			t.Fatalf("invalid number kind: %v", r.nKind)
 		}

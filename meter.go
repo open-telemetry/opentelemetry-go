@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
+package otel
 
 import (
 	"context"
@@ -31,6 +31,7 @@ import (
 //  - Batch asynchronous constructors (1 x int64,float64)
 //  - Internals
 
+// FIXME: rename to MeterProvider
 // Provider supports named Meter instances.
 type Provider interface {
 	// Meter creates an implementation of the Meter interface.

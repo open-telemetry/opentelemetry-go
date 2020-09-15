@@ -22,7 +22,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
@@ -32,7 +32,7 @@ import (
 // This test demonstrates that it is relatively difficult to setup a
 // Prometheus export pipeline:
 //
-//   1. The default boundaries are difficult to pass, should be []float instead of []metric.Number
+//   1. The default boundaries are difficult to pass, should be []float instead of []otel.Number
 //
 // TODO: Address this issue.
 
@@ -49,13 +49,13 @@ func ExampleNewExportPipeline() {
 	ctx := context.Background()
 
 	// Use two instruments
-	counter := metric.Must(meter).NewInt64Counter(
+	counter := otel.Must(meter).NewInt64Counter(
 		"a.counter",
-		metric.WithDescription("Counts things"),
+		otel.WithDescription("Counts things"),
 	)
-	recorder := metric.Must(meter).NewInt64ValueRecorder(
+	recorder := otel.Must(meter).NewInt64ValueRecorder(
 		"a.valuerecorder",
-		metric.WithDescription("Records values"),
+		otel.WithDescription("Records values"),
 	)
 
 	counter.Add(ctx, 100, label.String("key", "value"))

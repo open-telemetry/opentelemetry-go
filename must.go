@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
+package otel
 
 // MeterMust is a wrapper for Meter interfaces that panics when any
 // instrument constructor encounters an error.

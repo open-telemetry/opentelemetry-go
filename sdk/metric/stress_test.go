@@ -31,8 +31,8 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/api/metric"
-	api "go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
+	api "go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -69,7 +69,7 @@ type (
 
 	testKey struct {
 		labels     string
-		descriptor *metric.Descriptor
+		descriptor *otel.Descriptor
 	}
 
 	testImpl struct {
@@ -88,7 +88,7 @@ type (
 	}
 
 	SyncImpler interface {
-		SyncImpl() metric.SyncImpl
+		SyncImpl() otel.SyncImpl
 	}
 
 	// lastValueState supports merging lastValue values, for the case
@@ -161,7 +161,7 @@ func (f *testFixture) startWorker(impl *Accumulator, meter api.Meter, wg *sync.W
 	ctx := context.Background()
 	name := fmt.Sprint("test_", i)
 	instrument := f.impl.newInstrument(meter, name)
-	var descriptor *metric.Descriptor
+	var descriptor *otel.Descriptor
 	if ii, ok := instrument.SyncImpl().(*syncInstrument); ok {
 		descriptor = &ii.descriptor
 	}
@@ -265,13 +265,13 @@ func (f *testFixture) Process(accumulation export.Accumulation) error {
 
 	agg := accumulation.Aggregator()
 	switch accumulation.Descriptor().MetricKind() {
-	case metric.CounterKind:
+	case otel.CounterKind:
 		sum, err := agg.(aggregation.Sum).Sum()
 		if err != nil {
 			f.T.Fatal("Sum error: ", err)
 		}
 		f.impl.storeCollect(actual, sum, time.Time{})
-	case metric.ValueRecorderKind:
+	case otel.ValueRecorderKind:
 		lv, ts, err := agg.(aggregation.LastValue).LastValue()
 		if err != nil && err != aggregation.ErrNoData {
 			f.T.Fatal("Last value error: ", err)
@@ -294,7 +294,7 @@ func stressTest(t *testing.T, impl testImpl) {
 	}
 	cc := concurrency()
 	sdk := NewAccumulator(fixture)
-	meter := metric.WrapMeterImpl(sdk, "stress_test")
+	meter := otel.WrapMeterImpl(sdk, "stress_test")
 	fixture.wg.Add(cc + 1)
 
 	for i := 0; i < cc; i++ {

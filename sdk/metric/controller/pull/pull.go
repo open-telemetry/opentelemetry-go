@@ -18,8 +18,8 @@ import (
 	"context"
 	"time"
 
-	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/metric/registry"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/registry"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
@@ -79,9 +79,9 @@ func (c *Controller) SetClock(clock controllerTime.Clock) {
 	c.clock = clock
 }
 
-// Provider returns a metric.Provider for the implementation managed
+// Provider returns a otel.Provider for the implementation managed
 // by this controller.
-func (c *Controller) Provider() metric.Provider {
+func (c *Controller) Provider() otel.Provider {
 	return c.provider
 }
 

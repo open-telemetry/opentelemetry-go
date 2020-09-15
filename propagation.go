@@ -55,8 +55,8 @@ type HTTPInjector interface {
 	Inject(context.Context, HTTPSupplier)
 }
 
-// Config contains the current set of extractors and injectors.
-type Config struct {
+// PropagatorsConfig contains the current set of extractors and injectors.
+type PropagatorsConfig struct {
 	httpEx []HTTPExtractor
 	httpIn []HTTPInjector
 }
@@ -82,17 +82,17 @@ type HTTPPropagator interface {
 	GetAllKeys() []string
 }
 
-// Option support passing configuration parameters to New().
-type Option func(*Config)
+// PropagatorsOption support passing configuration parameters to New().
+type PropagatorsOption func(*PropagatorsConfig)
 
 // propagators is the default Propagators implementation.
 type propagators struct {
-	config Config
+	config PropagatorsConfig
 }
 
 // NewPropagators returns a standard Propagators implementation.
-func NewPropagators(options ...Option) Propagators {
-	config := Config{}
+func NewPropagators(options ...PropagatorsOption) Propagators {
+	config := PropagatorsConfig{}
 	for _, opt := range options {
 		opt(&config)
 	}
@@ -102,15 +102,15 @@ func NewPropagators(options ...Option) Propagators {
 }
 
 // WithInjectors appends to the optional injector set.
-func WithInjectors(inj ...HTTPInjector) Option {
-	return func(config *Config) {
+func WithInjectors(inj ...HTTPInjector) PropagatorsOption {
+	return func(config *PropagatorsConfig) {
 		config.httpIn = append(config.httpIn, inj...)
 	}
 }
 
 // WithExtractors appends to the optional extractor set.
-func WithExtractors(ext ...HTTPExtractor) Option {
-	return func(config *Config) {
+func WithExtractors(ext ...HTTPExtractor) PropagatorsOption {
+	return func(config *PropagatorsConfig) {
 		config.httpEx = append(config.httpEx, ext...)
 	}
 }

@@ -19,9 +19,9 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/metric/registry"
+	"go.opentelemetry.io/otel/registry"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
@@ -45,7 +45,7 @@ type Controller struct {
 	ticker       controllerTime.Ticker
 }
 
-// New constructs a Controller, an implementation of metric.Provider,
+// New constructs a Controller, an implementation of otel.Provider,
 // using the provided checkpointer, exporter, and options to configure
 // an SDK with periodic collection.
 func New(checkpointer export.Checkpointer, exporter export.Exporter, opts ...Option) *Controller {
@@ -83,8 +83,8 @@ func (c *Controller) SetClock(clock controllerTime.Clock) {
 	c.clock = clock
 }
 
-// Provider returns a metric.Provider instance for this controller.
-func (c *Controller) Provider() metric.Provider {
+// Provider returns a otel.Provider instance for this controller.
+func (c *Controller) Provider() otel.Provider {
 	return c.provider
 }
 

@@ -15,7 +15,7 @@
 package simple // import "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 
 import (
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
@@ -44,7 +44,7 @@ var (
 
 // NewWithInexpensiveDistribution returns a simple aggregation selector
 // that uses counter, minmaxsumcount and minmaxsumcount aggregators
-// for the three kinds of metric.  This selector is faster and uses
+// for the three kinds of otel.  This selector is faster and uses
 // less memory than the others because minmaxsumcount does not
 // aggregate quantile information.
 func NewWithInexpensiveDistribution() export.AggregatorSelector {
@@ -53,7 +53,7 @@ func NewWithInexpensiveDistribution() export.AggregatorSelector {
 
 // NewWithSketchDistribution returns a simple aggregation selector that
 // uses counter, ddsketch, and ddsketch aggregators for the three
-// kinds of metric.  This selector uses more cpu and memory than the
+// kinds of otel.  This selector uses more cpu and memory than the
 // NewWithInexpensiveDistribution because it uses one DDSketch per distinct
 // instrument and label set.
 func NewWithSketchDistribution(config *ddsketch.Config) export.AggregatorSelector {
@@ -63,7 +63,7 @@ func NewWithSketchDistribution(config *ddsketch.Config) export.AggregatorSelecto
 }
 
 // NewWithExactDistribution returns a simple aggregation selector that uses
-// counter, array, and array aggregators for the three kinds of metric.
+// counter, array, and array aggregators for the three kinds of otel.
 // This selector uses more memory than the NewWithSketchDistribution
 // because it aggregates an array of all values, therefore is able to
 // compute exact quantiles.
@@ -72,7 +72,7 @@ func NewWithExactDistribution() export.AggregatorSelector {
 }
 
 // NewWithHistogramDistribution returns a simple aggregation selector that uses counter,
-// histogram, and histogram aggregators for the three kinds of metric. This
+// histogram, and histogram aggregators for the three kinds of otel. This
 // selector uses more memory than the NewWithInexpensiveDistribution because it
 // uses a counter per bucket.
 func NewWithHistogramDistribution(boundaries []float64) export.AggregatorSelector {
@@ -86,9 +86,9 @@ func sumAggs(aggPtrs []*export.Aggregator) {
 	}
 }
 
-func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+func (selectorInexpensive) AggregatorFor(descriptor *otel.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch descriptor.MetricKind() {
-	case metric.ValueObserverKind, metric.ValueRecorderKind:
+	case otel.ValueObserverKind, otel.ValueRecorderKind:
 		aggs := minmaxsumcount.New(len(aggPtrs), descriptor)
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
@@ -98,9 +98,9 @@ func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor, aggPtrs 
 	}
 }
 
-func (s selectorSketch) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+func (s selectorSketch) AggregatorFor(descriptor *otel.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch descriptor.MetricKind() {
-	case metric.ValueObserverKind, metric.ValueRecorderKind:
+	case otel.ValueObserverKind, otel.ValueRecorderKind:
 		aggs := ddsketch.New(len(aggPtrs), descriptor, s.config)
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
@@ -110,9 +110,9 @@ func (s selectorSketch) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...
 	}
 }
 
-func (selectorExact) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+func (selectorExact) AggregatorFor(descriptor *otel.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch descriptor.MetricKind() {
-	case metric.ValueObserverKind, metric.ValueRecorderKind:
+	case otel.ValueObserverKind, otel.ValueRecorderKind:
 		aggs := array.New(len(aggPtrs))
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
@@ -122,9 +122,9 @@ func (selectorExact) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*ex
 	}
 }
 
-func (s selectorHistogram) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+func (s selectorHistogram) AggregatorFor(descriptor *otel.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch descriptor.MetricKind() {
-	case metric.ValueObserverKind, metric.ValueRecorderKind:
+	case otel.ValueObserverKind, otel.ValueRecorderKind:
 		aggs := histogram.New(len(aggPtrs), descriptor, s.boundaries)
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]

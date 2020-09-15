@@ -12,60 +12,60 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric_test
+package otel_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 )
 
 var (
-	syncKinds = []metric.Kind{
-		metric.ValueRecorderKind,
-		metric.CounterKind,
-		metric.UpDownCounterKind,
+	syncKinds = []otel.Kind{
+		otel.ValueRecorderKind,
+		otel.CounterKind,
+		otel.UpDownCounterKind,
 	}
-	asyncKinds = []metric.Kind{
-		metric.ValueObserverKind,
-		metric.SumObserverKind,
-		metric.UpDownSumObserverKind,
+	asyncKinds = []otel.Kind{
+		otel.ValueObserverKind,
+		otel.SumObserverKind,
+		otel.UpDownSumObserverKind,
 	}
-	addingKinds = []metric.Kind{
-		metric.CounterKind,
-		metric.UpDownCounterKind,
-		metric.SumObserverKind,
-		metric.UpDownSumObserverKind,
+	addingKinds = []otel.Kind{
+		otel.CounterKind,
+		otel.UpDownCounterKind,
+		otel.SumObserverKind,
+		otel.UpDownSumObserverKind,
 	}
-	groupingKinds = []metric.Kind{
-		metric.ValueRecorderKind,
-		metric.ValueObserverKind,
-	}
-
-	monotonicKinds = []metric.Kind{
-		metric.CounterKind,
-		metric.SumObserverKind,
+	groupingKinds = []otel.Kind{
+		otel.ValueRecorderKind,
+		otel.ValueObserverKind,
 	}
 
-	nonMonotonicKinds = []metric.Kind{
-		metric.UpDownCounterKind,
-		metric.UpDownSumObserverKind,
-		metric.ValueRecorderKind,
-		metric.ValueObserverKind,
+	monotonicKinds = []otel.Kind{
+		otel.CounterKind,
+		otel.SumObserverKind,
 	}
 
-	precomputedSumKinds = []metric.Kind{
-		metric.SumObserverKind,
-		metric.UpDownSumObserverKind,
+	nonMonotonicKinds = []otel.Kind{
+		otel.UpDownCounterKind,
+		otel.UpDownSumObserverKind,
+		otel.ValueRecorderKind,
+		otel.ValueObserverKind,
 	}
 
-	nonPrecomputedSumKinds = []metric.Kind{
-		metric.CounterKind,
-		metric.UpDownCounterKind,
-		metric.ValueRecorderKind,
-		metric.ValueObserverKind,
+	precomputedSumKinds = []otel.Kind{
+		otel.SumObserverKind,
+		otel.UpDownSumObserverKind,
+	}
+
+	nonPrecomputedSumKinds = []otel.Kind{
+		otel.CounterKind,
+		otel.UpDownCounterKind,
+		otel.ValueRecorderKind,
+		otel.ValueObserverKind,
 	}
 )
 

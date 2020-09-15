@@ -13,4 +13,4 @@
 // limitations under the License.
 
 // Package metrictest contains utilities for testing metrics.
-package metrictest // import "go.opentelemetry.io/otel/api/metric/metrictest"
+package metrictest // import "go.opentelemetry.io/otel/metrictest"

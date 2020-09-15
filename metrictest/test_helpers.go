@@ -17,7 +17,7 @@ package metrictest
 import (
 	"testing"
 
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 )
 
@@ -28,7 +28,7 @@ type Measured struct {
 	InstrumentationName    string
 	InstrumentationVersion string
 	Labels                 map[label.Key]label.Value
-	Number                 metric.Number
+	Number                 otel.Number
 }
 
 // LabelsToMap converts label set to keyValue map, to be easily used in tests
@@ -58,13 +58,13 @@ func AsStructs(batches []Batch) []Measured {
 }
 
 // ResolveNumberByKind takes defined metric descriptor creates a concrete typed metric number
-func ResolveNumberByKind(t *testing.T, kind metric.NumberKind, value float64) metric.Number {
+func ResolveNumberByKind(t *testing.T, kind otel.NumberKind, value float64) otel.Number {
 	t.Helper()
 	switch kind {
-	case metric.Int64NumberKind:
-		return metric.NewInt64Number(int64(value))
-	case metric.Float64NumberKind:
-		return metric.NewFloat64Number(value)
+	case otel.Int64NumberKind:
+		return otel.NewInt64Number(int64(value))
+	case otel.Float64NumberKind:
+		return otel.NewFloat64Number(value)
 	}
 	panic("invalid number kind")
 }
