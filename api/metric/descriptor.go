@@ -32,7 +32,7 @@ func NewDescriptor(name string, mkind Kind, nkind NumberKind, opts ...Instrument
 		name:       name,
 		kind:       mkind,
 		numberKind: nkind,
-		config:     ConfigureInstrument(opts),
+		config:     NewInstrumentConfig(opts...),
 	}
 }
 

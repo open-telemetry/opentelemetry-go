@@ -52,19 +52,27 @@ type Exporter struct {
 
 	backgroundConnectionDoneCh chan bool
 
-	c        Config
+	c        config
 	metadata metadata.MD
 }
 
 var _ tracesdk.SpanExporter = (*Exporter)(nil)
 var _ metricsdk.Exporter = (*Exporter)(nil)
 
-func configureOptions(cfg *Config, opts ...ExporterOption) {
-	for _, opt := range opts {
-		opt(cfg)
+// newConfig initializes a config struct with default values and applies
+// any ExporterOptions provided.
+func newConfig(opts ...ExporterOption) config {
+	cfg := config{
+		numWorkers:        DefaultNumWorkers,
+		grpcServiceConfig: DefaultGRPCServiceConfig,
 	}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+	return cfg
 }
 
+// NewExporter constructs a new Exporter and starts it.
 func NewExporter(opts ...ExporterOption) (*Exporter, error) {
 	exp := NewUnstartedExporter(opts...)
 	if err := exp.Start(); err != nil {
@@ -73,13 +81,10 @@ func NewExporter(opts ...ExporterOption) (*Exporter, error) {
 	return exp, nil
 }
 
+// NewUnstartedExporter constructs a new Exporter and does not start it.
 func NewUnstartedExporter(opts ...ExporterOption) *Exporter {
 	e := new(Exporter)
-	e.c = Config{
-		numWorkers:        DefaultNumWorkers,
-		grpcServiceConfig: DefaultGRPCServiceConfig,
-	}
-	configureOptions(&e.c, opts...)
+	e.c = newConfig(opts...)
 	if len(e.c.headers) > 0 {
 		e.metadata = metadata.New(e.c.headers)
 	}

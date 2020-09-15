@@ -51,12 +51,11 @@ func TestDetectMultiPairs(t *testing.T) {
 }
 
 func TestEmpty(t *testing.T) {
-	os.Setenv(envVar, "")
+	os.Setenv(envVar, "   ")
 
 	detector := &FromEnv{}
 	res, err := detector.Detect(context.Background())
-	require.Error(t, err)
-	assert.Equal(t, err, ErrMissingResource)
+	require.NoError(t, err)
 	assert.Equal(t, Empty(), res)
 }
 

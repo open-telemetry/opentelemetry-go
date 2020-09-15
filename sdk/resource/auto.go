@@ -21,9 +21,6 @@ import (
 )
 
 var (
-	// ErrMissingResource is returned by a detector when source information
-	// is unavailable for a Resource.
-	ErrMissingResource = errors.New("missing resource")
 	// ErrPartialResource is returned by a detector when complete source
 	// information for a Resource is unavailable or the source information
 	// contains invalid values that are omitted from the returned Resource.
@@ -33,13 +30,10 @@ var (
 // Detector detects OpenTelemetry resource information
 type Detector interface {
 	// Detect returns an initialized Resource based on gathered information.
-	// If source information to construct a Resource is inaccessible, an
-	// uninitialized Resource is returned with an appropriately wrapped
-	// ErrMissingResource error is returned. If the source information to
-	// construct a Resource contains invalid values, a Resource is returned
-	// with the valid parts of the source information used for
-	// initialization along with an appropriately wrapped ErrPartialResource
-	// error.
+	// If the source information to construct a Resource contains invalid
+	// values, a Resource is returned with the valid parts of the source
+	// information used for initialization along with an appropriately
+	// wrapped ErrPartialResource error.
 	Detect(ctx context.Context) (*Resource, error)
 }
 

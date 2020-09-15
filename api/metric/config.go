@@ -37,9 +37,9 @@ type InstrumentOption interface {
 	ApplyInstrument(*InstrumentConfig)
 }
 
-// ConfigureInstrument is a helper that applies all the InstrumentOptions
-// to an InstrumentConfig.
-func ConfigureInstrument(opts []InstrumentOption) InstrumentConfig {
+// NewInstrumentConfig creates a new InstrumentConfig
+// and applies all the given options.
+func NewInstrumentConfig(opts ...InstrumentOption) InstrumentConfig {
 	var config InstrumentConfig
 	for _, o := range opts {
 		o.ApplyInstrument(&config)
@@ -93,9 +93,9 @@ type MeterOption interface {
 	ApplyMeter(*MeterConfig)
 }
 
-// ConfigureMeter is a helper that applies all the MeterOptions to a
-// MeterConfig.
-func ConfigureMeter(opts []MeterOption) MeterConfig {
+// NewMeterConfig creates a new MeterConfig and applies
+// all the given options.
+func NewMeterConfig(opts ...MeterOption) MeterConfig {
 	var config MeterConfig
 	for _, o := range opts {
 		o.ApplyMeter(&config)
