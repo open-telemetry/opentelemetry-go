@@ -29,7 +29,7 @@ type (
 	}
 
 	meterProviderHolder struct {
-		mp otel.Provider
+		mp otel.MeterProvider
 	}
 
 	propagatorsHolder struct {
@@ -69,12 +69,12 @@ func SetTracerProvider(tp trace.Provider) {
 }
 
 // MeterProvider is the internal implementation for global.MeterProvider.
-func MeterProvider() otel.Provider {
+func MeterProvider() otel.MeterProvider {
 	return globalMeter.Load().(meterProviderHolder).mp
 }
 
 // SetMeterProvider is the internal implementation for global.SetMeterProvider.
-func SetMeterProvider(mp otel.Provider) {
+func SetMeterProvider(mp otel.MeterProvider) {
 	delegateMeterOnce.Do(func() {
 		current := MeterProvider()
 

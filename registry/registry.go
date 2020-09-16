@@ -28,7 +28,7 @@ type Provider struct {
 	impl otel.MeterImpl
 }
 
-var _ otel.Provider = (*Provider)(nil)
+var _ otel.MeterProvider = (*Provider)(nil)
 
 // uniqueInstrumentMeterImpl implements the otel.MeterImpl interface, adding
 // uniqueness checking for instrument descriptors.  Use NewUniqueInstrumentMeter

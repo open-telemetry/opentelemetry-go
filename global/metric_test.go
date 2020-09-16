@@ -23,7 +23,7 @@ import (
 
 type testMeterProvider struct{}
 
-var _ otel.Provider = &testMeterProvider{}
+var _ otel.MeterProvider = &testMeterProvider{}
 
 func (*testMeterProvider) Meter(_ string, _ ...otel.MeterOption) otel.Meter {
 	return otel.Meter{}
@@ -31,7 +31,7 @@ func (*testMeterProvider) Meter(_ string, _ ...otel.MeterOption) otel.Meter {
 
 func TestMultipleGlobalMeterProvider(t *testing.T) {
 	p1 := testMeterProvider{}
-	p2 := otel.NoopProvider{}
+	p2 := otel.NoopMeterProvider{}
 	global.SetMeterProvider(&p1)
 	global.SetMeterProvider(&p2)
 

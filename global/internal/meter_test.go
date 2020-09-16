@@ -213,7 +213,7 @@ func TestUnbindThenRecordOne(t *testing.T) {
 }
 
 type meterProviderWithConstructorError struct {
-	otel.Provider
+	otel.MeterProvider
 }
 
 type meterWithConstructorError struct {

@@ -32,8 +32,8 @@ import (
 //  - Internals
 
 // FIXME: rename to MeterProvider
-// Provider supports named Meter instances.
-type Provider interface {
+// MeterProvider supports named Meter instances.
+type MeterProvider interface {
 	// Meter creates an implementation of the Meter interface.
 	// The instrumentationName must be the name of the library providing
 	// instrumentation. This name may be the same as the instrumented code

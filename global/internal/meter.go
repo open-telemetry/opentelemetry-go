@@ -51,7 +51,7 @@ type meterKey struct {
 }
 
 type meterProvider struct {
-	delegate otel.Provider
+	delegate otel.MeterProvider
 
 	// lock protects `delegate` and `meters`.
 	lock sync.Mutex
@@ -113,7 +113,7 @@ type syncHandle struct {
 	initialize sync.Once
 }
 
-var _ otel.Provider = &meterProvider{}
+var _ otel.MeterProvider = &meterProvider{}
 var _ otel.MeterImpl = &meterImpl{}
 var _ otel.InstrumentImpl = &syncImpl{}
 var _ otel.BoundSyncImpl = &syncHandle{}
@@ -131,7 +131,7 @@ func newMeterProvider() *meterProvider {
 	}
 }
 
-func (p *meterProvider) setDelegate(provider otel.Provider) {
+func (p *meterProvider) setDelegate(provider otel.MeterProvider) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -166,7 +166,7 @@ func (p *meterProvider) Meter(instrumentationName string, opts ...otel.MeterOpti
 
 // Meter interface and delegation
 
-func (m *meterImpl) setDelegate(name, version string, provider otel.Provider) {
+func (m *meterImpl) setDelegate(name, version string, provider otel.MeterProvider) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 

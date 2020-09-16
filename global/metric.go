@@ -39,11 +39,11 @@ func Meter(instrumentationName string, opts ...otel.MeterOption) otel.Meter {
 //     meter := global.MeterProvider().Meter("example.com/foo")
 // or
 //     meter := global.Meter("example.com/foo")
-func MeterProvider() otel.Provider {
+func MeterProvider() otel.MeterProvider {
 	return internal.MeterProvider()
 }
 
 // SetMeterProvider registers `mp` as the global meter provider.
-func SetMeterProvider(mp otel.Provider) {
+func SetMeterProvider(mp otel.MeterProvider) {
 	internal.SetMeterProvider(mp)
 }

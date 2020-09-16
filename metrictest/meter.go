@@ -112,7 +112,7 @@ func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []label.KeyValue,
 	}})
 }
 
-func NewProvider() (*MeterImpl, otel.Provider) {
+func NewProvider() (*MeterImpl, otel.MeterProvider) {
 	impl := &MeterImpl{
 		asyncInstruments: NewAsyncInstrumentState(),
 	}

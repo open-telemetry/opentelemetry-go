@@ -20,19 +20,19 @@ import (
 	"go.opentelemetry.io/otel/label"
 )
 
-type NoopProvider struct{}
+type NoopMeterProvider struct{}
 
 type noopInstrument struct{}
 type noopBoundInstrument struct{}
 type NoopSync struct{ noopInstrument }
 type NoopAsync struct{ noopInstrument }
 
-var _ Provider = NoopProvider{}
+var _ MeterProvider = NoopMeterProvider{}
 var _ SyncImpl = NoopSync{}
 var _ BoundSyncImpl = noopBoundInstrument{}
 var _ AsyncImpl = NoopAsync{}
 
-func (NoopProvider) Meter(_ string, _ ...MeterOption) Meter {
+func (NoopMeterProvider) Meter(_ string, _ ...MeterOption) Meter {
 	return Meter{}
 }
 
