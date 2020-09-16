@@ -43,7 +43,7 @@ type HTTPExtractor interface {
 	// trace.ContextWithRemoteSpanContext. In case of correlation
 	// context, the propagator should use correlation.WithMap to
 	// store it in the context.
-	Extract(context.Context, HTTPSupplier) context.Context
+	Extract(ctx context.Context, supplier HTTPSupplier) context.Context
 }
 
 // HTTPInjector injects information into a HTTPSupplier.
@@ -52,7 +52,7 @@ type HTTPInjector interface {
 	// encodes it into propagator specific format and then injects
 	// the encoded information using supplier into an associated
 	// carrier.
-	Inject(context.Context, HTTPSupplier)
+	Inject(ctx context.Context, supplier HTTPSupplier)
 }
 
 // Config contains the current set of extractors and injectors.

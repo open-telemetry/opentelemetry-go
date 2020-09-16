@@ -89,8 +89,8 @@ func WithSpanRecorder(sr SpanRecorder) Option {
 }
 
 type SpanRecorder interface {
-	OnStart(*Span)
-	OnEnd(*Span)
+	OnStart(span *Span)
+	OnEnd(span *Span)
 }
 
 type StandardSpanRecorder struct {

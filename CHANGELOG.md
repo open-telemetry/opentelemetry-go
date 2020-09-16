@@ -39,6 +39,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The [configuration style guide](https://github.com/open-telemetry/opentelemetry-go/blob/master/CONTRIBUTING.md#config) has been updated to
    recommend the use of `newConfig()` instead of `configure()`. (#1163)
 - The `otlp.Config` type has been unexported and changed to `otlp.config`, along with its initializer. (#1163)
+- Ensure exported interface types include parameter names and update the
+   Style Guide to reflect this styling rule. (#1172)
 - Don't consider unset environment variable for resource detection to be an error. (#1170)
 - Rename `go.opentelemetry.io/otel/api/metric.ConfigureInstrument` to `NewInstrumentConfig` and
   `go.opentelemetry.io/otel/api/metric.ConfigureMeter` to `NewMeterConfig`.

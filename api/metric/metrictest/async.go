@@ -32,7 +32,7 @@ var ErrInvalidAsyncRunner = errors.New("unknown async runner type")
 // the SDK to provide support for running observer callbacks.
 type AsyncCollector interface {
 	// CollectAsync passes a batch of observations to the MeterImpl.
-	CollectAsync([]label.KeyValue, ...metric.Observation)
+	CollectAsync(labels []label.KeyValue, observation ...metric.Observation)
 }
 
 // AsyncInstrumentState manages an ordered set of asynchronous
@@ -49,7 +49,7 @@ type AsyncInstrumentState struct {
 	// collection interval.  Singletons are entered with a real
 	// instrument each, batch observers are entered with a nil
 	// instrument, ensuring that when a singleton callback is used
-	// repeatedly, it is excuted repeatedly in the interval, while
+	// repeatedly, it is executed repeatedly in the interval, while
 	// when a batch callback is used repeatedly, it only executes
 	// once per interval.
 	runnerMap map[asyncRunnerPair]struct{}
