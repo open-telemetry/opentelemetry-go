@@ -93,7 +93,7 @@ func (m *checkpointSet) ForEach(_ metricsdk.ExportKindSelector, fn func(metricsd
 
 type record struct {
 	name     string
-	mKind    otel.Kind
+	mKind    otel.InstrumentKind
 	nKind    otel.NumberKind
 	resource *resource.Resource
 	opts     []otel.InstrumentOption

@@ -114,7 +114,7 @@ func TestMinMaxSumCountValue(t *testing.T) {
 func TestMinMaxSumCountMetricDescriptor(t *testing.T) {
 	tests := []struct {
 		name        string
-		metricKind  otel.Kind
+		metricKind  otel.InstrumentKind
 		description string
 		unit        unit.Unit
 		numberKind  otel.NumberKind
@@ -219,7 +219,7 @@ func TestMinMaxSumCountPropagatesErrors(t *testing.T) {
 func TestSumMetricDescriptor(t *testing.T) {
 	tests := []struct {
 		name        string
-		metricKind  otel.Kind
+		metricKind  otel.InstrumentKind
 		description string
 		unit        unit.Unit
 		numberKind  otel.NumberKind

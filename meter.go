@@ -283,7 +283,7 @@ func (m Meter) MeterImpl() MeterImpl {
 // newAsync constructs one new asynchronous instrument.
 func (m Meter) newAsync(
 	name string,
-	mkind Kind,
+	mkind InstrumentKind,
 	nkind NumberKind,
 	opts []InstrumentOption,
 	runner AsyncRunner,
@@ -303,7 +303,7 @@ func (m Meter) newAsync(
 // newSync constructs one new synchronous instrument.
 func (m Meter) newSync(
 	name string,
-	metricKind Kind,
+	metricKind InstrumentKind,
 	numberKind NumberKind,
 	opts []InstrumentOption,
 ) (

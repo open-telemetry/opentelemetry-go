@@ -85,7 +85,7 @@ func TestRangeTest(t *testing.T) {
 func TestNaNTest(t *testing.T) {
 	for _, nkind := range []otel.NumberKind{otel.Float64NumberKind, otel.Int64NumberKind} {
 		t.Run(nkind.String(), func(t *testing.T) {
-			for _, mkind := range []otel.Kind{
+			for _, mkind := range []otel.InstrumentKind{
 				otel.CounterKind,
 				otel.ValueRecorderKind,
 				otel.ValueObserverKind,

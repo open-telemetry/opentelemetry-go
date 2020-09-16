@@ -37,12 +37,12 @@ func TestExportKindIncludes(t *testing.T) {
 	require.False(t, DeltaExporter.Includes(PassThroughExporter|CumulativeExporter))
 }
 
-var deltaMemoryKinds = []otel.Kind{
+var deltaMemoryKinds = []otel.InstrumentKind{
 	otel.SumObserverKind,
 	otel.UpDownSumObserverKind,
 }
 
-var cumulativeMemoryKinds = []otel.Kind{
+var cumulativeMemoryKinds = []otel.InstrumentKind{
 	otel.ValueRecorderKind,
 	otel.ValueObserverKind,
 	otel.CounterKind,

@@ -21,13 +21,13 @@ import "go.opentelemetry.io/otel/unit"
 // options.
 type Descriptor struct {
 	name       string
-	kind       Kind
+	kind       InstrumentKind
 	numberKind NumberKind
 	config     InstrumentConfig
 }
 
 // NewDescriptor returns a Descriptor with the given contents.
-func NewDescriptor(name string, mkind Kind, nkind NumberKind, opts ...InstrumentOption) Descriptor {
+func NewDescriptor(name string, mkind InstrumentKind, nkind NumberKind, opts ...InstrumentOption) Descriptor {
 	return Descriptor{
 		name:       name,
 		kind:       mkind,
@@ -42,7 +42,7 @@ func (d Descriptor) Name() string {
 }
 
 // MetricKind returns the specific kind of instrument.
-func (d Descriptor) MetricKind() Kind {
+func (d Descriptor) MetricKind() InstrumentKind {
 	return d.kind
 }
 

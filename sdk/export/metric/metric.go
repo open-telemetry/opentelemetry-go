@@ -385,7 +385,7 @@ func (kind ExportKind) ExportKindFor(_ *otel.Descriptor, _ aggregation.Kind) Exp
 
 // MemoryRequired returns whether an exporter of this kind requires
 // memory to export correctly.
-func (kind ExportKind) MemoryRequired(mkind otel.Kind) bool {
+func (kind ExportKind) MemoryRequired(mkind otel.InstrumentKind) bool {
 	switch mkind {
 	case otel.ValueRecorderKind, otel.ValueObserverKind,
 		otel.CounterKind, otel.UpDownCounterKind:

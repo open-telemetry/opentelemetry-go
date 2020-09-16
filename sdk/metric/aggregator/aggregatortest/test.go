@@ -53,7 +53,7 @@ func newProfiles() []Profile {
 	}
 }
 
-func NewAggregatorTest(mkind otel.Kind, nkind otel.NumberKind) *otel.Descriptor {
+func NewAggregatorTest(mkind otel.InstrumentKind, nkind otel.NumberKind) *otel.Descriptor {
 	desc := otel.NewDescriptor("test.name", mkind, nkind)
 	return &desc
 }

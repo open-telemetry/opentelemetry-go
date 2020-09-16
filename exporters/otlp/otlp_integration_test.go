@@ -131,7 +131,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	labels := []label.KeyValue{label.Bool("test", true)}
 
 	type data struct {
-		iKind otel.Kind
+		iKind otel.InstrumentKind
 		nKind metricapi.NumberKind
 		val   int64
 	}

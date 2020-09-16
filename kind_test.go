@@ -23,45 +23,45 @@ import (
 )
 
 var (
-	syncKinds = []otel.Kind{
+	syncKinds = []otel.InstrumentKind{
 		otel.ValueRecorderKind,
 		otel.CounterKind,
 		otel.UpDownCounterKind,
 	}
-	asyncKinds = []otel.Kind{
+	asyncKinds = []otel.InstrumentKind{
 		otel.ValueObserverKind,
 		otel.SumObserverKind,
 		otel.UpDownSumObserverKind,
 	}
-	addingKinds = []otel.Kind{
+	addingKinds = []otel.InstrumentKind{
 		otel.CounterKind,
 		otel.UpDownCounterKind,
 		otel.SumObserverKind,
 		otel.UpDownSumObserverKind,
 	}
-	groupingKinds = []otel.Kind{
+	groupingKinds = []otel.InstrumentKind{
 		otel.ValueRecorderKind,
 		otel.ValueObserverKind,
 	}
 
-	monotonicKinds = []otel.Kind{
+	monotonicKinds = []otel.InstrumentKind{
 		otel.CounterKind,
 		otel.SumObserverKind,
 	}
 
-	nonMonotonicKinds = []otel.Kind{
+	nonMonotonicKinds = []otel.InstrumentKind{
 		otel.UpDownCounterKind,
 		otel.UpDownSumObserverKind,
 		otel.ValueRecorderKind,
 		otel.ValueObserverKind,
 	}
 
-	precomputedSumKinds = []otel.Kind{
+	precomputedSumKinds = []otel.InstrumentKind{
 		otel.SumObserverKind,
 		otel.UpDownSumObserverKind,
 	}
 
-	nonPrecomputedSumKinds = []otel.Kind{
+	nonPrecomputedSumKinds = []otel.InstrumentKind{
 		otel.CounterKind,
 		otel.UpDownCounterKind,
 		otel.ValueRecorderKind,

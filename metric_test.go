@@ -31,7 +31,7 @@ import (
 
 var Must = otel.Must
 
-func checkSyncBatches(ctx context.Context, t *testing.T, labels []label.KeyValue, mock *metrictest.MeterImpl, nkind otel.NumberKind, mkind otel.Kind, instrument otel.InstrumentImpl, expected ...float64) {
+func checkSyncBatches(ctx context.Context, t *testing.T, labels []label.KeyValue, mock *metrictest.MeterImpl, nkind otel.NumberKind, mkind otel.InstrumentKind, instrument otel.InstrumentImpl, expected ...float64) {
 	t.Helper()
 
 	batchesCount := len(mock.MeasurementBatches)
@@ -319,7 +319,7 @@ func TestBatchObserverInstruments(t *testing.T) {
 	require.Equal(t, 0, m2.Number.CompareNumber(otel.Float64NumberKind, metrictest.ResolveNumberByKind(t, otel.Float64NumberKind, 42)))
 }
 
-func checkObserverBatch(t *testing.T, labels []label.KeyValue, mock *metrictest.MeterImpl, nkind otel.NumberKind, mkind otel.Kind, observer otel.AsyncImpl, expected float64) {
+func checkObserverBatch(t *testing.T, labels []label.KeyValue, mock *metrictest.MeterImpl, nkind otel.NumberKind, mkind otel.InstrumentKind, observer otel.AsyncImpl, expected float64) {
 	t.Helper()
 	assert.Len(t, mock.MeasurementBatches, 1)
 	if len(mock.MeasurementBatches) < 1 {

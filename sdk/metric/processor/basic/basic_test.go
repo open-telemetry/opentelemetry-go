@@ -40,7 +40,7 @@ func TestProcessor(t *testing.T) {
 		kind export.ExportKind
 	}
 	type instrumentCase struct {
-		kind otel.Kind
+		kind otel.InstrumentKind
 	}
 	type numberCase struct {
 		kind otel.NumberKind
@@ -114,7 +114,7 @@ func updateFor(t *testing.T, desc *otel.Descriptor, selector export.AggregatorSe
 func testProcessor(
 	t *testing.T,
 	ekind export.ExportKind,
-	mkind otel.Kind,
+	mkind otel.InstrumentKind,
 	nkind otel.NumberKind,
 	akind aggregation.Kind,
 ) {

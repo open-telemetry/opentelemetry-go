@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate stringer -type=Kind
+//go:generate stringer -type=InstrumentKind
 
 package otel
 
-// Kind describes the kind of instrument.
-type Kind int8
+// InstrumentKind describes the kind of instrument.
+type InstrumentKind int8
 
 const (
 	// ValueRecorderKind indicates a ValueRecorder instrument.
-	ValueRecorderKind Kind = iota
+	ValueRecorderKind InstrumentKind = iota
 	// ValueObserverKind indicates an ValueObserver instrument.
 	ValueObserverKind
 
@@ -37,7 +37,7 @@ const (
 )
 
 // Synchronous returns whether this is a synchronous kind of instrument.
-func (k Kind) Synchronous() bool {
+func (k InstrumentKind) Synchronous() bool {
 	switch k {
 	case CounterKind, UpDownCounterKind, ValueRecorderKind:
 		return true
@@ -46,12 +46,12 @@ func (k Kind) Synchronous() bool {
 }
 
 // Asynchronous returns whether this is an asynchronous kind of instrument.
-func (k Kind) Asynchronous() bool {
+func (k InstrumentKind) Asynchronous() bool {
 	return !k.Synchronous()
 }
 
 // Adding returns whether this kind of instrument adds its inputs (as opposed to Grouping).
-func (k Kind) Adding() bool {
+func (k InstrumentKind) Adding() bool {
 	switch k {
 	case CounterKind, UpDownCounterKind, SumObserverKind, UpDownSumObserverKind:
 		return true
@@ -60,12 +60,12 @@ func (k Kind) Adding() bool {
 }
 
 // Adding returns whether this kind of instrument groups its inputs (as opposed to Adding).
-func (k Kind) Grouping() bool {
+func (k InstrumentKind) Grouping() bool {
 	return !k.Adding()
 }
 
 // Monotonic returns whether this kind of instrument exposes a non-decreasing sum.
-func (k Kind) Monotonic() bool {
+func (k InstrumentKind) Monotonic() bool {
 	switch k {
 	case CounterKind, SumObserverKind:
 		return true
@@ -74,6 +74,6 @@ func (k Kind) Monotonic() bool {
 }
 
 // Cumulative returns whether this kind of instrument receives precomputed sums.
-func (k Kind) PrecomputedSum() bool {
+func (k InstrumentKind) PrecomputedSum() bool {
 	return k.Adding() && k.Asynchronous()
 }
