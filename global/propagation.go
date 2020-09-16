@@ -12,29 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal_test
+package global
 
 import (
-	"os"
-	"testing"
-
-	"go.opentelemetry.io/otel/api/global/internal"
-	ottest "go.opentelemetry.io/otel/internal/testing"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/global/internal"
 )
 
-// Ensure struct alignment prior to running tests.
-func TestMain(m *testing.M) {
-	fieldsMap := internal.AtomicFieldOffsets()
-	fields := make([]ottest.FieldOffset, 0, len(fieldsMap))
-	for name, offset := range fieldsMap {
-		fields = append(fields, ottest.FieldOffset{
-			Name:   name,
-			Offset: offset,
-		})
-	}
-	if !ottest.Aligned8Byte(fields, os.Stderr) {
-		os.Exit(1)
-	}
+// Propagators returns the registered global propagators instance.  If
+// none is registered then an instance of propagators.NoopPropagators
+// is returned.
+func Propagators() otel.Propagators {
+	return internal.Propagators()
+}
 
-	os.Exit(m.Run())
+// SetPropagators registers `p` as the global propagators instance.
+func SetPropagators(p otel.Propagators) {
+	internal.SetPropagators(p)
 }

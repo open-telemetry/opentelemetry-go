@@ -22,8 +22,8 @@ import (
 
 	"google.golang.org/grpc/credentials"
 
-	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/exporters/otlp"
+	"go.opentelemetry.io/otel/global"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 

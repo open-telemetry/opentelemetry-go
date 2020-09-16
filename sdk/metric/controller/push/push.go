@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/registry"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"

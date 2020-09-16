@@ -23,7 +23,7 @@ import (
 	"os"
 	"time"
 
-	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/global"
 
 	"go.opentelemetry.io/otel/exporters/trace/zipkin"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"

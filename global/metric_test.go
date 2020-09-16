@@ -12,21 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global
+package global_test
 
 import (
+	"testing"
+
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global/internal"
+	"go.opentelemetry.io/otel/global"
 )
 
-// Propagators returns the registered global propagators instance.  If
-// none is registered then an instance of propagators.NoopPropagators
-// is returned.
-func Propagators() otel.Propagators {
-	return internal.Propagators()
+type testMeterProvider struct{}
+
+var _ otel.Provider = &testMeterProvider{}
+
+func (*testMeterProvider) Meter(_ string, _ ...otel.MeterOption) otel.Meter {
+	return otel.Meter{}
 }
 
-// SetPropagators registers `p` as the global propagators instance.
-func SetPropagators(p otel.Propagators) {
-	internal.SetPropagators(p)
+func TestMultipleGlobalMeterProvider(t *testing.T) {
+	p1 := testMeterProvider{}
+	p2 := otel.NoopProvider{}
+	global.SetMeterProvider(&p1)
+	global.SetMeterProvider(&p2)
+
+	got := global.MeterProvider()
+	want := &p2
+	if got != want {
+		t.Fatalf("Provider: got %p, want %p\n", got, want)
+	}
 }

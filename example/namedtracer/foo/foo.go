@@ -17,8 +17,8 @@ package foo
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
 )
 

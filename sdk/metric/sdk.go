@@ -23,7 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	api "go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
 	internal "go.opentelemetry.io/otel/metrictest"
 	export "go.opentelemetry.io/otel/sdk/export/metric"

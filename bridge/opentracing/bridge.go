@@ -26,9 +26,9 @@ import (
 	otlog "github.com/opentracing/opentracing-go/log"
 
 	"go.opentelemetry.io/otel"
-	otelglobal "go.opentelemetry.io/otel/api/global"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/codes"
+	otelglobal "go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/internal/trace/noop"
 	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
 	"go.opentelemetry.io/otel/label"
