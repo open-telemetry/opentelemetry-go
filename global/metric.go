@@ -20,7 +20,7 @@ import (
 )
 
 // Meter creates an implementation of the Meter interface from the global
-// Provider. The instrumentationName must be the name of the library
+// MeterProvider. The instrumentationName must be the name of the library
 // providing instrumentation. This name may be the same as the instrumented
 // code only if that code provides built-in instrumentation. If the
 // instrumentationName is empty, then a implementation defined default name

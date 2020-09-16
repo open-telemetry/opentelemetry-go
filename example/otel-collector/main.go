@@ -53,7 +53,7 @@ func initProvider() (*otlp.Exporter, *push.Controller) {
 	)
 	handleErr(err, "failed to create exporter")
 
-	tracerProvider := sdktrace.NewProvider(
+	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithResource(resource.New(
 			// the service name used to display traces in backends
@@ -72,7 +72,7 @@ func initProvider() (*otlp.Exporter, *push.Controller) {
 	)
 
 	global.SetTracerProvider(tracerProvider)
-	global.SetMeterProvider(pusher.Provider())
+	global.SetMeterProvider(pusher.MeterProvider())
 	pusher.Start()
 
 	return exp, pusher

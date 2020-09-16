@@ -30,13 +30,13 @@ import (
 // will be returned without gathering metric data again.
 const DefaultCachePeriod time.Duration = 10 * time.Second
 
-// Controller manages access to a *sdk.Accumulator and
-// *basic.Processor.  Use Provider() for obtaining Meters.  Use
-// Foreach() for accessing current records.
+// Controller manages access to a *sdk.Accumulator and *basic.Processor. Use
+// MeterProvider() for obtaining Meters. Use Foreach() for accessing current
+// records.
 type Controller struct {
 	accumulator  *sdk.Accumulator
 	checkpointer export.Checkpointer
-	provider     *registry.Provider
+	provider     *registry.MeterProvider
 	period       time.Duration
 	lastCollect  time.Time
 	clock        controllerTime.Clock
@@ -65,7 +65,7 @@ func New(checkpointer export.Checkpointer, options ...Option) *Controller {
 	return &Controller{
 		accumulator:  accum,
 		checkpointer: checkpointer,
-		provider:     registry.NewProvider(accum),
+		provider:     registry.NewMeterProvider(accum),
 		period:       config.CachePeriod,
 		checkpoint:   checkpointer.CheckpointSet(),
 		clock:        controllerTime.RealClock{},
@@ -79,9 +79,9 @@ func (c *Controller) SetClock(clock controllerTime.Clock) {
 	c.clock = clock
 }
 
-// Provider returns a otel.Provider for the implementation managed
+// MeterProvider returns a otel.MeterProvider for the implementation managed
 // by this controller.
-func (c *Controller) Provider() otel.MeterProvider {
+func (c *Controller) MeterProvider() otel.MeterProvider {
 	return c.provider
 }
 

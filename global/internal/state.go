@@ -24,7 +24,7 @@ import (
 
 type (
 	tracerProviderHolder struct {
-		tp otel.Provider
+		tp otel.TracerProvider
 	}
 
 	meterProviderHolder struct {
@@ -46,19 +46,19 @@ var (
 )
 
 // TracerProvider is the internal implementation for global.TracerProvider.
-func TracerProvider() otel.Provider {
+func TracerProvider() otel.TracerProvider {
 	return globalTracer.Load().(tracerProviderHolder).tp
 }
 
 // SetTracerProvider is the internal implementation for global.SetTracerProvider.
-func SetTracerProvider(tp otel.Provider) {
+func SetTracerProvider(tp otel.TracerProvider) {
 	delegateTraceOnce.Do(func() {
 		current := TracerProvider()
 		if current == tp {
 			// Setting the provider to the prior default is nonsense, panic.
 			// Panic is acceptable because we are likely still early in the
 			// process lifetime.
-			panic("invalid Provider, the global instance cannot be reinstalled")
+			panic("invalid TracerProvider, the global instance cannot be reinstalled")
 		} else if def, ok := current.(*tracerProvider); ok {
 			def.setDelegate(tp)
 		}
@@ -81,7 +81,7 @@ func SetMeterProvider(mp otel.MeterProvider) {
 			// Setting the provider to the prior default is nonsense, panic.
 			// Panic is acceptable because we are likely still early in the
 			// process lifetime.
-			panic("invalid Provider, the global instance cannot be reinstalled")
+			panic("invalid MeterProvider, the global instance cannot be reinstalled")
 		} else if def, ok := current.(*meterProvider); ok {
 			def.setDelegate(mp)
 		}

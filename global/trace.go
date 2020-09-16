@@ -34,11 +34,11 @@ func Tracer(name string) otel.Tracer {
 //     tracer := global.TracerProvider().Tracer("example.com/foo")
 // or
 //     tracer := global.Tracer("example.com/foo")
-func TracerProvider() otel.Provider {
+func TracerProvider() otel.TracerProvider {
 	return internal.TracerProvider()
 }
 
 // SetTracerProvider registers `tp` as the global trace provider.
-func SetTracerProvider(tp otel.Provider) {
+func SetTracerProvider(tp otel.TracerProvider) {
 	internal.SetTracerProvider(tp)
 }

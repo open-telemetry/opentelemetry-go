@@ -24,7 +24,7 @@ import (
 
 type testTracerProvider struct{}
 
-var _ otel.Provider = &testTracerProvider{}
+var _ otel.TracerProvider = &testTracerProvider{}
 
 func (*testTracerProvider) Tracer(_ string, _ ...otel.TracerOption) otel.Tracer {
 	return noop.Tracer

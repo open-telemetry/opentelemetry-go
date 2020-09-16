@@ -166,6 +166,6 @@ func traceBenchmark(b *testing.B, name string, fn func(*testing.B, otel.Tracer))
 }
 
 func tracer(b *testing.B, name string, sampler sdktrace.Sampler) otel.Tracer {
-	tp := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sampler}))
+	tp := sdktrace.NewTracerProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sampler}))
 	return tp.Tracer(name)
 }

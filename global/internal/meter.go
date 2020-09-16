@@ -25,18 +25,18 @@ import (
 	"go.opentelemetry.io/otel/registry"
 )
 
-// This file contains the forwarding implementation of metric.Provider
+// This file contains the forwarding implementation of otel.MeterProvider
 // used as the default global instance.  Metric events using instruments
 // provided by this implementation are no-ops until the first Meter
 // implementation is set as the global provider.
 //
 // The implementation here uses Mutexes to maintain a list of active
-// Meters in the Provider and Instruments in each Meter, under the
+// Meters in the MeterProvider and Instruments in each Meter, under the
 // assumption that these interfaces are not performance-critical.
 //
 // We have the invariant that setDelegate() will be called before a
-// new metric.Provider implementation is registered as the global
-// provider.  Mutexes in the Provider and Meters ensure that each
+// new otel.MeterProvider implementation is registered as the global
+// provider. Mutexes in the MeterProvider and Meters ensure that each
 // instrument has a delegate before the global provider is set.
 //
 // Bound instrument operations are implemented by delegating to the
@@ -123,7 +123,7 @@ func (inst *instrument) Descriptor() otel.Descriptor {
 	return inst.descriptor
 }
 
-// Provider interface and delegation
+// MeterProvider interface and delegation
 
 func newMeterProvider() *meterProvider {
 	return &meterProvider{

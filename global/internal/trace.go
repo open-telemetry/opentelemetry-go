@@ -15,15 +15,16 @@
 package internal
 
 /*
-This file contains the forwarding implementation of the otel.Provider used as
-the default global instance. Prior to initialization of an SDK, Tracers
-returned by the global Provider will provide no-op functionality. This means
-that all Span created prior to initialization are no-op Spans.
+This file contains the forwarding implementation of the otel.TracerProvider
+used as the default global instance. Prior to initialization of an SDK,
+Tracers returned by the global TracerProvider will provide no-op
+functionality. This means that all Span created prior to initialization are
+no-op Spans.
 
 Once an SDK has been initialized, all provided no-op Tracers are swapped for
-Tracers provided by the SDK defined Provider. However, any Span started prior
-to this initialization does not change its behavior. Meaning, the Span remains
-a no-op Span.
+Tracers provided by the SDK defined TracerProvider. However, any Span started
+prior to this initialization does not change its behavior. Meaning, the Span
+remains a no-op Span.
 
 The implementation to track and swap Tracers locks all new Tracer creation
 until the swap is complete. This assumes that this operation is not
@@ -39,27 +40,29 @@ import (
 	"go.opentelemetry.io/otel/internal/trace/noop"
 )
 
-// tracerProvider is a placeholder for a configured SDK Provider.
+// tracerProvider is a placeholder for a configured SDK TracerProvider.
 //
-// All Provider functionality is forwarded to a delegate once configured.
+// All TracerProvider functionality is forwarded to a delegate once configured.
 type tracerProvider struct {
 	mtx     sync.Mutex
 	tracers []*tracer
 
-	delegate otel.Provider
+	delegate otel.TracerProvider
 }
 
-// Compile-time guarantee that tracerProvider implements the otel.Provider interface.
-var _ otel.Provider = &tracerProvider{}
+// Compile-time guarantee that tracerProvider implements the
+// otel.TracerProvider interface.
+var _ otel.TracerProvider = &tracerProvider{}
 
-// setDelegate configures p to delegate all Provider functionality to provider.
+// setDelegate configures p to delegate all TracerProvider functionality to
+// provider.
 //
 // All Tracers provided prior to this function call are switched out to be
 // Tracers provided by provider.
 //
 // Delegation only happens on the first call to this method. All subsequent
 // calls result in no delegation changes.
-func (p *tracerProvider) setDelegate(provider otel.Provider) {
+func (p *tracerProvider) setDelegate(provider otel.TracerProvider) {
 	if p.delegate != nil {
 		return
 	}
@@ -75,7 +78,7 @@ func (p *tracerProvider) setDelegate(provider otel.Provider) {
 	p.tracers = nil
 }
 
-// Tracer implements otel.Provider.
+// Tracer implements otel.TracerProvider.
 func (p *tracerProvider) Tracer(name string, opts ...otel.TracerOption) otel.Tracer {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
@@ -111,7 +114,7 @@ var _ otel.Tracer = &tracer{}
 //
 // Delegation only happens on the first call to this method. All subsequent
 // calls result in no delegation changes.
-func (t *tracer) setDelegate(provider otel.Provider) {
+func (t *tracer) setDelegate(provider otel.TracerProvider) {
 	t.once.Do(func() { t.delegate = provider.Tracer(t.name, t.opts...) })
 }
 

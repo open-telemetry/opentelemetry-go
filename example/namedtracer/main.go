@@ -33,7 +33,7 @@ var (
 	anotherKey = label.Key("ex.com/another")
 )
 
-var tp *sdktrace.Provider
+var tp *sdktrace.TracerProvider
 
 // initTracer creates and registers trace provider instance.
 func initTracer() {
@@ -43,7 +43,7 @@ func initTracer() {
 		log.Panicf("failed to initialize stdout exporter %v\n", err)
 		return
 	}
-	tp = sdktrace.NewProvider(
+	tp = sdktrace.NewTracerProvider(
 		sdktrace.WithConfig(
 			sdktrace.Config{
 				DefaultSampler: sdktrace.AlwaysSample(),

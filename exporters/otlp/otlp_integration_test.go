@@ -86,7 +86,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		}
 	}()
 
-	pOpts := []sdktrace.ProviderOption{
+	pOpts := []sdktrace.TracerProviderOption{
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithBatcher(
 			exp,
@@ -95,13 +95,13 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	}
-	tp1 := sdktrace.NewProvider(append(pOpts,
+	tp1 := sdktrace.NewTracerProvider(append(pOpts,
 		sdktrace.WithResource(resource.New(
 			label.String("rk1", "rv11)"),
 			label.Int64("rk2", 5),
 		)))...)
 
-	tp2 := sdktrace.NewProvider(append(pOpts,
+	tp2 := sdktrace.NewTracerProvider(append(pOpts,
 		sdktrace.WithResource(resource.New(
 			label.String("rk1", "rv12)"),
 			label.Float32("rk3", 6.5),
@@ -127,7 +127,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	pusher.Start()
 
 	ctx := context.Background()
-	meter := pusher.Provider().Meter("test-meter")
+	meter := pusher.MeterProvider().Meter("test-meter")
 	labels := []label.KeyValue{label.Bool("test", true)}
 
 	type data struct {
@@ -462,7 +462,7 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 		_ = exp.Shutdown(context.Background())
 	}()
 
-	tp := sdktrace.NewProvider(
+	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithBatcher(
 			exp,

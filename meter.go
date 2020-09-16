@@ -22,7 +22,7 @@ import (
 
 // The file is organized as follows:
 //
-//  - Provider interface
+//  - MeterProvider interface
 //  - Meter struct
 //  - RecordBatch
 //  - BatchObserver
@@ -31,7 +31,6 @@ import (
 //  - Batch asynchronous constructors (1 x int64,float64)
 //  - Internals
 
-// FIXME: rename to MeterProvider
 // MeterProvider supports named Meter instances.
 type MeterProvider interface {
 	// Meter creates an implementation of the Meter interface.

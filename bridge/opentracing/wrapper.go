@@ -25,7 +25,7 @@ type WrapperProvider struct {
 	wTracer *WrapperTracer
 }
 
-var _ otel.Provider = (*WrapperProvider)(nil)
+var _ otel.TracerProvider = (*WrapperProvider)(nil)
 
 // Tracer returns the WrapperTracer associated with the WrapperProvider.
 func (p *WrapperProvider) Tracer(_ string, _ ...otel.TracerOption) otel.Tracer {

@@ -32,7 +32,7 @@ import (
 
 func TestSpan(t *testing.T) {
 	t.Run("#Tracer", func(t *testing.T) {
-		tp := tracetest.NewProvider()
+		tp := tracetest.NewTracerProvider()
 		t.Run("returns the tracer used to start the span", func(t *testing.T) {
 			t.Parallel()
 
@@ -46,7 +46,7 @@ func TestSpan(t *testing.T) {
 	})
 
 	t.Run("#End", func(t *testing.T) {
-		tp := tracetest.NewProvider()
+		tp := tracetest.NewTracerProvider()
 		t.Run("ends the span", func(t *testing.T) {
 			t.Parallel()
 
@@ -125,7 +125,7 @@ func TestSpan(t *testing.T) {
 	})
 
 	t.Run("#RecordError", func(t *testing.T) {
-		tp := tracetest.NewProvider()
+		tp := tracetest.NewTracerProvider()
 		t.Run("records an error", func(t *testing.T) {
 			t.Parallel()
 
@@ -236,7 +236,7 @@ func TestSpan(t *testing.T) {
 	})
 
 	t.Run("#IsRecording", func(t *testing.T) {
-		tp := tracetest.NewProvider()
+		tp := tracetest.NewTracerProvider()
 		t.Run("returns true", func(t *testing.T) {
 			t.Parallel()
 
@@ -250,7 +250,7 @@ func TestSpan(t *testing.T) {
 	})
 
 	t.Run("#SpanContext", func(t *testing.T) {
-		tp := tracetest.NewProvider()
+		tp := tracetest.NewTracerProvider()
 		t.Run("returns a valid SpanContext", func(t *testing.T) {
 			t.Parallel()
 
@@ -275,7 +275,7 @@ func TestSpan(t *testing.T) {
 	})
 
 	t.Run("#Name", func(t *testing.T) {
-		tp := tracetest.NewProvider()
+		tp := tracetest.NewTracerProvider()
 		t.Run("returns the most recently set name on the span", func(t *testing.T) {
 			t.Parallel()
 
@@ -319,7 +319,7 @@ func TestSpan(t *testing.T) {
 	})
 
 	t.Run("#Attributes", func(t *testing.T) {
-		tp := tracetest.NewProvider()
+		tp := tracetest.NewTracerProvider()
 		t.Run("returns an empty map by default", func(t *testing.T) {
 			t.Parallel()
 
@@ -415,7 +415,7 @@ func TestSpan(t *testing.T) {
 	})
 
 	t.Run("#Links", func(t *testing.T) {
-		tp := tracetest.NewProvider()
+		tp := tracetest.NewTracerProvider()
 		t.Run("returns an empty map by default", func(t *testing.T) {
 			t.Parallel()
 
@@ -432,7 +432,7 @@ func TestSpan(t *testing.T) {
 	})
 
 	t.Run("#Events", func(t *testing.T) {
-		tp := tracetest.NewProvider()
+		tp := tracetest.NewTracerProvider()
 		t.Run("returns an empty slice by default", func(t *testing.T) {
 			t.Parallel()
 
@@ -526,7 +526,7 @@ func TestSpan(t *testing.T) {
 	})
 
 	t.Run("#Status", func(t *testing.T) {
-		tp := tracetest.NewProvider()
+		tp := tracetest.NewTracerProvider()
 		t.Run("defaults to OK", func(t *testing.T) {
 			t.Parallel()
 
@@ -608,7 +608,7 @@ func TestSpan(t *testing.T) {
 	})
 
 	t.Run("#SpanKind", func(t *testing.T) {
-		tp := tracetest.NewProvider()
+		tp := tracetest.NewTracerProvider()
 		t.Run("returns the value given at start", func(t *testing.T) {
 			t.Parallel()
 

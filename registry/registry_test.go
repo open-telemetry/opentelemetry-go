@@ -72,7 +72,7 @@ func unwrap(impl interface{}, err error) (otel.InstrumentImpl, error) {
 
 func TestRegistrySameInstruments(t *testing.T) {
 	for _, nf := range allNew {
-		_, provider := metrictest.NewProvider()
+		_, provider := metrictest.NewMeterProvider()
 
 		meter := provider.Meter("meter")
 		inst1, err1 := nf(meter, "this")
@@ -86,7 +86,7 @@ func TestRegistrySameInstruments(t *testing.T) {
 
 func TestRegistryDifferentNamespace(t *testing.T) {
 	for _, nf := range allNew {
-		_, provider := metrictest.NewProvider()
+		_, provider := metrictest.NewMeterProvider()
 
 		meter1 := provider.Meter("meter1")
 		meter2 := provider.Meter("meter2")
@@ -101,7 +101,7 @@ func TestRegistryDifferentNamespace(t *testing.T) {
 
 func TestRegistryDiffInstruments(t *testing.T) {
 	for origName, origf := range allNew {
-		_, provider := metrictest.NewProvider()
+		_, provider := metrictest.NewMeterProvider()
 		meter := provider.Meter("meter")
 
 		_, err := origf(meter, "this")
@@ -122,7 +122,7 @@ func TestRegistryDiffInstruments(t *testing.T) {
 
 func TestProvider(t *testing.T) {
 	impl, _ := metrictest.NewMeter()
-	p := registry.NewProvider(impl)
+	p := registry.NewMeterProvider(impl)
 	m1 := p.Meter("m1")
 	m1p := p.Meter("m1")
 	m2 := p.Meter("m2")

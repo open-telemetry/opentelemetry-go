@@ -16,16 +16,16 @@ package otel
 
 type noopProvider struct{}
 
-var _ Provider = noopProvider{}
+var _ TracerProvider = noopProvider{}
 
 // Tracer returns noop implementation of Tracer.
 func (p noopProvider) Tracer(_ string, _ ...TracerOption) Tracer {
 	return noopTracer{}
 }
 
-// NoopProvider returns a noop implementation of Provider.
+// NoopProvider returns a noop implementation of TracerProvider.
 // The Tracer and Spans created from the noop provider will
 // also be noop.
-func NoopProvider() Provider {
+func NoopProvider() TracerProvider {
 	return noopProvider{}
 }

@@ -50,17 +50,17 @@ func TestInstallNewPipeline(t *testing.T) {
 		name             string
 		endpoint         EndpointOption
 		options          []Option
-		expectedProvider otel.Provider
+		expectedProvider otel.TracerProvider
 	}{
 		{
 			name:             "simple pipeline",
 			endpoint:         WithCollectorEndpoint(collectorEndpoint),
-			expectedProvider: &sdktrace.Provider{},
+			expectedProvider: &sdktrace.TracerProvider{},
 		},
 		{
 			name:             "with agent endpoint",
 			endpoint:         WithAgentEndpoint(agentEndpoint),
-			expectedProvider: &sdktrace.Provider{},
+			expectedProvider: &sdktrace.TracerProvider{},
 		},
 		{
 			name:     "with disabled",
@@ -93,13 +93,13 @@ func TestNewExportPipeline(t *testing.T) {
 		name                                  string
 		endpoint                              EndpointOption
 		options                               []Option
-		expectedProviderType                  otel.Provider
+		expectedProviderType                  otel.TracerProvider
 		testSpanSampling, spanShouldBeSampled bool
 	}{
 		{
 			name:                 "simple pipeline",
 			endpoint:             WithCollectorEndpoint(collectorEndpoint),
-			expectedProviderType: &sdktrace.Provider{},
+			expectedProviderType: &sdktrace.TracerProvider{},
 		},
 		{
 			name:     "with disabled",
@@ -117,7 +117,7 @@ func TestNewExportPipeline(t *testing.T) {
 					DefaultSampler: sdktrace.AlwaysSample(),
 				}),
 			},
-			expectedProviderType: &sdktrace.Provider{},
+			expectedProviderType: &sdktrace.TracerProvider{},
 			testSpanSampling:     true,
 			spanShouldBeSampled:  true,
 		},
@@ -129,7 +129,7 @@ func TestNewExportPipeline(t *testing.T) {
 					DefaultSampler: sdktrace.NeverSample(),
 				}),
 			},
-			expectedProviderType: &sdktrace.Provider{},
+			expectedProviderType: &sdktrace.TracerProvider{},
 			testSpanSampling:     true,
 			spanShouldBeSampled:  false,
 		},
@@ -338,7 +338,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	tp := sdktrace.NewProvider(
+	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithSyncer(exp),
 	)

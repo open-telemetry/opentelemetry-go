@@ -134,7 +134,7 @@ func InstallNewPipeline(config Config, options ...pull.Option) (*Exporter, error
 	if err != nil {
 		return nil, err
 	}
-	global.SetMeterProvider(exp.Provider())
+	global.SetMeterProvider(exp.MeterProvider())
 	return exp, nil
 }
 
@@ -154,9 +154,9 @@ func (e *Exporter) SetController(config Config, options ...pull.Option) {
 	)
 }
 
-// Provider returns the otel.Provider of this exporter.
-func (e *Exporter) Provider() otel.MeterProvider {
-	return e.controller.Provider()
+// MeterProvider returns the otel.MeterProvider of this exporter.
+func (e *Exporter) MeterProvider() otel.MeterProvider {
+	return e.controller.MeterProvider()
 }
 
 // Controller returns the controller object that coordinates collection for the SDK.

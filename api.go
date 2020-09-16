@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/otel/label"
 )
 
-type Provider interface {
+type TracerProvider interface {
 	// Tracer creates an implementation of the Tracer interface.
 	// The instrumentationName must be the name of the library providing
 	// instrumentation. This name may be the same as the instrumented code

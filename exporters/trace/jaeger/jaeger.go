@@ -151,7 +151,7 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 
 // NewExportPipeline sets up a complete export pipeline
 // with the recommended setup for trace provider
-func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (otel.Provider, func(), error) {
+func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (otel.TracerProvider, func(), error) {
 	o := options{}
 	opts = append(opts, WithDisabledFromEnv())
 	for _, opt := range opts {
@@ -166,11 +166,11 @@ func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (otel.Prov
 		return nil, nil, err
 	}
 
-	pOpts := []sdktrace.ProviderOption{sdktrace.WithSyncer(exporter)}
+	pOpts := []sdktrace.TracerProviderOption{sdktrace.WithSyncer(exporter)}
 	if exporter.o.Config != nil {
 		pOpts = append(pOpts, sdktrace.WithConfig(*exporter.o.Config))
 	}
-	tp := sdktrace.NewProvider(pOpts...)
+	tp := sdktrace.NewTracerProvider(pOpts...)
 	return tp, exporter.Flush, nil
 }
 
