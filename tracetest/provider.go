@@ -17,7 +17,7 @@ package tracetest
 import (
 	"sync"
 
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
 )
 
 type Provider struct {
@@ -27,7 +27,7 @@ type Provider struct {
 	tracers   map[instrumentation]*Tracer
 }
 
-var _ trace.Provider = (*Provider)(nil)
+var _ otel.Provider = (*Provider)(nil)
 
 func NewProvider(opts ...Option) *Provider {
 	return &Provider{
@@ -40,8 +40,8 @@ type instrumentation struct {
 	Name, Version string
 }
 
-func (p *Provider) Tracer(instName string, opts ...trace.TracerOption) trace.Tracer {
-	conf := trace.NewTracerConfig(opts...)
+func (p *Provider) Tracer(instName string, opts ...otel.TracerOption) otel.Tracer {
+	conf := otel.NewTracerConfig(opts...)
 
 	inst := instrumentation{
 		Name:    instName,

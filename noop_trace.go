@@ -12,28 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tracetest_test
+package otel
 
 import (
-	"os"
-	"testing"
-	"unsafe"
-
-	"go.opentelemetry.io/otel/api/trace/tracetest"
-	ottest "go.opentelemetry.io/otel/internal/testing"
+	"context"
 )
 
-// Ensure struct alignment prior to running tests.
-func TestMain(m *testing.M) {
-	fields := []ottest.FieldOffset{
-		{
-			Name:   "MockTracer.StartSpanID",
-			Offset: unsafe.Offsetof(tracetest.MockTracer{}.StartSpanID),
-		},
-	}
-	if !ottest.Aligned8Byte(fields, os.Stderr) {
-		os.Exit(1)
-	}
+type noopTracer struct{}
 
-	os.Exit(m.Run())
+var _ Tracer = noopTracer{}
+
+// Start starts a noop span.
+func (noopTracer) Start(ctx context.Context, name string, opts ...SpanOption) (context.Context, Span) {
+	span := noopSpan{}
+	return ContextWithSpan(ctx, span), span
 }

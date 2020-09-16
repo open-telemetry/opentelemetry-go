@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace_test
+package otel_test
 
 import (
 	"context"
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/internal/trace/noop"
 	"go.opentelemetry.io/otel/label"
@@ -30,10 +30,10 @@ func TestSetCurrentSpanOverridesPreviouslySetSpan(t *testing.T) {
 	originalSpan := noop.Span
 	expectedSpan := mockSpan{}
 
-	ctx = trace.ContextWithSpan(ctx, originalSpan)
-	ctx = trace.ContextWithSpan(ctx, expectedSpan)
+	ctx = otel.ContextWithSpan(ctx, originalSpan)
+	ctx = otel.ContextWithSpan(ctx, expectedSpan)
 
-	if span := trace.SpanFromContext(ctx); span != expectedSpan {
+	if span := otel.SpanFromContext(ctx); span != expectedSpan {
 		t.Errorf("Want: %v, but have: %v", expectedSpan, span)
 	}
 }
@@ -42,7 +42,7 @@ func TestCurrentSpan(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
 		ctx  context.Context
-		want trace.Span
+		want otel.Span
 	}{
 		{
 			name: "CurrentSpan() returns a NoopSpan{} from an empty context",
@@ -51,13 +51,13 @@ func TestCurrentSpan(t *testing.T) {
 		},
 		{
 			name: "CurrentSpan() returns current span if set",
-			ctx:  trace.ContextWithSpan(context.Background(), mockSpan{}),
+			ctx:  otel.ContextWithSpan(context.Background(), mockSpan{}),
 			want: mockSpan{},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			// proto: CurrentSpan(ctx context.Context) trace.Span
-			have := trace.SpanFromContext(testcase.ctx)
+			// proto: CurrentSpan(ctx context.Context) otel.Span
+			have := otel.SpanFromContext(testcase.ctx)
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
 			}
@@ -65,14 +65,14 @@ func TestCurrentSpan(t *testing.T) {
 	}
 }
 
-// a duplicate of trace.NoopSpan for testing
+// a duplicate of otel.NoopSpan for testing
 type mockSpan struct{}
 
-var _ trace.Span = mockSpan{}
+var _ otel.Span = mockSpan{}
 
 // SpanContext returns an invalid span context.
-func (mockSpan) SpanContext() trace.SpanContext {
-	return trace.EmptySpanContext()
+func (mockSpan) SpanContext() otel.SpanContext {
+	return otel.EmptySpanContext()
 }
 
 // IsRecording always returns false for mockSpan.
@@ -101,15 +101,15 @@ func (mockSpan) SetAttribute(k string, v interface{}) {
 }
 
 // End does nothing.
-func (mockSpan) End(options ...trace.SpanOption) {
+func (mockSpan) End(options ...otel.SpanOption) {
 }
 
 // RecordError does nothing.
-func (mockSpan) RecordError(ctx context.Context, err error, opts ...trace.ErrorOption) {
+func (mockSpan) RecordError(ctx context.Context, err error, opts ...otel.ErrorOption) {
 }
 
 // Tracer returns noop implementation of Tracer.
-func (mockSpan) Tracer() trace.Tracer {
+func (mockSpan) Tracer() otel.Tracer {
 	return noop.Tracer
 }
 

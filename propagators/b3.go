@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/trace"
 )
 
 const (
@@ -44,7 +43,7 @@ const (
 )
 
 var (
-	empty = trace.EmptySpanContext()
+	empty = otel.EmptySpanContext()
 
 	errInvalidSampledByte        = errors.New("invalid B3 Sampled found")
 	errInvalidSampledHeader      = errors.New("invalid B3 Sampled header found")
@@ -98,7 +97,7 @@ var _ otel.HTTPPropagator = B3{}
 // The parent span ID is omitted because it is not tracked in the
 // SpanContext.
 func (b3 B3) Inject(ctx context.Context, supplier otel.HTTPSupplier) {
-	sc := trace.SpanFromContext(ctx).SpanContext()
+	sc := otel.SpanFromContext(ctx).SpanContext()
 
 	if b3.InjectEncoding.supports(B3SingleHeader) {
 		header := []string{}
@@ -142,7 +141,7 @@ func (b3 B3) Inject(ctx context.Context, supplier otel.HTTPSupplier) {
 // headers.
 func (b3 B3) Extract(ctx context.Context, supplier otel.HTTPSupplier) context.Context {
 	var (
-		sc  trace.SpanContext
+		sc  otel.SpanContext
 		err error
 	)
 
@@ -150,7 +149,7 @@ func (b3 B3) Extract(ctx context.Context, supplier otel.HTTPSupplier) context.Co
 	if h := supplier.Get(b3ContextHeader); h != "" {
 		sc, err = extractSingle(h)
 		if err == nil && sc.IsValid() {
-			return trace.ContextWithRemoteSpanContext(ctx, sc)
+			return otel.ContextWithRemoteSpanContext(ctx, sc)
 		}
 		// The Single Header value was invalid, fallback to Multiple Header.
 	}
@@ -166,7 +165,7 @@ func (b3 B3) Extract(ctx context.Context, supplier otel.HTTPSupplier) context.Co
 	if err != nil || !sc.IsValid() {
 		return ctx
 	}
-	return trace.ContextWithRemoteSpanContext(ctx, sc)
+	return otel.ContextWithRemoteSpanContext(ctx, sc)
 }
 
 // GetAllKeys returns the HTTP header names this propagator will use when
@@ -186,11 +185,11 @@ func (b3 B3) GetAllKeys() []string {
 // Multiple header. It is based on the implementation found here:
 // https://github.com/openzipkin/zipkin-go/blob/v0.2.2/propagation/b3/spancontext.go
 // and adapted to support a SpanContext.
-func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (trace.SpanContext, error) {
+func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (otel.SpanContext, error) {
 	var (
 		err           error
 		requiredCount int
-		sc            = trace.SpanContext{}
+		sc            = otel.SpanContext{}
 	)
 
 	// correct values for an existing sampled header are "0" and "1".
@@ -200,9 +199,9 @@ func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (trac
 	case "0", "false":
 		// Zero value for TraceFlags sample bit is unset.
 	case "1", "true":
-		sc.TraceFlags = trace.FlagsSampled
+		sc.TraceFlags = otel.FlagsSampled
 	case "":
-		sc.TraceFlags = trace.FlagsDeferred
+		sc.TraceFlags = otel.FlagsDeferred
 	default:
 		return empty, errInvalidSampledHeader
 	}
@@ -210,7 +209,7 @@ func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (trac
 	// The only accepted value for Flags is "1". This will set Debug to
 	// true. All other values and omission of header will be ignored.
 	if flags == "1" {
-		sc.TraceFlags |= trace.FlagsDebug
+		sc.TraceFlags |= otel.FlagsDebug
 	}
 
 	if traceID != "" {
@@ -220,14 +219,14 @@ func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (trac
 			// Pad 64-bit trace IDs.
 			id = b3TraceIDPadding + traceID
 		}
-		if sc.TraceID, err = trace.IDFromHex(id); err != nil {
+		if sc.TraceID, err = otel.IDFromHex(id); err != nil {
 			return empty, errInvalidTraceIDHeader
 		}
 	}
 
 	if spanID != "" {
 		requiredCount++
-		if sc.SpanID, err = trace.SpanIDFromHex(spanID); err != nil {
+		if sc.SpanID, err = otel.SpanIDFromHex(spanID); err != nil {
 			return empty, errInvalidSpanIDHeader
 		}
 	}
@@ -241,7 +240,7 @@ func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (trac
 			return empty, errInvalidScopeParent
 		}
 		// Validate parent span ID but we do not use it so do not save it.
-		if _, err = trace.SpanIDFromHex(parentSpanID); err != nil {
+		if _, err = otel.SpanIDFromHex(parentSpanID); err != nil {
 			return empty, errInvalidParentSpanIDHeader
 		}
 	}
@@ -253,13 +252,13 @@ func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (trac
 // Single header. It is based on the implementation found here:
 // https://github.com/openzipkin/zipkin-go/blob/v0.2.2/propagation/b3/spancontext.go
 // and adapted to support a SpanContext.
-func extractSingle(contextHeader string) (trace.SpanContext, error) {
+func extractSingle(contextHeader string) (otel.SpanContext, error) {
 	if contextHeader == "" {
 		return empty, errEmptyContext
 	}
 
 	var (
-		sc       = trace.SpanContext{}
+		sc       = otel.SpanContext{}
 		sampling string
 	)
 
@@ -285,13 +284,13 @@ func extractSingle(contextHeader string) (trace.SpanContext, error) {
 			return empty, errInvalidTraceIDValue
 		}
 		var err error
-		sc.TraceID, err = trace.IDFromHex(traceID)
+		sc.TraceID, err = otel.IDFromHex(traceID)
 		if err != nil {
 			return empty, errInvalidTraceIDValue
 		}
 		pos += separatorWidth // {traceID}-
 
-		sc.SpanID, err = trace.SpanIDFromHex(contextHeader[pos : pos+spanIDWidth])
+		sc.SpanID, err = otel.SpanIDFromHex(contextHeader[pos : pos+spanIDWidth])
 		if err != nil {
 			return empty, errInvalidSpanIDValue
 		}
@@ -315,7 +314,7 @@ func extractSingle(contextHeader string) (trace.SpanContext, error) {
 
 				// Validate parent span ID but we do not use it so do not
 				// save it.
-				_, err = trace.SpanIDFromHex(contextHeader[pos:])
+				_, err = otel.SpanIDFromHex(contextHeader[pos:])
 				if err != nil {
 					return empty, errInvalidParentSpanIDValue
 				}
@@ -328,11 +327,11 @@ func extractSingle(contextHeader string) (trace.SpanContext, error) {
 	}
 	switch sampling {
 	case "":
-		sc.TraceFlags = trace.FlagsDeferred
+		sc.TraceFlags = otel.FlagsDeferred
 	case "d":
-		sc.TraceFlags = trace.FlagsDebug
+		sc.TraceFlags = otel.FlagsDebug
 	case "1":
-		sc.TraceFlags = trace.FlagsSampled
+		sc.TraceFlags = otel.FlagsSampled
 	case "0":
 		// Zero value for TraceFlags sample bit is unset.
 	default:

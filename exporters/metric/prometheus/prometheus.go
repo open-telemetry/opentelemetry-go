@@ -155,7 +155,7 @@ func (e *Exporter) SetController(config Config, options ...pull.Option) {
 }
 
 // Provider returns the otel.Provider of this exporter.
-func (e *Exporter) Provider() otel.Provider {
+func (e *Exporter) Provider() otel.MeterProvider {
 	return e.controller.Provider()
 }
 

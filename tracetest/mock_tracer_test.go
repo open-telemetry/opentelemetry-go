@@ -12,4 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tracetest // import "go.opentelemetry.io/otel/api/trace/tracetest"
+package tracetest_test
+
+import (
+	"os"
+	"testing"
+	"unsafe"
+
+	ottest "go.opentelemetry.io/otel/internal/testing"
+	"go.opentelemetry.io/otel/tracetest"
+)
+
+// Ensure struct alignment prior to running tests.
+func TestMain(m *testing.M) {
+	fields := []ottest.FieldOffset{
+		{
+			Name:   "MockTracer.StartSpanID",
+			Offset: unsafe.Offsetof(tracetest.MockTracer{}.StartSpanID),
+		},
+	}
+	if !ottest.Aligned8Byte(fields, os.Stderr) {
+		os.Exit(1)
+	}
+
+	os.Exit(m.Run())
+}

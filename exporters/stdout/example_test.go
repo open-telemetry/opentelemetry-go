@@ -19,7 +19,6 @@ import (
 	"log"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
@@ -33,7 +32,7 @@ const (
 var (
 	tracer = global.TracerProvider().Tracer(
 		instrumentationName,
-		trace.WithInstrumentationVersion(instrumentationVersion),
+		otel.WithInstrumentationVersion(instrumentationVersion),
 	)
 
 	meter = global.MeterProvider().Meter(
@@ -50,7 +49,7 @@ var (
 func add(ctx context.Context, x, y int64) int64 {
 	nameKV := nameKey.String("add")
 
-	var span trace.Span
+	var span otel.Span
 	ctx, span = tracer.Start(ctx, "Addition")
 	defer span.End()
 
@@ -64,7 +63,7 @@ func add(ctx context.Context, x, y int64) int64 {
 func multiply(ctx context.Context, x, y int64) int64 {
 	nameKV := nameKey.String("multiply")
 
-	var span trace.Span
+	var span otel.Span
 	ctx, span = tracer.Start(ctx, "Multiplication")
 	defer span.End()
 

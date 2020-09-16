@@ -14,12 +14,6 @@
 
 package otel
 
-import (
-	"go.opentelemetry.io/otel/api/trace"
-)
-
-type Tracer = trace.Tracer
-
 // ErrorHandler handles irremediable events.
 type ErrorHandler interface {
 	// Handle handles any error deemed irremediable by an OpenTelemetry

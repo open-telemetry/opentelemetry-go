@@ -26,7 +26,6 @@ import (
 	"google.golang.org/grpc"
 
 	"go.opentelemetry.io/otel"
-	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
@@ -111,7 +110,7 @@ func main() {
 	ctx, span := tracer.Start(
 		context.Background(),
 		"CollectorExporter-Example",
-		apitrace.WithAttributes(commonLabels...))
+		otel.WithAttributes(commonLabels...))
 	for i := 0; i < 10; i++ {
 		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))
 		log.Printf("Doing really hard work (%d / 10)\n", i+1)

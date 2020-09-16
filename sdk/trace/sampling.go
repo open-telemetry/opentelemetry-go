@@ -18,7 +18,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	api "go.opentelemetry.io/otel/api/trace"
+	api "go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 )
 
@@ -76,7 +76,7 @@ func (ts traceIDRatioSampler) Description() string {
 // always sample. Fractions < 0 are treated as zero. To respect the
 // parent trace's `SampledFlag`, the `TraceIDRatioBased` sampler should be used
 // as a delegate of a `Parent` sampler.
-//nolint:golint // golint complains about stutter of `trace.TraceIDRatioBased`
+//nolint:golint // golint complains about stutter of `otel.TraceIDRatioBased`
 func TraceIDRatioBased(fraction float64) Sampler {
 	if fraction >= 1 {
 		return AlwaysSample()
@@ -102,7 +102,7 @@ func (as alwaysOnSampler) Description() string {
 	return "AlwaysOnSampler"
 }
 
-// AlwaysSample returns a Sampler that samples every trace.
+// AlwaysSample returns a Sampler that samples every otel.
 // Be careful about using this sampler in a production application with
 // significant traffic: a new trace will be started and exported for every
 // request.

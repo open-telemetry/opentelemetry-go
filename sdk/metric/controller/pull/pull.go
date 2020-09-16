@@ -81,7 +81,7 @@ func (c *Controller) SetClock(clock controllerTime.Clock) {
 
 // Provider returns a otel.Provider for the implementation managed
 // by this controller.
-func (c *Controller) Provider() otel.Provider {
+func (c *Controller) Provider() otel.MeterProvider {
 	return c.provider
 }
 

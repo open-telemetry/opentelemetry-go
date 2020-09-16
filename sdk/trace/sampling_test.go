@@ -21,7 +21,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	api "go.opentelemetry.io/otel/api/trace"
+	api "go.opentelemetry.io/otel"
 )
 
 func TestParentBasedDefaultLocalParentSampled(t *testing.T) {

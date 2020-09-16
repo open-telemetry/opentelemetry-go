@@ -12,5 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package trace provides tracing support.
-package trace // import "go.opentelemetry.io/otel/api/trace"
+package otel
+
+type noopProvider struct{}
+
+var _ Provider = noopProvider{}
+
+// Tracer returns noop implementation of Tracer.
+func (p noopProvider) Tracer(_ string, _ ...TracerOption) Tracer {
+	return noopTracer{}
+}
+
+// NoopProvider returns a noop implementation of Provider.
+// The Tracer and Spans created from the noop provider will
+// also be noop.
+func NoopProvider() Provider {
+	return noopProvider{}
+}

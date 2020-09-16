@@ -29,8 +29,7 @@ import (
 	"google.golang.org/api/support/bundler"
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/api/trace"
-	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 	"go.opentelemetry.io/otel/global"
 	ottest "go.opentelemetry.io/otel/internal/testing"
@@ -51,7 +50,7 @@ func TestInstallNewPipeline(t *testing.T) {
 		name             string
 		endpoint         EndpointOption
 		options          []Option
-		expectedProvider trace.Provider
+		expectedProvider otel.Provider
 	}{
 		{
 			name:             "simple pipeline",
@@ -69,7 +68,7 @@ func TestInstallNewPipeline(t *testing.T) {
 			options: []Option{
 				WithDisabled(true),
 			},
-			expectedProvider: apitrace.NoopProvider(),
+			expectedProvider: otel.NoopProvider(),
 		},
 	}
 
@@ -94,7 +93,7 @@ func TestNewExportPipeline(t *testing.T) {
 		name                                  string
 		endpoint                              EndpointOption
 		options                               []Option
-		expectedProviderType                  trace.Provider
+		expectedProviderType                  otel.Provider
 		testSpanSampling, spanShouldBeSampled bool
 	}{
 		{
@@ -108,7 +107,7 @@ func TestNewExportPipeline(t *testing.T) {
 			options: []Option{
 				WithDisabled(true),
 			},
-			expectedProviderType: apitrace.NoopProvider(),
+			expectedProviderType: otel.NoopProvider(),
 		},
 		{
 			name:     "always on",
@@ -173,7 +172,7 @@ func TestNewExportPipelineWithDisabledFromEnv(t *testing.T) {
 	)
 	defer fn()
 	assert.NoError(t, err)
-	assert.IsType(t, apitrace.NoopProvider(), tp)
+	assert.IsType(t, otel.NoopProvider(), tp)
 }
 
 func TestNewRawExporter(t *testing.T) {
@@ -356,11 +355,11 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 func Test_spanDataToThrift(t *testing.T) {
 	now := time.Now()
-	traceID, _ := apitrace.IDFromHex("0102030405060708090a0b0c0d0e0f10")
-	spanID, _ := apitrace.SpanIDFromHex("0102030405060708")
+	traceID, _ := otel.IDFromHex("0102030405060708090a0b0c0d0e0f10")
+	spanID, _ := otel.SpanIDFromHex("0102030405060708")
 
-	linkTraceID, _ := apitrace.IDFromHex("0102030405060709090a0b0c0d0e0f11")
-	linkSpanID, _ := apitrace.SpanIDFromHex("0102030405060709")
+	linkTraceID, _ := otel.IDFromHex("0102030405060709090a0b0c0d0e0f11")
+	linkSpanID, _ := otel.SpanIDFromHex("0102030405060709")
 
 	eventNameValue := "event-test"
 	keyValue := "value"
@@ -383,16 +382,16 @@ func Test_spanDataToThrift(t *testing.T) {
 		{
 			name: "no parent",
 			data: &export.SpanData{
-				SpanContext: apitrace.SpanContext{
+				SpanContext: otel.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,
 				},
 				Name:      "/foo",
 				StartTime: now,
 				EndTime:   now,
-				Links: []apitrace.Link{
+				Links: []otel.Link{
 					{
-						SpanContext: apitrace.SpanContext{
+						SpanContext: otel.SpanContext{
 							TraceID: linkTraceID,
 							SpanID:  linkSpanID,
 						},
@@ -409,7 +408,7 @@ func Test_spanDataToThrift(t *testing.T) {
 				},
 				StatusCode:    codes.Unknown,
 				StatusMessage: statusMessage,
-				SpanKind:      apitrace.SpanKindClient,
+				SpanKind:      otel.SpanKindClient,
 				Resource:      resource.New(label.String("rk1", rv1), label.Int64("rk2", rv2)),
 				InstrumentationLibrary: instrumentation.Library{
 					Name:    instrLibName,

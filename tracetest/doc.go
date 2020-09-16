@@ -12,18 +12,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
-
-import (
-	"context"
-)
-
-type noopTracer struct{}
-
-var _ Tracer = noopTracer{}
-
-// Start starts a noop span.
-func (noopTracer) Start(ctx context.Context, name string, opts ...SpanOption) (context.Context, Span) {
-	span := noopSpan{}
-	return ContextWithSpan(ctx, span), span
-}
+package tracetest // import "go.opentelemetry.io/otel/tracetest"

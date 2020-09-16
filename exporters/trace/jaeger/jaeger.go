@@ -23,7 +23,7 @@ import (
 	"google.golang.org/api/support/bundler"
 	"google.golang.org/grpc/codes"
 
-	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
@@ -92,7 +92,7 @@ func WithDisabled(disabled bool) Option {
 	}
 }
 
-// NewRawExporter returns a trace.Exporter implementation that exports
+// NewRawExporter returns a otel.Exporter implementation that exports
 // the collected spans to Jaeger.
 //
 // It will IGNORE Disabled option.
@@ -151,14 +151,14 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 
 // NewExportPipeline sets up a complete export pipeline
 // with the recommended setup for trace provider
-func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (apitrace.Provider, func(), error) {
+func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (otel.Provider, func(), error) {
 	o := options{}
 	opts = append(opts, WithDisabledFromEnv())
 	for _, opt := range opts {
 		opt(&o)
 	}
 	if o.Disabled {
-		return apitrace.NoopProvider(), func() {}, nil
+		return otel.NoopProvider(), func() {}, nil
 	}
 
 	exporter, err := NewRawExporter(endpointOption, opts...)
@@ -196,7 +196,7 @@ type Process struct {
 	Tags []label.KeyValue
 }
 
-// Exporter is an implementation of trace.SpanSyncer that uploads spans to Jaeger.
+// Exporter is an implementation of otel.SpanSyncer that uploads spans to Jaeger.
 type Exporter struct {
 	process  *gen.Process
 	bundler  *bundler.Bundler

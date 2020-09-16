@@ -22,7 +22,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/propagators"
 )
 
@@ -36,18 +35,18 @@ var (
 	spanID  = mustSpanIDFromHex(spanIDStr)
 )
 
-func mustTraceIDFromHex(s string) (t trace.ID) {
+func mustTraceIDFromHex(s string) (t otel.ID) {
 	var err error
-	t, err = trace.IDFromHex(s)
+	t, err = otel.IDFromHex(s)
 	if err != nil {
 		panic(err)
 	}
 	return
 }
 
-func mustSpanIDFromHex(s string) (t trace.SpanID) {
+func mustSpanIDFromHex(s string) (t otel.SpanID) {
 	var err error
-	t, err = trace.SpanIDFromHex(s)
+	t, err = otel.SpanIDFromHex(s)
 	if err != nil {
 		panic(err)
 	}
@@ -61,13 +60,13 @@ type outOfThinAirPropagator struct {
 var _ otel.HTTPPropagator = outOfThinAirPropagator{}
 
 func (p outOfThinAirPropagator) Extract(ctx context.Context, supplier otel.HTTPSupplier) context.Context {
-	sc := trace.SpanContext{
+	sc := otel.SpanContext{
 		TraceID:    traceID,
 		SpanID:     spanID,
 		TraceFlags: 0,
 	}
 	require.True(p.t, sc.IsValid())
-	return trace.ContextWithRemoteSpanContext(ctx, sc)
+	return otel.ContextWithRemoteSpanContext(ctx, sc)
 }
 
 func (outOfThinAirPropagator) Inject(context.Context, otel.HTTPSupplier) {}
@@ -101,7 +100,7 @@ func TestMultiplePropagators(t *testing.T) {
 	{
 		props := otel.NewPropagators(otel.WithExtractors(ootaProp))
 		ctx := otel.ExtractHTTP(bg, props, ns)
-		sc := trace.RemoteSpanContextFromContext(ctx)
+		sc := otel.RemoteSpanContextFromContext(ctx)
 		require.True(t, sc.IsValid(), "oota prop failed sanity check")
 	}
 	// sanity check for real propagators, ensuring that they
@@ -110,13 +109,13 @@ func TestMultiplePropagators(t *testing.T) {
 	for _, prop := range testProps {
 		props := otel.NewPropagators(otel.WithExtractors(prop))
 		ctx := otel.ExtractHTTP(bg, props, ns)
-		sc := trace.RemoteSpanContextFromContext(ctx)
+		sc := otel.RemoteSpanContextFromContext(ctx)
 		require.Falsef(t, sc.IsValid(), "%#v failed sanity check", prop)
 	}
 	for _, prop := range testProps {
 		props := otel.NewPropagators(otel.WithExtractors(ootaProp, prop))
 		ctx := otel.ExtractHTTP(bg, props, ns)
-		sc := trace.RemoteSpanContextFromContext(ctx)
+		sc := otel.RemoteSpanContextFromContext(ctx)
 		assert.Truef(t, sc.IsValid(), "%#v clobbers span context", prop)
 	}
 }

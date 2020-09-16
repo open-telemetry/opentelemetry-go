@@ -19,7 +19,7 @@ import (
 	"net/http"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagators"
 )
 
@@ -77,7 +77,7 @@ func BenchmarkInjectB3(b *testing.B) {
 			propagator := propagators.B3{InjectEncoding: tt.encoding}
 			traceBenchmark(tg.name+"/"+tt.name, b, func(b *testing.B) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
-				ctx := trace.ContextWithSpan(
+				ctx := otel.ContextWithSpan(
 					context.Background(),
 					testSpan{sc: tt.sc},
 				)

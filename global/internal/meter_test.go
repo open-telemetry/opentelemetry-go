@@ -221,7 +221,7 @@ type meterWithConstructorError struct {
 }
 
 func (m *meterProviderWithConstructorError) Meter(iName string, opts ...otel.MeterOption) otel.Meter {
-	return otel.WrapMeterImpl(&meterWithConstructorError{m.Provider.Meter(iName, opts...).MeterImpl()}, iName, opts...)
+	return otel.WrapMeterImpl(&meterWithConstructorError{m.MeterProvider.Meter(iName, opts...).MeterImpl()}, iName, opts...)
 }
 
 func (m *meterWithConstructorError) NewSyncInstrument(_ otel.Descriptor) (otel.SyncImpl, error) {
