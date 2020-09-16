@@ -72,5 +72,5 @@ type OverrideTracerSpanExtension interface {
 	// API calls. In such case, there is no need to use the
 	// WrapperTracer and thus no need to override the result of
 	// the Tracer() function.
-	OverrideTracer(otel.Tracer)
+	OverrideTracer(tracer otel.Tracer)
 }

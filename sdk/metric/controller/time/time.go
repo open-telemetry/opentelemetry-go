@@ -24,7 +24,7 @@ import (
 
 type Clock interface {
 	Now() lib.Time
-	Ticker(lib.Duration) Ticker
+	Ticker(duration lib.Duration) Ticker
 }
 
 type Ticker interface {

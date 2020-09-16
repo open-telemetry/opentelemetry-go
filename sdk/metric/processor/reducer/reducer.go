@@ -31,7 +31,7 @@ type (
 	// LabelFilterSelector is the interface used to configure a
 	// specific Filter to an instrument.
 	LabelFilterSelector interface {
-		LabelFilterFor(*otel.Descriptor) label.Filter
+		LabelFilterFor(descriptor *otel.Descriptor) label.Filter
 	}
 )
 
