@@ -257,8 +257,8 @@ func (s *bridgeSpan) Log(data ot.LogData) {
 }
 
 type bridgeSetTracer struct {
-	isSet bool
-	otelr otel.Tracer
+	isSet      bool
+	otelTracer otel.Tracer
 
 	warningHandler BridgeWarningHandler
 	warnOnce       sync.Once
@@ -270,7 +270,7 @@ func (s *bridgeSetTracer) tracer() otel.Tracer {
 			s.warningHandler("The OpenTelemetry tracer is not set, default no-op tracer is used! Call SetOpenTelemetryTracer to set it up.\n")
 		})
 	}
-	return s.otelr
+	return s.otelTracer
 }
 
 // BridgeWarningHandler is a type of handler that receives warnings
@@ -300,7 +300,7 @@ var _ ot.TracerContextWithSpanExtension = &BridgeTracer{}
 func NewBridgeTracer() *BridgeTracer {
 	return &BridgeTracer{
 		setTracer: bridgeSetTracer{
-			otelr: noop.Tracer,
+			otelTracer: noop.Tracer,
 		},
 		warningHandler: func(msg string) {},
 		propagators:    nil,
@@ -317,7 +317,7 @@ func (t *BridgeTracer) SetWarningHandler(handler BridgeWarningHandler) {
 // tracer. The passed tracer should know how to operate in the
 // environment that uses OpenTracing API.
 func (t *BridgeTracer) SetOpenTelemetryTracer(tracer otel.Tracer) {
-	t.setTracer.otelr = tracer
+	t.setTracer.otelTracer = tracer
 	t.setTracer.isSet = true
 }
 
