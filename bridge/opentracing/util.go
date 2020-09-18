@@ -20,21 +20,21 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
-// NewTracerPair is a utility function that creates a BridgeTracer
-// and a WrapperProvider. WrapperProvider creates a single instance of
+// NewTracerPair is a utility function that creates a BridgeTracer and a
+// WrapperTracerProvider. WrapperTracerProvider creates a single instance of
 // WrapperTracer. The BridgeTracer forwards the calls to the WrapperTracer
-// that wraps the passed tracer. BridgeTracer and WrapperProvider are returned to
-// the caller and the caller is expected to register BridgeTracer with opentracing and
-// WrapperProvider with opentelemetry.
-func NewTracerPair(tracer otel.Tracer) (*BridgeTracer, *WrapperProvider) {
+// that wraps the passed tracer. BridgeTracer and WrapperTracerProvider are
+// returned to the caller and the caller is expected to register BridgeTracer
+// with opentracing and WrapperTracerProvider with opentelemetry.
+func NewTracerPair(tracer otel.Tracer) (*BridgeTracer, *WrapperTracerProvider) {
 	bridgeTracer := NewBridgeTracer()
-	wrapperProvider := NewWrappedProvider(bridgeTracer, tracer)
-	bridgeTracer.SetOpenTelemetryTracer(wrapperProvider.Tracer(""))
-	return bridgeTracer, wrapperProvider
+	wtp := NewWrappedProvider(bridgeTracer, tracer)
+	bridgeTracer.SetOpenTelemetryTracer(wtp.Tracer(""))
+	return bridgeTracer, wtp
 }
 
-func NewTracerPairWithContext(ctx context.Context, tracer otel.Tracer) (context.Context, *BridgeTracer, *WrapperProvider) {
-	bridgeTracer, wrapperProvider := NewTracerPair(tracer)
+func NewTracerPairWithContext(ctx context.Context, tracer otel.Tracer) (context.Context, *BridgeTracer, *WrapperTracerProvider) {
+	bridgeTracer, wtp := NewTracerPair(tracer)
 	ctx = bridgeTracer.NewHookedContext(ctx)
-	return ctx, bridgeTracer, wrapperProvider
+	return ctx, bridgeTracer, wtp
 }

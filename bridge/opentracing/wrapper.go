@@ -21,21 +21,21 @@ import (
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 )
 
-type WrapperProvider struct {
+type WrapperTracerProvider struct {
 	wTracer *WrapperTracer
 }
 
-var _ otel.TracerProvider = (*WrapperProvider)(nil)
+var _ otel.TracerProvider = (*WrapperTracerProvider)(nil)
 
 // Tracer returns the WrapperTracer associated with the WrapperProvider.
-func (p *WrapperProvider) Tracer(_ string, _ ...otel.TracerOption) otel.Tracer {
+func (p *WrapperTracerProvider) Tracer(_ string, _ ...otel.TracerOption) otel.Tracer {
 	return p.wTracer
 }
 
 // NewWrappedProvider creates a new trace provider that creates a single
 // instance of WrapperTracer that wraps OpenTelemetry tracer.
-func NewWrappedProvider(bridge *BridgeTracer, tracer otel.Tracer) *WrapperProvider {
-	return &WrapperProvider{
+func NewWrappedProvider(bridge *BridgeTracer, tracer otel.Tracer) *WrapperTracerProvider {
+	return &WrapperTracerProvider{
 		wTracer: NewWrapperTracer(bridge, tracer),
 	}
 }
