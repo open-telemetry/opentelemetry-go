@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package baggage
+package propagators
 
 import (
 	"context"
@@ -33,12 +33,6 @@ const baggageHeader = "otcorrelations"
 type Baggage struct{}
 
 var _ propagation.HTTPPropagator = Baggage{}
-
-// DefaultHTTPPropagator returns the default context correlation HTTP
-// propagator.
-func DefaultHTTPPropagator() propagation.HTTPPropagator {
-	return Baggage{}
-}
 
 // Inject implements HTTPInjector.
 func (b Baggage) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {

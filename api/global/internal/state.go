@@ -18,7 +18,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go.opentelemetry.io/otel/api/baggage"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
@@ -124,7 +123,7 @@ func defaultPropagatorsValue() *atomic.Value {
 // with W3C trace and baggage propagation.
 func getDefaultPropagators() propagation.Propagators {
 	tcPropagator := propagators.TraceContext{}
-	bagPropagator := baggage.Baggage{}
+	bagPropagator := propagators.Baggage{}
 	return propagation.New(
 		propagation.WithExtractors(tcPropagator, bagPropagator),
 		propagation.WithInjectors(tcPropagator, bagPropagator),

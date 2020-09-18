@@ -122,5 +122,15 @@ func TestMultiplePropagators(t *testing.T) {
 }
 
 func TestDefaultHTTPPropagator(t *testing.T) {
-	assert.IsType(t, propagators.TraceContext{}, propagators.DefaultHTTPPropagator())
+	p := propagators.DefaultPropagator()
+
+	ext := p.HTTPExtractors()
+	require.Len(t, ext, 2)
+	assert.IsType(t, propagators.TraceContext{}, ext[0])
+	assert.IsType(t, propagators.Baggage{}, ext[1])
+
+	inj := p.HTTPInjectors()
+	require.Len(t, inj, 2)
+	assert.IsType(t, propagators.TraceContext{}, inj[0])
+	assert.IsType(t, propagators.Baggage{}, inj[1])
 }

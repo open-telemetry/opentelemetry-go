@@ -18,12 +18,12 @@ import (
 	"context"
 	"log"
 
-	"go.opentelemetry.io/otel/api/baggage"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/example/namedtracer/foo"
 	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/propagators"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -62,7 +62,7 @@ func main() {
 	tracer := tp.Tracer("example/namedtracer/main")
 	ctx := context.Background()
 
-	ctx = baggage.NewContext(ctx,
+	ctx = propagators.NewContext(ctx,
 		fooKey.String("foo1"),
 		barKey.String("bar1"),
 	)
