@@ -66,11 +66,12 @@ type BatchSpanProcessor struct {
 	queue   chan *export.SpanData
 	dropped uint32
 
-	batch    []*export.SpanData
-	timer    *time.Timer
-	stopWait sync.WaitGroup
-	stopOnce sync.Once
-	stopCh   chan struct{}
+	batch      []*export.SpanData
+	batchMutex sync.Mutex
+	timer      *time.Timer
+	stopWait   sync.WaitGroup
+	stopOnce   sync.Once
+	stopCh     chan struct{}
 }
 
 var _ SpanProcessor = (*BatchSpanProcessor)(nil)
@@ -131,6 +132,11 @@ func (bsp *BatchSpanProcessor) Shutdown() {
 	})
 }
 
+// ForceFlush exports all ended spans that have not yet been exported.
+func (bsp *BatchSpanProcessor) ForceFlush() {
+	bsp.exportSpans()
+}
+
 func WithMaxQueueSize(size int) BatchSpanProcessorOption {
 	return func(o *BatchSpanProcessorOptions) {
 		o.MaxQueueSize = size
@@ -159,6 +165,9 @@ func WithBlocking() BatchSpanProcessorOption {
 func (bsp *BatchSpanProcessor) exportSpans() {
 	bsp.timer.Reset(bsp.o.BatchTimeout)
 
+	bsp.batchMutex.Lock()
+	defer bsp.batchMutex.Unlock()
+
 	if len(bsp.batch) > 0 {
 		if err := bsp.e.ExportSpans(context.Background(), bsp.batch); err != nil {
 			global.Handle(err)
@@ -180,8 +189,11 @@ func (bsp *BatchSpanProcessor) processQueue() {
 		case <-bsp.timer.C:
 			bsp.exportSpans()
 		case sd := <-bsp.queue:
+			bsp.batchMutex.Lock()
 			bsp.batch = append(bsp.batch, sd)
-			if len(bsp.batch) == bsp.o.MaxExportBatchSize {
+			shouldExport := len(bsp.batch) == bsp.o.MaxExportBatchSize
+			bsp.batchMutex.Unlock()
+			if shouldExport {
 				if !bsp.timer.Stop() {
 					<-bsp.timer.C
 				}
@@ -202,8 +214,12 @@ func (bsp *BatchSpanProcessor) drainQueue() {
 				return
 			}
 
+			bsp.batchMutex.Lock()
 			bsp.batch = append(bsp.batch, sd)
-			if len(bsp.batch) == bsp.o.MaxExportBatchSize {
+			shouldExport := len(bsp.batch) == bsp.o.MaxExportBatchSize
+			bsp.batchMutex.Unlock()
+
+			if shouldExport {
 				bsp.exportSpans()
 			}
 		default:
