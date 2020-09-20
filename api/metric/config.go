@@ -14,7 +14,7 @@
 
 package metric
 
-import "go.opentelemetry.io/otel/api/unit"
+import "go.opentelemetry.io/otel/unit"
 
 // InstrumentConfig contains options for instrument descriptors.
 type InstrumentConfig struct {
