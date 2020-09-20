@@ -203,7 +203,7 @@ func TestBatchSpanProcessorForceFlush(t *testing.T) {
 	tp.RegisterSpanProcessor(ssp)
 	tr := tp.Tracer("BatchSpanProcessorWithOptions")
 
-	generateSpan(t, true, tr, option)
+	generateSpan(t, false, tr, option)
 
 	ssp.ForceFlush()
 
