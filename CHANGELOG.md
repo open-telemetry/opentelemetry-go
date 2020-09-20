@@ -45,6 +45,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Don't consider unset environment variable for resource detection to be an error. (#1170)
 - Rename `go.opentelemetry.io/otel/api/metric.ConfigureInstrument` to `NewInstrumentConfig` and
   `go.opentelemetry.io/otel/api/metric.ConfigureMeter` to `NewMeterConfig`.
+- Move the `go.opentelemetry.io/otel/api/unit` package to `go.opentelemetry.io/otel/unit`. (#1185)
 
 ### Fixed
 
