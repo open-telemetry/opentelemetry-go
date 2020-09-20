@@ -40,12 +40,12 @@ type SpanExporter interface {
 	// calls this function will not implement any retry logic. All errors
 	// returned by this function are considered unrecoverable and will be
 	// reported to a configured error Handler.
-	ExportSpans(context.Context, []*SpanData) error
+	ExportSpans(ctx context.Context, spanData []*SpanData) error
 	// Shutdown notifies the exporter of a pending halt to operations. The
 	// exporter is expected to preform any cleanup or synchronization it
 	// requires while honoring all timeouts and cancellations contained in
 	// the passed context.
-	Shutdown(context.Context) error
+	Shutdown(ctx context.Context) error
 }
 
 // SpanData contains all the information collected by a completed span.

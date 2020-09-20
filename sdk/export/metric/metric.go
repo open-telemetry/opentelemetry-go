@@ -71,7 +71,7 @@ type Processor interface {
 	// computation.  An SDK is not expected to call exporters from
 	// with Process, use a controller for that (see
 	// ./controllers/{pull,push}.
-	Process(Accumulation) error
+	Process(accum Accumulation) error
 }
 
 // AggregatorSelector supports selecting the kind of Aggregator to
@@ -94,7 +94,7 @@ type AggregatorSelector interface {
 	// Note: This is context-free because the aggregator should
 	// not relate to the incoming context.  This call should not
 	// block.
-	AggregatorFor(*metric.Descriptor, ...*Aggregator)
+	AggregatorFor(descriptor *metric.Descriptor, aggregator ...*Aggregator)
 }
 
 // Checkpointer is the interface used by a Controller to coordinate
@@ -152,7 +152,7 @@ type Aggregator interface {
 	//
 	// The Context argument comes from user-level code and could be
 	// inspected for a `correlation.Map` or `trace.SpanContext`.
-	Update(context.Context, metric.Number, *metric.Descriptor) error
+	Update(ctx context.Context, number metric.Number, descriptor *metric.Descriptor) error
 
 	// SynchronizedMove is called during collection to finish one
 	// period of aggregation by atomically saving the
@@ -181,7 +181,7 @@ type Aggregator interface {
 	//
 	// The owner of an Aggregator being merged is responsible for
 	// synchronization of both Aggregator states.
-	Merge(Aggregator, *metric.Descriptor) error
+	Merge(aggregator Aggregator, descriptor *metric.Descriptor) error
 }
 
 // Subtractor is an optional interface implemented by some
@@ -206,7 +206,7 @@ type Exporter interface {
 	//
 	// The CheckpointSet interface refers to the Processor that just
 	// completed collection.
-	Export(context.Context, CheckpointSet) error
+	Export(ctx context.Context, checkpointSet CheckpointSet) error
 
 	// ExportKindSelector is an interface used by the Processor
 	// in deciding whether to compute Delta or Cumulative
@@ -221,7 +221,7 @@ type ExportKindSelector interface {
 	// ExportKindFor should return the correct ExportKind that
 	// should be used when exporting data for the given metric
 	// instrument and Aggregator kind.
-	ExportKindFor(*metric.Descriptor, aggregation.Kind) ExportKind
+	ExportKindFor(descriptor *metric.Descriptor, aggregatorKind aggregation.Kind) ExportKind
 }
 
 // CheckpointSet allows a controller to access a complete checkpoint of
@@ -242,7 +242,7 @@ type CheckpointSet interface {
 	// expected from the Meter implementation. Any other kind
 	// of error will immediately halt ForEach and return
 	// the error to the caller.
-	ForEach(ExportKindSelector, func(Record) error) error
+	ForEach(kindSelector ExportKindSelector, recordFunc func(Record) error) error
 
 	// Locker supports locking the checkpoint set.  Collection
 	// into the checkpoint set cannot take place (in case of a

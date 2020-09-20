@@ -24,7 +24,7 @@ import (
 
 // Sampler decides whether a trace should be sampled and exported.
 type Sampler interface {
-	ShouldSample(SamplingParameters) SamplingResult
+	ShouldSample(parameters SamplingParameters) SamplingResult
 	Description() string
 }
 

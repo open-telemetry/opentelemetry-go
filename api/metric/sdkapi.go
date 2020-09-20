@@ -24,7 +24,7 @@ import (
 // implementation.
 type MeterImpl interface {
 	// RecordBatch atomically records a batch of measurements.
-	RecordBatch(context.Context, []label.KeyValue, ...Measurement)
+	RecordBatch(ctx context.Context, labels []label.KeyValue, measurement ...Measurement)
 
 	// NewSyncInstrument returns a newly constructed
 	// synchronous instrument implementation or an error, should
@@ -85,10 +85,10 @@ type AsyncImpl interface {
 
 // WrapMeterImpl constructs a `Meter` implementation from a
 // `MeterImpl` implementation.
-func WrapMeterImpl(impl MeterImpl, instrumentatioName string, opts ...MeterOption) Meter {
+func WrapMeterImpl(impl MeterImpl, instrumentationName string, opts ...MeterOption) Meter {
 	return Meter{
 		impl:    impl,
-		name:    instrumentatioName,
+		name:    instrumentationName,
 		version: NewMeterConfig(opts...).InstrumentationVersion,
 	}
 }
