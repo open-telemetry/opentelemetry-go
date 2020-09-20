@@ -39,6 +39,9 @@ func (t *testSpanProcesor) Shutdown() {
 	t.shutdownCount++
 }
 
+func (t *testSpanProcesor) ForceFlush() {
+}
+
 func TestRegisterSpanProcessort(t *testing.T) {
 	name := "Register span processor before span starts"
 	tp := basicProvider(t)
