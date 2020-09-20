@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - In the `go.opentelemetry.io/otel/api/trace` package, `NewTracerConfig` was added to construct new `TracerConfig`s.
    This addition was made to conform with our project option conventions. (#1155)
 - Instrumentation library information was added to the Zipkin exporter. (#1119)
+- The `SpanProcessor` interface now has a `ForceFlush()` method. (#1166)
 - More semantic conventions for k8s as resource attributes. (#1167)
 
 ### Changed
@@ -49,6 +50,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Zipkin example no longer mentions `ParentSampler`, corrected to `ParentBased`. (#1171)
+- Fix missing shutdown processor in otel-collector example. (#1186)
 
 ## [0.11.0] - 2020-08-24
 
