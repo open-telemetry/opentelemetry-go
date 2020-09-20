@@ -49,6 +49,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Zipkin example no longer mentions `ParentSampler`, corrected to `ParentBased`. (#1171)
+- Fix missing shutdown processor in otel-collector example. (#1186)
 
 ## [0.11.0] - 2020-08-24
 
