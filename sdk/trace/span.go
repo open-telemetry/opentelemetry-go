@@ -426,7 +426,7 @@ func makeSamplingDecision(data samplingData) SamplingResult {
 			Attributes:      data.attributes,
 			Links:           data.links,
 		})
-		if sampled.Decision == RecordAndSampled {
+		if sampled.Decision == RecordAndSample {
 			spanContext.TraceFlags |= apitrace.FlagsSampled
 		} else {
 			spanContext.TraceFlags &^= apitrace.FlagsSampled
@@ -434,7 +434,7 @@ func makeSamplingDecision(data samplingData) SamplingResult {
 		return sampled
 	}
 	if data.parent.TraceFlags&apitrace.FlagsSampled != 0 {
-		return SamplingResult{Decision: RecordAndSampled}
+		return SamplingResult{Decision: RecordAndSample}
 	}
-	return SamplingResult{Decision: NotRecord}
+	return SamplingResult{Decision: Drop}
 }
