@@ -48,7 +48,7 @@ func TestInstallNewPipeline(t *testing.T) {
 		serviceName,
 	)
 	assert.NoError(t, err)
-	assert.IsType(t, &sdktrace.Provider{}, global.TracerProvider())
+	assert.IsType(t, &sdktrace.TracerProvider{}, global.TracerProvider())
 }
 
 func TestNewExportPipeline(t *testing.T) {

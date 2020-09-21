@@ -20,17 +20,17 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 )
 
-type Provider struct {
+type TracerProvider struct {
 	config config
 
 	tracersMu sync.Mutex
 	tracers   map[instrumentation]*Tracer
 }
 
-var _ trace.Provider = (*Provider)(nil)
+var _ trace.TracerProvider = (*TracerProvider)(nil)
 
-func NewProvider(opts ...Option) *Provider {
-	return &Provider{
+func NewTracerProvider(opts ...Option) *TracerProvider {
+	return &TracerProvider{
 		config:  newConfig(opts...),
 		tracers: make(map[instrumentation]*Tracer),
 	}
@@ -40,7 +40,7 @@ type instrumentation struct {
 	Name, Version string
 }
 
-func (p *Provider) Tracer(instName string, opts ...trace.TracerOption) trace.Tracer {
+func (p *TracerProvider) Tracer(instName string, opts ...trace.TracerOption) trace.Tracer {
 	conf := trace.NewTracerConfig(opts...)
 
 	inst := instrumentation{

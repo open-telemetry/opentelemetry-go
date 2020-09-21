@@ -23,7 +23,7 @@ import (
 )
 
 type tracer struct {
-	provider               *Provider
+	provider               *TracerProvider
 	instrumentationLibrary instrumentation.Library
 }
 

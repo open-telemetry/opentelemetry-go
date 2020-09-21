@@ -20,7 +20,7 @@ import (
 )
 
 // Meter creates an implementation of the Meter interface from the global
-// Provider. The instrumentationName must be the name of the library
+// MeterProvider. The instrumentationName must be the name of the library
 // providing instrumentation. This name may be the same as the instrumented
 // code only if that code provides built-in instrumentation. If the
 // instrumentationName is empty, then a implementation defined default name
@@ -39,11 +39,11 @@ func Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter 
 //     meter := global.MeterProvider().Meter("example.com/foo")
 // or
 //     meter := global.Meter("example.com/foo")
-func MeterProvider() metric.Provider {
+func MeterProvider() metric.MeterProvider {
 	return internal.MeterProvider()
 }
 
 // SetMeterProvider registers `mp` as the global meter provider.
-func SetMeterProvider(mp metric.Provider) {
+func SetMeterProvider(mp metric.MeterProvider) {
 	internal.SetMeterProvider(mp)
 }
