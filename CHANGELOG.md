@@ -47,6 +47,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   `go.opentelemetry.io/otel/api/metric.ConfigureMeter` to `NewMeterConfig`.
 - Move the `go.opentelemetry.io/otel/api/unit` package to `go.opentelemetry.io/otel/unit`. (#1185)
 
+### Removed
+
+- Remove the B3 propagator from `go.opentelemetry.io/otel/propagators`. It is now located in the
+   `go.opentelemetry.io/contrib/propagators/` module. (#1191)
+
 ### Fixed
 
 - Zipkin example no longer mentions `ParentSampler`, corrected to `ParentBased`. (#1171)
