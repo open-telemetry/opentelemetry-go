@@ -682,7 +682,6 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 func TestHTTPAttributesFromHTTPStatusCode(t *testing.T) {
 	expected := []label.KeyValue{
 		label.Int("http.status_code", 404),
-		label.String("http.status_text", "Not Found"),
 	}
 	got := HTTPAttributesFromHTTPStatusCode(http.StatusNotFound)
 	assertElementsMatch(t, expected, got, "with valid HTTP status code")
