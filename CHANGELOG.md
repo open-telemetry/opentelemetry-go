@@ -48,6 +48,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Move the `go.opentelemetry.io/otel/api/unit` package to `go.opentelemetry.io/otel/unit`. (#1185)
 - Renamed `SamplingDecision` values to comply with OpenTelemetry specification change. (#1192)
 
+### Removed
+
+- Remove the B3 propagator from `go.opentelemetry.io/otel/propagators`. It is now located in the
+   `go.opentelemetry.io/contrib/propagators/` module. (#1191)
+
 ### Fixed
 
 - Zipkin example no longer mentions `ParentSampler`, corrected to `ParentBased`. (#1171)
