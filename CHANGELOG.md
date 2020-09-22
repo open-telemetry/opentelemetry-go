@@ -46,6 +46,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Rename `go.opentelemetry.io/otel/api/metric.ConfigureInstrument` to `NewInstrumentConfig` and
   `go.opentelemetry.io/otel/api/metric.ConfigureMeter` to `NewMeterConfig`.
 - Move the `go.opentelemetry.io/otel/api/unit` package to `go.opentelemetry.io/otel/unit`. (#1185)
+- Renamed `SamplingDecision` values to comply with OpenTelemetry specification change. (#1192)
 
 ### Fixed
 
