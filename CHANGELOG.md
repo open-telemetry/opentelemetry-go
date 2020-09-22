@@ -52,7 +52,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Remove the B3 propagator from `go.opentelemetry.io/otel/propagators`. It is now located in the
    `go.opentelemetry.io/contrib/propagators/` module. (#1191)
-- Remove semantic convention for HTTP status text.
+- Remove semantic convention for HTTP status text. (#1194)
 ### Fixed
 
 - Zipkin example no longer mentions `ParentSampler`, corrected to `ParentBased`. (#1171)
