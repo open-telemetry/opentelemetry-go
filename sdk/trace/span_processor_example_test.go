@@ -15,16 +15,11 @@
 package trace
 
 import (
-	"context"
 	"time"
 
 	export "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/export/trace/tracetest"
 )
-
-type exporter struct{}
-
-func (e exporter) ExportSpans(context.Context, []*export.SpanData) error { return nil }
-func (e exporter) Shutdown(context.Context) error                        { return nil }
 
 // LowPassFilter is a SpanProcessor that drops short lived spans.
 type LowPassFilter struct {
@@ -65,7 +60,7 @@ func (f HighPassFilter) OnEnd(sd *export.SpanData) {
 }
 
 func ExampleSpanProcessor() {
-	exportSpanProcessor := NewSimpleSpanProcessor(exporter{})
+	exportSpanProcessor := NewSimpleSpanProcessor(tracetest.NewNoopExporter())
 
 	// Build a band-pass filter to only allow spans shorter than an minute and
 	// longer than a second to be exported with the exportSpanProcessor.
