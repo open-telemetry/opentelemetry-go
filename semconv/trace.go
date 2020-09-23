@@ -94,9 +94,6 @@ const (
 	// HTTP response status code.
 	HTTPStatusCodeKey = label.Key("http.status_code")
 
-	// HTTP reason phrase.
-	HTTPStatusTextKey = label.Key("http.status_text")
-
 	// Kind of HTTP protocol used.
 	HTTPFlavorKey = label.Key("http.flavor")
 
