@@ -27,7 +27,6 @@ import (
 	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
 
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/unit"
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -35,6 +34,7 @@ import (
 	lvAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	sumAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	"go.opentelemetry.io/otel/unit"
 )
 
 var (

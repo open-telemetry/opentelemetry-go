@@ -345,6 +345,14 @@ func NewDog(name string, o ...DogOption) Dog    {…}
 func NewBird(name string, o ...BirdOption) Bird {…}
 ```
 
+### Interface Type
+
+To allow other developers to better comprehend the code, it is important
+to ensure it is sufficiently documented. One simple measure that contributes
+to this aim is self-documenting by naming method parameters. Therefore,
+where appropriate, methods of every exported interface type should have
+their parameters appropriately named.
+
 ## Approvers and Maintainers
 
 Approvers:

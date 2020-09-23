@@ -13,4 +13,4 @@
 // limitations under the License.
 
 // Package unit provides units.
-package unit // import "go.opentelemetry.io/otel/api/unit"
+package unit // import "go.opentelemetry.io/otel/unit"

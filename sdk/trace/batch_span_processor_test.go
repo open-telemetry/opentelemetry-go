@@ -64,6 +64,7 @@ func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
 	// These should not panic.
 	bsp.OnStart(&export.SpanData{})
 	bsp.OnEnd(&export.SpanData{})
+	bsp.ForceFlush()
 	bsp.Shutdown()
 }
 
