@@ -139,8 +139,8 @@ func (s *span) End(options ...apitrace.SpanOption) {
 	}
 	config := apitrace.NewSpanConfig(options...)
 	s.endOnce.Do(func() {
-		sps, _ := s.tracer.provider.spanProcessors.Load().(spanProcessorMap)
-		mustExportOrProcess := len(sps) > 0
+		sps, ok := s.tracer.provider.spanProcessors.Load().(spanProcessorStates)
+		mustExportOrProcess := ok && len(sps) > 0
 		if mustExportOrProcess {
 			sd := s.makeSpanData()
 			if config.Timestamp.IsZero() {
@@ -148,8 +148,8 @@ func (s *span) End(options ...apitrace.SpanOption) {
 			} else {
 				sd.EndTime = config.Timestamp
 			}
-			for sp := range sps {
-				sp.OnEnd(sd)
+			for _, sp := range sps {
+				sp.sp.OnEnd(sd)
 			}
 		}
 	})

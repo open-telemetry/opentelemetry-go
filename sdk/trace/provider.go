@@ -109,13 +109,15 @@ func (p *TracerProvider) Tracer(name string, opts ...apitrace.TracerOption) apit
 func (p *TracerProvider) RegisterSpanProcessor(s SpanProcessor) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	new := make(spanProcessorMap)
-	if old, ok := p.spanProcessors.Load().(spanProcessorMap); ok {
-		for k, v := range old {
-			new[k] = v
-		}
+	new := spanProcessorStates{}
+	if old, ok := p.spanProcessors.Load().(spanProcessorStates); ok {
+		new = append(new, old...)
 	}
-	new[s] = &sync.Once{}
+	newSpanSync := &spanProcessorState{
+		sp:    s,
+		state: &sync.Once{},
+	}
+	new = append(new, newSpanSync)
 	p.spanProcessors.Store(new)
 }
 
@@ -123,18 +125,33 @@ func (p *TracerProvider) RegisterSpanProcessor(s SpanProcessor) {
 func (p *TracerProvider) UnregisterSpanProcessor(s SpanProcessor) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	new := make(spanProcessorMap)
-	if old, ok := p.spanProcessors.Load().(spanProcessorMap); ok {
-		for k, v := range old {
-			new[k] = v
+	new := spanProcessorStates{}
+	old, ok := p.spanProcessors.Load().(spanProcessorStates)
+	if !ok || len(old) == 0 {
+		return
+	}
+	new = append(new, old...)
+
+	// stop the span processor if it is started and remove it from the list
+	var stopOnce *spanProcessorState
+	var idx int
+	for i, sps := range new {
+		if sps.sp == s {
+			stopOnce = sps
+			idx = i
 		}
 	}
-	if stopOnce, ok := new[s]; ok && stopOnce != nil {
-		stopOnce.Do(func() {
+	if stopOnce != nil {
+		stopOnce.state.Do(func() {
 			s.Shutdown()
 		})
 	}
-	delete(new, s)
+	if len(new) > 1 {
+		copy(new[idx:], new[idx+1:])
+	}
+	new[len(new)-1] = nil
+	new = new[:len(new)-1]
+
 	p.spanProcessors.Store(new)
 }
 
