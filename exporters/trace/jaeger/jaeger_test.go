@@ -51,17 +51,17 @@ func TestInstallNewPipeline(t *testing.T) {
 		name             string
 		endpoint         EndpointOption
 		options          []Option
-		expectedProvider trace.Provider
+		expectedProvider trace.TracerProvider
 	}{
 		{
 			name:             "simple pipeline",
 			endpoint:         WithCollectorEndpoint(collectorEndpoint),
-			expectedProvider: &sdktrace.Provider{},
+			expectedProvider: &sdktrace.TracerProvider{},
 		},
 		{
 			name:             "with agent endpoint",
 			endpoint:         WithAgentEndpoint(agentEndpoint),
-			expectedProvider: &sdktrace.Provider{},
+			expectedProvider: &sdktrace.TracerProvider{},
 		},
 		{
 			name:     "with disabled",
@@ -69,7 +69,7 @@ func TestInstallNewPipeline(t *testing.T) {
 			options: []Option{
 				WithDisabled(true),
 			},
-			expectedProvider: apitrace.NoopProvider(),
+			expectedProvider: apitrace.NoopTracerProvider(),
 		},
 	}
 
@@ -94,13 +94,13 @@ func TestNewExportPipeline(t *testing.T) {
 		name                                  string
 		endpoint                              EndpointOption
 		options                               []Option
-		expectedProviderType                  trace.Provider
+		expectedProviderType                  trace.TracerProvider
 		testSpanSampling, spanShouldBeSampled bool
 	}{
 		{
 			name:                 "simple pipeline",
 			endpoint:             WithCollectorEndpoint(collectorEndpoint),
-			expectedProviderType: &sdktrace.Provider{},
+			expectedProviderType: &sdktrace.TracerProvider{},
 		},
 		{
 			name:     "with disabled",
@@ -108,7 +108,7 @@ func TestNewExportPipeline(t *testing.T) {
 			options: []Option{
 				WithDisabled(true),
 			},
-			expectedProviderType: apitrace.NoopProvider(),
+			expectedProviderType: apitrace.NoopTracerProvider(),
 		},
 		{
 			name:     "always on",
@@ -118,7 +118,7 @@ func TestNewExportPipeline(t *testing.T) {
 					DefaultSampler: sdktrace.AlwaysSample(),
 				}),
 			},
-			expectedProviderType: &sdktrace.Provider{},
+			expectedProviderType: &sdktrace.TracerProvider{},
 			testSpanSampling:     true,
 			spanShouldBeSampled:  true,
 		},
@@ -130,7 +130,7 @@ func TestNewExportPipeline(t *testing.T) {
 					DefaultSampler: sdktrace.NeverSample(),
 				}),
 			},
-			expectedProviderType: &sdktrace.Provider{},
+			expectedProviderType: &sdktrace.TracerProvider{},
 			testSpanSampling:     true,
 			spanShouldBeSampled:  false,
 		},
@@ -173,7 +173,7 @@ func TestNewExportPipelineWithDisabledFromEnv(t *testing.T) {
 	)
 	defer fn()
 	assert.NoError(t, err)
-	assert.IsType(t, apitrace.NoopProvider(), tp)
+	assert.IsType(t, apitrace.NoopTracerProvider(), tp)
 }
 
 func TestNewRawExporter(t *testing.T) {
@@ -339,7 +339,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	tp := sdktrace.NewProvider(
+	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithSyncer(exp),
 	)

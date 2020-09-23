@@ -151,14 +151,14 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 
 // NewExportPipeline sets up a complete export pipeline
 // with the recommended setup for trace provider
-func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (apitrace.Provider, func(), error) {
+func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (apitrace.TracerProvider, func(), error) {
 	o := options{}
 	opts = append(opts, WithDisabledFromEnv())
 	for _, opt := range opts {
 		opt(&o)
 	}
 	if o.Disabled {
-		return apitrace.NoopProvider(), func() {}, nil
+		return apitrace.NoopTracerProvider(), func() {}, nil
 	}
 
 	exporter, err := NewRawExporter(endpointOption, opts...)
@@ -166,11 +166,11 @@ func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (apitrace.
 		return nil, nil, err
 	}
 
-	pOpts := []sdktrace.ProviderOption{sdktrace.WithSyncer(exporter)}
+	pOpts := []sdktrace.TracerProviderOption{sdktrace.WithSyncer(exporter)}
 	if exporter.o.Config != nil {
 		pOpts = append(pOpts, sdktrace.WithConfig(*exporter.o.Config))
 	}
-	tp := sdktrace.NewProvider(pOpts...)
+	tp := sdktrace.NewTracerProvider(pOpts...)
 	return tp, exporter.Flush, nil
 }
 

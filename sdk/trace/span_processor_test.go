@@ -44,7 +44,7 @@ func (t *testSpanProcesor) ForceFlush() {
 
 func TestRegisterSpanProcessort(t *testing.T) {
 	name := "Register span processor before span starts"
-	tp := basicProvider(t)
+	tp := basicTracerProvider(t)
 	sp := NewTestSpanProcessor()
 	tp.RegisterSpanProcessor(sp)
 
@@ -64,7 +64,7 @@ func TestRegisterSpanProcessort(t *testing.T) {
 
 func TestUnregisterSpanProcessor(t *testing.T) {
 	name := "Start span after unregistering span processor"
-	tp := basicProvider(t)
+	tp := basicTracerProvider(t)
 	sp := NewTestSpanProcessor()
 	tp.RegisterSpanProcessor(sp)
 
@@ -91,7 +91,7 @@ func TestUnregisterSpanProcessor(t *testing.T) {
 
 func TestUnregisterSpanProcessorWhileSpanIsActive(t *testing.T) {
 	name := "Unregister span processor while span is active"
-	tp := basicProvider(t)
+	tp := basicTracerProvider(t)
 	sp := NewTestSpanProcessor()
 	tp.RegisterSpanProcessor(sp)
 
@@ -116,7 +116,7 @@ func TestUnregisterSpanProcessorWhileSpanIsActive(t *testing.T) {
 
 func TestSpanProcessorShutdown(t *testing.T) {
 	name := "Increment shutdown counter of a span processor"
-	tp := basicProvider(t)
+	tp := basicTracerProvider(t)
 	sp := NewTestSpanProcessor()
 	if sp == nil {
 		t.Fatalf("Error creating new instance of TestSpanProcessor\n")
@@ -134,7 +134,7 @@ func TestSpanProcessorShutdown(t *testing.T) {
 
 func TestMultipleUnregisterSpanProcessorCalls(t *testing.T) {
 	name := "Increment shutdown counter after first UnregisterSpanProcessor call"
-	tp := basicProvider(t)
+	tp := basicTracerProvider(t)
 	sp := NewTestSpanProcessor()
 	if sp == nil {
 		t.Fatalf("Error creating new instance of TestSpanProcessor\n")

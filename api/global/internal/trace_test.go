@@ -35,7 +35,7 @@ func TestTraceWithSDK(t *testing.T) {
 	_, span1 := tracer1.Start(ctx, "span1")
 
 	sr := new(tracetest.StandardSpanRecorder)
-	tp := tracetest.NewProvider(tracetest.WithSpanRecorder(sr))
+	tp := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 	global.SetTracerProvider(tp)
 
 	// This span was started before initialization, it is expected to be dropped.
@@ -45,7 +45,7 @@ func TestTraceWithSDK(t *testing.T) {
 	_, span2 := tracer1.Start(ctx, "span2")
 	span2.End()
 
-	// The global trace Provider should now create Tracers that also use the newly configured SDK.
+	// The global TracerProvider should now create Tracers that also use the newly configured SDK.
 	tracer2 := gtp.Tracer("post")
 	_, span3 := tracer2.Start(ctx, "span3")
 	span3.End()
