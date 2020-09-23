@@ -63,6 +63,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Rename `ProviderOption` to `TracerProviderOption` in the `go.opentelemetry.io/otel/sdk/trace` package. (#1190)
 - Rename `Provider` to `TracerProvider` in the `go.opentelemetry.io/otel/sdk/trace` package. (#1190)
 - Rename `NewProvider` to `NewTracerProvider` in the `go.opentelemetry.io/otel/sdk/trace` package. (#1190)
+- Renamed `SamplingDecision` values to comply with OpenTelemetry specification change. (#1192)
+
+### Removed
+
+- Remove the B3 propagator from `go.opentelemetry.io/otel/propagators`. It is now located in the
+   `go.opentelemetry.io/contrib/propagators/` module. (#1191)
+- Remove the semantic convention for HTTP status text, `HTTPStatusTextKey` from package `go.opentelemetry.io/otel/semconv`. (#1194)
 
 ### Fixed
 

@@ -39,14 +39,21 @@ type SamplingParameters struct {
 	Links           []api.Link
 }
 
-// SamplingDecision indicates whether a span is recorded and sampled.
+// SamplingDecision indicates whether a span is dropped, recorded and/or sampled.
 type SamplingDecision uint8
 
 // Valid sampling decisions
 const (
-	NotRecord SamplingDecision = iota
-	Record
-	RecordAndSampled
+	// Drop will not record the span and all attributes/events will be dropped
+	Drop SamplingDecision = iota
+
+	// Record indicates the span's `IsRecording() == true`, but `Sampled` flag
+	// *must not* be set
+	RecordOnly
+
+	// RecordAndSample has span's `IsRecording() == true` and `Sampled` flag
+	// *must* be set
+	RecordAndSample
 )
 
 // SamplingResult conveys a SamplingDecision and a set of Attributes.
@@ -63,9 +70,9 @@ type traceIDRatioSampler struct {
 func (ts traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	x := binary.BigEndian.Uint64(p.TraceID[0:8]) >> 1
 	if x < ts.traceIDUpperBound {
-		return SamplingResult{Decision: RecordAndSampled}
+		return SamplingResult{Decision: RecordAndSample}
 	}
-	return SamplingResult{Decision: NotRecord}
+	return SamplingResult{Decision: Drop}
 }
 
 func (ts traceIDRatioSampler) Description() string {
@@ -95,7 +102,7 @@ func TraceIDRatioBased(fraction float64) Sampler {
 type alwaysOnSampler struct{}
 
 func (as alwaysOnSampler) ShouldSample(p SamplingParameters) SamplingResult {
-	return SamplingResult{Decision: RecordAndSampled}
+	return SamplingResult{Decision: RecordAndSample}
 }
 
 func (as alwaysOnSampler) Description() string {
@@ -113,7 +120,7 @@ func AlwaysSample() Sampler {
 type alwaysOffSampler struct{}
 
 func (as alwaysOffSampler) ShouldSample(p SamplingParameters) SamplingResult {
-	return SamplingResult{Decision: NotRecord}
+	return SamplingResult{Decision: Drop}
 }
 
 func (as alwaysOffSampler) Description() string {

@@ -138,9 +138,9 @@ type testSampler struct {
 func (ts *testSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	ts.callCount++
 	ts.t.Logf("called sampler for name %q", p.Name)
-	decision := NotRecord
+	decision := Drop
 	if strings.HasPrefix(p.Name, ts.prefix) {
-		decision = RecordAndSampled
+		decision = RecordAndSample
 	}
 	return SamplingResult{Decision: decision, Attributes: []label.KeyValue{label.Int("callCount", ts.callCount)}}
 }
