@@ -47,6 +47,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   `go.opentelemetry.io/otel/api/metric.ConfigureMeter` to `NewMeterConfig`.
 - Move the `go.opentelemetry.io/otel/api/unit` package to `go.opentelemetry.io/otel/unit`. (#1185)
 - Renamed `SamplingDecision` values to comply with OpenTelemetry specification change. (#1192)
+- Renamed Zipkin attribute names from `ot.status_code & ot.status_description` to `otel.status_code & otel.status_description`. (#1201)
 
 ### Removed
 

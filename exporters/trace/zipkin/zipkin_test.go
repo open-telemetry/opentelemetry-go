@@ -297,8 +297,8 @@ func TestExportSpans(t *testing.T) {
 			RemoteEndpoint: nil,
 			Annotations:    nil,
 			Tags: map[string]string{
-				"ot.status_code":        "NotFound",
-				"ot.status_description": "404, file not found",
+				"otel.status_code":        "NotFound",
+				"otel.status_description": "404, file not found",
 			},
 		},
 		// model of child
@@ -325,8 +325,8 @@ func TestExportSpans(t *testing.T) {
 			RemoteEndpoint: nil,
 			Annotations:    nil,
 			Tags: map[string]string{
-				"ot.status_code":        "PermissionDenied",
-				"ot.status_description": "403, forbidden",
+				"otel.status_code":        "PermissionDenied",
+				"otel.status_description": "403, forbidden",
 			},
 		},
 	}
