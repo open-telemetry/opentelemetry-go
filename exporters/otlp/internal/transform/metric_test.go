@@ -285,9 +285,7 @@ func TestSumInt64DataPoints(t *testing.T) {
 	require.NoError(t, s.SynchronizedMove(ckpt, &desc))
 	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
 	sum, ok := ckpt.(aggregation.Sum)
-	if !ok {
-		t.Errorf("ckpt is not an aggregation.Sum: %T", ckpt)
-	}
+	require.True(t, ok, "ckpt is not an aggregation.Sum: %T", ckpt)
 	value, err := sum.Sum()
 	require.NoError(t, err)
 
@@ -311,9 +309,7 @@ func TestSumFloat64DataPoints(t *testing.T) {
 	require.NoError(t, s.SynchronizedMove(ckpt, &desc))
 	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
 	sum, ok := ckpt.(aggregation.Sum)
-	if !ok {
-		t.Errorf("ckpt is not an aggregation.Sum: %T", ckpt)
-	}
+	require.True(t, ok, "ckpt is not an aggregation.Sum: %T", ckpt)
 	value, err := sum.Sum()
 	require.NoError(t, err)
 
@@ -337,9 +333,7 @@ func TestLastValueInt64DataPoints(t *testing.T) {
 	require.NoError(t, s.SynchronizedMove(ckpt, &desc))
 	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
 	sum, ok := ckpt.(aggregation.LastValue)
-	if !ok {
-		t.Errorf("ckpt is not an aggregation.LastValue: %T", ckpt)
-	}
+	require.True(t, ok, "ckpt is not an aggregation.LastValue: %T", ckpt)
 	value, timestamp, err := sum.LastValue()
 	require.NoError(t, err)
 
