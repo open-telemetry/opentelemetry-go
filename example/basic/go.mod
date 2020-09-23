@@ -11,4 +11,5 @@ replace (
 require (
 	go.opentelemetry.io/otel v0.11.0
 	go.opentelemetry.io/otel/exporters/stdout v0.11.0
+	go.opentelemetry.io/otel/sdk v0.11.0
 )
