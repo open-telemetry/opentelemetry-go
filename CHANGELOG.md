@@ -54,7 +54,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Remove the B3 propagator from `go.opentelemetry.io/otel/propagators`. It is now located in the
    `go.opentelemetry.io/contrib/propagators/` module. (#1191)
->>>>>>> origin
 
 ### Fixed
 
