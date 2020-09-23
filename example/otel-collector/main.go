@@ -47,11 +47,11 @@ func initProvider() func() {
 	// `localhost:30080` address. Otherwise, replace `localhost` with the
 	// address of your cluster. If you run the app inside k8s, then you can
 	// probably connect directly to the service through dns
-	exp, err := otlp.NewExporter(
-		otlp.WithInsecure(),
+	config := otlp.NewConnectionConfig(otlp.WithInsecure(),
 		otlp.WithAddress("localhost:30080"),
 		otlp.WithGRPCDialOption(grpc.WithBlock()), // useful for testing
 	)
+	exp, err := otlp.NewExporter(config, config)
 	handleErr(err, "failed to create exporter")
 
 	bsp := sdktrace.NewBatchSpanProcessor(exp)

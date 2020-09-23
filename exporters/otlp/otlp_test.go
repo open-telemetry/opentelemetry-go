@@ -35,7 +35,7 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 		}()
 	}
 
-	e := NewUnstartedExporter()
+	e := NewUnstartedExporter(EmptyConfiguration, EmptyConfiguration)
 	if err := e.Start(); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
@@ -63,7 +63,7 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 		}()
 	}
 
-	e := NewUnstartedExporter()
+	e := NewUnstartedExporter(EmptyConfiguration, EmptyConfiguration)
 	if err := e.Start(); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestExporterShutdownNoError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	e := NewUnstartedExporter()
+	e := NewUnstartedExporter(EmptyConfiguration, EmptyConfiguration)
 	if err := e.Start(); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}

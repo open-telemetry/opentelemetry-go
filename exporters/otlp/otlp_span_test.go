@@ -59,8 +59,8 @@ func (t *traceServiceClientStub) Reset() {
 
 func TestExportSpans(t *testing.T) {
 	tsc := &traceServiceClientStub{}
-	exp := NewUnstartedExporter()
-	exp.traceExporter = tsc
+	exp := NewUnstartedExporter(EmptyConfiguration, EmptyConfiguration)
+	exp.tracesClient = tsc
 	exp.started = true
 
 	// March 31, 2020 5:01:26 1234nanos (UTC)

@@ -667,16 +667,16 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 // What works single-threaded should work multi-threaded
 func runMetricExportTests(t *testing.T, rs []record, expected []metricpb.ResourceMetrics) {
 	t.Run("1 goroutine", func(t *testing.T) {
-		runMetricExportTest(t, NewUnstartedExporter(WorkerCount(1)), rs, expected)
+		runMetricExportTest(t, NewUnstartedExporter(NewConnectionConfig(WorkerCount(1)), EmptyConfiguration), rs, expected)
 	})
 	t.Run("20 goroutines", func(t *testing.T) {
-		runMetricExportTest(t, NewUnstartedExporter(WorkerCount(20)), rs, expected)
+		runMetricExportTest(t, NewUnstartedExporter(NewConnectionConfig(WorkerCount(20)), EmptyConfiguration), rs, expected)
 	})
 }
 
 func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []metricpb.ResourceMetrics) {
 	msc := &metricsServiceClientStub{}
-	exp.metricExporter = msc
+	exp.metricsClient = msc
 	exp.started = true
 
 	recs := map[label.Distinct][]metricsdk.Record{}
@@ -769,8 +769,8 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 
 func TestEmptyMetricExport(t *testing.T) {
 	msc := &metricsServiceClientStub{}
-	exp := NewUnstartedExporter()
-	exp.metricExporter = msc
+	exp := NewUnstartedExporter(EmptyConfiguration, EmptyConfiguration)
+	exp.metricsClient = msc
 	exp.started = true
 
 	for _, test := range []struct {
