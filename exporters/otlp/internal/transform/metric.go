@@ -41,10 +41,10 @@ var (
 	// aggregator is attempted.
 	ErrUnimplementedAgg = errors.New("unimplemented aggregator")
 
-	// ErrIncompatibleAggregation is returned when
+	// ErrIncompatibleAgg is returned when
 	// aggregation.Kind implies an interface conversion that has
 	// failed
-	ErrIncompatibleAggregation = errors.New("incompatible aggregation type")
+	ErrIncompatibleAgg = errors.New("incompatible aggregation type")
 
 	// ErrUnknownValueType is returned when a transformation of an unknown value
 	// is attempted.
@@ -245,19 +245,22 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 	return rms, nil
 }
 
-// Record transforms a Record into an OTLP Metric. An ErrUnimplementedAgg
+// Record transforms a Record into an OTLP Metric. An ErrIncompatibleAgg
 // error is returned if the Record Aggregator is not supported.
 func Record(r export.Record) (*metricpb.Metric, error) {
 	agg := r.Aggregation()
 	switch agg.Kind() {
 	case aggregation.MinMaxSumCountKind:
-		return minMaxSumCount(r, agg.(aggregation.MinMaxSumCount))
+		mmsc, ok := agg.(aggregation.MinMaxSumCount)
+		if !ok {
+			return nil, fmt.Errorf("%w: %T", ErrIncompatibleAgg, agg)
+		}
+		return minMaxSumCount(r, mmsc)
 
 	case aggregation.SumKind:
 		s, ok := agg.(aggregation.Sum)
-
 		if !ok {
-			return nil, fmt.Errorf("%w: %T", ErrIncompatibleAggregation, agg)
+			return nil, fmt.Errorf("%w: %T", ErrIncompatibleAgg, agg)
 		}
 		sum, err := s.Sum()
 		if err != nil {
@@ -268,7 +271,7 @@ func Record(r export.Record) (*metricpb.Metric, error) {
 	case aggregation.LastValueKind:
 		lv, ok := agg.(aggregation.LastValue)
 		if !ok {
-			return nil, fmt.Errorf("%w: %T", ErrIncompatibleAggregation, agg)
+			return nil, fmt.Errorf("%w: %T", ErrIncompatibleAgg, agg)
 		}
 		value, tm, err := lv.LastValue()
 		if err != nil {
