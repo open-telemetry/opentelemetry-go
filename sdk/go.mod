@@ -10,6 +10,6 @@ require (
 	github.com/google/go-cmp v0.5.2
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/stretchr/testify v1.6.1
-	go.opentelemetry.io/otel v0.11.0
+	go.opentelemetry.io/otel v0.12.0
 	google.golang.org/grpc v1.32.0
 )
