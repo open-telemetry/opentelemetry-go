@@ -21,58 +21,72 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/trace/tracetest"
 )
 
-// LowPassFilter is a SpanProcessor that drops short lived spans.
-type LowPassFilter struct {
+// DurationFilter is a SpanProcessor that filters spans that have lifetimes
+// outside of a defined range.
+type DurationFilter struct {
 	// Next is the next SpanProcessor in the chain.
 	Next SpanProcessor
-	// Cutoff is the duration under which spans are dropped.
-	Cutoff time.Duration
+
+	// Min is the duration under which spans are dropped.
+	Min time.Duration
+	// Max is the duration over which spans are dropped.
+	Max time.Duration
 }
 
-func (f LowPassFilter) OnStart(sd *export.SpanData) { f.Next.OnStart(sd) }
-func (f LowPassFilter) Shutdown()                   { f.Next.Shutdown() }
-func (f LowPassFilter) ForceFlush()                 { f.Next.ForceFlush() }
-func (f LowPassFilter) OnEnd(sd *export.SpanData) {
-	if sd.EndTime.Sub(sd.StartTime) < f.Cutoff {
+func (f DurationFilter) OnStart(sd *export.SpanData) { f.Next.OnStart(sd) }
+func (f DurationFilter) Shutdown()                   { f.Next.Shutdown() }
+func (f DurationFilter) ForceFlush()                 { f.Next.ForceFlush() }
+func (f DurationFilter) OnEnd(sd *export.SpanData) {
+	if f.Min > 0 && sd.EndTime.Sub(sd.StartTime) < f.Min {
 		// Drop short lived spans.
 		return
 	}
-	f.Next.OnEnd(sd)
-}
-
-// HighPassFilter is a SpanProcessor that drops long lived spans.
-type HighPassFilter struct {
-	// Next is the next SpanProcessor in the chain.
-	Next SpanProcessor
-	// Cutoff is the duration over which spans are dropped.
-	Cutoff time.Duration
-}
-
-func (f HighPassFilter) OnStart(sd *export.SpanData) { f.Next.OnStart(sd) }
-func (f HighPassFilter) Shutdown()                   { f.Next.Shutdown() }
-func (f HighPassFilter) ForceFlush()                 { f.Next.ForceFlush() }
-func (f HighPassFilter) OnEnd(sd *export.SpanData) {
-	if sd.EndTime.Sub(sd.StartTime) > f.Cutoff {
+	if f.Max > 0 && sd.EndTime.Sub(sd.StartTime) > f.Max {
 		// Drop long lived spans.
 		return
 	}
 	f.Next.OnEnd(sd)
 }
 
-func ExampleSpanProcessor() {
-	exportSpanProcessor := NewSimpleSpanProcessor(tracetest.NewNoopExporter())
+// InstrumentationBlacklist is a SpanProcessor that drops all spans from
+// certain instrumentation.
+type InstrumentationBlacklist struct {
+	// Next is the next SpanProcessor in the chain.
+	Next SpanProcessor
 
-	// Build a band-pass filter to only allow spans shorter than an minute and
-	// longer than a second to be exported with the exportSpanProcessor.
-	bandPassFilter := LowPassFilter{
-		Next: HighPassFilter{
-			Next:   exportSpanProcessor,
-			Cutoff: time.Minute,
+	// Blacklist is the set of instrumentation names for which spans will be
+	// dropped.
+	Blacklist map[string]bool
+}
+
+func (f InstrumentationBlacklist) OnStart(sd *export.SpanData) { f.Next.OnStart(sd) }
+func (f InstrumentationBlacklist) Shutdown()                   { f.Next.Shutdown() }
+func (f InstrumentationBlacklist) ForceFlush()                 { f.Next.ForceFlush() }
+func (f InstrumentationBlacklist) OnEnd(sd *export.SpanData) {
+	if f.Blacklist != nil && f.Blacklist[sd.InstrumentationLibrary.Name] {
+		// Drop spans from this instrumentation
+		return
+	}
+	f.Next.OnEnd(sd)
+}
+
+func ExampleSpanProcessor() {
+	exportSP := NewSimpleSpanProcessor(tracetest.NewNoopExporter())
+
+	// Build a SpanProcessor chain to filter out all spans from the pernicious
+	// "naughty-instrumentation" dependency and only allow spans shorter than
+	// an minute and longer than a second to be exported with the exportSP.
+	filter := DurationFilter{
+		Next: InstrumentationBlacklist{
+			Next: exportSP,
+			Blacklist: map[string]bool{
+				"naughty-instrumentation": true,
+			},
 		},
-		Cutoff: time.Second,
+		Min: time.Second,
+		Max: time.Minute,
 	}
 
-	traceProvider := NewProvider()
-	traceProvider.RegisterSpanProcessor(bandPassFilter)
+	_ = NewProvider(WithSpanProcessor(filter))
 	// ...
 }
