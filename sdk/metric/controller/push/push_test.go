@@ -107,7 +107,7 @@ func TestPushTicker(t *testing.T) {
 		push.WithPeriod(time.Second),
 		push.WithResource(testResource),
 	)
-	meter := p.Provider().Meter("name")
+	meter := p.MeterProvider().Meter("name")
 
 	mock := controllertest.NewMockClock()
 	p.SetClock(mock)
@@ -193,7 +193,7 @@ func TestPushExportError(t *testing.T) {
 
 			ctx := context.Background()
 
-			meter := p.Provider().Meter("name")
+			meter := p.MeterProvider().Meter("name")
 			counter1 := metric.Must(meter).NewInt64Counter("counter1.sum")
 			counter2 := metric.Must(meter).NewInt64Counter("counter2.sum")
 

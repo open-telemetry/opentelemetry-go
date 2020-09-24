@@ -23,12 +23,12 @@ import (
 	"go.opentelemetry.io/otel/label"
 )
 
-// Provider is a standard metric.Provider for wrapping `MeterImpl`
-type Provider struct {
+// MeterProvider is a standard MeterProvider for wrapping `MeterImpl`
+type MeterProvider struct {
 	impl metric.MeterImpl
 }
 
-var _ metric.Provider = (*Provider)(nil)
+var _ metric.MeterProvider = (*MeterProvider)(nil)
 
 // uniqueInstrumentMeterImpl implements the metric.MeterImpl interface, adding
 // uniqueness checking for instrument descriptors.  Use NewUniqueInstrumentMeter
@@ -47,16 +47,16 @@ type key struct {
 	InstrumentationVersion string
 }
 
-// NewProvider returns a new provider that implements instrument
+// NewMeterProvider returns a new provider that implements instrument
 // name-uniqueness checking.
-func NewProvider(impl metric.MeterImpl) *Provider {
-	return &Provider{
+func NewMeterProvider(impl metric.MeterImpl) *MeterProvider {
+	return &MeterProvider{
 		impl: NewUniqueInstrumentMeterImpl(impl),
 	}
 }
 
-// Meter implements metric.Provider.
-func (p *Provider) Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter {
+// Meter implements MeterProvider.
+func (p *MeterProvider) Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter {
 	return metric.WrapMeterImpl(p.impl, instrumentationName, opts...)
 }
 
