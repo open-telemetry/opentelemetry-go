@@ -30,6 +30,6 @@ var (
 )
 
 func init() {
-	Tracer = trace.NoopProvider().Tracer("")
+	Tracer = trace.NoopTracerProvider().Tracer("")
 	_, Span = Tracer.Start(context.Background(), "")
 }

@@ -50,13 +50,13 @@ func NewExporter(options ...Option) (*Exporter, error) {
 // NewExportPipeline creates a complete export pipeline with the default
 // selectors, processors, and trace registration. It is the responsibility
 // of the caller to stop the returned push Controller.
-func NewExportPipeline(exportOpts []Option, pushOpts []push.Option) (apitrace.Provider, *push.Controller, error) {
+func NewExportPipeline(exportOpts []Option, pushOpts []push.Option) (apitrace.TracerProvider, *push.Controller, error) {
 	exporter, err := NewExporter(exportOpts...)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	tp := sdktrace.NewProvider(sdktrace.WithBatcher(exporter))
+	tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(exporter))
 	pusher := push.New(
 		basic.New(
 			simple.NewWithExactDistribution(),
@@ -88,6 +88,6 @@ func InstallNewPipeline(exportOpts []Option, pushOpts []push.Option) (*push.Cont
 		return controller, err
 	}
 	global.SetTracerProvider(tracerProvider)
-	global.SetMeterProvider(controller.Provider())
+	global.SetMeterProvider(controller.MeterProvider())
 	return controller, err
 }
