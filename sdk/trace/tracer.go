@@ -58,9 +58,9 @@ func (tr *tracer) Start(ctx context.Context, name string, options ...apitrace.Sp
 	span.tracer = tr
 
 	if span.IsRecording() {
-		sps, _ := tr.provider.spanProcessors.Load().(spanProcessorMap)
-		for sp := range sps {
-			sp.OnStart(span.data)
+		sps, _ := tr.provider.spanProcessors.Load().(spanProcessorStates)
+		for _, sp := range sps {
+			sp.sp.OnStart(span.data)
 		}
 	}
 

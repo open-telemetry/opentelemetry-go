@@ -43,4 +43,8 @@ type SpanProcessor interface {
 	ForceFlush()
 }
 
-type spanProcessorMap map[SpanProcessor]*sync.Once
+type spanProcessorState struct {
+	sp    SpanProcessor
+	state *sync.Once
+}
+type spanProcessorStates []*spanProcessorState
