@@ -864,7 +864,7 @@ It contains api and sdk for trace and meter.
 
 
 [Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.12.0...HEAD
-[0.11.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.12.0
+[0.12.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.12.0
 [0.11.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.11.0
 [0.10.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.10.0
 [0.9.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.9.0
