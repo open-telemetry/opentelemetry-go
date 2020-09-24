@@ -87,6 +87,6 @@ func ExampleSpanProcessor() {
 		Max: time.Minute,
 	}
 
-	_ = NewProvider(WithSpanProcessor(filter))
+	_ = NewTracerProvider(WithSpanProcessor(filter))
 	// ...
 }
