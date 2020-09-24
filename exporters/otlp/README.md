@@ -48,7 +48,7 @@ func main() {
 	//   	),
 	//   )
 	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithBatcher(exporter))
-	pusher := push.New(simple.NewWithExactDistribution(), exporter)
+	pusher := push.New(simple.NewWithInexpensiveDistribution(), exporter)
 	pusher.Start()
 	metricProvider := pusher.MeterProvider()
 
