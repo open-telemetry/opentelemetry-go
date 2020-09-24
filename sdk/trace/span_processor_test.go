@@ -45,47 +45,66 @@ func (t *testSpanProcesor) ForceFlush() {
 func TestRegisterSpanProcessort(t *testing.T) {
 	name := "Register span processor before span starts"
 	tp := basicTracerProvider(t)
-	sp := NewTestSpanProcessor()
-	tp.RegisterSpanProcessor(sp)
+	sps := []*testSpanProcesor{
+		NewTestSpanProcessor(),
+		NewTestSpanProcessor(),
+	}
+
+	for _, sp := range sps {
+		tp.RegisterSpanProcessor(sp)
+	}
 
 	tr := tp.Tracer("SpanProcessor")
 	_, span := tr.Start(context.Background(), "OnStart")
 	span.End()
 	wantCount := 1
-	gotCount := len(sp.spansStarted)
-	if gotCount != wantCount {
-		t.Errorf("%s: started count: got %d, want %d\n", name, gotCount, wantCount)
-	}
-	gotCount = len(sp.spansEnded)
-	if gotCount != wantCount {
-		t.Errorf("%s: ended count: got %d, want %d\n", name, gotCount, wantCount)
+
+	for _, sp := range sps {
+		gotCount := len(sp.spansStarted)
+		if gotCount != wantCount {
+			t.Errorf("%s: started count: got %d, want %d\n", name, gotCount, wantCount)
+		}
+		gotCount = len(sp.spansEnded)
+		if gotCount != wantCount {
+			t.Errorf("%s: ended count: got %d, want %d\n", name, gotCount, wantCount)
+		}
 	}
 }
 
 func TestUnregisterSpanProcessor(t *testing.T) {
 	name := "Start span after unregistering span processor"
 	tp := basicTracerProvider(t)
-	sp := NewTestSpanProcessor()
-	tp.RegisterSpanProcessor(sp)
+	sps := []*testSpanProcesor{
+		NewTestSpanProcessor(),
+		NewTestSpanProcessor(),
+	}
+
+	for _, sp := range sps {
+		tp.RegisterSpanProcessor(sp)
+	}
 
 	tr := tp.Tracer("SpanProcessor")
 	_, span := tr.Start(context.Background(), "OnStart")
 	span.End()
-	tp.UnregisterSpanProcessor(sp)
+	for _, sp := range sps {
+		tp.UnregisterSpanProcessor(sp)
+	}
 
 	// start another span after unregistering span processor.
 	_, span = tr.Start(context.Background(), "Start span after unregister")
 	span.End()
 
-	wantCount := 1
-	gotCount := len(sp.spansStarted)
-	if gotCount != wantCount {
-		t.Errorf("%s: started count: got %d, want %d\n", name, gotCount, wantCount)
-	}
+	for _, sp := range sps {
+		wantCount := 1
+		gotCount := len(sp.spansStarted)
+		if gotCount != wantCount {
+			t.Errorf("%s: started count: got %d, want %d\n", name, gotCount, wantCount)
+		}
 
-	gotCount = len(sp.spansEnded)
-	if gotCount != wantCount {
-		t.Errorf("%s: ended count: got %d, want %d\n", name, gotCount, wantCount)
+		gotCount = len(sp.spansEnded)
+		if gotCount != wantCount {
+			t.Errorf("%s: ended count: got %d, want %d\n", name, gotCount, wantCount)
+		}
 	}
 }
 
