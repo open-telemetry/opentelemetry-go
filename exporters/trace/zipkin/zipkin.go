@@ -111,13 +111,13 @@ func NewRawExporter(collectorURL, serviceName string, opts ...Option) (*Exporter
 
 // NewExportPipeline sets up a complete export pipeline
 // with the recommended setup for trace provider
-func NewExportPipeline(collectorURL, serviceName string, opts ...Option) (*sdktrace.Provider, error) {
+func NewExportPipeline(collectorURL, serviceName string, opts ...Option) (*sdktrace.TracerProvider, error) {
 	exp, err := NewRawExporter(collectorURL, serviceName, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	tp := sdktrace.NewProvider(sdktrace.WithBatcher(exp))
+	tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(exp))
 	if exp.o.config != nil {
 		tp.ApplyConfig(*exp.o.config)
 	}

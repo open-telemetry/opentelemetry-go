@@ -153,7 +153,7 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 	for _, option := range options {
 		t.Run(option.name, func(t *testing.T) {
 			te := testBatchExporter{}
-			tp := basicProvider(t)
+			tp := basicTracerProvider(t)
 			ssp := createAndRegisterBatchSP(option, &te)
 			if ssp == nil {
 				t.Fatalf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)

@@ -41,16 +41,16 @@ func main() {
 	}()
 
 	// Note: The exporter can also be used as a Batcher. E.g.
-	//   tracerProvider := sdktrace.NewProvider(
+	//   tracerProvider := sdktrace.NewTracerProvider(
 	//   	sdktrace.WithBatcher(exporter,
 	//   		sdktrace.WithBatchTimeout(time.Second*15),
 	//   		sdktrace.WithMaxExportBatchSize(100),
 	//   	),
 	//   )
-	tracerProvider := sdktrace.NewProvider(sdktrace.WithBatcher(exporter))
+	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithBatcher(exporter))
 	pusher := push.New(simple.NewWithExactDistribution(), exporter)
 	pusher.Start()
-	metricProvider := pusher.Provider()
+	metricProvider := pusher.MeterProvider()
 
 	// Your code here ...
 }

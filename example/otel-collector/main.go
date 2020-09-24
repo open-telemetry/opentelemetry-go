@@ -55,7 +55,7 @@ func initProvider() func() {
 	handleErr(err, "failed to create exporter")
 
 	bsp := sdktrace.NewBatchSpanProcessor(exp)
-	tracerProvider := sdktrace.NewProvider(
+	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithResource(resource.New(
 			// the service name used to display traces in backends
@@ -74,7 +74,7 @@ func initProvider() func() {
 	)
 
 	global.SetTracerProvider(tracerProvider)
-	global.SetMeterProvider(pusher.Provider())
+	global.SetMeterProvider(pusher.MeterProvider())
 	pusher.Start()
 
 	return func() {

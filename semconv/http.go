@@ -224,10 +224,6 @@ func HTTPAttributesFromHTTPStatusCode(code int) []label.KeyValue {
 	attrs := []label.KeyValue{
 		HTTPStatusCodeKey.Int(code),
 	}
-	text := http.StatusText(code)
-	if text != "" {
-		attrs = append(attrs, HTTPStatusTextKey.String(text))
-	}
 	return attrs
 }
 

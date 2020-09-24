@@ -27,11 +27,11 @@ import (
 
 type (
 	tracerProviderHolder struct {
-		tp trace.Provider
+		tp trace.TracerProvider
 	}
 
 	meterProviderHolder struct {
-		mp metric.Provider
+		mp metric.MeterProvider
 	}
 
 	propagatorsHolder struct {
@@ -49,19 +49,19 @@ var (
 )
 
 // TracerProvider is the internal implementation for global.TracerProvider.
-func TracerProvider() trace.Provider {
+func TracerProvider() trace.TracerProvider {
 	return globalTracer.Load().(tracerProviderHolder).tp
 }
 
 // SetTracerProvider is the internal implementation for global.SetTracerProvider.
-func SetTracerProvider(tp trace.Provider) {
+func SetTracerProvider(tp trace.TracerProvider) {
 	delegateTraceOnce.Do(func() {
 		current := TracerProvider()
 		if current == tp {
 			// Setting the provider to the prior default is nonsense, panic.
 			// Panic is acceptable because we are likely still early in the
 			// process lifetime.
-			panic("invalid Provider, the global instance cannot be reinstalled")
+			panic("invalid TracerProvider, the global instance cannot be reinstalled")
 		} else if def, ok := current.(*tracerProvider); ok {
 			def.setDelegate(tp)
 		}
@@ -71,12 +71,12 @@ func SetTracerProvider(tp trace.Provider) {
 }
 
 // MeterProvider is the internal implementation for global.MeterProvider.
-func MeterProvider() metric.Provider {
+func MeterProvider() metric.MeterProvider {
 	return globalMeter.Load().(meterProviderHolder).mp
 }
 
 // SetMeterProvider is the internal implementation for global.SetMeterProvider.
-func SetMeterProvider(mp metric.Provider) {
+func SetMeterProvider(mp metric.MeterProvider) {
 	delegateMeterOnce.Do(func() {
 		current := MeterProvider()
 
@@ -84,7 +84,7 @@ func SetMeterProvider(mp metric.Provider) {
 			// Setting the provider to the prior default is nonsense, panic.
 			// Panic is acceptable because we are likely still early in the
 			// process lifetime.
-			panic("invalid Provider, the global instance cannot be reinstalled")
+			panic("invalid MeterProvider, the global instance cannot be reinstalled")
 		} else if def, ok := current.(*meterProvider); ok {
 			def.setDelegate(mp)
 		}
