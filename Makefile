@@ -57,7 +57,7 @@ $(TOOLS_DIR)/gojq: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_MOD_D
 	cd $(TOOLS_MOD_DIR) && \
 	go build -o $(TOOLS_DIR)/gojq github.com/itchyny/gojq/cmd/gojq
 
-precommit: dependabot-check license-check generate build lint examples test
+precommit: dependabot-check license-check generate build lint examples test-benchmarks test
 
 .PHONY: test-with-coverage
 test-with-coverage:
@@ -122,6 +122,13 @@ examples:
 	  echo "Building $${ex}"; \
 	  (cd "$${ex}" && \
 	   go build .); \
+	done
+
+.PHONY: test-benchmarks
+test-benchmarks:
+	@set -e; for dir in $(ALL_GO_MOD_DIRS); do \
+	  echo "test benchmarks in $${dir}"; \
+	  (cd "$${dir}" && go test -test.benchtime=1ms -run=NONE -bench=. ./...) > /dev/null; \
 	done
 
 .PHONY: lint
