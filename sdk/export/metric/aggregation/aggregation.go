@@ -40,7 +40,7 @@ type (
 		Sum() (metric.Number, error)
 	}
 
-	// Sum returns the number of values that were aggregated.
+	// Count returns the number of values that were aggregated.
 	Count interface {
 		Aggregation
 		Count() (int64, error)
