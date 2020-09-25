@@ -156,44 +156,50 @@ func WithGRPCDialOption(opts ...grpc.DialOption) ExporterOption {
 	}
 }
 
-// NewConnectionConfig initializes a config struct with default values and applies
-// any ExporterOptions provided.
-func newConnectionConfig(opts ...ExporterOption) config {
-	cfg := config{
-		numWorkers:        DefaultNumWorkers,
-		grpcServiceConfig: DefaultGRPCServiceConfig,
-	}
-
-	for _, opt := range opts {
-		opt(&cfg)
-	}
-	return cfg
-}
-
 // ConnConfigurations keeping track of both traces and metrics
 type ConnConfigurations struct {
 	metrics config
 	traces  config
 }
 
-func NewConnections() ConnConfigurations { return ConnConfigurations{}.SetCommonOptions() }
-
-// SetCommonOptions updates the connection configuration for both traces and metrics endpoints
-func (occ ConnConfigurations) SetCommonOptions(opts ...ExporterOption) ConnConfigurations {
-	config := newConnectionConfig(opts...)
-	occ.metrics = config
-	occ.traces = config
-	return occ
+// NewConnections initializes a config struct with default values and applies
+// any ExporterOptions provided for both metrics and traces.
+func NewConnections(opts ...ExporterOption) ConnConfigurations {
+	return ConnConfigurations{
+		metrics: newDefaultConnectionConfig(opts...),
+		traces:  newDefaultConnectionConfig(opts...),
+	}
 }
 
-// SetMetricOptions updates the connection configuration for the metrics endpoint
+func newDefaultConnectionConfig(opts ...ExporterOption) config {
+	cfg := config{
+		numWorkers:        DefaultNumWorkers,
+		grpcServiceConfig: DefaultGRPCServiceConfig,
+	}
+
+	return applyOptions(cfg, opts...)
+}
+
+func applyOptions(cfg config, opts ...ExporterOption) config {
+	newCfg := cfg
+	for _, opt := range opts {
+		opt(&newCfg)
+	}
+	return newCfg
+}
+
+// SetMetricOptions updates the connection configuration for the metrics endpoint,
+// overriding options set with NewConnections, or setting new metrics specific options.
 func (occ ConnConfigurations) SetMetricOptions(opts ...ExporterOption) ConnConfigurations {
-	occ.metrics = newConnectionConfig(opts...)
+	oldCfg := occ.metrics
+	occ.metrics = applyOptions(oldCfg, opts...)
 	return occ
 }
 
-// SetTraceOptions updates the connection configuration for the traces endpoint
+// SetTraceOptions updates the connection configuration for the traces endpoint,
+// overriding options set with NewConnections, or setting new trace specific options.
 func (occ ConnConfigurations) SetTraceOptions(opts ...ExporterOption) ConnConfigurations {
-	occ.traces = newConnectionConfig(opts...)
+	oldCfg := occ.traces
+	occ.traces = applyOptions(oldCfg, opts...)
 	return occ
 }

@@ -74,8 +74,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	}
 
 	opts = append(opts, additionalOpts...)
-	config := otlp.NewConnections().SetCommonOptions(opts...)
-	exp, err := otlp.NewExporter(config)
+	exp, err := otlp.NewExporter(otlp.NewConnections(opts...))
 	if err != nil {
 		t.Fatalf("failed to create a new collector exporter: %v", err)
 	}
@@ -287,10 +286,9 @@ func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
 		_ = mc.stop()
 	}()
 
-	config := otlp.NewConnections().
-		SetCommonOptions(otlp.WithInsecure(),
-			otlp.WithReconnectionPeriod(50*time.Millisecond),
-			otlp.WithAddress(mc.address))
+	config := otlp.NewConnections(otlp.WithInsecure(),
+		otlp.WithReconnectionPeriod(50*time.Millisecond),
+		otlp.WithAddress(mc.address))
 	exp, err := otlp.NewExporter(config)
 	if err != nil {
 		t.Fatalf("error creating exporter: %v", err)
@@ -323,10 +321,9 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 	mc := runMockCol(t)
 
 	reconnectionPeriod := 20 * time.Millisecond
-	config := otlp.NewConnections().
-		SetCommonOptions(otlp.WithInsecure(),
-			otlp.WithAddress(mc.address),
-			otlp.WithReconnectionPeriod(reconnectionPeriod))
+	config := otlp.NewConnections(otlp.WithInsecure(),
+		otlp.WithAddress(mc.address),
+		otlp.WithReconnectionPeriod(reconnectionPeriod))
 	exp, err := otlp.NewExporter(config)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -396,10 +393,9 @@ func TestNewExporter_collectorOnBadConnection(t *testing.T) {
 	_, collectorPortStr, _ := net.SplitHostPort(ln.Addr().String())
 
 	address := fmt.Sprintf("localhost:%s", collectorPortStr)
-	config := otlp.NewConnections().
-		SetCommonOptions(otlp.WithInsecure(),
-			otlp.WithReconnectionPeriod(50*time.Millisecond),
-			otlp.WithAddress(address))
+	config := otlp.NewConnections(otlp.WithInsecure(),
+		otlp.WithReconnectionPeriod(50*time.Millisecond),
+		otlp.WithAddress(address))
 	exp, err := otlp.NewExporter(config)
 	if err != nil {
 		t.Fatalf("Despite an indefinite background reconnection, got error: %v", err)
@@ -413,10 +409,9 @@ func TestNewExporter_withAddress(t *testing.T) {
 		_ = mc.stop()
 	}()
 
-	config := otlp.NewConnections().
-		SetCommonOptions(otlp.WithInsecure(),
-			otlp.WithReconnectionPeriod(50*time.Millisecond),
-			otlp.WithAddress(mc.address))
+	config := otlp.NewConnections(otlp.WithInsecure(),
+		otlp.WithReconnectionPeriod(50*time.Millisecond),
+		otlp.WithAddress(mc.address))
 	exp := otlp.NewUnstartedExporter(config)
 
 	defer func() {
@@ -434,11 +429,10 @@ func TestNewExporter_withHeaders(t *testing.T) {
 		_ = mc.stop()
 	}()
 
-	config := otlp.NewConnections().
-		SetCommonOptions(otlp.WithInsecure(),
-			otlp.WithReconnectionPeriod(50*time.Millisecond),
-			otlp.WithAddress(mc.address),
-			otlp.WithHeaders(map[string]string{"header1": "value1"}))
+	config := otlp.NewConnections(otlp.WithInsecure(),
+		otlp.WithReconnectionPeriod(50*time.Millisecond),
+		otlp.WithAddress(mc.address),
+		otlp.WithHeaders(map[string]string{"header1": "value1"}))
 	exp, _ := otlp.NewExporter(config)
 	require.NoError(t, exp.ExportSpans(context.Background(), []*exporttrace.SpanData{{Name: "in the midst"}}))
 
@@ -460,10 +454,9 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 
 	<-time.After(5 * time.Millisecond)
 
-	config := otlp.NewConnections().
-		SetCommonOptions(otlp.WithInsecure(),
-			otlp.WithReconnectionPeriod(50*time.Millisecond),
-			otlp.WithAddress(mc.address))
+	config := otlp.NewConnections(otlp.WithInsecure(),
+		otlp.WithReconnectionPeriod(50*time.Millisecond),
+		otlp.WithAddress(mc.address))
 	exp, _ := otlp.NewExporter(config)
 
 	defer func() {
