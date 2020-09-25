@@ -95,6 +95,7 @@ type (
 	// Histogram returns the count of events in pre-determined buckets.
 	Histogram interface {
 		Aggregation
+		Count() (int64, error)
 		Sum() (metric.Number, error)
 		Histogram() (Buckets, error)
 	}
