@@ -42,7 +42,7 @@ func Example_insecure() {
 		}
 	}()
 
-	tp := sdktrace.NewProvider(
+	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithBatcher(
 			exp,
@@ -88,7 +88,7 @@ func Example_withTLS() {
 		}
 	}()
 
-	tp := sdktrace.NewProvider(
+	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithBatcher(
 			exp,

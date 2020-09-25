@@ -30,10 +30,10 @@ import (
 )
 
 func TestTracer(t *testing.T) {
-	tp := tracetest.NewProvider()
+	tp := tracetest.NewTracerProvider()
 
 	apitest.NewHarness(t).TestTracer(func() func() trace.Tracer {
-		tp := tracetest.NewProvider()
+		tp := tracetest.NewTracerProvider()
 		var i uint64
 		return func() trace.Tracer {
 			return tp.Tracer(fmt.Sprintf("tracer %d", atomic.AddUint64(&i, 1)))
@@ -259,7 +259,7 @@ func TestTracer(t *testing.T) {
 }
 
 func testTracedSpan(t *testing.T, fn func(tracer trace.Tracer, name string) (trace.Span, error)) {
-	tp := tracetest.NewProvider()
+	tp := tracetest.NewTracerProvider()
 	t.Run("starts a span with the expected name", func(t *testing.T) {
 		t.Parallel()
 
@@ -304,7 +304,7 @@ func testTracedSpan(t *testing.T, fn func(tracer trace.Tracer, name string) (tra
 		e := matchers.NewExpecter(t)
 
 		sr := new(tracetest.StandardSpanRecorder)
-		subject := tracetest.NewProvider(tracetest.WithSpanRecorder(sr)).Tracer(t.Name())
+		subject := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr)).Tracer(t.Name())
 		subject.Start(context.Background(), "span1")
 
 		e.Expect(len(sr.Started())).ToEqual(1)
@@ -324,7 +324,7 @@ func testTracedSpan(t *testing.T, fn func(tracer trace.Tracer, name string) (tra
 		e := matchers.NewExpecter(t)
 
 		sr := new(tracetest.StandardSpanRecorder)
-		subject := tracetest.NewProvider(tracetest.WithSpanRecorder(sr)).Tracer(t.Name())
+		subject := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr)).Tracer(t.Name())
 
 		numSpans := 2
 

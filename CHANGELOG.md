@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.12.0] - 2020-09-24
+
 ### Added
 
 - A `SpanConfigure` function in `go.opentelemetry.io/otel/api/trace` to create a new `SpanConfig` from `SpanOption`s. (#1108)
@@ -46,8 +48,29 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Don't consider unset environment variable for resource detection to be an error. (#1170)
 - Rename `go.opentelemetry.io/otel/api/metric.ConfigureInstrument` to `NewInstrumentConfig` and
   `go.opentelemetry.io/otel/api/metric.ConfigureMeter` to `NewMeterConfig`.
+- ValueObserver instruments use LastValue aggregator by default. (#1165)
+- OTLP Metric exporter supports LastValue aggregation. (#1165)
 - Move the `go.opentelemetry.io/otel/api/unit` package to `go.opentelemetry.io/otel/unit`. (#1185)
+- Rename `Provider` to `MeterProvider` in the `go.opentelemetry.io/otel/api/metric` package. (#1190)
+- Rename `NoopProvider` to `NoopMeterProvider` in the `go.opentelemetry.io/otel/api/metric` package. (#1190)
+- Rename `NewProvider` to `NewMeterProvider` in the `go.opentelemetry.io/otel/api/metric/metrictest` package. (#1190)
+- Rename `Provider` to `MeterProvider` in the `go.opentelemetry.io/otel/api/metric/registry` package. (#1190)
+- Rename `NewProvider` to `NewMeterProvider` in the `go.opentelemetry.io/otel/api/metri/registryc` package. (#1190)
+- Rename `Provider` to `TracerProvider` in the `go.opentelemetry.io/otel/api/trace` package. (#1190)
+- Rename `NoopProvider` to `NoopTracerProvider` in the `go.opentelemetry.io/otel/api/trace` package. (#1190)
+- Rename `Provider` to `TracerProvider` in the `go.opentelemetry.io/otel/api/trace/tracetest` package. (#1190)
+- Rename `NewProvider` to `NewTracerProvider` in the `go.opentelemetry.io/otel/api/trace/tracetest` package. (#1190)
+- Rename `WrapperProvider` to `WrapperTracerProvider` in the `go.opentelemetry.io/otel/bridge/opentracing` package. (#1190)
+- Rename `NewWrapperProvider` to `NewWrapperTracerProvider` in the `go.opentelemetry.io/otel/bridge/opentracing` package. (#1190)
+- Rename `Provider` method of the pull controller to `MeterProvider` in the `go.opentelemetry.io/otel/sdk/metric/controller/pull` package. (#1190)
+- Rename `Provider` method of the push controller to `MeterProvider` in the `go.opentelemetry.io/otel/sdk/metric/controller/push` package. (#1190)
+- Rename `ProviderOptions` to `TracerProviderConfig` in the `go.opentelemetry.io/otel/sdk/trace` package. (#1190)
+- Rename `ProviderOption` to `TracerProviderOption` in the `go.opentelemetry.io/otel/sdk/trace` package. (#1190)
+- Rename `Provider` to `TracerProvider` in the `go.opentelemetry.io/otel/sdk/trace` package. (#1190)
+- Rename `NewProvider` to `NewTracerProvider` in the `go.opentelemetry.io/otel/sdk/trace` package. (#1190)
 - Renamed `SamplingDecision` values to comply with OpenTelemetry specification change. (#1192)
+- Renamed Zipkin attribute names from `ot.status_code & ot.status_description` to `otel.status_code & otel.status_description`. (#1201)
+- The default SDK now invokes registered `SpanProcessor`s in the order they were registered with the `TracerProvider`. (#1195)
 - Change `go.opentelemetry.io/exporters/otlp/` `Exporter` interface to take as parameter a `ConnConfigurations` structure containing different configurations for metrics and traces endpoints. (#1202)
 - `go.opentelemetry.io/exporters/otlp/` `Exporter` connection logic (including indefinite background connection) is now handled by an internal `go.opentelemetry.io/exporters/otlp/` `otlpConnection` object. (#1202)
 
@@ -55,11 +78,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Remove the B3 propagator from `go.opentelemetry.io/otel/propagators`. It is now located in the
    `go.opentelemetry.io/contrib/propagators/` module. (#1191)
+- Remove the semantic convention for HTTP status text, `HTTPStatusTextKey` from package `go.opentelemetry.io/otel/semconv`. (#1194)
 
 ### Fixed
 
 - Zipkin example no longer mentions `ParentSampler`, corrected to `ParentBased`. (#1171)
 - Fix missing shutdown processor in otel-collector example. (#1186)
+- Fix missing shutdown processor in basic and namedtracer examples. (#1197)
 
 ## [0.11.0] - 2020-08-24
 
@@ -841,7 +866,8 @@ It contains api and sdk for trace and meter.
 - CODEOWNERS file to track owners of this project.
 
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.12.0
 [0.11.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.11.0
 [0.10.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.10.0
 [0.9.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.9.0

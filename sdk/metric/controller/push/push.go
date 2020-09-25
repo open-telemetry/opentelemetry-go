@@ -34,7 +34,7 @@ const DefaultPushPeriod = 10 * time.Second
 type Controller struct {
 	lock         sync.Mutex
 	accumulator  *sdk.Accumulator
-	provider     *registry.Provider
+	provider     *registry.MeterProvider
 	checkpointer export.Checkpointer
 	exporter     export.Exporter
 	wg           sync.WaitGroup
@@ -45,9 +45,9 @@ type Controller struct {
 	ticker       controllerTime.Ticker
 }
 
-// New constructs a Controller, an implementation of metric.Provider,
-// using the provided checkpointer, exporter, and options to configure
-// an SDK with periodic collection.
+// New constructs a Controller, an implementation of MeterProvider, using the
+// provided checkpointer, exporter, and options to configure an SDK with
+// periodic collection.
 func New(checkpointer export.Checkpointer, exporter export.Exporter, opts ...Option) *Controller {
 	c := &Config{
 		Period: DefaultPushPeriod,
@@ -64,7 +64,7 @@ func New(checkpointer export.Checkpointer, exporter export.Exporter, opts ...Opt
 		sdk.WithResource(c.Resource),
 	)
 	return &Controller{
-		provider:     registry.NewProvider(impl),
+		provider:     registry.NewMeterProvider(impl),
 		accumulator:  impl,
 		checkpointer: checkpointer,
 		exporter:     exporter,
@@ -83,8 +83,8 @@ func (c *Controller) SetClock(clock controllerTime.Clock) {
 	c.clock = clock
 }
 
-// Provider returns a metric.Provider instance for this controller.
-func (c *Controller) Provider() metric.Provider {
+// MeterProvider returns a MeterProvider instance for this controller.
+func (c *Controller) MeterProvider() metric.MeterProvider {
 	return c.provider
 }
 

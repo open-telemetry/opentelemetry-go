@@ -25,19 +25,19 @@ import (
 	"go.opentelemetry.io/otel/label"
 )
 
-// This file contains the forwarding implementation of metric.Provider
-// used as the default global instance.  Metric events using instruments
-// provided by this implementation are no-ops until the first Meter
-// implementation is set as the global provider.
+// This file contains the forwarding implementation of MeterProvider used as
+// the default global instance.  Metric events using instruments provided by
+// this implementation are no-ops until the first Meter implementation is set
+// as the global provider.
 //
-// The implementation here uses Mutexes to maintain a list of active
-// Meters in the Provider and Instruments in each Meter, under the
-// assumption that these interfaces are not performance-critical.
+// The implementation here uses Mutexes to maintain a list of active Meters in
+// the MeterProvider and Instruments in each Meter, under the assumption that
+// these interfaces are not performance-critical.
 //
-// We have the invariant that setDelegate() will be called before a
-// new metric.Provider implementation is registered as the global
-// provider.  Mutexes in the Provider and Meters ensure that each
-// instrument has a delegate before the global provider is set.
+// We have the invariant that setDelegate() will be called before a new
+// MeterProvider implementation is registered as the global provider.  Mutexes
+// in the MeterProvider and Meters ensure that each instrument has a delegate
+// before the global provider is set.
 //
 // Bound instrument operations are implemented by delegating to the
 // instrument after it is registered, with a sync.Once initializer to
@@ -51,7 +51,7 @@ type meterKey struct {
 }
 
 type meterProvider struct {
-	delegate metric.Provider
+	delegate metric.MeterProvider
 
 	// lock protects `delegate` and `meters`.
 	lock sync.Mutex
@@ -113,7 +113,7 @@ type syncHandle struct {
 	initialize sync.Once
 }
 
-var _ metric.Provider = &meterProvider{}
+var _ metric.MeterProvider = &meterProvider{}
 var _ metric.MeterImpl = &meterImpl{}
 var _ metric.InstrumentImpl = &syncImpl{}
 var _ metric.BoundSyncImpl = &syncHandle{}
@@ -123,7 +123,7 @@ func (inst *instrument) Descriptor() metric.Descriptor {
 	return inst.descriptor
 }
 
-// Provider interface and delegation
+// MeterProvider interface and delegation
 
 func newMeterProvider() *meterProvider {
 	return &meterProvider{
@@ -131,7 +131,7 @@ func newMeterProvider() *meterProvider {
 	}
 }
 
-func (p *meterProvider) setDelegate(provider metric.Provider) {
+func (p *meterProvider) setDelegate(provider metric.MeterProvider) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -166,7 +166,7 @@ func (p *meterProvider) Meter(instrumentationName string, opts ...metric.MeterOp
 
 // Meter interface and delegation
 
-func (m *meterImpl) setDelegate(name, version string, provider metric.Provider) {
+func (m *meterImpl) setDelegate(name, version string, provider metric.MeterProvider) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 

@@ -22,7 +22,7 @@ import (
 
 var testConfig = sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}
 
-func basicProvider(t *testing.T) *sdktrace.Provider {
-	tp := sdktrace.NewProvider(sdktrace.WithConfig(testConfig))
+func basicTracerProvider(t *testing.T) *sdktrace.TracerProvider {
+	tp := sdktrace.NewTracerProvider(sdktrace.WithConfig(testConfig))
 	return tp
 }

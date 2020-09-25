@@ -86,7 +86,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		}
 	}()
 
-	pOpts := []sdktrace.ProviderOption{
+	pOpts := []sdktrace.TracerProviderOption{
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithBatcher(
 			exp,
@@ -95,13 +95,13 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	}
-	tp1 := sdktrace.NewProvider(append(pOpts,
+	tp1 := sdktrace.NewTracerProvider(append(pOpts,
 		sdktrace.WithResource(resource.New(
 			label.String("rk1", "rv11)"),
 			label.Int64("rk2", 5),
 		)))...)
 
-	tp2 := sdktrace.NewProvider(append(pOpts,
+	tp2 := sdktrace.NewTracerProvider(append(pOpts,
 		sdktrace.WithResource(resource.New(
 			label.String("rk1", "rv12)"),
 			label.Float32("rk3", 6.5),
@@ -121,13 +121,13 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		span.End()
 	}
 
-	selector := simple.NewWithExactDistribution()
+	selector := simple.NewWithInexpensiveDistribution()
 	processor := processor.New(selector, metricsdk.PassThroughExporter)
 	pusher := push.New(processor, exp)
 	pusher.Start()
 
 	ctx := context.Background()
-	meter := pusher.Provider().Meter("test-meter")
+	meter := pusher.MeterProvider().Meter("test-meter")
 	labels := []label.KeyValue{label.Bool("test", true)}
 
 	type data struct {
@@ -144,6 +144,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		"test-float64-valueobserver": {metric.ValueObserverKind, metricapi.Float64NumberKind, 3},
 	}
 	for name, data := range instruments {
+		data := data
 		switch data.iKind {
 		case metric.CounterKind:
 			switch data.nKind {
@@ -166,10 +167,11 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		case metric.ValueObserverKind:
 			switch data.nKind {
 			case metricapi.Int64NumberKind:
-				callback := func(v int64) metricapi.Int64ObserverFunc {
-					return metricapi.Int64ObserverFunc(func(_ context.Context, result metricapi.Int64ObserverResult) { result.Observe(v, labels...) })
-				}(data.val)
-				metricapi.Must(meter).NewInt64ValueObserver(name, callback)
+				metricapi.Must(meter).NewInt64ValueObserver(name,
+					func(_ context.Context, result metricapi.Int64ObserverResult) {
+						result.Observe(data.val, labels...)
+					},
+				)
 			case metricapi.Float64NumberKind:
 				callback := func(v float64) metricapi.Float64ObserverFunc {
 					return metricapi.Float64ObserverFunc(func(_ context.Context, result metricapi.Float64ObserverResult) { result.Observe(v, labels...) })
@@ -245,7 +247,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		seen[desc.Name] = struct{}{}
 
 		switch data.iKind {
-		case metric.CounterKind:
+		case metric.CounterKind, metric.ValueObserverKind:
 			switch data.nKind {
 			case metricapi.Int64NumberKind:
 				assert.Equal(t, metricpb.MetricDescriptor_INT64.String(), desc.GetType().String())
@@ -260,7 +262,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 			default:
 				assert.Failf(t, "invalid number kind", data.nKind.String())
 			}
-		case metric.ValueRecorderKind, metric.ValueObserverKind:
+		case metric.ValueRecorderKind:
 			assert.Equal(t, metricpb.MetricDescriptor_SUMMARY.String(), desc.GetType().String())
 			m.GetSummaryDataPoints()
 			if dp := m.GetSummaryDataPoints(); assert.Len(t, dp, 1) {
@@ -463,7 +465,7 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 		_ = exp.Shutdown(context.Background())
 	}()
 
-	tp := sdktrace.NewProvider(
+	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithBatcher(
 			exp,
@@ -487,7 +489,7 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 	span.SetAttributes(testKvs...)
 	span.End()
 
-	selector := simple.NewWithExactDistribution()
+	selector := simple.NewWithInexpensiveDistribution()
 	processor := processor.New(selector, metricsdk.PassThroughExporter)
 	pusher := push.New(processor, exp)
 	pusher.Start()

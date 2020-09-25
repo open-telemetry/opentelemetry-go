@@ -33,30 +33,33 @@ var (
 	anotherKey = label.Key("ex.com/another")
 )
 
-var tp *sdktrace.Provider
+var tp *sdktrace.TracerProvider
 
 // initTracer creates and registers trace provider instance.
-func initTracer() {
+func initTracer() func() {
 	var err error
 	exp, err := stdout.NewExporter(stdout.WithPrettyPrint())
 	if err != nil {
 		log.Panicf("failed to initialize stdout exporter %v\n", err)
-		return
+		return nil
 	}
-	tp = sdktrace.NewProvider(
+	bsp := sdktrace.NewBatchSpanProcessor(exp)
+	tp = sdktrace.NewTracerProvider(
 		sdktrace.WithConfig(
 			sdktrace.Config{
 				DefaultSampler: sdktrace.AlwaysSample(),
 			},
 		),
-		sdktrace.WithBatcher(exp),
+		sdktrace.WithSpanProcessor(bsp),
 	)
 	global.SetTracerProvider(tp)
+	return bsp.Shutdown
 }
 
 func main() {
 	// initialize trace provider.
-	initTracer()
+	shutdown := initTracer()
+	defer shutdown()
 
 	// Create a named tracer with package path as its name.
 	tracer := tp.Tracer("example/namedtracer/main")
