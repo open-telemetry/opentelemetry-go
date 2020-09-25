@@ -52,8 +52,8 @@ var _ tracesdk.SpanExporter = (*Exporter)(nil)
 var _ metricsdk.Exporter = (*Exporter)(nil)
 
 // NewExporter constructs a new Exporter and starts it.
-func NewExporter(metricsConnectionConfig, tracesConnectionConfig ConnectionConfiguration) (*Exporter, error) {
-	exp := NewUnstartedExporter(metricsConnectionConfig, tracesConnectionConfig)
+func NewExporter(configuration ConnConfigurations) (*Exporter, error) {
+	exp := NewUnstartedExporter(configuration)
 	if err := exp.Start(); err != nil {
 		return nil, err
 	}
@@ -61,10 +61,10 @@ func NewExporter(metricsConnectionConfig, tracesConnectionConfig ConnectionConfi
 }
 
 // NewUnstartedExporter constructs a new Exporter and does not start it.
-func NewUnstartedExporter(metricsConnectionConfig, tracesConnectionConfig ConnectionConfiguration) *Exporter {
+func NewUnstartedExporter(configuration ConnConfigurations) *Exporter {
 	e := new(Exporter)
-	e.metricsConnection = newOtlpConnection(e.handleNewMetricsConnection, metricsConnectionConfig)
-	e.tracesConnection = newOtlpConnection(e.handleNewTracesConnection, tracesConnectionConfig)
+	e.metricsConnection = newOtlpConnection(configuration.metrics, e.handleNewMetricsConnection)
+	e.tracesConnection = newOtlpConnection(configuration.traces, e.handleNewTracesConnection)
 
 	// TODO (rghetia): add resources
 

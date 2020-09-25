@@ -59,7 +59,7 @@ func (t *traceServiceClientStub) Reset() {
 
 func TestExportSpans(t *testing.T) {
 	tsc := &traceServiceClientStub{}
-	exp := NewUnstartedExporter(EmptyConfiguration, EmptyConfiguration)
+	exp := NewUnstartedExporter(NewConnections())
 	exp.tracesClient = tsc
 	exp.started = true
 

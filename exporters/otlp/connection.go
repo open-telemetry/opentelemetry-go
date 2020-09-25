@@ -28,20 +28,23 @@ import (
 )
 
 type otlpConnection struct {
+	// Ensure pointer is 64-bit aligned for atomic operations on both 32 and 64 bit machines.
+	lastConnectErrPtr unsafe.Pointer
+
 	// mu protects the non-atomic and non-channel variables
 	mu sync.RWMutex
 
-	c                          ConnectionConfiguration
-	metadata                   metadata.MD
-	lastConnectErrPtr          unsafe.Pointer
-	cc                         *grpc.ClientConn
+	c        config
+	metadata metadata.MD
+	cc       *grpc.ClientConn
+
 	newConnectionHandler       func(cc *grpc.ClientConn) error
 	disconnectedCh             chan bool
 	backgroundConnectionDoneCh chan bool
 	stopCh                     chan bool
 }
 
-func newOtlpConnection(handler func(cc *grpc.ClientConn) error, c ConnectionConfiguration) *otlpConnection {
+func newOtlpConnection(c config, handler func(cc *grpc.ClientConn) error) *otlpConnection {
 	conn := new(otlpConnection)
 	conn.newConnectionHandler = handler
 	conn.c = c

@@ -28,8 +28,9 @@ import (
 )
 
 func Example_insecure() {
-	exp, err := otlp.NewExporter(otlp.EmptyConfiguration,
-		otlp.NewConnectionConfig(otlp.WithInsecure()))
+	config := otlp.NewConnections().
+		SetTraceOptions(otlp.WithInsecure())
+	exp, err := otlp.NewExporter(config)
 	if err != nil {
 		log.Fatalf("Failed to create the collector exporter: %v", err)
 	}
@@ -73,8 +74,9 @@ func Example_withTLS() {
 		log.Fatalf("failed to create gRPC client TLS credentials: %v", err)
 	}
 
-	exp, err := otlp.NewExporter(otlp.EmptyConfiguration,
-		otlp.NewConnectionConfig(otlp.WithTLSCredentials(creds)))
+	config := otlp.NewConnections().
+		SetTraceOptions(otlp.WithTLSCredentials(creds))
+	exp, err := otlp.NewExporter(config)
 	if err != nil {
 		log.Fatalf("failed to create the collector exporter: %v", err)
 	}
