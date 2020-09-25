@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- OTLP Metric exporter supports Histogram aggregation. (#)
+- OTLP Metric exporter supports Histogram aggregation. (#1209)
 
 ## [0.12.0] - 2020-09-24
 
