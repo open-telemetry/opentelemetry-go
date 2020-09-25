@@ -16,6 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Instrumentation library information was added to the Zipkin exporter. (#1119)
 - The `SpanProcessor` interface now has a `ForceFlush()` method. (#1166)
 - More semantic conventions for k8s as resource attributes. (#1167)
+- Support different OTLP exporter endpoints, allowing separate configurations for metrics and traces through `NewConnections`, `SetMetricsOptions`, `SetTracesOptions` functions from `go.opentelemetry.io/exporters/otlp/options` and the `ConnConfigurations` structure. (#1202)
 
 ### Changed
 
@@ -47,6 +48,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   `go.opentelemetry.io/otel/api/metric.ConfigureMeter` to `NewMeterConfig`.
 - Move the `go.opentelemetry.io/otel/api/unit` package to `go.opentelemetry.io/otel/unit`. (#1185)
 - Renamed `SamplingDecision` values to comply with OpenTelemetry specification change. (#1192)
+- Change `go.opentelemetry.io/exporters/otlp/` `Exporter` interface to take as parameter a `ConnConfigurations` structure containing different configurations for metrics and traces endpoints. (#1202)
+- `go.opentelemetry.io/exporters/otlp/` `Exporter` connection logic (including indefinite background connection) is now handled by an internal `go.opentelemetry.io/exporters/otlp/` `otlpConnection` object. (#1202)
 
 ### Removed
 
