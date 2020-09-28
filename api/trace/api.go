@@ -138,9 +138,6 @@ type Span interface {
 
 	// Set span attributes
 	SetAttributes(kv ...label.KeyValue)
-
-	// Set singular span attribute, with type inference.
-	SetAttribute(k string, v interface{})
 }
 
 // SpanConfig is a group of options for a Span.

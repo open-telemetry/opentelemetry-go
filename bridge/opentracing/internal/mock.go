@@ -228,10 +228,6 @@ func (s *MockSpan) SetAttributes(attributes ...label.KeyValue) {
 	})
 }
 
-func (s *MockSpan) SetAttribute(k string, v interface{}) {
-	s.SetAttributes(label.Any(k, v))
-}
-
 func (s *MockSpan) applyUpdate(update otelbaggage.MapUpdate) {
 	s.Attributes = s.Attributes.Apply(update)
 }
