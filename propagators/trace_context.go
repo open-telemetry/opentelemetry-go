@@ -47,15 +47,14 @@ const (
 // their proprietary information.
 type TraceContext struct{}
 
-var _ otel.HTTPPropagator = TraceContext{}
+var _ otel.TextMapPropagator = TraceContext{}
 var traceCtxRegExp = regexp.MustCompile("^(?P<version>[0-9a-f]{2})-(?P<traceID>[a-f0-9]{32})-(?P<spanID>[a-f0-9]{16})-(?P<traceFlags>[a-f0-9]{2})(?:-.*)?$")
 
-// Inject injects a context into the supplier as W3C Trace Context HTTP
-// headers.
-func (tc TraceContext) Inject(ctx context.Context, supplier otel.HTTPSupplier) {
+// Inject set tracecontext from the Context into the carrier.
+func (tc TraceContext) Inject(ctx context.Context, carrier otel.TextMapCarrier) {
 	tracestate := ctx.Value(tracestateKey)
 	if state, ok := tracestate.(string); tracestate != nil && ok {
-		supplier.Set(tracestateHeader, state)
+		carrier.Set(tracestateHeader, state)
 	}
 
 	sc := trace.SpanFromContext(ctx).SpanContext()
@@ -67,26 +66,25 @@ func (tc TraceContext) Inject(ctx context.Context, supplier otel.HTTPSupplier) {
 		sc.TraceID,
 		sc.SpanID,
 		sc.TraceFlags&trace.FlagsSampled)
-	supplier.Set(traceparentHeader, h)
+	carrier.Set(traceparentHeader, h)
 }
 
-// Extract extracts a context from the supplier if it contains W3C Trace
-// Context headers.
-func (tc TraceContext) Extract(ctx context.Context, supplier otel.HTTPSupplier) context.Context {
-	state := supplier.Get(tracestateHeader)
+// Extract reads tracecontext from the carrier into a returned Context.
+func (tc TraceContext) Extract(ctx context.Context, carrier otel.TextMapCarrier) context.Context {
+	state := carrier.Get(tracestateHeader)
 	if state != "" {
 		ctx = context.WithValue(ctx, tracestateKey, state)
 	}
 
-	sc := tc.extract(supplier)
+	sc := tc.extract(carrier)
 	if !sc.IsValid() {
 		return ctx
 	}
 	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
 
-func (tc TraceContext) extract(supplier otel.HTTPSupplier) trace.SpanContext {
-	h := supplier.Get(traceparentHeader)
+func (tc TraceContext) extract(carrier otel.TextMapCarrier) trace.SpanContext {
+	h := carrier.Get(traceparentHeader)
 	if h == "" {
 		return trace.EmptySpanContext()
 	}
@@ -153,8 +151,7 @@ func (tc TraceContext) extract(supplier otel.HTTPSupplier) trace.SpanContext {
 	return sc
 }
 
-// GetAllKeys returns the HTTP header names this propagator will use when
-// injecting.
-func (tc TraceContext) GetAllKeys() []string {
+// Fields returns the keys who's values are set with Inject.
+func (tc TraceContext) Fields() []string {
 	return []string{traceparentHeader, tracestateHeader}
 }

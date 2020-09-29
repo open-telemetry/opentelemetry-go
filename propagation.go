@@ -14,130 +14,65 @@
 
 package otel
 
-import (
-	"context"
-)
+import "context"
 
-// HTTPSupplier is an interface that specifies methods to retrieve and
-// store a single value for a key to an associated carrier. It is
-// implemented by http.Headers.
-type HTTPSupplier interface {
-	// Get method retrieves a single value for a given key.
+// TextMapCarrier is the storage medium used by a TextMapPropagator.
+type TextMapCarrier interface {
+	// Get returns the value associated with the passed key.
 	Get(key string) string
-	// Set method stores a single value for a given key. Note that
-	// this should not be appending a value to some array, but
-	// rather overwrite the old value.
+	// Set stores the key-value pair.
 	Set(key string, value string)
 }
 
-// HTTPExtractor extracts information from a HTTPSupplier into a
-// context.
-type HTTPExtractor interface {
-	// Extract method retrieves encoded information using supplier
-	// from the associated carrier, decodes it and creates a new
-	// context containing the decoded information.
-	//
-	// Information can be a correlation context or a remote span
-	// context. In case of span context, the propagator should
-	// store it in the context using
-	// trace.ContextWithRemoteSpanContext. In case of correlation
-	// context, the propagator should use correlation.WithMap to
-	// store it in the context.
-	Extract(ctx context.Context, supplier HTTPSupplier) context.Context
+// TextMapPropagator propagates cross-cutting concerns as key-value text
+// pairs within a carrier that travels in-band across process boundaries.
+type TextMapPropagator interface {
+	// Inject set cross-cutting concerns from the Context into the carrier.
+	Inject(ctx context.Context, carrier TextMapCarrier)
+	// Extract reads cross-cutting concerns from the carrier into a Context.
+	Extract(ctx context.Context, carrier TextMapCarrier) context.Context
+	// Fields returns the keys who's values are set with Inject.
+	Fields() []string
 }
 
-// HTTPInjector injects information into a HTTPSupplier.
-type HTTPInjector interface {
-	// Inject method retrieves information from the context,
-	// encodes it into propagator specific format and then injects
-	// the encoded information using supplier into an associated
-	// carrier.
-	Inject(ctx context.Context, supplier HTTPSupplier)
-}
+type compositeTextMapPropagator []TextMapPropagator
 
-// Config contains the current set of extractors and injectors.
-type Config struct {
-	httpEx []HTTPExtractor
-	httpIn []HTTPInjector
-}
-
-// Propagators is the interface to a set of injectors and extractors
-// for all supported carrier formats. It can be used to chain multiple
-// propagators into a single entity.
-type Propagators interface {
-	// HTTPExtractors returns the configured extractors.
-	HTTPExtractors() []HTTPExtractor
-
-	// HTTPInjectors returns the configured injectors.
-	HTTPInjectors() []HTTPInjector
-}
-
-// HTTPPropagator is the interface to inject to and extract from
-// HTTPSupplier.
-type HTTPPropagator interface {
-	HTTPInjector
-	HTTPExtractor
-
-	// GetAllKeys returns the HTTP header names used.
-	GetAllKeys() []string
-}
-
-// Option support passing configuration parameters to New().
-type Option func(*Config)
-
-// propagators is the default Propagators implementation.
-type propagators struct {
-	config Config
-}
-
-// New returns a standard Propagators implementation.
-func New(options ...Option) Propagators {
-	config := Config{}
-	for _, opt := range options {
-		opt(&config)
-	}
-	return &propagators{
-		config: config,
+func (p compositeTextMapPropagator) Inject(ctx context.Context, carrier TextMapCarrier) {
+	for _, i := range p {
+		i.Inject(ctx, carrier)
 	}
 }
 
-// WithInjectors appends to the optional injector set.
-func WithInjectors(inj ...HTTPInjector) Option {
-	return func(config *Config) {
-		config.httpIn = append(config.httpIn, inj...)
-	}
-}
-
-// WithExtractors appends to the optional extractor set.
-func WithExtractors(ext ...HTTPExtractor) Option {
-	return func(config *Config) {
-		config.httpEx = append(config.httpEx, ext...)
-	}
-}
-
-// HTTPExtractors implements Propagators.
-func (p *propagators) HTTPExtractors() []HTTPExtractor {
-	return p.config.httpEx
-}
-
-// HTTPInjectors implements Propagators.
-func (p *propagators) HTTPInjectors() []HTTPInjector {
-	return p.config.httpIn
-}
-
-// ExtractHTTP applies props.HTTPExtractors() to the passed context
-// and the supplier and returns the combined result context.
-func ExtractHTTP(ctx context.Context, props Propagators, supplier HTTPSupplier) context.Context {
-	for _, ex := range props.HTTPExtractors() {
-		ctx = ex.Extract(ctx, supplier)
+func (p compositeTextMapPropagator) Extract(ctx context.Context, carrier TextMapCarrier) context.Context {
+	for _, i := range p {
+		ctx = i.Extract(ctx, carrier)
 	}
 	return ctx
 }
 
-// InjectHTTP applies props.HTTPInjectors() to the passed context and
-// the supplier.
-func InjectHTTP(ctx context.Context, props Propagators, supplier HTTPSupplier) {
-	for _, in := range props.HTTPInjectors() {
-		in.Inject(ctx, supplier)
+func (p compositeTextMapPropagator) Fields() []string {
+	unique := make(map[string]struct{})
+	for _, i := range p {
+		for _, k := range i.Fields() {
+			unique[k] = struct{}{}
+		}
 	}
+
+	fields := make([]string, 0, len(unique))
+	for k := range unique {
+		fields = append(fields, k)
+	}
+	return fields
+}
+
+// NewCompositeTextMapPropagator returns a unified TextMapPropagator from the
+// group of passed TextMapPropagator. This allows different cross-cutting
+// concerns to be propagates in a unified manner.
+//
+// The returned TextMapPropagator will inject and extract cross-cutting
+// concerns in the order the TextMapPropagators were provided. Additionally,
+// the Fields method will return a de-duplicated slice of the keys that are
+// set with the Inject method.
+func NewCompositeTextMapPropagator(p ...TextMapPropagator) TextMapPropagator {
+	return compositeTextMapPropagator(p)
 }

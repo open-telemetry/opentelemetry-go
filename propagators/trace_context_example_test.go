@@ -15,7 +15,6 @@
 package propagators_test
 
 import (
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/propagators"
 )
@@ -23,8 +22,5 @@ import (
 func ExampleTraceContext() {
 	tc := propagators.TraceContext{}
 	// Register the TraceContext propagator globally.
-	global.SetPropagators(otel.New(
-		otel.WithExtractors(tc),
-		otel.WithInjectors(tc),
-	))
+	global.SetTextMapPropagator(tc)
 }
