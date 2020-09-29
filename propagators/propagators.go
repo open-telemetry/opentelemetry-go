@@ -14,11 +14,11 @@
 
 package propagators
 
-import "go.opentelemetry.io/otel/api/propagation"
+import "go.opentelemetry.io/otel"
 
 // DefaultHTTPPropagator returns the default OpenTelemetry HTTP propagator,
 // the W3C Trace Context propagator.
-func DefaultHTTPPropagator() propagation.HTTPPropagator {
+func DefaultHTTPPropagator() otel.HTTPPropagator {
 	// As specified here:
 	// https://github.com/open-telemetry/opentelemetry-specification/blob/master/specification/context/api-propagators.md#global-propagators
 	return TraceContext{}

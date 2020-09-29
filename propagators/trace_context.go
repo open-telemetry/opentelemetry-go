@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"go.opentelemetry.io/otel/api/propagation"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
@@ -47,12 +47,12 @@ const (
 // their proprietary information.
 type TraceContext struct{}
 
-var _ propagation.HTTPPropagator = TraceContext{}
+var _ otel.HTTPPropagator = TraceContext{}
 var traceCtxRegExp = regexp.MustCompile("^(?P<version>[0-9a-f]{2})-(?P<traceID>[a-f0-9]{32})-(?P<spanID>[a-f0-9]{16})-(?P<traceFlags>[a-f0-9]{2})(?:-.*)?$")
 
 // Inject injects a context into the supplier as W3C Trace Context HTTP
 // headers.
-func (tc TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
+func (tc TraceContext) Inject(ctx context.Context, supplier otel.HTTPSupplier) {
 	tracestate := ctx.Value(tracestateKey)
 	if state, ok := tracestate.(string); tracestate != nil && ok {
 		supplier.Set(tracestateHeader, state)
@@ -72,7 +72,7 @@ func (tc TraceContext) Inject(ctx context.Context, supplier propagation.HTTPSupp
 
 // Extract extracts a context from the supplier if it contains W3C Trace
 // Context headers.
-func (tc TraceContext) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
+func (tc TraceContext) Extract(ctx context.Context, supplier otel.HTTPSupplier) context.Context {
 	state := supplier.Get(tracestateHeader)
 	if state != "" {
 		ctx = context.WithValue(ctx, tracestateKey, state)
@@ -85,7 +85,7 @@ func (tc TraceContext) Extract(ctx context.Context, supplier propagation.HTTPSup
 	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
 
-func (tc TraceContext) extract(supplier propagation.HTTPSupplier) trace.SpanContext {
+func (tc TraceContext) extract(supplier otel.HTTPSupplier) trace.SpanContext {
 	h := supplier.Get(traceparentHeader)
 	if h == "" {
 		return trace.EmptySpanContext()
