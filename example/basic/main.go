@@ -61,6 +61,8 @@ func main() {
 	global.SetTracerProvider(tp)
 	global.SetMeterProvider(pusher.MeterProvider())
 
+	// set global propagator to baggage (the default is no-op).
+	global.SetTextMapPropagator(baggage.Baggage{})
 	tracer := global.Tracer("ex.com/basic")
 	meter := global.Meter("ex.com/basic")
 

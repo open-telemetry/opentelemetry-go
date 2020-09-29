@@ -19,10 +19,8 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/baggage"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/propagators"
 )
 
 type (
@@ -123,9 +121,7 @@ func defaultPropagatorsValue() *atomic.Value {
 // getDefaultTextMapPropagator returns the default TextMapPropagator,
 // configured with W3C trace and baggage propagation.
 func getDefaultTextMapPropagator() otel.TextMapPropagator {
-	tc := propagators.TraceContext{}
-	bag := baggage.Baggage{}
-	return otel.NewCompositeTextMapPropagator(tc, bag)
+	return otel.NewCompositeTextMapPropagator()
 }
 
 // ResetForTest restores the initial global state, for testing purposes.
