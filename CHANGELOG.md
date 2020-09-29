@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - OTLP Metric exporter supports Histogram aggregation. (#1209)
 
+### Changed
+
+- Set default propagator to no-op propagator. (#1184)
+
 ## [0.12.0] - 2020-09-24
 
 ### Added
