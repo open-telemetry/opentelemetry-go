@@ -174,7 +174,7 @@ func (s *span) RecordError(ctx context.Context, err error, opts ...apitrace.Erro
 		cfg.Timestamp = time.Now()
 	}
 
-	if cfg.StatusCode != codes.Ok && cfg.StatusCode != codes.Unset {
+	if cfg.StatusCode != codes.Unset {
 		s.SetStatus(cfg.StatusCode, "")
 	}
 
