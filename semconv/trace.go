@@ -286,6 +286,7 @@ var (
 
 	MessagingTempDestination = MessagingTempDestinationKey.Bool(true)
 
+	MessagingOperationSend    = MessagingOperationKey.String("send")
 	MessagingOperationReceive = MessagingOperationKey.String("receive")
 	MessagingOperationProcess = MessagingOperationKey.String("process")
 )
