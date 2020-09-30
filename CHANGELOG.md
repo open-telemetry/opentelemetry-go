@@ -11,11 +11,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - OTLP Metric exporter supports Histogram aggregation. (#1209)
+- A Baggage API to implement the OpenTelemetry specification. (#1217)
 
 ### Changed
 
-- Move the `go.opentelemetry.io/otel/api/baggage` package into `go.opentelemetry.io/otel/propagators`. (#1186)
 - Set default propagator to no-op propagator. (#1184)
+- Move the `go.opentelemetry.io/otel/api/baggage` package into `go.opentelemetry.io/otel/propagators`. (#1217)
+
+### Removed
+
+- The internal implementation of Baggage storage is removed in favor of using the new Baggage API functionality. (#1217)
 
 ## [0.12.0] - 2020-09-24
 
