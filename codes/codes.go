@@ -91,5 +91,9 @@ func (c *Code) MarshalJSON() ([]byte, error) {
 	if c == nil {
 		return []byte("null"), nil
 	}
-	return []byte(`"` + c.String() + `"`), nil
+	str, ok := codeToStr[*c]
+	if !ok {
+		return nil, fmt.Errorf("invalid code: %d", *c)
+	}
+	return []byte(fmt.Sprintf("%q", str)), nil
 }
