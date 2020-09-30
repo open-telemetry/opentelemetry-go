@@ -43,7 +43,7 @@ func TestPullNoCache(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	meter := puller.Provider().Meter("nocache")
+	meter := puller.MeterProvider().Meter("nocache")
 	counter := metric.Must(meter).NewInt64Counter("counter.sum")
 
 	counter.Add(ctx, 10, label.String("A", "B"))
@@ -80,7 +80,7 @@ func TestPullWithCache(t *testing.T) {
 	puller.SetClock(mock)
 
 	ctx := context.Background()
-	meter := puller.Provider().Meter("nocache")
+	meter := puller.MeterProvider().Meter("nocache")
 	counter := metric.Must(meter).NewInt64Counter("counter.sum")
 
 	counter.Add(ctx, 10, label.String("A", "B"))

@@ -139,8 +139,8 @@ func (s *span) End(options ...apitrace.SpanOption) {
 	}
 	config := apitrace.NewSpanConfig(options...)
 	s.endOnce.Do(func() {
-		sps, _ := s.tracer.provider.spanProcessors.Load().(spanProcessorMap)
-		mustExportOrProcess := len(sps) > 0
+		sps, ok := s.tracer.provider.spanProcessors.Load().(spanProcessorStates)
+		mustExportOrProcess := ok && len(sps) > 0
 		if mustExportOrProcess {
 			sd := s.makeSpanData()
 			if config.Timestamp.IsZero() {
@@ -148,8 +148,8 @@ func (s *span) End(options ...apitrace.SpanOption) {
 			} else {
 				sd.EndTime = config.Timestamp
 			}
-			for sp := range sps {
-				sp.OnEnd(sd)
+			for _, sp := range sps {
+				sp.sp.OnEnd(sd)
 			}
 		}
 	})
@@ -426,7 +426,7 @@ func makeSamplingDecision(data samplingData) SamplingResult {
 			Attributes:      data.attributes,
 			Links:           data.links,
 		})
-		if sampled.Decision == RecordAndSampled {
+		if sampled.Decision == RecordAndSample {
 			spanContext.TraceFlags |= apitrace.FlagsSampled
 		} else {
 			spanContext.TraceFlags &^= apitrace.FlagsSampled
@@ -434,7 +434,7 @@ func makeSamplingDecision(data samplingData) SamplingResult {
 		return sampled
 	}
 	if data.parent.TraceFlags&apitrace.FlagsSampled != 0 {
-		return SamplingResult{Decision: RecordAndSampled}
+		return SamplingResult{Decision: RecordAndSample}
 	}
-	return SamplingResult{Decision: NotRecord}
+	return SamplingResult{Decision: Drop}
 }

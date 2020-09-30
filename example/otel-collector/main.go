@@ -27,9 +27,11 @@ import (
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/api/propagation"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/propagators"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -55,7 +57,7 @@ func initProvider() func() {
 	handleErr(err, "failed to create exporter")
 
 	bsp := sdktrace.NewBatchSpanProcessor(exp)
-	tracerProvider := sdktrace.NewProvider(
+	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithResource(resource.New(
 			// the service name used to display traces in backends
@@ -73,8 +75,12 @@ func initProvider() func() {
 		push.WithPeriod(2*time.Second),
 	)
 
+	tcPropagator := propagators.TraceContext{}
+	props := propagation.New(propagation.WithExtractors(tcPropagator),
+		propagation.WithInjectors(tcPropagator))
+	global.SetPropagators(props)
 	global.SetTracerProvider(tracerProvider)
-	global.SetMeterProvider(pusher.Provider())
+	global.SetMeterProvider(pusher.MeterProvider())
 	pusher.Start()
 
 	return func() {

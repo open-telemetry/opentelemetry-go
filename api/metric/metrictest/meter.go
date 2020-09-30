@@ -113,15 +113,15 @@ func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []label.KeyValue,
 	}})
 }
 
-func NewProvider() (*MeterImpl, apimetric.Provider) {
+func NewMeterProvider() (*MeterImpl, apimetric.MeterProvider) {
 	impl := &MeterImpl{
 		asyncInstruments: NewAsyncInstrumentState(),
 	}
-	return impl, registry.NewProvider(impl)
+	return impl, registry.NewMeterProvider(impl)
 }
 
 func NewMeter() (*MeterImpl, apimetric.Meter) {
-	impl, p := NewProvider()
+	impl, p := NewMeterProvider()
 	return impl, p.Meter("mock")
 }
 

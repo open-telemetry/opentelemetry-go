@@ -24,7 +24,7 @@ import (
 
 type testTracerProvider struct{}
 
-var _ trace.Provider = &testTracerProvider{}
+var _ trace.TracerProvider = &testTracerProvider{}
 
 func (*testTracerProvider) Tracer(_ string, _ ...trace.TracerOption) trace.Tracer {
 	return noop.Tracer
@@ -32,13 +32,13 @@ func (*testTracerProvider) Tracer(_ string, _ ...trace.TracerOption) trace.Trace
 
 func TestMultipleGlobalTracerProvider(t *testing.T) {
 	p1 := testTracerProvider{}
-	p2 := trace.NoopProvider()
+	p2 := trace.NoopTracerProvider()
 	global.SetTracerProvider(&p1)
 	global.SetTracerProvider(p2)
 
 	got := global.TracerProvider()
 	want := p2
 	if got != want {
-		t.Fatalf("Provider: got %p, want %p\n", got, want)
+		t.Fatalf("TracerProvider: got %p, want %p\n", got, want)
 	}
 }

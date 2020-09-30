@@ -22,7 +22,7 @@ import (
 
 // The file is organized as follows:
 //
-//  - Provider interface
+//  - MeterProvider interface
 //  - Meter struct
 //  - RecordBatch
 //  - BatchObserver
@@ -31,8 +31,8 @@ import (
 //  - Batch asynchronous constructors (1 x int64,float64)
 //  - Internals
 
-// Provider supports named Meter instances.
-type Provider interface {
+// MeterProvider supports named Meter instances.
+type MeterProvider interface {
 	// Meter creates an implementation of the Meter interface.
 	// The instrumentationName must be the name of the library providing
 	// instrumentation. This name may be the same as the instrumented code

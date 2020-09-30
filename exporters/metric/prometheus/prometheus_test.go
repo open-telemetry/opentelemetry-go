@@ -43,7 +43,7 @@ func TestPrometheusExporter(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	meter := exporter.Provider().Meter("test")
+	meter := exporter.MeterProvider().Meter("test")
 
 	counter := metric.Must(meter).NewFloat64Counter("counter")
 	valuerecorder := metric.Must(meter).NewFloat64ValueRecorder("valuerecorder")
@@ -105,7 +105,7 @@ func TestPrometheusStatefulness(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	meter := exporter.Provider().Meter("test")
+	meter := exporter.MeterProvider().Meter("test")
 
 	// GET the HTTP endpoint
 	scrape := func() string {

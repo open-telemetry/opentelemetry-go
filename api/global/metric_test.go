@@ -23,7 +23,7 @@ import (
 
 type testMeterProvider struct{}
 
-var _ metric.Provider = &testMeterProvider{}
+var _ metric.MeterProvider = &testMeterProvider{}
 
 func (*testMeterProvider) Meter(_ string, _ ...metric.MeterOption) metric.Meter {
 	return metric.Meter{}
@@ -31,13 +31,13 @@ func (*testMeterProvider) Meter(_ string, _ ...metric.MeterOption) metric.Meter 
 
 func TestMultipleGlobalMeterProvider(t *testing.T) {
 	p1 := testMeterProvider{}
-	p2 := metric.NoopProvider{}
+	p2 := metric.NoopMeterProvider{}
 	global.SetMeterProvider(&p1)
 	global.SetMeterProvider(&p2)
 
 	got := global.MeterProvider()
 	want := &p2
 	if got != want {
-		t.Fatalf("Provider: got %p, want %p\n", got, want)
+		t.Fatalf("MeterProvider: got %p, want %p\n", got, want)
 	}
 }
