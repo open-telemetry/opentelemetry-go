@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - OTLP Metric exporter supports Histogram aggregation. (#1209)
+- Added messaging operation semconv shortcut for `messaging.operation.send`
 
 ### Changed
 
