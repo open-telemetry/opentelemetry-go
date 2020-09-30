@@ -11,10 +11,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - OTLP Metric exporter supports Histogram aggregation. (#1209)
+- The `Code` struct from the `go.opentelemetry.io/otel/codes` package now supports JSON marshaling and unmarshaling as well as implements the `Stringer` interface. (#1214)
 
 ### Changed
 
 - Set default propagator to no-op propagator. (#1184)
+- The status codes of the `go.opentelemetry.io/otel/codes` package have been updated to match the latest OpenTelemetry specification.
+   They now are `Unset`, `Error`, and `Ok`.
+   They no longer track the gRPC codes. (#1214)
+- The `StatusCode` field of the `SpanData` struct in the `go.opentelemetry.io/otel/sdk/export/trace` package now uses the codes package from this package instead of the gRPC project. (#1214)
 
 ## [0.12.0] - 2020-09-24
 
