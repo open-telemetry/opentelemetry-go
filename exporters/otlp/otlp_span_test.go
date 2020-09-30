@@ -21,8 +21,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 
+	"go.opentelemetry.io/otel/codes"
 	coltracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/trace/v1"
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
 	resourcepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/resource/v1"
@@ -95,7 +95,7 @@ func TestExportSpans(t *testing.T) {
 						label.String("user", "alice"),
 						label.Bool("authenticated", true),
 					},
-					StatusCode:    codes.OK,
+					StatusCode:    codes.Ok,
 					StatusMessage: "Ok",
 					Resource:      resource.New(label.String("instance", "tester-a")),
 					InstrumentationLibrary: instrumentation.Library{
@@ -117,7 +117,7 @@ func TestExportSpans(t *testing.T) {
 						label.String("user", "alice"),
 						label.Bool("authenticated", true),
 					},
-					StatusCode:    codes.OK,
+					StatusCode:    codes.Ok,
 					StatusMessage: "Ok",
 					Resource:      resource.New(label.String("instance", "tester-a")),
 					InstrumentationLibrary: instrumentation.Library{
@@ -140,7 +140,7 @@ func TestExportSpans(t *testing.T) {
 						label.String("user", "alice"),
 						label.Bool("authenticated", true),
 					},
-					StatusCode:    codes.OK,
+					StatusCode:    codes.Ok,
 					StatusMessage: "Ok",
 					Resource:      resource.New(label.String("instance", "tester-a")),
 					InstrumentationLibrary: instrumentation.Library{
@@ -162,7 +162,7 @@ func TestExportSpans(t *testing.T) {
 						label.String("user", "bob"),
 						label.Bool("authenticated", false),
 					},
-					StatusCode:    codes.Unauthenticated,
+					StatusCode:    codes.Error,
 					StatusMessage: "Unauthenticated",
 					Resource:      resource.New(label.String("instance", "tester-b")),
 					InstrumentationLibrary: instrumentation.Library{
@@ -341,7 +341,7 @@ func TestExportSpans(t *testing.T) {
 										},
 									},
 									Status: &tracepb.Status{
-										Code:    tracepb.Status_Unauthenticated,
+										Code:    tracepb.Status_UnknownError,
 										Message: "Unauthenticated",
 									},
 								},

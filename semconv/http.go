@@ -264,11 +264,11 @@ var validRangesPerCategory = map[int][]codeRange{
 // SpanStatusFromHTTPStatusCode generates a status code and a message
 // as specified by the OpenTelemetry specification for a span.
 func SpanStatusFromHTTPStatusCode(code int) (codes.Code, string) {
-	spanCode := func() codes.Code {
+	spanCode, valid := func() (codes.Code, bool) {
 		category := code / 100
 		ranges, ok := validRangesPerCategory[category]
 		if !ok {
-			return codes.Unknown
+			return codes.Error, false
 		}
 		ok = false
 		for _, crange := range ranges {
@@ -278,39 +278,14 @@ func SpanStatusFromHTTPStatusCode(code int) (codes.Code, string) {
 			}
 		}
 		if !ok {
-			return codes.Unknown
-		}
-		switch code {
-		case http.StatusUnauthorized:
-			return codes.Unauthenticated
-		case http.StatusForbidden:
-			return codes.PermissionDenied
-		case http.StatusNotFound:
-			return codes.NotFound
-		case http.StatusTooManyRequests:
-			return codes.ResourceExhausted
-		case http.StatusNotImplemented:
-			return codes.Unimplemented
-		case http.StatusServiceUnavailable:
-			return codes.Unavailable
-		case http.StatusGatewayTimeout:
-			return codes.DeadlineExceeded
+			return codes.Error, false
 		}
 		if category > 0 && category < 4 {
-			return codes.OK
+			return codes.Unset, true
 		}
-		if category == 4 {
-			return codes.InvalidArgument
-		}
-		if category == 5 {
-			return codes.Internal
-		}
-		// this really should not happen, if we get there then
-		// it means that the code got out of sync with
-		// validRangesPerCategory map
-		return codes.Unknown
+		return codes.Error, true
 	}()
-	if spanCode == codes.Unknown {
+	if !valid {
 		return spanCode, fmt.Sprintf("Invalid HTTP status code %d", code)
 	}
 	return spanCode, fmt.Sprintf("HTTP status code: %d", code)

@@ -15,8 +15,7 @@
 package transform
 
 import (
-	"google.golang.org/grpc/codes"
-
+	"go.opentelemetry.io/otel/codes"
 	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
 
 	apitrace "go.opentelemetry.io/otel/api/trace"
@@ -127,8 +126,15 @@ func span(sd *export.SpanData) *tracepb.Span {
 
 // status transform a span code and message into an OTLP span status.
 func status(status codes.Code, message string) *tracepb.Status {
+	var c tracepb.Status_StatusCode
+	switch status {
+	case codes.Error:
+		c = tracepb.Status_UnknownError
+	default:
+		c = tracepb.Status_Ok
+	}
 	return &tracepb.Status{
-		Code:    tracepb.Status_StatusCode(status),
+		Code:    c,
 		Message: message,
 	}
 }

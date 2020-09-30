@@ -89,7 +89,7 @@ func (s *span) SetStatus(code codes.Code, msg string) {
 		return
 	}
 	s.mu.Lock()
-	s.data.StatusCode = internal.ConvertCode(code)
+	s.data.StatusCode = code
 	s.data.StatusMessage = msg
 	s.mu.Unlock()
 }
@@ -174,7 +174,7 @@ func (s *span) RecordError(ctx context.Context, err error, opts ...apitrace.Erro
 		cfg.Timestamp = time.Now()
 	}
 
-	if cfg.StatusCode != codes.OK {
+	if cfg.StatusCode != codes.Ok && cfg.StatusCode != codes.Unset {
 		s.SetStatus(cfg.StatusCode, "")
 	}
 

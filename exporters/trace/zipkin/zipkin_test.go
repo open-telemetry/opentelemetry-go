@@ -29,10 +29,10 @@ import (
 	zkmodel "github.com/openzipkin/zipkin-go/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/codes"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -252,7 +252,7 @@ func TestExportSpans(t *testing.T) {
 			EndTime:       time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
 			Attributes:    nil,
 			MessageEvents: nil,
-			StatusCode:    codes.NotFound,
+			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
 		},
 		// child
@@ -268,7 +268,7 @@ func TestExportSpans(t *testing.T) {
 			EndTime:       time.Date(2020, time.March, 11, 19, 24, 45, 0, time.UTC),
 			Attributes:    nil,
 			MessageEvents: nil,
-			StatusCode:    codes.PermissionDenied,
+			StatusCode:    codes.Error,
 			StatusMessage: "403, forbidden",
 		},
 	}
@@ -297,7 +297,7 @@ func TestExportSpans(t *testing.T) {
 			RemoteEndpoint: nil,
 			Annotations:    nil,
 			Tags: map[string]string{
-				"otel.status_code":        "NotFound",
+				"otel.status_code":        "Error",
 				"otel.status_description": "404, file not found",
 			},
 		},
@@ -325,7 +325,7 @@ func TestExportSpans(t *testing.T) {
 			RemoteEndpoint: nil,
 			Annotations:    nil,
 			Tags: map[string]string{
-				"otel.status_code":        "PermissionDenied",
+				"otel.status_code":        "Error",
 				"otel.status_description": "403, forbidden",
 			},
 		},
