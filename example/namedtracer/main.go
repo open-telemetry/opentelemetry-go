@@ -18,12 +18,12 @@ import (
 	"context"
 	"log"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/example/namedtracer/foo"
 	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/label"
-	"go.opentelemetry.io/otel/propagators"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -64,11 +64,7 @@ func main() {
 	// Create a named tracer with package path as its name.
 	tracer := tp.Tracer("example/namedtracer/main")
 	ctx := context.Background()
-
-	ctx = propagators.NewContext(ctx,
-		fooKey.String("foo1"),
-		barKey.String("bar1"),
-	)
+	ctx = otel.WithBaggageValues(ctx, fooKey.String("foo1"), barKey.String("bar1"))
 
 	var span trace.Span
 	ctx, span = tracer.Start(ctx, "operation")

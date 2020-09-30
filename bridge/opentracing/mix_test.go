@@ -23,8 +23,8 @@ import (
 
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
+	otelbaggage "go.opentelemetry.io/otel/internal/baggage"
 	"go.opentelemetry.io/otel/label"
-	otelpropagators "go.opentelemetry.io/otel/propagators"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/internal"
 )
@@ -589,7 +589,7 @@ func (bio *baggageInteroperationTest) addAndRecordBaggage(t *testing.T, ctx cont
 	value := bio.baggageItems[idx].value
 
 	otSpan.SetBaggageItem(otKey, value)
-	ctx = otelpropagators.NewContext(ctx, label.String(otelKey, value))
+	ctx = otelbaggage.NewContext(ctx, label.String(otelKey, value))
 
 	otRecording := make(map[string]string)
 	otSpan.Context().ForeachBaggageItem(func(key, value string) bool {
@@ -597,7 +597,7 @@ func (bio *baggageInteroperationTest) addAndRecordBaggage(t *testing.T, ctx cont
 		return true
 	})
 	otelRecording := make(map[string]string)
-	otelpropagators.MapFromContext(ctx).Foreach(func(kv label.KeyValue) bool {
+	otelbaggage.MapFromContext(ctx).Foreach(func(kv label.KeyValue) bool {
 		otelRecording[string(kv.Key)] = kv.Value.Emit()
 		return true
 	})

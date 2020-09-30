@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/otel/api/propagation"
+	"go.opentelemetry.io/otel/internal/baggage"
 	"go.opentelemetry.io/otel/label"
 )
 
@@ -27,16 +28,17 @@ import (
 // https://github.com/open-telemetry/opentelemetry-specification/blob/18b2752ebe6c7f0cdd8c7b2bcbdceb0ae3f5ad95/specification/correlationcontext/api.md#header-name
 const baggageHeader = "otcorrelations"
 
-// Baggage propagates Key:Values in W3C CorrelationContext
-// format.
-// nolint:golint
+// Baggage is a propagator that supports the W3C Baggage format.
+//
+// This propagates user-defined baggage associated with a trace. The complete
+// specification is defined at https://w3c.github.io/baggage/.
 type Baggage struct{}
 
 var _ propagation.HTTPPropagator = Baggage{}
 
 // Inject implements HTTPInjector.
 func (b Baggage) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
-	baggageMap := MapFromContext(ctx)
+	baggageMap := baggage.MapFromContext(ctx)
 	firstIter := true
 	var headerValueBuilder strings.Builder
 	baggageMap.Foreach(func(kv label.KeyValue) bool {
@@ -57,12 +59,12 @@ func (b Baggage) Inject(ctx context.Context, supplier propagation.HTTPSupplier) 
 
 // Extract implements HTTPExtractor.
 func (b Baggage) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
-	baggage := supplier.Get(baggageHeader)
-	if baggage == "" {
+	bVal := supplier.Get(baggageHeader)
+	if bVal == "" {
 		return ctx
 	}
 
-	baggageValues := strings.Split(baggage, ",")
+	baggageValues := strings.Split(bVal, ",")
 	keyValues := make([]label.KeyValue, 0, len(baggageValues))
 	for _, baggageValue := range baggageValues {
 		valueAndProps := strings.Split(baggageValue, ";")
@@ -98,7 +100,7 @@ func (b Baggage) Extract(ctx context.Context, supplier propagation.HTTPSupplier)
 
 	if len(keyValues) > 0 {
 		// Only update the context if valid values were found
-		return ContextWithMap(ctx, NewMap(MapUpdate{
+		return baggage.ContextWithMap(ctx, baggage.NewMap(baggage.MapUpdate{
 			MultiKV: keyValues,
 		}))
 	}

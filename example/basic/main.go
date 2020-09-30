@@ -18,6 +18,7 @@ import (
 	"context"
 	"log"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/propagation"
@@ -83,11 +84,7 @@ func main() {
 	valuerecorderTwo := metric.Must(meter).NewFloat64ValueRecorder("ex.com.two")
 
 	ctx := context.Background()
-
-	ctx = propagators.NewContext(ctx,
-		fooKey.String("foo1"),
-		barKey.String("bar1"),
-	)
+	ctx = otel.WithBaggageValues(ctx, fooKey.String("foo1"), barKey.String("bar1"))
 
 	valuerecorder := valuerecorderTwo.Bind(commonLabels...)
 	defer valuerecorder.Unbind()
@@ -102,7 +99,7 @@ func main() {
 
 		meter.RecordBatch(
 			// Note: call-site variables added as context Entries:
-			propagators.NewContext(ctx, anotherKey.String("xyz")),
+			otel.WithBaggageValues(ctx, anotherKey.String("xyz")),
 			commonLabels,
 
 			valuerecorderTwo.Measurement(2.0),
