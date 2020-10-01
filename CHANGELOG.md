@@ -16,6 +16,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Set default propagator to no-op propagator. (#1184)
 
+### Removed
+
+- Remove duplicate hostname key `HostHostNameKey` in Resource semantic conventions. (#1219)
+
 ## [0.12.0] - 2020-09-24
 
 ### Added
