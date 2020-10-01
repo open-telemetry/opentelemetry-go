@@ -18,7 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
-- Remove duplicate hostname key in Resource. (#1218)
+- Remove duplicate hostname key `HostHostNameKey` in Resource semantic conventions. (#1219)
 
 ## [0.12.0] - 2020-09-24
 
