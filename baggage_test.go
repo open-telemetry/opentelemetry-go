@@ -59,11 +59,11 @@ func TestBaggage(t *testing.T) {
 	}
 
 	v = BaggageValue(ctx, first)
-	if !v.AsBool() {
+	if v.Type() != label.BOOL || !v.AsBool() {
 		t.Fatal("BaggageValue failed to get correct first value")
 	}
 	v = BaggageValue(ctx, second)
-	if v.AsString() != "2" {
+	if v.Type() != label.STRING || v.AsString() != "2" {
 		t.Fatal("BaggageValue failed to get correct second value")
 	}
 
