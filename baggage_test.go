@@ -32,7 +32,7 @@ func TestBaggage(t *testing.T) {
 	}
 
 	first, second, third := label.Key("first"), label.Key("second"), label.Key("third")
-	ctx = WithBaggageValues(ctx, first.Bool(true), second.String("2"))
+	ctx = ContextWithBaggageValues(ctx, first.Bool(true), second.String("2"))
 	m := baggage.MapFromContext(ctx)
 	v, ok := m.Value(first)
 	if !ok {
@@ -53,6 +53,11 @@ func TestBaggage(t *testing.T) {
 		t.Fatal("WithBaggageValues set an unexpected third value")
 	}
 
+	b = Baggage(ctx)
+	if b.Len() != 2 {
+		t.Fatalf("Baggage returned a set with %d elements, want 2", b.Len())
+	}
+
 	v = BaggageValue(ctx, first)
 	if !v.AsBool() {
 		t.Fatal("BaggageValue failed to get correct first value")
@@ -62,7 +67,7 @@ func TestBaggage(t *testing.T) {
 		t.Fatal("BaggageValue failed to get correct second value")
 	}
 
-	ctx = WithoutBaggageValues(ctx, first)
+	ctx = ContextWithoutBaggageValues(ctx, first)
 	m = baggage.MapFromContext(ctx)
 	_, ok = m.Value(first)
 	if ok {
@@ -73,7 +78,7 @@ func TestBaggage(t *testing.T) {
 		t.Fatal("WithoutBaggageValues removed incorrect value")
 	}
 
-	ctx = WithoutBaggage(ctx)
+	ctx = ContextWithoutBaggage(ctx)
 	m = baggage.MapFromContext(ctx)
 	if m.Len() != 0 {
 		t.Fatal("WithoutBaggage failed to clear baggage")

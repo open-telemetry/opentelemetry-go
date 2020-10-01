@@ -64,7 +64,7 @@ func main() {
 	// Create a named tracer with package path as its name.
 	tracer := tp.Tracer("example/namedtracer/main")
 	ctx := context.Background()
-	ctx = otel.WithBaggageValues(ctx, fooKey.String("foo1"), barKey.String("bar1"))
+	ctx = otel.ContextWithBaggageValues(ctx, fooKey.String("foo1"), barKey.String("bar1"))
 
 	var span trace.Span
 	ctx, span = tracer.Start(ctx, "operation")

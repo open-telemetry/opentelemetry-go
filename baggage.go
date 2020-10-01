@@ -43,24 +43,24 @@ func BaggageValue(ctx context.Context, key label.Key) label.Value {
 	return v
 }
 
-// WithBaggageValues returns a copy of parent with pairs updated in the baggage.
-func WithBaggageValues(parent context.Context, pairs ...label.KeyValue) context.Context {
+// ContextWithBaggageValues returns a copy of parent with pairs updated in the baggage.
+func ContextWithBaggageValues(parent context.Context, pairs ...label.KeyValue) context.Context {
 	m := baggage.MapFromContext(parent).Apply(baggage.MapUpdate{
 		MultiKV: pairs,
 	})
 	return baggage.ContextWithMap(parent, m)
 }
 
-// WithoutBaggageValues returns a copy of parent in which the values related
+// ContextWithoutBaggageValues returns a copy of parent in which the values related
 // to keys have been removed from the baggage.
-func WithoutBaggageValues(parent context.Context, keys ...label.Key) context.Context {
+func ContextWithoutBaggageValues(parent context.Context, keys ...label.Key) context.Context {
 	m := baggage.MapFromContext(parent).Apply(baggage.MapUpdate{
 		DropMultiK: keys,
 	})
 	return baggage.ContextWithMap(parent, m)
 }
 
-// WithoutBaggage returns a copy of parent without baggage.
-func WithoutBaggage(parent context.Context) context.Context {
+// ContextWithoutBaggage returns a copy of parent without baggage.
+func ContextWithoutBaggage(parent context.Context) context.Context {
 	return baggage.ContextWithNoCorrelationData(parent)
 }

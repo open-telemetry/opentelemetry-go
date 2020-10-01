@@ -84,7 +84,7 @@ func main() {
 	valuerecorderTwo := metric.Must(meter).NewFloat64ValueRecorder("ex.com.two")
 
 	ctx := context.Background()
-	ctx = otel.WithBaggageValues(ctx, fooKey.String("foo1"), barKey.String("bar1"))
+	ctx = otel.ContextWithBaggageValues(ctx, fooKey.String("foo1"), barKey.String("bar1"))
 
 	valuerecorder := valuerecorderTwo.Bind(commonLabels...)
 	defer valuerecorder.Unbind()
@@ -99,7 +99,7 @@ func main() {
 
 		meter.RecordBatch(
 			// Note: call-site variables added as context Entries:
-			otel.WithBaggageValues(ctx, anotherKey.String("xyz")),
+			otel.ContextWithBaggageValues(ctx, anotherKey.String("xyz")),
 			commonLabels,
 
 			valuerecorderTwo.Measurement(2.0),
