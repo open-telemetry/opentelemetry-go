@@ -49,10 +49,6 @@ func (noopSpan) SetError(v bool) {
 func (noopSpan) SetAttributes(attributes ...label.KeyValue) {
 }
 
-// SetAttribute does nothing.
-func (noopSpan) SetAttribute(k string, v interface{}) {
-}
-
 // End does nothing.
 func (noopSpan) End(options ...SpanOption) {
 }

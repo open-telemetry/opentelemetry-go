@@ -23,9 +23,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `ExtractHTTP` and `InjectHTTP` fuctions from the `go.opentelemetry.io/otel/api/propagation` package were removed. (#1212)
 - The `Propagators` interface from the `go.opentelemetry.io/otel/api/propagation` package was removed to conform to the OpenTelemetry specification.
    The explicit `TextMapPropagator` type can be used in its place as this is the `Propagator` type the specification defines. (#1212)
-
-### Removed
-
+- The `SetAttribute` method of the `Span` from the `go.opentelemetry.io/otel/api/trace` package was removed given its redundancy with the `SetAttributes` method. (#1216)
 - Remove duplicate hostname key `HostHostNameKey` in Resource semantic conventions. (#1219)
 
 ## [0.12.0] - 2020-09-24
