@@ -24,6 +24,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `Propagators` interface from the `go.opentelemetry.io/otel/api/propagation` package was removed to conform to the OpenTelemetry specification.
    The explicit `TextMapPropagator` type can be used in its place as this is the `Propagator` type the specification defines. (#1212)
 
+### Removed
+
+- Remove duplicate hostname key `HostHostNameKey` in Resource semantic conventions. (#1219)
+
 ## [0.12.0] - 2020-09-24
 
 ### Added

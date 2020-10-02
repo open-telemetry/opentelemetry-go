@@ -179,11 +179,8 @@ const (
 
 // Semantic conventions for host resource attribute keys.
 const (
-	// A uniquely identifying name for the host.
+	// A uniquely identifying name for the host: 'hostname', FQDN, or user specified name
 	HostNameKey = label.Key("host.name")
-
-	// A hostname as returned by the 'hostname' command on host machine.
-	HostHostNameKey = label.Key("host.hostname")
 
 	// Unique host ID. For cloud environments this will be the instance ID.
 	HostIDKey = label.Key("host.id")
