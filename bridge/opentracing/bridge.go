@@ -25,9 +25,9 @@ import (
 	otext "github.com/opentracing/opentracing-go/ext"
 	otlog "github.com/opentracing/opentracing-go/log"
 
+	"go.opentelemetry.io/otel"
 	otelbaggage "go.opentelemetry.io/otel/api/baggage"
 	otelglobal "go.opentelemetry.io/otel/api/global"
-	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/internal/trace/noop"
@@ -287,7 +287,7 @@ type BridgeTracer struct {
 	warningHandler BridgeWarningHandler
 	warnOnce       sync.Once
 
-	propagators otelpropagation.Propagators
+	propagator otel.TextMapPropagator
 }
 
 var _ ot.Tracer = &BridgeTracer{}
@@ -304,7 +304,7 @@ func NewBridgeTracer() *BridgeTracer {
 			otelTracer: noop.Tracer,
 		},
 		warningHandler: func(msg string) {},
-		propagators:    nil,
+		propagator:     nil,
 	}
 }
 
@@ -322,8 +322,8 @@ func (t *BridgeTracer) SetOpenTelemetryTracer(tracer oteltrace.Tracer) {
 	t.setTracer.isSet = true
 }
 
-func (t *BridgeTracer) SetPropagators(propagators otelpropagation.Propagators) {
-	t.propagators = propagators
+func (t *BridgeTracer) SetTextMapPropagator(propagator otel.TextMapPropagator) {
+	t.propagator = propagator
 }
 
 func (t *BridgeTracer) NewHookedContext(ctx context.Context) context.Context {
@@ -614,7 +614,7 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 	}
 	ctx := oteltrace.ContextWithSpan(context.Background(), fs)
 	ctx = otelbaggage.ContextWithMap(ctx, bridgeSC.baggageItems)
-	otelpropagation.InjectHTTP(ctx, t.getPropagators(), header)
+	t.getPropagator().Inject(ctx, header)
 	return nil
 }
 
@@ -631,7 +631,7 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 		return nil, ot.ErrInvalidCarrier
 	}
 	header := http.Header(hhcarrier)
-	ctx := otelpropagation.ExtractHTTP(context.Background(), t.getPropagators(), header)
+	ctx := t.getPropagator().Extract(context.Background(), header)
 	baggage := otelbaggage.MapFromContext(ctx)
 	otelSC, _, _ := otelparent.GetSpanContextAndLinks(ctx, false)
 	bridgeSC := &bridgeSpanContext{
@@ -644,9 +644,9 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 	return bridgeSC, nil
 }
 
-func (t *BridgeTracer) getPropagators() otelpropagation.Propagators {
-	if t.propagators != nil {
-		return t.propagators
+func (t *BridgeTracer) getPropagator() otel.TextMapPropagator {
+	if t.propagator != nil {
+		return t.propagator
 	}
-	return otelglobal.Propagators()
+	return otelglobal.TextMapPropagator()
 }

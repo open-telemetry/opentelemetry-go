@@ -19,7 +19,7 @@ import (
 	"net/url"
 	"strings"
 
-	"go.opentelemetry.io/otel/api/propagation"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 )
 
@@ -27,21 +27,14 @@ import (
 // https://github.com/open-telemetry/opentelemetry-specification/blob/18b2752ebe6c7f0cdd8c7b2bcbdceb0ae3f5ad95/specification/correlationcontext/api.md#header-name
 const baggageHeader = "otcorrelations"
 
-// Baggage propagates Key:Values in W3C CorrelationContext
-// format.
+// Baggage propagates Key:Values in W3C CorrelationContext format.
 // nolint:golint
 type Baggage struct{}
 
-var _ propagation.HTTPPropagator = Baggage{}
+var _ otel.TextMapPropagator = Baggage{}
 
-// DefaultHTTPPropagator returns the default context correlation HTTP
-// propagator.
-func DefaultHTTPPropagator() propagation.HTTPPropagator {
-	return Baggage{}
-}
-
-// Inject implements HTTPInjector.
-func (b Baggage) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
+// Inject set baggage key-values from the Context into the carrier.
+func (b Baggage) Inject(ctx context.Context, carrier otel.TextMapCarrier) {
 	baggageMap := MapFromContext(ctx)
 	firstIter := true
 	var headerValueBuilder strings.Builder
@@ -57,13 +50,13 @@ func (b Baggage) Inject(ctx context.Context, supplier propagation.HTTPSupplier) 
 	})
 	if headerValueBuilder.Len() > 0 {
 		headerString := headerValueBuilder.String()
-		supplier.Set(baggageHeader, headerString)
+		carrier.Set(baggageHeader, headerString)
 	}
 }
 
-// Extract implements HTTPExtractor.
-func (b Baggage) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
-	baggage := supplier.Get(baggageHeader)
+// Extract reads baggage key-values from the carrier into a returned Context.
+func (b Baggage) Extract(ctx context.Context, carrier otel.TextMapCarrier) context.Context {
+	baggage := carrier.Get(baggageHeader)
 	if baggage == "" {
 		return ctx
 	}
@@ -112,7 +105,7 @@ func (b Baggage) Extract(ctx context.Context, supplier propagation.HTTPSupplier)
 	return ctx
 }
 
-// GetAllKeys implements HTTPPropagator.
-func (b Baggage) GetAllKeys() []string {
+// Fields returns the keys who's values are set with Inject.
+func (b Baggage) Fields() []string {
 	return []string{baggageHeader}
 }
