@@ -23,9 +23,10 @@ import (
 
 // Baggage returns a copy of the baggage in ctx.
 func Baggage(ctx context.Context) label.Set {
-	// TODO (MrAlias): The underlying storage, the Map, shares many of the
-	// functional elements of the label.Set. These should be unified so this
-	// conversion is unnecessary and there is no performance hit calling this.
+	// TODO (MrAlias, #1222): The underlying storage, the Map, shares many of
+	// the functional elements of the label.Set. These should be unified so
+	// this conversion is unnecessary and there is no performance hit calling
+	// this.
 	m := baggage.MapFromContext(ctx)
 	values := make([]label.KeyValue, 0, m.Len())
 	m.Foreach(func(kv label.KeyValue) bool {
