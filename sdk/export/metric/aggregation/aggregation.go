@@ -40,7 +40,7 @@ type (
 		Sum() (metric.Number, error)
 	}
 
-	// Sum returns the number of values that were aggregated.
+	// Count returns the number of values that were aggregated.
 	Count interface {
 		Aggregation
 		Count() (int64, error)
@@ -95,6 +95,7 @@ type (
 	// Histogram returns the count of events in pre-determined buckets.
 	Histogram interface {
 		Aggregation
+		Count() (int64, error)
 		Sum() (metric.Number, error)
 		Histogram() (Buckets, error)
 	}

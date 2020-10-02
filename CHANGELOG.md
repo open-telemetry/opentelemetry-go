@@ -8,6 +8,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- OTLP Metric exporter supports Histogram aggregation. (#1209)
+
+### Changed
+
+- Set default propagator to no-op propagator. (#1184)
+
+### Removed
+
+- Remove duplicate hostname key `HostHostNameKey` in Resource semantic conventions. (#1219)
+
 ## [0.12.0] - 2020-09-24
 
 ### Added
@@ -71,8 +83,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Renamed `SamplingDecision` values to comply with OpenTelemetry specification change. (#1192)
 - Renamed Zipkin attribute names from `ot.status_code & ot.status_description` to `otel.status_code & otel.status_description`. (#1201)
 - The default SDK now invokes registered `SpanProcessor`s in the order they were registered with the `TracerProvider`. (#1195)
+- Add test of spans being processed by the `SpanProcessor`s in the order they were registered. (#1203)
 - Change `go.opentelemetry.io/exporters/otlp/` `Exporter` interface to take as parameter a `ConnConfigurations` structure containing different configurations for metrics and traces endpoints. (#1202)
 - `go.opentelemetry.io/exporters/otlp/` `Exporter` connection logic (including indefinite background connection) is now handled by an internal `go.opentelemetry.io/exporters/otlp/` `otlpConnection` object. (#1202)
+
 
 ### Removed
 

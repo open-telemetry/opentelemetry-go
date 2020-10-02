@@ -33,7 +33,7 @@ import (
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/resource"
 
@@ -106,6 +106,8 @@ var (
 
 	testInstA = resource.New(label.String("instance", "tester-a"))
 	testInstB = resource.New(label.String("instance", "tester-b"))
+
+	testHistogramBoundaries = []float64{2.0, 4.0, 8.0}
 
 	md = &metricpb.MetricDescriptor{
 		Name: "int64-count",
@@ -229,9 +231,9 @@ func TestValuerecorderMetricGroupingExport(t *testing.T) {
 						{
 							MetricDescriptor: &metricpb.MetricDescriptor{
 								Name: "valuerecorder",
-								Type: metricpb.MetricDescriptor_SUMMARY,
+								Type: metricpb.MetricDescriptor_HISTOGRAM,
 							},
-							SummaryDataPoints: []*metricpb.SummaryDataPoint{
+							HistogramDataPoints: []*metricpb.HistogramDataPoint{
 								{
 									Labels: []*commonpb.StringKeyValue{
 										{
@@ -243,20 +245,14 @@ func TestValuerecorderMetricGroupingExport(t *testing.T) {
 											Value: "test.com",
 										},
 									},
-									Count: 2,
-									Sum:   11,
-									PercentileValues: []*metricpb.SummaryDataPoint_ValueAtPercentile{
-										{
-											Percentile: 0.0,
-											Value:      1.0,
-										},
-										{
-											Percentile: 100.0,
-											Value:      10.0,
-										},
-									},
 									StartTimeUnixNano: startTime(),
 									TimeUnixNano:      pointTime(),
+									Count:             2,
+									Sum:               11,
+									ExplicitBounds:    testHistogramBoundaries,
+									Buckets: []*metricpb.HistogramDataPoint_Bucket{
+										{Count: 1}, {Count: 0}, {Count: 0}, {Count: 1},
+									},
 								},
 								{
 									Labels: []*commonpb.StringKeyValue{
@@ -269,17 +265,11 @@ func TestValuerecorderMetricGroupingExport(t *testing.T) {
 											Value: "test.com",
 										},
 									},
-									Count: 2,
-									Sum:   11,
-									PercentileValues: []*metricpb.SummaryDataPoint_ValueAtPercentile{
-										{
-											Percentile: 0.0,
-											Value:      1.0,
-										},
-										{
-											Percentile: 100.0,
-											Value:      10.0,
-										},
+									Count:          2,
+									Sum:            11,
+									ExplicitBounds: testHistogramBoundaries,
+									Buckets: []*metricpb.HistogramDataPoint_Bucket{
+										{Count: 1}, {Count: 0}, {Count: 0}, {Count: 1},
 									},
 									StartTimeUnixNano: startTime(),
 									TimeUnixNano:      pointTime(),
@@ -690,7 +680,7 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 		case metric.CounterKind:
 			agg, ckpt = metrictest.Unslice2(sum.New(2))
 		default:
-			agg, ckpt = metrictest.Unslice2(minmaxsumcount.New(2, &desc))
+			agg, ckpt = metrictest.Unslice2(histogram.New(2, &desc, testHistogramBoundaries))
 		}
 
 		ctx := context.Background()

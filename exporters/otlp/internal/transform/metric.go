@@ -257,6 +257,13 @@ func Record(r export.Record) (*metricpb.Metric, error) {
 		}
 		return minMaxSumCount(r, mmsc)
 
+	case aggregation.HistogramKind:
+		h, ok := agg.(aggregation.Histogram)
+		if !ok {
+			return nil, fmt.Errorf("%w: %T", ErrIncompatibleAgg, agg)
+		}
+		return histogram(r, h)
+
 	case aggregation.SumKind:
 		s, ok := agg.(aggregation.Sum)
 		if !ok {
@@ -327,7 +334,7 @@ func scalar(record export.Record, num metric.Number, start, end time.Time) (*met
 }
 
 // minMaxSumCountValue returns the values of the MinMaxSumCount Aggregator
-// as discret values.
+// as discrete values.
 func minMaxSumCountValues(a aggregation.MinMaxSumCount) (min, max, sum metric.Number, count int64, err error) {
 	if min, err = a.Min(); err != nil {
 		return
@@ -378,6 +385,67 @@ func minMaxSumCount(record export.Record, a aggregation.MinMaxSumCount) (*metric
 				},
 				StartTimeUnixNano: toNanos(record.StartTime()),
 				TimeUnixNano:      toNanos(record.EndTime()),
+			},
+		},
+	}, nil
+}
+
+func histogramValues(a aggregation.Histogram) (boundaries []float64, counts []float64, err error) {
+	var buckets aggregation.Buckets
+	if buckets, err = a.Histogram(); err != nil {
+		return
+	}
+	boundaries, counts = buckets.Boundaries, buckets.Counts
+	if len(counts) != len(boundaries)+1 {
+		err = ErrTransforming
+		return
+	}
+	return
+}
+
+// histogram transforms a Histogram Aggregator into an OTLP Metric.
+func histogram(record export.Record, a aggregation.Histogram) (*metricpb.Metric, error) {
+	desc := record.Descriptor()
+	labels := record.Labels()
+	boundaries, counts, err := histogramValues(a)
+	if err != nil {
+		return nil, err
+	}
+
+	count, err := a.Count()
+	if err != nil {
+		return nil, err
+	}
+
+	sum, err := a.Sum()
+	if err != nil {
+		return nil, err
+	}
+
+	buckets := make([]*metricpb.HistogramDataPoint_Bucket, len(counts))
+	for i := 0; i < len(counts); i++ {
+		buckets[i] = &metricpb.HistogramDataPoint_Bucket{
+			Count: uint64(counts[i]),
+		}
+	}
+
+	numKind := desc.NumberKind()
+	return &metricpb.Metric{
+		MetricDescriptor: &metricpb.MetricDescriptor{
+			Name:        desc.Name(),
+			Description: desc.Description(),
+			Unit:        string(desc.Unit()),
+			Type:        metricpb.MetricDescriptor_HISTOGRAM,
+		},
+		HistogramDataPoints: []*metricpb.HistogramDataPoint{
+			{
+				Labels:            stringKeyValues(labels.Iter()),
+				StartTimeUnixNano: toNanos(record.StartTime()),
+				TimeUnixNano:      toNanos(record.EndTime()),
+				Count:             uint64(count),
+				Sum:               sum.CoerceToFloat64(numKind),
+				Buckets:           buckets,
+				ExplicitBounds:    boundaries,
 			},
 		},
 	}, nil

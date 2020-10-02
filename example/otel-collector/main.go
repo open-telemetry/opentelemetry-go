@@ -27,9 +27,11 @@ import (
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/api/propagation"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/propagators"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -73,6 +75,10 @@ func initProvider() func() {
 		push.WithPeriod(2*time.Second),
 	)
 
+	tcPropagator := propagators.TraceContext{}
+	props := propagation.New(propagation.WithExtractors(tcPropagator),
+		propagation.WithInjectors(tcPropagator))
+	global.SetPropagators(props)
 	global.SetTracerProvider(tracerProvider)
 	global.SetMeterProvider(pusher.MeterProvider())
 	pusher.Start()

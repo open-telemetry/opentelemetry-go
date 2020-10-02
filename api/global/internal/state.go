@@ -18,11 +18,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go.opentelemetry.io/otel/api/baggage"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/propagators"
 )
 
 type (
@@ -120,15 +118,9 @@ func defaultPropagatorsValue() *atomic.Value {
 	return v
 }
 
-// getDefaultPropagators returns a default Propagators, configured
-// with W3C trace and baggage propagation.
+// getDefaultPropagators returns a default noop Propagators
 func getDefaultPropagators() propagation.Propagators {
-	tcPropagator := propagators.TraceContext{}
-	bagPropagator := baggage.Baggage{}
-	return propagation.New(
-		propagation.WithExtractors(tcPropagator, bagPropagator),
-		propagation.WithInjectors(tcPropagator, bagPropagator),
-	)
+	return propagation.New()
 }
 
 // ResetForTest restores the initial global state, for testing purposes.
