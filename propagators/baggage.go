@@ -19,7 +19,7 @@ import (
 	"net/url"
 	"strings"
 
-	"go.opentelemetry.io/otel/api/propagation"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/baggage"
 	"go.opentelemetry.io/otel/label"
 )
@@ -34,10 +34,10 @@ const baggageHeader = "otcorrelations"
 // specification is defined at https://w3c.github.io/baggage/.
 type Baggage struct{}
 
-var _ propagation.HTTPPropagator = Baggage{}
+var _ otel.TextMapPropagator = Baggage{}
 
-// Inject implements HTTPInjector.
-func (b Baggage) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
+// Inject sets baggage key-values from ctx into the carrier.
+func (b Baggage) Inject(ctx context.Context, carrier otel.TextMapCarrier) {
 	baggageMap := baggage.MapFromContext(ctx)
 	firstIter := true
 	var headerValueBuilder strings.Builder
@@ -53,15 +53,15 @@ func (b Baggage) Inject(ctx context.Context, supplier propagation.HTTPSupplier) 
 	})
 	if headerValueBuilder.Len() > 0 {
 		headerString := headerValueBuilder.String()
-		supplier.Set(baggageHeader, headerString)
+		carrier.Set(baggageHeader, headerString)
 	}
 }
 
-// Extract implements HTTPExtractor.
-func (b Baggage) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
-	bVal := supplier.Get(baggageHeader)
+// Extract returns a copy of parent with the baggage from the carrier added.
+func (b Baggage) Extract(parent context.Context, carrier otel.TextMapCarrier) context.Context {
+	bVal := carrier.Get(baggageHeader)
 	if bVal == "" {
-		return ctx
+		return parent
 	}
 
 	baggageValues := strings.Split(bVal, ",")
@@ -100,15 +100,15 @@ func (b Baggage) Extract(ctx context.Context, supplier propagation.HTTPSupplier)
 
 	if len(keyValues) > 0 {
 		// Only update the context if valid values were found
-		return baggage.ContextWithMap(ctx, baggage.NewMap(baggage.MapUpdate{
+		return baggage.ContextWithMap(parent, baggage.NewMap(baggage.MapUpdate{
 			MultiKV: keyValues,
 		}))
 	}
 
-	return ctx
+	return parent
 }
 
-// GetAllKeys implements HTTPPropagator.
-func (b Baggage) GetAllKeys() []string {
+// Fields returns the keys who's values are set with Inject.
+func (b Baggage) Fields() []string {
 	return []string{baggageHeader}
 }

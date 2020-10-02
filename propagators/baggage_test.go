@@ -22,14 +22,14 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/otel/api/propagation"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/baggage"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/propagators"
 )
 
 func TestExtractValidBaggageFromHTTPReq(t *testing.T) {
-	props := propagation.New(propagation.WithExtractors(propagators.Baggage{}))
+	prop := otel.TextMapPropagator(propagators.Baggage{})
 	tests := []struct {
 		name    string
 		header  string
@@ -91,7 +91,7 @@ func TestExtractValidBaggageFromHTTPReq(t *testing.T) {
 			req.Header.Set("otcorrelations", tt.header)
 
 			ctx := context.Background()
-			ctx = propagation.ExtractHTTP(ctx, props, req.Header)
+			ctx = prop.Extract(ctx, req.Header)
 			gotBaggage := baggage.MapFromContext(ctx)
 			wantBaggage := baggage.NewMap(baggage.MapUpdate{MultiKV: tt.wantKVs})
 			if gotBaggage.Len() != wantBaggage.Len() {
@@ -118,7 +118,7 @@ func TestExtractValidBaggageFromHTTPReq(t *testing.T) {
 }
 
 func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
-	props := propagation.New(propagation.WithExtractors(propagators.Baggage{}))
+	prop := otel.TextMapPropagator(propagators.Baggage{})
 	tests := []struct {
 		name   string
 		header string
@@ -153,7 +153,7 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 
 			ctx := baggage.NewContext(context.Background(), tt.hasKVs...)
 			wantBaggage := baggage.MapFromContext(ctx)
-			ctx = propagation.ExtractHTTP(ctx, props, req.Header)
+			ctx = prop.Extract(ctx, req.Header)
 			gotBaggage := baggage.MapFromContext(ctx)
 			if gotBaggage.Len() != wantBaggage.Len() {
 				t.Errorf(
@@ -177,7 +177,6 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 
 func TestInjectBaggageToHTTPReq(t *testing.T) {
 	propagator := propagators.Baggage{}
-	props := propagation.New(propagation.WithInjectors(propagator))
 	tests := []struct {
 		name         string
 		kvs          []label.KeyValue
@@ -230,7 +229,7 @@ func TestInjectBaggageToHTTPReq(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
 			ctx := baggage.ContextWithMap(context.Background(), baggage.NewMap(baggage.MapUpdate{MultiKV: tt.kvs}))
-			propagation.InjectHTTP(ctx, props, req.Header)
+			propagator.Inject(ctx, req.Header)
 
 			gotHeader := req.Header.Get("otcorrelations")
 			wantedLen := len(strings.Join(tt.wantInHeader, ","))
@@ -253,7 +252,7 @@ func TestInjectBaggageToHTTPReq(t *testing.T) {
 func TestBaggagePropagatorGetAllKeys(t *testing.T) {
 	var propagator propagators.Baggage
 	want := []string{"otcorrelations"}
-	got := propagator.GetAllKeys()
+	got := propagator.Fields()
 	if diff := cmp.Diff(got, want); diff != "" {
 		t.Errorf("GetAllKeys: -got +want %s", diff)
 	}

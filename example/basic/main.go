@@ -21,7 +21,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/label"
@@ -63,12 +62,8 @@ func main() {
 	global.SetTracerProvider(tp)
 	global.SetMeterProvider(pusher.MeterProvider())
 
-	// set propagator to baggage since the default is no-op
-	bagPropagator := propagators.Baggage{}
-	props := propagation.New(propagation.WithExtractors(bagPropagator),
-		propagation.WithInjectors(bagPropagator))
-
-	global.SetPropagators(props)
+	// set global propagator to baggage (the default is no-op).
+	global.SetTextMapPropagator(propagators.Baggage{})
 	tracer := global.Tracer("ex.com/basic")
 	meter := global.Meter("ex.com/basic")
 
