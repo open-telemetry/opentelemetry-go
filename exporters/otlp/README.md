@@ -14,7 +14,7 @@ The exporter can be installed using standard `go` functionality.
 $ go get -u go.opentelemetry.io/otel/exporters/otlp
 ```
 
-A new exporter can be created using the `NewExporter` function.
+A new exporter can be created using the `NewExporter` function, and configured using connection configuration functions (see [Configurations](#configurations)).
 
 ```golang
 package main
@@ -29,7 +29,8 @@ import (
 )
 
 func main() {
-	exporter, err := otlp.NewExporter() // Configure as needed.
+	config := otlp.NewConnections() // Configure as needed.
+	exporter, err := otlp.NewExporter(config) 
 	if err != nil {
 		log.Fatalf("failed to create exporter: %v", err)
 	}
@@ -58,7 +59,25 @@ func main() {
 
 ## Configuration
 
-Configurations options can be specified when creating a new exporter (`NewExporter`).
+Configurations options can be specified when creating a new connection configuration, or when updating it.
+
+To create a configuration, you can use the following based on what connection you want:
+
+1) `NewConnections`: creates default configurations for both metrics and traces and applies any options provided to both metrics and traces connection. Use this when configuring both metrics and traces endpoints.
+
+2) `NewTracesConnection`: creates default configuration for traces and applies any options provided to the traces connection. Use this when configuring only a traces endpoint.
+
+3) `NewMetricsConnection`: creates default configuration for metrics and applies any options provided to the metrics connection. Use this when configuring only a metrics endpoint.
+
+To update a connection configuration, use the following:
+
+1) `SetCommonOptions`: updates the connection configuration for both metrics and traces, allowing to override options for both endpoints at once.
+
+2) `SetMetricOptions`: updates the connection configuration for the metrics endpoint, overriding options or setting new metrics specific options.
+
+3) `SetTraceOptions`: updates the connection configuration for the traces endpoint, overriding options or setting new trace specific options.
+
+The available options are listed bellow.
 
 ### `WorkerCount(n uint)`
 

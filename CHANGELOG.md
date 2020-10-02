@@ -87,7 +87,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Change `go.opentelemetry.io/exporters/otlp/` `Exporter` interface to take as parameter a `ConnConfigurations` structure containing different configurations for metrics and traces endpoints. (#1202)
 - `go.opentelemetry.io/exporters/otlp/` `Exporter` connection logic (including indefinite background connection) is now handled by an internal `go.opentelemetry.io/exporters/otlp/` `otlpConnection` object. (#1202)
 
-
 ### Removed
 
 - Remove the B3 propagator from `go.opentelemetry.io/otel/propagators`. It is now located in the
