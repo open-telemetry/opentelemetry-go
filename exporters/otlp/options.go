@@ -163,19 +163,45 @@ type ConnConfigurations struct {
 	traces  config
 }
 
-// DefaultConnectionOptions gives a simple way to configure the Exporter connections to default.
-var DefaultConnectionOptions []ExporterOption = []ExporterOption{
-	WithAddress(fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorPort)),
-	WorkerCount(DefaultNumWorkers),
-	WithGRPCServiceConfig(DefaultGRPCServiceConfig),
+func newDefaultConfig() config {
+	return config{
+		collectorAddr:     fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorPort),
+		numWorkers:        DefaultNumWorkers,
+		grpcServiceConfig: DefaultGRPCServiceConfig,
+	}
 }
 
-// NewConnections creates an empty configuration and applies
-// any ExporterOptions provided for both metrics and traces.
+// NewConnections creates default configurations for both metrics and traces and applies
+// any ExporterOptions provided to both metrics and traces connection.
+// Use this when configuring both metrics and traces endpoints.
+// Specific options (like collector address or dial options) can be set for both signals
+// with `SetMetricOptions`, `SetTraceOptions` or `SetCommonOptions`
 func NewConnections(opts ...ExporterOption) ConnConfigurations {
 	return ConnConfigurations{
-		metrics: applyOptions(config{}, opts...),
-		traces:  applyOptions(config{}, opts...),
+		metrics: applyOptions(newDefaultConfig(), opts...),
+		traces:  applyOptions(newDefaultConfig(), opts...),
+	}
+}
+
+// NewTracesConnection creates default configuration for traces and applies
+// any ExporterOptions provided to the traces connection.
+// Use this when configuring only a traces endpoint.
+// Specific options (like collector address or dial options) can be further set with `SetTraceOptions`
+func NewTracesConnection(opts ...ExporterOption) ConnConfigurations {
+	return ConnConfigurations{
+		metrics: config{},
+		traces:  applyOptions(newDefaultConfig(), opts...),
+	}
+}
+
+// NewMetricsConnection creates default configuration for metrics and applies
+// any ExporterOptions provided to the metrics connection.
+// Use this when configuring only a metrics endpoint.
+// Specific options (like collector address or dial options) can be further set with `SetMetricOptions`
+func NewMetricsConnection(opts ...ExporterOption) ConnConfigurations {
+	return ConnConfigurations{
+		metrics: applyOptions(newDefaultConfig(), opts...),
+		traces:  config{},
 	}
 }
 

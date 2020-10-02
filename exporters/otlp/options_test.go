@@ -15,24 +15,76 @@
 package otlp
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewConnectionsDoesNotSetDefaultOptions(t *testing.T) {
+func TestNewConnectionsSetsDefaultOptions(t *testing.T) {
 
-	expectedAddress := ""
 	config := NewConnections()
 
-	assert.False(t, config.metrics.canDialInsecure,
-		"expected metrics connection to dial insecure")
-	assert.False(t, config.traces.canDialInsecure,
-		"expected traces connection to dial insecure")
-	assert.Equal(t, config.metrics.collectorAddr, expectedAddress,
+	expectedAddress := fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorPort)
+	assert.Equal(t, expectedAddress, config.metrics.collectorAddr,
 		"expected different metrics collector address")
-	assert.Equal(t, config.traces.collectorAddr, expectedAddress,
+	assert.Equal(t, expectedAddress, config.traces.collectorAddr,
 		"expected different traces collector address")
+
+	assert.Equal(t, DefaultNumWorkers, config.metrics.numWorkers,
+		"expected different metrics number of workers")
+	assert.Equal(t, DefaultNumWorkers, config.traces.numWorkers,
+		"expected different traces number of workers")
+
+	assert.Equal(t, DefaultGRPCServiceConfig, config.metrics.grpcServiceConfig,
+		"expected different metrics grpc service config")
+	assert.Equal(t, DefaultGRPCServiceConfig, config.traces.grpcServiceConfig,
+		"expected different traces grpc service config")
+
+}
+
+func TestNewTraceConnectionsSetsDefaultOptionsOnlyForTraces(t *testing.T) {
+
+	config := NewTracesConnection()
+
+	expectedAddress := fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorPort)
+	assert.Equal(t, "", config.metrics.collectorAddr,
+		"expected different metrics collector address")
+	assert.Equal(t, expectedAddress, config.traces.collectorAddr,
+		"expected different traces collector address")
+
+	assert.Equal(t, uint(0), config.metrics.numWorkers,
+		"expected different metrics number of workers")
+	assert.Equal(t, DefaultNumWorkers, config.traces.numWorkers,
+		"expected different traces number of workers")
+
+	assert.Equal(t, "", config.metrics.grpcServiceConfig,
+		"expected different metrics grpc service config")
+	assert.Equal(t, DefaultGRPCServiceConfig, config.traces.grpcServiceConfig,
+		"expected different traces grpc service config")
+
+}
+
+func TestNewMetricsConnectionsSetsDefaultOptionsOnlyForMetrics(t *testing.T) {
+
+	config := NewMetricsConnection()
+
+	expectedAddress := fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorPort)
+	assert.Equal(t, expectedAddress, config.metrics.collectorAddr,
+		"expected different metrics collector address")
+	assert.Equal(t, "", config.traces.collectorAddr,
+		"expected different traces collector address")
+
+	assert.Equal(t, DefaultNumWorkers, config.metrics.numWorkers,
+		"expected different metrics number of workers")
+	assert.Equal(t, uint(0), config.traces.numWorkers,
+		"expected different traces number of workers")
+
+	assert.Equal(t, DefaultGRPCServiceConfig, config.metrics.grpcServiceConfig,
+		"expected different metrics grpc service config")
+	assert.Equal(t, "", config.traces.grpcServiceConfig,
+		"expected different traces grpc service config")
+
 }
 
 func TestNewConnectionsSetsCommonOptions(t *testing.T) {
@@ -94,9 +146,9 @@ func TestSetTraceOptionsOverridesCommonOptions(t *testing.T) {
 		"expected different traces collector address")
 }
 
-func TestSetCommonOptionsOverridesInitialOptions(t *testing.T) {
+func TestSetCommonOptionsOverridesDefaultOptions(t *testing.T) {
 	commonAddress := "common"
-	config := NewConnections(DefaultConnectionOptions...).
+	config := NewConnections().
 		SetCommonOptions(WithAddress(commonAddress), WithInsecure())
 
 	assert.True(t, config.metrics.canDialInsecure,

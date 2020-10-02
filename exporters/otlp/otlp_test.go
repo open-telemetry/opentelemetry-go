@@ -41,7 +41,7 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 		}()
 	}
 
-	e := NewUnstartedExporter(NewConnections(DefaultConnectionOptions...))
+	e := NewUnstartedExporter(NewConnections())
 	if err := e.Start(); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
@@ -69,7 +69,7 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 		}()
 	}
 
-	e := NewUnstartedExporter(NewConnections(DefaultConnectionOptions...))
+	e := NewUnstartedExporter(NewConnections())
 	if err := e.Start(); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestExporterShutdownNoError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	e := NewUnstartedExporter(NewConnections(DefaultConnectionOptions...))
+	e := NewUnstartedExporter(NewConnections())
 	if err := e.Start(); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
@@ -109,8 +109,7 @@ func TestExporterOnlyStartsMetricsConnection(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	config := NewConnections().
-		SetMetricOptions(WithAddress(collectorAddr), WithInsecure())
+	config := NewMetricsConnection(WithAddress(collectorAddr), WithInsecure())
 	e := NewUnstartedExporter(config)
 	if err := e.Start(); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
@@ -141,8 +140,7 @@ func TestExporterOnlyStartsTracesConnection(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	config := NewConnections().
-		SetTraceOptions(WithAddress(collectorAddr), WithInsecure())
+	config := NewTracesConnection(WithAddress(collectorAddr), WithInsecure())
 	e := NewUnstartedExporter(config)
 	if err := e.Start(); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
