@@ -27,7 +27,6 @@ import (
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/propagation"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/label"
@@ -75,10 +74,8 @@ func initProvider() func() {
 		push.WithPeriod(2*time.Second),
 	)
 
-	tcPropagator := propagators.TraceContext{}
-	props := propagation.New(propagation.WithExtractors(tcPropagator),
-		propagation.WithInjectors(tcPropagator))
-	global.SetPropagators(props)
+	// set global propagator to tracecontext (the default is no-op).
+	global.SetTextMapPropagator(propagators.TraceContext{})
 	global.SetTracerProvider(tracerProvider)
 	global.SetMeterProvider(pusher.MeterProvider())
 	pusher.Start()

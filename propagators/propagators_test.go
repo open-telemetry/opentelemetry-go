@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/propagation"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/propagators"
 )
@@ -58,9 +58,9 @@ type outOfThinAirPropagator struct {
 	t *testing.T
 }
 
-var _ propagation.HTTPPropagator = outOfThinAirPropagator{}
+var _ otel.TextMapPropagator = outOfThinAirPropagator{}
 
-func (p outOfThinAirPropagator) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
+func (p outOfThinAirPropagator) Extract(ctx context.Context, carrier otel.TextMapCarrier) context.Context {
 	sc := trace.SpanContext{
 		TraceID:    traceID,
 		SpanID:     spanID,
@@ -70,34 +70,33 @@ func (p outOfThinAirPropagator) Extract(ctx context.Context, supplier propagatio
 	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
 
-func (outOfThinAirPropagator) Inject(context.Context, propagation.HTTPSupplier) {}
+func (outOfThinAirPropagator) Inject(context.Context, otel.TextMapCarrier) {}
 
-func (outOfThinAirPropagator) GetAllKeys() []string {
+func (outOfThinAirPropagator) Fields() []string {
 	return nil
 }
 
-type nilSupplier struct{}
+type nilCarrier struct{}
 
-var _ propagation.HTTPSupplier = nilSupplier{}
+var _ otel.TextMapCarrier = nilCarrier{}
 
-func (nilSupplier) Get(key string) string {
+func (nilCarrier) Get(key string) string {
 	return ""
 }
 
-func (nilSupplier) Set(key string, value string) {}
+func (nilCarrier) Set(key string, value string) {}
 
 func TestMultiplePropagators(t *testing.T) {
 	ootaProp := outOfThinAirPropagator{t: t}
-	ns := nilSupplier{}
-	testProps := []propagation.HTTPPropagator{
+	ns := nilCarrier{}
+	testProps := []otel.TextMapPropagator{
 		propagators.TraceContext{},
 	}
 	bg := context.Background()
 	// sanity check of oota propagator, ensuring that it really
 	// generates the valid span context out of thin air
 	{
-		props := propagation.New(propagation.WithExtractors(ootaProp))
-		ctx := propagation.ExtractHTTP(bg, props, ns)
+		ctx := ootaProp.Extract(bg, ns)
 		sc := trace.RemoteSpanContextFromContext(ctx)
 		require.True(t, sc.IsValid(), "oota prop failed sanity check")
 	}
@@ -105,19 +104,14 @@ func TestMultiplePropagators(t *testing.T) {
 	// really are not putting any valid span context into an empty
 	// go context in absence of the HTTP headers.
 	for _, prop := range testProps {
-		props := propagation.New(propagation.WithExtractors(prop))
-		ctx := propagation.ExtractHTTP(bg, props, ns)
+		ctx := prop.Extract(bg, ns)
 		sc := trace.RemoteSpanContextFromContext(ctx)
 		require.Falsef(t, sc.IsValid(), "%#v failed sanity check", prop)
 	}
 	for _, prop := range testProps {
-		props := propagation.New(propagation.WithExtractors(ootaProp, prop))
-		ctx := propagation.ExtractHTTP(bg, props, ns)
+		props := otel.NewCompositeTextMapPropagator(ootaProp, prop)
+		ctx := props.Extract(bg, ns)
 		sc := trace.RemoteSpanContextFromContext(ctx)
 		assert.Truef(t, sc.IsValid(), "%#v clobbers span context", prop)
 	}
-}
-
-func TestDefaultHTTPPropagator(t *testing.T) {
-	assert.IsType(t, propagators.TraceContext{}, propagators.DefaultHTTPPropagator())
 }
