@@ -74,7 +74,8 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	}
 
 	opts = append(opts, additionalOpts...)
-	exp, err := otlp.NewExporter(otlp.NewConnections(opts...))
+	config := otlp.NewConnections(otlp.DefaultConnectionOptions...).SetCommonOptions(opts...)
+	exp, err := otlp.NewExporter(config)
 	if err != nil {
 		t.Fatalf("failed to create a new collector exporter: %v", err)
 	}

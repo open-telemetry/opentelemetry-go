@@ -20,6 +20,21 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestNewConnectionsDoesNotSetDefaultOptions(t *testing.T) {
+
+	expectedAddress := ""
+	config := NewConnections()
+
+	assert.False(t, config.metrics.canDialInsecure,
+		"expected metrics connection to dial insecure")
+	assert.False(t, config.traces.canDialInsecure,
+		"expected traces connection to dial insecure")
+	assert.Equal(t, config.metrics.collectorAddr, expectedAddress,
+		"expected different metrics collector address")
+	assert.Equal(t, config.traces.collectorAddr, expectedAddress,
+		"expected different traces collector address")
+}
+
 func TestNewConnectionsSetsCommonOptions(t *testing.T) {
 
 	expectedAddress := "foo"
@@ -76,5 +91,21 @@ func TestSetTraceOptionsOverridesCommonOptions(t *testing.T) {
 	assert.Equal(t, config.metrics.collectorAddr, metricsAddress,
 		"expected different metrics collector address")
 	assert.Equal(t, config.traces.collectorAddr, tracesAddress,
+		"expected different traces collector address")
+}
+
+func TestSetCommonOptionsOverridesInitialOptions(t *testing.T) {
+	commonAddress := "common"
+	config := NewConnections(DefaultConnectionOptions...).
+		SetCommonOptions(WithAddress(commonAddress), WithInsecure())
+
+	assert.True(t, config.metrics.canDialInsecure,
+		"expected metrics connection to dial insecure")
+	assert.True(t, config.traces.canDialInsecure,
+		"expected traces connection to dial insecure")
+
+	assert.Equal(t, config.metrics.collectorAddr, commonAddress,
+		"expected different metrics collector address")
+	assert.Equal(t, config.traces.collectorAddr, commonAddress,
 		"expected different traces collector address")
 }

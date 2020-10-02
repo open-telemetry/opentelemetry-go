@@ -16,7 +16,6 @@ package otlp
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"sync"
 	"sync/atomic"
@@ -179,7 +178,7 @@ func (oc *otlpConnection) connect() error {
 }
 
 func (oc *otlpConnection) dialToCollector() (*grpc.ClientConn, error) {
-	addr := oc.prepareCollectorAddress()
+	addr := oc.c.collectorAddr
 
 	dialOpts := []grpc.DialOption{}
 	if oc.c.grpcServiceConfig != "" {
@@ -199,13 +198,6 @@ func (oc *otlpConnection) dialToCollector() (*grpc.ClientConn, error) {
 
 	ctx := oc.contextWithMetadata(context.Background())
 	return grpc.DialContext(ctx, addr, dialOpts...)
-}
-
-func (oc *otlpConnection) prepareCollectorAddress() string {
-	if oc.c.collectorAddr != "" {
-		return oc.c.collectorAddr
-	}
-	return fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorPort)
 }
 
 func (oc *otlpConnection) contextWithMetadata(ctx context.Context) context.Context {

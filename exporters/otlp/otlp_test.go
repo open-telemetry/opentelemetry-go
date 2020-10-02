@@ -17,8 +17,14 @@ package otlp
 import (
 	"context"
 	"errors"
+	"net"
 	"testing"
 	"time"
+
+	"google.golang.org/grpc"
+
+	colmetricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/metrics/v1"
+	coltracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/trace/v1"
 )
 
 func TestExporterShutdownHonorsTimeout(t *testing.T) {
@@ -35,7 +41,7 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 		}()
 	}
 
-	e := NewUnstartedExporter(NewConnections())
+	e := NewUnstartedExporter(NewConnections(DefaultConnectionOptions...))
 	if err := e.Start(); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
@@ -63,7 +69,7 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 		}()
 	}
 
-	e := NewUnstartedExporter(NewConnections())
+	e := NewUnstartedExporter(NewConnections(DefaultConnectionOptions...))
 	if err := e.Start(); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
@@ -82,7 +88,7 @@ func TestExporterShutdownNoError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	e := NewUnstartedExporter(NewConnections())
+	e := NewUnstartedExporter(NewConnections(DefaultConnectionOptions...))
 	if err := e.Start(); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
@@ -90,4 +96,89 @@ func TestExporterShutdownNoError(t *testing.T) {
 	if err := e.Shutdown(ctx); err != nil {
 		t.Errorf("shutdown errored: expected nil, got %v", err)
 	}
+}
+
+func TestExporterOnlyStartsMetricsConnection(t *testing.T) {
+
+	collectorAddr := ":9081"
+	colDeferFunc := runUnimplementedCollectorAtAddress(t, collectorAddr)
+	defer func() {
+		_ = colDeferFunc()
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
+	config := NewConnections().
+		SetMetricOptions(WithAddress(collectorAddr), WithInsecure())
+	e := NewUnstartedExporter(config)
+	if err := e.Start(); err != nil {
+		t.Fatalf("failed to start exporter: %v", err)
+	}
+	defer func() {
+		_ = e.Shutdown(ctx)
+	}()
+
+	metricsConnErr := e.metricsConnection.lastConnectError()
+	if metricsConnErr != nil {
+		t.Errorf("metrics connection error out: %v", metricsConnErr)
+	}
+
+	if e.tracesConnection != nil {
+		t.Errorf("expected traces connection not to start")
+	}
+
+}
+
+func TestExporterOnlyStartsTracesConnection(t *testing.T) {
+
+	collectorAddr := ":9081"
+	colDeferFunc := runUnimplementedCollectorAtAddress(t, collectorAddr)
+	defer func() {
+		_ = colDeferFunc()
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
+	config := NewConnections().
+		SetTraceOptions(WithAddress(collectorAddr), WithInsecure())
+	e := NewUnstartedExporter(config)
+	if err := e.Start(); err != nil {
+		t.Fatalf("failed to start exporter: %v", err)
+	}
+	defer func() {
+		_ = e.Shutdown(ctx)
+	}()
+
+	tracesConnectionError := e.tracesConnection.lastConnectError()
+	if tracesConnectionError != nil {
+		t.Errorf("traces connection error out: %v", tracesConnectionError)
+	}
+
+	if e.metricsConnection != nil {
+		t.Errorf("expected metrics connection not to start")
+	}
+
+}
+
+func runUnimplementedCollectorAtAddress(t *testing.T, addr string) func() error {
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		t.Fatalf("Failed to get an address: %v", err)
+	}
+
+	srv := grpc.NewServer()
+	coltracepb.RegisterTraceServiceServer(srv, new(coltracepb.UnimplementedTraceServiceServer))
+	colmetricpb.RegisterMetricsServiceServer(srv, new(colmetricpb.UnimplementedMetricsServiceServer))
+	go func() {
+		_ = srv.Serve(ln)
+	}()
+
+	deferFunc := func() error {
+		srv.Stop()
+		return ln.Close()
+	}
+
+	return deferFunc
 }

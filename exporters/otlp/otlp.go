@@ -63,8 +63,14 @@ func NewExporter(configuration ConnConfigurations) (*Exporter, error) {
 // NewUnstartedExporter constructs a new Exporter and does not start it.
 func NewUnstartedExporter(configuration ConnConfigurations) *Exporter {
 	e := new(Exporter)
-	e.metricsConnection = newOtlpConnection(configuration.metrics, e.handleNewMetricsConnection)
-	e.tracesConnection = newOtlpConnection(configuration.traces, e.handleNewTracesConnection)
+
+	// Only create connections for the signals with configured addresses.
+	if configuration.metrics.collectorAddr != "" {
+		e.metricsConnection = newOtlpConnection(configuration.metrics, e.handleNewMetricsConnection)
+	}
+	if configuration.traces.collectorAddr != "" {
+		e.tracesConnection = newOtlpConnection(configuration.traces, e.handleNewTracesConnection)
+	}
 
 	// TODO (rghetia): add resources
 
@@ -126,8 +132,12 @@ func (e *Exporter) startExporterConnections(stopCh chan bool) error {
 	}
 
 	// TODO @sprisca: would a signal on the stop chanel stop both connections?
-	e.metricsConnection.startConnection(stopCh)
-	e.tracesConnection.startConnection(stopCh)
+	if e.metricsConnection != nil {
+		e.metricsConnection.startConnection(stopCh)
+	}
+	if e.tracesConnection != nil {
+		e.tracesConnection.startConnection(stopCh)
+	}
 	return nil
 }
 
@@ -191,6 +201,10 @@ func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) e
 		}
 	}(ctx, cancel)
 
+	if e.metricsConnection == nil {
+		return errNotStarted
+	}
+
 	numWorkers := e.metricsConnection.c.numWorkers
 	rms, err := transform.CheckpointSet(ctx, e, cps, numWorkers)
 	if err != nil {
@@ -233,6 +247,11 @@ func (e *Exporter) uploadTraces(ctx context.Context, sdl []*tracesdk.SpanData) e
 	case <-e.stopCh:
 		return nil
 	default:
+
+		if e.tracesConnection == nil {
+			return errNotStarted
+		}
+
 		if !e.tracesConnection.connected() {
 			return errDisconnected
 		}

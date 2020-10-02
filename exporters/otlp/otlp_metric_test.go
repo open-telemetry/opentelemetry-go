@@ -657,10 +657,16 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 // What works single-threaded should work multi-threaded
 func runMetricExportTests(t *testing.T, rs []record, expected []metricpb.ResourceMetrics) {
 	t.Run("1 goroutine", func(t *testing.T) {
-		runMetricExportTest(t, NewUnstartedExporter(NewConnections().SetMetricOptions(WorkerCount(1))), rs, expected)
+		config := NewConnections().
+			SetMetricOptions(DefaultConnectionOptions...).
+			SetMetricOptions(WorkerCount(1))
+		runMetricExportTest(t, NewUnstartedExporter(config), rs, expected)
 	})
 	t.Run("20 goroutines", func(t *testing.T) {
-		runMetricExportTest(t, NewUnstartedExporter(NewConnections().SetMetricOptions(WorkerCount(20))), rs, expected)
+		config := NewConnections().
+			SetMetricOptions(DefaultConnectionOptions...).
+			SetMetricOptions(WorkerCount(20))
+		runMetricExportTest(t, NewUnstartedExporter(config), rs, expected)
 	})
 }
 
@@ -759,7 +765,7 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 
 func TestEmptyMetricExport(t *testing.T) {
 	msc := &metricsServiceClientStub{}
-	exp := NewUnstartedExporter(NewConnections())
+	exp := NewUnstartedExporter(NewConnections().SetMetricOptions(DefaultConnectionOptions...))
 	exp.metricsClient = msc
 	exp.started = true
 

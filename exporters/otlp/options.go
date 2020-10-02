@@ -15,6 +15,7 @@
 package otlp
 
 import (
+	"fmt"
 	"time"
 
 	"google.golang.org/grpc"
@@ -162,30 +163,26 @@ type ConnConfigurations struct {
 	traces  config
 }
 
-// NewConnections initializes a config struct with default values and applies
+// DefaultConnectionOptions gives a simple way to configure the Exporter connections to default.
+var DefaultConnectionOptions []ExporterOption = []ExporterOption{
+	WithAddress(fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorPort)),
+	WorkerCount(DefaultNumWorkers),
+	WithGRPCServiceConfig(DefaultGRPCServiceConfig),
+}
+
+// NewConnections creates an empty configuration and applies
 // any ExporterOptions provided for both metrics and traces.
 func NewConnections(opts ...ExporterOption) ConnConfigurations {
 	return ConnConfigurations{
-		metrics: newDefaultConnectionConfig(opts...),
-		traces:  newDefaultConnectionConfig(opts...),
+		metrics: applyOptions(config{}, opts...),
+		traces:  applyOptions(config{}, opts...),
 	}
 }
 
-func newDefaultConnectionConfig(opts ...ExporterOption) config {
-	cfg := config{
-		numWorkers:        DefaultNumWorkers,
-		grpcServiceConfig: DefaultGRPCServiceConfig,
-	}
-
-	return applyOptions(cfg, opts...)
-}
-
-func applyOptions(cfg config, opts ...ExporterOption) config {
-	newCfg := cfg
-	for _, opt := range opts {
-		opt(&newCfg)
-	}
-	return newCfg
+// SetCommonOptions updates the connection configuration for both metrics and traces,
+// allowing to override default or custom options for both endpoints at once.
+func (occ ConnConfigurations) SetCommonOptions(opts ...ExporterOption) ConnConfigurations {
+	return occ.SetMetricOptions(opts...).SetTraceOptions(opts...)
 }
 
 // SetMetricOptions updates the connection configuration for the metrics endpoint,
@@ -202,4 +199,12 @@ func (occ ConnConfigurations) SetTraceOptions(opts ...ExporterOption) ConnConfig
 	oldCfg := occ.traces
 	occ.traces = applyOptions(oldCfg, opts...)
 	return occ
+}
+
+func applyOptions(cfg config, opts ...ExporterOption) config {
+	newCfg := cfg
+	for _, opt := range opts {
+		opt(&newCfg)
+	}
+	return newCfg
 }
