@@ -93,16 +93,6 @@ func toAttribute(v label.KeyValue) *commonpb.KeyValue {
 func arrayValues(kv label.KeyValue) []*commonpb.AnyValue {
 	a := kv.Value.AsArray()
 	aType := reflect.TypeOf(a)
-	if kv.Value.Type() != label.ARRAY || aType.Kind() != reflect.Array {
-		return []*commonpb.AnyValue{
-			{
-				Value: &commonpb.AnyValue_StringValue{
-					StringValue: "INVALID",
-				},
-			},
-		}
-	}
-
 	var valueFunc func(reflect.Value) *commonpb.AnyValue
 	switch aType.Elem().Kind() {
 	case reflect.Bool:
