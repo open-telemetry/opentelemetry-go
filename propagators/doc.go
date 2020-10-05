@@ -17,6 +17,8 @@ Package propagators contains OpenTelemetry context propagators.
 
 OpenTelemetry propagators are used to extract and inject context data from and
 into messages exchanged by applications. The propagator supported by this
-package is the W3C Trace Context encoding (https://www.w3.org/TR/trace-context/).
+package is the W3C Trace Context encoding
+(https://www.w3.org/TR/trace-context/), and W3C Baggage
+(https://w3c.github.io/baggage/).
 */
 package propagators // import "go.opentelemetry.io/otel/propagators"
