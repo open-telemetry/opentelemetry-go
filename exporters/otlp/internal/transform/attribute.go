@@ -137,9 +137,9 @@ func arrayValues(kv label.KeyValue) []*commonpb.AnyValue {
 		}
 	}
 
-	results := make([]*commonpb.AnyValue, 0, aType.Len())
+	results := make([]*commonpb.AnyValue, aType.Len())
 	for i, aValue := 0, reflect.ValueOf(a); i < aValue.Len(); i++ {
-		results = append(results, valueFunc(aValue.Index(i)))
+		results[i] = valueFunc(aValue.Index(i))
 	}
 	return results
 }
