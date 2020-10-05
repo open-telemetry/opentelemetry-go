@@ -263,7 +263,7 @@ func (s *MockSpan) RecordError(ctx context.Context, err error, opts ...oteltrace
 		cfg.Timestamp = time.Now()
 	}
 
-	if cfg.StatusCode != codes.OK {
+	if cfg.StatusCode != codes.Ok {
 		s.SetStatus(cfg.StatusCode, "")
 	}
 

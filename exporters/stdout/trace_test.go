@@ -22,9 +22,8 @@ import (
 	"testing"
 	"time"
 
-	"google.golang.org/grpc/codes"
-
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -64,7 +63,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 			{Name: "bar", Attributes: []label.KeyValue{label.Float64("double", doubleValue)}, Time: now},
 		},
 		SpanKind:      trace.SpanKindInternal,
-		StatusCode:    codes.Unknown,
+		StatusCode:    codes.Error,
 		StatusMessage: "interesting",
 		Resource:      resource,
 	}
@@ -115,7 +114,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`}` +
 		`],` +
 		`"Links":null,` +
-		`"StatusCode":2,` +
+		`"StatusCode":"Error",` +
 		`"StatusMessage":"interesting",` +
 		`"HasRemoteParent":false,` +
 		`"DroppedAttributeCount":0,` +

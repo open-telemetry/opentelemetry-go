@@ -167,7 +167,7 @@ func TestSpan(t *testing.T) {
 					},
 				}}
 				e.Expect(subject.Events()).ToEqual(expectedEvents)
-				e.Expect(subject.StatusCode()).ToEqual(codes.OK)
+				e.Expect(subject.StatusCode()).ToEqual(codes.Unset)
 				e.Expect(subject.StatusMessage()).ToEqual("")
 			}
 		})
@@ -186,7 +186,7 @@ func TestSpan(t *testing.T) {
 			errMsg := "test error message"
 			testErr := ottest.NewTestError(errMsg)
 			testTime := time.Now()
-			expStatusCode := codes.Unknown
+			expStatusCode := codes.Error
 			subject.RecordError(ctx, testErr, trace.WithErrorTime(testTime), trace.WithErrorStatus(expStatusCode))
 
 			expectedEvents := []tracetest.Event{{
@@ -538,31 +538,17 @@ func TestSpan(t *testing.T) {
 			subject, ok := span.(*tracetest.Span)
 			e.Expect(ok).ToBeTrue()
 
-			e.Expect(subject.StatusCode()).ToEqual(codes.OK)
+			e.Expect(subject.StatusCode()).ToEqual(codes.Unset)
 
 			subject.End()
 
-			e.Expect(subject.StatusCode()).ToEqual(codes.OK)
+			e.Expect(subject.StatusCode()).ToEqual(codes.Unset)
 		})
 
 		statuses := []codes.Code{
-			codes.OK,
-			codes.Canceled,
-			codes.Unknown,
-			codes.InvalidArgument,
-			codes.DeadlineExceeded,
-			codes.NotFound,
-			codes.AlreadyExists,
-			codes.PermissionDenied,
-			codes.ResourceExhausted,
-			codes.FailedPrecondition,
-			codes.Aborted,
-			codes.OutOfRange,
-			codes.Unimplemented,
-			codes.Internal,
-			codes.Unavailable,
-			codes.DataLoss,
-			codes.Unauthenticated,
+			codes.Unset,
+			codes.Error,
+			codes.Ok,
 		}
 
 		for _, status := range statuses {
@@ -577,7 +563,7 @@ func TestSpan(t *testing.T) {
 				subject, ok := span.(*tracetest.Span)
 				e.Expect(ok).ToBeTrue()
 
-				subject.SetStatus(codes.OK, "OK")
+				subject.SetStatus(codes.Ok, "Ok")
 				subject.SetStatus(status, "Yo!")
 
 				e.Expect(subject.StatusCode()).ToEqual(status)
@@ -595,7 +581,7 @@ func TestSpan(t *testing.T) {
 				subject, ok := span.(*tracetest.Span)
 				e.Expect(ok).ToBeTrue()
 
-				originalStatus := codes.OK
+				originalStatus := codes.Ok
 
 				subject.SetStatus(originalStatus, "OK")
 				subject.End()

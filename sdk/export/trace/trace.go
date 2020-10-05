@@ -18,9 +18,8 @@ import (
 	"context"
 	"time"
 
-	"google.golang.org/grpc/codes"
-
 	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
