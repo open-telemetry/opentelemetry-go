@@ -695,40 +695,32 @@ func TestHTTPAttributesFromHTTPStatusCode(t *testing.T) {
 
 func TestSpanStatusFromHTTPStatusCode(t *testing.T) {
 	for code := 0; code < 1000; code++ {
-		expected := getExpectedGRPCCodeForHTTPCode(code)
+		expected := getExpectedCodeForHTTPCode(code)
 		got, _ := SpanStatusFromHTTPStatusCode(code)
 		assert.Equalf(t, expected, got, "%s vs %s", expected, got)
 	}
 }
 
-func getExpectedGRPCCodeForHTTPCode(code int) codes.Code {
+func getExpectedCodeForHTTPCode(code int) codes.Code {
 	if http.StatusText(code) == "" {
-		return codes.Unknown
+		return codes.Error
 	}
 	switch code {
-	case http.StatusUnauthorized:
-		return codes.Unauthenticated
-	case http.StatusForbidden:
-		return codes.PermissionDenied
-	case http.StatusNotFound:
-		return codes.NotFound
-	case http.StatusTooManyRequests:
-		return codes.ResourceExhausted
-	case http.StatusNotImplemented:
-		return codes.Unimplemented
-	case http.StatusServiceUnavailable:
-		return codes.Unavailable
-	case http.StatusGatewayTimeout:
-		return codes.DeadlineExceeded
+	case
+		http.StatusUnauthorized,
+		http.StatusForbidden,
+		http.StatusNotFound,
+		http.StatusTooManyRequests,
+		http.StatusNotImplemented,
+		http.StatusServiceUnavailable,
+		http.StatusGatewayTimeout:
+		return codes.Error
 	}
 	category := code / 100
-	if category < 4 {
-		return codes.OK
+	if category > 0 && category < 4 {
+		return codes.Unset
 	}
-	if category < 5 {
-		return codes.InvalidArgument
-	}
-	return codes.Internal
+	return codes.Error
 }
 
 func assertElementsMatch(t *testing.T, expected, got []label.KeyValue, format string, args ...interface{}) {

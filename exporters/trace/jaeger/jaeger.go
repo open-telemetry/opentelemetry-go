@@ -21,10 +21,10 @@ import (
 	"sync"
 
 	"google.golang.org/api/support/bundler"
-	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/global"
 	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/codes"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -294,7 +294,7 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 
 	// Ensure that if Status.Code is not OK, that we set the "error" tag on the Jaeger span.
 	// See Issue https://github.com/census-instrumentation/opencensus-go/issues/1041
-	if data.StatusCode != codes.OK {
+	if data.StatusCode != codes.Ok && data.StatusCode != codes.Unset {
 		tags = append(tags, getBoolTag("error", true))
 	}
 

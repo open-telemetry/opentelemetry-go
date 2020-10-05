@@ -23,12 +23,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/codes"
 
 	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
 	"go.opentelemetry.io/otel/label"
 
 	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/codes"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -155,100 +155,28 @@ func TestLinks(t *testing.T) {
 
 func TestStatus(t *testing.T) {
 	for _, test := range []struct {
-		grpcCode   codes.Code
+		code       codes.Code
 		message    string
 		otlpStatus tracepb.Status_StatusCode
 	}{
 		{
-			codes.OK,
-			"test OK",
+			codes.Ok,
+			"test Ok",
 			tracepb.Status_Ok,
 		},
 		{
-			codes.Canceled,
-			//nolint
-			"test CANCELLED",
-			//nolint
-			tracepb.Status_Cancelled,
+			codes.Unset,
+			"test Unset",
+			tracepb.Status_Ok,
 		},
 		{
-			codes.Unknown,
-			"test UNKNOWN",
+			codes.Error,
+			"test Error",
 			tracepb.Status_UnknownError,
-		},
-		{
-			codes.InvalidArgument,
-			"test INVALID_ARGUMENT",
-			tracepb.Status_InvalidArgument,
-		},
-		{
-			codes.DeadlineExceeded,
-			"test DEADLINE_EXCEEDED",
-			tracepb.Status_DeadlineExceeded,
-		},
-		{
-			codes.NotFound,
-			"test NOT_FOUND",
-			tracepb.Status_NotFound,
-		},
-		{
-			codes.AlreadyExists,
-			"test ALREADY_EXISTS",
-			tracepb.Status_AlreadyExists,
-		},
-		{
-			codes.PermissionDenied,
-			"test PERMISSION_DENIED",
-			tracepb.Status_PermissionDenied,
-		},
-		{
-			codes.ResourceExhausted,
-			"test RESOURCE_EXHAUSTED",
-			tracepb.Status_ResourceExhausted,
-		},
-		{
-			codes.FailedPrecondition,
-			"test FAILED_PRECONDITION",
-			tracepb.Status_FailedPrecondition,
-		},
-		{
-			codes.Aborted,
-			"test ABORTED",
-			tracepb.Status_Aborted,
-		},
-		{
-			codes.OutOfRange,
-			"test OUT_OF_RANGE",
-			tracepb.Status_OutOfRange,
-		},
-		{
-			codes.Unimplemented,
-			"test UNIMPLEMENTED",
-			tracepb.Status_Unimplemented,
-		},
-		{
-			codes.Internal,
-			"test INTERNAL",
-			tracepb.Status_InternalError,
-		},
-		{
-			codes.Unavailable,
-			"test UNAVAILABLE",
-			tracepb.Status_Unavailable,
-		},
-		{
-			codes.DataLoss,
-			"test DATA_LOSS",
-			tracepb.Status_DataLoss,
-		},
-		{
-			codes.Unauthenticated,
-			"test UNAUTHENTICATED",
-			tracepb.Status_Unauthenticated,
 		},
 	} {
 		expected := &tracepb.Status{Code: test.otlpStatus, Message: test.message}
-		assert.Equal(t, expected, status(test.grpcCode, test.message))
+		assert.Equal(t, expected, status(test.code, test.message))
 	}
 
 }
@@ -315,7 +243,7 @@ func TestSpanData(t *testing.T) {
 				},
 			},
 		},
-		StatusCode:      codes.Internal,
+		StatusCode:      codes.Error,
 		StatusMessage:   "utterly unrecognized",
 		HasRemoteParent: true,
 		Attributes: []label.KeyValue{

@@ -89,7 +89,7 @@ func (s *Span) RecordError(ctx context.Context, err error, opts ...trace.ErrorOp
 		cfg.Timestamp = time.Now()
 	}
 
-	if cfg.StatusCode != codes.OK {
+	if cfg.StatusCode != codes.Unset {
 		s.SetStatus(cfg.StatusCode, "")
 	}
 
