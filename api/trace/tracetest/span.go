@@ -174,10 +174,6 @@ func (s *Span) SetAttributes(attrs ...label.KeyValue) {
 	}
 }
 
-func (s *Span) SetAttribute(k string, v interface{}) {
-	s.SetAttributes(label.Any(k, v))
-}
-
 // Name returns the name most recently set on the Span, either at or after creation time.
 // It cannot be change after End has been called on the Span.
 func (s *Span) Name() string {

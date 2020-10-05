@@ -101,13 +101,6 @@ func (s *span) SetAttributes(attributes ...label.KeyValue) {
 	s.copyToCappedAttributes(attributes...)
 }
 
-func (s *span) SetAttribute(k string, v interface{}) {
-	attr := label.Any(k, v)
-	if attr.Value.Type() != label.INVALID {
-		s.SetAttributes(attr)
-	}
-}
-
 // End ends the span.
 //
 // The only SpanOption currently supported is WithTimestamp which will set the

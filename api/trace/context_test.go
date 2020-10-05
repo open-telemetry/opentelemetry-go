@@ -96,10 +96,6 @@ func (mockSpan) SetError(v bool) {
 func (mockSpan) SetAttributes(attributes ...label.KeyValue) {
 }
 
-// SetAttribute does nothing.
-func (mockSpan) SetAttribute(k string, v interface{}) {
-}
-
 // End does nothing.
 func (mockSpan) End(options ...trace.SpanOption) {
 }

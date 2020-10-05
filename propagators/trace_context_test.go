@@ -21,14 +21,13 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/api/trace/tracetest"
 	"go.opentelemetry.io/otel/propagators"
 )
 
 func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
-	props := propagation.New(propagation.WithExtractors(propagators.TraceContext{}))
+	prop := propagators.TraceContext{}
 	tests := []struct {
 		name   string
 		header string
@@ -112,7 +111,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			req.Header.Set("traceparent", tt.header)
 
 			ctx := context.Background()
-			ctx = propagation.ExtractHTTP(ctx, props, req.Header)
+			ctx = prop.Extract(ctx, req.Header)
 			gotSc := trace.RemoteSpanContextFromContext(ctx)
 			if diff := cmp.Diff(gotSc, tt.wantSc); diff != "" {
 				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
@@ -123,7 +122,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 
 func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 	wantSc := trace.EmptySpanContext()
-	props := propagation.New(propagation.WithExtractors(propagators.TraceContext{}))
+	prop := propagators.TraceContext{}
 	tests := []struct {
 		name   string
 		header string
@@ -200,7 +199,7 @@ func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 			req.Header.Set("traceparent", tt.header)
 
 			ctx := context.Background()
-			ctx = propagation.ExtractHTTP(ctx, props, req.Header)
+			ctx = prop.Extract(ctx, req.Header)
 			gotSc := trace.RemoteSpanContextFromContext(ctx)
 			if diff := cmp.Diff(gotSc, wantSc); diff != "" {
 				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
@@ -215,7 +214,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 		Sampled:     false,
 		StartSpanID: &id,
 	}
-	props := propagation.New(propagation.WithInjectors(propagators.TraceContext{}))
+	prop := propagators.TraceContext{}
 	tests := []struct {
 		name       string
 		sc         trace.SpanContext
@@ -261,7 +260,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 				ctx = trace.ContextWithRemoteSpanContext(ctx, tt.sc)
 				ctx, _ = mockTracer.Start(ctx, "inject")
 			}
-			propagation.InjectHTTP(ctx, props, req.Header)
+			prop.Inject(ctx, req.Header)
 
 			gotHeader := req.Header.Get("traceparent")
 			if diff := cmp.Diff(gotHeader, tt.wantHeader); diff != "" {
@@ -274,23 +273,23 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 func TestTraceContextPropagator_GetAllKeys(t *testing.T) {
 	var propagator propagators.TraceContext
 	want := []string{"traceparent", "tracestate"}
-	got := propagator.GetAllKeys()
+	got := propagator.Fields()
 	if diff := cmp.Diff(got, want); diff != "" {
 		t.Errorf("GetAllKeys: -got +want %s", diff)
 	}
 }
 
 func TestTraceStatePropagation(t *testing.T) {
-	props := propagation.New(propagation.WithInjectors(propagators.TraceContext{}), propagation.WithExtractors(propagators.TraceContext{}))
+	prop := propagators.TraceContext{}
 	want := "opaquevalue"
 	headerName := "tracestate"
 
 	inReq, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
 	inReq.Header.Add(headerName, want)
-	ctx := propagation.ExtractHTTP(context.Background(), props, inReq.Header)
+	ctx := prop.Extract(context.Background(), inReq.Header)
 
 	outReq, _ := http.NewRequest(http.MethodGet, "http://www.example.com", nil)
-	propagation.InjectHTTP(ctx, props, outReq.Header)
+	prop.Inject(ctx, outReq.Header)
 
 	if diff := cmp.Diff(outReq.Header.Get(headerName), want); diff != "" {
 		t.Errorf("Propagate tracestate: -got +want %s", diff)

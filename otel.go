@@ -16,15 +16,12 @@ package otel
 
 import (
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
 type Tracer = trace.Tracer
 
 type Meter = metric.Meter
-
-type Propagators = propagation.Propagators
 
 // ErrorHandler handles irremediable events.
 type ErrorHandler interface {
