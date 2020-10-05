@@ -15,6 +15,7 @@
 package label_test
 
 import (
+	"reflect"
 	"testing"
 	"unsafe"
 
@@ -200,5 +201,13 @@ func getBitlessInfo(i int) bitlessInfo {
 		unsignedType:  label.UINT64,
 		signedValue:   int64(i),
 		unsignedValue: uint64(i),
+	}
+}
+
+func TestAsArrayValue(t *testing.T) {
+	v := label.ArrayValue([]uint{1, 2, 3}).AsArray()
+	// Ensure the returned dynamic type is stable.
+	if got, want := reflect.TypeOf(v).Kind(), reflect.Array; got != want {
+		t.Errorf("AsArray() returned %T, want %T", got, want)
 	}
 }
