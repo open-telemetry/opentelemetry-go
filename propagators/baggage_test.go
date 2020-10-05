@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package baggage_test
+package propagators_test
 
 import (
 	"context"
@@ -23,12 +23,13 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/baggage"
+	"go.opentelemetry.io/otel/internal/baggage"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/propagators"
 )
 
 func TestExtractValidBaggageFromHTTPReq(t *testing.T) {
-	prop := otel.TextMapPropagator(baggage.Baggage{})
+	prop := otel.TextMapPropagator(propagators.Baggage{})
 	tests := []struct {
 		name    string
 		header  string
@@ -117,7 +118,7 @@ func TestExtractValidBaggageFromHTTPReq(t *testing.T) {
 }
 
 func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
-	prop := otel.TextMapPropagator(baggage.Baggage{})
+	prop := otel.TextMapPropagator(propagators.Baggage{})
 	tests := []struct {
 		name   string
 		header string
@@ -175,7 +176,7 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 }
 
 func TestInjectBaggageToHTTPReq(t *testing.T) {
-	propagator := baggage.Baggage{}
+	propagator := propagators.Baggage{}
 	tests := []struct {
 		name         string
 		kvs          []label.KeyValue
@@ -248,8 +249,8 @@ func TestInjectBaggageToHTTPReq(t *testing.T) {
 	}
 }
 
-func TestTraceContextPropagator_GetAllKeys(t *testing.T) {
-	var propagator baggage.Baggage
+func TestBaggagePropagatorGetAllKeys(t *testing.T) {
+	var propagator propagators.Baggage
 	want := []string{"otcorrelations"}
 	got := propagator.Fields()
 	if diff := cmp.Diff(got, want); diff != "" {
