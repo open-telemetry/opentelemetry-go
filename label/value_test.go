@@ -15,6 +15,7 @@
 package label_test
 
 import (
+	"reflect"
 	"testing"
 	"unsafe"
 
@@ -42,7 +43,7 @@ func TestValue(t *testing.T) {
 			name:      "Key.Array([]bool) correctly return key's internal bool values",
 			value:     k.Array([]bool{true, false}).Value,
 			wantType:  label.ARRAY,
-			wantValue: []bool{true, false},
+			wantValue: [2]bool{true, false},
 		},
 		{
 			name:      "Key.Int64() correctly returns keys's internal int64 value",
@@ -102,66 +103,69 @@ func TestValue(t *testing.T) {
 			name:      "Key.Array([]int64) correctly returns keys's internal int64 values",
 			value:     k.Array([]int64{42, 43}).Value,
 			wantType:  label.ARRAY,
-			wantValue: []int64{42, 43},
+			wantValue: [2]int64{42, 43},
 		},
 		{
 			name:      "KeyArray([]uint64) correctly returns keys's internal uint64 values",
 			value:     k.Array([]uint64{42, 43}).Value,
 			wantType:  label.ARRAY,
-			wantValue: []uint64{42, 43},
+			wantValue: [2]uint64{42, 43},
 		},
 		{
 			name:      "Key.Array([]float64) correctly returns keys's internal float64 values",
 			value:     k.Array([]float64{42, 43}).Value,
 			wantType:  label.ARRAY,
-			wantValue: []float64{42, 43},
+			wantValue: [2]float64{42, 43},
 		},
 		{
 			name:      "Key.Array([]int32) correctly returns keys's internal int32 values",
 			value:     k.Array([]int32{42, 43}).Value,
 			wantType:  label.ARRAY,
-			wantValue: []int32{42, 43},
+			wantValue: [2]int32{42, 43},
 		},
 		{
 			name:      "Key.Array([]uint32) correctly returns keys's internal uint32 values",
 			value:     k.Array([]uint32{42, 43}).Value,
 			wantType:  label.ARRAY,
-			wantValue: []uint32{42, 43},
+			wantValue: [2]uint32{42, 43},
 		},
 		{
 			name:      "Key.Array([]float32) correctly returns keys's internal float32 values",
 			value:     k.Array([]float32{42, 43}).Value,
 			wantType:  label.ARRAY,
-			wantValue: []float32{42, 43},
+			wantValue: [2]float32{42, 43},
 		},
 		{
 			name:      "Key.Array([]string) correctly return key's internal string values",
 			value:     k.Array([]string{"foo", "bar"}).Value,
 			wantType:  label.ARRAY,
-			wantValue: []string{"foo", "bar"},
+			wantValue: [2]string{"foo", "bar"},
 		},
 		{
 			name:      "Key.Array([]int) correctly returns keys's internal signed integral values",
 			value:     k.Array([]int{42, 43}).Value,
 			wantType:  label.ARRAY,
-			wantValue: []int{42, 43},
+			wantValue: [2]int{42, 43},
 		},
 		{
 			name:      "Key.Array([]uint) correctly returns keys's internal unsigned integral values",
 			value:     k.Array([]uint{42, 43}).Value,
 			wantType:  label.ARRAY,
-			wantValue: []uint{42, 43},
+			wantValue: [2]uint{42, 43},
 		},
 		{
-			name:      "Key.Array([][]int) correctly return key's multi dimensional array",
+			name:      "Key.Array([][]int) refuses to create multi-dimensional array",
 			value:     k.Array([][]int{{1, 2}, {3, 4}}).Value,
-			wantType:  label.ARRAY,
-			wantValue: [][]int{{1, 2}, {3, 4}},
+			wantType:  label.INVALID,
+			wantValue: nil,
 		},
 	} {
 		t.Logf("Running test case %s", testcase.name)
 		if testcase.value.Type() != testcase.wantType {
 			t.Errorf("wrong value type, got %#v, expected %#v", testcase.value.Type(), testcase.wantType)
+		}
+		if testcase.wantType == label.INVALID {
+			continue
 		}
 		got := testcase.value.AsInterface()
 		if diff := cmp.Diff(testcase.wantValue, got); diff != "" {
@@ -197,5 +201,13 @@ func getBitlessInfo(i int) bitlessInfo {
 		unsignedType:  label.UINT64,
 		signedValue:   int64(i),
 		unsignedValue: uint64(i),
+	}
+}
+
+func TestAsArrayValue(t *testing.T) {
+	v := label.ArrayValue([]uint{1, 2, 3}).AsArray()
+	// Ensure the returned dynamic type is stable.
+	if got, want := reflect.TypeOf(v).Kind(), reflect.Array; got != want {
+		t.Errorf("AsArray() returned %T, want %T", got, want)
 	}
 }

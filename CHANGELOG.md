@@ -25,6 +25,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `StatusCode` field of the `SpanData` struct in the `go.opentelemetry.io/otel/sdk/export/trace` package now uses the codes package from this package instead of the gRPC project. (#1214)
 - Move the `go.opentelemetry.io/otel/api/baggage` package into `go.opentelemetry.io/otel/propagators`. (#1217)
 
+### Fixed
+
+- Copies of data from arrays and slices passed to `go.opentelemetry.io/otel/label.ArrayValue()` are now used in the returned `Value` instead of using the mutable data itself. (#1226)
+
 ### Removed
 
 - The `ExtractHTTP` and `InjectHTTP` fuctions from the `go.opentelemetry.io/otel/api/propagation` package were removed. (#1212)
@@ -33,6 +37,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `SetAttribute` method of the `Span` from the `go.opentelemetry.io/otel/api/trace` package was removed given its redundancy with the `SetAttributes` method. (#1216)
 - The internal implementation of Baggage storage is removed in favor of using the new Baggage API functionality. (#1217)
 - Remove duplicate hostname key `HostHostNameKey` in Resource semantic conventions. (#1219)
+- Nested array/slice support has been removed. (#1226)
 
 ## [0.12.0] - 2020-09-24
 

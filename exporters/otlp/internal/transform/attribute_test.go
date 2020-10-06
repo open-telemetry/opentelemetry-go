@@ -158,6 +158,21 @@ func TestArrayAttributes(t *testing.T) {
 		{nil, nil},
 		{
 			[]label.KeyValue{
+				label.Array("invalid", [][]string{{"1", "2"}, {"a"}}),
+			},
+			[]*commonpb.KeyValue{
+				{
+					Key: "invalid",
+					Value: &commonpb.AnyValue{
+						Value: &commonpb.AnyValue_StringValue{
+							StringValue: "INVALID",
+						},
+					},
+				},
+			},
+		},
+		{
+			[]label.KeyValue{
 				label.Array("bool array to bool array", []bool{true, false}),
 				label.Array("int array to int64 array", []int{1, 2, 3}),
 				label.Array("uint array to int64 array", []uint{1, 2, 3}),
@@ -191,17 +206,20 @@ func TestArrayAttributes(t *testing.T) {
 
 		for i, actualArrayAttr := range actualArrayAttributes {
 			expectedArrayAttr := expectedArrayAttributes[i]
-			if !assert.Equal(t, expectedArrayAttr.Key, actualArrayAttr.Key) {
+			expectedKey, actualKey := expectedArrayAttr.Key, actualArrayAttr.Key
+			if !assert.Equal(t, expectedKey, actualKey) {
 				continue
 			}
 
-			expectedArrayValue := expectedArrayAttr.Value.GetArrayValue()
-			assert.NotNil(t, expectedArrayValue)
-
-			actualArrayValue := actualArrayAttr.Value.GetArrayValue()
-			assert.NotNil(t, actualArrayValue)
-
-			assertExpectedArrayValues(t, expectedArrayValue.Values, actualArrayValue.Values)
+			expected := expectedArrayAttr.Value.GetArrayValue()
+			actual := actualArrayAttr.Value.GetArrayValue()
+			if expected == nil {
+				assert.Nil(t, actual)
+				continue
+			}
+			if assert.NotNil(t, actual, "expected not nil for %s", actualKey) {
+				assertExpectedArrayValues(t, expected.Values, actual.Values)
+			}
 		}
 
 	}
