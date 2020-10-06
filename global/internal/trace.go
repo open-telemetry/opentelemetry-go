@@ -92,7 +92,12 @@ func (p *tracerProvider) Tracer(name string, opts ...otel.TracerOption) otel.Tra
 	return t
 }
 
-// tracer is a placeholder for a otel.Tracer.
+// Shutdown implements TracerProvider.
+func (p *tracerProvider) Shutdown() {
+	p.delegate.Shutdown()
+}
+
+// tracer is a placeholder for a trace.Tracer.
 //
 // All Tracer functionality is forwarded to a delegate once configured.
 // Otherwise, all functionality is forwarded to a NoopTracer.

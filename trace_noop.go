@@ -37,6 +37,9 @@ func (p noopTracerProvider) Tracer(string, ...TracerOption) Tracer {
 	return noopTracer{}
 }
 
+// Shutdown returns noop implementation of Tracer.
+func (p noopTracerProvider) Shutdown() {}
+
 // noopTracer is an implementation of Tracer that preforms no operations.
 type noopTracer struct{}
 

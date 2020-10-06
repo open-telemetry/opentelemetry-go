@@ -51,6 +51,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - OTLP Metric exporter supports Histogram aggregation. (#1209)
 - The `Code` struct from the `go.opentelemetry.io/otel/codes` package now supports JSON marshaling and unmarshaling as well as implements the `Stringer` interface. (#1214)
 - A Baggage API to implement the OpenTelemetry specification. (#1217)
+- Add Shutdown method to apitrace.TracerProvider (#1206)
 
 ### Changed
 

@@ -66,3 +66,5 @@ func (p *TracerProvider) Tracer(instName string, opts ...otel.TracerOption) otel
 	}
 	return t
 }
+
+func (p *TracerProvider) Shutdown() {}

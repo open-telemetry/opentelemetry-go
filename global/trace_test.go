@@ -22,7 +22,9 @@ import (
 	"go.opentelemetry.io/otel/internal/trace/noop"
 )
 
-type testTracerProvider struct{}
+type testTracerProvider struct {
+	running bool
+}
 
 var _ otel.TracerProvider = &testTracerProvider{}
 
@@ -30,15 +32,26 @@ func (*testTracerProvider) Tracer(_ string, _ ...otel.TracerOption) otel.Tracer 
 	return noop.Tracer
 }
 
+func (tp *testTracerProvider) Shutdown() {
+	tp.running = false
+}
+
 func TestMultipleGlobalTracerProvider(t *testing.T) {
 	p1 := testTracerProvider{}
 	p2 := otel.NewNoopTracerProvider()
-	global.SetTracerProvider(&p1)
+
 	global.SetTracerProvider(p2)
+	global.SetTracerProvider(&p1)
 
 	got := global.TracerProvider()
-	want := p2
+	p1.running = true
+
+	want := &p1
 	if got != want {
 		t.Fatalf("TracerProvider: got %p, want %p\n", got, want)
+	}
+	got.Shutdown()
+	if p1.running {
+		t.Fatalf("Trace should be shutdown")
 	}
 }

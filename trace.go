@@ -374,4 +374,7 @@ type TracerProvider interface {
 	// instrumentationName is empty, then a implementation defined default
 	// name will be used instead.
 	Tracer(instrumentationName string, opts ...TracerOption) Tracer
+
+	// Shutdown closes the provider's resources such as the span processors.
+	Shutdown()
 }

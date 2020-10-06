@@ -492,6 +492,7 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	)
+	defer tp.Shutdown()
 
 	tr := tp.Tracer("test-tracer")
 	testKvs := []label.KeyValue{
