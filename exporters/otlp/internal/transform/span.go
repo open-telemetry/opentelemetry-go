@@ -129,9 +129,9 @@ func status(status codes.Code, message string) *tracepb.Status {
 	var c tracepb.Status_StatusCode
 	switch status {
 	case codes.Error:
-		c = tracepb.Status_UnknownError
+		c = tracepb.Status_STATUS_CODE_UNKNOWN_ERROR
 	default:
-		c = tracepb.Status_Ok
+		c = tracepb.Status_STATUS_CODE_OK
 	}
 	return &tracepb.Status{
 		Code:    c,
@@ -196,15 +196,15 @@ func spanEvents(es []export.Event) []*tracepb.Span_Event {
 func spanKind(kind apitrace.SpanKind) tracepb.Span_SpanKind {
 	switch kind {
 	case apitrace.SpanKindInternal:
-		return tracepb.Span_INTERNAL
+		return tracepb.Span_SPAN_KIND_INTERNAL
 	case apitrace.SpanKindClient:
-		return tracepb.Span_CLIENT
+		return tracepb.Span_SPAN_KIND_CLIENT
 	case apitrace.SpanKindServer:
-		return tracepb.Span_SERVER
+		return tracepb.Span_SPAN_KIND_SERVER
 	case apitrace.SpanKindProducer:
-		return tracepb.Span_PRODUCER
+		return tracepb.Span_SPAN_KIND_PRODUCER
 	case apitrace.SpanKindConsumer:
-		return tracepb.Span_CONSUMER
+		return tracepb.Span_SPAN_KIND_CONSUMER
 	default:
 		return tracepb.Span_SPAN_KIND_UNSPECIFIED
 	}
