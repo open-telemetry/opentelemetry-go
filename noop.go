@@ -110,9 +110,9 @@ func (p noopProvider) Tracer(_ string, _ ...TracerOption) Tracer {
 	return noopTracer{}
 }
 
-// NoopProvider returns a noop implementation of TracerProvider.
+// NewNoopTracerProvider returns a noop implementation of TracerProvider.
 // The Tracer and Spans created from the noop provider will
 // also be noop.
-func NoopProvider() TracerProvider {
+func NewNoopTracerProvider() TracerProvider {
 	return noopProvider{}
 }

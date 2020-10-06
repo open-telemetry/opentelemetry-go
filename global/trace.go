@@ -28,7 +28,7 @@ func Tracer(name string) otel.Tracer {
 }
 
 // TracerProvider returns the registered global trace provider.
-// If none is registered then an instance of otel.NoopProvider is returned.
+// If none is registered then an instance of NoopTracerProvider is returned.
 //
 // Use the trace provider to create a named tracer. E.g.
 //     tracer := global.TracerProvider().Tracer("example.com/foo")

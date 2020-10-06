@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/oteltest"
@@ -33,9 +34,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	grpccodes "google.golang.org/grpc/codes"
 
-	otelcodes "go.opentelemetry.io/otel/codes"
 	ottest "go.opentelemetry.io/otel/internal/testing"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -137,9 +136,9 @@ type testSampler struct {
 func (ts *testSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	ts.callCount++
 	ts.t.Logf("called sampler for name %q", p.Name)
-	decision := NotRecord
+	decision := Drop
 	if strings.HasPrefix(p.Name, ts.prefix) {
-		decision = RecordAndSampled
+		decision = RecordAndSample
 	}
 	return SamplingResult{Decision: decision, Attributes: []label.KeyValue{label.Int("callCount", ts.callCount)}}
 }
@@ -648,7 +647,7 @@ func TestSetSpanStatus(t *testing.T) {
 	tp := NewTracerProvider(WithSyncer(te))
 
 	span := startSpan(tp, "SpanStatus")
-	span.SetStatus(otelcodes.Canceled, "canceled")
+	span.SetStatus(codes.Error, "Error")
 	got, err := endSpan(te, span)
 	if err != nil {
 		t.Fatal(err)
@@ -662,8 +661,8 @@ func TestSetSpanStatus(t *testing.T) {
 		ParentSpanID:           sid,
 		Name:                   "span0",
 		SpanKind:               otel.SpanKindInternal,
-		StatusCode:             grpccodes.Canceled,
-		StatusMessage:          "canceled",
+		StatusCode:             codes.Error,
+		StatusMessage:          "Error",
 		HasRemoteParent:        true,
 		InstrumentationLibrary: instrumentation.Library{Name: "SpanStatus"},
 	}
@@ -1026,7 +1025,7 @@ func TestRecordErrorWithStatus(t *testing.T) {
 
 	testErr := ottest.NewTestError("test error")
 	errTime := time.Now()
-	testStatus := otelcodes.Unknown
+	testStatus := codes.Error
 	span.RecordError(context.Background(), testErr,
 		otel.WithErrorTime(errTime),
 		otel.WithErrorStatus(testStatus),
@@ -1045,7 +1044,7 @@ func TestRecordErrorWithStatus(t *testing.T) {
 		ParentSpanID:    sid,
 		Name:            "span0",
 		SpanKind:        otel.SpanKindInternal,
-		StatusCode:      grpccodes.Unknown,
+		StatusCode:      codes.Error,
 		StatusMessage:   "",
 		HasRemoteParent: true,
 		MessageEvents: []export.Event{
@@ -1086,7 +1085,7 @@ func TestRecordErrorNil(t *testing.T) {
 		Name:                   "span0",
 		SpanKind:               otel.SpanKindInternal,
 		HasRemoteParent:        true,
-		StatusCode:             grpccodes.OK,
+		StatusCode:             codes.Unset,
 		StatusMessage:          "",
 		InstrumentationLibrary: instrumentation.Library{Name: "RecordErrorNil"},
 	}

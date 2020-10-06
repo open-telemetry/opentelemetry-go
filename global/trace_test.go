@@ -32,13 +32,13 @@ func (*testTracerProvider) Tracer(_ string, _ ...otel.TracerOption) otel.Tracer 
 
 func TestMultipleGlobalTracerProvider(t *testing.T) {
 	p1 := testTracerProvider{}
-	p2 := otel.NoopProvider()
+	p2 := otel.NewNoopTracerProvider()
 	global.SetTracerProvider(&p1)
 	global.SetTracerProvider(p2)
 
 	got := global.TracerProvider()
 	want := p2
 	if got != want {
-		t.Fatalf("Provider: got %p, want %p\n", got, want)
+		t.Fatalf("TracerProvider: got %p, want %p\n", got, want)
 	}
 }

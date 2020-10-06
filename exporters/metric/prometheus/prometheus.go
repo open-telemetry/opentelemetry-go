@@ -154,7 +154,7 @@ func (e *Exporter) SetController(config Config, options ...pull.Option) {
 	)
 }
 
-// MeterProvider returns the otel.MeterProvider of this exporter.
+// MeterProvider returns the MeterProvider of this exporter.
 func (e *Exporter) MeterProvider() otel.MeterProvider {
 	return e.controller.MeterProvider()
 }

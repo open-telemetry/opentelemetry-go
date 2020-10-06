@@ -35,6 +35,16 @@ type SpanProcessor interface {
 	// data. No calls to OnStart and OnEnd method is invoked after Shutdown call is
 	// made. It should not be blocked indefinitely.
 	Shutdown()
+
+	// ForceFlush exports all ended spans to the configured Exporter that have not yet
+	// been exported.  It should only be called when absolutely necessary, such as when
+	// using a FaaS provider that may suspend the process after an invocation, but before
+	// the Processor can export the completed spans.
+	ForceFlush()
 }
 
-type spanProcessorMap map[SpanProcessor]*sync.Once
+type spanProcessorState struct {
+	sp    SpanProcessor
+	state *sync.Once
+}
+type spanProcessorStates []*spanProcessorState

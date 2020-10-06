@@ -20,6 +20,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
@@ -86,9 +87,18 @@ func sumAggs(aggPtrs []*export.Aggregator) {
 	}
 }
 
+func lastValueAggs(aggPtrs []*export.Aggregator) {
+	aggs := lastvalue.New(len(aggPtrs))
+	for i := range aggPtrs {
+		*aggPtrs[i] = &aggs[i]
+	}
+}
+
 func (selectorInexpensive) AggregatorFor(descriptor *otel.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch descriptor.MetricKind() {
-	case otel.ValueObserverKind, otel.ValueRecorderKind:
+	case otel.ValueObserverKind:
+		lastValueAggs(aggPtrs)
+	case otel.ValueRecorderKind:
 		aggs := minmaxsumcount.New(len(aggPtrs), descriptor)
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
@@ -100,7 +110,9 @@ func (selectorInexpensive) AggregatorFor(descriptor *otel.Descriptor, aggPtrs ..
 
 func (s selectorSketch) AggregatorFor(descriptor *otel.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch descriptor.MetricKind() {
-	case otel.ValueObserverKind, otel.ValueRecorderKind:
+	case otel.ValueObserverKind:
+		lastValueAggs(aggPtrs)
+	case otel.ValueRecorderKind:
 		aggs := ddsketch.New(len(aggPtrs), descriptor, s.config)
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
@@ -112,7 +124,9 @@ func (s selectorSketch) AggregatorFor(descriptor *otel.Descriptor, aggPtrs ...*e
 
 func (selectorExact) AggregatorFor(descriptor *otel.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch descriptor.MetricKind() {
-	case otel.ValueObserverKind, otel.ValueRecorderKind:
+	case otel.ValueObserverKind:
+		lastValueAggs(aggPtrs)
+	case otel.ValueRecorderKind:
 		aggs := array.New(len(aggPtrs))
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
@@ -124,7 +138,9 @@ func (selectorExact) AggregatorFor(descriptor *otel.Descriptor, aggPtrs ...*expo
 
 func (s selectorHistogram) AggregatorFor(descriptor *otel.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch descriptor.MetricKind() {
-	case otel.ValueObserverKind, otel.ValueRecorderKind:
+	case otel.ValueObserverKind:
+		lastValueAggs(aggPtrs)
+	case otel.ValueRecorderKind:
 		aggs := histogram.New(len(aggPtrs), descriptor, s.boundaries)
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]

@@ -51,7 +51,7 @@ func TestNewSimpleSpanProcessorWithNilExporter(t *testing.T) {
 }
 
 func TestSimpleSpanProcessorOnEnd(t *testing.T) {
-	tp := basicProvider(t)
+	tp := basicTracerProvider(t)
 	te := testExporter{}
 	ssp := sdktrace.NewSimpleSpanProcessor(&te)
 	if ssp == nil {

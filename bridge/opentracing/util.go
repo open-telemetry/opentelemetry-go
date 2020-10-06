@@ -28,7 +28,7 @@ import (
 // with opentracing and WrapperTracerProvider with opentelemetry.
 func NewTracerPair(tracer otel.Tracer) (*BridgeTracer, *WrapperTracerProvider) {
 	bridgeTracer := NewBridgeTracer()
-	wtp := NewWrappedProvider(bridgeTracer, tracer)
+	wtp := NewWrappedTracerProvider(bridgeTracer, tracer)
 	bridgeTracer.SetOpenTelemetryTracer(wtp.Tracer(""))
 	return bridgeTracer, wtp
 }

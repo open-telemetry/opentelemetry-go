@@ -27,9 +27,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/api/support/bundler"
-	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 	"go.opentelemetry.io/otel/global"
 	ottest "go.opentelemetry.io/otel/internal/testing"
@@ -68,7 +68,7 @@ func TestInstallNewPipeline(t *testing.T) {
 			options: []Option{
 				WithDisabled(true),
 			},
-			expectedProvider: otel.NoopProvider(),
+			expectedProvider: otel.NewNoopTracerProvider(),
 		},
 	}
 
@@ -107,7 +107,7 @@ func TestNewExportPipeline(t *testing.T) {
 			options: []Option{
 				WithDisabled(true),
 			},
-			expectedProviderType: otel.NoopProvider(),
+			expectedProviderType: otel.NewNoopTracerProvider(),
 		},
 		{
 			name:     "always on",
@@ -172,7 +172,7 @@ func TestNewExportPipelineWithDisabledFromEnv(t *testing.T) {
 	)
 	defer fn()
 	assert.NoError(t, err)
-	assert.IsType(t, otel.NoopProvider(), tp)
+	assert.IsType(t, otel.NewNoopTracerProvider(), tp)
 }
 
 func TestNewRawExporter(t *testing.T) {
@@ -363,7 +363,7 @@ func Test_spanDataToThrift(t *testing.T) {
 
 	eventNameValue := "event-test"
 	keyValue := "value"
-	statusCodeValue := int64(2)
+	statusCodeValue := int64(1)
 	doubleValue := 123.456
 	uintValue := int64(123)
 	boolTrue := true
@@ -406,7 +406,7 @@ func Test_spanDataToThrift(t *testing.T) {
 				MessageEvents: []export.Event{
 					{Name: eventNameValue, Attributes: []label.KeyValue{label.String("k1", keyValue)}, Time: now},
 				},
-				StatusCode:    codes.Unknown,
+				StatusCode:    codes.Error,
 				StatusMessage: statusMessage,
 				SpanKind:      otel.SpanKindClient,
 				Resource:      resource.New(label.String("rk1", rv1), label.Int64("rk2", rv2)),

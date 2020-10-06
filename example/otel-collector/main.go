@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/propagators"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -39,7 +40,7 @@ import (
 
 // Initializes an OTLP exporter, and configures the corresponding trace and
 // metric providers.
-func initProvider() (*otlp.Exporter, *push.Controller) {
+func initProvider() func() {
 
 	// If the OpenTelemetry Collector is running on a local cluster (minikube or
 	// microk8s), it should be accessible through the NodePort service at the
@@ -53,13 +54,14 @@ func initProvider() (*otlp.Exporter, *push.Controller) {
 	)
 	handleErr(err, "failed to create exporter")
 
+	bsp := sdktrace.NewBatchSpanProcessor(exp)
 	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithResource(resource.New(
 			// the service name used to display traces in backends
 			semconv.ServiceNameKey.String("test-service"),
 		)),
-		sdktrace.WithBatcher(exp),
+		sdktrace.WithSpanProcessor(bsp),
 	)
 
 	pusher := push.New(
@@ -71,21 +73,24 @@ func initProvider() (*otlp.Exporter, *push.Controller) {
 		push.WithPeriod(2*time.Second),
 	)
 
+	// set global propagator to tracecontext (the default is no-op).
+	global.SetTextMapPropagator(propagators.TraceContext{})
 	global.SetTracerProvider(tracerProvider)
 	global.SetMeterProvider(pusher.MeterProvider())
 	pusher.Start()
 
-	return exp, pusher
+	return func() {
+		bsp.Shutdown() // shutdown the processor
+		handleErr(exp.Shutdown(context.Background()), "failed to stop exporter")
+		pusher.Stop() // pushes any last exports to the receiver
+	}
 }
 
 func main() {
 	log.Printf("Waiting for connection...")
 
-	exp, pusher := initProvider()
-	defer func() {
-		handleErr(exp.Shutdown(context.Background()), "failed to stop exporter")
-	}()
-	defer pusher.Stop() // pushes any last exports to the receiver
+	shutdown := initProvider()
+	defer shutdown()
 
 	tracer := global.Tracer("test-tracer")
 	meter := global.Meter("test-meter")
@@ -111,6 +116,7 @@ func main() {
 		context.Background(),
 		"CollectorExporter-Example",
 		otel.WithAttributes(commonLabels...))
+	defer span.End()
 	for i := 0; i < 10; i++ {
 		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))
 		log.Printf("Doing really hard work (%d / 10)\n", i+1)
@@ -121,7 +127,6 @@ func main() {
 	}
 
 	log.Printf("Done!")
-	span.End()
 }
 
 func handleErr(err error, message string) {

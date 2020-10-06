@@ -15,6 +15,8 @@
 package transform
 
 import (
+	"reflect"
+
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
 	"go.opentelemetry.io/otel/label"
 
@@ -75,7 +77,11 @@ func toAttribute(v label.KeyValue) *commonpb.KeyValue {
 			StringValue: v.Value.AsString(),
 		}
 	case label.ARRAY:
-		result.Value.Value = toArrayAttribute(v)
+		result.Value.Value = &commonpb.AnyValue_ArrayValue{
+			ArrayValue: &commonpb.ArrayValue{
+				Values: arrayValues(v),
+			},
+		}
 	default:
 		result.Value.Value = &commonpb.AnyValue_StringValue{
 			StringValue: "INVALID",
@@ -84,164 +90,56 @@ func toAttribute(v label.KeyValue) *commonpb.KeyValue {
 	return result
 }
 
-func toArrayAttribute(v label.KeyValue) *commonpb.AnyValue_ArrayValue {
-	array := v.Value.AsArray()
-	var resultValues []*commonpb.AnyValue
-
-	switch typedArray := array.(type) {
-	case []bool:
-		resultValues = getValuesFromBoolArray(typedArray)
-	case []int:
-		resultValues = getValuesFromIntArray(typedArray)
-	case []int32:
-		resultValues = getValuesFromInt32Array(typedArray)
-	case []int64:
-		resultValues = getValuesFromInt64Array(typedArray)
-	case []uint:
-		resultValues = getValuesFromUIntArray(typedArray)
-	case []uint32:
-		resultValues = getValuesFromUInt32Array(typedArray)
-	case []uint64:
-		resultValues = getValuesFromUInt64Array(typedArray)
-	case []float32:
-		resultValues = getValuesFromFloat32Array(typedArray)
-	case []float64:
-		resultValues = getValuesFromFloat64Array(typedArray)
-	case []string:
-		resultValues = getValuesFromStringArray(typedArray)
-	default:
-		resultValues = []*commonpb.AnyValue{
-			{
-				Value: &commonpb.AnyValue_StringValue{
-					StringValue: "INVALID",
+func arrayValues(kv label.KeyValue) []*commonpb.AnyValue {
+	a := kv.Value.AsArray()
+	aType := reflect.TypeOf(a)
+	var valueFunc func(reflect.Value) *commonpb.AnyValue
+	switch aType.Elem().Kind() {
+	case reflect.Bool:
+		valueFunc = func(v reflect.Value) *commonpb.AnyValue {
+			return &commonpb.AnyValue{
+				Value: &commonpb.AnyValue_BoolValue{
+					BoolValue: v.Bool(),
 				},
-			},
+			}
+		}
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		valueFunc = func(v reflect.Value) *commonpb.AnyValue {
+			return &commonpb.AnyValue{
+				Value: &commonpb.AnyValue_IntValue{
+					IntValue: v.Int(),
+				},
+			}
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		valueFunc = func(v reflect.Value) *commonpb.AnyValue {
+			return &commonpb.AnyValue{
+				Value: &commonpb.AnyValue_IntValue{
+					IntValue: int64(v.Uint()),
+				},
+			}
+		}
+	case reflect.Float32, reflect.Float64:
+		valueFunc = func(v reflect.Value) *commonpb.AnyValue {
+			return &commonpb.AnyValue{
+				Value: &commonpb.AnyValue_DoubleValue{
+					DoubleValue: v.Float(),
+				},
+			}
+		}
+	case reflect.String:
+		valueFunc = func(v reflect.Value) *commonpb.AnyValue {
+			return &commonpb.AnyValue{
+				Value: &commonpb.AnyValue_StringValue{
+					StringValue: v.String(),
+				},
+			}
 		}
 	}
 
-	return &commonpb.AnyValue_ArrayValue{
-		ArrayValue: &commonpb.ArrayValue{
-			Values: resultValues,
-		},
+	results := make([]*commonpb.AnyValue, aType.Len())
+	for i, aValue := 0, reflect.ValueOf(a); i < aValue.Len(); i++ {
+		results[i] = valueFunc(aValue.Index(i))
 	}
-}
-
-func getValuesFromBoolArray(boolArray []bool) []*commonpb.AnyValue {
-	result := []*commonpb.AnyValue{}
-	for _, b := range boolArray {
-		result = append(result, &commonpb.AnyValue{
-			Value: &commonpb.AnyValue_BoolValue{
-				BoolValue: b,
-			},
-		})
-	}
-	return result
-}
-
-func getValuesFromIntArray(intArray []int) []*commonpb.AnyValue {
-	result := []*commonpb.AnyValue{}
-	for _, i := range intArray {
-		result = append(result, &commonpb.AnyValue{
-			Value: &commonpb.AnyValue_IntValue{
-				IntValue: int64(i),
-			},
-		})
-	}
-	return result
-}
-
-func getValuesFromInt32Array(int32Array []int32) []*commonpb.AnyValue {
-	result := []*commonpb.AnyValue{}
-	for _, i := range int32Array {
-		result = append(result, &commonpb.AnyValue{
-			Value: &commonpb.AnyValue_IntValue{
-				IntValue: int64(i),
-			},
-		})
-	}
-	return result
-}
-
-func getValuesFromInt64Array(int64Array []int64) []*commonpb.AnyValue {
-	result := []*commonpb.AnyValue{}
-	for _, i := range int64Array {
-		result = append(result, &commonpb.AnyValue{
-			Value: &commonpb.AnyValue_IntValue{
-				IntValue: i,
-			},
-		})
-	}
-	return result
-}
-
-func getValuesFromUIntArray(uintArray []uint) []*commonpb.AnyValue {
-	result := []*commonpb.AnyValue{}
-	for _, i := range uintArray {
-		result = append(result, &commonpb.AnyValue{
-			Value: &commonpb.AnyValue_IntValue{
-				IntValue: int64(i),
-			},
-		})
-	}
-	return result
-}
-
-func getValuesFromUInt32Array(uint32Array []uint32) []*commonpb.AnyValue {
-	result := []*commonpb.AnyValue{}
-	for _, i := range uint32Array {
-		result = append(result, &commonpb.AnyValue{
-			Value: &commonpb.AnyValue_IntValue{
-				IntValue: int64(i),
-			},
-		})
-	}
-	return result
-}
-
-func getValuesFromUInt64Array(uint64Array []uint64) []*commonpb.AnyValue {
-	result := []*commonpb.AnyValue{}
-	for _, i := range uint64Array {
-		result = append(result, &commonpb.AnyValue{
-			Value: &commonpb.AnyValue_IntValue{
-				IntValue: int64(i),
-			},
-		})
-	}
-	return result
-}
-
-func getValuesFromFloat32Array(float32Array []float32) []*commonpb.AnyValue {
-	result := []*commonpb.AnyValue{}
-	for _, f := range float32Array {
-		result = append(result, &commonpb.AnyValue{
-			Value: &commonpb.AnyValue_DoubleValue{
-				DoubleValue: float64(f),
-			},
-		})
-	}
-	return result
-}
-
-func getValuesFromFloat64Array(float64Array []float64) []*commonpb.AnyValue {
-	result := []*commonpb.AnyValue{}
-	for _, f := range float64Array {
-		result = append(result, &commonpb.AnyValue{
-			Value: &commonpb.AnyValue_DoubleValue{
-				DoubleValue: f,
-			},
-		})
-	}
-	return result
-}
-
-func getValuesFromStringArray(stringArray []string) []*commonpb.AnyValue {
-	result := []*commonpb.AnyValue{}
-	for _, s := range stringArray {
-		result = append(result, &commonpb.AnyValue{
-			Value: &commonpb.AnyValue_StringValue{
-				StringValue: s,
-			},
-		})
-	}
-	return result
+	return results
 }

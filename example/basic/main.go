@@ -23,6 +23,10 @@ import (
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 var (
@@ -33,15 +37,31 @@ var (
 )
 
 func main() {
-	pusher, err := stdout.InstallNewPipeline([]stdout.Option{
+	exporter, err := stdout.NewExporter([]stdout.Option{
 		stdout.WithQuantiles([]float64{0.5, 0.9, 0.99}),
 		stdout.WithPrettyPrint(),
-	}, nil)
+	}...)
 	if err != nil {
 		log.Fatalf("failed to initialize stdout export pipeline: %v", err)
 	}
-	defer pusher.Stop()
 
+	bsp := trace.NewBatchSpanProcessor(exporter)
+	defer bsp.Shutdown()
+	tp := trace.NewTracerProvider(trace.WithSpanProcessor(bsp))
+	pusher := push.New(
+		basic.New(
+			simple.NewWithExactDistribution(),
+			exporter,
+		),
+		exporter,
+	)
+	pusher.Start()
+	defer pusher.Stop()
+	global.SetTracerProvider(tp)
+	global.SetMeterProvider(pusher.MeterProvider())
+
+	// set global propagator to baggage (the default is no-op).
+	global.SetTextMapPropagator(propagators.Baggage{})
 	tracer := global.Tracer("ex.com/basic")
 	meter := global.Meter("ex.com/basic")
 
@@ -57,11 +77,7 @@ func main() {
 	valuerecorderTwo := otel.Must(meter).NewFloat64ValueRecorder("ex.com.two")
 
 	ctx := context.Background()
-
-	ctx = propagators.NewContext(ctx,
-		fooKey.String("foo1"),
-		barKey.String("bar1"),
-	)
+	ctx = otel.ContextWithBaggageValues(ctx, fooKey.String("foo1"), barKey.String("bar1"))
 
 	valuerecorder := valuerecorderTwo.Bind(commonLabels...)
 	defer valuerecorder.Unbind()
@@ -76,7 +92,7 @@ func main() {
 
 		meter.RecordBatch(
 			// Note: call-site variables added as context Entries:
-			propagators.NewContext(ctx, anotherKey.String("xyz")),
+			otel.ContextWithBaggageValues(ctx, anotherKey.String("xyz")),
 			commonLabels,
 
 			valuerecorderTwo.Measurement(2.0),

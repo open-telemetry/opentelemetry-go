@@ -139,8 +139,8 @@ func attributesToJSONMapString(attributes []label.KeyValue) string {
 
 // extraZipkinTags are those that may be added to every outgoing span
 var extraZipkinTags = []string{
-	"ot.status_code",
-	"ot.status_description",
+	"otel.status_code",
+	"otel.status_description",
 	keyInstrumentationLibraryName,
 	keyInstrumentationLibraryVersion,
 }
@@ -153,8 +153,8 @@ func toZipkinTags(data *export.SpanData) map[string]string {
 	if v, ok := m["error"]; ok && v == "false" {
 		delete(m, "error")
 	}
-	m["ot.status_code"] = data.StatusCode.String()
-	m["ot.status_description"] = data.StatusMessage
+	m["otel.status_code"] = data.StatusCode.String()
+	m["otel.status_description"] = data.StatusMessage
 
 	if il := data.InstrumentationLibrary; il.Name != "" {
 		m[keyInstrumentationLibraryName] = il.Name

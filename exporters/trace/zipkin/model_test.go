@@ -23,9 +23,9 @@ import (
 	"github.com/google/go-cmp/cmp"
 	zkmodel "github.com/openzipkin/zipkin-go/model"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -62,7 +62,7 @@ func TestModelConversion(t *testing.T) {
 					Attributes: nil,
 				},
 			},
-			StatusCode:    codes.NotFound,
+			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
 		},
 		// span data with no parent (same as typical, but has
@@ -95,7 +95,7 @@ func TestModelConversion(t *testing.T) {
 					Attributes: nil,
 				},
 			},
-			StatusCode:    codes.NotFound,
+			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
 		},
 		// span data of unspecified kind
@@ -127,7 +127,7 @@ func TestModelConversion(t *testing.T) {
 					Attributes: nil,
 				},
 			},
-			StatusCode:    codes.NotFound,
+			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
 		},
 		// span data of internal kind
@@ -159,7 +159,7 @@ func TestModelConversion(t *testing.T) {
 					Attributes: nil,
 				},
 			},
-			StatusCode:    codes.NotFound,
+			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
 		},
 		// span data of client kind
@@ -191,7 +191,7 @@ func TestModelConversion(t *testing.T) {
 					Attributes: nil,
 				},
 			},
-			StatusCode:    codes.NotFound,
+			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
 		},
 		// span data of producer kind
@@ -223,7 +223,7 @@ func TestModelConversion(t *testing.T) {
 					Attributes: nil,
 				},
 			},
-			StatusCode:    codes.NotFound,
+			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
 		},
 		// span data of consumer kind
@@ -255,7 +255,7 @@ func TestModelConversion(t *testing.T) {
 					Attributes: nil,
 				},
 			},
-			StatusCode:    codes.NotFound,
+			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
 		},
 		// span data with no events
@@ -274,7 +274,7 @@ func TestModelConversion(t *testing.T) {
 				label.String("attr2", "bar"),
 			},
 			MessageEvents: nil,
-			StatusCode:    codes.NotFound,
+			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
 		},
 		// span data with an "error" attribute set to "false"
@@ -305,7 +305,7 @@ func TestModelConversion(t *testing.T) {
 					Attributes: nil,
 				},
 			},
-			StatusCode:    codes.NotFound,
+			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
 		},
 	}
@@ -344,10 +344,10 @@ func TestModelConversion(t *testing.T) {
 				},
 			},
 			Tags: map[string]string{
-				"attr1":                 "42",
-				"attr2":                 "bar",
-				"ot.status_code":        "NotFound",
-				"ot.status_description": "404, file not found",
+				"attr1":                   "42",
+				"attr2":                   "bar",
+				"otel.status_code":        "Error",
+				"otel.status_description": "404, file not found",
 			},
 		},
 		// model for span data with no parent
@@ -383,10 +383,10 @@ func TestModelConversion(t *testing.T) {
 				},
 			},
 			Tags: map[string]string{
-				"attr1":                 "42",
-				"attr2":                 "bar",
-				"ot.status_code":        "NotFound",
-				"ot.status_description": "404, file not found",
+				"attr1":                   "42",
+				"attr2":                   "bar",
+				"otel.status_code":        "Error",
+				"otel.status_description": "404, file not found",
 			},
 		},
 		// model for span data of unspecified kind
@@ -422,10 +422,10 @@ func TestModelConversion(t *testing.T) {
 				},
 			},
 			Tags: map[string]string{
-				"attr1":                 "42",
-				"attr2":                 "bar",
-				"ot.status_code":        "NotFound",
-				"ot.status_description": "404, file not found",
+				"attr1":                   "42",
+				"attr2":                   "bar",
+				"otel.status_code":        "Error",
+				"otel.status_description": "404, file not found",
 			},
 		},
 		// model for span data of internal kind
@@ -461,10 +461,10 @@ func TestModelConversion(t *testing.T) {
 				},
 			},
 			Tags: map[string]string{
-				"attr1":                 "42",
-				"attr2":                 "bar",
-				"ot.status_code":        "NotFound",
-				"ot.status_description": "404, file not found",
+				"attr1":                   "42",
+				"attr2":                   "bar",
+				"otel.status_code":        "Error",
+				"otel.status_description": "404, file not found",
 			},
 		},
 		// model for span data of client kind
@@ -500,10 +500,10 @@ func TestModelConversion(t *testing.T) {
 				},
 			},
 			Tags: map[string]string{
-				"attr1":                 "42",
-				"attr2":                 "bar",
-				"ot.status_code":        "NotFound",
-				"ot.status_description": "404, file not found",
+				"attr1":                   "42",
+				"attr2":                   "bar",
+				"otel.status_code":        "Error",
+				"otel.status_description": "404, file not found",
 			},
 		},
 		// model for span data of producer kind
@@ -539,10 +539,10 @@ func TestModelConversion(t *testing.T) {
 				},
 			},
 			Tags: map[string]string{
-				"attr1":                 "42",
-				"attr2":                 "bar",
-				"ot.status_code":        "NotFound",
-				"ot.status_description": "404, file not found",
+				"attr1":                   "42",
+				"attr2":                   "bar",
+				"otel.status_code":        "Error",
+				"otel.status_description": "404, file not found",
 			},
 		},
 		// model for span data of consumer kind
@@ -578,10 +578,10 @@ func TestModelConversion(t *testing.T) {
 				},
 			},
 			Tags: map[string]string{
-				"attr1":                 "42",
-				"attr2":                 "bar",
-				"ot.status_code":        "NotFound",
-				"ot.status_description": "404, file not found",
+				"attr1":                   "42",
+				"attr2":                   "bar",
+				"otel.status_code":        "Error",
+				"otel.status_description": "404, file not found",
 			},
 		},
 		// model for span data with no events
@@ -608,10 +608,10 @@ func TestModelConversion(t *testing.T) {
 			RemoteEndpoint: nil,
 			Annotations:    nil,
 			Tags: map[string]string{
-				"attr1":                 "42",
-				"attr2":                 "bar",
-				"ot.status_code":        "NotFound",
-				"ot.status_description": "404, file not found",
+				"attr1":                   "42",
+				"attr2":                   "bar",
+				"otel.status_code":        "Error",
+				"otel.status_description": "404, file not found",
 			},
 		},
 		// model for span data with an "error" attribute set to "false"
@@ -647,8 +647,8 @@ func TestModelConversion(t *testing.T) {
 				},
 			},
 			Tags: map[string]string{
-				"ot.status_code":        "NotFound",
-				"ot.status_description": "404, file not found",
+				"otel.status_code":        "Error",
+				"otel.status_description": "404, file not found",
 			},
 		},
 	}
@@ -685,20 +685,20 @@ func Test_toZipkinTags(t *testing.T) {
 				},
 			},
 			want: map[string]string{
-				"double":                fmt.Sprint(doubleValue),
-				"key":                   keyValue,
-				"ok":                    "true",
-				"uint":                  strconv.FormatInt(uintValue, 10),
-				"ot.status_code":        codes.OK.String(),
-				"ot.status_description": "",
+				"double":                  fmt.Sprint(doubleValue),
+				"key":                     keyValue,
+				"ok":                      "true",
+				"uint":                    strconv.FormatInt(uintValue, 10),
+				"otel.status_code":        codes.Unset.String(),
+				"otel.status_description": "",
 			},
 		},
 		{
 			name: "no attributes",
 			data: &export.SpanData{},
 			want: map[string]string{
-				"ot.status_code":        codes.OK.String(),
-				"ot.status_description": "",
+				"otel.status_code":        codes.Unset.String(),
+				"otel.status_description": "",
 			},
 		},
 		{
@@ -709,8 +709,8 @@ func Test_toZipkinTags(t *testing.T) {
 				},
 			},
 			want: map[string]string{
-				"ot.status_code":        codes.OK.String(),
-				"ot.status_description": "",
+				"otel.status_code":        codes.Unset.String(),
+				"otel.status_description": "",
 			},
 		},
 		{
@@ -720,14 +720,14 @@ func Test_toZipkinTags(t *testing.T) {
 					label.String("key", keyValue),
 					label.Bool("error", true),
 				},
-				StatusCode:    codes.Unknown,
+				StatusCode:    codes.Error,
 				StatusMessage: statusMessage,
 			},
 			want: map[string]string{
-				"error":                 "true",
-				"key":                   keyValue,
-				"ot.status_code":        codes.Unknown.String(),
-				"ot.status_description": statusMessage,
+				"error":                   "true",
+				"key":                     keyValue,
+				"otel.status_code":        codes.Error.String(),
+				"otel.status_description": statusMessage,
 			},
 		},
 		{
@@ -736,8 +736,8 @@ func Test_toZipkinTags(t *testing.T) {
 				InstrumentationLibrary: instrumentation.Library{},
 			},
 			want: map[string]string{
-				"ot.status_code":        codes.OK.String(),
-				"ot.status_description": "",
+				"otel.status_code":        codes.Unset.String(),
+				"otel.status_description": "",
 			},
 		},
 		{
@@ -750,8 +750,8 @@ func Test_toZipkinTags(t *testing.T) {
 			},
 			want: map[string]string{
 				"otel.instrumentation_library.name": instrLibName,
-				"ot.status_code":                    codes.OK.String(),
-				"ot.status_description":             "",
+				"otel.status_code":                  codes.Unset.String(),
+				"otel.status_description":           "",
 			},
 		},
 		{
@@ -766,8 +766,8 @@ func Test_toZipkinTags(t *testing.T) {
 			want: map[string]string{
 				"otel.instrumentation_library.name":    instrLibName,
 				"otel.instrumentation_library.version": instrLibVersion,
-				"ot.status_code":                       codes.OK.String(),
-				"ot.status_description":                "",
+				"otel.status_code":                     codes.Unset.String(),
+				"otel.status_description":              "",
 			},
 		},
 	}

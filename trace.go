@@ -75,9 +75,6 @@ type Span interface {
 
 	// Set span attributes
 	SetAttributes(kv ...label.KeyValue)
-
-	// Set singular span attribute, with type inference.
-	SetAttribute(k string, v interface{})
 }
 
 // Link is used to establish relationship between two spans within the same Trace or

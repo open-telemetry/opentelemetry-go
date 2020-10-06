@@ -38,6 +38,6 @@ func TestMultipleGlobalMeterProvider(t *testing.T) {
 	got := global.MeterProvider()
 	want := &p2
 	if got != want {
-		t.Fatalf("Provider: got %p, want %p\n", got, want)
+		t.Fatalf("MeterProvider: got %p, want %p\n", got, want)
 	}
 }

@@ -79,8 +79,8 @@ func (c *Controller) SetClock(clock controllerTime.Clock) {
 	c.clock = clock
 }
 
-// MeterProvider returns a otel.MeterProvider for the implementation managed
-// by this controller.
+// MeterProvider returns a MeterProvider for the implementation managed by
+// this controller.
 func (c *Controller) MeterProvider() otel.MeterProvider {
 	return c.provider
 }

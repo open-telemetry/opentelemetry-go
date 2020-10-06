@@ -45,9 +45,9 @@ type Controller struct {
 	ticker       controllerTime.Ticker
 }
 
-// New constructs a Controller, an implementation of otel.MeterProvider,
-// using the provided checkpointer, exporter, and options to configure
-// an SDK with periodic collection.
+// New constructs a Controller, an implementation of MeterProvider, using the
+// provided checkpointer, exporter, and options to configure an SDK with
+// periodic collection.
 func New(checkpointer export.Checkpointer, exporter export.Exporter, opts ...Option) *Controller {
 	c := &Config{
 		Period: DefaultPushPeriod,
@@ -83,7 +83,7 @@ func (c *Controller) SetClock(clock controllerTime.Clock) {
 	c.clock = clock
 }
 
-// MeterProvider returns a otel.MeterProvider instance for this controller.
+// MeterProvider returns a MeterProvider instance for this controller.
 func (c *Controller) MeterProvider() otel.MeterProvider {
 	return c.provider
 }

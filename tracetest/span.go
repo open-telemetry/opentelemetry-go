@@ -89,7 +89,7 @@ func (s *Span) RecordError(ctx context.Context, err error, opts ...otel.ErrorOpt
 		cfg.Timestamp = time.Now()
 	}
 
-	if cfg.StatusCode != codes.OK {
+	if cfg.StatusCode != codes.Unset {
 		s.SetStatus(cfg.StatusCode, "")
 	}
 
@@ -172,10 +172,6 @@ func (s *Span) SetAttributes(attrs ...label.KeyValue) {
 	for _, attr := range attrs {
 		s.attributes[attr.Key] = attr.Value
 	}
-}
-
-func (s *Span) SetAttribute(k string, v interface{}) {
-	s.SetAttributes(label.Any(k, v))
 }
 
 // Name returns the name most recently set on the Span, either at or after creation time.

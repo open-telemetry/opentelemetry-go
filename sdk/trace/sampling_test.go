@@ -33,8 +33,8 @@ func TestParentBasedDefaultLocalParentSampled(t *testing.T) {
 		SpanID:     spanID,
 		TraceFlags: api.FlagsSampled,
 	}
-	if sampler.ShouldSample(SamplingParameters{ParentContext: parentCtx}).Decision != RecordAndSampled {
-		t.Error("Sampling decision should be RecordAndSampled")
+	if sampler.ShouldSample(SamplingParameters{ParentContext: parentCtx}).Decision != RecordAndSample {
+		t.Error("Sampling decision should be RecordAndSample")
 	}
 }
 
@@ -46,8 +46,8 @@ func TestParentBasedDefaultLocalParentNotSampled(t *testing.T) {
 		TraceID: traceID,
 		SpanID:  spanID,
 	}
-	if sampler.ShouldSample(SamplingParameters{ParentContext: parentCtx}).Decision != NotRecord {
-		t.Error("Sampling decision should be NotRecord")
+	if sampler.ShouldSample(SamplingParameters{ParentContext: parentCtx}).Decision != Drop {
+		t.Error("Sampling decision should be Drop")
 	}
 }
 
@@ -55,13 +55,13 @@ func TestParentBasedWithNoParent(t *testing.T) {
 	params := SamplingParameters{}
 
 	sampler := ParentBased(AlwaysSample())
-	if sampler.ShouldSample(params).Decision != RecordAndSampled {
-		t.Error("Sampling decision should be RecordAndSampled")
+	if sampler.ShouldSample(params).Decision != RecordAndSample {
+		t.Error("Sampling decision should be RecordAndSample")
 	}
 
 	sampler = ParentBased(NeverSample())
-	if sampler.ShouldSample(params).Decision != NotRecord {
-		t.Error("Sampling decision should be NotRecord")
+	if sampler.ShouldSample(params).Decision != Drop {
+		t.Error("Sampling decision should be Drop")
 	}
 }
 
@@ -77,28 +77,28 @@ func TestParentBasedWithSamplerOptions(t *testing.T) {
 			WithLocalParentSampled(NeverSample()),
 			false,
 			true,
-			NotRecord,
+			Drop,
 		},
 		{
 			"localParentNotSampled",
 			WithLocalParentNotSampled(AlwaysSample()),
 			false,
 			false,
-			RecordAndSampled,
+			RecordAndSample,
 		},
 		{
 			"remoteParentSampled",
 			WithRemoteParentSampled(NeverSample()),
 			true,
 			true,
-			NotRecord,
+			Drop,
 		},
 		{
 			"remoteParentNotSampled",
 			WithRemoteParentNotSampled(AlwaysSample()),
 			true,
 			false,
-			RecordAndSampled,
+			RecordAndSample,
 		},
 	}
 
@@ -126,13 +126,13 @@ func TestParentBasedWithSamplerOptions(t *testing.T) {
 			)
 
 			switch tc.expectedDecision {
-			case RecordAndSampled:
+			case RecordAndSample:
 				if sampler.ShouldSample(params).Decision != tc.expectedDecision {
-					t.Error("Sampling decision should be RecordAndSampled")
+					t.Error("Sampling decision should be RecordAndSample")
 				}
-			case NotRecord:
+			case Drop:
 				if sampler.ShouldSample(params).Decision != tc.expectedDecision {
-					t.Error("Sampling decision should be NotRecord")
+					t.Error("Sampling decision should be Drop")
 				}
 			}
 		})
@@ -181,8 +181,8 @@ func TestTraceIdRatioSamplesInclusively(t *testing.T) {
 			traceID := idg.NewTraceID()
 
 			params := SamplingParameters{TraceID: traceID}
-			if samplerLo.ShouldSample(params).Decision == RecordAndSampled {
-				require.Equal(t, RecordAndSampled, samplerHi.ShouldSample(params).Decision,
+			if samplerLo.ShouldSample(params).Decision == RecordAndSample {
+				require.Equal(t, RecordAndSample, samplerHi.ShouldSample(params).Decision,
 					"%s sampled but %s did not", samplerLo.Description(), samplerHi.Description())
 			}
 		}

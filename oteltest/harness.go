@@ -191,7 +191,7 @@ func (h *Harness) testSpan(tracerFactory func() otel.Tracer) {
 			span.AddEventWithTimestamp(context.Background(), time.Now(), "test event")
 		},
 		"#SetStatus": func(span otel.Span) {
-			span.SetStatus(codes.Internal, "internal")
+			span.SetStatus(codes.Error, "internal")
 		},
 		"#SetName": func(span otel.Span) {
 			span.SetName("new name")

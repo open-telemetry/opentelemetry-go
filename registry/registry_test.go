@@ -120,7 +120,7 @@ func TestRegistryDiffInstruments(t *testing.T) {
 	}
 }
 
-func TestProvider(t *testing.T) {
+func TestMeterProvider(t *testing.T) {
 	impl, _ := metrictest.NewMeter()
 	p := registry.NewMeterProvider(impl)
 	m1 := p.Meter("m1")

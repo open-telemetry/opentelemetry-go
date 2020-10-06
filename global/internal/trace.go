@@ -15,11 +15,10 @@
 package internal
 
 /*
-This file contains the forwarding implementation of the otel.TracerProvider
-used as the default global instance. Prior to initialization of an SDK,
-Tracers returned by the global TracerProvider will provide no-op
-functionality. This means that all Span created prior to initialization are
-no-op Spans.
+This file contains the forwarding implementation of the TracerProvider used as
+the default global instance. Prior to initialization of an SDK, Tracers
+returned by the global TracerProvider will provide no-op functionality. This
+means that all Span created prior to initialization are no-op Spans.
 
 Once an SDK has been initialized, all provided no-op Tracers are swapped for
 Tracers provided by the SDK defined TracerProvider. However, any Span started
@@ -42,7 +41,8 @@ import (
 
 // tracerProvider is a placeholder for a configured SDK TracerProvider.
 //
-// All TracerProvider functionality is forwarded to a delegate once configured.
+// All TracerProvider functionality is forwarded to a delegate once
+// configured.
 type tracerProvider struct {
 	mtx     sync.Mutex
 	tracers []*tracer
@@ -50,8 +50,8 @@ type tracerProvider struct {
 	delegate otel.TracerProvider
 }
 
-// Compile-time guarantee that tracerProvider implements the
-// otel.TracerProvider interface.
+// Compile-time guarantee that tracerProvider implements the TracerProvider
+// interface.
 var _ otel.TracerProvider = &tracerProvider{}
 
 // setDelegate configures p to delegate all TracerProvider functionality to
@@ -78,7 +78,7 @@ func (p *tracerProvider) setDelegate(provider otel.TracerProvider) {
 	p.tracers = nil
 }
 
-// Tracer implements otel.TracerProvider.
+// Tracer implements TracerProvider.
 func (p *tracerProvider) Tracer(name string, opts ...otel.TracerOption) otel.Tracer {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()

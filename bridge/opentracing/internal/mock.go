@@ -23,9 +23,9 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/internal/baggage"
 	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
 	"go.opentelemetry.io/otel/label"
-	otelpropagators "go.opentelemetry.io/otel/propagators"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 )
@@ -45,7 +45,7 @@ type MockContextKeyValue struct {
 }
 
 type MockTracer struct {
-	Resources             otelpropagators.Map
+	Resources             baggage.Map
 	FinishedSpans         []*MockSpan
 	SpareTraceIDs         []otel.ID
 	SpareSpanIDs          []otel.SpanID
@@ -60,7 +60,7 @@ var _ migration.DeferredContextSetupTracerExtension = &MockTracer{}
 
 func NewMockTracer() *MockTracer {
 	return &MockTracer{
-		Resources:             otelpropagators.NewEmptyMap(),
+		Resources:             baggage.NewEmptyMap(),
 		FinishedSpans:         nil,
 		SpareTraceIDs:         nil,
 		SpareSpanIDs:          nil,
@@ -86,7 +86,7 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...otel.SpanOp
 		officialTracer: t,
 		spanContext:    spanContext,
 		recording:      config.Record,
-		Attributes: otelpropagators.NewMap(otelpropagators.MapUpdate{
+		Attributes: baggage.NewMap(baggage.MapUpdate{
 			MultiKV: config.Attributes,
 		}),
 		StartTime:    startTime,
@@ -179,10 +179,10 @@ func (t *MockTracer) DeferredContextSetupHook(ctx context.Context, span otel.Spa
 }
 
 type MockEvent struct {
-	CtxAttributes otelpropagators.Map
+	CtxAttributes baggage.Map
 	Timestamp     time.Time
 	Name          string
-	Attributes    otelpropagators.Map
+	Attributes    baggage.Map
 }
 
 type MockSpan struct {
@@ -192,7 +192,7 @@ type MockSpan struct {
 	SpanKind       otel.SpanKind
 	recording      bool
 
-	Attributes   otelpropagators.Map
+	Attributes   baggage.Map
 	StartTime    time.Time
 	EndTime      time.Time
 	ParentSpanID otel.SpanID
@@ -223,16 +223,12 @@ func (s *MockSpan) SetError(v bool) {
 }
 
 func (s *MockSpan) SetAttributes(attributes ...label.KeyValue) {
-	s.applyUpdate(otelpropagators.MapUpdate{
+	s.applyUpdate(baggage.MapUpdate{
 		MultiKV: attributes,
 	})
 }
 
-func (s *MockSpan) SetAttribute(k string, v interface{}) {
-	s.SetAttributes(label.Any(k, v))
-}
-
-func (s *MockSpan) applyUpdate(update otelpropagators.MapUpdate) {
+func (s *MockSpan) applyUpdate(update baggage.MapUpdate) {
 	s.Attributes = s.Attributes.Apply(update)
 }
 
@@ -267,7 +263,7 @@ func (s *MockSpan) RecordError(ctx context.Context, err error, opts ...otel.Erro
 		cfg.Timestamp = time.Now()
 	}
 
-	if cfg.StatusCode != codes.OK {
+	if cfg.StatusCode != codes.Ok {
 		s.SetStatus(cfg.StatusCode, "")
 	}
 
@@ -287,10 +283,10 @@ func (s *MockSpan) AddEvent(ctx context.Context, name string, attrs ...label.Key
 
 func (s *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...label.KeyValue) {
 	s.Events = append(s.Events, MockEvent{
-		CtxAttributes: otelpropagators.MapFromContext(ctx),
+		CtxAttributes: baggage.MapFromContext(ctx),
 		Timestamp:     timestamp,
 		Name:          name,
-		Attributes: otelpropagators.NewMap(otelpropagators.MapUpdate{
+		Attributes: baggage.NewMap(baggage.MapUpdate{
 			MultiKV: attrs,
 		}),
 	})

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
 	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
@@ -39,6 +40,11 @@ var (
 	// ErrUnimplementedAgg is returned when a transformation of an unimplemented
 	// aggregator is attempted.
 	ErrUnimplementedAgg = errors.New("unimplemented aggregator")
+
+	// ErrIncompatibleAgg is returned when
+	// aggregation.Kind implies an interface conversion that has
+	// failed
+	ErrIncompatibleAgg = errors.New("incompatible aggregation type")
 
 	// ErrUnknownValueType is returned when a transformation of an unknown value
 	// is attempted.
@@ -58,6 +64,14 @@ type result struct {
 	InstrumentationLibrary instrumentation.Library
 	Metric                 *metricpb.Metric
 	Err                    error
+}
+
+// toNanos returns the number of nanoseconds since the UNIX epoch.
+func toNanos(t time.Time) uint64 {
+	if t.IsZero() {
+		return 0
+	}
+	return uint64(t.UnixNano())
 }
 
 // CheckpointSet transforms all records contained in a checkpoint into
@@ -231,27 +245,57 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 	return rms, nil
 }
 
-// Record transforms a Record into an OTLP otel. An ErrUnimplementedAgg
+// Record transforms a Record into an OTLP Metric. An ErrIncompatibleAgg
 // error is returned if the Record Aggregator is not supported.
 func Record(r export.Record) (*metricpb.Metric, error) {
-	switch a := r.Aggregation().(type) {
-	case aggregation.MinMaxSumCount:
-		return minMaxSumCount(r, a)
-	case aggregation.Sum:
-		return sum(r, a)
+	agg := r.Aggregation()
+	switch agg.Kind() {
+	case aggregation.MinMaxSumCountKind:
+		mmsc, ok := agg.(aggregation.MinMaxSumCount)
+		if !ok {
+			return nil, fmt.Errorf("%w: %T", ErrIncompatibleAgg, agg)
+		}
+		return minMaxSumCount(r, mmsc)
+
+	case aggregation.HistogramKind:
+		h, ok := agg.(aggregation.Histogram)
+		if !ok {
+			return nil, fmt.Errorf("%w: %T", ErrIncompatibleAgg, agg)
+		}
+		return histogram(r, h)
+
+	case aggregation.SumKind:
+		s, ok := agg.(aggregation.Sum)
+		if !ok {
+			return nil, fmt.Errorf("%w: %T", ErrIncompatibleAgg, agg)
+		}
+		sum, err := s.Sum()
+		if err != nil {
+			return nil, err
+		}
+		return scalar(r, sum, r.StartTime(), r.EndTime())
+
+	case aggregation.LastValueKind:
+		lv, ok := agg.(aggregation.LastValue)
+		if !ok {
+			return nil, fmt.Errorf("%w: %T", ErrIncompatibleAgg, agg)
+		}
+		value, tm, err := lv.LastValue()
+		if err != nil {
+			return nil, err
+		}
+		return scalar(r, value, time.Time{}, tm)
+
 	default:
-		return nil, fmt.Errorf("%w: %v", ErrUnimplementedAgg, a)
+		return nil, fmt.Errorf("%w: %T", ErrUnimplementedAgg, agg)
 	}
 }
 
-// sum transforms a Sum Aggregator into an OTLP otel.
-func sum(record export.Record, a aggregation.Sum) (*metricpb.Metric, error) {
+// scalar transforms a Sum or LastValue Aggregator into an OTLP Metric.
+// For LastValue (Gauge), use start==time.Time{}.
+func scalar(record export.Record, num otel.Number, start, end time.Time) (*metricpb.Metric, error) {
 	desc := record.Descriptor()
 	labels := record.Labels()
-	sum, err := a.Sum()
-	if err != nil {
-		return nil, err
-	}
 
 	m := &metricpb.Metric{
 		MetricDescriptor: &metricpb.MetricDescriptor{
@@ -266,20 +310,20 @@ func sum(record export.Record, a aggregation.Sum) (*metricpb.Metric, error) {
 		m.MetricDescriptor.Type = metricpb.MetricDescriptor_INT64
 		m.Int64DataPoints = []*metricpb.Int64DataPoint{
 			{
-				Value:             sum.CoerceToInt64(n),
+				Value:             num.CoerceToInt64(n),
 				Labels:            stringKeyValues(labels.Iter()),
-				StartTimeUnixNano: uint64(record.StartTime().UnixNano()),
-				TimeUnixNano:      uint64(record.EndTime().UnixNano()),
+				StartTimeUnixNano: toNanos(start),
+				TimeUnixNano:      toNanos(end),
 			},
 		}
 	case otel.Float64NumberKind:
 		m.MetricDescriptor.Type = metricpb.MetricDescriptor_DOUBLE
 		m.DoubleDataPoints = []*metricpb.DoubleDataPoint{
 			{
-				Value:             sum.CoerceToFloat64(n),
+				Value:             num.CoerceToFloat64(n),
 				Labels:            stringKeyValues(labels.Iter()),
-				StartTimeUnixNano: uint64(record.StartTime().UnixNano()),
-				TimeUnixNano:      uint64(record.EndTime().UnixNano()),
+				StartTimeUnixNano: toNanos(start),
+				TimeUnixNano:      toNanos(end),
 			},
 		}
 	default:
@@ -290,7 +334,7 @@ func sum(record export.Record, a aggregation.Sum) (*metricpb.Metric, error) {
 }
 
 // minMaxSumCountValue returns the values of the MinMaxSumCount Aggregator
-// as discret values.
+// as discrete values.
 func minMaxSumCountValues(a aggregation.MinMaxSumCount) (min, max, sum otel.Number, count int64, err error) {
 	if min, err = a.Min(); err != nil {
 		return
@@ -339,8 +383,69 @@ func minMaxSumCount(record export.Record, a aggregation.MinMaxSumCount) (*metric
 						Value:      max.CoerceToFloat64(numKind),
 					},
 				},
-				StartTimeUnixNano: uint64(record.StartTime().UnixNano()),
-				TimeUnixNano:      uint64(record.EndTime().UnixNano()),
+				StartTimeUnixNano: toNanos(record.StartTime()),
+				TimeUnixNano:      toNanos(record.EndTime()),
+			},
+		},
+	}, nil
+}
+
+func histogramValues(a aggregation.Histogram) (boundaries []float64, counts []float64, err error) {
+	var buckets aggregation.Buckets
+	if buckets, err = a.Histogram(); err != nil {
+		return
+	}
+	boundaries, counts = buckets.Boundaries, buckets.Counts
+	if len(counts) != len(boundaries)+1 {
+		err = ErrTransforming
+		return
+	}
+	return
+}
+
+// histogram transforms a Histogram Aggregator into an OTLP Metric.
+func histogram(record export.Record, a aggregation.Histogram) (*metricpb.Metric, error) {
+	desc := record.Descriptor()
+	labels := record.Labels()
+	boundaries, counts, err := histogramValues(a)
+	if err != nil {
+		return nil, err
+	}
+
+	count, err := a.Count()
+	if err != nil {
+		return nil, err
+	}
+
+	sum, err := a.Sum()
+	if err != nil {
+		return nil, err
+	}
+
+	buckets := make([]*metricpb.HistogramDataPoint_Bucket, len(counts))
+	for i := 0; i < len(counts); i++ {
+		buckets[i] = &metricpb.HistogramDataPoint_Bucket{
+			Count: uint64(counts[i]),
+		}
+	}
+
+	numKind := desc.NumberKind()
+	return &metricpb.Metric{
+		MetricDescriptor: &metricpb.MetricDescriptor{
+			Name:        desc.Name(),
+			Description: desc.Description(),
+			Unit:        string(desc.Unit()),
+			Type:        metricpb.MetricDescriptor_HISTOGRAM,
+		},
+		HistogramDataPoints: []*metricpb.HistogramDataPoint{
+			{
+				Labels:            stringKeyValues(labels.Iter()),
+				StartTimeUnixNano: toNanos(record.StartTime()),
+				TimeUnixNano:      toNanos(record.EndTime()),
+				Count:             uint64(count),
+				Sum:               sum.CoerceToFloat64(numKind),
+				Buckets:           buckets,
+				ExplicitBounds:    boundaries,
 			},
 		},
 	}, nil

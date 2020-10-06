@@ -30,6 +30,6 @@ var (
 )
 
 func init() {
-	Tracer = otel.NoopProvider().Tracer("")
+	Tracer = otel.NewNoopTracerProvider().Tracer("")
 	_, Span = Tracer.Start(context.Background(), "")
 }

@@ -89,7 +89,7 @@ func (s *span) SetStatus(code codes.Code, msg string) {
 		return
 	}
 	s.mu.Lock()
-	s.data.StatusCode = internal.ConvertCode(code)
+	s.data.StatusCode = code
 	s.data.StatusMessage = msg
 	s.mu.Unlock()
 }
@@ -99,13 +99,6 @@ func (s *span) SetAttributes(attributes ...label.KeyValue) {
 		return
 	}
 	s.copyToCappedAttributes(attributes...)
-}
-
-func (s *span) SetAttribute(k string, v interface{}) {
-	attr := label.Any(k, v)
-	if attr.Value.Type() != label.INVALID {
-		s.SetAttributes(attr)
-	}
 }
 
 // End ends the span.
@@ -139,8 +132,8 @@ func (s *span) End(options ...otel.SpanOption) {
 	}
 	config := otel.NewSpanConfig(options...)
 	s.endOnce.Do(func() {
-		sps, _ := s.tracer.provider.spanProcessors.Load().(spanProcessorMap)
-		mustExportOrProcess := len(sps) > 0
+		sps, ok := s.tracer.provider.spanProcessors.Load().(spanProcessorStates)
+		mustExportOrProcess := ok && len(sps) > 0
 		if mustExportOrProcess {
 			sd := s.makeSpanData()
 			if config.Timestamp.IsZero() {
@@ -148,8 +141,8 @@ func (s *span) End(options ...otel.SpanOption) {
 			} else {
 				sd.EndTime = config.Timestamp
 			}
-			for sp := range sps {
-				sp.OnEnd(sd)
+			for _, sp := range sps {
+				sp.sp.OnEnd(sd)
 			}
 		}
 	})
@@ -174,7 +167,7 @@ func (s *span) RecordError(ctx context.Context, err error, opts ...otel.ErrorOpt
 		cfg.Timestamp = time.Now()
 	}
 
-	if cfg.StatusCode != codes.OK {
+	if cfg.StatusCode != codes.Unset {
 		s.SetStatus(cfg.StatusCode, "")
 	}
 
@@ -426,7 +419,7 @@ func makeSamplingDecision(data samplingData) SamplingResult {
 			Attributes:      data.attributes,
 			Links:           data.links,
 		})
-		if sampled.Decision == RecordAndSampled {
+		if sampled.Decision == RecordAndSample {
 			spanContext.TraceFlags |= otel.FlagsSampled
 		} else {
 			spanContext.TraceFlags &^= otel.FlagsSampled
@@ -434,7 +427,7 @@ func makeSamplingDecision(data samplingData) SamplingResult {
 		return sampled
 	}
 	if data.parent.TraceFlags&otel.FlagsSampled != 0 {
-		return SamplingResult{Decision: RecordAndSampled}
+		return SamplingResult{Decision: RecordAndSample}
 	}
-	return SamplingResult{Decision: NotRecord}
+	return SamplingResult{Decision: Drop}
 }
