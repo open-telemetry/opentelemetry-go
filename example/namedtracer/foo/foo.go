@@ -17,8 +17,8 @@ package foo
 import (
 	"context"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
 )
 
@@ -33,7 +33,7 @@ func SubOperation(ctx context.Context) error {
 	// for its component to get the instance of the provider.
 	tr := global.Tracer("example/namedtracer/foo")
 
-	var span trace.Span
+	var span otel.Span
 	ctx, span = tr.Start(ctx, "Sub operation...")
 	defer span.End()
 	span.SetAttributes(lemonsKey.String("five"))

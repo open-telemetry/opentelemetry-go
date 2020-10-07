@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/internal/matchers"
 	ottest "go.opentelemetry.io/otel/internal/testing"
@@ -113,7 +113,7 @@ func TestSpan(t *testing.T) {
 			e.Expect(ok).ToBeTrue()
 
 			expectedEndTime := time.Now().AddDate(5, 0, 0)
-			subject.End(trace.WithTimestamp(expectedEndTime))
+			subject.End(otel.WithTimestamp(expectedEndTime))
 
 			e.Expect(subject.Ended()).ToBeTrue()
 
@@ -156,7 +156,7 @@ func TestSpan(t *testing.T) {
 				e.Expect(ok).ToBeTrue()
 
 				testTime := time.Now()
-				subject.RecordError(ctx, s.err, trace.WithErrorTime(testTime))
+				subject.RecordError(ctx, s.err, otel.WithErrorTime(testTime))
 
 				expectedEvents := []oteltest.Event{{
 					Timestamp: testTime,
@@ -187,7 +187,7 @@ func TestSpan(t *testing.T) {
 			testErr := ottest.NewTestError(errMsg)
 			testTime := time.Now()
 			expStatusCode := codes.Error
-			subject.RecordError(ctx, testErr, trace.WithErrorTime(testTime), trace.WithErrorStatus(expStatusCode))
+			subject.RecordError(ctx, testErr, otel.WithErrorTime(testTime), otel.WithErrorStatus(expStatusCode))
 
 			expectedEvents := []oteltest.Event{{
 				Timestamp: testTime,
@@ -602,13 +602,13 @@ func TestSpan(t *testing.T) {
 
 			tracer := tp.Tracer(t.Name())
 			_, span := tracer.Start(context.Background(), "test",
-				trace.WithSpanKind(trace.SpanKindConsumer))
+				otel.WithSpanKind(otel.SpanKindConsumer))
 
 			subject, ok := span.(*oteltest.Span)
 			e.Expect(ok).ToBeTrue()
 			subject.End()
 
-			e.Expect(subject.SpanKind()).ToEqual(trace.SpanKindConsumer)
+			e.Expect(subject.SpanKind()).ToEqual(otel.SpanKindConsumer)
 		})
 	})
 }

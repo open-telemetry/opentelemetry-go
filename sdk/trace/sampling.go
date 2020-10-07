@@ -18,7 +18,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	api "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 )
 
@@ -30,13 +30,13 @@ type Sampler interface {
 
 // SamplingParameters contains the values passed to a Sampler.
 type SamplingParameters struct {
-	ParentContext   api.SpanContext
-	TraceID         api.ID
+	ParentContext   otel.SpanContext
+	TraceID         otel.TraceID
 	Name            string
 	HasRemoteParent bool
-	Kind            api.SpanKind
+	Kind            otel.SpanKind
 	Attributes      []label.KeyValue
-	Links           []api.Link
+	Links           []otel.Link
 }
 
 // SamplingDecision indicates whether a span is dropped, recorded and/or sampled.
@@ -83,7 +83,7 @@ func (ts traceIDRatioSampler) Description() string {
 // always sample. Fractions < 0 are treated as zero. To respect the
 // parent trace's `SampledFlag`, the `TraceIDRatioBased` sampler should be used
 // as a delegate of a `Parent` sampler.
-//nolint:golint // golint complains about stutter of `trace.TraceIDRatioBased`
+//nolint:golint // golint complains about stutter of `otel.TraceIDRatioBased`
 func TraceIDRatioBased(fraction float64) Sampler {
 	if fraction >= 1 {
 		return AlwaysSample()
@@ -109,7 +109,7 @@ func (as alwaysOnSampler) Description() string {
 	return "AlwaysOnSampler"
 }
 
-// AlwaysSample returns a Sampler that samples every trace.
+// AlwaysSample returns a Sampler that samples every otel.
 // Be careful about using this sampler in a production application with
 // significant traffic: a new trace will be started and exported for every
 // request.
