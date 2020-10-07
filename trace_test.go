@@ -49,7 +49,7 @@ func TestContextSpan(t *testing.T) {
 	if got, ok := ctx.Value(currentSpanKey).(testSpan); !ok {
 		t.Errorf("failed to set context with %#v", want)
 	} else if got != want {
-		t.Errorf("got %#v from context with current overriden, want %#v", got, want)
+		t.Errorf("got %#v from context with current overridden, want %#v", got, want)
 	}
 
 	if got := SpanFromContext(ctx); got != want {
@@ -81,7 +81,7 @@ func TestContextRemoteSpanContext(t *testing.T) {
 	if got, ok := ctx.Value(remoteContextKey).(SpanContext); !ok {
 		t.Errorf("failed to set SpanContext with %#v", want)
 	} else if got != want {
-		t.Errorf("got %#v from context with remote overriden, want %#v", got, want)
+		t.Errorf("got %#v from context with remote overridden, want %#v", got, want)
 	}
 
 	if got := RemoteSpanContextFromContext(ctx); got != want {
