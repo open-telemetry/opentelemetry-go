@@ -227,7 +227,7 @@ func TestExportSpans(t *testing.T) {
 									SpanId:            []byte{0, 0, 0, 0, 0, 0, 0, 2},
 									ParentSpanId:      []byte{0, 0, 0, 0, 0, 0, 0, 1},
 									Name:              "internal process",
-									Kind:              tracepb.Span_INTERNAL,
+									Kind:              tracepb.Span_SPAN_KIND_INTERNAL,
 									StartTimeUnixNano: uint64(startTime.UnixNano()),
 									EndTimeUnixNano:   uint64(endTime.UnixNano()),
 									Attributes: []*commonpb.KeyValue{
