@@ -38,6 +38,17 @@ func (p noopTracerProvider) Tracer(string, ...TracerOption) Tracer {
 	return noopTracer{}
 }
 
+// noopTracer is an implementation of Tracer that preforms no operations.
+type noopTracer struct{}
+
+var _ Tracer = noopTracer{}
+
+// Start starts a noop span.
+func (t noopTracer) Start(ctx context.Context, name string, _ ...SpanOption) (context.Context, Span) {
+	span := noopSpan{}
+	return ContextWithSpan(ctx, span), span
+}
+
 // noopSpan is an implementation of Span that preforms no operations.
 type noopSpan struct{}
 
@@ -75,14 +86,3 @@ func (noopSpan) AddEventWithTimestamp(context.Context, time.Time, string, ...lab
 
 // SetName does nothing.
 func (noopSpan) SetName(string) {}
-
-// noopTracer is an implementation of Tracer that preforms no operations.
-type noopTracer struct{}
-
-var _ Tracer = noopTracer{}
-
-// Start starts a noop span.
-func (t noopTracer) Start(ctx context.Context, name string, _ ...SpanOption) (context.Context, Span) {
-	span := noopSpan{}
-	return ContextWithSpan(ctx, span), span
-}

@@ -323,3 +323,83 @@ func TestStringSpanID(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateSpanKind(t *testing.T) {
+	tests := []struct {
+		in   SpanKind
+		want SpanKind
+	}{
+		{
+			SpanKindUnspecified,
+			SpanKindInternal,
+		},
+		{
+
+			SpanKindInternal,
+			SpanKindInternal,
+		},
+		{
+
+			SpanKindServer,
+			SpanKindServer,
+		},
+		{
+
+			SpanKindClient,
+			SpanKindClient,
+		},
+		{
+			SpanKindProducer,
+			SpanKindProducer,
+		},
+		{
+			SpanKindConsumer,
+			SpanKindConsumer,
+		},
+	}
+	for _, test := range tests {
+		if got := ValidateSpanKind(test.in); got != test.want {
+			t.Errorf("ValidateSpanKind(%#v) = %#v, want %#v", test.in, got, test.want)
+		}
+	}
+}
+
+func TestSpanKindString(t *testing.T) {
+	tests := []struct {
+		in   SpanKind
+		want string
+	}{
+		{
+			SpanKindUnspecified,
+			"unspecified",
+		},
+		{
+
+			SpanKindInternal,
+			"internal",
+		},
+		{
+
+			SpanKindServer,
+			"server",
+		},
+		{
+
+			SpanKindClient,
+			"client",
+		},
+		{
+			SpanKindProducer,
+			"producer",
+		},
+		{
+			SpanKindConsumer,
+			"consumer",
+		},
+	}
+	for _, test := range tests {
+		if got := test.in.String(); got != test.want {
+			t.Errorf("%#v.String() = %#v, want %#v", test.in, got, test.want)
+		}
+	}
+}
