@@ -109,7 +109,7 @@ func (as alwaysOnSampler) Description() string {
 	return "AlwaysOnSampler"
 }
 
-// AlwaysSample returns a Sampler that samples every otel.
+// AlwaysSample returns a Sampler that samples every trace.
 // Be careful about using this sampler in a production application with
 // significant traffic: a new trace will be started and exported for every
 // request.

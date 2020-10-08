@@ -38,7 +38,8 @@ const (
 
 var emptySpanContext = otel.SpanContext{}
 
-// span implements otel.Span interface.
+// span is an implementation of the OpenTelemetry Span API representing the
+// individual component of a trace.
 type span struct {
 	// data contains information recorded about the span.
 	//

@@ -266,8 +266,8 @@ type Span interface {
 	// SetName sets the Span name.
 	SetName(name string)
 
-	// SetAttributes sets kv as attributes of the Span. If the keys of kv
-	// already exist for an attribute of the Span it will be overwritten with
+	// SetAttributes sets kv as attributes of the Span. If a key from kv
+	// already exists for an attribute of the Span it will be overwritten with
 	// the value contained in kv.
 	SetAttributes(kv ...label.KeyValue)
 }

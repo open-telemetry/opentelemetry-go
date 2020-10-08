@@ -92,8 +92,8 @@ func WithDisabled(disabled bool) Option {
 	}
 }
 
-// NewRawExporter returns a otel.Exporter implementation that exports
-// the collected spans to Jaeger.
+// NewRawExporter returns an OTel Exporter implementation that exports the
+// collected spans to Jaeger.
 //
 // It will IGNORE Disabled option.
 func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, error) {
@@ -196,7 +196,8 @@ type Process struct {
 	Tags []label.KeyValue
 }
 
-// Exporter is an implementation of otel.SpanSyncer that uploads spans to Jaeger.
+// Exporter is an implementation of an OTel SpanSyncer that uploads spans to
+// Jaeger.
 type Exporter struct {
 	process  *gen.Process
 	bundler  *bundler.Bundler

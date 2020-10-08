@@ -23,7 +23,8 @@ exporters are used to process and transport this data.
 
 Tracing
 
-To participate in distributed traces a Span needs to be created for the operation being performed as part of a traced workflow. It its simplest form:
+To participate in distributed traces a Span needs to be created for the
+operation being performed as part of a traced workflow. It its simplest form:
 
 	var tracer otel.Tracer
 
