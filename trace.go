@@ -74,7 +74,7 @@ func (t TraceID) String() string {
 	return hex.EncodeToString(t[:])
 }
 
-// SpanID is a unique identify of a span in a trace.
+// SpanID is a unique identity of a span in a trace.
 type SpanID [8]byte
 
 var nilSpanID SpanID

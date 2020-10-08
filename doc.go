@@ -15,9 +15,9 @@
 /*
 Package otel provides an implementation of the OpenTelemetry API.
 
-The provided API is used to instrument code and measure data about that codes
+The provided API is used to instrument code and measure data about that code's
 performance and operation. The measured data, by default, is not processed or
-trasmitted anywhere. An implementation of the OpenTelemetry SDK, like the
+transmitted anywhere. An implementation of the OpenTelemetry SDK, like the
 default SDK implementation (go.opentelemetry.io/otel/sdk), and associated
 exporters are used to process and transport this data.
 
