@@ -141,9 +141,5 @@ func Configure(ctx context.Context, opts ...Option) (*Resource, error) {
 		[]Detector{cfg.telemetrySDK, cfg.host, cfg.fromEnv},
 		cfg.detectors...,
 	)
-	res, err := Detect(ctx, detectors...)
-	if err != nil {
-		return nil, err
-	}
-	return res, err
+	return Detect(ctx, detectors...)
 }

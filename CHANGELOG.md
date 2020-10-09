@@ -8,6 +8,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Support for `resource.Configure()` to configure Resource with
+  automatic values for builtin semantic `telemetry.sdk.*` and
+  `host.name` conventions. (#1235)
+
 ### Changed
 
 - Move the `go.opentelemetry.io/otel/api/trace` package into `go.opentelemetry.io/otel` with the following changes. (#1229)
