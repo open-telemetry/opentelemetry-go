@@ -26,7 +26,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
-	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
 	"go.opentelemetry.io/otel/label"
 
 	"go.opentelemetry.io/otel/api/metric"
@@ -238,37 +237,58 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	assert.Len(t, metrics, len(instruments), "not enough metrics exported")
 	seen := make(map[string]struct{}, len(instruments))
 	for _, m := range metrics {
-		desc := m.GetMetricDescriptor()
-		data, ok := instruments[desc.Name]
+		data, ok := instruments[m.Name]
 		if !ok {
-			assert.Failf(t, "unknown metrics", desc.Name)
+			assert.Failf(t, "unknown metrics", m.Name)
 			continue
 		}
-		seen[desc.Name] = struct{}{}
+		seen[m.Name] = struct{}{}
 
 		switch data.iKind {
-		case metric.CounterKind, metric.ValueObserverKind:
+		case metric.CounterKind:
 			switch data.nKind {
 			case metricapi.Int64NumberKind:
-				assert.Equal(t, metricpb.MetricDescriptor_INT64.String(), desc.GetType().String())
-				if dp := m.GetInt64DataPoints(); assert.Len(t, dp, 1) {
-					assert.Equal(t, data.val, dp[0].Value, "invalid value for %q", desc.Name)
+				if dp := m.GetIntSum().DataPoints; assert.Len(t, dp, 1) {
+					assert.Equal(t, data.val, dp[0].Value, "invalid value for %q", m.Name)
 				}
 			case metricapi.Float64NumberKind:
-				assert.Equal(t, metricpb.MetricDescriptor_DOUBLE.String(), desc.GetType().String())
-				if dp := m.GetDoubleDataPoints(); assert.Len(t, dp, 1) {
-					assert.Equal(t, float64(data.val), dp[0].Value, "invalid value for %q", desc.Name)
+				if dp := m.GetDoubleSum().DataPoints; assert.Len(t, dp, 1) {
+					assert.Equal(t, float64(data.val), dp[0].Value, "invalid value for %q", m.Name)
+				}
+			default:
+				assert.Failf(t, "invalid number kind", data.nKind.String())
+			}
+		case metric.ValueObserverKind:
+			switch data.nKind {
+			case metricapi.Int64NumberKind:
+				if dp := m.GetIntGauge().DataPoints; assert.Len(t, dp, 1) {
+					assert.Equal(t, data.val, dp[0].Value, "invalid value for %q", m.Name)
+				}
+			case metricapi.Float64NumberKind:
+				if dp := m.GetDoubleGauge().DataPoints; assert.Len(t, dp, 1) {
+					assert.Equal(t, float64(data.val), dp[0].Value, "invalid value for %q", m.Name)
 				}
 			default:
 				assert.Failf(t, "invalid number kind", data.nKind.String())
 			}
 		case metric.ValueRecorderKind:
-			assert.Equal(t, metricpb.MetricDescriptor_SUMMARY.String(), desc.GetType().String())
-			m.GetSummaryDataPoints()
-			if dp := m.GetSummaryDataPoints(); assert.Len(t, dp, 1) {
-				count := dp[0].Count
-				assert.Equal(t, uint64(1), count, "invalid count for %q", desc.Name)
-				assert.Equal(t, float64(data.val*int64(count)), dp[0].Sum, "invalid sum for %q (value %d)", desc.Name, data.val)
+			switch data.nKind {
+			case metricapi.Int64NumberKind:
+				assert.NotNil(t, m.GetIntHistogram())
+				if dp := m.GetIntHistogram().DataPoints; assert.Len(t, dp, 1) {
+					count := dp[0].Count
+					assert.Equal(t, uint64(1), count, "invalid count for %q", m.Name)
+					assert.Equal(t, int64(data.val*int64(count)), dp[0].Sum, "invalid sum for %q (value %d)", m.Name, data.val)
+				}
+			case metricapi.Float64NumberKind:
+				assert.NotNil(t, m.GetDoubleHistogram())
+				if dp := m.GetDoubleHistogram().DataPoints; assert.Len(t, dp, 1) {
+					count := dp[0].Count
+					assert.Equal(t, uint64(1), count, "invalid count for %q", m.Name)
+					assert.Equal(t, float64(data.val*int64(count)), dp[0].Sum, "invalid sum for %q (value %d)", m.Name, data.val)
+				}
+			default:
+				assert.Failf(t, "invalid number kind", data.nKind.String())
 			}
 		default:
 			assert.Failf(t, "invalid metrics kind", data.iKind.String())

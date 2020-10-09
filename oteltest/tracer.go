@@ -12,18 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package tracetest provides testing utilities for tracing.
-package tracetest
+package oteltest
 
 import (
 	"context"
 	"time"
 
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 )
 
-var _ trace.Tracer = (*Tracer)(nil)
+var _ otel.Tracer = (*Tracer)(nil)
 
 // Tracer is an OpenTelemetry Tracer implementation used for testing.
 type Tracer struct {
@@ -35,8 +34,8 @@ type Tracer struct {
 	config *config
 }
 
-func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOption) (context.Context, trace.Span) {
-	c := trace.NewSpanConfig(opts...)
+func (t *Tracer) Start(ctx context.Context, name string, opts ...otel.SpanOption) (context.Context, otel.Span) {
+	c := otel.NewSpanConfig(opts...)
 	startTime := time.Now()
 	if st := c.Timestamp; !st.IsZero() {
 		startTime = st
@@ -46,26 +45,26 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 		tracer:     t,
 		startTime:  startTime,
 		attributes: make(map[label.Key]label.Value),
-		links:      make(map[trace.SpanContext][]label.KeyValue),
+		links:      make(map[otel.SpanContext][]label.KeyValue),
 		spanKind:   c.SpanKind,
 	}
 
 	if c.NewRoot {
-		span.spanContext = trace.EmptySpanContext()
+		span.spanContext = otel.SpanContext{}
 
 		iodKey := label.Key("ignored-on-demand")
-		if lsc := trace.SpanFromContext(ctx).SpanContext(); lsc.IsValid() {
+		if lsc := otel.SpanFromContext(ctx).SpanContext(); lsc.IsValid() {
 			span.links[lsc] = []label.KeyValue{iodKey.String("current")}
 		}
-		if rsc := trace.RemoteSpanContextFromContext(ctx); rsc.IsValid() {
+		if rsc := otel.RemoteSpanContextFromContext(ctx); rsc.IsValid() {
 			span.links[rsc] = []label.KeyValue{iodKey.String("remote")}
 		}
 	} else {
 		span.spanContext = t.config.SpanContextFunc(ctx)
-		if lsc := trace.SpanFromContext(ctx).SpanContext(); lsc.IsValid() {
+		if lsc := otel.SpanFromContext(ctx).SpanContext(); lsc.IsValid() {
 			span.spanContext.TraceID = lsc.TraceID
 			span.parentSpanID = lsc.SpanID
-		} else if rsc := trace.RemoteSpanContextFromContext(ctx); rsc.IsValid() {
+		} else if rsc := otel.RemoteSpanContextFromContext(ctx); rsc.IsValid() {
 			span.spanContext.TraceID = rsc.TraceID
 			span.parentSpanID = rsc.SpanID
 		}
@@ -81,5 +80,5 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 	if t.config.SpanRecorder != nil {
 		t.config.SpanRecorder.OnStart(span)
 	}
-	return trace.ContextWithSpan(ctx, span), span
+	return otel.ContextWithSpan(ctx, span), span
 }

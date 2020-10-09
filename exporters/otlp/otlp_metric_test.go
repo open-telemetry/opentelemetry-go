@@ -109,11 +109,6 @@ var (
 
 	testHistogramBoundaries = []float64{2.0, 4.0, 8.0}
 
-	md = &metricpb.MetricDescriptor{
-		Name: "int64-count",
-		Type: metricpb.MetricDescriptor_INT64,
-	}
-
 	cpu1Labels = []*commonpb.StringKeyValue{
 		{
 			Key:   "CPU",
@@ -189,19 +184,25 @@ func TestNoGroupingExport(t *testing.T) {
 					{
 						Metrics: []*metricpb.Metric{
 							{
-								MetricDescriptor: md,
-								Int64DataPoints: []*metricpb.Int64DataPoint{
-									{
-										Value:             11,
-										Labels:            cpu1Labels,
-										StartTimeUnixNano: startTime(),
-										TimeUnixNano:      pointTime(),
-									},
-									{
-										Value:             11,
-										Labels:            cpu2Labels,
-										StartTimeUnixNano: startTime(),
-										TimeUnixNano:      pointTime(),
+								Name: "int64-count",
+								Data: &metricpb.Metric_IntSum{
+									IntSum: &metricpb.IntSum{
+										IsMonotonic:            true,
+										AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+										DataPoints: []*metricpb.IntDataPoint{
+											{
+												Value:             11,
+												Labels:            cpu1Labels,
+												StartTimeUnixNano: startTime(),
+												TimeUnixNano:      pointTime(),
+											},
+											{
+												Value:             11,
+												Labels:            cpu2Labels,
+												StartTimeUnixNano: startTime(),
+												TimeUnixNano:      pointTime(),
+											},
+										},
 									},
 								},
 							},
@@ -229,50 +230,48 @@ func TestValuerecorderMetricGroupingExport(t *testing.T) {
 				{
 					Metrics: []*metricpb.Metric{
 						{
-							MetricDescriptor: &metricpb.MetricDescriptor{
-								Name: "valuerecorder",
-								Type: metricpb.MetricDescriptor_HISTOGRAM,
-							},
-							HistogramDataPoints: []*metricpb.HistogramDataPoint{
-								{
-									Labels: []*commonpb.StringKeyValue{
+							Name: "valuerecorder",
+							Data: &metricpb.Metric_IntHistogram{
+								IntHistogram: &metricpb.IntHistogram{
+									AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+									DataPoints: []*metricpb.IntHistogramDataPoint{
 										{
-											Key:   "CPU",
-											Value: "1",
+											Labels: []*commonpb.StringKeyValue{
+												{
+													Key:   "CPU",
+													Value: "1",
+												},
+												{
+													Key:   "host",
+													Value: "test.com",
+												},
+											},
+											StartTimeUnixNano: startTime(),
+											TimeUnixNano:      pointTime(),
+											Count:             2,
+											Sum:               11,
+											ExplicitBounds:    testHistogramBoundaries,
+											BucketCounts:      []uint64{1, 0, 0, 1},
 										},
 										{
-											Key:   "host",
-											Value: "test.com",
+											Labels: []*commonpb.StringKeyValue{
+												{
+													Key:   "CPU",
+													Value: "1",
+												},
+												{
+													Key:   "host",
+													Value: "test.com",
+												},
+											},
+											Count:             2,
+											Sum:               11,
+											ExplicitBounds:    testHistogramBoundaries,
+											BucketCounts:      []uint64{1, 0, 0, 1},
+											StartTimeUnixNano: startTime(),
+											TimeUnixNano:      pointTime(),
 										},
 									},
-									StartTimeUnixNano: startTime(),
-									TimeUnixNano:      pointTime(),
-									Count:             2,
-									Sum:               11,
-									ExplicitBounds:    testHistogramBoundaries,
-									Buckets: []*metricpb.HistogramDataPoint_Bucket{
-										{Count: 1}, {Count: 0}, {Count: 0}, {Count: 1},
-									},
-								},
-								{
-									Labels: []*commonpb.StringKeyValue{
-										{
-											Key:   "CPU",
-											Value: "1",
-										},
-										{
-											Key:   "host",
-											Value: "test.com",
-										},
-									},
-									Count:          2,
-									Sum:            11,
-									ExplicitBounds: testHistogramBoundaries,
-									Buckets: []*metricpb.HistogramDataPoint_Bucket{
-										{Count: 1}, {Count: 0}, {Count: 0}, {Count: 1},
-									},
-									StartTimeUnixNano: startTime(),
-									TimeUnixNano:      pointTime(),
 								},
 							},
 						},
@@ -281,9 +280,6 @@ func TestValuerecorderMetricGroupingExport(t *testing.T) {
 			},
 		},
 	}
-	runMetricExportTests(t, []record{r, r}, expected)
-	//changing the number kind should make no difference.
-	r.nKind = metric.Float64NumberKind
 	runMetricExportTests(t, []record{r, r}, expected)
 }
 
@@ -306,19 +302,25 @@ func TestCountInt64MetricGroupingExport(t *testing.T) {
 					{
 						Metrics: []*metricpb.Metric{
 							{
-								MetricDescriptor: md,
-								Int64DataPoints: []*metricpb.Int64DataPoint{
-									{
-										Value:             11,
-										Labels:            cpu1Labels,
-										StartTimeUnixNano: startTime(),
-										TimeUnixNano:      pointTime(),
-									},
-									{
-										Value:             11,
-										Labels:            cpu1Labels,
-										StartTimeUnixNano: startTime(),
-										TimeUnixNano:      pointTime(),
+								Name: "int64-count",
+								Data: &metricpb.Metric_IntSum{
+									IntSum: &metricpb.IntSum{
+										IsMonotonic:            true,
+										AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+										DataPoints: []*metricpb.IntDataPoint{
+											{
+												Value:             11,
+												Labels:            cpu1Labels,
+												StartTimeUnixNano: startTime(),
+												TimeUnixNano:      pointTime(),
+											},
+											{
+												Value:             11,
+												Labels:            cpu1Labels,
+												StartTimeUnixNano: startTime(),
+												TimeUnixNano:      pointTime(),
+											},
+										},
 									},
 								},
 							},
@@ -349,40 +351,43 @@ func TestCountFloat64MetricGroupingExport(t *testing.T) {
 					{
 						Metrics: []*metricpb.Metric{
 							{
-								MetricDescriptor: &metricpb.MetricDescriptor{
-									Name: "float64-count",
-									Type: metricpb.MetricDescriptor_DOUBLE,
-								},
-								DoubleDataPoints: []*metricpb.DoubleDataPoint{
-									{
-										Value: 11,
-										Labels: []*commonpb.StringKeyValue{
+								Name: "float64-count",
+								Data: &metricpb.Metric_DoubleSum{
+									DoubleSum: &metricpb.DoubleSum{
+										IsMonotonic:            true,
+										AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+										DataPoints: []*metricpb.DoubleDataPoint{
 											{
-												Key:   "CPU",
-												Value: "1",
+												Value: 11,
+												Labels: []*commonpb.StringKeyValue{
+													{
+														Key:   "CPU",
+														Value: "1",
+													},
+													{
+														Key:   "host",
+														Value: "test.com",
+													},
+												},
+												StartTimeUnixNano: startTime(),
+												TimeUnixNano:      pointTime(),
 											},
 											{
-												Key:   "host",
-												Value: "test.com",
+												Value: 11,
+												Labels: []*commonpb.StringKeyValue{
+													{
+														Key:   "CPU",
+														Value: "1",
+													},
+													{
+														Key:   "host",
+														Value: "test.com",
+													},
+												},
+												StartTimeUnixNano: startTime(),
+												TimeUnixNano:      pointTime(),
 											},
 										},
-										StartTimeUnixNano: startTime(),
-										TimeUnixNano:      pointTime(),
-									},
-									{
-										Value: 11,
-										Labels: []*commonpb.StringKeyValue{
-											{
-												Key:   "CPU",
-												Value: "1",
-											},
-											{
-												Key:   "host",
-												Value: "test.com",
-											},
-										},
-										StartTimeUnixNano: startTime(),
-										TimeUnixNano:      pointTime(),
 									},
 								},
 							},
@@ -438,25 +443,31 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 					{
 						Metrics: []*metricpb.Metric{
 							{
-								MetricDescriptor: md,
-								Int64DataPoints: []*metricpb.Int64DataPoint{
-									{
-										Value:             11,
-										Labels:            cpu1Labels,
-										StartTimeUnixNano: startTime(),
-										TimeUnixNano:      pointTime(),
-									},
-									{
-										Value:             11,
-										Labels:            cpu1Labels,
-										StartTimeUnixNano: startTime(),
-										TimeUnixNano:      pointTime(),
-									},
-									{
-										Value:             11,
-										Labels:            cpu2Labels,
-										StartTimeUnixNano: startTime(),
-										TimeUnixNano:      pointTime(),
+								Name: "int64-count",
+								Data: &metricpb.Metric_IntSum{
+									IntSum: &metricpb.IntSum{
+										IsMonotonic:            true,
+										AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+										DataPoints: []*metricpb.IntDataPoint{
+											{
+												Value:             11,
+												Labels:            cpu1Labels,
+												StartTimeUnixNano: startTime(),
+												TimeUnixNano:      pointTime(),
+											},
+											{
+												Value:             11,
+												Labels:            cpu1Labels,
+												StartTimeUnixNano: startTime(),
+												TimeUnixNano:      pointTime(),
+											},
+											{
+												Value:             11,
+												Labels:            cpu2Labels,
+												StartTimeUnixNano: startTime(),
+												TimeUnixNano:      pointTime(),
+											},
+										},
 									},
 								},
 							},
@@ -470,13 +481,19 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 					{
 						Metrics: []*metricpb.Metric{
 							{
-								MetricDescriptor: md,
-								Int64DataPoints: []*metricpb.Int64DataPoint{
-									{
-										Value:             11,
-										Labels:            cpu1Labels,
-										StartTimeUnixNano: startTime(),
-										TimeUnixNano:      pointTime(),
+								Name: "int64-count",
+								Data: &metricpb.Metric_IntSum{
+									IntSum: &metricpb.IntSum{
+										IsMonotonic:            true,
+										AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+										DataPoints: []*metricpb.IntDataPoint{
+											{
+												Value:             11,
+												Labels:            cpu1Labels,
+												StartTimeUnixNano: startTime(),
+												TimeUnixNano:      pointTime(),
+											},
+										},
 									},
 								},
 							},
@@ -563,25 +580,31 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 						},
 						Metrics: []*metricpb.Metric{
 							{
-								MetricDescriptor: md,
-								Int64DataPoints: []*metricpb.Int64DataPoint{
-									{
-										Value:             11,
-										Labels:            cpu1Labels,
-										StartTimeUnixNano: startTime(),
-										TimeUnixNano:      pointTime(),
-									},
-									{
-										Value:             11,
-										Labels:            cpu1Labels,
-										StartTimeUnixNano: startTime(),
-										TimeUnixNano:      pointTime(),
-									},
-									{
-										Value:             11,
-										Labels:            cpu2Labels,
-										StartTimeUnixNano: startTime(),
-										TimeUnixNano:      pointTime(),
+								Name: "int64-count",
+								Data: &metricpb.Metric_IntSum{
+									IntSum: &metricpb.IntSum{
+										IsMonotonic:            true,
+										AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+										DataPoints: []*metricpb.IntDataPoint{
+											{
+												Value:             11,
+												Labels:            cpu1Labels,
+												StartTimeUnixNano: startTime(),
+												TimeUnixNano:      pointTime(),
+											},
+											{
+												Value:             11,
+												Labels:            cpu1Labels,
+												StartTimeUnixNano: startTime(),
+												TimeUnixNano:      pointTime(),
+											},
+											{
+												Value:             11,
+												Labels:            cpu2Labels,
+												StartTimeUnixNano: startTime(),
+												TimeUnixNano:      pointTime(),
+											},
+										},
 									},
 								},
 							},
@@ -594,13 +617,19 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 						},
 						Metrics: []*metricpb.Metric{
 							{
-								MetricDescriptor: md,
-								Int64DataPoints: []*metricpb.Int64DataPoint{
-									{
-										Value:             11,
-										Labels:            cpu1Labels,
-										StartTimeUnixNano: startTime(),
-										TimeUnixNano:      pointTime(),
+								Name: "int64-count",
+								Data: &metricpb.Metric_IntSum{
+									IntSum: &metricpb.IntSum{
+										IsMonotonic:            true,
+										AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+										DataPoints: []*metricpb.IntDataPoint{
+											{
+												Value:             11,
+												Labels:            cpu1Labels,
+												StartTimeUnixNano: startTime(),
+												TimeUnixNano:      pointTime(),
+											},
+										},
 									},
 								},
 							},
@@ -612,13 +641,19 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 						},
 						Metrics: []*metricpb.Metric{
 							{
-								MetricDescriptor: md,
-								Int64DataPoints: []*metricpb.Int64DataPoint{
-									{
-										Value:             11,
-										Labels:            cpu1Labels,
-										StartTimeUnixNano: startTime(),
-										TimeUnixNano:      pointTime(),
+								Name: "int64-count",
+								Data: &metricpb.Metric_IntSum{
+									IntSum: &metricpb.IntSum{
+										IsMonotonic:            true,
+										AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+										DataPoints: []*metricpb.IntDataPoint{
+											{
+												Value:             11,
+												Labels:            cpu1Labels,
+												StartTimeUnixNano: startTime(),
+												TimeUnixNano:      pointTime(),
+											},
+										},
 									},
 								},
 							},
@@ -636,13 +671,19 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 						},
 						Metrics: []*metricpb.Metric{
 							{
-								MetricDescriptor: md,
-								Int64DataPoints: []*metricpb.Int64DataPoint{
-									{
-										Value:             11,
-										Labels:            cpu1Labels,
-										StartTimeUnixNano: startTime(),
-										TimeUnixNano:      pointTime(),
+								Name: "int64-count",
+								Data: &metricpb.Metric_IntSum{
+									IntSum: &metricpb.IntSum{
+										IsMonotonic:            true,
+										AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+										DataPoints: []*metricpb.IntDataPoint{
+											{
+												Value:             11,
+												Labels:            cpu1Labels,
+												StartTimeUnixNano: startTime(),
+												TimeUnixNano:      pointTime(),
+											},
+										},
 									},
 								},
 							},
@@ -739,14 +780,25 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 				continue
 			}
 			for i, expected := range ilm.GetMetrics() {
-				assert.Equal(t, expected.GetMetricDescriptor(), g[i].GetMetricDescriptor())
-				// Compare each list directly because there is no order
-				// guarantee with the concurrent processing design of the exporter
-				// and ElementsMatch does not apply to contained slices.
-				assert.ElementsMatch(t, expected.GetInt64DataPoints(), g[i].GetInt64DataPoints())
-				assert.ElementsMatch(t, expected.GetDoubleDataPoints(), g[i].GetDoubleDataPoints())
-				assert.ElementsMatch(t, expected.GetHistogramDataPoints(), g[i].GetHistogramDataPoints())
-				assert.ElementsMatch(t, expected.GetSummaryDataPoints(), g[i].GetSummaryDataPoints())
+				assert.Equal(t, expected.Name, g[i].Name)
+				assert.Equal(t, expected.Unit, g[i].Unit)
+				assert.Equal(t, expected.Description, g[i].Description)
+				switch g[i].Data.(type) {
+				case *metricpb.Metric_IntGauge:
+					assert.ElementsMatch(t, expected.GetIntGauge().DataPoints, g[i].GetIntGauge().DataPoints)
+				case *metricpb.Metric_IntHistogram:
+					assert.ElementsMatch(t, expected.GetIntHistogram().DataPoints, g[i].GetIntHistogram().DataPoints)
+				case *metricpb.Metric_IntSum:
+					assert.ElementsMatch(t, expected.GetIntSum().DataPoints, g[i].GetIntSum().DataPoints)
+				case *metricpb.Metric_DoubleGauge:
+					assert.ElementsMatch(t, expected.GetDoubleGauge().DataPoints, g[i].GetDoubleGauge().DataPoints)
+				case *metricpb.Metric_DoubleHistogram:
+					assert.ElementsMatch(t, expected.GetDoubleHistogram().DataPoints, g[i].GetDoubleHistogram().DataPoints)
+				case *metricpb.Metric_DoubleSum:
+					assert.ElementsMatch(t, expected.GetDoubleSum().DataPoints, g[i].GetDoubleSum().DataPoints)
+				default:
+					assert.Failf(t, "unknown data type", g[i].Name)
+				}
 			}
 		}
 	}

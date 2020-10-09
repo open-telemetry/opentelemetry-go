@@ -15,10 +15,10 @@
 package stdout
 
 import (
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
-	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/trace"
+	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -31,8 +31,8 @@ type Exporter struct {
 }
 
 var (
-	_ metric.Exporter    = &Exporter{}
-	_ trace.SpanExporter = &Exporter{}
+	_ metric.Exporter          = &Exporter{}
+	_ exporttrace.SpanExporter = &Exporter{}
 )
 
 // NewExporter creates an Exporter with the passed options.
@@ -50,7 +50,7 @@ func NewExporter(options ...Option) (*Exporter, error) {
 // NewExportPipeline creates a complete export pipeline with the default
 // selectors, processors, and trace registration. It is the responsibility
 // of the caller to stop the returned push Controller.
-func NewExportPipeline(exportOpts []Option, pushOpts []push.Option) (apitrace.TracerProvider, *push.Controller, error) {
+func NewExportPipeline(exportOpts []Option, pushOpts []push.Option) (otel.TracerProvider, *push.Controller, error) {
 	exporter, err := NewExporter(exportOpts...)
 	if err != nil {
 		return nil, nil, err

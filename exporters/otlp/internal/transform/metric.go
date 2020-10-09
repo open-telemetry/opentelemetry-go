@@ -193,23 +193,26 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 			rb.InstrumentationLibraryBatches[res.InstrumentationLibrary] = mb
 		}
 
-		mID := res.Metric.GetMetricDescriptor().String()
+		mID := res.Metric.GetName()
 		m, ok := mb[mID]
 		if !ok {
 			mb[mID] = res.Metric
 			continue
 		}
-		if len(res.Metric.Int64DataPoints) > 0 {
-			m.Int64DataPoints = append(m.Int64DataPoints, res.Metric.Int64DataPoints...)
-		}
-		if len(res.Metric.DoubleDataPoints) > 0 {
-			m.DoubleDataPoints = append(m.DoubleDataPoints, res.Metric.DoubleDataPoints...)
-		}
-		if len(res.Metric.HistogramDataPoints) > 0 {
-			m.HistogramDataPoints = append(m.HistogramDataPoints, res.Metric.HistogramDataPoints...)
-		}
-		if len(res.Metric.SummaryDataPoints) > 0 {
-			m.SummaryDataPoints = append(m.SummaryDataPoints, res.Metric.SummaryDataPoints...)
+		switch res.Metric.Data.(type) {
+		case *metricpb.Metric_IntGauge:
+			m.GetIntGauge().DataPoints = append(m.GetIntGauge().DataPoints, res.Metric.GetIntGauge().DataPoints...)
+		case *metricpb.Metric_IntHistogram:
+			m.GetIntHistogram().DataPoints = append(m.GetIntHistogram().DataPoints, res.Metric.GetIntHistogram().DataPoints...)
+		case *metricpb.Metric_IntSum:
+			m.GetIntSum().DataPoints = append(m.GetIntSum().DataPoints, res.Metric.GetIntSum().DataPoints...)
+		case *metricpb.Metric_DoubleGauge:
+			m.GetDoubleGauge().DataPoints = append(m.GetDoubleGauge().DataPoints, res.Metric.GetDoubleGauge().DataPoints...)
+		case *metricpb.Metric_DoubleHistogram:
+			m.GetDoubleHistogram().DataPoints = append(m.GetDoubleHistogram().DataPoints, res.Metric.GetDoubleHistogram().DataPoints...)
+		case *metricpb.Metric_DoubleSum:
+			m.GetDoubleSum().DataPoints = append(m.GetDoubleSum().DataPoints, res.Metric.GetDoubleSum().DataPoints...)
+		default:
 		}
 	}
 
@@ -284,11 +287,55 @@ func Record(r export.Record) (*metricpb.Metric, error) {
 		if err != nil {
 			return nil, err
 		}
-		return scalar(r, value, time.Time{}, tm)
+		return gauge(r, value, time.Time{}, tm)
 
 	default:
 		return nil, fmt.Errorf("%w: %T", ErrUnimplementedAgg, agg)
 	}
+}
+
+func gauge(record export.Record, num metric.Number, start, end time.Time) (*metricpb.Metric, error) {
+	desc := record.Descriptor()
+	labels := record.Labels()
+
+	m := &metricpb.Metric{
+		Name:        desc.Name(),
+		Description: desc.Description(),
+		Unit:        string(desc.Unit()),
+	}
+
+	switch n := desc.NumberKind(); n {
+	case metric.Int64NumberKind:
+		m.Data = &metricpb.Metric_IntGauge{
+			IntGauge: &metricpb.IntGauge{
+				DataPoints: []*metricpb.IntDataPoint{
+					{
+						Value:             num.CoerceToInt64(n),
+						Labels:            stringKeyValues(labels.Iter()),
+						StartTimeUnixNano: toNanos(start),
+						TimeUnixNano:      toNanos(end),
+					},
+				},
+			},
+		}
+	case metric.Float64NumberKind:
+		m.Data = &metricpb.Metric_DoubleGauge{
+			DoubleGauge: &metricpb.DoubleGauge{
+				DataPoints: []*metricpb.DoubleDataPoint{
+					{
+						Value:             num.CoerceToFloat64(n),
+						Labels:            stringKeyValues(labels.Iter()),
+						StartTimeUnixNano: toNanos(start),
+						TimeUnixNano:      toNanos(end),
+					},
+				},
+			},
+		}
+	default:
+		return nil, fmt.Errorf("%w: %v", ErrUnknownValueType, n)
+	}
+
+	return m, nil
 }
 
 // scalar transforms a Sum or LastValue Aggregator into an OTLP Metric.
@@ -298,32 +345,36 @@ func scalar(record export.Record, num metric.Number, start, end time.Time) (*met
 	labels := record.Labels()
 
 	m := &metricpb.Metric{
-		MetricDescriptor: &metricpb.MetricDescriptor{
-			Name:        desc.Name(),
-			Description: desc.Description(),
-			Unit:        string(desc.Unit()),
-		},
+		Name:        desc.Name(),
+		Description: desc.Description(),
+		Unit:        string(desc.Unit()),
 	}
 
 	switch n := desc.NumberKind(); n {
 	case metric.Int64NumberKind:
-		m.MetricDescriptor.Type = metricpb.MetricDescriptor_INT64
-		m.Int64DataPoints = []*metricpb.Int64DataPoint{
-			{
-				Value:             num.CoerceToInt64(n),
-				Labels:            stringKeyValues(labels.Iter()),
-				StartTimeUnixNano: toNanos(start),
-				TimeUnixNano:      toNanos(end),
+		m.Data = &metricpb.Metric_IntSum{
+			IntSum: &metricpb.IntSum{
+				DataPoints: []*metricpb.IntDataPoint{
+					{
+						Value:             num.CoerceToInt64(n),
+						Labels:            stringKeyValues(labels.Iter()),
+						StartTimeUnixNano: toNanos(start),
+						TimeUnixNano:      toNanos(end),
+					},
+				},
 			},
 		}
 	case metric.Float64NumberKind:
-		m.MetricDescriptor.Type = metricpb.MetricDescriptor_DOUBLE
-		m.DoubleDataPoints = []*metricpb.DoubleDataPoint{
-			{
-				Value:             num.CoerceToFloat64(n),
-				Labels:            stringKeyValues(labels.Iter()),
-				StartTimeUnixNano: toNanos(start),
-				TimeUnixNano:      toNanos(end),
+		m.Data = &metricpb.Metric_DoubleSum{
+			DoubleSum: &metricpb.DoubleSum{
+				DataPoints: []*metricpb.DoubleDataPoint{
+					{
+						Value:             num.CoerceToFloat64(n),
+						Labels:            stringKeyValues(labels.Iter()),
+						StartTimeUnixNano: toNanos(start),
+						TimeUnixNano:      toNanos(end),
+					},
+				},
 			},
 		}
 	default:
@@ -360,34 +411,52 @@ func minMaxSumCount(record export.Record, a aggregation.MinMaxSumCount) (*metric
 		return nil, err
 	}
 
-	numKind := desc.NumberKind()
-	return &metricpb.Metric{
-		MetricDescriptor: &metricpb.MetricDescriptor{
-			Name:        desc.Name(),
-			Description: desc.Description(),
-			Unit:        string(desc.Unit()),
-			Type:        metricpb.MetricDescriptor_SUMMARY,
-		},
-		SummaryDataPoints: []*metricpb.SummaryDataPoint{
-			{
-				Labels: stringKeyValues(labels.Iter()),
-				Count:  uint64(count),
-				Sum:    sum.CoerceToFloat64(numKind),
-				PercentileValues: []*metricpb.SummaryDataPoint_ValueAtPercentile{
+	m := &metricpb.Metric{
+		Name:        desc.Name(),
+		Description: desc.Description(),
+		Unit:        string(desc.Unit()),
+	}
+
+	buckets := []uint64{min.AsRaw(), max.AsRaw()}
+	bounds := []float64{0.0, 100.0}
+
+	switch n := desc.NumberKind(); n {
+	case metric.Int64NumberKind:
+		m.Data = &metricpb.Metric_IntHistogram{
+			IntHistogram: &metricpb.IntHistogram{
+				DataPoints: []*metricpb.IntHistogramDataPoint{
 					{
-						Percentile: 0.0,
-						Value:      min.CoerceToFloat64(numKind),
-					},
-					{
-						Percentile: 100.0,
-						Value:      max.CoerceToFloat64(numKind),
+						Sum:               sum.CoerceToInt64(n),
+						Labels:            stringKeyValues(labels.Iter()),
+						StartTimeUnixNano: toNanos(record.StartTime()),
+						TimeUnixNano:      toNanos(record.EndTime()),
+						Count:             uint64(count),
+						BucketCounts:      buckets,
+						ExplicitBounds:    bounds,
 					},
 				},
-				StartTimeUnixNano: toNanos(record.StartTime()),
-				TimeUnixNano:      toNanos(record.EndTime()),
 			},
-		},
-	}, nil
+		}
+	case metric.Float64NumberKind:
+		m.Data = &metricpb.Metric_DoubleHistogram{
+			DoubleHistogram: &metricpb.DoubleHistogram{
+				DataPoints: []*metricpb.DoubleHistogramDataPoint{
+					{
+						Sum:               sum.CoerceToFloat64(n),
+						Labels:            stringKeyValues(labels.Iter()),
+						StartTimeUnixNano: toNanos(record.StartTime()),
+						TimeUnixNano:      toNanos(record.EndTime()),
+						Count:             uint64(count),
+						BucketCounts:      buckets,
+						ExplicitBounds:    bounds,
+					},
+				},
+			},
+		}
+	default:
+		return nil, fmt.Errorf("%w: %v", ErrUnknownValueType, n)
+	}
+	return m, nil
 }
 
 func histogramValues(a aggregation.Histogram) (boundaries []float64, counts []float64, err error) {
@@ -422,33 +491,53 @@ func histogram(record export.Record, a aggregation.Histogram) (*metricpb.Metric,
 		return nil, err
 	}
 
-	buckets := make([]*metricpb.HistogramDataPoint_Bucket, len(counts))
+	buckets := make([]uint64, len(counts))
 	for i := 0; i < len(counts); i++ {
-		buckets[i] = &metricpb.HistogramDataPoint_Bucket{
-			Count: uint64(counts[i]),
+		buckets[i] = uint64(counts[i])
+	}
+	m := &metricpb.Metric{
+		Name:        desc.Name(),
+		Description: desc.Description(),
+		Unit:        string(desc.Unit()),
+	}
+	switch n := desc.NumberKind(); n {
+	case metric.Int64NumberKind:
+		m.Data = &metricpb.Metric_IntHistogram{
+			IntHistogram: &metricpb.IntHistogram{
+				DataPoints: []*metricpb.IntHistogramDataPoint{
+					{
+						Sum:               sum.CoerceToInt64(n),
+						Labels:            stringKeyValues(labels.Iter()),
+						StartTimeUnixNano: toNanos(record.StartTime()),
+						TimeUnixNano:      toNanos(record.EndTime()),
+						Count:             uint64(count),
+						BucketCounts:      buckets,
+						ExplicitBounds:    boundaries,
+					},
+				},
+			},
 		}
+	case metric.Float64NumberKind:
+		m.Data = &metricpb.Metric_DoubleHistogram{
+			DoubleHistogram: &metricpb.DoubleHistogram{
+				DataPoints: []*metricpb.DoubleHistogramDataPoint{
+					{
+						Sum:               sum.CoerceToFloat64(n),
+						Labels:            stringKeyValues(labels.Iter()),
+						StartTimeUnixNano: toNanos(record.StartTime()),
+						TimeUnixNano:      toNanos(record.EndTime()),
+						Count:             uint64(count),
+						BucketCounts:      buckets,
+						ExplicitBounds:    boundaries,
+					},
+				},
+			},
+		}
+	default:
+		return nil, fmt.Errorf("%w: %v", ErrUnknownValueType, n)
 	}
 
-	numKind := desc.NumberKind()
-	return &metricpb.Metric{
-		MetricDescriptor: &metricpb.MetricDescriptor{
-			Name:        desc.Name(),
-			Description: desc.Description(),
-			Unit:        string(desc.Unit()),
-			Type:        metricpb.MetricDescriptor_HISTOGRAM,
-		},
-		HistogramDataPoints: []*metricpb.HistogramDataPoint{
-			{
-				Labels:            stringKeyValues(labels.Iter()),
-				StartTimeUnixNano: toNanos(record.StartTime()),
-				TimeUnixNano:      toNanos(record.EndTime()),
-				Count:             uint64(count),
-				Sum:               sum.CoerceToFloat64(numKind),
-				Buckets:           buckets,
-				ExplicitBounds:    boundaries,
-			},
-		},
-	}, nil
+	return m, nil
 }
 
 // stringKeyValues transforms a label iterator into an OTLP StringKeyValues.

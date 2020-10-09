@@ -18,7 +18,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	api "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 )
 
@@ -30,13 +30,13 @@ type Sampler interface {
 
 // SamplingParameters contains the values passed to a Sampler.
 type SamplingParameters struct {
-	ParentContext   api.SpanContext
-	TraceID         api.ID
+	ParentContext   otel.SpanContext
+	TraceID         otel.TraceID
 	Name            string
 	HasRemoteParent bool
-	Kind            api.SpanKind
+	Kind            otel.SpanKind
 	Attributes      []label.KeyValue
-	Links           []api.Link
+	Links           []otel.Link
 }
 
 // SamplingDecision indicates whether a span is dropped, recorded and/or sampled.

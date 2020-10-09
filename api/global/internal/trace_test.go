@@ -22,7 +22,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/global/internal"
-	"go.opentelemetry.io/otel/api/trace/tracetest"
+	"go.opentelemetry.io/otel/oteltest"
 )
 
 func TestTraceWithSDK(t *testing.T) {
@@ -34,8 +34,8 @@ func TestTraceWithSDK(t *testing.T) {
 	// This is started before an SDK was registered and should be dropped.
 	_, span1 := tracer1.Start(ctx, "span1")
 
-	sr := new(tracetest.StandardSpanRecorder)
-	tp := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
+	sr := new(oteltest.StandardSpanRecorder)
+	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 	global.SetTracerProvider(tp)
 
 	// This span was started before initialization, it is expected to be dropped.
@@ -50,7 +50,7 @@ func TestTraceWithSDK(t *testing.T) {
 	_, span3 := tracer2.Start(ctx, "span3")
 	span3.End()
 
-	filterNames := func(spans []*tracetest.Span) []string {
+	filterNames := func(spans []*oteltest.Span) []string {
 		names := make([]string, len(spans))
 		for i := range spans {
 			names[i] = spans[i].Name()
