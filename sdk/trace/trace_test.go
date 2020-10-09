@@ -415,6 +415,8 @@ func TestSamplerAttributesLocalChildSpan(t *testing.T) {
 
 	got := te.Spans()
 
+	// endSpan expects only a single span in the test exporter, so manually clear the
+	// fields that can't be tested for easily (times, span and trace ids).
 	pid := got[0].SpanContext.SpanID
 	got[0].SpanContext.TraceID = tid
 	got[0].ParentSpanID = sid
