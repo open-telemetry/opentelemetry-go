@@ -61,7 +61,7 @@ func New(checkpointer export.Checkpointer, exporter export.Exporter, opts ...Opt
 
 	impl := sdk.NewAccumulator(
 		checkpointer,
-		sdk.WithResource(c.Resource),
+		c.Resource,
 	)
 	return &Controller{
 		provider:     registry.NewMeterProvider(impl),

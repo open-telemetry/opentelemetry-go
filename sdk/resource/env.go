@@ -36,10 +36,10 @@ var (
 type FromEnv struct{}
 
 // compile time assertion that FromEnv implements Detector interface
-var _ Detector = (*FromEnv)(nil)
+var _ Detector = FromEnv{}
 
 // Detect collects resources from environment
-func (d *FromEnv) Detect(context.Context) (*Resource, error) {
+func (FromEnv) Detect(context.Context) (*Resource, error) {
 	labels := strings.TrimSpace(os.Getenv(envVar))
 
 	if labels == "" {

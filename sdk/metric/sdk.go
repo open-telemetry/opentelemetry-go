@@ -305,16 +305,11 @@ func (s *syncInstrument) RecordOne(ctx context.Context, number api.Number, kvs [
 // processor will call Collect() when it receives a request to scrape
 // current metric values.  A push-based processor should configure its
 // own periodic collection.
-func NewAccumulator(processor export.Processor, opts ...Option) *Accumulator {
-	c := &Config{}
-	for _, opt := range opts {
-		opt.Apply(c)
-	}
-
+func NewAccumulator(processor export.Processor, resource *resource.Resource) *Accumulator {
 	return &Accumulator{
 		processor:        processor,
 		asyncInstruments: internal.NewAsyncInstrumentState(),
-		resource:         c.Resource,
+		resource:         resource,
 	}
 }
 
