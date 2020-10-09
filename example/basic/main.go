@@ -21,7 +21,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/propagators"
@@ -85,7 +84,7 @@ func main() {
 	defer valuerecorder.Unbind()
 
 	err = func(ctx context.Context) error {
-		var span trace.Span
+		var span otel.Span
 		ctx, span = tracer.Start(ctx, "operation")
 		defer span.End()
 
@@ -101,7 +100,7 @@ func main() {
 		)
 
 		return func(ctx context.Context) error {
-			var span trace.Span
+			var span otel.Span
 			ctx, span = tracer.Start(ctx, "Sub operation...")
 			defer span.End()
 

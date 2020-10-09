@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tracetest
+package oteltest
 
 import (
 	"context"
@@ -20,8 +20,7 @@ import (
 	"encoding/binary"
 	"sync/atomic"
 
-	"go.opentelemetry.io/otel/api/trace"
-	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
 	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
 )
 
@@ -42,25 +41,25 @@ type MockTracer struct {
 	OnSpanStarted func(span *MockSpan)
 }
 
-var _ apitrace.Tracer = (*MockTracer)(nil)
+var _ otel.Tracer = (*MockTracer)(nil)
 
 // Start starts a MockSpan. It creates a new Span based on Parent SpanContext option.
 // TraceID is used from Parent Span Context and SpanID is assigned.
 // If Parent SpanContext option is not specified then random TraceID is used.
 // No other options are supported.
-func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.SpanOption) (context.Context, apitrace.Span) {
-	config := trace.NewSpanConfig(o...)
+func (mt *MockTracer) Start(ctx context.Context, name string, o ...otel.SpanOption) (context.Context, otel.Span) {
+	config := otel.NewSpanConfig(o...)
 
 	var span *MockSpan
-	var sc apitrace.SpanContext
+	var sc otel.SpanContext
 
 	parentSpanContext, _, _ := otelparent.GetSpanContextAndLinks(ctx, config.NewRoot)
 
 	if !parentSpanContext.IsValid() {
-		sc = apitrace.SpanContext{}
+		sc = otel.SpanContext{}
 		_, _ = rand.Read(sc.TraceID[:])
 		if mt.Sampled {
-			sc.TraceFlags = apitrace.FlagsSampled
+			sc.TraceFlags = otel.FlagsSampled
 		}
 	} else {
 		sc = parentSpanContext
@@ -76,5 +75,5 @@ func (mt *MockTracer) Start(ctx context.Context, name string, o ...apitrace.Span
 		mt.OnSpanStarted(span)
 	}
 
-	return apitrace.ContextWithSpan(ctx, span), span
+	return otel.ContextWithSpan(ctx, span), span
 }

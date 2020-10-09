@@ -21,7 +21,6 @@ import (
 	"regexp"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/trace"
 )
 
 const (
@@ -57,7 +56,7 @@ func (tc TraceContext) Inject(ctx context.Context, carrier otel.TextMapCarrier) 
 		carrier.Set(tracestateHeader, state)
 	}
 
-	sc := trace.SpanFromContext(ctx).SpanContext()
+	sc := otel.SpanFromContext(ctx).SpanContext()
 	if !sc.IsValid() {
 		return
 	}
@@ -65,7 +64,7 @@ func (tc TraceContext) Inject(ctx context.Context, carrier otel.TextMapCarrier) 
 		supportedVersion,
 		sc.TraceID,
 		sc.SpanID,
-		sc.TraceFlags&trace.FlagsSampled)
+		sc.TraceFlags&otel.FlagsSampled)
 	carrier.Set(traceparentHeader, h)
 }
 
@@ -80,72 +79,72 @@ func (tc TraceContext) Extract(ctx context.Context, carrier otel.TextMapCarrier)
 	if !sc.IsValid() {
 		return ctx
 	}
-	return trace.ContextWithRemoteSpanContext(ctx, sc)
+	return otel.ContextWithRemoteSpanContext(ctx, sc)
 }
 
-func (tc TraceContext) extract(carrier otel.TextMapCarrier) trace.SpanContext {
+func (tc TraceContext) extract(carrier otel.TextMapCarrier) otel.SpanContext {
 	h := carrier.Get(traceparentHeader)
 	if h == "" {
-		return trace.EmptySpanContext()
+		return otel.SpanContext{}
 	}
 
 	matches := traceCtxRegExp.FindStringSubmatch(h)
 
 	if len(matches) == 0 {
-		return trace.EmptySpanContext()
+		return otel.SpanContext{}
 	}
 
 	if len(matches) < 5 { // four subgroups plus the overall match
-		return trace.EmptySpanContext()
+		return otel.SpanContext{}
 	}
 
 	if len(matches[1]) != 2 {
-		return trace.EmptySpanContext()
+		return otel.SpanContext{}
 	}
 	ver, err := hex.DecodeString(matches[1])
 	if err != nil {
-		return trace.EmptySpanContext()
+		return otel.SpanContext{}
 	}
 	version := int(ver[0])
 	if version > maxVersion {
-		return trace.EmptySpanContext()
+		return otel.SpanContext{}
 	}
 
 	if version == 0 && len(matches) != 5 { // four subgroups plus the overall match
-		return trace.EmptySpanContext()
+		return otel.SpanContext{}
 	}
 
 	if len(matches[2]) != 32 {
-		return trace.EmptySpanContext()
+		return otel.SpanContext{}
 	}
 
-	var sc trace.SpanContext
+	var sc otel.SpanContext
 
-	sc.TraceID, err = trace.IDFromHex(matches[2][:32])
+	sc.TraceID, err = otel.TraceIDFromHex(matches[2][:32])
 	if err != nil {
-		return trace.EmptySpanContext()
+		return otel.SpanContext{}
 	}
 
 	if len(matches[3]) != 16 {
-		return trace.EmptySpanContext()
+		return otel.SpanContext{}
 	}
-	sc.SpanID, err = trace.SpanIDFromHex(matches[3])
+	sc.SpanID, err = otel.SpanIDFromHex(matches[3])
 	if err != nil {
-		return trace.EmptySpanContext()
+		return otel.SpanContext{}
 	}
 
 	if len(matches[4]) != 2 {
-		return trace.EmptySpanContext()
+		return otel.SpanContext{}
 	}
 	opts, err := hex.DecodeString(matches[4])
 	if err != nil || len(opts) < 1 || (version == 0 && opts[0] > 2) {
-		return trace.EmptySpanContext()
+		return otel.SpanContext{}
 	}
 	// Clear all flags other than the trace-context supported sampling bit.
-	sc.TraceFlags = opts[0] & trace.FlagsSampled
+	sc.TraceFlags = opts[0] & otel.FlagsSampled
 
 	if !sc.IsValid() {
-		return trace.EmptySpanContext()
+		return otel.SpanContext{}
 	}
 
 	return sc

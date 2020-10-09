@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tracetest
+package oteltest
 
 import (
 	"context"
@@ -20,17 +20,17 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
 )
 
 // defaultSpanContextFunc returns the default SpanContextFunc.
-func defaultSpanContextFunc() func(context.Context) trace.SpanContext {
+func defaultSpanContextFunc() func(context.Context) otel.SpanContext {
 	var traceID, spanID uint64 = 1, 1
-	return func(ctx context.Context) trace.SpanContext {
-		var sc trace.SpanContext
-		if lsc := trace.SpanFromContext(ctx).SpanContext(); lsc.IsValid() {
+	return func(ctx context.Context) otel.SpanContext {
+		var sc otel.SpanContext
+		if lsc := otel.SpanFromContext(ctx).SpanContext(); lsc.IsValid() {
 			sc = lsc
-		} else if rsc := trace.RemoteSpanContextFromContext(ctx); rsc.IsValid() {
+		} else if rsc := otel.RemoteSpanContextFromContext(ctx); rsc.IsValid() {
 			sc = rsc
 		} else {
 			binary.BigEndian.PutUint64(sc.TraceID[:], atomic.AddUint64(&traceID, 1))
@@ -43,7 +43,7 @@ func defaultSpanContextFunc() func(context.Context) trace.SpanContext {
 type config struct {
 	// SpanContextFunc returns a SpanContext from an parent Context for a
 	// new span.
-	SpanContextFunc func(context.Context) trace.SpanContext
+	SpanContextFunc func(context.Context) otel.SpanContext
 
 	// SpanRecorder keeps track of spans.
 	SpanRecorder SpanRecorder
@@ -65,14 +65,14 @@ type Option interface {
 }
 
 type spanContextFuncOption struct {
-	SpanContextFunc func(context.Context) trace.SpanContext
+	SpanContextFunc func(context.Context) otel.SpanContext
 }
 
 func (o spanContextFuncOption) Apply(c *config) {
 	c.SpanContextFunc = o.SpanContextFunc
 }
 
-func WithSpanContextFunc(f func(context.Context) trace.SpanContext) Option {
+func WithSpanContextFunc(f func(context.Context) otel.SpanContext) Option {
 	return spanContextFuncOption{f}
 }
 

@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	coltracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/trace/v1"
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
@@ -29,7 +30,6 @@ import (
 	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
 	"go.opentelemetry.io/otel/label"
 
-	apitrace "go.opentelemetry.io/otel/api/trace"
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -82,12 +82,12 @@ func TestExportSpans(t *testing.T) {
 		{
 			[]*tracesdk.SpanData{
 				{
-					SpanContext: apitrace.SpanContext{
-						TraceID:    apitrace.ID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
-						SpanID:     apitrace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
+					SpanContext: otel.SpanContext{
+						TraceID:    otel.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
+						SpanID:     otel.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 						TraceFlags: byte(1),
 					},
-					SpanKind:  apitrace.SpanKindServer,
+					SpanKind:  otel.SpanKindServer,
 					Name:      "parent process",
 					StartTime: startTime,
 					EndTime:   endTime,
@@ -104,12 +104,12 @@ func TestExportSpans(t *testing.T) {
 					},
 				},
 				{
-					SpanContext: apitrace.SpanContext{
-						TraceID:    apitrace.ID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}),
-						SpanID:     apitrace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
+					SpanContext: otel.SpanContext{
+						TraceID:    otel.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}),
+						SpanID:     otel.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 						TraceFlags: byte(1),
 					},
-					SpanKind:  apitrace.SpanKindServer,
+					SpanKind:  otel.SpanKindServer,
 					Name:      "secondary parent process",
 					StartTime: startTime,
 					EndTime:   endTime,
@@ -126,13 +126,13 @@ func TestExportSpans(t *testing.T) {
 					},
 				},
 				{
-					SpanContext: apitrace.SpanContext{
-						TraceID:    apitrace.ID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
-						SpanID:     apitrace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 2}),
+					SpanContext: otel.SpanContext{
+						TraceID:    otel.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
+						SpanID:     otel.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 2}),
 						TraceFlags: byte(1),
 					},
-					ParentSpanID: apitrace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
-					SpanKind:     apitrace.SpanKindInternal,
+					ParentSpanID: otel.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
+					SpanKind:     otel.SpanKindInternal,
 					Name:         "internal process",
 					StartTime:    startTime,
 					EndTime:      endTime,
@@ -149,12 +149,12 @@ func TestExportSpans(t *testing.T) {
 					},
 				},
 				{
-					SpanContext: apitrace.SpanContext{
-						TraceID:    apitrace.ID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}),
-						SpanID:     apitrace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
+					SpanContext: otel.SpanContext{
+						TraceID:    otel.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}),
+						SpanID:     otel.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 						TraceFlags: byte(1),
 					},
-					SpanKind:  apitrace.SpanKindServer,
+					SpanKind:  otel.SpanKindServer,
 					Name:      "parent process",
 					StartTime: startTime,
 					EndTime:   endTime,

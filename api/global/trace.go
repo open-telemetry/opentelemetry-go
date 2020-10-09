@@ -15,15 +15,15 @@
 package global
 
 import (
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global/internal"
-	"go.opentelemetry.io/otel/api/trace"
 )
 
 // Tracer creates a named tracer that implements Tracer interface.
 // If the name is an empty string then provider uses default name.
 //
 // This is short for TracerProvider().Tracer(name)
-func Tracer(name string) trace.Tracer {
+func Tracer(name string) otel.Tracer {
 	return TracerProvider().Tracer(name)
 }
 
@@ -34,11 +34,11 @@ func Tracer(name string) trace.Tracer {
 //     tracer := global.TracerProvider().Tracer("example.com/foo")
 // or
 //     tracer := global.Tracer("example.com/foo")
-func TracerProvider() trace.TracerProvider {
+func TracerProvider() otel.TracerProvider {
 	return internal.TracerProvider()
 }
 
 // SetTracerProvider registers `tp` as the global trace provider.
-func SetTracerProvider(tp trace.TracerProvider) {
+func SetTracerProvider(tp otel.TracerProvider) {
 	internal.SetTracerProvider(tp)
 }

@@ -17,7 +17,7 @@ package trace
 import (
 	"context"
 
-	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/trace/parent"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
@@ -27,7 +27,7 @@ type tracer struct {
 	instrumentationLibrary instrumentation.Library
 }
 
-var _ apitrace.Tracer = &tracer{}
+var _ otel.Tracer = &tracer{}
 
 // Start starts a Span and returns it along with a context containing it.
 //
@@ -35,12 +35,12 @@ var _ apitrace.Tracer = &tracer{}
 // span context found in the passed context. The created Span will be
 // configured appropriately by any SpanOption passed. Any Timestamp option
 // passed will be used as the start time of the Span's life-cycle.
-func (tr *tracer) Start(ctx context.Context, name string, options ...apitrace.SpanOption) (context.Context, apitrace.Span) {
-	config := apitrace.NewSpanConfig(options...)
+func (tr *tracer) Start(ctx context.Context, name string, options ...otel.SpanOption) (context.Context, otel.Span) {
+	config := otel.NewSpanConfig(options...)
 
 	parentSpanContext, remoteParent, links := parent.GetSpanContextAndLinks(ctx, config.NewRoot)
 
-	if p := apitrace.SpanFromContext(ctx); p != nil {
+	if p := otel.SpanFromContext(ctx); p != nil {
 		if sdkSpan, ok := p.(*span); ok {
 			sdkSpan.addChild()
 		}
@@ -66,5 +66,5 @@ func (tr *tracer) Start(ctx context.Context, name string, options ...apitrace.Sp
 
 	ctx, end := startExecutionTracerTask(ctx, name)
 	span.executionTracerTaskEnd = end
-	return apitrace.ContextWithSpan(ctx, span), span
+	return otel.ContextWithSpan(ctx, span), span
 }

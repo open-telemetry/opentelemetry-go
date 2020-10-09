@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tracetest
+package oteltest
 
 import (
 	"context"
@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
 )
@@ -32,13 +32,13 @@ const (
 	errorEventName  = "error"
 )
 
-var _ trace.Span = (*Span)(nil)
+var _ otel.Span = (*Span)(nil)
 
 type Span struct {
 	lock          sync.RWMutex
 	tracer        *Tracer
-	spanContext   trace.SpanContext
-	parentSpanID  trace.SpanID
+	spanContext   otel.SpanContext
+	parentSpanID  otel.SpanID
 	ended         bool
 	name          string
 	startTime     time.Time
@@ -47,15 +47,15 @@ type Span struct {
 	statusMessage string
 	attributes    map[label.Key]label.Value
 	events        []Event
-	links         map[trace.SpanContext][]label.KeyValue
-	spanKind      trace.SpanKind
+	links         map[otel.SpanContext][]label.KeyValue
+	spanKind      otel.SpanKind
 }
 
-func (s *Span) Tracer() trace.Tracer {
+func (s *Span) Tracer() otel.Tracer {
 	return s.tracer
 }
 
-func (s *Span) End(opts ...trace.SpanOption) {
+func (s *Span) End(opts ...otel.SpanOption) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -63,7 +63,7 @@ func (s *Span) End(opts ...trace.SpanOption) {
 		return
 	}
 
-	c := trace.NewSpanConfig(opts...)
+	c := otel.NewSpanConfig(opts...)
 	s.endTime = time.Now()
 	if endTime := c.Timestamp; !endTime.IsZero() {
 		s.endTime = endTime
@@ -75,15 +75,12 @@ func (s *Span) End(opts ...trace.SpanOption) {
 	}
 }
 
-func (s *Span) RecordError(ctx context.Context, err error, opts ...trace.ErrorOption) {
+func (s *Span) RecordError(ctx context.Context, err error, opts ...otel.ErrorOption) {
 	if err == nil || s.ended {
 		return
 	}
 
-	cfg := trace.ErrorConfig{}
-	for _, o := range opts {
-		o(&cfg)
-	}
+	cfg := otel.NewErrorConfig(opts...)
 
 	if cfg.Timestamp.IsZero() {
 		cfg.Timestamp = time.Now()
@@ -134,7 +131,7 @@ func (s *Span) IsRecording() bool {
 	return true
 }
 
-func (s *Span) SpanContext() trace.SpanContext {
+func (s *Span) SpanContext() otel.SpanContext {
 	return s.spanContext
 }
 
@@ -183,7 +180,7 @@ func (s *Span) Name() string {
 // ParentSpanID returns the SpanID of the parent Span.
 // If the Span is a root Span and therefore does not have a parent, the returned SpanID will be invalid
 // (i.e., it will contain all zeroes).
-func (s *Span) ParentSpanID() trace.SpanID {
+func (s *Span) ParentSpanID() otel.SpanID {
 	return s.parentSpanID
 }
 
@@ -211,8 +208,8 @@ func (s *Span) Events() []Event {
 
 // Links returns the links set on the Span at creation time.
 // If multiple links for the same SpanContext were set, the last link will be used.
-func (s *Span) Links() map[trace.SpanContext][]label.KeyValue {
-	links := make(map[trace.SpanContext][]label.KeyValue)
+func (s *Span) Links() map[otel.SpanContext][]label.KeyValue {
+	links := make(map[otel.SpanContext][]label.KeyValue)
 
 	for sc, attributes := range s.links {
 		links[sc] = append([]label.KeyValue{}, attributes...)
@@ -255,6 +252,6 @@ func (s *Span) StatusMessage() string {
 }
 
 // SpanKind returns the span kind of this span.
-func (s *Span) SpanKind() trace.SpanKind {
+func (s *Span) SpanKind() otel.SpanKind {
 	return s.spanKind
 }

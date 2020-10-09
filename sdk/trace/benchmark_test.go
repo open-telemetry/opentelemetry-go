@@ -18,13 +18,13 @@ import (
 	"context"
 	"testing"
 
-	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func BenchmarkStartEndSpan(b *testing.B) {
-	traceBenchmark(b, "Benchmark StartEndSpan", func(b *testing.B, t apitrace.Tracer) {
+	traceBenchmark(b, "Benchmark StartEndSpan", func(b *testing.B, t otel.Tracer) {
 		ctx := context.Background()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -35,7 +35,7 @@ func BenchmarkStartEndSpan(b *testing.B) {
 }
 
 func BenchmarkSpanWithAttributes_4(b *testing.B) {
-	traceBenchmark(b, "Benchmark Start With 4 Attributes", func(b *testing.B, t apitrace.Tracer) {
+	traceBenchmark(b, "Benchmark Start With 4 Attributes", func(b *testing.B, t otel.Tracer) {
 		ctx := context.Background()
 		b.ResetTimer()
 
@@ -53,7 +53,7 @@ func BenchmarkSpanWithAttributes_4(b *testing.B) {
 }
 
 func BenchmarkSpanWithAttributes_8(b *testing.B) {
-	traceBenchmark(b, "Benchmark Start With 8 Attributes", func(b *testing.B, t apitrace.Tracer) {
+	traceBenchmark(b, "Benchmark Start With 8 Attributes", func(b *testing.B, t otel.Tracer) {
 		ctx := context.Background()
 		b.ResetTimer()
 
@@ -75,7 +75,7 @@ func BenchmarkSpanWithAttributes_8(b *testing.B) {
 }
 
 func BenchmarkSpanWithAttributes_all(b *testing.B) {
-	traceBenchmark(b, "Benchmark Start With all Attribute types", func(b *testing.B, t apitrace.Tracer) {
+	traceBenchmark(b, "Benchmark Start With all Attribute types", func(b *testing.B, t otel.Tracer) {
 		ctx := context.Background()
 		b.ResetTimer()
 
@@ -99,7 +99,7 @@ func BenchmarkSpanWithAttributes_all(b *testing.B) {
 }
 
 func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
-	traceBenchmark(b, "Benchmark Start With all Attributes types twice", func(b *testing.B, t apitrace.Tracer) {
+	traceBenchmark(b, "Benchmark Start With all Attributes types twice", func(b *testing.B, t otel.Tracer) {
 		ctx := context.Background()
 		b.ResetTimer()
 
@@ -133,8 +133,8 @@ func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
 }
 
 func BenchmarkTraceID_DotString(b *testing.B) {
-	t, _ := apitrace.IDFromHex("0000000000000001000000000000002a")
-	sc := apitrace.SpanContext{TraceID: t}
+	t, _ := otel.TraceIDFromHex("0000000000000001000000000000002a")
+	sc := otel.SpanContext{TraceID: t}
 
 	want := "0000000000000001000000000000002a"
 	for i := 0; i < b.N; i++ {
@@ -145,7 +145,7 @@ func BenchmarkTraceID_DotString(b *testing.B) {
 }
 
 func BenchmarkSpanID_DotString(b *testing.B) {
-	sc := apitrace.SpanContext{SpanID: apitrace.SpanID{1}}
+	sc := otel.SpanContext{SpanID: otel.SpanID{1}}
 	want := "0100000000000000"
 	for i := 0; i < b.N; i++ {
 		if got := sc.SpanID.String(); got != want {
@@ -154,7 +154,7 @@ func BenchmarkSpanID_DotString(b *testing.B) {
 	}
 }
 
-func traceBenchmark(b *testing.B, name string, fn func(*testing.B, apitrace.Tracer)) {
+func traceBenchmark(b *testing.B, name string, fn func(*testing.B, otel.Tracer)) {
 	b.Run("AlwaysSample", func(b *testing.B) {
 		b.ReportAllocs()
 		fn(b, tracer(b, name, sdktrace.AlwaysSample()))
@@ -165,7 +165,7 @@ func traceBenchmark(b *testing.B, name string, fn func(*testing.B, apitrace.Trac
 	})
 }
 
-func tracer(b *testing.B, name string, sampler sdktrace.Sampler) apitrace.Tracer {
+func tracer(b *testing.B, name string, sampler sdktrace.Sampler) otel.Tracer {
 	tp := sdktrace.NewTracerProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sampler}))
 	return tp.Tracer(name)
 }

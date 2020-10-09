@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -187,15 +187,15 @@ func createAndRegisterBatchSP(option testOption, te *testBatchExporter) *sdktrac
 	return sdktrace.NewBatchSpanProcessor(te, options...)
 }
 
-func generateSpan(t *testing.T, parallel bool, tr apitrace.Tracer, option testOption) {
+func generateSpan(t *testing.T, parallel bool, tr otel.Tracer, option testOption) {
 	sc := getSpanContext()
 
 	wg := &sync.WaitGroup{}
 	for i := 0; i < option.genNumSpans; i++ {
 		binary.BigEndian.PutUint64(sc.TraceID[0:8], uint64(i+1))
 		wg.Add(1)
-		f := func(sc apitrace.SpanContext) {
-			ctx := apitrace.ContextWithRemoteSpanContext(context.Background(), sc)
+		f := func(sc otel.SpanContext) {
+			ctx := otel.ContextWithRemoteSpanContext(context.Background(), sc)
 			_, span := tr.Start(ctx, option.name)
 			span.End()
 			wg.Done()
@@ -209,10 +209,10 @@ func generateSpan(t *testing.T, parallel bool, tr apitrace.Tracer, option testOp
 	wg.Wait()
 }
 
-func getSpanContext() apitrace.SpanContext {
-	tid, _ := apitrace.IDFromHex("01020304050607080102040810203040")
-	sid, _ := apitrace.SpanIDFromHex("0102040810203040")
-	return apitrace.SpanContext{
+func getSpanContext() otel.SpanContext {
+	tid, _ := otel.TraceIDFromHex("01020304050607080102040810203040")
+	sid, _ := otel.SpanIDFromHex("0102040810203040")
+	return otel.SpanContext{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 0x1,

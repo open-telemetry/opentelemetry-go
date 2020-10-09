@@ -20,7 +20,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/example/namedtracer/foo"
 	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/label"
@@ -66,7 +65,7 @@ func main() {
 	ctx := context.Background()
 	ctx = otel.ContextWithBaggageValues(ctx, fooKey.String("foo1"), barKey.String("bar1"))
 
-	var span trace.Span
+	var span otel.Span
 	ctx, span = tracer.Start(ctx, "operation")
 	defer span.End()
 	span.AddEvent(ctx, "Nice operation!", label.Int("bogons", 100))

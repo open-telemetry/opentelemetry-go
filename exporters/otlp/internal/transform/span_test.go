@@ -24,10 +24,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
 	"go.opentelemetry.io/otel/label"
 
-	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/codes"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -36,31 +36,31 @@ import (
 
 func TestSpanKind(t *testing.T) {
 	for _, test := range []struct {
-		kind     apitrace.SpanKind
+		kind     otel.SpanKind
 		expected tracepb.Span_SpanKind
 	}{
 		{
-			apitrace.SpanKindInternal,
+			otel.SpanKindInternal,
 			tracepb.Span_INTERNAL,
 		},
 		{
-			apitrace.SpanKindClient,
+			otel.SpanKindClient,
 			tracepb.Span_CLIENT,
 		},
 		{
-			apitrace.SpanKindServer,
+			otel.SpanKindServer,
 			tracepb.Span_SERVER,
 		},
 		{
-			apitrace.SpanKindProducer,
+			otel.SpanKindProducer,
 			tracepb.Span_PRODUCER,
 		},
 		{
-			apitrace.SpanKindConsumer,
+			otel.SpanKindConsumer,
 			tracepb.Span_CONSUMER,
 		},
 		{
-			apitrace.SpanKind(-1),
+			otel.SpanKind(-1),
 			tracepb.Span_SPAN_KIND_UNSPECIFIED,
 		},
 	} {
@@ -117,15 +117,15 @@ func TestNilLinks(t *testing.T) {
 }
 
 func TestEmptyLinks(t *testing.T) {
-	assert.Nil(t, links([]apitrace.Link{}))
+	assert.Nil(t, links([]otel.Link{}))
 }
 
 func TestLinks(t *testing.T) {
 	attrs := []label.KeyValue{label.Int("one", 1), label.Int("two", 2)}
-	l := []apitrace.Link{
+	l := []otel.Link{
 		{},
 		{
-			SpanContext: apitrace.EmptySpanContext(),
+			SpanContext: otel.SpanContext{},
 			Attributes:  attrs,
 		},
 	}
@@ -200,12 +200,12 @@ func TestSpanData(t *testing.T) {
 	startTime := time.Unix(1585674086, 1234)
 	endTime := startTime.Add(10 * time.Second)
 	spanData := &export.SpanData{
-		SpanContext: apitrace.SpanContext{
-			TraceID: apitrace.ID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
-			SpanID:  apitrace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
+		SpanContext: otel.SpanContext{
+			TraceID: otel.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+			SpanID:  otel.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 		},
-		SpanKind:     apitrace.SpanKindServer,
-		ParentSpanID: apitrace.SpanID{0xEF, 0xEE, 0xED, 0xEC, 0xEB, 0xEA, 0xE9, 0xE8},
+		SpanKind:     otel.SpanKindServer,
+		ParentSpanID: otel.SpanID{0xEF, 0xEE, 0xED, 0xEC, 0xEB, 0xEA, 0xE9, 0xE8},
 		Name:         "span data to span data",
 		StartTime:    startTime,
 		EndTime:      endTime,
@@ -221,11 +221,11 @@ func TestSpanData(t *testing.T) {
 				},
 			},
 		},
-		Links: []apitrace.Link{
+		Links: []otel.Link{
 			{
-				SpanContext: apitrace.SpanContext{
-					TraceID:    apitrace.ID{0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF},
-					SpanID:     apitrace.SpanID{0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7},
+				SpanContext: otel.SpanContext{
+					TraceID:    otel.TraceID{0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF},
+					SpanID:     otel.SpanID{0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7},
 					TraceFlags: 0,
 				},
 				Attributes: []label.KeyValue{
@@ -233,9 +233,9 @@ func TestSpanData(t *testing.T) {
 				},
 			},
 			{
-				SpanContext: apitrace.SpanContext{
-					TraceID:    apitrace.ID{0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0xEE, 0xEF},
-					SpanID:     apitrace.SpanID{0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7},
+				SpanContext: otel.SpanContext{
+					TraceID:    otel.TraceID{0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0xEE, 0xEF},
+					SpanID:     otel.SpanID{0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7},
 					TraceFlags: 0,
 				},
 				Attributes: []label.KeyValue{
