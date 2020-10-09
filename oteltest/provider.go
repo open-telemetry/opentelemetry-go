@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tracetest
+package oteltest
 
 import (
 	"sync"
 
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
 )
 
 type TracerProvider struct {
@@ -27,7 +27,7 @@ type TracerProvider struct {
 	tracers   map[instrumentation]*Tracer
 }
 
-var _ trace.TracerProvider = (*TracerProvider)(nil)
+var _ otel.TracerProvider = (*TracerProvider)(nil)
 
 func NewTracerProvider(opts ...Option) *TracerProvider {
 	return &TracerProvider{
@@ -40,8 +40,8 @@ type instrumentation struct {
 	Name, Version string
 }
 
-func (p *TracerProvider) Tracer(instName string, opts ...trace.TracerOption) trace.Tracer {
-	conf := trace.NewTracerConfig(opts...)
+func (p *TracerProvider) Tracer(instName string, opts ...otel.TracerOption) otel.Tracer {
+	conf := otel.NewTracerConfig(opts...)
 
 	inst := instrumentation{
 		Name:    instName,

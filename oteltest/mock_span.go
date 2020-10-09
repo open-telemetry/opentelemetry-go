@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tracetest
+package oteltest
 
 import (
 	"context"
 	"time"
 
-	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
 )
@@ -28,17 +28,17 @@ type MockSpan struct {
 	StatusMsg string
 	Name      string
 	Status    codes.Code
-	sc        apitrace.SpanContext
-	tracer    apitrace.Tracer
+	sc        otel.SpanContext
+	tracer    otel.Tracer
 }
 
-var _ apitrace.Span = (*MockSpan)(nil)
+var _ otel.Span = (*MockSpan)(nil)
 
 // SpanContext returns associated label.SpanContext. If the receiver is nil it returns
 // an empty label.SpanContext
-func (ms *MockSpan) SpanContext() apitrace.SpanContext {
+func (ms *MockSpan) SpanContext() otel.SpanContext {
 	if ms == nil {
-		return apitrace.EmptySpanContext()
+		return otel.SpanContext{}
 	}
 	return ms.sc
 }
@@ -63,11 +63,11 @@ func (ms *MockSpan) SetAttributes(attributes ...label.KeyValue) {
 }
 
 // End does nothing.
-func (ms *MockSpan) End(options ...apitrace.SpanOption) {
+func (ms *MockSpan) End(options ...otel.SpanOption) {
 }
 
 // RecordError does nothing.
-func (ms *MockSpan) RecordError(ctx context.Context, err error, opts ...apitrace.ErrorOption) {
+func (ms *MockSpan) RecordError(ctx context.Context, err error, opts ...otel.ErrorOption) {
 }
 
 // SetName sets the span name.
@@ -76,7 +76,7 @@ func (ms *MockSpan) SetName(name string) {
 }
 
 // Tracer returns MockTracer implementation of Tracer.
-func (ms *MockSpan) Tracer() apitrace.Tracer {
+func (ms *MockSpan) Tracer() otel.Tracer {
 	return ms.tracer
 }
 

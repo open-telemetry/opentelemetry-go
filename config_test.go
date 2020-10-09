@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package otel
 
 import (
 	"testing"
@@ -32,11 +32,11 @@ func TestNewSpanConfig(t *testing.T) {
 	timestamp1 := time.Unix(0, 0)
 
 	link1 := Link{
-		SpanContext: SpanContext{TraceID: ID([16]byte{1, 1}), SpanID: SpanID{3}},
+		SpanContext: SpanContext{TraceID: TraceID([16]byte{1, 1}), SpanID: SpanID{3}},
 		Attributes:  []label.KeyValue{k1v1},
 	}
 	link2 := Link{
-		SpanContext: SpanContext{TraceID: ID([16]byte{1, 1}), SpanID: SpanID{3}},
+		SpanContext: SpanContext{TraceID: TraceID([16]byte{1, 1}), SpanID: SpanID{3}},
 		Attributes:  []label.KeyValue{k1v2, k2v2},
 	}
 
@@ -191,5 +191,42 @@ func TestNewSpanConfig(t *testing.T) {
 	}
 	for _, test := range tests {
 		assert.Equal(t, test.expected, NewSpanConfig(test.options...))
+	}
+}
+
+func TestTracerConfig(t *testing.T) {
+	v1 := "semver:0.0.1"
+	v2 := "semver:1.0.0"
+	tests := []struct {
+		options  []TracerOption
+		expected *TracerConfig
+	}{
+		{
+			// No non-zero-values should be set.
+			[]TracerOption{},
+			new(TracerConfig),
+		},
+		{
+			[]TracerOption{
+				WithInstrumentationVersion(v1),
+			},
+			&TracerConfig{
+				InstrumentationVersion: v1,
+			},
+		},
+		{
+			[]TracerOption{
+				// Multiple calls should overwrite.
+				WithInstrumentationVersion(v1),
+				WithInstrumentationVersion(v2),
+			},
+			&TracerConfig{
+				InstrumentationVersion: v2,
+			},
+		},
+	}
+	for _, test := range tests {
+		config := NewTracerConfig(test.options...)
+		assert.Equal(t, test.expected, config)
 	}
 }

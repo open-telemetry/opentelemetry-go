@@ -16,10 +16,7 @@ package otel
 
 import (
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/trace"
 )
-
-type Tracer = trace.Tracer
 
 type Meter = metric.Meter
 

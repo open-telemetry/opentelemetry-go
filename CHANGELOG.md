@@ -8,6 +8,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Move the `go.opentelemetry.io/otel/api/trace` package into `go.opentelemetry.io/otel` with the following changes. (#1229)
+  - `ID` has been renamed to `TraceID`.
+  - `IDFromHex` has been renamed to `TraceIDFromHex`.
+  - `ErrorOption` has been changed to an interface to conform with project design standards which included adding a `NewErrorConfig` function.
+  - `EmptySpanContext` is removed.
+- Move the `go.opentelemetry.io/otel/api/trace/tracetest` package into `go.opentelemetry.io/otel/oteltest`. (#1229)
+
+## [0.13.0] - 2020-10-08
+
 ### Added
 
 - OTLP Metric exporter supports Histogram aggregation. (#1209)
@@ -32,7 +43,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
-- The `ExtractHTTP` and `InjectHTTP` fuctions from the `go.opentelemetry.io/otel/api/propagation` package were removed. (#1212)
+- The `ExtractHTTP` and `InjectHTTP` functions from the `go.opentelemetry.io/otel/api/propagation` package were removed. (#1212)
 - The `Propagators` interface from the `go.opentelemetry.io/otel/api/propagation` package was removed to conform to the OpenTelemetry specification.
    The explicit `TextMapPropagator` type can be used in its place as this is the `Propagator` type the specification defines. (#1212)
 - The `SetAttribute` method of the `Span` from the `go.opentelemetry.io/otel/api/trace` package was removed given its redundancy with the `SetAttributes` method. (#1216)
@@ -896,7 +907,8 @@ It contains api and sdk for trace and meter.
 - CODEOWNERS file to track owners of this project.
 
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.13.0
 [0.12.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.12.0
 [0.11.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.11.0
 [0.10.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.10.0

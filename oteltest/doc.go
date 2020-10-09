@@ -12,4 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tracetest // import "go.opentelemetry.io/otel/api/trace/tracetest"
+// Package oteltest provides testing utilities for the otel package.
+package oteltest // import "go.opentelemetry.io/otel/oteltest"

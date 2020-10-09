@@ -12,19 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package oteltest_test
 
-type noopTracerProvider struct{}
+import (
+	"os"
+	"testing"
+	"unsafe"
 
-var _ TracerProvider = noopTracerProvider{}
+	ottest "go.opentelemetry.io/otel/internal/testing"
+	"go.opentelemetry.io/otel/oteltest"
+)
 
-// Tracer returns noop implementation of Tracer.
-func (p noopTracerProvider) Tracer(_ string, _ ...TracerOption) Tracer {
-	return noopTracer{}
-}
+// Ensure struct alignment prior to running tests.
+func TestMain(m *testing.M) {
+	fields := []ottest.FieldOffset{
+		{
+			Name:   "MockTracer.StartSpanID",
+			Offset: unsafe.Offsetof(oteltest.MockTracer{}.StartSpanID),
+		},
+	}
+	if !ottest.Aligned8Byte(fields, os.Stderr) {
+		os.Exit(1)
+	}
 
-// NoopTracerProvider returns a noop implementation of TracerProvider. The
-// Tracer and Spans created from the noop provider will also be noop.
-func NoopTracerProvider() TracerProvider {
-	return noopTracerProvider{}
+	os.Exit(m.Run())
 }

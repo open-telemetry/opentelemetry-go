@@ -22,8 +22,8 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
-	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -36,7 +36,10 @@ const (
 	errorEventName  = "error"
 )
 
-// span implements apitrace.Span interface.
+var emptySpanContext = otel.SpanContext{}
+
+// span is an implementation of the OpenTelemetry Span API representing the
+// individual component of a trace.
 type span struct {
 	// data contains information recorded about the span.
 	//
@@ -45,7 +48,7 @@ type span struct {
 	// SpanContext, so that the trace ID is propagated.
 	data        *export.SpanData
 	mu          sync.Mutex // protects the contents of *data (but not the pointer value.)
-	spanContext apitrace.SpanContext
+	spanContext otel.SpanContext
 
 	// attributes are capped at configured limit. When the capacity is reached an oldest entry
 	// is removed to create room for a new entry.
@@ -65,11 +68,11 @@ type span struct {
 	tracer                 *tracer // tracer used to create span.
 }
 
-var _ apitrace.Span = &span{}
+var _ otel.Span = &span{}
 
-func (s *span) SpanContext() apitrace.SpanContext {
+func (s *span) SpanContext() otel.SpanContext {
 	if s == nil {
-		return apitrace.EmptySpanContext()
+		return otel.SpanContext{}
 	}
 	return s.spanContext
 }
@@ -108,7 +111,7 @@ func (s *span) SetAttributes(attributes ...label.KeyValue) {
 //
 // If this method is called while panicking an error event is added to the
 // Span before ending it and the panic is continued.
-func (s *span) End(options ...apitrace.SpanOption) {
+func (s *span) End(options ...otel.SpanOption) {
 	if s == nil {
 		return
 	}
@@ -130,7 +133,7 @@ func (s *span) End(options ...apitrace.SpanOption) {
 	if !s.IsRecording() {
 		return
 	}
-	config := apitrace.NewSpanConfig(options...)
+	config := otel.NewSpanConfig(options...)
 	s.endOnce.Do(func() {
 		sps, ok := s.tracer.provider.spanProcessors.Load().(spanProcessorStates)
 		mustExportOrProcess := ok && len(sps) > 0
@@ -148,7 +151,7 @@ func (s *span) End(options ...apitrace.SpanOption) {
 	})
 }
 
-func (s *span) RecordError(ctx context.Context, err error, opts ...apitrace.ErrorOption) {
+func (s *span) RecordError(ctx context.Context, err error, opts ...otel.ErrorOption) {
 	if s == nil || err == nil {
 		return
 	}
@@ -157,11 +160,7 @@ func (s *span) RecordError(ctx context.Context, err error, opts ...apitrace.Erro
 		return
 	}
 
-	cfg := apitrace.ErrorConfig{}
-
-	for _, o := range opts {
-		o(&cfg)
-	}
+	cfg := otel.NewErrorConfig(opts...)
 
 	if cfg.Timestamp.IsZero() {
 		cfg.Timestamp = time.Now()
@@ -186,7 +185,7 @@ func typeStr(i interface{}) string {
 	return fmt.Sprintf("%s.%s", t.PkgPath(), t.Name())
 }
 
-func (s *span) Tracer() apitrace.Tracer {
+func (s *span) Tracer() otel.Tracer {
 	return s.tracer
 }
 
@@ -227,9 +226,9 @@ func (s *span) SetName(name string) {
 	s.data.Name = name
 	// SAMPLING
 	noParent := !s.data.ParentSpanID.IsValid()
-	var ctx apitrace.SpanContext
+	var ctx otel.SpanContext
 	if noParent {
-		ctx = apitrace.EmptySpanContext()
+		ctx = otel.SpanContext{}
 	} else {
 		// FIXME: Where do we get the parent context from?
 		// From SpanStore?
@@ -255,7 +254,7 @@ func (s *span) SetName(name string) {
 	}
 }
 
-func (s *span) addLink(link apitrace.Link) {
+func (s *span) addLink(link otel.Link) {
 	if !s.IsRecording() {
 		return
 	}
@@ -285,10 +284,10 @@ func (s *span) makeSpanData() *export.SpanData {
 	return &sd
 }
 
-func (s *span) interfaceArrayToLinksArray() []apitrace.Link {
-	linkArr := make([]apitrace.Link, 0)
+func (s *span) interfaceArrayToLinksArray() []otel.Link {
+	linkArr := make([]otel.Link, 0)
 	for _, value := range s.links.queue {
-		linkArr = append(linkArr, value.(apitrace.Link))
+		linkArr = append(linkArr, value.(otel.Link))
 	}
 	return linkArr
 }
@@ -320,14 +319,14 @@ func (s *span) addChild() {
 	s.mu.Unlock()
 }
 
-func startSpanInternal(tr *tracer, name string, parent apitrace.SpanContext, remoteParent bool, o *apitrace.SpanConfig) *span {
+func startSpanInternal(tr *tracer, name string, parent otel.SpanContext, remoteParent bool, o *otel.SpanConfig) *span {
 	var noParent bool
 	span := &span{}
 	span.spanContext = parent
 
 	cfg := tr.provider.config.Load().(*Config)
 
-	if parent == apitrace.EmptySpanContext() {
+	if parent == emptySpanContext {
 		span.spanContext.TraceID = cfg.IDGenerator.NewTraceID()
 		noParent = true
 	}
@@ -358,7 +357,7 @@ func startSpanInternal(tr *tracer, name string, parent apitrace.SpanContext, rem
 	span.data = &export.SpanData{
 		SpanContext:            span.spanContext,
 		StartTime:              startTime,
-		SpanKind:               apitrace.ValidateSpanKind(o.SpanKind),
+		SpanKind:               otel.ValidateSpanKind(o.SpanKind),
 		Name:                   name,
 		HasRemoteParent:        remoteParent,
 		Resource:               cfg.Resource,
@@ -388,13 +387,13 @@ func startSpanInternal(tr *tracer, name string, parent apitrace.SpanContext, rem
 type samplingData struct {
 	noParent     bool
 	remoteParent bool
-	parent       apitrace.SpanContext
+	parent       otel.SpanContext
 	name         string
 	cfg          *Config
 	span         *span
 	attributes   []label.KeyValue
-	links        []apitrace.Link
-	kind         apitrace.SpanKind
+	links        []otel.Link
+	kind         otel.SpanKind
 }
 
 func makeSamplingDecision(data samplingData) SamplingResult {
@@ -420,13 +419,13 @@ func makeSamplingDecision(data samplingData) SamplingResult {
 			Links:           data.links,
 		})
 		if sampled.Decision == RecordAndSample {
-			spanContext.TraceFlags |= apitrace.FlagsSampled
+			spanContext.TraceFlags |= otel.FlagsSampled
 		} else {
-			spanContext.TraceFlags &^= apitrace.FlagsSampled
+			spanContext.TraceFlags &^= otel.FlagsSampled
 		}
 		return sampled
 	}
-	if data.parent.TraceFlags&apitrace.FlagsSampled != 0 {
+	if data.parent.TraceFlags&otel.FlagsSampled != 0 {
 		return SamplingResult{Decision: RecordAndSample}
 	}
 	return SamplingResult{Decision: Drop}
