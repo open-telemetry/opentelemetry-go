@@ -397,36 +397,21 @@ type samplingData struct {
 }
 
 func makeSamplingDecision(data samplingData) SamplingResult {
-	if data.noParent || data.remoteParent {
-		// If this span is the child of a local span and no
-		// Sampler is set in the options, keep the parent's
-		// TraceFlags.
-		//
-		// Otherwise, consult the Sampler in the options if it
-		// is non-nil, otherwise the default sampler.
-		sampler := data.cfg.DefaultSampler
-		//if o.Sampler != nil {
-		//	sampler = o.Sampler
-		//}
-		spanContext := &data.span.spanContext
-		sampled := sampler.ShouldSample(SamplingParameters{
-			ParentContext:   data.parent,
-			TraceID:         spanContext.TraceID,
-			Name:            data.name,
-			HasRemoteParent: data.remoteParent,
-			Kind:            data.kind,
-			Attributes:      data.attributes,
-			Links:           data.links,
-		})
-		if sampled.Decision == RecordAndSample {
-			spanContext.TraceFlags |= otel.FlagsSampled
-		} else {
-			spanContext.TraceFlags &^= otel.FlagsSampled
-		}
-		return sampled
+	sampler := data.cfg.DefaultSampler
+	spanContext := &data.span.spanContext
+	sampled := sampler.ShouldSample(SamplingParameters{
+		ParentContext:   data.parent,
+		TraceID:         spanContext.TraceID,
+		Name:            data.name,
+		HasRemoteParent: data.remoteParent,
+		Kind:            data.kind,
+		Attributes:      data.attributes,
+		Links:           data.links,
+	})
+	if sampled.Decision == RecordAndSample {
+		spanContext.TraceFlags |= otel.FlagsSampled
+	} else {
+		spanContext.TraceFlags &^= otel.FlagsSampled
 	}
-	if data.parent.TraceFlags&otel.FlagsSampled != 0 {
-		return SamplingResult{Decision: RecordAndSample}
-	}
-	return SamplingResult{Decision: Drop}
+	return sampled
 }

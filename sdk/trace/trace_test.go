@@ -399,6 +399,72 @@ func TestSetSpanAttributes(t *testing.T) {
 	}
 }
 
+// Test that the sampler is called for local child spans. This is verified by checking
+// that the attributes set in the sampler are set on the child span.
+func TestSamplerAttributesLocalChildSpan(t *testing.T) {
+	sampler := &testSampler{prefix: "span", t: t}
+	te := NewTestExporter()
+	tp := NewTracerProvider(WithConfig(Config{DefaultSampler: sampler}), WithSyncer(te))
+
+	ctx := context.Background()
+	ctx, span := startLocalSpan(tp, ctx, "SpanOne", "span0")
+	_, spanTwo := startLocalSpan(tp, ctx, "SpanTwo", "span1")
+
+	spanTwo.End()
+	span.End()
+
+	got := te.Spans()
+
+	// endSpan expects only a single span in the test exporter, so manually clear the
+	// fields that can't be tested for easily (times, span and trace ids).
+	pid := got[0].SpanContext.SpanID
+	got[0].SpanContext.TraceID = tid
+	got[0].ParentSpanID = sid
+
+	checkTime(&got[0].StartTime)
+	checkTime(&got[0].EndTime)
+
+	got[1].SpanContext.SpanID = otel.SpanID{}
+	got[1].SpanContext.TraceID = tid
+	got[1].ParentSpanID = pid
+	got[0].SpanContext.SpanID = otel.SpanID{}
+
+	checkTime(&got[1].StartTime)
+	checkTime(&got[1].EndTime)
+
+	want := []*export.SpanData{
+		{
+			SpanContext: otel.SpanContext{
+				TraceID:    tid,
+				TraceFlags: 0x1,
+			},
+			ParentSpanID:           sid,
+			Name:                   "span1",
+			Attributes:             []label.KeyValue{label.Int("callCount", 2)},
+			SpanKind:               otel.SpanKindInternal,
+			HasRemoteParent:        false,
+			InstrumentationLibrary: instrumentation.Library{Name: "SpanTwo"},
+		},
+		{
+			SpanContext: otel.SpanContext{
+				TraceID:    tid,
+				TraceFlags: 0x1,
+			},
+			ParentSpanID:           pid,
+			Name:                   "span0",
+			Attributes:             []label.KeyValue{label.Int("callCount", 1)},
+			SpanKind:               otel.SpanKindInternal,
+			HasRemoteParent:        false,
+			ChildSpanCount:         1,
+			InstrumentationLibrary: instrumentation.Library{Name: "SpanOne"},
+		},
+	}
+
+	if diff := cmpDiff(got, want); diff != "" {
+		t.Errorf("SetSpanAttributesLocalChildSpan: -got +want %s", diff)
+	}
+}
+
 func TestSetSpanAttributesOverLimit(t *testing.T) {
 	te := NewTestExporter()
 	cfg := Config{MaxAttributesPerSpan: 2}
@@ -728,6 +794,20 @@ func startNamedSpan(tp *TracerProvider, trName, name string, args ...otel.SpanOp
 		args...,
 	)
 	return span
+}
+
+// startLocalSpan is a test utility func that starts a span with a
+// passed name and with the passed context. The context is returned
+// along with the span so this parent can be used to create child
+// spans.
+func startLocalSpan(tp *TracerProvider, ctx context.Context, trName, name string, args ...otel.SpanOption) (context.Context, otel.Span) {
+	args = append(args, otel.WithRecord())
+	ctx, span := tp.Tracer(trName).Start(
+		ctx,
+		name,
+		args...,
+	)
+	return ctx, span
 }
 
 // endSpan is a test utility function that ends the span in the context and
