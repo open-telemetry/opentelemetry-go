@@ -196,7 +196,7 @@ func TestExportSpans(t *testing.T) {
 									TraceId:           []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 									SpanId:            []byte{0, 0, 0, 0, 0, 0, 0, 1},
 									Name:              "parent process",
-									Kind:              tracepb.Span_SERVER,
+									Kind:              tracepb.Span_SPAN_KIND_SERVER,
 									StartTimeUnixNano: uint64(startTime.UnixNano()),
 									EndTimeUnixNano:   uint64(endTime.UnixNano()),
 									Attributes: []*commonpb.KeyValue{
@@ -218,7 +218,7 @@ func TestExportSpans(t *testing.T) {
 										},
 									},
 									Status: &tracepb.Status{
-										Code:    tracepb.Status_Ok,
+										Code:    tracepb.Status_STATUS_CODE_OK,
 										Message: "Ok",
 									},
 								},
@@ -227,7 +227,7 @@ func TestExportSpans(t *testing.T) {
 									SpanId:            []byte{0, 0, 0, 0, 0, 0, 0, 2},
 									ParentSpanId:      []byte{0, 0, 0, 0, 0, 0, 0, 1},
 									Name:              "internal process",
-									Kind:              tracepb.Span_INTERNAL,
+									Kind:              tracepb.Span_SPAN_KIND_INTERNAL,
 									StartTimeUnixNano: uint64(startTime.UnixNano()),
 									EndTimeUnixNano:   uint64(endTime.UnixNano()),
 									Attributes: []*commonpb.KeyValue{
@@ -249,7 +249,7 @@ func TestExportSpans(t *testing.T) {
 										},
 									},
 									Status: &tracepb.Status{
-										Code:    tracepb.Status_Ok,
+										Code:    tracepb.Status_STATUS_CODE_OK,
 										Message: "Ok",
 									},
 								},
@@ -265,7 +265,7 @@ func TestExportSpans(t *testing.T) {
 									TraceId:           []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},
 									SpanId:            []byte{0, 0, 0, 0, 0, 0, 0, 1},
 									Name:              "secondary parent process",
-									Kind:              tracepb.Span_SERVER,
+									Kind:              tracepb.Span_SPAN_KIND_SERVER,
 									StartTimeUnixNano: uint64(startTime.UnixNano()),
 									EndTimeUnixNano:   uint64(endTime.UnixNano()),
 									Attributes: []*commonpb.KeyValue{
@@ -287,7 +287,7 @@ func TestExportSpans(t *testing.T) {
 										},
 									},
 									Status: &tracepb.Status{
-										Code:    tracepb.Status_Ok,
+										Code:    tracepb.Status_STATUS_CODE_OK,
 										Message: "Ok",
 									},
 								},
@@ -319,7 +319,7 @@ func TestExportSpans(t *testing.T) {
 									TraceId:           []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},
 									SpanId:            []byte{0, 0, 0, 0, 0, 0, 0, 1},
 									Name:              "parent process",
-									Kind:              tracepb.Span_SERVER,
+									Kind:              tracepb.Span_SPAN_KIND_SERVER,
 									StartTimeUnixNano: uint64(startTime.UnixNano()),
 									EndTimeUnixNano:   uint64(endTime.UnixNano()),
 									Attributes: []*commonpb.KeyValue{
@@ -341,7 +341,7 @@ func TestExportSpans(t *testing.T) {
 										},
 									},
 									Status: &tracepb.Status{
-										Code:    tracepb.Status_UnknownError,
+										Code:    tracepb.Status_STATUS_CODE_UNKNOWN_ERROR,
 										Message: "Unauthenticated",
 									},
 								},

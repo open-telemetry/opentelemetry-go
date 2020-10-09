@@ -41,23 +41,23 @@ func TestSpanKind(t *testing.T) {
 	}{
 		{
 			otel.SpanKindInternal,
-			tracepb.Span_INTERNAL,
+			tracepb.Span_SPAN_KIND_INTERNAL,
 		},
 		{
 			otel.SpanKindClient,
-			tracepb.Span_CLIENT,
+			tracepb.Span_SPAN_KIND_CLIENT,
 		},
 		{
 			otel.SpanKindServer,
-			tracepb.Span_SERVER,
+			tracepb.Span_SPAN_KIND_SERVER,
 		},
 		{
 			otel.SpanKindProducer,
-			tracepb.Span_PRODUCER,
+			tracepb.Span_SPAN_KIND_PRODUCER,
 		},
 		{
 			otel.SpanKindConsumer,
-			tracepb.Span_CONSUMER,
+			tracepb.Span_SPAN_KIND_CONSUMER,
 		},
 		{
 			otel.SpanKind(-1),
@@ -162,17 +162,17 @@ func TestStatus(t *testing.T) {
 		{
 			codes.Ok,
 			"test Ok",
-			tracepb.Status_Ok,
+			tracepb.Status_STATUS_CODE_OK,
 		},
 		{
 			codes.Unset,
 			"test Unset",
-			tracepb.Status_Ok,
+			tracepb.Status_STATUS_CODE_OK,
 		},
 		{
 			codes.Error,
 			"test Error",
-			tracepb.Status_UnknownError,
+			tracepb.Status_STATUS_CODE_UNKNOWN_ERROR,
 		},
 	} {
 		expected := &tracepb.Status{Code: test.otlpStatus, Message: test.message}
@@ -267,7 +267,7 @@ func TestSpanData(t *testing.T) {
 		SpanId:                 []byte{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 		ParentSpanId:           []byte{0xEF, 0xEE, 0xED, 0xEC, 0xEB, 0xEA, 0xE9, 0xE8},
 		Name:                   spanData.Name,
-		Kind:                   tracepb.Span_SERVER,
+		Kind:                   tracepb.Span_SPAN_KIND_SERVER,
 		StartTimeUnixNano:      uint64(startTime.UnixNano()),
 		EndTimeUnixNano:        uint64(endTime.UnixNano()),
 		Status:                 status(spanData.StatusCode, spanData.StatusMessage),
