@@ -19,6 +19,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - OTLP Exporter supports OTLP v0.5.0. (#1230)
 - The Sampler is now called on local child spans. (#1233)
 
+### Removed
+
+- The `ErrInvalidHexID`, `ErrInvalidTraceIDLength`, `ErrInvalidSpanIDLength`, `ErrInvalidSpanIDLength`, or `ErrNilSpanID` from the `go.opentelemetry.io/otel` package are unexported now. (#1243)
+
 ## [0.13.0] - 2020-10-08
 
 ### Added
