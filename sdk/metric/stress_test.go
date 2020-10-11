@@ -264,7 +264,7 @@ func (f *testFixture) Process(accumulation export.Accumulation) error {
 	actual, _ := f.received.LoadOrStore(key, f.impl.newStore())
 
 	agg := accumulation.Aggregator()
-	switch accumulation.Descriptor().MetricKind() {
+	switch accumulation.Descriptor().InstrumentKind() {
 	case metric.CounterInstrumentKind:
 		sum, err := agg.(aggregation.Sum).Sum()
 		if err != nil {

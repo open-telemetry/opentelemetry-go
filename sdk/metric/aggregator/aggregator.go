@@ -41,7 +41,7 @@ func RangeTest(number metric.Number, descriptor *metric.Descriptor) error {
 		return aggregation.ErrNaNInput
 	}
 
-	switch descriptor.MetricKind() {
+	switch descriptor.InstrumentKind() {
 	case metric.CounterInstrumentKind, metric.SumObserverInstrumentKind:
 		if number.IsNegative(numberKind) {
 			return aggregation.ErrNegativeInput

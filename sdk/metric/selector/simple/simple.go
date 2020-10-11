@@ -95,7 +95,7 @@ func lastValueAggs(aggPtrs []*export.Aggregator) {
 }
 
 func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
-	switch descriptor.MetricKind() {
+	switch descriptor.InstrumentKind() {
 	case metric.ValueObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
 	case metric.ValueRecorderInstrumentKind:
@@ -109,7 +109,7 @@ func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor, aggPtrs 
 }
 
 func (s selectorSketch) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
-	switch descriptor.MetricKind() {
+	switch descriptor.InstrumentKind() {
 	case metric.ValueObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
 	case metric.ValueRecorderInstrumentKind:
@@ -123,7 +123,7 @@ func (s selectorSketch) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...
 }
 
 func (selectorExact) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
-	switch descriptor.MetricKind() {
+	switch descriptor.InstrumentKind() {
 	case metric.ValueObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
 	case metric.ValueRecorderInstrumentKind:
@@ -137,7 +137,7 @@ func (selectorExact) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*ex
 }
 
 func (s selectorHistogram) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
-	switch descriptor.MetricKind() {
+	switch descriptor.InstrumentKind() {
 	case metric.ValueObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
 	case metric.ValueRecorderInstrumentKind:
