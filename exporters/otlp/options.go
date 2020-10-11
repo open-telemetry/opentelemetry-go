@@ -28,7 +28,7 @@ const (
 	// DefaultCollectorHost is the host address the Exporter will attempt
 	// connect to if no collector address is provided.
 	DefaultCollectorHost string = "localhost"
-	// DefaultNumWorkers is the goroutine number the Exporter will use when
+	// DefaultNumWorkers is the number of goroutines the Exporter will use when
 	// processing telemetry.
 	DefaultNumWorkers uint = 1
 

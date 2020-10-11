@@ -286,7 +286,7 @@ func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) e
 }
 
 // ExportKindFor reports back to the OpenTelemetry SDK sending this Exporter
-// metric telemetry that it needs to be pass in a pass-through format.
+// metric telemetry that it needs to be provided in a pass-through format.
 func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) metricsdk.ExportKind {
 	return metricsdk.PassThroughExporter
 }
