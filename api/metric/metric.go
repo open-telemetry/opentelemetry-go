@@ -18,18 +18,8 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/unit"
 )
-
-// The file is organized as follows:
-//
-//  - MeterProvider interface
-//  - Meter struct
-//  - RecordBatch
-//  - BatchObserver
-//  - Synchronous instrument constructors (2 x int64,float64)
-//  - Asynchronous instrument constructors (1 x int64,float64)
-//  - Batch asynchronous constructors (1 x int64,float64)
-//  - Internals
 
 // MeterProvider supports named Meter instances.
 type MeterProvider interface {
@@ -317,4 +307,64 @@ func (m Meter) newSync(
 	desc.config.InstrumentationName = m.name
 	desc.config.InstrumentationVersion = m.version
 	return m.impl.NewSyncInstrument(desc)
+}
+
+// Descriptor contains all the settings that describe an instrument,
+// including its name, metric kind, number kind, and the configurable
+// options.
+type Descriptor struct {
+	name           string
+	instrumentKind InstrumentKind
+	numberKind     NumberKind
+	config         InstrumentConfig
+}
+
+// NewDescriptor returns a Descriptor with the given contents.
+func NewDescriptor(name string, ikind InstrumentKind, nkind NumberKind, opts ...InstrumentOption) Descriptor {
+	return Descriptor{
+		name:           name,
+		instrumentKind: ikind,
+		numberKind:     nkind,
+		config:         NewInstrumentConfig(opts...),
+	}
+}
+
+// Name returns the metric instrument's name.
+func (d Descriptor) Name() string {
+	return d.name
+}
+
+// InstrumentKind returns the specific kind of instrument.
+func (d Descriptor) InstrumentKind() InstrumentKind {
+	return d.instrumentKind
+}
+
+// Description provides a human-readable description of the metric
+// instrument.
+func (d Descriptor) Description() string {
+	return d.config.Description
+}
+
+// Unit describes the units of the metric instrument.  Unitless
+// metrics return the empty string.
+func (d Descriptor) Unit() unit.Unit {
+	return d.config.Unit
+}
+
+// NumberKind returns whether this instrument is declared over int64,
+// float64, or uint64 values.
+func (d Descriptor) NumberKind() NumberKind {
+	return d.numberKind
+}
+
+// InstrumentationName returns the name of the library that provided
+// instrumentation for this instrument.
+func (d Descriptor) InstrumentationName() string {
+	return d.config.InstrumentationName
+}
+
+// InstrumentationVersion returns the version of the library that provided
+// instrumentation for this instrument.
+func (d Descriptor) InstrumentationVersion() string {
+	return d.config.InstrumentationVersion
 }
