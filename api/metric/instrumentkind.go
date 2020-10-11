@@ -60,7 +60,7 @@ func (k InstrumentKind) Adding() bool {
 	return false
 }
 
-// Adding returns whether this kind of instrument groups its inputs (as opposed to Adding).
+// Grouping returns whether this kind of instrument groups its inputs (as opposed to Adding).
 func (k InstrumentKind) Grouping() bool {
 	return !k.Adding()
 }
@@ -74,7 +74,7 @@ func (k InstrumentKind) Monotonic() bool {
 	return false
 }
 
-// Cumulative returns whether this kind of instrument receives precomputed sums.
+// PrecomputedSum returns whether this kind of instrument receives precomputed sums.
 func (k InstrumentKind) PrecomputedSum() bool {
 	return k.Adding() && k.Asynchronous()
 }
