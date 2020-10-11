@@ -65,7 +65,7 @@ func TestCounterSum(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg, ckpt := new2()
 
-		descriptor := aggregatortest.NewAggregatorTest(metric.CounterKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(metric.CounterInstrumentKind, profile.NumberKind)
 
 		sum := metric.Number(0)
 		for i := 0; i < count; i++ {
@@ -89,7 +89,7 @@ func TestValueRecorderSum(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg, ckpt := new2()
 
-		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 
 		sum := metric.Number(0)
 
@@ -115,7 +115,7 @@ func TestCounterMerge(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg1, agg2, ckpt1, ckpt2 := new4()
 
-		descriptor := aggregatortest.NewAggregatorTest(metric.CounterKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(metric.CounterInstrumentKind, profile.NumberKind)
 
 		sum := metric.Number(0)
 		for i := 0; i < count; i++ {

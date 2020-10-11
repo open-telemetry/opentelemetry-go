@@ -265,13 +265,13 @@ func (f *testFixture) Process(accumulation export.Accumulation) error {
 
 	agg := accumulation.Aggregator()
 	switch accumulation.Descriptor().MetricKind() {
-	case metric.CounterKind:
+	case metric.CounterInstrumentKind:
 		sum, err := agg.(aggregation.Sum).Sum()
 		if err != nil {
 			f.T.Fatal("Sum error: ", err)
 		}
 		f.impl.storeCollect(actual, sum, time.Time{})
-	case metric.ValueRecorderKind:
+	case metric.ValueRecorderInstrumentKind:
 		lv, ts, err := agg.(aggregation.LastValue).LastValue()
 		if err != nil && err != aggregation.ErrNoData {
 			f.T.Fatal("Last value error: ", err)

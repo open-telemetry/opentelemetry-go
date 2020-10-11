@@ -37,16 +37,16 @@ func TestExportKindIncludes(t *testing.T) {
 	require.False(t, DeltaExporter.Includes(PassThroughExporter|CumulativeExporter))
 }
 
-var deltaMemoryKinds = []metric.Kind{
-	metric.SumObserverKind,
-	metric.UpDownSumObserverKind,
+var deltaMemoryKinds = []metric.InstrumentKind{
+	metric.SumObserverInstrumentKind,
+	metric.UpDownSumObserverInstrumentKind,
 }
 
-var cumulativeMemoryKinds = []metric.Kind{
-	metric.ValueRecorderKind,
-	metric.ValueObserverKind,
-	metric.CounterKind,
-	metric.UpDownCounterKind,
+var cumulativeMemoryKinds = []metric.InstrumentKind{
+	metric.ValueRecorderInstrumentKind,
+	metric.ValueObserverInstrumentKind,
+	metric.CounterInstrumentKind,
+	metric.UpDownCounterInstrumentKind,
 }
 
 func TestExportKindMemoryRequired(t *testing.T) {
