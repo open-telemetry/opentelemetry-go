@@ -36,13 +36,13 @@ const (
 	// FlagsDebug is a bitmask with the debug bit set.
 	FlagsDebug = byte(0x04)
 
-	ErrInvalidHexID errorConst = "trace-id and span-id can only contain [0-9a-f] characters, all lowercase"
+	errInvalidHexID errorConst = "trace-id and span-id can only contain [0-9a-f] characters, all lowercase"
 
-	ErrInvalidTraceIDLength errorConst = "hex encoded trace-id must have length equals to 32"
-	ErrNilTraceID           errorConst = "trace-id can't be all zero"
+	errInvalidTraceIDLength errorConst = "hex encoded trace-id must have length equals to 32"
+	errNilTraceID           errorConst = "trace-id can't be all zero"
 
-	ErrInvalidSpanIDLength errorConst = "hex encoded span-id must have length equals to 16"
-	ErrNilSpanID           errorConst = "span-id can't be all zero"
+	errInvalidSpanIDLength errorConst = "hex encoded span-id must have length equals to 16"
+	errNilSpanID           errorConst = "span-id can't be all zero"
 )
 
 type errorConst string
@@ -103,7 +103,7 @@ func (s SpanID) String() string {
 func TraceIDFromHex(h string) (TraceID, error) {
 	t := TraceID{}
 	if len(h) != 32 {
-		return t, ErrInvalidTraceIDLength
+		return t, errInvalidTraceIDLength
 	}
 
 	if err := decodeHex(h, t[:]); err != nil {
@@ -111,7 +111,7 @@ func TraceIDFromHex(h string) (TraceID, error) {
 	}
 
 	if !t.IsValid() {
-		return t, ErrNilTraceID
+		return t, errNilTraceID
 	}
 	return t, nil
 }
@@ -122,7 +122,7 @@ func TraceIDFromHex(h string) (TraceID, error) {
 func SpanIDFromHex(h string) (SpanID, error) {
 	s := SpanID{}
 	if len(h) != 16 {
-		return s, ErrInvalidSpanIDLength
+		return s, errInvalidSpanIDLength
 	}
 
 	if err := decodeHex(h, s[:]); err != nil {
@@ -130,7 +130,7 @@ func SpanIDFromHex(h string) (SpanID, error) {
 	}
 
 	if !s.IsValid() {
-		return s, ErrNilSpanID
+		return s, errNilSpanID
 	}
 	return s, nil
 }
@@ -143,7 +143,7 @@ func decodeHex(h string, b []byte) error {
 		case '0' <= r && r <= '9':
 			continue
 		default:
-			return ErrInvalidHexID
+			return errInvalidHexID
 		}
 	}
 
@@ -295,19 +295,38 @@ type Link struct {
 // SpanKind is the role a Span plays in a Trace.
 type SpanKind int
 
+// As a convenience, these match the proto definition, see
+// https://github.com/open-telemetry/opentelemetry-proto/blob/30d237e1ff3ab7aa50e0922b5bebdd93505090af/opentelemetry/proto/trace/v1/trace.proto#L101-L129
+//
+// The unspecified value is not a valid `SpanKind`. Use `ValidateSpanKind()`
+// to coerce a span kind to a valid value.
 const (
-	// As a convenience, these match the proto definition, see
-	// opentelemetry/proto/trace/v1/trace.proto
-	//
-	// The unspecified value is not a valid `SpanKind`.  Use
-	// `ValidateSpanKind()` to coerce a span kind to a valid
-	// value.
+	// SpanKindUnspecified is an unspecified SpanKind and is not a valid
+	// SpanKind. SpanKindUnspecified should be replaced with SpanKindInternal
+	// if it is received.
 	SpanKindUnspecified SpanKind = 0
-	SpanKindInternal    SpanKind = 1
-	SpanKindServer      SpanKind = 2
-	SpanKindClient      SpanKind = 3
-	SpanKindProducer    SpanKind = 4
-	SpanKindConsumer    SpanKind = 5
+	// SpanKindInternal is a SpanKind for a Span that represents an internal
+	// operation within an application.
+	SpanKindInternal SpanKind = 1
+	// SpanKindServer is a SpanKind for a Span that represents the operation
+	// of handling a request from a client.
+	SpanKindServer SpanKind = 2
+	// SpanKindClient is a SpanKind for a Span that represents the operation
+	// of client making a request to a server.
+	SpanKindClient SpanKind = 3
+	// SpanKindProducer is a SpanKind for a Span that represents the operation
+	// of a producer sending a message to a message broker. Unlike
+	// SpanKindClient and SpanKindServer, there is often no direct
+	// relationship between this kind of Span and a SpanKindConsumer kind. A
+	// SpanKindProducer Span will end once the message is accepted by the
+	// message broker which might not overlap with the processing of that
+	// message.
+	SpanKindProducer SpanKind = 4
+	// SpanKindConsumer is a SpanKind for a Span that represents the operation
+	// of a consumer receiving a message from a message broker. Like
+	// SpanKindProducer Spans, there is often no direct relationship between
+	// this Span and the Span that produced the message.
+	SpanKindConsumer SpanKind = 5
 )
 
 // ValidateSpanKind returns a valid span kind value.  This will coerce
