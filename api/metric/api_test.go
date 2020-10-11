@@ -337,7 +337,7 @@ func checkObserverBatch(t *testing.T, labels []label.KeyValue, mock *mockTest.Me
 		return
 	}
 	measurement := got.Measurements[0]
-	require.Equal(t, mkind, measurement.Instrument.Descriptor().MetricKind())
+	require.Equal(t, mkind, measurement.Instrument.Descriptor().InstrumentKind())
 	assert.Equal(t, o, measurement.Instrument.Implementation().(*mockTest.Async))
 	ft := mockTest.ResolveNumberByKind(t, nkind, expected)
 	assert.Equal(t, 0, measurement.Number.CompareNumber(nkind, ft))
