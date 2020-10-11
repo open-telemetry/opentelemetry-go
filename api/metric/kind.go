@@ -12,68 +12,69 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate stringer -type=Kind
+//go:generate stringer -type=InstrumentKind
 
 package metric
 
-// Kind describes the kind of instrument.
-type Kind int8
+// InstrumentKind describes the kind of instrument.
+type InstrumentKind int8
 
 const (
-	// ValueRecorderKind indicates a ValueRecorder instrument.
-	ValueRecorderKind Kind = iota
-	// ValueObserverKind indicates an ValueObserver instrument.
-	ValueObserverKind
+	// ValueRecorderInstrumentKind indicates a ValueRecorder instrument.
+	ValueRecorderInstrumentKind InstrumentKind = iota
+	// ValueObserverInstrumentKind indicates an ValueObserver instrument.
+	ValueObserverInstrumentKind
 
-	// CounterKind indicates a Counter instrument.
-	CounterKind
-	// UpDownCounterKind indicates a UpDownCounter instrument.
-	UpDownCounterKind
+	// CounterInstrumentKind indicates a Counter instrument.
+	CounterInstrumentKind
+	// UpDownCounterInstrumentKind indicates a UpDownCounter instrument.
+	UpDownCounterInstrumentKind
 
-	// SumObserverKind indicates a SumObserver instrument.
-	SumObserverKind
-	// UpDownSumObserverKind indicates a UpDownSumObserver instrument.
-	UpDownSumObserverKind
+	// SumObserverInstrumentKind indicates a SumObserver instrument.
+	SumObserverInstrumentKind
+	// UpDownSumObserverInstrumentKind indicates a UpDownSumObserver
+	// instrument.
+	UpDownSumObserverInstrumentKind
 )
 
 // Synchronous returns whether this is a synchronous kind of instrument.
-func (k Kind) Synchronous() bool {
+func (k InstrumentKind) Synchronous() bool {
 	switch k {
-	case CounterKind, UpDownCounterKind, ValueRecorderKind:
+	case CounterInstrumentKind, UpDownCounterInstrumentKind, ValueRecorderInstrumentKind:
 		return true
 	}
 	return false
 }
 
 // Asynchronous returns whether this is an asynchronous kind of instrument.
-func (k Kind) Asynchronous() bool {
+func (k InstrumentKind) Asynchronous() bool {
 	return !k.Synchronous()
 }
 
 // Adding returns whether this kind of instrument adds its inputs (as opposed to Grouping).
-func (k Kind) Adding() bool {
+func (k InstrumentKind) Adding() bool {
 	switch k {
-	case CounterKind, UpDownCounterKind, SumObserverKind, UpDownSumObserverKind:
+	case CounterInstrumentKind, UpDownCounterInstrumentKind, SumObserverInstrumentKind, UpDownSumObserverInstrumentKind:
 		return true
 	}
 	return false
 }
 
 // Adding returns whether this kind of instrument groups its inputs (as opposed to Adding).
-func (k Kind) Grouping() bool {
+func (k InstrumentKind) Grouping() bool {
 	return !k.Adding()
 }
 
 // Monotonic returns whether this kind of instrument exposes a non-decreasing sum.
-func (k Kind) Monotonic() bool {
+func (k InstrumentKind) Monotonic() bool {
 	switch k {
-	case CounterKind, SumObserverKind:
+	case CounterInstrumentKind, SumObserverInstrumentKind:
 		return true
 	}
 	return false
 }
 
 // Cumulative returns whether this kind of instrument receives precomputed sums.
-func (k Kind) PrecomputedSum() bool {
+func (k InstrumentKind) PrecomputedSum() bool {
 	return k.Adding() && k.Asynchronous()
 }
