@@ -32,6 +32,93 @@ import (
 
 var Must = metric.Must
 
+var (
+	syncKinds = []metric.InstrumentKind{
+		metric.ValueRecorderInstrumentKind,
+		metric.CounterInstrumentKind,
+		metric.UpDownCounterInstrumentKind,
+	}
+	asyncKinds = []metric.InstrumentKind{
+		metric.ValueObserverInstrumentKind,
+		metric.SumObserverInstrumentKind,
+		metric.UpDownSumObserverInstrumentKind,
+	}
+	addingKinds = []metric.InstrumentKind{
+		metric.CounterInstrumentKind,
+		metric.UpDownCounterInstrumentKind,
+		metric.SumObserverInstrumentKind,
+		metric.UpDownSumObserverInstrumentKind,
+	}
+	groupingKinds = []metric.InstrumentKind{
+		metric.ValueRecorderInstrumentKind,
+		metric.ValueObserverInstrumentKind,
+	}
+
+	monotonicKinds = []metric.InstrumentKind{
+		metric.CounterInstrumentKind,
+		metric.SumObserverInstrumentKind,
+	}
+
+	nonMonotonicKinds = []metric.InstrumentKind{
+		metric.UpDownCounterInstrumentKind,
+		metric.UpDownSumObserverInstrumentKind,
+		metric.ValueRecorderInstrumentKind,
+		metric.ValueObserverInstrumentKind,
+	}
+
+	precomputedSumKinds = []metric.InstrumentKind{
+		metric.SumObserverInstrumentKind,
+		metric.UpDownSumObserverInstrumentKind,
+	}
+
+	nonPrecomputedSumKinds = []metric.InstrumentKind{
+		metric.CounterInstrumentKind,
+		metric.UpDownCounterInstrumentKind,
+		metric.ValueRecorderInstrumentKind,
+		metric.ValueObserverInstrumentKind,
+	}
+)
+
+func TestSynchronous(t *testing.T) {
+	for _, k := range syncKinds {
+		require.True(t, k.Synchronous())
+		require.False(t, k.Asynchronous())
+	}
+	for _, k := range asyncKinds {
+		require.True(t, k.Asynchronous())
+		require.False(t, k.Synchronous())
+	}
+}
+
+func TestGrouping(t *testing.T) {
+	for _, k := range groupingKinds {
+		require.True(t, k.Grouping())
+		require.False(t, k.Adding())
+	}
+	for _, k := range addingKinds {
+		require.True(t, k.Adding())
+		require.False(t, k.Grouping())
+	}
+}
+
+func TestMonotonic(t *testing.T) {
+	for _, k := range monotonicKinds {
+		require.True(t, k.Monotonic())
+	}
+	for _, k := range nonMonotonicKinds {
+		require.False(t, k.Monotonic())
+	}
+}
+
+func TestPrecomputedSum(t *testing.T) {
+	for _, k := range precomputedSumKinds {
+		require.True(t, k.PrecomputedSum())
+	}
+	for _, k := range nonPrecomputedSumKinds {
+		require.False(t, k.PrecomputedSum())
+	}
+}
+
 func checkSyncBatches(ctx context.Context, t *testing.T, labels []label.KeyValue, mock *mockTest.MeterImpl, nkind metric.NumberKind, mkind metric.InstrumentKind, instrument metric.InstrumentImpl, expected ...float64) {
 	t.Helper()
 
