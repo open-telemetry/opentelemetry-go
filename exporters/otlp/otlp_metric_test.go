@@ -93,7 +93,7 @@ func (m *checkpointSet) ForEach(_ metricsdk.ExportKindSelector, fn func(metricsd
 
 type record struct {
 	name     string
-	mKind    metric.InstrumentKind
+	iKind    metric.InstrumentKind
 	nKind    metric.NumberKind
 	resource *resource.Resource
 	opts     []metric.InstrumentOption
@@ -713,11 +713,11 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 	recs := map[label.Distinct][]metricsdk.Record{}
 	resources := map[label.Distinct]*resource.Resource{}
 	for _, r := range rs {
-		desc := metric.NewDescriptor(r.name, r.mKind, r.nKind, r.opts...)
+		desc := metric.NewDescriptor(r.name, r.iKind, r.nKind, r.opts...)
 		labs := label.NewSet(r.labels...)
 
 		var agg, ckpt metricsdk.Aggregator
-		switch r.mKind {
+		switch r.iKind {
 		case metric.CounterInstrumentKind:
 			agg, ckpt = metrictest.Unslice2(sum.New(2))
 		default:
