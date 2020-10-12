@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package apitest
+package oteltest
 
 import (
 	"context"
@@ -26,16 +26,21 @@ import (
 	"go.opentelemetry.io/otel/label"
 )
 
+// Harness is a testing harness used to test implementations of the
+// OpenTelemetry API.
 type Harness struct {
 	t *testing.T
 }
 
+// NewHarness returns an instantiated *Harness using t.
 func NewHarness(t *testing.T) *Harness {
 	return &Harness{
 		t: t,
 	}
 }
 
+// TestTracer runs validation tests for an implementation of the OpenTelemetry
+// Tracer API.
 func (h *Harness) TestTracer(subjectFactory func() otel.Tracer) {
 	h.t.Run("#Start", func(t *testing.T) {
 		t.Run("propagates the original context", func(t *testing.T) {
