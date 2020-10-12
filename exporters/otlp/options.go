@@ -22,10 +22,19 @@ import (
 )
 
 const (
+	// DefaultCollectorPort is the port the Exporter will attempt connect to
+	// if no collector port is provided.
 	DefaultCollectorPort uint16 = 55680
+	// DefaultCollectorHost is the host address the Exporter will attempt
+	// connect to if no collector address is provided.
 	DefaultCollectorHost string = "localhost"
-	DefaultNumWorkers    uint   = 1
+	// DefaultNumWorkers is the number of goroutines the Exporter will use when
+	// processing telemetry.
+	DefaultNumWorkers uint = 1
 
+	// DefaultGRPCServiceConfig is the gRPC service config used if none is
+	// provided by the user.
+	//
 	// For more info on gRPC service configs:
 	// https://github.com/grpc/proposal/blob/master/A6-client-retries.md
 	//
@@ -61,6 +70,7 @@ const (
 }`
 )
 
+// ExporterOption are setting options passed to an Exporter on creation.
 type ExporterOption func(*config)
 
 type config struct {
