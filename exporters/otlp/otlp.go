@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// code in this package is mostly copied from contrib.go.opencensus.io/exporter/ocagent/connection.go
 package otlp
+
+// This code was based on
+// contrib.go.opencensus.io/exporter/ocagent/connection.go
 
 import (
 	"context"
@@ -35,6 +37,9 @@ import (
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
+// Exporter is an OpenTelemetry exporter. It exports both traces and metrics
+// from OpenTelemetry instrumented to code using OpenTelemetry protocol
+// buffers to a configurable receiver.
 type Exporter struct {
 	// mu protects the non-atomic and non-channel variables
 	mu sync.RWMutex
@@ -280,10 +285,13 @@ func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) e
 	return nil
 }
 
+// ExportKindFor reports back to the OpenTelemetry SDK sending this Exporter
+// metric telemetry that it needs to be provided in a pass-through format.
 func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) metricsdk.ExportKind {
 	return metricsdk.PassThroughExporter
 }
 
+// ExportSpans exports a batch of SpanData.
 func (e *Exporter) ExportSpans(ctx context.Context, sds []*tracesdk.SpanData) error {
 	return e.uploadTraces(ctx, sds)
 }
