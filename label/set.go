@@ -78,6 +78,9 @@ var (
 
 const maxConcurrentEncoders = 3
 
+// EmptySet returns a reference to a Set with no elements.
+//
+// This is a convenience provided for optimized calling utility.
 func EmptySet() *Set {
 	return emptySet
 }
