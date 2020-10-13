@@ -47,7 +47,12 @@ support.
 
 ## Project Status
 
-[Project boards](https://github.com/open-telemetry/opentelemetry-go/projects)
+This project is currently in a pre-GA phase. Our progress towards a GA release
+candidate is tracked in [this project
+board](https://github.com/orgs/open-telemetry/projects/5).
+
+Progress and status specific to this repository is tracked in our local
+[project boards](https://github.com/open-telemetry/opentelemetry-go/projects)
 and [milestones](https://github.com/open-telemetry/opentelemetry-go/milestones)
 can be found at the respective links. We try to keep these accurate and should
 be the best place to go for answers on project status.
