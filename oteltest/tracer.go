@@ -34,6 +34,8 @@ type Tracer struct {
 	config *config
 }
 
+// Start creates a span. If t is configured with a SpanRecorder its OnStart
+// method will be called after the created Span has been initialized.
 func (t *Tracer) Start(ctx context.Context, name string, opts ...otel.SpanOption) (context.Context, otel.Span) {
 	c := otel.NewSpanConfig(opts...)
 	startTime := time.Now()
