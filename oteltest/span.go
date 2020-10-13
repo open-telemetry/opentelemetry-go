@@ -34,6 +34,7 @@ const (
 
 var _ otel.Span = (*Span)(nil)
 
+// Span is an OpenTelemetry Span used for testing.
 type Span struct {
 	lock          sync.RWMutex
 	tracer        *Tracer
@@ -51,10 +52,14 @@ type Span struct {
 	spanKind      otel.SpanKind
 }
 
+// Tracer returns the Tracer that created s.
 func (s *Span) Tracer() otel.Tracer {
 	return s.tracer
 }
 
+// End ends s. If the Tracer that created s was configured with a
+// SpanRecorder, that recorder's OnEnd method is called as the final part of
+// this method.
 func (s *Span) End(opts ...otel.SpanOption) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -75,6 +80,7 @@ func (s *Span) End(opts ...otel.SpanOption) {
 	}
 }
 
+// RecordError records an error as a Span event.
 func (s *Span) RecordError(ctx context.Context, err error, opts ...otel.ErrorOption) {
 	if err == nil || s.ended {
 		return
@@ -102,10 +108,12 @@ func (s *Span) RecordError(ctx context.Context, err error, opts ...otel.ErrorOpt
 	)
 }
 
+// AddEvent adds an event to s.
 func (s *Span) AddEvent(ctx context.Context, name string, attrs ...label.KeyValue) {
 	s.AddEventWithTimestamp(ctx, time.Now(), name, attrs...)
 }
 
+// AddEventWithTimestamp adds an event that occurred at timestamp to s.
 func (s *Span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...label.KeyValue) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -127,14 +135,17 @@ func (s *Span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, n
 	})
 }
 
+// IsRecording returns the recording state of s.
 func (s *Span) IsRecording() bool {
 	return true
 }
 
+// SpanContext returns the SpanContext of s.
 func (s *Span) SpanContext() otel.SpanContext {
 	return s.spanContext
 }
 
+// SetStatus sets the status of s in the form of a code and a message.
 func (s *Span) SetStatus(code codes.Code, msg string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -147,6 +158,7 @@ func (s *Span) SetStatus(code codes.Code, msg string) {
 	s.statusMessage = msg
 }
 
+// SetName sets the name of s.
 func (s *Span) SetName(name string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -158,6 +170,7 @@ func (s *Span) SetName(name string) {
 	s.name = name
 }
 
+// SetAttributes sets attrs as attributes of s.
 func (s *Span) SetAttributes(attrs ...label.KeyValue) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -171,22 +184,22 @@ func (s *Span) SetAttributes(attrs ...label.KeyValue) {
 	}
 }
 
-// Name returns the name most recently set on the Span, either at or after creation time.
-// It cannot be change after End has been called on the Span.
+// Name returns the name most recently set on s, either at or after creation
+// time. It cannot be change after End has been called on s.
 func (s *Span) Name() string {
 	return s.name
 }
 
-// ParentSpanID returns the SpanID of the parent Span.
-// If the Span is a root Span and therefore does not have a parent, the returned SpanID will be invalid
+// ParentSpanID returns the SpanID of the parent Span. If s is a root Span,
+// and therefore does not have a parent, the returned SpanID will be invalid
 // (i.e., it will contain all zeroes).
 func (s *Span) ParentSpanID() otel.SpanID {
 	return s.parentSpanID
 }
 
-// Attributes returns the attributes set on the Span, either at or after creation time.
-// If the same attribute key was set multiple times, the last call will be used.
-// Attributes cannot be changed after End has been called on the Span.
+// Attributes returns the attributes set on s, either at or after creation
+// time. If the same attribute key was set multiple times, the last call will
+// be used. Attributes cannot be changed after End has been called on s.
 func (s *Span) Attributes() map[label.Key]label.Value {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
@@ -200,14 +213,14 @@ func (s *Span) Attributes() map[label.Key]label.Value {
 	return attributes
 }
 
-// Events returns the events set on the Span.
-// Events cannot be changed after End has been called on the Span.
+// Events returns the events set on s. Events cannot be changed after End has
+// been called on s.
 func (s *Span) Events() []Event {
 	return s.events
 }
 
-// Links returns the links set on the Span at creation time.
-// If multiple links for the same SpanContext were set, the last link will be used.
+// Links returns the links set on s at creation time. If multiple links for
+// the same SpanContext were set, the last link will be used.
 func (s *Span) Links() map[otel.SpanContext][]label.KeyValue {
 	links := make(map[otel.SpanContext][]label.KeyValue)
 
@@ -218,40 +231,39 @@ func (s *Span) Links() map[otel.SpanContext][]label.KeyValue {
 	return links
 }
 
-// StartTime returns the time at which the Span was started.
-// This will be the wall-clock time unless a specific start time was provided.
+// StartTime returns the time at which s was started. This will be the
+// wall-clock time unless a specific start time was provided.
 func (s *Span) StartTime() time.Time {
 	return s.startTime
 }
 
-// EndTime returns the time at which the Span was ended if at has been ended,
-// or false otherwise.
-// If the span has been ended, the returned time will be the wall-clock time
-// unless a specific end time was provided.
+// EndTime returns the time at which s was ended if at has been ended, or
+// false otherwise. If the span has been ended, the returned time will be the
+// wall-clock time unless a specific end time was provided.
 func (s *Span) EndTime() (time.Time, bool) {
 	return s.endTime, s.ended
 }
 
-// Ended returns whether the Span has been ended,
-// i.e., whether End has been called at least once on the Span.
+// Ended returns whether s has been ended, i.e. whether End has been called at
+// least once on s.
 func (s *Span) Ended() bool {
 	return s.ended
 }
 
-// Status returns the status most recently set on the Span,
-// or codes.OK if no status has been explicitly set.
-// It cannot be changed after End has been called on the Span.
+// StatusCode returns the code of the status most recently set on s, or
+// codes.OK if no status has been explicitly set. It cannot be changed after
+// End has been called on s.
 func (s *Span) StatusCode() codes.Code {
 	return s.statusCode
 }
 
-// StatusMessage returns the status message most recently set on the
-// Span or the empty string if no status mesaage was set.
+// StatusMessage returns the status message most recently set on s or the
+// empty string if no status message was set.
 func (s *Span) StatusMessage() string {
 	return s.statusMessage
 }
 
-// SpanKind returns the span kind of this span.
+// SpanKind returns the span kind of s.
 func (s *Span) SpanKind() otel.SpanKind {
 	return s.spanKind
 }

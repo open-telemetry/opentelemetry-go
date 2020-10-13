@@ -84,6 +84,6 @@ func (ms *MockSpan) Tracer() otel.Tracer {
 func (ms *MockSpan) AddEvent(ctx context.Context, name string, attrs ...label.KeyValue) {
 }
 
-// AddEvent does nothing.
+// AddEventWithTimestamp does nothing.
 func (ms *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...label.KeyValue) {
 }
