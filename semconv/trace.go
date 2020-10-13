@@ -41,6 +41,7 @@ const (
 	NetHostNameKey = label.Key("net.host.name")
 )
 
+// Semantic conventions for common transport protocol attributes.
 var (
 	NetTransportTCP    = NetTransportKey.String("IP.TCP")
 	NetTransportUDP    = NetTransportKey.String("IP.UDP")
@@ -126,10 +127,13 @@ const (
 	HTTPResponseContentLengthUncompressedKey = label.Key("http.response_content_length_uncompressed")
 )
 
+// Semantic conventions for common HTTP attributes.
 var (
+	// Semantic conventions for HTTP(S) URI schemes.
 	HTTPSchemeHTTP  = HTTPSchemeKey.String("http")
 	HTTPSchemeHTTPS = HTTPSchemeKey.String("https")
 
+	// Semantic conventions for HTTP protocols.
 	HTTPFlavor1_0  = HTTPFlavorKey.String("1.0")
 	HTTPFlavor1_1  = HTTPFlavorKey.String("1.1")
 	HTTPFlavor2    = HTTPFlavorKey.String("2")
@@ -149,6 +153,7 @@ const (
 	DBUserKey = label.Key("db.user")
 )
 
+// Semantic conventions for common database system attributes.
 var (
 	DBSystemDB2       = DBSystemKey.String("db2")        // IBM DB2
 	DBSystemDerby     = DBSystemKey.String("derby")      // Apache Derby
@@ -227,11 +232,15 @@ const (
 	RPCMessageUncompressedSizeKey = label.Key("message.uncompressed_size")
 )
 
+// Semantic conventions for common RPC attributes.
 var (
+	// Semantic convention for gRPC as the remoting system.
 	RPCSystemGRPC = RPCSystemKey.String("grpc")
 
+	// Semantic convention for a message named message.
 	RPCNameMessage = RPCNameKey.String("message")
 
+	// Semantic conventions for RPC message types.
 	RPCMessageTypeSent     = RPCMessageTypeKey.String("SENT")
 	RPCMessageTypeReceived = RPCMessageTypeKey.String("RECEIVED")
 )
@@ -280,12 +289,18 @@ const (
 	MessagingRabbitMQRoutingKeyKey = label.Key("messaging.rabbitmq.routing_key")
 )
 
+// Semantic conventions for common messaging system attributes.
 var (
+	// Semantic conventions for message destinations.
 	MessagingDestinationKindKeyQueue = MessagingDestinationKindKey.String("queue")
 	MessagingDestinationKindKeyTopic = MessagingDestinationKindKey.String("topic")
 
+	// Semantic convention for message destinations that are temporary.
 	MessagingTempDestination = MessagingTempDestinationKey.Bool(true)
 
+	// Semantic convention for the operation parts of message consumption.
+	// This does not include a "send" attribute as that is explicitly not
+	// allowed in the OpenTelemetry specification.
 	MessagingOperationReceive = MessagingOperationKey.String("receive")
 	MessagingOperationProcess = MessagingOperationKey.String("process")
 )
@@ -324,13 +339,16 @@ const (
 	FaaSCronKey = label.Key("faas.cron")
 )
 
+// Semantic conventions for common FaaS system attributes.
 var (
+	// Semantic conventions for the types of triggers.
 	FaasTriggerDatasource = FaaSTriggerKey.String("datasource")
 	FaasTriggerHTTP       = FaaSTriggerKey.String("http")
 	FaasTriggerPubSub     = FaaSTriggerKey.String("pubsub")
 	FaasTriggerTimer      = FaaSTriggerKey.String("timer")
 	FaasTriggerOther      = FaaSTriggerKey.String("other")
 
+	// Semantic conventions for the types of operations performed.
 	FaaSDocumentOperationInsert = FaaSDocumentOperationKey.String("insert")
 	FaaSDocumentOperationEdit   = FaaSDocumentOperationKey.String("edit")
 	FaaSDocumentOperationDelete = FaaSDocumentOperationKey.String("delete")
