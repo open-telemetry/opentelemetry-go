@@ -60,6 +60,7 @@ func newConfig(opts ...Option) config {
 	return conf
 }
 
+// Option applies an option to a config.
 type Option interface {
 	Apply(*config)
 }
@@ -72,6 +73,8 @@ func (o spanContextFuncOption) Apply(c *config) {
 	c.SpanContextFunc = o.SpanContextFunc
 }
 
+// WithSpanContextFunc sets the SpanContextFunc used to generate a new Spans
+// context from a parent SpanContext.
 func WithSpanContextFunc(f func(context.Context) otel.SpanContext) Option {
 	return spanContextFuncOption{f}
 }
@@ -84,15 +87,23 @@ func (o spanRecorderOption) Apply(c *config) {
 	c.SpanRecorder = o.SpanRecorder
 }
 
+// WithSpanRecorder sets the SpanRecorder to use with the TracerProvider for
+// testing.
 func WithSpanRecorder(sr SpanRecorder) Option {
 	return spanRecorderOption{sr}
 }
 
+// SpanRecorder performs operations to record a span as it starts and ends.
 type SpanRecorder interface {
+	// OnStart is called by the Tracer when it starts a Span.
 	OnStart(span *Span)
+	// OnEnd is called by the Span when it ends.
 	OnEnd(span *Span)
 }
 
+// StandardSpanRecorder is a SpanRecorder that records all started and ended
+// spans in an ordered recording. StandardSpanRecorder is designed to be
+// concurrent safe and can by used by multiple goroutines.
 type StandardSpanRecorder struct {
 	startedMu sync.RWMutex
 	started   []*Span
@@ -101,18 +112,21 @@ type StandardSpanRecorder struct {
 	done   []*Span
 }
 
+// OnStart records span as started.
 func (ssr *StandardSpanRecorder) OnStart(span *Span) {
 	ssr.startedMu.Lock()
 	defer ssr.startedMu.Unlock()
 	ssr.started = append(ssr.started, span)
 }
 
+// OnEnd records span as completed.
 func (ssr *StandardSpanRecorder) OnEnd(span *Span) {
 	ssr.doneMu.Lock()
 	defer ssr.doneMu.Unlock()
 	ssr.done = append(ssr.done, span)
 }
 
+// Started returns a copy of all started Spans in the order they were started.
 func (ssr *StandardSpanRecorder) Started() []*Span {
 	ssr.startedMu.RLock()
 	defer ssr.startedMu.RUnlock()
@@ -123,6 +137,7 @@ func (ssr *StandardSpanRecorder) Started() []*Span {
 	return started
 }
 
+// Completed returns a copy of all ended Spans in the order they were ended.
 func (ssr *StandardSpanRecorder) Completed() []*Span {
 	ssr.doneMu.RLock()
 	defer ssr.doneMu.RUnlock()
