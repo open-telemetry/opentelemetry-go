@@ -53,7 +53,7 @@ func newProfiles() []Profile {
 	}
 }
 
-func NewAggregatorTest(mkind metric.Kind, nkind metric.NumberKind) *metric.Descriptor {
+func NewAggregatorTest(mkind metric.InstrumentKind, nkind metric.NumberKind) *metric.Descriptor {
 	desc := metric.NewDescriptor("test.name", mkind, nkind)
 	return &desc
 }

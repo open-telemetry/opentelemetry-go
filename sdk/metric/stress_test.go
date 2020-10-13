@@ -264,14 +264,14 @@ func (f *testFixture) Process(accumulation export.Accumulation) error {
 	actual, _ := f.received.LoadOrStore(key, f.impl.newStore())
 
 	agg := accumulation.Aggregator()
-	switch accumulation.Descriptor().MetricKind() {
-	case metric.CounterKind:
+	switch accumulation.Descriptor().InstrumentKind() {
+	case metric.CounterInstrumentKind:
 		sum, err := agg.(aggregation.Sum).Sum()
 		if err != nil {
 			f.T.Fatal("Sum error: ", err)
 		}
 		f.impl.storeCollect(actual, sum, time.Time{})
-	case metric.ValueRecorderKind:
+	case metric.ValueRecorderInstrumentKind:
 		lv, ts, err := agg.(aggregation.LastValue).LastValue()
 		if err != nil && err != aggregation.ErrNoData {
 			f.T.Fatal("Last value error: ", err)

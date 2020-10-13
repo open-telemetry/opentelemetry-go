@@ -130,22 +130,22 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	labels := []label.KeyValue{label.Bool("test", true)}
 
 	type data struct {
-		iKind metric.Kind
+		iKind metric.InstrumentKind
 		nKind metricapi.NumberKind
 		val   int64
 	}
 	instruments := map[string]data{
-		"test-int64-counter":         {metric.CounterKind, metricapi.Int64NumberKind, 1},
-		"test-float64-counter":       {metric.CounterKind, metricapi.Float64NumberKind, 1},
-		"test-int64-valuerecorder":   {metric.ValueRecorderKind, metricapi.Int64NumberKind, 2},
-		"test-float64-valuerecorder": {metric.ValueRecorderKind, metricapi.Float64NumberKind, 2},
-		"test-int64-valueobserver":   {metric.ValueObserverKind, metricapi.Int64NumberKind, 3},
-		"test-float64-valueobserver": {metric.ValueObserverKind, metricapi.Float64NumberKind, 3},
+		"test-int64-counter":         {metric.CounterInstrumentKind, metricapi.Int64NumberKind, 1},
+		"test-float64-counter":       {metric.CounterInstrumentKind, metricapi.Float64NumberKind, 1},
+		"test-int64-valuerecorder":   {metric.ValueRecorderInstrumentKind, metricapi.Int64NumberKind, 2},
+		"test-float64-valuerecorder": {metric.ValueRecorderInstrumentKind, metricapi.Float64NumberKind, 2},
+		"test-int64-valueobserver":   {metric.ValueObserverInstrumentKind, metricapi.Int64NumberKind, 3},
+		"test-float64-valueobserver": {metric.ValueObserverInstrumentKind, metricapi.Float64NumberKind, 3},
 	}
 	for name, data := range instruments {
 		data := data
 		switch data.iKind {
-		case metric.CounterKind:
+		case metric.CounterInstrumentKind:
 			switch data.nKind {
 			case metricapi.Int64NumberKind:
 				metricapi.Must(meter).NewInt64Counter(name).Add(ctx, data.val, labels...)
@@ -154,7 +154,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
-		case metric.ValueRecorderKind:
+		case metric.ValueRecorderInstrumentKind:
 			switch data.nKind {
 			case metricapi.Int64NumberKind:
 				metricapi.Must(meter).NewInt64ValueRecorder(name).Record(ctx, data.val, labels...)
@@ -163,7 +163,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
-		case metric.ValueObserverKind:
+		case metric.ValueObserverInstrumentKind:
 			switch data.nKind {
 			case metricapi.Int64NumberKind:
 				metricapi.Must(meter).NewInt64ValueObserver(name,
@@ -245,7 +245,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		seen[m.Name] = struct{}{}
 
 		switch data.iKind {
-		case metric.CounterKind:
+		case metric.CounterInstrumentKind:
 			switch data.nKind {
 			case metricapi.Int64NumberKind:
 				if dp := m.GetIntSum().DataPoints; assert.Len(t, dp, 1) {
@@ -258,7 +258,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 			default:
 				assert.Failf(t, "invalid number kind", data.nKind.String())
 			}
-		case metric.ValueObserverKind:
+		case metric.ValueObserverInstrumentKind:
 			switch data.nKind {
 			case metricapi.Int64NumberKind:
 				if dp := m.GetIntGauge().DataPoints; assert.Len(t, dp, 1) {
@@ -271,7 +271,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 			default:
 				assert.Failf(t, "invalid number kind", data.nKind.String())
 			}
-		case metric.ValueRecorderKind:
+		case metric.ValueRecorderInstrumentKind:
 			switch data.nKind {
 			case metricapi.Int64NumberKind:
 				assert.NotNil(t, m.GetIntHistogram())

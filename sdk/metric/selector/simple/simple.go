@@ -95,10 +95,10 @@ func lastValueAggs(aggPtrs []*export.Aggregator) {
 }
 
 func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
-	switch descriptor.MetricKind() {
-	case metric.ValueObserverKind:
+	switch descriptor.InstrumentKind() {
+	case metric.ValueObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
-	case metric.ValueRecorderKind:
+	case metric.ValueRecorderInstrumentKind:
 		aggs := minmaxsumcount.New(len(aggPtrs), descriptor)
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
@@ -109,10 +109,10 @@ func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor, aggPtrs 
 }
 
 func (s selectorSketch) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
-	switch descriptor.MetricKind() {
-	case metric.ValueObserverKind:
+	switch descriptor.InstrumentKind() {
+	case metric.ValueObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
-	case metric.ValueRecorderKind:
+	case metric.ValueRecorderInstrumentKind:
 		aggs := ddsketch.New(len(aggPtrs), descriptor, s.config)
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
@@ -123,10 +123,10 @@ func (s selectorSketch) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...
 }
 
 func (selectorExact) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
-	switch descriptor.MetricKind() {
-	case metric.ValueObserverKind:
+	switch descriptor.InstrumentKind() {
+	case metric.ValueObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
-	case metric.ValueRecorderKind:
+	case metric.ValueRecorderInstrumentKind:
 		aggs := array.New(len(aggPtrs))
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
@@ -137,10 +137,10 @@ func (selectorExact) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*ex
 }
 
 func (s selectorHistogram) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
-	switch descriptor.MetricKind() {
-	case metric.ValueObserverKind:
+	switch descriptor.InstrumentKind() {
+	case metric.ValueObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
-	case metric.ValueRecorderKind:
+	case metric.ValueRecorderInstrumentKind:
 		aggs := histogram.New(len(aggPtrs), descriptor, s.boundaries)
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]

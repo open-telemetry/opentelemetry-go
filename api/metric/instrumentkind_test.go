@@ -23,49 +23,49 @@ import (
 )
 
 var (
-	syncKinds = []metric.Kind{
-		metric.ValueRecorderKind,
-		metric.CounterKind,
-		metric.UpDownCounterKind,
+	syncKinds = []metric.InstrumentKind{
+		metric.ValueRecorderInstrumentKind,
+		metric.CounterInstrumentKind,
+		metric.UpDownCounterInstrumentKind,
 	}
-	asyncKinds = []metric.Kind{
-		metric.ValueObserverKind,
-		metric.SumObserverKind,
-		metric.UpDownSumObserverKind,
+	asyncKinds = []metric.InstrumentKind{
+		metric.ValueObserverInstrumentKind,
+		metric.SumObserverInstrumentKind,
+		metric.UpDownSumObserverInstrumentKind,
 	}
-	addingKinds = []metric.Kind{
-		metric.CounterKind,
-		metric.UpDownCounterKind,
-		metric.SumObserverKind,
-		metric.UpDownSumObserverKind,
+	addingKinds = []metric.InstrumentKind{
+		metric.CounterInstrumentKind,
+		metric.UpDownCounterInstrumentKind,
+		metric.SumObserverInstrumentKind,
+		metric.UpDownSumObserverInstrumentKind,
 	}
-	groupingKinds = []metric.Kind{
-		metric.ValueRecorderKind,
-		metric.ValueObserverKind,
-	}
-
-	monotonicKinds = []metric.Kind{
-		metric.CounterKind,
-		metric.SumObserverKind,
+	groupingKinds = []metric.InstrumentKind{
+		metric.ValueRecorderInstrumentKind,
+		metric.ValueObserverInstrumentKind,
 	}
 
-	nonMonotonicKinds = []metric.Kind{
-		metric.UpDownCounterKind,
-		metric.UpDownSumObserverKind,
-		metric.ValueRecorderKind,
-		metric.ValueObserverKind,
+	monotonicKinds = []metric.InstrumentKind{
+		metric.CounterInstrumentKind,
+		metric.SumObserverInstrumentKind,
 	}
 
-	precomputedSumKinds = []metric.Kind{
-		metric.SumObserverKind,
-		metric.UpDownSumObserverKind,
+	nonMonotonicKinds = []metric.InstrumentKind{
+		metric.UpDownCounterInstrumentKind,
+		metric.UpDownSumObserverInstrumentKind,
+		metric.ValueRecorderInstrumentKind,
+		metric.ValueObserverInstrumentKind,
 	}
 
-	nonPrecomputedSumKinds = []metric.Kind{
-		metric.CounterKind,
-		metric.UpDownCounterKind,
-		metric.ValueRecorderKind,
-		metric.ValueObserverKind,
+	precomputedSumKinds = []metric.InstrumentKind{
+		metric.SumObserverInstrumentKind,
+		metric.UpDownSumObserverInstrumentKind,
+	}
+
+	nonPrecomputedSumKinds = []metric.InstrumentKind{
+		metric.CounterInstrumentKind,
+		metric.UpDownCounterInstrumentKind,
+		metric.ValueRecorderInstrumentKind,
+		metric.ValueObserverInstrumentKind,
 	}
 )
 
