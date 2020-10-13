@@ -71,7 +71,7 @@ func TestLastValueUpdate(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg, ckpt := new2()
 
-		record := aggregatortest.NewAggregatorTest(metric.ValueObserverKind, profile.NumberKind)
+		record := aggregatortest.NewAggregatorTest(metric.ValueObserverInstrumentKind, profile.NumberKind)
 
 		var last metric.Number
 		for i := 0; i < count; i++ {
@@ -93,7 +93,7 @@ func TestLastValueMerge(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg1, agg2, ckpt1, ckpt2 := new4()
 
-		descriptor := aggregatortest.NewAggregatorTest(metric.ValueObserverKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(metric.ValueObserverInstrumentKind, profile.NumberKind)
 
 		first1 := profile.Random(+1)
 		first2 := profile.Random(+1)
@@ -124,7 +124,7 @@ func TestLastValueMerge(t *testing.T) {
 }
 
 func TestLastValueNotSet(t *testing.T) {
-	descriptor := aggregatortest.NewAggregatorTest(metric.ValueObserverKind, metric.Int64NumberKind)
+	descriptor := aggregatortest.NewAggregatorTest(metric.ValueObserverInstrumentKind, metric.Int64NumberKind)
 
 	g, ckpt := new2()
 	require.NoError(t, g.SynchronizedMove(ckpt, descriptor))

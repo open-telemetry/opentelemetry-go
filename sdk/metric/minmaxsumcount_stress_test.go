@@ -25,7 +25,7 @@ import (
 )
 
 func TestStressInt64MinMaxSumCount(t *testing.T) {
-	desc := metric.NewDescriptor("some_metric", metric.ValueRecorderKind, metric.Int64NumberKind)
+	desc := metric.NewDescriptor("some_metric", metric.ValueRecorderInstrumentKind, metric.Int64NumberKind)
 	alloc := minmaxsumcount.New(2, &desc)
 	mmsc, ckpt := &alloc[0], &alloc[1]
 

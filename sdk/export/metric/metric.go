@@ -385,14 +385,14 @@ func (kind ExportKind) ExportKindFor(_ *metric.Descriptor, _ aggregation.Kind) E
 
 // MemoryRequired returns whether an exporter of this kind requires
 // memory to export correctly.
-func (kind ExportKind) MemoryRequired(mkind metric.Kind) bool {
+func (kind ExportKind) MemoryRequired(mkind metric.InstrumentKind) bool {
 	switch mkind {
-	case metric.ValueRecorderKind, metric.ValueObserverKind,
-		metric.CounterKind, metric.UpDownCounterKind:
+	case metric.ValueRecorderInstrumentKind, metric.ValueObserverInstrumentKind,
+		metric.CounterInstrumentKind, metric.UpDownCounterInstrumentKind:
 		// Delta-oriented instruments:
 		return kind.Includes(CumulativeExporter)
 
-	case metric.SumObserverKind, metric.UpDownSumObserverKind:
+	case metric.SumObserverInstrumentKind, metric.UpDownSumObserverInstrumentKind:
 		// Cumulative-oriented instruments:
 		return kind.Includes(DeltaExporter)
 	}
