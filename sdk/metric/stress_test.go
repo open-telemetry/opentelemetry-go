@@ -31,8 +31,7 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/api/metric"
-	api "go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -46,7 +45,7 @@ const (
 	epsilon           = 1e-10
 )
 
-var Must = api.Must
+var Must = otel.Must
 
 type (
 	testFixture struct {
@@ -69,26 +68,26 @@ type (
 
 	testKey struct {
 		labels     string
-		descriptor *metric.Descriptor
+		descriptor *otel.Descriptor
 	}
 
 	testImpl struct {
-		newInstrument  func(meter api.Meter, name string) SyncImpler
-		getUpdateValue func() api.Number
-		operate        func(interface{}, context.Context, api.Number, []label.KeyValue)
+		newInstrument  func(meter otel.Meter, name string) SyncImpler
+		getUpdateValue func() otel.Number
+		operate        func(interface{}, context.Context, otel.Number, []label.KeyValue)
 		newStore       func() interface{}
 
 		// storeCollect and storeExpect are the same for
 		// counters, different for lastValues, to ensure we are
 		// testing the timestamps correctly.
-		storeCollect func(store interface{}, value api.Number, ts time.Time)
-		storeExpect  func(store interface{}, value api.Number)
-		readStore    func(store interface{}) api.Number
-		equalValues  func(a, b api.Number) bool
+		storeCollect func(store interface{}, value otel.Number, ts time.Time)
+		storeExpect  func(store interface{}, value otel.Number)
+		readStore    func(store interface{}) otel.Number
+		equalValues  func(a, b otel.Number) bool
 	}
 
 	SyncImpler interface {
-		SyncImpl() metric.SyncImpl
+		SyncImpl() otel.SyncImpl
 	}
 
 	// lastValueState supports merging lastValue values, for the case
@@ -96,7 +95,7 @@ type (
 	// take the later timestamp.
 	lastValueState struct {
 		// raw has to be aligned for 64-bit atomic operations.
-		raw api.Number
+		raw otel.Number
 		ts  time.Time
 	}
 )
@@ -157,11 +156,11 @@ func (f *testFixture) someLabels() []label.KeyValue {
 	}
 }
 
-func (f *testFixture) startWorker(impl *Accumulator, meter api.Meter, wg *sync.WaitGroup, i int) {
+func (f *testFixture) startWorker(impl *Accumulator, meter otel.Meter, wg *sync.WaitGroup, i int) {
 	ctx := context.Background()
 	name := fmt.Sprint("test_", i)
 	instrument := f.impl.newInstrument(meter, name)
-	var descriptor *metric.Descriptor
+	var descriptor *otel.Descriptor
 	if ii, ok := instrument.SyncImpl().(*syncInstrument); ok {
 		descriptor = &ii.descriptor
 	}
@@ -265,13 +264,13 @@ func (f *testFixture) Process(accumulation export.Accumulation) error {
 
 	agg := accumulation.Aggregator()
 	switch accumulation.Descriptor().InstrumentKind() {
-	case metric.CounterInstrumentKind:
+	case otel.CounterInstrumentKind:
 		sum, err := agg.(aggregation.Sum).Sum()
 		if err != nil {
 			f.T.Fatal("Sum error: ", err)
 		}
 		f.impl.storeCollect(actual, sum, time.Time{})
-	case metric.ValueRecorderInstrumentKind:
+	case otel.ValueRecorderInstrumentKind:
 		lv, ts, err := agg.(aggregation.LastValue).LastValue()
 		if err != nil && err != aggregation.ErrNoData {
 			f.T.Fatal("Last value error: ", err)
@@ -294,7 +293,7 @@ func stressTest(t *testing.T, impl testImpl) {
 	}
 	cc := concurrency()
 	sdk := NewAccumulator(fixture)
-	meter := metric.WrapMeterImpl(sdk, "stress_test")
+	meter := otel.WrapMeterImpl(sdk, "stress_test")
 	fixture.wg.Add(cc + 1)
 
 	for i := 0; i < cc; i++ {
@@ -326,11 +325,11 @@ func stressTest(t *testing.T, impl testImpl) {
 	fixture.assertTest(numCollect)
 }
 
-func int64sEqual(a, b api.Number) bool {
+func int64sEqual(a, b otel.Number) bool {
 	return a.AsInt64() == b.AsInt64()
 }
 
-func float64sEqual(a, b api.Number) bool {
+func float64sEqual(a, b otel.Number) bool {
 	diff := math.Abs(a.AsFloat64() - b.AsFloat64())
 	return diff < math.Abs(a.AsFloat64())*epsilon
 }
@@ -339,33 +338,33 @@ func float64sEqual(a, b api.Number) bool {
 
 func intCounterTestImpl() testImpl {
 	return testImpl{
-		newInstrument: func(meter api.Meter, name string) SyncImpler {
+		newInstrument: func(meter otel.Meter, name string) SyncImpler {
 			return Must(meter).NewInt64Counter(name + ".sum")
 		},
-		getUpdateValue: func() api.Number {
+		getUpdateValue: func() otel.Number {
 			for {
 				x := int64(rand.Intn(100))
 				if x != 0 {
-					return api.NewInt64Number(x)
+					return otel.NewInt64Number(x)
 				}
 			}
 		},
-		operate: func(inst interface{}, ctx context.Context, value api.Number, labels []label.KeyValue) {
-			counter := inst.(api.Int64Counter)
+		operate: func(inst interface{}, ctx context.Context, value otel.Number, labels []label.KeyValue) {
+			counter := inst.(otel.Int64Counter)
 			counter.Add(ctx, value.AsInt64(), labels...)
 		},
 		newStore: func() interface{} {
-			n := api.NewInt64Number(0)
+			n := otel.NewInt64Number(0)
 			return &n
 		},
-		storeCollect: func(store interface{}, value api.Number, _ time.Time) {
-			store.(*api.Number).AddInt64Atomic(value.AsInt64())
+		storeCollect: func(store interface{}, value otel.Number, _ time.Time) {
+			store.(*otel.Number).AddInt64Atomic(value.AsInt64())
 		},
-		storeExpect: func(store interface{}, value api.Number) {
-			store.(*api.Number).AddInt64Atomic(value.AsInt64())
+		storeExpect: func(store interface{}, value otel.Number) {
+			store.(*otel.Number).AddInt64Atomic(value.AsInt64())
 		},
-		readStore: func(store interface{}) api.Number {
-			return store.(*api.Number).AsNumberAtomic()
+		readStore: func(store interface{}) otel.Number {
+			return store.(*otel.Number).AsNumberAtomic()
 		},
 		equalValues: int64sEqual,
 	}
@@ -377,33 +376,33 @@ func TestStressInt64Counter(t *testing.T) {
 
 func floatCounterTestImpl() testImpl {
 	return testImpl{
-		newInstrument: func(meter api.Meter, name string) SyncImpler {
+		newInstrument: func(meter otel.Meter, name string) SyncImpler {
 			return Must(meter).NewFloat64Counter(name + ".sum")
 		},
-		getUpdateValue: func() api.Number {
+		getUpdateValue: func() otel.Number {
 			for {
 				x := rand.Float64()
 				if x != 0 {
-					return api.NewFloat64Number(x)
+					return otel.NewFloat64Number(x)
 				}
 			}
 		},
-		operate: func(inst interface{}, ctx context.Context, value api.Number, labels []label.KeyValue) {
-			counter := inst.(api.Float64Counter)
+		operate: func(inst interface{}, ctx context.Context, value otel.Number, labels []label.KeyValue) {
+			counter := inst.(otel.Float64Counter)
 			counter.Add(ctx, value.AsFloat64(), labels...)
 		},
 		newStore: func() interface{} {
-			n := api.NewFloat64Number(0.0)
+			n := otel.NewFloat64Number(0.0)
 			return &n
 		},
-		storeCollect: func(store interface{}, value api.Number, _ time.Time) {
-			store.(*api.Number).AddFloat64Atomic(value.AsFloat64())
+		storeCollect: func(store interface{}, value otel.Number, _ time.Time) {
+			store.(*otel.Number).AddFloat64Atomic(value.AsFloat64())
 		},
-		storeExpect: func(store interface{}, value api.Number) {
-			store.(*api.Number).AddFloat64Atomic(value.AsFloat64())
+		storeExpect: func(store interface{}, value otel.Number) {
+			store.(*otel.Number).AddFloat64Atomic(value.AsFloat64())
 		},
-		readStore: func(store interface{}) api.Number {
-			return store.(*api.Number).AsNumberAtomic()
+		readStore: func(store interface{}) otel.Number {
+			return store.(*otel.Number).AsNumberAtomic()
 		},
 		equalValues: float64sEqual,
 	}
@@ -417,23 +416,23 @@ func TestStressFloat64Counter(t *testing.T) {
 
 func intLastValueTestImpl() testImpl {
 	return testImpl{
-		newInstrument: func(meter api.Meter, name string) SyncImpler {
+		newInstrument: func(meter otel.Meter, name string) SyncImpler {
 			return Must(meter).NewInt64ValueRecorder(name + ".lastvalue")
 		},
-		getUpdateValue: func() api.Number {
+		getUpdateValue: func() otel.Number {
 			r1 := rand.Int63()
-			return api.NewInt64Number(rand.Int63() - r1)
+			return otel.NewInt64Number(rand.Int63() - r1)
 		},
-		operate: func(inst interface{}, ctx context.Context, value api.Number, labels []label.KeyValue) {
-			valuerecorder := inst.(api.Int64ValueRecorder)
+		operate: func(inst interface{}, ctx context.Context, value otel.Number, labels []label.KeyValue) {
+			valuerecorder := inst.(otel.Int64ValueRecorder)
 			valuerecorder.Record(ctx, value.AsInt64(), labels...)
 		},
 		newStore: func() interface{} {
 			return &lastValueState{
-				raw: api.NewInt64Number(0),
+				raw: otel.NewInt64Number(0),
 			}
 		},
-		storeCollect: func(store interface{}, value api.Number, ts time.Time) {
+		storeCollect: func(store interface{}, value otel.Number, ts time.Time) {
 			gs := store.(*lastValueState)
 
 			if !ts.Before(gs.ts) {
@@ -441,11 +440,11 @@ func intLastValueTestImpl() testImpl {
 				gs.raw.SetInt64Atomic(value.AsInt64())
 			}
 		},
-		storeExpect: func(store interface{}, value api.Number) {
+		storeExpect: func(store interface{}, value otel.Number) {
 			gs := store.(*lastValueState)
 			gs.raw.SetInt64Atomic(value.AsInt64())
 		},
-		readStore: func(store interface{}) api.Number {
+		readStore: func(store interface{}) otel.Number {
 			gs := store.(*lastValueState)
 			return gs.raw.AsNumberAtomic()
 		},
@@ -459,22 +458,22 @@ func TestStressInt64LastValue(t *testing.T) {
 
 func floatLastValueTestImpl() testImpl {
 	return testImpl{
-		newInstrument: func(meter api.Meter, name string) SyncImpler {
+		newInstrument: func(meter otel.Meter, name string) SyncImpler {
 			return Must(meter).NewFloat64ValueRecorder(name + ".lastvalue")
 		},
-		getUpdateValue: func() api.Number {
-			return api.NewFloat64Number((-0.5 + rand.Float64()) * 100000)
+		getUpdateValue: func() otel.Number {
+			return otel.NewFloat64Number((-0.5 + rand.Float64()) * 100000)
 		},
-		operate: func(inst interface{}, ctx context.Context, value api.Number, labels []label.KeyValue) {
-			valuerecorder := inst.(api.Float64ValueRecorder)
+		operate: func(inst interface{}, ctx context.Context, value otel.Number, labels []label.KeyValue) {
+			valuerecorder := inst.(otel.Float64ValueRecorder)
 			valuerecorder.Record(ctx, value.AsFloat64(), labels...)
 		},
 		newStore: func() interface{} {
 			return &lastValueState{
-				raw: api.NewFloat64Number(0),
+				raw: otel.NewFloat64Number(0),
 			}
 		},
-		storeCollect: func(store interface{}, value api.Number, ts time.Time) {
+		storeCollect: func(store interface{}, value otel.Number, ts time.Time) {
 			gs := store.(*lastValueState)
 
 			if !ts.Before(gs.ts) {
@@ -482,11 +481,11 @@ func floatLastValueTestImpl() testImpl {
 				gs.raw.SetFloat64Atomic(value.AsFloat64())
 			}
 		},
-		storeExpect: func(store interface{}, value api.Number) {
+		storeExpect: func(store interface{}, value otel.Number) {
 			gs := store.(*lastValueState)
 			gs.raw.SetFloat64Atomic(value.AsFloat64())
 		},
-		readStore: func(store interface{}) api.Number {
+		readStore: func(store interface{}) otel.Number {
 			gs := store.(*lastValueState)
 			return gs.raw.AsNumberAtomic()
 		},

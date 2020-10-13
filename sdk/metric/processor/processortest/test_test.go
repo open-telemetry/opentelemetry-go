@@ -20,7 +20,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
@@ -36,12 +36,12 @@ func generateTestData(proc export.Processor) {
 			resource.New(label.String("R", "V")),
 		),
 	)
-	meter := metric.WrapMeterImpl(accum, "testing")
+	meter := otel.WrapMeterImpl(accum, "testing")
 
-	counter := metric.Must(meter).NewFloat64Counter("counter.sum")
+	counter := otel.Must(meter).NewFloat64Counter("counter.sum")
 
-	_ = metric.Must(meter).NewInt64SumObserver("observer.sum",
-		func(_ context.Context, result metric.Int64ObserverResult) {
+	_ = otel.Must(meter).NewInt64SumObserver("observer.sum",
+		func(_ context.Context, result otel.Int64ObserverResult) {
 			result.Observe(10, label.String("K1", "V1"))
 			result.Observe(11, label.String("K1", "V2"))
 		},

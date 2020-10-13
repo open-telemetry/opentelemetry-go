@@ -27,7 +27,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/propagators"
@@ -105,10 +104,10 @@ func main() {
 	}
 
 	// Recorder metric example
-	valuerecorder := metric.Must(meter).
+	valuerecorder := otel.Must(meter).
 		NewFloat64Counter(
 			"an_important_metric",
-			metric.WithDescription("Measures the cumulative epicness of the app"),
+			otel.WithDescription("Measures the cumulative epicness of the app"),
 		).Bind(commonLabels...)
 	defer valuerecorder.Unbind()
 

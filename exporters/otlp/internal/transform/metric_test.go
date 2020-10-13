@@ -24,10 +24,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
 	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
 
-	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -96,28 +96,28 @@ func TestStringKeyValues(t *testing.T) {
 }
 
 func TestMinMaxSumCountValue(t *testing.T) {
-	mmsc, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &metric.Descriptor{}))
+	mmsc, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &otel.Descriptor{}))
 
-	assert.NoError(t, mmsc.Update(context.Background(), 1, &metric.Descriptor{}))
-	assert.NoError(t, mmsc.Update(context.Background(), 10, &metric.Descriptor{}))
+	assert.NoError(t, mmsc.Update(context.Background(), 1, &otel.Descriptor{}))
+	assert.NoError(t, mmsc.Update(context.Background(), 10, &otel.Descriptor{}))
 
 	// Prior to checkpointing ErrNoData should be returned.
 	_, _, _, _, err := minMaxSumCountValues(ckpt.(aggregation.MinMaxSumCount))
 	assert.EqualError(t, err, aggregation.ErrNoData.Error())
 
 	// Checkpoint to set non-zero values
-	require.NoError(t, mmsc.SynchronizedMove(ckpt, &metric.Descriptor{}))
+	require.NoError(t, mmsc.SynchronizedMove(ckpt, &otel.Descriptor{}))
 	min, max, sum, count, err := minMaxSumCountValues(ckpt.(aggregation.MinMaxSumCount))
 	if assert.NoError(t, err) {
-		assert.Equal(t, min, metric.NewInt64Number(1))
-		assert.Equal(t, max, metric.NewInt64Number(10))
-		assert.Equal(t, sum, metric.NewInt64Number(11))
+		assert.Equal(t, min, otel.NewInt64Number(1))
+		assert.Equal(t, max, otel.NewInt64Number(10))
+		assert.Equal(t, sum, otel.NewInt64Number(11))
 		assert.Equal(t, count, int64(2))
 	}
 }
 
 func TestMinMaxSumCountDatapoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, metric.Int64NumberKind)
+	desc := otel.NewDescriptor("", otel.ValueRecorderInstrumentKind, otel.Int64NumberKind)
 	labels := label.NewSet()
 	mmsc, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &desc))
 
@@ -149,17 +149,17 @@ func TestMinMaxSumCountPropagatesErrors(t *testing.T) {
 	// ErrNoData should be returned by both the Min and Max values of
 	// a MinMaxSumCount Aggregator. Use this fact to check the error is
 	// correctly returned.
-	mmsc := &minmaxsumcount.New(1, &metric.Descriptor{})[0]
+	mmsc := &minmaxsumcount.New(1, &otel.Descriptor{})[0]
 	_, _, _, _, err := minMaxSumCountValues(mmsc)
 	assert.Error(t, err)
 	assert.Equal(t, aggregation.ErrNoData, err)
 }
 
 func TestSumIntDataPoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, metric.Int64NumberKind)
+	desc := otel.NewDescriptor("", otel.ValueRecorderInstrumentKind, otel.Int64NumberKind)
 	labels := label.NewSet()
 	s, ckpt := metrictest.Unslice2(sumAgg.New(2))
-	assert.NoError(t, s.Update(context.Background(), metric.Number(1), &desc))
+	assert.NoError(t, s.Update(context.Background(), otel.Number(1), &desc))
 	require.NoError(t, s.SynchronizedMove(ckpt, &desc))
 	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
 	sum, ok := ckpt.(aggregation.Sum)
@@ -181,10 +181,10 @@ func TestSumIntDataPoints(t *testing.T) {
 }
 
 func TestSumFloatDataPoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, metric.Float64NumberKind)
+	desc := otel.NewDescriptor("", otel.ValueRecorderInstrumentKind, otel.Float64NumberKind)
 	labels := label.NewSet()
 	s, ckpt := metrictest.Unslice2(sumAgg.New(2))
-	assert.NoError(t, s.Update(context.Background(), metric.NewFloat64Number(1), &desc))
+	assert.NoError(t, s.Update(context.Background(), otel.NewFloat64Number(1), &desc))
 	require.NoError(t, s.SynchronizedMove(ckpt, &desc))
 	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
 	sum, ok := ckpt.(aggregation.Sum)
@@ -207,10 +207,10 @@ func TestSumFloatDataPoints(t *testing.T) {
 }
 
 func TestLastValueIntDataPoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, metric.Int64NumberKind)
+	desc := otel.NewDescriptor("", otel.ValueRecorderInstrumentKind, otel.Int64NumberKind)
 	labels := label.NewSet()
 	s, ckpt := metrictest.Unslice2(lvAgg.New(2))
-	assert.NoError(t, s.Update(context.Background(), metric.Number(100), &desc))
+	assert.NoError(t, s.Update(context.Background(), otel.Number(100), &desc))
 	require.NoError(t, s.SynchronizedMove(ckpt, &desc))
 	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
 	sum, ok := ckpt.(aggregation.LastValue)
@@ -233,7 +233,7 @@ func TestLastValueIntDataPoints(t *testing.T) {
 }
 
 func TestSumErrUnknownValueType(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, metric.NumberKind(-1))
+	desc := otel.NewDescriptor("", otel.ValueRecorderInstrumentKind, otel.NumberKind(-1))
 	labels := label.NewSet()
 	s := &sumAgg.New(1)[0]
 	record := export.NewRecord(&desc, &labels, nil, s, intervalStart, intervalEnd)
@@ -262,13 +262,13 @@ func (t *testAgg) Aggregation() aggregation.Aggregation {
 
 // None of these three are used:
 
-func (t *testAgg) Update(ctx context.Context, number metric.Number, descriptor *metric.Descriptor) error {
+func (t *testAgg) Update(ctx context.Context, number otel.Number, descriptor *otel.Descriptor) error {
 	return nil
 }
-func (t *testAgg) SynchronizedMove(destination export.Aggregator, descriptor *metric.Descriptor) error {
+func (t *testAgg) SynchronizedMove(destination export.Aggregator, descriptor *otel.Descriptor) error {
 	return nil
 }
-func (t *testAgg) Merge(aggregator export.Aggregator, descriptor *metric.Descriptor) error {
+func (t *testAgg) Merge(aggregator export.Aggregator, descriptor *otel.Descriptor) error {
 	return nil
 }
 
@@ -284,25 +284,25 @@ type testErrMinMaxSumCount struct {
 	testErrSum
 }
 
-func (te *testErrLastValue) LastValue() (metric.Number, time.Time, error) {
+func (te *testErrLastValue) LastValue() (otel.Number, time.Time, error) {
 	return 0, time.Time{}, te.err
 }
 func (te *testErrLastValue) Kind() aggregation.Kind {
 	return aggregation.LastValueKind
 }
 
-func (te *testErrSum) Sum() (metric.Number, error) {
+func (te *testErrSum) Sum() (otel.Number, error) {
 	return 0, te.err
 }
 func (te *testErrSum) Kind() aggregation.Kind {
 	return aggregation.SumKind
 }
 
-func (te *testErrMinMaxSumCount) Min() (metric.Number, error) {
+func (te *testErrMinMaxSumCount) Min() (otel.Number, error) {
 	return 0, te.err
 }
 
-func (te *testErrMinMaxSumCount) Max() (metric.Number, error) {
+func (te *testErrMinMaxSumCount) Max() (otel.Number, error) {
 	return 0, te.err
 }
 
@@ -318,7 +318,7 @@ var _ aggregation.MinMaxSumCount = &testErrMinMaxSumCount{}
 
 func TestRecordAggregatorIncompatibleErrors(t *testing.T) {
 	makeMpb := func(kind aggregation.Kind, agg aggregation.Aggregation) (*metricpb.Metric, error) {
-		desc := metric.NewDescriptor("things", metric.CounterInstrumentKind, metric.Int64NumberKind)
+		desc := otel.NewDescriptor("things", otel.CounterInstrumentKind, otel.Int64NumberKind)
 		labels := label.NewSet()
 		res := resource.New()
 		test := &testAgg{
@@ -355,7 +355,7 @@ func TestRecordAggregatorIncompatibleErrors(t *testing.T) {
 
 func TestRecordAggregatorUnexpectedErrors(t *testing.T) {
 	makeMpb := func(kind aggregation.Kind, agg aggregation.Aggregation) (*metricpb.Metric, error) {
-		desc := metric.NewDescriptor("things", metric.CounterInstrumentKind, metric.Int64NumberKind)
+		desc := otel.NewDescriptor("things", otel.CounterInstrumentKind, otel.Int64NumberKind)
 		labels := label.NewSet()
 		res := resource.New()
 		return Record(export.NewRecord(&desc, &labels, res, agg, intervalStart, intervalEnd))

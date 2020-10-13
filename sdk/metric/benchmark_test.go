@@ -20,8 +20,8 @@ import (
 	"math/rand"
 	"testing"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
@@ -29,7 +29,7 @@ import (
 )
 
 type benchFixture struct {
-	meter       metric.Meter
+	meter       otel.Meter
 	accumulator *sdk.Accumulator
 	B           *testing.B
 	export.AggregatorSelector
@@ -43,7 +43,7 @@ func newFixture(b *testing.B) *benchFixture {
 	}
 
 	bf.accumulator = sdk.NewAccumulator(bf)
-	bf.meter = metric.WrapMeterImpl(bf.accumulator, "benchmarks")
+	bf.meter = otel.WrapMeterImpl(bf.accumulator, "benchmarks")
 	return bf
 }
 
@@ -51,12 +51,12 @@ func (f *benchFixture) Process(export.Accumulation) error {
 	return nil
 }
 
-func (f *benchFixture) Meter(_ string, _ ...metric.MeterOption) metric.Meter {
+func (f *benchFixture) Meter(_ string, _ ...otel.MeterOption) otel.Meter {
 	return f.meter
 }
 
-func (f *benchFixture) meterMust() metric.MeterMust {
-	return metric.Must(f.meter)
+func (f *benchFixture) meterMust() otel.MeterMust {
+	return otel.Must(f.meter)
 }
 
 func makeManyLabels(n int) [][]label.KeyValue {
@@ -401,7 +401,7 @@ func BenchmarkObserverRegistration(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		names = append(names, fmt.Sprintf("test.%d.lastvalue", i))
 	}
-	cb := func(_ context.Context, result metric.Int64ObserverResult) {}
+	cb := func(_ context.Context, result otel.Int64ObserverResult) {}
 
 	b.ResetTimer()
 
@@ -414,7 +414,7 @@ func BenchmarkValueObserverObservationInt64(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	_ = fix.meterMust().NewInt64ValueObserver("test.lastvalue", func(_ context.Context, result metric.Int64ObserverResult) {
+	_ = fix.meterMust().NewInt64ValueObserver("test.lastvalue", func(_ context.Context, result otel.Int64ObserverResult) {
 		for i := 0; i < b.N; i++ {
 			result.Observe((int64)(i), labs...)
 		}
@@ -429,7 +429,7 @@ func BenchmarkValueObserverObservationFloat64(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	_ = fix.meterMust().NewFloat64ValueObserver("test.lastvalue", func(_ context.Context, result metric.Float64ObserverResult) {
+	_ = fix.meterMust().NewFloat64ValueObserver("test.lastvalue", func(_ context.Context, result otel.Float64ObserverResult) {
 		for i := 0; i < b.N; i++ {
 			result.Observe((float64)(i), labs...)
 		}
@@ -501,7 +501,7 @@ func benchmarkBatchRecord8Labels(b *testing.B, numInst int) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(numLabels)
-	var meas []metric.Measurement
+	var meas []otel.Measurement
 
 	for i := 0; i < numInst; i++ {
 		inst := fix.meterMust().NewInt64Counter(fmt.Sprintf("int64.%d.sum", i))

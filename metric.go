@@ -32,8 +32,7 @@ type MeterProvider interface {
 	Meter(instrumentationName string, opts ...MeterOption) Meter
 }
 
-// Meter is the OpenTelemetry metric API, based on a `MeterImpl`
-// implementation and the `Meter` library name.
+// Meter is the creator of metric instruments.
 //
 // An uninitialized Meter is a no-op implementation.
 type Meter struct {

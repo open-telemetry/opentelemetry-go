@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"sync"
 
+	api "go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
-	api "go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/label"
 )
 

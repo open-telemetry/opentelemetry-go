@@ -24,7 +24,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	ottest "go.opentelemetry.io/otel/internal/testing"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -64,16 +64,16 @@ func checkZero(t *testing.T, agg *Aggregator) {
 	lv, ts, err := agg.LastValue()
 	require.True(t, errors.Is(err, aggregation.ErrNoData))
 	require.Equal(t, time.Time{}, ts)
-	require.Equal(t, metric.Number(0), lv)
+	require.Equal(t, otel.Number(0), lv)
 }
 
 func TestLastValueUpdate(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg, ckpt := new2()
 
-		record := aggregatortest.NewAggregatorTest(metric.ValueObserverInstrumentKind, profile.NumberKind)
+		record := aggregatortest.NewAggregatorTest(otel.ValueObserverInstrumentKind, profile.NumberKind)
 
-		var last metric.Number
+		var last otel.Number
 		for i := 0; i < count; i++ {
 			x := profile.Random(rand.Intn(1)*2 - 1)
 			last = x
@@ -93,7 +93,7 @@ func TestLastValueMerge(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg1, agg2, ckpt1, ckpt2 := new4()
 
-		descriptor := aggregatortest.NewAggregatorTest(metric.ValueObserverInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(otel.ValueObserverInstrumentKind, profile.NumberKind)
 
 		first1 := profile.Random(+1)
 		first2 := profile.Random(+1)
@@ -124,7 +124,7 @@ func TestLastValueMerge(t *testing.T) {
 }
 
 func TestLastValueNotSet(t *testing.T) {
-	descriptor := aggregatortest.NewAggregatorTest(metric.ValueObserverInstrumentKind, metric.Int64NumberKind)
+	descriptor := aggregatortest.NewAggregatorTest(otel.ValueObserverInstrumentKind, otel.Int64NumberKind)
 
 	g, ckpt := new2()
 	require.NoError(t, g.SynchronizedMove(ckpt, descriptor))

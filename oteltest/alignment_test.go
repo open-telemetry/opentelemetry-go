@@ -22,7 +22,7 @@ import (
 	internaltest "go.opentelemetry.io/otel/internal/testing"
 )
 
-// Ensure struct alignment prior to running tests.
+// TestMain ensures struct alignment prior to running tests.
 func TestMain(m *testing.M) {
 	fields := []internaltest.FieldOffset{
 		{
@@ -32,6 +32,10 @@ func TestMain(m *testing.M) {
 		{
 			Name:   "Measurement.Number",
 			Offset: unsafe.Offsetof(Measurement{}.Number),
+		},
+		{
+			Name:   "MockTracer.StartSpanID",
+			Offset: unsafe.Offsetof(MockTracer{}.StartSpanID),
 		},
 	}
 	if !internaltest.Aligned8Byte(fields, os.Stderr) {

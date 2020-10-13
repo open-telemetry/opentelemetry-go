@@ -19,7 +19,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 )
@@ -37,7 +37,7 @@ func benchmarkHistogramSearchFloat64(b *testing.B, size int) {
 	for i := range values {
 		values[i] = rand.Float64() * inputRange
 	}
-	desc := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, metric.Float64NumberKind)
+	desc := aggregatortest.NewAggregatorTest(otel.ValueRecorderInstrumentKind, otel.Float64NumberKind)
 	agg := &histogram.New(1, desc, boundaries)[0]
 	ctx := context.Background()
 
@@ -45,7 +45,7 @@ func benchmarkHistogramSearchFloat64(b *testing.B, size int) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_ = agg.Update(ctx, metric.NewFloat64Number(values[i]), desc)
+		_ = agg.Update(ctx, otel.NewFloat64Number(values[i]), desc)
 	}
 }
 
@@ -88,7 +88,7 @@ func benchmarkHistogramSearchInt64(b *testing.B, size int) {
 	for i := range values {
 		values[i] = int64(rand.Float64() * inputRange)
 	}
-	desc := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, metric.Int64NumberKind)
+	desc := aggregatortest.NewAggregatorTest(otel.ValueRecorderInstrumentKind, otel.Int64NumberKind)
 	agg := &histogram.New(1, desc, boundaries)[0]
 	ctx := context.Background()
 
@@ -96,7 +96,7 @@ func benchmarkHistogramSearchInt64(b *testing.B, size int) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_ = agg.Update(ctx, metric.NewInt64Number(values[i]), desc)
+		_ = agg.Update(ctx, otel.NewInt64Number(values[i]), desc)
 	}
 }
 

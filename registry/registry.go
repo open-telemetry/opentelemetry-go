@@ -12,34 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package registry // import "go.opentelemetry.io/otel/api/metric/registry"
+package registry // import "go.opentelemetry.io/otel/registry"
 
 import (
 	"context"
 	"fmt"
 	"sync"
 
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 )
 
 // MeterProvider is a standard MeterProvider for wrapping `MeterImpl`
 type MeterProvider struct {
-	impl metric.MeterImpl
+	impl otel.MeterImpl
 }
 
-var _ metric.MeterProvider = (*MeterProvider)(nil)
+var _ otel.MeterProvider = (*MeterProvider)(nil)
 
-// uniqueInstrumentMeterImpl implements the metric.MeterImpl interface, adding
+// uniqueInstrumentMeterImpl implements the otel.MeterImpl interface, adding
 // uniqueness checking for instrument descriptors.  Use NewUniqueInstrumentMeter
 // to wrap an implementation with uniqueness checking.
 type uniqueInstrumentMeterImpl struct {
 	lock  sync.Mutex
-	impl  metric.MeterImpl
-	state map[key]metric.InstrumentImpl
+	impl  otel.MeterImpl
+	state map[key]otel.InstrumentImpl
 }
 
-var _ metric.MeterImpl = (*uniqueInstrumentMeterImpl)(nil)
+var _ otel.MeterImpl = (*uniqueInstrumentMeterImpl)(nil)
 
 type key struct {
 	instrumentName         string
@@ -49,15 +49,15 @@ type key struct {
 
 // NewMeterProvider returns a new provider that implements instrument
 // name-uniqueness checking.
-func NewMeterProvider(impl metric.MeterImpl) *MeterProvider {
+func NewMeterProvider(impl otel.MeterImpl) *MeterProvider {
 	return &MeterProvider{
 		impl: NewUniqueInstrumentMeterImpl(impl),
 	}
 }
 
 // Meter implements MeterProvider.
-func (p *MeterProvider) Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter {
-	return metric.WrapMeterImpl(p.impl, instrumentationName, opts...)
+func (p *MeterProvider) Meter(instrumentationName string, opts ...otel.MeterOption) otel.Meter {
+	return otel.WrapMeterImpl(p.impl, instrumentationName, opts...)
 }
 
 // ErrMetricKindMismatch is the standard error for mismatched metric
@@ -65,21 +65,21 @@ func (p *MeterProvider) Meter(instrumentationName string, opts ...metric.MeterOp
 var ErrMetricKindMismatch = fmt.Errorf(
 	"A metric was already registered by this name with another kind or number type")
 
-// NewUniqueInstrumentMeterImpl returns a wrapped metric.MeterImpl with
+// NewUniqueInstrumentMeterImpl returns a wrapped otel.MeterImpl with
 // the addition of uniqueness checking.
-func NewUniqueInstrumentMeterImpl(impl metric.MeterImpl) metric.MeterImpl {
+func NewUniqueInstrumentMeterImpl(impl otel.MeterImpl) otel.MeterImpl {
 	return &uniqueInstrumentMeterImpl{
 		impl:  impl,
-		state: map[key]metric.InstrumentImpl{},
+		state: map[key]otel.InstrumentImpl{},
 	}
 }
 
-// RecordBatch implements metric.MeterImpl.
-func (u *uniqueInstrumentMeterImpl) RecordBatch(ctx context.Context, labels []label.KeyValue, ms ...metric.Measurement) {
+// RecordBatch implements otel.MeterImpl.
+func (u *uniqueInstrumentMeterImpl) RecordBatch(ctx context.Context, labels []label.KeyValue, ms ...otel.Measurement) {
 	u.impl.RecordBatch(ctx, labels, ms...)
 }
 
-func keyOf(descriptor metric.Descriptor) key {
+func keyOf(descriptor otel.Descriptor) key {
 	return key{
 		descriptor.Name(),
 		descriptor.InstrumentationName(),
@@ -89,7 +89,7 @@ func keyOf(descriptor metric.Descriptor) key {
 
 // NewMetricKindMismatchError formats an error that describes a
 // mismatched metric instrument definition.
-func NewMetricKindMismatchError(desc metric.Descriptor) error {
+func NewMetricKindMismatchError(desc otel.Descriptor) error {
 	return fmt.Errorf("Metric was %s (%s %s)registered as a %s %s: %w",
 		desc.Name(),
 		desc.InstrumentationName(),
@@ -99,9 +99,9 @@ func NewMetricKindMismatchError(desc metric.Descriptor) error {
 		ErrMetricKindMismatch)
 }
 
-// Compatible determines whether two metric.Descriptors are considered
+// Compatible determines whether two otel.Descriptors are considered
 // the same for the purpose of uniqueness checking.
-func Compatible(candidate, existing metric.Descriptor) bool {
+func Compatible(candidate, existing otel.Descriptor) bool {
 	return candidate.InstrumentKind() == existing.InstrumentKind() &&
 		candidate.NumberKind() == existing.NumberKind()
 }
@@ -111,7 +111,7 @@ func Compatible(candidate, existing metric.Descriptor) bool {
 // `descriptor` argument.  If there is an existing compatible
 // registration, this returns the already-registered instrument.  If
 // there is no conflict and no prior registration, returns (nil, nil).
-func (u *uniqueInstrumentMeterImpl) checkUniqueness(descriptor metric.Descriptor) (metric.InstrumentImpl, error) {
+func (u *uniqueInstrumentMeterImpl) checkUniqueness(descriptor otel.Descriptor) (otel.InstrumentImpl, error) {
 	impl, ok := u.state[keyOf(descriptor)]
 	if !ok {
 		return nil, nil
@@ -124,8 +124,8 @@ func (u *uniqueInstrumentMeterImpl) checkUniqueness(descriptor metric.Descriptor
 	return impl, nil
 }
 
-// NewSyncInstrument implements metric.MeterImpl.
-func (u *uniqueInstrumentMeterImpl) NewSyncInstrument(descriptor metric.Descriptor) (metric.SyncImpl, error) {
+// NewSyncInstrument implements otel.MeterImpl.
+func (u *uniqueInstrumentMeterImpl) NewSyncInstrument(descriptor otel.Descriptor) (otel.SyncImpl, error) {
 	u.lock.Lock()
 	defer u.lock.Unlock()
 
@@ -134,7 +134,7 @@ func (u *uniqueInstrumentMeterImpl) NewSyncInstrument(descriptor metric.Descript
 	if err != nil {
 		return nil, err
 	} else if impl != nil {
-		return impl.(metric.SyncImpl), nil
+		return impl.(otel.SyncImpl), nil
 	}
 
 	syncInst, err := u.impl.NewSyncInstrument(descriptor)
@@ -145,11 +145,11 @@ func (u *uniqueInstrumentMeterImpl) NewSyncInstrument(descriptor metric.Descript
 	return syncInst, nil
 }
 
-// NewAsyncInstrument implements metric.MeterImpl.
+// NewAsyncInstrument implements otel.MeterImpl.
 func (u *uniqueInstrumentMeterImpl) NewAsyncInstrument(
-	descriptor metric.Descriptor,
-	runner metric.AsyncRunner,
-) (metric.AsyncImpl, error) {
+	descriptor otel.Descriptor,
+	runner otel.AsyncRunner,
+) (otel.AsyncImpl, error) {
 	u.lock.Lock()
 	defer u.lock.Unlock()
 
@@ -158,7 +158,7 @@ func (u *uniqueInstrumentMeterImpl) NewAsyncInstrument(
 	if err != nil {
 		return nil, err
 	} else if impl != nil {
-		return impl.(metric.AsyncImpl), nil
+		return impl.(otel.AsyncImpl), nil
 	}
 
 	asyncInst, err := u.impl.NewAsyncInstrument(descriptor, runner)

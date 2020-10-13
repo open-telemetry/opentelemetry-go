@@ -22,7 +22,7 @@ import (
 	"testing"
 	"unsafe"
 
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	ottest "go.opentelemetry.io/otel/internal/testing"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
@@ -31,30 +31,30 @@ import (
 const Magnitude = 1000
 
 type Profile struct {
-	NumberKind metric.NumberKind
-	Random     func(sign int) metric.Number
+	NumberKind otel.NumberKind
+	Random     func(sign int) otel.Number
 }
 
 func newProfiles() []Profile {
 	rnd := rand.New(rand.NewSource(rand.Int63()))
 	return []Profile{
 		{
-			NumberKind: metric.Int64NumberKind,
-			Random: func(sign int) metric.Number {
-				return metric.NewInt64Number(int64(sign) * int64(rnd.Intn(Magnitude+1)))
+			NumberKind: otel.Int64NumberKind,
+			Random: func(sign int) otel.Number {
+				return otel.NewInt64Number(int64(sign) * int64(rnd.Intn(Magnitude+1)))
 			},
 		},
 		{
-			NumberKind: metric.Float64NumberKind,
-			Random: func(sign int) metric.Number {
-				return metric.NewFloat64Number(float64(sign) * rnd.Float64() * Magnitude)
+			NumberKind: otel.Float64NumberKind,
+			Random: func(sign int) otel.Number {
+				return otel.NewFloat64Number(float64(sign) * rnd.Float64() * Magnitude)
 			},
 		},
 	}
 }
 
-func NewAggregatorTest(mkind metric.InstrumentKind, nkind metric.NumberKind) *metric.Descriptor {
-	desc := metric.NewDescriptor("test.name", mkind, nkind)
+func NewAggregatorTest(mkind otel.InstrumentKind, nkind otel.NumberKind) *otel.Descriptor {
+	desc := otel.NewDescriptor("test.name", mkind, nkind)
 	return &desc
 }
 
@@ -85,17 +85,17 @@ func TestMain(m *testing.M) {
 
 type Numbers struct {
 	// numbers has to be aligned for 64-bit atomic operations.
-	numbers []metric.Number
-	kind    metric.NumberKind
+	numbers []otel.Number
+	kind    otel.NumberKind
 }
 
-func NewNumbers(kind metric.NumberKind) Numbers {
+func NewNumbers(kind otel.NumberKind) Numbers {
 	return Numbers{
 		kind: kind,
 	}
 }
 
-func (n *Numbers) Append(v metric.Number) {
+func (n *Numbers) Append(v otel.Number) {
 	n.numbers = append(n.numbers, v)
 }
 
@@ -115,8 +115,8 @@ func (n *Numbers) Swap(i, j int) {
 	n.numbers[i], n.numbers[j] = n.numbers[j], n.numbers[i]
 }
 
-func (n *Numbers) Sum() metric.Number {
-	var sum metric.Number
+func (n *Numbers) Sum() otel.Number {
+	var sum otel.Number
 	for _, num := range n.numbers {
 		sum.AddNumber(n.kind, num)
 	}
@@ -127,16 +127,16 @@ func (n *Numbers) Count() int64 {
 	return int64(len(n.numbers))
 }
 
-func (n *Numbers) Min() metric.Number {
+func (n *Numbers) Min() otel.Number {
 	return n.numbers[0]
 }
 
-func (n *Numbers) Max() metric.Number {
+func (n *Numbers) Max() otel.Number {
 	return n.numbers[len(n.numbers)-1]
 }
 
 // Median() is an alias for Quantile(0.5).
-func (n *Numbers) Median() metric.Number {
+func (n *Numbers) Median() otel.Number {
 	// Note that len(n.numbers) is 1 greater than the max element
 	// index, so dividing by two rounds up.  This gives the
 	// intended definition for Quantile() in tests, which is to
@@ -145,12 +145,12 @@ func (n *Numbers) Median() metric.Number {
 	return n.numbers[len(n.numbers)/2]
 }
 
-func (n *Numbers) Points() []metric.Number {
+func (n *Numbers) Points() []otel.Number {
 	return n.numbers
 }
 
 // Performs the same range test the SDK does on behalf of the aggregator.
-func CheckedUpdate(t *testing.T, agg export.Aggregator, number metric.Number, descriptor *metric.Descriptor) {
+func CheckedUpdate(t *testing.T, agg export.Aggregator, number otel.Number, descriptor *otel.Descriptor) {
 	ctx := context.Background()
 
 	// Note: Aggregator tests are written assuming that the SDK
@@ -166,7 +166,7 @@ func CheckedUpdate(t *testing.T, agg export.Aggregator, number metric.Number, de
 	}
 }
 
-func CheckedMerge(t *testing.T, aggInto, aggFrom export.Aggregator, descriptor *metric.Descriptor) {
+func CheckedMerge(t *testing.T, aggInto, aggFrom export.Aggregator, descriptor *otel.Descriptor) {
 	if err := aggInto.Merge(aggFrom, descriptor); err != nil {
 		t.Error("Unexpected Merge failure", err)
 	}

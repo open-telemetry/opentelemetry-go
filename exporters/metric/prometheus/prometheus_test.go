@@ -26,7 +26,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
@@ -45,8 +45,8 @@ func TestPrometheusExporter(t *testing.T) {
 
 	meter := exporter.MeterProvider().Meter("test")
 
-	counter := metric.Must(meter).NewFloat64Counter("counter")
-	valuerecorder := metric.Must(meter).NewFloat64ValueRecorder("valuerecorder")
+	counter := otel.Must(meter).NewFloat64Counter("counter")
+	valuerecorder := otel.Must(meter).NewFloat64ValueRecorder("valuerecorder")
 
 	labels := []label.KeyValue{
 		label.Key("A").String("B"),
@@ -123,9 +123,9 @@ func TestPrometheusStatefulness(t *testing.T) {
 
 	ctx := context.Background()
 
-	counter := metric.Must(meter).NewInt64Counter(
+	counter := otel.Must(meter).NewInt64Counter(
 		"a.counter",
-		metric.WithDescription("Counts things"),
+		otel.WithDescription("Counts things"),
 	)
 
 	counter.Add(ctx, 100, label.String("key", "value"))
