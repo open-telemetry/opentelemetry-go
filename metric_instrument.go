@@ -14,7 +14,7 @@
 
 //go:generate stringer -type=InstrumentKind
 
-package metric
+package otel
 
 import (
 	"context"

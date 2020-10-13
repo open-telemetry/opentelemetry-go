@@ -12,17 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metrictest
+package oteltest
 
 import (
 	"context"
 	"sync"
+	"testing"
 
 	"go.opentelemetry.io/otel/api/metric"
 	apimetric "go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/metric/registry"
 	internalmetric "go.opentelemetry.io/otel/internal/metric"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/registry"
 )
 
 type (
@@ -190,4 +191,52 @@ func (m *MeterImpl) collect(ctx context.Context, labels []label.KeyValue, measur
 
 func (m *MeterImpl) RunAsyncInstruments() {
 	m.asyncInstruments.Run(context.Background(), m)
+}
+
+// Measured is the helper struct which provides flat representation of recorded measurements
+// to simplify testing
+type Measured struct {
+	Name                   string
+	InstrumentationName    string
+	InstrumentationVersion string
+	Labels                 map[label.Key]label.Value
+	Number                 metric.Number
+}
+
+// LabelsToMap converts label set to keyValue map, to be easily used in tests
+func LabelsToMap(kvs ...label.KeyValue) map[label.Key]label.Value {
+	m := map[label.Key]label.Value{}
+	for _, label := range kvs {
+		m[label.Key] = label.Value
+	}
+	return m
+}
+
+// AsStructs converts recorded batches to array of flat, readable Measured helper structures
+func AsStructs(batches []Batch) []Measured {
+	var r []Measured
+	for _, batch := range batches {
+		for _, m := range batch.Measurements {
+			r = append(r, Measured{
+				Name:                   m.Instrument.Descriptor().Name(),
+				InstrumentationName:    m.Instrument.Descriptor().InstrumentationName(),
+				InstrumentationVersion: m.Instrument.Descriptor().InstrumentationVersion(),
+				Labels:                 LabelsToMap(batch.Labels...),
+				Number:                 m.Number,
+			})
+		}
+	}
+	return r
+}
+
+// ResolveNumberByKind takes defined metric descriptor creates a concrete typed metric number
+func ResolveNumberByKind(t *testing.T, kind metric.NumberKind, value float64) metric.Number {
+	t.Helper()
+	switch kind {
+	case metric.Int64NumberKind:
+		return metric.NewInt64Number(int64(value))
+	case metric.Float64NumberKind:
+		return metric.NewFloat64Number(value)
+	}
+	panic("invalid number kind")
 }

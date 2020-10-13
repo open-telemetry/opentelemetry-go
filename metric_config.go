@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
+package otel
 
 import "go.opentelemetry.io/otel/unit"
 
@@ -103,14 +103,14 @@ func NewMeterConfig(opts ...MeterOption) MeterConfig {
 	return config
 }
 
-// Option is an interface for applying Instrument or Meter options.
-type Option interface {
+// MetricOption is an interface for applying Instrument or Meter options.
+type MetricOption interface {
 	InstrumentOption
 	MeterOption
 }
 
 // WithInstrumentationVersion sets the instrumentation version.
-func WithInstrumentationVersion(version string) Option {
+func WithInstrumentationVersion(version string) MetricOption {
 	return instrumentationVersionOption(version)
 }
 

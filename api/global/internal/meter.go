@@ -21,8 +21,8 @@ import (
 	"unsafe"
 
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/metric/registry"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/registry"
 )
 
 // This file contains the forwarding implementation of MeterProvider used as
