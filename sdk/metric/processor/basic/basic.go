@@ -160,7 +160,7 @@ func (b *Processor) Process(accum export.Accumulation) error {
 	// Check if there is an existing value.
 	value, ok := b.state.values[key]
 	if !ok {
-		stateful := b.ExportKindFor(desc, agg.Aggregation().Kind()).MemoryRequired(desc.MetricKind())
+		stateful := b.ExportKindFor(desc, agg.Aggregation().Kind()).MemoryRequired(desc.InstrumentKind())
 
 		newValue := &stateValue{
 			labels:   accum.Labels(),
@@ -170,7 +170,7 @@ func (b *Processor) Process(accum export.Accumulation) error {
 			current:  agg,
 		}
 		if stateful {
-			if desc.MetricKind().PrecomputedSum() {
+			if desc.InstrumentKind().PrecomputedSum() {
 				// If we know we need to compute deltas, allocate two aggregators.
 				b.AggregatorFor(desc, &newValue.cumulative, &newValue.delta)
 			} else {
@@ -207,7 +207,7 @@ func (b *Processor) Process(accum export.Accumulation) error {
 	// instrument reports a PrecomputedSum to a DeltaExporter or
 	// the reverse, a non-PrecomputedSum instrument with a
 	// CumulativeExporter.  This logic is encapsulated in
-	// ExportKind.MemoryRequired(MetricKind).
+	// ExportKind.MemoryRequired(InstrumentKind).
 	//
 	// Case (b) occurs when the variable `sameCollection` is true,
 	// indicating that the stateKey for Accumulation has already
@@ -272,7 +272,7 @@ func (b *Processor) FinishCollection() error {
 	defer func() { b.finishedCollection++ }()
 
 	for key, value := range b.values {
-		mkind := key.descriptor.MetricKind()
+		mkind := key.descriptor.InstrumentKind()
 		stale := value.updated != b.finishedCollection
 		stateless := !value.stateful
 
@@ -325,7 +325,7 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 		return ErrInconsistentState
 	}
 	for key, value := range b.values {
-		mkind := key.descriptor.MetricKind()
+		mkind := key.descriptor.InstrumentKind()
 
 		var agg aggregation.Aggregation
 		var start time.Time

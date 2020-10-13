@@ -93,7 +93,7 @@ func (m *checkpointSet) ForEach(_ metricsdk.ExportKindSelector, fn func(metricsd
 
 type record struct {
 	name     string
-	mKind    metric.Kind
+	iKind    metric.InstrumentKind
 	nKind    metric.NumberKind
 	resource *resource.Resource
 	opts     []metric.InstrumentOption
@@ -162,7 +162,7 @@ func TestNoGroupingExport(t *testing.T) {
 		[]record{
 			{
 				"int64-count",
-				metric.CounterKind,
+				metric.CounterInstrumentKind,
 				metric.Int64NumberKind,
 				nil,
 				nil,
@@ -170,7 +170,7 @@ func TestNoGroupingExport(t *testing.T) {
 			},
 			{
 				"int64-count",
-				metric.CounterKind,
+				metric.CounterInstrumentKind,
 				metric.Int64NumberKind,
 				nil,
 				nil,
@@ -217,7 +217,7 @@ func TestNoGroupingExport(t *testing.T) {
 func TestValuerecorderMetricGroupingExport(t *testing.T) {
 	r := record{
 		"valuerecorder",
-		metric.ValueRecorderKind,
+		metric.ValueRecorderInstrumentKind,
 		metric.Int64NumberKind,
 		nil,
 		nil,
@@ -286,7 +286,7 @@ func TestValuerecorderMetricGroupingExport(t *testing.T) {
 func TestCountInt64MetricGroupingExport(t *testing.T) {
 	r := record{
 		"int64-count",
-		metric.CounterKind,
+		metric.CounterInstrumentKind,
 		metric.Int64NumberKind,
 		nil,
 		nil,
@@ -335,7 +335,7 @@ func TestCountInt64MetricGroupingExport(t *testing.T) {
 func TestCountFloat64MetricGroupingExport(t *testing.T) {
 	r := record{
 		"float64-count",
-		metric.CounterKind,
+		metric.CounterInstrumentKind,
 		metric.Float64NumberKind,
 		nil,
 		nil,
@@ -405,7 +405,7 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 		[]record{
 			{
 				"int64-count",
-				metric.CounterKind,
+				metric.CounterInstrumentKind,
 				metric.Int64NumberKind,
 				testInstA,
 				nil,
@@ -413,7 +413,7 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 			},
 			{
 				"int64-count",
-				metric.CounterKind,
+				metric.CounterInstrumentKind,
 				metric.Int64NumberKind,
 				testInstA,
 				nil,
@@ -421,7 +421,7 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 			},
 			{
 				"int64-count",
-				metric.CounterKind,
+				metric.CounterInstrumentKind,
 				metric.Int64NumberKind,
 				testInstA,
 				nil,
@@ -429,7 +429,7 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 			},
 			{
 				"int64-count",
-				metric.CounterKind,
+				metric.CounterInstrumentKind,
 				metric.Int64NumberKind,
 				testInstB,
 				nil,
@@ -522,7 +522,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 		[]record{
 			{
 				"int64-count",
-				metric.CounterKind,
+				metric.CounterInstrumentKind,
 				metric.Int64NumberKind,
 				testInstA,
 				countingLib1,
@@ -530,7 +530,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 			},
 			{
 				"int64-count",
-				metric.CounterKind,
+				metric.CounterInstrumentKind,
 				metric.Int64NumberKind,
 				testInstA,
 				countingLib2,
@@ -538,7 +538,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 			},
 			{
 				"int64-count",
-				metric.CounterKind,
+				metric.CounterInstrumentKind,
 				metric.Int64NumberKind,
 				testInstA,
 				countingLib1,
@@ -546,7 +546,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 			},
 			{
 				"int64-count",
-				metric.CounterKind,
+				metric.CounterInstrumentKind,
 				metric.Int64NumberKind,
 				testInstA,
 				countingLib1,
@@ -554,7 +554,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 			},
 			{
 				"int64-count",
-				metric.CounterKind,
+				metric.CounterInstrumentKind,
 				metric.Int64NumberKind,
 				testInstA,
 				summingLib,
@@ -562,7 +562,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 			},
 			{
 				"int64-count",
-				metric.CounterKind,
+				metric.CounterInstrumentKind,
 				metric.Int64NumberKind,
 				testInstB,
 				countingLib1,
@@ -713,12 +713,12 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 	recs := map[label.Distinct][]metricsdk.Record{}
 	resources := map[label.Distinct]*resource.Resource{}
 	for _, r := range rs {
-		desc := metric.NewDescriptor(r.name, r.mKind, r.nKind, r.opts...)
+		desc := metric.NewDescriptor(r.name, r.iKind, r.nKind, r.opts...)
 		labs := label.NewSet(r.labels...)
 
 		var agg, ckpt metricsdk.Aggregator
-		switch r.mKind {
-		case metric.CounterKind:
+		switch r.iKind {
+		case metric.CounterInstrumentKind:
 			agg, ckpt = metrictest.Unslice2(sum.New(2))
 		default:
 			agg, ckpt = metrictest.Unslice2(histogram.New(2, &desc, testHistogramBoundaries))

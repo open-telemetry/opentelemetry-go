@@ -95,14 +95,14 @@ func NewMetricKindMismatchError(desc metric.Descriptor) error {
 		desc.InstrumentationName(),
 		desc.InstrumentationVersion(),
 		desc.NumberKind(),
-		desc.MetricKind(),
+		desc.InstrumentKind(),
 		ErrMetricKindMismatch)
 }
 
 // Compatible determines whether two metric.Descriptors are considered
 // the same for the purpose of uniqueness checking.
 func Compatible(candidate, existing metric.Descriptor) bool {
-	return candidate.MetricKind() == existing.MetricKind() &&
+	return candidate.InstrumentKind() == existing.InstrumentKind() &&
 		candidate.NumberKind() == existing.NumberKind()
 }
 

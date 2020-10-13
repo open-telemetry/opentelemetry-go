@@ -31,12 +31,12 @@ import (
 )
 
 var (
-	testCounterDesc           = metric.NewDescriptor("counter", metric.CounterKind, metric.Int64NumberKind)
-	testUpDownCounterDesc     = metric.NewDescriptor("updowncounter", metric.UpDownCounterKind, metric.Int64NumberKind)
-	testSumObserverDesc       = metric.NewDescriptor("sumobserver", metric.SumObserverKind, metric.Int64NumberKind)
-	testUpDownSumObserverDesc = metric.NewDescriptor("updownsumobserver", metric.UpDownSumObserverKind, metric.Int64NumberKind)
-	testValueRecorderDesc     = metric.NewDescriptor("valuerecorder", metric.ValueRecorderKind, metric.Int64NumberKind)
-	testValueObserverDesc     = metric.NewDescriptor("valueobserver", metric.ValueObserverKind, metric.Int64NumberKind)
+	testCounterDesc           = metric.NewDescriptor("counter", metric.CounterInstrumentKind, metric.Int64NumberKind)
+	testUpDownCounterDesc     = metric.NewDescriptor("updowncounter", metric.UpDownCounterInstrumentKind, metric.Int64NumberKind)
+	testSumObserverDesc       = metric.NewDescriptor("sumobserver", metric.SumObserverInstrumentKind, metric.Int64NumberKind)
+	testUpDownSumObserverDesc = metric.NewDescriptor("updownsumobserver", metric.UpDownSumObserverInstrumentKind, metric.Int64NumberKind)
+	testValueRecorderDesc     = metric.NewDescriptor("valuerecorder", metric.ValueRecorderInstrumentKind, metric.Int64NumberKind)
+	testValueObserverDesc     = metric.NewDescriptor("valueobserver", metric.ValueObserverInstrumentKind, metric.Int64NumberKind)
 )
 
 func oneAgg(sel export.AggregatorSelector, desc *metric.Descriptor) export.Aggregator {

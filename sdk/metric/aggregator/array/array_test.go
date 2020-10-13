@@ -62,7 +62,7 @@ func new4() (_, _, _, _ *Aggregator) {
 }
 
 func (ut *updateTest) run(t *testing.T, profile aggregatortest.Profile) {
-	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
+	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 	agg, ckpt := new2()
 
 	all := aggregatortest.NewNumbers(profile.NumberKind)
@@ -129,7 +129,7 @@ type mergeTest struct {
 }
 
 func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
-	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
+	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 	agg1, agg2, ckpt1, ckpt2 := new4()
 
 	all := aggregatortest.NewNumbers(profile.NumberKind)
@@ -225,7 +225,7 @@ func TestArrayErrors(t *testing.T) {
 		require.Error(t, err)
 		require.Equal(t, err, aggregation.ErrNoData)
 
-		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 
 		aggregatortest.CheckedUpdate(t, agg, metric.Number(0), descriptor)
 
@@ -253,7 +253,7 @@ func TestArrayErrors(t *testing.T) {
 }
 
 func TestArrayFloat64(t *testing.T) {
-	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, metric.Float64NumberKind)
+	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, metric.Float64NumberKind)
 
 	fpsf := func(sign int) []float64 {
 		// Check behavior of a bunch of odd floating
