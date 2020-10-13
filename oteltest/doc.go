@@ -12,5 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package oteltest provides testing utilities for the otel package.
+/*
+Package oteltest provides testing utilities for the otel package.
+
+API Validation
+
+The Harness can be used to validate an implementation of the OpenTelemetry API
+defined by the `otel` package.
+
+	func TestCustomSDKTracingImplementation(t *testing.T) {
+		yourTraceProvider := NewTracerProvider()
+		subjectFactory := func() otel.Tracer {
+			return yourTraceProvider.Tracer("testing")
+		}
+
+		oteltest.NewHarness(t).TestTracer(subjectFactory)
+	}
+
+Currently the Harness only provides testing of the trace portion of the
+OpenTelemetry API.
+
+Trace Testing
+
+To test tracing functionality a full testing implementation of the
+OpenTelemetry tracing API are provided. The provided TracerProvider, Tracer,
+and Span all implement their related interface and are designed to allow
+introspection of their state and history. Additionally, a SpanRecorder can be
+provided to the TracerProvider to record all Spans started and ended by the
+testing structures.
+
+	sr := new(oteltest.StandardSpanRecorder)
+	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+*/
 package oteltest // import "go.opentelemetry.io/otel/oteltest"
