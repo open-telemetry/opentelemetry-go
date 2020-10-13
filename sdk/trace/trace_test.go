@@ -29,12 +29,12 @@ import (
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/oteltest"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/apitest"
 	ottest "go.opentelemetry.io/otel/internal/testing"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -59,7 +59,7 @@ func init() {
 
 func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
 	tp := NewTracerProvider(WithConfig(Config{DefaultSampler: TraceIDRatioBased(0)}))
-	harness := apitest.NewHarness(t)
+	harness := oteltest.NewHarness(t)
 	subjectFactory := func() otel.Tracer {
 		return tp.Tracer("")
 	}

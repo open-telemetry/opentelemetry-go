@@ -21,6 +21,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	apimetric "go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/metric/registry"
+	internalmetric "go.opentelemetry.io/otel/internal/metric"
 	"go.opentelemetry.io/otel/label"
 )
 
@@ -44,7 +45,7 @@ type (
 
 		MeasurementBatches []Batch
 
-		asyncInstruments *AsyncInstrumentState
+		asyncInstruments *internalmetric.AsyncInstrumentState
 	}
 
 	Measurement struct {
@@ -115,7 +116,7 @@ func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []label.KeyValue,
 
 func NewMeterProvider() (*MeterImpl, apimetric.MeterProvider) {
 	impl := &MeterImpl{
-		asyncInstruments: NewAsyncInstrumentState(),
+		asyncInstruments: internalmetric.NewAsyncInstrumentState(),
 	}
 	return impl, registry.NewMeterProvider(impl)
 }

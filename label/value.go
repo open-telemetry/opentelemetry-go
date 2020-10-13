@@ -40,16 +40,28 @@ type Value struct {
 }
 
 const (
-	INVALID Type = iota // No value.
-	BOOL                // Boolean value, use AsBool() to get it.
-	INT32               // 32 bit signed integral value, use AsInt32() to get it.
-	INT64               // 64 bit signed integral value, use AsInt64() to get it.
-	UINT32              // 32 bit unsigned integral value, use AsUint32() to get it.
-	UINT64              // 64 bit unsigned integral value, use AsUint64() to get it.
-	FLOAT32             // 32 bit floating point value, use AsFloat32() to get it.
-	FLOAT64             // 64 bit floating point value, use AsFloat64() to get it.
-	STRING              // String value, use AsString() to get it.
-	ARRAY               // Array value of arbitrary type, use AsArray() to get it.
+	// INVALID is used for a Value with no value set.
+	INVALID Type = iota
+	// BOOL is a boolean Type Value.
+	BOOL
+	// INT32 is a 32-bit signed integral Type Value.
+	INT32
+	// INT64 is a 64-bit signed integral Type Value.
+	INT64
+	// UINT32 is a 32-bit unsigned integral Type Value.
+	UINT32
+	// UINT64 is a 64-bit unsigned integral Type Value.
+	UINT64
+	// FLOAT32 is a 32-bit floating point Type Value.
+	FLOAT32
+	// FLOAT64 is a 64-bit floating point Type Value.
+	FLOAT64
+	// STRING is a string Type Value.
+	STRING
+	// ARRAY is an array Type Value used to store 1-dimensional slices or
+	// arrays of bool, int, int32, int64, uint, uint32, uint64, float,
+	// float32, float64, or string types.
+	ARRAY
 )
 
 // BoolValue creates a BOOL Value.
