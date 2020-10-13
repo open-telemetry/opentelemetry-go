@@ -16,7 +16,6 @@ package otel
 
 import (
 	"context"
-	"time"
 
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
@@ -73,16 +72,13 @@ func (noopSpan) SetAttributes(...label.KeyValue) {}
 func (noopSpan) End(...SpanOption) {}
 
 // RecordError does nothing.
-func (noopSpan) RecordError(context.Context, error, ...ErrorOption) {}
+func (noopSpan) RecordError(error, ...EventOption) {}
 
 // Tracer returns the Tracer that created this Span.
 func (noopSpan) Tracer() Tracer { return noopTracer{} }
 
 // AddEvent does nothing.
-func (noopSpan) AddEvent(context.Context, string, ...label.KeyValue) {}
-
-// AddEventWithTimestamp does nothing.
-func (noopSpan) AddEventWithTimestamp(context.Context, time.Time, string, ...label.KeyValue) {}
+func (noopSpan) AddEvent(string, ...EventOption) {}
 
 // SetName does nothing.
 func (noopSpan) SetName(string) {}
