@@ -24,8 +24,10 @@ import (
 type testSpan struct {
 	noopSpan
 
-	ID int8
+	ID byte
 }
+
+func (s testSpan) SpanContext() SpanContext { return SpanContext{SpanID: [8]byte{s.ID}} }
 
 func TestContextSpan(t *testing.T) {
 	testCases := []struct {
@@ -408,5 +410,30 @@ func TestSpanKindString(t *testing.T) {
 		if got := test.in.String(); got != test.want {
 			t.Errorf("%#v.String() = %#v, want %#v", test.in, got, test.want)
 		}
+	}
+}
+
+func TestSpanContextFromContext(t *testing.T) {
+	testCases := []struct {
+		name                string
+		context             context.Context
+		expectedSpanContext SpanContext
+	}{
+		{
+			name:    "empty context",
+			context: context.Background(),
+		},
+		{
+			name:                "span 1",
+			context:             ContextWithSpan(context.Background(), testSpan{ID: 1}),
+			expectedSpanContext: SpanContext{SpanID: [8]byte{1}},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			spanContext := SpanContextFromContext(tc.context)
+			assert.Equal(t, tc.expectedSpanContext, spanContext)
+		})
 	}
 }
