@@ -213,7 +213,7 @@ func SpanFromContext(ctx context.Context) Span {
 	return nil
 }
 
-// SpanContextFromContext returns the span context from ctx.
+// SpanContextFromContext returns the current SpanContext from ctx, or an empty SpanContext if none set.
 func SpanContextFromContext(ctx context.Context) SpanContext {
 	if span := SpanFromContext(ctx); span != nil {
 		return span.SpanContext()
