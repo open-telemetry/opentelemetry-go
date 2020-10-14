@@ -17,6 +17,8 @@ package otel
 import (
 	"context"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type testSpan struct {
@@ -26,34 +28,39 @@ type testSpan struct {
 }
 
 func TestContextSpan(t *testing.T) {
-	ctx := context.Background()
-	got, empty := SpanFromContext(ctx), noopSpan{}
-	if got != empty {
-		t.Errorf("SpanFromContext returned %v from an empty context, want %v", got, empty)
+	testCases := []struct {
+		name         string
+		context      context.Context
+		expectedSpan Span
+	}{
+		{
+			name:         "empty context",
+			context:      context.Background(),
+			expectedSpan: nil,
+		},
+		{
+			name:         "span 0",
+			context:      ContextWithSpan(context.Background(), testSpan{ID: 0}),
+			expectedSpan: testSpan{ID: 0},
+		},
+		{
+			name:         "span 1",
+			context:      ContextWithSpan(context.Background(), testSpan{ID: 1}),
+			expectedSpan: testSpan{ID: 1},
+		},
 	}
 
-	want := testSpan{ID: 0}
-	ctx = ContextWithSpan(ctx, want)
-	if got, ok := ctx.Value(currentSpanKey).(testSpan); !ok {
-		t.Errorf("failed to set context with %#v", want)
-	} else if got != want {
-		t.Errorf("got %#v from context with current set, want %#v", got, want)
-	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			span := SpanFromContext(tc.context)
+			assert.Equal(t, tc.expectedSpan, span)
 
-	if got := SpanFromContext(ctx); got != want {
-		t.Errorf("SpanFromContext returned %v from a set context, want %v", got, want)
-	}
-
-	want = testSpan{ID: 1}
-	ctx = ContextWithSpan(ctx, want)
-	if got, ok := ctx.Value(currentSpanKey).(testSpan); !ok {
-		t.Errorf("failed to set context with %#v", want)
-	} else if got != want {
-		t.Errorf("got %#v from context with current overridden, want %#v", got, want)
-	}
-
-	if got := SpanFromContext(ctx); got != want {
-		t.Errorf("SpanFromContext returned %v from a set context, want %v", got, want)
+			if tc.expectedSpan != nil {
+				span, ok := tc.context.Value(currentSpanKey).(testSpan)
+				assert.True(t, ok)
+				assert.Equal(t, tc.expectedSpan.(testSpan), span)
+			}
+		})
 	}
 }
 

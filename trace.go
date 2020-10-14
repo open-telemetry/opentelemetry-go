@@ -210,7 +210,15 @@ func SpanFromContext(ctx context.Context) Span {
 	if span, ok := ctx.Value(currentSpanKey).(Span); ok {
 		return span
 	}
-	return noopSpan{}
+	return nil
+}
+
+// SpanContextFromContext returns the span context from ctx.
+func SpanContextFromContext(ctx context.Context) SpanContext {
+	if span := SpanFromContext(ctx); span != nil {
+		return span.SpanContext()
+	}
+	return SpanContext{}
 }
 
 // ContextWithRemoteSpanContext returns a copy of parent with a remote set as
