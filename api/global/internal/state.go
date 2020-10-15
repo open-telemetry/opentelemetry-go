@@ -41,8 +41,9 @@ var (
 	globalMeter       = defaultMeterValue()
 	globalPropagators = defaultPropagatorsValue()
 
-	delegateMeterOnce sync.Once
-	delegateTraceOnce sync.Once
+	delegateMeterOnce             sync.Once
+	delegateTraceOnce             sync.Once
+	delegateTextMapPropagatorOnce sync.Once
 )
 
 // TracerProvider is the internal implementation for global.TracerProvider.
@@ -96,6 +97,19 @@ func TextMapPropagator() otel.TextMapPropagator {
 
 // SetTextMapPropagator is the internal implementation for global.SetTextMapPropagator.
 func SetTextMapPropagator(p otel.TextMapPropagator) {
+	// For the textMapPropagator already returned by TextMapPropagator
+	// delegate to p.
+	delegateTextMapPropagatorOnce.Do(func() {
+		if current := TextMapPropagator(); current == p {
+			// Setting the provider to the prior default is nonsense, panic.
+			// Panic is acceptable because we are likely still early in the
+			// process lifetime.
+			panic("invalid TextMapPropagator, the global instance cannot be reinstalled")
+		} else if def, ok := current.(*textMapPropagator); ok {
+			def.SetDelegate(p)
+		}
+	})
+	// Return p when subsequent calls to TextMapPropagator are made.
 	globalPropagators.Store(propagatorsHolder{tm: p})
 }
 
@@ -113,14 +127,8 @@ func defaultMeterValue() *atomic.Value {
 
 func defaultPropagatorsValue() *atomic.Value {
 	v := &atomic.Value{}
-	v.Store(propagatorsHolder{tm: getDefaultTextMapPropagator()})
+	v.Store(propagatorsHolder{tm: newTextMapPropagator()})
 	return v
-}
-
-// getDefaultTextMapPropagator returns the default TextMapPropagator,
-// configured with W3C trace and baggage propagation.
-func getDefaultTextMapPropagator() otel.TextMapPropagator {
-	return otel.NewCompositeTextMapPropagator()
 }
 
 // ResetForTest restores the initial global state, for testing purposes.
