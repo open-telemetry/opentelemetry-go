@@ -54,34 +54,29 @@ func (p *textMapPropagator) SetDelegate(delegate otel.TextMapPropagator) {
 	p.mtx.Unlock()
 }
 
-// currentDelegate returns the current delegate of p in a concurrently-safe
-// manner.
-func (p *textMapPropagator) currentDelegate() otel.TextMapPropagator {
+// effectiveDelegate returns the current delegate of p if one is set,
+// otherwise the default noop TextMapPropagator is returned. This method is
+// can be called concurrently.
+func (p *textMapPropagator) effectiveDelegate() otel.TextMapPropagator {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
-	return p.delegate
+	if p.delegate != nil {
+		return p.delegate
+	}
+	return p.noop
 }
 
 // Inject set cross-cutting concerns from the Context into the carrier.
 func (p *textMapPropagator) Inject(ctx context.Context, carrier otel.TextMapCarrier) {
-	if d := p.currentDelegate(); d != nil {
-		d.Inject(ctx, carrier)
-	}
-	p.noop.Inject(ctx, carrier)
+	p.effectiveDelegate().Inject(ctx, carrier)
 }
 
 // Extract reads cross-cutting concerns from the carrier into a Context.
 func (p *textMapPropagator) Extract(ctx context.Context, carrier otel.TextMapCarrier) context.Context {
-	if d := p.currentDelegate(); d != nil {
-		return d.Extract(ctx, carrier)
-	}
-	return p.noop.Extract(ctx, carrier)
+	return p.effectiveDelegate().Extract(ctx, carrier)
 }
 
 // Fields returns the keys whose values are set with Inject.
 func (p *textMapPropagator) Fields() []string {
-	if d := p.currentDelegate(); d != nil {
-		return d.Fields()
-	}
-	return p.noop.Fields()
+	return p.effectiveDelegate().Fields()
 }
