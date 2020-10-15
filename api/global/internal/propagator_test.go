@@ -68,7 +68,7 @@ func TestTextMapPropagatorDelegationNil(t *testing.T) {
 	// Delegation to nil should not make a change.
 	internal.SetTextMapPropagator(nil)
 	initial.Inject(ctx, carrier)
-	ctx = initial.Extract(ctx, carrier)
+	initial.Extract(ctx, carrier)
 	if !carrier.GotN(t, 0) || !carrier.SetN(t, 0) {
 		return
 	}
