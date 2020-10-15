@@ -100,11 +100,17 @@ func NewEventConfig(options ...EventOption) *SpanConfig {
 	return c
 }
 
-// EventOption applies span life-cycle event options to a SpanConfig.
+// EventOption applies span event options to a SpanConfig.
 type EventOption interface {
-	SpanOption
-
 	ApplyEvent(*SpanConfig)
+}
+
+// LifeCycleOption applies span life-cycle options to a SpanConfig. These
+// options set values releated to events in a spans life-cycle like starting,
+// ending, experiencing an error and other user defined notable events.
+type LifeCycleOption interface {
+	SpanOption
+	EventOption
 }
 
 type attributeSpanOption []label.KeyValue
@@ -115,11 +121,16 @@ func (o attributeSpanOption) apply(c *SpanConfig) {
 	c.Attributes = append(c.Attributes, []label.KeyValue(o)...)
 }
 
-// WithAttributes adds the attributes to a span. These attributes are meant to
-// provide additional information about the work the Span represents. The
-// attributes are added to the existing Span attributes, i.e. this does not
-// overwrite.
-func WithAttributes(attributes ...label.KeyValue) EventOption {
+// WithAttributes adds the attributes related to a span life-cycle event.
+// These attributes are used to describe the work a Span represents when this
+// option is provided to a Span's start or end events. Otherwise, these
+// attributes provide additional information about the event being recorded
+// (e.g. error, state change, processing progress, system event).
+//
+// If multiple of these options are passed the attributes of each successive
+// option will extend the attributes instead of overwriting. There is no
+// guarantee of uniqueness in the resulting attributes.
+func WithAttributes(attributes ...label.KeyValue) LifeCycleOption {
 	return attributeSpanOption(attributes)
 }
 
@@ -129,9 +140,9 @@ func (o timestampSpanOption) ApplySpan(c *SpanConfig)  { o.apply(c) }
 func (o timestampSpanOption) ApplyEvent(c *SpanConfig) { o.apply(c) }
 func (o timestampSpanOption) apply(c *SpanConfig)      { c.Timestamp = time.Time(o) }
 
-// WithTimestamp sets the time of a Span life-cycle moment (e.g. started or
-// stopped).
-func WithTimestamp(t time.Time) EventOption {
+// WithTimestamp sets the time of a Span life-cycle moment (e.g. started,
+// stopped, errored).
+func WithTimestamp(t time.Time) LifeCycleOption {
 	return timestampSpanOption(t)
 }
 
