@@ -111,7 +111,7 @@ func (c *TextMapCarrier) SetN(t *testing.T, n int) bool {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 	if len(c.sets) != n {
-		t.Errorf("TextMapCarrier.Set was called %d times, not %d", len(c.gets), n)
+		t.Errorf("TextMapCarrier.Set was called %d times, not %d", len(c.sets), n)
 		return false
 	}
 	return true
