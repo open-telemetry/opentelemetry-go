@@ -55,7 +55,7 @@ func (p *textMapPropagator) SetDelegate(delegate otel.TextMapPropagator) {
 }
 
 // effectiveDelegate returns the current delegate of p if one is set,
-// otherwise the default noop TextMapPropagator is returned. This method is
+// otherwise the default noop TextMapPropagator is returned. This method
 // can be called concurrently.
 func (p *textMapPropagator) effectiveDelegate() otel.TextMapPropagator {
 	p.mtx.Lock()
