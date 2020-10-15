@@ -116,3 +116,9 @@ func TestTextMapPropagatorFields(t *testing.T) {
 		t.Errorf("TextMapPropagator.Fields returned %q, want %q", got[0], name)
 	}
 }
+
+func TestNewStateEmpty(t *testing.T) {
+	if want, got := (state{}), newState(""); got != want {
+		t.Errorf("newState(\"\") returned %v, want %v", got, want)
+	}
+}
