@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/otel/label"
 )
 
-// config contains configuration for an SDK.
+// config contains configuration for Resource creation.
 type config struct {
 	// detectors that will be evaluated.
 	detectors []Detector
