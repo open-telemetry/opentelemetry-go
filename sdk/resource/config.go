@@ -126,9 +126,9 @@ func (o noBuiltinOption) Apply(cfg *config) {
 	cfg.fromEnv = nil
 }
 
-// Configure returns a Resource combined from the provided attributes,
+// NewConfig returns a Resource combined from the provided attributes,
 // user-provided detectors and builtin detectors.
-func Configure(ctx context.Context, opts ...Option) (*Resource, error) {
+func NewConfig(ctx context.Context, opts ...Option) (*Resource, error) {
 	cfg := config{
 		telemetrySDK: TelemetrySDK{},
 		host:         Host{},

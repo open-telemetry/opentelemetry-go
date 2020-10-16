@@ -17,17 +17,21 @@ package resource
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	ottest "go.opentelemetry.io/otel/internal/testing"
 	"go.opentelemetry.io/otel/label"
 )
 
 func TestDetectOnePair(t *testing.T) {
-	os.Setenv(envVar, "key=value")
+	store, err := ottest.SetEnvVariables(map[string]string{
+		envVar: "key=value",
+	})
+	require.NoError(t, err)
+	defer func() { require.NoError(t, store.Restore()) }()
 
 	detector := &FromEnv{}
 	res, err := detector.Detect(context.Background())
@@ -36,8 +40,12 @@ func TestDetectOnePair(t *testing.T) {
 }
 
 func TestDetectMultiPairs(t *testing.T) {
-	os.Setenv("x", "1")
-	os.Setenv(envVar, "key=value, k = v , a= x, a=z")
+	store, err := ottest.SetEnvVariables(map[string]string{
+		"x":    "1",
+		envVar: "key=value, k = v , a= x, a=z",
+	})
+	require.NoError(t, err)
+	defer func() { require.NoError(t, store.Restore()) }()
 
 	detector := &FromEnv{}
 	res, err := detector.Detect(context.Background())
@@ -51,7 +59,11 @@ func TestDetectMultiPairs(t *testing.T) {
 }
 
 func TestEmpty(t *testing.T) {
-	os.Setenv(envVar, "   ")
+	store, err := ottest.SetEnvVariables(map[string]string{
+		envVar: "   ",
+	})
+	require.NoError(t, err)
+	defer func() { require.NoError(t, store.Restore()) }()
 
 	detector := &FromEnv{}
 	res, err := detector.Detect(context.Background())
@@ -60,7 +72,11 @@ func TestEmpty(t *testing.T) {
 }
 
 func TestMissingKeyError(t *testing.T) {
-	os.Setenv(envVar, "key=value,key")
+	store, err := ottest.SetEnvVariables(map[string]string{
+		envVar: "key=value,key",
+	})
+	require.NoError(t, err)
+	defer func() { require.NoError(t, store.Restore()) }()
 
 	detector := &FromEnv{}
 	res, err := detector.Detect(context.Background())

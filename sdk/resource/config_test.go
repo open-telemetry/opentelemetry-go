@@ -22,15 +22,23 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	ottest "go.opentelemetry.io/otel/internal/testing"
 	"go.opentelemetry.io/otel/label"
 	opentelemetry "go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
+const envVar = "OTEL_RESOURCE_ATTRIBUTES"
+
 func TestDefaultConfig(t *testing.T) {
-	os.Setenv("OTEL_RESOURCE_ATTRIBUTES", "")
+	store, err := ottest.SetEnvVariables(map[string]string{
+		envVar: "",
+	})
+	require.NoError(t, err)
+	defer func() { require.NoError(t, store.Restore()) }()
+
 	ctx := context.Background()
-	res, err := resource.Configure(ctx)
+	res, err := resource.NewConfig(ctx)
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{
 		"host.name":              hostname(),
@@ -41,9 +49,14 @@ func TestDefaultConfig(t *testing.T) {
 }
 
 func TestDefaultConfigNoHost(t *testing.T) {
-	os.Setenv("OTEL_RESOURCE_ATTRIBUTES", "")
+	store, err := ottest.SetEnvVariables(map[string]string{
+		envVar: "",
+	})
+	require.NoError(t, err)
+	defer func() { require.NoError(t, store.Restore()) }()
+
 	ctx := context.Background()
-	res, err := resource.Configure(ctx, resource.WithHost(nil))
+	res, err := resource.NewConfig(ctx, resource.WithHost(nil))
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{
 		"telemetry.sdk.name":     "opentelemetry-go",
@@ -53,9 +66,14 @@ func TestDefaultConfigNoHost(t *testing.T) {
 }
 
 func TestDefaultConfigNoEnv(t *testing.T) {
-	os.Setenv("OTEL_RESOURCE_ATTRIBUTES", "from=here")
+	store, err := ottest.SetEnvVariables(map[string]string{
+		envVar: "from=here",
+	})
+	require.NoError(t, err)
+	defer func() { require.NoError(t, store.Restore()) }()
+
 	ctx := context.Background()
-	res, err := resource.Configure(ctx, resource.WithFromEnv(nil))
+	res, err := resource.NewConfig(ctx, resource.WithFromEnv(nil))
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{
 		"host.name":              hostname(),
@@ -66,9 +84,14 @@ func TestDefaultConfigNoEnv(t *testing.T) {
 }
 
 func TestDefaultConfigWithEnv(t *testing.T) {
-	os.Setenv("OTEL_RESOURCE_ATTRIBUTES", "key=value,other=attr")
+	store, err := ottest.SetEnvVariables(map[string]string{
+		envVar: "key=value,other=attr",
+	})
+	require.NoError(t, err)
+	defer func() { require.NoError(t, store.Restore()) }()
+
 	ctx := context.Background()
-	res, err := resource.Configure(ctx)
+	res, err := resource.NewConfig(ctx)
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{
 		"key":                    "value",
@@ -81,9 +104,14 @@ func TestDefaultConfigWithEnv(t *testing.T) {
 }
 
 func TestWithoutBuiltin(t *testing.T) {
-	os.Setenv("OTEL_RESOURCE_ATTRIBUTES", "key=value,other=attr")
+	store, err := ottest.SetEnvVariables(map[string]string{
+		envVar: "key=value,other=attr",
+	})
+	require.NoError(t, err)
+	defer func() { require.NoError(t, store.Restore()) }()
+
 	ctx := context.Background()
-	res, err := resource.Configure(
+	res, err := resource.NewConfig(
 		ctx,
 		resource.WithoutBuiltin(),
 		resource.WithAttributes(label.String("hello", "collector")),
