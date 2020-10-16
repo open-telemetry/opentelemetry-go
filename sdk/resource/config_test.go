@@ -80,12 +80,12 @@ func TestDefaultConfigWithEnv(t *testing.T) {
 	}, toMap(res))
 }
 
-func TestNoBuiltin(t *testing.T) {
+func TestWithoutBuiltin(t *testing.T) {
 	os.Setenv("OTEL_RESOURCE_ATTRIBUTES", "key=value,other=attr")
 	ctx := context.Background()
 	res, err := resource.Configure(
 		ctx,
-		resource.WithNoBuiltin(),
+		resource.WithoutBuiltin(),
 		resource.WithAttributes(label.String("hello", "collector")),
 	)
 	require.NoError(t, err)

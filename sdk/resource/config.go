@@ -112,9 +112,9 @@ func (o fromEnvOption) Apply(cfg *config) {
 	cfg.fromEnv = o.Detector
 }
 
-// WithNoBuiltin disables all the builtin detectors, including the
+// WithoutBuiltin disables all the builtin detectors, including the
 // telemetry.sdk.*, host.*, and the environment detector.
-func WithNoBuiltin() Option {
+func WithoutBuiltin() Option {
 	return noBuiltinOption{}
 }
 
