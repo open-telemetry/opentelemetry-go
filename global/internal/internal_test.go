@@ -18,7 +18,7 @@ import (
 	"os"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/global/internal"
+	"go.opentelemetry.io/otel/global/internal"
 	ottest "go.opentelemetry.io/otel/internal/testing"
 )
 

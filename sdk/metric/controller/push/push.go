@@ -19,9 +19,9 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/metric/registry"
+	"go.opentelemetry.io/otel/global"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"

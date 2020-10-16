@@ -22,9 +22,9 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
+	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
 )
 

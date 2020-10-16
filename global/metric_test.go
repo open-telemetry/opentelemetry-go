@@ -17,8 +17,8 @@ package global_test
 import (
 	"testing"
 
-	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/global"
 )
 
 type testMeterProvider struct{}

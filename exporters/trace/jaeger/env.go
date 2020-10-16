@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"strings"
 
-	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
 )
 

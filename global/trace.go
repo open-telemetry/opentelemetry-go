@@ -16,7 +16,7 @@ package global
 
 import (
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global/internal"
+	"go.opentelemetry.io/otel/global/internal"
 )
 
 // Tracer creates a named tracer that implements Tracer interface.

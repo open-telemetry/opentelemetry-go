@@ -16,7 +16,7 @@ package global
 
 import (
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global/internal"
+	"go.opentelemetry.io/otel/global/internal"
 )
 
 // TextMapPropagator returns the global TextMapPropagator. If none has been

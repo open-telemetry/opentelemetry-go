@@ -21,10 +21,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/global/internal"
 	"go.opentelemetry.io/otel/api/metric"
 	metrictest "go.opentelemetry.io/otel/api/metric/metrictest"
+	"go.opentelemetry.io/otel/global"
+	"go.opentelemetry.io/otel/global/internal"
 	"go.opentelemetry.io/otel/label"
 )
 
