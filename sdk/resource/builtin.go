@@ -16,8 +16,10 @@ package resource
 
 import (
 	"context"
+	"fmt"
 	"os"
 
+	"go.opentelemetry.io/otel/label"
 	opentelemetry "go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/semconv"
 )
@@ -25,11 +27,17 @@ import (
 type (
 	TelemetrySDK struct{}
 	Host         struct{}
+
+	stringDetector struct {
+		K label.Key
+		F func() (string, error)
+	}
 )
 
 var (
 	_ Detector = TelemetrySDK{}
 	_ Detector = Host{}
+	_ Detector = stringDetector{}
 )
 
 func (TelemetrySDK) Detect(context.Context) (*Resource, error) {
@@ -40,10 +48,18 @@ func (TelemetrySDK) Detect(context.Context) (*Resource, error) {
 	), nil
 }
 
-func (Host) Detect(context.Context) (*Resource, error) {
-	hostname, err := os.Hostname()
+func (Host) Detect(ctx context.Context) (*Resource, error) {
+	return StringDetector(semconv.HostNameKey, os.Hostname).Detect(ctx)
+}
+
+func StringDetector(k label.Key, f func() (string, error)) Detector {
+	return stringDetector{K: k, F: f}
+}
+
+func (sd stringDetector) Detect(ctx context.Context) (*Resource, error) {
+	value, err := sd.F()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", string(sd.K), err)
 	}
-	return New(semconv.HostNameKey.String(hostname)), nil
+	return New(sd.K.String(value)), nil
 }
