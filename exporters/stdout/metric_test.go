@@ -99,7 +99,7 @@ func TestStdoutTimestamp(t *testing.T) {
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
 
 	ctx := context.Background()
-	desc := metric.NewDescriptor("test.name", metric.ValueObserverKind, metric.Int64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.ValueObserverInstrumentKind, metric.Int64NumberKind)
 
 	lvagg, ckpt := metrictest.Unslice2(lastvalue.New(2))
 
@@ -138,7 +138,7 @@ func TestStdoutCounterFormat(t *testing.T) {
 
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
 
-	desc := metric.NewDescriptor("test.name", metric.CounterKind, metric.Int64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.CounterInstrumentKind, metric.Int64NumberKind)
 
 	cagg, ckpt := metrictest.Unslice2(sum.New(2))
 
@@ -157,7 +157,7 @@ func TestStdoutLastValueFormat(t *testing.T) {
 
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
 
-	desc := metric.NewDescriptor("test.name", metric.ValueObserverKind, metric.Float64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.ValueObserverInstrumentKind, metric.Float64NumberKind)
 	lvagg, ckpt := metrictest.Unslice2(lastvalue.New(2))
 
 	aggregatortest.CheckedUpdate(fix.t, lvagg, metric.NewFloat64Number(123.456), &desc)
@@ -175,7 +175,7 @@ func TestStdoutMinMaxSumCount(t *testing.T) {
 
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
 
-	desc := metric.NewDescriptor("test.name", metric.ValueRecorderKind, metric.Float64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.ValueRecorderInstrumentKind, metric.Float64NumberKind)
 
 	magg, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &desc))
 
@@ -195,7 +195,7 @@ func TestStdoutValueRecorderFormat(t *testing.T) {
 
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
 
-	desc := metric.NewDescriptor("test.name", metric.ValueRecorderKind, metric.Float64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.ValueRecorderInstrumentKind, metric.Float64NumberKind)
 	aagg, ckpt := metrictest.Unslice2(array.New(2))
 
 	for i := 0; i < 1000; i++ {
@@ -234,7 +234,7 @@ func TestStdoutValueRecorderFormat(t *testing.T) {
 }
 
 func TestStdoutNoData(t *testing.T) {
-	desc := metric.NewDescriptor("test.name", metric.ValueRecorderKind, metric.Float64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.ValueRecorderInstrumentKind, metric.Float64NumberKind)
 
 	runTwoAggs := func(agg, ckpt export.Aggregator) {
 		t.Run(fmt.Sprintf("%T", agg), func(t *testing.T) {
@@ -263,7 +263,7 @@ func TestStdoutLastValueNotSet(t *testing.T) {
 
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
 
-	desc := metric.NewDescriptor("test.name", metric.ValueObserverKind, metric.Float64NumberKind)
+	desc := metric.NewDescriptor("test.name", metric.ValueObserverInstrumentKind, metric.Float64NumberKind)
 
 	lvagg, ckpt := metrictest.Unslice2(lastvalue.New(2))
 	require.NoError(t, lvagg.SynchronizedMove(ckpt, &desc))
@@ -314,7 +314,7 @@ func TestStdoutResource(t *testing.T) {
 
 		checkpointSet := metrictest.NewCheckpointSet(tc.res)
 
-		desc := metric.NewDescriptor("test.name", metric.ValueObserverKind, metric.Float64NumberKind)
+		desc := metric.NewDescriptor("test.name", metric.ValueObserverInstrumentKind, metric.Float64NumberKind)
 		lvagg, ckpt := metrictest.Unslice2(lastvalue.New(2))
 
 		aggregatortest.CheckedUpdate(fix.t, lvagg, metric.NewFloat64Number(123.456), &desc)

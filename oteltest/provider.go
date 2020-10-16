@@ -20,6 +20,10 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
+// TracerProvider is a testing TracerProvider. It is an functioning
+// implementation of an OpenTelemetry TracerProvider and can be configured
+// with a SpanRecorder that it configure all Tracers it creates to record
+// their Spans with.
 type TracerProvider struct {
 	config config
 
@@ -29,9 +33,10 @@ type TracerProvider struct {
 
 var _ otel.TracerProvider = (*TracerProvider)(nil)
 
-func NewTracerProvider(opts ...Option) *TracerProvider {
+// NewTracerProvider returns a *TracerProvider configured with options.
+func NewTracerProvider(options ...Option) *TracerProvider {
 	return &TracerProvider{
-		config:  newConfig(opts...),
+		config:  newConfig(options...),
 		tracers: make(map[instrumentation]*Tracer),
 	}
 }
@@ -40,6 +45,7 @@ type instrumentation struct {
 	Name, Version string
 }
 
+// Tracer returns an OpenTelemetry Tracer used for testing.
 func (p *TracerProvider) Tracer(instName string, opts ...otel.TracerOption) otel.Tracer {
 	conf := otel.NewTracerConfig(opts...)
 

@@ -66,7 +66,7 @@ func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
 }
 
 func (ut *updateTest) run(t *testing.T, profile aggregatortest.Profile) {
-	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
+	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 	agg, ckpt := new2(descriptor)
 
 	all := aggregatortest.NewNumbers(profile.NumberKind)
@@ -127,7 +127,7 @@ type mergeTest struct {
 }
 
 func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
-	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
+	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 
 	agg1, agg2, ckpt1, ckpt2 := new4(descriptor)
 

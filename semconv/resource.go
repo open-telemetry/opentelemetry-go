@@ -213,6 +213,7 @@ const (
 	CloudZoneKey = label.Key("cloud.zone")
 )
 
+// Semantic conventions for common cloud provider resource attributes.
 var (
 	CloudProviderAWS   = CloudProviderKey.String("aws")
 	CloudProviderAzure = CloudProviderKey.String("azure")

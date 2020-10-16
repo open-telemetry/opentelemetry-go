@@ -20,19 +20,19 @@ import "go.opentelemetry.io/otel/unit"
 // including its name, metric kind, number kind, and the configurable
 // options.
 type Descriptor struct {
-	name       string
-	kind       Kind
-	numberKind NumberKind
-	config     InstrumentConfig
+	name           string
+	instrumentKind InstrumentKind
+	numberKind     NumberKind
+	config         InstrumentConfig
 }
 
 // NewDescriptor returns a Descriptor with the given contents.
-func NewDescriptor(name string, mkind Kind, nkind NumberKind, opts ...InstrumentOption) Descriptor {
+func NewDescriptor(name string, ikind InstrumentKind, nkind NumberKind, opts ...InstrumentOption) Descriptor {
 	return Descriptor{
-		name:       name,
-		kind:       mkind,
-		numberKind: nkind,
-		config:     NewInstrumentConfig(opts...),
+		name:           name,
+		instrumentKind: ikind,
+		numberKind:     nkind,
+		config:         NewInstrumentConfig(opts...),
 	}
 }
 
@@ -41,9 +41,9 @@ func (d Descriptor) Name() string {
 	return d.name
 }
 
-// MetricKind returns the specific kind of instrument.
-func (d Descriptor) MetricKind() Kind {
-	return d.kind
+// InstrumentKind returns the specific kind of instrument.
+func (d Descriptor) InstrumentKind() InstrumentKind {
+	return d.instrumentKind
 }
 
 // Description provides a human-readable description of the metric

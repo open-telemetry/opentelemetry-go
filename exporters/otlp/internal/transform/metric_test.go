@@ -117,7 +117,7 @@ func TestMinMaxSumCountValue(t *testing.T) {
 }
 
 func TestMinMaxSumCountDatapoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderKind, metric.Int64NumberKind)
+	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, metric.Int64NumberKind)
 	labels := label.NewSet()
 	mmsc, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &desc))
 
@@ -156,7 +156,7 @@ func TestMinMaxSumCountPropagatesErrors(t *testing.T) {
 }
 
 func TestSumIntDataPoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderKind, metric.Int64NumberKind)
+	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, metric.Int64NumberKind)
 	labels := label.NewSet()
 	s, ckpt := metrictest.Unslice2(sumAgg.New(2))
 	assert.NoError(t, s.Update(context.Background(), metric.Number(1), &desc))
@@ -181,7 +181,7 @@ func TestSumIntDataPoints(t *testing.T) {
 }
 
 func TestSumFloatDataPoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderKind, metric.Float64NumberKind)
+	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, metric.Float64NumberKind)
 	labels := label.NewSet()
 	s, ckpt := metrictest.Unslice2(sumAgg.New(2))
 	assert.NoError(t, s.Update(context.Background(), metric.NewFloat64Number(1), &desc))
@@ -207,7 +207,7 @@ func TestSumFloatDataPoints(t *testing.T) {
 }
 
 func TestLastValueIntDataPoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderKind, metric.Int64NumberKind)
+	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, metric.Int64NumberKind)
 	labels := label.NewSet()
 	s, ckpt := metrictest.Unslice2(lvAgg.New(2))
 	assert.NoError(t, s.Update(context.Background(), metric.Number(100), &desc))
@@ -233,7 +233,7 @@ func TestLastValueIntDataPoints(t *testing.T) {
 }
 
 func TestSumErrUnknownValueType(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderKind, metric.NumberKind(-1))
+	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, metric.NumberKind(-1))
 	labels := label.NewSet()
 	s := &sumAgg.New(1)[0]
 	record := export.NewRecord(&desc, &labels, nil, s, intervalStart, intervalEnd)
@@ -318,7 +318,7 @@ var _ aggregation.MinMaxSumCount = &testErrMinMaxSumCount{}
 
 func TestRecordAggregatorIncompatibleErrors(t *testing.T) {
 	makeMpb := func(kind aggregation.Kind, agg aggregation.Aggregation) (*metricpb.Metric, error) {
-		desc := metric.NewDescriptor("things", metric.CounterKind, metric.Int64NumberKind)
+		desc := metric.NewDescriptor("things", metric.CounterInstrumentKind, metric.Int64NumberKind)
 		labels := label.NewSet()
 		res := resource.New()
 		test := &testAgg{
@@ -355,7 +355,7 @@ func TestRecordAggregatorIncompatibleErrors(t *testing.T) {
 
 func TestRecordAggregatorUnexpectedErrors(t *testing.T) {
 	makeMpb := func(kind aggregation.Kind, agg aggregation.Aggregation) (*metricpb.Metric, error) {
-		desc := metric.NewDescriptor("things", metric.CounterKind, metric.Int64NumberKind)
+		desc := metric.NewDescriptor("things", metric.CounterInstrumentKind, metric.Int64NumberKind)
 		labels := label.NewSet()
 		res := resource.New()
 		return Record(export.NewRecord(&desc, &labels, res, agg, intervalStart, intervalEnd))

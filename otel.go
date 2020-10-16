@@ -18,6 +18,9 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 )
 
+// Meter is the creator of metric instruments.
+//
+// An uninitialized Meter is a no-op implementation.
 type Meter = metric.Meter
 
 // ErrorHandler handles irremediable events.

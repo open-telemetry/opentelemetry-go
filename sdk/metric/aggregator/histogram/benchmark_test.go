@@ -37,7 +37,7 @@ func benchmarkHistogramSearchFloat64(b *testing.B, size int) {
 	for i := range values {
 		values[i] = rand.Float64() * inputRange
 	}
-	desc := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, metric.Float64NumberKind)
+	desc := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, metric.Float64NumberKind)
 	agg := &histogram.New(1, desc, boundaries)[0]
 	ctx := context.Background()
 
@@ -88,7 +88,7 @@ func benchmarkHistogramSearchInt64(b *testing.B, size int) {
 	for i := range values {
 		values[i] = int64(rand.Float64() * inputRange)
 	}
-	desc := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, metric.Int64NumberKind)
+	desc := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, metric.Int64NumberKind)
 	agg := &histogram.New(1, desc, boundaries)[0]
 	ctx := context.Background()
 

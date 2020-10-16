@@ -109,7 +109,7 @@ func TestHistogramPositiveAndNegative(t *testing.T) {
 
 // Validates count, sum and buckets for a given profile and policy
 func testHistogram(t *testing.T, profile aggregatortest.Profile, policy policy) {
-	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
+	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 
 	agg, ckpt := new2(descriptor)
 
@@ -154,7 +154,7 @@ func testHistogram(t *testing.T, profile aggregatortest.Profile, policy policy) 
 
 func TestHistogramInitial(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
-		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 
 		agg := &histogram.New(1, descriptor, boundaries)[0]
 		buckets, err := agg.Histogram()
@@ -167,7 +167,7 @@ func TestHistogramInitial(t *testing.T) {
 
 func TestHistogramMerge(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
-		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 
 		agg1, agg2, ckpt1, ckpt2 := new4(descriptor)
 
@@ -219,7 +219,7 @@ func TestHistogramMerge(t *testing.T) {
 
 func TestHistogramNotSet(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
-		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 
 		agg, ckpt := new2(descriptor)
 
