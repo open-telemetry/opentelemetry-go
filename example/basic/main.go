@@ -88,7 +88,7 @@ func main() {
 		ctx, span = tracer.Start(ctx, "operation")
 		defer span.End()
 
-		span.AddEvent(ctx, "Nice operation!", label.Int("bogons", 100))
+		span.AddEvent("Nice operation!", otel.WithAttributes(label.Int("bogons", 100)))
 		span.SetAttributes(anotherKey.String("yes"))
 
 		meter.RecordBatch(
@@ -105,7 +105,7 @@ func main() {
 			defer span.End()
 
 			span.SetAttributes(lemonsKey.String("five"))
-			span.AddEvent(ctx, "Sub span event")
+			span.AddEvent("Sub span event")
 			valuerecorder.Record(ctx, 1.3)
 
 			return nil

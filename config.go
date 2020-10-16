@@ -17,7 +17,6 @@ package otel
 import (
 	"time"
 
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
 )
 
@@ -49,44 +48,6 @@ func (o instVersionTracerOption) ApplyTracer(c *TracerConfig) { c.Instrumentatio
 // WithInstrumentationVersion sets the instrumentation version for a Tracer.
 func WithInstrumentationVersion(version string) TracerOption {
 	return instVersionTracerOption(version)
-}
-
-// ErrorConfig is a group of options for an error event.
-type ErrorConfig struct {
-	Timestamp  time.Time
-	StatusCode codes.Code
-}
-
-// NewErrorConfig applies all the options to a returned ErrorConfig.
-func NewErrorConfig(options ...ErrorOption) *ErrorConfig {
-	c := new(ErrorConfig)
-	for _, option := range options {
-		option.ApplyError(c)
-	}
-	return c
-}
-
-// ErrorOption applies an option to a ErrorConfig.
-type ErrorOption interface {
-	ApplyError(*ErrorConfig)
-}
-
-type errorTimeOption time.Time
-
-func (o errorTimeOption) ApplyError(c *ErrorConfig) { c.Timestamp = time.Time(o) }
-
-// WithErrorTime sets the time at which the error event should be recorded.
-func WithErrorTime(t time.Time) ErrorOption {
-	return errorTimeOption(t)
-}
-
-type errorStatusOption struct{ c codes.Code }
-
-func (o errorStatusOption) ApplyError(c *ErrorConfig) { c.StatusCode = o.c }
-
-// WithErrorStatus indicates the span status that should be set when recording an error event.
-func WithErrorStatus(c codes.Code) ErrorOption {
-	return errorStatusOption{c}
 }
 
 // SpanConfig is a group of options for a Span.
@@ -124,27 +85,64 @@ type SpanOption interface {
 	ApplySpan(*SpanConfig)
 }
 
+// NewEventConfig applies all the EventOptions to a returned SpanConfig. If no
+// timestamp option is passed, the returned SpanConfig will have a Timestamp
+// set to the call time, otherwise no validation is performed on the returned
+// SpanConfig.
+func NewEventConfig(options ...EventOption) *SpanConfig {
+	c := new(SpanConfig)
+	for _, option := range options {
+		option.ApplyEvent(c)
+	}
+	if c.Timestamp.IsZero() {
+		c.Timestamp = time.Now()
+	}
+	return c
+}
+
+// EventOption applies span event options to a SpanConfig.
+type EventOption interface {
+	ApplyEvent(*SpanConfig)
+}
+
+// LifeCycleOption applies span life-cycle options to a SpanConfig. These
+// options set values releated to events in a spans life-cycle like starting,
+// ending, experiencing an error and other user defined notable events.
+type LifeCycleOption interface {
+	SpanOption
+	EventOption
+}
+
 type attributeSpanOption []label.KeyValue
 
-func (o attributeSpanOption) ApplySpan(c *SpanConfig) {
+func (o attributeSpanOption) ApplySpan(c *SpanConfig)  { o.apply(c) }
+func (o attributeSpanOption) ApplyEvent(c *SpanConfig) { o.apply(c) }
+func (o attributeSpanOption) apply(c *SpanConfig) {
 	c.Attributes = append(c.Attributes, []label.KeyValue(o)...)
 }
 
-// WithAttributes adds the attributes to a span. These attributes are meant to
-// provide additional information about the work the Span represents. The
-// attributes are added to the existing Span attributes, i.e. this does not
-// overwrite.
-func WithAttributes(attributes ...label.KeyValue) SpanOption {
+// WithAttributes adds the attributes related to a span life-cycle event.
+// These attributes are used to describe the work a Span represents when this
+// option is provided to a Span's start or end events. Otherwise, these
+// attributes provide additional information about the event being recorded
+// (e.g. error, state change, processing progress, system event).
+//
+// If multiple of these options are passed the attributes of each successive
+// option will extend the attributes instead of overwriting. There is no
+// guarantee of uniqueness in the resulting attributes.
+func WithAttributes(attributes ...label.KeyValue) LifeCycleOption {
 	return attributeSpanOption(attributes)
 }
 
 type timestampSpanOption time.Time
 
-func (o timestampSpanOption) ApplySpan(c *SpanConfig) { c.Timestamp = time.Time(o) }
+func (o timestampSpanOption) ApplySpan(c *SpanConfig)  { o.apply(c) }
+func (o timestampSpanOption) ApplyEvent(c *SpanConfig) { o.apply(c) }
+func (o timestampSpanOption) apply(c *SpanConfig)      { c.Timestamp = time.Time(o) }
 
-// WithTimestamp sets the time of a Span life-cycle moment (e.g. started or
-// stopped).
-func WithTimestamp(t time.Time) SpanOption {
+// WithTimestamp sets the time of a Span life-cycle moment (e.g. started,
+// stopped, errored).
+func WithTimestamp(t time.Time) LifeCycleOption {
 	return timestampSpanOption(t)
 }
 

@@ -150,13 +150,13 @@ func TestSpan(t *testing.T) {
 				e := matchers.NewExpecter(t)
 
 				tracer := tp.Tracer(t.Name())
-				ctx, span := tracer.Start(context.Background(), "test")
+				_, span := tracer.Start(context.Background(), "test")
 
 				subject, ok := span.(*oteltest.Span)
 				e.Expect(ok).ToBeTrue()
 
 				testTime := time.Now()
-				subject.RecordError(ctx, s.err, otel.WithErrorTime(testTime))
+				subject.RecordError(s.err, otel.WithTimestamp(testTime))
 
 				expectedEvents := []oteltest.Event{{
 					Timestamp: testTime,
@@ -167,7 +167,7 @@ func TestSpan(t *testing.T) {
 					},
 				}}
 				e.Expect(subject.Events()).ToEqual(expectedEvents)
-				e.Expect(subject.StatusCode()).ToEqual(codes.Unset)
+				e.Expect(subject.StatusCode()).ToEqual(codes.Error)
 				e.Expect(subject.StatusMessage()).ToEqual("")
 			}
 		})
@@ -178,7 +178,7 @@ func TestSpan(t *testing.T) {
 			e := matchers.NewExpecter(t)
 
 			tracer := tp.Tracer(t.Name())
-			ctx, span := tracer.Start(context.Background(), "test")
+			_, span := tracer.Start(context.Background(), "test")
 
 			subject, ok := span.(*oteltest.Span)
 			e.Expect(ok).ToBeTrue()
@@ -186,8 +186,7 @@ func TestSpan(t *testing.T) {
 			errMsg := "test error message"
 			testErr := ottest.NewTestError(errMsg)
 			testTime := time.Now()
-			expStatusCode := codes.Error
-			subject.RecordError(ctx, testErr, otel.WithErrorTime(testTime), otel.WithErrorStatus(expStatusCode))
+			subject.RecordError(testErr, otel.WithTimestamp(testTime))
 
 			expectedEvents := []oteltest.Event{{
 				Timestamp: testTime,
@@ -198,7 +197,7 @@ func TestSpan(t *testing.T) {
 				},
 			}}
 			e.Expect(subject.Events()).ToEqual(expectedEvents)
-			e.Expect(subject.StatusCode()).ToEqual(expStatusCode)
+			e.Expect(subject.StatusCode()).ToEqual(codes.Error)
 		})
 
 		t.Run("cannot be set after the span has ended", func(t *testing.T) {
@@ -207,13 +206,13 @@ func TestSpan(t *testing.T) {
 			e := matchers.NewExpecter(t)
 
 			tracer := tp.Tracer(t.Name())
-			ctx, span := tracer.Start(context.Background(), "test")
+			_, span := tracer.Start(context.Background(), "test")
 
 			subject, ok := span.(*oteltest.Span)
 			e.Expect(ok).ToBeTrue()
 
 			subject.End()
-			subject.RecordError(ctx, errors.New("ignored error"))
+			subject.RecordError(errors.New("ignored error"))
 
 			e.Expect(len(subject.Events())).ToEqual(0)
 		})
@@ -224,12 +223,12 @@ func TestSpan(t *testing.T) {
 			e := matchers.NewExpecter(t)
 
 			tracer := tp.Tracer(t.Name())
-			ctx, span := tracer.Start(context.Background(), "test")
+			_, span := tracer.Start(context.Background(), "test")
 
 			subject, ok := span.(*oteltest.Span)
 			e.Expect(ok).ToBeTrue()
 
-			subject.RecordError(ctx, nil)
+			subject.RecordError(nil)
 
 			e.Expect(len(subject.Events())).ToEqual(0)
 		})
@@ -465,7 +464,7 @@ func TestSpan(t *testing.T) {
 			}
 
 			event1Start := time.Now()
-			subject.AddEvent(context.Background(), event1Name, event1Attributes...)
+			subject.AddEvent(event1Name, otel.WithAttributes(event1Attributes...))
 			event1End := time.Now()
 
 			event2Timestamp := time.Now().AddDate(5, 0, 0)
@@ -474,7 +473,7 @@ func TestSpan(t *testing.T) {
 				label.String("event2Attr", "abc"),
 			}
 
-			subject.AddEventWithTimestamp(context.Background(), event2Timestamp, event2Name, event2Attributes...)
+			subject.AddEvent(event2Name, otel.WithTimestamp(event2Timestamp), otel.WithAttributes(event2Attributes...))
 
 			events := subject.Events()
 
@@ -511,14 +510,14 @@ func TestSpan(t *testing.T) {
 			subject, ok := span.(*oteltest.Span)
 			e.Expect(ok).ToBeTrue()
 
-			subject.AddEvent(context.Background(), "test")
+			subject.AddEvent("test")
 
 			e.Expect(len(subject.Events())).ToEqual(1)
 
 			expectedEvent := subject.Events()[0]
 
 			subject.End()
-			subject.AddEvent(context.Background(), "should not occur")
+			subject.AddEvent("should not occur")
 
 			e.Expect(len(subject.Events())).ToEqual(1)
 			e.Expect(subject.Events()[0]).ToEqual(expectedEvent)
