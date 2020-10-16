@@ -179,10 +179,9 @@ func (t *MockTracer) DeferredContextSetupHook(ctx context.Context, span otel.Spa
 }
 
 type MockEvent struct {
-	CtxAttributes baggage.Map
-	Timestamp     time.Time
-	Name          string
-	Attributes    baggage.Map
+	Timestamp  time.Time
+	Name       string
+	Attributes baggage.Map
 }
 
 type MockSpan struct {
@@ -245,7 +244,7 @@ func (s *MockSpan) End(options ...otel.SpanOption) {
 	s.mockTracer.FinishedSpans = append(s.mockTracer.FinishedSpans, s)
 }
 
-func (s *MockSpan) RecordError(ctx context.Context, err error, opts ...otel.ErrorOption) {
+func (s *MockSpan) RecordError(err error, opts ...otel.EventOption) {
 	if err == nil {
 		return // no-op on nil error
 	}
@@ -254,37 +253,25 @@ func (s *MockSpan) RecordError(ctx context.Context, err error, opts ...otel.Erro
 		return // already finished
 	}
 
-	cfg := otel.NewErrorConfig(opts...)
-
-	if cfg.Timestamp.IsZero() {
-		cfg.Timestamp = time.Now()
-	}
-
-	if cfg.StatusCode != codes.Ok {
-		s.SetStatus(cfg.StatusCode, "")
-	}
-
-	s.AddEventWithTimestamp(ctx, cfg.Timestamp, "error",
+	s.SetStatus(codes.Error, "")
+	opts = append(opts, otel.WithAttributes(
 		label.String("error.type", reflect.TypeOf(err).String()),
 		label.String("error.message", err.Error()),
-	)
+	))
+	s.AddEvent("error", opts...)
 }
 
 func (s *MockSpan) Tracer() otel.Tracer {
 	return s.officialTracer
 }
 
-func (s *MockSpan) AddEvent(ctx context.Context, name string, attrs ...label.KeyValue) {
-	s.AddEventWithTimestamp(ctx, time.Now(), name, attrs...)
-}
-
-func (s *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...label.KeyValue) {
+func (s *MockSpan) AddEvent(name string, o ...otel.EventOption) {
+	c := otel.NewEventConfig(o...)
 	s.Events = append(s.Events, MockEvent{
-		CtxAttributes: baggage.MapFromContext(ctx),
-		Timestamp:     timestamp,
-		Name:          name,
+		Timestamp: c.Timestamp,
+		Name:      name,
 		Attributes: baggage.NewMap(baggage.MapUpdate{
-			MultiKV: attrs,
+			MultiKV: c.Attributes,
 		}),
 	})
 }
