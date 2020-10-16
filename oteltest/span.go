@@ -15,7 +15,6 @@
 package oteltest
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"sync"
@@ -81,19 +80,9 @@ func (s *Span) End(opts ...otel.SpanOption) {
 }
 
 // RecordError records an error as a Span event.
-func (s *Span) RecordError(ctx context.Context, err error, opts ...otel.ErrorOption) {
+func (s *Span) RecordError(err error, opts ...otel.EventOption) {
 	if err == nil || s.ended {
 		return
-	}
-
-	cfg := otel.NewErrorConfig(opts...)
-
-	if cfg.Timestamp.IsZero() {
-		cfg.Timestamp = time.Now()
-	}
-
-	if cfg.StatusCode != codes.Unset {
-		s.SetStatus(cfg.StatusCode, "")
 	}
 
 	errType := reflect.TypeOf(err)
@@ -102,19 +91,17 @@ func (s *Span) RecordError(ctx context.Context, err error, opts ...otel.ErrorOpt
 		errTypeString = errType.String()
 	}
 
-	s.AddEventWithTimestamp(ctx, cfg.Timestamp, errorEventName,
+	s.SetStatus(codes.Error, "")
+	opts = append(opts, otel.WithAttributes(
 		errorTypeKey.String(errTypeString),
 		errorMessageKey.String(err.Error()),
-	)
+	))
+
+	s.AddEvent(errorEventName, opts...)
 }
 
 // AddEvent adds an event to s.
-func (s *Span) AddEvent(ctx context.Context, name string, attrs ...label.KeyValue) {
-	s.AddEventWithTimestamp(ctx, time.Now(), name, attrs...)
-}
-
-// AddEventWithTimestamp adds an event that occurred at timestamp to s.
-func (s *Span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...label.KeyValue) {
+func (s *Span) AddEvent(name string, o ...otel.EventOption) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -122,14 +109,18 @@ func (s *Span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, n
 		return
 	}
 
-	attributes := make(map[label.Key]label.Value)
+	c := otel.NewEventConfig(o...)
 
-	for _, attr := range attrs {
-		attributes[attr.Key] = attr.Value
+	var attributes map[label.Key]label.Value
+	if l := len(c.Attributes); l > 0 {
+		attributes = make(map[label.Key]label.Value, l)
+		for _, attr := range c.Attributes {
+			attributes[attr.Key] = attr.Value
+		}
 	}
 
 	s.events = append(s.events, Event{
-		Timestamp:  timestamp,
+		Timestamp:  c.Timestamp,
 		Name:       name,
 		Attributes: attributes,
 	})
@@ -186,16 +177,12 @@ func (s *Span) SetAttributes(attrs ...label.KeyValue) {
 
 // Name returns the name most recently set on s, either at or after creation
 // time. It cannot be change after End has been called on s.
-func (s *Span) Name() string {
-	return s.name
-}
+func (s *Span) Name() string { return s.name }
 
 // ParentSpanID returns the SpanID of the parent Span. If s is a root Span,
 // and therefore does not have a parent, the returned SpanID will be invalid
 // (i.e., it will contain all zeroes).
-func (s *Span) ParentSpanID() otel.SpanID {
-	return s.parentSpanID
-}
+func (s *Span) ParentSpanID() otel.SpanID { return s.parentSpanID }
 
 // Attributes returns the attributes set on s, either at or after creation
 // time. If the same attribute key was set multiple times, the last call will
@@ -215,9 +202,7 @@ func (s *Span) Attributes() map[label.Key]label.Value {
 
 // Events returns the events set on s. Events cannot be changed after End has
 // been called on s.
-func (s *Span) Events() []Event {
-	return s.events
-}
+func (s *Span) Events() []Event { return s.events }
 
 // Links returns the links set on s at creation time. If multiple links for
 // the same SpanContext were set, the last link will be used.
@@ -233,37 +218,25 @@ func (s *Span) Links() map[otel.SpanContext][]label.KeyValue {
 
 // StartTime returns the time at which s was started. This will be the
 // wall-clock time unless a specific start time was provided.
-func (s *Span) StartTime() time.Time {
-	return s.startTime
-}
+func (s *Span) StartTime() time.Time { return s.startTime }
 
 // EndTime returns the time at which s was ended if at has been ended, or
 // false otherwise. If the span has been ended, the returned time will be the
 // wall-clock time unless a specific end time was provided.
-func (s *Span) EndTime() (time.Time, bool) {
-	return s.endTime, s.ended
-}
+func (s *Span) EndTime() (time.Time, bool) { return s.endTime, s.ended }
 
 // Ended returns whether s has been ended, i.e. whether End has been called at
 // least once on s.
-func (s *Span) Ended() bool {
-	return s.ended
-}
+func (s *Span) Ended() bool { return s.ended }
 
 // StatusCode returns the code of the status most recently set on s, or
 // codes.OK if no status has been explicitly set. It cannot be changed after
 // End has been called on s.
-func (s *Span) StatusCode() codes.Code {
-	return s.statusCode
-}
+func (s *Span) StatusCode() codes.Code { return s.statusCode }
 
 // StatusMessage returns the status message most recently set on s or the
 // empty string if no status message was set.
-func (s *Span) StatusMessage() string {
-	return s.statusMessage
-}
+func (s *Span) StatusMessage() string { return s.statusMessage }
 
 // SpanKind returns the span kind of s.
-func (s *Span) SpanKind() otel.SpanKind {
-	return s.spanKind
-}
+func (s *Span) SpanKind() otel.SpanKind { return s.spanKind }

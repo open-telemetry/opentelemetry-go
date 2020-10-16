@@ -512,11 +512,11 @@ func TestEvents(t *testing.T) {
 	k2v2 := label.Bool("key2", true)
 	k3v3 := label.Int64("key3", 3)
 
-	span.AddEvent(context.Background(), "foo", label.String("key1", "value1"))
-	span.AddEvent(context.Background(), "bar",
+	span.AddEvent("foo", otel.WithAttributes(label.String("key1", "value1")))
+	span.AddEvent("bar", otel.WithAttributes(
 		label.Bool("key2", true),
 		label.Int64("key3", 3),
-	)
+	))
 	got, err := endSpan(te, span)
 	if err != nil {
 		t.Fatal(err)
@@ -558,16 +558,16 @@ func TestEventsOverLimit(t *testing.T) {
 	k2v2 := label.Bool("key2", false)
 	k3v3 := label.String("key3", "value3")
 
-	span.AddEvent(context.Background(), "fooDrop", label.String("key1", "value1"))
-	span.AddEvent(context.Background(), "barDrop",
+	span.AddEvent("fooDrop", otel.WithAttributes(label.String("key1", "value1")))
+	span.AddEvent("barDrop", otel.WithAttributes(
 		label.Bool("key2", true),
 		label.String("key3", "value3"),
-	)
-	span.AddEvent(context.Background(), "foo", label.String("key1", "value1"))
-	span.AddEvent(context.Background(), "bar",
+	))
+	span.AddEvent("foo", otel.WithAttributes(label.String("key1", "value1")))
+	span.AddEvent("bar", otel.WithAttributes(
 		label.Bool("key2", false),
 		label.String("key3", "value3"),
-	)
+	))
 	got, err := endSpan(te, span)
 	if err != nil {
 		t.Fatal(err)
@@ -1062,9 +1062,7 @@ func TestRecordError(t *testing.T) {
 		span := startSpan(tp, "RecordError")
 
 		errTime := time.Now()
-		span.RecordError(context.Background(), s.err,
-			otel.WithErrorTime(errTime),
-		)
+		span.RecordError(s.err, otel.WithTimestamp(errTime))
 
 		got, err := endSpan(te, span)
 		if err != nil {
@@ -1078,6 +1076,7 @@ func TestRecordError(t *testing.T) {
 			},
 			ParentSpanID:    sid,
 			Name:            "span0",
+			StatusCode:      codes.Error,
 			SpanKind:        otel.SpanKindInternal,
 			HasRemoteParent: true,
 			MessageEvents: []export.Event{
@@ -1098,58 +1097,12 @@ func TestRecordError(t *testing.T) {
 	}
 }
 
-func TestRecordErrorWithStatus(t *testing.T) {
-	te := NewTestExporter()
-	tp := NewTracerProvider(WithSyncer(te))
-	span := startSpan(tp, "RecordErrorWithStatus")
-
-	testErr := ottest.NewTestError("test error")
-	errTime := time.Now()
-	testStatus := codes.Error
-	span.RecordError(context.Background(), testErr,
-		otel.WithErrorTime(errTime),
-		otel.WithErrorStatus(testStatus),
-	)
-
-	got, err := endSpan(te, span)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	want := &export.SpanData{
-		SpanContext: otel.SpanContext{
-			TraceID:    tid,
-			TraceFlags: 0x1,
-		},
-		ParentSpanID:    sid,
-		Name:            "span0",
-		SpanKind:        otel.SpanKindInternal,
-		StatusCode:      codes.Error,
-		StatusMessage:   "",
-		HasRemoteParent: true,
-		MessageEvents: []export.Event{
-			{
-				Name: errorEventName,
-				Time: errTime,
-				Attributes: []label.KeyValue{
-					errorTypeKey.String("go.opentelemetry.io/otel/internal/testing.TestError"),
-					errorMessageKey.String("test error"),
-				},
-			},
-		},
-		InstrumentationLibrary: instrumentation.Library{Name: "RecordErrorWithStatus"},
-	}
-	if diff := cmpDiff(got, want); diff != "" {
-		t.Errorf("SpanErrorOptions: -got +want %s", diff)
-	}
-}
-
 func TestRecordErrorNil(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te))
 	span := startSpan(tp, "RecordErrorNil")
 
-	span.RecordError(context.Background(), nil)
+	span.RecordError(nil)
 
 	got, err := endSpan(te, span)
 	if err != nil {
