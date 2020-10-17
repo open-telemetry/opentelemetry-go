@@ -42,15 +42,6 @@ type TracerOption interface {
 	ApplyTracer(*TracerConfig)
 }
 
-type instVersionTracerOption string
-
-func (o instVersionTracerOption) ApplyTracer(c *TracerConfig) { c.InstrumentationVersion = string(o) }
-
-// WithInstrumentationVersion sets the instrumentation version for a Tracer.
-func WithInstrumentationVersion(version string) TracerOption {
-	return instVersionTracerOption(version)
-}
-
 // SpanConfig is a group of options for a Span.
 type SpanConfig struct {
 	// Attributes describe the associated qualities of a Span.
