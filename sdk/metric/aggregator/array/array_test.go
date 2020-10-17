@@ -22,7 +22,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 )
@@ -31,7 +31,7 @@ type updateTest struct {
 	count int
 }
 
-func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
+func checkZero(t *testing.T, agg *Aggregator, desc *otel.Descriptor) {
 	kind := desc.NumberKind()
 
 	sum, err := agg.Sum()
@@ -62,7 +62,7 @@ func new4() (_, _, _, _ *Aggregator) {
 }
 
 func (ut *updateTest) run(t *testing.T, profile aggregatortest.Profile) {
-	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
+	descriptor := aggregatortest.NewAggregatorTest(otel.ValueRecorderInstrumentKind, profile.NumberKind)
 	agg, ckpt := new2()
 
 	all := aggregatortest.NewNumbers(profile.NumberKind)
@@ -129,7 +129,7 @@ type mergeTest struct {
 }
 
 func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
-	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
+	descriptor := aggregatortest.NewAggregatorTest(otel.ValueRecorderInstrumentKind, profile.NumberKind)
 	agg1, agg2, ckpt1, ckpt2 := new4()
 
 	all := aggregatortest.NewNumbers(profile.NumberKind)
@@ -225,12 +225,12 @@ func TestArrayErrors(t *testing.T) {
 		require.Error(t, err)
 		require.Equal(t, err, aggregation.ErrNoData)
 
-		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(otel.ValueRecorderInstrumentKind, profile.NumberKind)
 
-		aggregatortest.CheckedUpdate(t, agg, metric.Number(0), descriptor)
+		aggregatortest.CheckedUpdate(t, agg, otel.Number(0), descriptor)
 
-		if profile.NumberKind == metric.Float64NumberKind {
-			aggregatortest.CheckedUpdate(t, agg, metric.NewFloat64Number(math.NaN()), descriptor)
+		if profile.NumberKind == otel.Float64NumberKind {
+			aggregatortest.CheckedUpdate(t, agg, otel.NewFloat64Number(math.NaN()), descriptor)
 		}
 		require.NoError(t, agg.SynchronizedMove(ckpt, descriptor))
 
@@ -240,7 +240,7 @@ func TestArrayErrors(t *testing.T) {
 
 		num, err := ckpt.Quantile(0)
 		require.Nil(t, err)
-		require.Equal(t, num, metric.Number(0))
+		require.Equal(t, num, otel.Number(0))
 
 		_, err = ckpt.Quantile(-0.0001)
 		require.Error(t, err)
@@ -253,7 +253,7 @@ func TestArrayErrors(t *testing.T) {
 }
 
 func TestArrayFloat64(t *testing.T) {
-	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, metric.Float64NumberKind)
+	descriptor := aggregatortest.NewAggregatorTest(otel.ValueRecorderInstrumentKind, otel.Float64NumberKind)
 
 	fpsf := func(sign int) []float64 {
 		// Check behavior of a bunch of odd floating
@@ -282,18 +282,18 @@ func TestArrayFloat64(t *testing.T) {
 		}
 	}
 
-	all := aggregatortest.NewNumbers(metric.Float64NumberKind)
+	all := aggregatortest.NewNumbers(otel.Float64NumberKind)
 
 	agg, ckpt := new2()
 
 	for _, f := range fpsf(1) {
-		all.Append(metric.NewFloat64Number(f))
-		aggregatortest.CheckedUpdate(t, agg, metric.NewFloat64Number(f), descriptor)
+		all.Append(otel.NewFloat64Number(f))
+		aggregatortest.CheckedUpdate(t, agg, otel.NewFloat64Number(f), descriptor)
 	}
 
 	for _, f := range fpsf(-1) {
-		all.Append(metric.NewFloat64Number(f))
-		aggregatortest.CheckedUpdate(t, agg, metric.NewFloat64Number(f), descriptor)
+		all.Append(otel.NewFloat64Number(f))
+		aggregatortest.CheckedUpdate(t, agg, otel.NewFloat64Number(f), descriptor)
 	}
 
 	require.NoError(t, agg.SynchronizedMove(ckpt, descriptor))

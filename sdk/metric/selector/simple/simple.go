@@ -15,7 +15,7 @@
 package simple // import "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 
 import (
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
@@ -94,11 +94,11 @@ func lastValueAggs(aggPtrs []*export.Aggregator) {
 	}
 }
 
-func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+func (selectorInexpensive) AggregatorFor(descriptor *otel.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch descriptor.InstrumentKind() {
-	case metric.ValueObserverInstrumentKind:
+	case otel.ValueObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
-	case metric.ValueRecorderInstrumentKind:
+	case otel.ValueRecorderInstrumentKind:
 		aggs := minmaxsumcount.New(len(aggPtrs), descriptor)
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
@@ -108,11 +108,11 @@ func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor, aggPtrs 
 	}
 }
 
-func (s selectorSketch) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+func (s selectorSketch) AggregatorFor(descriptor *otel.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch descriptor.InstrumentKind() {
-	case metric.ValueObserverInstrumentKind:
+	case otel.ValueObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
-	case metric.ValueRecorderInstrumentKind:
+	case otel.ValueRecorderInstrumentKind:
 		aggs := ddsketch.New(len(aggPtrs), descriptor, s.config)
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
@@ -122,11 +122,11 @@ func (s selectorSketch) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...
 	}
 }
 
-func (selectorExact) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+func (selectorExact) AggregatorFor(descriptor *otel.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch descriptor.InstrumentKind() {
-	case metric.ValueObserverInstrumentKind:
+	case otel.ValueObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
-	case metric.ValueRecorderInstrumentKind:
+	case otel.ValueRecorderInstrumentKind:
 		aggs := array.New(len(aggPtrs))
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
@@ -136,11 +136,11 @@ func (selectorExact) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*ex
 	}
 }
 
-func (s selectorHistogram) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+func (s selectorHistogram) AggregatorFor(descriptor *otel.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch descriptor.InstrumentKind() {
-	case metric.ValueObserverInstrumentKind:
+	case otel.ValueObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
-	case metric.ValueRecorderInstrumentKind:
+	case otel.ValueRecorderInstrumentKind:
 		aggs := histogram.New(len(aggPtrs), descriptor, s.boundaries)
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]

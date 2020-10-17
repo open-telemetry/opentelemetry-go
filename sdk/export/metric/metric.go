@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -94,7 +94,7 @@ type AggregatorSelector interface {
 	// Note: This is context-free because the aggregator should
 	// not relate to the incoming context.  This call should not
 	// block.
-	AggregatorFor(descriptor *metric.Descriptor, aggregator ...*Aggregator)
+	AggregatorFor(descriptor *otel.Descriptor, aggregator ...*Aggregator)
 }
 
 // Checkpointer is the interface used by a Controller to coordinate
@@ -152,7 +152,7 @@ type Aggregator interface {
 	//
 	// The Context argument comes from user-level code and could be
 	// inspected for a `correlation.Map` or `trace.SpanContext`.
-	Update(ctx context.Context, number metric.Number, descriptor *metric.Descriptor) error
+	Update(ctx context.Context, number otel.Number, descriptor *otel.Descriptor) error
 
 	// SynchronizedMove is called during collection to finish one
 	// period of aggregation by atomically saving the
@@ -173,7 +173,7 @@ type Aggregator interface {
 	//
 	// This call has no Context argument because it is expected to
 	// perform only computation.
-	SynchronizedMove(destination Aggregator, descriptor *metric.Descriptor) error
+	SynchronizedMove(destination Aggregator, descriptor *otel.Descriptor) error
 
 	// Merge combines the checkpointed state from the argument
 	// Aggregator into this Aggregator.  Merge is not synchronized
@@ -181,7 +181,7 @@ type Aggregator interface {
 	//
 	// The owner of an Aggregator being merged is responsible for
 	// synchronization of both Aggregator states.
-	Merge(aggregator Aggregator, descriptor *metric.Descriptor) error
+	Merge(aggregator Aggregator, descriptor *otel.Descriptor) error
 }
 
 // Subtractor is an optional interface implemented by some
@@ -191,7 +191,7 @@ type Aggregator interface {
 type Subtractor interface {
 	// Subtract subtracts the `operand` from this Aggregator and
 	// outputs the value in `result`.
-	Subtract(operand, result Aggregator, descriptor *metric.Descriptor) error
+	Subtract(operand, result Aggregator, descriptor *otel.Descriptor) error
 }
 
 // Exporter handles presentation of the checkpoint of aggregate
@@ -221,7 +221,7 @@ type ExportKindSelector interface {
 	// ExportKindFor should return the correct ExportKind that
 	// should be used when exporting data for the given metric
 	// instrument and Aggregator kind.
-	ExportKindFor(descriptor *metric.Descriptor, aggregatorKind aggregation.Kind) ExportKind
+	ExportKindFor(descriptor *otel.Descriptor, aggregatorKind aggregation.Kind) ExportKind
 }
 
 // CheckpointSet allows a controller to access a complete checkpoint of
@@ -262,7 +262,7 @@ type CheckpointSet interface {
 // are shared by the Accumulator->Processor and Processor->Exporter
 // steps.
 type Metadata struct {
-	descriptor *metric.Descriptor
+	descriptor *otel.Descriptor
 	labels     *label.Set
 	resource   *resource.Resource
 }
@@ -285,7 +285,7 @@ type Record struct {
 }
 
 // Descriptor describes the metric instrument being exported.
-func (m Metadata) Descriptor() *metric.Descriptor {
+func (m Metadata) Descriptor() *otel.Descriptor {
 	return m.descriptor
 }
 
@@ -304,7 +304,7 @@ func (m Metadata) Resource() *resource.Resource {
 // Accumulations to send to Processors. The Descriptor, Labels, Resource,
 // and Aggregator represent aggregate metric events received over a single
 // collection period.
-func NewAccumulation(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregator Aggregator) Accumulation {
+func NewAccumulation(descriptor *otel.Descriptor, labels *label.Set, resource *resource.Resource, aggregator Aggregator) Accumulation {
 	return Accumulation{
 		Metadata: Metadata{
 			descriptor: descriptor,
@@ -324,7 +324,7 @@ func (r Accumulation) Aggregator() Aggregator {
 // NewRecord allows Processor implementations to construct export
 // records.  The Descriptor, Labels, and Aggregator represent
 // aggregate metric events received over a single collection period.
-func NewRecord(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregation aggregation.Aggregation, start, end time.Time) Record {
+func NewRecord(descriptor *otel.Descriptor, labels *label.Set, resource *resource.Resource, aggregation aggregation.Aggregation, start, end time.Time) Record {
 	return Record{
 		Metadata: Metadata{
 			descriptor: descriptor,
@@ -379,20 +379,20 @@ func (kind ExportKind) Includes(has ExportKind) bool {
 }
 
 // ExportKindFor returns a constant, as an implementation of ExportKindSelector.
-func (kind ExportKind) ExportKindFor(_ *metric.Descriptor, _ aggregation.Kind) ExportKind {
+func (kind ExportKind) ExportKindFor(_ *otel.Descriptor, _ aggregation.Kind) ExportKind {
 	return kind
 }
 
 // MemoryRequired returns whether an exporter of this kind requires
 // memory to export correctly.
-func (kind ExportKind) MemoryRequired(mkind metric.InstrumentKind) bool {
+func (kind ExportKind) MemoryRequired(mkind otel.InstrumentKind) bool {
 	switch mkind {
-	case metric.ValueRecorderInstrumentKind, metric.ValueObserverInstrumentKind,
-		metric.CounterInstrumentKind, metric.UpDownCounterInstrumentKind:
+	case otel.ValueRecorderInstrumentKind, otel.ValueObserverInstrumentKind,
+		otel.CounterInstrumentKind, otel.UpDownCounterInstrumentKind:
 		// Delta-oriented instruments:
 		return kind.Includes(CumulativeExporter)
 
-	case metric.SumObserverInstrumentKind, metric.UpDownSumObserverInstrumentKind:
+	case otel.SumObserverInstrumentKind, otel.UpDownSumObserverInstrumentKind:
 		// Cumulative-oriented instruments:
 		return kind.Includes(DeltaExporter)
 	}

@@ -19,7 +19,6 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/metric"
 )
 
 type (
@@ -28,7 +27,7 @@ type (
 	}
 
 	meterProviderHolder struct {
-		mp metric.MeterProvider
+		mp otel.MeterProvider
 	}
 
 	propagatorsHolder struct {
@@ -69,12 +68,12 @@ func SetTracerProvider(tp otel.TracerProvider) {
 }
 
 // MeterProvider is the internal implementation for global.MeterProvider.
-func MeterProvider() metric.MeterProvider {
+func MeterProvider() otel.MeterProvider {
 	return globalMeter.Load().(meterProviderHolder).mp
 }
 
 // SetMeterProvider is the internal implementation for global.SetMeterProvider.
-func SetMeterProvider(mp metric.MeterProvider) {
+func SetMeterProvider(mp otel.MeterProvider) {
 	delegateMeterOnce.Do(func() {
 		current := MeterProvider()
 

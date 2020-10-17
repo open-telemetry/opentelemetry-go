@@ -19,7 +19,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
@@ -31,15 +31,15 @@ import (
 )
 
 var (
-	testCounterDesc           = metric.NewDescriptor("counter", metric.CounterInstrumentKind, metric.Int64NumberKind)
-	testUpDownCounterDesc     = metric.NewDescriptor("updowncounter", metric.UpDownCounterInstrumentKind, metric.Int64NumberKind)
-	testSumObserverDesc       = metric.NewDescriptor("sumobserver", metric.SumObserverInstrumentKind, metric.Int64NumberKind)
-	testUpDownSumObserverDesc = metric.NewDescriptor("updownsumobserver", metric.UpDownSumObserverInstrumentKind, metric.Int64NumberKind)
-	testValueRecorderDesc     = metric.NewDescriptor("valuerecorder", metric.ValueRecorderInstrumentKind, metric.Int64NumberKind)
-	testValueObserverDesc     = metric.NewDescriptor("valueobserver", metric.ValueObserverInstrumentKind, metric.Int64NumberKind)
+	testCounterDesc           = otel.NewDescriptor("counter", otel.CounterInstrumentKind, otel.Int64NumberKind)
+	testUpDownCounterDesc     = otel.NewDescriptor("updowncounter", otel.UpDownCounterInstrumentKind, otel.Int64NumberKind)
+	testSumObserverDesc       = otel.NewDescriptor("sumobserver", otel.SumObserverInstrumentKind, otel.Int64NumberKind)
+	testUpDownSumObserverDesc = otel.NewDescriptor("updownsumobserver", otel.UpDownSumObserverInstrumentKind, otel.Int64NumberKind)
+	testValueRecorderDesc     = otel.NewDescriptor("valuerecorder", otel.ValueRecorderInstrumentKind, otel.Int64NumberKind)
+	testValueObserverDesc     = otel.NewDescriptor("valueobserver", otel.ValueObserverInstrumentKind, otel.Int64NumberKind)
 )
 
-func oneAgg(sel export.AggregatorSelector, desc *metric.Descriptor) export.Aggregator {
+func oneAgg(sel export.AggregatorSelector, desc *otel.Descriptor) export.Aggregator {
 	var agg export.Aggregator
 	sel.AggregatorFor(desc, &agg)
 	return agg
