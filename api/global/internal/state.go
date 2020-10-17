@@ -138,4 +138,5 @@ func ResetForTest() {
 	globalPropagators = defaultPropagatorsValue()
 	delegateMeterOnce = sync.Once{}
 	delegateTraceOnce = sync.Once{}
+	delegateTextMapPropagatorOnce = sync.Once{}
 }
