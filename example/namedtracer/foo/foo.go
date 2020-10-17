@@ -34,10 +34,10 @@ func SubOperation(ctx context.Context) error {
 	tr := global.Tracer("example/namedtracer/foo")
 
 	var span otel.Span
-	ctx, span = tr.Start(ctx, "Sub operation...")
+	_, span = tr.Start(ctx, "Sub operation...")
 	defer span.End()
 	span.SetAttributes(lemonsKey.String("five"))
-	span.AddEvent(ctx, "Sub span event")
+	span.AddEvent("Sub span event")
 
 	return nil
 }

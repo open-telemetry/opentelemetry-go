@@ -68,7 +68,7 @@ func main() {
 	var span otel.Span
 	ctx, span = tracer.Start(ctx, "operation")
 	defer span.End()
-	span.AddEvent(ctx, "Nice operation!", label.Int("bogons", 100))
+	span.AddEvent("Nice operation!", otel.WithAttributes(label.Int("bogons", 100)))
 	span.SetAttributes(anotherKey.String("yes"))
 	if err := foo.SubOperation(ctx); err != nil {
 		panic(err)

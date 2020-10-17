@@ -54,33 +54,29 @@ func (p *textMapPropagator) SetDelegate(delegate otel.TextMapPropagator) {
 	p.mtx.Unlock()
 }
 
-// HasDelegate returns if a delegate is set for p.
-func (p *textMapPropagator) HasDelegate() bool {
+// effectiveDelegate returns the current delegate of p if one is set,
+// otherwise the default noop TextMapPropagator is returned. This method
+// can be called concurrently.
+func (p *textMapPropagator) effectiveDelegate() otel.TextMapPropagator {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
-	return p.delegate != nil
+	if p.delegate != nil {
+		return p.delegate
+	}
+	return p.noop
 }
 
 // Inject set cross-cutting concerns from the Context into the carrier.
 func (p *textMapPropagator) Inject(ctx context.Context, carrier otel.TextMapCarrier) {
-	if p.HasDelegate() {
-		p.delegate.Inject(ctx, carrier)
-	}
-	p.noop.Inject(ctx, carrier)
+	p.effectiveDelegate().Inject(ctx, carrier)
 }
 
 // Extract reads cross-cutting concerns from the carrier into a Context.
 func (p *textMapPropagator) Extract(ctx context.Context, carrier otel.TextMapCarrier) context.Context {
-	if p.HasDelegate() {
-		return p.delegate.Extract(ctx, carrier)
-	}
-	return p.noop.Extract(ctx, carrier)
+	return p.effectiveDelegate().Extract(ctx, carrier)
 }
 
-// Fields returns the keys who's values are set with Inject.
+// Fields returns the keys whose values are set with Inject.
 func (p *textMapPropagator) Fields() []string {
-	if p.HasDelegate() {
-		return p.delegate.Fields()
-	}
-	return p.noop.Fields()
+	return p.effectiveDelegate().Fields()
 }
