@@ -12,20 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global
+package global_test
 
 import (
+	"testing"
+
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global/internal"
+	"go.opentelemetry.io/otel/global"
 )
 
-// TextMapPropagator returns the global TextMapPropagator. If none has been
-// set, a No-Op TextMapPropagator is returned.
-func TextMapPropagator() otel.TextMapPropagator {
-	return internal.TextMapPropagator()
+type testMeterProvider struct{}
+
+var _ otel.MeterProvider = &testMeterProvider{}
+
+func (*testMeterProvider) Meter(_ string, _ ...otel.MeterOption) otel.Meter {
+	return otel.Meter{}
 }
 
-// SetTextMapPropagator sets propagator as the global TSetTextMapPropagator.
-func SetTextMapPropagator(propagator otel.TextMapPropagator) {
-	internal.SetTextMapPropagator(propagator)
+func TestMultipleGlobalMeterProvider(t *testing.T) {
+	p1 := testMeterProvider{}
+	p2 := otel.NoopMeterProvider{}
+	global.SetMeterProvider(&p1)
+	global.SetMeterProvider(&p2)
+
+	got := global.MeterProvider()
+	want := &p2
+	if got != want {
+		t.Fatalf("MeterProvider: got %p, want %p\n", got, want)
+	}
 }

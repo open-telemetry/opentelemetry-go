@@ -17,7 +17,7 @@ package internal_test
 import (
 	"testing"
 
-	"go.opentelemetry.io/otel/api/global/internal"
+	"go.opentelemetry.io/otel/global/internal"
 )
 
 func TestResetsOfGlobalsPanic(t *testing.T) {

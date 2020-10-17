@@ -12,29 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal_test
+package global_test
 
 import (
-	"os"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/global/internal"
-	ottest "go.opentelemetry.io/otel/internal/testing"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/global"
+	"go.opentelemetry.io/otel/internal/trace/noop"
 )
 
-// Ensure struct alignment prior to running tests.
-func TestMain(m *testing.M) {
-	fieldsMap := internal.AtomicFieldOffsets()
-	fields := make([]ottest.FieldOffset, 0, len(fieldsMap))
-	for name, offset := range fieldsMap {
-		fields = append(fields, ottest.FieldOffset{
-			Name:   name,
-			Offset: offset,
-		})
-	}
-	if !ottest.Aligned8Byte(fields, os.Stderr) {
-		os.Exit(1)
-	}
+type testTracerProvider struct{}
 
-	os.Exit(m.Run())
+var _ otel.TracerProvider = &testTracerProvider{}
+
+func (*testTracerProvider) Tracer(_ string, _ ...otel.TracerOption) otel.Tracer {
+	return noop.Tracer
+}
+
+func TestMultipleGlobalTracerProvider(t *testing.T) {
+	p1 := testTracerProvider{}
+	p2 := otel.NewNoopTracerProvider()
+	global.SetTracerProvider(&p1)
+	global.SetTracerProvider(p2)
+
+	got := global.TracerProvider()
+	want := p2
+	if got != want {
+		t.Fatalf("TracerProvider: got %p, want %p\n", got, want)
+	}
 }

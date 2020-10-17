@@ -12,32 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global_test
+package internal_test
 
 import (
+	"os"
 	"testing"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/global/internal"
+	ottest "go.opentelemetry.io/otel/internal/testing"
 )
 
-type testMeterProvider struct{}
-
-var _ otel.MeterProvider = &testMeterProvider{}
-
-func (*testMeterProvider) Meter(_ string, _ ...otel.MeterOption) otel.Meter {
-	return otel.Meter{}
-}
-
-func TestMultipleGlobalMeterProvider(t *testing.T) {
-	p1 := testMeterProvider{}
-	p2 := otel.NoopMeterProvider{}
-	global.SetMeterProvider(&p1)
-	global.SetMeterProvider(&p2)
-
-	got := global.MeterProvider()
-	want := &p2
-	if got != want {
-		t.Fatalf("MeterProvider: got %p, want %p\n", got, want)
+// Ensure struct alignment prior to running tests.
+func TestMain(m *testing.M) {
+	fieldsMap := internal.AtomicFieldOffsets()
+	fields := make([]ottest.FieldOffset, 0, len(fieldsMap))
+	for name, offset := range fieldsMap {
+		fields = append(fields, ottest.FieldOffset{
+			Name:   name,
+			Offset: offset,
+		})
 	}
+	if !ottest.Aligned8Byte(fields, os.Stderr) {
+		os.Exit(1)
+	}
+
+	os.Exit(m.Run())
 }

@@ -13,4 +13,4 @@
 // limitations under the License.
 
 // Package global provides global providers, propagators and more.
-package global // import "go.opentelemetry.io/otel/api/global"
+package global // import "go.opentelemetry.io/otel/global"

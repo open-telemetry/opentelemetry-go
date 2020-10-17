@@ -16,7 +16,7 @@ package stdout
 
 import (
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/sdk/export/metric"
 	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
