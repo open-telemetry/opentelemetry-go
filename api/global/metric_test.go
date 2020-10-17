@@ -17,21 +17,21 @@ package global_test
 import (
 	"testing"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/metric"
 )
 
 type testMeterProvider struct{}
 
-var _ metric.MeterProvider = &testMeterProvider{}
+var _ otel.MeterProvider = &testMeterProvider{}
 
-func (*testMeterProvider) Meter(_ string, _ ...metric.MeterOption) metric.Meter {
-	return metric.Meter{}
+func (*testMeterProvider) Meter(_ string, _ ...otel.MeterOption) otel.Meter {
+	return otel.Meter{}
 }
 
 func TestMultipleGlobalMeterProvider(t *testing.T) {
 	p1 := testMeterProvider{}
-	p2 := metric.NoopMeterProvider{}
+	p2 := otel.NoopMeterProvider{}
 	global.SetMeterProvider(&p1)
 	global.SetMeterProvider(&p2)
 

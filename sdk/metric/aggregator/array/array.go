@@ -21,7 +21,7 @@ import (
 	"sync"
 	"unsafe"
 
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
@@ -32,11 +32,11 @@ type (
 	// an array with the exact set of values.
 	Aggregator struct {
 		lock   sync.Mutex
-		sum    metric.Number
+		sum    otel.Number
 		points points
 	}
 
-	points []metric.Number
+	points []otel.Number
 )
 
 var _ export.Aggregator = &Aggregator{}
@@ -62,7 +62,7 @@ func (c *Aggregator) Kind() aggregation.Kind {
 }
 
 // Sum returns the sum of values in the checkpoint.
-func (c *Aggregator) Sum() (metric.Number, error) {
+func (c *Aggregator) Sum() (otel.Number, error) {
 	return c.sum, nil
 }
 
@@ -72,29 +72,29 @@ func (c *Aggregator) Count() (int64, error) {
 }
 
 // Max returns the maximum value in the checkpoint.
-func (c *Aggregator) Max() (metric.Number, error) {
+func (c *Aggregator) Max() (otel.Number, error) {
 	return c.points.Quantile(1)
 }
 
 // Min returns the mininum value in the checkpoint.
-func (c *Aggregator) Min() (metric.Number, error) {
+func (c *Aggregator) Min() (otel.Number, error) {
 	return c.points.Quantile(0)
 }
 
 // Quantile returns the estimated quantile of data in the checkpoint.
 // It is an error if `q` is less than 0 or greated than 1.
-func (c *Aggregator) Quantile(q float64) (metric.Number, error) {
+func (c *Aggregator) Quantile(q float64) (otel.Number, error) {
 	return c.points.Quantile(q)
 }
 
 // Points returns access to the raw data set.
-func (c *Aggregator) Points() ([]metric.Number, error) {
+func (c *Aggregator) Points() ([]otel.Number, error) {
 	return c.points, nil
 }
 
 // SynchronizedMove saves the current state to oa and resets the current state to
 // the empty set, taking a lock to prevent concurrent Update() calls.
-func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descriptor) error {
+func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *otel.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)
@@ -116,7 +116,7 @@ func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descrip
 // Update adds the recorded measurement to the current data set.
 // Update takes a lock to prevent concurrent Update() and SynchronizedMove()
 // calls.
-func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metric.Descriptor) error {
+func (c *Aggregator) Update(_ context.Context, number otel.Number, desc *otel.Descriptor) error {
 	c.lock.Lock()
 	c.points = append(c.points, number)
 	c.sum.AddNumber(desc.NumberKind(), number)
@@ -126,7 +126,7 @@ func (c *Aggregator) Update(_ context.Context, number metric.Number, desc *metri
 }
 
 // Merge combines two data sets into one.
-func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
+func (c *Aggregator) Merge(oa export.Aggregator, desc *otel.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)
@@ -140,12 +140,12 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 	return nil
 }
 
-func (c *Aggregator) sort(kind metric.NumberKind) {
+func (c *Aggregator) sort(kind otel.NumberKind) {
 	switch kind {
-	case metric.Float64NumberKind:
+	case otel.Float64NumberKind:
 		sort.Float64s(*(*[]float64)(unsafe.Pointer(&c.points)))
 
-	case metric.Int64NumberKind:
+	case otel.Int64NumberKind:
 		sort.Sort(&c.points)
 
 	default:
@@ -155,7 +155,7 @@ func (c *Aggregator) sort(kind metric.NumberKind) {
 	}
 }
 
-func combine(a, b points, kind metric.NumberKind) points {
+func combine(a, b points, kind otel.NumberKind) points {
 	result := make(points, 0, len(a)+len(b))
 
 	for len(a) != 0 && len(b) != 0 {
@@ -190,7 +190,7 @@ func (p *points) Swap(i, j int) {
 // Quantile returns the least X such that Pr(x<X)>=q, where X is an
 // element of the data set.  This uses the "Nearest-Rank" definition
 // of a quantile.
-func (p *points) Quantile(q float64) (metric.Number, error) {
+func (p *points) Quantile(q float64) (otel.Number, error) {
 	if len(*p) == 0 {
 		return 0, aggregation.ErrNoData
 	}

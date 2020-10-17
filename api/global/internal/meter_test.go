@@ -21,23 +21,23 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/global/internal"
-	"go.opentelemetry.io/otel/api/metric"
-	metrictest "go.opentelemetry.io/otel/api/metric/metrictest"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/oteltest"
 )
 
-var Must = metric.Must
+var Must = otel.Must
 
-var asInt = metric.NewInt64Number
-var asFloat = metric.NewFloat64Number
+var asInt = otel.NewInt64Number
+var asFloat = otel.NewFloat64Number
 
 func TestDirect(t *testing.T) {
 	internal.ResetForTest()
 
 	ctx := context.Background()
-	meter1 := global.Meter("test1", metric.WithInstrumentationVersion("semver:v1.0.0"))
+	meter1 := global.Meter("test1", otel.WithInstrumentationVersion("semver:v1.0.0"))
 	meter2 := global.Meter("test2")
 	labels1 := []label.KeyValue{label.String("A", "B")}
 	labels2 := []label.KeyValue{label.String("C", "D")}
@@ -51,12 +51,12 @@ func TestDirect(t *testing.T) {
 	valuerecorder.Record(ctx, 1, labels1...)
 	valuerecorder.Record(ctx, 2, labels1...)
 
-	_ = Must(meter1).NewFloat64ValueObserver("test.valueobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
+	_ = Must(meter1).NewFloat64ValueObserver("test.valueobserver.float", func(_ context.Context, result otel.Float64ObserverResult) {
 		result.Observe(1., labels1...)
 		result.Observe(2., labels2...)
 	})
 
-	_ = Must(meter1).NewInt64ValueObserver("test.valueobserver.int", func(_ context.Context, result metric.Int64ObserverResult) {
+	_ = Must(meter1).NewInt64ValueObserver("test.valueobserver.int", func(_ context.Context, result otel.Int64ObserverResult) {
 		result.Observe(1, labels1...)
 		result.Observe(2, labels2...)
 	})
@@ -65,7 +65,7 @@ func TestDirect(t *testing.T) {
 	second.Record(ctx, 1, labels3...)
 	second.Record(ctx, 2, labels3...)
 
-	mock, provider := metrictest.NewMeterProvider()
+	mock, provider := oteltest.NewMeterProvider()
 	global.SetMeterProvider(provider)
 
 	counter.Add(ctx, 1, labels1...)
@@ -74,56 +74,56 @@ func TestDirect(t *testing.T) {
 
 	mock.RunAsyncInstruments()
 
-	measurements := metrictest.AsStructs(mock.MeasurementBatches)
+	measurements := oteltest.AsStructs(mock.MeasurementBatches)
 
 	require.EqualValues(t,
-		[]metrictest.Measured{
+		[]oteltest.Measured{
 			{
 				Name:                   "test.counter",
 				InstrumentationName:    "test1",
 				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 metrictest.LabelsToMap(labels1...),
+				Labels:                 oteltest.LabelsToMap(labels1...),
 				Number:                 asInt(1),
 			},
 			{
 				Name:                   "test.valuerecorder",
 				InstrumentationName:    "test1",
 				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 metrictest.LabelsToMap(labels1...),
+				Labels:                 oteltest.LabelsToMap(labels1...),
 				Number:                 asFloat(3),
 			},
 			{
 				Name:                "test.second",
 				InstrumentationName: "test2",
-				Labels:              metrictest.LabelsToMap(labels3...),
+				Labels:              oteltest.LabelsToMap(labels3...),
 				Number:              asFloat(3),
 			},
 			{
 				Name:                   "test.valueobserver.float",
 				InstrumentationName:    "test1",
 				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 metrictest.LabelsToMap(labels1...),
+				Labels:                 oteltest.LabelsToMap(labels1...),
 				Number:                 asFloat(1),
 			},
 			{
 				Name:                   "test.valueobserver.float",
 				InstrumentationName:    "test1",
 				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 metrictest.LabelsToMap(labels2...),
+				Labels:                 oteltest.LabelsToMap(labels2...),
 				Number:                 asFloat(2),
 			},
 			{
 				Name:                   "test.valueobserver.int",
 				InstrumentationName:    "test1",
 				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 metrictest.LabelsToMap(labels1...),
+				Labels:                 oteltest.LabelsToMap(labels1...),
 				Number:                 asInt(1),
 			},
 			{
 				Name:                   "test.valueobserver.int",
 				InstrumentationName:    "test1",
 				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 metrictest.LabelsToMap(labels2...),
+				Labels:                 oteltest.LabelsToMap(labels2...),
 				Number:                 asInt(2),
 			},
 		},
@@ -150,28 +150,28 @@ func TestBound(t *testing.T) {
 	boundM.Record(ctx, 1)
 	boundM.Record(ctx, 2)
 
-	mock, provider := metrictest.NewMeterProvider()
+	mock, provider := oteltest.NewMeterProvider()
 	global.SetMeterProvider(provider)
 
 	boundC.Add(ctx, 1)
 	boundM.Record(ctx, 3)
 
 	require.EqualValues(t,
-		[]metrictest.Measured{
+		[]oteltest.Measured{
 			{
 				Name:                "test.counter",
 				InstrumentationName: "test",
-				Labels:              metrictest.LabelsToMap(labels1...),
+				Labels:              oteltest.LabelsToMap(labels1...),
 				Number:              asFloat(1),
 			},
 			{
 				Name:                "test.valuerecorder",
 				InstrumentationName: "test",
-				Labels:              metrictest.LabelsToMap(labels1...),
+				Labels:              oteltest.LabelsToMap(labels1...),
 				Number:              asInt(3),
 			},
 		},
-		metrictest.AsStructs(mock.MeasurementBatches))
+		oteltest.AsStructs(mock.MeasurementBatches))
 
 	boundC.Unbind()
 	boundM.Unbind()
@@ -198,7 +198,7 @@ func TestUnbindThenRecordOne(t *testing.T) {
 	internal.ResetForTest()
 
 	ctx := context.Background()
-	mock, provider := metrictest.NewMeterProvider()
+	mock, provider := oteltest.NewMeterProvider()
 
 	meter := global.Meter("test")
 	counter := Must(meter).NewInt64Counter("test.counter")
@@ -213,19 +213,19 @@ func TestUnbindThenRecordOne(t *testing.T) {
 }
 
 type meterProviderWithConstructorError struct {
-	metric.MeterProvider
+	otel.MeterProvider
 }
 
 type meterWithConstructorError struct {
-	metric.MeterImpl
+	otel.MeterImpl
 }
 
-func (m *meterProviderWithConstructorError) Meter(iName string, opts ...metric.MeterOption) metric.Meter {
-	return metric.WrapMeterImpl(&meterWithConstructorError{m.MeterProvider.Meter(iName, opts...).MeterImpl()}, iName, opts...)
+func (m *meterProviderWithConstructorError) Meter(iName string, opts ...otel.MeterOption) otel.Meter {
+	return otel.WrapMeterImpl(&meterWithConstructorError{m.MeterProvider.Meter(iName, opts...).MeterImpl()}, iName, opts...)
 }
 
-func (m *meterWithConstructorError) NewSyncInstrument(_ metric.Descriptor) (metric.SyncImpl, error) {
-	return metric.NoopSync{}, errors.New("constructor error")
+func (m *meterWithConstructorError) NewSyncInstrument(_ otel.Descriptor) (otel.SyncImpl, error) {
+	return otel.NoopSync{}, errors.New("constructor error")
 }
 
 func TestErrorInDeferredConstructor(t *testing.T) {
@@ -237,7 +237,7 @@ func TestErrorInDeferredConstructor(t *testing.T) {
 	c1 := Must(meter).NewInt64Counter("test")
 	c2 := Must(meter).NewInt64Counter("test")
 
-	_, provider := metrictest.NewMeterProvider()
+	_, provider := oteltest.NewMeterProvider()
 	sdk := &meterProviderWithConstructorError{provider}
 
 	require.Panics(t, func() {
@@ -263,23 +263,23 @@ func TestImplementationIndirection(t *testing.T) {
 	ival := counter.Measurement(1).SyncImpl().Implementation()
 	require.NotNil(t, ival)
 
-	_, ok := ival.(*metrictest.Sync)
+	_, ok := ival.(*oteltest.Sync)
 	require.False(t, ok)
 
 	// Async: no SDK yet
 	valueobserver := Must(meter1).NewFloat64ValueObserver(
 		"interface.valueobserver",
-		func(_ context.Context, result metric.Float64ObserverResult) {},
+		func(_ context.Context, result otel.Float64ObserverResult) {},
 	)
 
 	ival = valueobserver.AsyncImpl().Implementation()
 	require.NotNil(t, ival)
 
-	_, ok = ival.(*metrictest.Async)
+	_, ok = ival.(*oteltest.Async)
 	require.False(t, ok)
 
 	// Register the SDK
-	_, provider := metrictest.NewMeterProvider()
+	_, provider := oteltest.NewMeterProvider()
 	global.SetMeterProvider(provider)
 
 	// Repeat the above tests
@@ -288,14 +288,14 @@ func TestImplementationIndirection(t *testing.T) {
 	ival = counter.Measurement(1).SyncImpl().Implementation()
 	require.NotNil(t, ival)
 
-	_, ok = ival.(*metrictest.Sync)
+	_, ok = ival.(*oteltest.Sync)
 	require.True(t, ok)
 
 	// Async
 	ival = valueobserver.AsyncImpl().Implementation()
 	require.NotNil(t, ival)
 
-	_, ok = ival.(*metrictest.Async)
+	_, ok = ival.(*oteltest.Async)
 	require.True(t, ok)
 }
 
@@ -308,19 +308,19 @@ func TestRecordBatchMock(t *testing.T) {
 
 	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
 
-	mock, provider := metrictest.NewMeterProvider()
+	mock, provider := oteltest.NewMeterProvider()
 	global.SetMeterProvider(provider)
 
 	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
 
 	require.EqualValues(t,
-		[]metrictest.Measured{
+		[]oteltest.Measured{
 			{
 				Name:                "test.counter",
 				InstrumentationName: "builtin",
-				Labels:              metrictest.LabelsToMap(),
+				Labels:              oteltest.LabelsToMap(),
 				Number:              asInt(1),
 			},
 		},
-		metrictest.AsStructs(mock.MeasurementBatches))
+		oteltest.AsStructs(mock.MeasurementBatches))
 }

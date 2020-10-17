@@ -21,9 +21,9 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel"
+	api "go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/metric"
-	api "go.opentelemetry.io/otel/api/metric"
 	internal "go.opentelemetry.io/otel/internal/metric"
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -76,7 +76,7 @@ type (
 	// mapkey uniquely describes a metric instrument in terms of
 	// its InstrumentID and the encoded form of its labels.
 	mapkey struct {
-		descriptor *metric.Descriptor
+		descriptor *otel.Descriptor
 		ordered    label.Distinct
 	}
 
@@ -124,7 +124,7 @@ type (
 
 	instrument struct {
 		meter      *Accumulator
-		descriptor metric.Descriptor
+		descriptor otel.Descriptor
 	}
 
 	asyncInstrument struct {
@@ -329,7 +329,7 @@ func (m *Accumulator) NewSyncInstrument(descriptor api.Descriptor) (api.SyncImpl
 }
 
 // NewAsyncInstrument implements api.MetricImpl.
-func (m *Accumulator) NewAsyncInstrument(descriptor api.Descriptor, runner metric.AsyncRunner) (api.AsyncImpl, error) {
+func (m *Accumulator) NewAsyncInstrument(descriptor api.Descriptor, runner otel.AsyncRunner) (api.AsyncImpl, error) {
 	a := &asyncInstrument{
 		instrument: instrument{
 			descriptor: descriptor,
@@ -405,7 +405,7 @@ func (m *Accumulator) collectSyncInstruments() int {
 }
 
 // CollectAsync implements internal.AsyncCollector.
-func (m *Accumulator) CollectAsync(kv []label.KeyValue, obs ...metric.Observation) {
+func (m *Accumulator) CollectAsync(kv []label.KeyValue, obs ...otel.Observation) {
 	labels := label.NewSetWithSortable(kv, &m.asyncSortSlice)
 
 	for _, ob := range obs {
@@ -538,7 +538,7 @@ func (r *record) mapkey() mapkey {
 
 // fromSync gets a sync implementation object, checking for
 // uninitialized instruments and instruments created by another SDK.
-func (m *Accumulator) fromSync(sync metric.SyncImpl) *syncInstrument {
+func (m *Accumulator) fromSync(sync otel.SyncImpl) *syncInstrument {
 	if sync != nil {
 		if inst, ok := sync.Implementation().(*syncInstrument); ok {
 			return inst
@@ -550,7 +550,7 @@ func (m *Accumulator) fromSync(sync metric.SyncImpl) *syncInstrument {
 
 // fromSync gets an async implementation object, checking for
 // uninitialized instruments and instruments created by another SDK.
-func (m *Accumulator) fromAsync(async metric.AsyncImpl) *asyncInstrument {
+func (m *Accumulator) fromAsync(async otel.AsyncImpl) *asyncInstrument {
 	if async != nil {
 		if inst, ok := async.Implementation().(*asyncInstrument); ok {
 			return inst

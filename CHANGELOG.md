@@ -28,6 +28,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
    This matches the returned type and fixes misuse of the term metric. (#1240)
 - Move test harness from the `go.opentelemetry.io/otel/api/apitest` package into `go.opentelemetry.io/otel/oteltest`. (#1241)
 - Rename `MergeItererator` to `MergeIterator` in the `go.opentelemetry.io/otel/label` package. (#1244)
+- Move the `go.opentelemetry.io/otel/api/metric`, `go.opentelemetry.io/otel/api/metric/metrictest`, and `go.opentelemetry.io/otel/api/metric/registry` packages into `go.opentelemetry.io/otel` as part of #964. (#1252)
 - The function signature of the Span `AddEvent` method in `go.opentelemetry.io/otel` is updated to no longer take an unused context and instead take a required name and a variable number of `EventOption`s. (#1254)
 - The function signature of the Span `RecordError` method in `go.opentelemetry.io/otel` is updated to no longer take an unused context and instead take a required error value and a variable number of `EventOption`s. (#1254)
 

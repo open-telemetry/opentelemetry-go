@@ -12,28 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package oteltest_test
+package otel
 
-import (
-	"os"
-	"testing"
-	"unsafe"
-
-	ottest "go.opentelemetry.io/otel/internal/testing"
-	"go.opentelemetry.io/otel/oteltest"
-)
-
-// Ensure struct alignment prior to running tests.
-func TestMain(m *testing.M) {
-	fields := []ottest.FieldOffset{
-		{
-			Name:   "MockTracer.StartSpanID",
-			Offset: unsafe.Offsetof(oteltest.MockTracer{}.StartSpanID),
-		},
-	}
-	if !ottest.Aligned8Byte(fields, os.Stderr) {
-		os.Exit(1)
-	}
-
-	os.Exit(m.Run())
+// ErrorHandler handles irremediable events.
+type ErrorHandler interface {
+	// Handle handles any error deemed irremediable by an OpenTelemetry
+	// component.
+	Handle(error)
 }

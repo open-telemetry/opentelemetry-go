@@ -19,7 +19,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
 
@@ -37,16 +37,16 @@ func TestExportKindIncludes(t *testing.T) {
 	require.False(t, DeltaExporter.Includes(PassThroughExporter|CumulativeExporter))
 }
 
-var deltaMemoryKinds = []metric.InstrumentKind{
-	metric.SumObserverInstrumentKind,
-	metric.UpDownSumObserverInstrumentKind,
+var deltaMemoryKinds = []otel.InstrumentKind{
+	otel.SumObserverInstrumentKind,
+	otel.UpDownSumObserverInstrumentKind,
 }
 
-var cumulativeMemoryKinds = []metric.InstrumentKind{
-	metric.ValueRecorderInstrumentKind,
-	metric.ValueObserverInstrumentKind,
-	metric.CounterInstrumentKind,
-	metric.UpDownCounterInstrumentKind,
+var cumulativeMemoryKinds = []otel.InstrumentKind{
+	otel.ValueRecorderInstrumentKind,
+	otel.ValueObserverInstrumentKind,
+	otel.CounterInstrumentKind,
+	otel.UpDownCounterInstrumentKind,
 }
 
 func TestExportKindMemoryRequired(t *testing.T) {

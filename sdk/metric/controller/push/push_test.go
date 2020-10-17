@@ -24,8 +24,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -114,7 +114,7 @@ func TestPushTicker(t *testing.T) {
 
 	ctx := context.Background()
 
-	counter := metric.Must(meter).NewInt64Counter("counter.sum")
+	counter := otel.Must(meter).NewInt64Counter("counter.sum")
 
 	p.Start()
 
@@ -194,8 +194,8 @@ func TestPushExportError(t *testing.T) {
 			ctx := context.Background()
 
 			meter := p.MeterProvider().Meter("name")
-			counter1 := metric.Must(meter).NewInt64Counter("counter1.sum")
-			counter2 := metric.Must(meter).NewInt64Counter("counter2.sum")
+			counter1 := otel.Must(meter).NewInt64Counter("counter1.sum")
+			counter2 := otel.Must(meter).NewInt64Counter("counter2.sum")
 
 			p.Start()
 			runtime.Gosched()

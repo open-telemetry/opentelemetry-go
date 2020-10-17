@@ -21,49 +21,49 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/metric"
-	mockTest "go.opentelemetry.io/otel/api/metric/metrictest"
-	"go.opentelemetry.io/otel/api/metric/registry"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/registry"
 )
 
 type (
-	newFunc func(m metric.Meter, name string) (metric.InstrumentImpl, error)
+	newFunc func(m otel.Meter, name string) (otel.InstrumentImpl, error)
 )
 
 var (
 	allNew = map[string]newFunc{
-		"counter.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+		"counter.int64": func(m otel.Meter, name string) (otel.InstrumentImpl, error) {
 			return unwrap(m.NewInt64Counter(name))
 		},
-		"counter.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+		"counter.float64": func(m otel.Meter, name string) (otel.InstrumentImpl, error) {
 			return unwrap(m.NewFloat64Counter(name))
 		},
-		"valuerecorder.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+		"valuerecorder.int64": func(m otel.Meter, name string) (otel.InstrumentImpl, error) {
 			return unwrap(m.NewInt64ValueRecorder(name))
 		},
-		"valuerecorder.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+		"valuerecorder.float64": func(m otel.Meter, name string) (otel.InstrumentImpl, error) {
 			return unwrap(m.NewFloat64ValueRecorder(name))
 		},
-		"valueobserver.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
-			return unwrap(m.NewInt64ValueObserver(name, func(context.Context, metric.Int64ObserverResult) {}))
+		"valueobserver.int64": func(m otel.Meter, name string) (otel.InstrumentImpl, error) {
+			return unwrap(m.NewInt64ValueObserver(name, func(context.Context, otel.Int64ObserverResult) {}))
 		},
-		"valueobserver.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
-			return unwrap(m.NewFloat64ValueObserver(name, func(context.Context, metric.Float64ObserverResult) {}))
+		"valueobserver.float64": func(m otel.Meter, name string) (otel.InstrumentImpl, error) {
+			return unwrap(m.NewFloat64ValueObserver(name, func(context.Context, otel.Float64ObserverResult) {}))
 		},
 	}
 )
 
-func unwrap(impl interface{}, err error) (metric.InstrumentImpl, error) {
+func unwrap(impl interface{}, err error) (otel.InstrumentImpl, error) {
 	if impl == nil {
 		return nil, err
 	}
 	if s, ok := impl.(interface {
-		SyncImpl() metric.SyncImpl
+		SyncImpl() otel.SyncImpl
 	}); ok {
 		return s.SyncImpl(), err
 	}
 	if a, ok := impl.(interface {
-		AsyncImpl() metric.AsyncImpl
+		AsyncImpl() otel.AsyncImpl
 	}); ok {
 		return a.AsyncImpl(), err
 	}
@@ -72,7 +72,7 @@ func unwrap(impl interface{}, err error) (metric.InstrumentImpl, error) {
 
 func TestRegistrySameInstruments(t *testing.T) {
 	for _, nf := range allNew {
-		_, provider := mockTest.NewMeterProvider()
+		_, provider := oteltest.NewMeterProvider()
 
 		meter := provider.Meter("meter")
 		inst1, err1 := nf(meter, "this")
@@ -86,7 +86,7 @@ func TestRegistrySameInstruments(t *testing.T) {
 
 func TestRegistryDifferentNamespace(t *testing.T) {
 	for _, nf := range allNew {
-		_, provider := mockTest.NewMeterProvider()
+		_, provider := oteltest.NewMeterProvider()
 
 		meter1 := provider.Meter("meter1")
 		meter2 := provider.Meter("meter2")
@@ -101,7 +101,7 @@ func TestRegistryDifferentNamespace(t *testing.T) {
 
 func TestRegistryDiffInstruments(t *testing.T) {
 	for origName, origf := range allNew {
-		_, provider := mockTest.NewMeterProvider()
+		_, provider := oteltest.NewMeterProvider()
 		meter := provider.Meter("meter")
 
 		_, err := origf(meter, "this")
@@ -121,7 +121,7 @@ func TestRegistryDiffInstruments(t *testing.T) {
 }
 
 func TestMeterProvider(t *testing.T) {
-	impl, _ := mockTest.NewMeter()
+	impl, _ := oteltest.NewMeter()
 	p := registry.NewMeterProvider(impl)
 	m1 := p.Meter("m1")
 	m1p := p.Meter("m1")

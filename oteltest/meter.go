@@ -12,17 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metrictest
+package oteltest
 
 import (
 	"context"
 	"sync"
+	"testing"
 
-	"go.opentelemetry.io/otel/api/metric"
-	apimetric "go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/metric/registry"
+	"go.opentelemetry.io/otel"
+	apimetric "go.opentelemetry.io/otel"
 	internalmetric "go.opentelemetry.io/otel/internal/metric"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/registry"
 )
 
 type (
@@ -126,7 +127,7 @@ func NewMeter() (*MeterImpl, apimetric.Meter) {
 	return impl, p.Meter("mock")
 }
 
-func (m *MeterImpl) NewSyncInstrument(descriptor metric.Descriptor) (apimetric.SyncImpl, error) {
+func (m *MeterImpl) NewSyncInstrument(descriptor otel.Descriptor) (apimetric.SyncImpl, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -138,7 +139,7 @@ func (m *MeterImpl) NewSyncInstrument(descriptor metric.Descriptor) (apimetric.S
 	}, nil
 }
 
-func (m *MeterImpl) NewAsyncInstrument(descriptor metric.Descriptor, runner metric.AsyncRunner) (apimetric.AsyncImpl, error) {
+func (m *MeterImpl) NewAsyncInstrument(descriptor otel.Descriptor, runner otel.AsyncRunner) (apimetric.AsyncImpl, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -165,7 +166,7 @@ func (m *MeterImpl) RecordBatch(ctx context.Context, labels []label.KeyValue, me
 	m.collect(ctx, labels, mm)
 }
 
-func (m *MeterImpl) CollectAsync(labels []label.KeyValue, obs ...metric.Observation) {
+func (m *MeterImpl) CollectAsync(labels []label.KeyValue, obs ...otel.Observation) {
 	mm := make([]Measurement, len(obs))
 	for i := 0; i < len(obs); i++ {
 		o := obs[i]
@@ -190,4 +191,52 @@ func (m *MeterImpl) collect(ctx context.Context, labels []label.KeyValue, measur
 
 func (m *MeterImpl) RunAsyncInstruments() {
 	m.asyncInstruments.Run(context.Background(), m)
+}
+
+// Measured is the helper struct which provides flat representation of recorded measurements
+// to simplify testing
+type Measured struct {
+	Name                   string
+	InstrumentationName    string
+	InstrumentationVersion string
+	Labels                 map[label.Key]label.Value
+	Number                 otel.Number
+}
+
+// LabelsToMap converts label set to keyValue map, to be easily used in tests
+func LabelsToMap(kvs ...label.KeyValue) map[label.Key]label.Value {
+	m := map[label.Key]label.Value{}
+	for _, label := range kvs {
+		m[label.Key] = label.Value
+	}
+	return m
+}
+
+// AsStructs converts recorded batches to array of flat, readable Measured helper structures
+func AsStructs(batches []Batch) []Measured {
+	var r []Measured
+	for _, batch := range batches {
+		for _, m := range batch.Measurements {
+			r = append(r, Measured{
+				Name:                   m.Instrument.Descriptor().Name(),
+				InstrumentationName:    m.Instrument.Descriptor().InstrumentationName(),
+				InstrumentationVersion: m.Instrument.Descriptor().InstrumentationVersion(),
+				Labels:                 LabelsToMap(batch.Labels...),
+				Number:                 m.Number,
+			})
+		}
+	}
+	return r
+}
+
+// ResolveNumberByKind takes defined metric descriptor creates a concrete typed metric number
+func ResolveNumberByKind(t *testing.T, kind otel.NumberKind, value float64) otel.Number {
+	t.Helper()
+	switch kind {
+	case otel.Int64NumberKind:
+		return otel.NewInt64Number(int64(value))
+	case otel.Float64NumberKind:
+		return otel.NewFloat64Number(value)
+	}
+	panic("invalid number kind")
 }

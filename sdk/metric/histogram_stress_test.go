@@ -22,12 +22,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 )
 
 func TestStressInt64Histogram(t *testing.T) {
-	desc := metric.NewDescriptor("some_metric", metric.ValueRecorderInstrumentKind, metric.Int64NumberKind)
+	desc := otel.NewDescriptor("some_metric", otel.ValueRecorderInstrumentKind, otel.Int64NumberKind)
 
 	alloc := histogram.New(2, &desc, []float64{25, 50, 75})
 	h, ckpt := &alloc[0], &alloc[1]
@@ -41,7 +41,7 @@ func TestStressInt64Histogram(t *testing.T) {
 			case <-ctx.Done():
 				return
 			default:
-				_ = h.Update(ctx, metric.NewInt64Number(rnd.Int63()%100), &desc)
+				_ = h.Update(ctx, otel.NewInt64Number(rnd.Int63()%100), &desc)
 			}
 		}
 	}()

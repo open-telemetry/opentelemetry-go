@@ -20,7 +20,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/propagators"
@@ -68,14 +67,14 @@ func main() {
 
 	commonLabels := []label.KeyValue{lemonsKey.Int(10), label.String("A", "1"), label.String("B", "2"), label.String("C", "3")}
 
-	oneMetricCB := func(_ context.Context, result metric.Float64ObserverResult) {
+	oneMetricCB := func(_ context.Context, result otel.Float64ObserverResult) {
 		result.Observe(1, commonLabels...)
 	}
-	_ = metric.Must(meter).NewFloat64ValueObserver("ex.com.one", oneMetricCB,
-		metric.WithDescription("A ValueObserver set to 1.0"),
+	_ = otel.Must(meter).NewFloat64ValueObserver("ex.com.one", oneMetricCB,
+		otel.WithDescription("A ValueObserver set to 1.0"),
 	)
 
-	valuerecorderTwo := metric.Must(meter).NewFloat64ValueRecorder("ex.com.two")
+	valuerecorderTwo := otel.Must(meter).NewFloat64ValueRecorder("ex.com.two")
 
 	ctx := context.Background()
 	ctx = otel.ContextWithBaggageValues(ctx, fooKey.String("foo1"), barKey.String("bar1"))
