@@ -114,7 +114,11 @@ func (s *bridgeSpan) FinishWithOptions(opts ot.FinishOptions) {
 }
 
 func (s *bridgeSpan) logRecord(record ot.LogRecord) {
-	s.otelSpan.AddEventWithTimestamp(context.Background(), record.Timestamp, "", otLogFieldsToOTelLabels(record.Fields)...)
+	s.otelSpan.AddEvent(
+		"",
+		otel.WithTimestamp(record.Timestamp),
+		otel.WithAttributes(otLogFieldsToOTelLabels(record.Fields)...),
+	)
 }
 
 func (s *bridgeSpan) Context() ot.SpanContext {
@@ -141,7 +145,10 @@ func (s *bridgeSpan) SetTag(key string, value interface{}) ot.Span {
 }
 
 func (s *bridgeSpan) LogFields(fields ...otlog.Field) {
-	s.otelSpan.AddEvent(context.Background(), "", otLogFieldsToOTelLabels(fields)...)
+	s.otelSpan.AddEvent(
+		"",
+		otel.WithAttributes(otLogFieldsToOTelLabels(fields)...),
+	)
 }
 
 type bridgeFieldEncoder struct {

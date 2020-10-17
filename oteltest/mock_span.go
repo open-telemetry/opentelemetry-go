@@ -15,9 +15,6 @@
 package oteltest
 
 import (
-	"context"
-	"time"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
@@ -44,9 +41,7 @@ func (ms *MockSpan) SpanContext() otel.SpanContext {
 }
 
 // IsRecording always returns false for MockSpan.
-func (ms *MockSpan) IsRecording() bool {
-	return false
-}
+func (ms *MockSpan) IsRecording() bool { return false }
 
 // SetStatus does nothing.
 func (ms *MockSpan) SetStatus(status codes.Code, msg string) {
@@ -55,35 +50,22 @@ func (ms *MockSpan) SetStatus(status codes.Code, msg string) {
 }
 
 // SetError does nothing.
-func (ms *MockSpan) SetError(v bool) {
-}
+func (ms *MockSpan) SetError(v bool) {}
 
 // SetAttributes does nothing.
-func (ms *MockSpan) SetAttributes(attributes ...label.KeyValue) {
-}
+func (ms *MockSpan) SetAttributes(attributes ...label.KeyValue) {}
 
 // End does nothing.
-func (ms *MockSpan) End(options ...otel.SpanOption) {
-}
+func (ms *MockSpan) End(options ...otel.SpanOption) {}
 
 // RecordError does nothing.
-func (ms *MockSpan) RecordError(ctx context.Context, err error, opts ...otel.ErrorOption) {
-}
+func (ms *MockSpan) RecordError(err error, opts ...otel.EventOption) {}
 
 // SetName sets the span name.
-func (ms *MockSpan) SetName(name string) {
-	ms.Name = name
-}
+func (ms *MockSpan) SetName(name string) { ms.Name = name }
 
 // Tracer returns MockTracer implementation of Tracer.
-func (ms *MockSpan) Tracer() otel.Tracer {
-	return ms.tracer
-}
+func (ms *MockSpan) Tracer() otel.Tracer { return ms.tracer }
 
 // AddEvent does nothing.
-func (ms *MockSpan) AddEvent(ctx context.Context, name string, attrs ...label.KeyValue) {
-}
-
-// AddEventWithTimestamp does nothing.
-func (ms *MockSpan) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...label.KeyValue) {
-}
+func (ms *MockSpan) AddEvent(string, ...otel.EventOption) {}

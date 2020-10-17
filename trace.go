@@ -19,7 +19,6 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
-	"time"
 
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
@@ -241,18 +240,15 @@ type Span interface {
 	// called other than setting the status.
 	End(options ...SpanOption)
 
-	// AddEvent adds an event to the span.
-	AddEvent(ctx context.Context, name string, attrs ...label.KeyValue)
-	// AddEventWithTimestamp adds an event that occurred at timestamp to the
-	// Span.
-	AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...label.KeyValue)
+	// AddEvent adds an event with the provided name and options.
+	AddEvent(name string, options ...EventOption)
 
 	// IsRecording returns the recording state of the Span. It will return
 	// true if the Span is active and events can be recorded.
 	IsRecording() bool
 
 	// RecordError records an error as a Span event.
-	RecordError(ctx context.Context, err error, opts ...ErrorOption)
+	RecordError(err error, options ...EventOption)
 
 	// SpanContext returns the SpanContext of the Span. The returned
 	// SpanContext is usable even after the End has been called for the Span.

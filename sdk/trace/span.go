@@ -15,7 +15,6 @@
 package trace
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -119,11 +118,12 @@ func (s *span) End(options ...otel.SpanOption) {
 	if recovered := recover(); recovered != nil {
 		// Record but don't stop the panic.
 		defer panic(recovered)
-		s.addEventWithTimestamp(
-			time.Now(),
+		s.addEvent(
 			errorEventName,
-			errorTypeKey.String(typeStr(recovered)),
-			errorMessageKey.String(fmt.Sprint(recovered)),
+			otel.WithAttributes(
+				errorTypeKey.String(typeStr(recovered)),
+				errorMessageKey.String(fmt.Sprint(recovered)),
+			),
 		)
 	}
 
@@ -151,29 +151,17 @@ func (s *span) End(options ...otel.SpanOption) {
 	})
 }
 
-func (s *span) RecordError(ctx context.Context, err error, opts ...otel.ErrorOption) {
-	if s == nil || err == nil {
+func (s *span) RecordError(err error, opts ...otel.EventOption) {
+	if s == nil || err == nil || !s.IsRecording() {
 		return
 	}
 
-	if !s.IsRecording() {
-		return
-	}
-
-	cfg := otel.NewErrorConfig(opts...)
-
-	if cfg.Timestamp.IsZero() {
-		cfg.Timestamp = time.Now()
-	}
-
-	if cfg.StatusCode != codes.Unset {
-		s.SetStatus(cfg.StatusCode, "")
-	}
-
-	s.AddEventWithTimestamp(ctx, cfg.Timestamp, errorEventName,
+	s.SetStatus(codes.Error, "")
+	opts = append(opts, otel.WithAttributes(
 		errorTypeKey.String(typeStr(err)),
 		errorMessageKey.String(err.Error()),
-	)
+	))
+	s.addEvent(errorEventName, opts...)
 }
 
 func typeStr(i interface{}) string {
@@ -189,27 +177,22 @@ func (s *span) Tracer() otel.Tracer {
 	return s.tracer
 }
 
-func (s *span) AddEvent(ctx context.Context, name string, attrs ...label.KeyValue) {
+func (s *span) AddEvent(name string, o ...otel.EventOption) {
 	if !s.IsRecording() {
 		return
 	}
-	s.addEventWithTimestamp(time.Now(), name, attrs...)
+	s.addEvent(name, o...)
 }
 
-func (s *span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...label.KeyValue) {
-	if !s.IsRecording() {
-		return
-	}
-	s.addEventWithTimestamp(timestamp, name, attrs...)
-}
+func (s *span) addEvent(name string, o ...otel.EventOption) {
+	c := otel.NewEventConfig(o...)
 
-func (s *span) addEventWithTimestamp(timestamp time.Time, name string, attrs ...label.KeyValue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.messageEvents.add(export.Event{
 		Name:       name,
-		Attributes: attrs,
-		Time:       timestamp,
+		Attributes: c.Attributes,
+		Time:       c.Timestamp,
 	})
 }
 
