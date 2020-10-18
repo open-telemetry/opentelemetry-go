@@ -53,7 +53,7 @@ func initTracer() func() {
 	)
 	global.SetTracerProvider(tp)
 	return func() {
-		bsp.Shutdown(context.Background())
+		_ = bsp.Shutdown(context.Background())
 	}
 }
 

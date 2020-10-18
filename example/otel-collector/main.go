@@ -81,7 +81,7 @@ func initProvider() func() {
 
 	return func() {
 		ctx := context.Background()
-		bsp.Shutdown(ctx) // shutdown the processor
+		_ = bsp.Shutdown(ctx) // shutdown the processor
 		handleErr(exp.Shutdown(ctx), "failed to stop exporter")
 		pusher.Stop() // pushes any last exports to the receiver
 	}

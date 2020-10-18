@@ -142,7 +142,7 @@ func (p *TracerProvider) UnregisterSpanProcessor(s SpanProcessor) {
 	}
 	if stopOnce != nil {
 		stopOnce.state.Do(func() {
-			s.Shutdown(context.Background())
+			_ = s.Shutdown(context.Background())
 		})
 	}
 	if len(new) > 1 {
