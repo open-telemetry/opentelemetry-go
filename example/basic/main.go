@@ -45,8 +45,10 @@ func main() {
 		log.Fatalf("failed to initialize stdout export pipeline: %v", err)
 	}
 
+	ctx := context.Background()
+
 	bsp := sdktrace.NewBatchSpanProcessor(exporter)
-	defer bsp.Shutdown()
+	defer bsp.Shutdown(ctx)
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(bsp))
 	pusher := push.New(
 		basic.New(
@@ -76,7 +78,6 @@ func main() {
 
 	valuerecorderTwo := otel.Must(meter).NewFloat64ValueRecorder("ex.com.two")
 
-	ctx := context.Background()
 	ctx = otel.ContextWithBaggageValues(ctx, fooKey.String("foo1"), barKey.String("bar1"))
 
 	valuerecorder := valuerecorderTwo.Bind(commonLabels...)

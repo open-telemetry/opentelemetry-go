@@ -15,6 +15,7 @@
 package trace
 
 import (
+	"context"
 	"sync"
 
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -31,10 +32,10 @@ type SpanProcessor interface {
 	// and hence should not block.
 	OnEnd(sd *export.SpanData)
 
-	// Shutdown is invoked when SDK shutsdown. Use this call to cleanup any processor
+	// Shutdown is invoked when SDK shuts down. Use this call to cleanup any processor
 	// data. No calls to OnStart and OnEnd method is invoked after Shutdown call is
 	// made. It should not be blocked indefinitely.
-	Shutdown()
+	Shutdown(ctx context.Context) error
 
 	// ForceFlush exports all ended spans to the configured Exporter that have not yet
 	// been exported.  It should only be called when absolutely necessary, such as when

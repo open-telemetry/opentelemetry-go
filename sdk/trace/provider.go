@@ -15,6 +15,7 @@
 package trace
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 
@@ -141,7 +142,7 @@ func (p *TracerProvider) UnregisterSpanProcessor(s SpanProcessor) {
 	}
 	if stopOnce != nil {
 		stopOnce.state.Do(func() {
-			s.Shutdown()
+			s.Shutdown(context.Background())
 		})
 	}
 	if len(new) > 1 {

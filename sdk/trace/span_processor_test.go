@@ -47,8 +47,9 @@ func (t *testSpanProcesor) OnEnd(s *export.SpanData) {
 	t.spansEnded = append(t.spansEnded, s)
 }
 
-func (t *testSpanProcesor) Shutdown() {
+func (t *testSpanProcesor) Shutdown(_ context.Context) error {
 	t.shutdownCount++
+	return nil
 }
 
 func (t *testSpanProcesor) ForceFlush() {
@@ -181,7 +182,7 @@ func TestSpanProcessorShutdown(t *testing.T) {
 	tp.RegisterSpanProcessor(sp)
 
 	wantCount := 1
-	sp.Shutdown()
+	sp.Shutdown(nil)
 
 	gotCount := sp.shutdownCount
 	if wantCount != gotCount {

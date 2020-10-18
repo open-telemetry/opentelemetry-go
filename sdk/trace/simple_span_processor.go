@@ -52,7 +52,8 @@ func (ssp *SimpleSpanProcessor) OnEnd(sd *export.SpanData) {
 }
 
 // Shutdown method does nothing. There is no data to cleanup.
-func (ssp *SimpleSpanProcessor) Shutdown() {
+func (ssp *SimpleSpanProcessor) Shutdown(_ context.Context) error {
+	return nil
 }
 
 // ForceFlush does nothing as there is no data to flush.

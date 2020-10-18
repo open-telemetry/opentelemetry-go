@@ -52,7 +52,9 @@ func initTracer() func() {
 		sdktrace.WithSpanProcessor(bsp),
 	)
 	global.SetTracerProvider(tp)
-	return bsp.Shutdown
+	return func() {
+		bsp.Shutdown(context.Background())
+	}
 }
 
 func main() {

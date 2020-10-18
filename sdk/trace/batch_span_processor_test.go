@@ -65,7 +65,7 @@ func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
 	bsp.OnStart(&export.SpanData{})
 	bsp.OnEnd(&export.SpanData{})
 	bsp.ForceFlush()
-	bsp.Shutdown()
+	bsp.Shutdown(context.Background())
 }
 
 type testOption struct {
@@ -222,8 +222,37 @@ func getSpanContext() otel.SpanContext {
 func TestBatchSpanProcessorShutdown(t *testing.T) {
 	bsp := sdktrace.NewBatchSpanProcessor(&testBatchExporter{})
 
-	bsp.Shutdown()
+	bsp.Shutdown(context.Background())
 
 	// Multiple call to Shutdown() should not panic.
-	bsp.Shutdown()
+	bsp.Shutdown(context.Background())
 }
+
+type testSlowExporter struct {
+}
+
+func (t *testSlowExporter) ExportSpans(ctx context.Context, _ []*export.SpanData) error {
+	// log.Fatal("ExportSpans aaaa")
+	<-ctx.Done()
+	return ctx.Err()
+}
+
+func (t *testSlowExporter) Shutdown(context.Context) error { return nil }
+
+// func TestBatchSpanProcessorShutdownCancel(t *testing.T) {
+// 	sd := export.SpanData{
+// 		SpanContext: otel.SpanContext{TraceFlags: otel.FlagsSampled},
+// 	}
+// 	bsp := sdktrace.NewBatchSpanProcessor(&testSlowExporter{},
+// 		// sdktrace.WithBatchTimeout(0),
+// 		sdktrace.WithMaxExportBatchSize(1),
+// 		sdktrace.WithMaxQueueSize(1),
+// 		sdktrace.WithBlocking(),
+// 	)
+// 	// These should not panic.
+// 	bsp.OnStart(&sd)
+// 	bsp.OnEnd(&sd)
+// 	bsp.ForceFlush()
+// 	ctx, cancel := context.WithCancel(context.Background())
+// 	bsp.Shutdown(ctx)
+// }
