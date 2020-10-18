@@ -182,7 +182,7 @@ func TestSpanProcessorShutdown(t *testing.T) {
 	tp.RegisterSpanProcessor(sp)
 
 	wantCount := 1
-	sp.Shutdown(nil)
+	_ = sp.Shutdown(context.Background())
 
 	gotCount := sp.shutdownCount
 	if wantCount != gotCount {

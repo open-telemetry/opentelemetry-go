@@ -84,5 +84,5 @@ func TestSimpleSpanProcessorShutdown(t *testing.T) {
 		t.Errorf("Error creating new instance of SimpleSpanProcessor\n")
 	}
 
-	ssp.Shutdown(context.Background())
+	_ = ssp.Shutdown(context.Background())
 }

@@ -65,7 +65,7 @@ func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
 	bsp.OnStart(&export.SpanData{})
 	bsp.OnEnd(&export.SpanData{})
 	bsp.ForceFlush()
-	bsp.Shutdown(context.Background())
+	_ = bsp.Shutdown(context.Background())
 }
 
 type testOption struct {
@@ -222,8 +222,8 @@ func getSpanContext() otel.SpanContext {
 func TestBatchSpanProcessorShutdown(t *testing.T) {
 	bsp := sdktrace.NewBatchSpanProcessor(&testBatchExporter{})
 
-	bsp.Shutdown(context.Background())
+	_ = bsp.Shutdown(context.Background())
 
 	// Multiple call to Shutdown() should not panic.
-	bsp.Shutdown(context.Background())
+	_ = bsp.Shutdown(context.Background())
 }
