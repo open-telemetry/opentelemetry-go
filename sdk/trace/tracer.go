@@ -38,7 +38,7 @@ var _ otel.Tracer = &tracer{}
 func (tr *tracer) Start(ctx context.Context, name string, options ...otel.SpanOption) (context.Context, otel.Span) {
 	config := otel.NewSpanConfig(options...)
 
-	parentSpanContext, remoteParent, links := parent.GetSpanContextAndLinks(ctx, config.NewRoot)
+	parentSpanReference, remoteParent, links := parent.GetSpanReferenceAndLinks(ctx, config.NewRoot)
 
 	if p := otel.SpanFromContext(ctx); p != nil {
 		if sdkSpan, ok := p.(*span); ok {
@@ -46,7 +46,7 @@ func (tr *tracer) Start(ctx context.Context, name string, options ...otel.SpanOp
 		}
 	}
 
-	span := startSpanInternal(tr, name, parentSpanContext, remoteParent, config)
+	span := startSpanInternal(tr, name, parentSpanReference, remoteParent, config)
 	for _, l := range links {
 		span.addLink(l)
 	}

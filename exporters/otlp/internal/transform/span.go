@@ -101,8 +101,8 @@ func span(sd *export.SpanData) *tracepb.Span {
 	}
 
 	s := &tracepb.Span{
-		TraceId:           sd.SpanContext.TraceID[:],
-		SpanId:            sd.SpanContext.SpanID[:],
+		TraceId:           sd.SpanReference.TraceID[:],
+		SpanId:            sd.SpanReference.SpanID[:],
 		Status:            status(sd.StatusCode, sd.StatusMessage),
 		StartTimeUnixNano: uint64(sd.StartTime.UnixNano()),
 		EndTimeUnixNano:   uint64(sd.EndTime.UnixNano()),

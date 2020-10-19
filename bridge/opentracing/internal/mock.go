@@ -76,7 +76,7 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...otel.SpanOp
 	if startTime.IsZero() {
 		startTime = time.Now()
 	}
-	spanContext := otel.SpanContext{
+	spanReference := otel.SpanReference{
 		TraceID:    t.getTraceID(ctx, config),
 		SpanID:     t.getSpanID(),
 		TraceFlags: 0,
@@ -84,7 +84,7 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...otel.SpanOp
 	span := &MockSpan{
 		mockTracer:     t,
 		officialTracer: t,
-		spanContext:    spanContext,
+		spanReference:    spanReference,
 		recording:      config.Record,
 		Attributes: baggage.NewMap(baggage.MapUpdate{
 			MultiKV: config.Attributes,
@@ -116,7 +116,7 @@ func (t *MockTracer) addSpareContextValue(ctx context.Context) context.Context {
 }
 
 func (t *MockTracer) getTraceID(ctx context.Context, config *otel.SpanConfig) otel.TraceID {
-	if parent := t.getParentSpanContext(ctx, config); parent.IsValid() {
+	if parent := t.getParentSpanReference(ctx, config); parent.IsValid() {
 		return parent.TraceID
 	}
 	if len(t.SpareTraceIDs) > 0 {
@@ -131,14 +131,14 @@ func (t *MockTracer) getTraceID(ctx context.Context, config *otel.SpanConfig) ot
 }
 
 func (t *MockTracer) getParentSpanID(ctx context.Context, config *otel.SpanConfig) otel.SpanID {
-	if parent := t.getParentSpanContext(ctx, config); parent.IsValid() {
+	if parent := t.getParentSpanReference(ctx, config); parent.IsValid() {
 		return parent.SpanID
 	}
 	return otel.SpanID{}
 }
 
-func (t *MockTracer) getParentSpanContext(ctx context.Context, config *otel.SpanConfig) otel.SpanContext {
-	spanCtx, _, _ := otelparent.GetSpanContextAndLinks(ctx, config.NewRoot)
+func (t *MockTracer) getParentSpanReference(ctx context.Context, config *otel.SpanConfig) otel.SpanReference {
+	spanCtx, _, _ := otelparent.GetSpanReferenceAndLinks(ctx, config.NewRoot)
 	return spanCtx
 }
 
@@ -187,7 +187,7 @@ type MockEvent struct {
 type MockSpan struct {
 	mockTracer     *MockTracer
 	officialTracer otel.Tracer
-	spanContext    otel.SpanContext
+	spanReference    otel.SpanReference
 	SpanKind       otel.SpanKind
 	recording      bool
 
@@ -201,8 +201,8 @@ type MockSpan struct {
 var _ otel.Span = &MockSpan{}
 var _ migration.OverrideTracerSpanExtension = &MockSpan{}
 
-func (s *MockSpan) SpanContext() otel.SpanContext {
-	return s.spanContext
+func (s *MockSpan) SpanReference() otel.SpanReference {
+	return s.spanReference
 }
 
 func (s *MockSpan) IsRecording() bool {

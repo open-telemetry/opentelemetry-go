@@ -49,7 +49,7 @@ type SpanExporter interface {
 
 // SpanData contains all the information collected by a completed span.
 type SpanData struct {
-	SpanContext  otel.SpanContext
+	SpanReference  otel.SpanReference
 	ParentSpanID otel.SpanID
 	SpanKind     otel.SpanKind
 	Name         string

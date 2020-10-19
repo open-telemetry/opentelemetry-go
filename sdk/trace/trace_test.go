@@ -188,7 +188,7 @@ func TestSetName(t *testing.T) {
 			t.Errorf("%d: the sampler was not even called during span creation", idx)
 		}
 		fooSampler.callCount = 0
-		if gotSampledBefore := span.SpanContext().IsSampled(); tt.sampledBefore != gotSampledBefore {
+		if gotSampledBefore := span.SpanReference().IsSampled(); tt.sampledBefore != gotSampledBefore {
 			t.Errorf("%d: invalid sampling decision before rename, expected %v, got %v", idx, tt.sampledBefore, gotSampledBefore)
 		}
 		span.SetName(tt.newName)
@@ -196,7 +196,7 @@ func TestSetName(t *testing.T) {
 			t.Errorf("%d: the sampler was not even called during span rename", idx)
 		}
 		fooSampler.callCount = 0
-		if gotSampledAfter := span.SpanContext().IsSampled(); tt.sampledAfter != gotSampledAfter {
+		if gotSampledAfter := span.SpanReference().IsSampled(); tt.sampledAfter != gotSampledAfter {
 			t.Errorf("%d: invalid sampling decision after rename, expected %v, got %v", idx, tt.sampledAfter, gotSampledAfter)
 		}
 		span.End()
@@ -263,17 +263,17 @@ func TestSampling(t *testing.T) {
 			for i := 0; i < total; i++ {
 				ctx := context.Background()
 				if tc.parent {
-					psc := otel.SpanContext{
+					psc := otel.SpanReference{
 						TraceID: idg.NewTraceID(),
 						SpanID:  idg.NewSpanID(),
 					}
 					if tc.sampledParent {
 						psc.TraceFlags = otel.FlagsSampled
 					}
-					ctx = otel.ContextWithRemoteSpanContext(ctx, psc)
+					ctx = otel.ContextWithRemoteSpanReference(ctx, psc)
 				}
 				_, span := tr.Start(ctx, "test")
-				if span.SpanContext().IsSampled() {
+				if span.SpanReference().IsSampled() {
 					sampled++
 				}
 			}
@@ -299,38 +299,38 @@ func TestStartSpanWithParent(t *testing.T) {
 	tr := tp.Tracer("SpanWithParent")
 	ctx := context.Background()
 
-	sc1 := otel.SpanContext{
+	sc1 := otel.SpanReference{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 0x1,
 	}
-	_, s1 := tr.Start(otel.ContextWithRemoteSpanContext(ctx, sc1), "span1-unsampled-parent1")
+	_, s1 := tr.Start(otel.ContextWithRemoteSpanReference(ctx, sc1), "span1-unsampled-parent1")
 	if err := checkChild(sc1, s1); err != nil {
 		t.Error(err)
 	}
 
-	_, s2 := tr.Start(otel.ContextWithRemoteSpanContext(ctx, sc1), "span2-unsampled-parent1")
+	_, s2 := tr.Start(otel.ContextWithRemoteSpanReference(ctx, sc1), "span2-unsampled-parent1")
 	if err := checkChild(sc1, s2); err != nil {
 		t.Error(err)
 	}
 
-	sc2 := otel.SpanContext{
+	sc2 := otel.SpanReference{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 0x1,
 		//Tracestate:   testTracestate,
 	}
-	_, s3 := tr.Start(otel.ContextWithRemoteSpanContext(ctx, sc2), "span3-sampled-parent2")
+	_, s3 := tr.Start(otel.ContextWithRemoteSpanReference(ctx, sc2), "span3-sampled-parent2")
 	if err := checkChild(sc2, s3); err != nil {
 		t.Error(err)
 	}
 
-	ctx2, s4 := tr.Start(otel.ContextWithRemoteSpanContext(ctx, sc2), "span4-sampled-parent2")
+	ctx2, s4 := tr.Start(otel.ContextWithRemoteSpanReference(ctx, sc2), "span4-sampled-parent2")
 	if err := checkChild(sc2, s4); err != nil {
 		t.Error(err)
 	}
 
-	s4Sc := s4.SpanContext()
+	s4Sc := s4.SpanReference()
 	_, s5 := tr.Start(ctx2, "span5-implicit-childof-span4")
 	if err := checkChild(s4Sc, s5); err != nil {
 		t.Error(err)
@@ -351,7 +351,7 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: otel.SpanContext{
+		SpanReference: otel.SpanReference{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
@@ -381,7 +381,7 @@ func TestSetSpanAttributes(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: otel.SpanContext{
+		SpanReference: otel.SpanReference{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
@@ -417,24 +417,24 @@ func TestSamplerAttributesLocalChildSpan(t *testing.T) {
 
 	// endSpan expects only a single span in the test exporter, so manually clear the
 	// fields that can't be tested for easily (times, span and trace ids).
-	pid := got[0].SpanContext.SpanID
-	got[0].SpanContext.TraceID = tid
+	pid := got[0].SpanReference.SpanID
+	got[0].SpanReference.TraceID = tid
 	got[0].ParentSpanID = sid
 
 	checkTime(&got[0].StartTime)
 	checkTime(&got[0].EndTime)
 
-	got[1].SpanContext.SpanID = otel.SpanID{}
-	got[1].SpanContext.TraceID = tid
+	got[1].SpanReference.SpanID = otel.SpanID{}
+	got[1].SpanReference.TraceID = tid
 	got[1].ParentSpanID = pid
-	got[0].SpanContext.SpanID = otel.SpanID{}
+	got[0].SpanReference.SpanID = otel.SpanID{}
 
 	checkTime(&got[1].StartTime)
 	checkTime(&got[1].EndTime)
 
 	want := []*export.SpanData{
 		{
-			SpanContext: otel.SpanContext{
+			SpanReference: otel.SpanReference{
 				TraceID:    tid,
 				TraceFlags: 0x1,
 			},
@@ -446,7 +446,7 @@ func TestSamplerAttributesLocalChildSpan(t *testing.T) {
 			InstrumentationLibrary: instrumentation.Library{Name: "SpanTwo"},
 		},
 		{
-			SpanContext: otel.SpanContext{
+			SpanReference: otel.SpanReference{
 				TraceID:    tid,
 				TraceFlags: 0x1,
 			},
@@ -483,7 +483,7 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: otel.SpanContext{
+		SpanReference: otel.SpanReference{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
@@ -529,7 +529,7 @@ func TestEvents(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: otel.SpanContext{
+		SpanReference: otel.SpanReference{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
@@ -580,7 +580,7 @@ func TestEventsOverLimit(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: otel.SpanContext{
+		SpanReference: otel.SpanReference{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
@@ -608,12 +608,12 @@ func TestLinks(t *testing.T) {
 	k2v2 := label.String("key2", "value2")
 	k3v3 := label.String("key3", "value3")
 
-	sc1 := otel.SpanContext{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
-	sc2 := otel.SpanContext{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
+	sc1 := otel.SpanReference{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
+	sc2 := otel.SpanReference{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
 
 	links := []otel.Link{
-		{SpanContext: sc1, Attributes: []label.KeyValue{k1v1}},
-		{SpanContext: sc2, Attributes: []label.KeyValue{k2v2, k3v3}},
+		{SpanReference: sc1, Attributes: []label.KeyValue{k1v1}},
+		{SpanReference: sc2, Attributes: []label.KeyValue{k2v2, k3v3}},
 	}
 	span := startSpan(tp, "Links", otel.WithLinks(links...))
 
@@ -623,7 +623,7 @@ func TestLinks(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: otel.SpanContext{
+		SpanReference: otel.SpanReference{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
@@ -643,17 +643,17 @@ func TestLinksOverLimit(t *testing.T) {
 	te := NewTestExporter()
 	cfg := Config{MaxLinksPerSpan: 2}
 
-	sc1 := otel.SpanContext{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
-	sc2 := otel.SpanContext{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
-	sc3 := otel.SpanContext{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
+	sc1 := otel.SpanReference{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
+	sc2 := otel.SpanReference{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
+	sc3 := otel.SpanReference{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
 
 	tp := NewTracerProvider(WithConfig(cfg), WithSyncer(te))
 
 	span := startSpan(tp, "LinksOverLimit",
 		otel.WithLinks(
-			otel.Link{SpanContext: sc1, Attributes: []label.KeyValue{label.String("key1", "value1")}},
-			otel.Link{SpanContext: sc2, Attributes: []label.KeyValue{label.String("key2", "value2")}},
-			otel.Link{SpanContext: sc3, Attributes: []label.KeyValue{label.String("key3", "value3")}},
+			otel.Link{SpanReference: sc1, Attributes: []label.KeyValue{label.String("key1", "value1")}},
+			otel.Link{SpanReference: sc2, Attributes: []label.KeyValue{label.String("key2", "value2")}},
+			otel.Link{SpanReference: sc3, Attributes: []label.KeyValue{label.String("key3", "value3")}},
 		),
 	)
 
@@ -666,15 +666,15 @@ func TestLinksOverLimit(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: otel.SpanContext{
+		SpanReference: otel.SpanReference{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
 		ParentSpanID: sid,
 		Name:         "span0",
 		Links: []otel.Link{
-			{SpanContext: sc2, Attributes: []label.KeyValue{k2v2}},
-			{SpanContext: sc3, Attributes: []label.KeyValue{k3v3}},
+			{SpanReference: sc2, Attributes: []label.KeyValue{k2v2}},
+			{SpanReference: sc3, Attributes: []label.KeyValue{k3v3}},
 		},
 		DroppedLinkCount:       1,
 		HasRemoteParent:        true,
@@ -692,7 +692,7 @@ func TestSetSpanName(t *testing.T) {
 	ctx := context.Background()
 
 	want := "SpanName-1"
-	ctx = otel.ContextWithRemoteSpanContext(ctx, otel.SpanContext{
+	ctx = otel.ContextWithRemoteSpanReference(ctx, otel.SpanReference{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 1,
@@ -720,7 +720,7 @@ func TestSetSpanStatus(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: otel.SpanContext{
+		SpanReference: otel.SpanReference{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
@@ -743,8 +743,8 @@ func cmpDiff(x, y interface{}) string {
 		cmp.AllowUnexported(export.Event{}))
 }
 
-func remoteSpanContext() otel.SpanContext {
-	return otel.SpanContext{
+func remoteSpanReference() otel.SpanReference {
+	return otel.SpanReference{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 1,
@@ -753,22 +753,22 @@ func remoteSpanContext() otel.SpanContext {
 
 // checkChild is test utility function that tests that c has fields set appropriately,
 // given that it is a child span of p.
-func checkChild(p otel.SpanContext, apiSpan otel.Span) error {
+func checkChild(p otel.SpanReference, apiSpan otel.Span) error {
 	s := apiSpan.(*span)
 	if s == nil {
 		return fmt.Errorf("got nil child span, want non-nil")
 	}
-	if got, want := s.spanContext.TraceID.String(), p.TraceID.String(); got != want {
+	if got, want := s.spanReference.TraceID.String(), p.TraceID.String(); got != want {
 		return fmt.Errorf("got child trace ID %s, want %s", got, want)
 	}
-	if childID, parentID := s.spanContext.SpanID.String(), p.SpanID.String(); childID == parentID {
+	if childID, parentID := s.spanReference.SpanID.String(), p.SpanID.String(); childID == parentID {
 		return fmt.Errorf("got child span ID %s, parent span ID %s; want unequal IDs", childID, parentID)
 	}
-	if got, want := s.spanContext.TraceFlags, p.TraceFlags; got != want {
+	if got, want := s.spanReference.TraceFlags, p.TraceFlags; got != want {
 		return fmt.Errorf("got child trace options %d, want %d", got, want)
 	}
 	// TODO [rgheita] : Fix tracestate test
-	//if got, want := c.spanContext.Tracestate, p.Tracestate; got != want {
+	//if got, want := c.spanReference.Tracestate, p.Tracestate; got != want {
 	//	return fmt.Errorf("got child tracestate %v, want %v", got, want)
 	//}
 	return nil
@@ -786,7 +786,7 @@ func startSpan(tp *TracerProvider, trName string, args ...otel.SpanOption) otel.
 // span to be automatically sampled.
 func startNamedSpan(tp *TracerProvider, trName, name string, args ...otel.SpanOption) otel.Span {
 	ctx := context.Background()
-	ctx = otel.ContextWithRemoteSpanContext(ctx, remoteSpanContext())
+	ctx = otel.ContextWithRemoteSpanReference(ctx, remoteSpanReference())
 	args = append(args, otel.WithRecord())
 	_, span := tp.Tracer(trName).Start(
 		ctx,
@@ -823,7 +823,7 @@ func endSpan(te *testExporter, span otel.Span) (*export.SpanData, error) {
 	if !span.IsRecording() {
 		return nil, fmt.Errorf("IsRecording: got false, want true")
 	}
-	if !span.SpanContext().IsSampled() {
+	if !span.SpanReference().IsSampled() {
 		return nil, fmt.Errorf("IsSampled: got false, want true")
 	}
 	span.End()
@@ -831,10 +831,10 @@ func endSpan(te *testExporter, span otel.Span) (*export.SpanData, error) {
 		return nil, fmt.Errorf("got %d exported spans, want one span", te.Len())
 	}
 	got := te.Spans()[0]
-	if !got.SpanContext.SpanID.IsValid() {
+	if !got.SpanReference.SpanID.IsValid() {
 		return nil, fmt.Errorf("exporting span: expected nonzero SpanID")
 	}
-	got.SpanContext.SpanID = otel.SpanID{}
+	got.SpanReference.SpanID = otel.SpanID{}
 	if !checkTime(&got.StartTime) {
 		return nil, fmt.Errorf("exporting span: expected nonzero StartTime")
 	}
@@ -871,7 +871,7 @@ func TestStartSpanAfterEnd(t *testing.T) {
 	ctx := context.Background()
 
 	tr := tp.Tracer("SpanAfterEnd")
-	ctx, span0 := tr.Start(otel.ContextWithRemoteSpanContext(ctx, remoteSpanContext()), "parent")
+	ctx, span0 := tr.Start(otel.ContextWithRemoteSpanReference(ctx, remoteSpanReference()), "parent")
 	ctx1, span1 := tr.Start(ctx, "span-1")
 	span1.End()
 	// Start a new span with the context containing span-1
@@ -896,16 +896,16 @@ func TestStartSpanAfterEnd(t *testing.T) {
 		t.Fatal("span-2 not recorded")
 	}
 
-	if got, want := gotSpan1.SpanContext.TraceID, gotParent.SpanContext.TraceID; got != want {
+	if got, want := gotSpan1.SpanReference.TraceID, gotParent.SpanReference.TraceID; got != want {
 		t.Errorf("span-1.TraceID=%q; want %q", got, want)
 	}
-	if got, want := gotSpan2.SpanContext.TraceID, gotParent.SpanContext.TraceID; got != want {
+	if got, want := gotSpan2.SpanReference.TraceID, gotParent.SpanReference.TraceID; got != want {
 		t.Errorf("span-2.TraceID=%q; want %q", got, want)
 	}
-	if got, want := gotSpan1.ParentSpanID, gotParent.SpanContext.SpanID; got != want {
+	if got, want := gotSpan1.ParentSpanID, gotParent.SpanReference.SpanID; got != want {
 		t.Errorf("span-1.ParentSpanID=%q; want %q (parent.SpanID)", got, want)
 	}
-	if got, want := gotSpan2.ParentSpanID, gotSpan1.SpanContext.SpanID; got != want {
+	if got, want := gotSpan2.ParentSpanID, gotSpan1.SpanReference.SpanID; got != want {
 		t.Errorf("span-2.ParentSpanID=%q; want %q (span1.SpanID)", got, want)
 	}
 }
@@ -984,8 +984,8 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 	sID, _ := otel.SpanIDFromHex("0001020304050607")
 	ctx := context.Background()
 
-	ctx = otel.ContextWithRemoteSpanContext(ctx,
-		otel.SpanContext{
+	ctx = otel.ContextWithRemoteSpanReference(ctx,
+		otel.SpanReference{
 			TraceID:    tID,
 			SpanID:     sID,
 			TraceFlags: 0,
@@ -1070,7 +1070,7 @@ func TestRecordError(t *testing.T) {
 		}
 
 		want := &export.SpanData{
-			SpanContext: otel.SpanContext{
+			SpanReference: otel.SpanReference{
 				TraceID:    tid,
 				TraceFlags: 0x1,
 			},
@@ -1110,7 +1110,7 @@ func TestRecordErrorNil(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: otel.SpanContext{
+		SpanReference: otel.SpanReference{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
@@ -1178,7 +1178,7 @@ func TestWithResource(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: otel.SpanContext{
+		SpanReference: otel.SpanReference{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},
@@ -1202,7 +1202,7 @@ func TestWithInstrumentationVersion(t *testing.T) {
 	tp := NewTracerProvider(WithSyncer(te))
 
 	ctx := context.Background()
-	ctx = otel.ContextWithRemoteSpanContext(ctx, remoteSpanContext())
+	ctx = otel.ContextWithRemoteSpanReference(ctx, remoteSpanReference())
 	_, span := tp.Tracer(
 		"WithInstrumentationVersion",
 		otel.WithInstrumentationVersion("v0.1.0"),
@@ -1213,7 +1213,7 @@ func TestWithInstrumentationVersion(t *testing.T) {
 	}
 
 	want := &export.SpanData{
-		SpanContext: otel.SpanContext{
+		SpanReference: otel.SpanReference{
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		},

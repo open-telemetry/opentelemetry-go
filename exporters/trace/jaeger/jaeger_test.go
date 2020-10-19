@@ -149,7 +149,7 @@ func TestNewExportPipeline(t *testing.T) {
 
 			if tc.testSpanSampling {
 				_, span := tp.Tracer("jaeger test").Start(context.Background(), tc.name)
-				spanCtx := span.SpanContext()
+				spanCtx := span.SpanReference()
 				assert.Equal(t, tc.spanShouldBeSampled, spanCtx.IsSampled())
 				span.End()
 			}
@@ -346,7 +346,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 	_, span := global.Tracer("test-tracer").Start(context.Background(), "test-span")
 	span.End()
 
-	assert.True(t, span.SpanContext().IsValid())
+	assert.True(t, span.SpanReference().IsValid())
 
 	exp.Flush()
 	tc := exp.uploader.(*testCollectorEnpoint)
@@ -382,7 +382,7 @@ func Test_spanDataToThrift(t *testing.T) {
 		{
 			name: "no parent",
 			data: &export.SpanData{
-				SpanContext: otel.SpanContext{
+				SpanReference: otel.SpanReference{
 					TraceID: traceID,
 					SpanID:  spanID,
 				},
@@ -391,7 +391,7 @@ func Test_spanDataToThrift(t *testing.T) {
 				EndTime:   now,
 				Links: []otel.Link{
 					{
-						SpanContext: otel.SpanContext{
+						SpanReference: otel.SpanReference{
 							TraceID: linkTraceID,
 							SpanID:  linkSpanID,
 						},

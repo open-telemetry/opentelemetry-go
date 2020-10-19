@@ -82,7 +82,7 @@ func TestExportSpans(t *testing.T) {
 		{
 			[]*tracesdk.SpanData{
 				{
-					SpanContext: otel.SpanContext{
+					SpanReference: otel.SpanReference{
 						TraceID:    otel.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
 						SpanID:     otel.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 						TraceFlags: byte(1),
@@ -104,7 +104,7 @@ func TestExportSpans(t *testing.T) {
 					},
 				},
 				{
-					SpanContext: otel.SpanContext{
+					SpanReference: otel.SpanReference{
 						TraceID:    otel.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}),
 						SpanID:     otel.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 						TraceFlags: byte(1),
@@ -126,7 +126,7 @@ func TestExportSpans(t *testing.T) {
 					},
 				},
 				{
-					SpanContext: otel.SpanContext{
+					SpanReference: otel.SpanReference{
 						TraceID:    otel.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
 						SpanID:     otel.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 2}),
 						TraceFlags: byte(1),
@@ -149,7 +149,7 @@ func TestExportSpans(t *testing.T) {
 					},
 				},
 				{
-					SpanContext: otel.SpanContext{
+					SpanReference: otel.SpanReference{
 						TraceID:    otel.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}),
 						SpanID:     otel.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 						TraceFlags: byte(1),

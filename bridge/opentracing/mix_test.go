@@ -229,12 +229,12 @@ func (cast *currentActiveSpanTest) runOTOtelOT(t *testing.T, ctx context.Context
 }
 
 func (cast *currentActiveSpanTest) recordSpans(t *testing.T, ctx context.Context) context.Context {
-	spanID := otel.SpanFromContext(ctx).SpanContext().SpanID
+	spanID := otel.SpanFromContext(ctx).SpanReference().SpanID
 	cast.recordedCurrentOtelSpanIDs = append(cast.recordedCurrentOtelSpanIDs, spanID)
 
 	spanID = otel.SpanID{}
 	if bridgeSpan, ok := ot.SpanFromContext(ctx).(*bridgeSpan); ok {
-		spanID = bridgeSpan.otelSpan.SpanContext().SpanID
+		spanID = bridgeSpan.otelSpan.SpanReference().SpanID
 	}
 	cast.recordedActiveOTSpanIDs = append(cast.recordedActiveOTSpanIDs, spanID)
 	return ctx
@@ -636,7 +636,7 @@ func checkTraceAndSpans(t *testing.T, tracer *internal.MockTracer, expectedTrace
 		t.Errorf("Expected %d finished spans, got %d", expectedSpanCount, len(tracer.FinishedSpans))
 	}
 	for idx, span := range tracer.FinishedSpans {
-		sctx := span.SpanContext()
+		sctx := span.SpanReference()
 		if sctx.TraceID != expectedTraceID {
 			t.Errorf("Expected trace ID %v in span %d (%d), got %v", expectedTraceID, idx, sctx.SpanID, sctx.TraceID)
 		}
@@ -648,8 +648,8 @@ func checkTraceAndSpans(t *testing.T, tracer *internal.MockTracer, expectedTrace
 		if span.ParentSpanID != expectedParentSpanID {
 			t.Errorf("Expected finished span %d (span ID: %d) to have parent span ID %d, but got %d", idx, sctx.SpanID, expectedParentSpanID, span.ParentSpanID)
 		}
-		if span.SpanKind != sks[span.SpanContext().SpanID] {
-			t.Errorf("Expected finished span %d (span ID: %d) to have span.kind to be '%v' but was '%v'", idx, sctx.SpanID, sks[span.SpanContext().SpanID], span.SpanKind)
+		if span.SpanKind != sks[span.SpanReference().SpanID] {
+			t.Errorf("Expected finished span %d (span ID: %d) to have span.kind to be '%v' but was '%v'", idx, sctx.SpanID, sks[span.SpanReference().SpanID], span.SpanKind)
 		}
 	}
 }

@@ -57,35 +57,35 @@ func TestContextSpan(t *testing.T) {
 	}
 }
 
-func TestContextRemoteSpanContext(t *testing.T) {
+func TestContextRemoteSpanReference(t *testing.T) {
 	ctx := context.Background()
-	got, empty := RemoteSpanContextFromContext(ctx), SpanContext{}
+	got, empty := RemoteSpanReferenceFromContext(ctx), SpanReference{}
 	if got != empty {
-		t.Errorf("RemoteSpanContextFromContext returned %v from an empty context, want %v", got, empty)
+		t.Errorf("RemoteSpanReferenceFromContext returned %v from an empty context, want %v", got, empty)
 	}
 
-	want := SpanContext{TraceID: [16]byte{1}, SpanID: [8]byte{42}}
-	ctx = ContextWithRemoteSpanContext(ctx, want)
-	if got, ok := ctx.Value(remoteContextKey).(SpanContext); !ok {
-		t.Errorf("failed to set SpanContext with %#v", want)
+	want := SpanReference{TraceID: [16]byte{1}, SpanID: [8]byte{42}}
+	ctx = ContextWithRemoteSpanReference(ctx, want)
+	if got, ok := ctx.Value(remoteContextKey).(SpanReference); !ok {
+		t.Errorf("failed to set SpanReference with %#v", want)
 	} else if got != want {
 		t.Errorf("got %#v from context with remote set, want %#v", got, want)
 	}
 
-	if got := RemoteSpanContextFromContext(ctx); got != want {
-		t.Errorf("RemoteSpanContextFromContext returned %v from a set context, want %v", got, want)
+	if got := RemoteSpanReferenceFromContext(ctx); got != want {
+		t.Errorf("RemoteSpanReferenceFromContext returned %v from a set context, want %v", got, want)
 	}
 
-	want = SpanContext{TraceID: [16]byte{1}, SpanID: [8]byte{43}}
-	ctx = ContextWithRemoteSpanContext(ctx, want)
-	if got, ok := ctx.Value(remoteContextKey).(SpanContext); !ok {
-		t.Errorf("failed to set SpanContext with %#v", want)
+	want = SpanReference{TraceID: [16]byte{1}, SpanID: [8]byte{43}}
+	ctx = ContextWithRemoteSpanReference(ctx, want)
+	if got, ok := ctx.Value(remoteContextKey).(SpanReference); !ok {
+		t.Errorf("failed to set SpanReference with %#v", want)
 	} else if got != want {
 		t.Errorf("got %#v from context with remote overridden, want %#v", got, want)
 	}
 
-	if got := RemoteSpanContextFromContext(ctx); got != want {
-		t.Errorf("RemoteSpanContextFromContext returned %v from a set context, want %v", got, want)
+	if got := RemoteSpanReferenceFromContext(ctx); got != want {
+		t.Errorf("RemoteSpanReferenceFromContext returned %v from a set context, want %v", got, want)
 	}
 }
 
@@ -97,29 +97,29 @@ func TestIsValid(t *testing.T) {
 		want bool
 	}{
 		{
-			name: "SpanContext.IsValid() returns true if sc has both an Trace ID and Span ID",
+			name: "SpanReference.IsValid() returns true if sc has both an Trace ID and Span ID",
 			tid:  [16]byte{1},
 			sid:  [8]byte{42},
 			want: true,
 		}, {
-			name: "SpanContext.IsValid() returns false if sc has neither an Trace ID nor Span ID",
+			name: "SpanReference.IsValid() returns false if sc has neither an Trace ID nor Span ID",
 			tid:  TraceID([16]byte{}),
 			sid:  [8]byte{},
 			want: false,
 		}, {
-			name: "SpanContext.IsValid() returns false if sc has a Span ID but not a Trace ID",
+			name: "SpanReference.IsValid() returns false if sc has a Span ID but not a Trace ID",
 			tid:  TraceID([16]byte{}),
 			sid:  [8]byte{42},
 			want: false,
 		}, {
-			name: "SpanContext.IsValid() returns false if sc has a Trace ID but not a Span ID",
+			name: "SpanReference.IsValid() returns false if sc has a Trace ID but not a Span ID",
 			tid:  TraceID([16]byte{1}),
 			sid:  [8]byte{},
 			want: false,
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			sc := SpanContext{
+			sc := SpanReference{
 				TraceID: testcase.tid,
 				SpanID:  testcase.sid,
 			}
@@ -182,18 +182,18 @@ func TestHasTraceID(t *testing.T) {
 		want bool
 	}{
 		{
-			name: "SpanContext.HasTraceID() returns true if both Low and High are nonzero",
+			name: "SpanReference.HasTraceID() returns true if both Low and High are nonzero",
 			tid:  TraceID([16]byte{1}),
 			want: true,
 		}, {
-			name: "SpanContext.HasTraceID() returns false if neither Low nor High are nonzero",
+			name: "SpanReference.HasTraceID() returns false if neither Low nor High are nonzero",
 			tid:  TraceID{},
 			want: false,
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (sc SpanContext) HasTraceID() bool{}
-			sc := SpanContext{TraceID: testcase.tid}
+			//proto: func (sc SpanReference) HasTraceID() bool{}
+			sc := SpanReference{TraceID: testcase.tid}
 			have := sc.HasTraceID()
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
@@ -205,21 +205,21 @@ func TestHasTraceID(t *testing.T) {
 func TestHasSpanID(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
-		sc   SpanContext
+		sc   SpanReference
 		want bool
 	}{
 		{
-			name: "SpanContext.HasSpanID() returns true if self.SpanID != 0",
-			sc:   SpanContext{SpanID: [8]byte{42}},
+			name: "SpanReference.HasSpanID() returns true if self.SpanID != 0",
+			sc:   SpanReference{SpanID: [8]byte{42}},
 			want: true,
 		}, {
-			name: "SpanContext.HasSpanID() returns false if self.SpanID == 0",
-			sc:   SpanContext{},
+			name: "SpanReference.HasSpanID() returns false if self.SpanID == 0",
+			sc:   SpanReference{},
 			want: false,
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (sc SpanContext) HasSpanID() bool {}
+			//proto: func (sc SpanReference) HasSpanID() bool {}
 			have := testcase.sc.HasSpanID()
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
@@ -228,36 +228,36 @@ func TestHasSpanID(t *testing.T) {
 	}
 }
 
-func TestSpanContextIsSampled(t *testing.T) {
+func TestSpanReferenceIsSampled(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
-		sc   SpanContext
+		sc   SpanReference
 		want bool
 	}{
 		{
 			name: "sampled",
-			sc: SpanContext{
+			sc: SpanReference{
 				TraceID:    TraceID([16]byte{1}),
 				TraceFlags: FlagsSampled,
 			},
 			want: true,
 		}, {
 			name: "unused bits are ignored, still not sampled",
-			sc: SpanContext{
+			sc: SpanReference{
 				TraceID:    TraceID([16]byte{1}),
 				TraceFlags: ^FlagsSampled,
 			},
 			want: false,
 		}, {
 			name: "unused bits are ignored, still sampled",
-			sc: SpanContext{
+			sc: SpanReference{
 				TraceID:    TraceID([16]byte{1}),
 				TraceFlags: FlagsSampled | ^FlagsSampled,
 			},
 			want: true,
 		}, {
 			name: "not sampled/default",
-			sc:   SpanContext{TraceID: TraceID{}},
+			sc:   SpanReference{TraceID: TraceID{}},
 			want: false,
 		},
 	} {

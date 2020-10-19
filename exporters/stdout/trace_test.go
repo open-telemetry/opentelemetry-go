@@ -47,7 +47,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 	resource := resource.New(label.String("rk1", "rv11"))
 
 	testSpan := &export.SpanData{
-		SpanContext: otel.SpanContext{
+		SpanReference: otel.SpanReference{
 			TraceID: traceID,
 			SpanID:  spanID,
 		},
@@ -74,7 +74,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 	expectedSerializedNow, _ := json.Marshal(now)
 
 	got := b.String()
-	expectedOutput := `[{"SpanContext":{` +
+	expectedOutput := `[{"SpanReference":{` +
 		`"TraceID":"0102030405060708090a0b0c0d0e0f10",` +
 		`"SpanID":"0102030405060708","TraceFlags":0},` +
 		`"ParentSpanID":"0000000000000000",` +

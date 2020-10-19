@@ -188,14 +188,14 @@ func createAndRegisterBatchSP(option testOption, te *testBatchExporter) *sdktrac
 }
 
 func generateSpan(t *testing.T, parallel bool, tr otel.Tracer, option testOption) {
-	sc := getSpanContext()
+	sc := getSpanReference()
 
 	wg := &sync.WaitGroup{}
 	for i := 0; i < option.genNumSpans; i++ {
 		binary.BigEndian.PutUint64(sc.TraceID[0:8], uint64(i+1))
 		wg.Add(1)
-		f := func(sc otel.SpanContext) {
-			ctx := otel.ContextWithRemoteSpanContext(context.Background(), sc)
+		f := func(sc otel.SpanReference) {
+			ctx := otel.ContextWithRemoteSpanReference(context.Background(), sc)
 			_, span := tr.Start(ctx, option.name)
 			span.End()
 			wg.Done()
@@ -209,10 +209,10 @@ func generateSpan(t *testing.T, parallel bool, tr otel.Tracer, option testOption
 	wg.Wait()
 }
 
-func getSpanContext() otel.SpanContext {
+func getSpanReference() otel.SpanReference {
 	tid, _ := otel.TraceIDFromHex("01020304050607080102040810203040")
 	sid, _ := otel.SpanIDFromHex("0102040810203040")
-	return otel.SpanContext{
+	return otel.SpanReference{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 0x1,

@@ -151,7 +151,7 @@ type Aggregator interface {
 	// whether the provided number is an int64 or float64.
 	//
 	// The Context argument comes from user-level code and could be
-	// inspected for a `correlation.Map` or `trace.SpanContext`.
+	// inspected for a `correlation.Map` or `trace.SpanReference`.
 	Update(ctx context.Context, number otel.Number, descriptor *otel.Descriptor) error
 
 	// SynchronizedMove is called during collection to finish one

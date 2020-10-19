@@ -37,7 +37,7 @@ var _ otel.Span = (*Span)(nil)
 type Span struct {
 	lock          sync.RWMutex
 	tracer        *Tracer
-	spanContext   otel.SpanContext
+	spanReference otel.SpanReference
 	parentSpanID  otel.SpanID
 	ended         bool
 	name          string
@@ -47,7 +47,7 @@ type Span struct {
 	statusMessage string
 	attributes    map[label.Key]label.Value
 	events        []Event
-	links         map[otel.SpanContext][]label.KeyValue
+	links         map[otel.SpanReference][]label.KeyValue
 	spanKind      otel.SpanKind
 }
 
@@ -131,9 +131,9 @@ func (s *Span) IsRecording() bool {
 	return true
 }
 
-// SpanContext returns the SpanContext of s.
-func (s *Span) SpanContext() otel.SpanContext {
-	return s.spanContext
+// SpanReference returns the SpanReference of s.
+func (s *Span) SpanReference() otel.SpanReference {
+	return s.spanReference
 }
 
 // SetStatus sets the status of s in the form of a code and a message.
@@ -205,9 +205,9 @@ func (s *Span) Attributes() map[label.Key]label.Value {
 func (s *Span) Events() []Event { return s.events }
 
 // Links returns the links set on s at creation time. If multiple links for
-// the same SpanContext were set, the last link will be used.
-func (s *Span) Links() map[otel.SpanContext][]label.KeyValue {
-	links := make(map[otel.SpanContext][]label.KeyValue)
+// the same SpanReference were set, the last link will be used.
+func (s *Span) Links() map[otel.SpanReference][]label.KeyValue {
+	links := make(map[otel.SpanReference][]label.KeyValue)
 
 	for sc, attributes := range s.links {
 		links[sc] = append([]label.KeyValue{}, attributes...)

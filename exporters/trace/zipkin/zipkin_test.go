@@ -94,7 +94,7 @@ func TestNewExportPipeline(t *testing.T) {
 
 			if tc.testSpanSampling {
 				_, span := tp.Tracer("zipkin test").Start(context.Background(), tc.name)
-				spanCtx := span.SpanContext()
+				spanCtx := span.SpanReference()
 				assert.Equal(t, tc.spanShouldBeSampled, spanCtx.IsSampled())
 				span.End()
 			}
@@ -241,7 +241,7 @@ func TestExportSpans(t *testing.T) {
 	spans := []*export.SpanData{
 		// parent
 		{
-			SpanContext: otel.SpanContext{
+			SpanReference: otel.SpanReference{
 				TraceID: otel.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
 				SpanID:  otel.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 			},
@@ -257,7 +257,7 @@ func TestExportSpans(t *testing.T) {
 		},
 		// child
 		{
-			SpanContext: otel.SpanContext{
+			SpanReference: otel.SpanReference{
 				TraceID: otel.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
 				SpanID:  otel.SpanID{0xDF, 0xDE, 0xDD, 0xDC, 0xDB, 0xDA, 0xD9, 0xD8},
 			},

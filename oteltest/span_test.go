@@ -248,9 +248,9 @@ func TestSpan(t *testing.T) {
 		})
 	})
 
-	t.Run("#SpanContext", func(t *testing.T) {
+	t.Run("#SpanReference", func(t *testing.T) {
 		tp := oteltest.NewTracerProvider()
-		t.Run("returns a valid SpanContext", func(t *testing.T) {
+		t.Run("returns a valid SpanReference", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
@@ -258,7 +258,7 @@ func TestSpan(t *testing.T) {
 			tracer := tp.Tracer(t.Name())
 			_, subject := tracer.Start(context.Background(), "test")
 
-			e.Expect(subject.SpanContext().IsValid()).ToBeTrue()
+			e.Expect(subject.SpanReference().IsValid()).ToBeTrue()
 		})
 
 		t.Run("returns a consistent value", func(t *testing.T) {
@@ -269,7 +269,7 @@ func TestSpan(t *testing.T) {
 			tracer := tp.Tracer(t.Name())
 			_, subject := tracer.Start(context.Background(), "test")
 
-			e.Expect(subject.SpanContext()).ToEqual(subject.SpanContext())
+			e.Expect(subject.SpanReference()).ToEqual(subject.SpanReference())
 		})
 	})
 

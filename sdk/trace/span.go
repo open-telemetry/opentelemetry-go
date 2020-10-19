@@ -35,7 +35,7 @@ const (
 	errorEventName  = "error"
 )
 
-var emptySpanContext = otel.SpanContext{}
+var emptySpanReference = otel.SpanReference{}
 
 // span is an implementation of the OpenTelemetry Span API representing the
 // individual component of a trace.
@@ -44,10 +44,10 @@ type span struct {
 	//
 	// It will be non-nil if we are exporting the span or recording events for it.
 	// Otherwise, data is nil, and the span is simply a carrier for the
-	// SpanContext, so that the trace ID is propagated.
+	// SpanReference, so that the trace ID is propagated.
 	data        *export.SpanData
 	mu          sync.Mutex // protects the contents of *data (but not the pointer value.)
-	spanContext otel.SpanContext
+	spanReference otel.SpanReference
 
 	// attributes are capped at configured limit. When the capacity is reached an oldest entry
 	// is removed to create room for a new entry.
@@ -69,11 +69,11 @@ type span struct {
 
 var _ otel.Span = &span{}
 
-func (s *span) SpanContext() otel.SpanContext {
+func (s *span) SpanReference() otel.SpanReference {
 	if s == nil {
-		return otel.SpanContext{}
+		return otel.SpanReference{}
 	}
-	return s.spanContext
+	return s.spanReference
 }
 
 func (s *span) IsRecording() bool {
@@ -209,13 +209,13 @@ func (s *span) SetName(name string) {
 	s.data.Name = name
 	// SAMPLING
 	noParent := !s.data.ParentSpanID.IsValid()
-	var ctx otel.SpanContext
+	var ctx otel.SpanReference
 	if noParent {
-		ctx = otel.SpanContext{}
+		ctx = otel.SpanReference{}
 	} else {
 		// FIXME: Where do we get the parent context from?
 		// From SpanStore?
-		ctx = s.data.SpanContext
+		ctx = s.data.SpanReference
 	}
 	data := samplingData{
 		noParent:     noParent,
@@ -302,18 +302,18 @@ func (s *span) addChild() {
 	s.mu.Unlock()
 }
 
-func startSpanInternal(tr *tracer, name string, parent otel.SpanContext, remoteParent bool, o *otel.SpanConfig) *span {
+func startSpanInternal(tr *tracer, name string, parent otel.SpanReference, remoteParent bool, o *otel.SpanConfig) *span {
 	var noParent bool
 	span := &span{}
-	span.spanContext = parent
+	span.spanReference = parent
 
 	cfg := tr.provider.config.Load().(*Config)
 
-	if parent == emptySpanContext {
-		span.spanContext.TraceID = cfg.IDGenerator.NewTraceID()
+	if parent == emptySpanReference {
+		span.spanReference.TraceID = cfg.IDGenerator.NewTraceID()
 		noParent = true
 	}
-	span.spanContext.SpanID = cfg.IDGenerator.NewSpanID()
+	span.spanReference.SpanID = cfg.IDGenerator.NewSpanID()
 	data := samplingData{
 		noParent:     noParent,
 		remoteParent: remoteParent,
@@ -328,8 +328,8 @@ func startSpanInternal(tr *tracer, name string, parent otel.SpanContext, remoteP
 	sampled := makeSamplingDecision(data)
 
 	// TODO: [rghetia] restore when spanstore is added.
-	// if !internal.LocalSpanStoreEnabled && !span.spanContext.IsSampled() && !o.Record {
-	if !span.spanContext.IsSampled() && !o.Record {
+	// if !internal.LocalSpanStoreEnabled && !span.spanReference.IsSampled() && !o.Record {
+	if !span.spanReference.IsSampled() && !o.Record {
 		return span
 	}
 
@@ -338,7 +338,7 @@ func startSpanInternal(tr *tracer, name string, parent otel.SpanContext, remoteP
 		startTime = time.Now()
 	}
 	span.data = &export.SpanData{
-		SpanContext:            span.spanContext,
+		SpanReference:          span.spanReference,
 		StartTime:              startTime,
 		SpanKind:               otel.ValidateSpanKind(o.SpanKind),
 		Name:                   name,
@@ -370,7 +370,7 @@ func startSpanInternal(tr *tracer, name string, parent otel.SpanContext, remoteP
 type samplingData struct {
 	noParent     bool
 	remoteParent bool
-	parent       otel.SpanContext
+	parent       otel.SpanReference
 	name         string
 	cfg          *Config
 	span         *span
@@ -381,10 +381,10 @@ type samplingData struct {
 
 func makeSamplingDecision(data samplingData) SamplingResult {
 	sampler := data.cfg.DefaultSampler
-	spanContext := &data.span.spanContext
+	spanReference := &data.span.spanReference
 	sampled := sampler.ShouldSample(SamplingParameters{
 		ParentContext:   data.parent,
-		TraceID:         spanContext.TraceID,
+		TraceID:         spanReference.TraceID,
 		Name:            data.name,
 		HasRemoteParent: data.remoteParent,
 		Kind:            data.kind,
@@ -392,9 +392,9 @@ func makeSamplingDecision(data samplingData) SamplingResult {
 		Links:           data.links,
 	})
 	if sampled.Decision == RecordAndSample {
-		spanContext.TraceFlags |= otel.FlagsSampled
+		spanReference.TraceFlags |= otel.FlagsSampled
 	} else {
-		spanContext.TraceFlags &^= otel.FlagsSampled
+		spanReference.TraceFlags &^= otel.FlagsSampled
 	}
 	return sampled
 }

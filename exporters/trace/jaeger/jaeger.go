@@ -328,12 +328,12 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 	}
 
 	return &gen.Span{
-		TraceIdHigh:   int64(binary.BigEndian.Uint64(data.SpanContext.TraceID[0:8])),
-		TraceIdLow:    int64(binary.BigEndian.Uint64(data.SpanContext.TraceID[8:16])),
-		SpanId:        int64(binary.BigEndian.Uint64(data.SpanContext.SpanID[:])),
+		TraceIdHigh:   int64(binary.BigEndian.Uint64(data.SpanReference.TraceID[0:8])),
+		TraceIdLow:    int64(binary.BigEndian.Uint64(data.SpanReference.TraceID[8:16])),
+		SpanId:        int64(binary.BigEndian.Uint64(data.SpanReference.SpanID[:])),
 		ParentSpanId:  int64(binary.BigEndian.Uint64(data.ParentSpanID[:])),
 		OperationName: data.Name, // TODO: if span kind is added then add prefix "Sent"/"Recv"
-		Flags:         int32(data.SpanContext.TraceFlags),
+		Flags:         int32(data.SpanReference.TraceFlags),
 		StartTime:     data.StartTime.UnixNano() / 1000,
 		Duration:      data.EndTime.Sub(data.StartTime).Nanoseconds() / 1000,
 		Tags:          tags,

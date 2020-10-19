@@ -21,15 +21,15 @@ import (
 	"go.opentelemetry.io/otel/label"
 )
 
-func GetSpanContextAndLinks(ctx context.Context, ignoreContext bool) (otel.SpanContext, bool, []otel.Link) {
-	lsctx := otel.SpanFromContext(ctx).SpanContext()
-	rsctx := otel.RemoteSpanContextFromContext(ctx)
+func GetSpanReferenceAndLinks(ctx context.Context, ignoreContext bool) (otel.SpanReference, bool, []otel.Link) {
+	lsctx := otel.SpanFromContext(ctx).SpanReference()
+	rsctx := otel.RemoteSpanReferenceFromContext(ctx)
 
 	if ignoreContext {
 		links := addLinkIfValid(nil, lsctx, "current")
 		links = addLinkIfValid(links, rsctx, "remote")
 
-		return otel.SpanContext{}, false, links
+		return otel.SpanReference{}, false, links
 	}
 	if lsctx.IsValid() {
 		return lsctx, false, nil
@@ -37,15 +37,15 @@ func GetSpanContextAndLinks(ctx context.Context, ignoreContext bool) (otel.SpanC
 	if rsctx.IsValid() {
 		return rsctx, true, nil
 	}
-	return otel.SpanContext{}, false, nil
+	return otel.SpanReference{}, false, nil
 }
 
-func addLinkIfValid(links []otel.Link, sc otel.SpanContext, kind string) []otel.Link {
+func addLinkIfValid(links []otel.Link, sc otel.SpanReference, kind string) []otel.Link {
 	if !sc.IsValid() {
 		return links
 	}
 	return append(links, otel.Link{
-		SpanContext: sc,
+		SpanReference: sc,
 		Attributes: []label.KeyValue{
 			label.String("ignored-on-demand", kind),
 		},

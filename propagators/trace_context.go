@@ -56,7 +56,7 @@ func (tc TraceContext) Inject(ctx context.Context, carrier otel.TextMapCarrier) 
 		carrier.Set(tracestateHeader, state)
 	}
 
-	sc := otel.SpanFromContext(ctx).SpanContext()
+	sc := otel.SpanFromContext(ctx).SpanReference()
 	if !sc.IsValid() {
 		return
 	}
@@ -79,72 +79,72 @@ func (tc TraceContext) Extract(ctx context.Context, carrier otel.TextMapCarrier)
 	if !sc.IsValid() {
 		return ctx
 	}
-	return otel.ContextWithRemoteSpanContext(ctx, sc)
+	return otel.ContextWithRemoteSpanReference(ctx, sc)
 }
 
-func (tc TraceContext) extract(carrier otel.TextMapCarrier) otel.SpanContext {
+func (tc TraceContext) extract(carrier otel.TextMapCarrier) otel.SpanReference {
 	h := carrier.Get(traceparentHeader)
 	if h == "" {
-		return otel.SpanContext{}
+		return otel.SpanReference{}
 	}
 
 	matches := traceCtxRegExp.FindStringSubmatch(h)
 
 	if len(matches) == 0 {
-		return otel.SpanContext{}
+		return otel.SpanReference{}
 	}
 
 	if len(matches) < 5 { // four subgroups plus the overall match
-		return otel.SpanContext{}
+		return otel.SpanReference{}
 	}
 
 	if len(matches[1]) != 2 {
-		return otel.SpanContext{}
+		return otel.SpanReference{}
 	}
 	ver, err := hex.DecodeString(matches[1])
 	if err != nil {
-		return otel.SpanContext{}
+		return otel.SpanReference{}
 	}
 	version := int(ver[0])
 	if version > maxVersion {
-		return otel.SpanContext{}
+		return otel.SpanReference{}
 	}
 
 	if version == 0 && len(matches) != 5 { // four subgroups plus the overall match
-		return otel.SpanContext{}
+		return otel.SpanReference{}
 	}
 
 	if len(matches[2]) != 32 {
-		return otel.SpanContext{}
+		return otel.SpanReference{}
 	}
 
-	var sc otel.SpanContext
+	var sc otel.SpanReference
 
 	sc.TraceID, err = otel.TraceIDFromHex(matches[2][:32])
 	if err != nil {
-		return otel.SpanContext{}
+		return otel.SpanReference{}
 	}
 
 	if len(matches[3]) != 16 {
-		return otel.SpanContext{}
+		return otel.SpanReference{}
 	}
 	sc.SpanID, err = otel.SpanIDFromHex(matches[3])
 	if err != nil {
-		return otel.SpanContext{}
+		return otel.SpanReference{}
 	}
 
 	if len(matches[4]) != 2 {
-		return otel.SpanContext{}
+		return otel.SpanReference{}
 	}
 	opts, err := hex.DecodeString(matches[4])
 	if err != nil || len(opts) < 1 || (version == 0 && opts[0] > 2) {
-		return otel.SpanContext{}
+		return otel.SpanReference{}
 	}
 	// Clear all flags other than the trace-context supported sampling bit.
 	sc.TraceFlags = opts[0] & otel.FlagsSampled
 
 	if !sc.IsValid() {
-		return otel.SpanContext{}
+		return otel.SpanReference{}
 	}
 
 	return sc

@@ -89,17 +89,17 @@ func TestTracer(t *testing.T) {
 			subject := tp.Tracer(t.Name())
 
 			parent, parentSpan := subject.Start(context.Background(), "parent")
-			parentSpanContext := parentSpan.SpanContext()
+			parentSpanReference := parentSpan.SpanReference()
 
 			_, span := subject.Start(parent, "child")
 
 			testSpan, ok := span.(*oteltest.Span)
 			e.Expect(ok).ToBeTrue()
 
-			childSpanContext := testSpan.SpanContext()
-			e.Expect(childSpanContext.TraceID).ToEqual(parentSpanContext.TraceID)
-			e.Expect(childSpanContext.SpanID).NotToEqual(parentSpanContext.SpanID)
-			e.Expect(testSpan.ParentSpanID()).ToEqual(parentSpanContext.SpanID)
+			childSpanReference := testSpan.SpanReference()
+			e.Expect(childSpanReference.TraceID).ToEqual(parentSpanReference.TraceID)
+			e.Expect(childSpanReference.SpanID).NotToEqual(parentSpanReference.SpanID)
+			e.Expect(testSpan.ParentSpanID()).ToEqual(parentSpanReference.SpanID)
 		})
 
 		t.Run("uses the current span from context as parent, even if it has remote span context", func(t *testing.T) {
@@ -111,18 +111,18 @@ func TestTracer(t *testing.T) {
 
 			parent, parentSpan := subject.Start(context.Background(), "parent")
 			_, remoteParentSpan := subject.Start(context.Background(), "remote not-a-parent")
-			parent = otel.ContextWithRemoteSpanContext(parent, remoteParentSpan.SpanContext())
-			parentSpanContext := parentSpan.SpanContext()
+			parent = otel.ContextWithRemoteSpanReference(parent, remoteParentSpan.SpanReference())
+			parentSpanReference := parentSpan.SpanReference()
 
 			_, span := subject.Start(parent, "child")
 
 			testSpan, ok := span.(*oteltest.Span)
 			e.Expect(ok).ToBeTrue()
 
-			childSpanContext := testSpan.SpanContext()
-			e.Expect(childSpanContext.TraceID).ToEqual(parentSpanContext.TraceID)
-			e.Expect(childSpanContext.SpanID).NotToEqual(parentSpanContext.SpanID)
-			e.Expect(testSpan.ParentSpanID()).ToEqual(parentSpanContext.SpanID)
+			childSpanReference := testSpan.SpanReference()
+			e.Expect(childSpanReference.TraceID).ToEqual(parentSpanReference.TraceID)
+			e.Expect(childSpanReference.SpanID).NotToEqual(parentSpanReference.SpanID)
+			e.Expect(testSpan.ParentSpanID()).ToEqual(parentSpanReference.SpanID)
 		})
 
 		t.Run("uses the remote span context from context as parent, if current span is missing", func(t *testing.T) {
@@ -133,18 +133,18 @@ func TestTracer(t *testing.T) {
 			subject := tp.Tracer(t.Name())
 
 			_, remoteParentSpan := subject.Start(context.Background(), "remote parent")
-			parent := otel.ContextWithRemoteSpanContext(context.Background(), remoteParentSpan.SpanContext())
-			remoteParentSpanContext := remoteParentSpan.SpanContext()
+			parent := otel.ContextWithRemoteSpanReference(context.Background(), remoteParentSpan.SpanReference())
+			remoteParentSpanReference := remoteParentSpan.SpanReference()
 
 			_, span := subject.Start(parent, "child")
 
 			testSpan, ok := span.(*oteltest.Span)
 			e.Expect(ok).ToBeTrue()
 
-			childSpanContext := testSpan.SpanContext()
-			e.Expect(childSpanContext.TraceID).ToEqual(remoteParentSpanContext.TraceID)
-			e.Expect(childSpanContext.SpanID).NotToEqual(remoteParentSpanContext.SpanID)
-			e.Expect(testSpan.ParentSpanID()).ToEqual(remoteParentSpanContext.SpanID)
+			childSpanReference := testSpan.SpanReference()
+			e.Expect(childSpanReference.TraceID).ToEqual(remoteParentSpanReference.TraceID)
+			e.Expect(childSpanReference.SpanID).NotToEqual(remoteParentSpanReference.SpanID)
+			e.Expect(testSpan.ParentSpanID()).ToEqual(remoteParentSpanReference.SpanID)
 		})
 
 		t.Run("creates new root when both current span and remote span context are missing", func(t *testing.T) {
@@ -156,19 +156,19 @@ func TestTracer(t *testing.T) {
 
 			_, parentSpan := subject.Start(context.Background(), "not-a-parent")
 			_, remoteParentSpan := subject.Start(context.Background(), "remote not-a-parent")
-			parentSpanContext := parentSpan.SpanContext()
-			remoteParentSpanContext := remoteParentSpan.SpanContext()
+			parentSpanReference := parentSpan.SpanReference()
+			remoteParentSpanReference := remoteParentSpan.SpanReference()
 
 			_, span := subject.Start(context.Background(), "child")
 
 			testSpan, ok := span.(*oteltest.Span)
 			e.Expect(ok).ToBeTrue()
 
-			childSpanContext := testSpan.SpanContext()
-			e.Expect(childSpanContext.TraceID).NotToEqual(parentSpanContext.TraceID)
-			e.Expect(childSpanContext.TraceID).NotToEqual(remoteParentSpanContext.TraceID)
-			e.Expect(childSpanContext.SpanID).NotToEqual(parentSpanContext.SpanID)
-			e.Expect(childSpanContext.SpanID).NotToEqual(remoteParentSpanContext.SpanID)
+			childSpanReference := testSpan.SpanReference()
+			e.Expect(childSpanReference.TraceID).NotToEqual(parentSpanReference.TraceID)
+			e.Expect(childSpanReference.TraceID).NotToEqual(remoteParentSpanReference.TraceID)
+			e.Expect(childSpanReference.SpanID).NotToEqual(parentSpanReference.SpanID)
+			e.Expect(childSpanReference.SpanID).NotToEqual(remoteParentSpanReference.SpanID)
 			e.Expect(testSpan.ParentSpanID().IsValid()).ToBeFalse()
 		})
 
@@ -181,31 +181,31 @@ func TestTracer(t *testing.T) {
 
 			parentCtx, parentSpan := subject.Start(context.Background(), "not-a-parent")
 			_, remoteParentSpan := subject.Start(context.Background(), "remote not-a-parent")
-			parentSpanContext := parentSpan.SpanContext()
-			remoteParentSpanContext := remoteParentSpan.SpanContext()
-			parentCtx = otel.ContextWithRemoteSpanContext(parentCtx, remoteParentSpanContext)
+			parentSpanReference := parentSpan.SpanReference()
+			remoteParentSpanReference := remoteParentSpan.SpanReference()
+			parentCtx = otel.ContextWithRemoteSpanReference(parentCtx, remoteParentSpanReference)
 
 			_, span := subject.Start(parentCtx, "child", otel.WithNewRoot())
 
 			testSpan, ok := span.(*oteltest.Span)
 			e.Expect(ok).ToBeTrue()
 
-			childSpanContext := testSpan.SpanContext()
-			e.Expect(childSpanContext.TraceID).NotToEqual(parentSpanContext.TraceID)
-			e.Expect(childSpanContext.TraceID).NotToEqual(remoteParentSpanContext.TraceID)
-			e.Expect(childSpanContext.SpanID).NotToEqual(parentSpanContext.SpanID)
-			e.Expect(childSpanContext.SpanID).NotToEqual(remoteParentSpanContext.SpanID)
+			childSpanReference := testSpan.SpanReference()
+			e.Expect(childSpanReference.TraceID).NotToEqual(parentSpanReference.TraceID)
+			e.Expect(childSpanReference.TraceID).NotToEqual(remoteParentSpanReference.TraceID)
+			e.Expect(childSpanReference.SpanID).NotToEqual(parentSpanReference.SpanID)
+			e.Expect(childSpanReference.SpanID).NotToEqual(remoteParentSpanReference.SpanID)
 			e.Expect(testSpan.ParentSpanID().IsValid()).ToBeFalse()
 
 			expectedLinks := []otel.Link{
 				{
-					SpanContext: parentSpanContext,
+					SpanReference: parentSpanReference,
 					Attributes: []label.KeyValue{
 						label.String("ignored-on-demand", "current"),
 					},
 				},
 				{
-					SpanContext: remoteParentSpanContext,
+					SpanReference: remoteParentSpanReference,
 					Attributes: []label.KeyValue{
 						label.String("ignored-on-demand", "remote"),
 					},
@@ -215,8 +215,8 @@ func TestTracer(t *testing.T) {
 			gotLinks := make([]otel.Link, 0, len(tsLinks))
 			for sc, attributes := range tsLinks {
 				gotLinks = append(gotLinks, otel.Link{
-					SpanContext: sc,
-					Attributes:  attributes,
+					SpanReference: sc,
+					Attributes:    attributes,
 				})
 			}
 			e.Expect(gotLinks).ToMatchInAnyOrder(expectedLinks)
@@ -231,7 +231,7 @@ func TestTracer(t *testing.T) {
 
 			_, span := subject.Start(context.Background(), "link1")
 			link1 := otel.Link{
-				SpanContext: span.SpanContext(),
+				SpanReference: span.SpanReference(),
 				Attributes: []label.KeyValue{
 					label.String("a", "1"),
 				},
@@ -239,7 +239,7 @@ func TestTracer(t *testing.T) {
 
 			_, span = subject.Start(context.Background(), "link2")
 			link2 := otel.Link{
-				SpanContext: span.SpanContext(),
+				SpanReference: span.SpanReference(),
 				Attributes: []label.KeyValue{
 					label.String("b", "2"),
 				},
@@ -251,8 +251,8 @@ func TestTracer(t *testing.T) {
 			e.Expect(ok).ToBeTrue()
 
 			links := testSpan.Links()
-			e.Expect(links[link1.SpanContext]).ToEqual(link1.Attributes)
-			e.Expect(links[link2.SpanContext]).ToEqual(link2.Attributes)
+			e.Expect(links[link1.SpanReference]).ToEqual(link1.Attributes)
+			e.Expect(links[link2.SpanReference]).ToEqual(link2.Attributes)
 		})
 	})
 }

@@ -25,17 +25,17 @@ type MockSpan struct {
 	StatusMsg string
 	Name      string
 	Status    codes.Code
-	sc        otel.SpanContext
+	sc        otel.SpanReference
 	tracer    otel.Tracer
 }
 
 var _ otel.Span = (*MockSpan)(nil)
 
-// SpanContext returns associated label.SpanContext. If the receiver is nil it returns
-// an empty label.SpanContext
-func (ms *MockSpan) SpanContext() otel.SpanContext {
+// SpanReference returns associated label.SpanReference. If the receiver is nil it returns
+// an empty label.SpanReference
+func (ms *MockSpan) SpanReference() otel.SpanReference {
 	if ms == nil {
-		return otel.SpanContext{}
+		return otel.SpanReference{}
 	}
 	return ms.sc
 }

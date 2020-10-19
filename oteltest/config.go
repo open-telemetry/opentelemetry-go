@@ -23,14 +23,14 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
-// defaultSpanContextFunc returns the default SpanContextFunc.
-func defaultSpanContextFunc() func(context.Context) otel.SpanContext {
+// defaultSpanReferenceFunc returns the default SpanReferenceFunc.
+func defaultSpanReferenceFunc() func(context.Context) otel.SpanReference {
 	var traceID, spanID uint64 = 1, 1
-	return func(ctx context.Context) otel.SpanContext {
-		var sc otel.SpanContext
-		if lsc := otel.SpanFromContext(ctx).SpanContext(); lsc.IsValid() {
+	return func(ctx context.Context) otel.SpanReference {
+		var sc otel.SpanReference
+		if lsc := otel.SpanFromContext(ctx).SpanReference(); lsc.IsValid() {
 			sc = lsc
-		} else if rsc := otel.RemoteSpanContextFromContext(ctx); rsc.IsValid() {
+		} else if rsc := otel.RemoteSpanReferenceFromContext(ctx); rsc.IsValid() {
 			sc = rsc
 		} else {
 			binary.BigEndian.PutUint64(sc.TraceID[:], atomic.AddUint64(&traceID, 1))
@@ -41,9 +41,9 @@ func defaultSpanContextFunc() func(context.Context) otel.SpanContext {
 }
 
 type config struct {
-	// SpanContextFunc returns a SpanContext from an parent Context for a
+	// SpanReferenceFunc returns a SpanReference from an parent Context for a
 	// new span.
-	SpanContextFunc func(context.Context) otel.SpanContext
+	SpanReferenceFunc func(context.Context) otel.SpanReference
 
 	// SpanRecorder keeps track of spans.
 	SpanRecorder SpanRecorder
@@ -54,8 +54,8 @@ func newConfig(opts ...Option) config {
 	for _, opt := range opts {
 		opt.Apply(&conf)
 	}
-	if conf.SpanContextFunc == nil {
-		conf.SpanContextFunc = defaultSpanContextFunc()
+	if conf.SpanReferenceFunc == nil {
+		conf.SpanReferenceFunc = defaultSpanReferenceFunc()
 	}
 	return conf
 }
@@ -65,18 +65,18 @@ type Option interface {
 	Apply(*config)
 }
 
-type spanContextFuncOption struct {
-	SpanContextFunc func(context.Context) otel.SpanContext
+type spanReferenceFuncOption struct {
+	SpanReferenceFunc func(context.Context) otel.SpanReference
 }
 
-func (o spanContextFuncOption) Apply(c *config) {
-	c.SpanContextFunc = o.SpanContextFunc
+func (o spanReferenceFuncOption) Apply(c *config) {
+	c.SpanReferenceFunc = o.SpanReferenceFunc
 }
 
-// WithSpanContextFunc sets the SpanContextFunc used to generate a new Spans
-// context from a parent SpanContext.
-func WithSpanContextFunc(f func(context.Context) otel.SpanContext) Option {
-	return spanContextFuncOption{f}
+// WithSpanReferenceFunc sets the SpanReferenceFunc used to generate a new Spans
+// context from a parent SpanReference.
+func WithSpanReferenceFunc(f func(context.Context) otel.SpanReference) Option {
+	return spanReferenceFuncOption{f}
 }
 
 type spanRecorderOption struct {

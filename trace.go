@@ -25,10 +25,10 @@ import (
 )
 
 const (
-	// FlagsSampled is a bitmask with the sampled bit set. A SpanContext
+	// FlagsSampled is a bitmask with the sampled bit set. A SpanReference
 	// with the sampling bit set means the span is sampled.
 	FlagsSampled = byte(0x01)
-	// FlagsDeferred is a bitmask with the deferred bit set. A SpanContext
+	// FlagsDeferred is a bitmask with the deferred bit set. A SpanReference
 	// with the deferred bit set means the sampling decision has been
 	// defered to the receiver.
 	FlagsDeferred = byte(0x02)
@@ -155,41 +155,41 @@ func decodeHex(h string, b []byte) error {
 	return nil
 }
 
-// SpanContext contains identifying trace information about a Span.
-type SpanContext struct {
+// SpanReference contains identifying trace information about a Span.
+type SpanReference struct {
 	TraceID    TraceID
 	SpanID     SpanID
 	TraceFlags byte
 }
 
-// IsValid returns if the SpanContext is valid. A valid span context has a
+// IsValid returns if the SpanReference is valid. A valid span context has a
 // valid TraceID and SpanID.
-func (sc SpanContext) IsValid() bool {
+func (sc SpanReference) IsValid() bool {
 	return sc.HasTraceID() && sc.HasSpanID()
 }
 
-// HasTraceID checks if the SpanContext has a valid TraceID.
-func (sc SpanContext) HasTraceID() bool {
+// HasTraceID checks if the SpanReference has a valid TraceID.
+func (sc SpanReference) HasTraceID() bool {
 	return sc.TraceID.IsValid()
 }
 
-// HasSpanID checks if the SpanContext has a valid SpanID.
-func (sc SpanContext) HasSpanID() bool {
+// HasSpanID checks if the SpanReference has a valid SpanID.
+func (sc SpanReference) HasSpanID() bool {
 	return sc.SpanID.IsValid()
 }
 
 // IsDeferred returns if the deferred bit is set in the trace flags.
-func (sc SpanContext) IsDeferred() bool {
+func (sc SpanReference) IsDeferred() bool {
 	return sc.TraceFlags&FlagsDeferred == FlagsDeferred
 }
 
 // IsDebug returns if the debug bit is set in the trace flags.
-func (sc SpanContext) IsDebug() bool {
+func (sc SpanReference) IsDebug() bool {
 	return sc.TraceFlags&FlagsDebug == FlagsDebug
 }
 
 // IsSampled returns if the sampling bit is set in the trace flags.
-func (sc SpanContext) IsSampled() bool {
+func (sc SpanReference) IsSampled() bool {
 	return sc.TraceFlags&FlagsSampled == FlagsSampled
 }
 
@@ -213,18 +213,18 @@ func SpanFromContext(ctx context.Context) Span {
 	return noopSpan{}
 }
 
-// ContextWithRemoteSpanContext returns a copy of parent with a remote set as
+// ContextWithRemoteSpanReference returns a copy of parent with a remote set as
 // the remote span context.
-func ContextWithRemoteSpanContext(parent context.Context, remote SpanContext) context.Context {
+func ContextWithRemoteSpanReference(parent context.Context, remote SpanReference) context.Context {
 	return context.WithValue(parent, remoteContextKey, remote)
 }
 
-// RemoteSpanContextFromContext returns the remote span context from ctx.
-func RemoteSpanContextFromContext(ctx context.Context) SpanContext {
-	if sc, ok := ctx.Value(remoteContextKey).(SpanContext); ok {
+// RemoteSpanReferenceFromContext returns the remote span context from ctx.
+func RemoteSpanReferenceFromContext(ctx context.Context) SpanReference {
+	if sc, ok := ctx.Value(remoteContextKey).(SpanReference); ok {
 		return sc
 	}
-	return SpanContext{}
+	return SpanReference{}
 }
 
 // Span is the individual component of a trace. It represents a single named
@@ -250,9 +250,9 @@ type Span interface {
 	// RecordError records an error as a Span event.
 	RecordError(err error, options ...EventOption)
 
-	// SpanContext returns the SpanContext of the Span. The returned
-	// SpanContext is usable even after the End has been called for the Span.
-	SpanContext() SpanContext
+	// SpanReference returns the SpanReference of the Span. The returned
+	// SpanReference is usable even after the End has been called for the Span.
+	SpanReference() SpanReference
 
 	// SetStatus sets the status of the Span in the form of a code and a
 	// message. SetStatus overrides the value of previous calls to SetStatus
@@ -275,16 +275,16 @@ type Span interface {
 //
 //   1. Batch Processing: A batch of operations may contain operations
 //      associated with one or more traces/spans. Since there can only be one
-//      parent SpanContext, a Link is used to keep reference to the
-//      SpanContext of all operations in the batch.
-//   2. Public Endpoint: A SpanContext for an in incoming client request on a
+//      parent SpanReference, a Link is used to keep reference to the
+//      SpanReference of all operations in the batch.
+//   2. Public Endpoint: A SpanReference for an in incoming client request on a
 //      public endpoint should be considered untrusted. In such a case, a new
 //      trace with its own identity and sampling decision needs to be created,
 //      but this new trace needs to be related to the original trace in some
-//      form. A Link is used to keep reference to the original SpanContext and
+//      form. A Link is used to keep reference to the original SpanReference and
 //      track the relationship.
 type Link struct {
-	SpanContext
+	SpanReference
 	Attributes []label.KeyValue
 }
 

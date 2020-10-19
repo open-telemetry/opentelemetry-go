@@ -37,7 +37,7 @@ func BenchmarkInject(b *testing.B) {
 }
 
 func injectSubBenchmarks(b *testing.B, fn func(context.Context, *testing.B)) {
-	b.Run("SampledSpanContext", func(b *testing.B) {
+	b.Run("SampledSpanReference", func(b *testing.B) {
 		var id uint64
 		spanID, _ := otel.SpanIDFromHex("00f067aa0ba902b7")
 		traceID, _ := otel.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
@@ -47,17 +47,17 @@ func injectSubBenchmarks(b *testing.B, fn func(context.Context, *testing.B)) {
 			StartSpanID: &id,
 		}
 		b.ReportAllocs()
-		sc := otel.SpanContext{
+		sc := otel.SpanReference{
 			TraceID:    traceID,
 			SpanID:     spanID,
 			TraceFlags: otel.FlagsSampled,
 		}
-		ctx := otel.ContextWithRemoteSpanContext(context.Background(), sc)
+		ctx := otel.ContextWithRemoteSpanReference(context.Background(), sc)
 		ctx, _ = mockTracer.Start(ctx, "inject")
 		fn(ctx, b)
 	})
 
-	b.Run("WithoutSpanContext", func(b *testing.B) {
+	b.Run("WithoutSpanReference", func(b *testing.B) {
 		b.ReportAllocs()
 		ctx := context.Background()
 		fn(ctx, b)

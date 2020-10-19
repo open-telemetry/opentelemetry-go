@@ -229,7 +229,7 @@ func (bsp *BatchSpanProcessor) drainQueue() {
 }
 
 func (bsp *BatchSpanProcessor) enqueue(sd *export.SpanData) {
-	if !sd.SpanContext.IsSampled() {
+	if !sd.SpanReference.IsSampled() {
 		return
 	}
 

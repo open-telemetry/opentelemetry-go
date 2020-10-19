@@ -69,7 +69,7 @@ func (h *Harness) TestTracer(subjectFactory func() otel.Tracer) {
 			e.Expect(span).NotToBeNil()
 
 			e.Expect(span.Tracer()).ToEqual(subject)
-			e.Expect(span.SpanContext().IsValid()).ToBeTrue()
+			e.Expect(span.SpanReference().IsValid()).ToBeTrue()
 		})
 
 		t.Run("stores the span on the provided context", func(t *testing.T) {
@@ -81,7 +81,7 @@ func (h *Harness) TestTracer(subjectFactory func() otel.Tracer) {
 			ctx, span := subject.Start(context.Background(), "test")
 
 			e.Expect(span).NotToBeNil()
-			e.Expect(span.SpanContext()).NotToEqual(otel.SpanContext{})
+			e.Expect(span.SpanReference()).NotToEqual(otel.SpanReference{})
 			e.Expect(otel.SpanFromContext(ctx)).ToEqual(span)
 		})
 
@@ -94,8 +94,8 @@ func (h *Harness) TestTracer(subjectFactory func() otel.Tracer) {
 			_, span1 := subject.Start(context.Background(), "span1")
 			_, span2 := subject.Start(context.Background(), "span2")
 
-			sc1 := span1.SpanContext()
-			sc2 := span2.SpanContext()
+			sc1 := span1.SpanReference()
+			sc2 := span2.SpanReference()
 
 			e.Expect(sc1.TraceID).NotToEqual(sc2.TraceID)
 			e.Expect(sc1.SpanID).NotToEqual(sc2.SpanID)
@@ -121,8 +121,8 @@ func (h *Harness) TestTracer(subjectFactory func() otel.Tracer) {
 			ctx, parent := subject.Start(context.Background(), "parent")
 			_, child := subject.Start(ctx, "child")
 
-			psc := parent.SpanContext()
-			csc := child.SpanContext()
+			psc := parent.SpanReference()
+			csc := child.SpanReference()
 
 			e.Expect(csc.TraceID).ToEqual(psc.TraceID)
 			e.Expect(csc.SpanID).NotToEqual(psc.SpanID)
@@ -137,8 +137,8 @@ func (h *Harness) TestTracer(subjectFactory func() otel.Tracer) {
 			ctx, parent := subject.Start(context.Background(), "parent")
 			_, child := subject.Start(ctx, "child", otel.WithNewRoot())
 
-			psc := parent.SpanContext()
-			csc := child.SpanContext()
+			psc := parent.SpanReference()
+			csc := child.SpanReference()
 
 			e.Expect(csc.TraceID).NotToEqual(psc.TraceID)
 			e.Expect(csc.SpanID).NotToEqual(psc.SpanID)
@@ -151,11 +151,11 @@ func (h *Harness) TestTracer(subjectFactory func() otel.Tracer) {
 			subject := subjectFactory()
 
 			_, remoteParent := subject.Start(context.Background(), "remote parent")
-			parentCtx := otel.ContextWithRemoteSpanContext(context.Background(), remoteParent.SpanContext())
+			parentCtx := otel.ContextWithRemoteSpanReference(context.Background(), remoteParent.SpanReference())
 			_, child := subject.Start(parentCtx, "child")
 
-			psc := remoteParent.SpanContext()
-			csc := child.SpanContext()
+			psc := remoteParent.SpanReference()
+			csc := child.SpanReference()
 
 			e.Expect(csc.TraceID).ToEqual(psc.TraceID)
 			e.Expect(csc.SpanID).NotToEqual(psc.SpanID)
@@ -168,11 +168,11 @@ func (h *Harness) TestTracer(subjectFactory func() otel.Tracer) {
 			subject := subjectFactory()
 
 			_, remoteParent := subject.Start(context.Background(), "remote parent")
-			parentCtx := otel.ContextWithRemoteSpanContext(context.Background(), remoteParent.SpanContext())
+			parentCtx := otel.ContextWithRemoteSpanReference(context.Background(), remoteParent.SpanReference())
 			_, child := subject.Start(parentCtx, "child", otel.WithNewRoot())
 
-			psc := remoteParent.SpanContext()
-			csc := child.SpanContext()
+			psc := remoteParent.SpanReference()
+			csc := child.SpanReference()
 
 			e.Expect(csc.TraceID).NotToEqual(psc.TraceID)
 			e.Expect(csc.SpanID).NotToEqual(psc.SpanID)
