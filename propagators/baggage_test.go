@@ -88,7 +88,7 @@ func TestExtractValidBaggageFromHTTPReq(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
-			req.Header.Set("otcorrelations", tt.header)
+			req.Header.Set("baggage", tt.header)
 
 			ctx := context.Background()
 			ctx = prop.Extract(ctx, req.Header)
@@ -149,7 +149,7 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
-			req.Header.Set("otcorrelations", tt.header)
+			req.Header.Set("baggage", tt.header)
 
 			ctx := baggage.NewContext(context.Background(), tt.hasKVs...)
 			wantBaggage := baggage.MapFromContext(ctx)
@@ -231,17 +231,17 @@ func TestInjectBaggageToHTTPReq(t *testing.T) {
 			ctx := baggage.ContextWithMap(context.Background(), baggage.NewMap(baggage.MapUpdate{MultiKV: tt.kvs}))
 			propagator.Inject(ctx, req.Header)
 
-			gotHeader := req.Header.Get("otcorrelations")
+			gotHeader := req.Header.Get("baggage")
 			wantedLen := len(strings.Join(tt.wantInHeader, ","))
 			if wantedLen != len(gotHeader) {
 				t.Errorf(
-					"%s: Inject otcorrelations incorrect length %d != %d.", tt.name, tt.wantedLen, len(gotHeader),
+					"%s: Inject baggage incorrect length %d != %d.", tt.name, tt.wantedLen, len(gotHeader),
 				)
 			}
 			for _, inHeader := range tt.wantInHeader {
 				if !strings.Contains(gotHeader, inHeader) {
 					t.Errorf(
-						"%s: Inject otcorrelations missing part of header: %s in %s", tt.name, inHeader, gotHeader,
+						"%s: Inject baggage missing part of header: %s in %s", tt.name, inHeader, gotHeader,
 					)
 				}
 			}
@@ -251,7 +251,7 @@ func TestInjectBaggageToHTTPReq(t *testing.T) {
 
 func TestBaggagePropagatorGetAllKeys(t *testing.T) {
 	var propagator propagators.Baggage
-	want := []string{"otcorrelations"}
+	want := []string{"baggage"}
 	got := propagator.Fields()
 	if diff := cmp.Diff(got, want); diff != "" {
 		t.Errorf("GetAllKeys: -got +want %s", diff)

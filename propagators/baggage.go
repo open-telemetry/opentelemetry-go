@@ -26,7 +26,7 @@ import (
 
 // Temporary header name until W3C finalizes format.
 // https://github.com/open-telemetry/opentelemetry-specification/blob/18b2752ebe6c7f0cdd8c7b2bcbdceb0ae3f5ad95/specification/correlationcontext/api.md#header-name
-const baggageHeader = "otcorrelations"
+const baggageHeader = "baggage"
 
 // Baggage is a propagator that supports the W3C Baggage format.
 //
