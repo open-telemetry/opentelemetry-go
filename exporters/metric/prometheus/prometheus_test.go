@@ -44,7 +44,7 @@ func TestPrometheusExporter(t *testing.T) {
 	require.NoError(t, err)
 
 	meter := exporter.MeterProvider().Meter("test")
-
+	upDownCounter := otel.Must(meter).NewFloat64UpDownCounter("updowncounter")
 	counter := otel.Must(meter).NewFloat64Counter("counter")
 	valuerecorder := otel.Must(meter).NewFloat64ValueRecorder("valuerecorder")
 
@@ -71,6 +71,11 @@ func TestPrometheusExporter(t *testing.T) {
 	expected = append(expected, `valuerecorder_bucket{A="B",C="D",R="V",le="1"} 3`)
 	expected = append(expected, `valuerecorder_count{A="B",C="D",R="V"} 4`)
 	expected = append(expected, `valuerecorder_sum{A="B",C="D",R="V"} 19.6`)
+
+	upDownCounter.Add(ctx, 10, labels...)
+	upDownCounter.Add(ctx, -3.2, labels...)
+
+	expected = append(expected, `updowncounter{A="B",C="D",R="V"} 6.8`)
 
 	compareExport(t, exporter, expected)
 	compareExport(t, exporter, expected)
