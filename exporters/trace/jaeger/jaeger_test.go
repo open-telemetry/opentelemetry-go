@@ -149,8 +149,8 @@ func TestNewExportPipeline(t *testing.T) {
 
 			if tc.testSpanSampling {
 				_, span := tp.Tracer("jaeger test").Start(context.Background(), tc.name)
-				spanCtx := span.SpanReference()
-				assert.Equal(t, tc.spanShouldBeSampled, spanCtx.IsSampled())
+				spanRef := span.SpanReference()
+				assert.Equal(t, tc.spanShouldBeSampled, spanRef.IsSampled())
 				span.End()
 			}
 		})

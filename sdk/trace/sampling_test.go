@@ -28,12 +28,12 @@ func TestParentBasedDefaultLocalParentSampled(t *testing.T) {
 	sampler := ParentBased(AlwaysSample())
 	traceID, _ := otel.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 	spanID, _ := otel.SpanIDFromHex("00f067aa0ba902b7")
-	parentCtx := otel.SpanReference{
+	parentRef := otel.SpanReference{
 		TraceID:    traceID,
 		SpanID:     spanID,
 		TraceFlags: otel.FlagsSampled,
 	}
-	if sampler.ShouldSample(SamplingParameters{ParentContext: parentCtx}).Decision != RecordAndSample {
+	if sampler.ShouldSample(SamplingParameters{ParentContext: parentRef}).Decision != RecordAndSample {
 		t.Error("Sampling decision should be RecordAndSample")
 	}
 }
@@ -42,11 +42,11 @@ func TestParentBasedDefaultLocalParentNotSampled(t *testing.T) {
 	sampler := ParentBased(AlwaysSample())
 	traceID, _ := otel.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 	spanID, _ := otel.SpanIDFromHex("00f067aa0ba902b7")
-	parentCtx := otel.SpanReference{
+	parentRef := otel.SpanReference{
 		TraceID: traceID,
 		SpanID:  spanID,
 	}
-	if sampler.ShouldSample(SamplingParameters{ParentContext: parentCtx}).Decision != Drop {
+	if sampler.ShouldSample(SamplingParameters{ParentContext: parentRef}).Decision != Drop {
 		t.Error("Sampling decision should be Drop")
 	}
 }
@@ -106,16 +106,16 @@ func TestParentBasedWithSamplerOptions(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			traceID, _ := otel.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 			spanID, _ := otel.SpanIDFromHex("00f067aa0ba902b7")
-			parentCtx := otel.SpanReference{
+			parentRef := otel.SpanReference{
 				TraceID: traceID,
 				SpanID:  spanID,
 			}
 
 			if tc.isParentSampled {
-				parentCtx.TraceFlags = otel.FlagsSampled
+				parentRef.TraceFlags = otel.FlagsSampled
 			}
 
-			params := SamplingParameters{ParentContext: parentCtx}
+			params := SamplingParameters{ParentContext: parentRef}
 			if tc.isParentRemote {
 				params.HasRemoteParent = true
 			}

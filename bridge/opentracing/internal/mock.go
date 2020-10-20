@@ -84,7 +84,7 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...otel.SpanOp
 	span := &MockSpan{
 		mockTracer:     t,
 		officialTracer: t,
-		spanReference:    spanReference,
+		spanReference:  spanReference,
 		recording:      config.Record,
 		Attributes: baggage.NewMap(baggage.MapUpdate{
 			MultiKV: config.Attributes,
@@ -138,8 +138,8 @@ func (t *MockTracer) getParentSpanID(ctx context.Context, config *otel.SpanConfi
 }
 
 func (t *MockTracer) getParentSpanReference(ctx context.Context, config *otel.SpanConfig) otel.SpanReference {
-	spanCtx, _, _ := otelparent.GetSpanReferenceAndLinks(ctx, config.NewRoot)
-	return spanCtx
+	spanRef, _, _ := otelparent.GetSpanReferenceAndLinks(ctx, config.NewRoot)
+	return spanRef
 }
 
 func (t *MockTracer) getSpanID() otel.SpanID {
@@ -187,7 +187,7 @@ type MockEvent struct {
 type MockSpan struct {
 	mockTracer     *MockTracer
 	officialTracer otel.Tracer
-	spanReference    otel.SpanReference
+	spanReference  otel.SpanReference
 	SpanKind       otel.SpanKind
 	recording      bool
 

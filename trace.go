@@ -162,7 +162,7 @@ type SpanReference struct {
 	TraceFlags byte
 }
 
-// IsValid returns if the SpanReference is valid. A valid span context has a
+// IsValid returns if the SpanReference is valid. A valid span reference has a
 // valid TraceID and SpanID.
 func (sc SpanReference) IsValid() bool {
 	return sc.HasTraceID() && sc.HasSpanID()
@@ -214,12 +214,12 @@ func SpanFromContext(ctx context.Context) Span {
 }
 
 // ContextWithRemoteSpanReference returns a copy of parent with a remote set as
-// the remote span context.
+// the remote span reference.
 func ContextWithRemoteSpanReference(parent context.Context, remote SpanReference) context.Context {
 	return context.WithValue(parent, remoteContextKey, remote)
 }
 
-// RemoteSpanReferenceFromContext returns the remote span context from ctx.
+// RemoteSpanReferenceFromContext returns the remote span reference from ctx.
 func RemoteSpanReferenceFromContext(ctx context.Context) SpanReference {
 	if sc, ok := ctx.Value(remoteContextKey).(SpanReference); ok {
 		return sc
