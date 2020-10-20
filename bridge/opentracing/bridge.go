@@ -44,17 +44,17 @@ type bridgeSpanReference struct {
 var _ ot.SpanContext = &bridgeSpanReference{}
 
 func newBridgeSpanReference(otelSpanReference otel.SpanReference, parentOtSpanContext ot.SpanContext) *bridgeSpanReference {
-	bCtx := &bridgeSpanReference{
+	bRef := &bridgeSpanReference{
 		baggageItems:      baggage.NewEmptyMap(),
 		otelSpanReference: otelSpanReference,
 	}
 	if parentOtSpanContext != nil {
 		parentOtSpanContext.ForeachBaggageItem(func(key, value string) bool {
-			bCtx.setBaggageItem(key, value)
+			bRef.setBaggageItem(key, value)
 			return true
 		})
 	}
-	return bCtx
+	return bRef
 }
 
 func (c *bridgeSpanReference) ForeachBaggageItem(handler func(k, v string) bool) {
@@ -440,8 +440,8 @@ func (t *BridgeTracer) ContextWithBridgeSpan(ctx context.Context, span otel.Span
 	if parentSpan := ot.SpanFromContext(ctx); parentSpan != nil {
 		otSpanContext = parentSpan.Context()
 	}
-	bCtx := newBridgeSpanReference(span.SpanReference(), otSpanContext)
-	bSpan := newBridgeSpan(span, bCtx, t)
+	bRef := newBridgeSpanReference(span.SpanReference(), otSpanContext)
+	bSpan := newBridgeSpan(span, bRef, t)
 	bSpan.skipDeferHook = true
 	return ot.ContextWithSpan(ctx, bSpan)
 }
@@ -583,8 +583,8 @@ func otSpanReferenceTypeToString(refType ot.SpanReferenceType) string {
 	}
 }
 
-// fakeSpan is just a holder of span context, nothing more. It's for
-// propagators, so they can get the span context from Go context.
+// fakeSpan is just a holder of span reference, nothing more. It's for
+// propagators, so they can get the span reference from Go context.
 type fakeSpan struct {
 	otel.Span
 	sc otel.SpanReference
