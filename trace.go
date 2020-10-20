@@ -165,32 +165,32 @@ type SpanReference struct {
 // IsValid returns if the SpanReference is valid. A valid span reference has a
 // valid TraceID and SpanID.
 func (sc SpanReference) IsValid() bool {
-	return sc.HasTraceID() && sc.HasSpanID()
+	return sr.HasTraceID() && sr.HasSpanID()
 }
 
 // HasTraceID checks if the SpanReference has a valid TraceID.
 func (sc SpanReference) HasTraceID() bool {
-	return sc.TraceID.IsValid()
+	return sr.TraceID.IsValid()
 }
 
 // HasSpanID checks if the SpanReference has a valid SpanID.
 func (sc SpanReference) HasSpanID() bool {
-	return sc.SpanID.IsValid()
+	return sr.SpanID.IsValid()
 }
 
 // IsDeferred returns if the deferred bit is set in the trace flags.
 func (sc SpanReference) IsDeferred() bool {
-	return sc.TraceFlags&FlagsDeferred == FlagsDeferred
+	return sr.TraceFlags&FlagsDeferred == FlagsDeferred
 }
 
 // IsDebug returns if the debug bit is set in the trace flags.
 func (sc SpanReference) IsDebug() bool {
-	return sc.TraceFlags&FlagsDebug == FlagsDebug
+	return sr.TraceFlags&FlagsDebug == FlagsDebug
 }
 
 // IsSampled returns if the sampling bit is set in the trace flags.
 func (sc SpanReference) IsSampled() bool {
-	return sc.TraceFlags&FlagsSampled == FlagsSampled
+	return sr.TraceFlags&FlagsSampled == FlagsSampled
 }
 
 type traceContextKeyType int
@@ -221,7 +221,7 @@ func ContextWithRemoteSpanReference(parent context.Context, remote SpanReference
 
 // RemoteSpanReferenceFromContext returns the remote span reference from ctx.
 func RemoteSpanReferenceFromContext(ctx context.Context) SpanReference {
-	if sc, ok := ctx.Value(remoteContextKey).(SpanReference); ok {
+	if sr, ok := ctx.Value(remoteContextKey).(SpanReference); ok {
 		return sc
 	}
 	return SpanReference{}

@@ -40,12 +40,12 @@ func GetSpanReferenceAndLinks(ctx context.Context, ignoreContext bool) (otel.Spa
 	return otel.SpanReference{}, false, nil
 }
 
-func addLinkIfValid(links []otel.Link, sc otel.SpanReference, kind string) []otel.Link {
-	if !sc.IsValid() {
+func addLinkIfValid(links []otel.Link, sr otel.SpanReference, kind string) []otel.Link {
+	if !sr.IsValid() {
 		return links
 	}
 	return append(links, otel.Link{
-		SpanReference: sc,
+		SpanReference: sr,
 		Attributes: []label.KeyValue{
 			label.String("ignored-on-demand", kind),
 		},

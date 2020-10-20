@@ -138,7 +138,7 @@ func BenchmarkTraceID_DotString(b *testing.B) {
 
 	want := "0000000000000001000000000000002a"
 	for i := 0; i < b.N; i++ {
-		if got := sc.TraceID.String(); got != want {
+		if got := sr.TraceID.String(); got != want {
 			b.Fatalf("got = %q want = %q", got, want)
 		}
 	}
@@ -148,7 +148,7 @@ func BenchmarkSpanID_DotString(b *testing.B) {
 	sc := otel.SpanReference{SpanID: otel.SpanID{1}}
 	want := "0100000000000000"
 	for i := 0; i < b.N; i++ {
-		if got := sc.SpanID.String(); got != want {
+		if got := sr.SpanID.String(); got != want {
 			b.Fatalf("got = %q want = %q", got, want)
 		}
 	}

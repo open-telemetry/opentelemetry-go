@@ -209,7 +209,7 @@ func (s *Span) Events() []Event { return s.events }
 func (s *Span) Links() map[otel.SpanReference][]label.KeyValue {
 	links := make(map[otel.SpanReference][]label.KeyValue)
 
-	for sc, attributes := range s.links {
+	for sr, attributes := range s.links {
 		links[sc] = append([]label.KeyValue{}, attributes...)
 	}
 

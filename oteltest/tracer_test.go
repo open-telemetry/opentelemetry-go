@@ -213,9 +213,9 @@ func TestTracer(t *testing.T) {
 			}
 			tsLinks := testSpan.Links()
 			gotLinks := make([]otel.Link, 0, len(tsLinks))
-			for sc, attributes := range tsLinks {
+			for sr, attributes := range tsLinks {
 				gotLinks = append(gotLinks, otel.Link{
-					SpanReference: sc,
+					SpanReference: sr,
 					Attributes:    attributes,
 				})
 			}

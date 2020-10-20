@@ -27,7 +27,7 @@ import (
 func defaultSpanReferenceFunc() func(context.Context) otel.SpanReference {
 	var traceID, spanID uint64 = 1, 1
 	return func(ctx context.Context) otel.SpanReference {
-		var sc otel.SpanReference
+		var sr otel.SpanReference
 		if lsc := otel.SpanFromContext(ctx).SpanReference(); lsc.IsValid() {
 			sc = lsc
 		} else if rsc := otel.RemoteSpanReferenceFromContext(ctx); rsc.IsValid() {

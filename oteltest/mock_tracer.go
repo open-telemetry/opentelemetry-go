@@ -51,7 +51,7 @@ func (mt *MockTracer) Start(ctx context.Context, name string, o ...otel.SpanOpti
 	config := otel.NewSpanConfig(o...)
 
 	var span *MockSpan
-	var sc otel.SpanReference
+	var sr otel.SpanReference
 
 	parentSpanReference, _, _ := otelparent.GetSpanReferenceAndLinks(ctx, config.NewRoot)
 
@@ -67,7 +67,7 @@ func (mt *MockTracer) Start(ctx context.Context, name string, o ...otel.SpanOpti
 
 	binary.BigEndian.PutUint64(sc.SpanID[:], atomic.AddUint64(mt.StartSpanID, 1))
 	span = &MockSpan{
-		sc:     sc,
+		sc:     sr,
 		tracer: mt,
 		Name:   name,
 	}

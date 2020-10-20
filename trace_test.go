@@ -97,22 +97,22 @@ func TestIsValid(t *testing.T) {
 		want bool
 	}{
 		{
-			name: "SpanReference.IsValid() returns true if sc has both an Trace ID and Span ID",
+			name: "SpanReference.IsValid() returns true if sr has both an Trace ID and Span ID",
 			tid:  [16]byte{1},
 			sid:  [8]byte{42},
 			want: true,
 		}, {
-			name: "SpanReference.IsValid() returns false if sc has neither an Trace ID nor Span ID",
+			name: "SpanReference.IsValid() returns false if sr has neither an Trace ID nor Span ID",
 			tid:  TraceID([16]byte{}),
 			sid:  [8]byte{},
 			want: false,
 		}, {
-			name: "SpanReference.IsValid() returns false if sc has a Span ID but not a Trace ID",
+			name: "SpanReference.IsValid() returns false if sr has a Span ID but not a Trace ID",
 			tid:  TraceID([16]byte{}),
 			sid:  [8]byte{42},
 			want: false,
 		}, {
-			name: "SpanReference.IsValid() returns false if sc has a Trace ID but not a Span ID",
+			name: "SpanReference.IsValid() returns false if sr has a Trace ID but not a Span ID",
 			tid:  TraceID([16]byte{1}),
 			sid:  [8]byte{},
 			want: false,
@@ -123,7 +123,7 @@ func TestIsValid(t *testing.T) {
 				TraceID: testcase.tid,
 				SpanID:  testcase.sid,
 			}
-			have := sc.IsValid()
+			have := sr.IsValid()
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
 			}
@@ -194,7 +194,7 @@ func TestHasTraceID(t *testing.T) {
 		t.Run(testcase.name, func(t *testing.T) {
 			//proto: func (sc SpanReference) HasTraceID() bool{}
 			sc := SpanReference{TraceID: testcase.tid}
-			have := sc.HasTraceID()
+			have := sr.HasTraceID()
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
 			}
