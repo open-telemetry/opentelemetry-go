@@ -30,7 +30,7 @@ type Sampler interface {
 
 // SamplingParameters contains the values passed to a Sampler.
 type SamplingParameters struct {
-	ParentContext   otel.SpanReference
+	ParentReference   otel.SpanReference
 	TraceID         otel.TraceID
 	Name            string
 	HasRemoteParent bool
@@ -234,15 +234,15 @@ func (o localParentNotSampledOption) Apply(config *config) {
 }
 
 func (pb parentBased) ShouldSample(p SamplingParameters) SamplingResult {
-	if p.ParentContext.IsValid() {
+	if p.ParentReference.IsValid() {
 		if p.HasRemoteParent {
-			if p.ParentContext.IsSampled() {
+			if p.ParentReference.IsSampled() {
 				return pb.config.remoteParentSampled.ShouldSample(p)
 			}
 			return pb.config.remoteParentNotSampled.ShouldSample(p)
 		}
 
-		if p.ParentContext.IsSampled() {
+		if p.ParentReference.IsSampled() {
 			return pb.config.localParentSampled.ShouldSample(p)
 		}
 		return pb.config.localParentNotSampled.ShouldSample(p)

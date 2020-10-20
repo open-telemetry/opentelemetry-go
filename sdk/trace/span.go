@@ -383,7 +383,7 @@ func makeSamplingDecision(data samplingData) SamplingResult {
 	sampler := data.cfg.DefaultSampler
 	spanReference := &data.span.spanReference
 	sampled := sampler.ShouldSample(SamplingParameters{
-		ParentContext:   data.parent,
+		ParentReference:   data.parent,
 		TraceID:         spanReference.TraceID,
 		Name:            data.name,
 		HasRemoteParent: data.remoteParent,

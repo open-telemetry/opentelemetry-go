@@ -33,7 +33,7 @@ func TestParentBasedDefaultLocalParentSampled(t *testing.T) {
 		SpanID:     spanID,
 		TraceFlags: otel.FlagsSampled,
 	}
-	if sampler.ShouldSample(SamplingParameters{ParentContext: parentRef}).Decision != RecordAndSample {
+	if sampler.ShouldSample(SamplingParameters{ParentReference: parentRef}).Decision != RecordAndSample {
 		t.Error("Sampling decision should be RecordAndSample")
 	}
 }
@@ -46,7 +46,7 @@ func TestParentBasedDefaultLocalParentNotSampled(t *testing.T) {
 		TraceID: traceID,
 		SpanID:  spanID,
 	}
-	if sampler.ShouldSample(SamplingParameters{ParentContext: parentRef}).Decision != Drop {
+	if sampler.ShouldSample(SamplingParameters{ParentReference: parentRef}).Decision != Drop {
 		t.Error("Sampling decision should be Drop")
 	}
 }
@@ -115,7 +115,7 @@ func TestParentBasedWithSamplerOptions(t *testing.T) {
 				parentRef.TraceFlags = otel.FlagsSampled
 			}
 
-			params := SamplingParameters{ParentContext: parentRef}
+			params := SamplingParameters{ParentReference: parentRef}
 			if tc.isParentRemote {
 				params.HasRemoteParent = true
 			}
