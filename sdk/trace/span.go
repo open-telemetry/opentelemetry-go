@@ -45,8 +45,8 @@ type span struct {
 	// It will be non-nil if we are exporting the span or recording events for it.
 	// Otherwise, data is nil, and the span is simply a carrier for the
 	// SpanReference, so that the trace ID is propagated.
-	data        *export.SpanData
-	mu          sync.Mutex // protects the contents of *data (but not the pointer value.)
+	data          *export.SpanData
+	mu            sync.Mutex // protects the contents of *data (but not the pointer value.)
 	spanReference otel.SpanReference
 
 	// attributes are capped at configured limit. When the capacity is reached an oldest entry
@@ -383,7 +383,7 @@ func makeSamplingDecision(data samplingData) SamplingResult {
 	sampler := data.cfg.DefaultSampler
 	spanReference := &data.span.spanReference
 	sampled := sampler.ShouldSample(SamplingParameters{
-		ParentReference:   data.parent,
+		ParentReference: data.parent,
 		TraceID:         spanReference.TraceID,
 		Name:            data.name,
 		HasRemoteParent: data.remoteParent,

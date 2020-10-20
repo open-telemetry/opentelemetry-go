@@ -49,11 +49,11 @@ type SpanExporter interface {
 
 // SpanData contains all the information collected by a completed span.
 type SpanData struct {
-	SpanReference  otel.SpanReference
-	ParentSpanID otel.SpanID
-	SpanKind     otel.SpanKind
-	Name         string
-	StartTime    time.Time
+	SpanReference otel.SpanReference
+	ParentSpanID  otel.SpanID
+	SpanKind      otel.SpanKind
+	Name          string
+	StartTime     time.Time
 	// The wall clock time of EndTime will be adjusted to always be offset
 	// from StartTime by the duration of the span.
 	EndTime                  time.Time

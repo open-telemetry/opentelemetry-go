@@ -126,7 +126,7 @@ func TestLinks(t *testing.T) {
 		{},
 		{
 			SpanReference: otel.SpanReference{},
-			Attributes:  attrs,
+			Attributes:    attrs,
 		},
 	}
 	got := links(l)
