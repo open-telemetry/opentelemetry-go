@@ -23,6 +23,8 @@ type Config struct {
 	// Resource describes all the metric records processed by the
 	// Accumulator.
 	Resource *resource.Resource
+
+	MetricsProcessors []MetricsProcessor
 }
 
 // Option is the interface that applies the value to a configuration option.
@@ -42,4 +44,14 @@ type resourceOption struct {
 
 func (o resourceOption) Apply(config *Config) {
 	config.Resource = o.Resource
+}
+
+func WithMetricsProcessors(processors []MetricsProcessor) Option {
+	return metricsProcessorsOption(processors)
+}
+
+type metricsProcessorsOption []MetricsProcessor
+
+func (p metricsProcessorsOption) Apply(config *Config) {
+	config.MetricsProcessors = p
 }

@@ -17,6 +17,7 @@ package push
 import (
 	"time"
 
+	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -33,6 +34,8 @@ type Config struct {
 	// integrate, and export) can last before it is canceled. Defaults to
 	// the controller push period.
 	Timeout time.Duration
+
+	MetricsProcessors []metric.MetricsProcessor
 }
 
 // Option is the interface that applies the value to a configuration option.
@@ -72,4 +75,14 @@ type timeoutOption time.Duration
 
 func (o timeoutOption) Apply(config *Config) {
 	config.Timeout = time.Duration(o)
+}
+
+func WithMetricsProcessor(p metric.MetricsProcessor) Option {
+	return metricsProcessorOption{p}
+}
+
+type metricsProcessorOption struct{ metric.MetricsProcessor }
+
+func (m metricsProcessorOption) Apply(config *Config) {
+	config.MetricsProcessors = append(config.MetricsProcessors, m.MetricsProcessor)
 }

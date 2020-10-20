@@ -67,6 +67,8 @@ type (
 
 		// resource is applied to all records in this Accumulator.
 		resource *resource.Resource
+
+		metricsProcessors []MetricsProcessor
 	}
 
 	syncInstrument struct {
@@ -123,8 +125,9 @@ type (
 	}
 
 	instrument struct {
-		meter      *Accumulator
-		descriptor otel.Descriptor
+		meter             *Accumulator
+		descriptor        otel.Descriptor
+		metricsProcessors []MetricsProcessor
 	}
 
 	asyncInstrument struct {
@@ -152,6 +155,14 @@ var (
 
 func (inst *instrument) Descriptor() api.Descriptor {
 	return inst.descriptor
+}
+
+func (inst *instrument) AddMetricsProcessor(p MetricsProcessor) {
+	inst.metricsProcessors = append(inst.metricsProcessors, p)
+}
+
+func (inst *instrument) getMetricsProcessors() []MetricsProcessor {
+	return inst.metricsProcessors
 }
 
 func (a *asyncInstrument) Implementation() interface{} {
@@ -290,7 +301,14 @@ func (s *syncInstrument) Bind(kvs []label.KeyValue) api.BoundSyncImpl {
 	return s.acquireHandle(kvs, nil)
 }
 
+type MetricsProcessor interface {
+	OnMetricRecorded(context.Context, *[]label.KeyValue)
+}
+
 func (s *syncInstrument) RecordOne(ctx context.Context, number api.Number, kvs []label.KeyValue) {
+	for _, processor := range s.getMetricsProcessors() {
+		processor.OnMetricRecorded(ctx, &kvs)
+	}
 	h := s.acquireHandle(kvs, nil)
 	defer h.Unbind()
 	h.RecordOne(ctx, number)
@@ -312,9 +330,10 @@ func NewAccumulator(processor export.Processor, opts ...Option) *Accumulator {
 	}
 
 	return &Accumulator{
-		processor:        processor,
-		asyncInstruments: internal.NewAsyncInstrumentState(),
-		resource:         c.Resource,
+		asyncInstruments:  internal.NewAsyncInstrumentState(),
+		processor:         processor,
+		resource:          c.Resource,
+		metricsProcessors: c.MetricsProcessors,
 	}
 }
 
@@ -322,8 +341,9 @@ func NewAccumulator(processor export.Processor, opts ...Option) *Accumulator {
 func (m *Accumulator) NewSyncInstrument(descriptor api.Descriptor) (api.SyncImpl, error) {
 	return &syncInstrument{
 		instrument: instrument{
-			descriptor: descriptor,
-			meter:      m,
+			descriptor:        descriptor,
+			meter:             m,
+			metricsProcessors: m.metricsProcessors,
 		},
 	}, nil
 }
