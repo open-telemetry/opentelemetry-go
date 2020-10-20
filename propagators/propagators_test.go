@@ -93,14 +93,14 @@ func TestMultiplePropagators(t *testing.T) {
 	}
 	bg := context.Background()
 	// sanity check of oota propagator, ensuring that it really
-	// generates the valid span context out of thin air
+	// generates the valid span reference out of thin air
 	{
 		ctx := ootaProp.Extract(bg, ns)
 		sc := otel.RemoteSpanReferenceFromContext(ctx)
 		require.True(t, sc.IsValid(), "oota prop failed sanity check")
 	}
 	// sanity check for real propagators, ensuring that they
-	// really are not putting any valid span context into an empty
+	// really are not putting any valid span reference into an empty
 	// go context in absence of the HTTP headers.
 	for _, prop := range testProps {
 		ctx := prop.Extract(bg, ns)
@@ -111,6 +111,6 @@ func TestMultiplePropagators(t *testing.T) {
 		props := otel.NewCompositeTextMapPropagator(ootaProp, prop)
 		ctx := props.Extract(bg, ns)
 		sc := otel.RemoteSpanReferenceFromContext(ctx)
-		assert.Truef(t, sc.IsValid(), "%#v clobbers span context", prop)
+		assert.Truef(t, sc.IsValid(), "%#v clobbers span reference", prop)
 	}
 }

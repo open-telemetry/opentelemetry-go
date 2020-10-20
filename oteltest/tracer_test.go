@@ -102,7 +102,7 @@ func TestTracer(t *testing.T) {
 			e.Expect(testSpan.ParentSpanID()).ToEqual(parentSpanReference.SpanID)
 		})
 
-		t.Run("uses the current span from context as parent, even if it has remote span context", func(t *testing.T) {
+		t.Run("uses the current span from context as parent, even if it has remote span reference", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
@@ -125,7 +125,7 @@ func TestTracer(t *testing.T) {
 			e.Expect(testSpan.ParentSpanID()).ToEqual(parentSpanReference.SpanID)
 		})
 
-		t.Run("uses the remote span context from context as parent, if current span is missing", func(t *testing.T) {
+		t.Run("uses the remote span reference from context as parent, if current span is missing", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
@@ -147,7 +147,7 @@ func TestTracer(t *testing.T) {
 			e.Expect(testSpan.ParentSpanID()).ToEqual(remoteParentSpanReference.SpanID)
 		})
 
-		t.Run("creates new root when both current span and remote span context are missing", func(t *testing.T) {
+		t.Run("creates new root when both current span and remote span reference are missing", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
@@ -172,7 +172,7 @@ func TestTracer(t *testing.T) {
 			e.Expect(testSpan.ParentSpanID().IsValid()).ToBeFalse()
 		})
 
-		t.Run("creates new root when requested, even if both current span and remote span context are in context", func(t *testing.T) {
+		t.Run("creates new root when requested, even if both current span and remote span reference are in context", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)

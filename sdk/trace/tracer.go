@@ -32,7 +32,7 @@ var _ otel.Tracer = &tracer{}
 // Start starts a Span and returns it along with a context containing it.
 //
 // The Span is created with the provided name and as a child of any existing
-// span context found in the passed context. The created Span will be
+// span reference found in the passed context. The created Span will be
 // configured appropriately by any SpanOption passed. Any Timestamp option
 // passed will be used as the start time of the Span's life-cycle.
 func (tr *tracer) Start(ctx context.Context, name string, options ...otel.SpanOption) (context.Context, otel.Span) {

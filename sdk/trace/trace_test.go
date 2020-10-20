@@ -781,7 +781,7 @@ func startSpan(tp *TracerProvider, trName string, args ...otel.SpanOption) otel.
 }
 
 // startNamed Span is a test utility func that starts a span with a
-// passed name and with remote span context as parent. The remote span
+// passed name and with remote span reference as parent. The remote span
 // context contains TraceFlags with sampled bit set. This allows the
 // span to be automatically sampled.
 func startNamedSpan(tp *TracerProvider, trName, name string, args ...otel.SpanOption) otel.Span {
@@ -813,7 +813,7 @@ func startLocalSpan(tp *TracerProvider, ctx context.Context, trName, name string
 // endSpan is a test utility function that ends the span in the context and
 // returns the exported export.SpanData.
 // It requires that span be sampled using one of these methods
-//  1. Passing parent span context in context
+//  1. Passing parent span reference in context
 //  2. Use WithSampler(AlwaysSample())
 //  3. Configuring AlwaysSample() as default sampler
 //

@@ -53,7 +53,7 @@ type noopSpan struct{}
 
 var _ noopSpan = noopSpan{}
 
-// SpanReference returns an empty span context.
+// SpanReference returns an empty span reference.
 func (noopSpan) SpanReference() SpanReference { return SpanReference{} }
 
 // IsRecording always returns false.

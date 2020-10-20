@@ -54,7 +54,7 @@ type SpanConfig struct {
 	Record bool
 	// NewRoot identifies a Span as the root Span for a new trace. This is
 	// commonly used when an existing trace crosses trust boundaries and the
-	// remote parent span context should be ignored for security.
+	// remote parent span reference should be ignored for security.
 	NewRoot bool
 	// SpanKind is the role a Span has in a trace.
 	SpanKind SpanKind
@@ -164,7 +164,7 @@ type newRootSpanOption bool
 func (o newRootSpanOption) ApplySpan(c *SpanConfig) { c.NewRoot = bool(o) }
 
 // WithNewRoot specifies that the Span should be treated as a root Span. Any
-// existing parent span context will be ignored when defining the Span's trace
+// existing parent span reference will be ignored when defining the Span's trace
 // identifiers.
 func WithNewRoot() SpanOption {
 	return newRootSpanOption(true)
