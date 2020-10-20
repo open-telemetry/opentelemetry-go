@@ -157,10 +157,6 @@ func (inst *instrument) Descriptor() api.Descriptor {
 	return inst.descriptor
 }
 
-func (inst *instrument) AddMetricsProcessor(p MetricsProcessor) {
-	inst.metricsProcessors = append(inst.metricsProcessors, p)
-}
-
 func (inst *instrument) getMetricsProcessors() []MetricsProcessor {
 	return inst.metricsProcessors
 }
