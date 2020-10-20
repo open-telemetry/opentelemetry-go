@@ -364,12 +364,12 @@ func (t *BridgeTracer) baggageSetHook(ctx context.Context) context.Context {
 func (t *BridgeTracer) baggageGetHook(ctx context.Context, m baggage.Map) baggage.Map {
 	span := ot.SpanFromContext(ctx)
 	if span == nil {
-		t.warningHandler("No active OpenTracing span, can not propagate the baggage items from OpenTracing span reference\n")
+		t.warningHandler("No active OpenTracing span, can not propagate the baggage items from OpenTracing span context\n")
 		return m
 	}
 	bSpan, ok := span.(*bridgeSpan)
 	if !ok {
-		t.warningHandler("Encountered a foreign OpenTracing span, will not propagate the baggage items from OpenTracing span reference\n")
+		t.warningHandler("Encountered a foreign OpenTracing span, will not propagate the baggage items from OpenTracing span context\n")
 		return m
 	}
 	items := bSpan.extraBaggageItems
@@ -535,7 +535,7 @@ func otSpanReferencesToParentAndLinks(references []ot.SpanReference) (*bridgeSpa
 	for _, reference := range references {
 		bridgeSC, ok := reference.ReferencedContext.(*bridgeSpanReference)
 		if !ok {
-			// We ignore foreign ot span references,
+			// We ignore foreign ot span contexts,
 			// sorry. We have no way of getting any
 			// TraceID and SpanID out of it for form a
 			// OTel SpanReference for OTel Link. And
