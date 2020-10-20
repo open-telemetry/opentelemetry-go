@@ -33,11 +33,11 @@ func TestNewSpanConfig(t *testing.T) {
 
 	link1 := Link{
 		SpanReference: SpanReference{TraceID: TraceID([16]byte{1, 1}), SpanID: SpanID{3}},
-		Attributes:  []label.KeyValue{k1v1},
+		Attributes:    []label.KeyValue{k1v1},
 	}
 	link2 := Link{
 		SpanReference: SpanReference{TraceID: TraceID([16]byte{1, 1}), SpanID: SpanID{3}},
-		Attributes:  []label.KeyValue{k1v2, k2v2},
+		Attributes:    []label.KeyValue{k1v2, k2v2},
 	}
 
 	tests := []struct {
