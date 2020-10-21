@@ -30,7 +30,6 @@ func TestTraceWithSDK(t *testing.T) {
 
 	ctx := context.Background()
 	gtp := global.TracerProvider()
-	defer gtp.Shutdown()
 	tracer1 := gtp.Tracer("pre")
 	// This is started before an SDK was registered and should be dropped.
 	_, span1 := tracer1.Start(ctx, "span1")

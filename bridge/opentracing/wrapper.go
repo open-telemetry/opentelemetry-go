@@ -32,9 +32,6 @@ func (p *WrapperTracerProvider) Tracer(_ string, _ ...otel.TracerOption) otel.Tr
 	return p.wTracer
 }
 
-// Shutdown implements TracerProvider
-func (p *WrapperTracerProvider) Shutdown() {}
-
 // NewWrappedTracerProvider creates a new trace provider that creates a single
 // instance of WrapperTracer that wraps OpenTelemetry tracer.
 func NewWrappedTracerProvider(bridge *BridgeTracer, tracer otel.Tracer) *WrapperTracerProvider {
