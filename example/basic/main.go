@@ -47,7 +47,7 @@ func main() {
 
 	bsp := sdktrace.NewBatchSpanProcessor(exporter)
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(bsp))
-	defer tp.Shutdown()
+	defer tp.Shutdown(context.Background())
 	pusher := push.New(
 		basic.New(
 			simple.NewWithExactDistribution(),

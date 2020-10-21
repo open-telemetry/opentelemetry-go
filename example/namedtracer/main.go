@@ -60,8 +60,8 @@ func main() {
 
 	// Create a named tracer with package path as its name.
 	tracer := tp.Tracer("example/namedtracer/main")
-	defer tp.Shutdown()
 	ctx := context.Background()
+	defer tp.Shutdown(ctx)
 	ctx = otel.ContextWithBaggageValues(ctx, fooKey.String("foo1"), barKey.String("bar1"))
 
 	var span otel.Span

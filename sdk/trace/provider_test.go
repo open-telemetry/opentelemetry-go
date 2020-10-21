@@ -15,13 +15,10 @@
 package trace
 
 import (
-	//"context"
+	"context"
 	"testing"
 
-    
-	// "go.opentelemetry.io/otel/label"
-    export "go.opentelemetry.io/otel/sdk/export/trace"
-    
+	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
 type basicSpanProcesor struct {
@@ -43,7 +40,7 @@ func  TestShutdownTraceProvider(t *testing.T) {
 
     sp.running = true
 
-    stp.Shutdown()
+    stp.Shutdown(context.Background())
 
     if sp.running != false {
         t.Errorf("Error shutdown basicSpanProcesor\n")

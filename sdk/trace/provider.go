@@ -15,6 +15,7 @@
 package trace
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 
@@ -181,10 +182,10 @@ func (p *TracerProvider) ApplyConfig(cfg Config) {
 }
 
 // Shutdown shuts down the span processors in the order they were registered
-func (p *TracerProvider) Shutdown() {
+func (p *TracerProvider) Shutdown(ctx context.Context) error {
 	spss, ok := p.spanProcessors.Load().(spanProcessorStates)
 	if !ok || len(spss) == 0 {
-		return
+		return nil
 	}
 
 	for _, sps := range spss {
@@ -192,6 +193,7 @@ func (p *TracerProvider) Shutdown() {
 			sps.sp.Shutdown()
 		})
 	}
+	return nil
 }
 
 // WithSyncer registers the exporter with the TracerProvider using a
