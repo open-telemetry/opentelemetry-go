@@ -24,7 +24,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -40,10 +40,10 @@ func TestProcessor(t *testing.T) {
 		kind export.ExportKind
 	}
 	type instrumentCase struct {
-		kind metric.InstrumentKind
+		kind otel.InstrumentKind
 	}
 	type numberCase struct {
-		kind metric.NumberKind
+		kind otel.NumberKind
 	}
 	type aggregatorCase struct {
 		kind aggregation.Kind
@@ -56,17 +56,17 @@ func TestProcessor(t *testing.T) {
 	} {
 		t.Run(tc.kind.String(), func(t *testing.T) {
 			for _, ic := range []instrumentCase{
-				{kind: metric.CounterInstrumentKind},
-				{kind: metric.UpDownCounterInstrumentKind},
-				{kind: metric.ValueRecorderInstrumentKind},
-				{kind: metric.SumObserverInstrumentKind},
-				{kind: metric.UpDownSumObserverInstrumentKind},
-				{kind: metric.ValueObserverInstrumentKind},
+				{kind: otel.CounterInstrumentKind},
+				{kind: otel.UpDownCounterInstrumentKind},
+				{kind: otel.ValueRecorderInstrumentKind},
+				{kind: otel.SumObserverInstrumentKind},
+				{kind: otel.UpDownSumObserverInstrumentKind},
+				{kind: otel.ValueObserverInstrumentKind},
 			} {
 				t.Run(ic.kind.String(), func(t *testing.T) {
 					for _, nc := range []numberCase{
-						{kind: metric.Int64NumberKind},
-						{kind: metric.Float64NumberKind},
+						{kind: otel.Int64NumberKind},
+						{kind: otel.Float64NumberKind},
 					} {
 						t.Run(nc.kind.String(), func(t *testing.T) {
 							for _, ac := range []aggregatorCase{
@@ -95,14 +95,14 @@ func TestProcessor(t *testing.T) {
 	}
 }
 
-func asNumber(nkind metric.NumberKind, value int64) metric.Number {
-	if nkind == metric.Int64NumberKind {
-		return metric.NewInt64Number(value)
+func asNumber(nkind otel.NumberKind, value int64) otel.Number {
+	if nkind == otel.Int64NumberKind {
+		return otel.NewInt64Number(value)
 	}
-	return metric.NewFloat64Number(float64(value))
+	return otel.NewFloat64Number(float64(value))
 }
 
-func updateFor(t *testing.T, desc *metric.Descriptor, selector export.AggregatorSelector, res *resource.Resource, value int64, labs ...label.KeyValue) export.Accumulation {
+func updateFor(t *testing.T, desc *otel.Descriptor, selector export.AggregatorSelector, res *resource.Resource, value int64, labs ...label.KeyValue) export.Accumulation {
 	ls := label.NewSet(labs...)
 	var agg export.Aggregator
 	selector.AggregatorFor(desc, &agg)
@@ -114,8 +114,8 @@ func updateFor(t *testing.T, desc *metric.Descriptor, selector export.Aggregator
 func testProcessor(
 	t *testing.T,
 	ekind export.ExportKind,
-	mkind metric.InstrumentKind,
-	nkind metric.NumberKind,
+	mkind otel.InstrumentKind,
+	nkind otel.NumberKind,
 	akind aggregation.Kind,
 ) {
 	// Note: this selector uses the instrument name to dictate
@@ -131,8 +131,8 @@ func testProcessor(
 
 		instSuffix := fmt.Sprint(".", strings.ToLower(akind.String()))
 
-		desc1 := metric.NewDescriptor(fmt.Sprint("inst1", instSuffix), mkind, nkind)
-		desc2 := metric.NewDescriptor(fmt.Sprint("inst2", instSuffix), mkind, nkind)
+		desc1 := otel.NewDescriptor(fmt.Sprint("inst1", instSuffix), mkind, nkind)
+		desc2 := otel.NewDescriptor(fmt.Sprint("inst2", instSuffix), mkind, nkind)
 
 		for nc := 0; nc < nCheckpoint; nc++ {
 
@@ -258,7 +258,7 @@ func testProcessor(
 
 type bogusExporter struct{}
 
-func (bogusExporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
+func (bogusExporter) ExportKindFor(*otel.Descriptor, aggregation.Kind) export.ExportKind {
 	return 1000000
 }
 
@@ -295,7 +295,7 @@ func TestBasicInconsistent(t *testing.T) {
 	// Test no start
 	b = basic.New(processorTest.AggregatorSelector(), export.PassThroughExporter)
 
-	desc := metric.NewDescriptor("inst", metric.CounterInstrumentKind, metric.Int64NumberKind)
+	desc := otel.NewDescriptor("inst", otel.CounterInstrumentKind, otel.Int64NumberKind)
 	accum := export.NewAccumulation(&desc, label.EmptySet(), resource.Empty(), metrictest.NoopAggregator{})
 	require.Equal(t, basic.ErrInconsistentState, b.Process(accum))
 
@@ -318,7 +318,7 @@ func TestBasicTimestamps(t *testing.T) {
 	b := basic.New(processorTest.AggregatorSelector(), export.PassThroughExporter)
 	afterNew := time.Now()
 
-	desc := metric.NewDescriptor("inst", metric.CounterInstrumentKind, metric.Int64NumberKind)
+	desc := otel.NewDescriptor("inst", otel.CounterInstrumentKind, otel.Int64NumberKind)
 	accum := export.NewAccumulation(&desc, label.EmptySet(), resource.Empty(), metrictest.NoopAggregator{})
 
 	b.StartCollection()
@@ -364,7 +364,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 	res := resource.New(label.String("R", "V"))
 	ekind := export.CumulativeExporter
 
-	desc := metric.NewDescriptor("inst.sum", metric.CounterInstrumentKind, metric.Int64NumberKind)
+	desc := otel.NewDescriptor("inst.sum", otel.CounterInstrumentKind, otel.Int64NumberKind)
 	selector := processorTest.AggregatorSelector()
 
 	processor := basic.New(selector, ekind, basic.WithMemory(false))
@@ -398,7 +398,7 @@ func TestStatefulNoMemoryDelta(t *testing.T) {
 	res := resource.New(label.String("R", "V"))
 	ekind := export.DeltaExporter
 
-	desc := metric.NewDescriptor("inst.sum", metric.SumObserverInstrumentKind, metric.Int64NumberKind)
+	desc := otel.NewDescriptor("inst.sum", otel.SumObserverInstrumentKind, otel.Int64NumberKind)
 	selector := processorTest.AggregatorSelector()
 
 	processor := basic.New(selector, ekind, basic.WithMemory(false))
@@ -436,7 +436,7 @@ func TestMultiObserverSum(t *testing.T) {
 	} {
 
 		res := resource.New(label.String("R", "V"))
-		desc := metric.NewDescriptor("observe.sum", metric.SumObserverInstrumentKind, metric.Int64NumberKind)
+		desc := otel.NewDescriptor("observe.sum", otel.SumObserverInstrumentKind, otel.Int64NumberKind)
 		selector := processorTest.AggregatorSelector()
 
 		processor := basic.New(selector, ekind, basic.WithMemory(false))

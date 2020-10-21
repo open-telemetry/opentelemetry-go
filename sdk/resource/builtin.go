@@ -32,7 +32,7 @@ type (
 	// Host is a Detector that provides information about the host being run on. This Detector is
 	// included as a builtin. If this information is not wanted it needs to explicitly be configured to
 	// not be included.
-	Host         struct{}
+	Host struct{}
 
 	stringDetector struct {
 		K label.Key

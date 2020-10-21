@@ -22,7 +22,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
@@ -44,7 +44,7 @@ func TestPullNoCache(t *testing.T) {
 
 	ctx := context.Background()
 	meter := puller.MeterProvider().Meter("nocache")
-	counter := metric.Must(meter).NewInt64Counter("counter.sum")
+	counter := otel.Must(meter).NewInt64Counter("counter.sum")
 
 	counter.Add(ctx, 10, label.String("A", "B"))
 
@@ -81,7 +81,7 @@ func TestPullWithCache(t *testing.T) {
 
 	ctx := context.Background()
 	meter := puller.MeterProvider().Meter("nocache")
-	counter := metric.Must(meter).NewInt64Counter("counter.sum")
+	counter := otel.Must(meter).NewInt64Counter("counter.sum")
 
 	counter.Add(ctx, 10, label.String("A", "B"))
 

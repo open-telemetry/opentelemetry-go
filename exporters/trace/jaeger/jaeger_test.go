@@ -29,9 +29,9 @@ import (
 	"google.golang.org/api/support/bundler"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/codes"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
+	"go.opentelemetry.io/otel/global"
 	ottest "go.opentelemetry.io/otel/internal/testing"
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"

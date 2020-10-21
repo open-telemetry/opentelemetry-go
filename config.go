@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/unit"
 )
 
 // TracerConfig is a group of options for a Tracer.
@@ -39,15 +40,6 @@ func NewTracerConfig(options ...TracerOption) *TracerConfig {
 // TracerOption applies an option to a TracerConfig.
 type TracerOption interface {
 	ApplyTracer(*TracerConfig)
-}
-
-type instVersionTracerOption string
-
-func (o instVersionTracerOption) ApplyTracer(c *TracerConfig) { c.InstrumentationVersion = string(o) }
-
-// WithInstrumentationVersion sets the instrumentation version for a Tracer.
-func WithInstrumentationVersion(version string) TracerOption {
-	return instVersionTracerOption(version)
 }
 
 // SpanConfig is a group of options for a Span.
@@ -185,4 +177,118 @@ func (o spanKindSpanOption) ApplySpan(c *SpanConfig) { c.SpanKind = SpanKind(o) 
 // WithSpanKind sets the SpanKind of a Span.
 func WithSpanKind(kind SpanKind) SpanOption {
 	return spanKindSpanOption(kind)
+}
+
+// InstrumentConfig contains options for metric instrument descriptors.
+type InstrumentConfig struct {
+	// Description describes the instrument in human-readable terms.
+	Description string
+	// Unit describes the measurement unit for a instrument.
+	Unit unit.Unit
+	// InstrumentationName is the name of the library providing
+	// instrumentation.
+	InstrumentationName string
+	// InstrumentationVersion is the version of the library providing
+	// instrumentation.
+	InstrumentationVersion string
+}
+
+// InstrumentOption is an interface for applying metric instrument options.
+type InstrumentOption interface {
+	// ApplyMeter is used to set a InstrumentOption value of a
+	// InstrumentConfig.
+	ApplyInstrument(*InstrumentConfig)
+}
+
+// NewInstrumentConfig creates a new InstrumentConfig
+// and applies all the given options.
+func NewInstrumentConfig(opts ...InstrumentOption) InstrumentConfig {
+	var config InstrumentConfig
+	for _, o := range opts {
+		o.ApplyInstrument(&config)
+	}
+	return config
+}
+
+// WithDescription applies provided description.
+func WithDescription(desc string) InstrumentOption {
+	return descriptionOption(desc)
+}
+
+type descriptionOption string
+
+func (d descriptionOption) ApplyInstrument(config *InstrumentConfig) {
+	config.Description = string(d)
+}
+
+// WithUnit applies provided unit.
+func WithUnit(unit unit.Unit) InstrumentOption {
+	return unitOption(unit)
+}
+
+type unitOption unit.Unit
+
+func (u unitOption) ApplyInstrument(config *InstrumentConfig) {
+	config.Unit = unit.Unit(u)
+}
+
+// WithInstrumentationName sets the instrumentation name.
+func WithInstrumentationName(name string) InstrumentOption {
+	return instrumentationNameOption(name)
+}
+
+type instrumentationNameOption string
+
+func (i instrumentationNameOption) ApplyInstrument(config *InstrumentConfig) {
+	config.InstrumentationName = string(i)
+}
+
+// MeterConfig contains options for Meters.
+type MeterConfig struct {
+	// InstrumentationVersion is the version of the library providing
+	// instrumentation.
+	InstrumentationVersion string
+}
+
+// MeterOption is an interface for applying Meter options.
+type MeterOption interface {
+	// ApplyMeter is used to set a MeterOption value of a MeterConfig.
+	ApplyMeter(*MeterConfig)
+}
+
+// NewMeterConfig creates a new MeterConfig and applies
+// all the given options.
+func NewMeterConfig(opts ...MeterOption) MeterConfig {
+	var config MeterConfig
+	for _, o := range opts {
+		o.ApplyMeter(&config)
+	}
+	return config
+}
+
+// InstrumentationOption is an interface for applying instrumentation specific
+// options.
+type InstrumentationOption interface {
+	InstrumentOption
+	MeterOption
+	TracerOption
+}
+
+// WithInstrumentationVersion sets the instrumentation version.
+func WithInstrumentationVersion(version string) InstrumentationOption {
+	return instrumentationVersionOption(version)
+}
+
+type instrumentationVersionOption string
+
+func (i instrumentationVersionOption) ApplyMeter(config *MeterConfig) {
+	config.InstrumentationVersion = string(i)
+}
+
+func (i instrumentationVersionOption) ApplyInstrument(config *InstrumentConfig) {
+	config.InstrumentationVersion = string(i)
+}
+
+func (i instrumentationVersionOption) ApplyTracer(config *TracerConfig) {
+	config.InstrumentationVersion = string(i)
 }
