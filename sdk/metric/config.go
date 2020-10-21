@@ -24,6 +24,8 @@ type Config struct {
 	// Accumulator.
 	Resource *resource.Resource
 
+	// MetricProcessors are executed each time a metric is recorded
+	// by the Accumulator's sync instrument implementation
 	MetricsProcessors []MetricsProcessor
 }
 

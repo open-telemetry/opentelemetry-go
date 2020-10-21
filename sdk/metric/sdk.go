@@ -68,6 +68,7 @@ type (
 		// resource is applied to all records in this Accumulator.
 		resource *resource.Resource
 
+		// metricsProcessors are applied to all records in this Accumulator
 		metricsProcessors []MetricsProcessor
 	}
 
@@ -141,6 +142,10 @@ type (
 		observedEpoch int64
 		labels        *label.Set
 		observed      export.Aggregator
+	}
+
+	MetricsProcessor interface {
+		OnMetricRecorded(context.Context, *[]label.KeyValue)
 	}
 )
 
@@ -295,10 +300,6 @@ func (s *syncInstrument) acquireHandle(kvs []label.KeyValue, labelPtr *label.Set
 
 func (s *syncInstrument) Bind(kvs []label.KeyValue) api.BoundSyncImpl {
 	return s.acquireHandle(kvs, nil)
-}
-
-type MetricsProcessor interface {
-	OnMetricRecorded(context.Context, *[]label.KeyValue)
 }
 
 func (s *syncInstrument) RecordOne(ctx context.Context, number api.Number, kvs []label.KeyValue) {
