@@ -229,7 +229,7 @@ func (cast *currentActiveSpanTest) runOTOtelOT(t *testing.T, ctx context.Context
 }
 
 func (cast *currentActiveSpanTest) recordSpans(t *testing.T, ctx context.Context) context.Context {
-	spanID := otel.SpanFromContext(ctx).SpanContext().SpanID
+	spanID := otel.SpanContextFromContext(ctx).SpanID
 	cast.recordedCurrentOtelSpanIDs = append(cast.recordedCurrentOtelSpanIDs, spanID)
 
 	spanID = otel.SpanID{}
