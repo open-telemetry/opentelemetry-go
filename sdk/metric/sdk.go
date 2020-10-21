@@ -144,7 +144,12 @@ type (
 		observed      export.Aggregator
 	}
 
+	// MetricsProcessor can be provided as an config option when creating
+	// a new push controller
 	MetricsProcessor interface {
+		// OnMetricRecorded is execute everytime a metric is recorded by
+		// the sync instrument implementation of an Accumulator, it generally
+		// provides ability to correlate the context with the metrics
 		OnMetricRecorded(context.Context, *[]label.KeyValue)
 	}
 )
