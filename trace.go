@@ -205,12 +205,12 @@ func ContextWithSpan(parent context.Context, span Span) context.Context {
 	return context.WithValue(parent, currentSpanKey, span)
 }
 
-// SpanFromContext returns the current span from ctx, or nil if none set.
+// SpanFromContext returns the current span from ctx, or noop span if none set.
 func SpanFromContext(ctx context.Context) Span {
 	if span, ok := ctx.Value(currentSpanKey).(Span); ok {
 		return span
 	}
-	return nil
+	return noopSpan{}
 }
 
 // SpanContextFromContext returns the current SpanContext from ctx, or an empty SpanContext if none set.

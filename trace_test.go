@@ -38,7 +38,7 @@ func TestContextSpan(t *testing.T) {
 		{
 			name:         "empty context",
 			context:      context.Background(),
-			expectedSpan: nil,
+			expectedSpan: noopSpan{},
 		},
 		{
 			name:         "span 0",
@@ -57,7 +57,7 @@ func TestContextSpan(t *testing.T) {
 			span := SpanFromContext(tc.context)
 			assert.Equal(t, tc.expectedSpan, span)
 
-			if tc.expectedSpan != nil {
+			if _, ok := tc.expectedSpan.(noopSpan); !ok {
 				span, ok := tc.context.Value(currentSpanKey).(testSpan)
 				assert.True(t, ok)
 				assert.Equal(t, tc.expectedSpan.(testSpan), span)
