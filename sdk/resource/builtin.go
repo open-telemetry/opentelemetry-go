@@ -25,13 +25,18 @@ import (
 )
 
 type (
-	// TelemetrySDK is a Detector that provides information about the OpenTelemetry SDK used.
-	// This Detector is included as a builtin. If this information is not wanted it needs to explicitly be
-	// configured to not be included.
+	// TelemetrySDK is a Detector that provides information about
+	// the OpenTelemetry SDK used.  This Detector is included as a
+	// builtin. If these resource attributes are not wanted, use
+	// the WithTelemetrySDK(nil) or WithoutBuiltin() options to
+	// explicitly disable them.
 	TelemetrySDK struct{}
-	// Host is a Detector that provides information about the host being run on. This Detector is
-	// included as a builtin. If this information is not wanted it needs to explicitly be configured to
-	// not be included.
+
+	// Host is a Detector that provides information about the host
+	// being run on. This Detector is included as a builtin. If
+	// these resource attributes are not wanted, use the
+	// WithHost(nil) or WithoutBuiltin() options to explicitly
+	// disable them.
 	Host struct{}
 
 	stringDetector struct {
@@ -60,11 +65,13 @@ func (Host) Detect(ctx context.Context) (*Resource, error) {
 	return StringDetector(semconv.HostNameKey, os.Hostname).Detect(ctx)
 }
 
-// StringDetector returns a Detector that will produce a *Resource containing the string as a value corresponding to k.
+// StringDetector returns a Detector that will produce a *Resource
+// containing the string as a value corresponding to k.
 func StringDetector(k label.Key, f func() (string, error)) Detector {
 	return stringDetector{K: k, F: f}
 }
 
+// Detect implements Detector.
 func (sd stringDetector) Detect(ctx context.Context) (*Resource, error) {
 	value, err := sd.F()
 	if err != nil {

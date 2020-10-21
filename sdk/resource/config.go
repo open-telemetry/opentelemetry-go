@@ -66,6 +66,7 @@ type detectorsOption struct {
 	detectors []Detector
 }
 
+// Apply implements Option.
 func (o detectorsOption) Apply(cfg *config) {
 	cfg.detectors = append(cfg.detectors, o.detectors...)
 }
@@ -80,6 +81,7 @@ type telemetrySDKOption struct {
 	Detector
 }
 
+// Apply implements Option.
 func (o telemetrySDKOption) Apply(cfg *config) {
 	cfg.telemetrySDK = o.Detector
 }
@@ -94,6 +96,7 @@ type hostOption struct {
 	Detector
 }
 
+// Apply implements Option.
 func (o hostOption) Apply(cfg *config) {
 	cfg.host = o.Detector
 }
@@ -108,6 +111,7 @@ type fromEnvOption struct {
 	Detector
 }
 
+// Apply implements Option.
 func (o fromEnvOption) Apply(cfg *config) {
 	cfg.fromEnv = o.Detector
 }
@@ -120,6 +124,7 @@ func WithoutBuiltin() Option {
 
 type noBuiltinOption struct{}
 
+// Apply implements Option.
 func (o noBuiltinOption) Apply(cfg *config) {
 	cfg.host = nil
 	cfg.telemetrySDK = nil

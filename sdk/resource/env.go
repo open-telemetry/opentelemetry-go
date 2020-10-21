@@ -27,12 +27,15 @@ import (
 const envVar = "OTEL_RESOURCE_ATTRIBUTES"
 
 var (
-	//errMissingValue is returned when a resource value is missing.
+	// errMissingValue is returned when a resource value is missing.
 	errMissingValue = fmt.Errorf("%w: missing value", ErrPartialResource)
 )
 
-// FromEnv is a detector that implements the Detector and collects resources
-// from environment
+// FromEnv is a Detector that implements the Detector and collects
+// resources from environment.  This Detector is included as a
+// builtin.  If these resource attributes are not wanted, use the
+// WithFromEnv(nil) or WithoutBuiltin() options to explicitly disable
+// them.
 type FromEnv struct{}
 
 // compile time assertion that FromEnv implements Detector interface
