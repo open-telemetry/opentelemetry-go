@@ -25,7 +25,13 @@ import (
 )
 
 type (
+	// TelemetrySDK is a Detector that provides information about the OpenTelemetry SDK used.
+	// This Detector is included as a builtin. If this information is not wanted it needs to explicitly be
+	// configured to not be included.
 	TelemetrySDK struct{}
+	// Host is a Detector that provides information about the host being run on. This Detector is
+	// included as a builtin. If this information is not wanted it needs to explicitly be configured to
+	// not be included.
 	Host         struct{}
 
 	stringDetector struct {
@@ -40,6 +46,7 @@ var (
 	_ Detector = stringDetector{}
 )
 
+// Detect returns a *Resource that describes the OpenTelemetry SDK used.
 func (TelemetrySDK) Detect(context.Context) (*Resource, error) {
 	return New(
 		semconv.TelemetrySDKNameKey.String("opentelemetry-go"),
@@ -48,10 +55,12 @@ func (TelemetrySDK) Detect(context.Context) (*Resource, error) {
 	), nil
 }
 
+// Detect returns a *Resource that describes the host being run on.
 func (Host) Detect(ctx context.Context) (*Resource, error) {
 	return StringDetector(semconv.HostNameKey, os.Hostname).Detect(ctx)
 }
 
+// StringDetector returns a Detector that will produce a *Resource containing the string as a value corresponding to k.
 func StringDetector(k label.Key, f func() (string, error)) Detector {
 	return stringDetector{K: k, F: f}
 }
