@@ -30,19 +30,19 @@ func (t *basicSpanProcesor) Shutdown() {
 }
 
 func (t *basicSpanProcesor) OnStart(s *export.SpanData) {}
-func (t *basicSpanProcesor) OnEnd(s *export.SpanData) {}
-func (t *basicSpanProcesor) ForceFlush() {}
+func (t *basicSpanProcesor) OnEnd(s *export.SpanData)   {}
+func (t *basicSpanProcesor) ForceFlush()                {}
 
-func  TestShutdownTraceProvider(t *testing.T) {
-    stp := NewTracerProvider()
-    sp := &basicSpanProcesor{}
-    stp.RegisterSpanProcessor(sp)
+func TestShutdownTraceProvider(t *testing.T) {
+	stp := NewTracerProvider()
+	sp := &basicSpanProcesor{}
+	stp.RegisterSpanProcessor(sp)
 
-    sp.running = true
+	sp.running = true
 
-    stp.Shutdown(context.Background())
+	_ = stp.Shutdown(context.Background())
 
-    if sp.running != false {
-        t.Errorf("Error shutdown basicSpanProcesor\n")
-    }
+	if sp.running != false {
+		t.Errorf("Error shutdown basicSpanProcesor\n")
+	}
 }
