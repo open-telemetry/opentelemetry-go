@@ -55,7 +55,7 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...otel.SpanOption
 		span.spanContext = otel.SpanContext{}
 
 		iodKey := label.Key("ignored-on-demand")
-		if lsc := otel.SpanFromContext(ctx).SpanContext(); lsc.IsValid() {
+		if lsc := otel.SpanContextFromContext(ctx); lsc.IsValid() {
 			span.links[lsc] = []label.KeyValue{iodKey.String("current")}
 		}
 		if rsc := otel.RemoteSpanContextFromContext(ctx); rsc.IsValid() {
@@ -63,7 +63,7 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...otel.SpanOption
 		}
 	} else {
 		span.spanContext = t.config.SpanContextFunc(ctx)
-		if lsc := otel.SpanFromContext(ctx).SpanContext(); lsc.IsValid() {
+		if lsc := otel.SpanContextFromContext(ctx); lsc.IsValid() {
 			span.spanContext.TraceID = lsc.TraceID
 			span.parentSpanID = lsc.SpanID
 		} else if rsc := otel.RemoteSpanContextFromContext(ctx); rsc.IsValid() {
