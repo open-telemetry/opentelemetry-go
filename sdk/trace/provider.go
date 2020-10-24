@@ -20,6 +20,7 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/global"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -142,7 +143,7 @@ func (p *TracerProvider) UnregisterSpanProcessor(s SpanProcessor) {
 	}
 	if stopOnce != nil {
 		stopOnce.state.Do(func() {
-			_ = s.Shutdown(context.Background())
+			global.Handle(s.Shutdown(context.Background()))
 		})
 	}
 	if len(new) > 1 {
