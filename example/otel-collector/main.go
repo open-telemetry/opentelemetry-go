@@ -80,7 +80,7 @@ func initProvider() func() {
 	pusher.Start()
 
 	return func() {
-		bsp.Shutdown() // shutdown the processor
+		handleErr(tracerProvider.Shutdown(context.Background()), "failed to shutdown provider")
 		handleErr(exp.Shutdown(context.Background()), "failed to stop exporter")
 		pusher.Stop() // pushes any last exports to the receiver
 	}
