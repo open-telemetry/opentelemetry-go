@@ -19,6 +19,7 @@
 package codes // import "go.opentelemetry.io/otel/codes"
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
 )
@@ -70,6 +71,7 @@ func (c *Code) UnmarshalJSON(b []byte) error {
 		return fmt.Errorf("nil receiver passed to UnmarshalJSON")
 	}
 
+	b = bytes.Replace(b, []byte("\""), []byte(""), -1)
 	if ci, err := strconv.ParseUint(string(b), 10, 32); err == nil {
 		if ci >= maxCode {
 			return fmt.Errorf("invalid code: %q", ci)

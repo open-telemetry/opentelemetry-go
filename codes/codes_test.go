@@ -133,3 +133,30 @@ func TestCodeMarshalJSONErrorInvalid(t *testing.T) {
 		t.Fatal("Code(maxCode).MarshalJSON() returned non-nil value")
 	}
 }
+
+func TestRoundTripCodes(t *testing.T) {
+	tests := []struct {
+		input Code
+	}{
+		{Unset},
+		{Error},
+		{Ok},
+	}
+	for _, test := range tests {
+		c := test.input
+		out := new(Code)
+
+		b, err := c.MarshalJSON()
+		if err != nil {
+			t.Fatalf("Code(%s).MarshalJSON() errored: %v", test.input, err)
+		}
+
+		if err := out.UnmarshalJSON(b); err != nil {
+			t.Fatalf("Code.UnmarshalJSON(%q) errored: %v", c, err)
+		}
+
+		if *out != test.input {
+			t.Errorf("failed to round trip %q, output was %v", test.input, out)
+		}
+	}
+}
