@@ -22,7 +22,7 @@ import (
 )
 
 func GetSpanContextAndLinks(ctx context.Context, ignoreContext bool) (otel.SpanContext, bool, []otel.Link) {
-	lsctx := otel.SpanFromContext(ctx).SpanContext()
+	lsctx := otel.SpanContextFromContext(ctx)
 	rsctx := otel.RemoteSpanContextFromContext(ctx)
 
 	if ignoreContext {
