@@ -9,9 +9,9 @@ The Go [OpenTelemetry](https://opentelemetry.io/) implementation.
 
 ## Project Status
 
-**This project is currently in a pre-GA phase**. Backwards incompatible changes
-may be introduced in subsequent minor version releases as we work to track the
-evolving OpenTelemetry specification and user feedback.
+**Warning**: this project is currently in a pre-GA phase. Backwards
+incompatible changes may be introduced in subsequent minor version releases as
+we work to track the evolving OpenTelemetry specification and user feedback.
 
 Our progress towards a GA release candidate is tracked in [this project
 board](https://github.com/orgs/open-telemetry/projects/5). This release
