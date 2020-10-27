@@ -191,7 +191,7 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 
 	for _, sps := range spss {
 		sps.state.Do(func() {
-			sps.sp.Shutdown()
+			global.Handle(sps.sp.Shutdown(ctx))
 		})
 	}
 	return nil

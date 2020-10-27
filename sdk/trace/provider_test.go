@@ -25,8 +25,9 @@ type basicSpanProcesor struct {
 	running bool
 }
 
-func (t *basicSpanProcesor) Shutdown() {
+func (t *basicSpanProcesor) Shutdown(context.Context) error {
 	t.running = false
+	return nil
 }
 
 func (t *basicSpanProcesor) OnStart(s *export.SpanData) {}

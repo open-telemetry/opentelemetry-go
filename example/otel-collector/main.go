@@ -80,6 +80,7 @@ func initProvider() func() {
 	pusher.Start()
 
 	return func() {
+		ctx := context.Background()
 		handleErr(tracerProvider.Shutdown(ctx), "failed to shutdown provider")
 		handleErr(exp.Shutdown(ctx), "failed to stop exporter")
 		pusher.Stop() // pushes any last exports to the receiver
