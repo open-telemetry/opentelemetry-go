@@ -16,6 +16,7 @@ package codes
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"testing"
 )
@@ -61,17 +62,18 @@ func TestCodeUnmarshalJSON(t *testing.T) {
 		want  Code
 	}{
 		{"0", Unset},
-		{"Unset", Unset},
+		{`"Unset"`, Unset},
 		{"1", Error},
-		{"Error", Error},
+		{`"Error"`, Error},
 		{"2", Ok},
-		{"Ok", Ok},
+		{`"Ok"`, Ok},
 	}
 	for _, test := range tests {
 		c := new(Code)
 		*c = Code(maxCode)
-		if err := c.UnmarshalJSON([]byte(test.input)); err != nil {
-			t.Fatalf("Code.UnmarshalJSON(%q) errored: %v", test.input, err)
+
+		if err := json.Unmarshal([]byte(test.input), c); err != nil {
+			t.Fatalf("json.Unmarshal(%q, Code) errored: %v", test.input, err)
 		}
 		if *c != test.want {
 			t.Errorf("failed to unmarshal %q as %v", test.input, test.want)
@@ -83,11 +85,13 @@ func TestCodeUnmarshalJSONErrorInvalidData(t *testing.T) {
 	tests := []string{
 		fmt.Sprintf("%d", maxCode),
 		"Not a code",
+		"Unset",
+		"true",
 	}
 	c := new(Code)
 	for _, test := range tests {
-		if err := c.UnmarshalJSON([]byte(test)); err == nil {
-			t.Fatalf("Code.UnmarshalJSON(%q) did not error", test)
+		if err := json.Unmarshal([]byte(test), c); err == nil {
+			t.Fatalf("json.Unmarshal(%q, Code) did not error", test)
 		}
 	}
 }
