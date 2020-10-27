@@ -13,14 +13,19 @@
 // limitations under the License.
 
 /*
-Package metric implements the OpenTelemetry metric.MeterImpl
-interface.  The Accumulator type supports configurable metrics export
-behavior through a collection of export interfaces that support
-various export strategies, described below.
+Package metric implements the OpenTelemetry metric API.
 
-The metric.MeterImpl API consists of methods for constructing
-synchronous and asynchronous instruments.  There are two constructors
-per instrument for the two kinds of number (int64, float64).
+This package is currently in a pre-GA phase. Backwards incompatible changes
+may be introduced in subsequent minor version releases as we work to track the
+evolving OpenTelemetry specification and user feedback.
+
+The Accumulator type supports configurable metrics export behavior through a
+collection of export interfaces that support various export strategies,
+described below.
+
+The OpenTelemetry metric API consists of methods for constructing synchronous
+and asynchronous instruments.  There are two constructors per instrument for
+the two kinds of number (int64, float64).
 
 Synchronous instruments are managed by a sync.Map containing a *record
 with the current state for each synchronous instrument.  A bound
