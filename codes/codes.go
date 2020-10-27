@@ -20,7 +20,6 @@ package codes // import "go.opentelemetry.io/otel/codes"
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strconv"
 )
@@ -75,9 +74,6 @@ func (c *Code) UnmarshalJSON(b []byte) error {
 	var x interface{}
 	if err := json.Unmarshal(b, &x); err != nil {
 		return err
-	}
-	if x == nil {
-		return errors.New("null code value")
 	}
 	switch x.(type) {
 	case string:
