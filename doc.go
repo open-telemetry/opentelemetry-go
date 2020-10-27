@@ -29,7 +29,7 @@ operation being performed as part of a traced workflow. It its simplest form:
 	var tracer otel.Tracer
 
 	func init() {
-		tracer := global.Tracer("instrumentation/package/name")
+		tracer = global.Tracer("instrumentation/package/name")
 	}
 
 	func operation(ctx context.Context) {

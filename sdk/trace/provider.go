@@ -182,6 +182,21 @@ func (p *TracerProvider) ApplyConfig(cfg Config) {
 	p.config.Store(&c)
 }
 
+// Shutdown shuts down the span processors in the order they were registered
+func (p *TracerProvider) Shutdown(ctx context.Context) error {
+	spss, ok := p.spanProcessors.Load().(spanProcessorStates)
+	if !ok || len(spss) == 0 {
+		return nil
+	}
+
+	for _, sps := range spss {
+		sps.state.Do(func() {
+			sps.sp.Shutdown()
+		})
+	}
+	return nil
+}
+
 // WithSyncer registers the exporter with the TracerProvider using a
 // SimpleSpanProcessor.
 func WithSyncer(e export.SpanExporter) TracerProviderOption {
