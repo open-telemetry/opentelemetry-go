@@ -188,22 +188,22 @@ func createAndRegisterBatchSP(option testOption, te *testBatchExporter) *sdktrac
 }
 
 func generateSpan(t *testing.T, parallel bool, tr otel.Tracer, option testOption) {
-	sc := getSpanReference()
+	sr := getSpanReference()
 
 	wg := &sync.WaitGroup{}
 	for i := 0; i < option.genNumSpans; i++ {
-		binary.BigEndian.PutUint64(sc.TraceID[0:8], uint64(i+1))
+		binary.BigEndian.PutUint64(sr.TraceID[0:8], uint64(i+1))
 		wg.Add(1)
-		f := func(sc otel.SpanReference) {
-			ctx := otel.ContextWithRemoteSpanReference(context.Background(), sc)
+		f := func(sr otel.SpanReference) {
+			ctx := otel.ContextWithRemoteSpanReference(context.Background(), sr)
 			_, span := tr.Start(ctx, option.name)
 			span.End()
 			wg.Done()
 		}
 		if parallel {
-			go f(sc)
+			go f(sr)
 		} else {
-			f(sc)
+			f(sr)
 		}
 	}
 	wg.Wait()

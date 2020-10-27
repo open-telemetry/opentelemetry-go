@@ -217,12 +217,12 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 	prop := propagators.TraceContext{}
 	tests := []struct {
 		name       string
-		sc         otel.SpanReference
+		sr         otel.SpanReference
 		wantHeader string
 	}{
 		{
 			name: "valid spancontext, sampled",
-			sc: otel.SpanReference{
+			sr: otel.SpanReference{
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: otel.FlagsSampled,
@@ -231,7 +231,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 		},
 		{
 			name: "valid spancontext, not sampled",
-			sc: otel.SpanReference{
+			sr: otel.SpanReference{
 				TraceID: traceID,
 				SpanID:  spanID,
 			},
@@ -239,7 +239,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 		},
 		{
 			name: "valid spancontext, with unsupported bit set in traceflags",
-			sc: otel.SpanReference{
+			sr: otel.SpanReference{
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: 0xff,
@@ -248,7 +248,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 		},
 		{
 			name:       "invalid spancontext",
-			sc:         otel.SpanReference{},
+			sr:         otel.SpanReference{},
 			wantHeader: "",
 		},
 	}
@@ -256,8 +256,8 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
 			ctx := context.Background()
-			if tt.sc.IsValid() {
-				ctx = otel.ContextWithRemoteSpanReference(ctx, tt.sc)
+			if tt.sr.IsValid() {
+				ctx = otel.ContextWithRemoteSpanReference(ctx, tt.sr)
 				ctx, _ = mockTracer.Start(ctx, "inject")
 			}
 			prop.Inject(ctx, req.Header)

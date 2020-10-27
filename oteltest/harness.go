@@ -94,11 +94,11 @@ func (h *Harness) TestTracer(subjectFactory func() otel.Tracer) {
 			_, span1 := subject.Start(context.Background(), "span1")
 			_, span2 := subject.Start(context.Background(), "span2")
 
-			sc1 := span1.SpanReference()
-			sc2 := span2.SpanReference()
+			sr1 := span1.SpanReference()
+			sr2 := span2.SpanReference()
 
-			e.Expect(sc1.TraceID).NotToEqual(sc2.TraceID)
-			e.Expect(sc1.SpanID).NotToEqual(sc2.SpanID)
+			e.Expect(sr1.TraceID).NotToEqual(sr2.TraceID)
+			e.Expect(sr1.SpanID).NotToEqual(sr2.SpanID)
 		})
 
 		t.Run("records the span if specified", func(t *testing.T) {
@@ -121,11 +121,11 @@ func (h *Harness) TestTracer(subjectFactory func() otel.Tracer) {
 			ctx, parent := subject.Start(context.Background(), "parent")
 			_, child := subject.Start(ctx, "child")
 
-			psc := parent.SpanReference()
-			csc := child.SpanReference()
+			psr := parent.SpanReference()
+			csr := child.SpanReference()
 
-			e.Expect(csc.TraceID).ToEqual(psc.TraceID)
-			e.Expect(csc.SpanID).NotToEqual(psc.SpanID)
+			e.Expect(csr.TraceID).ToEqual(psr.TraceID)
+			e.Expect(csr.SpanID).NotToEqual(psr.SpanID)
 		})
 
 		t.Run("ignores parent's trace ID when new root is requested", func(t *testing.T) {
@@ -137,11 +137,11 @@ func (h *Harness) TestTracer(subjectFactory func() otel.Tracer) {
 			ctx, parent := subject.Start(context.Background(), "parent")
 			_, child := subject.Start(ctx, "child", otel.WithNewRoot())
 
-			psc := parent.SpanReference()
-			csc := child.SpanReference()
+			psr := parent.SpanReference()
+			csr := child.SpanReference()
 
-			e.Expect(csc.TraceID).NotToEqual(psc.TraceID)
-			e.Expect(csc.SpanID).NotToEqual(psc.SpanID)
+			e.Expect(csr.TraceID).NotToEqual(psr.TraceID)
+			e.Expect(csr.SpanID).NotToEqual(psr.SpanID)
 		})
 
 		t.Run("propagates remote parent's trace ID through the context", func(t *testing.T) {
@@ -154,11 +154,11 @@ func (h *Harness) TestTracer(subjectFactory func() otel.Tracer) {
 			parentCtx := otel.ContextWithRemoteSpanReference(context.Background(), remoteParent.SpanReference())
 			_, child := subject.Start(parentCtx, "child")
 
-			psc := remoteParent.SpanReference()
-			csc := child.SpanReference()
+			psr := remoteParent.SpanReference()
+			csr := child.SpanReference()
 
-			e.Expect(csc.TraceID).ToEqual(psc.TraceID)
-			e.Expect(csc.SpanID).NotToEqual(psc.SpanID)
+			e.Expect(csr.TraceID).ToEqual(psr.TraceID)
+			e.Expect(csr.SpanID).NotToEqual(psr.SpanID)
 		})
 
 		t.Run("ignores remote parent's trace ID when new root is requested", func(t *testing.T) {
@@ -171,11 +171,11 @@ func (h *Harness) TestTracer(subjectFactory func() otel.Tracer) {
 			parentCtx := otel.ContextWithRemoteSpanReference(context.Background(), remoteParent.SpanReference())
 			_, child := subject.Start(parentCtx, "child", otel.WithNewRoot())
 
-			psc := remoteParent.SpanReference()
-			csc := child.SpanReference()
+			psr := remoteParent.SpanReference()
+			csr := child.SpanReference()
 
-			e.Expect(csc.TraceID).NotToEqual(psc.TraceID)
-			e.Expect(csc.SpanID).NotToEqual(psc.SpanID)
+			e.Expect(csr.TraceID).NotToEqual(psr.TraceID)
+			e.Expect(csr.SpanID).NotToEqual(psr.SpanID)
 		})
 	})
 

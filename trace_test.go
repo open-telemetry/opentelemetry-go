@@ -119,7 +119,7 @@ func TestIsValid(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			sc := SpanReference{
+			sr := SpanReference{
 				TraceID: testcase.tid,
 				SpanID:  testcase.sid,
 			}
@@ -192,8 +192,8 @@ func TestHasTraceID(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (sc SpanReference) HasTraceID() bool{}
-			sc := SpanReference{TraceID: testcase.tid}
+			//proto: func (sr SpanReference) HasTraceID() bool{}
+			sr := SpanReference{TraceID: testcase.tid}
 			have := sr.HasTraceID()
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
@@ -205,22 +205,22 @@ func TestHasTraceID(t *testing.T) {
 func TestHasSpanID(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
-		sc   SpanReference
+		sr   SpanReference
 		want bool
 	}{
 		{
 			name: "SpanReference.HasSpanID() returns true if self.SpanID != 0",
-			sc:   SpanReference{SpanID: [8]byte{42}},
+			sr:   SpanReference{SpanID: [8]byte{42}},
 			want: true,
 		}, {
 			name: "SpanReference.HasSpanID() returns false if self.SpanID == 0",
-			sc:   SpanReference{},
+			sr:   SpanReference{},
 			want: false,
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (sc SpanReference) HasSpanID() bool {}
-			have := testcase.sc.HasSpanID()
+			//proto: func (sr SpanReference) HasSpanID() bool {}
+			have := testcase.sr.HasSpanID()
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
 			}
@@ -231,38 +231,38 @@ func TestHasSpanID(t *testing.T) {
 func TestSpanReferenceIsSampled(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
-		sc   SpanReference
+		sr   SpanReference
 		want bool
 	}{
 		{
 			name: "sampled",
-			sc: SpanReference{
+			sr: SpanReference{
 				TraceID:    TraceID([16]byte{1}),
 				TraceFlags: FlagsSampled,
 			},
 			want: true,
 		}, {
 			name: "unused bits are ignored, still not sampled",
-			sc: SpanReference{
+			sr: SpanReference{
 				TraceID:    TraceID([16]byte{1}),
 				TraceFlags: ^FlagsSampled,
 			},
 			want: false,
 		}, {
 			name: "unused bits are ignored, still sampled",
-			sc: SpanReference{
+			sr: SpanReference{
 				TraceID:    TraceID([16]byte{1}),
 				TraceFlags: FlagsSampled | ^FlagsSampled,
 			},
 			want: true,
 		}, {
 			name: "not sampled/default",
-			sc:   SpanReference{TraceID: TraceID{}},
+			sr:   SpanReference{TraceID: TraceID{}},
 			want: false,
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			have := testcase.sc.IsSampled()
+			have := testcase.sr.IsSampled()
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
 			}

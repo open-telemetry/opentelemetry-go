@@ -47,12 +47,12 @@ func injectSubBenchmarks(b *testing.B, fn func(context.Context, *testing.B)) {
 			StartSpanID: &id,
 		}
 		b.ReportAllocs()
-		sc := otel.SpanReference{
+		sr := otel.SpanReference{
 			TraceID:    traceID,
 			SpanID:     spanID,
 			TraceFlags: otel.FlagsSampled,
 		}
-		ctx := otel.ContextWithRemoteSpanReference(context.Background(), sc)
+		ctx := otel.ContextWithRemoteSpanReference(context.Background(), sr)
 		ctx, _ = mockTracer.Start(ctx, "inject")
 		fn(ctx, b)
 	})

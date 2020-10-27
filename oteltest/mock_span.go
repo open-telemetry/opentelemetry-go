@@ -25,7 +25,7 @@ type MockSpan struct {
 	StatusMsg string
 	Name      string
 	Status    codes.Code
-	sc        otel.SpanReference
+	sr        otel.SpanReference
 	tracer    otel.Tracer
 }
 
@@ -37,7 +37,7 @@ func (ms *MockSpan) SpanReference() otel.SpanReference {
 	if ms == nil {
 		return otel.SpanReference{}
 	}
-	return ms.sc
+	return ms.sr
 }
 
 // IsRecording always returns false for MockSpan.

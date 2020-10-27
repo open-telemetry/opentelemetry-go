@@ -299,34 +299,34 @@ func TestStartSpanWithParent(t *testing.T) {
 	tr := tp.Tracer("SpanWithParent")
 	ctx := context.Background()
 
-	sc1 := otel.SpanReference{
+	sr1 := otel.SpanReference{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 0x1,
 	}
-	_, s1 := tr.Start(otel.ContextWithRemoteSpanReference(ctx, sc1), "span1-unsampled-parent1")
-	if err := checkChild(sc1, s1); err != nil {
+	_, s1 := tr.Start(otel.ContextWithRemoteSpanReference(ctx, sr1), "span1-unsampled-parent1")
+	if err := checkChild(sr1, s1); err != nil {
 		t.Error(err)
 	}
 
-	_, s2 := tr.Start(otel.ContextWithRemoteSpanReference(ctx, sc1), "span2-unsampled-parent1")
-	if err := checkChild(sc1, s2); err != nil {
+	_, s2 := tr.Start(otel.ContextWithRemoteSpanReference(ctx, sr1), "span2-unsampled-parent1")
+	if err := checkChild(sr1, s2); err != nil {
 		t.Error(err)
 	}
 
-	sc2 := otel.SpanReference{
+	sr2 := otel.SpanReference{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 0x1,
 		//Tracestate:   testTracestate,
 	}
-	_, s3 := tr.Start(otel.ContextWithRemoteSpanReference(ctx, sc2), "span3-sampled-parent2")
-	if err := checkChild(sc2, s3); err != nil {
+	_, s3 := tr.Start(otel.ContextWithRemoteSpanReference(ctx, sr2), "span3-sampled-parent2")
+	if err := checkChild(sr2, s3); err != nil {
 		t.Error(err)
 	}
 
-	ctx2, s4 := tr.Start(otel.ContextWithRemoteSpanReference(ctx, sc2), "span4-sampled-parent2")
-	if err := checkChild(sc2, s4); err != nil {
+	ctx2, s4 := tr.Start(otel.ContextWithRemoteSpanReference(ctx, sr2), "span4-sampled-parent2")
+	if err := checkChild(sr2, s4); err != nil {
 		t.Error(err)
 	}
 
@@ -608,12 +608,12 @@ func TestLinks(t *testing.T) {
 	k2v2 := label.String("key2", "value2")
 	k3v3 := label.String("key3", "value3")
 
-	sc1 := otel.SpanReference{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
-	sc2 := otel.SpanReference{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
+	sr1 := otel.SpanReference{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
+	sr2 := otel.SpanReference{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
 
 	links := []otel.Link{
-		{SpanReference: sc1, Attributes: []label.KeyValue{k1v1}},
-		{SpanReference: sc2, Attributes: []label.KeyValue{k2v2, k3v3}},
+		{SpanReference: sr1, Attributes: []label.KeyValue{k1v1}},
+		{SpanReference: sr2, Attributes: []label.KeyValue{k2v2, k3v3}},
 	}
 	span := startSpan(tp, "Links", otel.WithLinks(links...))
 
@@ -643,17 +643,17 @@ func TestLinksOverLimit(t *testing.T) {
 	te := NewTestExporter()
 	cfg := Config{MaxLinksPerSpan: 2}
 
-	sc1 := otel.SpanReference{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
-	sc2 := otel.SpanReference{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
-	sc3 := otel.SpanReference{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
+	sr1 := otel.SpanReference{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
+	sr2 := otel.SpanReference{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
+	sr3 := otel.SpanReference{TraceID: otel.TraceID([16]byte{1, 1}), SpanID: otel.SpanID{3}}
 
 	tp := NewTracerProvider(WithConfig(cfg), WithSyncer(te))
 
 	span := startSpan(tp, "LinksOverLimit",
 		otel.WithLinks(
-			otel.Link{SpanReference: sc1, Attributes: []label.KeyValue{label.String("key1", "value1")}},
-			otel.Link{SpanReference: sc2, Attributes: []label.KeyValue{label.String("key2", "value2")}},
-			otel.Link{SpanReference: sc3, Attributes: []label.KeyValue{label.String("key3", "value3")}},
+			otel.Link{SpanReference: sr1, Attributes: []label.KeyValue{label.String("key1", "value1")}},
+			otel.Link{SpanReference: sr2, Attributes: []label.KeyValue{label.String("key2", "value2")}},
+			otel.Link{SpanReference: sr3, Attributes: []label.KeyValue{label.String("key3", "value3")}},
 		),
 	)
 
@@ -673,8 +673,8 @@ func TestLinksOverLimit(t *testing.T) {
 		ParentSpanID: sid,
 		Name:         "span0",
 		Links: []otel.Link{
-			{SpanReference: sc2, Attributes: []label.KeyValue{k2v2}},
-			{SpanReference: sc3, Attributes: []label.KeyValue{k3v3}},
+			{SpanReference: sr2, Attributes: []label.KeyValue{k2v2}},
+			{SpanReference: sr3, Attributes: []label.KeyValue{k3v3}},
 		},
 		DroppedLinkCount:       1,
 		HasRemoteParent:        true,

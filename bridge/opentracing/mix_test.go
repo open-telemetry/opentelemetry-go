@@ -409,9 +409,9 @@ func (bip *baggageItemsPreservationTest) addAndRecordBaggage(t *testing.T, ctx c
 	idx := bip.step
 	bip.step++
 	span.SetBaggageItem(bip.baggageItems[idx].key, bip.baggageItems[idx].value)
-	sctx := span.Context()
+	sref := span.Context()
 	recording := make(map[string]string)
-	sctx.ForeachBaggageItem(func(key, value string) bool {
+	sref.ForeachBaggageItem(func(key, value string) bool {
 		recording[key] = value
 		return true
 	})
@@ -636,20 +636,20 @@ func checkTraceAndSpans(t *testing.T, tracer *internal.MockTracer, expectedTrace
 		t.Errorf("Expected %d finished spans, got %d", expectedSpanCount, len(tracer.FinishedSpans))
 	}
 	for idx, span := range tracer.FinishedSpans {
-		sctx := span.SpanReference()
-		if sctx.TraceID != expectedTraceID {
-			t.Errorf("Expected trace ID %v in span %d (%d), got %v", expectedTraceID, idx, sctx.SpanID, sctx.TraceID)
+		sref := span.SpanReference()
+		if sref.TraceID != expectedTraceID {
+			t.Errorf("Expected trace ID %v in span %d (%d), got %v", expectedTraceID, idx, sref.SpanID, sref.TraceID)
 		}
 		expectedSpanID := spanIDs[idx]
 		expectedParentSpanID := parentSpanIDs[idx]
-		if sctx.SpanID != expectedSpanID {
-			t.Errorf("Expected finished span %d to have span ID %d, but got %d", idx, expectedSpanID, sctx.SpanID)
+		if sref.SpanID != expectedSpanID {
+			t.Errorf("Expected finished span %d to have span ID %d, but got %d", idx, expectedSpanID, sref.SpanID)
 		}
 		if span.ParentSpanID != expectedParentSpanID {
-			t.Errorf("Expected finished span %d (span ID: %d) to have parent span ID %d, but got %d", idx, sctx.SpanID, expectedParentSpanID, span.ParentSpanID)
+			t.Errorf("Expected finished span %d (span ID: %d) to have parent span ID %d, but got %d", idx, sref.SpanID, expectedParentSpanID, span.ParentSpanID)
 		}
 		if span.SpanKind != sks[span.SpanReference().SpanID] {
-			t.Errorf("Expected finished span %d (span ID: %d) to have span.kind to be '%v' but was '%v'", idx, sctx.SpanID, sks[span.SpanReference().SpanID], span.SpanKind)
+			t.Errorf("Expected finished span %d (span ID: %d) to have span.kind to be '%v' but was '%v'", idx, sref.SpanID, sks[span.SpanReference().SpanID], span.SpanKind)
 		}
 	}
 }

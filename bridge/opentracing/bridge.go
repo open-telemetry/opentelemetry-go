@@ -84,10 +84,10 @@ type bridgeSpan struct {
 
 var _ ot.Span = &bridgeSpan{}
 
-func newBridgeSpan(otelSpan otel.Span, bridgeSC *bridgeSpanReference, tracer *BridgeTracer) *bridgeSpan {
+func newBridgeSpan(otelSpan otel.Span, bridgeSR *bridgeSpanReference, tracer *BridgeTracer) *bridgeSpan {
 	return &bridgeSpan{
 		otelSpan:          otelSpan,
-		ctx:               bridgeSC,
+		ctx:               bridgeSR,
 		tracer:            tracer,
 		skipDeferHook:     false,
 		extraBaggageItems: nil,
@@ -390,11 +390,11 @@ func (t *BridgeTracer) StartSpan(operationName string, opts ...ot.StartSpanOptio
 	for _, opt := range opts {
 		opt.Apply(&sso)
 	}
-	parentBridgeSC, links := otSpanReferencesToParentAndLinks(sso.References)
+	parentBridgeSR, links := otSpanReferencesToParentAndLinks(sso.References)
 	attributes, kind, hadTrueErrorTag := otTagsToOTelAttributesKindAndError(sso.Tags)
 	checkCtx := migration.WithDeferredSetup(context.Background())
-	if parentBridgeSC != nil {
-		checkCtx = otel.ContextWithRemoteSpanReference(checkCtx, parentBridgeSC.otelSpanReference)
+	if parentBridgeSR != nil {
+		checkCtx = otel.ContextWithRemoteSpanReference(checkCtx, parentBridgeSR.otelSpanReference)
 	}
 	checkCtx2, otelSpan := t.setTracer.tracer().Start(
 		checkCtx,
@@ -420,11 +420,11 @@ func (t *BridgeTracer) StartSpan(operationName string, opts ...ot.StartSpanOptio
 	// interface is not nil, but calling some interface function
 	// on it will most likely result in nil pointer dereference.
 	var otSpanContext ot.SpanContext
-	if parentBridgeSC != nil {
-		otSpanContext = parentBridgeSC
+	if parentBridgeSR != nil {
+		otSpanContext = parentBridgeSR
 	}
-	sctx := newBridgeSpanReference(otelSpan.SpanReference(), otSpanContext)
-	span := newBridgeSpan(otelSpan, sctx, t)
+	sref := newBridgeSpanReference(otelSpan.SpanReference(), otSpanContext)
+	span := newBridgeSpan(otelSpan, sref, t)
 
 	return span
 }
@@ -533,7 +533,7 @@ func otSpanReferencesToParentAndLinks(references []ot.SpanReference) (*bridgeSpa
 		links  []otel.Link
 	)
 	for _, reference := range references {
-		bridgeSC, ok := reference.ReferencedContext.(*bridgeSpanReference)
+		bridgeSR, ok := reference.ReferencedContext.(*bridgeSpanReference)
 		if !ok {
 			// We ignore foreign ot span contexts,
 			// sorry. We have no way of getting any
@@ -544,21 +544,21 @@ func otSpanReferencesToParentAndLinks(references []ot.SpanReference) (*bridgeSpa
 			continue
 		}
 		if parent != nil {
-			links = append(links, otSpanReferenceToOTelLink(bridgeSC, reference.Type))
+			links = append(links, otSpanReferenceToOTelLink(bridgeSR, reference.Type))
 		} else {
 			if reference.Type == ot.ChildOfRef {
-				parent = bridgeSC
+				parent = bridgeSR
 			} else {
-				links = append(links, otSpanReferenceToOTelLink(bridgeSC, reference.Type))
+				links = append(links, otSpanReferenceToOTelLink(bridgeSR, reference.Type))
 			}
 		}
 	}
 	return parent, links
 }
 
-func otSpanReferenceToOTelLink(bridgeSC *bridgeSpanReference, refType ot.SpanReferenceType) otel.Link {
+func otSpanReferenceToOTelLink(bridgeSR *bridgeSpanReference, refType ot.SpanReferenceType) otel.Link {
 	return otel.Link{
-		SpanReference: bridgeSC.otelSpanReference,
+		SpanReference: bridgeSR.otelSpanReference,
 		Attributes:    otSpanReferenceTypeToOTelLinkAttributes(refType),
 	}
 }
@@ -587,11 +587,11 @@ func otSpanReferenceTypeToString(refType ot.SpanReferenceType) string {
 // propagators, so they can get the span reference from Go context.
 type fakeSpan struct {
 	otel.Span
-	sc otel.SpanReference
+	sr otel.SpanReference
 }
 
 func (s fakeSpan) SpanReference() otel.SpanReference {
-	return s.sc
+	return s.sr
 }
 
 // Inject is a part of the implementation of the OpenTracing Tracer
@@ -599,11 +599,11 @@ func (s fakeSpan) SpanReference() otel.SpanReference {
 //
 // Currently only the HTTPHeaders format is supported.
 func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier interface{}) error {
-	bridgeSC, ok := sm.(*bridgeSpanReference)
+	bridgeSR, ok := sm.(*bridgeSpanReference)
 	if !ok {
 		return ot.ErrInvalidSpanContext
 	}
-	if !bridgeSC.otelSpanReference.IsValid() {
+	if !bridgeSR.otelSpanReference.IsValid() {
 		return ot.ErrInvalidSpanContext
 	}
 	if builtinFormat, ok := format.(ot.BuiltinFormat); !ok || builtinFormat != ot.HTTPHeaders {
@@ -616,10 +616,10 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 	header := http.Header(hhcarrier)
 	fs := fakeSpan{
 		Span: noop.Span,
-		sc:   bridgeSC.otelSpanReference,
+		sr:   bridgeSR.otelSpanReference,
 	}
 	ctx := otel.ContextWithSpan(context.Background(), fs)
-	ctx = baggage.ContextWithMap(ctx, bridgeSC.baggageItems)
+	ctx = baggage.ContextWithMap(ctx, bridgeSR.baggageItems)
 	t.getPropagator().Inject(ctx, header)
 	return nil
 }
@@ -639,15 +639,15 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 	header := http.Header(hhcarrier)
 	ctx := t.getPropagator().Extract(context.Background(), header)
 	baggage := baggage.MapFromContext(ctx)
-	otelSC, _, _ := otelparent.GetSpanReferenceAndLinks(ctx, false)
-	bridgeSC := &bridgeSpanReference{
+	otelSR, _, _ := otelparent.GetSpanReferenceAndLinks(ctx, false)
+	bridgeSR := &bridgeSpanReference{
 		baggageItems:      baggage,
-		otelSpanReference: otelSC,
+		otelSpanReference: otelSR,
 	}
-	if !bridgeSC.otelSpanReference.IsValid() {
+	if !bridgeSR.otelSpanReference.IsValid() {
 		return nil, ot.ErrSpanContextNotFound
 	}
-	return bridgeSC, nil
+	return bridgeSR, nil
 }
 
 func (t *BridgeTracer) getPropagator() otel.TextMapPropagator {

@@ -134,7 +134,7 @@ func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
 
 func BenchmarkTraceID_DotString(b *testing.B) {
 	t, _ := otel.TraceIDFromHex("0000000000000001000000000000002a")
-	sc := otel.SpanReference{TraceID: t}
+	sr := otel.SpanReference{TraceID: t}
 
 	want := "0000000000000001000000000000002a"
 	for i := 0; i < b.N; i++ {
@@ -145,7 +145,7 @@ func BenchmarkTraceID_DotString(b *testing.B) {
 }
 
 func BenchmarkSpanID_DotString(b *testing.B) {
-	sc := otel.SpanReference{SpanID: otel.SpanID{1}}
+	sr := otel.SpanReference{SpanID: otel.SpanID{1}}
 	want := "0100000000000000"
 	for i := 0; i < b.N; i++ {
 		if got := sr.SpanID.String(); got != want {

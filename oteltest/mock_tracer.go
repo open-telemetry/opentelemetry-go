@@ -56,18 +56,18 @@ func (mt *MockTracer) Start(ctx context.Context, name string, o ...otel.SpanOpti
 	parentSpanReference, _, _ := otelparent.GetSpanReferenceAndLinks(ctx, config.NewRoot)
 
 	if !parentSpanReference.IsValid() {
-		sc = otel.SpanReference{}
-		_, _ = rand.Read(sc.TraceID[:])
+		sr = otel.SpanReference{}
+		_, _ = rand.Read(sr.TraceID[:])
 		if mt.Sampled {
-			sc.TraceFlags = otel.FlagsSampled
+			sr.TraceFlags = otel.FlagsSampled
 		}
 	} else {
-		sc = parentSpanReference
+		sr = parentSpanReference
 	}
 
-	binary.BigEndian.PutUint64(sc.SpanID[:], atomic.AddUint64(mt.StartSpanID, 1))
+	binary.BigEndian.PutUint64(sr.SpanID[:], atomic.AddUint64(mt.StartSpanID, 1))
 	span = &MockSpan{
-		sc:     sr,
+		sr:     sr,
 		tracer: mt,
 		Name:   name,
 	}

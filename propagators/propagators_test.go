@@ -60,13 +60,13 @@ type outOfThinAirPropagator struct {
 var _ otel.TextMapPropagator = outOfThinAirPropagator{}
 
 func (p outOfThinAirPropagator) Extract(ctx context.Context, carrier otel.TextMapCarrier) context.Context {
-	sc := otel.SpanReference{
+	sr := otel.SpanReference{
 		TraceID:    traceID,
 		SpanID:     spanID,
 		TraceFlags: 0,
 	}
 	require.True(p.t, sr.IsValid())
-	return otel.ContextWithRemoteSpanReference(ctx, sc)
+	return otel.ContextWithRemoteSpanReference(ctx, sr)
 }
 
 func (outOfThinAirPropagator) Inject(context.Context, otel.TextMapCarrier) {}
@@ -96,7 +96,7 @@ func TestMultiplePropagators(t *testing.T) {
 	// generates the valid span reference out of thin air
 	{
 		ctx := ootaProp.Extract(bg, ns)
-		sc := otel.RemoteSpanReferenceFromContext(ctx)
+		sr := otel.RemoteSpanReferenceFromContext(ctx)
 		require.True(t, sr.IsValid(), "oota prop failed sanity check")
 	}
 	// sanity check for real propagators, ensuring that they
@@ -104,13 +104,13 @@ func TestMultiplePropagators(t *testing.T) {
 	// go context in absence of the HTTP headers.
 	for _, prop := range testProps {
 		ctx := prop.Extract(bg, ns)
-		sc := otel.RemoteSpanReferenceFromContext(ctx)
+		sr := otel.RemoteSpanReferenceFromContext(ctx)
 		require.Falsef(t, sr.IsValid(), "%#v failed sanity check", prop)
 	}
 	for _, prop := range testProps {
 		props := otel.NewCompositeTextMapPropagator(ootaProp, prop)
 		ctx := props.Extract(bg, ns)
-		sc := otel.RemoteSpanReferenceFromContext(ctx)
+		sr := otel.RemoteSpanReferenceFromContext(ctx)
 		assert.Truef(t, sr.IsValid(), "%#v clobbers span reference", prop)
 	}
 }

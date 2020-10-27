@@ -28,15 +28,15 @@ func defaultSpanReferenceFunc() func(context.Context) otel.SpanReference {
 	var traceID, spanID uint64 = 1, 1
 	return func(ctx context.Context) otel.SpanReference {
 		var sr otel.SpanReference
-		if lsc := otel.SpanFromContext(ctx).SpanReference(); lsc.IsValid() {
-			sc = lsc
-		} else if rsc := otel.RemoteSpanReferenceFromContext(ctx); rsc.IsValid() {
-			sc = rsc
+		if lsr := otel.SpanFromContext(ctx).SpanReference(); lsr.IsValid() {
+			sr = lsr
+		} else if rsr := otel.RemoteSpanReferenceFromContext(ctx); rsr.IsValid() {
+			sr = rsr
 		} else {
-			binary.BigEndian.PutUint64(sc.TraceID[:], atomic.AddUint64(&traceID, 1))
+			binary.BigEndian.PutUint64(sr.TraceID[:], atomic.AddUint64(&traceID, 1))
 		}
-		binary.BigEndian.PutUint64(sc.SpanID[:], atomic.AddUint64(&spanID, 1))
-		return sc
+		binary.BigEndian.PutUint64(sr.SpanID[:], atomic.AddUint64(&spanID, 1))
+		return sr
 	}
 }
 

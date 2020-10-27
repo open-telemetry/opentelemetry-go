@@ -56,15 +56,15 @@ func (tc TraceContext) Inject(ctx context.Context, carrier otel.TextMapCarrier) 
 		carrier.Set(tracestateHeader, state)
 	}
 
-	sc := otel.SpanFromContext(ctx).SpanReference()
+	sr := otel.SpanFromContext(ctx).SpanReference()
 	if !sr.IsValid() {
 		return
 	}
 	h := fmt.Sprintf("%.2x-%s-%s-%.2x",
 		supportedVersion,
-		sc.TraceID,
-		sc.SpanID,
-		sc.TraceFlags&otel.FlagsSampled)
+		sr.TraceID,
+		sr.SpanID,
+		sr.TraceFlags&otel.FlagsSampled)
 	carrier.Set(traceparentHeader, h)
 }
 
@@ -75,11 +75,11 @@ func (tc TraceContext) Extract(ctx context.Context, carrier otel.TextMapCarrier)
 		ctx = context.WithValue(ctx, tracestateKey, state)
 	}
 
-	sc := tc.extract(carrier)
+	sr := tc.extract(carrier)
 	if !sr.IsValid() {
 		return ctx
 	}
-	return otel.ContextWithRemoteSpanReference(ctx, sc)
+	return otel.ContextWithRemoteSpanReference(ctx, sr)
 }
 
 func (tc TraceContext) extract(carrier otel.TextMapCarrier) otel.SpanReference {
@@ -120,7 +120,7 @@ func (tc TraceContext) extract(carrier otel.TextMapCarrier) otel.SpanReference {
 
 	var sr otel.SpanReference
 
-	sc.TraceID, err = otel.TraceIDFromHex(matches[2][:32])
+	sr.TraceID, err = otel.TraceIDFromHex(matches[2][:32])
 	if err != nil {
 		return otel.SpanReference{}
 	}
@@ -128,7 +128,7 @@ func (tc TraceContext) extract(carrier otel.TextMapCarrier) otel.SpanReference {
 	if len(matches[3]) != 16 {
 		return otel.SpanReference{}
 	}
-	sc.SpanID, err = otel.SpanIDFromHex(matches[3])
+	sr.SpanID, err = otel.SpanIDFromHex(matches[3])
 	if err != nil {
 		return otel.SpanReference{}
 	}
@@ -141,13 +141,13 @@ func (tc TraceContext) extract(carrier otel.TextMapCarrier) otel.SpanReference {
 		return otel.SpanReference{}
 	}
 	// Clear all flags other than the trace-context supported sampling bit.
-	sc.TraceFlags = opts[0] & otel.FlagsSampled
+	sr.TraceFlags = opts[0] & otel.FlagsSampled
 
 	if !sr.IsValid() {
 		return otel.SpanReference{}
 	}
 
-	return sc
+	return sr
 }
 
 // Fields returns the keys who's values are set with Inject.

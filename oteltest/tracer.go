@@ -55,20 +55,20 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...otel.SpanOption
 		span.spanReference = otel.SpanReference{}
 
 		iodKey := label.Key("ignored-on-demand")
-		if lsc := otel.SpanFromContext(ctx).SpanReference(); lsc.IsValid() {
-			span.links[lsc] = []label.KeyValue{iodKey.String("current")}
+		if lsr := otel.SpanFromContext(ctx).SpanReference(); lsr.IsValid() {
+			span.links[lsr] = []label.KeyValue{iodKey.String("current")}
 		}
-		if rsc := otel.RemoteSpanReferenceFromContext(ctx); rsc.IsValid() {
-			span.links[rsc] = []label.KeyValue{iodKey.String("remote")}
+		if rsr := otel.RemoteSpanReferenceFromContext(ctx); rsr.IsValid() {
+			span.links[rsr] = []label.KeyValue{iodKey.String("remote")}
 		}
 	} else {
 		span.spanReference = t.config.SpanReferenceFunc(ctx)
-		if lsc := otel.SpanFromContext(ctx).SpanReference(); lsc.IsValid() {
-			span.spanReference.TraceID = lsc.TraceID
-			span.parentSpanID = lsc.SpanID
-		} else if rsc := otel.RemoteSpanReferenceFromContext(ctx); rsc.IsValid() {
-			span.spanReference.TraceID = rsc.TraceID
-			span.parentSpanID = rsc.SpanID
+		if lsr := otel.SpanFromContext(ctx).SpanReference(); lsr.IsValid() {
+			span.spanReference.TraceID = lsr.TraceID
+			span.parentSpanID = lsr.SpanID
+		} else if rsr := otel.RemoteSpanReferenceFromContext(ctx); rsr.IsValid() {
+			span.spanReference.TraceID = rsr.TraceID
+			span.parentSpanID = rsr.SpanID
 		}
 	}
 

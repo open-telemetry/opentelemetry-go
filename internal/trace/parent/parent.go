@@ -22,20 +22,20 @@ import (
 )
 
 func GetSpanReferenceAndLinks(ctx context.Context, ignoreContext bool) (otel.SpanReference, bool, []otel.Link) {
-	lsctx := otel.SpanFromContext(ctx).SpanReference()
-	rsctx := otel.RemoteSpanReferenceFromContext(ctx)
+	lsref := otel.SpanFromContext(ctx).SpanReference()
+	rsref := otel.RemoteSpanReferenceFromContext(ctx)
 
 	if ignoreContext {
-		links := addLinkIfValid(nil, lsctx, "current")
-		links = addLinkIfValid(links, rsctx, "remote")
+		links := addLinkIfValid(nil, lsref, "current")
+		links = addLinkIfValid(links, rsref, "remote")
 
 		return otel.SpanReference{}, false, links
 	}
-	if lsctx.IsValid() {
-		return lsctx, false, nil
+	if lsref.IsValid() {
+		return lsref, false, nil
 	}
-	if rsctx.IsValid() {
-		return rsctx, true, nil
+	if rsref.IsValid() {
+		return rsref, true, nil
 	}
 	return otel.SpanReference{}, false, nil
 }

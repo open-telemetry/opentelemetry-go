@@ -62,12 +62,12 @@ func TestSimpleSpanProcessorOnEnd(t *testing.T) {
 	tr := tp.Tracer("SimpleSpanProcessor")
 	tid, _ := otel.TraceIDFromHex("01020304050607080102040810203040")
 	sid, _ := otel.SpanIDFromHex("0102040810203040")
-	sc := otel.SpanReference{
+	sr := otel.SpanReference{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 0x1,
 	}
-	ctx := otel.ContextWithRemoteSpanReference(context.Background(), sc)
+	ctx := otel.ContextWithRemoteSpanReference(context.Background(), sr)
 	_, span := tr.Start(ctx, "OnEnd")
 	span.End()
 
