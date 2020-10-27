@@ -15,6 +15,7 @@
 package trace
 
 import (
+	"context"
 	"time"
 
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -33,9 +34,9 @@ type DurationFilter struct {
 	Max time.Duration
 }
 
-func (f DurationFilter) OnStart(sd *export.SpanData) { f.Next.OnStart(sd) }
-func (f DurationFilter) Shutdown()                   { f.Next.Shutdown() }
-func (f DurationFilter) ForceFlush()                 { f.Next.ForceFlush() }
+func (f DurationFilter) OnStart(sd *export.SpanData)        { f.Next.OnStart(sd) }
+func (f DurationFilter) Shutdown(ctx context.Context) error { return f.Next.Shutdown(ctx) }
+func (f DurationFilter) ForceFlush()                        { f.Next.ForceFlush() }
 func (f DurationFilter) OnEnd(sd *export.SpanData) {
 	if f.Min > 0 && sd.EndTime.Sub(sd.StartTime) < f.Min {
 		// Drop short lived spans.
@@ -59,9 +60,9 @@ type InstrumentationBlacklist struct {
 	Blacklist map[string]bool
 }
 
-func (f InstrumentationBlacklist) OnStart(sd *export.SpanData) { f.Next.OnStart(sd) }
-func (f InstrumentationBlacklist) Shutdown()                   { f.Next.Shutdown() }
-func (f InstrumentationBlacklist) ForceFlush()                 { f.Next.ForceFlush() }
+func (f InstrumentationBlacklist) OnStart(sd *export.SpanData)        { f.Next.OnStart(sd) }
+func (f InstrumentationBlacklist) Shutdown(ctx context.Context) error { return f.Next.Shutdown(ctx) }
+func (f InstrumentationBlacklist) ForceFlush()                        { f.Next.ForceFlush() }
 func (f InstrumentationBlacklist) OnEnd(sd *export.SpanData) {
 	if f.Blacklist != nil && f.Blacklist[sd.InstrumentationLibrary.Name] {
 		// Drop spans from this instrumentation

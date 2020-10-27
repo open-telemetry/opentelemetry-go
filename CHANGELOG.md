@@ -64,6 +64,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
    They no longer track the gRPC codes. (#1214)
 - The `StatusCode` field of the `SpanData` struct in the `go.opentelemetry.io/otel/sdk/export/trace` package now uses the codes package from this package instead of the gRPC project. (#1214)
 - Move the `go.opentelemetry.io/otel/api/baggage` package into `go.opentelemetry.io/otel/propagators`. (#1217)
+- A `Shutdown` method of `SpanProcessor` and all its implementations receives a context and returns an error. (#1264)
 
 ### Fixed
 

@@ -22,14 +22,14 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
-type testSpanProcesor struct {
+type testSpanProcessor struct {
 	name          string
 	spansStarted  []*export.SpanData
 	spansEnded    []*export.SpanData
 	shutdownCount int
 }
 
-func (t *testSpanProcesor) OnStart(s *export.SpanData) {
+func (t *testSpanProcessor) OnStart(s *export.SpanData) {
 	kv := label.KeyValue{
 		Key:   "OnStart",
 		Value: label.StringValue(t.name),
@@ -38,7 +38,7 @@ func (t *testSpanProcesor) OnStart(s *export.SpanData) {
 	t.spansStarted = append(t.spansStarted, s)
 }
 
-func (t *testSpanProcesor) OnEnd(s *export.SpanData) {
+func (t *testSpanProcessor) OnEnd(s *export.SpanData) {
 	kv := label.KeyValue{
 		Key:   "OnEnd",
 		Value: label.StringValue(t.name),
@@ -47,11 +47,12 @@ func (t *testSpanProcesor) OnEnd(s *export.SpanData) {
 	t.spansEnded = append(t.spansEnded, s)
 }
 
-func (t *testSpanProcesor) Shutdown() {
+func (t *testSpanProcessor) Shutdown(_ context.Context) error {
 	t.shutdownCount++
+	return nil
 }
 
-func (t *testSpanProcesor) ForceFlush() {
+func (t *testSpanProcessor) ForceFlush() {
 }
 
 func TestRegisterSpanProcessort(t *testing.T) {
@@ -181,7 +182,10 @@ func TestSpanProcessorShutdown(t *testing.T) {
 	tp.RegisterSpanProcessor(sp)
 
 	wantCount := 1
-	sp.Shutdown()
+	err := sp.Shutdown(context.Background())
+	if err != nil {
+		t.Error("Error shutting the testSpanProcessor down\n")
+	}
 
 	gotCount := sp.shutdownCount
 	if wantCount != gotCount {
@@ -216,12 +220,12 @@ func TestMultipleUnregisterSpanProcessorCalls(t *testing.T) {
 	}
 }
 
-func NewTestSpanProcessor(name string) *testSpanProcesor {
-	return &testSpanProcesor{name: name}
+func NewTestSpanProcessor(name string) *testSpanProcessor {
+	return &testSpanProcessor{name: name}
 }
 
-func NewNamedTestSpanProcessors(names []string) []*testSpanProcesor {
-	tsp := []*testSpanProcesor{}
+func NewNamedTestSpanProcessors(names []string) []*testSpanProcessor {
+	tsp := []*testSpanProcessor{}
 	for _, n := range names {
 		tsp = append(tsp, NewTestSpanProcessor(n))
 	}

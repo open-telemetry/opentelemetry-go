@@ -125,11 +125,23 @@ func (bsp *BatchSpanProcessor) OnEnd(sd *export.SpanData) {
 
 // Shutdown flushes the queue and waits until all spans are processed.
 // It only executes once. Subsequent call does nothing.
-func (bsp *BatchSpanProcessor) Shutdown() {
+func (bsp *BatchSpanProcessor) Shutdown(ctx context.Context) error {
+	var err error
 	bsp.stopOnce.Do(func() {
-		close(bsp.stopCh)
-		bsp.stopWait.Wait()
+		wait := make(chan struct{})
+		go func() {
+			close(bsp.stopCh)
+			bsp.stopWait.Wait()
+			close(wait)
+		}()
+		// Wait until the wait group is done or the context is cancelled
+		select {
+		case <-wait:
+		case <-ctx.Done():
+			err = ctx.Err()
+		}
 	})
+	return err
 }
 
 // ForceFlush exports all ended spans that have not yet been exported.
