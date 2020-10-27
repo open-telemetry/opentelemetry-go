@@ -87,6 +87,8 @@ func TestCodeUnmarshalJSONErrorInvalidData(t *testing.T) {
 		"Not a code",
 		"Unset",
 		"true",
+		`"Not existing"`,
+		"",
 	}
 	c := new(Code)
 	for _, test := range tests {
