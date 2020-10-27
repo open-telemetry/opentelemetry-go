@@ -82,7 +82,11 @@ func TestSimpleSpanProcessorShutdown(t *testing.T) {
 	ssp := sdktrace.NewSimpleSpanProcessor(&testExporter{})
 	if ssp == nil {
 		t.Errorf("Error creating new instance of SimpleSpanProcessor\n")
+		return
 	}
 
-	ssp.Shutdown()
+	err := ssp.Shutdown(context.Background())
+	if err != nil {
+		t.Error("Error shutting the SimpleSpanProcessor down\n")
+	}
 }
