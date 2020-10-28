@@ -61,6 +61,12 @@ func TestPrometheusExporter(t *testing.T) {
 
 	expected = append(expected, `counter{A="B",C="D",R="V"} 15.3`)
 
+	_ = otel.Must(meter).NewInt64ValueObserver("intobserver", func(_ context.Context, result otel.Int64ObserverResult) {
+		result.Observe(1, labels...)
+	})
+
+	expected = append(expected, `intobserver{A="B",C="D",R="V"} 1`)
+
 	valuerecorder.Record(ctx, -0.6, labels...)
 	valuerecorder.Record(ctx, -0.4, labels...)
 	valuerecorder.Record(ctx, 0.6, labels...)
