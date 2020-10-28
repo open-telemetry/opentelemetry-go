@@ -56,7 +56,7 @@ func (tc TraceContext) Inject(ctx context.Context, carrier otel.TextMapCarrier) 
 		carrier.Set(tracestateHeader, state)
 	}
 
-	sc := otel.SpanFromContext(ctx).SpanContext()
+	sc := otel.SpanContextFromContext(ctx)
 	if !sc.IsValid() {
 		return
 	}

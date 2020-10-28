@@ -28,7 +28,7 @@ func defaultSpanContextFunc() func(context.Context) otel.SpanContext {
 	var traceID, spanID uint64 = 1, 1
 	return func(ctx context.Context) otel.SpanContext {
 		var sc otel.SpanContext
-		if lsc := otel.SpanFromContext(ctx).SpanContext(); lsc.IsValid() {
+		if lsc := otel.SpanContextFromContext(ctx); lsc.IsValid() {
 			sc = lsc
 		} else if rsc := otel.RemoteSpanContextFromContext(ctx); rsc.IsValid() {
 			sc = rsc

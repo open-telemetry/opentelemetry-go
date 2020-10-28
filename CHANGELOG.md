@@ -12,8 +12,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - `EventOption` and the related `NewEventConfig` function are added to the `go.opentelemetry.io/otel` package to configure Span events. (#1254)
 - A `TextMapPropagator` and associated `TextMapCarrier` are added to the `go.opentelemetry.io/otel/oteltest` package to test TextMap type propagators and their use. (#1259)
+- `SpanContextFromContext` returns `SpanContext` from context. (#1255)
 - `WithMetricsProcessor` config option is added to the `go.opentelemetry.io/otel/sdk/push` package to allow providing processors that implement `MetricsProcessor` interface, which is
-  added to `go.opentelemetry.io/otel/sdk/metric` package
+  added to `go.opentelemetry.io/otel/sdk/metric` package. (#1271)
 
 ### Changed
 
@@ -35,6 +36,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The function signature of the Span `RecordError` method in `go.opentelemetry.io/otel` is updated to no longer take an unused context and instead take a required error value and a variable number of `EventOption`s. (#1254)
 - Move the `go.opentelemetry.io/otel/api/global` package to `go.opentelemetry.io/otel/global`. (#1262)
 - Rename correlation context header from `"otcorrelations"` to `"baggage"` to match the OpenTelemetry specification. (#1267)
+- Fix `Code.UnmarshalJSON` to work with valid json only. (#1276)
 
 ### Removed
 
@@ -53,6 +55,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - OTLP Metric exporter supports Histogram aggregation. (#1209)
 - The `Code` struct from the `go.opentelemetry.io/otel/codes` package now supports JSON marshaling and unmarshaling as well as implements the `Stringer` interface. (#1214)
 - A Baggage API to implement the OpenTelemetry specification. (#1217)
+- Add Shutdown method to sdk/trace/provider, shutdown processors in the order they were registered. (#1227)
 
 ### Changed
 
@@ -64,6 +67,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
    They no longer track the gRPC codes. (#1214)
 - The `StatusCode` field of the `SpanData` struct in the `go.opentelemetry.io/otel/sdk/export/trace` package now uses the codes package from this package instead of the gRPC project. (#1214)
 - Move the `go.opentelemetry.io/otel/api/baggage` package into `go.opentelemetry.io/otel/propagators`. (#1217)
+- A `Shutdown` method of `SpanProcessor` and all its implementations receives a context and returns an error. (#1264)
 
 ### Fixed
 
