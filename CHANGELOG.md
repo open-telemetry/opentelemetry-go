@@ -12,6 +12,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - `EventOption` and the related `NewEventConfig` function are added to the `go.opentelemetry.io/otel` package to configure Span events. (#1254)
 - A `TextMapPropagator` and associated `TextMapCarrier` are added to the `go.opentelemetry.io/otel/oteltest` package to test TextMap type propagators and their use. (#1259)
+- `WithMetricsProcessor` config option is added to the `go.opentelemetry.io/otel/sdk/push` package to allow providing processors that implement `MetricsProcessor` interface, which is
+  added to `go.opentelemetry.io/otel/sdk/metric` package
 
 ### Changed
 
