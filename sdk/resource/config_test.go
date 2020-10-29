@@ -38,7 +38,7 @@ func TestDefaultConfig(t *testing.T) {
 	defer func() { require.NoError(t, store.Restore()) }()
 
 	ctx := context.Background()
-	res, err := resource.NewConfig(ctx)
+	res, err := resource.New(ctx)
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{
 		"host.name":              hostname(),
@@ -56,7 +56,7 @@ func TestDefaultConfigNoHost(t *testing.T) {
 	defer func() { require.NoError(t, store.Restore()) }()
 
 	ctx := context.Background()
-	res, err := resource.NewConfig(ctx, resource.WithHost(nil))
+	res, err := resource.New(ctx, resource.WithHost(nil))
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{
 		"telemetry.sdk.name":     "opentelemetry-go",
@@ -73,7 +73,7 @@ func TestDefaultConfigNoEnv(t *testing.T) {
 	defer func() { require.NoError(t, store.Restore()) }()
 
 	ctx := context.Background()
-	res, err := resource.NewConfig(ctx, resource.WithFromEnv(nil))
+	res, err := resource.New(ctx, resource.WithFromEnv(nil))
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{
 		"host.name":              hostname(),
@@ -91,7 +91,7 @@ func TestDefaultConfigWithEnv(t *testing.T) {
 	defer func() { require.NoError(t, store.Restore()) }()
 
 	ctx := context.Background()
-	res, err := resource.NewConfig(ctx)
+	res, err := resource.New(ctx)
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{
 		"key":                    "value",
@@ -111,7 +111,7 @@ func TestWithoutBuiltin(t *testing.T) {
 	defer func() { require.NoError(t, store.Restore()) }()
 
 	ctx := context.Background()
-	res, err := resource.NewConfig(
+	res, err := resource.New(
 		ctx,
 		resource.WithoutBuiltin(),
 		resource.WithAttributes(label.String("hello", "collector")),

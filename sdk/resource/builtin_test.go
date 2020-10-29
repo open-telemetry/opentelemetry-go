@@ -37,7 +37,7 @@ func TestBuiltinStringDetector(t *testing.T) {
 }
 
 func TestBuiltinStringConfig(t *testing.T) {
-	res, err := resource.NewConfig(
+	res, err := resource.New(
 		context.Background(),
 		resource.WithoutBuiltin(),
 		resource.WithAttributes(label.String("A", "B")),

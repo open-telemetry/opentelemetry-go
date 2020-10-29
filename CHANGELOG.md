@@ -10,9 +10,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Support for `resource.NewConfig()` to configure a Resource with
-  automatic values for builtin semantic `telemetry.sdk.*` and
-  `host.name` conventions. (#1235)
 - `EventOption` and the related `NewEventConfig` function are added to the `go.opentelemetry.io/otel` package to configure Span events. (#1254)
 - A `TextMapPropagator` and associated `TextMapCarrier` are added to the `go.opentelemetry.io/otel/oteltest` package to test TextMap type propagators and their use. (#1259)
 - `SpanContextFromContext` returns `SpanContext` from context. (#1255)
@@ -38,6 +35,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Move the `go.opentelemetry.io/otel/api/global` package to `go.opentelemetry.io/otel/global`. (#1262)
 - Rename correlation context header from `"otcorrelations"` to `"baggage"` to match the OpenTelemetry specification. (#1267)
 - Fix `Code.UnmarshalJSON` to work with valid json only. (#1276)
+- The `resource.New()` method changes signature to support builtin attributes and functional options, including `telemetry.sdk.*` and
+  `host.name` semantic conventions; the former method is renamed `resource.NewFromAttributes`. (#1235)
 
 ### Removed
 

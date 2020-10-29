@@ -54,7 +54,7 @@ type detectAttributes struct {
 }
 
 func (d detectAttributes) Detect(context.Context) (*Resource, error) {
-	return New(d.attributes...), nil
+	return NewFromAttributes(d.attributes...), nil
 }
 
 // WithDetectors adds detectors to be evaluated for the configured resource.
@@ -131,9 +131,9 @@ func (o noBuiltinOption) Apply(cfg *config) {
 	cfg.fromEnv = nil
 }
 
-// NewConfig returns a Resource combined from the provided attributes,
+// New returns a Resource combined from the provided attributes,
 // user-provided detectors and builtin detectors.
-func NewConfig(ctx context.Context, opts ...Option) (*Resource, error) {
+func New(ctx context.Context, opts ...Option) (*Resource, error) {
 	cfg := config{
 		telemetrySDK: TelemetrySDK{},
 		host:         Host{},

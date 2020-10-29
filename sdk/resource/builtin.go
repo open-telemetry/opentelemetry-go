@@ -53,7 +53,7 @@ var (
 
 // Detect returns a *Resource that describes the OpenTelemetry SDK used.
 func (TelemetrySDK) Detect(context.Context) (*Resource, error) {
-	return New(
+	return NewFromAttributes(
 		semconv.TelemetrySDKNameKey.String("opentelemetry-go"),
 		semconv.TelemetrySDKLanguageKey.String("go"),
 		semconv.TelemetrySDKVersionKey.String(opentelemetry.Version()),
@@ -77,5 +77,5 @@ func (sd stringDetector) Detect(ctx context.Context) (*Resource, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", string(sd.K), err)
 	}
-	return New(sd.K.String(value)), nil
+	return NewFromAttributes(sd.K.String(value)), nil
 }

@@ -36,7 +36,7 @@ func TestDetectOnePair(t *testing.T) {
 	detector := &FromEnv{}
 	res, err := detector.Detect(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, New(label.String("key", "value")), res)
+	assert.Equal(t, NewFromAttributes(label.String("key", "value")), res)
 }
 
 func TestDetectMultiPairs(t *testing.T) {
@@ -50,7 +50,7 @@ func TestDetectMultiPairs(t *testing.T) {
 	detector := &FromEnv{}
 	res, err := detector.Detect(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, res, New(
+	assert.Equal(t, res, NewFromAttributes(
 		label.String("key", "value"),
 		label.String("k", "v"),
 		label.String("a", "x"),
@@ -82,7 +82,7 @@ func TestMissingKeyError(t *testing.T) {
 	res, err := detector.Detect(context.Background())
 	assert.Error(t, err)
 	assert.Equal(t, err, fmt.Errorf("%w: %v", errMissingValue, "[key]"))
-	assert.Equal(t, res, New(
+	assert.Equal(t, res, NewFromAttributes(
 		label.String("key", "value"),
 	))
 }
