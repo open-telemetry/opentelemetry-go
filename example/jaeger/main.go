@@ -29,7 +29,7 @@ import (
 
 // initTracer creates a new trace provider instance and registers it as global trace provider.
 func initTracer() func() {
-	// Create and install Jaeger export pipeline
+	// Create and install Jaeger export pipeline.
 	flush, err := jaeger.InstallNewPipeline(
 		jaeger.WithCollectorEndpoint("http://localhost:14268/api/traces"),
 		jaeger.WithProcess(jaeger.Process{
@@ -44,22 +44,20 @@ func initTracer() func() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	return func() {
-		flush()
-	}
+	return flush
 }
 
 func main() {
-	fn := initTracer()
-	defer fn()
-
 	ctx := context.Background()
+
+	flush := initTracer()
+	defer flush()
 
 	tr := global.Tracer("component-main")
 	ctx, span := tr.Start(ctx, "foo")
+	defer span.End()
+
 	bar(ctx)
-	span.End()
 }
 
 func bar(ctx context.Context) {
