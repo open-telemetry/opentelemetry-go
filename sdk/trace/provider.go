@@ -15,10 +15,12 @@
 package trace
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/global"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -141,7 +143,7 @@ func (p *TracerProvider) UnregisterSpanProcessor(s SpanProcessor) {
 	}
 	if stopOnce != nil {
 		stopOnce.state.Do(func() {
-			s.Shutdown()
+			global.Handle(s.Shutdown(context.Background()))
 		})
 	}
 	if len(new) > 1 {
@@ -178,6 +180,21 @@ func (p *TracerProvider) ApplyConfig(cfg Config) {
 		c.Resource = cfg.Resource
 	}
 	p.config.Store(&c)
+}
+
+// Shutdown shuts down the span processors in the order they were registered
+func (p *TracerProvider) Shutdown(ctx context.Context) error {
+	spss, ok := p.spanProcessors.Load().(spanProcessorStates)
+	if !ok || len(spss) == 0 {
+		return nil
+	}
+
+	for _, sps := range spss {
+		sps.state.Do(func() {
+			global.Handle(sps.sp.Shutdown(ctx))
+		})
+	}
+	return nil
 }
 
 // WithSyncer registers the exporter with the TracerProvider using a

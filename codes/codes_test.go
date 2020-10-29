@@ -16,6 +16,7 @@ package codes
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"testing"
 )
@@ -61,17 +62,18 @@ func TestCodeUnmarshalJSON(t *testing.T) {
 		want  Code
 	}{
 		{"0", Unset},
-		{"Unset", Unset},
+		{`"Unset"`, Unset},
 		{"1", Error},
-		{"Error", Error},
+		{`"Error"`, Error},
 		{"2", Ok},
-		{"Ok", Ok},
+		{`"Ok"`, Ok},
 	}
 	for _, test := range tests {
 		c := new(Code)
 		*c = Code(maxCode)
-		if err := c.UnmarshalJSON([]byte(test.input)); err != nil {
-			t.Fatalf("Code.UnmarshalJSON(%q) errored: %v", test.input, err)
+
+		if err := json.Unmarshal([]byte(test.input), c); err != nil {
+			t.Fatalf("json.Unmarshal(%q, Code) errored: %v", test.input, err)
 		}
 		if *c != test.want {
 			t.Errorf("failed to unmarshal %q as %v", test.input, test.want)
@@ -83,11 +85,15 @@ func TestCodeUnmarshalJSONErrorInvalidData(t *testing.T) {
 	tests := []string{
 		fmt.Sprintf("%d", maxCode),
 		"Not a code",
+		"Unset",
+		"true",
+		`"Not existing"`,
+		"",
 	}
 	c := new(Code)
 	for _, test := range tests {
-		if err := c.UnmarshalJSON([]byte(test)); err == nil {
-			t.Fatalf("Code.UnmarshalJSON(%q) did not error", test)
+		if err := json.Unmarshal([]byte(test), c); err == nil {
+			t.Fatalf("json.Unmarshal(%q, Code) did not error", test)
 		}
 	}
 }
@@ -131,5 +137,32 @@ func TestCodeMarshalJSONErrorInvalid(t *testing.T) {
 		t.Fatalf("Code(maxCode).MarshalJSON() did not error")
 	} else if b != nil {
 		t.Fatal("Code(maxCode).MarshalJSON() returned non-nil value")
+	}
+}
+
+func TestRoundTripCodes(t *testing.T) {
+	tests := []struct {
+		input Code
+	}{
+		{Unset},
+		{Error},
+		{Ok},
+	}
+	for _, test := range tests {
+		c := test.input
+		out := new(Code)
+
+		b, err := c.MarshalJSON()
+		if err != nil {
+			t.Fatalf("Code(%s).MarshalJSON() errored: %v", test.input, err)
+		}
+
+		if err := out.UnmarshalJSON(b); err != nil {
+			t.Fatalf("Code.UnmarshalJSON(%q) errored: %v", c, err)
+		}
+
+		if *out != test.input {
+			t.Errorf("failed to round trip %q, output was %v", test.input, out)
+		}
 	}
 }

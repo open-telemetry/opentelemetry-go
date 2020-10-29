@@ -65,7 +65,10 @@ func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
 	bsp.OnStart(&export.SpanData{})
 	bsp.OnEnd(&export.SpanData{})
 	bsp.ForceFlush()
-	bsp.Shutdown()
+	err := bsp.Shutdown(context.Background())
+	if err != nil {
+		t.Error("Error shutting the BatchSpanProcessor down\n")
+	}
 }
 
 type testOption struct {
@@ -222,8 +225,14 @@ func getSpanContext() otel.SpanContext {
 func TestBatchSpanProcessorShutdown(t *testing.T) {
 	bsp := sdktrace.NewBatchSpanProcessor(&testBatchExporter{})
 
-	bsp.Shutdown()
+	err := bsp.Shutdown(context.Background())
+	if err != nil {
+		t.Error("Error shutting the BatchSpanProcessor down\n")
+	}
 
 	// Multiple call to Shutdown() should not panic.
-	bsp.Shutdown()
+	err = bsp.Shutdown(context.Background())
+	if err != nil {
+		t.Error("Error shutting the BatchSpanProcessor down\n")
+	}
 }

@@ -35,12 +35,12 @@ var (
 var tp *sdktrace.TracerProvider
 
 // initTracer creates and registers trace provider instance.
-func initTracer() func() {
+func initTracer() {
 	var err error
 	exp, err := stdout.NewExporter(stdout.WithPrettyPrint())
 	if err != nil {
 		log.Panicf("failed to initialize stdout exporter %v\n", err)
-		return nil
+		return
 	}
 	bsp := sdktrace.NewBatchSpanProcessor(exp)
 	tp = sdktrace.NewTracerProvider(
@@ -52,17 +52,16 @@ func initTracer() func() {
 		sdktrace.WithSpanProcessor(bsp),
 	)
 	global.SetTracerProvider(tp)
-	return bsp.Shutdown
 }
 
 func main() {
 	// initialize trace provider.
-	shutdown := initTracer()
-	defer shutdown()
+	initTracer()
 
 	// Create a named tracer with package path as its name.
 	tracer := tp.Tracer("example/namedtracer/main")
 	ctx := context.Background()
+	defer func() { _ = tp.Shutdown(ctx) }()
 	ctx = otel.ContextWithBaggageValues(ctx, fooKey.String("foo1"), barKey.String("bar1"))
 
 	var span otel.Span
