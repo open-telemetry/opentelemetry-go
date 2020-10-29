@@ -159,6 +159,7 @@ var (
 func TestNoGroupingExport(t *testing.T) {
 	runMetricExportTests(
 		t,
+		nil,
 		[]record{
 			{
 				"int64-count",
@@ -280,7 +281,7 @@ func TestValuerecorderMetricGroupingExport(t *testing.T) {
 			},
 		},
 	}
-	runMetricExportTests(t, []record{r, r}, expected)
+	runMetricExportTests(t, nil, []record{r, r}, expected)
 }
 
 func TestCountInt64MetricGroupingExport(t *testing.T) {
@@ -294,6 +295,7 @@ func TestCountInt64MetricGroupingExport(t *testing.T) {
 	}
 	runMetricExportTests(
 		t,
+		nil,
 		[]record{r, r},
 		[]metricpb.ResourceMetrics{
 			{
@@ -343,6 +345,7 @@ func TestCountFloat64MetricGroupingExport(t *testing.T) {
 	}
 	runMetricExportTests(
 		t,
+		nil,
 		[]record{r, r},
 		[]metricpb.ResourceMetrics{
 			{
@@ -402,6 +405,7 @@ func TestCountFloat64MetricGroupingExport(t *testing.T) {
 func TestResourceMetricGroupingExport(t *testing.T) {
 	runMetricExportTests(
 		t,
+		nil,
 		[]record{
 			{
 				"int64-count",
@@ -519,6 +523,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 	}
 	runMetricExportTests(
 		t,
+		nil,
 		[]record{
 			{
 				"int64-count",
@@ -696,12 +701,12 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 }
 
 // What works single-threaded should work multi-threaded
-func runMetricExportTests(t *testing.T, rs []record, expected []metricpb.ResourceMetrics) {
+func runMetricExportTests(t *testing.T, opts []ExporterOption, rs []record, expected []metricpb.ResourceMetrics) {
 	t.Run("1 goroutine", func(t *testing.T) {
-		runMetricExportTest(t, NewUnstartedExporter(WorkerCount(1)), rs, expected)
+		runMetricExportTest(t, NewUnstartedExporter(append(opts[:len(opts):len(opts)], WorkerCount(1))...), rs, expected)
 	})
 	t.Run("20 goroutines", func(t *testing.T) {
-		runMetricExportTest(t, NewUnstartedExporter(WorkerCount(20)), rs, expected)
+		runMetricExportTest(t, NewUnstartedExporter(append(opts[:len(opts):len(opts)], WorkerCount(20))...), rs, expected)
 	})
 }
 
@@ -713,8 +718,10 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 	recs := map[label.Distinct][]metricsdk.Record{}
 	resources := map[label.Distinct]*resource.Resource{}
 	for _, r := range rs {
+		lcopy := make([]label.KeyValue, len(r.labels))
+		copy(lcopy, r.labels)
 		desc := otel.NewDescriptor(r.name, r.iKind, r.nKind, r.opts...)
-		labs := label.NewSet(r.labels...)
+		labs := label.NewSet(lcopy...)
 
 		var agg, ckpt metricsdk.Aggregator
 		switch r.iKind {
@@ -787,14 +794,38 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 				case *metricpb.Metric_IntGauge:
 					assert.ElementsMatch(t, expected.GetIntGauge().DataPoints, g[i].GetIntGauge().DataPoints)
 				case *metricpb.Metric_IntHistogram:
+					assert.Equal(t,
+						expected.GetIntHistogram().GetAggregationTemporality(),
+						g[i].GetIntHistogram().GetAggregationTemporality(),
+					)
 					assert.ElementsMatch(t, expected.GetIntHistogram().DataPoints, g[i].GetIntHistogram().DataPoints)
 				case *metricpb.Metric_IntSum:
+					assert.Equal(t,
+						expected.GetIntSum().GetAggregationTemporality(),
+						g[i].GetIntSum().GetAggregationTemporality(),
+					)
+					assert.Equal(t,
+						expected.GetIntSum().GetIsMonotonic(),
+						g[i].GetIntSum().GetIsMonotonic(),
+					)
 					assert.ElementsMatch(t, expected.GetIntSum().DataPoints, g[i].GetIntSum().DataPoints)
 				case *metricpb.Metric_DoubleGauge:
 					assert.ElementsMatch(t, expected.GetDoubleGauge().DataPoints, g[i].GetDoubleGauge().DataPoints)
 				case *metricpb.Metric_DoubleHistogram:
+					assert.Equal(t,
+						expected.GetDoubleHistogram().GetAggregationTemporality(),
+						g[i].GetDoubleHistogram().GetAggregationTemporality(),
+					)
 					assert.ElementsMatch(t, expected.GetDoubleHistogram().DataPoints, g[i].GetDoubleHistogram().DataPoints)
 				case *metricpb.Metric_DoubleSum:
+					assert.Equal(t,
+						expected.GetDoubleSum().GetAggregationTemporality(),
+						g[i].GetDoubleSum().GetAggregationTemporality(),
+					)
+					assert.Equal(t,
+						expected.GetDoubleSum().GetIsMonotonic(),
+						g[i].GetDoubleSum().GetIsMonotonic(),
+					)
 					assert.ElementsMatch(t, expected.GetDoubleSum().DataPoints, g[i].GetDoubleSum().DataPoints)
 				default:
 					assert.Failf(t, "unknown data type", g[i].Name)

@@ -259,7 +259,7 @@ func (o *Output) AddRecord(rec export.Record) error {
 // is chosen, whichever is implemented by the underlying Aggregator.
 func (o *Output) Map() map[string]float64 {
 	r := make(map[string]float64)
-	err := o.ForEach(export.PassThroughExporter, func(record export.Record) error {
+	err := o.ForEach(export.StatelessExportKindSelector(), func(record export.Record) error {
 		for key, value := range o.m {
 			encoded := value.labels.Encoded(o.labelEncoder)
 			rencoded := value.resource.Encoded(o.labelEncoder)
