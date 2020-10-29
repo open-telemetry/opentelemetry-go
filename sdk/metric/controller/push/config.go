@@ -77,12 +77,12 @@ func (o timeoutOption) Apply(config *Config) {
 	config.Timeout = time.Duration(o)
 }
 
-func WithMetricsProcessor(p metric.MetricsProcessor) Option {
-	return metricsProcessorOption{p}
+func WithMetricsProcessors(processors ...metric.MetricsProcessor) Option {
+	return metricsProcessorOption(processors)
 }
 
-type metricsProcessorOption struct{ metric.MetricsProcessor }
+type metricsProcessorOption []metric.MetricsProcessor
 
 func (m metricsProcessorOption) Apply(config *Config) {
-	config.MetricsProcessors = append(config.MetricsProcessors, m.MetricsProcessor)
+	config.MetricsProcessors = append(config.MetricsProcessors, m...)
 }

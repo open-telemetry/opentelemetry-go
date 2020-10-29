@@ -48,12 +48,12 @@ func (o resourceOption) Apply(config *Config) {
 	config.Resource = o.Resource
 }
 
-func WithMetricsProcessors(processors []MetricsProcessor) Option {
+func WithMetricsProcessors(processors ...MetricsProcessor) Option {
 	return metricsProcessorsOption(processors)
 }
 
 type metricsProcessorsOption []MetricsProcessor
 
 func (p metricsProcessorsOption) Apply(config *Config) {
-	config.MetricsProcessors = p
+	config.MetricsProcessors = append(config.MetricsProcessors, p...)
 }
