@@ -13,11 +13,17 @@
 // limitations under the License.
 
 /*
-Package reducer implements a metrics Processor component that applies
-a `label.Filter` to each processed `export.Accumulation` to remove
-labels before passing the result to another Processor.  This Processor
-can be used to reduce inherent dimensionality in the data, as a way to
-control the cost of collecting high cardinality metric data.
+Package reducer implements a metrics Processor component to reduce labels.
+
+This package is currently in a pre-GA phase. Backwards incompatible changes
+may be introduced in subsequent minor version releases as we work to track the
+evolving OpenTelemetry specification and user feedback.
+
+The metrics Processor component this package implements applies a
+`label.Filter` to each processed `export.Accumulation` to remove labels before
+passing the result to another Processor.  This Processor can be used to reduce
+inherent dimensionality in the data, as a way to control the cost of
+collecting high cardinality metric data.
 
 For example, to compose a push controller with a reducer and a basic
 metric processor:
