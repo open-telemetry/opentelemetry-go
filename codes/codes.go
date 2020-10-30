@@ -14,11 +14,16 @@
 
 // Package codes defines the canonical error codes used by OpenTelemetry.
 //
+// This package is currently in a pre-GA phase. Backwards incompatible changes
+// may be introduced in subsequent minor version releases as we work to track
+// the evolving OpenTelemetry specification and user feedback.
+//
 // It conforms to [the OpenTelemetry
 // specification](https://github.com/open-telemetry/opentelemetry-specification/blob/master/specification/trace/api.md#statuscanonicalcode).
 package codes // import "go.opentelemetry.io/otel/codes"
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 )
@@ -45,9 +50,9 @@ var codeToStr = map[Code]string{
 }
 
 var strToCode = map[string]Code{
-	"Unset": Unset,
-	"Error": Error,
-	"Ok":    Ok,
+	`"Unset"`: Unset,
+	`"Error"`: Error,
+	`"Ok"`:    Ok,
 }
 
 // String returns the Code as a string.
@@ -70,20 +75,30 @@ func (c *Code) UnmarshalJSON(b []byte) error {
 		return fmt.Errorf("nil receiver passed to UnmarshalJSON")
 	}
 
-	if ci, err := strconv.ParseUint(string(b), 10, 32); err == nil {
-		if ci >= maxCode {
-			return fmt.Errorf("invalid code: %q", ci)
+	var x interface{}
+	if err := json.Unmarshal(b, &x); err != nil {
+		return err
+	}
+	switch x.(type) {
+	case string:
+		if jc, ok := strToCode[string(b)]; ok {
+			*c = jc
+			return nil
 		}
+		return fmt.Errorf("invalid code: %q", string(b))
+	case float64:
+		if ci, err := strconv.ParseUint(string(b), 10, 32); err == nil {
+			if ci >= maxCode {
+				return fmt.Errorf("invalid code: %q", ci)
+			}
 
-		*c = Code(ci)
-		return nil
+			*c = Code(ci)
+			return nil
+		}
+		return fmt.Errorf("invalid code: %q", string(b))
+	default:
+		return fmt.Errorf("invalid code: %q", string(b))
 	}
-
-	if jc, ok := strToCode[string(b)]; ok {
-		*c = jc
-		return nil
-	}
-	return fmt.Errorf("invalid code: %q", string(b))
 }
 
 // MarshalJSON returns c as the JSON encoding of c.
