@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
 
 func TestExportKindIncludes(t *testing.T) {
@@ -48,5 +49,25 @@ func TestExportKindMemoryRequired(t *testing.T) {
 	for _, kind := range cumulativeMemoryKinds {
 		require.True(t, CumulativeExportKind.MemoryRequired(kind))
 		require.False(t, DeltaExportKind.MemoryRequired(kind))
+	}
+}
+
+func TestExportKindSelectors(t *testing.T) {
+	ceks := CumulativeExportKindSelector()
+	deks := DeltaExportKindSelector()
+	seks := StatelessExportKindSelector()
+
+	for _, ikind := range append(deltaMemoryKinds, cumulativeMemoryKinds...) {
+		desc := otel.NewDescriptor("instrument", ikind, otel.Int64NumberKind)
+
+		var akind aggregation.Kind
+		if ikind.Adding() {
+			akind = aggregation.SumKind
+		} else {
+			akind = aggregation.HistogramKind
+		}
+		require.Equal(t, CumulativeExportKind, ceks.ExportKindFor(&desc, akind))
+		require.Equal(t, DeltaExportKind, deks.ExportKindFor(&desc, akind))
+		require.False(t, seks.ExportKindFor(&desc, akind).MemoryRequired(ikind))
 	}
 }
