@@ -22,7 +22,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `ErrorOption` has been changed to an interface to conform with project design standards which included adding a `NewErrorConfig` function.
   - `EmptySpanContext` is removed.
 - Move the `go.opentelemetry.io/otel/api/trace/tracetest` package into `go.opentelemetry.io/otel/oteltest`. (#1229)
-- OTLP Exporter supports OTLP v0.5.0. (#1230)
+- OTLP Exporter updates:
+  - supports OTLP v0.5.0 (#1230)
+  - supports configurable aggregation temporality (default: Cumulative, optional: Stateless). (#1296)
 - The Sampler is now called on local child spans. (#1233)
 - The `Kind` type from the `go.opentelemetry.io/otel/api/metric` package was renamed to `InstrumentKind` to more specifically describe what it is and avoid semantic ambiguity. (#1240)
 - The `MetricKind` method of the `Descriptor` type in the `go.opentelemetry.io/otel/api/metric` package was renamed to `Descriptor.InstrumentKind`.

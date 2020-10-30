@@ -358,13 +358,13 @@ func (r Record) EndTime() time.Time {
 type ExportKind int
 
 const (
-	// CumulativeExportKind indicates that the ExportKind expects a
+	// CumulativeExportKind indicates that an Exporter expects a
 	// Cumulative Aggregation.
-	CumulativeExportKind ExportKind = 1 // e.g., Prometheus
+	CumulativeExportKind ExportKind = 1
 
-	// DeltaExportKind indicates that the ExportKind expects a
+	// DeltaExportKind indicates that an Exporter expects a
 	// Delta Aggregation.
-	DeltaExportKind ExportKind = 2 // e.g., StatsD
+	DeltaExportKind ExportKind = 2
 )
 
 // Includes tests whether `kind` includes a specific kind of

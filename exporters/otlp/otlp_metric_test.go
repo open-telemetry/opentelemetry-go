@@ -797,6 +797,7 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 
 		ctx := context.Background()
 		if r.iKind.Synchronous() {
+			// For synchronous instruments, perform two updates: 1 and 10
 			switch r.nKind {
 			case otel.Int64NumberKind:
 				require.NoError(t, agg.Update(ctx, otel.NewInt64Number(1), &desc))
@@ -808,6 +809,7 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 				t.Fatalf("invalid number kind: %v", r.nKind)
 			}
 		} else {
+			// For asynchronous instruments, perform a single update: 11
 			switch r.nKind {
 			case otel.Int64NumberKind:
 				require.NoError(t, agg.Update(ctx, otel.NewInt64Number(11), &desc))
