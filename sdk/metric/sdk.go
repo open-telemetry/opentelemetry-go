@@ -144,8 +144,8 @@ type (
 		observed      export.Aggregator
 	}
 
-	// MetricsProcessor can be provided as an config option when creating
-	// a new push controller
+	// Implementations of MetricsProcessor can be provided as an config option to provide an opportunity
+	// to re-compose metrics labels based on the context when the metrics are recorded.
 	MetricsProcessor interface {
 		// OnMetricRecorded is execute everytime a metric is recorded by
 		// the sync instrument implementation of an Accumulator, it generally
