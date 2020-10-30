@@ -168,3 +168,11 @@ func WithGRPCDialOption(opts ...grpc.DialOption) ExporterOption {
 		cfg.grpcDialOptions = opts
 	}
 }
+
+// WithMetricExportKindSelector defines the ExportKindSelector used for selecting
+// AggregationTemporality (i.e., Cumulative vs. Delta aggregation).
+func WithMetricExportKindSelector(selector metricsdk.ExportKindSelector) ExporterOption {
+	return func(cfg *config) {
+		cfg.exportKindSelector = selector
+	}
+}

@@ -68,10 +68,13 @@ var _ metricsdk.Exporter = (*Exporter)(nil)
 // any ExporterOptions provided.
 func newConfig(opts ...ExporterOption) config {
 	cfg := config{
-		numWorkers:         DefaultNumWorkers,
-		grpcServiceConfig:  DefaultGRPCServiceConfig,
+		numWorkers:        DefaultNumWorkers,
+		grpcServiceConfig: DefaultGRPCServiceConfig,
+
+		// Note: the default ExportKindSelector is specified
+		// as Cumulative:
+		// https://github.com/open-telemetry/opentelemetry-specification/issues/731
 		exportKindSelector: metricsdk.CumulativeExportKindSelector(),
-		// @@@ exportKindSelector: metricsdk.NewConstantExportKindSelector(metricsdk.DeltaExportKind),
 	}
 	for _, opt := range opts {
 		opt(&cfg)

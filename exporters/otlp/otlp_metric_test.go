@@ -700,6 +700,71 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 	)
 }
 
+func TestStatelessExportKind(t *testing.T) {
+	type kase struct {
+		name  string
+		ikind otel.InstrumentKind
+		tempo metricpb.AggregationTemporality
+		mono  bool
+	}
+
+	for _, k := range []kase{
+		{"counter", otel.CounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA, true},
+		{"updowncounter", otel.UpDownCounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA, false},
+		{"sumobserver", otel.SumObserverInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, true},
+		{"updownsumobserver", otel.UpDownSumObserverInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, false},
+	} {
+		t.Run(k.name, func(t *testing.T) {
+			runMetricExportTests(
+				t,
+				[]ExporterOption{
+					WithMetricExportKindSelector(
+						metricsdk.StatelessExportKindSelector(),
+					),
+				},
+				[]record{
+					{
+						"instrument",
+						k.ikind,
+						otel.Int64NumberKind,
+						testInstA,
+						nil,
+						append(baseKeyValues, cpuKey.Int(1)),
+					},
+				},
+				[]metricpb.ResourceMetrics{
+					{
+						Resource: testerAResource,
+						InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
+							{
+								Metrics: []*metricpb.Metric{
+									{
+										Name: "instrument",
+										Data: &metricpb.Metric_IntSum{
+											IntSum: &metricpb.IntSum{
+												IsMonotonic:            k.mono,
+												AggregationTemporality: k.tempo,
+												DataPoints: []*metricpb.IntDataPoint{
+													{
+														Value:             11,
+														Labels:            cpu1Labels,
+														StartTimeUnixNano: startTime(),
+														TimeUnixNano:      pointTime(),
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			)
+		})
+	}
+}
+
 // What works single-threaded should work multi-threaded
 func runMetricExportTests(t *testing.T, opts []ExporterOption, rs []record, expected []metricpb.ResourceMetrics) {
 	t.Run("1 goroutine", func(t *testing.T) {
@@ -724,23 +789,33 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 		labs := label.NewSet(lcopy...)
 
 		var agg, ckpt metricsdk.Aggregator
-		switch r.iKind {
-		case otel.CounterInstrumentKind:
+		if r.iKind.Adding() {
 			agg, ckpt = metrictest.Unslice2(sum.New(2))
-		default:
+		} else {
 			agg, ckpt = metrictest.Unslice2(histogram.New(2, &desc, testHistogramBoundaries))
 		}
 
 		ctx := context.Background()
-		switch r.nKind {
-		case otel.Int64NumberKind:
-			require.NoError(t, agg.Update(ctx, otel.NewInt64Number(1), &desc))
-			require.NoError(t, agg.Update(ctx, otel.NewInt64Number(10), &desc))
-		case otel.Float64NumberKind:
-			require.NoError(t, agg.Update(ctx, otel.NewFloat64Number(1), &desc))
-			require.NoError(t, agg.Update(ctx, otel.NewFloat64Number(10), &desc))
-		default:
-			t.Fatalf("invalid number kind: %v", r.nKind)
+		if r.iKind.Synchronous() {
+			switch r.nKind {
+			case otel.Int64NumberKind:
+				require.NoError(t, agg.Update(ctx, otel.NewInt64Number(1), &desc))
+				require.NoError(t, agg.Update(ctx, otel.NewInt64Number(10), &desc))
+			case otel.Float64NumberKind:
+				require.NoError(t, agg.Update(ctx, otel.NewFloat64Number(1), &desc))
+				require.NoError(t, agg.Update(ctx, otel.NewFloat64Number(10), &desc))
+			default:
+				t.Fatalf("invalid number kind: %v", r.nKind)
+			}
+		} else {
+			switch r.nKind {
+			case otel.Int64NumberKind:
+				require.NoError(t, agg.Update(ctx, otel.NewInt64Number(11), &desc))
+			case otel.Float64NumberKind:
+				require.NoError(t, agg.Update(ctx, otel.NewFloat64Number(11), &desc))
+			default:
+				t.Fatalf("invalid number kind: %v", r.nKind)
+			}
 		}
 		require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
 
