@@ -24,7 +24,7 @@ import (
 )
 
 func TestWithResource(t *testing.T) {
-	r := resource.NewFromAttributes(label.String("A", "a"))
+	r := resource.NewWithAttributes(label.String("A", "a"))
 
 	c := &Config{}
 	WithResource(r).Apply(c)

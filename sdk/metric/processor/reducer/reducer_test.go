@@ -75,7 +75,7 @@ func TestFilterProcessor(t *testing.T) {
 	)
 	accum := metricsdk.NewAccumulator(
 		reducer.New(testFilter{}, processorTest.Checkpointer(testProc)),
-		resource.NewFromAttributes(label.String("R", "V")),
+		resource.NewWithAttributes(label.String("R", "V")),
 	)
 	generateData(accum)
 
@@ -92,7 +92,7 @@ func TestFilterBasicProcessor(t *testing.T) {
 	basicProc := basic.New(processorTest.AggregatorSelector(), export.CumulativeExporter)
 	accum := metricsdk.NewAccumulator(
 		reducer.New(testFilter{}, basicProc),
-		resource.NewFromAttributes(label.String("R", "V")),
+		resource.NewWithAttributes(label.String("R", "V")),
 	)
 	exporter := processorTest.NewExporter(basicProc, label.DefaultEncoder())
 

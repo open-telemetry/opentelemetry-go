@@ -34,7 +34,7 @@ import (
 )
 
 var Must = otel.Must
-var testResource = resource.NewFromAttributes(label.String("R", "V"))
+var testResource = resource.NewWithAttributes(label.String("R", "V"))
 
 type handler struct {
 	sync.Mutex

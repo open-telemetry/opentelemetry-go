@@ -32,7 +32,7 @@ func generateTestData(proc export.Processor) {
 	ctx := context.Background()
 	accum := metricsdk.NewAccumulator(
 		proc,
-		resource.NewFromAttributes(label.String("R", "V")),
+		resource.NewWithAttributes(label.String("R", "V")),
 	)
 	meter := otel.WrapMeterImpl(accum, "testing")
 

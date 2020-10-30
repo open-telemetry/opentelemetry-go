@@ -68,5 +68,5 @@ func constructOTResources(s string) (*Resource, error) {
 	if len(invalid) > 0 {
 		err = fmt.Errorf("%w: %v", errMissingValue, invalid)
 	}
-	return NewFromAttributes(labels...), err
+	return NewWithAttributes(labels...), err
 }

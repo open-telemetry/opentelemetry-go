@@ -54,7 +54,7 @@ type detectAttributes struct {
 }
 
 func (d detectAttributes) Detect(context.Context) (*Resource, error) {
-	return NewFromAttributes(d.attributes...), nil
+	return NewWithAttributes(d.attributes...), nil
 }
 
 // WithDetectors adds detectors to be evaluated for the configured resource.
