@@ -7,6 +7,22 @@
 
 The Go [OpenTelemetry](https://opentelemetry.io/) implementation.
 
+## Project Status
+
+**Warning**: this project is currently in a pre-GA phase. Backwards
+incompatible changes may be introduced in subsequent minor version releases as
+we work to track the evolving OpenTelemetry specification and user feedback.
+
+Our progress towards a GA release candidate is tracked in [this project
+board](https://github.com/orgs/open-telemetry/projects/5). This release
+candidate will follow semantic versioning and will be released with a major
+version greater than zero.
+
+Progress and status specific to this repository is tracked in our local
+[project boards](https://github.com/open-telemetry/opentelemetry-go/projects)
+and
+[milestones](https://github.com/open-telemetry/opentelemetry-go/milestones).
+
 ## Getting Started
 
 OpenTelemetry's goal is to provide a single set of APIs to capture distributed
@@ -44,18 +60,6 @@ OpenTelemetry. These exporters are broken down by
 and
 [metric](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/export/metric?tab=importedby)
 support.
-
-## Project Status
-
-This project is currently in a pre-GA phase. Our progress towards a GA release
-candidate is tracked in [this project
-board](https://github.com/orgs/open-telemetry/projects/5).
-
-Progress and status specific to this repository is tracked in our local
-[project boards](https://github.com/open-telemetry/opentelemetry-go/projects)
-and [milestones](https://github.com/open-telemetry/opentelemetry-go/milestones)
-can be found at the respective links. We try to keep these accurate and should
-be the best place to go for answers on project status.
 
 ## Contributing
 
