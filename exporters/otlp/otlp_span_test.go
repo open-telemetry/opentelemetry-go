@@ -97,7 +97,7 @@ func TestExportSpans(t *testing.T) {
 					},
 					StatusCode:    codes.Ok,
 					StatusMessage: "Ok",
-					Resource:      resource.New(label.String("instance", "tester-a")),
+					Resource:      resource.NewWithAttributes(label.String("instance", "tester-a")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-a",
 						Version: "v0.1.0",
@@ -119,7 +119,7 @@ func TestExportSpans(t *testing.T) {
 					},
 					StatusCode:    codes.Ok,
 					StatusMessage: "Ok",
-					Resource:      resource.New(label.String("instance", "tester-a")),
+					Resource:      resource.NewWithAttributes(label.String("instance", "tester-a")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-b",
 						Version: "v0.1.0",
@@ -142,7 +142,7 @@ func TestExportSpans(t *testing.T) {
 					},
 					StatusCode:    codes.Ok,
 					StatusMessage: "Ok",
-					Resource:      resource.New(label.String("instance", "tester-a")),
+					Resource:      resource.NewWithAttributes(label.String("instance", "tester-a")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-a",
 						Version: "v0.1.0",
@@ -164,7 +164,7 @@ func TestExportSpans(t *testing.T) {
 					},
 					StatusCode:    codes.Error,
 					StatusMessage: "Unauthenticated",
-					Resource:      resource.New(label.String("instance", "tester-b")),
+					Resource:      resource.NewWithAttributes(label.String("instance", "tester-b")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-a",
 						Version: "v1.1.0",

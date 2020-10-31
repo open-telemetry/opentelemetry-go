@@ -94,13 +94,13 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		),
 	}
 	tp1 := sdktrace.NewTracerProvider(append(pOpts,
-		sdktrace.WithResource(resource.New(
+		sdktrace.WithResource(resource.NewWithAttributes(
 			label.String("rk1", "rv11)"),
 			label.Int64("rk2", 5),
 		)))...)
 
 	tp2 := sdktrace.NewTracerProvider(append(pOpts,
-		sdktrace.WithResource(resource.New(
+		sdktrace.WithResource(resource.NewWithAttributes(
 			label.String("rk1", "rv12)"),
 			label.Float32("rk3", 6.5),
 		)))...)

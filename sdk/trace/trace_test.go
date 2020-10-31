@@ -1169,7 +1169,7 @@ func TestWithResource(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te),
 		WithConfig(Config{DefaultSampler: AlwaysSample()}),
-		WithResource(resource.New(label.String("rk1", "rv1"), label.Int64("rk2", 5))))
+		WithResource(resource.NewWithAttributes(label.String("rk1", "rv1"), label.Int64("rk2", 5))))
 	span := startSpan(tp, "WithResource")
 	span.SetAttributes(label.String("key1", "value1"))
 	got, err := endSpan(te, span)
@@ -1189,7 +1189,7 @@ func TestWithResource(t *testing.T) {
 		},
 		SpanKind:               otel.SpanKindInternal,
 		HasRemoteParent:        true,
-		Resource:               resource.New(label.String("rk1", "rv1"), label.Int64("rk2", 5)),
+		Resource:               resource.NewWithAttributes(label.String("rk1", "rv1"), label.Int64("rk2", 5)),
 		InstrumentationLibrary: instrumentation.Library{Name: "WithResource"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {

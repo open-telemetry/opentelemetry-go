@@ -58,7 +58,7 @@ func TestNew(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
-			res := resource.New(c.in...)
+			res := resource.NewWithAttributes(c.in...)
 			if diff := cmp.Diff(
 				res.Attributes(),
 				c.want,
@@ -77,61 +77,61 @@ func TestMerge(t *testing.T) {
 	}{
 		{
 			name: "Merge with no overlap, no nil",
-			a:    resource.New(kv11, kv31),
-			b:    resource.New(kv21, kv41),
+			a:    resource.NewWithAttributes(kv11, kv31),
+			b:    resource.NewWithAttributes(kv21, kv41),
 			want: []label.KeyValue{kv11, kv21, kv31, kv41},
 		},
 		{
 			name: "Merge with no overlap, no nil, not interleaved",
-			a:    resource.New(kv11, kv21),
-			b:    resource.New(kv31, kv41),
+			a:    resource.NewWithAttributes(kv11, kv21),
+			b:    resource.NewWithAttributes(kv31, kv41),
 			want: []label.KeyValue{kv11, kv21, kv31, kv41},
 		},
 		{
 			name: "Merge with common key order1",
-			a:    resource.New(kv11),
-			b:    resource.New(kv12, kv21),
+			a:    resource.NewWithAttributes(kv11),
+			b:    resource.NewWithAttributes(kv12, kv21),
 			want: []label.KeyValue{kv11, kv21},
 		},
 		{
 			name: "Merge with common key order2",
-			a:    resource.New(kv12, kv21),
-			b:    resource.New(kv11),
+			a:    resource.NewWithAttributes(kv12, kv21),
+			b:    resource.NewWithAttributes(kv11),
 			want: []label.KeyValue{kv12, kv21},
 		},
 		{
 			name: "Merge with common key order4",
-			a:    resource.New(kv11, kv21, kv41),
-			b:    resource.New(kv31, kv41),
+			a:    resource.NewWithAttributes(kv11, kv21, kv41),
+			b:    resource.NewWithAttributes(kv31, kv41),
 			want: []label.KeyValue{kv11, kv21, kv31, kv41},
 		},
 		{
 			name: "Merge with no keys",
-			a:    resource.New(),
-			b:    resource.New(),
+			a:    resource.NewWithAttributes(),
+			b:    resource.NewWithAttributes(),
 			want: nil,
 		},
 		{
 			name: "Merge with first resource no keys",
-			a:    resource.New(),
-			b:    resource.New(kv21),
+			a:    resource.NewWithAttributes(),
+			b:    resource.NewWithAttributes(kv21),
 			want: []label.KeyValue{kv21},
 		},
 		{
 			name: "Merge with second resource no keys",
-			a:    resource.New(kv11),
-			b:    resource.New(),
+			a:    resource.NewWithAttributes(kv11),
+			b:    resource.NewWithAttributes(),
 			want: []label.KeyValue{kv11},
 		},
 		{
 			name: "Merge with first resource nil",
 			a:    nil,
-			b:    resource.New(kv21),
+			b:    resource.NewWithAttributes(kv21),
 			want: []label.KeyValue{kv21},
 		},
 		{
 			name: "Merge with second resource nil",
-			a:    resource.New(kv11),
+			a:    resource.NewWithAttributes(kv11),
 			b:    nil,
 			want: []label.KeyValue{kv11},
 		},
@@ -207,14 +207,14 @@ func TestString(t *testing.T) {
 			want: `A\=a\\\,B=b`,
 		},
 	} {
-		if got := resource.New(test.kvs...).String(); got != test.want {
+		if got := resource.NewWithAttributes(test.kvs...).String(); got != test.want {
 			t.Errorf("Resource(%v).String() = %q, want %q", test.kvs, got, test.want)
 		}
 	}
 }
 
 func TestMarshalJSON(t *testing.T) {
-	r := resource.New(label.Int64("A", 1), label.String("C", "D"))
+	r := resource.NewWithAttributes(label.Int64("A", 1), label.String("C", "D"))
 	data, err := json.Marshal(r)
 	require.NoError(t, err)
 	require.Equal(t,

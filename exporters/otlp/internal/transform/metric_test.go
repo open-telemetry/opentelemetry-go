@@ -320,7 +320,7 @@ func TestRecordAggregatorIncompatibleErrors(t *testing.T) {
 	makeMpb := func(kind aggregation.Kind, agg aggregation.Aggregation) (*metricpb.Metric, error) {
 		desc := otel.NewDescriptor("things", otel.CounterInstrumentKind, otel.Int64NumberKind)
 		labels := label.NewSet()
-		res := resource.New()
+		res := resource.Empty()
 		test := &testAgg{
 			kind: kind,
 			agg:  agg,
@@ -357,7 +357,7 @@ func TestRecordAggregatorUnexpectedErrors(t *testing.T) {
 	makeMpb := func(kind aggregation.Kind, agg aggregation.Aggregation) (*metricpb.Metric, error) {
 		desc := otel.NewDescriptor("things", otel.CounterInstrumentKind, otel.Int64NumberKind)
 		labels := label.NewSet()
-		res := resource.New()
+		res := resource.Empty()
 		return Record(export.NewRecord(&desc, &labels, res, agg, intervalStart, intervalEnd))
 	}
 

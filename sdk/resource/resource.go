@@ -31,10 +31,10 @@ type Resource struct {
 
 var emptyResource Resource
 
-// New creates a resource from a set of attributes.  If there are
+// NewWithAttributes creates a resource from a set of attributes.  If there are
 // duplicate keys present in the list of attributes, then the last
 // value found for the key is preserved.
-func New(kvs ...label.KeyValue) *Resource {
+func NewWithAttributes(kvs ...label.KeyValue) *Resource {
 	return &Resource{
 		labels: label.NewSet(kvs...),
 	}
@@ -103,7 +103,7 @@ func Merge(a, b *Resource) *Resource {
 	for mi.Next() {
 		combine = append(combine, mi.Label())
 	}
-	return New(combine...)
+	return NewWithAttributes(combine...)
 }
 
 // Empty returns an instance of Resource with no attributes.  It is

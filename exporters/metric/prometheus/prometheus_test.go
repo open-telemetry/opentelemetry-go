@@ -39,7 +39,7 @@ func TestPrometheusExporter(t *testing.T) {
 			DefaultHistogramBoundaries: []float64{-0.5, 1},
 		},
 		pull.WithCachePeriod(0),
-		pull.WithResource(resource.New(label.String("R", "V"))),
+		pull.WithResource(resource.NewWithAttributes(label.String("R", "V"))),
 	)
 	require.NoError(t, err)
 

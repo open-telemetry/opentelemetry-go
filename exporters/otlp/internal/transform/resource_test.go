@@ -40,7 +40,7 @@ func TestEmptyResource(t *testing.T) {
 func TestResourceAttributes(t *testing.T) {
 	attrs := []label.KeyValue{label.Int("one", 1), label.Int("two", 2)}
 
-	got := Resource(resource.New(attrs...)).GetAttributes()
+	got := Resource(resource.NewWithAttributes(attrs...)).GetAttributes()
 	if !assert.Len(t, attrs, 2) {
 		return
 	}

@@ -292,7 +292,8 @@ func stressTest(t *testing.T, impl testImpl) {
 		AggregatorSelector: processortest.AggregatorSelector(),
 	}
 	cc := concurrency()
-	sdk := NewAccumulator(fixture)
+
+	sdk := NewAccumulator(fixture, nil)
 	meter := otel.WrapMeterImpl(sdk, "stress_test")
 	fixture.wg.Add(cc + 1)
 
