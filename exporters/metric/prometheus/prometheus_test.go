@@ -34,6 +34,10 @@ import (
 )
 
 func TestPrometheusExporter(t *testing.T) {
+	// #TODO: This test does not adequately verify the type of
+	// prometheus metric exported for all types - for example,
+	// it does not verify that an UpDown- counter is exported
+	// as a gauge. To be improved.
 	exporter, err := prometheus.NewExportPipeline(
 		prometheus.Config{
 			DefaultHistogramBoundaries: []float64{-0.5, 1},
