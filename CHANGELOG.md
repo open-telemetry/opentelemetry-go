@@ -37,7 +37,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix `Code.UnmarshalJSON` to work with valid json only. (#1276)
 - The `resource.New()` method changes signature to support builtin attributes and functional options, including `telemetry.sdk.*` and
   `host.name` semantic conventions; the former method is renamed `resource.NewWithAttributes`. (#1235)
-- Fix condition in `label.Any`. (#1299)
 
 ### Removed
 
@@ -48,6 +47,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - The `go.opentelemetry.io/otel/api/global` packages global TextMapPropagator now delegates functionality to a globally set delegate for all previously returned propagators. (#1258)
+- Fix condition in `label.Any`. (#1299)
 
 ## [0.13.0] - 2020-10-08
 
