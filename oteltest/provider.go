@@ -66,3 +66,8 @@ func (p *TracerProvider) Tracer(instName string, opts ...otel.TracerOption) otel
 	}
 	return t
 }
+
+// DefaulTracer returns a default tracer for testing purposes.
+func DefaultTracer() otel.Tracer {
+	return NewTracerProvider().Tracer("")
+}

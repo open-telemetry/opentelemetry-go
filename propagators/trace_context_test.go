@@ -209,11 +209,7 @@ func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 }
 
 func TestInjectTraceContextToHTTPReq(t *testing.T) {
-	var id uint64
-	mockTracer := &oteltest.MockTracer{
-		Sampled:     false,
-		StartSpanID: &id,
-	}
+	mockTracer := oteltest.DefaultTracer()
 	prop := propagators.TraceContext{}
 	tests := []struct {
 		name       string
@@ -227,7 +223,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 				SpanID:     spanID,
 				TraceFlags: otel.FlagsSampled,
 			},
-			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000001-01",
+			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000002-01",
 		},
 		{
 			name: "valid spancontext, not sampled",
@@ -235,7 +231,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 				TraceID: traceID,
 				SpanID:  spanID,
 			},
-			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000002-00",
+			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000003-00",
 		},
 		{
 			name: "valid spancontext, with unsupported bit set in traceflags",
@@ -244,7 +240,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 				SpanID:     spanID,
 				TraceFlags: 0xff,
 			},
-			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000003-01",
+			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000004-01",
 		},
 		{
 			name:       "invalid spancontext",
