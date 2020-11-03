@@ -36,7 +36,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-var testResource = resource.New(label.String("R", "V"))
+var testResource = resource.NewWithAttributes(label.String("R", "V"))
 
 type handler struct {
 	sync.Mutex

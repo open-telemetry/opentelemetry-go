@@ -41,6 +41,7 @@ import (
 // Initializes an OTLP exporter, and configures the corresponding trace and
 // metric providers.
 func initProvider() func() {
+	ctx := context.Background()
 
 	// If the OpenTelemetry Collector is running on a local cluster (minikube or
 	// microk8s), it should be accessible through the NodePort service at the
@@ -54,13 +55,18 @@ func initProvider() func() {
 	)
 	handleErr(err, "failed to create exporter")
 
+	res, err := resource.New(ctx,
+		resource.WithAttributes(
+			// the service name used to display traces in backends
+			semconv.ServiceNameKey.String("test-service"),
+		),
+	)
+	handleErr(err, "failed to create resource")
+
 	bsp := sdktrace.NewBatchSpanProcessor(exp)
 	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithResource(resource.New(
-			// the service name used to display traces in backends
-			semconv.ServiceNameKey.String("test-service"),
-		)),
+		sdktrace.WithResource(res),
 		sdktrace.WithSpanProcessor(bsp),
 	)
 
@@ -80,7 +86,6 @@ func initProvider() func() {
 	pusher.Start()
 
 	return func() {
-		ctx := context.Background()
 		handleErr(tracerProvider.Shutdown(ctx), "failed to shutdown provider")
 		handleErr(exp.Shutdown(ctx), "failed to stop exporter")
 		pusher.Stop() // pushes any last exports to the receiver

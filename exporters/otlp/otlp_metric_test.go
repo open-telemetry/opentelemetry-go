@@ -104,8 +104,8 @@ var (
 	baseKeyValues = []label.KeyValue{label.String("host", "test.com")}
 	cpuKey        = label.Key("CPU")
 
-	testInstA = resource.New(label.String("instance", "tester-a"))
-	testInstB = resource.New(label.String("instance", "tester-b"))
+	testInstA = resource.NewWithAttributes(label.String("instance", "tester-a"))
+	testInstB = resource.NewWithAttributes(label.String("instance", "tester-b"))
 
 	testHistogramBoundaries = []float64{2.0, 4.0, 8.0}
 

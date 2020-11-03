@@ -37,10 +37,20 @@ import (
 // TODO: Address this issue.
 
 func ExampleNewExportPipeline() {
+	// Create a resource, with builtin attributes plus R=V.
+	res, err := resource.New(
+		context.Background(),
+		resource.WithoutBuiltin(), // Test-only!
+		resource.WithAttributes(label.String("R", "V")),
+	)
+	if err != nil {
+		panic(err)
+	}
+
 	// Create a meter
 	exporter, err := prometheus.NewExportPipeline(
 		prometheus.Config{},
-		pull.WithResource(resource.New(label.String("R", "V"))),
+		pull.WithResource(res),
 	)
 	if err != nil {
 		panic(err)

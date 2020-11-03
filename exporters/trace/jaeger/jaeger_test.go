@@ -409,7 +409,7 @@ func Test_spanDataToThrift(t *testing.T) {
 				StatusCode:    codes.Error,
 				StatusMessage: statusMessage,
 				SpanKind:      otel.SpanKindClient,
-				Resource:      resource.New(label.String("rk1", rv1), label.Int64("rk2", rv2)),
+				Resource:      resource.NewWithAttributes(label.String("rk1", rv1), label.Int64("rk2", rv2)),
 				InstrumentationLibrary: instrumentation.Library{
 					Name:    instrLibName,
 					Version: instrLibVersion,
