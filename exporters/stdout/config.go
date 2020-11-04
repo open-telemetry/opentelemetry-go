@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stdout
+package stdout // import "go.opentelemetry.io/otel/exporters/stdout"
 
 import (
 	"io"
