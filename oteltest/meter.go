@@ -23,7 +23,7 @@ import (
 	apimetric "go.opentelemetry.io/otel"
 	internalmetric "go.opentelemetry.io/otel/internal/metric"
 	"go.opentelemetry.io/otel/label"
-	"go.opentelemetry.io/otel/registry"
+	"go.opentelemetry.io/otel/metric/registry"
 )
 
 type (

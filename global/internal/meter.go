@@ -22,7 +22,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
-	"go.opentelemetry.io/otel/registry"
+	"go.opentelemetry.io/otel/metric/registry"
 )
 
 // This file contains the forwarding implementation of MeterProvider used as
