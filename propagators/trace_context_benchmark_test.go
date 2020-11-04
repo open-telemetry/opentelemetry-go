@@ -19,9 +19,9 @@ import (
 	"net/http"
 	"testing"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func BenchmarkInject(b *testing.B) {
@@ -38,17 +38,17 @@ func BenchmarkInject(b *testing.B) {
 
 func injectSubBenchmarks(b *testing.B, fn func(context.Context, *testing.B)) {
 	b.Run("SampledSpanContext", func(b *testing.B) {
-		spanID, _ := otel.SpanIDFromHex("00f067aa0ba902b7")
-		traceID, _ := otel.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+		spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+		traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 
 		mockTracer := oteltest.DefaultTracer()
 		b.ReportAllocs()
-		sc := otel.SpanContext{
+		sc := trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: otel.FlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		}
-		ctx := otel.ContextWithRemoteSpanContext(context.Background(), sc)
+		ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
 		ctx, _ = mockTracer.Start(ctx, "inject")
 		fn(ctx, b)
 	})

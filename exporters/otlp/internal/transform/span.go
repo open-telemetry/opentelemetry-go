@@ -15,13 +15,13 @@
 package transform
 
 import (
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
 
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -140,7 +140,7 @@ func status(status codes.Code, message string) *tracepb.Status {
 }
 
 // links transforms span Links to OTLP span links.
-func links(links []otel.Link) []*tracepb.Span_Link {
+func links(links []trace.Link) []*tracepb.Span_Link {
 	if len(links) == 0 {
 		return nil
 	}
@@ -193,17 +193,17 @@ func spanEvents(es []export.Event) []*tracepb.Span_Event {
 }
 
 // spanKind transforms a SpanKind to an OTLP span kind.
-func spanKind(kind otel.SpanKind) tracepb.Span_SpanKind {
+func spanKind(kind trace.SpanKind) tracepb.Span_SpanKind {
 	switch kind {
-	case otel.SpanKindInternal:
+	case trace.SpanKindInternal:
 		return tracepb.Span_SPAN_KIND_INTERNAL
-	case otel.SpanKindClient:
+	case trace.SpanKindClient:
 		return tracepb.Span_SPAN_KIND_CLIENT
-	case otel.SpanKindServer:
+	case trace.SpanKindServer:
 		return tracepb.Span_SPAN_KIND_SERVER
-	case otel.SpanKindProducer:
+	case trace.SpanKindProducer:
 		return tracepb.Span_SPAN_KIND_PRODUCER
-	case otel.SpanKindConsumer:
+	case trace.SpanKindConsumer:
 		return tracepb.Span_SPAN_KIND_CONSUMER
 	default:
 		return tracepb.Span_SPAN_KIND_UNSPECIFIED

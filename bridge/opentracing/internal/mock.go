@@ -21,11 +21,11 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/internal/baggage"
 	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 )
@@ -47,15 +47,15 @@ type MockContextKeyValue struct {
 type MockTracer struct {
 	Resources             baggage.Map
 	FinishedSpans         []*MockSpan
-	SpareTraceIDs         []otel.TraceID
-	SpareSpanIDs          []otel.SpanID
+	SpareTraceIDs         []trace.TraceID
+	SpareSpanIDs          []trace.SpanID
 	SpareContextKeyValues []MockContextKeyValue
 
 	randLock sync.Mutex
 	rand     *rand.Rand
 }
 
-var _ otel.Tracer = &MockTracer{}
+var _ trace.Tracer = &MockTracer{}
 var _ migration.DeferredContextSetupTracerExtension = &MockTracer{}
 
 func NewMockTracer() *MockTracer {
@@ -70,13 +70,13 @@ func NewMockTracer() *MockTracer {
 	}
 }
 
-func (t *MockTracer) Start(ctx context.Context, name string, opts ...otel.SpanOption) (context.Context, otel.Span) {
-	config := otel.NewSpanConfig(opts...)
+func (t *MockTracer) Start(ctx context.Context, name string, opts ...trace.SpanOption) (context.Context, trace.Span) {
+	config := trace.NewSpanConfig(opts...)
 	startTime := config.Timestamp
 	if startTime.IsZero() {
 		startTime = time.Now()
 	}
-	spanContext := otel.SpanContext{
+	spanContext := trace.SpanContext{
 		TraceID:    t.getTraceID(ctx, config),
 		SpanID:     t.getSpanID(),
 		TraceFlags: 0,
@@ -93,10 +93,10 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...otel.SpanOp
 		EndTime:      time.Time{},
 		ParentSpanID: t.getParentSpanID(ctx, config),
 		Events:       nil,
-		SpanKind:     otel.ValidateSpanKind(config.SpanKind),
+		SpanKind:     trace.ValidateSpanKind(config.SpanKind),
 	}
 	if !migration.SkipContextSetup(ctx) {
-		ctx = otel.ContextWithSpan(ctx, span)
+		ctx = trace.ContextWithSpan(ctx, span)
 		ctx = t.addSpareContextValue(ctx)
 	}
 	return ctx, span
@@ -115,7 +115,7 @@ func (t *MockTracer) addSpareContextValue(ctx context.Context) context.Context {
 	return ctx
 }
 
-func (t *MockTracer) getTraceID(ctx context.Context, config *otel.SpanConfig) otel.TraceID {
+func (t *MockTracer) getTraceID(ctx context.Context, config *trace.SpanConfig) trace.TraceID {
 	if parent := t.getParentSpanContext(ctx, config); parent.IsValid() {
 		return parent.TraceID
 	}
@@ -130,19 +130,19 @@ func (t *MockTracer) getTraceID(ctx context.Context, config *otel.SpanConfig) ot
 	return t.getRandTraceID()
 }
 
-func (t *MockTracer) getParentSpanID(ctx context.Context, config *otel.SpanConfig) otel.SpanID {
+func (t *MockTracer) getParentSpanID(ctx context.Context, config *trace.SpanConfig) trace.SpanID {
 	if parent := t.getParentSpanContext(ctx, config); parent.IsValid() {
 		return parent.SpanID
 	}
-	return otel.SpanID{}
+	return trace.SpanID{}
 }
 
-func (t *MockTracer) getParentSpanContext(ctx context.Context, config *otel.SpanConfig) otel.SpanContext {
+func (t *MockTracer) getParentSpanContext(ctx context.Context, config *trace.SpanConfig) trace.SpanContext {
 	spanCtx, _, _ := otelparent.GetSpanContextAndLinks(ctx, config.NewRoot)
 	return spanCtx
 }
 
-func (t *MockTracer) getSpanID() otel.SpanID {
+func (t *MockTracer) getSpanID() trace.SpanID {
 	if len(t.SpareSpanIDs) > 0 {
 		spanID := t.SpareSpanIDs[0]
 		t.SpareSpanIDs = t.SpareSpanIDs[1:]
@@ -154,27 +154,27 @@ func (t *MockTracer) getSpanID() otel.SpanID {
 	return t.getRandSpanID()
 }
 
-func (t *MockTracer) getRandSpanID() otel.SpanID {
+func (t *MockTracer) getRandSpanID() trace.SpanID {
 	t.randLock.Lock()
 	defer t.randLock.Unlock()
 
-	sid := otel.SpanID{}
+	sid := trace.SpanID{}
 	t.rand.Read(sid[:])
 
 	return sid
 }
 
-func (t *MockTracer) getRandTraceID() otel.TraceID {
+func (t *MockTracer) getRandTraceID() trace.TraceID {
 	t.randLock.Lock()
 	defer t.randLock.Unlock()
 
-	tid := otel.TraceID{}
+	tid := trace.TraceID{}
 	t.rand.Read(tid[:])
 
 	return tid
 }
 
-func (t *MockTracer) DeferredContextSetupHook(ctx context.Context, span otel.Span) context.Context {
+func (t *MockTracer) DeferredContextSetupHook(ctx context.Context, span trace.Span) context.Context {
 	return t.addSpareContextValue(ctx)
 }
 
@@ -186,22 +186,22 @@ type MockEvent struct {
 
 type MockSpan struct {
 	mockTracer     *MockTracer
-	officialTracer otel.Tracer
-	spanContext    otel.SpanContext
-	SpanKind       otel.SpanKind
+	officialTracer trace.Tracer
+	spanContext    trace.SpanContext
+	SpanKind       trace.SpanKind
 	recording      bool
 
 	Attributes   baggage.Map
 	StartTime    time.Time
 	EndTime      time.Time
-	ParentSpanID otel.SpanID
+	ParentSpanID trace.SpanID
 	Events       []MockEvent
 }
 
-var _ otel.Span = &MockSpan{}
+var _ trace.Span = &MockSpan{}
 var _ migration.OverrideTracerSpanExtension = &MockSpan{}
 
-func (s *MockSpan) SpanContext() otel.SpanContext {
+func (s *MockSpan) SpanContext() trace.SpanContext {
 	return s.spanContext
 }
 
@@ -231,11 +231,11 @@ func (s *MockSpan) applyUpdate(update baggage.MapUpdate) {
 	s.Attributes = s.Attributes.Apply(update)
 }
 
-func (s *MockSpan) End(options ...otel.SpanOption) {
+func (s *MockSpan) End(options ...trace.SpanOption) {
 	if !s.EndTime.IsZero() {
 		return // already finished
 	}
-	config := otel.NewSpanConfig(options...)
+	config := trace.NewSpanConfig(options...)
 	endTime := config.Timestamp
 	if endTime.IsZero() {
 		endTime = time.Now()
@@ -244,7 +244,7 @@ func (s *MockSpan) End(options ...otel.SpanOption) {
 	s.mockTracer.FinishedSpans = append(s.mockTracer.FinishedSpans, s)
 }
 
-func (s *MockSpan) RecordError(err error, opts ...otel.EventOption) {
+func (s *MockSpan) RecordError(err error, opts ...trace.EventOption) {
 	if err == nil {
 		return // no-op on nil error
 	}
@@ -254,19 +254,19 @@ func (s *MockSpan) RecordError(err error, opts ...otel.EventOption) {
 	}
 
 	s.SetStatus(codes.Error, "")
-	opts = append(opts, otel.WithAttributes(
+	opts = append(opts, trace.WithAttributes(
 		label.String("error.type", reflect.TypeOf(err).String()),
 		label.String("error.message", err.Error()),
 	))
 	s.AddEvent("error", opts...)
 }
 
-func (s *MockSpan) Tracer() otel.Tracer {
+func (s *MockSpan) Tracer() trace.Tracer {
 	return s.officialTracer
 }
 
-func (s *MockSpan) AddEvent(name string, o ...otel.EventOption) {
-	c := otel.NewEventConfig(o...)
+func (s *MockSpan) AddEvent(name string, o ...trace.EventOption) {
+	c := trace.NewEventConfig(o...)
 	s.Events = append(s.Events, MockEvent{
 		Timestamp: c.Timestamp,
 		Name:      name,
@@ -276,6 +276,6 @@ func (s *MockSpan) AddEvent(name string, o ...otel.EventOption) {
 	})
 }
 
-func (s *MockSpan) OverrideTracer(tracer otel.Tracer) {
+func (s *MockSpan) OverrideTracer(tracer trace.Tracer) {
 	s.officialTracer = tracer
 }

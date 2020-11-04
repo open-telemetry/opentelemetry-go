@@ -22,13 +22,13 @@ import (
 
 	"google.golang.org/api/support/bundler"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -151,14 +151,14 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 
 // NewExportPipeline sets up a complete export pipeline
 // with the recommended setup for trace provider
-func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (otel.TracerProvider, func(), error) {
+func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (trace.TracerProvider, func(), error) {
 	o := options{}
 	opts = append(opts, WithDisabledFromEnv())
 	for _, opt := range opts {
 		opt(&o)
 	}
 	if o.Disabled {
-		return otel.NewNoopTracerProvider(), func() {}, nil
+		return trace.NewNoopTracerProvider(), func() {}, nil
 	}
 
 	exporter, err := NewRawExporter(endpointOption, opts...)
