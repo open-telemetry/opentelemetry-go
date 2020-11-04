@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"time"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric/number"
 )
 
 // These interfaces describe the various ways to access state from an
@@ -37,7 +37,7 @@ type (
 	// Sum returns an aggregated sum.
 	Sum interface {
 		Aggregation
-		Sum() (otel.Number, error)
+		Sum() (number.Number, error)
 	}
 
 	// Count returns the number of values that were aggregated.
@@ -49,32 +49,32 @@ type (
 	// Min returns the minimum value over the set of values that were aggregated.
 	Min interface {
 		Aggregation
-		Min() (otel.Number, error)
+		Min() (number.Number, error)
 	}
 
 	// Max returns the maximum value over the set of values that were aggregated.
 	Max interface {
 		Aggregation
-		Max() (otel.Number, error)
+		Max() (number.Number, error)
 	}
 
 	// Quantile returns an exact or estimated quantile over the
 	// set of values that were aggregated.
 	Quantile interface {
 		Aggregation
-		Quantile(float64) (otel.Number, error)
+		Quantile(float64) (number.Number, error)
 	}
 
 	// LastValue returns the latest value that was aggregated.
 	LastValue interface {
 		Aggregation
-		LastValue() (otel.Number, time.Time, error)
+		LastValue() (number.Number, time.Time, error)
 	}
 
 	// Points returns the raw set of values that were aggregated.
 	Points interface {
 		Aggregation
-		Points() ([]otel.Number, error)
+		Points() ([]number.Number, error)
 	}
 
 	// Buckets represents histogram buckets boundaries and counts.
@@ -96,16 +96,16 @@ type (
 	Histogram interface {
 		Aggregation
 		Count() (int64, error)
-		Sum() (otel.Number, error)
+		Sum() (number.Number, error)
 		Histogram() (Buckets, error)
 	}
 
 	// MinMaxSumCount supports the Min, Max, Sum, and Count interfaces.
 	MinMaxSumCount interface {
 		Aggregation
-		Min() (otel.Number, error)
-		Max() (otel.Number, error)
-		Sum() (otel.Number, error)
+		Min() (number.Number, error)
+		Max() (number.Number, error)
+		Sum() (number.Number, error)
 		Count() (int64, error)
 	}
 
@@ -113,11 +113,11 @@ type (
 	// interfaces.
 	Distribution interface {
 		Aggregation
-		Min() (otel.Number, error)
-		Max() (otel.Number, error)
-		Sum() (otel.Number, error)
+		Min() (number.Number, error)
+		Max() (number.Number, error)
+		Sum() (number.Number, error)
 		Count() (int64, error)
-		Quantile(float64) (otel.Number, error)
+		Quantile(float64) (number.Number, error)
 	}
 )
 

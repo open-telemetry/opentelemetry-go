@@ -26,6 +26,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
@@ -43,7 +44,7 @@ func TestProcessor(t *testing.T) {
 		kind otel.InstrumentKind
 	}
 	type numberCase struct {
-		kind otel.NumberKind
+		kind number.Kind
 	}
 	type aggregatorCase struct {
 		kind aggregation.Kind
@@ -64,8 +65,8 @@ func TestProcessor(t *testing.T) {
 			} {
 				t.Run(ic.kind.String(), func(t *testing.T) {
 					for _, nc := range []numberCase{
-						{kind: otel.Int64NumberKind},
-						{kind: otel.Float64NumberKind},
+						{kind: number.Int64Kind},
+						{kind: number.Float64Kind},
 					} {
 						t.Run(nc.kind.String(), func(t *testing.T) {
 							for _, ac := range []aggregatorCase{
@@ -94,11 +95,11 @@ func TestProcessor(t *testing.T) {
 	}
 }
 
-func asNumber(nkind otel.NumberKind, value int64) otel.Number {
-	if nkind == otel.Int64NumberKind {
-		return otel.NewInt64Number(value)
+func asNumber(nkind number.Kind, value int64) number.Number {
+	if nkind == number.Int64Kind {
+		return number.NewInt64Number(value)
 	}
-	return otel.NewFloat64Number(float64(value))
+	return number.NewFloat64Number(float64(value))
 }
 
 func updateFor(t *testing.T, desc *otel.Descriptor, selector export.AggregatorSelector, res *resource.Resource, value int64, labs ...label.KeyValue) export.Accumulation {
@@ -114,7 +115,7 @@ func testProcessor(
 	t *testing.T,
 	ekind export.ExportKind,
 	mkind otel.InstrumentKind,
-	nkind otel.NumberKind,
+	nkind number.Kind,
 	akind aggregation.Kind,
 ) {
 	// Note: this selector uses the instrument name to dictate
@@ -294,7 +295,7 @@ func TestBasicInconsistent(t *testing.T) {
 	// Test no start
 	b = basic.New(processorTest.AggregatorSelector(), export.StatelessExportKindSelector())
 
-	desc := otel.NewDescriptor("inst", otel.CounterInstrumentKind, otel.Int64NumberKind)
+	desc := otel.NewDescriptor("inst", otel.CounterInstrumentKind, number.Int64Kind)
 	accum := export.NewAccumulation(&desc, label.EmptySet(), resource.Empty(), metrictest.NoopAggregator{})
 	require.Equal(t, basic.ErrInconsistentState, b.Process(accum))
 
@@ -317,7 +318,7 @@ func TestBasicTimestamps(t *testing.T) {
 	b := basic.New(processorTest.AggregatorSelector(), export.StatelessExportKindSelector())
 	afterNew := time.Now()
 
-	desc := otel.NewDescriptor("inst", otel.CounterInstrumentKind, otel.Int64NumberKind)
+	desc := otel.NewDescriptor("inst", otel.CounterInstrumentKind, number.Int64Kind)
 	accum := export.NewAccumulation(&desc, label.EmptySet(), resource.Empty(), metrictest.NoopAggregator{})
 
 	b.StartCollection()
@@ -363,7 +364,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 	res := resource.NewWithAttributes(label.String("R", "V"))
 	ekindSel := export.CumulativeExportKindSelector()
 
-	desc := otel.NewDescriptor("inst.sum", otel.CounterInstrumentKind, otel.Int64NumberKind)
+	desc := otel.NewDescriptor("inst.sum", otel.CounterInstrumentKind, number.Int64Kind)
 	selector := processorTest.AggregatorSelector()
 
 	processor := basic.New(selector, ekindSel, basic.WithMemory(false))
@@ -397,7 +398,7 @@ func TestStatefulNoMemoryDelta(t *testing.T) {
 	res := resource.NewWithAttributes(label.String("R", "V"))
 	ekindSel := export.DeltaExportKindSelector()
 
-	desc := otel.NewDescriptor("inst.sum", otel.SumObserverInstrumentKind, otel.Int64NumberKind)
+	desc := otel.NewDescriptor("inst.sum", otel.SumObserverInstrumentKind, number.Int64Kind)
 	selector := processorTest.AggregatorSelector()
 
 	processor := basic.New(selector, ekindSel, basic.WithMemory(false))
@@ -434,7 +435,7 @@ func TestMultiObserverSum(t *testing.T) {
 	} {
 
 		res := resource.NewWithAttributes(label.String("R", "V"))
-		desc := otel.NewDescriptor("observe.sum", otel.SumObserverInstrumentKind, otel.Int64NumberKind)
+		desc := otel.NewDescriptor("observe.sum", otel.SumObserverInstrumentKind, number.Int64Kind)
 		selector := processorTest.AggregatorSelector()
 
 		processor := basic.New(selector, ekindSel, basic.WithMemory(false))

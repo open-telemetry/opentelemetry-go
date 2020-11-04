@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric/number"
 )
 
 // MeterImpl is the interface an SDK must implement to supply a Meter
@@ -62,7 +63,7 @@ type SyncImpl interface {
 	Bind(labels []label.KeyValue) BoundSyncImpl
 
 	// RecordOne captures a single synchronous metric event.
-	RecordOne(ctx context.Context, number Number, labels []label.KeyValue)
+	RecordOne(ctx context.Context, number number.Number, labels []label.KeyValue)
 }
 
 // BoundSyncImpl is the implementation-level interface to a
@@ -70,7 +71,7 @@ type SyncImpl interface {
 type BoundSyncImpl interface {
 
 	// RecordOne captures a single synchronous metric event.
-	RecordOne(ctx context.Context, number Number)
+	RecordOne(ctx context.Context, number number.Number)
 
 	// Unbind frees the resources associated with this bound instrument. It
 	// does not affect the metric this bound instrument was created through.

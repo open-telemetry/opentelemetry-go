@@ -26,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel/global"
 	internal "go.opentelemetry.io/otel/internal/metric"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -162,8 +163,8 @@ func (s *syncInstrument) Implementation() interface{} {
 	return s
 }
 
-func (a *asyncInstrument) observe(number api.Number, labels *label.Set) {
-	if err := aggregator.RangeTest(number, &a.descriptor); err != nil {
+func (a *asyncInstrument) observe(num number.Number, labels *label.Set) {
+	if err := aggregator.RangeTest(num, &a.descriptor); err != nil {
 		global.Handle(err)
 		return
 	}
@@ -173,7 +174,7 @@ func (a *asyncInstrument) observe(number api.Number, labels *label.Set) {
 		// AggregatorSelector.
 		return
 	}
-	if err := recorder.Update(context.Background(), number, &a.descriptor); err != nil {
+	if err := recorder.Update(context.Background(), num, &a.descriptor); err != nil {
 		global.Handle(err)
 		return
 	}
@@ -290,10 +291,10 @@ func (s *syncInstrument) Bind(kvs []label.KeyValue) api.BoundSyncImpl {
 	return s.acquireHandle(kvs, nil)
 }
 
-func (s *syncInstrument) RecordOne(ctx context.Context, number api.Number, kvs []label.KeyValue) {
+func (s *syncInstrument) RecordOne(ctx context.Context, num number.Number, kvs []label.KeyValue) {
 	h := s.acquireHandle(kvs, nil)
 	defer h.Unbind()
-	h.RecordOne(ctx, number)
+	h.RecordOne(ctx, num)
 }
 
 // NewAccumulator constructs a new Accumulator for the given
@@ -501,16 +502,16 @@ func (m *Accumulator) RecordBatch(ctx context.Context, kvs []label.KeyValue, mea
 }
 
 // RecordOne implements api.SyncImpl.
-func (r *record) RecordOne(ctx context.Context, number api.Number) {
+func (r *record) RecordOne(ctx context.Context, num number.Number) {
 	if r.current == nil {
 		// The instrument is disabled according to the AggregatorSelector.
 		return
 	}
-	if err := aggregator.RangeTest(number, &r.inst.descriptor); err != nil {
+	if err := aggregator.RangeTest(num, &r.inst.descriptor); err != nil {
 		global.Handle(err)
 		return
 	}
-	if err := r.current.Update(ctx, number, &r.inst.descriptor); err != nil {
+	if err := r.current.Update(ctx, num, &r.inst.descriptor); err != nil {
 		global.Handle(err)
 		return
 	}

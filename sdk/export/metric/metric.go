@@ -23,6 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -152,7 +153,7 @@ type Aggregator interface {
 	//
 	// The Context argument comes from user-level code and could be
 	// inspected for a `correlation.Map` or `trace.SpanContext`.
-	Update(ctx context.Context, number otel.Number, descriptor *otel.Descriptor) error
+	Update(ctx context.Context, number number.Number, descriptor *otel.Descriptor) error
 
 	// SynchronizedMove is called during collection to finish one
 	// period of aggregation by atomically saving the

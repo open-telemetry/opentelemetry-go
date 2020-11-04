@@ -26,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
@@ -257,7 +258,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregation.LastValue, kind otel.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregation.LastValue, kind number.Kind, desc *prometheus.Desc, labels []string) error {
 	lv, _, err := lvagg.LastValue()
 	if err != nil {
 		return fmt.Errorf("error retrieving last value: %w", err)
@@ -272,7 +273,7 @@ func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregati
 	return nil
 }
 
-func (c *collector) exportNonMonotonicCounter(ch chan<- prometheus.Metric, sum aggregation.Sum, kind otel.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportNonMonotonicCounter(ch chan<- prometheus.Metric, sum aggregation.Sum, kind number.Kind, desc *prometheus.Desc, labels []string) error {
 	v, err := sum.Sum()
 	if err != nil {
 		return fmt.Errorf("error retrieving counter: %w", err)
@@ -287,7 +288,7 @@ func (c *collector) exportNonMonotonicCounter(ch chan<- prometheus.Metric, sum a
 	return nil
 }
 
-func (c *collector) exportMonotonicCounter(ch chan<- prometheus.Metric, sum aggregation.Sum, kind otel.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportMonotonicCounter(ch chan<- prometheus.Metric, sum aggregation.Sum, kind number.Kind, desc *prometheus.Desc, labels []string) error {
 	v, err := sum.Sum()
 	if err != nil {
 		return fmt.Errorf("error retrieving counter: %w", err)
@@ -302,13 +303,13 @@ func (c *collector) exportMonotonicCounter(ch chan<- prometheus.Metric, sum aggr
 	return nil
 }
 
-func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregation.Distribution, kind otel.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregation.Distribution, kind number.Kind, desc *prometheus.Desc, labels []string) error {
 	count, err := dist.Count()
 	if err != nil {
 		return fmt.Errorf("error retrieving count: %w", err)
 	}
 
-	var sum otel.Number
+	var sum number.Number
 	sum, err = dist.Sum()
 	if err != nil {
 		return fmt.Errorf("error retrieving distribution sum: %w", err)
@@ -329,7 +330,7 @@ func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregation.
 	return nil
 }
 
-func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregation.Histogram, kind otel.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregation.Histogram, kind number.Kind, desc *prometheus.Desc, labels []string) error {
 	buckets, err := hist.Histogram()
 	if err != nil {
 		return fmt.Errorf("error retrieving histogram: %w", err)
