@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package propagators_test
+package propagation_test
 
 import (
 	"context"
@@ -20,12 +20,12 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/oteltest"
-	"go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
 func BenchmarkInject(b *testing.B) {
-	var t propagators.TraceContext
+	var t propagation.TraceContext
 
 	injectSubBenchmarks(b, func(ctx context.Context, b *testing.B) {
 		req, _ := http.NewRequest("GET", "http://example.com", nil)
@@ -62,7 +62,7 @@ func injectSubBenchmarks(b *testing.B, fn func(context.Context, *testing.B)) {
 
 func BenchmarkExtract(b *testing.B) {
 	extractSubBenchmarks(b, func(b *testing.B, req *http.Request) {
-		var propagator propagators.TraceContext
+		var propagator propagation.TraceContext
 		ctx := context.Background()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {

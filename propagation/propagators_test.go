@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package propagators_test
+package propagation_test
 
 import (
 	"context"
@@ -21,8 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -58,9 +57,9 @@ type outOfThinAirPropagator struct {
 	t *testing.T
 }
 
-var _ otel.TextMapPropagator = outOfThinAirPropagator{}
+var _ propagation.TextMapPropagator = outOfThinAirPropagator{}
 
-func (p outOfThinAirPropagator) Extract(ctx context.Context, carrier otel.TextMapCarrier) context.Context {
+func (p outOfThinAirPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	sc := trace.SpanContext{
 		TraceID:    traceID,
 		SpanID:     spanID,
@@ -70,7 +69,7 @@ func (p outOfThinAirPropagator) Extract(ctx context.Context, carrier otel.TextMa
 	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
 
-func (outOfThinAirPropagator) Inject(context.Context, otel.TextMapCarrier) {}
+func (outOfThinAirPropagator) Inject(context.Context, propagation.TextMapCarrier) {}
 
 func (outOfThinAirPropagator) Fields() []string {
 	return nil
@@ -78,7 +77,7 @@ func (outOfThinAirPropagator) Fields() []string {
 
 type nilCarrier struct{}
 
-var _ otel.TextMapCarrier = nilCarrier{}
+var _ propagation.TextMapCarrier = nilCarrier{}
 
 func (nilCarrier) Get(key string) string {
 	return ""
@@ -89,8 +88,8 @@ func (nilCarrier) Set(key string, value string) {}
 func TestMultiplePropagators(t *testing.T) {
 	ootaProp := outOfThinAirPropagator{t: t}
 	ns := nilCarrier{}
-	testProps := []otel.TextMapPropagator{
-		propagators.TraceContext{},
+	testProps := []propagation.TextMapPropagator{
+		propagation.TraceContext{},
 	}
 	bg := context.Background()
 	// sanity check of oota propagator, ensuring that it really
@@ -109,7 +108,7 @@ func TestMultiplePropagators(t *testing.T) {
 		require.Falsef(t, sc.IsValid(), "%#v failed sanity check", prop)
 	}
 	for _, prop := range testProps {
-		props := otel.NewCompositeTextMapPropagator(ootaProp, prop)
+		props := propagation.NewCompositeTextMapPropagator(ootaProp, prop)
 		ctx := props.Extract(bg, ns)
 		sc := trace.RemoteSpanContextFromContext(ctx)
 		assert.Truef(t, sc.IsValid(), "%#v clobbers span context", prop)

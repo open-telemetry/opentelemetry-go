@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package propagators_test
+package propagation_test
 
 import (
 	"context"
@@ -22,12 +22,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/otel/oteltest"
-	"go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
 func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
-	prop := propagators.TraceContext{}
+	prop := propagation.TraceContext{}
 	tests := []struct {
 		name   string
 		header string
@@ -122,7 +122,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 
 func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 	wantSc := trace.SpanContext{}
-	prop := propagators.TraceContext{}
+	prop := propagation.TraceContext{}
 	tests := []struct {
 		name   string
 		header string
@@ -210,7 +210,7 @@ func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 
 func TestInjectTraceContextToHTTPReq(t *testing.T) {
 	mockTracer := oteltest.DefaultTracer()
-	prop := propagators.TraceContext{}
+	prop := propagation.TraceContext{}
 	tests := []struct {
 		name       string
 		sc         trace.SpanContext
@@ -267,7 +267,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 }
 
 func TestTraceContextPropagator_GetAllKeys(t *testing.T) {
-	var propagator propagators.TraceContext
+	var propagator propagation.TraceContext
 	want := []string{"traceparent", "tracestate"}
 	got := propagator.Fields()
 	if diff := cmp.Diff(got, want); diff != "" {
@@ -276,7 +276,7 @@ func TestTraceContextPropagator_GetAllKeys(t *testing.T) {
 }
 
 func TestTraceStatePropagation(t *testing.T) {
-	prop := propagators.TraceContext{}
+	prop := propagation.TraceContext{}
 	want := "opaquevalue"
 	headerName := "tracestate"
 
