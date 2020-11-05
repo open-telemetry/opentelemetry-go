@@ -701,14 +701,14 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 }
 
 func TestStatelessExportKind(t *testing.T) {
-	type kase struct {
+	type testcase struct {
 		name  string
-		ikind otel.InstrumentKind
-		tempo metricpb.AggregationTemporality
-		mono  bool
+		instrumentKind otel.InstrumentKind
+		aggTemporality metricpb.AggregationTemporality
+		monotonic  bool
 	}
 
-	for _, k := range []kase{
+	for _, k := range []testcase{
 		{"counter", otel.CounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA, true},
 		{"updowncounter", otel.UpDownCounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA, false},
 		{"sumobserver", otel.SumObserverInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, true},
@@ -725,7 +725,7 @@ func TestStatelessExportKind(t *testing.T) {
 				[]record{
 					{
 						"instrument",
-						k.ikind,
+						k.instrumentKind,
 						otel.Int64NumberKind,
 						testInstA,
 						nil,
@@ -742,8 +742,8 @@ func TestStatelessExportKind(t *testing.T) {
 										Name: "instrument",
 										Data: &metricpb.Metric_IntSum{
 											IntSum: &metricpb.IntSum{
-												IsMonotonic:            k.mono,
-												AggregationTemporality: k.tempo,
+												IsMonotonic:            k.monotonic,
+												AggregationTemporality: k.aggTemporality,
 												DataPoints: []*metricpb.IntDataPoint{
 													{
 														Value:             11,
