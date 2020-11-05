@@ -23,7 +23,7 @@ evolving OpenTelemetry specification and user feedback.
 For more information see
 [this](https://github.com/open-telemetry/oteps/blob/master/text/0083-component.md).
 */
-package instrumentation
+package instrumentation // import "go.opentelemetry.io/otel/sdk/instrumentation"
 
 // Library represents the instrumentation library.
 type Library struct {
