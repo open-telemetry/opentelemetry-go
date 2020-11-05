@@ -22,9 +22,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	ottest "go.opentelemetry.io/otel/internal/testing"
 	"go.opentelemetry.io/otel/label"
-	opentelemetry "go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -44,7 +44,7 @@ func TestDefaultConfig(t *testing.T) {
 		"host.name":              hostname(),
 		"telemetry.sdk.name":     "opentelemetry-go",
 		"telemetry.sdk.language": "go",
-		"telemetry.sdk.version":  opentelemetry.Version(),
+		"telemetry.sdk.version":  otel.Version(),
 	}, toMap(res))
 }
 
@@ -61,7 +61,7 @@ func TestDefaultConfigNoHost(t *testing.T) {
 	require.EqualValues(t, map[string]string{
 		"telemetry.sdk.name":     "opentelemetry-go",
 		"telemetry.sdk.language": "go",
-		"telemetry.sdk.version":  opentelemetry.Version(),
+		"telemetry.sdk.version":  otel.Version(),
 	}, toMap(res))
 }
 
@@ -79,7 +79,7 @@ func TestDefaultConfigNoEnv(t *testing.T) {
 		"host.name":              hostname(),
 		"telemetry.sdk.name":     "opentelemetry-go",
 		"telemetry.sdk.language": "go",
-		"telemetry.sdk.version":  opentelemetry.Version(),
+		"telemetry.sdk.version":  otel.Version(),
 	}, toMap(res))
 }
 
@@ -99,7 +99,7 @@ func TestDefaultConfigWithEnv(t *testing.T) {
 		"host.name":              hostname(),
 		"telemetry.sdk.name":     "opentelemetry-go",
 		"telemetry.sdk.language": "go",
-		"telemetry.sdk.version":  opentelemetry.Version(),
+		"telemetry.sdk.version":  otel.Version(),
 	}, toMap(res))
 }
 

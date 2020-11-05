@@ -12,12 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package opentelemetry contains Go support for OpenTelemetry.
-//
-// This package is currently in a pre-GA phase. Backwards incompatible changes
-// may be introduced in subsequent minor version releases as we work to track
-// the evolving OpenTelemetry specification and user feedback.
-package opentelemetry // import "go.opentelemetry.io/otel/sdk"
+package otel // import "go.opentelemetry.io/otel"
 
 // Version is the current release version of OpenTelemetry in use.
 func Version() string {

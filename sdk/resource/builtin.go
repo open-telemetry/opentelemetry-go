@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"os"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
-	opentelemetry "go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/semconv"
 )
 
@@ -56,7 +56,7 @@ func (TelemetrySDK) Detect(context.Context) (*Resource, error) {
 	return NewWithAttributes(
 		semconv.TelemetrySDKNameKey.String("opentelemetry-go"),
 		semconv.TelemetrySDKLanguageKey.String("go"),
-		semconv.TelemetrySDKVersionKey.String(opentelemetry.Version()),
+		semconv.TelemetrySDKVersionKey.String(otel.Version()),
 	), nil
 }
 
