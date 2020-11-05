@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package oteltest
+package oteltest // import "go.opentelemetry.io/otel/oteltest"
 
 import (
 	"sync"
@@ -65,4 +65,9 @@ func (p *TracerProvider) Tracer(instName string, opts ...otel.TracerOption) otel
 		p.tracers[inst] = t
 	}
 	return t
+}
+
+// DefaulTracer returns a default tracer for testing purposes.
+func DefaultTracer() otel.Tracer {
+	return NewTracerProvider().Tracer("")
 }

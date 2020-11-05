@@ -702,10 +702,10 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 
 func TestStatelessExportKind(t *testing.T) {
 	type testcase struct {
-		name  string
+		name           string
 		instrumentKind otel.InstrumentKind
 		aggTemporality metricpb.AggregationTemporality
-		monotonic  bool
+		monotonic      bool
 	}
 
 	for _, k := range []testcase{
