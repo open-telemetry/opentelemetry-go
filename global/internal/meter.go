@@ -20,8 +20,8 @@ import (
 	"sync/atomic"
 	"unsafe"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/registry"
 )
@@ -52,7 +52,7 @@ type meterKey struct {
 }
 
 type meterProvider struct {
-	delegate otel.MeterProvider
+	delegate metric.MeterProvider
 
 	// lock protects `delegate` and `meters`.
 	lock sync.Mutex
@@ -63,7 +63,7 @@ type meterProvider struct {
 }
 
 type meterImpl struct {
-	delegate unsafe.Pointer // (*otel.MeterImpl)
+	delegate unsafe.Pointer // (*metric.MeterImpl)
 
 	lock       sync.Mutex
 	syncInsts  []*syncImpl
@@ -71,42 +71,42 @@ type meterImpl struct {
 }
 
 type meterEntry struct {
-	unique otel.MeterImpl
+	unique metric.MeterImpl
 	impl   meterImpl
 }
 
 type instrument struct {
-	descriptor otel.Descriptor
+	descriptor metric.Descriptor
 }
 
 type syncImpl struct {
-	delegate unsafe.Pointer // (*otel.SyncImpl)
+	delegate unsafe.Pointer // (*metric.SyncImpl)
 
 	instrument
 }
 
 type asyncImpl struct {
-	delegate unsafe.Pointer // (*otel.AsyncImpl)
+	delegate unsafe.Pointer // (*metric.AsyncImpl)
 
 	instrument
 
-	runner otel.AsyncRunner
+	runner metric.AsyncRunner
 }
 
 // SyncImpler is implemented by all of the sync metric
 // instruments.
 type SyncImpler interface {
-	SyncImpl() otel.SyncImpl
+	SyncImpl() metric.SyncImpl
 }
 
 // AsyncImpler is implemented by all of the async
 // metric instruments.
 type AsyncImpler interface {
-	AsyncImpl() otel.AsyncImpl
+	AsyncImpl() metric.AsyncImpl
 }
 
 type syncHandle struct {
-	delegate unsafe.Pointer // (*otel.HandleImpl)
+	delegate unsafe.Pointer // (*metric.BoundInstrumentImpl)
 
 	inst   *syncImpl
 	labels []label.KeyValue
@@ -114,13 +114,13 @@ type syncHandle struct {
 	initialize sync.Once
 }
 
-var _ otel.MeterProvider = &meterProvider{}
-var _ otel.MeterImpl = &meterImpl{}
-var _ otel.InstrumentImpl = &syncImpl{}
-var _ otel.BoundSyncImpl = &syncHandle{}
-var _ otel.AsyncImpl = &asyncImpl{}
+var _ metric.MeterProvider = &meterProvider{}
+var _ metric.MeterImpl = &meterImpl{}
+var _ metric.InstrumentImpl = &syncImpl{}
+var _ metric.BoundSyncImpl = &syncHandle{}
+var _ metric.AsyncImpl = &asyncImpl{}
 
-func (inst *instrument) Descriptor() otel.Descriptor {
+func (inst *instrument) Descriptor() metric.Descriptor {
 	return inst.descriptor
 }
 
@@ -132,7 +132,7 @@ func newMeterProvider() *meterProvider {
 	}
 }
 
-func (p *meterProvider) setDelegate(provider otel.MeterProvider) {
+func (p *meterProvider) setDelegate(provider metric.MeterProvider) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -143,7 +143,7 @@ func (p *meterProvider) setDelegate(provider otel.MeterProvider) {
 	p.meters = nil
 }
 
-func (p *meterProvider) Meter(instrumentationName string, opts ...otel.MeterOption) otel.Meter {
+func (p *meterProvider) Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -153,7 +153,7 @@ func (p *meterProvider) Meter(instrumentationName string, opts ...otel.MeterOpti
 
 	key := meterKey{
 		Name:    instrumentationName,
-		Version: otel.NewMeterConfig(opts...).InstrumentationVersion,
+		Version: metric.NewMeterConfig(opts...).InstrumentationVersion,
 	}
 	entry, ok := p.meters[key]
 	if !ok {
@@ -162,17 +162,17 @@ func (p *meterProvider) Meter(instrumentationName string, opts ...otel.MeterOpti
 		p.meters[key] = entry
 
 	}
-	return otel.WrapMeterImpl(entry.unique, key.Name, otel.WithInstrumentationVersion(key.Version))
+	return metric.WrapMeterImpl(entry.unique, key.Name, metric.WithInstrumentationVersion(key.Version))
 }
 
 // Meter interface and delegation
 
-func (m *meterImpl) setDelegate(name, version string, provider otel.MeterProvider) {
+func (m *meterImpl) setDelegate(name, version string, provider metric.MeterProvider) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	d := new(otel.MeterImpl)
-	*d = provider.Meter(name, otel.WithInstrumentationVersion(version)).MeterImpl()
+	d := new(metric.MeterImpl)
+	*d = provider.Meter(name, metric.WithInstrumentationVersion(version)).MeterImpl()
 	m.delegate = unsafe.Pointer(d)
 
 	for _, inst := range m.syncInsts {
@@ -185,11 +185,11 @@ func (m *meterImpl) setDelegate(name, version string, provider otel.MeterProvide
 	m.asyncInsts = nil
 }
 
-func (m *meterImpl) NewSyncInstrument(desc otel.Descriptor) (otel.SyncImpl, error) {
+func (m *meterImpl) NewSyncInstrument(desc metric.Descriptor) (metric.SyncImpl, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	if meterPtr := (*otel.MeterImpl)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
+	if meterPtr := (*metric.MeterImpl)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
 		return (*meterPtr).NewSyncInstrument(desc)
 	}
 
@@ -204,8 +204,8 @@ func (m *meterImpl) NewSyncInstrument(desc otel.Descriptor) (otel.SyncImpl, erro
 
 // Synchronous delegation
 
-func (inst *syncImpl) setDelegate(d otel.MeterImpl) {
-	implPtr := new(otel.SyncImpl)
+func (inst *syncImpl) setDelegate(d metric.MeterImpl) {
+	implPtr := new(metric.SyncImpl)
 
 	var err error
 	*implPtr, err = d.NewSyncInstrument(inst.descriptor)
@@ -222,14 +222,14 @@ func (inst *syncImpl) setDelegate(d otel.MeterImpl) {
 }
 
 func (inst *syncImpl) Implementation() interface{} {
-	if implPtr := (*otel.SyncImpl)(atomic.LoadPointer(&inst.delegate)); implPtr != nil {
+	if implPtr := (*metric.SyncImpl)(atomic.LoadPointer(&inst.delegate)); implPtr != nil {
 		return (*implPtr).Implementation()
 	}
 	return inst
 }
 
-func (inst *syncImpl) Bind(labels []label.KeyValue) otel.BoundSyncImpl {
-	if implPtr := (*otel.SyncImpl)(atomic.LoadPointer(&inst.delegate)); implPtr != nil {
+func (inst *syncImpl) Bind(labels []label.KeyValue) metric.BoundSyncImpl {
+	if implPtr := (*metric.SyncImpl)(atomic.LoadPointer(&inst.delegate)); implPtr != nil {
 		return (*implPtr).Bind(labels)
 	}
 	return &syncHandle{
@@ -241,7 +241,7 @@ func (inst *syncImpl) Bind(labels []label.KeyValue) otel.BoundSyncImpl {
 func (bound *syncHandle) Unbind() {
 	bound.initialize.Do(func() {})
 
-	implPtr := (*otel.BoundSyncImpl)(atomic.LoadPointer(&bound.delegate))
+	implPtr := (*metric.BoundSyncImpl)(atomic.LoadPointer(&bound.delegate))
 
 	if implPtr == nil {
 		return
@@ -253,14 +253,14 @@ func (bound *syncHandle) Unbind() {
 // Async delegation
 
 func (m *meterImpl) NewAsyncInstrument(
-	desc otel.Descriptor,
-	runner otel.AsyncRunner,
-) (otel.AsyncImpl, error) {
+	desc metric.Descriptor,
+	runner metric.AsyncRunner,
+) (metric.AsyncImpl, error) {
 
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	if meterPtr := (*otel.MeterImpl)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
+	if meterPtr := (*metric.MeterImpl)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
 		return (*meterPtr).NewAsyncInstrument(desc, runner)
 	}
 
@@ -275,14 +275,14 @@ func (m *meterImpl) NewAsyncInstrument(
 }
 
 func (obs *asyncImpl) Implementation() interface{} {
-	if implPtr := (*otel.AsyncImpl)(atomic.LoadPointer(&obs.delegate)); implPtr != nil {
+	if implPtr := (*metric.AsyncImpl)(atomic.LoadPointer(&obs.delegate)); implPtr != nil {
 		return (*implPtr).Implementation()
 	}
 	return obs
 }
 
-func (obs *asyncImpl) setDelegate(d otel.MeterImpl) {
-	implPtr := new(otel.AsyncImpl)
+func (obs *asyncImpl) setDelegate(d metric.MeterImpl) {
+	implPtr := new(metric.AsyncImpl)
 
 	var err error
 	*implPtr, err = d.NewAsyncInstrument(obs.descriptor, obs.runner)
@@ -300,14 +300,14 @@ func (obs *asyncImpl) setDelegate(d otel.MeterImpl) {
 
 // Metric updates
 
-func (m *meterImpl) RecordBatch(ctx context.Context, labels []label.KeyValue, measurements ...otel.Measurement) {
-	if delegatePtr := (*otel.MeterImpl)(atomic.LoadPointer(&m.delegate)); delegatePtr != nil {
+func (m *meterImpl) RecordBatch(ctx context.Context, labels []label.KeyValue, measurements ...metric.Measurement) {
+	if delegatePtr := (*metric.MeterImpl)(atomic.LoadPointer(&m.delegate)); delegatePtr != nil {
 		(*delegatePtr).RecordBatch(ctx, labels, measurements...)
 	}
 }
 
 func (inst *syncImpl) RecordOne(ctx context.Context, number number.Number, labels []label.KeyValue) {
-	if instPtr := (*otel.SyncImpl)(atomic.LoadPointer(&inst.delegate)); instPtr != nil {
+	if instPtr := (*metric.SyncImpl)(atomic.LoadPointer(&inst.delegate)); instPtr != nil {
 		(*instPtr).RecordOne(ctx, number, labels)
 	}
 }
@@ -315,18 +315,18 @@ func (inst *syncImpl) RecordOne(ctx context.Context, number number.Number, label
 // Bound instrument initialization
 
 func (bound *syncHandle) RecordOne(ctx context.Context, number number.Number) {
-	instPtr := (*otel.SyncImpl)(atomic.LoadPointer(&bound.inst.delegate))
+	instPtr := (*metric.SyncImpl)(atomic.LoadPointer(&bound.inst.delegate))
 	if instPtr == nil {
 		return
 	}
-	var implPtr *otel.BoundSyncImpl
+	var implPtr *metric.BoundSyncImpl
 	bound.initialize.Do(func() {
-		implPtr = new(otel.BoundSyncImpl)
+		implPtr = new(metric.BoundSyncImpl)
 		*implPtr = (*instPtr).Bind(bound.labels)
 		atomic.StorePointer(&bound.delegate, unsafe.Pointer(implPtr))
 	})
 	if implPtr == nil {
-		implPtr = (*otel.BoundSyncImpl)(atomic.LoadPointer(&bound.delegate))
+		implPtr = (*metric.BoundSyncImpl)(atomic.LoadPointer(&bound.delegate))
 	}
 	// This may still be nil if instrument was created and bound
 	// without a delegate, then the instrument was set to have a

@@ -19,8 +19,8 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/global"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/registry"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
@@ -84,7 +84,7 @@ func (c *Controller) SetClock(clock controllerTime.Clock) {
 }
 
 // MeterProvider returns a MeterProvider instance for this controller.
-func (c *Controller) MeterProvider() otel.MeterProvider {
+func (c *Controller) MeterProvider() metric.MeterProvider {
 	return c.provider
 }
 

@@ -23,9 +23,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -34,7 +34,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-var Must = otel.Must
+var Must = metric.Must
 var testResource = resource.NewWithAttributes(label.String("R", "V"))
 
 type handler struct {
@@ -84,12 +84,12 @@ type testSelector struct {
 	newAggCount int
 }
 
-func (ts *testSelector) AggregatorFor(desc *otel.Descriptor, aggPtrs ...*export.Aggregator) {
+func (ts *testSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*export.Aggregator) {
 	ts.newAggCount += len(aggPtrs)
 	processortest.AggregatorSelector().AggregatorFor(desc, aggPtrs...)
 }
 
-func newSDK(t *testing.T) (otel.Meter, *metricsdk.Accumulator, *correctnessProcessor) {
+func newSDK(t *testing.T) (metric.Meter, *metricsdk.Accumulator, *correctnessProcessor) {
 	testHandler.Reset()
 	processor := &correctnessProcessor{
 		t:            t,
@@ -99,7 +99,7 @@ func newSDK(t *testing.T) (otel.Meter, *metricsdk.Accumulator, *correctnessProce
 		processor,
 		testResource,
 	)
-	meter := otel.WrapMeterImpl(accum, "test")
+	meter := metric.WrapMeterImpl(accum, "test")
 	return meter, accum, processor
 }
 
@@ -301,13 +301,13 @@ func TestObserverCollection(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, processor := newSDK(t)
 
-	_ = Must(meter).NewFloat64ValueObserver("float.valueobserver.lastvalue", func(_ context.Context, result otel.Float64ObserverResult) {
+	_ = Must(meter).NewFloat64ValueObserver("float.valueobserver.lastvalue", func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(1, label.String("A", "B"))
 		// last value wins
 		result.Observe(-1, label.String("A", "B"))
 		result.Observe(-1, label.String("C", "D"))
 	})
-	_ = Must(meter).NewInt64ValueObserver("int.valueobserver.lastvalue", func(_ context.Context, result otel.Int64ObserverResult) {
+	_ = Must(meter).NewInt64ValueObserver("int.valueobserver.lastvalue", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(-1, label.String("A", "B"))
 		result.Observe(1)
 		// last value wins
@@ -315,12 +315,12 @@ func TestObserverCollection(t *testing.T) {
 		result.Observe(1)
 	})
 
-	_ = Must(meter).NewFloat64SumObserver("float.sumobserver.sum", func(_ context.Context, result otel.Float64ObserverResult) {
+	_ = Must(meter).NewFloat64SumObserver("float.sumobserver.sum", func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(1, label.String("A", "B"))
 		result.Observe(2, label.String("A", "B"))
 		result.Observe(1, label.String("C", "D"))
 	})
-	_ = Must(meter).NewInt64SumObserver("int.sumobserver.sum", func(_ context.Context, result otel.Int64ObserverResult) {
+	_ = Must(meter).NewInt64SumObserver("int.sumobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(2, label.String("A", "B"))
 		result.Observe(1)
 		// last value wins
@@ -328,12 +328,12 @@ func TestObserverCollection(t *testing.T) {
 		result.Observe(1)
 	})
 
-	_ = Must(meter).NewFloat64UpDownSumObserver("float.updownsumobserver.sum", func(_ context.Context, result otel.Float64ObserverResult) {
+	_ = Must(meter).NewFloat64UpDownSumObserver("float.updownsumobserver.sum", func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(1, label.String("A", "B"))
 		result.Observe(-2, label.String("A", "B"))
 		result.Observe(1, label.String("C", "D"))
 	})
-	_ = Must(meter).NewInt64UpDownSumObserver("int.updownsumobserver.sum", func(_ context.Context, result otel.Int64ObserverResult) {
+	_ = Must(meter).NewInt64UpDownSumObserver("int.updownsumobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(2, label.String("A", "B"))
 		result.Observe(1)
 		// last value wins
@@ -341,7 +341,7 @@ func TestObserverCollection(t *testing.T) {
 		result.Observe(-1)
 	})
 
-	_ = Must(meter).NewInt64ValueObserver("empty.valueobserver.sum", func(_ context.Context, result otel.Int64ObserverResult) {
+	_ = Must(meter).NewInt64ValueObserver("empty.valueobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
 	})
 
 	collected := sdk.Collect(ctx)
@@ -375,13 +375,13 @@ func TestSumObserverInputRange(t *testing.T) {
 	meter, sdk, processor := newSDK(t)
 
 	// TODO: these tests are testing for negative values, not for _descending values_. Fix.
-	_ = Must(meter).NewFloat64SumObserver("float.sumobserver.sum", func(_ context.Context, result otel.Float64ObserverResult) {
+	_ = Must(meter).NewFloat64SumObserver("float.sumobserver.sum", func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(-2, label.String("A", "B"))
 		require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
 		result.Observe(-1, label.String("C", "D"))
 		require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
 	})
-	_ = Must(meter).NewInt64SumObserver("int.sumobserver.sum", func(_ context.Context, result otel.Int64ObserverResult) {
+	_ = Must(meter).NewInt64SumObserver("int.sumobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(-1, label.String("A", "B"))
 		require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
 		result.Observe(-1)
@@ -401,15 +401,15 @@ func TestObserverBatch(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, processor := newSDK(t)
 
-	var floatValueObs otel.Float64ValueObserver
-	var intValueObs otel.Int64ValueObserver
-	var floatSumObs otel.Float64SumObserver
-	var intSumObs otel.Int64SumObserver
-	var floatUpDownSumObs otel.Float64UpDownSumObserver
-	var intUpDownSumObs otel.Int64UpDownSumObserver
+	var floatValueObs metric.Float64ValueObserver
+	var intValueObs metric.Int64ValueObserver
+	var floatSumObs metric.Float64SumObserver
+	var intSumObs metric.Int64SumObserver
+	var floatUpDownSumObs metric.Float64UpDownSumObserver
+	var intUpDownSumObs metric.Int64UpDownSumObserver
 
 	var batch = Must(meter).NewBatchObserver(
-		func(_ context.Context, result otel.BatchObserverResult) {
+		func(_ context.Context, result metric.BatchObserverResult) {
 			result.Observe(
 				[]label.KeyValue{
 					label.String("A", "B"),
@@ -531,15 +531,15 @@ func TestRecordPersistence(t *testing.T) {
 func TestIncorrectInstruments(t *testing.T) {
 	// The Batch observe/record APIs are susceptible to
 	// uninitialized instruments.
-	var counter otel.Int64Counter
-	var observer otel.Int64ValueObserver
+	var counter metric.Int64Counter
+	var observer metric.Int64ValueObserver
 
 	ctx := context.Background()
 	meter, sdk, _ := newSDK(t)
 
 	// Now try with uninitialized instruments.
 	meter.RecordBatch(ctx, nil, counter.Measurement(1))
-	meter.NewBatchObserver(func(_ context.Context, result otel.BatchObserverResult) {
+	meter.NewBatchObserver(func(_ context.Context, result metric.BatchObserverResult) {
 		result.Observe(nil, observer.Observation(1))
 	})
 
@@ -548,14 +548,14 @@ func TestIncorrectInstruments(t *testing.T) {
 	require.Equal(t, 0, collected)
 
 	// Now try with instruments from another SDK.
-	var noopMeter otel.Meter
-	counter = otel.Must(noopMeter).NewInt64Counter("name.sum")
-	observer = otel.Must(noopMeter).NewBatchObserver(
-		func(context.Context, otel.BatchObserverResult) {},
+	var noopMeter metric.Meter
+	counter = metric.Must(noopMeter).NewInt64Counter("name.sum")
+	observer = metric.Must(noopMeter).NewBatchObserver(
+		func(context.Context, metric.BatchObserverResult) {},
 	).NewInt64ValueObserver("observer")
 
 	meter.RecordBatch(ctx, nil, counter.Measurement(1))
-	meter.NewBatchObserver(func(_ context.Context, result otel.BatchObserverResult) {
+	meter.NewBatchObserver(func(_ context.Context, result metric.BatchObserverResult) {
 		result.Observe(nil, observer.Observation(1))
 	})
 
@@ -570,7 +570,7 @@ func TestSyncInAsync(t *testing.T) {
 
 	counter := Must(meter).NewFloat64Counter("counter.sum")
 	_ = Must(meter).NewInt64ValueObserver("observer.lastvalue",
-		func(ctx context.Context, result otel.Int64ObserverResult) {
+		func(ctx context.Context, result metric.Int64ObserverResult) {
 			result.Observe(10)
 			counter.Add(ctx, 100)
 		},

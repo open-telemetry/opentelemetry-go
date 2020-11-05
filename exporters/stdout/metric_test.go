@@ -26,9 +26,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -100,7 +100,7 @@ func TestStdoutTimestamp(t *testing.T) {
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
 
 	ctx := context.Background()
-	desc := otel.NewDescriptor("test.name", otel.ValueObserverInstrumentKind, number.Int64Kind)
+	desc := metric.NewDescriptor("test.name", metric.ValueObserverInstrumentKind, number.Int64Kind)
 
 	lvagg, ckpt := metrictest.Unslice2(lastvalue.New(2))
 
@@ -139,7 +139,7 @@ func TestStdoutCounterFormat(t *testing.T) {
 
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
 
-	desc := otel.NewDescriptor("test.name", otel.CounterInstrumentKind, number.Int64Kind)
+	desc := metric.NewDescriptor("test.name", metric.CounterInstrumentKind, number.Int64Kind)
 
 	cagg, ckpt := metrictest.Unslice2(sum.New(2))
 
@@ -158,7 +158,7 @@ func TestStdoutLastValueFormat(t *testing.T) {
 
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
 
-	desc := otel.NewDescriptor("test.name", otel.ValueObserverInstrumentKind, number.Float64Kind)
+	desc := metric.NewDescriptor("test.name", metric.ValueObserverInstrumentKind, number.Float64Kind)
 	lvagg, ckpt := metrictest.Unslice2(lastvalue.New(2))
 
 	aggregatortest.CheckedUpdate(fix.t, lvagg, number.NewFloat64Number(123.456), &desc)
@@ -176,7 +176,7 @@ func TestStdoutMinMaxSumCount(t *testing.T) {
 
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
 
-	desc := otel.NewDescriptor("test.name", otel.ValueRecorderInstrumentKind, number.Float64Kind)
+	desc := metric.NewDescriptor("test.name", metric.ValueRecorderInstrumentKind, number.Float64Kind)
 
 	magg, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &desc))
 
@@ -196,7 +196,7 @@ func TestStdoutValueRecorderFormat(t *testing.T) {
 
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
 
-	desc := otel.NewDescriptor("test.name", otel.ValueRecorderInstrumentKind, number.Float64Kind)
+	desc := metric.NewDescriptor("test.name", metric.ValueRecorderInstrumentKind, number.Float64Kind)
 	aagg, ckpt := metrictest.Unslice2(array.New(2))
 
 	for i := 0; i < 1000; i++ {
@@ -235,7 +235,7 @@ func TestStdoutValueRecorderFormat(t *testing.T) {
 }
 
 func TestStdoutNoData(t *testing.T) {
-	desc := otel.NewDescriptor("test.name", otel.ValueRecorderInstrumentKind, number.Float64Kind)
+	desc := metric.NewDescriptor("test.name", metric.ValueRecorderInstrumentKind, number.Float64Kind)
 
 	runTwoAggs := func(agg, ckpt export.Aggregator) {
 		t.Run(fmt.Sprintf("%T", agg), func(t *testing.T) {
@@ -264,7 +264,7 @@ func TestStdoutLastValueNotSet(t *testing.T) {
 
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
 
-	desc := otel.NewDescriptor("test.name", otel.ValueObserverInstrumentKind, number.Float64Kind)
+	desc := metric.NewDescriptor("test.name", metric.ValueObserverInstrumentKind, number.Float64Kind)
 
 	lvagg, ckpt := metrictest.Unslice2(lastvalue.New(2))
 	require.NoError(t, lvagg.SynchronizedMove(ckpt, &desc))
@@ -315,7 +315,7 @@ func TestStdoutResource(t *testing.T) {
 
 		checkpointSet := metrictest.NewCheckpointSet(tc.res)
 
-		desc := otel.NewDescriptor("test.name", otel.ValueObserverInstrumentKind, number.Float64Kind)
+		desc := metric.NewDescriptor("test.name", metric.ValueObserverInstrumentKind, number.Float64Kind)
 		lvagg, ckpt := metrictest.Unslice2(lastvalue.New(2))
 
 		aggregatortest.CheckedUpdate(fix.t, lvagg, number.NewFloat64Number(123.456), &desc)

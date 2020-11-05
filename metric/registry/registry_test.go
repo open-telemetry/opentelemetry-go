@@ -21,49 +21,49 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/registry"
 	"go.opentelemetry.io/otel/oteltest"
 )
 
 type (
-	newFunc func(m otel.Meter, name string) (otel.InstrumentImpl, error)
+	newFunc func(m metric.Meter, name string) (metric.InstrumentImpl, error)
 )
 
 var (
 	allNew = map[string]newFunc{
-		"counter.int64": func(m otel.Meter, name string) (otel.InstrumentImpl, error) {
+		"counter.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
 			return unwrap(m.NewInt64Counter(name))
 		},
-		"counter.float64": func(m otel.Meter, name string) (otel.InstrumentImpl, error) {
+		"counter.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
 			return unwrap(m.NewFloat64Counter(name))
 		},
-		"valuerecorder.int64": func(m otel.Meter, name string) (otel.InstrumentImpl, error) {
+		"valuerecorder.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
 			return unwrap(m.NewInt64ValueRecorder(name))
 		},
-		"valuerecorder.float64": func(m otel.Meter, name string) (otel.InstrumentImpl, error) {
+		"valuerecorder.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
 			return unwrap(m.NewFloat64ValueRecorder(name))
 		},
-		"valueobserver.int64": func(m otel.Meter, name string) (otel.InstrumentImpl, error) {
-			return unwrap(m.NewInt64ValueObserver(name, func(context.Context, otel.Int64ObserverResult) {}))
+		"valueobserver.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+			return unwrap(m.NewInt64ValueObserver(name, func(context.Context, metric.Int64ObserverResult) {}))
 		},
-		"valueobserver.float64": func(m otel.Meter, name string) (otel.InstrumentImpl, error) {
-			return unwrap(m.NewFloat64ValueObserver(name, func(context.Context, otel.Float64ObserverResult) {}))
+		"valueobserver.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+			return unwrap(m.NewFloat64ValueObserver(name, func(context.Context, metric.Float64ObserverResult) {}))
 		},
 	}
 )
 
-func unwrap(impl interface{}, err error) (otel.InstrumentImpl, error) {
+func unwrap(impl interface{}, err error) (metric.InstrumentImpl, error) {
 	if impl == nil {
 		return nil, err
 	}
 	if s, ok := impl.(interface {
-		SyncImpl() otel.SyncImpl
+		SyncImpl() metric.SyncImpl
 	}); ok {
 		return s.SyncImpl(), err
 	}
 	if a, ok := impl.(interface {
-		AsyncImpl() otel.AsyncImpl
+		AsyncImpl() metric.AsyncImpl
 	}); ok {
 		return a.AsyncImpl(), err
 	}

@@ -22,9 +22,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -59,13 +59,13 @@ func ExampleNewExportPipeline() {
 	ctx := context.Background()
 
 	// Use two instruments
-	counter := otel.Must(meter).NewInt64Counter(
+	counter := metric.Must(meter).NewInt64Counter(
 		"a.counter",
-		otel.WithDescription("Counts things"),
+		metric.WithDescription("Counts things"),
 	)
-	recorder := otel.Must(meter).NewInt64ValueRecorder(
+	recorder := metric.Must(meter).NewInt64ValueRecorder(
 		"a.valuerecorder",
-		otel.WithDescription("Records values"),
+		metric.WithDescription("Records values"),
 	)
 
 	counter.Add(ctx, 100, label.String("key", "value"))
