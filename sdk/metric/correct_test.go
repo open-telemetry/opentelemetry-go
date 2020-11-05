@@ -23,7 +23,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/global"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
@@ -66,7 +66,7 @@ var testHandler *handler
 
 func init() {
 	testHandler = new(handler)
-	global.SetErrorHandler(testHandler)
+	otel.SetErrorHandler(testHandler)
 }
 
 // correctnessProcessor could be replaced with processortest.Processor

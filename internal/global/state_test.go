@@ -12,25 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal_test
+package global_test
 
 import (
 	"testing"
 
-	"go.opentelemetry.io/otel/global/internal"
+	"go.opentelemetry.io/otel/internal/global"
 )
 
 func TestResetsOfGlobalsPanic(t *testing.T) {
-	internal.ResetForTest()
+	global.ResetForTest()
 	tests := map[string]func(){
 		"SetTextMapPropagator": func() {
-			internal.SetTextMapPropagator(internal.TextMapPropagator())
+			global.SetTextMapPropagator(global.TextMapPropagator())
 		},
 		"SetTracerProvider": func() {
-			internal.SetTracerProvider(internal.TracerProvider())
+			global.SetTracerProvider(global.TracerProvider())
 		},
 		"SetMeterProvider": func() {
-			internal.SetMeterProvider(internal.MeterProvider())
+			global.SetMeterProvider(global.MeterProvider())
 		},
 	}
 

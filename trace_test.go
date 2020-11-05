@@ -12,32 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global_test
+package otel
 
 import (
 	"testing"
 
-	"go.opentelemetry.io/otel/global"
-	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/internal/trace/noop"
+	"go.opentelemetry.io/otel/trace"
 )
 
-type testMeterProvider struct{}
+type testTracerProvider struct{}
 
-var _ metric.MeterProvider = &testMeterProvider{}
+var _ trace.TracerProvider = &testTracerProvider{}
 
-func (*testMeterProvider) Meter(_ string, _ ...metric.MeterOption) metric.Meter {
-	return metric.Meter{}
+func (*testTracerProvider) Tracer(_ string, _ ...trace.TracerOption) trace.Tracer {
+	return noop.Tracer
 }
 
-func TestMultipleGlobalMeterProvider(t *testing.T) {
-	p1 := testMeterProvider{}
-	p2 := metric.NoopMeterProvider{}
-	global.SetMeterProvider(&p1)
-	global.SetMeterProvider(&p2)
+func TestMultipleGlobalTracerProvider(t *testing.T) {
+	p1 := testTracerProvider{}
+	p2 := trace.NewNoopTracerProvider()
+	SetTracerProvider(&p1)
+	SetTracerProvider(p2)
 
-	got := global.MeterProvider()
-	want := &p2
+	got := GetTracerProvider()
+	want := p2
 	if got != want {
-		t.Fatalf("MeterProvider: got %p, want %p\n", got, want)
+		t.Fatalf("TracerProvider: got %p, want %p\n", got, want)
 	}
 }

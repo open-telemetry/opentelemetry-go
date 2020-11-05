@@ -19,7 +19,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go.opentelemetry.io/otel/global"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -144,7 +144,7 @@ func (p *TracerProvider) UnregisterSpanProcessor(s SpanProcessor) {
 	}
 	if stopOnce != nil {
 		stopOnce.state.Do(func() {
-			global.Handle(s.Shutdown(context.Background()))
+			otel.Handle(s.Shutdown(context.Background()))
 		})
 	}
 	if len(new) > 1 {
@@ -192,7 +192,7 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 
 	for _, sps := range spss {
 		sps.state.Do(func() {
-			global.Handle(sps.sp.Shutdown(ctx))
+			otel.Handle(sps.sp.Shutdown(ctx))
 		})
 	}
 	return nil

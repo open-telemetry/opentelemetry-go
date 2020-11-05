@@ -12,24 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal_test
+package global_test
 
 import (
 	"context"
 	"testing"
 
-	"go.opentelemetry.io/otel/global"
-	"go.opentelemetry.io/otel/global/internal"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/label"
 )
 
 func BenchmarkGlobalInt64CounterAddNoSDK(b *testing.B) {
 	// Compare with BenchmarkGlobalInt64CounterAddWithSDK() in
-	// ../../../sdk/metric/benchmark_test.go to see the overhead of the
+	// ../../sdk/metric/benchmark_test.go to see the overhead of the
 	// global no-op system against a registered SDK.
-	internal.ResetForTest()
+	global.ResetForTest()
 	ctx := context.Background()
-	sdk := global.Meter("test")
+	sdk := otel.Meter("test")
 	labs := []label.KeyValue{label.String("A", "B")}
 	cnt := Must(sdk).NewInt64Counter("int64.counter")
 
@@ -42,9 +42,9 @@ func BenchmarkGlobalInt64CounterAddNoSDK(b *testing.B) {
 
 func BenchmarkStartEndSpanNoSDK(b *testing.B) {
 	// Compare with BenchmarkStartEndSpan() in
-	// ../../../sdk/trace/benchmark_test.go.
-	internal.ResetForTest()
-	t := global.Tracer("Benchmark StartEndSpan")
+	// ../../sdk/trace/benchmark_test.go.
+	global.ResetForTest()
+	t := otel.Tracer("Benchmark StartEndSpan")
 	ctx := context.Background()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

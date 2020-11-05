@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global
+package otel
 
 import (
 	"bytes"
@@ -66,7 +66,7 @@ func (s *HandlerTestSuite) SetupTest() {
 
 func (s *HandlerTestSuite) TestGlobalHandler() {
 	errs := []string{"one", "two"}
-	ErrorHandler().Handle(errors.New(errs[0]))
+	GetErrorHandler().Handle(errors.New(errs[0]))
 	Handle(errors.New(errs[1]))
 	s.Assert().Equal(errs, s.errLogger.Got())
 }

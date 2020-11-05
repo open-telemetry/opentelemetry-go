@@ -12,29 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal_test
+package otel // import "go.opentelemetry.io/otel"
 
 import (
-	"os"
-	"testing"
-
-	"go.opentelemetry.io/otel/global/internal"
-	ottest "go.opentelemetry.io/otel/internal/testing"
+	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/propagation"
 )
 
-// Ensure struct alignment prior to running tests.
-func TestMain(m *testing.M) {
-	fieldsMap := internal.AtomicFieldOffsets()
-	fields := make([]ottest.FieldOffset, 0, len(fieldsMap))
-	for name, offset := range fieldsMap {
-		fields = append(fields, ottest.FieldOffset{
-			Name:   name,
-			Offset: offset,
-		})
-	}
-	if !ottest.Aligned8Byte(fields, os.Stderr) {
-		os.Exit(1)
-	}
+// GetTextMapPropagator returns the global TextMapPropagator. If none has been
+// set, a No-Op TextMapPropagator is returned.
+func GetTextMapPropagator() propagation.TextMapPropagator {
+	return global.TextMapPropagator()
+}
 
-	os.Exit(m.Run())
+// SetTextMapPropagator sets propagator as the global TSetTextMapPropagator.
+func SetTextMapPropagator(propagator propagation.TextMapPropagator) {
+	global.SetTextMapPropagator(propagator)
 }
