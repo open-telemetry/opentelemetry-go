@@ -299,14 +299,14 @@ func Record(r export.Record) (*metricpb.Metric, error) {
 			return nil, err
 		}
 
-		return array(r, pts)
+		return gaugeArray(r, pts)
 
 	default:
 		return nil, fmt.Errorf("%w: %T", ErrUnimplementedAgg, agg)
 	}
 }
 
-func array(record export.Record, points []otel.Number) (*metricpb.Metric, error) {
+func gaugeArray(record export.Record, points []otel.Number) (*metricpb.Metric, error) {
 	desc := record.Descriptor()
 	m := &metricpb.Metric{
 		Name:        desc.Name(),
