@@ -21,9 +21,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
@@ -31,12 +31,12 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 	tests := []struct {
 		name   string
 		header string
-		wantSc otel.SpanContext
+		wantSc trace.SpanContext
 	}{
 		{
 			name:   "valid w3cHeader",
 			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00",
-			wantSc: otel.SpanContext{
+			wantSc: trace.SpanContext{
 				TraceID: traceID,
 				SpanID:  spanID,
 			},
@@ -44,34 +44,34 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 		{
 			name:   "valid w3cHeader and sampled",
 			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
-			wantSc: otel.SpanContext{
+			wantSc: trace.SpanContext{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: otel.FlagsSampled,
+				TraceFlags: trace.FlagsSampled,
 			},
 		},
 		{
 			name:   "future version",
 			header: "02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
-			wantSc: otel.SpanContext{
+			wantSc: trace.SpanContext{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: otel.FlagsSampled,
+				TraceFlags: trace.FlagsSampled,
 			},
 		},
 		{
 			name:   "future options with sampled bit set",
 			header: "02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-09",
-			wantSc: otel.SpanContext{
+			wantSc: trace.SpanContext{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: otel.FlagsSampled,
+				TraceFlags: trace.FlagsSampled,
 			},
 		},
 		{
 			name:   "future options with sampled bit cleared",
 			header: "02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-08",
-			wantSc: otel.SpanContext{
+			wantSc: trace.SpanContext{
 				TraceID: traceID,
 				SpanID:  spanID,
 			},
@@ -79,28 +79,28 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 		{
 			name:   "future additional data",
 			header: "02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-09-XYZxsf09",
-			wantSc: otel.SpanContext{
+			wantSc: trace.SpanContext{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: otel.FlagsSampled,
+				TraceFlags: trace.FlagsSampled,
 			},
 		},
 		{
 			name:   "valid b3Header ending in dash",
 			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01-",
-			wantSc: otel.SpanContext{
+			wantSc: trace.SpanContext{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: otel.FlagsSampled,
+				TraceFlags: trace.FlagsSampled,
 			},
 		},
 		{
 			name:   "future valid b3Header ending in dash",
 			header: "01-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-09-",
-			wantSc: otel.SpanContext{
+			wantSc: trace.SpanContext{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: otel.FlagsSampled,
+				TraceFlags: trace.FlagsSampled,
 			},
 		},
 	}
@@ -112,7 +112,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 
 			ctx := context.Background()
 			ctx = prop.Extract(ctx, req.Header)
-			gotSc := otel.RemoteSpanContextFromContext(ctx)
+			gotSc := trace.RemoteSpanContextFromContext(ctx)
 			if diff := cmp.Diff(gotSc, tt.wantSc); diff != "" {
 				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
 			}
@@ -121,7 +121,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 }
 
 func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
-	wantSc := otel.SpanContext{}
+	wantSc := trace.SpanContext{}
 	prop := propagators.TraceContext{}
 	tests := []struct {
 		name   string
@@ -200,7 +200,7 @@ func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 
 			ctx := context.Background()
 			ctx = prop.Extract(ctx, req.Header)
-			gotSc := otel.RemoteSpanContextFromContext(ctx)
+			gotSc := trace.RemoteSpanContextFromContext(ctx)
 			if diff := cmp.Diff(gotSc, wantSc); diff != "" {
 				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
 			}
@@ -213,21 +213,21 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 	prop := propagators.TraceContext{}
 	tests := []struct {
 		name       string
-		sc         otel.SpanContext
+		sc         trace.SpanContext
 		wantHeader string
 	}{
 		{
 			name: "valid spancontext, sampled",
-			sc: otel.SpanContext{
+			sc: trace.SpanContext{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: otel.FlagsSampled,
+				TraceFlags: trace.FlagsSampled,
 			},
 			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000002-01",
 		},
 		{
 			name: "valid spancontext, not sampled",
-			sc: otel.SpanContext{
+			sc: trace.SpanContext{
 				TraceID: traceID,
 				SpanID:  spanID,
 			},
@@ -235,7 +235,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 		},
 		{
 			name: "valid spancontext, with unsupported bit set in traceflags",
-			sc: otel.SpanContext{
+			sc: trace.SpanContext{
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: 0xff,
@@ -244,7 +244,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 		},
 		{
 			name:       "invalid spancontext",
-			sc:         otel.SpanContext{},
+			sc:         trace.SpanContext{},
 			wantHeader: "",
 		},
 	}
@@ -253,7 +253,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
 			ctx := context.Background()
 			if tt.sc.IsValid() {
-				ctx = otel.ContextWithRemoteSpanContext(ctx, tt.sc)
+				ctx = trace.ContextWithRemoteSpanContext(ctx, tt.sc)
 				ctx, _ = mockTracer.Start(ctx, "inject")
 			}
 			prop.Inject(ctx, req.Header)

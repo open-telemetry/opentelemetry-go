@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otel // import "go.opentelemetry.io/otel"
+package trace // import "go.opentelemetry.io/otel/trace"
 
 import (
 	"bytes"
@@ -51,6 +51,7 @@ func (e errorConst) Error() string {
 }
 
 // TraceID is a unique identity of a trace.
+// nolint:golint
 type TraceID [16]byte
 
 var nilTraceID TraceID
@@ -99,6 +100,7 @@ func (s SpanID) String() string {
 // TraceIDFromHex returns a TraceID from a hex string if it is compliant with
 // the W3C trace-context specification.  See more at
 // https://www.w3.org/TR/trace-context/#trace-id
+// nolint:golint
 func TraceIDFromHex(h string) (TraceID, error) {
 	t := TraceID{}
 	if len(h) != 32 {

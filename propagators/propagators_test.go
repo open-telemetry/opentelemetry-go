@@ -23,6 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -35,18 +36,18 @@ var (
 	spanID  = mustSpanIDFromHex(spanIDStr)
 )
 
-func mustTraceIDFromHex(s string) (t otel.TraceID) {
+func mustTraceIDFromHex(s string) (t trace.TraceID) {
 	var err error
-	t, err = otel.TraceIDFromHex(s)
+	t, err = trace.TraceIDFromHex(s)
 	if err != nil {
 		panic(err)
 	}
 	return
 }
 
-func mustSpanIDFromHex(s string) (t otel.SpanID) {
+func mustSpanIDFromHex(s string) (t trace.SpanID) {
 	var err error
-	t, err = otel.SpanIDFromHex(s)
+	t, err = trace.SpanIDFromHex(s)
 	if err != nil {
 		panic(err)
 	}
@@ -60,13 +61,13 @@ type outOfThinAirPropagator struct {
 var _ otel.TextMapPropagator = outOfThinAirPropagator{}
 
 func (p outOfThinAirPropagator) Extract(ctx context.Context, carrier otel.TextMapCarrier) context.Context {
-	sc := otel.SpanContext{
+	sc := trace.SpanContext{
 		TraceID:    traceID,
 		SpanID:     spanID,
 		TraceFlags: 0,
 	}
 	require.True(p.t, sc.IsValid())
-	return otel.ContextWithRemoteSpanContext(ctx, sc)
+	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
 
 func (outOfThinAirPropagator) Inject(context.Context, otel.TextMapCarrier) {}
@@ -96,7 +97,7 @@ func TestMultiplePropagators(t *testing.T) {
 	// generates the valid span context out of thin air
 	{
 		ctx := ootaProp.Extract(bg, ns)
-		sc := otel.RemoteSpanContextFromContext(ctx)
+		sc := trace.RemoteSpanContextFromContext(ctx)
 		require.True(t, sc.IsValid(), "oota prop failed sanity check")
 	}
 	// sanity check for real propagators, ensuring that they
@@ -104,13 +105,13 @@ func TestMultiplePropagators(t *testing.T) {
 	// go context in absence of the HTTP headers.
 	for _, prop := range testProps {
 		ctx := prop.Extract(bg, ns)
-		sc := otel.RemoteSpanContextFromContext(ctx)
+		sc := trace.RemoteSpanContextFromContext(ctx)
 		require.Falsef(t, sc.IsValid(), "%#v failed sanity check", prop)
 	}
 	for _, prop := range testProps {
 		props := otel.NewCompositeTextMapPropagator(ootaProp, prop)
 		ctx := props.Extract(bg, ns)
-		sc := otel.RemoteSpanContextFromContext(ctx)
+		sc := trace.RemoteSpanContextFromContext(ctx)
 		assert.Truef(t, sc.IsValid(), "%#v clobbers span context", prop)
 	}
 }

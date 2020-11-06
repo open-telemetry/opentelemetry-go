@@ -18,18 +18,18 @@ package noop
 import (
 	"context"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
 	// Tracer is a noop tracer that starts noop spans.
-	Tracer otel.Tracer
+	Tracer trace.Tracer
 
 	// Span is a noop Span.
-	Span otel.Span
+	Span trace.Span
 )
 
 func init() {
-	Tracer = otel.NewNoopTracerProvider().Tracer("")
+	Tracer = trace.NewNoopTracerProvider().Tracer("")
 	_, Span = Tracer.Start(context.Background(), "")
 }

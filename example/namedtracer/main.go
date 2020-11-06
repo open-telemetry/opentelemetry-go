@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
@@ -64,10 +65,10 @@ func main() {
 	defer func() { _ = tp.Shutdown(ctx) }()
 	ctx = otel.ContextWithBaggageValues(ctx, fooKey.String("foo1"), barKey.String("bar1"))
 
-	var span otel.Span
+	var span trace.Span
 	ctx, span = tracer.Start(ctx, "operation")
 	defer span.End()
-	span.AddEvent("Nice operation!", otel.WithAttributes(label.Int("bogons", 100)))
+	span.AddEvent("Nice operation!", trace.WithAttributes(label.Int("bogons", 100)))
 	span.SetAttributes(anotherKey.String("yes"))
 	if err := foo.SubOperation(ctx); err != nil {
 		panic(err)

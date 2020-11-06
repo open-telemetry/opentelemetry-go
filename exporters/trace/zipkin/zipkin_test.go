@@ -30,11 +30,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/global"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -241,12 +241,12 @@ func TestExportSpans(t *testing.T) {
 	spans := []*export.SpanData{
 		// parent
 		{
-			SpanContext: otel.SpanContext{
-				TraceID: otel.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
-				SpanID:  otel.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
+			SpanContext: trace.SpanContext{
+				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+				SpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 			},
-			ParentSpanID:  otel.SpanID{},
-			SpanKind:      otel.SpanKindServer,
+			ParentSpanID:  trace.SpanID{},
+			SpanKind:      trace.SpanKindServer,
 			Name:          "foo",
 			StartTime:     time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:       time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
@@ -257,12 +257,12 @@ func TestExportSpans(t *testing.T) {
 		},
 		// child
 		{
-			SpanContext: otel.SpanContext{
-				TraceID: otel.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
-				SpanID:  otel.SpanID{0xDF, 0xDE, 0xDD, 0xDC, 0xDB, 0xDA, 0xD9, 0xD8},
+			SpanContext: trace.SpanContext{
+				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+				SpanID:  trace.SpanID{0xDF, 0xDE, 0xDD, 0xDC, 0xDB, 0xDA, 0xD9, 0xD8},
 			},
-			ParentSpanID:  otel.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
-			SpanKind:      otel.SpanKindServer,
+			ParentSpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
+			SpanKind:      trace.SpanKindServer,
 			Name:          "bar",
 			StartTime:     time.Date(2020, time.March, 11, 19, 24, 15, 0, time.UTC),
 			EndTime:       time.Date(2020, time.March, 11, 19, 24, 45, 0, time.UTC),

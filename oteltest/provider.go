@@ -17,7 +17,7 @@ package oteltest // import "go.opentelemetry.io/otel/oteltest"
 import (
 	"sync"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // TracerProvider is a testing TracerProvider. It is an functioning
@@ -31,7 +31,7 @@ type TracerProvider struct {
 	tracers   map[instrumentation]*Tracer
 }
 
-var _ otel.TracerProvider = (*TracerProvider)(nil)
+var _ trace.TracerProvider = (*TracerProvider)(nil)
 
 // NewTracerProvider returns a *TracerProvider configured with options.
 func NewTracerProvider(options ...Option) *TracerProvider {
@@ -46,8 +46,8 @@ type instrumentation struct {
 }
 
 // Tracer returns an OpenTelemetry Tracer used for testing.
-func (p *TracerProvider) Tracer(instName string, opts ...otel.TracerOption) otel.Tracer {
-	conf := otel.NewTracerConfig(opts...)
+func (p *TracerProvider) Tracer(instName string, opts ...trace.TracerOption) trace.Tracer {
+	conf := trace.NewTracerConfig(opts...)
 
 	inst := instrumentation{
 		Name:    instName,
@@ -68,6 +68,6 @@ func (p *TracerProvider) Tracer(instName string, opts ...otel.TracerOption) otel
 }
 
 // DefaulTracer returns a default tracer for testing purposes.
-func DefaultTracer() otel.Tracer {
+func DefaultTracer() trace.Tracer {
 	return NewTracerProvider().Tracer("")
 }
