@@ -22,12 +22,12 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/internal/matchers"
 	ottest "go.opentelemetry.io/otel/internal/testing"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestSpan(t *testing.T) {
@@ -113,7 +113,7 @@ func TestSpan(t *testing.T) {
 			e.Expect(ok).ToBeTrue()
 
 			expectedEndTime := time.Now().AddDate(5, 0, 0)
-			subject.End(otel.WithTimestamp(expectedEndTime))
+			subject.End(trace.WithTimestamp(expectedEndTime))
 
 			e.Expect(subject.Ended()).ToBeTrue()
 
@@ -156,7 +156,7 @@ func TestSpan(t *testing.T) {
 				e.Expect(ok).ToBeTrue()
 
 				testTime := time.Now()
-				subject.RecordError(s.err, otel.WithTimestamp(testTime))
+				subject.RecordError(s.err, trace.WithTimestamp(testTime))
 
 				expectedEvents := []oteltest.Event{{
 					Timestamp: testTime,
@@ -186,7 +186,7 @@ func TestSpan(t *testing.T) {
 			errMsg := "test error message"
 			testErr := ottest.NewTestError(errMsg)
 			testTime := time.Now()
-			subject.RecordError(testErr, otel.WithTimestamp(testTime))
+			subject.RecordError(testErr, trace.WithTimestamp(testTime))
 
 			expectedEvents := []oteltest.Event{{
 				Timestamp: testTime,
@@ -464,7 +464,7 @@ func TestSpan(t *testing.T) {
 			}
 
 			event1Start := time.Now()
-			subject.AddEvent(event1Name, otel.WithAttributes(event1Attributes...))
+			subject.AddEvent(event1Name, trace.WithAttributes(event1Attributes...))
 			event1End := time.Now()
 
 			event2Timestamp := time.Now().AddDate(5, 0, 0)
@@ -473,7 +473,7 @@ func TestSpan(t *testing.T) {
 				label.String("event2Attr", "abc"),
 			}
 
-			subject.AddEvent(event2Name, otel.WithTimestamp(event2Timestamp), otel.WithAttributes(event2Attributes...))
+			subject.AddEvent(event2Name, trace.WithTimestamp(event2Timestamp), trace.WithAttributes(event2Attributes...))
 
 			events := subject.Events()
 
@@ -601,13 +601,13 @@ func TestSpan(t *testing.T) {
 
 			tracer := tp.Tracer(t.Name())
 			_, span := tracer.Start(context.Background(), "test",
-				otel.WithSpanKind(otel.SpanKindConsumer))
+				trace.WithSpanKind(trace.SpanKindConsumer))
 
 			subject, ok := span.(*oteltest.Span)
 			e.Expect(ok).ToBeTrue()
 			subject.End()
 
-			e.Expect(subject.SpanKind()).ToEqual(otel.SpanKindConsumer)
+			e.Expect(subject.SpanKind()).ToEqual(trace.SpanKindConsumer)
 		})
 	})
 }

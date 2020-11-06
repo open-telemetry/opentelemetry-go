@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package oteltest
+package oteltest // import "go.opentelemetry.io/otel/oteltest"
 
 import (
 	"context"

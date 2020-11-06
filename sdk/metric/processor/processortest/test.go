@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package processortest
+package processortest // import "go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 
 import (
 	"context"
