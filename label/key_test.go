@@ -75,29 +75,9 @@ func TestEmit(t *testing.T) {
 			want: "true",
 		},
 		{
-			name: `test Key.Emit() can emit a string representing self.INT32`,
-			v:    label.Int32Value(42),
-			want: "42",
-		},
-		{
 			name: `test Key.Emit() can emit a string representing self.INT64`,
 			v:    label.Int64Value(42),
 			want: "42",
-		},
-		{
-			name: `test Key.Emit() can emit a string representing self.UINT32`,
-			v:    label.Uint32Value(42),
-			want: "42",
-		},
-		{
-			name: `test Key.Emit() can emit a string representing self.UINT64`,
-			v:    label.Uint64Value(42),
-			want: "42",
-		},
-		{
-			name: `test Key.Emit() can emit a string representing self.FLOAT32`,
-			v:    label.Float32Value(42.1),
-			want: "42.1",
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.FLOAT64`,

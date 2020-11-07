@@ -502,20 +502,10 @@ func otTagToOTelLabel(k string, v interface{}) label.KeyValue {
 		return key.Bool(val)
 	case int64:
 		return key.Int64(val)
-	case uint64:
-		return key.Uint64(val)
 	case float64:
 		return key.Float64(val)
-	case int32:
-		return key.Int32(val)
-	case uint32:
-		return key.Uint32(val)
-	case float32:
-		return key.Float32(val)
 	case int:
 		return key.Int(val)
-	case uint:
-		return key.Uint(val)
 	case string:
 		return key.String(val)
 	default:

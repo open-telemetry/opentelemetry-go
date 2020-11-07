@@ -210,7 +210,7 @@ func (s *MockSpan) IsRecording() bool {
 }
 
 func (s *MockSpan) SetStatus(code codes.Code, msg string) {
-	s.SetAttributes(StatusCodeKey.Uint32(uint32(code)), StatusMessageKey.String(msg))
+	s.SetAttributes(StatusCodeKey.Int(int(code)), StatusMessageKey.String(msg))
 }
 
 func (s *MockSpan) SetName(name string) {
