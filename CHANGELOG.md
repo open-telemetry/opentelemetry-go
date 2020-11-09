@@ -37,6 +37,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix `Code.UnmarshalJSON` to work with valid json only. (#1276)
 - The `resource.New()` method changes signature to support builtin attributes and functional options, including `telemetry.sdk.*` and
   `host.name` semantic conventions; the former method is renamed `resource.NewWithAttributes`. (#1235)
+- The prometheus exporter now exports non-monotonic counters (i.e. `UpDownCounter`s) as gauges. (#1210)
 - Correct the `Span.End` method documentation in the `otel` API to state updates are not allowed on a span after it has ended. (#1310)
 
 ### Removed
