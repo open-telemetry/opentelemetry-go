@@ -36,6 +36,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Initializes an OTLP exporter, and configures the corresponding trace and
@@ -121,7 +122,7 @@ func main() {
 	ctx, span := tracer.Start(
 		context.Background(),
 		"CollectorExporter-Example",
-		otel.WithAttributes(commonLabels...))
+		trace.WithAttributes(commonLabels...))
 	defer span.End()
 	for i := 0; i < 10; i++ {
 		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))

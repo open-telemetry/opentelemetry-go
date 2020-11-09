@@ -18,9 +18,10 @@ import (
 	"context"
 	"time"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/trace"
+
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -49,9 +50,9 @@ type SpanExporter interface {
 
 // SpanData contains all the information collected by a completed span.
 type SpanData struct {
-	SpanContext  otel.SpanContext
-	ParentSpanID otel.SpanID
-	SpanKind     otel.SpanKind
+	SpanContext  trace.SpanContext
+	ParentSpanID trace.SpanID
+	SpanKind     trace.SpanKind
 	Name         string
 	StartTime    time.Time
 	// The wall clock time of EndTime will be adjusted to always be offset
@@ -59,7 +60,7 @@ type SpanData struct {
 	EndTime                  time.Time
 	Attributes               []label.KeyValue
 	MessageEvents            []Event
-	Links                    []otel.Link
+	Links                    []trace.Link
 	StatusCode               codes.Code
 	StatusMessage            string
 	HasRemoteParent          bool

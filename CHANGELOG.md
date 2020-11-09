@@ -16,7 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Move the `go.opentelemetry.io/otel/api/trace` package into `go.opentelemetry.io/otel` with the following changes. (#1229)
+- Move the `go.opentelemetry.io/otel/api/trace` package into `go.opentelemetry.io/otel/trace` with the following changes. (#1229) (#1307)
   - `ID` has been renamed to `TraceID`.
   - `IDFromHex` has been renamed to `TraceIDFromHex`.
   - `ErrorOption` has been changed to an interface to conform with project design standards which included adding a `NewErrorConfig` function.
