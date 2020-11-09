@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
@@ -83,11 +84,11 @@ func main() {
 	defer valuerecorder.Unbind()
 
 	err = func(ctx context.Context) error {
-		var span otel.Span
+		var span trace.Span
 		ctx, span = tracer.Start(ctx, "operation")
 		defer span.End()
 
-		span.AddEvent("Nice operation!", otel.WithAttributes(label.Int("bogons", 100)))
+		span.AddEvent("Nice operation!", trace.WithAttributes(label.Int("bogons", 100)))
 		span.SetAttributes(anotherKey.String("yes"))
 
 		meter.RecordBatch(
@@ -99,7 +100,7 @@ func main() {
 		)
 
 		return func(ctx context.Context) error {
-			var span otel.Span
+			var span trace.Span
 			ctx, span = tracer.Start(ctx, "Sub operation...")
 			defer span.End()
 

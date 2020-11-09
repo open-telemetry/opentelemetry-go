@@ -21,9 +21,9 @@ import (
 
 	zkmodel "github.com/openzipkin/zipkin-go/model"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -67,18 +67,18 @@ func toZipkinSpanContext(data *export.SpanData) zkmodel.SpanContext {
 	}
 }
 
-func toZipkinTraceID(traceID otel.TraceID) zkmodel.TraceID {
+func toZipkinTraceID(traceID trace.TraceID) zkmodel.TraceID {
 	return zkmodel.TraceID{
 		High: binary.BigEndian.Uint64(traceID[:8]),
 		Low:  binary.BigEndian.Uint64(traceID[8:]),
 	}
 }
 
-func toZipkinID(spanID otel.SpanID) zkmodel.ID {
+func toZipkinID(spanID trace.SpanID) zkmodel.ID {
 	return zkmodel.ID(binary.BigEndian.Uint64(spanID[:]))
 }
 
-func toZipkinParentID(spanID otel.SpanID) *zkmodel.ID {
+func toZipkinParentID(spanID trace.SpanID) *zkmodel.ID {
 	if spanID.IsValid() {
 		id := toZipkinID(spanID)
 		return &id
@@ -86,21 +86,21 @@ func toZipkinParentID(spanID otel.SpanID) *zkmodel.ID {
 	return nil
 }
 
-func toZipkinKind(kind otel.SpanKind) zkmodel.Kind {
+func toZipkinKind(kind trace.SpanKind) zkmodel.Kind {
 	switch kind {
-	case otel.SpanKindUnspecified:
+	case trace.SpanKindUnspecified:
 		return zkmodel.Undetermined
-	case otel.SpanKindInternal:
+	case trace.SpanKindInternal:
 		// The spec says we should set the kind to nil, but
 		// the model does not allow that.
 		return zkmodel.Undetermined
-	case otel.SpanKindServer:
+	case trace.SpanKindServer:
 		return zkmodel.Server
-	case otel.SpanKindClient:
+	case trace.SpanKindClient:
 		return zkmodel.Client
-	case otel.SpanKindProducer:
+	case trace.SpanKindProducer:
 		return zkmodel.Producer
-	case otel.SpanKindConsumer:
+	case trace.SpanKindConsumer:
 		return zkmodel.Consumer
 	}
 	return zkmodel.Undetermined

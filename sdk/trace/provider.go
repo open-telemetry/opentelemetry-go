@@ -19,8 +19,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/global"
+	"go.opentelemetry.io/otel/trace"
+
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -48,7 +49,7 @@ type TracerProvider struct {
 	config         atomic.Value // access atomically
 }
 
-var _ otel.TracerProvider = &TracerProvider{}
+var _ trace.TracerProvider = &TracerProvider{}
 
 // NewTracerProvider creates an instance of trace provider. Optional
 // parameter configures the provider with common options applicable
@@ -82,8 +83,8 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 
 // Tracer with the given name. If a tracer for the given name does not exist,
 // it is created first. If the name is empty, DefaultTracerName is used.
-func (p *TracerProvider) Tracer(name string, opts ...otel.TracerOption) otel.Tracer {
-	c := otel.NewTracerConfig(opts...)
+func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
+	c := trace.NewTracerConfig(opts...)
 
 	p.mu.Lock()
 	defer p.mu.Unlock()

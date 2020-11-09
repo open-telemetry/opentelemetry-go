@@ -21,10 +21,11 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/trace"
+
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/internal"
 )
@@ -35,7 +36,7 @@ const (
 	errorEventName  = "error"
 )
 
-var emptySpanContext = otel.SpanContext{}
+var emptySpanContext = trace.SpanContext{}
 
 // span is an implementation of the OpenTelemetry Span API representing the
 // individual component of a trace.
@@ -49,7 +50,7 @@ type span struct {
 	// Otherwise, data is nil, and the span is simply a carrier for the
 	// SpanContext, so that the trace ID is propagated.
 	data        *export.SpanData
-	spanContext otel.SpanContext
+	spanContext trace.SpanContext
 
 	// attributes are capped at configured limit. When the capacity is reached an oldest entry
 	// is removed to create room for a new entry.
@@ -71,11 +72,11 @@ type span struct {
 	tracer *tracer
 }
 
-var _ otel.Span = &span{}
+var _ trace.Span = &span{}
 
-func (s *span) SpanContext() otel.SpanContext {
+func (s *span) SpanContext() trace.SpanContext {
 	if s == nil {
-		return otel.SpanContext{}
+		return trace.SpanContext{}
 	}
 	return s.spanContext
 }
@@ -114,7 +115,7 @@ func (s *span) SetAttributes(attributes ...label.KeyValue) {
 //
 // If this method is called while panicking an error event is added to the
 // Span before ending it and the panic is continued.
-func (s *span) End(options ...otel.SpanOption) {
+func (s *span) End(options ...trace.SpanOption) {
 	if s == nil {
 		return
 	}
@@ -124,7 +125,7 @@ func (s *span) End(options ...otel.SpanOption) {
 		defer panic(recovered)
 		s.addEvent(
 			errorEventName,
-			otel.WithAttributes(
+			trace.WithAttributes(
 				errorTypeKey.String(typeStr(recovered)),
 				errorMessageKey.String(fmt.Sprint(recovered)),
 			),
@@ -137,7 +138,7 @@ func (s *span) End(options ...otel.SpanOption) {
 	if !s.IsRecording() {
 		return
 	}
-	config := otel.NewSpanConfig(options...)
+	config := trace.NewSpanConfig(options...)
 	s.endOnce.Do(func() {
 		sps, ok := s.tracer.provider.spanProcessors.Load().(spanProcessorStates)
 		mustExportOrProcess := ok && len(sps) > 0
@@ -155,13 +156,13 @@ func (s *span) End(options ...otel.SpanOption) {
 	})
 }
 
-func (s *span) RecordError(err error, opts ...otel.EventOption) {
+func (s *span) RecordError(err error, opts ...trace.EventOption) {
 	if s == nil || err == nil || !s.IsRecording() {
 		return
 	}
 
 	s.SetStatus(codes.Error, "")
-	opts = append(opts, otel.WithAttributes(
+	opts = append(opts, trace.WithAttributes(
 		errorTypeKey.String(typeStr(err)),
 		errorMessageKey.String(err.Error()),
 	))
@@ -177,19 +178,19 @@ func typeStr(i interface{}) string {
 	return fmt.Sprintf("%s.%s", t.PkgPath(), t.Name())
 }
 
-func (s *span) Tracer() otel.Tracer {
+func (s *span) Tracer() trace.Tracer {
 	return s.tracer
 }
 
-func (s *span) AddEvent(name string, o ...otel.EventOption) {
+func (s *span) AddEvent(name string, o ...trace.EventOption) {
 	if !s.IsRecording() {
 		return
 	}
 	s.addEvent(name, o...)
 }
 
-func (s *span) addEvent(name string, o ...otel.EventOption) {
-	c := otel.NewEventConfig(o...)
+func (s *span) addEvent(name string, o ...trace.EventOption) {
+	c := trace.NewEventConfig(o...)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -213,9 +214,9 @@ func (s *span) SetName(name string) {
 	s.data.Name = name
 	// SAMPLING
 	noParent := !s.data.ParentSpanID.IsValid()
-	var ctx otel.SpanContext
+	var ctx trace.SpanContext
 	if noParent {
-		ctx = otel.SpanContext{}
+		ctx = trace.SpanContext{}
 	} else {
 		// FIXME: Where do we get the parent context from?
 		ctx = s.data.SpanContext
@@ -240,7 +241,7 @@ func (s *span) SetName(name string) {
 	}
 }
 
-func (s *span) addLink(link otel.Link) {
+func (s *span) addLink(link trace.Link) {
 	if !s.IsRecording() {
 		return
 	}
@@ -270,10 +271,10 @@ func (s *span) makeSpanData() *export.SpanData {
 	return &sd
 }
 
-func (s *span) interfaceArrayToLinksArray() []otel.Link {
-	linkArr := make([]otel.Link, 0)
+func (s *span) interfaceArrayToLinksArray() []trace.Link {
+	linkArr := make([]trace.Link, 0)
 	for _, value := range s.links.queue {
-		linkArr = append(linkArr, value.(otel.Link))
+		linkArr = append(linkArr, value.(trace.Link))
 	}
 	return linkArr
 }
@@ -305,7 +306,7 @@ func (s *span) addChild() {
 	s.mu.Unlock()
 }
 
-func startSpanInternal(tr *tracer, name string, parent otel.SpanContext, remoteParent bool, o *otel.SpanConfig) *span {
+func startSpanInternal(tr *tracer, name string, parent trace.SpanContext, remoteParent bool, o *trace.SpanConfig) *span {
 	var noParent bool
 	span := &span{}
 	span.spanContext = parent
@@ -341,7 +342,7 @@ func startSpanInternal(tr *tracer, name string, parent otel.SpanContext, remoteP
 	span.data = &export.SpanData{
 		SpanContext:            span.spanContext,
 		StartTime:              startTime,
-		SpanKind:               otel.ValidateSpanKind(o.SpanKind),
+		SpanKind:               trace.ValidateSpanKind(o.SpanKind),
 		Name:                   name,
 		HasRemoteParent:        remoteParent,
 		Resource:               cfg.Resource,
@@ -363,13 +364,13 @@ func startSpanInternal(tr *tracer, name string, parent otel.SpanContext, remoteP
 type samplingData struct {
 	noParent     bool
 	remoteParent bool
-	parent       otel.SpanContext
+	parent       trace.SpanContext
 	name         string
 	cfg          *Config
 	span         *span
 	attributes   []label.KeyValue
-	links        []otel.Link
-	kind         otel.SpanKind
+	links        []trace.Link
+	kind         trace.SpanKind
 }
 
 func makeSamplingDecision(data samplingData) SamplingResult {
@@ -385,9 +386,9 @@ func makeSamplingDecision(data samplingData) SamplingResult {
 		Links:           data.links,
 	})
 	if sampled.Decision == RecordAndSample {
-		spanContext.TraceFlags |= otel.FlagsSampled
+		spanContext.TraceFlags |= trace.FlagsSampled
 	} else {
-		spanContext.TraceFlags &^= otel.FlagsSampled
+		spanContext.TraceFlags &^= trace.FlagsSampled
 	}
 	return sampled
 }
