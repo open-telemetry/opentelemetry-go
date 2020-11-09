@@ -42,11 +42,11 @@ type Config struct {
 
 const (
 	// DefaultMaxEventsPerSpan is default max number of message events per span
-	DefaultMaxEventsPerSpan = 128
+	DefaultMaxEventsPerSpan = 1000
 
 	// DefaultMaxAttributesPerSpan is default max number of attributes per span
-	DefaultMaxAttributesPerSpan = 32
+	DefaultMaxAttributesPerSpan = 1000
 
 	// DefaultMaxLinksPerSpan is default max number of links per span
-	DefaultMaxLinksPerSpan = 32
+	DefaultMaxLinksPerSpan = 1000
 )
