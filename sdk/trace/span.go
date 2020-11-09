@@ -41,13 +41,15 @@ var emptySpanContext = trace.SpanContext{}
 // span is an implementation of the OpenTelemetry Span API representing the
 // individual component of a trace.
 type span struct {
+	// mu protects the contents of this span.
+	mu sync.Mutex
+
 	// data contains information recorded about the span.
 	//
 	// It will be non-nil if we are exporting the span or recording events for it.
 	// Otherwise, data is nil, and the span is simply a carrier for the
 	// SpanContext, so that the trace ID is propagated.
 	data        *export.SpanData
-	mu          sync.Mutex // protects the contents of *data (but not the pointer value.)
 	spanContext trace.SpanContext
 
 	// attributes are capped at configured limit. When the capacity is reached an oldest entry
@@ -60,12 +62,14 @@ type span struct {
 	// links are stored in FIFO queue capped by configured limit.
 	links *evictedQueue
 
-	// spanStore is the spanStore this span belongs to, if any, otherwise it is nil.
-	//*spanStore
+	// endOnce ensures End is only called once.
 	endOnce sync.Once
 
-	executionTracerTaskEnd func()  // ends the execution tracer span
-	tracer                 *tracer // tracer used to create span.
+	// executionTracerTaskEnd ends the execution tracer span.
+	executionTracerTaskEnd func()
+
+	// tracer is the SDK tracer that created this span.
+	tracer *tracer
 }
 
 var _ trace.Span = &span{}
@@ -215,7 +219,6 @@ func (s *span) SetName(name string) {
 		ctx = trace.SpanContext{}
 	} else {
 		// FIXME: Where do we get the parent context from?
-		// From SpanStore?
 		ctx = s.data.SpanContext
 	}
 	data := samplingData{
@@ -328,8 +331,6 @@ func startSpanInternal(tr *tracer, name string, parent trace.SpanContext, remote
 	}
 	sampled := makeSamplingDecision(data)
 
-	// TODO: [rghetia] restore when spanstore is added.
-	// if !internal.LocalSpanStoreEnabled && !span.spanContext.IsSampled() && !o.Record {
 	if !span.spanContext.IsSampled() && !o.Record {
 		return span
 	}
@@ -356,14 +357,6 @@ func startSpanInternal(tr *tracer, name string, parent trace.SpanContext, remote
 	if !noParent {
 		span.data.ParentSpanID = parent.SpanID
 	}
-	// TODO: [rghetia] restore when spanstore is added.
-	//if internal.LocalSpanStoreEnabled {
-	//	ss := spanStoreForNameCreateIfNew(name)
-	//	if ss != nil {
-	//		span.spanStore = ss
-	//		ss.add(span)
-	//	}
-	//}
 
 	return span
 }

@@ -246,8 +246,10 @@ type Span interface {
 	// nil.
 	Tracer() Tracer
 
-	// End completes the Span. Updates are not allowed the Span after End is
-	// called other than setting the status.
+	// End completes the Span. The Span is considered complete and ready to be
+	// delivered through the rest of the telemetry pipeline after this method
+	// is called. Therefore, updates to the Span are not allowed after this
+	// method has been called.
 	End(options ...SpanOption)
 
 	// AddEvent adds an event with the provided name and options.
