@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
 	"encoding/binary"
 	"fmt"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Sampler decides whether a trace should be sampled and exported.
@@ -30,13 +30,13 @@ type Sampler interface {
 
 // SamplingParameters contains the values passed to a Sampler.
 type SamplingParameters struct {
-	ParentContext   otel.SpanContext
-	TraceID         otel.TraceID
+	ParentContext   trace.SpanContext
+	TraceID         trace.TraceID
 	Name            string
 	HasRemoteParent bool
-	Kind            otel.SpanKind
+	Kind            trace.SpanKind
 	Attributes      []label.KeyValue
-	Links           []otel.Link
+	Links           []trace.Link
 }
 
 // SamplingDecision indicates whether a span is dropped, recorded and/or sampled.

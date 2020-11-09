@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
@@ -35,12 +36,12 @@ var (
 var tp *sdktrace.TracerProvider
 
 // initTracer creates and registers trace provider instance.
-func initTracer() func() {
+func initTracer() {
 	var err error
 	exp, err := stdout.NewExporter(stdout.WithPrettyPrint())
 	if err != nil {
 		log.Panicf("failed to initialize stdout exporter %v\n", err)
-		return nil
+		return
 	}
 	bsp := sdktrace.NewBatchSpanProcessor(exp)
 	tp = sdktrace.NewTracerProvider(
@@ -52,23 +53,22 @@ func initTracer() func() {
 		sdktrace.WithSpanProcessor(bsp),
 	)
 	global.SetTracerProvider(tp)
-	return bsp.Shutdown
 }
 
 func main() {
 	// initialize trace provider.
-	shutdown := initTracer()
-	defer shutdown()
+	initTracer()
 
 	// Create a named tracer with package path as its name.
 	tracer := tp.Tracer("example/namedtracer/main")
 	ctx := context.Background()
+	defer func() { _ = tp.Shutdown(ctx) }()
 	ctx = otel.ContextWithBaggageValues(ctx, fooKey.String("foo1"), barKey.String("bar1"))
 
-	var span otel.Span
+	var span trace.Span
 	ctx, span = tracer.Start(ctx, "operation")
 	defer span.End()
-	span.AddEvent("Nice operation!", otel.WithAttributes(label.Int("bogons", 100)))
+	span.AddEvent("Nice operation!", trace.WithAttributes(label.Int("bogons", 100)))
 	span.SetAttributes(anotherKey.String("yes"))
 	if err := foo.SubOperation(ctx); err != nil {
 		panic(err)

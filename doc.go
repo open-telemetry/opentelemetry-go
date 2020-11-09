@@ -15,6 +15,10 @@
 /*
 Package otel provides an implementation of the OpenTelemetry API.
 
+This package is currently in a pre-GA phase. Backwards incompatible changes
+may be introduced in subsequent minor version releases as we work to track the
+evolving OpenTelemetry specification and user feedback.
+
 The provided API is used to instrument code and measure data about that code's
 performance and operation. The measured data, by default, is not processed or
 transmitted anywhere. An implementation of the OpenTelemetry SDK, like the
@@ -29,7 +33,7 @@ operation being performed as part of a traced workflow. It its simplest form:
 	var tracer otel.Tracer
 
 	func init() {
-		tracer := global.Tracer("instrumentation/package/name")
+		tracer = global.Tracer("instrumentation/package/name")
 	}
 
 	func operation(ctx context.Context) {

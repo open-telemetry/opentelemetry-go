@@ -1,4 +1,4 @@
-module go.opentelemetry.go/otel/example/zipkin
+module go.opentelemetry.io/otel/example/zipkin
 
 go 1.14
 

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pull
+package pull // import "go.opentelemetry.io/otel/sdk/metric/controller/pull"
 
 import (
 	"time"

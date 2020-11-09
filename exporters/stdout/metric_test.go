@@ -48,7 +48,7 @@ type testFixture struct {
 	output   *bytes.Buffer
 }
 
-var testResource = resource.New(label.String("R", "V"))
+var testResource = resource.NewWithAttributes(label.String("R", "V"))
 
 func newFixture(t *testing.T, opts ...stdout.Option) testFixture {
 	buf := &bytes.Buffer{}
@@ -290,11 +290,11 @@ func TestStdoutResource(t *testing.T) {
 	}
 	testCases := []testCase{
 		newCase("R1=V1,R2=V2,A=B,C=D",
-			resource.New(label.String("R1", "V1"), label.String("R2", "V2")),
+			resource.NewWithAttributes(label.String("R1", "V1"), label.String("R2", "V2")),
 			label.String("A", "B"),
 			label.String("C", "D")),
 		newCase("R1=V1,R2=V2",
-			resource.New(label.String("R1", "V1"), label.String("R2", "V2")),
+			resource.NewWithAttributes(label.String("R1", "V1"), label.String("R2", "V2")),
 		),
 		newCase("A=B,C=D",
 			nil,
@@ -304,7 +304,7 @@ func TestStdoutResource(t *testing.T) {
 		// We explicitly do not de-duplicate between resources
 		// and metric labels in this exporter.
 		newCase("R1=V1,R2=V2,R1=V3,R2=V4",
-			resource.New(label.String("R1", "V1"), label.String("R2", "V2")),
+			resource.NewWithAttributes(label.String("R1", "V1"), label.String("R2", "V2")),
 			label.String("R1", "V3"),
 			label.String("R2", "V4")),
 	}

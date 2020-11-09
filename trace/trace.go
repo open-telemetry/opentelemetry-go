@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otel
+package trace // import "go.opentelemetry.io/otel/trace"
 
 import (
 	"bytes"
@@ -51,6 +51,7 @@ func (e errorConst) Error() string {
 }
 
 // TraceID is a unique identity of a trace.
+// nolint:golint
 type TraceID [16]byte
 
 var nilTraceID TraceID
@@ -99,6 +100,7 @@ func (s SpanID) String() string {
 // TraceIDFromHex returns a TraceID from a hex string if it is compliant with
 // the W3C trace-context specification.  See more at
 // https://www.w3.org/TR/trace-context/#trace-id
+// nolint:golint
 func TraceIDFromHex(h string) (TraceID, error) {
 	t := TraceID{}
 	if len(h) != 32 {
@@ -205,12 +207,20 @@ func ContextWithSpan(parent context.Context, span Span) context.Context {
 	return context.WithValue(parent, currentSpanKey, span)
 }
 
-// SpanFromContext returns the current span from ctx, or nil if none set.
+// SpanFromContext returns the current span from ctx, or noop span if none set.
 func SpanFromContext(ctx context.Context) Span {
 	if span, ok := ctx.Value(currentSpanKey).(Span); ok {
 		return span
 	}
 	return noopSpan{}
+}
+
+// SpanContextFromContext returns the current SpanContext from ctx, or an empty SpanContext if none set.
+func SpanContextFromContext(ctx context.Context) SpanContext {
+	if span := SpanFromContext(ctx); span != nil {
+		return span.SpanContext()
+	}
+	return SpanContext{}
 }
 
 // ContextWithRemoteSpanContext returns a copy of parent with a remote set as
@@ -236,8 +246,10 @@ type Span interface {
 	// nil.
 	Tracer() Tracer
 
-	// End completes the Span. Updates are not allowed the Span after End is
-	// called other than setting the status.
+	// End completes the Span. The Span is considered complete and ready to be
+	// delivered through the rest of the telemetry pipeline after this method
+	// is called. Therefore, updates to the Span are not allowed after this
+	// method has been called.
 	End(options ...SpanOption)
 
 	// AddEvent adds an event with the provided name and options.

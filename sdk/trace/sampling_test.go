@@ -21,17 +21,17 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestParentBasedDefaultLocalParentSampled(t *testing.T) {
 	sampler := ParentBased(AlwaysSample())
-	traceID, _ := otel.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
-	spanID, _ := otel.SpanIDFromHex("00f067aa0ba902b7")
-	parentCtx := otel.SpanContext{
+	traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+	parentCtx := trace.SpanContext{
 		TraceID:    traceID,
 		SpanID:     spanID,
-		TraceFlags: otel.FlagsSampled,
+		TraceFlags: trace.FlagsSampled,
 	}
 	if sampler.ShouldSample(SamplingParameters{ParentContext: parentCtx}).Decision != RecordAndSample {
 		t.Error("Sampling decision should be RecordAndSample")
@@ -40,9 +40,9 @@ func TestParentBasedDefaultLocalParentSampled(t *testing.T) {
 
 func TestParentBasedDefaultLocalParentNotSampled(t *testing.T) {
 	sampler := ParentBased(AlwaysSample())
-	traceID, _ := otel.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
-	spanID, _ := otel.SpanIDFromHex("00f067aa0ba902b7")
-	parentCtx := otel.SpanContext{
+	traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+	parentCtx := trace.SpanContext{
 		TraceID: traceID,
 		SpanID:  spanID,
 	}
@@ -104,15 +104,15 @@ func TestParentBasedWithSamplerOptions(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			traceID, _ := otel.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
-			spanID, _ := otel.SpanIDFromHex("00f067aa0ba902b7")
-			parentCtx := otel.SpanContext{
+			traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+			spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+			parentCtx := trace.SpanContext{
 				TraceID: traceID,
 				SpanID:  spanID,
 			}
 
 			if tc.isParentSampled {
-				parentCtx.TraceFlags = otel.FlagsSampled
+				parentCtx.TraceFlags = trace.FlagsSampled
 			}
 
 			params := SamplingParameters{ParentContext: parentCtx}

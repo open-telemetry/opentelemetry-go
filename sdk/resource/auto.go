@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package resource
+package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
 import (
 	"context"
@@ -43,6 +43,9 @@ func Detect(ctx context.Context, detectors ...Detector) (*Resource, error) {
 	var autoDetectedRes *Resource
 	var errInfo []string
 	for _, detector := range detectors {
+		if detector == nil {
+			continue
+		}
 		res, err := detector.Detect(ctx)
 		if err != nil {
 			errInfo = append(errInfo, err.Error())

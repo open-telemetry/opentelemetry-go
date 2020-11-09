@@ -22,13 +22,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	coltracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/trace/v1"
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
 	resourcepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/resource/v1"
 	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/trace"
 
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -82,12 +82,12 @@ func TestExportSpans(t *testing.T) {
 		{
 			[]*tracesdk.SpanData{
 				{
-					SpanContext: otel.SpanContext{
-						TraceID:    otel.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
-						SpanID:     otel.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
+					SpanContext: trace.SpanContext{
+						TraceID:    trace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
+						SpanID:     trace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 						TraceFlags: byte(1),
 					},
-					SpanKind:  otel.SpanKindServer,
+					SpanKind:  trace.SpanKindServer,
 					Name:      "parent process",
 					StartTime: startTime,
 					EndTime:   endTime,
@@ -97,19 +97,19 @@ func TestExportSpans(t *testing.T) {
 					},
 					StatusCode:    codes.Ok,
 					StatusMessage: "Ok",
-					Resource:      resource.New(label.String("instance", "tester-a")),
+					Resource:      resource.NewWithAttributes(label.String("instance", "tester-a")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-a",
 						Version: "v0.1.0",
 					},
 				},
 				{
-					SpanContext: otel.SpanContext{
-						TraceID:    otel.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}),
-						SpanID:     otel.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
+					SpanContext: trace.SpanContext{
+						TraceID:    trace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}),
+						SpanID:     trace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 						TraceFlags: byte(1),
 					},
-					SpanKind:  otel.SpanKindServer,
+					SpanKind:  trace.SpanKindServer,
 					Name:      "secondary parent process",
 					StartTime: startTime,
 					EndTime:   endTime,
@@ -119,20 +119,20 @@ func TestExportSpans(t *testing.T) {
 					},
 					StatusCode:    codes.Ok,
 					StatusMessage: "Ok",
-					Resource:      resource.New(label.String("instance", "tester-a")),
+					Resource:      resource.NewWithAttributes(label.String("instance", "tester-a")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-b",
 						Version: "v0.1.0",
 					},
 				},
 				{
-					SpanContext: otel.SpanContext{
-						TraceID:    otel.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
-						SpanID:     otel.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 2}),
+					SpanContext: trace.SpanContext{
+						TraceID:    trace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
+						SpanID:     trace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 2}),
 						TraceFlags: byte(1),
 					},
-					ParentSpanID: otel.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
-					SpanKind:     otel.SpanKindInternal,
+					ParentSpanID: trace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
+					SpanKind:     trace.SpanKindInternal,
 					Name:         "internal process",
 					StartTime:    startTime,
 					EndTime:      endTime,
@@ -142,19 +142,19 @@ func TestExportSpans(t *testing.T) {
 					},
 					StatusCode:    codes.Ok,
 					StatusMessage: "Ok",
-					Resource:      resource.New(label.String("instance", "tester-a")),
+					Resource:      resource.NewWithAttributes(label.String("instance", "tester-a")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-a",
 						Version: "v0.1.0",
 					},
 				},
 				{
-					SpanContext: otel.SpanContext{
-						TraceID:    otel.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}),
-						SpanID:     otel.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
+					SpanContext: trace.SpanContext{
+						TraceID:    trace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}),
+						SpanID:     trace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 						TraceFlags: byte(1),
 					},
-					SpanKind:  otel.SpanKindServer,
+					SpanKind:  trace.SpanKindServer,
 					Name:      "parent process",
 					StartTime: startTime,
 					EndTime:   endTime,
@@ -164,7 +164,7 @@ func TestExportSpans(t *testing.T) {
 					},
 					StatusCode:    codes.Error,
 					StatusMessage: "Unauthenticated",
-					Resource:      resource.New(label.String("instance", "tester-b")),
+					Resource:      resource.NewWithAttributes(label.String("instance", "tester-b")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-a",
 						Version: "v1.1.0",
