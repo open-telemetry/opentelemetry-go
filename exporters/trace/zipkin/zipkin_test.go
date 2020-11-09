@@ -43,7 +43,7 @@ const (
 )
 
 func TestInstallNewPipeline(t *testing.T) {
-	err := InstallNewPipeline(
+	_, err := InstallNewPipeline(
 		collectorURL,
 		serviceName,
 	)
@@ -84,7 +84,7 @@ func TestNewExportPipeline(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tp, err := NewExportPipeline(
+			tp, flusher, err := NewExportPipeline(
 				collectorURL,
 				serviceName,
 				tc.options...,
@@ -98,6 +98,8 @@ func TestNewExportPipeline(t *testing.T) {
 				assert.Equal(t, tc.spanShouldBeSampled, spanCtx.IsSampled())
 				span.End()
 			}
+
+			flusher()
 		})
 	}
 }
@@ -192,6 +194,7 @@ func (c *mockZipkinCollector) handler(w http.ResponseWriter, r *http.Request) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.models = append(c.models, models...)
+	w.WriteHeader(202)
 }
 
 func (c *mockZipkinCollector) Close() {
@@ -340,9 +343,8 @@ func TestExportSpans(t *testing.T) {
 	ctx := context.Background()
 	require.Len(t, ls.Messages, 0)
 	require.NoError(t, exporter.ExportSpans(ctx, spans[0:1]))
-	require.Len(t, ls.Messages, 2)
+	require.Len(t, ls.Messages, 1)
 	require.Contains(t, ls.Messages[0], "send a POST request")
-	require.Contains(t, ls.Messages[1], "zipkin responded")
 	ls.Messages = nil
 	require.NoError(t, exporter.ExportSpans(ctx, nil))
 	require.Len(t, ls.Messages, 1)
@@ -350,7 +352,6 @@ func TestExportSpans(t *testing.T) {
 	ls.Messages = nil
 	require.NoError(t, exporter.ExportSpans(ctx, spans[1:2]))
 	require.Contains(t, ls.Messages[0], "send a POST request")
-	require.Contains(t, ls.Messages[1], "zipkin responded")
 	checkFunc := func() bool {
 		return collector.ModelsLen() == len(models)
 	}
@@ -362,13 +363,13 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	exp, err := NewRawExporter(collectorURL, serviceName)
+	exporter, err := NewRawExporter(collectorURL, serviceName)
 	require.NoError(t, err)
 
 	innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
 	defer innerCancel()
 	<-innerCtx.Done()
-	assert.Errorf(t, exp.Shutdown(innerCtx), context.DeadlineExceeded.Error())
+	assert.Errorf(t, exporter.Shutdown(innerCtx), context.DeadlineExceeded.Error())
 }
 
 func TestExporterShutdownHonorsCancel(t *testing.T) {

@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -75,8 +74,8 @@ func WithClient(client *http.Client) Option {
 
 // WithSDK sets the SDK config for the exporter pipeline.
 func WithSDK(config *sdktrace.Config) Option {
-	return func(o *options) {
-		o.config = config
+	return func(opts *options) {
+		opts.config = config
 	}
 }
 
@@ -111,30 +110,31 @@ func NewRawExporter(collectorURL, serviceName string, opts ...Option) (*Exporter
 
 // NewExportPipeline sets up a complete export pipeline
 // with the recommended setup for trace provider
-func NewExportPipeline(collectorURL, serviceName string, opts ...Option) (*sdktrace.TracerProvider, error) {
-	exp, err := NewRawExporter(collectorURL, serviceName, opts...)
+func NewExportPipeline(collectorURL, serviceName string, opts ...Option) (*sdktrace.TracerProvider, func(), error) {
+	exporter, err := NewRawExporter(collectorURL, serviceName, opts...)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(exp))
-	if exp.o.config != nil {
-		tp.ApplyConfig(*exp.o.config)
+	batcher := sdktrace.NewBatchSpanProcessor(exporter)
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(batcher))
+	if exporter.o.config != nil {
+		tp.ApplyConfig(*exporter.o.config)
 	}
 
-	return tp, err
+	return tp, batcher.ForceFlush, err
 }
 
 // InstallNewPipeline instantiates a NewExportPipeline with the
 // recommended configuration and registers it globally.
-func InstallNewPipeline(collectorURL, serviceName string, opts ...Option) error {
-	tp, err := NewExportPipeline(collectorURL, serviceName, opts...)
+func InstallNewPipeline(collectorURL, serviceName string, opts ...Option) (func(), error) {
+	tp, flusher, err := NewExportPipeline(collectorURL, serviceName, opts...)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	global.SetTracerProvider(tp)
-	return nil
+	return flusher, nil
 }
 
 // ExportSpans exports SpanData to a Zipkin receiver.
@@ -166,19 +166,12 @@ func (e *Exporter) ExportSpans(ctx context.Context, batch []*export.SpanData) er
 	if err != nil {
 		return e.errf("request to %s failed: %v", e.url, err)
 	}
-	e.logf("zipkin responded with status %d", resp.StatusCode)
+	defer resp.Body.Close()
 
-	_, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		// Best effort to clean up here.
-		resp.Body.Close()
-		return e.errf("failed to read response body: %v", err)
+	if resp.StatusCode != 202 {
+		return e.errf("failed to send spans to zipkin server with status %d", resp.StatusCode)
 	}
 
-	err = resp.Body.Close()
-	if err != nil {
-		return e.errf("failed to close response body: %v", err)
-	}
 	return nil
 }
 
