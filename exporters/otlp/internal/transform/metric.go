@@ -314,17 +314,14 @@ func gaugeArray(record export.Record, points []otel.Number) (*metricpb.Metric, e
 		Unit:        string(desc.Unit()),
 	}
 
-	start := record.StartTime()
-	end := record.EndTime()
-
 	switch n := desc.NumberKind(); n {
 	case otel.Int64NumberKind:
 		var pts []*metricpb.IntDataPoint
 		for _, p := range points {
 			pts = append(pts, &metricpb.IntDataPoint{
 				Labels:            nil,
-				StartTimeUnixNano: toNanos(start),
-				TimeUnixNano:      toNanos(end),
+				StartTimeUnixNano: toNanos(record.StartTime()),
+				TimeUnixNano:      toNanos(record.EndTime()),
 				Value:             p.CoerceToInt64(n),
 			})
 		}
@@ -339,8 +336,8 @@ func gaugeArray(record export.Record, points []otel.Number) (*metricpb.Metric, e
 		for _, p := range points {
 			pts = append(pts, &metricpb.DoubleDataPoint{
 				Labels:            nil,
-				StartTimeUnixNano: toNanos(start),
-				TimeUnixNano:      toNanos(end),
+				StartTimeUnixNano: toNanos(record.StartTime()),
+				TimeUnixNano:      toNanos(record.EndTime()),
 				Value:             p.CoerceToFloat64(n),
 			})
 		}
