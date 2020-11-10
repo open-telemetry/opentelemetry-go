@@ -32,7 +32,6 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	lvAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
@@ -346,11 +345,11 @@ func TestRecordAggregatorIncompatibleErrors(t *testing.T) {
 	require.Nil(t, mpb)
 	require.True(t, errors.Is(err, ErrIncompatibleAgg))
 
-	mpb, err = makeMpb(aggregation.ExactKind, &array.New(1)[0])
+	mpb, err = makeMpb(aggregation.ExactKind, &lastvalue.New(1)[0])
 
 	require.Error(t, err)
 	require.Nil(t, mpb)
-	require.True(t, errors.Is(err, ErrUnimplementedAgg))
+	require.True(t, errors.Is(err, ErrIncompatibleAgg))
 }
 
 func TestRecordAggregatorUnexpectedErrors(t *testing.T) {
