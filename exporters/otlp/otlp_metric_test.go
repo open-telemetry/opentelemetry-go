@@ -159,6 +159,7 @@ var (
 func TestNoGroupingExport(t *testing.T) {
 	runMetricExportTests(
 		t,
+		nil,
 		[]record{
 			{
 				"int64-count",
@@ -280,7 +281,7 @@ func TestValuerecorderMetricGroupingExport(t *testing.T) {
 			},
 		},
 	}
-	runMetricExportTests(t, []record{r, r}, expected)
+	runMetricExportTests(t, nil, []record{r, r}, expected)
 }
 
 func TestCountInt64MetricGroupingExport(t *testing.T) {
@@ -294,6 +295,7 @@ func TestCountInt64MetricGroupingExport(t *testing.T) {
 	}
 	runMetricExportTests(
 		t,
+		nil,
 		[]record{r, r},
 		[]metricpb.ResourceMetrics{
 			{
@@ -343,6 +345,7 @@ func TestCountFloat64MetricGroupingExport(t *testing.T) {
 	}
 	runMetricExportTests(
 		t,
+		nil,
 		[]record{r, r},
 		[]metricpb.ResourceMetrics{
 			{
@@ -402,6 +405,7 @@ func TestCountFloat64MetricGroupingExport(t *testing.T) {
 func TestResourceMetricGroupingExport(t *testing.T) {
 	runMetricExportTests(
 		t,
+		nil,
 		[]record{
 			{
 				"int64-count",
@@ -519,6 +523,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 	}
 	runMetricExportTests(
 		t,
+		nil,
 		[]record{
 			{
 				"int64-count",
@@ -695,13 +700,78 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 	)
 }
 
+func TestStatelessExportKind(t *testing.T) {
+	type testcase struct {
+		name           string
+		instrumentKind otel.InstrumentKind
+		aggTemporality metricpb.AggregationTemporality
+		monotonic      bool
+	}
+
+	for _, k := range []testcase{
+		{"counter", otel.CounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA, true},
+		{"updowncounter", otel.UpDownCounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA, false},
+		{"sumobserver", otel.SumObserverInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, true},
+		{"updownsumobserver", otel.UpDownSumObserverInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, false},
+	} {
+		t.Run(k.name, func(t *testing.T) {
+			runMetricExportTests(
+				t,
+				[]ExporterOption{
+					WithMetricExportKindSelector(
+						metricsdk.StatelessExportKindSelector(),
+					),
+				},
+				[]record{
+					{
+						"instrument",
+						k.instrumentKind,
+						otel.Int64NumberKind,
+						testInstA,
+						nil,
+						append(baseKeyValues, cpuKey.Int(1)),
+					},
+				},
+				[]metricpb.ResourceMetrics{
+					{
+						Resource: testerAResource,
+						InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
+							{
+								Metrics: []*metricpb.Metric{
+									{
+										Name: "instrument",
+										Data: &metricpb.Metric_IntSum{
+											IntSum: &metricpb.IntSum{
+												IsMonotonic:            k.monotonic,
+												AggregationTemporality: k.aggTemporality,
+												DataPoints: []*metricpb.IntDataPoint{
+													{
+														Value:             11,
+														Labels:            cpu1Labels,
+														StartTimeUnixNano: startTime(),
+														TimeUnixNano:      pointTime(),
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			)
+		})
+	}
+}
+
 // What works single-threaded should work multi-threaded
-func runMetricExportTests(t *testing.T, rs []record, expected []metricpb.ResourceMetrics) {
+func runMetricExportTests(t *testing.T, opts []ExporterOption, rs []record, expected []metricpb.ResourceMetrics) {
 	t.Run("1 goroutine", func(t *testing.T) {
-		runMetricExportTest(t, NewUnstartedExporter(WorkerCount(1)), rs, expected)
+		runMetricExportTest(t, NewUnstartedExporter(append(opts[:len(opts):len(opts)], WorkerCount(1))...), rs, expected)
 	})
 	t.Run("20 goroutines", func(t *testing.T) {
-		runMetricExportTest(t, NewUnstartedExporter(WorkerCount(20)), rs, expected)
+		runMetricExportTest(t, NewUnstartedExporter(append(opts[:len(opts):len(opts)], WorkerCount(20))...), rs, expected)
 	})
 }
 
@@ -713,27 +783,41 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 	recs := map[label.Distinct][]metricsdk.Record{}
 	resources := map[label.Distinct]*resource.Resource{}
 	for _, r := range rs {
+		lcopy := make([]label.KeyValue, len(r.labels))
+		copy(lcopy, r.labels)
 		desc := otel.NewDescriptor(r.name, r.iKind, r.nKind, r.opts...)
-		labs := label.NewSet(r.labels...)
+		labs := label.NewSet(lcopy...)
 
 		var agg, ckpt metricsdk.Aggregator
-		switch r.iKind {
-		case otel.CounterInstrumentKind:
+		if r.iKind.Adding() {
 			agg, ckpt = metrictest.Unslice2(sum.New(2))
-		default:
+		} else {
 			agg, ckpt = metrictest.Unslice2(histogram.New(2, &desc, testHistogramBoundaries))
 		}
 
 		ctx := context.Background()
-		switch r.nKind {
-		case otel.Int64NumberKind:
-			require.NoError(t, agg.Update(ctx, otel.NewInt64Number(1), &desc))
-			require.NoError(t, agg.Update(ctx, otel.NewInt64Number(10), &desc))
-		case otel.Float64NumberKind:
-			require.NoError(t, agg.Update(ctx, otel.NewFloat64Number(1), &desc))
-			require.NoError(t, agg.Update(ctx, otel.NewFloat64Number(10), &desc))
-		default:
-			t.Fatalf("invalid number kind: %v", r.nKind)
+		if r.iKind.Synchronous() {
+			// For synchronous instruments, perform two updates: 1 and 10
+			switch r.nKind {
+			case otel.Int64NumberKind:
+				require.NoError(t, agg.Update(ctx, otel.NewInt64Number(1), &desc))
+				require.NoError(t, agg.Update(ctx, otel.NewInt64Number(10), &desc))
+			case otel.Float64NumberKind:
+				require.NoError(t, agg.Update(ctx, otel.NewFloat64Number(1), &desc))
+				require.NoError(t, agg.Update(ctx, otel.NewFloat64Number(10), &desc))
+			default:
+				t.Fatalf("invalid number kind: %v", r.nKind)
+			}
+		} else {
+			// For asynchronous instruments, perform a single update: 11
+			switch r.nKind {
+			case otel.Int64NumberKind:
+				require.NoError(t, agg.Update(ctx, otel.NewInt64Number(11), &desc))
+			case otel.Float64NumberKind:
+				require.NoError(t, agg.Update(ctx, otel.NewFloat64Number(11), &desc))
+			default:
+				t.Fatalf("invalid number kind: %v", r.nKind)
+			}
 		}
 		require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
 
@@ -787,14 +871,38 @@ func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []me
 				case *metricpb.Metric_IntGauge:
 					assert.ElementsMatch(t, expected.GetIntGauge().DataPoints, g[i].GetIntGauge().DataPoints)
 				case *metricpb.Metric_IntHistogram:
+					assert.Equal(t,
+						expected.GetIntHistogram().GetAggregationTemporality(),
+						g[i].GetIntHistogram().GetAggregationTemporality(),
+					)
 					assert.ElementsMatch(t, expected.GetIntHistogram().DataPoints, g[i].GetIntHistogram().DataPoints)
 				case *metricpb.Metric_IntSum:
+					assert.Equal(t,
+						expected.GetIntSum().GetAggregationTemporality(),
+						g[i].GetIntSum().GetAggregationTemporality(),
+					)
+					assert.Equal(t,
+						expected.GetIntSum().GetIsMonotonic(),
+						g[i].GetIntSum().GetIsMonotonic(),
+					)
 					assert.ElementsMatch(t, expected.GetIntSum().DataPoints, g[i].GetIntSum().DataPoints)
 				case *metricpb.Metric_DoubleGauge:
 					assert.ElementsMatch(t, expected.GetDoubleGauge().DataPoints, g[i].GetDoubleGauge().DataPoints)
 				case *metricpb.Metric_DoubleHistogram:
+					assert.Equal(t,
+						expected.GetDoubleHistogram().GetAggregationTemporality(),
+						g[i].GetDoubleHistogram().GetAggregationTemporality(),
+					)
 					assert.ElementsMatch(t, expected.GetDoubleHistogram().DataPoints, g[i].GetDoubleHistogram().DataPoints)
 				case *metricpb.Metric_DoubleSum:
+					assert.Equal(t,
+						expected.GetDoubleSum().GetAggregationTemporality(),
+						g[i].GetDoubleSum().GetAggregationTemporality(),
+					)
+					assert.Equal(t,
+						expected.GetDoubleSum().GetIsMonotonic(),
+						g[i].GetDoubleSum().GetIsMonotonic(),
+					)
 					assert.ElementsMatch(t, expected.GetDoubleSum().DataPoints, g[i].GetDoubleSum().DataPoints)
 				default:
 					assert.Failf(t, "unknown data type", g[i].Name)

@@ -52,8 +52,8 @@ type quantile struct {
 	Value    interface{} `json:"Value"`
 }
 
-func (e *metricExporter) ExportKindFor(*otel.Descriptor, aggregation.Kind) exportmetric.ExportKind {
-	return exportmetric.PassThroughExporter
+func (e *metricExporter) ExportKindFor(desc *otel.Descriptor, kind aggregation.Kind) exportmetric.ExportKind {
+	return exportmetric.StatelessExportKindSelector().ExportKindFor(desc, kind)
 }
 
 func (e *metricExporter) Export(_ context.Context, checkpointSet exportmetric.CheckpointSet) error {

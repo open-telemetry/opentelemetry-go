@@ -17,7 +17,7 @@ package opentracing // import "go.opentelemetry.io/otel/bridge/opentracing"
 import (
 	"context"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // NewTracerPair is a utility function that creates a BridgeTracer and a
@@ -26,14 +26,14 @@ import (
 // that wraps the passed tracer. BridgeTracer and WrapperTracerProvider are
 // returned to the caller and the caller is expected to register BridgeTracer
 // with opentracing and WrapperTracerProvider with opentelemetry.
-func NewTracerPair(tracer otel.Tracer) (*BridgeTracer, *WrapperTracerProvider) {
+func NewTracerPair(tracer trace.Tracer) (*BridgeTracer, *WrapperTracerProvider) {
 	bridgeTracer := NewBridgeTracer()
 	wrapperProvider := NewWrappedTracerProvider(bridgeTracer, tracer)
 	bridgeTracer.SetOpenTelemetryTracer(wrapperProvider.Tracer(""))
 	return bridgeTracer, wrapperProvider
 }
 
-func NewTracerPairWithContext(ctx context.Context, tracer otel.Tracer) (context.Context, *BridgeTracer, *WrapperTracerProvider) {
+func NewTracerPairWithContext(ctx context.Context, tracer trace.Tracer) (context.Context, *BridgeTracer, *WrapperTracerProvider) {
 	bridgeTracer, wrapperProvider := NewTracerPair(tracer)
 	ctx = bridgeTracer.NewHookedContext(ctx)
 	return ctx, bridgeTracer, wrapperProvider

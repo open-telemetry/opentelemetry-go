@@ -16,13 +16,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Move the `go.opentelemetry.io/otel/api/trace` package into `go.opentelemetry.io/otel` with the following changes. (#1229)
+- Move the `go.opentelemetry.io/otel/api/trace` package into `go.opentelemetry.io/otel/trace` with the following changes. (#1229) (#1307)
   - `ID` has been renamed to `TraceID`.
   - `IDFromHex` has been renamed to `TraceIDFromHex`.
   - `ErrorOption` has been changed to an interface to conform with project design standards which included adding a `NewErrorConfig` function.
   - `EmptySpanContext` is removed.
 - Move the `go.opentelemetry.io/otel/api/trace/tracetest` package into `go.opentelemetry.io/otel/oteltest`. (#1229)
-- OTLP Exporter supports OTLP v0.5.0. (#1230)
+- OTLP Exporter updates:
+  - supports OTLP v0.5.0 (#1230)
+  - supports configurable aggregation temporality (default: Cumulative, optional: Stateless). (#1296)
 - The Sampler is now called on local child spans. (#1233)
 - The `Kind` type from the `go.opentelemetry.io/otel/api/metric` package was renamed to `InstrumentKind` to more specifically describe what it is and avoid semantic ambiguity. (#1240)
 - The `MetricKind` method of the `Descriptor` type in the `go.opentelemetry.io/otel/api/metric` package was renamed to `Descriptor.InstrumentKind`.
@@ -37,6 +39,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix `Code.UnmarshalJSON` to work with valid json only. (#1276)
 - The `resource.New()` method changes signature to support builtin attributes and functional options, including `telemetry.sdk.*` and
   `host.name` semantic conventions; the former method is renamed `resource.NewWithAttributes`. (#1235)
+- The prometheus exporter now exports non-monotonic counters (i.e. `UpDownCounter`s) as gauges. (#1210)
+- Correct the `Span.End` method documentation in the `otel` API to state updates are not allowed on a span after it has ended. (#1310)
+- Updated span collection limits for attribute, event and link counts to 1000 (#1318)
 
 ### Removed
 

@@ -20,9 +20,9 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -31,14 +31,14 @@ const (
 	errorEventName  = "error"
 )
 
-var _ otel.Span = (*Span)(nil)
+var _ trace.Span = (*Span)(nil)
 
 // Span is an OpenTelemetry Span used for testing.
 type Span struct {
 	lock          sync.RWMutex
 	tracer        *Tracer
-	spanContext   otel.SpanContext
-	parentSpanID  otel.SpanID
+	spanContext   trace.SpanContext
+	parentSpanID  trace.SpanID
 	ended         bool
 	name          string
 	startTime     time.Time
@@ -47,19 +47,19 @@ type Span struct {
 	statusMessage string
 	attributes    map[label.Key]label.Value
 	events        []Event
-	links         map[otel.SpanContext][]label.KeyValue
-	spanKind      otel.SpanKind
+	links         map[trace.SpanContext][]label.KeyValue
+	spanKind      trace.SpanKind
 }
 
 // Tracer returns the Tracer that created s.
-func (s *Span) Tracer() otel.Tracer {
+func (s *Span) Tracer() trace.Tracer {
 	return s.tracer
 }
 
 // End ends s. If the Tracer that created s was configured with a
 // SpanRecorder, that recorder's OnEnd method is called as the final part of
 // this method.
-func (s *Span) End(opts ...otel.SpanOption) {
+func (s *Span) End(opts ...trace.SpanOption) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -67,7 +67,7 @@ func (s *Span) End(opts ...otel.SpanOption) {
 		return
 	}
 
-	c := otel.NewSpanConfig(opts...)
+	c := trace.NewSpanConfig(opts...)
 	s.endTime = time.Now()
 	if endTime := c.Timestamp; !endTime.IsZero() {
 		s.endTime = endTime
@@ -80,7 +80,7 @@ func (s *Span) End(opts ...otel.SpanOption) {
 }
 
 // RecordError records an error as a Span event.
-func (s *Span) RecordError(err error, opts ...otel.EventOption) {
+func (s *Span) RecordError(err error, opts ...trace.EventOption) {
 	if err == nil || s.ended {
 		return
 	}
@@ -92,7 +92,7 @@ func (s *Span) RecordError(err error, opts ...otel.EventOption) {
 	}
 
 	s.SetStatus(codes.Error, "")
-	opts = append(opts, otel.WithAttributes(
+	opts = append(opts, trace.WithAttributes(
 		errorTypeKey.String(errTypeString),
 		errorMessageKey.String(err.Error()),
 	))
@@ -101,7 +101,7 @@ func (s *Span) RecordError(err error, opts ...otel.EventOption) {
 }
 
 // AddEvent adds an event to s.
-func (s *Span) AddEvent(name string, o ...otel.EventOption) {
+func (s *Span) AddEvent(name string, o ...trace.EventOption) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -109,7 +109,7 @@ func (s *Span) AddEvent(name string, o ...otel.EventOption) {
 		return
 	}
 
-	c := otel.NewEventConfig(o...)
+	c := trace.NewEventConfig(o...)
 
 	var attributes map[label.Key]label.Value
 	if l := len(c.Attributes); l > 0 {
@@ -132,7 +132,7 @@ func (s *Span) IsRecording() bool {
 }
 
 // SpanContext returns the SpanContext of s.
-func (s *Span) SpanContext() otel.SpanContext {
+func (s *Span) SpanContext() trace.SpanContext {
 	return s.spanContext
 }
 
@@ -182,7 +182,7 @@ func (s *Span) Name() string { return s.name }
 // ParentSpanID returns the SpanID of the parent Span. If s is a root Span,
 // and therefore does not have a parent, the returned SpanID will be invalid
 // (i.e., it will contain all zeroes).
-func (s *Span) ParentSpanID() otel.SpanID { return s.parentSpanID }
+func (s *Span) ParentSpanID() trace.SpanID { return s.parentSpanID }
 
 // Attributes returns the attributes set on s, either at or after creation
 // time. If the same attribute key was set multiple times, the last call will
@@ -206,8 +206,8 @@ func (s *Span) Events() []Event { return s.events }
 
 // Links returns the links set on s at creation time. If multiple links for
 // the same SpanContext were set, the last link will be used.
-func (s *Span) Links() map[otel.SpanContext][]label.KeyValue {
-	links := make(map[otel.SpanContext][]label.KeyValue)
+func (s *Span) Links() map[trace.SpanContext][]label.KeyValue {
+	links := make(map[trace.SpanContext][]label.KeyValue)
 
 	for sc, attributes := range s.links {
 		links[sc] = append([]label.KeyValue{}, attributes...)
@@ -239,4 +239,4 @@ func (s *Span) StatusCode() codes.Code { return s.statusCode }
 func (s *Span) StatusMessage() string { return s.statusMessage }
 
 // SpanKind returns the span kind of s.
-func (s *Span) SpanKind() otel.SpanKind { return s.spanKind }
+func (s *Span) SpanKind() trace.SpanKind { return s.spanKind }

@@ -18,7 +18,8 @@ import (
 	"math/rand"
 	"sync"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
+
 	"go.opentelemetry.io/otel/sdk/trace/internal"
 )
 
@@ -30,20 +31,20 @@ type defaultIDGenerator struct {
 var _ internal.IDGenerator = &defaultIDGenerator{}
 
 // NewSpanID returns a non-zero span ID from a randomly-chosen sequence.
-func (gen *defaultIDGenerator) NewSpanID() otel.SpanID {
+func (gen *defaultIDGenerator) NewSpanID() trace.SpanID {
 	gen.Lock()
 	defer gen.Unlock()
-	sid := otel.SpanID{}
+	sid := trace.SpanID{}
 	gen.randSource.Read(sid[:])
 	return sid
 }
 
 // NewTraceID returns a non-zero trace ID from a randomly-chosen sequence.
 // mu should be held while this function is called.
-func (gen *defaultIDGenerator) NewTraceID() otel.TraceID {
+func (gen *defaultIDGenerator) NewTraceID() trace.TraceID {
 	gen.Lock()
 	defer gen.Unlock()
-	tid := otel.TraceID{}
+	tid := trace.TraceID{}
 	gen.randSource.Read(tid[:])
 	return tid
 }

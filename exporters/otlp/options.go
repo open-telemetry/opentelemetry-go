@@ -19,6 +19,8 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+
+	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
 const (
@@ -83,6 +85,7 @@ type config struct {
 	headers            map[string]string
 	clientCredentials  credentials.TransportCredentials
 	numWorkers         uint
+	exportKindSelector metricsdk.ExportKindSelector
 }
 
 // WorkerCount sets the number of Goroutines to use when processing telemetry.
@@ -163,5 +166,13 @@ func WithGRPCServiceConfig(serviceConfig string) ExporterOption {
 func WithGRPCDialOption(opts ...grpc.DialOption) ExporterOption {
 	return func(cfg *config) {
 		cfg.grpcDialOptions = opts
+	}
+}
+
+// WithMetricExportKindSelector defines the ExportKindSelector used for selecting
+// AggregationTemporality (i.e., Cumulative vs. Delta aggregation).
+func WithMetricExportKindSelector(selector metricsdk.ExportKindSelector) ExporterOption {
+	return func(cfg *config) {
+		cfg.exportKindSelector = selector
 	}
 }
