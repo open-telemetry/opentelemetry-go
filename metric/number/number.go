@@ -96,8 +96,6 @@ func NewFloat64Number(f float64) Number {
 
 // NewNumberSignChange returns a number with the same magnitude and
 // the opposite sign.  `kind` must describe the kind of number in `nn`.
-//
-// Does not change Uint64Kind values.
 func NewNumberSignChange(kind Kind, nn Number) Number {
 	switch kind {
 	case Int64Kind:
