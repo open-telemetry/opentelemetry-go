@@ -48,6 +48,11 @@ var (
 	intervalEnd   = intervalStart.Add(time.Hour)
 )
 
+const (
+	otelCumulative = metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE
+	otelDelta      = metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA
+)
+
 func TestStringKeyValues(t *testing.T) {
 	tests := []struct {
 		kvs      []label.KeyValue
@@ -167,14 +172,17 @@ func TestSumIntDataPoints(t *testing.T) {
 	value, err := sum.Sum()
 	require.NoError(t, err)
 
-	if m, err := scalar(record, value, record.StartTime(), record.EndTime()); assert.NoError(t, err) {
+	if m, err := sumPoint(record, value, record.StartTime(), record.EndTime(), export.CumulativeExportKind, true); assert.NoError(t, err) {
 		assert.Nil(t, m.GetIntGauge())
 		assert.Nil(t, m.GetIntHistogram())
-		assert.Equal(t, []*metricpb.IntDataPoint{{
-			Value:             1,
-			StartTimeUnixNano: uint64(intervalStart.UnixNano()),
-			TimeUnixNano:      uint64(intervalEnd.UnixNano()),
-		}}, m.GetIntSum().DataPoints)
+		assert.Equal(t, &metricpb.IntSum{
+			AggregationTemporality: otelCumulative,
+			IsMonotonic:            true,
+			DataPoints: []*metricpb.IntDataPoint{{
+				Value:             1,
+				StartTimeUnixNano: uint64(intervalStart.UnixNano()),
+				TimeUnixNano:      uint64(intervalEnd.UnixNano()),
+			}}}, m.GetIntSum())
 		assert.Nil(t, m.GetDoubleGauge())
 		assert.Nil(t, m.GetDoubleHistogram())
 	}
@@ -192,17 +200,20 @@ func TestSumFloatDataPoints(t *testing.T) {
 	value, err := sum.Sum()
 	require.NoError(t, err)
 
-	if m, err := scalar(record, value, record.StartTime(), record.EndTime()); assert.NoError(t, err) {
+	if m, err := sumPoint(record, value, record.StartTime(), record.EndTime(), export.DeltaExportKind, false); assert.NoError(t, err) {
 		assert.Nil(t, m.GetIntGauge())
 		assert.Nil(t, m.GetIntHistogram())
 		assert.Nil(t, m.GetIntSum())
 		assert.Nil(t, m.GetDoubleGauge())
 		assert.Nil(t, m.GetDoubleHistogram())
-		assert.Equal(t, []*metricpb.DoubleDataPoint{{
-			Value:             1,
-			StartTimeUnixNano: uint64(intervalStart.UnixNano()),
-			TimeUnixNano:      uint64(intervalEnd.UnixNano()),
-		}}, m.GetDoubleSum().DataPoints)
+		assert.Equal(t, &metricpb.DoubleSum{
+			IsMonotonic:            false,
+			AggregationTemporality: otelDelta,
+			DataPoints: []*metricpb.DoubleDataPoint{{
+				Value:             1,
+				StartTimeUnixNano: uint64(intervalStart.UnixNano()),
+				TimeUnixNano:      uint64(intervalEnd.UnixNano()),
+			}}}, m.GetDoubleSum())
 	}
 }
 
@@ -218,7 +229,7 @@ func TestLastValueIntDataPoints(t *testing.T) {
 	value, timestamp, err := sum.LastValue()
 	require.NoError(t, err)
 
-	if m, err := gauge(record, value, time.Time{}, timestamp); assert.NoError(t, err) {
+	if m, err := gaugePoint(record, value, time.Time{}, timestamp); assert.NoError(t, err) {
 		assert.Equal(t, []*metricpb.IntDataPoint{{
 			Value:             100,
 			StartTimeUnixNano: 0,
@@ -240,7 +251,7 @@ func TestSumErrUnknownValueType(t *testing.T) {
 	value, err := s.Sum()
 	require.NoError(t, err)
 
-	_, err = scalar(record, value, record.StartTime(), record.EndTime())
+	_, err = sumPoint(record, value, record.StartTime(), record.EndTime(), export.CumulativeExportKind, true)
 	assert.Error(t, err)
 	if !errors.Is(err, ErrUnknownValueType) {
 		t.Errorf("expected ErrUnknownValueType, got %v", err)
@@ -325,7 +336,7 @@ func TestRecordAggregatorIncompatibleErrors(t *testing.T) {
 			kind: kind,
 			agg:  agg,
 		}
-		return Record(export.NewRecord(&desc, &labels, res, test, intervalStart, intervalEnd))
+		return Record(export.CumulativeExportKindSelector(), export.NewRecord(&desc, &labels, res, test, intervalStart, intervalEnd))
 	}
 
 	mpb, err := makeMpb(aggregation.SumKind, &lastvalue.New(1)[0])
@@ -358,7 +369,7 @@ func TestRecordAggregatorUnexpectedErrors(t *testing.T) {
 		desc := otel.NewDescriptor("things", otel.CounterInstrumentKind, otel.Int64NumberKind)
 		labels := label.NewSet()
 		res := resource.Empty()
-		return Record(export.NewRecord(&desc, &labels, res, agg, intervalStart, intervalEnd))
+		return Record(export.CumulativeExportKindSelector(), export.NewRecord(&desc, &labels, res, agg, intervalStart, intervalEnd))
 	}
 
 	errEx := fmt.Errorf("timeout")

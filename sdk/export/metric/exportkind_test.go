@@ -23,18 +23,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
 
-func TestExportKindIdentity(t *testing.T) {
-	akind := aggregation.Kind("Noop")
-
-	require.Equal(t, CumulativeExporter, CumulativeExporter.ExportKindFor(nil, akind))
-	require.Equal(t, DeltaExporter, DeltaExporter.ExportKindFor(nil, akind))
-	require.Equal(t, PassThroughExporter, PassThroughExporter.ExportKindFor(nil, akind))
-}
-
 func TestExportKindIncludes(t *testing.T) {
-	require.True(t, CumulativeExporter.Includes(CumulativeExporter))
-	require.True(t, DeltaExporter.Includes(CumulativeExporter|DeltaExporter))
-	require.False(t, DeltaExporter.Includes(PassThroughExporter|CumulativeExporter))
+	require.True(t, CumulativeExportKind.Includes(CumulativeExportKind))
+	require.True(t, DeltaExportKind.Includes(CumulativeExportKind|DeltaExportKind))
 }
 
 var deltaMemoryKinds = []otel.InstrumentKind{
@@ -51,14 +42,32 @@ var cumulativeMemoryKinds = []otel.InstrumentKind{
 
 func TestExportKindMemoryRequired(t *testing.T) {
 	for _, kind := range deltaMemoryKinds {
-		require.True(t, DeltaExporter.MemoryRequired(kind))
-		require.False(t, CumulativeExporter.MemoryRequired(kind))
-		require.False(t, PassThroughExporter.MemoryRequired(kind))
+		require.True(t, DeltaExportKind.MemoryRequired(kind))
+		require.False(t, CumulativeExportKind.MemoryRequired(kind))
 	}
 
 	for _, kind := range cumulativeMemoryKinds {
-		require.True(t, CumulativeExporter.MemoryRequired(kind))
-		require.False(t, DeltaExporter.MemoryRequired(kind))
-		require.False(t, PassThroughExporter.MemoryRequired(kind))
+		require.True(t, CumulativeExportKind.MemoryRequired(kind))
+		require.False(t, DeltaExportKind.MemoryRequired(kind))
+	}
+}
+
+func TestExportKindSelectors(t *testing.T) {
+	ceks := CumulativeExportKindSelector()
+	deks := DeltaExportKindSelector()
+	seks := StatelessExportKindSelector()
+
+	for _, ikind := range append(deltaMemoryKinds, cumulativeMemoryKinds...) {
+		desc := otel.NewDescriptor("instrument", ikind, otel.Int64NumberKind)
+
+		var akind aggregation.Kind
+		if ikind.Adding() {
+			akind = aggregation.SumKind
+		} else {
+			akind = aggregation.HistogramKind
+		}
+		require.Equal(t, CumulativeExportKind, ceks.ExportKindFor(&desc, akind))
+		require.Equal(t, DeltaExportKind, deks.ExportKindFor(&desc, akind))
+		require.False(t, seks.ExportKindFor(&desc, akind).MemoryRequired(ikind))
 	}
 }

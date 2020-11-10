@@ -8,28 +8,18 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
-	_ = x[CumulativeExporter-1]
-	_ = x[DeltaExporter-2]
-	_ = x[PassThroughExporter-4]
+	_ = x[CumulativeExportKind-1]
+	_ = x[DeltaExportKind-2]
 }
 
-const (
-	_ExportKind_name_0 = "CumulativeExporterDeltaExporter"
-	_ExportKind_name_1 = "PassThroughExporter"
-)
+const _ExportKind_name = "CumulativeExportKindDeltaExportKind"
 
-var (
-	_ExportKind_index_0 = [...]uint8{0, 18, 31}
-)
+var _ExportKind_index = [...]uint8{0, 20, 35}
 
 func (i ExportKind) String() string {
-	switch {
-	case 1 <= i && i <= 2:
-		i -= 1
-		return _ExportKind_name_0[_ExportKind_index_0[i]:_ExportKind_index_0[i+1]]
-	case i == 4:
-		return _ExportKind_name_1
-	default:
-		return "ExportKind(" + strconv.FormatInt(int64(i), 10) + ")"
+	i -= 1
+	if i < 0 || i >= ExportKind(len(_ExportKind_index)-1) {
+		return "ExportKind(" + strconv.FormatInt(int64(i+1), 10) + ")"
 	}
+	return _ExportKind_name[_ExportKind_index[i]:_ExportKind_index[i+1]]
 }

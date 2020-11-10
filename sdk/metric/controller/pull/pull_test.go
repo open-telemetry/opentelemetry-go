@@ -36,7 +36,7 @@ func TestPullNoCache(t *testing.T) {
 	puller := pull.New(
 		basic.New(
 			selector.NewWithExactDistribution(),
-			export.CumulativeExporter,
+			export.CumulativeExportKindSelector(),
 			basic.WithMemory(true),
 		),
 		pull.WithCachePeriod(0),
@@ -50,7 +50,7 @@ func TestPullNoCache(t *testing.T) {
 
 	require.NoError(t, puller.Collect(ctx))
 	records := processortest.NewOutput(label.DefaultEncoder())
-	require.NoError(t, puller.ForEach(export.CumulativeExporter, records.AddRecord))
+	require.NoError(t, puller.ForEach(export.CumulativeExportKindSelector(), records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=B/": 10,
@@ -60,7 +60,7 @@ func TestPullNoCache(t *testing.T) {
 
 	require.NoError(t, puller.Collect(ctx))
 	records = processortest.NewOutput(label.DefaultEncoder())
-	require.NoError(t, puller.ForEach(export.CumulativeExporter, records.AddRecord))
+	require.NoError(t, puller.ForEach(export.CumulativeExportKindSelector(), records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=B/": 20,
@@ -71,7 +71,7 @@ func TestPullWithCache(t *testing.T) {
 	puller := pull.New(
 		basic.New(
 			selector.NewWithExactDistribution(),
-			export.CumulativeExporter,
+			export.CumulativeExportKindSelector(),
 			basic.WithMemory(true),
 		),
 		pull.WithCachePeriod(time.Second),
@@ -87,7 +87,7 @@ func TestPullWithCache(t *testing.T) {
 
 	require.NoError(t, puller.Collect(ctx))
 	records := processortest.NewOutput(label.DefaultEncoder())
-	require.NoError(t, puller.ForEach(export.CumulativeExporter, records.AddRecord))
+	require.NoError(t, puller.ForEach(export.CumulativeExportKindSelector(), records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=B/": 10,
@@ -98,7 +98,7 @@ func TestPullWithCache(t *testing.T) {
 	// Cached value!
 	require.NoError(t, puller.Collect(ctx))
 	records = processortest.NewOutput(label.DefaultEncoder())
-	require.NoError(t, puller.ForEach(export.CumulativeExporter, records.AddRecord))
+	require.NoError(t, puller.ForEach(export.CumulativeExportKindSelector(), records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=B/": 10,
@@ -110,7 +110,7 @@ func TestPullWithCache(t *testing.T) {
 	// Re-computed value!
 	require.NoError(t, puller.Collect(ctx))
 	records = processortest.NewOutput(label.DefaultEncoder())
-	require.NoError(t, puller.ForEach(export.CumulativeExporter, records.AddRecord))
+	require.NoError(t, puller.ForEach(export.CumulativeExportKindSelector(), records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=B/": 20,
