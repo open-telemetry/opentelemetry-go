@@ -32,6 +32,7 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
+	arrAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	lvAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
@@ -222,6 +223,32 @@ func TestLastValueIntDataPoints(t *testing.T) {
 			Value:             100,
 			StartTimeUnixNano: 0,
 			TimeUnixNano:      uint64(timestamp.UnixNano()),
+		}}, m.GetIntGauge().DataPoints)
+		assert.Nil(t, m.GetIntHistogram())
+		assert.Nil(t, m.GetIntSum())
+		assert.Nil(t, m.GetDoubleGauge())
+		assert.Nil(t, m.GetDoubleHistogram())
+		assert.Nil(t, m.GetDoubleSum())
+	}
+}
+
+func TestExactIntDataPoints(t *testing.T) {
+	desc := otel.NewDescriptor("", otel.ValueObserverInstrumentKind, otel.Int64NumberKind)
+	labels := label.NewSet()
+	e, ckpt := metrictest.Unslice2(arrAgg.New(2))
+	assert.NoError(t, e.Update(context.Background(), otel.Number(100), &desc))
+	require.NoError(t, e.SynchronizedMove(ckpt, &desc))
+	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
+	p, ok := ckpt.(aggregation.Points)
+	require.True(t, ok, "ckpt is not an aggregation.Points: %T", ckpt)
+	pts, err := p.Points()
+	require.NoError(t, err)
+
+	if m, err := gaugeArray(record, pts); assert.NoError(t, err) {
+		assert.Equal(t, []*metricpb.IntDataPoint{{
+			Value:             100,
+			StartTimeUnixNano: toNanos(intervalStart),
+			TimeUnixNano:      toNanos(intervalEnd),
 		}}, m.GetIntGauge().DataPoints)
 		assert.Nil(t, m.GetIntHistogram())
 		assert.Nil(t, m.GetIntSum())
