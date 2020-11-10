@@ -22,12 +22,12 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestExporter_ExportSpan(t *testing.T) {
@@ -40,14 +40,14 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 	// setup test span
 	now := time.Now()
-	traceID, _ := otel.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
-	spanID, _ := otel.SpanIDFromHex("0102030405060708")
+	traceID, _ := trace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
+	spanID, _ := trace.SpanIDFromHex("0102030405060708")
 	keyValue := "value"
 	doubleValue := 123.456
 	resource := resource.NewWithAttributes(label.String("rk1", "rv11"))
 
 	testSpan := &export.SpanData{
-		SpanContext: otel.SpanContext{
+		SpanContext: trace.SpanContext{
 			TraceID: traceID,
 			SpanID:  spanID,
 		},
@@ -62,7 +62,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 			{Name: "foo", Attributes: []label.KeyValue{label.String("key", keyValue)}, Time: now},
 			{Name: "bar", Attributes: []label.KeyValue{label.Float64("double", doubleValue)}, Time: now},
 		},
-		SpanKind:      otel.SpanKindInternal,
+		SpanKind:      trace.SpanKindInternal,
 		StatusCode:    codes.Error,
 		StatusMessage: "interesting",
 		Resource:      resource,

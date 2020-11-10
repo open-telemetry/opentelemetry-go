@@ -214,6 +214,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	err := ctrl.ForEach(c.exp, func(record export.Record) error {
 		agg := record.Aggregation()
 		numberKind := record.Descriptor().NumberKind()
+		instrumentKind := record.Descriptor().InstrumentKind()
 
 		var labelKeys, labels []string
 		mergeLabels(record, &labelKeys, &labels)
@@ -236,9 +237,13 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			if err := c.exportSummary(ch, dist, numberKind, desc, labels); err != nil {
 				return fmt.Errorf("exporting summary: %w", err)
 			}
-		} else if sum, ok := agg.(aggregation.Sum); ok {
-			if err := c.exportCounter(ch, sum, numberKind, desc, labels); err != nil {
-				return fmt.Errorf("exporting counter: %w", err)
+		} else if sum, ok := agg.(aggregation.Sum); ok && instrumentKind.Monotonic() {
+			if err := c.exportMonotonicCounter(ch, sum, numberKind, desc, labels); err != nil {
+				return fmt.Errorf("exporting monotonic counter: %w", err)
+			}
+		} else if sum, ok := agg.(aggregation.Sum); ok && !instrumentKind.Monotonic() {
+			if err := c.exportNonMonotonicCounter(ch, sum, numberKind, desc, labels); err != nil {
+				return fmt.Errorf("exporting non monotonic counter: %w", err)
 			}
 		} else if lastValue, ok := agg.(aggregation.LastValue); ok {
 			if err := c.exportLastValue(ch, lastValue, numberKind, desc, labels); err != nil {
@@ -267,7 +272,22 @@ func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregati
 	return nil
 }
 
-func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregation.Sum, kind otel.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportNonMonotonicCounter(ch chan<- prometheus.Metric, sum aggregation.Sum, kind otel.NumberKind, desc *prometheus.Desc, labels []string) error {
+	v, err := sum.Sum()
+	if err != nil {
+		return fmt.Errorf("error retrieving counter: %w", err)
+	}
+
+	m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, v.CoerceToFloat64(kind), labels...)
+	if err != nil {
+		return fmt.Errorf("error creating constant metric: %w", err)
+	}
+
+	ch <- m
+	return nil
+}
+
+func (c *collector) exportMonotonicCounter(ch chan<- prometheus.Metric, sum aggregation.Sum, kind otel.NumberKind, desc *prometheus.Desc, labels []string) error {
 	v, err := sum.Sum()
 	if err != nil {
 		return fmt.Errorf("error retrieving counter: %w", err)

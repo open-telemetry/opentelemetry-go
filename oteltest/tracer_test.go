@@ -22,25 +22,25 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/matchers"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestTracer(t *testing.T) {
 	tp := oteltest.NewTracerProvider()
 
-	oteltest.NewHarness(t).TestTracer(func() func() otel.Tracer {
+	oteltest.NewHarness(t).TestTracer(func() func() trace.Tracer {
 		tp := oteltest.NewTracerProvider()
 		var i uint64
-		return func() otel.Tracer {
+		return func() trace.Tracer {
 			return tp.Tracer(fmt.Sprintf("tracer %d", atomic.AddUint64(&i, 1)))
 		}
 	}())
 
 	t.Run("#Start", func(t *testing.T) {
-		testTracedSpan(t, func(tracer otel.Tracer, name string) (otel.Span, error) {
+		testTracedSpan(t, func(tracer trace.Tracer, name string) (trace.Span, error) {
 			_, span := tracer.Start(context.Background(), name)
 
 			return span, nil
@@ -54,7 +54,7 @@ func TestTracer(t *testing.T) {
 			expectedStartTime := time.Now().AddDate(5, 0, 0)
 
 			subject := tp.Tracer(t.Name())
-			_, span := subject.Start(context.Background(), "test", otel.WithTimestamp(expectedStartTime))
+			_, span := subject.Start(context.Background(), "test", trace.WithTimestamp(expectedStartTime))
 
 			testSpan, ok := span.(*oteltest.Span)
 			e.Expect(ok).ToBeTrue()
@@ -71,7 +71,7 @@ func TestTracer(t *testing.T) {
 			attr2 := label.String("b", "2")
 
 			subject := tp.Tracer(t.Name())
-			_, span := subject.Start(context.Background(), "test", otel.WithAttributes(attr1, attr2))
+			_, span := subject.Start(context.Background(), "test", trace.WithAttributes(attr1, attr2))
 
 			testSpan, ok := span.(*oteltest.Span)
 			e.Expect(ok).ToBeTrue()
@@ -111,7 +111,7 @@ func TestTracer(t *testing.T) {
 
 			parent, parentSpan := subject.Start(context.Background(), "parent")
 			_, remoteParentSpan := subject.Start(context.Background(), "remote not-a-parent")
-			parent = otel.ContextWithRemoteSpanContext(parent, remoteParentSpan.SpanContext())
+			parent = trace.ContextWithRemoteSpanContext(parent, remoteParentSpan.SpanContext())
 			parentSpanContext := parentSpan.SpanContext()
 
 			_, span := subject.Start(parent, "child")
@@ -133,7 +133,7 @@ func TestTracer(t *testing.T) {
 			subject := tp.Tracer(t.Name())
 
 			_, remoteParentSpan := subject.Start(context.Background(), "remote parent")
-			parent := otel.ContextWithRemoteSpanContext(context.Background(), remoteParentSpan.SpanContext())
+			parent := trace.ContextWithRemoteSpanContext(context.Background(), remoteParentSpan.SpanContext())
 			remoteParentSpanContext := remoteParentSpan.SpanContext()
 
 			_, span := subject.Start(parent, "child")
@@ -183,9 +183,9 @@ func TestTracer(t *testing.T) {
 			_, remoteParentSpan := subject.Start(context.Background(), "remote not-a-parent")
 			parentSpanContext := parentSpan.SpanContext()
 			remoteParentSpanContext := remoteParentSpan.SpanContext()
-			parentCtx = otel.ContextWithRemoteSpanContext(parentCtx, remoteParentSpanContext)
+			parentCtx = trace.ContextWithRemoteSpanContext(parentCtx, remoteParentSpanContext)
 
-			_, span := subject.Start(parentCtx, "child", otel.WithNewRoot())
+			_, span := subject.Start(parentCtx, "child", trace.WithNewRoot())
 
 			testSpan, ok := span.(*oteltest.Span)
 			e.Expect(ok).ToBeTrue()
@@ -197,7 +197,7 @@ func TestTracer(t *testing.T) {
 			e.Expect(childSpanContext.SpanID).NotToEqual(remoteParentSpanContext.SpanID)
 			e.Expect(testSpan.ParentSpanID().IsValid()).ToBeFalse()
 
-			expectedLinks := []otel.Link{
+			expectedLinks := []trace.Link{
 				{
 					SpanContext: parentSpanContext,
 					Attributes: []label.KeyValue{
@@ -212,9 +212,9 @@ func TestTracer(t *testing.T) {
 				},
 			}
 			tsLinks := testSpan.Links()
-			gotLinks := make([]otel.Link, 0, len(tsLinks))
+			gotLinks := make([]trace.Link, 0, len(tsLinks))
 			for sc, attributes := range tsLinks {
-				gotLinks = append(gotLinks, otel.Link{
+				gotLinks = append(gotLinks, trace.Link{
 					SpanContext: sc,
 					Attributes:  attributes,
 				})
@@ -230,7 +230,7 @@ func TestTracer(t *testing.T) {
 			subject := tp.Tracer(t.Name())
 
 			_, span := subject.Start(context.Background(), "link1")
-			link1 := otel.Link{
+			link1 := trace.Link{
 				SpanContext: span.SpanContext(),
 				Attributes: []label.KeyValue{
 					label.String("a", "1"),
@@ -238,14 +238,14 @@ func TestTracer(t *testing.T) {
 			}
 
 			_, span = subject.Start(context.Background(), "link2")
-			link2 := otel.Link{
+			link2 := trace.Link{
 				SpanContext: span.SpanContext(),
 				Attributes: []label.KeyValue{
 					label.String("b", "2"),
 				},
 			}
 
-			_, span = subject.Start(context.Background(), "test", otel.WithLinks(link1, link2))
+			_, span = subject.Start(context.Background(), "test", trace.WithLinks(link1, link2))
 
 			testSpan, ok := span.(*oteltest.Span)
 			e.Expect(ok).ToBeTrue()
@@ -257,7 +257,7 @@ func TestTracer(t *testing.T) {
 	})
 }
 
-func testTracedSpan(t *testing.T, fn func(tracer otel.Tracer, name string) (otel.Span, error)) {
+func testTracedSpan(t *testing.T, fn func(tracer trace.Tracer, name string) (trace.Span, error)) {
 	tp := oteltest.NewTracerProvider()
 	t.Run("starts a span with the expected name", func(t *testing.T) {
 		t.Parallel()

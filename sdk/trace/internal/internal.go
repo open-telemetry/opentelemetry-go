@@ -15,10 +15,10 @@
 // Package internal provides trace internals.
 package internal
 
-import "go.opentelemetry.io/otel"
+import "go.opentelemetry.io/otel/trace"
 
 // IDGenerator allows custom generators for TraceId and SpanId.
 type IDGenerator interface {
-	NewTraceID() otel.TraceID
-	NewSpanID() otel.SpanID
+	NewTraceID() trace.TraceID
+	NewSpanID() trace.SpanID
 }

@@ -24,9 +24,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
 	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/codes"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -36,31 +36,31 @@ import (
 
 func TestSpanKind(t *testing.T) {
 	for _, test := range []struct {
-		kind     otel.SpanKind
+		kind     trace.SpanKind
 		expected tracepb.Span_SpanKind
 	}{
 		{
-			otel.SpanKindInternal,
+			trace.SpanKindInternal,
 			tracepb.Span_SPAN_KIND_INTERNAL,
 		},
 		{
-			otel.SpanKindClient,
+			trace.SpanKindClient,
 			tracepb.Span_SPAN_KIND_CLIENT,
 		},
 		{
-			otel.SpanKindServer,
+			trace.SpanKindServer,
 			tracepb.Span_SPAN_KIND_SERVER,
 		},
 		{
-			otel.SpanKindProducer,
+			trace.SpanKindProducer,
 			tracepb.Span_SPAN_KIND_PRODUCER,
 		},
 		{
-			otel.SpanKindConsumer,
+			trace.SpanKindConsumer,
 			tracepb.Span_SPAN_KIND_CONSUMER,
 		},
 		{
-			otel.SpanKind(-1),
+			trace.SpanKind(-1),
 			tracepb.Span_SPAN_KIND_UNSPECIFIED,
 		},
 	} {
@@ -117,15 +117,15 @@ func TestNilLinks(t *testing.T) {
 }
 
 func TestEmptyLinks(t *testing.T) {
-	assert.Nil(t, links([]otel.Link{}))
+	assert.Nil(t, links([]trace.Link{}))
 }
 
 func TestLinks(t *testing.T) {
 	attrs := []label.KeyValue{label.Int("one", 1), label.Int("two", 2)}
-	l := []otel.Link{
+	l := []trace.Link{
 		{},
 		{
-			SpanContext: otel.SpanContext{},
+			SpanContext: trace.SpanContext{},
 			Attributes:  attrs,
 		},
 	}
@@ -200,12 +200,12 @@ func TestSpanData(t *testing.T) {
 	startTime := time.Unix(1585674086, 1234)
 	endTime := startTime.Add(10 * time.Second)
 	spanData := &export.SpanData{
-		SpanContext: otel.SpanContext{
-			TraceID: otel.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
-			SpanID:  otel.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
+		SpanContext: trace.SpanContext{
+			TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+			SpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 		},
-		SpanKind:     otel.SpanKindServer,
-		ParentSpanID: otel.SpanID{0xEF, 0xEE, 0xED, 0xEC, 0xEB, 0xEA, 0xE9, 0xE8},
+		SpanKind:     trace.SpanKindServer,
+		ParentSpanID: trace.SpanID{0xEF, 0xEE, 0xED, 0xEC, 0xEB, 0xEA, 0xE9, 0xE8},
 		Name:         "span data to span data",
 		StartTime:    startTime,
 		EndTime:      endTime,
@@ -221,11 +221,11 @@ func TestSpanData(t *testing.T) {
 				},
 			},
 		},
-		Links: []otel.Link{
+		Links: []trace.Link{
 			{
-				SpanContext: otel.SpanContext{
-					TraceID:    otel.TraceID{0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF},
-					SpanID:     otel.SpanID{0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7},
+				SpanContext: trace.SpanContext{
+					TraceID:    trace.TraceID{0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF},
+					SpanID:     trace.SpanID{0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7},
 					TraceFlags: 0,
 				},
 				Attributes: []label.KeyValue{
@@ -233,9 +233,9 @@ func TestSpanData(t *testing.T) {
 				},
 			},
 			{
-				SpanContext: otel.SpanContext{
-					TraceID:    otel.TraceID{0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0xEE, 0xEF},
-					SpanID:     otel.SpanID{0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7},
+				SpanContext: trace.SpanContext{
+					TraceID:    trace.TraceID{0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0xEE, 0xEF},
+					SpanID:     trace.SpanID{0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7},
 					TraceFlags: 0,
 				},
 				Attributes: []label.KeyValue{
