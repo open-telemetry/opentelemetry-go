@@ -14,7 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - A `TextMapPropagator` and associated `TextMapCarrier` are added to the `go.opentelemetry.io/otel/oteltest` package to test TextMap type propagators and their use. (#1259)
 - `SpanContextFromContext` returns `SpanContext` from context. (#1255)
 - `MetricsLabelsEnricher` type is added to `go.opentelemetry.io/otel/sdk/metric` package. (#1271)
-- `WithMetricsLabelsEnricher` config option is added to `go.opentelemetry.io/otel/sdk/push` package to allow providing a function to enrich metrics labels based on context. (#1271)
+- `WithMetricsLabelsEnricher` config option is added to `go.opentelemetry.io/otel/sdk/push` and `go.opentelemetry.io/otel/sdk/pull` packages to allow providing a function to enrich metrics labels based on context. (#1271)
 
 ### Changed
 
