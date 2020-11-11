@@ -223,3 +223,39 @@ func TestPushExportError(t *testing.T) {
 		})
 	}
 }
+
+func TestWithMetricsLabelsEnricher(t *testing.T) {
+	exporter := newExporter()
+	checkpointer := newCheckpointer()
+	metricsLabelsEnricher := func(ctx context.Context, kvs []label.KeyValue) ([]label.KeyValue, error) {
+		baggage := otel.Baggage(ctx)
+		kvs = append(baggage.ToSlice(), kvs...)
+		return kvs, nil
+	}
+	p := push.New(
+		checkpointer,
+		exporter,
+		push.WithPeriod(time.Second),
+		push.WithMetricsLabelsEnricher(metricsLabelsEnricher),
+	)
+	meter := p.MeterProvider().Meter("name")
+
+	mock := controllertest.NewMockClock()
+	p.SetClock(mock)
+
+	counter := otel.Must(meter).NewInt64Counter("counter.sum")
+
+	p.Start()
+
+	ctx := otel.ContextWithBaggageValues(context.Background(), label.String("A", "B"))
+	counter.Add(ctx, 1)
+
+	require.EqualValues(t, map[string]float64{}, exporter.Values())
+
+	mock.Add(time.Second)
+	runtime.Gosched()
+
+	require.EqualValues(t, map[string]float64{
+		"counter.sum/A=B/": 1,
+	}, exporter.Values())
+}
