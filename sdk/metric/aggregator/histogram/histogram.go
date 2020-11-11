@@ -20,6 +20,7 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
@@ -36,7 +37,7 @@ type (
 	Aggregator struct {
 		lock       sync.Mutex
 		boundaries []float64
-		kind       otel.NumberKind
+		kind       number.Kind
 		state      state
 	}
 
@@ -45,7 +46,7 @@ type (
 	// the less than equal bucket count for the pre-determined boundaries.
 	state struct {
 		bucketCounts []float64
-		sum          otel.Number
+		sum          number.Number
 		count        int64
 	}
 )
@@ -94,7 +95,7 @@ func (c *Aggregator) Kind() aggregation.Kind {
 }
 
 // Sum returns the sum of all values in the checkpoint.
-func (c *Aggregator) Sum() (otel.Number, error) {
+func (c *Aggregator) Sum() (number.Number, error) {
 	return c.state.sum, nil
 }
 
@@ -134,7 +135,7 @@ func emptyState(boundaries []float64) state {
 }
 
 // Update adds the recorded measurement to the current data set.
-func (c *Aggregator) Update(_ context.Context, number otel.Number, desc *otel.Descriptor) error {
+func (c *Aggregator) Update(_ context.Context, number number.Number, desc *otel.Descriptor) error {
 	kind := desc.NumberKind()
 	asFloat := number.CoerceToFloat64(kind)
 

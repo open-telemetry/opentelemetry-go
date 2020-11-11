@@ -22,7 +22,8 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
-	"go.opentelemetry.io/otel/registry"
+	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/registry"
 )
 
 // This file contains the forwarding implementation of MeterProvider used as
@@ -305,7 +306,7 @@ func (m *meterImpl) RecordBatch(ctx context.Context, labels []label.KeyValue, me
 	}
 }
 
-func (inst *syncImpl) RecordOne(ctx context.Context, number otel.Number, labels []label.KeyValue) {
+func (inst *syncImpl) RecordOne(ctx context.Context, number number.Number, labels []label.KeyValue) {
 	if instPtr := (*otel.SyncImpl)(atomic.LoadPointer(&inst.delegate)); instPtr != nil {
 		(*instPtr).RecordOne(ctx, number, labels)
 	}
@@ -313,7 +314,7 @@ func (inst *syncImpl) RecordOne(ctx context.Context, number otel.Number, labels 
 
 // Bound instrument initialization
 
-func (bound *syncHandle) RecordOne(ctx context.Context, number otel.Number) {
+func (bound *syncHandle) RecordOne(ctx context.Context, number number.Number) {
 	instPtr := (*otel.SyncImpl)(atomic.LoadPointer(&bound.inst.delegate))
 	if instPtr == nil {
 		return

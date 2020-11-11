@@ -23,6 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -48,7 +49,7 @@ type NoopAggregator struct{}
 var _ export.Aggregator = (*NoopAggregator)(nil)
 
 // Update implements export.Aggregator.
-func (NoopAggregator) Update(context.Context, otel.Number, *otel.Descriptor) error {
+func (NoopAggregator) Update(context.Context, number.Number, *otel.Descriptor) error {
 	return nil
 }
 

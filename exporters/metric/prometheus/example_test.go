@@ -32,7 +32,7 @@ import (
 // This test demonstrates that it is relatively difficult to setup a
 // Prometheus export pipeline:
 //
-//   1. The default boundaries are difficult to pass, should be []float instead of []otel.Number
+//   1. The default boundaries are difficult to pass, should be []float instead of []number.Number
 //
 // TODO: Address this issue.
 
