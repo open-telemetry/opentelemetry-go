@@ -14,16 +14,8 @@
 
 package metric
 
-import (
-	"go.opentelemetry.io/otel/sdk/resource"
-)
-
 // Config contains configuration for an SDK.
 type Config struct {
-	// Resource describes all the metric records processed by the
-	// Accumulator.
-	Resource *resource.Resource
-
 	// MetricProcessors are executed each time a metric is recorded
 	// by the Accumulator's sync instrument implementation
 	MetricsProcessors []MetricsProcessor
@@ -33,19 +25,6 @@ type Config struct {
 type Option interface {
 	// Apply sets the Option value of a Config.
 	Apply(*Config)
-}
-
-// WithResource sets the Resource configuration option of a Config.
-func WithResource(res *resource.Resource) Option {
-	return resourceOption{res}
-}
-
-type resourceOption struct {
-	*resource.Resource
-}
-
-func (o resourceOption) Apply(config *Config) {
-	config.Resource = o.Resource
 }
 
 func WithMetricsProcessors(processors ...MetricsProcessor) Option {

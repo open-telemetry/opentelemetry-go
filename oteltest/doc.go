@@ -15,6 +15,10 @@
 /*
 Package oteltest provides testing utilities for the otel package.
 
+This package is currently in a pre-GA phase. Backwards incompatible changes
+may be introduced in subsequent minor version releases as we work to track the
+evolving OpenTelemetry specification and user feedback.
+
 API Validation
 
 The Harness can be used to validate an implementation of the OpenTelemetry API

@@ -37,16 +37,20 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Move the `go.opentelemetry.io/otel/api/global` package to `go.opentelemetry.io/otel/global`. (#1262)
 - Rename correlation context header from `"otcorrelations"` to `"baggage"` to match the OpenTelemetry specification. (#1267)
 - Fix `Code.UnmarshalJSON` to work with valid json only. (#1276)
+- The `resource.New()` method changes signature to support builtin attributes and functional options, including `telemetry.sdk.*` and
+  `host.name` semantic conventions; the former method is renamed `resource.NewWithAttributes`. (#1235)
 
 ### Removed
 
 - The `ErrInvalidHexID`, `ErrInvalidTraceIDLength`, `ErrInvalidSpanIDLength`, `ErrInvalidSpanIDLength`, or `ErrNilSpanID` from the `go.opentelemetry.io/otel` package are unexported now. (#1243)
 - The `AddEventWithTimestamp` method on the `Span` interface in `go.opentelemetry.io/otel` is removed due to its redundancy.
     It is replaced by using the `AddEvent` method with a `WithTimestamp` option. (#1254)
+- Structs `MockSpan` and `MockTracer` are removed from `go.opentelemetry.io/otel/oteltest`. `Tracer` and `Span` from the same module should be used in their place instead. (#1306)
 
 ### Fixed
 
 - The `go.opentelemetry.io/otel/api/global` packages global TextMapPropagator now delegates functionality to a globally set delegate for all previously returned propagators. (#1258)
+- Fix condition in `label.Any`. (#1299)
 
 ## [0.13.0] - 2020-10-08
 

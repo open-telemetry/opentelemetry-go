@@ -33,10 +33,6 @@ func TestMain(m *testing.M) {
 			Name:   "Measurement.Number",
 			Offset: unsafe.Offsetof(Measurement{}.Number),
 		},
-		{
-			Name:   "MockTracer.StartSpanID",
-			Offset: unsafe.Offsetof(MockTracer{}.StartSpanID),
-		},
 	}
 	if !internaltest.Aligned8Byte(fields, os.Stderr) {
 		os.Exit(1)

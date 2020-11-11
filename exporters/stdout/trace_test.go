@@ -44,7 +44,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 	spanID, _ := otel.SpanIDFromHex("0102030405060708")
 	keyValue := "value"
 	doubleValue := 123.456
-	resource := resource.New(label.String("rk1", "rv11"))
+	resource := resource.NewWithAttributes(label.String("rk1", "rv11"))
 
 	testSpan := &export.SpanData{
 		SpanContext: otel.SpanContext{

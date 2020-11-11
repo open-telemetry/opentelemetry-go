@@ -14,7 +14,7 @@
 
 // +build go1.11
 
-package trace
+package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
 	"context"

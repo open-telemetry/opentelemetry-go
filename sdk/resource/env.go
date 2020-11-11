@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package resource
+package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
 import (
 	"context"
@@ -27,19 +27,22 @@ import (
 const envVar = "OTEL_RESOURCE_ATTRIBUTES"
 
 var (
-	//errMissingValue is returned when a resource value is missing.
+	// errMissingValue is returned when a resource value is missing.
 	errMissingValue = fmt.Errorf("%w: missing value", ErrPartialResource)
 )
 
-// FromEnv is a detector that implements the Detector and collects resources
-// from environment
+// FromEnv is a Detector that implements the Detector and collects
+// resources from environment.  This Detector is included as a
+// builtin.  If these resource attributes are not wanted, use the
+// WithFromEnv(nil) or WithoutBuiltin() options to explicitly disable
+// them.
 type FromEnv struct{}
 
 // compile time assertion that FromEnv implements Detector interface
-var _ Detector = (*FromEnv)(nil)
+var _ Detector = FromEnv{}
 
 // Detect collects resources from environment
-func (d *FromEnv) Detect(context.Context) (*Resource, error) {
+func (FromEnv) Detect(context.Context) (*Resource, error) {
 	labels := strings.TrimSpace(os.Getenv(envVar))
 
 	if labels == "" {
@@ -65,5 +68,5 @@ func constructOTResources(s string) (*Resource, error) {
 	if len(invalid) > 0 {
 		err = fmt.Errorf("%w: %v", errMissingValue, invalid)
 	}
-	return New(labels...), err
+	return NewWithAttributes(labels...), err
 }

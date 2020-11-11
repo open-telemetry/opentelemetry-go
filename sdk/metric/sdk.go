@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
+package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
@@ -325,16 +325,16 @@ func (s *syncInstrument) RecordOne(ctx context.Context, number api.Number, kvs [
 // processor will call Collect() when it receives a request to scrape
 // current metric values.  A push-based processor should configure its
 // own periodic collection.
-func NewAccumulator(processor export.Processor, opts ...Option) *Accumulator {
+func NewAccumulator(processor export.Processor, resource *resource.Resource, opts ...Option) *Accumulator {
 	c := &Config{}
 	for _, opt := range opts {
 		opt.Apply(c)
 	}
 
 	return &Accumulator{
-		asyncInstruments:  internal.NewAsyncInstrumentState(),
-		processor:         processor,
-		resource:          c.Resource,
+		processor:        processor,
+		asyncInstruments: internal.NewAsyncInstrumentState(),
+		resource:         resource,
 		metricsProcessors: c.MetricsProcessors,
 	}
 }

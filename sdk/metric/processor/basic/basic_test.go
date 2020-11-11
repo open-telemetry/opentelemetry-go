@@ -121,7 +121,7 @@ func testProcessor(
 	// Note: this selector uses the instrument name to dictate
 	// aggregation kind.
 	selector := processorTest.AggregatorSelector()
-	res := resource.New(label.String("R", "V"))
+	res := resource.NewWithAttributes(label.String("R", "V"))
 
 	labs1 := []label.KeyValue{label.String("L1", "V")}
 	labs2 := []label.KeyValue{label.String("L2", "V")}
@@ -361,7 +361,7 @@ func TestBasicTimestamps(t *testing.T) {
 }
 
 func TestStatefulNoMemoryCumulative(t *testing.T) {
-	res := resource.New(label.String("R", "V"))
+	res := resource.NewWithAttributes(label.String("R", "V"))
 	ekind := export.CumulativeExporter
 
 	desc := otel.NewDescriptor("inst.sum", otel.CounterInstrumentKind, otel.Int64NumberKind)
@@ -395,7 +395,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 }
 
 func TestStatefulNoMemoryDelta(t *testing.T) {
-	res := resource.New(label.String("R", "V"))
+	res := resource.NewWithAttributes(label.String("R", "V"))
 	ekind := export.DeltaExporter
 
 	desc := otel.NewDescriptor("inst.sum", otel.SumObserverInstrumentKind, otel.Int64NumberKind)
@@ -435,7 +435,7 @@ func TestMultiObserverSum(t *testing.T) {
 		export.DeltaExporter,
 	} {
 
-		res := resource.New(label.String("R", "V"))
+		res := resource.NewWithAttributes(label.String("R", "V"))
 		desc := otel.NewDescriptor("observe.sum", otel.SumObserverInstrumentKind, otel.Int64NumberKind)
 		selector := processorTest.AggregatorSelector()
 
