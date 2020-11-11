@@ -61,6 +61,7 @@ func New(checkpointer export.Checkpointer, options ...Option) *Controller {
 	accum := sdk.NewAccumulator(
 		checkpointer,
 		config.Resource,
+		sdk.WithMetricsLabelsEnricher(config.MetricsLabelsEnricher),
 	)
 	return &Controller{
 		accumulator:  accum,

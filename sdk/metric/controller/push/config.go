@@ -35,6 +35,8 @@ type Config struct {
 	// the controller push period.
 	Timeout time.Duration
 
+	// MetricsLabelsEnricher is a function that enriches metrics labels based
+	// on kvs stored in context when metrics are recorded.
 	MetricsLabelsEnricher metric.MetricsLabelsEnricher
 }
 

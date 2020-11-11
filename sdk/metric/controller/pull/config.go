@@ -15,6 +15,7 @@
 package pull // import "go.opentelemetry.io/otel/sdk/metric/controller/pull"
 
 import (
+	"go.opentelemetry.io/otel/sdk/metric"
 	"time"
 
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -33,6 +34,10 @@ type Config struct {
 	// If the period is zero, caching of the result is disabled.
 	// The default value is 10 seconds.
 	CachePeriod time.Duration
+
+	// MetricsLabelsEnricher is a function that enriches metrics labels based
+	// on kvs stored in context when metrics are recorded.
+	MetricsLabelsEnricher metric.MetricsLabelsEnricher
 }
 
 // Option is the interface that applies the value to a configuration option.
@@ -61,4 +66,14 @@ type cachePeriodOption time.Duration
 
 func (o cachePeriodOption) Apply(config *Config) {
 	config.CachePeriod = time.Duration(o)
+}
+
+func WithMetricsLabelsEnricher(e metric.MetricsLabelsEnricher) Option {
+	return metricsLabelsEnricherOption(e)
+}
+
+type metricsLabelsEnricherOption metric.MetricsLabelsEnricher
+
+func (e metricsLabelsEnricherOption) Apply(config *Config) {
+	config.MetricsLabelsEnricher = metric.MetricsLabelsEnricher(e)
 }
