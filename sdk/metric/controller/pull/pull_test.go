@@ -117,3 +117,35 @@ func TestPullWithCache(t *testing.T) {
 	}, records.Map())
 
 }
+
+func TestPullWithMetricsLabelEnricher(t *testing.T) {
+	metricsLabelsEnricher := func(ctx context.Context, kvs []label.KeyValue) ([]label.KeyValue, error) {
+		baggage := otel.Baggage(ctx)
+		kvs = append(baggage.ToSlice(), kvs...)
+		return kvs, nil
+	}
+
+	puller := pull.New(
+		basic.New(
+			selector.NewWithExactDistribution(),
+			export.CumulativeExporter,
+			basic.WithMemory(true),
+		),
+		pull.WithCachePeriod(0),
+		pull.WithMetricsLabelsEnricher(metricsLabelsEnricher),
+	)
+
+	ctx := otel.ContextWithBaggageValues(context.Background(), label.String("A", "B"))
+	meter := puller.MeterProvider().Meter("withLabelEnricher")
+	counter := otel.Must(meter).NewInt64Counter("counter.sum")
+
+	counter.Add(ctx, 10)
+
+	require.NoError(t, puller.Collect(context.Background()))
+	records := processortest.NewOutput(label.DefaultEncoder())
+	require.NoError(t, puller.ForEach(export.CumulativeExporter, records.AddRecord))
+
+	require.EqualValues(t, map[string]float64{
+		"counter.sum/A=B/": 10,
+	}, records.Map())
+}
