@@ -35,7 +35,7 @@ type Config struct {
 	// the controller push period.
 	Timeout time.Duration
 
-	MetricsProcessors []metric.MetricsProcessor
+	MetricsLabelsEnricher metric.MetricsLabelsEnricher
 }
 
 // Option is the interface that applies the value to a configuration option.
@@ -77,12 +77,12 @@ func (o timeoutOption) Apply(config *Config) {
 	config.Timeout = time.Duration(o)
 }
 
-func WithMetricsProcessors(processors ...metric.MetricsProcessor) Option {
-	return metricsProcessorOption(processors)
+func WithMetricsLabelsEnricher(e metric.MetricsLabelsEnricher) Option {
+	return metricsLabelsEnricherOption(e)
 }
 
-type metricsProcessorOption []metric.MetricsProcessor
+type metricsLabelsEnricherOption metric.MetricsLabelsEnricher
 
-func (m metricsProcessorOption) Apply(config *Config) {
-	config.MetricsProcessors = append(config.MetricsProcessors, m...)
+func (e metricsLabelsEnricherOption) Apply(config *Config) {
+	config.MetricsLabelsEnricher = metric.MetricsLabelsEnricher(e)
 }

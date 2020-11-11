@@ -68,8 +68,8 @@ type (
 		// resource is applied to all records in this Accumulator.
 		resource *resource.Resource
 
-		// metricsProcessors are applied to all records in this Accumulator
-		metricsProcessors []MetricsProcessor
+		// metricsLabelsEnricher is applied to all records in this Accumulator
+		metricsLabelsEnricher MetricsLabelsEnricher
 	}
 
 	syncInstrument struct {
@@ -126,9 +126,8 @@ type (
 	}
 
 	instrument struct {
-		meter             *Accumulator
-		descriptor        otel.Descriptor
-		metricsProcessors []MetricsProcessor
+		meter      *Accumulator
+		descriptor otel.Descriptor
 	}
 
 	asyncInstrument struct {
@@ -144,14 +143,9 @@ type (
 		observed      export.Aggregator
 	}
 
-	// Implementations of MetricsProcessor can be provided as an config option to provide an opportunity
-	// to re-compose metrics labels based on the context when the metrics are recorded.
-	MetricsProcessor interface {
-		// OnMetricRecorded is execute everytime a metric is recorded by
-		// the sync instrument implementation of an Accumulator, it generally
-		// provides ability to correlate the context with the metrics
-		OnMetricRecorded(context.Context, *[]label.KeyValue)
-	}
+	// MetricsLabelsEnricher can be provided as a config option to enrich metrics labels based on
+	// the context when the metrics are recorded
+	MetricsLabelsEnricher func(context.Context, []label.KeyValue) ([]label.KeyValue, error)
 )
 
 var (
@@ -165,10 +159,6 @@ var (
 
 func (inst *instrument) Descriptor() api.Descriptor {
 	return inst.descriptor
-}
-
-func (inst *instrument) getMetricsProcessors() []MetricsProcessor {
-	return inst.metricsProcessors
 }
 
 func (a *asyncInstrument) Implementation() interface{} {
@@ -308,8 +298,8 @@ func (s *syncInstrument) Bind(kvs []label.KeyValue) api.BoundSyncImpl {
 }
 
 func (s *syncInstrument) RecordOne(ctx context.Context, number api.Number, kvs []label.KeyValue) {
-	for _, processor := range s.getMetricsProcessors() {
-		processor.OnMetricRecorded(ctx, &kvs)
+	if s.meter.metricsLabelsEnricher != nil {
+		kvs, _ = s.meter.metricsLabelsEnricher(ctx, kvs)
 	}
 	h := s.acquireHandle(kvs, nil)
 	defer h.Unbind()
@@ -332,10 +322,10 @@ func NewAccumulator(processor export.Processor, resource *resource.Resource, opt
 	}
 
 	return &Accumulator{
-		processor:        processor,
-		asyncInstruments: internal.NewAsyncInstrumentState(),
-		resource:         resource,
-		metricsProcessors: c.MetricsProcessors,
+		processor:             processor,
+		asyncInstruments:      internal.NewAsyncInstrumentState(),
+		resource:              resource,
+		metricsLabelsEnricher: c.MetricsLabelsEnricher,
 	}
 }
 
@@ -343,9 +333,8 @@ func NewAccumulator(processor export.Processor, resource *resource.Resource, opt
 func (m *Accumulator) NewSyncInstrument(descriptor api.Descriptor) (api.SyncImpl, error) {
 	return &syncInstrument{
 		instrument: instrument{
-			descriptor:        descriptor,
-			meter:             m,
-			metricsProcessors: m.metricsProcessors,
+			descriptor: descriptor,
+			meter:      m,
 		},
 	}, nil
 }

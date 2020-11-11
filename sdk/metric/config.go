@@ -16,9 +16,9 @@ package metric
 
 // Config contains configuration for an SDK.
 type Config struct {
-	// MetricProcessors are executed each time a metric is recorded
+	// If provided, MetricsLabelsEnricher is executed each time a metric is recorded
 	// by the Accumulator's sync instrument implementation
-	MetricsProcessors []MetricsProcessor
+	MetricsLabelsEnricher MetricsLabelsEnricher
 }
 
 // Option is the interface that applies the value to a configuration option.
@@ -27,12 +27,12 @@ type Option interface {
 	Apply(*Config)
 }
 
-func WithMetricsProcessors(processors ...MetricsProcessor) Option {
-	return metricsProcessorsOption(processors)
+func WithMetricsLabelsEnricher(e MetricsLabelsEnricher) Option {
+	return metricsLabelsEnricherOption(e)
 }
 
-type metricsProcessorsOption []MetricsProcessor
+type metricsLabelsEnricherOption MetricsLabelsEnricher
 
-func (p metricsProcessorsOption) Apply(config *Config) {
-	config.MetricsProcessors = append(config.MetricsProcessors, p...)
+func (e metricsLabelsEnricherOption) Apply(config *Config) {
+	config.MetricsLabelsEnricher = MetricsLabelsEnricher(e)
 }
