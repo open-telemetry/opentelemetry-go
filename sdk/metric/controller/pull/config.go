@@ -15,9 +15,9 @@
 package pull // import "go.opentelemetry.io/otel/sdk/metric/controller/pull"
 
 import (
-	"go.opentelemetry.io/otel/sdk/metric"
 	"time"
 
+	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
