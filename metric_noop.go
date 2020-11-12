@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric/number"
 )
 
 type NoopMeterProvider struct{}
@@ -44,7 +45,7 @@ func (noopInstrument) Descriptor() Descriptor {
 	return Descriptor{}
 }
 
-func (noopBoundInstrument) RecordOne(context.Context, Number) {
+func (noopBoundInstrument) RecordOne(context.Context, number.Number) {
 }
 
 func (noopBoundInstrument) Unbind() {
@@ -54,5 +55,5 @@ func (NoopSync) Bind([]label.KeyValue) BoundSyncImpl {
 	return noopBoundInstrument{}
 }
 
-func (NoopSync) RecordOne(context.Context, Number, []label.KeyValue) {
+func (NoopSync) RecordOne(context.Context, number.Number, []label.KeyValue) {
 }

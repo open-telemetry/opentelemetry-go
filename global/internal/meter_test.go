@@ -25,13 +25,14 @@ import (
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/global/internal"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/oteltest"
 )
 
 var Must = otel.Must
 
-var asInt = otel.NewInt64Number
-var asFloat = otel.NewFloat64Number
+var asInt = number.NewInt64Number
+var asFloat = number.NewFloat64Number
 
 func TestDirect(t *testing.T) {
 	internal.ResetForTest()

@@ -23,6 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	ottest "go.opentelemetry.io/otel/internal/testing"
+	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 )
 
@@ -67,7 +68,7 @@ func TestCounterSum(t *testing.T) {
 
 		descriptor := aggregatortest.NewAggregatorTest(otel.CounterInstrumentKind, profile.NumberKind)
 
-		sum := otel.Number(0)
+		sum := number.Number(0)
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			sum.AddNumber(profile.NumberKind, x)
@@ -91,7 +92,7 @@ func TestValueRecorderSum(t *testing.T) {
 
 		descriptor := aggregatortest.NewAggregatorTest(otel.ValueRecorderInstrumentKind, profile.NumberKind)
 
-		sum := otel.Number(0)
+		sum := number.Number(0)
 
 		for i := 0; i < count; i++ {
 			r1 := profile.Random(+1)
@@ -117,7 +118,7 @@ func TestCounterMerge(t *testing.T) {
 
 		descriptor := aggregatortest.NewAggregatorTest(otel.CounterInstrumentKind, profile.NumberKind)
 
-		sum := otel.Number(0)
+		sum := number.Number(0)
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			sum.AddNumber(profile.NumberKind, x)

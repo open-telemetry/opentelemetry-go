@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 )
@@ -227,10 +228,10 @@ func TestArrayErrors(t *testing.T) {
 
 		descriptor := aggregatortest.NewAggregatorTest(otel.ValueRecorderInstrumentKind, profile.NumberKind)
 
-		aggregatortest.CheckedUpdate(t, agg, otel.Number(0), descriptor)
+		aggregatortest.CheckedUpdate(t, agg, number.Number(0), descriptor)
 
-		if profile.NumberKind == otel.Float64NumberKind {
-			aggregatortest.CheckedUpdate(t, agg, otel.NewFloat64Number(math.NaN()), descriptor)
+		if profile.NumberKind == number.Float64Kind {
+			aggregatortest.CheckedUpdate(t, agg, number.NewFloat64Number(math.NaN()), descriptor)
 		}
 		require.NoError(t, agg.SynchronizedMove(ckpt, descriptor))
 
@@ -240,7 +241,7 @@ func TestArrayErrors(t *testing.T) {
 
 		num, err := ckpt.Quantile(0)
 		require.Nil(t, err)
-		require.Equal(t, num, otel.Number(0))
+		require.Equal(t, num, number.Number(0))
 
 		_, err = ckpt.Quantile(-0.0001)
 		require.Error(t, err)
@@ -253,7 +254,7 @@ func TestArrayErrors(t *testing.T) {
 }
 
 func TestArrayFloat64(t *testing.T) {
-	descriptor := aggregatortest.NewAggregatorTest(otel.ValueRecorderInstrumentKind, otel.Float64NumberKind)
+	descriptor := aggregatortest.NewAggregatorTest(otel.ValueRecorderInstrumentKind, number.Float64Kind)
 
 	fpsf := func(sign int) []float64 {
 		// Check behavior of a bunch of odd floating
@@ -282,18 +283,18 @@ func TestArrayFloat64(t *testing.T) {
 		}
 	}
 
-	all := aggregatortest.NewNumbers(otel.Float64NumberKind)
+	all := aggregatortest.NewNumbers(number.Float64Kind)
 
 	agg, ckpt := new2()
 
 	for _, f := range fpsf(1) {
-		all.Append(otel.NewFloat64Number(f))
-		aggregatortest.CheckedUpdate(t, agg, otel.NewFloat64Number(f), descriptor)
+		all.Append(number.NewFloat64Number(f))
+		aggregatortest.CheckedUpdate(t, agg, number.NewFloat64Number(f), descriptor)
 	}
 
 	for _, f := range fpsf(-1) {
-		all.Append(otel.NewFloat64Number(f))
-		aggregatortest.CheckedUpdate(t, agg, otel.NewFloat64Number(f), descriptor)
+		all.Append(number.NewFloat64Number(f))
+		aggregatortest.CheckedUpdate(t, agg, number.NewFloat64Number(f), descriptor)
 	}
 
 	require.NoError(t, agg.SynchronizedMove(ckpt, descriptor))

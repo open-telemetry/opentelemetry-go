@@ -26,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
@@ -253,7 +254,7 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 	var actual [][]label.KeyValue
 	for _, rec := range processor.accumulations {
 		sum, _ := rec.Aggregator().(aggregation.Sum).Sum()
-		require.Equal(t, sum, otel.NewInt64Number(2))
+		require.Equal(t, sum, number.NewInt64Number(2))
 
 		kvs := rec.Labels().ToSlice()
 		actual = append(actual, kvs)

@@ -23,7 +23,8 @@ import (
 	apimetric "go.opentelemetry.io/otel"
 	internalmetric "go.opentelemetry.io/otel/internal/metric"
 	"go.opentelemetry.io/otel/label"
-	"go.opentelemetry.io/otel/registry"
+	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/registry"
 )
 
 type (
@@ -51,7 +52,7 @@ type (
 
 	Measurement struct {
 		// Number needs to be aligned for 64-bit atomic operations.
-		Number     apimetric.Number
+		Number     number.Number
 		Instrument apimetric.InstrumentImpl
 	}
 
@@ -97,18 +98,18 @@ func (s *Sync) Bind(labels []label.KeyValue) apimetric.BoundSyncImpl {
 	}
 }
 
-func (s *Sync) RecordOne(ctx context.Context, number apimetric.Number, labels []label.KeyValue) {
+func (s *Sync) RecordOne(ctx context.Context, number number.Number, labels []label.KeyValue) {
 	s.meter.doRecordSingle(ctx, labels, s, number)
 }
 
-func (h *Handle) RecordOne(ctx context.Context, number apimetric.Number) {
+func (h *Handle) RecordOne(ctx context.Context, number number.Number) {
 	h.Instrument.meter.doRecordSingle(ctx, h.Labels, h.Instrument, number)
 }
 
 func (h *Handle) Unbind() {
 }
 
-func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []label.KeyValue, instrument apimetric.InstrumentImpl, number apimetric.Number) {
+func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []label.KeyValue, instrument apimetric.InstrumentImpl, number number.Number) {
 	m.collect(ctx, labels, []Measurement{{
 		Instrument: instrument,
 		Number:     number,
@@ -200,7 +201,7 @@ type Measured struct {
 	InstrumentationName    string
 	InstrumentationVersion string
 	Labels                 map[label.Key]label.Value
-	Number                 otel.Number
+	Number                 number.Number
 }
 
 // LabelsToMap converts label set to keyValue map, to be easily used in tests
@@ -230,13 +231,13 @@ func AsStructs(batches []Batch) []Measured {
 }
 
 // ResolveNumberByKind takes defined metric descriptor creates a concrete typed metric number
-func ResolveNumberByKind(t *testing.T, kind otel.NumberKind, value float64) otel.Number {
+func ResolveNumberByKind(t *testing.T, kind number.Kind, value float64) number.Number {
 	t.Helper()
 	switch kind {
-	case otel.Int64NumberKind:
-		return otel.NewInt64Number(int64(value))
-	case otel.Float64NumberKind:
-		return otel.NewFloat64Number(value)
+	case number.Int64Kind:
+		return number.NewInt64Number(int64(value))
+	case number.Float64Kind:
+		return number.NewFloat64Number(value)
 	}
 	panic("invalid number kind")
 }

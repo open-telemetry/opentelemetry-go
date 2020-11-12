@@ -21,6 +21,7 @@ import (
 	"errors"
 
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric/number"
 )
 
 // ErrSDKReturnedNilImpl is returned when a new `MeterImpl` returns nil.
@@ -94,7 +95,7 @@ func (k InstrumentKind) PrecomputedSum() bool {
 // instruments (e.g., Int64ValueObserver.Observation()).
 type Observation struct {
 	// number needs to be aligned for 64-bit atomic operations.
-	number     Number
+	number     number.Number
 	instrument AsyncImpl
 }
 
@@ -136,7 +137,7 @@ type BatchObserverResult struct {
 func (ir Int64ObserverResult) Observe(value int64, labels ...label.KeyValue) {
 	ir.function(labels, Observation{
 		instrument: ir.instrument,
-		number:     NewInt64Number(value),
+		number:     number.NewInt64Number(value),
 	})
 }
 
@@ -145,7 +146,7 @@ func (ir Int64ObserverResult) Observe(value int64, labels ...label.KeyValue) {
 func (fr Float64ObserverResult) Observe(value float64, labels ...label.KeyValue) {
 	fr.function(labels, Observation{
 		instrument: fr.instrument,
-		number:     NewFloat64Number(value),
+		number:     number.NewFloat64Number(value),
 	})
 }
 
@@ -323,7 +324,7 @@ type Float64UpDownSumObserver struct {
 // users should not refer to this.
 func (i Int64ValueObserver) Observation(v int64) Observation {
 	return Observation{
-		number:     NewInt64Number(v),
+		number:     number.NewInt64Number(v),
 		instrument: i.instrument,
 	}
 }
@@ -334,7 +335,7 @@ func (i Int64ValueObserver) Observation(v int64) Observation {
 // users should not refer to this.
 func (f Float64ValueObserver) Observation(v float64) Observation {
 	return Observation{
-		number:     NewFloat64Number(v),
+		number:     number.NewFloat64Number(v),
 		instrument: f.instrument,
 	}
 }
@@ -345,7 +346,7 @@ func (f Float64ValueObserver) Observation(v float64) Observation {
 // users should not refer to this.
 func (i Int64SumObserver) Observation(v int64) Observation {
 	return Observation{
-		number:     NewInt64Number(v),
+		number:     number.NewInt64Number(v),
 		instrument: i.instrument,
 	}
 }
@@ -356,7 +357,7 @@ func (i Int64SumObserver) Observation(v int64) Observation {
 // users should not refer to this.
 func (f Float64SumObserver) Observation(v float64) Observation {
 	return Observation{
-		number:     NewFloat64Number(v),
+		number:     number.NewFloat64Number(v),
 		instrument: f.instrument,
 	}
 }
@@ -367,7 +368,7 @@ func (f Float64SumObserver) Observation(v float64) Observation {
 // users should not refer to this.
 func (i Int64UpDownSumObserver) Observation(v int64) Observation {
 	return Observation{
-		number:     NewInt64Number(v),
+		number:     number.NewInt64Number(v),
 		instrument: i.instrument,
 	}
 }
@@ -378,7 +379,7 @@ func (i Int64UpDownSumObserver) Observation(v int64) Observation {
 // users should not refer to this.
 func (f Float64UpDownSumObserver) Observation(v float64) Observation {
 	return Observation{
-		number:     NewFloat64Number(v),
+		number:     number.NewFloat64Number(v),
 		instrument: f.instrument,
 	}
 }
@@ -388,7 +389,7 @@ func (f Float64UpDownSumObserver) Observation(v float64) Observation {
 // instruments (e.g., Int64Counter.Measurement()).
 type Measurement struct {
 	// number needs to be aligned for 64-bit atomic operations.
-	number     Number
+	number     number.Number
 	instrument SyncImpl
 }
 
@@ -415,7 +416,7 @@ func (m Measurement) SyncImpl() SyncImpl {
 }
 
 // Number returns a number recorded in this measurement.
-func (m Measurement) Number() Number {
+func (m Measurement) Number() number.Number {
 	return m.number
 }
 
@@ -427,7 +428,7 @@ func (m Observation) AsyncImpl() AsyncImpl {
 }
 
 // Number returns a number recorded in this observation.
-func (m Observation) Number() Number {
+func (m Observation) Number() number.Number {
 	return m.number
 }
 
@@ -446,18 +447,18 @@ func (s syncInstrument) bind(labels []label.KeyValue) syncBoundInstrument {
 }
 
 func (s syncInstrument) float64Measurement(value float64) Measurement {
-	return newMeasurement(s.instrument, NewFloat64Number(value))
+	return newMeasurement(s.instrument, number.NewFloat64Number(value))
 }
 
 func (s syncInstrument) int64Measurement(value int64) Measurement {
-	return newMeasurement(s.instrument, NewInt64Number(value))
+	return newMeasurement(s.instrument, number.NewInt64Number(value))
 }
 
-func (s syncInstrument) directRecord(ctx context.Context, number Number, labels []label.KeyValue) {
+func (s syncInstrument) directRecord(ctx context.Context, number number.Number, labels []label.KeyValue) {
 	s.instrument.RecordOne(ctx, number, labels)
 }
 
-func (h syncBoundInstrument) directRecord(ctx context.Context, number Number) {
+func (h syncBoundInstrument) directRecord(ctx context.Context, number number.Number) {
 	h.boundInstrument.RecordOne(ctx, number)
 }
 
@@ -507,7 +508,7 @@ func newSyncBoundInstrument(boundInstrument BoundSyncImpl) syncBoundInstrument {
 	}
 }
 
-func newMeasurement(instrument SyncImpl, number Number) Measurement {
+func newMeasurement(instrument SyncImpl, number number.Number) Measurement {
 	return Measurement{
 		instrument: instrument,
 		number:     number,
@@ -603,25 +604,25 @@ func (c Int64Counter) Measurement(value int64) Measurement {
 // Add adds the value to the counter's sum. The labels should contain
 // the keys and values to be associated with this value.
 func (c Float64Counter) Add(ctx context.Context, value float64, labels ...label.KeyValue) {
-	c.directRecord(ctx, NewFloat64Number(value), labels)
+	c.directRecord(ctx, number.NewFloat64Number(value), labels)
 }
 
 // Add adds the value to the counter's sum. The labels should contain
 // the keys and values to be associated with this value.
 func (c Int64Counter) Add(ctx context.Context, value int64, labels ...label.KeyValue) {
-	c.directRecord(ctx, NewInt64Number(value), labels)
+	c.directRecord(ctx, number.NewInt64Number(value), labels)
 }
 
 // Add adds the value to the counter's sum using the labels
 // previously bound to this counter via Bind()
 func (b BoundFloat64Counter) Add(ctx context.Context, value float64) {
-	b.directRecord(ctx, NewFloat64Number(value))
+	b.directRecord(ctx, number.NewFloat64Number(value))
 }
 
 // Add adds the value to the counter's sum using the labels
 // previously bound to this counter via Bind()
 func (b BoundInt64Counter) Add(ctx context.Context, value int64) {
-	b.directRecord(ctx, NewInt64Number(value))
+	b.directRecord(ctx, number.NewInt64Number(value))
 }
 
 // Float64UpDownCounter is a metric instrument that sums floating
@@ -678,25 +679,25 @@ func (c Int64UpDownCounter) Measurement(value int64) Measurement {
 // Add adds the value to the counter's sum. The labels should contain
 // the keys and values to be associated with this value.
 func (c Float64UpDownCounter) Add(ctx context.Context, value float64, labels ...label.KeyValue) {
-	c.directRecord(ctx, NewFloat64Number(value), labels)
+	c.directRecord(ctx, number.NewFloat64Number(value), labels)
 }
 
 // Add adds the value to the counter's sum. The labels should contain
 // the keys and values to be associated with this value.
 func (c Int64UpDownCounter) Add(ctx context.Context, value int64, labels ...label.KeyValue) {
-	c.directRecord(ctx, NewInt64Number(value), labels)
+	c.directRecord(ctx, number.NewInt64Number(value), labels)
 }
 
 // Add adds the value to the counter's sum using the labels
 // previously bound to this counter via Bind()
 func (b BoundFloat64UpDownCounter) Add(ctx context.Context, value float64) {
-	b.directRecord(ctx, NewFloat64Number(value))
+	b.directRecord(ctx, number.NewFloat64Number(value))
 }
 
 // Add adds the value to the counter's sum using the labels
 // previously bound to this counter via Bind()
 func (b BoundInt64UpDownCounter) Add(ctx context.Context, value int64) {
-	b.directRecord(ctx, NewInt64Number(value))
+	b.directRecord(ctx, number.NewInt64Number(value))
 }
 
 // Float64ValueRecorder is a metric that records float64 values.
@@ -753,24 +754,24 @@ func (c Int64ValueRecorder) Measurement(value int64) Measurement {
 // labels should contain the keys and values to be associated with
 // this value.
 func (c Float64ValueRecorder) Record(ctx context.Context, value float64, labels ...label.KeyValue) {
-	c.directRecord(ctx, NewFloat64Number(value), labels)
+	c.directRecord(ctx, number.NewFloat64Number(value), labels)
 }
 
 // Record adds a new value to the ValueRecorder's distribution. The
 // labels should contain the keys and values to be associated with
 // this value.
 func (c Int64ValueRecorder) Record(ctx context.Context, value int64, labels ...label.KeyValue) {
-	c.directRecord(ctx, NewInt64Number(value), labels)
+	c.directRecord(ctx, number.NewInt64Number(value), labels)
 }
 
 // Record adds a new value to the ValueRecorder's distribution using the labels
 // previously bound to the ValueRecorder via Bind().
 func (b BoundFloat64ValueRecorder) Record(ctx context.Context, value float64) {
-	b.directRecord(ctx, NewFloat64Number(value))
+	b.directRecord(ctx, number.NewFloat64Number(value))
 }
 
 // Record adds a new value to the ValueRecorder's distribution using the labels
 // previously bound to the ValueRecorder via Bind().
 func (b BoundInt64ValueRecorder) Record(ctx context.Context, value int64) {
-	b.directRecord(ctx, NewInt64Number(value))
+	b.directRecord(ctx, number.NewInt64Number(value))
 }

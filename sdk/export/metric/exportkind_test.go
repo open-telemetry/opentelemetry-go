@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
 
@@ -58,7 +59,7 @@ func TestExportKindSelectors(t *testing.T) {
 	seks := StatelessExportKindSelector()
 
 	for _, ikind := range append(deltaMemoryKinds, cumulativeMemoryKinds...) {
-		desc := otel.NewDescriptor("instrument", ikind, otel.Int64NumberKind)
+		desc := otel.NewDescriptor("instrument", ikind, number.Int64Kind)
 
 		var akind aggregation.Kind
 		if ikind.Adding() {

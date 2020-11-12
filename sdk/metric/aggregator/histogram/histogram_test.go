@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 )
@@ -72,7 +73,7 @@ func new4(desc *otel.Descriptor) (_, _, _, _ *histogram.Aggregator) {
 
 func checkZero(t *testing.T, agg *histogram.Aggregator, desc *otel.Descriptor) {
 	asum, err := agg.Sum()
-	require.Equal(t, otel.Number(0), asum, "Empty checkpoint sum = 0")
+	require.Equal(t, number.Number(0), asum, "Empty checkpoint sum = 0")
 	require.NoError(t, err)
 
 	count, err := agg.Count()
@@ -231,7 +232,7 @@ func TestHistogramNotSet(t *testing.T) {
 	})
 }
 
-func calcBuckets(points []otel.Number, profile aggregatortest.Profile) []uint64 {
+func calcBuckets(points []number.Number, profile aggregatortest.Profile) []uint64 {
 	sortedBoundaries := make([]float64, len(boundaries))
 
 	copy(sortedBoundaries, boundaries)
