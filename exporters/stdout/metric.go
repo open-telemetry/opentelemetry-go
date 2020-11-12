@@ -21,8 +21,8 @@ import (
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
 	exportmetric "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
@@ -52,7 +52,7 @@ type quantile struct {
 	Value    interface{} `json:"Value"`
 }
 
-func (e *metricExporter) ExportKindFor(desc *otel.Descriptor, kind aggregation.Kind) exportmetric.ExportKind {
+func (e *metricExporter) ExportKindFor(desc *metric.Descriptor, kind aggregation.Kind) exportmetric.ExportKind {
 	return exportmetric.StatelessExportKindSelector().ExportKindFor(desc, kind)
 }
 

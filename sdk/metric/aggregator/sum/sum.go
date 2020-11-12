@@ -17,7 +17,7 @@ package sum // import "go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 import (
 	"context"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -60,7 +60,7 @@ func (c *Aggregator) Sum() (number.Number, error) {
 
 // SynchronizedMove atomically saves the current value into oa and resets the
 // current sum to zero.
-func (c *Aggregator) SynchronizedMove(oa export.Aggregator, _ *otel.Descriptor) error {
+func (c *Aggregator) SynchronizedMove(oa export.Aggregator, _ *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)
@@ -70,13 +70,13 @@ func (c *Aggregator) SynchronizedMove(oa export.Aggregator, _ *otel.Descriptor) 
 }
 
 // Update atomically adds to the current value.
-func (c *Aggregator) Update(_ context.Context, num number.Number, desc *otel.Descriptor) error {
+func (c *Aggregator) Update(_ context.Context, num number.Number, desc *metric.Descriptor) error {
 	c.value.AddNumberAtomic(desc.NumberKind(), num)
 	return nil
 }
 
 // Merge combines two counters by adding their sums.
-func (c *Aggregator) Merge(oa export.Aggregator, desc *otel.Descriptor) error {
+func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)
@@ -85,7 +85,7 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *otel.Descriptor) error {
 	return nil
 }
 
-func (c *Aggregator) Subtract(opAgg, resAgg export.Aggregator, descriptor *otel.Descriptor) error {
+func (c *Aggregator) Subtract(opAgg, resAgg export.Aggregator, descriptor *metric.Descriptor) error {
 	op, _ := opAgg.(*Aggregator)
 	if op == nil {
 		return aggregator.NewInconsistentAggregatorError(c, opAgg)

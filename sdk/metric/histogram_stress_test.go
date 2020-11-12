@@ -22,13 +22,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 )
 
 func TestStressInt64Histogram(t *testing.T) {
-	desc := otel.NewDescriptor("some_metric", otel.ValueRecorderInstrumentKind, number.Int64Kind)
+	desc := metric.NewDescriptor("some_metric", metric.ValueRecorderInstrumentKind, number.Int64Kind)
 
 	alloc := histogram.New(2, &desc, []float64{25, 50, 75})
 	h, ckpt := &alloc[0], &alloc[1]
