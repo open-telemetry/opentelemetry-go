@@ -315,7 +315,7 @@ func gaugeArray(record export.Record, points []number.Number) (*metricpb.Metric,
 	}
 
 	switch n := desc.NumberKind(); n {
-	case otel.Int64NumberKind:
+	case number.Int64Kind:
 		var pts []*metricpb.IntDataPoint
 		for _, p := range points {
 			pts = append(pts, &metricpb.IntDataPoint{
@@ -331,7 +331,7 @@ func gaugeArray(record export.Record, points []number.Number) (*metricpb.Metric,
 			},
 		}
 
-	case otel.Float64NumberKind:
+	case number.Float64Kind:
 		var pts []*metricpb.DoubleDataPoint
 		for _, p := range points {
 			pts = append(pts, &metricpb.DoubleDataPoint{

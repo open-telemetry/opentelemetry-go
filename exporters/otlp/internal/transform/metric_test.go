@@ -245,10 +245,10 @@ func TestLastValueIntDataPoints(t *testing.T) {
 }
 
 func TestExactIntDataPoints(t *testing.T) {
-	desc := otel.NewDescriptor("", otel.ValueRecorderInstrumentKind, otel.Int64NumberKind)
+	desc := otel.NewDescriptor("", otel.ValueRecorderInstrumentKind, number.Int64Kind)
 	labels := label.NewSet()
 	e, ckpt := metrictest.Unslice2(arrAgg.New(2))
-	assert.NoError(t, e.Update(context.Background(), otel.Number(100), &desc))
+	assert.NoError(t, e.Update(context.Background(), number.Number(100), &desc))
 	require.NoError(t, e.SynchronizedMove(ckpt, &desc))
 	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
 	p, ok := ckpt.(aggregation.Points)
@@ -271,10 +271,10 @@ func TestExactIntDataPoints(t *testing.T) {
 }
 
 func TestExactFloatDataPoints(t *testing.T) {
-	desc := otel.NewDescriptor("", otel.ValueRecorderInstrumentKind, otel.Float64NumberKind)
+	desc := otel.NewDescriptor("", otel.ValueRecorderInstrumentKind, number.Float64Kind)
 	labels := label.NewSet()
 	e, ckpt := metrictest.Unslice2(arrAgg.New(2))
-	assert.NoError(t, e.Update(context.Background(), otel.NewFloat64Number(100), &desc))
+	assert.NoError(t, e.Update(context.Background(), number.NewFloat64Number(100), &desc))
 	require.NoError(t, e.SynchronizedMove(ckpt, &desc))
 	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
 	p, ok := ckpt.(aggregation.Points)
