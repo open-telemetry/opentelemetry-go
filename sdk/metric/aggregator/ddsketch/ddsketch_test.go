@@ -21,7 +21,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 )
@@ -31,17 +31,17 @@ const count = 1000
 type updateTest struct {
 }
 
-func new2(desc *otel.Descriptor) (_, _ *Aggregator) {
+func new2(desc *metric.Descriptor) (_, _ *Aggregator) {
 	alloc := New(2, desc, NewDefaultConfig())
 	return &alloc[0], &alloc[1]
 }
 
-func new4(desc *otel.Descriptor) (_, _, _, _ *Aggregator) {
+func new4(desc *metric.Descriptor) (_, _, _, _ *Aggregator) {
 	alloc := New(4, desc, NewDefaultConfig())
 	return &alloc[0], &alloc[1], &alloc[2], &alloc[3]
 }
 
-func checkZero(t *testing.T, agg *Aggregator, desc *otel.Descriptor) {
+func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
 	kind := desc.NumberKind()
 
 	sum, err := agg.Sum()
@@ -66,7 +66,7 @@ func checkZero(t *testing.T, agg *Aggregator, desc *otel.Descriptor) {
 }
 
 func (ut *updateTest) run(t *testing.T, profile aggregatortest.Profile) {
-	descriptor := aggregatortest.NewAggregatorTest(otel.ValueRecorderInstrumentKind, profile.NumberKind)
+	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 	agg, ckpt := new2(descriptor)
 
 	all := aggregatortest.NewNumbers(profile.NumberKind)
@@ -127,7 +127,7 @@ type mergeTest struct {
 }
 
 func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
-	descriptor := aggregatortest.NewAggregatorTest(otel.ValueRecorderInstrumentKind, profile.NumberKind)
+	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 
 	agg1, agg2, ckpt1, ckpt2 := new4(descriptor)
 

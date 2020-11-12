@@ -22,10 +22,10 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
 )
 
 var (
@@ -52,19 +52,19 @@ func main() {
 	observerLock := new(sync.RWMutex)
 	observerValueToReport := new(float64)
 	observerLabelsToReport := new([]label.KeyValue)
-	cb := func(_ context.Context, result otel.Float64ObserverResult) {
+	cb := func(_ context.Context, result metric.Float64ObserverResult) {
 		(*observerLock).RLock()
 		value := *observerValueToReport
 		labels := *observerLabelsToReport
 		(*observerLock).RUnlock()
 		result.Observe(value, labels...)
 	}
-	_ = otel.Must(meter).NewFloat64ValueObserver("ex.com.one", cb,
-		otel.WithDescription("A ValueObserver set to 1.0"),
+	_ = metric.Must(meter).NewFloat64ValueObserver("ex.com.one", cb,
+		metric.WithDescription("A ValueObserver set to 1.0"),
 	)
 
-	valuerecorder := otel.Must(meter).NewFloat64ValueRecorder("ex.com.two")
-	counter := otel.Must(meter).NewFloat64Counter("ex.com.three")
+	valuerecorder := metric.Must(meter).NewFloat64ValueRecorder("ex.com.two")
+	counter := metric.Must(meter).NewFloat64Counter("ex.com.three")
 
 	commonLabels := []label.KeyValue{lemonsKey.Int(10), label.String("A", "1"), label.String("B", "2"), label.String("C", "3")}
 	notSoCommonLabels := []label.KeyValue{lemonsKey.Int(13)}

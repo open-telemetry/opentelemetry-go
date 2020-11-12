@@ -14,7 +14,7 @@
 
 //go:generate stringer -type=InstrumentKind
 
-package otel // import "go.opentelemetry.io/otel"
+package metric // import "go.opentelemetry.io/otel/metric"
 
 import (
 	"context"

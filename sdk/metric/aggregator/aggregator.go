@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"math"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -35,7 +35,7 @@ func NewInconsistentAggregatorError(a1, a2 export.Aggregator) error {
 // This rejects NaN values.  This rejects negative values when the
 // metric instrument does not support negative values, including
 // monotonic counter metrics and absolute ValueRecorder metrics.
-func RangeTest(num number.Number, descriptor *otel.Descriptor) error {
+func RangeTest(num number.Number, descriptor *metric.Descriptor) error {
 	numberKind := descriptor.NumberKind()
 
 	if numberKind == number.Float64Kind && math.IsNaN(num.AsFloat64()) {
@@ -43,7 +43,7 @@ func RangeTest(num number.Number, descriptor *otel.Descriptor) error {
 	}
 
 	switch descriptor.InstrumentKind() {
-	case otel.CounterInstrumentKind, otel.SumObserverInstrumentKind:
+	case metric.CounterInstrumentKind, metric.SumObserverInstrumentKind:
 		if num.IsNegative(numberKind) {
 			return aggregation.ErrNegativeInput
 		}
