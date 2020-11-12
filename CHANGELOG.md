@@ -13,6 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `EventOption` and the related `NewEventConfig` function are added to the `go.opentelemetry.io/otel` package to configure Span events. (#1254)
 - A `TextMapPropagator` and associated `TextMapCarrier` are added to the `go.opentelemetry.io/otel/oteltest` package to test TextMap type propagators and their use. (#1259)
 - `SpanContextFromContext` returns `SpanContext` from context. (#1255)
+- Add an opencensus to opentelemetry tracing bridge. (#1305)
 
 ### Changed
 
