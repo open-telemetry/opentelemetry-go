@@ -21,7 +21,7 @@ import (
 	"go.opentelemetry.io/otel/label"
 )
 
-// Set returns a copy of the baggage in ctx.
+// Set returns a copy of the set of baggage key-values in ctx.
 func Set(ctx context.Context) label.Set {
 	// TODO (MrAlias, #1222): The underlying storage, the Map, shares many of
 	// the functional elements of the label.Set. These should be unified so
