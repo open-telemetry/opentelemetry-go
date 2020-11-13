@@ -12,14 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package propagators // import "go.opentelemetry.io/otel/propagators"
+package propagation // import "go.opentelemetry.io/otel/propagation"
 
 import (
 	"context"
 	"net/url"
 	"strings"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/baggage"
 	"go.opentelemetry.io/otel/label"
 )
@@ -32,10 +31,10 @@ const baggageHeader = "baggage"
 // specification is defined at https://w3c.github.io/baggage/.
 type Baggage struct{}
 
-var _ otel.TextMapPropagator = Baggage{}
+var _ TextMapPropagator = Baggage{}
 
 // Inject sets baggage key-values from ctx into the carrier.
-func (b Baggage) Inject(ctx context.Context, carrier otel.TextMapCarrier) {
+func (b Baggage) Inject(ctx context.Context, carrier TextMapCarrier) {
 	baggageMap := baggage.MapFromContext(ctx)
 	firstIter := true
 	var headerValueBuilder strings.Builder
@@ -56,7 +55,7 @@ func (b Baggage) Inject(ctx context.Context, carrier otel.TextMapCarrier) {
 }
 
 // Extract returns a copy of parent with the baggage from the carrier added.
-func (b Baggage) Extract(parent context.Context, carrier otel.TextMapCarrier) context.Context {
+func (b Baggage) Extract(parent context.Context, carrier TextMapCarrier) context.Context {
 	bVal := carrier.Get(baggageHeader)
 	if bVal == "" {
 		return parent

@@ -18,33 +18,33 @@ import (
 	"context"
 	"sync"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 // textMapPropagator is a default TextMapPropagator that delegates calls to a
 // registered delegate if one is set, otherwise it defaults to delegating the
-// calls to a the default no-op otel.TextMapPropagator.
+// calls to a the default no-op propagation.TextMapPropagator.
 type textMapPropagator struct {
 	mtx      sync.Mutex
 	once     sync.Once
-	delegate otel.TextMapPropagator
-	noop     otel.TextMapPropagator
+	delegate propagation.TextMapPropagator
+	noop     propagation.TextMapPropagator
 }
 
 // Compile-time guarantee that textMapPropagator implements the
-// otel.TextMapPropagator interface.
-var _ otel.TextMapPropagator = (*textMapPropagator)(nil)
+// propagation.TextMapPropagator interface.
+var _ propagation.TextMapPropagator = (*textMapPropagator)(nil)
 
 func newTextMapPropagator() *textMapPropagator {
 	return &textMapPropagator{
-		noop: otel.NewCompositeTextMapPropagator(),
+		noop: propagation.NewCompositeTextMapPropagator(),
 	}
 }
 
-// SetDelegate sets a delegate otel.TextMapPropagator that all calls are
+// SetDelegate sets a delegate propagation.TextMapPropagator that all calls are
 // forwarded to. Delegation can only be performed once, all subsequent calls
 // perform no delegation.
-func (p *textMapPropagator) SetDelegate(delegate otel.TextMapPropagator) {
+func (p *textMapPropagator) SetDelegate(delegate propagation.TextMapPropagator) {
 	if delegate == nil {
 		return
 	}
@@ -57,7 +57,7 @@ func (p *textMapPropagator) SetDelegate(delegate otel.TextMapPropagator) {
 // effectiveDelegate returns the current delegate of p if one is set,
 // otherwise the default noop TextMapPropagator is returned. This method
 // can be called concurrently.
-func (p *textMapPropagator) effectiveDelegate() otel.TextMapPropagator {
+func (p *textMapPropagator) effectiveDelegate() propagation.TextMapPropagator {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 	if p.delegate != nil {
@@ -67,12 +67,12 @@ func (p *textMapPropagator) effectiveDelegate() otel.TextMapPropagator {
 }
 
 // Inject set cross-cutting concerns from the Context into the carrier.
-func (p *textMapPropagator) Inject(ctx context.Context, carrier otel.TextMapCarrier) {
+func (p *textMapPropagator) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	p.effectiveDelegate().Inject(ctx, carrier)
 }
 
 // Extract reads cross-cutting concerns from the carrier into a Context.
-func (p *textMapPropagator) Extract(ctx context.Context, carrier otel.TextMapCarrier) context.Context {
+func (p *textMapPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	return p.effectiveDelegate().Extract(ctx, carrier)
 }
 

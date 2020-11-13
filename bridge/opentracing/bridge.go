@@ -25,16 +25,15 @@ import (
 	otext "github.com/opentracing/opentracing-go/ext"
 	otlog "github.com/opentracing/opentracing-go/log"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 	"go.opentelemetry.io/otel/codes"
 	otelglobal "go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/internal/baggage"
 	"go.opentelemetry.io/otel/internal/trace/noop"
 	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
-
-	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 )
 
 type bridgeSpanContext struct {
@@ -294,7 +293,7 @@ type BridgeTracer struct {
 	warningHandler BridgeWarningHandler
 	warnOnce       sync.Once
 
-	propagator otel.TextMapPropagator
+	propagator propagation.TextMapPropagator
 }
 
 var _ ot.Tracer = &BridgeTracer{}
@@ -329,7 +328,7 @@ func (t *BridgeTracer) SetOpenTelemetryTracer(tracer trace.Tracer) {
 	t.setTracer.isSet = true
 }
 
-func (t *BridgeTracer) SetTextMapPropagator(propagator otel.TextMapPropagator) {
+func (t *BridgeTracer) SetTextMapPropagator(propagator propagation.TextMapPropagator) {
 	t.propagator = propagator
 }
 
@@ -651,7 +650,7 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 	return bridgeSC, nil
 }
 
-func (t *BridgeTracer) getPropagator() otel.TextMapPropagator {
+func (t *BridgeTracer) getPropagator() propagation.TextMapPropagator {
 	if t.propagator != nil {
 		return t.propagator
 	}

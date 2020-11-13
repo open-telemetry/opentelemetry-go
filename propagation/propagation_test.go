@@ -12,12 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otel
+package propagation_test
 
 import (
 	"context"
 	"strings"
 	"testing"
+
+	"go.opentelemetry.io/otel/propagation"
 )
 
 type ctxKeyType uint
@@ -38,11 +40,11 @@ type propagator struct {
 	Name string
 }
 
-func (p propagator) Inject(ctx context.Context, carrier TextMapCarrier) {
+func (p propagator) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	carrier.Set(p.Name, "")
 }
 
-func (p propagator) Extract(ctx context.Context, carrier TextMapCarrier) context.Context {
+func (p propagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	v := ctx.Value(ctxKey)
 	if v == nil {
 		ctx = context.WithValue(ctx, ctxKey, []string{p.Name})
@@ -62,7 +64,7 @@ func TestCompositeTextMapPropagatorFields(t *testing.T) {
 		"a": {},
 		"b": {},
 	}
-	got := NewCompositeTextMapPropagator(a, b1, b2).Fields()
+	got := propagation.NewCompositeTextMapPropagator(a, b1, b2).Fields()
 	if len(got) != len(want) {
 		t.Fatalf("invalid fields from composite: %v (want %v)", got, want)
 	}
@@ -77,7 +79,7 @@ func TestCompositeTextMapPropagatorInject(t *testing.T) {
 	a, b := propagator{"a"}, propagator{"b"}
 
 	c := make(carrier, 0, 2)
-	NewCompositeTextMapPropagator(a, b).Inject(context.Background(), &c)
+	propagation.NewCompositeTextMapPropagator(a, b).Inject(context.Background(), &c)
 
 	if got := strings.Join([]string(c), ","); got != "a,b" {
 		t.Errorf("invalid inject order: %s", got)
@@ -88,7 +90,7 @@ func TestCompositeTextMapPropagatorExtract(t *testing.T) {
 	a, b := propagator{"a"}, propagator{"b"}
 
 	ctx := context.Background()
-	ctx = NewCompositeTextMapPropagator(a, b).Extract(ctx, nil)
+	ctx = propagation.NewCompositeTextMapPropagator(a, b).Extract(ctx, nil)
 
 	v := ctx.Value(ctxKey)
 	if v == nil {

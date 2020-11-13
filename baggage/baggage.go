@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otel // import "go.opentelemetry.io/otel"
+package baggage // import "go.opentelemetry.io/otel/baggage"
 
 import (
 	"context"
@@ -21,8 +21,8 @@ import (
 	"go.opentelemetry.io/otel/label"
 )
 
-// Baggage returns a copy of the baggage in ctx.
-func Baggage(ctx context.Context) label.Set {
+// Set returns a copy of the set of baggage key-values in ctx.
+func Set(ctx context.Context) label.Set {
 	// TODO (MrAlias, #1222): The underlying storage, the Map, shares many of
 	// the functional elements of the label.Set. These should be unified so
 	// this conversion is unnecessary and there is no performance hit calling
@@ -36,32 +36,32 @@ func Baggage(ctx context.Context) label.Set {
 	return label.NewSet(values...)
 }
 
-// BaggageValue returns the value related to key in the baggage of ctx. If no
+// Value returns the value related to key in the baggage of ctx. If no
 // value is set, the returned label.Value will be an uninitialized zero-value
 // with type INVALID.
-func BaggageValue(ctx context.Context, key label.Key) label.Value {
+func Value(ctx context.Context, key label.Key) label.Value {
 	v, _ := baggage.MapFromContext(ctx).Value(key)
 	return v
 }
 
-// ContextWithBaggageValues returns a copy of parent with pairs updated in the baggage.
-func ContextWithBaggageValues(parent context.Context, pairs ...label.KeyValue) context.Context {
+// ContextWithValues returns a copy of parent with pairs updated in the baggage.
+func ContextWithValues(parent context.Context, pairs ...label.KeyValue) context.Context {
 	m := baggage.MapFromContext(parent).Apply(baggage.MapUpdate{
 		MultiKV: pairs,
 	})
 	return baggage.ContextWithMap(parent, m)
 }
 
-// ContextWithoutBaggageValues returns a copy of parent in which the values related
+// ContextWithoutValues returns a copy of parent in which the values related
 // to keys have been removed from the baggage.
-func ContextWithoutBaggageValues(parent context.Context, keys ...label.Key) context.Context {
+func ContextWithoutValues(parent context.Context, keys ...label.Key) context.Context {
 	m := baggage.MapFromContext(parent).Apply(baggage.MapUpdate{
 		DropMultiK: keys,
 	})
 	return baggage.ContextWithMap(parent, m)
 }
 
-// ContextWithoutBaggage returns a copy of parent without baggage.
-func ContextWithoutBaggage(parent context.Context) context.Context {
+// ContextWithEmpty returns a copy of parent without baggage.
+func ContextWithEmpty(parent context.Context) context.Context {
 	return baggage.ContextWithNoCorrelationData(parent)
 }

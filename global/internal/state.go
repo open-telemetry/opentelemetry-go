@@ -18,8 +18,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -33,7 +33,7 @@ type (
 	}
 
 	propagatorsHolder struct {
-		tm otel.TextMapPropagator
+		tm propagation.TextMapPropagator
 	}
 )
 
@@ -92,12 +92,12 @@ func SetMeterProvider(mp metric.MeterProvider) {
 }
 
 // TextMapPropagator is the internal implementation for global.TextMapPropagator.
-func TextMapPropagator() otel.TextMapPropagator {
+func TextMapPropagator() propagation.TextMapPropagator {
 	return globalPropagators.Load().(propagatorsHolder).tm
 }
 
 // SetTextMapPropagator is the internal implementation for global.SetTextMapPropagator.
-func SetTextMapPropagator(p otel.TextMapPropagator) {
+func SetTextMapPropagator(p propagation.TextMapPropagator) {
 	// For the textMapPropagator already returned by TextMapPropagator
 	// delegate to p.
 	delegateTextMapPropagatorOnce.Do(func() {

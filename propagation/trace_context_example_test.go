@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package propagators_test
+package propagation_test
 
 import (
 	"go.opentelemetry.io/otel/global"
-	"go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 func ExampleTraceContext() {
-	tc := propagators.TraceContext{}
+	tc := propagation.TraceContext{}
 	// Register the TraceContext propagator globally.
 	global.SetTextMapPropagator(tc)
 }
