@@ -71,7 +71,7 @@ func (t *testSpanProcessor) Shutdown(_ context.Context) error {
 func (t *testSpanProcessor) ForceFlush() {
 }
 
-func TestRegisterSpanProcessort(t *testing.T) {
+func TestRegisterSpanProcessor(t *testing.T) {
 	name := "Register span processor before span starts"
 	tp := basicTracerProvider(t)
 	spNames := []string{"sp1", "sp2", "sp3"}
