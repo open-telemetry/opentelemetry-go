@@ -18,7 +18,8 @@ import (
 	"context"
 	"sync"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
@@ -29,14 +30,14 @@ type (
 	// keeping only the min, max, sum, and count.
 	Aggregator struct {
 		lock sync.Mutex
-		kind otel.NumberKind
+		kind number.Kind
 		state
 	}
 
 	state struct {
-		sum   otel.Number
-		min   otel.Number
-		max   otel.Number
+		sum   number.Number
+		min   number.Number
+		max   number.Number
 		count int64
 	}
 )
@@ -49,7 +50,7 @@ var _ aggregation.MinMaxSumCount = &Aggregator{}
 // Max.
 //
 // This type uses a mutex for Update() and SynchronizedMove() concurrency.
-func New(cnt int, desc *otel.Descriptor) []Aggregator {
+func New(cnt int, desc *metric.Descriptor) []Aggregator {
 	kind := desc.NumberKind()
 	aggs := make([]Aggregator, cnt)
 	for i := range aggs {
@@ -72,7 +73,7 @@ func (c *Aggregator) Kind() aggregation.Kind {
 }
 
 // Sum returns the sum of values in the checkpoint.
-func (c *Aggregator) Sum() (otel.Number, error) {
+func (c *Aggregator) Sum() (number.Number, error) {
 	return c.sum, nil
 }
 
@@ -84,7 +85,7 @@ func (c *Aggregator) Count() (int64, error) {
 // Min returns the minimum value in the checkpoint.
 // The error value aggregation.ErrNoData will be returned
 // if there were no measurements recorded during the checkpoint.
-func (c *Aggregator) Min() (otel.Number, error) {
+func (c *Aggregator) Min() (number.Number, error) {
 	if c.count == 0 {
 		return 0, aggregation.ErrNoData
 	}
@@ -94,7 +95,7 @@ func (c *Aggregator) Min() (otel.Number, error) {
 // Max returns the maximum value in the checkpoint.
 // The error value aggregation.ErrNoData will be returned
 // if there were no measurements recorded during the checkpoint.
-func (c *Aggregator) Max() (otel.Number, error) {
+func (c *Aggregator) Max() (number.Number, error) {
 	if c.count == 0 {
 		return 0, aggregation.ErrNoData
 	}
@@ -103,7 +104,7 @@ func (c *Aggregator) Max() (otel.Number, error) {
 
 // SynchronizedMove saves the current state into oa and resets the current state to
 // the empty set.
-func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *otel.Descriptor) error {
+func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)
@@ -119,7 +120,7 @@ func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *otel.Descripto
 	return nil
 }
 
-func emptyState(kind otel.NumberKind) state {
+func emptyState(kind number.Kind) state {
 	return state{
 		count: 0,
 		sum:   0,
@@ -129,7 +130,7 @@ func emptyState(kind otel.NumberKind) state {
 }
 
 // Update adds the recorded measurement to the current data set.
-func (c *Aggregator) Update(_ context.Context, number otel.Number, desc *otel.Descriptor) error {
+func (c *Aggregator) Update(_ context.Context, number number.Number, desc *metric.Descriptor) error {
 	kind := desc.NumberKind()
 
 	c.lock.Lock()
@@ -146,7 +147,7 @@ func (c *Aggregator) Update(_ context.Context, number otel.Number, desc *otel.De
 }
 
 // Merge combines two data sets into one.
-func (c *Aggregator) Merge(oa export.Aggregator, desc *otel.Descriptor) error {
+func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)

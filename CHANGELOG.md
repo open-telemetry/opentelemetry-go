@@ -15,23 +15,29 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `SpanContextFromContext` returns `SpanContext` from context. (#1255)
 - `MetricsLabelsEnricher` type is added to `go.opentelemetry.io/otel/sdk/metric` package. (#1271)
 - `WithMetricsLabelsEnricher` config option is added to `go.opentelemetry.io/otel/sdk/push` and `go.opentelemetry.io/otel/sdk/pull` packages to allow providing a function to enrich metrics labels based on context. (#1271)
+- Add an opencensus to opentelemetry tracing bridge. (#1305)
 
 ### Changed
 
-- Move the `go.opentelemetry.io/otel/api/trace` package into `go.opentelemetry.io/otel` with the following changes. (#1229)
+- Move the `go.opentelemetry.io/otel/api/trace` package into `go.opentelemetry.io/otel/trace` with the following changes. (#1229) (#1307)
   - `ID` has been renamed to `TraceID`.
   - `IDFromHex` has been renamed to `TraceIDFromHex`.
   - `ErrorOption` has been changed to an interface to conform with project design standards which included adding a `NewErrorConfig` function.
   - `EmptySpanContext` is removed.
 - Move the `go.opentelemetry.io/otel/api/trace/tracetest` package into `go.opentelemetry.io/otel/oteltest`. (#1229)
-- OTLP Exporter supports OTLP v0.5.0. (#1230)
+- OTLP Exporter updates:
+  - supports OTLP v0.5.0 (#1230)
+  - supports configurable aggregation temporality (default: Cumulative, optional: Stateless). (#1296)
 - The Sampler is now called on local child spans. (#1233)
 - The `Kind` type from the `go.opentelemetry.io/otel/api/metric` package was renamed to `InstrumentKind` to more specifically describe what it is and avoid semantic ambiguity. (#1240)
 - The `MetricKind` method of the `Descriptor` type in the `go.opentelemetry.io/otel/api/metric` package was renamed to `Descriptor.InstrumentKind`.
    This matches the returned type and fixes misuse of the term metric. (#1240)
 - Move test harness from the `go.opentelemetry.io/otel/api/apitest` package into `go.opentelemetry.io/otel/oteltest`. (#1241)
 - Rename `MergeItererator` to `MergeIterator` in the `go.opentelemetry.io/otel/label` package. (#1244)
-- Move the `go.opentelemetry.io/otel/api/metric`, `go.opentelemetry.io/otel/api/metric/metrictest`, and `go.opentelemetry.io/otel/api/metric/registry` packages into `go.opentelemetry.io/otel` as part of #964. (#1252)
+- Move the `go.opentelemetry.io/otel/api/metric/metrictest` package into `go.opentelemetry.io/oteltest` as part of #964. (#1252)
+- Move the `go.opentelemetry.io/otel/api/metric` package into `go.opentelemetry.io/otel/metric` as part of #1303. (#1321)
+- Move the `go.opentelemetry.io/otel/api/metric/registry` package into `go.opentelemetry.io/otel/metric/registry as a part of #1303. (#1316)
+- Move the `Number` type (together with related functions) from `go.opentelemetry.io/otel/api/metric` package into `go.opentelemetry.io/otel/metric/number` as a part of #1303. (#1316)
 - The function signature of the Span `AddEvent` method in `go.opentelemetry.io/otel` is updated to no longer take an unused context and instead take a required name and a variable number of `EventOption`s. (#1254)
 - The function signature of the Span `RecordError` method in `go.opentelemetry.io/otel` is updated to no longer take an unused context and instead take a required error value and a variable number of `EventOption`s. (#1254)
 - Move the `go.opentelemetry.io/otel/api/global` package to `go.opentelemetry.io/otel/global`. (#1262)
@@ -39,6 +45,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix `Code.UnmarshalJSON` to work with valid json only. (#1276)
 - The `resource.New()` method changes signature to support builtin attributes and functional options, including `telemetry.sdk.*` and
   `host.name` semantic conventions; the former method is renamed `resource.NewWithAttributes`. (#1235)
+- The prometheus exporter now exports non-monotonic counters (i.e. `UpDownCounter`s) as gauges. (#1210)
+- Correct the `Span.End` method documentation in the `otel` API to state updates are not allowed on a span after it has ended. (#1310)
+- Updated span collection limits for attribute, event and link counts to 1000 (#1318)
 
 ### Removed
 

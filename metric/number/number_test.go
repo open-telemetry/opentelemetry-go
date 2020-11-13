@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otel
+package number
 
 import (
 	"math"
@@ -31,7 +31,7 @@ func TestNumber(t *testing.T) {
 	for idx, i := range []int64{-42, 0, 42} {
 		n := i64Numbers[idx]
 		if got := n.AsInt64(); got != i {
-			t.Errorf("Number %#v (%s) int64 check failed, expected %d, got %d", n, n.Emit(Int64NumberKind), i, got)
+			t.Errorf("Number %#v (%s) int64 check failed, expected %d, got %d", n, n.Emit(Int64Kind), i, got)
 		}
 	}
 
@@ -51,7 +51,7 @@ func TestNumber(t *testing.T) {
 	for idx, f := range []float64{-42., 0., 42.} {
 		n := f64Numbers[idx]
 		if got := n.AsFloat64(); got != f {
-			t.Errorf("Number %#v (%s) float64 check failed, expected %f, got %f", n, n.Emit(Int64NumberKind), f, got)
+			t.Errorf("Number %#v (%s) float64 check failed, expected %f, got %f", n, n.Emit(Int64Kind), f, got)
 		}
 	}
 
@@ -72,7 +72,7 @@ func TestNumber(t *testing.T) {
 		n Number
 		// nums needs to be aligned for 64-bit atomic operations.
 		nums [3]Number
-		kind NumberKind
+		kind Kind
 		pos  bool
 		zero bool
 		neg  bool
@@ -81,7 +81,7 @@ func TestNumber(t *testing.T) {
 	testcases := []testcase{
 		{
 			n:    iNeg,
-			kind: Int64NumberKind,
+			kind: Int64Kind,
 			pos:  false,
 			zero: false,
 			neg:  true,
@@ -90,7 +90,7 @@ func TestNumber(t *testing.T) {
 		},
 		{
 			n:    iZero,
-			kind: Int64NumberKind,
+			kind: Int64Kind,
 			pos:  false,
 			zero: true,
 			neg:  false,
@@ -99,7 +99,7 @@ func TestNumber(t *testing.T) {
 		},
 		{
 			n:    iPos,
-			kind: Int64NumberKind,
+			kind: Int64Kind,
 			pos:  true,
 			zero: false,
 			neg:  false,
@@ -108,7 +108,7 @@ func TestNumber(t *testing.T) {
 		},
 		{
 			n:    fNeg,
-			kind: Float64NumberKind,
+			kind: Float64Kind,
 			pos:  false,
 			zero: false,
 			neg:  true,
@@ -117,7 +117,7 @@ func TestNumber(t *testing.T) {
 		},
 		{
 			n:    fZero,
-			kind: Float64NumberKind,
+			kind: Float64Kind,
 			pos:  false,
 			zero: true,
 			neg:  false,
@@ -126,7 +126,7 @@ func TestNumber(t *testing.T) {
 		},
 		{
 			n:    fPos,
-			kind: Float64NumberKind,
+			kind: Float64Kind,
 			pos:  true,
 			zero: false,
 			neg:  false,
@@ -165,8 +165,8 @@ func TestNumberZero(t *testing.T) {
 func TestNumberAsInterface(t *testing.T) {
 	i64 := NewInt64Number(10)
 	f64 := NewFloat64Number(11.11)
-	require.Equal(t, int64(10), (&i64).AsInterface(Int64NumberKind).(int64))
-	require.Equal(t, 11.11, (&f64).AsInterface(Float64NumberKind).(float64))
+	require.Equal(t, int64(10), (&i64).AsInterface(Int64Kind).(int64))
+	require.Equal(t, 11.11, (&f64).AsInterface(Float64Kind).(float64))
 }
 
 func TestNumberSignChange(t *testing.T) {
@@ -174,39 +174,39 @@ func TestNumberSignChange(t *testing.T) {
 		posInt := NewInt64Number(10)
 		negInt := NewInt64Number(-10)
 
-		require.Equal(t, posInt, NewNumberSignChange(Int64NumberKind, negInt))
-		require.Equal(t, negInt, NewNumberSignChange(Int64NumberKind, posInt))
+		require.Equal(t, posInt, NewNumberSignChange(Int64Kind, negInt))
+		require.Equal(t, negInt, NewNumberSignChange(Int64Kind, posInt))
 	})
 
 	t.Run("Float64", func(t *testing.T) {
 		posFloat := NewFloat64Number(10)
 		negFloat := NewFloat64Number(-10)
 
-		require.Equal(t, posFloat, NewNumberSignChange(Float64NumberKind, negFloat))
-		require.Equal(t, negFloat, NewNumberSignChange(Float64NumberKind, posFloat))
+		require.Equal(t, posFloat, NewNumberSignChange(Float64Kind, negFloat))
+		require.Equal(t, negFloat, NewNumberSignChange(Float64Kind, posFloat))
 	})
 
 	t.Run("Float64Zero", func(t *testing.T) {
 		posFloat := NewFloat64Number(0)
 		negFloat := NewFloat64Number(math.Copysign(0, -1))
 
-		require.Equal(t, posFloat, NewNumberSignChange(Float64NumberKind, negFloat))
-		require.Equal(t, negFloat, NewNumberSignChange(Float64NumberKind, posFloat))
+		require.Equal(t, posFloat, NewNumberSignChange(Float64Kind, negFloat))
+		require.Equal(t, negFloat, NewNumberSignChange(Float64Kind, posFloat))
 	})
 
 	t.Run("Float64Inf", func(t *testing.T) {
 		posFloat := NewFloat64Number(math.Inf(+1))
 		negFloat := NewFloat64Number(math.Inf(-1))
 
-		require.Equal(t, posFloat, NewNumberSignChange(Float64NumberKind, negFloat))
-		require.Equal(t, negFloat, NewNumberSignChange(Float64NumberKind, posFloat))
+		require.Equal(t, posFloat, NewNumberSignChange(Float64Kind, negFloat))
+		require.Equal(t, negFloat, NewNumberSignChange(Float64Kind, posFloat))
 	})
 
 	t.Run("Float64NaN", func(t *testing.T) {
 		posFloat := NewFloat64Number(math.NaN())
 		negFloat := NewFloat64Number(math.Copysign(math.NaN(), -1))
 
-		require.Equal(t, posFloat, NewNumberSignChange(Float64NumberKind, negFloat))
-		require.Equal(t, negFloat, NewNumberSignChange(Float64NumberKind, posFloat))
+		require.Equal(t, posFloat, NewNumberSignChange(Float64Kind, negFloat))
+		require.Equal(t, negFloat, NewNumberSignChange(Float64Kind, posFloat))
 	})
 }

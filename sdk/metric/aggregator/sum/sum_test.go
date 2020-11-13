@@ -21,8 +21,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
 	ottest "go.opentelemetry.io/otel/internal/testing"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 )
 
@@ -53,7 +54,7 @@ func new4() (_, _, _, _ *Aggregator) {
 	return &alloc[0], &alloc[1], &alloc[2], &alloc[3]
 }
 
-func checkZero(t *testing.T, agg *Aggregator, desc *otel.Descriptor) {
+func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
 	kind := desc.NumberKind()
 
 	sum, err := agg.Sum()
@@ -65,9 +66,9 @@ func TestCounterSum(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg, ckpt := new2()
 
-		descriptor := aggregatortest.NewAggregatorTest(otel.CounterInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(metric.CounterInstrumentKind, profile.NumberKind)
 
-		sum := otel.Number(0)
+		sum := number.Number(0)
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			sum.AddNumber(profile.NumberKind, x)
@@ -89,9 +90,9 @@ func TestValueRecorderSum(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg, ckpt := new2()
 
-		descriptor := aggregatortest.NewAggregatorTest(otel.ValueRecorderInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 
-		sum := otel.Number(0)
+		sum := number.Number(0)
 
 		for i := 0; i < count; i++ {
 			r1 := profile.Random(+1)
@@ -115,9 +116,9 @@ func TestCounterMerge(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg1, agg2, ckpt1, ckpt2 := new4()
 
-		descriptor := aggregatortest.NewAggregatorTest(otel.CounterInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(metric.CounterInstrumentKind, profile.NumberKind)
 
-		sum := otel.Number(0)
+		sum := number.Number(0)
 		for i := 0; i < count; i++ {
 			x := profile.Random(+1)
 			sum.AddNumber(profile.NumberKind, x)

@@ -18,7 +18,8 @@ import (
 	"context"
 	"testing"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
+
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -60,14 +61,14 @@ func TestSimpleSpanProcessorOnEnd(t *testing.T) {
 
 	tp.RegisterSpanProcessor(ssp)
 	tr := tp.Tracer("SimpleSpanProcessor")
-	tid, _ := otel.TraceIDFromHex("01020304050607080102040810203040")
-	sid, _ := otel.SpanIDFromHex("0102040810203040")
-	sc := otel.SpanContext{
+	tid, _ := trace.TraceIDFromHex("01020304050607080102040810203040")
+	sid, _ := trace.SpanIDFromHex("0102040810203040")
+	sc := trace.SpanContext{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 0x1,
 	}
-	ctx := otel.ContextWithRemoteSpanContext(context.Background(), sc)
+	ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
 	_, span := tr.Start(ctx, "OnEnd")
 	span.End()
 

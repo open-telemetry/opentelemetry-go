@@ -27,11 +27,10 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
-	"go.opentelemetry.io/otel"
 	colmetricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/metrics/v1"
 	coltracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/trace/v1"
-
 	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
+	"go.opentelemetry.io/otel/metric"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
@@ -70,6 +69,11 @@ func newConfig(opts ...ExporterOption) config {
 	cfg := config{
 		numWorkers:        DefaultNumWorkers,
 		grpcServiceConfig: DefaultGRPCServiceConfig,
+
+		// Note: the default ExportKindSelector is specified
+		// as Cumulative:
+		// https://github.com/open-telemetry/opentelemetry-specification/issues/731
+		exportKindSelector: metricsdk.CumulativeExportKindSelector(),
 	}
 	for _, opt := range opts {
 		opt(&cfg)
@@ -93,9 +97,6 @@ func NewUnstartedExporter(opts ...ExporterOption) *Exporter {
 	if len(e.c.headers) > 0 {
 		e.metadata = metadata.New(e.c.headers)
 	}
-
-	// TODO (rghetia): add resources
-
 	return e
 }
 
@@ -286,9 +287,9 @@ func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) e
 }
 
 // ExportKindFor reports back to the OpenTelemetry SDK sending this Exporter
-// metric telemetry that it needs to be provided in a pass-through format.
-func (e *Exporter) ExportKindFor(*otel.Descriptor, aggregation.Kind) metricsdk.ExportKind {
-	return metricsdk.PassThroughExporter
+// metric telemetry that it needs to be provided in a cumulative format.
+func (e *Exporter) ExportKindFor(desc *metric.Descriptor, kind aggregation.Kind) metricsdk.ExportKind {
+	return e.c.exportKindSelector.ExportKindFor(desc, kind)
 }
 
 // ExportSpans exports a batch of SpanData.

@@ -24,12 +24,12 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel"
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
 	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
 	resourcepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/resource/v1"
 
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -86,7 +86,7 @@ func CheckpointSet(ctx context.Context, exportSelector export.ExportKindSelector
 	for i := uint(0); i < numWorkers; i++ {
 		go func() {
 			defer wg.Done()
-			transformer(ctx, records, transformed)
+			transformer(ctx, exportSelector, records, transformed)
 		}()
 	}
 	go func() {
@@ -131,9 +131,9 @@ func source(ctx context.Context, exportSelector export.ExportKindSelector, cps e
 
 // transformer transforms records read from the passed in chan into
 // OTLP Metrics which are sent on the out chan.
-func transformer(ctx context.Context, in <-chan export.Record, out chan<- result) {
+func transformer(ctx context.Context, exportSelector export.ExportKindSelector, in <-chan export.Record, out chan<- result) {
 	for r := range in {
-		m, err := Record(r)
+		m, err := Record(exportSelector, r)
 		// Propagate errors, but do not send empty results.
 		if err == nil && m == nil {
 			continue
@@ -250,7 +250,7 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 
 // Record transforms a Record into an OTLP Metric. An ErrIncompatibleAgg
 // error is returned if the Record Aggregator is not supported.
-func Record(r export.Record) (*metricpb.Metric, error) {
+func Record(exportSelector export.ExportKindSelector, r export.Record) (*metricpb.Metric, error) {
 	agg := r.Aggregation()
 	switch agg.Kind() {
 	case aggregation.MinMaxSumCountKind:
@@ -265,7 +265,7 @@ func Record(r export.Record) (*metricpb.Metric, error) {
 		if !ok {
 			return nil, fmt.Errorf("%w: %T", ErrIncompatibleAgg, agg)
 		}
-		return histogram(r, h)
+		return histogramPoint(r, exportSelector.ExportKindFor(r.Descriptor(), aggregation.HistogramKind), h)
 
 	case aggregation.SumKind:
 		s, ok := agg.(aggregation.Sum)
@@ -276,7 +276,7 @@ func Record(r export.Record) (*metricpb.Metric, error) {
 		if err != nil {
 			return nil, err
 		}
-		return scalar(r, sum, r.StartTime(), r.EndTime())
+		return sumPoint(r, sum, r.StartTime(), r.EndTime(), exportSelector.ExportKindFor(r.Descriptor(), aggregation.SumKind), r.Descriptor().InstrumentKind().Monotonic())
 
 	case aggregation.LastValueKind:
 		lv, ok := agg.(aggregation.LastValue)
@@ -287,14 +287,14 @@ func Record(r export.Record) (*metricpb.Metric, error) {
 		if err != nil {
 			return nil, err
 		}
-		return gauge(r, value, time.Time{}, tm)
+		return gaugePoint(r, value, time.Time{}, tm)
 
 	default:
 		return nil, fmt.Errorf("%w: %T", ErrUnimplementedAgg, agg)
 	}
 }
 
-func gauge(record export.Record, num otel.Number, start, end time.Time) (*metricpb.Metric, error) {
+func gaugePoint(record export.Record, num number.Number, start, end time.Time) (*metricpb.Metric, error) {
 	desc := record.Descriptor()
 	labels := record.Labels()
 
@@ -305,7 +305,7 @@ func gauge(record export.Record, num otel.Number, start, end time.Time) (*metric
 	}
 
 	switch n := desc.NumberKind(); n {
-	case otel.Int64NumberKind:
+	case number.Int64Kind:
 		m.Data = &metricpb.Metric_IntGauge{
 			IntGauge: &metricpb.IntGauge{
 				DataPoints: []*metricpb.IntDataPoint{
@@ -318,7 +318,7 @@ func gauge(record export.Record, num otel.Number, start, end time.Time) (*metric
 				},
 			},
 		}
-	case otel.Float64NumberKind:
+	case number.Float64Kind:
 		m.Data = &metricpb.Metric_DoubleGauge{
 			DoubleGauge: &metricpb.DoubleGauge{
 				DataPoints: []*metricpb.DoubleDataPoint{
@@ -338,9 +338,17 @@ func gauge(record export.Record, num otel.Number, start, end time.Time) (*metric
 	return m, nil
 }
 
-// scalar transforms a Sum or LastValue Aggregator into an OTLP Metric.
-// For LastValue (Gauge), use start==time.Time{}.
-func scalar(record export.Record, num otel.Number, start, end time.Time) (*metricpb.Metric, error) {
+func exportKindToTemporality(ek export.ExportKind) metricpb.AggregationTemporality {
+	switch ek {
+	case export.DeltaExportKind:
+		return metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA
+	case export.CumulativeExportKind:
+		return metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE
+	}
+	return metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_UNSPECIFIED
+}
+
+func sumPoint(record export.Record, num number.Number, start, end time.Time, ek export.ExportKind, monotonic bool) (*metricpb.Metric, error) {
 	desc := record.Descriptor()
 	labels := record.Labels()
 
@@ -351,9 +359,11 @@ func scalar(record export.Record, num otel.Number, start, end time.Time) (*metri
 	}
 
 	switch n := desc.NumberKind(); n {
-	case otel.Int64NumberKind:
+	case number.Int64Kind:
 		m.Data = &metricpb.Metric_IntSum{
 			IntSum: &metricpb.IntSum{
+				IsMonotonic:            monotonic,
+				AggregationTemporality: exportKindToTemporality(ek),
 				DataPoints: []*metricpb.IntDataPoint{
 					{
 						Value:             num.CoerceToInt64(n),
@@ -364,9 +374,11 @@ func scalar(record export.Record, num otel.Number, start, end time.Time) (*metri
 				},
 			},
 		}
-	case otel.Float64NumberKind:
+	case number.Float64Kind:
 		m.Data = &metricpb.Metric_DoubleSum{
 			DoubleSum: &metricpb.DoubleSum{
+				IsMonotonic:            monotonic,
+				AggregationTemporality: exportKindToTemporality(ek),
 				DataPoints: []*metricpb.DoubleDataPoint{
 					{
 						Value:             num.CoerceToFloat64(n),
@@ -386,7 +398,7 @@ func scalar(record export.Record, num otel.Number, start, end time.Time) (*metri
 
 // minMaxSumCountValue returns the values of the MinMaxSumCount Aggregator
 // as discrete values.
-func minMaxSumCountValues(a aggregation.MinMaxSumCount) (min, max, sum otel.Number, count int64, err error) {
+func minMaxSumCountValues(a aggregation.MinMaxSumCount) (min, max, sum number.Number, count int64, err error) {
 	if min, err = a.Min(); err != nil {
 		return
 	}
@@ -421,7 +433,7 @@ func minMaxSumCount(record export.Record, a aggregation.MinMaxSumCount) (*metric
 	bounds := []float64{0.0, 100.0}
 
 	switch n := desc.NumberKind(); n {
-	case otel.Int64NumberKind:
+	case number.Int64Kind:
 		m.Data = &metricpb.Metric_IntHistogram{
 			IntHistogram: &metricpb.IntHistogram{
 				DataPoints: []*metricpb.IntHistogramDataPoint{
@@ -437,7 +449,7 @@ func minMaxSumCount(record export.Record, a aggregation.MinMaxSumCount) (*metric
 				},
 			},
 		}
-	case otel.Float64NumberKind:
+	case number.Float64Kind:
 		m.Data = &metricpb.Metric_DoubleHistogram{
 			DoubleHistogram: &metricpb.DoubleHistogram{
 				DataPoints: []*metricpb.DoubleHistogramDataPoint{
@@ -473,7 +485,7 @@ func histogramValues(a aggregation.Histogram) (boundaries []float64, counts []fl
 }
 
 // histogram transforms a Histogram Aggregator into an OTLP Metric.
-func histogram(record export.Record, a aggregation.Histogram) (*metricpb.Metric, error) {
+func histogramPoint(record export.Record, ek export.ExportKind, a aggregation.Histogram) (*metricpb.Metric, error) {
 	desc := record.Descriptor()
 	labels := record.Labels()
 	boundaries, counts, err := histogramValues(a)
@@ -501,9 +513,10 @@ func histogram(record export.Record, a aggregation.Histogram) (*metricpb.Metric,
 		Unit:        string(desc.Unit()),
 	}
 	switch n := desc.NumberKind(); n {
-	case otel.Int64NumberKind:
+	case number.Int64Kind:
 		m.Data = &metricpb.Metric_IntHistogram{
 			IntHistogram: &metricpb.IntHistogram{
+				AggregationTemporality: exportKindToTemporality(ek),
 				DataPoints: []*metricpb.IntHistogramDataPoint{
 					{
 						Sum:               sum.CoerceToInt64(n),
@@ -517,9 +530,10 @@ func histogram(record export.Record, a aggregation.Histogram) (*metricpb.Metric,
 				},
 			},
 		}
-	case otel.Float64NumberKind:
+	case number.Float64Kind:
 		m.Data = &metricpb.Metric_DoubleHistogram{
 			DoubleHistogram: &metricpb.DoubleHistogram{
+				AggregationTemporality: exportKindToTemporality(ek),
 				DataPoints: []*metricpb.DoubleHistogramDataPoint{
 					{
 						Sum:               sum.CoerceToFloat64(n),

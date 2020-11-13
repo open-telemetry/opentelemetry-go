@@ -20,8 +20,8 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -41,13 +41,13 @@ type (
 		// data for the same instrument with the same
 		// resources, and this code has logic to combine data
 		// properly from multiple accumulators.  However, the
-		// use of *otel.Descriptor in the stateKey makes
+		// use of *metric.Descriptor in the stateKey makes
 		// such combination impossible, because each
 		// accumulator allocates its own instruments.  This
 		// can be fixed by using the instrument name and kind
 		// instead of the descriptor pointer.  See
 		// https://github.com/open-telemetry/opentelemetry-go/issues/862.
-		descriptor *otel.Descriptor
+		descriptor *metric.Descriptor
 		distinct   label.Distinct
 		resource   label.Distinct
 	}
@@ -120,7 +120,7 @@ var _ export.Processor = &Processor{}
 var _ export.Checkpointer = &Processor{}
 var _ export.CheckpointSet = &state{}
 var ErrInconsistentState = fmt.Errorf("inconsistent processor state")
-var ErrInvalidExporterKind = fmt.Errorf("invalid exporter kind")
+var ErrInvalidExportKind = fmt.Errorf("invalid export kind")
 
 // New returns a basic Processor that is also a Checkpointer using the provided
 // AggregatorSelector to select Aggregators.  The ExportKindSelector
@@ -338,17 +338,7 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 
 		ekind := exporter.ExportKindFor(key.descriptor, value.current.Aggregation().Kind())
 		switch ekind {
-		case export.PassThroughExporter:
-			// No state is required, pass through the checkpointed value.
-			agg = value.current.Aggregation()
-
-			if mkind.PrecomputedSum() {
-				start = b.processStart
-			} else {
-				start = b.intervalStart
-			}
-
-		case export.CumulativeExporter:
+		case export.CumulativeExportKind:
 			// If stateful, the sum has been computed.  If stateless, the
 			// input was already cumulative.  Either way, use the checkpointed
 			// value:
@@ -359,7 +349,7 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 			}
 			start = b.processStart
 
-		case export.DeltaExporter:
+		case export.DeltaExportKind:
 			// Precomputed sums are a special case.
 			if mkind.PrecomputedSum() {
 				agg = value.delta.Aggregation()
@@ -369,7 +359,7 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 			start = b.intervalStart
 
 		default:
-			return fmt.Errorf("%v: %w", ekind, ErrInvalidExporterKind)
+			return fmt.Errorf("%v: %w", ekind, ErrInvalidExportKind)
 		}
 
 		if err := f(export.NewRecord(

@@ -22,8 +22,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
 	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
@@ -36,7 +36,7 @@ func TestPullNoCache(t *testing.T) {
 	puller := pull.New(
 		basic.New(
 			selector.NewWithExactDistribution(),
-			export.CumulativeExporter,
+			export.CumulativeExportKindSelector(),
 			basic.WithMemory(true),
 		),
 		pull.WithCachePeriod(0),
@@ -44,13 +44,13 @@ func TestPullNoCache(t *testing.T) {
 
 	ctx := context.Background()
 	meter := puller.MeterProvider().Meter("nocache")
-	counter := otel.Must(meter).NewInt64Counter("counter.sum")
+	counter := metric.Must(meter).NewInt64Counter("counter.sum")
 
 	counter.Add(ctx, 10, label.String("A", "B"))
 
 	require.NoError(t, puller.Collect(ctx))
 	records := processortest.NewOutput(label.DefaultEncoder())
-	require.NoError(t, puller.ForEach(export.CumulativeExporter, records.AddRecord))
+	require.NoError(t, puller.ForEach(export.CumulativeExportKindSelector(), records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=B/": 10,
@@ -60,7 +60,7 @@ func TestPullNoCache(t *testing.T) {
 
 	require.NoError(t, puller.Collect(ctx))
 	records = processortest.NewOutput(label.DefaultEncoder())
-	require.NoError(t, puller.ForEach(export.CumulativeExporter, records.AddRecord))
+	require.NoError(t, puller.ForEach(export.CumulativeExportKindSelector(), records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=B/": 20,
@@ -71,7 +71,7 @@ func TestPullWithCache(t *testing.T) {
 	puller := pull.New(
 		basic.New(
 			selector.NewWithExactDistribution(),
-			export.CumulativeExporter,
+			export.CumulativeExportKindSelector(),
 			basic.WithMemory(true),
 		),
 		pull.WithCachePeriod(time.Second),
@@ -81,13 +81,13 @@ func TestPullWithCache(t *testing.T) {
 
 	ctx := context.Background()
 	meter := puller.MeterProvider().Meter("nocache")
-	counter := otel.Must(meter).NewInt64Counter("counter.sum")
+	counter := metric.Must(meter).NewInt64Counter("counter.sum")
 
 	counter.Add(ctx, 10, label.String("A", "B"))
 
 	require.NoError(t, puller.Collect(ctx))
 	records := processortest.NewOutput(label.DefaultEncoder())
-	require.NoError(t, puller.ForEach(export.CumulativeExporter, records.AddRecord))
+	require.NoError(t, puller.ForEach(export.CumulativeExportKindSelector(), records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=B/": 10,
@@ -98,7 +98,7 @@ func TestPullWithCache(t *testing.T) {
 	// Cached value!
 	require.NoError(t, puller.Collect(ctx))
 	records = processortest.NewOutput(label.DefaultEncoder())
-	require.NoError(t, puller.ForEach(export.CumulativeExporter, records.AddRecord))
+	require.NoError(t, puller.ForEach(export.CumulativeExportKindSelector(), records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=B/": 10,
@@ -110,7 +110,7 @@ func TestPullWithCache(t *testing.T) {
 	// Re-computed value!
 	require.NoError(t, puller.Collect(ctx))
 	records = processortest.NewOutput(label.DefaultEncoder())
-	require.NoError(t, puller.ForEach(export.CumulativeExporter, records.AddRecord))
+	require.NoError(t, puller.ForEach(export.CumulativeExportKindSelector(), records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=B/": 20,

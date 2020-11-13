@@ -21,7 +21,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
@@ -38,27 +39,27 @@ func TestInconsistentAggregatorErr(t *testing.T) {
 	require.True(t, errors.Is(err, aggregation.ErrInconsistentType))
 }
 
-func testRangeNaN(t *testing.T, desc *otel.Descriptor) {
+func testRangeNaN(t *testing.T, desc *metric.Descriptor) {
 	// If the descriptor uses int64 numbers, this won't register as NaN
-	nan := otel.NewFloat64Number(math.NaN())
+	nan := number.NewFloat64Number(math.NaN())
 	err := aggregator.RangeTest(nan, desc)
 
-	if desc.NumberKind() == otel.Float64NumberKind {
+	if desc.NumberKind() == number.Float64Kind {
 		require.Equal(t, aggregation.ErrNaNInput, err)
 	} else {
 		require.Nil(t, err)
 	}
 }
 
-func testRangeNegative(t *testing.T, desc *otel.Descriptor) {
-	var neg, pos otel.Number
+func testRangeNegative(t *testing.T, desc *metric.Descriptor) {
+	var neg, pos number.Number
 
-	if desc.NumberKind() == otel.Float64NumberKind {
-		pos = otel.NewFloat64Number(+1)
-		neg = otel.NewFloat64Number(-1)
+	if desc.NumberKind() == number.Float64Kind {
+		pos = number.NewFloat64Number(+1)
+		neg = number.NewFloat64Number(-1)
 	} else {
-		pos = otel.NewInt64Number(+1)
-		neg = otel.NewInt64Number(-1)
+		pos = number.NewInt64Number(+1)
+		neg = number.NewInt64Number(-1)
 	}
 
 	posErr := aggregator.RangeTest(pos, desc)
@@ -70,11 +71,11 @@ func testRangeNegative(t *testing.T, desc *otel.Descriptor) {
 
 func TestRangeTest(t *testing.T) {
 	// Only Counters implement a range test.
-	for _, nkind := range []otel.NumberKind{otel.Float64NumberKind, otel.Int64NumberKind} {
+	for _, nkind := range []number.Kind{number.Float64Kind, number.Int64Kind} {
 		t.Run(nkind.String(), func(t *testing.T) {
-			desc := otel.NewDescriptor(
+			desc := metric.NewDescriptor(
 				"name",
-				otel.CounterInstrumentKind,
+				metric.CounterInstrumentKind,
 				nkind,
 			)
 			testRangeNegative(t, &desc)
@@ -83,14 +84,14 @@ func TestRangeTest(t *testing.T) {
 }
 
 func TestNaNTest(t *testing.T) {
-	for _, nkind := range []otel.NumberKind{otel.Float64NumberKind, otel.Int64NumberKind} {
+	for _, nkind := range []number.Kind{number.Float64Kind, number.Int64Kind} {
 		t.Run(nkind.String(), func(t *testing.T) {
-			for _, mkind := range []otel.InstrumentKind{
-				otel.CounterInstrumentKind,
-				otel.ValueRecorderInstrumentKind,
-				otel.ValueObserverInstrumentKind,
+			for _, mkind := range []metric.InstrumentKind{
+				metric.CounterInstrumentKind,
+				metric.ValueRecorderInstrumentKind,
+				metric.ValueObserverInstrumentKind,
 			} {
-				desc := otel.NewDescriptor(
+				desc := metric.NewDescriptor(
 					"name",
 					mkind,
 					nkind,

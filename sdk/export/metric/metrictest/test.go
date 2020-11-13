@@ -21,15 +21,16 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type mapkey struct {
-	desc     *otel.Descriptor
+	desc     *metric.Descriptor
 	distinct label.Distinct
 }
 
@@ -48,17 +49,17 @@ type NoopAggregator struct{}
 var _ export.Aggregator = (*NoopAggregator)(nil)
 
 // Update implements export.Aggregator.
-func (NoopAggregator) Update(context.Context, otel.Number, *otel.Descriptor) error {
+func (NoopAggregator) Update(context.Context, number.Number, *metric.Descriptor) error {
 	return nil
 }
 
 // SynchronizedMove implements export.Aggregator.
-func (NoopAggregator) SynchronizedMove(export.Aggregator, *otel.Descriptor) error {
+func (NoopAggregator) SynchronizedMove(export.Aggregator, *metric.Descriptor) error {
 	return nil
 }
 
 // Merge implements export.Aggregator.
-func (NoopAggregator) Merge(export.Aggregator, *otel.Descriptor) error {
+func (NoopAggregator) Merge(export.Aggregator, *metric.Descriptor) error {
 	return nil
 }
 
@@ -91,7 +92,7 @@ func (p *CheckpointSet) Reset() {
 //
 // If there is an existing record with the same descriptor and labels,
 // the stored aggregator will be returned and should be merged.
-func (p *CheckpointSet) Add(desc *otel.Descriptor, newAgg export.Aggregator, labels ...label.KeyValue) (agg export.Aggregator, added bool) {
+func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, labels ...label.KeyValue) (agg export.Aggregator, added bool) {
 	elabels := label.NewSet(labels...)
 
 	key := mapkey{

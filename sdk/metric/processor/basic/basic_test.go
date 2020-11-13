@@ -24,8 +24,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
@@ -40,33 +41,32 @@ func TestProcessor(t *testing.T) {
 		kind export.ExportKind
 	}
 	type instrumentCase struct {
-		kind otel.InstrumentKind
+		kind metric.InstrumentKind
 	}
 	type numberCase struct {
-		kind otel.NumberKind
+		kind number.Kind
 	}
 	type aggregatorCase struct {
 		kind aggregation.Kind
 	}
 
 	for _, tc := range []exportCase{
-		{kind: export.PassThroughExporter},
-		{kind: export.CumulativeExporter},
-		{kind: export.DeltaExporter},
+		{kind: export.CumulativeExportKind},
+		{kind: export.DeltaExportKind},
 	} {
 		t.Run(tc.kind.String(), func(t *testing.T) {
 			for _, ic := range []instrumentCase{
-				{kind: otel.CounterInstrumentKind},
-				{kind: otel.UpDownCounterInstrumentKind},
-				{kind: otel.ValueRecorderInstrumentKind},
-				{kind: otel.SumObserverInstrumentKind},
-				{kind: otel.UpDownSumObserverInstrumentKind},
-				{kind: otel.ValueObserverInstrumentKind},
+				{kind: metric.CounterInstrumentKind},
+				{kind: metric.UpDownCounterInstrumentKind},
+				{kind: metric.ValueRecorderInstrumentKind},
+				{kind: metric.SumObserverInstrumentKind},
+				{kind: metric.UpDownSumObserverInstrumentKind},
+				{kind: metric.ValueObserverInstrumentKind},
 			} {
 				t.Run(ic.kind.String(), func(t *testing.T) {
 					for _, nc := range []numberCase{
-						{kind: otel.Int64NumberKind},
-						{kind: otel.Float64NumberKind},
+						{kind: number.Int64Kind},
+						{kind: number.Float64Kind},
 					} {
 						t.Run(nc.kind.String(), func(t *testing.T) {
 							for _, ac := range []aggregatorCase{
@@ -95,14 +95,14 @@ func TestProcessor(t *testing.T) {
 	}
 }
 
-func asNumber(nkind otel.NumberKind, value int64) otel.Number {
-	if nkind == otel.Int64NumberKind {
-		return otel.NewInt64Number(value)
+func asNumber(nkind number.Kind, value int64) number.Number {
+	if nkind == number.Int64Kind {
+		return number.NewInt64Number(value)
 	}
-	return otel.NewFloat64Number(float64(value))
+	return number.NewFloat64Number(float64(value))
 }
 
-func updateFor(t *testing.T, desc *otel.Descriptor, selector export.AggregatorSelector, res *resource.Resource, value int64, labs ...label.KeyValue) export.Accumulation {
+func updateFor(t *testing.T, desc *metric.Descriptor, selector export.AggregatorSelector, res *resource.Resource, value int64, labs ...label.KeyValue) export.Accumulation {
 	ls := label.NewSet(labs...)
 	var agg export.Aggregator
 	selector.AggregatorFor(desc, &agg)
@@ -114,8 +114,8 @@ func updateFor(t *testing.T, desc *otel.Descriptor, selector export.AggregatorSe
 func testProcessor(
 	t *testing.T,
 	ekind export.ExportKind,
-	mkind otel.InstrumentKind,
-	nkind otel.NumberKind,
+	mkind metric.InstrumentKind,
+	nkind number.Kind,
 	akind aggregation.Kind,
 ) {
 	// Note: this selector uses the instrument name to dictate
@@ -127,12 +127,12 @@ func testProcessor(
 	labs2 := []label.KeyValue{label.String("L2", "V")}
 
 	testBody := func(t *testing.T, hasMemory bool, nAccum, nCheckpoint int) {
-		processor := basic.New(selector, ekind, basic.WithMemory(hasMemory))
+		processor := basic.New(selector, export.ConstantExportKindSelector(ekind), basic.WithMemory(hasMemory))
 
 		instSuffix := fmt.Sprint(".", strings.ToLower(akind.String()))
 
-		desc1 := otel.NewDescriptor(fmt.Sprint("inst1", instSuffix), mkind, nkind)
-		desc2 := otel.NewDescriptor(fmt.Sprint("inst2", instSuffix), mkind, nkind)
+		desc1 := metric.NewDescriptor(fmt.Sprint("inst1", instSuffix), mkind, nkind)
+		desc2 := metric.NewDescriptor(fmt.Sprint("inst2", instSuffix), mkind, nkind)
 
 		for nc := 0; nc < nCheckpoint; nc++ {
 
@@ -159,7 +159,7 @@ func testProcessor(
 				_, canSub := subr.(export.Subtractor)
 
 				// Allow unsupported subraction case only when it is called for.
-				require.True(t, mkind.PrecomputedSum() && ekind == export.DeltaExporter && !canSub)
+				require.True(t, mkind.PrecomputedSum() && ekind == export.DeltaExportKind && !canSub)
 				return
 			} else if err != nil {
 				t.Fatal("unexpected FinishCollection error: ", err)
@@ -183,7 +183,7 @@ func testProcessor(
 
 				// Test the final checkpoint state.
 				records1 := processorTest.NewOutput(label.DefaultEncoder())
-				err = checkpointSet.ForEach(ekind, records1.AddRecord)
+				err = checkpointSet.ForEach(export.ConstantExportKindSelector(ekind), records1.AddRecord)
 
 				// Test for an allowed error:
 				if err != nil && err != aggregation.ErrNoSubtraction {
@@ -196,7 +196,7 @@ func testProcessor(
 					// number of Accumulators, unless LastValue aggregation.
 					// If a precomputed sum, we expect cumulative inputs.
 					if mkind.PrecomputedSum() {
-						if ekind == export.DeltaExporter && akind != aggregation.LastValueKind {
+						if ekind == export.DeltaExportKind && akind != aggregation.LastValueKind {
 							multiplier = int64(nAccum)
 						} else if akind == aggregation.LastValueKind {
 							multiplier = cumulativeMultiplier
@@ -204,7 +204,7 @@ func testProcessor(
 							multiplier = cumulativeMultiplier * int64(nAccum)
 						}
 					} else {
-						if ekind == export.CumulativeExporter && akind != aggregation.LastValueKind {
+						if ekind == export.CumulativeExportKind && akind != aggregation.LastValueKind {
 							multiplier = cumulativeMultiplier * int64(nAccum)
 						} else if akind == aggregation.LastValueKind {
 							multiplier = 1
@@ -216,7 +216,7 @@ func testProcessor(
 					// Synchronous accumulate results from multiple accumulators,
 					// use that number as the baseline multiplier.
 					multiplier = int64(nAccum)
-					if ekind == export.CumulativeExporter {
+					if ekind == export.CumulativeExportKind {
 						// If a cumulative exporter, include prior checkpoints.
 						multiplier *= cumulativeMultiplier
 					}
@@ -258,7 +258,7 @@ func testProcessor(
 
 type bogusExporter struct{}
 
-func (bogusExporter) ExportKindFor(*otel.Descriptor, aggregation.Kind) export.ExportKind {
+func (bogusExporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
 	return 1000000
 }
 
@@ -268,39 +268,39 @@ func (bogusExporter) Export(context.Context, export.CheckpointSet) error {
 
 func TestBasicInconsistent(t *testing.T) {
 	// Test double-start
-	b := basic.New(processorTest.AggregatorSelector(), export.PassThroughExporter)
+	b := basic.New(processorTest.AggregatorSelector(), export.StatelessExportKindSelector())
 
 	b.StartCollection()
 	b.StartCollection()
 	require.Equal(t, basic.ErrInconsistentState, b.FinishCollection())
 
 	// Test finish without start
-	b = basic.New(processorTest.AggregatorSelector(), export.PassThroughExporter)
+	b = basic.New(processorTest.AggregatorSelector(), export.StatelessExportKindSelector())
 
 	require.Equal(t, basic.ErrInconsistentState, b.FinishCollection())
 
 	// Test no finish
-	b = basic.New(processorTest.AggregatorSelector(), export.PassThroughExporter)
+	b = basic.New(processorTest.AggregatorSelector(), export.StatelessExportKindSelector())
 
 	b.StartCollection()
 	require.Equal(
 		t,
 		basic.ErrInconsistentState,
 		b.ForEach(
-			export.PassThroughExporter,
+			export.StatelessExportKindSelector(),
 			func(export.Record) error { return nil },
 		),
 	)
 
 	// Test no start
-	b = basic.New(processorTest.AggregatorSelector(), export.PassThroughExporter)
+	b = basic.New(processorTest.AggregatorSelector(), export.StatelessExportKindSelector())
 
-	desc := otel.NewDescriptor("inst", otel.CounterInstrumentKind, otel.Int64NumberKind)
+	desc := metric.NewDescriptor("inst", metric.CounterInstrumentKind, number.Int64Kind)
 	accum := export.NewAccumulation(&desc, label.EmptySet(), resource.Empty(), metrictest.NoopAggregator{})
 	require.Equal(t, basic.ErrInconsistentState, b.Process(accum))
 
 	// Test invalid kind:
-	b = basic.New(processorTest.AggregatorSelector(), export.PassThroughExporter)
+	b = basic.New(processorTest.AggregatorSelector(), export.StatelessExportKindSelector())
 	b.StartCollection()
 	require.NoError(t, b.Process(accum))
 	require.NoError(t, b.FinishCollection())
@@ -309,16 +309,16 @@ func TestBasicInconsistent(t *testing.T) {
 		bogusExporter{},
 		func(export.Record) error { return nil },
 	)
-	require.True(t, errors.Is(err, basic.ErrInvalidExporterKind))
+	require.True(t, errors.Is(err, basic.ErrInvalidExportKind))
 
 }
 
 func TestBasicTimestamps(t *testing.T) {
 	beforeNew := time.Now()
-	b := basic.New(processorTest.AggregatorSelector(), export.PassThroughExporter)
+	b := basic.New(processorTest.AggregatorSelector(), export.StatelessExportKindSelector())
 	afterNew := time.Now()
 
-	desc := otel.NewDescriptor("inst", otel.CounterInstrumentKind, otel.Int64NumberKind)
+	desc := metric.NewDescriptor("inst", metric.CounterInstrumentKind, number.Int64Kind)
 	accum := export.NewAccumulation(&desc, label.EmptySet(), resource.Empty(), metrictest.NoopAggregator{})
 
 	b.StartCollection()
@@ -327,7 +327,7 @@ func TestBasicTimestamps(t *testing.T) {
 
 	var start1, end1 time.Time
 
-	require.NoError(t, b.ForEach(export.PassThroughExporter, func(rec export.Record) error {
+	require.NoError(t, b.ForEach(export.StatelessExportKindSelector(), func(rec export.Record) error {
 		start1 = rec.StartTime()
 		end1 = rec.EndTime()
 		return nil
@@ -344,7 +344,7 @@ func TestBasicTimestamps(t *testing.T) {
 
 		var start2, end2 time.Time
 
-		require.NoError(t, b.ForEach(export.PassThroughExporter, func(rec export.Record) error {
+		require.NoError(t, b.ForEach(export.StatelessExportKindSelector(), func(rec export.Record) error {
 			start2 = rec.StartTime()
 			end2 = rec.EndTime()
 			return nil
@@ -362,12 +362,12 @@ func TestBasicTimestamps(t *testing.T) {
 
 func TestStatefulNoMemoryCumulative(t *testing.T) {
 	res := resource.NewWithAttributes(label.String("R", "V"))
-	ekind := export.CumulativeExporter
+	ekindSel := export.CumulativeExportKindSelector()
 
-	desc := otel.NewDescriptor("inst.sum", otel.CounterInstrumentKind, otel.Int64NumberKind)
+	desc := metric.NewDescriptor("inst.sum", metric.CounterInstrumentKind, number.Int64Kind)
 	selector := processorTest.AggregatorSelector()
 
-	processor := basic.New(selector, ekind, basic.WithMemory(false))
+	processor := basic.New(selector, ekindSel, basic.WithMemory(false))
 	checkpointSet := processor.CheckpointSet()
 
 	for i := 1; i < 3; i++ {
@@ -377,7 +377,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 
 		// Verify zero elements
 		records := processorTest.NewOutput(label.DefaultEncoder())
-		require.NoError(t, checkpointSet.ForEach(ekind, records.AddRecord))
+		require.NoError(t, checkpointSet.ForEach(ekindSel, records.AddRecord))
 		require.EqualValues(t, map[string]float64{}, records.Map())
 
 		// Add 10
@@ -387,7 +387,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 
 		// Verify one element
 		records = processorTest.NewOutput(label.DefaultEncoder())
-		require.NoError(t, checkpointSet.ForEach(ekind, records.AddRecord))
+		require.NoError(t, checkpointSet.ForEach(ekindSel, records.AddRecord))
 		require.EqualValues(t, map[string]float64{
 			"inst.sum/A=B/R=V": float64(i * 10),
 		}, records.Map())
@@ -396,12 +396,12 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 
 func TestStatefulNoMemoryDelta(t *testing.T) {
 	res := resource.NewWithAttributes(label.String("R", "V"))
-	ekind := export.DeltaExporter
+	ekindSel := export.DeltaExportKindSelector()
 
-	desc := otel.NewDescriptor("inst.sum", otel.SumObserverInstrumentKind, otel.Int64NumberKind)
+	desc := metric.NewDescriptor("inst.sum", metric.SumObserverInstrumentKind, number.Int64Kind)
 	selector := processorTest.AggregatorSelector()
 
-	processor := basic.New(selector, ekind, basic.WithMemory(false))
+	processor := basic.New(selector, ekindSel, basic.WithMemory(false))
 	checkpointSet := processor.CheckpointSet()
 
 	for i := 1; i < 3; i++ {
@@ -411,7 +411,7 @@ func TestStatefulNoMemoryDelta(t *testing.T) {
 
 		// Verify zero elements
 		records := processorTest.NewOutput(label.DefaultEncoder())
-		require.NoError(t, checkpointSet.ForEach(ekind, records.AddRecord))
+		require.NoError(t, checkpointSet.ForEach(ekindSel, records.AddRecord))
 		require.EqualValues(t, map[string]float64{}, records.Map())
 
 		// Add 10
@@ -421,7 +421,7 @@ func TestStatefulNoMemoryDelta(t *testing.T) {
 
 		// Verify one element
 		records = processorTest.NewOutput(label.DefaultEncoder())
-		require.NoError(t, checkpointSet.ForEach(ekind, records.AddRecord))
+		require.NoError(t, checkpointSet.ForEach(ekindSel, records.AddRecord))
 		require.EqualValues(t, map[string]float64{
 			"inst.sum/A=B/R=V": 10,
 		}, records.Map())
@@ -429,17 +429,16 @@ func TestStatefulNoMemoryDelta(t *testing.T) {
 }
 
 func TestMultiObserverSum(t *testing.T) {
-	for _, ekind := range []export.ExportKind{
-		export.PassThroughExporter,
-		export.CumulativeExporter,
-		export.DeltaExporter,
+	for _, ekindSel := range []export.ExportKindSelector{
+		export.CumulativeExportKindSelector(),
+		export.DeltaExportKindSelector(),
 	} {
 
 		res := resource.NewWithAttributes(label.String("R", "V"))
-		desc := otel.NewDescriptor("observe.sum", otel.SumObserverInstrumentKind, otel.Int64NumberKind)
+		desc := metric.NewDescriptor("observe.sum", metric.SumObserverInstrumentKind, number.Int64Kind)
 		selector := processorTest.AggregatorSelector()
 
-		processor := basic.New(selector, ekind, basic.WithMemory(false))
+		processor := basic.New(selector, ekindSel, basic.WithMemory(false))
 		checkpointSet := processor.CheckpointSet()
 
 		for i := 1; i < 3; i++ {
@@ -452,13 +451,13 @@ func TestMultiObserverSum(t *testing.T) {
 
 			// Multiplier is 1 for deltas, otherwise i.
 			multiplier := i
-			if ekind == export.DeltaExporter {
+			if ekindSel.ExportKindFor(&desc, aggregation.SumKind) == export.DeltaExportKind {
 				multiplier = 1
 			}
 
 			// Verify one element
 			records := processorTest.NewOutput(label.DefaultEncoder())
-			require.NoError(t, checkpointSet.ForEach(ekind, records.AddRecord))
+			require.NoError(t, checkpointSet.ForEach(ekindSel, records.AddRecord))
 			require.EqualValues(t, map[string]float64{
 				"observe.sum/A=B/R=V": float64(3 * 10 * multiplier),
 			}, records.Map())

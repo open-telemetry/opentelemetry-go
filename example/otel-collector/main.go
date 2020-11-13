@@ -25,10 +25,10 @@ import (
 
 	"google.golang.org/grpc"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagators"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
@@ -36,6 +36,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Initializes an OTLP exporter, and configures the corresponding trace and
@@ -110,10 +111,10 @@ func main() {
 	}
 
 	// Recorder metric example
-	valuerecorder := otel.Must(meter).
+	valuerecorder := metric.Must(meter).
 		NewFloat64Counter(
 			"an_important_metric",
-			otel.WithDescription("Measures the cumulative epicness of the app"),
+			metric.WithDescription("Measures the cumulative epicness of the app"),
 		).Bind(commonLabels...)
 	defer valuerecorder.Unbind()
 
@@ -121,7 +122,7 @@ func main() {
 	ctx, span := tracer.Start(
 		context.Background(),
 		"CollectorExporter-Example",
-		otel.WithAttributes(commonLabels...))
+		trace.WithAttributes(commonLabels...))
 	defer span.End()
 	for i := 0; i < 10; i++ {
 		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))

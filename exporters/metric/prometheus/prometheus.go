@@ -23,9 +23,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
@@ -155,7 +156,7 @@ func (e *Exporter) SetController(config Config, options ...pull.Option) {
 }
 
 // MeterProvider returns the MeterProvider of this exporter.
-func (e *Exporter) MeterProvider() otel.MeterProvider {
+func (e *Exporter) MeterProvider() metric.MeterProvider {
 	return e.controller.MeterProvider()
 }
 
@@ -166,13 +167,13 @@ func (e *Exporter) Controller() *pull.Controller {
 	return e.controller
 }
 
-func (e *Exporter) ExportKindFor(*otel.Descriptor, aggregation.Kind) export.ExportKind {
+func (e *Exporter) ExportKindFor(desc *metric.Descriptor, kind aggregation.Kind) export.ExportKind {
 	// NOTE: Summary values should use Delta aggregation, then be
 	// combined into a sliding window, see the TODO below.
 	// NOTE: Prometheus also supports a "GaugeDelta" exposition format,
 	// which is expressed as a delta histogram.  Need to understand if this
 	// should be a default behavior for ValueRecorder/ValueObserver.
-	return export.CumulativeExporter
+	return export.CumulativeExportKindSelector().ExportKindFor(desc, kind)
 }
 
 func (e *Exporter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -214,6 +215,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	err := ctrl.ForEach(c.exp, func(record export.Record) error {
 		agg := record.Aggregation()
 		numberKind := record.Descriptor().NumberKind()
+		instrumentKind := record.Descriptor().InstrumentKind()
 
 		var labelKeys, labels []string
 		mergeLabels(record, &labelKeys, &labels)
@@ -236,9 +238,13 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			if err := c.exportSummary(ch, dist, numberKind, desc, labels); err != nil {
 				return fmt.Errorf("exporting summary: %w", err)
 			}
-		} else if sum, ok := agg.(aggregation.Sum); ok {
-			if err := c.exportCounter(ch, sum, numberKind, desc, labels); err != nil {
-				return fmt.Errorf("exporting counter: %w", err)
+		} else if sum, ok := agg.(aggregation.Sum); ok && instrumentKind.Monotonic() {
+			if err := c.exportMonotonicCounter(ch, sum, numberKind, desc, labels); err != nil {
+				return fmt.Errorf("exporting monotonic counter: %w", err)
+			}
+		} else if sum, ok := agg.(aggregation.Sum); ok && !instrumentKind.Monotonic() {
+			if err := c.exportNonMonotonicCounter(ch, sum, numberKind, desc, labels); err != nil {
+				return fmt.Errorf("exporting non monotonic counter: %w", err)
 			}
 		} else if lastValue, ok := agg.(aggregation.LastValue); ok {
 			if err := c.exportLastValue(ch, lastValue, numberKind, desc, labels); err != nil {
@@ -252,7 +258,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregation.LastValue, kind otel.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregation.LastValue, kind number.Kind, desc *prometheus.Desc, labels []string) error {
 	lv, _, err := lvagg.LastValue()
 	if err != nil {
 		return fmt.Errorf("error retrieving last value: %w", err)
@@ -267,7 +273,22 @@ func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregati
 	return nil
 }
 
-func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregation.Sum, kind otel.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportNonMonotonicCounter(ch chan<- prometheus.Metric, sum aggregation.Sum, kind number.Kind, desc *prometheus.Desc, labels []string) error {
+	v, err := sum.Sum()
+	if err != nil {
+		return fmt.Errorf("error retrieving counter: %w", err)
+	}
+
+	m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, v.CoerceToFloat64(kind), labels...)
+	if err != nil {
+		return fmt.Errorf("error creating constant metric: %w", err)
+	}
+
+	ch <- m
+	return nil
+}
+
+func (c *collector) exportMonotonicCounter(ch chan<- prometheus.Metric, sum aggregation.Sum, kind number.Kind, desc *prometheus.Desc, labels []string) error {
 	v, err := sum.Sum()
 	if err != nil {
 		return fmt.Errorf("error retrieving counter: %w", err)
@@ -282,13 +303,13 @@ func (c *collector) exportCounter(ch chan<- prometheus.Metric, sum aggregation.S
 	return nil
 }
 
-func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregation.Distribution, kind otel.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregation.Distribution, kind number.Kind, desc *prometheus.Desc, labels []string) error {
 	count, err := dist.Count()
 	if err != nil {
 		return fmt.Errorf("error retrieving count: %w", err)
 	}
 
-	var sum otel.Number
+	var sum number.Number
 	sum, err = dist.Sum()
 	if err != nil {
 		return fmt.Errorf("error retrieving distribution sum: %w", err)
@@ -309,7 +330,7 @@ func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregation.
 	return nil
 }
 
-func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregation.Histogram, kind otel.NumberKind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregation.Histogram, kind number.Kind, desc *prometheus.Desc, labels []string) error {
 	buckets, err := hist.Histogram()
 	if err != nil {
 		return fmt.Errorf("error retrieving histogram: %w", err)

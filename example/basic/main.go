@@ -22,11 +22,13 @@ import (
 	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagators"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
@@ -67,14 +69,14 @@ func main() {
 
 	commonLabels := []label.KeyValue{lemonsKey.Int(10), label.String("A", "1"), label.String("B", "2"), label.String("C", "3")}
 
-	oneMetricCB := func(_ context.Context, result otel.Float64ObserverResult) {
+	oneMetricCB := func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(1, commonLabels...)
 	}
-	_ = otel.Must(meter).NewFloat64ValueObserver("ex.com.one", oneMetricCB,
-		otel.WithDescription("A ValueObserver set to 1.0"),
+	_ = metric.Must(meter).NewFloat64ValueObserver("ex.com.one", oneMetricCB,
+		metric.WithDescription("A ValueObserver set to 1.0"),
 	)
 
-	valuerecorderTwo := otel.Must(meter).NewFloat64ValueRecorder("ex.com.two")
+	valuerecorderTwo := metric.Must(meter).NewFloat64ValueRecorder("ex.com.two")
 
 	ctx := context.Background()
 	ctx = otel.ContextWithBaggageValues(ctx, fooKey.String("foo1"), barKey.String("bar1"))
@@ -83,11 +85,11 @@ func main() {
 	defer valuerecorder.Unbind()
 
 	err = func(ctx context.Context) error {
-		var span otel.Span
+		var span trace.Span
 		ctx, span = tracer.Start(ctx, "operation")
 		defer span.End()
 
-		span.AddEvent("Nice operation!", otel.WithAttributes(label.Int("bogons", 100)))
+		span.AddEvent("Nice operation!", trace.WithAttributes(label.Int("bogons", 100)))
 		span.SetAttributes(anotherKey.String("yes"))
 
 		meter.RecordBatch(
@@ -99,7 +101,7 @@ func main() {
 		)
 
 		return func(ctx context.Context) error {
-			var span otel.Span
+			var span trace.Span
 			ctx, span = tracer.Start(ctx, "Sub operation...")
 			defer span.End()
 

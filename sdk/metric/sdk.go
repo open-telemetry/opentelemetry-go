@@ -21,11 +21,11 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go.opentelemetry.io/otel"
-	api "go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/global"
 	internal "go.opentelemetry.io/otel/internal/metric"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -79,7 +79,7 @@ type (
 	// mapkey uniquely describes a metric instrument in terms of
 	// its InstrumentID and the encoded form of its labels.
 	mapkey struct {
-		descriptor *otel.Descriptor
+		descriptor *metric.Descriptor
 		ordered    label.Distinct
 	}
 
@@ -127,7 +127,7 @@ type (
 
 	instrument struct {
 		meter      *Accumulator
-		descriptor otel.Descriptor
+		descriptor metric.Descriptor
 	}
 
 	asyncInstrument struct {
@@ -149,15 +149,15 @@ type (
 )
 
 var (
-	_ api.MeterImpl     = &Accumulator{}
-	_ api.AsyncImpl     = &asyncInstrument{}
-	_ api.SyncImpl      = &syncInstrument{}
-	_ api.BoundSyncImpl = &record{}
+	_ metric.MeterImpl     = &Accumulator{}
+	_ metric.AsyncImpl     = &asyncInstrument{}
+	_ metric.SyncImpl      = &syncInstrument{}
+	_ metric.BoundSyncImpl = &record{}
 
 	ErrUninitializedInstrument = fmt.Errorf("use of an uninitialized instrument")
 )
 
-func (inst *instrument) Descriptor() api.Descriptor {
+func (inst *instrument) Descriptor() metric.Descriptor {
 	return inst.descriptor
 }
 
@@ -169,8 +169,8 @@ func (s *syncInstrument) Implementation() interface{} {
 	return s
 }
 
-func (a *asyncInstrument) observe(number api.Number, labels *label.Set) {
-	if err := aggregator.RangeTest(number, &a.descriptor); err != nil {
+func (a *asyncInstrument) observe(num number.Number, labels *label.Set) {
+	if err := aggregator.RangeTest(num, &a.descriptor); err != nil {
 		global.Handle(err)
 		return
 	}
@@ -180,7 +180,7 @@ func (a *asyncInstrument) observe(number api.Number, labels *label.Set) {
 		// AggregatorSelector.
 		return
 	}
-	if err := recorder.Update(context.Background(), number, &a.descriptor); err != nil {
+	if err := recorder.Update(context.Background(), num, &a.descriptor); err != nil {
 		global.Handle(err)
 		return
 	}
@@ -293,12 +293,13 @@ func (s *syncInstrument) acquireHandle(kvs []label.KeyValue, labelPtr *label.Set
 	}
 }
 
-func (s *syncInstrument) Bind(kvs []label.KeyValue) api.BoundSyncImpl {
+func (s *syncInstrument) Bind(kvs []label.KeyValue) metric.BoundSyncImpl {
 	return s.acquireHandle(kvs, nil)
 }
 
-func (s *syncInstrument) RecordOne(ctx context.Context, number api.Number, kvs []label.KeyValue) {
-	if s.meter.metricsLabelsEnricher != nil {
+func (s *syncInstrument) RecordOne(ctx context.Context, num number.Number, kvs []label.KeyValue) {
+
+		if s.meter.metricsLabelsEnricher != nil {
 		var err error
 		kvs, err = s.meter.metricsLabelsEnricher(ctx, kvs)
 		if err != nil {
@@ -309,7 +310,7 @@ func (s *syncInstrument) RecordOne(ctx context.Context, number api.Number, kvs [
 
 	h := s.acquireHandle(kvs, nil)
 	defer h.Unbind()
-	h.RecordOne(ctx, number)
+	h.RecordOne(ctx, num)
 }
 
 // NewAccumulator constructs a new Accumulator for the given
@@ -335,8 +336,8 @@ func NewAccumulator(processor export.Processor, resource *resource.Resource, opt
 	}
 }
 
-// NewSyncInstrument implements api.MetricImpl.
-func (m *Accumulator) NewSyncInstrument(descriptor api.Descriptor) (api.SyncImpl, error) {
+// NewSyncInstrument implements metric.MetricImpl.
+func (m *Accumulator) NewSyncInstrument(descriptor metric.Descriptor) (metric.SyncImpl, error) {
 	return &syncInstrument{
 		instrument: instrument{
 			descriptor: descriptor,
@@ -345,8 +346,8 @@ func (m *Accumulator) NewSyncInstrument(descriptor api.Descriptor) (api.SyncImpl
 	}, nil
 }
 
-// NewAsyncInstrument implements api.MetricImpl.
-func (m *Accumulator) NewAsyncInstrument(descriptor api.Descriptor, runner otel.AsyncRunner) (api.AsyncImpl, error) {
+// NewAsyncInstrument implements metric.MetricImpl.
+func (m *Accumulator) NewAsyncInstrument(descriptor metric.Descriptor, runner metric.AsyncRunner) (metric.AsyncImpl, error) {
 	a := &asyncInstrument{
 		instrument: instrument{
 			descriptor: descriptor,
@@ -422,7 +423,7 @@ func (m *Accumulator) collectSyncInstruments() int {
 }
 
 // CollectAsync implements internal.AsyncCollector.
-func (m *Accumulator) CollectAsync(kv []label.KeyValue, obs ...otel.Observation) {
+func (m *Accumulator) CollectAsync(kv []label.KeyValue, obs ...metric.Observation) {
 	labels := label.NewSetWithSortable(kv, &m.asyncSortSlice)
 
 	for _, ob := range obs {
@@ -499,7 +500,7 @@ func (m *Accumulator) checkpointAsync(a *asyncInstrument) int {
 }
 
 // RecordBatch enters a batch of metric events.
-func (m *Accumulator) RecordBatch(ctx context.Context, kvs []label.KeyValue, measurements ...api.Measurement) {
+func (m *Accumulator) RecordBatch(ctx context.Context, kvs []label.KeyValue, measurements ...metric.Measurement) {
 	// Labels will be computed the first time acquireHandle is
 	// called.  Subsequent calls to acquireHandle will re-use the
 	// previously computed value instead of recomputing the
@@ -522,17 +523,17 @@ func (m *Accumulator) RecordBatch(ctx context.Context, kvs []label.KeyValue, mea
 	}
 }
 
-// RecordOne implements api.SyncImpl.
-func (r *record) RecordOne(ctx context.Context, number api.Number) {
+// RecordOne implements metric.SyncImpl.
+func (r *record) RecordOne(ctx context.Context, num number.Number) {
 	if r.current == nil {
 		// The instrument is disabled according to the AggregatorSelector.
 		return
 	}
-	if err := aggregator.RangeTest(number, &r.inst.descriptor); err != nil {
+	if err := aggregator.RangeTest(num, &r.inst.descriptor); err != nil {
 		global.Handle(err)
 		return
 	}
-	if err := r.current.Update(ctx, number, &r.inst.descriptor); err != nil {
+	if err := r.current.Update(ctx, num, &r.inst.descriptor); err != nil {
 		global.Handle(err)
 		return
 	}
@@ -541,7 +542,7 @@ func (r *record) RecordOne(ctx context.Context, number api.Number) {
 	atomic.AddInt64(&r.updateCount, 1)
 }
 
-// Unbind implements api.SyncImpl.
+// Unbind implements metric.SyncImpl.
 func (r *record) Unbind() {
 	r.refMapped.unref()
 }
@@ -555,7 +556,7 @@ func (r *record) mapkey() mapkey {
 
 // fromSync gets a sync implementation object, checking for
 // uninitialized instruments and instruments created by another SDK.
-func (m *Accumulator) fromSync(sync otel.SyncImpl) *syncInstrument {
+func (m *Accumulator) fromSync(sync metric.SyncImpl) *syncInstrument {
 	if sync != nil {
 		if inst, ok := sync.Implementation().(*syncInstrument); ok {
 			return inst
@@ -567,7 +568,7 @@ func (m *Accumulator) fromSync(sync otel.SyncImpl) *syncInstrument {
 
 // fromSync gets an async implementation object, checking for
 // uninitialized instruments and instruments created by another SDK.
-func (m *Accumulator) fromAsync(async otel.AsyncImpl) *asyncInstrument {
+func (m *Accumulator) fromAsync(async metric.AsyncImpl) *asyncInstrument {
 	if async != nil {
 		if inst, ok := async.Implementation().(*asyncInstrument); ok {
 			return inst
