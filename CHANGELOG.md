@@ -59,6 +59,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     It is replaced by using the `AddEvent` method with a `WithTimestamp` option. (#1254)
 - Structs `MockSpan` and `MockTracer` are removed from `go.opentelemetry.io/otel/oteltest`. `Tracer` and `Span` from the same module should be used in their place instead. (#1306)
 - `WorkerCount` option is removed from `go.opentelemetry.io/otel/exporters/otlp`. (#1350)
+- Remove return value `func()` from `exporter/trace/jeager/jaeger.go#NewExportPipeline`. (#1336) 
 
 ### Fixed
 

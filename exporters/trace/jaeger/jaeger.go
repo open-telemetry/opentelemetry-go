@@ -151,19 +151,19 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 
 // NewExportPipeline sets up a complete export pipeline
 // with the recommended setup for trace provider
-func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (trace.TracerProvider, func(), error) {
+func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (trace.TracerProvider, error) {
 	o := options{}
 	opts = append(opts, WithDisabledFromEnv())
 	for _, opt := range opts {
 		opt(&o)
 	}
 	if o.Disabled {
-		return trace.NewNoopTracerProvider(), func() {}, nil
+		return trace.NewNoopTracerProvider(), nil
 	}
 
 	exporter, err := NewRawExporter(endpointOption, opts...)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	pOpts := []sdktrace.TracerProviderOption{sdktrace.WithSyncer(exporter)}
@@ -171,19 +171,19 @@ func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (trace.Tra
 		pOpts = append(pOpts, sdktrace.WithConfig(*exporter.o.Config))
 	}
 	tp := sdktrace.NewTracerProvider(pOpts...)
-	return tp, exporter.Flush, nil
+	return tp, nil
 }
 
 // InstallNewPipeline instantiates a NewExportPipeline with the
 // recommended configuration and registers it globally.
-func InstallNewPipeline(endpointOption EndpointOption, opts ...Option) (func(), error) {
-	tp, flushFn, err := NewExportPipeline(endpointOption, opts...)
+func InstallNewPipeline(endpointOption EndpointOption, opts ...Option) error {
+	tp, err := NewExportPipeline(endpointOption, opts...)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	otel.SetTracerProvider(tp)
-	return flushFn, nil
+	return nil
 }
 
 // Process contains the information exported to jaeger about the source

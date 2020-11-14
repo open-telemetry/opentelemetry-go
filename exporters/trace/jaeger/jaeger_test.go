@@ -74,11 +74,10 @@ func TestInstallNewPipeline(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			fn, err := InstallNewPipeline(
+			err := InstallNewPipeline(
 				tc.endpoint,
 				tc.options...,
 			)
-			defer fn()
 
 			assert.NoError(t, err)
 			assert.IsType(t, tc.expectedProvider, otel.GetTracerProvider())
@@ -86,6 +85,20 @@ func TestInstallNewPipeline(t *testing.T) {
 			otel.SetTracerProvider(nil)
 		})
 	}
+}
+
+func TestInstallNewPipelineExportPipelineFailed(t *testing.T) {
+	t.Run("export pipeline failed", func(t *testing.T) {
+		err := InstallNewPipeline(
+			// using invalid localhost to mock error
+			WithAgentEndpoint("localhost"),
+		)
+
+		assert.Error(t, err)
+		assert.EqualError(t, err, "address localhost: missing port in address")
+
+		otel.SetTracerProvider(nil)
+	})
 }
 
 func TestNewExportPipeline(t *testing.T) {
@@ -137,11 +150,10 @@ func TestNewExportPipeline(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tp, fn, err := NewExportPipeline(
+			tp, err := NewExportPipeline(
 				tc.endpoint,
 				tc.options...,
 			)
-			defer fn()
 
 			assert.NoError(t, err)
 			assert.NotEqual(t, tp, otel.GetTracerProvider())
@@ -167,10 +179,10 @@ func TestNewExportPipelineWithDisabledFromEnv(t *testing.T) {
 		require.NoError(t, envStore.Restore())
 	}()
 
-	tp, fn, err := NewExportPipeline(
+	tp, err := NewExportPipeline(
 		WithCollectorEndpoint(collectorEndpoint),
 	)
-	defer fn()
+
 	assert.NoError(t, err)
 	assert.IsType(t, trace.NewNoopTracerProvider(), tp)
 }

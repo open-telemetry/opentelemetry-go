@@ -28,9 +28,9 @@ import (
 )
 
 // initTracer creates a new trace provider instance and registers it as global trace provider.
-func initTracer() func() {
+func initTracer() {
 	// Create and install Jaeger export pipeline.
-	flush, err := jaeger.InstallNewPipeline(
+	err := jaeger.InstallNewPipeline(
 		jaeger.WithCollectorEndpoint("http://localhost:14268/api/traces"),
 		jaeger.WithProcess(jaeger.Process{
 			ServiceName: "trace-demo",
@@ -44,14 +44,22 @@ func initTracer() func() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	return flush
 }
 
 func main() {
 	ctx := context.Background()
 
-	flush := initTracer()
-	defer flush()
+	initTracer()
+
+	defer func() {
+		tp := otel.GetTracerProvider()
+		if stp, ok := tp.(*sdktrace.TracerProvider); ok {
+			err := stp.Shutdown(context.Background())
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	}()
 
 	tr := otel.Tracer("component-main")
 	ctx, span := tr.Start(ctx, "foo")
