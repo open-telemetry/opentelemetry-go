@@ -16,9 +16,13 @@ package trace
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
+	"go.opentelemetry.io/otel/label"
+
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type testSpan struct {
@@ -436,4 +440,311 @@ func TestSpanContextFromContext(t *testing.T) {
 			assert.Equal(t, tc.expectedSpanContext, spanContext)
 		})
 	}
+}
+
+func TestTraceStateString(t *testing.T) {
+	testCases := []struct {
+		name        string
+		traceState  *TraceState
+		expectedStr string
+	}{
+		{
+			name: "Non-empty trace state",
+			traceState: &TraceState{
+				kvs: []label.KeyValue{
+					label.String("key1", "val1"),
+					label.String("key2", "val2"),
+					label.String("key3@vendor", "val3"),
+				},
+			},
+			expectedStr: "key1=val1,key2=val2,key3@vendor=val3",
+		},
+		{
+			name:        "Empty trace state",
+			traceState:  &TraceState{},
+			expectedStr: "",
+		},
+		{
+			name:        "Nil trace state",
+			traceState:  nil,
+			expectedStr: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expectedStr, tc.traceState.String())
+		})
+	}
+}
+
+func TestTraceStateGet(t *testing.T) {
+	testCases := []struct {
+		name          string
+		traceState    *TraceState
+		key           label.Key
+		expectedValue string
+	}{
+		{
+			name:          "OK case",
+			traceState:    &TraceState{generateKVsWithMaxMembers()},
+			key:           "key16",
+			expectedValue: "value16",
+		},
+		{
+			name:          "Not found",
+			traceState:    &TraceState{generateKVsWithMaxMembers()},
+			key:           "keyxx",
+			expectedValue: "",
+		},
+		{
+			name:          "Invalid key",
+			traceState:    &TraceState{generateKVsWithMaxMembers()},
+			key:           "key!",
+			expectedValue: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			KV := tc.traceState.Get(tc.key)
+			assert.Equal(t, tc.expectedValue, KV.AsString())
+		})
+	}
+}
+
+func TestTraceStateDelete(t *testing.T) {
+	testCases := []struct {
+		name               string
+		traceState         *TraceState
+		key                label.Key
+		expectedTraceState TraceState
+		expectedErr        error
+	}{
+		{
+			name: "OK case",
+			traceState: &TraceState{
+				kvs: []label.KeyValue{
+					label.String("key1", "val1"),
+					label.String("key2", "val2"),
+					label.String("key3", "val3"),
+				},
+			},
+			key: "key2",
+			expectedTraceState: TraceState{
+				kvs: []label.KeyValue{
+					label.String("key1", "val1"),
+					label.String("key3", "val3"),
+				},
+			},
+		},
+		{
+			name: "Non-existing key",
+			traceState: &TraceState{
+				kvs: []label.KeyValue{
+					label.String("key1", "val1"),
+					label.String("key2", "val2"),
+					label.String("key3", "val3"),
+				},
+			},
+			key: "keyx",
+			expectedTraceState: TraceState{
+				kvs: []label.KeyValue{
+					label.String("key1", "val1"),
+					label.String("key2", "val2"),
+					label.String("key3", "val3"),
+				},
+			},
+		},
+		{
+			name: "Invalid key",
+			traceState: &TraceState{
+				kvs: []label.KeyValue{
+					label.String("key1", "val1"),
+					label.String("key2", "val2"),
+					label.String("key3", "val3"),
+				},
+			},
+			key:                "in va lid",
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := tc.traceState.Delete(tc.key)
+			if tc.expectedErr != nil {
+				require.Error(t, err)
+				assert.Equal(t, tc.expectedErr, err)
+			} else {
+				require.NoError(t, err)
+				assert.NotSame(t, tc.traceState.kvs, result.kvs)
+			}
+
+			assert.Equal(t, tc.expectedTraceState, result)
+		})
+	}
+}
+
+func TestTraceStateInsert(t *testing.T) {
+	testCases := []struct {
+		name               string
+		traceState         *TraceState
+		keyValue           label.KeyValue
+		expectedTraceState TraceState
+		expectedErr        error
+	}{
+		{
+			name: "OK case - add new",
+			traceState: &TraceState{
+				kvs: []label.KeyValue{
+					label.String("key1", "val1"),
+					label.String("key2", "val2"),
+					label.String("key3", "val3"),
+				},
+			},
+			keyValue: label.String("key4@vendor", "val4"),
+			expectedTraceState: TraceState{
+				kvs: []label.KeyValue{
+					label.String("key4@vendor", "val4"),
+					label.String("key1", "val1"),
+					label.String("key2", "val2"),
+					label.String("key3", "val3"),
+				},
+			},
+		},
+		{
+			name: "OK case - replace",
+			traceState: &TraceState{
+				kvs: []label.KeyValue{
+					label.String("key1", "val1"),
+					label.String("key2", "val2"),
+					label.String("key3", "val3"),
+				},
+			},
+			keyValue: label.String("key2", "valX"),
+			expectedTraceState: TraceState{
+				kvs: []label.KeyValue{
+					label.String("key2", "valX"),
+					label.String("key1", "val1"),
+					label.String("key3", "val3"),
+				},
+			},
+		},
+		{
+			name:       "OK case - nil TraceState",
+			traceState: nil,
+			keyValue:   label.String("key", "val"),
+			expectedTraceState: TraceState{
+				kvs: []label.KeyValue{
+					label.String("key", "val"),
+				},
+			},
+		},
+		{
+			name: "Invalid key/value",
+			traceState: &TraceState{
+				kvs: []label.KeyValue{
+					label.String("key1", "val1"),
+				},
+			},
+			keyValue:           label.String("key!", "val!"),
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name:               "Too many entries",
+			traceState:         &TraceState{generateKVsWithMaxMembers()},
+			keyValue:           label.String("keyx", "valx"),
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateMembersNumber,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := tc.traceState.Insert(tc.keyValue)
+			if tc.expectedErr != nil {
+				require.Error(t, err)
+				assert.Equal(t, tc.expectedErr, err)
+			} else {
+				require.NoError(t, err)
+				assert.NotSame(t, tc.traceState, result)
+			}
+
+			assert.Equal(t, tc.expectedTraceState, result)
+		})
+	}
+}
+
+func TestTraceStateFromKeyValues(t *testing.T) {
+	testCases := []struct {
+		name               string
+		kvs                []label.KeyValue
+		expectedTraceState *TraceState
+		expectedErr        error
+	}{
+		{
+			name:               "OK case",
+			kvs:                generateKVsWithMaxMembers(),
+			expectedTraceState: &TraceState{generateKVsWithMaxMembers()},
+		},
+		{
+			name:               "OK case (empty)",
+			expectedTraceState: &TraceState{},
+		},
+		{
+			name: "Too many entries",
+			kvs: func() []label.KeyValue {
+				kvs := generateKVsWithMaxMembers()
+				kvs = append(kvs, label.String("keyx", "valX"))
+				return kvs
+			}(),
+			expectedTraceState: nil,
+			expectedErr:        errInvalidTraceStateMembersNumber,
+		},
+		{
+			name: "Duplicate",
+			kvs: []label.KeyValue{
+				label.String("key1", "val1"),
+				label.String("key1", "val2"),
+			},
+			expectedTraceState: nil,
+			expectedErr:        errInvalidTraceStateDuplicate,
+		},
+		{
+			name: "Invalid key/value",
+			kvs: []label.KeyValue{
+				label.String("key!", "val!"),
+			},
+			expectedTraceState: nil,
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := TraceStateFromKeyValues(tc.kvs...)
+			if tc.expectedErr != nil {
+				require.Error(t, err)
+				assert.Nil(t, result)
+				assert.Equal(t, tc.expectedErr, err)
+			} else {
+				require.NoError(t, err)
+				assert.NotNil(t, tc.expectedTraceState)
+				assert.Equal(t, tc.expectedTraceState, result)
+			}
+		})
+	}
+
+}
+
+func generateKVsWithMaxMembers() []label.KeyValue {
+	kvs := make([]label.KeyValue, traceStateMaxListMembers)
+	for i := 0; i < traceStateMaxListMembers; i++ {
+		kvs[i] = label.String(fmt.Sprintf("key%d", i+1),
+			fmt.Sprintf("value%d", i+1))
+	}
+	return kvs
 }
