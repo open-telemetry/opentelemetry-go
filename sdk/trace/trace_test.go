@@ -314,11 +314,15 @@ func TestStartSpanWithParent(t *testing.T) {
 		t.Error(err)
 	}
 
+	ts, err := trace.TraceStateFromKeyValues(label.String("k", "v"))
+	if err != nil {
+		t.Error(err)
+	}
 	sc2 := trace.SpanContext{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 0x1,
-		//Tracestate:   testTracestate,
+		TraceState: ts,
 	}
 	_, s3 := tr.Start(trace.ContextWithRemoteSpanContext(ctx, sc2), "span3-sampled-parent2")
 	if err := checkChild(sc2, s3); err != nil {
@@ -767,10 +771,9 @@ func checkChild(p trace.SpanContext, apiSpan trace.Span) error {
 	if got, want := s.spanContext.TraceFlags, p.TraceFlags; got != want {
 		return fmt.Errorf("got child trace options %d, want %d", got, want)
 	}
-	// TODO [rgheita] : Fix tracestate test
-	//if got, want := c.spanContext.Tracestate, p.Tracestate; got != want {
-	//	return fmt.Errorf("got child tracestate %v, want %v", got, want)
-	//}
+	if got, want := s.spanContext.TraceState, p.TraceState; got != want {
+		return fmt.Errorf("got child tracestate %v, want %v", got, want)
+	}
 	return nil
 }
 
