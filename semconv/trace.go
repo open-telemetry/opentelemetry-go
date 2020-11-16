@@ -80,7 +80,7 @@ const (
 
 	// Full HTTP request URL in the form:
 	// scheme://host[:port]/path?query[#fragment].
-	HTTPUrlKey = label.Key("http.url")
+	HTTPURLKey = label.Key("http.url")
 
 	// The full request target as passed in a HTTP request line or
 	// equivalent, e.g. "/path/12314/?q=ddds#123".

@@ -48,6 +48,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The prometheus exporter now exports non-monotonic counters (i.e. `UpDownCounter`s) as gauges. (#1210)
 - Correct the `Span.End` method documentation in the `otel` API to state updates are not allowed on a span after it has ended. (#1310)
 - Updated span collection limits for attribute, event and link counts to 1000 (#1318)
+- Renamed `semconv.HTTPUrlKey` to `semconv.HTTPURLKey`. (#1338)
 
 ### Removed
 
