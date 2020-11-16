@@ -26,7 +26,7 @@ type SpanProcessor interface {
 
 	// OnStart method is invoked when span is started. It is a synchronous call
 	// and hence should not block.
-	OnStart(sd *export.SpanData)
+	OnStart(parent context.Context, sd *export.SpanData)
 
 	// OnEnd method is invoked when span is finished. It is a synchronous call
 	// and hence should not block.
