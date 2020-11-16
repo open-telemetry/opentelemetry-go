@@ -26,9 +26,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -48,9 +48,9 @@ func TestPrometheusExporter(t *testing.T) {
 	require.NoError(t, err)
 
 	meter := exporter.MeterProvider().Meter("test")
-	upDownCounter := otel.Must(meter).NewFloat64UpDownCounter("updowncounter")
-	counter := otel.Must(meter).NewFloat64Counter("counter")
-	valuerecorder := otel.Must(meter).NewFloat64ValueRecorder("valuerecorder")
+	upDownCounter := metric.Must(meter).NewFloat64UpDownCounter("updowncounter")
+	counter := metric.Must(meter).NewFloat64Counter("counter")
+	valuerecorder := metric.Must(meter).NewFloat64ValueRecorder("valuerecorder")
 
 	labels := []label.KeyValue{
 		label.Key("A").String("B"),
@@ -65,7 +65,7 @@ func TestPrometheusExporter(t *testing.T) {
 
 	expected = append(expected, `counter{A="B",C="D",R="V"} 15.3`)
 
-	_ = otel.Must(meter).NewInt64ValueObserver("intobserver", func(_ context.Context, result otel.Int64ObserverResult) {
+	_ = metric.Must(meter).NewInt64ValueObserver("intobserver", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(1, labels...)
 	})
 
@@ -138,9 +138,9 @@ func TestPrometheusStatefulness(t *testing.T) {
 
 	ctx := context.Background()
 
-	counter := otel.Must(meter).NewInt64Counter(
+	counter := metric.Must(meter).NewInt64Counter(
 		"a.counter",
-		otel.WithDescription("Counts things"),
+		metric.WithDescription("Counts things"),
 	)
 
 	counter.Add(ctx, 100, label.String("key", "value"))

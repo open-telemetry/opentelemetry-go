@@ -25,11 +25,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/exporters/otlp"
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
 	"go.opentelemetry.io/otel/label"
-
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
@@ -130,52 +129,52 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	labels := []label.KeyValue{label.Bool("test", true)}
 
 	type data struct {
-		iKind otel.InstrumentKind
+		iKind metric.InstrumentKind
 		nKind number.Kind
 		val   int64
 	}
 	instruments := map[string]data{
-		"test-int64-counter":         {otel.CounterInstrumentKind, number.Int64Kind, 1},
-		"test-float64-counter":       {otel.CounterInstrumentKind, number.Float64Kind, 1},
-		"test-int64-valuerecorder":   {otel.ValueRecorderInstrumentKind, number.Int64Kind, 2},
-		"test-float64-valuerecorder": {otel.ValueRecorderInstrumentKind, number.Float64Kind, 2},
-		"test-int64-valueobserver":   {otel.ValueObserverInstrumentKind, number.Int64Kind, 3},
-		"test-float64-valueobserver": {otel.ValueObserverInstrumentKind, number.Float64Kind, 3},
+		"test-int64-counter":         {metric.CounterInstrumentKind, number.Int64Kind, 1},
+		"test-float64-counter":       {metric.CounterInstrumentKind, number.Float64Kind, 1},
+		"test-int64-valuerecorder":   {metric.ValueRecorderInstrumentKind, number.Int64Kind, 2},
+		"test-float64-valuerecorder": {metric.ValueRecorderInstrumentKind, number.Float64Kind, 2},
+		"test-int64-valueobserver":   {metric.ValueObserverInstrumentKind, number.Int64Kind, 3},
+		"test-float64-valueobserver": {metric.ValueObserverInstrumentKind, number.Float64Kind, 3},
 	}
 	for name, data := range instruments {
 		data := data
 		switch data.iKind {
-		case otel.CounterInstrumentKind:
+		case metric.CounterInstrumentKind:
 			switch data.nKind {
 			case number.Int64Kind:
-				otel.Must(meter).NewInt64Counter(name).Add(ctx, data.val, labels...)
+				metric.Must(meter).NewInt64Counter(name).Add(ctx, data.val, labels...)
 			case number.Float64Kind:
-				otel.Must(meter).NewFloat64Counter(name).Add(ctx, float64(data.val), labels...)
+				metric.Must(meter).NewFloat64Counter(name).Add(ctx, float64(data.val), labels...)
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
-		case otel.ValueRecorderInstrumentKind:
+		case metric.ValueRecorderInstrumentKind:
 			switch data.nKind {
 			case number.Int64Kind:
-				otel.Must(meter).NewInt64ValueRecorder(name).Record(ctx, data.val, labels...)
+				metric.Must(meter).NewInt64ValueRecorder(name).Record(ctx, data.val, labels...)
 			case number.Float64Kind:
-				otel.Must(meter).NewFloat64ValueRecorder(name).Record(ctx, float64(data.val), labels...)
+				metric.Must(meter).NewFloat64ValueRecorder(name).Record(ctx, float64(data.val), labels...)
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
-		case otel.ValueObserverInstrumentKind:
+		case metric.ValueObserverInstrumentKind:
 			switch data.nKind {
 			case number.Int64Kind:
-				otel.Must(meter).NewInt64ValueObserver(name,
-					func(_ context.Context, result otel.Int64ObserverResult) {
+				metric.Must(meter).NewInt64ValueObserver(name,
+					func(_ context.Context, result metric.Int64ObserverResult) {
 						result.Observe(data.val, labels...)
 					},
 				)
 			case number.Float64Kind:
-				callback := func(v float64) otel.Float64ObserverFunc {
-					return otel.Float64ObserverFunc(func(_ context.Context, result otel.Float64ObserverResult) { result.Observe(v, labels...) })
+				callback := func(v float64) metric.Float64ObserverFunc {
+					return metric.Float64ObserverFunc(func(_ context.Context, result metric.Float64ObserverResult) { result.Observe(v, labels...) })
 				}(float64(data.val))
-				otel.Must(meter).NewFloat64ValueObserver(name, callback)
+				metric.Must(meter).NewFloat64ValueObserver(name, callback)
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
@@ -245,7 +244,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 		seen[m.Name] = struct{}{}
 
 		switch data.iKind {
-		case otel.CounterInstrumentKind:
+		case metric.CounterInstrumentKind:
 			switch data.nKind {
 			case number.Int64Kind:
 				if dp := m.GetIntSum().DataPoints; assert.Len(t, dp, 1) {
@@ -258,7 +257,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 			default:
 				assert.Failf(t, "invalid number kind", data.nKind.String())
 			}
-		case otel.ValueObserverInstrumentKind:
+		case metric.ValueObserverInstrumentKind:
 			switch data.nKind {
 			case number.Int64Kind:
 				if dp := m.GetIntGauge().DataPoints; assert.Len(t, dp, 1) {
@@ -271,7 +270,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 			default:
 				assert.Failf(t, "invalid number kind", data.nKind.String())
 			}
-		case otel.ValueRecorderInstrumentKind:
+		case metric.ValueRecorderInstrumentKind:
 			switch data.nKind {
 			case number.Int64Kind:
 				assert.NotNil(t, m.GetIntHistogram())

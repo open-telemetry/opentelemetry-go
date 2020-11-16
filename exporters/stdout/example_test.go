@@ -20,8 +20,8 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/stdout"
-	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -31,18 +31,18 @@ const (
 )
 
 var (
-	tracer = global.TracerProvider().Tracer(
+	tracer = otel.GetTracerProvider().Tracer(
 		instrumentationName,
 		trace.WithInstrumentationVersion(instrumentationVersion),
 	)
 
-	meter = global.MeterProvider().Meter(
+	meter = otel.GetMeterProvider().Meter(
 		instrumentationName,
-		otel.WithInstrumentationVersion(instrumentationVersion),
+		metric.WithInstrumentationVersion(instrumentationVersion),
 	)
 
-	loopCounter = otel.Must(meter).NewInt64Counter("function.loops")
-	paramValue  = otel.Must(meter).NewInt64ValueRecorder("function.param")
+	loopCounter = metric.Must(meter).NewInt64Counter("function.loops")
+	paramValue  = metric.Must(meter).NewInt64ValueRecorder("function.param")
 
 	nameKey = label.Key("function.name")
 )

@@ -20,8 +20,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
@@ -45,20 +45,20 @@ var (
 
 type testFilter struct{}
 
-func (testFilter) LabelFilterFor(_ *otel.Descriptor) label.Filter {
+func (testFilter) LabelFilterFor(_ *metric.Descriptor) label.Filter {
 	return func(label label.KeyValue) bool {
 		return label.Key == "A" || label.Key == "C"
 	}
 }
 
-func generateData(impl otel.MeterImpl) {
+func generateData(impl metric.MeterImpl) {
 	ctx := context.Background()
-	meter := otel.WrapMeterImpl(impl, "testing")
+	meter := metric.WrapMeterImpl(impl, "testing")
 
-	counter := otel.Must(meter).NewFloat64Counter("counter.sum")
+	counter := metric.Must(meter).NewFloat64Counter("counter.sum")
 
-	_ = otel.Must(meter).NewInt64SumObserver("observer.sum",
-		func(_ context.Context, result otel.Int64ObserverResult) {
+	_ = metric.Must(meter).NewInt64SumObserver("observer.sum",
+		func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(10, kvs1...)
 			result.Observe(10, kvs2...)
 		},

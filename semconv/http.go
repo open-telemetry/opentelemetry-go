@@ -140,7 +140,7 @@ func HTTPClientAttributesFromHTTPRequest(request *http.Request) []label.KeyValue
 		attrs = append(attrs, HTTPMethodKey.String(http.MethodGet))
 	}
 
-	attrs = append(attrs, HTTPUrlKey.String(request.URL.String()))
+	attrs = append(attrs, HTTPURLKey.String(request.URL.String()))
 
 	return append(attrs, httpCommonAttributesFromHTTPRequest(request)...)
 }

@@ -19,7 +19,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
@@ -29,16 +29,16 @@ func TestExportKindIncludes(t *testing.T) {
 	require.True(t, DeltaExportKind.Includes(CumulativeExportKind|DeltaExportKind))
 }
 
-var deltaMemoryKinds = []otel.InstrumentKind{
-	otel.SumObserverInstrumentKind,
-	otel.UpDownSumObserverInstrumentKind,
+var deltaMemoryKinds = []metric.InstrumentKind{
+	metric.SumObserverInstrumentKind,
+	metric.UpDownSumObserverInstrumentKind,
 }
 
-var cumulativeMemoryKinds = []otel.InstrumentKind{
-	otel.ValueRecorderInstrumentKind,
-	otel.ValueObserverInstrumentKind,
-	otel.CounterInstrumentKind,
-	otel.UpDownCounterInstrumentKind,
+var cumulativeMemoryKinds = []metric.InstrumentKind{
+	metric.ValueRecorderInstrumentKind,
+	metric.ValueObserverInstrumentKind,
+	metric.CounterInstrumentKind,
+	metric.UpDownCounterInstrumentKind,
 }
 
 func TestExportKindMemoryRequired(t *testing.T) {
@@ -59,7 +59,7 @@ func TestExportKindSelectors(t *testing.T) {
 	seks := StatelessExportKindSelector()
 
 	for _, ikind := range append(deltaMemoryKinds, cumulativeMemoryKinds...) {
-		desc := otel.NewDescriptor("instrument", ikind, number.Int64Kind)
+		desc := metric.NewDescriptor("instrument", ikind, number.Int64Kind)
 
 		var akind aggregation.Kind
 		if ikind.Adding() {

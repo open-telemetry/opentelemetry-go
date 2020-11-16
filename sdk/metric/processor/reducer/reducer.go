@@ -15,8 +15,8 @@
 package reducer // import "go.opentelemetry.io/otel/sdk/metric/processor/reducer"
 
 import (
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 )
 
@@ -31,7 +31,7 @@ type (
 	// LabelFilterSelector is the interface used to configure a
 	// specific Filter to an instrument.
 	LabelFilterSelector interface {
-		LabelFilterFor(descriptor *otel.Descriptor) label.Filter
+		LabelFilterFor(descriptor *metric.Descriptor) label.Filter
 	}
 )
 

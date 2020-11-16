@@ -22,7 +22,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
@@ -61,17 +61,17 @@ var (
 	boundaries = []float64{500, 250, 750}
 )
 
-func new2(desc *otel.Descriptor) (_, _ *histogram.Aggregator) {
+func new2(desc *metric.Descriptor) (_, _ *histogram.Aggregator) {
 	alloc := histogram.New(2, desc, boundaries)
 	return &alloc[0], &alloc[1]
 }
 
-func new4(desc *otel.Descriptor) (_, _, _, _ *histogram.Aggregator) {
+func new4(desc *metric.Descriptor) (_, _, _, _ *histogram.Aggregator) {
 	alloc := histogram.New(4, desc, boundaries)
 	return &alloc[0], &alloc[1], &alloc[2], &alloc[3]
 }
 
-func checkZero(t *testing.T, agg *histogram.Aggregator, desc *otel.Descriptor) {
+func checkZero(t *testing.T, agg *histogram.Aggregator, desc *metric.Descriptor) {
 	asum, err := agg.Sum()
 	require.Equal(t, number.Number(0), asum, "Empty checkpoint sum = 0")
 	require.NoError(t, err)
@@ -110,7 +110,7 @@ func TestHistogramPositiveAndNegative(t *testing.T) {
 
 // Validates count, sum and buckets for a given profile and policy
 func testHistogram(t *testing.T, profile aggregatortest.Profile, policy policy) {
-	descriptor := aggregatortest.NewAggregatorTest(otel.ValueRecorderInstrumentKind, profile.NumberKind)
+	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 
 	agg, ckpt := new2(descriptor)
 
@@ -155,7 +155,7 @@ func testHistogram(t *testing.T, profile aggregatortest.Profile, policy policy) 
 
 func TestHistogramInitial(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
-		descriptor := aggregatortest.NewAggregatorTest(otel.ValueRecorderInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 
 		agg := &histogram.New(1, descriptor, boundaries)[0]
 		buckets, err := agg.Histogram()
@@ -168,7 +168,7 @@ func TestHistogramInitial(t *testing.T) {
 
 func TestHistogramMerge(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
-		descriptor := aggregatortest.NewAggregatorTest(otel.ValueRecorderInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 
 		agg1, agg2, ckpt1, ckpt2 := new4(descriptor)
 
@@ -220,7 +220,7 @@ func TestHistogramMerge(t *testing.T) {
 
 func TestHistogramNotSet(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
-		descriptor := aggregatortest.NewAggregatorTest(otel.ValueRecorderInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 
 		agg, ckpt := new2(descriptor)
 

@@ -22,7 +22,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
@@ -77,17 +77,17 @@ func TestMinMaxSumCountPositiveAndNegative(t *testing.T) {
 	})
 }
 
-func new2(desc *otel.Descriptor) (_, _ *Aggregator) {
+func new2(desc *metric.Descriptor) (_, _ *Aggregator) {
 	alloc := New(2, desc)
 	return &alloc[0], &alloc[1]
 }
 
-func new4(desc *otel.Descriptor) (_, _, _, _ *Aggregator) {
+func new4(desc *metric.Descriptor) (_, _, _, _ *Aggregator) {
 	alloc := New(4, desc)
 	return &alloc[0], &alloc[1], &alloc[2], &alloc[3]
 }
 
-func checkZero(t *testing.T, agg *Aggregator, desc *otel.Descriptor) {
+func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
 	kind := desc.NumberKind()
 
 	sum, err := agg.Sum()
@@ -109,7 +109,7 @@ func checkZero(t *testing.T, agg *Aggregator, desc *otel.Descriptor) {
 
 // Validates min, max, sum and count for a given profile and policy
 func minMaxSumCount(t *testing.T, profile aggregatortest.Profile, policy policy) {
-	descriptor := aggregatortest.NewAggregatorTest(otel.ValueRecorderInstrumentKind, profile.NumberKind)
+	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 
 	agg, ckpt := new2(descriptor)
 
@@ -157,7 +157,7 @@ func minMaxSumCount(t *testing.T, profile aggregatortest.Profile, policy policy)
 
 func TestMinMaxSumCountMerge(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
-		descriptor := aggregatortest.NewAggregatorTest(otel.ValueRecorderInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 
 		agg1, agg2, ckpt1, ckpt2 := new4(descriptor)
 
@@ -215,7 +215,7 @@ func TestMinMaxSumCountMerge(t *testing.T) {
 
 func TestMaxSumCountNotSet(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
-		descriptor := aggregatortest.NewAggregatorTest(otel.ValueRecorderInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 
 		alloc := New(2, descriptor)
 		agg, ckpt := &alloc[0], &alloc[1]

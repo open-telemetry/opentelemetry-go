@@ -22,8 +22,8 @@ import (
 	"testing"
 	"unsafe"
 
-	"go.opentelemetry.io/otel"
 	ottest "go.opentelemetry.io/otel/internal/testing"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
@@ -54,8 +54,8 @@ func newProfiles() []Profile {
 	}
 }
 
-func NewAggregatorTest(mkind otel.InstrumentKind, nkind number.Kind) *otel.Descriptor {
-	desc := otel.NewDescriptor("test.name", mkind, nkind)
+func NewAggregatorTest(mkind metric.InstrumentKind, nkind number.Kind) *metric.Descriptor {
+	desc := metric.NewDescriptor("test.name", mkind, nkind)
 	return &desc
 }
 
@@ -151,7 +151,7 @@ func (n *Numbers) Points() []number.Number {
 }
 
 // Performs the same range test the SDK does on behalf of the aggregator.
-func CheckedUpdate(t *testing.T, agg export.Aggregator, number number.Number, descriptor *otel.Descriptor) {
+func CheckedUpdate(t *testing.T, agg export.Aggregator, number number.Number, descriptor *metric.Descriptor) {
 	ctx := context.Background()
 
 	// Note: Aggregator tests are written assuming that the SDK
@@ -167,7 +167,7 @@ func CheckedUpdate(t *testing.T, agg export.Aggregator, number number.Number, de
 	}
 }
 
-func CheckedMerge(t *testing.T, aggInto, aggFrom export.Aggregator, descriptor *otel.Descriptor) {
+func CheckedMerge(t *testing.T, aggInto, aggFrom export.Aggregator, descriptor *metric.Descriptor) {
 	if err := aggInto.Merge(aggFrom, descriptor); err != nil {
 		t.Error("Unexpected Merge failure", err)
 	}

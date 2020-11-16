@@ -24,8 +24,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -135,7 +135,7 @@ func InstallNewPipeline(config Config, options ...pull.Option) (*Exporter, error
 	if err != nil {
 		return nil, err
 	}
-	global.SetMeterProvider(exp.MeterProvider())
+	otel.SetMeterProvider(exp.MeterProvider())
 	return exp, nil
 }
 
@@ -156,7 +156,7 @@ func (e *Exporter) SetController(config Config, options ...pull.Option) {
 }
 
 // MeterProvider returns the MeterProvider of this exporter.
-func (e *Exporter) MeterProvider() otel.MeterProvider {
+func (e *Exporter) MeterProvider() metric.MeterProvider {
 	return e.controller.MeterProvider()
 }
 
@@ -167,7 +167,7 @@ func (e *Exporter) Controller() *pull.Controller {
 	return e.controller
 }
 
-func (e *Exporter) ExportKindFor(desc *otel.Descriptor, kind aggregation.Kind) export.ExportKind {
+func (e *Exporter) ExportKindFor(desc *metric.Descriptor, kind aggregation.Kind) export.ExportKind {
 	// NOTE: Summary values should use Delta aggregation, then be
 	// combined into a sliding window, see the TODO below.
 	// NOTE: Prometheus also supports a "GaugeDelta" exposition format,
@@ -209,7 +209,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 	ctrl := c.exp.Controller()
 	if err := ctrl.Collect(context.Background()); err != nil {
-		global.Handle(err)
+		otel.Handle(err)
 	}
 
 	err := ctrl.ForEach(c.exp, func(record export.Record) error {
@@ -254,7 +254,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		return nil
 	})
 	if err != nil {
-		global.Handle(err)
+		otel.Handle(err)
 	}
 }
 

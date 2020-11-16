@@ -19,7 +19,7 @@ import (
 	"sort"
 	"sync"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -64,7 +64,7 @@ var _ aggregation.Histogram = &Aggregator{}
 // Note that this aggregator maintains each value using independent
 // atomic operations, which introduces the possibility that
 // checkpoints are inconsistent.
-func New(cnt int, desc *otel.Descriptor, boundaries []float64) []Aggregator {
+func New(cnt int, desc *metric.Descriptor, boundaries []float64) []Aggregator {
 	aggs := make([]Aggregator, cnt)
 
 	// Boundaries MUST be ordered otherwise the histogram could not
@@ -116,7 +116,7 @@ func (c *Aggregator) Histogram() (aggregation.Buckets, error) {
 // the empty set.  Since no locks are taken, there is a chance that
 // the independent Sum, Count and Bucket Count are not consistent with each
 // other.
-func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *otel.Descriptor) error {
+func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)
@@ -135,7 +135,7 @@ func emptyState(boundaries []float64) state {
 }
 
 // Update adds the recorded measurement to the current data set.
-func (c *Aggregator) Update(_ context.Context, number number.Number, desc *otel.Descriptor) error {
+func (c *Aggregator) Update(_ context.Context, number number.Number, desc *metric.Descriptor) error {
 	kind := desc.NumberKind()
 	asFloat := number.CoerceToFloat64(kind)
 
@@ -169,7 +169,7 @@ func (c *Aggregator) Update(_ context.Context, number number.Number, desc *otel.
 }
 
 // Merge combines two histograms that have the same buckets into a single one.
-func (c *Aggregator) Merge(oa export.Aggregator, desc *otel.Descriptor) error {
+func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)
