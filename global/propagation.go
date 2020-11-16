@@ -15,17 +15,17 @@
 package global // import "go.opentelemetry.io/otel/global"
 
 import (
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/global/internal"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 // TextMapPropagator returns the global TextMapPropagator. If none has been
 // set, a No-Op TextMapPropagator is returned.
-func TextMapPropagator() otel.TextMapPropagator {
+func TextMapPropagator() propagation.TextMapPropagator {
 	return internal.TextMapPropagator()
 }
 
 // SetTextMapPropagator sets propagator as the global TSetTextMapPropagator.
-func SetTextMapPropagator(propagator otel.TextMapPropagator) {
+func SetTextMapPropagator(propagator propagation.TextMapPropagator) {
 	internal.SetTextMapPropagator(propagator)
 }

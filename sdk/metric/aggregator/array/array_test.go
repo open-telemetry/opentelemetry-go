@@ -22,7 +22,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
@@ -32,7 +32,7 @@ type updateTest struct {
 	count int
 }
 
-func checkZero(t *testing.T, agg *Aggregator, desc *otel.Descriptor) {
+func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
 	kind := desc.NumberKind()
 
 	sum, err := agg.Sum()
@@ -63,7 +63,7 @@ func new4() (_, _, _, _ *Aggregator) {
 }
 
 func (ut *updateTest) run(t *testing.T, profile aggregatortest.Profile) {
-	descriptor := aggregatortest.NewAggregatorTest(otel.ValueRecorderInstrumentKind, profile.NumberKind)
+	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 	agg, ckpt := new2()
 
 	all := aggregatortest.NewNumbers(profile.NumberKind)
@@ -130,7 +130,7 @@ type mergeTest struct {
 }
 
 func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
-	descriptor := aggregatortest.NewAggregatorTest(otel.ValueRecorderInstrumentKind, profile.NumberKind)
+	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 	agg1, agg2, ckpt1, ckpt2 := new4()
 
 	all := aggregatortest.NewNumbers(profile.NumberKind)
@@ -226,7 +226,7 @@ func TestArrayErrors(t *testing.T) {
 		require.Error(t, err)
 		require.Equal(t, err, aggregation.ErrNoData)
 
-		descriptor := aggregatortest.NewAggregatorTest(otel.ValueRecorderInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 
 		aggregatortest.CheckedUpdate(t, agg, number.Number(0), descriptor)
 
@@ -254,7 +254,7 @@ func TestArrayErrors(t *testing.T) {
 }
 
 func TestArrayFloat64(t *testing.T) {
-	descriptor := aggregatortest.NewAggregatorTest(otel.ValueRecorderInstrumentKind, number.Float64Kind)
+	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, number.Float64Kind)
 
 	fpsf := func(sign int) []float64 {
 		// Check behavior of a bunch of odd floating

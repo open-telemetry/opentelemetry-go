@@ -13,7 +13,7 @@
 // limitations under the License.
 
 /*
-Package propagators contains OpenTelemetry context propagators.
+Package propagation contains OpenTelemetry context propagators.
 
 This package is currently in a pre-GA phase. Backwards incompatible changes
 may be introduced in subsequent minor version releases as we work to track the
@@ -25,4 +25,4 @@ package is the W3C Trace Context encoding
 (https://www.w3.org/TR/trace-context/), and W3C Baggage
 (https://w3c.github.io/baggage/).
 */
-package propagators // import "go.opentelemetry.io/otel/propagators"
+package propagation // import "go.opentelemetry.io/otel/propagation"

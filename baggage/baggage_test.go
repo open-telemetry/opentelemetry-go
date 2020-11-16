@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otel
+package baggage
 
 import (
 	"context"
@@ -26,59 +26,59 @@ func TestBaggage(t *testing.T) {
 	ctx := context.Background()
 	ctx = baggage.ContextWithMap(ctx, baggage.NewEmptyMap())
 
-	b := Baggage(ctx)
+	b := Set(ctx)
 	if b.Len() != 0 {
 		t.Fatalf("empty baggage returned a set with %d elements", b.Len())
 	}
 
 	first, second, third := label.Key("first"), label.Key("second"), label.Key("third")
-	ctx = ContextWithBaggageValues(ctx, first.Bool(true), second.String("2"))
+	ctx = ContextWithValues(ctx, first.Bool(true), second.String("2"))
 	m := baggage.MapFromContext(ctx)
 	v, ok := m.Value(first)
 	if !ok {
-		t.Fatal("WithBaggageValues failed to set first value")
+		t.Fatal("WithValues failed to set first value")
 	}
 	if !v.AsBool() {
-		t.Fatal("WithBaggageValues failed to set first correct value")
+		t.Fatal("WithValues failed to set first correct value")
 	}
 	v, ok = m.Value(second)
 	if !ok {
-		t.Fatal("WithBaggageValues failed to set second value")
+		t.Fatal("WithValues failed to set second value")
 	}
 	if v.AsString() != "2" {
-		t.Fatal("WithBaggageValues failed to set second correct value")
+		t.Fatal("WithValues failed to set second correct value")
 	}
 	_, ok = m.Value(third)
 	if ok {
-		t.Fatal("WithBaggageValues set an unexpected third value")
+		t.Fatal("WithValues set an unexpected third value")
 	}
 
-	b = Baggage(ctx)
+	b = Set(ctx)
 	if b.Len() != 2 {
 		t.Fatalf("Baggage returned a set with %d elements, want 2", b.Len())
 	}
 
-	v = BaggageValue(ctx, first)
+	v = Value(ctx, first)
 	if v.Type() != label.BOOL || !v.AsBool() {
-		t.Fatal("BaggageValue failed to get correct first value")
+		t.Fatal("Value failed to get correct first value")
 	}
-	v = BaggageValue(ctx, second)
+	v = Value(ctx, second)
 	if v.Type() != label.STRING || v.AsString() != "2" {
-		t.Fatal("BaggageValue failed to get correct second value")
+		t.Fatal("Value failed to get correct second value")
 	}
 
-	ctx = ContextWithoutBaggageValues(ctx, first)
+	ctx = ContextWithoutValues(ctx, first)
 	m = baggage.MapFromContext(ctx)
 	_, ok = m.Value(first)
 	if ok {
-		t.Fatal("WithoutBaggageValues failed to remove a baggage value")
+		t.Fatal("WithoutValues failed to remove a baggage value")
 	}
 	_, ok = m.Value(second)
 	if !ok {
-		t.Fatal("WithoutBaggageValues removed incorrect value")
+		t.Fatal("WithoutValues removed incorrect value")
 	}
 
-	ctx = ContextWithoutBaggage(ctx)
+	ctx = ContextWithEmpty(ctx)
 	m = baggage.MapFromContext(ctx)
 	if m.Len() != 0 {
 		t.Fatal("WithoutBaggage failed to clear baggage")

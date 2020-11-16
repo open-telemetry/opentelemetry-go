@@ -21,15 +21,15 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/global/internal"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/oteltest"
 )
 
-var Must = otel.Must
+var Must = metric.Must
 
 var asInt = number.NewInt64Number
 var asFloat = number.NewFloat64Number
@@ -38,7 +38,7 @@ func TestDirect(t *testing.T) {
 	internal.ResetForTest()
 
 	ctx := context.Background()
-	meter1 := global.Meter("test1", otel.WithInstrumentationVersion("semver:v1.0.0"))
+	meter1 := global.Meter("test1", metric.WithInstrumentationVersion("semver:v1.0.0"))
 	meter2 := global.Meter("test2")
 	labels1 := []label.KeyValue{label.String("A", "B")}
 	labels2 := []label.KeyValue{label.String("C", "D")}
@@ -52,12 +52,12 @@ func TestDirect(t *testing.T) {
 	valuerecorder.Record(ctx, 1, labels1...)
 	valuerecorder.Record(ctx, 2, labels1...)
 
-	_ = Must(meter1).NewFloat64ValueObserver("test.valueobserver.float", func(_ context.Context, result otel.Float64ObserverResult) {
+	_ = Must(meter1).NewFloat64ValueObserver("test.valueobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(1., labels1...)
 		result.Observe(2., labels2...)
 	})
 
-	_ = Must(meter1).NewInt64ValueObserver("test.valueobserver.int", func(_ context.Context, result otel.Int64ObserverResult) {
+	_ = Must(meter1).NewInt64ValueObserver("test.valueobserver.int", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(1, labels1...)
 		result.Observe(2, labels2...)
 	})
@@ -214,19 +214,19 @@ func TestUnbindThenRecordOne(t *testing.T) {
 }
 
 type meterProviderWithConstructorError struct {
-	otel.MeterProvider
+	metric.MeterProvider
 }
 
 type meterWithConstructorError struct {
-	otel.MeterImpl
+	metric.MeterImpl
 }
 
-func (m *meterProviderWithConstructorError) Meter(iName string, opts ...otel.MeterOption) otel.Meter {
-	return otel.WrapMeterImpl(&meterWithConstructorError{m.MeterProvider.Meter(iName, opts...).MeterImpl()}, iName, opts...)
+func (m *meterProviderWithConstructorError) Meter(iName string, opts ...metric.MeterOption) metric.Meter {
+	return metric.WrapMeterImpl(&meterWithConstructorError{m.MeterProvider.Meter(iName, opts...).MeterImpl()}, iName, opts...)
 }
 
-func (m *meterWithConstructorError) NewSyncInstrument(_ otel.Descriptor) (otel.SyncImpl, error) {
-	return otel.NoopSync{}, errors.New("constructor error")
+func (m *meterWithConstructorError) NewSyncInstrument(_ metric.Descriptor) (metric.SyncImpl, error) {
+	return metric.NoopSync{}, errors.New("constructor error")
 }
 
 func TestErrorInDeferredConstructor(t *testing.T) {
@@ -270,7 +270,7 @@ func TestImplementationIndirection(t *testing.T) {
 	// Async: no SDK yet
 	valueobserver := Must(meter1).NewFloat64ValueObserver(
 		"interface.valueobserver",
-		func(_ context.Context, result otel.Float64ObserverResult) {},
+		func(_ context.Context, result metric.Float64ObserverResult) {},
 	)
 
 	ival = valueobserver.AsyncImpl().Implementation()

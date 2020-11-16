@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package propagators // import "go.opentelemetry.io/otel/propagators"
+package propagation // import "go.opentelemetry.io/otel/propagation"
 
 import (
 	"context"
@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"regexp"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -47,11 +46,11 @@ const (
 // their proprietary information.
 type TraceContext struct{}
 
-var _ otel.TextMapPropagator = TraceContext{}
+var _ TextMapPropagator = TraceContext{}
 var traceCtxRegExp = regexp.MustCompile("^(?P<version>[0-9a-f]{2})-(?P<traceID>[a-f0-9]{32})-(?P<spanID>[a-f0-9]{16})-(?P<traceFlags>[a-f0-9]{2})(?:-.*)?$")
 
 // Inject set tracecontext from the Context into the carrier.
-func (tc TraceContext) Inject(ctx context.Context, carrier otel.TextMapCarrier) {
+func (tc TraceContext) Inject(ctx context.Context, carrier TextMapCarrier) {
 	tracestate := ctx.Value(tracestateKey)
 	if state, ok := tracestate.(string); tracestate != nil && ok {
 		carrier.Set(tracestateHeader, state)
@@ -70,7 +69,7 @@ func (tc TraceContext) Inject(ctx context.Context, carrier otel.TextMapCarrier) 
 }
 
 // Extract reads tracecontext from the carrier into a returned Context.
-func (tc TraceContext) Extract(ctx context.Context, carrier otel.TextMapCarrier) context.Context {
+func (tc TraceContext) Extract(ctx context.Context, carrier TextMapCarrier) context.Context {
 	state := carrier.Get(tracestateHeader)
 	if state != "" {
 		ctx = context.WithValue(ctx, tracestateKey, state)
@@ -83,7 +82,7 @@ func (tc TraceContext) Extract(ctx context.Context, carrier otel.TextMapCarrier)
 	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
 
-func (tc TraceContext) extract(carrier otel.TextMapCarrier) trace.SpanContext {
+func (tc TraceContext) extract(carrier TextMapCarrier) trace.SpanContext {
 	h := carrier.Get(traceparentHeader)
 	if h == "" {
 		return trace.SpanContext{}

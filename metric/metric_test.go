@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otel_test
+package metric_test
 
 import (
 	"context"
 	"errors"
 	"testing"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/unit"
@@ -30,52 +30,52 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var Must = otel.Must
+var Must = metric.Must
 
 var (
-	syncKinds = []otel.InstrumentKind{
-		otel.ValueRecorderInstrumentKind,
-		otel.CounterInstrumentKind,
-		otel.UpDownCounterInstrumentKind,
+	syncKinds = []metric.InstrumentKind{
+		metric.ValueRecorderInstrumentKind,
+		metric.CounterInstrumentKind,
+		metric.UpDownCounterInstrumentKind,
 	}
-	asyncKinds = []otel.InstrumentKind{
-		otel.ValueObserverInstrumentKind,
-		otel.SumObserverInstrumentKind,
-		otel.UpDownSumObserverInstrumentKind,
+	asyncKinds = []metric.InstrumentKind{
+		metric.ValueObserverInstrumentKind,
+		metric.SumObserverInstrumentKind,
+		metric.UpDownSumObserverInstrumentKind,
 	}
-	addingKinds = []otel.InstrumentKind{
-		otel.CounterInstrumentKind,
-		otel.UpDownCounterInstrumentKind,
-		otel.SumObserverInstrumentKind,
-		otel.UpDownSumObserverInstrumentKind,
+	addingKinds = []metric.InstrumentKind{
+		metric.CounterInstrumentKind,
+		metric.UpDownCounterInstrumentKind,
+		metric.SumObserverInstrumentKind,
+		metric.UpDownSumObserverInstrumentKind,
 	}
-	groupingKinds = []otel.InstrumentKind{
-		otel.ValueRecorderInstrumentKind,
-		otel.ValueObserverInstrumentKind,
-	}
-
-	monotonicKinds = []otel.InstrumentKind{
-		otel.CounterInstrumentKind,
-		otel.SumObserverInstrumentKind,
+	groupingKinds = []metric.InstrumentKind{
+		metric.ValueRecorderInstrumentKind,
+		metric.ValueObserverInstrumentKind,
 	}
 
-	nonMonotonicKinds = []otel.InstrumentKind{
-		otel.UpDownCounterInstrumentKind,
-		otel.UpDownSumObserverInstrumentKind,
-		otel.ValueRecorderInstrumentKind,
-		otel.ValueObserverInstrumentKind,
+	monotonicKinds = []metric.InstrumentKind{
+		metric.CounterInstrumentKind,
+		metric.SumObserverInstrumentKind,
 	}
 
-	precomputedSumKinds = []otel.InstrumentKind{
-		otel.SumObserverInstrumentKind,
-		otel.UpDownSumObserverInstrumentKind,
+	nonMonotonicKinds = []metric.InstrumentKind{
+		metric.UpDownCounterInstrumentKind,
+		metric.UpDownSumObserverInstrumentKind,
+		metric.ValueRecorderInstrumentKind,
+		metric.ValueObserverInstrumentKind,
 	}
 
-	nonPrecomputedSumKinds = []otel.InstrumentKind{
-		otel.CounterInstrumentKind,
-		otel.UpDownCounterInstrumentKind,
-		otel.ValueRecorderInstrumentKind,
-		otel.ValueObserverInstrumentKind,
+	precomputedSumKinds = []metric.InstrumentKind{
+		metric.SumObserverInstrumentKind,
+		metric.UpDownSumObserverInstrumentKind,
+	}
+
+	nonPrecomputedSumKinds = []metric.InstrumentKind{
+		metric.CounterInstrumentKind,
+		metric.UpDownCounterInstrumentKind,
+		metric.ValueRecorderInstrumentKind,
+		metric.ValueObserverInstrumentKind,
 	}
 )
 
@@ -119,7 +119,7 @@ func TestPrecomputedSum(t *testing.T) {
 	}
 }
 
-func checkSyncBatches(ctx context.Context, t *testing.T, labels []label.KeyValue, mock *oteltest.MeterImpl, nkind number.Kind, mkind otel.InstrumentKind, instrument otel.InstrumentImpl, expected ...float64) {
+func checkSyncBatches(ctx context.Context, t *testing.T, labels []label.KeyValue, mock *oteltest.MeterImpl, nkind number.Kind, mkind metric.InstrumentKind, instrument metric.InstrumentImpl, expected ...float64) {
 	t.Helper()
 
 	batchesCount := len(mock.MeasurementBatches)
@@ -149,7 +149,7 @@ func checkSyncBatches(ctx context.Context, t *testing.T, labels []label.KeyValue
 func TestOptions(t *testing.T) {
 	type testcase struct {
 		name string
-		opts []otel.InstrumentOption
+		opts []metric.InstrumentOption
 		desc string
 		unit unit.Unit
 	}
@@ -162,34 +162,34 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name: "description",
-			opts: []otel.InstrumentOption{
-				otel.WithDescription("stuff"),
+			opts: []metric.InstrumentOption{
+				metric.WithDescription("stuff"),
 			},
 			desc: "stuff",
 			unit: "",
 		},
 		{
 			name: "description override",
-			opts: []otel.InstrumentOption{
-				otel.WithDescription("stuff"),
-				otel.WithDescription("things"),
+			opts: []metric.InstrumentOption{
+				metric.WithDescription("stuff"),
+				metric.WithDescription("things"),
 			},
 			desc: "things",
 			unit: "",
 		},
 		{
 			name: "unit",
-			opts: []otel.InstrumentOption{
-				otel.WithUnit("s"),
+			opts: []metric.InstrumentOption{
+				metric.WithUnit("s"),
 			},
 			desc: "",
 			unit: "s",
 		},
 		{
 			name: "unit override",
-			opts: []otel.InstrumentOption{
-				otel.WithUnit("s"),
-				otel.WithUnit("h"),
+			opts: []metric.InstrumentOption{
+				metric.WithUnit("s"),
+				metric.WithUnit("h"),
 			},
 			desc: "",
 			unit: "h",
@@ -197,7 +197,7 @@ func TestOptions(t *testing.T) {
 	}
 	for idx, tt := range testcases {
 		t.Logf("Testing counter case %s (%d)", tt.name, idx)
-		if diff := cmp.Diff(otel.NewInstrumentConfig(tt.opts...), otel.InstrumentConfig{
+		if diff := cmp.Diff(metric.NewInstrumentConfig(tt.opts...), metric.InstrumentConfig{
 			Description: tt.desc,
 			Unit:        tt.unit,
 		}); diff != "" {
@@ -218,7 +218,7 @@ func TestCounter(t *testing.T) {
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, -742)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Float64Kind, otel.CounterInstrumentKind, c.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, number.Float64Kind, metric.CounterInstrumentKind, c.SyncImpl(),
 			1994.1, -742, 42,
 		)
 	})
@@ -231,7 +231,7 @@ func TestCounter(t *testing.T) {
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, 4200)
 		meter.RecordBatch(ctx, labels, c.Measurement(420000))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Int64Kind, otel.CounterInstrumentKind, c.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, number.Int64Kind, metric.CounterInstrumentKind, c.SyncImpl(),
 			42, 4200, 420000,
 		)
 
@@ -245,7 +245,7 @@ func TestCounter(t *testing.T) {
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, -100)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Int64Kind, otel.UpDownCounterInstrumentKind, c.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, number.Int64Kind, metric.UpDownCounterInstrumentKind, c.SyncImpl(),
 			100, -100, 42,
 		)
 	})
@@ -258,7 +258,7 @@ func TestCounter(t *testing.T) {
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, -76)
 		meter.RecordBatch(ctx, labels, c.Measurement(-100.1))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Float64Kind, otel.UpDownCounterInstrumentKind, c.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, number.Float64Kind, metric.UpDownCounterInstrumentKind, c.SyncImpl(),
 			100.1, -76, -100.1,
 		)
 	})
@@ -274,7 +274,7 @@ func TestValueRecorder(t *testing.T) {
 		boundInstrument := m.Bind(labels...)
 		boundInstrument.Record(ctx, 0)
 		meter.RecordBatch(ctx, labels, m.Measurement(-100.5))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Float64Kind, otel.ValueRecorderInstrumentKind, m.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, number.Float64Kind, metric.ValueRecorderInstrumentKind, m.SyncImpl(),
 			42, 0, -100.5,
 		)
 	})
@@ -287,7 +287,7 @@ func TestValueRecorder(t *testing.T) {
 		boundInstrument := m.Bind(labels...)
 		boundInstrument.Record(ctx, 80)
 		meter.RecordBatch(ctx, labels, m.Measurement(0))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Int64Kind, otel.ValueRecorderInstrumentKind, m.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, number.Int64Kind, metric.ValueRecorderInstrumentKind, m.SyncImpl(),
 			173, 80, 0,
 		)
 	})
@@ -297,66 +297,66 @@ func TestObserverInstruments(t *testing.T) {
 	t.Run("float valueobserver", func(t *testing.T) {
 		labels := []label.KeyValue{label.String("O", "P")}
 		mockSDK, meter := oteltest.NewMeter()
-		o := Must(meter).NewFloat64ValueObserver("test.valueobserver.float", func(_ context.Context, result otel.Float64ObserverResult) {
+		o := Must(meter).NewFloat64ValueObserver("test.valueobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
 			result.Observe(42.1, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, otel.ValueObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, metric.ValueObserverInstrumentKind, o.AsyncImpl(),
 			42.1,
 		)
 	})
 	t.Run("int valueobserver", func(t *testing.T) {
 		labels := []label.KeyValue{}
 		mockSDK, meter := oteltest.NewMeter()
-		o := Must(meter).NewInt64ValueObserver("test.observer.int", func(_ context.Context, result otel.Int64ObserverResult) {
+		o := Must(meter).NewInt64ValueObserver("test.observer.int", func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(-142, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, otel.ValueObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, metric.ValueObserverInstrumentKind, o.AsyncImpl(),
 			-142,
 		)
 	})
 	t.Run("float sumobserver", func(t *testing.T) {
 		labels := []label.KeyValue{label.String("O", "P")}
 		mockSDK, meter := oteltest.NewMeter()
-		o := Must(meter).NewFloat64SumObserver("test.sumobserver.float", func(_ context.Context, result otel.Float64ObserverResult) {
+		o := Must(meter).NewFloat64SumObserver("test.sumobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
 			result.Observe(42.1, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, otel.SumObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, metric.SumObserverInstrumentKind, o.AsyncImpl(),
 			42.1,
 		)
 	})
 	t.Run("int sumobserver", func(t *testing.T) {
 		labels := []label.KeyValue{}
 		mockSDK, meter := oteltest.NewMeter()
-		o := Must(meter).NewInt64SumObserver("test.observer.int", func(_ context.Context, result otel.Int64ObserverResult) {
+		o := Must(meter).NewInt64SumObserver("test.observer.int", func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(-142, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, otel.SumObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, metric.SumObserverInstrumentKind, o.AsyncImpl(),
 			-142,
 		)
 	})
 	t.Run("float updownsumobserver", func(t *testing.T) {
 		labels := []label.KeyValue{label.String("O", "P")}
 		mockSDK, meter := oteltest.NewMeter()
-		o := Must(meter).NewFloat64UpDownSumObserver("test.updownsumobserver.float", func(_ context.Context, result otel.Float64ObserverResult) {
+		o := Must(meter).NewFloat64UpDownSumObserver("test.updownsumobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
 			result.Observe(42.1, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, otel.UpDownSumObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, metric.UpDownSumObserverInstrumentKind, o.AsyncImpl(),
 			42.1,
 		)
 	})
 	t.Run("int updownsumobserver", func(t *testing.T) {
 		labels := []label.KeyValue{}
 		mockSDK, meter := oteltest.NewMeter()
-		o := Must(meter).NewInt64UpDownSumObserver("test.observer.int", func(_ context.Context, result otel.Int64ObserverResult) {
+		o := Must(meter).NewInt64UpDownSumObserver("test.observer.int", func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(-142, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, otel.UpDownSumObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, metric.UpDownSumObserverInstrumentKind, o.AsyncImpl(),
 			-142,
 		)
 	})
@@ -365,8 +365,8 @@ func TestObserverInstruments(t *testing.T) {
 func TestBatchObserverInstruments(t *testing.T) {
 	mockSDK, meter := oteltest.NewMeter()
 
-	var obs1 otel.Int64ValueObserver
-	var obs2 otel.Float64ValueObserver
+	var obs1 metric.Int64ValueObserver
+	var obs2 metric.Float64ValueObserver
 
 	labels := []label.KeyValue{
 		label.String("A", "B"),
@@ -374,7 +374,7 @@ func TestBatchObserverInstruments(t *testing.T) {
 	}
 
 	cb := Must(meter).NewBatchObserver(
-		func(_ context.Context, result otel.BatchObserverResult) {
+		func(_ context.Context, result metric.BatchObserverResult) {
 			result.Observe(labels,
 				obs1.Observation(42),
 				obs2.Observation(42.0),
@@ -407,7 +407,7 @@ func TestBatchObserverInstruments(t *testing.T) {
 	require.Equal(t, 0, m2.Number.CompareNumber(number.Float64Kind, oteltest.ResolveNumberByKind(t, number.Float64Kind, 42)))
 }
 
-func checkObserverBatch(t *testing.T, labels []label.KeyValue, mock *oteltest.MeterImpl, nkind number.Kind, mkind otel.InstrumentKind, observer otel.AsyncImpl, expected float64) {
+func checkObserverBatch(t *testing.T, labels []label.KeyValue, mock *oteltest.MeterImpl, nkind number.Kind, mkind metric.InstrumentKind, observer metric.AsyncImpl, expected float64) {
 	t.Helper()
 	assert.Len(t, mock.MeasurementBatches, 1)
 	if len(mock.MeasurementBatches) < 1 {
@@ -433,29 +433,29 @@ func checkObserverBatch(t *testing.T, labels []label.KeyValue, mock *oteltest.Me
 type testWrappedMeter struct {
 }
 
-var _ otel.MeterImpl = testWrappedMeter{}
+var _ metric.MeterImpl = testWrappedMeter{}
 
-func (testWrappedMeter) RecordBatch(context.Context, []label.KeyValue, ...otel.Measurement) {
+func (testWrappedMeter) RecordBatch(context.Context, []label.KeyValue, ...metric.Measurement) {
 }
 
-func (testWrappedMeter) NewSyncInstrument(_ otel.Descriptor) (otel.SyncImpl, error) {
+func (testWrappedMeter) NewSyncInstrument(_ metric.Descriptor) (metric.SyncImpl, error) {
 	return nil, nil
 }
 
-func (testWrappedMeter) NewAsyncInstrument(_ otel.Descriptor, _ otel.AsyncRunner) (otel.AsyncImpl, error) {
+func (testWrappedMeter) NewAsyncInstrument(_ metric.Descriptor, _ metric.AsyncRunner) (metric.AsyncImpl, error) {
 	return nil, errors.New("Test wrap error")
 }
 
 func TestWrappedInstrumentError(t *testing.T) {
 	impl := &testWrappedMeter{}
-	meter := otel.WrapMeterImpl(impl, "test")
+	meter := metric.WrapMeterImpl(impl, "test")
 
 	valuerecorder, err := meter.NewInt64ValueRecorder("test.valuerecorder")
 
-	require.Equal(t, err, otel.ErrSDKReturnedNilImpl)
+	require.Equal(t, err, metric.ErrSDKReturnedNilImpl)
 	require.NotNil(t, valuerecorder.SyncImpl())
 
-	observer, err := meter.NewInt64ValueObserver("test.observer", func(_ context.Context, result otel.Int64ObserverResult) {})
+	observer, err := meter.NewInt64ValueObserver("test.observer", func(_ context.Context, result metric.Int64ObserverResult) {})
 
 	require.NotNil(t, err)
 	require.NotNil(t, observer.AsyncImpl())
@@ -467,6 +467,6 @@ func TestNilCallbackObserverNoop(t *testing.T) {
 
 	observer := Must(meter).NewInt64ValueObserver("test.observer", nil)
 
-	_, ok := observer.AsyncImpl().(otel.NoopAsync)
+	_, ok := observer.AsyncImpl().(metric.NoopAsync)
 	require.True(t, ok)
 }

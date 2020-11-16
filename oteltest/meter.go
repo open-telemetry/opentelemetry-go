@@ -19,10 +19,9 @@ import (
 	"sync"
 	"testing"
 
-	"go.opentelemetry.io/otel"
-	apimetric "go.opentelemetry.io/otel"
 	internalmetric "go.opentelemetry.io/otel/internal/metric"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/registry"
 )
@@ -53,18 +52,18 @@ type (
 	Measurement struct {
 		// Number needs to be aligned for 64-bit atomic operations.
 		Number     number.Number
-		Instrument apimetric.InstrumentImpl
+		Instrument metric.InstrumentImpl
 	}
 
 	Instrument struct {
 		meter      *MeterImpl
-		descriptor apimetric.Descriptor
+		descriptor metric.Descriptor
 	}
 
 	Async struct {
 		Instrument
 
-		runner apimetric.AsyncRunner
+		runner metric.AsyncRunner
 	}
 
 	Sync struct {
@@ -73,13 +72,13 @@ type (
 )
 
 var (
-	_ apimetric.SyncImpl      = &Sync{}
-	_ apimetric.BoundSyncImpl = &Handle{}
-	_ apimetric.MeterImpl     = &MeterImpl{}
-	_ apimetric.AsyncImpl     = &Async{}
+	_ metric.SyncImpl      = &Sync{}
+	_ metric.BoundSyncImpl = &Handle{}
+	_ metric.MeterImpl     = &MeterImpl{}
+	_ metric.AsyncImpl     = &Async{}
 )
 
-func (i Instrument) Descriptor() apimetric.Descriptor {
+func (i Instrument) Descriptor() metric.Descriptor {
 	return i.descriptor
 }
 
@@ -91,7 +90,7 @@ func (s *Sync) Implementation() interface{} {
 	return s
 }
 
-func (s *Sync) Bind(labels []label.KeyValue) apimetric.BoundSyncImpl {
+func (s *Sync) Bind(labels []label.KeyValue) metric.BoundSyncImpl {
 	return &Handle{
 		Instrument: s,
 		Labels:     labels,
@@ -109,26 +108,26 @@ func (h *Handle) RecordOne(ctx context.Context, number number.Number) {
 func (h *Handle) Unbind() {
 }
 
-func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []label.KeyValue, instrument apimetric.InstrumentImpl, number number.Number) {
+func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []label.KeyValue, instrument metric.InstrumentImpl, number number.Number) {
 	m.collect(ctx, labels, []Measurement{{
 		Instrument: instrument,
 		Number:     number,
 	}})
 }
 
-func NewMeterProvider() (*MeterImpl, apimetric.MeterProvider) {
+func NewMeterProvider() (*MeterImpl, metric.MeterProvider) {
 	impl := &MeterImpl{
 		asyncInstruments: internalmetric.NewAsyncInstrumentState(),
 	}
 	return impl, registry.NewMeterProvider(impl)
 }
 
-func NewMeter() (*MeterImpl, apimetric.Meter) {
+func NewMeter() (*MeterImpl, metric.Meter) {
 	impl, p := NewMeterProvider()
 	return impl, p.Meter("mock")
 }
 
-func (m *MeterImpl) NewSyncInstrument(descriptor otel.Descriptor) (apimetric.SyncImpl, error) {
+func (m *MeterImpl) NewSyncInstrument(descriptor metric.Descriptor) (metric.SyncImpl, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -140,7 +139,7 @@ func (m *MeterImpl) NewSyncInstrument(descriptor otel.Descriptor) (apimetric.Syn
 	}, nil
 }
 
-func (m *MeterImpl) NewAsyncInstrument(descriptor otel.Descriptor, runner otel.AsyncRunner) (apimetric.AsyncImpl, error) {
+func (m *MeterImpl) NewAsyncInstrument(descriptor metric.Descriptor, runner metric.AsyncRunner) (metric.AsyncImpl, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -155,7 +154,7 @@ func (m *MeterImpl) NewAsyncInstrument(descriptor otel.Descriptor, runner otel.A
 	return a, nil
 }
 
-func (m *MeterImpl) RecordBatch(ctx context.Context, labels []label.KeyValue, measurements ...apimetric.Measurement) {
+func (m *MeterImpl) RecordBatch(ctx context.Context, labels []label.KeyValue, measurements ...metric.Measurement) {
 	mm := make([]Measurement, len(measurements))
 	for i := 0; i < len(measurements); i++ {
 		m := measurements[i]
@@ -167,7 +166,7 @@ func (m *MeterImpl) RecordBatch(ctx context.Context, labels []label.KeyValue, me
 	m.collect(ctx, labels, mm)
 }
 
-func (m *MeterImpl) CollectAsync(labels []label.KeyValue, obs ...otel.Observation) {
+func (m *MeterImpl) CollectAsync(labels []label.KeyValue, obs ...metric.Observation) {
 	mm := make([]Measurement, len(obs))
 	for i := 0; i < len(obs); i++ {
 		o := obs[i]
