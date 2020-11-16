@@ -28,7 +28,7 @@ type key uint
 
 const binaryKey key = 0
 
-// traceContextKey is the same as opencensus:
+// binaryHeader is the same as traceContextKey is in opencensus:
 // https://github.com/census-instrumentation/opencensus-go/blob/3fb168f674736c026e623310bfccb0691e6dec8a/plugin/ocgrpc/trace_common.go#L30
 const binaryHeader = "grpc-trace-bin"
 
