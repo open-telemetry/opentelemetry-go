@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func TestOTelSpanContextToOc(t *testing.T) {
+func TestOTelSpanContextToOC(t *testing.T) {
 	for _, tc := range []struct {
 		description string
 		input       trace.SpanContext
@@ -73,7 +73,7 @@ func TestOTelSpanContextToOc(t *testing.T) {
 		},
 	} {
 		t.Run(tc.description, func(t *testing.T) {
-			output := OTelSpanContextToOc(tc.input)
+			output := OTelSpanContextToOC(tc.input)
 			if output != tc.expected {
 				t.Fatalf("Got %+v spancontext, exepected %+v.", output, tc.expected)
 			}

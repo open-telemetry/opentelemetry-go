@@ -102,7 +102,7 @@ func TestStartSpanWithRemoteParent(t *testing.T) {
 	ctx := context.Background()
 	ctx, parent := tracer.Start(ctx, "OpenTelemetrySpan1")
 
-	_, span := octrace.StartSpanWithRemoteParent(ctx, "OpenCensusSpan", utils.OTelSpanContextToOc(parent.SpanContext()))
+	_, span := octrace.StartSpanWithRemoteParent(ctx, "OpenCensusSpan", utils.OTelSpanContextToOC(parent.SpanContext()))
 	span.End()
 
 	spans := sr.Completed()
