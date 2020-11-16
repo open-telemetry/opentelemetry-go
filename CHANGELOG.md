@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - A `TextMapPropagator` and associated `TextMapCarrier` are added to the `go.opentelemetry.io/otel/oteltest` package to test TextMap type propagators and their use. (#1259)
 - `SpanContextFromContext` returns `SpanContext` from context. (#1255)
 - Add an opencensus to opentelemetry tracing bridge. (#1305)
+- Add a parent context argument to `SpanProcessor.OnStart` to follow the specification. (#1333)
 
 ### Changed
 
@@ -38,7 +39,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Move the `Number` type (together with related functions) from `go.opentelemetry.io/otel/api/metric` package into `go.opentelemetry.io/otel/metric/number` as a part of #1303. (#1316)
 - The function signature of the Span `AddEvent` method in `go.opentelemetry.io/otel` is updated to no longer take an unused context and instead take a required name and a variable number of `EventOption`s. (#1254)
 - The function signature of the Span `RecordError` method in `go.opentelemetry.io/otel` is updated to no longer take an unused context and instead take a required error value and a variable number of `EventOption`s. (#1254)
-- Move the `go.opentelemetry.io/otel/api/global` package to `go.opentelemetry.io/otel/global`. (#1262)
+- Move the `go.opentelemetry.io/otel/api/global` package to `go.opentelemetry.io/otel`. (#1262) (#1330)
+- Move the `Version` function from `go.opentelemetry.io/otel/sdk` to `go.opentelemetry.io/otel`. (#1330)
 - Rename correlation context header from `"otcorrelations"` to `"baggage"` to match the OpenTelemetry specification. (#1267)
 - Fix `Code.UnmarshalJSON` to work with valid json only. (#1276)
 - The `resource.New()` method changes signature to support builtin attributes and functional options, including `telemetry.sdk.*` and

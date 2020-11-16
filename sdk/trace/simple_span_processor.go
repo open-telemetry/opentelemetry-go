@@ -17,7 +17,7 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/global"
+	"go.opentelemetry.io/otel"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
@@ -39,14 +39,14 @@ func NewSimpleSpanProcessor(exporter export.SpanExporter) *SimpleSpanProcessor {
 }
 
 // OnStart method does nothing.
-func (ssp *SimpleSpanProcessor) OnStart(sd *export.SpanData) {
+func (ssp *SimpleSpanProcessor) OnStart(parent context.Context, sd *export.SpanData) {
 }
 
 // OnEnd method exports SpanData using associated export.
 func (ssp *SimpleSpanProcessor) OnEnd(sd *export.SpanData) {
 	if ssp.e != nil && sd.SpanContext.IsSampled() {
 		if err := ssp.e.ExportSpans(context.Background(), []*export.SpanData{sd}); err != nil {
-			global.Handle(err)
+			otel.Handle(err)
 		}
 	}
 }

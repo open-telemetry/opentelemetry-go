@@ -25,9 +25,9 @@ import (
 	otext "github.com/opentracing/opentracing-go/ext"
 	otlog "github.com/opentracing/opentracing-go/log"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 	"go.opentelemetry.io/otel/codes"
-	otelglobal "go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/internal/baggage"
 	"go.opentelemetry.io/otel/internal/trace/noop"
 	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
@@ -654,5 +654,5 @@ func (t *BridgeTracer) getPropagator() propagation.TextMapPropagator {
 	if t.propagator != nil {
 		return t.propagator
 	}
-	return otelglobal.TextMapPropagator()
+	return otel.GetTextMapPropagator()
 }

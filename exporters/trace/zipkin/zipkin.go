@@ -26,7 +26,7 @@ import (
 	"net/url"
 	"sync"
 
-	"go.opentelemetry.io/otel/global"
+	"go.opentelemetry.io/otel"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -133,7 +133,7 @@ func InstallNewPipeline(collectorURL, serviceName string, opts ...Option) error 
 		return err
 	}
 
-	global.SetTracerProvider(tp)
+	otel.SetTracerProvider(tp)
 	return nil
 }
 

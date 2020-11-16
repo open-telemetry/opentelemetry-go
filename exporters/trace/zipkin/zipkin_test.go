@@ -30,8 +30,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/global"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -48,7 +48,7 @@ func TestInstallNewPipeline(t *testing.T) {
 		serviceName,
 	)
 	assert.NoError(t, err)
-	assert.IsType(t, &sdktrace.TracerProvider{}, global.TracerProvider())
+	assert.IsType(t, &sdktrace.TracerProvider{}, otel.GetTracerProvider())
 }
 
 func TestNewExportPipeline(t *testing.T) {
@@ -90,7 +90,7 @@ func TestNewExportPipeline(t *testing.T) {
 				tc.options...,
 			)
 			assert.NoError(t, err)
-			assert.NotEqual(t, tp, global.TracerProvider())
+			assert.NotEqual(t, tp, otel.GetTracerProvider())
 
 			if tc.testSpanSampling {
 				_, span := tp.Tracer("zipkin test").Start(context.Background(), tc.name)

@@ -20,7 +20,7 @@ import (
 	"context"
 	"log"
 
-	"go.opentelemetry.io/otel/global"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 
 	"go.opentelemetry.io/otel/exporters/trace/jaeger"
@@ -53,7 +53,7 @@ func main() {
 	flush := initTracer()
 	defer flush()
 
-	tr := global.Tracer("component-main")
+	tr := otel.Tracer("component-main")
 	ctx, span := tr.Start(ctx, "foo")
 	defer span.End()
 
@@ -61,7 +61,7 @@ func main() {
 }
 
 func bar(ctx context.Context) {
-	tr := global.Tracer("component-bar")
+	tr := otel.Tracer("component-bar")
 	_, span := tr.Start(ctx, "bar")
 	defer span.End()
 

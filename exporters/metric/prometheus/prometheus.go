@@ -23,7 +23,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"go.opentelemetry.io/otel/global"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
@@ -135,7 +135,7 @@ func InstallNewPipeline(config Config, options ...pull.Option) (*Exporter, error
 	if err != nil {
 		return nil, err
 	}
-	global.SetMeterProvider(exp.MeterProvider())
+	otel.SetMeterProvider(exp.MeterProvider())
 	return exp, nil
 }
 
@@ -209,7 +209,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 	ctrl := c.exp.Controller()
 	if err := ctrl.Collect(context.Background()); err != nil {
-		global.Handle(err)
+		otel.Handle(err)
 	}
 
 	err := ctrl.ForEach(c.exp, func(record export.Record) error {
@@ -254,7 +254,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		return nil
 	})
 	if err != nil {
-		global.Handle(err)
+		otel.Handle(err)
 	}
 }
 

@@ -18,8 +18,8 @@ import (
 	"context"
 	"log"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/stdout"
-	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
@@ -31,12 +31,12 @@ const (
 )
 
 var (
-	tracer = global.TracerProvider().Tracer(
+	tracer = otel.GetTracerProvider().Tracer(
 		instrumentationName,
 		trace.WithInstrumentationVersion(instrumentationVersion),
 	)
 
-	meter = global.MeterProvider().Meter(
+	meter = otel.GetMeterProvider().Meter(
 		instrumentationName,
 		metric.WithInstrumentationVersion(instrumentationVersion),
 	)

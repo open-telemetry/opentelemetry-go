@@ -18,9 +18,9 @@ import (
 	"context"
 	"log"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/exporters/stdout"
-	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
@@ -59,13 +59,13 @@ func main() {
 	)
 	pusher.Start()
 	defer pusher.Stop()
-	global.SetTracerProvider(tp)
-	global.SetMeterProvider(pusher.MeterProvider())
+	otel.SetTracerProvider(tp)
+	otel.SetMeterProvider(pusher.MeterProvider())
 
 	// set global propagator to baggage (the default is no-op).
-	global.SetTextMapPropagator(propagation.Baggage{})
-	tracer := global.Tracer("ex.com/basic")
-	meter := global.Meter("ex.com/basic")
+	otel.SetTextMapPropagator(propagation.Baggage{})
+	tracer := otel.Tracer("ex.com/basic")
+	meter := otel.Meter("ex.com/basic")
 
 	commonLabels := []label.KeyValue{lemonsKey.Int(10), label.String("A", "1"), label.String("B", "2"), label.String("C", "3")}
 
