@@ -22,7 +22,7 @@ import (
 
 // attributesMap is a capped map of attributes, holding the most recent attributes.
 // Eviction is done via a LRU method, the oldest entry is removed to create room for a new entry.
-// Updates are allowed and refreshes the usage of the key.
+// Updates are allowed and they refresh the usage of the key.
 //
 // This is based from https://github.com/hashicorp/golang-lru/blob/master/simplelru/lru.go
 // With a subset of the its operations and specific for holding label.KeyValue
