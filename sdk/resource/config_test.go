@@ -42,7 +42,7 @@ func TestDefaultConfig(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{
 		"host.name":              hostname(),
-		"telemetry.sdk.name":     "opentelemetry-go",
+		"telemetry.sdk.name":     "opentelemetry",
 		"telemetry.sdk.language": "go",
 		"telemetry.sdk.version":  otel.Version(),
 	}, toMap(res))
@@ -59,7 +59,7 @@ func TestDefaultConfigNoHost(t *testing.T) {
 	res, err := resource.New(ctx, resource.WithHost(nil))
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{
-		"telemetry.sdk.name":     "opentelemetry-go",
+		"telemetry.sdk.name":     "opentelemetry",
 		"telemetry.sdk.language": "go",
 		"telemetry.sdk.version":  otel.Version(),
 	}, toMap(res))
@@ -77,7 +77,7 @@ func TestDefaultConfigNoEnv(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{
 		"host.name":              hostname(),
-		"telemetry.sdk.name":     "opentelemetry-go",
+		"telemetry.sdk.name":     "opentelemetry",
 		"telemetry.sdk.language": "go",
 		"telemetry.sdk.version":  otel.Version(),
 	}, toMap(res))
@@ -97,7 +97,7 @@ func TestDefaultConfigWithEnv(t *testing.T) {
 		"key":                    "value",
 		"other":                  "attr",
 		"host.name":              hostname(),
-		"telemetry.sdk.name":     "opentelemetry-go",
+		"telemetry.sdk.name":     "opentelemetry",
 		"telemetry.sdk.language": "go",
 		"telemetry.sdk.version":  otel.Version(),
 	}, toMap(res))
