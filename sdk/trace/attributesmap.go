@@ -18,7 +18,6 @@ import (
 	"container/list"
 
 	"go.opentelemetry.io/otel/label"
-	"go.opentelemetry.io/otel/sdk/export/trace"
 )
 
 // attributesMap is a capped map of attributes, holding the most recent attributes.
@@ -62,10 +61,13 @@ func (am *attributesMap) add(kv label.KeyValue) {
 	}
 }
 
-func (am *attributesMap) toSpanData(sd *trace.SpanData) {
+// toKeyValue copies the attributesMap into a slice of label.KeyValue and
+// returns it. If the map is empty, a nil is returned.
+// TODO: Is it more efficient to return a pointer to the slice?
+func (am *attributesMap) toKeyValue() []label.KeyValue {
 	len := am.evictList.Len()
 	if len == 0 {
-		return
+		return nil
 	}
 
 	attributes := make([]label.KeyValue, 0, len)
@@ -75,8 +77,7 @@ func (am *attributesMap) toSpanData(sd *trace.SpanData) {
 		}
 	}
 
-	sd.Attributes = attributes
-	sd.DroppedAttributeCount = am.droppedCount
+	return attributes
 }
 
 // removeOldest removes the oldest item from the cache.

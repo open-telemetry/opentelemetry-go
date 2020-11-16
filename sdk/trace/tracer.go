@@ -60,8 +60,10 @@ func (tr *tracer) Start(ctx context.Context, name string, options ...trace.SpanO
 
 	if span.IsRecording() {
 		sps, _ := tr.provider.spanProcessors.Load().(spanProcessorStates)
+		// TODO: Change to ReadWriteSpan after adding this interface.
+		sd := span.makeSpanData()
 		for _, sp := range sps {
-			sp.sp.OnStart(ctx, span.data)
+			sp.sp.OnStart(ctx, sd)
 		}
 	}
 
