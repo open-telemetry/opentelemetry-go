@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal_test
+package global_test
 
 import (
 	"context"
@@ -20,23 +20,23 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/global"
-	"go.opentelemetry.io/otel/global/internal"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/oteltest"
 )
 
 func TestTraceWithSDK(t *testing.T) {
-	internal.ResetForTest()
+	global.ResetForTest()
 
 	ctx := context.Background()
-	gtp := global.TracerProvider()
+	gtp := otel.GetTracerProvider()
 	tracer1 := gtp.Tracer("pre")
 	// This is started before an SDK was registered and should be dropped.
 	_, span1 := tracer1.Start(ctx, "span1")
 
 	sr := new(oteltest.StandardSpanRecorder)
 	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
-	global.SetTracerProvider(tp)
+	otel.SetTracerProvider(tp)
 
 	// This span was started before initialization, it is expected to be dropped.
 	span1.End()

@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global_test
+package otel
 
 import (
 	"testing"
 
-	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/metric"
 )
 
@@ -32,10 +31,10 @@ func (*testMeterProvider) Meter(_ string, _ ...metric.MeterOption) metric.Meter 
 func TestMultipleGlobalMeterProvider(t *testing.T) {
 	p1 := testMeterProvider{}
 	p2 := metric.NoopMeterProvider{}
-	global.SetMeterProvider(&p1)
-	global.SetMeterProvider(&p2)
+	SetMeterProvider(&p1)
+	SetMeterProvider(&p2)
 
-	got := global.MeterProvider()
+	got := GetMeterProvider()
 	want := &p2
 	if got != want {
 		t.Fatalf("MeterProvider: got %p, want %p\n", got, want)

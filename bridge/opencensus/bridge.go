@@ -20,8 +20,8 @@ import (
 
 	octrace "go.opencensus.io/trace"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -60,7 +60,7 @@ func convertStartOptions(optFns []octrace.StartOption, name string) []trace.Span
 	}
 
 	if ocOpts.Sampler != nil {
-		global.Handle(fmt.Errorf("ignoring custom sampler for span %q created by OpenCensus because OpenTelemetry does not support creating a span with a custom sampler", name))
+		otel.Handle(fmt.Errorf("ignoring custom sampler for span %q created by OpenCensus because OpenTelemetry does not support creating a span with a custom sampler", name))
 	}
 	return otOpts
 }
@@ -81,7 +81,7 @@ func (o *otelTracer) NewContext(parent context.Context, s *octrace.Span) context
 	if otSpan, ok := s.Internal().(*span); ok {
 		return trace.ContextWithSpan(parent, otSpan.otSpan)
 	}
-	global.Handle(fmt.Errorf("unable to create context with span %q, since it was created using a different tracer", s.String()))
+	otel.Handle(fmt.Errorf("unable to create context with span %q, since it was created using a different tracer", s.String()))
 	return parent
 }
 
@@ -181,7 +181,7 @@ func (s *span) AddMessageReceiveEvent(messageID, uncompressedByteSize, compresse
 }
 
 func (s *span) AddLink(l octrace.Link) {
-	global.Handle(fmt.Errorf("ignoring OpenCensus link %+v for span %q because OpenTelemetry doesn't support setting links after creation", l, s.String()))
+	otel.Handle(fmt.Errorf("ignoring OpenCensus link %+v for span %q because OpenTelemetry doesn't support setting links after creation", l, s.String()))
 }
 
 func (s *span) String() string {
@@ -190,7 +190,7 @@ func (s *span) String() string {
 
 func otelSpanContextToOc(sc trace.SpanContext) octrace.SpanContext {
 	if sc.IsDebug() || sc.IsDeferred() {
-		global.Handle(fmt.Errorf("ignoring OpenTelemetry Debug or Deferred trace flags for span %q because they are not supported by OpenCensus", sc.SpanID))
+		otel.Handle(fmt.Errorf("ignoring OpenTelemetry Debug or Deferred trace flags for span %q because they are not supported by OpenCensus", sc.SpanID))
 	}
 	var to octrace.TraceOptions
 	if sc.IsSampled() {

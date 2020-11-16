@@ -18,10 +18,10 @@ import (
 	"context"
 	"log"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/example/namedtracer/foo"
 	"go.opentelemetry.io/otel/exporters/stdout"
-	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -52,7 +52,7 @@ func initTracer() {
 		),
 		sdktrace.WithSpanProcessor(bsp),
 	)
-	global.SetTracerProvider(tp)
+	otel.SetTracerProvider(tp)
 }
 
 func main() {

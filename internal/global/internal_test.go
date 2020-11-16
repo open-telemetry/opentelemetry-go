@@ -15,30 +15,26 @@
 package global_test
 
 import (
+	"os"
 	"testing"
 
-	"go.opentelemetry.io/otel/global"
-	"go.opentelemetry.io/otel/internal/trace/noop"
-	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/internal/global"
+	ottest "go.opentelemetry.io/otel/internal/testing"
 )
 
-type testTracerProvider struct{}
-
-var _ trace.TracerProvider = &testTracerProvider{}
-
-func (*testTracerProvider) Tracer(_ string, _ ...trace.TracerOption) trace.Tracer {
-	return noop.Tracer
-}
-
-func TestMultipleGlobalTracerProvider(t *testing.T) {
-	p1 := testTracerProvider{}
-	p2 := trace.NewNoopTracerProvider()
-	global.SetTracerProvider(&p1)
-	global.SetTracerProvider(p2)
-
-	got := global.TracerProvider()
-	want := p2
-	if got != want {
-		t.Fatalf("TracerProvider: got %p, want %p\n", got, want)
+// Ensure struct alignment prior to running tests.
+func TestMain(m *testing.M) {
+	fieldsMap := global.AtomicFieldOffsets()
+	fields := make([]ottest.FieldOffset, 0, len(fieldsMap))
+	for name, offset := range fieldsMap {
+		fields = append(fields, ottest.FieldOffset{
+			Name:   name,
+			Offset: offset,
+		})
 	}
+	if !ottest.Aligned8Byte(fields, os.Stderr) {
+		os.Exit(1)
+	}
+
+	os.Exit(m.Run())
 }
