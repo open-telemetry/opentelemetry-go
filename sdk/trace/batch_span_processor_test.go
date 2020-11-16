@@ -63,7 +63,7 @@ var _ export.SpanExporter = (*testBatchExporter)(nil)
 func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
 	bsp := sdktrace.NewBatchSpanProcessor(nil)
 	// These should not panic.
-	bsp.OnStart(&export.SpanData{})
+	bsp.OnStart(context.Background(), &export.SpanData{})
 	bsp.OnEnd(&export.SpanData{})
 	bsp.ForceFlush()
 	err := bsp.Shutdown(context.Background())

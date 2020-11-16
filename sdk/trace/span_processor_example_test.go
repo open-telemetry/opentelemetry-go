@@ -34,7 +34,9 @@ type DurationFilter struct {
 	Max time.Duration
 }
 
-func (f DurationFilter) OnStart(sd *export.SpanData)        { f.Next.OnStart(sd) }
+func (f DurationFilter) OnStart(parent context.Context, sd *export.SpanData) {
+	f.Next.OnStart(parent, sd)
+}
 func (f DurationFilter) Shutdown(ctx context.Context) error { return f.Next.Shutdown(ctx) }
 func (f DurationFilter) ForceFlush()                        { f.Next.ForceFlush() }
 func (f DurationFilter) OnEnd(sd *export.SpanData) {
@@ -60,7 +62,9 @@ type InstrumentationBlacklist struct {
 	Blacklist map[string]bool
 }
 
-func (f InstrumentationBlacklist) OnStart(sd *export.SpanData)        { f.Next.OnStart(sd) }
+func (f InstrumentationBlacklist) OnStart(parent context.Context, sd *export.SpanData) {
+	f.Next.OnStart(parent, sd)
+}
 func (f InstrumentationBlacklist) Shutdown(ctx context.Context) error { return f.Next.Shutdown(ctx) }
 func (f InstrumentationBlacklist) ForceFlush()                        { f.Next.ForceFlush() }
 func (f InstrumentationBlacklist) OnEnd(sd *export.SpanData) {
