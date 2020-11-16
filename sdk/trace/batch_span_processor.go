@@ -21,7 +21,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"go.opentelemetry.io/otel/global"
+	"go.opentelemetry.io/otel"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
@@ -182,7 +182,7 @@ func (bsp *BatchSpanProcessor) exportSpans() {
 
 	if len(bsp.batch) > 0 {
 		if err := bsp.e.ExportSpans(context.Background(), bsp.batch); err != nil {
-			global.Handle(err)
+			otel.Handle(err)
 		}
 		bsp.batch = bsp.batch[:0]
 	}

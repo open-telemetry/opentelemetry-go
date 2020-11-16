@@ -12,14 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package opentelemetry contains Go support for OpenTelemetry.
-//
-// This package is currently in a pre-GA phase. Backwards incompatible changes
-// may be introduced in subsequent minor version releases as we work to track
-// the evolving OpenTelemetry specification and user feedback.
-package opentelemetry // import "go.opentelemetry.io/otel/sdk"
+package otel
 
-// Version is the current release version of OpenTelemetry in use.
-func Version() string {
-	return "0.13.0"
+import (
+	"testing"
+
+	"go.opentelemetry.io/otel/internal/trace/noop"
+	"go.opentelemetry.io/otel/trace"
+)
+
+type testTracerProvider struct{}
+
+var _ trace.TracerProvider = &testTracerProvider{}
+
+func (*testTracerProvider) Tracer(_ string, _ ...trace.TracerOption) trace.Tracer {
+	return noop.Tracer
+}
+
+func TestMultipleGlobalTracerProvider(t *testing.T) {
+	p1 := testTracerProvider{}
+	p2 := trace.NewNoopTracerProvider()
+	SetTracerProvider(&p1)
+	SetTracerProvider(p2)
+
+	got := GetTracerProvider()
+	want := p2
+	if got != want {
+		t.Fatalf("TracerProvider: got %p, want %p\n", got, want)
+	}
 }

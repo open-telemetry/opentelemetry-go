@@ -12,20 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global // import "go.opentelemetry.io/otel/global"
+package otel // import "go.opentelemetry.io/otel"
 
-import (
-	"go.opentelemetry.io/otel/global/internal"
-	"go.opentelemetry.io/otel/propagation"
-)
-
-// TextMapPropagator returns the global TextMapPropagator. If none has been
-// set, a No-Op TextMapPropagator is returned.
-func TextMapPropagator() propagation.TextMapPropagator {
-	return internal.TextMapPropagator()
-}
-
-// SetTextMapPropagator sets propagator as the global TSetTextMapPropagator.
-func SetTextMapPropagator(propagator propagation.TextMapPropagator) {
-	internal.SetTextMapPropagator(propagator)
+// Version is the current release version of OpenTelemetry in use.
+func Version() string {
+	return "0.13.0"
 }

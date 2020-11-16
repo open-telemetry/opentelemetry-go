@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal
+package global
 
 /*
 This file contains the forwarding implementation of the TracerProvider used as

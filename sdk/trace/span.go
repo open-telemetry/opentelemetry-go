@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/trace"
 
@@ -208,7 +208,7 @@ func (s *span) SetName(name string) {
 	defer s.mu.Unlock()
 
 	if s.data == nil {
-		global.Handle(errUninitializedSpan)
+		otel.Handle(errUninitializedSpan)
 		return
 	}
 	s.data.Name = name

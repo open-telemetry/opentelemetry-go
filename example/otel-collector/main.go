@@ -25,8 +25,8 @@ import (
 
 	"google.golang.org/grpc"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp"
-	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
@@ -81,9 +81,9 @@ func initProvider() func() {
 	)
 
 	// set global propagator to tracecontext (the default is no-op).
-	global.SetTextMapPropagator(propagation.TraceContext{})
-	global.SetTracerProvider(tracerProvider)
-	global.SetMeterProvider(pusher.MeterProvider())
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+	otel.SetTracerProvider(tracerProvider)
+	otel.SetMeterProvider(pusher.MeterProvider())
 	pusher.Start()
 
 	return func() {
@@ -99,8 +99,8 @@ func main() {
 	shutdown := initProvider()
 	defer shutdown()
 
-	tracer := global.Tracer("test-tracer")
-	meter := global.Meter("test-meter")
+	tracer := otel.Tracer("test-tracer")
+	meter := otel.Meter("test-meter")
 
 	// labels represent additional key-value descriptors that can be bound to a
 	// metric observer or recorder.
