@@ -16,6 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `DeploymentEnvironmentKey` added to `go.opentelemetry.io/otel/semconv` package. (#1323)
 - Add an opencensus to opentelemetry tracing bridge. (#1305)
 - Add a parent context argument to `SpanProcessor.OnStart` to follow the specification. (#1333)
+- Add an opencensus binary propagation implementation. (#1334)
 
 ### Changed
 
