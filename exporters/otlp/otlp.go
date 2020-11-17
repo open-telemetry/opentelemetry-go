@@ -67,7 +67,6 @@ var _ metricsdk.Exporter = (*Exporter)(nil)
 // any ExporterOptions provided.
 func newConfig(opts ...ExporterOption) config {
 	cfg := config{
-		numWorkers:        DefaultNumWorkers,
 		grpcServiceConfig: DefaultGRPCServiceConfig,
 
 		// Note: the default ExportKindSelector is specified
@@ -259,7 +258,10 @@ func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) e
 		}
 	}(ctx, cancel)
 
-	rms, err := transform.CheckpointSet(ctx, e, cps, e.c.numWorkers)
+	// Hardcode the number of worker goroutines to 1. We later will
+	// need to see if there's a way to adjust that number for longer
+	// running operations.
+	rms, err := transform.CheckpointSet(ctx, e, cps, 1)
 	if err != nil {
 		return err
 	}
