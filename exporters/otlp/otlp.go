@@ -51,6 +51,7 @@ type Exporter struct {
 	lastConnectErrPtr unsafe.Pointer
 
 	startOnce      sync.Once
+	stopOnce       sync.Once
 	stopCh         chan struct{}
 	disconnectedCh chan bool
 
@@ -222,23 +223,26 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	}
 
 	var err error
-	if cc != nil {
-		// Clean things up before checking this error.
-		err = cc.Close()
-	}
 
-	// At this point we can change the state variable started
-	e.mu.Lock()
-	e.started = false
-	e.mu.Unlock()
-	closeStopCh(e.stopCh)
+	e.stopOnce.Do(func() {
+		if cc != nil {
+			// Clean things up before checking this error.
+			err = cc.Close()
+		}
 
-	// Ensure that the backgroundConnector returns
-	select {
-	case <-e.backgroundConnectionDoneCh:
-	case <-ctx.Done():
-		return ctx.Err()
-	}
+		// At this point we can change the state variable started
+		e.mu.Lock()
+		e.started = false
+		e.mu.Unlock()
+		closeStopCh(e.stopCh)
+
+		// Ensure that the backgroundConnector returns
+		select {
+		case <-e.backgroundConnectionDoneCh:
+		case <-ctx.Done():
+			err = ctx.Err()
+		}
+	})
 
 	return err
 }
