@@ -50,7 +50,7 @@ func TestAttributesMap(t *testing.T) {
 	}
 }
 
-func TestAttributesMap_GetOldest_RemoveOldest(t *testing.T) {
+func TestAttributesMapGetOldestRemoveOldest(t *testing.T) {
 	attrMap := newAttributesMap(128)
 
 	for i := 0; i < 128; i++ {
@@ -69,7 +69,7 @@ func TestAttributesMap_GetOldest_RemoveOldest(t *testing.T) {
 	}
 }
 
-func TestAttributesMap_ToSpanData(t *testing.T) {
+func TestAttributesMapToSpanData(t *testing.T) {
 	attrMap := newAttributesMap(128)
 
 	for i := 0; i < 128; i++ {
