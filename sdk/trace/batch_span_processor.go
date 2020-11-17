@@ -21,7 +21,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"go.opentelemetry.io/otel/global"
+	"go.opentelemetry.io/otel"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
@@ -112,7 +112,7 @@ func NewBatchSpanProcessor(exporter export.SpanExporter, options ...BatchSpanPro
 }
 
 // OnStart method does nothing.
-func (bsp *BatchSpanProcessor) OnStart(sd *export.SpanData) {}
+func (bsp *BatchSpanProcessor) OnStart(parent context.Context, sd *export.SpanData) {}
 
 // OnEnd method enqueues export.SpanData for later processing.
 func (bsp *BatchSpanProcessor) OnEnd(sd *export.SpanData) {
@@ -182,7 +182,7 @@ func (bsp *BatchSpanProcessor) exportSpans() {
 
 	if len(bsp.batch) > 0 {
 		if err := bsp.e.ExportSpans(context.Background(), bsp.batch); err != nil {
-			global.Handle(err)
+			otel.Handle(err)
 		}
 		bsp.batch = bsp.batch[:0]
 	}

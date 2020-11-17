@@ -20,8 +20,8 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -41,13 +41,13 @@ type (
 		// data for the same instrument with the same
 		// resources, and this code has logic to combine data
 		// properly from multiple accumulators.  However, the
-		// use of *otel.Descriptor in the stateKey makes
+		// use of *metric.Descriptor in the stateKey makes
 		// such combination impossible, because each
 		// accumulator allocates its own instruments.  This
 		// can be fixed by using the instrument name and kind
 		// instead of the descriptor pointer.  See
 		// https://github.com/open-telemetry/opentelemetry-go/issues/862.
-		descriptor *otel.Descriptor
+		descriptor *metric.Descriptor
 		distinct   label.Distinct
 		resource   label.Distinct
 	}

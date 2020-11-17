@@ -22,7 +22,7 @@ import (
 	"sync"
 	"testing"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 type ctxKeyType string
@@ -167,12 +167,12 @@ func (p *TextMapPropagator) stateFromContext(ctx context.Context) state {
 	return state{}
 }
 
-func (p *TextMapPropagator) stateFromCarrier(carrier otel.TextMapCarrier) state {
+func (p *TextMapPropagator) stateFromCarrier(carrier propagation.TextMapCarrier) state {
 	return newState(carrier.Get(p.Name))
 }
 
 // Inject set cross-cutting concerns for p from the Context into the carrier.
-func (p *TextMapPropagator) Inject(ctx context.Context, carrier otel.TextMapCarrier) {
+func (p *TextMapPropagator) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	s := p.stateFromContext(ctx)
 	s.Injections++
 	carrier.Set(p.Name, s.String())
@@ -188,7 +188,7 @@ func (p *TextMapPropagator) InjectedN(t *testing.T, carrier *TextMapCarrier, n i
 }
 
 // Extract reads cross-cutting concerns for p from the carrier into a Context.
-func (p *TextMapPropagator) Extract(ctx context.Context, carrier otel.TextMapCarrier) context.Context {
+func (p *TextMapPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	s := p.stateFromCarrier(carrier)
 	s.Extractions++
 	return context.WithValue(ctx, p.ctxKey, s)

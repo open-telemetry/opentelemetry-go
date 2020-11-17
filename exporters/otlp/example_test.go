@@ -22,8 +22,8 @@ import (
 
 	"google.golang.org/grpc/credentials"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp"
-	"go.opentelemetry.io/otel/global"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -36,7 +36,7 @@ func Example_insecure() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		if err := exp.Shutdown(ctx); err != nil {
-			global.Handle(err)
+			otel.Handle(err)
 		}
 	}()
 
@@ -49,9 +49,9 @@ func Example_insecure() {
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	)
-	global.SetTracerProvider(tp)
+	otel.SetTracerProvider(tp)
 
-	tracer := global.Tracer("test-tracer")
+	tracer := otel.Tracer("test-tracer")
 
 	// Then use the OpenTelemetry tracing library, like we normally would.
 	ctx, span := tracer.Start(context.Background(), "CollectorExporter-Example")
@@ -80,7 +80,7 @@ func Example_withTLS() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		if err := exp.Shutdown(ctx); err != nil {
-			global.Handle(err)
+			otel.Handle(err)
 		}
 	}()
 
@@ -93,9 +93,9 @@ func Example_withTLS() {
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	)
-	global.SetTracerProvider(tp)
+	otel.SetTracerProvider(tp)
 
-	tracer := global.Tracer("test-tracer")
+	tracer := otel.Tracer("test-tracer")
 
 	// Then use the OpenTelemetry tracing library, like we normally would.
 	ctx, span := tracer.Start(context.Background(), "Securely-Talking-To-Collector-Span")

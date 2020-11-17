@@ -1,7 +1,6 @@
 # OpenTelemetry Collector Go Exporter
 
-[![GoDoc](https://godoc.org/go.opentelemetry.io/otel?status.svg)](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp)
-
+[![PkgGoDev](https://pkg.go.dev/badge/go.opentelemetry.io/otel/exporters/otlp)](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp)
 
 This exporter exports OpenTelemetry spans and metrics to the OpenTelemetry Collector.
 
