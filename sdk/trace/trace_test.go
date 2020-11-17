@@ -1254,3 +1254,83 @@ func TestSpanCapturesPanic(t *testing.T) {
 		errorMessageKey.String("error message"),
 	})
 }
+
+func TestReadOnlySpan(t *testing.T) {
+	kv := label.String("foo", "bar")
+
+	tp := NewTracerProvider(WithResource(resource.NewWithAttributes(kv)))
+	cfg := tp.config.Load().(*Config)
+	tr := tp.Tracer("ReadOnlySpan", trace.WithInstrumentationVersion("3"))
+
+	// Initialize parent context.
+	parent := trace.SpanContext{
+		TraceID:    cfg.IDGenerator.NewTraceID(),
+		SpanID:     cfg.IDGenerator.NewSpanID(),
+		TraceFlags: 0x1,
+	}
+	ctx := trace.ContextWithRemoteSpanContext(context.Background(), parent)
+
+	// Initialize linked context.
+	linked := trace.SpanContext{
+		TraceID:    cfg.IDGenerator.NewTraceID(),
+		SpanID:     cfg.IDGenerator.NewSpanID(),
+		TraceFlags: 0x1,
+	}
+
+	st := time.Now()
+	ctx, span := tr.Start(ctx, "foo", trace.WithTimestamp(st),
+		trace.WithLinks(trace.Link{SpanContext: linked}))
+	span.SetAttributes(kv)
+	span.AddEvent("foo", trace.WithAttributes(kv))
+	span.SetStatus(codes.Ok, "foo")
+
+	// Verify span implements ReadOnlySpan.
+	ro, ok := span.(ReadOnlySpan)
+	require.True(t, ok)
+
+	assert.Equal(t, "foo", ro.Name())
+	assert.Equal(t, trace.SpanContextFromContext(ctx), ro.SpanContext())
+	assert.Equal(t, parent, ro.Parent())
+	assert.Equal(t, trace.SpanKindInternal, ro.SpanKind())
+	assert.Equal(t, st, ro.StartTime())
+	assert.True(t, ro.EndTime().IsZero())
+	assert.Equal(t, kv.Key, ro.Attributes()[0].Key)
+	assert.Equal(t, kv.Value, ro.Attributes()[0].Value)
+	assert.Equal(t, linked, ro.Links()[0].SpanContext)
+	assert.Equal(t, kv.Key, ro.Events()[0].Attributes[0].Key)
+	assert.Equal(t, kv.Value, ro.Events()[0].Attributes[0].Value)
+	assert.Equal(t, codes.Ok, ro.StatusCode())
+	assert.Equal(t, "foo", ro.StatusMessage())
+	assert.Equal(t, "ReadOnlySpan", ro.InstrumentationLibrary().Name)
+	assert.Equal(t, "3", ro.InstrumentationLibrary().Version)
+	assert.Equal(t, kv.Key, ro.Resource().Attributes()[0].Key)
+	assert.Equal(t, kv.Value, ro.Resource().Attributes()[0].Value)
+
+	// Verify changes to the original span are reflected in the ReadOnlySpan.
+	span.SetName("bar")
+	assert.Equal(t, "bar", ro.Name())
+
+	// Verify Snapshot() returns snapshots that are independent from the
+	// original span and from one another.
+	d1 := ro.Snapshot()
+	span.AddEvent("baz")
+	d2 := ro.Snapshot()
+	for _, e := range d1.MessageEvents {
+		if e.Name == "baz" {
+			t.Errorf("Didn't expect to find 'baz' event")
+		}
+	}
+	var exists bool
+	for _, e := range d2.MessageEvents {
+		if e.Name == "baz" {
+			exists = true
+		}
+	}
+	if !exists {
+		t.Errorf("Expected to find 'baz' event")
+	}
+
+	et := st.Add(time.Millisecond)
+	span.End(trace.WithTimestamp(et))
+	assert.Equal(t, et, ro.EndTime())
+}

@@ -36,6 +36,30 @@ const (
 	errorEventName  = "error"
 )
 
+// ReadOnlySpan allows reading information from the data structure underlying a
+// trace.Span. It is used in places where reading information from a span is
+// necessary but changing the span isn't necessary or allowed.
+// TODO: Should we make the methods unexported? The purpose of this interface
+// is controlling access to `span` fields, not having multiple implementations.
+type ReadOnlySpan interface {
+	Name() string
+	SpanContext() trace.SpanContext
+	Parent() trace.SpanContext
+	SpanKind() trace.SpanKind
+	StartTime() time.Time
+	EndTime() time.Time
+	Attributes() []label.KeyValue
+	Links() []trace.Link
+	Events() []export.Event
+	StatusCode() codes.Code
+	StatusMessage() string
+	Tracer() trace.Tracer
+	IsRecording() bool
+	InstrumentationLibrary() instrumentation.Library
+	Resource() *resource.Resource
+	Snapshot() *export.SpanData
+}
+
 var emptySpanContext = trace.SpanContext{}
 
 // span is an implementation of the OpenTelemetry Span API representing the
@@ -184,9 +208,8 @@ func (s *span) End(options ...trace.SpanOption) {
 		sps, ok := s.tracer.provider.spanProcessors.Load().(spanProcessorStates)
 		mustExportOrProcess := ok && len(sps) > 0
 		if mustExportOrProcess {
-			sd := s.makeSpanData()
 			for _, sp := range sps {
-				sp.sp.OnEnd(sd)
+				sp.sp.OnEnd(s)
 			}
 		}
 	})
@@ -271,6 +294,87 @@ func (s *span) SetName(name string) {
 	}
 }
 
+func (s *span) Name() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.name
+}
+
+func (s *span) Parent() trace.SpanContext {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.parent
+}
+
+func (s *span) SpanKind() trace.SpanKind {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.spanKind
+}
+
+func (s *span) StartTime() time.Time {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.startTime
+}
+
+func (s *span) EndTime() time.Time {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.endTime
+}
+
+func (s *span) Attributes() []label.KeyValue {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.attributes.evictList.Len() == 0 {
+		return []label.KeyValue{}
+	}
+	return s.attributes.toKeyValue()
+}
+
+func (s *span) Links() []trace.Link {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(s.links.queue) == 0 {
+		return []trace.Link{}
+	}
+	return s.interfaceArrayToLinksArray()
+}
+
+func (s *span) Events() []export.Event {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(s.messageEvents.queue) == 0 {
+		return []export.Event{}
+	}
+	return s.interfaceArrayToMessageEventArray()
+}
+
+func (s *span) StatusCode() codes.Code {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.statusCode
+}
+
+func (s *span) StatusMessage() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.statusMessage
+}
+
+func (s *span) InstrumentationLibrary() instrumentation.Library {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.instrumentationLibrary
+}
+
+func (s *span) Resource() *resource.Resource {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.resource
+}
+
 func (s *span) addLink(link trace.Link) {
 	if !s.IsRecording() {
 		return
@@ -280,8 +384,9 @@ func (s *span) addLink(link trace.Link) {
 	s.links.add(link)
 }
 
-// makeSpanData produces a SpanData representing the current state of the span.
-func (s *span) makeSpanData() *export.SpanData {
+// Snapshot creates a snapshot representing the current state of the span as an
+// export.SpanData and returns a pointer to it.
+func (s *span) Snapshot() *export.SpanData {
 	var sd export.SpanData
 	s.mu.Lock()
 	defer s.mu.Unlock()

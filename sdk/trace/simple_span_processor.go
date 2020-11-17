@@ -42,9 +42,10 @@ func NewSimpleSpanProcessor(exporter export.SpanExporter) *SimpleSpanProcessor {
 func (ssp *SimpleSpanProcessor) OnStart(parent context.Context, sd *export.SpanData) {
 }
 
-// OnEnd method exports SpanData using associated export.
-func (ssp *SimpleSpanProcessor) OnEnd(sd *export.SpanData) {
-	if ssp.e != nil && sd.SpanContext.IsSampled() {
+// OnEnd method exports a ReadOnlySpan using the associated exporter.
+func (ssp *SimpleSpanProcessor) OnEnd(s ReadOnlySpan) {
+	if ssp.e != nil && s.SpanContext().IsSampled() {
+		sd := s.Snapshot()
 		if err := ssp.e.ExportSpans(context.Background(), []*export.SpanData{sd}); err != nil {
 			otel.Handle(err)
 		}

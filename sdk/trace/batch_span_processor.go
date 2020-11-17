@@ -114,13 +114,13 @@ func NewBatchSpanProcessor(exporter export.SpanExporter, options ...BatchSpanPro
 // OnStart method does nothing.
 func (bsp *BatchSpanProcessor) OnStart(parent context.Context, sd *export.SpanData) {}
 
-// OnEnd method enqueues export.SpanData for later processing.
-func (bsp *BatchSpanProcessor) OnEnd(sd *export.SpanData) {
+// OnEnd method enqueues a ReadOnlySpan for later processing.
+func (bsp *BatchSpanProcessor) OnEnd(s ReadOnlySpan) {
 	// Do not enqueue spans if we are just going to drop them.
 	if bsp.e == nil {
 		return
 	}
-	bsp.enqueue(sd)
+	bsp.enqueue(s.Snapshot())
 }
 
 // Shutdown flushes the queue and waits until all spans are processed.

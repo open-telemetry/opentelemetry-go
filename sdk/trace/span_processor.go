@@ -30,7 +30,7 @@ type SpanProcessor interface {
 
 	// OnEnd method is invoked when span is finished. It is a synchronous call
 	// and hence should not block.
-	OnEnd(sd *export.SpanData)
+	OnEnd(s ReadOnlySpan)
 
 	// Shutdown is invoked when SDK shuts down. Use this call to cleanup any processor
 	// data. No calls to OnStart and OnEnd method is invoked after Shutdown call is

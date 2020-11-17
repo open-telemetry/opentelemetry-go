@@ -31,7 +31,7 @@ func (t *basicSpanProcesor) Shutdown(context.Context) error {
 }
 
 func (t *basicSpanProcesor) OnStart(parent context.Context, s *export.SpanData) {}
-func (t *basicSpanProcesor) OnEnd(s *export.SpanData)                           {}
+func (t *basicSpanProcesor) OnEnd(s ReadOnlySpan)                               {}
 func (t *basicSpanProcesor) ForceFlush()                                        {}
 
 func TestShutdownTraceProvider(t *testing.T) {

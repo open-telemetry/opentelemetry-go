@@ -20,13 +20,14 @@ import (
 
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
 
 type testSpanProcessor struct {
 	name          string
 	spansStarted  []*export.SpanData
-	spansEnded    []*export.SpanData
+	spansEnded    []sdktrace.ReadOnlySpan
 	shutdownCount int
 }
 
@@ -54,12 +55,7 @@ func (t *testSpanProcessor) OnStart(parent context.Context, s *export.SpanData) 
 	t.spansStarted = append(t.spansStarted, s)
 }
 
-func (t *testSpanProcessor) OnEnd(s *export.SpanData) {
-	kv := label.KeyValue{
-		Key:   "OnEnd",
-		Value: label.StringValue(t.name),
-	}
-	s.Attributes = append(s.Attributes, kv)
+func (t *testSpanProcessor) OnEnd(s sdktrace.ReadOnlySpan) {
 	t.spansEnded = append(t.spansEnded, s)
 }
 
@@ -174,21 +170,6 @@ func TestUnregisterSpanProcessor(t *testing.T) {
 		gotCount = len(sp.spansEnded)
 		if gotCount != wantCount {
 			t.Errorf("%s: ended count: got %d, want %d\n", name, gotCount, wantCount)
-		}
-
-		c := 0
-		for _, kv := range sp.spansEnded[0].Attributes {
-			if kv.Key != "OnEnd" {
-				continue
-			}
-			gotValue := kv.Value.AsString()
-			if gotValue != spNames[c] {
-				t.Errorf("%s: ordered attributes: got %s, want %s\n", name, gotValue, spNames[c])
-			}
-			c++
-		}
-		if c != len(spNames) {
-			t.Errorf("%s: expected attributes(OnEnd): got %d, want %d\n", name, c, len(spNames))
 		}
 	}
 }

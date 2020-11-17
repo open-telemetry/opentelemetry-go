@@ -61,10 +61,17 @@ func (t *testBatchExporter) getBatchCount() int {
 var _ export.SpanExporter = (*testBatchExporter)(nil)
 
 func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
+	tp := basicTracerProvider(t)
 	bsp := sdktrace.NewBatchSpanProcessor(nil)
+	tp.RegisterSpanProcessor(bsp)
+	tr := tp.Tracer("NilExporter")
+
+	_, span := tr.Start(context.Background(), "foo")
+	span.End()
+
 	// These should not panic.
 	bsp.OnStart(context.Background(), &export.SpanData{})
-	bsp.OnEnd(&export.SpanData{})
+	bsp.OnEnd(span.(sdktrace.ReadOnlySpan))
 	bsp.ForceFlush()
 	err := bsp.Shutdown(context.Background())
 	if err != nil {
