@@ -28,7 +28,7 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 		cancel()
 		closeStopCh = orig
 	}()
-	closeStopCh = func(stopCh chan bool) {
+	closeStopCh = func(stopCh chan struct{}) {
 		go func() {
 			<-ctx.Done()
 			close(stopCh)
@@ -56,7 +56,7 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 		cancel()
 		closeStopCh = orig
 	}()
-	closeStopCh = func(stopCh chan bool) {
+	closeStopCh = func(stopCh chan struct{}) {
 		go func() {
 			<-ctx.Done()
 			close(stopCh)

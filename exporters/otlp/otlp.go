@@ -51,7 +51,7 @@ type Exporter struct {
 	lastConnectErrPtr unsafe.Pointer
 
 	startOnce      sync.Once
-	stopCh         chan bool
+	stopCh         chan struct{}
 	disconnectedCh chan bool
 
 	backgroundConnectionDoneCh chan bool
@@ -118,7 +118,7 @@ func (e *Exporter) Start() error {
 		e.mu.Lock()
 		e.started = true
 		e.disconnectedCh = make(chan bool, 1)
-		e.stopCh = make(chan bool)
+		e.stopCh = make(chan struct{})
 		e.backgroundConnectionDoneCh = make(chan bool)
 		e.mu.Unlock()
 
@@ -205,7 +205,7 @@ func (e *Exporter) dialToCollector() (*grpc.ClientConn, error) {
 }
 
 // closeStopCh is used to wrap the exporters stopCh channel closing for testing.
-var closeStopCh = func(stopCh chan bool) {
+var closeStopCh = func(stopCh chan struct{}) {
 	close(stopCh)
 }
 
