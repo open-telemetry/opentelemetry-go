@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestTraceWithSDK(t *testing.T) {
@@ -60,4 +61,33 @@ func TestTraceWithSDK(t *testing.T) {
 	expected := []string{"span2", "span3"}
 	assert.ElementsMatch(t, expected, filterNames(sr.Started()))
 	assert.ElementsMatch(t, expected, filterNames(sr.Completed()))
+}
+
+type fnTracerProvider struct {
+	tracer func(string, ...trace.TracerOption) trace.Tracer
+}
+
+func (fn fnTracerProvider) Tracer(instrumentationName string, opts ...trace.TracerOption) trace.Tracer {
+	return fn.tracer(instrumentationName, opts...)
+}
+
+func TestTraceProviderDelegates(t *testing.T) {
+	global.ResetForTest()
+
+	// Retrieve the placeholder TracerProvider.
+	gtp := otel.GetTracerProvider()
+
+	// Configure it with a spy.
+	called := false
+	otel.SetTracerProvider(fnTracerProvider{
+		tracer: func(name string, opts ...trace.TracerOption) trace.Tracer {
+			called = true
+			assert.Equal(t, "abc", name)
+			assert.Equal(t, []trace.TracerOption{trace.WithInstrumentationVersion("xyz")}, opts)
+			return trace.NewNoopTracerProvider().Tracer("")
+		},
+	})
+
+	gtp.Tracer("abc", trace.WithInstrumentationVersion("xyz"))
+	assert.True(t, called, "expected configured TraceProvider to be called")
 }

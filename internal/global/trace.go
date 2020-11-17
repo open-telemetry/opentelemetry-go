@@ -84,7 +84,7 @@ func (p *tracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 	defer p.mtx.Unlock()
 
 	if p.delegate != nil {
-		return p.delegate.Tracer(name)
+		return p.delegate.Tracer(name, opts...)
 	}
 
 	t := &tracer{name: name, opts: opts}
