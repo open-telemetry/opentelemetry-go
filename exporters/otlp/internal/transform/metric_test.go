@@ -32,7 +32,7 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
+	arrAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	lvAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
@@ -243,6 +243,58 @@ func TestLastValueIntDataPoints(t *testing.T) {
 	}
 }
 
+func TestExactIntDataPoints(t *testing.T) {
+	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Int64Kind)
+	labels := label.NewSet()
+	e, ckpt := metrictest.Unslice2(arrAgg.New(2))
+	assert.NoError(t, e.Update(context.Background(), number.Number(100), &desc))
+	require.NoError(t, e.SynchronizedMove(ckpt, &desc))
+	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
+	p, ok := ckpt.(aggregation.Points)
+	require.True(t, ok, "ckpt is not an aggregation.Points: %T", ckpt)
+	pts, err := p.Points()
+	require.NoError(t, err)
+
+	if m, err := gaugeArray(record, pts); assert.NoError(t, err) {
+		assert.Equal(t, []*metricpb.IntDataPoint{{
+			Value:             100,
+			StartTimeUnixNano: toNanos(intervalStart),
+			TimeUnixNano:      toNanos(intervalEnd),
+		}}, m.GetIntGauge().DataPoints)
+		assert.Nil(t, m.GetIntHistogram())
+		assert.Nil(t, m.GetIntSum())
+		assert.Nil(t, m.GetDoubleGauge())
+		assert.Nil(t, m.GetDoubleHistogram())
+		assert.Nil(t, m.GetDoubleSum())
+	}
+}
+
+func TestExactFloatDataPoints(t *testing.T) {
+	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Float64Kind)
+	labels := label.NewSet()
+	e, ckpt := metrictest.Unslice2(arrAgg.New(2))
+	assert.NoError(t, e.Update(context.Background(), number.NewFloat64Number(100), &desc))
+	require.NoError(t, e.SynchronizedMove(ckpt, &desc))
+	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
+	p, ok := ckpt.(aggregation.Points)
+	require.True(t, ok, "ckpt is not an aggregation.Points: %T", ckpt)
+	pts, err := p.Points()
+	require.NoError(t, err)
+
+	if m, err := gaugeArray(record, pts); assert.NoError(t, err) {
+		assert.Equal(t, []*metricpb.DoubleDataPoint{{
+			Value:             100,
+			StartTimeUnixNano: toNanos(intervalStart),
+			TimeUnixNano:      toNanos(intervalEnd),
+		}}, m.GetDoubleGauge().DataPoints)
+		assert.Nil(t, m.GetIntHistogram())
+		assert.Nil(t, m.GetIntSum())
+		assert.Nil(t, m.GetIntGauge())
+		assert.Nil(t, m.GetDoubleHistogram())
+		assert.Nil(t, m.GetDoubleSum())
+	}
+}
+
 func TestSumErrUnknownValueType(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Kind(-1))
 	labels := label.NewSet()
@@ -357,11 +409,11 @@ func TestRecordAggregatorIncompatibleErrors(t *testing.T) {
 	require.Nil(t, mpb)
 	require.True(t, errors.Is(err, ErrIncompatibleAgg))
 
-	mpb, err = makeMpb(aggregation.ExactKind, &array.New(1)[0])
+	mpb, err = makeMpb(aggregation.ExactKind, &lastvalue.New(1)[0])
 
 	require.Error(t, err)
 	require.Nil(t, mpb)
-	require.True(t, errors.Is(err, ErrUnimplementedAgg))
+	require.True(t, errors.Is(err, ErrIncompatibleAgg))
 }
 
 func TestRecordAggregatorUnexpectedErrors(t *testing.T) {
