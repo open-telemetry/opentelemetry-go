@@ -15,52 +15,102 @@
 package otlp // import "go.opentelemetry.io/otel/exporters/otlp"
 
 import (
+	"context"
+	"fmt"
 	"math/rand"
+	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
-func (e *Exporter) lastConnectError() error {
-	errPtr := (*error)(atomic.LoadPointer(&e.lastConnectErrPtr))
+type grpcConnection struct {
+	// Ensure pointer is 64-bit aligned for atomic operations on both 32 and 64 bit machines.
+	lastConnectErrPtr unsafe.Pointer
+
+	// mu protects the non-atomic and non-channel variables
+	mu sync.RWMutex
+
+	c        config
+	metadata metadata.MD
+	cc       *grpc.ClientConn
+
+	newConnectionHandler       func(cc *grpc.ClientConn) error
+	disconnectedCh             chan bool
+	backgroundConnectionDoneCh chan bool
+	stopCh                     chan struct{}
+}
+
+func newGRPCConnection(c config, handler func(cc *grpc.ClientConn) error) *grpcConnection {
+	conn := new(grpcConnection)
+	conn.newConnectionHandler = handler
+	if c.collectorAddr == "" {
+		c.collectorAddr = fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorPort)
+	}
+	conn.c = c
+	if len(conn.c.headers) > 0 {
+		conn.metadata = metadata.New(conn.c.headers)
+	}
+	return conn
+}
+
+func (oc *grpcConnection) startConnection(stopCh chan struct{}) {
+	oc.stopCh = stopCh
+
+	oc.disconnectedCh = make(chan bool)
+	oc.backgroundConnectionDoneCh = make(chan bool)
+
+	if err := oc.connect(); err == nil {
+		oc.setStateConnected()
+	} else {
+		oc.setStateDisconnected(err)
+	}
+	go oc.indefiniteBackgroundConnection()
+}
+
+func (oc *grpcConnection) lastConnectError() error {
+	errPtr := (*error)(atomic.LoadPointer(&oc.lastConnectErrPtr))
 	if errPtr == nil {
 		return nil
 	}
 	return *errPtr
 }
 
-func (e *Exporter) saveLastConnectError(err error) {
+func (oc *grpcConnection) saveLastConnectError(err error) {
 	var errPtr *error
 	if err != nil {
 		errPtr = &err
 	}
-	atomic.StorePointer(&e.lastConnectErrPtr, unsafe.Pointer(errPtr))
+	atomic.StorePointer(&oc.lastConnectErrPtr, unsafe.Pointer(errPtr))
 }
 
-func (e *Exporter) setStateDisconnected(err error) {
-	e.saveLastConnectError(err)
+func (oc *grpcConnection) setStateDisconnected(err error) {
+	oc.saveLastConnectError(err)
 	select {
-	case e.disconnectedCh <- true:
+	case oc.disconnectedCh <- true:
 	default:
 	}
 }
 
-func (e *Exporter) setStateConnected() {
-	e.saveLastConnectError(nil)
+func (oc *grpcConnection) setStateConnected() {
+	oc.saveLastConnectError(nil)
 }
 
-func (e *Exporter) connected() bool {
-	return e.lastConnectError() == nil
+func (oc *grpcConnection) connected() bool {
+	return oc.lastConnectError() == nil
 }
 
 const defaultConnReattemptPeriod = 10 * time.Second
 
-func (e *Exporter) indefiniteBackgroundConnection() {
+func (oc *grpcConnection) indefiniteBackgroundConnection() {
 	defer func() {
-		e.backgroundConnectionDoneCh <- true
+		oc.backgroundConnectionDoneCh <- true
 	}()
 
-	connReattemptPeriod := e.c.reconnectionPeriod
+	connReattemptPeriod := oc.c.reconnectionPeriod
 	if connReattemptPeriod <= 0 {
 		connReattemptPeriod = defaultConnReattemptPeriod
 	}
@@ -79,17 +129,17 @@ func (e *Exporter) indefiniteBackgroundConnection() {
 		// 2. Otherwise block until we are disconnected, and
 		//    then retry connecting
 		select {
-		case <-e.stopCh:
+		case <-oc.stopCh:
 			return
 
-		case <-e.disconnectedCh:
+		case <-oc.disconnectedCh:
 			// Normal scenario that we'll wait for
 		}
 
-		if err := e.connect(); err == nil {
-			e.setStateConnected()
+		if err := oc.connect(); err == nil {
+			oc.setStateConnected()
 		} else {
-			e.setStateDisconnected(err)
+			oc.setStateDisconnected(err)
 		}
 
 		// Apply some jitter to avoid lockstep retrials of other
@@ -97,17 +147,88 @@ func (e *Exporter) indefiniteBackgroundConnection() {
 		// innocent DDOS, by clogging the machine's resources and network.
 		jitter := time.Duration(rng.Int63n(maxJitterNanos))
 		select {
-		case <-e.stopCh:
+		case <-oc.stopCh:
 			return
 		case <-time.After(connReattemptPeriod + jitter):
 		}
 	}
 }
 
-func (e *Exporter) connect() error {
-	cc, err := e.dialToCollector()
+func (oc *grpcConnection) connect() error {
+	cc, err := oc.dialToCollector()
 	if err != nil {
 		return err
 	}
-	return e.enableConnections(cc)
+
+	oc.mu.Lock()
+	defer oc.mu.Unlock()
+
+	// If previous clientConn is same as the current then just return.
+	// This doesn't happen right now as this func is only called with new ClientConn.
+	// It is more about future-proofing.
+	if oc.cc == cc {
+		return nil
+	}
+
+	// If the previous clientConn was non-nil, close it
+	if oc.cc != nil {
+		_ = oc.cc.Close()
+	}
+	oc.cc = cc
+
+	err = oc.newConnectionHandler(cc)
+	return err
+}
+
+func (oc *grpcConnection) dialToCollector() (*grpc.ClientConn, error) {
+	addr := oc.c.collectorAddr
+
+	dialOpts := []grpc.DialOption{}
+	if oc.c.grpcServiceConfig != "" {
+		dialOpts = append(dialOpts, grpc.WithDefaultServiceConfig(oc.c.grpcServiceConfig))
+	}
+	if oc.c.clientCredentials != nil {
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(oc.c.clientCredentials))
+	} else if oc.c.canDialInsecure {
+		dialOpts = append(dialOpts, grpc.WithInsecure())
+	}
+	if oc.c.compressor != "" {
+		dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.UseCompressor(oc.c.compressor)))
+	}
+	if len(oc.c.grpcDialOptions) != 0 {
+		dialOpts = append(dialOpts, oc.c.grpcDialOptions...)
+	}
+
+	ctx := oc.contextWithMetadata(context.Background())
+	return grpc.DialContext(ctx, addr, dialOpts...)
+}
+
+func (oc *grpcConnection) contextWithMetadata(ctx context.Context) context.Context {
+	if oc.metadata.Len() > 0 {
+		return metadata.NewOutgoingContext(ctx, oc.metadata)
+	}
+	return ctx
+}
+
+func (oc *grpcConnection) shutdown(ctx context.Context) error {
+	oc.mu.RLock()
+	cc := oc.cc
+	oc.mu.RUnlock()
+
+	var err error
+	if cc != nil {
+		err = cc.Close()
+	}
+
+	// Ensure that the backgroundConnector returns
+	select {
+	case <-oc.backgroundConnectionDoneCh:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+
+	close(oc.disconnectedCh)
+	close(oc.backgroundConnectionDoneCh)
+
+	return err
 }
