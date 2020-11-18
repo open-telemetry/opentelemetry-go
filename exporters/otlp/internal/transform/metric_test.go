@@ -244,7 +244,7 @@ func TestLastValueIntDataPoints(t *testing.T) {
 }
 
 func TestExactIntDataPoints(t *testing.T) {
-	desc := otel.NewDescriptor("", otel.ValueRecorderInstrumentKind, number.Int64Kind)
+	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Int64Kind)
 	labels := label.NewSet()
 	e, ckpt := metrictest.Unslice2(arrAgg.New(2))
 	assert.NoError(t, e.Update(context.Background(), number.Number(100), &desc))
@@ -270,7 +270,7 @@ func TestExactIntDataPoints(t *testing.T) {
 }
 
 func TestExactFloatDataPoints(t *testing.T) {
-	desc := otel.NewDescriptor("", otel.ValueRecorderInstrumentKind, number.Float64Kind)
+	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Float64Kind)
 	labels := label.NewSet()
 	e, ckpt := metrictest.Unslice2(arrAgg.New(2))
 	assert.NoError(t, e.Update(context.Background(), number.NewFloat64Number(100), &desc))
