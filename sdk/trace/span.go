@@ -44,8 +44,8 @@ type span struct {
 	// mu protects the contents of this span.
 	mu sync.Mutex
 
-	// parentSpanID is the span ID of the parent span of this span.
-	parentSpanID trace.SpanID
+	// parent holds the parent span of this span as a trace.SpanContext.
+	parent trace.SpanContext
 
 	// spanKind represents the kind of this span as a trace.SpanKind.
 	spanKind trace.SpanKind
@@ -243,7 +243,7 @@ func (s *span) SetName(name string) {
 
 	s.name = name
 	// SAMPLING
-	noParent := !s.parentSpanID.IsValid()
+	noParent := !s.parent.SpanID.IsValid()
 	var ctx trace.SpanContext
 	if noParent {
 		ctx = trace.SpanContext{}
@@ -291,7 +291,7 @@ func (s *span) makeSpanData() *export.SpanData {
 	sd.HasRemoteParent = s.hasRemoteParent
 	sd.InstrumentationLibrary = s.instrumentationLibrary
 	sd.Name = s.name
-	sd.ParentSpanID = s.parentSpanID
+	sd.ParentSpanID = s.parent.SpanID
 	sd.Resource = s.resource
 	sd.SpanContext = s.spanContext
 	sd.SpanKind = s.spanKind
@@ -350,7 +350,6 @@ func (s *span) addChild() {
 }
 
 func startSpanInternal(tr *tracer, name string, parent trace.SpanContext, remoteParent bool, o *trace.SpanConfig) *span {
-	var noParent bool
 	span := &span{}
 	span.spanContext = parent
 
@@ -358,7 +357,6 @@ func startSpanInternal(tr *tracer, name string, parent trace.SpanContext, remote
 
 	if parent == emptySpanContext {
 		span.spanContext.TraceID = cfg.IDGenerator.NewTraceID()
-		noParent = true
 	}
 	span.spanContext.SpanID = cfg.IDGenerator.NewSpanID()
 
@@ -367,7 +365,7 @@ func startSpanInternal(tr *tracer, name string, parent trace.SpanContext, remote
 	span.links = newEvictedQueue(cfg.MaxLinksPerSpan)
 
 	data := samplingData{
-		noParent:     noParent,
+		noParent:     parent == emptySpanContext,
 		remoteParent: remoteParent,
 		parent:       parent,
 		name:         name,
@@ -397,9 +395,7 @@ func startSpanInternal(tr *tracer, name string, parent trace.SpanContext, remote
 
 	span.SetAttributes(sampled.Attributes...)
 
-	if !noParent {
-		span.parentSpanID = parent.SpanID
-	}
+	span.parent = parent
 
 	return span
 }
