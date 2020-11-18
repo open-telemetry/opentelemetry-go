@@ -60,6 +60,16 @@ type ReadOnlySpan interface {
 	Snapshot() *export.SpanData
 }
 
+// ReadWriteSpan exposes the same methods as trace.Span and in addition allows
+// reading information from the underlying data structure.
+// This interface exposes the union of the methods of trace.Span (which is a
+// "write-only" span) and ReadOnlySpan. New methods for writing or reading span
+// information should be added under trace.Span or ReadOnlySpan, respectively.
+type ReadWriteSpan interface {
+	trace.Span
+	ReadOnlySpan
+}
+
 var emptySpanContext = trace.SpanContext{}
 
 // span is an implementation of the OpenTelemetry Span API representing the

@@ -70,7 +70,7 @@ func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
 	span.End()
 
 	// These should not panic.
-	bsp.OnStart(context.Background(), &export.SpanData{})
+	bsp.OnStart(context.Background(), span.(sdktrace.ReadWriteSpan))
 	bsp.OnEnd(span.(sdktrace.ReadOnlySpan))
 	bsp.ForceFlush()
 	err := bsp.Shutdown(context.Background())

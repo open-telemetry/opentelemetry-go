@@ -39,7 +39,7 @@ func NewSimpleSpanProcessor(exporter export.SpanExporter) *SimpleSpanProcessor {
 }
 
 // OnStart method does nothing.
-func (ssp *SimpleSpanProcessor) OnStart(parent context.Context, sd *export.SpanData) {
+func (ssp *SimpleSpanProcessor) OnStart(parent context.Context, s ReadWriteSpan) {
 }
 
 // OnEnd method exports a ReadOnlySpan using the associated exporter.

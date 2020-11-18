@@ -17,8 +17,6 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 import (
 	"context"
 	"sync"
-
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
 // SpanProcessor is interface to add hooks to start and end method invocations.
@@ -26,7 +24,7 @@ type SpanProcessor interface {
 
 	// OnStart method is invoked when span is started. It is a synchronous call
 	// and hence should not block.
-	OnStart(parent context.Context, sd *export.SpanData)
+	OnStart(parent context.Context, s ReadWriteSpan)
 
 	// OnEnd method is invoked when span is finished. It is a synchronous call
 	// and hence should not block.

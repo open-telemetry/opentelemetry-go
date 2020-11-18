@@ -112,7 +112,7 @@ func NewBatchSpanProcessor(exporter export.SpanExporter, options ...BatchSpanPro
 }
 
 // OnStart method does nothing.
-func (bsp *BatchSpanProcessor) OnStart(parent context.Context, sd *export.SpanData) {}
+func (bsp *BatchSpanProcessor) OnStart(parent context.Context, s ReadWriteSpan) {}
 
 // OnEnd method enqueues a ReadOnlySpan for later processing.
 func (bsp *BatchSpanProcessor) OnEnd(s ReadOnlySpan) {

@@ -18,7 +18,6 @@ import (
 	"context"
 	"time"
 
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/export/trace/tracetest"
 )
 
@@ -34,8 +33,8 @@ type DurationFilter struct {
 	Max time.Duration
 }
 
-func (f DurationFilter) OnStart(parent context.Context, sd *export.SpanData) {
-	f.Next.OnStart(parent, sd)
+func (f DurationFilter) OnStart(parent context.Context, s ReadWriteSpan) {
+	f.Next.OnStart(parent, s)
 }
 func (f DurationFilter) Shutdown(ctx context.Context) error { return f.Next.Shutdown(ctx) }
 func (f DurationFilter) ForceFlush()                        { f.Next.ForceFlush() }
@@ -62,8 +61,8 @@ type InstrumentationBlacklist struct {
 	Blacklist map[string]bool
 }
 
-func (f InstrumentationBlacklist) OnStart(parent context.Context, sd *export.SpanData) {
-	f.Next.OnStart(parent, sd)
+func (f InstrumentationBlacklist) OnStart(parent context.Context, s ReadWriteSpan) {
+	f.Next.OnStart(parent, s)
 }
 func (f InstrumentationBlacklist) Shutdown(ctx context.Context) error { return f.Next.Shutdown(ctx) }
 func (f InstrumentationBlacklist) ForceFlush()                        { f.Next.ForceFlush() }

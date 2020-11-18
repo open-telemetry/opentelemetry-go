@@ -60,9 +60,8 @@ func (tr *tracer) Start(ctx context.Context, name string, options ...trace.SpanO
 
 	if span.IsRecording() {
 		sps, _ := tr.provider.spanProcessors.Load().(spanProcessorStates)
-		sd := span.Snapshot()
 		for _, sp := range sps {
-			sp.sp.OnStart(ctx, sd)
+			sp.sp.OnStart(ctx, span)
 		}
 	}
 

@@ -1334,3 +1334,37 @@ func TestReadOnlySpan(t *testing.T) {
 	span.End(trace.WithTimestamp(et))
 	assert.Equal(t, et, ro.EndTime())
 }
+
+func TestReadWriteSpan(t *testing.T) {
+	tp := NewTracerProvider()
+	cfg := tp.config.Load().(*Config)
+	tr := tp.Tracer("ReadWriteSpan")
+
+	// Initialize parent context.
+	parent := trace.SpanContext{
+		TraceID:    cfg.IDGenerator.NewTraceID(),
+		SpanID:     cfg.IDGenerator.NewSpanID(),
+		TraceFlags: 0x1,
+	}
+	ctx := trace.ContextWithRemoteSpanContext(context.Background(), parent)
+
+	_, span := tr.Start(ctx, "foo")
+	defer span.End()
+
+	// Verify span implements ReadOnlySpan.
+	rw, ok := span.(ReadWriteSpan)
+	require.True(t, ok)
+
+	// Verify the span can be read from.
+	assert.False(t, rw.StartTime().IsZero())
+
+	// Verify the span can be written to.
+	rw.SetName("bar")
+	assert.Equal(t, "bar", rw.Name())
+
+	// NOTE: This function tests ReadWriteSpan which is an interface which
+	// embeds trace.Span and ReadOnlySpan. Since both of these interfaces have
+	// their own tests, there is no point in testing all the possible methods
+	// available via ReadWriteSpan as doing so would mean creating a lot of
+	// duplication.
+}
