@@ -29,17 +29,17 @@ import (
 
 type testBatchExporter struct {
 	mu         sync.Mutex
-	spans      []*export.SpanData
+	spans      []*export.SpanSnapshot
 	sizes      []int
 	batchCount int
 }
 
-func (t *testBatchExporter) ExportSpans(ctx context.Context, sds []*export.SpanData) error {
+func (t *testBatchExporter) ExportSpans(ctx context.Context, ss []*export.SpanSnapshot) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	t.spans = append(t.spans, sds...)
-	t.sizes = append(t.sizes, len(sds))
+	t.spans = append(t.spans, ss...)
+	t.sizes = append(t.sizes, len(ss))
 	t.batchCount++
 	return nil
 }

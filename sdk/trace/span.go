@@ -57,7 +57,7 @@ type ReadOnlySpan interface {
 	IsRecording() bool
 	InstrumentationLibrary() instrumentation.Library
 	Resource() *resource.Resource
-	Snapshot() *export.SpanData
+	Snapshot() *export.SpanSnapshot
 }
 
 // ReadWriteSpan exposes the same methods as trace.Span and in addition allows
@@ -395,9 +395,9 @@ func (s *span) addLink(link trace.Link) {
 }
 
 // Snapshot creates a snapshot representing the current state of the span as an
-// export.SpanData and returns a pointer to it.
-func (s *span) Snapshot() *export.SpanData {
-	var sd export.SpanData
+// export.SpanSnapshot and returns a pointer to it.
+func (s *span) Snapshot() *export.SpanSnapshot {
+	var sd export.SpanSnapshot
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
