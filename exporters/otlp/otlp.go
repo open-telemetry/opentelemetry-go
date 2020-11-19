@@ -92,13 +92,19 @@ func NewUnstartedExporter(opts ...ExporterOption) *Exporter {
 
 func (e *Exporter) handleNewConnection(cc *grpc.ClientConn) error {
 	e.mu.Lock()
-	e.metricExporter = colmetricpb.NewMetricsServiceClient(cc)
-	e.traceExporter = coltracepb.NewTraceServiceClient(cc)
-	e.mu.Unlock()
+	defer e.mu.Unlock()
+	if cc != nil {
+		e.metricExporter = colmetricpb.NewMetricsServiceClient(cc)
+		e.traceExporter = coltracepb.NewTraceServiceClient(cc)
+	} else {
+		e.metricExporter = nil
+		e.traceExporter = nil
+	}
 	return nil
 }
 
 var (
+	errNoClient       = errors.New("no client")
 	errAlreadyStarted = errors.New("already started")
 	errDisconnected   = errors.New("exporter disconnected")
 )
@@ -173,6 +179,9 @@ func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) e
 	err = func() error {
 		e.senderMu.Lock()
 		defer e.senderMu.Unlock()
+		if e.metricExporter == nil {
+			return errNoClient
+		}
 		_, err := e.metricExporter.Export(e.cc.contextWithMetadata(ctx), &colmetricpb.ExportMetricsServiceRequest{
 			ResourceMetrics: rms,
 		})
@@ -211,6 +220,9 @@ func (e *Exporter) uploadTraces(ctx context.Context, sdl []*tracesdk.SpanData) e
 	err := func() error {
 		e.senderMu.Lock()
 		defer e.senderMu.Unlock()
+		if e.traceExporter == nil {
+			return errNoClient
+		}
 		_, err := e.traceExporter.Export(e.cc.contextWithMetadata(ctx), &coltracepb.ExportTraceServiceRequest{
 			ResourceSpans: protoSpans,
 		})

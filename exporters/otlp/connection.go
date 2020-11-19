@@ -45,6 +45,11 @@ type grpcConnection struct {
 	disconnectedCh             chan bool
 	backgroundConnectionDoneCh chan struct{}
 	stopCh                     chan struct{}
+
+	// this is for tests, so they can replace the closing
+	// routine without a worry of modifying some global variable
+	// or changing it back to original after the test is done
+	closeBackgroundConnectionDoneCh func(ch chan struct{})
 }
 
 func newGRPCConnection(c config, handler func(cc *grpc.ClientConn) error) *grpcConnection {
@@ -56,6 +61,9 @@ func newGRPCConnection(c config, handler func(cc *grpc.ClientConn) error) *grpcC
 	conn.c = c
 	if len(conn.c.headers) > 0 {
 		conn.metadata = metadata.New(conn.c.headers)
+	}
+	conn.closeBackgroundConnectionDoneCh = func(ch chan struct{}) {
+		close(ch)
 	}
 	return conn
 }
@@ -95,6 +103,7 @@ func (oc *grpcConnection) setStateDisconnected(err error) {
 	case oc.disconnectedCh <- true:
 	default:
 	}
+	_ = oc.newConnectionHandler(nil)
 }
 
 func (oc *grpcConnection) setStateConnected() {
@@ -109,7 +118,7 @@ const defaultConnReattemptPeriod = 10 * time.Second
 
 func (oc *grpcConnection) indefiniteBackgroundConnection() {
 	defer func() {
-		close(oc.backgroundConnectionDoneCh)
+		oc.closeBackgroundConnectionDoneCh(oc.backgroundConnectionDoneCh)
 	}()
 
 	connReattemptPeriod := oc.c.reconnectionPeriod
@@ -221,11 +230,6 @@ func (oc *grpcConnection) contextWithMetadata(ctx context.Context) context.Conte
 	return ctx
 }
 
-// closeStopCh is used to wrap the exporters stopCh channel closing for testing.
-var closeStopCh = func(stopCh chan struct{}) {
-	close(stopCh)
-}
-
 func (oc *grpcConnection) shutdown(ctx context.Context) error {
 	oc.mu.RLock()
 	cc := oc.cc
@@ -236,7 +240,7 @@ func (oc *grpcConnection) shutdown(ctx context.Context) error {
 		err = cc.Close()
 	}
 
-	closeStopCh(oc.stopCh)
+	close(oc.stopCh)
 	// Ensure that the backgroundConnector returns
 	select {
 	case <-oc.backgroundConnectionDoneCh:
