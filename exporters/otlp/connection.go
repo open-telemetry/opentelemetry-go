@@ -179,7 +179,13 @@ func (oc *grpcConnection) connect() error {
 	if err != nil {
 		return err
 	}
+	oc.setConnection(cc)
+	return oc.newConnectionHandler(cc)
+}
 
+// setConnection sets cc as the client connection and returns true if
+// the connection state changed.
+func (oc *grpcConnection) setConnection(cc *grpc.ClientConn) bool {
 	oc.mu.Lock()
 	defer oc.mu.Unlock()
 
@@ -187,7 +193,7 @@ func (oc *grpcConnection) connect() error {
 	// This doesn't happen right now as this func is only called with new ClientConn.
 	// It is more about future-proofing.
 	if oc.cc == cc {
-		return nil
+		return false
 	}
 
 	// If the previous clientConn was non-nil, close it
@@ -195,9 +201,7 @@ func (oc *grpcConnection) connect() error {
 		_ = oc.cc.Close()
 	}
 	oc.cc = cc
-
-	err = oc.newConnectionHandler(cc)
-	return err
+	return true
 }
 
 func (oc *grpcConnection) dialToCollector() (*grpc.ClientConn, error) {
