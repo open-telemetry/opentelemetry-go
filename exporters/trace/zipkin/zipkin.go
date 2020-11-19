@@ -173,7 +173,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, batch []*export.SpanData) er
 	// but it is still being read because according to https://golang.org/pkg/net/http/#Response
 	// > The default HTTP client's Transport may not reuse HTTP/1.x "keep-alive" TCP connections
 	// > if the Body is not read to completion and closed.
-	_, err := io.Copy(ioutil.Discard, resp.Body)
+	_, err = io.Copy(ioutil.Discard, resp.Body)
 	if err != nil {
 		return e.errf("failed to read response body: %v", err)
 	}
