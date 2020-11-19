@@ -48,7 +48,6 @@ type Exporter struct {
 
 	startOnce sync.Once
 	stopOnce  sync.Once
-	stopCh    chan struct{}
 
 	exportKindSelector metricsdk.ExportKindSelector
 }
@@ -100,10 +99,8 @@ func (e *Exporter) handleNewConnection(cc *grpc.ClientConn) error {
 }
 
 var (
-	errAlreadyStarted  = errors.New("already started")
-	errDisconnected    = errors.New("exporter disconnected")
-	errStopped         = errors.New("exporter stopped")
-	errContextCanceled = errors.New("context canceled")
+	errAlreadyStarted = errors.New("already started")
+	errDisconnected   = errors.New("exporter disconnected")
 )
 
 // Start dials to the collector, establishing a connection to it. It also
@@ -116,19 +113,13 @@ func (e *Exporter) Start() error {
 	e.startOnce.Do(func() {
 		e.mu.Lock()
 		e.started = true
-		e.stopCh = make(chan struct{})
 		e.mu.Unlock()
 
 		err = nil
-		e.cc.startConnection(e.stopCh)
+		e.cc.startConnection()
 	})
 
 	return err
-}
-
-// closeStopCh is used to wrap the exporters stopCh channel closing for testing.
-var closeStopCh = func(stopCh chan struct{}) {
-	close(stopCh)
 }
 
 // Shutdown closes all connections and releases resources currently being used
@@ -146,7 +137,6 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	var err error
 
 	e.stopOnce.Do(func() {
-		closeStopCh(e.stopCh)
 		if cc != nil {
 			// Clean things up before checking this error.
 			err = cc.shutdown(ctx)
@@ -165,16 +155,8 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 // interface. It transforms and batches metric Records into OTLP Metrics and
 // transmits them to the configured collector.
 func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) error {
-	// Unify the parent context Done signal with the exporter stopCh.
-	ctx, cancel := context.WithCancel(parent)
+	ctx, cancel := e.cc.contextWithStop(parent)
 	defer cancel()
-	go func(ctx context.Context, cancel context.CancelFunc) {
-		select {
-		case <-ctx.Done():
-		case <-e.stopCh:
-			cancel()
-		}
-	}(ctx, cancel)
 
 	// Hardcode the number of worker goroutines to 1. We later will
 	// need to see if there's a way to adjust that number for longer
@@ -188,22 +170,18 @@ func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) e
 		return errDisconnected
 	}
 
-	select {
-	case <-e.stopCh:
-		return errStopped
-	case <-ctx.Done():
-		return errContextCanceled
-	default:
+	err = func() error {
 		e.senderMu.Lock()
+		defer e.senderMu.Unlock()
 		_, err := e.metricExporter.Export(e.cc.contextWithMetadata(ctx), &colmetricpb.ExportMetricsServiceRequest{
 			ResourceMetrics: rms,
 		})
-		e.senderMu.Unlock()
-		if err != nil {
-			return err
-		}
+		return err
+	}()
+	if err != nil {
+		e.cc.setStateDisconnected(err)
 	}
-	return nil
+	return err
 }
 
 // ExportKindFor reports back to the OpenTelemetry SDK sending this Exporter
@@ -218,28 +196,28 @@ func (e *Exporter) ExportSpans(ctx context.Context, sds []*tracesdk.SpanData) er
 }
 
 func (e *Exporter) uploadTraces(ctx context.Context, sdl []*tracesdk.SpanData) error {
-	select {
-	case <-e.stopCh:
+	ctx, cancel := e.cc.contextWithStop(ctx)
+	defer cancel()
+
+	if !e.cc.connected() {
 		return nil
-	default:
-		if !e.cc.connected() {
-			return nil
-		}
+	}
 
-		protoSpans := transform.SpanData(sdl)
-		if len(protoSpans) == 0 {
-			return nil
-		}
+	protoSpans := transform.SpanData(sdl)
+	if len(protoSpans) == 0 {
+		return nil
+	}
 
+	err := func() error {
 		e.senderMu.Lock()
+		defer e.senderMu.Unlock()
 		_, err := e.traceExporter.Export(e.cc.contextWithMetadata(ctx), &coltracepb.ExportTraceServiceRequest{
 			ResourceSpans: protoSpans,
 		})
-		e.senderMu.Unlock()
-		if err != nil {
-			e.cc.setStateDisconnected(err)
-			return err
-		}
+		return err
+	}()
+	if err != nil {
+		e.cc.setStateDisconnected(err)
 	}
-	return nil
+	return err
 }

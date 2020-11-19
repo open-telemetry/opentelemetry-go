@@ -60,9 +60,8 @@ func newGRPCConnection(c config, handler func(cc *grpc.ClientConn) error) *grpcC
 	return conn
 }
 
-func (oc *grpcConnection) startConnection(stopCh chan struct{}) {
-	oc.stopCh = stopCh
-
+func (oc *grpcConnection) startConnection() {
+	oc.stopCh = make(chan struct{})
 	oc.disconnectedCh = make(chan bool)
 	oc.backgroundConnectionDoneCh = make(chan struct{})
 
@@ -213,6 +212,11 @@ func (oc *grpcConnection) contextWithMetadata(ctx context.Context) context.Conte
 	return ctx
 }
 
+// closeStopCh is used to wrap the exporters stopCh channel closing for testing.
+var closeStopCh = func(stopCh chan struct{}) {
+	close(stopCh)
+}
+
 func (oc *grpcConnection) shutdown(ctx context.Context) error {
 	oc.mu.RLock()
 	cc := oc.cc
@@ -223,6 +227,7 @@ func (oc *grpcConnection) shutdown(ctx context.Context) error {
 		err = cc.Close()
 	}
 
+	closeStopCh(oc.stopCh)
 	// Ensure that the backgroundConnector returns
 	select {
 	case <-oc.backgroundConnectionDoneCh:
@@ -233,4 +238,20 @@ func (oc *grpcConnection) shutdown(ctx context.Context) error {
 	close(oc.disconnectedCh)
 
 	return err
+}
+
+func (oc *grpcConnection) contextWithStop(ctx context.Context) (context.Context, context.CancelFunc) {
+	// Unify the parent context Done signal with the connection's
+	// stop channel.
+	ctx, cancel := context.WithCancel(ctx)
+	go func(ctx context.Context, cancel context.CancelFunc) {
+		select {
+		case <-ctx.Done():
+			// Nothing to do, either cancelled or deadline
+			// happened.
+		case <-oc.stopCh:
+			cancel()
+		}
+	}(ctx, cancel)
+	return ctx, cancel
 }
