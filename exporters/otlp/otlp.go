@@ -73,9 +73,9 @@ func newConfig(opts ...ExporterOption) config {
 }
 
 // NewExporter constructs a new Exporter and starts it.
-func NewExporter(opts ...ExporterOption) (*Exporter, error) {
+func NewExporter(ctx context.Context, opts ...ExporterOption) (*Exporter, error) {
 	exp := NewUnstartedExporter(opts...)
-	if err := exp.Start(); err != nil {
+	if err := exp.Start(ctx); err != nil {
 		return nil, err
 	}
 	return exp, nil
@@ -114,7 +114,7 @@ var (
 // messages that consist of the node identifier. Start invokes a background
 // connector that will reattempt connections to the collector periodically
 // if the connection dies.
-func (e *Exporter) Start() error {
+func (e *Exporter) Start(ctx context.Context) error {
 	var err = errAlreadyStarted
 	e.startOnce.Do(func() {
 		e.mu.Lock()
@@ -122,7 +122,7 @@ func (e *Exporter) Start() error {
 		e.mu.Unlock()
 
 		err = nil
-		e.cc.startConnection(context.Background())
+		e.cc.startConnection(ctx)
 	})
 
 	return err

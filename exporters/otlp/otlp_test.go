@@ -34,7 +34,7 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 			orig(ch)
 		}()
 	}
-	if err := e.Start(); err != nil {
+	if err := e.Start(ctx); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
 
@@ -59,7 +59,7 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 			orig(ch)
 		}()
 	}
-	if err := e.Start(); err != nil {
+	if err := e.Start(ctx); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
 
@@ -78,7 +78,7 @@ func TestExporterShutdownNoError(t *testing.T) {
 	defer cancel()
 
 	e := NewUnstartedExporter()
-	if err := e.Start(); err != nil {
+	if err := e.Start(ctx); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
 
@@ -89,7 +89,7 @@ func TestExporterShutdownNoError(t *testing.T) {
 
 func TestExporterShutdownManyTimes(t *testing.T) {
 	ctx := context.Background()
-	e, err := NewExporter()
+	e, err := NewExporter(ctx)
 	if err != nil {
 		t.Fatalf("failed to start an exporter: %v", err)
 	}

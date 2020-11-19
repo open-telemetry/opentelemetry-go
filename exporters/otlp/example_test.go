@@ -28,12 +28,13 @@ import (
 )
 
 func Example_insecure() {
-	exp, err := otlp.NewExporter(otlp.WithInsecure())
+	ctx := context.Background()
+	exp, err := otlp.NewExporter(ctx, otlp.WithInsecure())
 	if err != nil {
 		log.Fatalf("Failed to create the collector exporter: %v", err)
 	}
 	defer func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
 		if err := exp.Shutdown(ctx); err != nil {
 			otel.Handle(err)
@@ -54,7 +55,7 @@ func Example_insecure() {
 	tracer := otel.Tracer("test-tracer")
 
 	// Then use the OpenTelemetry tracing library, like we normally would.
-	ctx, span := tracer.Start(context.Background(), "CollectorExporter-Example")
+	ctx, span := tracer.Start(ctx, "CollectorExporter-Example")
 	defer span.End()
 
 	for i := 0; i < 10; i++ {
@@ -72,12 +73,13 @@ func Example_withTLS() {
 		log.Fatalf("failed to create gRPC client TLS credentials: %v", err)
 	}
 
-	exp, err := otlp.NewExporter(otlp.WithTLSCredentials(creds))
+	ctx := context.Background()
+	exp, err := otlp.NewExporter(ctx, otlp.WithTLSCredentials(creds))
 	if err != nil {
 		log.Fatalf("failed to create the collector exporter: %v", err)
 	}
 	defer func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
 		if err := exp.Shutdown(ctx); err != nil {
 			otel.Handle(err)
@@ -98,7 +100,7 @@ func Example_withTLS() {
 	tracer := otel.Tracer("test-tracer")
 
 	// Then use the OpenTelemetry tracing library, like we normally would.
-	ctx, span := tracer.Start(context.Background(), "Securely-Talking-To-Collector-Span")
+	ctx, span := tracer.Start(ctx, "Securely-Talking-To-Collector-Span")
 	defer span.End()
 
 	for i := 0; i < 10; i++ {
