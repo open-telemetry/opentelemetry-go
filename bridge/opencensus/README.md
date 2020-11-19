@@ -4,7 +4,7 @@ The OpenCensus Bridge helps facilitate the migration of an application from Open
 
 ## The Problem: Mixing OpenCensus and OpenTelemetry libraries
 
-In a perfect world, one would simply migrate their entire go application --including cusotom instrumentation, libraries, and exporters-- from OpenCensus to OpenTelemetry all at once.  In the real world, dependency constraints, third-party ownership of libraries, or other reasons may require mixing OpenCensus and OpenTelemetry libraries in a single application.
+In a perfect world, one would simply migrate their entire go application --including custom instrumentation, libraries, and exporters-- from OpenCensus to OpenTelemetry all at once.  In the real world, dependency constraints, third-party ownership of libraries, or other reasons may require mixing OpenCensus and OpenTelemetry libraries in a single application.
 
 However, if you create the following spans in a go application:
 
@@ -40,7 +40,7 @@ Instead, I would prefer (to a single set of exporters):
 
 ### The bridge solution
 
-The bridge implements the OpenCensus trace API using OpenTelemetry.  This would cause, for example, a span recorded with OpenCensus' StartSpan() method to be equivalent to recording a span using OpenTelemetry's tracer.Start() method.  Funneling all tracing API calls to OpenTelemetry APIs results in the desired unified span higherarchy.
+The bridge implements the OpenCensus trace API using OpenTelemetry.  This would cause, for example, a span recorded with OpenCensus' `StartSpan()` method to be equivalent to recording a span using OpenTelemetry's `tracer.Start()` method.  Funneling all tracing API calls to OpenTelemetry APIs results in the desired unified span hierarchy.
 
 ### User Journey
 
@@ -61,9 +61,11 @@ tracer := otel.GetTracerProvider().Tracer("bridge")
 octrace.DefaultTracer = opencensus.NewTracer(tracer)
 ```
 
+Be sure to set the `Tracer` name to your instrumentation package name instead of `"bridge"`.
+
 ### Incompatibilities
 
-OpenCensus and OpenTelemetry APIs are not entirely compatible.  If the bridge finds any incompatibilities, it will log them.  Incompabitilities include:
+OpenCensus and OpenTelemetry APIs are not entirely compatible.  If the bridge finds any incompatibilities, it will log them.  Incompatibilities include:
 
 * Custom OpenCensus Samplers specified during StartSpan are ignored.
 * Links cannot be added to OpenCensus spans.

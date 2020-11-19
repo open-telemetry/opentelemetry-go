@@ -1,4 +1,4 @@
-module go.opentelemetry.io/otel/bridge/opencensus/examples/simple
+module go.opentelemetry.io/otel/bridge/opencensus/examples/bridge
 
 go 1.14
 

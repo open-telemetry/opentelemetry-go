@@ -29,10 +29,10 @@ import (
 func main() {
 	ctx := context.Background()
 
-	log.Println("Configuring opencensus.  Not Registering any opencensus exporters.")
+	log.Println("Configuring OpenCensus.  Not Registering any OpenCensus exporters.")
 	octrace.ApplyConfig(octrace.Config{DefaultSampler: octrace.AlwaysSample()})
 
-	log.Println("Registering opentelemetry stdout exporter.")
+	log.Println("Registering OpenTelemetry stdout exporter.")
 	otExporter, err := stdout.NewExporter(stdout.WithPrettyPrint())
 	if err != nil {
 		log.Fatal(err)
@@ -44,15 +44,15 @@ func main() {
 	tracer := tp.Tracer("simple")
 	octrace.DefaultTracer = opencensus.NewTracer(tracer)
 
-	log.Println("Creating opencensus span, which should be printed out using the OpenTelemetry stdout exporter.\n-- It should have no parent, since it is the first span.")
+	log.Println("Creating OpenCensus span, which should be printed out using the OpenTelemetry stdout exporter.\n-- It should have no parent, since it is the first span.")
 	ctx, outerOCSpan := octrace.StartSpan(ctx, "OpenCensusOuterSpan")
 	outerOCSpan.End()
 
-	log.Println("Creating opentelemetry span\n-- It should have the OC span as a parent, since the OC span was written with using OpenTelemetry APIs.")
+	log.Println("Creating OpenTelemetry span\n-- It should have the OpenCensus span as a parent, since the OpenCensus span was written with using OpenTelemetry APIs.")
 	ctx, otspan := tracer.Start(ctx, "OpenTelemetrySpan")
 	otspan.End()
 
-	log.Println("Creating opencensus span, which should be printed out using the OpenTelemetry stdout exporter.\n-- It should have the OTel span as a parent, since it was written using OpenTelemetry APIs")
+	log.Println("Creating OpenCensus span, which should be printed out using the OpenTelemetry stdout exporter.\n-- It should have the OpenTelemetry span as a parent, since it was written using OpenTelemetry APIs")
 	_, innerOCSpan := octrace.StartSpan(ctx, "OpenCensusInnerSpan")
 	innerOCSpan.End()
 }
