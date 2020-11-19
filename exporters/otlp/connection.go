@@ -68,12 +68,12 @@ func newGRPCConnection(c config, handler func(cc *grpc.ClientConn) error) *grpcC
 	return conn
 }
 
-func (oc *grpcConnection) startConnection() {
+func (oc *grpcConnection) startConnection(ctx context.Context) {
 	oc.stopCh = make(chan struct{})
 	oc.disconnectedCh = make(chan bool)
 	oc.backgroundConnectionDoneCh = make(chan struct{})
 
-	if err := oc.connect(); err == nil {
+	if err := oc.connect(ctx); err == nil {
 		oc.setStateConnected()
 	} else {
 		oc.setStateDisconnected(err)
@@ -156,7 +156,7 @@ func (oc *grpcConnection) indefiniteBackgroundConnection() {
 			// Normal scenario that we'll wait for
 		}
 
-		if err := oc.connect(); err == nil {
+		if err := oc.connect(context.Background()); err == nil {
 			oc.setStateConnected()
 		} else {
 			oc.setStateDisconnected(err)
@@ -174,8 +174,8 @@ func (oc *grpcConnection) indefiniteBackgroundConnection() {
 	}
 }
 
-func (oc *grpcConnection) connect() error {
-	cc, err := oc.dialToCollector()
+func (oc *grpcConnection) connect(ctx context.Context) error {
+	cc, err := oc.dialToCollector(ctx)
 	if err != nil {
 		return err
 	}
@@ -204,7 +204,7 @@ func (oc *grpcConnection) setConnection(cc *grpc.ClientConn) bool {
 	return true
 }
 
-func (oc *grpcConnection) dialToCollector() (*grpc.ClientConn, error) {
+func (oc *grpcConnection) dialToCollector(ctx context.Context) (*grpc.ClientConn, error) {
 	addr := oc.c.collectorAddr
 
 	dialOpts := []grpc.DialOption{}
@@ -223,7 +223,7 @@ func (oc *grpcConnection) dialToCollector() (*grpc.ClientConn, error) {
 		dialOpts = append(dialOpts, oc.c.grpcDialOptions...)
 	}
 
-	ctx := oc.contextWithMetadata(context.Background())
+	ctx = oc.contextWithMetadata(ctx)
 	return grpc.DialContext(ctx, addr, dialOpts...)
 }
 

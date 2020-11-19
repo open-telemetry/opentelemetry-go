@@ -122,7 +122,7 @@ func (e *Exporter) Start() error {
 		e.mu.Unlock()
 
 		err = nil
-		e.cc.startConnection()
+		e.cc.startConnection(context.Background())
 	})
 
 	return err
