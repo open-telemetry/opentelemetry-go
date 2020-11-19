@@ -223,6 +223,8 @@ func (oc *grpcConnection) dialToCollector(ctx context.Context) (*grpc.ClientConn
 		dialOpts = append(dialOpts, oc.c.grpcDialOptions...)
 	}
 
+	ctx, cancel := oc.contextWithStop(ctx)
+	defer cancel()
 	ctx = oc.contextWithMetadata(ctx)
 	return grpc.DialContext(ctx, addr, dialOpts...)
 }
