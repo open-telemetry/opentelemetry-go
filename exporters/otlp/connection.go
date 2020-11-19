@@ -33,7 +33,7 @@ type grpcConnection struct {
 
 	// mu protects the connection as it is accessed by the
 	// exporter goroutines and background connection goroutine
-	mu sync.RWMutex
+	mu sync.Mutex
 	cc *grpc.ClientConn
 
 	// these fields are read-only after constructor is finished
@@ -237,15 +237,6 @@ func (oc *grpcConnection) contextWithMetadata(ctx context.Context) context.Conte
 }
 
 func (oc *grpcConnection) shutdown(ctx context.Context) error {
-	oc.mu.RLock()
-	cc := oc.cc
-	oc.mu.RUnlock()
-
-	var err error
-	if cc != nil {
-		err = cc.Close()
-	}
-
 	close(oc.stopCh)
 	// Ensure that the backgroundConnector returns
 	select {
@@ -256,7 +247,16 @@ func (oc *grpcConnection) shutdown(ctx context.Context) error {
 
 	close(oc.disconnectedCh)
 
-	return err
+	oc.mu.Lock()
+	cc := oc.cc
+	oc.cc = nil
+	oc.mu.Unlock()
+
+	if cc != nil {
+		return cc.Close()
+	}
+
+	return nil
 }
 
 func (oc *grpcConnection) contextWithStop(ctx context.Context) (context.Context, context.CancelFunc) {
