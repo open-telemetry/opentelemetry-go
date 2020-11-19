@@ -31,14 +31,17 @@ type grpcConnection struct {
 	// Ensure pointer is 64-bit aligned for atomic operations on both 32 and 64 bit machines.
 	lastConnectErrPtr unsafe.Pointer
 
-	// mu protects the non-atomic and non-channel variables
+	// mu protects the connection as it is accessed by the
+	// exporter goroutines and background connection goroutine
 	mu sync.RWMutex
+	cc *grpc.ClientConn
 
-	c        config
-	metadata metadata.MD
-	cc       *grpc.ClientConn
+	// these fields are read-only after constructor is finished
+	c                    config
+	metadata             metadata.MD
+	newConnectionHandler func(cc *grpc.ClientConn) error
 
-	newConnectionHandler       func(cc *grpc.ClientConn) error
+	// these channels are created once
 	disconnectedCh             chan bool
 	backgroundConnectionDoneCh chan struct{}
 	stopCh                     chan struct{}
