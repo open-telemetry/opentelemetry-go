@@ -29,7 +29,9 @@ import (
 
 func Example_insecure() {
 	ctx := context.Background()
-	exp, err := otlp.NewExporter(ctx, otlp.WithInsecure())
+	config := otlp.GRPCConnectionConfig{}.Apply(otlp.WithInsecure())
+	driver := otlp.NewGRPCSingleConnectionDriver(config)
+	exp, err := otlp.NewExporter(ctx, driver)
 	if err != nil {
 		log.Fatalf("Failed to create the collector exporter: %v", err)
 	}
@@ -74,7 +76,9 @@ func Example_withTLS() {
 	}
 
 	ctx := context.Background()
-	exp, err := otlp.NewExporter(ctx, otlp.WithTLSCredentials(creds))
+	config := otlp.GRPCConnectionConfig{}.Apply(otlp.WithTLSCredentials(creds))
+	driver := otlp.NewGRPCSingleConnectionDriver(config)
+	exp, err := otlp.NewExporter(ctx, driver)
 	if err != nil {
 		log.Fatalf("failed to create the collector exporter: %v", err)
 	}

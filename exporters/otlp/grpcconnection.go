@@ -37,7 +37,7 @@ type grpcConnection struct {
 	cc *grpc.ClientConn
 
 	// these fields are read-only after constructor is finished
-	c                    config
+	c                    GRPCConnectionConfig
 	metadata             metadata.MD
 	newConnectionHandler func(cc *grpc.ClientConn) error
 
@@ -52,11 +52,14 @@ type grpcConnection struct {
 	closeBackgroundConnectionDoneCh func(ch chan struct{})
 }
 
-func newGRPCConnection(c config, handler func(cc *grpc.ClientConn) error) *grpcConnection {
+func newGRPCConnection(c GRPCConnectionConfig, handler func(cc *grpc.ClientConn) error) *grpcConnection {
 	conn := new(grpcConnection)
 	conn.newConnectionHandler = handler
 	if c.collectorAddr == "" {
 		c.collectorAddr = fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorPort)
+	}
+	if c.grpcServiceConfig == "" && !c.grpcServiceConfigOverridden {
+		c.grpcServiceConfig = DefaultGRPCServiceConfig
 	}
 	conn.c = c
 	if len(conn.c.headers) > 0 {

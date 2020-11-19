@@ -42,7 +42,7 @@ import (
 func TestNewExporter_endToEnd(t *testing.T) {
 	tests := []struct {
 		name           string
-		additionalOpts []otlp.ExporterOption
+		additionalOpts []otlp.GRPCConnectionOption
 	}{
 		{
 			name: "StandardExporter",
@@ -56,7 +56,24 @@ func TestNewExporter_endToEnd(t *testing.T) {
 	}
 }
 
-func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption) {
+func newGRPCExporter(t *testing.T, ctx context.Context, address string, additionalOpts ...otlp.GRPCConnectionOption) *otlp.Exporter {
+	opts := []otlp.GRPCConnectionOption{
+		otlp.WithInsecure(),
+		otlp.WithAddress(address),
+		otlp.WithReconnectionPeriod(50 * time.Millisecond),
+	}
+
+	opts = append(opts, additionalOpts...)
+	config := otlp.GRPCConnectionConfig{}.Apply(opts...)
+	driver := otlp.NewGRPCSingleConnectionDriver(config)
+	exp, err := otlp.NewExporter(ctx, driver)
+	if err != nil {
+		t.Fatalf("failed to create a new collector exporter: %v", err)
+	}
+	return exp
+}
+
+func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.GRPCConnectionOption) {
 	mc := runMockColAtAddr(t, "localhost:56561")
 
 	defer func() {
@@ -65,18 +82,8 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 
 	<-time.After(5 * time.Millisecond)
 
-	opts := []otlp.ExporterOption{
-		otlp.WithInsecure(),
-		otlp.WithAddress(mc.address),
-		otlp.WithReconnectionPeriod(50 * time.Millisecond),
-	}
-
-	opts = append(opts, additionalOpts...)
 	ctx := context.Background()
-	exp, err := otlp.NewExporter(ctx, opts...)
-	if err != nil {
-		t.Fatalf("failed to create a new collector exporter: %v", err)
-	}
+	exp := newGRPCExporter(t, ctx, mc.address, additionalOpts...)
 	defer func() {
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
@@ -308,13 +315,7 @@ func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
 	}()
 
 	ctx := context.Background()
-	exp, err := otlp.NewExporter(ctx,
-		otlp.WithInsecure(),
-		otlp.WithReconnectionPeriod(50*time.Millisecond),
-		otlp.WithAddress(mc.address))
-	if err != nil {
-		t.Fatalf("error creating exporter: %v", err)
-	}
+	exp := newGRPCExporter(t, ctx, mc.address)
 	defer func() {
 		if err := exp.Shutdown(ctx); err != nil {
 			panic(err)
@@ -344,13 +345,8 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 
 	reconnectionPeriod := 20 * time.Millisecond
 	ctx := context.Background()
-	exp, err := otlp.NewExporter(ctx,
-		otlp.WithInsecure(),
-		otlp.WithAddress(mc.address),
+	exp := newGRPCExporter(t, ctx, mc.address,
 		otlp.WithReconnectionPeriod(reconnectionPeriod))
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
 	defer func() {
 		_ = exp.Shutdown(ctx)
 	}()
@@ -417,13 +413,7 @@ func TestNewExporter_collectorOnBadConnection(t *testing.T) {
 
 	address := fmt.Sprintf("localhost:%s", collectorPortStr)
 	ctx := context.Background()
-	exp, err := otlp.NewExporter(ctx,
-		otlp.WithInsecure(),
-		otlp.WithReconnectionPeriod(50*time.Millisecond),
-		otlp.WithAddress(address))
-	if err != nil {
-		t.Fatalf("Despite an indefinite background reconnection, got error: %v", err)
-	}
+	exp := newGRPCExporter(t, ctx, address)
 	_ = exp.Shutdown(ctx)
 }
 
@@ -433,19 +423,9 @@ func TestNewExporter_withAddress(t *testing.T) {
 		_ = mc.stop()
 	}()
 
-	exp := otlp.NewUnstartedExporter(
-		otlp.WithInsecure(),
-		otlp.WithReconnectionPeriod(50*time.Millisecond),
-		otlp.WithAddress(mc.address))
-
 	ctx := context.Background()
-	defer func() {
-		_ = exp.Shutdown(ctx)
-	}()
-
-	if err := exp.Start(ctx); err != nil {
-		t.Fatalf("Unexpected Start error: %v", err)
-	}
+	exp := newGRPCExporter(t, ctx, mc.address)
+	_ = exp.Shutdown(ctx)
 }
 
 func TestNewExporter_withHeaders(t *testing.T) {
@@ -455,12 +435,8 @@ func TestNewExporter_withHeaders(t *testing.T) {
 	}()
 
 	ctx := context.Background()
-	exp, _ := otlp.NewExporter(ctx,
-		otlp.WithInsecure(),
-		otlp.WithReconnectionPeriod(50*time.Millisecond),
-		otlp.WithAddress(mc.address),
-		otlp.WithHeaders(map[string]string{"header1": "value1"}),
-	)
+	exp := newGRPCExporter(t, ctx, mc.address,
+		otlp.WithHeaders(map[string]string{"header1": "value1"}))
 	require.NoError(t, exp.ExportSpans(ctx, []*exporttrace.SpanSnapshot{{Name: "in the midst"}}))
 
 	defer func() {
@@ -482,11 +458,7 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 	<-time.After(5 * time.Millisecond)
 
 	ctx := context.Background()
-	exp, _ := otlp.NewExporter(ctx,
-		otlp.WithInsecure(),
-		otlp.WithReconnectionPeriod(50*time.Millisecond),
-		otlp.WithAddress(mc.address),
-	)
+	exp := newGRPCExporter(t, ctx, mc.address)
 
 	defer func() {
 		_ = exp.Shutdown(ctx)
