@@ -11,8 +11,8 @@ replace (
 
 require (
 	go.opencensus.io v0.22.6-0.20201102222123-380f4078db9f
-	go.opentelemetry.io/otel v0.13.0
-	go.opentelemetry.io/otel/bridge/opencensus v0.0.0-20201117180221-c857a3da18cb
-	go.opentelemetry.io/otel/exporters/stdout v0.13.0
-	go.opentelemetry.io/otel/sdk v0.13.0
+	go.opentelemetry.io/otel v0.14.0
+	go.opentelemetry.io/otel/bridge/opencensus v0.14.0
+	go.opentelemetry.io/otel/exporters/stdout v0.14.0
+	go.opentelemetry.io/otel/sdk v0.14.0
 )

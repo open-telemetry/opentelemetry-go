@@ -11,6 +11,6 @@ require (
 	github.com/google/go-cmp v0.5.3
 	github.com/openzipkin/zipkin-go v0.2.5
 	github.com/stretchr/testify v1.6.1
-	go.opentelemetry.io/otel v0.13.0
-	go.opentelemetry.io/otel/sdk v0.13.0
+	go.opentelemetry.io/otel v0.14.0
+	go.opentelemetry.io/otel/sdk v0.14.0
 )

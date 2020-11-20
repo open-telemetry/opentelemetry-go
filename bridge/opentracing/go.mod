@@ -6,5 +6,5 @@ replace go.opentelemetry.io/otel => ../..
 
 require (
 	github.com/opentracing/opentracing-go v1.2.0
-	go.opentelemetry.io/otel v0.13.0
+	go.opentelemetry.io/otel v0.14.0
 )
