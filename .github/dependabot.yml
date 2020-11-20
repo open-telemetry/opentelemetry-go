@@ -48,6 +48,16 @@ updates:
       interval: weekly
   -
     package-ecosystem: gomod
+    directory: /bridge/opencensus/examples/bridge
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
     directory: /example/basic
     labels:
       - dependencies
