@@ -143,10 +143,8 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	var err error
 
 	e.stopOnce.Do(func() {
-		if cc != nil {
-			// Clean things up before checking this error.
-			err = cc.shutdown(ctx)
-		}
+		// Clean things up before checking this error.
+		err = cc.shutdown(ctx)
 
 		// At this point we can change the state variable started
 		e.mu.Lock()
