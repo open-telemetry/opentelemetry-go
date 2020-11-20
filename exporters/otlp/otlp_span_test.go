@@ -341,7 +341,7 @@ func TestExportSpans(t *testing.T) {
 										},
 									},
 									Status: &tracepb.Status{
-										Code:    tracepb.Status_STATUS_CODE_UNKNOWN_ERROR,
+										Code:    tracepb.Status_STATUS_CODE_ERROR,
 										Message: "Unauthenticated",
 									},
 								},
