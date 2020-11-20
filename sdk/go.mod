@@ -10,5 +10,5 @@ require (
 	github.com/google/go-cmp v0.5.3
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/stretchr/testify v1.6.1
-	go.opentelemetry.io/otel v0.13.0
+	go.opentelemetry.io/otel v0.14.0
 )
