@@ -40,7 +40,7 @@ type grpcConnection struct {
 
 	newConnectionHandler       func(cc *grpc.ClientConn) error
 	disconnectedCh             chan bool
-	backgroundConnectionDoneCh chan bool
+	backgroundConnectionDoneCh chan struct{}
 	stopCh                     chan struct{}
 }
 
@@ -61,7 +61,7 @@ func (oc *grpcConnection) startConnection(stopCh chan struct{}) {
 	oc.stopCh = stopCh
 
 	oc.disconnectedCh = make(chan bool)
-	oc.backgroundConnectionDoneCh = make(chan bool)
+	oc.backgroundConnectionDoneCh = make(chan struct{})
 
 	if err := oc.connect(); err == nil {
 		oc.setStateConnected()
@@ -107,7 +107,7 @@ const defaultConnReattemptPeriod = 10 * time.Second
 
 func (oc *grpcConnection) indefiniteBackgroundConnection() {
 	defer func() {
-		oc.backgroundConnectionDoneCh <- true
+		close(oc.backgroundConnectionDoneCh)
 	}()
 
 	connReattemptPeriod := oc.c.reconnectionPeriod
@@ -228,7 +228,6 @@ func (oc *grpcConnection) shutdown(ctx context.Context) error {
 	}
 
 	close(oc.disconnectedCh)
-	close(oc.backgroundConnectionDoneCh)
 
 	return err
 }
