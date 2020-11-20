@@ -17,6 +17,7 @@ package otlp
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 )
@@ -28,7 +29,7 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 		cancel()
 		closeStopCh = orig
 	}()
-	closeStopCh = func(stopCh chan bool) {
+	closeStopCh = func(stopCh chan struct{}) {
 		go func() {
 			<-ctx.Done()
 			close(stopCh)
@@ -56,7 +57,7 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 		cancel()
 		closeStopCh = orig
 	}()
-	closeStopCh = func(stopCh chan bool) {
+	closeStopCh = func(stopCh chan struct{}) {
 		go func() {
 			<-ctx.Done()
 			close(stopCh)
@@ -89,5 +90,32 @@ func TestExporterShutdownNoError(t *testing.T) {
 
 	if err := e.Shutdown(ctx); err != nil {
 		t.Errorf("shutdown errored: expected nil, got %v", err)
+	}
+}
+
+func TestExporterShutdownManyTimes(t *testing.T) {
+	ctx := context.Background()
+	e, err := NewExporter()
+	if err != nil {
+		t.Fatalf("failed to start an exporter: %v", err)
+	}
+	ch := make(chan struct{})
+	wg := sync.WaitGroup{}
+	const num int = 20
+	wg.Add(num)
+	errs := make([]error, num)
+	for i := 0; i < num; i++ {
+		go func(idx int) {
+			defer wg.Done()
+			<-ch
+			errs[idx] = e.Shutdown(ctx)
+		}(i)
+	}
+	close(ch)
+	wg.Wait()
+	for _, err := range errs {
+		if err != nil {
+			t.Fatalf("failed to shutdown exporter: %v", err)
+		}
 	}
 }

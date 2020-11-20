@@ -51,7 +51,8 @@ type Exporter struct {
 	lastConnectErrPtr unsafe.Pointer
 
 	startOnce      sync.Once
-	stopCh         chan bool
+	stopOnce       sync.Once
+	stopCh         chan struct{}
 	disconnectedCh chan bool
 
 	backgroundConnectionDoneCh chan bool
@@ -67,7 +68,6 @@ var _ metricsdk.Exporter = (*Exporter)(nil)
 // any ExporterOptions provided.
 func newConfig(opts ...ExporterOption) config {
 	cfg := config{
-		numWorkers:        DefaultNumWorkers,
 		grpcServiceConfig: DefaultGRPCServiceConfig,
 
 		// Note: the default ExportKindSelector is specified
@@ -119,7 +119,7 @@ func (e *Exporter) Start() error {
 		e.mu.Lock()
 		e.started = true
 		e.disconnectedCh = make(chan bool, 1)
-		e.stopCh = make(chan bool)
+		e.stopCh = make(chan struct{})
 		e.backgroundConnectionDoneCh = make(chan bool)
 		e.mu.Unlock()
 
@@ -206,7 +206,7 @@ func (e *Exporter) dialToCollector() (*grpc.ClientConn, error) {
 }
 
 // closeStopCh is used to wrap the exporters stopCh channel closing for testing.
-var closeStopCh = func(stopCh chan bool) {
+var closeStopCh = func(stopCh chan struct{}) {
 	close(stopCh)
 }
 
@@ -223,23 +223,26 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	}
 
 	var err error
-	if cc != nil {
-		// Clean things up before checking this error.
-		err = cc.Close()
-	}
 
-	// At this point we can change the state variable started
-	e.mu.Lock()
-	e.started = false
-	e.mu.Unlock()
-	closeStopCh(e.stopCh)
+	e.stopOnce.Do(func() {
+		if cc != nil {
+			// Clean things up before checking this error.
+			err = cc.Close()
+		}
 
-	// Ensure that the backgroundConnector returns
-	select {
-	case <-e.backgroundConnectionDoneCh:
-	case <-ctx.Done():
-		return ctx.Err()
-	}
+		// At this point we can change the state variable started
+		e.mu.Lock()
+		e.started = false
+		e.mu.Unlock()
+		closeStopCh(e.stopCh)
+
+		// Ensure that the backgroundConnector returns
+		select {
+		case <-e.backgroundConnectionDoneCh:
+		case <-ctx.Done():
+			err = ctx.Err()
+		}
+	})
 
 	return err
 }
@@ -259,7 +262,10 @@ func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) e
 		}
 	}(ctx, cancel)
 
-	rms, err := transform.CheckpointSet(ctx, e, cps, e.c.numWorkers)
+	// Hardcode the number of worker goroutines to 1. We later will
+	// need to see if there's a way to adjust that number for longer
+	// running operations.
+	rms, err := transform.CheckpointSet(ctx, e, cps, 1)
 	if err != nil {
 		return err
 	}

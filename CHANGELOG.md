@@ -59,6 +59,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `AddEventWithTimestamp` method on the `Span` interface in `go.opentelemetry.io/otel` is removed due to its redundancy.
     It is replaced by using the `AddEvent` method with a `WithTimestamp` option. (#1254)
 - Structs `MockSpan` and `MockTracer` are removed from `go.opentelemetry.io/otel/oteltest`. `Tracer` and `Span` from the same module should be used in their place instead. (#1306)
+- `WorkerCount` option is removed from `go.opentelemetry.io/otel/exporters/otlp`. (#1350)
 
 ### Fixed
 
