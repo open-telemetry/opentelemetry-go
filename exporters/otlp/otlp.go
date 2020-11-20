@@ -20,12 +20,9 @@ package otlp // import "go.opentelemetry.io/otel/exporters/otlp"
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sync"
-	"unsafe"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
 
 	colmetricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/metrics/v1"
 	coltracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/trace/v1"
@@ -43,22 +40,17 @@ type Exporter struct {
 	// mu protects the non-atomic and non-channel variables
 	mu sync.RWMutex
 	// senderMu protects the concurrent unsafe sends on the shared gRPC client connection.
-	senderMu          sync.Mutex
-	started           bool
-	traceExporter     coltracepb.TraceServiceClient
-	metricExporter    colmetricpb.MetricsServiceClient
-	grpcClientConn    *grpc.ClientConn
-	lastConnectErrPtr unsafe.Pointer
+	senderMu       sync.Mutex
+	started        bool
+	traceExporter  coltracepb.TraceServiceClient
+	metricExporter colmetricpb.MetricsServiceClient
+	cc             *grpcConnection
 
-	startOnce      sync.Once
-	stopOnce       sync.Once
-	stopCh         chan struct{}
-	disconnectedCh chan bool
+	startOnce sync.Once
+	stopOnce  sync.Once
+	stopCh    chan struct{}
 
-	backgroundConnectionDoneCh chan bool
-
-	c        config
-	metadata metadata.MD
+	exportKindSelector metricsdk.ExportKindSelector
 }
 
 var _ tracesdk.SpanExporter = (*Exporter)(nil)
@@ -93,16 +85,22 @@ func NewExporter(opts ...ExporterOption) (*Exporter, error) {
 // NewUnstartedExporter constructs a new Exporter and does not start it.
 func NewUnstartedExporter(opts ...ExporterOption) *Exporter {
 	e := new(Exporter)
-	e.c = newConfig(opts...)
-	if len(e.c.headers) > 0 {
-		e.metadata = metadata.New(e.c.headers)
-	}
+	cfg := newConfig(opts...)
+	e.exportKindSelector = cfg.exportKindSelector
+	e.cc = newGRPCConnection(cfg, e.handleNewConnection)
 	return e
+}
+
+func (e *Exporter) handleNewConnection(cc *grpc.ClientConn) error {
+	e.mu.Lock()
+	e.metricExporter = colmetricpb.NewMetricsServiceClient(cc)
+	e.traceExporter = coltracepb.NewTraceServiceClient(cc)
+	e.mu.Unlock()
+	return nil
 }
 
 var (
 	errAlreadyStarted  = errors.New("already started")
-	errNotStarted      = errors.New("not started")
 	errDisconnected    = errors.New("exporter disconnected")
 	errStopped         = errors.New("exporter stopped")
 	errContextCanceled = errors.New("context canceled")
@@ -118,91 +116,14 @@ func (e *Exporter) Start() error {
 	e.startOnce.Do(func() {
 		e.mu.Lock()
 		e.started = true
-		e.disconnectedCh = make(chan bool, 1)
 		e.stopCh = make(chan struct{})
-		e.backgroundConnectionDoneCh = make(chan bool)
 		e.mu.Unlock()
 
-		// An optimistic first connection attempt to ensure that
-		// applications under heavy load can immediately process
-		// data. See https://github.com/census-ecosystem/opencensus-go-exporter-ocagent/pull/63
-		if err := e.connect(); err == nil {
-			e.setStateConnected()
-		} else {
-			e.setStateDisconnected(err)
-		}
-		go e.indefiniteBackgroundConnection()
-
 		err = nil
+		e.cc.startConnection(e.stopCh)
 	})
 
 	return err
-}
-
-func (e *Exporter) prepareCollectorAddress() string {
-	if e.c.collectorAddr != "" {
-		return e.c.collectorAddr
-	}
-	return fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorPort)
-}
-
-func (e *Exporter) enableConnections(cc *grpc.ClientConn) error {
-	e.mu.RLock()
-	started := e.started
-	e.mu.RUnlock()
-
-	if !started {
-		return errNotStarted
-	}
-
-	e.mu.Lock()
-	// If previous clientConn is same as the current then just return.
-	// This doesn't happen right now as this func is only called with new ClientConn.
-	// It is more about future-proofing.
-	if e.grpcClientConn == cc {
-		e.mu.Unlock()
-		return nil
-	}
-	// If the previous clientConn was non-nil, close it
-	if e.grpcClientConn != nil {
-		_ = e.grpcClientConn.Close()
-	}
-	e.grpcClientConn = cc
-	e.traceExporter = coltracepb.NewTraceServiceClient(cc)
-	e.metricExporter = colmetricpb.NewMetricsServiceClient(cc)
-	e.mu.Unlock()
-
-	return nil
-}
-
-func (e *Exporter) contextWithMetadata(ctx context.Context) context.Context {
-	if e.metadata.Len() > 0 {
-		return metadata.NewOutgoingContext(ctx, e.metadata)
-	}
-	return ctx
-}
-
-func (e *Exporter) dialToCollector() (*grpc.ClientConn, error) {
-	addr := e.prepareCollectorAddress()
-
-	dialOpts := []grpc.DialOption{}
-	if e.c.grpcServiceConfig != "" {
-		dialOpts = append(dialOpts, grpc.WithDefaultServiceConfig(e.c.grpcServiceConfig))
-	}
-	if e.c.clientCredentials != nil {
-		dialOpts = append(dialOpts, grpc.WithTransportCredentials(e.c.clientCredentials))
-	} else if e.c.canDialInsecure {
-		dialOpts = append(dialOpts, grpc.WithInsecure())
-	}
-	if e.c.compressor != "" {
-		dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.UseCompressor(e.c.compressor)))
-	}
-	if len(e.c.grpcDialOptions) != 0 {
-		dialOpts = append(dialOpts, e.c.grpcDialOptions...)
-	}
-
-	ctx := e.contextWithMetadata(context.Background())
-	return grpc.DialContext(ctx, addr, dialOpts...)
 }
 
 // closeStopCh is used to wrap the exporters stopCh channel closing for testing.
@@ -214,7 +135,7 @@ var closeStopCh = func(stopCh chan struct{}) {
 // by the exporter. If the exporter is not started this does nothing.
 func (e *Exporter) Shutdown(ctx context.Context) error {
 	e.mu.RLock()
-	cc := e.grpcClientConn
+	cc := e.cc
 	started := e.started
 	e.mu.RUnlock()
 
@@ -225,23 +146,16 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	var err error
 
 	e.stopOnce.Do(func() {
+		closeStopCh(e.stopCh)
 		if cc != nil {
 			// Clean things up before checking this error.
-			err = cc.Close()
+			err = cc.shutdown(ctx)
 		}
 
 		// At this point we can change the state variable started
 		e.mu.Lock()
 		e.started = false
 		e.mu.Unlock()
-		closeStopCh(e.stopCh)
-
-		// Ensure that the backgroundConnector returns
-		select {
-		case <-e.backgroundConnectionDoneCh:
-		case <-ctx.Done():
-			err = ctx.Err()
-		}
 	})
 
 	return err
@@ -270,7 +184,7 @@ func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) e
 		return err
 	}
 
-	if !e.connected() {
+	if !e.cc.connected() {
 		return errDisconnected
 	}
 
@@ -281,7 +195,7 @@ func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) e
 		return errContextCanceled
 	default:
 		e.senderMu.Lock()
-		_, err := e.metricExporter.Export(e.contextWithMetadata(ctx), &colmetricpb.ExportMetricsServiceRequest{
+		_, err := e.metricExporter.Export(e.cc.contextWithMetadata(ctx), &colmetricpb.ExportMetricsServiceRequest{
 			ResourceMetrics: rms,
 		})
 		e.senderMu.Unlock()
@@ -295,7 +209,7 @@ func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) e
 // ExportKindFor reports back to the OpenTelemetry SDK sending this Exporter
 // metric telemetry that it needs to be provided in a cumulative format.
 func (e *Exporter) ExportKindFor(desc *metric.Descriptor, kind aggregation.Kind) metricsdk.ExportKind {
-	return e.c.exportKindSelector.ExportKindFor(desc, kind)
+	return e.exportKindSelector.ExportKindFor(desc, kind)
 }
 
 // ExportSpans exports a batch of SpanData.
@@ -308,7 +222,7 @@ func (e *Exporter) uploadTraces(ctx context.Context, sdl []*tracesdk.SpanData) e
 	case <-e.stopCh:
 		return nil
 	default:
-		if !e.connected() {
+		if !e.cc.connected() {
 			return nil
 		}
 
@@ -318,12 +232,12 @@ func (e *Exporter) uploadTraces(ctx context.Context, sdl []*tracesdk.SpanData) e
 		}
 
 		e.senderMu.Lock()
-		_, err := e.traceExporter.Export(e.contextWithMetadata(ctx), &coltracepb.ExportTraceServiceRequest{
+		_, err := e.traceExporter.Export(e.cc.contextWithMetadata(ctx), &coltracepb.ExportTraceServiceRequest{
 			ResourceSpans: protoSpans,
 		})
 		e.senderMu.Unlock()
 		if err != nil {
-			e.setStateDisconnected(err)
+			e.cc.setStateDisconnected(err)
 			return err
 		}
 	}
