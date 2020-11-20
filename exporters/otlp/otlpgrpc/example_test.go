@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlp_test
+package otlpgrpc_test
 
 import (
 	"context"
@@ -24,6 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
@@ -33,7 +34,7 @@ import (
 
 func Example_insecure() {
 	ctx := context.Background()
-	driver := otlp.NewGRPCDriver(otlp.WithInsecure())
+	driver := otlpgrpc.NewDriver(otlpgrpc.WithInsecure())
 	exp, err := otlp.NewExporter(ctx, driver)
 	if err != nil {
 		log.Fatalf("Failed to create the collector exporter: %v", err)
@@ -86,7 +87,7 @@ func Example_withTLS() {
 	}
 
 	ctx := context.Background()
-	driver := otlp.NewGRPCDriver(otlp.WithTLSCredentials(creds))
+	driver := otlpgrpc.NewDriver(otlpgrpc.WithTLSCredentials(creds))
 	exp, err := otlp.NewExporter(ctx, driver)
 	if err != nil {
 		log.Fatalf("failed to create the collector exporter: %v", err)
@@ -133,13 +134,13 @@ func Example_withTLS() {
 func Example_withDifferentSignalCollectors() {
 
 	// Set different endpoints for the metrics and traces collectors
-	metricsDriver := otlp.NewGRPCDriver(
-		otlp.WithInsecure(),
-		otlp.WithEndpoint("localhost:30080"),
+	metricsDriver := otlpgrpc.NewDriver(
+		otlpgrpc.WithInsecure(),
+		otlpgrpc.WithEndpoint("localhost:30080"),
 	)
-	tracesDriver := otlp.NewGRPCDriver(
-		otlp.WithInsecure(),
-		otlp.WithEndpoint("localhost:30082"),
+	tracesDriver := otlpgrpc.NewDriver(
+		otlpgrpc.WithInsecure(),
+		otlpgrpc.WithEndpoint("localhost:30082"),
 	)
 	splitCfg := otlp.SplitConfig{
 		ForMetrics: metricsDriver,

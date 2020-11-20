@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlp_test
+package otlpgrpc_test
 
 import (
 	"context"
@@ -31,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
@@ -49,27 +50,27 @@ import (
 func TestNewExporter_endToEnd(t *testing.T) {
 	tests := []struct {
 		name           string
-		additionalOpts []otlp.GRPCConnectionOption
+		additionalOpts []otlpgrpc.Option
 	}{
 		{
 			name: "StandardExporter",
 		},
 		{
 			name: "WithCompressor",
-			additionalOpts: []otlp.GRPCConnectionOption{
-				otlp.WithCompressor(gzip.Name),
+			additionalOpts: []otlpgrpc.Option{
+				otlpgrpc.WithCompressor(gzip.Name),
 			},
 		},
 		{
-			name: "WithGRPCServiceConfig",
-			additionalOpts: []otlp.GRPCConnectionOption{
-				otlp.WithGRPCServiceConfig("{}"),
+			name: "WithServiceConfig",
+			additionalOpts: []otlpgrpc.Option{
+				otlpgrpc.WithServiceConfig("{}"),
 			},
 		},
 		{
-			name: "WithGRPCDialOptions",
-			additionalOpts: []otlp.GRPCConnectionOption{
-				otlp.WithGRPCDialOption(grpc.WithBlock()),
+			name: "WithDialOptions",
+			additionalOpts: []otlpgrpc.Option{
+				otlpgrpc.WithDialOption(grpc.WithBlock()),
 			},
 		},
 	}
@@ -81,15 +82,15 @@ func TestNewExporter_endToEnd(t *testing.T) {
 	}
 }
 
-func newGRPCExporter(t *testing.T, ctx context.Context, endpoint string, additionalOpts ...otlp.GRPCConnectionOption) *otlp.Exporter {
-	opts := []otlp.GRPCConnectionOption{
-		otlp.WithInsecure(),
-		otlp.WithEndpoint(endpoint),
-		otlp.WithReconnectionPeriod(50 * time.Millisecond),
+func newGRPCExporter(t *testing.T, ctx context.Context, endpoint string, additionalOpts ...otlpgrpc.Option) *otlp.Exporter {
+	opts := []otlpgrpc.Option{
+		otlpgrpc.WithInsecure(),
+		otlpgrpc.WithEndpoint(endpoint),
+		otlpgrpc.WithReconnectionPeriod(50 * time.Millisecond),
 	}
 
 	opts = append(opts, additionalOpts...)
-	driver := otlp.NewGRPCDriver(opts...)
+	driver := otlpgrpc.NewDriver(opts...)
 	exp, err := otlp.NewExporter(ctx, driver)
 	if err != nil {
 		t.Fatalf("failed to create a new collector exporter: %v", err)
@@ -325,7 +326,7 @@ func runEndToEndTest(t *testing.T, ctx context.Context, exp *otlp.Exporter, mcTr
 	}
 }
 
-func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.GRPCConnectionOption) {
+func newExporterEndToEndTest(t *testing.T, additionalOpts []otlpgrpc.Option) {
 	mc := runMockCollectorAtEndpoint(t, "localhost:56561")
 
 	defer func() {
@@ -385,7 +386,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 	reconnectionPeriod := 20 * time.Millisecond
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint,
-		otlp.WithReconnectionPeriod(reconnectionPeriod))
+		otlpgrpc.WithReconnectionPeriod(reconnectionPeriod))
 	defer func() {
 		_ = exp.Shutdown(ctx)
 	}()
@@ -475,7 +476,7 @@ func TestNewExporter_withHeaders(t *testing.T) {
 
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint,
-		otlp.WithHeaders(map[string]string{"header1": "value1"}))
+		otlpgrpc.WithHeaders(map[string]string{"header1": "value1"}))
 	require.NoError(t, exp.ExportSpans(ctx, []*exporttrace.SpanSnapshot{{Name: "in the midst"}}))
 
 	defer func() {
@@ -694,8 +695,8 @@ func TestDisconnected(t *testing.T) {
 	// setting a blocking connection, so dialing to the invalid
 	// endpoint actually fails.
 	exp := newGRPCExporter(t, ctx, "invalid",
-		otlp.WithReconnectionPeriod(time.Hour),
-		otlp.WithGRPCDialOption(
+		otlpgrpc.WithReconnectionPeriod(time.Hour),
+		otlpgrpc.WithDialOption(
 			grpc.WithBlock(),
 			grpc.FailOnNonTempDialError(true),
 		),
@@ -778,20 +779,20 @@ func TestMultiConnectionDriver(t *testing.T) {
 
 	<-time.After(5 * time.Millisecond)
 
-	commonOpts := []otlp.GRPCConnectionOption{
-		otlp.WithInsecure(),
-		otlp.WithReconnectionPeriod(50 * time.Millisecond),
-		otlp.WithGRPCDialOption(grpc.WithBlock()),
+	commonOpts := []otlpgrpc.Option{
+		otlpgrpc.WithInsecure(),
+		otlpgrpc.WithReconnectionPeriod(50 * time.Millisecond),
+		otlpgrpc.WithDialOption(grpc.WithBlock()),
 	}
-	optsTraces := append([]otlp.GRPCConnectionOption{
-		otlp.WithEndpoint(mcTraces.endpoint),
+	optsTraces := append([]otlpgrpc.Option{
+		otlpgrpc.WithEndpoint(mcTraces.endpoint),
 	}, commonOpts...)
-	optsMetrics := append([]otlp.GRPCConnectionOption{
-		otlp.WithEndpoint(mcMetrics.endpoint),
+	optsMetrics := append([]otlpgrpc.Option{
+		otlpgrpc.WithEndpoint(mcMetrics.endpoint),
 	}, commonOpts...)
 
-	tracesDriver := otlp.NewGRPCDriver(optsTraces...)
-	metricsDriver := otlp.NewGRPCDriver(optsMetrics...)
+	tracesDriver := otlpgrpc.NewDriver(optsTraces...)
+	metricsDriver := otlpgrpc.NewDriver(optsMetrics...)
 	splitCfg := otlp.SplitConfig{
 		ForMetrics: metricsDriver,
 		ForTraces:  tracesDriver,

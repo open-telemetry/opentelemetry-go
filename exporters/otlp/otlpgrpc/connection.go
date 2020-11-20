@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlp // import "go.opentelemetry.io/otel/exporters/otlp"
+package otlpgrpc
 
 import (
 	"context"
@@ -26,7 +26,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-type grpcConnection struct {
+type connection struct {
 	// Ensure pointer is 64-bit aligned for atomic operations on both 32 and 64 bit machines.
 	lastConnectErrPtr unsafe.Pointer
 
@@ -36,7 +36,7 @@ type grpcConnection struct {
 	cc *grpc.ClientConn
 
 	// these fields are read-only after constructor is finished
-	c                    grpcConnectionConfig
+	cfg                  config
 	metadata             metadata.MD
 	newConnectionHandler func(cc *grpc.ClientConn)
 
@@ -51,73 +51,73 @@ type grpcConnection struct {
 	closeBackgroundConnectionDoneCh func(ch chan struct{})
 }
 
-func newGRPCConnection(c grpcConnectionConfig, handler func(cc *grpc.ClientConn)) *grpcConnection {
-	conn := new(grpcConnection)
-	conn.newConnectionHandler = handler
-	conn.c = c
-	if len(conn.c.headers) > 0 {
-		conn.metadata = metadata.New(conn.c.headers)
+func newConnection(cfg config, handler func(cc *grpc.ClientConn)) *connection {
+	c := new(connection)
+	c.newConnectionHandler = handler
+	c.cfg = cfg
+	if len(c.cfg.headers) > 0 {
+		c.metadata = metadata.New(c.cfg.headers)
 	}
-	conn.closeBackgroundConnectionDoneCh = func(ch chan struct{}) {
+	c.closeBackgroundConnectionDoneCh = func(ch chan struct{}) {
 		close(ch)
 	}
-	return conn
+	return c
 }
 
-func (oc *grpcConnection) startConnection(ctx context.Context) {
-	oc.stopCh = make(chan struct{})
-	oc.disconnectedCh = make(chan bool)
-	oc.backgroundConnectionDoneCh = make(chan struct{})
+func (c *connection) startConnection(ctx context.Context) {
+	c.stopCh = make(chan struct{})
+	c.disconnectedCh = make(chan bool)
+	c.backgroundConnectionDoneCh = make(chan struct{})
 
-	if err := oc.connect(ctx); err == nil {
-		oc.setStateConnected()
+	if err := c.connect(ctx); err == nil {
+		c.setStateConnected()
 	} else {
-		oc.setStateDisconnected(err)
+		c.setStateDisconnected(err)
 	}
-	go oc.indefiniteBackgroundConnection()
+	go c.indefiniteBackgroundConnection()
 }
 
-func (oc *grpcConnection) lastConnectError() error {
-	errPtr := (*error)(atomic.LoadPointer(&oc.lastConnectErrPtr))
+func (c *connection) lastConnectError() error {
+	errPtr := (*error)(atomic.LoadPointer(&c.lastConnectErrPtr))
 	if errPtr == nil {
 		return nil
 	}
 	return *errPtr
 }
 
-func (oc *grpcConnection) saveLastConnectError(err error) {
+func (c *connection) saveLastConnectError(err error) {
 	var errPtr *error
 	if err != nil {
 		errPtr = &err
 	}
-	atomic.StorePointer(&oc.lastConnectErrPtr, unsafe.Pointer(errPtr))
+	atomic.StorePointer(&c.lastConnectErrPtr, unsafe.Pointer(errPtr))
 }
 
-func (oc *grpcConnection) setStateDisconnected(err error) {
-	oc.saveLastConnectError(err)
+func (c *connection) setStateDisconnected(err error) {
+	c.saveLastConnectError(err)
 	select {
-	case oc.disconnectedCh <- true:
+	case c.disconnectedCh <- true:
 	default:
 	}
-	oc.newConnectionHandler(nil)
+	c.newConnectionHandler(nil)
 }
 
-func (oc *grpcConnection) setStateConnected() {
-	oc.saveLastConnectError(nil)
+func (c *connection) setStateConnected() {
+	c.saveLastConnectError(nil)
 }
 
-func (oc *grpcConnection) connected() bool {
-	return oc.lastConnectError() == nil
+func (c *connection) connected() bool {
+	return c.lastConnectError() == nil
 }
 
 const defaultConnReattemptPeriod = 10 * time.Second
 
-func (oc *grpcConnection) indefiniteBackgroundConnection() {
+func (c *connection) indefiniteBackgroundConnection() {
 	defer func() {
-		oc.closeBackgroundConnectionDoneCh(oc.backgroundConnectionDoneCh)
+		c.closeBackgroundConnectionDoneCh(c.backgroundConnectionDoneCh)
 	}()
 
-	connReattemptPeriod := oc.c.reconnectionPeriod
+	connReattemptPeriod := c.cfg.reconnectionPeriod
 	if connReattemptPeriod <= 0 {
 		connReattemptPeriod = defaultConnReattemptPeriod
 	}
@@ -136,14 +136,14 @@ func (oc *grpcConnection) indefiniteBackgroundConnection() {
 		// 2. Otherwise block until we are disconnected, and
 		//    then retry connecting
 		select {
-		case <-oc.stopCh:
+		case <-c.stopCh:
 			return
 
-		case <-oc.disconnectedCh:
+		case <-c.disconnectedCh:
 			// Quickly check if we haven't stopped at the
 			// same time.
 			select {
-			case <-oc.stopCh:
+			case <-c.stopCh:
 				return
 
 			default:
@@ -152,10 +152,10 @@ func (oc *grpcConnection) indefiniteBackgroundConnection() {
 			// Normal scenario that we'll wait for
 		}
 
-		if err := oc.connect(context.Background()); err == nil {
-			oc.setStateConnected()
+		if err := c.connect(context.Background()); err == nil {
+			c.setStateConnected()
 		} else {
-			oc.setStateDisconnected(err)
+			c.setStateDisconnected(err)
 		}
 
 		// Apply some jitter to avoid lockstep retrials of other
@@ -163,89 +163,89 @@ func (oc *grpcConnection) indefiniteBackgroundConnection() {
 		// innocent DDOS, by clogging the machine's resources and network.
 		jitter := time.Duration(rng.Int63n(maxJitterNanos))
 		select {
-		case <-oc.stopCh:
+		case <-c.stopCh:
 			return
 		case <-time.After(connReattemptPeriod + jitter):
 		}
 	}
 }
 
-func (oc *grpcConnection) connect(ctx context.Context) error {
-	cc, err := oc.dialToCollector(ctx)
+func (c *connection) connect(ctx context.Context) error {
+	cc, err := c.dialToCollector(ctx)
 	if err != nil {
 		return err
 	}
-	oc.setConnection(cc)
-	oc.newConnectionHandler(cc)
+	c.setConnection(cc)
+	c.newConnectionHandler(cc)
 	return nil
 }
 
 // setConnection sets cc as the client connection and returns true if
 // the connection state changed.
-func (oc *grpcConnection) setConnection(cc *grpc.ClientConn) bool {
-	oc.mu.Lock()
-	defer oc.mu.Unlock()
+func (c *connection) setConnection(cc *grpc.ClientConn) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	// If previous clientConn is same as the current then just return.
 	// This doesn't happen right now as this func is only called with new ClientConn.
 	// It is more about future-proofing.
-	if oc.cc == cc {
+	if c.cc == cc {
 		return false
 	}
 
 	// If the previous clientConn was non-nil, close it
-	if oc.cc != nil {
-		_ = oc.cc.Close()
+	if c.cc != nil {
+		_ = c.cc.Close()
 	}
-	oc.cc = cc
+	c.cc = cc
 	return true
 }
 
-func (oc *grpcConnection) dialToCollector(ctx context.Context) (*grpc.ClientConn, error) {
-	endpoint := oc.c.collectorEndpoint
+func (c *connection) dialToCollector(ctx context.Context) (*grpc.ClientConn, error) {
+	endpoint := c.cfg.collectorEndpoint
 
 	dialOpts := []grpc.DialOption{}
-	if oc.c.grpcServiceConfig != "" {
-		dialOpts = append(dialOpts, grpc.WithDefaultServiceConfig(oc.c.grpcServiceConfig))
+	if c.cfg.serviceConfig != "" {
+		dialOpts = append(dialOpts, grpc.WithDefaultServiceConfig(c.cfg.serviceConfig))
 	}
-	if oc.c.clientCredentials != nil {
-		dialOpts = append(dialOpts, grpc.WithTransportCredentials(oc.c.clientCredentials))
-	} else if oc.c.canDialInsecure {
+	if c.cfg.clientCredentials != nil {
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(c.cfg.clientCredentials))
+	} else if c.cfg.canDialInsecure {
 		dialOpts = append(dialOpts, grpc.WithInsecure())
 	}
-	if oc.c.compressor != "" {
-		dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.UseCompressor(oc.c.compressor)))
+	if c.cfg.compressor != "" {
+		dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.UseCompressor(c.cfg.compressor)))
 	}
-	if len(oc.c.grpcDialOptions) != 0 {
-		dialOpts = append(dialOpts, oc.c.grpcDialOptions...)
+	if len(c.cfg.dialOptions) != 0 {
+		dialOpts = append(dialOpts, c.cfg.dialOptions...)
 	}
 
-	ctx, cancel := oc.contextWithStop(ctx)
+	ctx, cancel := c.contextWithStop(ctx)
 	defer cancel()
-	ctx = oc.contextWithMetadata(ctx)
+	ctx = c.contextWithMetadata(ctx)
 	return grpc.DialContext(ctx, endpoint, dialOpts...)
 }
 
-func (oc *grpcConnection) contextWithMetadata(ctx context.Context) context.Context {
-	if oc.metadata.Len() > 0 {
-		return metadata.NewOutgoingContext(ctx, oc.metadata)
+func (c *connection) contextWithMetadata(ctx context.Context) context.Context {
+	if c.metadata.Len() > 0 {
+		return metadata.NewOutgoingContext(ctx, c.metadata)
 	}
 	return ctx
 }
 
-func (oc *grpcConnection) shutdown(ctx context.Context) error {
-	close(oc.stopCh)
+func (c *connection) shutdown(ctx context.Context) error {
+	close(c.stopCh)
 	// Ensure that the backgroundConnector returns
 	select {
-	case <-oc.backgroundConnectionDoneCh:
+	case <-c.backgroundConnectionDoneCh:
 	case <-ctx.Done():
 		return ctx.Err()
 	}
 
-	oc.mu.Lock()
-	cc := oc.cc
-	oc.cc = nil
-	oc.mu.Unlock()
+	c.mu.Lock()
+	cc := c.cc
+	c.cc = nil
+	c.mu.Unlock()
 
 	if cc != nil {
 		return cc.Close()
@@ -254,7 +254,7 @@ func (oc *grpcConnection) shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (oc *grpcConnection) contextWithStop(ctx context.Context) (context.Context, context.CancelFunc) {
+func (c *connection) contextWithStop(ctx context.Context) (context.Context, context.CancelFunc) {
 	// Unify the parent context Done signal with the connection's
 	// stop channel.
 	ctx, cancel := context.WithCancel(ctx)
@@ -263,7 +263,7 @@ func (oc *grpcConnection) contextWithStop(ctx context.Context) (context.Context,
 		case <-ctx.Done():
 			// Nothing to do, either cancelled or deadline
 			// happened.
-		case <-oc.stopCh:
+		case <-c.stopCh:
 			cancel()
 		}
 	}(ctx, cancel)

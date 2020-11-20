@@ -12,27 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlp
+/*
+Package otlpgrpc provides an implementation of otlp.ProtocolDriver
+that connects to the collector and sends traces and metrics using
+gRPC.
 
-import (
-	"os"
-	"testing"
-	"unsafe"
-
-	ottest "go.opentelemetry.io/otel/internal/testing"
-)
-
-// Ensure struct alignment prior to running tests.
-func TestMain(m *testing.M) {
-	fields := []ottest.FieldOffset{
-		{
-			Name:   "grpcConnection.lastConnectErrPtr",
-			Offset: unsafe.Offsetof(grpcConnection{}.lastConnectErrPtr),
-		},
-	}
-	if !ottest.Aligned8Byte(fields, os.Stderr) {
-		os.Exit(1)
-	}
-
-	os.Exit(m.Run())
-}
+This package is currently in a pre-GA phase. Backwards incompatible
+changes may be introduced in subsequent minor version releases as we
+work to track the evolving OpenTelemetry specification and user
+feedback.
+*/
+package otlpgrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
