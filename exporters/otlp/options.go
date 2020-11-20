@@ -30,10 +30,6 @@ const (
 	// DefaultCollectorHost is the host address the Exporter will attempt
 	// connect to if no collector address is provided.
 	DefaultCollectorHost string = "localhost"
-	// DefaultNumWorkers is the number of goroutines the Exporter will use when
-	// processing telemetry.
-	DefaultNumWorkers uint = 1
-
 	// DefaultGRPCServiceConfig is the gRPC service config used if none is
 	// provided by the user.
 	//
@@ -84,18 +80,7 @@ type config struct {
 	grpcDialOptions    []grpc.DialOption
 	headers            map[string]string
 	clientCredentials  credentials.TransportCredentials
-	numWorkers         uint
 	exportKindSelector metricsdk.ExportKindSelector
-}
-
-// WorkerCount sets the number of Goroutines to use when processing telemetry.
-func WorkerCount(n uint) ExporterOption {
-	if n == 0 {
-		n = DefaultNumWorkers
-	}
-	return func(cfg *config) {
-		cfg.numWorkers = n
-	}
 }
 
 // WithInsecure disables client transport security for the exporter's gRPC connection
