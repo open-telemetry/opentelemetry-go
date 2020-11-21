@@ -10,12 +10,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- `trace.WithIDGenerator()` `TracerProviderOption`.
+- `trace.WithIDGenerator()` `TracerProviderOption`. (#1363)
 
 ### Changed
 
 - Move the OpenCensus example into `example` directory. (#1359)
-- Moved the SDK's `internal.IDGenerator` interface in to the `sdk/trace` package to enable support for externally-defined ID generators.
+- Moved the SDK's `internal.IDGenerator` interface in to the `sdk/trace` package to enable support for externally-defined ID generators. (#1363)
 
 ## [0.14.0] - 2020-11-19
 
