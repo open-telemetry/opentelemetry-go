@@ -231,3 +231,10 @@ func WithResource(r *resource.Resource) TracerProviderOption {
 		opts.config.Resource = r
 	}
 }
+
+// WithIDGenerator option registers an IDGenerator with the TracerProvider.
+func WithIDGenerator(g IDGenerator) TracerProviderOption {
+	return func(opts *TracerProviderConfig) {
+		opts.config.IDGenerator = g
+	}
+}

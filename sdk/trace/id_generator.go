@@ -15,20 +15,26 @@
 package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
+	crand "crypto/rand"
+	"encoding/binary"
 	"math/rand"
 	"sync"
 
 	"go.opentelemetry.io/otel/trace"
-
-	"go.opentelemetry.io/otel/sdk/trace/internal"
 )
+
+// IDGenerator allows custom generators for TraceId and SpanId.
+type IDGenerator interface {
+	NewTraceID() trace.TraceID
+	NewSpanID() trace.SpanID
+}
 
 type defaultIDGenerator struct {
 	sync.Mutex
 	randSource *rand.Rand
 }
 
-var _ internal.IDGenerator = &defaultIDGenerator{}
+var _ IDGenerator = &defaultIDGenerator{}
 
 // NewSpanID returns a non-zero span ID from a randomly-chosen sequence.
 func (gen *defaultIDGenerator) NewSpanID() trace.SpanID {
@@ -47,4 +53,12 @@ func (gen *defaultIDGenerator) NewTraceID() trace.TraceID {
 	tid := trace.TraceID{}
 	gen.randSource.Read(tid[:])
 	return tid
+}
+
+func defIDGenerator() IDGenerator {
+	gen := &defaultIDGenerator{}
+	var rngSeed int64
+	_ = binary.Read(crand.Reader, binary.LittleEndian, &rngSeed)
+	gen.randSource = rand.New(rand.NewSource(rngSeed))
+	return gen
 }
