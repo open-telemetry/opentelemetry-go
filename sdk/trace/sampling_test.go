@@ -168,7 +168,7 @@ func TestTraceIdRatioSamplesInclusively(t *testing.T) {
 		numSamplers = 1000
 		numTraces   = 100
 	)
-	idg := defIDGenerator()
+	idg := defaultIDGenerator()
 
 	for i := 0; i < numSamplers; i++ {
 		ratioLo, ratioHi := rand.Float64(), rand.Float64()

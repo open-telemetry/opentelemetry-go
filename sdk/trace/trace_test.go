@@ -213,7 +213,7 @@ func TestRecordingIsOn(t *testing.T) {
 }
 
 func TestSampling(t *testing.T) {
-	idg := defIDGenerator()
+	idg := defaultIDGenerator()
 	const total = 10000
 	for name, tc := range map[string]struct {
 		sampler       Sampler

@@ -66,7 +66,7 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	}
 	tp.config.Store(&Config{
 		DefaultSampler:       ParentBased(AlwaysSample()),
-		IDGenerator:          defIDGenerator(),
+		IDGenerator:          defaultIDGenerator(),
 		MaxAttributesPerSpan: DefaultMaxAttributesPerSpan,
 		MaxEventsPerSpan:     DefaultMaxEventsPerSpan,
 		MaxLinksPerSpan:      DefaultMaxLinksPerSpan,
