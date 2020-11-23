@@ -127,9 +127,6 @@ type span struct {
 	// links are stored in FIFO queue capped by configured limit.
 	links *evictedQueue
 
-	// endOnce ensures End is only called once.
-	endOnce sync.Once
-
 	// executionTracerTaskEnd ends the execution tracer span.
 	executionTracerTaskEnd func()
 
@@ -187,6 +184,10 @@ func (s *span) End(options ...trace.SpanOption) {
 		return
 	}
 
+	// Store the end time as soon as possible to avoid artificially increasing
+	// the span's duration in case some operation below takes a while.
+	et := internal.MonotonicEndTime(s.startTime)
+
 	if recovered := recover(); recovered != nil {
 		// Record but don't stop the panic.
 		defer panic(recovered)
@@ -202,27 +203,28 @@ func (s *span) End(options ...trace.SpanOption) {
 	if s.executionTracerTaskEnd != nil {
 		s.executionTracerTaskEnd()
 	}
+
 	if !s.IsRecording() {
 		return
 	}
-	config := trace.NewSpanConfig(options...)
-	s.endOnce.Do(func() {
-		s.mu.Lock()
-		if config.Timestamp.IsZero() {
-			s.endTime = internal.MonotonicEndTime(s.startTime)
-		} else {
-			s.endTime = config.Timestamp
-		}
-		s.mu.Unlock()
 
-		sps, ok := s.tracer.provider.spanProcessors.Load().(spanProcessorStates)
-		mustExportOrProcess := ok && len(sps) > 0
-		if mustExportOrProcess {
-			for _, sp := range sps {
-				sp.sp.OnEnd(s)
-			}
+	config := trace.NewSpanConfig(options...)
+
+	s.mu.Lock()
+	if config.Timestamp.IsZero() {
+		s.endTime = et
+	} else {
+		s.endTime = config.Timestamp
+	}
+	s.mu.Unlock()
+
+	sps, ok := s.tracer.provider.spanProcessors.Load().(spanProcessorStates)
+	mustExportOrProcess := ok && len(sps) > 0
+	if mustExportOrProcess {
+		for _, sp := range sps {
+			sp.sp.OnEnd(s)
 		}
-	})
+	}
 }
 
 func (s *span) RecordError(err error, opts ...trace.EventOption) {

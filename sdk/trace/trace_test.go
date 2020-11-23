@@ -858,11 +858,21 @@ func TestEndSpanTwice(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te))
 
-	span := startSpan(tp, "EndSpanTwice")
-	span.End()
-	span.End()
+	st := time.Now()
+	et1 := st.Add(100 * time.Millisecond)
+	et2 := st.Add(200 * time.Millisecond)
+
+	span := startSpan(tp, "EndSpanTwice", trace.WithTimestamp(st))
+	span.End(trace.WithTimestamp(et1))
+	span.End(trace.WithTimestamp(et2))
+
 	if te.Len() != 1 {
 		t.Fatalf("expected only a single span, got %#v", te.Spans())
+	}
+
+	ro := span.(ReadOnlySpan)
+	if ro.EndTime() != et1 {
+		t.Fatalf("2nd call to End() should not modify end time")
 	}
 }
 
