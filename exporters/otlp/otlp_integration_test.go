@@ -72,12 +72,13 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	}
 
 	opts = append(opts, additionalOpts...)
-	exp, err := otlp.NewExporter(opts...)
+	ctx := context.Background()
+	exp, err := otlp.NewExporter(ctx, opts...)
 	if err != nil {
 		t.Fatalf("failed to create a new collector exporter: %v", err)
 	}
 	defer func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
 		if err := exp.Shutdown(ctx); err != nil {
 			panic(err)
@@ -110,11 +111,11 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	// Now create few spans
 	m := 4
 	for i := 0; i < m; i++ {
-		_, span := tr1.Start(context.Background(), "AlwaysSample")
+		_, span := tr1.Start(ctx, "AlwaysSample")
 		span.SetAttributes(label.Int64("i", int64(i)))
 		span.End()
 
-		_, span = tr2.Start(context.Background(), "AlwaysSample")
+		_, span = tr2.Start(ctx, "AlwaysSample")
 		span.SetAttributes(label.Int64("i", int64(i)))
 		span.End()
 	}
@@ -124,7 +125,6 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	pusher := push.New(processor, exp)
 	pusher.Start()
 
-	ctx := context.Background()
 	meter := pusher.MeterProvider().Meter("test-meter")
 	labels := []label.KeyValue{label.Bool("test", true)}
 
@@ -190,7 +190,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	<-time.After(40 * time.Millisecond)
 
 	// Now shutdown the exporter
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+	ctx, cancel := context.WithTimeout(ctx, time.Millisecond)
 	defer cancel()
 	if err := exp.Shutdown(ctx); err != nil {
 		t.Fatalf("failed to stop the exporter: %v", err)
@@ -307,31 +307,33 @@ func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
 		_ = mc.stop()
 	}()
 
-	exp, err := otlp.NewExporter(otlp.WithInsecure(),
+	ctx := context.Background()
+	exp, err := otlp.NewExporter(ctx,
+		otlp.WithInsecure(),
 		otlp.WithReconnectionPeriod(50*time.Millisecond),
 		otlp.WithAddress(mc.address))
 	if err != nil {
 		t.Fatalf("error creating exporter: %v", err)
 	}
 	defer func() {
-		if err := exp.Shutdown(context.Background()); err != nil {
+		if err := exp.Shutdown(ctx); err != nil {
 			panic(err)
 		}
 	}()
 
 	// Invoke Start numerous times, should return errAlreadyStarted
 	for i := 0; i < 10; i++ {
-		if err := exp.Start(); err == nil || !strings.Contains(err.Error(), "already started") {
+		if err := exp.Start(ctx); err == nil || !strings.Contains(err.Error(), "already started") {
 			t.Fatalf("#%d unexpected Start error: %v", i, err)
 		}
 	}
 
-	if err := exp.Shutdown(context.Background()); err != nil {
+	if err := exp.Shutdown(ctx); err != nil {
 		t.Fatalf("failed to Shutdown the exporter: %v", err)
 	}
 	// Invoke Shutdown numerous times
 	for i := 0; i < 10; i++ {
-		if err := exp.Shutdown(context.Background()); err != nil {
+		if err := exp.Shutdown(ctx); err != nil {
 			t.Fatalf(`#%d got error (%v) expected none`, i, err)
 		}
 	}
@@ -341,14 +343,16 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 	mc := runMockCol(t)
 
 	reconnectionPeriod := 20 * time.Millisecond
-	exp, err := otlp.NewExporter(otlp.WithInsecure(),
+	ctx := context.Background()
+	exp, err := otlp.NewExporter(ctx,
+		otlp.WithInsecure(),
 		otlp.WithAddress(mc.address),
 		otlp.WithReconnectionPeriod(reconnectionPeriod))
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 	defer func() {
-		_ = exp.Shutdown(context.Background())
+		_ = exp.Shutdown(ctx)
 	}()
 
 	// We'll now stop the collector right away to simulate a connection
@@ -363,7 +367,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 		// No endpoint up.
 		require.Error(
 			t,
-			exp.ExportSpans(context.Background(), []*exporttrace.SpanData{{Name: "in the midst"}}),
+			exp.ExportSpans(ctx, []*exporttrace.SpanData{{Name: "in the midst"}}),
 			"transport: Error while dialing dial tcp %s: connect: connection refused",
 			mc.address,
 		)
@@ -377,7 +381,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 
 		n := 10
 		for i := 0; i < n; i++ {
-			require.NoError(t, exp.ExportSpans(context.Background(), []*exporttrace.SpanData{{Name: "Resurrected"}}))
+			require.NoError(t, exp.ExportSpans(ctx, []*exporttrace.SpanData{{Name: "Resurrected"}}))
 		}
 
 		nmaSpans := nmc.getSpans()
@@ -412,13 +416,15 @@ func TestNewExporter_collectorOnBadConnection(t *testing.T) {
 	_, collectorPortStr, _ := net.SplitHostPort(ln.Addr().String())
 
 	address := fmt.Sprintf("localhost:%s", collectorPortStr)
-	exp, err := otlp.NewExporter(otlp.WithInsecure(),
+	ctx := context.Background()
+	exp, err := otlp.NewExporter(ctx,
+		otlp.WithInsecure(),
 		otlp.WithReconnectionPeriod(50*time.Millisecond),
 		otlp.WithAddress(address))
 	if err != nil {
 		t.Fatalf("Despite an indefinite background reconnection, got error: %v", err)
 	}
-	_ = exp.Shutdown(context.Background())
+	_ = exp.Shutdown(ctx)
 }
 
 func TestNewExporter_withAddress(t *testing.T) {
@@ -432,11 +438,12 @@ func TestNewExporter_withAddress(t *testing.T) {
 		otlp.WithReconnectionPeriod(50*time.Millisecond),
 		otlp.WithAddress(mc.address))
 
+	ctx := context.Background()
 	defer func() {
-		_ = exp.Shutdown(context.Background())
+		_ = exp.Shutdown(ctx)
 	}()
 
-	if err := exp.Start(); err != nil {
+	if err := exp.Start(ctx); err != nil {
 		t.Fatalf("Unexpected Start error: %v", err)
 	}
 }
@@ -447,16 +454,17 @@ func TestNewExporter_withHeaders(t *testing.T) {
 		_ = mc.stop()
 	}()
 
-	exp, _ := otlp.NewExporter(
+	ctx := context.Background()
+	exp, _ := otlp.NewExporter(ctx,
 		otlp.WithInsecure(),
 		otlp.WithReconnectionPeriod(50*time.Millisecond),
 		otlp.WithAddress(mc.address),
 		otlp.WithHeaders(map[string]string{"header1": "value1"}),
 	)
-	require.NoError(t, exp.ExportSpans(context.Background(), []*exporttrace.SpanData{{Name: "in the midst"}}))
+	require.NoError(t, exp.ExportSpans(ctx, []*exporttrace.SpanData{{Name: "in the midst"}}))
 
 	defer func() {
-		_ = exp.Shutdown(context.Background())
+		_ = exp.Shutdown(ctx)
 	}()
 
 	headers := mc.getHeaders()
@@ -473,14 +481,15 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 
 	<-time.After(5 * time.Millisecond)
 
-	exp, _ := otlp.NewExporter(
+	ctx := context.Background()
+	exp, _ := otlp.NewExporter(ctx,
 		otlp.WithInsecure(),
 		otlp.WithReconnectionPeriod(50*time.Millisecond),
 		otlp.WithAddress(mc.address),
 	)
 
 	defer func() {
-		_ = exp.Shutdown(context.Background())
+		_ = exp.Shutdown(ctx)
 	}()
 
 	tp := sdktrace.NewTracerProvider(
@@ -492,7 +501,7 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	)
-	defer func() { _ = tp.Shutdown(context.Background()) }()
+	defer func() { _ = tp.Shutdown(ctx) }()
 
 	tr := tp.Tracer("test-tracer")
 	testKvs := []label.KeyValue{
@@ -504,7 +513,7 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 		label.Bool("Bool", true),
 		label.String("String", "test"),
 	}
-	_, span := tr.Start(context.Background(), "AlwaysSample")
+	_, span := tr.Start(ctx, "AlwaysSample")
 	span.SetAttributes(testKvs...)
 	span.End()
 
@@ -520,7 +529,7 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 	<-time.After(40 * time.Millisecond)
 
 	// Now shutdown the exporter
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+	ctx, cancel := context.WithTimeout(ctx, time.Millisecond)
 	defer cancel()
 	if err := exp.Shutdown(ctx); err != nil {
 		t.Fatalf("failed to stop the exporter: %v", err)
