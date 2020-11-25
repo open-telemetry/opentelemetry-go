@@ -62,9 +62,8 @@ func TestNoopSpan(t *testing.T) {
 	_, s := tracer.Start(context.Background(), "test span")
 	span := s.(noopSpan)
 
-	if got, want := span.SpanContext(), (SpanContext{}); got != want {
-		t.Errorf("span.SpanContext() returned %#v, want %#v", got, want)
-	}
+	got, want := span.SpanContext(), (SpanContext{})
+	assertSpanContext(t, got, want)
 
 	if got, want := span.IsRecording(), false; got != want {
 		t.Errorf("span.IsRecording() returned %#v, want %#v", got, want)

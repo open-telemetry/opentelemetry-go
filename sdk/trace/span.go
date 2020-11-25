@@ -313,7 +313,10 @@ func startSpanInternal(tr *tracer, name string, parent trace.SpanContext, remote
 
 	cfg := tr.provider.config.Load().(*Config)
 
-	if parent == emptySpanContext {
+	if parent.SpanID == emptySpanContext.SpanID &&
+		parent.TraceID == emptySpanContext.TraceID &&
+		parent.TraceFlags == emptySpanContext.TraceFlags &&
+		parent.TraceState.IsEmpty() {
 		span.spanContext.TraceID = cfg.IDGenerator.NewTraceID()
 		noParent = true
 	}

@@ -185,24 +185,20 @@ type TraceState struct { //nolint:golint
 	kvs []label.KeyValue
 }
 
-var _ json.Marshaler = &TraceState{}
+var _ json.Marshaler = TraceState{}
 var keyFormatRegExp = regexp.MustCompile(
 	`^((` + traceStateKeyFormat + `)|(` + traceStateKeyFormatWithMultiTenantVendor + `))$`,
 )
 var valueFormatRegExp = regexp.MustCompile(`^(` + traceStateValueFormat + `)$`)
 
 // MarshalJSON implements a custom marshal function to encode trace state.
-func (ts *TraceState) MarshalJSON() ([]byte, error) {
+func (ts TraceState) MarshalJSON() ([]byte, error) {
 	return json.Marshal(ts.kvs)
 }
 
 // String returns trace state as a string valid according to the
 // W3C Trace Context specification.
-func (ts *TraceState) String() string {
-	if ts == nil {
-		return ""
-	}
-
+func (ts TraceState) String() string {
 	var sb strings.Builder
 
 	for i, kv := range ts.kvs {
@@ -220,8 +216,8 @@ func (ts *TraceState) String() string {
 
 // Get returns a value for given key from the trace state.
 // If no key is found or provided key is invalid, returns an empty value.
-func (ts *TraceState) Get(key label.Key) label.Value {
-	if ts == nil || !isTraceStateKeyValid(key) {
+func (ts TraceState) Get(key label.Key) label.Value {
+	if !isTraceStateKeyValid(key) {
 		return label.Value{}
 	}
 
@@ -237,18 +233,14 @@ func (ts *TraceState) Get(key label.Key) label.Value {
 // Insert adds a new key/value, if one doesn't exists; otherwise updates the existing entry.
 // The new or updated entry is always inserted at the beginning of the TraceState, i.e.
 // on the left side, as per the W3C Trace Context specification requirement.
-func (ts *TraceState) Insert(entry label.KeyValue) (TraceState, error) {
+func (ts TraceState) Insert(entry label.KeyValue) (TraceState, error) {
 	if !isTraceStateKeyValueValid(entry) {
-		return TraceState{}, errInvalidTraceStateKeyValue
-	}
-
-	if ts == nil {
-		return TraceState{[]label.KeyValue{entry}}, nil
+		return ts, errInvalidTraceStateKeyValue
 	}
 
 	ckvs := ts.copyKVsAndDeleteEntry(entry.Key)
 	if len(ckvs)+1 > traceStateMaxListMembers {
-		return TraceState{}, errInvalidTraceStateMembersNumber
+		return ts, errInvalidTraceStateMembersNumber
 	}
 
 	ckvs = append(ckvs, label.KeyValue{})
@@ -259,19 +251,20 @@ func (ts *TraceState) Insert(entry label.KeyValue) (TraceState, error) {
 }
 
 // Delete removes specified entry from the trace state.
-func (ts *TraceState) Delete(key label.Key) (TraceState, error) {
-	if ts == nil {
-		return TraceState{}, nil
-	}
-
+func (ts TraceState) Delete(key label.Key) (TraceState, error) {
 	if !isTraceStateKeyValid(key) {
-		return TraceState{}, errInvalidTraceStateKeyValue
+		return ts, errInvalidTraceStateKeyValue
 	}
 
 	return TraceState{ts.copyKVsAndDeleteEntry(key)}, nil
 }
 
-func (ts *TraceState) copyKVsAndDeleteEntry(key label.Key) []label.KeyValue {
+// IsEmpty returns true if the TraceState does not contain any entries
+func (ts TraceState) IsEmpty() bool {
+	return len(ts.kvs) == 0
+}
+
+func (ts TraceState) copyKVsAndDeleteEntry(key label.Key) []label.KeyValue {
 	ckvs := make([]label.KeyValue, len(ts.kvs))
 	copy(ckvs, ts.kvs)
 	for i, kv := range ts.kvs {
@@ -286,24 +279,24 @@ func (ts *TraceState) copyKVsAndDeleteEntry(key label.Key) []label.KeyValue {
 
 // TraceStateFromKeyValues is a convenience method to create a new TraceState from
 // provided key/value pairs.
-func TraceStateFromKeyValues(kvs ...label.KeyValue) (*TraceState, error) { //nolint:golint
+func TraceStateFromKeyValues(kvs ...label.KeyValue) (TraceState, error) { //nolint:golint
 	if len(kvs) > traceStateMaxListMembers {
-		return nil, errInvalidTraceStateMembersNumber
+		return TraceState{}, errInvalidTraceStateMembersNumber
 	}
 
 	km := make(map[label.Key]bool)
 	for _, kv := range kvs {
 		if !isTraceStateKeyValueValid(kv) {
-			return nil, errInvalidTraceStateKeyValue
+			return TraceState{}, errInvalidTraceStateKeyValue
 		}
 		_, ok := km[kv.Key]
 		if ok {
-			return nil, errInvalidTraceStateDuplicate
+			return TraceState{}, errInvalidTraceStateDuplicate
 		}
 		km[kv.Key] = true
 	}
 
-	return &TraceState{kvs}, nil
+	return TraceState{kvs}, nil
 }
 
 func isTraceStateKeyValid(key label.Key) bool {
@@ -320,7 +313,7 @@ type SpanContext struct {
 	TraceID    TraceID
 	SpanID     SpanID
 	TraceFlags byte
-	TraceState *TraceState
+	TraceState TraceState
 }
 
 // IsValid returns if the SpanContext is valid. A valid span context has a
