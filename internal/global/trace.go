@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal
+package global
 
 /*
 This file contains the forwarding implementation of the TracerProvider used as
@@ -84,7 +84,7 @@ func (p *tracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 	defer p.mtx.Unlock()
 
 	if p.delegate != nil {
-		return p.delegate.Tracer(name)
+		return p.delegate.Tracer(name, opts...)
 	}
 
 	t := &tracer{name: name, opts: opts}

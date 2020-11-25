@@ -25,8 +25,8 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/trace"
@@ -54,7 +54,7 @@ func init() {
 	tid, _ = trace.TraceIDFromHex("01020304050607080102040810203040")
 	sid, _ = trace.SpanIDFromHex("0102040810203040")
 
-	global.SetErrorHandler(new(discardHandler))
+	otel.SetErrorHandler(new(discardHandler))
 }
 
 func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {

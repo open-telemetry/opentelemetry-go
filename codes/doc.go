@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package opentelemetry contains Go support for OpenTelemetry.
-//
-// This package is currently in a pre-GA phase. Backwards incompatible changes
-// may be introduced in subsequent minor version releases as we work to track
-// the evolving OpenTelemetry specification and user feedback.
-package opentelemetry // import "go.opentelemetry.io/otel/sdk"
+/*
+Package codes defines the canonical error codes used by OpenTelemetry.
 
-// Version is the current release version of OpenTelemetry in use.
-func Version() string {
-	return "0.13.0"
-}
+This package is currently in a pre-GA phase. Backwards incompatible changes
+may be introduced in subsequent minor version releases as we work to track
+the evolving OpenTelemetry specification and user feedback.
+
+It conforms to [the OpenTelemetry
+specification](https://github.com/open-telemetry/opentelemetry-specification/blob/master/specification/trace/api.md#statuscanonicalcode).
+*/
+package codes // import "go.opentelemetry.io/otel/codes"

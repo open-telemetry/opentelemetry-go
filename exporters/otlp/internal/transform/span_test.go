@@ -172,7 +172,7 @@ func TestStatus(t *testing.T) {
 		{
 			codes.Error,
 			"test Error",
-			tracepb.Status_STATUS_CODE_UNKNOWN_ERROR,
+			tracepb.Status_STATUS_CODE_ERROR,
 		},
 	} {
 		expected := &tracepb.Status{Code: test.otlpStatus, Message: test.message}

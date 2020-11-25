@@ -767,15 +767,7 @@ func TestStatelessExportKind(t *testing.T) {
 
 // What works single-threaded should work multi-threaded
 func runMetricExportTests(t *testing.T, opts []ExporterOption, rs []record, expected []metricpb.ResourceMetrics) {
-	t.Run("1 goroutine", func(t *testing.T) {
-		runMetricExportTest(t, NewUnstartedExporter(append(opts[:len(opts):len(opts)], WorkerCount(1))...), rs, expected)
-	})
-	t.Run("20 goroutines", func(t *testing.T) {
-		runMetricExportTest(t, NewUnstartedExporter(append(opts[:len(opts):len(opts)], WorkerCount(20))...), rs, expected)
-	})
-}
-
-func runMetricExportTest(t *testing.T, exp *Exporter, rs []record, expected []metricpb.ResourceMetrics) {
+	exp := NewUnstartedExporter(opts...)
 	msc := &metricsServiceClientStub{}
 	exp.metricExporter = msc
 	exp.started = true

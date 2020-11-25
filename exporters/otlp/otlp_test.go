@@ -17,26 +17,24 @@ package otlp
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 )
 
 func TestExporterShutdownHonorsTimeout(t *testing.T) {
-	orig := closeStopCh
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer func() {
-		cancel()
-		closeStopCh = orig
-	}()
-	closeStopCh = func(stopCh chan bool) {
-		go func() {
-			<-ctx.Done()
-			close(stopCh)
-		}()
-	}
+	defer cancel()
 
 	e := NewUnstartedExporter()
-	if err := e.Start(); err != nil {
+	orig := e.cc.closeBackgroundConnectionDoneCh
+	e.cc.closeBackgroundConnectionDoneCh = func(ch chan struct{}) {
+		go func() {
+			<-ctx.Done()
+			orig(ch)
+		}()
+	}
+	if err := e.Start(ctx); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
 
@@ -50,21 +48,18 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 }
 
 func TestExporterShutdownHonorsCancel(t *testing.T) {
-	orig := closeStopCh
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer func() {
-		cancel()
-		closeStopCh = orig
-	}()
-	closeStopCh = func(stopCh chan bool) {
-		go func() {
-			<-ctx.Done()
-			close(stopCh)
-		}()
-	}
+	defer cancel()
 
 	e := NewUnstartedExporter()
-	if err := e.Start(); err != nil {
+	orig := e.cc.closeBackgroundConnectionDoneCh
+	e.cc.closeBackgroundConnectionDoneCh = func(ch chan struct{}) {
+		go func() {
+			<-ctx.Done()
+			orig(ch)
+		}()
+	}
+	if err := e.Start(ctx); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
 
@@ -83,11 +78,38 @@ func TestExporterShutdownNoError(t *testing.T) {
 	defer cancel()
 
 	e := NewUnstartedExporter()
-	if err := e.Start(); err != nil {
+	if err := e.Start(ctx); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
 
 	if err := e.Shutdown(ctx); err != nil {
 		t.Errorf("shutdown errored: expected nil, got %v", err)
+	}
+}
+
+func TestExporterShutdownManyTimes(t *testing.T) {
+	ctx := context.Background()
+	e, err := NewExporter(ctx)
+	if err != nil {
+		t.Fatalf("failed to start an exporter: %v", err)
+	}
+	ch := make(chan struct{})
+	wg := sync.WaitGroup{}
+	const num int = 20
+	wg.Add(num)
+	errs := make([]error, num)
+	for i := 0; i < num; i++ {
+		go func(idx int) {
+			defer wg.Done()
+			<-ch
+			errs[idx] = e.Shutdown(ctx)
+		}(i)
+	}
+	close(ch)
+	wg.Wait()
+	for _, err := range errs {
+		if err != nil {
+			t.Fatalf("failed to shutdown exporter: %v", err)
+		}
 	}
 }

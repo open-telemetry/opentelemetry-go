@@ -12,9 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package global provides global providers, propagators and more.
-//
-// This package is currently in a pre-GA phase. Backwards incompatible changes
-// may be introduced in subsequent minor version releases as we work to track
-// the evolving OpenTelemetry specification and user feedback.
-package global // import "go.opentelemetry.io/otel/global"
+// Package opencensus provides a migration bridge forwarding the OpenCensus API to the OpenTelemetry SDK.
+package opencensus // import "go.opentelemetry.io/otel/bridge/opencensus"

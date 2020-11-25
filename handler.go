@@ -12,15 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global // import "go.opentelemetry.io/otel/global"
+package otel // import "go.opentelemetry.io/otel"
 
 import (
 	"log"
 	"os"
 	"sync"
 	"sync/atomic"
-
-	"go.opentelemetry.io/otel"
 )
 
 var (
@@ -37,7 +35,7 @@ var (
 	delegateErrorHandlerOnce sync.Once
 
 	// Comiple time check that loggingErrorHandler implements ErrorHandler.
-	_ otel.ErrorHandler = (*loggingErrorHandler)(nil)
+	_ ErrorHandler = (*loggingErrorHandler)(nil)
 )
 
 // loggingErrorHandler logs all errors to STDERR.
@@ -48,7 +46,7 @@ type loggingErrorHandler struct {
 }
 
 // setDelegate sets the ErrorHandler delegate if one is not already set.
-func (h *loggingErrorHandler) setDelegate(d otel.ErrorHandler) {
+func (h *loggingErrorHandler) setDelegate(d ErrorHandler) {
 	if h.delegate.Load() != nil {
 		// Delegate already registered
 		return
@@ -56,26 +54,26 @@ func (h *loggingErrorHandler) setDelegate(d otel.ErrorHandler) {
 	h.delegate.Store(d)
 }
 
-// Handle implements otel.ErrorHandler.
+// Handle implements ErrorHandler.
 func (h *loggingErrorHandler) Handle(err error) {
 	if d := h.delegate.Load(); d != nil {
-		d.(otel.ErrorHandler).Handle(err)
+		d.(ErrorHandler).Handle(err)
 		return
 	}
 	h.l.Print(err)
 }
 
-// ErrorHandler returns the global ErrorHandler instance. If no ErrorHandler
+// GetErrorHandler returns the global ErrorHandler instance. If no ErrorHandler
 // instance has been set (`SetErrorHandler`), the default ErrorHandler which
 // logs errors to STDERR is returned.
-func ErrorHandler() otel.ErrorHandler {
+func GetErrorHandler() ErrorHandler {
 	return globalErrorHandler
 }
 
 // SetErrorHandler sets the global ErrorHandler to be h.
-func SetErrorHandler(h otel.ErrorHandler) {
+func SetErrorHandler(h ErrorHandler) {
 	delegateErrorHandlerOnce.Do(func() {
-		current := ErrorHandler()
+		current := GetErrorHandler()
 		if current == h {
 			return
 		}
@@ -87,5 +85,5 @@ func SetErrorHandler(h otel.ErrorHandler) {
 
 // Handle is a convience function for ErrorHandler().Handle(err)
 func Handle(err error) {
-	ErrorHandler().Handle(err)
+	GetErrorHandler().Handle(err)
 }

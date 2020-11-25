@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global // import "go.opentelemetry.io/otel/global"
+package otel // import "go.opentelemetry.io/otel"
 
 import (
-	"go.opentelemetry.io/otel/global/internal"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -24,21 +24,21 @@ import (
 //
 // This is short for TracerProvider().Tracer(name)
 func Tracer(name string) trace.Tracer {
-	return TracerProvider().Tracer(name)
+	return GetTracerProvider().Tracer(name)
 }
 
 // TracerProvider returns the registered global trace provider.
 // If none is registered then an instance of NoopTracerProvider is returned.
 //
 // Use the trace provider to create a named tracer. E.g.
-//     tracer := global.TracerProvider().Tracer("example.com/foo")
+//     tracer := global.GetTracerProvider().Tracer("example.com/foo")
 // or
 //     tracer := global.Tracer("example.com/foo")
-func TracerProvider() trace.TracerProvider {
-	return internal.TracerProvider()
+func GetTracerProvider() trace.TracerProvider {
+	return global.TracerProvider()
 }
 
 // SetTracerProvider registers `tp` as the global trace provider.
 func SetTracerProvider(tp trace.TracerProvider) {
-	internal.SetTracerProvider(tp)
+	global.SetTracerProvider(tp)
 }

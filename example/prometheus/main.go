@@ -22,8 +22,8 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
-	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 )
@@ -48,7 +48,7 @@ func initMeter() {
 func main() {
 	initMeter()
 
-	meter := global.Meter("ex.com/basic")
+	meter := otel.Meter("ex.com/basic")
 	observerLock := new(sync.RWMutex)
 	observerValueToReport := new(float64)
 	observerLabelsToReport := new([]label.KeyValue)

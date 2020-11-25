@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global // import "go.opentelemetry.io/otel/global"
+package otel // import "go.opentelemetry.io/otel"
 
 import (
-	"go.opentelemetry.io/otel/global/internal"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 )
 
@@ -28,10 +28,10 @@ import (
 //
 // This is short for MeterProvider().Meter(name)
 func Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter {
-	return MeterProvider().Meter(instrumentationName, opts...)
+	return GetMeterProvider().Meter(instrumentationName, opts...)
 }
 
-// MeterProvider returns the registered global meter provider.  If
+// GetMeterProvider returns the registered global meter provider.  If
 // none is registered then a default meter provider is returned that
 // forwards the Meter interface to the first registered Meter.
 //
@@ -39,11 +39,11 @@ func Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter 
 //     meter := global.MeterProvider().Meter("example.com/foo")
 // or
 //     meter := global.Meter("example.com/foo")
-func MeterProvider() metric.MeterProvider {
-	return internal.MeterProvider()
+func GetMeterProvider() metric.MeterProvider {
+	return global.MeterProvider()
 }
 
 // SetMeterProvider registers `mp` as the global meter provider.
 func SetMeterProvider(mp metric.MeterProvider) {
-	internal.SetMeterProvider(mp)
+	global.SetMeterProvider(mp)
 }

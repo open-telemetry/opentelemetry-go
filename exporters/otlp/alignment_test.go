@@ -26,8 +26,8 @@ import (
 func TestMain(m *testing.M) {
 	fields := []ottest.FieldOffset{
 		{
-			Name:   "Exporter.lastConnectErrPtr",
-			Offset: unsafe.Offsetof(Exporter{}.lastConnectErrPtr),
+			Name:   "grpcConnection.lastConnectErrPtr",
+			Offset: unsafe.Offsetof(grpcConnection{}.lastConnectErrPtr),
 		},
 	}
 	if !ottest.Aligned8Byte(fields, os.Stderr) {

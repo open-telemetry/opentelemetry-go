@@ -23,8 +23,7 @@ import (
 	"os"
 	"time"
 
-	"go.opentelemetry.io/otel/global"
-
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/trace/zipkin"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -57,7 +56,7 @@ func main() {
 
 	ctx := context.Background()
 
-	tr := global.TracerProvider().Tracer("component-main")
+	tr := otel.GetTracerProvider().Tracer("component-main")
 	ctx, span := tr.Start(ctx, "foo")
 	<-time.After(6 * time.Millisecond)
 	bar(ctx)
@@ -69,7 +68,7 @@ func main() {
 }
 
 func bar(ctx context.Context) {
-	tr := global.TracerProvider().Tracer("component-bar")
+	tr := otel.GetTracerProvider().Tracer("component-bar")
 	_, span := tr.Start(ctx, "bar")
 	<-time.After(6 * time.Millisecond)
 	span.End()

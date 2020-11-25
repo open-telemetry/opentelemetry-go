@@ -129,7 +129,7 @@ func status(status codes.Code, message string) *tracepb.Status {
 	var c tracepb.Status_StatusCode
 	switch status {
 	case codes.Error:
-		c = tracepb.Status_STATUS_CODE_UNKNOWN_ERROR
+		c = tracepb.Status_STATUS_CODE_ERROR
 	default:
 		c = tracepb.Status_STATUS_CODE_OK
 	}

@@ -22,9 +22,9 @@ import (
 
 	"google.golang.org/api/support/bundler"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
-	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -129,7 +129,7 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 	}
 	bundler := bundler.NewBundler((*gen.Span)(nil), func(bundle interface{}) {
 		if err := e.upload(bundle.([]*gen.Span)); err != nil {
-			global.Handle(err)
+			otel.Handle(err)
 		}
 	})
 
@@ -182,7 +182,7 @@ func InstallNewPipeline(endpointOption EndpointOption, opts ...Option) (func(), 
 		return nil, err
 	}
 
-	global.SetTracerProvider(tp)
+	otel.SetTracerProvider(tp)
 	return flushFn, nil
 }
 

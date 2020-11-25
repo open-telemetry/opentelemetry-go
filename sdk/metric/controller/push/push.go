@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/global"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/registry"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -144,10 +144,10 @@ func (c *Controller) tick() {
 	c.checkpointer.StartCollection()
 	c.accumulator.Collect(ctx)
 	if err := c.checkpointer.FinishCollection(); err != nil {
-		global.Handle(err)
+		otel.Handle(err)
 	}
 
 	if err := c.exporter.Export(ctx, ckpt); err != nil {
-		global.Handle(err)
+		otel.Handle(err)
 	}
 }

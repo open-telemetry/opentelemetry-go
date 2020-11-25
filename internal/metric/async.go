@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"sync"
 
-	"go.opentelemetry.io/otel/global"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 )
@@ -41,7 +41,7 @@ type AsyncCollector interface {
 type AsyncInstrumentState struct {
 	lock sync.Mutex
 
-	// errorOnce will use the global.Handler to report an error
+	// errorOnce will use the otel.Handler to report an error
 	// once in case of an invalid runner attempting to run.
 	errorOnce sync.Once
 
@@ -142,7 +142,7 @@ func (a *AsyncInstrumentState) Run(ctx context.Context, collector AsyncCollector
 		}
 
 		a.errorOnce.Do(func() {
-			global.Handle(fmt.Errorf("%w: type %T (reported once)", ErrInvalidAsyncRunner, rp))
+			otel.Handle(fmt.Errorf("%w: type %T (reported once)", ErrInvalidAsyncRunner, rp))
 		})
 	}
 }
