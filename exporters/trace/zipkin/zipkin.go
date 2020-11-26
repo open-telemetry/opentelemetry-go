@@ -178,7 +178,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, batch []*export.SpanData) er
 		return e.errf("failed to read response body: %v", err)
 	}
 
-	if resp.StatusCode != 202 {
+	if resp.StatusCode != http.StatusAccepted {
 		return e.errf("failed to send spans to zipkin server with status %d", resp.StatusCode)
 	}
 
