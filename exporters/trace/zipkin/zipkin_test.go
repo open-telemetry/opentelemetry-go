@@ -192,7 +192,7 @@ func (c *mockZipkinCollector) handler(w http.ResponseWriter, r *http.Request) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.models = append(c.models, models...)
-	w.WriteHeader(202)
+	w.WriteHeader(http.StatusAccepted)
 }
 
 func (c *mockZipkinCollector) Close() {
