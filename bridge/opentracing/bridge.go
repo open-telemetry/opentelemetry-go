@@ -133,7 +133,8 @@ func (s *bridgeSpan) SetOperationName(operationName string) ot.Span {
 // SetTag method adds a tag to the span.
 //
 // Note about the following value conversions:
-// - uint -> int
+// - int -> int64
+// - uint -> int64
 // - int32 -> int64
 // - uint32 -> int64
 // - uint64 -> int64
@@ -505,7 +506,8 @@ func otTagsToOTelAttributesKindAndError(tags map[string]interface{}) ([]label.Ke
 
 // otTagToOTelLabel converts given key-value into label.KeyValue.
 // Note that some conversions are not obvious:
-// - uint -> int
+// - int -> int64
+// - uint -> int64
 // - int32 -> int64
 // - uint32 -> int64
 // - uint64 -> int64
