@@ -320,7 +320,7 @@ func (t *BridgeTracer) SetWarningHandler(handler BridgeWarningHandler) {
 	t.warningHandler = handler
 }
 
-// SetWarningHandler overrides the underlying OpenTelemetry
+// SetOpenTelemetryTracer overrides the underlying OpenTelemetry
 // tracer. The passed tracer should know how to operate in the
 // environment that uses OpenTracing API.
 func (t *BridgeTracer) SetOpenTelemetryTracer(tracer trace.Tracer) {
