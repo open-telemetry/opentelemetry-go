@@ -20,6 +20,12 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func TestExporterShutdownHonorsTimeout(t *testing.T) {
@@ -111,5 +117,43 @@ func TestExporterShutdownManyTimes(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to shutdown exporter: %v", err)
 		}
+	}
+}
+
+func TestInstallNewPipeline(t *testing.T) {
+	ctx := context.Background()
+	_, _, _, err := InstallNewPipeline(ctx, nil, nil)
+	assert.NoError(t, err)
+	assert.IsType(t, &sdktrace.TracerProvider{}, otel.GetTracerProvider())
+}
+
+func TestNewExportPipeline(t *testing.T) {
+	testCases := []struct {
+		name             string
+		expOpts          []ExporterOption
+		resOpts          []resource.Option
+		testSpanSampling bool
+	}{
+		{
+			name: "simple pipeline",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, tp, _, err := NewExportPipeline(
+				context.Background(),
+				tc.expOpts,
+				tc.resOpts,
+			)
+
+			assert.NoError(t, err)
+			assert.NotEqual(t, tp, otel.GetTracerProvider())
+
+			_, span := tp.Tracer("otlp test").Start(context.Background(), tc.name)
+			spanCtx := span.SpanContext()
+			assert.Equal(t, true, spanCtx.IsSampled())
+			span.End()
+		})
 	}
 }

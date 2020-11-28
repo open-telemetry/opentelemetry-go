@@ -21,16 +21,24 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 
 	"google.golang.org/grpc"
 
+	"go.opentelemetry.io/otel"
 	colmetricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/metrics/v1"
 	coltracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/trace/v1"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/propagation"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 // Exporter is an OpenTelemetry exporter. It exports both traces and metrics
@@ -230,4 +238,52 @@ func (e *Exporter) uploadTraces(ctx context.Context, sdl []*tracesdk.SpanData) e
 		e.cc.setStateDisconnected(err)
 	}
 	return err
+}
+
+func NewExportPipeline(ctx context.Context, exportOpts []ExporterOption,
+	resOpts []resource.Option) (*Exporter, *sdktrace.TracerProvider, *push.Controller, error) {
+
+	exp, err := NewExporter(ctx, exportOpts...)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	res, err := resource.New(ctx, resOpts...)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	bsp := sdktrace.NewBatchSpanProcessor(exp)
+	tracerProvider := sdktrace.NewTracerProvider(
+		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithResource(res),
+		sdktrace.WithSpanProcessor(bsp),
+	)
+
+	pusher := push.New(
+		basic.New(
+			simple.NewWithExactDistribution(),
+			exp,
+		),
+		exp,
+		push.WithPeriod(7*time.Second),
+	)
+
+	return exp, tracerProvider, pusher, nil
+}
+
+func InstallNewPipeline(ctx context.Context, exportOpts []ExporterOption,
+	resOpts []resource.Option) (*Exporter, *sdktrace.TracerProvider, *push.Controller, error) {
+
+	exp, tp, pusher, err := NewExportPipeline(ctx, exportOpts, resOpts)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+	otel.SetTracerProvider(tp)
+	otel.SetMeterProvider(pusher.MeterProvider())
+	pusher.Start()
+
+	return exp, tp, pusher, err
 }
