@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package push_test
+package basic_test
 
 import (
 	"context"
@@ -29,9 +29,9 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -83,7 +83,7 @@ func newCheckpointer() export.Checkpointer {
 func TestPushDoubleStop(t *testing.T) {
 	exporter := newExporter()
 	checkpointer := newCheckpointer()
-	p := push.New(checkpointer, exporter)
+	p := controller.New(checkpointer, exporter)
 	p.Start()
 	p.Stop()
 	p.Stop()
@@ -92,7 +92,7 @@ func TestPushDoubleStop(t *testing.T) {
 func TestPushDoubleStart(t *testing.T) {
 	exporter := newExporter()
 	checkpointer := newCheckpointer()
-	p := push.New(checkpointer, exporter)
+	p := controller.New(checkpointer, exporter)
 	p.Start()
 	p.Start()
 	p.Stop()
@@ -101,11 +101,11 @@ func TestPushDoubleStart(t *testing.T) {
 func TestPushTicker(t *testing.T) {
 	exporter := newExporter()
 	checkpointer := newCheckpointer()
-	p := push.New(
+	p := controller.New(
 		checkpointer,
 		exporter,
-		push.WithPeriod(time.Second),
-		push.WithResource(testResource),
+		controller.WithPeriod(time.Second),
+		controller.WithResource(testResource),
 	)
 	meter := p.MeterProvider().Meter("name")
 
@@ -180,12 +180,12 @@ func TestPushExportError(t *testing.T) {
 			// This test validates the error handling
 			// behavior of the basic Processor is honored
 			// by the push processor.
-			checkpointer := basic.New(processorTest.AggregatorSelector(), exporter)
-			p := push.New(
+			checkpointer := processor.New(processorTest.AggregatorSelector(), exporter)
+			p := controller.New(
 				checkpointer,
 				exporter,
-				push.WithPeriod(time.Second),
-				push.WithResource(testResource),
+				controller.WithPeriod(time.Second),
+				controller.WithResource(testResource),
 			)
 
 			mock := controllertest.NewMockClock()

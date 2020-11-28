@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package push // import "go.opentelemetry.io/otel/sdk/metric/controller/push"
+package basic // import "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 
 import (
 	"context"

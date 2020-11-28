@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package push // import "go.opentelemetry.io/otel/sdk/metric/controller/push"
+package basic // import "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 
 import (
 	"time"
@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// Config contains configuration for a push Controller.
+// Config contains configuration for a basic Controller.
 type Config struct {
 	// Resource is the OpenTelemetry resource associated with all Meters
 	// created by the Controller.
