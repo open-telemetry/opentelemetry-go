@@ -27,36 +27,51 @@ import (
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
 )
 
-// DefaultPushPeriod is the default time interval between pushes.
-const DefaultPushPeriod = 10 * time.Second
+// DefaultPeriod is the minimum time between collections, maximum time
+// for Export().
+const DefaultPeriod = 10 * time.Second
 
 // Controller organizes a periodic push of metric data.
 type Controller struct {
-	lock         sync.Mutex
-	accumulator  *sdk.Accumulator
-	provider     *registry.MeterProvider
-	checkpointer export.Checkpointer
-	exporter     export.Exporter
-	wg           sync.WaitGroup
-	ch           chan struct{}
-	period       time.Duration
-	timeout      time.Duration
-	clock        controllerTime.Clock
-	ticker       controllerTime.Ticker
+	lock             sync.Mutex
+	accumulator      *sdk.Accumulator
+	provider         *registry.MeterProvider
+	checkpointer     export.Checkpointer
+	exporter         export.Exporter
+	wg               sync.WaitGroup
+	stopCh           chan struct{}
+	exportRequestCh  chan struct{}
+	exportResponseCh chan struct{}
+	clock            controllerTime.Clock
+	ticker           controllerTime.Ticker
+
+	collectPeriod  time.Duration
+	collectTimeout time.Duration
+	exportTimeout  time.Duration
 }
 
 // New constructs a Controller, an implementation of MeterProvider, using the
 // provided checkpointer, exporter, and options to configure an SDK with
 // periodic collection.
-func New(checkpointer export.Checkpointer, exporter export.Exporter, opts ...Option) *Controller {
+func New(checkpointer export.Checkpointer, opts ...Option) *Controller {
 	c := &Config{
-		Period: DefaultPushPeriod,
+		CollectPeriod: DefaultPeriod,
 	}
 	for _, opt := range opts {
 		opt.Apply(c)
 	}
-	if c.Timeout == 0 {
-		c.Timeout = c.Period
+	if c.CollectTimeout == 0 {
+		c.CollectTimeout = c.CollectPeriod
+	}
+
+	var exportRequestCh chan struct{}
+	var exportResponseCh chan struct{}
+	if c.Exporter != nil {
+		exportRequestCh = make(chan struct{}, 1)
+		exportResponseCh = make(chan struct{}, 1)
+	}
+	if c.ExportTimeout == 0 {
+		c.ExportTimeout = c.CollectPeriod
 	}
 
 	impl := sdk.NewAccumulator(
@@ -64,14 +79,17 @@ func New(checkpointer export.Checkpointer, exporter export.Exporter, opts ...Opt
 		c.Resource,
 	)
 	return &Controller{
-		provider:     registry.NewMeterProvider(impl),
-		accumulator:  impl,
-		checkpointer: checkpointer,
-		exporter:     exporter,
-		ch:           make(chan struct{}),
-		period:       c.Period,
-		timeout:      c.Timeout,
-		clock:        controllerTime.RealClock{},
+		provider:         registry.NewMeterProvider(impl),
+		accumulator:      impl,
+		checkpointer:     checkpointer,
+		exporter:         c.Exporter,
+		stopCh:           make(chan struct{}),
+		collectPeriod:    c.CollectPeriod,
+		collectTimeout:   c.CollectTimeout,
+		exportTimeout:    c.ExportTimeout,
+		exportRequestCh:  exportRequestCh,
+		exportResponseCh: exportResponseCh,
+		clock:            controllerTime.RealClock{},
 	}
 }
 
@@ -98,9 +116,14 @@ func (c *Controller) Start() {
 		return
 	}
 
-	c.ticker = c.clock.Ticker(c.period)
 	c.wg.Add(1)
-	go c.run(c.ch)
+	c.ticker = c.clock.Ticker(c.collectPeriod)
+
+	if c.exporter != nil {
+		c.wg.Add(2)
+		go c.runTicker(c.stopCh)
+		go c.runExporter(c.stopCh)
+	}
 }
 
 // Stop waits for the background goroutine to return and then collects
@@ -109,32 +132,58 @@ func (c *Controller) Stop() {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if c.ch == nil {
+	if c.stopCh == nil {
 		return
 	}
 
-	close(c.ch)
-	c.ch = nil
+	close(c.stopCh)
+	c.stopCh = nil
+	c.wg.Done()
 	c.wg.Wait()
 	c.ticker.Stop()
 
-	c.tick()
+	c.collect(nil)
 }
 
-func (c *Controller) run(ch chan struct{}) {
+func (c *Controller) runTicker(stopCh chan struct{}) {
+	defer c.wg.Done()
 	for {
 		select {
-		case <-ch:
-			c.wg.Done()
+		case <-stopCh:
 			return
 		case <-c.ticker.C():
-			c.tick()
+			c.collect(stopCh)
 		}
 	}
 }
 
-func (c *Controller) tick() {
-	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+func (c *Controller) collect(stopCh chan struct{}) {
+	if c.exporter != nil {
+		// Wait for the previous export to finish or timeout.
+		select {
+		case <-c.exportResponseCh:
+			// ok
+		case <-stopCh:
+			return
+		}
+
+	}
+	if err := c.checkpoint(); err != nil {
+		otel.Handle(err)
+	}
+	if c.exporter != nil {
+		// Begin a new export.
+		select {
+		case c.exportRequestCh <- struct{}{}:
+			// ok
+		case <-stopCh:
+			return
+		}
+	}
+}
+
+func (c *Controller) checkpoint() error {
+	ctx, cancel := context.WithTimeout(context.Background(), c.collectTimeout)
 	defer cancel()
 
 	ckpt := c.checkpointer.CheckpointSet()
@@ -143,9 +192,34 @@ func (c *Controller) tick() {
 
 	c.checkpointer.StartCollection()
 	c.accumulator.Collect(ctx)
-	if err := c.checkpointer.FinishCollection(); err != nil {
-		otel.Handle(err)
+	return c.checkpointer.FinishCollection()
+}
+
+func (c *Controller) runExporter(stopCh chan struct{}) {
+	defer c.wg.Done()
+	c.exportResponseCh <- struct{}{}
+	for {
+		select {
+		case <-c.exportRequestCh:
+		case <-stopCh:
+			return
+		}
+		c.export()
+		select {
+		case c.exportResponseCh <- struct{}{}:
+		case <-stopCh:
+			return
+		}
 	}
+}
+
+func (c *Controller) export() {
+	ctx, cancel := context.WithTimeout(context.Background(), c.exportTimeout)
+	defer cancel()
+
+	ckpt := c.checkpointer.CheckpointSet()
+	ckpt.RLock()
+	defer ckpt.RUnlock()
 
 	if err := c.exporter.Export(ctx, ckpt); err != nil {
 		otel.Handle(err)

@@ -83,7 +83,7 @@ func newCheckpointer() export.Checkpointer {
 func TestPushDoubleStop(t *testing.T) {
 	exporter := newExporter()
 	checkpointer := newCheckpointer()
-	p := controller.New(checkpointer, exporter)
+	p := controller.New(checkpointer, controller.WithExporter(exporter))
 	p.Start()
 	p.Stop()
 	p.Stop()
@@ -92,7 +92,7 @@ func TestPushDoubleStop(t *testing.T) {
 func TestPushDoubleStart(t *testing.T) {
 	exporter := newExporter()
 	checkpointer := newCheckpointer()
-	p := controller.New(checkpointer, exporter)
+	p := controller.New(checkpointer, controller.WithExporter(exporter))
 	p.Start()
 	p.Start()
 	p.Stop()
@@ -103,8 +103,8 @@ func TestPushTicker(t *testing.T) {
 	checkpointer := newCheckpointer()
 	p := controller.New(
 		checkpointer,
-		exporter,
-		controller.WithPeriod(time.Second),
+		controller.WithExporter(exporter),
+		controller.WithCollectPeriod(time.Second),
 		controller.WithResource(testResource),
 	)
 	meter := p.MeterProvider().Meter("name")
@@ -183,8 +183,8 @@ func TestPushExportError(t *testing.T) {
 			checkpointer := processor.New(processorTest.AggregatorSelector(), exporter)
 			p := controller.New(
 				checkpointer,
-				exporter,
-				controller.WithPeriod(time.Second),
+				controller.WithExporter(exporter),
+				controller.WithCollectPeriod(time.Second),
 				controller.WithResource(testResource),
 			)
 
