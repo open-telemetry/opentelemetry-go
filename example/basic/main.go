@@ -24,8 +24,8 @@ import (
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -50,12 +50,12 @@ func main() {
 	bsp := sdktrace.NewBatchSpanProcessor(exporter)
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(bsp))
 	defer func() { _ = tp.Shutdown(context.Background()) }()
-	pusher := push.New(
-		basic.New(
+	pusher := controller.New(
+		processor.New(
 			simple.NewWithExactDistribution(),
 			exporter,
 		),
-		exporter,
+		controller.WithExporter(exporter),
 	)
 	pusher.Start()
 	defer pusher.Stop()

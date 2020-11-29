@@ -30,8 +30,8 @@ import (
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -71,13 +71,13 @@ func initProvider() func() {
 		sdktrace.WithSpanProcessor(bsp),
 	)
 
-	pusher := push.New(
-		basic.New(
+	pusher := controller.New(
+		processor.New(
 			simple.NewWithExactDistribution(),
 			exp,
 		),
-		exp,
-		push.WithPeriod(2*time.Second),
+		controller.WithExporter(exp),
+		controller.WithCollectPeriod(2*time.Second),
 	)
 
 	// set global propagator to tracecontext (the default is no-op).

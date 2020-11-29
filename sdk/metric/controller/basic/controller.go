@@ -228,7 +228,7 @@ func (c *Controller) Collect(ctx context.Context) error {
 			return true
 		}
 		now := c.clock.Now()
-		if now.Sub(c.collectedTime) <= c.collectPeriod {
+		if now.Sub(c.collectedTime) < c.collectPeriod {
 			return false
 		}
 		c.collectedTime = now

@@ -32,7 +32,7 @@ import (
 	"go.opentelemetry.io/otel/metric/number"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -122,7 +122,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 
 	selector := simple.NewWithInexpensiveDistribution()
 	processor := processor.New(selector, metricsdk.StatelessExportKindSelector())
-	pusher := push.New(processor, exp)
+	pusher := controller.New(processor, controller.WithExporter(exp))
 	pusher.Start()
 
 	meter := pusher.MeterProvider().Meter("test-meter")
@@ -519,7 +519,7 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 
 	selector := simple.NewWithInexpensiveDistribution()
 	processor := processor.New(selector, metricsdk.StatelessExportKindSelector())
-	pusher := push.New(processor, exp)
+	pusher := controller.New(processor, controller.WithExporter(exp))
 	pusher.Start()
 
 	// Flush and close.

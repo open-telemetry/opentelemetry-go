@@ -31,7 +31,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
-	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
@@ -227,14 +226,14 @@ func TestPushExportError(t *testing.T) {
 	}
 }
 
-func TestPullNoCache(t *testing.T) {
-	puller := pull.New(
+func TestPullNoCollect(t *testing.T) {
+	puller := controller.New(
 		basic.New(
 			processorTest.AggregatorSelector(),
 			export.CumulativeExportKindSelector(),
 			basic.WithMemory(true),
 		),
-		pull.WithCachePeriod(0),
+		controller.WithCollectPeriod(0),
 	)
 
 	ctx := context.Background()
@@ -262,14 +261,14 @@ func TestPullNoCache(t *testing.T) {
 	}, records.Map())
 }
 
-func TestPullWithCache(t *testing.T) {
-	puller := pull.New(
+func TestPullWithCollect(t *testing.T) {
+	puller := controller.New(
 		basic.New(
 			processorTest.AggregatorSelector(),
 			export.CumulativeExportKindSelector(),
 			basic.WithMemory(true),
 		),
-		pull.WithCachePeriod(time.Second),
+		controller.WithCollectPeriod(time.Second),
 	)
 	mock := controllertest.NewMockClock()
 	puller.SetClock(mock)

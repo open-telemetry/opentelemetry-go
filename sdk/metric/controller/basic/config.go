@@ -17,8 +17,8 @@ package basic // import "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 import (
 	"time"
 
-	"go.opentelemetry.io/otel/sdk/resource"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // Config contains configuration for a basic Controller.
@@ -42,7 +42,7 @@ type Config struct {
 
 	// CollectTimeout is the timeout of the Context passed to
 	// Collect() and subsequently to Observer instrument callbacks.
-	// 
+	//
 	// Defaults to the configured collection period (see CollectPeriod).
 	CollectTimeout time.Duration
 
@@ -99,7 +99,7 @@ func WithExporter(exporter export.Exporter) Option {
 	return exporterOption{exporter}
 }
 
-type exporterOption struct { export.Exporter }
+type exporterOption struct{ export.Exporter }
 
 func (o exporterOption) Apply(config *Config) {
 	config.Exporter = o.Exporter
@@ -115,4 +115,3 @@ type exportTimeoutOption time.Duration
 func (o exportTimeoutOption) Apply(config *Config) {
 	config.ExportTimeout = time.Duration(o)
 }
-
