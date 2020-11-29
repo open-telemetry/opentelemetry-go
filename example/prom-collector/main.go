@@ -72,6 +72,8 @@ func initMeter() {
 		options...,
 	)
 
+	cont.Start()
+
 	promExporter, err := prometheus.NewExporter(prometheus.Config{}, cont)
 	if err != nil {
 		log.Panic("could not initialize prometheus:", err)
