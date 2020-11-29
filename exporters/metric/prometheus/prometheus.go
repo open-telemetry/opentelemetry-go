@@ -85,9 +85,8 @@ type Config struct {
 	DefaultHistogramBoundaries []float64
 }
 
-// NewExportPipeline sets up a complete export pipeline with the recommended setup,
-// using the recommended selector and standard processor.  See the controller.Options.
-func NewExportPipeline(config Config, options ...controller.Option) (*Exporter, error) {
+// NewExporter returns a new Prometheus
+func NewExporter(config Config, controller *controller.Controller) (*Exporter, error) {
 	if config.Registry == nil {
 		config.Registry = prometheus.NewRegistry()
 	}
@@ -104,6 +103,7 @@ func NewExportPipeline(config Config, options ...controller.Option) (*Exporter, 
 		handler:                    promhttp.HandlerFor(config.Gatherer, promhttp.HandlerOpts{}),
 		registerer:                 config.Registerer,
 		gatherer:                   config.Gatherer,
+		controller:                 controller,
 		defaultSummaryQuantiles:    config.DefaultSummaryQuantiles,
 		defaultHistogramBoundaries: config.DefaultHistogramBoundaries,
 	}
@@ -111,12 +111,16 @@ func NewExportPipeline(config Config, options ...controller.Option) (*Exporter, 
 	c := &collector{
 		exp: e,
 	}
-	e.SetController(config, options...)
 	if err := config.Registerer.Register(c); err != nil {
 		return nil, fmt.Errorf("cannot register the collector: %w", err)
 	}
-
 	return e, nil
+}
+
+// NewExportPipeline sets up a complete export pipeline with the recommended setup,
+// using the recommended selector and standard processor.  See the controller.Options.
+func NewExportPipeline(config Config, options ...controller.Option) (*Exporter, error) {
+	return NewExporter(config, defaultController(config, options...))
 }
 
 // InstallNewPipeline instantiates a NewExportPipeline and registers it globally.
@@ -139,16 +143,13 @@ func InstallNewPipeline(config Config, options ...controller.Option) (*Exporter,
 	return exp, nil
 }
 
-// SetController sets up a standard *controller.Controller as the metric provider
-// for this exporter.
-func (e *Exporter) SetController(config Config, options ...controller.Option) {
-	e.lock.Lock()
-	defer e.lock.Unlock()
-
-	e.controller = controller.New(
+// defaultController returns a standard *controller.Controller for use
+// with Prometheus.
+func defaultController(config Config, options ...controller.Option) *controller.Controller {
+	return controller.New(
 		processor.New(
 			simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries),
-			e,
+			export.CumulativeExportKindSelector(),
 			processor.WithMemory(true),
 		),
 		options...,
