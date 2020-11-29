@@ -33,21 +33,23 @@ const DefaultPeriod = 10 * time.Second
 
 // Controller organizes a periodic push of metric data.
 type Controller struct {
-	lock             sync.Mutex
-	accumulator      *sdk.Accumulator
-	provider         *registry.MeterProvider
-	checkpointer     export.Checkpointer
-	exporter         export.Exporter
-	wg               sync.WaitGroup
-	stopCh           chan struct{}
-	exportRequestCh  chan struct{}
-	exportResponseCh chan struct{}
-	clock            controllerTime.Clock
-	ticker           controllerTime.Ticker
+	lock         sync.Mutex
+	accumulator  *sdk.Accumulator
+	provider     *registry.MeterProvider
+	checkpointer export.Checkpointer
+	exporter     export.Exporter
+	wg           sync.WaitGroup
+	stopCh       chan struct{}
+	clock        controllerTime.Clock
+	ticker       controllerTime.Ticker
 
 	collectPeriod  time.Duration
 	collectTimeout time.Duration
 	exportTimeout  time.Duration
+
+	// collectedTime is used only in configurations with no
+	// exporter, when ticker != nil.
+	collectedTime time.Time
 }
 
 // New constructs a Controller, an implementation of MeterProvider, using the
@@ -63,13 +65,6 @@ func New(checkpointer export.Checkpointer, opts ...Option) *Controller {
 	if c.CollectTimeout == 0 {
 		c.CollectTimeout = c.CollectPeriod
 	}
-
-	var exportRequestCh chan struct{}
-	var exportResponseCh chan struct{}
-	if c.Exporter != nil {
-		exportRequestCh = make(chan struct{}, 1)
-		exportResponseCh = make(chan struct{}, 1)
-	}
 	if c.ExportTimeout == 0 {
 		c.ExportTimeout = c.CollectPeriod
 	}
@@ -79,17 +74,15 @@ func New(checkpointer export.Checkpointer, opts ...Option) *Controller {
 		c.Resource,
 	)
 	return &Controller{
-		provider:         registry.NewMeterProvider(impl),
-		accumulator:      impl,
-		checkpointer:     checkpointer,
-		exporter:         c.Exporter,
-		stopCh:           make(chan struct{}),
-		collectPeriod:    c.CollectPeriod,
-		collectTimeout:   c.CollectTimeout,
-		exportTimeout:    c.ExportTimeout,
-		exportRequestCh:  exportRequestCh,
-		exportResponseCh: exportResponseCh,
-		clock:            controllerTime.RealClock{},
+		provider:       registry.NewMeterProvider(impl),
+		accumulator:    impl,
+		checkpointer:   checkpointer,
+		exporter:       c.Exporter,
+		stopCh:         make(chan struct{}),
+		collectPeriod:  c.CollectPeriod,
+		collectTimeout: c.CollectTimeout,
+		exportTimeout:  c.ExportTimeout,
+		clock:          controllerTime.RealClock{},
 	}
 }
 
@@ -120,9 +113,8 @@ func (c *Controller) Start() {
 	c.ticker = c.clock.Ticker(c.collectPeriod)
 
 	if c.exporter != nil {
-		c.wg.Add(2)
+		c.wg.Add(1)
 		go c.runTicker(c.stopCh)
-		go c.runExporter(c.stopCh)
 	}
 }
 
@@ -158,70 +150,88 @@ func (c *Controller) runTicker(stopCh chan struct{}) {
 }
 
 func (c *Controller) collect(stopCh chan struct{}) {
-	if c.exporter != nil {
-		// Wait for the previous export to finish or timeout.
-		select {
-		case <-c.exportResponseCh:
-			// ok
-		case <-stopCh:
-			return
-		}
-
-	}
-	if err := c.checkpoint(); err != nil {
+	if err := c.checkpoint(func() bool {
+		return true
+	}); err != nil {
 		otel.Handle(err)
 	}
-	if c.exporter != nil {
-		// Begin a new export.
-		select {
-		case c.exportRequestCh <- struct{}{}:
-			// ok
-		case <-stopCh:
-			return
-		}
+	if c.exporter == nil {
+		return
+	}
+	// This export has to complete before starting another
+	// collection since it will hold a read lock and
+	// checkpoint() must re-acquire a write lock.
+	if err := c.export(); err != nil {
+		otel.Handle(err)
 	}
 }
 
-func (c *Controller) checkpoint() error {
-	ctx, cancel := context.WithTimeout(context.Background(), c.collectTimeout)
-	defer cancel()
-
+func (c *Controller) checkpoint(cond func() bool) error {
 	ckpt := c.checkpointer.CheckpointSet()
 	ckpt.Lock()
 	defer ckpt.Unlock()
 
+	if !cond() {
+		return nil
+	}
 	c.checkpointer.StartCollection()
+
+	ctx, cancel := context.WithTimeout(context.Background(), c.collectTimeout)
+	defer cancel()
+
 	c.accumulator.Collect(ctx)
+
 	return c.checkpointer.FinishCollection()
 }
 
-func (c *Controller) runExporter(stopCh chan struct{}) {
-	defer c.wg.Done()
-	c.exportResponseCh <- struct{}{}
-	for {
-		select {
-		case <-c.exportRequestCh:
-		case <-stopCh:
-			return
-		}
-		c.export()
-		select {
-		case c.exportResponseCh <- struct{}{}:
-		case <-stopCh:
-			return
-		}
-	}
-}
-
-func (c *Controller) export() {
-	ctx, cancel := context.WithTimeout(context.Background(), c.exportTimeout)
-	defer cancel()
-
+func (c *Controller) export() error {
 	ckpt := c.checkpointer.CheckpointSet()
 	ckpt.RLock()
 	defer ckpt.RUnlock()
 
-	if err := c.exporter.Export(ctx, ckpt); err != nil {
-		otel.Handle(err)
+	ctx, cancel := context.WithTimeout(context.Background(), c.exportTimeout)
+	defer cancel()
+
+	return c.exporter.Export(ctx, ckpt)
+}
+
+// Foreach gives the caller read-locked access to the current
+// export.CheckpointSet.
+func (c *Controller) ForEach(ks export.ExportKindSelector, f func(export.Record) error) error {
+	ckpt := c.checkpointer.CheckpointSet()
+	ckpt.RLock()
+	defer ckpt.RUnlock()
+
+	return ckpt.ForEach(ks, f)
+}
+
+// IsRunning returns true if the controller was started via Start().
+func (c *Controller) IsRunning() bool {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	return c.ticker != nil
+}
+
+// Collect requests a collection.  The collection will be skipped if
+// the last collection is aged less than the CachePeriod.
+func (c *Controller) Collect(ctx context.Context) error {
+	if c.IsRunning() {
+		// When there's a non-nil ticker, there's a goroutine
+		// computing checkpoints with the collection period.
+		return nil
 	}
+
+	return c.checkpoint(func() bool {
+		// This is called with the CheckpointSet exclusive
+		// lock held.
+		if c.collectPeriod == 0 {
+			return true
+		}
+		now := c.clock.Now()
+		if now.Sub(c.collectedTime) <= c.collectPeriod {
+			return false
+		}
+		c.collectedTime = now
+		return true
+	})
 }
