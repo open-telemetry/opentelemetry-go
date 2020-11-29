@@ -22,6 +22,8 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/grpc"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
 	"go.opentelemetry.io/otel/exporters/otlp"
@@ -32,7 +34,6 @@ import (
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"google.golang.org/grpc"
 )
 
 func initMeter() {
