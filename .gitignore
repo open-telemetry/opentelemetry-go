@@ -10,7 +10,6 @@ coverage.*
 
 gen/
 
-/example/basic/basic
 /example/grpc/client/client
 /example/grpc/server/server
 /example/http/client/client

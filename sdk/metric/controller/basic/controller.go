@@ -28,13 +28,31 @@ import (
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
 )
 
-// DefaultPeriod is the minimum time between collections, maximum time
-// for Export().
+// DefaultPeriod is used for:
+//
+// - the minimum time between calls to Collect()
+// - the timeout for Export()
+// - the timeout for Collect().
 const DefaultPeriod = 10 * time.Second
 
+// ErrControllerStarted indicates that a controller was started more
+// than once.
 var ErrControllerStarted = fmt.Errorf("controller already started")
 
-// Controller organizes a periodic push of metric data.
+// Controller organizes and synchronizes collection of metric data in
+// both "pull" and "push" configurations.  This supports two distinct
+// modes:
+//
+// - Push and Pull: Start() must be called to begin calling the exporter;
+//   Collect() is called periodically by a background thread after starting
+//   the controller.
+// - Pull-Only: Start() is optional in this case, to call Collect periodically.
+//   If Start() is not called, Collect() can be called manually to initiate
+//   collection
+//
+// The controller supports mixing push and pull access to metric data
+// using the export.CheckpointSet RWLock interface.  Collection will
+// be blocked by a pull request in the basic controller.
 type Controller struct {
 	lock         sync.Mutex
 	accumulator  *sdk.Accumulator
@@ -55,9 +73,9 @@ type Controller struct {
 	collectedTime time.Time
 }
 
-// New constructs a Controller, an implementation of MeterProvider, using the
-// provided checkpointer, exporter, and options to configure an SDK with
-// periodic collection.
+// New constructs a Controller using the provided checkpointer and
+// options (including an optional Exporter) to configure an metric
+// export pipeline.
 func New(checkpointer export.Checkpointer, opts ...Option) *Controller {
 	c := &Config{
 		CollectPeriod:  DefaultPeriod,
@@ -99,7 +117,17 @@ func (c *Controller) MeterProvider() metric.MeterProvider {
 }
 
 // Start begins a ticker that periodically collects and exports
-// metrics with the configured interval.
+// metrics with the configured interval.  This is required for calling
+// a configured Exporter (see WithExporter) and is otherwise optional
+// when only pulling metric data.
+//
+// The passed context is passed to Collect() and subsequently to
+// asychronous instrument callbacks.  Returns an error when the
+// controller was already started.
+//
+// Note that it is not necessary to Start a controller when only
+// pulling data; use the Collect() and ForEach() methods directly in
+// this case.
 func (c *Controller) Start(ctx context.Context) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -115,7 +143,9 @@ func (c *Controller) Start(ctx context.Context) error {
 }
 
 // Stop waits for the background goroutine to return and then collects
-// and exports metrics one last time before returning.
+// and exports metrics one last time before returning.  The passed
+// context is passed to Collect() and subsequently to asynchronous
+// instruments.
 func (c *Controller) Stop(ctx context.Context) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -133,6 +163,7 @@ func (c *Controller) Stop(ctx context.Context) error {
 	return c.collect(ctx, nil)
 }
 
+// runTicker collection on ticker events until the stop channel is closed.
 func (c *Controller) runTicker(ctx context.Context, stopCh chan struct{}) {
 	defer c.wg.Done()
 	for {
@@ -147,6 +178,7 @@ func (c *Controller) runTicker(ctx context.Context, stopCh chan struct{}) {
 	}
 }
 
+// collect computes a checkpoint and optionally exports it.
 func (c *Controller) collect(ctx context.Context, stopCh chan struct{}) error {
 	if err := c.checkpoint(ctx, func() bool {
 		return true
@@ -165,6 +197,9 @@ func (c *Controller) collect(ctx context.Context, stopCh chan struct{}) error {
 	return nil
 }
 
+// checkpoint calls the Accumulator and Checkpointer interfaces to
+// compute the CheckpointSet.  This applies the configured collection
+// timeout.
 func (c *Controller) checkpoint(ctx context.Context, cond func() bool) error {
 	ckpt := c.checkpointer.CheckpointSet()
 	ckpt.Lock()
@@ -203,6 +238,8 @@ func (c *Controller) checkpoint(ctx context.Context, cond func() bool) error {
 	return err
 }
 
+// export calls the exporter with a read lock on the CheckpointSet,
+// applying the configured export timeout.
 func (c *Controller) export() error {
 	ckpt := c.checkpointer.CheckpointSet()
 	ckpt.RLock()
@@ -228,7 +265,9 @@ func (c *Controller) ForEach(ks export.ExportKindSelector, f func(export.Record)
 	return ckpt.ForEach(ks, f)
 }
 
-// IsRunning returns true if the controller was started via Start().
+// IsRunning returns true if the controller was started via Start(),
+// indicating that the current export.CheckpointSet is being kept
+// up-to-date.
 func (c *Controller) IsRunning() bool {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -236,7 +275,8 @@ func (c *Controller) IsRunning() bool {
 }
 
 // Collect requests a collection.  The collection will be skipped if
-// the last collection is aged less than the CachePeriod.
+// the last collection is aged less than the configured collection
+// period.
 func (c *Controller) Collect(ctx context.Context) error {
 	if c.IsRunning() {
 		// When there's a non-nil ticker, there's a goroutine
