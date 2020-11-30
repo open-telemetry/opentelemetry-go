@@ -43,7 +43,7 @@ type Config struct {
 	// CollectTimeout is the timeout of the Context passed to
 	// Collect() and subsequently to Observer instrument callbacks.
 	//
-	// Defaults to the configured collection period (see CollectPeriod).
+	// Default value is 10s.  If zero, no Collect timeout is applied.
 	CollectTimeout time.Duration
 
 	// Exporter is used for pushing metric data.
@@ -51,7 +51,7 @@ type Config struct {
 
 	// ExportTimeout is the timeout of the Context when an Exporter is configured.
 	//
-	// Defaults to the configured collection period (see CollectPeriod).
+	// Default value is 10s.  If zero, no Export timeout is applied.
 	ExportTimeout time.Duration
 }
 

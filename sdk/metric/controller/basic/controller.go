@@ -16,6 +16,7 @@ package basic // import "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -30,6 +31,8 @@ import (
 // DefaultPeriod is the minimum time between collections, maximum time
 // for Export().
 const DefaultPeriod = 10 * time.Second
+
+var ErrControllerStarted = fmt.Errorf("controller already started")
 
 // Controller organizes a periodic push of metric data.
 type Controller struct {
@@ -57,16 +60,12 @@ type Controller struct {
 // periodic collection.
 func New(checkpointer export.Checkpointer, opts ...Option) *Controller {
 	c := &Config{
-		CollectPeriod: DefaultPeriod,
+		CollectPeriod:  DefaultPeriod,
+		CollectTimeout: DefaultPeriod,
+		ExportTimeout:  DefaultPeriod,
 	}
 	for _, opt := range opts {
 		opt.Apply(c)
-	}
-	if c.CollectTimeout == 0 {
-		c.CollectTimeout = c.CollectPeriod
-	}
-	if c.ExportTimeout == 0 {
-		c.ExportTimeout = c.CollectPeriod
 	}
 
 	impl := sdk.NewAccumulator(
@@ -101,27 +100,28 @@ func (c *Controller) MeterProvider() metric.MeterProvider {
 
 // Start begins a ticker that periodically collects and exports
 // metrics with the configured interval.
-func (c *Controller) Start() {
+func (c *Controller) Start(ctx context.Context) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	if c.ticker != nil {
-		return
+		return ErrControllerStarted
 	}
 
 	c.wg.Add(2)
 	c.ticker = c.clock.Ticker(c.collectPeriod)
-	go c.runTicker(c.stopCh)
+	go c.runTicker(ctx, c.stopCh)
+	return nil
 }
 
 // Stop waits for the background goroutine to return and then collects
 // and exports metrics one last time before returning.
-func (c *Controller) Stop() {
+func (c *Controller) Stop(ctx context.Context) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	if c.stopCh == nil {
-		return
+		return nil
 	}
 
 	close(c.stopCh)
@@ -130,39 +130,42 @@ func (c *Controller) Stop() {
 	c.wg.Wait()
 	c.ticker.Stop()
 
-	c.collect(nil)
+	return c.collect(ctx, nil)
 }
 
-func (c *Controller) runTicker(stopCh chan struct{}) {
+func (c *Controller) runTicker(ctx context.Context, stopCh chan struct{}) {
 	defer c.wg.Done()
 	for {
 		select {
 		case <-stopCh:
 			return
 		case <-c.ticker.C():
-			c.collect(stopCh)
+			if err := c.collect(ctx, stopCh); err != nil {
+				otel.Handle(err)
+			}
 		}
 	}
 }
 
-func (c *Controller) collect(stopCh chan struct{}) {
-	if err := c.checkpoint(func() bool {
+func (c *Controller) collect(ctx context.Context, stopCh chan struct{}) error {
+	if err := c.checkpoint(ctx, func() bool {
 		return true
 	}); err != nil {
-		otel.Handle(err)
+		return err
 	}
 	if c.exporter == nil {
-		return
+		return nil
 	}
 	// This export has to complete before starting another
 	// collection since it will hold a read lock and
 	// checkpoint() must re-acquire a write lock.
 	if err := c.export(); err != nil {
-		otel.Handle(err)
+		return err
 	}
+	return nil
 }
 
-func (c *Controller) checkpoint(cond func() bool) error {
+func (c *Controller) checkpoint(ctx context.Context, cond func() bool) error {
 	ckpt := c.checkpointer.CheckpointSet()
 	ckpt.Lock()
 	defer ckpt.Unlock()
@@ -172,12 +175,32 @@ func (c *Controller) checkpoint(cond func() bool) error {
 	}
 	c.checkpointer.StartCollection()
 
-	ctx, cancel := context.WithTimeout(context.Background(), c.collectTimeout)
-	defer cancel()
+	if c.collectTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, c.collectTimeout)
+		defer cancel()
+	}
 
-	c.accumulator.Collect(ctx)
+	_ = c.accumulator.Collect(ctx)
 
-	return c.checkpointer.FinishCollection()
+	var err error
+	select {
+	case <-ctx.Done():
+		err = ctx.Err()
+	default:
+		// The context wasn't done, ok.
+	}
+
+	// Finish the checkpoint whether the accumulator timed out or not.
+	if cerr := c.checkpointer.FinishCollection(); cerr != nil {
+		if err == nil {
+			err = cerr
+		} else {
+			err = fmt.Errorf("%s: %w", cerr.Error(), err)
+		}
+	}
+
+	return err
 }
 
 func (c *Controller) export() error {
@@ -185,8 +208,12 @@ func (c *Controller) export() error {
 	ckpt.RLock()
 	defer ckpt.RUnlock()
 
-	ctx, cancel := context.WithTimeout(context.Background(), c.exportTimeout)
-	defer cancel()
+	ctx := context.Background()
+	if c.exportTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, c.exportTimeout)
+		defer cancel()
+	}
 
 	return c.exporter.Export(ctx, ckpt)
 }
@@ -217,7 +244,7 @@ func (c *Controller) Collect(ctx context.Context) error {
 		return nil
 	}
 
-	return c.checkpoint(func() bool {
+	return c.checkpoint(ctx, func() bool {
 		// This is called with the CheckpointSet exclusive
 		// lock held.
 		if c.collectPeriod == 0 {

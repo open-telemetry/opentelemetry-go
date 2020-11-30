@@ -16,6 +16,7 @@ package basic_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"runtime"
 	"sync"
@@ -81,21 +82,23 @@ func newCheckpointer() export.Checkpointer {
 }
 
 func TestPushDoubleStop(t *testing.T) {
+	ctx := context.Background()
 	exporter := newExporter()
 	checkpointer := newCheckpointer()
 	p := controller.New(checkpointer, controller.WithExporter(exporter))
-	p.Start()
-	p.Stop()
-	p.Stop()
+	p.Start(ctx)
+	p.Stop(ctx)
+	p.Stop(ctx)
 }
 
 func TestPushDoubleStart(t *testing.T) {
+	ctx := context.Background()
 	exporter := newExporter()
 	checkpointer := newCheckpointer()
 	p := controller.New(checkpointer, controller.WithExporter(exporter))
-	p.Start()
-	p.Start()
-	p.Stop()
+	p.Start(ctx)
+	p.Start(ctx)
+	p.Stop(ctx)
 }
 
 func TestPushTicker(t *testing.T) {
@@ -116,7 +119,7 @@ func TestPushTicker(t *testing.T) {
 
 	counter := metric.Must(meter).NewInt64Counter("counter.sum")
 
-	p.Start()
+	p.Start(ctx)
 
 	counter.Add(ctx, 3)
 
@@ -144,7 +147,7 @@ func TestPushTicker(t *testing.T) {
 	require.Equal(t, 1, exporter.ExportCount())
 	exporter.Reset()
 
-	p.Stop()
+	p.Stop(ctx)
 }
 
 func TestPushExportError(t *testing.T) {
@@ -197,7 +200,7 @@ func TestPushExportError(t *testing.T) {
 			counter1 := metric.Must(meter).NewInt64Counter("counter1.sum")
 			counter2 := metric.Must(meter).NewInt64Counter("counter2.sum")
 
-			p.Start()
+			p.Start(ctx)
 			runtime.Gosched()
 
 			counter1.Add(ctx, 3, label.String("X", "Y"))
@@ -219,7 +222,7 @@ func TestPushExportError(t *testing.T) {
 				require.Equal(t, tt.expectedError, err)
 			}
 
-			p.Stop()
+			p.Stop(ctx)
 		})
 	}
 }
@@ -310,9 +313,19 @@ func TestPullWithCollect(t *testing.T) {
 
 }
 
-func TestStartNoExporter(t *testing.T) {
-	ctx := context.Background()
+func getMap(t *testing.T, cont *controller.Controller) map[string]float64 {
+	out := processortest.NewOutput(label.DefaultEncoder())
 
+	require.NoError(t, cont.ForEach(
+		export.CumulativeExportKindSelector(),
+		func(record export.Record) error {
+			return out.AddRecord(record)
+		},
+	))
+	return out.Map()
+}
+
+func TestStartNoExporter(t *testing.T) {
 	cont := controller.New(
 		processor.New(
 			processortest.AggregatorSelector(),
@@ -327,31 +340,20 @@ func TestStartNoExporter(t *testing.T) {
 	calls := int64(0)
 
 	_ = metric.Must(prov.Meter("named")).NewInt64SumObserver("calls.lastvalue",
-		func(_ context.Context, result metric.Int64ObserverResult) {
+		func(ctx context.Context, result metric.Int64ObserverResult) {
 			calls++
+			require.Equal(t, "B", ctx.Value("A"))
 			result.Observe(calls, label.String("A", "B"))
 		},
 	)
-
-	getMap := func() map[string]float64 {
-		out := processortest.NewOutput(label.DefaultEncoder())
-
-		require.NoError(t, cont.ForEach(
-			export.CumulativeExportKindSelector(),
-			func(record export.Record) error {
-				return out.AddRecord(record)
-			},
-		))
-		return out.Map()
-	}
 
 	// Collect() has not been called.  The controller is unstarted.
 	expect := map[string]float64{}
 
 	// The time advances, but doesn't change the result (not collected).
-	require.EqualValues(t, expect, getMap())
+	require.EqualValues(t, expect, getMap(t, cont))
 	mock.Add(time.Second)
-	require.EqualValues(t, expect, getMap())
+	require.EqualValues(t, expect, getMap(t, cont))
 	mock.Add(time.Second)
 
 	expect = map[string]float64{
@@ -359,11 +361,14 @@ func TestStartNoExporter(t *testing.T) {
 	}
 
 	// Collect once
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "A", "B")
+
 	require.NoError(t, cont.Collect(ctx))
 
-	require.EqualValues(t, expect, getMap())
+	require.EqualValues(t, expect, getMap(t, cont))
 	mock.Add(time.Second)
-	require.EqualValues(t, expect, getMap())
+	require.EqualValues(t, expect, getMap(t, cont))
 	mock.Add(time.Second)
 
 	// Again
@@ -373,12 +378,12 @@ func TestStartNoExporter(t *testing.T) {
 
 	require.NoError(t, cont.Collect(ctx))
 
-	require.EqualValues(t, expect, getMap())
+	require.EqualValues(t, expect, getMap(t, cont))
 	mock.Add(time.Second)
-	require.EqualValues(t, expect, getMap())
+	require.EqualValues(t, expect, getMap(t, cont))
 
 	// Start the controller
-	cont.Start()
+	cont.Start(ctx)
 
 	for i := 1; i <= 3; i++ {
 		expect = map[string]float64{
@@ -386,6 +391,154 @@ func TestStartNoExporter(t *testing.T) {
 		}
 
 		mock.Add(time.Second)
-		require.EqualValues(t, expect, getMap())
+		require.EqualValues(t, expect, getMap(t, cont))
 	}
+}
+
+func TestObserverCanceled(t *testing.T) {
+	cont := controller.New(
+		processor.New(
+			processortest.AggregatorSelector(),
+			export.CumulativeExportKindSelector(),
+		),
+		controller.WithCollectPeriod(0),
+		controller.WithCollectTimeout(time.Millisecond),
+	)
+
+	prov := cont.MeterProvider()
+	calls := int64(0)
+
+	_ = metric.Must(prov.Meter("named")).NewInt64SumObserver("done.lastvalue",
+		func(ctx context.Context, result metric.Int64ObserverResult) {
+			<-ctx.Done()
+			calls++
+			result.Observe(calls)
+		},
+	)
+	// This relies on the context timing out
+	err := cont.Collect(context.Background())
+	require.Error(t, err)
+	require.True(t, errors.Is(err, context.DeadlineExceeded))
+
+	expect := map[string]float64{
+		"done.lastvalue//": 1,
+	}
+
+	require.EqualValues(t, expect, getMap(t, cont))
+}
+
+func TestObserverContext(t *testing.T) {
+	cont := controller.New(
+		processor.New(
+			processortest.AggregatorSelector(),
+			export.CumulativeExportKindSelector(),
+		),
+		controller.WithCollectTimeout(0),
+	)
+
+	prov := cont.MeterProvider()
+
+	_ = metric.Must(prov.Meter("named")).NewInt64SumObserver("done.lastvalue",
+		func(ctx context.Context, result metric.Int64ObserverResult) {
+			time.Sleep(10 * time.Millisecond)
+			require.Equal(t, "B", ctx.Value("A"))
+			result.Observe(1)
+		},
+	)
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "A", "B")
+
+	require.NoError(t, cont.Collect(ctx))
+
+	expect := map[string]float64{
+		"done.lastvalue//": 1,
+	}
+
+	require.EqualValues(t, expect, getMap(t, cont))
+}
+
+type blockingExporter struct {
+	calls    int
+	exporter *processortest.Exporter
+}
+
+func newBlockingExporter() *blockingExporter {
+	return &blockingExporter{
+		exporter: processortest.NewExporter(
+			export.CumulativeExportKindSelector(),
+			label.DefaultEncoder(),
+		),
+	}
+}
+
+func (b *blockingExporter) Export(ctx context.Context, output export.CheckpointSet) error {
+	var err error
+	_ = b.exporter.Export(ctx, output)
+	if b.calls == 0 {
+		// timeout once
+		<-ctx.Done()
+		err = ctx.Err()
+	}
+	b.calls++
+	return err
+}
+
+func (_ *blockingExporter) ExportKindFor(
+	_ *metric.Descriptor,
+	_ aggregation.Kind,
+) export.ExportKind {
+	return export.CumulativeExportKind
+}
+
+func TestExportTimeout(t *testing.T) {
+	exporter := newBlockingExporter()
+	cont := controller.New(
+		processor.New(
+			processortest.AggregatorSelector(),
+			export.CumulativeExportKindSelector(),
+		),
+		controller.WithCollectPeriod(time.Second),
+		controller.WithExportTimeout(time.Millisecond),
+		controller.WithExporter(exporter),
+	)
+	mock := controllertest.NewMockClock()
+	cont.SetClock(mock)
+
+	prov := cont.MeterProvider()
+
+	calls := int64(0)
+	_ = metric.Must(prov.Meter("named")).NewInt64SumObserver("one.lastvalue",
+		func(ctx context.Context, result metric.Int64ObserverResult) {
+			calls++
+			result.Observe(calls)
+		},
+	)
+
+	require.NoError(t, cont.Start(context.Background()))
+
+	// Initial empty state
+	expect := map[string]float64{}
+	require.EqualValues(t, expect, exporter.exporter.Values())
+
+	// Collect after 1s, timeout
+	mock.Add(time.Second)
+
+	err := testHandler.Flush()
+	require.Error(t, err)
+	require.True(t, errors.Is(err, context.DeadlineExceeded))
+
+	expect = map[string]float64{
+		"one.lastvalue//": 1,
+	}
+	require.EqualValues(t, expect, exporter.exporter.Values())
+
+	// Collect again
+	mock.Add(time.Second)
+	expect = map[string]float64{
+		"one.lastvalue//": 2,
+	}
+	require.EqualValues(t, expect, exporter.exporter.Values())
+
+	err = testHandler.Flush()
+	require.NoError(t, err)
 }
