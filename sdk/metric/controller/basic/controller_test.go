@@ -31,10 +31,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
-	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
-	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -66,17 +64,17 @@ func init() {
 	otel.SetErrorHandler(testHandler)
 }
 
-func newExporter() *processorTest.Exporter {
-	return processorTest.NewExporter(
+func newExporter() *processortest.Exporter {
+	return processortest.NewExporter(
 		export.StatelessExportKindSelector(),
 		label.DefaultEncoder(),
 	)
 }
 
 func newCheckpointer() export.Checkpointer {
-	return processorTest.Checkpointer(
-		processorTest.NewProcessor(
-			processorTest.AggregatorSelector(),
+	return processortest.Checkpointer(
+		processortest.NewProcessor(
+			processortest.AggregatorSelector(),
 			label.DefaultEncoder(),
 		),
 	)
@@ -182,7 +180,7 @@ func TestPushExportError(t *testing.T) {
 			// This test validates the error handling
 			// behavior of the basic Processor is honored
 			// by the push processor.
-			checkpointer := processor.New(processorTest.AggregatorSelector(), exporter)
+			checkpointer := processor.New(processortest.AggregatorSelector(), exporter)
 			p := controller.New(
 				checkpointer,
 				controller.WithExporter(exporter),
@@ -228,10 +226,10 @@ func TestPushExportError(t *testing.T) {
 
 func TestPullNoCollect(t *testing.T) {
 	puller := controller.New(
-		basic.New(
-			processorTest.AggregatorSelector(),
+		processor.New(
+			processortest.AggregatorSelector(),
 			export.CumulativeExportKindSelector(),
-			basic.WithMemory(true),
+			processor.WithMemory(true),
 		),
 		controller.WithCollectPeriod(0),
 	)
@@ -263,10 +261,10 @@ func TestPullNoCollect(t *testing.T) {
 
 func TestPullWithCollect(t *testing.T) {
 	puller := controller.New(
-		basic.New(
-			processorTest.AggregatorSelector(),
+		processor.New(
+			processortest.AggregatorSelector(),
 			export.CumulativeExportKindSelector(),
-			basic.WithMemory(true),
+			processor.WithMemory(true),
 		),
 		controller.WithCollectPeriod(time.Second),
 	)
@@ -310,4 +308,84 @@ func TestPullWithCollect(t *testing.T) {
 		"counter.sum/A=B/": 20,
 	}, records.Map())
 
+}
+
+func TestStartNoExporter(t *testing.T) {
+	ctx := context.Background()
+
+	cont := controller.New(
+		processor.New(
+			processortest.AggregatorSelector(),
+			export.CumulativeExportKindSelector(),
+		),
+		controller.WithCollectPeriod(time.Second),
+	)
+	mock := controllertest.NewMockClock()
+	cont.SetClock(mock)
+
+	prov := cont.MeterProvider()
+	calls := int64(0)
+
+	_ = metric.Must(prov.Meter("named")).NewInt64SumObserver("calls.lastvalue",
+		func(_ context.Context, result metric.Int64ObserverResult) {
+			calls++
+			result.Observe(calls, label.String("A", "B"))
+		},
+	)
+
+	getMap := func() map[string]float64 {
+		out := processortest.NewOutput(label.DefaultEncoder())
+
+		require.NoError(t, cont.ForEach(
+			export.CumulativeExportKindSelector(),
+			func(record export.Record) error {
+				return out.AddRecord(record)
+			},
+		))
+		return out.Map()
+	}
+
+	// Collect() has not been called.  The controller is unstarted.
+	expect := map[string]float64{}
+
+	// The time advances, but doesn't change the result (not collected).
+	require.EqualValues(t, expect, getMap())
+	mock.Add(time.Second)
+	require.EqualValues(t, expect, getMap())
+	mock.Add(time.Second)
+
+	expect = map[string]float64{
+		"calls.lastvalue/A=B/": 1,
+	}
+
+	// Collect once
+	require.NoError(t, cont.Collect(ctx))
+
+	require.EqualValues(t, expect, getMap())
+	mock.Add(time.Second)
+	require.EqualValues(t, expect, getMap())
+	mock.Add(time.Second)
+
+	// Again
+	expect = map[string]float64{
+		"calls.lastvalue/A=B/": 2,
+	}
+
+	require.NoError(t, cont.Collect(ctx))
+
+	require.EqualValues(t, expect, getMap())
+	mock.Add(time.Second)
+	require.EqualValues(t, expect, getMap())
+
+	// Start the controller
+	cont.Start()
+
+	for i := 1; i <= 3; i++ {
+		expect = map[string]float64{
+			"calls.lastvalue/A=B/": 2 + float64(i),
+		}
+
+		mock.Add(time.Second)
+		require.EqualValues(t, expect, getMap())
+	}
 }

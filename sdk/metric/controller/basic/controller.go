@@ -109,13 +109,9 @@ func (c *Controller) Start() {
 		return
 	}
 
-	c.wg.Add(1)
+	c.wg.Add(2)
 	c.ticker = c.clock.Ticker(c.collectPeriod)
-
-	if c.exporter != nil {
-		c.wg.Add(1)
-		go c.runTicker(c.stopCh)
-	}
+	go c.runTicker(c.stopCh)
 }
 
 // Stop waits for the background goroutine to return and then collects
