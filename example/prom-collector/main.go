@@ -43,7 +43,7 @@ func initMeter() {
 		resource.WithAttributes(label.String("R", "V")),
 	)
 	if err != nil {
-		log.Panic("could not initialize resource:", err)
+		log.Fatal("could not initialize resource:", err)
 	}
 
 	otlpExporter, err := otlp.NewExporter(ctx,
@@ -52,7 +52,7 @@ func initMeter() {
 		otlp.WithGRPCDialOption(grpc.WithBlock()), // useful for testing
 	)
 	if err != nil {
-		log.Panic("could not initialize OTLP:", err)
+		log.Fatal("could not initialize OTLP:", err)
 	}
 
 	cont := controller.New(
@@ -67,11 +67,13 @@ func initMeter() {
 		controller.WithExporter(otlpExporter),
 	)
 
-	cont.Start()
+	if err := cont.Start(context.Background()); err != nil {
+		log.Fatal("could not start controller:", err)
+	}
 
 	promExporter, err := prometheus.NewExporter(prometheus.Config{}, cont)
 	if err != nil {
-		log.Panic("could not initialize prometheus:", err)
+		log.Fatal("could not initialize prometheus:", err)
 	}
 	http.HandleFunc("/", promExporter.ServeHTTP)
 	go func() {

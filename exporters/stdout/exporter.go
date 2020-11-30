@@ -15,6 +15,8 @@
 package stdout // import "go.opentelemetry.io/otel/exporters/stdout"
 
 import (
+	"context"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/export/metric"
 	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
@@ -67,9 +69,9 @@ func NewExportPipeline(exportOpts []Option, pushOpts []controller.Option) (trace
 			controller.WithExporter(exporter),
 		)...,
 	)
-	pusher.Start()
+	err = pusher.Start(context.Background())
 
-	return tp, pusher, nil
+	return tp, pusher, err
 }
 
 // InstallNewPipeline creates a complete export pipelines with defaults and

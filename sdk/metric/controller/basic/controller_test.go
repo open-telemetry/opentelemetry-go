@@ -86,9 +86,9 @@ func TestPushDoubleStop(t *testing.T) {
 	exporter := newExporter()
 	checkpointer := newCheckpointer()
 	p := controller.New(checkpointer, controller.WithExporter(exporter))
-	p.Start(ctx)
-	p.Stop(ctx)
-	p.Stop(ctx)
+	require.NoError(t, p.Start(ctx))
+	require.NoError(t, p.Stop(ctx))
+	require.NoError(t, p.Stop(ctx))
 }
 
 func TestPushDoubleStart(t *testing.T) {
@@ -96,9 +96,11 @@ func TestPushDoubleStart(t *testing.T) {
 	exporter := newExporter()
 	checkpointer := newCheckpointer()
 	p := controller.New(checkpointer, controller.WithExporter(exporter))
-	p.Start(ctx)
-	p.Start(ctx)
-	p.Stop(ctx)
+	require.NoError(t, p.Start(ctx))
+	err := p.Start(ctx)
+	require.Error(t, err)
+	require.True(t, errors.Is(err, controller.ErrControllerStarted))
+	require.NoError(t, p.Stop(ctx))
 }
 
 func TestPushTicker(t *testing.T) {
@@ -119,7 +121,7 @@ func TestPushTicker(t *testing.T) {
 
 	counter := metric.Must(meter).NewInt64Counter("counter.sum")
 
-	p.Start(ctx)
+	require.NoError(t, p.Start(ctx))
 
 	counter.Add(ctx, 3)
 
@@ -147,7 +149,7 @@ func TestPushTicker(t *testing.T) {
 	require.Equal(t, 1, exporter.ExportCount())
 	exporter.Reset()
 
-	p.Stop(ctx)
+	require.NoError(t, p.Stop(ctx))
 }
 
 func TestPushExportError(t *testing.T) {
@@ -200,7 +202,7 @@ func TestPushExportError(t *testing.T) {
 			counter1 := metric.Must(meter).NewInt64Counter("counter1.sum")
 			counter2 := metric.Must(meter).NewInt64Counter("counter2.sum")
 
-			p.Start(ctx)
+			require.NoError(t, p.Start(ctx))
 			runtime.Gosched()
 
 			counter1.Add(ctx, 3, label.String("X", "Y"))
@@ -222,7 +224,7 @@ func TestPushExportError(t *testing.T) {
 				require.Equal(t, tt.expectedError, err)
 			}
 
-			p.Stop(ctx)
+			require.NoError(t, p.Stop(ctx))
 		})
 	}
 }
@@ -325,6 +327,17 @@ func getMap(t *testing.T, cont *controller.Controller) map[string]float64 {
 	return out.Map()
 }
 
+type testContextKey string
+
+func testContext() context.Context {
+	ctx := context.Background()
+	return context.WithValue(ctx, testContextKey("A"), "B")
+}
+
+func checkTestContext(t *testing.T, ctx context.Context) {
+	require.Equal(t, "B", ctx.Value(testContextKey("A")))
+}
+
 func TestStartNoExporter(t *testing.T) {
 	cont := controller.New(
 		processor.New(
@@ -342,7 +355,7 @@ func TestStartNoExporter(t *testing.T) {
 	_ = metric.Must(prov.Meter("named")).NewInt64SumObserver("calls.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			calls++
-			require.Equal(t, "B", ctx.Value("A"))
+			checkTestContext(t, ctx)
 			result.Observe(calls, label.String("A", "B"))
 		},
 	)
@@ -361,8 +374,7 @@ func TestStartNoExporter(t *testing.T) {
 	}
 
 	// Collect once
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, "A", "B")
+	ctx := testContext()
 
 	require.NoError(t, cont.Collect(ctx))
 
@@ -383,7 +395,7 @@ func TestStartNoExporter(t *testing.T) {
 	require.EqualValues(t, expect, getMap(t, cont))
 
 	// Start the controller
-	cont.Start(ctx)
+	require.NoError(t, cont.Start(ctx))
 
 	for i := 1; i <= 3; i++ {
 		expect = map[string]float64{
@@ -441,12 +453,11 @@ func TestObserverContext(t *testing.T) {
 	_ = metric.Must(prov.Meter("named")).NewInt64SumObserver("done.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			time.Sleep(10 * time.Millisecond)
-			require.Equal(t, "B", ctx.Value("A"))
+			checkTestContext(t, ctx)
 			result.Observe(1)
 		},
 	)
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, "A", "B")
+	ctx := testContext()
 
 	require.NoError(t, cont.Collect(ctx))
 
@@ -483,9 +494,9 @@ func (b *blockingExporter) Export(ctx context.Context, output export.CheckpointS
 	return err
 }
 
-func (_ *blockingExporter) ExportKindFor(
-	_ *metric.Descriptor,
-	_ aggregation.Kind,
+func (*blockingExporter) ExportKindFor(
+	*metric.Descriptor,
+	aggregation.Kind,
 ) export.ExportKind {
 	return export.CumulativeExportKind
 }

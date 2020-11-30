@@ -123,7 +123,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	selector := simple.NewWithInexpensiveDistribution()
 	processor := processor.New(selector, metricsdk.StatelessExportKindSelector())
 	pusher := controller.New(processor, controller.WithExporter(exp))
-	pusher.Start()
+	require.NoError(t, pusher.Start(context.Background()))
 
 	meter := pusher.MeterProvider().Meter("test-meter")
 	labels := []label.KeyValue{label.Bool("test", true)}
@@ -184,7 +184,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 	}
 
 	// Flush and close.
-	pusher.Stop()
+	require.NoError(t, pusher.Stop(context.Background()))
 
 	// Wait >2 cycles.
 	<-time.After(40 * time.Millisecond)
@@ -520,10 +520,10 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 	selector := simple.NewWithInexpensiveDistribution()
 	processor := processor.New(selector, metricsdk.StatelessExportKindSelector())
 	pusher := controller.New(processor, controller.WithExporter(exp))
-	pusher.Start()
+	require.NoError(t, pusher.Start(context.Background()))
 
 	// Flush and close.
-	pusher.Stop()
+	require.NoError(t, pusher.Stop(context.Background()))
 
 	// Wait >2 cycles.
 	<-time.After(40 * time.Millisecond)
