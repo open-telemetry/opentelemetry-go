@@ -10,7 +10,7 @@ replace (
 require (
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/protobuf v1.4.2 // indirect
-	github.com/google/go-cmp v0.5.3
+	github.com/google/go-cmp v0.5.4
 	github.com/stretchr/testify v1.6.1
 	go.opentelemetry.io/otel v0.14.0
 	go.opentelemetry.io/otel/sdk v0.14.0
