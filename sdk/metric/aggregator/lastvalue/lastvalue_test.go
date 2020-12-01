@@ -136,7 +136,7 @@ func TestLastValueNotSet(t *testing.T) {
 func TestSynchronizedMoveReset(t *testing.T) {
 	aggregatortest.SynchronizedMoveResetTest(
 		t,
-		metric.ValueRecorderInstrumentKind,
+		metric.ValueObserverInstrumentKind,
 		func(desc *metric.Descriptor) export.Aggregator {
 			return &New(1)[0]
 		},

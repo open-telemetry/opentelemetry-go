@@ -116,7 +116,7 @@ func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descrip
 	}
 	c.state = emptyState(c.kind)
 	c.lock.Unlock()
-	if o == nil {
+	if oa != nil && o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)
 	}
 

@@ -24,6 +24,7 @@ import (
 	"unsafe"
 
 	"github.com/stretchr/testify/require"
+
 	ottest "go.opentelemetry.io/otel/internal/testing"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
@@ -194,7 +195,7 @@ func SynchronizedMoveResetTest(t *testing.T, mkind metric.InstrumentKind, nf fun
 			CheckedUpdate(t, agg, x1, descriptor)
 		}
 
-		agg.SynchronizedMove(nil, descriptor)
+		require.NoError(t, agg.SynchronizedMove(nil, descriptor))
 
 		if count, ok := agg.(aggregation.Count); ok {
 			c, err := count.Count()
