@@ -136,7 +136,7 @@ func (c *Controller) Start(ctx context.Context) error {
 		return ErrControllerStarted
 	}
 
-	c.wg.Add(2)
+	c.wg.Add(1)
 	c.ticker = c.clock.Ticker(c.period)
 	go c.runTicker(ctx, c.stopCh)
 	return nil
@@ -156,7 +156,6 @@ func (c *Controller) Stop(ctx context.Context) error {
 
 	close(c.stopCh)
 	c.stopCh = nil
-	c.wg.Done()
 	c.wg.Wait()
 	c.ticker.Stop()
 
