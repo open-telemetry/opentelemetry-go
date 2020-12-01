@@ -122,7 +122,7 @@ func (c *Controller) MeterProvider() metric.MeterProvider {
 // when only pulling metric data.
 //
 // The passed context is passed to Collect() and subsequently to
-// asychronous instrument callbacks.  Returns an error when the
+// asynchronous instrument callbacks.  Returns an error when the
 // controller was already started.
 //
 // Note that it is not necessary to Start a controller when only

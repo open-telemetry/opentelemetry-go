@@ -12,6 +12,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Move the OpenCensus example into `example` directory. (#1359)
 - `NewExporter` and `Start` functions in `go.opentelemetry.io/otel/exporters/otlp` now receive `context.Context` as a first parameter. (#1357)
+- Metric Push and Pull Controller components are combined into a single "basic" Controller:
+  - `WithExporter()` and `Start()` to configure Push behavior
+  - `Collect()` and `ForEach()` for Pull export methods. (#1378)
+  
+### Added
+
+- Metric exporter example for Prometheus and OTLP dual export. (#1378)
 
 ## [0.14.0] - 2020-11-19
 
