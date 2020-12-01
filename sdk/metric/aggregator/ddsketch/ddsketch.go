@@ -117,14 +117,18 @@ func (c *Aggregator) toNumber(f float64) number.Number {
 // a new sketch, taking a lock to prevent concurrent Update() calls.
 func (c *Aggregator) SynchronizedMove(oa export.Aggregator, _ *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
-	if o == nil {
-		return aggregator.NewInconsistentAggregatorError(c, oa)
-	}
 	replace := sdk.NewDDSketch(c.cfg)
 
 	c.lock.Lock()
-	o.sketch, c.sketch = c.sketch, replace
+	if o != nil {
+		o.sketch = c.sketch
+	}
+	c.sketch = replace
 	c.lock.Unlock()
+
+	if oa != nil && o == nil {
+		return aggregator.NewInconsistentAggregatorError(c, oa)
+	}
 
 	return nil
 }
