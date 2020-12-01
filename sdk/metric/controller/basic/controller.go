@@ -61,12 +61,12 @@ type Controller struct {
 	exporter     export.Exporter
 	wg           sync.WaitGroup
 	stopCh       chan struct{}
+	period       time.Duration
+	timeout      time.Duration
 	clock        controllerTime.Clock
 	ticker       controllerTime.Ticker
 
-	collectPeriod  time.Duration
-	collectTimeout time.Duration
-	exportTimeout  time.Duration
+	exportTimeout time.Duration
 
 	// collectedTime is used only in configurations with no
 	// exporter, when ticker != nil.
@@ -91,15 +91,15 @@ func New(checkpointer export.Checkpointer, opts ...Option) *Controller {
 		c.Resource,
 	)
 	return &Controller{
-		provider:       registry.NewMeterProvider(impl),
-		accumulator:    impl,
-		checkpointer:   checkpointer,
-		exporter:       c.Exporter,
-		stopCh:         make(chan struct{}),
-		collectPeriod:  c.CollectPeriod,
-		collectTimeout: c.CollectTimeout,
-		exportTimeout:  c.ExportTimeout,
-		clock:          controllerTime.RealClock{},
+		provider:      registry.NewMeterProvider(impl),
+		accumulator:   impl,
+		checkpointer:  checkpointer,
+		exporter:      c.Exporter,
+		stopCh:        make(chan struct{}),
+		period:        c.CollectPeriod,
+		timeout:       c.CollectTimeout,
+		exportTimeout: c.ExportTimeout,
+		clock:         controllerTime.RealClock{},
 	}
 }
 
@@ -137,7 +137,7 @@ func (c *Controller) Start(ctx context.Context) error {
 	}
 
 	c.wg.Add(2)
-	c.ticker = c.clock.Ticker(c.collectPeriod)
+	c.ticker = c.clock.Ticker(c.period)
 	go c.runTicker(ctx, c.stopCh)
 	return nil
 }
@@ -210,9 +210,9 @@ func (c *Controller) checkpoint(ctx context.Context, cond func() bool) error {
 	}
 	c.checkpointer.StartCollection()
 
-	if c.collectTimeout > 0 {
+	if c.timeout > 0 {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, c.collectTimeout)
+		ctx, cancel = context.WithTimeout(ctx, c.timeout)
 		defer cancel()
 	}
 
@@ -287,11 +287,11 @@ func (c *Controller) Collect(ctx context.Context) error {
 	return c.checkpoint(ctx, func() bool {
 		// This is called with the CheckpointSet exclusive
 		// lock held.
-		if c.collectPeriod == 0 {
+		if c.period == 0 {
 			return true
 		}
 		now := c.clock.Now()
-		if now.Sub(c.collectedTime) < c.collectPeriod {
+		if now.Sub(c.collectedTime) < c.period {
 			return false
 		}
 		c.collectedTime = now
