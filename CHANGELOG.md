@@ -13,6 +13,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Move the OpenCensus example into `example` directory. (#1359)
 - `NewExporter` and `Start` functions in `go.opentelemetry.io/otel/exporters/otlp` now receive `context.Context` as a first parameter. (#1357)
 
+### Fixed
+
+- Metric SDK `SumObserver` and `UpDownSumObserver` instruments correctness fixes. (#1381)
+
 ## [0.14.0] - 2020-11-19
 
 ### Added
