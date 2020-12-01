@@ -16,16 +16,19 @@ package aggregatortest // import "go.opentelemetry.io/otel/sdk/metric/aggregator
 
 import (
 	"context"
+	"errors"
 	"math/rand"
 	"os"
 	"sort"
 	"testing"
 	"unsafe"
 
+	"github.com/stretchr/testify/require"
 	ottest "go.opentelemetry.io/otel/internal/testing"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
@@ -171,4 +174,45 @@ func CheckedMerge(t *testing.T, aggInto, aggFrom export.Aggregator, descriptor *
 	if err := aggInto.Merge(aggFrom, descriptor); err != nil {
 		t.Error("Unexpected Merge failure", err)
 	}
+}
+
+func SynchronizedMoveResetTest(t *testing.T, mkind metric.InstrumentKind, nf func(*metric.Descriptor) export.Aggregator) {
+	// Ensures that SynchronizedMove(nil, descriptor) discards and
+	// resets the aggregator.
+	RunProfiles(t, func(t *testing.T, profile Profile) {
+		descriptor := NewAggregatorTest(
+			mkind,
+			profile.NumberKind,
+		)
+		agg := nf(descriptor)
+
+		all := NewNumbers(profile.NumberKind)
+
+		for i := 0; i < 10; i++ {
+			x1 := profile.Random(+1)
+			all.Append(x1)
+			CheckedUpdate(t, agg, x1, descriptor)
+		}
+
+		agg.SynchronizedMove(nil, descriptor)
+
+		if count, ok := agg.(aggregation.Count); ok {
+			c, err := count.Count()
+			require.Equal(t, int64(0), c)
+			require.NoError(t, err)
+		}
+
+		if sum, ok := agg.(aggregation.Sum); ok {
+			s, err := sum.Sum()
+			require.Equal(t, number.Number(0), s)
+			require.NoError(t, err)
+		}
+
+		if lv, ok := agg.(aggregation.LastValue); ok {
+			v, _, err := lv.LastValue()
+			require.Equal(t, number.Number(0), v)
+			require.Error(t, err)
+			require.True(t, errors.Is(err, aggregation.ErrNoData))
+		}
+	})
 }
