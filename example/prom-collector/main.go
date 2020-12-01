@@ -50,6 +50,7 @@ func initMeter() {
 		otlp.WithInsecure(),
 		otlp.WithAddress("127.0.0.1:17001"),
 		otlp.WithGRPCDialOption(grpc.WithBlock()), // useful for testing
+		otlp.WithMetricExportKindSelector(export.CumulativeExportKindSelector()),
 	)
 	if err != nil {
 		log.Fatal("could not initialize OTLP:", err)
@@ -60,7 +61,7 @@ func initMeter() {
 			simple.NewWithHistogramDistribution([]float64{
 				0.001, 0.01, 0.1, 1, 10, 100, 1000,
 			}),
-			export.CumulativeExportKindSelector(),
+			otlpExporter, // otlpExporter is an ExportKindSelector
 			processor.WithMemory(true),
 		),
 		controller.WithResource(res),
