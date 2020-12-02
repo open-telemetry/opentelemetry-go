@@ -7,6 +7,7 @@ on:
 jobs:
   go:
     strategy:
+      fail-fast: false
       matrix:
         container: ["cimg/go:1.14", "cimg/go:1.15"]
     runs-on: ubuntu-latest

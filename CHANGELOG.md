@@ -85,7 +85,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Correct the `Span.End` method documentation in the `otel` API to state updates are not allowed on a span after it has ended. (#1310)
 - Updated span collection limits for attribute, event and link counts to 1000 (#1318)
 - Renamed `semconv.HTTPUrlKey` to `semconv.HTTPURLKey`. (#1338)
-- Migrated CI/CD from CircleCI to GitHub Actions (#ADD_NUMBER_WHEN_PR_IS_MADE)
+- Migrated CI/CD from CircleCI to GitHub Actions (#1382)
 
 ### Removed
 
@@ -102,7 +102,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/otel/api/global` packages global TextMapPropagator now delegates functionality to a globally set delegate for all previously returned propagators. (#1258)
 - Fix condition in `label.Any`. (#1299)
 - Fix global `TracerProvider` to pass options to its configured provider. (#1329)
-- Fix missing handler for `ExactKind` aggregator in OTLP metrics transformer (#1309) 
+- Fix missing handler for `ExactKind` aggregator in OTLP metrics transformer (#1309)
 
 ## [0.13.0] - 2020-10-08
 
