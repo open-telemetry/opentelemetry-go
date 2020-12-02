@@ -270,3 +270,51 @@ func TestExportTimeout(t *testing.T) {
 	err = testHandler.Flush()
 	require.NoError(t, err)
 }
+
+func TestCollectAfterStop(t *testing.T) {
+	exp := processortest.NewExporter(
+		export.CumulativeExportKindSelector(),
+		label.DefaultEncoder(),
+	)
+	cont := controller.New(
+		processor.New(
+			processortest.AggregatorSelector(),
+			exp,
+		),
+		controller.WithCollectPeriod(time.Second),
+		controller.WithExporter(exp),
+	)
+	mock := controllertest.NewMockClock()
+	cont.SetClock(mock)
+
+	prov := cont.MeterProvider()
+
+	calls := int64(0)
+	_ = metric.Must(prov.Meter("named")).NewInt64SumObserver("one.lastvalue",
+		func(ctx context.Context, result metric.Int64ObserverResult) {
+			calls++
+			result.Observe(calls)
+			if calls > 1 {
+				panic("Too many observations")
+			}
+		},
+	)
+
+	// No collections happen (because mock clock does not advance):
+	require.NoError(t, cont.Start(context.Background()))
+
+	// There's one collection run by Stop():
+	require.NoError(t, cont.Stop(context.Background()))
+
+	mock.Add(time.Second)
+	expect := map[string]float64{
+		"one.lastvalue//": 1,
+	}
+	require.EqualValues(t, expect, exp.Values())
+	require.NoError(t, testHandler.Flush())
+
+	// Manual collect after Stop does not panic.
+	require.NoError(t, cont.Collect(context.Background()))
+	require.EqualValues(t, expect, exp.Values())
+	require.NoError(t, testHandler.Flush())
+}

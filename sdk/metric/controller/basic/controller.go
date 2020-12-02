@@ -144,8 +144,10 @@ func (c *Controller) Start(ctx context.Context) error {
 
 // Stop waits for the background goroutine to return and then collects
 // and exports metrics one last time before returning.  The passed
-// context is passed to Collect() and subsequently to asynchronous
-// instruments.
+// context is passed to the final Collect() and subsequently to the
+// final asynchronous instruments.
+//
+// Note that Stop() will not cancel an ongoing collection or export.
 func (c *Controller) Stop(ctx context.Context) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -159,7 +161,7 @@ func (c *Controller) Stop(ctx context.Context) error {
 	c.wg.Wait()
 	c.ticker.Stop()
 
-	return c.collect(ctx, nil)
+	return c.collect(ctx)
 }
 
 // runTicker collection on ticker events until the stop channel is closed.
@@ -170,7 +172,7 @@ func (c *Controller) runTicker(ctx context.Context, stopCh chan struct{}) {
 		case <-stopCh:
 			return
 		case <-c.ticker.C():
-			if err := c.collect(ctx, stopCh); err != nil {
+			if err := c.collect(ctx); err != nil {
 				otel.Handle(err)
 			}
 		}
@@ -178,7 +180,7 @@ func (c *Controller) runTicker(ctx context.Context, stopCh chan struct{}) {
 }
 
 // collect computes a checkpoint and optionally exports it.
-func (c *Controller) collect(ctx context.Context, stopCh chan struct{}) error {
+func (c *Controller) collect(ctx context.Context) error {
 	if err := c.checkpoint(ctx, func() bool {
 		return true
 	}); err != nil {
@@ -198,7 +200,8 @@ func (c *Controller) collect(ctx context.Context, stopCh chan struct{}) error {
 
 // checkpoint calls the Accumulator and Checkpointer interfaces to
 // compute the CheckpointSet.  This applies the configured collection
-// timeout.
+// timeout.  Note that this does not try to cancel a Collect or Export
+// when Stop() is called.
 func (c *Controller) checkpoint(ctx context.Context, cond func() bool) error {
 	ckpt := c.checkpointer.CheckpointSet()
 	ckpt.Lock()
