@@ -248,8 +248,6 @@ func (oc *grpcConnection) shutdown(ctx context.Context) error {
 		return ctx.Err()
 	}
 
-	close(oc.disconnectedCh)
-
 	oc.mu.Lock()
 	cc := oc.cc
 	oc.cc = nil
