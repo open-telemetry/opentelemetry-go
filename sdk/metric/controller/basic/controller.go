@@ -74,7 +74,7 @@ type Controller struct {
 }
 
 // New constructs a Controller using the provided checkpointer and
-// options (including an optional Exporter) to configure an metric
+// options (including an optional Exporter) to configure a metric
 // export pipeline.
 func New(checkpointer export.Checkpointer, opts ...Option) *Controller {
 	c := &Config{
