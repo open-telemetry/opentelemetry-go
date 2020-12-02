@@ -54,7 +54,7 @@ func (d *grpcSingleConnectionDriver) getTracesClient() grpcTracesClient {
 	}
 }
 
-func (d *grpcSingleConnectionDriver) handleNewConnection(cc *grpc.ClientConn) error {
+func (d *grpcSingleConnectionDriver) handleNewConnection(cc *grpc.ClientConn) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 	if cc != nil {
@@ -64,7 +64,6 @@ func (d *grpcSingleConnectionDriver) handleNewConnection(cc *grpc.ClientConn) er
 		d.metricsClient = nil
 		d.tracesClient = nil
 	}
-	return nil
 }
 
 func NewGRPCSingleConnectionDriver(cfg GRPCConnectionConfig) ProtocolDriver {

@@ -39,7 +39,7 @@ type grpcConnection struct {
 	// these fields are read-only after constructor is finished
 	c                    GRPCConnectionConfig
 	metadata             metadata.MD
-	newConnectionHandler func(cc *grpc.ClientConn) error
+	newConnectionHandler func(cc *grpc.ClientConn)
 
 	// these channels are created once
 	disconnectedCh             chan bool
@@ -52,7 +52,7 @@ type grpcConnection struct {
 	closeBackgroundConnectionDoneCh func(ch chan struct{})
 }
 
-func newGRPCConnection(c GRPCConnectionConfig, handler func(cc *grpc.ClientConn) error) *grpcConnection {
+func newGRPCConnection(c GRPCConnectionConfig, handler func(cc *grpc.ClientConn)) *grpcConnection {
 	conn := new(grpcConnection)
 	conn.newConnectionHandler = handler
 	if c.collectorAddr == "" {
@@ -106,7 +106,7 @@ func (oc *grpcConnection) setStateDisconnected(err error) {
 	case oc.disconnectedCh <- true:
 	default:
 	}
-	_ = oc.newConnectionHandler(nil)
+	oc.newConnectionHandler(nil)
 }
 
 func (oc *grpcConnection) setStateConnected() {
@@ -183,7 +183,8 @@ func (oc *grpcConnection) connect(ctx context.Context) error {
 		return err
 	}
 	oc.setConnection(cc)
-	return oc.newConnectionHandler(cc)
+	oc.newConnectionHandler(cc)
+	return nil
 }
 
 // setConnection sets cc as the client connection and returns true if
