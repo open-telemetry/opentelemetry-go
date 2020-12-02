@@ -25,18 +25,25 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/encoding/gzip"
+
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
-	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
+	exportmetric "go.opentelemetry.io/otel/sdk/export/metric"
 	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestNewExporter_endToEnd(t *testing.T) {
@@ -46,6 +53,24 @@ func TestNewExporter_endToEnd(t *testing.T) {
 	}{
 		{
 			name: "StandardExporter",
+		},
+		{
+			name: "WithCompressor",
+			additionalOpts: []otlp.GRPCConnectionOption{
+				otlp.WithCompressor(gzip.Name),
+			},
+		},
+		{
+			name: "WithGRPCServiceConfig",
+			additionalOpts: []otlp.GRPCConnectionOption{
+				otlp.WithGRPCServiceConfig("{}"),
+			},
+		},
+		{
+			name: "WithGRPCDialOptions",
+			additionalOpts: []otlp.GRPCConnectionOption{
+				otlp.WithGRPCDialOption(grpc.WithBlock()),
+			},
 		},
 	}
 
@@ -128,7 +153,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.GRPCConnectionO
 	}
 
 	selector := simple.NewWithInexpensiveDistribution()
-	processor := processor.New(selector, metricsdk.StatelessExportKindSelector())
+	processor := processor.New(selector, exportmetric.StatelessExportKindSelector())
 	pusher := push.New(processor, exp)
 	pusher.Start()
 
@@ -490,7 +515,7 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 	span.End()
 
 	selector := simple.NewWithInexpensiveDistribution()
-	processor := processor.New(selector, metricsdk.StatelessExportKindSelector())
+	processor := processor.New(selector, exportmetric.StatelessExportKindSelector())
 	pusher := push.New(processor, exp)
 	pusher.Start()
 
@@ -594,4 +619,135 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 		}
 		assert.Equal(t, expected[i], actual)
 	}
+}
+
+type discCheckpointSet struct{}
+
+func (discCheckpointSet) ForEach(kindSelector exportmetric.ExportKindSelector, recordFunc func(exportmetric.Record) error) error {
+	desc := metric.NewDescriptor(
+		"foo",
+		metric.CounterInstrumentKind,
+		number.Int64Kind,
+	)
+	res := resource.NewWithAttributes(label.String("a", "b"))
+	agg := sum.New(1)
+	start := time.Now().Add(-20 * time.Minute)
+	end := time.Now()
+	labels := label.NewSet()
+	rec := exportmetric.NewRecord(&desc, &labels, res, agg[0].Aggregation(), start, end)
+	return recordFunc(rec)
+}
+
+func (discCheckpointSet) Lock()    {}
+func (discCheckpointSet) Unlock()  {}
+func (discCheckpointSet) RLock()   {}
+func (discCheckpointSet) RUnlock() {}
+
+func discSpanSnapshot() *exporttrace.SpanSnapshot {
+	return &exporttrace.SpanSnapshot{
+		SpanContext: trace.SpanContext{
+			TraceID:    trace.TraceID{2, 3, 4, 5, 6, 7, 8, 9, 2, 3, 4, 5, 6, 7, 8, 9},
+			SpanID:     trace.SpanID{3, 4, 5, 6, 7, 8, 9, 0},
+			TraceFlags: trace.FlagsSampled,
+		},
+		ParentSpanID:             trace.SpanID{1, 2, 3, 4, 5, 6, 7, 8},
+		SpanKind:                 trace.SpanKindInternal,
+		Name:                     "foo",
+		StartTime:                time.Now().Add(-20 * time.Minute),
+		EndTime:                  time.Now(),
+		Attributes:               []label.KeyValue{},
+		MessageEvents:            []exporttrace.Event{},
+		Links:                    []trace.Link{},
+		StatusCode:               codes.Ok,
+		StatusMessage:            "",
+		HasRemoteParent:          false,
+		DroppedAttributeCount:    0,
+		DroppedMessageEventCount: 0,
+		DroppedLinkCount:         0,
+		ChildSpanCount:           0,
+		Resource:                 resource.NewWithAttributes(label.String("a", "b")),
+		InstrumentationLibrary: instrumentation.Library{
+			Name:    "bar",
+			Version: "0.0.0",
+		},
+	}
+}
+
+func TestDisconnected(t *testing.T) {
+	ctx := context.Background()
+	// The address is whatever, we want to be disconnected. But we
+	// setting a blocking connection, so dialing to the invalid
+	// address actually fails.
+	exp := newGRPCExporter(t, ctx, "invalid",
+		otlp.WithReconnectionPeriod(time.Hour),
+		otlp.WithGRPCDialOption(
+			grpc.WithBlock(),
+			grpc.FailOnNonTempDialError(true),
+		),
+	)
+	defer func() {
+		assert.NoError(t, exp.Shutdown(ctx))
+	}()
+
+	assert.Error(t, exp.Export(ctx, discCheckpointSet{}))
+	assert.Error(t, exp.ExportSpans(ctx, []*exporttrace.SpanSnapshot{discSpanSnapshot()}))
+}
+
+type emptyCheckpointSet struct{}
+
+func (emptyCheckpointSet) ForEach(kindSelector exportmetric.ExportKindSelector, recordFunc func(exportmetric.Record) error) error {
+	return nil
+}
+
+func (emptyCheckpointSet) Lock()    {}
+func (emptyCheckpointSet) Unlock()  {}
+func (emptyCheckpointSet) RLock()   {}
+func (emptyCheckpointSet) RUnlock() {}
+
+func TestEmptyData(t *testing.T) {
+	mc := runMockColAtAddr(t, "localhost:56561")
+
+	defer func() {
+		_ = mc.stop()
+	}()
+
+	<-time.After(5 * time.Millisecond)
+
+	ctx := context.Background()
+	exp := newGRPCExporter(t, ctx, mc.address)
+	defer func() {
+		assert.NoError(t, exp.Shutdown(ctx))
+	}()
+
+	assert.NoError(t, exp.ExportSpans(ctx, nil))
+	assert.NoError(t, exp.Export(ctx, emptyCheckpointSet{}))
+}
+
+type failCheckpointSet struct{}
+
+func (failCheckpointSet) ForEach(kindSelector exportmetric.ExportKindSelector, recordFunc func(exportmetric.Record) error) error {
+	return fmt.Errorf("fail")
+}
+
+func (failCheckpointSet) Lock()    {}
+func (failCheckpointSet) Unlock()  {}
+func (failCheckpointSet) RLock()   {}
+func (failCheckpointSet) RUnlock() {}
+
+func TestFailedMetricTransform(t *testing.T) {
+	mc := runMockColAtAddr(t, "localhost:56561")
+
+	defer func() {
+		_ = mc.stop()
+	}()
+
+	<-time.After(5 * time.Millisecond)
+
+	ctx := context.Background()
+	exp := newGRPCExporter(t, ctx, mc.address)
+	defer func() {
+		assert.NoError(t, exp.Shutdown(ctx))
+	}()
+
+	assert.Error(t, exp.Export(ctx, failCheckpointSet{}))
 }
