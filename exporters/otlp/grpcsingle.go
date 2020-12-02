@@ -35,22 +35,28 @@ type grpcSingleConnectionDriver struct {
 }
 
 func (d *grpcSingleConnectionDriver) getMetricsClient() grpcMetricsClient {
+	d.lock.Lock()
+	client := d.metricsClient
+	d.lock.Unlock()
 	return grpcMetricsClient{
 		grpcClientBase: grpcClientBase{
 			clientLock: &d.lock,
 			connection: d.connection,
 		},
-		client: d.metricsClient,
+		client: client,
 	}
 }
 
 func (d *grpcSingleConnectionDriver) getTracesClient() grpcTracesClient {
+	d.lock.Lock()
+	client := d.tracesClient
+	d.lock.Unlock()
 	return grpcTracesClient{
 		grpcClientBase: grpcClientBase{
 			clientLock: &d.lock,
 			connection: d.connection,
 		},
-		client: d.tracesClient,
+		client: client,
 	}
 }
 
