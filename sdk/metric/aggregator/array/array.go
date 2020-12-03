@@ -98,6 +98,10 @@ func (c *Aggregator) Points() ([]number.Number, error) {
 func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 
+	if oa != nil && o == nil {
+		return aggregator.NewInconsistentAggregatorError(c, oa)
+	}
+
 	c.lock.Lock()
 	if o != nil {
 		o.points = c.points
@@ -106,10 +110,6 @@ func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descrip
 	c.points = nil
 	c.sum = 0
 	c.lock.Unlock()
-
-	if oa != nil && o == nil {
-		return aggregator.NewInconsistentAggregatorError(c, oa)
-	}
 
 	// TODO: This sort should be done lazily, only when quantiles
 	// are requested.  The SDK specification says you can use this
