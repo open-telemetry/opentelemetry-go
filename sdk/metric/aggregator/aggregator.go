@@ -31,7 +31,7 @@ func NewInconsistentAggregatorError(a1, a2 export.Aggregator) error {
 	return fmt.Errorf("%w: %T and %T", aggregation.ErrInconsistentType, a1, a2)
 }
 
-// RangeTest is a commmon routine for testing for valid input values.
+// RangeTest is a common routine for testing for valid input values.
 // This rejects NaN values.  This rejects negative values when the
 // metric instrument does not support negative values, including
 // monotonic counter metrics and absolute ValueRecorder metrics.
