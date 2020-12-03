@@ -14,7 +14,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `NewExporter` and `Start` functions in `go.opentelemetry.io/otel/exporters/otlp` now receive `context.Context` as a first parameter. (#1357)
 - Metric Push and Pull Controller components are combined into a single "basic" Controller:
   - `WithExporter()` and `Start()` to configure Push behavior
-  - `Collect()` and `ForEach()` for Pull export methods. (#1378)
+  - `Start()` is optional; use `Collect()` and `ForEach()` for Pull behavior
+  - `Start()` and `Stop()` accept Context. (#1378)
+- Zipkin exporter relies on the status code for success rather than body read but still read the response body. (#1328)
   
 ### Added
 
