@@ -17,7 +17,6 @@ package aggregatortest // import "go.opentelemetry.io/otel/sdk/metric/aggregator
 import (
 	"context"
 	"errors"
-	"fmt"
 	"math/rand"
 	"os"
 	"sort"
