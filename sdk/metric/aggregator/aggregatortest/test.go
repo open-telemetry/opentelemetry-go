@@ -273,21 +273,18 @@ func SynchronizedMoveResetTest(t *testing.T, mkind metric.InstrumentKind, nf fun
 				c, err := count.Count()
 				require.Equal(t, int64(1), c)
 				require.NoError(t, err)
-				fmt.Println("CASE A")
 			}
 
 			if sum, ok := agg.(aggregation.Sum); ok {
 				s, err := sum.Sum()
 				require.Equal(t, input, s)
 				require.NoError(t, err)
-				fmt.Println("CASE B")
 			}
 
 			if lv, ok := agg.(aggregation.LastValue); ok {
 				v, _, err := lv.LastValue()
 				require.Equal(t, input, v)
 				require.NoError(t, err)
-				fmt.Println("CASE C")
 			}
 
 		})
