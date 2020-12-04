@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -122,7 +121,7 @@ func TestExporterShutdownManyTimes(t *testing.T) {
 
 func TestInstallNewPipeline(t *testing.T) {
 	ctx := context.Background()
-	_, _, _, err := InstallNewPipeline(ctx, nil, nil)
+	_, _, _, err := InstallNewPipeline(ctx)
 	assert.NoError(t, err)
 	assert.IsType(t, &sdktrace.TracerProvider{}, otel.GetTracerProvider())
 }
@@ -131,7 +130,6 @@ func TestNewExportPipeline(t *testing.T) {
 	testCases := []struct {
 		name             string
 		expOpts          []ExporterOption
-		resOpts          []resource.Option
 		testSpanSampling bool
 	}{
 		{
@@ -143,8 +141,7 @@ func TestNewExportPipeline(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			_, tp, _, err := NewExportPipeline(
 				context.Background(),
-				tc.expOpts,
-				tc.resOpts,
+				tc.expOpts...,
 			)
 
 			assert.NoError(t, err)
