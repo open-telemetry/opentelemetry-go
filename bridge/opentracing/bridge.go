@@ -510,7 +510,7 @@ func otTagsToOTelAttributesKindAndError(tags map[string]interface{}) ([]label.Ke
 // - uint -> int64
 // - int32 -> int64
 // - uint32 -> int64
-// - uint64 -> int64
+// - uint64 -> string
 // - float32 -> float64
 func otTagToOTelLabel(k string, v interface{}) label.KeyValue {
 	key := otTagToOTelLabelKey(k)
@@ -520,7 +520,7 @@ func otTagToOTelLabel(k string, v interface{}) label.KeyValue {
 	case int64:
 		return key.Int64(val)
 	case uint64:
-		return key.Int64(int64(val))
+		return key.String(fmt.Sprintf("%d", val))
 	case float64:
 		return key.Float64(val)
 	case int32:
