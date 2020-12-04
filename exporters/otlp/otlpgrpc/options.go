@@ -46,7 +46,6 @@ const (
 			"MaxBackoff":"5s",
 			"BackoffMultiplier":2,
 			"RetryableStatusCodes":[
-				"UNAVAILABLE",
 				"CANCELLED",
 				"DEADLINE_EXCEEDED",
 				"RESOURCE_EXHAUSTED",
