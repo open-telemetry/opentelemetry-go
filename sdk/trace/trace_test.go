@@ -41,20 +41,30 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
+type storingHandler struct {
+	errs []error
+}
+
+func (s *storingHandler) Handle(err error) {
+	s.errs = append(s.errs, err)
+}
+
+func (s *storingHandler) Reset() {
+	s.errs = nil
+}
+
 var (
 	tid trace.TraceID
 	sid trace.SpanID
+
+	handler *storingHandler = &storingHandler{}
 )
-
-type discardHandler struct{}
-
-func (*discardHandler) Handle(_ error) {}
 
 func init() {
 	tid, _ = trace.TraceIDFromHex("01020304050607080102040810203040")
 	sid, _ = trace.SpanIDFromHex("0102040810203040")
 
-	otel.SetErrorHandler(new(discardHandler))
+	otel.SetErrorHandler(handler)
 }
 
 func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
