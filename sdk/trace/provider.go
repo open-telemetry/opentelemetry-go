@@ -144,7 +144,9 @@ func (p *TracerProvider) UnregisterSpanProcessor(s SpanProcessor) {
 	}
 	if stopOnce != nil {
 		stopOnce.state.Do(func() {
-			otel.Handle(s.Shutdown(context.Background()))
+			if err := s.Shutdown(context.Background()); err != nil {
+				otel.Handle(err)
+			}
 		})
 	}
 	if len(new) > 1 {
@@ -192,7 +194,9 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 
 	for _, sps := range spss {
 		sps.state.Do(func() {
-			otel.Handle(sps.sp.Shutdown(ctx))
+			if err := sps.sp.Shutdown(ctx); err != nil {
+				otel.Handle(err)
+			}
 		})
 	}
 	return nil
