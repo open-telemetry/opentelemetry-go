@@ -296,6 +296,10 @@ func (ts TraceState) copyKVsAndDeleteEntry(key label.Key) []label.KeyValue {
 // TraceStateFromKeyValues is a convenience method to create a new TraceState from
 // provided key/value pairs.
 func TraceStateFromKeyValues(kvs ...label.KeyValue) (TraceState, error) { //nolint:golint
+	if len(kvs) == 0 {
+		return TraceState{}, nil
+	}
+
 	if len(kvs) > traceStateMaxListMembers {
 		return TraceState{}, errInvalidTraceStateMembersNumber
 	}
@@ -312,7 +316,9 @@ func TraceStateFromKeyValues(kvs ...label.KeyValue) (TraceState, error) { //noli
 		km[kv.Key] = true
 	}
 
-	return TraceState{kvs}, nil
+	ckvs := make([]label.KeyValue, len(kvs))
+	copy(ckvs, kvs)
+	return TraceState{ckvs}, nil
 }
 
 func isTraceStateKeyValid(key label.Key) bool {

@@ -594,19 +594,19 @@ func TestTraceStateGet(t *testing.T) {
 	}{
 		{
 			name:          "OK case",
-			traceState:    TraceState{generateKVsWithMaxMembers()},
+			traceState:    TraceState{kvsWithMaxMembers},
 			key:           "key16",
 			expectedValue: "value16",
 		},
 		{
 			name:          "Not found",
-			traceState:    TraceState{generateKVsWithMaxMembers()},
+			traceState:    TraceState{kvsWithMaxMembers},
 			key:           "keyxx",
 			expectedValue: "",
 		},
 		{
 			name:          "Invalid key",
-			traceState:    TraceState{generateKVsWithMaxMembers()},
+			traceState:    TraceState{kvsWithMaxMembers},
 			key:           "key!",
 			expectedValue: "",
 		},
@@ -761,9 +761,9 @@ func TestTraceStateInsert(t *testing.T) {
 		},
 		{
 			name:               "Too many entries",
-			traceState:         TraceState{generateKVsWithMaxMembers()},
+			traceState:         TraceState{kvsWithMaxMembers},
 			keyValue:           label.String("keyx", "valx"),
-			expectedTraceState: TraceState{generateKVsWithMaxMembers()},
+			expectedTraceState: TraceState{kvsWithMaxMembers},
 			expectedErr:        errInvalidTraceStateMembersNumber,
 		},
 	}
@@ -792,8 +792,8 @@ func TestTraceStateFromKeyValues(t *testing.T) {
 	}{
 		{
 			name:               "OK case",
-			kvs:                generateKVsWithMaxMembers(),
-			expectedTraceState: TraceState{generateKVsWithMaxMembers()},
+			kvs:                kvsWithMaxMembers,
+			expectedTraceState: TraceState{kvsWithMaxMembers},
 		},
 		{
 			name:               "OK case (empty)",
@@ -802,7 +802,7 @@ func TestTraceStateFromKeyValues(t *testing.T) {
 		{
 			name: "Too many entries",
 			kvs: func() []label.KeyValue {
-				kvs := generateKVsWithMaxMembers()
+				kvs := kvsWithMaxMembers
 				kvs = append(kvs, label.String("keyx", "valX"))
 				return kvs
 			}(),
@@ -845,11 +845,11 @@ func TestTraceStateFromKeyValues(t *testing.T) {
 
 }
 
-func generateKVsWithMaxMembers() []label.KeyValue {
+var kvsWithMaxMembers = func() []label.KeyValue {
 	kvs := make([]label.KeyValue, traceStateMaxListMembers)
 	for i := 0; i < traceStateMaxListMembers; i++ {
 		kvs[i] = label.String(fmt.Sprintf("key%d", i+1),
 			fmt.Sprintf("value%d", i+1))
 	}
 	return kvs
-}
+}()
