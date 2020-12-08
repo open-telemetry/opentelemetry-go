@@ -288,6 +288,69 @@ func TestSpanContextIsSampled(t *testing.T) {
 	}
 }
 
+func TestIsEqualWith(t *testing.T) {
+	testCases := []struct {
+		name     string
+		sc1      SpanContext
+		sc2      SpanContext
+		expected bool
+	}{
+		{
+			name: "OK case",
+			sc1: SpanContext{
+				TraceID:    [16]byte{1},
+				SpanID:     [8]byte{2},
+				TraceFlags: FlagsSampled,
+				TraceState: TraceState{},
+			},
+			sc2: SpanContext{
+				TraceID:    [16]byte{1},
+				SpanID:     [8]byte{2},
+				TraceFlags: FlagsSampled,
+				TraceState: TraceState{},
+			},
+			expected: true,
+		},
+		{
+			name: "Different SpanID",
+			sc1: SpanContext{
+				TraceID:    [16]byte{1},
+				SpanID:     [8]byte{2},
+				TraceFlags: FlagsSampled,
+				TraceState: TraceState{},
+			},
+			sc2: SpanContext{
+				TraceID:    [16]byte{1},
+				SpanID:     [8]byte{42},
+				TraceFlags: FlagsSampled,
+				TraceState: TraceState{},
+			},
+			expected: false,
+		},
+		{
+			name: "Different TraceState",
+			sc1: SpanContext{
+
+				TraceFlags: FlagsSampled,
+				TraceState: TraceState{kvsWithMaxMembers},
+			},
+			sc2: SpanContext{
+				TraceID:    [16]byte{1},
+				SpanID:     [8]byte{2},
+				TraceFlags: FlagsSampled,
+				TraceState: TraceState{},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, tc.sc1.IsEqualWith(tc.sc2))
+		})
+	}
+}
+
 func TestStringTraceID(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
@@ -474,6 +537,50 @@ func TestTraceStateString(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			assert.Equal(t, tc.expectedStr, tc.traceState.String())
+		})
+	}
+}
+
+func TestTraceStateIsEqualWith(t *testing.T) {
+	testCases := []struct {
+		name     string
+		ts1      TraceState
+		ts2      TraceState
+		expected bool
+	}{
+		{
+			name:     "OK case",
+			ts1:      TraceState{kvsWithMaxMembers},
+			ts2:      TraceState{kvsWithMaxMembers},
+			expected: true,
+		},
+		{
+			name:     "Not same length",
+			ts1:      TraceState{kvsWithMaxMembers},
+			ts2:      TraceState{},
+			expected: false,
+		},
+		{
+			name: "Not same members",
+			ts1: TraceState{
+				kvs: []label.KeyValue{
+					label.String("key1", "val1"),
+					label.String("key2", "val2"),
+				},
+			},
+			ts2: TraceState{
+				kvs: []label.KeyValue{
+					label.String("key1", "val1"),
+					label.String("key9", "val9"),
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, tc.ts1.IsEqualWith(tc.ts2))
 		})
 	}
 }

@@ -80,10 +80,7 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 
 	for _, link := range c.Links {
 		for i, sl := range span.links {
-			if sl.SpanContext.SpanID == link.SpanContext.SpanID &&
-				sl.SpanContext.TraceID == link.SpanContext.TraceID &&
-				sl.SpanContext.TraceFlags == link.SpanContext.TraceFlags &&
-				sl.SpanContext.TraceState.String() == link.SpanContext.TraceState.String() {
+			if sl.SpanContext.IsEqualWith(link.SpanContext) {
 				span.links[i].Attributes = link.Attributes
 				break
 			}

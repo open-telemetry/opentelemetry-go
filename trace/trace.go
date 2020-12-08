@@ -214,6 +214,22 @@ func (ts TraceState) String() string {
 	return sb.String()
 }
 
+// IsEqualWith returns true if entries of both trace states
+// are the same.
+func (ts TraceState) IsEqualWith(compare TraceState) bool {
+	if len(ts.kvs) != len(compare.kvs) {
+		return false
+	}
+
+	for i, kv := range ts.kvs {
+		if kv != compare.kvs[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
 // Get returns a value for given key from the trace state.
 // If no key is found or provided key is invalid, returns an empty value.
 func (ts TraceState) Get(key label.Key) label.Value {
@@ -345,6 +361,14 @@ func (sc SpanContext) IsDebug() bool {
 // IsSampled returns if the sampling bit is set in the trace flags.
 func (sc SpanContext) IsSampled() bool {
 	return sc.TraceFlags&FlagsSampled == FlagsSampled
+}
+
+// IsEqualWith returns true if both span contexts have equal values.
+func (sc SpanContext) IsEqualWith(compare SpanContext) bool {
+	return sc.SpanID == compare.SpanID &&
+		sc.TraceID == compare.TraceID &&
+		sc.TraceFlags == compare.TraceFlags &&
+		sc.TraceState.IsEqualWith(compare.TraceState)
 }
 
 type traceContextKeyType int

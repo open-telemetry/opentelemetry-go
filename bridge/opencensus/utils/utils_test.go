@@ -130,9 +130,7 @@ func TestOCSpanContextToOTel(t *testing.T) {
 	} {
 		t.Run(tc.description, func(t *testing.T) {
 			output := OCSpanContextToOTel(tc.input)
-			if output.SpanID != tc.expected.SpanID ||
-				output.TraceID != tc.expected.TraceID ||
-				output.TraceFlags != tc.expected.TraceFlags {
+			if !output.IsEqualWith(tc.expected) {
 				t.Fatalf("Got %+v spancontext, exepected %+v.", output, tc.expected)
 			}
 		})
