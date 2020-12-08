@@ -263,9 +263,10 @@ func TestSampling(t *testing.T) {
 			for i := 0; i < total; i++ {
 				ctx := context.Background()
 				if tc.parent {
+					tid, sid := idg.NewIDs(ctx)
 					psc := trace.SpanContext{
-						TraceID: idg.NewTraceID(),
-						SpanID:  idg.NewSpanID(),
+						TraceID: tid,
+						SpanID:  sid,
 					}
 					if tc.sampledParent {
 						psc.TraceFlags = trace.FlagsSampled
