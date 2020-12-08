@@ -23,21 +23,18 @@ import (
 )
 
 func TestExporterShutdownHonorsTimeout(t *testing.T) {
-	orig := closeStopCh
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer func() {
-		cancel()
-		closeStopCh = orig
-	}()
-	closeStopCh = func(stopCh chan struct{}) {
-		go func() {
-			<-ctx.Done()
-			close(stopCh)
-		}()
-	}
+	defer cancel()
 
 	e := NewUnstartedExporter()
-	if err := e.Start(); err != nil {
+	orig := e.cc.closeBackgroundConnectionDoneCh
+	e.cc.closeBackgroundConnectionDoneCh = func(ch chan struct{}) {
+		go func() {
+			<-ctx.Done()
+			orig(ch)
+		}()
+	}
+	if err := e.Start(ctx); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
 
@@ -51,21 +48,18 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 }
 
 func TestExporterShutdownHonorsCancel(t *testing.T) {
-	orig := closeStopCh
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer func() {
-		cancel()
-		closeStopCh = orig
-	}()
-	closeStopCh = func(stopCh chan struct{}) {
-		go func() {
-			<-ctx.Done()
-			close(stopCh)
-		}()
-	}
+	defer cancel()
 
 	e := NewUnstartedExporter()
-	if err := e.Start(); err != nil {
+	orig := e.cc.closeBackgroundConnectionDoneCh
+	e.cc.closeBackgroundConnectionDoneCh = func(ch chan struct{}) {
+		go func() {
+			<-ctx.Done()
+			orig(ch)
+		}()
+	}
+	if err := e.Start(ctx); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
 
@@ -84,7 +78,7 @@ func TestExporterShutdownNoError(t *testing.T) {
 	defer cancel()
 
 	e := NewUnstartedExporter()
-	if err := e.Start(); err != nil {
+	if err := e.Start(ctx); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
 
@@ -95,7 +89,7 @@ func TestExporterShutdownNoError(t *testing.T) {
 
 func TestExporterShutdownManyTimes(t *testing.T) {
 	ctx := context.Background()
-	e, err := NewExporter()
+	e, err := NewExporter(ctx)
 	if err != nil {
 		t.Fatalf("failed to start an exporter: %v", err)
 	}
