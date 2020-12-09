@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Documentation about the project's versioning policy. (#1388)
+ 
 ### Changed
 
 - Move the OpenCensus example into `example` directory. (#1359)
