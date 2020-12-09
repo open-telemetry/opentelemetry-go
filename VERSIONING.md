@@ -104,8 +104,8 @@ released as version `v1.0.0`.
 
 Active development of this project continues. The `otel/metrics` module now has
 backwards incompatible changes to its API that need to be released and the
-`otel/baggage` has a minor bug fix that needs to be released. The following
-release is made:
+`otel/baggage` module has a minor bug fix that needs to be released. The
+following release is made:
 
 * `otel`: `v1.0.1`
 * `otel/trace`: `v1.0.1`
@@ -114,11 +114,11 @@ release is made:
 * `otel/sdk/trace`: `v1.0.1`
 * `otel/sdk/metrics`: `v0.15.0`
 
-Notice that again all stable module versions are incremented in unison and the
-`otel/sdk/metrics` package, which depends on the `otel/metrics` package, also
-bumped its version. This bump of the `otel/sdk/metrics` package makes sense
-given their coupling, though it is not explicitly required by our versioning
-policy.
+Notice that, again, all stable module versions are incremented in unison and
+the `otel/sdk/metrics` package, which depends on the `otel/metrics` package,
+also bumped its version. This bump of the `otel/sdk/metrics` package makes
+sense given their coupling, though it is not explicitly required by our
+versioning policy.
 
 As we progress, the `otel/metrics` and `otel/sdk/metrics` packages have reached
 a point where they should be evaluated for stability. The `otel` module is
@@ -132,8 +132,8 @@ reintegrated with the `otel/metrics` package and the following release is made:
 * `otel/sdk/metrics`: `v1.1.0-rc.1`
 
 All the modules are evaluated and determined to a viable stable release. They
-are then released as version `v1.1.0` (where the minor version is incremented
-to indicate the addition of new signal).
+are then released as version `v1.1.0` (the minor version is incremented to
+indicate the addition of new signal).
 
 * `otel`: `v1.1.0`
 * `otel/trace`: `v1.1.0`
