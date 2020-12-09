@@ -23,6 +23,9 @@ Progress and status specific to this repository is tracked in our local
 and
 [milestones](https://github.com/open-telemetry/opentelemetry-go/milestones).
 
+Project versioning information and stability guarantees can be found in the
+[versioning documentation](./VERSIONING.md).
+
 ## Getting Started
 
 OpenTelemetry's goal is to provide a single set of APIs to capture distributed
