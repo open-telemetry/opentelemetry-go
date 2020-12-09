@@ -5,13 +5,6 @@ is designed so the following goals can be achieved.
 
 **Users are provided a codebase of value that is stable and secure.**
 
-* Users stay up to date with the latest release.
-* Never create a dependency conflict between packages which rely on different
-  versions of OpenTelemetry.
-* Do not break stable public APIs.
-* Allow for multiple levels of stability within the same release.
-* Provide idiomatic versioning of a Go project.
-
 ## Policy
 
 * Versioning of this project will be idiomatic of a Go project using [Go
