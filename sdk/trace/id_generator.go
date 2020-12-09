@@ -47,7 +47,7 @@ func (gen *randomIDGenerator) NewSpanID(ctx context.Context, traceID trace.Trace
 }
 
 // NewIDs returns a non-zero trace ID and a non-zero span ID from a
-// randomly-chosen sequence. mu should be held while this function is called.
+// randomly-chosen sequence.
 func (gen *randomIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.SpanID) {
 	gen.Lock()
 	defer gen.Unlock()
