@@ -73,37 +73,33 @@ func TestContextSpan(t *testing.T) {
 func TestContextRemoteSpanContext(t *testing.T) {
 	ctx := context.Background()
 	got, empty := RemoteSpanContextFromContext(ctx), SpanContext{}
-	assertSpanContext(t, got, empty)
+	if !got.IsEqualWith(empty) {
+		t.Errorf("RemoteSpanContextFromContext returned %v from an empty context, want %v", got, empty)
+	}
 
 	want := SpanContext{TraceID: [16]byte{1}, SpanID: [8]byte{42}}
 	ctx = ContextWithRemoteSpanContext(ctx, want)
 	if got, ok := ctx.Value(remoteContextKey).(SpanContext); !ok {
 		t.Errorf("failed to set SpanContext with %#v", want)
-	} else {
-		assertSpanContext(t, got, want)
+	} else if !got.IsEqualWith(want) {
+		t.Errorf("got %#v from context with remote set, want %#v", got, want)
 	}
 
-	got = RemoteSpanContextFromContext(ctx)
-	assertSpanContext(t, got, want)
+	if got := RemoteSpanContextFromContext(ctx); !got.IsEqualWith(want) {
+		t.Errorf("RemoteSpanContextFromContext returned %v from a set context, want %v", got, want)
+	}
 
 	want = SpanContext{TraceID: [16]byte{1}, SpanID: [8]byte{43}}
 	ctx = ContextWithRemoteSpanContext(ctx, want)
 	if got, ok := ctx.Value(remoteContextKey).(SpanContext); !ok {
 		t.Errorf("failed to set SpanContext with %#v", want)
-	} else {
-		assertSpanContext(t, got, want)
+	} else if !got.IsEqualWith(want) {
+		t.Errorf("got %#v from context with remote set, want %#v", got, want)
 	}
 
 	got = RemoteSpanContextFromContext(ctx)
-	assertSpanContext(t, got, want)
-}
-
-func assertSpanContext(t *testing.T, got SpanContext, want SpanContext) {
-	if got.SpanID != want.SpanID ||
-		got.TraceID != want.TraceID ||
-		got.TraceFlags != want.TraceFlags ||
-		!assert.EqualValues(t, got.TraceState, want.TraceState) {
-		t.Errorf("got SpanContext %v, but want %v", got, want)
+	if !got.IsEqualWith(want) {
+		t.Errorf("RemoteSpanContextFromContext returned %v from a set context, want %v", got, want)
 	}
 }
 
