@@ -8,9 +8,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- `trace.WithIDGenerator()` `TracerProviderOption`. (#1363)
+
 ### Changed
 
 - Move the OpenCensus example into `example` directory. (#1359)
+- Moved the SDK's `internal.IDGenerator` interface in to the `sdk/trace` package to enable support for externally-defined ID generators. (#1363)
 - `NewExporter` and `Start` functions in `go.opentelemetry.io/otel/exporters/otlp` now receive `context.Context` as a first parameter. (#1357)
 - Zipkin exporter relies on the status code for success rather than body read but still read the response body. (#1328)
 

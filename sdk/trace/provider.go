@@ -66,7 +66,7 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	}
 	tp.config.Store(&Config{
 		DefaultSampler:       ParentBased(AlwaysSample()),
-		IDGenerator:          defIDGenerator(),
+		IDGenerator:          defaultIDGenerator(),
 		MaxAttributesPerSpan: DefaultMaxAttributesPerSpan,
 		MaxEventsPerSpan:     DefaultMaxEventsPerSpan,
 		MaxLinksPerSpan:      DefaultMaxLinksPerSpan,
@@ -229,5 +229,12 @@ func WithConfig(config Config) TracerProviderOption {
 func WithResource(r *resource.Resource) TracerProviderOption {
 	return func(opts *TracerProviderConfig) {
 		opts.config.Resource = r
+	}
+}
+
+// WithIDGenerator option registers an IDGenerator with the TracerProvider.
+func WithIDGenerator(g IDGenerator) TracerProviderOption {
+	return func(opts *TracerProviderConfig) {
+		opts.config.IDGenerator = g
 	}
 }
