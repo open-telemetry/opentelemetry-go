@@ -9,21 +9,22 @@ is designed so the following goals can be achieved.
 
 * Versioning of this project will be idiomatic of a Go project using [Go
   modules](https://github.com/golang/go/wiki/Modules).
-  * This project will use [semantic import
-    versioning](https://github.com/golang/go/wiki/Modules#semantic-import-versioning).
-    * This project uses [semver](https://semver.org/spec/v2.0.0.html).
-    * If a module in this project is version `v2` or higher, the major
-      version of the module must be included as a `/vN` at the end of the
-      module paths used in `go.mod` files (e.g., `module
-      go.opentelemetry.io/otel/v2`, `require go.opentelemetry.io/otel/v2
-      v2.0.1`) and in the package import path (e.g., `import
-      "go.opentelemetry.io/otel/v2/trace"`). This includes the paths used in
-      `go get` commands (e.g., `go get go.opentelemetry.io/otel/v2@v2.0.1`.
-      Note there is both a `/v2` and a `@v2.0.1` in that example. One way to
-      think about it is that the module name now includes the `/v2`, so include
-      `/v2` whenever you are using the module name).
-    * If the module is version `v0` or `v1`, do not include the major version
-      in either the module path or the import path.
+  * [Semantic import
+    versioning](https://github.com/golang/go/wiki/Modules#semantic-import-versioning)
+    will be used.
+    * Versions will comply with [semver 2.0](https://semver.org/spec/v2.0.0.html).
+    * If a module is version `v2` or higher, the major version of the module
+      must be included as a `/vN` at the end of the module paths used in
+      `go.mod` files (e.g., `module go.opentelemetry.io/otel/v2`, `require
+      go.opentelemetry.io/otel/v2 v2.0.1`) and in the package import path
+      (e.g., `import "go.opentelemetry.io/otel/v2/trace"`). This includes the
+      paths used in `go get` commands (e.g., `go get
+      go.opentelemetry.io/otel/v2@v2.0.1`.  Note there is both a `/v2` and a
+      `@v2.0.1` in that example. One way to think about it is that the module
+      name now includes the `/v2`, so include `/v2` whenever you are using the
+      module name).
+    * If a module is version `v0` or `v1`, do not include the major version in
+      either the module path or the import path.
   * Modules will be used to encapsulate signals and components.
     * Experimental modules still under active development will be versioned at
       `v0` to imply the stability guarantee defined by
@@ -49,6 +50,71 @@ is designed so the following goals can be achieved.
         stable module version will be an increment of the minor version number
         and will be applied to all existing stable modules as well as the newly
         stable module being released.
+* Versioning of the associated [contrib
+  repository](https://github.com/open-telemetry/opentelemetry-go-contrib) of
+  this project will be idiomatic of a Go project using [Go
+  modules](https://github.com/golang/go/wiki/Modules).
+  * [Semantic import
+    versioning](https://github.com/golang/go/wiki/Modules#semantic-import-versioning)
+    will be used.
+    * Versions will comply with [semver 2.0](https://semver.org/spec/v2.0.0.html).
+    * If a module is version `v2` or higher, the
+      major version of the module must be included as a `/vN` at the end of the
+      module paths used in `go.mod` files (e.g., `module
+      go.opentelemetry.io/contrib/instrumentation/host/v2`, `require
+      go.opentelemetry.io/contrib/instrumentation/host/v2 v2.0.1`) and in the
+      package import path (e.g., `import
+      "go.opentelemetry.io/contrib/instrumentation/host/v2"`). This includes
+      the paths used in `go get` commands (e.g., `go get
+      go.opentelemetry.io/contrib/instrumentation/host/v2@v2.0.1`.  Note there
+      is both a `/v2` and a `@v2.0.1` in that example. One way to think about
+      it is that the module name now includes the `/v2`, so include `/v2`
+      whenever you are using the module name).
+    * If a module is version `v0` or `v1`, do not include the major version
+      in either the module path or the import path.
+  * In addition to public APIs, telemetry produced by stable instrumentation
+    will remain stable and backwards compatible. This is to avoid breaking
+    alerts and dashboard.
+  * Modules will be used to encapsulate instrumentation, detectors, exporters,
+    propagators, and any other independent sets of related components.
+    * Experimental modules still under active development will be versioned at
+      `v0` to imply the stability guarantee defined by
+      [semver](https://semver.org/spec/v2.0.0.html#spec-item-4).
+
+      > Major version zero (0.y.z) is for initial development. Anything MAY
+      > change at any time. The public API SHOULD NOT be considered stable.
+
+    * Mature modules that we guarantee a stable public API and telemetry will
+      be versioned with a major version greater than `v0`.
+    * Experimental modules will start their versioning at `v0.0.0` and will
+      increment their minor version when backwards incompatible changes are
+      released and increment their patch version when backwards compatible
+      changes are released.
+    * Stable contrib modules cannot depend on experimental modules from this
+      project.
+    * All stable contrib modules of the same major version with this project
+      will use the same entire version as this project.
+      * Stable modules may be released with an incremented minor or patch
+        version even though that module's code has not been changed. Instead
+        the only change that will have been included is to have updated that
+        modules dependency on this project's stable APIs.
+      * When an experimental module in contrib becomes stable a new stable
+        module version will be released and will include this now stable
+        module. The new stable module version will be an increment of the minor
+        version number and will be applied to all existing stable contrib
+        modules, this project's modules, and the newly stable module being
+        released.
+  * Contrib modules will be kept up to date with this project's releases.
+    * Due to the dependency contrib modules will implicitly have on this
+      project's modules the release of stable contrib modules to match the
+      released version number will be staggered after this project's release.
+      There is no explicit time guarantee for how long after this projects
+      release the contrib release will be. Effort should be made to keep them
+      as close in time as possible.
+    * No additional stable release in this project can be made until the
+      contrib repository has a matching stable release.
+    * No release can be made in the contrib repository after this project's
+      stable release except for a stable release of the contrib repository.
 * GitHub releases will be made for all releases.
 * Go modules will be made available at Go package mirrors.
 
