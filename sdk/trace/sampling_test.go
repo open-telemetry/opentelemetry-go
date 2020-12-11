@@ -15,6 +15,7 @@
 package trace
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -168,7 +169,7 @@ func TestTraceIdRatioSamplesInclusively(t *testing.T) {
 		numSamplers = 1000
 		numTraces   = 100
 	)
-	idg := defIDGenerator()
+	idg := defaultIDGenerator()
 
 	for i := 0; i < numSamplers; i++ {
 		ratioLo, ratioHi := rand.Float64(), rand.Float64()
@@ -178,7 +179,7 @@ func TestTraceIdRatioSamplesInclusively(t *testing.T) {
 		samplerHi := TraceIDRatioBased(ratioHi)
 		samplerLo := TraceIDRatioBased(ratioLo)
 		for j := 0; j < numTraces; j++ {
-			traceID := idg.NewTraceID()
+			traceID, _ := idg.NewIDs(context.Background())
 
 			params := SamplingParameters{TraceID: traceID}
 			if samplerLo.ShouldSample(params).Decision == RecordAndSample {
