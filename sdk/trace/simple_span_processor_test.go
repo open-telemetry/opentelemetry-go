@@ -25,11 +25,11 @@ import (
 )
 
 type testExporter struct {
-	spans []*export.SpanData
+	spans []*export.SpanSnapshot
 }
 
-func (t *testExporter) ExportSpans(ctx context.Context, spans []*export.SpanData) error {
-	t.spans = append(t.spans, spans...)
+func (t *testExporter) ExportSpans(ctx context.Context, ss []*export.SpanSnapshot) error {
+	t.spans = append(t.spans, ss...)
 	return nil
 }
 
