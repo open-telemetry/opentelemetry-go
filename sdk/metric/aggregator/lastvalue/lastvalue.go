@@ -93,6 +93,10 @@ func (g *Aggregator) LastValue() (number.Number, time.Time, error) {
 
 // SynchronizedMove atomically saves the current value.
 func (g *Aggregator) SynchronizedMove(oa export.Aggregator, _ *metric.Descriptor) error {
+	if oa == nil {
+		atomic.StorePointer(&g.value, unsafe.Pointer(unsetLastValue))
+		return nil
+	}
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(g, oa)

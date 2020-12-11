@@ -132,3 +132,13 @@ func TestLastValueNotSet(t *testing.T) {
 
 	checkZero(t, g)
 }
+
+func TestSynchronizedMoveReset(t *testing.T) {
+	aggregatortest.SynchronizedMoveResetTest(
+		t,
+		metric.ValueObserverInstrumentKind,
+		func(desc *metric.Descriptor) export.Aggregator {
+			return &New(1)[0]
+		},
+	)
+}
