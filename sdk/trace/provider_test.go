@@ -16,16 +16,20 @@ package trace
 
 import (
 	"context"
+	"errors"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type basicSpanProcesor struct {
-	running bool
+	running             bool
+	injectShutdownError error
 }
 
 func (t *basicSpanProcesor) Shutdown(context.Context) error {
 	t.running = false
-	return nil
+	return t.injectShutdownError
 }
 
 func (t *basicSpanProcesor) OnStart(parent context.Context, s ReadWriteSpan) {}
@@ -44,4 +48,37 @@ func TestShutdownTraceProvider(t *testing.T) {
 	if sp.running != false {
 		t.Errorf("Error shutdown basicSpanProcesor\n")
 	}
+}
+
+func TestFailedProcessorShutdown(t *testing.T) {
+	handler.Reset()
+	stp := NewTracerProvider()
+	spErr := errors.New("basic span processor shutdown failure")
+	sp := &basicSpanProcesor{
+		running:             true,
+		injectShutdownError: spErr,
+	}
+	stp.RegisterSpanProcessor(sp)
+
+	_ = stp.Shutdown(context.Background())
+
+	assert.Contains(t, handler.errs, spErr)
+}
+
+func TestFailedProcessorShutdownInUnregister(t *testing.T) {
+	handler.Reset()
+	stp := NewTracerProvider()
+	spErr := errors.New("basic span processor shutdown failure")
+	sp := &basicSpanProcesor{
+		running:             true,
+		injectShutdownError: spErr,
+	}
+	stp.RegisterSpanProcessor(sp)
+	stp.UnregisterSpanProcessor(sp)
+
+	assert.Contains(t, handler.errs, spErr)
+
+	handler.errs = nil
+	_ = stp.Shutdown(context.Background())
+	assert.Empty(t, handler.errs)
 }
