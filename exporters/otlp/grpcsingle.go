@@ -23,6 +23,9 @@ import (
 
 	colmetricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/metrics/v1"
 	coltracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/trace/v1"
+	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
+	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
+	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
 )
@@ -33,44 +36,6 @@ type grpcDriver struct {
 	lock          sync.Mutex
 	metricsClient colmetricpb.MetricsServiceClient
 	tracesClient  coltracepb.TraceServiceClient
-}
-
-func (d *grpcDriver) getMetricsClient() grpcMetricsClient {
-	d.lock.Lock()
-	client := d.metricsClient
-	d.lock.Unlock()
-	return grpcMetricsClient{
-		grpcClientBase: grpcClientBase{
-			clientLock: &d.lock,
-			connection: d.connection,
-		},
-		client: client,
-	}
-}
-
-func (d *grpcDriver) getTracesClient() grpcTracesClient {
-	d.lock.Lock()
-	client := d.tracesClient
-	d.lock.Unlock()
-	return grpcTracesClient{
-		grpcClientBase: grpcClientBase{
-			clientLock: &d.lock,
-			connection: d.connection,
-		},
-		client: client,
-	}
-}
-
-func (d *grpcDriver) handleNewConnection(cc *grpc.ClientConn) {
-	d.lock.Lock()
-	defer d.lock.Unlock()
-	if cc != nil {
-		d.metricsClient = colmetricpb.NewMetricsServiceClient(cc)
-		d.tracesClient = coltracepb.NewTraceServiceClient(cc)
-	} else {
-		d.metricsClient = nil
-		d.tracesClient = nil
-	}
 }
 
 func NewGRPCDriver(opts ...GRPCConnectionOption) ProtocolDriver {
@@ -86,6 +51,18 @@ func NewGRPCDriver(opts ...GRPCConnectionOption) ProtocolDriver {
 	return d
 }
 
+func (d *grpcDriver) handleNewConnection(cc *grpc.ClientConn) {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+	if cc != nil {
+		d.metricsClient = colmetricpb.NewMetricsServiceClient(cc)
+		d.tracesClient = coltracepb.NewTraceServiceClient(cc)
+	} else {
+		d.metricsClient = nil
+		d.tracesClient = nil
+	}
+}
+
 func (d *grpcDriver) Start(ctx context.Context) error {
 	d.connection.startConnection(ctx)
 	return nil
@@ -96,9 +73,72 @@ func (d *grpcDriver) Stop(ctx context.Context) error {
 }
 
 func (d *grpcDriver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error {
-	return uploadMetrics(ctx, cps, selector, d.getMetricsClient())
+	if !d.connection.connected() {
+		return errDisconnected
+	}
+	ctx, cancel := d.connection.contextWithStop(ctx)
+	defer cancel()
+
+	rms, err := transform.CheckpointSet(ctx, selector, cps, 1)
+	if err != nil {
+		return err
+	}
+	if len(rms) == 0 {
+		return nil
+	}
+
+	return d.uploadMetrics(ctx, rms)
+}
+
+func (d *grpcDriver) uploadMetrics(ctx context.Context, protoMetrics []*metricpb.ResourceMetrics) error {
+	ctx = d.connection.contextWithMetadata(ctx)
+	err := func() error {
+		d.lock.Lock()
+		defer d.lock.Unlock()
+		if d.metricsClient == nil {
+			return errNoClient
+		}
+		_, err := d.metricsClient.Export(ctx, &colmetricpb.ExportMetricsServiceRequest{
+			ResourceMetrics: protoMetrics,
+		})
+		return err
+	}()
+	if err != nil {
+		d.connection.setStateDisconnected(err)
+	}
+	return err
 }
 
 func (d *grpcDriver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
-	return uploadTraces(ctx, ss, d.getTracesClient())
+	if !d.connection.connected() {
+		return errDisconnected
+	}
+	ctx, cancel := d.connection.contextWithStop(ctx)
+	defer cancel()
+
+	protoSpans := transform.SpanData(ss)
+	if len(protoSpans) == 0 {
+		return nil
+	}
+
+	return d.uploadTraces(ctx, protoSpans)
+}
+
+func (d *grpcDriver) uploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) error {
+	ctx = d.connection.contextWithMetadata(ctx)
+	err := func() error {
+		d.lock.Lock()
+		defer d.lock.Unlock()
+		if d.tracesClient == nil {
+			return errNoClient
+		}
+		_, err := d.tracesClient.Export(ctx, &coltracepb.ExportTraceServiceRequest{
+			ResourceSpans: protoSpans,
+		})
+		return err
+	}()
+	if err != nil {
+		d.connection.setStateDisconnected(err)
+	}
+	return err
 }
