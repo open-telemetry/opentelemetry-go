@@ -22,7 +22,7 @@ import (
 )
 
 // SimpleSpanProcessor is a SpanProcessor that synchronously sends all
-// SpanData to a trace.Exporter when the span finishes.
+// SpanSnapshots to a trace.Exporter when the span finishes.
 type SimpleSpanProcessor struct {
 	e export.SpanExporter
 }
@@ -30,7 +30,7 @@ type SimpleSpanProcessor struct {
 var _ SpanProcessor = (*SimpleSpanProcessor)(nil)
 
 // NewSimpleSpanProcessor returns a new SimpleSpanProcessor that will
-// synchronously send SpanData to the exporter.
+// synchronously send SpanSnapshots to the exporter.
 func NewSimpleSpanProcessor(exporter export.SpanExporter) *SimpleSpanProcessor {
 	ssp := &SimpleSpanProcessor{
 		e: exporter,
@@ -39,13 +39,14 @@ func NewSimpleSpanProcessor(exporter export.SpanExporter) *SimpleSpanProcessor {
 }
 
 // OnStart method does nothing.
-func (ssp *SimpleSpanProcessor) OnStart(parent context.Context, sd *export.SpanData) {
+func (ssp *SimpleSpanProcessor) OnStart(parent context.Context, s ReadWriteSpan) {
 }
 
-// OnEnd method exports SpanData using associated export.
-func (ssp *SimpleSpanProcessor) OnEnd(sd *export.SpanData) {
-	if ssp.e != nil && sd.SpanContext.IsSampled() {
-		if err := ssp.e.ExportSpans(context.Background(), []*export.SpanData{sd}); err != nil {
+// OnEnd method exports a ReadOnlySpan using the associated exporter.
+func (ssp *SimpleSpanProcessor) OnEnd(s ReadOnlySpan) {
+	if ssp.e != nil && s.SpanContext().IsSampled() {
+		ss := s.Snapshot()
+		if err := ssp.e.ExportSpans(context.Background(), []*export.SpanSnapshot{ss}); err != nil {
 			otel.Handle(err)
 		}
 	}
