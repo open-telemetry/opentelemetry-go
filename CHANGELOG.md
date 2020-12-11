@@ -10,11 +10,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- `trace.WithIDGenerator()` `TracerProviderOption`. (#1363)
 - Add the `ReadOnlySpan` and `ReadWriteSpan` interfaces to provide better control for accessing span data. (#1360)
 
 ### Changed
 
+- Zipkin exporter relies on the status code for success rather than body read but still read the response body. (#1328)
 - Move the OpenCensus example into `example` directory. (#1359)
+- Moved the SDK's `internal.IDGenerator` interface in to the `sdk/trace` package to enable support for externally-defined ID generators. (#1363)
 - `NewExporter` and `Start` functions in `go.opentelemetry.io/otel/exporters/otlp` now receive `context.Context` as a first parameter. (#1357)
 - Rename `export.SpanData` to `export.SpanSnapshot` and use it only for exporting spans. (#1360)
 - Store the parent's full `SpanContext` rather than just its span ID in the `span` struct. (#1360)
@@ -23,6 +26,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - Remove `errUninitializedSpan` as its only usage is now obsolete. (#1360)
+
+### Fixed
+
+- Metric SDK `SumObserver` and `UpDownSumObserver` instruments correctness fixes. (#1381)
 
 ## [0.14.0] - 2020-11-19
 

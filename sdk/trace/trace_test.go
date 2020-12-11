@@ -213,7 +213,7 @@ func TestRecordingIsOn(t *testing.T) {
 }
 
 func TestSampling(t *testing.T) {
-	idg := defIDGenerator()
+	idg := defaultIDGenerator()
 	const total = 10000
 	for name, tc := range map[string]struct {
 		sampler       Sampler
@@ -263,9 +263,10 @@ func TestSampling(t *testing.T) {
 			for i := 0; i < total; i++ {
 				ctx := context.Background()
 				if tc.parent {
+					tid, sid := idg.NewIDs(ctx)
 					psc := trace.SpanContext{
-						TraceID: idg.NewTraceID(),
-						SpanID:  idg.NewSpanID(),
+						TraceID: tid,
+						SpanID:  sid,
 					}
 					if tc.sampledParent {
 						psc.TraceFlags = trace.FlagsSampled
@@ -1274,17 +1275,19 @@ func TestReadOnlySpan(t *testing.T) {
 	tr := tp.Tracer("ReadOnlySpan", trace.WithInstrumentationVersion("3"))
 
 	// Initialize parent context.
+	tID, sID := cfg.IDGenerator.NewIDs(context.Background())
 	parent := trace.SpanContext{
-		TraceID:    cfg.IDGenerator.NewTraceID(),
-		SpanID:     cfg.IDGenerator.NewSpanID(),
+		TraceID:    tID,
+		SpanID:     sID,
 		TraceFlags: 0x1,
 	}
 	ctx := trace.ContextWithRemoteSpanContext(context.Background(), parent)
 
 	// Initialize linked context.
+	tID, sID = cfg.IDGenerator.NewIDs(context.Background())
 	linked := trace.SpanContext{
-		TraceID:    cfg.IDGenerator.NewTraceID(),
-		SpanID:     cfg.IDGenerator.NewSpanID(),
+		TraceID:    tID,
+		SpanID:     sID,
 		TraceFlags: 0x1,
 	}
 
@@ -1352,9 +1355,10 @@ func TestReadWriteSpan(t *testing.T) {
 	tr := tp.Tracer("ReadWriteSpan")
 
 	// Initialize parent context.
+	tID, sID := cfg.IDGenerator.NewIDs(context.Background())
 	parent := trace.SpanContext{
-		TraceID:    cfg.IDGenerator.NewTraceID(),
-		SpanID:     cfg.IDGenerator.NewSpanID(),
+		TraceID:    tID,
+		SpanID:     sID,
 		TraceFlags: 0x1,
 	}
 	ctx := trace.ContextWithRemoteSpanContext(context.Background(), parent)

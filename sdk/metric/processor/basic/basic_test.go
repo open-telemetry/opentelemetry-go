@@ -30,7 +30,9 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
+	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -463,4 +465,56 @@ func TestMultiObserverSum(t *testing.T) {
 			}, records.Map())
 		}
 	}
+}
+
+func TestSumObserverEndToEnd(t *testing.T) {
+	ctx := context.Background()
+	eselector := export.CumulativeExportKindSelector()
+	proc := basic.New(
+		processorTest.AggregatorSelector(),
+		eselector,
+	)
+	accum := sdk.NewAccumulator(proc, resource.Empty())
+	meter := metric.WrapMeterImpl(accum, "testing")
+
+	var calls int64
+	metric.Must(meter).NewInt64SumObserver("observer.sum",
+		func(_ context.Context, result metric.Int64ObserverResult) {
+			calls++
+			result.Observe(calls)
+		},
+	)
+	data := proc.CheckpointSet()
+
+	var startTime [3]time.Time
+	var endTime [3]time.Time
+
+	for i := range startTime {
+		data.Lock()
+		proc.StartCollection()
+		accum.Collect(ctx)
+		require.NoError(t, proc.FinishCollection())
+
+		exporter := processortest.NewExporter(eselector, label.DefaultEncoder())
+		require.NoError(t, exporter.Export(ctx, data))
+
+		require.EqualValues(t, map[string]float64{
+			"observer.sum//": float64(i + 1),
+		}, exporter.Values())
+
+		var record export.Record
+		require.NoError(t, data.ForEach(eselector, func(r export.Record) error {
+			record = r
+			return nil
+		}))
+
+		startTime[i] = record.StartTime()
+		endTime[i] = record.EndTime()
+		data.Unlock()
+	}
+
+	require.Equal(t, startTime[0], startTime[1])
+	require.Equal(t, startTime[0], startTime[2])
+	require.True(t, endTime[0].Before(endTime[1]))
+	require.True(t, endTime[1].Before(endTime[2]))
 }

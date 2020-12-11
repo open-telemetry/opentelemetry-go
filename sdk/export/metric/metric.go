@@ -174,6 +174,9 @@ type Aggregator interface {
 	//
 	// This call has no Context argument because it is expected to
 	// perform only computation.
+	//
+	// When called with a nil `destination`, this Aggregator is reset
+	// and the current value is discarded.
 	SynchronizedMove(destination Aggregator, descriptor *metric.Descriptor) error
 
 	// Merge combines the checkpointed state from the argument
