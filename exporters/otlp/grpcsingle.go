@@ -16,6 +16,7 @@ package otlp // import "go.opentelemetry.io/otel/exporters/otlp"
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"google.golang.org/grpc"
@@ -26,7 +27,7 @@ import (
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
-type grpcSingleConnectionDriver struct {
+type grpcDriver struct {
 	connection *grpcConnection
 
 	lock          sync.Mutex
@@ -34,7 +35,7 @@ type grpcSingleConnectionDriver struct {
 	tracesClient  coltracepb.TraceServiceClient
 }
 
-func (d *grpcSingleConnectionDriver) getMetricsClient() grpcMetricsClient {
+func (d *grpcDriver) getMetricsClient() grpcMetricsClient {
 	d.lock.Lock()
 	client := d.metricsClient
 	d.lock.Unlock()
@@ -47,7 +48,7 @@ func (d *grpcSingleConnectionDriver) getMetricsClient() grpcMetricsClient {
 	}
 }
 
-func (d *grpcSingleConnectionDriver) getTracesClient() grpcTracesClient {
+func (d *grpcDriver) getTracesClient() grpcTracesClient {
 	d.lock.Lock()
 	client := d.tracesClient
 	d.lock.Unlock()
@@ -60,7 +61,7 @@ func (d *grpcSingleConnectionDriver) getTracesClient() grpcTracesClient {
 	}
 }
 
-func (d *grpcSingleConnectionDriver) handleNewConnection(cc *grpc.ClientConn) {
+func (d *grpcDriver) handleNewConnection(cc *grpc.ClientConn) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 	if cc != nil {
@@ -72,25 +73,32 @@ func (d *grpcSingleConnectionDriver) handleNewConnection(cc *grpc.ClientConn) {
 	}
 }
 
-func NewGRPCSingleConnectionDriver(cfg GRPCConnectionConfig) ProtocolDriver {
-	d := &grpcSingleConnectionDriver{}
+func NewGRPCDriver(opts ...GRPCConnectionOption) ProtocolDriver {
+	cfg := grpcConnectionConfig{
+		collectorAddr:     fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorPort),
+		grpcServiceConfig: DefaultGRPCServiceConfig,
+	}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+	d := &grpcDriver{}
 	d.connection = newGRPCConnection(cfg, d.handleNewConnection)
 	return d
 }
 
-func (d *grpcSingleConnectionDriver) Start(ctx context.Context) error {
+func (d *grpcDriver) Start(ctx context.Context) error {
 	d.connection.startConnection(ctx)
 	return nil
 }
 
-func (d *grpcSingleConnectionDriver) Stop(ctx context.Context) error {
+func (d *grpcDriver) Stop(ctx context.Context) error {
 	return d.connection.shutdown(ctx)
 }
 
-func (d *grpcSingleConnectionDriver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error {
+func (d *grpcDriver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error {
 	return uploadMetrics(ctx, cps, selector, d.getMetricsClient())
 }
 
-func (d *grpcSingleConnectionDriver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
+func (d *grpcDriver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
 	return uploadTraces(ctx, ss, d.getTracesClient())
 }

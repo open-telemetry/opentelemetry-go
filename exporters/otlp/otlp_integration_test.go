@@ -89,8 +89,7 @@ func newGRPCExporter(t *testing.T, ctx context.Context, address string, addition
 	}
 
 	opts = append(opts, additionalOpts...)
-	config := otlp.GRPCConnectionConfig{}.Apply(opts...)
-	driver := otlp.NewGRPCSingleConnectionDriver(config)
+	driver := otlp.NewGRPCDriver(opts...)
 	exp, err := otlp.NewExporter(ctx, driver)
 	if err != nil {
 		t.Fatalf("failed to create a new collector exporter: %v", err)

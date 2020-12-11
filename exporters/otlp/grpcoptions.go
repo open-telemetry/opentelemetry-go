@@ -60,36 +60,24 @@ const (
 }`
 )
 
-type GRPCConnectionConfig struct {
-	canDialInsecure             bool
-	collectorAddr               string
-	compressor                  string
-	reconnectionPeriod          time.Duration
-	grpcServiceConfig           string
-	grpcServiceConfigOverridden bool
-	grpcDialOptions             []grpc.DialOption
-	headers                     map[string]string
-	clientCredentials           credentials.TransportCredentials
+type grpcConnectionConfig struct {
+	canDialInsecure    bool
+	collectorAddr      string
+	compressor         string
+	reconnectionPeriod time.Duration
+	grpcServiceConfig  string
+	grpcDialOptions    []grpc.DialOption
+	headers            map[string]string
+	clientCredentials  credentials.TransportCredentials
 }
 
-type GRPCConnectionOption func(cfg *GRPCConnectionConfig)
-
-func (cfg GRPCConnectionConfig) Apply(opts ...GRPCConnectionOption) GRPCConnectionConfig {
-	cfg.ApplyInPlace(opts...)
-	return cfg
-}
-
-func (cfg *GRPCConnectionConfig) ApplyInPlace(opts ...GRPCConnectionOption) {
-	for _, opt := range opts {
-		opt(cfg)
-	}
-}
+type GRPCConnectionOption func(cfg *grpcConnectionConfig)
 
 // WithInsecure disables client transport security for the exporter's gRPC connection
 // just like grpc.WithInsecure() https://pkg.go.dev/google.golang.org/grpc#WithInsecure
 // does. Note, by default, client security is required unless WithInsecure is used.
 func WithInsecure() GRPCConnectionOption {
-	return func(cfg *GRPCConnectionConfig) {
+	return func(cfg *grpcConnectionConfig) {
 		cfg.canDialInsecure = true
 	}
 }
@@ -98,7 +86,7 @@ func WithInsecure() GRPCConnectionOption {
 // connect to the collector on. If unset, it will instead try to use
 // connect to DefaultCollectorHost:DefaultCollectorPort.
 func WithAddress(addr string) GRPCConnectionOption {
-	return func(cfg *GRPCConnectionConfig) {
+	return func(cfg *grpcConnectionConfig) {
 		cfg.collectorAddr = addr
 	}
 }
@@ -106,7 +94,7 @@ func WithAddress(addr string) GRPCConnectionOption {
 // WithReconnectionPeriod allows one to set the delay between next connection attempt
 // after failing to connect with the collector.
 func WithReconnectionPeriod(rp time.Duration) GRPCConnectionOption {
-	return func(cfg *GRPCConnectionConfig) {
+	return func(cfg *grpcConnectionConfig) {
 		cfg.reconnectionPeriod = rp
 	}
 }
@@ -117,14 +105,14 @@ func WithReconnectionPeriod(rp time.Duration) GRPCConnectionOption {
 // compressors auto-register on import, such as gzip, which can be registered by calling
 // `import _ "google.golang.org/grpc/encoding/gzip"`
 func WithCompressor(compressor string) GRPCConnectionOption {
-	return func(cfg *GRPCConnectionConfig) {
+	return func(cfg *grpcConnectionConfig) {
 		cfg.compressor = compressor
 	}
 }
 
 // WithHeaders will send the provided headers with gRPC requests
 func WithHeaders(headers map[string]string) GRPCConnectionOption {
-	return func(cfg *GRPCConnectionConfig) {
+	return func(cfg *grpcConnectionConfig) {
 		cfg.headers = headers
 	}
 }
@@ -135,16 +123,15 @@ func WithHeaders(headers map[string]string) GRPCConnectionOption {
 // these credentials can be done in many ways e.g. plain file, in code tls.Config
 // or by certificate rotation, so it is up to the caller to decide what to use.
 func WithTLSCredentials(creds credentials.TransportCredentials) GRPCConnectionOption {
-	return func(cfg *GRPCConnectionConfig) {
+	return func(cfg *grpcConnectionConfig) {
 		cfg.clientCredentials = creds
 	}
 }
 
 // WithGRPCServiceConfig defines the default gRPC service config used.
 func WithGRPCServiceConfig(serviceConfig string) GRPCConnectionOption {
-	return func(cfg *GRPCConnectionConfig) {
+	return func(cfg *grpcConnectionConfig) {
 		cfg.grpcServiceConfig = serviceConfig
-		cfg.grpcServiceConfigOverridden = true
 	}
 }
 
@@ -152,7 +139,7 @@ func WithGRPCServiceConfig(serviceConfig string) GRPCConnectionOption {
 // with some other configuration the GRPC specified via the collector the ones here will
 // take preference since they are set last.
 func WithGRPCDialOption(opts ...grpc.DialOption) GRPCConnectionOption {
-	return func(cfg *GRPCConnectionConfig) {
+	return func(cfg *grpcConnectionConfig) {
 		cfg.grpcDialOptions = opts
 	}
 }

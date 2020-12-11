@@ -16,7 +16,6 @@ package otlp // import "go.opentelemetry.io/otel/exporters/otlp"
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"sync"
 	"sync/atomic"
@@ -37,7 +36,7 @@ type grpcConnection struct {
 	cc *grpc.ClientConn
 
 	// these fields are read-only after constructor is finished
-	c                    GRPCConnectionConfig
+	c                    grpcConnectionConfig
 	metadata             metadata.MD
 	newConnectionHandler func(cc *grpc.ClientConn)
 
@@ -52,15 +51,9 @@ type grpcConnection struct {
 	closeBackgroundConnectionDoneCh func(ch chan struct{})
 }
 
-func newGRPCConnection(c GRPCConnectionConfig, handler func(cc *grpc.ClientConn)) *grpcConnection {
+func newGRPCConnection(c grpcConnectionConfig, handler func(cc *grpc.ClientConn)) *grpcConnection {
 	conn := new(grpcConnection)
 	conn.newConnectionHandler = handler
-	if c.collectorAddr == "" {
-		c.collectorAddr = fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorPort)
-	}
-	if c.grpcServiceConfig == "" && !c.grpcServiceConfigOverridden {
-		c.grpcServiceConfig = DefaultGRPCServiceConfig
-	}
 	conn.c = c
 	if len(conn.c.headers) > 0 {
 		conn.metadata = metadata.New(conn.c.headers)
