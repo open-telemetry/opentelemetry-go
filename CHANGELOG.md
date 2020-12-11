@@ -19,6 +19,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `NewExporter` and `Start` functions in `go.opentelemetry.io/otel/exporters/otlp` now receive `context.Context` as a first parameter. (#1357)
 - Zipkin exporter relies on the status code for success rather than body read but still read the response body. (#1328)
 
+### Fixed
+
+- Metric SDK `SumObserver` and `UpDownSumObserver` instruments correctness fixes. (#1381)
+
 ## [0.14.0] - 2020-11-19
 
 ### Added
