@@ -73,7 +73,7 @@ func TestContextSpan(t *testing.T) {
 func TestContextRemoteSpanContext(t *testing.T) {
 	ctx := context.Background()
 	got, empty := RemoteSpanContextFromContext(ctx), SpanContext{}
-	if !got.IsEqualWith(empty) {
+	if !assertSpanContextEqual(got, empty) {
 		t.Errorf("RemoteSpanContextFromContext returned %v from an empty context, want %v", got, empty)
 	}
 
@@ -81,11 +81,11 @@ func TestContextRemoteSpanContext(t *testing.T) {
 	ctx = ContextWithRemoteSpanContext(ctx, want)
 	if got, ok := ctx.Value(remoteContextKey).(SpanContext); !ok {
 		t.Errorf("failed to set SpanContext with %#v", want)
-	} else if !got.IsEqualWith(want) {
+	} else if !assertSpanContextEqual(got, want) {
 		t.Errorf("got %#v from context with remote set, want %#v", got, want)
 	}
 
-	if got := RemoteSpanContextFromContext(ctx); !got.IsEqualWith(want) {
+	if got := RemoteSpanContextFromContext(ctx); !assertSpanContextEqual(got, want) {
 		t.Errorf("RemoteSpanContextFromContext returned %v from a set context, want %v", got, want)
 	}
 
@@ -93,12 +93,12 @@ func TestContextRemoteSpanContext(t *testing.T) {
 	ctx = ContextWithRemoteSpanContext(ctx, want)
 	if got, ok := ctx.Value(remoteContextKey).(SpanContext); !ok {
 		t.Errorf("failed to set SpanContext with %#v", want)
-	} else if !got.IsEqualWith(want) {
+	} else if !assertSpanContextEqual(got, want) {
 		t.Errorf("got %#v from context with remote set, want %#v", got, want)
 	}
 
 	got = RemoteSpanContextFromContext(ctx)
-	if !got.IsEqualWith(want) {
+	if !assertSpanContextEqual(got, want) {
 		t.Errorf("RemoteSpanContextFromContext returned %v from a set context, want %v", got, want)
 	}
 }
@@ -280,69 +280,6 @@ func TestSpanContextIsSampled(t *testing.T) {
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
 			}
-		})
-	}
-}
-
-func TestIsEqualWith(t *testing.T) {
-	testCases := []struct {
-		name     string
-		sc1      SpanContext
-		sc2      SpanContext
-		expected bool
-	}{
-		{
-			name: "OK case",
-			sc1: SpanContext{
-				TraceID:    [16]byte{1},
-				SpanID:     [8]byte{2},
-				TraceFlags: FlagsSampled,
-				TraceState: TraceState{},
-			},
-			sc2: SpanContext{
-				TraceID:    [16]byte{1},
-				SpanID:     [8]byte{2},
-				TraceFlags: FlagsSampled,
-				TraceState: TraceState{},
-			},
-			expected: true,
-		},
-		{
-			name: "Different SpanID",
-			sc1: SpanContext{
-				TraceID:    [16]byte{1},
-				SpanID:     [8]byte{2},
-				TraceFlags: FlagsSampled,
-				TraceState: TraceState{},
-			},
-			sc2: SpanContext{
-				TraceID:    [16]byte{1},
-				SpanID:     [8]byte{42},
-				TraceFlags: FlagsSampled,
-				TraceState: TraceState{},
-			},
-			expected: false,
-		},
-		{
-			name: "Different TraceState",
-			sc1: SpanContext{
-
-				TraceFlags: FlagsSampled,
-				TraceState: TraceState{kvsWithMaxMembers},
-			},
-			sc2: SpanContext{
-				TraceID:    [16]byte{1},
-				SpanID:     [8]byte{2},
-				TraceFlags: FlagsSampled,
-				TraceState: TraceState{},
-			},
-			expected: false,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expected, tc.sc1.IsEqualWith(tc.sc2))
 		})
 	}
 }
@@ -533,50 +470,6 @@ func TestTraceStateString(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			assert.Equal(t, tc.expectedStr, tc.traceState.String())
-		})
-	}
-}
-
-func TestTraceStateIsEqualWith(t *testing.T) {
-	testCases := []struct {
-		name     string
-		ts1      TraceState
-		ts2      TraceState
-		expected bool
-	}{
-		{
-			name:     "OK case",
-			ts1:      TraceState{kvsWithMaxMembers},
-			ts2:      TraceState{kvsWithMaxMembers},
-			expected: true,
-		},
-		{
-			name:     "Not same length",
-			ts1:      TraceState{kvsWithMaxMembers},
-			ts2:      TraceState{},
-			expected: false,
-		},
-		{
-			name: "Not same members",
-			ts1: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key1", "val1"),
-					label.String("key2", "val2"),
-				},
-			},
-			ts2: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key1", "val1"),
-					label.String("key9", "val9"),
-				},
-			},
-			expected: false,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expected, tc.ts1.IsEqualWith(tc.ts2))
 		})
 	}
 }
@@ -839,6 +732,27 @@ func TestTraceStateFromKeyValues(t *testing.T) {
 		})
 	}
 
+}
+
+func assertSpanContextEqual(got SpanContext, want SpanContext) bool {
+	return got.SpanID == want.SpanID &&
+		got.TraceID == want.TraceID &&
+		got.TraceFlags == want.TraceFlags &&
+		assertTraceStateEqual(got.TraceState, want.TraceState)
+}
+
+func assertTraceStateEqual(got TraceState, want TraceState) bool {
+	if len(got.kvs) != len(want.kvs) {
+		return false
+	}
+
+	for i, kv := range got.kvs {
+		if kv != want.kvs[i] {
+			return false
+		}
+	}
+
+	return true
 }
 
 var kvsWithMaxMembers = func() []label.KeyValue {

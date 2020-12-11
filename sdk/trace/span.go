@@ -314,7 +314,10 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 
 	cfg := tr.provider.config.Load().(*Config)
 
-	if parent.IsEqualWith(emptySpanContext) {
+	if parent.SpanID == emptySpanContext.SpanID &&
+		parent.TraceID == emptySpanContext.TraceID &&
+		parent.TraceFlags == emptySpanContext.TraceFlags &&
+		parent.TraceState.IsEmpty() {
 		// Generate both TraceID and SpanID
 		span.spanContext.TraceID, span.spanContext.SpanID = cfg.IDGenerator.NewIDs(ctx)
 		noParent = true

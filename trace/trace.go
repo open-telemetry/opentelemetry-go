@@ -53,7 +53,7 @@ const (
 	traceStateMaxListMembers = 32
 
 	errInvalidTraceStateKeyValue errorConst = "provided key or value is not valid according to the" +
-		"W3C Trace Context specification"
+		" W3C Trace Context specification"
 	errInvalidTraceStateMembersNumber errorConst = "trace state would exceed the maximum limit of members (32)"
 	errInvalidTraceStateDuplicate     errorConst = "trace state key/value pairs with duplicate keys provided"
 )
@@ -182,6 +182,8 @@ func decodeHex(h string, b []byte) error {
 // Trace state must be valid according to the W3C Trace Context specification at all times. All
 // mutating operations validate their input and, in case of valid parameters, return a new TraceState.
 type TraceState struct { //nolint:golint
+	// TODO @matej-g: Consider implementing this as label.Set, see
+	// comment https://github.com/open-telemetry/opentelemetry-go/pull/1340#discussion_r540599226
 	kvs []label.KeyValue
 }
 
@@ -212,22 +214,6 @@ func (ts TraceState) String() string {
 	}
 
 	return sb.String()
-}
-
-// IsEqualWith returns true if entries of both trace states
-// are the same.
-func (ts TraceState) IsEqualWith(compare TraceState) bool {
-	if len(ts.kvs) != len(compare.kvs) {
-		return false
-	}
-
-	for i, kv := range ts.kvs {
-		if kv != compare.kvs[i] {
-			return false
-		}
-	}
-
-	return true
 }
 
 // Get returns a value for given key from the trace state.
@@ -367,14 +353,6 @@ func (sc SpanContext) IsDebug() bool {
 // IsSampled returns if the sampling bit is set in the trace flags.
 func (sc SpanContext) IsSampled() bool {
 	return sc.TraceFlags&FlagsSampled == FlagsSampled
-}
-
-// IsEqualWith returns true if both span contexts have equal values.
-func (sc SpanContext) IsEqualWith(compare SpanContext) bool {
-	return sc.SpanID == compare.SpanID &&
-		sc.TraceID == compare.TraceID &&
-		sc.TraceFlags == compare.TraceFlags &&
-		sc.TraceState.IsEqualWith(compare.TraceState)
 }
 
 type traceContextKeyType int
