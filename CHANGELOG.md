@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the `ReadOnlySpan` and `ReadWriteSpan` interfaces to provide better control for accessing span data. (#1360)
-- `NewGRPCSingleConnectionDriver` function returns a `ProtocolDriver` that maintains a single connection to the collector. (#1369)
+- `NewGRPCDriver` function returns a `ProtocolDriver` that maintains a single gRPC connection to the collector. (#1369)
 
 ### Changed
 
@@ -21,7 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Migrated CI/CD from CircleCI to GitHub Actions (#1382)
 - Remove duplicate checkout from GitHub Actions workflow (#1407)
 - `NewExporter` from `exporters/otlp` now takes a `ProtocolDriver` as a parameter. (#1369)
-- Many OTLP Exporter options became GRPC ProtocolDriver options. (#1369)
+- Many OTLP Exporter options became gRPC ProtocolDriver options. (#1369)
 
 ### Removed
 
