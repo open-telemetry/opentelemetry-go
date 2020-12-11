@@ -102,6 +102,7 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 	}
 
 	innerCtx, innerCancel := context.WithTimeout(ctx, time.Microsecond)
+	<-time.After(time.Second)
 	if err := e.Shutdown(innerCtx); err == nil {
 		t.Error("expected context DeadlineExceeded error, got nil")
 	} else if !errors.Is(err, context.DeadlineExceeded) {
