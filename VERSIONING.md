@@ -33,7 +33,7 @@ is designed so the following goals can be achieved.
       > Major version zero (0.y.z) is for initial development. Anything MAY
       > change at any time. The public API SHOULD NOT be considered stable.
 
-    * Mature modules that we guarantee a stable public API will be versioned
+    * Mature modules for which we guarantee a stable public API will be versioned
       with a major version greater than `v0`.
     * Experimental modules will start their versioning at `v0.0.0` and will
       increment their minor version when backwards incompatible changes are
@@ -84,7 +84,7 @@ is designed so the following goals can be achieved.
       > Major version zero (0.y.z) is for initial development. Anything MAY
       > change at any time. The public API SHOULD NOT be considered stable.
 
-    * Mature modules that we guarantee a stable public API and telemetry will
+    * Mature modules for which we guarantee a stable public API and telemetry will
       be versioned with a major version greater than `v0`.
     * Experimental modules will start their versioning at `v0.0.0` and will
       increment their minor version when backwards incompatible changes are
