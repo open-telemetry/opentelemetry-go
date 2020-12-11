@@ -16,16 +16,20 @@ package aggregatortest // import "go.opentelemetry.io/otel/sdk/metric/aggregator
 
 import (
 	"context"
+	"errors"
 	"math/rand"
 	"os"
 	"sort"
 	"testing"
 	"unsafe"
 
+	"github.com/stretchr/testify/require"
+
 	ottest "go.opentelemetry.io/otel/internal/testing"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
@@ -35,6 +39,12 @@ type Profile struct {
 	NumberKind number.Kind
 	Random     func(sign int) number.Number
 }
+
+type NoopAggregator struct{}
+type NoopAggregation struct{}
+
+var _ export.Aggregator = NoopAggregator{}
+var _ aggregation.Aggregation = NoopAggregation{}
 
 func newProfiles() []Profile {
 	rnd := rand.New(rand.NewSource(rand.Int63()))
@@ -171,4 +181,112 @@ func CheckedMerge(t *testing.T, aggInto, aggFrom export.Aggregator, descriptor *
 	if err := aggInto.Merge(aggFrom, descriptor); err != nil {
 		t.Error("Unexpected Merge failure", err)
 	}
+}
+
+func (NoopAggregation) Kind() aggregation.Kind {
+	return aggregation.Kind("Noop")
+}
+
+func (NoopAggregator) Aggregation() aggregation.Aggregation {
+	return NoopAggregation{}
+}
+
+func (NoopAggregator) Update(context.Context, number.Number, *metric.Descriptor) error {
+	return nil
+}
+
+func (NoopAggregator) SynchronizedMove(export.Aggregator, *metric.Descriptor) error {
+	return nil
+}
+
+func (NoopAggregator) Merge(export.Aggregator, *metric.Descriptor) error {
+	return nil
+}
+
+func SynchronizedMoveResetTest(t *testing.T, mkind metric.InstrumentKind, nf func(*metric.Descriptor) export.Aggregator) {
+	t.Run("reset on nil", func(t *testing.T) {
+		// Ensures that SynchronizedMove(nil, descriptor) discards and
+		// resets the aggregator.
+		RunProfiles(t, func(t *testing.T, profile Profile) {
+			descriptor := NewAggregatorTest(
+				mkind,
+				profile.NumberKind,
+			)
+			agg := nf(descriptor)
+
+			for i := 0; i < 10; i++ {
+				x1 := profile.Random(+1)
+				CheckedUpdate(t, agg, x1, descriptor)
+			}
+
+			require.NoError(t, agg.SynchronizedMove(nil, descriptor))
+
+			if count, ok := agg.(aggregation.Count); ok {
+				c, err := count.Count()
+				require.Equal(t, int64(0), c)
+				require.NoError(t, err)
+			}
+
+			if sum, ok := agg.(aggregation.Sum); ok {
+				s, err := sum.Sum()
+				require.Equal(t, number.Number(0), s)
+				require.NoError(t, err)
+			}
+
+			if lv, ok := agg.(aggregation.LastValue); ok {
+				v, _, err := lv.LastValue()
+				require.Equal(t, number.Number(0), v)
+				require.Error(t, err)
+				require.True(t, errors.Is(err, aggregation.ErrNoData))
+			}
+		})
+	})
+
+	t.Run("no reset on incorrect type", func(t *testing.T) {
+		// Ensures that SynchronizedMove(wrong_type, descriptor) does not
+		// reset the aggregator.
+		RunProfiles(t, func(t *testing.T, profile Profile) {
+			descriptor := NewAggregatorTest(
+				mkind,
+				profile.NumberKind,
+			)
+			agg := nf(descriptor)
+
+			var input number.Number
+			const inval = 100
+			if profile.NumberKind == number.Int64Kind {
+				input = number.NewInt64Number(inval)
+			} else {
+				input = number.NewFloat64Number(inval)
+			}
+
+			CheckedUpdate(t, agg, input, descriptor)
+
+			err := agg.SynchronizedMove(NoopAggregator{}, descriptor)
+			require.Error(t, err)
+			require.True(t, errors.Is(err, aggregation.ErrInconsistentType))
+
+			// Test that the aggregator was not reset
+
+			if count, ok := agg.(aggregation.Count); ok {
+				c, err := count.Count()
+				require.Equal(t, int64(1), c)
+				require.NoError(t, err)
+			}
+
+			if sum, ok := agg.(aggregation.Sum); ok {
+				s, err := sum.Sum()
+				require.Equal(t, input, s)
+				require.NoError(t, err)
+			}
+
+			if lv, ok := agg.(aggregation.LastValue); ok {
+				v, _, err := lv.LastValue()
+				require.Equal(t, input, v)
+				require.NoError(t, err)
+			}
+
+		})
+	})
+
 }

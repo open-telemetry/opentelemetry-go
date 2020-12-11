@@ -200,7 +200,7 @@ func TestSpanData(t *testing.T) {
 	startTime := time.Unix(1585674086, 1234)
 	endTime := startTime.Add(10 * time.Second)
 	traceState, _ := trace.TraceStateFromKeyValues(label.String("key1", "val1"), label.String("key2", "val2"))
-	spanData := &export.SpanData{
+	spanData := &export.SpanSnapshot{
 		SpanContext: trace.SpanContext{
 			TraceID:    trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
 			SpanID:     trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
@@ -282,7 +282,7 @@ func TestSpanData(t *testing.T) {
 		DroppedLinksCount:      3,
 	}
 
-	got := SpanData([]*export.SpanData{spanData})
+	got := SpanData([]*export.SpanSnapshot{spanData})
 	require.Len(t, got, 1)
 
 	assert.Equal(t, got[0].GetResource(), Resource(spanData.Resource))
@@ -299,7 +299,7 @@ func TestSpanData(t *testing.T) {
 
 // Empty parent span ID should be treated as root span.
 func TestRootSpanData(t *testing.T) {
-	sd := SpanData([]*export.SpanData{{}})
+	sd := SpanData([]*export.SpanSnapshot{{}})
 	require.Len(t, sd, 1)
 	rs := sd[0]
 	got := rs.GetInstrumentationLibrarySpans()[0].GetSpans()[0].GetParentSpanId()
@@ -309,5 +309,5 @@ func TestRootSpanData(t *testing.T) {
 }
 
 func TestSpanDataNilResource(t *testing.T) {
-	assert.NotPanics(t, func() { SpanData([]*export.SpanData{{}}) })
+	assert.NotPanics(t, func() { SpanData([]*export.SpanSnapshot{{}}) })
 }

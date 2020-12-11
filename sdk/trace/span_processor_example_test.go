@@ -18,7 +18,6 @@ import (
 	"context"
 	"time"
 
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/export/trace/tracetest"
 )
 
@@ -34,21 +33,21 @@ type DurationFilter struct {
 	Max time.Duration
 }
 
-func (f DurationFilter) OnStart(parent context.Context, sd *export.SpanData) {
-	f.Next.OnStart(parent, sd)
+func (f DurationFilter) OnStart(parent context.Context, s ReadWriteSpan) {
+	f.Next.OnStart(parent, s)
 }
 func (f DurationFilter) Shutdown(ctx context.Context) error { return f.Next.Shutdown(ctx) }
 func (f DurationFilter) ForceFlush()                        { f.Next.ForceFlush() }
-func (f DurationFilter) OnEnd(sd *export.SpanData) {
-	if f.Min > 0 && sd.EndTime.Sub(sd.StartTime) < f.Min {
+func (f DurationFilter) OnEnd(s ReadOnlySpan) {
+	if f.Min > 0 && s.EndTime().Sub(s.StartTime()) < f.Min {
 		// Drop short lived spans.
 		return
 	}
-	if f.Max > 0 && sd.EndTime.Sub(sd.StartTime) > f.Max {
+	if f.Max > 0 && s.EndTime().Sub(s.StartTime()) > f.Max {
 		// Drop long lived spans.
 		return
 	}
-	f.Next.OnEnd(sd)
+	f.Next.OnEnd(s)
 }
 
 // InstrumentationBlacklist is a SpanProcessor that drops all spans from
@@ -62,17 +61,17 @@ type InstrumentationBlacklist struct {
 	Blacklist map[string]bool
 }
 
-func (f InstrumentationBlacklist) OnStart(parent context.Context, sd *export.SpanData) {
-	f.Next.OnStart(parent, sd)
+func (f InstrumentationBlacklist) OnStart(parent context.Context, s ReadWriteSpan) {
+	f.Next.OnStart(parent, s)
 }
 func (f InstrumentationBlacklist) Shutdown(ctx context.Context) error { return f.Next.Shutdown(ctx) }
 func (f InstrumentationBlacklist) ForceFlush()                        { f.Next.ForceFlush() }
-func (f InstrumentationBlacklist) OnEnd(sd *export.SpanData) {
-	if f.Blacklist != nil && f.Blacklist[sd.InstrumentationLibrary.Name] {
+func (f InstrumentationBlacklist) OnEnd(s ReadOnlySpan) {
+	if f.Blacklist != nil && f.Blacklist[s.InstrumentationLibrary().Name] {
 		// Drop spans from this instrumentation
 		return
 	}
-	f.Next.OnEnd(sd)
+	f.Next.OnEnd(s)
 }
 
 func ExampleSpanProcessor() {

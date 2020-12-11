@@ -118,13 +118,18 @@ func (c *Aggregator) Histogram() (aggregation.Buckets, error) {
 // other.
 func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
-	if o == nil {
+
+	if oa != nil && o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)
 	}
 
 	c.lock.Lock()
-	o.state, c.state = c.state, emptyState(c.boundaries)
+	if o != nil {
+		o.state = c.state
+	}
+	c.state = emptyState(c.boundaries)
 	c.lock.Unlock()
+
 	return nil
 }
 

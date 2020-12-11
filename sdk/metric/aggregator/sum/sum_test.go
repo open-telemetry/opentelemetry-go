@@ -24,6 +24,7 @@ import (
 	ottest "go.opentelemetry.io/otel/internal/testing"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 )
 
@@ -140,4 +141,14 @@ func TestCounterMerge(t *testing.T) {
 		require.Equal(t, sum, asum, "Same sum - monotonic")
 		require.Nil(t, err)
 	})
+}
+
+func TestSynchronizedMoveReset(t *testing.T) {
+	aggregatortest.SynchronizedMoveResetTest(
+		t,
+		metric.SumObserverInstrumentKind,
+		func(desc *metric.Descriptor) export.Aggregator {
+			return &New(1)[0]
+		},
+	)
 }
