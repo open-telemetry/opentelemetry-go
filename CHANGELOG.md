@@ -8,16 +8,21 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.15.0] - 2020-12-10
+
 ### Added
 
-- `trace.WithIDGenerator()` `TracerProviderOption`. (#1363)
+- The `WithIDGenerator` `TracerProviderOption` is added to the `go.opentelemetry.io/otel/trace` package to configure an `IDGenerator` for the `TracerProvider`. (#1363)
 
 ### Changed
 
+- The Zipkin exporter now uses the Span status code to determine. (#1328)
+- `NewExporter` and `Start` functions in `go.opentelemetry.io/otel/exporters/otlp` now receive `context.Context` as a first parameter. (#1357)
 - Move the OpenCensus example into `example` directory. (#1359)
 - Moved the SDK's `internal.IDGenerator` interface in to the `sdk/trace` package to enable support for externally-defined ID generators. (#1363)
-- `NewExporter` and `Start` functions in `go.opentelemetry.io/otel/exporters/otlp` now receive `context.Context` as a first parameter. (#1357)
-- Zipkin exporter relies on the status code for success rather than body read but still read the response body. (#1328)
+- Bump `github.com/google/go-cmp` from 0.5.3 to 0.5.4 (#1374)
+- Bump `github.com/golangci/golangci-lint` in `/internal/tools` (#1375)
+
 
 ### Fixed
 
@@ -975,7 +980,8 @@ It contains api and sdk for trace and meter.
 - CODEOWNERS file to track owners of this project.
 
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.15.0
 [0.14.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.14.0
 [0.13.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.13.0
 [0.12.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.12.0
