@@ -210,8 +210,8 @@ type Exporter struct {
 
 var _ export.SpanExporter = (*Exporter)(nil)
 
-// ExportSpans exports SpanData to Jaeger.
-func (e *Exporter) ExportSpans(ctx context.Context, spans []*export.SpanData) error {
+// ExportSpans exports SpanSnapshots to Jaeger.
+func (e *Exporter) ExportSpans(ctx context.Context, ss []*export.SpanSnapshot) error {
 	e.stoppedMu.RLock()
 	stopped := e.stopped
 	e.stoppedMu.RUnlock()
@@ -219,9 +219,9 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []*export.SpanData) er
 		return nil
 	}
 
-	for _, span := range spans {
+	for _, span := range ss {
 		// TODO(jbd): Handle oversized bundlers.
-		err := e.bundler.Add(spanDataToThrift(span), 1)
+		err := e.bundler.Add(spanSnapshotToThrift(span), 1)
 		if err != nil {
 			return fmt.Errorf("failed to bundle %q: %w", span.Name, err)
 		}
@@ -260,9 +260,9 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func spanDataToThrift(data *export.SpanData) *gen.Span {
-	tags := make([]*gen.Tag, 0, len(data.Attributes))
-	for _, kv := range data.Attributes {
+func spanSnapshotToThrift(ss *export.SpanSnapshot) *gen.Span {
+	tags := make([]*gen.Tag, 0, len(ss.Attributes))
+	for _, kv := range ss.Attributes {
 		tag := keyValueToTag(kv)
 		if tag != nil {
 			tags = append(tags, tag)
@@ -273,14 +273,14 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 	// semantic. Should resources be appended before span
 	// attributes, above, to allow span attributes to
 	// overwrite resource attributes?
-	if data.Resource != nil {
-		for iter := data.Resource.Iter(); iter.Next(); {
+	if ss.Resource != nil {
+		for iter := ss.Resource.Iter(); iter.Next(); {
 			if tag := keyValueToTag(iter.Attribute()); tag != nil {
 				tags = append(tags, tag)
 			}
 		}
 	}
-	if il := data.InstrumentationLibrary; il.Name != "" {
+	if il := ss.InstrumentationLibrary; il.Name != "" {
 		tags = append(tags, getStringTag(keyInstrumentationLibraryName, il.Name))
 		if il.Version != "" {
 			tags = append(tags, getStringTag(keyInstrumentationLibraryVersion, il.Version))
@@ -288,19 +288,19 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 	}
 
 	tags = append(tags,
-		getInt64Tag("status.code", int64(data.StatusCode)),
-		getStringTag("status.message", data.StatusMessage),
-		getStringTag("span.kind", data.SpanKind.String()),
+		getInt64Tag("status.code", int64(ss.StatusCode)),
+		getStringTag("status.message", ss.StatusMessage),
+		getStringTag("span.kind", ss.SpanKind.String()),
 	)
 
 	// Ensure that if Status.Code is not OK, that we set the "error" tag on the Jaeger span.
 	// See Issue https://github.com/census-instrumentation/opencensus-go/issues/1041
-	if data.StatusCode != codes.Ok && data.StatusCode != codes.Unset {
+	if ss.StatusCode != codes.Ok && ss.StatusCode != codes.Unset {
 		tags = append(tags, getBoolTag("error", true))
 	}
 
 	var logs []*gen.Log
-	for _, a := range data.MessageEvents {
+	for _, a := range ss.MessageEvents {
 		fields := make([]*gen.Tag, 0, len(a.Attributes))
 		for _, kv := range a.Attributes {
 			tag := keyValueToTag(kv)
@@ -316,7 +316,7 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 	}
 
 	var refs []*gen.SpanRef
-	for _, link := range data.Links {
+	for _, link := range ss.Links {
 		refs = append(refs, &gen.SpanRef{
 			TraceIdHigh: int64(binary.BigEndian.Uint64(link.TraceID[0:8])),
 			TraceIdLow:  int64(binary.BigEndian.Uint64(link.TraceID[8:16])),
@@ -328,14 +328,14 @@ func spanDataToThrift(data *export.SpanData) *gen.Span {
 	}
 
 	return &gen.Span{
-		TraceIdHigh:   int64(binary.BigEndian.Uint64(data.SpanContext.TraceID[0:8])),
-		TraceIdLow:    int64(binary.BigEndian.Uint64(data.SpanContext.TraceID[8:16])),
-		SpanId:        int64(binary.BigEndian.Uint64(data.SpanContext.SpanID[:])),
-		ParentSpanId:  int64(binary.BigEndian.Uint64(data.ParentSpanID[:])),
-		OperationName: data.Name, // TODO: if span kind is added then add prefix "Sent"/"Recv"
-		Flags:         int32(data.SpanContext.TraceFlags),
-		StartTime:     data.StartTime.UnixNano() / 1000,
-		Duration:      data.EndTime.Sub(data.StartTime).Nanoseconds() / 1000,
+		TraceIdHigh:   int64(binary.BigEndian.Uint64(ss.SpanContext.TraceID[0:8])),
+		TraceIdLow:    int64(binary.BigEndian.Uint64(ss.SpanContext.TraceID[8:16])),
+		SpanId:        int64(binary.BigEndian.Uint64(ss.SpanContext.SpanID[:])),
+		ParentSpanId:  int64(binary.BigEndian.Uint64(ss.ParentSpanID[:])),
+		OperationName: ss.Name, // TODO: if span kind is added then add prefix "Sent"/"Recv"
+		Flags:         int32(ss.SpanContext.TraceFlags),
+		StartTime:     ss.StartTime.UnixNano() / 1000,
+		Duration:      ss.EndTime.Sub(ss.StartTime).Nanoseconds() / 1000,
 		Tags:          tags,
 		Logs:          logs,
 		References:    refs,

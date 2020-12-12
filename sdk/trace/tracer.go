@@ -47,7 +47,7 @@ func (tr *tracer) Start(ctx context.Context, name string, options ...trace.SpanO
 		}
 	}
 
-	span := startSpanInternal(tr, name, parentSpanContext, remoteParent, config)
+	span := startSpanInternal(ctx, tr, name, parentSpanContext, remoteParent, config)
 	for _, l := range links {
 		span.addLink(l)
 	}
@@ -61,7 +61,7 @@ func (tr *tracer) Start(ctx context.Context, name string, options ...trace.SpanO
 	if span.IsRecording() {
 		sps, _ := tr.provider.spanProcessors.Load().(spanProcessorStates)
 		for _, sp := range sps {
-			sp.sp.OnStart(ctx, span.data)
+			sp.sp.OnStart(ctx, span)
 		}
 	}
 

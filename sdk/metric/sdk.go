@@ -182,13 +182,9 @@ func (a *asyncInstrument) observe(num number.Number, labels *label.Set) {
 func (a *asyncInstrument) getRecorder(labels *label.Set) export.Aggregator {
 	lrec, ok := a.recorders[labels.Equivalent()]
 	if ok {
-		if lrec.observedEpoch == a.meter.currentEpoch {
-			// last value wins for Observers, so if we see the same labels
-			// in the current epoch, we replace the old recorder
-			a.meter.processor.AggregatorFor(&a.descriptor, &lrec.observed)
-		} else {
-			lrec.observedEpoch = a.meter.currentEpoch
-		}
+		// Note: SynchronizedMove(nil) can't return an error
+		_ = lrec.observed.SynchronizedMove(nil, &a.descriptor)
+		lrec.observedEpoch = a.meter.currentEpoch
 		a.recorders[labels.Equivalent()] = lrec
 		return lrec.observed
 	}

@@ -24,6 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 )
@@ -234,4 +235,14 @@ func TestMaxSumCountNotSet(t *testing.T) {
 		require.Equal(t, aggregation.ErrNoData, err)
 		require.Equal(t, number.Number(0), max)
 	})
+}
+
+func TestSynchronizedMoveReset(t *testing.T) {
+	aggregatortest.SynchronizedMoveResetTest(
+		t,
+		metric.ValueRecorderInstrumentKind,
+		func(desc *metric.Descriptor) export.Aggregator {
+			return &New(1, desc)[0]
+		},
+	)
 }

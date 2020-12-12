@@ -239,7 +239,7 @@ func logStoreLogger(s *logStore) *log.Logger {
 }
 
 func TestExportSpans(t *testing.T) {
-	spans := []*export.SpanData{
+	spans := []*export.SpanSnapshot{
 		// parent
 		{
 			SpanContext: trace.SpanContext{
