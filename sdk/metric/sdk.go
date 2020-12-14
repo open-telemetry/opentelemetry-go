@@ -299,7 +299,7 @@ func (s *syncInstrument) Bind(kvs []label.KeyValue) metric.BoundSyncImpl {
 
 func (s *syncInstrument) RecordOne(ctx context.Context, num number.Number, kvs []label.KeyValue) {
 
-		if s.meter.metricsLabelsEnricher != nil {
+	if s.meter.metricsLabelsEnricher != nil {
 		var err error
 		kvs, err = s.meter.metricsLabelsEnricher(ctx, kvs)
 		if err != nil {
