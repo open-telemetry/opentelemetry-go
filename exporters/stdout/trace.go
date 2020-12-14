@@ -31,8 +31,8 @@ type traceExporter struct {
 	stopped   bool
 }
 
-// ExportSpans writes SpanData in json format to stdout.
-func (e *traceExporter) ExportSpans(ctx context.Context, data []*trace.SpanData) error {
+// ExportSpans writes SpanSnapshots in json format to stdout.
+func (e *traceExporter) ExportSpans(ctx context.Context, ss []*trace.SpanSnapshot) error {
 	e.stoppedMu.RLock()
 	stopped := e.stopped
 	e.stoppedMu.RUnlock()
@@ -40,10 +40,10 @@ func (e *traceExporter) ExportSpans(ctx context.Context, data []*trace.SpanData)
 		return nil
 	}
 
-	if e.config.DisableTraceExport || len(data) == 0 {
+	if e.config.DisableTraceExport || len(ss) == 0 {
 		return nil
 	}
-	out, err := e.marshal(data)
+	out, err := e.marshal(ss)
 	if err != nil {
 		return err
 	}

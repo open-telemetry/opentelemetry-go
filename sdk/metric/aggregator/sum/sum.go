@@ -61,6 +61,10 @@ func (c *Aggregator) Sum() (number.Number, error) {
 // SynchronizedMove atomically saves the current value into oa and resets the
 // current sum to zero.
 func (c *Aggregator) SynchronizedMove(oa export.Aggregator, _ *metric.Descriptor) error {
+	if oa == nil {
+		c.value.SetRawAtomic(0)
+		return nil
+	}
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)

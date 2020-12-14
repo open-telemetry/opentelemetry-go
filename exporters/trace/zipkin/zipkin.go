@@ -32,7 +32,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-// Exporter exports SpanData to the zipkin collector. It implements
+// Exporter exports SpanSnapshots to the zipkin collector. It implements
 // the SpanBatcher interface, so it needs to be used together with the
 // WithBatcher option when setting up the exporter pipeline.
 type Exporter struct {
@@ -138,8 +138,8 @@ func InstallNewPipeline(collectorURL, serviceName string, opts ...Option) error 
 	return nil
 }
 
-// ExportSpans exports SpanData to a Zipkin receiver.
-func (e *Exporter) ExportSpans(ctx context.Context, batch []*export.SpanData) error {
+// ExportSpans exports SpanSnapshots to a Zipkin receiver.
+func (e *Exporter) ExportSpans(ctx context.Context, ss []*export.SpanSnapshot) error {
 	e.stoppedMu.RLock()
 	stopped := e.stopped
 	e.stoppedMu.RUnlock()
@@ -148,11 +148,11 @@ func (e *Exporter) ExportSpans(ctx context.Context, batch []*export.SpanData) er
 		return nil
 	}
 
-	if len(batch) == 0 {
+	if len(ss) == 0 {
 		e.logf("no spans to export")
 		return nil
 	}
-	models := toZipkinSpanModels(batch, e.serviceName)
+	models := toZipkinSpanModels(ss, e.serviceName)
 	body, err := json.Marshal(models)
 	if err != nil {
 		return e.errf("failed to serialize zipkin models to JSON: %v", err)

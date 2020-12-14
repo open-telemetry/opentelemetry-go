@@ -68,19 +68,19 @@ func TestExportSpans(t *testing.T) {
 	endTime := startTime.Add(10 * time.Second)
 
 	for _, test := range []struct {
-		sd   []*tracesdk.SpanData
+		sd   []*tracesdk.SpanSnapshot
 		want []tracepb.ResourceSpans
 	}{
 		{
-			[]*tracesdk.SpanData(nil),
+			[]*tracesdk.SpanSnapshot(nil),
 			[]tracepb.ResourceSpans(nil),
 		},
 		{
-			[]*tracesdk.SpanData{},
+			[]*tracesdk.SpanSnapshot{},
 			[]tracepb.ResourceSpans(nil),
 		},
 		{
-			[]*tracesdk.SpanData{
+			[]*tracesdk.SpanSnapshot{
 				{
 					SpanContext: trace.SpanContext{
 						TraceID:    trace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),

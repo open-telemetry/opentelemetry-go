@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/label"
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
 const testKeyFmt = "test-key-%d"
@@ -75,24 +74,30 @@ func TestAttributesMapGetOldestRemoveOldest(t *testing.T) {
 	}
 }
 
-func TestAttributesMapToSpanData(t *testing.T) {
+func TestAttributesMapToKeyValue(t *testing.T) {
 	attrMap := newAttributesMap(128)
 
 	for i := 0; i < 128; i++ {
 		attrMap.add(label.Int(fmt.Sprintf(testKeyFmt, i), i))
 	}
 
-	sd := &export.SpanData{}
+	kv := attrMap.toKeyValue()
 
-	attrMap.toSpanData(sd)
-
-	if attrMap.droppedCount != sd.DroppedAttributeCount {
-		t.Errorf("attrMap.droppedCount: got '%d'; want '%d'", attrMap.droppedCount, sd.DroppedAttributeCount)
-	}
-
-	gotAttrLen := len(attrMap.attributes)
-	wantAttrLen := len(sd.Attributes)
+	gotAttrLen := len(kv)
+	wantAttrLen := 128
 	if gotAttrLen != wantAttrLen {
 		t.Errorf("len(attrMap.attributes): got '%d'; want '%d'", gotAttrLen, wantAttrLen)
+	}
+}
+
+func BenchmarkAttributesMapToKeyValue(b *testing.B) {
+	attrMap := newAttributesMap(128)
+
+	for i := 0; i < 128; i++ {
+		attrMap.add(label.Int(fmt.Sprintf(testKeyFmt, i), i))
+	}
+
+	for n := 0; n < b.N; n++ {
+		attrMap.toKeyValue()
 	}
 }

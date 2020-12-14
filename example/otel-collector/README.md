@@ -7,7 +7,7 @@ The complete flow is:
 
 ```
                                           -----> Jaeger (trace)
-App + SDK ---> OpenTelemtry Collector ---|
+App + SDK ---> OpenTelemetry Collector ---|
                                           -----> Prometheus (metrics)
 ```
 

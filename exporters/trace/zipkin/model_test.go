@@ -32,7 +32,7 @@ import (
 )
 
 func TestModelConversion(t *testing.T) {
-	inputBatch := []*export.SpanData{
+	inputBatch := []*export.SpanSnapshot{
 		// typical span data
 		{
 			SpanContext: trace.SpanContext{
@@ -671,12 +671,12 @@ func Test_toZipkinTags(t *testing.T) {
 
 	tests := []struct {
 		name string
-		data *export.SpanData
+		data *export.SpanSnapshot
 		want map[string]string
 	}{
 		{
 			name: "attributes",
-			data: &export.SpanData{
+			data: &export.SpanSnapshot{
 				Attributes: []label.KeyValue{
 					label.String("key", keyValue),
 					label.Float64("double", doubleValue),
@@ -695,7 +695,7 @@ func Test_toZipkinTags(t *testing.T) {
 		},
 		{
 			name: "no attributes",
-			data: &export.SpanData{},
+			data: &export.SpanSnapshot{},
 			want: map[string]string{
 				"otel.status_code":        codes.Unset.String(),
 				"otel.status_description": "",
@@ -703,7 +703,7 @@ func Test_toZipkinTags(t *testing.T) {
 		},
 		{
 			name: "omit-noerror",
-			data: &export.SpanData{
+			data: &export.SpanSnapshot{
 				Attributes: []label.KeyValue{
 					label.Bool("error", false),
 				},
@@ -715,7 +715,7 @@ func Test_toZipkinTags(t *testing.T) {
 		},
 		{
 			name: "statusCode",
-			data: &export.SpanData{
+			data: &export.SpanSnapshot{
 				Attributes: []label.KeyValue{
 					label.String("key", keyValue),
 					label.Bool("error", true),
@@ -732,7 +732,7 @@ func Test_toZipkinTags(t *testing.T) {
 		},
 		{
 			name: "instrLib-empty",
-			data: &export.SpanData{
+			data: &export.SpanSnapshot{
 				InstrumentationLibrary: instrumentation.Library{},
 			},
 			want: map[string]string{
@@ -742,7 +742,7 @@ func Test_toZipkinTags(t *testing.T) {
 		},
 		{
 			name: "instrLib-noversion",
-			data: &export.SpanData{
+			data: &export.SpanSnapshot{
 				Attributes: []label.KeyValue{},
 				InstrumentationLibrary: instrumentation.Library{
 					Name: instrLibName,
@@ -756,7 +756,7 @@ func Test_toZipkinTags(t *testing.T) {
 		},
 		{
 			name: "instrLib-with-version",
-			data: &export.SpanData{
+			data: &export.SpanSnapshot{
 				Attributes: []label.KeyValue{},
 				InstrumentationLibrary: instrumentation.Library{
 					Name:    instrLibName,
