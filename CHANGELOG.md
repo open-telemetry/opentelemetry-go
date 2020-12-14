@@ -17,7 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Rename `export.SpanData` to `export.SpanSnapshot` and use it only for exporting spans. (#1360)
 - Store the parent's full `SpanContext` rather than just its span ID in the `span` struct. (#1360)
 - Improve span duration accuracy. (#1360)
-
+- Migrated CI/CD from CircleCI to GitHub Actions (#1382)
 ### Removed
 
 - Remove `errUninitializedSpan` as its only usage is now obsolete. (#1360)
@@ -85,7 +85,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Correct the `Span.End` method documentation in the `otel` API to state updates are not allowed on a span after it has ended. (#1310)
 - Updated span collection limits for attribute, event and link counts to 1000 (#1318)
 - Renamed `semconv.HTTPUrlKey` to `semconv.HTTPURLKey`. (#1338)
-- Migrated CI/CD from CircleCI to GitHub Actions (#1382)
 
 ### Removed
 
