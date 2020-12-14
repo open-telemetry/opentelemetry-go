@@ -168,6 +168,12 @@ released as version `v1.0.0`.
 * `otel/baggage`: `v1.0.0`
 * `otel/sdk/trace`: `v1.0.0`
 
+Since both the `go` utility and the Go module system support [the semantic
+versioning definition of
+precedence](https://semver.org/spec/v2.0.0.html#spec-item-11), this release
+will correctly be interpreted as the successor to the previous release
+candidates.
+
 Active development of this project continues. The `otel/metrics` module now has
 backwards incompatible changes to its API that need to be released and the
 `otel/baggage` module has a minor bug fix that needs to be released. The
