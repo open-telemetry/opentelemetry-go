@@ -247,10 +247,8 @@ func NewExportPipeline(ctx context.Context, exporterOpts ...ExporterOption) (*Ex
 		return nil, nil, nil, err
 	}
 
-	bsp := sdktrace.NewBatchSpanProcessor(exp)
 	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exp),
-		sdktrace.WithSpanProcessor(bsp),
 	)
 
 	pusher := push.New(
