@@ -21,7 +21,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go.opentelemetry.io/otel/global"
+	"go.opentelemetry.io/otel"
 	internal "go.opentelemetry.io/otel/internal/metric"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
@@ -171,7 +171,7 @@ func (s *syncInstrument) Implementation() interface{} {
 
 func (a *asyncInstrument) observe(num number.Number, labels *label.Set) {
 	if err := aggregator.RangeTest(num, &a.descriptor); err != nil {
-		global.Handle(err)
+		otel.Handle(err)
 		return
 	}
 	recorder := a.getRecorder(labels)
@@ -181,7 +181,7 @@ func (a *asyncInstrument) observe(num number.Number, labels *label.Set) {
 		return
 	}
 	if err := recorder.Update(context.Background(), num, &a.descriptor); err != nil {
-		global.Handle(err)
+		otel.Handle(err)
 		return
 	}
 }
@@ -189,13 +189,9 @@ func (a *asyncInstrument) observe(num number.Number, labels *label.Set) {
 func (a *asyncInstrument) getRecorder(labels *label.Set) export.Aggregator {
 	lrec, ok := a.recorders[labels.Equivalent()]
 	if ok {
-		if lrec.observedEpoch == a.meter.currentEpoch {
-			// last value wins for Observers, so if we see the same labels
-			// in the current epoch, we replace the old recorder
-			a.meter.processor.AggregatorFor(&a.descriptor, &lrec.observed)
-		} else {
-			lrec.observedEpoch = a.meter.currentEpoch
-		}
+		// Note: SynchronizedMove(nil) can't return an error
+		_ = lrec.observed.SynchronizedMove(nil, &a.descriptor)
+		lrec.observedEpoch = a.meter.currentEpoch
 		a.recorders[labels.Equivalent()] = lrec
 		return lrec.observed
 	}
@@ -457,14 +453,14 @@ func (m *Accumulator) checkpointRecord(r *record) int {
 	}
 	err := r.current.SynchronizedMove(r.checkpoint, &r.inst.descriptor)
 	if err != nil {
-		global.Handle(err)
+		otel.Handle(err)
 		return 0
 	}
 
 	a := export.NewAccumulation(&r.inst.descriptor, r.labels, m.resource, r.checkpoint)
 	err = m.processor.Process(a)
 	if err != nil {
-		global.Handle(err)
+		otel.Handle(err)
 	}
 	return 1
 }
@@ -482,7 +478,7 @@ func (m *Accumulator) checkpointAsync(a *asyncInstrument) int {
 				a := export.NewAccumulation(&a.descriptor, lrec.labels, m.resource, lrec.observed)
 				err := m.processor.Process(a)
 				if err != nil {
-					global.Handle(err)
+					otel.Handle(err)
 				}
 				checkpointed++
 			}
@@ -530,11 +526,11 @@ func (r *record) RecordOne(ctx context.Context, num number.Number) {
 		return
 	}
 	if err := aggregator.RangeTest(num, &r.inst.descriptor); err != nil {
-		global.Handle(err)
+		otel.Handle(err)
 		return
 	}
 	if err := r.current.Update(ctx, num, &r.inst.descriptor); err != nil {
-		global.Handle(err)
+		otel.Handle(err)
 		return
 	}
 	// Record was modified, inform the Collect() that things need
@@ -562,7 +558,7 @@ func (m *Accumulator) fromSync(sync metric.SyncImpl) *syncInstrument {
 			return inst
 		}
 	}
-	global.Handle(ErrUninitializedInstrument)
+	otel.Handle(ErrUninitializedInstrument)
 	return nil
 }
 
@@ -574,6 +570,6 @@ func (m *Accumulator) fromAsync(async metric.AsyncImpl) *asyncInstrument {
 			return inst
 		}
 	}
-	global.Handle(ErrUninitializedInstrument)
+	otel.Handle(ErrUninitializedInstrument)
 	return nil
 }

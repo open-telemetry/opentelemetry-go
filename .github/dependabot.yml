@@ -78,6 +78,16 @@ updates:
       interval: weekly
   -
     package-ecosystem: gomod
+    directory: /example/opencensus
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
     directory: /example/otel-collector
     labels:
       - dependencies

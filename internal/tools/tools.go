@@ -18,6 +18,7 @@ package tools
 
 import (
 	_ "github.com/client9/misspell/cmd/misspell"
+	_ "github.com/gogo/protobuf/protoc-gen-gogofast"
 	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
 	_ "github.com/itchyny/gojq"
 	_ "golang.org/x/tools/cmd/stringer"

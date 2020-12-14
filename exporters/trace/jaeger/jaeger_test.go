@@ -28,9 +28,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/api/support/bundler"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
-	"go.opentelemetry.io/otel/global"
 	ottest "go.opentelemetry.io/otel/internal/testing"
 	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -81,9 +81,9 @@ func TestInstallNewPipeline(t *testing.T) {
 			defer fn()
 
 			assert.NoError(t, err)
-			assert.IsType(t, tc.expectedProvider, global.TracerProvider())
+			assert.IsType(t, tc.expectedProvider, otel.GetTracerProvider())
 
-			global.SetTracerProvider(nil)
+			otel.SetTracerProvider(nil)
 		})
 	}
 }
@@ -144,7 +144,7 @@ func TestNewExportPipeline(t *testing.T) {
 			defer fn()
 
 			assert.NoError(t, err)
-			assert.NotEqual(t, tp, global.TracerProvider())
+			assert.NotEqual(t, tp, otel.GetTracerProvider())
 			assert.IsType(t, tc.expectedProviderType, tp)
 
 			if tc.testSpanSampling {
@@ -342,8 +342,8 @@ func TestExporter_ExportSpan(t *testing.T) {
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithSyncer(exp),
 	)
-	global.SetTracerProvider(tp)
-	_, span := global.Tracer("test-tracer").Start(context.Background(), "test-span")
+	otel.SetTracerProvider(tp)
+	_, span := otel.Tracer("test-tracer").Start(context.Background(), "test-span")
 	span.End()
 
 	assert.True(t, span.SpanContext().IsValid())
@@ -353,7 +353,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 	assert.True(t, len(tc.spansUploaded) == 1)
 }
 
-func Test_spanDataToThrift(t *testing.T) {
+func Test_spanSnapshotToThrift(t *testing.T) {
 	now := time.Now()
 	traceID, _ := trace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
 	spanID, _ := trace.SpanIDFromHex("0102030405060708")
@@ -376,12 +376,12 @@ func Test_spanDataToThrift(t *testing.T) {
 
 	tests := []struct {
 		name string
-		data *export.SpanData
+		data *export.SpanSnapshot
 		want *gen.Span
 	}{
 		{
 			name: "no parent",
-			data: &export.SpanData{
+			data: &export.SpanSnapshot{
 				SpanContext: trace.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,
@@ -465,7 +465,7 @@ func Test_spanDataToThrift(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := spanDataToThrift(tt.data)
+			got := spanSnapshotToThrift(tt.data)
 			sort.Slice(got.Tags, func(i, j int) bool {
 				return got.Tags[i].Key < got.Tags[j].Key
 			})

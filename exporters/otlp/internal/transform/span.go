@@ -28,8 +28,9 @@ const (
 	maxMessageEventsPerSpan = 128
 )
 
-// SpanData transforms a slice of SpanData into a slice of OTLP ResourceSpans.
-func SpanData(sdl []*export.SpanData) []*tracepb.ResourceSpans {
+// SpanData transforms a slice of SpanSnapshot into a slice of OTLP
+// ResourceSpans.
+func SpanData(sdl []*export.SpanSnapshot) []*tracepb.ResourceSpans {
 	if len(sdl) == 0 {
 		return nil
 	}
@@ -95,7 +96,7 @@ func SpanData(sdl []*export.SpanData) []*tracepb.ResourceSpans {
 }
 
 // span transforms a Span into an OTLP span.
-func span(sd *export.SpanData) *tracepb.Span {
+func span(sd *export.SpanSnapshot) *tracepb.Span {
 	if sd == nil {
 		return nil
 	}
@@ -129,7 +130,7 @@ func status(status codes.Code, message string) *tracepb.Status {
 	var c tracepb.Status_StatusCode
 	switch status {
 	case codes.Error:
-		c = tracepb.Status_STATUS_CODE_UNKNOWN_ERROR
+		c = tracepb.Status_STATUS_CODE_ERROR
 	default:
 		c = tracepb.Status_STATUS_CODE_OK
 	}

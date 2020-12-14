@@ -30,8 +30,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/global"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -48,7 +48,7 @@ func TestInstallNewPipeline(t *testing.T) {
 		serviceName,
 	)
 	assert.NoError(t, err)
-	assert.IsType(t, &sdktrace.TracerProvider{}, global.TracerProvider())
+	assert.IsType(t, &sdktrace.TracerProvider{}, otel.GetTracerProvider())
 }
 
 func TestNewExportPipeline(t *testing.T) {
@@ -90,7 +90,7 @@ func TestNewExportPipeline(t *testing.T) {
 				tc.options...,
 			)
 			assert.NoError(t, err)
-			assert.NotEqual(t, tp, global.TracerProvider())
+			assert.NotEqual(t, tp, otel.GetTracerProvider())
 
 			if tc.testSpanSampling {
 				_, span := tp.Tracer("zipkin test").Start(context.Background(), tc.name)
@@ -192,6 +192,7 @@ func (c *mockZipkinCollector) handler(w http.ResponseWriter, r *http.Request) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.models = append(c.models, models...)
+	w.WriteHeader(http.StatusAccepted)
 }
 
 func (c *mockZipkinCollector) Close() {
@@ -238,7 +239,7 @@ func logStoreLogger(s *logStore) *log.Logger {
 }
 
 func TestExportSpans(t *testing.T) {
-	spans := []*export.SpanData{
+	spans := []*export.SpanSnapshot{
 		// parent
 		{
 			SpanContext: trace.SpanContext{
@@ -340,9 +341,8 @@ func TestExportSpans(t *testing.T) {
 	ctx := context.Background()
 	require.Len(t, ls.Messages, 0)
 	require.NoError(t, exporter.ExportSpans(ctx, spans[0:1]))
-	require.Len(t, ls.Messages, 2)
+	require.Len(t, ls.Messages, 1)
 	require.Contains(t, ls.Messages[0], "send a POST request")
-	require.Contains(t, ls.Messages[1], "zipkin responded")
 	ls.Messages = nil
 	require.NoError(t, exporter.ExportSpans(ctx, nil))
 	require.Len(t, ls.Messages, 1)
@@ -350,7 +350,6 @@ func TestExportSpans(t *testing.T) {
 	ls.Messages = nil
 	require.NoError(t, exporter.ExportSpans(ctx, spans[1:2]))
 	require.Contains(t, ls.Messages[0], "send a POST request")
-	require.Contains(t, ls.Messages[1], "zipkin responded")
 	checkFunc := func() bool {
 		return collector.ModelsLen() == len(models)
 	}

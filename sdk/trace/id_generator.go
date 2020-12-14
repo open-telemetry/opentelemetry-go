@@ -15,23 +15,30 @@
 package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
+	"context"
+	crand "crypto/rand"
+	"encoding/binary"
 	"math/rand"
 	"sync"
 
 	"go.opentelemetry.io/otel/trace"
-
-	"go.opentelemetry.io/otel/sdk/trace/internal"
 )
 
-type defaultIDGenerator struct {
+// IDGenerator allows custom generators for TraceID and SpanID.
+type IDGenerator interface {
+	NewIDs(ctx context.Context) (trace.TraceID, trace.SpanID)
+	NewSpanID(ctx context.Context, traceID trace.TraceID) trace.SpanID
+}
+
+type randomIDGenerator struct {
 	sync.Mutex
 	randSource *rand.Rand
 }
 
-var _ internal.IDGenerator = &defaultIDGenerator{}
+var _ IDGenerator = &randomIDGenerator{}
 
 // NewSpanID returns a non-zero span ID from a randomly-chosen sequence.
-func (gen *defaultIDGenerator) NewSpanID() trace.SpanID {
+func (gen *randomIDGenerator) NewSpanID(ctx context.Context, traceID trace.TraceID) trace.SpanID {
 	gen.Lock()
 	defer gen.Unlock()
 	sid := trace.SpanID{}
@@ -39,12 +46,22 @@ func (gen *defaultIDGenerator) NewSpanID() trace.SpanID {
 	return sid
 }
 
-// NewTraceID returns a non-zero trace ID from a randomly-chosen sequence.
-// mu should be held while this function is called.
-func (gen *defaultIDGenerator) NewTraceID() trace.TraceID {
+// NewIDs returns a non-zero trace ID and a non-zero span ID from a
+// randomly-chosen sequence.
+func (gen *randomIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.SpanID) {
 	gen.Lock()
 	defer gen.Unlock()
 	tid := trace.TraceID{}
 	gen.randSource.Read(tid[:])
-	return tid
+	sid := trace.SpanID{}
+	gen.randSource.Read(sid[:])
+	return tid, sid
+}
+
+func defaultIDGenerator() IDGenerator {
+	gen := &randomIDGenerator{}
+	var rngSeed int64
+	_ = binary.Read(crand.Reader, binary.LittleEndian, &rngSeed)
+	gen.randSource = rand.New(rand.NewSource(rngSeed))
+	return gen
 }

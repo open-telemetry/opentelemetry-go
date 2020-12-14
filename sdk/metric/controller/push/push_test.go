@@ -24,7 +24,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/global"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -61,7 +61,7 @@ var testHandler *handler
 
 func init() {
 	testHandler = new(handler)
-	global.SetErrorHandler(testHandler)
+	otel.SetErrorHandler(testHandler)
 }
 
 func newExporter() *processorTest.Exporter {

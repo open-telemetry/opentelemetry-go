@@ -25,11 +25,11 @@ import (
 
 	"google.golang.org/grpc"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp"
-	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -49,7 +49,7 @@ func initProvider() func() {
 	// `localhost:30080` address. Otherwise, replace `localhost` with the
 	// address of your cluster. If you run the app inside k8s, then you can
 	// probably connect directly to the service through dns
-	exp, err := otlp.NewExporter(
+	exp, err := otlp.NewExporter(ctx,
 		otlp.WithInsecure(),
 		otlp.WithAddress("localhost:30080"),
 		otlp.WithGRPCDialOption(grpc.WithBlock()), // useful for testing
@@ -81,9 +81,9 @@ func initProvider() func() {
 	)
 
 	// set global propagator to tracecontext (the default is no-op).
-	global.SetTextMapPropagator(propagators.TraceContext{})
-	global.SetTracerProvider(tracerProvider)
-	global.SetMeterProvider(pusher.MeterProvider())
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+	otel.SetTracerProvider(tracerProvider)
+	otel.SetMeterProvider(pusher.MeterProvider())
 	pusher.Start()
 
 	return func() {
@@ -99,8 +99,8 @@ func main() {
 	shutdown := initProvider()
 	defer shutdown()
 
-	tracer := global.Tracer("test-tracer")
-	meter := global.Meter("test-meter")
+	tracer := otel.Tracer("test-tracer")
+	meter := otel.Meter("test-meter")
 
 	// labels represent additional key-value descriptors that can be bound to a
 	// metric observer or recorder.

@@ -20,6 +20,7 @@ import (
 
 	octrace "go.opencensus.io/trace"
 
+	"go.opentelemetry.io/otel/bridge/opencensus/utils"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/oteltest"
@@ -101,7 +102,7 @@ func TestStartSpanWithRemoteParent(t *testing.T) {
 	ctx := context.Background()
 	ctx, parent := tracer.Start(ctx, "OpenTelemetrySpan1")
 
-	_, span := octrace.StartSpanWithRemoteParent(ctx, "OpenCensusSpan", otelSpanContextToOc(parent.SpanContext()))
+	_, span := octrace.StartSpanWithRemoteParent(ctx, "OpenCensusSpan", utils.OTelSpanContextToOC(parent.SpanContext()))
 	span.End()
 
 	spans := sr.Completed()

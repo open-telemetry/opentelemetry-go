@@ -30,12 +30,12 @@ func NewNoopExporter() *NoopExporter {
 	return new(NoopExporter)
 }
 
-// NoopExporter is an exporter that drops all received SpanData and performs
-// no action.
+// NoopExporter is an exporter that drops all received SpanSnapshots and
+// performs no action.
 type NoopExporter struct{}
 
-// ExportSpans handles export of SpanData by dropping it.
-func (nsb *NoopExporter) ExportSpans(context.Context, []*trace.SpanData) error { return nil }
+// ExportSpans handles export of SpanSnapshots by dropping them.
+func (nsb *NoopExporter) ExportSpans(context.Context, []*trace.SpanSnapshot) error { return nil }
 
 // Shutdown stops the exporter by doing nothing.
 func (nsb *NoopExporter) Shutdown(context.Context) error { return nil }
@@ -49,19 +49,19 @@ func NewInMemoryExporter() *InMemoryExporter {
 
 // InMemoryExporter is an exporter that stores all received spans in-memory.
 type InMemoryExporter struct {
-	mu  sync.Mutex
-	sds []*trace.SpanData
+	mu sync.Mutex
+	ss []*trace.SpanSnapshot
 }
 
-// ExportSpans handles export of SpanData by storing it in memory.
-func (imsb *InMemoryExporter) ExportSpans(_ context.Context, sds []*trace.SpanData) error {
+// ExportSpans handles export of SpanSnapshots by storing them in memory.
+func (imsb *InMemoryExporter) ExportSpans(_ context.Context, ss []*trace.SpanSnapshot) error {
 	imsb.mu.Lock()
 	defer imsb.mu.Unlock()
-	imsb.sds = append(imsb.sds, sds...)
+	imsb.ss = append(imsb.ss, ss...)
 	return nil
 }
 
-// Shutdown stops the exporter by clearing SpanData held in memory.
+// Shutdown stops the exporter by clearing SpanSnapshots held in memory.
 func (imsb *InMemoryExporter) Shutdown(context.Context) error {
 	imsb.Reset()
 	return nil
@@ -71,14 +71,14 @@ func (imsb *InMemoryExporter) Shutdown(context.Context) error {
 func (imsb *InMemoryExporter) Reset() {
 	imsb.mu.Lock()
 	defer imsb.mu.Unlock()
-	imsb.sds = nil
+	imsb.ss = nil
 }
 
 // GetSpans returns the current in-memory stored spans.
-func (imsb *InMemoryExporter) GetSpans() []*trace.SpanData {
+func (imsb *InMemoryExporter) GetSpans() []*trace.SpanSnapshot {
 	imsb.mu.Lock()
 	defer imsb.mu.Unlock()
-	ret := make([]*trace.SpanData, len(imsb.sds))
-	copy(ret, imsb.sds)
+	ret := make([]*trace.SpanSnapshot, len(imsb.ss))
+	copy(ret, imsb.ss)
 	return ret
 }

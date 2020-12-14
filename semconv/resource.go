@@ -219,3 +219,9 @@ var (
 	CloudProviderAzure = CloudProviderKey.String("azure")
 	CloudProviderGCP   = CloudProviderKey.String("gcp")
 )
+
+// Semantic conventions for deployment attributes.
+const (
+	// Name of the deployment environment (aka deployment tier); e.g. (staging, production).
+	DeploymentEnvironmentKey = label.Key("deployment.environment")
+)

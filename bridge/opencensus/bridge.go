@@ -20,8 +20,9 @@ import (
 
 	octrace "go.opencensus.io/trace"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/bridge/opencensus/utils"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/global"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -60,7 +61,7 @@ func convertStartOptions(optFns []octrace.StartOption, name string) []trace.Span
 	}
 
 	if ocOpts.Sampler != nil {
-		global.Handle(fmt.Errorf("ignoring custom sampler for span %q created by OpenCensus because OpenTelemetry does not support creating a span with a custom sampler", name))
+		otel.Handle(fmt.Errorf("ignoring custom sampler for span %q created by OpenCensus because OpenTelemetry does not support creating a span with a custom sampler", name))
 	}
 	return otOpts
 }
@@ -68,7 +69,7 @@ func convertStartOptions(optFns []octrace.StartOption, name string) []trace.Span
 func (o *otelTracer) StartSpanWithRemoteParent(ctx context.Context, name string, parent octrace.SpanContext, s ...octrace.StartOption) (context.Context, *octrace.Span) {
 	// make sure span context is zero'd out so we use the remote parent
 	ctx = trace.ContextWithSpan(ctx, nil)
-	ctx = trace.ContextWithRemoteSpanContext(ctx, ocSpanContextToOTel(parent))
+	ctx = trace.ContextWithRemoteSpanContext(ctx, utils.OCSpanContextToOTel(parent))
 	return o.StartSpan(ctx, name, s...)
 }
 
@@ -81,7 +82,7 @@ func (o *otelTracer) NewContext(parent context.Context, s *octrace.Span) context
 	if otSpan, ok := s.Internal().(*span); ok {
 		return trace.ContextWithSpan(parent, otSpan.otSpan)
 	}
-	global.Handle(fmt.Errorf("unable to create context with span %q, since it was created using a different tracer", s.String()))
+	otel.Handle(fmt.Errorf("unable to create context with span %q, since it was created using a different tracer", s.String()))
 	return parent
 }
 
@@ -98,7 +99,7 @@ func (s *span) End() {
 }
 
 func (s *span) SpanContext() octrace.SpanContext {
-	return otelSpanContextToOc(s.otSpan.SpanContext())
+	return utils.OTelSpanContextToOC(s.otSpan.SpanContext())
 }
 
 func (s *span) SetName(name string) {
@@ -181,37 +182,9 @@ func (s *span) AddMessageReceiveEvent(messageID, uncompressedByteSize, compresse
 }
 
 func (s *span) AddLink(l octrace.Link) {
-	global.Handle(fmt.Errorf("ignoring OpenCensus link %+v for span %q because OpenTelemetry doesn't support setting links after creation", l, s.String()))
+	otel.Handle(fmt.Errorf("ignoring OpenCensus link %+v for span %q because OpenTelemetry doesn't support setting links after creation", l, s.String()))
 }
 
 func (s *span) String() string {
 	return fmt.Sprintf("span %s", s.otSpan.SpanContext().SpanID.String())
-}
-
-func otelSpanContextToOc(sc trace.SpanContext) octrace.SpanContext {
-	if sc.IsDebug() || sc.IsDeferred() {
-		global.Handle(fmt.Errorf("ignoring OpenTelemetry Debug or Deferred trace flags for span %q because they are not supported by OpenCensus", sc.SpanID))
-	}
-	var to octrace.TraceOptions
-	if sc.IsSampled() {
-		// OpenCensus doesn't expose functions to directly set sampled
-		to = 0x1
-	}
-	return octrace.SpanContext{
-		TraceID:      octrace.TraceID(sc.TraceID),
-		SpanID:       octrace.SpanID(sc.SpanID),
-		TraceOptions: to,
-	}
-}
-
-func ocSpanContextToOTel(sc octrace.SpanContext) trace.SpanContext {
-	var traceFlags byte
-	if sc.IsSampled() {
-		traceFlags = trace.FlagsSampled
-	}
-	return trace.SpanContext{
-		TraceID:    trace.TraceID(sc.TraceID),
-		SpanID:     trace.SpanID(sc.SpanID),
-		TraceFlags: traceFlags,
-	}
 }

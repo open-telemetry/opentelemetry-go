@@ -46,7 +46,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 	doubleValue := 123.456
 	resource := resource.NewWithAttributes(label.String("rk1", "rv11"))
 
-	testSpan := &export.SpanData{
+	testSpan := &export.SpanSnapshot{
 		SpanContext: trace.SpanContext{
 			TraceID: traceID,
 			SpanID:  spanID,
@@ -67,7 +67,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		StatusMessage: "interesting",
 		Resource:      resource,
 	}
-	if err := ex.ExportSpans(context.Background(), []*export.SpanData{testSpan}); err != nil {
+	if err := ex.ExportSpans(context.Background(), []*export.SpanSnapshot{testSpan}); err != nil {
 		t.Fatal(err)
 	}
 

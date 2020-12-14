@@ -19,31 +19,42 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/label"
-	export "go.opentelemetry.io/otel/sdk/export/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type testSpanProcessor struct {
 	name          string
-	spansStarted  []*export.SpanData
-	spansEnded    []*export.SpanData
+	spansStarted  []sdktrace.ReadWriteSpan
+	spansEnded    []sdktrace.ReadOnlySpan
 	shutdownCount int
 }
 
-func (t *testSpanProcessor) OnStart(s *export.SpanData) {
-	kv := label.KeyValue{
-		Key:   "OnStart",
-		Value: label.StringValue(t.name),
+func (t *testSpanProcessor) OnStart(parent context.Context, s sdktrace.ReadWriteSpan) {
+	psc := trace.RemoteSpanContextFromContext(parent)
+	kv := []label.KeyValue{
+		{
+			Key:   "SpanProcessorName",
+			Value: label.StringValue(t.name),
+		},
+		// Store parent trace ID and span ID as attributes to be read later in
+		// tests so that we "do something" with the parent argument. Real
+		// SpanProcessor implementations will likely use the parent argument in
+		// a more meaningful way.
+		{
+			Key:   "ParentTraceID",
+			Value: label.StringValue(psc.TraceID.String()),
+		},
+		{
+			Key:   "ParentSpanID",
+			Value: label.StringValue(psc.SpanID.String()),
+		},
 	}
-	s.Attributes = append(s.Attributes, kv)
+	s.AddEvent("OnStart", trace.WithAttributes(kv...))
 	t.spansStarted = append(t.spansStarted, s)
 }
 
-func (t *testSpanProcessor) OnEnd(s *export.SpanData) {
-	kv := label.KeyValue{
-		Key:   "OnEnd",
-		Value: label.StringValue(t.name),
-	}
-	s.Attributes = append(s.Attributes, kv)
+func (t *testSpanProcessor) OnEnd(s sdktrace.ReadOnlySpan) {
 	t.spansEnded = append(t.spansEnded, s)
 }
 
@@ -55,7 +66,7 @@ func (t *testSpanProcessor) Shutdown(_ context.Context) error {
 func (t *testSpanProcessor) ForceFlush() {
 }
 
-func TestRegisterSpanProcessort(t *testing.T) {
+func TestRegisterSpanProcessor(t *testing.T) {
 	name := "Register span processor before span starts"
 	tp := basicTracerProvider(t)
 	spNames := []string{"sp1", "sp2", "sp3"}
@@ -65,8 +76,16 @@ func TestRegisterSpanProcessort(t *testing.T) {
 		tp.RegisterSpanProcessor(sp)
 	}
 
+	tid, _ := trace.TraceIDFromHex("01020304050607080102040810203040")
+	sid, _ := trace.SpanIDFromHex("0102040810203040")
+	parent := trace.SpanContext{
+		TraceID: tid,
+		SpanID:  sid,
+	}
+	ctx := trace.ContextWithRemoteSpanContext(context.Background(), parent)
+
 	tr := tp.Tracer("SpanProcessor")
-	_, span := tr.Start(context.Background(), "OnStart")
+	_, span := tr.Start(ctx, "OnStart")
 	span.End()
 	wantCount := 1
 
@@ -81,18 +100,42 @@ func TestRegisterSpanProcessort(t *testing.T) {
 		}
 
 		c := 0
-		for _, kv := range sp.spansStarted[0].Attributes {
-			if kv.Key != "OnStart" {
-				continue
+		tidOK := false
+		sidOK := false
+		for _, e := range sp.spansStarted[0].Events() {
+			for _, kv := range e.Attributes {
+				switch kv.Key {
+				case "SpanProcessorName":
+					gotValue := kv.Value.AsString()
+					if gotValue != spNames[c] {
+						t.Errorf("%s: attributes: got %s, want %s\n", name, gotValue, spNames[c])
+					}
+					c++
+				case "ParentTraceID":
+					gotValue := kv.Value.AsString()
+					if gotValue != parent.TraceID.String() {
+						t.Errorf("%s: attributes: got %s, want %s\n", name, gotValue, parent.TraceID)
+					}
+					tidOK = true
+				case "ParentSpanID":
+					gotValue := kv.Value.AsString()
+					if gotValue != parent.SpanID.String() {
+						t.Errorf("%s: attributes: got %s, want %s\n", name, gotValue, parent.SpanID)
+					}
+					sidOK = true
+				default:
+					continue
+				}
 			}
-			gotValue := kv.Value.AsString()
-			if gotValue != spNames[c] {
-				t.Errorf("%s: ordered attributes: got %s, want %s\n", name, gotValue, spNames[c])
-			}
-			c++
 		}
 		if c != len(spNames) {
-			t.Errorf("%s: expected attributes(OnStart): got %d, want %d\n", name, c, len(spNames))
+			t.Errorf("%s: expected attributes(SpanProcessorName): got %d, want %d\n", name, c, len(spNames))
+		}
+		if !tidOK {
+			t.Errorf("%s: expected attributes(ParentTraceID)\n", name)
+		}
+		if !sidOK {
+			t.Errorf("%s: expected attributes(ParentSpanID)\n", name)
 		}
 	}
 }
@@ -128,21 +171,6 @@ func TestUnregisterSpanProcessor(t *testing.T) {
 		gotCount = len(sp.spansEnded)
 		if gotCount != wantCount {
 			t.Errorf("%s: ended count: got %d, want %d\n", name, gotCount, wantCount)
-		}
-
-		c := 0
-		for _, kv := range sp.spansEnded[0].Attributes {
-			if kv.Key != "OnEnd" {
-				continue
-			}
-			gotValue := kv.Value.AsString()
-			if gotValue != spNames[c] {
-				t.Errorf("%s: ordered attributes: got %s, want %s\n", name, gotValue, spNames[c])
-			}
-			c++
-		}
-		if c != len(spNames) {
-			t.Errorf("%s: expected attributes(OnEnd): got %d, want %d\n", name, c, len(spNames))
 		}
 	}
 }
