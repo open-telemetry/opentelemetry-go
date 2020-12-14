@@ -299,7 +299,7 @@ func (s *syncInstrument) RecordOne(ctx context.Context, num number.Number, kvs [
 		var err error
 		kvs, err = s.meter.metricsLabelsEnricher(ctx, kvs)
 		if err != nil {
-			global.Handle(err)
+			otel.Handle(err)
 			return
 		}
 	}

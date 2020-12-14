@@ -20,6 +20,8 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/baggage"
+
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/label"
@@ -120,7 +122,7 @@ func TestPullWithCache(t *testing.T) {
 
 func TestPullWithMetricsLabelEnricher(t *testing.T) {
 	metricsLabelsEnricher := func(ctx context.Context, kvs []label.KeyValue) ([]label.KeyValue, error) {
-		baggage := otel.Baggage(ctx)
+		baggage := baggage.Set(ctx)
 		kvs = append(baggage.ToSlice(), kvs...)
 		return kvs, nil
 	}
@@ -128,22 +130,22 @@ func TestPullWithMetricsLabelEnricher(t *testing.T) {
 	puller := pull.New(
 		basic.New(
 			selector.NewWithExactDistribution(),
-			export.CumulativeExporter,
+			export.CumulativeExportKindSelector(),
 			basic.WithMemory(true),
 		),
 		pull.WithCachePeriod(0),
 		pull.WithMetricsLabelsEnricher(metricsLabelsEnricher),
 	)
 
-	ctx := otel.ContextWithBaggageValues(context.Background(), label.String("A", "B"))
+	ctx := baggage.ContextWithValues(context.Background(), label.String("A", "B"))
 	meter := puller.MeterProvider().Meter("withLabelEnricher")
-	counter := otel.Must(meter).NewInt64Counter("counter.sum")
+	counter := metric.Must(meter).NewInt64Counter("counter.sum")
 
 	counter.Add(ctx, 10)
 
 	require.NoError(t, puller.Collect(context.Background()))
 	records := processortest.NewOutput(label.DefaultEncoder())
-	require.NoError(t, puller.ForEach(export.CumulativeExporter, records.AddRecord))
+	require.NoError(t, puller.ForEach(export.CumulativeExportKindSelector(), records.AddRecord))
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=B/": 10,

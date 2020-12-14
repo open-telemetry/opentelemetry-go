@@ -22,6 +22,8 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/baggage"
+
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
@@ -228,7 +230,7 @@ func TestWithMetricsLabelsEnricher(t *testing.T) {
 	exporter := newExporter()
 	checkpointer := newCheckpointer()
 	metricsLabelsEnricher := func(ctx context.Context, kvs []label.KeyValue) ([]label.KeyValue, error) {
-		baggage := otel.Baggage(ctx)
+		baggage := baggage.Set(ctx)
 		kvs = append(baggage.ToSlice(), kvs...)
 		return kvs, nil
 	}
@@ -243,11 +245,11 @@ func TestWithMetricsLabelsEnricher(t *testing.T) {
 	mock := controllertest.NewMockClock()
 	p.SetClock(mock)
 
-	counter := otel.Must(meter).NewInt64Counter("counter.sum")
+	counter := metric.Must(meter).NewInt64Counter("counter.sum")
 
 	p.Start()
 
-	ctx := otel.ContextWithBaggageValues(context.Background(), label.String("A", "B"))
+	ctx := baggage.ContextWithValues(context.Background(), label.String("A", "B"))
 	counter.Add(ctx, 1)
 
 	require.EqualValues(t, map[string]float64{}, exporter.Values())
