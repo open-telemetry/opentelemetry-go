@@ -109,7 +109,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.GRPCConnectionO
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.address, additionalOpts...)
 	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, time.Second)
+		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 		if err := exp.Shutdown(ctx); err != nil {
 			panic(err)
@@ -221,7 +221,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.GRPCConnectionO
 	<-time.After(40 * time.Millisecond)
 
 	// Now shutdown the exporter
-	ctx, cancel := context.WithTimeout(ctx, time.Millisecond)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	if err := exp.Shutdown(ctx); err != nil {
 		t.Fatalf("failed to stop the exporter: %v", err)
@@ -525,7 +525,7 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 	<-time.After(40 * time.Millisecond)
 
 	// Now shutdown the exporter
-	ctx, cancel := context.WithTimeout(ctx, time.Millisecond)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	if err := exp.Shutdown(ctx); err != nil {
 		t.Fatalf("failed to stop the exporter: %v", err)
