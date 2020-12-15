@@ -17,7 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Rename `export.SpanData` to `export.SpanSnapshot` and use it only for exporting spans. (#1360)
 - Store the parent's full `SpanContext` rather than just its span ID in the `span` struct. (#1360)
 - Improve span duration accuracy. (#1360)
-
+- Migrated CI/CD from CircleCI to GitHub Actions (#1382)
 ### Removed
 
 - Remove `errUninitializedSpan` as its only usage is now obsolete. (#1360)
@@ -101,7 +101,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/otel/api/global` packages global TextMapPropagator now delegates functionality to a globally set delegate for all previously returned propagators. (#1258)
 - Fix condition in `label.Any`. (#1299)
 - Fix global `TracerProvider` to pass options to its configured provider. (#1329)
-- Fix missing handler for `ExactKind` aggregator in OTLP metrics transformer (#1309) 
+- Fix missing handler for `ExactKind` aggregator in OTLP metrics transformer (#1309)
 
 ## [0.13.0] - 2020-10-08
 
