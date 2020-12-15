@@ -1,0 +1,52 @@
+name: ci
+on:
+  push:
+    branches: [master]
+  pull_request:
+env:
+  TEST_RESULTS: /tmp/test-results # path to where test results will be saved
+jobs:
+  go:
+    strategy:
+      fail-fast: false
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go_version: [1.14, 1.15]
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+      - name: Setup Go
+        uses: actions/setup-go@v2.1.3
+        with:
+          go-version: ${{ matrix.go_version }}
+      - name: Setup Environment
+        run: |
+          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: restore cache
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-go-mod
+        with:
+          path: /home/runner/go/pkg/mod
+          key: go-pkg-mod-{{ checksum "go.sum" }}
+      - name: Precommit and Coverage Report
+        run: |
+          make ci
+          mkdir $TEST_RESULTS
+          cp coverage.out $TEST_RESULTS
+          cp coverage.txt $TEST_RESULTS
+          cp coverage.html $TEST_RESULTS
+      - uses: codecov/codecov-action@v1
+        with:
+          file: ./coverage.txt
+          fail_ci_if_error: true
+          verbose: true
+      - name: store test output
+        uses: actions/upload-artifact@v2
+        with:
+            name: opentelemetry-go-test-output
+            path: ${{ env.TEST_RESULTS }}
