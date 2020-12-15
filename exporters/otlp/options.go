@@ -28,7 +28,7 @@ const (
 	// if no collector port is provided.
 	DefaultCollectorPort uint16 = 55680
 	// DefaultCollectorHost is the host address the Exporter will attempt
-	// connect to if no collector address is provided.
+	// connect to if no collector endpoint is provided.
 	DefaultCollectorHost string = "localhost"
 	// DefaultGRPCServiceConfig is the gRPC service config used if none is
 	// provided by the user.

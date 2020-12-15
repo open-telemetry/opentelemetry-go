@@ -151,7 +151,7 @@ type mockCol struct {
 	traceSvc  *mockTraceService
 	metricSvc *mockMetricService
 
-	address  string
+	endpoint string
 	stopFunc func() error
 	stopOnce sync.Once
 }
@@ -207,15 +207,15 @@ func (mc *mockCol) getMetrics() []*metricpb.Metric {
 	return mc.metricSvc.getMetrics()
 }
 
-// runMockCol is a helper function to create a mockCol
-func runMockCol(t *testing.T) *mockCol {
-	return runMockColAtAddr(t, "localhost:0")
+// runMockCollector is a helper function to create a mock Collector
+func runMockCollector(t *testing.T) *mockCol {
+	return runMockColAtEndpoint(t, "localhost:0")
 }
 
-func runMockColAtAddr(t *testing.T, addr string) *mockCol {
-	ln, err := net.Listen("tcp", addr)
+func runMockColAtEndpoint(t *testing.T, endpoint string) *mockCol {
+	ln, err := net.Listen("tcp", endpoint)
 	if err != nil {
-		t.Fatalf("Failed to get an address: %v", err)
+		t.Fatalf("Failed to get an endpoint: %v", err)
 	}
 
 	srv := grpc.NewServer()
@@ -233,7 +233,7 @@ func runMockColAtAddr(t *testing.T, addr string) *mockCol {
 
 	_, collectorPortStr, _ := net.SplitHostPort(ln.Addr().String())
 
-	mc.address = "localhost:" + collectorPortStr
+	mc.endpoint = "localhost:" + collectorPortStr
 	mc.stopFunc = deferFunc
 
 	return mc

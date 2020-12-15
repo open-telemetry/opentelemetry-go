@@ -57,7 +57,7 @@ func TestNewExporter_endToEnd(t *testing.T) {
 }
 
 func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption) {
-	mc := runMockColAtAddr(t, "localhost:56561")
+	mc := runMockColAtEndpoint(t, "localhost:56561")
 
 	defer func() {
 		_ = mc.stop()
@@ -302,7 +302,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 }
 
 func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
-	mc := runMockCol(t)
+	mc := runMockCollector(t)
 	defer func() {
 		_ = mc.stop()
 	}()
@@ -340,7 +340,7 @@ func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
 }
 
 func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
-	mc := runMockCol(t)
+	mc := runMockCollector(t)
 
 	reconnectionPeriod := 20 * time.Millisecond
 	ctx := context.Background()
@@ -369,12 +369,12 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 			t,
 			exp.ExportSpans(ctx, []*exporttrace.SpanSnapshot{{Name: "in the midst"}}),
 			"transport: Error while dialing dial tcp %s: connect: connection refused",
-			mc.address,
+			mc.endpoint,
 		)
 
 		// Now resurrect the collector by making a new one but reusing the
-		// old address, and the collector should reconnect automatically.
-		nmc := runMockColAtAddr(t, mc.address)
+		// old endpoint, and the collector should reconnect automatically.
+		nmc := runMockColAtEndpoint(t, mc.endpoint)
 
 		// Give the exporter sometime to reconnect
 		<-time.After(reconnectionPeriod * 4)
@@ -409,26 +409,26 @@ func TestNewExporter_collectorOnBadConnection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to grab an available port: %v", err)
 	}
-	// Firstly close the "collector's" channel: optimistically this address won't get reused ASAP
+	// Firstly close the "collector's" channel: optimistically this endpoint won't get reused ASAP
 	// However, our goal of closing it is to simulate an unavailable connection
 	_ = ln.Close()
 
 	_, collectorPortStr, _ := net.SplitHostPort(ln.Addr().String())
 
-	address := fmt.Sprintf("localhost:%s", collectorPortStr)
+	endpoint := fmt.Sprintf("localhost:%s", collectorPortStr)
 	ctx := context.Background()
 	exp, err := otlp.NewExporter(ctx,
 		otlp.WithInsecure(),
 		otlp.WithReconnectionPeriod(50*time.Millisecond),
-		otlp.WithEndpoint(address))
+		otlp.WithEndpoint(endpoint))
 	if err != nil {
 		t.Fatalf("Despite an indefinite background reconnection, got error: %v", err)
 	}
 	_ = exp.Shutdown(ctx)
 }
 
-func TestNewExporter_withAddress(t *testing.T) {
-	mc := runMockCol(t)
+func TestNewExporter_withEndpoint(t *testing.T) {
+	mc := runMockCollector(t)
 	defer func() {
 		_ = mc.stop()
 	}()
@@ -449,7 +449,7 @@ func TestNewExporter_withAddress(t *testing.T) {
 }
 
 func TestNewExporter_withHeaders(t *testing.T) {
-	mc := runMockCol(t)
+	mc := runMockCollector(t)
 	defer func() {
 		_ = mc.stop()
 	}()
@@ -473,7 +473,7 @@ func TestNewExporter_withHeaders(t *testing.T) {
 }
 
 func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
-	mc := runMockCol(t)
+	mc := runMockCollector(t)
 
 	defer func() {
 		_ = mc.stop()
