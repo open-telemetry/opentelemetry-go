@@ -67,7 +67,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption)
 
 	opts := []otlp.ExporterOption{
 		otlp.WithInsecure(),
-		otlp.WithAddress(mc.address),
+		otlp.WithEndpoint(mc.endpoint),
 		otlp.WithReconnectionPeriod(50 * time.Millisecond),
 	}
 
@@ -311,7 +311,7 @@ func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
 	exp, err := otlp.NewExporter(ctx,
 		otlp.WithInsecure(),
 		otlp.WithReconnectionPeriod(50*time.Millisecond),
-		otlp.WithAddress(mc.address))
+		otlp.WithEndpoint(mc.endpoint))
 	if err != nil {
 		t.Fatalf("error creating exporter: %v", err)
 	}
@@ -346,7 +346,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 	ctx := context.Background()
 	exp, err := otlp.NewExporter(ctx,
 		otlp.WithInsecure(),
-		otlp.WithAddress(mc.address),
+		otlp.WithEndpoint(mc.endpoint),
 		otlp.WithReconnectionPeriod(reconnectionPeriod))
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -420,7 +420,7 @@ func TestNewExporter_collectorOnBadConnection(t *testing.T) {
 	exp, err := otlp.NewExporter(ctx,
 		otlp.WithInsecure(),
 		otlp.WithReconnectionPeriod(50*time.Millisecond),
-		otlp.WithAddress(address))
+		otlp.WithEndpoint(address))
 	if err != nil {
 		t.Fatalf("Despite an indefinite background reconnection, got error: %v", err)
 	}
@@ -436,7 +436,7 @@ func TestNewExporter_withAddress(t *testing.T) {
 	exp := otlp.NewUnstartedExporter(
 		otlp.WithInsecure(),
 		otlp.WithReconnectionPeriod(50*time.Millisecond),
-		otlp.WithAddress(mc.address))
+		otlp.WithEndpoint(mc.endpoint))
 
 	ctx := context.Background()
 	defer func() {
@@ -458,7 +458,7 @@ func TestNewExporter_withHeaders(t *testing.T) {
 	exp, _ := otlp.NewExporter(ctx,
 		otlp.WithInsecure(),
 		otlp.WithReconnectionPeriod(50*time.Millisecond),
-		otlp.WithAddress(mc.address),
+		otlp.WithEndpoint(mc.endpoint),
 		otlp.WithHeaders(map[string]string{"header1": "value1"}),
 	)
 	require.NoError(t, exp.ExportSpans(ctx, []*exporttrace.SpanSnapshot{{Name: "in the midst"}}))
@@ -485,7 +485,7 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 	exp, _ := otlp.NewExporter(ctx,
 		otlp.WithInsecure(),
 		otlp.WithReconnectionPeriod(50*time.Millisecond),
-		otlp.WithAddress(mc.address),
+		otlp.WithEndpoint(mc.endpoint),
 	)
 
 	defer func() {
