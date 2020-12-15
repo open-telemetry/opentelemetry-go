@@ -126,19 +126,19 @@ modules and their versions:
 
 * `otel`: `v0.14.0`
 * `otel/trace`: `v0.14.0`
-* `otel/metrics`: `v0.14.0`
+* `otel/metric`: `v0.14.0`
 * `otel/baggage`: `v0.14.0`
 * `otel/sdk/trace`: `v0.14.0`
-* `otel/sdk/metrics`: `v0.14.0`
+* `otel/sdk/metric`: `v0.14.0`
 
 These modules have been developed to a point where the `otel/trace`,
 `otel/baggage`, and `otel/sdk/trace` modules have reached a point that they
-should be considered for a stable release. The `otel/metrics` and
-`otel/sdk/metrics` are still under active development and the `otel` module
-depends on both `otel/trace` and `otel/metrics`.
+should be considered for a stable release. The `otel/metric` and
+`otel/sdk/metric` are still under active development and the `otel` module
+depends on both `otel/trace` and `otel/metric`.
 
-The `otel` package is refactored to remove its dependencies on `otel/metrics`
-so it can be released as stable as well. With that done the following release
+The `otel` package is refactored to remove its dependencies on `otel/metric` so
+it can be released as stable as well. With that done the following release
 candidates are made:
 
 * `otel`: `v1.0.0-rc.1`
@@ -146,7 +146,7 @@ candidates are made:
 * `otel/baggage`: `v1.0.0-rc.1`
 * `otel/sdk/trace`: `v1.0.0-rc.1`
 
-The `otel/metrics` and `otel/sdk/metrics` modules remain at `v0.14.0`.
+The `otel/metric` and `otel/sdk/metric` modules remain at `v0.14.0`.
 
 A few minor issues are discovered in the `otel/trace` package. These issues are
 resolved with some minor, but backwards incompatible, changes and are released
@@ -174,34 +174,34 @@ precedence](https://semver.org/spec/v2.0.0.html#spec-item-11), this release
 will correctly be interpreted as the successor to the previous release
 candidates.
 
-Active development of this project continues. The `otel/metrics` module now has
+Active development of this project continues. The `otel/metric` module now has
 backwards incompatible changes to its API that need to be released and the
 `otel/baggage` module has a minor bug fix that needs to be released. The
 following release is made:
 
 * `otel`: `v1.0.1`
 * `otel/trace`: `v1.0.1`
-* `otel/metrics`: `v0.15.0`
+* `otel/metric`: `v0.15.0`
 * `otel/baggage`: `v1.0.1`
 * `otel/sdk/trace`: `v1.0.1`
-* `otel/sdk/metrics`: `v0.15.0`
+* `otel/sdk/metric`: `v0.15.0`
 
 Notice that, again, all stable module versions are incremented in unison and
-the `otel/sdk/metrics` package, which depends on the `otel/metrics` package,
-also bumped its version. This bump of the `otel/sdk/metrics` package makes
-sense given their coupling, though it is not explicitly required by our
-versioning policy.
+the `otel/sdk/metric` package, which depends on the `otel/metric` package, also
+bumped its version. This bump of the `otel/sdk/metric` package makes sense
+given their coupling, though it is not explicitly required by our versioning
+policy.
 
-As we progress, the `otel/metrics` and `otel/sdk/metrics` packages have reached
-a point where they should be evaluated for stability. The `otel` module is
-reintegrated with the `otel/metrics` package and the following release is made:
+As we progress, the `otel/metric` and `otel/sdk/metric` packages have reached a
+point where they should be evaluated for stability. The `otel` module is
+reintegrated with the `otel/metric` package and the following release is made:
 
 * `otel`: `v1.1.0-rc.1`
 * `otel/trace`: `v1.1.0-rc.1`
-* `otel/metrics`: `v1.1.0-rc.1`
+* `otel/metric`: `v1.1.0-rc.1`
 * `otel/baggage`: `v1.1.0-rc.1`
 * `otel/sdk/trace`: `v1.1.0-rc.1`
-* `otel/sdk/metrics`: `v1.1.0-rc.1`
+* `otel/sdk/metric`: `v1.1.0-rc.1`
 
 All the modules are evaluated and determined to a viable stable release. They
 are then released as version `v1.1.0` (the minor version is incremented to
@@ -209,7 +209,7 @@ indicate the addition of new signal).
 
 * `otel`: `v1.1.0`
 * `otel/trace`: `v1.1.0`
-* `otel/metrics`: `v1.1.0`
+* `otel/metric`: `v1.1.0`
 * `otel/baggage`: `v1.1.0`
 * `otel/sdk/trace`: `v1.1.0`
-* `otel/sdk/metrics`: `v1.1.0`
+* `otel/sdk/metric`: `v1.1.0`
