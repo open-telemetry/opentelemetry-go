@@ -9,10 +9,9 @@ jobs:
   go:
     strategy:
       fail-fast: false
-    runs-on: ubuntu-latest
-    strategy:
       matrix:
         go_version: [1.14, 1.15]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v2
