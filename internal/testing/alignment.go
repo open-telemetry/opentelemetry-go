@@ -49,7 +49,7 @@ type FieldOffset struct {
 
 // Aligned8Byte returns if all fields are aligned modulo 8-bytes.
 //
-// Error messaging is printed to out for any fileds determined misaligned.
+// Error messaging is printed to out for any field determined misaligned.
 func Aligned8Byte(fields []FieldOffset, out io.Writer) bool {
 	misaligned := make([]FieldOffset, 0)
 	for _, f := range fields {
