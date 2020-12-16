@@ -46,7 +46,7 @@ func initProvider() func() {
 
 	// If the OpenTelemetry Collector is running on a local cluster (minikube or
 	// microk8s), it should be accessible through the NodePort service at the
-	// `localhost:30080` endpint. Otherwise, replace `localhost` with the
+	// `localhost:30080` endpoint. Otherwise, replace `localhost` with the
 	// endpoint of your cluster. If you run the app inside k8s, then you can
 	// probably connect directly to the service through dns
 	exp, err := otlp.NewExporter(ctx,
