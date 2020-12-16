@@ -57,7 +57,7 @@ func TestNewExporter_endToEnd(t *testing.T) {
 }
 
 func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.ExporterOption) {
-	mc := runMockColAtEndpoint(t, "localhost:56561")
+	mc := runMockCollectorAtEndpoint(t, "localhost:56561")
 
 	defer func() {
 		_ = mc.stop()
@@ -374,7 +374,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 
 		// Now resurrect the collector by making a new one but reusing the
 		// old endpoint, and the collector should reconnect automatically.
-		nmc := runMockColAtEndpoint(t, mc.endpoint)
+		nmc := runMockCollectorAtEndpoint(t, mc.endpoint)
 
 		// Give the exporter sometime to reconnect
 		<-time.After(reconnectionPeriod * 4)
