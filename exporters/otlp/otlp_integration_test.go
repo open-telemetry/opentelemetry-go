@@ -216,6 +216,16 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.GRPCConnectionO
 
 	// Flush and close.
 	pusher.Stop()
+	func() {
+		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+		if err := tp1.Shutdown(ctx); err != nil {
+			t.Fatalf("failed to shut down a tracer provider 1: %v", err)
+		}
+		if err := tp2.Shutdown(ctx); err != nil {
+			t.Fatalf("failed to shut down a tracer provider 2: %v", err)
+		}
+	}()
 
 	// Wait >2 cycles.
 	<-time.After(40 * time.Millisecond)
@@ -513,13 +523,14 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 	span.SetAttributes(testKvs...)
 	span.End()
 
-	selector := simple.NewWithInexpensiveDistribution()
-	processor := processor.New(selector, exportmetric.StatelessExportKindSelector())
-	pusher := push.New(processor, exp)
-	pusher.Start()
-
 	// Flush and close.
-	pusher.Stop()
+	func() {
+		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+		if err := tp.Shutdown(ctx); err != nil {
+			t.Fatalf("failed to shut down a tracer provider: %v", err)
+		}
+	}()
 
 	// Wait >2 cycles.
 	<-time.After(40 * time.Millisecond)
