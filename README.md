@@ -28,6 +28,8 @@ Project versioning information and stability guarantees can be found in the
 
 ## Getting Started
 
+You can find a getting started guide on [opentelemetry.io](https://opentelemetry.io/docs/go/getting-started/).
+
 OpenTelemetry's goal is to provide a single set of APIs to capture distributed
 traces and metrics from your application and send them to an observability
 platform. This project allows you to do just that for applications written in
