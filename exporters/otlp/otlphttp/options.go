@@ -32,6 +32,13 @@ const (
 	GzipCompression
 )
 
+type PayloadFormat int
+
+const (
+	PayloadBinary PayloadFormat = iota
+	PayloadJSON
+)
+
 const (
 	// DefaultMaxAttempts describes how many times the driver
 	// should retry the sending of the payload in case of a
@@ -58,6 +65,7 @@ type config struct {
 	tlsCfg         *tls.Config
 	insecure       bool
 	headers        map[string]string
+	format         PayloadFormat
 }
 
 // Option applies an option to the HTTP driver.
@@ -177,4 +185,14 @@ func (o headersOption) Apply(cfg *config) {
 // Content-Encoding and Content-Type may result in a broken driver.
 func WithHeaders(headers map[string]string) Option {
 	return (headersOption)(headers)
+}
+
+type payloadFormatOption PayloadFormat
+
+func (o payloadFormatOption) Apply(cfg *config) {
+	cfg.format = (PayloadFormat)(o)
+}
+
+func WithPayloadFormat(format PayloadFormat) Option {
+	return (payloadFormatOption)(format)
 }

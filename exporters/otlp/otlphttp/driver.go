@@ -28,16 +28,24 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	colmetricspb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/metrics/v1"
 	coltracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/trace/v1"
+	metricspb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
+	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
+	"go.opentelemetry.io/otel/exporters/otlp/internal/transform/transformjson"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
-const contentType = "application/x-protobuf"
+const (
+	binaryContentType = "application/x-protobuf"
+	jsonContentType   = "application/json"
+)
 
 // Keep it in sync with golang's DefaultTransport from net/http! We
 // have our own copy to avoid handling a situation where the
@@ -139,14 +147,18 @@ func (d *driver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet,
 	if len(rms) == 0 {
 		return nil
 	}
-	pbRequest := &colmetricspb.ExportMetricsServiceRequest{
-		ResourceMetrics: rms,
-	}
-	rawRequest, err := pbRequest.Marshal()
+	rawRequest, contentType, err := d.marshalMetrics(rms)
 	if err != nil {
 		return err
 	}
-	return d.send(ctx, rawRequest, d.cfg.metricsURLPath)
+	return d.send(ctx, rawRequest, contentType, d.cfg.metricsURLPath)
+}
+
+func (d *driver) marshalMetrics(rms []*metricspb.ResourceMetrics) ([]byte, string, error) {
+	request := &colmetricspb.ExportMetricsServiceRequest{
+		ResourceMetrics: rms,
+	}
+	return d.marshalRequest(request)
 }
 
 // ExportTraces implements otlp.ProtocolDriver.
@@ -155,23 +167,44 @@ func (d *driver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) 
 	if len(protoSpans) == 0 {
 		return nil
 	}
-	pbRequest := &coltracepb.ExportTraceServiceRequest{
-		ResourceSpans: protoSpans,
-	}
-	rawRequest, err := pbRequest.Marshal()
+	rawRequest, contentType, err := d.marshalTraces(protoSpans)
 	if err != nil {
 		return err
 	}
-	return d.send(ctx, rawRequest, d.cfg.tracesURLPath)
+	return d.send(ctx, rawRequest, contentType, d.cfg.tracesURLPath)
 }
 
-func (d *driver) send(ctx context.Context, rawRequest []byte, urlPath string) error {
+func (d *driver) marshalTraces(protoSpans []*tracepb.ResourceSpans) ([]byte, string, error) {
+	request := &coltracepb.ExportTraceServiceRequest{
+		ResourceSpans: protoSpans,
+	}
+	return d.marshalRequest(request)
+}
+
+type protoMarshalerMessage interface {
+	proto.Marshaler
+	proto.Message
+}
+
+func (d *driver) marshalRequest(request protoMarshalerMessage) ([]byte, string, error) {
+	switch d.cfg.format {
+	case PayloadBinary:
+		rawRequest, err := request.Marshal()
+		return rawRequest, binaryContentType, err
+	case PayloadJSON:
+		rawRequest, err := transformjson.Marshal(request)
+		return rawRequest, jsonContentType, err
+	}
+	return nil, "", fmt.Errorf("invalid payload format %d", d.cfg.format)
+}
+
+func (d *driver) send(ctx context.Context, rawRequest []byte, contentType, urlPath string) error {
 	address := fmt.Sprintf("%s://%s%s", d.getScheme(), d.cfg.endpoint, urlPath)
 	var cancel context.CancelFunc
 	ctx, cancel = d.contextWithStop(ctx)
 	defer cancel()
 	for i := 0; i < d.cfg.maxAttempts; i++ {
-		response, err := d.singleSend(ctx, rawRequest, address)
+		response, err := d.singleSend(ctx, rawRequest, contentType, address)
 		if err != nil {
 			return err
 		}
@@ -242,7 +275,7 @@ func (d *driver) contextWithStop(ctx context.Context) (context.Context, context.
 	return ctx, cancel
 }
 
-func (d *driver) singleSend(ctx context.Context, rawRequest []byte, address string) (*http.Response, error) {
+func (d *driver) singleSend(ctx context.Context, rawRequest []byte, contentType, address string) (*http.Response, error) {
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, address, nil)
 	if err != nil {
 		return nil, err
@@ -250,6 +283,7 @@ func (d *driver) singleSend(ctx context.Context, rawRequest []byte, address stri
 	bodyReader, contentLength, headers := d.prepareBody(rawRequest)
 	// Not closing bodyReader through defer, the HTTP Client's
 	// Transport will do it for us
+	headers.Set("Content-Type", contentType)
 	request.Body = bodyReader
 	request.ContentLength = contentLength
 	for key, values := range headers {
@@ -267,7 +301,6 @@ func (d *driver) prepareBody(rawRequest []byte) (io.ReadCloser, int64, http.Head
 		headers.Set(k, v)
 	}
 	contentLength := (int64)(len(rawRequest))
-	headers.Set("Content-Type", contentType)
 	requestReader := bytes.NewBuffer(rawRequest)
 	switch d.cfg.compression {
 	case NoCompression:
