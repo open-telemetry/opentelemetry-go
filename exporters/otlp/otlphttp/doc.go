@@ -14,7 +14,8 @@
 
 /*
 Package otlphttp implements a protocol driver that sends traces and
-metrics to the collector using HTTP with binary protobuf payloads.
+metrics to the collector using HTTP with binary or JSON protobuf
+payloads.
 
 This package is currently in a pre-GA phase. Backwards incompatible
 changes may be introduced in subsequent minor version releases as we
