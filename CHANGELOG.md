@@ -18,6 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Store the parent's full `SpanContext` rather than just its span ID in the `span` struct. (#1360)
 - Improve span duration accuracy. (#1360)
 - Migrated CI/CD from CircleCI to GitHub Actions (#1382)
+- Remove duplicate checkout from GitHub Actions workflow (#1407)
 ### Removed
 
 - Remove `errUninitializedSpan` as its only usage is now obsolete. (#1360)
