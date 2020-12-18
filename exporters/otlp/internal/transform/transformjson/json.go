@@ -37,6 +37,10 @@ func Marshal(message proto.Message) ([]byte, error) {
 	return marshal(message)
 }
 
+func Unmarshal(data []byte, message proto.Message) error {
+	return unmarshal(data, message)
+}
+
 type result int
 
 const (
@@ -45,15 +49,36 @@ const (
 	resultFinished
 )
 
+type fixupType int
+
+const (
+	fixupToHex fixupType = iota
+	fixupToBase64
+)
+
 func marshal(request proto.Message) ([]byte, error) {
 	buffer := new(bytes.Buffer)
 	marshaler := jsonpb.Marshaler{}
 	if err := marshaler.Marshal(buffer, request); err != nil {
 		return nil, err
 	}
-	state := newState()
+	return fixupJSON(buffer, fixupToHex)
+}
+
+func unmarshal(data []byte, request proto.Message) error {
+	buffer := bytes.NewBuffer(data)
+	revertedJSON, err := fixupJSON(buffer, fixupToBase64)
+	if err != nil {
+		return err
+	}
+	unmarshaler := jsonpb.Unmarshaler{}
+	return unmarshaler.Unmarshal(bytes.NewBuffer(revertedJSON), request)
+}
+
+func fixupJSON(dataReader io.Reader, fixup fixupType) ([]byte, error) {
+	state := newState(fixup)
 	defer state.clean()
-	decoder := json.NewDecoder(buffer)
+	decoder := json.NewDecoder(dataReader)
 	for {
 		processor := state.topProcessor()
 		switch processor.process(decoder.Token()) {
@@ -84,10 +109,13 @@ type state struct {
 	err        error
 	tempOPS    []*objectProcessorState
 	tempAPS    []*arrayProcessorState
+	fixup      fixupType
 }
 
-func newState() *state {
-	s := &state{}
+func newState(fixup fixupType) *state {
+	s := &state{
+		fixup: fixup,
+	}
 	s.push((*toplevelProcessor)(s), nil)
 	s.s = s
 	return s
@@ -282,17 +310,12 @@ func (p *objectProcessor) processValue(token json.Token, extra *objectProcessorS
 		if !ok {
 			return p.s.fail(errors.New("expected a string for an ID value"))
 		}
-		for _, enc := range []*base64.Encoding{base64.StdEncoding, base64.URLEncoding} {
-			strBuf := bytes.NewBufferString(str)
-			dec := base64.NewDecoder(enc, strBuf)
-			b, err := ioutil.ReadAll(dec)
-			if err != nil {
-				continue
-			}
-			extra.currentMap[extra.currentKey] = hex.EncodeToString(b)
-			return resultOK
+		fixedID, err := fixID(p.fixup, str)
+		if err != nil {
+			return p.s.fail(err)
 		}
-		return p.s.fail(errors.New("invalid base64 encoding of an ID value"))
+		extra.currentMap[extra.currentKey] = fixedID
+		return resultOK
 	}
 	switch v := token.(type) {
 	case json.Delim:
@@ -315,6 +338,49 @@ func (p *objectProcessor) processValue(token json.Token, extra *objectProcessorS
 		extra.currentMap[extra.currentKey] = v
 	}
 	return resultOK
+}
+
+func fixID(fixup fixupType, str string) (string, error) {
+	switch fixup {
+	case fixupToHex:
+		return fixIDToHex(str)
+	case fixupToBase64:
+		return fixIDToBase64(str)
+	default:
+		return "", errors.New("invalid fixup type")
+	}
+}
+
+func fixIDToHex(str string) (string, error) {
+	strBuf := bytes.NewBufferString(str)
+	dec := base64.NewDecoder(base64.StdEncoding, strBuf)
+	b, err := ioutil.ReadAll(dec)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}
+
+func fixIDToBase64(str string) (string, error) {
+	b, err := hex.DecodeString(str)
+	if err != nil {
+		return "", err
+	}
+	bLen := len(b)
+	bLen64 := (int64)(bLen)
+	buf := new(bytes.Buffer)
+	stdEnc := base64.StdEncoding
+	buf.Grow(stdEnc.EncodedLen(bLen))
+	enc := base64.NewEncoder(stdEnc, buf)
+	written, err := io.Copy(enc, bytes.NewBuffer(b))
+	if err != nil {
+		return "", err
+	}
+	if written != bLen64 {
+		return "", errors.New("failed to copy all bytes to base64 encoder")
+	}
+	enc.Close()
+	return buf.String(), nil
 }
 
 type arrayProcessorState struct {

@@ -141,3 +141,33 @@ func TestMarshalMetrics(t *testing.T) {
 	assert.NoError(t, err)
 	assert.JSONEq(t, metricsJSON, (string)(rawRequest))
 }
+
+func TestUnmarshalTraces(t *testing.T) {
+	snapshotSlice := otlptest.SingleSpanSnapshot()
+	protoSpans := transform.SpanData(snapshotSlice)
+	request := &collectortracepb.ExportTraceServiceRequest{
+		ResourceSpans: protoSpans,
+	}
+	// This assumes that "snapshotJSON" represents "request",
+	// which is tested by TestMarshalTraces
+	newRequest := &collectortracepb.ExportTraceServiceRequest{}
+	err := transformjson.Unmarshal([]byte(snapshotJSON), newRequest)
+	assert.NoError(t, err)
+	assert.Equal(t, request, newRequest)
+}
+
+func TestUnmarshalMetrics(t *testing.T) {
+	cps := otlptest.OneRecordCheckpointSet{}
+	selector := metricexport.CumulativeExportKindSelector()
+	rms, err := transform.CheckpointSet(context.Background(), selector, cps, 1)
+	assert.NoError(t, err)
+	request := &collectormetricspb.ExportMetricsServiceRequest{
+		ResourceMetrics: rms,
+	}
+	// This assumes that "metricsJSON" represents "request", which
+	// is tested by TestMarshalMetrics
+	newRequest := &collectormetricspb.ExportMetricsServiceRequest{}
+	err = transformjson.Unmarshal([]byte(metricsJSON), newRequest)
+	assert.NoError(t, err)
+	assert.Equal(t, request, newRequest)
+}
