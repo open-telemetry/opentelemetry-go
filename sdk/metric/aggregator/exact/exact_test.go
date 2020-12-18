@@ -151,10 +151,17 @@ func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
 
 	aggregatortest.CheckedMerge(t, ckpt1, ckpt2, descriptor)
 
-	all.Sort()
-
 	pts, err := ckpt1.Points()
 	require.Nil(t, err)
+
+	received := aggregatortest.NewNumbers(profile.NumberKind)
+	for i, s := range pts {
+		received.Append(s.Number)
+
+		if i > 0 {
+			require.True(t, pts[i-1].Time.Before(pts[i].Time))
+		}
+	}
 
 	allSum := all.Sum()
 	sum := sumOf(pts, profile.NumberKind)
@@ -166,6 +173,7 @@ func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
 	count, err := ckpt1.Count()
 	require.Nil(t, err)
 	require.Equal(t, all.Count(), count, "Same count - absolute")
+	require.Equal(t, all, received, "Same ordered contents")
 }
 
 func TestExactMerge(t *testing.T) {

@@ -64,17 +64,20 @@ type (
 		LastValue() (number.Number, time.Time, error)
 	}
 
-	// Points returns the raw set of values that were aggregated.
+	// Points returns the raw values that were aggregated.
 	Points interface {
 		Aggregation
+
+		// Points returns samples in the order they were
+		// recorded.  Points are approximately ordered by
+		// timestamp, but this is not guaranteed.
 		Points() (Samples, error)
 	}
 
-	// Samples is a set of samples.  They implement the
-	// sort.Interface, sorting by arrival time.
+	// Samples is a list of Samples.
 	Samples []Sample
 
-	// Sample is a point
+	// Sample is a raw data point, consisting of a number and value.
 	Sample struct {
 		number.Number
 		time.Time
