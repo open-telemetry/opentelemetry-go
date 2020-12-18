@@ -105,6 +105,19 @@ func TestEndToEnd(t *testing.T) {
 				ExpectedHeaders: testHeaders,
 			},
 		},
+		{
+			name: "with JSON payloads",
+			opts: []otlphttp.Option{
+				otlphttp.WithPayloadFormat(otlphttp.PayloadJSON),
+			},
+		},
+		{
+			name: "with JSON payloads and gzip compression",
+			opts: []otlphttp.Option{
+				otlphttp.WithPayloadFormat(otlphttp.PayloadJSON),
+				otlphttp.WithCompression(otlphttp.GzipCompression),
+			},
+		},
 	}
 
 	for _, tc := range tests {
