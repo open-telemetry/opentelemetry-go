@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"math"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -240,6 +241,8 @@ func TestExactFloat64(t *testing.T) {
 
 	agg, ckpt := new2()
 
+	startTime := time.Now()
+
 	for _, f := range fpsf(1) {
 		all.Append(number.NewFloat64Number(f))
 		aggregatortest.CheckedUpdate(t, agg, number.NewFloat64Number(f), descriptor)
@@ -249,6 +252,8 @@ func TestExactFloat64(t *testing.T) {
 		all.Append(number.NewFloat64Number(f))
 		aggregatortest.CheckedUpdate(t, agg, number.NewFloat64Number(f), descriptor)
 	}
+
+	endTime := time.Now()
 
 	require.NoError(t, agg.SynchronizedMove(ckpt, descriptor))
 
@@ -272,6 +277,8 @@ func TestExactFloat64(t *testing.T) {
 			require.True(t, po[i-1].Time.Before(po[i].Time))
 		}
 	}
+	require.True(t, po[0].Time.After(startTime))
+	require.True(t, po[len(po)-1].Time.Before(endTime))
 }
 
 func TestSynchronizedMoveReset(t *testing.T) {
