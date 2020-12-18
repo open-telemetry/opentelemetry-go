@@ -139,7 +139,6 @@ const (
 )
 
 var (
-	ErrInvalidQuantile  = fmt.Errorf("the requested quantile is out of range")
 	ErrNegativeInput    = fmt.Errorf("negative value is out of range for this instrument")
 	ErrNaNInput         = fmt.Errorf("NaN value is an invalid input")
 	ErrInconsistentType = fmt.Errorf("inconsistent aggregator types")

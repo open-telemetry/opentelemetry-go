@@ -458,24 +458,6 @@ func BenchmarkFloat64MaxSumCountHandleAdd(b *testing.B) {
 	benchmarkFloat64ValueRecorderHandleAdd(b, "float64.minmaxsumcount")
 }
 
-// DDSketch
-
-func BenchmarkInt64DDSketchAdd(b *testing.B) {
-	benchmarkInt64ValueRecorderAdd(b, "int64.sketch")
-}
-
-func BenchmarkInt64DDSketchHandleAdd(b *testing.B) {
-	benchmarkInt64ValueRecorderHandleAdd(b, "int64.sketch")
-}
-
-func BenchmarkFloat64DDSketchAdd(b *testing.B) {
-	benchmarkFloat64ValueRecorderAdd(b, "float64.sketch")
-}
-
-func BenchmarkFloat64DDSketchHandleAdd(b *testing.B) {
-	benchmarkFloat64ValueRecorderHandleAdd(b, "float64.sketch")
-}
-
 // Array
 
 func BenchmarkInt64ArrayAdd(b *testing.B) {

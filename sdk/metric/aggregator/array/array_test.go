@@ -39,7 +39,7 @@ func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
 
 	pts, err := agg.Points()
 	require.NoError(t, err)
-	require.Equal(t, nil, pts)
+	require.Equal(t, 0, len(pts))
 }
 
 func new2() (_, _ *Aggregator) {
@@ -252,8 +252,6 @@ func TestArrayFloat64(t *testing.T) {
 
 	require.NoError(t, agg.SynchronizedMove(ckpt, descriptor))
 
-	all.Sort()
-
 	pts, err := ckpt.Points()
 	require.Nil(t, err)
 
@@ -269,7 +267,10 @@ func TestArrayFloat64(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, all.Len(), len(po), "Points() must have same length of updates")
 	for i := 0; i < len(po); i++ {
-		require.Equal(t, all.Points()[i], po[i], "Wrong point at position %d", i)
+		require.Equal(t, all.Points()[i], po[i].Number, "Wrong point at position %d", i)
+		if i > 0 {
+			require.True(t, po[i-1].Time.Before(po[i].Time))
+		}
 	}
 }
 

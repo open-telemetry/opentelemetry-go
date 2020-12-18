@@ -92,8 +92,6 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// TODO: Expose Numbers in api/metric for sorting support
-
 type Numbers struct {
 	// numbers has to be aligned for 64-bit atomic operations.
 	numbers []number.Number
@@ -144,16 +142,6 @@ func (n *Numbers) Min() number.Number {
 
 func (n *Numbers) Max() number.Number {
 	return n.numbers[len(n.numbers)-1]
-}
-
-// Median() is an alias for Quantile(0.5).
-func (n *Numbers) Median() number.Number {
-	// Note that len(n.numbers) is 1 greater than the max element
-	// index, so dividing by two rounds up.  This gives the
-	// intended definition for Quantile() in tests, which is to
-	// return the smallest element that is at or above the
-	// specified quantile.
-	return n.numbers[len(n.numbers)/2]
 }
 
 func (n *Numbers) Points() []number.Number {

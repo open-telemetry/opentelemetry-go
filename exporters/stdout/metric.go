@@ -41,15 +41,8 @@ type line struct {
 	Count     interface{} `json:"Count,omitempty"`
 	LastValue interface{} `json:"Last,omitempty"`
 
-	Quantiles []quantile `json:"Quantiles,omitempty"`
-
 	// Note: this is a pointer because omitempty doesn't work when time.IsZero()
 	Timestamp *time.Time `json:"Timestamp,omitempty"`
-}
-
-type quantile struct {
-	Quantile interface{} `json:"Quantile"`
-	Value    interface{} `json:"Value"`
 }
 
 func (e *metricExporter) ExportKindFor(desc *metric.Descriptor, kind aggregation.Kind) exportmetric.ExportKind {
@@ -106,22 +99,6 @@ func (e *metricExporter) Export(_ context.Context, checkpointSet exportmetric.Ch
 				return err
 			}
 			expose.Min = min.AsInterface(kind)
-
-			if dist, ok := agg.(aggregation.Distribution); ok && len(e.config.Quantiles) != 0 {
-				summary := make([]quantile, len(e.config.Quantiles))
-				expose.Quantiles = summary
-
-				for i, q := range e.config.Quantiles {
-					value, err := dist.Quantile(q)
-					if err != nil {
-						return err
-					}
-					summary[i] = quantile{
-						Quantile: q,
-						Value:    value.AsInterface(kind),
-					}
-				}
-			}
 		} else if lv, ok := agg.(aggregation.LastValue); ok {
 			value, timestamp, err := lv.LastValue()
 			if err != nil {
