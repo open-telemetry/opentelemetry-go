@@ -27,6 +27,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -35,6 +36,7 @@ import (
 	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
 	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/otlptest"
+	"go.opentelemetry.io/otel/exporters/otlp/internal/transform/transformjson"
 	"go.opentelemetry.io/otel/exporters/otlp/otlphttp"
 )
 
@@ -94,14 +96,18 @@ func (c *mockCollector) serveMetrics(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	response := collectormetricpb.ExportMetricsServiceResponse{}
-	rawResponse, err := response.Marshal()
+	contentType, err := getValidContentType(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	rawResponse, err := marshalMessage(contentType, &collectormetricpb.ExportMetricsServiceResponse{})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if injectedStatus := c.getInjectHTTPStatus(); injectedStatus != 0 {
-		writeReply(w, rawResponse, injectedStatus, c.injectContentType)
+		writeReply(w, contentType, rawResponse, injectedStatus, c.injectContentType)
 		return
 	}
 	rawRequest, err := readRequest(r)
@@ -110,11 +116,11 @@ func (c *mockCollector) serveMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	request := collectormetricpb.ExportMetricsServiceRequest{}
-	if err := request.Unmarshal(rawRequest); err != nil {
+	if err := unmarshalMessage(contentType, &request, rawRequest); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	writeReply(w, rawResponse, 0, c.injectContentType)
+	writeReply(w, contentType, rawResponse, 0, c.injectContentType)
 	c.metricLock.Lock()
 	defer c.metricLock.Unlock()
 	c.metricsStorage.AddMetrics(&request)
@@ -125,14 +131,18 @@ func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	response := collectortracepb.ExportTraceServiceResponse{}
-	rawResponse, err := response.Marshal()
+	contentType, err := getValidContentType(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	rawResponse, err := marshalMessage(contentType, &collectortracepb.ExportTraceServiceResponse{})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if injectedStatus := c.getInjectHTTPStatus(); injectedStatus != 0 {
-		writeReply(w, rawResponse, injectedStatus, c.injectContentType)
+		writeReply(w, contentType, rawResponse, injectedStatus, c.injectContentType)
 		return
 	}
 	rawRequest, err := readRequest(r)
@@ -141,11 +151,11 @@ func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	request := collectortracepb.ExportTraceServiceRequest{}
-	if err := request.Unmarshal(rawRequest); err != nil {
+	if err := unmarshalMessage(contentType, &request, rawRequest); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	writeReply(w, rawResponse, 0, c.injectContentType)
+	writeReply(w, contentType, rawResponse, 0, c.injectContentType)
 	c.spanLock.Lock()
 	defer c.spanLock.Unlock()
 	c.spansStorage.AddSpans(&request)
@@ -159,6 +169,49 @@ func (c *mockCollector) checkHeaders(r *http.Request) bool {
 		}
 	}
 	return true
+}
+
+func getValidContentType(r *http.Request) (string, error) {
+	contentType := r.Header.Get("Content-Type")
+	switch contentType {
+	case "application/x-protobuf":
+	case "application/json":
+	default:
+		return "", fmt.Errorf("invalid content type %q", contentType)
+	}
+	return contentType, nil
+}
+
+type protoMarshalerMessage interface {
+	proto.Marshaler
+	proto.Message
+}
+
+func marshalMessage(contentType string, message protoMarshalerMessage) ([]byte, error) {
+	switch contentType {
+	case "application/x-protobuf":
+		return message.Marshal()
+	case "application/json":
+		return transformjson.Marshal(message)
+	default:
+		return nil, fmt.Errorf("should not happen, %s should be a valid content type by now", contentType)
+	}
+}
+
+type protoUnmarshalerMessage interface {
+	proto.Unmarshaler
+	proto.Message
+}
+
+func unmarshalMessage(contentType string, message protoUnmarshalerMessage, data []byte) error {
+	switch contentType {
+	case "application/x-protobuf":
+		return message.Unmarshal(data)
+	case "application/json":
+		return transformjson.Unmarshal(data, message)
+	default:
+		return fmt.Errorf("should not happen, %s should be a valid content type by now", contentType)
+	}
 }
 
 func (c *mockCollector) getInjectHTTPStatus() int {
@@ -194,12 +247,11 @@ func readGzipBody(body io.Reader) ([]byte, error) {
 	return rawRequest.Bytes(), nil
 }
 
-func writeReply(w http.ResponseWriter, rawResponse []byte, injectHTTPStatus int, injectContentType string) {
+func writeReply(w http.ResponseWriter, contentType string, rawResponse []byte, injectHTTPStatus int, injectContentType string) {
 	status := http.StatusOK
 	if injectHTTPStatus != 0 {
 		status = injectHTTPStatus
 	}
-	contentType := "application/x-protobuf"
 	if injectContentType != "" {
 		contentType = injectContentType
 	}
