@@ -298,3 +298,60 @@ func TestSynchronizedMoveReset(t *testing.T) {
 		},
 	)
 }
+
+func TestMergeBehavior(t *testing.T) {
+	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
+		for _, forward := range []bool{false, true} {
+			t.Run(fmt.Sprint("Forward=", forward), func(t *testing.T) {
+				descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
+				agg1, agg2, ckpt, _ := new4()
+
+				all := aggregatortest.NewNumbers(profile.NumberKind)
+
+				for i := 0; i < 100; i++ {
+					x1 := profile.Random(+1)
+					all.Append(x1)
+					aggregatortest.CheckedUpdate(t, agg1, x1, descriptor)
+				}
+
+				for i := 0; i < 100; i++ {
+					x2 := profile.Random(+1)
+					all.Append(x2)
+					aggregatortest.CheckedUpdate(t, agg2, x2, descriptor)
+				}
+
+				if forward {
+					aggregatortest.CheckedMerge(t, ckpt, agg1, descriptor)
+					aggregatortest.CheckedMerge(t, ckpt, agg2, descriptor)
+				} else {
+					aggregatortest.CheckedMerge(t, ckpt, agg2, descriptor)
+					aggregatortest.CheckedMerge(t, ckpt, agg1, descriptor)
+				}
+
+				pts, err := ckpt.Points()
+				require.Nil(t, err)
+
+				received := aggregatortest.NewNumbers(profile.NumberKind)
+				for i, s := range pts {
+					received.Append(s.Number)
+
+					if i > 0 {
+						require.True(t, pts[i-1].Time.Before(pts[i].Time))
+					}
+				}
+
+				allSum := all.Sum()
+				sum := sumOf(pts, profile.NumberKind)
+				require.InEpsilon(t,
+					(&allSum).CoerceToFloat64(profile.NumberKind),
+					sum.CoerceToFloat64(profile.NumberKind),
+					0.0000001,
+					"Same sum - absolute")
+				count, err := ckpt.Count()
+				require.Nil(t, err)
+				require.Equal(t, all.Count(), count, "Same count - absolute")
+				require.Equal(t, all, received, "Same ordered contents")
+			})
+		}
+	})
+}
