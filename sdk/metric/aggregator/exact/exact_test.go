@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package array
+package exact
 
 import (
 	"fmt"
@@ -97,7 +97,7 @@ func (ut *updateTest) run(t *testing.T, profile aggregatortest.Profile) {
 	require.Equal(t, all.Count(), count, "Same count")
 }
 
-func TestArrayUpdate(t *testing.T) {
+func TestExactUpdate(t *testing.T) {
 	// Test with an odd an even number of measurements
 	for count := 999; count <= 1000; count++ {
 		t.Run(fmt.Sprint("Odd=", count%2 == 1), func(t *testing.T) {
@@ -167,7 +167,7 @@ func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
 	require.Equal(t, all.Count(), count, "Same count - absolute")
 }
 
-func TestArrayMerge(t *testing.T) {
+func TestExactMerge(t *testing.T) {
 	// Test with an odd an even number of measurements
 	for count := 999; count <= 1000; count++ {
 		t.Run(fmt.Sprint("Odd=", count%2 == 1), func(t *testing.T) {
@@ -187,7 +187,7 @@ func TestArrayMerge(t *testing.T) {
 	}
 }
 
-func TestArrayErrors(t *testing.T) {
+func TestExactErrors(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg, ckpt := new2()
 
@@ -206,7 +206,7 @@ func TestArrayErrors(t *testing.T) {
 	})
 }
 
-func TestArrayFloat64(t *testing.T) {
+func TestExactFloat64(t *testing.T) {
 	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, number.Float64Kind)
 
 	fpsf := func(sign int) []float64 {

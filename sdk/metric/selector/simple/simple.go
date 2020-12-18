@@ -17,7 +17,7 @@ package simple // import "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 import (
 	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
@@ -96,7 +96,7 @@ func (selectorExact) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*ex
 	case metric.ValueObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
 	case metric.ValueRecorderInstrumentKind:
-		aggs := array.New(len(aggPtrs))
+		aggs := exact.New(len(aggPtrs))
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
 		}

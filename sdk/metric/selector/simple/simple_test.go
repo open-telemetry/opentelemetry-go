@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
@@ -61,7 +61,7 @@ func TestInexpensiveDistribution(t *testing.T) {
 
 func TestExactDistribution(t *testing.T) {
 	ex := simple.NewWithExactDistribution()
-	require.IsType(t, (*array.Aggregator)(nil), oneAgg(ex, &testValueRecorderDesc))
+	require.IsType(t, (*exact.Aggregator)(nil), oneAgg(ex, &testValueRecorderDesc))
 	testFixedSelectors(t, ex)
 }
 

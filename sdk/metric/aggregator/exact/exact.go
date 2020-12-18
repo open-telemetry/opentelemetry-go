@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package array // import "go.opentelemetry.io/otel/sdk/metric/aggregator/array"
+package exact // import "go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
 
 import (
 	"context"
@@ -39,7 +39,7 @@ var _ export.Aggregator = &Aggregator{}
 var _ aggregation.Points = &Aggregator{}
 var _ aggregation.Count = &Aggregator{}
 
-// New returns a new array aggregator, which aggregates recorded
+// New returns a new exact aggregator, which aggregates recorded
 // measurements by storing them in an array.  This type uses a mutex
 // for Update() and SynchronizedMove() concurrency.
 func New(cnt int) []Aggregator {
