@@ -58,13 +58,6 @@ type (
 		Max() (number.Number, error)
 	}
 
-	// Quantile returns an exact or estimated quantile over the
-	// set of values that were aggregated.
-	Quantile interface {
-		Aggregation
-		Quantile(float64) (number.Number, error)
-	}
-
 	// LastValue returns the latest value that was aggregated.
 	LastValue interface {
 		Aggregation
@@ -74,7 +67,17 @@ type (
 	// Points returns the raw set of values that were aggregated.
 	Points interface {
 		Aggregation
-		Points() ([]number.Number, error)
+		Points() (Samples, error)
+	}
+
+	// Samples is a set of samples.  They implement the
+	// sort.Interface, sorting by arrival time.
+	Samples []Sample
+
+	// Sample is a point
+	Sample struct {
+		number.Number
+		time.Time
 	}
 
 	// Buckets represents histogram buckets boundaries and counts.
@@ -108,17 +111,6 @@ type (
 		Sum() (number.Number, error)
 		Count() (int64, error)
 	}
-
-	// Distribution supports the Min, Max, Sum, Count, and Quantile
-	// interfaces.
-	Distribution interface {
-		Aggregation
-		Min() (number.Number, error)
-		Max() (number.Number, error)
-		Sum() (number.Number, error)
-		Count() (int64, error)
-		Quantile(float64) (number.Number, error)
-	}
 )
 
 type (
@@ -143,7 +135,6 @@ const (
 	MinMaxSumCountKind Kind = "MinMaxSumCount"
 	HistogramKind      Kind = "Histogram"
 	LastValueKind      Kind = "Lastvalue"
-	SketchKind         Kind = "Sketch"
 	ExactKind          Kind = "Exact"
 )
 

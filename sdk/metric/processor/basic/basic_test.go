@@ -77,7 +77,6 @@ func TestProcessor(t *testing.T) {
 								{kind: aggregation.HistogramKind},
 								{kind: aggregation.LastValueKind},
 								{kind: aggregation.ExactKind},
-								{kind: aggregation.SketchKind},
 							} {
 								t.Run(ac.kind.String(), func(t *testing.T) {
 									testProcessor(

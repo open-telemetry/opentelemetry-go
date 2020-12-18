@@ -16,10 +16,8 @@ package array // import "go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 
 import (
 	"context"
-	"math"
-	"sort"
 	"sync"
-	"unsafe"
+	"time"
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
@@ -32,18 +30,14 @@ type (
 	// Aggregator aggregates events that form a distribution, keeping
 	// an array with the exact set of values.
 	Aggregator struct {
-		lock   sync.Mutex
-		sum    number.Number
-		points points
+		lock    sync.Mutex
+		samples aggregation.Samples
 	}
-
-	points []number.Number
 )
 
 var _ export.Aggregator = &Aggregator{}
-var _ aggregation.MinMaxSumCount = &Aggregator{}
-var _ aggregation.Distribution = &Aggregator{}
 var _ aggregation.Points = &Aggregator{}
+var _ aggregation.Count = &Aggregator{}
 
 // New returns a new array aggregator, which aggregates recorded
 // measurements by storing them in an array.  This type uses a mutex
@@ -62,35 +56,14 @@ func (c *Aggregator) Kind() aggregation.Kind {
 	return aggregation.ExactKind
 }
 
-// Sum returns the sum of values in the checkpoint.
-func (c *Aggregator) Sum() (number.Number, error) {
-	return c.sum, nil
-}
-
 // Count returns the number of values in the checkpoint.
 func (c *Aggregator) Count() (int64, error) {
-	return int64(len(c.points)), nil
-}
-
-// Max returns the maximum value in the checkpoint.
-func (c *Aggregator) Max() (number.Number, error) {
-	return c.points.Quantile(1)
-}
-
-// Min returns the mininum value in the checkpoint.
-func (c *Aggregator) Min() (number.Number, error) {
-	return c.points.Quantile(0)
-}
-
-// Quantile returns the estimated quantile of data in the checkpoint.
-// It is an error if `q` is less than 0 or greated than 1.
-func (c *Aggregator) Quantile(q float64) (number.Number, error) {
-	return c.points.Quantile(q)
+	return int64(len(c.samples)), nil
 }
 
 // Points returns access to the raw data set.
-func (c *Aggregator) Points() ([]number.Number, error) {
-	return c.points, nil
+func (c *Aggregator) Points() (aggregation.Samples, error) {
+	return c.samples, nil
 }
 
 // SynchronizedMove saves the current state to oa and resets the current state to
@@ -103,21 +76,13 @@ func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descrip
 	}
 
 	c.lock.Lock()
-	if o != nil {
-		o.points = c.points
-		o.sum = c.sum
-	}
-	c.points = nil
-	c.sum = 0
-	c.lock.Unlock()
+	defer c.lock.Unlock()
 
-	// TODO: This sort should be done lazily, only when quantiles
-	// are requested.  The SDK specification says you can use this
-	// aggregator to simply list values in the order they were
-	// received as an alternative to requesting quantile information.
 	if o != nil {
-		o.sort(desc.NumberKind())
+		o.samples = c.samples
 	}
+	c.samples = nil
+
 	return nil
 }
 
@@ -125,9 +90,12 @@ func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descrip
 // Update takes a lock to prevent concurrent Update() and SynchronizedMove()
 // calls.
 func (c *Aggregator) Update(_ context.Context, number number.Number, desc *metric.Descriptor) error {
+	now := time.Now()
 	c.lock.Lock()
-	c.points = append(c.points, number)
-	c.sum.AddNumber(desc.NumberKind(), number)
+	c.samples = append(c.samples, aggregation.Sample{
+		Number: number,
+		Time:   now,
+	})
 	c.lock.Unlock()
 
 	return nil
@@ -140,34 +108,15 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 		return aggregator.NewInconsistentAggregatorError(c, oa)
 	}
 
-	// Note: Current assumption is that `o` was checkpointed,
-	// therefore is already sorted.  See the TODO above, since
-	// this is an open question.
-	c.sum.AddNumber(desc.NumberKind(), o.sum)
-	c.points = combine(c.points, o.points, desc.NumberKind())
+	c.samples = combine(c.samples, o.samples)
 	return nil
 }
 
-func (c *Aggregator) sort(kind number.Kind) {
-	switch kind {
-	case number.Float64Kind:
-		sort.Float64s(*(*[]float64)(unsafe.Pointer(&c.points)))
-
-	case number.Int64Kind:
-		sort.Sort(&c.points)
-
-	default:
-		// NOTE: This can't happen because the SDK doesn't
-		// support uint64-kind metric instruments.
-		panic("Impossible case")
-	}
-}
-
-func combine(a, b points, kind number.Kind) points {
-	result := make(points, 0, len(a)+len(b))
+func combine(a, b aggregation.Samples) aggregation.Samples {
+	result := make(aggregation.Samples, 0, len(a)+len(b))
 
 	for len(a) != 0 && len(b) != 0 {
-		if a[0].CompareNumber(kind, b[0]) < 0 {
+		if a[0].Time.Before(b[0].Time) {
 			result = append(result, a[0])
 			a = a[1:]
 		} else {
@@ -178,42 +127,4 @@ func combine(a, b points, kind number.Kind) points {
 	result = append(result, a...)
 	result = append(result, b...)
 	return result
-}
-
-func (p *points) Len() int {
-	return len(*p)
-}
-
-func (p *points) Less(i, j int) bool {
-	// Note this is specialized for int64, because float64 is
-	// handled by `sort.Float64s` and uint64 numbers never appear
-	// in this data.
-	return int64((*p)[i]) < int64((*p)[j])
-}
-
-func (p *points) Swap(i, j int) {
-	(*p)[i], (*p)[j] = (*p)[j], (*p)[i]
-}
-
-// Quantile returns the least X such that Pr(x<X)>=q, where X is an
-// element of the data set.  This uses the "Nearest-Rank" definition
-// of a quantile.
-func (p *points) Quantile(q float64) (number.Number, error) {
-	if len(*p) == 0 {
-		return 0, aggregation.ErrNoData
-	}
-
-	if q < 0 || q > 1 {
-		return 0, aggregation.ErrInvalidQuantile
-	}
-
-	if q == 0 || len(*p) == 1 {
-		return (*p)[0], nil
-	} else if q == 1 {
-		return (*p)[len(*p)-1], nil
-	}
-
-	position := float64(len(*p)-1) * q
-	ceil := int(math.Ceil(position))
-	return (*p)[ceil], nil
 }

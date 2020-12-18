@@ -15,7 +15,6 @@
 package array
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"testing"
@@ -34,23 +33,13 @@ type updateTest struct {
 }
 
 func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
-	kind := desc.NumberKind()
-
-	sum, err := agg.Sum()
-	require.NoError(t, err)
-	require.Equal(t, kind.Zero(), sum)
-
 	count, err := agg.Count()
 	require.NoError(t, err)
 	require.Equal(t, int64(0), count)
 
-	max, err := agg.Max()
-	require.True(t, errors.Is(err, aggregation.ErrNoData))
-	require.Equal(t, kind.Zero(), max)
-
-	min, err := agg.Min()
-	require.True(t, errors.Is(err, aggregation.ErrNoData))
-	require.Equal(t, kind.Zero(), min)
+	pts, err := agg.Points()
+	require.NoError(t, err)
+	require.Equal(t, nil, pts)
 }
 
 func new2() (_, _ *Aggregator) {
@@ -61,6 +50,14 @@ func new2() (_, _ *Aggregator) {
 func new4() (_, _, _, _ *Aggregator) {
 	alloc := New(4)
 	return &alloc[0], &alloc[1], &alloc[2], &alloc[3]
+}
+
+func sumOf(samples aggregation.Samples, k number.Kind) number.Number {
+	var n number.Number
+	for _, s := range samples {
+		n.AddNumber(k, s.Number)
+	}
+	return n
 }
 
 func (ut *updateTest) run(t *testing.T, profile aggregatortest.Profile) {
@@ -86,8 +83,9 @@ func (ut *updateTest) run(t *testing.T, profile aggregatortest.Profile) {
 
 	all.Sort()
 
-	sum, err := ckpt.Sum()
+	pts, err := ckpt.Points()
 	require.Nil(t, err)
+	sum := sumOf(pts, profile.NumberKind)
 	allSum := all.Sum()
 	require.InEpsilon(t,
 		(&allSum).CoerceToFloat64(profile.NumberKind),
@@ -97,18 +95,6 @@ func (ut *updateTest) run(t *testing.T, profile aggregatortest.Profile) {
 	count, err := ckpt.Count()
 	require.Nil(t, err)
 	require.Equal(t, all.Count(), count, "Same count")
-
-	min, err := ckpt.Min()
-	require.Nil(t, err)
-	require.Equal(t, all.Min(), min, "Same min")
-
-	max, err := ckpt.Max()
-	require.Nil(t, err)
-	require.Equal(t, all.Max(), max, "Same max")
-
-	qx, err := ckpt.Quantile(0.5)
-	require.Nil(t, err)
-	require.Equal(t, all.Median(), qx, "Same median")
 }
 
 func TestArrayUpdate(t *testing.T) {
@@ -166,9 +152,11 @@ func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
 
 	all.Sort()
 
-	sum, err := ckpt1.Sum()
+	pts, err := ckpt1.Points()
 	require.Nil(t, err)
+
 	allSum := all.Sum()
+	sum := sumOf(pts, profile.NumberKind)
 	require.InEpsilon(t,
 		(&allSum).CoerceToFloat64(profile.NumberKind),
 		sum.CoerceToFloat64(profile.NumberKind),
@@ -177,18 +165,6 @@ func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
 	count, err := ckpt1.Count()
 	require.Nil(t, err)
 	require.Equal(t, all.Count(), count, "Same count - absolute")
-
-	min, err := ckpt1.Min()
-	require.Nil(t, err)
-	require.Equal(t, all.Min(), min, "Same min - absolute")
-
-	max, err := ckpt1.Max()
-	require.Nil(t, err)
-	require.Equal(t, all.Max(), max, "Same max - absolute")
-
-	qx, err := ckpt1.Quantile(0.5)
-	require.Nil(t, err)
-	require.Equal(t, all.Median(), qx, "Same median - absolute")
 }
 
 func TestArrayMerge(t *testing.T) {
@@ -215,18 +191,6 @@ func TestArrayErrors(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg, ckpt := new2()
 
-		_, err := ckpt.Max()
-		require.Error(t, err)
-		require.Equal(t, err, aggregation.ErrNoData)
-
-		_, err = ckpt.Min()
-		require.Error(t, err)
-		require.Equal(t, err, aggregation.ErrNoData)
-
-		_, err = ckpt.Quantile(0.1)
-		require.Error(t, err)
-		require.Equal(t, err, aggregation.ErrNoData)
-
 		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 
 		aggregatortest.CheckedUpdate(t, agg, number.Number(0), descriptor)
@@ -239,18 +203,6 @@ func TestArrayErrors(t *testing.T) {
 		count, err := ckpt.Count()
 		require.Equal(t, int64(1), count, "NaN value was not counted")
 		require.Nil(t, err)
-
-		num, err := ckpt.Quantile(0)
-		require.Nil(t, err)
-		require.Equal(t, num, number.Number(0))
-
-		_, err = ckpt.Quantile(-0.0001)
-		require.Error(t, err)
-		require.True(t, errors.Is(err, aggregation.ErrInvalidQuantile))
-
-		_, err = agg.Quantile(1.0001)
-		require.Error(t, err)
-		require.True(t, errors.Is(err, aggregation.ErrNoData))
 	})
 }
 
@@ -302,26 +254,16 @@ func TestArrayFloat64(t *testing.T) {
 
 	all.Sort()
 
-	sum, err := ckpt.Sum()
+	pts, err := ckpt.Points()
 	require.Nil(t, err)
+
 	allSum := all.Sum()
+	sum := sumOf(pts, number.Float64Kind)
 	require.InEpsilon(t, (&allSum).AsFloat64(), sum.AsFloat64(), 0.0000001, "Same sum")
 
 	count, err := ckpt.Count()
 	require.Equal(t, all.Count(), count, "Same count")
 	require.Nil(t, err)
-
-	min, err := ckpt.Min()
-	require.Nil(t, err)
-	require.Equal(t, all.Min(), min, "Same min")
-
-	max, err := ckpt.Max()
-	require.Nil(t, err)
-	require.Equal(t, all.Max(), max, "Same max")
-
-	qx, err := ckpt.Quantile(0.5)
-	require.Nil(t, err)
-	require.Equal(t, all.Median(), qx, "Same median")
 
 	po, err := ckpt.Points()
 	require.Nil(t, err)

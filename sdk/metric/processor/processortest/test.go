@@ -26,7 +26,6 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
@@ -180,11 +179,6 @@ func (testAggregatorSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...
 		}
 	case strings.HasSuffix(desc.Name(), ".lastvalue"):
 		aggs := lastvalue.New(len(aggPtrs))
-		for i := range aggPtrs {
-			*aggPtrs[i] = &aggs[i]
-		}
-	case strings.HasSuffix(desc.Name(), ".sketch"):
-		aggs := ddsketch.New(len(aggPtrs), desc, ddsketch.NewDefaultConfig())
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
 		}
