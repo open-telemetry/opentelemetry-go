@@ -19,9 +19,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Improve span duration accuracy. (#1360)
 - Migrated CI/CD from CircleCI to GitHub Actions (#1382)
 - Remove duplicate checkout from GitHub Actions workflow (#1407)
+- Metric `array` aggregator renamed `exact` inline with the name of its `aggregation.Kind` ()
+- Metric stdout exporter uses MinMaxSumCount aggregator for ValueRecorder instrument ()
+
 ### Removed
 
 - Remove `errUninitializedSpan` as its only usage is now obsolete. (#1360)
+- Remove Metric export functionality related to quantiles and summary data points: this is not specified ()
+- Remove DDSketch metric aggregator; our intention is to re-introduce this as an option of the histogram aggregator after [new OTLP histogram data types](https://github.com/open-telemetry/opentelemetry-proto/pull/226) are released ()
 
 ## [0.15.0] - 2020-12-10
 
