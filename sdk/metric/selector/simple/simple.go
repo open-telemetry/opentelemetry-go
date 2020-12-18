@@ -38,28 +38,27 @@ var (
 	_ export.AggregatorSelector = selectorHistogram{}
 )
 
-// NewWithInexpensiveDistribution returns a simple aggregation selector
-// that uses counter, minmaxsumcount and minmaxsumcount aggregators
-// for the three kinds of metric.  This selector is faster and uses
-// less memory than the others because minmaxsumcount does not
-// aggregate quantile information.
+// NewWithInexpensiveDistribution returns a simple aggregator selector
+// that uses minmaxsumcount aggregators for `ValueRecorder`
+// instruments.  This selector is faster and uses less memory than the
+// others in this package because minmaxsumcount aggregators maintain
+// the least information about the distribution among these choices.
 func NewWithInexpensiveDistribution() export.AggregatorSelector {
 	return selectorInexpensive{}
 }
 
-// NewWithExactDistribution returns a simple aggregation selector that uses
-// counter, array, and array aggregators for the three kinds of metric.
-// This selector uses more memory than the NewWithSketchDistribution
-// because it aggregates an array of all values, therefore is able to
-// compute exact quantiles.
+// NewWithExactDistribution returns a simple aggregator selector that
+// uses exact aggregators for `ValueRecorder` instruments.  This
+// selector uses more memory than the others in this package because
+// exact aggregators maintain the most information about the
+// distribution among these choices.
 func NewWithExactDistribution() export.AggregatorSelector {
 	return selectorExact{}
 }
 
-// NewWithHistogramDistribution returns a simple aggregation selector that uses counter,
-// histogram, and histogram aggregators for the three kinds of metric. This
-// selector uses more memory than the NewWithInexpensiveDistribution because it
-// uses a counter per bucket.
+// NewWithHistogramDistribution returns a simple aggregator selector
+// that uses histogram aggregators for `ValueRecorder` instruments.
+// This selector is a good default choice for most metric exporters.
 func NewWithHistogramDistribution(boundaries []float64) export.AggregatorSelector {
 	return selectorHistogram{boundaries: boundaries}
 }
