@@ -14,6 +14,9 @@
 
 package prometheus // import "go.opentelemetry.io/otel/exporters/metric/prometheus"
 
+// Note that this package does not support a way to export Prometheus
+// Summary data points, removed in PR#1412.
+
 import (
 	"context"
 	"fmt"
@@ -54,7 +57,7 @@ type Exporter struct {
 }
 
 // ErrUnsupportedAggregator is returned for unrepresentable aggregator
-// types (e.g., array).
+// types (e.g., exact).
 var ErrUnsupportedAggregator = fmt.Errorf("unsupported aggregator type")
 
 var _ http.Handler = &Exporter{}
