@@ -458,21 +458,21 @@ func BenchmarkFloat64MaxSumCountHandleAdd(b *testing.B) {
 	benchmarkFloat64ValueRecorderHandleAdd(b, "float64.minmaxsumcount")
 }
 
-// Array
+// Exact
 
-func BenchmarkInt64ArrayAdd(b *testing.B) {
+func BenchmarkInt64ExactAdd(b *testing.B) {
 	benchmarkInt64ValueRecorderAdd(b, "int64.exact")
 }
 
-func BenchmarkInt64ArrayHandleAdd(b *testing.B) {
+func BenchmarkInt64ExactHandleAdd(b *testing.B) {
 	benchmarkInt64ValueRecorderHandleAdd(b, "int64.exact")
 }
 
-func BenchmarkFloat64ArrayAdd(b *testing.B) {
+func BenchmarkFloat64ExactAdd(b *testing.B) {
 	benchmarkFloat64ValueRecorderAdd(b, "float64.exact")
 }
 
-func BenchmarkFloat64ArrayHandleAdd(b *testing.B) {
+func BenchmarkFloat64ExactHandleAdd(b *testing.B) {
 	benchmarkFloat64ValueRecorderHandleAdd(b, "float64.exact")
 }
 
