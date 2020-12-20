@@ -168,8 +168,8 @@ func (b *Processor) Process(accum export.Accumulation) error {
 				// be allocated, one for the prior
 				// value and one for the output delta.
 				// This functionality was removed from
-				// the basic processor in PR (@@@).
-				return aggregation.ErrNoSubtraction
+				// the basic processor in PR #1415.
+				return aggregation.ErrNoCumulativeToDelta
 			}
 			// In this case allocate one aggregator to
 			// save the current state.
@@ -289,7 +289,7 @@ func (b *Processor) FinishCollection() error {
 		// delta or a cumulative aggregation.
 		var err error
 		if mkind.PrecomputedSum() {
-			err = aggregation.ErrNoSubtraction
+			err = aggregation.ErrNoCumulativeToDelta
 		} else {
 			// This line is equivalent to:
 			// value.cumulative = value.cumulative + value.current
@@ -338,8 +338,8 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 			// Precomputed sums are a special case.
 			if mkind.PrecomputedSum() {
 				// This functionality was removed from
-				// the basic processor in PR (@@@).
-				return aggregation.ErrNoSubtraction
+				// the basic processor in PR #1415.
+				return aggregation.ErrNoCumulativeToDelta
 			}
 			agg = value.current.Aggregation()
 			start = b.intervalStart
