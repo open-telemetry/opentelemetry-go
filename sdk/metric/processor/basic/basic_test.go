@@ -474,6 +474,19 @@ func TestSumObserverEndToEnd(t *testing.T) {
 			return nil
 		}))
 
+		// Try again, but ask for a Delta
+		require.Equal(
+			t,
+			aggregation.ErrNoCumulativeToDelta,
+			data.ForEach(
+				export.ConstantExportKindSelector(export.DeltaExportKind),
+				func(r export.Record) error {
+					t.Fail()
+					return nil
+				},
+			),
+		)
+
 		startTime[i] = record.StartTime()
 		endTime[i] = record.EndTime()
 		data.Unlock()
