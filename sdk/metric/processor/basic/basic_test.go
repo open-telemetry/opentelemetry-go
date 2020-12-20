@@ -120,6 +120,10 @@ func testProcessor(
 	nkind number.Kind,
 	akind aggregation.Kind,
 ) {
+	if ekind == export.DeltaExportKind && mkind.PrecomputedSum() {
+		return
+	}
+
 	// Note: this selector uses the instrument name to dictate
 	// aggregation kind.
 	selector := processorTest.AggregatorSelector()
@@ -137,7 +141,6 @@ func testProcessor(
 		desc2 := metric.NewDescriptor(fmt.Sprint("inst2", instSuffix), mkind, nkind)
 
 		for nc := 0; nc < nCheckpoint; nc++ {
-
 			// The input is 10 per update, scaled by
 			// the number of checkpoints for
 			// cumulative instruments:
@@ -150,22 +153,11 @@ func testProcessor(
 			processor.StartCollection()
 
 			for na := 0; na < nAccum; na++ {
-				_ = processor.Process(updateFor(t, &desc1, selector, res, input, labs1...))
-				_ = processor.Process(updateFor(t, &desc2, selector, res, input, labs2...))
+				require.NoError(t, processor.Process(updateFor(t, &desc1, selector, res, input, labs1...)))
+				require.NoError(t, processor.Process(updateFor(t, &desc2, selector, res, input, labs2...)))
 			}
 
-			err := processor.FinishCollection()
-			if err == aggregation.ErrNoSubtraction {
-				var subr export.Aggregator
-				selector.AggregatorFor(&desc1, &subr)
-				_, canSub := subr.(export.Subtractor)
-
-				// Allow unsupported subraction case only when it is called for.
-				require.True(t, mkind.PrecomputedSum() && ekind == export.DeltaExportKind && !canSub)
-				return
-			} else if err != nil {
-				t.Fatal("unexpected FinishCollection error: ", err)
-			}
+			require.NoError(t, processor.FinishCollection())
 
 			if nc < nCheckpoint-1 {
 				continue
@@ -178,19 +170,13 @@ func testProcessor(
 					// We're repeating the test after another
 					// interval with no updates.
 					processor.StartCollection()
-					if err := processor.FinishCollection(); err != nil {
-						t.Fatal("unexpected collection error: ", err)
-					}
+					require.NoError(t, processor.FinishCollection())
 				}
 
 				// Test the final checkpoint state.
 				records1 := processorTest.NewOutput(label.DefaultEncoder())
-				err = checkpointSet.ForEach(export.ConstantExportKindSelector(ekind), records1.AddRecord)
+				require.NoError(t, checkpointSet.ForEach(export.ConstantExportKindSelector(ekind), records1.AddRecord))
 
-				// Test for an allowed error:
-				if err != nil && err != aggregation.ErrNoSubtraction {
-					t.Fatal("unexpected checkpoint error: ", err)
-				}
 				var multiplier int64
 
 				if mkind.Asynchronous() {
@@ -198,8 +184,8 @@ func testProcessor(
 					// number of Accumulators, unless LastValue aggregation.
 					// If a precomputed sum, we expect cumulative inputs.
 					if mkind.PrecomputedSum() {
-						if ekind == export.DeltaExportKind && akind != aggregation.LastValueKind {
-							multiplier = int64(nAccum)
+						if ekind == export.DeltaExportKind {
+							panic("Impossible")
 						} else if akind == aggregation.LastValueKind {
 							multiplier = cumulativeMultiplier
 						} else {
@@ -396,44 +382,10 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 	}
 }
 
-func TestStatefulNoMemoryDelta(t *testing.T) {
-	res := resource.NewWithAttributes(label.String("R", "V"))
-	ekindSel := export.DeltaExportKindSelector()
-
-	desc := metric.NewDescriptor("inst.sum", metric.SumObserverInstrumentKind, number.Int64Kind)
-	selector := processorTest.AggregatorSelector()
-
-	processor := basic.New(selector, ekindSel, basic.WithMemory(false))
-	checkpointSet := processor.CheckpointSet()
-
-	for i := 1; i < 3; i++ {
-		// Empty interval
-		processor.StartCollection()
-		require.NoError(t, processor.FinishCollection())
-
-		// Verify zero elements
-		records := processorTest.NewOutput(label.DefaultEncoder())
-		require.NoError(t, checkpointSet.ForEach(ekindSel, records.AddRecord))
-		require.EqualValues(t, map[string]float64{}, records.Map())
-
-		// Add 10
-		processor.StartCollection()
-		_ = processor.Process(updateFor(t, &desc, selector, res, int64(i*10), label.String("A", "B")))
-		require.NoError(t, processor.FinishCollection())
-
-		// Verify one element
-		records = processorTest.NewOutput(label.DefaultEncoder())
-		require.NoError(t, checkpointSet.ForEach(ekindSel, records.AddRecord))
-		require.EqualValues(t, map[string]float64{
-			"inst.sum/A=B/R=V": 10,
-		}, records.Map())
-	}
-}
-
 func TestMultiObserverSum(t *testing.T) {
 	for _, ekindSel := range []export.ExportKindSelector{
 		export.CumulativeExportKindSelector(),
-		export.DeltaExportKindSelector(),
+		export.StatelessExportKindSelector(),
 	} {
 
 		res := resource.NewWithAttributes(label.String("R", "V"))

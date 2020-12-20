@@ -188,16 +188,6 @@ type Aggregator interface {
 	Merge(aggregator Aggregator, descriptor *metric.Descriptor) error
 }
 
-// Subtractor is an optional interface implemented by some
-// Aggregators.  An Aggregator must support `Subtract()` in order to
-// be configured for a Precomputed-Sum instrument (SumObserver,
-// UpDownSumObserver) using a DeltaExporter.
-type Subtractor interface {
-	// Subtract subtracts the `operand` from this Aggregator and
-	// outputs the value in `result`.
-	Subtract(operand, result Aggregator, descriptor *metric.Descriptor) error
-}
-
 // Exporter handles presentation of the checkpoint of aggregate
 // metrics.  This is the final stage of a metrics export pipeline,
 // where metric data are formatted for a specific system.
@@ -219,8 +209,7 @@ type Exporter interface {
 }
 
 // ExportKindSelector is a sub-interface of Exporter used to indicate
-// whether the Processor should compute Delta or Cumulative
-// Aggregations.
+// whether the Processor should compute Cumulative Aggregations.
 type ExportKindSelector interface {
 	// ExportKindFor should return the correct ExportKind that
 	// should be used when exporting data for the given metric
@@ -416,12 +405,6 @@ func ConstantExportKindSelector(kind ExportKind) ExportKindSelector {
 // always returns CumulativeExportKind.
 func CumulativeExportKindSelector() ExportKindSelector {
 	return ConstantExportKindSelector(CumulativeExportKind)
-}
-
-// DeltaExportKindSelector returns an ExportKindSelector that
-// always returns DeltaExportKind.
-func DeltaExportKindSelector() ExportKindSelector {
-	return ConstantExportKindSelector(DeltaExportKind)
 }
 
 // StatelessExportKindSelector returns an ExportKindSelector that

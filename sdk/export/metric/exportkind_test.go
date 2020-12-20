@@ -55,7 +55,6 @@ func TestExportKindMemoryRequired(t *testing.T) {
 
 func TestExportKindSelectors(t *testing.T) {
 	ceks := CumulativeExportKindSelector()
-	deks := DeltaExportKindSelector()
 	seks := StatelessExportKindSelector()
 
 	for _, ikind := range append(deltaMemoryKinds, cumulativeMemoryKinds...) {
@@ -68,7 +67,6 @@ func TestExportKindSelectors(t *testing.T) {
 			akind = aggregation.HistogramKind
 		}
 		require.Equal(t, CumulativeExportKind, ceks.ExportKindFor(&desc, akind))
-		require.Equal(t, DeltaExportKind, deks.ExportKindFor(&desc, akind))
 		require.False(t, seks.ExportKindFor(&desc, akind).MemoryRequired(ikind))
 	}
 }

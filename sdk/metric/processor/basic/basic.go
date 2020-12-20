@@ -81,11 +81,6 @@ type (
 		// values in a single collection round.
 		current export.Aggregator
 
-		// delta, if non-nil, refers to an Aggregator owned by
-		// the processor used to compute deltas between
-		// precomputed sums.
-		delta export.Aggregator
-
 		// cumulative, if non-nil, refers to an Aggregator owned
 		// by the processor used to store the last cumulative
 		// value.
@@ -98,9 +93,6 @@ type (
 		// RWMutex implements locking for the `CheckpointSet` interface.
 		sync.RWMutex
 		values map[stateKey]*stateValue
-
-		// Note: the timestamp logic currently assumes all
-		// exports are deltas.
 
 		processStart  time.Time
 		intervalStart time.Time
@@ -125,8 +117,8 @@ var ErrInvalidExportKind = fmt.Errorf("invalid export kind")
 // New returns a basic Processor that is also a Checkpointer using the provided
 // AggregatorSelector to select Aggregators.  The ExportKindSelector
 // is consulted to determine the kind(s) of exporter that will consume
-// data, so that this Processor can prepare to compute Delta or
-// Cumulative Aggregations as needed.
+// data, so that this Processor can prepare to compute Cumulative Aggregations
+// as needed.
 func New(aselector export.AggregatorSelector, eselector export.ExportKindSelector, opts ...Option) *Processor {
 	now := time.Now()
 	p := &Processor{
@@ -171,13 +163,17 @@ func (b *Processor) Process(accum export.Accumulation) error {
 		}
 		if stateful {
 			if desc.InstrumentKind().PrecomputedSum() {
-				// If we know we need to compute deltas, allocate two aggregators.
-				b.AggregatorFor(desc, &newValue.cumulative, &newValue.delta)
-			} else {
-				// In this case we are certain not to need a delta, only allocate
-				// a cumulative aggregator.
-				b.AggregatorFor(desc, &newValue.cumulative)
+				// To convert precomputed sums to
+				// deltas requires two aggregators to
+				// be allocated, one for the prior
+				// value and one for the output delta.
+				// This functionality was removed from
+				// the basic processor in PR (@@@).
+				return aggregation.ErrNoSubtraction
 			}
+			// In this case allocate one aggregator to
+			// save the current state.
+			b.AggregatorFor(desc, &newValue.cumulative)
 		}
 		b.state.values[key] = newValue
 		return nil
@@ -294,20 +290,10 @@ func (b *Processor) FinishCollection() error {
 		// delta or a cumulative aggregation.
 		var err error
 		if mkind.PrecomputedSum() {
-			if currentSubtractor, ok := value.current.(export.Subtractor); ok {
-				// This line is equivalent to:
-				// value.delta = currentSubtractor - value.cumulative
-				err = currentSubtractor.Subtract(value.cumulative, value.delta, key.descriptor)
-
-				if err == nil {
-					err = value.current.SynchronizedMove(value.cumulative, key.descriptor)
-				}
-			} else {
-				err = aggregation.ErrNoSubtraction
-			}
+			err = aggregation.ErrNoSubtraction
 		} else {
 			// This line is equivalent to:
-			// value.cumulative = value.cumulative + value.delta
+			// value.cumulative = value.cumulative + value.current
 			err = value.cumulative.Merge(value.current, key.descriptor)
 		}
 		if err != nil {
@@ -352,10 +338,11 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 		case export.DeltaExportKind:
 			// Precomputed sums are a special case.
 			if mkind.PrecomputedSum() {
-				agg = value.delta.Aggregation()
-			} else {
-				agg = value.current.Aggregation()
+				// This functionality was removed from
+				// the basic processor in PR (@@@).
+				return aggregation.ErrNoSubtraction
 			}
+			agg = value.current.Aggregation()
 			start = b.intervalStart
 
 		default:
