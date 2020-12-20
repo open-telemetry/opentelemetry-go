@@ -19,9 +19,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Improve span duration accuracy. (#1360)
 - Migrated CI/CD from CircleCI to GitHub Actions (#1382)
 - Remove duplicate checkout from GitHub Actions workflow (#1407)
+
 ### Removed
 
 - Remove `errUninitializedSpan` as its only usage is now obsolete. (#1360)
+- Remove Metric Processor's ability to convert cumulative to delta. (#1415)
 
 ## [0.15.0] - 2020-12-10
 
