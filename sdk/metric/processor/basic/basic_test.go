@@ -120,6 +120,17 @@ func testProcessor(
 	nkind number.Kind,
 	akind aggregation.Kind,
 ) {
+	// This code tests for errors when the export kind is Delta
+	// and the instrument kind is PrecomputedSum().
+	expectConversion := !(ekind == export.DeltaExportKind && mkind.PrecomputedSum())
+	requireConversion := func(t *testing.T, err error) {
+		if expectConversion {
+			require.NoError(t, err)
+		} else {
+			require.Equal(t, aggregation.ErrNoCumulativeToDelta, err)
+		}
+	}
+
 	// Note: this selector uses the instrument name to dictate
 	// aggregation kind.
 	selector := processorTest.AggregatorSelector()
@@ -149,18 +160,12 @@ func testProcessor(
 			processor.StartCollection()
 
 			for na := 0; na < nAccum; na++ {
-				err := processor.Process(updateFor(t, &desc1, selector, res, input, labs1...))
-
-				if ekind == export.DeltaExportKind && mkind.PrecomputedSum() {
-					require.Equal(t, aggregation.ErrNoCumulativeToDelta, err)
-					return
-				}
-
-				require.NoError(t, err)
-
-				require.NoError(t, processor.Process(updateFor(t, &desc2, selector, res, input, labs2...)))
+				requireConversion(t, processor.Process(updateFor(t, &desc1, selector, res, input, labs1...)))
+				requireConversion(t, processor.Process(updateFor(t, &desc2, selector, res, input, labs2...)))
 			}
 
+			// Note: in case of !expectConvesion, we still get no error here
+			// because the Process() skipped entering state for those records.
 			require.NoError(t, processor.FinishCollection())
 
 			if nc < nCheckpoint-1 {
@@ -180,6 +185,11 @@ func testProcessor(
 				// Test the final checkpoint state.
 				records1 := processorTest.NewOutput(label.DefaultEncoder())
 				require.NoError(t, checkpointSet.ForEach(export.ConstantExportKindSelector(ekind), records1.AddRecord))
+
+				if !expectConversion {
+					require.EqualValues(t, map[string]float64{}, records1.Map())
+					continue
+				}
 
 				var multiplier int64
 
