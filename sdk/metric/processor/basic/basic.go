@@ -199,9 +199,8 @@ func (b *Processor) Process(accum export.Accumulation) error {
 	// or not.
 	//
 	// Case (a) occurs when the instrument and the exporter
-	// require memory to work correctly, either because the
-	// instrument reports a PrecomputedSum to a DeltaExporter or
-	// the reverse, a non-PrecomputedSum instrument with a
+	// require memory to work correctly because the
+	// instrument reports a non-PrecomputedSum instrument with a
 	// CumulativeExporter.  This logic is encapsulated in
 	// ExportKind.MemoryRequired(InstrumentKind).
 	//
