@@ -120,10 +120,6 @@ func testProcessor(
 	nkind number.Kind,
 	akind aggregation.Kind,
 ) {
-	if ekind == export.DeltaExportKind && mkind.PrecomputedSum() {
-		return
-	}
-
 	// Note: this selector uses the instrument name to dictate
 	// aggregation kind.
 	selector := processorTest.AggregatorSelector()
@@ -153,7 +149,15 @@ func testProcessor(
 			processor.StartCollection()
 
 			for na := 0; na < nAccum; na++ {
-				require.NoError(t, processor.Process(updateFor(t, &desc1, selector, res, input, labs1...)))
+				err := processor.Process(updateFor(t, &desc1, selector, res, input, labs1...))
+
+				if ekind == export.DeltaExportKind && mkind.PrecomputedSum() {
+					require.Equal(t, aggregation.ErrNoCumulativeToDelta, err)
+					return
+				}
+
+				require.NoError(t, err)
+
 				require.NoError(t, processor.Process(updateFor(t, &desc2, selector, res, input, labs2...)))
 			}
 
