@@ -68,6 +68,7 @@ type config struct {
 	dialOptions        []grpc.DialOption
 	headers            map[string]string
 	clientCredentials  credentials.TransportCredentials
+	timeout            time.Duration
 }
 
 // Option applies an option to the gRPC driver.
@@ -141,5 +142,11 @@ func WithServiceConfig(serviceConfig string) Option {
 func WithDialOption(opts ...grpc.DialOption) Option {
 	return func(cfg *config) {
 		cfg.dialOptions = opts
+	}
+}
+
+func WithTimeout(timeout time.Duration) Option {
+	return func(cfg *config) {
+		cfg.timeout = timeout
 	}
 }

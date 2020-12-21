@@ -92,6 +92,8 @@ func (d *driver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet,
 	}
 	ctx, cancel := d.connection.contextWithStop(ctx)
 	defer cancel()
+	ctx, cancel = d.contextWithTimeout(ctx)
+	defer cancel()
 
 	rms, err := transform.CheckpointSet(ctx, selector, cps, 1)
 	if err != nil {
@@ -131,6 +133,8 @@ func (d *driver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) 
 	}
 	ctx, cancel := d.connection.contextWithStop(ctx)
 	defer cancel()
+	ctx, cancel = d.contextWithTimeout(ctx)
+	defer cancel()
 
 	protoSpans := transform.SpanData(ss)
 	if len(protoSpans) == 0 {
@@ -158,3 +162,12 @@ func (d *driver) uploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 	}
 	return err
 }
+
+func (d *driver) contextWithTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
+	if d.connection.cfg.timeout > 0 {
+		return context.WithTimeout(ctx, d.connection.cfg.timeout)
+	}
+	return ctx, noopCancel
+}
+
+func noopCancel() {}

@@ -140,6 +140,8 @@ func (d *driver) Stop(ctx context.Context) error {
 
 // ExportMetrics implements otlp.ProtocolDriver.
 func (d *driver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error {
+	ctx, cancel := d.contextWithTimeout(ctx)
+	defer cancel()
 	rms, err := transform.CheckpointSet(ctx, selector, cps, 1)
 	if err != nil {
 		return err
@@ -163,6 +165,8 @@ func (d *driver) marshalMetrics(rms []*metricspb.ResourceMetrics) ([]byte, strin
 
 // ExportTraces implements otlp.ProtocolDriver.
 func (d *driver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
+	ctx, cancel := d.contextWithTimeout(ctx)
+	defer cancel()
 	protoSpans := transform.SpanData(ss)
 	if len(protoSpans) == 0 {
 		return nil
@@ -322,3 +326,12 @@ func (d *driver) prepareBody(rawRequest []byte) (io.ReadCloser, int64, http.Head
 	}
 	return bodyReader, contentLength, headers
 }
+
+func (d *driver) contextWithTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
+	if d.cfg.timeout > 0 {
+		return context.WithTimeout(ctx, d.cfg.timeout)
+	}
+	return ctx, noopCancel
+}
+
+func noopCancel() {}

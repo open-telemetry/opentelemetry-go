@@ -66,6 +66,7 @@ type config struct {
 	insecure       bool
 	headers        map[string]string
 	format         PayloadFormat
+	timeout        time.Duration
 }
 
 // Option applies an option to the HTTP driver.
@@ -195,4 +196,14 @@ func (o payloadFormatOption) Apply(cfg *config) {
 
 func WithPayloadFormat(format PayloadFormat) Option {
 	return (payloadFormatOption)(format)
+}
+
+type timeoutOption time.Duration
+
+func (o timeoutOption) Apply(cfg *config) {
+	cfg.timeout = (time.Duration)(o)
+}
+
+func WithTimeout(timeout time.Duration) Option {
+	return (timeoutOption)(timeout)
 }
