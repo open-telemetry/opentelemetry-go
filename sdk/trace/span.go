@@ -473,7 +473,7 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 
 	cfg := tr.provider.config.Load().(*Config)
 
-	if parent == emptySpanContext {
+	if hasEmptySpanContext(parent) {
 		// Generate both TraceID and SpanID
 		span.spanContext.TraceID, span.spanContext.SpanID = cfg.IDGenerator.NewIDs(ctx)
 	} else {
@@ -486,7 +486,7 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 	span.links = newEvictedQueue(cfg.MaxLinksPerSpan)
 
 	data := samplingData{
-		noParent:     parent == emptySpanContext,
+		noParent:     hasEmptySpanContext(parent),
 		remoteParent: remoteParent,
 		parent:       parent,
 		name:         name,
@@ -519,6 +519,13 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 	span.parent = parent
 
 	return span
+}
+
+func hasEmptySpanContext(parent trace.SpanContext) bool {
+	return parent.SpanID == emptySpanContext.SpanID &&
+		parent.TraceID == emptySpanContext.TraceID &&
+		parent.TraceFlags == emptySpanContext.TraceFlags &&
+		parent.TraceState.IsEmpty()
 }
 
 type samplingData struct {

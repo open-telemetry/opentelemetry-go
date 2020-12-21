@@ -62,7 +62,7 @@ func TestNoopSpan(t *testing.T) {
 	_, s := tracer.Start(context.Background(), "test span")
 	span := s.(noopSpan)
 
-	if got, want := span.SpanContext(), (SpanContext{}); got != want {
+	if got, want := span.SpanContext(), (SpanContext{}); !assertSpanContextEqual(got, want) {
 		t.Errorf("span.SpanContext() returned %#v, want %#v", got, want)
 	}
 
