@@ -20,10 +20,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/grpc"
 
 	"go.opentelemetry.io/otel/codes"
-	coltracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/trace/v1"
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
 	resourcepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/resource/v1"
 	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
@@ -35,33 +33,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-type traceServiceClientStub struct {
-	rs []tracepb.ResourceSpans
-}
-
-func (t *traceServiceClientStub) Export(ctx context.Context, in *coltracepb.ExportTraceServiceRequest, opts ...grpc.CallOption) (*coltracepb.ExportTraceServiceResponse, error) {
-	for _, rs := range in.GetResourceSpans() {
-		if rs == nil {
-			continue
-		}
-		t.rs = append(t.rs, *rs)
-	}
-	return &coltracepb.ExportTraceServiceResponse{}, nil
-}
-
-func (t *traceServiceClientStub) ResourceSpans() []tracepb.ResourceSpans {
-	return t.rs
-}
-
-func (t *traceServiceClientStub) Reset() {
-	t.rs = nil
-}
-
 func TestExportSpans(t *testing.T) {
-	tsc := &traceServiceClientStub{}
-	exp := NewUnstartedExporter()
-	exp.traceExporter = tsc
-	exp.started = true
+	exp, driver := newExporter(t)
 
 	// March 31, 2020 5:01:26 1234nanos (UTC)
 	startTime := time.Unix(1585674086, 1234)
@@ -352,8 +325,8 @@ func TestExportSpans(t *testing.T) {
 			},
 		},
 	} {
-		tsc.Reset()
+		driver.Reset()
 		assert.NoError(t, exp.ExportSpans(context.Background(), test.sd))
-		assert.ElementsMatch(t, test.want, tsc.ResourceSpans())
+		assert.ElementsMatch(t, test.want, driver.rs)
 	}
 }
