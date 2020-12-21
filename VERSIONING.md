@@ -35,6 +35,8 @@ is designed so the following goals can be achieved.
 
     * Mature modules for which we guarantee a stable public API will be versioned
       with a major version greater than `v0`.
+      * The decision to make a module stable will be made on a case-by-case
+        bases by the maintainers of this project.
     * Experimental modules will start their versioning at `v0.0.0` and will
       increment their minor version when backwards incompatible changes are
       released and increment their patch version when backwards compatible
