@@ -47,7 +47,7 @@ type Span struct {
 	statusMessage string
 	attributes    map[label.Key]label.Value
 	events        []Event
-	links         map[trace.SpanContext][]label.KeyValue
+	links         []trace.Link
 	spanKind      trace.SpanKind
 }
 
@@ -206,15 +206,7 @@ func (s *Span) Events() []Event { return s.events }
 
 // Links returns the links set on s at creation time. If multiple links for
 // the same SpanContext were set, the last link will be used.
-func (s *Span) Links() map[trace.SpanContext][]label.KeyValue {
-	links := make(map[trace.SpanContext][]label.KeyValue)
-
-	for sc, attributes := range s.links {
-		links[sc] = append([]label.KeyValue{}, attributes...)
-	}
-
-	return links
-}
+func (s *Span) Links() []trace.Link { return s.links }
 
 // StartTime returns the time at which s was started. This will be the
 // wall-clock time unless a specific start time was provided.

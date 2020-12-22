@@ -47,7 +47,7 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 		tracer:     t,
 		startTime:  startTime,
 		attributes: make(map[label.Key]label.Value),
-		links:      make(map[trace.SpanContext][]label.KeyValue),
+		links:      []trace.Link{},
 		spanKind:   c.SpanKind,
 	}
 
@@ -56,10 +56,16 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 
 		iodKey := label.Key("ignored-on-demand")
 		if lsc := trace.SpanContextFromContext(ctx); lsc.IsValid() {
-			span.links[lsc] = []label.KeyValue{iodKey.String("current")}
+			span.links = append(span.links, trace.Link{
+				SpanContext: lsc,
+				Attributes:  []label.KeyValue{iodKey.String("current")},
+			})
 		}
 		if rsc := trace.RemoteSpanContextFromContext(ctx); rsc.IsValid() {
-			span.links[rsc] = []label.KeyValue{iodKey.String("remote")}
+			span.links = append(span.links, trace.Link{
+				SpanContext: rsc,
+				Attributes:  []label.KeyValue{iodKey.String("remote")},
+			})
 		}
 	} else {
 		span.spanContext = t.config.SpanContextFunc(ctx)
@@ -73,7 +79,16 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 	}
 
 	for _, link := range c.Links {
-		span.links[link.SpanContext] = link.Attributes
+		for i, sl := range span.links {
+			if sl.SpanContext.SpanID == link.SpanContext.SpanID &&
+				sl.SpanContext.TraceID == link.SpanContext.TraceID &&
+				sl.SpanContext.TraceFlags == link.SpanContext.TraceFlags &&
+				sl.SpanContext.TraceState.String() == link.SpanContext.TraceState.String() {
+				span.links[i].Attributes = link.Attributes
+				break
+			}
+		}
+		span.links = append(span.links, link)
 	}
 
 	span.SetName(name)

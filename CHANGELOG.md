@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the `ReadOnlySpan` and `ReadWriteSpan` interfaces to provide better control for accessing span data. (#1360)
+- `NewGRPCDriver` function returns a `ProtocolDriver` that maintains a single gRPC connection to the collector. (#1369)
 
 ### Changed
 
@@ -18,6 +19,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Store the parent's full `SpanContext` rather than just its span ID in the `span` struct. (#1360)
 - Improve span duration accuracy. (#1360)
 - Migrated CI/CD from CircleCI to GitHub Actions (#1382)
+- Remove duplicate checkout from GitHub Actions workflow (#1407)
+- `NewExporter` from `exporters/otlp` now takes a `ProtocolDriver` as a parameter. (#1369)
+- Many OTLP Exporter options became gRPC ProtocolDriver options. (#1369)
 - Unify endpoint API that related to OTel exporter. (#1401)
 
 ### Removed
@@ -51,6 +55,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - An `EventOption` and the related `NewEventConfig` function are added to the `go.opentelemetry.io/otel` package to configure Span events. (#1254)
 - A `TextMapPropagator` and associated `TextMapCarrier` are added to the `go.opentelemetry.io/otel/oteltest` package to test `TextMap` type propagators and their use. (#1259)
 - `SpanContextFromContext` returns `SpanContext` from context. (#1255)
+- `TraceState` has been added to `SpanContext`. (#1340)
 - `DeploymentEnvironmentKey` added to `go.opentelemetry.io/otel/semconv` package. (#1323)
 - Add an OpenCensus to OpenTelemetry tracing bridge. (#1305)
 - Add a parent context argument to `SpanProcessor.OnStart` to follow the specification. (#1333)
