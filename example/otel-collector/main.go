@@ -77,7 +77,7 @@ func initProvider() func() {
 			simple.NewWithExactDistribution(),
 			exp,
 		),
-		controller.WithExporter(exp),
+		controller.WithPusher(exp),
 		controller.WithCollectPeriod(2*time.Second),
 	)
 

@@ -154,7 +154,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.GRPCConnectionO
 
 	selector := simple.NewWithInexpensiveDistribution()
 	processor := processor.New(selector, metricsdk.StatelessExportKindSelector())
-	pusher := controller.New(processor, controller.WithExporter(exp))
+	pusher := controller.New(processor, controller.WithPusher(exp))
 	require.NoError(t, pusher.Start(ctx))
 
 	meter := pusher.MeterProvider().Meter("test-meter")
@@ -527,7 +527,7 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 
 	selector := simple.NewWithInexpensiveDistribution()
 	processor := processor.New(selector, metricsdk.StatelessExportKindSelector())
-	pusher := controller.New(processor, controller.WithExporter(exp))
+	pusher := controller.New(processor, controller.WithPusher(exp))
 	require.NoError(t, pusher.Start(ctx))
 
 	// Flush and close.

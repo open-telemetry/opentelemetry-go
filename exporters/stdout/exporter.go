@@ -66,7 +66,7 @@ func NewExportPipeline(exportOpts []Option, pushOpts []controller.Option) (trace
 		),
 		append(
 			pushOpts,
-			controller.WithExporter(exporter),
+			controller.WithPusher(exporter),
 		)...,
 	)
 	err = pusher.Start(context.Background())
