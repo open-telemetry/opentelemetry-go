@@ -113,7 +113,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			ctx := context.Background()
 			ctx = prop.Extract(ctx, req.Header)
 			gotSc := trace.RemoteSpanContextFromContext(ctx)
-			if diff := cmp.Diff(gotSc, tt.wantSc); diff != "" {
+			if diff := cmp.Diff(gotSc, tt.wantSc, cmp.AllowUnexported(trace.TraceState{})); diff != "" {
 				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
 			}
 		})
@@ -201,7 +201,7 @@ func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 			ctx := context.Background()
 			ctx = prop.Extract(ctx, req.Header)
 			gotSc := trace.RemoteSpanContextFromContext(ctx)
-			if diff := cmp.Diff(gotSc, wantSc); diff != "" {
+			if diff := cmp.Diff(gotSc, wantSc, cmp.AllowUnexported(trace.TraceState{})); diff != "" {
 				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
 			}
 		})

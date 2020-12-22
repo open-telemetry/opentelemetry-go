@@ -28,7 +28,6 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -46,12 +45,13 @@ func initMeter() {
 		log.Fatal("could not initialize resource:", err)
 	}
 
-	otlpExporter, err := otlp.NewExporter(ctx,
+	driver := otlp.NewGRPCDriver(
 		otlp.WithInsecure(),
-		otlp.WithAddress("127.0.0.1:17001"),
+		otlp.WithAddress("localhost:30080"),
 		otlp.WithGRPCDialOption(grpc.WithBlock()), // useful for testing
-		otlp.WithMetricExportKindSelector(export.CumulativeExportKindSelector()),
 	)
+	otlpExporter, err := otlp.NewExporter(ctx, driver)
+
 	if err != nil {
 		log.Fatal("could not initialize OTLP:", err)
 	}
