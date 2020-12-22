@@ -226,8 +226,8 @@ func TestExportTimeout(t *testing.T) {
 			export.CumulativeExportKindSelector(),
 		),
 		controller.WithCollectPeriod(time.Second),
-		controller.WithExportTimeout(time.Millisecond),
-		controller.WithExporter(exporter),
+		controller.WithPushTimeout(time.Millisecond),
+		controller.WithPusher(exporter),
 	)
 	mock := controllertest.NewMockClock()
 	cont.SetClock(mock)
@@ -271,7 +271,7 @@ func TestExportTimeout(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCollectAfterStop(t *testing.T) {
+func TestCollectAfterStopThenStartAgain(t *testing.T) {
 	exp := processortest.NewExporter(
 		export.CumulativeExportKindSelector(),
 		label.DefaultEncoder(),
@@ -282,39 +282,71 @@ func TestCollectAfterStop(t *testing.T) {
 			exp,
 		),
 		controller.WithCollectPeriod(time.Second),
-		controller.WithExporter(exp),
+		controller.WithPusher(exp),
 	)
 	mock := controllertest.NewMockClock()
 	cont.SetClock(mock)
 
 	prov := cont.MeterProvider()
 
-	calls := int64(0)
+	calls := 0
 	_ = metric.Must(prov.Meter("named")).NewInt64SumObserver("one.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			calls++
-			result.Observe(calls)
-			if calls > 1 {
-				panic("Too many observations")
-			}
+			result.Observe(int64(calls))
 		},
 	)
 
 	// No collections happen (because mock clock does not advance):
 	require.NoError(t, cont.Start(context.Background()))
+	require.True(t, cont.IsRunning())
 
 	// There's one collection run by Stop():
 	require.NoError(t, cont.Stop(context.Background()))
 
-	mock.Add(time.Second)
-	expect := map[string]float64{
+	require.EqualValues(t, map[string]float64{
 		"one.lastvalue//": 1,
-	}
-	require.EqualValues(t, expect, exp.Values())
+	}, exp.Values())
 	require.NoError(t, testHandler.Flush())
 
-	// Manual collect after Stop does not panic.
+	// Manual collect after Stop still works, subject to
+	// CollectPeriod.
 	require.NoError(t, cont.Collect(context.Background()))
-	require.EqualValues(t, expect, exp.Values())
+	require.EqualValues(t, map[string]float64{
+		"one.lastvalue//": 2,
+	}, getMap(t, cont))
+
 	require.NoError(t, testHandler.Flush())
+	require.False(t, cont.IsRunning())
+
+	// Start again, see that collection proceeds.  However,
+	// explicit collection should still fail.
+	require.NoError(t, cont.Start(context.Background()))
+	require.True(t, cont.IsRunning())
+	err := cont.Collect(context.Background())
+	require.Error(t, err)
+	require.Equal(t, controller.ErrControllerStarted, err)
+
+	require.NoError(t, cont.Stop(context.Background()))
+	require.EqualValues(t, map[string]float64{
+		"one.lastvalue//": 3,
+	}, exp.Values())
+	require.False(t, cont.IsRunning())
+
+	// Time has not advanced yet. Now let the ticker perform
+	// collection:
+	require.NoError(t, cont.Start(context.Background()))
+	mock.Add(time.Second)
+	require.EqualValues(t, map[string]float64{
+		"one.lastvalue//": 4,
+	}, exp.Values())
+
+	mock.Add(time.Second)
+	require.EqualValues(t, map[string]float64{
+		"one.lastvalue//": 5,
+	}, exp.Values())
+	require.NoError(t, cont.Stop(context.Background()))
+	require.EqualValues(t, map[string]float64{
+		"one.lastvalue//": 6,
+	}, exp.Values())
 }

@@ -46,13 +46,16 @@ type Config struct {
 	// Default value is 10s.  If zero, no Collect timeout is applied.
 	CollectTimeout time.Duration
 
-	// Exporter is used for pushing metric data.
-	Exporter export.Exporter
+	// Pusher is used for exporting metric data.
+	//
+	// Note: Exporters such as Prometheus that pull data do not implement
+	// export.Exporter.  These will directly call Collect() and ForEach().
+	Pusher export.Exporter
 
-	// ExportTimeout is the timeout of the Context when an Exporter is configured.
+	// PushTimeout is the timeout of the Context when a Pusher is configured.
 	//
 	// Default value is 10s.  If zero, no Export timeout is applied.
-	ExportTimeout time.Duration
+	PushTimeout time.Duration
 }
 
 // Option is the interface that applies the value to a configuration option.
@@ -94,24 +97,24 @@ func (o collectTimeoutOption) Apply(config *Config) {
 	config.CollectTimeout = time.Duration(o)
 }
 
-// WithExporter sets the Exporter configuration option of a Config.
-func WithExporter(exporter export.Exporter) Option {
-	return exporterOption{exporter}
+// WithPusher sets the Pusher configuration option of a Config.
+func WithPusher(pusher export.Exporter) Option {
+	return pusherOption{pusher}
 }
 
-type exporterOption struct{ export.Exporter }
+type pusherOption struct{ pusher export.Exporter }
 
-func (o exporterOption) Apply(config *Config) {
-	config.Exporter = o.Exporter
+func (o pusherOption) Apply(config *Config) {
+	config.Pusher = o.pusher
 }
 
-// WithExportTimeout sets the ExportTimeout configuration option of a Config.
-func WithExportTimeout(timeout time.Duration) Option {
-	return exportTimeoutOption(timeout)
+// WithPushTimeout sets the PushTimeout configuration option of a Config.
+func WithPushTimeout(timeout time.Duration) Option {
+	return pushTimeoutOption(timeout)
 }
 
-type exportTimeoutOption time.Duration
+type pushTimeoutOption time.Duration
 
-func (o exportTimeoutOption) Apply(config *Config) {
-	config.ExportTimeout = time.Duration(o)
+func (o pushTimeoutOption) Apply(config *Config) {
+	config.PushTimeout = time.Duration(o)
 }

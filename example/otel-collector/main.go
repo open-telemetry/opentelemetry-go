@@ -72,7 +72,7 @@ func initProvider() func() {
 		sdktrace.WithSpanProcessor(bsp),
 	)
 
-	controller := controller.New(
+	cont := controller.New(
 		processor.New(
 			simple.NewWithExactDistribution(),
 			exp,
@@ -84,13 +84,13 @@ func initProvider() func() {
 	// set global propagator to tracecontext (the default is no-op).
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 	otel.SetTracerProvider(tracerProvider)
-	otel.SetMeterProvider(controller.MeterProvider())
-	handleErr(controller.Start(context.Background()), "failed to start controller")
+	otel.SetMeterProvider(cont.MeterProvider())
+	handleErr(cont.Start(context.Background()), "failed to start controller")
 
 	return func() {
 		handleErr(tracerProvider.Shutdown(ctx), "failed to shutdown provider")
 		handleErr(exp.Shutdown(ctx), "failed to stop exporter")
-		handleErr(controller.Stop(context.Background()), "failed to stop controller")
+		handleErr(cont.Stop(context.Background()), "failed to stop controller")
 	}
 }
 
