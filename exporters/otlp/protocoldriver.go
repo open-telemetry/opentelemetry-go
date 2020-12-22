@@ -51,9 +51,14 @@ type ProtocolDriver interface {
 	ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error
 }
 
+// SplitConfig is used to configure a split driver.
 type SplitConfig struct {
+	// ForMetrics driver will be used for sending metrics to the
+	// collector.
 	ForMetrics ProtocolDriver
-	ForTraces  ProtocolDriver
+	// ForTraces driver will be used for sending spans to the
+	// collector.
+	ForTraces ProtocolDriver
 }
 
 type splitDriver struct {
@@ -73,6 +78,8 @@ func NewSplitDriver(cfg SplitConfig) ProtocolDriver {
 	}
 }
 
+// Start implements ProtocolDriver. It starts both drivers at the same
+// time.
 func (d *splitDriver) Start(ctx context.Context) error {
 	wg := sync.WaitGroup{}
 	wg.Add(2)
@@ -98,6 +105,8 @@ func (d *splitDriver) Start(ctx context.Context) error {
 	return nil
 }
 
+// Stop implements ProtocolDriver. It stops both drivers at the same
+// time.
 func (d *splitDriver) Stop(ctx context.Context) error {
 	wg := sync.WaitGroup{}
 	wg.Add(2)
@@ -123,10 +132,14 @@ func (d *splitDriver) Stop(ctx context.Context) error {
 	return nil
 }
 
+// ExportMetrics implements ProtocolDriver. It forwards the call to
+// the driver used for sending metrics.
 func (d *splitDriver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error {
 	return d.metric.ExportMetrics(ctx, cps, selector)
 }
 
+// ExportTraces implements ProtocolDriver. It forwards the call to the
+// driver used for sending spans.
 func (d *splitDriver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
 	return d.trace.ExportTraces(ctx, ss)
 }
