@@ -182,13 +182,9 @@ func (a *asyncInstrument) observe(num number.Number, labels *label.Set) {
 func (a *asyncInstrument) getRecorder(labels *label.Set) export.Aggregator {
 	lrec, ok := a.recorders[labels.Equivalent()]
 	if ok {
-		if lrec.observedEpoch == a.meter.currentEpoch {
-			// last value wins for Observers, so if we see the same labels
-			// in the current epoch, we replace the old recorder
-			a.meter.processor.AggregatorFor(&a.descriptor, &lrec.observed)
-		} else {
-			lrec.observedEpoch = a.meter.currentEpoch
-		}
+		// Note: SynchronizedMove(nil) can't return an error
+		_ = lrec.observed.SynchronizedMove(nil, &a.descriptor)
+		lrec.observedEpoch = a.meter.currentEpoch
 		a.recorders[labels.Equivalent()] = lrec
 		return lrec.observed
 	}
@@ -300,7 +296,7 @@ func (s *syncInstrument) RecordOne(ctx context.Context, num number.Number, kvs [
 // processor.  This Accumulator supports only a single processor.
 //
 // The Accumulator does not start any background process to collect itself
-// periodically, this responsbility lies with the processor, typically,
+// periodically, this responsibility lies with the processor, typically,
 // depending on the type of export.  For example, a pull-based
 // processor will call Collect() when it receives a request to scrape
 // current metric values.  A push-based processor should configure its

@@ -66,7 +66,7 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	}
 	tp.config.Store(&Config{
 		DefaultSampler:       ParentBased(AlwaysSample()),
-		IDGenerator:          defIDGenerator(),
+		IDGenerator:          defaultIDGenerator(),
 		MaxAttributesPerSpan: DefaultMaxAttributesPerSpan,
 		MaxEventsPerSpan:     DefaultMaxEventsPerSpan,
 		MaxLinksPerSpan:      DefaultMaxLinksPerSpan,
@@ -144,7 +144,9 @@ func (p *TracerProvider) UnregisterSpanProcessor(s SpanProcessor) {
 	}
 	if stopOnce != nil {
 		stopOnce.state.Do(func() {
-			otel.Handle(s.Shutdown(context.Background()))
+			if err := s.Shutdown(context.Background()); err != nil {
+				otel.Handle(err)
+			}
 		})
 	}
 	if len(new) > 1 {
@@ -192,7 +194,9 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 
 	for _, sps := range spss {
 		sps.state.Do(func() {
-			otel.Handle(sps.sp.Shutdown(ctx))
+			if err := sps.sp.Shutdown(ctx); err != nil {
+				otel.Handle(err)
+			}
 		})
 	}
 	return nil
@@ -229,5 +233,12 @@ func WithConfig(config Config) TracerProviderOption {
 func WithResource(r *resource.Resource) TracerProviderOption {
 	return func(opts *TracerProviderConfig) {
 		opts.config.Resource = r
+	}
+}
+
+// WithIDGenerator option registers an IDGenerator with the TracerProvider.
+func WithIDGenerator(g IDGenerator) TracerProviderOption {
+	return func(opts *TracerProviderConfig) {
+		opts.config.IDGenerator = g
 	}
 }

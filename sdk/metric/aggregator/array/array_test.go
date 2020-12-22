@@ -24,6 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 )
@@ -328,4 +329,14 @@ func TestArrayFloat64(t *testing.T) {
 	for i := 0; i < len(po); i++ {
 		require.Equal(t, all.Points()[i], po[i], "Wrong point at position %d", i)
 	}
+}
+
+func TestSynchronizedMoveReset(t *testing.T) {
+	aggregatortest.SynchronizedMoveResetTest(
+		t,
+		metric.ValueRecorderInstrumentKind,
+		func(desc *metric.Descriptor) export.Aggregator {
+			return &New(1)[0]
+		},
+	)
 }

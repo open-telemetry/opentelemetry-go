@@ -41,20 +41,30 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
+type storingHandler struct {
+	errs []error
+}
+
+func (s *storingHandler) Handle(err error) {
+	s.errs = append(s.errs, err)
+}
+
+func (s *storingHandler) Reset() {
+	s.errs = nil
+}
+
 var (
 	tid trace.TraceID
 	sid trace.SpanID
+
+	handler *storingHandler = &storingHandler{}
 )
-
-type discardHandler struct{}
-
-func (*discardHandler) Handle(_ error) {}
 
 func init() {
 	tid, _ = trace.TraceIDFromHex("01020304050607080102040810203040")
 	sid, _ = trace.SpanIDFromHex("0102040810203040")
 
-	otel.SetErrorHandler(new(discardHandler))
+	otel.SetErrorHandler(handler)
 }
 
 func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
@@ -70,19 +80,19 @@ func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
 type testExporter struct {
 	mu    sync.RWMutex
 	idx   map[string]int
-	spans []*export.SpanData
+	spans []*export.SpanSnapshot
 }
 
 func NewTestExporter() *testExporter {
 	return &testExporter{idx: make(map[string]int)}
 }
 
-func (te *testExporter) ExportSpans(_ context.Context, spans []*export.SpanData) error {
+func (te *testExporter) ExportSpans(_ context.Context, ss []*export.SpanSnapshot) error {
 	te.mu.Lock()
 	defer te.mu.Unlock()
 
 	i := len(te.spans)
-	for _, s := range spans {
+	for _, s := range ss {
 		te.idx[s.Name] = i
 		te.spans = append(te.spans, s)
 		i++
@@ -90,16 +100,16 @@ func (te *testExporter) ExportSpans(_ context.Context, spans []*export.SpanData)
 	return nil
 }
 
-func (te *testExporter) Spans() []*export.SpanData {
+func (te *testExporter) Spans() []*export.SpanSnapshot {
 	te.mu.RLock()
 	defer te.mu.RUnlock()
 
-	cp := make([]*export.SpanData, len(te.spans))
+	cp := make([]*export.SpanSnapshot, len(te.spans))
 	copy(cp, te.spans)
 	return cp
 }
 
-func (te *testExporter) GetSpan(name string) (*export.SpanData, bool) {
+func (te *testExporter) GetSpan(name string) (*export.SpanSnapshot, bool) {
 	te.mu.RLock()
 	defer te.mu.RUnlock()
 	i, ok := te.idx[name]
@@ -213,7 +223,7 @@ func TestRecordingIsOn(t *testing.T) {
 }
 
 func TestSampling(t *testing.T) {
-	idg := defIDGenerator()
+	idg := defaultIDGenerator()
 	const total = 10000
 	for name, tc := range map[string]struct {
 		sampler       Sampler
@@ -263,9 +273,10 @@ func TestSampling(t *testing.T) {
 			for i := 0; i < total; i++ {
 				ctx := context.Background()
 				if tc.parent {
+					tid, sid := idg.NewIDs(ctx)
 					psc := trace.SpanContext{
-						TraceID: idg.NewTraceID(),
-						SpanID:  idg.NewSpanID(),
+						TraceID: tid,
+						SpanID:  sid,
 					}
 					if tc.sampledParent {
 						psc.TraceFlags = trace.FlagsSampled
@@ -305,34 +316,38 @@ func TestStartSpanWithParent(t *testing.T) {
 		TraceFlags: 0x1,
 	}
 	_, s1 := tr.Start(trace.ContextWithRemoteSpanContext(ctx, sc1), "span1-unsampled-parent1")
-	if err := checkChild(sc1, s1); err != nil {
+	if err := checkChild(t, sc1, s1); err != nil {
 		t.Error(err)
 	}
 
 	_, s2 := tr.Start(trace.ContextWithRemoteSpanContext(ctx, sc1), "span2-unsampled-parent1")
-	if err := checkChild(sc1, s2); err != nil {
+	if err := checkChild(t, sc1, s2); err != nil {
 		t.Error(err)
 	}
 
+	ts, err := trace.TraceStateFromKeyValues(label.String("k", "v"))
+	if err != nil {
+		t.Error(err)
+	}
 	sc2 := trace.SpanContext{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 0x1,
-		//Tracestate:   testTracestate,
+		TraceState: ts,
 	}
 	_, s3 := tr.Start(trace.ContextWithRemoteSpanContext(ctx, sc2), "span3-sampled-parent2")
-	if err := checkChild(sc2, s3); err != nil {
+	if err := checkChild(t, sc2, s3); err != nil {
 		t.Error(err)
 	}
 
 	ctx2, s4 := tr.Start(trace.ContextWithRemoteSpanContext(ctx, sc2), "span4-sampled-parent2")
-	if err := checkChild(sc2, s4); err != nil {
+	if err := checkChild(t, sc2, s4); err != nil {
 		t.Error(err)
 	}
 
 	s4Sc := s4.SpanContext()
 	_, s5 := tr.Start(ctx2, "span5-implicit-childof-span4")
-	if err := checkChild(s4Sc, s5); err != nil {
+	if err := checkChild(t, s4Sc, s5); err != nil {
 		t.Error(err)
 	}
 }
@@ -350,7 +365,7 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &export.SpanData{
+	want := &export.SpanSnapshot{
 		SpanContext: trace.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -380,7 +395,7 @@ func TestSetSpanAttributes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &export.SpanData{
+	want := &export.SpanSnapshot{
 		SpanContext: trace.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -432,7 +447,7 @@ func TestSamplerAttributesLocalChildSpan(t *testing.T) {
 	checkTime(&got[1].StartTime)
 	checkTime(&got[1].EndTime)
 
-	want := []*export.SpanData{
+	want := []*export.SpanSnapshot{
 		{
 			SpanContext: trace.SpanContext{
 				TraceID:    tid,
@@ -482,7 +497,7 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &export.SpanData{
+	want := &export.SpanSnapshot{
 		SpanContext: trace.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -528,7 +543,7 @@ func TestEvents(t *testing.T) {
 		}
 	}
 
-	want := &export.SpanData{
+	want := &export.SpanSnapshot{
 		SpanContext: trace.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -579,7 +594,7 @@ func TestEventsOverLimit(t *testing.T) {
 		}
 	}
 
-	want := &export.SpanData{
+	want := &export.SpanSnapshot{
 		SpanContext: trace.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -622,7 +637,7 @@ func TestLinks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &export.SpanData{
+	want := &export.SpanSnapshot{
 		SpanContext: trace.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -665,7 +680,7 @@ func TestLinksOverLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &export.SpanData{
+	want := &export.SpanSnapshot{
 		SpanContext: trace.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -719,7 +734,7 @@ func TestSetSpanStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &export.SpanData{
+	want := &export.SpanSnapshot{
 		SpanContext: trace.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -740,7 +755,8 @@ func TestSetSpanStatus(t *testing.T) {
 func cmpDiff(x, y interface{}) string {
 	return cmp.Diff(x, y,
 		cmp.AllowUnexported(label.Value{}),
-		cmp.AllowUnexported(export.Event{}))
+		cmp.AllowUnexported(export.Event{}),
+		cmp.AllowUnexported(trace.TraceState{}))
 }
 
 func remoteSpanContext() trace.SpanContext {
@@ -753,7 +769,7 @@ func remoteSpanContext() trace.SpanContext {
 
 // checkChild is test utility function that tests that c has fields set appropriately,
 // given that it is a child span of p.
-func checkChild(p trace.SpanContext, apiSpan trace.Span) error {
+func checkChild(t *testing.T, p trace.SpanContext, apiSpan trace.Span) error {
 	s := apiSpan.(*span)
 	if s == nil {
 		return fmt.Errorf("got nil child span, want non-nil")
@@ -767,10 +783,8 @@ func checkChild(p trace.SpanContext, apiSpan trace.Span) error {
 	if got, want := s.spanContext.TraceFlags, p.TraceFlags; got != want {
 		return fmt.Errorf("got child trace options %d, want %d", got, want)
 	}
-	// TODO [rgheita] : Fix tracestate test
-	//if got, want := c.spanContext.Tracestate, p.Tracestate; got != want {
-	//	return fmt.Errorf("got child tracestate %v, want %v", got, want)
-	//}
+	got, want := s.spanContext.TraceState, p.TraceState
+	assert.Equal(t, want, got)
 	return nil
 }
 
@@ -811,15 +825,16 @@ func startLocalSpan(tp *TracerProvider, ctx context.Context, trName, name string
 }
 
 // endSpan is a test utility function that ends the span in the context and
-// returns the exported export.SpanData.
+// returns the exported export.SpanSnapshot.
 // It requires that span be sampled using one of these methods
 //  1. Passing parent span context in context
 //  2. Use WithSampler(AlwaysSample())
 //  3. Configuring AlwaysSample() as default sampler
 //
 // It also does some basic tests on the span.
-// It also clears spanID in the export.SpanData to make the comparison easier.
-func endSpan(te *testExporter, span trace.Span) (*export.SpanData, error) {
+// It also clears spanID in the export.SpanSnapshot to make the comparison
+// easier.
+func endSpan(te *testExporter, span trace.Span) (*export.SpanSnapshot, error) {
 	if !span.IsRecording() {
 		return nil, fmt.Errorf("IsRecording: got false, want true")
 	}
@@ -857,11 +872,21 @@ func TestEndSpanTwice(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te))
 
-	span := startSpan(tp, "EndSpanTwice")
-	span.End()
-	span.End()
+	st := time.Now()
+	et1 := st.Add(100 * time.Millisecond)
+	et2 := st.Add(200 * time.Millisecond)
+
+	span := startSpan(tp, "EndSpanTwice", trace.WithTimestamp(st))
+	span.End(trace.WithTimestamp(et1))
+	span.End(trace.WithTimestamp(et2))
+
 	if te.Len() != 1 {
 		t.Fatalf("expected only a single span, got %#v", te.Spans())
+	}
+
+	ro := span.(ReadOnlySpan)
+	if ro.EndTime() != et1 {
+		t.Fatalf("2nd call to End() should not modify end time")
 	}
 }
 
@@ -1069,7 +1094,7 @@ func TestRecordError(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		want := &export.SpanData{
+		want := &export.SpanSnapshot{
 			SpanContext: trace.SpanContext{
 				TraceID:    tid,
 				TraceFlags: 0x1,
@@ -1109,7 +1134,7 @@ func TestRecordErrorNil(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &export.SpanData{
+	want := &export.SpanSnapshot{
 		SpanContext: trace.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -1177,7 +1202,7 @@ func TestWithResource(t *testing.T) {
 		t.Error(err.Error())
 	}
 
-	want := &export.SpanData{
+	want := &export.SpanSnapshot{
 		SpanContext: trace.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -1212,7 +1237,7 @@ func TestWithInstrumentationVersion(t *testing.T) {
 		t.Error(err.Error())
 	}
 
-	want := &export.SpanData{
+	want := &export.SpanSnapshot{
 		SpanContext: trace.SpanContext{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -1253,4 +1278,121 @@ func TestSpanCapturesPanic(t *testing.T) {
 		errorTypeKey.String("*errors.errorString"),
 		errorMessageKey.String("error message"),
 	})
+}
+
+func TestReadOnlySpan(t *testing.T) {
+	kv := label.String("foo", "bar")
+
+	tp := NewTracerProvider(WithResource(resource.NewWithAttributes(kv)))
+	cfg := tp.config.Load().(*Config)
+	tr := tp.Tracer("ReadOnlySpan", trace.WithInstrumentationVersion("3"))
+
+	// Initialize parent context.
+	tID, sID := cfg.IDGenerator.NewIDs(context.Background())
+	parent := trace.SpanContext{
+		TraceID:    tID,
+		SpanID:     sID,
+		TraceFlags: 0x1,
+	}
+	ctx := trace.ContextWithRemoteSpanContext(context.Background(), parent)
+
+	// Initialize linked context.
+	tID, sID = cfg.IDGenerator.NewIDs(context.Background())
+	linked := trace.SpanContext{
+		TraceID:    tID,
+		SpanID:     sID,
+		TraceFlags: 0x1,
+	}
+
+	st := time.Now()
+	ctx, span := tr.Start(ctx, "foo", trace.WithTimestamp(st),
+		trace.WithLinks(trace.Link{SpanContext: linked}))
+	span.SetAttributes(kv)
+	span.AddEvent("foo", trace.WithAttributes(kv))
+	span.SetStatus(codes.Ok, "foo")
+
+	// Verify span implements ReadOnlySpan.
+	ro, ok := span.(ReadOnlySpan)
+	require.True(t, ok)
+
+	assert.Equal(t, "foo", ro.Name())
+	assert.Equal(t, trace.SpanContextFromContext(ctx), ro.SpanContext())
+	assert.Equal(t, parent, ro.Parent())
+	assert.Equal(t, trace.SpanKindInternal, ro.SpanKind())
+	assert.Equal(t, st, ro.StartTime())
+	assert.True(t, ro.EndTime().IsZero())
+	assert.Equal(t, kv.Key, ro.Attributes()[0].Key)
+	assert.Equal(t, kv.Value, ro.Attributes()[0].Value)
+	assert.Equal(t, linked, ro.Links()[0].SpanContext)
+	assert.Equal(t, kv.Key, ro.Events()[0].Attributes[0].Key)
+	assert.Equal(t, kv.Value, ro.Events()[0].Attributes[0].Value)
+	assert.Equal(t, codes.Ok, ro.StatusCode())
+	assert.Equal(t, "foo", ro.StatusMessage())
+	assert.Equal(t, "ReadOnlySpan", ro.InstrumentationLibrary().Name)
+	assert.Equal(t, "3", ro.InstrumentationLibrary().Version)
+	assert.Equal(t, kv.Key, ro.Resource().Attributes()[0].Key)
+	assert.Equal(t, kv.Value, ro.Resource().Attributes()[0].Value)
+
+	// Verify changes to the original span are reflected in the ReadOnlySpan.
+	span.SetName("bar")
+	assert.Equal(t, "bar", ro.Name())
+
+	// Verify Snapshot() returns snapshots that are independent from the
+	// original span and from one another.
+	d1 := ro.Snapshot()
+	span.AddEvent("baz")
+	d2 := ro.Snapshot()
+	for _, e := range d1.MessageEvents {
+		if e.Name == "baz" {
+			t.Errorf("Didn't expect to find 'baz' event")
+		}
+	}
+	var exists bool
+	for _, e := range d2.MessageEvents {
+		if e.Name == "baz" {
+			exists = true
+		}
+	}
+	if !exists {
+		t.Errorf("Expected to find 'baz' event")
+	}
+
+	et := st.Add(time.Millisecond)
+	span.End(trace.WithTimestamp(et))
+	assert.Equal(t, et, ro.EndTime())
+}
+
+func TestReadWriteSpan(t *testing.T) {
+	tp := NewTracerProvider()
+	cfg := tp.config.Load().(*Config)
+	tr := tp.Tracer("ReadWriteSpan")
+
+	// Initialize parent context.
+	tID, sID := cfg.IDGenerator.NewIDs(context.Background())
+	parent := trace.SpanContext{
+		TraceID:    tID,
+		SpanID:     sID,
+		TraceFlags: 0x1,
+	}
+	ctx := trace.ContextWithRemoteSpanContext(context.Background(), parent)
+
+	_, span := tr.Start(ctx, "foo")
+	defer span.End()
+
+	// Verify span implements ReadOnlySpan.
+	rw, ok := span.(ReadWriteSpan)
+	require.True(t, ok)
+
+	// Verify the span can be read from.
+	assert.False(t, rw.StartTime().IsZero())
+
+	// Verify the span can be written to.
+	rw.SetName("bar")
+	assert.Equal(t, "bar", rw.Name())
+
+	// NOTE: This function tests ReadWriteSpan which is an interface which
+	// embeds trace.Span and ReadOnlySpan. Since both of these interfaces have
+	// their own tests, there is no point in testing all the possible methods
+	// available via ReadWriteSpan as doing so would mean creating a lot of
+	// duplication.
 }

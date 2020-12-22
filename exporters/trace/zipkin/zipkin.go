@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -31,7 +32,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-// Exporter exports SpanData to the zipkin collector. It implements
+// Exporter exports SpanSnapshots to the zipkin collector. It implements
 // the SpanBatcher interface, so it needs to be used together with the
 // WithBatcher option when setting up the exporter pipeline.
 type Exporter struct {
@@ -112,14 +113,14 @@ func NewRawExporter(collectorURL, serviceName string, opts ...Option) (*Exporter
 // NewExportPipeline sets up a complete export pipeline
 // with the recommended setup for trace provider
 func NewExportPipeline(collectorURL, serviceName string, opts ...Option) (*sdktrace.TracerProvider, error) {
-	exp, err := NewRawExporter(collectorURL, serviceName, opts...)
+	exporter, err := NewRawExporter(collectorURL, serviceName, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(exp))
-	if exp.o.config != nil {
-		tp.ApplyConfig(*exp.o.config)
+	tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(exporter))
+	if exporter.o.config != nil {
+		tp.ApplyConfig(*exporter.o.config)
 	}
 
 	return tp, err
@@ -137,8 +138,8 @@ func InstallNewPipeline(collectorURL, serviceName string, opts ...Option) error 
 	return nil
 }
 
-// ExportSpans exports SpanData to a Zipkin receiver.
-func (e *Exporter) ExportSpans(ctx context.Context, batch []*export.SpanData) error {
+// ExportSpans exports SpanSnapshots to a Zipkin receiver.
+func (e *Exporter) ExportSpans(ctx context.Context, ss []*export.SpanSnapshot) error {
 	e.stoppedMu.RLock()
 	stopped := e.stopped
 	e.stoppedMu.RUnlock()
@@ -147,11 +148,11 @@ func (e *Exporter) ExportSpans(ctx context.Context, batch []*export.SpanData) er
 		return nil
 	}
 
-	if len(batch) == 0 {
+	if len(ss) == 0 {
 		e.logf("no spans to export")
 		return nil
 	}
-	models := toZipkinSpanModels(batch, e.serviceName)
+	models := toZipkinSpanModels(ss, e.serviceName)
 	body, err := json.Marshal(models)
 	if err != nil {
 		return e.errf("failed to serialize zipkin models to JSON: %v", err)
@@ -166,19 +167,21 @@ func (e *Exporter) ExportSpans(ctx context.Context, batch []*export.SpanData) er
 	if err != nil {
 		return e.errf("request to %s failed: %v", e.url, err)
 	}
-	e.logf("zipkin responded with status %d", resp.StatusCode)
+	defer resp.Body.Close()
 
-	_, err = ioutil.ReadAll(resp.Body)
+	// Zipkin API returns a 202 on success and the content of the body isn't interesting
+	// but it is still being read because according to https://golang.org/pkg/net/http/#Response
+	// > The default HTTP client's Transport may not reuse HTTP/1.x "keep-alive" TCP connections
+	// > if the Body is not read to completion and closed.
+	_, err = io.Copy(ioutil.Discard, resp.Body)
 	if err != nil {
-		// Best effort to clean up here.
-		resp.Body.Close()
 		return e.errf("failed to read response body: %v", err)
 	}
 
-	err = resp.Body.Close()
-	if err != nil {
-		return e.errf("failed to close response body: %v", err)
+	if resp.StatusCode != http.StatusAccepted {
+		return e.errf("failed to send spans to zipkin server with status %d", resp.StatusCode)
 	}
+
 	return nil
 }
 

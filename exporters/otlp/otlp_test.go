@@ -22,28 +22,90 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
+	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
+	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
+	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
+
+	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
+	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
+
+type stubProtocolDriver struct {
+	rm []metricpb.ResourceMetrics
+	rs []tracepb.ResourceSpans
+}
+
+var _ ProtocolDriver = (*stubProtocolDriver)(nil)
+
+func (m *stubProtocolDriver) Start(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		return nil
+	}
+}
+
+func (m *stubProtocolDriver) Stop(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		return nil
+	}
+}
+
+func (m *stubProtocolDriver) ExportMetrics(parent context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error {
+	rms, err := transform.CheckpointSet(parent, selector, cps, 1)
+	if err != nil {
+		return err
+	}
+	for _, rm := range rms {
+		if rm == nil {
+			continue
+		}
+		m.rm = append(m.rm, *rm)
+	}
+	return nil
+}
+
+func (m *stubProtocolDriver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
+	for _, rs := range transform.SpanData(ss) {
+		if rs == nil {
+			continue
+		}
+		m.rs = append(m.rs, *rs)
+	}
+	return nil
+}
+
+func (m *stubProtocolDriver) Reset() {
+	m.rm = nil
+	m.rs = nil
+}
+
+func newExporter(t *testing.T, opts ...ExporterOption) (*Exporter, *stubProtocolDriver) {
+	driver := &stubProtocolDriver{}
+	exp, err := NewExporter(context.Background(), driver, opts...)
+	require.NoError(t, err)
+	return exp, driver
+}
 
 func TestExporterShutdownHonorsTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	e := NewUnstartedExporter()
-	orig := e.cc.closeBackgroundConnectionDoneCh
-	e.cc.closeBackgroundConnectionDoneCh = func(ch chan struct{}) {
-		go func() {
-			<-ctx.Done()
-			orig(ch)
-		}()
-	}
+	e := NewUnstartedExporter(&stubProtocolDriver{})
 	if err := e.Start(ctx); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
 
 	innerCtx, innerCancel := context.WithTimeout(ctx, time.Microsecond)
+	<-time.After(time.Second)
 	if err := e.Shutdown(innerCtx); err == nil {
 		t.Error("expected context DeadlineExceeded error, got nil")
 	} else if !errors.Is(err, context.DeadlineExceeded) {
@@ -56,14 +118,7 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	e := NewUnstartedExporter()
-	orig := e.cc.closeBackgroundConnectionDoneCh
-	e.cc.closeBackgroundConnectionDoneCh = func(ch chan struct{}) {
-		go func() {
-			<-ctx.Done()
-			orig(ch)
-		}()
-	}
+	e := NewUnstartedExporter(&stubProtocolDriver{})
 	if err := e.Start(ctx); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
@@ -82,7 +137,7 @@ func TestExporterShutdownNoError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	e := NewUnstartedExporter()
+	e := NewUnstartedExporter(&stubProtocolDriver{})
 	if err := e.Start(ctx); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
@@ -94,7 +149,7 @@ func TestExporterShutdownNoError(t *testing.T) {
 
 func TestExporterShutdownManyTimes(t *testing.T) {
 	ctx := context.Background()
-	e, err := NewExporter(ctx)
+	e, err := NewExporter(ctx, &stubProtocolDriver{})
 	if err != nil {
 		t.Fatalf("failed to start an exporter: %v", err)
 	}
@@ -121,7 +176,7 @@ func TestExporterShutdownManyTimes(t *testing.T) {
 
 func TestInstallNewPipeline(t *testing.T) {
 	ctx := context.Background()
-	_, _, _, err := InstallNewPipeline(ctx)
+	_, _, _, err := InstallNewPipeline(ctx, &stubProtocolDriver{})
 	assert.NoError(t, err)
 	assert.IsType(t, &sdktrace.TracerProvider{}, otel.GetTracerProvider())
 }
@@ -141,6 +196,7 @@ func TestNewExportPipeline(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			_, tp, _, err := NewExportPipeline(
 				context.Background(),
+				&stubProtocolDriver{},
 				tc.expOpts...,
 			)
 

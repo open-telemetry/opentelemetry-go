@@ -97,20 +97,27 @@ func (c *Aggregator) Points() ([]number.Number, error) {
 // the empty set, taking a lock to prevent concurrent Update() calls.
 func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
-	if o == nil {
+
+	if oa != nil && o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)
 	}
 
 	c.lock.Lock()
-	o.points, c.points = c.points, nil
-	o.sum, c.sum = c.sum, 0
+	if o != nil {
+		o.points = c.points
+		o.sum = c.sum
+	}
+	c.points = nil
+	c.sum = 0
 	c.lock.Unlock()
 
 	// TODO: This sort should be done lazily, only when quantiles
 	// are requested.  The SDK specification says you can use this
 	// aggregator to simply list values in the order they were
 	// received as an alternative to requesting quantile information.
-	o.sort(desc.NumberKind())
+	if o != nil {
+		o.sort(desc.NumberKind())
+	}
 	return nil
 }
 

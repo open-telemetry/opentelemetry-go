@@ -24,6 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 )
@@ -248,4 +249,14 @@ func calcBuckets(points []number.Number, profile aggregatortest.Profile) []uint6
 	}
 
 	return counts
+}
+
+func TestSynchronizedMoveReset(t *testing.T) {
+	aggregatortest.SynchronizedMoveResetTest(
+		t,
+		metric.ValueRecorderInstrumentKind,
+		func(desc *metric.Descriptor) export.Aggregator {
+			return &histogram.New(1, desc, boundaries)[0]
+		},
+	)
 }

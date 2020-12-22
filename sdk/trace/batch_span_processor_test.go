@@ -29,17 +29,17 @@ import (
 
 type testBatchExporter struct {
 	mu         sync.Mutex
-	spans      []*export.SpanData
+	spans      []*export.SpanSnapshot
 	sizes      []int
 	batchCount int
 }
 
-func (t *testBatchExporter) ExportSpans(ctx context.Context, sds []*export.SpanData) error {
+func (t *testBatchExporter) ExportSpans(ctx context.Context, ss []*export.SpanSnapshot) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	t.spans = append(t.spans, sds...)
-	t.sizes = append(t.sizes, len(sds))
+	t.spans = append(t.spans, ss...)
+	t.sizes = append(t.sizes, len(ss))
 	t.batchCount++
 	return nil
 }
@@ -61,10 +61,17 @@ func (t *testBatchExporter) getBatchCount() int {
 var _ export.SpanExporter = (*testBatchExporter)(nil)
 
 func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
+	tp := basicTracerProvider(t)
 	bsp := sdktrace.NewBatchSpanProcessor(nil)
+	tp.RegisterSpanProcessor(bsp)
+	tr := tp.Tracer("NilExporter")
+
+	_, span := tr.Start(context.Background(), "foo")
+	span.End()
+
 	// These should not panic.
-	bsp.OnStart(context.Background(), &export.SpanData{})
-	bsp.OnEnd(&export.SpanData{})
+	bsp.OnStart(context.Background(), span.(sdktrace.ReadWriteSpan))
+	bsp.OnEnd(span.(sdktrace.ReadOnlySpan))
 	bsp.ForceFlush()
 	err := bsp.Shutdown(context.Background())
 	if err != nil {
