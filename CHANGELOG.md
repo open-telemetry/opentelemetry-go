@@ -1,4 +1,4 @@
-# Changelog
+u# Changelog
 
 All notable changes to this project will be documented in this file.
 
@@ -20,15 +20,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Improve span duration accuracy. (#1360)
 - Migrated CI/CD from CircleCI to GitHub Actions (#1382)
 - Remove duplicate checkout from GitHub Actions workflow (#1407)
-<<<<<<< HEAD
 - Metric Push and Pull Controller components are combined into a single "basic" Controller:
   - `WithExporter()` and `Start()` to configure Push behavior
   - `Start()` is optional; use `Collect()` and `ForEach()` for Pull behavior
   - `Start()` and `Stop()` accept Context. (#1378)
-=======
 - `NewExporter` from `exporters/otlp` now takes a `ProtocolDriver` as a parameter. (#1369)
 - Many OTLP Exporter options became gRPC ProtocolDriver options. (#1369)
->>>>>>> origin
 
 ### Removed
 
