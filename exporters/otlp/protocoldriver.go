@@ -16,6 +16,7 @@ package otlp // import "go.opentelemetry.io/otel/exporters/otlp"
 
 import (
 	"context"
+	"sync"
 
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
@@ -48,4 +49,97 @@ type ProtocolDriver interface {
 	// concurrently with ExportMetrics, so the manager needs to
 	// take this into account by doing proper locking.
 	ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error
+}
+
+// SplitConfig is used to configure a split driver.
+type SplitConfig struct {
+	// ForMetrics driver will be used for sending metrics to the
+	// collector.
+	ForMetrics ProtocolDriver
+	// ForTraces driver will be used for sending spans to the
+	// collector.
+	ForTraces ProtocolDriver
+}
+
+type splitDriver struct {
+	metric ProtocolDriver
+	trace  ProtocolDriver
+}
+
+var _ ProtocolDriver = (*splitDriver)(nil)
+
+// NewSplitDriver creates a protocol driver which contains two other
+// protocol drivers and will forward traces to one of them and metrics
+// to another.
+func NewSplitDriver(cfg SplitConfig) ProtocolDriver {
+	return &splitDriver{
+		metric: cfg.ForMetrics,
+		trace:  cfg.ForTraces,
+	}
+}
+
+// Start implements ProtocolDriver. It starts both drivers at the same
+// time.
+func (d *splitDriver) Start(ctx context.Context) error {
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	var (
+		metricErr error
+		traceErr  error
+	)
+	go func() {
+		defer wg.Done()
+		metricErr = d.metric.Start(ctx)
+	}()
+	go func() {
+		defer wg.Done()
+		traceErr = d.trace.Start(ctx)
+	}()
+	wg.Wait()
+	if metricErr != nil {
+		return metricErr
+	}
+	if traceErr != nil {
+		return traceErr
+	}
+	return nil
+}
+
+// Stop implements ProtocolDriver. It stops both drivers at the same
+// time.
+func (d *splitDriver) Stop(ctx context.Context) error {
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	var (
+		metricErr error
+		traceErr  error
+	)
+	go func() {
+		defer wg.Done()
+		metricErr = d.metric.Stop(ctx)
+	}()
+	go func() {
+		defer wg.Done()
+		traceErr = d.trace.Stop(ctx)
+	}()
+	wg.Wait()
+	if metricErr != nil {
+		return metricErr
+	}
+	if traceErr != nil {
+		return traceErr
+	}
+	return nil
+}
+
+// ExportMetrics implements ProtocolDriver. It forwards the call to
+// the driver used for sending metrics.
+func (d *splitDriver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error {
+	return d.metric.ExportMetrics(ctx, cps, selector)
+}
+
+// ExportTraces implements ProtocolDriver. It forwards the call to the
+// driver used for sending spans.
+func (d *splitDriver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
+	return d.trace.ExportTraces(ctx, ss)
 }
