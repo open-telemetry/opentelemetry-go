@@ -97,25 +97,7 @@ func newGRPCExporter(t *testing.T, ctx context.Context, address string, addition
 	return exp
 }
 
-func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.GRPCConnectionOption) {
-	mc := runMockColAtAddr(t, "localhost:56561")
-
-	defer func() {
-		_ = mc.stop()
-	}()
-
-	<-time.After(5 * time.Millisecond)
-
-	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, mc.address, additionalOpts...)
-	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		defer cancel()
-		if err := exp.Shutdown(ctx); err != nil {
-			panic(err)
-		}
-	}()
-
+func runEndToEndTest(t *testing.T, ctx context.Context, exp *otlp.Exporter, mcTraces, mcMetrics *mockCol) {
 	pOpts := []sdktrace.TracerProviderOption{
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithBatcher(
@@ -239,10 +221,11 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.GRPCConnectionO
 
 	// Shutdown the collector too so that we can begin
 	// verification checks of expected data back.
-	_ = mc.stop()
+	_ = mcTraces.stop()
+	_ = mcMetrics.stop()
 
 	// Now verify that we only got two resources
-	rss := mc.getResourceSpans()
+	rss := mcTraces.getResourceSpans()
 	if got, want := len(rss), 2; got != want {
 		t.Fatalf("resource span count: got %d, want %d\n", got, want)
 	}
@@ -273,7 +256,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.GRPCConnectionO
 		}
 	}
 
-	metrics := mc.getMetrics()
+	metrics := mcMetrics.getMetrics()
 	assert.Len(t, metrics, len(instruments), "not enough metrics exported")
 	seen := make(map[string]struct{}, len(instruments))
 	for _, m := range metrics {
@@ -340,6 +323,28 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.GRPCConnectionO
 			assert.Fail(t, fmt.Sprintf("no metric(s) exported for %q", i))
 		}
 	}
+}
+
+func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.GRPCConnectionOption) {
+	mc := runMockColAtAddr(t, "localhost:56561")
+
+	defer func() {
+		_ = mc.stop()
+	}()
+
+	<-time.After(5 * time.Millisecond)
+
+	ctx := context.Background()
+	exp := newGRPCExporter(t, ctx, mc.address, additionalOpts...)
+	defer func() {
+		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+		if err := exp.Shutdown(ctx); err != nil {
+			panic(err)
+		}
+	}()
+
+	runEndToEndTest(t, ctx, exp, mc, mc)
 }
 
 func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
@@ -760,4 +765,45 @@ func TestFailedMetricTransform(t *testing.T) {
 	}()
 
 	assert.Error(t, exp.Export(ctx, failCheckpointSet{}))
+}
+
+func TestMultiConnectionDriver(t *testing.T) {
+	mcTraces := runMockCol(t)
+	mcMetrics := runMockCol(t)
+
+	defer func() {
+		_ = mcTraces.stop()
+		_ = mcMetrics.stop()
+	}()
+
+	<-time.After(5 * time.Millisecond)
+
+	commonOpts := []otlp.GRPCConnectionOption{
+		otlp.WithInsecure(),
+		otlp.WithReconnectionPeriod(50 * time.Millisecond),
+		otlp.WithGRPCDialOption(grpc.WithBlock()),
+	}
+	optsTraces := append([]otlp.GRPCConnectionOption{
+		otlp.WithAddress(mcTraces.address),
+	}, commonOpts...)
+	optsMetrics := append([]otlp.GRPCConnectionOption{
+		otlp.WithAddress(mcMetrics.address),
+	}, commonOpts...)
+
+	tracesDriver := otlp.NewGRPCDriver(optsTraces...)
+	metricsDriver := otlp.NewGRPCDriver(optsMetrics...)
+	splitCfg := otlp.SplitConfig{
+		ForMetrics: metricsDriver,
+		ForTraces:  tracesDriver,
+	}
+	driver := otlp.NewSplitDriver(splitCfg)
+	ctx := context.Background()
+	exp, err := otlp.NewExporter(ctx, driver)
+	if err != nil {
+		t.Fatalf("failed to create a new collector exporter: %v", err)
+	}
+	defer func() {
+		assert.NoError(t, exp.Shutdown(ctx))
+	}()
+	runEndToEndTest(t, ctx, exp, mcTraces, mcMetrics)
 }
