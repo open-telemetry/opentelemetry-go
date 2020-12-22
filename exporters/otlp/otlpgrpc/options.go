@@ -70,6 +70,7 @@ type config struct {
 	clientCredentials  credentials.TransportCredentials
 }
 
+// Option applies an option to the gRPC driver.
 type Option func(cfg *config)
 
 // WithInsecure disables client transport security for the exporter's gRPC connection
