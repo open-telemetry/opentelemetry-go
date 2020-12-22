@@ -16,6 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `NewSplitDriver` for OTLP exporter that allows sending traces and metrics to different endpoints. (#1418)
 - Add codeql worfklow to GitHub Actions (#1428)
 - Added Gosec workflow to GitHub Actions (#1429)
+- A new HTTP driver for OTLP exporter in `exporters/otlp/otlphttp`. Currently it only supports the binary protobuf payloads. (#1420)
 
 ### Changed
 
@@ -29,6 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Unify endpoint API that related to OTel exporter. (#1401)
 - Metric aggregator Count() and histogram Bucket.Counts are consistently `uint64`. (1430)
 - `SamplingResult` now passed a `Tracestate` from the parent `SpanContext` (#1432)
+- Moved gRPC driver for OTLP exporter to `exporters/otlp/otlpgrpc`. (#1420)
 
 ### Removed
 
