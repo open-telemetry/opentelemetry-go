@@ -61,6 +61,7 @@ func New(checkpointer export.Checkpointer, options ...Option) *Controller {
 	accum := sdk.NewAccumulator(
 		checkpointer,
 		config.Resource,
+		nil,
 	)
 	return &Controller{
 		accumulator:  accum,

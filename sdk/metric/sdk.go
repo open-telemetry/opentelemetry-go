@@ -67,6 +67,9 @@ type (
 
 		// resource is applied to all records in this Accumulator.
 		resource *resource.Resource
+
+		// enricher (optional) extracts labels from baggage.
+		enricher export.Enricher
 	}
 
 	syncInstrument struct {
@@ -123,7 +126,7 @@ type (
 	}
 
 	instrument struct {
-		meter      *Accumulator
+		meter      *Accumulator // TODO rename 'accumulator'
 		descriptor metric.Descriptor
 	}
 
@@ -287,9 +290,12 @@ func (s *syncInstrument) Bind(kvs []label.KeyValue) metric.BoundSyncImpl {
 }
 
 func (s *syncInstrument) RecordOne(ctx context.Context, num number.Number, kvs []label.KeyValue) {
+	// Introduce labels from baggage.
+	kvs = s.meter.enrich(ctx, kvs)
+
 	h := s.acquireHandle(kvs, nil)
 	defer h.Unbind()
-	h.RecordOne(ctx, num)
+	h.recordEvent(ctx, num)
 }
 
 // NewAccumulator constructs a new Accumulator for the given
@@ -301,11 +307,12 @@ func (s *syncInstrument) RecordOne(ctx context.Context, num number.Number, kvs [
 // processor will call Collect() when it receives a request to scrape
 // current metric values.  A push-based processor should configure its
 // own periodic collection.
-func NewAccumulator(processor export.Processor, resource *resource.Resource) *Accumulator {
+func NewAccumulator(processor export.Processor, resource *resource.Resource, enricher export.Enricher) *Accumulator {
 	return &Accumulator{
 		processor:        processor,
 		asyncInstruments: internal.NewAsyncInstrumentState(),
 		resource:         resource,
+		enricher:         enricher,
 	}
 }
 
@@ -350,6 +357,20 @@ func (m *Accumulator) Collect(ctx context.Context) int {
 	m.currentEpoch++
 
 	return checkpointed
+}
+
+func (m *Accumulator) enrich(ctx context.Context, kvs []label.KeyValue) []label.KeyValue {
+	if m.enricher == nil {
+		return kvs
+	}
+	out, err := m.enricher(ctx, kvs)
+
+	// Return the enricher result if it is non-nil and no error.
+	if err == nil && out != nil {
+		return out
+	}
+	otel.Handle(err)
+	return kvs
 }
 
 func (m *Accumulator) collectSyncInstruments() int {
@@ -474,6 +495,9 @@ func (m *Accumulator) checkpointAsync(a *asyncInstrument) int {
 
 // RecordBatch enters a batch of metric events.
 func (m *Accumulator) RecordBatch(ctx context.Context, kvs []label.KeyValue, measurements ...metric.Measurement) {
+	// Introduce labels from baggage.
+	kvs = m.enrich(ctx, kvs)
+
 	// Labels will be computed the first time acquireHandle is
 	// called.  Subsequent calls to acquireHandle will re-use the
 	// previously computed value instead of recomputing the
@@ -492,12 +516,27 @@ func (m *Accumulator) RecordBatch(ctx context.Context, kvs []label.KeyValue, mea
 		}
 
 		defer h.Unbind()
-		h.RecordOne(ctx, meas.Number())
+		h.recordEvent(ctx, meas.Number())
 	}
 }
 
 // RecordOne implements metric.SyncImpl.
 func (r *record) RecordOne(ctx context.Context, num number.Number) {
+	if r.inst.meter.enricher == nil {
+		r.recordEvent(ctx, num)
+		return
+	}
+
+	// Note: When there is an enricher, the bound instrument loses
+	// performance when labels are introduced.  The ToSlice() below
+	// could be stored in the instrument when enricher != nil, to
+	// avoid this cost.
+
+	// Call the unbound instrument path when the enricher is in use.
+	r.inst.RecordOne(ctx, num, r.labels.ToSlice())
+}
+
+func (r *record) recordEvent(ctx context.Context, num number.Number) {
 	if r.current == nil {
 		// The instrument is disabled according to the AggregatorSelector.
 		return
@@ -506,6 +545,7 @@ func (r *record) RecordOne(ctx context.Context, num number.Number) {
 		otel.Handle(err)
 		return
 	}
+
 	if err := r.current.Update(ctx, num, &r.inst.descriptor); err != nil {
 		otel.Handle(err)
 		return

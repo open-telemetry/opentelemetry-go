@@ -474,7 +474,7 @@ func TestSumObserverEndToEnd(t *testing.T) {
 		processorTest.AggregatorSelector(),
 		eselector,
 	)
-	accum := sdk.NewAccumulator(proc, resource.Empty())
+	accum := sdk.NewAccumulator(proc, resource.Empty(), nil)
 	meter := metric.WrapMeterImpl(accum, "testing")
 
 	var calls int64
