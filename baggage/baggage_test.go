@@ -18,6 +18,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/internal/baggage"
 	"go.opentelemetry.io/otel/label"
 )
@@ -83,4 +85,23 @@ func TestBaggage(t *testing.T) {
 	if m.Len() != 0 {
 		t.Fatal("WithoutBaggage failed to clear baggage")
 	}
+}
+
+func TestForEach(t *testing.T) {
+	ctx := ContextWithValues(
+		context.Background(),
+		label.String("A", "B"),
+		label.String("C", "D"),
+	)
+
+	out := map[string]string{}
+	ForEach(ctx, func(kv label.KeyValue) bool {
+		out[string(kv.Key)] = kv.Value.Emit()
+		return true
+	})
+
+	require.EqualValues(t, map[string]string{
+		"A": "B",
+		"C": "D",
+	}, out)
 }
