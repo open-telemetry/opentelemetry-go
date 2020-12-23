@@ -92,11 +92,11 @@ func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descrip
 func (c *Aggregator) Update(_ context.Context, number number.Number, desc *metric.Descriptor) error {
 	now := time.Now()
 	c.lock.Lock()
+	defer c.lock.Unlock()
 	c.samples = append(c.samples, aggregation.Sample{
 		Number: number,
 		Time:   now,
 	})
-	c.lock.Unlock()
 
 	return nil
 }

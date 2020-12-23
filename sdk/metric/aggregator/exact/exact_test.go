@@ -89,7 +89,7 @@ func (ut *updateTest) run(t *testing.T, profile aggregatortest.Profile) {
 	sum := sumOf(pts, profile.NumberKind)
 	allSum := all.Sum()
 	require.InEpsilon(t,
-		(&allSum).CoerceToFloat64(profile.NumberKind),
+		allSum.CoerceToFloat64(profile.NumberKind),
 		sum.CoerceToFloat64(profile.NumberKind),
 		0.0000001,
 		"Same sum")
@@ -166,7 +166,7 @@ func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
 	allSum := all.Sum()
 	sum := sumOf(pts, profile.NumberKind)
 	require.InEpsilon(t,
-		(&allSum).CoerceToFloat64(profile.NumberKind),
+		allSum.CoerceToFloat64(profile.NumberKind),
 		sum.CoerceToFloat64(profile.NumberKind),
 		0.0000001,
 		"Same sum - absolute")
@@ -270,7 +270,7 @@ func TestExactFloat64(t *testing.T) {
 
 	allSum := all.Sum()
 	sum := sumOf(pts, number.Float64Kind)
-	require.InEpsilon(t, (&allSum).AsFloat64(), sum.AsFloat64(), 0.0000001, "Same sum")
+	require.InEpsilon(t, allSum.AsFloat64(), sum.AsFloat64(), 0.0000001, "Same sum")
 
 	count, err := ckpt.Count()
 	require.Equal(t, all.Count(), count, "Same count")
@@ -329,7 +329,7 @@ func TestMergeBehavior(t *testing.T) {
 				}
 
 				pts, err := ckpt.Points()
-				require.Nil(t, err)
+				require.NoError(t, err)
 
 				received := aggregatortest.NewNumbers(profile.NumberKind)
 				for i, s := range pts {
@@ -343,12 +343,12 @@ func TestMergeBehavior(t *testing.T) {
 				allSum := all.Sum()
 				sum := sumOf(pts, profile.NumberKind)
 				require.InEpsilon(t,
-					(&allSum).CoerceToFloat64(profile.NumberKind),
+					allSum.CoerceToFloat64(profile.NumberKind),
 					sum.CoerceToFloat64(profile.NumberKind),
 					0.0000001,
 					"Same sum - absolute")
 				count, err := ckpt.Count()
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, all.Count(), count, "Same count - absolute")
 				require.Equal(t, all, received, "Same ordered contents")
 			})
