@@ -143,6 +143,14 @@ type Checkpointer interface {
 // Note: This interface does not include the *metric.Descriptor
 // because it creates significant complexity and/or cost to enrich
 // RecordBatch() events.
+//
+// Note: This interface is called with input labels before they are
+// sorted and de-duplicated as described in
+// label.NewSetWithSortableFiltered().  The enricher has control over
+// whether label values should override the input making use of the
+// last-value semantic detailed for metric event labels in general.
+// Appending baggage values means they override the call-site labels,
+// prepending baggage means call-site labels override baggage labels.
 type Enricher func(context.Context, []label.KeyValue) ([]label.KeyValue, error)
 
 // Aggregator implements a specific aggregation behavior, e.g., a
