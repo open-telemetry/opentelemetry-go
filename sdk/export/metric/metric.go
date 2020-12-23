@@ -137,9 +137,6 @@ type Checkpointer interface {
 //
 // This SHOULD NOT modify the input label slice.
 //
-// This is permitted to add or remove labels and are applied
-// to all synchronous instrument events.
-//
 // Note: This interface does not include the *metric.Descriptor
 // because it creates significant complexity and/or cost to enrich
 // RecordBatch() events.
