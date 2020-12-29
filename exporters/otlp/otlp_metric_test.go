@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlp
+package otlp_test
 
 import (
 	"context"
@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/exporters/otlp"
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
 	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
 	resourcepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/resource/v1"
@@ -692,8 +693,8 @@ func TestStatelessExportKind(t *testing.T) {
 		t.Run(k.name, func(t *testing.T) {
 			runMetricExportTests(
 				t,
-				[]ExporterOption{
-					WithMetricExportKindSelector(
+				[]otlp.ExporterOption{
+					otlp.WithMetricExportKindSelector(
 						metricsdk.StatelessExportKindSelector(),
 					),
 				},
@@ -740,7 +741,7 @@ func TestStatelessExportKind(t *testing.T) {
 	}
 }
 
-func runMetricExportTests(t *testing.T, opts []ExporterOption, rs []record, expected []metricpb.ResourceMetrics) {
+func runMetricExportTests(t *testing.T, opts []otlp.ExporterOption, rs []record, expected []metricpb.ResourceMetrics) {
 	exp, driver := newExporter(t, opts...)
 
 	recs := map[label.Distinct][]metricsdk.Record{}
