@@ -202,7 +202,7 @@ func (oc *grpcConnection) setConnection(cc *grpc.ClientConn) bool {
 }
 
 func (oc *grpcConnection) dialToCollector(ctx context.Context) (*grpc.ClientConn, error) {
-	addr := oc.c.collectorAddr
+	endpoint := oc.c.collectorEndpoint
 
 	dialOpts := []grpc.DialOption{}
 	if oc.c.grpcServiceConfig != "" {
@@ -223,7 +223,7 @@ func (oc *grpcConnection) dialToCollector(ctx context.Context) (*grpc.ClientConn
 	ctx, cancel := oc.contextWithStop(ctx)
 	defer cancel()
 	ctx = oc.contextWithMetadata(ctx)
-	return grpc.DialContext(ctx, addr, dialOpts...)
+	return grpc.DialContext(ctx, endpoint, dialOpts...)
 }
 
 func (oc *grpcConnection) contextWithMetadata(ctx context.Context) context.Context {

@@ -81,10 +81,10 @@ func TestNewExporter_endToEnd(t *testing.T) {
 	}
 }
 
-func newGRPCExporter(t *testing.T, ctx context.Context, address string, additionalOpts ...otlp.GRPCConnectionOption) *otlp.Exporter {
+func newGRPCExporter(t *testing.T, ctx context.Context, endpoint string, additionalOpts ...otlp.GRPCConnectionOption) *otlp.Exporter {
 	opts := []otlp.GRPCConnectionOption{
 		otlp.WithInsecure(),
-		otlp.WithAddress(address),
+		otlp.WithEndpoint(endpoint),
 		otlp.WithReconnectionPeriod(50 * time.Millisecond),
 	}
 
@@ -97,7 +97,7 @@ func newGRPCExporter(t *testing.T, ctx context.Context, address string, addition
 	return exp
 }
 
-func runEndToEndTest(t *testing.T, ctx context.Context, exp *otlp.Exporter, mcTraces, mcMetrics *mockCol) {
+func runEndToEndTest(t *testing.T, ctx context.Context, exp *otlp.Exporter, mcTraces, mcMetrics *mockCollector) {
 	pOpts := []sdktrace.TracerProviderOption{
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithBatcher(
@@ -326,7 +326,7 @@ func runEndToEndTest(t *testing.T, ctx context.Context, exp *otlp.Exporter, mcTr
 }
 
 func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.GRPCConnectionOption) {
-	mc := runMockColAtAddr(t, "localhost:56561")
+	mc := runMockCollectorAtEndpoint(t, "localhost:56561")
 
 	defer func() {
 		_ = mc.stop()
@@ -335,7 +335,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.GRPCConnectionO
 	<-time.After(5 * time.Millisecond)
 
 	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, mc.address, additionalOpts...)
+	exp := newGRPCExporter(t, ctx, mc.endpoint, additionalOpts...)
 	defer func() {
 		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
@@ -348,13 +348,13 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlp.GRPCConnectionO
 }
 
 func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
-	mc := runMockCol(t)
+	mc := runMockCollector(t)
 	defer func() {
 		_ = mc.stop()
 	}()
 
 	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, mc.address)
+	exp := newGRPCExporter(t, ctx, mc.endpoint)
 	defer func() {
 		if err := exp.Shutdown(ctx); err != nil {
 			panic(err)
@@ -380,11 +380,11 @@ func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
 }
 
 func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
-	mc := runMockCol(t)
+	mc := runMockCollector(t)
 
 	reconnectionPeriod := 20 * time.Millisecond
 	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, mc.address,
+	exp := newGRPCExporter(t, ctx, mc.endpoint,
 		otlp.WithReconnectionPeriod(reconnectionPeriod))
 	defer func() {
 		_ = exp.Shutdown(ctx)
@@ -404,12 +404,12 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 			t,
 			exp.ExportSpans(ctx, []*exporttrace.SpanSnapshot{{Name: "in the midst"}}),
 			"transport: Error while dialing dial tcp %s: connect: connection refused",
-			mc.address,
+			mc.endpoint,
 		)
 
 		// Now resurrect the collector by making a new one but reusing the
-		// old address, and the collector should reconnect automatically.
-		nmc := runMockColAtAddr(t, mc.address)
+		// old endpoint, and the collector should reconnect automatically.
+		nmc := runMockCollectorAtEndpoint(t, mc.endpoint)
 
 		// Give the exporter sometime to reconnect
 		<-time.After(reconnectionPeriod * 4)
@@ -444,37 +444,37 @@ func TestNewExporter_collectorOnBadConnection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to grab an available port: %v", err)
 	}
-	// Firstly close the "collector's" channel: optimistically this address won't get reused ASAP
+	// Firstly close the "collector's" channel: optimistically this endpoint won't get reused ASAP
 	// However, our goal of closing it is to simulate an unavailable connection
 	_ = ln.Close()
 
 	_, collectorPortStr, _ := net.SplitHostPort(ln.Addr().String())
 
-	address := fmt.Sprintf("localhost:%s", collectorPortStr)
+	endpoint := fmt.Sprintf("localhost:%s", collectorPortStr)
 	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, address)
+	exp := newGRPCExporter(t, ctx, endpoint)
 	_ = exp.Shutdown(ctx)
 }
 
-func TestNewExporter_withAddress(t *testing.T) {
-	mc := runMockCol(t)
+func TestNewExporter_withEndpoint(t *testing.T) {
+	mc := runMockCollector(t)
 	defer func() {
 		_ = mc.stop()
 	}()
 
 	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, mc.address)
+	exp := newGRPCExporter(t, ctx, mc.endpoint)
 	_ = exp.Shutdown(ctx)
 }
 
 func TestNewExporter_withHeaders(t *testing.T) {
-	mc := runMockCol(t)
+	mc := runMockCollector(t)
 	defer func() {
 		_ = mc.stop()
 	}()
 
 	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, mc.address,
+	exp := newGRPCExporter(t, ctx, mc.endpoint,
 		otlp.WithHeaders(map[string]string{"header1": "value1"}))
 	require.NoError(t, exp.ExportSpans(ctx, []*exporttrace.SpanSnapshot{{Name: "in the midst"}}))
 
@@ -488,7 +488,7 @@ func TestNewExporter_withHeaders(t *testing.T) {
 }
 
 func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
-	mc := runMockCol(t)
+	mc := runMockCollector(t)
 
 	defer func() {
 		_ = mc.stop()
@@ -497,7 +497,7 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 	<-time.After(5 * time.Millisecond)
 
 	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, mc.address)
+	exp := newGRPCExporter(t, ctx, mc.endpoint)
 
 	defer func() {
 		_ = exp.Shutdown(ctx)
@@ -690,9 +690,9 @@ func discSpanSnapshot() *exporttrace.SpanSnapshot {
 
 func TestDisconnected(t *testing.T) {
 	ctx := context.Background()
-	// The address is whatever, we want to be disconnected. But we
+	// The endpoint is whatever, we want to be disconnected. But we
 	// setting a blocking connection, so dialing to the invalid
-	// address actually fails.
+	// endpoint actually fails.
 	exp := newGRPCExporter(t, ctx, "invalid",
 		otlp.WithReconnectionPeriod(time.Hour),
 		otlp.WithGRPCDialOption(
@@ -720,7 +720,7 @@ func (emptyCheckpointSet) RLock()   {}
 func (emptyCheckpointSet) RUnlock() {}
 
 func TestEmptyData(t *testing.T) {
-	mc := runMockColAtAddr(t, "localhost:56561")
+	mc := runMockCollectorAtEndpoint(t, "localhost:56561")
 
 	defer func() {
 		_ = mc.stop()
@@ -729,7 +729,7 @@ func TestEmptyData(t *testing.T) {
 	<-time.After(5 * time.Millisecond)
 
 	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, mc.address)
+	exp := newGRPCExporter(t, ctx, mc.endpoint)
 	defer func() {
 		assert.NoError(t, exp.Shutdown(ctx))
 	}()
@@ -750,7 +750,7 @@ func (failCheckpointSet) RLock()   {}
 func (failCheckpointSet) RUnlock() {}
 
 func TestFailedMetricTransform(t *testing.T) {
-	mc := runMockColAtAddr(t, "localhost:56561")
+	mc := runMockCollectorAtEndpoint(t, "localhost:56561")
 
 	defer func() {
 		_ = mc.stop()
@@ -759,7 +759,7 @@ func TestFailedMetricTransform(t *testing.T) {
 	<-time.After(5 * time.Millisecond)
 
 	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, mc.address)
+	exp := newGRPCExporter(t, ctx, mc.endpoint)
 	defer func() {
 		assert.NoError(t, exp.Shutdown(ctx))
 	}()
@@ -768,8 +768,8 @@ func TestFailedMetricTransform(t *testing.T) {
 }
 
 func TestMultiConnectionDriver(t *testing.T) {
-	mcTraces := runMockCol(t)
-	mcMetrics := runMockCol(t)
+	mcTraces := runMockCollector(t)
+	mcMetrics := runMockCollector(t)
 
 	defer func() {
 		_ = mcTraces.stop()
@@ -784,10 +784,10 @@ func TestMultiConnectionDriver(t *testing.T) {
 		otlp.WithGRPCDialOption(grpc.WithBlock()),
 	}
 	optsTraces := append([]otlp.GRPCConnectionOption{
-		otlp.WithAddress(mcTraces.address),
+		otlp.WithEndpoint(mcTraces.endpoint),
 	}, commonOpts...)
 	optsMetrics := append([]otlp.GRPCConnectionOption{
-		otlp.WithAddress(mcMetrics.address),
+		otlp.WithEndpoint(mcMetrics.endpoint),
 	}, commonOpts...)
 
 	tracesDriver := otlp.NewGRPCDriver(optsTraces...)
