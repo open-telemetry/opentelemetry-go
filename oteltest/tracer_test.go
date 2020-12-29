@@ -211,14 +211,7 @@ func TestTracer(t *testing.T) {
 					},
 				},
 			}
-			tsLinks := testSpan.Links()
-			gotLinks := make([]trace.Link, 0, len(tsLinks))
-			for sc, attributes := range tsLinks {
-				gotLinks = append(gotLinks, trace.Link{
-					SpanContext: sc,
-					Attributes:  attributes,
-				})
-			}
+			gotLinks := testSpan.Links()
 			e.Expect(gotLinks).ToMatchInAnyOrder(expectedLinks)
 		})
 
@@ -251,8 +244,8 @@ func TestTracer(t *testing.T) {
 			e.Expect(ok).ToBeTrue()
 
 			links := testSpan.Links()
-			e.Expect(links[link1.SpanContext]).ToEqual(link1.Attributes)
-			e.Expect(links[link2.SpanContext]).ToEqual(link2.Attributes)
+			e.Expect(links[0].Attributes).ToEqual(link1.Attributes)
+			e.Expect(links[1].Attributes).ToEqual(link2.Attributes)
 		})
 	})
 }

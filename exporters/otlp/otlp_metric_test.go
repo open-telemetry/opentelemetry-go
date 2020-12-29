@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlp
+package otlp_test
 
 import (
 	"context"
@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	colmetricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/metrics/v1"
+	"go.opentelemetry.io/otel/exporters/otlp"
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
 	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
 	resourcepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/resource/v1"
@@ -36,8 +36,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/resource"
-
-	"google.golang.org/grpc"
 )
 
 var (
@@ -53,28 +51,6 @@ func startTime() uint64 {
 
 func pointTime() uint64 {
 	return uint64(intervalEnd.UnixNano())
-}
-
-type metricsServiceClientStub struct {
-	rm []metricpb.ResourceMetrics
-}
-
-func (m *metricsServiceClientStub) Export(ctx context.Context, in *colmetricpb.ExportMetricsServiceRequest, opts ...grpc.CallOption) (*colmetricpb.ExportMetricsServiceResponse, error) {
-	for _, rm := range in.GetResourceMetrics() {
-		if rm == nil {
-			continue
-		}
-		m.rm = append(m.rm, *rm)
-	}
-	return &colmetricpb.ExportMetricsServiceResponse{}, nil
-}
-
-func (m *metricsServiceClientStub) ResourceMetrics() []metricpb.ResourceMetrics {
-	return m.rm
-}
-
-func (m *metricsServiceClientStub) Reset() {
-	m.rm = nil
 }
 
 type checkpointSet struct {
@@ -717,8 +693,8 @@ func TestStatelessExportKind(t *testing.T) {
 		t.Run(k.name, func(t *testing.T) {
 			runMetricExportTests(
 				t,
-				[]ExporterOption{
-					WithMetricExportKindSelector(
+				[]otlp.ExporterOption{
+					otlp.WithMetricExportKindSelector(
 						metricsdk.StatelessExportKindSelector(),
 					),
 				},
@@ -765,12 +741,8 @@ func TestStatelessExportKind(t *testing.T) {
 	}
 }
 
-// What works single-threaded should work multi-threaded
-func runMetricExportTests(t *testing.T, opts []ExporterOption, rs []record, expected []metricpb.ResourceMetrics) {
-	exp := NewUnstartedExporter(opts...)
-	msc := &metricsServiceClientStub{}
-	exp.metricExporter = msc
-	exp.started = true
+func runMetricExportTests(t *testing.T, opts []otlp.ExporterOption, rs []record, expected []metricpb.ResourceMetrics) {
+	exp, driver := newExporter(t, opts...)
 
 	recs := map[label.Distinct][]metricsdk.Record{}
 	resources := map[label.Distinct]*resource.Resource{}
@@ -830,7 +802,7 @@ func runMetricExportTests(t *testing.T, opts []ExporterOption, rs []record, expe
 		resource, instrumentationLibrary string
 	}
 	got := map[key][]*metricpb.Metric{}
-	for _, rm := range msc.ResourceMetrics() {
+	for _, rm := range driver.rm {
 		for _, ilm := range rm.InstrumentationLibraryMetrics {
 			k := key{
 				resource:               rm.GetResource().String(),
@@ -910,10 +882,7 @@ func runMetricExportTests(t *testing.T, opts []ExporterOption, rs []record, expe
 }
 
 func TestEmptyMetricExport(t *testing.T) {
-	msc := &metricsServiceClientStub{}
-	exp := NewUnstartedExporter()
-	exp.metricExporter = msc
-	exp.started = true
+	exp, driver := newExporter(t)
 
 	for _, test := range []struct {
 		records []metricsdk.Record
@@ -928,8 +897,8 @@ func TestEmptyMetricExport(t *testing.T) {
 			[]metricpb.ResourceMetrics(nil),
 		},
 	} {
-		msc.Reset()
+		driver.Reset()
 		require.NoError(t, exp.Export(context.Background(), &checkpointSet{records: test.records}))
-		assert.Equal(t, test.want, msc.ResourceMetrics())
+		assert.Equal(t, test.want, driver.rm)
 	}
 }
