@@ -24,9 +24,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
 
-func TestExportKindIncludes(t *testing.T) {
-	require.True(t, CumulativeExportKind.Includes(CumulativeExportKind))
-	require.True(t, DeltaExportKind.Includes(CumulativeExportKind|DeltaExportKind))
+func TestAggregationTemporalityIncludes(t *testing.T) {
+	require.True(t, CumulativeAggregationTemporality.Includes(CumulativeAggregationTemporality))
+	require.True(t, DeltaAggregationTemporality.Includes(CumulativeAggregationTemporality|DeltaAggregationTemporality))
 }
 
 var deltaMemoryKinds = []metric.InstrumentKind{
@@ -41,21 +41,21 @@ var cumulativeMemoryKinds = []metric.InstrumentKind{
 	metric.UpDownCounterInstrumentKind,
 }
 
-func TestExportKindMemoryRequired(t *testing.T) {
+func TestAggregationTemporalityMemoryRequired(t *testing.T) {
 	for _, kind := range deltaMemoryKinds {
-		require.True(t, DeltaExportKind.MemoryRequired(kind))
-		require.False(t, CumulativeExportKind.MemoryRequired(kind))
+		require.True(t, DeltaAggregationTemporality.MemoryRequired(kind))
+		require.False(t, CumulativeAggregationTemporality.MemoryRequired(kind))
 	}
 
 	for _, kind := range cumulativeMemoryKinds {
-		require.True(t, CumulativeExportKind.MemoryRequired(kind))
-		require.False(t, DeltaExportKind.MemoryRequired(kind))
+		require.True(t, CumulativeAggregationTemporality.MemoryRequired(kind))
+		require.False(t, DeltaAggregationTemporality.MemoryRequired(kind))
 	}
 }
 
-func TestExportKindSelectors(t *testing.T) {
-	ceks := CumulativeExportKindSelector()
-	seks := StatelessExportKindSelector()
+func TestAggregationTemporalitySelectors(t *testing.T) {
+	ceks := CumulativeAggregationTemporalitySelector()
+	seks := StatelessAggregationTemporalitySelector()
 
 	for _, ikind := range append(deltaMemoryKinds, cumulativeMemoryKinds...) {
 		desc := metric.NewDescriptor("instrument", ikind, number.Int64Kind)
@@ -66,7 +66,7 @@ func TestExportKindSelectors(t *testing.T) {
 		} else {
 			akind = aggregation.HistogramKind
 		}
-		require.Equal(t, CumulativeExportKind, ceks.ExportKindFor(&desc, akind))
-		require.False(t, seks.ExportKindFor(&desc, akind).MemoryRequired(ikind))
+		require.Equal(t, CumulativeAggregationTemporality, ceks.AggregationTemporalityFor(&desc, akind))
+		require.False(t, seks.AggregationTemporalityFor(&desc, akind).MemoryRequired(ikind))
 	}
 }

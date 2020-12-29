@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate stringer -type=ExportKind
+//go:generate stringer -type=AggregationTemporality
 
 package metric // import "go.opentelemetry.io/otel/sdk/export/metric"
 
@@ -202,19 +202,19 @@ type Exporter interface {
 	// completed collection.
 	Export(ctx context.Context, checkpointSet CheckpointSet) error
 
-	// ExportKindSelector is an interface used by the Processor
+	// AggregationTemporalitySelector is an interface used by the Processor
 	// in deciding whether to compute Delta or Cumulative
 	// Aggregations when passing Records to this Exporter.
-	ExportKindSelector
+	AggregationTemporalitySelector
 }
 
-// ExportKindSelector is a sub-interface of Exporter used to indicate
+// AggregationTemporalitySelector is a sub-interface of Exporter used to indicate
 // whether the Processor should compute Cumulative Aggregations.
-type ExportKindSelector interface {
-	// ExportKindFor should return the correct ExportKind that
+type AggregationTemporalitySelector interface {
+	// AggregationTemporalityFor should return the correct AggregationTemporality that
 	// should be used when exporting data for the given metric
 	// instrument and Aggregator kind.
-	ExportKindFor(descriptor *metric.Descriptor, aggregatorKind aggregation.Kind) ExportKind
+	AggregationTemporalityFor(descriptor *metric.Descriptor, aggregatorKind aggregation.Kind) AggregationTemporality
 }
 
 // CheckpointSet allows a controller to access a complete checkpoint of
@@ -227,7 +227,7 @@ type CheckpointSet interface {
 	// period. Each aggregated checkpoint returned by the
 	// function parameter may return an error.
 	//
-	// The ExportKindSelector argument is used to determine
+	// The AggregationTemporalitySelector argument is used to determine
 	// whether the Record is computed using Delta or Cumulative
 	// aggregation.
 	//
@@ -235,7 +235,7 @@ type CheckpointSet interface {
 	// expected from the Meter implementation. Any other kind
 	// of error will immediately halt ForEach and return
 	// the error to the caller.
-	ForEach(kindSelector ExportKindSelector, recordFunc func(Record) error) error
+	ForEach(kindSelector AggregationTemporalitySelector, recordFunc func(Record) error) error
 
 	// Locker supports locking the checkpoint set.  Collection
 	// into the checkpoint set cannot take place (in case of a
@@ -346,38 +346,38 @@ func (r Record) EndTime() time.Time {
 	return r.end
 }
 
-// ExportKind indicates the kind of data exported by an exporter.
+// AggregationTemporality indicates the kind of data exported by an exporter.
 // These bits may be OR-d together when multiple exporters are in use.
-type ExportKind int
+type AggregationTemporality int
 
 const (
-	// CumulativeExportKind indicates that an Exporter expects a
+	// CumulativeAggregationTemporality indicates that an Exporter expects a
 	// Cumulative Aggregation.
-	CumulativeExportKind ExportKind = 1
+	CumulativeAggregationTemporality AggregationTemporality = 1
 
-	// DeltaExportKind indicates that an Exporter expects a
+	// DeltaAggregationTemporality indicates that an Exporter expects a
 	// Delta Aggregation.
-	DeltaExportKind ExportKind = 2
+	DeltaAggregationTemporality AggregationTemporality = 2
 )
 
 // Includes tests whether `kind` includes a specific kind of
 // exporter.
-func (kind ExportKind) Includes(has ExportKind) bool {
+func (kind AggregationTemporality) Includes(has AggregationTemporality) bool {
 	return kind&has != 0
 }
 
 // MemoryRequired returns whether an exporter of this kind requires
 // memory to export correctly.
-func (kind ExportKind) MemoryRequired(mkind metric.InstrumentKind) bool {
+func (kind AggregationTemporality) MemoryRequired(mkind metric.InstrumentKind) bool {
 	switch mkind {
 	case metric.ValueRecorderInstrumentKind, metric.ValueObserverInstrumentKind,
 		metric.CounterInstrumentKind, metric.UpDownCounterInstrumentKind:
 		// Delta-oriented instruments:
-		return kind.Includes(CumulativeExportKind)
+		return kind.Includes(CumulativeAggregationTemporality)
 
 	case metric.SumObserverInstrumentKind, metric.UpDownSumObserverInstrumentKind:
 		// Cumulative-oriented instruments:
-		return kind.Includes(DeltaExportKind)
+		return kind.Includes(DeltaAggregationTemporality)
 	}
 	// Something unexpected is happening--we could panic.  This
 	// will become an error when the exporter tries to access a
@@ -386,43 +386,43 @@ func (kind ExportKind) MemoryRequired(mkind metric.InstrumentKind) bool {
 }
 
 type (
-	constantExportKindSelector  ExportKind
-	statelessExportKindSelector struct{}
+	constantAggregationTemporalitySelector  AggregationTemporality
+	statelessAggregationTemporalitySelector struct{}
 )
 
 var (
-	_ ExportKindSelector = constantExportKindSelector(0)
-	_ ExportKindSelector = statelessExportKindSelector{}
+	_ AggregationTemporalitySelector = constantAggregationTemporalitySelector(0)
+	_ AggregationTemporalitySelector = statelessAggregationTemporalitySelector{}
 )
 
-// ConstantExportKindSelector returns an ExportKindSelector that returns
-// a constant ExportKind, one that is either always cumulative or always delta.
-func ConstantExportKindSelector(kind ExportKind) ExportKindSelector {
-	return constantExportKindSelector(kind)
+// ConstantAggregationTemporalitySelector returns an AggregationTemporalitySelector that returns
+// a constant AggregationTemporality, one that is either always cumulative or always delta.
+func ConstantAggregationTemporalitySelector(kind AggregationTemporality) AggregationTemporalitySelector {
+	return constantAggregationTemporalitySelector(kind)
 }
 
-// CumulativeExportKindSelector returns an ExportKindSelector that
-// always returns CumulativeExportKind.
-func CumulativeExportKindSelector() ExportKindSelector {
-	return ConstantExportKindSelector(CumulativeExportKind)
+// CumulativeAggregationTemporalitySelector returns an AggregationTemporalitySelector that
+// always returns CumulativeAggregationTemporality.
+func CumulativeAggregationTemporalitySelector() AggregationTemporalitySelector {
+	return ConstantAggregationTemporalitySelector(CumulativeAggregationTemporality)
 }
 
-// StatelessExportKindSelector returns an ExportKindSelector that
-// always returns the ExportKind that avoids long-term memory
+// StatelessAggregationTemporalitySelector returns an AggregationTemporalitySelector that
+// always returns the AggregationTemporality that avoids long-term memory
 // requirements.
-func StatelessExportKindSelector() ExportKindSelector {
-	return statelessExportKindSelector{}
+func StatelessAggregationTemporalitySelector() AggregationTemporalitySelector {
+	return statelessAggregationTemporalitySelector{}
 }
 
-// ExportKindFor implements ExportKindSelector.
-func (c constantExportKindSelector) ExportKindFor(_ *metric.Descriptor, _ aggregation.Kind) ExportKind {
-	return ExportKind(c)
+// AggregationTemporalityFor implements AggregationTemporalitySelector.
+func (c constantAggregationTemporalitySelector) AggregationTemporalityFor(_ *metric.Descriptor, _ aggregation.Kind) AggregationTemporality {
+	return AggregationTemporality(c)
 }
 
-// ExportKindFor implements ExportKindSelector.
-func (s statelessExportKindSelector) ExportKindFor(desc *metric.Descriptor, kind aggregation.Kind) ExportKind {
+// AggregationTemporalityFor implements AggregationTemporalitySelector.
+func (s statelessAggregationTemporalitySelector) AggregationTemporalityFor(desc *metric.Descriptor, kind aggregation.Kind) AggregationTemporality {
 	if kind == aggregation.SumKind && desc.InstrumentKind().PrecomputedSum() {
-		return CumulativeExportKind
+		return CumulativeAggregationTemporality
 	}
-	return DeltaExportKind
+	return DeltaAggregationTemporality
 }
