@@ -53,7 +53,7 @@ func new4() (_, _, _, _ *Aggregator) {
 	return &alloc[0], &alloc[1], &alloc[2], &alloc[3]
 }
 
-func sumOf(samples aggregation.Samples, k number.Kind) number.Number {
+func sumOf(samples []aggregation.Point, k number.Kind) number.Number {
 	var n number.Number
 	for _, s := range samples {
 		n.AddNumber(k, s.Number)

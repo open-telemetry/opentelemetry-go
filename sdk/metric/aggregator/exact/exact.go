@@ -31,7 +31,7 @@ type (
 	// an array with the exact set of values.
 	Aggregator struct {
 		lock    sync.Mutex
-		samples aggregation.Samples
+		samples []aggregation.Point
 	}
 )
 
@@ -62,7 +62,7 @@ func (c *Aggregator) Count() (int64, error) {
 }
 
 // Points returns access to the raw data set.
-func (c *Aggregator) Points() (aggregation.Samples, error) {
+func (c *Aggregator) Points() ([]aggregation.Point, error) {
 	return c.samples, nil
 }
 
@@ -93,7 +93,7 @@ func (c *Aggregator) Update(_ context.Context, number number.Number, desc *metri
 	now := time.Now()
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	c.samples = append(c.samples, aggregation.Sample{
+	c.samples = append(c.samples, aggregation.Point{
 		Number: number,
 		Time:   now,
 	})
@@ -112,8 +112,8 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 	return nil
 }
 
-func combine(a, b aggregation.Samples) aggregation.Samples {
-	result := make(aggregation.Samples, 0, len(a)+len(b))
+func combine(a, b []aggregation.Point) []aggregation.Point {
+	result := make([]aggregation.Point, 0, len(a)+len(b))
 
 	for len(a) != 0 && len(b) != 0 {
 		if a[0].Time.Before(b[0].Time) {

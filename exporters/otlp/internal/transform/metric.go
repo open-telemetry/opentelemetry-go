@@ -306,7 +306,7 @@ func Record(exportSelector export.ExportKindSelector, r export.Record) (*metricp
 	}
 }
 
-func gaugeArray(record export.Record, samples aggregation.Samples) (*metricpb.Metric, error) {
+func gaugeArray(record export.Record, samples []aggregation.Point) (*metricpb.Metric, error) {
 	desc := record.Descriptor()
 	m := &metricpb.Metric{
 		Name:        desc.Name(),

@@ -68,17 +68,14 @@ type (
 	Points interface {
 		Aggregation
 
-		// Points returns samples in the order they were
+		// Points returns points in the order they were
 		// recorded.  Points are approximately ordered by
 		// timestamp, but this is not guaranteed.
-		Points() (Samples, error)
+		Points() ([]Point, error)
 	}
 
-	// Samples is a list of Samples.
-	Samples []Sample
-
-	// Sample is a raw data point, consisting of a number and value.
-	Sample struct {
+	// Point is a raw data point, consisting of a number and value.
+	Point struct {
 		number.Number
 		time.Time
 	}
