@@ -68,7 +68,7 @@ func (m *stubProtocolDriver) Stop(ctx context.Context) error {
 	}
 }
 
-func (m *stubProtocolDriver) ExportMetrics(parent context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error {
+func (m *stubProtocolDriver) ExportMetrics(parent context.Context, cps metricsdk.CheckpointSet, selector metricsdk.AggregationTemporalitySelector) error {
 	m.metricsExported++
 	rms, err := transform.CheckpointSet(parent, selector, cps, 1)
 	if err != nil {
@@ -204,7 +204,7 @@ func TestSplitDriver(t *testing.T) {
 	assert.Equal(t, 0, driverMetrics.tracesExported)
 	assert.Equal(t, 0, driverMetrics.metricsExported)
 
-	assert.NoError(t, driver.ExportMetrics(ctx, discCheckpointSet{}, metricsdk.StatelessExportKindSelector()))
+	assert.NoError(t, driver.ExportMetrics(ctx, discCheckpointSet{}, metricsdk.StatelessAggregationTemporalitySelector()))
 	assert.NoError(t, driver.ExportTraces(ctx, []*tracesdk.SpanSnapshot{discSpanSnapshot()}))
 	assert.Len(t, driverTraces.rm, 0)
 	assert.Len(t, driverTraces.rs, 1)

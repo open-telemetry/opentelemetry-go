@@ -76,7 +76,7 @@ func toNanos(t time.Time) uint64 {
 
 // CheckpointSet transforms all records contained in a checkpoint into
 // batched OTLP ResourceMetrics.
-func CheckpointSet(ctx context.Context, exportSelector export.ExportKindSelector, cps export.CheckpointSet, numWorkers uint) ([]*metricpb.ResourceMetrics, error) {
+func CheckpointSet(ctx context.Context, exportSelector export.AggregationTemporalitySelector, cps export.CheckpointSet, numWorkers uint) ([]*metricpb.ResourceMetrics, error) {
 	records, errc := source(ctx, exportSelector, cps)
 
 	// Start a fixed number of goroutines to transform records.
@@ -110,7 +110,7 @@ func CheckpointSet(ctx context.Context, exportSelector export.ExportKindSelector
 // source starts a goroutine that sends each one of the Records yielded by
 // the CheckpointSet on the returned chan. Any error encoutered will be sent
 // on the returned error chan after seeding is complete.
-func source(ctx context.Context, exportSelector export.ExportKindSelector, cps export.CheckpointSet) (<-chan export.Record, <-chan error) {
+func source(ctx context.Context, exportSelector export.AggregationTemporalitySelector, cps export.CheckpointSet) (<-chan export.Record, <-chan error) {
 	errc := make(chan error, 1)
 	out := make(chan export.Record)
 	// Seed records into process.
@@ -131,7 +131,7 @@ func source(ctx context.Context, exportSelector export.ExportKindSelector, cps e
 
 // transformer transforms records read from the passed in chan into
 // OTLP Metrics which are sent on the out chan.
-func transformer(ctx context.Context, exportSelector export.ExportKindSelector, in <-chan export.Record, out chan<- result) {
+func transformer(ctx context.Context, exportSelector export.AggregationTemporalitySelector, in <-chan export.Record, out chan<- result) {
 	for r := range in {
 		m, err := Record(exportSelector, r)
 		// Propagate errors, but do not send empty results.
@@ -250,7 +250,7 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 
 // Record transforms a Record into an OTLP Metric. An ErrIncompatibleAgg
 // error is returned if the Record Aggregator is not supported.
-func Record(exportSelector export.ExportKindSelector, r export.Record) (*metricpb.Metric, error) {
+func Record(exportSelector export.AggregationTemporalitySelector, r export.Record) (*metricpb.Metric, error) {
 	agg := r.Aggregation()
 	switch agg.Kind() {
 	case aggregation.MinMaxSumCountKind:
@@ -265,7 +265,7 @@ func Record(exportSelector export.ExportKindSelector, r export.Record) (*metricp
 		if !ok {
 			return nil, fmt.Errorf("%w: %T", ErrIncompatibleAgg, agg)
 		}
-		return histogramPoint(r, exportSelector.ExportKindFor(r.Descriptor(), aggregation.HistogramKind), h)
+		return histogramPoint(r, exportSelector.AggregationTemporalityFor(r.Descriptor(), aggregation.HistogramKind), h)
 
 	case aggregation.SumKind:
 		s, ok := agg.(aggregation.Sum)
@@ -276,7 +276,7 @@ func Record(exportSelector export.ExportKindSelector, r export.Record) (*metricp
 		if err != nil {
 			return nil, err
 		}
-		return sumPoint(r, sum, r.StartTime(), r.EndTime(), exportSelector.ExportKindFor(r.Descriptor(), aggregation.SumKind), r.Descriptor().InstrumentKind().Monotonic())
+		return sumPoint(r, sum, r.StartTime(), r.EndTime(), exportSelector.AggregationTemporalityFor(r.Descriptor(), aggregation.SumKind), r.Descriptor().InstrumentKind().Monotonic())
 
 	case aggregation.LastValueKind:
 		lv, ok := agg.(aggregation.LastValue)
@@ -398,17 +398,17 @@ func gaugePoint(record export.Record, num number.Number, start, end time.Time) (
 	return m, nil
 }
 
-func exportKindToTemporality(ek export.ExportKind) metricpb.AggregationTemporality {
+func exportKindToTemporality(ek export.AggregationTemporality) metricpb.AggregationTemporality {
 	switch ek {
-	case export.DeltaExportKind:
+	case export.DeltaAggregationTemporality:
 		return metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA
-	case export.CumulativeExportKind:
+	case export.CumulativeAggregationTemporality:
 		return metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE
 	}
 	return metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_UNSPECIFIED
 }
 
-func sumPoint(record export.Record, num number.Number, start, end time.Time, ek export.ExportKind, monotonic bool) (*metricpb.Metric, error) {
+func sumPoint(record export.Record, num number.Number, start, end time.Time, ek export.AggregationTemporality, monotonic bool) (*metricpb.Metric, error) {
 	desc := record.Descriptor()
 	labels := record.Labels()
 
@@ -545,7 +545,7 @@ func histogramValues(a aggregation.Histogram) (boundaries []float64, counts []fl
 }
 
 // histogram transforms a Histogram Aggregator into an OTLP Metric.
-func histogramPoint(record export.Record, ek export.ExportKind, a aggregation.Histogram) (*metricpb.Metric, error) {
+func histogramPoint(record export.Record, ek export.AggregationTemporality, a aggregation.Histogram) (*metricpb.Metric, error) {
 	desc := record.Descriptor()
 	labels := record.Labels()
 	boundaries, counts, err := histogramValues(a)

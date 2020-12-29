@@ -167,13 +167,13 @@ func (e *Exporter) Controller() *pull.Controller {
 	return e.controller
 }
 
-func (e *Exporter) ExportKindFor(desc *metric.Descriptor, kind aggregation.Kind) export.ExportKind {
+func (e *Exporter) AggregationTemporalityFor(desc *metric.Descriptor, kind aggregation.Kind) export.AggregationTemporality {
 	// NOTE: Summary values should use Delta aggregation, then be
 	// combined into a sliding window, see the TODO below.
 	// NOTE: Prometheus also supports a "GaugeDelta" exposition format,
 	// which is expressed as a delta histogram.  Need to understand if this
 	// should be a default behavior for ValueRecorder/ValueObserver.
-	return export.CumulativeExportKindSelector().ExportKindFor(desc, kind)
+	return export.CumulativeAggregationTemporalitySelector().AggregationTemporalityFor(desc, kind)
 }
 
 func (e *Exporter) ServeHTTP(w http.ResponseWriter, r *http.Request) {

@@ -43,7 +43,7 @@ type ProtocolDriver interface {
 	// wire format and send it to the collector. May be called
 	// concurrently with ExportTraces, so the manager needs to
 	// take this into account by doing proper locking.
-	ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error
+	ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet, selector metricsdk.AggregationTemporalitySelector) error
 	// ExportTraces should transform the passed traces to the wire
 	// format and send it to the collector. May be called
 	// concurrently with ExportMetrics, so the manager needs to
@@ -134,7 +134,7 @@ func (d *splitDriver) Stop(ctx context.Context) error {
 
 // ExportMetrics implements ProtocolDriver. It forwards the call to
 // the driver used for sending metrics.
-func (d *splitDriver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error {
+func (d *splitDriver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet, selector metricsdk.AggregationTemporalitySelector) error {
 	return d.metric.ExportMetrics(ctx, cps, selector)
 }
 

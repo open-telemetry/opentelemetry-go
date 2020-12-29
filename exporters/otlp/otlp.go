@@ -54,10 +54,10 @@ func NewExporter(ctx context.Context, driver ProtocolDriver, opts ...ExporterOpt
 // NewUnstartedExporter constructs a new Exporter and does not start it.
 func NewUnstartedExporter(driver ProtocolDriver, opts ...ExporterOption) *Exporter {
 	cfg := config{
-		// Note: the default ExportKindSelector is specified
+		// Note: the default AggregationTemporalitySelector is specified
 		// as Cumulative:
 		// https://github.com/open-telemetry/opentelemetry-specification/issues/731
-		exportKindSelector: metricsdk.CumulativeExportKindSelector(),
+		exportKindSelector: metricsdk.CumulativeAggregationTemporalitySelector(),
 	}
 	for _, opt := range opts {
 		opt(&cfg)
@@ -120,10 +120,10 @@ func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) e
 	return e.driver.ExportMetrics(parent, cps, e.cfg.exportKindSelector)
 }
 
-// ExportKindFor reports back to the OpenTelemetry SDK sending this Exporter
+// AggregationTemporalityFor reports back to the OpenTelemetry SDK sending this Exporter
 // metric telemetry that it needs to be provided in a configured format.
-func (e *Exporter) ExportKindFor(desc *metric.Descriptor, kind aggregation.Kind) metricsdk.ExportKind {
-	return e.cfg.exportKindSelector.ExportKindFor(desc, kind)
+func (e *Exporter) AggregationTemporalityFor(desc *metric.Descriptor, kind aggregation.Kind) metricsdk.AggregationTemporality {
+	return e.cfg.exportKindSelector.AggregationTemporalityFor(desc, kind)
 }
 
 // ExportSpans implements the

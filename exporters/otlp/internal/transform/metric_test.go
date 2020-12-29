@@ -172,7 +172,7 @@ func TestSumIntDataPoints(t *testing.T) {
 	value, err := sum.Sum()
 	require.NoError(t, err)
 
-	if m, err := sumPoint(record, value, record.StartTime(), record.EndTime(), export.CumulativeExportKind, true); assert.NoError(t, err) {
+	if m, err := sumPoint(record, value, record.StartTime(), record.EndTime(), export.CumulativeAggregationTemporality, true); assert.NoError(t, err) {
 		assert.Nil(t, m.GetIntGauge())
 		assert.Nil(t, m.GetIntHistogram())
 		assert.Equal(t, &metricpb.IntSum{
@@ -200,7 +200,7 @@ func TestSumFloatDataPoints(t *testing.T) {
 	value, err := sum.Sum()
 	require.NoError(t, err)
 
-	if m, err := sumPoint(record, value, record.StartTime(), record.EndTime(), export.DeltaExportKind, false); assert.NoError(t, err) {
+	if m, err := sumPoint(record, value, record.StartTime(), record.EndTime(), export.DeltaAggregationTemporality, false); assert.NoError(t, err) {
 		assert.Nil(t, m.GetIntGauge())
 		assert.Nil(t, m.GetIntHistogram())
 		assert.Nil(t, m.GetIntSum())
@@ -303,7 +303,7 @@ func TestSumErrUnknownValueType(t *testing.T) {
 	value, err := s.Sum()
 	require.NoError(t, err)
 
-	_, err = sumPoint(record, value, record.StartTime(), record.EndTime(), export.CumulativeExportKind, true)
+	_, err = sumPoint(record, value, record.StartTime(), record.EndTime(), export.CumulativeAggregationTemporality, true)
 	assert.Error(t, err)
 	if !errors.Is(err, ErrUnknownValueType) {
 		t.Errorf("expected ErrUnknownValueType, got %v", err)
@@ -388,7 +388,7 @@ func TestRecordAggregatorIncompatibleErrors(t *testing.T) {
 			kind: kind,
 			agg:  agg,
 		}
-		return Record(export.CumulativeExportKindSelector(), export.NewRecord(&desc, &labels, res, test, intervalStart, intervalEnd))
+		return Record(export.CumulativeAggregationTemporalitySelector(), export.NewRecord(&desc, &labels, res, test, intervalStart, intervalEnd))
 	}
 
 	mpb, err := makeMpb(aggregation.SumKind, &lastvalue.New(1)[0])
@@ -421,7 +421,7 @@ func TestRecordAggregatorUnexpectedErrors(t *testing.T) {
 		desc := metric.NewDescriptor("things", metric.CounterInstrumentKind, number.Int64Kind)
 		labels := label.NewSet()
 		res := resource.Empty()
-		return Record(export.CumulativeExportKindSelector(), export.NewRecord(&desc, &labels, res, agg, intervalStart, intervalEnd))
+		return Record(export.CumulativeAggregationTemporalitySelector(), export.NewRecord(&desc, &labels, res, agg, intervalStart, intervalEnd))
 	}
 
 	errEx := fmt.Errorf("timeout")

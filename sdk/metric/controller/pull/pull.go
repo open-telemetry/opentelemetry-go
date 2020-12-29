@@ -87,7 +87,7 @@ func (c *Controller) MeterProvider() metric.MeterProvider {
 
 // Foreach gives the caller read-locked access to the current
 // export.CheckpointSet.
-func (c *Controller) ForEach(ks export.ExportKindSelector, f func(export.Record) error) error {
+func (c *Controller) ForEach(ks export.AggregationTemporalitySelector, f func(export.Record) error) error {
 	c.checkpointer.CheckpointSet().RLock()
 	defer c.checkpointer.CheckpointSet().RUnlock()
 

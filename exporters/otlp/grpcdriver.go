@@ -72,7 +72,7 @@ func (d *grpcDriver) Stop(ctx context.Context) error {
 	return d.connection.shutdown(ctx)
 }
 
-func (d *grpcDriver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error {
+func (d *grpcDriver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet, selector metricsdk.AggregationTemporalitySelector) error {
 	if !d.connection.connected() {
 		return errDisconnected
 	}

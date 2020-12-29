@@ -89,7 +89,7 @@ func TestFilterProcessor(t *testing.T) {
 
 // Test a filter with the ../basic Processor.
 func TestFilterBasicProcessor(t *testing.T) {
-	basicProc := basic.New(processorTest.AggregatorSelector(), export.CumulativeExportKindSelector())
+	basicProc := basic.New(processorTest.AggregatorSelector(), export.CumulativeAggregationTemporalitySelector())
 	accum := metricsdk.NewAccumulator(
 		reducer.New(testFilter{}, basicProc),
 		resource.NewWithAttributes(label.String("R", "V")),

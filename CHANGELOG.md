@@ -23,11 +23,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Remove duplicate checkout from GitHub Actions workflow (#1407)
 - `NewExporter` from `exporters/otlp` now takes a `ProtocolDriver` as a parameter. (#1369)
 - Many OTLP Exporter options became gRPC ProtocolDriver options. (#1369)
+- Metric SDK exporter interface `ExportKind` renamed `AggregationTemporality`. (#1415)
 
 ### Removed
 
 - Remove `errUninitializedSpan` as its only usage is now obsolete. (#1360)
-- Remove Metric Processor's ability to convert cumulative to delta. (#1415)
+- Remove the basic metric Processor's ability to convert cumulative to delta aggregation temporality. (#1415)
 
 ## [0.15.0] - 2020-12-10
 

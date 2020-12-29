@@ -29,7 +29,7 @@ import (
 
 type (
 	Processor struct {
-		export.ExportKindSelector
+		export.AggregationTemporalitySelector
 		export.AggregatorSelector
 
 		state
@@ -112,18 +112,18 @@ var _ export.Processor = &Processor{}
 var _ export.Checkpointer = &Processor{}
 var _ export.CheckpointSet = &state{}
 var ErrInconsistentState = fmt.Errorf("inconsistent processor state")
-var ErrInvalidExportKind = fmt.Errorf("invalid export kind")
+var ErrInvalidAggregationTemporality = fmt.Errorf("invalid aggregation temporality")
 
 // New returns a basic Processor that is also a Checkpointer using the provided
-// AggregatorSelector to select Aggregators.  The ExportKindSelector
+// AggregatorSelector to select Aggregators.  The AggregationTemporalitySelector
 // is consulted to determine the kind(s) of exporter that will consume
 // data, so that this Processor can prepare to compute Cumulative Aggregations
 // as needed.
-func New(aselector export.AggregatorSelector, eselector export.ExportKindSelector, opts ...Option) *Processor {
+func New(aselector export.AggregatorSelector, eselector export.AggregationTemporalitySelector, opts ...Option) *Processor {
 	now := time.Now()
 	p := &Processor{
-		AggregatorSelector: aselector,
-		ExportKindSelector: eselector,
+		AggregatorSelector:             aselector,
+		AggregationTemporalitySelector: eselector,
 		state: state{
 			values:        map[stateKey]*stateValue{},
 			processStart:  now,
@@ -152,7 +152,7 @@ func (b *Processor) Process(accum export.Accumulation) error {
 	// Check if there is an existing value.
 	value, ok := b.state.values[key]
 	if !ok {
-		stateful := b.ExportKindFor(desc, agg.Aggregation().Kind()).MemoryRequired(desc.InstrumentKind())
+		stateful := b.AggregationTemporalityFor(desc, agg.Aggregation().Kind()).MemoryRequired(desc.InstrumentKind())
 
 		newValue := &stateValue{
 			labels:   accum.Labels(),
@@ -202,7 +202,7 @@ func (b *Processor) Process(accum export.Accumulation) error {
 	// require memory to work correctly because the
 	// instrument reports a non-PrecomputedSum instrument with a
 	// CumulativeExporter.  This logic is encapsulated in
-	// ExportKind.MemoryRequired(InstrumentKind).
+	// AggregationTemporality.MemoryRequired(InstrumentKind).
 	//
 	// Case (b) occurs when the variable `sameCollection` is true,
 	// indicating that the stateKey for Accumulation has already
@@ -305,7 +305,7 @@ func (b *Processor) FinishCollection() error {
 // ForEach iterates through the CheckpointSet, passing an
 // export.Record with the appropriate Cumulative or Delta aggregation
 // to an exporter.
-func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record) error) error {
+func (b *state) ForEach(exporter export.AggregationTemporalitySelector, f func(export.Record) error) error {
 	if b.startedCollection != b.finishedCollection {
 		return ErrInconsistentState
 	}
@@ -321,9 +321,9 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 			continue
 		}
 
-		ekind := exporter.ExportKindFor(key.descriptor, value.current.Aggregation().Kind())
+		ekind := exporter.AggregationTemporalityFor(key.descriptor, value.current.Aggregation().Kind())
 		switch ekind {
-		case export.CumulativeExportKind:
+		case export.CumulativeAggregationTemporality:
 			// If stateful, the sum has been computed.  If stateless, the
 			// input was already cumulative.  Either way, use the checkpointed
 			// value:
@@ -334,7 +334,7 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 			}
 			start = b.processStart
 
-		case export.DeltaExportKind:
+		case export.DeltaAggregationTemporality:
 			// Precomputed sums are a special case.
 			if mkind.PrecomputedSum() {
 				// This functionality was removed from
@@ -345,7 +345,7 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 			start = b.intervalStart
 
 		default:
-			return fmt.Errorf("%v: %w", ekind, ErrInvalidExportKind)
+			return fmt.Errorf("%v: %w", ekind, ErrInvalidAggregationTemporality)
 		}
 
 		if err := f(export.NewRecord(

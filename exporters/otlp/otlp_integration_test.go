@@ -134,7 +134,7 @@ func runEndToEndTest(t *testing.T, ctx context.Context, exp *otlp.Exporter, mcTr
 	}
 
 	selector := simple.NewWithInexpensiveDistribution()
-	processor := processor.New(selector, exportmetric.StatelessExportKindSelector())
+	processor := processor.New(selector, exportmetric.StatelessAggregationTemporalitySelector())
 	pusher := push.New(processor, exp)
 	pusher.Start()
 
@@ -638,7 +638,7 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 
 type discCheckpointSet struct{}
 
-func (discCheckpointSet) ForEach(kindSelector exportmetric.ExportKindSelector, recordFunc func(exportmetric.Record) error) error {
+func (discCheckpointSet) ForEach(kindSelector exportmetric.AggregationTemporalitySelector, recordFunc func(exportmetric.Record) error) error {
 	desc := metric.NewDescriptor(
 		"foo",
 		metric.CounterInstrumentKind,
@@ -710,7 +710,7 @@ func TestDisconnected(t *testing.T) {
 
 type emptyCheckpointSet struct{}
 
-func (emptyCheckpointSet) ForEach(kindSelector exportmetric.ExportKindSelector, recordFunc func(exportmetric.Record) error) error {
+func (emptyCheckpointSet) ForEach(kindSelector exportmetric.AggregationTemporalitySelector, recordFunc func(exportmetric.Record) error) error {
 	return nil
 }
 
@@ -740,7 +740,7 @@ func TestEmptyData(t *testing.T) {
 
 type failCheckpointSet struct{}
 
-func (failCheckpointSet) ForEach(kindSelector exportmetric.ExportKindSelector, recordFunc func(exportmetric.Record) error) error {
+func (failCheckpointSet) ForEach(kindSelector exportmetric.AggregationTemporalitySelector, recordFunc func(exportmetric.Record) error) error {
 	return fmt.Errorf("fail")
 }
 

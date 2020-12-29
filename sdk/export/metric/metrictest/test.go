@@ -109,9 +109,9 @@ func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, l
 	return newAgg, true
 }
 
-// ForEach does not use ExportKindSelected: use a real Processor to
-// test ExportKind functionality.
-func (p *CheckpointSet) ForEach(_ export.ExportKindSelector, f func(export.Record) error) error {
+// ForEach does not use AggregationTemporalitySelected: use a real Processor to
+// test AggregationTemporality functionality.
+func (p *CheckpointSet) ForEach(_ export.AggregationTemporalitySelector, f func(export.Record) error) error {
 	for _, r := range p.updates {
 		if err := f(r); err != nil && !errors.Is(err, aggregation.ErrNoData) {
 			return err

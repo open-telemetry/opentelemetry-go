@@ -81,7 +81,7 @@ type (
 	// Exporter is a testing implementation of export.Exporter that
 	// assembles its results as a map[string]float64.
 	Exporter struct {
-		export.ExportKindSelector
+		export.AggregationTemporalitySelector
 		output      *Output
 		exportCount int
 
@@ -215,7 +215,7 @@ func NewOutput(labelEncoder label.Encoder) *Output {
 }
 
 // ForEach implements export.CheckpointSet.
-func (o *Output) ForEach(_ export.ExportKindSelector, ff func(export.Record) error) error {
+func (o *Output) ForEach(_ export.AggregationTemporalitySelector, ff func(export.Record) error) error {
 	for key, value := range o.m {
 		if err := ff(export.NewRecord(
 			key.desc,
@@ -259,7 +259,7 @@ func (o *Output) AddRecord(rec export.Record) error {
 // is chosen, whichever is implemented by the underlying Aggregator.
 func (o *Output) Map() map[string]float64 {
 	r := make(map[string]float64)
-	err := o.ForEach(export.StatelessExportKindSelector(), func(record export.Record) error {
+	err := o.ForEach(export.StatelessAggregationTemporalitySelector(), func(record export.Record) error {
 		for key, value := range o.m {
 			encoded := value.labels.Encoded(o.labelEncoder)
 			rencoded := value.resource.Encoded(o.labelEncoder)
@@ -316,10 +316,10 @@ func (o *Output) AddAccumulation(acc export.Accumulation) error {
 //
 // Where in the example A=1,B=2 is the encoded labels and R=V is the
 // encoded resource value.
-func NewExporter(selector export.ExportKindSelector, encoder label.Encoder) *Exporter {
+func NewExporter(selector export.AggregationTemporalitySelector, encoder label.Encoder) *Exporter {
 	return &Exporter{
-		ExportKindSelector: selector,
-		output:             NewOutput(encoder),
+		AggregationTemporalitySelector: selector,
+		output:                         NewOutput(encoder),
 	}
 }
 
@@ -327,7 +327,7 @@ func (e *Exporter) Export(_ context.Context, ckpt export.CheckpointSet) error {
 	e.output.Lock()
 	defer e.output.Unlock()
 	e.exportCount++
-	return ckpt.ForEach(e.ExportKindSelector, func(r export.Record) error {
+	return ckpt.ForEach(e.AggregationTemporalitySelector, func(r export.Record) error {
 		if e.InjectErr != nil {
 			if err := e.InjectErr(r); err != nil {
 				return err
