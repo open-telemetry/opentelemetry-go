@@ -39,7 +39,7 @@ var _ export.Aggregator = &Aggregator{}
 var _ aggregation.Points = &Aggregator{}
 var _ aggregation.Count = &Aggregator{}
 
-// New returns a new exact aggregator, which aggregates recorded
+// New returns cnt many new exact aggregators, which aggregate recorded
 // measurements by storing them in an array.  This type uses a mutex
 // for Update() and SynchronizedMove() concurrency.
 func New(cnt int) []Aggregator {
