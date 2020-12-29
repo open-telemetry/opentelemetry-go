@@ -16,7 +16,6 @@ package otlp // import "go.opentelemetry.io/otel/exporters/otlp"
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"sync"
 	"sync/atomic"
@@ -37,9 +36,9 @@ type grpcConnection struct {
 	cc *grpc.ClientConn
 
 	// these fields are read-only after constructor is finished
-	c                    config
+	c                    grpcConnectionConfig
 	metadata             metadata.MD
-	newConnectionHandler func(cc *grpc.ClientConn) error
+	newConnectionHandler func(cc *grpc.ClientConn)
 
 	// these channels are created once
 	disconnectedCh             chan bool
@@ -52,12 +51,9 @@ type grpcConnection struct {
 	closeBackgroundConnectionDoneCh func(ch chan struct{})
 }
 
-func newGRPCConnection(c config, handler func(cc *grpc.ClientConn) error) *grpcConnection {
+func newGRPCConnection(c grpcConnectionConfig, handler func(cc *grpc.ClientConn)) *grpcConnection {
 	conn := new(grpcConnection)
 	conn.newConnectionHandler = handler
-	if c.collectorAddr == "" {
-		c.collectorAddr = fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorPort)
-	}
 	conn.c = c
 	if len(conn.c.headers) > 0 {
 		conn.metadata = metadata.New(conn.c.headers)
@@ -103,7 +99,7 @@ func (oc *grpcConnection) setStateDisconnected(err error) {
 	case oc.disconnectedCh <- true:
 	default:
 	}
-	_ = oc.newConnectionHandler(nil)
+	oc.newConnectionHandler(nil)
 }
 
 func (oc *grpcConnection) setStateConnected() {
@@ -180,7 +176,8 @@ func (oc *grpcConnection) connect(ctx context.Context) error {
 		return err
 	}
 	oc.setConnection(cc)
-	return oc.newConnectionHandler(cc)
+	oc.newConnectionHandler(cc)
+	return nil
 }
 
 // setConnection sets cc as the client connection and returns true if
@@ -244,8 +241,6 @@ func (oc *grpcConnection) shutdown(ctx context.Context) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	}
-
-	close(oc.disconnectedCh)
 
 	oc.mu.Lock()
 	cc := oc.cc
