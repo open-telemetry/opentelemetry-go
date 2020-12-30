@@ -1,9 +1,5 @@
 name: Run Gosec
 on:
-  push:
-    branches: [master]
-  pull_request:
-    branches: [master]
   workflow_dispatch:
 jobs:
   tests:
