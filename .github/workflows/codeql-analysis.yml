@@ -1,7 +1,6 @@
 name: "CodeQL Analysis"
 
 on:
-  push:
   workflow_dispatch:
   schedule:
     #        ┌───────────── minute (0 - 59)
