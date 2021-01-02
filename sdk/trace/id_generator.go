@@ -16,10 +16,9 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
 	"context"
-	crand "crypto/rand"
-	"encoding/binary"
 	"math/rand"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel/trace"
 )
@@ -60,8 +59,6 @@ func (gen *randomIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.
 
 func defaultIDGenerator() IDGenerator {
 	gen := &randomIDGenerator{}
-	var rngSeed int64
-	_ = binary.Read(crand.Reader, binary.LittleEndian, &rngSeed)
-	gen.randSource = rand.New(rand.NewSource(rngSeed))
+	gen.randSource = rand.New(rand.NewSource(time.Now().UnixNano()))
 	return gen
 }
