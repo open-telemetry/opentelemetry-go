@@ -32,7 +32,7 @@ type (
 		config *ddsketch.Config
 	}
 	selectorHistogram struct {
-		boundaries []float64
+		options []histogram.Option
 	}
 )
 
@@ -76,8 +76,8 @@ func NewWithExactDistribution() export.AggregatorSelector {
 // histogram, and histogram aggregators for the three kinds of metric. This
 // selector uses more memory than the NewWithInexpensiveDistribution because it
 // uses a counter per bucket.
-func NewWithHistogramDistribution(boundaries []float64) export.AggregatorSelector {
-	return selectorHistogram{boundaries: boundaries}
+func NewWithHistogramDistribution(options ...histogram.Option) export.AggregatorSelector {
+	return selectorHistogram{options: options}
 }
 
 func sumAggs(aggPtrs []*export.Aggregator) {
@@ -141,7 +141,7 @@ func (s selectorHistogram) AggregatorFor(descriptor *metric.Descriptor, aggPtrs 
 	case metric.ValueObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
 	case metric.ValueRecorderInstrumentKind:
-		aggs := histogram.New(len(aggPtrs), descriptor, s.boundaries)
+		aggs := histogram.New(len(aggPtrs), descriptor, s.options...)
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
 		}

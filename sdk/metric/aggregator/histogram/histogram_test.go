@@ -63,12 +63,12 @@ var (
 )
 
 func new2(desc *metric.Descriptor) (_, _ *histogram.Aggregator) {
-	alloc := histogram.New(2, desc, boundaries)
+	alloc := histogram.New(2, desc, histogram.WithExplicitBoundaries(boundaries))
 	return &alloc[0], &alloc[1]
 }
 
 func new4(desc *metric.Descriptor) (_, _, _, _ *histogram.Aggregator) {
-	alloc := histogram.New(4, desc, boundaries)
+	alloc := histogram.New(4, desc, histogram.WithExplicitBoundaries(boundaries))
 	return &alloc[0], &alloc[1], &alloc[2], &alloc[3]
 }
 
@@ -158,7 +158,7 @@ func TestHistogramInitial(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 
-		agg := &histogram.New(1, descriptor, boundaries)[0]
+		agg := &histogram.New(1, descriptor, histogram.WithExplicitBoundaries(boundaries))[0]
 		buckets, err := agg.Histogram()
 
 		require.NoError(t, err)
@@ -256,7 +256,7 @@ func TestSynchronizedMoveReset(t *testing.T) {
 		t,
 		metric.ValueRecorderInstrumentKind,
 		func(desc *metric.Descriptor) export.Aggregator {
-			return &histogram.New(1, desc, boundaries)[0]
+			return &histogram.New(1, desc, histogram.WithExplicitBoundaries(boundaries))[0]
 		},
 	)
 }

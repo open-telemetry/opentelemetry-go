@@ -41,6 +41,22 @@ type (
 		state      state
 	}
 
+	// Config describes how the histogram is aggregated.
+	Config struct {
+		// ExplicitBoundaries support arbitrary bucketing schemes.  This
+		// is the general case.
+		ExplicitBoundaries []float64
+
+		// ExemplarsPerBucket is the number of exemplars saved per bucket.
+		ExemplarsPerBucket int
+	}
+
+	// Option configures a histogram Config.
+	Option interface {
+		// Apply sets one or more Config fields.
+		Apply(*Config)
+	}
+
 	// state represents the state of a histogram, consisting of
 	// the sum and counts for all observed values and
 	// the less than equal bucket count for the pre-determined boundaries.
@@ -50,6 +66,30 @@ type (
 		count        int64
 	}
 )
+
+// WithExemplars sets the Exemplars configuration option of a Config.
+func WithExemplars(exemplars int) Option {
+	return exemplarsOption(exemplars)
+}
+
+type exemplarsOption int
+
+func (o exemplarsOption) Apply(config *Config) {
+	config.ExemplarsPerBucket = int(o)
+}
+
+// WithExplicitBoundaries sets the ExplicitBoundaries configuration option of a Config.
+func WithExplicitBoundaries(explicitBoundaries []float64) Option {
+	return explicitBoundariesOption{explicitBoundaries}
+}
+
+type explicitBoundariesOption struct {
+	boundaries []float64
+}
+
+func (o explicitBoundariesOption) Apply(config *Config) {
+	config.ExplicitBoundaries = o.boundaries
+}
 
 var _ export.Aggregator = &Aggregator{}
 var _ aggregation.Sum = &Aggregator{}
@@ -64,14 +104,19 @@ var _ aggregation.Histogram = &Aggregator{}
 // Note that this aggregator maintains each value using independent
 // atomic operations, which introduces the possibility that
 // checkpoints are inconsistent.
-func New(cnt int, desc *metric.Descriptor, boundaries []float64) []Aggregator {
+func New(cnt int, desc *metric.Descriptor, opts ...Option) []Aggregator {
+	var cfg Config
+	for _, opt := range opts {
+		opt.Apply(&cfg)
+	}
+
 	aggs := make([]Aggregator, cnt)
 
 	// Boundaries MUST be ordered otherwise the histogram could not
 	// be properly computed.
-	sortedBoundaries := make([]float64, len(boundaries))
+	sortedBoundaries := make([]float64, len(cfg.ExplicitBoundaries))
 
-	copy(sortedBoundaries, boundaries)
+	copy(sortedBoundaries, cfg.ExplicitBoundaries)
 	sort.Float64s(sortedBoundaries)
 
 	for i := range aggs {
