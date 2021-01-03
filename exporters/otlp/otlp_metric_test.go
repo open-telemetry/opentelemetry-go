@@ -756,7 +756,7 @@ func runMetricExportTests(t *testing.T, opts []otlp.ExporterOption, rs []record,
 		if r.iKind.Adding() {
 			agg, ckpt = metrictest.Unslice2(sum.New(2))
 		} else {
-			agg, ckpt = metrictest.Unslice2(histogram.New(2, &desc, testHistogramBoundaries))
+			agg, ckpt = metrictest.Unslice2(histogram.New(2, &desc, histogram.WithExplicitBoundaries(testHistogramBoundaries)))
 		}
 
 		ctx := context.Background()

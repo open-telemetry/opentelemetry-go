@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -147,7 +148,9 @@ func (e *Exporter) SetController(config Config, options ...pull.Option) {
 
 	e.controller = pull.New(
 		basic.New(
-			simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries),
+			simple.NewWithHistogramDistribution(
+				histogram.WithExplicitBoundaries(config.DefaultHistogramBoundaries),
+			),
 			e,
 			basic.WithMemory(true),
 		),
