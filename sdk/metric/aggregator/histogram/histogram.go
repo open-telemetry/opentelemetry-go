@@ -79,13 +79,23 @@ func (o explicitBoundariesOption) Apply(config *Config) {
 
 // defaultExplicitBoundaries have been copied from prometheus.DefBuckets.
 //
-// The use of these defaults is not expected to last, as we anticipate
-// the use of a high-precision histogram sketch as the standard
-// histogram aggregator for OTLP export.
+// Note we anticipate the use of a high-precision histogram sketch as
+// the standard histogram aggregator for OTLP export.
 // (https://github.com/open-telemetry/opentelemetry-specification/issues/982).
-// Downstream exporters that are must use a small number of buckets
-// are expected to collapse the histogram themselves, in that case.
-var defaultExplicitBoundaries = []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10}
+var defaultFloat64ExplicitBoundaries = []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10}
+
+// defaultInt64ExplicitBoundaryMultiplier determines the default
+// integer histogram boundaries.
+const defaultInt64ExplicitBoundaryMultiplier = 1e6
+
+// defaultInt64ExplicitBoundaries applies a multiplier to the default
+// float64 boundaries: [ 5K, 10K, 25K, ..., 2.5M, 5M, 10M ]
+var defaultInt64ExplicitBoundaries = func(bounds []float64) (asint []float64) {
+	for _, f := range bounds {
+		asint = append(asint, defaultInt64ExplicitBoundaryMultiplier*f)
+	}
+	return
+}(defaultFloat64ExplicitBoundaries)
 
 var _ export.Aggregator = &Aggregator{}
 var _ aggregation.Sum = &Aggregator{}
@@ -101,8 +111,12 @@ var _ aggregation.Histogram = &Aggregator{}
 // atomic operations, which introduces the possibility that
 // checkpoints are inconsistent.
 func New(cnt int, desc *metric.Descriptor, opts ...Option) []Aggregator {
-	cfg := Config{
-		ExplicitBoundaries: defaultExplicitBoundaries,
+	var cfg Config
+
+	if desc.NumberKind() == number.Int64Kind {
+		cfg.ExplicitBoundaries = defaultInt64ExplicitBoundaries
+	} else {
+		cfg.ExplicitBoundaries = defaultFloat64ExplicitBoundaries
 	}
 
 	for _, opt := range opts {
