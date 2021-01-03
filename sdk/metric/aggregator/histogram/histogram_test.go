@@ -284,7 +284,7 @@ func TestHistogramDefaultBoundaries(t *testing.T) {
 				num = number.NewFloat64Number(value)
 			}
 
-			agg.Update(ctx, num, descriptor)
+			require.NoError(t, agg.Update(ctx, num, descriptor))
 		}
 
 		bucks, err := agg.Histogram()
