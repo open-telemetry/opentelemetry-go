@@ -46,9 +46,6 @@ type (
 		// ExplicitBoundaries support arbitrary bucketing schemes.  This
 		// is the general case.
 		ExplicitBoundaries []float64
-
-		// ExemplarsPerBucket is the number of exemplars saved per bucket.
-		ExemplarsPerBucket int
 	}
 
 	// Option configures a histogram Config.
@@ -67,17 +64,6 @@ type (
 	}
 )
 
-// WithExemplars sets the Exemplars configuration option of a Config.
-func WithExemplars(exemplars int) Option {
-	return exemplarsOption(exemplars)
-}
-
-type exemplarsOption int
-
-func (o exemplarsOption) Apply(config *Config) {
-	config.ExemplarsPerBucket = int(o)
-}
-
 // WithExplicitBoundaries sets the ExplicitBoundaries configuration option of a Config.
 func WithExplicitBoundaries(explicitBoundaries []float64) Option {
 	return explicitBoundariesOption{explicitBoundaries}
@@ -90,6 +76,16 @@ type explicitBoundariesOption struct {
 func (o explicitBoundariesOption) Apply(config *Config) {
 	config.ExplicitBoundaries = o.boundaries
 }
+
+// defaultExplicitBoundaries have been copied from prometheus.DefBuckets.
+//
+// The use of these defaults is not expected to last, as we anticipate
+// the use of a high-precision histogram sketch as the standard
+// histogram aggregator for OTLP export.
+// (https://github.com/open-telemetry/opentelemetry-specification/issues/982).
+// Downstream exporters that are must use a small number of buckets
+// are expected to collapse the histogram themselves, in that case.
+var defaultExplicitBoundaries = []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10}
 
 var _ export.Aggregator = &Aggregator{}
 var _ aggregation.Sum = &Aggregator{}
@@ -105,7 +101,10 @@ var _ aggregation.Histogram = &Aggregator{}
 // atomic operations, which introduces the possibility that
 // checkpoints are inconsistent.
 func New(cnt int, desc *metric.Descriptor, opts ...Option) []Aggregator {
-	var cfg Config
+	cfg := Config{
+		ExplicitBoundaries: defaultExplicitBoundaries,
+	}
+
 	for _, opt := range opts {
 		opt.Apply(&cfg)
 	}
