@@ -23,6 +23,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Remove duplicate checkout from GitHub Actions workflow (#1407)
 - `NewExporter` from `exporters/otlp` now takes a `ProtocolDriver` as a parameter. (#1369)
 - Many OTLP Exporter options became gRPC ProtocolDriver options. (#1369)
+- Histogram aggregator accepts functional options, uses default boundaries if none given. (#1434)
 
 ### Removed
 
