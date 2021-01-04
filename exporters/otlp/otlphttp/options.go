@@ -61,7 +61,15 @@ type config struct {
 }
 
 // Option applies an option to the HTTP driver.
-type Option func(cfg *config)
+type Option interface {
+	Apply(*config)
+}
+
+type endpointOption string
+
+func (o endpointOption) Apply(cfg *config) {
+	cfg.endpoint = (string)(o)
+}
 
 // WithEndpoint allows one to set the address of the collector
 // endpoint that the driver will use to send metrics and spans. If
@@ -69,74 +77,104 @@ type Option func(cfg *config)
 // DefaultCollectorHost:DefaultCollectorPort. Note that the endpoint
 // must not contain any URL path.
 func WithEndpoint(endpoint string) Option {
-	return func(cfg *config) {
-		cfg.endpoint = endpoint
-	}
+	return (endpointOption)(endpoint)
+}
+
+type compressionOption Compression
+
+func (o compressionOption) Apply(cfg *config) {
+	cfg.compression = (Compression)(o)
 }
 
 // WithCompression tells the driver to compress the sent data.
 func WithCompression(compression Compression) Option {
-	return func(cfg *config) {
-		cfg.compression = compression
-	}
+	return (compressionOption)(compression)
+}
+
+type tracesURLPathOption string
+
+func (o tracesURLPathOption) Apply(cfg *config) {
+	cfg.tracesURLPath = (string)(o)
 }
 
 // WithTracesURLPath allows one to override the default URL path used
 // for sending traces. If unset, DefaultTracesPath will be used.
 func WithTracesURLPath(urlPath string) Option {
-	return func(cfg *config) {
-		cfg.tracesURLPath = urlPath
-	}
+	return (tracesURLPathOption)(urlPath)
+}
+
+type metricsURLPathOption string
+
+func (o metricsURLPathOption) Apply(cfg *config) {
+	cfg.metricsURLPath = (string)(o)
 }
 
 // WithMetricsURLPath allows one to override the default URL path used
 // for sending metrics. If unset, DefaultMetricsPath will be used.
 func WithMetricsURLPath(urlPath string) Option {
-	return func(cfg *config) {
-		cfg.metricsURLPath = urlPath
-	}
+	return (metricsURLPathOption)(urlPath)
 }
 
-// WithMetricsURLPath allows one to override how many times the driver
+type maxAttemptsOption int
+
+func (o maxAttemptsOption) Apply(cfg *config) {
+	cfg.maxAttempts = (int)(o)
+}
+
+// WithMaxAttempts allows one to override how many times the driver
 // will try to send the payload in case of retryable errors. If unset,
 // DefaultMaxAttempts will be used.
 func WithMaxAttempts(maxAttempts int) Option {
-	return func(cfg *config) {
-		cfg.maxAttempts = maxAttempts
-	}
+	return maxAttemptsOption(maxAttempts)
+}
+
+type backoffOption time.Duration
+
+func (o backoffOption) Apply(cfg *config) {
+	cfg.backoff = (time.Duration)(o)
 }
 
 // WithBackoff tells the driver to use the duration as a base of the
 // exponential backoff strategy. If unset, DefaultBackoff will be
 // used.
 func WithBackoff(duration time.Duration) Option {
-	return func(cfg *config) {
-		cfg.backoff = duration
-	}
+	return (backoffOption)(duration)
+}
+
+type tlsClientConfigOption tls.Config
+
+func (o *tlsClientConfigOption) Apply(cfg *config) {
+	cfg.tlsCfg = (*tls.Config)(o)
 }
 
 // WithTLSClientConfig can be used to set up a custom TLS
 // configuration for the client used to send payloads to the
 // collector. Use it if you want to use a custom certificate.
 func WithTLSClientConfig(tlsCfg *tls.Config) Option {
-	return func(cfg *config) {
-		cfg.tlsCfg = tlsCfg
-	}
+	return (*tlsClientConfigOption)(tlsCfg)
+}
+
+type insecureOption struct{}
+
+func (insecureOption) Apply(cfg *config) {
+	cfg.insecure = true
 }
 
 // WithInsecure tells the driver to connect to the collector using the
 // HTTP scheme, instead of HTTPS.
 func WithInsecure() Option {
-	return func(cfg *config) {
-		cfg.insecure = true
-	}
+	return insecureOption{}
+}
+
+type headersOption map[string]string
+
+func (o headersOption) Apply(cfg *config) {
+	cfg.headers = (map[string]string)(o)
 }
 
 // WithHeaders allows one to tell the driver to send additional HTTP
 // headers with the payloads. Specifying headers like Content-Length,
 // Content-Encoding and Content-Type may result in a broken driver.
 func WithHeaders(headers map[string]string) Option {
-	return func(cfg *config) {
-		cfg.headers = headers
-	}
+	return (headersOption)(headers)
 }

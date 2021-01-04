@@ -77,7 +77,7 @@ func NewDriver(opts ...Option) otlp.ProtocolDriver {
 		backoff:        DefaultBackoff,
 	}
 	for _, opt := range opts {
-		opt(&cfg)
+		opt.Apply(&cfg)
 	}
 	for pathPtr, defaultPath := range map[*string]string{
 		&cfg.tracesURLPath:  DefaultTracesPath,
