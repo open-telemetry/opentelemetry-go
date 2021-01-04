@@ -734,9 +734,9 @@ func TestOtTagToOTelLabel_CheckTypeConversions(t *testing.T) {
 			expectedValueType: label.INT64,
 		},
 		{
-			key:               "uint to int64",
+			key:               "uint to string",
 			value:             uint(1234),
-			expectedValueType: label.INT64,
+			expectedValueType: label.STRING,
 		},
 		{
 			key:               "int32 to int64",

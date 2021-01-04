@@ -134,10 +134,10 @@ func (s *bridgeSpan) SetOperationName(operationName string) ot.Span {
 //
 // Note about the following value conversions:
 // - int -> int64
-// - uint -> int64
+// - uint -> string
 // - int32 -> int64
 // - uint32 -> int64
-// - uint64 -> int64
+// - uint64 -> string
 // - float32 -> float64
 func (s *bridgeSpan) SetTag(key string, value interface{}) ot.Span {
 	switch key {
@@ -507,7 +507,7 @@ func otTagsToOTelAttributesKindAndError(tags map[string]interface{}) ([]label.Ke
 // otTagToOTelLabel converts given key-value into label.KeyValue.
 // Note that some conversions are not obvious:
 // - int -> int64
-// - uint -> int64
+// - uint -> string
 // - int32 -> int64
 // - uint32 -> int64
 // - uint64 -> string
@@ -532,7 +532,7 @@ func otTagToOTelLabel(k string, v interface{}) label.KeyValue {
 	case int:
 		return key.Int(val)
 	case uint:
-		return key.Int(int(val))
+		return key.String(fmt.Sprintf("%d", val))
 	case string:
 		return key.String(val)
 	default:
