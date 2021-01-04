@@ -175,9 +175,11 @@ func (d *driver) send(ctx context.Context, rawRequest []byte, urlPath string) er
 		if err != nil {
 			return err
 		}
-		// We don't care about the body, so close it
-		// immediately.
-		response.Body.Close()
+		// We don't care about the body, so try to read it
+		// into /dev/null and close it immediately. The
+		// reading part is to facilitate connection reuse.
+		_, _ = io.Copy(ioutil.Discard, response.Body)
+		_ = response.Body.Close()
 		switch response.StatusCode {
 		case http.StatusOK:
 			return nil
