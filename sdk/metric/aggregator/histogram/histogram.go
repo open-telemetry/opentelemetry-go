@@ -78,8 +78,8 @@ func New(cnt int, desc *metric.Descriptor, boundaries []float64) []Aggregator {
 		aggs[i] = Aggregator{
 			kind:       desc.NumberKind(),
 			boundaries: sortedBoundaries,
-			state:      emptyState(sortedBoundaries),
 		}
+		aggs[i].state = aggs[i].emptyState()
 	}
 	return aggs
 }
@@ -123,19 +123,20 @@ func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descrip
 		return aggregator.NewInconsistentAggregatorError(c, oa)
 	}
 
+	newState := c.emptyState()
 	c.lock.Lock()
 	if o != nil {
 		o.state = c.state
 	}
-	c.state = emptyState(c.boundaries)
+	c.state = newState
 	c.lock.Unlock()
 
 	return nil
 }
 
-func emptyState(boundaries []float64) state {
+func (c *Aggregator) emptyState() state {
 	return state{
-		bucketCounts: make([]float64, len(boundaries)+1),
+		bucketCounts: make([]float64, len(c.boundaries)+1),
 	}
 }
 
