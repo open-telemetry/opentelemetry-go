@@ -137,22 +137,25 @@ func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descrip
 		return aggregator.NewInconsistentAggregatorError(c, oa)
 	}
 
-	var next *state
-
 	if o != nil {
-		// Swap case.
+		// Swap case: This is the ordinary case for a
+		// synchronous instrument, where the SDK allocates two
+		// Aggregators and lock contention is anticipated.
+		// Reset the target state before swapping it under the
+		// lock below.
 		o.clearState()
-		next = o.state
-	} else {
-		// No swap is available.
-		next = c.newState()
 	}
 
 	c.lock.Lock()
 	if o != nil {
-		o.state = c.state
+		c.state, o.state = o.state, c.state
+	} else {
+		// No swap case: This is the ordinary case for an
+		// asynchronous instrument, where the SDK allocates a
+		// single Aggregator and there is no anticipated lock
+		// contention.
+		c.clearState()
 	}
-	c.state = next
 	c.lock.Unlock()
 
 	return nil

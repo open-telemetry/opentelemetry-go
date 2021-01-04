@@ -190,6 +190,8 @@ func TestHistogramNotSet(t *testing.T) {
 	})
 }
 
+// checkHistogram ensures the correct aggregated state between `all`
+// (test aggregator) and `agg` (code under test).
 func checkHistogram(t *testing.T, all aggregatortest.Numbers, profile aggregatortest.Profile, agg *histogram.Aggregator) {
 
 	all.Sort()
@@ -201,8 +203,7 @@ func checkHistogram(t *testing.T, all aggregatortest.Numbers, profile aggregator
 	require.InEpsilon(t,
 		sum.CoerceToFloat64(profile.NumberKind),
 		asum.CoerceToFloat64(profile.NumberKind),
-		0.000000001,
-		"Same sum - absolute")
+		0.000000001)
 
 	count, err := agg.Count()
 	require.NoError(t, err)
@@ -211,7 +212,8 @@ func checkHistogram(t *testing.T, all aggregatortest.Numbers, profile aggregator
 	buckets, err := agg.Histogram()
 	require.NoError(t, err)
 
-	require.Equal(t, len(buckets.Counts), len(boundaries)+1, "There should be b + 1 counts, where b is the number of boundaries")
+	require.Equal(t, len(buckets.Counts), len(boundaries)+1,
+		"There should be b + 1 counts, where b is the number of boundaries")
 
 	sortedBoundaries := make([]float64, len(boundaries))
 	copy(sortedBoundaries, boundaries)
