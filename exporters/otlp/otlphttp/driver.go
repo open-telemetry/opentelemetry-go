@@ -208,14 +208,17 @@ func (d *driver) getScheme() string {
 
 func getWaitDuration(backoff time.Duration, i int) time.Duration {
 	// Strategy: after nth failed attempt, attempt resending after
-	// k * initialBackoff, where k is a random number in range [0,
-	// 2^n-1).
+	// k * initialBackoff + jitter, where k is a random number in
+	// range [0, 2^n-1), and jitter is a random percentage of
+	// initialBackoff from [-10%, 10%).
 
 	// There won't be an overflow, since i is capped to
 	// DefaultMaxAttempts (5).
 	upperK := (int64)(1) << (i + 1)
+	jitterPercent := (rand.Float64() - 0.5) / 10.
+	jitter := jitterPercent * (float64)(backoff)
 	k := rand.Int63n(upperK)
-	return backoff * time.Duration(k)
+	return (time.Duration)(k)*backoff + (time.Duration)(jitter)
 }
 
 func (d *driver) contextWithStop(ctx context.Context) (context.Context, context.CancelFunc) {
