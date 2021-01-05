@@ -60,6 +60,13 @@ func TestEndToEnd(t *testing.T) {
 			},
 		},
 		{
+			name: "with empty paths (forced to defaults)",
+			opts: []otlphttp.Option{
+				otlphttp.WithMetricsURLPath(""),
+				otlphttp.WithTracesURLPath(""),
+			},
+		},
+		{
 			name: "with different paths",
 			opts: []otlphttp.Option{
 				otlphttp.WithMetricsURLPath(otherMetricsPath),
@@ -248,9 +255,61 @@ func TestEmptyData(t *testing.T) {
 
 func TestUnreasonableMaxAttempts(t *testing.T) {
 	// Max attempts is 5, we set collector to fail 7 times and try
-	// to configure max attempts to be 10. Since we cap max
-	// attempts to 5, exporting to the collector should fail.
-	statuses := make([]int, 0, 7)
+	// to configure max attempts to be either negative or too
+	// large. Since we set max attempts to 5 in such cases,
+	// exporting to the collector should fail.
+	type testcase struct {
+		name        string
+		maxAttempts int
+	}
+	for _, tc := range []testcase{
+		{
+			name:        "negative max attempts",
+			maxAttempts: -3,
+		},
+		{
+			name:        "too large max attempts",
+			maxAttempts: 10,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			statuses := make([]int, 0, 7)
+			for i := 0; i < cap(statuses); i++ {
+				statuses = append(statuses, http.StatusTooManyRequests)
+			}
+			mcCfg := mockCollectorConfig{
+				InjectHTTPStatus: statuses,
+			}
+			mc := runMockCollector(t, mcCfg)
+			defer mc.MustStop(t)
+			driver := otlphttp.NewDriver(
+				otlphttp.WithEndpoint(mc.Endpoint()),
+				otlphttp.WithInsecure(),
+				otlphttp.WithMaxAttempts(tc.maxAttempts),
+				otlphttp.WithBackoff(time.Millisecond),
+			)
+			ctx := context.Background()
+			exporter, err := otlp.NewExporter(ctx, driver)
+			require.NoError(t, err)
+			defer func() {
+				assert.NoError(t, exporter.Shutdown(ctx))
+			}()
+			err = exporter.ExportSpans(ctx, otlptest.SingleSpanSnapshot())
+			assert.Error(t, err)
+			assert.Empty(t, mc.GetSpans())
+		})
+	}
+}
+
+func TestUnreasonableBackoff(t *testing.T) {
+	// This sets backoff to negative value, which gets corrected
+	// to default backoff instead of being used. Default max
+	// attempts is 5, so we set the collector to fail 4 times, but
+	// we set the deadline to 3 times of the default backoff, so
+	// this should show that deadline is not met, meaning that the
+	// retries weren't immediate (as negative backoff could
+	// imply).
+	statuses := make([]int, 0, 4)
 	for i := 0; i < cap(statuses); i++ {
 		statuses = append(statuses, http.StatusTooManyRequests)
 	}
@@ -262,10 +321,10 @@ func TestUnreasonableMaxAttempts(t *testing.T) {
 	driver := otlphttp.NewDriver(
 		otlphttp.WithEndpoint(mc.Endpoint()),
 		otlphttp.WithInsecure(),
-		otlphttp.WithMaxAttempts(10),
-		otlphttp.WithBackoff(time.Millisecond),
+		otlphttp.WithBackoff(-time.Millisecond),
 	)
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 3*otlphttp.DefaultBackoff)
+	defer cancel()
 	exporter, err := otlp.NewExporter(ctx, driver)
 	require.NoError(t, err)
 	defer func() {
