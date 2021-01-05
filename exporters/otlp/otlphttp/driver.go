@@ -210,7 +210,7 @@ func getWaitDuration(backoff time.Duration, i int) time.Duration {
 	// Strategy: after nth failed attempt, attempt resending after
 	// k * initialBackoff + jitter, where k is a random number in
 	// range [0, 2^n-1), and jitter is a random percentage of
-	// initialBackoff from [-10%, 10%).
+	// initialBackoff from [-5%, 5%).
 
 	// There won't be an overflow, since i is capped to
 	// DefaultMaxAttempts (5).
