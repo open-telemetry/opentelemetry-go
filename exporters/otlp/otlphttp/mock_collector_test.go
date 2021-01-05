@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -49,6 +50,8 @@ type mockCollector struct {
 
 	injectHTTPStatus  []int
 	injectContentType string
+
+	clientTLSConfig *tls.Config
 }
 
 func (c *mockCollector) Stop() error {
@@ -79,6 +82,10 @@ func (c *mockCollector) GetMetrics() []*metricpb.Metric {
 
 func (c *mockCollector) Endpoint() string {
 	return c.endpoint
+}
+
+func (c *mockCollector) ClientTLSConfig() *tls.Config {
+	return c.clientTLSConfig
 }
 
 func (c *mockCollector) serveMetrics(w http.ResponseWriter, r *http.Request) {
@@ -188,6 +195,7 @@ type mockCollectorConfig struct {
 	Port              int
 	InjectHTTPStatus  []int
 	InjectContentType string
+	WithTLS           bool
 }
 
 func (c *mockCollectorConfig) fillInDefaults() {
@@ -218,8 +226,25 @@ func runMockCollector(t *testing.T, cfg mockCollectorConfig) *mockCollector {
 	server := &http.Server{
 		Handler: mux,
 	}
+	if cfg.WithTLS {
+		pem, err := generateWeakCertificate()
+		require.NoError(t, err)
+		tlsCertificate, err := tls.X509KeyPair(pem.Certificate, pem.PrivateKey)
+		require.NoError(t, err)
+		server.TLSConfig = &tls.Config{
+			Certificates: []tls.Certificate{tlsCertificate},
+		}
+
+		m.clientTLSConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
+	}
 	go func() {
-		_ = server.Serve(ln)
+		if cfg.WithTLS {
+			_ = server.ServeTLS(ln, "", "")
+		} else {
+			_ = server.Serve(ln)
+		}
 	}()
 	m.server = server
 	return m

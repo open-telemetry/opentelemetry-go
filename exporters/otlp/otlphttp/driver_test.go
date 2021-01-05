@@ -40,6 +40,7 @@ func TestEndToEnd(t *testing.T) {
 		name  string
 		opts  []otlphttp.Option
 		mcCfg mockCollectorConfig
+		tls   bool
 	}{
 		{
 			name: "no extra options",
@@ -73,16 +74,31 @@ func TestEndToEnd(t *testing.T) {
 				TracesURLPath:  otherTracesPath,
 			},
 		},
+		{
+			name: "with TLS",
+			opts: nil,
+			mcCfg: mockCollectorConfig{
+				WithTLS: true,
+			},
+			tls: true,
+		},
 	}
 
 	for _, tc := range tests {
-		func() {
+		t.Run(tc.name, func(t *testing.T) {
 			mc := runMockCollector(t, tc.mcCfg)
 			defer mc.MustStop(t)
-			allOpts := append([]otlphttp.Option{
+			allOpts := []otlphttp.Option{
 				otlphttp.WithEndpoint(mc.Endpoint()),
-				otlphttp.WithInsecure(),
-			}, tc.opts...)
+			}
+			if tc.tls {
+				tlsConfig := mc.ClientTLSConfig()
+				require.NotNil(t, tlsConfig)
+				allOpts = append(allOpts, otlphttp.WithTLSClientConfig(tlsConfig))
+			} else {
+				allOpts = append(allOpts, otlphttp.WithInsecure())
+			}
+			allOpts = append(allOpts, tc.opts...)
 			driver := otlphttp.NewDriver(allOpts...)
 			ctx := context.Background()
 			exporter, err := otlp.NewExporter(ctx, driver)
@@ -92,7 +108,7 @@ func TestEndToEnd(t *testing.T) {
 				}()
 				otlptest.RunEndToEndTest(ctx, t, exporter, mc, mc)
 			}
-		}()
+		})
 	}
 }
 
