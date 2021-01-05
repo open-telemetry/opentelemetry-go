@@ -52,6 +52,7 @@ type mockCollector struct {
 	injectContentType string
 
 	clientTLSConfig *tls.Config
+	expectedHeaders map[string]string
 }
 
 func (c *mockCollector) Stop() error {
@@ -89,6 +90,10 @@ func (c *mockCollector) ClientTLSConfig() *tls.Config {
 }
 
 func (c *mockCollector) serveMetrics(w http.ResponseWriter, r *http.Request) {
+	if !c.checkHeaders(r) {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	response := collectormetricpb.ExportMetricsServiceResponse{}
 	rawResponse, err := response.Marshal()
 	if err != nil {
@@ -116,6 +121,10 @@ func (c *mockCollector) serveMetrics(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
+	if !c.checkHeaders(r) {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	response := collectortracepb.ExportTraceServiceResponse{}
 	rawResponse, err := response.Marshal()
 	if err != nil {
@@ -140,6 +149,16 @@ func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
 	c.spanLock.Lock()
 	defer c.spanLock.Unlock()
 	c.spansStorage.AddSpans(&request)
+}
+
+func (c *mockCollector) checkHeaders(r *http.Request) bool {
+	for k, v := range c.expectedHeaders {
+		got := r.Header.Get(k)
+		if got != v {
+			return false
+		}
+	}
+	return true
 }
 
 func (c *mockCollector) getInjectHTTPStatus() int {
@@ -196,6 +215,7 @@ type mockCollectorConfig struct {
 	InjectHTTPStatus  []int
 	InjectContentType string
 	WithTLS           bool
+	ExpectedHeaders   map[string]string
 }
 
 func (c *mockCollectorConfig) fillInDefaults() {
@@ -219,6 +239,7 @@ func runMockCollector(t *testing.T, cfg mockCollectorConfig) *mockCollector {
 		metricsStorage:    otlptest.NewMetricsStorage(),
 		injectHTTPStatus:  cfg.InjectHTTPStatus,
 		injectContentType: cfg.InjectContentType,
+		expectedHeaders:   cfg.ExpectedHeaders,
 	}
 	mux := http.NewServeMux()
 	mux.Handle(cfg.MetricsURLPath, http.HandlerFunc(m.serveMetrics))

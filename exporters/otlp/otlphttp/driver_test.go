@@ -35,6 +35,13 @@ const (
 	otherTracesPath     = "/post/traces/here"
 )
 
+var (
+	testHeaders = map[string]string{
+		"Otel-Go-Key-1": "somevalue",
+		"Otel-Go-Key-2": "someothervalue",
+	}
+)
+
 func TestEndToEnd(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -81,6 +88,15 @@ func TestEndToEnd(t *testing.T) {
 				WithTLS: true,
 			},
 			tls: true,
+		},
+		{
+			name: "with extra headers",
+			opts: []otlphttp.Option{
+				otlphttp.WithHeaders(testHeaders),
+			},
+			mcCfg: mockCollectorConfig{
+				ExpectedHeaders: testHeaders,
+			},
 		},
 	}
 
