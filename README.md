@@ -23,6 +23,9 @@ Progress and status specific to this repository is tracked in our local
 and
 [milestones](https://github.com/open-telemetry/opentelemetry-go/milestones).
 
+Project versioning information and stability guarantees can be found in the
+[versioning documentation](./VERSIONING.md).
+
 ## Getting Started
 
 You can find a getting started guide on [opentelemetry.io](https://opentelemetry.io/docs/go/getting-started/).
