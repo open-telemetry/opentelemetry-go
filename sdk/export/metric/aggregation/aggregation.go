@@ -43,7 +43,7 @@ type (
 	// Count returns the number of values that were aggregated.
 	Count interface {
 		Aggregation
-		Count() (int64, error)
+		Count() (uint64, error)
 	}
 
 	// Min returns the minimum value over the set of values that were aggregated.
@@ -89,16 +89,14 @@ type (
 		// aggregating integers.
 		Boundaries []float64
 
-		// Counts are floating point numbers to account for
-		// the possibility of sampling which allows for
-		// non-integer count values.
-		Counts []float64
+		// Counts holds the count in each bucket.
+		Counts []uint64
 	}
 
 	// Histogram returns the count of events in pre-determined buckets.
 	Histogram interface {
 		Aggregation
-		Count() (int64, error)
+		Count() (uint64, error)
 		Sum() (number.Number, error)
 		Histogram() (Buckets, error)
 	}
@@ -109,7 +107,7 @@ type (
 		Min() (number.Number, error)
 		Max() (number.Number, error)
 		Sum() (number.Number, error)
-		Count() (int64, error)
+		Count() (uint64, error)
 	}
 )
 

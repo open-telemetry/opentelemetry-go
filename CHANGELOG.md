@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add the `ReadOnlySpan` and `ReadWriteSpan` interfaces to provide better control for accessing span data. (#1360)
 - `NewGRPCDriver` function returns a `ProtocolDriver` that maintains a single gRPC connection to the collector. (#1369)
+- Documentation about the project's versioning policy. (#1388)
 - `NewSplitDriver` for OTLP exporter that allows sending traces and metrics to different endpoints. (#1418)
 
 ### Changed
@@ -26,6 +27,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Metric stdout exporter uses MinMaxSumCount aggregator for ValueRecorder instruments (#1412)
 - `NewExporter` from `exporters/otlp` now takes a `ProtocolDriver` as a parameter. (#1369)
 - Many OTLP Exporter options became gRPC ProtocolDriver options. (#1369)
+- Unify endpoint API that related to OTel exporter. (#1401)
+- Metric aggregator Count() and histogram Bucket.Counts are consistently `uint64`. (1430)
 
 ### Removed
 

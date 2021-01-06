@@ -458,7 +458,7 @@ func sumPoint(record export.Record, num number.Number, start, end time.Time, ek 
 
 // minMaxSumCountValue returns the values of the MinMaxSumCount Aggregator
 // as discrete values.
-func minMaxSumCountValues(a aggregation.MinMaxSumCount) (min, max, sum number.Number, count int64, err error) {
+func minMaxSumCountValues(a aggregation.MinMaxSumCount) (min, max, sum number.Number, count uint64, err error) {
 	if min, err = a.Min(); err != nil {
 		return
 	}
@@ -531,7 +531,7 @@ func minMaxSumCount(record export.Record, a aggregation.MinMaxSumCount) (*metric
 	return m, nil
 }
 
-func histogramValues(a aggregation.Histogram) (boundaries []float64, counts []float64, err error) {
+func histogramValues(a aggregation.Histogram) (boundaries []float64, counts []uint64, err error) {
 	var buckets aggregation.Buckets
 	if buckets, err = a.Histogram(); err != nil {
 		return
@@ -563,10 +563,6 @@ func histogramPoint(record export.Record, ek export.ExportKind, a aggregation.Hi
 		return nil, err
 	}
 
-	buckets := make([]uint64, len(counts))
-	for i := 0; i < len(counts); i++ {
-		buckets[i] = uint64(counts[i])
-	}
 	m := &metricpb.Metric{
 		Name:        desc.Name(),
 		Description: desc.Description(),
@@ -584,7 +580,7 @@ func histogramPoint(record export.Record, ek export.ExportKind, a aggregation.Hi
 						StartTimeUnixNano: toNanos(record.StartTime()),
 						TimeUnixNano:      toNanos(record.EndTime()),
 						Count:             uint64(count),
-						BucketCounts:      buckets,
+						BucketCounts:      counts,
 						ExplicitBounds:    boundaries,
 					},
 				},
@@ -601,7 +597,7 @@ func histogramPoint(record export.Record, ek export.ExportKind, a aggregation.Hi
 						StartTimeUnixNano: toNanos(record.StartTime()),
 						TimeUnixNano:      toNanos(record.EndTime()),
 						Count:             uint64(count),
-						BucketCounts:      buckets,
+						BucketCounts:      counts,
 						ExplicitBounds:    boundaries,
 					},
 				},

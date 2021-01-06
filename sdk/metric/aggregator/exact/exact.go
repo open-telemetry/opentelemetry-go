@@ -57,8 +57,8 @@ func (c *Aggregator) Kind() aggregation.Kind {
 }
 
 // Count returns the number of values in the checkpoint.
-func (c *Aggregator) Count() (int64, error) {
-	return int64(len(c.samples)), nil
+func (c *Aggregator) Count() (uint64, error) {
+	return uint64(len(c.samples)), nil
 }
 
 // Points returns access to the raw data set.

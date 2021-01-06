@@ -63,7 +63,7 @@ func TestStressInt64MinMaxSumCount(t *testing.T) {
 			}
 			lo, hi, sum := min.AsInt64(), max.AsInt64(), s.AsInt64()
 
-			if hi-lo+1 != c {
+			if uint64(hi-lo)+1 != c {
 				t.Fail()
 			}
 			if c == 1 {
