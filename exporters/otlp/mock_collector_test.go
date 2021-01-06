@@ -26,16 +26,16 @@ import (
 	"google.golang.org/grpc"
 	metadata "google.golang.org/grpc/metadata"
 
-	colmetricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/metrics/v1"
-	coltracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/trace/v1"
+	collectormetricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/metrics/v1"
+	collectortracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/trace/v1"
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
 	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
 	resourcepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/resource/v1"
 	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
 )
 
-func makeMockCollector(t *testing.T) *mockCol {
-	return &mockCol{
+func makeMockCollector(t *testing.T) *mockCollector {
+	return &mockCollector{
 		t: t,
 		traceSvc: &mockTraceService{
 			rsm: map[string]*tracepb.ResourceSpans{},
@@ -74,7 +74,7 @@ func (mts *mockTraceService) getResourceSpans() []*tracepb.ResourceSpans {
 	return rss
 }
 
-func (mts *mockTraceService) Export(ctx context.Context, exp *coltracepb.ExportTraceServiceRequest) (*coltracepb.ExportTraceServiceResponse, error) {
+func (mts *mockTraceService) Export(ctx context.Context, exp *collectortracepb.ExportTraceServiceRequest) (*collectortracepb.ExportTraceServiceResponse, error) {
 	mts.mu.Lock()
 	mts.headers, _ = metadata.FromIncomingContext(ctx)
 	defer mts.mu.Unlock()
@@ -100,7 +100,7 @@ func (mts *mockTraceService) Export(ctx context.Context, exp *coltracepb.ExportT
 			}
 		}
 	}
-	return &coltracepb.ExportTraceServiceResponse{}, nil
+	return &collectortracepb.ExportTraceServiceResponse{}, nil
 }
 
 func resourceString(res *resourcepb.Resource) string {
@@ -133,7 +133,7 @@ func (mms *mockMetricService) getMetrics() []*metricpb.Metric {
 	return append(m, mms.metrics...)
 }
 
-func (mms *mockMetricService) Export(ctx context.Context, exp *colmetricpb.ExportMetricsServiceRequest) (*colmetricpb.ExportMetricsServiceResponse, error) {
+func (mms *mockMetricService) Export(ctx context.Context, exp *collectormetricpb.ExportMetricsServiceRequest) (*collectormetricpb.ExportMetricsServiceResponse, error) {
 	mms.mu.Lock()
 	for _, rm := range exp.GetResourceMetrics() {
 		// TODO (rghetia) handle multiple resource and library info.
@@ -142,26 +142,26 @@ func (mms *mockMetricService) Export(ctx context.Context, exp *colmetricpb.Expor
 		}
 	}
 	mms.mu.Unlock()
-	return &colmetricpb.ExportMetricsServiceResponse{}, nil
+	return &collectormetricpb.ExportMetricsServiceResponse{}, nil
 }
 
-type mockCol struct {
+type mockCollector struct {
 	t *testing.T
 
 	traceSvc  *mockTraceService
 	metricSvc *mockMetricService
 
-	address  string
+	endpoint string
 	stopFunc func() error
 	stopOnce sync.Once
 }
 
-var _ coltracepb.TraceServiceServer = (*mockTraceService)(nil)
-var _ colmetricpb.MetricsServiceServer = (*mockMetricService)(nil)
+var _ collectortracepb.TraceServiceServer = (*mockTraceService)(nil)
+var _ collectormetricpb.MetricsServiceServer = (*mockMetricService)(nil)
 
 var errAlreadyStopped = fmt.Errorf("already stopped")
 
-func (mc *mockCol) stop() error {
+func (mc *mockCollector) stop() error {
 	var err = errAlreadyStopped
 	mc.stopOnce.Do(func() {
 		if mc.stopFunc != nil {
@@ -191,37 +191,37 @@ func (mc *mockCol) stop() error {
 	return err
 }
 
-func (mc *mockCol) getSpans() []*tracepb.Span {
+func (mc *mockCollector) getSpans() []*tracepb.Span {
 	return mc.traceSvc.getSpans()
 }
 
-func (mc *mockCol) getResourceSpans() []*tracepb.ResourceSpans {
+func (mc *mockCollector) getResourceSpans() []*tracepb.ResourceSpans {
 	return mc.traceSvc.getResourceSpans()
 }
 
-func (mc *mockCol) getHeaders() metadata.MD {
+func (mc *mockCollector) getHeaders() metadata.MD {
 	return mc.traceSvc.getHeaders()
 }
 
-func (mc *mockCol) getMetrics() []*metricpb.Metric {
+func (mc *mockCollector) getMetrics() []*metricpb.Metric {
 	return mc.metricSvc.getMetrics()
 }
 
-// runMockCol is a helper function to create a mockCol
-func runMockCol(t *testing.T) *mockCol {
-	return runMockColAtAddr(t, "localhost:0")
+// runMockCollector is a helper function to create a mock Collector
+func runMockCollector(t *testing.T) *mockCollector {
+	return runMockCollectorAtEndpoint(t, "localhost:0")
 }
 
-func runMockColAtAddr(t *testing.T, addr string) *mockCol {
-	ln, err := net.Listen("tcp", addr)
+func runMockCollectorAtEndpoint(t *testing.T, endpoint string) *mockCollector {
+	ln, err := net.Listen("tcp", endpoint)
 	if err != nil {
-		t.Fatalf("Failed to get an address: %v", err)
+		t.Fatalf("Failed to get an endpoint: %v", err)
 	}
 
 	srv := grpc.NewServer()
 	mc := makeMockCollector(t)
-	coltracepb.RegisterTraceServiceServer(srv, mc.traceSvc)
-	colmetricpb.RegisterMetricsServiceServer(srv, mc.metricSvc)
+	collectortracepb.RegisterTraceServiceServer(srv, mc.traceSvc)
+	collectormetricpb.RegisterMetricsServiceServer(srv, mc.metricSvc)
 	go func() {
 		_ = srv.Serve(ln)
 	}()
@@ -233,7 +233,7 @@ func runMockColAtAddr(t *testing.T, addr string) *mockCol {
 
 	_, collectorPortStr, _ := net.SplitHostPort(ln.Addr().String())
 
-	mc.address = "localhost:" + collectorPortStr
+	mc.endpoint = "localhost:" + collectorPortStr
 	mc.stopFunc = deferFunc
 
 	return mc

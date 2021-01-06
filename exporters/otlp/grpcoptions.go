@@ -62,7 +62,7 @@ const (
 
 type grpcConnectionConfig struct {
 	canDialInsecure    bool
-	collectorAddr      string
+	collectorEndpoint  string
 	compressor         string
 	reconnectionPeriod time.Duration
 	grpcServiceConfig  string
@@ -82,12 +82,12 @@ func WithInsecure() GRPCConnectionOption {
 	}
 }
 
-// WithAddress allows one to set the address that the exporter will
+// WithEndpoint allows one to set the endpoint that the exporter will
 // connect to the collector on. If unset, it will instead try to use
 // connect to DefaultCollectorHost:DefaultCollectorPort.
-func WithAddress(addr string) GRPCConnectionOption {
+func WithEndpoint(endpoint string) GRPCConnectionOption {
 	return func(cfg *grpcConnectionConfig) {
-		cfg.collectorAddr = addr
+		cfg.collectorEndpoint = endpoint
 	}
 }
 

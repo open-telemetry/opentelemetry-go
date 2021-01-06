@@ -40,7 +40,7 @@ type grpcDriver struct {
 
 func NewGRPCDriver(opts ...GRPCConnectionOption) ProtocolDriver {
 	cfg := grpcConnectionConfig{
-		collectorAddr:     fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorPort),
+		collectorEndpoint: fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorPort),
 		grpcServiceConfig: DefaultGRPCServiceConfig,
 	}
 	for _, opt := range opts {

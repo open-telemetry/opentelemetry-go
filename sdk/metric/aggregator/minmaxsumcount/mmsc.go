@@ -38,7 +38,7 @@ type (
 		sum   number.Number
 		min   number.Number
 		max   number.Number
-		count int64
+		count uint64
 	}
 )
 
@@ -78,7 +78,7 @@ func (c *Aggregator) Sum() (number.Number, error) {
 }
 
 // Count returns the number of values in the checkpoint.
-func (c *Aggregator) Count() (int64, error) {
+func (c *Aggregator) Count() (uint64, error) {
 	return c.count, nil
 }
 
