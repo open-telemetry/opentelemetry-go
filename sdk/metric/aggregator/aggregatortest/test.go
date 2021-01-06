@@ -134,8 +134,8 @@ func (n *Numbers) Sum() number.Number {
 	return sum
 }
 
-func (n *Numbers) Count() int64 {
-	return int64(len(n.numbers))
+func (n *Numbers) Count() uint64 {
+	return uint64(len(n.numbers))
 }
 
 func (n *Numbers) Min() number.Number {
@@ -223,7 +223,7 @@ func SynchronizedMoveResetTest(t *testing.T, mkind metric.InstrumentKind, nf fun
 
 			if count, ok := agg.(aggregation.Count); ok {
 				c, err := count.Count()
-				require.Equal(t, int64(0), c)
+				require.Equal(t, uint64(0), c)
 				require.NoError(t, err)
 			}
 
@@ -270,7 +270,7 @@ func SynchronizedMoveResetTest(t *testing.T, mkind metric.InstrumentKind, nf fun
 
 			if count, ok := agg.(aggregation.Count); ok {
 				c, err := count.Count()
-				require.Equal(t, int64(1), c)
+				require.Equal(t, uint64(1), c)
 				require.NoError(t, err)
 			}
 

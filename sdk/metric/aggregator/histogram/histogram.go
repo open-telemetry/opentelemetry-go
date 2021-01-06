@@ -45,9 +45,9 @@ type (
 	// the sum and counts for all observed values and
 	// the less than equal bucket count for the pre-determined boundaries.
 	state struct {
-		bucketCounts []float64
+		bucketCounts []uint64
 		sum          number.Number
-		count        int64
+		count        uint64
 	}
 )
 
@@ -84,20 +84,6 @@ func New(cnt int, desc *metric.Descriptor, boundaries []float64) []Aggregator {
 	return aggs
 }
 
-func (c *Aggregator) newState() *state {
-	return &state{
-		bucketCounts: make([]float64, len(c.boundaries)+1),
-	}
-}
-
-func (c *Aggregator) clearState() {
-	for i := range c.state.bucketCounts {
-		c.state.bucketCounts[i] = 0
-	}
-	c.state.sum = 0
-	c.state.count = 0
-}
-
 // Aggregation returns an interface for reading the state of this aggregator.
 func (c *Aggregator) Aggregation() aggregation.Aggregation {
 	return c
@@ -114,7 +100,7 @@ func (c *Aggregator) Sum() (number.Number, error) {
 }
 
 // Count returns the number of values in the checkpoint.
-func (c *Aggregator) Count() (int64, error) {
+func (c *Aggregator) Count() (uint64, error) {
 	return c.state.count, nil
 }
 
@@ -159,6 +145,20 @@ func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descrip
 	c.lock.Unlock()
 
 	return nil
+}
+
+func (c *Aggregator) newState() *state {
+	return &state{
+		bucketCounts: make([]uint64, len(c.boundaries)+1),
+	}
+}
+
+func (c *Aggregator) clearState() {
+	for i := range c.state.bucketCounts {
+		c.state.bucketCounts[i] = 0
+	}
+	c.state.sum = 0
+	c.state.count = 0
 }
 
 // Update adds the recorded measurement to the current data set.
