@@ -88,9 +88,12 @@ func initProvider() func() {
 	pusher.Start()
 
 	return func() {
-		handleErr(tracerProvider.Shutdown(ctx), "failed to shutdown provider")
+		// Shutdown will flush any remaining spans.
+		handleErr(tracerProvider.Shutdown(ctx), "failed to shutdown TracerProvider")
+
+		// Push any last metric events to the exporter.
+		pusher.Stop()
 		handleErr(exp.Shutdown(ctx), "failed to stop exporter")
-		pusher.Stop() // pushes any last exports to the receiver
 	}
 }
 
