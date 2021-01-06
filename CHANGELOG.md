@@ -25,6 +25,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `NewExporter` from `exporters/otlp` now takes a `ProtocolDriver` as a parameter. (#1369)
 - Many OTLP Exporter options became gRPC ProtocolDriver options. (#1369)
 - Unify endpoint API that related to OTel exporter. (#1401)
+- Metric aggregator Count() and histogram Bucket.Counts are consistently `uint64`. (1430)
 
 ### Removed
 

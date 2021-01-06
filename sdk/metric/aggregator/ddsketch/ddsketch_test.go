@@ -51,7 +51,7 @@ func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
 
 	count, err := agg.Count()
 	require.NoError(t, err)
-	require.Equal(t, int64(0), count)
+	require.Equal(t, uint64(0), count)
 
 	max, err := agg.Max()
 	require.True(t, errors.Is(err, aggregation.ErrNoData))
