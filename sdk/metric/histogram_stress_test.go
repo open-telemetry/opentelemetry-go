@@ -54,10 +54,9 @@ func TestStressInt64Histogram(t *testing.T) {
 		b, _ := ckpt.Histogram()
 		c, _ := ckpt.Count()
 
-		var realCount int64
+		var realCount uint64
 		for _, c := range b.Counts {
-			v := int64(c)
-			realCount += v
+			realCount += c
 		}
 
 		if realCount != c {

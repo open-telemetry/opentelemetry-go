@@ -58,9 +58,9 @@ type (
 	// the sum and counts for all observed values and
 	// the less than equal bucket count for the pre-determined boundaries.
 	state struct {
-		bucketCounts []float64
+		bucketCounts []uint64
 		sum          number.Number
-		count        int64
+		count        uint64
 	}
 )
 
@@ -158,7 +158,7 @@ func (c *Aggregator) Sum() (number.Number, error) {
 }
 
 // Count returns the number of values in the checkpoint.
-func (c *Aggregator) Count() (int64, error) {
+func (c *Aggregator) Count() (uint64, error) {
 	return c.state.count, nil
 }
 
@@ -193,7 +193,7 @@ func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descrip
 
 func emptyState(boundaries []float64) state {
 	return state{
-		bucketCounts: make([]float64, len(boundaries)+1),
+		bucketCounts: make([]uint64, len(boundaries)+1),
 	}
 }
 

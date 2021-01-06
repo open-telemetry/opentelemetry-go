@@ -79,7 +79,7 @@ func checkZero(t *testing.T, agg *histogram.Aggregator, desc *metric.Descriptor)
 	require.NoError(t, err)
 
 	count, err := agg.Count()
-	require.Equal(t, int64(0), count, "Empty checkpoint count = 0")
+	require.Equal(t, uint64(0), count, "Empty checkpoint count = 0")
 	require.NoError(t, err)
 
 	buckets, err := agg.Histogram()
@@ -270,7 +270,7 @@ func TestHistogramDefaultBoundaries(t *testing.T) {
 
 		bounds := []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10} // len 11
 		values := append(bounds, 100)                                         // len 12
-		expect := []float64{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}               // len 12
+		expect := []uint64{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}                // len 12
 
 		for _, value := range values {
 			var num number.Number
