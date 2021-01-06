@@ -47,7 +47,7 @@ func initMeter() {
 
 	driver := otlp.NewGRPCDriver(
 		otlp.WithInsecure(),
-		otlp.WithAddress("localhost:30080"),
+		otlp.WithEndpoint("localhost:30080"),
 		otlp.WithGRPCDialOption(grpc.WithBlock()), // useful for testing
 	)
 	otlpExporter, err := otlp.NewExporter(ctx, driver)
