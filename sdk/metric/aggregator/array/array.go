@@ -68,8 +68,8 @@ func (c *Aggregator) Sum() (number.Number, error) {
 }
 
 // Count returns the number of values in the checkpoint.
-func (c *Aggregator) Count() (int64, error) {
-	return int64(len(c.points)), nil
+func (c *Aggregator) Count() (uint64, error) {
+	return uint64(len(c.points)), nil
 }
 
 // Max returns the maximum value in the checkpoint.
