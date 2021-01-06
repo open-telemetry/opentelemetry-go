@@ -135,11 +135,11 @@ func Example_withDifferentSignalCollectors() {
 	// Set different endpoints for the metrics and traces collectors
 	metricsDriver := otlp.NewGRPCDriver(
 		otlp.WithInsecure(),
-		otlp.WithAddress("localhost:30080"),
+		otlp.WithEndpoint("localhost:30080"),
 	)
 	tracesDriver := otlp.NewGRPCDriver(
 		otlp.WithInsecure(),
-		otlp.WithAddress("localhost:30082"),
+		otlp.WithEndpoint("localhost:30082"),
 	)
 	splitCfg := otlp.SplitConfig{
 		ForMetrics: metricsDriver,
