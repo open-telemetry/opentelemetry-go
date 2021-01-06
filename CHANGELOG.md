@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Documentation about the project's versioning policy. (#1388)
 - `NewSplitDriver` for OTLP exporter that allows sending traces and metrics to different endpoints. (#1418)
 - Add codeql worfklow to GitHub Actions (#1428)
+- Added Gosec workflow to GitHub Actions (#1429)
 
 ### Changed
 
