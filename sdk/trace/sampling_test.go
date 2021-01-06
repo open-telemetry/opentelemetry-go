@@ -230,7 +230,7 @@ func TestTracestateIsPassed(t *testing.T) {
 			}
 			params := SamplingParameters{ParentContext: parentCtx}
 
-			require.Equal(t, traceState, tc.sampler.ShouldSample(params).Tracestate, "traceState is not equal")
+			require.Equal(t, traceState, tc.sampler.ShouldSample(params).Tracestate, "TraceState is not equal")
 		})
 	}
 }
