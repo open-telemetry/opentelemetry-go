@@ -211,6 +211,11 @@ func getWaitDuration(backoff time.Duration, i int) time.Duration {
 	// k * initialBackoff + jitter, where k is a random number in
 	// range [0, 2^n-1), and jitter is a random percentage of
 	// initialBackoff from [-5%, 5%).
+	//
+	// Based on
+	// https://en.wikipedia.org/wiki/Exponential_backoff#Example_exponential_backoff_algorithm
+	//
+	// Jitter is our addition.
 
 	// There won't be an overflow, since i is capped to
 	// DefaultMaxAttempts (5).
