@@ -132,8 +132,10 @@ func (bsp *BatchSpanProcessor) Shutdown(ctx context.Context) error {
 		go func() {
 			close(bsp.stopCh)
 			bsp.stopWait.Wait()
-			if err := bsp.e.Shutdown(ctx); err != nil {
-				otel.Handle(err)
+			if bsp.e != nil {
+				if err := bsp.e.Shutdown(ctx); err != nil {
+					otel.Handle(err)
+				}
 			}
 			close(wait)
 		}()

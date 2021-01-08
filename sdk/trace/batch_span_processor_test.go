@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/trace"
 
 	export "go.opentelemetry.io/otel/sdk/export/trace"
