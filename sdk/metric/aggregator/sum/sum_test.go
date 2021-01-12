@@ -21,7 +21,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	ottest "go.opentelemetry.io/otel/internal/testing"
+	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
