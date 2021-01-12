@@ -69,9 +69,7 @@ func NewUnstartedExporter(driver ProtocolDriver, opts ...ExporterOption) *Export
 }
 
 var (
-	errNoClient       = errors.New("no client")
 	errAlreadyStarted = errors.New("already started")
-	errDisconnected   = errors.New("exporter disconnected")
 )
 
 // Start establishes connections to the OpenTelemetry collector. Starting an
