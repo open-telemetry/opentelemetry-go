@@ -132,11 +132,7 @@ func (tc TraceContext) extract(carrier TextMapCarrier) trace.SpanContext {
 	// Clear all flags other than the trace-context supported sampling bit.
 	sc.TraceFlags = opts[0] & trace.FlagsSampled
 
-	ts, err := parseTraceState(carrier.Get(tracestateHeader))
-	if err != nil {
-		return trace.SpanContext{}
-	}
-	sc.TraceState = ts
+	sc.TraceState = parseTraceState(carrier.Get(tracestateHeader))
 
 	if !sc.IsValid() {
 		return trace.SpanContext{}
@@ -150,15 +146,24 @@ func (tc TraceContext) Fields() []string {
 	return []string{traceparentHeader, tracestateHeader}
 }
 
-func parseTraceState(in string) (trace.TraceState, error) {
+func parseTraceState(in string) trace.TraceState {
 	if in == "" {
-		return trace.TraceState{}, nil
+		return trace.TraceState{}
 	}
 
 	kvs := []label.KeyValue{}
 	for _, entry := range strings.Split(in, ",") {
 		parts := strings.SplitN(entry, "=", 2)
+		if len(parts) != 2 {
+			// Parse failure, abort!
+			return trace.TraceState{}
+		}
 		kvs = append(kvs, label.String(parts[0], parts[1]))
 	}
-	return trace.TraceStateFromKeyValues(kvs...)
+
+	// Ignoring error here as "failure to parse tracestate MUST NOT
+	// affect the parsing of traceparent."
+	// https://www.w3.org/TR/trace-context/#tracestate-header
+	ts, _ := trace.TraceStateFromKeyValues(kvs...)
+	return ts
 }
