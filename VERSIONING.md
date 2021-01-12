@@ -40,9 +40,9 @@ is designed so the following goals can be achieved.
     * Experimental modules will start their versioning at `v0.0.0` and will
       increment their minor version when backwards incompatible changes are
       released and increment their patch version when backwards compatible
-      changes are released.
-    * All stable modules that use the same major version number will use the
-      same entire version number.
+      changes are released. Experimental modules should be developed against
+      the latest stable version of their dependencies.
+    * All stable modules will use the same entire version number.
       * Stable modules may be released with an incremented minor or patch
         version even though that module has not been changed, but rather so
         that it will remain at the same version as other stable modules that
