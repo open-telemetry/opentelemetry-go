@@ -40,7 +40,6 @@ var (
 
 func main() {
 	exporter, err := stdout.NewExporter([]stdout.Option{
-		stdout.WithQuantiles([]float64{0.5, 0.9, 0.99}),
 		stdout.WithPrettyPrint(),
 	}...)
 	if err != nil {
