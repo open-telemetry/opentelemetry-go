@@ -3,8 +3,8 @@ module go.opentelemetry.io/otel
 go 1.14
 
 replace (
-	go.opentelemetry.io/otel/label => ./label
 	go.opentelemetry.io/otel/codes => ./codes
+	go.opentelemetry.io/otel/label => ./label
 )
 
 require (

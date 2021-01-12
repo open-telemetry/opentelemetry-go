@@ -5,8 +5,8 @@ go 1.14
 replace (
 	go.opentelemetry.io/otel => ../..
 	go.opentelemetry.io/otel/bridge/opencensus => ../../bridge/opencensus
-	go.opentelemetry.io/otel/exporters/stdout => ../../exporters/stdout
 	go.opentelemetry.io/otel/codes => ../../codes
+	go.opentelemetry.io/otel/exporters/stdout => ../../exporters/stdout
 	go.opentelemetry.io/otel/label => ../../label
 	go.opentelemetry.io/otel/sdk => ../../sdk
 )
