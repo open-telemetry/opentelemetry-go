@@ -306,7 +306,7 @@ func Record(exportSelector export.ExportKindSelector, r export.Record) (*metricp
 	}
 }
 
-func gaugeArray(record export.Record, samples []aggregation.Point) (*metricpb.Metric, error) {
+func gaugeArray(record export.Record, points []aggregation.Point) (*metricpb.Metric, error) {
 	desc := record.Descriptor()
 	m := &metricpb.Metric{
 		Name:        desc.Name(),
@@ -317,7 +317,7 @@ func gaugeArray(record export.Record, samples []aggregation.Point) (*metricpb.Me
 	switch nk := desc.NumberKind(); nk {
 	case number.Int64Kind:
 		var pts []*metricpb.IntDataPoint
-		for _, s := range samples {
+		for _, s := range points {
 			pts = append(pts, &metricpb.IntDataPoint{
 				Labels:            nil,
 				StartTimeUnixNano: toNanos(record.StartTime()),
@@ -333,7 +333,7 @@ func gaugeArray(record export.Record, samples []aggregation.Point) (*metricpb.Me
 
 	case number.Float64Kind:
 		var pts []*metricpb.DoubleDataPoint
-		for _, s := range samples {
+		for _, s := range points {
 			pts = append(pts, &metricpb.DoubleDataPoint{
 				Labels:            nil,
 				StartTimeUnixNano: toNanos(record.StartTime()),
