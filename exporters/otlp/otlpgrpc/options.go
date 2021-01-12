@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlp // import "go.opentelemetry.io/otel/exporters/otlp"
+package otlpgrpc
 
 import (
 	"time"
@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	// DefaultGRPCServiceConfig is the gRPC service config used if none is
+	// DefaultServiceConfig is the gRPC service config used if none is
 	// provided by the user.
 	//
 	// For more info on gRPC service configs:
@@ -34,7 +34,7 @@ const (
 	// Note: MaxAttempts > 5 are treated as 5. See
 	// https://github.com/grpc/proposal/blob/master/A6-client-retries.md#validation-of-retrypolicy
 	// for more details.
-	DefaultGRPCServiceConfig = `{
+	DefaultServiceConfig = `{
 	"methodConfig":[{
 		"name":[
 			{ "service":"opentelemetry.proto.collector.metrics.v1.MetricsService" },
@@ -46,7 +46,6 @@ const (
 			"MaxBackoff":"5s",
 			"BackoffMultiplier":2,
 			"RetryableStatusCodes":[
-				"UNAVAILABLE",
 				"CANCELLED",
 				"DEADLINE_EXCEEDED",
 				"RESOURCE_EXHAUSTED",
@@ -60,24 +59,25 @@ const (
 }`
 )
 
-type grpcConnectionConfig struct {
+type config struct {
 	canDialInsecure    bool
 	collectorEndpoint  string
 	compressor         string
 	reconnectionPeriod time.Duration
-	grpcServiceConfig  string
-	grpcDialOptions    []grpc.DialOption
+	serviceConfig      string
+	dialOptions        []grpc.DialOption
 	headers            map[string]string
 	clientCredentials  credentials.TransportCredentials
 }
 
-type GRPCConnectionOption func(cfg *grpcConnectionConfig)
+// Option applies an option to the gRPC driver.
+type Option func(cfg *config)
 
 // WithInsecure disables client transport security for the exporter's gRPC connection
 // just like grpc.WithInsecure() https://pkg.go.dev/google.golang.org/grpc#WithInsecure
 // does. Note, by default, client security is required unless WithInsecure is used.
-func WithInsecure() GRPCConnectionOption {
-	return func(cfg *grpcConnectionConfig) {
+func WithInsecure() Option {
+	return func(cfg *config) {
 		cfg.canDialInsecure = true
 	}
 }
@@ -85,16 +85,16 @@ func WithInsecure() GRPCConnectionOption {
 // WithEndpoint allows one to set the endpoint that the exporter will
 // connect to the collector on. If unset, it will instead try to use
 // connect to DefaultCollectorHost:DefaultCollectorPort.
-func WithEndpoint(endpoint string) GRPCConnectionOption {
-	return func(cfg *grpcConnectionConfig) {
+func WithEndpoint(endpoint string) Option {
+	return func(cfg *config) {
 		cfg.collectorEndpoint = endpoint
 	}
 }
 
 // WithReconnectionPeriod allows one to set the delay between next connection attempt
 // after failing to connect with the collector.
-func WithReconnectionPeriod(rp time.Duration) GRPCConnectionOption {
-	return func(cfg *grpcConnectionConfig) {
+func WithReconnectionPeriod(rp time.Duration) Option {
+	return func(cfg *config) {
 		cfg.reconnectionPeriod = rp
 	}
 }
@@ -104,15 +104,15 @@ func WithReconnectionPeriod(rp time.Duration) GRPCConnectionOption {
 // with google.golang.org/grpc/encoding. This can be done by encoding.RegisterCompressor. Some
 // compressors auto-register on import, such as gzip, which can be registered by calling
 // `import _ "google.golang.org/grpc/encoding/gzip"`
-func WithCompressor(compressor string) GRPCConnectionOption {
-	return func(cfg *grpcConnectionConfig) {
+func WithCompressor(compressor string) Option {
+	return func(cfg *config) {
 		cfg.compressor = compressor
 	}
 }
 
 // WithHeaders will send the provided headers with gRPC requests
-func WithHeaders(headers map[string]string) GRPCConnectionOption {
-	return func(cfg *grpcConnectionConfig) {
+func WithHeaders(headers map[string]string) Option {
+	return func(cfg *config) {
 		cfg.headers = headers
 	}
 }
@@ -122,24 +122,24 @@ func WithHeaders(headers map[string]string) GRPCConnectionOption {
 // of say a Certificate file or a tls.Certificate, because the retrieving
 // these credentials can be done in many ways e.g. plain file, in code tls.Config
 // or by certificate rotation, so it is up to the caller to decide what to use.
-func WithTLSCredentials(creds credentials.TransportCredentials) GRPCConnectionOption {
-	return func(cfg *grpcConnectionConfig) {
+func WithTLSCredentials(creds credentials.TransportCredentials) Option {
+	return func(cfg *config) {
 		cfg.clientCredentials = creds
 	}
 }
 
-// WithGRPCServiceConfig defines the default gRPC service config used.
-func WithGRPCServiceConfig(serviceConfig string) GRPCConnectionOption {
-	return func(cfg *grpcConnectionConfig) {
-		cfg.grpcServiceConfig = serviceConfig
+// WithServiceConfig defines the default gRPC service config used.
+func WithServiceConfig(serviceConfig string) Option {
+	return func(cfg *config) {
+		cfg.serviceConfig = serviceConfig
 	}
 }
 
-// WithGRPCDialOption opens support to any grpc.DialOption to be used. If it conflicts
+// WithDialOption opens support to any grpc.DialOption to be used. If it conflicts
 // with some other configuration the GRPC specified via the collector the ones here will
 // take preference since they are set last.
-func WithGRPCDialOption(opts ...grpc.DialOption) GRPCConnectionOption {
-	return func(cfg *grpcConnectionConfig) {
-		cfg.grpcDialOptions = opts
+func WithDialOption(opts ...grpc.DialOption) Option {
+	return func(cfg *config) {
+		cfg.dialOptions = opts
 	}
 }

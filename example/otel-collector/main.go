@@ -27,6 +27,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
@@ -49,10 +50,10 @@ func initProvider() func() {
 	// `localhost:30080` endpoint. Otherwise, replace `localhost` with the
 	// endpoint of your cluster. If you run the app inside k8s, then you can
 	// probably connect directly to the service through dns
-	driver := otlp.NewGRPCDriver(
-		otlp.WithInsecure(),
-		otlp.WithEndpoint("localhost:30080"),
-		otlp.WithGRPCDialOption(grpc.WithBlock()), // useful for testing
+	driver := otlpgrpc.NewDriver(
+		otlpgrpc.WithInsecure(),
+		otlpgrpc.WithEndpoint("localhost:30080"),
+		otlpgrpc.WithDialOption(grpc.WithBlock()), // useful for testing
 	)
 	exp, err := otlp.NewExporter(ctx, driver)
 	handleErr(err, "failed to create exporter")

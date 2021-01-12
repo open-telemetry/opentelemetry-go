@@ -12,15 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlp // import "go.opentelemetry.io/otel/exporters/otlp"
+package otlpgrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
 	"google.golang.org/grpc"
 
+	"go.opentelemetry.io/otel/exporters/otlp"
 	colmetricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/metrics/v1"
 	coltracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/trace/v1"
 	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
@@ -30,28 +32,34 @@ import (
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
-type grpcDriver struct {
-	connection *grpcConnection
+type driver struct {
+	connection *connection
 
 	lock          sync.Mutex
 	metricsClient colmetricpb.MetricsServiceClient
 	tracesClient  coltracepb.TraceServiceClient
 }
 
-func NewGRPCDriver(opts ...GRPCConnectionOption) ProtocolDriver {
-	cfg := grpcConnectionConfig{
-		collectorEndpoint: fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorPort),
-		grpcServiceConfig: DefaultGRPCServiceConfig,
+var (
+	errNoClient     = errors.New("no client")
+	errDisconnected = errors.New("exporter disconnected")
+)
+
+// NewDriver creates a new gRPC protocol driver.
+func NewDriver(opts ...Option) otlp.ProtocolDriver {
+	cfg := config{
+		collectorEndpoint: fmt.Sprintf("%s:%d", otlp.DefaultCollectorHost, otlp.DefaultCollectorPort),
+		serviceConfig:     DefaultServiceConfig,
 	}
 	for _, opt := range opts {
 		opt(&cfg)
 	}
-	d := &grpcDriver{}
-	d.connection = newGRPCConnection(cfg, d.handleNewConnection)
+	d := &driver{}
+	d.connection = newConnection(cfg, d.handleNewConnection)
 	return d
 }
 
-func (d *grpcDriver) handleNewConnection(cc *grpc.ClientConn) {
+func (d *driver) handleNewConnection(cc *grpc.ClientConn) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 	if cc != nil {
@@ -63,16 +71,22 @@ func (d *grpcDriver) handleNewConnection(cc *grpc.ClientConn) {
 	}
 }
 
-func (d *grpcDriver) Start(ctx context.Context) error {
+// Start implements otlp.ProtocolDriver. It establishes a connection
+// to the collector.
+func (d *driver) Start(ctx context.Context) error {
 	d.connection.startConnection(ctx)
 	return nil
 }
 
-func (d *grpcDriver) Stop(ctx context.Context) error {
+// Stop implements otlp.ProtocolDriver. It shuts down the connection
+// to the collector.
+func (d *driver) Stop(ctx context.Context) error {
 	return d.connection.shutdown(ctx)
 }
 
-func (d *grpcDriver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error {
+// ExportMetrics implements otlp.ProtocolDriver. It transforms metrics
+// to protobuf binary format and sends the result to the collector.
+func (d *driver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error {
 	if !d.connection.connected() {
 		return errDisconnected
 	}
@@ -90,7 +104,7 @@ func (d *grpcDriver) ExportMetrics(ctx context.Context, cps metricsdk.Checkpoint
 	return d.uploadMetrics(ctx, rms)
 }
 
-func (d *grpcDriver) uploadMetrics(ctx context.Context, protoMetrics []*metricpb.ResourceMetrics) error {
+func (d *driver) uploadMetrics(ctx context.Context, protoMetrics []*metricpb.ResourceMetrics) error {
 	ctx = d.connection.contextWithMetadata(ctx)
 	err := func() error {
 		d.lock.Lock()
@@ -109,7 +123,9 @@ func (d *grpcDriver) uploadMetrics(ctx context.Context, protoMetrics []*metricpb
 	return err
 }
 
-func (d *grpcDriver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
+// ExportTraces implements otlp.ProtocolDriver. It transforms spans to
+// protobuf binary format and sends the result to the collector.
+func (d *driver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
 	if !d.connection.connected() {
 		return errDisconnected
 	}
@@ -124,7 +140,7 @@ func (d *grpcDriver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapsh
 	return d.uploadTraces(ctx, protoSpans)
 }
 
-func (d *grpcDriver) uploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) error {
+func (d *driver) uploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) error {
 	ctx = d.connection.contextWithMetadata(ctx)
 	err := func() error {
 		d.lock.Lock()
