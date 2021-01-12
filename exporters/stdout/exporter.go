@@ -61,7 +61,7 @@ func NewExportPipeline(exportOpts []Option, pushOpts []controller.Option) (trace
 	tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(exporter))
 	pusher := controller.New(
 		processor.New(
-			simple.NewWithExactDistribution(),
+			simple.NewWithInexpensiveDistribution(),
 			exporter,
 		),
 		append(

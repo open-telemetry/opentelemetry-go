@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package array
+package exact
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -34,23 +34,13 @@ type updateTest struct {
 }
 
 func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
-	kind := desc.NumberKind()
-
-	sum, err := agg.Sum()
-	require.NoError(t, err)
-	require.Equal(t, kind.Zero(), sum)
-
 	count, err := agg.Count()
 	require.NoError(t, err)
 	require.Equal(t, uint64(0), count)
 
-	max, err := agg.Max()
-	require.True(t, errors.Is(err, aggregation.ErrNoData))
-	require.Equal(t, kind.Zero(), max)
-
-	min, err := agg.Min()
-	require.True(t, errors.Is(err, aggregation.ErrNoData))
-	require.Equal(t, kind.Zero(), min)
+	pts, err := agg.Points()
+	require.NoError(t, err)
+	require.Equal(t, 0, len(pts))
 }
 
 func new2() (_, _ *Aggregator) {
@@ -61,6 +51,14 @@ func new2() (_, _ *Aggregator) {
 func new4() (_, _, _, _ *Aggregator) {
 	alloc := New(4)
 	return &alloc[0], &alloc[1], &alloc[2], &alloc[3]
+}
+
+func sumOf(samples []aggregation.Point, k number.Kind) number.Number {
+	var n number.Number
+	for _, s := range samples {
+		n.AddNumber(k, s.Number)
+	}
+	return n
 }
 
 func (ut *updateTest) run(t *testing.T, profile aggregatortest.Profile) {
@@ -86,32 +84,21 @@ func (ut *updateTest) run(t *testing.T, profile aggregatortest.Profile) {
 
 	all.Sort()
 
-	sum, err := ckpt.Sum()
+	pts, err := ckpt.Points()
 	require.Nil(t, err)
+	sum := sumOf(pts, profile.NumberKind)
 	allSum := all.Sum()
 	require.InEpsilon(t,
-		(&allSum).CoerceToFloat64(profile.NumberKind),
+		allSum.CoerceToFloat64(profile.NumberKind),
 		sum.CoerceToFloat64(profile.NumberKind),
 		0.0000001,
 		"Same sum")
 	count, err := ckpt.Count()
 	require.Nil(t, err)
 	require.Equal(t, all.Count(), count, "Same count")
-
-	min, err := ckpt.Min()
-	require.Nil(t, err)
-	require.Equal(t, all.Min(), min, "Same min")
-
-	max, err := ckpt.Max()
-	require.Nil(t, err)
-	require.Equal(t, all.Max(), max, "Same max")
-
-	qx, err := ckpt.Quantile(0.5)
-	require.Nil(t, err)
-	require.Equal(t, all.Median(), qx, "Same median")
 }
 
-func TestArrayUpdate(t *testing.T) {
+func TestExactUpdate(t *testing.T) {
 	// Test with an odd an even number of measurements
 	for count := 999; count <= 1000; count++ {
 		t.Run(fmt.Sprint("Odd=", count%2 == 1), func(t *testing.T) {
@@ -164,34 +151,32 @@ func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
 
 	aggregatortest.CheckedMerge(t, ckpt1, ckpt2, descriptor)
 
-	all.Sort()
-
-	sum, err := ckpt1.Sum()
+	pts, err := ckpt1.Points()
 	require.Nil(t, err)
+
+	received := aggregatortest.NewNumbers(profile.NumberKind)
+	for i, s := range pts {
+		received.Append(s.Number)
+
+		if i > 0 {
+			require.True(t, pts[i-1].Time.Before(pts[i].Time))
+		}
+	}
+
 	allSum := all.Sum()
+	sum := sumOf(pts, profile.NumberKind)
 	require.InEpsilon(t,
-		(&allSum).CoerceToFloat64(profile.NumberKind),
+		allSum.CoerceToFloat64(profile.NumberKind),
 		sum.CoerceToFloat64(profile.NumberKind),
 		0.0000001,
 		"Same sum - absolute")
 	count, err := ckpt1.Count()
 	require.Nil(t, err)
 	require.Equal(t, all.Count(), count, "Same count - absolute")
-
-	min, err := ckpt1.Min()
-	require.Nil(t, err)
-	require.Equal(t, all.Min(), min, "Same min - absolute")
-
-	max, err := ckpt1.Max()
-	require.Nil(t, err)
-	require.Equal(t, all.Max(), max, "Same max - absolute")
-
-	qx, err := ckpt1.Quantile(0.5)
-	require.Nil(t, err)
-	require.Equal(t, all.Median(), qx, "Same median - absolute")
+	require.Equal(t, all, received, "Same ordered contents")
 }
 
-func TestArrayMerge(t *testing.T) {
+func TestExactMerge(t *testing.T) {
 	// Test with an odd an even number of measurements
 	for count := 999; count <= 1000; count++ {
 		t.Run(fmt.Sprint("Odd=", count%2 == 1), func(t *testing.T) {
@@ -211,21 +196,9 @@ func TestArrayMerge(t *testing.T) {
 	}
 }
 
-func TestArrayErrors(t *testing.T) {
+func TestExactErrors(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg, ckpt := new2()
-
-		_, err := ckpt.Max()
-		require.Error(t, err)
-		require.Equal(t, err, aggregation.ErrNoData)
-
-		_, err = ckpt.Min()
-		require.Error(t, err)
-		require.Equal(t, err, aggregation.ErrNoData)
-
-		_, err = ckpt.Quantile(0.1)
-		require.Error(t, err)
-		require.Equal(t, err, aggregation.ErrNoData)
 
 		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 
@@ -239,22 +212,10 @@ func TestArrayErrors(t *testing.T) {
 		count, err := ckpt.Count()
 		require.Equal(t, uint64(1), count, "NaN value was not counted")
 		require.Nil(t, err)
-
-		num, err := ckpt.Quantile(0)
-		require.Nil(t, err)
-		require.Equal(t, num, number.Number(0))
-
-		_, err = ckpt.Quantile(-0.0001)
-		require.Error(t, err)
-		require.True(t, errors.Is(err, aggregation.ErrInvalidQuantile))
-
-		_, err = agg.Quantile(1.0001)
-		require.Error(t, err)
-		require.True(t, errors.Is(err, aggregation.ErrNoData))
 	})
 }
 
-func TestArrayFloat64(t *testing.T) {
+func TestExactFloat64(t *testing.T) {
 	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, number.Float64Kind)
 
 	fpsf := func(sign int) []float64 {
@@ -288,6 +249,8 @@ func TestArrayFloat64(t *testing.T) {
 
 	agg, ckpt := new2()
 
+	startTime := time.Now()
+
 	for _, f := range fpsf(1) {
 		all.Append(number.NewFloat64Number(f))
 		aggregatortest.CheckedUpdate(t, agg, number.NewFloat64Number(f), descriptor)
@@ -298,37 +261,32 @@ func TestArrayFloat64(t *testing.T) {
 		aggregatortest.CheckedUpdate(t, agg, number.NewFloat64Number(f), descriptor)
 	}
 
+	endTime := time.Now()
+
 	require.NoError(t, agg.SynchronizedMove(ckpt, descriptor))
 
-	all.Sort()
-
-	sum, err := ckpt.Sum()
+	pts, err := ckpt.Points()
 	require.Nil(t, err)
+
 	allSum := all.Sum()
-	require.InEpsilon(t, (&allSum).AsFloat64(), sum.AsFloat64(), 0.0000001, "Same sum")
+	sum := sumOf(pts, number.Float64Kind)
+	require.InEpsilon(t, allSum.AsFloat64(), sum.AsFloat64(), 0.0000001, "Same sum")
 
 	count, err := ckpt.Count()
 	require.Equal(t, all.Count(), count, "Same count")
 	require.Nil(t, err)
 
-	min, err := ckpt.Min()
-	require.Nil(t, err)
-	require.Equal(t, all.Min(), min, "Same min")
-
-	max, err := ckpt.Max()
-	require.Nil(t, err)
-	require.Equal(t, all.Max(), max, "Same max")
-
-	qx, err := ckpt.Quantile(0.5)
-	require.Nil(t, err)
-	require.Equal(t, all.Median(), qx, "Same median")
-
 	po, err := ckpt.Points()
 	require.Nil(t, err)
 	require.Equal(t, all.Len(), len(po), "Points() must have same length of updates")
 	for i := 0; i < len(po); i++ {
-		require.Equal(t, all.Points()[i], po[i], "Wrong point at position %d", i)
+		require.Equal(t, all.Points()[i], po[i].Number, "Wrong point at position %d", i)
+		if i > 0 {
+			require.True(t, po[i-1].Time.Before(po[i].Time))
+		}
 	}
+	require.True(t, po[0].Time.After(startTime))
+	require.True(t, po[len(po)-1].Time.Before(endTime))
 }
 
 func TestSynchronizedMoveReset(t *testing.T) {
@@ -339,4 +297,61 @@ func TestSynchronizedMoveReset(t *testing.T) {
 			return &New(1)[0]
 		},
 	)
+}
+
+func TestMergeBehavior(t *testing.T) {
+	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
+		for _, forward := range []bool{false, true} {
+			t.Run(fmt.Sprint("Forward=", forward), func(t *testing.T) {
+				descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
+				agg1, agg2, ckpt, _ := new4()
+
+				all := aggregatortest.NewNumbers(profile.NumberKind)
+
+				for i := 0; i < 100; i++ {
+					x1 := profile.Random(+1)
+					all.Append(x1)
+					aggregatortest.CheckedUpdate(t, agg1, x1, descriptor)
+				}
+
+				for i := 0; i < 100; i++ {
+					x2 := profile.Random(+1)
+					all.Append(x2)
+					aggregatortest.CheckedUpdate(t, agg2, x2, descriptor)
+				}
+
+				if forward {
+					aggregatortest.CheckedMerge(t, ckpt, agg1, descriptor)
+					aggregatortest.CheckedMerge(t, ckpt, agg2, descriptor)
+				} else {
+					aggregatortest.CheckedMerge(t, ckpt, agg2, descriptor)
+					aggregatortest.CheckedMerge(t, ckpt, agg1, descriptor)
+				}
+
+				pts, err := ckpt.Points()
+				require.NoError(t, err)
+
+				received := aggregatortest.NewNumbers(profile.NumberKind)
+				for i, s := range pts {
+					received.Append(s.Number)
+
+					if i > 0 {
+						require.True(t, pts[i-1].Time.Before(pts[i].Time))
+					}
+				}
+
+				allSum := all.Sum()
+				sum := sumOf(pts, profile.NumberKind)
+				require.InEpsilon(t,
+					allSum.CoerceToFloat64(profile.NumberKind),
+					sum.CoerceToFloat64(profile.NumberKind),
+					0.0000001,
+					"Same sum - absolute")
+				count, err := ckpt.Count()
+				require.NoError(t, err)
+				require.Equal(t, all.Count(), count, "Same count - absolute")
+				require.Equal(t, all, received, "Same ordered contents")
+			})
+		}
+	})
 }
