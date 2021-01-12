@@ -12,13 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlp_test
+package otlpgrpc_test
 
 import (
 	"context"
 	"fmt"
 	"net"
-	"sort"
 	"sync"
 	"testing"
 	"time"
@@ -28,121 +27,73 @@ import (
 
 	collectormetricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/metrics/v1"
 	collectortracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/trace/v1"
-	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
 	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
-	resourcepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/resource/v1"
 	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
+	"go.opentelemetry.io/otel/exporters/otlp/internal/otlptest"
 )
 
 func makeMockCollector(t *testing.T) *mockCollector {
 	return &mockCollector{
 		t: t,
 		traceSvc: &mockTraceService{
-			rsm: map[string]*tracepb.ResourceSpans{},
+			storage: otlptest.NewSpansStorage(),
 		},
-		metricSvc: &mockMetricService{},
+		metricSvc: &mockMetricService{
+			storage: otlptest.NewMetricsStorage(),
+		},
 	}
 }
 
 type mockTraceService struct {
 	mu      sync.RWMutex
-	rsm     map[string]*tracepb.ResourceSpans
+	storage otlptest.SpansStorage
 	headers metadata.MD
 }
 
 func (mts *mockTraceService) getHeaders() metadata.MD {
+	mts.mu.RLock()
+	defer mts.mu.RUnlock()
 	return mts.headers
 }
 
 func (mts *mockTraceService) getSpans() []*tracepb.Span {
 	mts.mu.RLock()
 	defer mts.mu.RUnlock()
-	spans := []*tracepb.Span{}
-	for _, rs := range mts.rsm {
-		spans = append(spans, rs.InstrumentationLibrarySpans[0].Spans...)
-	}
-	return spans
+	return mts.storage.GetSpans()
 }
 
 func (mts *mockTraceService) getResourceSpans() []*tracepb.ResourceSpans {
 	mts.mu.RLock()
 	defer mts.mu.RUnlock()
-	rss := make([]*tracepb.ResourceSpans, 0, len(mts.rsm))
-	for _, rs := range mts.rsm {
-		rss = append(rss, rs)
-	}
-	return rss
+	return mts.storage.GetResourceSpans()
 }
 
 func (mts *mockTraceService) Export(ctx context.Context, exp *collectortracepb.ExportTraceServiceRequest) (*collectortracepb.ExportTraceServiceResponse, error) {
+	reply := &collectortracepb.ExportTraceServiceResponse{}
 	mts.mu.Lock()
-	mts.headers, _ = metadata.FromIncomingContext(ctx)
 	defer mts.mu.Unlock()
-	rss := exp.GetResourceSpans()
-	for _, rs := range rss {
-		rstr := resourceString(rs.Resource)
-		existingRs, ok := mts.rsm[rstr]
-		if !ok {
-			mts.rsm[rstr] = rs
-			// TODO (rghetia): Add support for library Info.
-			if len(rs.InstrumentationLibrarySpans) == 0 {
-				rs.InstrumentationLibrarySpans = []*tracepb.InstrumentationLibrarySpans{
-					{
-						Spans: []*tracepb.Span{},
-					},
-				}
-			}
-		} else {
-			if len(rs.InstrumentationLibrarySpans) > 0 {
-				existingRs.InstrumentationLibrarySpans[0].Spans =
-					append(existingRs.InstrumentationLibrarySpans[0].Spans,
-						rs.InstrumentationLibrarySpans[0].GetSpans()...)
-			}
-		}
-	}
-	return &collectortracepb.ExportTraceServiceResponse{}, nil
-}
-
-func resourceString(res *resourcepb.Resource) string {
-	sAttrs := sortedAttributes(res.GetAttributes())
-	rstr := ""
-	for _, attr := range sAttrs {
-		rstr = rstr + attr.String()
-
-	}
-	return rstr
-}
-
-func sortedAttributes(attrs []*commonpb.KeyValue) []*commonpb.KeyValue {
-	sort.Slice(attrs[:], func(i, j int) bool {
-		return attrs[i].Key < attrs[j].Key
-	})
-	return attrs
+	mts.headers, _ = metadata.FromIncomingContext(ctx)
+	mts.storage.AddSpans(exp)
+	return reply, nil
 }
 
 type mockMetricService struct {
 	mu      sync.RWMutex
-	metrics []*metricpb.Metric
+	storage otlptest.MetricsStorage
 }
 
 func (mms *mockMetricService) getMetrics() []*metricpb.Metric {
-	// copy in order to not change.
-	m := make([]*metricpb.Metric, 0, len(mms.metrics))
 	mms.mu.RLock()
 	defer mms.mu.RUnlock()
-	return append(m, mms.metrics...)
+	return mms.storage.GetMetrics()
 }
 
 func (mms *mockMetricService) Export(ctx context.Context, exp *collectormetricpb.ExportMetricsServiceRequest) (*collectormetricpb.ExportMetricsServiceResponse, error) {
+	reply := &collectormetricpb.ExportMetricsServiceResponse{}
 	mms.mu.Lock()
-	for _, rm := range exp.GetResourceMetrics() {
-		// TODO (rghetia) handle multiple resource and library info.
-		if len(rm.InstrumentationLibraryMetrics) > 0 {
-			mms.metrics = append(mms.metrics, rm.InstrumentationLibraryMetrics[0].Metrics...)
-		}
-	}
-	mms.mu.Unlock()
-	return &collectormetricpb.ExportMetricsServiceResponse{}, nil
+	defer mms.mu.Unlock()
+	mms.storage.AddMetrics(exp)
+	return reply, nil
 }
 
 type mockCollector struct {
@@ -191,6 +142,10 @@ func (mc *mockCollector) stop() error {
 	return err
 }
 
+func (mc *mockCollector) Stop() error {
+	return mc.stop()
+}
+
 func (mc *mockCollector) getSpans() []*tracepb.Span {
 	return mc.traceSvc.getSpans()
 }
@@ -199,12 +154,20 @@ func (mc *mockCollector) getResourceSpans() []*tracepb.ResourceSpans {
 	return mc.traceSvc.getResourceSpans()
 }
 
+func (mc *mockCollector) GetResourceSpans() []*tracepb.ResourceSpans {
+	return mc.getResourceSpans()
+}
+
 func (mc *mockCollector) getHeaders() metadata.MD {
 	return mc.traceSvc.getHeaders()
 }
 
 func (mc *mockCollector) getMetrics() []*metricpb.Metric {
 	return mc.metricSvc.getMetrics()
+}
+
+func (mc *mockCollector) GetMetrics() []*metricpb.Metric {
+	return mc.getMetrics()
 }
 
 // runMockCollector is a helper function to create a mock Collector
