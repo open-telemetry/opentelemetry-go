@@ -215,3 +215,15 @@ indicate the addition of new signal).
 * `otel/baggage`: `v1.1.0`
 * `otel/sdk/trace`: `v1.1.0`
 * `otel/sdk/metric`: `v1.1.0`
+
+Eventually, an API-breaking change becomes necessary in `otel/metric`, so we
+increment that module to `otel/metric/v2`. To keep versions consistent across
+all stable modules, we increment the others as well. (For brevity, we've
+omitted any RCs created as part of this process.)
+
+* `otel/v2`: `v2.0.0`
+* `otel/trace/v2`: `v2.0.0`
+* `otel/metric/v2`: `v2.0.0`
+* `otel/baggage/v2`: `v2.0.0`
+* `otel/sdk/trace/v2`: `v2.0.0`
+* `otel/sdk/metric/v2`: `v2.0.0`
