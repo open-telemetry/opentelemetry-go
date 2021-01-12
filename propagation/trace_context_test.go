@@ -280,7 +280,10 @@ func TestTraceStatePropagation(t *testing.T) {
 	prop := propagation.TraceContext{}
 	stateHeader := "tracestate"
 	parentHeader := "traceparent"
-	state, _ := trace.TraceStateFromKeyValues(label.String("key1", "value1"), label.String("key2", "value2"))
+	state, err := trace.TraceStateFromKeyValues(label.String("key1", "value1"), label.String("key2", "value2"))
+	if err != nil {
+		t.Fatalf("Unable to construct expected TraceState: %s", err.Error())
+	}
 
 	tests := []struct {
 		name    string
