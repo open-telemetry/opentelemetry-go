@@ -35,6 +35,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Metric aggregator Count() and histogram Bucket.Counts are consistently `uint64`. (1430)
 - `SamplingResult` now passed a `Tracestate` from the parent `SpanContext` (#1432)
 - Moved gRPC driver for OTLP exporter to `exporters/otlp/otlpgrpc`. (#1420)
+- The following packages were moved into independently versioned modules in preparation for GA:
+  - otel/codes
+  - otel/label
 
 ### Removed
 
