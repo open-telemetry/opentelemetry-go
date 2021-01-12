@@ -4,6 +4,7 @@ go 1.14
 
 replace (
 	go.opentelemetry.io/otel => ../..
+	go.opentelemetry.io/otel/codes => ../../codes
 	go.opentelemetry.io/otel/label => ../../label
 	go.opentelemetry.io/otel/sdk => ../../sdk
 )
@@ -13,6 +14,7 @@ require (
 	github.com/google/go-cmp v0.5.4
 	github.com/stretchr/testify v1.6.1
 	go.opentelemetry.io/otel v0.15.0
+	go.opentelemetry.io/otel/codes v0.1.0
 	go.opentelemetry.io/otel/label v0.1.0
 	go.opentelemetry.io/otel/sdk v0.15.0
 	golang.org/x/net v0.0.0-20191002035440-2ec189313ef0 // indirect
