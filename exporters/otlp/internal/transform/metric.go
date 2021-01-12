@@ -306,7 +306,7 @@ func Record(exportSelector export.ExportKindSelector, r export.Record) (*metricp
 	}
 }
 
-func gaugeArray(record export.Record, points []number.Number) (*metricpb.Metric, error) {
+func gaugeArray(record export.Record, points []aggregation.Point) (*metricpb.Metric, error) {
 	desc := record.Descriptor()
 	m := &metricpb.Metric{
 		Name:        desc.Name(),
@@ -314,15 +314,15 @@ func gaugeArray(record export.Record, points []number.Number) (*metricpb.Metric,
 		Unit:        string(desc.Unit()),
 	}
 
-	switch n := desc.NumberKind(); n {
+	switch nk := desc.NumberKind(); nk {
 	case number.Int64Kind:
 		var pts []*metricpb.IntDataPoint
-		for _, p := range points {
+		for _, s := range points {
 			pts = append(pts, &metricpb.IntDataPoint{
 				Labels:            nil,
 				StartTimeUnixNano: toNanos(record.StartTime()),
 				TimeUnixNano:      toNanos(record.EndTime()),
-				Value:             p.CoerceToInt64(n),
+				Value:             s.Number.CoerceToInt64(nk),
 			})
 		}
 		m.Data = &metricpb.Metric_IntGauge{
@@ -333,12 +333,12 @@ func gaugeArray(record export.Record, points []number.Number) (*metricpb.Metric,
 
 	case number.Float64Kind:
 		var pts []*metricpb.DoubleDataPoint
-		for _, p := range points {
+		for _, s := range points {
 			pts = append(pts, &metricpb.DoubleDataPoint{
 				Labels:            nil,
 				StartTimeUnixNano: toNanos(record.StartTime()),
 				TimeUnixNano:      toNanos(record.EndTime()),
-				Value:             p.CoerceToFloat64(n),
+				Value:             s.Number.CoerceToFloat64(nk),
 			})
 		}
 		m.Data = &metricpb.Metric_DoubleGauge{
@@ -348,7 +348,7 @@ func gaugeArray(record export.Record, points []number.Number) (*metricpb.Metric,
 		}
 
 	default:
-		return nil, fmt.Errorf("%w: %v", ErrUnknownValueType, n)
+		return nil, fmt.Errorf("%w: %v", ErrUnknownValueType, nk)
 	}
 
 	return m, nil

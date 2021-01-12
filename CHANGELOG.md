@@ -26,6 +26,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Improve span duration accuracy. (#1360)
 - Migrated CI/CD from CircleCI to GitHub Actions (#1382)
 - Remove duplicate checkout from GitHub Actions workflow (#1407)
+- Metric `array` aggregator renamed `exact` to match its `aggregation.Kind` (#1412)
+- Metric `exact` aggregator includes per-point timestamps (#1412)
+- Metric stdout exporter uses MinMaxSumCount aggregator for ValueRecorder instruments (#1412)
 - `NewExporter` from `exporters/otlp` now takes a `ProtocolDriver` as a parameter. (#1369)
 - Many OTLP Exporter options became gRPC ProtocolDriver options. (#1369)
 - Unify endpoint API that related to OTel exporter. (#1401)
@@ -36,6 +39,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - Remove `errUninitializedSpan` as its only usage is now obsolete. (#1360)
+- Remove Metric export functionality related to quantiles and summary data points: this is not specified (#1412)
+- Remove DDSketch metric aggregator; our intention is to re-introduce this as an option of the histogram aggregator after [new OTLP histogram data types](https://github.com/open-telemetry/opentelemetry-proto/pull/226) are released (#1412)
 
 ## [0.15.0] - 2020-12-10
 

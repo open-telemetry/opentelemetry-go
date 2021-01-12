@@ -77,7 +77,6 @@ func multiply(ctx context.Context, x, y int64) int64 {
 
 func Example() {
 	exportOpts := []stdout.Option{
-		stdout.WithQuantiles([]float64{0.5}),
 		stdout.WithPrettyPrint(),
 	}
 	// Registers both a trace and meter Provider globally.
