@@ -84,7 +84,7 @@ func initMeter() {
 	otel.SetMeterProvider(cont.MeterProvider())
 
 	log.Println("Prometheus server running on :17000")
-	log.Println("Exporting OTLP to :17001")
+	log.Println("Exporting OTLP to :30080")
 }
 
 func main() {
