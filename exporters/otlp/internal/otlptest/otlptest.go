@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/exporters/otlp"
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
@@ -28,7 +29,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	exportmetric "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -75,10 +76,10 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlp.Exporter, mcTr
 
 	selector := simple.NewWithInexpensiveDistribution()
 	processor := processor.New(selector, exportmetric.StatelessExportKindSelector())
-	pusher := push.New(processor, exp)
-	pusher.Start()
+	cont := controller.New(processor, controller.WithPusher(exp))
+	require.NoError(t, cont.Start(ctx))
 
-	meter := pusher.MeterProvider().Meter("test-meter")
+	meter := cont.MeterProvider().Meter("test-meter")
 	labels := []label.KeyValue{label.Bool("test", true)}
 
 	type data struct {
@@ -137,7 +138,7 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlp.Exporter, mcTr
 	}
 
 	// Flush and close.
-	pusher.Stop()
+	require.NoError(t, cont.Stop(ctx))
 	func() {
 		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
