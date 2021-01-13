@@ -36,6 +36,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `SamplingResult` now passed a `Tracestate` from the parent `SpanContext` (#1432)
 - Moved gRPC driver for OTLP exporter to `exporters/otlp/otlpgrpc`. (#1420)
 - The `TraceContext` propagator now correctly propagates `TraceState` through the `SpanContext`. (#1447)
+- The `Event` type is moved from the `otel/sdk/export/trace` package to the `otel/trace` API package. (#1452)
 
 ### Removed
 
