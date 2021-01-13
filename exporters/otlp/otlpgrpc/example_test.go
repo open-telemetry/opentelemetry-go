@@ -26,8 +26,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -179,24 +179,33 @@ func Example_withDifferentSignalCollectors() {
 	}()
 	otel.SetTracerProvider(tp)
 
-	pusher := push.New(
-		basic.New(
+	pusher := controller.New(
+		processor.New(
 			simple.NewWithExactDistribution(),
 			exp,
 		),
-		exp,
-		push.WithPeriod(2*time.Second),
+		controller.WithPusher(exp),
+		controller.WithCollectPeriod(2*time.Second),
 	)
 	otel.SetMeterProvider(pusher.MeterProvider())
 
-	pusher.Start()
-	defer pusher.Stop() // pushes any last exports to the receiver
+	if err := pusher.Start(ctx); err != nil {
+		log.Fatalf("could not start metric controoler: %v", err)
+	}
+	defer func() {
+		ctx, cancel := context.WithTimeout(ctx, time.Second)
+		defer cancel()
+		// pushes any last exports to the receiver
+		if err := pusher.Stop(ctx); err != nil {
+			otel.Handle(err)
+		}
+	}()
 
 	tracer := otel.Tracer("test-tracer")
 	meter := otel.Meter("test-meter")
 
 	// Recorder metric example
-	valuerecorder := metric.Must(meter).
+	counter := metric.Must(meter).
 		NewFloat64Counter(
 			"an_important_metric",
 			metric.WithDescription("Measures the cumulative epicness of the app"),
@@ -210,7 +219,7 @@ func Example_withDifferentSignalCollectors() {
 	for i := 0; i < 10; i++ {
 		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))
 		log.Printf("Doing really hard work (%d / 10)\n", i+1)
-		valuerecorder.Add(ctx, 1.0)
+		counter.Add(ctx, 1.0)
 
 		<-time.After(time.Second)
 		iSpan.End()

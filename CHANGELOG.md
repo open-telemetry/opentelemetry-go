@@ -36,6 +36,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `SamplingResult` now passed a `Tracestate` from the parent `SpanContext` (#1432)
 - Moved gRPC driver for OTLP exporter to `exporters/otlp/otlpgrpc`. (#1420)
 - The `TraceContext` propagator now correctly propagates `TraceState` through the `SpanContext`. (#1447)
+- Metric Push and Pull Controller components are combined into a single "basic" Controller:
+  - `WithExporter()` and `Start()` to configure Push behavior
+  - `Start()` is optional; use `Collect()` and `ForEach()` for Pull behavior
+  - `Start()` and `Stop()` accept Context. (#1378)
 
 ### Removed
 
@@ -57,7 +61,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Moved the SDK's `internal.IDGenerator` interface in to the `sdk/trace` package to enable support for externally-defined ID generators. (#1363)
 - Bump `github.com/google/go-cmp` from 0.5.3 to 0.5.4 (#1374)
 - Bump `github.com/golangci/golangci-lint` in `/internal/tools` (#1375)
-
 
 ### Fixed
 

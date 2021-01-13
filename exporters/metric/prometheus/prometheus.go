@@ -32,8 +32,8 @@ import (
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
-	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
@@ -51,7 +51,7 @@ type Exporter struct {
 	// struct allows the exporter to potentially support multiple
 	// controllers (e.g., with different resources).
 	lock       sync.RWMutex
-	controller *pull.Controller
+	controller *controller.Controller
 
 	defaultHistogramBoundaries []float64
 }
@@ -87,9 +87,9 @@ type Config struct {
 	DefaultHistogramBoundaries []float64
 }
 
-// NewExportPipeline sets up a complete export pipeline with the recommended setup,
-// using the recommended selector and standard processor.  See the pull.Options.
-func NewExportPipeline(config Config, options ...pull.Option) (*Exporter, error) {
+// NewExporter returns a new Prometheus exporter using the configured
+// metric controller.  See controller.New().
+func NewExporter(config Config, controller *controller.Controller) (*Exporter, error) {
 	if config.Registry == nil {
 		config.Registry = prometheus.NewRegistry()
 	}
@@ -106,18 +106,23 @@ func NewExportPipeline(config Config, options ...pull.Option) (*Exporter, error)
 		handler:                    promhttp.HandlerFor(config.Gatherer, promhttp.HandlerOpts{}),
 		registerer:                 config.Registerer,
 		gatherer:                   config.Gatherer,
+		controller:                 controller,
 		defaultHistogramBoundaries: config.DefaultHistogramBoundaries,
 	}
 
 	c := &collector{
 		exp: e,
 	}
-	e.SetController(config, options...)
 	if err := config.Registerer.Register(c); err != nil {
 		return nil, fmt.Errorf("cannot register the collector: %w", err)
 	}
-
 	return e, nil
+}
+
+// NewExportPipeline sets up a complete export pipeline with the recommended setup,
+// using the recommended selector and standard processor.  See the controller.Options.
+func NewExportPipeline(config Config, options ...controller.Option) (*Exporter, error) {
+	return NewExporter(config, defaultController(config, options...))
 }
 
 // InstallNewPipeline instantiates a NewExportPipeline and registers it globally.
@@ -131,7 +136,7 @@ func NewExportPipeline(config Config, options ...pull.Option) (*Exporter, error)
 // 	http.HandleFunc("/metrics", hf)
 // 	defer pipeline.Stop()
 // 	... Done
-func InstallNewPipeline(config Config, options ...pull.Option) (*Exporter, error) {
+func InstallNewPipeline(config Config, options ...controller.Option) (*Exporter, error) {
 	exp, err := NewExportPipeline(config, options...)
 	if err != nil {
 		return nil, err
@@ -140,17 +145,14 @@ func InstallNewPipeline(config Config, options ...pull.Option) (*Exporter, error
 	return exp, nil
 }
 
-// SetController sets up a standard *pull.Controller as the metric provider
-// for this exporter.
-func (e *Exporter) SetController(config Config, options ...pull.Option) {
-	e.lock.Lock()
-	defer e.lock.Unlock()
-
-	e.controller = pull.New(
-		basic.New(
+// defaultController returns a standard *controller.Controller for use
+// with Prometheus.
+func defaultController(config Config, options ...controller.Option) *controller.Controller {
+	return controller.New(
+		processor.New(
 			simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries),
-			e,
-			basic.WithMemory(true),
+			export.CumulativeExportKindSelector(),
+			processor.WithMemory(true),
 		),
 		options...,
 	)
@@ -162,7 +164,7 @@ func (e *Exporter) MeterProvider() metric.MeterProvider {
 }
 
 // Controller returns the controller object that coordinates collection for the SDK.
-func (e *Exporter) Controller() *pull.Controller {
+func (e *Exporter) Controller() *controller.Controller {
 	e.lock.RLock()
 	defer e.lock.RUnlock()
 	return e.controller

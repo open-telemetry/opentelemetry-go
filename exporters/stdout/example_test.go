@@ -84,8 +84,11 @@ func Example() {
 	if err != nil {
 		log.Fatal("Could not initialize stdout exporter:", err)
 	}
-	defer pusher.Stop()
-
 	ctx := context.Background()
+
 	log.Println("the answer is", add(ctx, multiply(ctx, multiply(ctx, 2, 2), 10), 2))
+
+	if err := pusher.Stop(ctx); err != nil {
+		log.Fatal("Could not stop stdout exporter:", err)
+	}
 }

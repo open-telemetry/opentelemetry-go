@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package push_test
+package basic_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"runtime"
 	"sync"
@@ -29,10 +30,10 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
-	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/processortest"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -64,48 +65,52 @@ func init() {
 	otel.SetErrorHandler(testHandler)
 }
 
-func newExporter() *processorTest.Exporter {
-	return processorTest.NewExporter(
+func newExporter() *processortest.Exporter {
+	return processortest.NewExporter(
 		export.StatelessExportKindSelector(),
 		label.DefaultEncoder(),
 	)
 }
 
 func newCheckpointer() export.Checkpointer {
-	return processorTest.Checkpointer(
-		processorTest.NewProcessor(
-			processorTest.AggregatorSelector(),
+	return processortest.Checkpointer(
+		processortest.NewProcessor(
+			processortest.AggregatorSelector(),
 			label.DefaultEncoder(),
 		),
 	)
 }
 
 func TestPushDoubleStop(t *testing.T) {
+	ctx := context.Background()
 	exporter := newExporter()
 	checkpointer := newCheckpointer()
-	p := push.New(checkpointer, exporter)
-	p.Start()
-	p.Stop()
-	p.Stop()
+	p := controller.New(checkpointer, controller.WithPusher(exporter))
+	require.NoError(t, p.Start(ctx))
+	require.NoError(t, p.Stop(ctx))
+	require.NoError(t, p.Stop(ctx))
 }
 
 func TestPushDoubleStart(t *testing.T) {
+	ctx := context.Background()
 	exporter := newExporter()
 	checkpointer := newCheckpointer()
-	p := push.New(checkpointer, exporter)
-	p.Start()
-	p.Start()
-	p.Stop()
+	p := controller.New(checkpointer, controller.WithPusher(exporter))
+	require.NoError(t, p.Start(ctx))
+	err := p.Start(ctx)
+	require.Error(t, err)
+	require.True(t, errors.Is(err, controller.ErrControllerStarted))
+	require.NoError(t, p.Stop(ctx))
 }
 
 func TestPushTicker(t *testing.T) {
 	exporter := newExporter()
 	checkpointer := newCheckpointer()
-	p := push.New(
+	p := controller.New(
 		checkpointer,
-		exporter,
-		push.WithPeriod(time.Second),
-		push.WithResource(testResource),
+		controller.WithPusher(exporter),
+		controller.WithCollectPeriod(time.Second),
+		controller.WithResource(testResource),
 	)
 	meter := p.MeterProvider().Meter("name")
 
@@ -116,7 +121,7 @@ func TestPushTicker(t *testing.T) {
 
 	counter := metric.Must(meter).NewInt64Counter("counter.sum")
 
-	p.Start()
+	require.NoError(t, p.Start(ctx))
 
 	counter.Add(ctx, 3)
 
@@ -144,7 +149,7 @@ func TestPushTicker(t *testing.T) {
 	require.Equal(t, 1, exporter.ExportCount())
 	exporter.Reset()
 
-	p.Stop()
+	require.NoError(t, p.Stop(ctx))
 }
 
 func TestPushExportError(t *testing.T) {
@@ -180,12 +185,12 @@ func TestPushExportError(t *testing.T) {
 			// This test validates the error handling
 			// behavior of the basic Processor is honored
 			// by the push processor.
-			checkpointer := basic.New(processorTest.AggregatorSelector(), exporter)
-			p := push.New(
+			checkpointer := processor.New(processortest.AggregatorSelector(), exporter)
+			p := controller.New(
 				checkpointer,
-				exporter,
-				push.WithPeriod(time.Second),
-				push.WithResource(testResource),
+				controller.WithPusher(exporter),
+				controller.WithCollectPeriod(time.Second),
+				controller.WithResource(testResource),
 			)
 
 			mock := controllertest.NewMockClock()
@@ -197,7 +202,7 @@ func TestPushExportError(t *testing.T) {
 			counter1 := metric.Must(meter).NewInt64Counter("counter1.sum")
 			counter2 := metric.Must(meter).NewInt64Counter("counter2.sum")
 
-			p.Start()
+			require.NoError(t, p.Start(ctx))
 			runtime.Gosched()
 
 			counter1.Add(ctx, 3, label.String("X", "Y"))
@@ -219,7 +224,7 @@ func TestPushExportError(t *testing.T) {
 				require.Equal(t, tt.expectedError, err)
 			}
 
-			p.Stop()
+			require.NoError(t, p.Stop(ctx))
 		})
 	}
 }

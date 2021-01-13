@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pull_test
+package basic_test
 
 import (
 	"context"
@@ -25,21 +25,20 @@ import (
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
-	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
-	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
-	selector "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
-func TestPullNoCache(t *testing.T) {
-	puller := pull.New(
-		basic.New(
-			selector.NewWithExactDistribution(),
+func TestPullNoCollect(t *testing.T) {
+	puller := controller.New(
+		processor.New(
+			processortest.AggregatorSelector(),
 			export.CumulativeExportKindSelector(),
-			basic.WithMemory(true),
+			processor.WithMemory(true),
 		),
-		pull.WithCachePeriod(0),
+		controller.WithCollectPeriod(0),
 	)
 
 	ctx := context.Background()
@@ -67,14 +66,14 @@ func TestPullNoCache(t *testing.T) {
 	}, records.Map())
 }
 
-func TestPullWithCache(t *testing.T) {
-	puller := pull.New(
-		basic.New(
-			selector.NewWithExactDistribution(),
+func TestPullWithCollect(t *testing.T) {
+	puller := controller.New(
+		processor.New(
+			processortest.AggregatorSelector(),
 			export.CumulativeExportKindSelector(),
-			basic.WithMemory(true),
+			processor.WithMemory(true),
 		),
-		pull.WithCachePeriod(time.Second),
+		controller.WithCollectPeriod(time.Second),
 	)
 	mock := controllertest.NewMockClock()
 	puller.SetClock(mock)
