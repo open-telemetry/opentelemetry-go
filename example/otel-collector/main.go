@@ -27,11 +27,12 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -49,10 +50,10 @@ func initProvider() func() {
 	// `localhost:30080` endpoint. Otherwise, replace `localhost` with the
 	// endpoint of your cluster. If you run the app inside k8s, then you can
 	// probably connect directly to the service through dns
-	driver := otlp.NewGRPCDriver(
-		otlp.WithInsecure(),
-		otlp.WithEndpoint("localhost:30080"),
-		otlp.WithGRPCDialOption(grpc.WithBlock()), // useful for testing
+	driver := otlpgrpc.NewDriver(
+		otlpgrpc.WithInsecure(),
+		otlpgrpc.WithEndpoint("localhost:30080"),
+		otlpgrpc.WithDialOption(grpc.WithBlock()), // useful for testing
 	)
 	exp, err := otlp.NewExporter(ctx, driver)
 	handleErr(err, "failed to create exporter")
@@ -72,25 +73,27 @@ func initProvider() func() {
 		sdktrace.WithSpanProcessor(bsp),
 	)
 
-	pusher := push.New(
-		basic.New(
+	cont := controller.New(
+		processor.New(
 			simple.NewWithExactDistribution(),
 			exp,
 		),
-		exp,
-		push.WithPeriod(2*time.Second),
+		controller.WithPusher(exp),
+		controller.WithCollectPeriod(2*time.Second),
 	)
 
 	// set global propagator to tracecontext (the default is no-op).
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 	otel.SetTracerProvider(tracerProvider)
-	otel.SetMeterProvider(pusher.MeterProvider())
-	pusher.Start()
+	otel.SetMeterProvider(cont.MeterProvider())
+	handleErr(cont.Start(context.Background()), "failed to start controller")
 
 	return func() {
-		handleErr(tracerProvider.Shutdown(ctx), "failed to shutdown provider")
-		handleErr(exp.Shutdown(ctx), "failed to stop exporter")
-		pusher.Stop() // pushes any last exports to the receiver
+		// Shutdown will flush any remaining spans.
+		handleErr(tracerProvider.Shutdown(ctx), "failed to shutdown TracerProvider")
+
+		// Push any last metric events to the exporter.
+		handleErr(cont.Stop(context.Background()), "failed to stop controller")
 	}
 }
 

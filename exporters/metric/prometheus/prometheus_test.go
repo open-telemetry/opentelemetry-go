@@ -29,7 +29,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -42,8 +42,8 @@ func TestPrometheusExporter(t *testing.T) {
 		prometheus.Config{
 			DefaultHistogramBoundaries: []float64{-0.5, 1},
 		},
-		pull.WithCachePeriod(0),
-		pull.WithResource(resource.NewWithAttributes(label.String("R", "V"))),
+		controller.WithCollectPeriod(0),
+		controller.WithResource(resource.NewWithAttributes(label.String("R", "V"))),
 	)
 	require.NoError(t, err)
 
@@ -116,7 +116,7 @@ func TestPrometheusStatefulness(t *testing.T) {
 	// Create a meter
 	exporter, err := prometheus.NewExportPipeline(
 		prometheus.Config{},
-		pull.WithCachePeriod(0),
+		controller.WithCollectPeriod(0),
 	)
 	require.NoError(t, err)
 
