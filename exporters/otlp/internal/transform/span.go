@@ -162,7 +162,7 @@ func links(links []trace.Link) []*tracepb.Span_Link {
 }
 
 // spanEvents transforms span Events to an OTLP span events.
-func spanEvents(es []export.Event) []*tracepb.Span_Event {
+func spanEvents(es []trace.Event) []*tracepb.Span_Event {
 	if len(es) == 0 {
 		return nil
 	}

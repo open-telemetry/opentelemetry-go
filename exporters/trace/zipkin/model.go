@@ -106,7 +106,7 @@ func toZipkinKind(kind trace.SpanKind) zkmodel.Kind {
 	return zkmodel.Undetermined
 }
 
-func toZipkinAnnotations(events []export.Event) []zkmodel.Annotation {
+func toZipkinAnnotations(events []trace.Event) []zkmodel.Annotation {
 	if len(events) == 0 {
 		return nil
 	}

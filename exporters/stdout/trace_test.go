@@ -60,7 +60,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 			label.String("key", keyValue),
 			label.Float64("double", doubleValue),
 		},
-		MessageEvents: []export.Event{
+		MessageEvents: []trace.Event{
 			{Name: "foo", Attributes: []label.KeyValue{label.String("key", keyValue)}, Time: now},
 			{Name: "bar", Attributes: []label.KeyValue{label.Float64("double", doubleValue)}, Time: now},
 		},
