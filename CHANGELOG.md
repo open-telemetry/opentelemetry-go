@@ -8,15 +8,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.16.0] - 2020-01-13
+
 ### Added
 
 - Add the `ReadOnlySpan` and `ReadWriteSpan` interfaces to provide better control for accessing span data. (#1360)
 - `NewGRPCDriver` function returns a `ProtocolDriver` that maintains a single gRPC connection to the collector. (#1369)
-- Documentation about the project's versioning policy. (#1388)
-- `NewSplitDriver` for OTLP exporter that allows sending traces and metrics to different endpoints. (#1418)
-- Add codeql worfklow to GitHub Actions (#1428)
+- Added documentation about the project's versioning policy. (#1388)
+- Added `NewSplitDriver` for OTLP exporter that allows sending traces and metrics to different endpoints. (#1418)
+- Added codeql worfklow to GitHub Actions (#1428)
 - Added Gosec workflow to GitHub Actions (#1429)
-- A new HTTP driver for OTLP exporter in `exporters/otlp/otlphttp`. Currently it only supports the binary protobuf payloads. (#1420)
+- Add new HTTP driver for OTLP exporter in `exporters/otlp/otlphttp`. Currently it only supports the binary protobuf payloads. (#1420)
 
 ### Changed
 
@@ -1024,7 +1026,8 @@ It contains api and sdk for trace and meter.
 - CODEOWNERS file to track owners of this project.
 
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.16.0
 [0.15.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.15.0
 [0.14.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.14.0
 [0.13.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.13.0
