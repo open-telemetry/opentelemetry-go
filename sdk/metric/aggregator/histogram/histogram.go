@@ -41,17 +41,17 @@ type (
 		state      *state
 	}
 
-	// Config describes how the histogram is aggregated.
-	Config struct {
-		// ExplicitBoundaries support arbitrary bucketing schemes.  This
+	// config describes how the histogram is aggregated.
+	config struct {
+		// explicitBoundaries support arbitrary bucketing schemes.  This
 		// is the general case.
-		ExplicitBoundaries []float64
+		explicitBoundaries []float64
 	}
 
-	// Option configures a histogram Config.
+	// Option configures a histogram config.
 	Option interface {
-		// Apply sets one or more Config fields.
-		Apply(*Config)
+		// apply sets one or more config fields.
+		apply(*config)
 	}
 
 	// state represents the state of a histogram, consisting of
@@ -64,7 +64,7 @@ type (
 	}
 )
 
-// WithExplicitBoundaries sets the ExplicitBoundaries configuration option of a Config.
+// WithExplicitBoundaries sets the ExplicitBoundaries configuration option of a config.
 func WithExplicitBoundaries(explicitBoundaries []float64) Option {
 	return explicitBoundariesOption{explicitBoundaries}
 }
@@ -73,8 +73,8 @@ type explicitBoundariesOption struct {
 	boundaries []float64
 }
 
-func (o explicitBoundariesOption) Apply(config *Config) {
-	config.ExplicitBoundaries = o.boundaries
+func (o explicitBoundariesOption) apply(config *config) {
+	config.explicitBoundaries = o.boundaries
 }
 
 // defaultExplicitBoundaries have been copied from prometheus.DefBuckets.
@@ -111,25 +111,25 @@ var _ aggregation.Histogram = &Aggregator{}
 // atomic operations, which introduces the possibility that
 // checkpoints are inconsistent.
 func New(cnt int, desc *metric.Descriptor, opts ...Option) []Aggregator {
-	var cfg Config
+	var cfg config
 
 	if desc.NumberKind() == number.Int64Kind {
-		cfg.ExplicitBoundaries = defaultInt64ExplicitBoundaries
+		cfg.explicitBoundaries = defaultInt64ExplicitBoundaries
 	} else {
-		cfg.ExplicitBoundaries = defaultFloat64ExplicitBoundaries
+		cfg.explicitBoundaries = defaultFloat64ExplicitBoundaries
 	}
 
 	for _, opt := range opts {
-		opt.Apply(&cfg)
+		opt.apply(&cfg)
 	}
 
 	aggs := make([]Aggregator, cnt)
 
 	// Boundaries MUST be ordered otherwise the histogram could not
 	// be properly computed.
-	sortedBoundaries := make([]float64, len(cfg.ExplicitBoundaries))
+	sortedBoundaries := make([]float64, len(cfg.explicitBoundaries))
 
-	copy(sortedBoundaries, cfg.ExplicitBoundaries)
+	copy(sortedBoundaries, cfg.explicitBoundaries)
 	sort.Float64s(sortedBoundaries)
 
 	for i := range aggs {
