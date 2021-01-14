@@ -115,42 +115,23 @@ func testHistogram(t *testing.T, profile aggregatortest.Profile, policy policy) 
 
 	agg, ckpt := new2(descriptor)
 
-	all := aggregatortest.NewNumbers(profile.NumberKind)
+	// This needs to repeat at least 3 times to uncover a failure to reset
+	// for the overall sum and count fields, since the third time through
+	// is the first time a `histogram.state` object is reused.
+	for repeat := 0; repeat < 3; repeat++ {
+		all := aggregatortest.NewNumbers(profile.NumberKind)
 
-	for i := 0; i < count; i++ {
-		x := profile.Random(policy.sign())
-		all.Append(x)
-		aggregatortest.CheckedUpdate(t, agg, x, descriptor)
-	}
+		for i := 0; i < count; i++ {
+			x := profile.Random(policy.sign())
+			all.Append(x)
+			aggregatortest.CheckedUpdate(t, agg, x, descriptor)
+		}
 
-	require.NoError(t, agg.SynchronizedMove(ckpt, descriptor))
+		require.NoError(t, agg.SynchronizedMove(ckpt, descriptor))
 
-	checkZero(t, agg, descriptor)
+		checkZero(t, agg, descriptor)
 
-	all.Sort()
-
-	asum, err := ckpt.Sum()
-	sum := all.Sum()
-	require.InEpsilon(t,
-		sum.CoerceToFloat64(profile.NumberKind),
-		asum.CoerceToFloat64(profile.NumberKind),
-		0.000000001,
-		"Same sum - "+policy.name)
-	require.NoError(t, err)
-
-	count, err := ckpt.Count()
-	require.Equal(t, all.Count(), count, "Same count -"+policy.name)
-	require.NoError(t, err)
-
-	buckets, err := ckpt.Histogram()
-	require.NoError(t, err)
-
-	require.Equal(t, len(buckets.Counts), len(boundaries)+1, "There should be b + 1 counts, where b is the number of boundaries")
-
-	counts := calcBuckets(all.Points(), profile)
-	for i, v := range counts {
-		bCount := uint64(buckets.Counts[i])
-		require.Equal(t, v, bCount, "Wrong bucket #%d count: %v != %v", i, counts, buckets.Counts)
+		checkHistogram(t, all, profile, ckpt)
 	}
 }
 
@@ -191,31 +172,7 @@ func TestHistogramMerge(t *testing.T) {
 
 		aggregatortest.CheckedMerge(t, ckpt1, ckpt2, descriptor)
 
-		all.Sort()
-
-		asum, err := ckpt1.Sum()
-		sum := all.Sum()
-		require.InEpsilon(t,
-			sum.CoerceToFloat64(profile.NumberKind),
-			asum.CoerceToFloat64(profile.NumberKind),
-			0.000000001,
-			"Same sum - absolute")
-		require.NoError(t, err)
-
-		count, err := ckpt1.Count()
-		require.Equal(t, all.Count(), count, "Same count - absolute")
-		require.NoError(t, err)
-
-		buckets, err := ckpt1.Histogram()
-		require.NoError(t, err)
-
-		require.Equal(t, len(buckets.Counts), len(boundaries)+1, "There should be b + 1 counts, where b is the number of boundaries")
-
-		counts := calcBuckets(all.Points(), profile)
-		for i, v := range counts {
-			bCount := uint64(buckets.Counts[i])
-			require.Equal(t, v, bCount, "Wrong bucket #%d count: %v != %v", i, counts, buckets.Counts)
-		}
+		checkHistogram(t, all, profile, ckpt1)
 	})
 }
 
@@ -233,22 +190,49 @@ func TestHistogramNotSet(t *testing.T) {
 	})
 }
 
-func calcBuckets(points []number.Number, profile aggregatortest.Profile) []uint64 {
-	sortedBoundaries := make([]float64, len(boundaries))
+// checkHistogram ensures the correct aggregated state between `all`
+// (test aggregator) and `agg` (code under test).
+func checkHistogram(t *testing.T, all aggregatortest.Numbers, profile aggregatortest.Profile, agg *histogram.Aggregator) {
 
+	all.Sort()
+
+	asum, err := agg.Sum()
+	require.NoError(t, err)
+
+	sum := all.Sum()
+	require.InEpsilon(t,
+		sum.CoerceToFloat64(profile.NumberKind),
+		asum.CoerceToFloat64(profile.NumberKind),
+		0.000000001)
+
+	count, err := agg.Count()
+	require.NoError(t, err)
+	require.Equal(t, all.Count(), count)
+
+	buckets, err := agg.Histogram()
+	require.NoError(t, err)
+
+	require.Equal(t, len(buckets.Counts), len(boundaries)+1,
+		"There should be b + 1 counts, where b is the number of boundaries")
+
+	sortedBoundaries := make([]float64, len(boundaries))
 	copy(sortedBoundaries, boundaries)
 	sort.Float64s(sortedBoundaries)
 
+	require.EqualValues(t, sortedBoundaries, buckets.Boundaries)
+
 	counts := make([]uint64, len(sortedBoundaries)+1)
 	idx := 0
-	for _, p := range points {
+	for _, p := range all.Points() {
 		for idx < len(sortedBoundaries) && p.CoerceToFloat64(profile.NumberKind) >= sortedBoundaries[idx] {
 			idx++
 		}
 		counts[idx]++
 	}
-
-	return counts
+	for i, v := range counts {
+		bCount := uint64(buckets.Counts[i])
+		require.Equal(t, v, bCount, "Wrong bucket #%d count: %v != %v", i, counts, buckets.Counts)
+	}
 }
 
 func TestSynchronizedMoveReset(t *testing.T) {
