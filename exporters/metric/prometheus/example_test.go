@@ -25,7 +25,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -50,7 +50,7 @@ func ExampleNewExportPipeline() {
 	// Create a meter
 	exporter, err := prometheus.NewExportPipeline(
 		prometheus.Config{},
-		pull.WithResource(res),
+		controller.WithResource(res),
 	)
 	if err != nil {
 		panic(err)

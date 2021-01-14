@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
+	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -277,17 +278,85 @@ func TestTraceContextPropagator_GetAllKeys(t *testing.T) {
 
 func TestTraceStatePropagation(t *testing.T) {
 	prop := propagation.TraceContext{}
-	want := "opaquevalue"
-	headerName := "tracestate"
+	stateHeader := "tracestate"
+	parentHeader := "traceparent"
+	state, err := trace.TraceStateFromKeyValues(label.String("key1", "value1"), label.String("key2", "value2"))
+	if err != nil {
+		t.Fatalf("Unable to construct expected TraceState: %s", err.Error())
+	}
 
-	inReq, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
-	inReq.Header.Add(headerName, want)
-	ctx := prop.Extract(context.Background(), inReq.Header)
+	tests := []struct {
+		name    string
+		headers map[string]string
+		valid   bool
+		wantSc  trace.SpanContext
+	}{
+		{
+			name: "valid parent and state",
+			headers: map[string]string{
+				parentHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00",
+				stateHeader:  "key1=value1,key2=value2",
+			},
+			valid: true,
+			wantSc: trace.SpanContext{
+				TraceID:    traceID,
+				SpanID:     spanID,
+				TraceState: state,
+			},
+		},
+		{
+			name: "valid parent, invalid state",
+			headers: map[string]string{
+				parentHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00",
+				stateHeader:  "key1=value1,invalid$@#=invalid",
+			},
+			valid: false,
+			wantSc: trace.SpanContext{
+				TraceID: traceID,
+				SpanID:  spanID,
+			},
+		},
+		{
+			name: "valid parent, malformed state",
+			headers: map[string]string{
+				parentHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00",
+				stateHeader:  "key1=value1,invalid",
+			},
+			valid: false,
+			wantSc: trace.SpanContext{
+				TraceID: traceID,
+				SpanID:  spanID,
+			},
+		},
+	}
 
-	outReq, _ := http.NewRequest(http.MethodGet, "http://www.example.com", nil)
-	prop.Inject(ctx, outReq.Header)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			inReq, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
+			for hk, hv := range tt.headers {
+				inReq.Header.Add(hk, hv)
+			}
 
-	if diff := cmp.Diff(outReq.Header.Get(headerName), want); diff != "" {
-		t.Errorf("Propagate tracestate: -got +want %s", diff)
+			ctx := prop.Extract(context.Background(), inReq.Header)
+			if diff := cmp.Diff(
+				trace.RemoteSpanContextFromContext(ctx),
+				tt.wantSc,
+				cmp.AllowUnexported(label.Value{}),
+				cmp.AllowUnexported(trace.TraceState{}),
+			); diff != "" {
+				t.Errorf("Extracted tracestate: -got +want %s", diff)
+			}
+
+			if tt.valid {
+				mockTracer := oteltest.DefaultTracer()
+				ctx, _ = mockTracer.Start(ctx, "inject")
+				outReq, _ := http.NewRequest(http.MethodGet, "http://www.example.com", nil)
+				prop.Inject(ctx, outReq.Header)
+
+				if diff := cmp.Diff(outReq.Header.Get(stateHeader), tt.headers[stateHeader]); diff != "" {
+					t.Errorf("Propagated tracestate: -got +want %s", diff)
+				}
+			}
+		})
 	}
 }

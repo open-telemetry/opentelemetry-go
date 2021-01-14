@@ -31,11 +31,8 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/ddsketch"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
@@ -76,14 +73,6 @@ func (fix testFixture) Export(checkpointSet export.CheckpointSet) {
 	if err != nil {
 		fix.t.Error("export failed: ", err)
 	}
-}
-
-func TestStdoutInvalidQuantile(t *testing.T) {
-	_, err := stdout.NewExporter(
-		stdout.WithQuantiles([]float64{1.1, 0.9}),
-	)
-	require.Error(t, err, "Invalid quantile error expected")
-	require.Equal(t, aggregation.ErrInvalidQuantile, err)
 }
 
 func TestStdoutTimestamp(t *testing.T) {
@@ -197,7 +186,7 @@ func TestStdoutValueRecorderFormat(t *testing.T) {
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
 
 	desc := metric.NewDescriptor("test.name", metric.ValueRecorderInstrumentKind, number.Float64Kind)
-	aagg, ckpt := metrictest.Unslice2(array.New(2))
+	aagg, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &desc))
 
 	for i := 0; i < 1000; i++ {
 		aggregatortest.CheckedUpdate(fix.t, aagg, number.NewFloat64Number(float64(i)+0.5), &desc)
@@ -215,21 +204,7 @@ func TestStdoutValueRecorderFormat(t *testing.T) {
 		"Min": 0.5,
 		"Max": 999.5,
 		"Sum": 500000,
-		"Count": 1000,
-		"Quantiles": [
-			{
-				"Quantile": 0.5,
-				"Value": 500.5
-			},
-			{
-				"Quantile": 0.9,
-				"Value": 900.5
-			},
-			{
-				"Quantile": 0.99,
-				"Value": 990.5
-			}
-		]
+		"Count": 1000
 	}
 ]`, fix.Output())
 }
@@ -255,7 +230,7 @@ func TestStdoutNoData(t *testing.T) {
 		})
 	}
 
-	runTwoAggs(metrictest.Unslice2(ddsketch.New(2, &desc, ddsketch.NewDefaultConfig())))
+	runTwoAggs(metrictest.Unslice2(lastvalue.New(2)))
 	runTwoAggs(metrictest.Unslice2(minmaxsumcount.New(2, &desc)))
 }
 

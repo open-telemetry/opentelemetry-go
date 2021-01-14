@@ -28,10 +28,37 @@ import (
 	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
 	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
-
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
 )
+
+func stubSpanSnapshot(count int) []*tracesdk.SpanSnapshot {
+	spans := make([]*tracesdk.SpanSnapshot, 0, count)
+	for i := 0; i < count; i++ {
+		spans = append(spans, new(tracesdk.SpanSnapshot))
+	}
+	return spans
+}
+
+type stubCheckpointSet struct {
+	limit int
+}
+
+var _ metricsdk.CheckpointSet = stubCheckpointSet{}
+
+func (s stubCheckpointSet) ForEach(kindSelector metricsdk.ExportKindSelector, recordFunc func(metricsdk.Record) error) error {
+	for i := 0; i < s.limit; i++ {
+		if err := recordFunc(metricsdk.Record{}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (stubCheckpointSet) Lock()    {}
+func (stubCheckpointSet) Unlock()  {}
+func (stubCheckpointSet) RLock()   {}
+func (stubCheckpointSet) RUnlock() {}
 
 type stubProtocolDriver struct {
 	started         int
@@ -42,8 +69,8 @@ type stubProtocolDriver struct {
 	injectedStartError error
 	injectedStopError  error
 
-	rm []metricpb.ResourceMetrics
-	rs []tracepb.ResourceSpans
+	rm []metricsdk.Record
+	rs []tracesdk.SpanSnapshot
 }
 
 var _ otlp.ProtocolDriver = (*stubProtocolDriver)(nil)
@@ -70,6 +97,39 @@ func (m *stubProtocolDriver) Stop(ctx context.Context) error {
 
 func (m *stubProtocolDriver) ExportMetrics(parent context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error {
 	m.metricsExported++
+	return cps.ForEach(selector, func(record metricsdk.Record) error {
+		m.rm = append(m.rm, record)
+		return nil
+	})
+}
+
+func (m *stubProtocolDriver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
+	m.tracesExported++
+	for _, rs := range ss {
+		if rs == nil {
+			continue
+		}
+		m.rs = append(m.rs, *rs)
+	}
+	return nil
+}
+
+type stubTransformingProtocolDriver struct {
+	rm []metricpb.ResourceMetrics
+	rs []tracepb.ResourceSpans
+}
+
+var _ otlp.ProtocolDriver = (*stubTransformingProtocolDriver)(nil)
+
+func (m *stubTransformingProtocolDriver) Start(ctx context.Context) error {
+	return nil
+}
+
+func (m *stubTransformingProtocolDriver) Stop(ctx context.Context) error {
+	return nil
+}
+
+func (m *stubTransformingProtocolDriver) ExportMetrics(parent context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error {
 	rms, err := transform.CheckpointSet(parent, selector, cps, 1)
 	if err != nil {
 		return err
@@ -83,8 +143,7 @@ func (m *stubProtocolDriver) ExportMetrics(parent context.Context, cps metricsdk
 	return nil
 }
 
-func (m *stubProtocolDriver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
-	m.tracesExported++
+func (m *stubTransformingProtocolDriver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
 	for _, rs := range transform.SpanData(ss) {
 		if rs == nil {
 			continue
@@ -94,13 +153,13 @@ func (m *stubProtocolDriver) ExportTraces(ctx context.Context, ss []*tracesdk.Sp
 	return nil
 }
 
-func (m *stubProtocolDriver) Reset() {
+func (m *stubTransformingProtocolDriver) Reset() {
 	m.rm = nil
 	m.rs = nil
 }
 
-func newExporter(t *testing.T, opts ...otlp.ExporterOption) (*otlp.Exporter, *stubProtocolDriver) {
-	driver := &stubProtocolDriver{}
+func newExporter(t *testing.T, opts ...otlp.ExporterOption) (*otlp.Exporter, *stubTransformingProtocolDriver) {
+	driver := &stubTransformingProtocolDriver{}
 	exp, err := otlp.NewExporter(context.Background(), driver, opts...)
 	require.NoError(t, err)
 	return exp, driver
@@ -204,11 +263,13 @@ func TestSplitDriver(t *testing.T) {
 	assert.Equal(t, 0, driverMetrics.tracesExported)
 	assert.Equal(t, 0, driverMetrics.metricsExported)
 
-	assert.NoError(t, driver.ExportMetrics(ctx, discCheckpointSet{}, metricsdk.StatelessExportKindSelector()))
-	assert.NoError(t, driver.ExportTraces(ctx, []*tracesdk.SpanSnapshot{discSpanSnapshot()}))
+	recordCount := 5
+	spanCount := 7
+	assert.NoError(t, driver.ExportMetrics(ctx, stubCheckpointSet{recordCount}, metricsdk.StatelessExportKindSelector()))
+	assert.NoError(t, driver.ExportTraces(ctx, stubSpanSnapshot(spanCount)))
 	assert.Len(t, driverTraces.rm, 0)
-	assert.Len(t, driverTraces.rs, 1)
-	assert.Len(t, driverMetrics.rm, 1)
+	assert.Len(t, driverTraces.rs, spanCount)
+	assert.Len(t, driverMetrics.rm, recordCount)
 	assert.Len(t, driverMetrics.rs, 0)
 	assert.Equal(t, 1, driverTraces.tracesExported)
 	assert.Equal(t, 0, driverTraces.metricsExported)

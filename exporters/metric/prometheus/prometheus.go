@@ -14,6 +14,9 @@
 
 package prometheus // import "go.opentelemetry.io/otel/exporters/metric/prometheus"
 
+// Note that this package does not support a way to export Prometheus
+// Summary data points, removed in PR#1412.
+
 import (
 	"context"
 	"fmt"
@@ -29,8 +32,8 @@ import (
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/controller/pull"
-	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
@@ -48,11 +51,14 @@ type Exporter struct {
 	// struct allows the exporter to potentially support multiple
 	// controllers (e.g., with different resources).
 	lock       sync.RWMutex
-	controller *pull.Controller
+	controller *controller.Controller
 
-	defaultSummaryQuantiles    []float64
 	defaultHistogramBoundaries []float64
 }
+
+// ErrUnsupportedAggregator is returned for unrepresentable aggregator
+// types (e.g., exact).
+var ErrUnsupportedAggregator = fmt.Errorf("unsupported aggregator type")
 
 var _ http.Handler = &Exporter{}
 
@@ -76,18 +82,14 @@ type Config struct {
 	// If not specified the Registry will be used as default.
 	Gatherer prometheus.Gatherer
 
-	// DefaultSummaryQuantiles is the default summary quantiles
-	// to use. Use nil to specify the system-default summary quantiles.
-	DefaultSummaryQuantiles []float64
-
 	// DefaultHistogramBoundaries defines the default histogram bucket
 	// boundaries.
 	DefaultHistogramBoundaries []float64
 }
 
-// NewExportPipeline sets up a complete export pipeline with the recommended setup,
-// using the recommended selector and standard processor.  See the pull.Options.
-func NewExportPipeline(config Config, options ...pull.Option) (*Exporter, error) {
+// NewExporter returns a new Prometheus exporter using the configured
+// metric controller.  See controller.New().
+func NewExporter(config Config, controller *controller.Controller) (*Exporter, error) {
 	if config.Registry == nil {
 		config.Registry = prometheus.NewRegistry()
 	}
@@ -104,19 +106,23 @@ func NewExportPipeline(config Config, options ...pull.Option) (*Exporter, error)
 		handler:                    promhttp.HandlerFor(config.Gatherer, promhttp.HandlerOpts{}),
 		registerer:                 config.Registerer,
 		gatherer:                   config.Gatherer,
-		defaultSummaryQuantiles:    config.DefaultSummaryQuantiles,
+		controller:                 controller,
 		defaultHistogramBoundaries: config.DefaultHistogramBoundaries,
 	}
 
 	c := &collector{
 		exp: e,
 	}
-	e.SetController(config, options...)
 	if err := config.Registerer.Register(c); err != nil {
 		return nil, fmt.Errorf("cannot register the collector: %w", err)
 	}
-
 	return e, nil
+}
+
+// NewExportPipeline sets up a complete export pipeline with the recommended setup,
+// using the recommended selector and standard processor.  See the controller.Options.
+func NewExportPipeline(config Config, options ...controller.Option) (*Exporter, error) {
+	return NewExporter(config, defaultController(config, options...))
 }
 
 // InstallNewPipeline instantiates a NewExportPipeline and registers it globally.
@@ -130,7 +136,7 @@ func NewExportPipeline(config Config, options ...pull.Option) (*Exporter, error)
 // 	http.HandleFunc("/metrics", hf)
 // 	defer pipeline.Stop()
 // 	... Done
-func InstallNewPipeline(config Config, options ...pull.Option) (*Exporter, error) {
+func InstallNewPipeline(config Config, options ...controller.Option) (*Exporter, error) {
 	exp, err := NewExportPipeline(config, options...)
 	if err != nil {
 		return nil, err
@@ -139,17 +145,14 @@ func InstallNewPipeline(config Config, options ...pull.Option) (*Exporter, error
 	return exp, nil
 }
 
-// SetController sets up a standard *pull.Controller as the metric provider
-// for this exporter.
-func (e *Exporter) SetController(config Config, options ...pull.Option) {
-	e.lock.Lock()
-	defer e.lock.Unlock()
-
-	e.controller = pull.New(
-		basic.New(
+// defaultController returns a standard *controller.Controller for use
+// with Prometheus.
+func defaultController(config Config, options ...controller.Option) *controller.Controller {
+	return controller.New(
+		processor.New(
 			simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries),
-			e,
-			basic.WithMemory(true),
+			export.CumulativeExportKindSelector(),
+			processor.WithMemory(true),
 		),
 		options...,
 	)
@@ -161,21 +164,18 @@ func (e *Exporter) MeterProvider() metric.MeterProvider {
 }
 
 // Controller returns the controller object that coordinates collection for the SDK.
-func (e *Exporter) Controller() *pull.Controller {
+func (e *Exporter) Controller() *controller.Controller {
 	e.lock.RLock()
 	defer e.lock.RUnlock()
 	return e.controller
 }
 
+// ExportKindFor implements ExportKindSelector.
 func (e *Exporter) ExportKindFor(desc *metric.Descriptor, kind aggregation.Kind) export.ExportKind {
-	// NOTE: Summary values should use Delta aggregation, then be
-	// combined into a sliding window, see the TODO below.
-	// NOTE: Prometheus also supports a "GaugeDelta" exposition format,
-	// which is expressed as a delta histogram.  Need to understand if this
-	// should be a default behavior for ValueRecorder/ValueObserver.
 	return export.CumulativeExportKindSelector().ExportKindFor(desc, kind)
 }
 
+// ServeHTTP implements http.Handler.
 func (e *Exporter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	e.handler.ServeHTTP(w, r)
 }
@@ -187,6 +187,7 @@ type collector struct {
 
 var _ prometheus.Collector = (*collector)(nil)
 
+// Describe implements prometheus.Collector.
 func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 	c.exp.lock.RLock()
 	defer c.exp.lock.RUnlock()
@@ -226,18 +227,6 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			if err := c.exportHistogram(ch, hist, numberKind, desc, labels); err != nil {
 				return fmt.Errorf("exporting histogram: %w", err)
 			}
-		} else if dist, ok := agg.(aggregation.Distribution); ok {
-			// TODO: summaries values are never being resetted.
-			//  As measurements are recorded, new records starts to have less impact on these summaries.
-			//  We should implement an solution that is similar to the Prometheus Clients
-			//  using a rolling window for summaries could be a solution.
-			//
-			//  References:
-			// 	https://www.robustperception.io/how-does-a-prometheus-summary-work
-			//  https://github.com/prometheus/client_golang/blob/fa4aa9000d2863904891d193dea354d23f3d712a/prometheus/summary.go#L135
-			if err := c.exportSummary(ch, dist, numberKind, desc, labels); err != nil {
-				return fmt.Errorf("exporting summary: %w", err)
-			}
 		} else if sum, ok := agg.(aggregation.Sum); ok && instrumentKind.Monotonic() {
 			if err := c.exportMonotonicCounter(ch, sum, numberKind, desc, labels); err != nil {
 				return fmt.Errorf("exporting monotonic counter: %w", err)
@@ -250,6 +239,8 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			if err := c.exportLastValue(ch, lastValue, numberKind, desc, labels); err != nil {
 				return fmt.Errorf("exporting last value: %w", err)
 			}
+		} else {
+			return fmt.Errorf("%w: %s", ErrUnsupportedAggregator, agg.Kind())
 		}
 		return nil
 	})
@@ -297,33 +288,6 @@ func (c *collector) exportMonotonicCounter(ch chan<- prometheus.Metric, sum aggr
 	m, err := prometheus.NewConstMetric(desc, prometheus.CounterValue, v.CoerceToFloat64(kind), labels...)
 	if err != nil {
 		return fmt.Errorf("error creating constant metric: %w", err)
-	}
-
-	ch <- m
-	return nil
-}
-
-func (c *collector) exportSummary(ch chan<- prometheus.Metric, dist aggregation.Distribution, kind number.Kind, desc *prometheus.Desc, labels []string) error {
-	count, err := dist.Count()
-	if err != nil {
-		return fmt.Errorf("error retrieving count: %w", err)
-	}
-
-	var sum number.Number
-	sum, err = dist.Sum()
-	if err != nil {
-		return fmt.Errorf("error retrieving distribution sum: %w", err)
-	}
-
-	quantiles := make(map[float64]float64)
-	for _, quantile := range c.exp.defaultSummaryQuantiles {
-		q, _ := dist.Quantile(quantile)
-		quantiles[quantile] = q.CoerceToFloat64(kind)
-	}
-
-	m, err := prometheus.NewConstSummary(desc, uint64(count), sum.CoerceToFloat64(kind), quantiles, labels...)
-	if err != nil {
-		return fmt.Errorf("error creating constant summary: %w", err)
 	}
 
 	ch <- m
