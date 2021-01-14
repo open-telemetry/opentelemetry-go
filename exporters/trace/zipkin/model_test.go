@@ -48,7 +48,7 @@ func TestModelConversion(t *testing.T) {
 				label.Uint64("attr1", 42),
 				label.String("attr2", "bar"),
 			},
-			MessageEvents: []export.Event{
+			MessageEvents: []trace.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
@@ -81,7 +81,7 @@ func TestModelConversion(t *testing.T) {
 				label.Uint64("attr1", 42),
 				label.String("attr2", "bar"),
 			},
-			MessageEvents: []export.Event{
+			MessageEvents: []trace.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
@@ -113,7 +113,7 @@ func TestModelConversion(t *testing.T) {
 				label.Uint64("attr1", 42),
 				label.String("attr2", "bar"),
 			},
-			MessageEvents: []export.Event{
+			MessageEvents: []trace.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
@@ -145,7 +145,7 @@ func TestModelConversion(t *testing.T) {
 				label.Uint64("attr1", 42),
 				label.String("attr2", "bar"),
 			},
-			MessageEvents: []export.Event{
+			MessageEvents: []trace.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
@@ -177,7 +177,7 @@ func TestModelConversion(t *testing.T) {
 				label.Uint64("attr1", 42),
 				label.String("attr2", "bar"),
 			},
-			MessageEvents: []export.Event{
+			MessageEvents: []trace.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
@@ -209,7 +209,7 @@ func TestModelConversion(t *testing.T) {
 				label.Uint64("attr1", 42),
 				label.String("attr2", "bar"),
 			},
-			MessageEvents: []export.Event{
+			MessageEvents: []trace.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
@@ -241,7 +241,7 @@ func TestModelConversion(t *testing.T) {
 				label.Uint64("attr1", 42),
 				label.String("attr2", "bar"),
 			},
-			MessageEvents: []export.Event{
+			MessageEvents: []trace.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
@@ -291,7 +291,7 @@ func TestModelConversion(t *testing.T) {
 			Attributes: []label.KeyValue{
 				label.String("error", "false"),
 			},
-			MessageEvents: []export.Event{
+			MessageEvents: []trace.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
