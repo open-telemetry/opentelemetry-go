@@ -132,6 +132,11 @@ func (bsp *BatchSpanProcessor) Shutdown(ctx context.Context) error {
 		go func() {
 			close(bsp.stopCh)
 			bsp.stopWait.Wait()
+			if bsp.e != nil {
+				if err := bsp.e.Shutdown(ctx); err != nil {
+					otel.Handle(err)
+				}
+			}
 			close(wait)
 		}()
 		// Wait until the wait group is done or the context is cancelled

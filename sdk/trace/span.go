@@ -51,7 +51,7 @@ type ReadOnlySpan interface {
 	EndTime() time.Time
 	Attributes() []label.KeyValue
 	Links() []trace.Link
-	Events() []export.Event
+	Events() []trace.Event
 	StatusCode() codes.Code
 	StatusMessage() string
 	Tracer() trace.Tracer
@@ -266,7 +266,7 @@ func (s *span) addEvent(name string, o ...trace.EventOption) {
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.messageEvents.add(export.Event{
+	s.messageEvents.add(trace.Event{
 		Name:       name,
 		Attributes: c.Attributes,
 		Time:       c.Timestamp,
@@ -355,11 +355,11 @@ func (s *span) Links() []trace.Link {
 	return s.interfaceArrayToLinksArray()
 }
 
-func (s *span) Events() []export.Event {
+func (s *span) Events() []trace.Event {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if len(s.messageEvents.queue) == 0 {
-		return []export.Event{}
+		return []trace.Event{}
 	}
 	return s.interfaceArrayToMessageEventArray()
 }
@@ -440,10 +440,10 @@ func (s *span) interfaceArrayToLinksArray() []trace.Link {
 	return linkArr
 }
 
-func (s *span) interfaceArrayToMessageEventArray() []export.Event {
-	messageEventArr := make([]export.Event, 0)
+func (s *span) interfaceArrayToMessageEventArray() []trace.Event {
+	messageEventArr := make([]trace.Event, 0)
 	for _, value := range s.messageEvents.queue {
-		messageEventArr = append(messageEventArr, value.(export.Event))
+		messageEventArr = append(messageEventArr, value.(trace.Event))
 	}
 	return messageEventArr
 }
