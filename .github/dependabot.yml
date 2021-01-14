@@ -48,7 +48,7 @@ updates:
       interval: weekly
   -
     package-ecosystem: gomod
-    directory: /example/basic
+    directory: /example/prom-collector
     labels:
       - dependencies
       - go

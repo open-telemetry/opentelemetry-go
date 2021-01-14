@@ -22,6 +22,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -187,5 +188,49 @@ func TestTraceIdRatioSamplesInclusively(t *testing.T) {
 					"%s sampled but %s did not", samplerLo.Description(), samplerHi.Description())
 			}
 		}
+	}
+}
+
+func TestTracestateIsPassed(t *testing.T) {
+	testCases := []struct {
+		name    string
+		sampler Sampler
+	}{
+		{
+			"notSampled",
+			NeverSample(),
+		},
+		{
+			"sampled",
+			AlwaysSample(),
+		},
+		{
+			"parentSampled",
+			ParentBased(AlwaysSample()),
+		},
+		{
+			"parentNotSampled",
+			ParentBased(NeverSample()),
+		},
+		{
+			"traceIDRatioSampler",
+			TraceIDRatioBased(.5),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			traceState, err := trace.TraceStateFromKeyValues(label.String("k", "v"))
+			if err != nil {
+				t.Error(err)
+			}
+
+			parentCtx := trace.SpanContext{
+				TraceState: traceState,
+			}
+			params := SamplingParameters{ParentContext: parentCtx}
+
+			require.Equal(t, traceState, tc.sampler.ShouldSample(params).Tracestate, "TraceState is not equal")
+		})
 	}
 }

@@ -77,7 +77,6 @@ func multiply(ctx context.Context, x, y int64) int64 {
 
 func Example() {
 	exportOpts := []stdout.Option{
-		stdout.WithQuantiles([]float64{0.5}),
 		stdout.WithPrettyPrint(),
 	}
 	// Registers both a trace and meter Provider globally.
@@ -85,8 +84,11 @@ func Example() {
 	if err != nil {
 		log.Fatal("Could not initialize stdout exporter:", err)
 	}
-	defer pusher.Stop()
-
 	ctx := context.Background()
+
 	log.Println("the answer is", add(ctx, multiply(ctx, multiply(ctx, 2, 2), 10), 2))
+
+	if err := pusher.Stop(ctx); err != nil {
+		log.Fatal("Could not stop stdout exporter:", err)
+	}
 }
