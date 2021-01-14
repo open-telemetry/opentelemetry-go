@@ -398,8 +398,8 @@ func gaugePoint(record export.Record, num number.Number, start, end time.Time) (
 	return m, nil
 }
 
-func exportKindToTemporality(ek export.AggregationTemporality) metricpb.AggregationTemporality {
-	switch ek {
+func aggregationTemporalityOTLP(aggTemp export.AggregationTemporality) metricpb.AggregationTemporality {
+	switch aggTemp {
 	case export.DeltaAggregationTemporality:
 		return metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA
 	case export.CumulativeAggregationTemporality:
@@ -408,7 +408,7 @@ func exportKindToTemporality(ek export.AggregationTemporality) metricpb.Aggregat
 	return metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_UNSPECIFIED
 }
 
-func sumPoint(record export.Record, num number.Number, start, end time.Time, ek export.AggregationTemporality, monotonic bool) (*metricpb.Metric, error) {
+func sumPoint(record export.Record, num number.Number, start, end time.Time, aggTemp export.AggregationTemporality, monotonic bool) (*metricpb.Metric, error) {
 	desc := record.Descriptor()
 	labels := record.Labels()
 
@@ -423,7 +423,7 @@ func sumPoint(record export.Record, num number.Number, start, end time.Time, ek 
 		m.Data = &metricpb.Metric_IntSum{
 			IntSum: &metricpb.IntSum{
 				IsMonotonic:            monotonic,
-				AggregationTemporality: exportKindToTemporality(ek),
+				AggregationTemporality: aggregationTemporalityOTLP(aggTemp),
 				DataPoints: []*metricpb.IntDataPoint{
 					{
 						Value:             num.CoerceToInt64(n),
@@ -438,7 +438,7 @@ func sumPoint(record export.Record, num number.Number, start, end time.Time, ek 
 		m.Data = &metricpb.Metric_DoubleSum{
 			DoubleSum: &metricpb.DoubleSum{
 				IsMonotonic:            monotonic,
-				AggregationTemporality: exportKindToTemporality(ek),
+				AggregationTemporality: aggregationTemporalityOTLP(aggTemp),
 				DataPoints: []*metricpb.DoubleDataPoint{
 					{
 						Value:             num.CoerceToFloat64(n),
@@ -545,7 +545,7 @@ func histogramValues(a aggregation.Histogram) (boundaries []float64, counts []ui
 }
 
 // histogram transforms a Histogram Aggregator into an OTLP Metric.
-func histogramPoint(record export.Record, ek export.AggregationTemporality, a aggregation.Histogram) (*metricpb.Metric, error) {
+func histogramPoint(record export.Record, aggTemp export.AggregationTemporality, a aggregation.Histogram) (*metricpb.Metric, error) {
 	desc := record.Descriptor()
 	labels := record.Labels()
 	boundaries, counts, err := histogramValues(a)
@@ -572,7 +572,7 @@ func histogramPoint(record export.Record, ek export.AggregationTemporality, a ag
 	case number.Int64Kind:
 		m.Data = &metricpb.Metric_IntHistogram{
 			IntHistogram: &metricpb.IntHistogram{
-				AggregationTemporality: exportKindToTemporality(ek),
+				AggregationTemporality: aggregationTemporalityOTLP(aggTemp),
 				DataPoints: []*metricpb.IntHistogramDataPoint{
 					{
 						Sum:               sum.CoerceToInt64(n),
@@ -589,7 +589,7 @@ func histogramPoint(record export.Record, ek export.AggregationTemporality, a ag
 	case number.Float64Kind:
 		m.Data = &metricpb.Metric_DoubleHistogram{
 			DoubleHistogram: &metricpb.DoubleHistogram{
-				AggregationTemporality: exportKindToTemporality(ek),
+				AggregationTemporality: aggregationTemporalityOTLP(aggTemp),
 				DataPoints: []*metricpb.DoubleHistogramDataPoint{
 					{
 						Sum:               sum.CoerceToFloat64(n),
