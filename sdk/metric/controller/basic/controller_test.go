@@ -36,7 +36,7 @@ func getMap(t *testing.T, cont *controller.Controller) map[string]float64 {
 	out := processortest.NewOutput(label.DefaultEncoder())
 
 	require.NoError(t, cont.ForEach(
-		export.CumulativeExportKindSelector(),
+		export.CumulativeAggregationTemporalitySelector(),
 		func(record export.Record) error {
 			return out.AddRecord(record)
 		},
@@ -59,7 +59,7 @@ func TestStartNoExporter(t *testing.T) {
 	cont := controller.New(
 		processor.New(
 			processortest.AggregatorSelector(),
-			export.CumulativeExportKindSelector(),
+			export.CumulativeAggregationTemporalitySelector(),
 		),
 		controller.WithCollectPeriod(time.Second),
 	)
@@ -128,7 +128,7 @@ func TestObserverCanceled(t *testing.T) {
 	cont := controller.New(
 		processor.New(
 			processortest.AggregatorSelector(),
-			export.CumulativeExportKindSelector(),
+			export.CumulativeAggregationTemporalitySelector(),
 		),
 		controller.WithCollectPeriod(0),
 		controller.WithCollectTimeout(time.Millisecond),
@@ -160,7 +160,7 @@ func TestObserverContext(t *testing.T) {
 	cont := controller.New(
 		processor.New(
 			processortest.AggregatorSelector(),
-			export.CumulativeExportKindSelector(),
+			export.CumulativeAggregationTemporalitySelector(),
 		),
 		controller.WithCollectTimeout(0),
 	)
@@ -193,7 +193,7 @@ type blockingExporter struct {
 func newBlockingExporter() *blockingExporter {
 	return &blockingExporter{
 		exporter: processortest.NewExporter(
-			export.CumulativeExportKindSelector(),
+			export.CumulativeAggregationTemporalitySelector(),
 			label.DefaultEncoder(),
 		),
 	}
@@ -211,11 +211,11 @@ func (b *blockingExporter) Export(ctx context.Context, output export.CheckpointS
 	return err
 }
 
-func (*blockingExporter) ExportKindFor(
+func (*blockingExporter) AggregationTemporalityFor(
 	*metric.Descriptor,
 	aggregation.Kind,
-) export.ExportKind {
-	return export.CumulativeExportKind
+) export.AggregationTemporality {
+	return export.CumulativeAggregationTemporality
 }
 
 func TestExportTimeout(t *testing.T) {
@@ -223,7 +223,7 @@ func TestExportTimeout(t *testing.T) {
 	cont := controller.New(
 		processor.New(
 			processortest.AggregatorSelector(),
-			export.CumulativeExportKindSelector(),
+			export.CumulativeAggregationTemporalitySelector(),
 		),
 		controller.WithCollectPeriod(time.Second),
 		controller.WithPushTimeout(time.Millisecond),
@@ -273,7 +273,7 @@ func TestExportTimeout(t *testing.T) {
 
 func TestCollectAfterStopThenStartAgain(t *testing.T) {
 	exp := processortest.NewExporter(
-		export.CumulativeExportKindSelector(),
+		export.CumulativeAggregationTemporalitySelector(),
 		label.DefaultEncoder(),
 	)
 	cont := controller.New(

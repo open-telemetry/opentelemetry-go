@@ -45,8 +45,8 @@ type line struct {
 	Timestamp *time.Time `json:"Timestamp,omitempty"`
 }
 
-func (e *metricExporter) AggregationTemporalityFor(desc *metric.Descriptor, kind aggregation.Kind) exportmetric.ExportKind {
-	return exportmetric.StatelessExportKindSelector().ExportKindFor(desc, kind)
+func (e *metricExporter) AggregationTemporalityFor(desc *metric.Descriptor, kind aggregation.Kind) exportmetric.AggregationTemporality {
+	return exportmetric.StatelessAggregationTemporalitySelector().AggregationTemporalityFor(desc, kind)
 }
 
 func (e *metricExporter) Export(_ context.Context, checkpointSet exportmetric.CheckpointSet) error {

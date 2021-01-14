@@ -51,7 +51,7 @@ func main() {
 	//   	),
 	//   )
 	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithBatcher(exporter))
-	processor := processor.New(simple.NewWithInexpensiveDistribution(), metricsdk.StatelessExportKindSelector())
+	processor := processor.New(simple.NewWithInexpensiveDistribution(), metricsdk.StatelessAggregationTemporalitySelector())
 	pusher := push.New(processor, exporter)
 	pusher.Start()
 	metricProvider := pusher.MeterProvider()

@@ -62,7 +62,7 @@ func initMeter() {
 			simple.NewWithHistogramDistribution([]float64{
 				0.001, 0.01, 0.1, 1, 10, 100, 1000,
 			}),
-			otlpExporter, // otlpExporter is an ExportKindSelector
+			otlpExporter, // otlpExporter is an AggregationTemporalitySelector
 			processor.WithMemory(true),
 		),
 		controller.WithResource(res),

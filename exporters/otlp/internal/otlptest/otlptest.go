@@ -75,7 +75,7 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlp.Exporter, mcTr
 	}
 
 	selector := simple.NewWithInexpensiveDistribution()
-	processor := processor.New(selector, exportmetric.StatelessExportKindSelector())
+	processor := processor.New(selector, exportmetric.StatelessAggregationTemporalitySelector())
 	cont := controller.New(processor, controller.WithPusher(exp))
 	require.NoError(t, cont.Start(ctx))
 

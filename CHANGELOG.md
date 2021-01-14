@@ -65,8 +65,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+#### Tracing
+
 - `BatchSpanProcessor.Shutdown()` will now shutdown underlying `export.SpanExporter`. (#1443)
->>>>>>> origin
 
 ## [0.15.0] - 2020-12-10
 

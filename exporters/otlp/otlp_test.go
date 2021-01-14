@@ -46,7 +46,7 @@ type stubCheckpointSet struct {
 
 var _ metricsdk.CheckpointSet = stubCheckpointSet{}
 
-func (s stubCheckpointSet) ForEach(kindSelector metricsdk.ExportKindSelector, recordFunc func(metricsdk.Record) error) error {
+func (s stubCheckpointSet) ForEach(kindSelector metricsdk.AggregationTemporalitySelector, recordFunc func(metricsdk.Record) error) error {
 	for i := 0; i < s.limit; i++ {
 		if err := recordFunc(metricsdk.Record{}); err != nil {
 			return err
@@ -129,7 +129,7 @@ func (m *stubTransformingProtocolDriver) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (m *stubTransformingProtocolDriver) ExportMetrics(parent context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error {
+func (m *stubTransformingProtocolDriver) ExportMetrics(parent context.Context, cps metricsdk.CheckpointSet, selector metricsdk.AggregationTemporalitySelector) error {
 	rms, err := transform.CheckpointSet(parent, selector, cps, 1)
 	if err != nil {
 		return err

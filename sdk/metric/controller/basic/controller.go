@@ -260,7 +260,7 @@ func (c *Controller) export(ctx context.Context) error {
 
 // Foreach gives the caller read-locked access to the current
 // export.CheckpointSet.
-func (c *Controller) ForEach(ks export.ExportKindSelector, f func(export.Record) error) error {
+func (c *Controller) ForEach(ks export.AggregationTemporalitySelector, f func(export.Record) error) error {
 	ckpt := c.checkpointer.CheckpointSet()
 	ckpt.RLock()
 	defer ckpt.RUnlock()

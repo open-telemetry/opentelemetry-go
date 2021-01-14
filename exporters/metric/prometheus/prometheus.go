@@ -151,7 +151,7 @@ func defaultController(config Config, options ...controller.Option) *controller.
 	return controller.New(
 		processor.New(
 			simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries),
-			export.CumulativeExportKindSelector(),
+			export.CumulativeAggregationTemporalitySelector(),
 			processor.WithMemory(true),
 		),
 		options...,

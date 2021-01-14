@@ -60,7 +60,7 @@ var _ exportmetric.CheckpointSet = OneRecordCheckpointSet{}
 
 // ForEach implements exportmetric.CheckpointSet. It always invokes
 // the callback once with always the same record.
-func (OneRecordCheckpointSet) ForEach(kindSelector exportmetric.ExportKindSelector, recordFunc func(exportmetric.Record) error) error {
+func (OneRecordCheckpointSet) ForEach(kindSelector exportmetric.AggregationTemporalitySelector, recordFunc func(exportmetric.Record) error) error {
 	desc := metric.NewDescriptor(
 		"foo",
 		metric.CounterInstrumentKind,
@@ -120,7 +120,7 @@ var _ exportmetric.CheckpointSet = EmptyCheckpointSet{}
 
 // ForEach implements exportmetric.CheckpointSet. It never invokes the
 // callback.
-func (EmptyCheckpointSet) ForEach(kindSelector exportmetric.ExportKindSelector, recordFunc func(exportmetric.Record) error) error {
+func (EmptyCheckpointSet) ForEach(kindSelector exportmetric.AggregationTemporalitySelector, recordFunc func(exportmetric.Record) error) error {
 	return nil
 }
 
@@ -133,6 +133,6 @@ type FailCheckpointSet struct {
 var _ exportmetric.CheckpointSet = FailCheckpointSet{}
 
 // ForEach implements exportmetric.CheckpointSet. It always fails.
-func (FailCheckpointSet) ForEach(kindSelector exportmetric.ExportKindSelector, recordFunc func(exportmetric.Record) error) error {
+func (FailCheckpointSet) ForEach(kindSelector exportmetric.AggregationTemporalitySelector, recordFunc func(exportmetric.Record) error) error {
 	return fmt.Errorf("fail")
 }

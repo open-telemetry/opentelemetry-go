@@ -131,7 +131,7 @@ func (d *driver) Stop(ctx context.Context) error {
 }
 
 // ExportMetrics implements otlp.ProtocolDriver.
-func (d *driver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error {
+func (d *driver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet, selector metricsdk.AggregationTemporalitySelector) error {
 	rms, err := transform.CheckpointSet(ctx, selector, cps, 1)
 	if err != nil {
 		return err
