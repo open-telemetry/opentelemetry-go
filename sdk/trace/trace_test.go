@@ -551,7 +551,7 @@ func TestEvents(t *testing.T) {
 		ParentSpanID:    sid,
 		Name:            "span0",
 		HasRemoteParent: true,
-		MessageEvents: []export.Event{
+		MessageEvents: []trace.Event{
 			{Name: "foo", Attributes: []label.KeyValue{k1v1}},
 			{Name: "bar", Attributes: []label.KeyValue{k2v2, k3v3}},
 		},
@@ -601,7 +601,7 @@ func TestEventsOverLimit(t *testing.T) {
 		},
 		ParentSpanID: sid,
 		Name:         "span0",
-		MessageEvents: []export.Event{
+		MessageEvents: []trace.Event{
 			{Name: "foo", Attributes: []label.KeyValue{k1v1}},
 			{Name: "bar", Attributes: []label.KeyValue{k2v2, k3v3}},
 		},
@@ -755,7 +755,7 @@ func TestSetSpanStatus(t *testing.T) {
 func cmpDiff(x, y interface{}) string {
 	return cmp.Diff(x, y,
 		cmp.AllowUnexported(label.Value{}),
-		cmp.AllowUnexported(export.Event{}),
+		cmp.AllowUnexported(trace.Event{}),
 		cmp.AllowUnexported(trace.TraceState{}))
 }
 
@@ -1104,7 +1104,7 @@ func TestRecordError(t *testing.T) {
 			StatusCode:      codes.Error,
 			SpanKind:        trace.SpanKindInternal,
 			HasRemoteParent: true,
-			MessageEvents: []export.Event{
+			MessageEvents: []trace.Event{
 				{
 					Name: errorEventName,
 					Time: errTime,
