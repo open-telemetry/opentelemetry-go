@@ -23,8 +23,8 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/codes"
+	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/internal/matchers"
-	ottest "go.opentelemetry.io/otel/internal/testing"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/trace"
@@ -136,7 +136,7 @@ func TestSpan(t *testing.T) {
 			}{
 				{
 					err: ottest.NewTestError("test error"),
-					typ: "go.opentelemetry.io/otel/internal/testing.TestError",
+					typ: "go.opentelemetry.io/otel/internal/internaltest.TestError",
 					msg: "test error",
 				},
 				{
@@ -192,7 +192,7 @@ func TestSpan(t *testing.T) {
 				Timestamp: testTime,
 				Name:      "error",
 				Attributes: map[label.Key]label.Value{
-					label.Key("error.type"):    label.StringValue("go.opentelemetry.io/otel/internal/testing.TestError"),
+					label.Key("error.type"):    label.StringValue("go.opentelemetry.io/otel/internal/internaltest.TestError"),
 					label.Key("error.message"): label.StringValue(errMsg),
 				},
 			}}

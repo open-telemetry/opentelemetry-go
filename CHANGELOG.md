@@ -8,15 +8,23 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.16.0] - 2020-01-13
+
 ### Added
 
 - Add the `ReadOnlySpan` and `ReadWriteSpan` interfaces to provide better control for accessing span data. (#1360)
 - `NewGRPCDriver` function returns a `ProtocolDriver` that maintains a single gRPC connection to the collector. (#1369)
-- Documentation about the project's versioning policy. (#1388)
-- `NewSplitDriver` for OTLP exporter that allows sending traces and metrics to different endpoints. (#1418)
+- Added documentation about the project's versioning policy. (#1388)
+- Added `NewSplitDriver` for OTLP exporter that allows sending traces and metrics to different endpoints. (#1418)
+- Added codeql worfklow to GitHub Actions (#1428)
+- Added Gosec workflow to GitHub Actions (#1429)
+- Add new HTTP driver for OTLP exporter in `exporters/otlp/otlphttp`. Currently it only supports the binary protobuf payloads. (#1420)
 
 ### Changed
 
+#### Tracing
+
+- Rename `internal/testing` to `internal/internaltest`. (#1449)
 - Rename `export.SpanData` to `export.SpanSnapshot` and use it only for exporting spans. (#1360)
 - Store the parent's full `SpanContext` rather than just its span ID in the `span` struct. (#1360)
 - Improve span duration accuracy. (#1360)
@@ -25,13 +33,40 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `NewExporter` from `exporters/otlp` now takes a `ProtocolDriver` as a parameter. (#1369)
 - Many OTLP Exporter options became gRPC ProtocolDriver options. (#1369)
 - Unify endpoint API that related to OTel exporter. (#1401)
+- Moved gRPC driver for OTLP exporter to `exporters/otlp/otlpgrpc`. (#1420)
+- The `TraceContext` propagator now correctly propagates `TraceState` through the `SpanContext`. (#1447)
+- The `Event` type is moved from the `otel/sdk/export/trace` package to the `otel/trace` API package. (#1452)
+
+#### Metrics
+
+- Metric `array` aggregator renamed `exact` to match its `aggregation.Kind` (#1412)
+- Metric `exact` aggregator includes per-point timestamps (#1412)
+- Metric stdout exporter uses MinMaxSumCount aggregator for ValueRecorder instruments (#1412)
+- Optimize metric histogram aggregator to re-use its slice of buckets. (#1435)
 - Metric aggregator Count() and histogram Bucket.Counts are consistently `uint64`. (1430)
 - Metric SDK exporter interface `ExportKind` renamed `AggregationTemporality`. (#1415)
+- `SamplingResult` now passed a `Tracestate` from the parent `SpanContext` (#1432)
+- Metric Push and Pull Controller components are combined into a single "basic" Controller:
+  - `WithExporter()` and `Start()` to configure Push behavior
+  - `Start()` is optional; use `Collect()` and `ForEach()` for Pull behavior
+  - `Start()` and `Stop()` accept Context. (#1378)
 
 ### Removed
 
+#### Tracing
+
 - Remove `errUninitializedSpan` as its only usage is now obsolete. (#1360)
+
+#### Metrics
+
 - Remove the basic metric Processor's ability to convert cumulative to delta aggregation temporality. (#1415)
+- Remove Metric export functionality related to quantiles and summary data points: this is not specified (#1412)
+- Remove DDSketch metric aggregator; our intention is to re-introduce this as an option of the histogram aggregator after [new OTLP histogram data types](https://github.com/open-telemetry/opentelemetry-proto/pull/226) are released (#1412)
+
+### Fixed
+
+- `BatchSpanProcessor.Shutdown()` will now shutdown underlying `export.SpanExporter`. (#1443)
+>>>>>>> origin
 
 ## [0.15.0] - 2020-12-10
 
@@ -47,7 +82,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Moved the SDK's `internal.IDGenerator` interface in to the `sdk/trace` package to enable support for externally-defined ID generators. (#1363)
 - Bump `github.com/google/go-cmp` from 0.5.3 to 0.5.4 (#1374)
 - Bump `github.com/golangci/golangci-lint` in `/internal/tools` (#1375)
-
 
 ### Fixed
 
@@ -1006,7 +1040,8 @@ It contains api and sdk for trace and meter.
 - CODEOWNERS file to track owners of this project.
 
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.16.0
 [0.15.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.15.0
 [0.14.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.14.0
 [0.13.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.13.0

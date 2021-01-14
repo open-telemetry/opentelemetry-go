@@ -21,7 +21,7 @@ import (
 const (
 	// DefaultCollectorPort is the port the Exporter will attempt connect to
 	// if no collector port is provided.
-	DefaultCollectorPort uint16 = 55680
+	DefaultCollectorPort uint16 = 4317
 	// DefaultCollectorHost is the host address the Exporter will attempt
 	// connect to if no collector address is provided.
 	DefaultCollectorHost string = "localhost"
