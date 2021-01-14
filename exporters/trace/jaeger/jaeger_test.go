@@ -403,7 +403,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 					label.Uint64("uint", uint64(uintValue)),
 					label.Uint64("overflows", math.MaxUint64),
 				},
-				MessageEvents: []export.Event{
+				MessageEvents: []trace.Event{
 					{Name: eventNameValue, Attributes: []label.KeyValue{label.String("k1", keyValue)}, Time: now},
 				},
 				StatusCode:    codes.Error,
