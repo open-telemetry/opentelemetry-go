@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Removed
+
+- The `runtime/trace` task for Go 1.11 was removed. (#1469)
+
 ## [0.16.0] - 2020-01-13
 
 ### Added
