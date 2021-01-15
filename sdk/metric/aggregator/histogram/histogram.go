@@ -41,6 +41,19 @@ type (
 		state      *state
 	}
 
+	// config describes how the histogram is aggregated.
+	config struct {
+		// explicitBoundaries support arbitrary bucketing schemes.  This
+		// is the general case.
+		explicitBoundaries []float64
+	}
+
+	// Option configures a histogram config.
+	Option interface {
+		// apply sets one or more config fields.
+		apply(*config)
+	}
+
 	// state represents the state of a histogram, consisting of
 	// the sum and counts for all observed values and
 	// the less than equal bucket count for the pre-determined boundaries.
@@ -50,6 +63,39 @@ type (
 		count        uint64
 	}
 )
+
+// WithExplicitBoundaries sets the ExplicitBoundaries configuration option of a config.
+func WithExplicitBoundaries(explicitBoundaries []float64) Option {
+	return explicitBoundariesOption{explicitBoundaries}
+}
+
+type explicitBoundariesOption struct {
+	boundaries []float64
+}
+
+func (o explicitBoundariesOption) apply(config *config) {
+	config.explicitBoundaries = o.boundaries
+}
+
+// defaultExplicitBoundaries have been copied from prometheus.DefBuckets.
+//
+// Note we anticipate the use of a high-precision histogram sketch as
+// the standard histogram aggregator for OTLP export.
+// (https://github.com/open-telemetry/opentelemetry-specification/issues/982).
+var defaultFloat64ExplicitBoundaries = []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10}
+
+// defaultInt64ExplicitBoundaryMultiplier determines the default
+// integer histogram boundaries.
+const defaultInt64ExplicitBoundaryMultiplier = 1e6
+
+// defaultInt64ExplicitBoundaries applies a multiplier to the default
+// float64 boundaries: [ 5K, 10K, 25K, ..., 2.5M, 5M, 10M ]
+var defaultInt64ExplicitBoundaries = func(bounds []float64) (asint []float64) {
+	for _, f := range bounds {
+		asint = append(asint, defaultInt64ExplicitBoundaryMultiplier*f)
+	}
+	return
+}(defaultFloat64ExplicitBoundaries)
 
 var _ export.Aggregator = &Aggregator{}
 var _ aggregation.Sum = &Aggregator{}
@@ -64,14 +110,26 @@ var _ aggregation.Histogram = &Aggregator{}
 // Note that this aggregator maintains each value using independent
 // atomic operations, which introduces the possibility that
 // checkpoints are inconsistent.
-func New(cnt int, desc *metric.Descriptor, boundaries []float64) []Aggregator {
+func New(cnt int, desc *metric.Descriptor, opts ...Option) []Aggregator {
+	var cfg config
+
+	if desc.NumberKind() == number.Int64Kind {
+		cfg.explicitBoundaries = defaultInt64ExplicitBoundaries
+	} else {
+		cfg.explicitBoundaries = defaultFloat64ExplicitBoundaries
+	}
+
+	for _, opt := range opts {
+		opt.apply(&cfg)
+	}
+
 	aggs := make([]Aggregator, cnt)
 
 	// Boundaries MUST be ordered otherwise the histogram could not
 	// be properly computed.
-	sortedBoundaries := make([]float64, len(boundaries))
+	sortedBoundaries := make([]float64, len(cfg.explicitBoundaries))
 
-	copy(sortedBoundaries, boundaries)
+	copy(sortedBoundaries, cfg.explicitBoundaries)
 	sort.Float64s(sortedBoundaries)
 
 	for i := range aggs {

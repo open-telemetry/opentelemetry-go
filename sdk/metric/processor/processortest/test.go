@@ -184,7 +184,7 @@ func (testAggregatorSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...
 			*aggPtrs[i] = &aggs[i]
 		}
 	case strings.HasSuffix(desc.Name(), ".histogram"):
-		aggs := histogram.New(len(aggPtrs), desc, nil)
+		aggs := histogram.New(len(aggPtrs), desc)
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
 		}

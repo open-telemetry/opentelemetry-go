@@ -66,7 +66,7 @@ func TestExactDistribution(t *testing.T) {
 }
 
 func TestHistogramDistribution(t *testing.T) {
-	hist := simple.NewWithHistogramDistribution(nil)
+	hist := simple.NewWithHistogramDistribution()
 	require.IsType(t, (*histogram.Aggregator)(nil), oneAgg(hist, &testValueRecorderDesc))
 	testFixedSelectors(t, hist)
 }
