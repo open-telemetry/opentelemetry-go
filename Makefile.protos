@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# This Makefile.proto has rules to generate go code for otlp
+# This Makefile.protos has rules to generate go code for otlp
 # exporter. It does it by copying the proto files from
 # `exporters/otlp/internal/opentelemetry-proto` (which is a
 # submodule that needs to be checked out) into `gen/proto`, changing
