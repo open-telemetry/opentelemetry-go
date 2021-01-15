@@ -21,7 +21,6 @@ import (
 	"math"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -35,7 +34,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -989,55 +987,6 @@ func TestNilSpanEnd(t *testing.T) {
 	span.End()
 }
 
-func TestExecutionTracerTaskEnd(t *testing.T) {
-	var n uint64
-	tp := NewTracerProvider(WithConfig(Config{DefaultSampler: NeverSample()}))
-	tr := tp.Tracer("Execution Tracer Task End")
-
-	executionTracerTaskEnd := func() {
-		atomic.AddUint64(&n, 1)
-	}
-
-	var spans []*span
-	_, apiSpan := tr.Start(context.Background(), "foo")
-	s := apiSpan.(*span)
-
-	s.executionTracerTaskEnd = executionTracerTaskEnd
-	spans = append(spans, s) // never sample
-
-	tID, _ := trace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f")
-	sID, _ := trace.SpanIDFromHex("0001020304050607")
-	ctx := context.Background()
-
-	ctx = trace.ContextWithRemoteSpanContext(ctx,
-		trace.SpanContext{
-			TraceID:    tID,
-			SpanID:     sID,
-			TraceFlags: 0,
-		},
-	)
-	_, apiSpan = tr.Start(
-		ctx,
-		"foo",
-	)
-	s = apiSpan.(*span)
-	s.executionTracerTaskEnd = executionTracerTaskEnd
-	spans = append(spans, s) // parent not sampled
-
-	//tp.ApplyConfig(Config{DefaultSampler: AlwaysSample()})
-	_, apiSpan = tr.Start(context.Background(), "foo")
-	s = apiSpan.(*span)
-	s.executionTracerTaskEnd = executionTracerTaskEnd
-	spans = append(spans, s) // always sample
-
-	for _, span := range spans {
-		span.End()
-	}
-	if got, want := n, uint64(len(spans)); got != want {
-		t.Fatalf("Execution tracer task ended for %v spans; want %v", got, want)
-	}
-}
-
 func TestCustomStartEndTime(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithConfig(Config{DefaultSampler: AlwaysSample()}))
@@ -1060,65 +1009,6 @@ func TestCustomStartEndTime(t *testing.T) {
 	}
 	if got.EndTime != endTime {
 		t.Errorf("expected end time to be %s, got %s", endTime, got.EndTime)
-	}
-}
-
-func TestRecordError(t *testing.T) {
-	scenarios := []struct {
-		err error
-		typ string
-		msg string
-	}{
-		{
-			err: ottest.NewTestError("test error"),
-			typ: "go.opentelemetry.io/otel/internal/internaltest.TestError",
-			msg: "test error",
-		},
-		{
-			err: errors.New("test error 2"),
-			typ: "*errors.errorString",
-			msg: "test error 2",
-		},
-	}
-
-	for _, s := range scenarios {
-		te := NewTestExporter()
-		tp := NewTracerProvider(WithSyncer(te))
-		span := startSpan(tp, "RecordError")
-
-		errTime := time.Now()
-		span.RecordError(s.err, trace.WithTimestamp(errTime))
-
-		got, err := endSpan(te, span)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		want := &export.SpanSnapshot{
-			SpanContext: trace.SpanContext{
-				TraceID:    tid,
-				TraceFlags: 0x1,
-			},
-			ParentSpanID:    sid,
-			Name:            "span0",
-			StatusCode:      codes.Error,
-			SpanKind:        trace.SpanKindInternal,
-			HasRemoteParent: true,
-			MessageEvents: []trace.Event{
-				{
-					Name: errorEventName,
-					Time: errTime,
-					Attributes: []label.KeyValue{
-						errorTypeKey.String(s.typ),
-						errorMessageKey.String(s.msg),
-					},
-				},
-			},
-			InstrumentationLibrary: instrumentation.Library{Name: "RecordError"},
-		}
-		if diff := cmpDiff(got, want); diff != "" {
-			t.Errorf("SpanErrorOptions: -got +want %s", diff)
-		}
 	}
 }
 

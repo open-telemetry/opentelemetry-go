@@ -65,7 +65,5 @@ func (tr *tracer) Start(ctx context.Context, name string, options ...trace.SpanO
 		}
 	}
 
-	ctx, end := startExecutionTracerTask(ctx, name)
-	span.executionTracerTaskEnd = end
 	return trace.ContextWithSpan(ctx, span), span
 }

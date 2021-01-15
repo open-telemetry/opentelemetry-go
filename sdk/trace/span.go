@@ -128,9 +128,6 @@ type span struct {
 	// links are stored in FIFO queue capped by configured limit.
 	links *evictedQueue
 
-	// executionTracerTaskEnd ends the execution tracer span.
-	executionTracerTaskEnd func()
-
 	// tracer is the SDK tracer that created this span.
 	tracer *tracer
 }
@@ -199,10 +196,6 @@ func (s *span) End(options ...trace.SpanOption) {
 				errorMessageKey.String(fmt.Sprint(recovered)),
 			),
 		)
-	}
-
-	if s.executionTracerTaskEnd != nil {
-		s.executionTracerTaskEnd()
 	}
 
 	if !s.IsRecording() {
