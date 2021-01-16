@@ -24,10 +24,11 @@ import (
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+
+	"go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 )
 
 // Exporter is an OpenTelemetry exporter. It exports both traces and metrics
@@ -140,7 +141,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, ss []*tracesdk.SpanSnapshot)
 // NewExportPipeline sets up a complete export pipeline
 // with the recommended setup for trace provider.
 func NewExportPipeline(ctx context.Context, driver ProtocolDriver, exporterOpts ...ExporterOption) (*Exporter,
-	*sdktrace.TracerProvider, *push.Controller, error) {
+	*sdktrace.TracerProvider, *basic.Controller, error) {
 
 	exp, err := NewExporter(ctx, driver, exporterOpts...)
 	if err != nil {
@@ -151,30 +152,32 @@ func NewExportPipeline(ctx context.Context, driver ProtocolDriver, exporterOpts 
 		sdktrace.WithBatcher(exp),
 	)
 
-	pusher := push.New(
-		basic.New(
+	cntr := basic.New(
+		processor.New(
 			simple.NewWithInexpensiveDistribution(),
 			exp,
 		),
-		exp,
 	)
 
-	return exp, tracerProvider, pusher, nil
+	return exp, tracerProvider, cntr, nil
 }
 
 // InstallNewPipeline instantiates a NewExportPipeline with the
 // recommended configuration and registers it globally.
 func InstallNewPipeline(ctx context.Context, driver ProtocolDriver, exporterOpts ...ExporterOption) (*Exporter,
-	*sdktrace.TracerProvider, *push.Controller, error) {
+	*sdktrace.TracerProvider, *basic.Controller, error) {
 
-	exp, tp, pusher, err := NewExportPipeline(ctx, driver, exporterOpts...)
+	exp, tp, cntr, err := NewExportPipeline(ctx, driver, exporterOpts...)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
 	otel.SetTracerProvider(tp)
-	otel.SetMeterProvider(pusher.MeterProvider())
-	pusher.Start()
+	otel.SetMeterProvider(cntr.MeterProvider())
+	err = cntr.Start(ctx)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
-	return exp, tp, pusher, err
+	return exp, tp, cntr, err
 }
