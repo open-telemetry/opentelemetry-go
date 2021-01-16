@@ -25,7 +25,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	ottest "go.opentelemetry.io/otel/internal/testing"
+	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -92,8 +92,6 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// TODO: Expose Numbers in api/metric for sorting support
-
 type Numbers struct {
 	// numbers has to be aligned for 64-bit atomic operations.
 	numbers []number.Number
@@ -134,8 +132,8 @@ func (n *Numbers) Sum() number.Number {
 	return sum
 }
 
-func (n *Numbers) Count() int64 {
-	return int64(len(n.numbers))
+func (n *Numbers) Count() uint64 {
+	return uint64(len(n.numbers))
 }
 
 func (n *Numbers) Min() number.Number {
@@ -144,16 +142,6 @@ func (n *Numbers) Min() number.Number {
 
 func (n *Numbers) Max() number.Number {
 	return n.numbers[len(n.numbers)-1]
-}
-
-// Median() is an alias for Quantile(0.5).
-func (n *Numbers) Median() number.Number {
-	// Note that len(n.numbers) is 1 greater than the max element
-	// index, so dividing by two rounds up.  This gives the
-	// intended definition for Quantile() in tests, which is to
-	// return the smallest element that is at or above the
-	// specified quantile.
-	return n.numbers[len(n.numbers)/2]
 }
 
 func (n *Numbers) Points() []number.Number {
@@ -223,7 +211,7 @@ func SynchronizedMoveResetTest(t *testing.T, mkind metric.InstrumentKind, nf fun
 
 			if count, ok := agg.(aggregation.Count); ok {
 				c, err := count.Count()
-				require.Equal(t, int64(0), c)
+				require.Equal(t, uint64(0), c)
 				require.NoError(t, err)
 			}
 
@@ -270,7 +258,7 @@ func SynchronizedMoveResetTest(t *testing.T, mkind metric.InstrumentKind, nf fun
 
 			if count, ok := agg.(aggregation.Count); ok {
 				c, err := count.Count()
-				require.Equal(t, int64(1), c)
+				require.Equal(t, uint64(1), c)
 				require.NoError(t, err)
 			}
 

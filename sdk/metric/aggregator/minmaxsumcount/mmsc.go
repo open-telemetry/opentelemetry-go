@@ -38,7 +38,7 @@ type (
 		sum   number.Number
 		min   number.Number
 		max   number.Number
-		count int64
+		count uint64
 	}
 )
 
@@ -46,8 +46,7 @@ var _ export.Aggregator = &Aggregator{}
 var _ aggregation.MinMaxSumCount = &Aggregator{}
 
 // New returns a new aggregator for computing the min, max, sum, and
-// count.  It does not compute quantile information other than Min and
-// Max.
+// count.
 //
 // This type uses a mutex for Update() and SynchronizedMove() concurrency.
 func New(cnt int, desc *metric.Descriptor) []Aggregator {
@@ -78,7 +77,7 @@ func (c *Aggregator) Sum() (number.Number, error) {
 }
 
 // Count returns the number of values in the checkpoint.
-func (c *Aggregator) Count() (int64, error) {
+func (c *Aggregator) Count() (uint64, error) {
 	return c.count, nil
 }
 

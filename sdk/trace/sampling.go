@@ -56,10 +56,11 @@ const (
 	RecordAndSample
 )
 
-// SamplingResult conveys a SamplingDecision and a set of Attributes.
+// SamplingResult conveys a SamplingDecision, set of Attributes and a Tracestate.
 type SamplingResult struct {
 	Decision   SamplingDecision
 	Attributes []label.KeyValue
+	Tracestate trace.TraceState
 }
 
 type traceIDRatioSampler struct {
@@ -70,9 +71,15 @@ type traceIDRatioSampler struct {
 func (ts traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	x := binary.BigEndian.Uint64(p.TraceID[0:8]) >> 1
 	if x < ts.traceIDUpperBound {
-		return SamplingResult{Decision: RecordAndSample}
+		return SamplingResult{
+			Decision:   RecordAndSample,
+			Tracestate: p.ParentContext.TraceState,
+		}
 	}
-	return SamplingResult{Decision: Drop}
+	return SamplingResult{
+		Decision:   Drop,
+		Tracestate: p.ParentContext.TraceState,
+	}
 }
 
 func (ts traceIDRatioSampler) Description() string {
@@ -102,7 +109,10 @@ func TraceIDRatioBased(fraction float64) Sampler {
 type alwaysOnSampler struct{}
 
 func (as alwaysOnSampler) ShouldSample(p SamplingParameters) SamplingResult {
-	return SamplingResult{Decision: RecordAndSample}
+	return SamplingResult{
+		Decision:   RecordAndSample,
+		Tracestate: p.ParentContext.TraceState,
+	}
 }
 
 func (as alwaysOnSampler) Description() string {
@@ -120,7 +130,10 @@ func AlwaysSample() Sampler {
 type alwaysOffSampler struct{}
 
 func (as alwaysOffSampler) ShouldSample(p SamplingParameters) SamplingResult {
-	return SamplingResult{Decision: Drop}
+	return SamplingResult{
+		Decision:   Drop,
+		Tracestate: p.ParentContext.TraceState,
+	}
 }
 
 func (as alwaysOffSampler) Description() string {

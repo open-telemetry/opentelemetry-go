@@ -43,7 +43,7 @@ type (
 	// Count returns the number of values that were aggregated.
 	Count interface {
 		Aggregation
-		Count() (int64, error)
+		Count() (uint64, error)
 	}
 
 	// Min returns the minimum value over the set of values that were aggregated.
@@ -58,23 +58,26 @@ type (
 		Max() (number.Number, error)
 	}
 
-	// Quantile returns an exact or estimated quantile over the
-	// set of values that were aggregated.
-	Quantile interface {
-		Aggregation
-		Quantile(float64) (number.Number, error)
-	}
-
 	// LastValue returns the latest value that was aggregated.
 	LastValue interface {
 		Aggregation
 		LastValue() (number.Number, time.Time, error)
 	}
 
-	// Points returns the raw set of values that were aggregated.
+	// Points returns the raw values that were aggregated.
 	Points interface {
 		Aggregation
-		Points() ([]number.Number, error)
+
+		// Points returns points in the order they were
+		// recorded.  Points are approximately ordered by
+		// timestamp, but this is not guaranteed.
+		Points() ([]Point, error)
+	}
+
+	// Point is a raw data point, consisting of a number and value.
+	Point struct {
+		number.Number
+		time.Time
 	}
 
 	// Buckets represents histogram buckets boundaries and counts.
@@ -86,16 +89,14 @@ type (
 		// aggregating integers.
 		Boundaries []float64
 
-		// Counts are floating point numbers to account for
-		// the possibility of sampling which allows for
-		// non-integer count values.
-		Counts []float64
+		// Counts holds the count in each bucket.
+		Counts []uint64
 	}
 
 	// Histogram returns the count of events in pre-determined buckets.
 	Histogram interface {
 		Aggregation
-		Count() (int64, error)
+		Count() (uint64, error)
 		Sum() (number.Number, error)
 		Histogram() (Buckets, error)
 	}
@@ -106,18 +107,7 @@ type (
 		Min() (number.Number, error)
 		Max() (number.Number, error)
 		Sum() (number.Number, error)
-		Count() (int64, error)
-	}
-
-	// Distribution supports the Min, Max, Sum, Count, and Quantile
-	// interfaces.
-	Distribution interface {
-		Aggregation
-		Min() (number.Number, error)
-		Max() (number.Number, error)
-		Sum() (number.Number, error)
-		Count() (int64, error)
-		Quantile(float64) (number.Number, error)
+		Count() (uint64, error)
 	}
 )
 
@@ -143,12 +133,10 @@ const (
 	MinMaxSumCountKind Kind = "MinMaxSumCount"
 	HistogramKind      Kind = "Histogram"
 	LastValueKind      Kind = "Lastvalue"
-	SketchKind         Kind = "Sketch"
 	ExactKind          Kind = "Exact"
 )
 
 var (
-	ErrInvalidQuantile  = fmt.Errorf("the requested quantile is out of range")
 	ErrNegativeInput    = fmt.Errorf("negative value is out of range for this instrument")
 	ErrNaNInput         = fmt.Errorf("NaN value is an invalid input")
 	ErrInconsistentType = fmt.Errorf("inconsistent aggregator types")

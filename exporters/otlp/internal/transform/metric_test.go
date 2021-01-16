@@ -32,7 +32,7 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
-	arrAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/array"
+	arrAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	lvAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
@@ -117,7 +117,7 @@ func TestMinMaxSumCountValue(t *testing.T) {
 		assert.Equal(t, min, number.NewInt64Number(1))
 		assert.Equal(t, max, number.NewInt64Number(10))
 		assert.Equal(t, sum, number.NewInt64Number(11))
-		assert.Equal(t, count, int64(2))
+		assert.Equal(t, count, uint64(2))
 	}
 }
 
@@ -369,7 +369,7 @@ func (te *testErrMinMaxSumCount) Max() (number.Number, error) {
 	return 0, te.err
 }
 
-func (te *testErrMinMaxSumCount) Count() (int64, error) {
+func (te *testErrMinMaxSumCount) Count() (uint64, error) {
 	return 0, te.err
 }
 

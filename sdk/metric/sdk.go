@@ -412,8 +412,7 @@ func (m *Accumulator) observeAsyncInstruments(ctx context.Context) int {
 
 	asyncCollected := 0
 
-	// TODO: change this to `ctx` (in a separate PR, with tests)
-	m.asyncInstruments.Run(context.Background(), m)
+	m.asyncInstruments.Run(ctx, m)
 
 	for _, inst := range m.asyncInstruments.Instruments() {
 		if a := m.fromAsync(inst); a != nil {
