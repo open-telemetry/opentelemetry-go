@@ -188,7 +188,8 @@ type Metadata struct {
 // and label set, as prepared by an Accumulator for the Processor.
 type Accumulation struct {
 	Metadata
-	aggregator metric.Aggregator
+	aggregator   metric.Aggregator
+	viewSelector metric.AggregatorSelector
 }
 
 // Record contains the exported data for a single metric instrument
@@ -219,16 +220,17 @@ func (m Metadata) Resource() *resource.Resource {
 
 // NewAccumulation allows Accumulator implementations to construct new
 // Accumulations to send to Processors. The Descriptor, Labels, Resource,
-// and Aggregator represent aggregate metric events received over a single
-// collection period.
-func NewAccumulation(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregator metric.Aggregator) Accumulation {
+// Aggregator and AggregatorSelector represent aggregate metric events
+// received over a single collection period.
+func NewAccumulation(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregator metric.Aggregator, viewSelector metric.AggregatorSelector) Accumulation {
 	return Accumulation{
 		Metadata: Metadata{
 			descriptor: descriptor,
 			labels:     labels,
 			resource:   resource,
 		},
-		aggregator: aggregator,
+		aggregator:   aggregator,
+		viewSelector: viewSelector,
 	}
 }
 
@@ -236,6 +238,13 @@ func NewAccumulation(descriptor *metric.Descriptor, labels *label.Set, resource 
 // access the checkpointed state without locking.
 func (r Accumulation) Aggregator() metric.Aggregator {
 	return r.aggregator
+}
+
+// ViewAggregatorSelector returns the aggregator selector object for an
+// instrument associated with a view. This could be nil indicating
+// the default AggregaotSelector should be used.
+func (r Accumulation) ViewAggregatorSelector() metric.AggregatorSelector {
+	return r.viewSelector
 }
 
 // NewRecord allows Processor implementations to construct export

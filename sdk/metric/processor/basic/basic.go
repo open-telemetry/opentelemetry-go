@@ -144,6 +144,20 @@ func New(aselector metric.AggregatorSelector, eselector export.ExportKindSelecto
 	return p
 }
 
+// allocateAggregator allocates a variable number of aggregators of a kind
+// suitable for the `descriptor`.
+//
+// If `viewSelector` is not `nil`, it would be used to initialize the
+// aggregators. Otherwise, the AggregatorSelector associated with the
+// `Processor` would be .
+func (b *Processor) allocAggregator(descriptor *metric.Descriptor, viewSelector metric.AggregatorSelector, aggregator ...*metric.Aggregator) {
+	if viewSelector != nil {
+		viewSelector.AggregatorFor(descriptor, aggregator...)
+	} else {
+		b.AggregatorFor(descriptor, aggregator...)
+	}
+}
+
 // Process implements export.Processor.
 func (b *Processor) Process(accum export.Accumulation) error {
 	if b.startedCollection != b.finishedCollection+1 {
@@ -172,11 +186,11 @@ func (b *Processor) Process(accum export.Accumulation) error {
 		if stateful {
 			if desc.InstrumentKind().PrecomputedSum() {
 				// If we know we need to compute deltas, allocate two aggregators.
-				b.AggregatorFor(desc, &newValue.cumulative, &newValue.delta)
+				b.allocAggregator(desc, accum.ViewAggregatorSelector(), &newValue.cumulative, &newValue.delta)
 			} else {
 				// In this case we are certain not to need a delta, only allocate
 				// a cumulative aggregator.
-				b.AggregatorFor(desc, &newValue.cumulative)
+				b.allocAggregator(desc, accum.ViewAggregatorSelector(), &newValue.cumulative)
 			}
 		}
 		b.state.values[key] = newValue
@@ -233,7 +247,7 @@ func (b *Processor) Process(accum export.Accumulation) error {
 	// before merging below.
 	if !value.currentOwned {
 		tmp := value.current
-		b.AggregatorSelector.AggregatorFor(desc, &value.current)
+		b.allocAggregator(desc, accum.ViewAggregatorSelector(), &value.current)
 		value.currentOwned = true
 		if err := tmp.SynchronizedMove(value.current, desc); err != nil {
 			return err

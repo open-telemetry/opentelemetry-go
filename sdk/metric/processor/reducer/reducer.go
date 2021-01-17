@@ -62,6 +62,7 @@ func (p *Processor) Process(accum export.Accumulation) error {
 			&reduced,
 			accum.Resource(),
 			accum.Aggregator(),
+			nil,
 		),
 	)
 }
