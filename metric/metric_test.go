@@ -206,6 +206,18 @@ func TestOptions(t *testing.T) {
 	}
 }
 
+func TestViewPanic(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("The code did not panic")
+		}
+	}()
+
+	_, meter := oteltest.NewMeter()
+	c := Must(meter).NewFloat64Counter("test.counter.float")
+	meter.RegisterView(metric.NewView(c.SyncImpl(), metric.DropAll, nil, nil))
+}
+
 func TestCounter(t *testing.T) {
 	// N.B. the API does not check for negative
 	// values, that's the SDK's responsibility.
@@ -434,6 +446,9 @@ type testWrappedMeter struct {
 }
 
 var _ metric.MeterImpl = testWrappedMeter{}
+
+func (testWrappedMeter) RegisterView(metric.View) {
+}
 
 func (testWrappedMeter) RecordBatch(context.Context, []label.KeyValue, ...metric.Measurement) {
 }

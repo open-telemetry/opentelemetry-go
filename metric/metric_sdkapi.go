@@ -24,6 +24,9 @@ import (
 // MeterImpl is the interface an SDK must implement to supply a Meter
 // implementation.
 type MeterImpl interface {
+	// RegisterView registers a view for a synchronous instrument.
+	RegisterView(v View)
+
 	// RecordBatch atomically records a batch of measurements.
 	RecordBatch(ctx context.Context, labels []label.KeyValue, measurement ...Measurement)
 

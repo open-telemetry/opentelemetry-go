@@ -74,6 +74,11 @@ func NewUniqueInstrumentMeterImpl(impl metric.MeterImpl) metric.MeterImpl {
 	}
 }
 
+// RegisterView implements metric.MeterImpl.
+func (u *uniqueInstrumentMeterImpl) RegisterView(v metric.View) {
+	u.impl.RegisterView(v)
+}
+
 // RecordBatch implements metric.MeterImpl.
 func (u *uniqueInstrumentMeterImpl) RecordBatch(ctx context.Context, labels []label.KeyValue, ms ...metric.Measurement) {
 	u.impl.RecordBatch(ctx, labels, ms...)

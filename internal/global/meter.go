@@ -185,6 +185,11 @@ func (m *meterImpl) setDelegate(name, version string, provider metric.MeterProvi
 	m.asyncInsts = nil
 }
 
+// RegisterView is a no-op here.
+func (m *meterImpl) RegisterView(metric.View) {
+	// Should we panic here?
+}
+
 func (m *meterImpl) NewSyncInstrument(desc metric.Descriptor) (metric.SyncImpl, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()

@@ -41,6 +41,13 @@ type Meter struct {
 	name, version string
 }
 
+// RegisterView registers a view for a synchronous instrument.
+func (m Meter) RegisterView(v View) {
+	if m.impl != nil {
+		m.impl.RegisterView(v)
+	}
+}
+
 // RecordBatch atomically records a batch of measurements.
 func (m Meter) RecordBatch(ctx context.Context, ls []label.KeyValue, ms ...Measurement) {
 	if m.impl == nil {
@@ -326,6 +333,11 @@ type BatchObserverMust struct {
 // error.
 func Must(meter Meter) MeterMust {
 	return MeterMust{meter: meter}
+}
+
+// RegisterView calls `Meter.RegisterView`
+func (mm MeterMust) RegisterView(v View) {
+	mm.meter.RegisterView(v)
 }
 
 // NewInt64Counter calls `Meter.NewInt64Counter` and returns the

@@ -127,6 +127,10 @@ func NewMeter() (*MeterImpl, metric.Meter) {
 	return impl, p.Meter("mock")
 }
 
+func (m *MeterImpl) RegisterView(v metric.View) {
+	panic("me")
+}
+
 func (m *MeterImpl) NewSyncInstrument(descriptor metric.Descriptor) (metric.SyncImpl, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()

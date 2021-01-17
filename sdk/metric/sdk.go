@@ -309,6 +309,10 @@ func NewAccumulator(processor export.Processor, resource *resource.Resource) *Ac
 	}
 }
 
+func (m *Accumulator) RegisterView(v metric.View) {
+	panic("me")
+}
+
 // NewSyncInstrument implements metric.MetricImpl.
 func (m *Accumulator) NewSyncInstrument(descriptor metric.Descriptor) (metric.SyncImpl, error) {
 	return &syncInstrument{
