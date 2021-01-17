@@ -106,20 +106,30 @@ func main() {
 	tracer := otel.Tracer("test-tracer")
 	meter := otel.Meter("test-meter")
 
+	// Recorder metric example
+	vr, _ := meter.NewFloat64Counter(
+		"an_important_metric",
+		metric.WithDescription("Measures the cumulative epicness of the app"),
+	)
+
+	// DropAll view, meaning all records label would be dropped before aggregation.
+	meter.RegisterView(metric.NewView(vr.SyncImpl(), metric.DropAll, nil, nil))
+
+	// Ungroup view, meaning all records take the labels directly.
+	meter.RegisterView(metric.NewView(vr.SyncImpl(), metric.Ungroup, nil, nil))
+
+	// Two views with the same metric and aggregation type but different label keys for aggregation.
+	meter.RegisterView(metric.NewView(vr.SyncImpl(), metric.LabelKeys, []label.Key{"os_type"}, nil))
+	meter.RegisterView(metric.NewView(vr.SyncImpl(), metric.LabelKeys, []label.Key{"environment"}, nil))
+
 	// labels represent additional key-value descriptors that can be bound to a
 	// metric observer or recorder.
 	commonLabels := []label.KeyValue{
-		label.String("labelA", "chocolate"),
-		label.String("labelB", "raspberry"),
-		label.String("labelC", "vanilla"),
+		label.String("os_type", "linux"),
 	}
 
-	// Recorder metric example
-	valuerecorder := metric.Must(meter).
-		NewFloat64Counter(
-			"an_important_metric",
-			metric.WithDescription("Measures the cumulative epicness of the app"),
-		).Bind(commonLabels...)
+	// Note: views registered after binding have no effect on the bind object.
+	valuerecorder := vr.Bind(commonLabels...)
 	defer valuerecorder.Unbind()
 
 	// work begins
@@ -132,6 +142,10 @@ func main() {
 		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))
 		log.Printf("Doing really hard work (%d / 10)\n", i+1)
 		valuerecorder.Add(ctx, 1.0)
+
+		vr.Add(context.Background(), 1.0, label.String("os_type", "win"), label.String("environment", "prod"))
+
+		vr.Add(context.Background(), 1.0, label.String("environment", "ddev"))
 
 		<-time.After(time.Second)
 		iSpan.End()
