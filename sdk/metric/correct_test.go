@@ -30,6 +30,7 @@ import (
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -87,6 +88,16 @@ type testSelector struct {
 func (ts *testSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*metric.Aggregator) {
 	ts.newAggCount += len(aggPtrs)
 	processortest.AggregatorSelector().AggregatorFor(desc, aggPtrs...)
+}
+
+type testAlwaysLastValueAggregatorSelector struct {
+}
+
+func (t *testAlwaysLastValueAggregatorSelector) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*metric.Aggregator) {
+	aggs := lastvalue.New(len(aggPtrs))
+	for i := range aggPtrs {
+		*aggPtrs[i] = &aggs[i]
+	}
 }
 
 func newSDK(t *testing.T) (metric.Meter, *metricsdk.Accumulator, *correctnessProcessor) {
@@ -172,6 +183,106 @@ func TestInputRangeValueRecorder(t *testing.T) {
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, testHandler.Flush())
 	require.Nil(t, err)
+}
+
+func TestViewDropAllLabels(t *testing.T) {
+	ctx := context.Background()
+	meter, sdk, processor := newSDK(t)
+
+	valuerecorder := Must(meter).NewFloat64ValueRecorder("name.exact")
+	Must(meter).RegisterView(metric.NewView(valuerecorder.SyncImpl(), metric.DropAll, nil, nil))
+	Must(meter).RegisterView(metric.NewView(valuerecorder.SyncImpl(), metric.LabelKeys, nil, nil))
+
+	valuerecorder.Record(ctx, 1.0, label.String("A", "a"))
+
+	checkpointed := sdk.Collect(ctx)
+	require.Equal(t, 1, checkpointed)
+
+	require.Equal(t, 1, len(processor.accumulations))
+	require.Equal(t, 0, processor.accumulations[0].Labels().Len())
+}
+
+func TestViewUngroupLabels(t *testing.T) {
+	ctx := context.Background()
+	meter, sdk, processor := newSDK(t)
+
+	valuerecorder := Must(meter).NewFloat64ValueRecorder("name.exact")
+	Must(meter).RegisterView(metric.NewView(valuerecorder.SyncImpl(), metric.Ungroup, nil, nil))
+
+	valuerecorder.Record(ctx, 1.0, label.String("A", "a"))
+
+	checkpointed := sdk.Collect(ctx)
+	require.Equal(t, 1, checkpointed)
+
+	labels := processor.accumulations[0].Labels().ToSlice()
+	require.ElementsMatch(t, labels, []label.KeyValue{label.String("A", "a")})
+}
+
+func TestViewLabelKeys(t *testing.T) {
+	ctx := context.Background()
+	meter, sdk, processor := newSDK(t)
+
+	valuerecorder := Must(meter).NewFloat64ValueRecorder("name.exact")
+	Must(meter).RegisterView(metric.NewView(valuerecorder.SyncImpl(), metric.LabelKeys, []label.Key{"A", "B"}, nil))
+
+	valuerecorder.Record(ctx, 1.0, label.String("A", "a"))
+
+	checkpointed := sdk.Collect(ctx)
+	require.Equal(t, 1, checkpointed)
+
+	labels := processor.accumulations[0].Labels()
+	expected := label.NewSet(label.String("A", "a"), label.Empty("B"))
+	require.True(t, labels.Equals(&expected))
+}
+
+func TestViewCustomAggregator(t *testing.T) {
+	ctx := context.Background()
+	meter, sdk, processor := newSDK(t)
+
+	valuerecorder := Must(meter).NewFloat64ValueRecorder("name.exact")
+	Must(meter).RegisterView(metric.NewView(valuerecorder.SyncImpl(), metric.Ungroup, nil, &testAlwaysLastValueAggregatorSelector{}))
+
+	valuerecorder.Record(ctx, 1.0, label.String("A", "a"))
+	valuerecorder.Record(ctx, 2.0, label.String("A", "a"))
+
+	checkpointed := sdk.Collect(ctx)
+	require.Equal(t, 1, checkpointed)
+
+	agg := processor.accumulations[0].Aggregator()
+	require.Equal(t, aggregation.LastValueKind, agg.Aggregation().Kind())
+}
+
+func TestViewBind(t *testing.T) {
+	ctx := context.Background()
+	meter, sdk, processor := newSDK(t)
+
+	valuerecorder := Must(meter).NewFloat64ValueRecorder("name.exact")
+	Must(meter).RegisterView(metric.NewView(valuerecorder.SyncImpl(), metric.Ungroup, nil, &testAlwaysLastValueAggregatorSelector{}))
+
+	bindvaluerecorder := valuerecorder.Bind(label.String("A", "a"))
+	defer bindvaluerecorder.Unbind()
+
+	Must(meter).RegisterView(metric.NewView(valuerecorder.SyncImpl(), metric.DropAll, nil, &testAlwaysLastValueAggregatorSelector{}))
+
+	valuerecorder.Record(ctx, 1.0, label.String("A", "a"))
+
+	bindvaluerecorder.Record(ctx, 2.0)
+
+	checkpointed := sdk.Collect(ctx)
+	require.Equal(t, 2, checkpointed)
+
+	require.Equal(t, 2, len(processor.accumulations))
+	v0, _, _ := processor.accumulations[0].Aggregator().Aggregation().(aggregation.LastValue).LastValue()
+	v1, _, _ := processor.accumulations[1].Aggregator().Aggregation().(aggregation.LastValue).LastValue()
+	result := map[label.Set]float64{
+		*processor.accumulations[0].Labels(): v0.AsFloat64(),
+		*processor.accumulations[1].Labels(): v1.AsFloat64(),
+	}
+	expected := map[label.Set]float64{
+		label.NewSet():                       1.0,
+		label.NewSet(label.String("A", "a")): 2.0,
+	}
+	require.Equal(t, expected, result)
 }
 
 func TestDisabledInstrument(t *testing.T) {

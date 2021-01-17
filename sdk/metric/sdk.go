@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 	"runtime"
+	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -71,6 +73,21 @@ type (
 
 	syncInstrument struct {
 		instrument
+
+		// views is a logical set of registered views for this instrument.
+		views sync.Map
+	}
+
+	// syncInstrumentViewKey is used only in syncInstrument as a key representation of a view.
+	syncInstrumentViewKey struct {
+		selector           metric.AggregatorSelector
+		labelConfig        metric.ViewLabelConfig
+		labelKeysSignature string
+	}
+
+	// syncInstrumentViewValue is used only in syncInstrument as a value representation of a view.
+	syncInstrumentViewValue struct {
+		labelKeys map[label.Key]struct{}
 	}
 
 	// mapkey uniquely describes a metric instrument in terms of
@@ -78,6 +95,11 @@ type (
 	mapkey struct {
 		descriptor *metric.Descriptor
 		ordered    label.Distinct
+	}
+
+	// boundInstrument is a snapshot of the view data for a given instrument.
+	boundInstrument struct {
+		records []*record
 	}
 
 	// record maintains the state of one metric instrument.  Due
@@ -115,6 +137,9 @@ type (
 		// inst is a pointer to the corresponding instrument.
 		inst *syncInstrument
 
+		// viewSelector is a reference to the corresponding view's aggregator selector.
+		viewSelector metric.AggregatorSelector
+
 		// current implements the actual RecordOne() API,
 		// depending on the type of aggregation.  If nil, the
 		// metric was disabled by the exporter.
@@ -146,6 +171,7 @@ var (
 	_ metric.AsyncImpl     = &asyncInstrument{}
 	_ metric.SyncImpl      = &syncInstrument{}
 	_ metric.BoundSyncImpl = &record{}
+	_ metric.BoundSyncImpl = &boundInstrument{}
 
 	ErrUninitializedInstrument = fmt.Errorf("use of an uninitialized instrument")
 )
@@ -156,6 +182,98 @@ func (inst *instrument) Descriptor() metric.Descriptor {
 
 func (a *asyncInstrument) Implementation() interface{} {
 	return a
+}
+
+func (s *syncInstrument) registerView(labelConfig metric.ViewLabelConfig, labelKeys []label.Key, selector metric.AggregatorSelector) {
+	key, val := newSyncInstrumentView(labelConfig, labelKeys, selector)
+
+	// First-write-win: ignore duplicated view silently.
+	// maybe return/record an error?
+	s.views.LoadOrStore(key, val)
+}
+
+func (s *syncInstrument) rangeViews(kvs []label.KeyValue, f func([]label.KeyValue, metric.AggregatorSelector)) {
+	empty := true
+	s.views.Range(func(key, value interface{}) bool {
+		empty = false
+		return false
+	})
+	if empty {
+		s.registerView(metric.Ungroup, nil, nil)
+	}
+
+	// compute on need
+	var labelKvs map[label.Key]label.KeyValue
+
+	s.views.Range(func(key, value interface{}) bool {
+		viewKey := key.(*syncInstrumentViewKey)
+		viewValue := value.(*syncInstrumentViewValue)
+
+		var viewLabelKeyValues []label.KeyValue
+		switch viewKey.labelConfig {
+		case metric.Ungroup:
+			viewLabelKeyValues = kvs
+
+		case metric.LabelKeys:
+			if labelKvs == nil {
+				labelKvs = map[label.Key]label.KeyValue{}
+				for _, kv := range kvs {
+					labelKvs[kv.Key] = kv
+				}
+			}
+			for k, kv := range labelKvs {
+				if _, p := viewValue.labelKeys[k]; p {
+					viewLabelKeyValues = append(viewLabelKeyValues, kv)
+				}
+			}
+			for k := range viewValue.labelKeys {
+				if _, p := labelKvs[k]; !p {
+					viewLabelKeyValues = append(viewLabelKeyValues, k.Empty())
+				}
+			}
+
+		case metric.DropAll:
+			// keep nil
+		default:
+			panic(fmt.Sprintf("impossible label config: %s", viewKey.labelConfig))
+		}
+
+		f(viewLabelKeyValues, viewKey.selector)
+		return true
+	})
+}
+
+// newSyncInstrumentView returns a view key/value representation for the given parameters.
+func newSyncInstrumentView(labelConfig metric.ViewLabelConfig, labelKeys []label.Key, selector metric.AggregatorSelector) (*syncInstrumentViewKey, *syncInstrumentViewValue) {
+	key := &syncInstrumentViewKey{
+		selector:           selector,
+		labelConfig:        labelConfig,
+		labelKeysSignature: "",
+	}
+	value := &syncInstrumentViewValue{
+		labelKeys: nil,
+	}
+
+	if labelConfig == metric.LabelKeys {
+		if len(labelKeys) > 0 {
+			value.labelKeys = map[label.Key]struct{}{}
+			for _, k := range labelKeys {
+				value.labelKeys[k] = struct{}{}
+			}
+
+			keys := make([]string, 0, len(value.labelKeys))
+			for k := range value.labelKeys {
+				keys = append(keys, string(k))
+			}
+			sort.Strings(keys)
+			key.labelKeysSignature = strings.Join(keys, "|")
+		} else {
+			// make sure there is only one representation for aggregations without any labels
+			key.labelConfig = metric.DropAll
+		}
+	}
+
+	return key, value
 }
 
 func (s *syncInstrument) Implementation() interface{} {
@@ -209,21 +327,18 @@ func (a *asyncInstrument) getRecorder(labels *label.Set) metric.Aggregator {
 // support re-use of the orderedLabels computed by a previous
 // measurement in the same batch.   This performs two allocations
 // in the common case.
-func (s *syncInstrument) acquireHandle(kvs []label.KeyValue, labelPtr *label.Set) *record {
+func (s *syncInstrument) acquireHandle(kvs []label.KeyValue, selector metric.AggregatorSelector) *record {
 	var rec *record
 	var equiv label.Distinct
 
-	if labelPtr == nil {
-		// This memory allocation may not be used, but it's
-		// needed for the `sortSlice` field, to avoid an
-		// allocation while sorting.
-		rec = &record{}
-		rec.storage = label.NewSetWithSortable(kvs, &rec.sortSlice)
-		rec.labels = &rec.storage
-		equiv = rec.storage.Equivalent()
-	} else {
-		equiv = labelPtr.Equivalent()
-	}
+	// This memory allocation may not be used, but it's
+	// needed for the `sortSlice` field, to avoid an
+	// allocation while sorting.
+	rec = &record{}
+	rec.storage = label.NewSetWithSortable(kvs, &rec.sortSlice)
+	rec.labels = &rec.storage
+	rec.viewSelector = selector
+	equiv = rec.storage.Equivalent()
 
 	// Create lookup key for sync.Map (one allocation, as this
 	// passes through an interface{})
@@ -243,14 +358,14 @@ func (s *syncInstrument) acquireHandle(kvs []label.KeyValue, labelPtr *label.Set
 		// This entry is no longer mapped, try to add a new entry.
 	}
 
-	if rec == nil {
-		rec = &record{}
-		rec.labels = labelPtr
-	}
 	rec.refMapped = refcountMapped{value: 2}
 	rec.inst = s
 
-	s.meter.processor.AggregatorFor(&s.descriptor, &rec.current, &rec.checkpoint)
+	if selector != nil {
+		selector.AggregatorFor(&s.descriptor, &rec.current, &rec.checkpoint)
+	} else {
+		s.meter.processor.AggregatorFor(&s.descriptor, &rec.current, &rec.checkpoint)
+	}
 
 	for {
 		// Load/Store: there's a memory allocation to place `mk` into
@@ -283,13 +398,19 @@ func (s *syncInstrument) acquireHandle(kvs []label.KeyValue, labelPtr *label.Set
 }
 
 func (s *syncInstrument) Bind(kvs []label.KeyValue) metric.BoundSyncImpl {
-	return s.acquireHandle(kvs, nil)
+	result := &boundInstrument{}
+	s.rangeViews(kvs, func(viewKvs []label.KeyValue, selector metric.AggregatorSelector) {
+		result.records = append(result.records, s.acquireHandle(viewKvs, selector))
+	})
+	return result
 }
 
 func (s *syncInstrument) RecordOne(ctx context.Context, num number.Number, kvs []label.KeyValue) {
-	h := s.acquireHandle(kvs, nil)
-	defer h.Unbind()
-	h.RecordOne(ctx, num)
+	s.rangeViews(kvs, func(viewKvs []label.KeyValue, selector metric.AggregatorSelector) {
+		h := s.acquireHandle(viewKvs, selector)
+		h.RecordOne(ctx, num)
+		h.Unbind()
+	})
 }
 
 // NewAccumulator constructs a new Accumulator for the given
@@ -310,7 +431,11 @@ func NewAccumulator(processor export.Processor, resource *resource.Resource) *Ac
 }
 
 func (m *Accumulator) RegisterView(v metric.View) {
-	panic("me")
+	s := m.fromSync(v.SyncImpl())
+	// maybe return an error if s is `nil`?
+	if s != nil {
+		s.registerView(v.LabelConfig(), v.LabelKeys(), v.AggregatorFactory())
+	}
 }
 
 // NewSyncInstrument implements metric.MetricImpl.
@@ -437,7 +562,7 @@ func (m *Accumulator) checkpointRecord(r *record) int {
 		return 0
 	}
 
-	a := export.NewAccumulation(&r.inst.descriptor, r.labels, m.resource, r.checkpoint, nil)
+	a := export.NewAccumulation(&r.inst.descriptor, r.labels, m.resource, r.checkpoint, r.viewSelector)
 	err = m.processor.Process(a)
 	if err != nil {
 		otel.Handle(err)
@@ -477,25 +602,12 @@ func (m *Accumulator) checkpointAsync(a *asyncInstrument) int {
 
 // RecordBatch enters a batch of metric events.
 func (m *Accumulator) RecordBatch(ctx context.Context, kvs []label.KeyValue, measurements ...metric.Measurement) {
-	// Labels will be computed the first time acquireHandle is
-	// called.  Subsequent calls to acquireHandle will re-use the
-	// previously computed value instead of recomputing the
-	// ordered labels.
-	var labelsPtr *label.Set
-	for i, meas := range measurements {
+	for _, meas := range measurements {
 		s := m.fromSync(meas.SyncImpl())
 		if s == nil {
 			continue
 		}
-		h := s.acquireHandle(kvs, labelsPtr)
-
-		// Re-use labels for the next measurement.
-		if i == 0 {
-			labelsPtr = h.labels
-		}
-
-		defer h.Unbind()
-		h.RecordOne(ctx, meas.Number())
+		s.RecordOne(ctx, meas.Number(), kvs)
 	}
 }
 
@@ -527,6 +639,18 @@ func (r *record) mapkey() mapkey {
 	return mapkey{
 		descriptor: &r.inst.descriptor,
 		ordered:    r.labels.Equivalent(),
+	}
+}
+
+func (b *boundInstrument) RecordOne(ctx context.Context, number number.Number) {
+	for _, r := range b.records {
+		r.RecordOne(ctx, number)
+	}
+}
+
+func (b *boundInstrument) Unbind() {
+	for _, r := range b.records {
+		r.Unbind()
 	}
 }
 
