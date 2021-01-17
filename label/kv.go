@@ -26,6 +26,11 @@ type KeyValue struct {
 	Value Value
 }
 
+// Empty creates an empty key-value pair with a passed name.
+func Empty(k string) KeyValue {
+	return Key(k).Empty()
+}
+
 // Bool creates a new key-value pair with a passed name and a bool
 // value.
 func Bool(k string, v bool) KeyValue {

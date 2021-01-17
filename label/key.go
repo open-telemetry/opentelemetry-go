@@ -18,6 +18,18 @@ package label // import "go.opentelemetry.io/otel/label"
 // allowed character set in the key depends on the use of the key.
 type Key string
 
+// Empty creates a KeyValue instance with value unset.
+//
+// Consider using a convenience function provided by the
+// api/key package -
+// key.Int64(name, value).
+func (k Key) Empty() KeyValue {
+	return KeyValue{
+		Key:   k,
+		Value: EmptyValue(),
+	}
+}
+
 // Bool creates a KeyValue instance with a BOOL Value.
 //
 // If creating both key and a bool value at the same time, then

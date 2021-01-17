@@ -34,6 +34,12 @@ func TestValue(t *testing.T) {
 		wantValue interface{}
 	}{
 		{
+			name:      "Key.Empty() correctly returns key's internal empty value",
+			value:     k.Empty().Value,
+			wantType:  label.INVALID,
+			wantValue: nil,
+		},
+		{
 			name:      "Key.Bool() correctly returns keys's internal bool value",
 			value:     k.Bool(true).Value,
 			wantType:  label.BOOL,

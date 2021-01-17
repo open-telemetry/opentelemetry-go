@@ -30,6 +30,14 @@ func TestKeyValueConstructors(t *testing.T) {
 		expected label.KeyValue
 	}{
 		{
+			name:   "Empty",
+			actual: label.Empty("k1"),
+			expected: label.KeyValue{
+				Key:   "k1",
+				Value: label.EmptyValue(),
+			},
+		},
+		{
 			name:   "Bool",
 			actual: label.Bool("k1", true),
 			expected: label.KeyValue{

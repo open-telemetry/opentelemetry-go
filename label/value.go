@@ -64,6 +64,13 @@ const (
 	ARRAY
 )
 
+// EmptyValue creates a Value with no value set.
+func EmptyValue() Value {
+	return Value{
+		vtype: INVALID,
+	}
+}
+
 // BoolValue creates a BOOL Value.
 func BoolValue(v bool) Value {
 	return Value{
