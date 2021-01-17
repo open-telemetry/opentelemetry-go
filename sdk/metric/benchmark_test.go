@@ -32,7 +32,7 @@ type benchFixture struct {
 	meter       metric.Meter
 	accumulator *sdk.Accumulator
 	B           *testing.B
-	export.AggregatorSelector
+	metric.AggregatorSelector
 }
 
 func newFixture(b *testing.B) *benchFixture {

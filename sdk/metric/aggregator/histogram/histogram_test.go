@@ -25,7 +25,6 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 )
@@ -240,7 +239,7 @@ func TestSynchronizedMoveReset(t *testing.T) {
 	aggregatortest.SynchronizedMoveResetTest(
 		t,
 		metric.ValueRecorderInstrumentKind,
-		func(desc *metric.Descriptor) export.Aggregator {
+		func(desc *metric.Descriptor) metric.Aggregator {
 			return &histogram.New(1, desc, histogram.WithExplicitBoundaries(testBoundaries))[0]
 		},
 	)

@@ -23,8 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/number"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -63,7 +62,7 @@ type Processor interface {
 	// Note that the SDK only calls AggregatorFor when new records
 	// require an Aggregator. This does not provide a way to
 	// disable metrics with active records.
-	AggregatorSelector
+	metric.AggregatorSelector
 
 	// Process is called by the SDK once per internal record,
 	// passing the export Accumulation (a Descriptor, the corresponding
@@ -73,29 +72,6 @@ type Processor interface {
 	// with Process, use a controller for that (see
 	// ./controllers/{pull,push}.
 	Process(accum Accumulation) error
-}
-
-// AggregatorSelector supports selecting the kind of Aggregator to
-// use at runtime for a specific metric instrument.
-type AggregatorSelector interface {
-	// AggregatorFor allocates a variable number of aggregators of
-	// a kind suitable for the requested export.  This method
-	// initializes a `...*Aggregator`, to support making a single
-	// allocation.
-	//
-	// When the call returns without initializing the *Aggregator
-	// to a non-nil value, the metric instrument is explicitly
-	// disabled.
-	//
-	// This must return a consistent type to avoid confusion in
-	// later stages of the metrics export process, i.e., when
-	// Merging or Checkpointing aggregators for a specific
-	// instrument.
-	//
-	// Note: This is context-free because the aggregator should
-	// not relate to the incoming context.  This call should not
-	// block.
-	AggregatorFor(descriptor *metric.Descriptor, aggregator ...*Aggregator)
 }
 
 // Checkpointer is the interface used by a Controller to coordinate
@@ -125,69 +101,6 @@ type Checkpointer interface {
 	FinishCollection() error
 }
 
-// Aggregator implements a specific aggregation behavior, e.g., a
-// behavior to track a sequence of updates to an instrument.  Sum-only
-// instruments commonly use a simple Sum aggregator, but for the
-// distribution instruments (ValueRecorder, ValueObserver) there are a
-// number of possible aggregators with different cost and accuracy
-// tradeoffs.
-//
-// Note that any Aggregator may be attached to any instrument--this is
-// the result of the OpenTelemetry API/SDK separation.  It is possible
-// to attach a Sum aggregator to a ValueRecorder instrument or a
-// MinMaxSumCount aggregator to a Counter instrument.
-type Aggregator interface {
-	// Aggregation returns an Aggregation interface to access the
-	// current state of this Aggregator.  The caller is
-	// responsible for synchronization and must not call any the
-	// other methods in this interface concurrently while using
-	// the Aggregation.
-	Aggregation() aggregation.Aggregation
-
-	// Update receives a new measured value and incorporates it
-	// into the aggregation.  Update() calls may be called
-	// concurrently.
-	//
-	// Descriptor.NumberKind() should be consulted to determine
-	// whether the provided number is an int64 or float64.
-	//
-	// The Context argument comes from user-level code and could be
-	// inspected for a `correlation.Map` or `trace.SpanContext`.
-	Update(ctx context.Context, number number.Number, descriptor *metric.Descriptor) error
-
-	// SynchronizedMove is called during collection to finish one
-	// period of aggregation by atomically saving the
-	// currently-updating state into the argument Aggregator AND
-	// resetting the current value to the zero state.
-	//
-	// SynchronizedMove() is called concurrently with Update().  These
-	// two methods must be synchronized with respect to each
-	// other, for correctness.
-	//
-	// After saving a synchronized copy, the Aggregator can be converted
-	// into one or more of the interfaces in the `aggregation` sub-package,
-	// according to kind of Aggregator that was selected.
-	//
-	// This method will return an InconsistentAggregatorError if
-	// this Aggregator cannot be copied into the destination due
-	// to an incompatible type.
-	//
-	// This call has no Context argument because it is expected to
-	// perform only computation.
-	//
-	// When called with a nil `destination`, this Aggregator is reset
-	// and the current value is discarded.
-	SynchronizedMove(destination Aggregator, descriptor *metric.Descriptor) error
-
-	// Merge combines the checkpointed state from the argument
-	// Aggregator into this Aggregator.  Merge is not synchronized
-	// with respect to Update or SynchronizedMove.
-	//
-	// The owner of an Aggregator being merged is responsible for
-	// synchronization of both Aggregator states.
-	Merge(aggregator Aggregator, descriptor *metric.Descriptor) error
-}
-
 // Subtractor is an optional interface implemented by some
 // Aggregators.  An Aggregator must support `Subtract()` in order to
 // be configured for a Precomputed-Sum instrument (SumObserver,
@@ -195,7 +108,7 @@ type Aggregator interface {
 type Subtractor interface {
 	// Subtract subtracts the `operand` from this Aggregator and
 	// outputs the value in `result`.
-	Subtract(operand, result Aggregator, descriptor *metric.Descriptor) error
+	Subtract(operand, result metric.Aggregator, descriptor *metric.Descriptor) error
 }
 
 // Exporter handles presentation of the checkpoint of aggregate
@@ -275,7 +188,7 @@ type Metadata struct {
 // and label set, as prepared by an Accumulator for the Processor.
 type Accumulation struct {
 	Metadata
-	aggregator Aggregator
+	aggregator metric.Aggregator
 }
 
 // Record contains the exported data for a single metric instrument
@@ -308,7 +221,7 @@ func (m Metadata) Resource() *resource.Resource {
 // Accumulations to send to Processors. The Descriptor, Labels, Resource,
 // and Aggregator represent aggregate metric events received over a single
 // collection period.
-func NewAccumulation(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregator Aggregator) Accumulation {
+func NewAccumulation(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregator metric.Aggregator) Accumulation {
 	return Accumulation{
 		Metadata: Metadata{
 			descriptor: descriptor,
@@ -321,7 +234,7 @@ func NewAccumulation(descriptor *metric.Descriptor, labels *label.Set, resource 
 
 // Aggregator returns the checkpointed aggregator. It is safe to
 // access the checkpointed state without locking.
-func (r Accumulation) Aggregator() Aggregator {
+func (r Accumulation) Aggregator() metric.Aggregator {
 	return r.aggregator
 }
 

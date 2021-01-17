@@ -26,15 +26,14 @@ import (
 
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/aggregation"
 	"go.opentelemetry.io/otel/metric/number"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 )
 
 const count = 100
 
-var _ export.Aggregator = &Aggregator{}
+var _ metric.Aggregator = &Aggregator{}
 
 // Ensure struct alignment prior to running tests.
 func TestMain(m *testing.M) {
@@ -137,7 +136,7 @@ func TestSynchronizedMoveReset(t *testing.T) {
 	aggregatortest.SynchronizedMoveResetTest(
 		t,
 		metric.ValueObserverInstrumentKind,
-		func(desc *metric.Descriptor) export.Aggregator {
+		func(desc *metric.Descriptor) metric.Aggregator {
 			return &New(1)[0]
 		},
 	)

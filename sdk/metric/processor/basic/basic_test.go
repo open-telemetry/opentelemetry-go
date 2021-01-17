@@ -26,9 +26,9 @@ import (
 
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/aggregation"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
@@ -103,9 +103,9 @@ func asNumber(nkind number.Kind, value int64) number.Number {
 	return number.NewFloat64Number(float64(value))
 }
 
-func updateFor(t *testing.T, desc *metric.Descriptor, selector export.AggregatorSelector, res *resource.Resource, value int64, labs ...label.KeyValue) export.Accumulation {
+func updateFor(t *testing.T, desc *metric.Descriptor, selector metric.AggregatorSelector, res *resource.Resource, value int64, labs ...label.KeyValue) export.Accumulation {
 	ls := label.NewSet(labs...)
-	var agg export.Aggregator
+	var agg metric.Aggregator
 	selector.AggregatorFor(desc, &agg)
 	require.NoError(t, agg.Update(context.Background(), asNumber(desc.NumberKind(), value), desc))
 
@@ -155,7 +155,7 @@ func testProcessor(
 
 			err := processor.FinishCollection()
 			if err == aggregation.ErrNoSubtraction {
-				var subr export.Aggregator
+				var subr metric.Aggregator
 				selector.AggregatorFor(&desc1, &subr)
 				_, canSub := subr.(export.Subtractor)
 

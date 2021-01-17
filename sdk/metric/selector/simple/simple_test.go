@@ -21,7 +21,6 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
@@ -39,13 +38,13 @@ var (
 	testValueObserverDesc     = metric.NewDescriptor("valueobserver", metric.ValueObserverInstrumentKind, number.Int64Kind)
 )
 
-func oneAgg(sel export.AggregatorSelector, desc *metric.Descriptor) export.Aggregator {
-	var agg export.Aggregator
+func oneAgg(sel metric.AggregatorSelector, desc *metric.Descriptor) metric.Aggregator {
+	var agg metric.Aggregator
 	sel.AggregatorFor(desc, &agg)
 	return agg
 }
 
-func testFixedSelectors(t *testing.T, sel export.AggregatorSelector) {
+func testFixedSelectors(t *testing.T, sel metric.AggregatorSelector) {
 	require.IsType(t, (*lastvalue.Aggregator)(nil), oneAgg(sel, &testValueObserverDesc))
 	require.IsType(t, (*sum.Aggregator)(nil), oneAgg(sel, &testCounterDesc))
 	require.IsType(t, (*sum.Aggregator)(nil), oneAgg(sel, &testUpDownCounterDesc))

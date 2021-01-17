@@ -29,9 +29,9 @@ import (
 	resourcepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/resource/v1"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/aggregation"
 	"go.opentelemetry.io/otel/metric/number"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
@@ -752,7 +752,7 @@ func runMetricExportTests(t *testing.T, opts []otlp.ExporterOption, rs []record,
 		desc := metric.NewDescriptor(r.name, r.iKind, r.nKind, r.opts...)
 		labs := label.NewSet(lcopy...)
 
-		var agg, ckpt metricsdk.Aggregator
+		var agg, ckpt metric.Aggregator
 		if r.iKind.Adding() {
 			agg, ckpt = metrictest.Unslice2(sum.New(2))
 		} else {

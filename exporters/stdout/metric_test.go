@@ -212,7 +212,7 @@ func TestStdoutValueRecorderFormat(t *testing.T) {
 func TestStdoutNoData(t *testing.T) {
 	desc := metric.NewDescriptor("test.name", metric.ValueRecorderInstrumentKind, number.Float64Kind)
 
-	runTwoAggs := func(agg, ckpt export.Aggregator) {
+	runTwoAggs := func(agg, ckpt metric.Aggregator) {
 		t.Run(fmt.Sprintf("%T", agg), func(t *testing.T) {
 			t.Parallel()
 

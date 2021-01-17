@@ -21,9 +21,8 @@ import (
 	"unsafe"
 
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/aggregation"
 	"go.opentelemetry.io/otel/metric/number"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
@@ -51,7 +50,7 @@ type (
 	}
 )
 
-var _ export.Aggregator = &Aggregator{}
+var _ metric.Aggregator = &Aggregator{}
 var _ aggregation.LastValue = &Aggregator{}
 
 // An unset lastValue has zero timestamp and zero value.
@@ -92,7 +91,7 @@ func (g *Aggregator) LastValue() (number.Number, time.Time, error) {
 }
 
 // SynchronizedMove atomically saves the current value.
-func (g *Aggregator) SynchronizedMove(oa export.Aggregator, _ *metric.Descriptor) error {
+func (g *Aggregator) SynchronizedMove(oa metric.Aggregator, _ *metric.Descriptor) error {
 	if oa == nil {
 		atomic.StorePointer(&g.value, unsafe.Pointer(unsetLastValue))
 		return nil
@@ -117,7 +116,7 @@ func (g *Aggregator) Update(_ context.Context, number number.Number, desc *metri
 
 // Merge combines state from two aggregators.  The most-recently set
 // value is chosen.
-func (g *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
+func (g *Aggregator) Merge(oa metric.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(g, oa)

@@ -27,9 +27,8 @@ import (
 
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/aggregation"
 	"go.opentelemetry.io/otel/metric/number"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
@@ -43,7 +42,7 @@ type Profile struct {
 type NoopAggregator struct{}
 type NoopAggregation struct{}
 
-var _ export.Aggregator = NoopAggregator{}
+var _ metric.Aggregator = NoopAggregator{}
 var _ aggregation.Aggregation = NoopAggregation{}
 
 func newProfiles() []Profile {
@@ -149,7 +148,7 @@ func (n *Numbers) Points() []number.Number {
 }
 
 // Performs the same range test the SDK does on behalf of the aggregator.
-func CheckedUpdate(t *testing.T, agg export.Aggregator, number number.Number, descriptor *metric.Descriptor) {
+func CheckedUpdate(t *testing.T, agg metric.Aggregator, number number.Number, descriptor *metric.Descriptor) {
 	ctx := context.Background()
 
 	// Note: Aggregator tests are written assuming that the SDK
@@ -165,7 +164,7 @@ func CheckedUpdate(t *testing.T, agg export.Aggregator, number number.Number, de
 	}
 }
 
-func CheckedMerge(t *testing.T, aggInto, aggFrom export.Aggregator, descriptor *metric.Descriptor) {
+func CheckedMerge(t *testing.T, aggInto, aggFrom metric.Aggregator, descriptor *metric.Descriptor) {
 	if err := aggInto.Merge(aggFrom, descriptor); err != nil {
 		t.Error("Unexpected Merge failure", err)
 	}
@@ -183,15 +182,15 @@ func (NoopAggregator) Update(context.Context, number.Number, *metric.Descriptor)
 	return nil
 }
 
-func (NoopAggregator) SynchronizedMove(export.Aggregator, *metric.Descriptor) error {
+func (NoopAggregator) SynchronizedMove(metric.Aggregator, *metric.Descriptor) error {
 	return nil
 }
 
-func (NoopAggregator) Merge(export.Aggregator, *metric.Descriptor) error {
+func (NoopAggregator) Merge(metric.Aggregator, *metric.Descriptor) error {
 	return nil
 }
 
-func SynchronizedMoveResetTest(t *testing.T, mkind metric.InstrumentKind, nf func(*metric.Descriptor) export.Aggregator) {
+func SynchronizedMoveResetTest(t *testing.T, mkind metric.InstrumentKind, nf func(*metric.Descriptor) metric.Aggregator) {
 	t.Run("reset on nil", func(t *testing.T) {
 		// Ensures that SynchronizedMove(nil, descriptor) discards and
 		// resets the aggregator.

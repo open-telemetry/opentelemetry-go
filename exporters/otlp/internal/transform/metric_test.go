@@ -28,9 +28,9 @@ import (
 	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/aggregation"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	arrAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
@@ -328,10 +328,10 @@ func (t *testAgg) Aggregation() aggregation.Aggregation {
 func (t *testAgg) Update(ctx context.Context, number number.Number, descriptor *metric.Descriptor) error {
 	return nil
 }
-func (t *testAgg) SynchronizedMove(destination export.Aggregator, descriptor *metric.Descriptor) error {
+func (t *testAgg) SynchronizedMove(destination metric.Aggregator, descriptor *metric.Descriptor) error {
 	return nil
 }
-func (t *testAgg) Merge(aggregator export.Aggregator, descriptor *metric.Descriptor) error {
+func (t *testAgg) Merge(aggregator metric.Aggregator, descriptor *metric.Descriptor) error {
 	return nil
 }
 
@@ -373,7 +373,7 @@ func (te *testErrMinMaxSumCount) Count() (uint64, error) {
 	return 0, te.err
 }
 
-var _ export.Aggregator = &testAgg{}
+var _ metric.Aggregator = &testAgg{}
 var _ aggregation.Aggregation = &testAgg{}
 var _ aggregation.Sum = &testErrSum{}
 var _ aggregation.LastValue = &testErrLastValue{}

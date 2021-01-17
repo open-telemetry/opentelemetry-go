@@ -33,9 +33,9 @@ import (
 
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/aggregation"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 )
 
@@ -58,7 +58,7 @@ type (
 		impl     testImpl
 		T        *testing.T
 
-		export.AggregatorSelector
+		metric.AggregatorSelector
 
 		lock  sync.Mutex
 		lused map[string]bool

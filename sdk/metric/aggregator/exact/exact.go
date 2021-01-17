@@ -20,9 +20,8 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/aggregation"
 	"go.opentelemetry.io/otel/metric/number"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
 
@@ -35,7 +34,7 @@ type (
 	}
 )
 
-var _ export.Aggregator = &Aggregator{}
+var _ metric.Aggregator = &Aggregator{}
 var _ aggregation.Points = &Aggregator{}
 var _ aggregation.Count = &Aggregator{}
 
@@ -68,7 +67,7 @@ func (c *Aggregator) Points() ([]aggregation.Point, error) {
 
 // SynchronizedMove saves the current state to oa and resets the current state to
 // the empty set, taking a lock to prevent concurrent Update() calls.
-func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descriptor) error {
+func (c *Aggregator) SynchronizedMove(oa metric.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 
 	if oa != nil && o == nil {
@@ -102,7 +101,7 @@ func (c *Aggregator) Update(_ context.Context, number number.Number, desc *metri
 }
 
 // Merge combines two data sets into one.
-func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
+func (c *Aggregator) Merge(oa metric.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)

@@ -16,7 +16,6 @@ package simple // import "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 
 import (
 	"go.opentelemetry.io/otel/metric"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
@@ -33,9 +32,9 @@ type (
 )
 
 var (
-	_ export.AggregatorSelector = selectorInexpensive{}
-	_ export.AggregatorSelector = selectorExact{}
-	_ export.AggregatorSelector = selectorHistogram{}
+	_ metric.AggregatorSelector = selectorInexpensive{}
+	_ metric.AggregatorSelector = selectorExact{}
+	_ metric.AggregatorSelector = selectorHistogram{}
 )
 
 // NewWithInexpensiveDistribution returns a simple aggregator selector
@@ -43,7 +42,7 @@ var (
 // instruments.  This selector is faster and uses less memory than the
 // others in this package because minmaxsumcount aggregators maintain
 // the least information about the distribution among these choices.
-func NewWithInexpensiveDistribution() export.AggregatorSelector {
+func NewWithInexpensiveDistribution() metric.AggregatorSelector {
 	return selectorInexpensive{}
 }
 
@@ -52,32 +51,32 @@ func NewWithInexpensiveDistribution() export.AggregatorSelector {
 // selector uses more memory than the others in this package because
 // exact aggregators maintain the most information about the
 // distribution among these choices.
-func NewWithExactDistribution() export.AggregatorSelector {
+func NewWithExactDistribution() metric.AggregatorSelector {
 	return selectorExact{}
 }
 
 // NewWithHistogramDistribution returns a simple aggregator selector
 // that uses histogram aggregators for `ValueRecorder` instruments.
 // This selector is a good default choice for most metric exporters.
-func NewWithHistogramDistribution(options ...histogram.Option) export.AggregatorSelector {
+func NewWithHistogramDistribution(options ...histogram.Option) metric.AggregatorSelector {
 	return selectorHistogram{options: options}
 }
 
-func sumAggs(aggPtrs []*export.Aggregator) {
+func sumAggs(aggPtrs []*metric.Aggregator) {
 	aggs := sum.New(len(aggPtrs))
 	for i := range aggPtrs {
 		*aggPtrs[i] = &aggs[i]
 	}
 }
 
-func lastValueAggs(aggPtrs []*export.Aggregator) {
+func lastValueAggs(aggPtrs []*metric.Aggregator) {
 	aggs := lastvalue.New(len(aggPtrs))
 	for i := range aggPtrs {
 		*aggPtrs[i] = &aggs[i]
 	}
 }
 
-func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*metric.Aggregator) {
 	switch descriptor.InstrumentKind() {
 	case metric.ValueObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
@@ -91,7 +90,7 @@ func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor, aggPtrs 
 	}
 }
 
-func (selectorExact) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+func (selectorExact) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*metric.Aggregator) {
 	switch descriptor.InstrumentKind() {
 	case metric.ValueObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
@@ -105,7 +104,7 @@ func (selectorExact) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*ex
 	}
 }
 
-func (s selectorHistogram) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+func (s selectorHistogram) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*metric.Aggregator) {
 	switch descriptor.InstrumentKind() {
 	case metric.ValueObserverInstrumentKind:
 		lastValueAggs(aggPtrs)

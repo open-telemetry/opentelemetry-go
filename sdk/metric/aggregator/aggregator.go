@@ -19,15 +19,14 @@ import (
 	"math"
 
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/aggregation"
 	"go.opentelemetry.io/otel/metric/number"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
 
 // NewInconsistentAggregatorError formats an error describing an attempt to
 // Checkpoint or Merge different-type aggregators.  The result can be unwrapped as
 // an ErrInconsistentType.
-func NewInconsistentAggregatorError(a1, a2 export.Aggregator) error {
+func NewInconsistentAggregatorError(a1, a2 metric.Aggregator) error {
 	return fmt.Errorf("%w: %T and %T", aggregation.ErrInconsistentType, a1, a2)
 }
 

@@ -23,9 +23,9 @@ import (
 
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/aggregation"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -46,7 +46,7 @@ type CheckpointSet struct {
 // NoopAggregator is useful for testing Exporters.
 type NoopAggregator struct{}
 
-var _ export.Aggregator = (*NoopAggregator)(nil)
+var _ metric.Aggregator = (*NoopAggregator)(nil)
 
 // Update implements export.Aggregator.
 func (NoopAggregator) Update(context.Context, number.Number, *metric.Descriptor) error {
@@ -54,12 +54,12 @@ func (NoopAggregator) Update(context.Context, number.Number, *metric.Descriptor)
 }
 
 // SynchronizedMove implements export.Aggregator.
-func (NoopAggregator) SynchronizedMove(export.Aggregator, *metric.Descriptor) error {
+func (NoopAggregator) SynchronizedMove(metric.Aggregator, *metric.Descriptor) error {
 	return nil
 }
 
 // Merge implements export.Aggregator.
-func (NoopAggregator) Merge(export.Aggregator, *metric.Descriptor) error {
+func (NoopAggregator) Merge(metric.Aggregator, *metric.Descriptor) error {
 	return nil
 }
 
@@ -92,7 +92,7 @@ func (p *CheckpointSet) Reset() {
 //
 // If there is an existing record with the same descriptor and labels,
 // the stored aggregator will be returned and should be merged.
-func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, labels ...label.KeyValue) (agg export.Aggregator, added bool) {
+func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg metric.Aggregator, labels ...label.KeyValue) (agg metric.Aggregator, added bool) {
 	elabels := label.NewSet(labels...)
 
 	key := mapkey{
@@ -100,7 +100,7 @@ func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, l
 		distinct: elabels.Equivalent(),
 	}
 	if record, ok := p.records[key]; ok {
-		return record.Aggregation().(export.Aggregator), false
+		return record.Aggregation().(metric.Aggregator), false
 	}
 
 	rec := export.NewRecord(desc, &elabels, p.resource, newAgg.Aggregation(), time.Time{}, time.Time{})
@@ -121,7 +121,7 @@ func (p *CheckpointSet) ForEach(_ export.ExportKindSelector, f func(export.Recor
 }
 
 // Takes a slice of []some.Aggregator and returns a slice of []export.Aggregator
-func Unslice2(sl interface{}) (one, two export.Aggregator) {
+func Unslice2(sl interface{}) (one, two metric.Aggregator) {
 	slv := reflect.ValueOf(sl)
 	if slv.Type().Kind() != reflect.Slice {
 		panic("Invalid Unslice2")
@@ -129,7 +129,7 @@ func Unslice2(sl interface{}) (one, two export.Aggregator) {
 	if slv.Len() != 2 {
 		panic("Invalid Unslice2: length > 2")
 	}
-	one = slv.Index(0).Addr().Interface().(export.Aggregator)
-	two = slv.Index(1).Addr().Interface().(export.Aggregator)
+	one = slv.Index(0).Addr().Interface().(metric.Aggregator)
+	two = slv.Index(1).Addr().Interface().(metric.Aggregator)
 	return
 }

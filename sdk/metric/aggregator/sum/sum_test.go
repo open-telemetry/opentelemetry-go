@@ -24,7 +24,6 @@ import (
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 )
 
@@ -147,7 +146,7 @@ func TestSynchronizedMoveReset(t *testing.T) {
 	aggregatortest.SynchronizedMoveResetTest(
 		t,
 		metric.SumObserverInstrumentKind,
-		func(desc *metric.Descriptor) export.Aggregator {
+		func(desc *metric.Descriptor) metric.Aggregator {
 			return &New(1)[0]
 		},
 	)
