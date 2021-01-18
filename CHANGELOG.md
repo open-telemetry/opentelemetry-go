@@ -8,6 +8,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `View` and `RegisterView` as part of the Metric API, and their implementation in the SDK. (#1473)
+
+### Changed
+
+- Moved `Aggregator`/`Aggregation`/`AggregatorSelector` interfaces to _otel/metric_ from _otel/sdk/export/metric_. (#1473)
+- Support `KeyValue` labels with values unset. (#1473)
+- Modified the `otel-collector` example to include View API usage. (#1473)
+- `Accumulation` accepts a view selector for aggregator creation. (#1473)
+
 ## [0.16.0] - 2020-01-13
 
 ### Added
