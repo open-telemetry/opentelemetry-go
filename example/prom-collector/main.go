@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -59,9 +60,11 @@ func initMeter() {
 
 	cont := controller.New(
 		processor.New(
-			simple.NewWithHistogramDistribution([]float64{
-				0.001, 0.01, 0.1, 1, 10, 100, 1000,
-			}),
+			simple.NewWithHistogramDistribution(
+				histogram.WithExplicitBoundaries([]float64{
+					0.001, 0.01, 0.1, 1, 10, 100, 1000,
+				}),
+			),
 			otlpExporter, // otlpExporter is an ExportKindSelector
 			processor.WithMemory(true),
 		),

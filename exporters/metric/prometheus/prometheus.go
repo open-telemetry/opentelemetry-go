@@ -32,9 +32,10 @@ import (
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	selector "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
 // Exporter supports Prometheus pulls.  It does not implement the
@@ -150,7 +151,9 @@ func InstallNewPipeline(config Config, options ...controller.Option) (*Exporter,
 func defaultController(config Config, options ...controller.Option) *controller.Controller {
 	return controller.New(
 		processor.New(
-			simple.NewWithHistogramDistribution(config.DefaultHistogramBoundaries),
+			selector.NewWithHistogramDistribution(
+				histogram.WithExplicitBoundaries(config.DefaultHistogramBoundaries),
+			),
 			export.CumulativeExportKindSelector(),
 			processor.WithMemory(true),
 		),
