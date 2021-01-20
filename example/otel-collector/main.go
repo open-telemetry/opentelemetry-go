@@ -130,7 +130,7 @@ func main() {
 
 	// Custom defined fixed bucket histogram aggregation
 	definedBuckets := []float64{1.0, 2.0, 3.0}
-	histogramAggregatorSelector := simple.NewWithHistogramDistribution(histogram.WithExplicitBoundaries(definedBuckets))
+	histogramAggregatorSelector := NewHistogramAggregationSelector(definedBuckets)
 	meter.RegisterView(metric.NewView(hist.SyncImpl(), metric.Ungroup, nil, histogramAggregatorSelector))
 
 	// labels represent additional key-value descriptors that can be bound to a
@@ -171,4 +171,8 @@ func handleErr(err error, message string) {
 	if err != nil {
 		log.Fatalf("%s: %v", message, err)
 	}
+}
+
+func NewHistogramAggregationSelector(buckets []float64) metric.AggregatorSelector {
+	return simple.NewWithHistogramDistribution(histogram.WithExplicitBoundaries(buckets))
 }
