@@ -125,6 +125,31 @@ type Checkpointer interface {
 	FinishCollection() error
 }
 
+// Enricher supports extracting baggage attributes and applying them
+// as metric event labels and also permits erasing metric labels at
+// runtime.  When configured with an Accumulator, the Enricher is
+// applied to all synchronous instruments.
+//
+// This receives the context and the event labels and
+// returns the effective KeyValue slice.  If this returns a
+// nil KeyValue slice or a non-nil error, the caller SHOULD
+// use the original KeyValue slice.
+//
+// This SHOULD NOT modify the input label slice.
+//
+// Note: This interface does not include the *metric.Descriptor
+// because it creates significant complexity and/or cost to enrich
+// RecordBatch() events.
+//
+// Note: This interface is called with input labels before they are
+// sorted and de-duplicated as described in
+// label.NewSetWithSortableFiltered().  The enricher has control over
+// whether label values should override the input making use of the
+// last-value semantic detailed for metric event labels in general.
+// Appending baggage values means they override the call-site labels,
+// prepending baggage means call-site labels override baggage labels.
+type Enricher func(context.Context, []label.KeyValue) ([]label.KeyValue, error)
+
 // Aggregator implements a specific aggregation behavior, e.g., a
 // behavior to track a sequence of updates to an instrument.  Sum-only
 // instruments commonly use a simple Sum aggregator, but for the

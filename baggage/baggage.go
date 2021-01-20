@@ -36,6 +36,12 @@ func Set(ctx context.Context) label.Set {
 	return label.NewSet(values...)
 }
 
+// ForEach allows visiting the baggage values in a context without
+// copying a slice.
+func ForEach(ctx context.Context, f func(kv label.KeyValue) bool) {
+	baggage.MapFromContext(ctx).Foreach(f)
+}
+
 // Value returns the value related to key in the baggage of ctx. If no
 // value is set, the returned label.Value will be an uninitialized zero-value
 // with type INVALID.

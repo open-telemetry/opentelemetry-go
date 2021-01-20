@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
@@ -98,9 +99,19 @@ func newSDK(t *testing.T) (metric.Meter, *metricsdk.Accumulator, *correctnessPro
 	accum := metricsdk.NewAccumulator(
 		processor,
 		testResource,
+		nil,
 	)
 	meter := metric.WrapMeterImpl(accum, "test")
 	return meter, accum, processor
+}
+
+func expectAndResetOutput(t *testing.T, processor *correctnessProcessor, expect map[string]float64) {
+	out := processortest.NewOutput(label.DefaultEncoder())
+	for _, rec := range processor.accumulations {
+		require.NoError(t, out.AddAccumulation(rec))
+	}
+	require.EqualValues(t, expect, out.Map())
+	processor.accumulations = nil
 }
 
 func (ci *correctnessProcessor) Process(accumulation export.Accumulation) error {
@@ -351,12 +362,9 @@ func TestObserverCollection(t *testing.T) {
 		collected := sdk.Collect(ctx)
 		require.Equal(t, collected, len(processor.accumulations))
 
-		out := processortest.NewOutput(label.DefaultEncoder())
-		for _, rec := range processor.accumulations {
-			require.NoError(t, out.AddAccumulation(rec))
-		}
 		mult := float64(mult)
-		require.EqualValues(t, map[string]float64{
+
+		expectAndResetOutput(t, processor, map[string]float64{
 			"float.valueobserver.lastvalue/A=B/R=V": -mult,
 			"float.valueobserver.lastvalue/C=D/R=V": -mult,
 			"int.valueobserver.lastvalue//R=V":      mult,
@@ -371,7 +379,7 @@ func TestObserverCollection(t *testing.T) {
 			"float.updownsumobserver.sum/C=D/R=V": mult,
 			"int.updownsumobserver.sum//R=V":      -mult,
 			"int.updownsumobserver.sum/A=B/R=V":   mult,
-		}, out.Map())
+		})
 	}
 }
 
@@ -456,11 +464,7 @@ func TestObserverBatch(t *testing.T) {
 
 	require.Equal(t, collected, len(processor.accumulations))
 
-	out := processortest.NewOutput(label.DefaultEncoder())
-	for _, rec := range processor.accumulations {
-		require.NoError(t, out.AddAccumulation(rec))
-	}
-	require.EqualValues(t, map[string]float64{
+	expectAndResetOutput(t, processor, map[string]float64{
 		"float.sumobserver.sum//R=V":    1.1,
 		"float.sumobserver.sum/A=B/R=V": 1000,
 		"int.sumobserver.sum//R=V":      10,
@@ -475,7 +479,7 @@ func TestObserverBatch(t *testing.T) {
 		"float.valueobserver.lastvalue/C=D/R=V": -1,
 		"int.valueobserver.lastvalue//R=V":      1,
 		"int.valueobserver.lastvalue/A=B/R=V":   1,
-	}, out.Map())
+	})
 }
 
 func TestRecordBatch(t *testing.T) {
@@ -501,16 +505,12 @@ func TestRecordBatch(t *testing.T) {
 
 	sdk.Collect(ctx)
 
-	out := processortest.NewOutput(label.DefaultEncoder())
-	for _, rec := range processor.accumulations {
-		require.NoError(t, out.AddAccumulation(rec))
-	}
-	require.EqualValues(t, map[string]float64{
+	expectAndResetOutput(t, processor, map[string]float64{
 		"int64.sum/A=B,C=D/R=V":     1,
 		"float64.sum/A=B,C=D/R=V":   2,
 		"int64.exact/A=B,C=D/R=V":   3,
 		"float64.exact/A=B,C=D/R=V": 4,
-	}, out.Map())
+	})
 }
 
 // TestRecordPersistence ensures that a direct-called instrument that
@@ -583,12 +583,127 @@ func TestSyncInAsync(t *testing.T) {
 
 	sdk.Collect(ctx)
 
-	out := processortest.NewOutput(label.DefaultEncoder())
-	for _, rec := range processor.accumulations {
-		require.NoError(t, out.AddAccumulation(rec))
-	}
-	require.EqualValues(t, map[string]float64{
+	expectAndResetOutput(t, processor, map[string]float64{
 		"counter.sum//R=V":        100,
 		"observer.lastvalue//R=V": 10,
-	}, out.Map())
+	})
+}
+
+func TestEnricher(t *testing.T) {
+	enrich := func(context.Context, []label.KeyValue) ([]label.KeyValue, error) {
+		return nil, nil
+	}
+
+	testHandler.Reset()
+	processor := &correctnessProcessor{
+		t:            t,
+		testSelector: &testSelector{selector: processortest.AggregatorSelector()},
+	}
+	accum := metricsdk.NewAccumulator(
+		processor,
+		testResource,
+		func(ctx context.Context, kvs []label.KeyValue) ([]label.KeyValue, error) {
+			return enrich(ctx, kvs)
+		},
+	)
+
+	meter := metric.WrapMeterImpl(accum, "test")
+
+	bg := context.Background()
+	ctx := baggage.ContextWithValues(
+		bg,
+		label.String("Corr1", "Val1"),
+		label.String("Corr2", "Val2"),
+	)
+
+	counter := Must(meter).NewInt64Counter("name.sum")
+	recorder := Must(meter).NewFloat64ValueRecorder("name.lastvalue")
+
+	counter.Add(ctx, 1)
+	recorder.Record(ctx, 10, label.String("E", "F"))
+
+	_ = accum.Collect(bg)
+	expectAndResetOutput(t, processor, map[string]float64{
+		"name.sum//R=V":          1,
+		"name.lastvalue/E=F/R=V": 10,
+	})
+
+	// This enriches with all baggage keys
+	enrich = func(ctx context.Context, input []label.KeyValue) ([]label.KeyValue, error) {
+		baggage.ForEach(ctx, func(kv label.KeyValue) bool {
+			input = append(input, kv)
+			return true
+		})
+		return input, nil
+	}
+
+	counter.Add(ctx, 1)
+	recorder.Record(ctx, 10, label.String("E", "F"))
+
+	_ = accum.Collect(bg)
+	expectAndResetOutput(t, processor, map[string]float64{
+		"name.sum/Corr1=Val1,Corr2=Val2/R=V":           1,
+		"name.lastvalue/Corr1=Val1,Corr2=Val2,E=F/R=V": 10,
+	})
+
+	// This enriches by erasing all labels
+	enrich = func(ctx context.Context, input []label.KeyValue) ([]label.KeyValue, error) {
+		return []label.KeyValue{}, nil
+	}
+
+	counter.Add(ctx, 1, label.String("Y", "Z"))
+	recorder.Record(ctx, 10, label.String("E", "F"))
+
+	_ = accum.Collect(bg)
+	expectAndResetOutput(t, processor, map[string]float64{
+		"name.sum//R=V":       1,
+		"name.lastvalue//R=V": 10,
+	})
+
+	// This enriches by including the first input and all baggage labels.
+	enrich = func(ctx context.Context, input []label.KeyValue) ([]label.KeyValue, error) {
+		var output []label.KeyValue
+		if len(input) > 0 {
+			output = append(output, input[0])
+		}
+		baggage.ForEach(ctx, func(kv label.KeyValue) bool {
+			output = append(output, kv)
+			return true
+		})
+		return output, nil
+	}
+
+	counter.Add(ctx, 1, label.String("Y", "Z"), label.String("X", "Y"))
+	recorder.Record(ctx, 10, label.String("E", "F"), label.String("G", "H"))
+
+	_ = accum.Collect(bg)
+	expectAndResetOutput(t, processor, map[string]float64{
+		"name.sum/Corr1=Val1,Corr2=Val2,Y=Z/R=V":       1,
+		"name.lastvalue/Corr1=Val1,Corr2=Val2,E=F/R=V": 10,
+	})
+
+	// This enriches by APPENDING a duplicate label.
+	enrich = func(ctx context.Context, input []label.KeyValue) ([]label.KeyValue, error) {
+		return append(input, label.String("Extra", "Baggage")), nil
+	}
+
+	counter.Add(ctx, 1, label.String("Extra", "Call-site"))
+
+	_ = accum.Collect(bg)
+	expectAndResetOutput(t, processor, map[string]float64{
+		"name.sum/Extra=Baggage/R=V": 1,
+	})
+
+	// This enriches by APPENDING a duplicate label.
+	enrich = func(ctx context.Context, input []label.KeyValue) ([]label.KeyValue, error) {
+		return append([]label.KeyValue{label.String("Extra", "Baggage")}, input...), nil
+	}
+
+	counter.Add(ctx, 1, label.String("Extra", "Call-site"))
+
+	_ = accum.Collect(bg)
+	expectAndResetOutput(t, processor, map[string]float64{
+		"name.sum/Extra=Call-site/R=V": 1,
+	})
+
 }
