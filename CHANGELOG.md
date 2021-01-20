@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add sdk/trace/sampling package which contains remote sampling support instruments. (#1479)
+
 ## [0.16.0] - 2020-01-13
 
 ### Added
