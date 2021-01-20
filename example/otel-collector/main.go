@@ -31,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -122,6 +123,16 @@ func main() {
 	meter.RegisterView(metric.NewView(vr.SyncImpl(), metric.LabelKeys, []label.Key{"os_type"}, nil))
 	meter.RegisterView(metric.NewView(vr.SyncImpl(), metric.LabelKeys, []label.Key{"environment"}, nil))
 
+	// ValueRecorder histogram metric example
+	hist, _ := meter.NewFloat64ValueRecorder(
+		"example_hist",
+		metric.WithDescription("Example fixed bucket histogram"))
+
+	// Custom defined fixed bucket histogram aggregation
+	definedBuckets := []float64{1.0, 2.0, 3.0}
+	histogramAggregatorSelector := simple.NewWithHistogramDistribution(histogram.WithExplicitBoundaries(definedBuckets))
+	meter.RegisterView(metric.NewView(hist.SyncImpl(), metric.Ungroup, nil, histogramAggregatorSelector))
+
 	// labels represent additional key-value descriptors that can be bound to a
 	// metric observer or recorder.
 	commonLabels := []label.KeyValue{
@@ -146,6 +157,8 @@ func main() {
 		vr.Add(context.Background(), 1.0, label.String("os_type", "win"), label.String("environment", "prod"))
 
 		vr.Add(context.Background(), 1.0, label.String("environment", "ddev"))
+
+		hist.Record(context.Background(), float64(i%5))
 
 		<-time.After(time.Second)
 		iSpan.End()
