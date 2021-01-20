@@ -27,6 +27,8 @@ type Config struct {
 	// created by the Controller.
 	Resource *resource.Resource
 
+	Enricher export.Enricher
+
 	// CollectPeriod is the interval between calls to Collect a
 	// checkpoint.
 	//
@@ -73,6 +75,16 @@ type resourceOption struct{ *resource.Resource }
 
 func (o resourceOption) Apply(config *Config) {
 	config.Resource = o.Resource
+}
+
+func WithEnricher(e export.Enricher) Option {
+	return enricherOption(e)
+}
+
+type enricherOption export.Enricher
+
+func (e enricherOption) Apply(config *Config) {
+	config.Enricher = export.Enricher(e)
 }
 
 // WithCollectPeriod sets the CollectPeriod configuration option of a Config.
