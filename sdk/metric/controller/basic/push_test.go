@@ -253,7 +253,8 @@ func TestEnricher(t *testing.T) {
 
 	counter := metric.Must(meter).NewInt64Counter("counter.sum")
 
-	p.Start(context.Background())
+	err := p.Start(context.Background())
+	require.NoError(t, err)
 
 	ctx := baggage.ContextWithValues(context.Background(), label.String("A", "B"))
 	counter.Add(ctx, 1)
