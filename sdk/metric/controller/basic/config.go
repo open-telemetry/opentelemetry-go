@@ -27,6 +27,8 @@ type Config struct {
 	// created by the Controller.
 	Resource *resource.Resource
 
+	// Enricher is an optional function that can be provided to apply baggage attributes
+	// as metric labels.
 	Enricher export.Enricher
 
 	// CollectPeriod is the interval between calls to Collect a
@@ -77,6 +79,7 @@ func (o resourceOption) Apply(config *Config) {
 	config.Resource = o.Resource
 }
 
+// WithEnricher sets the Enricher configuration option of a Config
 func WithEnricher(e export.Enricher) Option {
 	return enricherOption(e)
 }
