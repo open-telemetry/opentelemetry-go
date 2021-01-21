@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+- Add a tool to help analyze the impact of package/module refactors.
+
 ## [0.16.0] - 2020-01-13
 
 ### Added
