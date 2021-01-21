@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Metric SDK adds `Enricher` API for applying baggage attributes as metric labels in request context. (#XXX) //TODO: add PR number
+- Metric SDK adds `Enricher` API for applying baggage attributes as metric labels in request context. (#1480)
 
 ## [0.16.0] - 2020-01-13
 
