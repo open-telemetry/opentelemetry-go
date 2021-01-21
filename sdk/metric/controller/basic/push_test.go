@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -227,4 +228,42 @@ func TestPushExportError(t *testing.T) {
 			require.NoError(t, p.Stop(ctx))
 		})
 	}
+}
+
+func TestEnricher(t *testing.T) {
+	exporter := newExporter()
+	checkpointer := newCheckpointer()
+	enricher := func(ctx context.Context, kvs []label.KeyValue) ([]label.KeyValue, error) {
+		baggage := baggage.Set(ctx)
+		kvs = append(baggage.ToSlice(), kvs...)
+		return kvs, nil
+	}
+
+	p := controller.New(
+		checkpointer,
+		controller.WithPusher(exporter),
+		controller.WithCollectPeriod(time.Second),
+		controller.WithEnricher(enricher),
+	)
+
+	meter := p.MeterProvider().Meter("name")
+
+	mock := controllertest.NewMockClock()
+	p.SetClock(mock)
+
+	counter := metric.Must(meter).NewInt64Counter("counter.sum")
+
+	p.Start(context.Background())
+
+	ctx := baggage.ContextWithValues(context.Background(), label.String("A", "B"))
+	counter.Add(ctx, 1)
+
+	require.EqualValues(t, map[string]float64{}, exporter.Values())
+
+	mock.Add(time.Second)
+	runtime.Gosched()
+
+	require.EqualValues(t, map[string]float64{
+		"counter.sum/A=B/": 1,
+	}, exporter.Values())
 }
