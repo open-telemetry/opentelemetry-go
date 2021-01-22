@@ -26,7 +26,7 @@ import (
 // instrumentationName is empty, then a implementation defined default name
 // will be used instead.
 //
-// This is short for MeterProvider().Meter(name)
+// This is short for otel.GetMeterProvider().Meter(name)
 func Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter {
 	return GetMeterProvider().Meter(instrumentationName, opts...)
 }
@@ -36,9 +36,9 @@ func Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter 
 // forwards the Meter interface to the first registered Meter.
 //
 // Use the meter provider to create a named meter. E.g.
-//     meter := global.MeterProvider().Meter("example.com/foo")
+//     meter := otel.GetMeterProvider().Meter("example.com/foo")
 // or
-//     meter := global.Meter("example.com/foo")
+//     meter := otel.Meter("example.com/foo")
 func GetMeterProvider() metric.MeterProvider {
 	return global.MeterProvider()
 }
