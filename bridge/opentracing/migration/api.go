@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This package provides interfaces and functions that are useful for
+// Package migration provides interfaces and functions that are useful for
 // providing a cooperation of the OpenTelemetry tracers with the
 // OpenTracing API.
 package migration // import "go.opentelemetry.io/otel/bridge/opentracing/migration"
