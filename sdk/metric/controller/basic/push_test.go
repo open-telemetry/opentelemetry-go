@@ -85,7 +85,7 @@ func TestPushDoubleStop(t *testing.T) {
 	ctx := context.Background()
 	exporter := newExporter()
 	checkpointer := newCheckpointer()
-	p := controller.New(checkpointer, controller.WithPusher(exporter))
+	p := controller.New(checkpointer, controller.WithExporter(exporter))
 	require.NoError(t, p.Start(ctx))
 	require.NoError(t, p.Stop(ctx))
 	require.NoError(t, p.Stop(ctx))
@@ -95,7 +95,7 @@ func TestPushDoubleStart(t *testing.T) {
 	ctx := context.Background()
 	exporter := newExporter()
 	checkpointer := newCheckpointer()
-	p := controller.New(checkpointer, controller.WithPusher(exporter))
+	p := controller.New(checkpointer, controller.WithExporter(exporter))
 	require.NoError(t, p.Start(ctx))
 	err := p.Start(ctx)
 	require.Error(t, err)
@@ -108,7 +108,7 @@ func TestPushTicker(t *testing.T) {
 	checkpointer := newCheckpointer()
 	p := controller.New(
 		checkpointer,
-		controller.WithPusher(exporter),
+		controller.WithExporter(exporter),
 		controller.WithCollectPeriod(time.Second),
 		controller.WithResource(testResource),
 	)
@@ -188,7 +188,7 @@ func TestPushExportError(t *testing.T) {
 			checkpointer := processor.New(processortest.AggregatorSelector(), exporter)
 			p := controller.New(
 				checkpointer,
-				controller.WithPusher(exporter),
+				controller.WithExporter(exporter),
 				controller.WithCollectPeriod(time.Second),
 				controller.WithResource(testResource),
 			)

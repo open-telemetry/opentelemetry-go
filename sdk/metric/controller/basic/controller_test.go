@@ -227,7 +227,7 @@ func TestExportTimeout(t *testing.T) {
 		),
 		controller.WithCollectPeriod(time.Second),
 		controller.WithPushTimeout(time.Millisecond),
-		controller.WithPusher(exporter),
+		controller.WithExporter(exporter),
 	)
 	mock := controllertest.NewMockClock()
 	cont.SetClock(mock)
@@ -282,7 +282,7 @@ func TestCollectAfterStopThenStartAgain(t *testing.T) {
 			exp,
 		),
 		controller.WithCollectPeriod(time.Second),
-		controller.WithPusher(exp),
+		controller.WithExporter(exp),
 	)
 	mock := controllertest.NewMockClock()
 	cont.SetClock(mock)
