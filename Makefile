@@ -19,6 +19,7 @@ TOOLS_MOD_DIR := ./internal/tools
 ALL_DOCS := $(shell find . -name '*.md' -type f | sort)
 # All directories with go.mod files related to opentelemetry library. Used for building, testing and linting.
 ALL_GO_MOD_DIRS := $(filter-out $(TOOLS_MOD_DIR), $(shell find . -type f -name 'go.mod' -exec dirname {} \; | egrep -v '^./example' | sort)) $(shell find ./example -type f -name 'go.mod' -exec dirname {} \; | sort)
+ALL_GO_DIRS := $(filter-out $(TOOLS_MOD_DIR), $(shell find . -type f -name '*.go' -exec dirname {} \; | egrep -v '^./example' | sort | uniq)) $(shell find ./example -type f -name '*.go' -exec dirname {} \; | sort | uniq)
 ALL_COVERAGE_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | egrep -v '^./example|^$(TOOLS_MOD_DIR)' | sort)
 
 # Mac OS Catalina 10.5.x doesn't support 386. Hence skip 386 test
@@ -44,6 +45,10 @@ TOOLS_DIR := $(abspath ./.tools)
 $(TOOLS_DIR)/golangci-lint: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_MOD_DIR)/tools.go
 	cd $(TOOLS_MOD_DIR) && \
 	go build -o $(TOOLS_DIR)/golangci-lint github.com/golangci/golangci-lint/cmd/golangci-lint
+
+$(TOOLS_DIR)/staticcheck: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_MOD_DIR)/tools.go
+	cd $(TOOLS_MOD_DIR) && \
+	go build -o $(TOOLS_DIR)/staticcheck honnef.co/go/tools/cmd/staticcheck
 
 $(TOOLS_DIR)/misspell: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_MOD_DIR)/tools.go
 	cd $(TOOLS_MOD_DIR) && \
@@ -132,12 +137,17 @@ test-benchmarks:
 	done
 
 .PHONY: lint
-lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell
+lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell $(TOOLS_DIR)/staticcheck
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "golangci-lint in $${dir}"; \
 	  (cd "$${dir}" && \
 	    $(TOOLS_DIR)/golangci-lint run --fix && \
 	    $(TOOLS_DIR)/golangci-lint run); \
+	done
+	set -e; for dir in $(ALL_GO_DIRS); do \
+	  echo "staticcheck in $${dir}"; \
+	  (cd "$${dir}" && \
+	    $(TOOLS_DIR)/staticcheck -checks "all","-ST1000","-ST1003","-ST1005","-ST1020","-ST1021","-S1023","-ST1019" ); \
 	done
 	$(TOOLS_DIR)/misspell -w $(ALL_DOCS)
 	set -e; for dir in $(ALL_GO_MOD_DIRS) $(TOOLS_MOD_DIR); do \

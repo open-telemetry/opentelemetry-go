@@ -8,4 +8,5 @@ require (
 	github.com/golangci/golangci-lint v1.35.2
 	github.com/itchyny/gojq v0.12.1
 	golang.org/x/tools v0.0.0-20210106214847-113979e3529a
+	honnef.co/go/tools v0.0.1-2020.1.6
 )
