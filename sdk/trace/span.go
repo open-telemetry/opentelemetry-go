@@ -77,7 +77,7 @@ var emptySpanContext = trace.SpanContext{}
 // individual component of a trace.
 type span struct {
 	// mu protects the contents of this span.
-	mu sync.Mutex
+	mu sync.RWMutex
 
 	// parent holds the parent span of this span as a trace.SpanContext.
 	parent trace.SpanContext
@@ -148,8 +148,8 @@ func (s *span) IsRecording() bool {
 	if s == nil {
 		return false
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.endTime.IsZero()
 }
 
@@ -308,38 +308,38 @@ func (s *span) SetName(name string) {
 }
 
 func (s *span) Name() string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.name
 }
 
 func (s *span) Parent() trace.SpanContext {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.parent
 }
 
 func (s *span) SpanKind() trace.SpanKind {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.spanKind
 }
 
 func (s *span) StartTime() time.Time {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.startTime
 }
 
 func (s *span) EndTime() time.Time {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.endTime
 }
 
 func (s *span) Attributes() []label.KeyValue {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	if s.attributes.evictList.Len() == 0 {
 		return []label.KeyValue{}
 	}
@@ -347,8 +347,8 @@ func (s *span) Attributes() []label.KeyValue {
 }
 
 func (s *span) Links() []trace.Link {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	if len(s.links.queue) == 0 {
 		return []trace.Link{}
 	}
@@ -356,8 +356,8 @@ func (s *span) Links() []trace.Link {
 }
 
 func (s *span) Events() []trace.Event {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	if len(s.messageEvents.queue) == 0 {
 		return []trace.Event{}
 	}
@@ -365,26 +365,26 @@ func (s *span) Events() []trace.Event {
 }
 
 func (s *span) StatusCode() codes.Code {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.statusCode
 }
 
 func (s *span) StatusMessage() string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.statusMessage
 }
 
 func (s *span) InstrumentationLibrary() instrumentation.Library {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.instrumentationLibrary
 }
 
 func (s *span) Resource() *resource.Resource {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.resource
 }
 
@@ -401,8 +401,8 @@ func (s *span) addLink(link trace.Link) {
 // export.SpanSnapshot and returns a pointer to it.
 func (s *span) Snapshot() *export.SpanSnapshot {
 	var sd export.SpanSnapshot
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	sd.ChildSpanCount = s.childSpanCount
 	sd.EndTime = s.endTime

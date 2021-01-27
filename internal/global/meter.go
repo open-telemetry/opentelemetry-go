@@ -55,7 +55,7 @@ type meterProvider struct {
 	delegate metric.MeterProvider
 
 	// lock protects `delegate` and `meters`.
-	lock sync.Mutex
+	lock sync.RWMutex
 
 	// meters maintains a unique entry for every named Meter
 	// that has been registered through the global instance.
@@ -65,7 +65,7 @@ type meterProvider struct {
 type meterImpl struct {
 	delegate unsafe.Pointer // (*metric.MeterImpl)
 
-	lock       sync.Mutex
+	lock       sync.RWMutex
 	syncInsts  []*syncImpl
 	asyncInsts []*asyncImpl
 }
@@ -144,8 +144,8 @@ func (p *meterProvider) setDelegate(provider metric.MeterProvider) {
 }
 
 func (p *meterProvider) Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter {
-	p.lock.Lock()
-	defer p.lock.Unlock()
+	p.lock.RLock()
+	defer p.lock.RUnlock()
 
 	if p.delegate != nil {
 		return p.delegate.Meter(instrumentationName, opts...)
