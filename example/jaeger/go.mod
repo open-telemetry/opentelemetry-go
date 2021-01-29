@@ -7,6 +7,7 @@ replace (
 	go.opentelemetry.io/otel/exporters/trace/jaeger => ../../exporters/trace/jaeger
 	go.opentelemetry.io/otel/label => ../../label
 	go.opentelemetry.io/otel/sdk => ../../sdk
+	go.opentelemetry.io/otel/semconv => ../../semconv
 )
 
 require (

@@ -22,7 +22,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
 )
 
@@ -691,36 +690,6 @@ func TestHTTPAttributesFromHTTPStatusCode(t *testing.T) {
 	}
 	got = HTTPAttributesFromHTTPStatusCode(499)
 	assertElementsMatch(t, expected, got, "with invalid HTTP status code")
-}
-
-func TestSpanStatusFromHTTPStatusCode(t *testing.T) {
-	for code := 0; code < 1000; code++ {
-		expected := getExpectedCodeForHTTPCode(code)
-		got, _ := SpanStatusFromHTTPStatusCode(code)
-		assert.Equalf(t, expected, got, "%s vs %s", expected, got)
-	}
-}
-
-func getExpectedCodeForHTTPCode(code int) codes.Code {
-	if http.StatusText(code) == "" {
-		return codes.Error
-	}
-	switch code {
-	case
-		http.StatusUnauthorized,
-		http.StatusForbidden,
-		http.StatusNotFound,
-		http.StatusTooManyRequests,
-		http.StatusNotImplemented,
-		http.StatusServiceUnavailable,
-		http.StatusGatewayTimeout:
-		return codes.Error
-	}
-	category := code / 100
-	if category > 0 && category < 4 {
-		return codes.Unset
-	}
-	return codes.Error
 }
 
 func assertElementsMatch(t *testing.T, expected, got []label.KeyValue, format string, args ...interface{}) {

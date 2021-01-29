@@ -6,6 +6,7 @@ replace (
 	go.opentelemetry.io/otel => ../..
 	go.opentelemetry.io/otel/label => ../../label
 	go.opentelemetry.io/otel/sdk => ../../sdk
+	go.opentelemetry.io/otel/semconv => ../../semconv
 )
 
 require (

@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Make `labels` into a module.
+- Move `semconv.SpanStatusFromHTTPStatusCode` into `codes` and make `semconv` into a module.
 
 ## [0.16.0] - 2020-01-13
 
