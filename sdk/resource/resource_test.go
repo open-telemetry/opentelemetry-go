@@ -32,6 +32,7 @@ var (
 	kv21 = label.String("k2", "v21")
 	kv31 = label.String("k3", "v31")
 	kv41 = label.String("k4", "v41")
+	kv42 = label.String("k4", "")
 )
 
 func TestNew(t *testing.T) {
@@ -91,13 +92,13 @@ func TestMerge(t *testing.T) {
 			name: "Merge with common key order1",
 			a:    resource.NewWithAttributes(kv11),
 			b:    resource.NewWithAttributes(kv12, kv21),
-			want: []label.KeyValue{kv11, kv21},
+			want: []label.KeyValue{kv12, kv21},
 		},
 		{
 			name: "Merge with common key order2",
 			a:    resource.NewWithAttributes(kv12, kv21),
 			b:    resource.NewWithAttributes(kv11),
-			want: []label.KeyValue{kv12, kv21},
+			want: []label.KeyValue{kv11, kv21},
 		},
 		{
 			name: "Merge with common key order4",
@@ -134,6 +135,18 @@ func TestMerge(t *testing.T) {
 			a:    resource.NewWithAttributes(kv11),
 			b:    nil,
 			want: []label.KeyValue{kv11},
+		},
+		{
+			name: "Merge with first resource value empty string",
+			a:    resource.NewWithAttributes(kv42),
+			b:    resource.NewWithAttributes(kv41),
+			want: []label.KeyValue{kv41},
+		},
+		{
+			name: "Merge with second resource value empty string",
+			a:    resource.NewWithAttributes(kv41),
+			b:    resource.NewWithAttributes(kv42),
+			want: []label.KeyValue{kv42},
 		},
 	}
 	for _, c := range cases {
