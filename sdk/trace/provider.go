@@ -179,8 +179,9 @@ func (p *TracerProvider) ApplyConfig(cfg Config) {
 	if cfg.MaxLinksPerSpan > 0 {
 		c.MaxLinksPerSpan = cfg.MaxLinksPerSpan
 	}
-	if cfg.Resource != nil {
-		c.Resource = cfg.Resource
+	c.Resource = cfg.Resource
+	if c.Resource == nil {
+		c.Resource = resource.Default()
 	}
 	p.config.Store(&c)
 }

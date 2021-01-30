@@ -17,13 +17,16 @@ package resource_test
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/semconv"
 )
 
 var (
@@ -160,6 +163,21 @@ func TestMerge(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDefault(t *testing.T) {
+	res := resource.Default()
+	require.False(t, res.Equal(resource.Empty()))
+	require.True(t, res.LabelSet().HasValue(semconv.ServiceNameKey))
+
+	serviceName, _ := res.LabelSet().Value(semconv.ServiceNameKey)
+	require.True(t, strings.HasPrefix(serviceName.AsString(), "unknown_service:"))
+	require.Greaterf(t, len(serviceName.AsString()), len("unknown_service:"),
+		"default service.name should include executable name")
+
+	require.Contains(t, res.Attributes(), semconv.TelemetrySDKLanguageGo)
+	require.Contains(t, res.Attributes(), semconv.TelemetrySDKVersionKey.String(otel.Version()))
+	require.Contains(t, res.Attributes(), semconv.TelemetrySDKNameKey.String("opentelemetry"))
 }
 
 func TestString(t *testing.T) {
