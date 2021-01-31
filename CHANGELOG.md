@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Reverse order in which `Resource` attributes are merged, per change in spec. (#1501)
 - Moved `Aggregator`/`Aggregation`/`AggregatorSelector` interfaces to _otel/metric_ from _otel/sdk/export/metric_. (#1473)
 - Support `KeyValue` labels with values unset. (#1473)
 - Modified the `otel-collector` example to include View API usage. (#1473)
