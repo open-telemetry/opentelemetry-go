@@ -22,4 +22,4 @@ the evolving OpenTelemetry specification and user feedback.
 It conforms to [the OpenTelemetry
 specification](https://github.com/open-telemetry/opentelemetry-specification/blob/master/specification/trace/api.md#statuscanonicalcode).
 */
-package codes // import "go.opentelemetry.io/otel/codes"
+package codes // import "go.opentelemetry.io/otel/trace/codes"
