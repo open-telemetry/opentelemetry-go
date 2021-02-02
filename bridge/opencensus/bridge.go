@@ -22,9 +22,9 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/bridge/opencensus/utils"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/codes"
 )
 
 // NewTracer returns an implementation of the OpenCensus Tracer interface which

@@ -17,8 +17,8 @@ package trace // import "go.opentelemetry.io/otel/trace"
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/trace/codes"
 )
 
 // NewNoopTracerProvider returns an implementation of TracerProvider that

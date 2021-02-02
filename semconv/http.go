@@ -21,7 +21,6 @@ import (
 	"strconv"
 	"strings"
 
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
 )
 
@@ -225,68 +224,4 @@ func HTTPAttributesFromHTTPStatusCode(code int) []label.KeyValue {
 		HTTPStatusCodeKey.Int(code),
 	}
 	return attrs
-}
-
-type codeRange struct {
-	fromInclusive int
-	toInclusive   int
-}
-
-func (r codeRange) contains(code int) bool {
-	return r.fromInclusive <= code && code <= r.toInclusive
-}
-
-var validRangesPerCategory = map[int][]codeRange{
-	1: {
-		{http.StatusContinue, http.StatusEarlyHints},
-	},
-	2: {
-		{http.StatusOK, http.StatusAlreadyReported},
-		{http.StatusIMUsed, http.StatusIMUsed},
-	},
-	3: {
-		{http.StatusMultipleChoices, http.StatusUseProxy},
-		{http.StatusTemporaryRedirect, http.StatusPermanentRedirect},
-	},
-	4: {
-		{http.StatusBadRequest, http.StatusTeapot}, // yes, teapot is so useful…
-		{http.StatusMisdirectedRequest, http.StatusUpgradeRequired},
-		{http.StatusPreconditionRequired, http.StatusTooManyRequests},
-		{http.StatusRequestHeaderFieldsTooLarge, http.StatusRequestHeaderFieldsTooLarge},
-		{http.StatusUnavailableForLegalReasons, http.StatusUnavailableForLegalReasons},
-	},
-	5: {
-		{http.StatusInternalServerError, http.StatusLoopDetected},
-		{http.StatusNotExtended, http.StatusNetworkAuthenticationRequired},
-	},
-}
-
-// SpanStatusFromHTTPStatusCode generates a status code and a message
-// as specified by the OpenTelemetry specification for a span.
-func SpanStatusFromHTTPStatusCode(code int) (codes.Code, string) {
-	spanCode, valid := func() (codes.Code, bool) {
-		category := code / 100
-		ranges, ok := validRangesPerCategory[category]
-		if !ok {
-			return codes.Error, false
-		}
-		ok = false
-		for _, crange := range ranges {
-			ok = crange.contains(code)
-			if ok {
-				break
-			}
-		}
-		if !ok {
-			return codes.Error, false
-		}
-		if category > 0 && category < 4 {
-			return codes.Unset, true
-		}
-		return codes.Error, true
-	}()
-	if !valid {
-		return spanCode, fmt.Sprintf("Invalid HTTP status code %d", code)
-	}
-	return spanCode, fmt.Sprintf("HTTP status code: %d", code)
 }

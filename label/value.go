@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"unsafe"
 
-	"go.opentelemetry.io/otel/internal"
+	"go.opentelemetry.io/otel/label/internal"
 )
 
 //go:generate stringer -type=Type

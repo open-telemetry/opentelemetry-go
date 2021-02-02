@@ -28,10 +28,10 @@ import (
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/trace"
 
-	"go.opentelemetry.io/otel/codes"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/trace/codes"
 )
 
 func TestSpanKind(t *testing.T) {
