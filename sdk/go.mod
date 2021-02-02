@@ -7,6 +7,7 @@ replace (
 	go.opentelemetry.io/otel/label => ../label
 	go.opentelemetry.io/otel/semconv => ../semconv
 	go.opentelemetry.io/otel/trace => ../trace
+	go.opentelemetry.io/otel/baggage => ../baggage
 )
 
 require (

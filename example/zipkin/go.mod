@@ -4,6 +4,7 @@ go 1.14
 
 replace (
 	go.opentelemetry.io/otel => ../..
+	go.opentelemetry.io/otel/baggage => ../../baggage
 	go.opentelemetry.io/otel/exporters/trace/zipkin => ../../exporters/trace/zipkin
 	go.opentelemetry.io/otel/label => ../../label
 	go.opentelemetry.io/otel/sdk => ../../sdk
