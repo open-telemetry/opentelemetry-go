@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package baggage provides types and functions to manage W3C Baggage.
-package baggage
+// Package updatable provides types and functions to manage W3C Baggage.
+package updatable
 
 import (
 	"context"

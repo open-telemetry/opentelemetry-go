@@ -19,7 +19,7 @@ import (
 	"net/url"
 	"strings"
 
-	"go.opentelemetry.io/otel/internal/baggage"
+	"go.opentelemetry.io/otel/baggage/updatable"
 	"go.opentelemetry.io/otel/label"
 )
 
@@ -35,7 +35,7 @@ var _ TextMapPropagator = Baggage{}
 
 // Inject sets baggage key-values from ctx into the carrier.
 func (b Baggage) Inject(ctx context.Context, carrier TextMapCarrier) {
-	baggageMap := baggage.MapFromContext(ctx)
+	baggageMap := updatable.MapFromContext(ctx)
 	firstIter := true
 	var headerValueBuilder strings.Builder
 	baggageMap.Foreach(func(kv label.KeyValue) bool {
@@ -97,7 +97,7 @@ func (b Baggage) Extract(parent context.Context, carrier TextMapCarrier) context
 
 	if len(keyValues) > 0 {
 		// Only update the context if valid values were found
-		return baggage.ContextWithMap(parent, baggage.NewMap(baggage.MapUpdate{
+		return updatable.ContextWithMap(parent, updatable.NewMap(updatable.MapUpdate{
 			MultiKV: keyValues,
 		}))
 	}

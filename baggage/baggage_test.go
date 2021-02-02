@@ -18,13 +18,13 @@ import (
 	"context"
 	"testing"
 
-	"go.opentelemetry.io/otel/internal/baggage"
+	"go.opentelemetry.io/otel/baggage/updatable"
 	"go.opentelemetry.io/otel/label"
 )
 
 func TestBaggage(t *testing.T) {
 	ctx := context.Background()
-	ctx = baggage.ContextWithMap(ctx, baggage.NewEmptyMap())
+	ctx = updatable.ContextWithMap(ctx, updatable.NewEmptyMap())
 
 	b := Set(ctx)
 	if b.Len() != 0 {
@@ -33,7 +33,7 @@ func TestBaggage(t *testing.T) {
 
 	first, second, third := label.Key("first"), label.Key("second"), label.Key("third")
 	ctx = ContextWithValues(ctx, first.Bool(true), second.String("2"))
-	m := baggage.MapFromContext(ctx)
+	m := updatable.MapFromContext(ctx)
 	v, ok := m.Value(first)
 	if !ok {
 		t.Fatal("WithValues failed to set first value")
@@ -68,7 +68,7 @@ func TestBaggage(t *testing.T) {
 	}
 
 	ctx = ContextWithoutValues(ctx, first)
-	m = baggage.MapFromContext(ctx)
+	m = updatable.MapFromContext(ctx)
 	_, ok = m.Value(first)
 	if ok {
 		t.Fatal("WithoutValues failed to remove a baggage value")
@@ -79,7 +79,7 @@ func TestBaggage(t *testing.T) {
 	}
 
 	ctx = ContextWithEmpty(ctx)
-	m = baggage.MapFromContext(ctx)
+	m = updatable.MapFromContext(ctx)
 	if m.Len() != 0 {
 		t.Fatal("WithoutBaggage failed to clear baggage")
 	}

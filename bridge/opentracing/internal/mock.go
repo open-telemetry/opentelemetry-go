@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel/baggage/updatable"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/internal/baggage"
 	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/trace"
@@ -45,7 +45,7 @@ type MockContextKeyValue struct {
 }
 
 type MockTracer struct {
-	Resources             baggage.Map
+	Resources             updatable.Map
 	FinishedSpans         []*MockSpan
 	SpareTraceIDs         []trace.TraceID
 	SpareSpanIDs          []trace.SpanID
@@ -60,7 +60,7 @@ var _ migration.DeferredContextSetupTracerExtension = &MockTracer{}
 
 func NewMockTracer() *MockTracer {
 	return &MockTracer{
-		Resources:             baggage.NewEmptyMap(),
+		Resources:             updatable.NewEmptyMap(),
 		FinishedSpans:         nil,
 		SpareTraceIDs:         nil,
 		SpareSpanIDs:          nil,
@@ -86,7 +86,7 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...trace.SpanO
 		officialTracer: t,
 		spanContext:    spanContext,
 		recording:      config.Record,
-		Attributes: baggage.NewMap(baggage.MapUpdate{
+		Attributes: updatable.NewMap(updatable.MapUpdate{
 			MultiKV: config.Attributes,
 		}),
 		StartTime:    startTime,
@@ -181,7 +181,7 @@ func (t *MockTracer) DeferredContextSetupHook(ctx context.Context, span trace.Sp
 type MockEvent struct {
 	Timestamp  time.Time
 	Name       string
-	Attributes baggage.Map
+	Attributes updatable.Map
 }
 
 type MockSpan struct {
@@ -191,7 +191,7 @@ type MockSpan struct {
 	SpanKind       trace.SpanKind
 	recording      bool
 
-	Attributes   baggage.Map
+	Attributes   updatable.Map
 	StartTime    time.Time
 	EndTime      time.Time
 	ParentSpanID trace.SpanID
@@ -222,12 +222,12 @@ func (s *MockSpan) SetError(v bool) {
 }
 
 func (s *MockSpan) SetAttributes(attributes ...label.KeyValue) {
-	s.applyUpdate(baggage.MapUpdate{
+	s.applyUpdate(updatable.MapUpdate{
 		MultiKV: attributes,
 	})
 }
 
-func (s *MockSpan) applyUpdate(update baggage.MapUpdate) {
+func (s *MockSpan) applyUpdate(update updatable.MapUpdate) {
 	s.Attributes = s.Attributes.Apply(update)
 }
 
@@ -270,7 +270,7 @@ func (s *MockSpan) AddEvent(name string, o ...trace.EventOption) {
 	s.Events = append(s.Events, MockEvent{
 		Timestamp: c.Timestamp,
 		Name:      name,
-		Attributes: baggage.NewMap(baggage.MapUpdate{
+		Attributes: updatable.NewMap(updatable.MapUpdate{
 			MultiKV: c.Attributes,
 		}),
 	})

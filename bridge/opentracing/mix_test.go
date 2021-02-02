@@ -22,7 +22,7 @@ import (
 	ot "github.com/opentracing/opentracing-go"
 
 	"go.opentelemetry.io/otel"
-	otelbaggage "go.opentelemetry.io/otel/internal/baggage"
+	otelbaggage "go.opentelemetry.io/otel/baggage/updatable"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/trace"
 

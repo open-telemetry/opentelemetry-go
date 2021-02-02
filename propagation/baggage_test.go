@@ -22,7 +22,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/otel/internal/baggage"
+	"go.opentelemetry.io/otel/baggage/updatable"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/propagation"
 )
@@ -91,8 +91,8 @@ func TestExtractValidBaggageFromHTTPReq(t *testing.T) {
 
 			ctx := context.Background()
 			ctx = prop.Extract(ctx, req.Header)
-			gotBaggage := baggage.MapFromContext(ctx)
-			wantBaggage := baggage.NewMap(baggage.MapUpdate{MultiKV: tt.wantKVs})
+			gotBaggage := updatable.MapFromContext(ctx)
+			wantBaggage := updatable.NewMap(updatable.MapUpdate{MultiKV: tt.wantKVs})
 			if gotBaggage.Len() != wantBaggage.Len() {
 				t.Errorf(
 					"Got and Want Baggage are not the same size %d != %d",
@@ -150,10 +150,10 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
 			req.Header.Set("baggage", tt.header)
 
-			ctx := baggage.NewContext(context.Background(), tt.hasKVs...)
-			wantBaggage := baggage.MapFromContext(ctx)
+			ctx := updatable.NewContext(context.Background(), tt.hasKVs...)
+			wantBaggage := updatable.MapFromContext(ctx)
 			ctx = prop.Extract(ctx, req.Header)
-			gotBaggage := baggage.MapFromContext(ctx)
+			gotBaggage := updatable.MapFromContext(ctx)
 			if gotBaggage.Len() != wantBaggage.Len() {
 				t.Errorf(
 					"Got and Want Baggage are not the same size %d != %d",
@@ -227,7 +227,7 @@ func TestInjectBaggageToHTTPReq(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
-			ctx := baggage.ContextWithMap(context.Background(), baggage.NewMap(baggage.MapUpdate{MultiKV: tt.kvs}))
+			ctx := updatable.ContextWithMap(context.Background(), updatable.NewMap(updatable.MapUpdate{MultiKV: tt.kvs}))
 			propagator.Inject(ctx, req.Header)
 
 			gotHeader := req.Header.Get("baggage")
