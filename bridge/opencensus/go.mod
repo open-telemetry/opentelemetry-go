@@ -11,7 +11,7 @@ require (
 
 replace (
 	go.opentelemetry.io/otel => ../..
+	go.opentelemetry.io/otel/baggage => ../../baggage
 	go.opentelemetry.io/otel/label => ../../label
 	go.opentelemetry.io/otel/trace => ../../trace
-	go.opentelemetry.io/otel/baggage => ../../baggage
 )

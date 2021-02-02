@@ -28,7 +28,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/baggage/updatable"
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/internal/trace/noop"
 	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
 	"go.opentelemetry.io/otel/label"

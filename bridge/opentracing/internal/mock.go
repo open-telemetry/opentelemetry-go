@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/baggage/updatable"
-	"go.opentelemetry.io/otel/codes"
 	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/trace"
