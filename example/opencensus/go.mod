@@ -7,6 +7,7 @@ replace (
 	go.opentelemetry.io/otel/bridge/opencensus => ../../bridge/opencensus
 	go.opentelemetry.io/otel/exporters/stdout => ../../exporters/stdout
 	go.opentelemetry.io/otel/sdk => ../../sdk
+	go.opentelemetry.io/otel/trace => ../../trace
 )
 
 require (

@@ -7,6 +7,7 @@ replace (
 	go.opentelemetry.io/otel/exporters/metric/prometheus => ../../exporters/metric/prometheus
 	go.opentelemetry.io/otel/exporters/otlp => ../../exporters/otlp
 	go.opentelemetry.io/otel/sdk => ../../sdk
+	go.opentelemetry.io/otel/trace => ../../trace
 )
 
 require (
