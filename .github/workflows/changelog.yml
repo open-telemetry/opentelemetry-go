@@ -1,4 +1,4 @@
-# This action requires that any PR targeting the master branch should touch at
+# This action requires that any PR targeting the main branch should touch at
 # least one CHANGELOG file. If a CHANGELOG entry is not required, add the "Skip
 # Changelog" label to disable this action.
 
@@ -8,8 +8,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
     branches:
-      - master
-
+      - main
 jobs:
   changelog:
     runs-on: ubuntu-latest
