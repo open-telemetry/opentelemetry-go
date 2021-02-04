@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This package implements a bridge that forwards OpenTracing API
+// Package opentracing implements a bridge that forwards OpenTracing API
 // calls to the OpenTelemetry SDK.
 //
 // To use the bridge, first create an OpenTelemetry tracer of
