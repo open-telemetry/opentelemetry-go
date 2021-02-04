@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## Fixed
 
-- Fixed opentracing span to return empty string on missing baggage items for `BaggageItem()` calls.
+- Fixed opentracing span to return empty string on missing baggage items for `BaggageItem()` calls. (#1512)
 
 ### Changed
 
