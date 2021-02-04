@@ -32,7 +32,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	selector "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -60,9 +60,11 @@ func initMeter() {
 
 	cont := controller.New(
 		processor.New(
-			histogram.WithExplicitBoundaries([]float64{
-				0.001, 0.01, 0.1, 1, 10, 100, 1000,
-			}),
+			selector.NewWithHistogramDistribution(
+				histogram.WithExplicitBoundaries([]float64{
+					0.001, 0.01, 0.1, 1, 10, 100, 1000,
+				}),
+			),
 			otlpExporter, // otlpExporter is an AggregationTemporalitySelector
 			processor.WithMemory(true),
 		),
