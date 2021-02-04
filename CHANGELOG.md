@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Reverse order in which `Resource` attributes are merged, per change in spec. (#1501)
+
 ## [0.16.0] - 2020-01-13
 
 ### Added
