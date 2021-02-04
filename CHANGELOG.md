@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## Fixed
+
+- Fixed opentracing span to return empty string on missing baggage items for `BaggageItem()` calls.
+
 ### Changed
 
 - Reverse order in which `Resource` attributes are merged, per change in spec. (#1501)
