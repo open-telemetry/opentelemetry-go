@@ -70,7 +70,10 @@ func (c *bridgeSpanContext) setBaggageItem(restrictedKey, value string) {
 
 func (c *bridgeSpanContext) baggageItem(restrictedKey string) string {
 	crk := http.CanonicalHeaderKey(restrictedKey)
-	val, _ := c.baggageItems.Value(label.Key(crk))
+	val, ok := c.baggageItems.Value(label.Key(crk))
+	if !ok {
+		return ""
+	}
 	return val.Emit()
 }
 
