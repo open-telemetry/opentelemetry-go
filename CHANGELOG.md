@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed opentracing bridge span to return empty string on missing baggage items, according to `opentracing.Span#BaggageItem` definition.
+
 ## [0.16.0] - 2020-01-13
 
 ### Added
