@@ -50,6 +50,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `Start()` is optional; use `Collect()` and `ForEach()` for Pull behavior
   - `Start()` and `Stop()` accept Context. (#1378)
 - The `Event` type is moved from the `otel/sdk/export/trace` package to the `otel/trace` API package. (#1452)
+- Updated example code in README.md for creating new exporter. `WithAddress` is replaced with `WithEndpoint`. (#1513)
 
 ### Removed
 
