@@ -32,7 +32,20 @@ import (
 
 func main() {
 	ctx := context.Background()
-	exporter, err := otlp.NewExporter(ctx) // Configure as needed.
+
+	// Set different endpoints for the metrics and traces collectors
+	metricsDriver := otlpgrpc.NewDriver(
+		//Configure metrics driver here
+	)
+	tracesDriver := otlpgrpc.NewDriver(
+		//Configure traces driver here
+	)
+	config := otlp.SplitConfig{
+		ForMetrics: metricsDriver,
+		ForTraces:  tracesDriver,
+	}
+	driver := otlp.NewSplitDriver(config)
+	exporter, err := otlp.NewExporter(ctx, driver) // Configure as needed.
 	if err != nil {
 		log.Fatalf("failed to create exporter: %v", err)
 	}
@@ -74,10 +87,10 @@ Sets the number of Goroutines to use when processing telemetry.
 Disables client transport security for the exporter's gRPC connection just like [`grpc.WithInsecure()`](https://pkg.go.dev/google.golang.org/grpc#WithInsecure) does.
 By default, client security is required unless `WithInsecure` is used.
 
-### `WithAddress(addr string)`
+### `WithEndpoint(endpoint string)`
 
-Sets the address that the exporter will connect to the collector on.
-The default address the exporter connects to is `localhost:55680`.
+Sets the endpoint that the exporter will connect to the collector on.
+By default the exporter connects to `localhost:55680`.
 
 ### `WithReconnectionPeriod(rp time.Duration)`
 
