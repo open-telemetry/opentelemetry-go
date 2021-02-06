@@ -193,10 +193,10 @@ func (d *driver) send(ctx context.Context, rawRequest []byte, urlPath string) er
 				return ctx.Err()
 			}
 		default:
-			return fmt.Errorf("Failed with HTTP status %s", response.Status)
+			return fmt.Errorf("failed with HTTP status %s", response.Status)
 		}
 	}
-	return fmt.Errorf("Failed to send data to %s after %d tries", address, d.cfg.maxAttempts)
+	return fmt.Errorf("failed to send data to %s after %d tries", address, d.cfg.maxAttempts)
 }
 
 func (d *driver) getScheme() string {
