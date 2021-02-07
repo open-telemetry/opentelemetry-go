@@ -9,6 +9,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 - The OTLP exporter now has two new convenience functions, `NewExportPipeline` and `InstallNewPipeline`, setup and install the exporter in tracing and metrics pipelines. (#1348)
+- Rename project default branch from `master` to `main`.
+- Reverse order in which `Resource` attributes are merged, per change in spec. (#1501)
 
 ## [0.16.0] - 2020-01-13
 
