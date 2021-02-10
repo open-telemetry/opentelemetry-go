@@ -13,3 +13,31 @@ require (
 	go.opentelemetry.io/otel/exporters/stdout v0.16.0
 	go.opentelemetry.io/otel/sdk v0.16.0
 )
+
+replace go.opentelemetry.io/otel/bridge/opencensus => ../../bridge/opencensus
+
+replace go.opentelemetry.io/otel/bridge/opentracing => ../../bridge/opentracing
+
+replace go.opentelemetry.io/otel/example/jaeger => ../jaeger
+
+replace go.opentelemetry.io/otel/example/namedtracer => ./
+
+replace go.opentelemetry.io/otel/example/opencensus => ../opencensus
+
+replace go.opentelemetry.io/otel/example/otel-collector => ../otel-collector
+
+replace go.opentelemetry.io/otel/example/prom-collector => ../prom-collector
+
+replace go.opentelemetry.io/otel/example/prometheus => ../prometheus
+
+replace go.opentelemetry.io/otel/example/zipkin => ../zipkin
+
+replace go.opentelemetry.io/otel/exporters/metric/prometheus => ../../exporters/metric/prometheus
+
+replace go.opentelemetry.io/otel/exporters/otlp => ../../exporters/otlp
+
+replace go.opentelemetry.io/otel/exporters/trace/jaeger => ../../exporters/trace/jaeger
+
+replace go.opentelemetry.io/otel/exporters/trace/zipkin => ../../exporters/trace/zipkin
+
+replace go.opentelemetry.io/otel/internal/tools => ../../internal/tools

@@ -8,3 +8,35 @@ require (
 )
 
 replace go.opentelemetry.io/otel => ../..
+
+replace go.opentelemetry.io/otel/bridge/opencensus => ./
+
+replace go.opentelemetry.io/otel/bridge/opentracing => ../opentracing
+
+replace go.opentelemetry.io/otel/example/jaeger => ../../example/jaeger
+
+replace go.opentelemetry.io/otel/example/namedtracer => ../../example/namedtracer
+
+replace go.opentelemetry.io/otel/example/opencensus => ../../example/opencensus
+
+replace go.opentelemetry.io/otel/example/otel-collector => ../../example/otel-collector
+
+replace go.opentelemetry.io/otel/example/prom-collector => ../../example/prom-collector
+
+replace go.opentelemetry.io/otel/example/prometheus => ../../example/prometheus
+
+replace go.opentelemetry.io/otel/example/zipkin => ../../example/zipkin
+
+replace go.opentelemetry.io/otel/exporters/metric/prometheus => ../../exporters/metric/prometheus
+
+replace go.opentelemetry.io/otel/exporters/otlp => ../../exporters/otlp
+
+replace go.opentelemetry.io/otel/exporters/stdout => ../../exporters/stdout
+
+replace go.opentelemetry.io/otel/exporters/trace/jaeger => ../../exporters/trace/jaeger
+
+replace go.opentelemetry.io/otel/exporters/trace/zipkin => ../../exporters/trace/zipkin
+
+replace go.opentelemetry.io/otel/internal/tools => ../../internal/tools
+
+replace go.opentelemetry.io/otel/sdk => ../../sdk
