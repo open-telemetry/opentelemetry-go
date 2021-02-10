@@ -41,3 +41,13 @@ replace go.opentelemetry.io/otel/exporters/stdout => ../../exporters/stdout
 replace go.opentelemetry.io/otel/exporters/trace/jaeger => ../../exporters/trace/jaeger
 
 replace go.opentelemetry.io/otel/internal/tools => ../../internal/tools
+
+replace go.opentelemetry.io/otel/metric => ../../metric
+
+replace go.opentelemetry.io/otel/oteltest => ../../oteltest
+
+replace go.opentelemetry.io/otel/sdk/export/metric => ../../sdk/export/metric
+
+replace go.opentelemetry.io/otel/sdk/metric => ../../sdk/metric
+
+replace go.opentelemetry.io/otel/trace => ../../trace

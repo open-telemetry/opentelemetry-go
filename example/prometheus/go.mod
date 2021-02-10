@@ -11,6 +11,7 @@ replace (
 require (
 	go.opentelemetry.io/otel v0.16.0
 	go.opentelemetry.io/otel/exporters/metric/prometheus v0.16.0
+	go.opentelemetry.io/otel/metric v0.0.0-00010101000000-000000000000
 )
 
 replace go.opentelemetry.io/otel/bridge/opencensus => ../../bridge/opencensus
@@ -40,3 +41,13 @@ replace go.opentelemetry.io/otel/exporters/trace/jaeger => ../../exporters/trace
 replace go.opentelemetry.io/otel/exporters/trace/zipkin => ../../exporters/trace/zipkin
 
 replace go.opentelemetry.io/otel/internal/tools => ../../internal/tools
+
+replace go.opentelemetry.io/otel/metric => ../../metric
+
+replace go.opentelemetry.io/otel/oteltest => ../../oteltest
+
+replace go.opentelemetry.io/otel/sdk/export/metric => ../../sdk/export/metric
+
+replace go.opentelemetry.io/otel/sdk/metric => ../../sdk/metric
+
+replace go.opentelemetry.io/otel/trace => ../../trace
