@@ -15,7 +15,8 @@
 // The crosslink tool generates and maintains replace directives in all
 // the go.mod files within this repository. Some directives are superfluous
 // (e.g. because the replaced module doesn't occur in the dependency tree),
-// but we generate them anyway for the sake of consistency.
+// but we generate them anyway for the sake of consistency (#1529 tracks
+// pruning this to a mininal set).
 //
 // In particular, we generate a replace directive from each module to itself
 // (i.e., the target path "./"). This is actually necessary in the presence of
@@ -39,15 +40,21 @@ import (
 type repo string
 
 func findRepoRoot() (repo, error) {
-	dir, err := os.Getwd()
+	start, err := os.Getwd()
 	if err != nil {
 		return "", err
 	}
 
+	dir := start
 	for {
 		_, err := os.Stat(filepath.Join(dir, ".git"))
 		if errors.Is(err, os.ErrNotExist) {
 			dir = filepath.Dir(dir)
+			// From https://golang.org/pkg/path/filepath/#Dir:
+			// The returned path does not end in a separator unless it is the root directory.
+			if strings.HasSuffix(dir, string(filepath.Separator)) {
+				return "", fmt.Errorf("unable to find git repository enclosing working dir %s", start)
+			}
 			continue
 		}
 
