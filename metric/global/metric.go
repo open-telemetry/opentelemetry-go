@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otel // import "go.opentelemetry.io/otel"
+package global // import "go.opentelemetry.io/otel/metric/global"
 
 import (
 	"go.opentelemetry.io/otel/internal/global"
