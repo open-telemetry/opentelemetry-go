@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Rename project default branch from `master` to `main`.
 - Reverse order in which `Resource` attributes are merged, per change in spec. (#1501)
+- Add tooling to maintain "replace" directives in go.mod files automatically.
 
 ## [0.16.0] - 2020-01-13
 
