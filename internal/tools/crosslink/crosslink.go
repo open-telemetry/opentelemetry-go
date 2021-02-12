@@ -13,14 +13,11 @@
 // limitations under the License.
 
 // The crosslink tool generates and maintains replace directives in all
-// the go.mod files within this repository. Some directives are superfluous
-// (e.g. because the replaced module doesn't occur in the dependency tree),
-// but we generate them anyway for the sake of consistency (#1529 tracks
-// pruning this to a mininal set).
+// the go.mod files within this repository.
 //
-// In particular, we generate a replace directive from each module to itself
-// (i.e., the target path "./"). This is actually necessary in the presence of
-// cyclic dependencies between modules.
+// In particular, we generate a replace directive from some modules to
+// themselves (i.e., the target path "./"). This is actually necessary
+// in the presence of cyclic dependencies between modules.
 
 package main
 
@@ -129,10 +126,21 @@ func (m mods) print(w io.Writer) error {
 }
 
 func (m mods) crossLink() error {
+	var dt depTracker
 	for _, from := range m {
 		args := []string{"mod", "edit"}
 
+		// drop everything
 		for _, to := range m {
+			log.Print("\tto=", to)
+		}
+
+		// add back the necessary ones
+		targets, err := dt.modDeps(from, m)
+		if err != nil {
+			return err
+		}
+		for _, to := range targets {
 			localPath, err := filepath.Rel(from.filePath, to.filePath)
 			if err != nil {
 				return err
@@ -142,7 +150,7 @@ func (m mods) crossLink() error {
 			} else if !strings.HasPrefix(localPath, "..") {
 				localPath = "./" + localPath
 			}
-			args = append(args, "-replace", to.importPath+"="+localPath)
+			args = append(args, "-replace="+to.importPath+"="+localPath)
 		}
 
 		cmd := exec.Command("go", args...)

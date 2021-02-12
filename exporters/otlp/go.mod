@@ -2,11 +2,6 @@ module go.opentelemetry.io/otel/exporters/otlp
 
 go 1.14
 
-replace (
-	go.opentelemetry.io/otel => ../..
-	go.opentelemetry.io/otel/sdk => ../../sdk
-)
-
 require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/go-cmp v0.5.4
@@ -20,39 +15,13 @@ require (
 	google.golang.org/grpc v1.35.0
 )
 
-replace go.opentelemetry.io/otel/bridge/opencensus => ../../bridge/opencensus
-
-replace go.opentelemetry.io/otel/bridge/opentracing => ../../bridge/opentracing
-
-replace go.opentelemetry.io/otel/example/jaeger => ../../example/jaeger
-
-replace go.opentelemetry.io/otel/example/namedtracer => ../../example/namedtracer
-
-replace go.opentelemetry.io/otel/example/opencensus => ../../example/opencensus
-
-replace go.opentelemetry.io/otel/example/otel-collector => ../../example/otel-collector
-
-replace go.opentelemetry.io/otel/example/prom-collector => ../../example/prom-collector
-
-replace go.opentelemetry.io/otel/example/prometheus => ../../example/prometheus
-
-replace go.opentelemetry.io/otel/example/zipkin => ../../example/zipkin
-
-replace go.opentelemetry.io/otel/exporters/metric/prometheus => ../metric/prometheus
+replace go.opentelemetry.io/otel => ../..
 
 replace go.opentelemetry.io/otel/exporters/otlp => ./
 
-replace go.opentelemetry.io/otel/exporters/stdout => ../stdout
-
-replace go.opentelemetry.io/otel/exporters/trace/jaeger => ../trace/jaeger
-
-replace go.opentelemetry.io/otel/exporters/trace/zipkin => ../trace/zipkin
-
-replace go.opentelemetry.io/otel/internal/tools => ../../internal/tools
-
 replace go.opentelemetry.io/otel/metric => ../../metric
 
-replace go.opentelemetry.io/otel/oteltest => ../../oteltest
+replace go.opentelemetry.io/otel/sdk => ../../sdk
 
 replace go.opentelemetry.io/otel/sdk/export/metric => ../../sdk/export/metric
 
