@@ -23,12 +23,12 @@ import (
 
 	"google.golang.org/grpc"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
@@ -85,7 +85,7 @@ func initMeter() {
 		log.Fatal(http.ListenAndServe(":17000", nil))
 	}()
 
-	otel.SetMeterProvider(cont.MeterProvider())
+	global.SetMeterProvider(cont.MeterProvider())
 
 	log.Println("Prometheus server running on :17000")
 	log.Println("Exporting OTLP to :30080")
@@ -98,7 +98,7 @@ func main() {
 		label.String("label1", "value1"),
 	}
 
-	meter := otel.Meter("ex.com/prom-collector")
+	meter := global.Meter("ex.com/prom-collector")
 	_ = metric.Must(meter).NewFloat64ValueObserver(
 		"randval",
 		func(_ context.Context, result metric.Float64ObserverResult) {
