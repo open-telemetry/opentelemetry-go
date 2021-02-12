@@ -201,8 +201,6 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 		t.Fatalf("Connected collector: spans: got %d want %d", g, w)
 	}
 
-	fmt.Println("++++ first assert ok")
-
 	dSpans := mc.getSpans()
 	// Expecting 0 spans to have been received by the original but now dead collector
 	if g, w := len(dSpans), 0; g != w {
