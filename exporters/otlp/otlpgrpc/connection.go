@@ -135,28 +135,28 @@ func (c *connection) indefiniteBackgroundConnection() {
 		// 1. If we've stopped, return entirely
 		// 2. Otherwise block until we are disconnected, and
 		//    then retry connecting
-		if c.connected() {
+		select {
+		case <-c.stopCh:
+			return
+
+		case <-c.disconnectedCh:
+			// Quickly check if we haven't stopped at the
+			// same time.
 			select {
 			case <-c.stopCh:
 				return
 
-			case <-c.disconnectedCh:
-				// Quickly check if we haven't stopped at the
-				// same time.
-				select {
-				case <-c.stopCh:
-					return
-
-				default:
-				}
-
-				// Normal scenario that we'll wait for
+			default:
 			}
+
+			// Normal scenario that we'll wait for
 		}
 
 		if err := c.connect(context.Background()); err == nil {
 			c.setStateConnected()
 		} else {
+			// this code is unreachable in most cases
+			// c.connect does not establish connection
 			c.setStateDisconnected(err)
 		}
 
