@@ -20,9 +20,9 @@ import (
 	"math/rand"
 	"testing"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
@@ -214,8 +214,8 @@ func BenchmarkGlobalInt64CounterAddWithSDK(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 
-	sdk := otel.Meter("test")
-	otel.SetMeterProvider(fix)
+	sdk := global.Meter("test")
+	global.SetMeterProvider(fix)
 
 	labs := []label.KeyValue{label.String("A", "B")}
 	cnt := Must(sdk).NewInt64Counter("int64.sum")

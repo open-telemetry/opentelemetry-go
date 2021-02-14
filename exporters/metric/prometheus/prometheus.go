@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -142,7 +143,7 @@ func InstallNewPipeline(config Config, options ...controller.Option) (*Exporter,
 	if err != nil {
 		return nil, err
 	}
-	otel.SetMeterProvider(exp.MeterProvider())
+	global.SetMeterProvider(exp.MeterProvider())
 	return exp, nil
 }
 

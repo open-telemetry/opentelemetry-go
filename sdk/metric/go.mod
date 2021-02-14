@@ -1,14 +1,6 @@
-module go.opentelemetry.io/otel/internal/tools
+module go.opentelemetry.io/otel/sdk/metric
 
 go 1.14
-
-require (
-	github.com/client9/misspell v0.3.4
-	github.com/gogo/protobuf v1.3.2
-	github.com/golangci/golangci-lint v1.36.0
-	github.com/itchyny/gojq v0.12.1
-	golang.org/x/tools v0.0.0-20210106214847-113979e3529a
-)
 
 replace go.opentelemetry.io/otel => ../..
 
@@ -40,16 +32,25 @@ replace go.opentelemetry.io/otel/exporters/trace/jaeger => ../../exporters/trace
 
 replace go.opentelemetry.io/otel/exporters/trace/zipkin => ../../exporters/trace/zipkin
 
-replace go.opentelemetry.io/otel/internal/tools => ./
-
-replace go.opentelemetry.io/otel/sdk => ../../sdk
+replace go.opentelemetry.io/otel/internal/tools => ../../internal/tools
 
 replace go.opentelemetry.io/otel/metric => ../../metric
 
 replace go.opentelemetry.io/otel/oteltest => ../../oteltest
 
-replace go.opentelemetry.io/otel/sdk/export/metric => ../../sdk/export/metric
+replace go.opentelemetry.io/otel/sdk => ../
 
-replace go.opentelemetry.io/otel/sdk/metric => ../../sdk/metric
+replace go.opentelemetry.io/otel/sdk/export/metric => ../export/metric
+
+replace go.opentelemetry.io/otel/sdk/metric => ./
 
 replace go.opentelemetry.io/otel/trace => ../../trace
+
+require (
+	github.com/benbjohnson/clock v1.0.3 // do not upgrade to v1.1.x because it would require Go >= 1.15
+	github.com/stretchr/testify v1.7.0
+	go.opentelemetry.io/otel v0.16.0
+	go.opentelemetry.io/otel/metric v0.0.0-00010101000000-000000000000
+	go.opentelemetry.io/otel/sdk v0.0.0-00010101000000-000000000000
+	go.opentelemetry.io/otel/sdk/export/metric v0.0.0-00010101000000-000000000000
+)
