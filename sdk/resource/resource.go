@@ -17,6 +17,8 @@ package resource // import "go.opentelemetry.io/otel/sdk/resource"
 import (
 	"context"
 
+	"go.opentelemetry.io/otel"
+
 	"go.opentelemetry.io/otel/label"
 )
 
@@ -34,9 +36,12 @@ type Resource struct {
 var (
 	emptyResource Resource
 
-	defaultResource *Resource = func(r *Resource, err error) *Resource { return r }(
-		Detect(context.Background(), defaultServiceNameDetector{}, TelemetrySDK{}),
-	)
+	defaultResource *Resource = func(r *Resource, err error) *Resource {
+		if err != nil {
+			otel.Handle(err)
+		}
+		return r
+	}(Detect(context.Background(), defaultServiceNameDetector{}, TelemetrySDK{}))
 )
 
 // NewWithAttributes creates a resource from a set of attributes.  If there are

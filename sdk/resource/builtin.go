@@ -91,7 +91,7 @@ func (defaultServiceNameDetector) Detect(ctx context.Context) (*Resource, error)
 		func() (string, error) {
 			executable, err := os.Executable()
 			if err != nil {
-				return "unknown_service", nil
+				return "unknown_service:go", nil
 			}
 			return "unknown_service:" + filepath.Base(executable), nil
 		},
