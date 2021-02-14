@@ -482,7 +482,7 @@ func TestSamplerAttributesLocalChildSpan(t *testing.T) {
 
 func TestSetSpanAttributesOverLimit(t *testing.T) {
 	te := NewTestExporter()
-	cfg := Config{MaxAttributesPerSpan: 2}
+	cfg := Config{SpanLimits: SpanLimits{AttributeCountLimit: 2}}
 	tp := NewTracerProvider(WithConfig(cfg), WithSyncer(te))
 
 	span := startSpan(tp, "SpanAttributesOverLimit")
@@ -565,7 +565,7 @@ func TestEvents(t *testing.T) {
 
 func TestEventsOverLimit(t *testing.T) {
 	te := NewTestExporter()
-	cfg := Config{MaxEventsPerSpan: 2}
+	cfg := Config{SpanLimits: SpanLimits{EventCountLimit: 2}}
 	tp := NewTracerProvider(WithConfig(cfg), WithSyncer(te))
 
 	span := startSpan(tp, "EventsOverLimit")
@@ -656,7 +656,7 @@ func TestLinks(t *testing.T) {
 
 func TestLinksOverLimit(t *testing.T) {
 	te := NewTestExporter()
-	cfg := Config{MaxLinksPerSpan: 2}
+	cfg := Config{SpanLimits: SpanLimits{LinkCountLimit: 2}}
 
 	sc1 := trace.SpanContext{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}}
 	sc2 := trace.SpanContext{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}}

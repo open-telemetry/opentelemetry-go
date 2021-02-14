@@ -481,9 +481,9 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 		span.spanContext.SpanID = cfg.IDGenerator.NewSpanID(ctx, parent.TraceID)
 	}
 
-	span.attributes = newAttributesMap(cfg.MaxAttributesPerSpan)
-	span.messageEvents = newEvictedQueue(cfg.MaxEventsPerSpan)
-	span.links = newEvictedQueue(cfg.MaxLinksPerSpan)
+	span.attributes = newAttributesMap(cfg.SpanLimits.AttributeCountLimit)
+	span.messageEvents = newEvictedQueue(cfg.SpanLimits.EventCountLimit)
+	span.links = newEvictedQueue(cfg.SpanLimits.LinkCountLimit)
 
 	data := samplingData{
 		noParent:     hasEmptySpanContext(parent),
