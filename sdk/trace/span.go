@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel/codes"
@@ -133,6 +134,11 @@ type span struct {
 
 	// tracer is the SDK tracer that created this span.
 	tracer *tracer
+
+	// spanLimits holds the limit to this span.
+	spanLimits SpanLimits
+
+	droppedAttributeCount int32
 }
 
 var _ trace.Span = &span{}
@@ -263,6 +269,12 @@ func (s *span) AddEvent(name string, o ...trace.EventOption) {
 
 func (s *span) addEvent(name string, o ...trace.EventOption) {
 	c := trace.NewEventConfig(o...)
+
+	// Discard over limited attributes
+	if len(c.Attributes) > s.spanLimits.AttributePerEventCountLimit {
+		s.addDroppedAttributeCount(len(c.Attributes) - s.spanLimits.AttributePerEventCountLimit)
+		c.Attributes = c.Attributes[:s.spanLimits.AttributePerEventCountLimit]
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -417,9 +429,10 @@ func (s *span) Snapshot() *export.SpanSnapshot {
 	sd.StatusCode = s.statusCode
 	sd.StatusMessage = s.statusMessage
 
+	sd.DroppedAttributeCount = int(s.droppedAttributeCount)
 	if s.attributes.evictList.Len() > 0 {
 		sd.Attributes = s.attributes.toKeyValue()
-		sd.DroppedAttributeCount = s.attributes.droppedCount
+		sd.DroppedAttributeCount += s.attributes.droppedCount
 	}
 	if len(s.messageEvents.queue) > 0 {
 		sd.MessageEvents = s.interfaceArrayToMessageEventArray()
@@ -467,6 +480,10 @@ func (s *span) addChild() {
 	s.mu.Unlock()
 }
 
+func (s *span) addDroppedAttributeCount(delta int) {
+	atomic.AddInt32(&s.droppedAttributeCount, int32(delta))
+}
+
 func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trace.SpanContext, remoteParent bool, o *trace.SpanConfig) *span {
 	span := &span{}
 	span.spanContext = parent
@@ -484,6 +501,7 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 	span.attributes = newAttributesMap(cfg.SpanLimits.AttributeCountLimit)
 	span.messageEvents = newEvictedQueue(cfg.SpanLimits.EventCountLimit)
 	span.links = newEvictedQueue(cfg.SpanLimits.LinkCountLimit)
+	span.spanLimits = cfg.SpanLimits
 
 	data := samplingData{
 		noParent:     hasEmptySpanContext(parent),

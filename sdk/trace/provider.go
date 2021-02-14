@@ -183,6 +183,12 @@ func (p *TracerProvider) ApplyConfig(cfg Config) {
 	if cfg.SpanLimits.LinkCountLimit > 0 {
 		c.SpanLimits.LinkCountLimit = cfg.SpanLimits.LinkCountLimit
 	}
+	if cfg.SpanLimits.AttributePerEventCountLimit > 0 {
+		c.SpanLimits.AttributePerEventCountLimit = cfg.SpanLimits.AttributePerEventCountLimit
+	}
+	if cfg.SpanLimits.AttributePerLinkCountLimit > 0 {
+		c.SpanLimits.AttributePerLinkCountLimit = cfg.SpanLimits.AttributePerLinkCountLimit
+	}
 	if cfg.Resource != nil {
 		c.Resource = cfg.Resource
 	}

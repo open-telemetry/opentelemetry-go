@@ -38,9 +38,10 @@ var _ trace.Tracer = &tracer{}
 // configured appropriately by any SpanOption passed. Any Timestamp option
 // passed will be used as the start time of the Span's life-cycle.
 func (tr *tracer) Start(ctx context.Context, name string, options ...trace.SpanOption) (context.Context, trace.Span) {
-	config := trace.NewSpanConfig(options...)
+	spanConfig := trace.NewSpanConfig(options...)
+	cfg := tr.provider.config.Load().(*Config)
 
-	parentSpanContext, remoteParent, links := parent.GetSpanContextAndLinks(ctx, config.NewRoot)
+	parentSpanContext, remoteParent, links := parent.GetSpanContextAndLinks(ctx, spanConfig.NewRoot)
 
 	if p := trace.SpanFromContext(ctx); p != nil {
 		if sdkSpan, ok := p.(*span); ok {
@@ -48,14 +49,20 @@ func (tr *tracer) Start(ctx context.Context, name string, options ...trace.SpanO
 		}
 	}
 
-	span := startSpanInternal(ctx, tr, name, parentSpanContext, remoteParent, config)
+	span := startSpanInternal(ctx, tr, name, parentSpanContext, remoteParent, spanConfig)
 	for _, l := range links {
 		span.addLink(l)
 	}
-	for _, l := range config.Links {
+	for _, l := range spanConfig.Links {
+		// Discard over limited attributes
+		if len(l.Attributes) > cfg.SpanLimits.AttributePerLinkCountLimit {
+			span.addDroppedAttributeCount(len(l.Attributes) - cfg.SpanLimits.AttributePerLinkCountLimit)
+			l.Attributes = l.Attributes[:cfg.SpanLimits.AttributePerLinkCountLimit]
+		}
+
 		span.addLink(l)
 	}
-	span.SetAttributes(config.Attributes...)
+	span.SetAttributes(spanConfig.Attributes...)
 
 	span.tracer = tr
 

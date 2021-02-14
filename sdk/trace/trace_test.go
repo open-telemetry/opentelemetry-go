@@ -1024,7 +1024,7 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 	s.executionTracerTaskEnd = executionTracerTaskEnd
 	spans = append(spans, s) // parent not sampled
 
-	//tp.ApplyConfig(Config{DefaultSampler: AlwaysSample()})
+	// tp.ApplyConfig(Config{DefaultSampler: AlwaysSample()})
 	_, apiSpan = tr.Start(context.Background(), "foo")
 	s = apiSpan.(*span)
 	s.executionTracerTaskEnd = executionTracerTaskEnd
@@ -1395,4 +1395,110 @@ func TestReadWriteSpan(t *testing.T) {
 	// their own tests, there is no point in testing all the possible methods
 	// available via ReadWriteSpan as doing so would mean creating a lot of
 	// duplication.
+}
+
+func TestAddSpanEventWithOverLimitedAttributes(t *testing.T) {
+	te := NewTestExporter()
+	cfg := Config{SpanLimits: SpanLimits{AttributePerEventCountLimit: 2}}
+	tp := NewTracerProvider(WithConfig(cfg), WithSyncer(te))
+
+	span := startSpan(tp, "AddSpanEventWithOverLimitedAttributes")
+	span.AddEvent("test1", trace.WithAttributes(
+		label.Bool("key1", true),
+		label.String("key2", "value2"),
+	))
+	// Parts of the attribute should be discard
+	span.AddEvent("test2", trace.WithAttributes(
+		label.Bool("key1", true),
+		label.String("key2", "value2"),
+		label.String("key3", "value3"),
+		label.String("key4", "value4"),
+	))
+	got, err := endSpan(te, span)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i := range got.MessageEvents {
+		if !checkTime(&got.MessageEvents[i].Time) {
+			t.Error("exporting span: expected nonzero Event Time")
+		}
+	}
+
+	want := &export.SpanSnapshot{
+		SpanContext: trace.SpanContext{
+			TraceID:    tid,
+			TraceFlags: 0x1,
+		},
+		ParentSpanID: sid,
+		Name:         "span0",
+		Attributes:   nil,
+		MessageEvents: []trace.Event{
+			{
+				Name: "test1",
+				Attributes: []label.KeyValue{
+					label.Bool("key1", true),
+					label.String("key2", "value2"),
+				},
+			},
+			{
+				Name: "test2",
+				Attributes: []label.KeyValue{
+					label.Bool("key1", true),
+					label.String("key2", "value2"),
+				},
+			},
+		},
+		SpanKind:               trace.SpanKindInternal,
+		HasRemoteParent:        true,
+		DroppedAttributeCount:  2,
+		InstrumentationLibrary: instrumentation.Library{Name: "AddSpanEventWithOverLimitedAttributes"},
+	}
+	if diff := cmpDiff(got, want); diff != "" {
+		t.Errorf("SetSpanAttributesOverLimit: -got +want %s", diff)
+	}
+}
+
+func TestWithLinksWithOverLimitedAttributes(t *testing.T) {
+	te := NewTestExporter()
+	cfg := Config{SpanLimits: SpanLimits{AttributePerLinkCountLimit: 1}}
+	tp := NewTracerProvider(WithConfig(cfg), WithSyncer(te))
+
+	k1v1 := label.String("key1", "value1")
+	k2v2 := label.String("key2", "value2")
+	k3v3 := label.String("key3", "value3")
+	k4v4 := label.String("key4", "value4")
+
+	sc1 := trace.SpanContext{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}}
+	sc2 := trace.SpanContext{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}}
+
+	span := startSpan(tp, "Links", trace.WithLinks([]trace.Link{
+		{SpanContext: sc1, Attributes: []label.KeyValue{k1v1, k2v2}},
+		{SpanContext: sc2, Attributes: []label.KeyValue{k2v2, k3v3, k4v4}},
+	}...))
+
+	got, err := endSpan(te, span)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &export.SpanSnapshot{
+		SpanContext: trace.SpanContext{
+			TraceID:    tid,
+			TraceFlags: 0x1,
+		},
+		ParentSpanID:    sid,
+		Name:            "span0",
+		HasRemoteParent: true,
+		Links: []trace.Link{
+			{SpanContext: sc1, Attributes: []label.KeyValue{k1v1}},
+			{SpanContext: sc2, Attributes: []label.KeyValue{k2v2}},
+		},
+		DroppedAttributeCount:  3,
+		SpanKind:               trace.SpanKindInternal,
+		InstrumentationLibrary: instrumentation.Library{Name: "Links"},
+	}
+	if diff := cmpDiff(got, want); diff != "" {
+		t.Errorf("Link: -got +want %s", diff)
+	}
 }
