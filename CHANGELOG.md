@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- AttributePerEventCountLimit and AttributePerLinkCountLimit for SpanLimits. (#1535)
+
 ### Changed
 
 - Rename project default branch from `master` to `main`.
@@ -15,6 +19,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add tooling to maintain "replace" directives in go.mod files automatically. (#1528)
 - Create new modules: otel/metric, otel/trace, otel/oteltest, otel/sdk/export/metric, otel/sdk/metric (#1528)
 - Move metric-related public APIs from otel to otel/metric/global. (#1528)
+- Default span limit values to 128. (#1535)
+- Rename MaxEventsPerSpan, MaxAttributesPerSpan and MaxLinksPerSpan to EventCountLimit, AttributeCountLimit and LinkCountLimit, and move these fieds into SpanLimits. (#1535)
 
 ## [0.16.0] - 2020-01-13
 
