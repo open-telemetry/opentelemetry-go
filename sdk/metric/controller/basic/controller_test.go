@@ -17,6 +17,7 @@ package basic_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -30,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 func getMap(t *testing.T, cont *controller.Controller) map[string]float64 {
@@ -55,6 +57,58 @@ func checkTestContext(t *testing.T, ctx context.Context) {
 	require.Equal(t, "B", ctx.Value(testContextKey("A")))
 }
 
+func TestControllerUsesResource(t *testing.T) {
+	cases := []struct {
+		name    string
+		options []controller.Option
+		wanted  string
+	}{
+		{
+			name:    "explicitly empty resource",
+			options: []controller.Option{controller.WithResource(resource.Empty())},
+			wanted:  ""},
+		{
+			name:    "uses default if no resource option",
+			options: nil,
+			wanted:  resource.Default().Encoded(label.DefaultEncoder())},
+		{
+			name:    "explicit resource",
+			options: []controller.Option{controller.WithResource(resource.NewWithAttributes(label.String("R", "S")))},
+			wanted:  "R=S"},
+		{
+			name: "last resource wins",
+			options: []controller.Option{
+				controller.WithResource(resource.Default()),
+				controller.WithResource(resource.NewWithAttributes(label.String("R", "S"))),
+			},
+			wanted: "R=S",
+		},
+	}
+	for _, c := range cases {
+		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
+			cont := controller.New(
+				processor.New(
+					processortest.AggregatorSelector(),
+					export.CumulativeExportKindSelector(),
+				),
+				c.options...,
+			)
+			prov := cont.MeterProvider()
+
+			ctr := metric.Must(prov.Meter("named")).NewFloat64Counter("calls.sum")
+			ctr.Add(context.Background(), 1.)
+
+			// Collect once
+			require.NoError(t, cont.Collect(context.Background()))
+
+			expect := map[string]float64{
+				"calls.sum//" + c.wanted: 1.,
+			}
+			require.EqualValues(t, expect, getMap(t, cont))
+		})
+	}
+}
+
 func TestStartNoExporter(t *testing.T) {
 	cont := controller.New(
 		processor.New(
@@ -62,6 +116,7 @@ func TestStartNoExporter(t *testing.T) {
 			export.CumulativeExportKindSelector(),
 		),
 		controller.WithCollectPeriod(time.Second),
+		controller.WithResource(resource.Empty()),
 	)
 	mock := controllertest.NewMockClock()
 	cont.SetClock(mock)
@@ -132,6 +187,7 @@ func TestObserverCanceled(t *testing.T) {
 		),
 		controller.WithCollectPeriod(0),
 		controller.WithCollectTimeout(time.Millisecond),
+		controller.WithResource(resource.Empty()),
 	)
 
 	prov := cont.MeterProvider()
@@ -163,6 +219,7 @@ func TestObserverContext(t *testing.T) {
 			export.CumulativeExportKindSelector(),
 		),
 		controller.WithCollectTimeout(0),
+		controller.WithResource(resource.Empty()),
 	)
 
 	prov := cont.MeterProvider()
@@ -228,6 +285,7 @@ func TestExportTimeout(t *testing.T) {
 		controller.WithCollectPeriod(time.Second),
 		controller.WithPushTimeout(time.Millisecond),
 		controller.WithExporter(exporter),
+		controller.WithResource(resource.Empty()),
 	)
 	mock := controllertest.NewMockClock()
 	cont.SetClock(mock)
@@ -282,7 +340,12 @@ func TestCollectAfterStopThenStartAgain(t *testing.T) {
 			exp,
 		),
 		controller.WithCollectPeriod(time.Second),
+<<<<<<< HEAD
 		controller.WithExporter(exp),
+=======
+		controller.WithPusher(exp),
+		controller.WithResource(resource.Empty()),
+>>>>>>> 8fae0a64 (Create resource.Default() with required attributes/default values (#1507))
 	)
 	mock := controllertest.NewMockClock()
 	cont.SetClock(mock)
