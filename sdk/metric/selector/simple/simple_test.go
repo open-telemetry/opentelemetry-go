@@ -31,12 +31,13 @@ import (
 )
 
 var (
-	testCounterDesc           = metric.NewDescriptor("counter", metric.CounterInstrumentKind, number.Int64Kind)
-	testUpDownCounterDesc     = metric.NewDescriptor("updowncounter", metric.UpDownCounterInstrumentKind, number.Int64Kind)
-	testSumObserverDesc       = metric.NewDescriptor("sumobserver", metric.SumObserverInstrumentKind, number.Int64Kind)
-	testUpDownSumObserverDesc = metric.NewDescriptor("updownsumobserver", metric.UpDownSumObserverInstrumentKind, number.Int64Kind)
-	testValueRecorderDesc     = metric.NewDescriptor("valuerecorder", metric.ValueRecorderInstrumentKind, number.Int64Kind)
-	testValueObserverDesc     = metric.NewDescriptor("valueobserver", metric.ValueObserverInstrumentKind, number.Int64Kind)
+	testCounterDesc              = metric.NewDescriptor("counter", metric.CounterInstrumentKind, number.Int64Kind)
+	testUpDownCounterDesc        = metric.NewDescriptor("updowncounter", metric.UpDownCounterInstrumentKind, number.Int64Kind)
+	testSumObserverDesc          = metric.NewDescriptor("sumobserver", metric.SumObserverInstrumentKind, number.Int64Kind)
+	testUpDownSumObserverDesc    = metric.NewDescriptor("updownsumobserver", metric.UpDownSumObserverInstrumentKind, number.Int64Kind)
+	testValueRecorderDesc        = metric.NewDescriptor("valuerecorder", metric.ValueRecorderInstrumentKind, number.Int64Kind)
+	testAnotherValueRecorderDesc = metric.NewDescriptor("another_valuerecorder", metric.ValueRecorderInstrumentKind, number.Int64Kind)
+	testValueObserverDesc        = metric.NewDescriptor("valueobserver", metric.ValueObserverInstrumentKind, number.Int64Kind)
 )
 
 func oneAgg(sel export.AggregatorSelector, desc *metric.Descriptor) export.Aggregator {
@@ -69,4 +70,14 @@ func TestHistogramDistribution(t *testing.T) {
 	hist := simple.NewWithHistogramDistribution()
 	require.IsType(t, (*histogram.Aggregator)(nil), oneAgg(hist, &testValueRecorderDesc))
 	testFixedSelectors(t, hist)
+}
+
+func TestDelegator(t *testing.T) {
+	d := simple.NewWithDelegate(simple.NewWithInexpensiveDistribution())
+	require.IsType(t, (*minmaxsumcount.Aggregator)(nil), oneAgg(d, &testValueRecorderDesc))
+	require.False(t, d.Register(testValueRecorderDesc.Name(), simple.NewWithExactDistribution()), "duplicated register")
+	require.IsType(t, (*minmaxsumcount.Aggregator)(nil), oneAgg(d, &testValueRecorderDesc))
+	require.True(t, d.Register(testAnotherValueRecorderDesc.Name(), simple.NewWithExactDistribution()), "failed to register")
+	require.IsType(t, (*exact.Aggregator)(nil), oneAgg(d, &testAnotherValueRecorderDesc))
+	testFixedSelectors(t, d)
 }

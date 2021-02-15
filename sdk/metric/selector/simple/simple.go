@@ -15,6 +15,8 @@
 package simple // import "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 
 import (
+	"sync"
+
 	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
@@ -30,13 +32,31 @@ type (
 	selectorHistogram   struct {
 		options []histogram.Option
 	}
+
+	// SelectorDelegator implements export.AggregatorSelector and provides a way to
+	// register a specific AggregatorSelector for a given metric name.
+	SelectorDelegator struct {
+		// defaultSelector is the default AggregatorSelector for an unregistered metric.
+		defaultSelector export.AggregatorSelector
+
+		// namedSelector stores the mapping from metric name to AggregatorSelector.
+		namedSelector sync.Map
+	}
 )
 
 var (
 	_ export.AggregatorSelector = selectorInexpensive{}
 	_ export.AggregatorSelector = selectorExact{}
 	_ export.AggregatorSelector = selectorHistogram{}
+	_ export.AggregatorSelector = &SelectorDelegator{}
 )
+
+// NewWithDelegate returns a SelectorDelegator with given default selector.
+func NewWithDelegate(defaultSelector export.AggregatorSelector) *SelectorDelegator {
+	return &SelectorDelegator{
+		defaultSelector: defaultSelector,
+	}
+}
 
 // NewWithInexpensiveDistribution returns a simple aggregator selector
 // that uses minmaxsumcount aggregators for `ValueRecorder`
@@ -117,4 +137,19 @@ func (s selectorHistogram) AggregatorFor(descriptor *metric.Descriptor, aggPtrs 
 	default:
 		sumAggs(aggPtrs)
 	}
+}
+
+// Register provides a way to assosicate a metric name with a specific AggregatorSelector.
+// If the name is registered before, the call has no effect. Returns true if the name was
+// not registered before.
+func (s *SelectorDelegator) Register(instrumentName string, aselector export.AggregatorSelector) bool {
+	_, loaded := s.namedSelector.LoadOrStore(instrumentName, aselector)
+	return !loaded
+}
+
+// AggregatorFor initializes required AggregatorSelector based on the metric name. It always
+// returns the same kind of AggregatorSelector for a given metric name.
+func (s *SelectorDelegator) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+	actual, _ := s.namedSelector.LoadOrStore(descriptor.Name(), s.defaultSelector)
+	actual.(export.AggregatorSelector).AggregatorFor(descriptor, aggPtrs...)
 }
