@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"time"
 
 	"google.golang.org/grpc"
@@ -32,6 +33,8 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/propagation"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -43,7 +46,7 @@ import (
 
 // Initializes an OTLP exporter, and configures the corresponding trace and
 // metric providers.
-func initProvider() func() {
+func initProvider(aselector export.AggregatorSelector) func() {
 	ctx := context.Background()
 
 	// If the OpenTelemetry Collector is running on a local cluster (minikube or
@@ -73,10 +76,9 @@ func initProvider() func() {
 		sdktrace.WithResource(res),
 		sdktrace.WithSpanProcessor(bsp),
 	)
-
 	cont := controller.New(
 		processor.New(
-			simple.NewWithExactDistribution(),
+			aselector,
 			exp,
 		),
 		controller.WithPusher(exp),
@@ -101,7 +103,9 @@ func initProvider() func() {
 func main() {
 	log.Printf("Waiting for connection...")
 
-	shutdown := initProvider()
+	aselector := simple.NewWithDelegate(simple.NewWithExactDistribution())
+
+	shutdown := initProvider(aselector)
 	defer shutdown()
 
 	tracer := otel.Tracer("test-tracer")
@@ -123,6 +127,25 @@ func main() {
 		).Bind(commonLabels...)
 	defer valuerecorder.Unbind()
 
+	// Note: must register the name before creating an instrument.
+	aselector.Register("request_latency",
+		simple.NewWithHistogramDistribution(histogram.WithExplicitBoundaries([]float64{50, 200, 300})))
+	requestLatency := metric.Must(meter).
+		NewFloat64ValueRecorder(
+			"request_latency",
+			metric.WithDescription("request latency distribution"),
+		).Bind(commonLabels...)
+	defer requestLatency.Unbind()
+
+	aselector.Register("request_size",
+		simple.NewWithHistogramDistribution(histogram.WithExplicitBoundaries([]float64{1000, 5000, 20000})))
+	requestSize := metric.Must(meter).
+		NewFloat64ValueRecorder(
+			"request_size",
+			metric.WithDescription("request size distribution"),
+		).Bind(commonLabels...)
+	defer requestSize.Unbind()
+
 	// work begins
 	ctx, span := tracer.Start(
 		context.Background(),
@@ -133,6 +156,9 @@ func main() {
 		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))
 		log.Printf("Doing really hard work (%d / 10)\n", i+1)
 		valuerecorder.Add(ctx, 1.0)
+
+		requestLatency.Record(ctx, float64(rand.Int31n(350)))
+		requestSize.Record(ctx, float64(rand.Int31n(21000)))
 
 		<-time.After(time.Second)
 		iSpan.End()
