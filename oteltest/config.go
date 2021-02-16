@@ -46,7 +46,7 @@ type config struct {
 	SpanContextFunc func(context.Context) trace.SpanContext
 
 	// SpanRecorder keeps track of spans.
-	SpanRecorder SpanRecorder
+	SpanRecorder *SpanRecorder
 }
 
 func newConfig(opts ...Option) config {
@@ -80,7 +80,7 @@ func WithSpanContextFunc(f func(context.Context) trace.SpanContext) Option {
 }
 
 type spanRecorderOption struct {
-	SpanRecorder SpanRecorder
+	SpanRecorder *SpanRecorder
 }
 
 func (o spanRecorderOption) Apply(c *config) {
@@ -89,7 +89,7 @@ func (o spanRecorderOption) Apply(c *config) {
 
 // WithSpanRecorder sets the SpanRecorder to use with the TracerProvider for
 // testing.
-func WithSpanRecorder(sr SpanRecorder) Option {
+func WithSpanRecorder(sr *SpanRecorder) Option {
 	return spanRecorderOption{sr}
 }
 

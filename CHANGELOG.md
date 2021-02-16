@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Replaced interface `oteltest.SpanRecorder` with its existing implementation
-  `StandardSpanRecorder`.
+  `StandardSpanRecorder` (#1541).
 
 ### Added
 
