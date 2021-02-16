@@ -117,6 +117,7 @@ func TestPrometheusStatefulness(t *testing.T) {
 	exporter, err := prometheus.NewExportPipeline(
 		prometheus.Config{},
 		controller.WithCollectPeriod(0),
+		controller.WithResource(resource.Empty()),
 	)
 	require.NoError(t, err)
 
