@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// package attr provides key and value labels.
+// Package attr provides key and value attributes.
 //
 // This package is currently in a pre-GA phase. Backwards incompatible changes
 // may be introduced in subsequent minor version releases as we work to track

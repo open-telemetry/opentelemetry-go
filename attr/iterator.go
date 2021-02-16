@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package attr // import label "go.opentelemetry.io/otel/attr"
+package attr // import "go.opentelemetry.io/otel/attr"
 
 // Iterator allows iterating over the set of labels in order,
 // sorted by key.
