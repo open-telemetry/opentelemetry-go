@@ -94,17 +94,8 @@ func WithSpanRecorder(sr SpanRecorder) Option {
 }
 
 // SpanRecorder performs operations to record a span as it starts and ends.
-type SpanRecorder interface {
-	// OnStart is called by the Tracer when it starts a Span.
-	OnStart(span *Span)
-	// OnEnd is called by the Span when it ends.
-	OnEnd(span *Span)
-}
-
-// StandardSpanRecorder is a SpanRecorder that records all started and ended
-// spans in an ordered recording. StandardSpanRecorder is designed to be
-// concurrent safe and can by used by multiple goroutines.
-type StandardSpanRecorder struct {
+// It is designed to be concurrent safe and can by used by multiple goroutines.
+type SpanRecorder struct {
 	startedMu sync.RWMutex
 	started   []*Span
 
@@ -113,21 +104,21 @@ type StandardSpanRecorder struct {
 }
 
 // OnStart records span as started.
-func (ssr *StandardSpanRecorder) OnStart(span *Span) {
+func (ssr *SpanRecorder) OnStart(span *Span) {
 	ssr.startedMu.Lock()
 	defer ssr.startedMu.Unlock()
 	ssr.started = append(ssr.started, span)
 }
 
 // OnEnd records span as completed.
-func (ssr *StandardSpanRecorder) OnEnd(span *Span) {
+func (ssr *SpanRecorder) OnEnd(span *Span) {
 	ssr.doneMu.Lock()
 	defer ssr.doneMu.Unlock()
 	ssr.done = append(ssr.done, span)
 }
 
 // Started returns a copy of all started Spans in the order they were started.
-func (ssr *StandardSpanRecorder) Started() []*Span {
+func (ssr *SpanRecorder) Started() []*Span {
 	ssr.startedMu.RLock()
 	defer ssr.startedMu.RUnlock()
 	started := make([]*Span, len(ssr.started))
@@ -138,7 +129,7 @@ func (ssr *StandardSpanRecorder) Started() []*Span {
 }
 
 // Completed returns a copy of all ended Spans in the order they were ended.
-func (ssr *StandardSpanRecorder) Completed() []*Span {
+func (ssr *SpanRecorder) Completed() []*Span {
 	ssr.doneMu.RLock()
 	defer ssr.doneMu.RUnlock()
 	done := make([]*Span, len(ssr.done))
