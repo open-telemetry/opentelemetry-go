@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
+	label "go.opentelemetry.io/otel/attr"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/trace"
 
 	export "go.opentelemetry.io/otel/sdk/export/trace"

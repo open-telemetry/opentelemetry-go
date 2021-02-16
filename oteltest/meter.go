@@ -19,8 +19,8 @@ import (
 	"sync"
 	"testing"
 
+	label "go.opentelemetry.io/otel/attr"
 	internalmetric "go.opentelemetry.io/otel/internal/metric"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/registry"

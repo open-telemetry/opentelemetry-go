@@ -18,7 +18,7 @@ package baggage
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/label"
+	label "go.opentelemetry.io/otel/attr"
 )
 
 type rawMap map[label.Key]label.Value

@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"testing"
 
-	"go.opentelemetry.io/otel/label"
+	label "go.opentelemetry.io/otel/attr"
 )
 
 type testCase struct {

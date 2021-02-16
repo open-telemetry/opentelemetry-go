@@ -17,7 +17,7 @@ package resource // import "go.opentelemetry.io/otel/sdk/resource"
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/label"
+	label "go.opentelemetry.io/otel/attr"
 )
 
 // config contains configuration for Resource creation.

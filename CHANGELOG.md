@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Added `resource.Default()` for use with meter and tracer providers. (#1507)
 
+### Changed
+
+- Renamed the `otel/label` package to `otel/attr`.
+
 ## [0.17.0] - 2020-02-12
 
 ### Changed

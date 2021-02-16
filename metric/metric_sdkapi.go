@@ -17,7 +17,7 @@ package metric // import "go.opentelemetry.io/otel/metric"
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/label"
+	label "go.opentelemetry.io/otel/attr"
 	"go.opentelemetry.io/otel/metric/number"
 )
 

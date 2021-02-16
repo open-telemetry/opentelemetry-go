@@ -21,11 +21,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	label "go.opentelemetry.io/otel/attr"
 	"go.opentelemetry.io/otel/codes"
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
 	resourcepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/resource/v1"
 	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/trace"
 
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"

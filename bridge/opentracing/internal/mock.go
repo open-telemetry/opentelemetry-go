@@ -21,10 +21,10 @@ import (
 	"sync"
 	"time"
 
+	label "go.opentelemetry.io/otel/attr"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/internal/baggage"
 	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"

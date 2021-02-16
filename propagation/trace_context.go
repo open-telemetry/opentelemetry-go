@@ -21,7 +21,7 @@ import (
 	"regexp"
 	"strings"
 
-	"go.opentelemetry.io/otel/label"
+	label "go.opentelemetry.io/otel/attr"
 	"go.opentelemetry.io/otel/trace"
 )
 

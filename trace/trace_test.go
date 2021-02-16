@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"testing"
 
-	"go.opentelemetry.io/otel/label"
+	label "go.opentelemetry.io/otel/attr"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

@@ -22,10 +22,10 @@ import (
 	"testing"
 	"time"
 
+	label "go.opentelemetry.io/otel/attr"
 	"go.opentelemetry.io/otel/codes"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/internal/matchers"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/trace"
 )

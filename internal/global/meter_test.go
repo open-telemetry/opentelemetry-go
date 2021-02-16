@@ -21,8 +21,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	label "go.opentelemetry.io/otel/attr"
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	metricglobal "go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/number"

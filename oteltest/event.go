@@ -17,7 +17,7 @@ package oteltest // import "go.opentelemetry.io/otel/oteltest"
 import (
 	"time"
 
-	"go.opentelemetry.io/otel/label"
+	label "go.opentelemetry.io/otel/attr"
 )
 
 // Event encapsulates the properties of calls to AddEvent.

@@ -19,8 +19,8 @@ import (
 	"log"
 
 	"go.opentelemetry.io/otel"
+	label "go.opentelemetry.io/otel/attr"
 	"go.opentelemetry.io/otel/exporters/stdout"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/trace"

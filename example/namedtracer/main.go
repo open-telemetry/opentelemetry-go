@@ -19,10 +19,10 @@ import (
 	"log"
 
 	"go.opentelemetry.io/otel"
+	label "go.opentelemetry.io/otel/attr"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/example/namedtracer/foo"
 	"go.opentelemetry.io/otel/exporters/stdout"
-	"go.opentelemetry.io/otel/label"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )

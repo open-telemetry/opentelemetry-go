@@ -19,8 +19,8 @@ import (
 	"net/url"
 	"strings"
 
+	label "go.opentelemetry.io/otel/attr"
 	"go.opentelemetry.io/otel/internal/baggage"
-	"go.opentelemetry.io/otel/label"
 )
 
 const baggageHeader = "baggage"

@@ -17,8 +17,8 @@ package transform
 import (
 	"reflect"
 
+	label "go.opentelemetry.io/otel/attr"
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
-	"go.opentelemetry.io/otel/label"
 
 	"go.opentelemetry.io/otel/sdk/resource"
 )

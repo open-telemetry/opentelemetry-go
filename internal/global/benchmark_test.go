@@ -19,8 +19,8 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel"
+	label "go.opentelemetry.io/otel/attr"
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/label"
 	metricglobal "go.opentelemetry.io/otel/metric/global"
 )
 

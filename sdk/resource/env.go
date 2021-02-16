@@ -20,7 +20,7 @@ import (
 	"os"
 	"strings"
 
-	"go.opentelemetry.io/otel/label"
+	label "go.opentelemetry.io/otel/attr"
 )
 
 // envVar is the environment variable name OpenTelemetry Resource information can be assigned to.

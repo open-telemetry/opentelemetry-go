@@ -17,8 +17,8 @@ package baggage // import "go.opentelemetry.io/otel/baggage"
 import (
 	"context"
 
+	label "go.opentelemetry.io/otel/attr"
 	"go.opentelemetry.io/otel/internal/baggage"
-	"go.opentelemetry.io/otel/label"
 )
 
 // Set returns a copy of the set of baggage key-values in ctx.

@@ -17,7 +17,7 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 import (
 	"container/list"
 
-	"go.opentelemetry.io/otel/label"
+	label "go.opentelemetry.io/otel/attr"
 )
 
 // attributesMap is a capped map of attributes, holding the most recent attributes.

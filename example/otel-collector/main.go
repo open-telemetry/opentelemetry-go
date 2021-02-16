@@ -26,9 +26,9 @@ import (
 	"google.golang.org/grpc"
 
 	"go.opentelemetry.io/otel"
+	label "go.opentelemetry.io/otel/attr"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/propagation"

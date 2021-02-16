@@ -26,8 +26,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	label "go.opentelemetry.io/otel/attr"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/resource"
