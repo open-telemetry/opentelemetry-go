@@ -46,6 +46,18 @@ func NewTextMapCarrier(data map[string]string) *TextMapCarrier {
 	return &TextMapCarrier{data: copied}
 }
 
+// Keys returns the keys for which this carrier has a value.
+func (c *TextMapCarrier) Keys() []string {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
+
+	result := make([]string, 0, len(c.data))
+	for k := range c.data {
+		result = append(result, k)
+	}
+	return result
+}
+
 // Get returns the value associated with the passed key.
 func (c *TextMapCarrier) Get(key string) string {
 	c.mtx.Lock()
