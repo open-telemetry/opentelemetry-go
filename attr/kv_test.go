@@ -46,43 +46,11 @@ func TestKeyValueConstructors(t *testing.T) {
 			},
 		},
 		{
-			name:   "Uint64",
-			actual: label.Uint64("k1", 1),
-			expected: label.KeyValue{
-				Key:   "k1",
-				Value: label.Uint64Value(1),
-			},
-		},
-		{
 			name:   "Float64",
 			actual: label.Float64("k1", 123.5),
 			expected: label.KeyValue{
 				Key:   "k1",
 				Value: label.Float64Value(123.5),
-			},
-		},
-		{
-			name:   "Int32",
-			actual: label.Int32("k1", 123),
-			expected: label.KeyValue{
-				Key:   "k1",
-				Value: label.Int32Value(123),
-			},
-		},
-		{
-			name:   "Uint32",
-			actual: label.Uint32("k1", 123),
-			expected: label.KeyValue{
-				Key:   "k1",
-				Value: label.Uint32Value(123),
-			},
-		},
-		{
-			name:   "Float32",
-			actual: label.Float32("k1", 123.5),
-			expected: label.KeyValue{
-				Key:   "k1",
-				Value: label.Float32Value(123.5),
 			},
 		},
 		{
@@ -99,14 +67,6 @@ func TestKeyValueConstructors(t *testing.T) {
 			expected: label.KeyValue{
 				Key:   "k1",
 				Value: label.IntValue(123),
-			},
-		},
-		{
-			name:   "Uint",
-			actual: label.Uint("k1", 123),
-			expected: label.KeyValue{
-				Key:   "k1",
-				Value: label.UintValue(123),
 			},
 		},
 	}
@@ -153,34 +113,10 @@ func TestAny(t *testing.T) {
 			wantValue: int64(42),
 		},
 		{
-			key:       "uint64 type inferred",
-			value:     uint64(42),
-			wantType:  label.UINT64,
-			wantValue: uint64(42),
-		},
-		{
 			key:       "float64 type inferred",
 			value:     float64(42.1),
 			wantType:  label.FLOAT64,
 			wantValue: 42.1,
-		},
-		{
-			key:       "int32 type inferred",
-			value:     int32(42),
-			wantType:  label.INT32,
-			wantValue: int32(42),
-		},
-		{
-			key:       "uint32 type inferred",
-			value:     uint32(42),
-			wantType:  label.UINT32,
-			wantValue: uint32(42),
-		},
-		{
-			key:       "float32 type inferred",
-			value:     float32(42.1),
-			wantType:  label.FLOAT32,
-			wantValue: float32(42.1),
 		},
 		{
 			key:       "string type inferred",

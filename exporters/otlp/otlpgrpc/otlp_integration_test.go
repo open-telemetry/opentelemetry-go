@@ -280,9 +280,7 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 	tr := tp.Tracer("test-tracer")
 	testKvs := []label.KeyValue{
 		label.Int("Int", 1),
-		label.Int32("Int32", int32(2)),
 		label.Int64("Int64", int64(3)),
-		label.Float32("Float32", float32(1.11)),
 		label.Float64("Float64", 2.22),
 		label.Bool("Bool", true),
 		label.String("String", "test"),
@@ -330,26 +328,10 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 			},
 		},
 		{
-			Key: "Int32",
-			Value: &commonpb.AnyValue{
-				Value: &commonpb.AnyValue_IntValue{
-					IntValue: 2,
-				},
-			},
-		},
-		{
 			Key: "Int64",
 			Value: &commonpb.AnyValue{
 				Value: &commonpb.AnyValue_IntValue{
 					IntValue: 3,
-				},
-			},
-		},
-		{
-			Key: "Float32",
-			Value: &commonpb.AnyValue{
-				Value: &commonpb.AnyValue_DoubleValue{
-					DoubleValue: 1.11,
 				},
 			},
 		},

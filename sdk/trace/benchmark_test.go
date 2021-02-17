@@ -45,7 +45,6 @@ func BenchmarkSpanWithAttributes_4(b *testing.B) {
 			span.SetAttributes(
 				label.Bool("key1", false),
 				label.String("key2", "hello"),
-				label.Uint64("key3", 123),
 				label.Float64("key4", 123.456),
 			)
 			span.End()
@@ -63,11 +62,9 @@ func BenchmarkSpanWithAttributes_8(b *testing.B) {
 			span.SetAttributes(
 				label.Bool("key1", false),
 				label.String("key2", "hello"),
-				label.Uint64("key3", 123),
 				label.Float64("key4", 123.456),
 				label.Bool("key21", false),
 				label.String("key22", "hello"),
-				label.Uint64("key23", 123),
 				label.Float64("key24", 123.456),
 			)
 			span.End()
@@ -86,13 +83,8 @@ func BenchmarkSpanWithAttributes_all(b *testing.B) {
 				label.Bool("key1", false),
 				label.String("key2", "hello"),
 				label.Int64("key3", 123),
-				label.Uint64("key4", 123),
-				label.Int32("key5", 123),
-				label.Uint32("key6", 123),
 				label.Float64("key7", 123.456),
-				label.Float32("key8", 123.456),
 				label.Int("key9", 123),
-				label.Uint("key10", 123),
 			)
 			span.End()
 		}
@@ -110,23 +102,13 @@ func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
 				label.Bool("key1", false),
 				label.String("key2", "hello"),
 				label.Int64("key3", 123),
-				label.Uint64("key4", 123),
-				label.Int32("key5", 123),
-				label.Uint32("key6", 123),
 				label.Float64("key7", 123.456),
-				label.Float32("key8", 123.456),
 				label.Int("key10", 123),
-				label.Uint("key11", 123),
 				label.Bool("key21", false),
 				label.String("key22", "hello"),
 				label.Int64("key23", 123),
-				label.Uint64("key24", 123),
-				label.Int32("key25", 123),
-				label.Uint32("key26", 123),
 				label.Float64("key27", 123.456),
-				label.Float32("key28", 123.456),
 				label.Int("key210", 123),
-				label.Uint("key211", 123),
 			)
 			span.End()
 		}

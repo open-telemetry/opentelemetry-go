@@ -60,13 +60,9 @@ func toAttribute(v label.KeyValue) *commonpb.KeyValue {
 		result.Value.Value = &commonpb.AnyValue_BoolValue{
 			BoolValue: v.Value.AsBool(),
 		}
-	case label.INT64, label.INT32, label.UINT32, label.UINT64:
+	case label.INT64:
 		result.Value.Value = &commonpb.AnyValue_IntValue{
 			IntValue: v.Value.AsInt64(),
-		}
-	case label.FLOAT32:
-		result.Value.Value = &commonpb.AnyValue_DoubleValue{
-			DoubleValue: float64(v.Value.AsFloat32()),
 		}
 	case label.FLOAT64:
 		result.Value.Value = &commonpb.AnyValue_DoubleValue{
@@ -103,7 +99,7 @@ func arrayValues(kv label.KeyValue) []*commonpb.AnyValue {
 				},
 			}
 		}
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+	case reflect.Int, reflect.Int64:
 		valueFunc = func(v reflect.Value) *commonpb.AnyValue {
 			return &commonpb.AnyValue{
 				Value: &commonpb.AnyValue_IntValue{
@@ -111,7 +107,7 @@ func arrayValues(kv label.KeyValue) []*commonpb.AnyValue {
 				},
 			}
 		}
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+	case reflect.Uintptr:
 		valueFunc = func(v reflect.Value) *commonpb.AnyValue {
 			return &commonpb.AnyValue{
 				Value: &commonpb.AnyValue_IntValue{
@@ -119,7 +115,7 @@ func arrayValues(kv label.KeyValue) []*commonpb.AnyValue {
 				},
 			}
 		}
-	case reflect.Float32, reflect.Float64:
+	case reflect.Float64:
 		valueFunc = func(v reflect.Value) *commonpb.AnyValue {
 			return &commonpb.AnyValue{
 				Value: &commonpb.AnyValue_DoubleValue{

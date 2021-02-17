@@ -130,6 +130,15 @@ func (s *bridgeSpan) SetOperationName(operationName string) ot.Span {
 	return s
 }
 
+// SetTag method adds a tag to the span.
+//
+// Note about the following value conversions:
+// - int -> int64
+// - uint -> string
+// - int32 -> int64
+// - uint32 -> int64
+// - uint64 -> string
+// - float32 -> float64
 func (s *bridgeSpan) SetTag(key string, value interface{}) ot.Span {
 	switch key {
 	case string(otext.SpanKind):
@@ -495,6 +504,14 @@ func otTagsToOTelAttributesKindAndError(tags map[string]interface{}) ([]label.Ke
 	return pairs, kind, err
 }
 
+// otTagToOTelLabel converts given key-value into label.KeyValue.
+// Note that some conversions are not obvious:
+// - int -> int64
+// - uint -> string
+// - int32 -> int64
+// - uint32 -> int64
+// - uint64 -> string
+// - float32 -> float64
 func otTagToOTelLabel(k string, v interface{}) label.KeyValue {
 	key := otTagToOTelLabelKey(k)
 	switch val := v.(type) {
@@ -503,19 +520,19 @@ func otTagToOTelLabel(k string, v interface{}) label.KeyValue {
 	case int64:
 		return key.Int64(val)
 	case uint64:
-		return key.Uint64(val)
+		return key.String(fmt.Sprintf("%d", val))
 	case float64:
 		return key.Float64(val)
 	case int32:
-		return key.Int32(val)
+		return key.Int64(int64(val))
 	case uint32:
-		return key.Uint32(val)
+		return key.Int64(int64(val))
 	case float32:
-		return key.Float32(val)
+		return key.Float64(float64(val))
 	case int:
 		return key.Int(val)
 	case uint:
-		return key.Uint(val)
+		return key.String(fmt.Sprintf("%d", val))
 	case string:
 		return key.String(val)
 	default:

@@ -284,17 +284,13 @@ func TestDefaultLabelEncoder(t *testing.T) {
 	// that is done in Labels(...).
 	encoded = encoder.Encode(newSetIter(
 		label.Int("I", 1),
-		label.Uint("U", 1),
-		label.Int32("I32", 1),
-		label.Uint32("U32", 1),
 		label.Int64("I64", 1),
-		label.Uint64("U64", 1),
 		label.Float64("F64", 1),
 		label.Float64("F64", 1),
 		label.String("S", "1"),
 		label.Bool("B", true),
 	))
-	require.Equal(t, "B=true,F64=1,I=1,I32=1,I64=1,S=1,U=1,U32=1,U64=1", encoded)
+	require.Equal(t, "B=true,F64=1,I=1,I64=1,S=1", encoded)
 }
 
 func TestObserverCollection(t *testing.T) {

@@ -716,3 +716,77 @@ func runOTOtelOT(t *testing.T, ctx context.Context, name string, callback func(*
 		}(ctx2)
 	}(ctx)
 }
+
+func TestOtTagToOTelLabel_CheckTypeConversions(t *testing.T) {
+	tableTest := []struct {
+		key               string
+		value             interface{}
+		expectedValueType label.Type
+	}{
+		{
+			key:               "bool to bool",
+			value:             true,
+			expectedValueType: label.BOOL,
+		},
+		{
+			key:               "int to int64",
+			value:             123,
+			expectedValueType: label.INT64,
+		},
+		{
+			key:               "uint to string",
+			value:             uint(1234),
+			expectedValueType: label.STRING,
+		},
+		{
+			key:               "int32 to int64",
+			value:             int32(12345),
+			expectedValueType: label.INT64,
+		},
+		{
+			key:               "uint32 to int64",
+			value:             uint32(123456),
+			expectedValueType: label.INT64,
+		},
+		{
+			key:               "int64 to int64",
+			value:             int64(1234567),
+			expectedValueType: label.INT64,
+		},
+		{
+			key:               "uint64 to string",
+			value:             uint64(12345678),
+			expectedValueType: label.STRING,
+		},
+		{
+			key:               "float32 to float64",
+			value:             float32(3.14),
+			expectedValueType: label.FLOAT64,
+		},
+		{
+			key:               "float64 to float64",
+			value:             float64(3.14),
+			expectedValueType: label.FLOAT64,
+		},
+		{
+			key:               "string to string",
+			value:             "string_value",
+			expectedValueType: label.STRING,
+		},
+		{
+			key:               "unexpected type to string",
+			value:             struct{}{},
+			expectedValueType: label.STRING,
+		},
+	}
+
+	for _, test := range tableTest {
+		got := otTagToOTelLabel(test.key, test.value)
+		if test.expectedValueType != got.Value.Type() {
+			t.Errorf("Expected type %s, but got %s after conversion '%v' value",
+				test.expectedValueType,
+				got.Value.Type(),
+				test.value)
+		}
+	}
+}
