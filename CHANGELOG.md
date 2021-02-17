@@ -14,7 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Renamed the `otel/label` package to `otel/attr`. (#1541)
+- Renamed the `otel/label` package to `otel/attribute`. (#1541)
 
 ## [0.17.0] - 2020-02-12
 
