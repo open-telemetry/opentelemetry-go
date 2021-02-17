@@ -90,7 +90,7 @@ func TestExtractValidBaggageFromHTTPReq(t *testing.T) {
 			req.Header.Set("baggage", tt.header)
 
 			ctx := context.Background()
-			ctx = prop.Extract(ctx, req.Header)
+			ctx = prop.Extract(ctx, propagation.HeaderCarrier(req.Header))
 			gotBaggage := baggage.MapFromContext(ctx)
 			wantBaggage := baggage.NewMap(baggage.MapUpdate{MultiKV: tt.wantKVs})
 			if gotBaggage.Len() != wantBaggage.Len() {
@@ -152,7 +152,7 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 
 			ctx := baggage.NewContext(context.Background(), tt.hasKVs...)
 			wantBaggage := baggage.MapFromContext(ctx)
-			ctx = prop.Extract(ctx, req.Header)
+			ctx = prop.Extract(ctx, propagation.HeaderCarrier(req.Header))
 			gotBaggage := baggage.MapFromContext(ctx)
 			if gotBaggage.Len() != wantBaggage.Len() {
 				t.Errorf(
@@ -218,7 +218,7 @@ func TestInjectBaggageToHTTPReq(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
 			ctx := baggage.ContextWithMap(context.Background(), baggage.NewMap(baggage.MapUpdate{MultiKV: tt.kvs}))
-			propagator.Inject(ctx, req.Header)
+			propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 			gotHeader := req.Header.Get("baggage")
 			wantedLen := len(strings.Join(tt.wantInHeader, ","))
