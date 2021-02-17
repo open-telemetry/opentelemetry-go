@@ -18,7 +18,7 @@ import (
 	"context"
 	"time"
 
-	label "go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
@@ -62,7 +62,7 @@ type SpanSnapshot struct {
 	// The wall clock time of EndTime will be adjusted to always be offset
 	// from StartTime by the duration of the span.
 	EndTime                  time.Time
-	Attributes               []label.KeyValue
+	Attributes               []attribute.KeyValue
 	MessageEvents            []trace.Event
 	Links                    []trace.Link
 	StatusCode               codes.Code

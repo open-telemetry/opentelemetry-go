@@ -28,7 +28,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/encoding/gzip"
 
-	label "go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/otlptest"
@@ -278,12 +278,12 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 	defer func() { _ = tp.Shutdown(ctx) }()
 
 	tr := tp.Tracer("test-tracer")
-	testKvs := []label.KeyValue{
-		label.Int("Int", 1),
-		label.Int64("Int64", int64(3)),
-		label.Float64("Float64", 2.22),
-		label.Bool("Bool", true),
-		label.String("String", "test"),
+	testKvs := []attribute.KeyValue{
+		attribute.Int("Int", 1),
+		attribute.Int64("Int64", int64(3)),
+		attribute.Float64("Float64", 2.22),
+		attribute.Bool("Bool", true),
+		attribute.String("String", "test"),
 	}
 	_, span := tr.Start(ctx, "AlwaysSample")
 	span.SetAttributes(testKvs...)

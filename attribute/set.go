@@ -295,7 +295,7 @@ func NewSetWithFiltered(kvs []KeyValue, filter Filter) (Set, []KeyValue) {
 // - allocating a `Set` for storing the return value of this
 //   constructor.
 //
-// The result maintains a cache of encoded labels, by label.EncoderID.
+// The result maintains a cache of encoded labels, by attribute.EncoderID.
 // This value should not be copied after its first use.
 //
 // The second `[]KeyValue` return value is a list of labels that were

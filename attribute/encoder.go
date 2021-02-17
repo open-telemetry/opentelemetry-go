@@ -28,7 +28,7 @@ type (
 	Encoder interface {
 		// Encode returns the serialized encoding of the label
 		// set using its Iterator.  This result may be cached
-		// by a label.Set.
+		// by a attribute.Set.
 		Encode(iterator Iterator) string
 
 		// ID returns a value that is unique for each class of

@@ -17,7 +17,7 @@ package trace // import "go.opentelemetry.io/otel/trace"
 import (
 	"context"
 
-	label "go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 )
 
@@ -66,7 +66,7 @@ func (noopSpan) SetStatus(codes.Code, string) {}
 func (noopSpan) SetError(bool) {}
 
 // SetAttributes does nothing.
-func (noopSpan) SetAttributes(...label.KeyValue) {}
+func (noopSpan) SetAttributes(...attribute.KeyValue) {}
 
 // End does nothing.
 func (noopSpan) End(...SpanOption) {}

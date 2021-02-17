@@ -55,7 +55,7 @@ func (i *Iterator) Attribute() KeyValue {
 	return i.Label()
 }
 
-// IndexedLabel returns current index and label. Must be called only
+// IndexedLabel returns current index and attribute. Must be called only
 // after Next returns true.
 func (i *Iterator) IndexedLabel() (int, KeyValue) {
 	return i.idx, i.Label()
