@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
@@ -43,12 +44,15 @@ type (
 		K label.Key
 		F func() (string, error)
 	}
+
+	defaultServiceNameDetector struct{}
 )
 
 var (
 	_ Detector = TelemetrySDK{}
 	_ Detector = Host{}
 	_ Detector = stringDetector{}
+	_ Detector = defaultServiceNameDetector{}
 )
 
 // Detect returns a *Resource that describes the OpenTelemetry SDK used.
@@ -78,4 +82,18 @@ func (sd stringDetector) Detect(ctx context.Context) (*Resource, error) {
 		return nil, fmt.Errorf("%s: %w", string(sd.K), err)
 	}
 	return NewWithAttributes(sd.K.String(value)), nil
+}
+
+// Detect implements Detector
+func (defaultServiceNameDetector) Detect(ctx context.Context) (*Resource, error) {
+	return StringDetector(
+		semconv.ServiceNameKey,
+		func() (string, error) {
+			executable, err := os.Executable()
+			if err != nil {
+				return "unknown_service:go", nil
+			}
+			return "unknown_service:" + filepath.Base(executable), nil
+		},
+	).Detect(ctx)
 }

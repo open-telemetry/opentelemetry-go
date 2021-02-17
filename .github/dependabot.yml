@@ -48,7 +48,7 @@ updates:
       interval: weekly
   -
     package-ecosystem: gomod
-    directory: /example/basic
+    directory: /example/prom-collector
     labels:
       - dependencies
       - go
@@ -179,6 +179,36 @@ updates:
   -
     package-ecosystem: gomod
     directory: /internal/tools
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
+    directory: /sdk/export/metric
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
+    directory: /sdk/metric
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
+    directory: /oteltest
     labels:
       - dependencies
       - go

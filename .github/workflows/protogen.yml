@@ -15,7 +15,7 @@ jobs:
       with:
         go-version: '^1.14.0'
     - run: sudo apt-get -y install rsync wget unzip
-    - run: make -f Makefile.proto protobuf clean
+    - run: make -f Makefile.protos protobuf clean
     - uses: stefanzweifel/git-auto-commit-action@v4
       id: commit-changes
       with:

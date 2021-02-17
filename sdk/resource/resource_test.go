@@ -17,13 +17,16 @@ package resource_test
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/semconv"
 )
 
 var (
@@ -32,6 +35,7 @@ var (
 	kv21 = label.String("k2", "v21")
 	kv31 = label.String("k3", "v31")
 	kv41 = label.String("k4", "v41")
+	kv42 = label.String("k4", "")
 )
 
 func TestNew(t *testing.T) {
@@ -91,13 +95,13 @@ func TestMerge(t *testing.T) {
 			name: "Merge with common key order1",
 			a:    resource.NewWithAttributes(kv11),
 			b:    resource.NewWithAttributes(kv12, kv21),
-			want: []label.KeyValue{kv11, kv21},
+			want: []label.KeyValue{kv12, kv21},
 		},
 		{
 			name: "Merge with common key order2",
 			a:    resource.NewWithAttributes(kv12, kv21),
 			b:    resource.NewWithAttributes(kv11),
-			want: []label.KeyValue{kv12, kv21},
+			want: []label.KeyValue{kv11, kv21},
 		},
 		{
 			name: "Merge with common key order4",
@@ -135,6 +139,18 @@ func TestMerge(t *testing.T) {
 			b:    nil,
 			want: []label.KeyValue{kv11},
 		},
+		{
+			name: "Merge with first resource value empty string",
+			a:    resource.NewWithAttributes(kv42),
+			b:    resource.NewWithAttributes(kv41),
+			want: []label.KeyValue{kv41},
+		},
+		{
+			name: "Merge with second resource value empty string",
+			a:    resource.NewWithAttributes(kv41),
+			b:    resource.NewWithAttributes(kv42),
+			want: []label.KeyValue{kv42},
+		},
 	}
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
@@ -147,6 +163,21 @@ func TestMerge(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDefault(t *testing.T) {
+	res := resource.Default()
+	require.False(t, res.Equal(resource.Empty()))
+	require.True(t, res.LabelSet().HasValue(semconv.ServiceNameKey))
+
+	serviceName, _ := res.LabelSet().Value(semconv.ServiceNameKey)
+	require.True(t, strings.HasPrefix(serviceName.AsString(), "unknown_service:"))
+	require.Greaterf(t, len(serviceName.AsString()), len("unknown_service:"),
+		"default service.name should include executable name")
+
+	require.Contains(t, res.Attributes(), semconv.TelemetrySDKLanguageGo)
+	require.Contains(t, res.Attributes(), semconv.TelemetrySDKVersionKey.String(otel.Version()))
+	require.Contains(t, res.Attributes(), semconv.TelemetrySDKNameKey.String("opentelemetry"))
 }
 
 func TestString(t *testing.T) {

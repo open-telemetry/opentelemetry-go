@@ -19,14 +19,12 @@ import (
 	"os"
 
 	"go.opentelemetry.io/otel/label"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
 
 var (
 	defaultWriter              = os.Stdout
 	defaultPrettyPrint         = false
 	defaultTimestamps          = true
-	defaultQuantiles           = []float64{0.5, 0.9, 0.99}
 	defaultLabelEncoder        = label.DefaultEncoder()
 	defaultDisableTraceExport  = false
 	defaultDisableMetricExport = false
@@ -45,15 +43,6 @@ type Config struct {
 	// true.
 	Timestamps bool
 
-	// Quantiles are the desired aggregation quantiles for distribution
-	// summaries, used when the configured aggregator supports
-	// quantiles.
-	//
-	// Note: this exporter is meant as a demonstration; a real
-	// exporter may wish to configure quantiles on a per-metric
-	// basis.
-	Quantiles []float64
-
 	// LabelEncoder encodes the labels.
 	LabelEncoder label.Encoder
 
@@ -70,7 +59,6 @@ func NewConfig(options ...Option) (Config, error) {
 		Writer:              defaultWriter,
 		PrettyPrint:         defaultPrettyPrint,
 		Timestamps:          defaultTimestamps,
-		Quantiles:           defaultQuantiles,
 		LabelEncoder:        defaultLabelEncoder,
 		DisableTraceExport:  defaultDisableTraceExport,
 		DisableMetricExport: defaultDisableMetricExport,
@@ -78,11 +66,6 @@ func NewConfig(options ...Option) (Config, error) {
 	for _, opt := range options {
 		opt.Apply(&config)
 
-	}
-	for _, q := range config.Quantiles {
-		if q < 0 || q > 1 {
-			return config, aggregation.ErrInvalidQuantile
-		}
 	}
 	return config, nil
 }
@@ -126,17 +109,6 @@ type timestampsOption bool
 
 func (o timestampsOption) Apply(config *Config) {
 	config.Timestamps = bool(o)
-}
-
-// WithQuantiles sets the quantile values to export.
-func WithQuantiles(quantiles []float64) Option {
-	return quantilesOption(quantiles)
-}
-
-type quantilesOption []float64
-
-func (o quantilesOption) Apply(config *Config) {
-	config.Quantiles = []float64(o)
 }
 
 // WithLabelEncoder sets the label encoder used in export.

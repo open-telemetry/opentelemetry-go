@@ -15,6 +15,10 @@
 package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
 import (
+	"context"
+
+	"go.opentelemetry.io/otel"
+
 	"go.opentelemetry.io/otel/label"
 )
 
@@ -29,7 +33,16 @@ type Resource struct {
 	labels label.Set
 }
 
-var emptyResource Resource
+var (
+	emptyResource Resource
+
+	defaultResource *Resource = func(r *Resource, err error) *Resource {
+		if err != nil {
+			otel.Handle(err)
+		}
+		return r
+	}(Detect(context.Background(), defaultServiceNameDetector{}, TelemetrySDK{}))
+)
 
 // NewWithAttributes creates a resource from a set of attributes.  If there are
 // duplicate keys present in the list of attributes, then the last
@@ -84,7 +97,8 @@ func (r *Resource) Equal(eq *Resource) bool {
 // Merge creates a new resource by combining resource a and b.
 //
 // If there are common keys between resource a and b, then the value
-// from resource a is preserved.
+// from resource b will overwrite the value from resource a, even
+// if resource b's value is empty.
 func Merge(a, b *Resource) *Resource {
 	if a == nil && b == nil {
 		return Empty()
@@ -96,9 +110,9 @@ func Merge(a, b *Resource) *Resource {
 		return a
 	}
 
-	// Note: 'a' labels will overwrite 'b' with last-value-wins in label.Key()
-	// Meaning this is equivalent to: append(b.Attributes(), a.Attributes()...)
-	mi := label.NewMergeIterator(a.LabelSet(), b.LabelSet())
+	// Note: 'b' labels will overwrite 'a' with last-value-wins in label.Key()
+	// Meaning this is equivalent to: append(a.Attributes(), b.Attributes()...)
+	mi := label.NewMergeIterator(b.LabelSet(), a.LabelSet())
 	combine := make([]label.KeyValue, 0, a.Len()+b.Len())
 	for mi.Next() {
 		combine = append(combine, mi.Label())
@@ -110,6 +124,12 @@ func Merge(a, b *Resource) *Resource {
 // equivalent to a `nil` Resource.
 func Empty() *Resource {
 	return &emptyResource
+}
+
+// Default returns an instance of Resource with a default
+// "service.name" and OpenTelemetrySDK attributes
+func Default() *Resource {
+	return defaultResource
 }
 
 // Equivalent returns an object that can be compared for equality

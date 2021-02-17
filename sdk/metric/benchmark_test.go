@@ -20,9 +20,9 @@ import (
 	"math/rand"
 	"testing"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
@@ -214,8 +214,8 @@ func BenchmarkGlobalInt64CounterAddWithSDK(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 
-	sdk := otel.Meter("test")
-	otel.SetMeterProvider(fix)
+	sdk := global.Meter("test")
+	global.SetMeterProvider(fix)
 
 	labs := []label.KeyValue{label.String("A", "B")}
 	cnt := Must(sdk).NewInt64Counter("int64.sum")
@@ -458,39 +458,21 @@ func BenchmarkFloat64MaxSumCountHandleAdd(b *testing.B) {
 	benchmarkFloat64ValueRecorderHandleAdd(b, "float64.minmaxsumcount")
 }
 
-// DDSketch
+// Exact
 
-func BenchmarkInt64DDSketchAdd(b *testing.B) {
-	benchmarkInt64ValueRecorderAdd(b, "int64.sketch")
-}
-
-func BenchmarkInt64DDSketchHandleAdd(b *testing.B) {
-	benchmarkInt64ValueRecorderHandleAdd(b, "int64.sketch")
-}
-
-func BenchmarkFloat64DDSketchAdd(b *testing.B) {
-	benchmarkFloat64ValueRecorderAdd(b, "float64.sketch")
-}
-
-func BenchmarkFloat64DDSketchHandleAdd(b *testing.B) {
-	benchmarkFloat64ValueRecorderHandleAdd(b, "float64.sketch")
-}
-
-// Array
-
-func BenchmarkInt64ArrayAdd(b *testing.B) {
+func BenchmarkInt64ExactAdd(b *testing.B) {
 	benchmarkInt64ValueRecorderAdd(b, "int64.exact")
 }
 
-func BenchmarkInt64ArrayHandleAdd(b *testing.B) {
+func BenchmarkInt64ExactHandleAdd(b *testing.B) {
 	benchmarkInt64ValueRecorderHandleAdd(b, "int64.exact")
 }
 
-func BenchmarkFloat64ArrayAdd(b *testing.B) {
+func BenchmarkFloat64ExactAdd(b *testing.B) {
 	benchmarkFloat64ValueRecorderAdd(b, "float64.exact")
 }
 
-func BenchmarkFloat64ArrayHandleAdd(b *testing.B) {
+func BenchmarkFloat64ExactHandleAdd(b *testing.B) {
 	benchmarkFloat64ValueRecorderHandleAdd(b, "float64.exact")
 }
 

@@ -167,7 +167,7 @@ func TestInputRangeValueRecorder(t *testing.T) {
 	processor.accumulations = nil
 	checkpointed = sdk.Collect(ctx)
 
-	count, err := processor.accumulations[0].Aggregator().(aggregation.Distribution).Count()
+	count, err := processor.accumulations[0].Aggregator().(aggregation.Count).Count()
 	require.Equal(t, uint64(2), count)
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, testHandler.Flush())
