@@ -28,6 +28,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Create new modules: otel/metric, otel/trace, otel/oteltest, otel/sdk/export/metric, otel/sdk/metric (#1528)
 - Move metric-related public global APIs from otel to otel/metric/global. (#1528)
 
+## Fixed
+
+- Fixed otlpgrpc reconnection issue.
+
 ## [0.16.0] - 2020-01-13
 
 ### Added
