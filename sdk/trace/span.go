@@ -369,12 +369,8 @@ func (s *span) EndTime() time.Time {
 	return s.endTime
 }
 
-<<<<<<< HEAD
-func (s *span) Attributes() []attribute.KeyValue {
-=======
 // Attributes returns the attributes of this span.
-func (s *span) Attributes() []label.KeyValue {
->>>>>>> origin/main
+func (s *span) Attributes() []attribute.KeyValue {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.attributes.evictList.Len() == 0 {
