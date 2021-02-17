@@ -38,29 +38,8 @@ var (
 	int16Val    = int16(1)
 	int16KeyVal = label.Int("int16", int(int16Val))
 
-	int32Val    = int32(1)
-	int32KeyVal = label.Int32("int32", int32Val)
-
 	int64Val    = int64(1)
 	int64KeyVal = label.Int64("int64", int64Val)
-
-	uintVal    = uint(1)
-	uintKeyVal = label.Uint("uint", uintVal)
-
-	uint8Val    = uint8(1)
-	uint8KeyVal = label.Uint("uint8", uint(uint8Val))
-
-	uint16Val    = uint16(1)
-	uint16KeyVal = label.Uint("uint16", uint(uint16Val))
-
-	uint32Val    = uint32(1)
-	uint32KeyVal = label.Uint32("uint32", uint32Val)
-
-	uint64Val    = uint64(1)
-	uint64KeyVal = label.Uint64("uint64", uint64Val)
-
-	float32Val    = float32(1.0)
-	float32KeyVal = label.Float32("float32", float32Val)
 
 	float64Val    = float64(1.0)
 	float64KeyVal = label.Float64("float64", float64Val)
@@ -128,20 +107,6 @@ func BenchmarkInt16KeyAny(b *testing.B) {
 	}
 }
 
-func BenchmarkInt32Key(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = label.Int32("int32", int32Val)
-	}
-}
-
-func BenchmarkInt32KeyAny(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = label.Any("int32", int32Val)
-	}
-}
-
 func BenchmarkInt64Key(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
@@ -153,76 +118,6 @@ func BenchmarkInt64KeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		_ = label.Any("int64", int64Val)
-	}
-}
-
-func BenchmarkUintKey(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = label.Uint("uint", uintVal)
-	}
-}
-
-func BenchmarkUintKeyAny(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = label.Any("uint", uintVal)
-	}
-}
-
-func BenchmarkUint8KeyAny(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = label.Any("uint8", uint8Val)
-	}
-}
-
-func BenchmarkUint16KeyAny(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = label.Any("uint16", uint16Val)
-	}
-}
-
-func BenchmarkUint32Key(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = label.Uint32("uint32", uint32Val)
-	}
-}
-
-func BenchmarkUint32KeyAny(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = label.Any("uint32", uint32Val)
-	}
-}
-
-func BenchmarkUint64Key(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = label.Uint64("uint64", uint64Val)
-	}
-}
-
-func BenchmarkUint64KeyAny(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = label.Any("uint64", uint64Val)
-	}
-}
-
-func BenchmarkFloat32Key(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = label.Float32("float32", float32Val)
-	}
-}
-
-func BenchmarkFloat32KeyAny(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = label.Any("float32", float32Val)
 	}
 }
 
@@ -303,59 +198,10 @@ func BenchmarkEmitInt16(b *testing.B) {
 	}
 }
 
-func BenchmarkEmitInt32(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = int32KeyVal.Value.Emit()
-	}
-}
-
 func BenchmarkEmitInt64(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		_ = int64KeyVal.Value.Emit()
-	}
-}
-
-func BenchmarkEmitUint(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = uintKeyVal.Value.Emit()
-	}
-}
-
-func BenchmarkEmitUint8(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = uint8KeyVal.Value.Emit()
-	}
-}
-
-func BenchmarkEmitUint16(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = uint16KeyVal.Value.Emit()
-	}
-}
-
-func BenchmarkEmitUint32(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = uint32KeyVal.Value.Emit()
-	}
-}
-
-func BenchmarkEmitUint64(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = uint64KeyVal.Value.Emit()
-	}
-}
-
-func BenchmarkEmitFloat32(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = float32KeyVal.Value.Emit()
 	}
 }
 
