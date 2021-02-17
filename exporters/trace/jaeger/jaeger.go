@@ -359,42 +359,12 @@ func keyValueToTag(keyValue label.KeyValue) *gen.Tag {
 			VBool: &b,
 			VType: gen.TagType_BOOL,
 		}
-	case label.INT32:
-		i := int64(keyValue.Value.AsInt32())
-		tag = &gen.Tag{
-			Key:   string(keyValue.Key),
-			VLong: &i,
-			VType: gen.TagType_LONG,
-		}
 	case label.INT64:
 		i := keyValue.Value.AsInt64()
 		tag = &gen.Tag{
 			Key:   string(keyValue.Key),
 			VLong: &i,
 			VType: gen.TagType_LONG,
-		}
-	case label.UINT32:
-		i := int64(keyValue.Value.AsUint32())
-		tag = &gen.Tag{
-			Key:   string(keyValue.Key),
-			VLong: &i,
-			VType: gen.TagType_LONG,
-		}
-	case label.UINT64:
-		// we'll ignore the value if it overflows
-		if i := int64(keyValue.Value.AsUint64()); i >= 0 {
-			tag = &gen.Tag{
-				Key:   string(keyValue.Key),
-				VLong: &i,
-				VType: gen.TagType_LONG,
-			}
-		}
-	case label.FLOAT32:
-		f := float64(keyValue.Value.AsFloat32())
-		tag = &gen.Tag{
-			Key:     string(keyValue.Key),
-			VDouble: &f,
-			VType:   gen.TagType_DOUBLE,
 		}
 	case label.FLOAT64:
 		f := keyValue.Value.AsFloat64()
