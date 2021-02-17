@@ -156,9 +156,6 @@ func (s *span) IsRecording() bool {
 }
 
 func (s *span) SetStatus(code codes.Code, msg string) {
-	if s == nil {
-		return
-	}
 	if !s.IsRecording() {
 		return
 	}
@@ -175,7 +172,8 @@ func (s *span) SetAttributes(attributes ...label.KeyValue) {
 	s.copyToCappedAttributes(attributes...)
 }
 
-// End ends the span.
+// End ends the span. This method does nothing if the span is already ended or
+// is not being recorded.
 //
 // The only SpanOption currently supported is WithTimestamp which will set the
 // end time for a Span's life-cycle.
@@ -183,7 +181,7 @@ func (s *span) SetAttributes(attributes ...label.KeyValue) {
 // If this method is called while panicking an error event is added to the
 // Span before ending it and the panic is continued.
 func (s *span) End(options ...trace.SpanOption) {
-	if s == nil {
+	if !s.IsRecording() {
 		return
 	}
 
@@ -277,6 +275,10 @@ func (s *span) addEvent(name string, o ...trace.EventOption) {
 }
 
 func (s *span) SetName(name string) {
+	if !s.IsRecording() {
+		return
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
