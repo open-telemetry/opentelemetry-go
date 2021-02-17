@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/otel"
-	label "go.opentelemetry.io/otel/attr"
+	label "go.opentelemetry.io/otel/attribute"
 )
 
 // Environment variable names

@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package attr_test
+package attribute_test
 
 import (
 	"regexp"
 	"testing"
 
-	label "go.opentelemetry.io/otel/attr"
+	label "go.opentelemetry.io/otel/attribute"
 
 	"github.com/stretchr/testify/require"
 )

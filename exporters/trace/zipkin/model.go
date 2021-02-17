@@ -21,7 +21,7 @@ import (
 
 	zkmodel "github.com/openzipkin/zipkin-go/model"
 
-	label "go.opentelemetry.io/otel/attr"
+	label "go.opentelemetry.io/otel/attribute"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/trace"
 )

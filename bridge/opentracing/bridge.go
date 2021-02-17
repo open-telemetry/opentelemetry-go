@@ -26,7 +26,7 @@ import (
 	otlog "github.com/opentracing/opentracing-go/log"
 
 	"go.opentelemetry.io/otel"
-	label "go.opentelemetry.io/otel/attr"
+	label "go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/internal/baggage"

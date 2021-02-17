@@ -17,7 +17,7 @@ package baggage // import "go.opentelemetry.io/otel/baggage"
 import (
 	"context"
 
-	label "go.opentelemetry.io/otel/attr"
+	label "go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/baggage"
 )
 

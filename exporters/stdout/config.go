@@ -18,7 +18,7 @@ import (
 	"io"
 	"os"
 
-	label "go.opentelemetry.io/otel/attr"
+	label "go.opentelemetry.io/otel/attribute"
 )
 
 var (

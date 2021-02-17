@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package attr // import "go.opentelemetry.io/otel/attr"
+package attribute // import "go.opentelemetry.io/otel/attribute"
 
 // Key represents the key part in key-value pairs. It's a string. The
 // allowed character set in the key depends on the use of the key.

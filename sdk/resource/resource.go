@@ -19,7 +19,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 
-	label "go.opentelemetry.io/otel/attr"
+	label "go.opentelemetry.io/otel/attribute"
 )
 
 // Resource describes an entity about which identifying information

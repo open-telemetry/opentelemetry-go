@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"testing"
 
-	label "go.opentelemetry.io/otel/attr"
+	label "go.opentelemetry.io/otel/attribute"
 )
 
 const testKeyFmt = "test-key-%d"

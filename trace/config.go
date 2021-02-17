@@ -17,7 +17,7 @@ package trace
 import (
 	"time"
 
-	label "go.opentelemetry.io/otel/attr"
+	label "go.opentelemetry.io/otel/attribute"
 )
 
 // TracerConfig is a group of options for a Tracer.
