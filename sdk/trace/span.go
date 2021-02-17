@@ -137,6 +137,7 @@ type span struct {
 
 var _ trace.Span = &span{}
 
+// SpanContext returns the SpanContext of this span.
 func (s *span) SpanContext() trace.SpanContext {
 	if s == nil {
 		return trace.SpanContext{}
@@ -144,6 +145,8 @@ func (s *span) SpanContext() trace.SpanContext {
 	return s.spanContext
 }
 
+// IsRecording returns if this span is being recorded. If this span has ended
+// this will return false.
 func (s *span) IsRecording() bool {
 	if s == nil {
 		return false
@@ -153,10 +156,10 @@ func (s *span) IsRecording() bool {
 	return s.endTime.IsZero()
 }
 
+// SetStatus sets the status of this span in the form of a code and a
+// message. This overrides the existing value of this span's status if one
+// exists. If this span is not being recorded than this method does nothing.
 func (s *span) SetStatus(code codes.Code, msg string) {
-	if s == nil {
-		return
-	}
 	if !s.IsRecording() {
 		return
 	}
@@ -166,6 +169,12 @@ func (s *span) SetStatus(code codes.Code, msg string) {
 	s.mu.Unlock()
 }
 
+// SetAttributes sets attributes of this span.
+//
+// If a key from attributes already exists the value associated with that key
+// will be overwritten with the value contained in attributes.
+//
+// If this span is not being recorded than this method does nothing.
 func (s *span) SetAttributes(attributes ...label.KeyValue) {
 	if !s.IsRecording() {
 		return
@@ -173,7 +182,8 @@ func (s *span) SetAttributes(attributes ...label.KeyValue) {
 	s.copyToCappedAttributes(attributes...)
 }
 
-// End ends the span.
+// End ends the span. This method does nothing if the span is already ended or
+// is not being recorded.
 //
 // The only SpanOption currently supported is WithTimestamp which will set the
 // end time for a Span's life-cycle.
@@ -181,6 +191,8 @@ func (s *span) SetAttributes(attributes ...label.KeyValue) {
 // If this method is called while panicking an error event is added to the
 // Span before ending it and the panic is continued.
 func (s *span) End(options ...trace.SpanOption) {
+	// Do not start by checking if the span is being recorded which requires
+	// acquiring a lock. Make a minimal check that the span is not nil.
 	if s == nil {
 		return
 	}
@@ -188,6 +200,12 @@ func (s *span) End(options ...trace.SpanOption) {
 	// Store the end time as soon as possible to avoid artificially increasing
 	// the span's duration in case some operation below takes a while.
 	et := internal.MonotonicEndTime(s.startTime)
+
+	// Do relative expensive check now that we have an end time and see if we
+	// need to do any more processing.
+	if !s.IsRecording() {
+		return
+	}
 
 	if recovered := recover(); recovered != nil {
 		// Record but don't stop the panic.
@@ -205,13 +223,10 @@ func (s *span) End(options ...trace.SpanOption) {
 		s.executionTracerTaskEnd()
 	}
 
-	if !s.IsRecording() {
-		return
-	}
-
 	config := trace.NewSpanConfig(options...)
 
 	s.mu.Lock()
+	// Setting endTime to non-zero marks the span as ended and not recording.
 	if config.Timestamp.IsZero() {
 		s.endTime = et
 	} else {
@@ -228,6 +243,8 @@ func (s *span) End(options ...trace.SpanOption) {
 	}
 }
 
+// RecordError will record err as a span event for this span. If this span is
+// not being recorded or err is nil than this method does nothing.
 func (s *span) RecordError(err error, opts ...trace.EventOption) {
 	if s == nil || err == nil || !s.IsRecording() {
 		return
@@ -250,10 +267,13 @@ func typeStr(i interface{}) string {
 	return fmt.Sprintf("%s.%s", t.PkgPath(), t.Name())
 }
 
+// Tracer returns the Tracer that created this span.
 func (s *span) Tracer() trace.Tracer {
 	return s.tracer
 }
 
+// AddEvent adds an event with the provided name and options. If this span is
+// not being recorded than this method does nothing.
 func (s *span) AddEvent(name string, o ...trace.EventOption) {
 	if !s.IsRecording() {
 		return
@@ -273,7 +293,13 @@ func (s *span) addEvent(name string, o ...trace.EventOption) {
 	})
 }
 
+// SetName sets the name of this span. If this span is not being recorded than
+// this method does nothing.
 func (s *span) SetName(name string) {
+	if !s.IsRecording() {
+		return
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -307,36 +333,43 @@ func (s *span) SetName(name string) {
 	}
 }
 
+// Name returns the name of this span.
 func (s *span) Name() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.name
 }
 
+// Name returns the SpanContext of this span's parent span.
 func (s *span) Parent() trace.SpanContext {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.parent
 }
 
+// SpanKind returns the SpanKind of this span.
 func (s *span) SpanKind() trace.SpanKind {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.spanKind
 }
 
+// StartTime returns the time this span started.
 func (s *span) StartTime() time.Time {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.startTime
 }
 
+// EndTime returns the time this span ended. For spans that have not yet
+// ended, the returned value will be the zero value of time.Time.
 func (s *span) EndTime() time.Time {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.endTime
 }
 
+// Attributes returns the attributes of this span.
 func (s *span) Attributes() []label.KeyValue {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -346,6 +379,7 @@ func (s *span) Attributes() []label.KeyValue {
 	return s.attributes.toKeyValue()
 }
 
+// Events returns the links of this span.
 func (s *span) Links() []trace.Link {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -355,6 +389,7 @@ func (s *span) Links() []trace.Link {
 	return s.interfaceArrayToLinksArray()
 }
 
+// Events returns the events of this span.
 func (s *span) Events() []trace.Event {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -364,24 +399,30 @@ func (s *span) Events() []trace.Event {
 	return s.interfaceArrayToMessageEventArray()
 }
 
+// StatusCode returns the status code of this span.
 func (s *span) StatusCode() codes.Code {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.statusCode
 }
 
+// StatusMessage returns the status message of this span.
 func (s *span) StatusMessage() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.statusMessage
 }
 
+// InstrumentationLibrary returns the instrumentation.Library associated with
+// the Tracer that created this span.
 func (s *span) InstrumentationLibrary() instrumentation.Library {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.instrumentationLibrary
 }
 
+// Resource returns the Resource associated with the Tracer that created this
+// span.
 func (s *span) Resource() *resource.Resource {
 	s.mu.Lock()
 	defer s.mu.Unlock()
