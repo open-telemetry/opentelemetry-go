@@ -35,7 +35,7 @@ func TestTraceWithSDK(t *testing.T) {
 	// This is started before an SDK was registered and should be dropped.
 	_, span1 := tracer1.Start(ctx, "span1")
 
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 	otel.SetTracerProvider(tp)
 
