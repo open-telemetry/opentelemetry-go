@@ -191,13 +191,21 @@ func (s *span) SetAttributes(attributes ...label.KeyValue) {
 // If this method is called while panicking an error event is added to the
 // Span before ending it and the panic is continued.
 func (s *span) End(options ...trace.SpanOption) {
-	if !s.IsRecording() {
+	// Do not start by checking if the span is being recorded which requires
+	// acquiring a lock. Make a minimal check that the span is not nil.
+	if s == nil {
 		return
 	}
 
 	// Store the end time as soon as possible to avoid artificially increasing
 	// the span's duration in case some operation below takes a while.
 	et := internal.MonotonicEndTime(s.startTime)
+
+	// Do relative expensive check now that we have an end time and see if we
+	// need to do any more processing.
+	if !s.IsRecording() {
+		return
+	}
 
 	if recovered := recover(); recovered != nil {
 		// Record but don't stop the panic.
@@ -213,10 +221,6 @@ func (s *span) End(options ...trace.SpanOption) {
 
 	if s.executionTracerTaskEnd != nil {
 		s.executionTracerTaskEnd()
-	}
-
-	if !s.IsRecording() {
-		return
 	}
 
 	config := trace.NewSpanConfig(options...)
