@@ -17,7 +17,6 @@ package jaeger
 import (
 	"context"
 	"encoding/binary"
-	"math"
 	"os"
 	"sort"
 	"testing"
@@ -365,7 +364,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 	keyValue := "value"
 	statusCodeValue := int64(1)
 	doubleValue := 123.456
-	uintValue := int64(123)
+	intValue := int64(123)
 	boolTrue := true
 	statusMessage := "this is a problem"
 	spanKind := "client"
@@ -400,8 +399,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 				Attributes: []label.KeyValue{
 					label.String("key", keyValue),
 					label.Float64("double", doubleValue),
-					label.Uint64("uint", uint64(uintValue)),
-					label.Uint64("overflows", math.MaxUint64),
+					label.Int64("int", intValue),
 				},
 				MessageEvents: []trace.Event{
 					{Name: eventNameValue, Attributes: []label.KeyValue{label.String("k1", keyValue)}, Time: now},
@@ -425,7 +423,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 				Tags: []*gen.Tag{
 					{Key: "double", VType: gen.TagType_DOUBLE, VDouble: &doubleValue},
 					{Key: "key", VType: gen.TagType_STRING, VStr: &keyValue},
-					{Key: "uint", VType: gen.TagType_LONG, VLong: &uintValue},
+					{Key: "int", VType: gen.TagType_LONG, VLong: &intValue},
 					{Key: "error", VType: gen.TagType_BOOL, VBool: &boolTrue},
 					{Key: "otel.instrumentation_library.name", VType: gen.TagType_STRING, VStr: &instrLibName},
 					{Key: "otel.instrumentation_library.version", VType: gen.TagType_STRING, VStr: &instrLibVersion},

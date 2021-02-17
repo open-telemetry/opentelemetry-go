@@ -57,7 +57,7 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlp.Exporter, mcTr
 	tp2 := sdktrace.NewTracerProvider(append(pOpts,
 		sdktrace.WithResource(resource.NewWithAttributes(
 			label.String("rk1", "rv12)"),
-			label.Float32("rk3", 6.5),
+			label.Float64("rk3", 6.5),
 		)))...)
 
 	tr1 := tp1.Tracer("test-tracer1")
