@@ -293,6 +293,8 @@ func (s *span) addEvent(name string, o ...trace.EventOption) {
 	})
 }
 
+// SetName sets the name of this span. If this span is not being recorded than
+// this method does nothing.
 func (s *span) SetName(name string) {
 	if !s.IsRecording() {
 		return
