@@ -144,6 +144,8 @@ func (s *span) SpanContext() trace.SpanContext {
 	return s.spanContext
 }
 
+// IsRecording returns if this span is being recorded. If this span has ended
+// this will return false.
 func (s *span) IsRecording() bool {
 	if s == nil {
 		return false
@@ -212,6 +214,7 @@ func (s *span) End(options ...trace.SpanOption) {
 	config := trace.NewSpanConfig(options...)
 
 	s.mu.Lock()
+	// Setting endTime to non-zero marks the span as ended and not recording.
 	if config.Timestamp.IsZero() {
 		s.endTime = et
 	} else {
