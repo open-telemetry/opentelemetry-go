@@ -31,7 +31,7 @@ func BenchmarkInject(b *testing.B) {
 		req, _ := http.NewRequest("GET", "http://example.com", nil)
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			t.Inject(ctx, req.Header)
+			t.Inject(ctx, propagation.HeaderCarrier(req.Header))
 		}
 	})
 }
@@ -66,7 +66,7 @@ func BenchmarkExtract(b *testing.B) {
 		ctx := context.Background()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			propagator.Extract(ctx, req.Header)
+			propagator.Extract(ctx, propagation.HeaderCarrier(req.Header))
 		}
 	})
 }

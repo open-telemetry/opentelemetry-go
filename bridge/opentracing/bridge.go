@@ -637,7 +637,7 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 	}
 	ctx := trace.ContextWithSpan(context.Background(), fs)
 	ctx = baggage.ContextWithMap(ctx, bridgeSC.baggageItems)
-	t.getPropagator().Inject(ctx, header)
+	t.getPropagator().Inject(ctx, propagation.HeaderCarrier(header))
 	return nil
 }
 
@@ -654,7 +654,7 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 		return nil, ot.ErrInvalidCarrier
 	}
 	header := http.Header(hhcarrier)
-	ctx := t.getPropagator().Extract(context.Background(), header)
+	ctx := t.getPropagator().Extract(context.Background(), propagation.HeaderCarrier(header))
 	baggage := baggage.MapFromContext(ctx)
 	otelSC, _, _ := otelparent.GetSpanContextAndLinks(ctx, false)
 	bridgeSC := &bridgeSpanContext{
