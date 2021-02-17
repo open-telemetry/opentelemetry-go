@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 func TestPullNoCollect(t *testing.T) {
@@ -39,6 +40,7 @@ func TestPullNoCollect(t *testing.T) {
 			processor.WithMemory(true),
 		),
 		controller.WithCollectPeriod(0),
+		controller.WithResource(resource.Empty()),
 	)
 
 	ctx := context.Background()
@@ -74,6 +76,7 @@ func TestPullWithCollect(t *testing.T) {
 			processor.WithMemory(true),
 		),
 		controller.WithCollectPeriod(time.Second),
+		controller.WithResource(resource.Empty()),
 	)
 	mock := controllertest.NewMockClock()
 	puller.SetClock(mock)

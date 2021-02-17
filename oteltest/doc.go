@@ -45,7 +45,7 @@ introspection of their state and history. Additionally, a SpanRecorder can be
 provided to the TracerProvider to record all Spans started and ended by the
 testing structures.
 
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 */
 package oteltest // import "go.opentelemetry.io/otel/oteltest"

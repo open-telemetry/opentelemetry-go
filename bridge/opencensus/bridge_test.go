@@ -28,7 +28,7 @@ import (
 )
 
 func TestMixedAPIs(t *testing.T) {
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 	tracer := tp.Tracer("mixedapitracer")
 	octrace.DefaultTracer = NewTracer(tracer)
@@ -74,7 +74,7 @@ func TestMixedAPIs(t *testing.T) {
 }
 
 func TestStartOptions(t *testing.T) {
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 	octrace.DefaultTracer = NewTracer(tp.Tracer("startoptionstracer"))
 
@@ -94,7 +94,7 @@ func TestStartOptions(t *testing.T) {
 }
 
 func TestStartSpanWithRemoteParent(t *testing.T) {
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 	tracer := tp.Tracer("remoteparent")
 	octrace.DefaultTracer = NewTracer(tracer)
@@ -117,7 +117,7 @@ func TestStartSpanWithRemoteParent(t *testing.T) {
 }
 
 func TestToFromContext(t *testing.T) {
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 	tracer := tp.Tracer("tofromcontext")
 	octrace.DefaultTracer = NewTracer(tracer)
@@ -158,7 +158,7 @@ func TestToFromContext(t *testing.T) {
 }
 
 func TestIsRecordingEvents(t *testing.T) {
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 	octrace.DefaultTracer = NewTracer(tp.Tracer("isrecordingevents"))
 
@@ -170,7 +170,7 @@ func TestIsRecordingEvents(t *testing.T) {
 }
 
 func TestSetThings(t *testing.T) {
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 	octrace.DefaultTracer = NewTracer(tp.Tracer("setthings"))
 

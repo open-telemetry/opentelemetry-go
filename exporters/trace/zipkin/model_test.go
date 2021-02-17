@@ -45,7 +45,7 @@ func TestModelConversion(t *testing.T) {
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
 			Attributes: []label.KeyValue{
-				label.Uint64("attr1", 42),
+				label.Int64("attr1", 42),
 				label.String("attr2", "bar"),
 			},
 			MessageEvents: []trace.Event{
@@ -53,7 +53,7 @@ func TestModelConversion(t *testing.T) {
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
 					Attributes: []label.KeyValue{
-						label.Uint64("eventattr1", 123),
+						label.Int64("eventattr1", 123),
 					},
 				},
 				{
@@ -78,7 +78,7 @@ func TestModelConversion(t *testing.T) {
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
 			Attributes: []label.KeyValue{
-				label.Uint64("attr1", 42),
+				label.Int64("attr1", 42),
 				label.String("attr2", "bar"),
 			},
 			MessageEvents: []trace.Event{
@@ -86,7 +86,7 @@ func TestModelConversion(t *testing.T) {
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
 					Attributes: []label.KeyValue{
-						label.Uint64("eventattr1", 123),
+						label.Int64("eventattr1", 123),
 					},
 				},
 				{
@@ -110,7 +110,7 @@ func TestModelConversion(t *testing.T) {
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
 			Attributes: []label.KeyValue{
-				label.Uint64("attr1", 42),
+				label.Int64("attr1", 42),
 				label.String("attr2", "bar"),
 			},
 			MessageEvents: []trace.Event{
@@ -118,7 +118,7 @@ func TestModelConversion(t *testing.T) {
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
 					Attributes: []label.KeyValue{
-						label.Uint64("eventattr1", 123),
+						label.Int64("eventattr1", 123),
 					},
 				},
 				{
@@ -142,7 +142,7 @@ func TestModelConversion(t *testing.T) {
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
 			Attributes: []label.KeyValue{
-				label.Uint64("attr1", 42),
+				label.Int64("attr1", 42),
 				label.String("attr2", "bar"),
 			},
 			MessageEvents: []trace.Event{
@@ -150,7 +150,7 @@ func TestModelConversion(t *testing.T) {
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
 					Attributes: []label.KeyValue{
-						label.Uint64("eventattr1", 123),
+						label.Int64("eventattr1", 123),
 					},
 				},
 				{
@@ -174,7 +174,7 @@ func TestModelConversion(t *testing.T) {
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
 			Attributes: []label.KeyValue{
-				label.Uint64("attr1", 42),
+				label.Int64("attr1", 42),
 				label.String("attr2", "bar"),
 			},
 			MessageEvents: []trace.Event{
@@ -182,7 +182,7 @@ func TestModelConversion(t *testing.T) {
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
 					Attributes: []label.KeyValue{
-						label.Uint64("eventattr1", 123),
+						label.Int64("eventattr1", 123),
 					},
 				},
 				{
@@ -206,7 +206,7 @@ func TestModelConversion(t *testing.T) {
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
 			Attributes: []label.KeyValue{
-				label.Uint64("attr1", 42),
+				label.Int64("attr1", 42),
 				label.String("attr2", "bar"),
 			},
 			MessageEvents: []trace.Event{
@@ -214,7 +214,7 @@ func TestModelConversion(t *testing.T) {
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
 					Attributes: []label.KeyValue{
-						label.Uint64("eventattr1", 123),
+						label.Int64("eventattr1", 123),
 					},
 				},
 				{
@@ -238,7 +238,7 @@ func TestModelConversion(t *testing.T) {
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
 			Attributes: []label.KeyValue{
-				label.Uint64("attr1", 42),
+				label.Int64("attr1", 42),
 				label.String("attr2", "bar"),
 			},
 			MessageEvents: []trace.Event{
@@ -246,7 +246,7 @@ func TestModelConversion(t *testing.T) {
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
 					Attributes: []label.KeyValue{
-						label.Uint64("eventattr1", 123),
+						label.Int64("eventattr1", 123),
 					},
 				},
 				{
@@ -270,7 +270,7 @@ func TestModelConversion(t *testing.T) {
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
 			Attributes: []label.KeyValue{
-				label.Uint64("attr1", 42),
+				label.Int64("attr1", 42),
 				label.String("attr2", "bar"),
 			},
 			MessageEvents: nil,
@@ -296,7 +296,7 @@ func TestModelConversion(t *testing.T) {
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
 					Attributes: []label.KeyValue{
-						label.Uint64("eventattr1", 123),
+						label.Int64("eventattr1", 123),
 					},
 				},
 				{
@@ -680,7 +680,7 @@ func Test_toZipkinTags(t *testing.T) {
 				Attributes: []label.KeyValue{
 					label.String("key", keyValue),
 					label.Float64("double", doubleValue),
-					label.Uint64("uint", uint64(uintValue)),
+					label.Int64("uint", uintValue),
 					label.Bool("ok", true),
 				},
 			},

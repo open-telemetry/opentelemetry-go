@@ -214,7 +214,7 @@ func TestSpanData(t *testing.T) {
 		MessageEvents: []trace.Event{
 			{Time: startTime,
 				Attributes: []label.KeyValue{
-					label.Uint64("CompressedByteSize", 512),
+					label.Int64("CompressedByteSize", 512),
 				},
 			},
 			{Time: endTime,
