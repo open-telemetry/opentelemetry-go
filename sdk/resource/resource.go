@@ -15,6 +15,10 @@
 package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
 import (
+	"context"
+
+	"go.opentelemetry.io/otel"
+
 	"go.opentelemetry.io/otel/label"
 )
 
@@ -29,7 +33,16 @@ type Resource struct {
 	labels label.Set
 }
 
-var emptyResource Resource
+var (
+	emptyResource Resource
+
+	defaultResource *Resource = func(r *Resource, err error) *Resource {
+		if err != nil {
+			otel.Handle(err)
+		}
+		return r
+	}(Detect(context.Background(), defaultServiceNameDetector{}, TelemetrySDK{}))
+)
 
 // NewWithAttributes creates a resource from a set of attributes.  If there are
 // duplicate keys present in the list of attributes, then the last
@@ -111,6 +124,12 @@ func Merge(a, b *Resource) *Resource {
 // equivalent to a `nil` Resource.
 func Empty() *Resource {
 	return &emptyResource
+}
+
+// Default returns an instance of Resource with a default
+// "service.name" and OpenTelemetrySDK attributes
+func Default() *Resource {
+	return defaultResource
 }
 
 // Equivalent returns an object that can be compared for equality

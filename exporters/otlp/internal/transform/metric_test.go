@@ -70,13 +70,13 @@ func TestStringKeyValues(t *testing.T) {
 			[]label.KeyValue{
 				label.Bool("true", true),
 				label.Int64("one", 1),
-				label.Uint64("two", 2),
+				label.Int64("two", 2),
 				label.Float64("three", 3),
-				label.Int32("four", 4),
-				label.Uint32("five", 5),
-				label.Float32("six", 6),
+				label.Int("four", 4),
+				label.Int("five", 5),
+				label.Float64("six", 6),
 				label.Int("seven", 7),
-				label.Uint("eight", 8),
+				label.Int("eight", 8),
 				label.String("the", "final word"),
 			},
 			[]*commonpb.StringKeyValue{

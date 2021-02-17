@@ -26,6 +26,7 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // DefaultPeriod is used for:
@@ -84,6 +85,9 @@ func New(checkpointer export.Checkpointer, opts ...Option) *Controller {
 	}
 	for _, opt := range opts {
 		opt.Apply(c)
+	}
+	if c.Resource == nil {
+		c.Resource = resource.Default()
 	}
 
 	impl := sdk.NewAccumulator(
