@@ -18,14 +18,14 @@ import (
 	"io"
 	"os"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 var (
 	defaultWriter              = os.Stdout
 	defaultPrettyPrint         = false
 	defaultTimestamps          = true
-	defaultLabelEncoder        = label.DefaultEncoder()
+	defaultLabelEncoder        = attribute.DefaultEncoder()
 	defaultDisableTraceExport  = false
 	defaultDisableMetricExport = false
 )
@@ -44,7 +44,7 @@ type Config struct {
 	Timestamps bool
 
 	// LabelEncoder encodes the labels.
-	LabelEncoder label.Encoder
+	LabelEncoder attribute.Encoder
 
 	// DisableTraceExport prevents any export of trace telemetry.
 	DisableTraceExport bool
@@ -112,12 +112,12 @@ func (o timestampsOption) Apply(config *Config) {
 }
 
 // WithLabelEncoder sets the label encoder used in export.
-func WithLabelEncoder(enc label.Encoder) Option {
+func WithLabelEncoder(enc attribute.Encoder) Option {
 	return labelEncoderOption{enc}
 }
 
 type labelEncoderOption struct {
-	LabelEncoder label.Encoder
+	LabelEncoder attribute.Encoder
 }
 
 func (o labelEncoderOption) Apply(config *Config) {

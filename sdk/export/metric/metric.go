@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -267,7 +267,7 @@ type CheckpointSet interface {
 // steps.
 type Metadata struct {
 	descriptor *metric.Descriptor
-	labels     *label.Set
+	labels     *attribute.Set
 	resource   *resource.Resource
 }
 
@@ -295,7 +295,7 @@ func (m Metadata) Descriptor() *metric.Descriptor {
 
 // Labels describes the labels associated with the instrument and the
 // aggregated data.
-func (m Metadata) Labels() *label.Set {
+func (m Metadata) Labels() *attribute.Set {
 	return m.labels
 }
 
@@ -308,7 +308,7 @@ func (m Metadata) Resource() *resource.Resource {
 // Accumulations to send to Processors. The Descriptor, Labels, Resource,
 // and Aggregator represent aggregate metric events received over a single
 // collection period.
-func NewAccumulation(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregator Aggregator) Accumulation {
+func NewAccumulation(descriptor *metric.Descriptor, labels *attribute.Set, resource *resource.Resource, aggregator Aggregator) Accumulation {
 	return Accumulation{
 		Metadata: Metadata{
 			descriptor: descriptor,
@@ -328,7 +328,7 @@ func (r Accumulation) Aggregator() Aggregator {
 // NewRecord allows Processor implementations to construct export
 // records.  The Descriptor, Labels, and Aggregator represent
 // aggregate metric events received over a single collection period.
-func NewRecord(descriptor *metric.Descriptor, labels *label.Set, resource *resource.Resource, aggregation aggregation.Aggregation, start, end time.Time) Record {
+func NewRecord(descriptor *metric.Descriptor, labels *attribute.Set, resource *resource.Resource, aggregation aggregation.Aggregation, start, end time.Time) Record {
 	return Record{
 		Metadata: Metadata{
 			descriptor: descriptor,

@@ -26,12 +26,12 @@ import (
 	otlog "github.com/opentracing/opentracing-go/log"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/internal/baggage"
 	"go.opentelemetry.io/otel/internal/trace/noop"
 	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -58,19 +58,19 @@ func newBridgeSpanContext(otelSpanContext trace.SpanContext, parentOtSpanContext
 }
 
 func (c *bridgeSpanContext) ForeachBaggageItem(handler func(k, v string) bool) {
-	c.baggageItems.Foreach(func(kv label.KeyValue) bool {
+	c.baggageItems.Foreach(func(kv attribute.KeyValue) bool {
 		return handler(string(kv.Key), kv.Value.Emit())
 	})
 }
 
 func (c *bridgeSpanContext) setBaggageItem(restrictedKey, value string) {
 	crk := http.CanonicalHeaderKey(restrictedKey)
-	c.baggageItems = c.baggageItems.Apply(baggage.MapUpdate{SingleKV: label.String(crk, value)})
+	c.baggageItems = c.baggageItems.Apply(baggage.MapUpdate{SingleKV: attribute.String(crk, value)})
 }
 
 func (c *bridgeSpanContext) baggageItem(restrictedKey string) string {
 	crk := http.CanonicalHeaderKey(restrictedKey)
-	val, _ := c.baggageItems.Value(label.Key(crk))
+	val, _ := c.baggageItems.Value(attribute.Key(crk))
 	return val.Emit()
 }
 
@@ -161,7 +161,7 @@ func (s *bridgeSpan) LogFields(fields ...otlog.Field) {
 }
 
 type bridgeFieldEncoder struct {
-	pairs []label.KeyValue
+	pairs []attribute.KeyValue
 }
 
 var _ otlog.Encoder = &bridgeFieldEncoder{}
@@ -214,7 +214,7 @@ func (e *bridgeFieldEncoder) emitCommon(key string, value interface{}) {
 	e.pairs = append(e.pairs, otTagToOTelLabel(key, value))
 }
 
-func otLogFieldsToOTelLabels(fields []otlog.Field) []label.KeyValue {
+func otLogFieldsToOTelLabels(fields []otlog.Field) []attribute.KeyValue {
 	encoder := &bridgeFieldEncoder{}
 	for _, field := range fields {
 		field.Marshal(encoder)
@@ -363,7 +363,7 @@ func (t *BridgeTracer) baggageSetHook(ctx context.Context) context.Context {
 	// context, so we don't care about the old hooks.
 	clearCtx, _, _ := baggage.ContextWithNoHooks(ctx)
 	m := baggage.MapFromContext(clearCtx)
-	m.Foreach(func(kv label.KeyValue) bool {
+	m.Foreach(func(kv attribute.KeyValue) bool {
 		bSpan.setBaggageItemOnly(string(kv.Key), kv.Value.Emit())
 		return true
 	})
@@ -385,9 +385,9 @@ func (t *BridgeTracer) baggageGetHook(ctx context.Context, m baggage.Map) baggag
 	if len(items) == 0 {
 		return m
 	}
-	kv := make([]label.KeyValue, 0, len(items))
+	kv := make([]attribute.KeyValue, 0, len(items))
 	for k, v := range items {
-		kv = append(kv, label.String(k, v))
+		kv = append(kv, attribute.String(k, v))
 	}
 	return m.Apply(baggage.MapUpdate{MultiKV: kv})
 }
@@ -474,10 +474,10 @@ func (t *BridgeTracer) ContextWithSpanHook(ctx context.Context, span ot.Span) co
 	return ctx
 }
 
-func otTagsToOTelAttributesKindAndError(tags map[string]interface{}) ([]label.KeyValue, trace.SpanKind, bool) {
+func otTagsToOTelAttributesKindAndError(tags map[string]interface{}) ([]attribute.KeyValue, trace.SpanKind, bool) {
 	kind := trace.SpanKindInternal
 	err := false
-	var pairs []label.KeyValue
+	var pairs []attribute.KeyValue
 	for k, v := range tags {
 		switch k {
 		case string(otext.SpanKind):
@@ -504,7 +504,7 @@ func otTagsToOTelAttributesKindAndError(tags map[string]interface{}) ([]label.Ke
 	return pairs, kind, err
 }
 
-// otTagToOTelLabel converts given key-value into label.KeyValue.
+// otTagToOTelLabel converts given key-value into attribute.KeyValue.
 // Note that some conversions are not obvious:
 // - int -> int64
 // - uint -> string
@@ -512,7 +512,7 @@ func otTagsToOTelAttributesKindAndError(tags map[string]interface{}) ([]label.Ke
 // - uint32 -> int64
 // - uint64 -> string
 // - float32 -> float64
-func otTagToOTelLabel(k string, v interface{}) label.KeyValue {
+func otTagToOTelLabel(k string, v interface{}) attribute.KeyValue {
 	key := otTagToOTelLabelKey(k)
 	switch val := v.(type) {
 	case bool:
@@ -540,8 +540,8 @@ func otTagToOTelLabel(k string, v interface{}) label.KeyValue {
 	}
 }
 
-func otTagToOTelLabelKey(k string) label.Key {
-	return label.Key(k)
+func otTagToOTelLabelKey(k string) attribute.Key {
+	return attribute.Key(k)
 }
 
 func otSpanReferencesToParentAndLinks(references []ot.SpanReference) (*bridgeSpanContext, []trace.Link) {
@@ -580,9 +580,9 @@ func otSpanReferenceToOTelLink(bridgeSC *bridgeSpanContext, refType ot.SpanRefer
 	}
 }
 
-func otSpanReferenceTypeToOTelLinkAttributes(refType ot.SpanReferenceType) []label.KeyValue {
-	return []label.KeyValue{
-		label.String("ot-span-reference-type", otSpanReferenceTypeToString(refType)),
+func otSpanReferenceTypeToOTelLinkAttributes(refType ot.SpanReferenceType) []attribute.KeyValue {
+	return []attribute.KeyValue{
+		attribute.String("ot-span-reference-type", otSpanReferenceTypeToString(refType)),
 	}
 }
 

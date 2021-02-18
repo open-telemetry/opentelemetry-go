@@ -15,10 +15,10 @@
 package transform
 
 import (
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
 
-	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/trace"
@@ -35,10 +35,10 @@ func SpanData(sdl []*export.SpanSnapshot) []*tracepb.ResourceSpans {
 		return nil
 	}
 
-	rsm := make(map[label.Distinct]*tracepb.ResourceSpans)
+	rsm := make(map[attribute.Distinct]*tracepb.ResourceSpans)
 
 	type ilsKey struct {
-		r  label.Distinct
+		r  attribute.Distinct
 		il instrumentation.Library
 	}
 	ilsm := make(map[ilsKey]*tracepb.InstrumentationLibrarySpans)

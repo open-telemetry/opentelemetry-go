@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	exportmetric "go.opentelemetry.io/otel/sdk/export/metric"
@@ -66,14 +66,14 @@ func (OneRecordCheckpointSet) ForEach(kindSelector exportmetric.ExportKindSelect
 		metric.CounterInstrumentKind,
 		number.Int64Kind,
 	)
-	res := resource.NewWithAttributes(label.String("a", "b"))
+	res := resource.NewWithAttributes(attribute.String("a", "b"))
 	agg := sum.New(1)
 	if err := agg[0].Update(context.Background(), number.NewInt64Number(42), &desc); err != nil {
 		return err
 	}
 	start := time.Date(2020, time.December, 8, 19, 15, 0, 0, time.UTC)
 	end := time.Date(2020, time.December, 8, 19, 16, 0, 0, time.UTC)
-	labels := label.NewSet(label.String("abc", "def"), label.Int64("one", 1))
+	labels := attribute.NewSet(attribute.String("abc", "def"), attribute.Int64("one", 1))
 	rec := exportmetric.NewRecord(&desc, &labels, res, agg[0].Aggregation(), start, end)
 	return recordFunc(rec)
 }
@@ -92,7 +92,7 @@ func SingleSpanSnapshot() []*exporttrace.SpanSnapshot {
 		Name:                     "foo",
 		StartTime:                time.Date(2020, time.December, 8, 20, 23, 0, 0, time.UTC),
 		EndTime:                  time.Date(2020, time.December, 0, 20, 24, 0, 0, time.UTC),
-		Attributes:               []label.KeyValue{},
+		Attributes:               []attribute.KeyValue{},
 		MessageEvents:            []trace.Event{},
 		Links:                    []trace.Link{},
 		StatusCode:               codes.Ok,
@@ -102,7 +102,7 @@ func SingleSpanSnapshot() []*exporttrace.SpanSnapshot {
 		DroppedMessageEventCount: 0,
 		DroppedLinkCount:         0,
 		ChildSpanCount:           0,
-		Resource:                 resource.NewWithAttributes(label.String("a", "b")),
+		Resource:                 resource.NewWithAttributes(attribute.String("a", "b")),
 		InstrumentationLibrary: instrumentation.Library{
 			Name:    "bar",
 			Version: "0.0.0",

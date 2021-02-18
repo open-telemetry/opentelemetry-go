@@ -22,8 +22,8 @@ import (
 	ot "github.com/opentracing/opentracing-go"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	otelbaggage "go.opentelemetry.io/otel/internal/baggage"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/internal"
@@ -589,7 +589,7 @@ func (bio *baggageInteroperationTest) addAndRecordBaggage(t *testing.T, ctx cont
 	value := bio.baggageItems[idx].value
 
 	otSpan.SetBaggageItem(otKey, value)
-	ctx = otelbaggage.NewContext(ctx, label.String(otelKey, value))
+	ctx = otelbaggage.NewContext(ctx, attribute.String(otelKey, value))
 
 	otRecording := make(map[string]string)
 	otSpan.Context().ForeachBaggageItem(func(key, value string) bool {
@@ -597,7 +597,7 @@ func (bio *baggageInteroperationTest) addAndRecordBaggage(t *testing.T, ctx cont
 		return true
 	})
 	otelRecording := make(map[string]string)
-	otelbaggage.MapFromContext(ctx).Foreach(func(kv label.KeyValue) bool {
+	otelbaggage.MapFromContext(ctx).Foreach(func(kv attribute.KeyValue) bool {
 		otelRecording[string(kv.Key)] = kv.Value.Emit()
 		return true
 	})
@@ -721,62 +721,62 @@ func TestOtTagToOTelLabel_CheckTypeConversions(t *testing.T) {
 	tableTest := []struct {
 		key               string
 		value             interface{}
-		expectedValueType label.Type
+		expectedValueType attribute.Type
 	}{
 		{
 			key:               "bool to bool",
 			value:             true,
-			expectedValueType: label.BOOL,
+			expectedValueType: attribute.BOOL,
 		},
 		{
 			key:               "int to int64",
 			value:             123,
-			expectedValueType: label.INT64,
+			expectedValueType: attribute.INT64,
 		},
 		{
 			key:               "uint to string",
 			value:             uint(1234),
-			expectedValueType: label.STRING,
+			expectedValueType: attribute.STRING,
 		},
 		{
 			key:               "int32 to int64",
 			value:             int32(12345),
-			expectedValueType: label.INT64,
+			expectedValueType: attribute.INT64,
 		},
 		{
 			key:               "uint32 to int64",
 			value:             uint32(123456),
-			expectedValueType: label.INT64,
+			expectedValueType: attribute.INT64,
 		},
 		{
 			key:               "int64 to int64",
 			value:             int64(1234567),
-			expectedValueType: label.INT64,
+			expectedValueType: attribute.INT64,
 		},
 		{
 			key:               "uint64 to string",
 			value:             uint64(12345678),
-			expectedValueType: label.STRING,
+			expectedValueType: attribute.STRING,
 		},
 		{
 			key:               "float32 to float64",
 			value:             float32(3.14),
-			expectedValueType: label.FLOAT64,
+			expectedValueType: attribute.FLOAT64,
 		},
 		{
 			key:               "float64 to float64",
 			value:             float64(3.14),
-			expectedValueType: label.FLOAT64,
+			expectedValueType: attribute.FLOAT64,
 		},
 		{
 			key:               "string to string",
 			value:             "string_value",
-			expectedValueType: label.STRING,
+			expectedValueType: attribute.STRING,
 		},
 		{
 			key:               "unexpected type to string",
 			value:             struct{}{},
-			expectedValueType: label.STRING,
+			expectedValueType: attribute.STRING,
 		},
 	}
 

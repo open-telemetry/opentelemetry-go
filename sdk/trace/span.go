@@ -22,8 +22,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/trace"
 
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -33,8 +33,8 @@ import (
 )
 
 const (
-	errorTypeKey    = label.Key("error.type")
-	errorMessageKey = label.Key("error.message")
+	errorTypeKey    = attribute.Key("error.type")
+	errorMessageKey = attribute.Key("error.message")
 	errorEventName  = "error"
 )
 
@@ -50,7 +50,7 @@ type ReadOnlySpan interface {
 	SpanKind() trace.SpanKind
 	StartTime() time.Time
 	EndTime() time.Time
-	Attributes() []label.KeyValue
+	Attributes() []attribute.KeyValue
 	Links() []trace.Link
 	Events() []trace.Event
 	StatusCode() codes.Code
@@ -182,7 +182,7 @@ func (s *span) SetStatus(code codes.Code, msg string) {
 // will be overwritten with the value contained in attributes.
 //
 // If this span is not being recorded than this method does nothing.
-func (s *span) SetAttributes(attributes ...label.KeyValue) {
+func (s *span) SetAttributes(attributes ...attribute.KeyValue) {
 	if !s.IsRecording() {
 		return
 	}
@@ -355,11 +355,11 @@ func (s *span) EndTime() time.Time {
 }
 
 // Attributes returns the attributes of this span.
-func (s *span) Attributes() []label.KeyValue {
+func (s *span) Attributes() []attribute.KeyValue {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.attributes.evictList.Len() == 0 {
-		return []label.KeyValue{}
+		return []attribute.KeyValue{}
 	}
 	return s.attributes.toKeyValue()
 }
@@ -482,11 +482,11 @@ func (s *span) interfaceArrayToMessageEventArray() []trace.Event {
 	return messageEventArr
 }
 
-func (s *span) copyToCappedAttributes(attributes ...label.KeyValue) {
+func (s *span) copyToCappedAttributes(attributes ...attribute.KeyValue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, a := range attributes {
-		if a.Value.Type() != label.INVALID {
+		if a.Value.Type() != attribute.INVALID {
 			s.attributes.add(a)
 		}
 	}
@@ -574,7 +574,7 @@ type samplingData struct {
 	name         string
 	cfg          *Config
 	span         *span
-	attributes   []label.KeyValue
+	attributes   []attribute.KeyValue
 	links        []trace.Link
 	kind         trace.SpanKind
 }

@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // Environment variable names
@@ -111,9 +111,9 @@ var errTagEnvironmentDefaultValueNotFound = errors.New("missing default value fo
 // - comma separated list of key=value
 // - value can be specified using the notation ${envVar:defaultValue}, where `envVar`
 // is an environment variable and `defaultValue` is the value to use in case the env var is not set
-func parseTags(sTags string) ([]label.KeyValue, error) {
+func parseTags(sTags string) ([]attribute.KeyValue, error) {
 	pairs := strings.Split(sTags, ",")
-	tags := make([]label.KeyValue, len(pairs))
+	tags := make([]attribute.KeyValue, len(pairs))
 	for i, p := range pairs {
 		field := strings.SplitN(p, "=", 2)
 		if len(field) != 2 {
@@ -139,24 +139,24 @@ func parseTags(sTags string) ([]label.KeyValue, error) {
 	return tags, nil
 }
 
-func parseKeyValue(k, v string) label.KeyValue {
-	return label.KeyValue{
-		Key:   label.Key(k),
+func parseKeyValue(k, v string) attribute.KeyValue {
+	return attribute.KeyValue{
+		Key:   attribute.Key(k),
 		Value: parseValue(v),
 	}
 }
 
-func parseValue(str string) label.Value {
+func parseValue(str string) attribute.Value {
 	if v, err := strconv.ParseInt(str, 10, 64); err == nil {
-		return label.Int64Value(v)
+		return attribute.Int64Value(v)
 	}
 	if v, err := strconv.ParseFloat(str, 64); err == nil {
-		return label.Float64Value(v)
+		return attribute.Float64Value(v)
 	}
 	if v, err := strconv.ParseBool(str); err == nil {
-		return label.BoolValue(v)
+		return attribute.BoolValue(v)
 	}
 
 	// Fallback
-	return label.StringValue(str)
+	return attribute.StringValue(str)
 }

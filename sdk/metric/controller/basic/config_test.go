@@ -19,12 +19,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 func TestWithResource(t *testing.T) {
-	r := resource.NewWithAttributes(label.String("A", "a"))
+	r := resource.NewWithAttributes(attribute.String("A", "a"))
 
 	c := &Config{}
 	WithResource(r).Apply(c)

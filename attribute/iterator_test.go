@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package label_test
+package attribute_test
 
 import (
 	"fmt"
@@ -20,13 +20,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 func TestIterator(t *testing.T) {
-	one := label.String("one", "1")
-	two := label.Int("two", 2)
-	lbl := label.NewSet(one, two)
+	one := attribute.String("one", "1")
+	two := attribute.Int("two", 2)
+	lbl := attribute.NewSet(one, two)
 	iter := lbl.Iter()
 	require.Equal(t, 2, iter.Len())
 
@@ -49,7 +49,7 @@ func TestIterator(t *testing.T) {
 }
 
 func TestEmptyIterator(t *testing.T) {
-	lbl := label.NewSet()
+	lbl := attribute.NewSet()
 	iter := lbl.Iter()
 	require.Equal(t, 0, iter.Len())
 	require.False(t, iter.Next())
@@ -64,9 +64,9 @@ func TestMergedIterator(t *testing.T) {
 		expect []string
 	}
 
-	makeLabels := func(keys []string, num int) (result []label.KeyValue) {
+	makeLabels := func(keys []string, num int) (result []attribute.KeyValue) {
 		for _, k := range keys {
-			result = append(result, label.Int(k, num))
+			result = append(result, attribute.Int(k, num))
 		}
 		return
 	}
@@ -131,10 +131,10 @@ func TestMergedIterator(t *testing.T) {
 			labels1 := makeLabels(input.keys1, 1)
 			labels2 := makeLabels(input.keys2, 2)
 
-			set1 := label.NewSet(labels1...)
-			set2 := label.NewSet(labels2...)
+			set1 := attribute.NewSet(labels1...)
+			set2 := attribute.NewSet(labels2...)
 
-			merge := label.NewMergeIterator(&set1, &set2)
+			merge := attribute.NewMergeIterator(&set1, &set2)
 
 			var result []string
 

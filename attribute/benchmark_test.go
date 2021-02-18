@@ -12,40 +12,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package label_test
+package attribute_test
 
 import (
 	"testing"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 type test struct{}
 
 var (
 	arrayVal    = []string{"one", "two"}
-	arrayKeyVal = label.Array("array", arrayVal)
+	arrayKeyVal = attribute.Array("array", arrayVal)
 
 	boolVal    = true
-	boolKeyVal = label.Bool("bool", boolVal)
+	boolKeyVal = attribute.Bool("bool", boolVal)
 
 	intVal    = int(1)
-	intKeyVal = label.Int("int", intVal)
+	intKeyVal = attribute.Int("int", intVal)
 
 	int8Val    = int8(1)
-	int8KeyVal = label.Int("int8", int(int8Val))
+	int8KeyVal = attribute.Int("int8", int(int8Val))
 
 	int16Val    = int16(1)
-	int16KeyVal = label.Int("int16", int(int16Val))
+	int16KeyVal = attribute.Int("int16", int(int16Val))
 
 	int64Val    = int64(1)
-	int64KeyVal = label.Int64("int64", int64Val)
+	int64KeyVal = attribute.Int64("int64", int64Val)
 
 	float64Val    = float64(1.0)
-	float64KeyVal = label.Float64("float64", float64Val)
+	float64KeyVal = attribute.Float64("float64", float64Val)
 
 	stringVal    = "string"
-	stringKeyVal = label.String("string", stringVal)
+	stringKeyVal = attribute.String("string", stringVal)
 
 	bytesVal  = []byte("bytes")
 	structVal = test{}
@@ -54,112 +54,112 @@ var (
 func BenchmarkArrayKey(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = label.Array("array", arrayVal)
+		_ = attribute.Array("array", arrayVal)
 	}
 }
 
 func BenchmarkArrayKeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = label.Any("array", arrayVal)
+		_ = attribute.Any("array", arrayVal)
 	}
 }
 
 func BenchmarkBoolKey(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = label.Bool("bool", boolVal)
+		_ = attribute.Bool("bool", boolVal)
 	}
 }
 
 func BenchmarkBoolKeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = label.Any("bool", boolVal)
+		_ = attribute.Any("bool", boolVal)
 	}
 }
 
 func BenchmarkIntKey(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = label.Int("int", intVal)
+		_ = attribute.Int("int", intVal)
 	}
 }
 
 func BenchmarkIntKeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = label.Any("int", intVal)
+		_ = attribute.Any("int", intVal)
 	}
 }
 
 func BenchmarkInt8KeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = label.Any("int8", int8Val)
+		_ = attribute.Any("int8", int8Val)
 	}
 }
 
 func BenchmarkInt16KeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = label.Any("int16", int16Val)
+		_ = attribute.Any("int16", int16Val)
 	}
 }
 
 func BenchmarkInt64Key(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = label.Int64("int64", int64Val)
+		_ = attribute.Int64("int64", int64Val)
 	}
 }
 
 func BenchmarkInt64KeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = label.Any("int64", int64Val)
+		_ = attribute.Any("int64", int64Val)
 	}
 }
 
 func BenchmarkFloat64Key(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = label.Float64("float64", float64Val)
+		_ = attribute.Float64("float64", float64Val)
 	}
 }
 
 func BenchmarkFloat64KeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = label.Any("float64", float64Val)
+		_ = attribute.Any("float64", float64Val)
 	}
 }
 
 func BenchmarkStringKey(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = label.String("string", stringVal)
+		_ = attribute.String("string", stringVal)
 	}
 }
 
 func BenchmarkStringKeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = label.Any("string", stringVal)
+		_ = attribute.Any("string", stringVal)
 	}
 }
 
 func BenchmarkBytesKeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = label.Any("bytes", bytesVal)
+		_ = attribute.Any("bytes", bytesVal)
 	}
 }
 
 func BenchmarkStructKeyAny(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = label.Any("struct", structVal)
+		_ = attribute.Any("struct", structVal)
 	}
 }
 

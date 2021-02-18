@@ -23,10 +23,10 @@ import (
 
 	"google.golang.org/grpc"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
@@ -41,7 +41,7 @@ func initMeter() {
 
 	res, err := resource.New(
 		ctx,
-		resource.WithAttributes(label.String("R", "V")),
+		resource.WithAttributes(attribute.String("R", "V")),
 	)
 	if err != nil {
 		log.Fatal("could not initialize resource:", err)
@@ -94,8 +94,8 @@ func initMeter() {
 func main() {
 	initMeter()
 
-	labels := []label.KeyValue{
-		label.String("label1", "value1"),
+	labels := []attribute.KeyValue{
+		attribute.String("label1", "value1"),
 	}
 
 	meter := global.Meter("ex.com/prom-collector")

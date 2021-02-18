@@ -19,8 +19,8 @@ import (
 	"sync"
 	"testing"
 
+	"go.opentelemetry.io/otel/attribute"
 	internalmetric "go.opentelemetry.io/otel/internal/metric"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/registry"
@@ -29,14 +29,14 @@ import (
 type (
 	Handle struct {
 		Instrument *Sync
-		Labels     []label.KeyValue
+		Labels     []attribute.KeyValue
 	}
 
 	Batch struct {
 		// Measurement needs to be aligned for 64-bit atomic operations.
 		Measurements []Measurement
 		Ctx          context.Context
-		Labels       []label.KeyValue
+		Labels       []attribute.KeyValue
 		LibraryName  string
 	}
 
@@ -90,14 +90,14 @@ func (s *Sync) Implementation() interface{} {
 	return s
 }
 
-func (s *Sync) Bind(labels []label.KeyValue) metric.BoundSyncImpl {
+func (s *Sync) Bind(labels []attribute.KeyValue) metric.BoundSyncImpl {
 	return &Handle{
 		Instrument: s,
 		Labels:     labels,
 	}
 }
 
-func (s *Sync) RecordOne(ctx context.Context, number number.Number, labels []label.KeyValue) {
+func (s *Sync) RecordOne(ctx context.Context, number number.Number, labels []attribute.KeyValue) {
 	s.meter.doRecordSingle(ctx, labels, s, number)
 }
 
@@ -108,7 +108,7 @@ func (h *Handle) RecordOne(ctx context.Context, number number.Number) {
 func (h *Handle) Unbind() {
 }
 
-func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []label.KeyValue, instrument metric.InstrumentImpl, number number.Number) {
+func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []attribute.KeyValue, instrument metric.InstrumentImpl, number number.Number) {
 	m.collect(ctx, labels, []Measurement{{
 		Instrument: instrument,
 		Number:     number,
@@ -154,7 +154,7 @@ func (m *MeterImpl) NewAsyncInstrument(descriptor metric.Descriptor, runner metr
 	return a, nil
 }
 
-func (m *MeterImpl) RecordBatch(ctx context.Context, labels []label.KeyValue, measurements ...metric.Measurement) {
+func (m *MeterImpl) RecordBatch(ctx context.Context, labels []attribute.KeyValue, measurements ...metric.Measurement) {
 	mm := make([]Measurement, len(measurements))
 	for i := 0; i < len(measurements); i++ {
 		m := measurements[i]
@@ -166,7 +166,7 @@ func (m *MeterImpl) RecordBatch(ctx context.Context, labels []label.KeyValue, me
 	m.collect(ctx, labels, mm)
 }
 
-func (m *MeterImpl) CollectAsync(labels []label.KeyValue, obs ...metric.Observation) {
+func (m *MeterImpl) CollectAsync(labels []attribute.KeyValue, obs ...metric.Observation) {
 	mm := make([]Measurement, len(obs))
 	for i := 0; i < len(obs); i++ {
 		o := obs[i]
@@ -178,7 +178,7 @@ func (m *MeterImpl) CollectAsync(labels []label.KeyValue, obs ...metric.Observat
 	m.collect(context.Background(), labels, mm)
 }
 
-func (m *MeterImpl) collect(ctx context.Context, labels []label.KeyValue, measurements []Measurement) {
+func (m *MeterImpl) collect(ctx context.Context, labels []attribute.KeyValue, measurements []Measurement) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -199,13 +199,13 @@ type Measured struct {
 	Name                   string
 	InstrumentationName    string
 	InstrumentationVersion string
-	Labels                 map[label.Key]label.Value
+	Labels                 map[attribute.Key]attribute.Value
 	Number                 number.Number
 }
 
 // LabelsToMap converts label set to keyValue map, to be easily used in tests
-func LabelsToMap(kvs ...label.KeyValue) map[label.Key]label.Value {
-	m := map[label.Key]label.Value{}
+func LabelsToMap(kvs ...attribute.KeyValue) map[attribute.Key]attribute.Value {
+	m := map[attribute.Key]attribute.Value{}
 	for _, label := range kvs {
 		m[label.Key] = label.Value
 	}

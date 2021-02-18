@@ -26,8 +26,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/stdout"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -46,7 +46,7 @@ type testFixture struct {
 	output   *bytes.Buffer
 }
 
-var testResource = resource.NewWithAttributes(label.String("R", "V"))
+var testResource = resource.NewWithAttributes(attribute.String("R", "V"))
 
 func newFixture(t *testing.T, opts ...stdout.Option) testFixture {
 	buf := &bytes.Buffer{}
@@ -135,7 +135,7 @@ func TestStdoutCounterFormat(t *testing.T) {
 	aggregatortest.CheckedUpdate(fix.t, cagg, number.NewInt64Number(123), &desc)
 	require.NoError(t, cagg.SynchronizedMove(ckpt, &desc))
 
-	checkpointSet.Add(&desc, ckpt, label.String("A", "B"), label.String("C", "D"))
+	checkpointSet.Add(&desc, ckpt, attribute.String("A", "B"), attribute.String("C", "D"))
 
 	fix.Export(checkpointSet)
 
@@ -153,7 +153,7 @@ func TestStdoutLastValueFormat(t *testing.T) {
 	aggregatortest.CheckedUpdate(fix.t, lvagg, number.NewFloat64Number(123.456), &desc)
 	require.NoError(t, lvagg.SynchronizedMove(ckpt, &desc))
 
-	checkpointSet.Add(&desc, ckpt, label.String("A", "B"), label.String("C", "D"))
+	checkpointSet.Add(&desc, ckpt, attribute.String("A", "B"), attribute.String("C", "D"))
 
 	fix.Export(checkpointSet)
 
@@ -173,7 +173,7 @@ func TestStdoutMinMaxSumCount(t *testing.T) {
 	aggregatortest.CheckedUpdate(fix.t, magg, number.NewFloat64Number(876.543), &desc)
 	require.NoError(t, magg.SynchronizedMove(ckpt, &desc))
 
-	checkpointSet.Add(&desc, ckpt, label.String("A", "B"), label.String("C", "D"))
+	checkpointSet.Add(&desc, ckpt, attribute.String("A", "B"), attribute.String("C", "D"))
 
 	fix.Export(checkpointSet)
 
@@ -194,7 +194,7 @@ func TestStdoutValueRecorderFormat(t *testing.T) {
 
 	require.NoError(t, aagg.SynchronizedMove(ckpt, &desc))
 
-	checkpointSet.Add(&desc, ckpt, label.String("A", "B"), label.String("C", "D"))
+	checkpointSet.Add(&desc, ckpt, attribute.String("A", "B"), attribute.String("C", "D"))
 
 	fix.Export(checkpointSet)
 
@@ -244,7 +244,7 @@ func TestStdoutLastValueNotSet(t *testing.T) {
 	lvagg, ckpt := metrictest.Unslice2(lastvalue.New(2))
 	require.NoError(t, lvagg.SynchronizedMove(ckpt, &desc))
 
-	checkpointSet.Add(&desc, lvagg, label.String("A", "B"), label.String("C", "D"))
+	checkpointSet.Add(&desc, lvagg, attribute.String("A", "B"), attribute.String("C", "D"))
 
 	fix.Export(checkpointSet)
 
@@ -255,9 +255,9 @@ func TestStdoutResource(t *testing.T) {
 	type testCase struct {
 		expect string
 		res    *resource.Resource
-		attrs  []label.KeyValue
+		attrs  []attribute.KeyValue
 	}
-	newCase := func(expect string, res *resource.Resource, attrs ...label.KeyValue) testCase {
+	newCase := func(expect string, res *resource.Resource, attrs ...attribute.KeyValue) testCase {
 		return testCase{
 			expect: expect,
 			res:    res,
@@ -266,23 +266,23 @@ func TestStdoutResource(t *testing.T) {
 	}
 	testCases := []testCase{
 		newCase("R1=V1,R2=V2,A=B,C=D",
-			resource.NewWithAttributes(label.String("R1", "V1"), label.String("R2", "V2")),
-			label.String("A", "B"),
-			label.String("C", "D")),
+			resource.NewWithAttributes(attribute.String("R1", "V1"), attribute.String("R2", "V2")),
+			attribute.String("A", "B"),
+			attribute.String("C", "D")),
 		newCase("R1=V1,R2=V2",
-			resource.NewWithAttributes(label.String("R1", "V1"), label.String("R2", "V2")),
+			resource.NewWithAttributes(attribute.String("R1", "V1"), attribute.String("R2", "V2")),
 		),
 		newCase("A=B,C=D",
 			nil,
-			label.String("A", "B"),
-			label.String("C", "D"),
+			attribute.String("A", "B"),
+			attribute.String("C", "D"),
 		),
 		// We explicitly do not de-duplicate between resources
 		// and metric labels in this exporter.
 		newCase("R1=V1,R2=V2,R1=V3,R2=V4",
-			resource.NewWithAttributes(label.String("R1", "V1"), label.String("R2", "V2")),
-			label.String("R1", "V3"),
-			label.String("R2", "V4")),
+			resource.NewWithAttributes(attribute.String("R1", "V1"), attribute.String("R2", "V2")),
+			attribute.String("R1", "V3"),
+			attribute.String("R2", "V4")),
 	}
 
 	for _, tc := range testCases {

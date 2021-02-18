@@ -18,7 +18,7 @@ import (
 	"context"
 	"testing"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -32,10 +32,10 @@ type testSpanProcessor struct {
 
 func (t *testSpanProcessor) OnStart(parent context.Context, s sdktrace.ReadWriteSpan) {
 	psc := trace.RemoteSpanContextFromContext(parent)
-	kv := []label.KeyValue{
+	kv := []attribute.KeyValue{
 		{
 			Key:   "SpanProcessorName",
-			Value: label.StringValue(t.name),
+			Value: attribute.StringValue(t.name),
 		},
 		// Store parent trace ID and span ID as attributes to be read later in
 		// tests so that we "do something" with the parent argument. Real
@@ -43,11 +43,11 @@ func (t *testSpanProcessor) OnStart(parent context.Context, s sdktrace.ReadWrite
 		// a more meaningful way.
 		{
 			Key:   "ParentTraceID",
-			Value: label.StringValue(psc.TraceID.String()),
+			Value: attribute.StringValue(psc.TraceID.String()),
 		},
 		{
 			Key:   "ParentSpanID",
-			Value: label.StringValue(psc.SpanID.String()),
+			Value: attribute.StringValue(psc.SpanID.String()),
 		},
 	}
 	s.AddEvent("OnStart", trace.WithAttributes(kv...))

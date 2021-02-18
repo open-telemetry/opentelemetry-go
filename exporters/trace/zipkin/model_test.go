@@ -24,8 +24,8 @@ import (
 	zkmodel "github.com/openzipkin/zipkin-go/model"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/trace"
@@ -44,16 +44,16 @@ func TestModelConversion(t *testing.T) {
 			Name:         "foo",
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
-			Attributes: []label.KeyValue{
-				label.Int64("attr1", 42),
-				label.String("attr2", "bar"),
+			Attributes: []attribute.KeyValue{
+				attribute.Int64("attr1", 42),
+				attribute.String("attr2", "bar"),
 			},
 			MessageEvents: []trace.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
-					Attributes: []label.KeyValue{
-						label.Int64("eventattr1", 123),
+					Attributes: []attribute.KeyValue{
+						attribute.Int64("eventattr1", 123),
 					},
 				},
 				{
@@ -77,16 +77,16 @@ func TestModelConversion(t *testing.T) {
 			Name:         "foo",
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
-			Attributes: []label.KeyValue{
-				label.Int64("attr1", 42),
-				label.String("attr2", "bar"),
+			Attributes: []attribute.KeyValue{
+				attribute.Int64("attr1", 42),
+				attribute.String("attr2", "bar"),
 			},
 			MessageEvents: []trace.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
-					Attributes: []label.KeyValue{
-						label.Int64("eventattr1", 123),
+					Attributes: []attribute.KeyValue{
+						attribute.Int64("eventattr1", 123),
 					},
 				},
 				{
@@ -109,16 +109,16 @@ func TestModelConversion(t *testing.T) {
 			Name:         "foo",
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
-			Attributes: []label.KeyValue{
-				label.Int64("attr1", 42),
-				label.String("attr2", "bar"),
+			Attributes: []attribute.KeyValue{
+				attribute.Int64("attr1", 42),
+				attribute.String("attr2", "bar"),
 			},
 			MessageEvents: []trace.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
-					Attributes: []label.KeyValue{
-						label.Int64("eventattr1", 123),
+					Attributes: []attribute.KeyValue{
+						attribute.Int64("eventattr1", 123),
 					},
 				},
 				{
@@ -141,16 +141,16 @@ func TestModelConversion(t *testing.T) {
 			Name:         "foo",
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
-			Attributes: []label.KeyValue{
-				label.Int64("attr1", 42),
-				label.String("attr2", "bar"),
+			Attributes: []attribute.KeyValue{
+				attribute.Int64("attr1", 42),
+				attribute.String("attr2", "bar"),
 			},
 			MessageEvents: []trace.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
-					Attributes: []label.KeyValue{
-						label.Int64("eventattr1", 123),
+					Attributes: []attribute.KeyValue{
+						attribute.Int64("eventattr1", 123),
 					},
 				},
 				{
@@ -173,16 +173,16 @@ func TestModelConversion(t *testing.T) {
 			Name:         "foo",
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
-			Attributes: []label.KeyValue{
-				label.Int64("attr1", 42),
-				label.String("attr2", "bar"),
+			Attributes: []attribute.KeyValue{
+				attribute.Int64("attr1", 42),
+				attribute.String("attr2", "bar"),
 			},
 			MessageEvents: []trace.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
-					Attributes: []label.KeyValue{
-						label.Int64("eventattr1", 123),
+					Attributes: []attribute.KeyValue{
+						attribute.Int64("eventattr1", 123),
 					},
 				},
 				{
@@ -205,16 +205,16 @@ func TestModelConversion(t *testing.T) {
 			Name:         "foo",
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
-			Attributes: []label.KeyValue{
-				label.Int64("attr1", 42),
-				label.String("attr2", "bar"),
+			Attributes: []attribute.KeyValue{
+				attribute.Int64("attr1", 42),
+				attribute.String("attr2", "bar"),
 			},
 			MessageEvents: []trace.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
-					Attributes: []label.KeyValue{
-						label.Int64("eventattr1", 123),
+					Attributes: []attribute.KeyValue{
+						attribute.Int64("eventattr1", 123),
 					},
 				},
 				{
@@ -237,16 +237,16 @@ func TestModelConversion(t *testing.T) {
 			Name:         "foo",
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
-			Attributes: []label.KeyValue{
-				label.Int64("attr1", 42),
-				label.String("attr2", "bar"),
+			Attributes: []attribute.KeyValue{
+				attribute.Int64("attr1", 42),
+				attribute.String("attr2", "bar"),
 			},
 			MessageEvents: []trace.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
-					Attributes: []label.KeyValue{
-						label.Int64("eventattr1", 123),
+					Attributes: []attribute.KeyValue{
+						attribute.Int64("eventattr1", 123),
 					},
 				},
 				{
@@ -269,9 +269,9 @@ func TestModelConversion(t *testing.T) {
 			Name:         "foo",
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
-			Attributes: []label.KeyValue{
-				label.Int64("attr1", 42),
-				label.String("attr2", "bar"),
+			Attributes: []attribute.KeyValue{
+				attribute.Int64("attr1", 42),
+				attribute.String("attr2", "bar"),
 			},
 			MessageEvents: nil,
 			StatusCode:    codes.Error,
@@ -288,15 +288,15 @@ func TestModelConversion(t *testing.T) {
 			Name:         "foo",
 			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
 			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
-			Attributes: []label.KeyValue{
-				label.String("error", "false"),
+			Attributes: []attribute.KeyValue{
+				attribute.String("error", "false"),
 			},
 			MessageEvents: []trace.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
-					Attributes: []label.KeyValue{
-						label.Int64("eventattr1", 123),
+					Attributes: []attribute.KeyValue{
+						attribute.Int64("eventattr1", 123),
 					},
 				},
 				{
@@ -677,11 +677,11 @@ func Test_toZipkinTags(t *testing.T) {
 		{
 			name: "attributes",
 			data: &export.SpanSnapshot{
-				Attributes: []label.KeyValue{
-					label.String("key", keyValue),
-					label.Float64("double", doubleValue),
-					label.Int64("uint", uintValue),
-					label.Bool("ok", true),
+				Attributes: []attribute.KeyValue{
+					attribute.String("key", keyValue),
+					attribute.Float64("double", doubleValue),
+					attribute.Int64("uint", uintValue),
+					attribute.Bool("ok", true),
 				},
 			},
 			want: map[string]string{
@@ -704,8 +704,8 @@ func Test_toZipkinTags(t *testing.T) {
 		{
 			name: "omit-noerror",
 			data: &export.SpanSnapshot{
-				Attributes: []label.KeyValue{
-					label.Bool("error", false),
+				Attributes: []attribute.KeyValue{
+					attribute.Bool("error", false),
 				},
 			},
 			want: map[string]string{
@@ -716,9 +716,9 @@ func Test_toZipkinTags(t *testing.T) {
 		{
 			name: "statusCode",
 			data: &export.SpanSnapshot{
-				Attributes: []label.KeyValue{
-					label.String("key", keyValue),
-					label.Bool("error", true),
+				Attributes: []attribute.KeyValue{
+					attribute.String("key", keyValue),
+					attribute.Bool("error", true),
 				},
 				StatusCode:    codes.Error,
 				StatusMessage: statusMessage,
@@ -743,7 +743,7 @@ func Test_toZipkinTags(t *testing.T) {
 		{
 			name: "instrLib-noversion",
 			data: &export.SpanSnapshot{
-				Attributes: []label.KeyValue{},
+				Attributes: []attribute.KeyValue{},
 				InstrumentationLibrary: instrumentation.Library{
 					Name: instrLibName,
 				},
@@ -757,7 +757,7 @@ func Test_toZipkinTags(t *testing.T) {
 		{
 			name: "instrLib-with-version",
 			data: &export.SpanSnapshot{
-				Attributes: []label.KeyValue{},
+				Attributes: []attribute.KeyValue{},
 				InstrumentationLibrary: instrumentation.Library{
 					Name:    instrLibName,
 					Version: instrLibVersion,

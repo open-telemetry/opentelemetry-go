@@ -21,7 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -280,7 +280,7 @@ func TestTraceStatePropagation(t *testing.T) {
 	prop := propagation.TraceContext{}
 	stateHeader := "tracestate"
 	parentHeader := "traceparent"
-	state, err := trace.TraceStateFromKeyValues(label.String("key1", "value1"), label.String("key2", "value2"))
+	state, err := trace.TraceStateFromKeyValues(attribute.String("key1", "value1"), attribute.String("key2", "value2"))
 	if err != nil {
 		t.Fatalf("Unable to construct expected TraceState: %s", err.Error())
 	}
@@ -341,7 +341,7 @@ func TestTraceStatePropagation(t *testing.T) {
 			if diff := cmp.Diff(
 				trace.RemoteSpanContextFromContext(ctx),
 				tt.wantSc,
-				cmp.AllowUnexported(label.Value{}),
+				cmp.AllowUnexported(attribute.Value{}),
 				cmp.AllowUnexported(trace.TraceState{}),
 			); diff != "" {
 				t.Errorf("Extracted tracestate: -got +want %s", diff)
