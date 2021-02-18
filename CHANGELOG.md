@@ -14,13 +14,29 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Rename project default branch from `master` to `main`.
+- Replaced interface `oteltest.SpanRecorder` with its existing implementation
+  `StandardSpanRecorder` (#1542).
+- Default span limit values to 128. (#1535)
+- Rename MaxEventsPerSpan, MaxAttributesPerSpan and MaxLinksPerSpan to EventCountLimit, AttributeCountLimit and LinkCountLimit, and move these fieds into SpanLimits. (#1535)
+
+### Added
+
+- Added `resource.Default()` for use with meter and tracer providers. (#1507)
+- Added `Keys()` method to `propagation.TextMapCarrier` and `propagation.HeaderCarrier` to adapt `http.Header` to this interface. (#1544)
+
+## [0.17.0] - 2020-02-12
+
+### Changed
+
+- Rename project default branch from `master` to `main`. (#1505)
 - Reverse order in which `Resource` attributes are merged, per change in spec. (#1501)
 - Add tooling to maintain "replace" directives in go.mod files automatically. (#1528)
 - Create new modules: otel/metric, otel/trace, otel/oteltest, otel/sdk/export/metric, otel/sdk/metric (#1528)
-- Move metric-related public APIs from otel to otel/metric/global. (#1528)
-- Default span limit values to 128. (#1535)
-- Rename MaxEventsPerSpan, MaxAttributesPerSpan and MaxLinksPerSpan to EventCountLimit, AttributeCountLimit and LinkCountLimit, and move these fieds into SpanLimits. (#1535)
+- Move metric-related public global APIs from otel to otel/metric/global. (#1528)
+
+## Fixed
+
+- Fixed otlpgrpc reconnection issue.
 
 ## [0.16.0] - 2020-01-13
 
@@ -142,6 +158,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `MockSpan` and `MockTracer` types are removed from `go.opentelemetry.io/otel/oteltest`.
    `Tracer` and `Span` from the same module should be used in their place instead. (#1306)
 - `WorkerCount` option is removed from `go.opentelemetry.io/otel/exporters/otlp`. (#1350)
+- Remove the following labels types: INT32, UINT32, UINT64 and FLOAT32. (#1314)
 
 ### Fixed
 
@@ -1042,7 +1059,8 @@ It contains api and sdk for trace and meter.
 - CODEOWNERS file to track owners of this project.
 
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.17.0
 [0.16.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.16.0
 [0.15.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.15.0
 [0.14.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.14.0

@@ -79,6 +79,10 @@ type nilCarrier struct{}
 
 var _ propagation.TextMapCarrier = nilCarrier{}
 
+func (nilCarrier) Keys() []string {
+	return nil
+}
+
 func (nilCarrier) Get(key string) string {
 	return ""
 }

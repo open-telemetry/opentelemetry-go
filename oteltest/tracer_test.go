@@ -295,7 +295,7 @@ func testTracedSpan(t *testing.T, fn func(tracer trace.Tracer, name string) (tra
 
 		e := matchers.NewExpecter(t)
 
-		sr := new(oteltest.StandardSpanRecorder)
+		sr := new(oteltest.SpanRecorder)
 		subject := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr)).Tracer(t.Name())
 		subject.Start(context.Background(), "span1")
 
@@ -315,7 +315,7 @@ func testTracedSpan(t *testing.T, fn func(tracer trace.Tracer, name string) (tra
 
 		e := matchers.NewExpecter(t)
 
-		sr := new(oteltest.StandardSpanRecorder)
+		sr := new(oteltest.SpanRecorder)
 		subject := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr)).Tracer(t.Name())
 
 		numSpans := 2
