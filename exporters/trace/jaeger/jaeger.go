@@ -23,9 +23,9 @@ import (
 	"google.golang.org/api/support/bundler"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
-	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -193,7 +193,7 @@ type Process struct {
 	ServiceName string
 
 	// Tags are added to Jaeger Process exports
-	Tags []label.KeyValue
+	Tags []attribute.KeyValue
 }
 
 // Exporter is an implementation of an OTel SpanSyncer that uploads spans to
@@ -342,31 +342,31 @@ func spanSnapshotToThrift(ss *export.SpanSnapshot) *gen.Span {
 	}
 }
 
-func keyValueToTag(keyValue label.KeyValue) *gen.Tag {
+func keyValueToTag(keyValue attribute.KeyValue) *gen.Tag {
 	var tag *gen.Tag
 	switch keyValue.Value.Type() {
-	case label.STRING:
+	case attribute.STRING:
 		s := keyValue.Value.AsString()
 		tag = &gen.Tag{
 			Key:   string(keyValue.Key),
 			VStr:  &s,
 			VType: gen.TagType_STRING,
 		}
-	case label.BOOL:
+	case attribute.BOOL:
 		b := keyValue.Value.AsBool()
 		tag = &gen.Tag{
 			Key:   string(keyValue.Key),
 			VBool: &b,
 			VType: gen.TagType_BOOL,
 		}
-	case label.INT64:
+	case attribute.INT64:
 		i := keyValue.Value.AsInt64()
 		tag = &gen.Tag{
 			Key:   string(keyValue.Key),
 			VLong: &i,
 			VType: gen.TagType_LONG,
 		}
-	case label.FLOAT64:
+	case attribute.FLOAT64:
 		f := keyValue.Value.AsFloat64()
 		tag = &gen.Tag{
 			Key:     string(keyValue.Key),

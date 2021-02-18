@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package label_test
+package attribute_test
 
 import (
 	"regexp"
 	"testing"
 
-	"go.opentelemetry.io/otel/label"
-
 	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 type testCase struct {
-	kvs []label.KeyValue
+	kvs []attribute.KeyValue
 
 	keyRe *regexp.Regexp
 
@@ -32,14 +32,14 @@ type testCase struct {
 	fullEnc  string
 }
 
-func expect(enc string, kvs ...label.KeyValue) testCase {
+func expect(enc string, kvs ...attribute.KeyValue) testCase {
 	return testCase{
 		kvs:      kvs,
 		encoding: enc,
 	}
 }
 
-func expectFiltered(enc, filter, fullEnc string, kvs ...label.KeyValue) testCase {
+func expectFiltered(enc, filter, fullEnc string, kvs ...attribute.KeyValue) testCase {
 	return testCase{
 		kvs:      kvs,
 		keyRe:    regexp.MustCompile(filter),
@@ -50,26 +50,26 @@ func expectFiltered(enc, filter, fullEnc string, kvs ...label.KeyValue) testCase
 
 func TestSetDedup(t *testing.T) {
 	cases := []testCase{
-		expect("A=B", label.String("A", "2"), label.String("A", "B")),
-		expect("A=B", label.String("A", "2"), label.Int("A", 1), label.String("A", "B")),
-		expect("A=B", label.String("A", "B"), label.String("A", "C"), label.String("A", "D"), label.String("A", "B")),
+		expect("A=B", attribute.String("A", "2"), attribute.String("A", "B")),
+		expect("A=B", attribute.String("A", "2"), attribute.Int("A", 1), attribute.String("A", "B")),
+		expect("A=B", attribute.String("A", "B"), attribute.String("A", "C"), attribute.String("A", "D"), attribute.String("A", "B")),
 
-		expect("A=B,C=D", label.String("A", "1"), label.String("C", "D"), label.String("A", "B")),
-		expect("A=B,C=D", label.String("A", "2"), label.String("A", "B"), label.String("C", "D")),
-		expect("A=B,C=D", label.Float64("C", 1.2), label.String("A", "2"), label.String("A", "B"), label.String("C", "D")),
-		expect("A=B,C=D", label.String("C", "D"), label.String("A", "B"), label.String("A", "C"), label.String("A", "D"), label.String("A", "B")),
-		expect("A=B,C=D", label.String("A", "B"), label.String("C", "D"), label.String("A", "C"), label.String("A", "D"), label.String("A", "B")),
-		expect("A=B,C=D", label.String("A", "B"), label.String("A", "C"), label.String("A", "D"), label.String("A", "B"), label.String("C", "D")),
+		expect("A=B,C=D", attribute.String("A", "1"), attribute.String("C", "D"), attribute.String("A", "B")),
+		expect("A=B,C=D", attribute.String("A", "2"), attribute.String("A", "B"), attribute.String("C", "D")),
+		expect("A=B,C=D", attribute.Float64("C", 1.2), attribute.String("A", "2"), attribute.String("A", "B"), attribute.String("C", "D")),
+		expect("A=B,C=D", attribute.String("C", "D"), attribute.String("A", "B"), attribute.String("A", "C"), attribute.String("A", "D"), attribute.String("A", "B")),
+		expect("A=B,C=D", attribute.String("A", "B"), attribute.String("C", "D"), attribute.String("A", "C"), attribute.String("A", "D"), attribute.String("A", "B")),
+		expect("A=B,C=D", attribute.String("A", "B"), attribute.String("A", "C"), attribute.String("A", "D"), attribute.String("A", "B"), attribute.String("C", "D")),
 	}
-	enc := label.DefaultEncoder()
+	enc := attribute.DefaultEncoder()
 
-	s2d := map[string][]label.Distinct{}
-	d2s := map[label.Distinct][]string{}
+	s2d := map[string][]attribute.Distinct{}
+	d2s := map[attribute.Distinct][]string{}
 
 	for _, tc := range cases {
-		cpy := make([]label.KeyValue, len(tc.kvs))
+		cpy := make([]attribute.KeyValue, len(tc.kvs))
 		copy(cpy, tc.kvs)
-		sl := label.NewSet(cpy...)
+		sl := attribute.NewSet(cpy...)
 
 		// Ensure that the input was reordered but no elements went missing.
 		require.ElementsMatch(t, tc.kvs, cpy)
@@ -129,19 +129,19 @@ func TestSetDedup(t *testing.T) {
 }
 
 func TestUniqueness(t *testing.T) {
-	short := []label.KeyValue{
-		label.String("A", "0"),
-		label.String("B", "2"),
-		label.String("A", "1"),
+	short := []attribute.KeyValue{
+		attribute.String("A", "0"),
+		attribute.String("B", "2"),
+		attribute.String("A", "1"),
 	}
-	long := []label.KeyValue{
-		label.String("B", "2"),
-		label.String("C", "5"),
-		label.String("B", "2"),
-		label.String("C", "1"),
-		label.String("A", "4"),
-		label.String("C", "3"),
-		label.String("A", "1"),
+	long := []attribute.KeyValue{
+		attribute.String("B", "2"),
+		attribute.String("C", "5"),
+		attribute.String("B", "2"),
+		attribute.String("C", "1"),
+		attribute.String("A", "4"),
+		attribute.String("C", "3"),
+		attribute.String("A", "1"),
 	}
 	cases := []testCase{
 		expectFiltered("A=1", "^A$", "B=2", short...),
@@ -154,16 +154,16 @@ func TestUniqueness(t *testing.T) {
 		expectFiltered("C=3", "C", "A=1,B=2", long...),
 		expectFiltered("", "D", "A=1,B=2,C=3", long...),
 	}
-	enc := label.DefaultEncoder()
+	enc := attribute.DefaultEncoder()
 
 	for _, tc := range cases {
-		cpy := make([]label.KeyValue, len(tc.kvs))
+		cpy := make([]attribute.KeyValue, len(tc.kvs))
 		copy(cpy, tc.kvs)
-		distinct, uniq := label.NewSetWithFiltered(cpy, func(label label.KeyValue) bool {
+		distinct, uniq := attribute.NewSetWithFiltered(cpy, func(label attribute.KeyValue) bool {
 			return tc.keyRe.MatchString(string(label.Key))
 		})
 
-		full := label.NewSet(uniq...)
+		full := attribute.NewSet(uniq...)
 
 		require.Equal(t, tc.encoding, distinct.Encoded(enc))
 		require.Equal(t, tc.fullEnc, full.Encoded(enc))
@@ -171,7 +171,7 @@ func TestUniqueness(t *testing.T) {
 }
 
 func TestLookup(t *testing.T) {
-	set := label.NewSet(label.Int("C", 3), label.Int("A", 1), label.Int("B", 2))
+	set := attribute.NewSet(attribute.Int("C", 3), attribute.Int("A", 1), attribute.Int("B", 2))
 
 	value, has := set.Value("C")
 	require.True(t, has)

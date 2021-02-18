@@ -20,24 +20,24 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 func TestNewSpanConfig(t *testing.T) {
-	k1v1 := label.String("key1", "value1")
-	k1v2 := label.String("key1", "value2")
-	k2v2 := label.String("key2", "value2")
+	k1v1 := attribute.String("key1", "value1")
+	k1v2 := attribute.String("key1", "value2")
+	k2v2 := attribute.String("key2", "value2")
 
 	timestamp0 := time.Unix(0, 0)
 	timestamp1 := time.Unix(0, 0)
 
 	link1 := Link{
 		SpanContext: SpanContext{TraceID: TraceID([16]byte{1, 1}), SpanID: SpanID{3}},
-		Attributes:  []label.KeyValue{k1v1},
+		Attributes:  []attribute.KeyValue{k1v1},
 	}
 	link2 := Link{
 		SpanContext: SpanContext{TraceID: TraceID([16]byte{1, 1}), SpanID: SpanID{3}},
-		Attributes:  []label.KeyValue{k1v2, k2v2},
+		Attributes:  []attribute.KeyValue{k1v2, k2v2},
 	}
 
 	tests := []struct {
@@ -54,7 +54,7 @@ func TestNewSpanConfig(t *testing.T) {
 				WithAttributes(k1v1),
 			},
 			&SpanConfig{
-				Attributes: []label.KeyValue{k1v1},
+				Attributes: []attribute.KeyValue{k1v1},
 			},
 		},
 		{
@@ -66,7 +66,7 @@ func TestNewSpanConfig(t *testing.T) {
 			},
 			&SpanConfig{
 				// No uniqueness is guaranteed by the API.
-				Attributes: []label.KeyValue{k1v1, k1v2, k2v2},
+				Attributes: []attribute.KeyValue{k1v1, k1v2, k2v2},
 			},
 		},
 		{
@@ -75,7 +75,7 @@ func TestNewSpanConfig(t *testing.T) {
 			},
 			&SpanConfig{
 				// No uniqueness is guaranteed by the API.
-				Attributes: []label.KeyValue{k1v1, k1v2, k2v2},
+				Attributes: []attribute.KeyValue{k1v1, k1v2, k2v2},
 			},
 		},
 		{
@@ -180,7 +180,7 @@ func TestNewSpanConfig(t *testing.T) {
 				WithSpanKind(SpanKindConsumer),
 			},
 			&SpanConfig{
-				Attributes: []label.KeyValue{k1v1},
+				Attributes: []attribute.KeyValue{k1v1},
 				Timestamp:  timestamp0,
 				Links:      []Link{link1, link2},
 				Record:     true,

@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -35,7 +35,7 @@ import (
 )
 
 var Must = metric.Must
-var testResource = resource.NewWithAttributes(label.String("R", "V"))
+var testResource = resource.NewWithAttributes(attribute.String("R", "V"))
 
 type handler struct {
 	sync.Mutex
@@ -209,19 +209,19 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 		keySets = 2
 		repeats = 3
 	)
-	var keysA []label.Key
-	var keysB []label.Key
+	var keysA []attribute.Key
+	var keysB []attribute.Key
 
 	for i := 0; i < maxKeys; i++ {
-		keysA = append(keysA, label.Key(fmt.Sprintf("A%03d", i)))
-		keysB = append(keysB, label.Key(fmt.Sprintf("B%03d", i)))
+		keysA = append(keysA, attribute.Key(fmt.Sprintf("A%03d", i)))
+		keysB = append(keysB, attribute.Key(fmt.Sprintf("B%03d", i)))
 	}
 
-	var allExpect [][]label.KeyValue
+	var allExpect [][]attribute.KeyValue
 	for numKeys := 0; numKeys < maxKeys; numKeys++ {
 
-		var kvsA []label.KeyValue
-		var kvsB []label.KeyValue
+		var kvsA []attribute.KeyValue
+		var kvsB []attribute.KeyValue
 		for r := 0; r < repeats; r++ {
 			for i := 0; i < numKeys; i++ {
 				kvsA = append(kvsA, keysA[i].Int(r))
@@ -229,8 +229,8 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 			}
 		}
 
-		var expectA []label.KeyValue
-		var expectB []label.KeyValue
+		var expectA []attribute.KeyValue
+		var expectB []attribute.KeyValue
 		for i := 0; i < numKeys; i++ {
 			expectA = append(expectA, keysA[i].Int(repeats-1))
 			expectB = append(expectB, keysB[i].Int(repeats-1))
@@ -251,7 +251,7 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 
 	sdk.Collect(ctx)
 
-	var actual [][]label.KeyValue
+	var actual [][]attribute.KeyValue
 	for _, rec := range processor.accumulations {
 		sum, _ := rec.Aggregator().(aggregation.Sum).Sum()
 		require.Equal(t, sum, number.NewInt64Number(2))
@@ -263,32 +263,32 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 	require.ElementsMatch(t, allExpect, actual)
 }
 
-func newSetIter(kvs ...label.KeyValue) label.Iterator {
-	labels := label.NewSet(kvs...)
+func newSetIter(kvs ...attribute.KeyValue) attribute.Iterator {
+	labels := attribute.NewSet(kvs...)
 	return labels.Iter()
 }
 
 func TestDefaultLabelEncoder(t *testing.T) {
-	encoder := label.DefaultEncoder()
+	encoder := attribute.DefaultEncoder()
 
-	encoded := encoder.Encode(newSetIter(label.String("A", "B"), label.String("C", "D")))
+	encoded := encoder.Encode(newSetIter(attribute.String("A", "B"), attribute.String("C", "D")))
 	require.Equal(t, `A=B,C=D`, encoded)
 
-	encoded = encoder.Encode(newSetIter(label.String("A", "B,c=d"), label.String(`C\`, "D")))
+	encoded = encoder.Encode(newSetIter(attribute.String("A", "B,c=d"), attribute.String(`C\`, "D")))
 	require.Equal(t, `A=B\,c\=d,C\\=D`, encoded)
 
-	encoded = encoder.Encode(newSetIter(label.String(`\`, `=`), label.String(`,`, `\`)))
+	encoded = encoder.Encode(newSetIter(attribute.String(`\`, `=`), attribute.String(`,`, `\`)))
 	require.Equal(t, `\,=\\,\\=\=`, encoded)
 
 	// Note: the label encoder does not sort or de-dup values,
 	// that is done in Labels(...).
 	encoded = encoder.Encode(newSetIter(
-		label.Int("I", 1),
-		label.Int64("I64", 1),
-		label.Float64("F64", 1),
-		label.Float64("F64", 1),
-		label.String("S", "1"),
-		label.Bool("B", true),
+		attribute.Int("I", 1),
+		attribute.Int64("I64", 1),
+		attribute.Float64("F64", 1),
+		attribute.Float64("F64", 1),
+		attribute.String("S", "1"),
+		attribute.Bool("B", true),
 	))
 	require.Equal(t, "B=true,F64=1,I=1,I64=1,S=1", encoded)
 }
@@ -299,42 +299,42 @@ func TestObserverCollection(t *testing.T) {
 	mult := 1
 
 	_ = Must(meter).NewFloat64ValueObserver("float.valueobserver.lastvalue", func(_ context.Context, result metric.Float64ObserverResult) {
-		result.Observe(float64(mult), label.String("A", "B"))
+		result.Observe(float64(mult), attribute.String("A", "B"))
 		// last value wins
-		result.Observe(float64(-mult), label.String("A", "B"))
-		result.Observe(float64(-mult), label.String("C", "D"))
+		result.Observe(float64(-mult), attribute.String("A", "B"))
+		result.Observe(float64(-mult), attribute.String("C", "D"))
 	})
 	_ = Must(meter).NewInt64ValueObserver("int.valueobserver.lastvalue", func(_ context.Context, result metric.Int64ObserverResult) {
-		result.Observe(int64(-mult), label.String("A", "B"))
+		result.Observe(int64(-mult), attribute.String("A", "B"))
 		result.Observe(int64(mult))
 		// last value wins
-		result.Observe(int64(mult), label.String("A", "B"))
+		result.Observe(int64(mult), attribute.String("A", "B"))
 		result.Observe(int64(mult))
 	})
 
 	_ = Must(meter).NewFloat64SumObserver("float.sumobserver.sum", func(_ context.Context, result metric.Float64ObserverResult) {
-		result.Observe(float64(mult), label.String("A", "B"))
-		result.Observe(float64(2*mult), label.String("A", "B"))
-		result.Observe(float64(mult), label.String("C", "D"))
+		result.Observe(float64(mult), attribute.String("A", "B"))
+		result.Observe(float64(2*mult), attribute.String("A", "B"))
+		result.Observe(float64(mult), attribute.String("C", "D"))
 	})
 	_ = Must(meter).NewInt64SumObserver("int.sumobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
-		result.Observe(int64(2*mult), label.String("A", "B"))
+		result.Observe(int64(2*mult), attribute.String("A", "B"))
 		result.Observe(int64(mult))
 		// last value wins
-		result.Observe(int64(mult), label.String("A", "B"))
+		result.Observe(int64(mult), attribute.String("A", "B"))
 		result.Observe(int64(mult))
 	})
 
 	_ = Must(meter).NewFloat64UpDownSumObserver("float.updownsumobserver.sum", func(_ context.Context, result metric.Float64ObserverResult) {
-		result.Observe(float64(mult), label.String("A", "B"))
-		result.Observe(float64(-2*mult), label.String("A", "B"))
-		result.Observe(float64(mult), label.String("C", "D"))
+		result.Observe(float64(mult), attribute.String("A", "B"))
+		result.Observe(float64(-2*mult), attribute.String("A", "B"))
+		result.Observe(float64(mult), attribute.String("C", "D"))
 	})
 	_ = Must(meter).NewInt64UpDownSumObserver("int.updownsumobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
-		result.Observe(int64(2*mult), label.String("A", "B"))
+		result.Observe(int64(2*mult), attribute.String("A", "B"))
 		result.Observe(int64(mult))
 		// last value wins
-		result.Observe(int64(mult), label.String("A", "B"))
+		result.Observe(int64(mult), attribute.String("A", "B"))
 		result.Observe(int64(-mult))
 	})
 
@@ -347,7 +347,7 @@ func TestObserverCollection(t *testing.T) {
 		collected := sdk.Collect(ctx)
 		require.Equal(t, collected, len(processor.accumulations))
 
-		out := processortest.NewOutput(label.DefaultEncoder())
+		out := processortest.NewOutput(attribute.DefaultEncoder())
 		for _, rec := range processor.accumulations {
 			require.NoError(t, out.AddAccumulation(rec))
 		}
@@ -377,13 +377,13 @@ func TestSumObserverInputRange(t *testing.T) {
 
 	// TODO: these tests are testing for negative values, not for _descending values_. Fix.
 	_ = Must(meter).NewFloat64SumObserver("float.sumobserver.sum", func(_ context.Context, result metric.Float64ObserverResult) {
-		result.Observe(-2, label.String("A", "B"))
+		result.Observe(-2, attribute.String("A", "B"))
 		require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
-		result.Observe(-1, label.String("C", "D"))
+		result.Observe(-1, attribute.String("C", "D"))
 		require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
 	})
 	_ = Must(meter).NewInt64SumObserver("int.sumobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
-		result.Observe(-1, label.String("A", "B"))
+		result.Observe(-1, attribute.String("A", "B"))
 		require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
 		result.Observe(-1)
 		require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
@@ -412,8 +412,8 @@ func TestObserverBatch(t *testing.T) {
 	var batch = Must(meter).NewBatchObserver(
 		func(_ context.Context, result metric.BatchObserverResult) {
 			result.Observe(
-				[]label.KeyValue{
-					label.String("A", "B"),
+				[]attribute.KeyValue{
+					attribute.String("A", "B"),
 				},
 				floatValueObs.Observation(1),
 				floatValueObs.Observation(-1),
@@ -425,8 +425,8 @@ func TestObserverBatch(t *testing.T) {
 				intUpDownSumObs.Observation(-100),
 			)
 			result.Observe(
-				[]label.KeyValue{
-					label.String("C", "D"),
+				[]attribute.KeyValue{
+					attribute.String("C", "D"),
 				},
 				floatValueObs.Observation(-1),
 				floatSumObs.Observation(-1),
@@ -452,7 +452,7 @@ func TestObserverBatch(t *testing.T) {
 
 	require.Equal(t, collected, len(processor.accumulations))
 
-	out := processortest.NewOutput(label.DefaultEncoder())
+	out := processortest.NewOutput(attribute.DefaultEncoder())
 	for _, rec := range processor.accumulations {
 		require.NoError(t, out.AddAccumulation(rec))
 	}
@@ -485,9 +485,9 @@ func TestRecordBatch(t *testing.T) {
 
 	sdk.RecordBatch(
 		ctx,
-		[]label.KeyValue{
-			label.String("A", "B"),
-			label.String("C", "D"),
+		[]attribute.KeyValue{
+			attribute.String("A", "B"),
+			attribute.String("C", "D"),
 		},
 		counter1.Measurement(1),
 		counter2.Measurement(2),
@@ -497,7 +497,7 @@ func TestRecordBatch(t *testing.T) {
 
 	sdk.Collect(ctx)
 
-	out := processortest.NewOutput(label.DefaultEncoder())
+	out := processortest.NewOutput(attribute.DefaultEncoder())
 	for _, rec := range processor.accumulations {
 		require.NoError(t, out.AddAccumulation(rec))
 	}
@@ -517,8 +517,8 @@ func TestRecordPersistence(t *testing.T) {
 	meter, sdk, processor := newSDK(t)
 
 	c := Must(meter).NewFloat64Counter("name.sum")
-	b := c.Bind(label.String("bound", "true"))
-	uk := label.String("bound", "false")
+	b := c.Bind(attribute.String("bound", "true"))
+	uk := attribute.String("bound", "false")
 
 	for i := 0; i < 100; i++ {
 		c.Add(ctx, 1, uk)
@@ -579,7 +579,7 @@ func TestSyncInAsync(t *testing.T) {
 
 	sdk.Collect(ctx)
 
-	out := processortest.NewOutput(label.DefaultEncoder())
+	out := processortest.NewOutput(attribute.DefaultEncoder())
 	for _, rec := range processor.accumulations {
 		require.NoError(t, out.AddAccumulation(rec))
 	}

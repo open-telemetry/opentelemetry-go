@@ -19,12 +19,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel/attribute"
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
-	"go.opentelemetry.io/otel/label"
 )
 
 type attributeTest struct {
-	attrs    []label.KeyValue
+	attrs    []attribute.KeyValue
 	expected []*commonpb.KeyValue
 }
 
@@ -32,12 +32,12 @@ func TestAttributes(t *testing.T) {
 	for _, test := range []attributeTest{
 		{nil, nil},
 		{
-			[]label.KeyValue{
-				label.Int("int to int", 123),
-				label.Int64("int64 to int64", 1234567),
-				label.Float64("float64 to double", 1.61),
-				label.String("string to string", "string"),
-				label.Bool("bool to bool", true),
+			[]attribute.KeyValue{
+				attribute.Int("int to int", 123),
+				attribute.Int64("int64 to int64", 1234567),
+				attribute.Float64("float64 to double", 1.61),
+				attribute.String("string to string", "string"),
+				attribute.Bool("bool to bool", true),
 			},
 			[]*commonpb.KeyValue{
 				{
@@ -111,8 +111,8 @@ func TestArrayAttributes(t *testing.T) {
 	for _, test := range []attributeTest{
 		{nil, nil},
 		{
-			[]label.KeyValue{
-				label.Array("invalid", [][]string{{"1", "2"}, {"a"}}),
+			[]attribute.KeyValue{
+				attribute.Array("invalid", [][]string{{"1", "2"}, {"a"}}),
 			},
 			[]*commonpb.KeyValue{
 				{
@@ -126,12 +126,12 @@ func TestArrayAttributes(t *testing.T) {
 			},
 		},
 		{
-			[]label.KeyValue{
-				label.Array("bool array to bool array", []bool{true, false}),
-				label.Array("int array to int64 array", []int{1, 2, 3}),
-				label.Array("int64 array to int64 array", []int64{1, 2, 3}),
-				label.Array("float64 array to double array", []float64{1.11, 2.22, 3.33}),
-				label.Array("string array to string array", []string{"foo", "bar", "baz"}),
+			[]attribute.KeyValue{
+				attribute.Array("bool array to bool array", []bool{true, false}),
+				attribute.Array("int array to int64 array", []int{1, 2, 3}),
+				attribute.Array("int64 array to int64 array", []int64{1, 2, 3}),
+				attribute.Array("float64 array to double array", []float64{1.11, 2.22, 3.33}),
+				attribute.Array("string array to string array", []string{"foo", "bar", "baz"}),
 			},
 			[]*commonpb.KeyValue{
 				newOTelBoolArray("bool array to bool array", []bool{true, false}),

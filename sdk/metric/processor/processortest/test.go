@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -40,14 +40,14 @@ type (
 	// attributes.
 	mapKey struct {
 		desc     *metric.Descriptor
-		labels   label.Distinct
-		resource label.Distinct
+		labels   attribute.Distinct
+		resource attribute.Distinct
 	}
 
 	// mapValue is value stored in a processor used to produce a
 	// CheckpointSet.
 	mapValue struct {
-		labels     *label.Set
+		labels     *attribute.Set
 		resource   *resource.Resource
 		aggregator export.Aggregator
 	}
@@ -55,7 +55,7 @@ type (
 	// Output implements export.CheckpointSet.
 	Output struct {
 		m            map[mapKey]mapValue
-		labelEncoder label.Encoder
+		labelEncoder attribute.Encoder
 		sync.RWMutex
 	}
 
@@ -101,7 +101,7 @@ type (
 //
 // Where in the example A=1,B=2 is the encoded labels and R=V is the
 // encoded resource value.
-func NewProcessor(selector export.AggregatorSelector, encoder label.Encoder) *Processor {
+func NewProcessor(selector export.AggregatorSelector, encoder attribute.Encoder) *Processor {
 	return &Processor{
 		AggregatorSelector: selector,
 		output:             NewOutput(encoder),
@@ -202,7 +202,7 @@ func (testAggregatorSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...
 // (from an Accumulator) or an expected set of Records (from a
 // Processor).  If testing with an Accumulator, it may be simpler to
 // use the test Processor in this package.
-func NewOutput(labelEncoder label.Encoder) *Output {
+func NewOutput(labelEncoder attribute.Encoder) *Output {
 	return &Output{
 		m:            make(map[mapKey]mapValue),
 		labelEncoder: labelEncoder,
@@ -318,7 +318,7 @@ func (o *Output) AddAccumulation(acc export.Accumulation) error {
 //
 // Where in the example A=1,B=2 is the encoded labels and R=V is the
 // encoded resource value.
-func NewExporter(selector export.ExportKindSelector, encoder label.Encoder) *Exporter {
+func NewExporter(selector export.ExportKindSelector, encoder attribute.Encoder) *Exporter {
 	return &Exporter{
 		ExportKindSelector: selector,
 		output:             NewOutput(encoder),

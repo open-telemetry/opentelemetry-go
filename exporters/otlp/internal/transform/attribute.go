@@ -17,14 +17,14 @@ package transform
 import (
 	"reflect"
 
+	"go.opentelemetry.io/otel/attribute"
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
-	"go.opentelemetry.io/otel/label"
 
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // Attributes transforms a slice of KeyValues into a slice of OTLP attribute key-values.
-func Attributes(attrs []label.KeyValue) []*commonpb.KeyValue {
+func Attributes(attrs []attribute.KeyValue) []*commonpb.KeyValue {
 	if len(attrs) == 0 {
 		return nil
 	}
@@ -50,29 +50,29 @@ func ResourceAttributes(resource *resource.Resource) []*commonpb.KeyValue {
 	return out
 }
 
-func toAttribute(v label.KeyValue) *commonpb.KeyValue {
+func toAttribute(v attribute.KeyValue) *commonpb.KeyValue {
 	result := &commonpb.KeyValue{
 		Key:   string(v.Key),
 		Value: new(commonpb.AnyValue),
 	}
 	switch v.Value.Type() {
-	case label.BOOL:
+	case attribute.BOOL:
 		result.Value.Value = &commonpb.AnyValue_BoolValue{
 			BoolValue: v.Value.AsBool(),
 		}
-	case label.INT64:
+	case attribute.INT64:
 		result.Value.Value = &commonpb.AnyValue_IntValue{
 			IntValue: v.Value.AsInt64(),
 		}
-	case label.FLOAT64:
+	case attribute.FLOAT64:
 		result.Value.Value = &commonpb.AnyValue_DoubleValue{
 			DoubleValue: v.Value.AsFloat64(),
 		}
-	case label.STRING:
+	case attribute.STRING:
 		result.Value.Value = &commonpb.AnyValue_StringValue{
 			StringValue: v.Value.AsString(),
 		}
-	case label.ARRAY:
+	case attribute.ARRAY:
 		result.Value.Value = &commonpb.AnyValue_ArrayValue{
 			ArrayValue: &commonpb.ArrayValue{
 				Values: arrayValues(v),
@@ -86,7 +86,7 @@ func toAttribute(v label.KeyValue) *commonpb.KeyValue {
 	return result
 }
 
-func arrayValues(kv label.KeyValue) []*commonpb.AnyValue {
+func arrayValues(kv attribute.KeyValue) []*commonpb.AnyValue {
 	a := kv.Value.AsArray()
 	aType := reflect.TypeOf(a)
 	var valueFunc func(reflect.Value) *commonpb.AnyValue

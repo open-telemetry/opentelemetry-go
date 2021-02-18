@@ -17,7 +17,7 @@ package trace
 import (
 	"time"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // TracerConfig is a group of options for a Tracer.
@@ -44,7 +44,7 @@ type TracerOption interface {
 // SpanConfig is a group of options for a Span.
 type SpanConfig struct {
 	// Attributes describe the associated qualities of a Span.
-	Attributes []label.KeyValue
+	Attributes []attribute.KeyValue
 	// Timestamp is a time in a Span life-cycle.
 	Timestamp time.Time
 	// Links are the associations a Span has with other Spans.
@@ -104,12 +104,12 @@ type LifeCycleOption interface {
 	EventOption
 }
 
-type attributeSpanOption []label.KeyValue
+type attributeSpanOption []attribute.KeyValue
 
 func (o attributeSpanOption) ApplySpan(c *SpanConfig)  { o.apply(c) }
 func (o attributeSpanOption) ApplyEvent(c *SpanConfig) { o.apply(c) }
 func (o attributeSpanOption) apply(c *SpanConfig) {
-	c.Attributes = append(c.Attributes, []label.KeyValue(o)...)
+	c.Attributes = append(c.Attributes, []attribute.KeyValue(o)...)
 }
 
 // WithAttributes adds the attributes related to a span life-cycle event.
@@ -121,7 +121,7 @@ func (o attributeSpanOption) apply(c *SpanConfig) {
 // If multiple of these options are passed the attributes of each successive
 // option will extend the attributes instead of overwriting. There is no
 // guarantee of uniqueness in the resulting attributes.
-func WithAttributes(attributes ...label.KeyValue) LifeCycleOption {
+func WithAttributes(attributes ...attribute.KeyValue) LifeCycleOption {
 	return attributeSpanOption(attributes)
 }
 

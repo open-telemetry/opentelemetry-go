@@ -24,11 +24,11 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
 	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
 	resourcepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/resource/v1"
 
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -170,7 +170,7 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 	}
 
 	// group by unique Resource string.
-	grouped := make(map[label.Distinct]resourceBatch)
+	grouped := make(map[attribute.Distinct]resourceBatch)
 	for res := range in {
 		if res.Err != nil {
 			errStrings = append(errStrings, res.Err.Error())
@@ -611,7 +611,7 @@ func histogramPoint(record export.Record, ek export.ExportKind, a aggregation.Hi
 }
 
 // stringKeyValues transforms a label iterator into an OTLP StringKeyValues.
-func stringKeyValues(iter label.Iterator) []*commonpb.StringKeyValue {
+func stringKeyValues(iter attribute.Iterator) []*commonpb.StringKeyValue {
 	l := iter.Len()
 	if l == 0 {
 		return nil

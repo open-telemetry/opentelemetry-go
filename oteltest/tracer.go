@@ -18,7 +18,7 @@ import (
 	"context"
 	"time"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -46,7 +46,7 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 	span := &Span{
 		tracer:     t,
 		startTime:  startTime,
-		attributes: make(map[label.Key]label.Value),
+		attributes: make(map[attribute.Key]attribute.Value),
 		links:      []trace.Link{},
 		spanKind:   c.SpanKind,
 	}
@@ -54,17 +54,17 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 	if c.NewRoot {
 		span.spanContext = trace.SpanContext{}
 
-		iodKey := label.Key("ignored-on-demand")
+		iodKey := attribute.Key("ignored-on-demand")
 		if lsc := trace.SpanContextFromContext(ctx); lsc.IsValid() {
 			span.links = append(span.links, trace.Link{
 				SpanContext: lsc,
-				Attributes:  []label.KeyValue{iodKey.String("current")},
+				Attributes:  []attribute.KeyValue{iodKey.String("current")},
 			})
 		}
 		if rsc := trace.RemoteSpanContextFromContext(ctx); rsc.IsValid() {
 			span.links = append(span.links, trace.Link{
 				SpanContext: rsc,
-				Attributes:  []label.KeyValue{iodKey.String("remote")},
+				Attributes:  []attribute.KeyValue{iodKey.String("remote")},
 			})
 		}
 	} else {

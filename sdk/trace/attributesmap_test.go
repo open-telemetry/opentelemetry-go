@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"testing"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 const testKeyFmt = "test-key-%d"
@@ -28,7 +28,7 @@ func TestAttributesMap(t *testing.T) {
 	attrMap := newAttributesMap(wantCapacity)
 
 	for i := 0; i < 256; i++ {
-		attrMap.add(label.Int(fmt.Sprintf(testKeyFmt, i), i))
+		attrMap.add(attribute.Int(fmt.Sprintf(testKeyFmt, i), i))
 	}
 	if attrMap.capacity != wantCapacity {
 		t.Errorf("attrMap.capacity: got '%d'; want '%d'", attrMap.capacity, wantCapacity)
@@ -39,14 +39,14 @@ func TestAttributesMap(t *testing.T) {
 	}
 
 	for i := 0; i < wantCapacity; i++ {
-		key := label.Key(fmt.Sprintf(testKeyFmt, i))
+		key := attribute.Key(fmt.Sprintf(testKeyFmt, i))
 		_, ok := attrMap.attributes[key]
 		if ok {
 			t.Errorf("key %q should be dropped", testKeyFmt)
 		}
 	}
 	for i := wantCapacity; i < 256; i++ {
-		key := label.Key(fmt.Sprintf(testKeyFmt, i))
+		key := attribute.Key(fmt.Sprintf(testKeyFmt, i))
 		_, ok := attrMap.attributes[key]
 		if !ok {
 			t.Errorf("key %q should not be dropped", key)
@@ -58,7 +58,7 @@ func TestAttributesMapGetOldestRemoveOldest(t *testing.T) {
 	attrMap := newAttributesMap(128)
 
 	for i := 0; i < 128; i++ {
-		attrMap.add(label.Int(fmt.Sprintf(testKeyFmt, i), i))
+		attrMap.add(attribute.Int(fmt.Sprintf(testKeyFmt, i), i))
 	}
 
 	attrMap.removeOldest()
@@ -66,7 +66,7 @@ func TestAttributesMapGetOldestRemoveOldest(t *testing.T) {
 	attrMap.removeOldest()
 
 	for i := 0; i < 3; i++ {
-		key := label.Key(fmt.Sprintf(testKeyFmt, i))
+		key := attribute.Key(fmt.Sprintf(testKeyFmt, i))
 		_, ok := attrMap.attributes[key]
 		if ok {
 			t.Errorf("key %q should be removed", key)
@@ -78,7 +78,7 @@ func TestAttributesMapToKeyValue(t *testing.T) {
 	attrMap := newAttributesMap(128)
 
 	for i := 0; i < 128; i++ {
-		attrMap.add(label.Int(fmt.Sprintf(testKeyFmt, i), i))
+		attrMap.add(attribute.Int(fmt.Sprintf(testKeyFmt, i), i))
 	}
 
 	kv := attrMap.toKeyValue()
@@ -94,7 +94,7 @@ func BenchmarkAttributesMapToKeyValue(b *testing.B) {
 	attrMap := newAttributesMap(128)
 
 	for i := 0; i < 128; i++ {
-		attrMap.add(label.Int(fmt.Sprintf(testKeyFmt, i), i))
+		attrMap.add(attribute.Int(fmt.Sprintf(testKeyFmt, i), i))
 	}
 
 	for n := 0; n < b.N; n++ {

@@ -17,7 +17,7 @@ package parent
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -46,8 +46,8 @@ func addLinkIfValid(links []trace.Link, sc trace.SpanContext, kind string) []tra
 	}
 	return append(links, trace.Link{
 		SpanContext: sc,
-		Attributes: []label.KeyValue{
-			label.String("ignored-on-demand", kind),
+		Attributes: []attribute.KeyValue{
+			attribute.String("ignored-on-demand", kind),
 		},
 	})
 }

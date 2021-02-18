@@ -18,7 +18,7 @@ import (
 	"context"
 	"testing"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -43,9 +43,9 @@ func BenchmarkSpanWithAttributes_4(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			_, span := t.Start(ctx, "/foo")
 			span.SetAttributes(
-				label.Bool("key1", false),
-				label.String("key2", "hello"),
-				label.Float64("key4", 123.456),
+				attribute.Bool("key1", false),
+				attribute.String("key2", "hello"),
+				attribute.Float64("key4", 123.456),
 			)
 			span.End()
 		}
@@ -60,12 +60,12 @@ func BenchmarkSpanWithAttributes_8(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			_, span := t.Start(ctx, "/foo")
 			span.SetAttributes(
-				label.Bool("key1", false),
-				label.String("key2", "hello"),
-				label.Float64("key4", 123.456),
-				label.Bool("key21", false),
-				label.String("key22", "hello"),
-				label.Float64("key24", 123.456),
+				attribute.Bool("key1", false),
+				attribute.String("key2", "hello"),
+				attribute.Float64("key4", 123.456),
+				attribute.Bool("key21", false),
+				attribute.String("key22", "hello"),
+				attribute.Float64("key24", 123.456),
 			)
 			span.End()
 		}
@@ -80,11 +80,11 @@ func BenchmarkSpanWithAttributes_all(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			_, span := t.Start(ctx, "/foo")
 			span.SetAttributes(
-				label.Bool("key1", false),
-				label.String("key2", "hello"),
-				label.Int64("key3", 123),
-				label.Float64("key7", 123.456),
-				label.Int("key9", 123),
+				attribute.Bool("key1", false),
+				attribute.String("key2", "hello"),
+				attribute.Int64("key3", 123),
+				attribute.Float64("key7", 123.456),
+				attribute.Int("key9", 123),
 			)
 			span.End()
 		}
@@ -99,16 +99,16 @@ func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			_, span := t.Start(ctx, "/foo")
 			span.SetAttributes(
-				label.Bool("key1", false),
-				label.String("key2", "hello"),
-				label.Int64("key3", 123),
-				label.Float64("key7", 123.456),
-				label.Int("key10", 123),
-				label.Bool("key21", false),
-				label.String("key22", "hello"),
-				label.Int64("key23", 123),
-				label.Float64("key27", 123.456),
-				label.Int("key210", 123),
+				attribute.Bool("key1", false),
+				attribute.String("key2", "hello"),
+				attribute.Int64("key3", 123),
+				attribute.Float64("key7", 123.456),
+				attribute.Int("key10", 123),
+				attribute.Bool("key21", false),
+				attribute.String("key22", "hello"),
+				attribute.Int64("key23", 123),
+				attribute.Float64("key27", 123.456),
+				attribute.Int("key210", 123),
 			)
 			span.End()
 		}

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package label_test
+package attribute_test
 
 import (
 	"strings"
@@ -20,60 +20,60 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 func TestKeyValueConstructors(t *testing.T) {
 	tt := []struct {
 		name     string
-		actual   label.KeyValue
-		expected label.KeyValue
+		actual   attribute.KeyValue
+		expected attribute.KeyValue
 	}{
 		{
 			name:   "Bool",
-			actual: label.Bool("k1", true),
-			expected: label.KeyValue{
+			actual: attribute.Bool("k1", true),
+			expected: attribute.KeyValue{
 				Key:   "k1",
-				Value: label.BoolValue(true),
+				Value: attribute.BoolValue(true),
 			},
 		},
 		{
 			name:   "Int64",
-			actual: label.Int64("k1", 123),
-			expected: label.KeyValue{
+			actual: attribute.Int64("k1", 123),
+			expected: attribute.KeyValue{
 				Key:   "k1",
-				Value: label.Int64Value(123),
+				Value: attribute.Int64Value(123),
 			},
 		},
 		{
 			name:   "Float64",
-			actual: label.Float64("k1", 123.5),
-			expected: label.KeyValue{
+			actual: attribute.Float64("k1", 123.5),
+			expected: attribute.KeyValue{
 				Key:   "k1",
-				Value: label.Float64Value(123.5),
+				Value: attribute.Float64Value(123.5),
 			},
 		},
 		{
 			name:   "String",
-			actual: label.String("k1", "123.5"),
-			expected: label.KeyValue{
+			actual: attribute.String("k1", "123.5"),
+			expected: attribute.KeyValue{
 				Key:   "k1",
-				Value: label.StringValue("123.5"),
+				Value: attribute.StringValue("123.5"),
 			},
 		},
 		{
 			name:   "Int",
-			actual: label.Int("k1", 123),
-			expected: label.KeyValue{
+			actual: attribute.Int("k1", 123),
+			expected: attribute.KeyValue{
 				Key:   "k1",
-				Value: label.IntValue(123),
+				Value: attribute.IntValue(123),
 			},
 		},
 	}
 
 	for _, test := range tt {
 		t.Run(test.name, func(t *testing.T) {
-			if diff := cmp.Diff(test.actual, test.expected, cmp.AllowUnexported(label.Value{})); diff != "" {
+			if diff := cmp.Diff(test.actual, test.expected, cmp.AllowUnexported(attribute.Value{})); diff != "" {
 				t.Fatal(diff)
 			}
 		})
@@ -97,60 +97,60 @@ func TestAny(t *testing.T) {
 	for _, testcase := range []struct {
 		key       string
 		value     interface{}
-		wantType  label.Type
+		wantType  attribute.Type
 		wantValue interface{}
 	}{
 		{
 			key:       "bool type inferred",
 			value:     true,
-			wantType:  label.BOOL,
+			wantType:  attribute.BOOL,
 			wantValue: true,
 		},
 		{
 			key:       "int64 type inferred",
 			value:     int64(42),
-			wantType:  label.INT64,
+			wantType:  attribute.INT64,
 			wantValue: int64(42),
 		},
 		{
 			key:       "float64 type inferred",
 			value:     float64(42.1),
-			wantType:  label.FLOAT64,
+			wantType:  attribute.FLOAT64,
 			wantValue: 42.1,
 		},
 		{
 			key:       "string type inferred",
 			value:     "foo",
-			wantType:  label.STRING,
+			wantType:  attribute.STRING,
 			wantValue: "foo",
 		},
 		{
 			key:       "stringer type inferred",
 			value:     builder,
-			wantType:  label.STRING,
+			wantType:  attribute.STRING,
 			wantValue: "foo",
 		},
 		{
 			key:       "unknown value serialized as %v",
 			value:     nil,
-			wantType:  label.STRING,
+			wantType:  attribute.STRING,
 			wantValue: "<nil>",
 		},
 		{
 			key:       "JSON struct serialized correctly",
 			value:     &jsonifyStruct,
-			wantType:  label.STRING,
+			wantType:  attribute.STRING,
 			wantValue: `{"Public":"foo","tagName":"baz","Empty":""}`,
 		},
 		{
 			key:       "Invalid JSON struct falls back to string",
 			value:     &invalidStruct,
-			wantType:  label.STRING,
+			wantType:  attribute.STRING,
 			wantValue: "&{(0+0i)}",
 		},
 	} {
 		t.Logf("Running test case %s", testcase.key)
-		keyValue := label.Any(testcase.key, testcase.value)
+		keyValue := attribute.Any(testcase.key, testcase.value)
 		if keyValue.Value.Type() != testcase.wantType {
 			t.Errorf("wrong value type, got %#v, expected %#v", keyValue.Value.Type(), testcase.wantType)
 		}

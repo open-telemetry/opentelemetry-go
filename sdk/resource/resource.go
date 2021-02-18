@@ -18,8 +18,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel"
-
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // Resource describes an entity about which identifying information
@@ -30,7 +29,7 @@ import (
 // (`*resource.Resource`).  The `nil` value is equivalent to an empty
 // Resource.
 type Resource struct {
-	labels label.Set
+	labels attribute.Set
 }
 
 var (
@@ -47,9 +46,9 @@ var (
 // NewWithAttributes creates a resource from a set of attributes.  If there are
 // duplicate keys present in the list of attributes, then the last
 // value found for the key is preserved.
-func NewWithAttributes(kvs ...label.KeyValue) *Resource {
+func NewWithAttributes(kvs ...attribute.KeyValue) *Resource {
 	return &Resource{
-		labels: label.NewSet(kvs...),
+		labels: attribute.NewSet(kvs...),
 	}
 }
 
@@ -62,12 +61,12 @@ func (r *Resource) String() string {
 	if r == nil {
 		return ""
 	}
-	return r.labels.Encoded(label.DefaultEncoder())
+	return r.labels.Encoded(attribute.DefaultEncoder())
 }
 
 // Attributes returns a copy of attributes from the resource in a sorted order.
 // To avoid allocating a new slice, use an iterator.
-func (r *Resource) Attributes() []label.KeyValue {
+func (r *Resource) Attributes() []attribute.KeyValue {
 	if r == nil {
 		r = Empty()
 	}
@@ -76,7 +75,7 @@ func (r *Resource) Attributes() []label.KeyValue {
 
 // Iter returns an interator of the Resource attributes.
 // This is ideal to use if you do not want a copy of the attributes.
-func (r *Resource) Iter() label.Iterator {
+func (r *Resource) Iter() attribute.Iterator {
 	if r == nil {
 		r = Empty()
 	}
@@ -110,10 +109,10 @@ func Merge(a, b *Resource) *Resource {
 		return a
 	}
 
-	// Note: 'b' labels will overwrite 'a' with last-value-wins in label.Key()
+	// Note: 'b' labels will overwrite 'a' with last-value-wins in attribute.Key()
 	// Meaning this is equivalent to: append(a.Attributes(), b.Attributes()...)
-	mi := label.NewMergeIterator(b.LabelSet(), a.LabelSet())
-	combine := make([]label.KeyValue, 0, a.Len()+b.Len())
+	mi := attribute.NewMergeIterator(b.LabelSet(), a.LabelSet())
+	combine := make([]attribute.KeyValue, 0, a.Len()+b.Len())
 	for mi.Next() {
 		combine = append(combine, mi.Label())
 	}
@@ -135,12 +134,12 @@ func Default() *Resource {
 // Equivalent returns an object that can be compared for equality
 // between two resources.  This value is suitable for use as a key in
 // a map.
-func (r *Resource) Equivalent() label.Distinct {
+func (r *Resource) Equivalent() attribute.Distinct {
 	return r.LabelSet().Equivalent()
 }
 
-// LabelSet returns the equivalent *label.Set.
-func (r *Resource) LabelSet() *label.Set {
+// LabelSet returns the equivalent *attribute.Set.
+func (r *Resource) LabelSet() *attribute.Set {
 	if r == nil {
 		r = Empty()
 	}
@@ -167,7 +166,7 @@ func (r *Resource) Len() int {
 // Encoded returns an encoded representation of the resource by
 // applying a label encoder.  The result is cached by the underlying
 // label set.
-func (r *Resource) Encoded(enc label.Encoder) string {
+func (r *Resource) Encoded(enc attribute.Encoder) string {
 	if r == nil {
 		return ""
 	}
