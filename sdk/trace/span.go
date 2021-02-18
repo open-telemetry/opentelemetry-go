@@ -135,7 +135,7 @@ type span struct {
 	// tracer is the SDK tracer that created this span.
 	tracer *tracer
 
-	// spanLimits holds the limit to this span.
+	// spanLimits holds the limits to this span.
 	spanLimits SpanLimits
 
 	droppedAttributeCount int32

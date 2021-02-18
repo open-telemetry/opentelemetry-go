@@ -1397,7 +1397,7 @@ func TestReadWriteSpan(t *testing.T) {
 	// duplication.
 }
 
-func TestAddSpanEventWithOverLimitedAttributes(t *testing.T) {
+func TestAddEventsWithMoreAttributesThanLimit(t *testing.T) {
 	te := NewTestExporter()
 	cfg := Config{SpanLimits: SpanLimits{AttributePerEventCountLimit: 2}}
 	tp := NewTracerProvider(WithConfig(cfg), WithSyncer(te))
@@ -1459,7 +1459,7 @@ func TestAddSpanEventWithOverLimitedAttributes(t *testing.T) {
 	}
 }
 
-func TestWithLinksWithOverLimitedAttributes(t *testing.T) {
+func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 	te := NewTestExporter()
 	cfg := Config{SpanLimits: SpanLimits{AttributePerLinkCountLimit: 1}}
 	tp := NewTracerProvider(WithConfig(cfg), WithSyncer(te))

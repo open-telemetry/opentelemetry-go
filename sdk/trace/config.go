@@ -33,37 +33,37 @@ type Config struct {
 	Resource *resource.Resource
 }
 
-// SpanLimits represents the limit to a span.
+// SpanLimits represents the limits of a span.
 type SpanLimits struct {
-	// AttributeCountLimit is maximum allowed span attribute count.
+	// AttributeCountLimit is the maximum allowed span attribute count.
 	AttributeCountLimit int
 
-	// EventCountLimit is maximum allowed span event count.
+	// EventCountLimit is the maximum allowed span event count.
 	EventCountLimit int
 
-	// LinkCountLimit is maximum allowed span link count.
+	// LinkCountLimit is the maximum allowed span link count.
 	LinkCountLimit int
 
-	// AttributePerEventCountLimit is maximum allowed attribute per span event count.
+	// AttributePerEventCountLimit is the maximum allowed attribute per span event count.
 	AttributePerEventCountLimit int
 
-	// AttributePerLinkCountLimit is maximum allowed attribute per span link count.
+	// AttributePerLinkCountLimit is the maximum allowed attribute per span link count.
 	AttributePerLinkCountLimit int
 }
 
 const (
-	// DefaultAttributeCountLimit is default maximum allowed span attribute count.
+	// DefaultAttributeCountLimit is the default maximum allowed span attribute count.
 	DefaultAttributeCountLimit = 128
 
-	// DefaultEventCountLimit is default maximum allowed span event count.
+	// DefaultEventCountLimit is the default maximum allowed span event count.
 	DefaultEventCountLimit = 128
 
-	// DefaultLinkCountLimit is default maximum allowed span link count.
+	// DefaultLinkCountLimit is the default maximum allowed span link count.
 	DefaultLinkCountLimit = 128
 
-	// DefaultAttributePerEventCountLimit is default maximum allowed attribute per span event count.
+	// DefaultAttributePerEventCountLimit is the default maximum allowed attribute per span event count.
 	DefaultAttributePerEventCountLimit = 128
 
-	// DefaultAttributePerLinkCountLimit is default maximum allowed attribute per span link count.
+	// DefaultAttributePerLinkCountLimit is the default maximum allowed attribute per span link count.
 	DefaultAttributePerLinkCountLimit = 128
 )
