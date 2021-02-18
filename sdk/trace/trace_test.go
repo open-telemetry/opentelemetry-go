@@ -1432,7 +1432,7 @@ func TestReadWriteSpan(t *testing.T) {
 func TestAddEventsWithMoreAttributesThanLimit(t *testing.T) {
 	te := NewTestExporter()
 	cfg := Config{SpanLimits: SpanLimits{AttributePerEventCountLimit: 2}}
-	tp := NewTracerProvider(WithConfig(cfg), WithSyncer(te))
+	tp := NewTracerProvider(WithConfig(cfg), WithSyncer(te), WithResource(resource.Empty()))
 
 	span := startSpan(tp, "AddSpanEventWithOverLimitedAttributes")
 	span.AddEvent("test1", trace.WithAttributes(
@@ -1494,7 +1494,7 @@ func TestAddEventsWithMoreAttributesThanLimit(t *testing.T) {
 func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 	te := NewTestExporter()
 	cfg := Config{SpanLimits: SpanLimits{AttributePerLinkCountLimit: 1}}
-	tp := NewTracerProvider(WithConfig(cfg), WithSyncer(te))
+	tp := NewTracerProvider(WithConfig(cfg), WithSyncer(te), WithResource(resource.Empty()))
 
 	k1v1 := label.String("key1", "value1")
 	k2v2 := label.String("key2", "value2")
