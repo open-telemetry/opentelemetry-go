@@ -18,6 +18,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Added `resource.Default()` for use with meter and tracer providers. (#1507)
 - Added `Keys()` method to `propagation.TextMapCarrier` and `propagation.HeaderCarrier` to adapt `http.Header` to this interface. (#1544)
 
+### Removed
+
+- Removed attempt to resample spans upon changing the span name with `span.SetName()`. (#1545)
+
 ## [0.17.0] - 2020-02-12
 
 ### Changed
