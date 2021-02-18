@@ -77,6 +77,9 @@ var emptySpanContext = trace.SpanContext{}
 // span is an implementation of the OpenTelemetry Span API representing the
 // individual component of a trace.
 type span struct {
+	// droppedAttributeCount contains dropped attributes for the events and links.
+	droppedAttributeCount int64
+
 	// mu protects the contents of this span.
 	mu sync.Mutex
 
@@ -137,8 +140,6 @@ type span struct {
 
 	// spanLimits holds the limits to this span.
 	spanLimits SpanLimits
-
-	droppedAttributeCount int32
 }
 
 var _ trace.Span = &span{}
@@ -529,7 +530,7 @@ func (s *span) addChild() {
 }
 
 func (s *span) addDroppedAttributeCount(delta int) {
-	atomic.AddInt32(&s.droppedAttributeCount, int32(delta))
+	atomic.AddInt64(&s.droppedAttributeCount, int64(delta))
 }
 
 func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trace.SpanContext, remoteParent bool, o *trace.SpanConfig) *span {
