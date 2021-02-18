@@ -1425,15 +1425,15 @@ func TestAddEventsWithMoreAttributesThanLimit(t *testing.T) {
 
 	span := startSpan(tp, "AddSpanEventWithOverLimitedAttributes")
 	span.AddEvent("test1", trace.WithAttributes(
-		label.Bool("key1", true),
-		label.String("key2", "value2"),
+		attribute.Bool("key1", true),
+		attribute.String("key2", "value2"),
 	))
 	// Parts of the attribute should be discard
 	span.AddEvent("test2", trace.WithAttributes(
-		label.Bool("key1", true),
-		label.String("key2", "value2"),
-		label.String("key3", "value3"),
-		label.String("key4", "value4"),
+		attribute.Bool("key1", true),
+		attribute.String("key2", "value2"),
+		attribute.String("key3", "value3"),
+		attribute.String("key4", "value4"),
 	))
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -1457,16 +1457,16 @@ func TestAddEventsWithMoreAttributesThanLimit(t *testing.T) {
 		MessageEvents: []trace.Event{
 			{
 				Name: "test1",
-				Attributes: []label.KeyValue{
-					label.Bool("key1", true),
-					label.String("key2", "value2"),
+				Attributes: []attribute.KeyValue{
+					attribute.Bool("key1", true),
+					attribute.String("key2", "value2"),
 				},
 			},
 			{
 				Name: "test2",
-				Attributes: []label.KeyValue{
-					label.Bool("key1", true),
-					label.String("key2", "value2"),
+				Attributes: []attribute.KeyValue{
+					attribute.Bool("key1", true),
+					attribute.String("key2", "value2"),
 				},
 			},
 		},
@@ -1485,17 +1485,17 @@ func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 	cfg := Config{SpanLimits: SpanLimits{AttributePerLinkCountLimit: 1}}
 	tp := NewTracerProvider(WithConfig(cfg), WithSyncer(te), WithResource(resource.Empty()))
 
-	k1v1 := label.String("key1", "value1")
-	k2v2 := label.String("key2", "value2")
-	k3v3 := label.String("key3", "value3")
-	k4v4 := label.String("key4", "value4")
+	k1v1 := attribute.String("key1", "value1")
+	k2v2 := attribute.String("key2", "value2")
+	k3v3 := attribute.String("key3", "value3")
+	k4v4 := attribute.String("key4", "value4")
 
 	sc1 := trace.SpanContext{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}}
 	sc2 := trace.SpanContext{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}}
 
 	span := startSpan(tp, "Links", trace.WithLinks([]trace.Link{
-		{SpanContext: sc1, Attributes: []label.KeyValue{k1v1, k2v2}},
-		{SpanContext: sc2, Attributes: []label.KeyValue{k2v2, k3v3, k4v4}},
+		{SpanContext: sc1, Attributes: []attribute.KeyValue{k1v1, k2v2}},
+		{SpanContext: sc2, Attributes: []attribute.KeyValue{k2v2, k3v3, k4v4}},
 	}...))
 
 	got, err := endSpan(te, span)
@@ -1512,8 +1512,8 @@ func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 		Name:            "span0",
 		HasRemoteParent: true,
 		Links: []trace.Link{
-			{SpanContext: sc1, Attributes: []label.KeyValue{k1v1}},
-			{SpanContext: sc2, Attributes: []label.KeyValue{k2v2}},
+			{SpanContext: sc1, Attributes: []attribute.KeyValue{k1v1}},
+			{SpanContext: sc2, Attributes: []attribute.KeyValue{k2v2}},
 		},
 		DroppedAttributeCount:  3,
 		SpanKind:               trace.SpanKindInternal,
