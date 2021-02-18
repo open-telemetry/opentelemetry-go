@@ -158,58 +158,47 @@ func (ts testSampler) Description() string {
 }
 
 func TestSetName(t *testing.T) {
-	fooSampler := &testSampler{prefix: "foo", t: t}
-	tp := NewTracerProvider(WithConfig(Config{DefaultSampler: fooSampler}))
+	tp := NewTracerProvider()
 
 	type testCase struct {
-		name          string
-		newName       string
-		sampledBefore bool
-		sampledAfter  bool
+		name    string
+		newName string
 	}
 	for idx, tt := range []testCase{
 		{ // 0
-			name:          "foobar",
-			newName:       "foobaz",
-			sampledBefore: true,
-			sampledAfter:  true,
+			name:    "foobar",
+			newName: "foobaz",
 		},
 		{ // 1
-			name:          "foobar",
-			newName:       "barbaz",
-			sampledBefore: true,
-			sampledAfter:  false,
+			name:    "foobar",
+			newName: "barbaz",
 		},
 		{ // 2
-			name:          "barbar",
-			newName:       "barbaz",
-			sampledBefore: false,
-			sampledAfter:  false,
+			name:    "barbar",
+			newName: "barbaz",
 		},
 		{ // 3
-			name:          "barbar",
-			newName:       "foobar",
-			sampledBefore: false,
-			sampledAfter:  true,
+			name:    "barbar",
+			newName: "foobar",
 		},
 	} {
-		span := startNamedSpan(tp, "SetName", tt.name)
-		if fooSampler.callCount == 0 {
-			t.Errorf("%d: the sampler was not even called during span creation", idx)
+		sp := startNamedSpan(tp, "SetName", tt.name)
+		if sdkspan, ok := sp.(*span); ok {
+			if sdkspan.Name() != tt.name {
+				t.Errorf("%d: invalid name at span creation, expected %v, got %v", idx, tt.name, sdkspan.Name())
+			}
+		} else {
+			t.Errorf("%d: unable to coerce span to SDK span, is type %T", idx, sp)
 		}
-		fooSampler.callCount = 0
-		if gotSampledBefore := span.SpanContext().IsSampled(); tt.sampledBefore != gotSampledBefore {
-			t.Errorf("%d: invalid sampling decision before rename, expected %v, got %v", idx, tt.sampledBefore, gotSampledBefore)
+		sp.SetName(tt.newName)
+		if sdkspan, ok := sp.(*span); ok {
+			if sdkspan.Name() != tt.newName {
+				t.Errorf("%d: span name not changed, expected %v, got %v", idx, tt.newName, sdkspan.Name())
+			}
+		} else {
+			t.Errorf("%d: unable to coerce span to SDK span, is type %T", idx, sp)
 		}
-		span.SetName(tt.newName)
-		if fooSampler.callCount == 0 {
-			t.Errorf("%d: the sampler was not even called during span rename", idx)
-		}
-		fooSampler.callCount = 0
-		if gotSampledAfter := span.SpanContext().IsSampled(); tt.sampledAfter != gotSampledAfter {
-			t.Errorf("%d: invalid sampling decision after rename, expected %v, got %v", idx, tt.sampledAfter, gotSampledAfter)
-		}
-		span.End()
+		sp.End()
 	}
 }
 

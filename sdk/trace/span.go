@@ -302,35 +302,7 @@ func (s *span) SetName(name string) {
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
 	s.name = name
-	// SAMPLING
-	noParent := !s.parent.SpanID.IsValid()
-	var ctx trace.SpanContext
-	if noParent {
-		ctx = trace.SpanContext{}
-	} else {
-		// FIXME: Where do we get the parent context from?
-		ctx = s.spanContext
-	}
-	data := samplingData{
-		noParent:     noParent,
-		remoteParent: s.hasRemoteParent,
-		parent:       ctx,
-		name:         name,
-		cfg:          s.tracer.provider.config.Load().(*Config),
-		span:         s,
-		attributes:   s.attributes.toKeyValue(),
-		links:        s.interfaceArrayToLinksArray(),
-		kind:         s.spanKind,
-	}
-	sampled := makeSamplingDecision(data)
-
-	// Adding attributes directly rather than using s.SetAttributes()
-	// as s.mu is already locked and attempting to do so would deadlock.
-	for _, a := range sampled.Attributes {
-		s.attributes.add(a)
-	}
 }
 
 // Name returns the name of this span.
