@@ -22,13 +22,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 func TestBuiltinStringDetector(t *testing.T) {
 	E := fmt.Errorf("no K")
-	res, err := resource.StringDetector(label.Key("K"), func() (string, error) {
+	res, err := resource.StringDetector(attribute.Key("K"), func() (string, error) {
 		return "", E
 	}).Detect(context.Background())
 	require.True(t, errors.Is(err, E))
@@ -40,8 +40,8 @@ func TestBuiltinStringConfig(t *testing.T) {
 	res, err := resource.New(
 		context.Background(),
 		resource.WithoutBuiltin(),
-		resource.WithAttributes(label.String("A", "B")),
-		resource.WithDetectors(resource.StringDetector(label.Key("K"), func() (string, error) {
+		resource.WithAttributes(attribute.String("A", "B")),
+		resource.WithDetectors(resource.StringDetector(attribute.Key("K"), func() (string, error) {
 			return "", fmt.Errorf("K-IS-MISSING")
 		})),
 	)

@@ -27,7 +27,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/number"
@@ -349,7 +349,7 @@ func mergeLabels(record export.Record, keys, values *[]string) {
 
 	// Duplicate keys are resolved by taking the record label value over
 	// the resource value.
-	mi := label.NewMergeIterator(record.Labels(), record.Resource().LabelSet())
+	mi := attribute.NewMergeIterator(record.Labels(), record.Resource().LabelSet())
 	for mi.Next() {
 		label := mi.Label()
 		if keys != nil {

@@ -23,7 +23,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -35,7 +35,7 @@ import (
 )
 
 func getMap(t *testing.T, cont *controller.Controller) map[string]float64 {
-	out := processortest.NewOutput(label.DefaultEncoder())
+	out := processortest.NewOutput(attribute.DefaultEncoder())
 
 	require.NoError(t, cont.ForEach(
 		export.CumulativeExportKindSelector(),
@@ -70,16 +70,16 @@ func TestControllerUsesResource(t *testing.T) {
 		{
 			name:    "uses default if no resource option",
 			options: nil,
-			wanted:  resource.Default().Encoded(label.DefaultEncoder())},
+			wanted:  resource.Default().Encoded(attribute.DefaultEncoder())},
 		{
 			name:    "explicit resource",
-			options: []controller.Option{controller.WithResource(resource.NewWithAttributes(label.String("R", "S")))},
+			options: []controller.Option{controller.WithResource(resource.NewWithAttributes(attribute.String("R", "S")))},
 			wanted:  "R=S"},
 		{
 			name: "last resource wins",
 			options: []controller.Option{
 				controller.WithResource(resource.Default()),
-				controller.WithResource(resource.NewWithAttributes(label.String("R", "S"))),
+				controller.WithResource(resource.NewWithAttributes(attribute.String("R", "S"))),
 			},
 			wanted: "R=S",
 		},
@@ -128,7 +128,7 @@ func TestStartNoExporter(t *testing.T) {
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			calls++
 			checkTestContext(t, ctx)
-			result.Observe(calls, label.String("A", "B"))
+			result.Observe(calls, attribute.String("A", "B"))
 		},
 	)
 
@@ -251,7 +251,7 @@ func newBlockingExporter() *blockingExporter {
 	return &blockingExporter{
 		exporter: processortest.NewExporter(
 			export.CumulativeExportKindSelector(),
-			label.DefaultEncoder(),
+			attribute.DefaultEncoder(),
 		),
 	}
 }
@@ -332,7 +332,7 @@ func TestExportTimeout(t *testing.T) {
 func TestCollectAfterStopThenStartAgain(t *testing.T) {
 	exp := processortest.NewExporter(
 		export.CumulativeExportKindSelector(),
-		label.DefaultEncoder(),
+		attribute.DefaultEncoder(),
 	)
 	cont := controller.New(
 		processor.New(

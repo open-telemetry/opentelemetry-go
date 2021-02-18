@@ -19,10 +19,10 @@ import (
 	"fmt"
 	"testing"
 
-	"go.opentelemetry.io/otel/label"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 type testSpan struct {
@@ -452,10 +452,10 @@ func TestTraceStateString(t *testing.T) {
 		{
 			name: "Non-empty trace state",
 			traceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key1", "val1"),
-					label.String("key2", "val2"),
-					label.String("key3@vendor", "val3"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key1", "val1"),
+					attribute.String("key2", "val2"),
+					attribute.String("key3@vendor", "val3"),
 				},
 			},
 			expectedStr: "key1=val1,key2=val2,key3@vendor=val3",
@@ -478,7 +478,7 @@ func TestTraceStateGet(t *testing.T) {
 	testCases := []struct {
 		name          string
 		traceState    TraceState
-		key           label.Key
+		key           attribute.Key
 		expectedValue string
 	}{
 		{
@@ -513,60 +513,60 @@ func TestTraceStateDelete(t *testing.T) {
 	testCases := []struct {
 		name               string
 		traceState         TraceState
-		key                label.Key
+		key                attribute.Key
 		expectedTraceState TraceState
 		expectedErr        error
 	}{
 		{
 			name: "OK case",
 			traceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key1", "val1"),
-					label.String("key2", "val2"),
-					label.String("key3", "val3"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key1", "val1"),
+					attribute.String("key2", "val2"),
+					attribute.String("key3", "val3"),
 				},
 			},
 			key: "key2",
 			expectedTraceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key1", "val1"),
-					label.String("key3", "val3"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key1", "val1"),
+					attribute.String("key3", "val3"),
 				},
 			},
 		},
 		{
 			name: "Non-existing key",
 			traceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key1", "val1"),
-					label.String("key2", "val2"),
-					label.String("key3", "val3"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key1", "val1"),
+					attribute.String("key2", "val2"),
+					attribute.String("key3", "val3"),
 				},
 			},
 			key: "keyx",
 			expectedTraceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key1", "val1"),
-					label.String("key2", "val2"),
-					label.String("key3", "val3"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key1", "val1"),
+					attribute.String("key2", "val2"),
+					attribute.String("key3", "val3"),
 				},
 			},
 		},
 		{
 			name: "Invalid key",
 			traceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key1", "val1"),
-					label.String("key2", "val2"),
-					label.String("key3", "val3"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key1", "val1"),
+					attribute.String("key2", "val2"),
+					attribute.String("key3", "val3"),
 				},
 			},
 			key: "in va lid",
 			expectedTraceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key1", "val1"),
-					label.String("key2", "val2"),
-					label.String("key3", "val3"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key1", "val1"),
+					attribute.String("key2", "val2"),
+					attribute.String("key3", "val3"),
 				},
 			},
 			expectedErr: errInvalidTraceStateKeyValue,
@@ -592,58 +592,58 @@ func TestTraceStateInsert(t *testing.T) {
 	testCases := []struct {
 		name               string
 		traceState         TraceState
-		keyValue           label.KeyValue
+		keyValue           attribute.KeyValue
 		expectedTraceState TraceState
 		expectedErr        error
 	}{
 		{
 			name: "OK case - add new",
 			traceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key1", "val1"),
-					label.String("key2", "val2"),
-					label.String("key3", "val3"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key1", "val1"),
+					attribute.String("key2", "val2"),
+					attribute.String("key3", "val3"),
 				},
 			},
-			keyValue: label.String("key4@vendor", "val4"),
+			keyValue: attribute.String("key4@vendor", "val4"),
 			expectedTraceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key4@vendor", "val4"),
-					label.String("key1", "val1"),
-					label.String("key2", "val2"),
-					label.String("key3", "val3"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key4@vendor", "val4"),
+					attribute.String("key1", "val1"),
+					attribute.String("key2", "val2"),
+					attribute.String("key3", "val3"),
 				},
 			},
 		},
 		{
 			name: "OK case - replace",
 			traceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key1", "val1"),
-					label.String("key2", "val2"),
-					label.String("key3", "val3"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key1", "val1"),
+					attribute.String("key2", "val2"),
+					attribute.String("key3", "val3"),
 				},
 			},
-			keyValue: label.String("key2", "valX"),
+			keyValue: attribute.String("key2", "valX"),
 			expectedTraceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key2", "valX"),
-					label.String("key1", "val1"),
-					label.String("key3", "val3"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key2", "valX"),
+					attribute.String("key1", "val1"),
+					attribute.String("key3", "val3"),
 				},
 			},
 		},
 		{
 			name: "Invalid key/value",
 			traceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key1", "val1"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key1", "val1"),
 				},
 			},
-			keyValue: label.String("key!", "val!"),
+			keyValue: attribute.String("key!", "val!"),
 			expectedTraceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key1", "val1"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key1", "val1"),
 				},
 			},
 			expectedErr: errInvalidTraceStateKeyValue,
@@ -651,7 +651,7 @@ func TestTraceStateInsert(t *testing.T) {
 		{
 			name:               "Too many entries",
 			traceState:         TraceState{kvsWithMaxMembers},
-			keyValue:           label.String("keyx", "valx"),
+			keyValue:           attribute.String("keyx", "valx"),
 			expectedTraceState: TraceState{kvsWithMaxMembers},
 			expectedErr:        errInvalidTraceStateMembersNumber,
 		},
@@ -675,7 +675,7 @@ func TestTraceStateInsert(t *testing.T) {
 func TestTraceStateFromKeyValues(t *testing.T) {
 	testCases := []struct {
 		name               string
-		kvs                []label.KeyValue
+		kvs                []attribute.KeyValue
 		expectedTraceState TraceState
 		expectedErr        error
 	}{
@@ -690,9 +690,9 @@ func TestTraceStateFromKeyValues(t *testing.T) {
 		},
 		{
 			name: "Too many entries",
-			kvs: func() []label.KeyValue {
+			kvs: func() []attribute.KeyValue {
 				kvs := kvsWithMaxMembers
-				kvs = append(kvs, label.String("keyx", "valX"))
+				kvs = append(kvs, attribute.String("keyx", "valX"))
 				return kvs
 			}(),
 			expectedTraceState: TraceState{},
@@ -700,17 +700,17 @@ func TestTraceStateFromKeyValues(t *testing.T) {
 		},
 		{
 			name: "Duplicate",
-			kvs: []label.KeyValue{
-				label.String("key1", "val1"),
-				label.String("key1", "val2"),
+			kvs: []attribute.KeyValue{
+				attribute.String("key1", "val1"),
+				attribute.String("key1", "val2"),
 			},
 			expectedTraceState: TraceState{},
 			expectedErr:        errInvalidTraceStateDuplicate,
 		},
 		{
 			name: "Invalid key/value",
-			kvs: []label.KeyValue{
-				label.String("key!", "val!"),
+			kvs: []attribute.KeyValue{
+				attribute.String("key!", "val!"),
 			},
 			expectedTraceState: TraceState{},
 			expectedErr:        errInvalidTraceStateKeyValue,
@@ -755,10 +755,10 @@ func assertTraceStateEqual(got TraceState, want TraceState) bool {
 	return true
 }
 
-var kvsWithMaxMembers = func() []label.KeyValue {
-	kvs := make([]label.KeyValue, traceStateMaxListMembers)
+var kvsWithMaxMembers = func() []attribute.KeyValue {
+	kvs := make([]attribute.KeyValue, traceStateMaxListMembers)
 	for i := 0; i < traceStateMaxListMembers; i++ {
-		kvs[i] = label.String(fmt.Sprintf("key%d", i+1),
+		kvs[i] = attribute.String(fmt.Sprintf("key%d", i+1),
 			fmt.Sprintf("value%d", i+1))
 	}
 	return kvs

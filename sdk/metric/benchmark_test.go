@@ -20,7 +20,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -59,8 +59,8 @@ func (f *benchFixture) meterMust() metric.MeterMust {
 	return metric.Must(f.meter)
 }
 
-func makeManyLabels(n int) [][]label.KeyValue {
-	r := make([][]label.KeyValue, n)
+func makeManyLabels(n int) [][]attribute.KeyValue {
+	r := make([][]attribute.KeyValue, n)
 
 	for i := 0; i < n; i++ {
 		r[i] = makeLabels(1)
@@ -69,9 +69,9 @@ func makeManyLabels(n int) [][]label.KeyValue {
 	return r
 }
 
-func makeLabels(n int) []label.KeyValue {
+func makeLabels(n int) []attribute.KeyValue {
 	used := map[string]bool{}
-	l := make([]label.KeyValue, n)
+	l := make([]attribute.KeyValue, n)
 	for i := 0; i < n; i++ {
 		var k string
 		for {
@@ -81,7 +81,7 @@ func makeLabels(n int) []label.KeyValue {
 				break
 			}
 		}
-		l[i] = label.String(k, fmt.Sprint("v", rand.Intn(1000000000)))
+		l[i] = attribute.String(k, fmt.Sprint("v", rand.Intn(1000000000)))
 	}
 	return l
 }
@@ -120,7 +120,7 @@ func BenchmarkInt64CounterAddWithLabels_16(b *testing.B) {
 }
 
 // Note: performance does not depend on label set size for the
-// benchmarks below--all are benchmarked for a single label.
+// benchmarks below--all are benchmarked for a single attribute.
 
 func BenchmarkAcquireNewHandle(b *testing.B) {
 	fix := newFixture(b)
@@ -168,10 +168,10 @@ func BenchmarkAcquireReleaseExistingHandle(b *testing.B) {
 
 // Iterators
 
-var benchmarkIteratorVar label.KeyValue
+var benchmarkIteratorVar attribute.KeyValue
 
 func benchmarkIterator(b *testing.B, n int) {
-	labels := label.NewSet(makeLabels(n)...)
+	labels := attribute.NewSet(makeLabels(n)...)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		iter := labels.Iter()
@@ -217,7 +217,7 @@ func BenchmarkGlobalInt64CounterAddWithSDK(b *testing.B) {
 	sdk := global.Meter("test")
 	global.SetMeterProvider(fix)
 
-	labs := []label.KeyValue{label.String("A", "B")}
+	labs := []attribute.KeyValue{attribute.String("A", "B")}
 	cnt := Must(sdk).NewInt64Counter("int64.sum")
 
 	b.ResetTimer()
@@ -520,7 +520,7 @@ func BenchmarkRepeatedDirectCalls(b *testing.B) {
 	fix := newFixture(b)
 
 	c := fix.meterMust().NewInt64Counter("int64.sum")
-	k := label.String("bench", "true")
+	k := attribute.String("bench", "true")
 
 	b.ResetTimer()
 

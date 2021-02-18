@@ -22,8 +22,8 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/matchers"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -67,8 +67,8 @@ func TestTracer(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			attr1 := label.String("a", "1")
-			attr2 := label.String("b", "2")
+			attr1 := attribute.String("a", "1")
+			attr2 := attribute.String("b", "2")
 
 			subject := tp.Tracer(t.Name())
 			_, span := subject.Start(context.Background(), "test", trace.WithAttributes(attr1, attr2))
@@ -200,14 +200,14 @@ func TestTracer(t *testing.T) {
 			expectedLinks := []trace.Link{
 				{
 					SpanContext: parentSpanContext,
-					Attributes: []label.KeyValue{
-						label.String("ignored-on-demand", "current"),
+					Attributes: []attribute.KeyValue{
+						attribute.String("ignored-on-demand", "current"),
 					},
 				},
 				{
 					SpanContext: remoteParentSpanContext,
-					Attributes: []label.KeyValue{
-						label.String("ignored-on-demand", "remote"),
+					Attributes: []attribute.KeyValue{
+						attribute.String("ignored-on-demand", "remote"),
 					},
 				},
 			}
@@ -225,16 +225,16 @@ func TestTracer(t *testing.T) {
 			_, span := subject.Start(context.Background(), "link1")
 			link1 := trace.Link{
 				SpanContext: span.SpanContext(),
-				Attributes: []label.KeyValue{
-					label.String("a", "1"),
+				Attributes: []attribute.KeyValue{
+					attribute.String("a", "1"),
 				},
 			}
 
 			_, span = subject.Start(context.Background(), "link2")
 			link2 := trace.Link{
 				SpanContext: span.SpanContext(),
-				Attributes: []label.KeyValue{
-					label.String("b", "2"),
+				Attributes: []attribute.KeyValue{
+					attribute.String("b", "2"),
 				},
 			}
 

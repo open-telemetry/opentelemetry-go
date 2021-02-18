@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/semconv"
 )
 
@@ -41,7 +41,7 @@ type (
 	Host struct{}
 
 	stringDetector struct {
-		K label.Key
+		K attribute.Key
 		F func() (string, error)
 	}
 
@@ -71,7 +71,7 @@ func (Host) Detect(ctx context.Context) (*Resource, error) {
 
 // StringDetector returns a Detector that will produce a *Resource
 // containing the string as a value corresponding to k.
-func StringDetector(k label.Key, f func() (string, error)) Detector {
+func StringDetector(k attribute.Key, f func() (string, error)) Detector {
 	return stringDetector{K: k, F: f}
 }
 

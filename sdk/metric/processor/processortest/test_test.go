@@ -20,7 +20,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
@@ -32,7 +32,7 @@ func generateTestData(proc export.Processor) {
 	ctx := context.Background()
 	accum := metricsdk.NewAccumulator(
 		proc,
-		resource.NewWithAttributes(label.String("R", "V")),
+		resource.NewWithAttributes(attribute.String("R", "V")),
 	)
 	meter := metric.WrapMeterImpl(accum, "testing")
 
@@ -40,13 +40,13 @@ func generateTestData(proc export.Processor) {
 
 	_ = metric.Must(meter).NewInt64SumObserver("observer.sum",
 		func(_ context.Context, result metric.Int64ObserverResult) {
-			result.Observe(10, label.String("K1", "V1"))
-			result.Observe(11, label.String("K1", "V2"))
+			result.Observe(10, attribute.String("K1", "V1"))
+			result.Observe(11, attribute.String("K1", "V2"))
 		},
 	)
 
-	counter.Add(ctx, 100, label.String("K1", "V1"))
-	counter.Add(ctx, 101, label.String("K1", "V2"))
+	counter.Add(ctx, 100, attribute.String("K1", "V1"))
+	counter.Add(ctx, 101, attribute.String("K1", "V2"))
 
 	accum.Collect(ctx)
 }
@@ -56,7 +56,7 @@ func TestProcessorTesting(t *testing.T) {
 	// generate Accumulations.
 	testProc := processorTest.NewProcessor(
 		processorTest.AggregatorSelector(),
-		label.DefaultEncoder(),
+		attribute.DefaultEncoder(),
 	)
 	checkpointer := processorTest.Checkpointer(testProc)
 
@@ -75,7 +75,7 @@ func TestProcessorTesting(t *testing.T) {
 	// Export the data and validate it again.
 	exporter := processorTest.NewExporter(
 		export.StatelessExportKindSelector(),
-		label.DefaultEncoder(),
+		attribute.DefaultEncoder(),
 	)
 
 	err := exporter.Export(context.Background(), checkpointer.CheckpointSet())

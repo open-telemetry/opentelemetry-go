@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package label // import "go.opentelemetry.io/otel/label"
+package attribute // import "go.opentelemetry.io/otel/attribute"
 
 import (
 	"encoding/json"

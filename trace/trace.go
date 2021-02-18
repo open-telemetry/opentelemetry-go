@@ -23,8 +23,8 @@ import (
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/label"
 )
 
 const (
@@ -183,9 +183,9 @@ func decodeHex(h string, b []byte) error {
 // Trace state must be valid according to the W3C Trace Context specification at all times. All
 // mutating operations validate their input and, in case of valid parameters, return a new TraceState.
 type TraceState struct { //nolint:golint
-	// TODO @matej-g: Consider implementing this as label.Set, see
+	// TODO @matej-g: Consider implementing this as attribute.Set, see
 	// comment https://github.com/open-telemetry/opentelemetry-go/pull/1340#discussion_r540599226
-	kvs []label.KeyValue
+	kvs []attribute.KeyValue
 }
 
 var _ json.Marshaler = TraceState{}
@@ -219,9 +219,9 @@ func (ts TraceState) String() string {
 
 // Get returns a value for given key from the trace state.
 // If no key is found or provided key is invalid, returns an empty value.
-func (ts TraceState) Get(key label.Key) label.Value {
+func (ts TraceState) Get(key attribute.Key) attribute.Value {
 	if !isTraceStateKeyValid(key) {
-		return label.Value{}
+		return attribute.Value{}
 	}
 
 	for _, kv := range ts.kvs {
@@ -230,13 +230,13 @@ func (ts TraceState) Get(key label.Key) label.Value {
 		}
 	}
 
-	return label.Value{}
+	return attribute.Value{}
 }
 
 // Insert adds a new key/value, if one doesn't exists; otherwise updates the existing entry.
 // The new or updated entry is always inserted at the beginning of the TraceState, i.e.
 // on the left side, as per the W3C Trace Context specification requirement.
-func (ts TraceState) Insert(entry label.KeyValue) (TraceState, error) {
+func (ts TraceState) Insert(entry attribute.KeyValue) (TraceState, error) {
 	if !isTraceStateKeyValueValid(entry) {
 		return ts, errInvalidTraceStateKeyValue
 	}
@@ -246,7 +246,7 @@ func (ts TraceState) Insert(entry label.KeyValue) (TraceState, error) {
 		return ts, errInvalidTraceStateMembersNumber
 	}
 
-	ckvs = append(ckvs, label.KeyValue{})
+	ckvs = append(ckvs, attribute.KeyValue{})
 	copy(ckvs[1:], ckvs)
 	ckvs[0] = entry
 
@@ -254,7 +254,7 @@ func (ts TraceState) Insert(entry label.KeyValue) (TraceState, error) {
 }
 
 // Delete removes specified entry from the trace state.
-func (ts TraceState) Delete(key label.Key) (TraceState, error) {
+func (ts TraceState) Delete(key attribute.Key) (TraceState, error) {
 	if !isTraceStateKeyValid(key) {
 		return ts, errInvalidTraceStateKeyValue
 	}
@@ -267,8 +267,8 @@ func (ts TraceState) IsEmpty() bool {
 	return len(ts.kvs) == 0
 }
 
-func (ts TraceState) copyKVsAndDeleteEntry(key label.Key) []label.KeyValue {
-	ckvs := make([]label.KeyValue, len(ts.kvs))
+func (ts TraceState) copyKVsAndDeleteEntry(key attribute.Key) []attribute.KeyValue {
+	ckvs := make([]attribute.KeyValue, len(ts.kvs))
 	copy(ckvs, ts.kvs)
 	for i, kv := range ts.kvs {
 		if kv.Key == key {
@@ -282,7 +282,7 @@ func (ts TraceState) copyKVsAndDeleteEntry(key label.Key) []label.KeyValue {
 
 // TraceStateFromKeyValues is a convenience method to create a new TraceState from
 // provided key/value pairs.
-func TraceStateFromKeyValues(kvs ...label.KeyValue) (TraceState, error) { //nolint:golint
+func TraceStateFromKeyValues(kvs ...attribute.KeyValue) (TraceState, error) { //nolint:golint
 	if len(kvs) == 0 {
 		return TraceState{}, nil
 	}
@@ -291,7 +291,7 @@ func TraceStateFromKeyValues(kvs ...label.KeyValue) (TraceState, error) { //noli
 		return TraceState{}, errInvalidTraceStateMembersNumber
 	}
 
-	km := make(map[label.Key]bool)
+	km := make(map[attribute.Key]bool)
 	for _, kv := range kvs {
 		if !isTraceStateKeyValueValid(kv) {
 			return TraceState{}, errInvalidTraceStateKeyValue
@@ -303,16 +303,16 @@ func TraceStateFromKeyValues(kvs ...label.KeyValue) (TraceState, error) { //noli
 		km[kv.Key] = true
 	}
 
-	ckvs := make([]label.KeyValue, len(kvs))
+	ckvs := make([]attribute.KeyValue, len(kvs))
 	copy(ckvs, kvs)
 	return TraceState{ckvs}, nil
 }
 
-func isTraceStateKeyValid(key label.Key) bool {
+func isTraceStateKeyValid(key attribute.Key) bool {
 	return keyFormatRegExp.MatchString(string(key))
 }
 
-func isTraceStateKeyValueValid(kv label.KeyValue) bool {
+func isTraceStateKeyValueValid(kv attribute.KeyValue) bool {
 	return isTraceStateKeyValid(kv.Key) &&
 		valueFormatRegExp.MatchString(kv.Value.Emit())
 }
@@ -438,7 +438,7 @@ type Span interface {
 	// SetAttributes sets kv as attributes of the Span. If a key from kv
 	// already exists for an attribute of the Span it will be overwritten with
 	// the value contained in kv.
-	SetAttributes(kv ...label.KeyValue)
+	SetAttributes(kv ...attribute.KeyValue)
 }
 
 // Event is a thing that happened during a Span's lifetime.
@@ -447,7 +447,7 @@ type Event struct {
 	Name string
 
 	// Attributes describe the aspects of the event.
-	Attributes []label.KeyValue
+	Attributes []attribute.KeyValue
 
 	// Time at which this event was recorded.
 	Time time.Time
@@ -470,7 +470,7 @@ type Event struct {
 //      track the relationship.
 type Link struct {
 	SpanContext
-	Attributes []label.KeyValue
+	Attributes []attribute.KeyValue
 }
 
 // SpanKind is the role a Span plays in a Trace.

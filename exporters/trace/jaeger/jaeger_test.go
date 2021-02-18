@@ -28,10 +28,10 @@ import (
 	"google.golang.org/api/support/bundler"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
-	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -203,8 +203,8 @@ func TestNewRawExporter(t *testing.T) {
 				WithProcess(
 					Process{
 						ServiceName: "jaeger-test",
-						Tags: []label.KeyValue{
-							label.String("key", "val"),
+						Tags: []attribute.KeyValue{
+							attribute.String("key", "val"),
 						},
 					},
 				),
@@ -329,8 +329,8 @@ func TestExporter_ExportSpan(t *testing.T) {
 		withTestCollectorEndpoint(),
 		WithProcess(Process{
 			ServiceName: serviceName,
-			Tags: []label.KeyValue{
-				label.String(tagKey, tagVal),
+			Tags: []attribute.KeyValue{
+				attribute.String(tagKey, tagVal),
 			},
 		}),
 	)
@@ -396,18 +396,18 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 						},
 					},
 				},
-				Attributes: []label.KeyValue{
-					label.String("key", keyValue),
-					label.Float64("double", doubleValue),
-					label.Int64("int", intValue),
+				Attributes: []attribute.KeyValue{
+					attribute.String("key", keyValue),
+					attribute.Float64("double", doubleValue),
+					attribute.Int64("int", intValue),
 				},
 				MessageEvents: []trace.Event{
-					{Name: eventNameValue, Attributes: []label.KeyValue{label.String("k1", keyValue)}, Time: now},
+					{Name: eventNameValue, Attributes: []attribute.KeyValue{attribute.String("k1", keyValue)}, Time: now},
 				},
 				StatusCode:    codes.Error,
 				StatusMessage: statusMessage,
 				SpanKind:      trace.SpanKindClient,
-				Resource:      resource.NewWithAttributes(label.String("rk1", rv1), label.Int64("rk2", rv2)),
+				Resource:      resource.NewWithAttributes(attribute.String("rk1", rv1), attribute.Int64("rk2", rv2)),
 				InstrumentationLibrary: instrumentation.Library{
 					Name:    instrLibName,
 					Version: instrLibVersion,

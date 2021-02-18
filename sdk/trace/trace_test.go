@@ -26,8 +26,8 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/trace"
 
@@ -150,7 +150,7 @@ func (ts *testSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	if strings.HasPrefix(p.Name, ts.prefix) {
 		decision = RecordAndSample
 	}
-	return SamplingResult{Decision: decision, Attributes: []label.KeyValue{label.Int("callCount", ts.callCount)}}
+	return SamplingResult{Decision: decision, Attributes: []attribute.KeyValue{attribute.Int("callCount", ts.callCount)}}
 }
 
 func (ts testSampler) Description() string {
@@ -314,7 +314,7 @@ func TestStartSpanWithParent(t *testing.T) {
 		t.Error(err)
 	}
 
-	ts, err := trace.TraceStateFromKeyValues(label.String("k", "v"))
+	ts, err := trace.TraceStateFromKeyValues(attribute.String("k", "v"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -346,8 +346,8 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
 	span := startSpan(tp,
 		"StartSpanAttribute",
-		trace.WithAttributes(label.String("key1", "value1")),
-		trace.WithAttributes(label.String("key2", "value2")),
+		trace.WithAttributes(attribute.String("key1", "value1")),
+		trace.WithAttributes(attribute.String("key2", "value2")),
 	)
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -361,9 +361,9 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 		},
 		ParentSpanID: sid,
 		Name:         "span0",
-		Attributes: []label.KeyValue{
-			label.String("key1", "value1"),
-			label.String("key2", "value2"),
+		Attributes: []attribute.KeyValue{
+			attribute.String("key1", "value1"),
+			attribute.String("key2", "value2"),
 		},
 		SpanKind:               trace.SpanKindInternal,
 		HasRemoteParent:        true,
@@ -378,7 +378,7 @@ func TestSetSpanAttributes(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
 	span := startSpan(tp, "SpanAttribute")
-	span.SetAttributes(label.String("key1", "value1"))
+	span.SetAttributes(attribute.String("key1", "value1"))
 	got, err := endSpan(te, span)
 	if err != nil {
 		t.Fatal(err)
@@ -391,8 +391,8 @@ func TestSetSpanAttributes(t *testing.T) {
 		},
 		ParentSpanID: sid,
 		Name:         "span0",
-		Attributes: []label.KeyValue{
-			label.String("key1", "value1"),
+		Attributes: []attribute.KeyValue{
+			attribute.String("key1", "value1"),
 		},
 		SpanKind:               trace.SpanKindInternal,
 		HasRemoteParent:        true,
@@ -444,7 +444,7 @@ func TestSamplerAttributesLocalChildSpan(t *testing.T) {
 			},
 			ParentSpanID:           sid,
 			Name:                   "span1",
-			Attributes:             []label.KeyValue{label.Int("callCount", 2)},
+			Attributes:             []attribute.KeyValue{attribute.Int("callCount", 2)},
 			SpanKind:               trace.SpanKindInternal,
 			HasRemoteParent:        false,
 			InstrumentationLibrary: instrumentation.Library{Name: "SpanTwo"},
@@ -456,7 +456,7 @@ func TestSamplerAttributesLocalChildSpan(t *testing.T) {
 			},
 			ParentSpanID:           pid,
 			Name:                   "span0",
-			Attributes:             []label.KeyValue{label.Int("callCount", 1)},
+			Attributes:             []attribute.KeyValue{attribute.Int("callCount", 1)},
 			SpanKind:               trace.SpanKindInternal,
 			HasRemoteParent:        false,
 			ChildSpanCount:         1,
@@ -476,10 +476,10 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 
 	span := startSpan(tp, "SpanAttributesOverLimit")
 	span.SetAttributes(
-		label.Bool("key1", true),
-		label.String("key2", "value2"),
-		label.Bool("key1", false), // Replace key1.
-		label.Int64("key4", 4),    // Remove key2 and add key4
+		attribute.Bool("key1", true),
+		attribute.String("key2", "value2"),
+		attribute.Bool("key1", false), // Replace key1.
+		attribute.Int64("key4", 4),    // Remove key2 and add key4
 	)
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -493,9 +493,9 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 		},
 		ParentSpanID: sid,
 		Name:         "span0",
-		Attributes: []label.KeyValue{
-			label.Bool("key1", false),
-			label.Int64("key4", 4),
+		Attributes: []attribute.KeyValue{
+			attribute.Bool("key1", false),
+			attribute.Int64("key4", 4),
 		},
 		SpanKind:               trace.SpanKindInternal,
 		HasRemoteParent:        true,
@@ -512,14 +512,14 @@ func TestEvents(t *testing.T) {
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
 
 	span := startSpan(tp, "Events")
-	k1v1 := label.String("key1", "value1")
-	k2v2 := label.Bool("key2", true)
-	k3v3 := label.Int64("key3", 3)
+	k1v1 := attribute.String("key1", "value1")
+	k2v2 := attribute.Bool("key2", true)
+	k3v3 := attribute.Int64("key3", 3)
 
-	span.AddEvent("foo", trace.WithAttributes(label.String("key1", "value1")))
+	span.AddEvent("foo", trace.WithAttributes(attribute.String("key1", "value1")))
 	span.AddEvent("bar", trace.WithAttributes(
-		label.Bool("key2", true),
-		label.Int64("key3", 3),
+		attribute.Bool("key2", true),
+		attribute.Int64("key3", 3),
 	))
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -541,8 +541,8 @@ func TestEvents(t *testing.T) {
 		Name:            "span0",
 		HasRemoteParent: true,
 		MessageEvents: []trace.Event{
-			{Name: "foo", Attributes: []label.KeyValue{k1v1}},
-			{Name: "bar", Attributes: []label.KeyValue{k2v2, k3v3}},
+			{Name: "foo", Attributes: []attribute.KeyValue{k1v1}},
+			{Name: "bar", Attributes: []attribute.KeyValue{k2v2, k3v3}},
 		},
 		SpanKind:               trace.SpanKindInternal,
 		InstrumentationLibrary: instrumentation.Library{Name: "Events"},
@@ -558,19 +558,19 @@ func TestEventsOverLimit(t *testing.T) {
 	tp := NewTracerProvider(WithConfig(cfg), WithSyncer(te), WithResource(resource.Empty()))
 
 	span := startSpan(tp, "EventsOverLimit")
-	k1v1 := label.String("key1", "value1")
-	k2v2 := label.Bool("key2", false)
-	k3v3 := label.String("key3", "value3")
+	k1v1 := attribute.String("key1", "value1")
+	k2v2 := attribute.Bool("key2", false)
+	k3v3 := attribute.String("key3", "value3")
 
-	span.AddEvent("fooDrop", trace.WithAttributes(label.String("key1", "value1")))
+	span.AddEvent("fooDrop", trace.WithAttributes(attribute.String("key1", "value1")))
 	span.AddEvent("barDrop", trace.WithAttributes(
-		label.Bool("key2", true),
-		label.String("key3", "value3"),
+		attribute.Bool("key2", true),
+		attribute.String("key3", "value3"),
 	))
-	span.AddEvent("foo", trace.WithAttributes(label.String("key1", "value1")))
+	span.AddEvent("foo", trace.WithAttributes(attribute.String("key1", "value1")))
 	span.AddEvent("bar", trace.WithAttributes(
-		label.Bool("key2", false),
-		label.String("key3", "value3"),
+		attribute.Bool("key2", false),
+		attribute.String("key3", "value3"),
 	))
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -591,8 +591,8 @@ func TestEventsOverLimit(t *testing.T) {
 		ParentSpanID: sid,
 		Name:         "span0",
 		MessageEvents: []trace.Event{
-			{Name: "foo", Attributes: []label.KeyValue{k1v1}},
-			{Name: "bar", Attributes: []label.KeyValue{k2v2, k3v3}},
+			{Name: "foo", Attributes: []attribute.KeyValue{k1v1}},
+			{Name: "bar", Attributes: []attribute.KeyValue{k2v2, k3v3}},
 		},
 		DroppedMessageEventCount: 2,
 		HasRemoteParent:          true,
@@ -608,16 +608,16 @@ func TestLinks(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
 
-	k1v1 := label.String("key1", "value1")
-	k2v2 := label.String("key2", "value2")
-	k3v3 := label.String("key3", "value3")
+	k1v1 := attribute.String("key1", "value1")
+	k2v2 := attribute.String("key2", "value2")
+	k3v3 := attribute.String("key3", "value3")
 
 	sc1 := trace.SpanContext{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}}
 	sc2 := trace.SpanContext{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}}
 
 	links := []trace.Link{
-		{SpanContext: sc1, Attributes: []label.KeyValue{k1v1}},
-		{SpanContext: sc2, Attributes: []label.KeyValue{k2v2, k3v3}},
+		{SpanContext: sc1, Attributes: []attribute.KeyValue{k1v1}},
+		{SpanContext: sc2, Attributes: []attribute.KeyValue{k2v2, k3v3}},
 	}
 	span := startSpan(tp, "Links", trace.WithLinks(links...))
 
@@ -655,14 +655,14 @@ func TestLinksOverLimit(t *testing.T) {
 
 	span := startSpan(tp, "LinksOverLimit",
 		trace.WithLinks(
-			trace.Link{SpanContext: sc1, Attributes: []label.KeyValue{label.String("key1", "value1")}},
-			trace.Link{SpanContext: sc2, Attributes: []label.KeyValue{label.String("key2", "value2")}},
-			trace.Link{SpanContext: sc3, Attributes: []label.KeyValue{label.String("key3", "value3")}},
+			trace.Link{SpanContext: sc1, Attributes: []attribute.KeyValue{attribute.String("key1", "value1")}},
+			trace.Link{SpanContext: sc2, Attributes: []attribute.KeyValue{attribute.String("key2", "value2")}},
+			trace.Link{SpanContext: sc3, Attributes: []attribute.KeyValue{attribute.String("key3", "value3")}},
 		),
 	)
 
-	k2v2 := label.String("key2", "value2")
-	k3v3 := label.String("key3", "value3")
+	k2v2 := attribute.String("key2", "value2")
+	k3v3 := attribute.String("key3", "value3")
 
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -677,8 +677,8 @@ func TestLinksOverLimit(t *testing.T) {
 		ParentSpanID: sid,
 		Name:         "span0",
 		Links: []trace.Link{
-			{SpanContext: sc2, Attributes: []label.KeyValue{k2v2}},
-			{SpanContext: sc3, Attributes: []label.KeyValue{k3v3}},
+			{SpanContext: sc2, Attributes: []attribute.KeyValue{k2v2}},
+			{SpanContext: sc3, Attributes: []attribute.KeyValue{k3v3}},
 		},
 		DroppedLinkCount:       1,
 		HasRemoteParent:        true,
@@ -743,7 +743,7 @@ func TestSetSpanStatus(t *testing.T) {
 
 func cmpDiff(x, y interface{}) string {
 	return cmp.Diff(x, y,
-		cmp.AllowUnexported(label.Value{}),
+		cmp.AllowUnexported(attribute.Value{}),
 		cmp.AllowUnexported(trace.Event{}),
 		cmp.AllowUnexported(trace.TraceState{}))
 }
@@ -1097,7 +1097,7 @@ func TestRecordError(t *testing.T) {
 				{
 					Name: errorEventName,
 					Time: errTime,
-					Attributes: []label.KeyValue{
+					Attributes: []attribute.KeyValue{
 						errorTypeKey.String(s.typ),
 						errorMessageKey.String(s.msg),
 					},
@@ -1198,15 +1198,15 @@ func TestWithResource(t *testing.T) {
 		},
 		{
 			name:    "explicit resource",
-			options: []TracerProviderOption{WithResource(resource.NewWithAttributes(label.String("rk1", "rv1"), label.Int64("rk2", 5)))},
-			want:    resource.NewWithAttributes(label.String("rk1", "rv1"), label.Int64("rk2", 5)),
+			options: []TracerProviderOption{WithResource(resource.NewWithAttributes(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5)))},
+			want:    resource.NewWithAttributes(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5)),
 		},
 		{
 			name: "last resource wins",
 			options: []TracerProviderOption{
-				WithResource(resource.NewWithAttributes(label.String("rk1", "vk1"), label.Int64("rk2", 5))),
-				WithResource(resource.NewWithAttributes(label.String("rk3", "rv3"), label.Int64("rk4", 10)))},
-			want: resource.NewWithAttributes(label.String("rk3", "rv3"), label.Int64("rk4", 10)),
+				WithResource(resource.NewWithAttributes(attribute.String("rk1", "vk1"), attribute.Int64("rk2", 5))),
+				WithResource(resource.NewWithAttributes(attribute.String("rk3", "rv3"), attribute.Int64("rk4", 10)))},
+			want: resource.NewWithAttributes(attribute.String("rk3", "rv3"), attribute.Int64("rk4", 10)),
 		},
 	}
 	for _, tc := range cases {
@@ -1216,7 +1216,7 @@ func TestWithResource(t *testing.T) {
 			defaultOptions := []TracerProviderOption{WithSyncer(te), WithConfig(Config{DefaultSampler: AlwaysSample()})}
 			tp := NewTracerProvider(append(defaultOptions, tc.options...)...)
 			span := startSpan(tp, "WithResource")
-			span.SetAttributes(label.String("key1", "value1"))
+			span.SetAttributes(attribute.String("key1", "value1"))
 			got, err := endSpan(te, span)
 			if err != nil {
 				t.Error(err.Error())
@@ -1228,8 +1228,8 @@ func TestWithResource(t *testing.T) {
 				},
 				ParentSpanID: sid,
 				Name:         "span0",
-				Attributes: []label.KeyValue{
-					label.String("key1", "value1"),
+				Attributes: []attribute.KeyValue{
+					attribute.String("key1", "value1"),
 				},
 				SpanKind:               trace.SpanKindInternal,
 				HasRemoteParent:        true,
@@ -1295,14 +1295,14 @@ func TestSpanCapturesPanic(t *testing.T) {
 	require.Len(t, spans, 1)
 	require.Len(t, spans[0].MessageEvents, 1)
 	assert.Equal(t, spans[0].MessageEvents[0].Name, errorEventName)
-	assert.Equal(t, spans[0].MessageEvents[0].Attributes, []label.KeyValue{
+	assert.Equal(t, spans[0].MessageEvents[0].Attributes, []attribute.KeyValue{
 		errorTypeKey.String("*errors.errorString"),
 		errorMessageKey.String("error message"),
 	})
 }
 
 func TestReadOnlySpan(t *testing.T) {
-	kv := label.String("foo", "bar")
+	kv := attribute.String("foo", "bar")
 
 	tp := NewTracerProvider(WithResource(resource.NewWithAttributes(kv)))
 	cfg := tp.config.Load().(*Config)

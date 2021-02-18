@@ -24,8 +24,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/codes"
@@ -77,12 +77,12 @@ func TestEmptySpanEvent(t *testing.T) {
 }
 
 func TestSpanEvent(t *testing.T) {
-	attrs := []label.KeyValue{label.Int("one", 1), label.Int("two", 2)}
+	attrs := []attribute.KeyValue{attribute.Int("one", 1), attribute.Int("two", 2)}
 	eventTime := time.Date(2020, 5, 20, 0, 0, 0, 0, time.UTC)
 	got := spanEvents([]trace.Event{
 		{
 			Name:       "test 1",
-			Attributes: []label.KeyValue{},
+			Attributes: []attribute.KeyValue{},
 			Time:       eventTime,
 		},
 		{
@@ -121,7 +121,7 @@ func TestEmptyLinks(t *testing.T) {
 }
 
 func TestLinks(t *testing.T) {
-	attrs := []label.KeyValue{label.Int("one", 1), label.Int("two", 2)}
+	attrs := []attribute.KeyValue{attribute.Int("one", 1), attribute.Int("two", 2)}
 	l := []trace.Link{
 		{},
 		{
@@ -199,7 +199,7 @@ func TestSpanData(t *testing.T) {
 	// March 31, 2020 5:01:26 1234nanos (UTC)
 	startTime := time.Unix(1585674086, 1234)
 	endTime := startTime.Add(10 * time.Second)
-	traceState, _ := trace.TraceStateFromKeyValues(label.String("key1", "val1"), label.String("key2", "val2"))
+	traceState, _ := trace.TraceStateFromKeyValues(attribute.String("key1", "val1"), attribute.String("key2", "val2"))
 	spanData := &export.SpanSnapshot{
 		SpanContext: trace.SpanContext{
 			TraceID:    trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
@@ -213,13 +213,13 @@ func TestSpanData(t *testing.T) {
 		EndTime:      endTime,
 		MessageEvents: []trace.Event{
 			{Time: startTime,
-				Attributes: []label.KeyValue{
-					label.Int64("CompressedByteSize", 512),
+				Attributes: []attribute.KeyValue{
+					attribute.Int64("CompressedByteSize", 512),
 				},
 			},
 			{Time: endTime,
-				Attributes: []label.KeyValue{
-					label.String("MessageEventType", "Recv"),
+				Attributes: []attribute.KeyValue{
+					attribute.String("MessageEventType", "Recv"),
 				},
 			},
 		},
@@ -230,8 +230,8 @@ func TestSpanData(t *testing.T) {
 					SpanID:     trace.SpanID{0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7},
 					TraceFlags: 0,
 				},
-				Attributes: []label.KeyValue{
-					label.String("LinkType", "Parent"),
+				Attributes: []attribute.KeyValue{
+					attribute.String("LinkType", "Parent"),
 				},
 			},
 			{
@@ -240,21 +240,21 @@ func TestSpanData(t *testing.T) {
 					SpanID:     trace.SpanID{0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7},
 					TraceFlags: 0,
 				},
-				Attributes: []label.KeyValue{
-					label.String("LinkType", "Child"),
+				Attributes: []attribute.KeyValue{
+					attribute.String("LinkType", "Child"),
 				},
 			},
 		},
 		StatusCode:      codes.Error,
 		StatusMessage:   "utterly unrecognized",
 		HasRemoteParent: true,
-		Attributes: []label.KeyValue{
-			label.Int64("timeout_ns", 12e9),
+		Attributes: []attribute.KeyValue{
+			attribute.Int64("timeout_ns", 12e9),
 		},
 		DroppedAttributeCount:    1,
 		DroppedMessageEventCount: 2,
 		DroppedLinkCount:         3,
-		Resource:                 resource.NewWithAttributes(label.String("rk1", "rv1"), label.Int64("rk2", 5)),
+		Resource:                 resource.NewWithAttributes(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5)),
 		InstrumentationLibrary: instrumentation.Library{
 			Name:    "go.opentelemetry.io/test/otel",
 			Version: "v0.0.1",
