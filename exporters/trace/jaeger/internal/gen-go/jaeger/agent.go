@@ -8,7 +8,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/apache/thrift/lib/go/thrift"
+	"go.opentelemetry.io/otel/exporters/trace/jaeger/internal/vendor/github.com/apache/thrift/lib/go/thrift"
 )
 
 // (needed to ensure safety because of naive import list construction.)
