@@ -406,6 +406,13 @@ func (s *span) addLink(link trace.Link) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	// Discard over limited attributes
+	if len(link.Attributes) > s.spanLimits.AttributePerLinkCountLimit {
+		s.addDroppedAttributeCount(len(link.Attributes) - s.spanLimits.AttributePerLinkCountLimit)
+		link.Attributes = link.Attributes[:s.spanLimits.AttributePerLinkCountLimit]
+	}
+
 	s.links.add(link)
 }
 
