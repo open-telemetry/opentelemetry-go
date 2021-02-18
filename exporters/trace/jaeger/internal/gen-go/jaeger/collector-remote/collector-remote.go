@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"strings"
 
-	"go.opentelemetry.io/otel/exporters/trace/jaeger/internal/vendor/github.com/apache/thrift/lib/go/thrift"
+	"go.opentelemetry.io/otel/exporters/trace/jaeger/internal/third_party/thrift/lib/go/thrift"
 
 	"go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 )
