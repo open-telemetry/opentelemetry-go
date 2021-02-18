@@ -26,26 +26,44 @@ type Config struct {
 	// IDGenerator is for internal use only.
 	IDGenerator IDGenerator
 
-	// MaxEventsPerSpan is max number of message events per span
-	MaxEventsPerSpan int
-
-	// MaxAnnotationEventsPerSpan is max number of attributes per span
-	MaxAttributesPerSpan int
-
-	// MaxLinksPerSpan is max number of links per span
-	MaxLinksPerSpan int
+	// SpanLimits used to limit the number of attributes, events and links to a span.
+	SpanLimits SpanLimits
 
 	// Resource contains attributes representing an entity that produces telemetry.
 	Resource *resource.Resource
 }
 
+// SpanLimits represents the limits of a span.
+type SpanLimits struct {
+	// AttributeCountLimit is the maximum allowed span attribute count.
+	AttributeCountLimit int
+
+	// EventCountLimit is the maximum allowed span event count.
+	EventCountLimit int
+
+	// LinkCountLimit is the maximum allowed span link count.
+	LinkCountLimit int
+
+	// AttributePerEventCountLimit is the maximum allowed attribute per span event count.
+	AttributePerEventCountLimit int
+
+	// AttributePerLinkCountLimit is the maximum allowed attribute per span link count.
+	AttributePerLinkCountLimit int
+}
+
 const (
-	// DefaultMaxEventsPerSpan is default max number of message events per span
-	DefaultMaxEventsPerSpan = 1000
+	// DefaultAttributeCountLimit is the default maximum allowed span attribute count.
+	DefaultAttributeCountLimit = 128
 
-	// DefaultMaxAttributesPerSpan is default max number of attributes per span
-	DefaultMaxAttributesPerSpan = 1000
+	// DefaultEventCountLimit is the default maximum allowed span event count.
+	DefaultEventCountLimit = 128
 
-	// DefaultMaxLinksPerSpan is default max number of links per span
-	DefaultMaxLinksPerSpan = 1000
+	// DefaultLinkCountLimit is the default maximum allowed span link count.
+	DefaultLinkCountLimit = 128
+
+	// DefaultAttributePerEventCountLimit is the default maximum allowed attribute per span event count.
+	DefaultAttributePerEventCountLimit = 128
+
+	// DefaultAttributePerLinkCountLimit is the default maximum allowed attribute per span link count.
+	DefaultAttributePerLinkCountLimit = 128
 )

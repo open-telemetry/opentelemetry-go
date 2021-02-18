@@ -65,11 +65,15 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 		namedTracer: make(map[instrumentation.Library]*tracer),
 	}
 	tp.config.Store(&Config{
-		DefaultSampler:       ParentBased(AlwaysSample()),
-		IDGenerator:          defaultIDGenerator(),
-		MaxAttributesPerSpan: DefaultMaxAttributesPerSpan,
-		MaxEventsPerSpan:     DefaultMaxEventsPerSpan,
-		MaxLinksPerSpan:      DefaultMaxLinksPerSpan,
+		DefaultSampler: ParentBased(AlwaysSample()),
+		IDGenerator:    defaultIDGenerator(),
+		SpanLimits: SpanLimits{
+			AttributeCountLimit:         DefaultAttributeCountLimit,
+			EventCountLimit:             DefaultEventCountLimit,
+			LinkCountLimit:              DefaultLinkCountLimit,
+			AttributePerEventCountLimit: DefaultAttributePerEventCountLimit,
+			AttributePerLinkCountLimit:  DefaultAttributePerLinkCountLimit,
+		},
 	})
 
 	for _, sp := range o.processors {
@@ -170,14 +174,20 @@ func (p *TracerProvider) ApplyConfig(cfg Config) {
 	if cfg.IDGenerator != nil {
 		c.IDGenerator = cfg.IDGenerator
 	}
-	if cfg.MaxEventsPerSpan > 0 {
-		c.MaxEventsPerSpan = cfg.MaxEventsPerSpan
+	if cfg.SpanLimits.EventCountLimit > 0 {
+		c.SpanLimits.EventCountLimit = cfg.SpanLimits.EventCountLimit
 	}
-	if cfg.MaxAttributesPerSpan > 0 {
-		c.MaxAttributesPerSpan = cfg.MaxAttributesPerSpan
+	if cfg.SpanLimits.AttributeCountLimit > 0 {
+		c.SpanLimits.AttributeCountLimit = cfg.SpanLimits.AttributeCountLimit
 	}
-	if cfg.MaxLinksPerSpan > 0 {
-		c.MaxLinksPerSpan = cfg.MaxLinksPerSpan
+	if cfg.SpanLimits.LinkCountLimit > 0 {
+		c.SpanLimits.LinkCountLimit = cfg.SpanLimits.LinkCountLimit
+	}
+	if cfg.SpanLimits.AttributePerEventCountLimit > 0 {
+		c.SpanLimits.AttributePerEventCountLimit = cfg.SpanLimits.AttributePerEventCountLimit
+	}
+	if cfg.SpanLimits.AttributePerLinkCountLimit > 0 {
+		c.SpanLimits.AttributePerLinkCountLimit = cfg.SpanLimits.AttributePerLinkCountLimit
 	}
 	c.Resource = cfg.Resource
 	if c.Resource == nil {
