@@ -8,10 +8,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- AttributePerEventCountLimit and AttributePerLinkCountLimit for SpanLimits. (#1535)
+
 ### Changed
 
 - Replaced interface `oteltest.SpanRecorder` with its existing implementation
   `StandardSpanRecorder` (#1542).
+- Default span limit values to 128. (#1535)
+- Rename MaxEventsPerSpan, MaxAttributesPerSpan and MaxLinksPerSpan to EventCountLimit, AttributeCountLimit and LinkCountLimit, and move these fieds into SpanLimits. (#1535)
 - Renamed the `otel/label` package to `otel/attribute`. (#1541)
 
 ### Added
