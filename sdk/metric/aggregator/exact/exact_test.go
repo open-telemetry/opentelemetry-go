@@ -285,8 +285,8 @@ func TestExactFloat64(t *testing.T) {
 			require.True(t, po[i-1].Time.Before(po[i].Time))
 		}
 	}
-	require.True(t, po[0].Time.After(startTime))
-	require.True(t, po[len(po)-1].Time.Before(endTime))
+	require.False(t, po[0].Time.Before(startTime))
+	require.False(t, po[len(po)-1].Time.After(endTime))
 }
 
 func TestSynchronizedMoveReset(t *testing.T) {
