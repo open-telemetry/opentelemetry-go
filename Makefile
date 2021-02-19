@@ -66,7 +66,7 @@ test-with-coverage:
 	for dir in $(ALL_COVERAGE_MOD_DIRS); do \
 	  echo "go test ./... + coverage in $${dir}"; \
 	  (cd "$${dir}" && \
-	 	$(GOTEST_WITH_COVERAGE) ./... && \
+	 	go list ./... | grep -v third_party | xargs $(GOTEST_WITH_COVERAGE) && \
 		go tool cover -html=coverage.out -o coverage.html); \
       [ -f "$${dir}/coverage.out" ] && cat "$${dir}/coverage.out" >> coverage.txt; \
 	done; \
@@ -93,7 +93,7 @@ build:
 	  echo "compiling all packages in $${dir}"; \
 	  (cd "$${dir}" && \
 	    go build ./... && \
-	    go test -run xxxxxMatchNothingxxxxx ./... >/dev/null); \
+	    go list ./... | grep -v third_party | xargs go test -vet=off -run xxxxxMatchNothingxxxxx >/dev/null); \
 	done
 
 .PHONY: test
@@ -101,7 +101,7 @@ test:
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "go test ./... + race in $${dir}"; \
 	  (cd "$${dir}" && \
-	    $(GOTEST) ./...); \
+	    go list ./... | grep -v third_party | xargs $(GOTEST)); \
 	done
 
 .PHONY: test-386
@@ -112,7 +112,7 @@ test-386:
 	  set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	    echo "go test ./... GOARCH 386 in $${dir}"; \
 	    (cd "$${dir}" && \
-	      GOARCH=386 $(GOTEST_MIN) ./...); \
+	      GOARCH=386 go list ./... | grep -v third_party | xargs $(GOTEST_MIN)); \
 	  done; \
 	fi
 
@@ -128,7 +128,7 @@ examples:
 test-benchmarks:
 	@set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "test benchmarks in $${dir}"; \
-	  (cd "$${dir}" && go test -test.benchtime=1ms -run=NONE -bench=. ./...) > /dev/null; \
+	  (cd "$${dir}" && go list ./... | grep -v third_party | xargs go test -test.benchtime=1ms -run=NONE -bench=.) > /dev/null; \
 	done
 
 .PHONY: lint
@@ -136,8 +136,8 @@ lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell lint-modules
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "golangci-lint in $${dir}"; \
 	  (cd "$${dir}" && \
-	    $(TOOLS_DIR)/golangci-lint run --fix && \
-	    $(TOOLS_DIR)/golangci-lint run); \
+	    $(TOOLS_DIR)/golangci-lint run --skip-dirs-use-default --fix && \
+	    $(TOOLS_DIR)/golangci-lint run --skip-dirs-use-default); \
 	done
 	$(TOOLS_DIR)/misspell -w $(ALL_DOCS)
 
@@ -160,7 +160,7 @@ generate: $(TOOLS_DIR)/stringer
 
 .PHONY: license-check
 license-check:
-	@licRes=$$(for f in $$(find . -type f \( -iname '*.go' -o -iname '*.sh' \) ! -path './vendor/*' ! -path './exporters/otlp/internal/opentelemetry-proto/*') ; do \
+	@licRes=$$(for f in $$(find . -type f \( -iname '*.go' -o -iname '*.sh' \) ! -path './vendor/*' ! -path '**/third_party/*' ! -path './exporters/otlp/internal/opentelemetry-proto/*') ; do \
 	           awk '/Copyright The OpenTelemetry Authors|generated|GENERATED/ && NR<=3 { found=1; next } END { if (!found) print FILENAME }' $$f; \
 	   done); \
 	   if [ -n "$${licRes}" ]; then \

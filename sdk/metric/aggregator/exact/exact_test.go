@@ -159,7 +159,7 @@ func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
 		received.Append(s.Number)
 
 		if i > 0 {
-			require.True(t, pts[i-1].Time.Before(pts[i].Time))
+			require.False(t, pts[i-1].Time.After(pts[i].Time))
 		}
 	}
 
@@ -282,11 +282,11 @@ func TestExactFloat64(t *testing.T) {
 	for i := 0; i < len(po); i++ {
 		require.Equal(t, all.Points()[i], po[i].Number, "Wrong point at position %d", i)
 		if i > 0 {
-			require.True(t, po[i-1].Time.Before(po[i].Time))
+			require.False(t, po[i-1].Time.After(po[i].Time))
 		}
 	}
-	require.True(t, po[0].Time.After(startTime))
-	require.True(t, po[len(po)-1].Time.Before(endTime))
+	require.False(t, po[0].Time.Before(startTime))
+	require.False(t, po[len(po)-1].Time.After(endTime))
 }
 
 func TestSynchronizedMoveReset(t *testing.T) {
