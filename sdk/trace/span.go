@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -76,6 +77,9 @@ var emptySpanContext = trace.SpanContext{}
 // span is an implementation of the OpenTelemetry Span API representing the
 // individual component of a trace.
 type span struct {
+	// droppedAttributeCount contains dropped attributes for the events and links.
+	droppedAttributeCount int64
+
 	// mu protects the contents of this span.
 	mu sync.Mutex
 
@@ -133,6 +137,9 @@ type span struct {
 
 	// tracer is the SDK tracer that created this span.
 	tracer *tracer
+
+	// spanLimits holds the limits to this span.
+	spanLimits SpanLimits
 }
 
 var _ trace.Span = &span{}
@@ -284,6 +291,12 @@ func (s *span) AddEvent(name string, o ...trace.EventOption) {
 func (s *span) addEvent(name string, o ...trace.EventOption) {
 	c := trace.NewEventConfig(o...)
 
+	// Discard over limited attributes
+	if len(c.Attributes) > s.spanLimits.AttributePerEventCountLimit {
+		s.addDroppedAttributeCount(len(c.Attributes) - s.spanLimits.AttributePerEventCountLimit)
+		c.Attributes = c.Attributes[:s.spanLimits.AttributePerEventCountLimit]
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.messageEvents.add(trace.Event{
@@ -407,6 +420,13 @@ func (s *span) addLink(link trace.Link) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	// Discard over limited attributes
+	if len(link.Attributes) > s.spanLimits.AttributePerLinkCountLimit {
+		s.addDroppedAttributeCount(len(link.Attributes) - s.spanLimits.AttributePerLinkCountLimit)
+		link.Attributes = link.Attributes[:s.spanLimits.AttributePerLinkCountLimit]
+	}
+
 	s.links.add(link)
 }
 
@@ -430,9 +450,10 @@ func (s *span) Snapshot() *export.SpanSnapshot {
 	sd.StatusCode = s.statusCode
 	sd.StatusMessage = s.statusMessage
 
+	sd.DroppedAttributeCount = int(s.droppedAttributeCount)
 	if s.attributes.evictList.Len() > 0 {
 		sd.Attributes = s.attributes.toKeyValue()
-		sd.DroppedAttributeCount = s.attributes.droppedCount
+		sd.DroppedAttributeCount += s.attributes.droppedCount
 	}
 	if len(s.messageEvents.queue) > 0 {
 		sd.MessageEvents = s.interfaceArrayToMessageEventArray()
@@ -480,6 +501,10 @@ func (s *span) addChild() {
 	s.mu.Unlock()
 }
 
+func (s *span) addDroppedAttributeCount(delta int) {
+	atomic.AddInt64(&s.droppedAttributeCount, int64(delta))
+}
+
 func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trace.SpanContext, remoteParent bool, o *trace.SpanConfig) *span {
 	span := &span{}
 	span.spanContext = parent
@@ -494,9 +519,10 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 		span.spanContext.SpanID = cfg.IDGenerator.NewSpanID(ctx, parent.TraceID)
 	}
 
-	span.attributes = newAttributesMap(cfg.MaxAttributesPerSpan)
-	span.messageEvents = newEvictedQueue(cfg.MaxEventsPerSpan)
-	span.links = newEvictedQueue(cfg.MaxLinksPerSpan)
+	span.attributes = newAttributesMap(cfg.SpanLimits.AttributeCountLimit)
+	span.messageEvents = newEvictedQueue(cfg.SpanLimits.EventCountLimit)
+	span.links = newEvictedQueue(cfg.SpanLimits.LinkCountLimit)
+	span.spanLimits = cfg.SpanLimits
 
 	data := samplingData{
 		noParent:     hasEmptySpanContext(parent),
