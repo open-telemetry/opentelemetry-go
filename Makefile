@@ -21,16 +21,6 @@ ALL_DOCS := $(shell find . -name '*.md' -type f | sort)
 ALL_GO_MOD_DIRS := $(filter-out $(TOOLS_MOD_DIR), $(shell find . -type f -name 'go.mod' -exec dirname {} \; | egrep -v '^./example' | sort)) $(shell find ./example -type f -name 'go.mod' -exec dirname {} \; | sort)
 ALL_COVERAGE_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | egrep -v '^./example|^$(TOOLS_MOD_DIR)' | sort)
 
-# Mac OS Catalina 10.5.x doesn't support 386. Hence skip 386 test
-SKIP_386_TEST = false
-UNAME_S := $(shell uname -s)
-ifeq ($(UNAME_S),Darwin)
-	SW_VERS := $(shell sw_vers -productVersion)
-	ifeq ($(shell echo $(SW_VERS) | egrep '^(10.1[5-9]|1[1-9]|[2-9])'), $(SW_VERS))
-		SKIP_386_TEST = true
-	endif
-endif
-
 GOTEST_MIN = go test -timeout 30s
 GOTEST = $(GOTEST_MIN) -race
 GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.out -covermode=atomic -coverpkg=./...
@@ -74,7 +64,7 @@ test-with-coverage:
 
 
 .PHONY: ci
-ci: precommit check-clean-work-tree test-with-coverage test-386
+ci: precommit check-clean-work-tree test-with-coverage
 
 .PHONY: check-clean-work-tree
 check-clean-work-tree:
@@ -103,18 +93,6 @@ test:
 	  (cd "$${dir}" && \
 	    $(GOTEST) ./...); \
 	done
-
-.PHONY: test-386
-test-386:
-	if [ $(SKIP_386_TEST) = true ] ; then \
-	  echo "skipping the test for GOARCH 386 as it is not supported on the current OS"; \
-	else \
-	  set -e; for dir in $(ALL_GO_MOD_DIRS); do \
-	    echo "go test ./... GOARCH 386 in $${dir}"; \
-	    (cd "$${dir}" && \
-	      GOARCH=386 $(GOTEST_MIN) ./...); \
-	  done; \
-	fi
 
 .PHONY: examples
 examples:

@@ -8,10 +8,6 @@ env:
   TEST_RESULTS: /tmp/test-results # path to where test results will be saved
 jobs:
   go:
-    strategy:
-      fail-fast: false
-      matrix:
-        go_version: [1.14, 1.15]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
@@ -48,3 +44,34 @@ jobs:
         with:
             name: opentelemetry-go-test-output
             path: ${{ env.TEST_RESULTS }}
+
+
+  compatibility-test:
+    strategy:
+      matrix:
+        go-version: [1.15.x, 1.14.x]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        arch: ["386", amd64, arm, arm64]
+        exclude:
+        - os: macos-latest
+          arch: "386"
+        - os: macos-latest
+          arch: arm
+        - os: macos-latest
+          arch: arm64
+        - os: windows-latest
+          arch: arm
+        - os: windows-latest
+          arch: arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v2.1.3
+      with:
+        go-version: ${{ matrix.go-version }}
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: Run tests
+      env:
+          GOARCH: ${{ matrix.arch }}
+      run: go run ./internal/tools/testmods/testmods.go -short
