@@ -17,12 +17,13 @@ package otlp_test
 import (
 	"context"
 	"errors"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
 	"log"
 	"sync"
 	"testing"
 	"time"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -375,7 +376,7 @@ func ExampleNewExporter() {
 	// Output:
 }
 
-func ExampleNewExporter_WithBatcher() {
+func ExampleNewExporter_with_batcher() {
 	ctx := context.Background()
 
 	// Set different endpoints for the metrics and traces collectors
