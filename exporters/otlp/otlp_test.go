@@ -371,6 +371,8 @@ func ExampleNewExporter() {
 
 	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithBatcher(exporter))
 	otel.SetTracerProvider(tracerProvider)
+
+	// Output:
 }
 
 func ExampleNewExporterWithBatcher() {
@@ -406,4 +408,6 @@ func ExampleNewExporterWithBatcher() {
 		),
 	)
 	otel.SetTracerProvider(tracerProvider)
+
+	// Output:
 }
