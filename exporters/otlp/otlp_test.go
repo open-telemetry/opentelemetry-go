@@ -375,7 +375,7 @@ func ExampleNewExporter() {
 	// Output:
 }
 
-func ExampleNewExporterWithBatcher() {
+func ExampleNewExporter_WithBatcher() {
 	ctx := context.Background()
 
 	// Set different endpoints for the metrics and traces collectors
