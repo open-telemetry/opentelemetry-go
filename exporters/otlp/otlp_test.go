@@ -17,6 +17,9 @@ package otlp_test
 import (
 	"context"
 	"errors"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
+	"log"
 	"sync"
 	"testing"
 	"time"
@@ -30,6 +33,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func stubSpanSnapshot(count int) []*tracesdk.SpanSnapshot {
@@ -337,4 +341,69 @@ func TestSplitDriverFail(t *testing.T) {
 			assert.NoError(t, errStop)
 		}
 	}
+}
+
+func ExampleNewExporter() {
+	ctx := context.Background()
+
+	// Set different endpoints for the metrics and traces collectors
+	metricsDriver := otlpgrpc.NewDriver(
+	//Configure metrics driver here
+	)
+	tracesDriver := otlpgrpc.NewDriver(
+	//Configure traces driver here
+	)
+	config := otlp.SplitConfig{
+		ForMetrics: metricsDriver,
+		ForTraces:  tracesDriver,
+	}
+	driver := otlp.NewSplitDriver(config)
+	exporter, err := otlp.NewExporter(ctx, driver) // Configure as needed.
+	if err != nil {
+		log.Fatalf("failed to create exporter: %v", err)
+	}
+	defer func() {
+		err := exporter.Shutdown(ctx)
+		if err != nil {
+			log.Fatalf("failed to stop exporter: %v", err)
+		}
+	}()
+
+	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithBatcher(exporter))
+	otel.SetTracerProvider(tracerProvider)
+}
+
+func ExampleNewExporterWithBatcher() {
+	ctx := context.Background()
+
+	// Set different endpoints for the metrics and traces collectors
+	metricsDriver := otlpgrpc.NewDriver(
+	//Configure metrics driver here
+	)
+	tracesDriver := otlpgrpc.NewDriver(
+	//Configure traces driver here
+	)
+	config := otlp.SplitConfig{
+		ForMetrics: metricsDriver,
+		ForTraces:  tracesDriver,
+	}
+	driver := otlp.NewSplitDriver(config)
+	exporter, err := otlp.NewExporter(ctx, driver) // Configure as needed.
+	if err != nil {
+		log.Fatalf("failed to create exporter: %v", err)
+	}
+	defer func() {
+		err := exporter.Shutdown(ctx)
+		if err != nil {
+			log.Fatalf("failed to stop exporter: %v", err)
+		}
+	}()
+	// Note: The exporter can also be used as a Batcher. E.g.
+	tracerProvider := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter,
+			sdktrace.WithBatchTimeout(time.Second*15),
+			sdktrace.WithMaxExportBatchSize(100),
+		),
+	)
+	otel.SetTracerProvider(tracerProvider)
 }
