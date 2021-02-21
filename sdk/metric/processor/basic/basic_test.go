@@ -335,8 +335,8 @@ func TestBasicTimestamps(t *testing.T) {
 	}))
 
 	// The first start time is set in the constructor.
-	require.True(t, beforeNew.Before(start1))
-	require.True(t, afterNew.After(start1))
+	require.False(t, beforeNew.After(start1))
+	require.False(t, afterNew.Before(start1))
 
 	for i := 0; i < 2; i++ {
 		b.StartCollection()
