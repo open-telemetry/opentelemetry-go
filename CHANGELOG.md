@@ -25,6 +25,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Added `resource.Default()` for use with meter and tracer providers. (#1507)
 - Added `Keys()` method to `propagation.TextMapCarrier` and `propagation.HeaderCarrier` to adapt `http.Header` to this interface. (#1544)
+- Added `code` attributes to `go.opentelemetry.io/otel/semconv` package. (#1558)
 
 ### Removed
 
