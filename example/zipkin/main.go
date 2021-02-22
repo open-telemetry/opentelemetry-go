@@ -55,7 +55,7 @@ func initTracer(url string) func() {
 	global.SetTracerProvider(tp)
 
 	return func() {
-		tp.Shutdown(context.Background())
+		_ = tp.Shutdown(context.Background())
 	}
 }
 
