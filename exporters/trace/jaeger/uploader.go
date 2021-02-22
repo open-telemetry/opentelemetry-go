@@ -24,7 +24,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/apache/thrift/lib/go/thrift"
+	"go.opentelemetry.io/otel/exporters/trace/jaeger/internal/third_party/thrift/lib/go/thrift"
 
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 )
