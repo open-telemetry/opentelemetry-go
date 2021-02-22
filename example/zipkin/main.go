@@ -63,8 +63,8 @@ func main() {
 	url := flag.String("zipkin", "http://localhost:9411/api/v2/spans", "zipkin url")
 	flag.Parse()
 
-	flusher := initTracer(*url)
-	defer flusher()
+	shutdown := initTracer(*url)
+	defer shutdown()
 
 	ctx := context.Background()
 
