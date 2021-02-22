@@ -354,7 +354,7 @@ var (
 	FaaSDocumentOperationDelete = FaaSDocumentOperationKey.String("delete")
 )
 
-// Semantic conventions for source code attributes
+// Semantic conventions for source code attributes.
 const (
 	// The method or function name, or equivalent (usually rightmost part of
 	// the code unit's name).
