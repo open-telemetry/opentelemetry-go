@@ -117,6 +117,12 @@ type mergeTest struct {
 	absolute bool
 }
 
+func advance() {
+	before := time.Now()
+	for time.Now() != before {
+	}
+}
+
 func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
 	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 	agg1, agg2, ckpt1, ckpt2 := new4()
@@ -130,15 +136,18 @@ func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
 
 		x2 := profile.Random(+1)
 		all.Append(x2)
+		advance()
 		aggregatortest.CheckedUpdate(t, agg2, x2, descriptor)
 
 		if !mt.absolute {
 			y1 := profile.Random(-1)
 			all.Append(y1)
+			advance()
 			aggregatortest.CheckedUpdate(t, agg1, y1, descriptor)
 
 			y2 := profile.Random(-1)
 			all.Append(y2)
+			advance()
 			aggregatortest.CheckedUpdate(t, agg2, y2, descriptor)
 		}
 	}
