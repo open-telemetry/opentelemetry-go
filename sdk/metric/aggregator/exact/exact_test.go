@@ -120,6 +120,7 @@ type mergeTest struct {
 func advance() {
 	before := time.Now()
 	for time.Now() != before {
+		time.Sleep(0)
 	}
 }
 
