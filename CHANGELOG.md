@@ -20,6 +20,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Rename MaxEventsPerSpan, MaxAttributesPerSpan and MaxLinksPerSpan to EventCountLimit, AttributeCountLimit and LinkCountLimit, and move these fieds into SpanLimits. (#1535)
 - Renamed the `otel/label` package to `otel/attribute`. (#1541)
 - Vendor the Jaeger exporter's dependency on Apache Thrift. (#1551)
+- Stagger timestamps in exact aggregator tests. (#1569)
 
 ### Added
 
