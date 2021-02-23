@@ -116,7 +116,10 @@ func combine(a, b []aggregation.Point) []aggregation.Point {
 	result := make([]aggregation.Point, 0, len(a)+len(b))
 
 	for len(a) != 0 && len(b) != 0 {
-		if a[0].Time.Before(b[0].Time) {
+		if a[0].Time == b[0].Time && a[0].Number.AsRaw() < b[0].Number.AsRaw() {
+			result = append(result, a[0])
+			a = a[1:]
+		} else if a[0].Time.Before(b[0].Time) {
 			result = append(result, a[0])
 			a = a[1:]
 		} else {
