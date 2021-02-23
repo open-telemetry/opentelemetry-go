@@ -73,12 +73,12 @@ func (ts traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult 
 	if x < ts.traceIDUpperBound {
 		return SamplingResult{
 			Decision:   RecordAndSample,
-			Tracestate: p.ParentContext.TraceState,
+			Tracestate: p.ParentContext.TraceState(),
 		}
 	}
 	return SamplingResult{
 		Decision:   Drop,
-		Tracestate: p.ParentContext.TraceState,
+		Tracestate: p.ParentContext.TraceState(),
 	}
 }
 
@@ -111,7 +111,7 @@ type alwaysOnSampler struct{}
 func (as alwaysOnSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	return SamplingResult{
 		Decision:   RecordAndSample,
-		Tracestate: p.ParentContext.TraceState,
+		Tracestate: p.ParentContext.TraceState(),
 	}
 }
 
@@ -132,7 +132,7 @@ type alwaysOffSampler struct{}
 func (as alwaysOffSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	return SamplingResult{
 		Decision:   Drop,
-		Tracestate: p.ParentContext.TraceState,
+		Tracestate: p.ParentContext.TraceState(),
 	}
 }
 

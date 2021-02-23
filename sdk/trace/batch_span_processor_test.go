@@ -209,7 +209,8 @@ func generateSpan(t *testing.T, parallel bool, tr trace.Tracer, option testOptio
 
 	wg := &sync.WaitGroup{}
 	for i := 0; i < option.genNumSpans; i++ {
-		binary.BigEndian.PutUint64(sc.TraceID[0:8], uint64(i+1))
+		tid := sc.TraceID()
+		binary.BigEndian.PutUint64(tid[0:8], uint64(i+1))
 		wg.Add(1)
 		f := func(sc trace.SpanContext) {
 			ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
@@ -229,11 +230,11 @@ func generateSpan(t *testing.T, parallel bool, tr trace.Tracer, option testOptio
 func getSpanContext() trace.SpanContext {
 	tid, _ := trace.TraceIDFromHex("01020304050607080102040810203040")
 	sid, _ := trace.SpanIDFromHex("0102040810203040")
-	return trace.SpanContext{
+	return trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 0x1,
-	}
+	})
 }
 
 func TestBatchSpanProcessorShutdown(t *testing.T) {

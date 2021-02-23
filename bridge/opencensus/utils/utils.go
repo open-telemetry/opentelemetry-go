@@ -28,7 +28,7 @@ import (
 // error handler.
 func OTelSpanContextToOC(sc trace.SpanContext) octrace.SpanContext {
 	if sc.IsDebug() || sc.IsDeferred() {
-		otel.Handle(fmt.Errorf("ignoring OpenTelemetry Debug or Deferred trace flags for span %q because they are not supported by OpenCensus", sc.SpanID))
+		otel.Handle(fmt.Errorf("ignoring OpenTelemetry Debug or Deferred trace flags for span %q because they are not supported by OpenCensus", sc.SpanID()))
 	}
 	var to octrace.TraceOptions
 	if sc.IsSampled() {
@@ -36,8 +36,8 @@ func OTelSpanContextToOC(sc trace.SpanContext) octrace.SpanContext {
 		to = 0x1
 	}
 	return octrace.SpanContext{
-		TraceID:      octrace.TraceID(sc.TraceID),
-		SpanID:       octrace.SpanID(sc.SpanID),
+		TraceID:      octrace.TraceID(sc.TraceID()),
+		SpanID:       octrace.SpanID(sc.SpanID()),
 		TraceOptions: to,
 	}
 }
@@ -49,9 +49,9 @@ func OCSpanContextToOTel(sc octrace.SpanContext) trace.SpanContext {
 	if sc.IsSampled() {
 		traceFlags = trace.FlagsSampled
 	}
-	return trace.SpanContext{
+	return trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    trace.TraceID(sc.TraceID),
 		SpanID:     trace.SpanID(sc.SpanID),
 		TraceFlags: traceFlags,
-	}
+	})
 }

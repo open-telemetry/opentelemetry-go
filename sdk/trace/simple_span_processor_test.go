@@ -63,17 +63,17 @@ func TestSimpleSpanProcessorOnEnd(t *testing.T) {
 	tr := tp.Tracer("SimpleSpanProcessor")
 	tid, _ := trace.TraceIDFromHex("01020304050607080102040810203040")
 	sid, _ := trace.SpanIDFromHex("0102040810203040")
-	sc := trace.SpanContext{
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 0x1,
-	}
+	})
 	ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
 	_, span := tr.Start(ctx, "OnEnd")
 	span.End()
 
 	wantTraceID := tid
-	gotTraceID := te.spans[0].SpanContext.TraceID
+	gotTraceID := te.spans[0].SpanContext.TraceID()
 	if wantTraceID != gotTraceID {
 		t.Errorf("SimplerSpanProcessor OnEnd() check: got %+v, want %+v\n", gotTraceID, wantTraceID)
 	}

@@ -442,7 +442,7 @@ func (s *span) Snapshot() *export.SpanSnapshot {
 	sd.HasRemoteParent = s.hasRemoteParent
 	sd.InstrumentationLibrary = s.instrumentationLibrary
 	sd.Name = s.name
-	sd.ParentSpanID = s.parent.SpanID
+	sd.ParentSpanID = s.parent.SpanID()
 	sd.Resource = s.resource
 	sd.SpanContext = s.spanContext
 	sd.SpanKind = s.spanKind
@@ -507,17 +507,27 @@ func (s *span) addDroppedAttributeCount(delta int) {
 
 func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trace.SpanContext, remoteParent bool, o *trace.SpanConfig) *span {
 	span := &span{}
-	span.spanContext = parent
 
 	cfg := tr.provider.config.Load().(*Config)
 
+	var tid trace.TraceID
+	var sid trace.SpanID
+
 	if hasEmptySpanContext(parent) {
 		// Generate both TraceID and SpanID
-		span.spanContext.TraceID, span.spanContext.SpanID = cfg.IDGenerator.NewIDs(ctx)
+		tid, sid = cfg.IDGenerator.NewIDs(ctx)
 	} else {
 		// TraceID already exists, just generate a SpanID
-		span.spanContext.SpanID = cfg.IDGenerator.NewSpanID(ctx, parent.TraceID)
+		tid = parent.TraceID()
+		sid = cfg.IDGenerator.NewSpanID(ctx, tid)
 	}
+
+	span.spanContext = trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    tid,
+		SpanID:     sid,
+		TraceFlags: parent.TraceFlags(),
+		TraceState: parent.TraceState(),
+	})
 
 	span.attributes = newAttributesMap(cfg.SpanLimits.AttributeCountLimit)
 	span.messageEvents = newEvictedQueue(cfg.SpanLimits.EventCountLimit)
@@ -561,10 +571,7 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 }
 
 func hasEmptySpanContext(parent trace.SpanContext) bool {
-	return parent.SpanID == emptySpanContext.SpanID &&
-		parent.TraceID == emptySpanContext.TraceID &&
-		parent.TraceFlags == emptySpanContext.TraceFlags &&
-		parent.TraceState.IsEmpty()
+	return parent.Equal(emptySpanContext)
 }
 
 type samplingData struct {
@@ -581,10 +588,9 @@ type samplingData struct {
 
 func makeSamplingDecision(data samplingData) SamplingResult {
 	sampler := data.cfg.DefaultSampler
-	spanContext := &data.span.spanContext
 	sampled := sampler.ShouldSample(SamplingParameters{
 		ParentContext:   data.parent,
-		TraceID:         spanContext.TraceID,
+		TraceID:         data.span.spanContext.TraceID(),
 		Name:            data.name,
 		HasRemoteParent: data.remoteParent,
 		Kind:            data.kind,
@@ -592,9 +598,9 @@ func makeSamplingDecision(data samplingData) SamplingResult {
 		Links:           data.links,
 	})
 	if sampled.Decision == RecordAndSample {
-		spanContext.TraceFlags |= trace.FlagsSampled
+		data.span.spanContext = data.span.spanContext.WithTraceFlags(data.span.spanContext.TraceFlags() | trace.FlagsSampled)
 	} else {
-		spanContext.TraceFlags &^= trace.FlagsSampled
+		data.span.spanContext = data.span.spanContext.WithTraceFlags(data.span.spanContext.TraceFlags() &^ trace.FlagsSampled)
 	}
 	return sampled
 }

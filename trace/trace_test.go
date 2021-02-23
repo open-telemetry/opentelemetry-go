@@ -31,7 +31,7 @@ type testSpan struct {
 	ID byte
 }
 
-func (s testSpan) SpanContext() SpanContext { return SpanContext{SpanID: [8]byte{s.ID}} }
+func (s testSpan) SpanContext() SpanContext { return SpanContext{spanID: [8]byte{s.ID}} }
 
 func TestContextSpan(t *testing.T) {
 	testCases := []struct {
@@ -77,7 +77,7 @@ func TestContextRemoteSpanContext(t *testing.T) {
 		t.Errorf("RemoteSpanContextFromContext returned %v from an empty context, want %v", got, empty)
 	}
 
-	want := SpanContext{TraceID: [16]byte{1}, SpanID: [8]byte{42}}
+	want := SpanContext{traceID: [16]byte{1}, spanID: [8]byte{42}}
 	ctx = ContextWithRemoteSpanContext(ctx, want)
 	if got, ok := ctx.Value(remoteContextKey).(SpanContext); !ok {
 		t.Errorf("failed to set SpanContext with %#v", want)
@@ -89,7 +89,7 @@ func TestContextRemoteSpanContext(t *testing.T) {
 		t.Errorf("RemoteSpanContextFromContext returned %v from a set context, want %v", got, want)
 	}
 
-	want = SpanContext{TraceID: [16]byte{1}, SpanID: [8]byte{43}}
+	want = SpanContext{traceID: [16]byte{1}, spanID: [8]byte{43}}
 	ctx = ContextWithRemoteSpanContext(ctx, want)
 	if got, ok := ctx.Value(remoteContextKey).(SpanContext); !ok {
 		t.Errorf("failed to set SpanContext with %#v", want)
@@ -134,8 +134,8 @@ func TestIsValid(t *testing.T) {
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			sc := SpanContext{
-				TraceID: testcase.tid,
-				SpanID:  testcase.sid,
+				traceID: testcase.tid,
+				spanID:  testcase.sid,
 			}
 			have := sc.IsValid()
 			if have != testcase.want {
@@ -207,7 +207,7 @@ func TestHasTraceID(t *testing.T) {
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			//proto: func (sc SpanContext) HasTraceID() bool{}
-			sc := SpanContext{TraceID: testcase.tid}
+			sc := SpanContext{traceID: testcase.tid}
 			have := sc.HasTraceID()
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
@@ -224,7 +224,7 @@ func TestHasSpanID(t *testing.T) {
 	}{
 		{
 			name: "SpanContext.HasSpanID() returns true if self.SpanID != 0",
-			sc:   SpanContext{SpanID: [8]byte{42}},
+			sc:   SpanContext{spanID: [8]byte{42}},
 			want: true,
 		}, {
 			name: "SpanContext.HasSpanID() returns false if self.SpanID == 0",
@@ -251,27 +251,27 @@ func TestSpanContextIsSampled(t *testing.T) {
 		{
 			name: "sampled",
 			sc: SpanContext{
-				TraceID:    TraceID([16]byte{1}),
-				TraceFlags: FlagsSampled,
+				traceID:    TraceID([16]byte{1}),
+				traceFlags: FlagsSampled,
 			},
 			want: true,
 		}, {
 			name: "unused bits are ignored, still not sampled",
 			sc: SpanContext{
-				TraceID:    TraceID([16]byte{1}),
-				TraceFlags: ^FlagsSampled,
+				traceID:    TraceID([16]byte{1}),
+				traceFlags: ^FlagsSampled,
 			},
 			want: false,
 		}, {
 			name: "unused bits are ignored, still sampled",
 			sc: SpanContext{
-				TraceID:    TraceID([16]byte{1}),
-				TraceFlags: FlagsSampled | ^FlagsSampled,
+				traceID:    TraceID([16]byte{1}),
+				traceFlags: FlagsSampled | ^FlagsSampled,
 			},
 			want: true,
 		}, {
 			name: "not sampled/default",
-			sc:   SpanContext{TraceID: TraceID{}},
+			sc:   SpanContext{traceID: TraceID{}},
 			want: false,
 		},
 	} {
@@ -431,7 +431,7 @@ func TestSpanContextFromContext(t *testing.T) {
 		{
 			name:                "span 1",
 			context:             ContextWithSpan(context.Background(), testSpan{ID: 1}),
-			expectedSpanContext: SpanContext{SpanID: [8]byte{1}},
+			expectedSpanContext: SpanContext{spanID: [8]byte{1}},
 		},
 	}
 
@@ -735,10 +735,10 @@ func TestTraceStateFromKeyValues(t *testing.T) {
 }
 
 func assertSpanContextEqual(got SpanContext, want SpanContext) bool {
-	return got.SpanID == want.SpanID &&
-		got.TraceID == want.TraceID &&
-		got.TraceFlags == want.TraceFlags &&
-		assertTraceStateEqual(got.TraceState, want.TraceState)
+	return got.spanID == want.spanID &&
+		got.traceID == want.traceID &&
+		got.traceFlags == want.traceFlags &&
+		assertTraceStateEqual(got.traceState, want.traceState)
 }
 
 func assertTraceStateEqual(got TraceState, want TraceState) bool {
