@@ -39,6 +39,11 @@ func NewTracerConfig(options ...TracerOption) *TracerConfig {
 // TracerOption applies an option to a TracerConfig.
 type TracerOption interface {
 	ApplyTracer(*TracerConfig)
+
+	// A private method to prevent users implementing the
+	// interface and so future additions to it will not
+	// violate compatibility.
+	private()
 }
 
 // SpanConfig is a group of options for a Span.
@@ -74,6 +79,11 @@ func NewSpanConfig(options ...SpanOption) *SpanConfig {
 // SpanOption applies an option to a SpanConfig.
 type SpanOption interface {
 	ApplySpan(*SpanConfig)
+
+	// A private method to prevent users implementing the
+	// interface and so future additions to it will not
+	// violate compatibility.
+	private()
 }
 
 // NewEventConfig applies all the EventOptions to a returned SpanConfig. If no
@@ -94,6 +104,11 @@ func NewEventConfig(options ...EventOption) *SpanConfig {
 // EventOption applies span event options to a SpanConfig.
 type EventOption interface {
 	ApplyEvent(*SpanConfig)
+
+	// A private method to prevent users implementing the
+	// interface and so future additions to it will not
+	// violate compatibility.
+	private()
 }
 
 // LifeCycleOption applies span life-cycle options to a SpanConfig. These
@@ -108,6 +123,7 @@ type attributeSpanOption []attribute.KeyValue
 
 func (o attributeSpanOption) ApplySpan(c *SpanConfig)  { o.apply(c) }
 func (o attributeSpanOption) ApplyEvent(c *SpanConfig) { o.apply(c) }
+func (attributeSpanOption) private()                   {}
 func (o attributeSpanOption) apply(c *SpanConfig) {
 	c.Attributes = append(c.Attributes, []attribute.KeyValue(o)...)
 }
@@ -129,6 +145,7 @@ type timestampSpanOption time.Time
 
 func (o timestampSpanOption) ApplySpan(c *SpanConfig)  { o.apply(c) }
 func (o timestampSpanOption) ApplyEvent(c *SpanConfig) { o.apply(c) }
+func (timestampSpanOption) private()                   {}
 func (o timestampSpanOption) apply(c *SpanConfig)      { c.Timestamp = time.Time(o) }
 
 // WithTimestamp sets the time of a Span life-cycle moment (e.g. started,
@@ -140,6 +157,7 @@ func WithTimestamp(t time.Time) LifeCycleOption {
 type linksSpanOption []Link
 
 func (o linksSpanOption) ApplySpan(c *SpanConfig) { c.Links = append(c.Links, []Link(o)...) }
+func (linksSpanOption) private()                  {}
 
 // WithLinks adds links to a Span. The links are added to the existing Span
 // links, i.e. this does not overwrite.
@@ -150,6 +168,7 @@ func WithLinks(links ...Link) SpanOption {
 type recordSpanOption bool
 
 func (o recordSpanOption) ApplySpan(c *SpanConfig) { c.Record = bool(o) }
+func (recordSpanOption) private()                  {}
 
 // WithRecord specifies that the span should be recorded. It is important to
 // note that implementations may override this option, i.e. if the span is a
@@ -161,6 +180,7 @@ func WithRecord() SpanOption {
 type newRootSpanOption bool
 
 func (o newRootSpanOption) ApplySpan(c *SpanConfig) { c.NewRoot = bool(o) }
+func (newRootSpanOption) private()                  {}
 
 // WithNewRoot specifies that the Span should be treated as a root Span. Any
 // existing parent span context will be ignored when defining the Span's trace
@@ -172,6 +192,7 @@ func WithNewRoot() SpanOption {
 type spanKindSpanOption SpanKind
 
 func (o spanKindSpanOption) ApplySpan(c *SpanConfig) { c.SpanKind = SpanKind(o) }
+func (o spanKindSpanOption) private()                {}
 
 // WithSpanKind sets the SpanKind of a Span.
 func WithSpanKind(kind SpanKind) SpanOption {
@@ -194,3 +215,5 @@ type instrumentationVersionOption string
 func (i instrumentationVersionOption) ApplyTracer(config *TracerConfig) {
 	config.InstrumentationVersion = string(i)
 }
+
+func (instrumentationVersionOption) private() {}

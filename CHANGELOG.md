@@ -21,6 +21,21 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Renamed the `otel/label` package to `otel/attribute`. (#1541)
 - Vendor the Jaeger exporter's dependency on Apache Thrift. (#1551)
 - Stagger timestamps in exact aggregator tests. (#1569)
+- Prevent end-users from implementing some interfaces (#1575)
+```
+      "otel/exporters/otlp/otlphttp".Option
+      "otel/exporters/stdout".Option
+      "otel/oteltest".Option
+      "otel/trace".TracerOption
+      "otel/trace".SpanOption
+      "otel/trace".EventOption
+      "otel/trace".LifeCycleOption
+      "otel/trace".InstrumentationOption
+      "otel/sdk/resource".Option
+      "otel/sdk/trace".ParentBasedSamplerOption
+      "otel/sdk/trace".ReadOnlySpan
+      "otel/sdk/trace".ReadWriteSpan
+```
 
 ### Added
 
@@ -31,6 +46,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - Removed attempt to resample spans upon changing the span name with `span.SetName()`. (#1545)
+
+### Fixed
+
+- The sequential timing check of timestamps in the stdout exporter are now setup explicitly to be sequential (#1571). (#1572)
 
 ## [0.17.0] - 2020-02-12
 

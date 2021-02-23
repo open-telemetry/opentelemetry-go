@@ -85,6 +85,8 @@ func TestStdoutTimestamp(t *testing.T) {
 	}
 
 	before := time.Now()
+	// Ensure the timestamp is after before.
+	time.Sleep(time.Nanosecond)
 
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
 
@@ -102,6 +104,8 @@ func TestStdoutTimestamp(t *testing.T) {
 		t.Fatal("Unexpected export error: ", err)
 	}
 
+	// Ensure the timestamp is before after.
+	time.Sleep(time.Nanosecond)
 	after := time.Now()
 
 	var printed []interface{}
