@@ -31,6 +31,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Removed attempt to resample spans upon changing the span name with `span.SetName()`. (#1545)
 
+### Fixed
+- Fixed otlpgrpc exporter passing labels when translating exact aggregation to pb
+
 ## [0.17.0] - 2020-02-12
 
 ### Changed
