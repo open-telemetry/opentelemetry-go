@@ -22,8 +22,8 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	internal "go.opentelemetry.io/otel/internal/metric"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -63,7 +63,7 @@ type (
 		// asyncSortSlice has a single purpose - as a temporary
 		// place for sorting during labels creation to avoid
 		// allocation.  It is cleared after use.
-		asyncSortSlice label.Sortable
+		asyncSortSlice attribute.Sortable
 
 		// resource is applied to all records in this Accumulator.
 		resource *resource.Resource
@@ -77,7 +77,7 @@ type (
 	// its InstrumentID and the encoded form of its labels.
 	mapkey struct {
 		descriptor *metric.Descriptor
-		ordered    label.Distinct
+		ordered    attribute.Distinct
 	}
 
 	// record maintains the state of one metric instrument.  Due
@@ -99,18 +99,18 @@ type (
 		// storage is the stored label set for this record,
 		// except in cases where a label set is shared due to
 		// batch recording.
-		storage label.Set
+		storage attribute.Set
 
 		// labels is the processed label set for this record.
 		// this may refer to the `storage` field in another
 		// record if this label set is shared resulting from
 		// `RecordBatch`.
-		labels *label.Set
+		labels *attribute.Set
 
 		// sortSlice has a single purpose - as a temporary
 		// place for sorting during labels creation to avoid
 		// allocation.
-		sortSlice label.Sortable
+		sortSlice attribute.Sortable
 
 		// inst is a pointer to the corresponding instrument.
 		inst *syncInstrument
@@ -131,12 +131,12 @@ type (
 		instrument
 		// recorders maps ordered labels to the pair of
 		// labelset and recorder
-		recorders map[label.Distinct]*labeledRecorder
+		recorders map[attribute.Distinct]*labeledRecorder
 	}
 
 	labeledRecorder struct {
 		observedEpoch int64
-		labels        *label.Set
+		labels        *attribute.Set
 		observed      export.Aggregator
 	}
 )
@@ -162,7 +162,7 @@ func (s *syncInstrument) Implementation() interface{} {
 	return s
 }
 
-func (a *asyncInstrument) observe(num number.Number, labels *label.Set) {
+func (a *asyncInstrument) observe(num number.Number, labels *attribute.Set) {
 	if err := aggregator.RangeTest(num, &a.descriptor); err != nil {
 		otel.Handle(err)
 		return
@@ -179,7 +179,7 @@ func (a *asyncInstrument) observe(num number.Number, labels *label.Set) {
 	}
 }
 
-func (a *asyncInstrument) getRecorder(labels *label.Set) export.Aggregator {
+func (a *asyncInstrument) getRecorder(labels *attribute.Set) export.Aggregator {
 	lrec, ok := a.recorders[labels.Equivalent()]
 	if ok {
 		// Note: SynchronizedMove(nil) can't return an error
@@ -191,7 +191,7 @@ func (a *asyncInstrument) getRecorder(labels *label.Set) export.Aggregator {
 	var rec export.Aggregator
 	a.meter.processor.AggregatorFor(&a.descriptor, &rec)
 	if a.recorders == nil {
-		a.recorders = make(map[label.Distinct]*labeledRecorder)
+		a.recorders = make(map[attribute.Distinct]*labeledRecorder)
 	}
 	// This may store nil recorder in the map, thus disabling the
 	// asyncInstrument for the labelset for good. This is intentional,
@@ -209,16 +209,16 @@ func (a *asyncInstrument) getRecorder(labels *label.Set) export.Aggregator {
 // support re-use of the orderedLabels computed by a previous
 // measurement in the same batch.   This performs two allocations
 // in the common case.
-func (s *syncInstrument) acquireHandle(kvs []label.KeyValue, labelPtr *label.Set) *record {
+func (s *syncInstrument) acquireHandle(kvs []attribute.KeyValue, labelPtr *attribute.Set) *record {
 	var rec *record
-	var equiv label.Distinct
+	var equiv attribute.Distinct
 
 	if labelPtr == nil {
 		// This memory allocation may not be used, but it's
 		// needed for the `sortSlice` field, to avoid an
 		// allocation while sorting.
 		rec = &record{}
-		rec.storage = label.NewSetWithSortable(kvs, &rec.sortSlice)
+		rec.storage = attribute.NewSetWithSortable(kvs, &rec.sortSlice)
 		rec.labels = &rec.storage
 		equiv = rec.storage.Equivalent()
 	} else {
@@ -282,11 +282,11 @@ func (s *syncInstrument) acquireHandle(kvs []label.KeyValue, labelPtr *label.Set
 	}
 }
 
-func (s *syncInstrument) Bind(kvs []label.KeyValue) metric.BoundSyncImpl {
+func (s *syncInstrument) Bind(kvs []attribute.KeyValue) metric.BoundSyncImpl {
 	return s.acquireHandle(kvs, nil)
 }
 
-func (s *syncInstrument) RecordOne(ctx context.Context, num number.Number, kvs []label.KeyValue) {
+func (s *syncInstrument) RecordOne(ctx context.Context, num number.Number, kvs []attribute.KeyValue) {
 	h := s.acquireHandle(kvs, nil)
 	defer h.Unbind()
 	h.RecordOne(ctx, num)
@@ -396,8 +396,8 @@ func (m *Accumulator) collectSyncInstruments() int {
 }
 
 // CollectAsync implements internal.AsyncCollector.
-func (m *Accumulator) CollectAsync(kv []label.KeyValue, obs ...metric.Observation) {
-	labels := label.NewSetWithSortable(kv, &m.asyncSortSlice)
+func (m *Accumulator) CollectAsync(kv []attribute.KeyValue, obs ...metric.Observation) {
+	labels := attribute.NewSetWithSortable(kv, &m.asyncSortSlice)
 
 	for _, ob := range obs {
 		if a := m.fromAsync(ob.AsyncImpl()); a != nil {
@@ -472,12 +472,12 @@ func (m *Accumulator) checkpointAsync(a *asyncInstrument) int {
 }
 
 // RecordBatch enters a batch of metric events.
-func (m *Accumulator) RecordBatch(ctx context.Context, kvs []label.KeyValue, measurements ...metric.Measurement) {
+func (m *Accumulator) RecordBatch(ctx context.Context, kvs []attribute.KeyValue, measurements ...metric.Measurement) {
 	// Labels will be computed the first time acquireHandle is
 	// called.  Subsequent calls to acquireHandle will re-use the
 	// previously computed value instead of recomputing the
 	// ordered labels.
-	var labelsPtr *label.Set
+	var labelsPtr *attribute.Set
 	for i, meas := range measurements {
 		s := m.fromSync(meas.SyncImpl())
 		if s == nil {

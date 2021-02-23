@@ -20,7 +20,7 @@ import (
 	"os"
 	"strings"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // envVar is the environment variable name OpenTelemetry Resource information can be assigned to.
@@ -53,7 +53,7 @@ func (FromEnv) Detect(context.Context) (*Resource, error) {
 
 func constructOTResources(s string) (*Resource, error) {
 	pairs := strings.Split(s, ",")
-	labels := []label.KeyValue{}
+	labels := []attribute.KeyValue{}
 	var invalid []string
 	for _, p := range pairs {
 		field := strings.SplitN(p, "=", 2)
@@ -62,7 +62,7 @@ func constructOTResources(s string) (*Resource, error) {
 			continue
 		}
 		k, v := strings.TrimSpace(field[0]), strings.TrimSpace(field[1])
-		labels = append(labels, label.String(k, v))
+		labels = append(labels, attribute.String(k, v))
 	}
 	var err error
 	if len(invalid) > 0 {

@@ -21,10 +21,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
+	metricglobal "go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/oteltest"
 )
@@ -38,11 +38,11 @@ func TestDirect(t *testing.T) {
 	global.ResetForTest()
 
 	ctx := context.Background()
-	meter1 := otel.Meter("test1", metric.WithInstrumentationVersion("semver:v1.0.0"))
-	meter2 := otel.Meter("test2")
-	labels1 := []label.KeyValue{label.String("A", "B")}
-	labels2 := []label.KeyValue{label.String("C", "D")}
-	labels3 := []label.KeyValue{label.String("E", "F")}
+	meter1 := metricglobal.Meter("test1", metric.WithInstrumentationVersion("semver:v1.0.0"))
+	meter2 := metricglobal.Meter("test2")
+	labels1 := []attribute.KeyValue{attribute.String("A", "B")}
+	labels2 := []attribute.KeyValue{attribute.String("C", "D")}
+	labels3 := []attribute.KeyValue{attribute.String("E", "F")}
 
 	counter := Must(meter1).NewInt64Counter("test.counter")
 	counter.Add(ctx, 1, labels1...)
@@ -67,7 +67,7 @@ func TestDirect(t *testing.T) {
 	second.Record(ctx, 2, labels3...)
 
 	mock, provider := oteltest.NewMeterProvider()
-	otel.SetMeterProvider(provider)
+	metricglobal.SetMeterProvider(provider)
 
 	counter.Add(ctx, 1, labels1...)
 	valuerecorder.Record(ctx, 3, labels1...)
@@ -138,8 +138,8 @@ func TestBound(t *testing.T) {
 	// Note: this test uses opposite Float64/Int64 number kinds
 	// vs. the above, to cover all the instruments.
 	ctx := context.Background()
-	glob := otel.Meter("test")
-	labels1 := []label.KeyValue{label.String("A", "B")}
+	glob := metricglobal.Meter("test")
+	labels1 := []attribute.KeyValue{attribute.String("A", "B")}
 
 	counter := Must(glob).NewFloat64Counter("test.counter")
 	boundC := counter.Bind(labels1...)
@@ -152,7 +152,7 @@ func TestBound(t *testing.T) {
 	boundM.Record(ctx, 2)
 
 	mock, provider := oteltest.NewMeterProvider()
-	otel.SetMeterProvider(provider)
+	metricglobal.SetMeterProvider(provider)
 
 	boundC.Add(ctx, 1)
 	boundM.Record(ctx, 3)
@@ -182,8 +182,8 @@ func TestUnbind(t *testing.T) {
 	// Tests Unbind with SDK never installed.
 	global.ResetForTest()
 
-	glob := otel.Meter("test")
-	labels1 := []label.KeyValue{label.String("A", "B")}
+	glob := metricglobal.Meter("test")
+	labels1 := []attribute.KeyValue{attribute.String("A", "B")}
 
 	counter := Must(glob).NewFloat64Counter("test.counter")
 	boundC := counter.Bind(labels1...)
@@ -201,10 +201,10 @@ func TestUnbindThenRecordOne(t *testing.T) {
 	ctx := context.Background()
 	mock, provider := oteltest.NewMeterProvider()
 
-	meter := otel.Meter("test")
+	meter := metricglobal.Meter("test")
 	counter := Must(meter).NewInt64Counter("test.counter")
 	boundC := counter.Bind()
-	otel.SetMeterProvider(provider)
+	metricglobal.SetMeterProvider(provider)
 	boundC.Unbind()
 
 	require.NotPanics(t, func() {
@@ -233,7 +233,7 @@ func TestErrorInDeferredConstructor(t *testing.T) {
 	global.ResetForTest()
 
 	ctx := context.Background()
-	meter := otel.GetMeterProvider().Meter("builtin")
+	meter := metricglobal.GetMeterProvider().Meter("builtin")
 
 	c1 := Must(meter).NewInt64Counter("test")
 	c2 := Must(meter).NewInt64Counter("test")
@@ -242,7 +242,7 @@ func TestErrorInDeferredConstructor(t *testing.T) {
 	sdk := &meterProviderWithConstructorError{provider}
 
 	require.Panics(t, func() {
-		otel.SetMeterProvider(sdk)
+		metricglobal.SetMeterProvider(sdk)
 	})
 
 	c1.Add(ctx, 1)
@@ -256,7 +256,7 @@ func TestImplementationIndirection(t *testing.T) {
 	// returns the implementation interface not the global, after
 	// registered.
 
-	meter1 := otel.Meter("test1")
+	meter1 := metricglobal.Meter("test1")
 
 	// Sync: no SDK yet
 	counter := Must(meter1).NewInt64Counter("interface.counter")
@@ -281,7 +281,7 @@ func TestImplementationIndirection(t *testing.T) {
 
 	// Register the SDK
 	_, provider := oteltest.NewMeterProvider()
-	otel.SetMeterProvider(provider)
+	metricglobal.SetMeterProvider(provider)
 
 	// Repeat the above tests
 
@@ -303,14 +303,14 @@ func TestImplementationIndirection(t *testing.T) {
 func TestRecordBatchMock(t *testing.T) {
 	global.ResetForTest()
 
-	meter := otel.GetMeterProvider().Meter("builtin")
+	meter := metricglobal.GetMeterProvider().Meter("builtin")
 
 	counter := Must(meter).NewInt64Counter("test.counter")
 
 	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
 
 	mock, provider := oteltest.NewMeterProvider()
-	otel.SetMeterProvider(provider)
+	metricglobal.SetMeterProvider(provider)
 
 	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
 

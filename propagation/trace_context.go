@@ -21,7 +21,7 @@ import (
 	"regexp"
 	"strings"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -151,14 +151,14 @@ func parseTraceState(in string) trace.TraceState {
 		return trace.TraceState{}
 	}
 
-	kvs := []label.KeyValue{}
+	kvs := []attribute.KeyValue{}
 	for _, entry := range strings.Split(in, ",") {
 		parts := strings.SplitN(entry, "=", 2)
 		if len(parts) != 2 {
 			// Parse failure, abort!
 			return trace.TraceState{}
 		}
-		kvs = append(kvs, label.String(parts[0], parts[1]))
+		kvs = append(kvs, attribute.String(parts[0], parts[1]))
 	}
 
 	// Ignoring error here as "failure to parse tracestate MUST NOT

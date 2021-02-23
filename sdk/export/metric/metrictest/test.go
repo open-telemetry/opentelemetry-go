@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -31,7 +31,7 @@ import (
 
 type mapkey struct {
 	desc     *metric.Descriptor
-	distinct label.Distinct
+	distinct attribute.Distinct
 }
 
 // CheckpointSet is useful for testing Exporters.
@@ -92,8 +92,8 @@ func (p *CheckpointSet) Reset() {
 //
 // If there is an existing record with the same descriptor and labels,
 // the stored aggregator will be returned and should be merged.
-func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, labels ...label.KeyValue) (agg export.Aggregator, added bool) {
-	elabels := label.NewSet(labels...)
+func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, labels ...attribute.KeyValue) (agg export.Aggregator, added bool) {
+	elabels := attribute.NewSet(labels...)
 
 	key := mapkey{
 		desc:     desc,

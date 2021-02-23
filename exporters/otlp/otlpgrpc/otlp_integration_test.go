@@ -28,11 +28,11 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/encoding/gzip"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/otlptest"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
-	"go.opentelemetry.io/otel/label"
 	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -139,6 +139,72 @@ func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
 		if err := exp.Shutdown(ctx); err != nil {
 			t.Fatalf(`#%d got error (%v) expected none`, i, err)
 		}
+	}
+}
+
+func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *testing.T) {
+	mc := runMockCollector(t)
+
+	reconnectionPeriod := 2 * time.Second // 2 second + jitter rest time after reconnection
+	ctx := context.Background()
+	exp := newGRPCExporter(t, ctx, mc.endpoint,
+		otlpgrpc.WithReconnectionPeriod(reconnectionPeriod))
+	defer func() {
+		_ = exp.Shutdown(ctx)
+	}()
+
+	// We'll now stop the collector right away to simulate a connection
+	// dying in the midst of communication or even not existing before.
+	_ = mc.stop()
+
+	// first export, it will send disconnected message to the channel on export failure,
+	// trigger almost immediate reconnection
+	require.Error(
+		t,
+		exp.ExportSpans(ctx, []*exporttrace.SpanSnapshot{{Name: "in the midst"}}),
+		"transport: Error while dialing dial tcp %s: connect: connection refused",
+		mc.endpoint,
+	)
+
+	// give it time for first reconnection
+	<-time.After(time.Millisecond * 20)
+
+	// second export, it will detect connection issue, change state of exporter to disconnected and
+	// send message to disconnected channel but this time reconnection gouroutine will be in (rest mode, not listening to the disconnected channel)
+	require.Error(
+		t,
+		exp.ExportSpans(ctx, []*exporttrace.SpanSnapshot{{Name: "in the midst"}}),
+		"transport: Error while dialing dial tcp %s: connect: connection refused2",
+		mc.endpoint,
+	)
+
+	// as a result we have exporter in disconnected state waiting for disconnection message to reconnect
+
+	// resurrect collector
+	nmc := runMockCollectorAtEndpoint(t, mc.endpoint)
+
+	// make sure reconnection loop hits beginning and goes back to waiting mode
+	// after hitting beginning of the loop it should reconnect
+	<-time.After(time.Second * 4)
+
+	n := 10
+	for i := 0; i < n; i++ {
+		// when disconnected exp.ExportSpans doesnt send disconnected messages again
+		// it just quits and return last connection error
+		require.NoError(t, exp.ExportSpans(ctx, []*exporttrace.SpanSnapshot{{Name: "Resurrected"}}))
+	}
+
+	nmaSpans := nmc.getSpans()
+
+	// Expecting 10 SpanSnapshots that were sampled, given that
+	if g, w := len(nmaSpans), n; g != w {
+		t.Fatalf("Connected collector: spans: got %d want %d", g, w)
+	}
+
+	dSpans := mc.getSpans()
+	// Expecting 0 spans to have been received by the original but now dead collector
+	if g, w := len(dSpans), 0; g != w {
+		t.Fatalf("Disconnected collector: spans: got %d want %d", g, w)
 	}
 }
 
@@ -278,14 +344,12 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 	defer func() { _ = tp.Shutdown(ctx) }()
 
 	tr := tp.Tracer("test-tracer")
-	testKvs := []label.KeyValue{
-		label.Int("Int", 1),
-		label.Int32("Int32", int32(2)),
-		label.Int64("Int64", int64(3)),
-		label.Float32("Float32", float32(1.11)),
-		label.Float64("Float64", 2.22),
-		label.Bool("Bool", true),
-		label.String("String", "test"),
+	testKvs := []attribute.KeyValue{
+		attribute.Int("Int", 1),
+		attribute.Int64("Int64", int64(3)),
+		attribute.Float64("Float64", 2.22),
+		attribute.Bool("Bool", true),
+		attribute.String("String", "test"),
 	}
 	_, span := tr.Start(ctx, "AlwaysSample")
 	span.SetAttributes(testKvs...)
@@ -330,26 +394,10 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 			},
 		},
 		{
-			Key: "Int32",
-			Value: &commonpb.AnyValue{
-				Value: &commonpb.AnyValue_IntValue{
-					IntValue: 2,
-				},
-			},
-		},
-		{
 			Key: "Int64",
 			Value: &commonpb.AnyValue{
 				Value: &commonpb.AnyValue_IntValue{
 					IntValue: 3,
-				},
-			},
-		},
-		{
-			Key: "Float32",
-			Value: &commonpb.AnyValue{
-				Value: &commonpb.AnyValue_DoubleValue{
-					DoubleValue: 1.11,
 				},
 			},
 		},

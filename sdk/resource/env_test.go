@@ -22,8 +22,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
-	"go.opentelemetry.io/otel/label"
 )
 
 func TestDetectOnePair(t *testing.T) {
@@ -36,7 +36,7 @@ func TestDetectOnePair(t *testing.T) {
 	detector := &FromEnv{}
 	res, err := detector.Detect(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, NewWithAttributes(label.String("key", "value")), res)
+	assert.Equal(t, NewWithAttributes(attribute.String("key", "value")), res)
 }
 
 func TestDetectMultiPairs(t *testing.T) {
@@ -51,10 +51,10 @@ func TestDetectMultiPairs(t *testing.T) {
 	res, err := detector.Detect(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, res, NewWithAttributes(
-		label.String("key", "value"),
-		label.String("k", "v"),
-		label.String("a", "x"),
-		label.String("a", "z"),
+		attribute.String("key", "value"),
+		attribute.String("k", "v"),
+		attribute.String("a", "x"),
+		attribute.String("a", "z"),
 	))
 }
 
@@ -83,6 +83,6 @@ func TestMissingKeyError(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, err, fmt.Errorf("%w: %v", errMissingValue, "[key]"))
 	assert.Equal(t, res, NewWithAttributes(
-		label.String("key", "value"),
+		attribute.String("key", "value"),
 	))
 }

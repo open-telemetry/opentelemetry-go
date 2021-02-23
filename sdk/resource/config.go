@@ -17,7 +17,7 @@ package resource // import "go.opentelemetry.io/otel/sdk/resource"
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // config contains configuration for Resource creation.
@@ -45,12 +45,12 @@ type Option interface {
 }
 
 // WithAttributes adds attributes to the configured Resource.
-func WithAttributes(attributes ...label.KeyValue) Option {
+func WithAttributes(attributes ...attribute.KeyValue) Option {
 	return WithDetectors(detectAttributes{attributes})
 }
 
 type detectAttributes struct {
-	attributes []label.KeyValue
+	attributes []attribute.KeyValue
 }
 
 func (d detectAttributes) Detect(context.Context) (*Resource, error) {
