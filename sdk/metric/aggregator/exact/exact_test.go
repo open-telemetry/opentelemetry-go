@@ -33,6 +33,10 @@ type updateTest struct {
 	count int
 }
 
+func requireNotAfter(t *testing.T, t1, t2 time.Time) {
+	require.False(t, t1.After(t2), "expected %v ≤ %v", t1, t2)
+}
+
 func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
 	count, err := agg.Count()
 	require.NoError(t, err)
@@ -169,7 +173,7 @@ func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
 		received.Append(s.Number)
 
 		if i > 0 {
-			require.True(t, pts[i-1].Time.Before(pts[i].Time))
+			requireNotAfter(t, pts[i-1].Time, pts[i].Time)
 		}
 	}
 
@@ -296,11 +300,11 @@ func TestExactFloat64(t *testing.T) {
 	for i := 0; i < len(po); i++ {
 		require.Equal(t, all.Points()[i], po[i].Number, "Wrong point at position %d", i)
 		if i > 0 {
-			require.True(t, po[i-1].Time.Before(po[i].Time))
+			requireNotAfter(t, po[i-1].Time, po[i].Time)
 		}
 	}
-	require.True(t, po[0].Time.After(startTime))
-	require.True(t, po[len(po)-1].Time.Before(endTime))
+	requireNotAfter(t, startTime, po[0].Time)
+	requireNotAfter(t, po[len(po)-1].Time, endTime)
 }
 
 func TestSynchronizedMoveReset(t *testing.T) {
@@ -352,7 +356,7 @@ func TestMergeBehavior(t *testing.T) {
 					received.Append(s.Number)
 
 					if i > 0 {
-						require.True(t, pts[i-1].Time.Before(pts[i].Time))
+						requireNotAfter(t, pts[i-1].Time, pts[i].Time)
 					}
 				}
 
