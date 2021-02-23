@@ -11,6 +11,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - AttributePerEventCountLimit and AttributePerLinkCountLimit for SpanLimits. (#1535)
+- Added `resource.Default()` for use with meter and tracer providers. (#1507)
+- Added `Keys()` method to `propagation.TextMapCarrier` and `propagation.HeaderCarrier` to adapt `http.Header` to this interface. (#1544)
+- Added `code` attributes to `go.opentelemetry.io/otel/semconv` package. (#1558)
 
 ### Changed
 
@@ -20,12 +23,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Rename MaxEventsPerSpan, MaxAttributesPerSpan and MaxLinksPerSpan to EventCountLimit, AttributeCountLimit and LinkCountLimit, and move these fieds into SpanLimits. (#1535)
 - Renamed the `otel/label` package to `otel/attribute`. (#1541)
 - Vendor the Jaeger exporter's dependency on Apache Thrift. (#1551)
-
-### Added
-
-- Added `resource.Default()` for use with meter and tracer providers. (#1507)
-- Added `Keys()` method to `propagation.TextMapCarrier` and `propagation.HeaderCarrier` to adapt `http.Header` to this interface. (#1544)
-- Added `code` attributes to `go.opentelemetry.io/otel/semconv` package. (#1558)
+- `trace.SpanContext` is now immutable and has no exported fields. (#1573)
+  - `trace.NewSpanContext()` can be used in conjunction with the `trace.SpanContextConfig` struct to initialize a new `SpanContext` where all values are known.
 
 ### Removed
 
