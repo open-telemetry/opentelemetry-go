@@ -118,10 +118,7 @@ type mergeTest struct {
 }
 
 func advance() {
-	before := time.Now()
-	for time.Now() != before {
-		time.Sleep(0)
-	}
+	time.Sleep(time.Nanosecond)
 }
 
 func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
