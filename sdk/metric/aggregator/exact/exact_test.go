@@ -70,10 +70,12 @@ func (ut *updateTest) run(t *testing.T, profile aggregatortest.Profile) {
 	for i := 0; i < ut.count; i++ {
 		x := profile.Random(+1)
 		all.Append(x)
+		advance()
 		aggregatortest.CheckedUpdate(t, agg, x, descriptor)
 
 		y := profile.Random(-1)
 		all.Append(y)
+		advance()
 		aggregatortest.CheckedUpdate(t, agg, y, descriptor)
 	}
 
@@ -167,7 +169,7 @@ func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
 		received.Append(s.Number)
 
 		if i > 0 {
-			require.False(t, pts[i-1].Time.After(pts[i].Time))
+			require.True(t, pts[i-1].Time.Before(pts[i].Time))
 		}
 	}
 
@@ -210,9 +212,11 @@ func TestExactErrors(t *testing.T) {
 
 		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 
+		advance()
 		aggregatortest.CheckedUpdate(t, agg, number.Number(0), descriptor)
 
 		if profile.NumberKind == number.Float64Kind {
+			advance()
 			aggregatortest.CheckedUpdate(t, agg, number.NewFloat64Number(math.NaN()), descriptor)
 		}
 		require.NoError(t, agg.SynchronizedMove(ckpt, descriptor))
@@ -261,11 +265,13 @@ func TestExactFloat64(t *testing.T) {
 
 	for _, f := range fpsf(1) {
 		all.Append(number.NewFloat64Number(f))
+		advance()
 		aggregatortest.CheckedUpdate(t, agg, number.NewFloat64Number(f), descriptor)
 	}
 
 	for _, f := range fpsf(-1) {
 		all.Append(number.NewFloat64Number(f))
+		advance()
 		aggregatortest.CheckedUpdate(t, agg, number.NewFloat64Number(f), descriptor)
 	}
 
@@ -290,11 +296,11 @@ func TestExactFloat64(t *testing.T) {
 	for i := 0; i < len(po); i++ {
 		require.Equal(t, all.Points()[i], po[i].Number, "Wrong point at position %d", i)
 		if i > 0 {
-			require.False(t, po[i-1].Time.After(po[i].Time))
+			require.True(t, po[i-1].Time.Before(po[i].Time))
 		}
 	}
-	require.False(t, po[0].Time.Before(startTime))
-	require.False(t, po[len(po)-1].Time.After(endTime))
+	require.True(t, po[0].Time.After(startTime))
+	require.True(t, po[len(po)-1].Time.Before(endTime))
 }
 
 func TestSynchronizedMoveReset(t *testing.T) {
@@ -319,12 +325,14 @@ func TestMergeBehavior(t *testing.T) {
 				for i := 0; i < 100; i++ {
 					x1 := profile.Random(+1)
 					all.Append(x1)
+					advance()
 					aggregatortest.CheckedUpdate(t, agg1, x1, descriptor)
 				}
 
 				for i := 0; i < 100; i++ {
 					x2 := profile.Random(+1)
 					all.Append(x2)
+					advance()
 					aggregatortest.CheckedUpdate(t, agg2, x2, descriptor)
 				}
 

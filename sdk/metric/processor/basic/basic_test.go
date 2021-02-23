@@ -316,7 +316,9 @@ func TestBasicInconsistent(t *testing.T) {
 
 func TestBasicTimestamps(t *testing.T) {
 	beforeNew := time.Now()
+	time.Sleep(time.Nanosecond)
 	b := basic.New(processorTest.AggregatorSelector(), export.StatelessExportKindSelector())
+	time.Sleep(time.Nanosecond)
 	afterNew := time.Now()
 
 	desc := metric.NewDescriptor("inst", metric.CounterInstrumentKind, number.Int64Kind)
@@ -335,8 +337,8 @@ func TestBasicTimestamps(t *testing.T) {
 	}))
 
 	// The first start time is set in the constructor.
-	require.False(t, beforeNew.After(start1))
-	require.False(t, afterNew.Before(start1))
+	require.True(t, beforeNew.Before(start1))
+	require.True(t, afterNew.After(start1))
 
 	for i := 0; i < 2; i++ {
 		b.StartCollection()
