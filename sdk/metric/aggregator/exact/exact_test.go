@@ -132,6 +132,7 @@ func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
 	for i := 0; i < mt.count; i++ {
 		x1 := profile.Random(+1)
 		all.Append(x1)
+		advance()
 		aggregatortest.CheckedUpdate(t, agg1, x1, descriptor)
 
 		x2 := profile.Random(+1)
