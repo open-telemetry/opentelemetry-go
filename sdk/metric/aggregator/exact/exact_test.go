@@ -33,6 +33,10 @@ type updateTest struct {
 	count int
 }
 
+func requireNotAfter(t *testing.T, t1, t2 time.Time) {
+	require.False(t, t1.After(t2), "expected %v ≤ %v", t1, t2)
+}
+
 func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
 	count, err := agg.Count()
 	require.NoError(t, err)
@@ -70,10 +74,12 @@ func (ut *updateTest) run(t *testing.T, profile aggregatortest.Profile) {
 	for i := 0; i < ut.count; i++ {
 		x := profile.Random(+1)
 		all.Append(x)
+		advance()
 		aggregatortest.CheckedUpdate(t, agg, x, descriptor)
 
 		y := profile.Random(-1)
 		all.Append(y)
+		advance()
 		aggregatortest.CheckedUpdate(t, agg, y, descriptor)
 	}
 
@@ -117,6 +123,10 @@ type mergeTest struct {
 	absolute bool
 }
 
+func advance() {
+	time.Sleep(time.Nanosecond)
+}
+
 func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
 	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 	agg1, agg2, ckpt1, ckpt2 := new4()
@@ -126,19 +136,23 @@ func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
 	for i := 0; i < mt.count; i++ {
 		x1 := profile.Random(+1)
 		all.Append(x1)
+		advance()
 		aggregatortest.CheckedUpdate(t, agg1, x1, descriptor)
 
 		x2 := profile.Random(+1)
 		all.Append(x2)
+		advance()
 		aggregatortest.CheckedUpdate(t, agg2, x2, descriptor)
 
 		if !mt.absolute {
 			y1 := profile.Random(-1)
 			all.Append(y1)
+			advance()
 			aggregatortest.CheckedUpdate(t, agg1, y1, descriptor)
 
 			y2 := profile.Random(-1)
 			all.Append(y2)
+			advance()
 			aggregatortest.CheckedUpdate(t, agg2, y2, descriptor)
 		}
 	}
@@ -159,7 +173,7 @@ func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
 		received.Append(s.Number)
 
 		if i > 0 {
-			require.False(t, pts[i-1].Time.After(pts[i].Time))
+			requireNotAfter(t, pts[i-1].Time, pts[i].Time)
 		}
 	}
 
@@ -202,9 +216,11 @@ func TestExactErrors(t *testing.T) {
 
 		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
 
+		advance()
 		aggregatortest.CheckedUpdate(t, agg, number.Number(0), descriptor)
 
 		if profile.NumberKind == number.Float64Kind {
+			advance()
 			aggregatortest.CheckedUpdate(t, agg, number.NewFloat64Number(math.NaN()), descriptor)
 		}
 		require.NoError(t, agg.SynchronizedMove(ckpt, descriptor))
@@ -253,11 +269,13 @@ func TestExactFloat64(t *testing.T) {
 
 	for _, f := range fpsf(1) {
 		all.Append(number.NewFloat64Number(f))
+		advance()
 		aggregatortest.CheckedUpdate(t, agg, number.NewFloat64Number(f), descriptor)
 	}
 
 	for _, f := range fpsf(-1) {
 		all.Append(number.NewFloat64Number(f))
+		advance()
 		aggregatortest.CheckedUpdate(t, agg, number.NewFloat64Number(f), descriptor)
 	}
 
@@ -282,11 +300,11 @@ func TestExactFloat64(t *testing.T) {
 	for i := 0; i < len(po); i++ {
 		require.Equal(t, all.Points()[i], po[i].Number, "Wrong point at position %d", i)
 		if i > 0 {
-			require.False(t, po[i-1].Time.After(po[i].Time))
+			requireNotAfter(t, po[i-1].Time, po[i].Time)
 		}
 	}
-	require.False(t, po[0].Time.Before(startTime))
-	require.False(t, po[len(po)-1].Time.After(endTime))
+	requireNotAfter(t, startTime, po[0].Time)
+	requireNotAfter(t, po[len(po)-1].Time, endTime)
 }
 
 func TestSynchronizedMoveReset(t *testing.T) {
@@ -311,12 +329,14 @@ func TestMergeBehavior(t *testing.T) {
 				for i := 0; i < 100; i++ {
 					x1 := profile.Random(+1)
 					all.Append(x1)
+					advance()
 					aggregatortest.CheckedUpdate(t, agg1, x1, descriptor)
 				}
 
 				for i := 0; i < 100; i++ {
 					x2 := profile.Random(+1)
 					all.Append(x2)
+					advance()
 					aggregatortest.CheckedUpdate(t, agg2, x2, descriptor)
 				}
 
@@ -336,7 +356,7 @@ func TestMergeBehavior(t *testing.T) {
 					received.Append(s.Number)
 
 					if i > 0 {
-						require.True(t, pts[i-1].Time.Before(pts[i].Time))
+						requireNotAfter(t, pts[i-1].Time, pts[i].Time)
 					}
 				}
 
