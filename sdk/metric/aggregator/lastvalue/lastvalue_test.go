@@ -104,6 +104,8 @@ func TestLastValueMerge(t *testing.T) {
 		aggregatortest.CheckedUpdate(t, agg2, first2, descriptor)
 
 		require.NoError(t, agg1.SynchronizedMove(ckpt1, descriptor))
+		// Ensure these should not have the same timestamp.
+		time.Sleep(time.Nanosecond)
 		require.NoError(t, agg2.SynchronizedMove(ckpt2, descriptor))
 
 		checkZero(t, agg1)
