@@ -18,8 +18,6 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
-	"runtime"
-	"syscall"
 	"testing"
 	"time"
 
@@ -80,19 +78,6 @@ func newUDPConn() (net.PacketConn, *net.UDPConn, error) {
 	}
 
 	return mockServer, conn, nil
-}
-
-func assertSockBufferSize(t *testing.T, expectedBytes int, conn *net.UDPConn) bool {
-	fd, _ := conn.File()
-	bufferBytes, _ := syscall.GetsockoptInt(int(fd.Fd()), syscall.SOL_SOCKET, syscall.SO_SNDBUF)
-
-	// The linux kernel doubles SO_SNDBUF value (to allow space for bookkeeping overhead) when it is set using setsockopt(2), and this doubled value is returned by getsockopt(2)
-	// https://linux.die.net/man/7/socket
-	if runtime.GOOS == "linux" {
-		return assert.GreaterOrEqual(t, expectedBytes*2, bufferBytes)
-	}
-
-	return assert.Equal(t, expectedBytes, bufferBytes)
 }
 
 func assertConnWritable(t *testing.T, conn udpConn, serverConn net.PacketConn) {
