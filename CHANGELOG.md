@@ -47,6 +47,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## Fixed
 
 - Fixed otlpgrpc reconnection issue.
+- The example code in the README.md of `go.opentelemetry.io/otel/exporters/otlp` is moved to a compiled example test and used the new `WithAddress` instead of `WithEndpoint`. (#1513)
+- The otel-collector example now uses the default OTLP receiver port of the collector.
 
 ## [0.16.0] - 2020-01-13
 
