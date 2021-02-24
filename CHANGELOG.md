@@ -35,6 +35,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - The sequential timing check of timestamps in the stdout exporter are now setup explicitly to be sequential (#1571). (#1572)
+- Windows build of Jaeger tests now compiles with OS specific functions (#1576). (#1577)
 
 ## [0.17.0] - 2020-02-12
 
