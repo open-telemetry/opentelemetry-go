@@ -15,32 +15,6 @@ $ go get -u go.opentelemetry.io/otel/exporters/otlp
 
 A new exporter can be created using the `NewExporter` function.
 
-```golang
-	// Set different endpoints for the metrics and traces collectors
-	metricsDriver := otlpgrpc.NewDriver(
-		//Configure metrics driver here
-	)
-	tracesDriver := otlpgrpc.NewDriver(
-		//Configure traces driver here
-	)
-	config := otlp.SplitConfig{
-		ForMetrics: metricsDriver,
-		ForTraces:  tracesDriver,
-	}
-	driver := otlp.NewSplitDriver(config)
-	exporter, err := otlp.NewExporter(ctx, driver) // Configure as needed.
-	if err != nil {
-		log.Fatalf("failed to create exporter: %v", err)
-	}
-	defer func() {
-		err := exporter.Shutdown(ctx)
-		if err != nil {
-			log.Fatalf("failed to stop exporter: %v", err)
-		}
-	}()
-
-```
-
 ## Retries
 
 The exporter will not, by default, retry failed requests to the collector.
