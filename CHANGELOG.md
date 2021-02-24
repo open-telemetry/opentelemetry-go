@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - AttributePerEventCountLimit and AttributePerLinkCountLimit for SpanLimits. (#1535)
+- Compatibility testing suite in the CI system. (#1567)
 
 ### Changed
 
@@ -20,6 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Rename MaxEventsPerSpan, MaxAttributesPerSpan and MaxLinksPerSpan to EventCountLimit, AttributeCountLimit and LinkCountLimit, and move these fieds into SpanLimits. (#1535)
 - Renamed the `otel/label` package to `otel/attribute`. (#1541)
 - Vendor the Jaeger exporter's dependency on Apache Thrift. (#1551)
+- Parallelize the CI linting and testing. (#1567)
 - Stagger timestamps in exact aggregator tests. (#1569)
 
 ### Added
@@ -31,6 +33,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - Removed attempt to resample spans upon changing the span name with `span.SetName()`. (#1545)
+- The `test-386` make target.
+   This was replaced with a full compatibility testing suite (i.e. multi OS/arch) in the CI system. (#1567)
 
 ### Fixed
 
