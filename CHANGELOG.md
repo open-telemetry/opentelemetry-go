@@ -15,7 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Added `Keys()` method to `propagation.TextMapCarrier` and `propagation.HeaderCarrier` to adapt `http.Header` to this interface. (#1544)
 - Added `code` attributes to `go.opentelemetry.io/otel/semconv` package. (#1558)
 - Compatibility testing suite in the CI system for the following systems. (#1567)
-   | OS      | Go Version | Archetecture |
+   | OS      | Go Version | Architecture |
    | ------- | ---------- | ------------ |
    | Ubuntu  | 1.15       | amd64        |
    | Ubuntu  | 1.14       | amd64        |
