@@ -22,7 +22,7 @@ ALL_GO_MOD_DIRS := $(filter-out $(TOOLS_MOD_DIR), $(shell find . -type f -name '
 ALL_COVERAGE_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | egrep -v '^./example|^$(TOOLS_MOD_DIR)' | sort)
 
 GO = go
-TIMEOUT = 30
+TIMEOUT = 60
 
 .DEFAULT_GOAL := precommit
 
