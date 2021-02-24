@@ -45,6 +45,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - Removed attempt to resample spans upon changing the span name with `span.SetName()`. (#1545)
+- The `test-benchmark` is no longer a dependency of the `precommit` make target. (#1567)
 - The `test-386` make target.
    This was replaced with a full compatibility testing suite (i.e. multi OS/arch) in the CI system. (#1567)
 
