@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -37,7 +37,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-var testResource = resource.NewWithAttributes(label.String("R", "V"))
+var testResource = resource.NewWithAttributes(attribute.String("R", "V"))
 
 type handler struct {
 	sync.Mutex
@@ -68,7 +68,7 @@ func init() {
 func newExporter() *processortest.Exporter {
 	return processortest.NewExporter(
 		export.StatelessExportKindSelector(),
-		label.DefaultEncoder(),
+		attribute.DefaultEncoder(),
 	)
 }
 
@@ -76,7 +76,7 @@ func newCheckpointer() export.Checkpointer {
 	return processortest.Checkpointer(
 		processortest.NewProcessor(
 			processortest.AggregatorSelector(),
-			label.DefaultEncoder(),
+			attribute.DefaultEncoder(),
 		),
 	)
 }
@@ -205,7 +205,7 @@ func TestPushExportError(t *testing.T) {
 			require.NoError(t, p.Start(ctx))
 			runtime.Gosched()
 
-			counter1.Add(ctx, 3, label.String("X", "Y"))
+			counter1.Add(ctx, 3, attribute.String("X", "Y"))
 			counter2.Add(ctx, 5)
 
 			require.Equal(t, 0, exporter.ExportCount())

@@ -66,7 +66,7 @@ func newConnection(cfg config, handler func(cc *grpc.ClientConn)) *connection {
 
 func (c *connection) startConnection(ctx context.Context) {
 	c.stopCh = make(chan struct{})
-	c.disconnectedCh = make(chan bool)
+	c.disconnectedCh = make(chan bool, 1)
 	c.backgroundConnectionDoneCh = make(chan struct{})
 
 	if err := c.connect(ctx); err == nil {
@@ -155,6 +155,8 @@ func (c *connection) indefiniteBackgroundConnection() {
 		if err := c.connect(context.Background()); err == nil {
 			c.setStateConnected()
 		} else {
+			// this code is unreachable in most cases
+			// c.connect does not establish connection
 			c.setStateDisconnected(err)
 		}
 

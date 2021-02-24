@@ -22,8 +22,8 @@ import (
 	ot "github.com/opentracing/opentracing-go"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	otelbaggage "go.opentelemetry.io/otel/internal/baggage"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/internal"
@@ -589,7 +589,7 @@ func (bio *baggageInteroperationTest) addAndRecordBaggage(t *testing.T, ctx cont
 	value := bio.baggageItems[idx].value
 
 	otSpan.SetBaggageItem(otKey, value)
-	ctx = otelbaggage.NewContext(ctx, label.String(otelKey, value))
+	ctx = otelbaggage.NewContext(ctx, attribute.String(otelKey, value))
 
 	otRecording := make(map[string]string)
 	otSpan.Context().ForeachBaggageItem(func(key, value string) bool {
@@ -597,7 +597,7 @@ func (bio *baggageInteroperationTest) addAndRecordBaggage(t *testing.T, ctx cont
 		return true
 	})
 	otelRecording := make(map[string]string)
-	otelbaggage.MapFromContext(ctx).Foreach(func(kv label.KeyValue) bool {
+	otelbaggage.MapFromContext(ctx).Foreach(func(kv attribute.KeyValue) bool {
 		otelRecording[string(kv.Key)] = kv.Value.Emit()
 		return true
 	})
@@ -715,4 +715,78 @@ func runOTOtelOT(t *testing.T, ctx context.Context, name string, callback func(*
 			_ = callback(t, ctx3)
 		}(ctx2)
 	}(ctx)
+}
+
+func TestOtTagToOTelLabel_CheckTypeConversions(t *testing.T) {
+	tableTest := []struct {
+		key               string
+		value             interface{}
+		expectedValueType attribute.Type
+	}{
+		{
+			key:               "bool to bool",
+			value:             true,
+			expectedValueType: attribute.BOOL,
+		},
+		{
+			key:               "int to int64",
+			value:             123,
+			expectedValueType: attribute.INT64,
+		},
+		{
+			key:               "uint to string",
+			value:             uint(1234),
+			expectedValueType: attribute.STRING,
+		},
+		{
+			key:               "int32 to int64",
+			value:             int32(12345),
+			expectedValueType: attribute.INT64,
+		},
+		{
+			key:               "uint32 to int64",
+			value:             uint32(123456),
+			expectedValueType: attribute.INT64,
+		},
+		{
+			key:               "int64 to int64",
+			value:             int64(1234567),
+			expectedValueType: attribute.INT64,
+		},
+		{
+			key:               "uint64 to string",
+			value:             uint64(12345678),
+			expectedValueType: attribute.STRING,
+		},
+		{
+			key:               "float32 to float64",
+			value:             float32(3.14),
+			expectedValueType: attribute.FLOAT64,
+		},
+		{
+			key:               "float64 to float64",
+			value:             float64(3.14),
+			expectedValueType: attribute.FLOAT64,
+		},
+		{
+			key:               "string to string",
+			value:             "string_value",
+			expectedValueType: attribute.STRING,
+		},
+		{
+			key:               "unexpected type to string",
+			value:             struct{}{},
+			expectedValueType: attribute.STRING,
+		},
+	}
+
+	for _, test := range tableTest {
+		got := otTagToOTelLabel(test.key, test.value)
+		if test.expectedValueType != got.Value.Type() {
+			t.Errorf("Expected type %s, but got %s after conversion '%v' value",
+				test.expectedValueType,
+				got.Value.Type(),
+				test.value)
+		}
+	}
 }

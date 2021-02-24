@@ -22,8 +22,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -41,7 +41,7 @@ func ExampleNewExportPipeline() {
 	res, err := resource.New(
 		context.Background(),
 		resource.WithoutBuiltin(), // Test-only!
-		resource.WithAttributes(label.String("R", "V")),
+		resource.WithAttributes(attribute.String("R", "V")),
 	)
 	if err != nil {
 		panic(err)
@@ -68,8 +68,8 @@ func ExampleNewExportPipeline() {
 		metric.WithDescription("Records values"),
 	)
 
-	counter.Add(ctx, 100, label.String("key", "value"))
-	recorder.Record(ctx, 100, label.String("key", "value"))
+	counter.Add(ctx, 100, attribute.String("key", "value"))
+	recorder.Record(ctx, 100, attribute.String("key", "value"))
 
 	// GET the HTTP endpoint
 	var input bytes.Buffer

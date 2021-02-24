@@ -17,18 +17,18 @@ package metric
 import (
 	"testing"
 
-	"go.opentelemetry.io/otel/label"
-
 	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
-var testSlice = []label.KeyValue{
-	label.String("bar", "baz"),
-	label.Int("foo", 42),
+var testSlice = []attribute.KeyValue{
+	attribute.String("bar", "baz"),
+	attribute.Int("foo", 42),
 }
 
-func newIter(slice []label.KeyValue) label.Iterator {
-	labels := label.NewSet(slice...)
+func newIter(slice []attribute.KeyValue) attribute.Iterator {
+	labels := attribute.NewSet(slice...)
 	return labels.Iter()
 }
 
@@ -37,17 +37,17 @@ func TestLabelIterator(t *testing.T) {
 	require.Equal(t, 2, iter.Len())
 
 	require.True(t, iter.Next())
-	require.Equal(t, label.String("bar", "baz"), iter.Label())
+	require.Equal(t, attribute.String("bar", "baz"), iter.Label())
 	idx, kv := iter.IndexedLabel()
 	require.Equal(t, 0, idx)
-	require.Equal(t, label.String("bar", "baz"), kv)
+	require.Equal(t, attribute.String("bar", "baz"), kv)
 	require.Equal(t, 2, iter.Len())
 
 	require.True(t, iter.Next())
-	require.Equal(t, label.Int("foo", 42), iter.Label())
+	require.Equal(t, attribute.Int("foo", 42), iter.Label())
 	idx, kv = iter.IndexedLabel()
 	require.Equal(t, 1, idx)
-	require.Equal(t, label.Int("foo", 42), kv)
+	require.Equal(t, attribute.Int("foo", 42), kv)
 	require.Equal(t, 2, iter.Len())
 
 	require.False(t, iter.Next())

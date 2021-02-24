@@ -21,7 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -112,7 +112,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			req.Header.Set("traceparent", tt.header)
 
 			ctx := context.Background()
-			ctx = prop.Extract(ctx, req.Header)
+			ctx = prop.Extract(ctx, propagation.HeaderCarrier(req.Header))
 			gotSc := trace.RemoteSpanContextFromContext(ctx)
 			if diff := cmp.Diff(gotSc, tt.wantSc, cmp.AllowUnexported(trace.TraceState{})); diff != "" {
 				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
@@ -200,7 +200,7 @@ func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 			req.Header.Set("traceparent", tt.header)
 
 			ctx := context.Background()
-			ctx = prop.Extract(ctx, req.Header)
+			ctx = prop.Extract(ctx, propagation.HeaderCarrier(req.Header))
 			gotSc := trace.RemoteSpanContextFromContext(ctx)
 			if diff := cmp.Diff(gotSc, wantSc, cmp.AllowUnexported(trace.TraceState{})); diff != "" {
 				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
@@ -257,7 +257,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 				ctx = trace.ContextWithRemoteSpanContext(ctx, tt.sc)
 				ctx, _ = mockTracer.Start(ctx, "inject")
 			}
-			prop.Inject(ctx, req.Header)
+			prop.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 			gotHeader := req.Header.Get("traceparent")
 			if diff := cmp.Diff(gotHeader, tt.wantHeader); diff != "" {
@@ -280,7 +280,7 @@ func TestTraceStatePropagation(t *testing.T) {
 	prop := propagation.TraceContext{}
 	stateHeader := "tracestate"
 	parentHeader := "traceparent"
-	state, err := trace.TraceStateFromKeyValues(label.String("key1", "value1"), label.String("key2", "value2"))
+	state, err := trace.TraceStateFromKeyValues(attribute.String("key1", "value1"), attribute.String("key2", "value2"))
 	if err != nil {
 		t.Fatalf("Unable to construct expected TraceState: %s", err.Error())
 	}
@@ -337,11 +337,11 @@ func TestTraceStatePropagation(t *testing.T) {
 				inReq.Header.Add(hk, hv)
 			}
 
-			ctx := prop.Extract(context.Background(), inReq.Header)
+			ctx := prop.Extract(context.Background(), propagation.HeaderCarrier(inReq.Header))
 			if diff := cmp.Diff(
 				trace.RemoteSpanContextFromContext(ctx),
 				tt.wantSc,
-				cmp.AllowUnexported(label.Value{}),
+				cmp.AllowUnexported(attribute.Value{}),
 				cmp.AllowUnexported(trace.TraceState{}),
 			); diff != "" {
 				t.Errorf("Extracted tracestate: -got +want %s", diff)
@@ -351,7 +351,7 @@ func TestTraceStatePropagation(t *testing.T) {
 				mockTracer := oteltest.DefaultTracer()
 				ctx, _ = mockTracer.Start(ctx, "inject")
 				outReq, _ := http.NewRequest(http.MethodGet, "http://www.example.com", nil)
-				prop.Inject(ctx, outReq.Header)
+				prop.Inject(ctx, propagation.HeaderCarrier(outReq.Header))
 
 				if diff := cmp.Diff(outReq.Header.Get(stateHeader), tt.headers[stateHeader]); diff != "" {
 					t.Errorf("Propagated tracestate: -got +want %s", diff)

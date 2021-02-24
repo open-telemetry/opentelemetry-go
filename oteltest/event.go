@@ -17,12 +17,12 @@ package oteltest // import "go.opentelemetry.io/otel/oteltest"
 import (
 	"time"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // Event encapsulates the properties of calls to AddEvent.
 type Event struct {
 	Timestamp  time.Time
 	Name       string
-	Attributes map[label.Key]label.Value
+	Attributes map[attribute.Key]attribute.Value
 }

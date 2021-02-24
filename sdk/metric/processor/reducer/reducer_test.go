@@ -20,7 +20,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
@@ -31,22 +31,22 @@ import (
 )
 
 var (
-	kvs1 = []label.KeyValue{
-		label.Int("A", 1),
-		label.Int("B", 2),
-		label.Int("C", 3),
+	kvs1 = []attribute.KeyValue{
+		attribute.Int("A", 1),
+		attribute.Int("B", 2),
+		attribute.Int("C", 3),
 	}
-	kvs2 = []label.KeyValue{
-		label.Int("A", 1),
-		label.Int("B", 0),
-		label.Int("C", 3),
+	kvs2 = []attribute.KeyValue{
+		attribute.Int("A", 1),
+		attribute.Int("B", 0),
+		attribute.Int("C", 3),
 	}
 )
 
 type testFilter struct{}
 
-func (testFilter) LabelFilterFor(_ *metric.Descriptor) label.Filter {
-	return func(label label.KeyValue) bool {
+func (testFilter) LabelFilterFor(_ *metric.Descriptor) attribute.Filter {
+	return func(label attribute.KeyValue) bool {
 		return label.Key == "A" || label.Key == "C"
 	}
 }
@@ -71,11 +71,11 @@ func generateData(impl metric.MeterImpl) {
 func TestFilterProcessor(t *testing.T) {
 	testProc := processorTest.NewProcessor(
 		processorTest.AggregatorSelector(),
-		label.DefaultEncoder(),
+		attribute.DefaultEncoder(),
 	)
 	accum := metricsdk.NewAccumulator(
 		reducer.New(testFilter{}, processorTest.Checkpointer(testProc)),
-		resource.NewWithAttributes(label.String("R", "V")),
+		resource.NewWithAttributes(attribute.String("R", "V")),
 	)
 	generateData(accum)
 
@@ -92,9 +92,9 @@ func TestFilterBasicProcessor(t *testing.T) {
 	basicProc := basic.New(processorTest.AggregatorSelector(), export.CumulativeExportKindSelector())
 	accum := metricsdk.NewAccumulator(
 		reducer.New(testFilter{}, basicProc),
-		resource.NewWithAttributes(label.String("R", "V")),
+		resource.NewWithAttributes(attribute.String("R", "V")),
 	)
-	exporter := processorTest.NewExporter(basicProc, label.DefaultEncoder())
+	exporter := processorTest.NewExporter(basicProc, attribute.DefaultEncoder())
 
 	generateData(accum)
 
