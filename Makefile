@@ -175,12 +175,3 @@ check-clean-work-tree:
 	  git status; \
 	  exit 1; \
 	fi
-
-# Miscellaneous
-
-.PHONY: mod-download
-mod-download:
-	@set -e; for dir in $(ALL_GO_MOD_DIRS); do \
-	  echo "$(GO) mod download $${dir}"; \
-	  (cd "$${dir}" && $(GO) mod download); \
-	done
