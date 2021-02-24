@@ -11,7 +11,19 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - AttributePerEventCountLimit and AttributePerLinkCountLimit for SpanLimits. (#1535)
-- Compatibility testing suite in the CI system. (#1567)
+- Compatibility testing suite in the CI system for the following systems. (#1567)
+   | OS      | Go Version | Archetecture |
+   | ------- | ---------- | ------------ |
+   | Ubuntu  | 1.15       | amd64        |
+   | Ubuntu  | 1.14       | amd64        |
+   | Ubuntu  | 1.15       | 386          |
+   | Ubuntu  | 1.14       | 386          |
+   | MacOS   | 1.15       | amd64        |
+   | MacOS   | 1.14       | amd64        |
+   | Windows | 1.15       | amd64        |
+   | Windows | 1.14       | amd64        |
+   | Windows | 1.15       | 386          |
+   | Windows | 1.14       | 386          |
 
 ### Changed
 
