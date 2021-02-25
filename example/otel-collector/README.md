@@ -105,14 +105,14 @@ to the OpenTelemetry Collector, we need to first configure the `otlp` receiver:
   otel-collector-config: |
     receivers:
       # Make sure to add the otlp receiver.
-      # This will open up the receiver on port 55680.
+      # This will open up the receiver on port 4317.
       otlp:
-        endpoint: 0.0.0.0:55680
+        endpoint: 0.0.0.0:4317
     processors:
 ...
 ```
 
-This will create the receiver on the Collector side, and open up port `55680`
+This will create the receiver on the Collector side, and open up port `4317`
 for receiving traces.
 
 The rest of the configuration is quite standard, with the only mention that we
@@ -141,9 +141,9 @@ metadata:
 spec:
   ports:
   - name: otlp # Default endpoint for otlp receiver.
-    port: 55680
+    port: 4317
     protocol: TCP
-    targetPort: 55680
+    targetPort: 4317
     nodePort: 30080
   - name: metrics # Endpoint for metrics from our app.
     port: 8889
