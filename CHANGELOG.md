@@ -49,6 +49,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The sequential timing check of timestamps in the stdout exporter are now setup explicitly to be sequential (#1571). (#1572)
 - Windows build of Jaeger tests now compiles with OS specific functions (#1576). (#1577)
 - The sequential timing check of timestamps of go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue are now setup explicitly to be sequential (#1578). (#1579)
+- Validate tracestate header keys with vedors according to the W3C TraceContext specification (#1475). (#1581)
 
 ## [0.17.0] - 2020-02-12
 
