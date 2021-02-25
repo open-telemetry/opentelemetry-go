@@ -699,10 +699,19 @@ func TestTraceStateFromKeyValues(t *testing.T) {
 			expectedErr:        errInvalidTraceStateMembersNumber,
 		},
 		{
-			name: "Duplicate",
+			name: "Duplicate key",
 			kvs: []attribute.KeyValue{
 				attribute.String("key1", "val1"),
 				attribute.String("key1", "val2"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateDuplicate,
+		},
+		{
+			name: "Duplicate key/value",
+			kvs: []attribute.KeyValue{
+				attribute.String("key1", "val1"),
+				attribute.String("key1", "val1"),
 			},
 			expectedTraceState: TraceState{},
 			expectedErr:        errInvalidTraceStateDuplicate,
@@ -715,23 +724,257 @@ func TestTraceStateFromKeyValues(t *testing.T) {
 			expectedTraceState: TraceState{},
 			expectedErr:        errInvalidTraceStateKeyValue,
 		},
+		{
+			name: "Full character set",
+			kvs: []attribute.KeyValue{
+				attribute.String(
+					"abcdefghijklmnopqrstuvwxyz0123456789_-*/",
+					" !\"#$%&'()*+-./0123456789:;<>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",
+				),
+			},
+			expectedTraceState: TraceState{[]attribute.KeyValue{
+				attribute.String(
+					"abcdefghijklmnopqrstuvwxyz0123456789_-*/",
+					" !\"#$%&'()*+-./0123456789:;<>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",
+				),
+			}},
+		},
+		{
+			name: "Full character set with vendor",
+			kvs: []attribute.KeyValue{
+				attribute.String(
+					"abcdefghijklmnopqrstuvwxyz0123456789_-*/@a-z0-9_-*/",
+					"!\"#$%&'()*+-./0123456789:;<>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",
+				),
+			},
+			expectedTraceState: TraceState{[]attribute.KeyValue{
+				attribute.String(
+					"abcdefghijklmnopqrstuvwxyz0123456789_-*/@a-z0-9_-*/",
+					"!\"#$%&'()*+-./0123456789:;<>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",
+				),
+			}},
+		},
+		{
+			name: "Full character with vendor starting with number",
+			kvs: []attribute.KeyValue{
+				attribute.String(
+					"0123456789_-*/abcdefghijklmnopqrstuvwxyz@a-z0-9_-*/",
+					"!\"#$%&'()*+-./0123456789:;<>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",
+				),
+			},
+			expectedTraceState: TraceState{[]attribute.KeyValue{
+				attribute.String(
+					"0123456789_-*/abcdefghijklmnopqrstuvwxyz@a-z0-9_-*/",
+					"!\"#$%&'()*+-./0123456789:;<>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",
+				),
+			}},
+		},
+		{
+			name: "One field",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo", "1"),
+			},
+			expectedTraceState: TraceState{[]attribute.KeyValue{
+				attribute.String("foo", "1"),
+			}},
+		},
+		{
+			name: "Two fields",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo", "1"),
+				attribute.String("bar", "2"),
+			},
+			expectedTraceState: TraceState{[]attribute.KeyValue{
+				attribute.String("foo", "1"),
+				attribute.String("bar", "2"),
+			}},
+		},
+		{
+			name: "Long field key",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo", "1"),
+				attribute.String(
+					"zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+					"1",
+				),
+			},
+			expectedTraceState: TraceState{[]attribute.KeyValue{
+				attribute.String("foo", "1"),
+				attribute.String(
+					"zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+					"1",
+				),
+			}},
+		},
+		{
+			name: "Long field key with vendor",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo", "1"),
+				attribute.String(
+					"ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt@vvvvvvvvvvvvvv",
+					"1",
+				),
+			},
+			expectedTraceState: TraceState{[]attribute.KeyValue{
+				attribute.String("foo", "1"),
+				attribute.String(
+					"ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt@vvvvvvvvvvvvvv",
+					"1",
+				),
+			}},
+		},
+		{
+			name: "Invalid whitespace value",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo", "1 \t "),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Invalid whitespace key",
+			kvs: []attribute.KeyValue{
+				attribute.String(" \t bar", "2"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Empty header value",
+			kvs: []attribute.KeyValue{
+				attribute.String("", ""),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Space in key",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo ", "1"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Capitalized key",
+			kvs: []attribute.KeyValue{
+				attribute.String("FOO", "1"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Period in key",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo.bar", "1"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Empty vendor",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo@", "1"),
+				attribute.String("bar", "2"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Empty key for vendor",
+			kvs: []attribute.KeyValue{
+				attribute.String("@foo", "1"),
+				attribute.String("bar", "2"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Double @",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo@@bar", "1"),
+				attribute.String("bar", "2"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Compound vendor",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo@bar@baz", "1"),
+				attribute.String("bar", "2"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Key too long",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo", "1"),
+				attribute.String("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz", "1"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Key too long with vendor",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo", "1"),
+				attribute.String("tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt@v", "1"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Vendor too long",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo", "1"),
+				attribute.String("t@vvvvvvvvvvvvvvv", "1"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Equal sign in value",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo", "bar=baz"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Empty value",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo", ""),
+				attribute.String("bar", "3"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+	}
+
+	messageFunc := func(kvs []attribute.KeyValue) []string {
+		var out []string
+		for _, kv := range kvs {
+			out = append(out, fmt.Sprintf("%s=%s", kv.Key, kv.Value.AsString()))
+		}
+		return out
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result, err := TraceStateFromKeyValues(tc.kvs...)
 			if tc.expectedErr != nil {
-				require.Error(t, err)
+				require.Error(t, err, messageFunc(tc.kvs))
 				assert.Equal(t, TraceState{}, result)
 				assert.Equal(t, tc.expectedErr, err)
 			} else {
-				require.NoError(t, err)
+				require.NoError(t, err, messageFunc(tc.kvs))
 				assert.NotNil(t, tc.expectedTraceState)
 				assert.Equal(t, tc.expectedTraceState, result)
 			}
 		})
 	}
-
 }
 
 func assertSpanContextEqual(got SpanContext, want SpanContext) bool {
