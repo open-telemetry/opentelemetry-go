@@ -63,9 +63,19 @@ func newConfig(opts ...Option) config {
 // Option applies an option to a config.
 type Option interface {
 	Apply(*config)
+
+	// A private method to prevent users implementing the
+	// interface and so future additions to it will not
+	// violate compatibility.
+	private()
 }
 
+type option struct{}
+
+func (option) private() {}
+
 type spanContextFuncOption struct {
+	option
 	SpanContextFunc func(context.Context) trace.SpanContext
 }
 
@@ -76,10 +86,11 @@ func (o spanContextFuncOption) Apply(c *config) {
 // WithSpanContextFunc sets the SpanContextFunc used to generate a new Spans
 // context from a parent SpanContext.
 func WithSpanContextFunc(f func(context.Context) trace.SpanContext) Option {
-	return spanContextFuncOption{f}
+	return spanContextFuncOption{SpanContextFunc: f}
 }
 
 type spanRecorderOption struct {
+	option
 	SpanRecorder *SpanRecorder
 }
 
@@ -90,7 +101,7 @@ func (o spanRecorderOption) Apply(c *config) {
 // WithSpanRecorder sets the SpanRecorder to use with the TracerProvider for
 // testing.
 func WithSpanRecorder(sr *SpanRecorder) Option {
-	return spanRecorderOption{sr}
+	return spanRecorderOption{SpanRecorder: sr}
 }
 
 // SpanRecorder performs operations to record a span as it starts and ends.

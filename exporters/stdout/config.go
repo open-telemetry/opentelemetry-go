@@ -74,6 +74,11 @@ func NewConfig(options ...Option) (Config, error) {
 type Option interface {
 	// Apply option value to Config.
 	Apply(*Config)
+
+	// A private method to prevent users implementing the
+	// interface and so future additions to it will not
+	// violate compatibility.
+	private()
 }
 
 // WithWriter sets the export stream destination.
@@ -89,6 +94,8 @@ func (o writerOption) Apply(config *Config) {
 	config.Writer = o.W
 }
 
+func (writerOption) private() {}
+
 // WithPrettyPrint sets the export stream format to use JSON.
 func WithPrettyPrint() Option {
 	return prettyPrintOption(true)
@@ -100,6 +107,8 @@ func (o prettyPrintOption) Apply(config *Config) {
 	config.PrettyPrint = bool(o)
 }
 
+func (prettyPrintOption) private() {}
+
 // WithoutTimestamps sets the export stream to not include timestamps.
 func WithoutTimestamps() Option {
 	return timestampsOption(false)
@@ -110,6 +119,8 @@ type timestampsOption bool
 func (o timestampsOption) Apply(config *Config) {
 	config.Timestamps = bool(o)
 }
+
+func (timestampsOption) private() {}
 
 // WithLabelEncoder sets the label encoder used in export.
 func WithLabelEncoder(enc attribute.Encoder) Option {
@@ -124,6 +135,8 @@ func (o labelEncoderOption) Apply(config *Config) {
 	config.LabelEncoder = o.LabelEncoder
 }
 
+func (labelEncoderOption) private() {}
+
 // WithoutTraceExport disables all trace exporting.
 func WithoutTraceExport() Option {
 	return disableTraceExportOption(true)
@@ -135,6 +148,8 @@ func (o disableTraceExportOption) Apply(config *Config) {
 	config.DisableTraceExport = bool(o)
 }
 
+func (disableTraceExportOption) private() {}
+
 // WithoutMetricExport disables all metric exporting.
 func WithoutMetricExport() Option {
 	return disableMetricExportOption(true)
@@ -145,3 +160,5 @@ type disableMetricExportOption bool
 func (o disableMetricExportOption) Apply(config *Config) {
 	config.DisableMetricExport = bool(o)
 }
+
+func (disableMetricExportOption) private() {}
