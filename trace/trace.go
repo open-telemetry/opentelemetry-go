@@ -48,7 +48,7 @@ const (
 
 	// based on the W3C Trace Context specification, see https://www.w3.org/TR/trace-context-1/#tracestate-header
 	traceStateKeyFormat                      = `[a-z][_0-9a-z\-\*\/]{0,255}`
-	traceStateKeyFormatWithMultiTenantVendor = `[a-z][_0-9a-z\-\*\/]{0,240}@[a-z][_0-9a-z\-\*\/]{0,13}`
+	traceStateKeyFormatWithMultiTenantVendor = `[a-z0-9][_0-9a-z\-\*\/]{0,240}@[a-z][_0-9a-z\-\*\/]{0,13}`
 	traceStateValueFormat                    = `[\x20-\x2b\x2d-\x3c\x3e-\x7e]{0,255}[\x21-\x2b\x2d-\x3c\x3e-\x7e]`
 
 	traceStateMaxListMembers = 32
