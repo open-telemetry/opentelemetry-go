@@ -201,10 +201,10 @@ func (bsp *BatchSpanProcessor) processQueue() {
 	defer bsp.timer.Stop()
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	for {
 		select {
 		case <-bsp.stopCh:
-			cancel()
 			return
 		case <-bsp.timer.C:
 			if err := bsp.exportSpans(ctx); err != nil {
@@ -231,6 +231,7 @@ func (bsp *BatchSpanProcessor) processQueue() {
 // to finish the enqueue, then exports the final batch.
 func (bsp *BatchSpanProcessor) drainQueue() {
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	for {
 		select {
 		case sd := <-bsp.queue:
@@ -252,7 +253,6 @@ func (bsp *BatchSpanProcessor) drainQueue() {
 				}
 			}
 		default:
-			cancel()
 			close(bsp.queue)
 		}
 	}
