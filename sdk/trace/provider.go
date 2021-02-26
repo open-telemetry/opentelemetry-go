@@ -197,7 +197,7 @@ func (p *TracerProvider) ApplyConfig(cfg Config) {
 	p.config.Store(&c)
 }
 
-// ForceFlush immediately export all spans that have not yet been exported for
+// ForceFlush immediately exports all spans that have not yet been exported for
 // all the registered span processors.
 func (p *TracerProvider) ForceFlush(ctx context.Context) error {
 	spss, ok := p.spanProcessors.Load().(spanProcessorStates)
