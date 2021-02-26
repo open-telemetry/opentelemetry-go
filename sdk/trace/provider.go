@@ -86,10 +86,10 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 }
 
 // Tracer returns a Tracer with the given name and options. If a Tracer for
-// the given name and options does not exist it is created first, otherwise
-// the existing matching Tracer is returned.
+// the given name and options does not exist it is created, otherwise the
+// existing Tracer is returned.
 //
-// If the name is empty, DefaultTracerName is used.
+// If name is empty, DefaultTracerName is used instead.
 //
 // This method is safe to be called concurrently.
 func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
