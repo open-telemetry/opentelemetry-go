@@ -58,5 +58,6 @@ func (ssp *SimpleSpanProcessor) Shutdown(_ context.Context) error {
 }
 
 // ForceFlush does nothing as there is no data to flush.
-func (ssp *SimpleSpanProcessor) ForceFlush() {
+func (ssp *SimpleSpanProcessor) ForceFlush(context.Context) error {
+	return nil
 }
