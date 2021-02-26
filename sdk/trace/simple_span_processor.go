@@ -58,11 +58,11 @@ func (ssp *SimpleSpanProcessor) OnEnd(s ReadOnlySpan) {
 
 // Shutdown shuts down the exporter this SimpleSpanProcessor exports to.
 func (ssp *SimpleSpanProcessor) Shutdown(ctx context.Context) error {
-	ssp.exporterMu.Lock()
-	defer ssp.exporterMu.Unlock()
-
 	var err error
 	ssp.stopOnce.Do(func() {
+		ssp.exporterMu.Lock()
+		defer ssp.exporterMu.Unlock()
+
 		err = ssp.exporter.Shutdown(ctx)
 		// Set exporter to nil so subsequent calls to OnEnd are ignored
 		// gracefully.
