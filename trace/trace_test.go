@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -1006,3 +1007,92 @@ var kvsWithMaxMembers = func() []attribute.KeyValue {
 	}
 	return kvs
 }()
+
+func TestNewSpanContext(t *testing.T) {
+	testCases := []struct {
+		name                string
+		config              SpanContextConfig
+		expectedSpanContext SpanContext
+	}{
+		{
+			name: "Complete SpanContext",
+			config: SpanContextConfig{
+				TraceID:    TraceID([16]byte{1}),
+				SpanID:     SpanID([8]byte{42}),
+				TraceFlags: 0x1,
+				TraceState: TraceState{kvs: []attribute.KeyValue{
+					attribute.String("foo", "bar"),
+				}},
+			},
+			expectedSpanContext: SpanContext{
+				traceID:    TraceID([16]byte{1}),
+				spanID:     SpanID([8]byte{42}),
+				traceFlags: 0x1,
+				traceState: TraceState{kvs: []attribute.KeyValue{
+					attribute.String("foo", "bar"),
+				}},
+			},
+		},
+		{
+			name:                "Empty SpanContext",
+			config:              SpanContextConfig{},
+			expectedSpanContext: SpanContext{},
+		},
+		{
+			name: "Partial SpanContext",
+			config: SpanContextConfig{
+				TraceID: TraceID([16]byte{1}),
+				SpanID:  SpanID([8]byte{42}),
+			},
+			expectedSpanContext: SpanContext{
+				traceID:    TraceID([16]byte{1}),
+				spanID:     SpanID([8]byte{42}),
+				traceFlags: 0x0,
+				traceState: TraceState{},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			sctx := NewSpanContext(tc.config)
+			if !assertSpanContextEqual(sctx, tc.expectedSpanContext) {
+				t.Fatalf("%s: Unexpected context created: %s", tc.name, cmp.Diff(sctx, tc.expectedSpanContext))
+			}
+		})
+	}
+}
+
+func TestSpanContextDerivation(t *testing.T) {
+	from := SpanContext{}
+	to := SpanContext{traceID: TraceID([16]byte{1})}
+
+	modified := from.WithTraceID(to.TraceID())
+	if !assertSpanContextEqual(modified, to) {
+		t.Fatalf("WithTraceID: Unexpected context created: %s", cmp.Diff(modified, to))
+	}
+
+	from = to
+	to.spanID = SpanID([8]byte{42})
+
+	modified = from.WithSpanID(to.SpanID())
+	if !assertSpanContextEqual(modified, to) {
+		t.Fatalf("WithSpanID: Unexpected context created: %s", cmp.Diff(modified, to))
+	}
+
+	from = to
+	to.traceFlags = 0x13
+
+	modified = from.WithTraceFlags(to.TraceFlags())
+	if !assertSpanContextEqual(modified, to) {
+		t.Fatalf("WithTraceFlags: Unexpected context created: %s", cmp.Diff(modified, to))
+	}
+
+	from = to
+	to.traceState = TraceState{kvs: []attribute.KeyValue{attribute.String("foo", "bar")}}
+
+	modified = from.WithTraceState(to.TraceState())
+	if !assertSpanContextEqual(modified, to) {
+		t.Fatalf("WithTraceState: Unexpected context created: %s", cmp.Diff(modified, to))
+	}
+}
