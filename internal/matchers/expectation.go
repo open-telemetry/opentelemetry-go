@@ -83,6 +83,12 @@ func (e *Expectation) ToBeFalse() {
 	}
 }
 
+func (e *Expectation) NotToPanic() {
+	if actual := recover(); actual != nil {
+		e.fail(fmt.Sprintf("Expected panic\n\t%v\nto have not been raised", actual))
+	}
+}
+
 func (e *Expectation) ToSucceed() {
 	switch actual := e.actual.(type) {
 	case error:
