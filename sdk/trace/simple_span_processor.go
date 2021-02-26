@@ -16,45 +16,59 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
 	"context"
+	"sync"
 
 	"go.opentelemetry.io/otel"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
 // SimpleSpanProcessor is a SpanProcessor that synchronously sends all
-// SpanSnapshots to a trace.Exporter when the span finishes.
+// completed Spans to a trace.Exporter immediately.
 type SimpleSpanProcessor struct {
-	e export.SpanExporter
+	exporterMu sync.RWMutex
+	exporter   export.SpanExporter
+	stopOnce   sync.Once
 }
 
 var _ SpanProcessor = (*SimpleSpanProcessor)(nil)
 
-// NewSimpleSpanProcessor returns a new SimpleSpanProcessor that will
-// synchronously send SpanSnapshots to the exporter.
+// NewSimpleSpanProcessor returns a new SimpleSpanProcessor.
 func NewSimpleSpanProcessor(exporter export.SpanExporter) *SimpleSpanProcessor {
 	ssp := &SimpleSpanProcessor{
-		e: exporter,
+		exporter: exporter,
 	}
 	return ssp
 }
 
-// OnStart method does nothing.
-func (ssp *SimpleSpanProcessor) OnStart(parent context.Context, s ReadWriteSpan) {
-}
+// OnStart does nothing.
+func (ssp *SimpleSpanProcessor) OnStart(context.Context, ReadWriteSpan) {}
 
-// OnEnd method exports a ReadOnlySpan using the associated exporter.
+// OnEnd immediately exports a ReadOnlySpan.
 func (ssp *SimpleSpanProcessor) OnEnd(s ReadOnlySpan) {
-	if ssp.e != nil && s.SpanContext().IsSampled() {
+	ssp.exporterMu.RLock()
+	defer ssp.exporterMu.RUnlock()
+
+	if ssp.exporter != nil && s.SpanContext().IsSampled() {
 		ss := s.Snapshot()
-		if err := ssp.e.ExportSpans(context.Background(), []*export.SpanSnapshot{ss}); err != nil {
+		if err := ssp.exporter.ExportSpans(context.Background(), []*export.SpanSnapshot{ss}); err != nil {
 			otel.Handle(err)
 		}
 	}
 }
 
-// Shutdown method does nothing. There is no data to cleanup.
-func (ssp *SimpleSpanProcessor) Shutdown(_ context.Context) error {
-	return nil
+// Shutdown shuts down the exporter this SimpleSpanProcessor exports to.
+func (ssp *SimpleSpanProcessor) Shutdown(ctx context.Context) error {
+	ssp.exporterMu.Lock()
+	defer ssp.exporterMu.Unlock()
+
+	var err error
+	ssp.stopOnce.Do(func() {
+		err = ssp.exporter.Shutdown(ctx)
+		// Set exporter to nil so subsequent calls to OnEnd are ignored
+		// gracefully.
+		ssp.exporter = nil
+	})
+	return err
 }
 
 // ForceFlush does nothing as there is no data to flush.
