@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - AttributePerEventCountLimit and AttributePerLinkCountLimit for SpanLimits. (#1535)
 - Added `Keys()` method to `propagation.TextMapCarrier` and `propagation.HeaderCarrier` to adapt `http.Header` to this interface. (#1544)
 - Added `code` attributes to `go.opentelemetry.io/otel/semconv` package. (#1558)
+- A `ForceFlush` method to the `"go.opentelemetry.io/otel/sdk/trace".TracerProvider` to flush all registered `SpanProcessor`s. (#1607)
 
 ### Changed
 
@@ -39,6 +40,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
       "otel/sdk/trace".ReadOnlySpan
       "otel/sdk/trace".ReadWriteSpan
 ```
+- Update the `ForceFlush` method signature to the `"go.opentelemetry.io/otel/sdk/trace".SpanProcessor` to accept a context.Context and return an error. (#1607)
+- Update the `Shutdown` method to the `"go.opentelemetry.io/otel/sdk/trace".TracerProvider` return an error on shutdown failure. (#1607)
 
 ### Removed
 
