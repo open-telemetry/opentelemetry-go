@@ -154,7 +154,7 @@ func (p *TracerProvider) UnregisterSpanProcessor(s SpanProcessor) {
 		})
 	}
 	if len(spss) > 1 {
-		copy(spss[idx:], new[idx+1:])
+		copy(spss[idx:], spss[idx+1:])
 	}
 	spss[len(spss)-1] = nil
 	spss = spss[:len(spss)-1]
