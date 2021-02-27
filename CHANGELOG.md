@@ -10,7 +10,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Added `resource.Default()` for use with meter and tracer providers. (#1507)
 - AttributePerEventCountLimit and AttributePerLinkCountLimit for SpanLimits. (#1535)
+- Added `Keys()` method to `propagation.TextMapCarrier` and `propagation.HeaderCarrier` to adapt `http.Header` to this interface. (#1544)
+- Added `code` attributes to `go.opentelemetry.io/otel/semconv` package. (#1558)
 
 ### Changed
 
@@ -20,16 +23,33 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Rename MaxEventsPerSpan, MaxAttributesPerSpan and MaxLinksPerSpan to EventCountLimit, AttributeCountLimit and LinkCountLimit, and move these fieds into SpanLimits. (#1535)
 - Renamed the `otel/label` package to `otel/attribute`. (#1541)
 - Vendor the Jaeger exporter's dependency on Apache Thrift. (#1551)
-
-### Added
-
-- Added `resource.Default()` for use with meter and tracer providers. (#1507)
-- Added `Keys()` method to `propagation.TextMapCarrier` and `propagation.HeaderCarrier` to adapt `http.Header` to this interface. (#1544)
-- Added `code` attributes to `go.opentelemetry.io/otel/semconv` package. (#1558)
+- Stagger timestamps in exact aggregator tests. (#1569)
+- Prevent end-users from implementing some interfaces (#1575)
+```
+      "otel/exporters/otlp/otlphttp".Option
+      "otel/exporters/stdout".Option
+      "otel/oteltest".Option
+      "otel/trace".TracerOption
+      "otel/trace".SpanOption
+      "otel/trace".EventOption
+      "otel/trace".LifeCycleOption
+      "otel/trace".InstrumentationOption
+      "otel/sdk/resource".Option
+      "otel/sdk/trace".ParentBasedSamplerOption
+      "otel/sdk/trace".ReadOnlySpan
+      "otel/sdk/trace".ReadWriteSpan
+```
 
 ### Removed
 
 - Removed attempt to resample spans upon changing the span name with `span.SetName()`. (#1545)
+
+### Fixed
+
+- The sequential timing check of timestamps in the stdout exporter are now setup explicitly to be sequential (#1571). (#1572)
+- Windows build of Jaeger tests now compiles with OS specific functions (#1576). (#1577)
+- The sequential timing check of timestamps of go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue are now setup explicitly to be sequential (#1578). (#1579)
+- Validate tracestate header keys with vedors according to the W3C TraceContext specification (#1475). (#1581)
 
 ## [0.17.0] - 2020-02-12
 
@@ -44,6 +64,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## Fixed
 
 - Fixed otlpgrpc reconnection issue.
+- The example code in the README.md of `go.opentelemetry.io/otel/exporters/otlp` is moved to a compiled example test and used the new `WithAddress` instead of `WithEndpoint`. (#1513)
+- The otel-collector example now uses the default OTLP receiver port of the collector.
 
 ## [0.16.0] - 2020-01-13
 

@@ -37,6 +37,10 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
+func requireNotAfter(t *testing.T, t1, t2 time.Time) {
+	require.False(t, t1.After(t2), "expected %v ≤ %v", t1, t2)
+}
+
 // TestProcessor tests all the non-error paths in this package.
 func TestProcessor(t *testing.T) {
 	type exportCase struct {
@@ -316,7 +320,9 @@ func TestBasicInconsistent(t *testing.T) {
 
 func TestBasicTimestamps(t *testing.T) {
 	beforeNew := time.Now()
+	time.Sleep(time.Nanosecond)
 	b := basic.New(processorTest.AggregatorSelector(), export.StatelessExportKindSelector())
+	time.Sleep(time.Nanosecond)
 	afterNew := time.Now()
 
 	desc := metric.NewDescriptor("inst", metric.CounterInstrumentKind, number.Int64Kind)
@@ -335,8 +341,8 @@ func TestBasicTimestamps(t *testing.T) {
 	}))
 
 	// The first start time is set in the constructor.
-	require.False(t, beforeNew.After(start1))
-	require.False(t, afterNew.Before(start1))
+	requireNotAfter(t, beforeNew, start1)
+	requireNotAfter(t, start1, afterNew)
 
 	for i := 0; i < 2; i++ {
 		b.StartCollection()
@@ -353,8 +359,8 @@ func TestBasicTimestamps(t *testing.T) {
 
 		// Subsequent intervals have their start and end aligned.
 		require.Equal(t, start2, end1)
-		require.True(t, start1.Before(end1))
-		require.True(t, start2.Before(end2))
+		requireNotAfter(t, start1, end1)
+		requireNotAfter(t, start2, end2)
 
 		start1 = start2
 		end1 = end2
@@ -514,6 +520,6 @@ func TestSumObserverEndToEnd(t *testing.T) {
 
 	require.Equal(t, startTime[0], startTime[1])
 	require.Equal(t, startTime[0], startTime[2])
-	require.True(t, endTime[0].Before(endTime[1]))
-	require.True(t, endTime[1].Before(endTime[2]))
+	requireNotAfter(t, endTime[0], endTime[1])
+	requireNotAfter(t, endTime[1], endTime[2])
 }

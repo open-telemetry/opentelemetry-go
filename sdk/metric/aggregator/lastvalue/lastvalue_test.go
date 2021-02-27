@@ -101,6 +101,8 @@ func TestLastValueMerge(t *testing.T) {
 		first1.AddNumber(profile.NumberKind, first2)
 
 		aggregatortest.CheckedUpdate(t, agg1, first1, descriptor)
+		// Ensure these should not have the same timestamp.
+		time.Sleep(time.Nanosecond)
 		aggregatortest.CheckedUpdate(t, agg2, first2, descriptor)
 
 		require.NoError(t, agg1.SynchronizedMove(ckpt1, descriptor))
