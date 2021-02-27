@@ -137,7 +137,7 @@ func TestMinMaxSumCountDatapoints(t *testing.T) {
 			BucketCounts:      []uint64{1, 10},
 			StartTimeUnixNano: uint64(intervalStart.UnixNano()),
 			TimeUnixNano:      uint64(intervalEnd.UnixNano()),
-			Labels:            []*commonpb.StringKeyValue{
+			Labels: []*commonpb.StringKeyValue{
 				{
 					Key:   "one",
 					Value: "1",
