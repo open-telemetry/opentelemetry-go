@@ -53,7 +53,7 @@ func Example_insecure() {
 		sdktrace.WithBatcher(
 			exp,
 			// add following two options to ensure flush
-			sdktrace.WithBatchTimeout(5),
+			sdktrace.WithBatchTimeout(5*time.Second),
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	)
@@ -106,7 +106,7 @@ func Example_withTLS() {
 		sdktrace.WithBatcher(
 			exp,
 			// add following two options to ensure flush
-			sdktrace.WithBatchTimeout(5),
+			sdktrace.WithBatchTimeout(5*time.Second),
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	)
@@ -167,7 +167,7 @@ func Example_withDifferentSignalCollectors() {
 		sdktrace.WithBatcher(
 			exp,
 			// add following two options to ensure flush
-			sdktrace.WithBatchTimeout(5),
+			sdktrace.WithBatchTimeout(5*time.Second),
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	)
