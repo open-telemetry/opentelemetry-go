@@ -56,6 +56,7 @@ func (s *storingHandler) Reset() {
 var (
 	tid trace.TraceID
 	sid trace.SpanID
+	customerSid trace.SpanID
 
 	handler *storingHandler = &storingHandler{}
 )
@@ -63,6 +64,7 @@ var (
 func init() {
 	tid, _ = trace.TraceIDFromHex("01020304050607080102040810203040")
 	sid, _ = trace.SpanIDFromHex("0102040810203040")
+	customerSid, _ = trace.SpanIDFromHex("1102040810203040")
 
 	otel.SetErrorHandler(handler)
 }
@@ -838,7 +840,9 @@ func endSpan(te *testExporter, span trace.Span) (*export.SpanSnapshot, error) {
 	if !got.SpanContext.SpanID.IsValid() {
 		return nil, fmt.Errorf("exporting span: expected nonzero SpanID")
 	}
-	got.SpanContext.SpanID = trace.SpanID{}
+	if got.SpanContext.SpanID != customerSid {
+		got.SpanContext.SpanID = trace.SpanID{}
+	}
 	if !checkTime(&got.StartTime) {
 		return nil, fmt.Errorf("exporting span: expected nonzero StartTime")
 	}
@@ -1175,6 +1179,42 @@ func TestWithSpanKind(t *testing.T) {
 
 		if spanData.SpanKind != sk {
 			t.Errorf("WithSpanKind check: got %+v, want %+v\n", spanData.SpanKind, sks)
+		}
+	}
+}
+
+func TestWithCustomerSpanID(t *testing.T) {
+	te := NewTestExporter()
+	tp := NewTracerProvider(WithSyncer(te),
+		WithConfig(Config{DefaultSampler: AlwaysSample()}), WithResource(resource.Empty()))
+	tr := tp.Tracer("withSpanKind")
+
+	_, span := tr.Start(context.Background(), "WithoutSpanKind")
+	spanData, err := endSpan(te, span)
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	if spanData.SpanContext.SpanID != (trace.SpanID{}) {
+		t.Errorf("Default value of SpanID should be Internal: got %+v, want %+v\n",
+			spanData.SpanContext.SpanID, trace.SpanID{})
+	}
+
+	sids := []trace.SpanID{
+		customerSid,
+	}
+
+	for _, sid := range sids {
+		te.Reset()
+
+		_, span := tr.Start(context.Background(), fmt.Sprintf("customerSpanID-%v", sid), trace.WithCustomerSpanID(sid))
+		spanData, err := endSpan(te, span)
+		if err != nil {
+			t.Error(err.Error())
+		}
+
+		if spanData.SpanContext.SpanID != sid {
+			t.Errorf("WithCustomerSpanID check: got %+v, want %+v\n", spanData.SpanContext.SpanID, sid)
 		}
 	}
 }

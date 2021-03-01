@@ -521,6 +521,8 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 	if hasEmptySpanContext(parent) {
 		// Generate both TraceID and SpanID
 		span.spanContext.TraceID, span.spanContext.SpanID = cfg.IDGenerator.NewIDs(ctx)
+	} else if o.CustomerSpanID != (trace.SpanID{}) {
+		span.spanContext.SpanID = o.CustomerSpanID
 	} else {
 		// TraceID already exists, just generate a SpanID
 		span.spanContext.SpanID = cfg.IDGenerator.NewSpanID(ctx, parent.TraceID)

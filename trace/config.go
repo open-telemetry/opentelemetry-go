@@ -62,6 +62,8 @@ type SpanConfig struct {
 	NewRoot bool
 	// SpanKind is the role a Span has in a trace.
 	SpanKind SpanKind
+	// CustomerSpanID for user generate a span with customerSpanID
+	CustomerSpanID SpanID
 }
 
 // NewSpanConfig applies all the options to a returned SpanConfig.
@@ -198,6 +200,19 @@ func (o spanKindSpanOption) private()                {}
 func WithSpanKind(kind SpanKind) SpanOption {
 	return spanKindSpanOption(kind)
 }
+
+// WithCustomerSpanID set the customerSpanID
+func WithCustomerSpanID(spanID SpanID)  SpanOption  {
+	return customerSpanIDOption(spanID)
+}
+
+type customerSpanIDOption SpanID
+
+func (i customerSpanIDOption) ApplySpan(config *SpanConfig) {
+	config.CustomerSpanID = SpanID(i)
+}
+
+func (customerSpanIDOption) private() {}
 
 // InstrumentationOption is an interface for applying instrumentation specific
 // options.
