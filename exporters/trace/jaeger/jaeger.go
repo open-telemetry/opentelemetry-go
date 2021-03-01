@@ -17,6 +17,7 @@ package jaeger // import "go.opentelemetry.io/otel/exporters/trace/jaeger"
 import (
 	"context"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -375,6 +376,14 @@ func keyValueToTag(keyValue attribute.KeyValue) *gen.Tag {
 			Key:     string(keyValue.Key),
 			VDouble: &f,
 			VType:   gen.TagType_DOUBLE,
+		}
+	case attribute.ARRAY:
+		json, _ := json.Marshal(keyValue.Value.AsArray())
+		a := (string)(json)
+		tag = &gen.Tag{
+			Key:   string(keyValue.Key),
+			VStr:  &a,
+			VType: gen.TagType_STRING,
 		}
 	}
 	return tag
