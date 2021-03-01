@@ -308,18 +308,21 @@ func Record(exportSelector export.ExportKindSelector, r export.Record) (*metricp
 
 func gaugeArray(record export.Record, points []aggregation.Point) (*metricpb.Metric, error) {
 	desc := record.Descriptor()
+	labels := record.Labels()
 	m := &metricpb.Metric{
 		Name:        desc.Name(),
 		Description: desc.Description(),
 		Unit:        string(desc.Unit()),
 	}
 
+	pbLabels := stringKeyValues(labels.Iter())
+
 	switch nk := desc.NumberKind(); nk {
 	case number.Int64Kind:
 		var pts []*metricpb.IntDataPoint
 		for _, s := range points {
 			pts = append(pts, &metricpb.IntDataPoint{
-				Labels:            nil,
+				Labels:            pbLabels,
 				StartTimeUnixNano: toNanos(record.StartTime()),
 				TimeUnixNano:      toNanos(record.EndTime()),
 				Value:             s.Number.CoerceToInt64(nk),
@@ -335,7 +338,7 @@ func gaugeArray(record export.Record, points []aggregation.Point) (*metricpb.Met
 		var pts []*metricpb.DoubleDataPoint
 		for _, s := range points {
 			pts = append(pts, &metricpb.DoubleDataPoint{
-				Labels:            nil,
+				Labels:            pbLabels,
 				StartTimeUnixNano: toNanos(record.StartTime()),
 				TimeUnixNano:      toNanos(record.EndTime()),
 				Value:             s.Number.CoerceToFloat64(nk),

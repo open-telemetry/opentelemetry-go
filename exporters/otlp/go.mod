@@ -17,7 +17,7 @@ require (
 	go.opentelemetry.io/otel/sdk/export/metric v0.17.0
 	go.opentelemetry.io/otel/sdk/metric v0.17.0
 	go.opentelemetry.io/otel/trace v0.17.0
-	google.golang.org/grpc v1.35.0
+	google.golang.org/grpc v1.36.0
 )
 
 replace go.opentelemetry.io/otel/bridge/opencensus => ../../bridge/opencensus
