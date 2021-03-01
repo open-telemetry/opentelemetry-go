@@ -35,8 +35,8 @@ import (
 const (
 	defaultServiceName = "OpenTelemetry"
 
-	keyInstrumentationLibraryName    = "otel.instrumentation_library.name"
-	keyInstrumentationLibraryVersion = "otel.instrumentation_library.version"
+	keyInstrumentationLibraryName    = "otel.library.name"
+	keyInstrumentationLibraryVersion = "otel.library.version"
 )
 
 type Option func(*options)
