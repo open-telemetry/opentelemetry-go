@@ -39,7 +39,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
       "otel/sdk/trace".ReadOnlySpan
       "otel/sdk/trace".ReadWriteSpan
 ```
-- The SimpleSpanProcessor will now shutdown the enclosed SpanExporter and gracefully ignore subsequent calls to OnEnd after Shutdown is called. (#1612)
+- The SimpleSpanProcessor will now shut down the enclosed `SpanExporter` and gracefully ignore subsequent calls to `OnEnd` after `Shutdown` is called. (#1612)
 
 ### Removed
 
