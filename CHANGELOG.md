@@ -27,6 +27,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
    | Windows | 1.14       | amd64        |
    | Windows | 1.15       | 386          |
    | Windows | 1.14       | 386          |
+- Changed all examples to use `WithBatchTimeout(5 * time.Second)` rather than `WithBatchTimeout(5)` (#1621)
 
 ### Changed
 
