@@ -123,7 +123,7 @@ func TestMinMaxSumCountValue(t *testing.T) {
 
 func TestMinMaxSumCountDatapoints(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Int64Kind)
-	labels := attribute.NewSet()
+	labels := attribute.NewSet(attribute.String("one", "1"))
 	mmsc, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &desc))
 
 	assert.NoError(t, mmsc.Update(context.Background(), 1, &desc))
@@ -137,6 +137,12 @@ func TestMinMaxSumCountDatapoints(t *testing.T) {
 			BucketCounts:      []uint64{1, 10},
 			StartTimeUnixNano: uint64(intervalStart.UnixNano()),
 			TimeUnixNano:      uint64(intervalEnd.UnixNano()),
+			Labels: []*commonpb.StringKeyValue{
+				{
+					Key:   "one",
+					Value: "1",
+				},
+			},
 		},
 	}
 	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
@@ -162,7 +168,7 @@ func TestMinMaxSumCountPropagatesErrors(t *testing.T) {
 
 func TestSumIntDataPoints(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Int64Kind)
-	labels := attribute.NewSet()
+	labels := attribute.NewSet(attribute.String("one", "1"))
 	s, ckpt := metrictest.Unslice2(sumAgg.New(2))
 	assert.NoError(t, s.Update(context.Background(), number.Number(1), &desc))
 	require.NoError(t, s.SynchronizedMove(ckpt, &desc))
@@ -182,6 +188,12 @@ func TestSumIntDataPoints(t *testing.T) {
 				Value:             1,
 				StartTimeUnixNano: uint64(intervalStart.UnixNano()),
 				TimeUnixNano:      uint64(intervalEnd.UnixNano()),
+				Labels: []*commonpb.StringKeyValue{
+					{
+						Key:   "one",
+						Value: "1",
+					},
+				},
 			}}}, m.GetIntSum())
 		assert.Nil(t, m.GetDoubleGauge())
 		assert.Nil(t, m.GetDoubleHistogram())
@@ -190,7 +202,7 @@ func TestSumIntDataPoints(t *testing.T) {
 
 func TestSumFloatDataPoints(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Float64Kind)
-	labels := attribute.NewSet()
+	labels := attribute.NewSet(attribute.String("one", "1"))
 	s, ckpt := metrictest.Unslice2(sumAgg.New(2))
 	assert.NoError(t, s.Update(context.Background(), number.NewFloat64Number(1), &desc))
 	require.NoError(t, s.SynchronizedMove(ckpt, &desc))
@@ -213,13 +225,19 @@ func TestSumFloatDataPoints(t *testing.T) {
 				Value:             1,
 				StartTimeUnixNano: uint64(intervalStart.UnixNano()),
 				TimeUnixNano:      uint64(intervalEnd.UnixNano()),
+				Labels: []*commonpb.StringKeyValue{
+					{
+						Key:   "one",
+						Value: "1",
+					},
+				},
 			}}}, m.GetDoubleSum())
 	}
 }
 
 func TestLastValueIntDataPoints(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Int64Kind)
-	labels := attribute.NewSet()
+	labels := attribute.NewSet(attribute.String("one", "1"))
 	s, ckpt := metrictest.Unslice2(lvAgg.New(2))
 	assert.NoError(t, s.Update(context.Background(), number.Number(100), &desc))
 	require.NoError(t, s.SynchronizedMove(ckpt, &desc))
@@ -234,6 +252,12 @@ func TestLastValueIntDataPoints(t *testing.T) {
 			Value:             100,
 			StartTimeUnixNano: 0,
 			TimeUnixNano:      uint64(timestamp.UnixNano()),
+			Labels: []*commonpb.StringKeyValue{
+				{
+					Key:   "one",
+					Value: "1",
+				},
+			},
 		}}, m.GetIntGauge().DataPoints)
 		assert.Nil(t, m.GetIntHistogram())
 		assert.Nil(t, m.GetIntSum())
@@ -245,7 +269,7 @@ func TestLastValueIntDataPoints(t *testing.T) {
 
 func TestExactIntDataPoints(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Int64Kind)
-	labels := attribute.NewSet()
+	labels := attribute.NewSet(attribute.String("one", "1"))
 	e, ckpt := metrictest.Unslice2(arrAgg.New(2))
 	assert.NoError(t, e.Update(context.Background(), number.Number(100), &desc))
 	require.NoError(t, e.SynchronizedMove(ckpt, &desc))
@@ -260,6 +284,12 @@ func TestExactIntDataPoints(t *testing.T) {
 			Value:             100,
 			StartTimeUnixNano: toNanos(intervalStart),
 			TimeUnixNano:      toNanos(intervalEnd),
+			Labels: []*commonpb.StringKeyValue{
+				{
+					Key:   "one",
+					Value: "1",
+				},
+			},
 		}}, m.GetIntGauge().DataPoints)
 		assert.Nil(t, m.GetIntHistogram())
 		assert.Nil(t, m.GetIntSum())
@@ -271,7 +301,7 @@ func TestExactIntDataPoints(t *testing.T) {
 
 func TestExactFloatDataPoints(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Float64Kind)
-	labels := attribute.NewSet()
+	labels := attribute.NewSet(attribute.String("one", "1"))
 	e, ckpt := metrictest.Unslice2(arrAgg.New(2))
 	assert.NoError(t, e.Update(context.Background(), number.NewFloat64Number(100), &desc))
 	require.NoError(t, e.SynchronizedMove(ckpt, &desc))
@@ -286,6 +316,12 @@ func TestExactFloatDataPoints(t *testing.T) {
 			Value:             100,
 			StartTimeUnixNano: toNanos(intervalStart),
 			TimeUnixNano:      toNanos(intervalEnd),
+			Labels: []*commonpb.StringKeyValue{
+				{
+					Key:   "one",
+					Value: "1",
+				},
+			},
 		}}, m.GetDoubleGauge().DataPoints)
 		assert.Nil(t, m.GetIntHistogram())
 		assert.Nil(t, m.GetIntSum())
