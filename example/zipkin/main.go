@@ -52,7 +52,7 @@ func initTracer(url string) func() {
 	batcher := sdktrace.NewBatchSpanProcessor(exporter)
 
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(batcher))
-	global.SetTracerProvider(tp)
+	otel.SetTracerProvider(tp)
 
 	return func() {
 		_ = tp.Shutdown(context.Background())
