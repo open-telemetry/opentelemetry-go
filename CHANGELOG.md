@@ -40,7 +40,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Vendor the Jaeger exporter's dependency on Apache Thrift. (#1551)
 - Parallelize the CI linting and testing. (#1567)
 - Stagger timestamps in exact aggregator tests. (#1569)
-- Changed all examples to use `WithBatchTimeout(5 * time.Second)` rather than `WithBatchTimeout(5)` (#1621)
+- Changed all examples to use `WithBatchTimeout(5 * time.Second)` rather than `WithBatchTimeout(5)`. (#1621)
 - Prevent end-users from implementing some interfaces (#1575)
 ```
       "otel/exporters/otlp/otlphttp".Option
