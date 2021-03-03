@@ -61,12 +61,15 @@ func (ssp *SimpleSpanProcessor) Shutdown(ctx context.Context) error {
 	var err error
 	ssp.stopOnce.Do(func() {
 		ssp.exporterMu.Lock()
-		defer ssp.exporterMu.Unlock()
-
-		err = ssp.exporter.Shutdown(ctx)
+		exporter := ssp.exporter
 		// Set exporter to nil so subsequent calls to OnEnd are ignored
 		// gracefully.
 		ssp.exporter = nil
+		ssp.exporterMu.Unlock()
+
+		// Clear the ssp.exporter prior to shutting it down so if that creates
+		// a span that needs to be exported there is no deadlock.
+		err = exporter.Shutdown(ctx)
 	})
 	return err
 }
