@@ -86,8 +86,13 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	return tp
 }
 
-// Tracer with the given name. If a tracer for the given name does not exist,
-// it is created first. If the name is empty, DefaultTracerName is used.
+// Tracer returns a Tracer with the given name and options. If a Tracer for
+// the given name and options does not exist it is created, otherwise the
+// existing Tracer is returned.
+//
+// If name is empty, DefaultTracerName is used instead.
+//
+// This method is safe to be called concurrently.
 func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
 	c := trace.NewTracerConfig(opts...)
 
@@ -131,17 +136,17 @@ func (p *TracerProvider) RegisterSpanProcessor(s SpanProcessor) {
 func (p *TracerProvider) UnregisterSpanProcessor(s SpanProcessor) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	new := spanProcessorStates{}
+	spss := spanProcessorStates{}
 	old, ok := p.spanProcessors.Load().(spanProcessorStates)
 	if !ok || len(old) == 0 {
 		return
 	}
-	new = append(new, old...)
+	spss = append(spss, old...)
 
 	// stop the span processor if it is started and remove it from the list
 	var stopOnce *spanProcessorState
 	var idx int
-	for i, sps := range new {
+	for i, sps := range spss {
 		if sps.sp == s {
 			stopOnce = sps
 			idx = i
@@ -154,13 +159,13 @@ func (p *TracerProvider) UnregisterSpanProcessor(s SpanProcessor) {
 			}
 		})
 	}
-	if len(new) > 1 {
-		copy(new[idx:], new[idx+1:])
+	if len(spss) > 1 {
+		copy(spss[idx:], spss[idx+1:])
 	}
-	new[len(new)-1] = nil
-	new = new[:len(new)-1]
+	spss[len(spss)-1] = nil
+	spss = spss[:len(spss)-1]
 
-	p.spanProcessors.Store(new)
+	p.spanProcessors.Store(spss)
 }
 
 // ApplyConfig changes the configuration of the provider.
