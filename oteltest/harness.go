@@ -16,6 +16,7 @@ package oteltest // import "go.opentelemetry.io/otel/oteltest"
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -37,6 +38,56 @@ func NewHarness(t *testing.T) *Harness {
 	return &Harness{
 		t: t,
 	}
+}
+
+// TestTracer runs validation tests for an implementation of the OpenTelemetry
+// TracerProvider API.
+func (h *Harness) TestTracerProvider(subjectFactory func() trace.TracerProvider) {
+	h.t.Run("#Start", func(t *testing.T) {
+		t.Run("allow creating an arbitrary number of TracerProvider instances", func(t *testing.T) {
+			t.Parallel()
+
+			e := matchers.NewExpecter(t)
+
+			tp1 := subjectFactory()
+			tp2 := subjectFactory()
+
+			e.Expect(tp1).NotToEqual(tp2)
+		})
+		t.Run("all methods are safe to be called concurrently", func(t *testing.T) {
+			t.Parallel()
+
+			runner := func(tp trace.TracerProvider) <-chan struct{} {
+				done := make(chan struct{})
+				go func(tp trace.TracerProvider) {
+					var wg sync.WaitGroup
+					for i := 0; i < 20; i++ {
+						wg.Add(1)
+						go func(name, version string) {
+							_ = tp.Tracer(name, trace.WithInstrumentationVersion(version))
+							wg.Done()
+						}(fmt.Sprintf("tracer %d", i%5), fmt.Sprintf("%d", i))
+					}
+					wg.Wait()
+					done <- struct{}{}
+				}(tp)
+				return done
+			}
+
+			matchers.NewExpecter(t).Expect(func() {
+				// Run with multiple TracerProvider to ensure they encapsulate
+				// their own Tracers.
+				tp1 := subjectFactory()
+				tp2 := subjectFactory()
+
+				done1 := runner(tp1)
+				done2 := runner(tp2)
+
+				<-done1
+				<-done2
+			}).NotToPanic()
+		})
+	})
 }
 
 // TestTracer runs validation tests for an implementation of the OpenTelemetry
