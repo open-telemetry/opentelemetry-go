@@ -8,10 +8,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.18.0] - 2020-03-03
+
 ### Added
 
 - Added `resource.Default()` for use with meter and tracer providers. (#1507)
-- AttributePerEventCountLimit and AttributePerLinkCountLimit for SpanLimits. (#1535)
+- `AttributePerEventCountLimit` and `AttributePerLinkCountLimit` for `SpanLimits`. (#1535)
 - Added `Keys()` method to `propagation.TextMapCarrier` and `propagation.HeaderCarrier` to adapt `http.Header` to this interface. (#1544)
 - Added `code` attributes to `go.opentelemetry.io/otel/semconv` package. (#1558)
 - Compatibility testing suite in the CI system for the following systems. (#1567)
@@ -27,18 +29,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
    | Windows | 1.14       | amd64        |
    | Windows | 1.15       | 386          |
    | Windows | 1.14       | 386          |
-- Changed all examples to use `WithBatchTimeout(5 * time.Second)` rather than `WithBatchTimeout(5)` (#1621)
 
 ### Changed
 
 - Replaced interface `oteltest.SpanRecorder` with its existing implementation
   `StandardSpanRecorder` (#1542).
 - Default span limit values to 128. (#1535)
-- Rename MaxEventsPerSpan, MaxAttributesPerSpan and MaxLinksPerSpan to EventCountLimit, AttributeCountLimit and LinkCountLimit, and move these fieds into SpanLimits. (#1535)
+- Rename `MaxEventsPerSpan`, `MaxAttributesPerSpan` and `MaxLinksPerSpan` to `EventCountLimit`, `AttributeCountLimit` and `LinkCountLimit`, and move these fields into `SpanLimits`. (#1535)
 - Renamed the `otel/label` package to `otel/attribute`. (#1541)
 - Vendor the Jaeger exporter's dependency on Apache Thrift. (#1551)
 - Parallelize the CI linting and testing. (#1567)
 - Stagger timestamps in exact aggregator tests. (#1569)
+- Changed all examples to use `WithBatchTimeout(5 * time.Second)` rather than `WithBatchTimeout(5)`. (#1621)
 - Prevent end-users from implementing some interfaces (#1575)
 ```
       "otel/exporters/otlp/otlphttp".Option
@@ -59,7 +61,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Removed attempt to resample spans upon changing the span name with `span.SetName()`. (#1545)
 - The `test-benchmark` is no longer a dependency of the `precommit` make target. (#1567)
-- The `test-386` make target.
+- Removed the `test-386` make target.
    This was replaced with a full compatibility testing suite (i.e. multi OS/arch) in the CI system. (#1567)
 
 ### Fixed
@@ -1107,7 +1109,8 @@ It contains api and sdk for trace and meter.
 - CODEOWNERS file to track owners of this project.
 
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.17.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.18.0
 [0.17.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.17.0
 [0.16.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.16.0
 [0.15.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.15.0
