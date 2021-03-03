@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- The SimpleSpanProcessor will now shut down the enclosed `SpanExporter` and gracefully ignore subsequent calls to `OnEnd` after `Shutdown` is called. (#1612)
+
 ## [0.18.0] - 2020-03-03
 
 ### Added
@@ -56,7 +60,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
       "otel/sdk/trace".ReadOnlySpan
       "otel/sdk/trace".ReadWriteSpan
 ```
-- The SimpleSpanProcessor will now shut down the enclosed `SpanExporter` and gracefully ignore subsequent calls to `OnEnd` after `Shutdown` is called. (#1612)
 
 ### Removed
 
