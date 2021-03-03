@@ -296,7 +296,7 @@ func WithDefaultSampler(s Sampler) TracerProviderOption {
 	}
 }
 
-// WithSampler option registers a SpanLimits with the the TracerProvider.
+// WithSpanLimits option registers a SpanLimits with the the TracerProvider.
 func WithSpanLimits(sl SpanLimits) TracerProviderOption {
 	return func(opts *TracerProviderConfig) {
 		opts.config.SpanLimits = sl
