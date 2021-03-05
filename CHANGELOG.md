@@ -8,6 +8,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## Added
+
+- Added `Marshler` config option to `otlphttp` to enable otlp over json or protobufs. (#1586)
+### Removed
+
+- Removed the exported `SimpleSpanProcessor` and `BatchSpanProcessor` structs.
+   These are now returned as a SpanProcessor interface from their respective constructors. (#1638)
+
 ## [0.18.0] - 2020-03-03
 
 ### Added
