@@ -117,7 +117,7 @@ func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
 
 func BenchmarkTraceID_DotString(b *testing.B) {
 	t, _ := trace.TraceIDFromHex("0000000000000001000000000000002a")
-	sc := trace.SpanContext{}.WithTraceID(t)
+	sc := trace.NewSpanContext(trace.SpanContextConfig{TraceID: t})
 
 	want := "0000000000000001000000000000002a"
 	for i := 0; i < b.N; i++ {
@@ -128,7 +128,7 @@ func BenchmarkTraceID_DotString(b *testing.B) {
 }
 
 func BenchmarkSpanID_DotString(b *testing.B) {
-	sc := trace.SpanContext{}.WithSpanID(trace.SpanID{1})
+	sc := trace.NewSpanContext(trace.SpanContextConfig{SpanID: trace.SpanID{1}})
 	want := "0100000000000000"
 	for i := 0; i < b.N; i++ {
 		if got := sc.SpanID().String(); got != want {

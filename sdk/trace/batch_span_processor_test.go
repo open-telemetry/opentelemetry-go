@@ -211,6 +211,8 @@ func generateSpan(t *testing.T, parallel bool, tr trace.Tracer, option testOptio
 	for i := 0; i < option.genNumSpans; i++ {
 		tid := sc.TraceID()
 		binary.BigEndian.PutUint64(tid[0:8], uint64(i+1))
+		newSc := sc.WithTraceID(tid)
+
 		wg.Add(1)
 		f := func(sc trace.SpanContext) {
 			ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
@@ -219,9 +221,9 @@ func generateSpan(t *testing.T, parallel bool, tr trace.Tracer, option testOptio
 			wg.Done()
 		}
 		if parallel {
-			go f(sc)
+			go f(newSc)
 		} else {
-			f(sc)
+			f(newSc)
 		}
 	}
 	wg.Wait()

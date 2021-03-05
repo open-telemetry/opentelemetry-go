@@ -320,7 +320,7 @@ func isTraceStateKeyValueValid(kv attribute.KeyValue) bool {
 }
 
 // SpanContextConfig contains mutable fields usable for constructing
-// an immutable SpanContext
+// an immutable SpanContext.
 type SpanContextConfig struct {
 	TraceID    TraceID
 	SpanID     SpanID
@@ -329,7 +329,7 @@ type SpanContextConfig struct {
 }
 
 // NewSpanContext constructs a SpanContext using values from the provided
-// SpanContextConfig
+// SpanContextConfig.
 func NewSpanContext(config SpanContextConfig) SpanContext {
 	return SpanContext{
 		traceID:    config.TraceID,
@@ -353,7 +353,7 @@ func (sc SpanContext) IsValid() bool {
 	return sc.HasTraceID() && sc.HasSpanID()
 }
 
-// TraceID returns the TraceID from the SpanContext
+// TraceID returns the TraceID from the SpanContext.
 func (sc SpanContext) TraceID() TraceID {
 	return sc.traceID
 }
@@ -373,7 +373,7 @@ func (sc SpanContext) WithTraceID(traceID TraceID) SpanContext {
 	}
 }
 
-// SpanID returns the SpanID from the SpanContext
+// SpanID returns the SpanID from the SpanContext.
 func (sc SpanContext) SpanID() SpanID {
 	return sc.spanID
 }
@@ -393,7 +393,7 @@ func (sc SpanContext) WithSpanID(spanID SpanID) SpanContext {
 	}
 }
 
-// TraceFlags returns the flags from the SpanContext
+// TraceFlags returns the flags from the SpanContext.
 func (sc SpanContext) TraceFlags() byte {
 	return sc.traceFlags
 }
@@ -423,7 +423,7 @@ func (sc SpanContext) IsSampled() bool {
 	return sc.traceFlags&FlagsSampled == FlagsSampled
 }
 
-// TraceState returns the TraceState from the SpanContext
+// TraceState returns the TraceState from the SpanContext.
 func (sc SpanContext) TraceState() TraceState {
 	return sc.traceState
 }
