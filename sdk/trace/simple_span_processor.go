@@ -22,7 +22,7 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
-// SimpleSpanProcessor is a SpanProcessor that synchronously sends all
+// simpleSpanProcessor is a SpanProcessor that synchronously sends all
 // completed Spans to a trace.Exporter immediately.
 type simpleSpanProcessor struct {
 	exporterMu sync.RWMutex
