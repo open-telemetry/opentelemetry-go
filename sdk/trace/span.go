@@ -170,14 +170,17 @@ func (s *span) IsRecording() bool {
 
 // SetStatus sets the status of this span in the form of a code and a
 // message. This overrides the existing value of this span's status if one
-// exists. If this span is not being recorded than this method does nothing.
+// exists. Message will be set only if status is error. If this span is not being
+// recorded than this method does nothing.
 func (s *span) SetStatus(code codes.Code, msg string) {
 	if !s.IsRecording() {
 		return
 	}
 	s.mu.Lock()
 	s.statusCode = code
-	s.statusMessage = msg
+	if code == codes.Error {
+		s.statusMessage = msg
+	}
 	s.mu.Unlock()
 }
 

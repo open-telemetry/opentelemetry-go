@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## Added
 
 - Added `Marshler` config option to `otlphttp` to enable otlp over json or protobufs. (#1586)
+- Add `description` to SpanStatus only when `StatusCode` is set to error. (#1662)
 ### Removed
 
 - Removed the exported `SimpleSpanProcessor` and `BatchSpanProcessor` structs.
