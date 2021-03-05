@@ -21,29 +21,29 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
-// SimpleSpanProcessor is a SpanProcessor that synchronously sends all
+// simpleSpanProcessor is a SpanProcessor that synchronously sends all
 // SpanSnapshots to a trace.Exporter when the span finishes.
-type SimpleSpanProcessor struct {
+type simpleSpanProcessor struct {
 	e export.SpanExporter
 }
 
-var _ SpanProcessor = (*SimpleSpanProcessor)(nil)
+var _ SpanProcessor = (*simpleSpanProcessor)(nil)
 
-// NewSimpleSpanProcessor returns a new SimpleSpanProcessor that will
-// synchronously send SpanSnapshots to the exporter.
-func NewSimpleSpanProcessor(exporter export.SpanExporter) *SimpleSpanProcessor {
-	ssp := &SimpleSpanProcessor{
+// NewSimpleSpanProcessor returns a new SpanProcessor that will synchronously
+// send completed spans to the exporter immediately.
+func NewSimpleSpanProcessor(exporter export.SpanExporter) SpanProcessor {
+	ssp := &simpleSpanProcessor{
 		e: exporter,
 	}
 	return ssp
 }
 
 // OnStart method does nothing.
-func (ssp *SimpleSpanProcessor) OnStart(parent context.Context, s ReadWriteSpan) {
+func (ssp *simpleSpanProcessor) OnStart(parent context.Context, s ReadWriteSpan) {
 }
 
 // OnEnd method exports a ReadOnlySpan using the associated exporter.
-func (ssp *SimpleSpanProcessor) OnEnd(s ReadOnlySpan) {
+func (ssp *simpleSpanProcessor) OnEnd(s ReadOnlySpan) {
 	if ssp.e != nil && s.SpanContext().IsSampled() {
 		ss := s.Snapshot()
 		if err := ssp.e.ExportSpans(context.Background(), []*export.SpanSnapshot{ss}); err != nil {
@@ -53,10 +53,10 @@ func (ssp *SimpleSpanProcessor) OnEnd(s ReadOnlySpan) {
 }
 
 // Shutdown method does nothing. There is no data to cleanup.
-func (ssp *SimpleSpanProcessor) Shutdown(_ context.Context) error {
+func (ssp *simpleSpanProcessor) Shutdown(_ context.Context) error {
 	return nil
 }
 
 // ForceFlush does nothing as there is no data to flush.
-func (ssp *SimpleSpanProcessor) ForceFlush() {
+func (ssp *simpleSpanProcessor) ForceFlush() {
 }

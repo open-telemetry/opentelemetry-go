@@ -10,9 +10,9 @@ replace (
 require (
 	github.com/google/go-cmp v0.5.4
 	github.com/stretchr/testify v1.7.0
-	go.opentelemetry.io/otel v0.17.0
-	go.opentelemetry.io/otel/sdk v0.17.0
-	go.opentelemetry.io/otel/trace v0.17.0
+	go.opentelemetry.io/otel v0.18.0
+	go.opentelemetry.io/otel/sdk v0.18.0
+	go.opentelemetry.io/otel/trace v0.18.0
 	google.golang.org/api v0.40.0
 )
 

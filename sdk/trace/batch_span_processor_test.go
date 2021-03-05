@@ -198,7 +198,7 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 	}
 }
 
-func createAndRegisterBatchSP(option testOption, te *testBatchExporter) *sdktrace.BatchSpanProcessor {
+func createAndRegisterBatchSP(option testOption, te *testBatchExporter) sdktrace.SpanProcessor {
 	// Always use blocking queue to avoid flaky tests.
 	options := append(option.o, sdktrace.WithBlocking())
 	return sdktrace.NewBatchSpanProcessor(te, options...)

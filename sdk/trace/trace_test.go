@@ -68,13 +68,16 @@ func init() {
 }
 
 func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
-	tp := NewTracerProvider(WithConfig(Config{DefaultSampler: TraceIDRatioBased(0)}))
 	harness := oteltest.NewHarness(t)
-	subjectFactory := func() trace.Tracer {
-		return tp.Tracer("")
-	}
 
-	harness.TestTracer(subjectFactory)
+	harness.TestTracerProvider(func() trace.TracerProvider {
+		return NewTracerProvider(WithConfig(Config{DefaultSampler: TraceIDRatioBased(0)}))
+	})
+
+	tp := NewTracerProvider(WithConfig(Config{DefaultSampler: TraceIDRatioBased(0)}))
+	harness.TestTracer(func() trace.Tracer {
+		return tp.Tracer("")
+	})
 }
 
 type testExporter struct {
