@@ -117,24 +117,6 @@ func TestNewSpanConfig(t *testing.T) {
 		},
 		{
 			[]SpanOption{
-				WithRecord(),
-			},
-			&SpanConfig{
-				Record: true,
-			},
-		},
-		{
-			[]SpanOption{
-				// Multiple calls should not change Record state.
-				WithRecord(),
-				WithRecord(),
-			},
-			&SpanConfig{
-				Record: true,
-			},
-		},
-		{
-			[]SpanOption{
 				WithNewRoot(),
 			},
 			&SpanConfig{
@@ -175,7 +157,6 @@ func TestNewSpanConfig(t *testing.T) {
 				WithAttributes(k1v1),
 				WithTimestamp(timestamp0),
 				WithLinks(link1, link2),
-				WithRecord(),
 				WithNewRoot(),
 				WithSpanKind(SpanKindConsumer),
 			},
@@ -183,7 +164,6 @@ func TestNewSpanConfig(t *testing.T) {
 				Attributes: []attribute.KeyValue{k1v1},
 				Timestamp:  timestamp0,
 				Links:      []Link{link1, link2},
-				Record:     true,
 				NewRoot:    true,
 				SpanKind:   SpanKindConsumer,
 			},

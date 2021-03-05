@@ -542,9 +542,14 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 		links:        o.Links,
 		kind:         o.SpanKind,
 	}
-	sampled := makeSamplingDecision(data)
+	samplingResult := makeSamplingDecision(data)
+	if isSampled(samplingResult) {
+		span.spanContext.TraceFlags |= trace.FlagsSampled
+	} else {
+		span.spanContext.TraceFlags &^= trace.FlagsSampled
+	}
 
-	if !span.spanContext.IsSampled() && !o.Record {
+	if !isRecording(samplingResult) {
 		return span
 	}
 
@@ -560,7 +565,7 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 	span.resource = cfg.Resource
 	span.instrumentationLibrary = tr.instrumentationLibrary
 
-	span.SetAttributes(sampled.Attributes...)
+	span.SetAttributes(samplingResult.Attributes...)
 
 	span.parent = parent
 
@@ -588,20 +593,21 @@ type samplingData struct {
 
 func makeSamplingDecision(data samplingData) SamplingResult {
 	sampler := data.cfg.DefaultSampler
-	spanContext := &data.span.spanContext
-	sampled := sampler.ShouldSample(SamplingParameters{
+	return sampler.ShouldSample(SamplingParameters{
 		ParentContext:   data.parent,
-		TraceID:         spanContext.TraceID,
+		TraceID:         data.span.spanContext.TraceID,
 		Name:            data.name,
 		HasRemoteParent: data.remoteParent,
 		Kind:            data.kind,
 		Attributes:      data.attributes,
 		Links:           data.links,
 	})
-	if sampled.Decision == RecordAndSample {
-		spanContext.TraceFlags |= trace.FlagsSampled
-	} else {
-		spanContext.TraceFlags &^= trace.FlagsSampled
-	}
-	return sampled
+}
+
+func isRecording(s SamplingResult) bool {
+	return s.Decision == RecordOnly || s.Decision == RecordAndSample
+}
+
+func isSampled(s SamplingResult) bool {
+	return s.Decision == RecordAndSample
 }

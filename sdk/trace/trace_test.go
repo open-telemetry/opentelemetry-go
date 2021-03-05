@@ -793,7 +793,6 @@ func startSpan(tp *TracerProvider, trName string, args ...trace.SpanOption) trac
 func startNamedSpan(tp *TracerProvider, trName, name string, args ...trace.SpanOption) trace.Span {
 	ctx := context.Background()
 	ctx = trace.ContextWithRemoteSpanContext(ctx, remoteSpanContext())
-	args = append(args, trace.WithRecord())
 	_, span := tp.Tracer(trName).Start(
 		ctx,
 		name,
@@ -807,7 +806,6 @@ func startNamedSpan(tp *TracerProvider, trName, name string, args ...trace.SpanO
 // along with the span so this parent can be used to create child
 // spans.
 func startLocalSpan(tp *TracerProvider, ctx context.Context, trName, name string, args ...trace.SpanOption) (context.Context, trace.Span) {
-	args = append(args, trace.WithRecord())
 	ctx, span := tp.Tracer(trName).Start(
 		ctx,
 		name,
@@ -1255,7 +1253,7 @@ func TestWithInstrumentationVersion(t *testing.T) {
 	_, span := tp.Tracer(
 		"WithInstrumentationVersion",
 		trace.WithInstrumentationVersion("v0.1.0"),
-	).Start(ctx, "span0", trace.WithRecord())
+	).Start(ctx, "span0")
 	got, err := endSpan(te, span)
 	if err != nil {
 		t.Error(err.Error())
@@ -1286,7 +1284,6 @@ func TestSpanCapturesPanic(t *testing.T) {
 	_, span := tp.Tracer("CatchPanic").Start(
 		context.Background(),
 		"span",
-		trace.WithRecord(),
 	)
 
 	f := func() {
