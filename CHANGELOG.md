@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- `"go.opentelemetry.io/sdk/metric/controller.basic".WithPusher` is replaced with `WithExporter` to provide consistent naming across project. (#1656)
+
 ### Removed
 
 - Removed the exported `SimpleSpanProcessor` and `BatchSpanProcessor` structs.
@@ -61,7 +65,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
       "otel/sdk/trace".ReadOnlySpan
       "otel/sdk/trace".ReadWriteSpan
 ```
-
 ### Removed
 
 - Removed attempt to resample spans upon changing the span name with `span.SetName()`. (#1545)
