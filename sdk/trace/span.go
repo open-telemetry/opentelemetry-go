@@ -491,7 +491,7 @@ func (s *span) copyToCappedAttributes(attributes ...attribute.KeyValue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, a := range attributes {
-		if a.Value.Type() != attribute.INVALID {
+		if a.Value.Type() != attribute.INVALID && a.Key != "" {
 			s.attributes.add(a)
 		}
 	}
