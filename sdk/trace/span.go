@@ -256,7 +256,7 @@ func (s *span) End(options ...trace.SpanOption) {
 }
 
 // RecordError will record err as a span event for this span. This will
-// not set error status to span. If this span is not being recorded or
+// not set an error status to span. If this span is not being recorded or
 // err is nil than this method does nothing.
 func (s *span) RecordError(err error, opts ...trace.EventOption) {
 	if s == nil || err == nil || !s.IsRecording() {
