@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## Added
 
 - Added `Marshler` config option to `otlphttp` to enable otlp over json or protobufs. (#1586)
-- Added `non-empty` string check for `Attribute keys`
+- Added `non-empty` string check for `Attribute keys`. (#1659)
 
 ### Removed
 
