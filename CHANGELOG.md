@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Removed
+
+- Removed `WithRecord()` from `trace.SpanOption` when creating a span. (#)
+
 ## [0.18.0] - 2020-03-03
 
 ### Added
