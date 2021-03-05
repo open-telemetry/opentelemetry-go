@@ -279,9 +279,10 @@ func (d *driver) prepareBody(rawRequest []byte) (io.ReadCloser, int64, http.Head
 		headers.Set(k, v)
 	}
 	contentLength := (int64)(len(rawRequest))
-	headers.Set("Content-Type", contentTypeProto)
 	if d.cfg.marshaler == MarshalJSON {
 		headers.Set("Content-Type", contentTypeJSON)
+	} else {
+		headers.Set("Content-Type", contentTypeProto)
 	}
 	requestReader := bytes.NewBuffer(rawRequest)
 	switch d.cfg.compression {
