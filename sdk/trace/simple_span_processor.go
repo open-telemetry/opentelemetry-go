@@ -24,27 +24,28 @@ import (
 
 // SimpleSpanProcessor is a SpanProcessor that synchronously sends all
 // completed Spans to a trace.Exporter immediately.
-type SimpleSpanProcessor struct {
+type simpleSpanProcessor struct {
 	exporterMu sync.RWMutex
 	exporter   export.SpanExporter
 	stopOnce   sync.Once
 }
 
-var _ SpanProcessor = (*SimpleSpanProcessor)(nil)
+var _ SpanProcessor = (*simpleSpanProcessor)(nil)
 
-// NewSimpleSpanProcessor returns a new SimpleSpanProcessor.
-func NewSimpleSpanProcessor(exporter export.SpanExporter) *SimpleSpanProcessor {
-	ssp := &SimpleSpanProcessor{
+// NewSimpleSpanProcessor returns a new SpanProcessor that will synchronously
+// send completed spans to the exporter immediately.
+func NewSimpleSpanProcessor(exporter export.SpanExporter) SpanProcessor {
+	ssp := &simpleSpanProcessor{
 		exporter: exporter,
 	}
 	return ssp
 }
 
 // OnStart does nothing.
-func (ssp *SimpleSpanProcessor) OnStart(context.Context, ReadWriteSpan) {}
+func (ssp *simpleSpanProcessor) OnStart(context.Context, ReadWriteSpan) {}
 
 // OnEnd immediately exports a ReadOnlySpan.
-func (ssp *SimpleSpanProcessor) OnEnd(s ReadOnlySpan) {
+func (ssp *simpleSpanProcessor) OnEnd(s ReadOnlySpan) {
 	ssp.exporterMu.RLock()
 	defer ssp.exporterMu.RUnlock()
 
@@ -57,7 +58,7 @@ func (ssp *SimpleSpanProcessor) OnEnd(s ReadOnlySpan) {
 }
 
 // Shutdown shuts down the exporter this SimpleSpanProcessor exports to.
-func (ssp *SimpleSpanProcessor) Shutdown(ctx context.Context) error {
+func (ssp *simpleSpanProcessor) Shutdown(ctx context.Context) error {
 	var err error
 	ssp.stopOnce.Do(func() {
 		ssp.exporterMu.Lock()
@@ -75,5 +76,5 @@ func (ssp *SimpleSpanProcessor) Shutdown(ctx context.Context) error {
 }
 
 // ForceFlush does nothing as there is no data to flush.
-func (ssp *SimpleSpanProcessor) ForceFlush() {
+func (ssp *simpleSpanProcessor) ForceFlush() {
 }

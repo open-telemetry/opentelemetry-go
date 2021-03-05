@@ -12,6 +12,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The SimpleSpanProcessor will now shut down the enclosed `SpanExporter` and gracefully ignore subsequent calls to `OnEnd` after `Shutdown` is called. (#1612)
 
+### Removed
+
+- Removed the exported `SimpleSpanProcessor` and `BatchSpanProcessor` structs.
+   These are now returned as a SpanProcessor interface from their respective constructors. (#1638)
+
 ## [0.18.0] - 2020-03-03
 
 ### Added
