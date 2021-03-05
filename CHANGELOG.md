@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- `SamplingResult.TraceState` is correctly propagated to newly created
+  span's `SpanContext`. (#1655)
+
 ## [0.18.0] - 2020-03-03
 
 ### Added
@@ -33,7 +38,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Replaced interface `oteltest.SpanRecorder` with its existing implementation
-  `StandardSpanRecorder` (#1542).
+  `StandardSpanRecorder`. (#1542)
 - Default span limit values to 128. (#1535)
 - Rename `MaxEventsPerSpan`, `MaxAttributesPerSpan` and `MaxLinksPerSpan` to `EventCountLimit`, `AttributeCountLimit` and `LinkCountLimit`, and move these fields into `SpanLimits`. (#1535)
 - Renamed the `otel/label` package to `otel/attribute`. (#1541)
