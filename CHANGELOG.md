@@ -8,9 +8,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Removed
+
+- Removed the exported `SimpleSpanProcessor` and `BatchSpanProcessor` structs.
+   These are now returned as a SpanProcessor interface from their respective constructors. (#1638)
+
 ### Fixed
 
-- `SamplingResult.TraceState` is correctly propagated to newly created
+- `SamplingResult.TraceState` is correctly propagated to a newly created
   span's `SpanContext`. (#1655)
 
 ## [0.18.0] - 2020-03-03
