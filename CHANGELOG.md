@@ -17,6 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Removed the exported `SimpleSpanProcessor` and `BatchSpanProcessor` structs.
    These are now returned as a SpanProcessor interface from their respective constructors. (#1638)
 - Removed setting `ErrorStatus`  while recording err as span event in `RecordError`. (#1663)
+
 ## [0.18.0] - 2020-03-03
 
 ### Added
