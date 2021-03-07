@@ -36,6 +36,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -185,32 +186,14 @@ func TestNewRawExporter(t *testing.T) {
 		{
 			name:                   "default exporter",
 			endpoint:               WithCollectorEndpoint(collectorEndpoint),
-			expectedServiceName:    defaultServiceName,
+			expectedServiceName:    "unknown_service",
 			expectedBufferMaxCount: bundler.DefaultBufferedByteLimit,
 			expectedBatchMaxCount:  bundler.DefaultBundleCountThreshold,
 		},
 		{
 			name:                   "default exporter with agent endpoint",
 			endpoint:               WithAgentEndpoint(agentEndpoint),
-			expectedServiceName:    defaultServiceName,
-			expectedBufferMaxCount: bundler.DefaultBufferedByteLimit,
-			expectedBatchMaxCount:  bundler.DefaultBundleCountThreshold,
-		},
-		{
-			name:     "with process",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
-			options: []Option{
-				WithProcess(
-					Process{
-						ServiceName: "jaeger-test",
-						Tags: []attribute.KeyValue{
-							attribute.String("key", "val"),
-						},
-					},
-				),
-			},
-			expectedServiceName:    "jaeger-test",
-			expectedTagsLen:        1,
+			expectedServiceName:    "unknown_service",
 			expectedBufferMaxCount: bundler.DefaultBufferedByteLimit,
 			expectedBatchMaxCount:  bundler.DefaultBundleCountThreshold,
 		},
@@ -218,15 +201,10 @@ func TestNewRawExporter(t *testing.T) {
 			name:     "with buffer and batch max count",
 			endpoint: WithCollectorEndpoint(collectorEndpoint),
 			options: []Option{
-				WithProcess(
-					Process{
-						ServiceName: "jaeger-test",
-					},
-				),
 				WithBufferMaxCount(99),
 				WithBatchMaxCount(99),
 			},
-			expectedServiceName:    "jaeger-test",
+			expectedServiceName:    "unknown_service",
 			expectedBufferMaxCount: 99,
 			expectedBatchMaxCount:  99,
 		},
@@ -240,10 +218,11 @@ func TestNewRawExporter(t *testing.T) {
 			)
 
 			assert.NoError(t, err)
-			assert.Equal(t, tc.expectedServiceName, exp.process.ServiceName)
-			assert.Len(t, exp.process.Tags, tc.expectedTagsLen)
 			assert.Equal(t, tc.expectedBufferMaxCount, exp.bundler.BufferedByteLimit)
 			assert.Equal(t, tc.expectedBatchMaxCount, exp.bundler.BundleCountThreshold)
+			assert.Equal(t, semconv.ServiceNameKey, exp.defaultServiceName.Key)
+			assert.Contains(t, exp.defaultServiceName.Value.AsString(), tc.expectedServiceName)
+			assert.NotEmpty(t, exp.defaultServiceName.Value.AsString())
 		})
 	}
 }
@@ -327,11 +306,11 @@ func TestExporter_ExportSpan(t *testing.T) {
 	// Create Jaeger Exporter
 	exp, err := NewRawExporter(
 		withTestCollectorEndpoint(),
-		WithProcess(Process{
-			ServiceName: serviceName,
-			Tags: []attribute.KeyValue{
+		WithSDK(&sdktrace.Config{
+			Resource: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String(serviceName),
 				attribute.String(tagKey, tagVal),
-			},
+			),
 		}),
 	)
 
@@ -407,7 +386,11 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 				StatusCode:    codes.Error,
 				StatusMessage: statusMessage,
 				SpanKind:      trace.SpanKindClient,
-				Resource:      resource.NewWithAttributes(attribute.String("rk1", rv1), attribute.Int64("rk2", rv2)),
+				Resource: resource.NewWithAttributes(
+					attribute.String("rk1", rv1),
+					attribute.Int64("rk2", rv2),
+					semconv.ServiceNameKey.String("service name"),
+				),
 				InstrumentationLibrary: instrumentation.Library{
 					Name:    instrLibName,
 					Version: instrLibVersion,
@@ -430,8 +413,6 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 					{Key: "status.code", VType: gen.TagType_LONG, VLong: &statusCodeValue},
 					{Key: "status.message", VType: gen.TagType_STRING, VStr: &statusMessage},
 					{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
-					{Key: "rk1", VType: gen.TagType_STRING, VStr: &rv1},
-					{Key: "rk2", VType: gen.TagType_LONG, VLong: &rv2},
 				},
 				References: []*gen.SpanRef{
 					{

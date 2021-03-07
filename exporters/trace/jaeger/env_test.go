@@ -234,8 +234,8 @@ func TestNewRawExporterWithEnv(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, false, exp.o.Disabled)
-	assert.EqualValues(t, serviceName, exp.process.ServiceName)
-	assert.Len(t, exp.process.Tags, 1)
+	assert.EqualValues(t, serviceName, exp.o.Process.ServiceName)
+	assert.Len(t, exp.o.Process.Tags, 1)
 
 	require.IsType(t, &collectorUploader{}, exp.uploader)
 	uploader := exp.uploader.(*collectorUploader)
@@ -276,8 +276,8 @@ func TestNewRawExporterWithEnvImplicitly(t *testing.T) {
 	assert.NoError(t, err)
 	// NewRawExporter will ignore Disabled env
 	assert.Equal(t, true, exp.o.Disabled)
-	assert.EqualValues(t, serviceName, exp.process.ServiceName)
-	assert.Len(t, exp.process.Tags, 1)
+	assert.EqualValues(t, serviceName, exp.o.Process.ServiceName)
+	assert.Len(t, exp.o.Process.Tags, 1)
 
 	require.IsType(t, &collectorUploader{}, exp.uploader)
 	uploader := exp.uploader.(*collectorUploader)
