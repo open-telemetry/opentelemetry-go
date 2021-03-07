@@ -56,13 +56,6 @@ type options struct {
 	Disabled bool
 }
 
-// WithProcess sets the process with the information about the exporting process.
-func WithProcess(process Process) Option {
-	return func(o *options) {
-		o.Process = process
-	}
-}
-
 // WithBufferMaxCount defines the total number of traces that can be buffered in memory
 func WithBufferMaxCount(bufferMaxCount int) Option {
 	return func(o *options) {
@@ -120,26 +113,11 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 		return nil, fmt.Errorf("failed to get service name from default resource")
 	}
 
-	service := o.Process.ServiceName
-	if service == "" {
-		service = defaultServiceName.Value.AsString()
-	}
-	tags := make([]*gen.Tag, 0, len(o.Process.Tags))
-	for _, tag := range o.Process.Tags {
-		t := keyValueToTag(tag)
-		if t != nil {
-			tags = append(tags, t)
-		}
-	}
-
 	e := &Exporter{
-		uploader: uploader,
-		process: &gen.Process{
-			ServiceName: service,
-			Tags:        tags,
-		},
-		o:                  o,
-		defaultServiceName: defaultServiceName,
+		uploader:            uploader,
+		o:                   o,
+		defaultServiceName:  defaultServiceName,
+		resourceFromProcess: processToResource(o.Process),
 	}
 	bundler := bundler.NewBundler((*export.SpanSnapshot)(nil), func(bundle interface{}) {
 		if err := e.upload(bundle.([]*export.SpanSnapshot)); err != nil {
@@ -213,7 +191,6 @@ type Process struct {
 // Exporter is an implementation of an OTel SpanSyncer that uploads spans to
 // Jaeger.
 type Exporter struct {
-	process  *gen.Process
 	bundler  *bundler.Bundler
 	uploader batchUploader
 	o        options
@@ -221,7 +198,8 @@ type Exporter struct {
 	stoppedMu sync.RWMutex
 	stopped   bool
 
-	defaultServiceName attribute.KeyValue
+	defaultServiceName  attribute.KeyValue
+	resourceFromProcess *resource.Resource
 }
 
 var _ export.SpanExporter = (*Exporter)(nil)
@@ -414,7 +392,7 @@ func (e *Exporter) Flush() {
 }
 
 func (e *Exporter) upload(spans []*export.SpanSnapshot) error {
-	batchList := jaegerBatchList(spans, e.defaultServiceName)
+	batchList := jaegerBatchList(spans, e.defaultServiceName, e.resourceFromProcess)
 	for _, batch := range batchList {
 		err := e.uploader.upload(batch)
 		if err != nil {
@@ -427,7 +405,7 @@ func (e *Exporter) upload(spans []*export.SpanSnapshot) error {
 
 // jaegerBatchList transforms a slice of SpanSnapshot into a slice of jaeger
 // Batch.
-func jaegerBatchList(ssl []*export.SpanSnapshot, defaultServiceName attribute.KeyValue) []*gen.Batch {
+func jaegerBatchList(ssl []*export.SpanSnapshot, defaultServiceName attribute.KeyValue, resourceFromProcess *resource.Resource) []*gen.Batch {
 	if len(ssl) == 0 {
 		return nil
 	}
@@ -439,11 +417,16 @@ func jaegerBatchList(ssl []*export.SpanSnapshot, defaultServiceName attribute.Ke
 			continue
 		}
 
-		resourceKey := ss.Resource.Equivalent()
+		newResource := ss.Resource
+		if resourceFromProcess != nil {
+			// The value from process will overwrite the value from span's resources
+			newResource = resource.Merge(ss.Resource, resourceFromProcess)
+		}
+		resourceKey := newResource.Equivalent()
 		batch, bOK := batchDict[resourceKey]
 		if !bOK {
 			batch = &gen.Batch{
-				Process: process(ss.Resource, defaultServiceName),
+				Process: process(newResource, defaultServiceName),
 				Spans:   []*gen.Span{},
 			}
 		}
@@ -485,4 +468,17 @@ func process(res *resource.Resource, defaultServiceName attribute.KeyValue) *gen
 	process.ServiceName = serviceName.Value.AsString()
 
 	return &process
+}
+
+func processToResource(process Process) *resource.Resource {
+	var attrs []attribute.KeyValue
+	if process.ServiceName != "" {
+		attrs = append(attrs, semconv.ServiceNameKey.String(process.ServiceName))
+	}
+	attrs = append(attrs, process.Tags...)
+
+	if len(attrs) == 0 {
+		return nil
+	}
+	return resource.NewWithAttributes(attrs...)
 }
