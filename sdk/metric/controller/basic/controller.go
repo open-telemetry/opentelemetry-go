@@ -44,7 +44,7 @@ var ErrControllerStarted = fmt.Errorf("controller already started")
 // both "pull" and "push" configurations.  This supports two distinct
 // modes:
 //
-// - Push and Pull: Start() must be called to begin calling the pusher;
+// - Push and Pull: Start() must be called to begin calling the exporter;
 //   Collect() is called periodically by a background thread after starting
 //   the controller.
 // - Pull-Only: Start() is optional in this case, to call Collect periodically.
@@ -59,7 +59,7 @@ type Controller struct {
 	accumulator  *sdk.Accumulator
 	provider     *registry.MeterProvider
 	checkpointer export.Checkpointer
-	pusher       export.Exporter
+	exporter     export.Exporter
 	wg           sync.WaitGroup
 	stopCh       chan struct{}
 	clock        controllerTime.Clock
@@ -70,12 +70,12 @@ type Controller struct {
 	pushTimeout    time.Duration
 
 	// collectedTime is used only in configurations with no
-	// pusher, when ticker != nil.
+	// exporter, when ticker != nil.
 	collectedTime time.Time
 }
 
 // New constructs a Controller using the provided checkpointer and
-// options (including optional Pusher) to configure a metric
+// options (including optional exporter) to configure a metric
 // export pipeline.
 func New(checkpointer export.Checkpointer, opts ...Option) *Controller {
 	c := &Config{
@@ -98,7 +98,7 @@ func New(checkpointer export.Checkpointer, opts ...Option) *Controller {
 		provider:     registry.NewMeterProvider(impl),
 		accumulator:  impl,
 		checkpointer: checkpointer,
-		pusher:       c.Pusher,
+		exporter:     c.Exporter,
 		stopCh:       nil,
 		clock:        controllerTime.RealClock{},
 
@@ -193,7 +193,7 @@ func (c *Controller) collect(ctx context.Context) error {
 	}); err != nil {
 		return err
 	}
-	if c.pusher == nil {
+	if c.exporter == nil {
 		return nil
 	}
 	// Note: this is not subject to collectTimeout.  This blocks the next
@@ -259,7 +259,7 @@ func (c *Controller) export(ctx context.Context) error {
 		defer cancel()
 	}
 
-	return c.pusher.Export(ctx, ckpt)
+	return c.exporter.Export(ctx, ckpt)
 }
 
 // Foreach gives the caller read-locked access to the current

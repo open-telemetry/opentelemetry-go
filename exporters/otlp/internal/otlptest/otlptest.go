@@ -76,7 +76,7 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlp.Exporter, mcTr
 
 	selector := simple.NewWithInexpensiveDistribution()
 	processor := processor.New(selector, exportmetric.StatelessExportKindSelector())
-	cont := controller.New(processor, controller.WithPusher(exp))
+	cont := controller.New(processor, controller.WithExporter(exp))
 	require.NoError(t, cont.Start(ctx))
 
 	meter := cont.MeterProvider().Meter("test-meter")

@@ -46,13 +46,13 @@ type Config struct {
 	// Default value is 10s.  If zero, no Collect timeout is applied.
 	CollectTimeout time.Duration
 
-	// Pusher is used for exporting metric data.
+	// Exporter is used for exporting metric data.
 	//
 	// Note: Exporters such as Prometheus that pull data do not implement
 	// export.Exporter.  These will directly call Collect() and ForEach().
-	Pusher export.Exporter
+	Exporter export.Exporter
 
-	// PushTimeout is the timeout of the Context when a Pusher is configured.
+	// PushTimeout is the timeout of the Context when a exporter is configured.
 	//
 	// Default value is 10s.  If zero, no Export timeout is applied.
 	PushTimeout time.Duration
@@ -97,15 +97,15 @@ func (o collectTimeoutOption) Apply(config *Config) {
 	config.CollectTimeout = time.Duration(o)
 }
 
-// WithPusher sets the Pusher configuration option of a Config.
-func WithPusher(pusher export.Exporter) Option {
-	return pusherOption{pusher}
+// WithExporter sets the exporter configuration option of a Config.
+func WithExporter(exporter export.Exporter) Option {
+	return exporterOption{exporter}
 }
 
-type pusherOption struct{ pusher export.Exporter }
+type exporterOption struct{ exporter export.Exporter }
 
-func (o pusherOption) Apply(config *Config) {
-	config.Pusher = o.pusher
+func (o exporterOption) Apply(config *Config) {
+	config.Exporter = o.exporter
 }
 
 // WithPushTimeout sets the PushTimeout configuration option of a Config.
