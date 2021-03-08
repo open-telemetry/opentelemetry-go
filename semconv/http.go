@@ -264,29 +264,31 @@ var validRangesPerCategory = map[int][]codeRange{
 // SpanStatusFromHTTPStatusCode generates a status code and a message
 // as specified by the OpenTelemetry specification for a span.
 func SpanStatusFromHTTPStatusCode(code int) (codes.Code, string) {
-	spanCode, valid := func() (codes.Code, bool) {
-		category := code / 100
-		ranges, ok := validRangesPerCategory[category]
-		if !ok {
-			return codes.Error, false
-		}
-		ok = false
-		for _, crange := range ranges {
-			ok = crange.contains(code)
-			if ok {
-				break
-			}
-		}
-		if !ok {
-			return codes.Error, false
-		}
-		if category > 0 && category < 4 {
-			return codes.Unset, true
-		}
-		return codes.Error, true
-	}()
+	spanCode, valid := validateStatusCode(code)
 	if !valid {
 		return spanCode, fmt.Sprintf("Invalid HTTP status code %d", code)
 	}
-	return spanCode, fmt.Sprintf("HTTP status code: %d", code)
+	return spanCode, ""
+}
+
+func validateStatusCode(code int) (codes.Code, bool) {
+	category := code / 100
+	ranges, ok := validRangesPerCategory[category]
+	if !ok {
+		return codes.Error, false
+	}
+	ok = false
+	for _, crange := range ranges {
+		ok = crange.contains(code)
+		if ok {
+			break
+		}
+	}
+	if !ok {
+		return codes.Error, false
+	}
+	if category > 0 && category < 4 {
+		return codes.Unset, true
+	}
+	return codes.Error, true
 }
