@@ -148,7 +148,15 @@ var extraZipkinTags = []string{
 func toZipkinTags(data *export.SpanSnapshot) map[string]string {
 	m := make(map[string]string, len(data.Attributes)+len(extraZipkinTags))
 	for _, kv := range data.Attributes {
-		m[(string)(kv.Key)] = kv.Value.Emit()
+		switch kv.Value.Type() {
+		// For array attributes, serialize as JSON list string.
+		case attribute.ARRAY:
+			json, _ := json.Marshal(kv.Value.AsArray())
+			m[(string)(kv.Key)] = (string)(json)
+		default:
+			m[(string)(kv.Key)] = kv.Value.Emit()
+		}
+
 	}
 	if v, ok := m["error"]; ok && v == "false" {
 		delete(m, "error")

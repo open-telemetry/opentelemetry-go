@@ -47,6 +47,7 @@ func TestModelConversion(t *testing.T) {
 			Attributes: []attribute.KeyValue{
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
+				attribute.Array("attr3", []int{0, 1, 2}),
 			},
 			MessageEvents: []trace.Event{
 				{
@@ -346,6 +347,7 @@ func TestModelConversion(t *testing.T) {
 			Tags: map[string]string{
 				"attr1":                   "42",
 				"attr2":                   "bar",
+				"attr3":                   "[0,1,2]",
 				"otel.status_code":        "Error",
 				"otel.status_description": "404, file not found",
 			},
