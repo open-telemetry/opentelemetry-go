@@ -169,7 +169,12 @@ func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (trace.Tra
 
 	pOpts := []sdktrace.TracerProviderOption{sdktrace.WithSyncer(exporter)}
 	if exporter.o.Config != nil {
-		pOpts = append(pOpts, sdktrace.WithConfig(*exporter.o.Config))
+		pOpts = append(pOpts,
+			sdktrace.WithDefaultSampler(exporter.o.Config.DefaultSampler),
+			sdktrace.WithIDGenerator(exporter.o.Config.IDGenerator),
+			sdktrace.WithSpanLimits(exporter.o.Config.SpanLimits),
+			sdktrace.WithResource(exporter.o.Config.Resource),
+		)
 	}
 	tp := sdktrace.NewTracerProvider(pOpts...)
 	return tp, exporter.Flush, nil

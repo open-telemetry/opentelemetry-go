@@ -338,7 +338,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 	assert.NoError(t, err)
 
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithDefaultSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithSyncer(exp),
 	)
 	otel.SetTracerProvider(tp)
