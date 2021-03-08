@@ -1167,7 +1167,7 @@ func TestRecordError(t *testing.T) {
 			},
 			ParentSpanID:    sid,
 			Name:            "span0",
-			StatusCode:      codes.Error,
+			StatusCode:      codes.Unset,
 			SpanKind:        trace.SpanKindInternal,
 			HasRemoteParent: true,
 			MessageEvents: []trace.Event{
