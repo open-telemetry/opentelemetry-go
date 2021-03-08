@@ -520,6 +520,41 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 	}
 }
 
+func TestSetSpanAttributesWithInvalidKey(t *testing.T) {
+	te := NewTestExporter()
+	cfg := Config{SpanLimits: SpanLimits{}}
+	tp := NewTracerProvider(WithConfig(cfg), WithSyncer(te), WithResource(resource.Empty()))
+
+	span := startSpan(tp, "SpanToSetInvalidKeyOrValue")
+	span.SetAttributes(
+		attribute.Bool("", true),
+		attribute.Bool("key1", false),
+	)
+	got, err := endSpan(te, span)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &export.SpanSnapshot{
+		SpanContext: trace.SpanContext{
+			TraceID:    tid,
+			TraceFlags: 0x1,
+		},
+		ParentSpanID: sid,
+		Name:         "span0",
+		Attributes: []attribute.KeyValue{
+			attribute.Bool("key1", false),
+		},
+		SpanKind:               trace.SpanKindInternal,
+		HasRemoteParent:        true,
+		DroppedAttributeCount:  0,
+		InstrumentationLibrary: instrumentation.Library{Name: "SpanToSetInvalidKeyOrValue"},
+	}
+	if diff := cmpDiff(got, want); diff != "" {
+		t.Errorf("SetSpanAttributesWithInvalidKey: -got +want %s", diff)
+	}
+}
+
 func TestEvents(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))

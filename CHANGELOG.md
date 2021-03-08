@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Added non-empty string check for trace `Attribute` keys. (#1659)
 - Add `description` to SpanStatus only when `StatusCode` is set to error. (#1662)
 
 ### Removed
@@ -89,6 +90,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The sequential timing check of timestamps of go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue are now setup explicitly to be sequential (#1578). (#1579)
 - Validate tracestate header keys with vedors according to the W3C TraceContext specification (#1475). (#1581)
 - The OTLP exporter includes related labels for translations of a GaugeArray (#1563). (#1570)
+- Jaeger Exporter: Ensure mapping between OTEL and Jaeger span data complies with the specification. (#1626)
 
 ## [0.17.0] - 2020-02-12
 
