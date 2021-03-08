@@ -12,6 +12,7 @@ require (
 	go.opentelemetry.io/otel v0.18.0
 	go.opentelemetry.io/otel/exporters/trace/zipkin v0.18.0
 	go.opentelemetry.io/otel/sdk v0.18.0
+	go.opentelemetry.io/otel/trace v0.18.0
 )
 
 replace go.opentelemetry.io/otel/bridge/opencensus => ../../bridge/opencensus
