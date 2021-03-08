@@ -56,6 +56,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
    | Windows | 1.14       | amd64        |
    | Windows | 1.15       | 386          |
    | Windows | 1.14       | 386          |
+- Added `WithDefaultSampler` and `WithSpanLimits` to tracer provider. (#1633)
 
 ### Changed
 
@@ -89,6 +90,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `test-benchmark` is no longer a dependency of the `precommit` make target. (#1567)
 - Removed the `test-386` make target.
    This was replaced with a full compatibility testing suite (i.e. multi OS/arch) in the CI system. (#1567)
+- Removed `WithConfig` from tracer provider to avoid overriding configuration. (#1633)
 
 ### Fixed
 

@@ -69,7 +69,7 @@ func initProvider() func() {
 
 	bsp := sdktrace.NewBatchSpanProcessor(exp)
 	tracerProvider := sdktrace.NewTracerProvider(
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithDefaultSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithResource(res),
 		sdktrace.WithSpanProcessor(bsp),
 	)
