@@ -16,6 +16,7 @@ package zipkin
 
 import (
 	"fmt"
+	"net"
 	"strconv"
 	"testing"
 	"time"
@@ -209,6 +210,9 @@ func TestModelConversion(t *testing.T) {
 			Attributes: []attribute.KeyValue{
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
+				// remote endpoint attributes
+				attribute.String("peer.service", "test-peer-service"),
+				attribute.String("net.peer.name", "test-peer-name"),
 			},
 			MessageEvents: []trace.Event{
 				{
@@ -241,6 +245,8 @@ func TestModelConversion(t *testing.T) {
 			Attributes: []attribute.KeyValue{
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
+				attribute.String("net.peer.ip", "1.2.3.4"),
+				attribute.Int64("net.peer.port", 9876),
 			},
 			MessageEvents: []trace.Event{
 				{
@@ -528,7 +534,9 @@ func TestModelConversion(t *testing.T) {
 			LocalEndpoint: &zkmodel.Endpoint{
 				ServiceName: "model-test",
 			},
-			RemoteEndpoint: nil,
+			RemoteEndpoint: &zkmodel.Endpoint{
+				ServiceName: "test-peer-service",
+			},
 			Annotations: []zkmodel.Annotation{
 				{
 					Timestamp: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
@@ -543,7 +551,9 @@ func TestModelConversion(t *testing.T) {
 				"attr1":            "42",
 				"attr2":            "bar",
 				"otel.status_code": "Error",
+				"net.peer.name":    "test-peer-name",
 				"error":            "404, file not found",
+				"peer.service":     "test-peer-service",
 			},
 		},
 		// model for span data of consumer kind
@@ -567,7 +577,10 @@ func TestModelConversion(t *testing.T) {
 			LocalEndpoint: &zkmodel.Endpoint{
 				ServiceName: "model-test",
 			},
-			RemoteEndpoint: nil,
+			RemoteEndpoint: &zkmodel.Endpoint{
+				IPv4: net.ParseIP("1.2.3.4"),
+				Port: 9876,
+			},
 			Annotations: []zkmodel.Annotation{
 				{
 					Timestamp: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
@@ -581,6 +594,8 @@ func TestModelConversion(t *testing.T) {
 			Tags: map[string]string{
 				"attr1":            "42",
 				"attr2":            "bar",
+				"net.peer.ip":      "1.2.3.4",
+				"net.peer.port":    "9876",
 				"otel.status_code": "Error",
 				"error":            "404, file not found",
 			},

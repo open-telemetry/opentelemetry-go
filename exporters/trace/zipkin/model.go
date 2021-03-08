@@ -18,18 +18,24 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"net"
+	"strconv"
 
 	zkmodel "github.com/openzipkin/zipkin-go/model"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
 const (
 	keyInstrumentationLibraryName    = "otel.library.name"
 	keyInstrumentationLibraryVersion = "otel.library.version"
+
+	keyPeerHostname attribute.Key = "peer.hostname"
+	keyPeerAddress  attribute.Key = "peer.address"
 )
 
 func toZipkinSpanModels(batch []*export.SpanSnapshot, serviceName string) []zkmodel.SpanModel {
@@ -51,7 +57,7 @@ func toZipkinSpanModel(data *export.SpanSnapshot, serviceName string) zkmodel.Sp
 		LocalEndpoint: &zkmodel.Endpoint{
 			ServiceName: serviceName,
 		},
-		RemoteEndpoint: nil, // *Endpoint
+		RemoteEndpoint: toZipkinRemoteEndpoint(data),
 		Annotations:    toZipkinAnnotations(data.MessageEvents),
 		Tags:           toZipkinTags(data),
 	}
@@ -183,4 +189,81 @@ func toZipkinTags(data *export.SpanSnapshot) map[string]string {
 	}
 
 	return m
+}
+
+// Rank determines selection order for remote endpoint. See the specification
+// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/sdk_exporters/zipkin.md#remote-endpoint
+var remoteEndpointKeyRank = map[attribute.Key]int{
+	semconv.PeerServiceKey: 0,
+	semconv.NetPeerNameKey: 1,
+	semconv.NetPeerIPKey:   2,
+	keyPeerHostname:        3,
+	keyPeerAddress:         4,
+	semconv.HTTPHostKey:    5,
+	semconv.DBNameKey:      6,
+}
+
+func toZipkinRemoteEndpoint(data *export.SpanSnapshot) *zkmodel.Endpoint {
+	// Should be set only for consumer or producer kind
+	if data.SpanKind != trace.SpanKindConsumer &&
+		data.SpanKind != trace.SpanKindProducer {
+		return nil
+	}
+
+	var endpointAttr attribute.KeyValue
+	for _, kv := range data.Attributes {
+		rank, ok := remoteEndpointKeyRank[kv.Key]
+		if !ok {
+			continue
+		}
+
+		currentKeyRank, ok := remoteEndpointKeyRank[endpointAttr.Key]
+		if !ok {
+			endpointAttr = kv
+		} else {
+			if rank < currentKeyRank {
+				endpointAttr = kv
+			}
+		}
+	}
+
+	if endpointAttr.Key == "" {
+		return nil
+	}
+
+	if endpointAttr.Key != semconv.NetPeerIPKey &&
+		endpointAttr.Value.Type() == attribute.STRING {
+		return &zkmodel.Endpoint{
+			ServiceName: endpointAttr.Value.AsString(),
+		}
+	}
+
+	return remoteEndpointPeerIPWithPort(endpointAttr.Value.AsString(), data.Attributes)
+}
+
+// Handles `net.peer.ip` remote endpoint separately (should include `net.peer.ip`
+// as well, if available).
+func remoteEndpointPeerIPWithPort(peerIP string, attrs []attribute.KeyValue) *zkmodel.Endpoint {
+	ip := net.ParseIP(peerIP)
+	if ip == nil {
+		return nil
+	}
+
+	endpoint := &zkmodel.Endpoint{}
+	// Determine if IPv4 or IPv6
+	if ip.To4() != nil {
+		endpoint.IPv4 = ip
+	} else {
+		endpoint.IPv6 = ip
+	}
+
+	for _, kv := range attrs {
+		if kv.Key == semconv.NetPeerPortKey {
+			port, _ := strconv.ParseUint(kv.Value.Emit(), 10, 16)
+			endpoint.Port = uint16(port)
+			return endpoint
+		}
+	}
+
+	return endpoint
 }
