@@ -503,3 +503,238 @@ func TestErrorOnExportShutdownExporter(t *testing.T) {
 	assert.NoError(t, e.Shutdown(context.Background()))
 	assert.NoError(t, e.ExportSpans(context.Background(), nil))
 }
+
+func TestJaegerBatchList(t *testing.T) {
+	newString := func(value string) *string {
+		return &value
+	}
+	statusCodeValue := int64(0)
+	statusMessage := ""
+	spanKind := "unspecified"
+	now := time.Now()
+
+	testCases := []struct {
+		name                string
+		spanSnapshotList    []*export.SpanSnapshot
+		defaultServiceName  string
+		resourceFromProcess *resource.Resource
+		expectedBatchList   []*gen.Batch
+	}{
+		{
+			name:              "no span shots",
+			spanSnapshotList:  nil,
+			expectedBatchList: nil,
+		},
+		{
+			name: "span's snapshot contains nil span",
+			spanSnapshotList: []*export.SpanSnapshot{
+				{
+					Name: "s1",
+					Resource: resource.NewWithAttributes(
+						semconv.ServiceNameKey.String("name"),
+						attribute.Key("r1").String("v1"),
+					),
+					StartTime: now,
+					EndTime:   now,
+				},
+				nil,
+			},
+			expectedBatchList: []*gen.Batch{
+				{
+					Process: &gen.Process{
+						ServiceName: "name",
+						Tags: []*gen.Tag{
+							{Key: "r1", VType: gen.TagType_STRING, VStr: newString("v1")},
+						},
+					},
+					Spans: []*gen.Span{
+						{
+							OperationName: "s1",
+							Tags: []*gen.Tag{
+								{Key: "status.code", VType: gen.TagType_LONG, VLong: &statusCodeValue},
+								{Key: "status.message", VType: gen.TagType_STRING, VStr: &statusMessage},
+								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
+							},
+							StartTime: now.UnixNano() / 1000,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "merge spans that have the same resources",
+			spanSnapshotList: []*export.SpanSnapshot{
+				{
+					Name: "s1",
+					Resource: resource.NewWithAttributes(
+						semconv.ServiceNameKey.String("name"),
+						attribute.Key("r1").String("v1"),
+					),
+					StartTime: now,
+					EndTime:   now,
+				},
+				{
+					Name: "s2",
+					Resource: resource.NewWithAttributes(
+						semconv.ServiceNameKey.String("name"),
+						attribute.Key("r1").String("v1"),
+					),
+					StartTime: now,
+					EndTime:   now,
+				},
+				{
+					Name: "s3",
+					Resource: resource.NewWithAttributes(
+						semconv.ServiceNameKey.String("name"),
+						attribute.Key("r2").String("v2"),
+					),
+					StartTime: now,
+					EndTime:   now,
+				},
+			},
+			expectedBatchList: []*gen.Batch{
+				{
+					Process: &gen.Process{
+						ServiceName: "name",
+						Tags: []*gen.Tag{
+							{Key: "r1", VType: gen.TagType_STRING, VStr: newString("v1")},
+						},
+					},
+					Spans: []*gen.Span{
+						{
+							OperationName: "s1",
+							Tags: []*gen.Tag{
+								{Key: "status.code", VType: gen.TagType_LONG, VLong: &statusCodeValue},
+								{Key: "status.message", VType: gen.TagType_STRING, VStr: &statusMessage},
+								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
+							},
+							StartTime: now.UnixNano() / 1000,
+						},
+						{
+							OperationName: "s2",
+							Tags: []*gen.Tag{
+								{Key: "status.code", VType: gen.TagType_LONG, VLong: &statusCodeValue},
+								{Key: "status.message", VType: gen.TagType_STRING, VStr: &statusMessage},
+								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
+							},
+							StartTime: now.UnixNano() / 1000,
+						},
+					},
+				},
+				{
+					Process: &gen.Process{
+						ServiceName: "name",
+						Tags: []*gen.Tag{
+							{Key: "r2", VType: gen.TagType_STRING, VStr: newString("v2")},
+						},
+					},
+					Spans: []*gen.Span{
+						{
+							OperationName: "s3",
+							Tags: []*gen.Tag{
+								{Key: "status.code", VType: gen.TagType_LONG, VLong: &statusCodeValue},
+								{Key: "status.message", VType: gen.TagType_STRING, VStr: &statusMessage},
+								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
+							},
+							StartTime: now.UnixNano() / 1000,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "merge resources that are come from process",
+			spanSnapshotList: []*export.SpanSnapshot{
+				{
+					Name: "s1",
+					Resource: resource.NewWithAttributes(
+						semconv.ServiceNameKey.String("name"),
+						attribute.Key("r1").String("v1"),
+						attribute.Key("r2").String("v2"),
+					),
+					StartTime: now,
+					EndTime:   now,
+				},
+			},
+			resourceFromProcess: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("new-name"),
+				attribute.Key("r1").String("v2"),
+			),
+			expectedBatchList: []*gen.Batch{
+				{
+					Process: &gen.Process{
+						ServiceName: "new-name",
+						Tags: []*gen.Tag{
+							{Key: "r1", VType: gen.TagType_STRING, VStr: newString("v2")},
+							{Key: "r2", VType: gen.TagType_STRING, VStr: newString("v2")},
+						},
+					},
+					Spans: []*gen.Span{
+						{
+							OperationName: "s1",
+							Tags: []*gen.Tag{
+								{Key: "status.code", VType: gen.TagType_LONG, VLong: &statusCodeValue},
+								{Key: "status.message", VType: gen.TagType_STRING, VStr: &statusMessage},
+								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
+							},
+							StartTime: now.UnixNano() / 1000,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			batchList := jaegerBatchList(tc.spanSnapshotList, tc.defaultServiceName, tc.resourceFromProcess)
+
+			assert.ElementsMatch(t, tc.expectedBatchList, batchList)
+		})
+	}
+}
+
+func TestProcess(t *testing.T) {
+	v1 := "v1"
+
+	testCases := []struct {
+		name               string
+		res                *resource.Resource
+		defaultServiceName string
+		expectedProcess    *gen.Process
+	}{
+		{
+			name: "resources contain service name",
+			res: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("service name"),
+				attribute.Key("r1").String("v1"),
+			),
+			defaultServiceName: "default service name",
+			expectedProcess: &gen.Process{
+				ServiceName: "service name",
+				Tags: []*gen.Tag{
+					{Key: "r1", VType: gen.TagType_STRING, VStr: &v1},
+				},
+			},
+		},
+		{
+			name:               "resources don't have service name",
+			res:                resource.NewWithAttributes(attribute.Key("r1").String("v1")),
+			defaultServiceName: "default service name",
+			expectedProcess: &gen.Process{
+				ServiceName: "default service name",
+				Tags: []*gen.Tag{
+					{Key: "r1", VType: gen.TagType_STRING, VStr: &v1},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			pro := process(tc.res, tc.defaultServiceName)
+
+			assert.Equal(t, tc.expectedProcess, pro)
+		})
+	}
+}
