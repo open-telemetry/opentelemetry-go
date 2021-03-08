@@ -11,10 +11,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Added `Marshaler` config option to `otlphttp` to enable otlp over json or protobufs. (#1586)
-
+- A `ForceFlush` method to the `"go.opentelemetry.io/otel/sdk/trace".TracerProvider` to flush all registered `SpanProcessor`s. (#1608)
 
 ### Changed
 
+- Update the `ForceFlush` method signature to the `"go.opentelemetry.io/otel/sdk/trace".SpanProcessor` to accept a `context.Context` and return an error. (#1608)
+- Update the `Shutdown` method to the `"go.opentelemetry.io/otel/sdk/trace".TracerProvider` return an error on shutdown failure. (#1608)
 - The SimpleSpanProcessor will now shut down the enclosed `SpanExporter` and gracefully ignore subsequent calls to `OnEnd` after `Shutdown` is called. (#1612)
 - `"go.opentelemetry.io/sdk/metric/controller.basic".WithPusher` is replaced with `WithExporter` to provide consistent naming across project. (#1656)
 - Added non-empty string check for trace `Attribute` keys. (#1659)
@@ -25,6 +27,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Removed `WithRecord()` from `trace.SpanOption` when creating a span. (#1660)
 - Removed the exported `SimpleSpanProcessor` and `BatchSpanProcessor` structs.
    These are now returned as a SpanProcessor interface from their respective constructors. (#1638)
+- Removed setting status to `Error` while recording an error as a span event in `RecordError`. (#1663)
+
 
 ### Fixed
 

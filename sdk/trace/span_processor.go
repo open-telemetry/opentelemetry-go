@@ -46,7 +46,7 @@ type SpanProcessor interface {
 	// been exported.  It should only be called when absolutely necessary, such as when
 	// using a FaaS provider that may suspend the process after an invocation, but before
 	// the Processor can export the completed spans.
-	ForceFlush()
+	ForceFlush(ctx context.Context) error
 }
 
 type spanProcessorState struct {
