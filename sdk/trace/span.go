@@ -543,6 +543,7 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 		kind:         o.SpanKind,
 	}
 	sampled := makeSamplingDecision(data)
+	span.spanContext.TraceState = sampled.Tracestate
 
 	if !span.spanContext.IsSampled() && !o.Record {
 		return span

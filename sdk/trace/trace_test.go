@@ -58,11 +58,21 @@ var (
 	sid trace.SpanID
 
 	handler *storingHandler = &storingHandler{}
+
+	k1, k2, k3    attribute.Key
+	kv1, kv2, kv3 attribute.KeyValue
 )
 
 func init() {
 	tid, _ = trace.TraceIDFromHex("01020304050607080102040810203040")
 	sid, _ = trace.SpanIDFromHex("0102040810203040")
+
+	k1 = attribute.Key("k1")
+	kv1 = k1.String("v1")
+	k2 = attribute.Key("k2")
+	kv2 = k2.String("v2")
+	k3 = attribute.Key("k3")
+	kv3 = k3.String("v3")
 
 	otel.SetErrorHandler(handler)
 }
@@ -1525,4 +1535,146 @@ func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Link: -got +want %s", diff)
 	}
+}
+
+type stateSampler struct {
+	prefix string
+	f      func(trace.TraceState) trace.TraceState
+}
+
+func (s *stateSampler) ShouldSample(p SamplingParameters) SamplingResult {
+	decision := Drop
+	if strings.HasPrefix(p.Name, s.prefix) {
+		decision = RecordAndSample
+	}
+	return SamplingResult{Decision: decision, Tracestate: s.f(p.ParentContext.TraceState)}
+}
+
+func (s stateSampler) Description() string {
+	return "stateSampler"
+}
+
+// Check that a new span propagates the SamplerResult.TraceState
+func TestSamplerTraceState(t *testing.T) {
+	mustTS := func(t trace.TraceState, err error) trace.TraceState { return t }
+	makeInserter := func(k attribute.KeyValue, prefix string) Sampler {
+		return &stateSampler{
+			prefix: prefix,
+			f:      func(t trace.TraceState) trace.TraceState { return mustTS(t.Insert(k)) },
+		}
+	}
+	makeDeleter := func(k attribute.Key, prefix string) Sampler {
+		return &stateSampler{
+			prefix: prefix,
+			f:      func(t trace.TraceState) trace.TraceState { return mustTS(t.Delete(k)) },
+		}
+	}
+	clearer := func(prefix string) Sampler {
+		return &stateSampler{
+			prefix: prefix,
+			f:      func(t trace.TraceState) trace.TraceState { return trace.TraceState{} },
+		}
+	}
+
+	tests := []struct {
+		name       string
+		sampler    Sampler
+		spanName   string
+		input      trace.TraceState
+		want       trace.TraceState
+		exportSpan bool
+	}{
+		{
+			name:       "alwaysOn",
+			sampler:    AlwaysSample(),
+			input:      mustTS(trace.TraceStateFromKeyValues(kv1)),
+			want:       mustTS(trace.TraceStateFromKeyValues(kv1)),
+			exportSpan: true,
+		},
+		{
+			name:       "alwaysOff",
+			sampler:    NeverSample(),
+			input:      mustTS(trace.TraceStateFromKeyValues(kv1)),
+			want:       mustTS(trace.TraceStateFromKeyValues(kv1)),
+			exportSpan: false,
+		},
+		{
+			name:       "insertKeySampled",
+			sampler:    makeInserter(kv2, "span"),
+			spanName:   "span0",
+			input:      mustTS(trace.TraceStateFromKeyValues(kv1)),
+			want:       mustTS(trace.TraceStateFromKeyValues(kv2, kv1)),
+			exportSpan: true,
+		},
+		{
+			name:       "insertKeyDropped",
+			sampler:    makeInserter(kv2, "span"),
+			spanName:   "nospan0",
+			input:      mustTS(trace.TraceStateFromKeyValues(kv1)),
+			want:       mustTS(trace.TraceStateFromKeyValues(kv2, kv1)),
+			exportSpan: false,
+		},
+		{
+			name:       "deleteKeySampled",
+			sampler:    makeDeleter(k1, "span"),
+			spanName:   "span0",
+			input:      mustTS(trace.TraceStateFromKeyValues(kv1, kv2)),
+			want:       mustTS(trace.TraceStateFromKeyValues(kv2)),
+			exportSpan: true,
+		},
+		{
+			name:       "deleteKeyDropped",
+			sampler:    makeDeleter(k1, "span"),
+			spanName:   "nospan0",
+			input:      mustTS(trace.TraceStateFromKeyValues(kv1, kv2, kv3)),
+			want:       mustTS(trace.TraceStateFromKeyValues(kv2, kv3)),
+			exportSpan: false,
+		},
+		{
+			name:       "clearer",
+			sampler:    clearer("span"),
+			spanName:   "span0",
+			input:      mustTS(trace.TraceStateFromKeyValues(kv1, kv3)),
+			want:       mustTS(trace.TraceStateFromKeyValues()),
+			exportSpan: true,
+		},
+	}
+
+	for _, ts := range tests {
+		ts := ts
+		t.Run(ts.name, func(t *testing.T) {
+			te := NewTestExporter()
+			tp := NewTracerProvider(WithConfig(Config{DefaultSampler: ts.sampler}), WithSyncer(te), WithResource(resource.Empty()))
+			tr := tp.Tracer("TraceState")
+
+			sc1 := trace.SpanContext{
+				TraceID:    tid,
+				SpanID:     sid,
+				TraceFlags: trace.FlagsSampled,
+				TraceState: ts.input,
+			}
+			ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc1)
+			_, span := tr.Start(ctx, ts.spanName)
+
+			// span's TraceState should be set regardless of Sampled/NonSampled state.
+			require.Equal(t, ts.want, span.SpanContext().TraceState)
+
+			span.End()
+
+			got := te.Spans()
+			if len(got) > 0 != ts.exportSpan {
+				t.Errorf("unexpected number of exported spans %d", len(got))
+			}
+			if len(got) == 0 {
+				return
+			}
+
+			receivedState := got[0].SpanContext.TraceState
+
+			if diff := cmpDiff(receivedState, ts.want); diff != "" {
+				t.Errorf("TraceState not propagated: -got +want %s", diff)
+			}
+		})
+	}
+
 }
