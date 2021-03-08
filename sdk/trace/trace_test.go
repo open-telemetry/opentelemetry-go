@@ -789,6 +789,35 @@ func TestSetSpanStatus(t *testing.T) {
 	}
 }
 
+func TestSetSpanStatusWithoutMessageWhenStatusIsNotError(t *testing.T) {
+	te := NewTestExporter()
+	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
+
+	span := startSpan(tp, "SpanStatus")
+	span.SetStatus(codes.Ok, "This message will be ignored")
+	got, err := endSpan(te, span)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &export.SpanSnapshot{
+		SpanContext: trace.SpanContext{
+			TraceID:    tid,
+			TraceFlags: 0x1,
+		},
+		ParentSpanID:           sid,
+		Name:                   "span0",
+		SpanKind:               trace.SpanKindInternal,
+		StatusCode:             codes.Ok,
+		StatusMessage:          "",
+		HasRemoteParent:        true,
+		InstrumentationLibrary: instrumentation.Library{Name: "SpanStatus"},
+	}
+	if diff := cmpDiff(got, want); diff != "" {
+		t.Errorf("SetSpanStatus: -got +want %s", diff)
+	}
+}
+
 func cmpDiff(x, y interface{}) string {
 	return cmp.Diff(x, y,
 		cmp.AllowUnexported(attribute.Value{}),
@@ -1396,7 +1425,7 @@ func TestReadOnlySpan(t *testing.T) {
 	assert.Equal(t, kv.Key, ro.Events()[0].Attributes[0].Key)
 	assert.Equal(t, kv.Value, ro.Events()[0].Attributes[0].Value)
 	assert.Equal(t, codes.Ok, ro.StatusCode())
-	assert.Equal(t, "foo", ro.StatusMessage())
+	assert.Equal(t, "", ro.StatusMessage())
 	assert.Equal(t, "ReadOnlySpan", ro.InstrumentationLibrary().Name)
 	assert.Equal(t, "3", ro.InstrumentationLibrary().Version)
 	assert.Equal(t, kv.Key, ro.Resource().Attributes()[0].Key)
