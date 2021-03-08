@@ -558,5 +558,7 @@ type TracerProvider interface {
 	// only if that code provides built-in instrumentation. If the
 	// instrumentationName is empty, then a implementation defined default
 	// name will be used instead.
+	//
+	// This method must be concurrency safe.
 	Tracer(instrumentationName string, opts ...TracerOption) Tracer
 }

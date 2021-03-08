@@ -28,7 +28,7 @@ TIMEOUT = 60
 
 .PHONY: precommit ci
 precommit: dependabot-check license-check lint build examples test-default
-ci: precommit check-clean-work-tree test-with-coverage
+ci: precommit check-clean-work-tree test-coverage
 
 # Tools
 
@@ -114,9 +114,11 @@ test-coverage:
 	for dir in $(ALL_COVERAGE_MOD_DIRS); do \
 	  echo "$(GO) test -coverpkg=./... -covermode=$(COVERAGE_MODE) -coverprofile="$(COVERAGE_PROFILE)" $${dir}/..."; \
 	  (cd "$${dir}" && \
-	 	$(GO) test -coverpkg=./... -covermode=$(COVERAGE_MODE) -coverprofile="$(COVERAGE_PROFILE)" ./... && \
-		$(GO) tool cover -html=coverage.out -o coverage.html); \
-      [ -f "$${dir}/coverage.out" ] && cat "$${dir}/coverage.out" >> coverage.txt; \
+	    $(GO) list ./... \
+	    | grep -v third_party \
+	    | xargs $(GO) test -coverpkg=./... -covermode=$(COVERAGE_MODE) -coverprofile="$(COVERAGE_PROFILE)" && \
+	  $(GO) tool cover -html=coverage.out -o coverage.html); \
+	  [ -f "$${dir}/coverage.out" ] && cat "$${dir}/coverage.out" >> coverage.txt; \
 	done; \
 	sed -i.bak -e '2,$$ { /^mode: /d; }' coverage.txt
 

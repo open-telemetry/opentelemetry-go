@@ -27,6 +27,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/gogo/protobuf/jsonpb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -109,15 +110,25 @@ func (c *mockCollector) serveMetrics(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	request := collectormetricpb.ExportMetricsServiceRequest{}
-	if err := request.Unmarshal(rawRequest); err != nil {
+	request, err := unmarshalMetricsRequest(rawRequest, r.Header.Get("content-type"))
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	writeReply(w, rawResponse, 0, c.injectContentType)
 	c.metricLock.Lock()
 	defer c.metricLock.Unlock()
-	c.metricsStorage.AddMetrics(&request)
+	c.metricsStorage.AddMetrics(request)
+}
+
+func unmarshalMetricsRequest(rawRequest []byte, contentType string) (*collectormetricpb.ExportMetricsServiceRequest, error) {
+	request := &collectormetricpb.ExportMetricsServiceRequest{}
+	if contentType == "application/json" {
+		err := jsonpb.UnmarshalString(string(rawRequest), request)
+		return request, err
+	}
+	err := request.Unmarshal(rawRequest)
+	return request, err
 }
 
 func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
@@ -140,15 +151,26 @@ func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	request := collectortracepb.ExportTraceServiceRequest{}
-	if err := request.Unmarshal(rawRequest); err != nil {
+
+	request, err := unmarshalTraceRequest(rawRequest, r.Header.Get("content-type"))
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	writeReply(w, rawResponse, 0, c.injectContentType)
 	c.spanLock.Lock()
 	defer c.spanLock.Unlock()
-	c.spansStorage.AddSpans(&request)
+	c.spansStorage.AddSpans(request)
+}
+
+func unmarshalTraceRequest(rawRequest []byte, contentType string) (*collectortracepb.ExportTraceServiceRequest, error) {
+	request := &collectortracepb.ExportTraceServiceRequest{}
+	if contentType == "application/json" {
+		err := jsonpb.UnmarshalString(string(rawRequest), request)
+		return request, err
+	}
+	err := request.Unmarshal(rawRequest)
+	return request, err
 }
 
 func (c *mockCollector) checkHeaders(r *http.Request) bool {

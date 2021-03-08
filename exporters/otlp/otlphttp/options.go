@@ -48,6 +48,16 @@ const (
 	DefaultBackoff time.Duration = 300 * time.Millisecond
 )
 
+// Marshaler describes the kind of message format sent to the collector
+type Marshaler int
+
+const (
+	// MarshalProto tells the driver to send using the protobuf binary format.
+	MarshalProto Marshaler = iota
+	// MarshalJSON tells the driver to send using json format.
+	MarshalJSON
+)
+
 type config struct {
 	endpoint       string
 	compression    Compression
@@ -58,6 +68,7 @@ type config struct {
 	tlsCfg         *tls.Config
 	insecure       bool
 	headers        map[string]string
+	marshaler      Marshaler
 }
 
 // Option applies an option to the HTTP driver.
@@ -200,4 +211,17 @@ func (headersOption) private() {}
 // Content-Encoding and Content-Type may result in a broken driver.
 func WithHeaders(headers map[string]string) Option {
 	return (headersOption)(headers)
+}
+
+type marshalerOption Marshaler
+
+func (o marshalerOption) Apply(cfg *config) {
+	cfg.marshaler = Marshaler(o)
+}
+func (marshalerOption) private() {}
+
+// WithMarshal tells the driver which wire format to use when sending to the
+// collector.  If unset, MarshalProto will be used
+func WithMarshal(m Marshaler) Option {
+	return marshalerOption(m)
 }
