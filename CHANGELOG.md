@@ -11,10 +11,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## Added
 
 - Added `Marshler` config option to `otlphttp` to enable otlp over json or protobufs. (#1586)
+- Jaeger exporter falls back to `resource.Default`'s `service.name` if the exported Span does not have one. (#1673)
+
+### Changed
+
+- Jaeger exporter populates Jaeger's Span Process from Resource. (#1673)
+
 ### Removed
 
 - Removed the exported `SimpleSpanProcessor` and `BatchSpanProcessor` structs.
    These are now returned as a SpanProcessor interface from their respective constructors. (#1638)
+- Removed `jaeger.WithProcess`. (#1673)
 
 ## [0.18.0] - 2020-03-03
 
