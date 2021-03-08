@@ -36,8 +36,8 @@ type DurationFilter struct {
 func (f DurationFilter) OnStart(parent context.Context, s ReadWriteSpan) {
 	f.Next.OnStart(parent, s)
 }
-func (f DurationFilter) Shutdown(ctx context.Context) error { return f.Next.Shutdown(ctx) }
-func (f DurationFilter) ForceFlush()                        { f.Next.ForceFlush() }
+func (f DurationFilter) Shutdown(ctx context.Context) error   { return f.Next.Shutdown(ctx) }
+func (f DurationFilter) ForceFlush(ctx context.Context) error { return f.Next.ForceFlush(ctx) }
 func (f DurationFilter) OnEnd(s ReadOnlySpan) {
 	if f.Min > 0 && s.EndTime().Sub(s.StartTime()) < f.Min {
 		// Drop short lived spans.
@@ -65,7 +65,9 @@ func (f InstrumentationBlacklist) OnStart(parent context.Context, s ReadWriteSpa
 	f.Next.OnStart(parent, s)
 }
 func (f InstrumentationBlacklist) Shutdown(ctx context.Context) error { return f.Next.Shutdown(ctx) }
-func (f InstrumentationBlacklist) ForceFlush()                        { f.Next.ForceFlush() }
+func (f InstrumentationBlacklist) ForceFlush(ctx context.Context) error {
+	return f.Next.ForceFlush(ctx)
+}
 func (f InstrumentationBlacklist) OnEnd(s ReadOnlySpan) {
 	if f.Blacklist != nil && f.Blacklist[s.InstrumentationLibrary().Name] {
 		// Drop spans from this instrumentation

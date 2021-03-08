@@ -356,6 +356,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 	now := time.Now()
 	traceID, _ := trace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
 	spanID, _ := trace.SpanIDFromHex("0102030405060708")
+	parentSpanID, _ := trace.SpanIDFromHex("0807060504030201")
 
 	linkTraceID, _ := trace.TraceIDFromHex("0102030405060709090a0b0c0d0e0f11")
 	linkSpanID, _ := trace.SpanIDFromHex("0102030405060709")
@@ -366,6 +367,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 	doubleValue := 123.456
 	intValue := int64(123)
 	boolTrue := true
+	arrValue := "[0,1,2,3]"
 	statusMessage := "this is a problem"
 	spanKind := "client"
 	rv1 := "rv11"
@@ -425,8 +427,8 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 					{Key: "key", VType: gen.TagType_STRING, VStr: &keyValue},
 					{Key: "int", VType: gen.TagType_LONG, VLong: &intValue},
 					{Key: "error", VType: gen.TagType_BOOL, VBool: &boolTrue},
-					{Key: "otel.instrumentation_library.name", VType: gen.TagType_STRING, VStr: &instrLibName},
-					{Key: "otel.instrumentation_library.version", VType: gen.TagType_STRING, VStr: &instrLibVersion},
+					{Key: "otel.library.name", VType: gen.TagType_STRING, VStr: &instrLibName},
+					{Key: "otel.library.version", VType: gen.TagType_STRING, VStr: &instrLibVersion},
 					{Key: "status.code", VType: gen.TagType_LONG, VLong: &statusCodeValue},
 					{Key: "status.message", VType: gen.TagType_STRING, VStr: &statusMessage},
 					{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
@@ -435,7 +437,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 				},
 				References: []*gen.SpanRef{
 					{
-						RefType:     gen.SpanRefType_CHILD_OF,
+						RefType:     gen.SpanRefType_FOLLOWS_FROM,
 						TraceIdHigh: int64(binary.BigEndian.Uint64(linkTraceID[0:8])),
 						TraceIdLow:  int64(binary.BigEndian.Uint64(linkTraceID[8:16])),
 						SpanId:      int64(binary.BigEndian.Uint64(linkSpanID[:])),
@@ -456,6 +458,60 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 								VType: gen.TagType_STRING,
 							},
 						},
+					},
+				},
+			},
+		},
+		{
+			name: "with parent",
+			data: &export.SpanSnapshot{
+				ParentSpanID: parentSpanID,
+				SpanContext: trace.SpanContext{
+					TraceID: traceID,
+					SpanID:  spanID,
+				},
+				Links: []trace.Link{
+					{
+						SpanContext: trace.SpanContext{
+							TraceID: linkTraceID,
+							SpanID:  linkSpanID,
+						},
+					},
+				},
+				Name:      "/foo",
+				StartTime: now,
+				EndTime:   now,
+				Attributes: []attribute.KeyValue{
+					attribute.Array("arr", []int{0, 1, 2, 3}),
+				},
+				StatusCode:    codes.Unset,
+				StatusMessage: statusMessage,
+				SpanKind:      trace.SpanKindInternal,
+				InstrumentationLibrary: instrumentation.Library{
+					Name:    instrLibName,
+					Version: instrLibVersion,
+				},
+			},
+			want: &gen.Span{
+				TraceIdLow:    651345242494996240,
+				TraceIdHigh:   72623859790382856,
+				SpanId:        72623859790382856,
+				ParentSpanId:  578437695752307201,
+				OperationName: "/foo",
+				StartTime:     now.UnixNano() / 1000,
+				Duration:      0,
+				Tags: []*gen.Tag{
+					// status code, message and span kind should NOT be populated
+					{Key: "arr", VType: gen.TagType_STRING, VStr: &arrValue},
+					{Key: "otel.library.name", VType: gen.TagType_STRING, VStr: &instrLibName},
+					{Key: "otel.library.version", VType: gen.TagType_STRING, VStr: &instrLibVersion},
+				},
+				References: []*gen.SpanRef{
+					{
+						RefType:     gen.SpanRefType_FOLLOWS_FROM,
+						TraceIdHigh: int64(binary.BigEndian.Uint64(linkTraceID[0:8])),
+						TraceIdLow:  int64(binary.BigEndian.Uint64(linkTraceID[8:16])),
+						SpanId:      int64(binary.BigEndian.Uint64(linkSpanID[:])),
 					},
 				},
 			},
