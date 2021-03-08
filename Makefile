@@ -62,9 +62,9 @@ tools: $(CROSSLINK) $(GOLANGCI_LINT) $(MISSPELL) $(STRINGER) $(TOOLS)/gojq
 
 .PHONY: examples generate build
 examples:
-	@set -e; for ex in $(EXAMPLES); do \
+	@set -e; for dir in $(EXAMPLES); do \
 	  echo "$(GO) build $${dir}/..."; \
-	  (cd "$${ex}" && \
+	  (cd "$${dir}" && \
 	   $(GO) build .); \
 	done
 
