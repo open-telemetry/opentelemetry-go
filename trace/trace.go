@@ -398,6 +398,15 @@ func RemoteSpanContextFromContext(ctx context.Context) SpanContext {
 	return SpanContext{}
 }
 
+// Start creates a new child span from the parent span in the passed context using the tracer linked
+// from the parent span and returns a new context containing the new span, and the span itself.
+// An empty NoopSpan is returned if no span is present in the passed context.
+func Start(ctx context.Context, name string, opts ...SpanOption) (context.Context, Span) {
+	parentSpan := SpanFromContext(ctx)
+	tracer := parentSpan.Tracer()
+	return tracer.Start(ctx, name, opts...)
+}
+
 // Span is the individual component of a trace. It represents a single named
 // and timed operation of a workflow that is traced. A Tracer is used to
 // create a Span and it is then up to the operation the Span represents to

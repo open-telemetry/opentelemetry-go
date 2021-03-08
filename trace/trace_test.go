@@ -17,6 +17,7 @@ package trace
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -28,10 +29,35 @@ import (
 type testSpan struct {
 	noopSpan
 
-	ID byte
+	tracer Tracer
+	ID     byte
 }
 
 func (s testSpan) SpanContext() SpanContext { return SpanContext{SpanID: [8]byte{s.ID}} }
+func (s testSpan) Tracer() Tracer {
+	if s.tracer != nil {
+		return s.tracer
+	}
+	return s.noopSpan.Tracer()
+}
+
+type testTracer struct {
+	noopTracer
+	receivedCtx     context.Context
+	receivedName    string
+	receivedOptions []SpanOption
+	span            Span
+}
+
+func (t *testTracer) Start(ctx context.Context, spanName string, opts ...SpanOption) (context.Context, Span) {
+	t.receivedCtx = ctx
+	t.receivedName = spanName
+	t.receivedOptions = opts
+	if t.span != nil {
+		return ContextWithSpan(ctx, t.span), t.span
+	}
+	return t.noopTracer.Start(ctx, spanName, opts...)
+}
 
 func TestContextSpan(t *testing.T) {
 	testCases := []struct {
@@ -100,6 +126,65 @@ func TestContextRemoteSpanContext(t *testing.T) {
 	got = RemoteSpanContextFromContext(ctx)
 	if !assertSpanContextEqual(got, want) {
 		t.Errorf("RemoteSpanContextFromContext returned %v from a set context, want %v", got, want)
+	}
+}
+
+func TestStart(t *testing.T) {
+	knownTracer := &testTracer{}
+	knownSpan := testSpan{}
+	for _, testcase := range []struct {
+		name            string
+		spanInContext   Span
+		spanName        string
+		spanOptions     []SpanOption
+		tracerChildSpan Span
+		expectedSpan    Span
+	}{
+		{
+			name:          "No span in context should return NoopSpan",
+			spanInContext: nil,
+			expectedSpan:  noopSpan{},
+		},
+		{
+			name: "When given a span should use that span's tracer and pass through all parameters",
+			spanInContext: testSpan{
+				tracer: knownTracer,
+			},
+			spanName:        "foo",
+			spanOptions:     []SpanOption{WithSpanKind(SpanKindClient)},
+			tracerChildSpan: knownSpan,
+			expectedSpan:    knownSpan,
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			if testcase.spanInContext != nil {
+				ctx = ContextWithSpan(ctx, testcase.spanInContext)
+			}
+
+			if testcase.tracerChildSpan != nil {
+				knownTracer.span = testcase.tracerChildSpan
+			}
+
+			childCtx, span := Start(ctx, testcase.spanName, testcase.spanOptions...)
+			if testcase.tracerChildSpan != nil && testcase.spanName != knownTracer.receivedName {
+				t.Errorf("receivedName mismatch: want: %v, but have: %v", span, testcase.expectedSpan)
+			}
+			if testcase.tracerChildSpan != nil && !reflect.DeepEqual(testcase.spanOptions, knownTracer.receivedOptions) {
+				t.Errorf("receivedOptions mismatch: want: %v, but have: %v", testcase.spanOptions, knownTracer.receivedOptions)
+			}
+			if testcase.tracerChildSpan != nil && testcase.spanInContext != SpanFromContext(knownTracer.receivedCtx) {
+				t.Errorf("span not correctly passed through to tracer: want: %v, but have: %v", span, testcase.expectedSpan)
+			}
+			if span != testcase.expectedSpan {
+				t.Errorf("span expectedSpan mismatch: want: %v, but have: %v", span, testcase.expectedSpan)
+			}
+			ctxSpan := SpanFromContext(childCtx)
+			if ctxSpan != testcase.expectedSpan {
+				t.Errorf("context expectedSpan mismatch: want: %v, but have: %v", span, testcase.expectedSpan)
+			}
+		})
 	}
 }
 

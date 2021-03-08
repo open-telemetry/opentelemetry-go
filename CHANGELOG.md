@@ -10,6 +10,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## Added
 
+- Added `tracer.Start` convenience function (#1674)
+
 - Added `Marshler` config option to `otlphttp` to enable otlp over json or protobufs. (#1586)
 ### Removed
 
