@@ -34,6 +34,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - `SamplingResult.TraceState` is correctly propagated to a newly created
   span's `SpanContext`. (#1655)
+- The `otel-collector` example now correctly flushes metric events prior to shutting down the exporter. (#1678)
 
 ## [0.18.0] - 2020-03-03
 
