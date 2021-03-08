@@ -22,6 +22,7 @@ import (
 	zkmodel "github.com/openzipkin/zipkin-go/model"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -140,7 +141,6 @@ func attributesToJSONMapString(attributes []attribute.KeyValue) string {
 // extraZipkinTags are those that may be added to every outgoing span
 var extraZipkinTags = []string{
 	"otel.status_code",
-	"otel.status_description",
 	keyInstrumentationLibraryName,
 	keyInstrumentationLibraryVersion,
 }
@@ -156,13 +156,20 @@ func toZipkinTags(data *export.SpanSnapshot) map[string]string {
 		default:
 			m[(string)(kv.Key)] = kv.Value.Emit()
 		}
-
 	}
+
+	if data.StatusCode != codes.Unset {
+		m["otel.status_code"] = data.StatusCode.String()
+	}
+
+	if data.StatusCode == codes.Error {
+		m["error"] = data.StatusMessage
+	}
+
+	// If boolean with 'false' is present, should be removed.
 	if v, ok := m["error"]; ok && v == "false" {
 		delete(m, "error")
 	}
-	m["otel.status_code"] = data.StatusCode.String()
-	m["otel.status_description"] = data.StatusMessage
 
 	if il := data.InstrumentationLibrary; il.Name != "" {
 		m[keyInstrumentationLibraryName] = il.Name
@@ -170,5 +177,10 @@ func toZipkinTags(data *export.SpanSnapshot) map[string]string {
 			m[keyInstrumentationLibraryVersion] = il.Version
 		}
 	}
+
+	if len(m) == 0 {
+		return nil
+	}
+
 	return m
 }
