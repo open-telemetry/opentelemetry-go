@@ -36,6 +36,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
+
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -521,8 +522,7 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 
 func TestSetSpanAttributesWithInvalidKey(t *testing.T) {
 	te := NewTestExporter()
-	cfg := Config{SpanLimits: SpanLimits{}}
-	tp := NewTracerProvider(WithConfig(cfg), WithSyncer(te), WithResource(resource.Empty()))
+	tp := NewTracerProvider(WithSpanLimits(SpanLimits{}), WithSyncer(te), WithResource(resource.Empty()))
 
 	span := startSpan(tp, "SpanToSetInvalidKeyOrValue")
 	span.SetAttributes(
@@ -1711,7 +1711,7 @@ func TestSamplerTraceState(t *testing.T) {
 		ts := ts
 		t.Run(ts.name, func(t *testing.T) {
 			te := NewTestExporter()
-			tp := NewTracerProvider(WithConfig(Config{DefaultSampler: ts.sampler}), WithSyncer(te), WithResource(resource.Empty()))
+			tp := NewTracerProvider(WithDefaultSampler(ts.sampler), WithSyncer(te), WithResource(resource.Empty()))
 			tr := tp.Tracer("TraceState")
 
 			sc1 := trace.SpanContext{
