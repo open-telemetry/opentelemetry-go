@@ -185,7 +185,7 @@ func Example_withDifferentSignalCollectors() {
 			simple.NewWithExactDistribution(),
 			exp,
 		),
-		controller.WithPusher(exp),
+		controller.WithExporter(exp),
 		controller.WithCollectPeriod(2*time.Second),
 	)
 	global.SetMeterProvider(pusher.MeterProvider())
