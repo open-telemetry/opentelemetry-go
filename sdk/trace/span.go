@@ -170,14 +170,17 @@ func (s *span) IsRecording() bool {
 
 // SetStatus sets the status of this span in the form of a code and a
 // message. This overrides the existing value of this span's status if one
-// exists. If this span is not being recorded than this method does nothing.
+// exists. Message will be set only if status is error. If this span is not being
+// recorded than this method does nothing.
 func (s *span) SetStatus(code codes.Code, msg string) {
 	if !s.IsRecording() {
 		return
 	}
 	s.mu.Lock()
 	s.statusCode = code
-	s.statusMessage = msg
+	if code == codes.Error {
+		s.statusMessage = msg
+	}
 	s.mu.Unlock()
 }
 
@@ -492,7 +495,9 @@ func (s *span) copyToCappedAttributes(attributes ...attribute.KeyValue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, a := range attributes {
-		if a.Value.Type() != attribute.INVALID {
+		// Ensure attributes conform to the specification:
+		// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.0.1/specification/common/common.md#attributes
+		if a.Value.Type() != attribute.INVALID && a.Key != "" {
 			s.attributes.add(a)
 		}
 	}
@@ -544,6 +549,7 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 		kind:         o.SpanKind,
 	}
 	sampled := makeSamplingDecision(data)
+	span.spanContext.TraceState = sampled.Tracestate
 
 	if !span.spanContext.IsSampled() && !o.Record {
 		return span

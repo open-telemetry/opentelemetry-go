@@ -17,6 +17,7 @@ package jaeger // import "go.opentelemetry.io/otel/exporters/trace/jaeger"
 import (
 	"context"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -34,8 +35,8 @@ import (
 const (
 	defaultServiceName = "OpenTelemetry"
 
-	keyInstrumentationLibraryName    = "otel.instrumentation_library.name"
-	keyInstrumentationLibraryVersion = "otel.instrumentation_library.version"
+	keyInstrumentationLibraryName    = "otel.library.name"
+	keyInstrumentationLibraryVersion = "otel.library.version"
 )
 
 type Option func(*options)
@@ -287,16 +288,21 @@ func spanSnapshotToThrift(ss *export.SpanSnapshot) *gen.Span {
 		}
 	}
 
-	tags = append(tags,
-		getInt64Tag("status.code", int64(ss.StatusCode)),
-		getStringTag("status.message", ss.StatusMessage),
-		getStringTag("span.kind", ss.SpanKind.String()),
-	)
+	if ss.SpanKind != trace.SpanKindInternal {
+		tags = append(tags,
+			getStringTag("span.kind", ss.SpanKind.String()),
+		)
+	}
 
-	// Ensure that if Status.Code is not OK, that we set the "error" tag on the Jaeger span.
-	// See Issue https://github.com/census-instrumentation/opencensus-go/issues/1041
-	if ss.StatusCode != codes.Ok && ss.StatusCode != codes.Unset {
-		tags = append(tags, getBoolTag("error", true))
+	if ss.StatusCode != codes.Unset {
+		tags = append(tags,
+			getInt64Tag("status.code", int64(ss.StatusCode)),
+			getStringTag("status.message", ss.StatusMessage),
+		)
+
+		if ss.StatusCode == codes.Error {
+			tags = append(tags, getBoolTag("error", true))
+		}
 	}
 
 	var logs []*gen.Log
@@ -321,9 +327,7 @@ func spanSnapshotToThrift(ss *export.SpanSnapshot) *gen.Span {
 			TraceIdHigh: int64(binary.BigEndian.Uint64(link.TraceID[0:8])),
 			TraceIdLow:  int64(binary.BigEndian.Uint64(link.TraceID[8:16])),
 			SpanId:      int64(binary.BigEndian.Uint64(link.SpanID[:])),
-			// TODO(paivagustavo): properly set the reference type when specs are defined
-			//  see https://github.com/open-telemetry/opentelemetry-specification/issues/65
-			RefType: gen.SpanRefType_CHILD_OF,
+			RefType:     gen.SpanRefType_FOLLOWS_FROM,
 		})
 	}
 
@@ -372,6 +376,14 @@ func keyValueToTag(keyValue attribute.KeyValue) *gen.Tag {
 			Key:     string(keyValue.Key),
 			VDouble: &f,
 			VType:   gen.TagType_DOUBLE,
+		}
+	case attribute.ARRAY:
+		json, _ := json.Marshal(keyValue.Value.AsArray())
+		a := (string)(json)
+		tag = &gen.Tag{
+			Key:   string(keyValue.Key),
+			VStr:  &a,
+			VType: gen.TagType_STRING,
 		}
 	}
 	return tag
