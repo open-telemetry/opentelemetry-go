@@ -27,8 +27,8 @@ import (
 )
 
 const (
-	keyInstrumentationLibraryName    = "otel.instrumentation_library.name"
-	keyInstrumentationLibraryVersion = "otel.instrumentation_library.version"
+	keyInstrumentationLibraryName    = "otel.library.name"
+	keyInstrumentationLibraryVersion = "otel.library.version"
 )
 
 func toZipkinSpanModels(batch []*export.SpanSnapshot, serviceName string) []zkmodel.SpanModel {

@@ -749,9 +749,9 @@ func Test_toZipkinTags(t *testing.T) {
 				},
 			},
 			want: map[string]string{
-				"otel.instrumentation_library.name": instrLibName,
-				"otel.status_code":                  codes.Unset.String(),
-				"otel.status_description":           "",
+				"otel.library.name":       instrLibName,
+				"otel.status_code":        codes.Unset.String(),
+				"otel.status_description": "",
 			},
 		},
 		{
@@ -764,10 +764,10 @@ func Test_toZipkinTags(t *testing.T) {
 				},
 			},
 			want: map[string]string{
-				"otel.instrumentation_library.name":    instrLibName,
-				"otel.instrumentation_library.version": instrLibVersion,
-				"otel.status_code":                     codes.Unset.String(),
-				"otel.status_description":              "",
+				"otel.library.name":       instrLibName,
+				"otel.library.version":    instrLibVersion,
+				"otel.status_code":        codes.Unset.String(),
+				"otel.status_description": "",
 			},
 		},
 	}
