@@ -116,7 +116,7 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 	e := &Exporter{
 		uploader:            uploader,
 		o:                   o,
-		defaultServiceName:  defaultServiceName,
+		defaultServiceName:  defaultServiceName.Value.AsString(),
 		resourceFromProcess: processToResource(o.Process),
 	}
 	bundler := bundler.NewBundler((*export.SpanSnapshot)(nil), func(bundle interface{}) {
@@ -198,7 +198,7 @@ type Exporter struct {
 	stoppedMu sync.RWMutex
 	stopped   bool
 
-	defaultServiceName  attribute.KeyValue
+	defaultServiceName  string
 	resourceFromProcess *resource.Resource
 }
 
@@ -405,7 +405,7 @@ func (e *Exporter) upload(spans []*export.SpanSnapshot) error {
 
 // jaegerBatchList transforms a slice of SpanSnapshot into a slice of jaeger
 // Batch.
-func jaegerBatchList(ssl []*export.SpanSnapshot, defaultServiceName attribute.KeyValue, resourceFromProcess *resource.Resource) []*gen.Batch {
+func jaegerBatchList(ssl []*export.SpanSnapshot, defaultServiceName string, resourceFromProcess *resource.Resource) []*gen.Batch {
 	if len(ssl) == 0 {
 		return nil
 	}
@@ -443,7 +443,7 @@ func jaegerBatchList(ssl []*export.SpanSnapshot, defaultServiceName attribute.Ke
 }
 
 // process transforms a OTel Resource into a jaeger Process.
-func process(res *resource.Resource, defaultServiceName attribute.KeyValue) *gen.Process {
+func process(res *resource.Resource, defaultServiceName string) *gen.Process {
 	var process gen.Process
 
 	var serviceName attribute.KeyValue
@@ -463,7 +463,7 @@ func process(res *resource.Resource, defaultServiceName attribute.KeyValue) *gen
 	// If no service.name is contained in a Span's Resource,
 	// that field MUST be populated from the default Resource.
 	if serviceName.Value.AsString() == "" {
-		serviceName = defaultServiceName
+		serviceName = semconv.ServiceVersionKey.String(defaultServiceName)
 	}
 	process.ServiceName = serviceName.Value.AsString()
 

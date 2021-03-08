@@ -220,9 +220,8 @@ func TestNewRawExporter(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedBufferMaxCount, exp.bundler.BufferedByteLimit)
 			assert.Equal(t, tc.expectedBatchMaxCount, exp.bundler.BundleCountThreshold)
-			assert.Equal(t, semconv.ServiceNameKey, exp.defaultServiceName.Key)
-			assert.Contains(t, exp.defaultServiceName.Value.AsString(), tc.expectedServiceName)
-			assert.NotEmpty(t, exp.defaultServiceName.Value.AsString())
+			assert.Contains(t, exp.defaultServiceName, tc.expectedServiceName)
+			assert.NotEmpty(t, exp.defaultServiceName)
 		})
 	}
 }
