@@ -32,9 +32,11 @@ func (t *basicSpanProcesor) Shutdown(context.Context) error {
 	return t.injectShutdownError
 }
 
-func (t *basicSpanProcesor) OnStart(parent context.Context, s ReadWriteSpan) {}
-func (t *basicSpanProcesor) OnEnd(s ReadOnlySpan)                            {}
-func (t *basicSpanProcesor) ForceFlush()                                     {}
+func (t *basicSpanProcesor) OnStart(context.Context, ReadWriteSpan) {}
+func (t *basicSpanProcesor) OnEnd(ReadOnlySpan)                     {}
+func (t *basicSpanProcesor) ForceFlush(context.Context) error {
+	return nil
+}
 
 func TestShutdownTraceProvider(t *testing.T) {
 	stp := NewTracerProvider()
@@ -51,7 +53,6 @@ func TestShutdownTraceProvider(t *testing.T) {
 }
 
 func TestFailedProcessorShutdown(t *testing.T) {
-	handler.Reset()
 	stp := NewTracerProvider()
 	spErr := errors.New("basic span processor shutdown failure")
 	sp := &basicSpanProcesor{
@@ -60,9 +61,9 @@ func TestFailedProcessorShutdown(t *testing.T) {
 	}
 	stp.RegisterSpanProcessor(sp)
 
-	_ = stp.Shutdown(context.Background())
-
-	assert.Contains(t, handler.errs, spErr)
+	err := stp.Shutdown(context.Background())
+	assert.Error(t, err)
+	assert.Equal(t, err, spErr)
 }
 
 func TestFailedProcessorShutdownInUnregister(t *testing.T) {
@@ -78,7 +79,6 @@ func TestFailedProcessorShutdownInUnregister(t *testing.T) {
 
 	assert.Contains(t, handler.errs, spErr)
 
-	handler.errs = nil
-	_ = stp.Shutdown(context.Background())
-	assert.Empty(t, handler.errs)
+	err := stp.Shutdown(context.Background())
+	assert.NoError(t, err)
 }

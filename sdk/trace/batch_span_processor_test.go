@@ -78,10 +78,11 @@ func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
 	// These should not panic.
 	bsp.OnStart(context.Background(), span.(sdktrace.ReadWriteSpan))
 	bsp.OnEnd(span.(sdktrace.ReadOnlySpan))
-	bsp.ForceFlush()
-	err := bsp.Shutdown(context.Background())
-	if err != nil {
-		t.Error("Error shutting the BatchSpanProcessor down\n")
+	if err := bsp.ForceFlush(context.Background()); err != nil {
+		t.Errorf("failed to ForceFlush the BatchSpanProcessor: %v", err)
+	}
+	if err := bsp.Shutdown(context.Background()); err != nil {
+		t.Errorf("failed to Shutdown the BatchSpanProcessor: %v", err)
 	}
 }
 

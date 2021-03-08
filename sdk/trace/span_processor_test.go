@@ -63,7 +63,8 @@ func (t *testSpanProcessor) Shutdown(_ context.Context) error {
 	return nil
 }
 
-func (t *testSpanProcessor) ForceFlush() {
+func (t *testSpanProcessor) ForceFlush(context.Context) error {
+	return nil
 }
 
 func TestRegisterSpanProcessor(t *testing.T) {
