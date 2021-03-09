@@ -36,6 +36,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
+
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -58,11 +59,21 @@ var (
 	sid trace.SpanID
 
 	handler *storingHandler = &storingHandler{}
+
+	k1, k2, k3    attribute.Key
+	kv1, kv2, kv3 attribute.KeyValue
 )
 
 func init() {
 	tid, _ = trace.TraceIDFromHex("01020304050607080102040810203040")
 	sid, _ = trace.SpanIDFromHex("0102040810203040")
+
+	k1 = attribute.Key("k1")
+	kv1 = k1.String("v1")
+	k2 = attribute.Key("k2")
+	kv2 = k2.String("v2")
+	k3 = attribute.Key("k3")
+	kv3 = k3.String("v3")
 
 	otel.SetErrorHandler(handler)
 }
@@ -71,10 +82,10 @@ func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
 	harness := oteltest.NewHarness(t)
 
 	harness.TestTracerProvider(func() trace.TracerProvider {
-		return NewTracerProvider(WithConfig(Config{DefaultSampler: TraceIDRatioBased(0)}))
+		return NewTracerProvider(WithDefaultSampler(TraceIDRatioBased(0)))
 	})
 
-	tp := NewTracerProvider(WithConfig(Config{DefaultSampler: TraceIDRatioBased(0)}))
+	tp := NewTracerProvider(WithDefaultSampler(TraceIDRatioBased(0)))
 	harness.TestTracer(func() trace.Tracer {
 		return tp.Tracer("")
 	})
@@ -259,7 +270,7 @@ func TestSampling(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			p := NewTracerProvider(WithConfig(Config{DefaultSampler: tc.sampler}))
+			p := NewTracerProvider(WithDefaultSampler(tc.sampler))
 			tr := p.Tracer("test")
 			var sampled int
 			for i := 0; i < total; i++ {
@@ -411,7 +422,7 @@ func TestSetSpanAttributes(t *testing.T) {
 func TestSamplerAttributesLocalChildSpan(t *testing.T) {
 	sampler := &testSampler{prefix: "span", t: t}
 	te := NewTestExporter()
-	tp := NewTracerProvider(WithConfig(Config{DefaultSampler: sampler}), WithSyncer(te), WithResource(resource.Empty()))
+	tp := NewTracerProvider(WithDefaultSampler(sampler), WithSyncer(te), WithResource(resource.Empty()))
 
 	ctx := context.Background()
 	ctx, span := startLocalSpan(tp, ctx, "SpanOne", "span0")
@@ -474,8 +485,7 @@ func TestSamplerAttributesLocalChildSpan(t *testing.T) {
 
 func TestSetSpanAttributesOverLimit(t *testing.T) {
 	te := NewTestExporter()
-	cfg := Config{SpanLimits: SpanLimits{AttributeCountLimit: 2}}
-	tp := NewTracerProvider(WithConfig(cfg), WithSyncer(te), WithResource(resource.Empty()))
+	tp := NewTracerProvider(WithSpanLimits(SpanLimits{AttributeCountLimit: 2}), WithSyncer(te), WithResource(resource.Empty()))
 
 	span := startSpan(tp, "SpanAttributesOverLimit")
 	span.SetAttributes(
@@ -507,6 +517,40 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("SetSpanAttributesOverLimit: -got +want %s", diff)
+	}
+}
+
+func TestSetSpanAttributesWithInvalidKey(t *testing.T) {
+	te := NewTestExporter()
+	tp := NewTracerProvider(WithSpanLimits(SpanLimits{}), WithSyncer(te), WithResource(resource.Empty()))
+
+	span := startSpan(tp, "SpanToSetInvalidKeyOrValue")
+	span.SetAttributes(
+		attribute.Bool("", true),
+		attribute.Bool("key1", false),
+	)
+	got, err := endSpan(te, span)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &export.SpanSnapshot{
+		SpanContext: trace.SpanContext{
+			TraceID:    tid,
+			TraceFlags: 0x1,
+		},
+		ParentSpanID: sid,
+		Name:         "span0",
+		Attributes: []attribute.KeyValue{
+			attribute.Bool("key1", false),
+		},
+		SpanKind:               trace.SpanKindInternal,
+		HasRemoteParent:        true,
+		DroppedAttributeCount:  0,
+		InstrumentationLibrary: instrumentation.Library{Name: "SpanToSetInvalidKeyOrValue"},
+	}
+	if diff := cmpDiff(got, want); diff != "" {
+		t.Errorf("SetSpanAttributesWithInvalidKey: -got +want %s", diff)
 	}
 }
 
@@ -557,8 +601,7 @@ func TestEvents(t *testing.T) {
 
 func TestEventsOverLimit(t *testing.T) {
 	te := NewTestExporter()
-	cfg := Config{SpanLimits: SpanLimits{EventCountLimit: 2}}
-	tp := NewTracerProvider(WithConfig(cfg), WithSyncer(te), WithResource(resource.Empty()))
+	tp := NewTracerProvider(WithSpanLimits(SpanLimits{EventCountLimit: 2}), WithSyncer(te), WithResource(resource.Empty()))
 
 	span := startSpan(tp, "EventsOverLimit")
 	k1v1 := attribute.String("key1", "value1")
@@ -648,13 +691,12 @@ func TestLinks(t *testing.T) {
 
 func TestLinksOverLimit(t *testing.T) {
 	te := NewTestExporter()
-	cfg := Config{SpanLimits: SpanLimits{LinkCountLimit: 2}}
 
 	sc1 := trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}})
 	sc2 := trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}})
 	sc3 := trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}})
 
-	tp := NewTracerProvider(WithConfig(cfg), WithSyncer(te), WithResource(resource.Empty()))
+	tp := NewTracerProvider(WithSpanLimits(SpanLimits{LinkCountLimit: 2}), WithSyncer(te), WithResource(resource.Empty()))
 
 	span := startSpan(tp, "LinksOverLimit",
 		trace.WithLinks(
@@ -736,6 +778,35 @@ func TestSetSpanStatus(t *testing.T) {
 		SpanKind:               trace.SpanKindInternal,
 		StatusCode:             codes.Error,
 		StatusMessage:          "Error",
+		HasRemoteParent:        true,
+		InstrumentationLibrary: instrumentation.Library{Name: "SpanStatus"},
+	}
+	if diff := cmpDiff(got, want); diff != "" {
+		t.Errorf("SetSpanStatus: -got +want %s", diff)
+	}
+}
+
+func TestSetSpanStatusWithoutMessageWhenStatusIsNotError(t *testing.T) {
+	te := NewTestExporter()
+	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
+
+	span := startSpan(tp, "SpanStatus")
+	span.SetStatus(codes.Ok, "This message will be ignored")
+	got, err := endSpan(te, span)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &export.SpanSnapshot{
+		SpanContext: trace.SpanContext{
+			TraceID:    tid,
+			TraceFlags: 0x1,
+		},
+		ParentSpanID:           sid,
+		Name:                   "span0",
+		SpanKind:               trace.SpanKindInternal,
+		StatusCode:             codes.Ok,
+		StatusMessage:          "",
 		HasRemoteParent:        true,
 		InstrumentationLibrary: instrumentation.Library{Name: "SpanStatus"},
 	}
@@ -884,7 +955,7 @@ func TestEndSpanTwice(t *testing.T) {
 
 func TestStartSpanAfterEnd(t *testing.T) {
 	te := NewTestExporter()
-	tp := NewTracerProvider(WithConfig(Config{DefaultSampler: AlwaysSample()}), WithSyncer(te))
+	tp := NewTracerProvider(WithDefaultSampler(AlwaysSample()), WithSyncer(te))
 	ctx := context.Background()
 
 	tr := tp.Tracer("SpanAfterEnd")
@@ -929,7 +1000,7 @@ func TestStartSpanAfterEnd(t *testing.T) {
 
 func TestChildSpanCount(t *testing.T) {
 	te := NewTestExporter()
-	tp := NewTracerProvider(WithConfig(Config{DefaultSampler: AlwaysSample()}), WithSyncer(te))
+	tp := NewTracerProvider(WithDefaultSampler(AlwaysSample()), WithSyncer(te))
 
 	tr := tp.Tracer("ChidSpanCount")
 	ctx, span0 := tr.Start(context.Background(), "parent")
@@ -983,7 +1054,7 @@ func TestNilSpanEnd(t *testing.T) {
 
 func TestExecutionTracerTaskEnd(t *testing.T) {
 	var n uint64
-	tp := NewTracerProvider(WithConfig(Config{DefaultSampler: NeverSample()}))
+	tp := NewTracerProvider(WithDefaultSampler(NeverSample()))
 	tr := tp.Tracer("Execution Tracer Task End")
 
 	executionTracerTaskEnd := func() {
@@ -1032,7 +1103,7 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 
 func TestCustomStartEndTime(t *testing.T) {
 	te := NewTestExporter()
-	tp := NewTracerProvider(WithSyncer(te), WithConfig(Config{DefaultSampler: AlwaysSample()}))
+	tp := NewTracerProvider(WithSyncer(te), WithDefaultSampler(AlwaysSample()))
 
 	startTime := time.Date(2019, time.August, 27, 14, 42, 0, 0, time.UTC)
 	endTime := startTime.Add(time.Second * 20)
@@ -1093,7 +1164,7 @@ func TestRecordError(t *testing.T) {
 			}),
 			ParentSpanID:    sid,
 			Name:            "span0",
-			StatusCode:      codes.Error,
+			StatusCode:      codes.Unset,
 			SpanKind:        trace.SpanKindInternal,
 			HasRemoteParent: true,
 			MessageEvents: []trace.Event{
@@ -1146,7 +1217,7 @@ func TestRecordErrorNil(t *testing.T) {
 
 func TestWithSpanKind(t *testing.T) {
 	te := NewTestExporter()
-	tp := NewTracerProvider(WithSyncer(te), WithConfig(Config{DefaultSampler: AlwaysSample()}), WithResource(resource.Empty()))
+	tp := NewTracerProvider(WithSyncer(te), WithDefaultSampler(AlwaysSample()), WithResource(resource.Empty()))
 	tr := tp.Tracer("withSpanKind")
 
 	_, span := tr.Start(context.Background(), "WithoutSpanKind")
@@ -1216,7 +1287,7 @@ func TestWithResource(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			te := NewTestExporter()
-			defaultOptions := []TracerProviderOption{WithSyncer(te), WithConfig(Config{DefaultSampler: AlwaysSample()})}
+			defaultOptions := []TracerProviderOption{WithSyncer(te), WithDefaultSampler(AlwaysSample())}
 			tp := NewTracerProvider(append(defaultOptions, tc.options...)...)
 			span := startSpan(tp, "WithResource")
 			span.SetAttributes(attribute.String("key1", "value1"))
@@ -1351,7 +1422,7 @@ func TestReadOnlySpan(t *testing.T) {
 	assert.Equal(t, kv.Key, ro.Events()[0].Attributes[0].Key)
 	assert.Equal(t, kv.Value, ro.Events()[0].Attributes[0].Value)
 	assert.Equal(t, codes.Ok, ro.StatusCode())
-	assert.Equal(t, "foo", ro.StatusMessage())
+	assert.Equal(t, "", ro.StatusMessage())
 	assert.Equal(t, "ReadOnlySpan", ro.InstrumentationLibrary().Name)
 	assert.Equal(t, "3", ro.InstrumentationLibrary().Version)
 	assert.Equal(t, kv.Key, ro.Resource().Attributes()[0].Key)
@@ -1423,8 +1494,11 @@ func TestReadWriteSpan(t *testing.T) {
 
 func TestAddEventsWithMoreAttributesThanLimit(t *testing.T) {
 	te := NewTestExporter()
-	cfg := Config{SpanLimits: SpanLimits{AttributePerEventCountLimit: 2}}
-	tp := NewTracerProvider(WithConfig(cfg), WithSyncer(te), WithResource(resource.Empty()))
+	tp := NewTracerProvider(
+		WithSpanLimits(SpanLimits{AttributePerEventCountLimit: 2}),
+		WithSyncer(te),
+		WithResource(resource.Empty()),
+	)
 
 	span := startSpan(tp, "AddSpanEventWithOverLimitedAttributes")
 	span.AddEvent("test1", trace.WithAttributes(
@@ -1485,8 +1559,11 @@ func TestAddEventsWithMoreAttributesThanLimit(t *testing.T) {
 
 func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 	te := NewTestExporter()
-	cfg := Config{SpanLimits: SpanLimits{AttributePerLinkCountLimit: 1}}
-	tp := NewTracerProvider(WithConfig(cfg), WithSyncer(te), WithResource(resource.Empty()))
+	tp := NewTracerProvider(
+		WithSpanLimits(SpanLimits{AttributePerLinkCountLimit: 1}),
+		WithSyncer(te),
+		WithResource(resource.Empty()),
+	)
 
 	k1v1 := attribute.String("key1", "value1")
 	k2v2 := attribute.String("key2", "value2")
@@ -1525,4 +1602,146 @@ func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Link: -got +want %s", diff)
 	}
+}
+
+type stateSampler struct {
+	prefix string
+	f      func(trace.TraceState) trace.TraceState
+}
+
+func (s *stateSampler) ShouldSample(p SamplingParameters) SamplingResult {
+	decision := Drop
+	if strings.HasPrefix(p.Name, s.prefix) {
+		decision = RecordAndSample
+	}
+	return SamplingResult{Decision: decision, Tracestate: s.f(p.ParentContext.TraceState)}
+}
+
+func (s stateSampler) Description() string {
+	return "stateSampler"
+}
+
+// Check that a new span propagates the SamplerResult.TraceState
+func TestSamplerTraceState(t *testing.T) {
+	mustTS := func(t trace.TraceState, err error) trace.TraceState { return t }
+	makeInserter := func(k attribute.KeyValue, prefix string) Sampler {
+		return &stateSampler{
+			prefix: prefix,
+			f:      func(t trace.TraceState) trace.TraceState { return mustTS(t.Insert(k)) },
+		}
+	}
+	makeDeleter := func(k attribute.Key, prefix string) Sampler {
+		return &stateSampler{
+			prefix: prefix,
+			f:      func(t trace.TraceState) trace.TraceState { return mustTS(t.Delete(k)) },
+		}
+	}
+	clearer := func(prefix string) Sampler {
+		return &stateSampler{
+			prefix: prefix,
+			f:      func(t trace.TraceState) trace.TraceState { return trace.TraceState{} },
+		}
+	}
+
+	tests := []struct {
+		name       string
+		sampler    Sampler
+		spanName   string
+		input      trace.TraceState
+		want       trace.TraceState
+		exportSpan bool
+	}{
+		{
+			name:       "alwaysOn",
+			sampler:    AlwaysSample(),
+			input:      mustTS(trace.TraceStateFromKeyValues(kv1)),
+			want:       mustTS(trace.TraceStateFromKeyValues(kv1)),
+			exportSpan: true,
+		},
+		{
+			name:       "alwaysOff",
+			sampler:    NeverSample(),
+			input:      mustTS(trace.TraceStateFromKeyValues(kv1)),
+			want:       mustTS(trace.TraceStateFromKeyValues(kv1)),
+			exportSpan: false,
+		},
+		{
+			name:       "insertKeySampled",
+			sampler:    makeInserter(kv2, "span"),
+			spanName:   "span0",
+			input:      mustTS(trace.TraceStateFromKeyValues(kv1)),
+			want:       mustTS(trace.TraceStateFromKeyValues(kv2, kv1)),
+			exportSpan: true,
+		},
+		{
+			name:       "insertKeyDropped",
+			sampler:    makeInserter(kv2, "span"),
+			spanName:   "nospan0",
+			input:      mustTS(trace.TraceStateFromKeyValues(kv1)),
+			want:       mustTS(trace.TraceStateFromKeyValues(kv2, kv1)),
+			exportSpan: false,
+		},
+		{
+			name:       "deleteKeySampled",
+			sampler:    makeDeleter(k1, "span"),
+			spanName:   "span0",
+			input:      mustTS(trace.TraceStateFromKeyValues(kv1, kv2)),
+			want:       mustTS(trace.TraceStateFromKeyValues(kv2)),
+			exportSpan: true,
+		},
+		{
+			name:       "deleteKeyDropped",
+			sampler:    makeDeleter(k1, "span"),
+			spanName:   "nospan0",
+			input:      mustTS(trace.TraceStateFromKeyValues(kv1, kv2, kv3)),
+			want:       mustTS(trace.TraceStateFromKeyValues(kv2, kv3)),
+			exportSpan: false,
+		},
+		{
+			name:       "clearer",
+			sampler:    clearer("span"),
+			spanName:   "span0",
+			input:      mustTS(trace.TraceStateFromKeyValues(kv1, kv3)),
+			want:       mustTS(trace.TraceStateFromKeyValues()),
+			exportSpan: true,
+		},
+	}
+
+	for _, ts := range tests {
+		ts := ts
+		t.Run(ts.name, func(t *testing.T) {
+			te := NewTestExporter()
+			tp := NewTracerProvider(WithDefaultSampler(ts.sampler), WithSyncer(te), WithResource(resource.Empty()))
+			tr := tp.Tracer("TraceState")
+
+			sc1 := trace.SpanContext{
+				TraceID:    tid,
+				SpanID:     sid,
+				TraceFlags: trace.FlagsSampled,
+				TraceState: ts.input,
+			}
+			ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc1)
+			_, span := tr.Start(ctx, ts.spanName)
+
+			// span's TraceState should be set regardless of Sampled/NonSampled state.
+			require.Equal(t, ts.want, span.SpanContext().TraceState)
+
+			span.End()
+
+			got := te.Spans()
+			if len(got) > 0 != ts.exportSpan {
+				t.Errorf("unexpected number of exported spans %d", len(got))
+			}
+			if len(got) == 0 {
+				return
+			}
+
+			receivedState := got[0].SpanContext.TraceState
+
+			if diff := cmpDiff(receivedState, ts.want); diff != "" {
+				t.Errorf("TraceState not propagated: -got +want %s", diff)
+			}
+		})
+	}
+
 }

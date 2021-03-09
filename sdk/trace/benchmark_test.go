@@ -149,6 +149,6 @@ func traceBenchmark(b *testing.B, name string, fn func(*testing.B, trace.Tracer)
 }
 
 func tracer(b *testing.B, name string, sampler sdktrace.Sampler) trace.Tracer {
-	tp := sdktrace.NewTracerProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sampler}))
+	tp := sdktrace.NewTracerProvider(sdktrace.WithDefaultSampler(sampler))
 	return tp.Tracer(name)
 }
