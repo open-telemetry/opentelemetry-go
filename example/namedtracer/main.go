@@ -45,11 +45,7 @@ func initTracer() {
 	}
 	bsp := sdktrace.NewBatchSpanProcessor(exp)
 	tp = sdktrace.NewTracerProvider(
-		sdktrace.WithConfig(
-			sdktrace.Config{
-				DefaultSampler: sdktrace.AlwaysSample(),
-			},
-		),
+		sdktrace.WithDefaultSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithSpanProcessor(bsp),
 	)
 	otel.SetTracerProvider(tp)

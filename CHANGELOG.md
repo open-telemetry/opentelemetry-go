@@ -8,11 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-## Added
+### Added
 
 - Added `Marshler` config option to `otlphttp` to enable otlp over json or protobufs. (#1586)
 - A `ForceFlush` method to the `"go.opentelemetry.io/otel/sdk/trace".TracerProvider` to flush all registered `SpanProcessor`s. (#1608)
-
 
 ### Changed
 
@@ -22,13 +21,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `"go.opentelemetry.io/sdk/metric/controller.basic".WithPusher` is replaced with `WithExporter` to provide consistent naming across project. (#1656)
 - Added non-empty string check for trace `Attribute` keys. (#1659)
 - Add `description` to SpanStatus only when `StatusCode` is set to error. (#1662)
+- `trace.SpanContext` is now immutable and has no exported fields. (#1573)
+  - `trace.NewSpanContext()` can be used in conjunction with the `trace.SpanContextConfig` struct to initialize a new `SpanContext` where all values are known.
 
 ### Removed
 
 - Removed the exported `SimpleSpanProcessor` and `BatchSpanProcessor` structs.
    These are now returned as a SpanProcessor interface from their respective constructors. (#1638)
 - Removed setting status to `Error` while recording an error as a span event in `RecordError`. (#1663)
-
 
 ### Fixed
 
@@ -57,6 +57,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
    | Windows | 1.14       | amd64        |
    | Windows | 1.15       | 386          |
    | Windows | 1.14       | 386          |
+- Added `WithDefaultSampler` and `WithSpanLimits` to tracer provider. (#1633)
 
 ### Changed
 
@@ -90,6 +91,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `test-benchmark` is no longer a dependency of the `precommit` make target. (#1567)
 - Removed the `test-386` make target.
    This was replaced with a full compatibility testing suite (i.e. multi OS/arch) in the CI system. (#1567)
+- Removed `WithConfig` from tracer provider to avoid overriding configuration. (#1633)
 
 ### Fixed
 

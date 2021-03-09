@@ -32,11 +32,11 @@ func TestNewSpanConfig(t *testing.T) {
 	timestamp1 := time.Unix(0, 0)
 
 	link1 := Link{
-		SpanContext: SpanContext{TraceID: TraceID([16]byte{1, 1}), SpanID: SpanID{3}},
+		SpanContext: SpanContext{traceID: TraceID([16]byte{1, 1}), spanID: SpanID{3}},
 		Attributes:  []attribute.KeyValue{k1v1},
 	}
 	link2 := Link{
-		SpanContext: SpanContext{TraceID: TraceID([16]byte{1, 1}), SpanID: SpanID{3}},
+		SpanContext: SpanContext{traceID: TraceID([16]byte{1, 1}), spanID: SpanID{3}},
 		Attributes:  []attribute.KeyValue{k1v2, k2v2},
 	}
 
