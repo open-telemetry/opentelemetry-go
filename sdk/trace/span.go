@@ -558,10 +558,15 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 		links:        o.Links,
 		kind:         o.SpanKind,
 	}
-	sampled := makeSamplingDecision(data)
-	span.spanContext = span.spanContext.WithTraceState(sampled.Tracestate)
+	samplingResult := makeSamplingDecision(data)
+	if isSampled(samplingResult) {
+		span.spanContext = span.spanContext.WithTraceFlags(span.spanContext.TraceFlags() | trace.FlagsSampled)
+	} else {
+		span.spanContext = span.spanContext.WithTraceFlags(span.spanContext.TraceFlags() &^ trace.FlagsSampled)
+	}
+	span.spanContext = span.spanContext.WithTraceState(samplingResult.Tracestate)
 
-	if !span.spanContext.IsSampled() && !o.Record {
+	if !isRecording(samplingResult) {
 		return span
 	}
 
@@ -577,7 +582,7 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 	span.resource = cfg.Resource
 	span.instrumentationLibrary = tr.instrumentationLibrary
 
-	span.SetAttributes(sampled.Attributes...)
+	span.SetAttributes(samplingResult.Attributes...)
 
 	span.parent = parent
 
@@ -602,7 +607,7 @@ type samplingData struct {
 
 func makeSamplingDecision(data samplingData) SamplingResult {
 	sampler := data.cfg.DefaultSampler
-	sampled := sampler.ShouldSample(SamplingParameters{
+	return sampler.ShouldSample(SamplingParameters{
 		ParentContext:   data.parent,
 		TraceID:         data.span.spanContext.TraceID(),
 		Name:            data.name,
@@ -611,10 +616,12 @@ func makeSamplingDecision(data samplingData) SamplingResult {
 		Attributes:      data.attributes,
 		Links:           data.links,
 	})
-	if sampled.Decision == RecordAndSample {
-		data.span.spanContext = data.span.spanContext.WithTraceFlags(data.span.spanContext.TraceFlags() | trace.FlagsSampled)
-	} else {
-		data.span.spanContext = data.span.spanContext.WithTraceFlags(data.span.spanContext.TraceFlags() &^ trace.FlagsSampled)
-	}
-	return sampled
+}
+
+func isRecording(s SamplingResult) bool {
+	return s.Decision == RecordOnly || s.Decision == RecordAndSample
+}
+
+func isSampled(s SamplingResult) bool {
+	return s.Decision == RecordAndSample
 }

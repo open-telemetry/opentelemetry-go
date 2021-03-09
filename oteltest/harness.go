@@ -152,17 +152,6 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			e.Expect(sc1.SpanID()).NotToEqual(sc2.SpanID())
 		})
 
-		t.Run("records the span if specified", func(t *testing.T) {
-			t.Parallel()
-
-			e := matchers.NewExpecter(t)
-			subject := subjectFactory()
-
-			_, span := subject.Start(context.Background(), "span", trace.WithRecord())
-
-			e.Expect(span.IsRecording()).ToBeTrue()
-		})
-
 		t.Run("propagates a parent's trace ID through the context", func(t *testing.T) {
 			t.Parallel()
 
