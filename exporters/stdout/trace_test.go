@@ -48,11 +48,11 @@ func TestExporter_ExportSpan(t *testing.T) {
 	resource := resource.NewWithAttributes(attribute.String("rk1", "rv11"))
 
 	testSpan := &export.SpanSnapshot{
-		SpanContext: trace.SpanContext{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    traceID,
 			SpanID:     spanID,
 			TraceState: traceState,
-		},
+		}),
 		Name:      "/foo",
 		StartTime: now,
 		EndTime:   now,

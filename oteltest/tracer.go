@@ -70,20 +70,20 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 	} else {
 		span.spanContext = t.config.SpanContextFunc(ctx)
 		if lsc := trace.SpanContextFromContext(ctx); lsc.IsValid() {
-			span.spanContext.TraceID = lsc.TraceID
-			span.parentSpanID = lsc.SpanID
+			span.spanContext = span.spanContext.WithTraceID(lsc.TraceID())
+			span.parentSpanID = lsc.SpanID()
 		} else if rsc := trace.RemoteSpanContextFromContext(ctx); rsc.IsValid() {
-			span.spanContext.TraceID = rsc.TraceID
-			span.parentSpanID = rsc.SpanID
+			span.spanContext = span.spanContext.WithTraceID(rsc.TraceID())
+			span.parentSpanID = rsc.SpanID()
 		}
 	}
 
 	for _, link := range c.Links {
 		for i, sl := range span.links {
-			if sl.SpanContext.SpanID == link.SpanContext.SpanID &&
-				sl.SpanContext.TraceID == link.SpanContext.TraceID &&
-				sl.SpanContext.TraceFlags == link.SpanContext.TraceFlags &&
-				sl.SpanContext.TraceState.String() == link.SpanContext.TraceState.String() {
+			if sl.SpanContext.SpanID() == link.SpanContext.SpanID() &&
+				sl.SpanContext.TraceID() == link.SpanContext.TraceID() &&
+				sl.SpanContext.TraceFlags() == link.SpanContext.TraceFlags() &&
+				sl.SpanContext.TraceState().String() == link.SpanContext.TraceState().String() {
 				span.links[i].Attributes = link.Attributes
 				break
 			}
