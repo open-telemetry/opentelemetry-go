@@ -535,10 +535,10 @@ func TestSetSpanAttributesWithInvalidKey(t *testing.T) {
 	}
 
 	want := &export.SpanSnapshot{
-		SpanContext: trace.SpanContext{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
-		},
+		}),
 		ParentSpanID: sid,
 		Name:         "span0",
 		Attributes: []attribute.KeyValue{
@@ -798,10 +798,10 @@ func TestSetSpanStatusWithoutMessageWhenStatusIsNotError(t *testing.T) {
 	}
 
 	want := &export.SpanSnapshot{
-		SpanContext: trace.SpanContext{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
-		},
+		}),
 		ParentSpanID:           sid,
 		Name:                   "span0",
 		SpanKind:               trace.SpanKindInternal,
@@ -1614,7 +1614,7 @@ func (s *stateSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	if strings.HasPrefix(p.Name, s.prefix) {
 		decision = RecordAndSample
 	}
-	return SamplingResult{Decision: decision, Tracestate: s.f(p.ParentContext.TraceState)}
+	return SamplingResult{Decision: decision, Tracestate: s.f(p.ParentContext.TraceState())}
 }
 
 func (s stateSampler) Description() string {
@@ -1714,17 +1714,17 @@ func TestSamplerTraceState(t *testing.T) {
 			tp := NewTracerProvider(WithDefaultSampler(ts.sampler), WithSyncer(te), WithResource(resource.Empty()))
 			tr := tp.Tracer("TraceState")
 
-			sc1 := trace.SpanContext{
+			sc1 := trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    tid,
 				SpanID:     sid,
 				TraceFlags: trace.FlagsSampled,
 				TraceState: ts.input,
-			}
+			})
 			ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc1)
 			_, span := tr.Start(ctx, ts.spanName)
 
 			// span's TraceState should be set regardless of Sampled/NonSampled state.
-			require.Equal(t, ts.want, span.SpanContext().TraceState)
+			require.Equal(t, ts.want, span.SpanContext().TraceState())
 
 			span.End()
 
@@ -1736,7 +1736,7 @@ func TestSamplerTraceState(t *testing.T) {
 				return
 			}
 
-			receivedState := got[0].SpanContext.TraceState
+			receivedState := got[0].SpanContext.TraceState()
 
 			if diff := cmpDiff(receivedState, ts.want); diff != "" {
 				t.Errorf("TraceState not propagated: -got +want %s", diff)
