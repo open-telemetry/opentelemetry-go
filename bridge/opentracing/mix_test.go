@@ -229,12 +229,12 @@ func (cast *currentActiveSpanTest) runOTOtelOT(t *testing.T, ctx context.Context
 }
 
 func (cast *currentActiveSpanTest) recordSpans(t *testing.T, ctx context.Context) context.Context {
-	spanID := trace.SpanContextFromContext(ctx).SpanID
+	spanID := trace.SpanContextFromContext(ctx).SpanID()
 	cast.recordedCurrentOtelSpanIDs = append(cast.recordedCurrentOtelSpanIDs, spanID)
 
 	spanID = trace.SpanID{}
 	if bridgeSpan, ok := ot.SpanFromContext(ctx).(*bridgeSpan); ok {
-		spanID = bridgeSpan.otelSpan.SpanContext().SpanID
+		spanID = bridgeSpan.otelSpan.SpanContext().SpanID()
 	}
 	cast.recordedActiveOTSpanIDs = append(cast.recordedActiveOTSpanIDs, spanID)
 	return ctx
@@ -637,19 +637,19 @@ func checkTraceAndSpans(t *testing.T, tracer *internal.MockTracer, expectedTrace
 	}
 	for idx, span := range tracer.FinishedSpans {
 		sctx := span.SpanContext()
-		if sctx.TraceID != expectedTraceID {
-			t.Errorf("Expected trace ID %v in span %d (%d), got %v", expectedTraceID, idx, sctx.SpanID, sctx.TraceID)
+		if sctx.TraceID() != expectedTraceID {
+			t.Errorf("Expected trace ID %v in span %d (%d), got %v", expectedTraceID, idx, sctx.SpanID(), sctx.TraceID())
 		}
 		expectedSpanID := spanIDs[idx]
 		expectedParentSpanID := parentSpanIDs[idx]
-		if sctx.SpanID != expectedSpanID {
-			t.Errorf("Expected finished span %d to have span ID %d, but got %d", idx, expectedSpanID, sctx.SpanID)
+		if sctx.SpanID() != expectedSpanID {
+			t.Errorf("Expected finished span %d to have span ID %d, but got %d", idx, expectedSpanID, sctx.SpanID())
 		}
 		if span.ParentSpanID != expectedParentSpanID {
-			t.Errorf("Expected finished span %d (span ID: %d) to have parent span ID %d, but got %d", idx, sctx.SpanID, expectedParentSpanID, span.ParentSpanID)
+			t.Errorf("Expected finished span %d (span ID: %d) to have parent span ID %d, but got %d", idx, sctx.SpanID(), expectedParentSpanID, span.ParentSpanID)
 		}
-		if span.SpanKind != sks[span.SpanContext().SpanID] {
-			t.Errorf("Expected finished span %d (span ID: %d) to have span.kind to be '%v' but was '%v'", idx, sctx.SpanID, sks[span.SpanContext().SpanID], span.SpanKind)
+		if span.SpanKind != sks[span.SpanContext().SpanID()] {
+			t.Errorf("Expected finished span %d (span ID: %d) to have span.kind to be '%v' but was '%v'", idx, sctx.SpanID(), sks[span.SpanContext().SpanID()], span.SpanKind)
 		}
 	}
 }

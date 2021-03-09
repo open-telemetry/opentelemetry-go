@@ -189,6 +189,8 @@ type TraceState struct { //nolint:golint
 }
 
 var _ json.Marshaler = TraceState{}
+var _ json.Marshaler = SpanContext{}
+
 var keyFormatRegExp = regexp.MustCompile(
 	`^((` + traceStateKeyFormat + `)|(` + traceStateKeyFormatWithMultiTenantVendor + `))$`,
 )
@@ -317,12 +319,32 @@ func isTraceStateKeyValueValid(kv attribute.KeyValue) bool {
 		valueFormatRegExp.MatchString(kv.Value.Emit())
 }
 
-// SpanContext contains identifying trace information about a Span.
-type SpanContext struct {
+// SpanContextConfig contains mutable fields usable for constructing
+// an immutable SpanContext.
+type SpanContextConfig struct {
 	TraceID    TraceID
 	SpanID     SpanID
 	TraceFlags byte
 	TraceState TraceState
+}
+
+// NewSpanContext constructs a SpanContext using values from the provided
+// SpanContextConfig.
+func NewSpanContext(config SpanContextConfig) SpanContext {
+	return SpanContext{
+		traceID:    config.TraceID,
+		spanID:     config.SpanID,
+		traceFlags: config.TraceFlags,
+		traceState: config.TraceState,
+	}
+}
+
+// SpanContext contains identifying trace information about a Span.
+type SpanContext struct {
+	traceID    TraceID
+	spanID     SpanID
+	traceFlags byte
+	traceState TraceState
 }
 
 // IsValid returns if the SpanContext is valid. A valid span context has a
@@ -331,29 +353,107 @@ func (sc SpanContext) IsValid() bool {
 	return sc.HasTraceID() && sc.HasSpanID()
 }
 
+// TraceID returns the TraceID from the SpanContext.
+func (sc SpanContext) TraceID() TraceID {
+	return sc.traceID
+}
+
 // HasTraceID checks if the SpanContext has a valid TraceID.
 func (sc SpanContext) HasTraceID() bool {
-	return sc.TraceID.IsValid()
+	return sc.traceID.IsValid()
+}
+
+// WithTraceID returns a new SpanContext with the TraceID replaced.
+func (sc SpanContext) WithTraceID(traceID TraceID) SpanContext {
+	return SpanContext{
+		traceID:    traceID,
+		spanID:     sc.spanID,
+		traceFlags: sc.traceFlags,
+		traceState: sc.traceState,
+	}
+}
+
+// SpanID returns the SpanID from the SpanContext.
+func (sc SpanContext) SpanID() SpanID {
+	return sc.spanID
 }
 
 // HasSpanID checks if the SpanContext has a valid SpanID.
 func (sc SpanContext) HasSpanID() bool {
-	return sc.SpanID.IsValid()
+	return sc.spanID.IsValid()
+}
+
+// WithSpanID returns a new SpanContext with the SpanID replaced.
+func (sc SpanContext) WithSpanID(spanID SpanID) SpanContext {
+	return SpanContext{
+		traceID:    sc.traceID,
+		spanID:     spanID,
+		traceFlags: sc.traceFlags,
+		traceState: sc.traceState,
+	}
+}
+
+// TraceFlags returns the flags from the SpanContext.
+func (sc SpanContext) TraceFlags() byte {
+	return sc.traceFlags
+}
+
+// WithTraceFlags returns a new SpanContext with the TraceFlags replaced.
+func (sc SpanContext) WithTraceFlags(flags byte) SpanContext {
+	return SpanContext{
+		traceID:    sc.traceID,
+		spanID:     sc.spanID,
+		traceFlags: flags,
+		traceState: sc.traceState,
+	}
 }
 
 // IsDeferred returns if the deferred bit is set in the trace flags.
 func (sc SpanContext) IsDeferred() bool {
-	return sc.TraceFlags&FlagsDeferred == FlagsDeferred
+	return sc.traceFlags&FlagsDeferred == FlagsDeferred
 }
 
 // IsDebug returns if the debug bit is set in the trace flags.
 func (sc SpanContext) IsDebug() bool {
-	return sc.TraceFlags&FlagsDebug == FlagsDebug
+	return sc.traceFlags&FlagsDebug == FlagsDebug
 }
 
 // IsSampled returns if the sampling bit is set in the trace flags.
 func (sc SpanContext) IsSampled() bool {
-	return sc.TraceFlags&FlagsSampled == FlagsSampled
+	return sc.traceFlags&FlagsSampled == FlagsSampled
+}
+
+// TraceState returns the TraceState from the SpanContext.
+func (sc SpanContext) TraceState() TraceState {
+	return sc.traceState
+}
+
+// WithTraceState returns a new SpanContext with the TraceState replaced.
+func (sc SpanContext) WithTraceState(state TraceState) SpanContext {
+	return SpanContext{
+		traceID:    sc.traceID,
+		spanID:     sc.spanID,
+		traceFlags: sc.traceFlags,
+		traceState: state,
+	}
+}
+
+// Equal is a predicate that determines whether two SpanContext values are equal.
+func (sc SpanContext) Equal(other SpanContext) bool {
+	return sc.traceID == other.traceID &&
+		sc.spanID == other.spanID &&
+		sc.traceFlags == other.traceFlags &&
+		sc.traceState.String() == other.traceState.String()
+}
+
+// MarshalJSON implements a custom marshal function to encode a SpanContext.
+func (sc SpanContext) MarshalJSON() ([]byte, error) {
+	return json.Marshal(SpanContextConfig{
+		TraceID:    sc.traceID,
+		SpanID:     sc.spanID,
+		TraceFlags: sc.traceFlags,
+		TraceState: sc.traceState,
+	})
 }
 
 type traceContextKeyType int
