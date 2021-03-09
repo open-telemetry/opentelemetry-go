@@ -274,13 +274,6 @@ func WithSpanProcessor(sp SpanProcessor) TracerProviderOption {
 	}
 }
 
-// WithConfig option sets the configuration to provider.
-func WithConfig(config Config) TracerProviderOption {
-	return func(opts *TracerProviderConfig) {
-		opts.config = config
-	}
-}
-
 // WithResource option attaches a resource to the provider.
 // The resource is added to the span when it is started.
 func WithResource(r *resource.Resource) TracerProviderOption {
@@ -293,5 +286,19 @@ func WithResource(r *resource.Resource) TracerProviderOption {
 func WithIDGenerator(g IDGenerator) TracerProviderOption {
 	return func(opts *TracerProviderConfig) {
 		opts.config.IDGenerator = g
+	}
+}
+
+// WithDefaultSampler option registers a DefaultSampler with the the TracerProvider.
+func WithDefaultSampler(s Sampler) TracerProviderOption {
+	return func(opts *TracerProviderConfig) {
+		opts.config.DefaultSampler = s
+	}
+}
+
+// WithSpanLimits option registers a SpanLimits with the the TracerProvider.
+func WithSpanLimits(sl SpanLimits) TracerProviderOption {
+	return func(opts *TracerProviderConfig) {
+		opts.config.SpanLimits = sl
 	}
 }

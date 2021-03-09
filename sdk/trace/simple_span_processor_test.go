@@ -60,11 +60,11 @@ func TestNewSimpleSpanProcessorWithNilExporter(t *testing.T) {
 
 func startSpan(tp trace.TracerProvider) trace.Span {
 	tr := tp.Tracer("SimpleSpanProcessor")
-	sc := trace.SpanContext{
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 0x1,
-	}
+	})
 	ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
 	_, span := tr.Start(ctx, "OnEnd")
 	return span
@@ -79,7 +79,7 @@ func TestSimpleSpanProcessorOnEnd(t *testing.T) {
 	startSpan(tp).End()
 
 	wantTraceID := tid
-	gotTraceID := te.spans[0].SpanContext.TraceID
+	gotTraceID := te.spans[0].SpanContext.TraceID()
 	if wantTraceID != gotTraceID {
 		t.Errorf("SimplerSpanProcessor OnEnd() check: got %+v, want %+v\n", gotTraceID, wantTraceID)
 	}

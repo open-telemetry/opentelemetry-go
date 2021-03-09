@@ -43,11 +43,11 @@ func (t *testSpanProcessor) OnStart(parent context.Context, s sdktrace.ReadWrite
 		// a more meaningful way.
 		{
 			Key:   "ParentTraceID",
-			Value: attribute.StringValue(psc.TraceID.String()),
+			Value: attribute.StringValue(psc.TraceID().String()),
 		},
 		{
 			Key:   "ParentSpanID",
-			Value: attribute.StringValue(psc.SpanID.String()),
+			Value: attribute.StringValue(psc.SpanID().String()),
 		},
 	}
 	s.AddEvent("OnStart", trace.WithAttributes(kv...))
@@ -79,10 +79,10 @@ func TestRegisterSpanProcessor(t *testing.T) {
 
 	tid, _ := trace.TraceIDFromHex("01020304050607080102040810203040")
 	sid, _ := trace.SpanIDFromHex("0102040810203040")
-	parent := trace.SpanContext{
+	parent := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID: tid,
 		SpanID:  sid,
-	}
+	})
 	ctx := trace.ContextWithRemoteSpanContext(context.Background(), parent)
 
 	tr := tp.Tracer("SpanProcessor")
@@ -114,14 +114,14 @@ func TestRegisterSpanProcessor(t *testing.T) {
 					c++
 				case "ParentTraceID":
 					gotValue := kv.Value.AsString()
-					if gotValue != parent.TraceID.String() {
-						t.Errorf("%s: attributes: got %s, want %s\n", name, gotValue, parent.TraceID)
+					if gotValue != parent.TraceID().String() {
+						t.Errorf("%s: attributes: got %s, want %s\n", name, gotValue, parent.TraceID())
 					}
 					tidOK = true
 				case "ParentSpanID":
 					gotValue := kv.Value.AsString()
-					if gotValue != parent.SpanID.String() {
-						t.Errorf("%s: attributes: got %s, want %s\n", name, gotValue, parent.SpanID)
+					if gotValue != parent.SpanID().String() {
+						t.Errorf("%s: attributes: got %s, want %s\n", name, gotValue, parent.SpanID())
 					}
 					sidOK = true
 				default:
