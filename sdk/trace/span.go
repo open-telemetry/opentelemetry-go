@@ -560,11 +560,11 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 	}
 	samplingResult := makeSamplingDecision(data)
 	if isSampled(samplingResult) {
-		span.spanContext.TraceFlags |= trace.FlagsSampled
+		span.spanContext = span.spanContext.WithTraceFlags(span.spanContext.TraceFlags() | trace.FlagsSampled)
 	} else {
-		span.spanContext.TraceFlags &^= trace.FlagsSampled
+		span.spanContext = span.spanContext.WithTraceFlags(span.spanContext.TraceFlags() &^ trace.FlagsSampled)
 	}
-	span.spanContext.TraceState = samplingResult.Tracestate
+	span.spanContext = span.spanContext.WithTraceState(samplingResult.Tracestate)
 
 	if !isRecording(samplingResult) {
 		return span
