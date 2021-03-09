@@ -411,7 +411,6 @@ func (t *BridgeTracer) StartSpan(operationName string, opts ...ot.StartSpanOptio
 		trace.WithAttributes(attributes...),
 		trace.WithTimestamp(sso.StartTime),
 		trace.WithLinks(links...),
-		trace.WithRecord(),
 		trace.WithSpanKind(kind),
 	)
 	if checkCtx != checkCtx2 {

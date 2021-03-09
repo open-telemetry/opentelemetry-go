@@ -85,7 +85,6 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...trace.SpanO
 		mockTracer:     t,
 		officialTracer: t,
 		spanContext:    spanContext,
-		recording:      config.Record,
 		Attributes: baggage.NewMap(baggage.MapUpdate{
 			MultiKV: config.Attributes,
 		}),
