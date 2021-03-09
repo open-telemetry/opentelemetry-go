@@ -277,12 +277,12 @@ func TestSampling(t *testing.T) {
 				ctx := context.Background()
 				if tc.parent {
 					tid, sid := idg.NewIDs(ctx)
-					psc := trace.SpanContext{
+					psc := trace.NewSpanContext(trace.SpanContextConfig{
 						TraceID: tid,
 						SpanID:  sid,
-					}
+					})
 					if tc.sampledParent {
-						psc.TraceFlags = trace.FlagsSampled
+						psc = psc.WithTraceFlags(trace.FlagsSampled)
 					}
 					ctx = trace.ContextWithRemoteSpanContext(ctx, psc)
 				}
@@ -313,11 +313,11 @@ func TestStartSpanWithParent(t *testing.T) {
 	tr := tp.Tracer("SpanWithParent")
 	ctx := context.Background()
 
-	sc1 := trace.SpanContext{
+	sc1 := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 0x1,
-	}
+	})
 	_, s1 := tr.Start(trace.ContextWithRemoteSpanContext(ctx, sc1), "span1-unsampled-parent1")
 	if err := checkChild(t, sc1, s1); err != nil {
 		t.Error(err)
@@ -332,12 +332,12 @@ func TestStartSpanWithParent(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	sc2 := trace.SpanContext{
+	sc2 := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 0x1,
 		TraceState: ts,
-	}
+	})
 	_, s3 := tr.Start(trace.ContextWithRemoteSpanContext(ctx, sc2), "span3-sampled-parent2")
 	if err := checkChild(t, sc2, s3); err != nil {
 		t.Error(err)
@@ -369,10 +369,10 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 	}
 
 	want := &export.SpanSnapshot{
-		SpanContext: trace.SpanContext{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
-		},
+		}),
 		ParentSpanID: sid,
 		Name:         "span0",
 		Attributes: []attribute.KeyValue{
@@ -399,10 +399,10 @@ func TestSetSpanAttributes(t *testing.T) {
 	}
 
 	want := &export.SpanSnapshot{
-		SpanContext: trace.SpanContext{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
-		},
+		}),
 		ParentSpanID: sid,
 		Name:         "span0",
 		Attributes: []attribute.KeyValue{
@@ -435,27 +435,27 @@ func TestSamplerAttributesLocalChildSpan(t *testing.T) {
 
 	// endSpan expects only a single span in the test exporter, so manually clear the
 	// fields that can't be tested for easily (times, span and trace ids).
-	pid := got[0].SpanContext.SpanID
-	got[0].SpanContext.TraceID = tid
+	pid := got[0].SpanContext.SpanID()
+	got[0].SpanContext = got[0].SpanContext.WithTraceID(tid)
 	got[0].ParentSpanID = sid
 
 	checkTime(&got[0].StartTime)
 	checkTime(&got[0].EndTime)
 
-	got[1].SpanContext.SpanID = trace.SpanID{}
-	got[1].SpanContext.TraceID = tid
+	got[1].SpanContext = got[1].SpanContext.WithSpanID(trace.SpanID{})
+	got[1].SpanContext = got[1].SpanContext.WithTraceID(tid)
 	got[1].ParentSpanID = pid
-	got[0].SpanContext.SpanID = trace.SpanID{}
+	got[0].SpanContext = got[0].SpanContext.WithSpanID(trace.SpanID{})
 
 	checkTime(&got[1].StartTime)
 	checkTime(&got[1].EndTime)
 
 	want := []*export.SpanSnapshot{
 		{
-			SpanContext: trace.SpanContext{
+			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    tid,
 				TraceFlags: 0x1,
-			},
+			}),
 			ParentSpanID:           sid,
 			Name:                   "span1",
 			Attributes:             []attribute.KeyValue{attribute.Int("callCount", 2)},
@@ -464,10 +464,10 @@ func TestSamplerAttributesLocalChildSpan(t *testing.T) {
 			InstrumentationLibrary: instrumentation.Library{Name: "SpanTwo"},
 		},
 		{
-			SpanContext: trace.SpanContext{
+			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    tid,
 				TraceFlags: 0x1,
-			},
+			}),
 			ParentSpanID:           pid,
 			Name:                   "span0",
 			Attributes:             []attribute.KeyValue{attribute.Int("callCount", 1)},
@@ -500,10 +500,10 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 	}
 
 	want := &export.SpanSnapshot{
-		SpanContext: trace.SpanContext{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
-		},
+		}),
 		ParentSpanID: sid,
 		Name:         "span0",
 		Attributes: []attribute.KeyValue{
@@ -535,10 +535,10 @@ func TestSetSpanAttributesWithInvalidKey(t *testing.T) {
 	}
 
 	want := &export.SpanSnapshot{
-		SpanContext: trace.SpanContext{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
-		},
+		}),
 		ParentSpanID: sid,
 		Name:         "span0",
 		Attributes: []attribute.KeyValue{
@@ -580,10 +580,10 @@ func TestEvents(t *testing.T) {
 	}
 
 	want := &export.SpanSnapshot{
-		SpanContext: trace.SpanContext{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
-		},
+		}),
 		ParentSpanID:    sid,
 		Name:            "span0",
 		HasRemoteParent: true,
@@ -630,10 +630,10 @@ func TestEventsOverLimit(t *testing.T) {
 	}
 
 	want := &export.SpanSnapshot{
-		SpanContext: trace.SpanContext{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
-		},
+		}),
 		ParentSpanID: sid,
 		Name:         "span0",
 		MessageEvents: []trace.Event{
@@ -658,8 +658,8 @@ func TestLinks(t *testing.T) {
 	k2v2 := attribute.String("key2", "value2")
 	k3v3 := attribute.String("key3", "value3")
 
-	sc1 := trace.SpanContext{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}}
-	sc2 := trace.SpanContext{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}}
+	sc1 := trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}})
+	sc2 := trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}})
 
 	links := []trace.Link{
 		{SpanContext: sc1, Attributes: []attribute.KeyValue{k1v1}},
@@ -673,10 +673,10 @@ func TestLinks(t *testing.T) {
 	}
 
 	want := &export.SpanSnapshot{
-		SpanContext: trace.SpanContext{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
-		},
+		}),
 		ParentSpanID:           sid,
 		Name:                   "span0",
 		HasRemoteParent:        true,
@@ -692,9 +692,9 @@ func TestLinks(t *testing.T) {
 func TestLinksOverLimit(t *testing.T) {
 	te := NewTestExporter()
 
-	sc1 := trace.SpanContext{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}}
-	sc2 := trace.SpanContext{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}}
-	sc3 := trace.SpanContext{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}}
+	sc1 := trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}})
+	sc2 := trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}})
+	sc3 := trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}})
 
 	tp := NewTracerProvider(WithSpanLimits(SpanLimits{LinkCountLimit: 2}), WithSyncer(te), WithResource(resource.Empty()))
 
@@ -715,10 +715,10 @@ func TestLinksOverLimit(t *testing.T) {
 	}
 
 	want := &export.SpanSnapshot{
-		SpanContext: trace.SpanContext{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
-		},
+		}),
 		ParentSpanID: sid,
 		Name:         "span0",
 		Links: []trace.Link{
@@ -741,11 +741,11 @@ func TestSetSpanName(t *testing.T) {
 	ctx := context.Background()
 
 	want := "SpanName-1"
-	ctx = trace.ContextWithRemoteSpanContext(ctx, trace.SpanContext{
+	ctx = trace.ContextWithRemoteSpanContext(ctx, trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 1,
-	})
+	}))
 	_, span := tp.Tracer("SetSpanName").Start(ctx, "SpanName-1")
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -769,10 +769,10 @@ func TestSetSpanStatus(t *testing.T) {
 	}
 
 	want := &export.SpanSnapshot{
-		SpanContext: trace.SpanContext{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
-		},
+		}),
 		ParentSpanID:           sid,
 		Name:                   "span0",
 		SpanKind:               trace.SpanKindInternal,
@@ -798,10 +798,10 @@ func TestSetSpanStatusWithoutMessageWhenStatusIsNotError(t *testing.T) {
 	}
 
 	want := &export.SpanSnapshot{
-		SpanContext: trace.SpanContext{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
-		},
+		}),
 		ParentSpanID:           sid,
 		Name:                   "span0",
 		SpanKind:               trace.SpanKindInternal,
@@ -823,11 +823,11 @@ func cmpDiff(x, y interface{}) string {
 }
 
 func remoteSpanContext() trace.SpanContext {
-	return trace.SpanContext{
+	return trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 1,
-	}
+	})
 }
 
 // checkChild is test utility function that tests that c has fields set appropriately,
@@ -837,16 +837,16 @@ func checkChild(t *testing.T, p trace.SpanContext, apiSpan trace.Span) error {
 	if s == nil {
 		return fmt.Errorf("got nil child span, want non-nil")
 	}
-	if got, want := s.spanContext.TraceID.String(), p.TraceID.String(); got != want {
+	if got, want := s.spanContext.TraceID().String(), p.TraceID().String(); got != want {
 		return fmt.Errorf("got child trace ID %s, want %s", got, want)
 	}
-	if childID, parentID := s.spanContext.SpanID.String(), p.SpanID.String(); childID == parentID {
+	if childID, parentID := s.spanContext.SpanID().String(), p.SpanID().String(); childID == parentID {
 		return fmt.Errorf("got child span ID %s, parent span ID %s; want unequal IDs", childID, parentID)
 	}
-	if got, want := s.spanContext.TraceFlags, p.TraceFlags; got != want {
+	if got, want := s.spanContext.TraceFlags(), p.TraceFlags(); got != want {
 		return fmt.Errorf("got child trace options %d, want %d", got, want)
 	}
-	got, want := s.spanContext.TraceState, p.TraceState
+	got, want := s.spanContext.TraceState(), p.TraceState()
 	assert.Equal(t, want, got)
 	return nil
 }
@@ -909,10 +909,10 @@ func endSpan(te *testExporter, span trace.Span) (*export.SpanSnapshot, error) {
 		return nil, fmt.Errorf("got %d exported spans, want one span", te.Len())
 	}
 	got := te.Spans()[0]
-	if !got.SpanContext.SpanID.IsValid() {
+	if !got.SpanContext.SpanID().IsValid() {
 		return nil, fmt.Errorf("exporting span: expected nonzero SpanID")
 	}
-	got.SpanContext.SpanID = trace.SpanID{}
+	got.SpanContext = got.SpanContext.WithSpanID(trace.SpanID{})
 	if !checkTime(&got.StartTime) {
 		return nil, fmt.Errorf("exporting span: expected nonzero StartTime")
 	}
@@ -984,16 +984,16 @@ func TestStartSpanAfterEnd(t *testing.T) {
 		t.Fatal("span-2 not recorded")
 	}
 
-	if got, want := gotSpan1.SpanContext.TraceID, gotParent.SpanContext.TraceID; got != want {
+	if got, want := gotSpan1.SpanContext.TraceID(), gotParent.SpanContext.TraceID(); got != want {
 		t.Errorf("span-1.TraceID=%q; want %q", got, want)
 	}
-	if got, want := gotSpan2.SpanContext.TraceID, gotParent.SpanContext.TraceID; got != want {
+	if got, want := gotSpan2.SpanContext.TraceID(), gotParent.SpanContext.TraceID(); got != want {
 		t.Errorf("span-2.TraceID=%q; want %q", got, want)
 	}
-	if got, want := gotSpan1.ParentSpanID, gotParent.SpanContext.SpanID; got != want {
+	if got, want := gotSpan1.ParentSpanID, gotParent.SpanContext.SpanID(); got != want {
 		t.Errorf("span-1.ParentSpanID=%q; want %q (parent.SpanID)", got, want)
 	}
-	if got, want := gotSpan2.ParentSpanID, gotSpan1.SpanContext.SpanID; got != want {
+	if got, want := gotSpan2.ParentSpanID, gotSpan1.SpanContext.SpanID(); got != want {
 		t.Errorf("span-2.ParentSpanID=%q; want %q (span1.SpanID)", got, want)
 	}
 }
@@ -1073,11 +1073,11 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 	ctx := context.Background()
 
 	ctx = trace.ContextWithRemoteSpanContext(ctx,
-		trace.SpanContext{
+		trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tID,
 			SpanID:     sID,
 			TraceFlags: 0,
-		},
+		}),
 	)
 	_, apiSpan = tr.Start(
 		ctx,
@@ -1158,10 +1158,10 @@ func TestRecordError(t *testing.T) {
 		}
 
 		want := &export.SpanSnapshot{
-			SpanContext: trace.SpanContext{
+			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    tid,
 				TraceFlags: 0x1,
-			},
+			}),
 			ParentSpanID:    sid,
 			Name:            "span0",
 			StatusCode:      codes.Unset,
@@ -1198,10 +1198,10 @@ func TestRecordErrorNil(t *testing.T) {
 	}
 
 	want := &export.SpanSnapshot{
-		SpanContext: trace.SpanContext{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
-		},
+		}),
 		ParentSpanID:           sid,
 		Name:                   "span0",
 		SpanKind:               trace.SpanKindInternal,
@@ -1296,10 +1296,10 @@ func TestWithResource(t *testing.T) {
 				t.Error(err.Error())
 			}
 			want := &export.SpanSnapshot{
-				SpanContext: trace.SpanContext{
+				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID:    tid,
 					TraceFlags: 0x1,
-				},
+				}),
 				ParentSpanID: sid,
 				Name:         "span0",
 				Attributes: []attribute.KeyValue{
@@ -1333,10 +1333,10 @@ func TestWithInstrumentationVersion(t *testing.T) {
 	}
 
 	want := &export.SpanSnapshot{
-		SpanContext: trace.SpanContext{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
-		},
+		}),
 		ParentSpanID:    sid,
 		Name:            "span0",
 		SpanKind:        trace.SpanKindInternal,
@@ -1384,20 +1384,20 @@ func TestReadOnlySpan(t *testing.T) {
 
 	// Initialize parent context.
 	tID, sID := cfg.IDGenerator.NewIDs(context.Background())
-	parent := trace.SpanContext{
+	parent := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    tID,
 		SpanID:     sID,
 		TraceFlags: 0x1,
-	}
+	})
 	ctx := trace.ContextWithRemoteSpanContext(context.Background(), parent)
 
 	// Initialize linked context.
 	tID, sID = cfg.IDGenerator.NewIDs(context.Background())
-	linked := trace.SpanContext{
+	linked := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    tID,
 		SpanID:     sID,
 		TraceFlags: 0x1,
-	}
+	})
 
 	st := time.Now()
 	ctx, span := tr.Start(ctx, "foo", trace.WithTimestamp(st),
@@ -1464,11 +1464,11 @@ func TestReadWriteSpan(t *testing.T) {
 
 	// Initialize parent context.
 	tID, sID := cfg.IDGenerator.NewIDs(context.Background())
-	parent := trace.SpanContext{
+	parent := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    tID,
 		SpanID:     sID,
 		TraceFlags: 0x1,
-	}
+	})
 	ctx := trace.ContextWithRemoteSpanContext(context.Background(), parent)
 
 	_, span := tr.Start(ctx, "foo")
@@ -1524,10 +1524,10 @@ func TestAddEventsWithMoreAttributesThanLimit(t *testing.T) {
 	}
 
 	want := &export.SpanSnapshot{
-		SpanContext: trace.SpanContext{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
-		},
+		}),
 		ParentSpanID: sid,
 		Name:         "span0",
 		Attributes:   nil,
@@ -1570,8 +1570,8 @@ func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 	k3v3 := attribute.String("key3", "value3")
 	k4v4 := attribute.String("key4", "value4")
 
-	sc1 := trace.SpanContext{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}}
-	sc2 := trace.SpanContext{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}}
+	sc1 := trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}})
+	sc2 := trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}})
 
 	span := startSpan(tp, "Links", trace.WithLinks([]trace.Link{
 		{SpanContext: sc1, Attributes: []attribute.KeyValue{k1v1, k2v2}},
@@ -1584,10 +1584,10 @@ func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 	}
 
 	want := &export.SpanSnapshot{
-		SpanContext: trace.SpanContext{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
-		},
+		}),
 		ParentSpanID:    sid,
 		Name:            "span0",
 		HasRemoteParent: true,
@@ -1614,7 +1614,7 @@ func (s *stateSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	if strings.HasPrefix(p.Name, s.prefix) {
 		decision = RecordAndSample
 	}
-	return SamplingResult{Decision: decision, Tracestate: s.f(p.ParentContext.TraceState)}
+	return SamplingResult{Decision: decision, Tracestate: s.f(p.ParentContext.TraceState())}
 }
 
 func (s stateSampler) Description() string {
@@ -1714,17 +1714,17 @@ func TestSamplerTraceState(t *testing.T) {
 			tp := NewTracerProvider(WithDefaultSampler(ts.sampler), WithSyncer(te), WithResource(resource.Empty()))
 			tr := tp.Tracer("TraceState")
 
-			sc1 := trace.SpanContext{
+			sc1 := trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    tid,
 				SpanID:     sid,
 				TraceFlags: trace.FlagsSampled,
 				TraceState: ts.input,
-			}
+			})
 			ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc1)
 			_, span := tr.Start(ctx, ts.spanName)
 
 			// span's TraceState should be set regardless of Sampled/NonSampled state.
-			require.Equal(t, ts.want, span.SpanContext().TraceState)
+			require.Equal(t, ts.want, span.SpanContext().TraceState())
 
 			span.End()
 
@@ -1736,7 +1736,7 @@ func TestSamplerTraceState(t *testing.T) {
 				return
 			}
 
-			receivedState := got[0].SpanContext.TraceState
+			receivedState := got[0].SpanContext.TraceState()
 
 			if diff := cmpDiff(receivedState, ts.want); diff != "" {
 				t.Errorf("TraceState not propagated: -got +want %s", diff)

@@ -76,11 +76,11 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...trace.SpanO
 	if startTime.IsZero() {
 		startTime = time.Now()
 	}
-	spanContext := trace.SpanContext{
+	spanContext := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    t.getTraceID(ctx, config),
 		SpanID:     t.getSpanID(),
 		TraceFlags: 0,
-	}
+	})
 	span := &MockSpan{
 		mockTracer:     t,
 		officialTracer: t,
@@ -117,7 +117,7 @@ func (t *MockTracer) addSpareContextValue(ctx context.Context) context.Context {
 
 func (t *MockTracer) getTraceID(ctx context.Context, config *trace.SpanConfig) trace.TraceID {
 	if parent := t.getParentSpanContext(ctx, config); parent.IsValid() {
-		return parent.TraceID
+		return parent.TraceID()
 	}
 	if len(t.SpareTraceIDs) > 0 {
 		traceID := t.SpareTraceIDs[0]
@@ -132,7 +132,7 @@ func (t *MockTracer) getTraceID(ctx context.Context, config *trace.SpanConfig) t
 
 func (t *MockTracer) getParentSpanID(ctx context.Context, config *trace.SpanConfig) trace.SpanID {
 	if parent := t.getParentSpanContext(ctx, config); parent.IsValid() {
-		return parent.SpanID
+		return parent.SpanID()
 	}
 	return trace.SpanID{}
 }

@@ -148,8 +148,8 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			sc1 := span1.SpanContext()
 			sc2 := span2.SpanContext()
 
-			e.Expect(sc1.TraceID).NotToEqual(sc2.TraceID)
-			e.Expect(sc1.SpanID).NotToEqual(sc2.SpanID)
+			e.Expect(sc1.TraceID()).NotToEqual(sc2.TraceID())
+			e.Expect(sc1.SpanID()).NotToEqual(sc2.SpanID())
 		})
 
 		t.Run("records the span if specified", func(t *testing.T) {
@@ -175,8 +175,8 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			psc := parent.SpanContext()
 			csc := child.SpanContext()
 
-			e.Expect(csc.TraceID).ToEqual(psc.TraceID)
-			e.Expect(csc.SpanID).NotToEqual(psc.SpanID)
+			e.Expect(csc.TraceID()).ToEqual(psc.TraceID())
+			e.Expect(csc.SpanID()).NotToEqual(psc.SpanID())
 		})
 
 		t.Run("ignores parent's trace ID when new root is requested", func(t *testing.T) {
@@ -191,8 +191,8 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			psc := parent.SpanContext()
 			csc := child.SpanContext()
 
-			e.Expect(csc.TraceID).NotToEqual(psc.TraceID)
-			e.Expect(csc.SpanID).NotToEqual(psc.SpanID)
+			e.Expect(csc.TraceID()).NotToEqual(psc.TraceID())
+			e.Expect(csc.SpanID()).NotToEqual(psc.SpanID())
 		})
 
 		t.Run("propagates remote parent's trace ID through the context", func(t *testing.T) {
@@ -208,8 +208,8 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			psc := remoteParent.SpanContext()
 			csc := child.SpanContext()
 
-			e.Expect(csc.TraceID).ToEqual(psc.TraceID)
-			e.Expect(csc.SpanID).NotToEqual(psc.SpanID)
+			e.Expect(csc.TraceID()).ToEqual(psc.TraceID())
+			e.Expect(csc.SpanID()).NotToEqual(psc.SpanID())
 		})
 
 		t.Run("ignores remote parent's trace ID when new root is requested", func(t *testing.T) {
@@ -225,8 +225,8 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			psc := remoteParent.SpanContext()
 			csc := child.SpanContext()
 
-			e.Expect(csc.TraceID).NotToEqual(psc.TraceID)
-			e.Expect(csc.SpanID).NotToEqual(psc.SpanID)
+			e.Expect(csc.TraceID()).NotToEqual(psc.TraceID())
+			e.Expect(csc.SpanID()).NotToEqual(psc.SpanID())
 		})
 	})
 
