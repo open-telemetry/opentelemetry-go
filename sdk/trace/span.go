@@ -554,7 +554,7 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 	} else {
 		span.spanContext.TraceFlags &^= trace.FlagsSampled
 	}
-	span.spanContext.TraceState = sampled.Tracestate
+	span.spanContext.TraceState = samplingResult.Tracestate
 
 	if !isRecording(samplingResult) {
 		return span
