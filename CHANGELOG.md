@@ -12,7 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Added `Marshler` config option to `otlphttp` to enable otlp over json or protobufs. (#1586)
 - A `ForceFlush` method to the `"go.opentelemetry.io/otel/sdk/trace".TracerProvider` to flush all registered `SpanProcessor`s. (#1608)
-
+- Added `WithDefaultSampler` and `WithSpanLimits` to tracer provider. (#1633)
 
 ### Changed
 
@@ -28,12 +28,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Removed the exported `SimpleSpanProcessor` and `BatchSpanProcessor` structs.
    These are now returned as a SpanProcessor interface from their respective constructors. (#1638)
 - Removed setting status to `Error` while recording an error as a span event in `RecordError`. (#1663)
+- Removed `WithConfig` from tracer provider to avoid overriding configuration. (#1633)
 
 
 ### Fixed
 
 - `SamplingResult.TraceState` is correctly propagated to a newly created
   span's `SpanContext`. (#1655)
+- Jaeger Exporter: Ensure mapping between OTEL and Jaeger span data complies with the specification. (#1626)
 
 ## [0.18.0] - 2020-03-03
 
@@ -56,7 +58,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
    | Windows | 1.14       | amd64        |
    | Windows | 1.15       | 386          |
    | Windows | 1.14       | 386          |
-- Added `WithDefaultSampler` and `WithSpanLimits` to tracer provider. (#1633)
 
 ### Changed
 
@@ -90,7 +91,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `test-benchmark` is no longer a dependency of the `precommit` make target. (#1567)
 - Removed the `test-386` make target.
    This was replaced with a full compatibility testing suite (i.e. multi OS/arch) in the CI system. (#1567)
-- Removed `WithConfig` from tracer provider to avoid overriding configuration. (#1633)
 
 ### Fixed
 
@@ -99,7 +99,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The sequential timing check of timestamps of go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue are now setup explicitly to be sequential (#1578). (#1579)
 - Validate tracestate header keys with vedors according to the W3C TraceContext specification (#1475). (#1581)
 - The OTLP exporter includes related labels for translations of a GaugeArray (#1563). (#1570)
-- Jaeger Exporter: Ensure mapping between OTEL and Jaeger span data complies with the specification. (#1626)
 
 ## [0.17.0] - 2020-02-12
 
