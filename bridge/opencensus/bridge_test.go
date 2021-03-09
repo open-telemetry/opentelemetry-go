@@ -66,8 +66,8 @@ func TestMixedAPIs(t *testing.T) {
 		// Reverse the order we look at the spans in, since they are listed in last-to-first order.
 		i = len(spans) - i - 1
 		// Verify that OpenCensus spans and opentelemetry spans have each other as parents.
-		if spans[i].ParentSpanID() != parent.SpanContext().SpanID {
-			t.Errorf("Span %v had parent %v.  Expected %d", spans[i].Name(), spans[i].ParentSpanID(), parent.SpanContext().SpanID)
+		if spans[i].ParentSpanID() != parent.SpanContext().SpanID() {
+			t.Errorf("Span %v had parent %v.  Expected %d", spans[i].Name(), spans[i].ParentSpanID(), parent.SpanContext().SpanID())
 		}
 		parent = spans[i]
 	}
@@ -111,8 +111,8 @@ func TestStartSpanWithRemoteParent(t *testing.T) {
 		t.Fatalf("Got %d spans, exepected %d", len(spans), 1)
 	}
 
-	if spans[0].ParentSpanID() != parent.SpanContext().SpanID {
-		t.Errorf("Span %v, had parent %v.  Expected %d", spans[0].Name(), spans[0].ParentSpanID(), parent.SpanContext().SpanID)
+	if spans[0].ParentSpanID() != parent.SpanContext().SpanID() {
+		t.Errorf("Span %v, had parent %v.  Expected %d", spans[0].Name(), spans[0].ParentSpanID(), parent.SpanContext().SpanID())
 	}
 }
 
@@ -150,8 +150,8 @@ func TestToFromContext(t *testing.T) {
 		// Reverse the order we look at the spans in, since they are listed in last-to-first order.
 		i = len(spans) - i - 1
 		// Verify that OpenCensus spans and opentelemetry spans have each other as parents.
-		if spans[i].ParentSpanID() != parent.SpanContext().SpanID {
-			t.Errorf("Span %v had parent %v.  Expected %d", spans[i].Name(), spans[i].ParentSpanID(), parent.SpanContext().SpanID)
+		if spans[i].ParentSpanID() != parent.SpanContext().SpanID() {
+			t.Errorf("Span %v had parent %v.  Expected %d", spans[i].Name(), spans[i].ParentSpanID(), parent.SpanContext().SpanID())
 		}
 		parent = spans[i]
 	}
