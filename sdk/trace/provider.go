@@ -16,6 +16,7 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 
@@ -201,19 +202,55 @@ func (p *TracerProvider) ApplyConfig(cfg Config) {
 	p.config.Store(&c)
 }
 
-// Shutdown shuts down the span processors in the order they were registered
-func (p *TracerProvider) Shutdown(ctx context.Context) error {
+// ForceFlush immediately exports all spans that have not yet been exported for
+// all the registered span processors.
+func (p *TracerProvider) ForceFlush(ctx context.Context) error {
 	spss, ok := p.spanProcessors.Load().(spanProcessorStates)
-	if !ok || len(spss) == 0 {
+	if !ok {
+		return fmt.Errorf("failed to load span processors")
+	}
+	if len(spss) == 0 {
 		return nil
 	}
 
 	for _, sps := range spss {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		if err := sps.sp.ForceFlush(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Shutdown shuts down the span processors in the order they were registered.
+func (p *TracerProvider) Shutdown(ctx context.Context) error {
+	spss, ok := p.spanProcessors.Load().(spanProcessorStates)
+	if !ok {
+		return fmt.Errorf("failed to load span processors")
+	}
+	if len(spss) == 0 {
+		return nil
+	}
+
+	for _, sps := range spss {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		var err error
 		sps.state.Do(func() {
-			if err := sps.sp.Shutdown(ctx); err != nil {
-				otel.Handle(err)
-			}
+			err = sps.sp.Shutdown(ctx)
 		})
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -237,13 +274,6 @@ func WithSpanProcessor(sp SpanProcessor) TracerProviderOption {
 	}
 }
 
-// WithConfig option sets the configuration to provider.
-func WithConfig(config Config) TracerProviderOption {
-	return func(opts *TracerProviderConfig) {
-		opts.config = config
-	}
-}
-
 // WithResource option attaches a resource to the provider.
 // The resource is added to the span when it is started.
 func WithResource(r *resource.Resource) TracerProviderOption {
@@ -256,5 +286,19 @@ func WithResource(r *resource.Resource) TracerProviderOption {
 func WithIDGenerator(g IDGenerator) TracerProviderOption {
 	return func(opts *TracerProviderConfig) {
 		opts.config.IDGenerator = g
+	}
+}
+
+// WithDefaultSampler option registers a DefaultSampler with the the TracerProvider.
+func WithDefaultSampler(s Sampler) TracerProviderOption {
+	return func(opts *TracerProviderConfig) {
+		opts.config.DefaultSampler = s
+	}
+}
+
+// WithSpanLimits option registers a SpanLimits with the the TracerProvider.
+func WithSpanLimits(sl SpanLimits) TracerProviderOption {
+	return func(opts *TracerProviderConfig) {
+		opts.config.SpanLimits = sl
 	}
 }
