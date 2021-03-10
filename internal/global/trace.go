@@ -34,6 +34,7 @@ SDK prior to any Tracer creation.
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 
 	"go.opentelemetry.io/otel/internal/trace/noop"
 	"go.opentelemetry.io/otel/trace"
@@ -44,9 +45,8 @@ import (
 // All TracerProvider functionality is forwarded to a delegate once
 // configured.
 type tracerProvider struct {
-	mtx     sync.Mutex
-	tracers []*tracer
-
+	mtx      sync.Mutex
+	tracers  []*tracer
 	delegate trace.TracerProvider
 }
 
@@ -60,13 +60,8 @@ var _ trace.TracerProvider = &tracerProvider{}
 // All Tracers provided prior to this function call are switched out to be
 // Tracers provided by provider.
 //
-// Delegation only happens on the first call to this method. All subsequent
-// calls result in no delegation changes.
+// It is guaranteed by the caller that this happens only once.
 func (p *tracerProvider) setDelegate(provider trace.TracerProvider) {
-	if p.delegate != nil {
-		return
-	}
-
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
@@ -97,11 +92,10 @@ func (p *tracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 // All Tracer functionality is forwarded to a delegate once configured.
 // Otherwise, all functionality is forwarded to a NoopTracer.
 type tracer struct {
-	once sync.Once
 	name string
 	opts []trace.TracerOption
 
-	delegate trace.Tracer
+	delegate atomic.Value
 }
 
 // Compile-time guarantee that tracer implements the trace.Tracer interface.
@@ -112,17 +106,17 @@ var _ trace.Tracer = &tracer{}
 //
 // All subsequent calls to the Tracer methods will be passed to the delegate.
 //
-// Delegation only happens on the first call to this method. All subsequent
-// calls result in no delegation changes.
+// It is guaranteed by the caller that this happens only once.
 func (t *tracer) setDelegate(provider trace.TracerProvider) {
-	t.once.Do(func() { t.delegate = provider.Tracer(t.name, t.opts...) })
+	t.delegate.Store(provider.Tracer(t.name, t.opts...))
 }
 
 // Start implements trace.Tracer by forwarding the call to t.delegate if
 // set, otherwise it forwards the call to a NoopTracer.
 func (t *tracer) Start(ctx context.Context, name string, opts ...trace.SpanOption) (context.Context, trace.Span) {
-	if t.delegate != nil {
-		return t.delegate.Start(ctx, name, opts...)
+	delegate := t.delegate.Load()
+	if delegate != nil {
+		return delegate.(trace.Tracer).Start(ctx, name, opts...)
 	}
 	return noop.Tracer.Start(ctx, name, opts...)
 }
