@@ -52,13 +52,13 @@ func (tc TraceContext) Inject(ctx context.Context, carrier TextMapCarrier) {
 		return
 	}
 
-	carrier.Set(tracestateHeader, sc.TraceState.String())
+	carrier.Set(tracestateHeader, sc.TraceState().String())
 
 	h := fmt.Sprintf("%.2x-%s-%s-%.2x",
 		supportedVersion,
-		sc.TraceID,
-		sc.SpanID,
-		sc.TraceFlags&trace.FlagsSampled)
+		sc.TraceID(),
+		sc.SpanID(),
+		sc.TraceFlags()&trace.FlagsSampled)
 	carrier.Set(traceparentHeader, h)
 }
 
@@ -107,9 +107,9 @@ func (tc TraceContext) extract(carrier TextMapCarrier) trace.SpanContext {
 		return trace.SpanContext{}
 	}
 
-	var sc trace.SpanContext
+	var scc trace.SpanContextConfig
 
-	sc.TraceID, err = trace.TraceIDFromHex(matches[2][:32])
+	scc.TraceID, err = trace.TraceIDFromHex(matches[2][:32])
 	if err != nil {
 		return trace.SpanContext{}
 	}
@@ -117,7 +117,7 @@ func (tc TraceContext) extract(carrier TextMapCarrier) trace.SpanContext {
 	if len(matches[3]) != 16 {
 		return trace.SpanContext{}
 	}
-	sc.SpanID, err = trace.SpanIDFromHex(matches[3])
+	scc.SpanID, err = trace.SpanIDFromHex(matches[3])
 	if err != nil {
 		return trace.SpanContext{}
 	}
@@ -130,10 +130,11 @@ func (tc TraceContext) extract(carrier TextMapCarrier) trace.SpanContext {
 		return trace.SpanContext{}
 	}
 	// Clear all flags other than the trace-context supported sampling bit.
-	sc.TraceFlags = opts[0] & trace.FlagsSampled
+	scc.TraceFlags = opts[0] & trace.FlagsSampled
 
-	sc.TraceState = parseTraceState(carrier.Get(tracestateHeader))
+	scc.TraceState = parseTraceState(carrier.Get(tracestateHeader))
 
+	sc := trace.NewSpanContext(scc)
 	if !sc.IsValid() {
 		return trace.SpanContext{}
 	}

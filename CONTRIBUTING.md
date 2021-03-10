@@ -371,8 +371,8 @@ Approvers:
 
 Maintainers:
 
-- [Anthony Mirabella](https://github.com/Aneurysm9), Centene
-- [Tyler Yahn](https://github.com/MrAlias), New Relic
+- [Anthony Mirabella](https://github.com/Aneurysm9), AWS
+- [Tyler Yahn](https://github.com/MrAlias), Splunk
 
 ### Become an Approver or a Maintainer
 
