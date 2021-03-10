@@ -195,3 +195,21 @@ func TestTracerDelegatesConcurrentSafe(t *testing.T) {
 
 	assert.LessOrEqual(t, int32(10), atomic.LoadInt32(&called), "expected configured TraceProvider to be called")
 }
+
+func TestTraceProviderDelegatesSameInstance(t *testing.T) {
+	global.ResetForTest()
+
+	// Retrieve the placeholder TracerProvider.
+	gtp := otel.GetTracerProvider()
+	tracer := gtp.Tracer("abc", trace.WithInstrumentationVersion("xyz"))
+	assert.Same(t, tracer, gtp.Tracer("abc", trace.WithInstrumentationVersion("xyz")))
+	assert.Same(t, tracer, gtp.Tracer("abc", trace.WithInstrumentationVersion("xyz")))
+
+	otel.SetTracerProvider(fnTracerProvider{
+		tracer: func(name string, opts ...trace.TracerOption) trace.Tracer {
+			return trace.NewNoopTracerProvider().Tracer("")
+		},
+	})
+
+	assert.NotSame(t, tracer, gtp.Tracer("abc", trace.WithInstrumentationVersion("xyz")))
+}
