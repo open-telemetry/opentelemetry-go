@@ -102,7 +102,7 @@ func TestTraceProviderDelegates(t *testing.T) {
 	assert.True(t, called, "expected configured TraceProvider to be called")
 }
 
-func TestTraceProviderDelegates_MultiGoRoutines(t *testing.T) {
+func TestTraceProviderDelegatesConcurrentSafe(t *testing.T) {
 	global.ResetForTest()
 
 	// Retrieve the placeholder TracerProvider.
