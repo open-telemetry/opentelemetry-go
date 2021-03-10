@@ -108,8 +108,8 @@ func TestTraceProviderDelegatesConcurrentSafe(t *testing.T) {
 	// Retrieve the placeholder TracerProvider.
 	gtp := otel.GetTracerProvider()
 
-	done := make(chan int)
-	quit := make(chan int)
+	done := make(chan struct{})
+	quit := make(chan struct{})
 	go func() {
 		defer close(done)
 		for {
@@ -129,23 +129,21 @@ func TestTraceProviderDelegatesConcurrentSafe(t *testing.T) {
 	called := int32(0)
 	otel.SetTracerProvider(fnTracerProvider{
 		tracer: func(name string, opts ...trace.TracerOption) trace.Tracer {
-			atomic.AddInt32(&called, 1)
+			newVal := atomic.AddInt32(&called, 1)
 			assert.Equal(t, "abc", name)
 			assert.Equal(t, []trace.TracerOption{trace.WithInstrumentationVersion("xyz")}, opts)
+			if newVal == 10 {
+				// Signal the goroutine to finish.
+				close(quit)
+			}
 			return trace.NewNoopTracerProvider().Tracer("")
 		},
 	})
 
-	// Wait for the goroutine to make some calls to the installed provider.
-	<-time.After(100 * time.Millisecond)
-
-	// Signal the goroutine to finish.
-	close(quit)
-
 	// Wait for the go routine to finish
 	<-done
 
-	assert.Less(t, int32(10), atomic.LoadInt32(&called), "expected configured TraceProvider to be called")
+	assert.LessOrEqual(t, int32(10), atomic.LoadInt32(&called), "expected configured TraceProvider to be called")
 }
 
 func TestTracerDelegatesConcurrentSafe(t *testing.T) {
@@ -155,8 +153,8 @@ func TestTracerDelegatesConcurrentSafe(t *testing.T) {
 	gtp := otel.GetTracerProvider()
 	tracer := gtp.Tracer("abc", trace.WithInstrumentationVersion("xyz"))
 
-	done := make(chan int)
-	quit := make(chan int)
+	done := make(chan struct{})
+	quit := make(chan struct{})
 	go func() {
 		defer close(done)
 		for {
@@ -180,22 +178,20 @@ func TestTracerDelegatesConcurrentSafe(t *testing.T) {
 			assert.Equal(t, []trace.TracerOption{trace.WithInstrumentationVersion("xyz")}, opts)
 			return fnTracer{
 				start: func(ctx context.Context, spanName string, opts ...trace.SpanOption) (context.Context, trace.Span) {
-					atomic.StoreInt32(&called, 1)
+					newVal := atomic.AddInt32(&called, 1)
 					assert.Equal(t, "name", spanName)
+					if newVal == 10 {
+						// Signal the goroutine to finish.
+						close(quit)
+					}
 					return trace.NewNoopTracerProvider().Tracer("").Start(ctx, spanName)
 				},
 			}
 		},
 	})
 
-	// Wait for the goroutine to make some calls to the installed provider.
-	<-time.After(100 * time.Millisecond)
-
-	// Signal the goroutine to finish.
-	close(quit)
-
 	// Wait for the go routine to finish
 	<-done
 
-	assert.Equal(t, int32(1), atomic.LoadInt32(&called), "expected configured TraceProvider to be called")
+	assert.LessOrEqual(t, int32(10), atomic.LoadInt32(&called), "expected configured TraceProvider to be called")
 }
