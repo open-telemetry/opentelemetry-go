@@ -69,7 +69,7 @@ func initProvider() func() {
 
 	bsp := sdktrace.NewBatchSpanProcessor(exp)
 	tracerProvider := sdktrace.NewTracerProvider(
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithDefaultSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithResource(res),
 		sdktrace.WithSpanProcessor(bsp),
 	)
@@ -79,7 +79,7 @@ func initProvider() func() {
 			simple.NewWithExactDistribution(),
 			exp,
 		),
-		controller.WithPusher(exp),
+		controller.WithExporter(exp),
 		controller.WithCollectPeriod(2*time.Second),
 	)
 
@@ -90,11 +90,11 @@ func initProvider() func() {
 	handleErr(cont.Start(context.Background()), "failed to start controller")
 
 	return func() {
-		// Shutdown will flush any remaining spans.
-		handleErr(tracerProvider.Shutdown(ctx), "failed to shutdown TracerProvider")
-
 		// Push any last metric events to the exporter.
 		handleErr(cont.Stop(context.Background()), "failed to stop controller")
+
+		// Shutdown will flush any remaining spans and shut down the exporter.
+		handleErr(tracerProvider.Shutdown(ctx), "failed to shutdown TracerProvider")
 	}
 }
 

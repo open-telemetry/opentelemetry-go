@@ -3,7 +3,7 @@ module go.opentelemetry.io/otel
 go 1.14
 
 require (
-	github.com/google/go-cmp v0.5.4
+	github.com/google/go-cmp v0.5.5
 	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/otel/metric v0.18.0
 	go.opentelemetry.io/otel/oteltest v0.18.0

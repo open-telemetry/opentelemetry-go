@@ -696,8 +696,15 @@ func TestHTTPAttributesFromHTTPStatusCode(t *testing.T) {
 func TestSpanStatusFromHTTPStatusCode(t *testing.T) {
 	for code := 0; code < 1000; code++ {
 		expected := getExpectedCodeForHTTPCode(code)
-		got, _ := SpanStatusFromHTTPStatusCode(code)
+		got, msg := SpanStatusFromHTTPStatusCode(code)
 		assert.Equalf(t, expected, got, "%s vs %s", expected, got)
+
+		_, valid := validateHTTPStatusCode(code)
+		if !valid {
+			assert.NotEmpty(t, msg, "message should be set if error cannot be inferred from code")
+		} else {
+			assert.Empty(t, msg, "message should not be set if error can be inferred from code")
+		}
 	}
 }
 

@@ -82,11 +82,11 @@ func (OneRecordCheckpointSet) ForEach(kindSelector exportmetric.ExportKindSelect
 // may be useful for testing driver's trace export.
 func SingleSpanSnapshot() []*exporttrace.SpanSnapshot {
 	sd := &exporttrace.SpanSnapshot{
-		SpanContext: trace.SpanContext{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    trace.TraceID{2, 3, 4, 5, 6, 7, 8, 9, 2, 3, 4, 5, 6, 7, 8, 9},
 			SpanID:     trace.SpanID{3, 4, 5, 6, 7, 8, 9, 0},
 			TraceFlags: trace.FlagsSampled,
-		},
+		}),
 		ParentSpanID:             trace.SpanID{1, 2, 3, 4, 5, 6, 7, 8},
 		SpanKind:                 trace.SpanKindInternal,
 		Name:                     "foo",

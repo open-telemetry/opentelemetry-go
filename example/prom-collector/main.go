@@ -69,7 +69,7 @@ func initMeter() {
 			processor.WithMemory(true),
 		),
 		controller.WithResource(res),
-		controller.WithPusher(otlpExporter),
+		controller.WithExporter(otlpExporter),
 	)
 
 	if err := cont.Start(context.Background()); err != nil {

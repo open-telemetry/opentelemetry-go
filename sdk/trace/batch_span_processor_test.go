@@ -78,10 +78,11 @@ func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
 	// These should not panic.
 	bsp.OnStart(context.Background(), span.(sdktrace.ReadWriteSpan))
 	bsp.OnEnd(span.(sdktrace.ReadOnlySpan))
-	bsp.ForceFlush()
-	err := bsp.Shutdown(context.Background())
-	if err != nil {
-		t.Error("Error shutting the BatchSpanProcessor down\n")
+	if err := bsp.ForceFlush(context.Background()); err != nil {
+		t.Errorf("failed to ForceFlush the BatchSpanProcessor: %v", err)
+	}
+	if err := bsp.Shutdown(context.Background()); err != nil {
+		t.Errorf("failed to Shutdown the BatchSpanProcessor: %v", err)
 	}
 }
 
@@ -209,7 +210,10 @@ func generateSpan(t *testing.T, parallel bool, tr trace.Tracer, option testOptio
 
 	wg := &sync.WaitGroup{}
 	for i := 0; i < option.genNumSpans; i++ {
-		binary.BigEndian.PutUint64(sc.TraceID[0:8], uint64(i+1))
+		tid := sc.TraceID()
+		binary.BigEndian.PutUint64(tid[0:8], uint64(i+1))
+		newSc := sc.WithTraceID(tid)
+
 		wg.Add(1)
 		f := func(sc trace.SpanContext) {
 			ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
@@ -218,9 +222,9 @@ func generateSpan(t *testing.T, parallel bool, tr trace.Tracer, option testOptio
 			wg.Done()
 		}
 		if parallel {
-			go f(sc)
+			go f(newSc)
 		} else {
-			f(sc)
+			f(newSc)
 		}
 	}
 	wg.Wait()
@@ -229,11 +233,11 @@ func generateSpan(t *testing.T, parallel bool, tr trace.Tracer, option testOptio
 func getSpanContext() trace.SpanContext {
 	tid, _ := trace.TraceIDFromHex("01020304050607080102040810203040")
 	sid, _ := trace.SpanIDFromHex("0102040810203040")
-	return trace.SpanContext{
+	return trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    tid,
 		SpanID:     sid,
 		TraceFlags: 0x1,
-	}
+	})
 }
 
 func TestBatchSpanProcessorShutdown(t *testing.T) {
