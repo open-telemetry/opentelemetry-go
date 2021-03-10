@@ -41,6 +41,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `otel-collector` example now correctly flushes metric events prior to shutting down the exporter. (#1678)
 - Synchronization issues in global trace delegate implementation. (#1686)
 
+### Fixed
+- Do not set span status message in `SpanStatusFromHTTPStatusCode` if it can be inferred from `http.status_code`. (#1681)
+
 ## [0.18.0] - 2020-03-03
 
 ### Added
