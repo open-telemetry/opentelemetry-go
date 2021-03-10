@@ -43,17 +43,17 @@ var _ Detector = FromEnv{}
 
 // Detect collects resources from environment
 func (FromEnv) Detect(context.Context) (*Resource, error) {
-	labels := strings.TrimSpace(os.Getenv(envVar))
+	attrs := strings.TrimSpace(os.Getenv(envVar))
 
-	if labels == "" {
+	if attrs == "" {
 		return Empty(), nil
 	}
-	return constructOTResources(labels)
+	return constructOTResources(attrs)
 }
 
 func constructOTResources(s string) (*Resource, error) {
 	pairs := strings.Split(s, ",")
-	labels := []attribute.KeyValue{}
+	attrs := []attribute.KeyValue{}
 	var invalid []string
 	for _, p := range pairs {
 		field := strings.SplitN(p, "=", 2)
@@ -62,11 +62,11 @@ func constructOTResources(s string) (*Resource, error) {
 			continue
 		}
 		k, v := strings.TrimSpace(field[0]), strings.TrimSpace(field[1])
-		labels = append(labels, attribute.String(k, v))
+		attrs = append(attrs, attribute.String(k, v))
 	}
 	var err error
 	if len(invalid) > 0 {
 		err = fmt.Errorf("%w: %v", errMissingValue, invalid)
 	}
-	return NewWithAttributes(labels...), err
+	return NewWithAttributes(attrs...), err
 }
