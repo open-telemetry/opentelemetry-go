@@ -148,7 +148,7 @@ func TestTraceProviderDelegatesConcurrentSafe(t *testing.T) {
 	assert.Less(t, int32(10), atomic.LoadInt32(&called), "expected configured TraceProvider to be called")
 }
 
-func TestTracerDelegates_MultiGoRoutines(t *testing.T) {
+func TestTracerDelegatesConcurrentSafe(t *testing.T) {
 	global.ResetForTest()
 
 	// Retrieve the placeholder TracerProvider.
