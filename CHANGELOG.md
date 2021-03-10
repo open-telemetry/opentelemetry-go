@@ -40,6 +40,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Jaeger Exporter: Ensure mapping between OTEL and Jaeger span data complies with the specification. (#1626)
 - The `otel-collector` example now correctly flushes metric events prior to shutting down the exporter. (#1678)
 
+### Fixed
+- Do not set span status message in `SpanStatusFromHTTPStatusCode` if it can be inferred from `http.status_code`. (#1681)
+
 ## [0.18.0] - 2020-03-03
 
 ### Added
