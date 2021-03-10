@@ -90,11 +90,11 @@ func initProvider() func() {
 	handleErr(cont.Start(context.Background()), "failed to start controller")
 
 	return func() {
-		// Shutdown will flush any remaining spans.
-		handleErr(tracerProvider.Shutdown(ctx), "failed to shutdown TracerProvider")
-
 		// Push any last metric events to the exporter.
 		handleErr(cont.Stop(context.Background()), "failed to stop controller")
+
+		// Shutdown will flush any remaining spans and shut down the exporter.
+		handleErr(tracerProvider.Shutdown(ctx), "failed to shutdown TracerProvider")
 	}
 }
 
