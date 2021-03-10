@@ -38,6 +38,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `SamplingResult.TraceState` is correctly propagated to a newly created
   span's `SpanContext`. (#1655)
 - Jaeger Exporter: Ensure mapping between OTEL and Jaeger span data complies with the specification. (#1626)
+- Zipkin Exporter: Ensure mapping between OTEL and Zipkin span data complies with the specification. (#1688)
 - The `otel-collector` example now correctly flushes metric events prior to shutting down the exporter. (#1678)
 - Synchronization issues in global trace delegate implementation. (#1686)
 - Do not set span status message in `SpanStatusFromHTTPStatusCode` if it can be inferred from `http.status_code`. (#1681)
