@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -1375,11 +1376,10 @@ func TestReadOnlySpan(t *testing.T) {
 	kv := attribute.String("foo", "bar")
 
 	tp := NewTracerProvider(WithResource(resource.NewWithAttributes(kv)))
-	cfg := tp.config.Load().(*Config)
 	tr := tp.Tracer("ReadOnlySpan", trace.WithInstrumentationVersion("3"))
 
 	// Initialize parent context.
-	tID, sID := cfg.IDGenerator.NewIDs(context.Background())
+	tID, sID := tp.idGenerator.NewIDs(context.Background())
 	parent := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    tID,
 		SpanID:     sID,
@@ -1389,7 +1389,7 @@ func TestReadOnlySpan(t *testing.T) {
 	ctx := trace.ContextWithRemoteSpanContext(context.Background(), parent)
 
 	// Initialize linked context.
-	tID, sID = cfg.IDGenerator.NewIDs(context.Background())
+	tID, sID = tp.idGenerator.NewIDs(context.Background())
 	linked := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    tID,
 		SpanID:     sID,
@@ -1456,11 +1456,10 @@ func TestReadOnlySpan(t *testing.T) {
 
 func TestReadWriteSpan(t *testing.T) {
 	tp := NewTracerProvider(WithResource(resource.Empty()))
-	cfg := tp.config.Load().(*Config)
 	tr := tp.Tracer("ReadWriteSpan")
 
 	// Initialize parent context.
-	tID, sID := cfg.IDGenerator.NewIDs(context.Background())
+	tID, sID := tp.idGenerator.NewIDs(context.Background())
 	parent := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    tID,
 		SpanID:     sID,
@@ -1741,4 +1740,52 @@ func TestSamplerTraceState(t *testing.T) {
 		})
 	}
 
+}
+
+type testIDGenerator struct {
+	traceID int
+	spanID  int
+}
+
+func (gen *testIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.SpanID) {
+	traceIDHex := fmt.Sprintf("%032x", gen.traceID)
+	traceID, _ := trace.TraceIDFromHex(traceIDHex)
+	gen.traceID++
+
+	spanID := gen.NewSpanID(ctx, traceID)
+	return traceID, spanID
+}
+
+func (gen *testIDGenerator) NewSpanID(ctx context.Context, traceID trace.TraceID) trace.SpanID {
+	spanIDHex := fmt.Sprintf("%016x", gen.spanID)
+	spanID, _ := trace.SpanIDFromHex(spanIDHex)
+	gen.spanID++
+	return spanID
+}
+
+var _ IDGenerator = (*testIDGenerator)(nil)
+
+func TestWithIDGenerator(t *testing.T) {
+	const (
+		startTraceID = 1
+		startSpanID  = 1
+		numSpan      = 10
+	)
+
+	gen := &testIDGenerator{traceID: startSpanID, spanID: startSpanID}
+
+	for i := 0; i < numSpan; i++ {
+		te := NewTestExporter()
+		tp := NewTracerProvider(
+			WithSyncer(te),
+			WithIDGenerator(gen),
+		)
+		span := startSpan(tp, "TestWithIDGenerator")
+		got, err := strconv.ParseUint(span.SpanContext().SpanID().String(), 16, 64)
+		require.NoError(t, err)
+		want := uint64(startSpanID + i)
+		assert.Equal(t, got, want)
+		_, err = endSpan(te, span)
+		require.NoError(t, err)
+	}
 }

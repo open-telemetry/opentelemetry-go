@@ -63,9 +63,7 @@ func TestNewExportPipeline(t *testing.T) {
 		{
 			name: "always on",
 			options: []Option{
-				WithSDK(&sdktrace.Config{
-					DefaultSampler: sdktrace.AlwaysSample(),
-				}),
+				WithSDKOptions(sdktrace.WithSampler(sdktrace.AlwaysSample())),
 			},
 			testSpanSampling:    true,
 			spanShouldBeSampled: true,
@@ -73,9 +71,7 @@ func TestNewExportPipeline(t *testing.T) {
 		{
 			name: "never",
 			options: []Option{
-				WithSDK(&sdktrace.Config{
-					DefaultSampler: sdktrace.NeverSample(),
-				}),
+				WithSDKOptions(sdktrace.WithSampler(sdktrace.NeverSample())),
 			},
 			testSpanSampling:    true,
 			spanShouldBeSampled: false,
@@ -388,4 +384,35 @@ func TestErrorOnExportShutdownExporter(t *testing.T) {
 	require.NoError(t, err)
 	assert.NoError(t, exp.Shutdown(context.Background()))
 	assert.NoError(t, exp.ExportSpans(context.Background(), nil))
+}
+
+func TestNewExportPipelineWithOptions(t *testing.T) {
+	const eventCountLimit = 10
+
+	collector := startMockZipkinCollector(t)
+	defer collector.Close()
+
+	tp, err := NewExportPipeline(collector.url,
+		WithSDKOptions(
+			sdktrace.WithResource(resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("zipkin-test"),
+			)),
+			sdktrace.WithSpanLimits(sdktrace.SpanLimits{
+				EventCountLimit: eventCountLimit,
+			}),
+		),
+	)
+	require.NoError(t, err)
+
+	otel.SetTracerProvider(tp)
+	_, span := otel.Tracer("zipkin-tracer").Start(context.Background(), "test-span")
+	for i := 0; i < eventCountLimit*2; i++ {
+		span.AddEvent(fmt.Sprintf("event-%d", i))
+	}
+	span.End()
+
+	require.NoError(t, tp.Shutdown(context.Background()))
+	require.Equal(t, 1, collector.ModelsLen())
+	model := collector.StealModels()[0]
+	require.Equal(t, len(model.Annotations), eventCountLimit)
 }

@@ -31,6 +31,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Jaeger exporter populates Jaeger's Span Process from Resource. (#1673)
 - `"go.opentelemetry.io/otel/sdk/resource".NewWithAttributes` will now drop any invalid attributes passed. (#1703)
 - `"go.opentelemetry.io/otel/sdk/resource".StringDetector` will now error if the produced attribute is invalid. (#1703)
+- Changed `WithSDK` to `WithSDKOptions` to accept variadic arguments of `TracerProviderOption` type in `go.opentelemetry.io/otel/exporters/trace/jaeger` package. (#1693)
+- Changed `WithSDK` to `WithSDKOptions` to accept variadic arguments of `TracerProviderOption` type in `go.opentelemetry.io/otel/exporters/trace/zipkin` package. (#1693)
 
 ### Removed
 
@@ -41,6 +43,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Removed `WithConfig` from tracer provider to avoid overriding configuration. (#1633)
 - Removed `serviceName` parameter from Zipkin exporter and uses resource instead. (#1549)
 - Removed `jaeger.WithProcess`. (#1673)
+- Removed `ApplyConfig` method and `Config` struct from tracer provider. (#1693)
 
 ### Fixed
 

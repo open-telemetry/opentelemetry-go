@@ -53,7 +53,7 @@ var (
 type options struct {
 	client *http.Client
 	logger *log.Logger
-	config *sdktrace.Config
+	tpOpts []sdktrace.TracerProviderOption
 }
 
 // Option defines a function that configures the exporter.
@@ -73,10 +73,10 @@ func WithClient(client *http.Client) Option {
 	}
 }
 
-// WithSDK sets the SDK config for the exporter pipeline.
-func WithSDK(config *sdktrace.Config) Option {
-	return func(o *options) {
-		o.config = config
+// WithSDKOptions configures options passed to the created TracerProvider.
+func WithSDKOptions(tpOpts ...sdktrace.TracerProviderOption) Option {
+	return func(opts *options) {
+		opts.tpOpts = tpOpts
 	}
 }
 
@@ -116,10 +116,8 @@ func NewExportPipeline(collectorURL string, opts ...Option) (*sdktrace.TracerPro
 		return nil, err
 	}
 
-	tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(exporter))
-	if exporter.o.config != nil {
-		tp.ApplyConfig(*exporter.o.config)
-	}
+	tpOpts := append(exporter.o.tpOpts, sdktrace.WithBatcher(exporter))
+	tp := sdktrace.NewTracerProvider(tpOpts...)
 
 	return tp, err
 }
