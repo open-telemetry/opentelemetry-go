@@ -92,7 +92,7 @@ The solution we use here is to allow wrapping an OpenTelemetry exporter such
 that it implements the OpenCensus exporter interfaces. This allows a single
 exporter to be used for metrics from *both* OpenCensus and OpenTelemetry.
 
-### User Journy
+### User Journey
 
 Starting from an application using entirely OpenCensus APIs:
 
