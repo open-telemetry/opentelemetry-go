@@ -101,10 +101,13 @@ func span(sd *export.SpanSnapshot) *tracepb.Span {
 		return nil
 	}
 
+	tid := sd.SpanContext.TraceID()
+	sid := sd.SpanContext.SpanID()
+
 	s := &tracepb.Span{
-		TraceId:                sd.SpanContext.TraceID[:],
-		SpanId:                 sd.SpanContext.SpanID[:],
-		TraceState:             sd.SpanContext.TraceState.String(),
+		TraceId:                tid[:],
+		SpanId:                 sid[:],
+		TraceState:             sd.SpanContext.TraceState().String(),
 		Status:                 status(sd.StatusCode, sd.StatusMessage),
 		StartTimeUnixNano:      uint64(sd.StartTime.UnixNano()),
 		EndTimeUnixNano:        uint64(sd.EndTime.UnixNano()),
@@ -152,9 +155,12 @@ func links(links []trace.Link) []*tracepb.Span_Link {
 		// being reused -- in short we need a new otLink per iteration.
 		otLink := otLink
 
+		tid := otLink.TraceID()
+		sid := otLink.SpanID()
+
 		sl = append(sl, &tracepb.Span_Link{
-			TraceId:    otLink.TraceID[:],
-			SpanId:     otLink.SpanID[:],
+			TraceId:    tid[:],
+			SpanId:     sid[:],
 			Attributes: Attributes(otLink.Attributes),
 		})
 	}

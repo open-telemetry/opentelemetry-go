@@ -97,9 +97,9 @@ func TestTracer(t *testing.T) {
 			e.Expect(ok).ToBeTrue()
 
 			childSpanContext := testSpan.SpanContext()
-			e.Expect(childSpanContext.TraceID).ToEqual(parentSpanContext.TraceID)
-			e.Expect(childSpanContext.SpanID).NotToEqual(parentSpanContext.SpanID)
-			e.Expect(testSpan.ParentSpanID()).ToEqual(parentSpanContext.SpanID)
+			e.Expect(childSpanContext.TraceID()).ToEqual(parentSpanContext.TraceID())
+			e.Expect(childSpanContext.SpanID()).NotToEqual(parentSpanContext.SpanID())
+			e.Expect(testSpan.ParentSpanID()).ToEqual(parentSpanContext.SpanID())
 		})
 
 		t.Run("uses the current span from context as parent, even if it has remote span context", func(t *testing.T) {
@@ -120,9 +120,9 @@ func TestTracer(t *testing.T) {
 			e.Expect(ok).ToBeTrue()
 
 			childSpanContext := testSpan.SpanContext()
-			e.Expect(childSpanContext.TraceID).ToEqual(parentSpanContext.TraceID)
-			e.Expect(childSpanContext.SpanID).NotToEqual(parentSpanContext.SpanID)
-			e.Expect(testSpan.ParentSpanID()).ToEqual(parentSpanContext.SpanID)
+			e.Expect(childSpanContext.TraceID()).ToEqual(parentSpanContext.TraceID())
+			e.Expect(childSpanContext.SpanID()).NotToEqual(parentSpanContext.SpanID())
+			e.Expect(testSpan.ParentSpanID()).ToEqual(parentSpanContext.SpanID())
 		})
 
 		t.Run("uses the remote span context from context as parent, if current span is missing", func(t *testing.T) {
@@ -142,9 +142,9 @@ func TestTracer(t *testing.T) {
 			e.Expect(ok).ToBeTrue()
 
 			childSpanContext := testSpan.SpanContext()
-			e.Expect(childSpanContext.TraceID).ToEqual(remoteParentSpanContext.TraceID)
-			e.Expect(childSpanContext.SpanID).NotToEqual(remoteParentSpanContext.SpanID)
-			e.Expect(testSpan.ParentSpanID()).ToEqual(remoteParentSpanContext.SpanID)
+			e.Expect(childSpanContext.TraceID()).ToEqual(remoteParentSpanContext.TraceID())
+			e.Expect(childSpanContext.SpanID()).NotToEqual(remoteParentSpanContext.SpanID())
+			e.Expect(testSpan.ParentSpanID()).ToEqual(remoteParentSpanContext.SpanID())
 		})
 
 		t.Run("creates new root when both current span and remote span context are missing", func(t *testing.T) {
@@ -165,10 +165,10 @@ func TestTracer(t *testing.T) {
 			e.Expect(ok).ToBeTrue()
 
 			childSpanContext := testSpan.SpanContext()
-			e.Expect(childSpanContext.TraceID).NotToEqual(parentSpanContext.TraceID)
-			e.Expect(childSpanContext.TraceID).NotToEqual(remoteParentSpanContext.TraceID)
-			e.Expect(childSpanContext.SpanID).NotToEqual(parentSpanContext.SpanID)
-			e.Expect(childSpanContext.SpanID).NotToEqual(remoteParentSpanContext.SpanID)
+			e.Expect(childSpanContext.TraceID()).NotToEqual(parentSpanContext.TraceID())
+			e.Expect(childSpanContext.TraceID()).NotToEqual(remoteParentSpanContext.TraceID())
+			e.Expect(childSpanContext.SpanID()).NotToEqual(parentSpanContext.SpanID())
+			e.Expect(childSpanContext.SpanID()).NotToEqual(remoteParentSpanContext.SpanID())
 			e.Expect(testSpan.ParentSpanID().IsValid()).ToBeFalse()
 		})
 
@@ -191,10 +191,10 @@ func TestTracer(t *testing.T) {
 			e.Expect(ok).ToBeTrue()
 
 			childSpanContext := testSpan.SpanContext()
-			e.Expect(childSpanContext.TraceID).NotToEqual(parentSpanContext.TraceID)
-			e.Expect(childSpanContext.TraceID).NotToEqual(remoteParentSpanContext.TraceID)
-			e.Expect(childSpanContext.SpanID).NotToEqual(parentSpanContext.SpanID)
-			e.Expect(childSpanContext.SpanID).NotToEqual(remoteParentSpanContext.SpanID)
+			e.Expect(childSpanContext.TraceID()).NotToEqual(parentSpanContext.TraceID())
+			e.Expect(childSpanContext.TraceID()).NotToEqual(remoteParentSpanContext.TraceID())
+			e.Expect(childSpanContext.SpanID()).NotToEqual(parentSpanContext.SpanID())
+			e.Expect(childSpanContext.SpanID()).NotToEqual(remoteParentSpanContext.SpanID())
 			e.Expect(testSpan.ParentSpanID().IsValid()).ToBeFalse()
 
 			expectedLinks := []trace.Link{

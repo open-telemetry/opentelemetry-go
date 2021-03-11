@@ -8,6 +8,41 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Added `Marshaler` config option to `otlphttp` to enable otlp over json or protobufs. (#1586)
+- A `ForceFlush` method to the `"go.opentelemetry.io/otel/sdk/trace".TracerProvider` to flush all registered `SpanProcessor`s. (#1608)
+- Added `WithDefaultSampler` and `WithSpanLimits` to tracer provider. (#1633)
+
+### Changed
+
+- Update the `ForceFlush` method signature to the `"go.opentelemetry.io/otel/sdk/trace".SpanProcessor` to accept a `context.Context` and return an error. (#1608)
+- Update the `Shutdown` method to the `"go.opentelemetry.io/otel/sdk/trace".TracerProvider` return an error on shutdown failure. (#1608)
+- The SimpleSpanProcessor will now shut down the enclosed `SpanExporter` and gracefully ignore subsequent calls to `OnEnd` after `Shutdown` is called. (#1612)
+- `"go.opentelemetry.io/sdk/metric/controller.basic".WithPusher` is replaced with `WithExporter` to provide consistent naming across project. (#1656)
+- Added non-empty string check for trace `Attribute` keys. (#1659)
+- Add `description` to SpanStatus only when `StatusCode` is set to error. (#1662)
+- `trace.SpanContext` is now immutable and has no exported fields. (#1573)
+  - `trace.NewSpanContext()` can be used in conjunction with the `trace.SpanContextConfig` struct to initialize a new `SpanContext` where all values are known.
+
+### Removed
+
+- Removed `WithRecord()` from `trace.SpanOption` when creating a span. (#1660)
+- Removed the exported `SimpleSpanProcessor` and `BatchSpanProcessor` structs.
+   These are now returned as a SpanProcessor interface from their respective constructors. (#1638)
+- Removed setting status to `Error` while recording an error as a span event in `RecordError`. (#1663)
+- Removed `WithConfig` from tracer provider to avoid overriding configuration. (#1633)
+
+### Fixed
+
+- `SamplingResult.TraceState` is correctly propagated to a newly created
+  span's `SpanContext`. (#1655)
+- Jaeger Exporter: Ensure mapping between OTEL and Jaeger span data complies with the specification. (#1626)
+- The `otel-collector` example now correctly flushes metric events prior to shutting down the exporter. (#1678)
+- Synchronization issues in global trace delegate implementation. (#1686)
+- Do not set span status message in `SpanStatusFromHTTPStatusCode` if it can be inferred from `http.status_code`. (#1681)
+- Reduced excess memory usage by global `TracerProvider`. (#1687)
+
 ## [0.18.0] - 2020-03-03
 
 ### Added
@@ -33,7 +68,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Replaced interface `oteltest.SpanRecorder` with its existing implementation
-  `StandardSpanRecorder` (#1542).
+  `StandardSpanRecorder`. (#1542)
 - Default span limit values to 128. (#1535)
 - Rename `MaxEventsPerSpan`, `MaxAttributesPerSpan` and `MaxLinksPerSpan` to `EventCountLimit`, `AttributeCountLimit` and `LinkCountLimit`, and move these fields into `SpanLimits`. (#1535)
 - Renamed the `otel/label` package to `otel/attribute`. (#1541)
@@ -56,7 +91,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
       "otel/sdk/trace".ReadOnlySpan
       "otel/sdk/trace".ReadWriteSpan
 ```
-
 ### Removed
 
 - Removed attempt to resample spans upon changing the span name with `span.SetName()`. (#1545)
@@ -69,7 +103,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The sequential timing check of timestamps in the stdout exporter are now setup explicitly to be sequential (#1571). (#1572)
 - Windows build of Jaeger tests now compiles with OS specific functions (#1576). (#1577)
 - The sequential timing check of timestamps of go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue are now setup explicitly to be sequential (#1578). (#1579)
-- Validate tracestate header keys with vedors according to the W3C TraceContext specification (#1475). (#1581)
+- Validate tracestate header keys with vendors according to the W3C TraceContext specification (#1475). (#1581)
 - The OTLP exporter includes related labels for translations of a GaugeArray (#1563). (#1570)
 
 ## [0.17.0] - 2020-02-12
