@@ -168,9 +168,9 @@ func TestMerge(t *testing.T) {
 func TestDefault(t *testing.T) {
 	res := resource.Default()
 	require.False(t, res.Equal(resource.Empty()))
-	require.True(t, res.LabelSet().HasValue(semconv.ServiceNameKey))
+	require.True(t, res.Set().HasValue(semconv.ServiceNameKey))
 
-	serviceName, _ := res.LabelSet().Value(semconv.ServiceNameKey)
+	serviceName, _ := res.Set().Value(semconv.ServiceNameKey)
 	require.True(t, strings.HasPrefix(serviceName.AsString(), "unknown_service:"))
 	require.Greaterf(t, len(serviceName.AsString()), len("unknown_service:"),
 		"default service.name should include executable name")

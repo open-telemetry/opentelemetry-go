@@ -349,7 +349,7 @@ func mergeLabels(record export.Record, keys, values *[]string) {
 
 	// Duplicate keys are resolved by taking the record label value over
 	// the resource value.
-	mi := attribute.NewMergeIterator(record.Labels(), record.Resource().LabelSet())
+	mi := attribute.NewMergeIterator(record.Labels(), record.Resource().Set())
 	for mi.Next() {
 		label := mi.Label()
 		if keys != nil {
