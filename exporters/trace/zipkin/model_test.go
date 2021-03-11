@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -210,9 +211,6 @@ func TestModelConversion(t *testing.T) {
 			Attributes: []attribute.KeyValue{
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
-				// remote endpoint attributes
-				attribute.String("peer.service", "test-peer-service"),
-				attribute.String("net.peer.name", "test-peer-name"),
 			},
 			MessageEvents: []trace.Event{
 				{
@@ -245,6 +243,7 @@ func TestModelConversion(t *testing.T) {
 			Attributes: []attribute.KeyValue{
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
+				attribute.String("peer.hostname", "test-peer-hostname"),
 				attribute.String("net.peer.ip", "1.2.3.4"),
 				attribute.Int64("net.peer.port", 9876),
 			},
@@ -534,9 +533,7 @@ func TestModelConversion(t *testing.T) {
 			LocalEndpoint: &zkmodel.Endpoint{
 				ServiceName: "model-test",
 			},
-			RemoteEndpoint: &zkmodel.Endpoint{
-				ServiceName: "test-peer-service",
-			},
+			RemoteEndpoint: nil,
 			Annotations: []zkmodel.Annotation{
 				{
 					Timestamp: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
@@ -551,9 +548,7 @@ func TestModelConversion(t *testing.T) {
 				"attr1":            "42",
 				"attr2":            "bar",
 				"otel.status_code": "Error",
-				"net.peer.name":    "test-peer-name",
 				"error":            "404, file not found",
-				"peer.service":     "test-peer-service",
 			},
 		},
 		// model for span data of consumer kind
@@ -596,6 +591,7 @@ func TestModelConversion(t *testing.T) {
 				"attr2":            "bar",
 				"net.peer.ip":      "1.2.3.4",
 				"net.peer.port":    "9876",
+				"peer.hostname":    "test-peer-hostname",
 				"otel.status_code": "Error",
 				"error":            "404, file not found",
 			},
@@ -674,7 +670,7 @@ func zkmodelIDPtr(n uint64) *zkmodel.ID {
 	return &id
 }
 
-func Test_toZipkinTags(t *testing.T) {
+func TestTagsTransformation(t *testing.T) {
 	keyValue := "value"
 	doubleValue := 123.456
 	uintValue := int64(123)
@@ -771,6 +767,91 @@ func Test_toZipkinTags(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := toZipkinTags(tt.data)
+			if diff := cmp.Diff(got, tt.want); diff != "" {
+				t.Errorf("Diff%v", diff)
+			}
+		})
+	}
+}
+
+func TestRemoteEndpointTransformation(t *testing.T) {
+	tests := []struct {
+		name string
+		data *export.SpanSnapshot
+		want *zkmodel.Endpoint
+	}{
+		{
+			name: "nil-not-applicable",
+			data: &export.SpanSnapshot{
+				SpanKind:   trace.SpanKindClient,
+				Attributes: []attribute.KeyValue{},
+			},
+			want: nil,
+		},
+		{
+			name: "nil-not-found",
+			data: &export.SpanSnapshot{
+				SpanKind: trace.SpanKindConsumer,
+				Attributes: []attribute.KeyValue{
+					attribute.String("attr", "test"),
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "peer-service-rank",
+			data: &export.SpanSnapshot{
+				SpanKind: trace.SpanKindProducer,
+				Attributes: []attribute.KeyValue{
+					semconv.PeerServiceKey.String("peer-service-test"),
+					semconv.NetPeerNameKey.String("peer-name-test"),
+					semconv.HTTPHostKey.String("http-host-test"),
+				},
+			},
+			want: &zkmodel.Endpoint{
+				ServiceName: "peer-service-test",
+			},
+		},
+		{
+			name: "net-peer-invalid-ip",
+			data: &export.SpanSnapshot{
+				SpanKind: trace.SpanKindProducer,
+				Attributes: []attribute.KeyValue{
+					semconv.NetPeerIPKey.String("INVALID"),
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "net-peer-ipv6-no-port",
+			data: &export.SpanSnapshot{
+				SpanKind: trace.SpanKindProducer,
+				Attributes: []attribute.KeyValue{
+					semconv.NetPeerIPKey.String("0:0:1:5ee:bad:c0de:0:0"),
+				},
+			},
+			want: &zkmodel.Endpoint{
+				IPv6: net.ParseIP("0:0:1:5ee:bad:c0de:0:0"),
+			},
+		},
+		{
+			name: "net-peer-ipv4-port",
+			data: &export.SpanSnapshot{
+				SpanKind: trace.SpanKindProducer,
+				Attributes: []attribute.KeyValue{
+					semconv.NetPeerIPKey.String("1.2.3.4"),
+					semconv.NetPeerPortKey.Int(9876),
+				},
+			},
+			want: &zkmodel.Endpoint{
+				IPv4: net.ParseIP("1.2.3.4"),
+				Port: 9876,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := toZipkinRemoteEndpoint(tt.data)
 			if diff := cmp.Diff(got, tt.want); diff != "" {
 				t.Errorf("Diff%v", diff)
 			}
