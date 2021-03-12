@@ -33,19 +33,19 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
 const (
 	collectorURL = "http://localhost:9411/api/v2/spans"
-	serviceName  = "zipkin-test"
 )
 
 func TestInstallNewPipeline(t *testing.T) {
 	err := InstallNewPipeline(
 		collectorURL,
-		serviceName,
 	)
 	assert.NoError(t, err)
 	assert.IsType(t, &sdktrace.TracerProvider{}, otel.GetTracerProvider())
@@ -86,7 +86,6 @@ func TestNewExportPipeline(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tp, err := NewExportPipeline(
 				collectorURL,
-				serviceName,
 				tc.options...,
 			)
 			assert.NoError(t, err)
@@ -103,13 +102,11 @@ func TestNewExportPipeline(t *testing.T) {
 }
 
 func TestNewRawExporter(t *testing.T) {
-	exp, err := NewRawExporter(
+	_, err := NewRawExporter(
 		collectorURL,
-		serviceName,
 	)
 
 	assert.NoError(t, err)
-	assert.EqualValues(t, serviceName, exp.serviceName)
 }
 
 func TestNewRawExporterShouldFailInvalidCollectorURL(t *testing.T) {
@@ -121,7 +118,6 @@ func TestNewRawExporterShouldFailInvalidCollectorURL(t *testing.T) {
 	// cannot be empty
 	exp, err = NewRawExporter(
 		"",
-		serviceName,
 	)
 
 	assert.Error(t, err)
@@ -131,7 +127,6 @@ func TestNewRawExporterShouldFailInvalidCollectorURL(t *testing.T) {
 	// invalid URL
 	exp, err = NewRawExporter(
 		"localhost",
-		serviceName,
 	)
 
 	assert.Error(t, err)
@@ -239,6 +234,10 @@ func logStoreLogger(s *logStore) *log.Logger {
 }
 
 func TestExportSpans(t *testing.T) {
+	resource := resource.NewWithAttributes(
+		semconv.ServiceNameKey.String("exporter-test"),
+	)
+
 	spans := []*export.SpanSnapshot{
 		// parent
 		{
@@ -255,6 +254,7 @@ func TestExportSpans(t *testing.T) {
 			MessageEvents: nil,
 			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
+			Resource:      resource,
 		},
 		// child
 		{
@@ -271,6 +271,7 @@ func TestExportSpans(t *testing.T) {
 			MessageEvents: nil,
 			StatusCode:    codes.Error,
 			StatusMessage: "403, forbidden",
+			Resource:      resource,
 		},
 	}
 	models := []zkmodel.SpanModel{
@@ -336,7 +337,7 @@ func TestExportSpans(t *testing.T) {
 	defer collector.Close()
 	ls := &logStore{T: t}
 	logger := logStoreLogger(ls)
-	exporter, err := NewRawExporter(collector.url, "exporter-test", WithLogger(logger))
+	exporter, err := NewRawExporter(collector.url, WithLogger(logger))
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.Len(t, ls.Messages, 0)
@@ -361,7 +362,7 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	exp, err := NewRawExporter(collectorURL, serviceName)
+	exp, err := NewRawExporter(collectorURL)
 	require.NoError(t, err)
 
 	innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
@@ -374,7 +375,7 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	exp, err := NewRawExporter(collectorURL, serviceName)
+	exp, err := NewRawExporter(collectorURL)
 	require.NoError(t, err)
 
 	innerCtx, innerCancel := context.WithCancel(ctx)
@@ -383,7 +384,7 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 }
 
 func TestErrorOnExportShutdownExporter(t *testing.T) {
-	exp, err := NewRawExporter(collectorURL, serviceName)
+	exp, err := NewRawExporter(collectorURL)
 	require.NoError(t, err)
 	assert.NoError(t, exp.Shutdown(context.Background()))
 	assert.NoError(t, exp.ExportSpans(context.Background(), nil))

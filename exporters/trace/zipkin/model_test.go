@@ -22,16 +22,23 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	zkmodel "github.com/openzipkin/zipkin-go/model"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
 func TestModelConversion(t *testing.T) {
+	resource := resource.NewWithAttributes(
+		semconv.ServiceNameKey.String("model-test"),
+	)
+
 	inputBatch := []*export.SpanSnapshot{
 		// typical span data
 		{
@@ -64,6 +71,7 @@ func TestModelConversion(t *testing.T) {
 			},
 			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
+			Resource:      resource,
 		},
 		// span data with no parent (same as typical, but has
 		// invalid parent)
@@ -97,6 +105,7 @@ func TestModelConversion(t *testing.T) {
 			},
 			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
+			Resource:      resource,
 		},
 		// span data of unspecified kind
 		{
@@ -129,6 +138,7 @@ func TestModelConversion(t *testing.T) {
 			},
 			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
+			Resource:      resource,
 		},
 		// span data of internal kind
 		{
@@ -161,6 +171,7 @@ func TestModelConversion(t *testing.T) {
 			},
 			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
+			Resource:      resource,
 		},
 		// span data of client kind
 		{
@@ -193,6 +204,7 @@ func TestModelConversion(t *testing.T) {
 			},
 			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
+			Resource:      resource,
 		},
 		// span data of producer kind
 		{
@@ -225,6 +237,7 @@ func TestModelConversion(t *testing.T) {
 			},
 			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
+			Resource:      resource,
 		},
 		// span data of consumer kind
 		{
@@ -257,6 +270,7 @@ func TestModelConversion(t *testing.T) {
 			},
 			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
+			Resource:      resource,
 		},
 		// span data with no events
 		{
@@ -276,6 +290,7 @@ func TestModelConversion(t *testing.T) {
 			MessageEvents: nil,
 			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
+			Resource:      resource,
 		},
 		// span data with an "error" attribute set to "false"
 		{
@@ -307,6 +322,7 @@ func TestModelConversion(t *testing.T) {
 			},
 			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
+			Resource:      resource,
 		},
 	}
 
@@ -652,7 +668,7 @@ func TestModelConversion(t *testing.T) {
 			},
 		},
 	}
-	gottenOutputBatch := toZipkinSpanModels(inputBatch, "model-test")
+	gottenOutputBatch := toZipkinSpanModels(inputBatch)
 	require.Equal(t, expectedOutputBatch, gottenOutputBatch)
 }
 
@@ -779,4 +795,15 @@ func Test_toZipkinTags(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestServiceName(t *testing.T) {
+	attrs := []attribute.KeyValue{}
+	assert.Empty(t, getServiceName(attrs))
+
+	attrs = append(attrs, attribute.String("test_key", "test_value"))
+	assert.Empty(t, getServiceName(attrs))
+
+	attrs = append(attrs, semconv.ServiceNameKey.String("my_service"))
+	assert.Equal(t, "my_service", getServiceName(attrs))
 }
