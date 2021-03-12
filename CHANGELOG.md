@@ -22,6 +22,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `"go.opentelemetry.io/sdk/metric/controller.basic".WithPusher` is replaced with `WithExporter` to provide consistent naming across project. (#1656)
 - Added non-empty string check for trace `Attribute` keys. (#1659)
 - Add `description` to SpanStatus only when `StatusCode` is set to error. (#1662)
+- Removes `serviceName` parameter from Zipkin exporter and uses resource instead. (#1549)
 
 ### Removed
 
