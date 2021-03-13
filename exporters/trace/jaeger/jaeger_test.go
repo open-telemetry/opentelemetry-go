@@ -496,10 +496,10 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 			name: "resources do not affect the tags",
 			data: &export.SpanSnapshot{
 				ParentSpanID: parentSpanID,
-				SpanContext: trace.SpanContext{
+				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID: traceID,
 					SpanID:  spanID,
-				},
+				}),
 				Name:      "/foo",
 				StartTime: now,
 				EndTime:   now,
