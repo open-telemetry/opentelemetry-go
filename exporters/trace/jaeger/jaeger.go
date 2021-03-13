@@ -457,7 +457,7 @@ func jaegerBatchList(ssl []*export.SpanSnapshot, defaultServiceName string, reso
 	return batchList
 }
 
-// process transforms a OTel Resource into a jaeger Process.
+// process transforms an OTel Resource into a jaeger Process.
 func process(res *resource.Resource, defaultServiceName string) *gen.Process {
 	var process gen.Process
 

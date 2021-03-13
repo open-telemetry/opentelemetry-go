@@ -19,6 +19,7 @@ import (
 	"encoding/binary"
 	"os"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -220,8 +221,8 @@ func TestNewRawExporter(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedBufferMaxCount, exp.bundler.BufferedByteLimit)
 			assert.Equal(t, tc.expectedBatchMaxCount, exp.bundler.BundleCountThreshold)
-			assert.Contains(t, exp.defaultServiceName, tc.expectedServiceName)
 			assert.NotEmpty(t, exp.defaultServiceName)
+			assert.True(t, strings.HasPrefix(exp.defaultServiceName, tc.expectedServiceName))
 		})
 	}
 }
@@ -689,7 +690,7 @@ func TestJaegerBatchList(t *testing.T) {
 			},
 		},
 		{
-			name: "merge resources that are come from process",
+			name: "merge resources that come from process",
 			spanSnapshotList: []*export.SpanSnapshot{
 				{
 					Name: "s1",
