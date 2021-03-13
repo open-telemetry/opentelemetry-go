@@ -30,11 +30,11 @@ func TestParentBasedDefaultLocalParentSampled(t *testing.T) {
 	sampler := ParentBased(AlwaysSample())
 	traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
-	parentCtx := trace.SpanContext{
+	parentCtx := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    traceID,
 		SpanID:     spanID,
 		TraceFlags: trace.FlagsSampled,
-	}
+	})
 	if sampler.ShouldSample(SamplingParameters{ParentContext: parentCtx}).Decision != RecordAndSample {
 		t.Error("Sampling decision should be RecordAndSample")
 	}
@@ -44,10 +44,10 @@ func TestParentBasedDefaultLocalParentNotSampled(t *testing.T) {
 	sampler := ParentBased(AlwaysSample())
 	traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
-	parentCtx := trace.SpanContext{
+	parentCtx := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID: traceID,
 		SpanID:  spanID,
-	}
+	})
 	if sampler.ShouldSample(SamplingParameters{ParentContext: parentCtx}).Decision != Drop {
 		t.Error("Sampling decision should be Drop")
 	}
@@ -108,13 +108,13 @@ func TestParentBasedWithSamplerOptions(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 			spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
-			parentCtx := trace.SpanContext{
+			parentCtx := trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID: traceID,
 				SpanID:  spanID,
-			}
+			})
 
 			if tc.isParentSampled {
-				parentCtx.TraceFlags = trace.FlagsSampled
+				parentCtx = parentCtx.WithTraceFlags(trace.FlagsSampled)
 			}
 
 			params := SamplingParameters{ParentContext: parentCtx}
@@ -225,9 +225,9 @@ func TestTracestateIsPassed(t *testing.T) {
 				t.Error(err)
 			}
 
-			parentCtx := trace.SpanContext{
+			parentCtx := trace.NewSpanContext(trace.SpanContextConfig{
 				TraceState: traceState,
-			}
+			})
 			params := SamplingParameters{ParentContext: parentCtx}
 
 			require.Equal(t, traceState, tc.sampler.ShouldSample(params).Tracestate, "TraceState is not equal")

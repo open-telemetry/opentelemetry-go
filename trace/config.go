@@ -54,8 +54,6 @@ type SpanConfig struct {
 	Timestamp time.Time
 	// Links are the associations a Span has with other Spans.
 	Links []Link
-	// Record is the recording state of a Span.
-	Record bool
 	// NewRoot identifies a Span as the root Span for a new trace. This is
 	// commonly used when an existing trace crosses trust boundaries and the
 	// remote parent span context should be ignored for security.
@@ -163,18 +161,6 @@ func (linksSpanOption) private()                  {}
 // links, i.e. this does not overwrite.
 func WithLinks(links ...Link) SpanOption {
 	return linksSpanOption(links)
-}
-
-type recordSpanOption bool
-
-func (o recordSpanOption) ApplySpan(c *SpanConfig) { c.Record = bool(o) }
-func (recordSpanOption) private()                  {}
-
-// WithRecord specifies that the span should be recorded. It is important to
-// note that implementations may override this option, i.e. if the span is a
-// child of an un-sampled trace.
-func WithRecord() SpanOption {
-	return recordSpanOption(true)
 }
 
 type newRootSpanOption bool

@@ -362,19 +362,19 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 		{
 			name: "no parent",
 			data: &export.SpanSnapshot{
-				SpanContext: trace.SpanContext{
+				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID: traceID,
 					SpanID:  spanID,
-				},
+				}),
 				Name:      "/foo",
 				StartTime: now,
 				EndTime:   now,
 				Links: []trace.Link{
 					{
-						SpanContext: trace.SpanContext{
+						SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 							TraceID: linkTraceID,
 							SpanID:  linkSpanID,
-						},
+						}),
 					},
 				},
 				Attributes: []attribute.KeyValue{
@@ -442,16 +442,16 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 			name: "with parent",
 			data: &export.SpanSnapshot{
 				ParentSpanID: parentSpanID,
-				SpanContext: trace.SpanContext{
+				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID: traceID,
 					SpanID:  spanID,
-				},
+				}),
 				Links: []trace.Link{
 					{
-						SpanContext: trace.SpanContext{
+						SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 							TraceID: linkTraceID,
 							SpanID:  linkSpanID,
-						},
+						}),
 					},
 				},
 				Name:      "/foo",
