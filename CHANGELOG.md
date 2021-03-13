@@ -22,13 +22,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `"go.opentelemetry.io/sdk/metric/controller.basic".WithPusher` is replaced with `WithExporter` to provide consistent naming across project. (#1656)
 - Added non-empty string check for trace `Attribute` keys. (#1659)
 - Add `description` to SpanStatus only when `StatusCode` is set to error. (#1662)
-- Removes `serviceName` parameter from Zipkin exporter and uses resource instead. (#1549)
 
 ### Removed
 
 - Removed the exported `SimpleSpanProcessor` and `BatchSpanProcessor` structs.
    These are now returned as a SpanProcessor interface from their respective constructors. (#1638)
 - Removed setting status to `Error` while recording an error as a span event in `RecordError`. (#1663)
+- Removed `serviceName` parameter from Zipkin exporter and uses resource instead. (#1549)
 
 
 ### Fixed
