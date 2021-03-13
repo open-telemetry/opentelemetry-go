@@ -239,8 +239,8 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 							psc := parent.SpanContext()
 							csc := child.SpanContext()
 
-							e.Expect(csc.TraceID).ToEqual(psc.TraceID)
-							e.Expect(csc.SpanID).NotToEqual(psc.SpanID)
+							e.Expect(csc.TraceID()).ToEqual(psc.TraceID())
+							e.Expect(csc.SpanID()).NotToEqual(psc.SpanID())
 						}(fmt.Sprintf("span %d", i))
 					}
 					wg.Wait()
