@@ -103,21 +103,19 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 	}
 
 	// Fetch default service.name from default resource for backup
-	var defaultServiceName attribute.KeyValue
+	var defaultServiceName string
 	defaultResource := resource.Default()
-	for iter := defaultResource.Iter(); iter.Next(); {
-		if iter.Attribute().Key == semconv.ServiceNameKey {
-			defaultServiceName = iter.Attribute()
-		}
+	if value, exists := defaultResource.LabelSet().Value(semconv.ServiceNameKey); exists {
+		defaultServiceName = value.AsString()
 	}
-	if defaultServiceName.Value.AsString() == "" {
+	if defaultServiceName == "" {
 		return nil, fmt.Errorf("failed to get service name from default resource")
 	}
 
 	e := &Exporter{
 		uploader:            uploader,
 		o:                   o,
-		defaultServiceName:  defaultServiceName.Value.AsString(),
+		defaultServiceName:  defaultServiceName,
 		resourceFromProcess: processToResource(o.Process),
 	}
 	bundler := bundler.NewBundler((*export.SpanSnapshot)(nil), func(bundle interface{}) {
