@@ -35,11 +35,11 @@ func TestOTelSpanContextToOC(t *testing.T) {
 		},
 		{
 			description: "sampled",
-			input: trace.SpanContext{
+			input: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    trace.TraceID([16]byte{1}),
 				SpanID:     trace.SpanID([8]byte{2}),
 				TraceFlags: trace.FlagsSampled,
-			},
+			}),
 			expected: octrace.SpanContext{
 				TraceID:      octrace.TraceID([16]byte{1}),
 				SpanID:       octrace.SpanID([8]byte{2}),
@@ -48,10 +48,10 @@ func TestOTelSpanContextToOC(t *testing.T) {
 		},
 		{
 			description: "not sampled",
-			input: trace.SpanContext{
+			input: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID: trace.TraceID([16]byte{1}),
 				SpanID:  trace.SpanID([8]byte{2}),
-			},
+			}),
 			expected: octrace.SpanContext{
 				TraceID:      octrace.TraceID([16]byte{1}),
 				SpanID:       octrace.SpanID([8]byte{2}),
@@ -60,11 +60,11 @@ func TestOTelSpanContextToOC(t *testing.T) {
 		},
 		{
 			description: "debug flag",
-			input: trace.SpanContext{
+			input: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    trace.TraceID([16]byte{1}),
 				SpanID:     trace.SpanID([8]byte{2}),
 				TraceFlags: trace.FlagsDebug,
-			},
+			}),
 			expected: octrace.SpanContext{
 				TraceID:      octrace.TraceID([16]byte{1}),
 				SpanID:       octrace.SpanID([8]byte{2}),
@@ -97,11 +97,11 @@ func TestOCSpanContextToOTel(t *testing.T) {
 				SpanID:       octrace.SpanID([8]byte{2}),
 				TraceOptions: octrace.TraceOptions(0x1),
 			},
-			expected: trace.SpanContext{
+			expected: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    trace.TraceID([16]byte{1}),
 				SpanID:     trace.SpanID([8]byte{2}),
 				TraceFlags: trace.FlagsSampled,
-			},
+			}),
 		},
 		{
 			description: "not sampled",
@@ -110,10 +110,10 @@ func TestOCSpanContextToOTel(t *testing.T) {
 				SpanID:       octrace.SpanID([8]byte{2}),
 				TraceOptions: octrace.TraceOptions(0),
 			},
-			expected: trace.SpanContext{
+			expected: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID: trace.TraceID([16]byte{1}),
 				SpanID:  trace.SpanID([8]byte{2}),
-			},
+			}),
 		},
 		{
 			description: "trace state is ignored",
@@ -122,17 +122,15 @@ func TestOCSpanContextToOTel(t *testing.T) {
 				SpanID:     octrace.SpanID([8]byte{2}),
 				Tracestate: &tracestate.Tracestate{},
 			},
-			expected: trace.SpanContext{
+			expected: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID: trace.TraceID([16]byte{1}),
 				SpanID:  trace.SpanID([8]byte{2}),
-			},
+			}),
 		},
 	} {
 		t.Run(tc.description, func(t *testing.T) {
 			output := OCSpanContextToOTel(tc.input)
-			if output.SpanID != tc.expected.SpanID ||
-				output.TraceID != tc.expected.TraceID ||
-				output.TraceFlags != tc.expected.TraceFlags {
+			if !output.Equal(tc.expected) {
 				t.Fatalf("Got %+v spancontext, exepected %+v.", output, tc.expected)
 			}
 		})
