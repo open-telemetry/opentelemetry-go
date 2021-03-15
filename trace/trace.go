@@ -512,7 +512,7 @@ func SpanContextFromContext(ctx context.Context) SpanContext {
 // ContextWithRemoteSpanContext returns a copy of parent with a remote set as
 // the remote span context.
 func ContextWithRemoteSpanContext(parent context.Context, remote SpanContext) context.Context {
-	return context.WithValue(parent, remoteContextKey, remote)
+	return context.WithValue(parent, remoteContextKey, remote.WithRemote(true))
 }
 
 // RemoteSpanContextFromContext returns the remote span context from ctx.
