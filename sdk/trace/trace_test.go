@@ -1385,6 +1385,7 @@ func TestReadOnlySpan(t *testing.T) {
 		TraceID:    tID,
 		SpanID:     sID,
 		TraceFlags: 0x1,
+		Remote:     true,
 	})
 	ctx := trace.ContextWithRemoteSpanContext(context.Background(), parent)
 
