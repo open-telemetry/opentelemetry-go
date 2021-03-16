@@ -284,7 +284,7 @@ func WithSpanProcessor(sp SpanProcessor) TracerProviderOption {
 // WithResource returns a TracerProviderOption that will configure the
 // Resource r as a TracerProvider's Resource. The configured Resource is
 // referenced by all the Tracers the TracerProvider creates. It represents the
-// tracing environment the TracerProvider operates in.
+// entity producing telemetry.
 //
 // If this option is not used, the TracerProvider will use the
 // resource.Default() Resource by default.
