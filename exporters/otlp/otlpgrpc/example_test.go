@@ -49,7 +49,7 @@ func Example_insecure() {
 	}()
 
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithDefaultSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithBatcher(
 			exp,
 			// add following two options to ensure flush
@@ -102,7 +102,7 @@ func Example_withTLS() {
 	}()
 
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithDefaultSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithBatcher(
 			exp,
 			// add following two options to ensure flush
@@ -163,7 +163,7 @@ func Example_withDifferentSignalCollectors() {
 	}()
 
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithDefaultSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithBatcher(
 			exp,
 			// add following two options to ensure flush
