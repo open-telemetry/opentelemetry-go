@@ -13,6 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Added `Marshaler` config option to `otlphttp` to enable otlp over json or protobufs. (#1586)
 - A `ForceFlush` method to the `"go.opentelemetry.io/otel/sdk/trace".TracerProvider` to flush all registered `SpanProcessor`s. (#1608)
 - Added `WithDefaultSampler` and `WithSpanLimits` to tracer provider. (#1633)
+- Jaeger exporter falls back to `resource.Default`'s `service.name` if the exported Span does not have one. (#1673)
 
 ### Changed
 
@@ -25,6 +26,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `trace.SpanContext` is now immutable and has no exported fields. (#1573)
   - `trace.NewSpanContext()` can be used in conjunction with the `trace.SpanContextConfig` struct to initialize a new `SpanContext` where all values are known.
 - Renamed the `LabelSet` method of `"go.opentelemetry.io/otel/sdk/resource".Resource` to `Set`. (#1692)
+- Jaeger exporter populates Jaeger's Span Process from Resource. (#1673)
 
 ### Removed
 
@@ -33,6 +35,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
    These are now returned as a SpanProcessor interface from their respective constructors. (#1638)
 - Removed setting status to `Error` while recording an error as a span event in `RecordError`. (#1663)
 - Removed `WithConfig` from tracer provider to avoid overriding configuration. (#1633)
+- Removed `jaeger.WithProcess`. (#1673)
 
 ### Fixed
 
