@@ -12,7 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Added `Marshaler` config option to `otlphttp` to enable otlp over json or protobufs. (#1586)
 - A `ForceFlush` method to the `"go.opentelemetry.io/otel/sdk/trace".TracerProvider` to flush all registered `SpanProcessor`s. (#1608)
-- Added `WithSampler` and `WithSpanLimits` to tracer provider. (#1633, TBD)
+- Added `WithSampler` and `WithSpanLimits` to tracer provider. (#1633, #1702)
 - Jaeger exporter falls back to `resource.Default`'s `service.name` if the exported Span does not have one. (#1673)
 
 ### Changed
