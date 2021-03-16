@@ -323,7 +323,7 @@ func WithSampler(s Sampler) TracerProviderOption {
 // WithSpanLimits returns a TracerProviderOption that will configure the
 // SpanLimits sl as a TracerProvider's SpanLimits. The configured SpanLimits
 // are used used by the Tracers the TracerProvider and the Spans they create
-// limit tracing resources used.
+// to limit tracing resources used.
 //
 // If this option is not used, the TracerProvider will use the default
 // SpanLimits.
