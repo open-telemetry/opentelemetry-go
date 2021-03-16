@@ -217,6 +217,44 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 			e.Expect(csc.TraceID()).NotToEqual(psc.TraceID())
 			e.Expect(csc.SpanID()).NotToEqual(psc.SpanID())
 		})
+
+		t.Run("all methods are safe to be called concurrently", func(t *testing.T) {
+			t.Parallel()
+
+			e := matchers.NewExpecter(t)
+			tracer := subjectFactory()
+
+			ctx, parent := tracer.Start(context.Background(), "span")
+
+			runner := func(tp trace.Tracer) <-chan struct{} {
+				done := make(chan struct{})
+				go func(tp trace.Tracer) {
+					var wg sync.WaitGroup
+					for i := 0; i < 20; i++ {
+						wg.Add(1)
+						go func(name string) {
+							defer wg.Done()
+							_, child := tp.Start(ctx, name)
+
+							psc := parent.SpanContext()
+							csc := child.SpanContext()
+
+							e.Expect(csc.TraceID()).ToEqual(psc.TraceID())
+							e.Expect(csc.SpanID()).NotToEqual(psc.SpanID())
+						}(fmt.Sprintf("span %d", i))
+					}
+					wg.Wait()
+					done <- struct{}{}
+				}(tp)
+				return done
+			}
+
+			e.Expect(func() {
+				done := runner(tracer)
+
+				<-done
+			}).NotToPanic()
+		})
 	})
 
 	h.testSpan(subjectFactory)
