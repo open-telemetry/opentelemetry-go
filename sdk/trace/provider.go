@@ -289,8 +289,10 @@ func WithIDGenerator(g IDGenerator) TracerProviderOption {
 	}
 }
 
-// WithDefaultSampler option registers a DefaultSampler with the the TracerProvider.
-func WithDefaultSampler(s Sampler) TracerProviderOption {
+// WithSampler option registers a Sampler with the the TracerProvider used by
+// the created Tracers to make their sampling decisions for the Spans they
+// create.
+func WithSampler(s Sampler) TracerProviderOption {
 	return func(opts *TracerProviderConfig) {
 		opts.config.DefaultSampler = s
 	}
