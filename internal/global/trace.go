@@ -46,7 +46,7 @@ import (
 // configured.
 type tracerProvider struct {
 	mtx      sync.Mutex
-	tracers  []*tracer
+	tracers  map[il]*tracer
 	delegate trace.TracerProvider
 }
 
@@ -66,6 +66,11 @@ func (p *tracerProvider) setDelegate(provider trace.TracerProvider) {
 	defer p.mtx.Unlock()
 
 	p.delegate = provider
+
+	if len(p.tracers) == 0 {
+		return
+	}
+
 	for _, t := range p.tracers {
 		t.setDelegate(provider)
 	}
@@ -82,9 +87,29 @@ func (p *tracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 		return p.delegate.Tracer(name, opts...)
 	}
 
+	// At this moment it is guaranteed that no sdk is installed, save the tracer in the tracers map.
+
+	key := il{
+		name:    name,
+		version: trace.NewTracerConfig(opts...).InstrumentationVersion,
+	}
+
+	if p.tracers == nil {
+		p.tracers = make(map[il]*tracer)
+	}
+
+	if val, ok := p.tracers[key]; ok {
+		return val
+	}
+
 	t := &tracer{name: name, opts: opts}
-	p.tracers = append(p.tracers, t)
+	p.tracers[key] = t
 	return t
+}
+
+type il struct {
+	name    string
+	version string
 }
 
 // tracer is a placeholder for a trace.Tracer.
