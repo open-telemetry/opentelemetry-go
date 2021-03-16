@@ -35,6 +35,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
    These are now returned as a SpanProcessor interface from their respective constructors. (#1638)
 - Removed setting status to `Error` while recording an error as a span event in `RecordError`. (#1663)
 - Removed `WithConfig` from tracer provider to avoid overriding configuration. (#1633)
+- Removed `serviceName` parameter from Zipkin exporter and uses resource instead. (#1549)
 - Removed `jaeger.WithProcess`. (#1673)
 
 ### Fixed
