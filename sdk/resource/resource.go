@@ -62,7 +62,7 @@ func NewWithAttributes(attrs ...attribute.KeyValue) *Resource {
 		return &emptyResource
 	}
 
-	return &Resource{s}
+	return &Resource{s} //nolint
 }
 
 // String implements the Stringer interface and provides a
