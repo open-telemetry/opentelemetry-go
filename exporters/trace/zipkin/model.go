@@ -23,6 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -31,15 +32,26 @@ const (
 	keyInstrumentationLibraryVersion = "otel.instrumentation_library.version"
 )
 
-func toZipkinSpanModels(batch []*export.SpanSnapshot, serviceName string) []zkmodel.SpanModel {
+func toZipkinSpanModels(batch []*export.SpanSnapshot) []zkmodel.SpanModel {
 	models := make([]zkmodel.SpanModel, 0, len(batch))
 	for _, data := range batch {
-		models = append(models, toZipkinSpanModel(data, serviceName))
+		models = append(models, toZipkinSpanModel(data))
 	}
 	return models
 }
 
-func toZipkinSpanModel(data *export.SpanSnapshot, serviceName string) zkmodel.SpanModel {
+func getServiceName(attrs []attribute.KeyValue) string {
+	for _, kv := range attrs {
+		if kv.Key == semconv.ServiceNameKey {
+			return kv.Value.AsString()
+		}
+	}
+
+	// Resource holds a default value so this might not be reach.
+	return ""
+}
+
+func toZipkinSpanModel(data *export.SpanSnapshot) zkmodel.SpanModel {
 	return zkmodel.SpanModel{
 		SpanContext: toZipkinSpanContext(data),
 		Name:        data.Name,
@@ -48,7 +60,7 @@ func toZipkinSpanModel(data *export.SpanSnapshot, serviceName string) zkmodel.Sp
 		Duration:    data.EndTime.Sub(data.StartTime),
 		Shared:      false,
 		LocalEndpoint: &zkmodel.Endpoint{
-			ServiceName: serviceName,
+			ServiceName: getServiceName(data.Resource.Attributes()),
 		},
 		RemoteEndpoint: nil, // *Endpoint
 		Annotations:    toZipkinAnnotations(data.MessageEvents),
