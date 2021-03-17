@@ -13,7 +13,7 @@ require (
 	go.opentelemetry.io/otel v0.18.0
 	go.opentelemetry.io/otel/sdk v0.18.0
 	go.opentelemetry.io/otel/trace v0.18.0
-	google.golang.org/api v0.40.0
+	google.golang.org/api v0.41.0
 )
 
 replace go.opentelemetry.io/otel/bridge/opencensus => ../../../bridge/opencensus
