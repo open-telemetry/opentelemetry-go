@@ -497,7 +497,7 @@ func (s *span) copyToCappedAttributes(attributes ...attribute.KeyValue) {
 	for _, a := range attributes {
 		// Ensure attributes conform to the specification:
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.0.1/specification/common/common.md#attributes
-		if a.Value.Type() != attribute.INVALID && a.Key != "" {
+		if a.Valid() {
 			s.attributes.add(a)
 		}
 	}

@@ -36,11 +36,10 @@ import (
 // the SpanBatcher interface, so it needs to be used together with the
 // WithBatcher option when setting up the exporter pipeline.
 type Exporter struct {
-	url         string
-	serviceName string
-	client      *http.Client
-	logger      *log.Logger
-	o           options
+	url    string
+	client *http.Client
+	logger *log.Logger
+	o      options
 
 	stoppedMu sync.RWMutex
 	stopped   bool
@@ -82,7 +81,7 @@ func WithSDK(config *sdktrace.Config) Option {
 }
 
 // NewRawExporter creates a new Zipkin exporter.
-func NewRawExporter(collectorURL, serviceName string, opts ...Option) (*Exporter, error) {
+func NewRawExporter(collectorURL string, opts ...Option) (*Exporter, error) {
 	if collectorURL == "" {
 		return nil, errors.New("collector URL cannot be empty")
 	}
@@ -102,18 +101,17 @@ func NewRawExporter(collectorURL, serviceName string, opts ...Option) (*Exporter
 		o.client = http.DefaultClient
 	}
 	return &Exporter{
-		url:         collectorURL,
-		client:      o.client,
-		logger:      o.logger,
-		serviceName: serviceName,
-		o:           o,
+		url:    collectorURL,
+		client: o.client,
+		logger: o.logger,
+		o:      o,
 	}, nil
 }
 
 // NewExportPipeline sets up a complete export pipeline
 // with the recommended setup for trace provider
-func NewExportPipeline(collectorURL, serviceName string, opts ...Option) (*sdktrace.TracerProvider, error) {
-	exporter, err := NewRawExporter(collectorURL, serviceName, opts...)
+func NewExportPipeline(collectorURL string, opts ...Option) (*sdktrace.TracerProvider, error) {
+	exporter, err := NewRawExporter(collectorURL, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -128,8 +126,8 @@ func NewExportPipeline(collectorURL, serviceName string, opts ...Option) (*sdktr
 
 // InstallNewPipeline instantiates a NewExportPipeline with the
 // recommended configuration and registers it globally.
-func InstallNewPipeline(collectorURL, serviceName string, opts ...Option) error {
-	tp, err := NewExportPipeline(collectorURL, serviceName, opts...)
+func InstallNewPipeline(collectorURL string, opts ...Option) error {
+	tp, err := NewExportPipeline(collectorURL, opts...)
 	if err != nil {
 		return err
 	}
@@ -152,7 +150,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, ss []*export.SpanSnapshot) e
 		e.logf("no spans to export")
 		return nil
 	}
-	models := toZipkinSpanModels(ss, e.serviceName)
+	models := toZipkinSpanModels(ss)
 	body, err := json.Marshal(models)
 	if err != nil {
 		return e.errf("failed to serialize zipkin models to JSON: %v", err)
