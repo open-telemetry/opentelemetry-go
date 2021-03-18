@@ -361,7 +361,7 @@ func (sc SpanContext) IsRemote() bool {
 	return sc.remote
 }
 
-// WithRemote returns a new SpanContext with the remote property replaced.
+// WithRemote returns a copy of sc with the Remote property set to remote.
 func (sc SpanContext) WithRemote(remote bool) SpanContext {
 	return SpanContext{
 		traceID:    sc.traceID,
