@@ -40,7 +40,7 @@ import (
 // themselves.
 func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlp.Exporter, mcTraces, mcMetrics Collector) {
 	pOpts := []sdktrace.TracerProviderOption{
-		sdktrace.WithDefaultSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithBatcher(
 			exp,
 			// add following two options to ensure flush

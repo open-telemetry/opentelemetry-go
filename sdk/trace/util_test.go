@@ -21,6 +21,6 @@ import (
 )
 
 func basicTracerProvider(t *testing.T) *sdktrace.TracerProvider {
-	tp := sdktrace.NewTracerProvider(sdktrace.WithDefaultSampler(sdktrace.AlwaysSample()))
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.AlwaysSample()))
 	return tp
 }

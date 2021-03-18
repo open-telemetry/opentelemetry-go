@@ -82,10 +82,10 @@ func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
 	harness := oteltest.NewHarness(t)
 
 	harness.TestTracerProvider(func() trace.TracerProvider {
-		return NewTracerProvider(WithDefaultSampler(TraceIDRatioBased(0)))
+		return NewTracerProvider(WithSampler(TraceIDRatioBased(0)))
 	})
 
-	tp := NewTracerProvider(WithDefaultSampler(TraceIDRatioBased(0)))
+	tp := NewTracerProvider(WithSampler(TraceIDRatioBased(0)))
 	harness.TestTracer(func() trace.Tracer {
 		return tp.Tracer("")
 	})
@@ -270,7 +270,7 @@ func TestSampling(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			p := NewTracerProvider(WithDefaultSampler(tc.sampler))
+			p := NewTracerProvider(WithSampler(tc.sampler))
 			tr := p.Tracer("test")
 			var sampled int
 			for i := 0; i < total; i++ {
@@ -422,7 +422,7 @@ func TestSetSpanAttributes(t *testing.T) {
 func TestSamplerAttributesLocalChildSpan(t *testing.T) {
 	sampler := &testSampler{prefix: "span", t: t}
 	te := NewTestExporter()
-	tp := NewTracerProvider(WithDefaultSampler(sampler), WithSyncer(te), WithResource(resource.Empty()))
+	tp := NewTracerProvider(WithSampler(sampler), WithSyncer(te), WithResource(resource.Empty()))
 
 	ctx := context.Background()
 	ctx, span := startLocalSpan(tp, ctx, "SpanOne", "span0")
@@ -953,7 +953,7 @@ func TestEndSpanTwice(t *testing.T) {
 
 func TestStartSpanAfterEnd(t *testing.T) {
 	te := NewTestExporter()
-	tp := NewTracerProvider(WithDefaultSampler(AlwaysSample()), WithSyncer(te))
+	tp := NewTracerProvider(WithSampler(AlwaysSample()), WithSyncer(te))
 	ctx := context.Background()
 
 	tr := tp.Tracer("SpanAfterEnd")
@@ -998,7 +998,7 @@ func TestStartSpanAfterEnd(t *testing.T) {
 
 func TestChildSpanCount(t *testing.T) {
 	te := NewTestExporter()
-	tp := NewTracerProvider(WithDefaultSampler(AlwaysSample()), WithSyncer(te))
+	tp := NewTracerProvider(WithSampler(AlwaysSample()), WithSyncer(te))
 
 	tr := tp.Tracer("ChidSpanCount")
 	ctx, span0 := tr.Start(context.Background(), "parent")
@@ -1052,7 +1052,7 @@ func TestNilSpanEnd(t *testing.T) {
 
 func TestExecutionTracerTaskEnd(t *testing.T) {
 	var n uint64
-	tp := NewTracerProvider(WithDefaultSampler(NeverSample()))
+	tp := NewTracerProvider(WithSampler(NeverSample()))
 	tr := tp.Tracer("Execution Tracer Task End")
 
 	executionTracerTaskEnd := func() {
@@ -1085,7 +1085,6 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 	s.executionTracerTaskEnd = executionTracerTaskEnd
 	spans = append(spans, s) // parent not sampled
 
-	// tp.ApplyConfig(Config{DefaultSampler: AlwaysSample()})
 	_, apiSpan = tr.Start(context.Background(), "foo")
 	s = apiSpan.(*span)
 	s.executionTracerTaskEnd = executionTracerTaskEnd
@@ -1101,7 +1100,7 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 
 func TestCustomStartEndTime(t *testing.T) {
 	te := NewTestExporter()
-	tp := NewTracerProvider(WithSyncer(te), WithDefaultSampler(AlwaysSample()))
+	tp := NewTracerProvider(WithSyncer(te), WithSampler(AlwaysSample()))
 
 	startTime := time.Date(2019, time.August, 27, 14, 42, 0, 0, time.UTC)
 	endTime := startTime.Add(time.Second * 20)
@@ -1215,7 +1214,7 @@ func TestRecordErrorNil(t *testing.T) {
 
 func TestWithSpanKind(t *testing.T) {
 	te := NewTestExporter()
-	tp := NewTracerProvider(WithSyncer(te), WithDefaultSampler(AlwaysSample()), WithResource(resource.Empty()))
+	tp := NewTracerProvider(WithSyncer(te), WithSampler(AlwaysSample()), WithResource(resource.Empty()))
 	tr := tp.Tracer("withSpanKind")
 
 	_, span := tr.Start(context.Background(), "WithoutSpanKind")
@@ -1285,7 +1284,7 @@ func TestWithResource(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			te := NewTestExporter()
-			defaultOptions := []TracerProviderOption{WithSyncer(te), WithDefaultSampler(AlwaysSample())}
+			defaultOptions := []TracerProviderOption{WithSyncer(te), WithSampler(AlwaysSample())}
 			tp := NewTracerProvider(append(defaultOptions, tc.options...)...)
 			span := startSpan(tp, "WithResource")
 			span.SetAttributes(attribute.String("key1", "value1"))
@@ -1709,7 +1708,7 @@ func TestSamplerTraceState(t *testing.T) {
 		ts := ts
 		t.Run(ts.name, func(t *testing.T) {
 			te := NewTestExporter()
-			tp := NewTracerProvider(WithDefaultSampler(ts.sampler), WithSyncer(te), WithResource(resource.Empty()))
+			tp := NewTracerProvider(WithSampler(ts.sampler), WithSyncer(te), WithResource(resource.Empty()))
 			tr := tp.Tracer("TraceState")
 
 			sc1 := trace.NewSpanContext(trace.SpanContextConfig{

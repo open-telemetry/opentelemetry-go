@@ -333,7 +333,7 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 	}()
 
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithDefaultSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithBatcher(
 			exp,
 			// add following two options to ensure flush

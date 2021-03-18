@@ -52,9 +52,16 @@ type TracerProvider struct {
 
 var _ trace.TracerProvider = &TracerProvider{}
 
-// NewTracerProvider creates an instance of trace provider. Optional
-// parameter configures the provider with common options applicable
-// to all tracer instances that will be created by this provider.
+// NewTracerProvider returns a new and configured TracerProvider.
+//
+// By default the returned TracerProvider is configured with:
+//  - a ParentBased(AlwaysSample) Sampler
+//  - a random number IDGenerator
+//  - the resource.Default() Resource
+//  - the default SpanLimits.
+//
+// The passed opts are used to override these default values and configure the
+// returned TracerProvider appropriately.
 func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	o := &TracerProviderConfig{}
 
@@ -274,29 +281,52 @@ func WithSpanProcessor(sp SpanProcessor) TracerProviderOption {
 	}
 }
 
-// WithResource option attaches a resource to the provider.
-// The resource is added to the span when it is started.
+// WithResource returns a TracerProviderOption that will configure the
+// Resource r as a TracerProvider's Resource. The configured Resource is
+// referenced by all the Tracers the TracerProvider creates. It represents the
+// entity producing telemetry.
+//
+// If this option is not used, the TracerProvider will use the
+// resource.Default() Resource by default.
 func WithResource(r *resource.Resource) TracerProviderOption {
 	return func(opts *TracerProviderConfig) {
 		opts.config.Resource = r
 	}
 }
 
-// WithIDGenerator option registers an IDGenerator with the TracerProvider.
+// WithIDGenerator returns a TracerProviderOption that will configure the
+// IDGenerator g as a TracerProvider's IDGenerator. The configured IDGenerator
+// is used by the Tracers the TracerProvider creates to generate new Span and
+// Trace IDs.
+//
+// If this option is not used, the TracerProvider will use a random number
+// IDGenerator by default.
 func WithIDGenerator(g IDGenerator) TracerProviderOption {
 	return func(opts *TracerProviderConfig) {
 		opts.config.IDGenerator = g
 	}
 }
 
-// WithDefaultSampler option registers a DefaultSampler with the the TracerProvider.
-func WithDefaultSampler(s Sampler) TracerProviderOption {
+// WithSampler returns a TracerProviderOption that will configure the Sampler
+// s as a TracerProvider's Sampler. The configured Sampler is used by the
+// Tracers the TracerProvider creates to make their sampling decisions for the
+// Spans they create.
+//
+// If this option is not used, the TracerProvider will use a
+// ParentBased(AlwaysSample) Sampler by default.
+func WithSampler(s Sampler) TracerProviderOption {
 	return func(opts *TracerProviderConfig) {
 		opts.config.DefaultSampler = s
 	}
 }
 
-// WithSpanLimits option registers a SpanLimits with the the TracerProvider.
+// WithSpanLimits returns a TracerProviderOption that will configure the
+// SpanLimits sl as a TracerProvider's SpanLimits. The configured SpanLimits
+// are used used by the Tracers the TracerProvider and the Spans they create
+// to limit tracing resources used.
+//
+// If this option is not used, the TracerProvider will use the default
+// SpanLimits.
 func WithSpanLimits(sl SpanLimits) TracerProviderOption {
 	return func(opts *TracerProviderConfig) {
 		opts.config.SpanLimits = sl
