@@ -80,6 +80,8 @@ func TestContextRemoteSpanContext(t *testing.T) {
 
 	want := SpanContext{traceID: [16]byte{1}, spanID: [8]byte{42}}
 	ctx = ContextWithRemoteSpanContext(ctx, want)
+	want = want.WithRemote(true)
+
 	if got, ok := ctx.Value(remoteContextKey).(SpanContext); !ok {
 		t.Errorf("failed to set SpanContext with %#v", want)
 	} else if !assertSpanContextEqual(got, want) {
@@ -92,6 +94,8 @@ func TestContextRemoteSpanContext(t *testing.T) {
 
 	want = SpanContext{traceID: [16]byte{1}, spanID: [8]byte{43}}
 	ctx = ContextWithRemoteSpanContext(ctx, want)
+	want = want.WithRemote(true)
+
 	if got, ok := ctx.Value(remoteContextKey).(SpanContext); !ok {
 		t.Errorf("failed to set SpanContext with %#v", want)
 	} else if !assertSpanContextEqual(got, want) {
@@ -982,6 +986,7 @@ func assertSpanContextEqual(got SpanContext, want SpanContext) bool {
 	return got.spanID == want.spanID &&
 		got.traceID == want.traceID &&
 		got.traceFlags == want.traceFlags &&
+		got.remote == want.remote &&
 		assertTraceStateEqual(got.traceState, want.traceState)
 }
 

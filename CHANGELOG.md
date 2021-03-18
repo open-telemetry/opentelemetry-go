@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - A `ForceFlush` method to the `"go.opentelemetry.io/otel/sdk/trace".TracerProvider` to flush all registered `SpanProcessor`s. (#1608)
 - Added `WithDefaultSampler` and `WithSpanLimits` to tracer provider. (#1633)
 - Jaeger exporter falls back to `resource.Default`'s `service.name` if the exported Span does not have one. (#1673)
+- `"go.opentelemetry.io/otel/trace".SpanContext` now has a `remote` property, and `IsRemote()` predicate, that is true when the `SpanContext` has been extracted from remote context data. (#1701)
 - A `Valid` method to the `"go.opentelemetry.io/otel/attribute".KeyValue` type. (#1703)
 
 ### Changed

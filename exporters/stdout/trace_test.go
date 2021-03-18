@@ -83,7 +83,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`{` +
 		`"Key":"key",` +
 		`"Value":{"Type":"STRING","Value":"val"}` +
-		`}]},` +
+		`}],"Remote":false},` +
 		`"ParentSpanID":"0000000000000000",` +
 		`"SpanKind":1,` +
 		`"Name":"/foo",` +

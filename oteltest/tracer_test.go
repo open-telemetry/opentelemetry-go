@@ -184,6 +184,8 @@ func TestTracer(t *testing.T) {
 			parentSpanContext := parentSpan.SpanContext()
 			remoteParentSpanContext := remoteParentSpan.SpanContext()
 			parentCtx = trace.ContextWithRemoteSpanContext(parentCtx, remoteParentSpanContext)
+			// remote SpanContexts will be marked as remote
+			remoteParentSpanContext = remoteParentSpanContext.WithRemote(true)
 
 			_, span := subject.Start(parentCtx, "child", trace.WithNewRoot())
 
