@@ -18,7 +18,7 @@ import (
 	"context"
 	"testing"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -32,10 +32,10 @@ type testSpanProcessor struct {
 
 func (t *testSpanProcessor) OnStart(parent context.Context, s sdktrace.ReadWriteSpan) {
 	psc := trace.RemoteSpanContextFromContext(parent)
-	kv := []label.KeyValue{
+	kv := []attribute.KeyValue{
 		{
 			Key:   "SpanProcessorName",
-			Value: label.StringValue(t.name),
+			Value: attribute.StringValue(t.name),
 		},
 		// Store parent trace ID and span ID as attributes to be read later in
 		// tests so that we "do something" with the parent argument. Real
@@ -43,11 +43,11 @@ func (t *testSpanProcessor) OnStart(parent context.Context, s sdktrace.ReadWrite
 		// a more meaningful way.
 		{
 			Key:   "ParentTraceID",
-			Value: label.StringValue(psc.TraceID.String()),
+			Value: attribute.StringValue(psc.TraceID().String()),
 		},
 		{
 			Key:   "ParentSpanID",
-			Value: label.StringValue(psc.SpanID.String()),
+			Value: attribute.StringValue(psc.SpanID().String()),
 		},
 	}
 	s.AddEvent("OnStart", trace.WithAttributes(kv...))
@@ -63,7 +63,8 @@ func (t *testSpanProcessor) Shutdown(_ context.Context) error {
 	return nil
 }
 
-func (t *testSpanProcessor) ForceFlush() {
+func (t *testSpanProcessor) ForceFlush(context.Context) error {
+	return nil
 }
 
 func TestRegisterSpanProcessor(t *testing.T) {
@@ -78,10 +79,10 @@ func TestRegisterSpanProcessor(t *testing.T) {
 
 	tid, _ := trace.TraceIDFromHex("01020304050607080102040810203040")
 	sid, _ := trace.SpanIDFromHex("0102040810203040")
-	parent := trace.SpanContext{
+	parent := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID: tid,
 		SpanID:  sid,
-	}
+	})
 	ctx := trace.ContextWithRemoteSpanContext(context.Background(), parent)
 
 	tr := tp.Tracer("SpanProcessor")
@@ -113,14 +114,14 @@ func TestRegisterSpanProcessor(t *testing.T) {
 					c++
 				case "ParentTraceID":
 					gotValue := kv.Value.AsString()
-					if gotValue != parent.TraceID.String() {
-						t.Errorf("%s: attributes: got %s, want %s\n", name, gotValue, parent.TraceID)
+					if gotValue != parent.TraceID().String() {
+						t.Errorf("%s: attributes: got %s, want %s\n", name, gotValue, parent.TraceID())
 					}
 					tidOK = true
 				case "ParentSpanID":
 					gotValue := kv.Value.AsString()
-					if gotValue != parent.SpanID.String() {
-						t.Errorf("%s: attributes: got %s, want %s\n", name, gotValue, parent.SpanID)
+					if gotValue != parent.SpanID().String() {
+						t.Errorf("%s: attributes: got %s, want %s\n", name, gotValue, parent.SpanID())
 					}
 					sidOK = true
 				default:

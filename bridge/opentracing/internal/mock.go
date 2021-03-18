@@ -21,22 +21,22 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/internal/baggage"
 	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 )
 
 var (
-	ComponentKey     = label.Key("component")
-	ServiceKey       = label.Key("service")
-	StatusCodeKey    = label.Key("status.code")
-	StatusMessageKey = label.Key("status.message")
-	ErrorKey         = label.Key("error")
-	NameKey          = label.Key("name")
+	ComponentKey     = attribute.Key("component")
+	ServiceKey       = attribute.Key("service")
+	StatusCodeKey    = attribute.Key("status.code")
+	StatusMessageKey = attribute.Key("status.message")
+	ErrorKey         = attribute.Key("error")
+	NameKey          = attribute.Key("name")
 )
 
 type MockContextKeyValue struct {
@@ -76,16 +76,15 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...trace.SpanO
 	if startTime.IsZero() {
 		startTime = time.Now()
 	}
-	spanContext := trace.SpanContext{
+	spanContext := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    t.getTraceID(ctx, config),
 		SpanID:     t.getSpanID(),
 		TraceFlags: 0,
-	}
+	})
 	span := &MockSpan{
 		mockTracer:     t,
 		officialTracer: t,
 		spanContext:    spanContext,
-		recording:      config.Record,
 		Attributes: baggage.NewMap(baggage.MapUpdate{
 			MultiKV: config.Attributes,
 		}),
@@ -117,7 +116,7 @@ func (t *MockTracer) addSpareContextValue(ctx context.Context) context.Context {
 
 func (t *MockTracer) getTraceID(ctx context.Context, config *trace.SpanConfig) trace.TraceID {
 	if parent := t.getParentSpanContext(ctx, config); parent.IsValid() {
-		return parent.TraceID
+		return parent.TraceID()
 	}
 	if len(t.SpareTraceIDs) > 0 {
 		traceID := t.SpareTraceIDs[0]
@@ -132,7 +131,7 @@ func (t *MockTracer) getTraceID(ctx context.Context, config *trace.SpanConfig) t
 
 func (t *MockTracer) getParentSpanID(ctx context.Context, config *trace.SpanConfig) trace.SpanID {
 	if parent := t.getParentSpanContext(ctx, config); parent.IsValid() {
-		return parent.SpanID
+		return parent.SpanID()
 	}
 	return trace.SpanID{}
 }
@@ -210,7 +209,7 @@ func (s *MockSpan) IsRecording() bool {
 }
 
 func (s *MockSpan) SetStatus(code codes.Code, msg string) {
-	s.SetAttributes(StatusCodeKey.Uint32(uint32(code)), StatusMessageKey.String(msg))
+	s.SetAttributes(StatusCodeKey.Int(int(code)), StatusMessageKey.String(msg))
 }
 
 func (s *MockSpan) SetName(name string) {
@@ -221,7 +220,7 @@ func (s *MockSpan) SetError(v bool) {
 	s.SetAttributes(ErrorKey.Bool(v))
 }
 
-func (s *MockSpan) SetAttributes(attributes ...label.KeyValue) {
+func (s *MockSpan) SetAttributes(attributes ...attribute.KeyValue) {
 	s.applyUpdate(baggage.MapUpdate{
 		MultiKV: attributes,
 	})
@@ -255,8 +254,8 @@ func (s *MockSpan) RecordError(err error, opts ...trace.EventOption) {
 
 	s.SetStatus(codes.Error, "")
 	opts = append(opts, trace.WithAttributes(
-		label.String("error.type", reflect.TypeOf(err).String()),
-		label.String("error.message", err.Error()),
+		attribute.String("error.type", reflect.TypeOf(err).String()),
+		attribute.String("error.message", err.Error()),
 	))
 	s.AddEvent("error", opts...)
 }

@@ -19,7 +19,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -27,8 +27,8 @@ const conflict = 0.5
 
 func makeLabels(n int) (_, _ *resource.Resource) {
 	used := map[string]bool{}
-	l1 := make([]label.KeyValue, n)
-	l2 := make([]label.KeyValue, n)
+	l1 := make([]attribute.KeyValue, n)
+	l2 := make([]attribute.KeyValue, n)
 	for i := 0; i < n; i++ {
 		var k string
 		for {
@@ -38,12 +38,12 @@ func makeLabels(n int) (_, _ *resource.Resource) {
 				break
 			}
 		}
-		l1[i] = label.String(k, fmt.Sprint("v", rand.Intn(1000000000)))
+		l1[i] = attribute.String(k, fmt.Sprint("v", rand.Intn(1000000000)))
 
 		if rand.Float64() < conflict {
 			l2[i] = l1[i]
 		} else {
-			l2[i] = label.String(k, fmt.Sprint("v", rand.Intn(1000000000)))
+			l2[i] = attribute.String(k, fmt.Sprint("v", rand.Intn(1000000000)))
 		}
 
 	}

@@ -60,11 +60,11 @@ type outOfThinAirPropagator struct {
 var _ propagation.TextMapPropagator = outOfThinAirPropagator{}
 
 func (p outOfThinAirPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
-	sc := trace.SpanContext{
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    traceID,
 		SpanID:     spanID,
 		TraceFlags: 0,
-	}
+	})
 	require.True(p.t, sc.IsValid())
 	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
@@ -78,6 +78,10 @@ func (outOfThinAirPropagator) Fields() []string {
 type nilCarrier struct{}
 
 var _ propagation.TextMapCarrier = nilCarrier{}
+
+func (nilCarrier) Keys() []string {
+	return nil
+}
 
 func (nilCarrier) Get(key string) string {
 	return ""

@@ -23,9 +23,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	exportmetric "go.opentelemetry.io/otel/sdk/export/metric"
@@ -40,24 +40,24 @@ import (
 // themselves.
 func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlp.Exporter, mcTraces, mcMetrics Collector) {
 	pOpts := []sdktrace.TracerProviderOption{
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithBatcher(
 			exp,
 			// add following two options to ensure flush
-			sdktrace.WithBatchTimeout(5),
+			sdktrace.WithBatchTimeout(5*time.Second),
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	}
 	tp1 := sdktrace.NewTracerProvider(append(pOpts,
 		sdktrace.WithResource(resource.NewWithAttributes(
-			label.String("rk1", "rv11)"),
-			label.Int64("rk2", 5),
+			attribute.String("rk1", "rv11)"),
+			attribute.Int64("rk2", 5),
 		)))...)
 
 	tp2 := sdktrace.NewTracerProvider(append(pOpts,
 		sdktrace.WithResource(resource.NewWithAttributes(
-			label.String("rk1", "rv12)"),
-			label.Float32("rk3", 6.5),
+			attribute.String("rk1", "rv12)"),
+			attribute.Float64("rk3", 6.5),
 		)))...)
 
 	tr1 := tp1.Tracer("test-tracer1")
@@ -66,21 +66,21 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlp.Exporter, mcTr
 	m := 4
 	for i := 0; i < m; i++ {
 		_, span := tr1.Start(ctx, "AlwaysSample")
-		span.SetAttributes(label.Int64("i", int64(i)))
+		span.SetAttributes(attribute.Int64("i", int64(i)))
 		span.End()
 
 		_, span = tr2.Start(ctx, "AlwaysSample")
-		span.SetAttributes(label.Int64("i", int64(i)))
+		span.SetAttributes(attribute.Int64("i", int64(i)))
 		span.End()
 	}
 
 	selector := simple.NewWithInexpensiveDistribution()
 	processor := processor.New(selector, exportmetric.StatelessExportKindSelector())
-	cont := controller.New(processor, controller.WithPusher(exp))
+	cont := controller.New(processor, controller.WithExporter(exp))
 	require.NoError(t, cont.Start(ctx))
 
 	meter := cont.MeterProvider().Meter("test-meter")
-	labels := []label.KeyValue{label.Bool("test", true)}
+	labels := []attribute.KeyValue{attribute.Bool("test", true)}
 
 	type data struct {
 		iKind metric.InstrumentKind

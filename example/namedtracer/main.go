@@ -19,18 +19,18 @@ import (
 	"log"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/example/namedtracer/foo"
 	"go.opentelemetry.io/otel/exporters/stdout"
-	"go.opentelemetry.io/otel/label"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
 
 var (
-	fooKey     = label.Key("ex.com/foo")
-	barKey     = label.Key("ex.com/bar")
-	anotherKey = label.Key("ex.com/another")
+	fooKey     = attribute.Key("ex.com/foo")
+	barKey     = attribute.Key("ex.com/bar")
+	anotherKey = attribute.Key("ex.com/another")
 )
 
 var tp *sdktrace.TracerProvider
@@ -45,11 +45,7 @@ func initTracer() {
 	}
 	bsp := sdktrace.NewBatchSpanProcessor(exp)
 	tp = sdktrace.NewTracerProvider(
-		sdktrace.WithConfig(
-			sdktrace.Config{
-				DefaultSampler: sdktrace.AlwaysSample(),
-			},
-		),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithSpanProcessor(bsp),
 	)
 	otel.SetTracerProvider(tp)
@@ -68,7 +64,7 @@ func main() {
 	var span trace.Span
 	ctx, span = tracer.Start(ctx, "operation")
 	defer span.End()
-	span.AddEvent("Nice operation!", trace.WithAttributes(label.Int("bogons", 100)))
+	span.AddEvent("Nice operation!", trace.WithAttributes(attribute.Int("bogons", 100)))
 	span.SetAttributes(anotherKey.String("yes"))
 	if err := foo.SubOperation(ctx); err != nil {
 		panic(err)

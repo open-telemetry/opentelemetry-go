@@ -22,8 +22,8 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/matchers"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -67,8 +67,8 @@ func TestTracer(t *testing.T) {
 
 			e := matchers.NewExpecter(t)
 
-			attr1 := label.String("a", "1")
-			attr2 := label.String("b", "2")
+			attr1 := attribute.String("a", "1")
+			attr2 := attribute.String("b", "2")
 
 			subject := tp.Tracer(t.Name())
 			_, span := subject.Start(context.Background(), "test", trace.WithAttributes(attr1, attr2))
@@ -97,9 +97,9 @@ func TestTracer(t *testing.T) {
 			e.Expect(ok).ToBeTrue()
 
 			childSpanContext := testSpan.SpanContext()
-			e.Expect(childSpanContext.TraceID).ToEqual(parentSpanContext.TraceID)
-			e.Expect(childSpanContext.SpanID).NotToEqual(parentSpanContext.SpanID)
-			e.Expect(testSpan.ParentSpanID()).ToEqual(parentSpanContext.SpanID)
+			e.Expect(childSpanContext.TraceID()).ToEqual(parentSpanContext.TraceID())
+			e.Expect(childSpanContext.SpanID()).NotToEqual(parentSpanContext.SpanID())
+			e.Expect(testSpan.ParentSpanID()).ToEqual(parentSpanContext.SpanID())
 		})
 
 		t.Run("uses the current span from context as parent, even if it has remote span context", func(t *testing.T) {
@@ -120,9 +120,9 @@ func TestTracer(t *testing.T) {
 			e.Expect(ok).ToBeTrue()
 
 			childSpanContext := testSpan.SpanContext()
-			e.Expect(childSpanContext.TraceID).ToEqual(parentSpanContext.TraceID)
-			e.Expect(childSpanContext.SpanID).NotToEqual(parentSpanContext.SpanID)
-			e.Expect(testSpan.ParentSpanID()).ToEqual(parentSpanContext.SpanID)
+			e.Expect(childSpanContext.TraceID()).ToEqual(parentSpanContext.TraceID())
+			e.Expect(childSpanContext.SpanID()).NotToEqual(parentSpanContext.SpanID())
+			e.Expect(testSpan.ParentSpanID()).ToEqual(parentSpanContext.SpanID())
 		})
 
 		t.Run("uses the remote span context from context as parent, if current span is missing", func(t *testing.T) {
@@ -142,9 +142,9 @@ func TestTracer(t *testing.T) {
 			e.Expect(ok).ToBeTrue()
 
 			childSpanContext := testSpan.SpanContext()
-			e.Expect(childSpanContext.TraceID).ToEqual(remoteParentSpanContext.TraceID)
-			e.Expect(childSpanContext.SpanID).NotToEqual(remoteParentSpanContext.SpanID)
-			e.Expect(testSpan.ParentSpanID()).ToEqual(remoteParentSpanContext.SpanID)
+			e.Expect(childSpanContext.TraceID()).ToEqual(remoteParentSpanContext.TraceID())
+			e.Expect(childSpanContext.SpanID()).NotToEqual(remoteParentSpanContext.SpanID())
+			e.Expect(testSpan.ParentSpanID()).ToEqual(remoteParentSpanContext.SpanID())
 		})
 
 		t.Run("creates new root when both current span and remote span context are missing", func(t *testing.T) {
@@ -165,10 +165,10 @@ func TestTracer(t *testing.T) {
 			e.Expect(ok).ToBeTrue()
 
 			childSpanContext := testSpan.SpanContext()
-			e.Expect(childSpanContext.TraceID).NotToEqual(parentSpanContext.TraceID)
-			e.Expect(childSpanContext.TraceID).NotToEqual(remoteParentSpanContext.TraceID)
-			e.Expect(childSpanContext.SpanID).NotToEqual(parentSpanContext.SpanID)
-			e.Expect(childSpanContext.SpanID).NotToEqual(remoteParentSpanContext.SpanID)
+			e.Expect(childSpanContext.TraceID()).NotToEqual(parentSpanContext.TraceID())
+			e.Expect(childSpanContext.TraceID()).NotToEqual(remoteParentSpanContext.TraceID())
+			e.Expect(childSpanContext.SpanID()).NotToEqual(parentSpanContext.SpanID())
+			e.Expect(childSpanContext.SpanID()).NotToEqual(remoteParentSpanContext.SpanID())
 			e.Expect(testSpan.ParentSpanID().IsValid()).ToBeFalse()
 		})
 
@@ -184,6 +184,8 @@ func TestTracer(t *testing.T) {
 			parentSpanContext := parentSpan.SpanContext()
 			remoteParentSpanContext := remoteParentSpan.SpanContext()
 			parentCtx = trace.ContextWithRemoteSpanContext(parentCtx, remoteParentSpanContext)
+			// remote SpanContexts will be marked as remote
+			remoteParentSpanContext = remoteParentSpanContext.WithRemote(true)
 
 			_, span := subject.Start(parentCtx, "child", trace.WithNewRoot())
 
@@ -191,23 +193,23 @@ func TestTracer(t *testing.T) {
 			e.Expect(ok).ToBeTrue()
 
 			childSpanContext := testSpan.SpanContext()
-			e.Expect(childSpanContext.TraceID).NotToEqual(parentSpanContext.TraceID)
-			e.Expect(childSpanContext.TraceID).NotToEqual(remoteParentSpanContext.TraceID)
-			e.Expect(childSpanContext.SpanID).NotToEqual(parentSpanContext.SpanID)
-			e.Expect(childSpanContext.SpanID).NotToEqual(remoteParentSpanContext.SpanID)
+			e.Expect(childSpanContext.TraceID()).NotToEqual(parentSpanContext.TraceID())
+			e.Expect(childSpanContext.TraceID()).NotToEqual(remoteParentSpanContext.TraceID())
+			e.Expect(childSpanContext.SpanID()).NotToEqual(parentSpanContext.SpanID())
+			e.Expect(childSpanContext.SpanID()).NotToEqual(remoteParentSpanContext.SpanID())
 			e.Expect(testSpan.ParentSpanID().IsValid()).ToBeFalse()
 
 			expectedLinks := []trace.Link{
 				{
 					SpanContext: parentSpanContext,
-					Attributes: []label.KeyValue{
-						label.String("ignored-on-demand", "current"),
+					Attributes: []attribute.KeyValue{
+						attribute.String("ignored-on-demand", "current"),
 					},
 				},
 				{
 					SpanContext: remoteParentSpanContext,
-					Attributes: []label.KeyValue{
-						label.String("ignored-on-demand", "remote"),
+					Attributes: []attribute.KeyValue{
+						attribute.String("ignored-on-demand", "remote"),
 					},
 				},
 			}
@@ -225,16 +227,16 @@ func TestTracer(t *testing.T) {
 			_, span := subject.Start(context.Background(), "link1")
 			link1 := trace.Link{
 				SpanContext: span.SpanContext(),
-				Attributes: []label.KeyValue{
-					label.String("a", "1"),
+				Attributes: []attribute.KeyValue{
+					attribute.String("a", "1"),
 				},
 			}
 
 			_, span = subject.Start(context.Background(), "link2")
 			link2 := trace.Link{
 				SpanContext: span.SpanContext(),
-				Attributes: []label.KeyValue{
-					label.String("b", "2"),
+				Attributes: []attribute.KeyValue{
+					attribute.String("b", "2"),
 				},
 			}
 
@@ -295,7 +297,7 @@ func testTracedSpan(t *testing.T, fn func(tracer trace.Tracer, name string) (tra
 
 		e := matchers.NewExpecter(t)
 
-		sr := new(oteltest.StandardSpanRecorder)
+		sr := new(oteltest.SpanRecorder)
 		subject := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr)).Tracer(t.Name())
 		subject.Start(context.Background(), "span1")
 
@@ -315,7 +317,7 @@ func testTracedSpan(t *testing.T, fn func(tracer trace.Tracer, name string) (tra
 
 		e := matchers.NewExpecter(t)
 
-		sr := new(oteltest.StandardSpanRecorder)
+		sr := new(oteltest.SpanRecorder)
 		subject := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr)).Tracer(t.Name())
 
 		numSpans := 2

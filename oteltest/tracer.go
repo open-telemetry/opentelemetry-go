@@ -18,7 +18,7 @@ import (
 	"context"
 	"time"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -46,7 +46,7 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 	span := &Span{
 		tracer:     t,
 		startTime:  startTime,
-		attributes: make(map[label.Key]label.Value),
+		attributes: make(map[attribute.Key]attribute.Value),
 		links:      []trace.Link{},
 		spanKind:   c.SpanKind,
 	}
@@ -54,36 +54,36 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 	if c.NewRoot {
 		span.spanContext = trace.SpanContext{}
 
-		iodKey := label.Key("ignored-on-demand")
+		iodKey := attribute.Key("ignored-on-demand")
 		if lsc := trace.SpanContextFromContext(ctx); lsc.IsValid() {
 			span.links = append(span.links, trace.Link{
 				SpanContext: lsc,
-				Attributes:  []label.KeyValue{iodKey.String("current")},
+				Attributes:  []attribute.KeyValue{iodKey.String("current")},
 			})
 		}
 		if rsc := trace.RemoteSpanContextFromContext(ctx); rsc.IsValid() {
 			span.links = append(span.links, trace.Link{
 				SpanContext: rsc,
-				Attributes:  []label.KeyValue{iodKey.String("remote")},
+				Attributes:  []attribute.KeyValue{iodKey.String("remote")},
 			})
 		}
 	} else {
 		span.spanContext = t.config.SpanContextFunc(ctx)
 		if lsc := trace.SpanContextFromContext(ctx); lsc.IsValid() {
-			span.spanContext.TraceID = lsc.TraceID
-			span.parentSpanID = lsc.SpanID
+			span.spanContext = span.spanContext.WithTraceID(lsc.TraceID())
+			span.parentSpanID = lsc.SpanID()
 		} else if rsc := trace.RemoteSpanContextFromContext(ctx); rsc.IsValid() {
-			span.spanContext.TraceID = rsc.TraceID
-			span.parentSpanID = rsc.SpanID
+			span.spanContext = span.spanContext.WithTraceID(rsc.TraceID())
+			span.parentSpanID = rsc.SpanID()
 		}
 	}
 
 	for _, link := range c.Links {
 		for i, sl := range span.links {
-			if sl.SpanContext.SpanID == link.SpanContext.SpanID &&
-				sl.SpanContext.TraceID == link.SpanContext.TraceID &&
-				sl.SpanContext.TraceFlags == link.SpanContext.TraceFlags &&
-				sl.SpanContext.TraceState.String() == link.SpanContext.TraceState.String() {
+			if sl.SpanContext.SpanID() == link.SpanContext.SpanID() &&
+				sl.SpanContext.TraceID() == link.SpanContext.TraceID() &&
+				sl.SpanContext.TraceFlags() == link.SpanContext.TraceFlags() &&
+				sl.SpanContext.TraceState().String() == link.SpanContext.TraceState().String() {
 				span.links[i].Attributes = link.Attributes
 				break
 			}

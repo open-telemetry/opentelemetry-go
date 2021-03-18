@@ -17,9 +17,9 @@ package jaeger
 import (
 	"context"
 	"encoding/binary"
-	"math"
 	"os"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -29,14 +29,15 @@ import (
 	"google.golang.org/api/support/bundler"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
-	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -186,32 +187,14 @@ func TestNewRawExporter(t *testing.T) {
 		{
 			name:                   "default exporter",
 			endpoint:               WithCollectorEndpoint(collectorEndpoint),
-			expectedServiceName:    defaultServiceName,
+			expectedServiceName:    "unknown_service",
 			expectedBufferMaxCount: bundler.DefaultBufferedByteLimit,
 			expectedBatchMaxCount:  bundler.DefaultBundleCountThreshold,
 		},
 		{
 			name:                   "default exporter with agent endpoint",
 			endpoint:               WithAgentEndpoint(agentEndpoint),
-			expectedServiceName:    defaultServiceName,
-			expectedBufferMaxCount: bundler.DefaultBufferedByteLimit,
-			expectedBatchMaxCount:  bundler.DefaultBundleCountThreshold,
-		},
-		{
-			name:     "with process",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
-			options: []Option{
-				WithProcess(
-					Process{
-						ServiceName: "jaeger-test",
-						Tags: []label.KeyValue{
-							label.String("key", "val"),
-						},
-					},
-				),
-			},
-			expectedServiceName:    "jaeger-test",
-			expectedTagsLen:        1,
+			expectedServiceName:    "unknown_service",
 			expectedBufferMaxCount: bundler.DefaultBufferedByteLimit,
 			expectedBatchMaxCount:  bundler.DefaultBundleCountThreshold,
 		},
@@ -219,15 +202,10 @@ func TestNewRawExporter(t *testing.T) {
 			name:     "with buffer and batch max count",
 			endpoint: WithCollectorEndpoint(collectorEndpoint),
 			options: []Option{
-				WithProcess(
-					Process{
-						ServiceName: "jaeger-test",
-					},
-				),
 				WithBufferMaxCount(99),
 				WithBatchMaxCount(99),
 			},
-			expectedServiceName:    "jaeger-test",
+			expectedServiceName:    "unknown_service",
 			expectedBufferMaxCount: 99,
 			expectedBatchMaxCount:  99,
 		},
@@ -241,10 +219,10 @@ func TestNewRawExporter(t *testing.T) {
 			)
 
 			assert.NoError(t, err)
-			assert.Equal(t, tc.expectedServiceName, exp.process.ServiceName)
-			assert.Len(t, exp.process.Tags, tc.expectedTagsLen)
 			assert.Equal(t, tc.expectedBufferMaxCount, exp.bundler.BufferedByteLimit)
 			assert.Equal(t, tc.expectedBatchMaxCount, exp.bundler.BundleCountThreshold)
+			assert.NotEmpty(t, exp.defaultServiceName)
+			assert.True(t, strings.HasPrefix(exp.defaultServiceName, tc.expectedServiceName))
 		})
 	}
 }
@@ -328,18 +306,18 @@ func TestExporter_ExportSpan(t *testing.T) {
 	// Create Jaeger Exporter
 	exp, err := NewRawExporter(
 		withTestCollectorEndpoint(),
-		WithProcess(Process{
-			ServiceName: serviceName,
-			Tags: []label.KeyValue{
-				label.String(tagKey, tagVal),
-			},
+		WithSDK(&sdktrace.Config{
+			Resource: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String(serviceName),
+				attribute.String(tagKey, tagVal),
+			),
 		}),
 	)
 
 	assert.NoError(t, err)
 
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithSyncer(exp),
 	)
 	otel.SetTracerProvider(tp)
@@ -357,6 +335,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 	now := time.Now()
 	traceID, _ := trace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
 	spanID, _ := trace.SpanIDFromHex("0102030405060708")
+	parentSpanID, _ := trace.SpanIDFromHex("0807060504030201")
 
 	linkTraceID, _ := trace.TraceIDFromHex("0102030405060709090a0b0c0d0e0f11")
 	linkSpanID, _ := trace.SpanIDFromHex("0102030405060709")
@@ -365,8 +344,9 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 	keyValue := "value"
 	statusCodeValue := int64(1)
 	doubleValue := 123.456
-	uintValue := int64(123)
+	intValue := int64(123)
 	boolTrue := true
+	arrValue := "[0,1,2,3]"
 	statusMessage := "this is a problem"
 	spanKind := "client"
 	rv1 := "rv11"
@@ -382,34 +362,32 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 		{
 			name: "no parent",
 			data: &export.SpanSnapshot{
-				SpanContext: trace.SpanContext{
+				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID: traceID,
 					SpanID:  spanID,
-				},
+				}),
 				Name:      "/foo",
 				StartTime: now,
 				EndTime:   now,
 				Links: []trace.Link{
 					{
-						SpanContext: trace.SpanContext{
+						SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 							TraceID: linkTraceID,
 							SpanID:  linkSpanID,
-						},
+						}),
 					},
 				},
-				Attributes: []label.KeyValue{
-					label.String("key", keyValue),
-					label.Float64("double", doubleValue),
-					label.Uint64("uint", uint64(uintValue)),
-					label.Uint64("overflows", math.MaxUint64),
+				Attributes: []attribute.KeyValue{
+					attribute.String("key", keyValue),
+					attribute.Float64("double", doubleValue),
+					attribute.Int64("int", intValue),
 				},
 				MessageEvents: []trace.Event{
-					{Name: eventNameValue, Attributes: []label.KeyValue{label.String("k1", keyValue)}, Time: now},
+					{Name: eventNameValue, Attributes: []attribute.KeyValue{attribute.String("k1", keyValue)}, Time: now},
 				},
 				StatusCode:    codes.Error,
 				StatusMessage: statusMessage,
 				SpanKind:      trace.SpanKindClient,
-				Resource:      resource.NewWithAttributes(label.String("rk1", rv1), label.Int64("rk2", rv2)),
 				InstrumentationLibrary: instrumentation.Library{
 					Name:    instrLibName,
 					Version: instrLibVersion,
@@ -425,19 +403,17 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 				Tags: []*gen.Tag{
 					{Key: "double", VType: gen.TagType_DOUBLE, VDouble: &doubleValue},
 					{Key: "key", VType: gen.TagType_STRING, VStr: &keyValue},
-					{Key: "uint", VType: gen.TagType_LONG, VLong: &uintValue},
+					{Key: "int", VType: gen.TagType_LONG, VLong: &intValue},
 					{Key: "error", VType: gen.TagType_BOOL, VBool: &boolTrue},
-					{Key: "otel.instrumentation_library.name", VType: gen.TagType_STRING, VStr: &instrLibName},
-					{Key: "otel.instrumentation_library.version", VType: gen.TagType_STRING, VStr: &instrLibVersion},
+					{Key: "otel.library.name", VType: gen.TagType_STRING, VStr: &instrLibName},
+					{Key: "otel.library.version", VType: gen.TagType_STRING, VStr: &instrLibVersion},
 					{Key: "status.code", VType: gen.TagType_LONG, VLong: &statusCodeValue},
 					{Key: "status.message", VType: gen.TagType_STRING, VStr: &statusMessage},
 					{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
-					{Key: "rk1", VType: gen.TagType_STRING, VStr: &rv1},
-					{Key: "rk2", VType: gen.TagType_LONG, VLong: &rv2},
 				},
 				References: []*gen.SpanRef{
 					{
-						RefType:     gen.SpanRefType_CHILD_OF,
+						RefType:     gen.SpanRefType_FOLLOWS_FROM,
 						TraceIdHigh: int64(binary.BigEndian.Uint64(linkTraceID[0:8])),
 						TraceIdLow:  int64(binary.BigEndian.Uint64(linkTraceID[8:16])),
 						SpanId:      int64(binary.BigEndian.Uint64(linkSpanID[:])),
@@ -459,6 +435,98 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 							},
 						},
 					},
+				},
+			},
+		},
+		{
+			name: "with parent",
+			data: &export.SpanSnapshot{
+				ParentSpanID: parentSpanID,
+				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID: traceID,
+					SpanID:  spanID,
+				}),
+				Links: []trace.Link{
+					{
+						SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+							TraceID: linkTraceID,
+							SpanID:  linkSpanID,
+						}),
+					},
+				},
+				Name:      "/foo",
+				StartTime: now,
+				EndTime:   now,
+				Attributes: []attribute.KeyValue{
+					attribute.Array("arr", []int{0, 1, 2, 3}),
+				},
+				StatusCode:    codes.Unset,
+				StatusMessage: statusMessage,
+				SpanKind:      trace.SpanKindInternal,
+				InstrumentationLibrary: instrumentation.Library{
+					Name:    instrLibName,
+					Version: instrLibVersion,
+				},
+			},
+			want: &gen.Span{
+				TraceIdLow:    651345242494996240,
+				TraceIdHigh:   72623859790382856,
+				SpanId:        72623859790382856,
+				ParentSpanId:  578437695752307201,
+				OperationName: "/foo",
+				StartTime:     now.UnixNano() / 1000,
+				Duration:      0,
+				Tags: []*gen.Tag{
+					// status code, message and span kind should NOT be populated
+					{Key: "arr", VType: gen.TagType_STRING, VStr: &arrValue},
+					{Key: "otel.library.name", VType: gen.TagType_STRING, VStr: &instrLibName},
+					{Key: "otel.library.version", VType: gen.TagType_STRING, VStr: &instrLibVersion},
+				},
+				References: []*gen.SpanRef{
+					{
+						RefType:     gen.SpanRefType_FOLLOWS_FROM,
+						TraceIdHigh: int64(binary.BigEndian.Uint64(linkTraceID[0:8])),
+						TraceIdLow:  int64(binary.BigEndian.Uint64(linkTraceID[8:16])),
+						SpanId:      int64(binary.BigEndian.Uint64(linkSpanID[:])),
+					},
+				},
+			},
+		},
+		{
+			name: "resources do not affect the tags",
+			data: &export.SpanSnapshot{
+				ParentSpanID: parentSpanID,
+				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID: traceID,
+					SpanID:  spanID,
+				}),
+				Name:      "/foo",
+				StartTime: now,
+				EndTime:   now,
+				Resource: resource.NewWithAttributes(
+					attribute.String("rk1", rv1),
+					attribute.Int64("rk2", rv2),
+					semconv.ServiceNameKey.String("service name"),
+				),
+				StatusCode:    codes.Unset,
+				StatusMessage: statusMessage,
+				SpanKind:      trace.SpanKindInternal,
+				InstrumentationLibrary: instrumentation.Library{
+					Name:    instrLibName,
+					Version: instrLibVersion,
+				},
+			},
+			want: &gen.Span{
+				TraceIdLow:    651345242494996240,
+				TraceIdHigh:   72623859790382856,
+				SpanId:        72623859790382856,
+				ParentSpanId:  578437695752307201,
+				OperationName: "/foo",
+				StartTime:     now.UnixNano() / 1000,
+				Duration:      0,
+				Tags: []*gen.Tag{
+					{Key: "otel.library.name", VType: gen.TagType_STRING, VStr: &instrLibName},
+					{Key: "otel.library.version", VType: gen.TagType_STRING, VStr: &instrLibVersion},
 				},
 			},
 		},
@@ -524,4 +592,297 @@ func TestErrorOnExportShutdownExporter(t *testing.T) {
 	require.NoError(t, err)
 	assert.NoError(t, e.Shutdown(context.Background()))
 	assert.NoError(t, e.ExportSpans(context.Background(), nil))
+}
+
+func TestJaegerBatchList(t *testing.T) {
+	newString := func(value string) *string {
+		return &value
+	}
+	spanKind := "unspecified"
+	now := time.Now()
+
+	testCases := []struct {
+		name                string
+		spanSnapshotList    []*export.SpanSnapshot
+		defaultServiceName  string
+		resourceFromProcess *resource.Resource
+		expectedBatchList   []*gen.Batch
+	}{
+		{
+			name:              "no span shots",
+			spanSnapshotList:  nil,
+			expectedBatchList: nil,
+		},
+		{
+			name: "span's snapshot contains nil span",
+			spanSnapshotList: []*export.SpanSnapshot{
+				{
+					Name: "s1",
+					Resource: resource.NewWithAttributes(
+						semconv.ServiceNameKey.String("name"),
+						attribute.Key("r1").String("v1"),
+					),
+					StartTime: now,
+					EndTime:   now,
+				},
+				nil,
+			},
+			expectedBatchList: []*gen.Batch{
+				{
+					Process: &gen.Process{
+						ServiceName: "name",
+						Tags: []*gen.Tag{
+							{Key: "r1", VType: gen.TagType_STRING, VStr: newString("v1")},
+						},
+					},
+					Spans: []*gen.Span{
+						{
+							OperationName: "s1",
+							Tags: []*gen.Tag{
+								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
+							},
+							StartTime: now.UnixNano() / 1000,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "merge spans that have the same resources",
+			spanSnapshotList: []*export.SpanSnapshot{
+				{
+					Name: "s1",
+					Resource: resource.NewWithAttributes(
+						semconv.ServiceNameKey.String("name"),
+						attribute.Key("r1").String("v1"),
+					),
+					StartTime: now,
+					EndTime:   now,
+				},
+				{
+					Name: "s2",
+					Resource: resource.NewWithAttributes(
+						semconv.ServiceNameKey.String("name"),
+						attribute.Key("r1").String("v1"),
+					),
+					StartTime: now,
+					EndTime:   now,
+				},
+				{
+					Name: "s3",
+					Resource: resource.NewWithAttributes(
+						semconv.ServiceNameKey.String("name"),
+						attribute.Key("r2").String("v2"),
+					),
+					StartTime: now,
+					EndTime:   now,
+				},
+			},
+			expectedBatchList: []*gen.Batch{
+				{
+					Process: &gen.Process{
+						ServiceName: "name",
+						Tags: []*gen.Tag{
+							{Key: "r1", VType: gen.TagType_STRING, VStr: newString("v1")},
+						},
+					},
+					Spans: []*gen.Span{
+						{
+							OperationName: "s1",
+							Tags: []*gen.Tag{
+								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
+							},
+							StartTime: now.UnixNano() / 1000,
+						},
+						{
+							OperationName: "s2",
+							Tags: []*gen.Tag{
+								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
+							},
+							StartTime: now.UnixNano() / 1000,
+						},
+					},
+				},
+				{
+					Process: &gen.Process{
+						ServiceName: "name",
+						Tags: []*gen.Tag{
+							{Key: "r2", VType: gen.TagType_STRING, VStr: newString("v2")},
+						},
+					},
+					Spans: []*gen.Span{
+						{
+							OperationName: "s3",
+							Tags: []*gen.Tag{
+								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
+							},
+							StartTime: now.UnixNano() / 1000,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "merge resources that come from process",
+			spanSnapshotList: []*export.SpanSnapshot{
+				{
+					Name: "s1",
+					Resource: resource.NewWithAttributes(
+						semconv.ServiceNameKey.String("name"),
+						attribute.Key("r1").String("v1"),
+						attribute.Key("r2").String("v2"),
+					),
+					StartTime: now,
+					EndTime:   now,
+				},
+			},
+			resourceFromProcess: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("new-name"),
+				attribute.Key("r1").String("v2"),
+			),
+			expectedBatchList: []*gen.Batch{
+				{
+					Process: &gen.Process{
+						ServiceName: "new-name",
+						Tags: []*gen.Tag{
+							{Key: "r1", VType: gen.TagType_STRING, VStr: newString("v2")},
+							{Key: "r2", VType: gen.TagType_STRING, VStr: newString("v2")},
+						},
+					},
+					Spans: []*gen.Span{
+						{
+							OperationName: "s1",
+							Tags: []*gen.Tag{
+								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
+							},
+							StartTime: now.UnixNano() / 1000,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "span's snapshot contains no service name but resourceFromProcess does",
+			spanSnapshotList: []*export.SpanSnapshot{
+				{
+					Name: "s1",
+					Resource: resource.NewWithAttributes(
+						attribute.Key("r1").String("v1"),
+					),
+					StartTime: now,
+					EndTime:   now,
+				},
+				nil,
+			},
+			resourceFromProcess: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("new-name"),
+			),
+			expectedBatchList: []*gen.Batch{
+				{
+					Process: &gen.Process{
+						ServiceName: "new-name",
+						Tags: []*gen.Tag{
+							{Key: "r1", VType: gen.TagType_STRING, VStr: newString("v1")},
+						},
+					},
+					Spans: []*gen.Span{
+						{
+							OperationName: "s1",
+							Tags: []*gen.Tag{
+								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
+							},
+							StartTime: now.UnixNano() / 1000,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "no service name in spans and resourceFromProcess",
+			spanSnapshotList: []*export.SpanSnapshot{
+				{
+					Name: "s1",
+					Resource: resource.NewWithAttributes(
+						attribute.Key("r1").String("v1"),
+					),
+					StartTime: now,
+					EndTime:   now,
+				},
+				nil,
+			},
+			defaultServiceName: "default service name",
+			expectedBatchList: []*gen.Batch{
+				{
+					Process: &gen.Process{
+						ServiceName: "default service name",
+						Tags: []*gen.Tag{
+							{Key: "r1", VType: gen.TagType_STRING, VStr: newString("v1")},
+						},
+					},
+					Spans: []*gen.Span{
+						{
+							OperationName: "s1",
+							Tags: []*gen.Tag{
+								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
+							},
+							StartTime: now.UnixNano() / 1000,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			batchList := jaegerBatchList(tc.spanSnapshotList, tc.defaultServiceName, tc.resourceFromProcess)
+
+			assert.ElementsMatch(t, tc.expectedBatchList, batchList)
+		})
+	}
+}
+
+func TestProcess(t *testing.T) {
+	v1 := "v1"
+
+	testCases := []struct {
+		name               string
+		res                *resource.Resource
+		defaultServiceName string
+		expectedProcess    *gen.Process
+	}{
+		{
+			name: "resources contain service name",
+			res: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("service name"),
+				attribute.Key("r1").String("v1"),
+			),
+			defaultServiceName: "default service name",
+			expectedProcess: &gen.Process{
+				ServiceName: "service name",
+				Tags: []*gen.Tag{
+					{Key: "r1", VType: gen.TagType_STRING, VStr: &v1},
+				},
+			},
+		},
+		{
+			name:               "resources don't have service name",
+			res:                resource.NewWithAttributes(attribute.Key("r1").String("v1")),
+			defaultServiceName: "default service name",
+			expectedProcess: &gen.Process{
+				ServiceName: "default service name",
+				Tags: []*gen.Tag{
+					{Key: "r1", VType: gen.TagType_STRING, VStr: &v1},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			pro := process(tc.res, tc.defaultServiceName)
+
+			assert.Equal(t, tc.expectedProcess, pro)
+		})
+	}
 }

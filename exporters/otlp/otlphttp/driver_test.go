@@ -105,6 +105,12 @@ func TestEndToEnd(t *testing.T) {
 				ExpectedHeaders: testHeaders,
 			},
 		},
+		{
+			name: "with json encoding",
+			opts: []otlphttp.Option{
+				otlphttp.WithMarshal(otlphttp.MarshalJSON),
+			},
+		},
 	}
 
 	for _, tc := range tests {

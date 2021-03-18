@@ -24,7 +24,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -36,6 +36,10 @@ import (
 	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
+
+func requireNotAfter(t *testing.T, t1, t2 time.Time) {
+	require.False(t, t1.After(t2), "expected %v ≤ %v", t1, t2)
+}
 
 // TestProcessor tests all the non-error paths in this package.
 func TestProcessor(t *testing.T) {
@@ -103,8 +107,8 @@ func asNumber(nkind number.Kind, value int64) number.Number {
 	return number.NewFloat64Number(float64(value))
 }
 
-func updateFor(t *testing.T, desc *metric.Descriptor, selector export.AggregatorSelector, res *resource.Resource, value int64, labs ...label.KeyValue) export.Accumulation {
-	ls := label.NewSet(labs...)
+func updateFor(t *testing.T, desc *metric.Descriptor, selector export.AggregatorSelector, res *resource.Resource, value int64, labs ...attribute.KeyValue) export.Accumulation {
+	ls := attribute.NewSet(labs...)
 	var agg export.Aggregator
 	selector.AggregatorFor(desc, &agg)
 	require.NoError(t, agg.Update(context.Background(), asNumber(desc.NumberKind(), value), desc))
@@ -122,10 +126,10 @@ func testProcessor(
 	// Note: this selector uses the instrument name to dictate
 	// aggregation kind.
 	selector := processorTest.AggregatorSelector()
-	res := resource.NewWithAttributes(label.String("R", "V"))
+	res := resource.NewWithAttributes(attribute.String("R", "V"))
 
-	labs1 := []label.KeyValue{label.String("L1", "V")}
-	labs2 := []label.KeyValue{label.String("L2", "V")}
+	labs1 := []attribute.KeyValue{attribute.String("L1", "V")}
+	labs2 := []attribute.KeyValue{attribute.String("L2", "V")}
 
 	testBody := func(t *testing.T, hasMemory bool, nAccum, nCheckpoint int) {
 		processor := basic.New(selector, export.ConstantExportKindSelector(ekind), basic.WithMemory(hasMemory))
@@ -183,7 +187,7 @@ func testProcessor(
 				}
 
 				// Test the final checkpoint state.
-				records1 := processorTest.NewOutput(label.DefaultEncoder())
+				records1 := processorTest.NewOutput(attribute.DefaultEncoder())
 				err = checkpointSet.ForEach(export.ConstantExportKindSelector(ekind), records1.AddRecord)
 
 				// Test for an allowed error:
@@ -297,7 +301,7 @@ func TestBasicInconsistent(t *testing.T) {
 	b = basic.New(processorTest.AggregatorSelector(), export.StatelessExportKindSelector())
 
 	desc := metric.NewDescriptor("inst", metric.CounterInstrumentKind, number.Int64Kind)
-	accum := export.NewAccumulation(&desc, label.EmptySet(), resource.Empty(), metrictest.NoopAggregator{})
+	accum := export.NewAccumulation(&desc, attribute.EmptySet(), resource.Empty(), metrictest.NoopAggregator{})
 	require.Equal(t, basic.ErrInconsistentState, b.Process(accum))
 
 	// Test invalid kind:
@@ -316,11 +320,13 @@ func TestBasicInconsistent(t *testing.T) {
 
 func TestBasicTimestamps(t *testing.T) {
 	beforeNew := time.Now()
+	time.Sleep(time.Nanosecond)
 	b := basic.New(processorTest.AggregatorSelector(), export.StatelessExportKindSelector())
+	time.Sleep(time.Nanosecond)
 	afterNew := time.Now()
 
 	desc := metric.NewDescriptor("inst", metric.CounterInstrumentKind, number.Int64Kind)
-	accum := export.NewAccumulation(&desc, label.EmptySet(), resource.Empty(), metrictest.NoopAggregator{})
+	accum := export.NewAccumulation(&desc, attribute.EmptySet(), resource.Empty(), metrictest.NoopAggregator{})
 
 	b.StartCollection()
 	_ = b.Process(accum)
@@ -335,8 +341,8 @@ func TestBasicTimestamps(t *testing.T) {
 	}))
 
 	// The first start time is set in the constructor.
-	require.True(t, beforeNew.Before(start1))
-	require.True(t, afterNew.After(start1))
+	requireNotAfter(t, beforeNew, start1)
+	requireNotAfter(t, start1, afterNew)
 
 	for i := 0; i < 2; i++ {
 		b.StartCollection()
@@ -353,8 +359,8 @@ func TestBasicTimestamps(t *testing.T) {
 
 		// Subsequent intervals have their start and end aligned.
 		require.Equal(t, start2, end1)
-		require.True(t, start1.Before(end1))
-		require.True(t, start2.Before(end2))
+		requireNotAfter(t, start1, end1)
+		requireNotAfter(t, start2, end2)
 
 		start1 = start2
 		end1 = end2
@@ -362,7 +368,7 @@ func TestBasicTimestamps(t *testing.T) {
 }
 
 func TestStatefulNoMemoryCumulative(t *testing.T) {
-	res := resource.NewWithAttributes(label.String("R", "V"))
+	res := resource.NewWithAttributes(attribute.String("R", "V"))
 	ekindSel := export.CumulativeExportKindSelector()
 
 	desc := metric.NewDescriptor("inst.sum", metric.CounterInstrumentKind, number.Int64Kind)
@@ -377,17 +383,17 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 		require.NoError(t, processor.FinishCollection())
 
 		// Verify zero elements
-		records := processorTest.NewOutput(label.DefaultEncoder())
+		records := processorTest.NewOutput(attribute.DefaultEncoder())
 		require.NoError(t, checkpointSet.ForEach(ekindSel, records.AddRecord))
 		require.EqualValues(t, map[string]float64{}, records.Map())
 
 		// Add 10
 		processor.StartCollection()
-		_ = processor.Process(updateFor(t, &desc, selector, res, 10, label.String("A", "B")))
+		_ = processor.Process(updateFor(t, &desc, selector, res, 10, attribute.String("A", "B")))
 		require.NoError(t, processor.FinishCollection())
 
 		// Verify one element
-		records = processorTest.NewOutput(label.DefaultEncoder())
+		records = processorTest.NewOutput(attribute.DefaultEncoder())
 		require.NoError(t, checkpointSet.ForEach(ekindSel, records.AddRecord))
 		require.EqualValues(t, map[string]float64{
 			"inst.sum/A=B/R=V": float64(i * 10),
@@ -396,7 +402,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 }
 
 func TestStatefulNoMemoryDelta(t *testing.T) {
-	res := resource.NewWithAttributes(label.String("R", "V"))
+	res := resource.NewWithAttributes(attribute.String("R", "V"))
 	ekindSel := export.DeltaExportKindSelector()
 
 	desc := metric.NewDescriptor("inst.sum", metric.SumObserverInstrumentKind, number.Int64Kind)
@@ -411,17 +417,17 @@ func TestStatefulNoMemoryDelta(t *testing.T) {
 		require.NoError(t, processor.FinishCollection())
 
 		// Verify zero elements
-		records := processorTest.NewOutput(label.DefaultEncoder())
+		records := processorTest.NewOutput(attribute.DefaultEncoder())
 		require.NoError(t, checkpointSet.ForEach(ekindSel, records.AddRecord))
 		require.EqualValues(t, map[string]float64{}, records.Map())
 
 		// Add 10
 		processor.StartCollection()
-		_ = processor.Process(updateFor(t, &desc, selector, res, int64(i*10), label.String("A", "B")))
+		_ = processor.Process(updateFor(t, &desc, selector, res, int64(i*10), attribute.String("A", "B")))
 		require.NoError(t, processor.FinishCollection())
 
 		// Verify one element
-		records = processorTest.NewOutput(label.DefaultEncoder())
+		records = processorTest.NewOutput(attribute.DefaultEncoder())
 		require.NoError(t, checkpointSet.ForEach(ekindSel, records.AddRecord))
 		require.EqualValues(t, map[string]float64{
 			"inst.sum/A=B/R=V": 10,
@@ -435,7 +441,7 @@ func TestMultiObserverSum(t *testing.T) {
 		export.DeltaExportKindSelector(),
 	} {
 
-		res := resource.NewWithAttributes(label.String("R", "V"))
+		res := resource.NewWithAttributes(attribute.String("R", "V"))
 		desc := metric.NewDescriptor("observe.sum", metric.SumObserverInstrumentKind, number.Int64Kind)
 		selector := processorTest.AggregatorSelector()
 
@@ -445,9 +451,9 @@ func TestMultiObserverSum(t *testing.T) {
 		for i := 1; i < 3; i++ {
 			// Add i*10*3 times
 			processor.StartCollection()
-			_ = processor.Process(updateFor(t, &desc, selector, res, int64(i*10), label.String("A", "B")))
-			_ = processor.Process(updateFor(t, &desc, selector, res, int64(i*10), label.String("A", "B")))
-			_ = processor.Process(updateFor(t, &desc, selector, res, int64(i*10), label.String("A", "B")))
+			_ = processor.Process(updateFor(t, &desc, selector, res, int64(i*10), attribute.String("A", "B")))
+			_ = processor.Process(updateFor(t, &desc, selector, res, int64(i*10), attribute.String("A", "B")))
+			_ = processor.Process(updateFor(t, &desc, selector, res, int64(i*10), attribute.String("A", "B")))
 			require.NoError(t, processor.FinishCollection())
 
 			// Multiplier is 1 for deltas, otherwise i.
@@ -457,7 +463,7 @@ func TestMultiObserverSum(t *testing.T) {
 			}
 
 			// Verify one element
-			records := processorTest.NewOutput(label.DefaultEncoder())
+			records := processorTest.NewOutput(attribute.DefaultEncoder())
 			require.NoError(t, checkpointSet.ForEach(ekindSel, records.AddRecord))
 			require.EqualValues(t, map[string]float64{
 				"observe.sum/A=B/R=V": float64(3 * 10 * multiplier),
@@ -494,7 +500,7 @@ func TestSumObserverEndToEnd(t *testing.T) {
 		accum.Collect(ctx)
 		require.NoError(t, proc.FinishCollection())
 
-		exporter := processortest.NewExporter(eselector, label.DefaultEncoder())
+		exporter := processortest.NewExporter(eselector, attribute.DefaultEncoder())
 		require.NoError(t, exporter.Export(ctx, data))
 
 		require.EqualValues(t, map[string]float64{
@@ -514,6 +520,6 @@ func TestSumObserverEndToEnd(t *testing.T) {
 
 	require.Equal(t, startTime[0], startTime[1])
 	require.Equal(t, startTime[0], startTime[2])
-	require.True(t, endTime[0].Before(endTime[1]))
-	require.True(t, endTime[1].Before(endTime[2]))
+	requireNotAfter(t, endTime[0], endTime[1])
+	requireNotAfter(t, endTime[1], endTime[2])
 }

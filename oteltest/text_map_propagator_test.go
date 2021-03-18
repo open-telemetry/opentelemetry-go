@@ -16,12 +16,21 @@ package oteltest
 
 import (
 	"context"
+	"reflect"
 	"testing"
 )
 
 var (
 	key, value = "test", "true"
 )
+
+func TestTextMapCarrierKeys(t *testing.T) {
+	tmc := NewTextMapCarrier(map[string]string{key: value})
+	expected, actual := []string{key}, tmc.Keys()
+	if !reflect.DeepEqual(actual, expected) {
+		t.Errorf("expected tmc.Keys() to be %v but it was %v", expected, actual)
+	}
+}
 
 func TestTextMapCarrierGet(t *testing.T) {
 	tmc := NewTextMapCarrier(map[string]string{key: value})

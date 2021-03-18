@@ -48,6 +48,16 @@ const (
 	DefaultBackoff time.Duration = 300 * time.Millisecond
 )
 
+// Marshaler describes the kind of message format sent to the collector
+type Marshaler int
+
+const (
+	// MarshalProto tells the driver to send using the protobuf binary format.
+	MarshalProto Marshaler = iota
+	// MarshalJSON tells the driver to send using json format.
+	MarshalJSON
+)
+
 type config struct {
 	endpoint       string
 	compression    Compression
@@ -58,11 +68,17 @@ type config struct {
 	tlsCfg         *tls.Config
 	insecure       bool
 	headers        map[string]string
+	marshaler      Marshaler
 }
 
 // Option applies an option to the HTTP driver.
 type Option interface {
 	Apply(*config)
+
+	// A private method to prevent users implementing the
+	// interface and so future additions to it will not
+	// violate compatibility.
+	private()
 }
 
 type endpointOption string
@@ -70,6 +86,8 @@ type endpointOption string
 func (o endpointOption) Apply(cfg *config) {
 	cfg.endpoint = (string)(o)
 }
+
+func (endpointOption) private() {}
 
 // WithEndpoint allows one to set the address of the collector
 // endpoint that the driver will use to send metrics and spans. If
@@ -86,6 +104,8 @@ func (o compressionOption) Apply(cfg *config) {
 	cfg.compression = (Compression)(o)
 }
 
+func (compressionOption) private() {}
+
 // WithCompression tells the driver to compress the sent data.
 func WithCompression(compression Compression) Option {
 	return (compressionOption)(compression)
@@ -96,6 +116,8 @@ type tracesURLPathOption string
 func (o tracesURLPathOption) Apply(cfg *config) {
 	cfg.tracesURLPath = (string)(o)
 }
+
+func (tracesURLPathOption) private() {}
 
 // WithTracesURLPath allows one to override the default URL path used
 // for sending traces. If unset, DefaultTracesPath will be used.
@@ -109,6 +131,8 @@ func (o metricsURLPathOption) Apply(cfg *config) {
 	cfg.metricsURLPath = (string)(o)
 }
 
+func (metricsURLPathOption) private() {}
+
 // WithMetricsURLPath allows one to override the default URL path used
 // for sending metrics. If unset, DefaultMetricsPath will be used.
 func WithMetricsURLPath(urlPath string) Option {
@@ -120,6 +144,8 @@ type maxAttemptsOption int
 func (o maxAttemptsOption) Apply(cfg *config) {
 	cfg.maxAttempts = (int)(o)
 }
+
+func (maxAttemptsOption) private() {}
 
 // WithMaxAttempts allows one to override how many times the driver
 // will try to send the payload in case of retryable errors. If unset,
@@ -134,6 +160,8 @@ func (o backoffOption) Apply(cfg *config) {
 	cfg.backoff = (time.Duration)(o)
 }
 
+func (backoffOption) private() {}
+
 // WithBackoff tells the driver to use the duration as a base of the
 // exponential backoff strategy. If unset, DefaultBackoff will be
 // used.
@@ -146,6 +174,8 @@ type tlsClientConfigOption tls.Config
 func (o *tlsClientConfigOption) Apply(cfg *config) {
 	cfg.tlsCfg = (*tls.Config)(o)
 }
+
+func (*tlsClientConfigOption) private() {}
 
 // WithTLSClientConfig can be used to set up a custom TLS
 // configuration for the client used to send payloads to the
@@ -160,6 +190,8 @@ func (insecureOption) Apply(cfg *config) {
 	cfg.insecure = true
 }
 
+func (insecureOption) private() {}
+
 // WithInsecure tells the driver to connect to the collector using the
 // HTTP scheme, instead of HTTPS.
 func WithInsecure() Option {
@@ -172,9 +204,24 @@ func (o headersOption) Apply(cfg *config) {
 	cfg.headers = (map[string]string)(o)
 }
 
+func (headersOption) private() {}
+
 // WithHeaders allows one to tell the driver to send additional HTTP
 // headers with the payloads. Specifying headers like Content-Length,
 // Content-Encoding and Content-Type may result in a broken driver.
 func WithHeaders(headers map[string]string) Option {
 	return (headersOption)(headers)
+}
+
+type marshalerOption Marshaler
+
+func (o marshalerOption) Apply(cfg *config) {
+	cfg.marshaler = Marshaler(o)
+}
+func (marshalerOption) private() {}
+
+// WithMarshal tells the driver which wire format to use when sending to the
+// collector.  If unset, MarshalProto will be used
+func WithMarshal(m Marshaler) Option {
+	return marshalerOption(m)
 }

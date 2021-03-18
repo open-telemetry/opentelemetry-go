@@ -22,9 +22,9 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/stdout"
-	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
@@ -42,27 +42,27 @@ func TestExporter_ExportSpan(t *testing.T) {
 	now := time.Now()
 	traceID, _ := trace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
 	spanID, _ := trace.SpanIDFromHex("0102030405060708")
-	traceState, _ := trace.TraceStateFromKeyValues(label.String("key", "val"))
+	traceState, _ := trace.TraceStateFromKeyValues(attribute.String("key", "val"))
 	keyValue := "value"
 	doubleValue := 123.456
-	resource := resource.NewWithAttributes(label.String("rk1", "rv11"))
+	resource := resource.NewWithAttributes(attribute.String("rk1", "rv11"))
 
 	testSpan := &export.SpanSnapshot{
-		SpanContext: trace.SpanContext{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    traceID,
 			SpanID:     spanID,
 			TraceState: traceState,
-		},
+		}),
 		Name:      "/foo",
 		StartTime: now,
 		EndTime:   now,
-		Attributes: []label.KeyValue{
-			label.String("key", keyValue),
-			label.Float64("double", doubleValue),
+		Attributes: []attribute.KeyValue{
+			attribute.String("key", keyValue),
+			attribute.Float64("double", doubleValue),
 		},
 		MessageEvents: []trace.Event{
-			{Name: "foo", Attributes: []label.KeyValue{label.String("key", keyValue)}, Time: now},
-			{Name: "bar", Attributes: []label.KeyValue{label.Float64("double", doubleValue)}, Time: now},
+			{Name: "foo", Attributes: []attribute.KeyValue{attribute.String("key", keyValue)}, Time: now},
+			{Name: "bar", Attributes: []attribute.KeyValue{attribute.Float64("double", doubleValue)}, Time: now},
 		},
 		SpanKind:      trace.SpanKindInternal,
 		StatusCode:    codes.Error,
@@ -83,7 +83,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`{` +
 		`"Key":"key",` +
 		`"Value":{"Type":"STRING","Value":"val"}` +
-		`}]},` +
+		`}],"Remote":false},` +
 		`"ParentSpanID":"0000000000000000",` +
 		`"SpanKind":1,` +
 		`"Name":"/foo",` +

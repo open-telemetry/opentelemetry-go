@@ -26,10 +26,11 @@ import (
 	"google.golang.org/grpc"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/propagation"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
@@ -68,7 +69,7 @@ func initProvider() func() {
 
 	bsp := sdktrace.NewBatchSpanProcessor(exp)
 	tracerProvider := sdktrace.NewTracerProvider(
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithResource(res),
 		sdktrace.WithSpanProcessor(bsp),
 	)
@@ -78,22 +79,22 @@ func initProvider() func() {
 			simple.NewWithExactDistribution(),
 			exp,
 		),
-		controller.WithPusher(exp),
+		controller.WithExporter(exp),
 		controller.WithCollectPeriod(2*time.Second),
 	)
 
 	// set global propagator to tracecontext (the default is no-op).
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 	otel.SetTracerProvider(tracerProvider)
-	otel.SetMeterProvider(cont.MeterProvider())
+	global.SetMeterProvider(cont.MeterProvider())
 	handleErr(cont.Start(context.Background()), "failed to start controller")
 
 	return func() {
-		// Shutdown will flush any remaining spans.
-		handleErr(tracerProvider.Shutdown(ctx), "failed to shutdown TracerProvider")
-
 		// Push any last metric events to the exporter.
 		handleErr(cont.Stop(context.Background()), "failed to stop controller")
+
+		// Shutdown will flush any remaining spans and shut down the exporter.
+		handleErr(tracerProvider.Shutdown(ctx), "failed to shutdown TracerProvider")
 	}
 }
 
@@ -104,14 +105,14 @@ func main() {
 	defer shutdown()
 
 	tracer := otel.Tracer("test-tracer")
-	meter := otel.Meter("test-meter")
+	meter := global.Meter("test-meter")
 
 	// labels represent additional key-value descriptors that can be bound to a
 	// metric observer or recorder.
-	commonLabels := []label.KeyValue{
-		label.String("labelA", "chocolate"),
-		label.String("labelB", "raspberry"),
-		label.String("labelC", "vanilla"),
+	commonLabels := []attribute.KeyValue{
+		attribute.String("labelA", "chocolate"),
+		attribute.String("labelB", "raspberry"),
+		attribute.String("labelC", "vanilla"),
 	}
 
 	// Recorder metric example

@@ -20,9 +20,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-var testConfig = sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}
-
 func basicTracerProvider(t *testing.T) *sdktrace.TracerProvider {
-	tp := sdktrace.NewTracerProvider(sdktrace.WithConfig(testConfig))
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.AlwaysSample()))
 	return tp
 }

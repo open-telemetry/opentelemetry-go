@@ -33,10 +33,13 @@ func defaultSpanContextFunc() func(context.Context) trace.SpanContext {
 		} else if rsc := trace.RemoteSpanContextFromContext(ctx); rsc.IsValid() {
 			sc = rsc
 		} else {
-			binary.BigEndian.PutUint64(sc.TraceID[:], atomic.AddUint64(&traceID, 1))
+			var tid trace.TraceID
+			binary.BigEndian.PutUint64(tid[:], atomic.AddUint64(&traceID, 1))
+			sc = sc.WithTraceID(tid)
 		}
-		binary.BigEndian.PutUint64(sc.SpanID[:], atomic.AddUint64(&spanID, 1))
-		return sc
+		var sid trace.SpanID
+		binary.BigEndian.PutUint64(sid[:], atomic.AddUint64(&spanID, 1))
+		return sc.WithSpanID(sid)
 	}
 }
 
@@ -46,7 +49,7 @@ type config struct {
 	SpanContextFunc func(context.Context) trace.SpanContext
 
 	// SpanRecorder keeps track of spans.
-	SpanRecorder SpanRecorder
+	SpanRecorder *SpanRecorder
 }
 
 func newConfig(opts ...Option) config {
@@ -63,9 +66,19 @@ func newConfig(opts ...Option) config {
 // Option applies an option to a config.
 type Option interface {
 	Apply(*config)
+
+	// A private method to prevent users implementing the
+	// interface and so future additions to it will not
+	// violate compatibility.
+	private()
 }
 
+type option struct{}
+
+func (option) private() {}
+
 type spanContextFuncOption struct {
+	option
 	SpanContextFunc func(context.Context) trace.SpanContext
 }
 
@@ -76,11 +89,12 @@ func (o spanContextFuncOption) Apply(c *config) {
 // WithSpanContextFunc sets the SpanContextFunc used to generate a new Spans
 // context from a parent SpanContext.
 func WithSpanContextFunc(f func(context.Context) trace.SpanContext) Option {
-	return spanContextFuncOption{f}
+	return spanContextFuncOption{SpanContextFunc: f}
 }
 
 type spanRecorderOption struct {
-	SpanRecorder SpanRecorder
+	option
+	SpanRecorder *SpanRecorder
 }
 
 func (o spanRecorderOption) Apply(c *config) {
@@ -89,22 +103,13 @@ func (o spanRecorderOption) Apply(c *config) {
 
 // WithSpanRecorder sets the SpanRecorder to use with the TracerProvider for
 // testing.
-func WithSpanRecorder(sr SpanRecorder) Option {
-	return spanRecorderOption{sr}
+func WithSpanRecorder(sr *SpanRecorder) Option {
+	return spanRecorderOption{SpanRecorder: sr}
 }
 
 // SpanRecorder performs operations to record a span as it starts and ends.
-type SpanRecorder interface {
-	// OnStart is called by the Tracer when it starts a Span.
-	OnStart(span *Span)
-	// OnEnd is called by the Span when it ends.
-	OnEnd(span *Span)
-}
-
-// StandardSpanRecorder is a SpanRecorder that records all started and ended
-// spans in an ordered recording. StandardSpanRecorder is designed to be
-// concurrent safe and can by used by multiple goroutines.
-type StandardSpanRecorder struct {
+// It is designed to be concurrent safe and can by used by multiple goroutines.
+type SpanRecorder struct {
 	startedMu sync.RWMutex
 	started   []*Span
 
@@ -113,21 +118,21 @@ type StandardSpanRecorder struct {
 }
 
 // OnStart records span as started.
-func (ssr *StandardSpanRecorder) OnStart(span *Span) {
+func (ssr *SpanRecorder) OnStart(span *Span) {
 	ssr.startedMu.Lock()
 	defer ssr.startedMu.Unlock()
 	ssr.started = append(ssr.started, span)
 }
 
 // OnEnd records span as completed.
-func (ssr *StandardSpanRecorder) OnEnd(span *Span) {
+func (ssr *SpanRecorder) OnEnd(span *Span) {
 	ssr.doneMu.Lock()
 	defer ssr.doneMu.Unlock()
 	ssr.done = append(ssr.done, span)
 }
 
 // Started returns a copy of all started Spans in the order they were started.
-func (ssr *StandardSpanRecorder) Started() []*Span {
+func (ssr *SpanRecorder) Started() []*Span {
 	ssr.startedMu.RLock()
 	defer ssr.startedMu.RUnlock()
 	started := make([]*Span, len(ssr.started))
@@ -138,7 +143,7 @@ func (ssr *StandardSpanRecorder) Started() []*Span {
 }
 
 // Completed returns a copy of all ended Spans in the order they were ended.
-func (ssr *StandardSpanRecorder) Completed() []*Span {
+func (ssr *SpanRecorder) Completed() []*Span {
 	ssr.doneMu.RLock()
 	defer ssr.doneMu.RUnlock()
 	done := make([]*Span, len(ssr.done))
