@@ -8,7 +8,6 @@ replace (
 )
 
 require (
-	github.com/gogo/protobuf v1.3.2
 	github.com/google/go-cmp v0.5.5
 	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/otel v0.18.0
@@ -17,7 +16,10 @@ require (
 	go.opentelemetry.io/otel/sdk/export/metric v0.18.0
 	go.opentelemetry.io/otel/sdk/metric v0.18.0
 	go.opentelemetry.io/otel/trace v0.18.0
+	go.opentelemetry.io/proto/otlp v0.7.0
+	golang.org/x/net v0.0.0-20201021035429-f5854403a974 // indirect
 	google.golang.org/grpc v1.36.0
+	google.golang.org/protobuf v1.25.0
 )
 
 replace go.opentelemetry.io/otel/bridge/opencensus => ../../bridge/opencensus
