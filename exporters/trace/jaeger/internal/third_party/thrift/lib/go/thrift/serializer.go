@@ -21,6 +21,7 @@ package thrift
 
 import (
 	"context"
+	"sync"
 )
 
 type TSerializer struct {
@@ -29,23 +30,24 @@ type TSerializer struct {
 }
 
 type TStruct interface {
-	Write(p TProtocol) error
-	Read(p TProtocol) error
+	Write(ctx context.Context, p TProtocol) error
+	Read(ctx context.Context, p TProtocol) error
 }
 
 func NewTSerializer() *TSerializer {
 	transport := NewTMemoryBufferLen(1024)
-	protocol := NewTBinaryProtocolFactoryDefault().GetProtocol(transport)
+	protocol := NewTBinaryProtocolTransport(transport)
 
 	return &TSerializer{
-		transport,
-		protocol}
+		Transport: transport,
+		Protocol:  protocol,
+	}
 }
 
 func (t *TSerializer) WriteString(ctx context.Context, msg TStruct) (s string, err error) {
 	t.Transport.Reset()
 
-	if err = msg.Write(t.Protocol); err != nil {
+	if err = msg.Write(ctx, t.Protocol); err != nil {
 		return
 	}
 
@@ -62,7 +64,7 @@ func (t *TSerializer) WriteString(ctx context.Context, msg TStruct) (s string, e
 func (t *TSerializer) Write(ctx context.Context, msg TStruct) (b []byte, err error) {
 	t.Transport.Reset()
 
-	if err = msg.Write(t.Protocol); err != nil {
+	if err = msg.Write(ctx, t.Protocol); err != nil {
 		return
 	}
 
@@ -76,4 +78,59 @@ func (t *TSerializer) Write(ctx context.Context, msg TStruct) (b []byte, err err
 
 	b = append(b, t.Transport.Bytes()...)
 	return
+}
+
+// TSerializerPool is the thread-safe version of TSerializer, it uses resource
+// pool of TSerializer under the hood.
+//
+// It must be initialized with either NewTSerializerPool or
+// NewTSerializerPoolSizeFactory.
+type TSerializerPool struct {
+	pool sync.Pool
+}
+
+// NewTSerializerPool creates a new TSerializerPool.
+//
+// NewTSerializer can be used as the arg here.
+func NewTSerializerPool(f func() *TSerializer) *TSerializerPool {
+	return &TSerializerPool{
+		pool: sync.Pool{
+			New: func() interface{} {
+				return f()
+			},
+		},
+	}
+}
+
+// NewTSerializerPoolSizeFactory creates a new TSerializerPool with the given
+// size and protocol factory.
+//
+// Note that the size is not the limit. The TMemoryBuffer underneath can grow
+// larger than that. It just dictates the initial size.
+func NewTSerializerPoolSizeFactory(size int, factory TProtocolFactory) *TSerializerPool {
+	return &TSerializerPool{
+		pool: sync.Pool{
+			New: func() interface{} {
+				transport := NewTMemoryBufferLen(size)
+				protocol := factory.GetProtocol(transport)
+
+				return &TSerializer{
+					Transport: transport,
+					Protocol:  protocol,
+				}
+			},
+		},
+	}
+}
+
+func (t *TSerializerPool) WriteString(ctx context.Context, msg TStruct) (string, error) {
+	s := t.pool.Get().(*TSerializer)
+	defer t.pool.Put(s)
+	return s.WriteString(ctx, msg)
+}
+
+func (t *TSerializerPool) Write(ctx context.Context, msg TStruct) ([]byte, error) {
+	s := t.pool.Get().(*TSerializer)
+	defer t.pool.Put(s)
+	return s.Write(ctx, msg)
 }

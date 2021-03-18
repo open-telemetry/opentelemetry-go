@@ -30,6 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Jaeger exporter populates Jaeger's Span Process from Resource. (#1673)
 - `"go.opentelemetry.io/otel/sdk/resource".NewWithAttributes` will now drop any invalid attributes passed. (#1703)
 - `"go.opentelemetry.io/otel/sdk/resource".StringDetector` will now error if the produced attribute is invalid. (#1703)
+- Jaeger exporter was updated to use thrift v0.14.1.
 
 ### Removed
 

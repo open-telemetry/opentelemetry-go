@@ -22,6 +22,7 @@ package thrift
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -159,26 +160,37 @@ func (p *THttpClient) Read(buf []byte) (int, error) {
 		return 0, NewTTransportException(NOT_OPEN, "Response buffer is empty, no request.")
 	}
 	n, err := p.response.Body.Read(buf)
-	if n > 0 && (err == nil || err == io.EOF) {
+	if n > 0 && (err == nil || errors.Is(err, io.EOF)) {
 		return n, nil
 	}
 	return n, NewTTransportExceptionFromError(err)
 }
 
 func (p *THttpClient) ReadByte() (c byte, err error) {
+	if p.response == nil {
+		return 0, NewTTransportException(NOT_OPEN, "Response buffer is empty, no request.")
+	}
 	return readByte(p.response.Body)
 }
 
 func (p *THttpClient) Write(buf []byte) (int, error) {
-	n, err := p.requestBuffer.Write(buf)
-	return n, err
+	if p.requestBuffer == nil {
+		return 0, NewTTransportException(NOT_OPEN, "Request buffer is nil, connection may have been closed.")
+	}
+	return p.requestBuffer.Write(buf)
 }
 
 func (p *THttpClient) WriteByte(c byte) error {
+	if p.requestBuffer == nil {
+		return NewTTransportException(NOT_OPEN, "Request buffer is nil, connection may have been closed.")
+	}
 	return p.requestBuffer.WriteByte(c)
 }
 
 func (p *THttpClient) WriteString(s string) (n int, err error) {
+	if p.requestBuffer == nil {
+		return 0, NewTTransportException(NOT_OPEN, "Request buffer is nil, connection may have been closed.")
+	}
 	return p.requestBuffer.WriteString(s)
 }
 
@@ -186,7 +198,11 @@ func (p *THttpClient) Flush(ctx context.Context) error {
 	// Close any previous response body to avoid leaking connections.
 	p.closeResponse()
 
-	req, err := http.NewRequest("POST", p.url.String(), p.requestBuffer)
+	// Give up the ownership of the current request buffer to http request,
+	// and create a new buffer for the next request.
+	buf := p.requestBuffer
+	p.requestBuffer = new(bytes.Buffer)
+	req, err := http.NewRequest("POST", p.url.String(), buf)
 	if err != nil {
 		return NewTTransportExceptionFromError(err)
 	}
@@ -218,7 +234,7 @@ func (p *THttpClient) RemainingBytes() (num_bytes uint64) {
 	}
 
 	const maxSize = ^uint64(0)
-	return maxSize // the thruth is, we just don't know unless framed is used
+	return maxSize // the truth is, we just don't know unless framed is used
 }
 
 // Deprecated: Use NewTHttpClientTransportFactory instead.
