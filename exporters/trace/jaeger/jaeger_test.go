@@ -17,6 +17,7 @@ package jaeger
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 	"os"
 	"sort"
 	"strings"
@@ -114,9 +115,7 @@ func TestNewExportPipeline(t *testing.T) {
 			name:     "always on",
 			endpoint: WithCollectorEndpoint(collectorEndpoint),
 			options: []Option{
-				WithSDK(&sdktrace.Config{
-					DefaultSampler: sdktrace.AlwaysSample(),
-				}),
+				WithSDKOptions(sdktrace.WithSampler(sdktrace.AlwaysSample())),
 			},
 			expectedProviderType: &sdktrace.TracerProvider{},
 			testSpanSampling:     true,
@@ -126,9 +125,7 @@ func TestNewExportPipeline(t *testing.T) {
 			name:     "never",
 			endpoint: WithCollectorEndpoint(collectorEndpoint),
 			options: []Option{
-				WithSDK(&sdktrace.Config{
-					DefaultSampler: sdktrace.NeverSample(),
-				}),
+				WithSDKOptions(sdktrace.WithSampler(sdktrace.NeverSample())),
 			},
 			expectedProviderType: &sdktrace.TracerProvider{},
 			testSpanSampling:     true,
@@ -281,11 +278,11 @@ func TestNewRawExporterShouldFailIfCollectorUnset(t *testing.T) {
 }
 
 type testCollectorEnpoint struct {
-	spansUploaded []*gen.Span
+	batchesUploaded []*gen.Batch
 }
 
 func (c *testCollectorEnpoint) upload(batch *gen.Batch) error {
-	c.spansUploaded = append(c.spansUploaded, batch.Spans...)
+	c.batchesUploaded = append(c.batchesUploaded, batch)
 	return nil
 }
 
@@ -294,6 +291,12 @@ var _ batchUploader = (*testCollectorEnpoint)(nil)
 func withTestCollectorEndpoint() func() (batchUploader, error) {
 	return func() (batchUploader, error) {
 		return &testCollectorEnpoint{}, nil
+	}
+}
+
+func withTestCollectorEndpointInjected(ce *testCollectorEnpoint) func() (batchUploader, error) {
+	return func() (batchUploader, error) {
+		return ce, nil
 	}
 }
 
@@ -306,12 +309,12 @@ func TestExporter_ExportSpan(t *testing.T) {
 	// Create Jaeger Exporter
 	exp, err := NewRawExporter(
 		withTestCollectorEndpoint(),
-		WithSDK(&sdktrace.Config{
-			Resource: resource.NewWithAttributes(
+		WithSDKOptions(
+			sdktrace.WithResource(resource.NewWithAttributes(
 				semconv.ServiceNameKey.String(serviceName),
 				attribute.String(tagKey, tagVal),
-			),
-		}),
+			)),
+		),
 	)
 
 	assert.NoError(t, err)
@@ -328,7 +331,8 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 	exp.Flush()
 	tc := exp.uploader.(*testCollectorEnpoint)
-	assert.True(t, len(tc.spansUploaded) == 1)
+	assert.True(t, len(tc.batchesUploaded) == 1)
+	assert.True(t, len(tc.batchesUploaded[0].GetSpans()) == 1)
 }
 
 func Test_spanSnapshotToThrift(t *testing.T) {
@@ -885,4 +889,51 @@ func TestProcess(t *testing.T) {
 			assert.Equal(t, tc.expectedProcess, pro)
 		})
 	}
+}
+
+func TestNewExporterPipelineWithOptions(t *testing.T) {
+	envStore, err := ottest.SetEnvVariables(map[string]string{
+		envDisabled: "false",
+	})
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, envStore.Restore())
+	}()
+
+	const (
+		serviceName     = "test-service"
+		eventCountLimit = 10
+	)
+
+	testCollector := &testCollectorEnpoint{}
+	tp, spanFlush, err := NewExportPipeline(
+		withTestCollectorEndpointInjected(testCollector),
+		WithSDKOptions(
+			sdktrace.WithResource(resource.NewWithAttributes(
+				semconv.ServiceNameKey.String(serviceName),
+			)),
+			sdktrace.WithSpanLimits(sdktrace.SpanLimits{
+				EventCountLimit: eventCountLimit,
+			}),
+		),
+	)
+	assert.NoError(t, err)
+
+	otel.SetTracerProvider(tp)
+	_, span := otel.Tracer("test-tracer").Start(context.Background(), "test-span")
+	for i := 0; i < eventCountLimit*2; i++ {
+		span.AddEvent(fmt.Sprintf("event-%d", i))
+	}
+	span.End()
+	spanFlush()
+
+	assert.True(t, span.SpanContext().IsValid())
+
+	batchesUploaded := testCollector.batchesUploaded
+	assert.True(t, len(batchesUploaded) == 1)
+	uploadedBatch := batchesUploaded[0]
+	assert.Equal(t, serviceName, uploadedBatch.GetProcess().GetServiceName())
+	assert.True(t, len(uploadedBatch.GetSpans()) == 1)
+	uploadedSpan := uploadedBatch.GetSpans()[0]
+	assert.Equal(t, eventCountLimit, len(uploadedSpan.GetLogs()))
 }

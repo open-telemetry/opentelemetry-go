@@ -14,25 +14,6 @@
 
 package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
-import (
-	"go.opentelemetry.io/otel/sdk/resource"
-)
-
-// Config represents the global tracing configuration.
-type Config struct {
-	// DefaultSampler is the default sampler used when creating new spans.
-	DefaultSampler Sampler
-
-	// IDGenerator is for internal use only.
-	IDGenerator IDGenerator
-
-	// SpanLimits used to limit the number of attributes, events and links to a span.
-	SpanLimits SpanLimits
-
-	// Resource contains attributes representing an entity that produces telemetry.
-	Resource *resource.Resource
-}
-
 // SpanLimits represents the limits of a span.
 type SpanLimits struct {
 	// AttributeCountLimit is the maximum allowed span attribute count.
@@ -49,6 +30,24 @@ type SpanLimits struct {
 
 	// AttributePerLinkCountLimit is the maximum allowed attribute per span link count.
 	AttributePerLinkCountLimit int
+}
+
+func (sl *SpanLimits) ensureDefault() {
+	if sl.EventCountLimit <= 0 {
+		sl.EventCountLimit = DefaultEventCountLimit
+	}
+	if sl.AttributeCountLimit <= 0 {
+		sl.AttributeCountLimit = DefaultAttributeCountLimit
+	}
+	if sl.LinkCountLimit <= 0 {
+		sl.LinkCountLimit = DefaultLinkCountLimit
+	}
+	if sl.AttributePerEventCountLimit <= 0 {
+		sl.AttributePerEventCountLimit = DefaultAttributePerEventCountLimit
+	}
+	if sl.AttributePerLinkCountLimit <= 0 {
+		sl.AttributePerLinkCountLimit = DefaultAttributePerLinkCountLimit
+	}
 }
 
 const (

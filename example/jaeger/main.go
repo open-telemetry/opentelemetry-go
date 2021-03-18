@@ -34,14 +34,14 @@ func initTracer() func() {
 	// Create and install Jaeger export pipeline.
 	flush, err := jaeger.InstallNewPipeline(
 		jaeger.WithCollectorEndpoint("http://localhost:14268/api/traces"),
-		jaeger.WithSDK(&sdktrace.Config{
-			DefaultSampler: sdktrace.AlwaysSample(),
-			Resource: resource.NewWithAttributes(
+		jaeger.WithSDKOptions(
+			sdktrace.WithSampler(sdktrace.AlwaysSample()),
+			sdktrace.WithResource(resource.NewWithAttributes(
 				semconv.ServiceNameKey.String("trace-demo"),
 				attribute.String("exporter", "jaeger"),
 				attribute.Float64("float", 312.23),
-			),
-		}),
+			)),
+		),
 	)
 	if err != nil {
 		log.Fatal(err)
