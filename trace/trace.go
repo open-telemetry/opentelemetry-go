@@ -326,6 +326,7 @@ type SpanContextConfig struct {
 	SpanID     SpanID
 	TraceFlags byte
 	TraceState TraceState
+	Remote     bool
 }
 
 // NewSpanContext constructs a SpanContext using values from the provided
@@ -336,6 +337,7 @@ func NewSpanContext(config SpanContextConfig) SpanContext {
 		spanID:     config.SpanID,
 		traceFlags: config.TraceFlags,
 		traceState: config.TraceState,
+		remote:     config.Remote,
 	}
 }
 
@@ -345,12 +347,29 @@ type SpanContext struct {
 	spanID     SpanID
 	traceFlags byte
 	traceState TraceState
+	remote     bool
 }
 
 // IsValid returns if the SpanContext is valid. A valid span context has a
 // valid TraceID and SpanID.
 func (sc SpanContext) IsValid() bool {
 	return sc.HasTraceID() && sc.HasSpanID()
+}
+
+// IsRemote indicates whether the SpanContext represents a remotely-created Span.
+func (sc SpanContext) IsRemote() bool {
+	return sc.remote
+}
+
+// WithRemote returns a copy of sc with the Remote property set to remote.
+func (sc SpanContext) WithRemote(remote bool) SpanContext {
+	return SpanContext{
+		traceID:    sc.traceID,
+		spanID:     sc.spanID,
+		traceFlags: sc.traceFlags,
+		traceState: sc.traceState,
+		remote:     remote,
+	}
 }
 
 // TraceID returns the TraceID from the SpanContext.
@@ -370,6 +389,7 @@ func (sc SpanContext) WithTraceID(traceID TraceID) SpanContext {
 		spanID:     sc.spanID,
 		traceFlags: sc.traceFlags,
 		traceState: sc.traceState,
+		remote:     sc.remote,
 	}
 }
 
@@ -390,6 +410,7 @@ func (sc SpanContext) WithSpanID(spanID SpanID) SpanContext {
 		spanID:     spanID,
 		traceFlags: sc.traceFlags,
 		traceState: sc.traceState,
+		remote:     sc.remote,
 	}
 }
 
@@ -405,6 +426,7 @@ func (sc SpanContext) WithTraceFlags(flags byte) SpanContext {
 		spanID:     sc.spanID,
 		traceFlags: flags,
 		traceState: sc.traceState,
+		remote:     sc.remote,
 	}
 }
 
@@ -435,6 +457,7 @@ func (sc SpanContext) WithTraceState(state TraceState) SpanContext {
 		spanID:     sc.spanID,
 		traceFlags: sc.traceFlags,
 		traceState: state,
+		remote:     sc.remote,
 	}
 }
 
@@ -443,7 +466,8 @@ func (sc SpanContext) Equal(other SpanContext) bool {
 	return sc.traceID == other.traceID &&
 		sc.spanID == other.spanID &&
 		sc.traceFlags == other.traceFlags &&
-		sc.traceState.String() == other.traceState.String()
+		sc.traceState.String() == other.traceState.String() &&
+		sc.remote == other.remote
 }
 
 // MarshalJSON implements a custom marshal function to encode a SpanContext.
@@ -453,6 +477,7 @@ func (sc SpanContext) MarshalJSON() ([]byte, error) {
 		SpanID:     sc.spanID,
 		TraceFlags: sc.traceFlags,
 		TraceState: sc.traceState,
+		Remote:     sc.remote,
 	})
 }
 
@@ -487,7 +512,7 @@ func SpanContextFromContext(ctx context.Context) SpanContext {
 // ContextWithRemoteSpanContext returns a copy of parent with a remote set as
 // the remote span context.
 func ContextWithRemoteSpanContext(parent context.Context, remote SpanContext) context.Context {
-	return context.WithValue(parent, remoteContextKey, remote)
+	return context.WithValue(parent, remoteContextKey, remote.WithRemote(true))
 }
 
 // RemoteSpanContextFromContext returns the remote span context from ctx.

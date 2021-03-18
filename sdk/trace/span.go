@@ -521,18 +521,18 @@ func (*span) private() {}
 func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trace.SpanContext, remoteParent bool, o *trace.SpanConfig) *span {
 	span := &span{}
 
-	cfg := tr.provider.config.Load().(*Config)
+	provider := tr.provider
 
 	var tid trace.TraceID
 	var sid trace.SpanID
 
 	if hasEmptySpanContext(parent) {
 		// Generate both TraceID and SpanID
-		tid, sid = cfg.IDGenerator.NewIDs(ctx)
+		tid, sid = provider.idGenerator.NewIDs(ctx)
 	} else {
 		// TraceID already exists, just generate a SpanID
 		tid = parent.TraceID()
-		sid = cfg.IDGenerator.NewSpanID(ctx, tid)
+		sid = provider.idGenerator.NewSpanID(ctx, tid)
 	}
 
 	span.spanContext = trace.NewSpanContext(trace.SpanContextConfig{
@@ -542,17 +542,18 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 		TraceState: parent.TraceState(),
 	})
 
-	span.attributes = newAttributesMap(cfg.SpanLimits.AttributeCountLimit)
-	span.messageEvents = newEvictedQueue(cfg.SpanLimits.EventCountLimit)
-	span.links = newEvictedQueue(cfg.SpanLimits.LinkCountLimit)
-	span.spanLimits = cfg.SpanLimits
+	spanLimits := provider.spanLimits
+	span.attributes = newAttributesMap(spanLimits.AttributeCountLimit)
+	span.messageEvents = newEvictedQueue(spanLimits.EventCountLimit)
+	span.links = newEvictedQueue(spanLimits.LinkCountLimit)
+	span.spanLimits = spanLimits
 
 	data := samplingData{
 		noParent:     hasEmptySpanContext(parent),
 		remoteParent: remoteParent,
 		parent:       parent,
 		name:         name,
-		cfg:          cfg,
+		sampler:      provider.sampler,
 		span:         span,
 		attributes:   o.Attributes,
 		links:        o.Links,
@@ -579,7 +580,7 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 	span.spanKind = trace.ValidateSpanKind(o.SpanKind)
 	span.name = name
 	span.hasRemoteParent = remoteParent
-	span.resource = cfg.Resource
+	span.resource = provider.resource
 	span.instrumentationLibrary = tr.instrumentationLibrary
 
 	span.SetAttributes(samplingResult.Attributes...)
@@ -598,7 +599,7 @@ type samplingData struct {
 	remoteParent bool
 	parent       trace.SpanContext
 	name         string
-	cfg          *Config
+	sampler      Sampler
 	span         *span
 	attributes   []attribute.KeyValue
 	links        []trace.Link
@@ -606,8 +607,7 @@ type samplingData struct {
 }
 
 func makeSamplingDecision(data samplingData) SamplingResult {
-	sampler := data.cfg.DefaultSampler
-	return sampler.ShouldSample(SamplingParameters{
+	return data.sampler.ShouldSample(SamplingParameters{
 		ParentContext:   data.parent,
 		TraceID:         data.span.spanContext.TraceID(),
 		Name:            data.name,

@@ -40,6 +40,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			wantSc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID: traceID,
 				SpanID:  spanID,
+				Remote:  true,
 			}),
 		},
 		{
@@ -49,6 +50,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
+				Remote:     true,
 			}),
 		},
 		{
@@ -58,6 +60,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
+				Remote:     true,
 			}),
 		},
 		{
@@ -67,6 +70,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
+				Remote:     true,
 			}),
 		},
 		{
@@ -75,6 +79,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			wantSc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID: traceID,
 				SpanID:  spanID,
+				Remote:  true,
 			}),
 		},
 		{
@@ -84,6 +89,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
+				Remote:     true,
 			}),
 		},
 		{
@@ -93,6 +99,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
+				Remote:     true,
 			}),
 		},
 		{
@@ -102,6 +109,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
+				Remote:     true,
 			}),
 		},
 	}
@@ -302,6 +310,7 @@ func TestTraceStatePropagation(t *testing.T) {
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceState: state,
+				Remote:     true,
 			}),
 		},
 		{
@@ -314,6 +323,7 @@ func TestTraceStatePropagation(t *testing.T) {
 			wantSc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID: traceID,
 				SpanID:  spanID,
+				Remote:  true,
 			}),
 		},
 		{
@@ -326,6 +336,7 @@ func TestTraceStatePropagation(t *testing.T) {
 			wantSc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID: traceID,
 				SpanID:  spanID,
+				Remote:  true,
 			}),
 		},
 	}

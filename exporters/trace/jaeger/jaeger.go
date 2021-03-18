@@ -52,7 +52,8 @@ type options struct {
 	// BatchMaxCount defines the maximum number of spans sent in one batch
 	BatchMaxCount int
 
-	Config *sdktrace.Config
+	// TracerProviderOptions defines the options for tracer provider of sdk.
+	TracerProviderOptions []sdktrace.TracerProviderOption
 
 	Disabled bool
 }
@@ -71,10 +72,10 @@ func WithBatchMaxCount(batchMaxCount int) Option {
 	}
 }
 
-// WithSDK sets the SDK config for the exporter pipeline.
-func WithSDK(config *sdktrace.Config) Option {
+// WithSDKOptions configures options for tracer provider of sdk.
+func WithSDKOptions(opts ...sdktrace.TracerProviderOption) Option {
 	return func(o *options) {
-		o.Config = config
+		o.TracerProviderOptions = opts
 	}
 }
 
@@ -157,15 +158,7 @@ func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (trace.Tra
 		return nil, nil, err
 	}
 
-	pOpts := []sdktrace.TracerProviderOption{sdktrace.WithSyncer(exporter)}
-	if exporter.o.Config != nil {
-		pOpts = append(pOpts,
-			sdktrace.WithDefaultSampler(exporter.o.Config.DefaultSampler),
-			sdktrace.WithIDGenerator(exporter.o.Config.IDGenerator),
-			sdktrace.WithSpanLimits(exporter.o.Config.SpanLimits),
-			sdktrace.WithResource(exporter.o.Config.Resource),
-		)
-	}
+	pOpts := append(exporter.o.TracerProviderOptions, sdktrace.WithSyncer(exporter))
 	tp := sdktrace.NewTracerProvider(pOpts...)
 	return tp, exporter.Flush, nil
 }

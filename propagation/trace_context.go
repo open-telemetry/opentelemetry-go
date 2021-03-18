@@ -133,6 +133,7 @@ func (tc TraceContext) extract(carrier TextMapCarrier) trace.SpanContext {
 	scc.TraceFlags = opts[0] & trace.FlagsSampled
 
 	scc.TraceState = parseTraceState(carrier.Get(tracestateHeader))
+	scc.Remote = true
 
 	sc := trace.NewSpanContext(scc)
 	if !sc.IsValid() {

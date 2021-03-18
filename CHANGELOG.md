@@ -12,8 +12,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Added `Marshaler` config option to `otlphttp` to enable otlp over json or protobufs. (#1586)
 - A `ForceFlush` method to the `"go.opentelemetry.io/otel/sdk/trace".TracerProvider` to flush all registered `SpanProcessor`s. (#1608)
-- Added `WithDefaultSampler` and `WithSpanLimits` to tracer provider. (#1633)
+- Added `WithSampler` and `WithSpanLimits` to tracer provider. (#1633, #1702)
 - Jaeger exporter falls back to `resource.Default`'s `service.name` if the exported Span does not have one. (#1673)
+- `"go.opentelemetry.io/otel/trace".SpanContext` now has a `remote` property, and `IsRemote()` predicate, that is true when the `SpanContext` has been extracted from remote context data. (#1701)
 - A `Valid` method to the `"go.opentelemetry.io/otel/attribute".KeyValue` type. (#1703)
 
 ### Changed
@@ -30,8 +31,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Jaeger exporter populates Jaeger's Span Process from Resource. (#1673)
 - `"go.opentelemetry.io/otel/sdk/resource".NewWithAttributes` will now drop any invalid attributes passed. (#1703)
 - `"go.opentelemetry.io/otel/sdk/resource".StringDetector` will now error if the produced attribute is invalid. (#1703)
+- Changed `WithSDK` to `WithSDKOptions` to accept variadic arguments of `TracerProviderOption` type in `go.opentelemetry.io/otel/exporters/trace/jaeger` package. (#1693)
+- Changed `WithSDK` to `WithSDKOptions` to accept variadic arguments of `TracerProviderOption` type in `go.opentelemetry.io/otel/exporters/trace/zipkin` package. (#1693)
 - Jaeger exporter was updated to use thrift v0.14.1.
-
+  
 ### Removed
 
 - Removed `WithRecord()` from `trace.SpanOption` when creating a span. (#1660)
@@ -41,6 +44,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Removed `WithConfig` from tracer provider to avoid overriding configuration. (#1633)
 - Removed `serviceName` parameter from Zipkin exporter and uses resource instead. (#1549)
 - Removed `jaeger.WithProcess`. (#1673)
+- Removed `ApplyConfig` method and `Config` struct from tracer provider. (#1693)
 
 ### Fixed
 
