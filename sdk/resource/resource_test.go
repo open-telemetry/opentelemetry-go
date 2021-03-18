@@ -237,6 +237,14 @@ func TestString(t *testing.T) {
 			kvs:  []attribute.KeyValue{attribute.String(`A=a\,B`, `b`)},
 			want: `A\=a\\\,B=b`,
 		},
+		{
+			kvs:  []attribute.KeyValue{attribute.String("", "invalid")},
+			want: "",
+		},
+		{
+			kvs:  []attribute.KeyValue{attribute.String("", "invalid"), attribute.String("B", "b")},
+			want: "B=b",
+		},
 	} {
 		if got := resource.NewWithAttributes(test.kvs...).String(); got != test.want {
 			t.Errorf("Resource(%v).String() = %q, want %q", test.kvs, got, test.want)
