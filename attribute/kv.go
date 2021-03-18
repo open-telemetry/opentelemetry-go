@@ -26,6 +26,11 @@ type KeyValue struct {
 	Value Value
 }
 
+// Valid returns if kv is a valid OpenTelemetry attribute.
+func (kv KeyValue) Valid() bool {
+	return kv.Key != "" && kv.Value.Type() != INVALID
+}
+
 // Bool creates a new key-value pair with a passed name and a bool
 // value.
 func Bool(k string, v bool) KeyValue {

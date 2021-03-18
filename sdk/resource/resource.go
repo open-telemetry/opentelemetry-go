@@ -43,13 +43,26 @@ var (
 	}(Detect(context.Background(), defaultServiceNameDetector{}, TelemetrySDK{}))
 )
 
-// NewWithAttributes creates a resource from a set of attributes.  If there are
-// duplicate keys present in the list of attributes, then the last
-// value found for the key is preserved.
-func NewWithAttributes(kvs ...attribute.KeyValue) *Resource {
-	return &Resource{
-		attrs: attribute.NewSet(kvs...),
+// NewWithAttributes creates a resource from attrs. If attrs contains
+// duplicate keys, the last value will be used. If attrs contains any invalid
+// items those items will be dropped.
+func NewWithAttributes(attrs ...attribute.KeyValue) *Resource {
+	if len(attrs) == 0 {
+		return &emptyResource
 	}
+
+	// Ensure attributes comply with the specification:
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.0.1/specification/common/common.md#attributes
+	s, _ := attribute.NewSetWithFiltered(attrs, func(kv attribute.KeyValue) bool {
+		return kv.Valid()
+	})
+
+	// If attrs only contains invalid entries do not allocate a new resource.
+	if s.Len() == 0 {
+		return &emptyResource
+	}
+
+	return &Resource{s} //nolint
 }
 
 // String implements the Stringer interface and provides a

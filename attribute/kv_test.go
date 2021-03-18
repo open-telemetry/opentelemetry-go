@@ -160,3 +160,62 @@ func TestAny(t *testing.T) {
 		}
 	}
 }
+
+func TestKeyValueValid(t *testing.T) {
+	tests := []struct {
+		desc  string
+		valid bool
+		kv    attribute.KeyValue
+	}{
+		{
+			desc:  "uninitialized KeyValue should be invalid",
+			valid: false,
+			kv:    attribute.KeyValue{},
+		},
+		{
+			desc:  "empty key value should be invalid",
+			valid: false,
+			kv:    attribute.Key("").Bool(true),
+		},
+		{
+			desc:  "INVALID value type should be invalid",
+			valid: false,
+			kv: attribute.KeyValue{
+				Key: attribute.Key("valid key"),
+				// Default type is INVALID.
+				Value: attribute.Value{},
+			},
+		},
+		{
+			desc:  "non-empty key with BOOL type Value should be valid",
+			valid: true,
+			kv:    attribute.Bool("bool", true),
+		},
+		{
+			desc:  "non-empty key with INT64 type Value should be valid",
+			valid: true,
+			kv:    attribute.Int64("int64", 0),
+		},
+		{
+			desc:  "non-empty key with FLOAT64 type Value should be valid",
+			valid: true,
+			kv:    attribute.Float64("float64", 0),
+		},
+		{
+			desc:  "non-empty key with STRING type Value should be valid",
+			valid: true,
+			kv:    attribute.String("string", ""),
+		},
+		{
+			desc:  "non-empty key with ARRAY type Value should be valid",
+			valid: true,
+			kv:    attribute.Array("array", []int{}),
+		},
+	}
+
+	for _, test := range tests {
+		if got, want := test.kv.Valid(), test.valid; got != want {
+			t.Error(test.desc)
+		}
+	}
+}
