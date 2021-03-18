@@ -173,7 +173,6 @@ func InstallNewPipeline(ctx context.Context, driver ProtocolDriver, exporterOpts
 	}
 
 	otel.SetTracerProvider(tp)
-	otel.SetMeterProvider(cntr.MeterProvider())
 	err = cntr.Start(ctx)
 	if err != nil {
 		return nil, nil, nil, err
