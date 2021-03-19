@@ -44,8 +44,8 @@ var _ Tracer = noopTracer{}
 
 // Start starts a noop span.
 func (t noopTracer) Start(ctx context.Context, name string, _ ...SpanOption) (context.Context, Span) {
-	span := noopSpan{}
-	return ContextWithSpan(ctx, span), span
+	// Don't set span in context since ContextFromSpan returns noopSpan{} by default.
+	return ctx, noopSpan{}
 }
 
 // noopSpan is an implementation of Span that preforms no operations.
