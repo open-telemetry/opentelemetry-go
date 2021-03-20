@@ -63,6 +63,10 @@ func (tc TraceContext) Inject(ctx context.Context, carrier TextMapCarrier) {
 }
 
 // Extract reads tracecontext from the carrier into a returned Context.
+//
+// The returned Context will be a copy of ctx and contain the extracted
+// tracecontext as the remote SpanContext. If the extracted tracecontext is
+// invalid, the passed ctx will be returned directly instead.
 func (tc TraceContext) Extract(ctx context.Context, carrier TextMapCarrier) context.Context {
 	sc := tc.extract(carrier)
 	if !sc.IsValid() {
