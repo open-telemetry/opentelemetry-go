@@ -13,7 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Migrate from using internally built and maintained version of the OTLP to the one hosted at `go.opentelemetry.io/proto/otlp`. (#1713)
 - Migrate from using `github.com/gogo/protobuf` to `google.golang.org/protobuf` to match `go.opentelemetry.io/proto/otlp`. (#1713)
 
-## [0.19.0] - 2020-03-18
+## [0.19.0] - 2021-03-18
 
 ### Added
 
@@ -61,7 +61,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Synchronization issues in global trace delegate implementation. (#1686)
 - Reduced excess memory usage by global `TracerProvider`. (#1687)
 
-## [0.18.0] - 2020-03-03
+## [0.18.0] - 2021-03-03
 
 ### Added
 
@@ -124,7 +124,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Validate tracestate header keys with vendors according to the W3C TraceContext specification (#1475). (#1581)
 - The OTLP exporter includes related labels for translations of a GaugeArray (#1563). (#1570)
 
-## [0.17.0] - 2020-02-12
+## [0.17.0] - 2021-02-12
 
 ### Changed
 
@@ -140,7 +140,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The example code in the README.md of `go.opentelemetry.io/otel/exporters/otlp` is moved to a compiled example test and used the new `WithAddress` instead of `WithEndpoint`. (#1513)
 - The otel-collector example now uses the default OTLP receiver port of the collector.
 
-## [0.16.0] - 2020-01-13
+## [0.16.0] - 2021-01-13
 
 ### Added
 
