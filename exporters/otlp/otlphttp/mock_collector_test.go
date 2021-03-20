@@ -27,16 +27,17 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/gogo/protobuf/jsonpb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	jsonpb "google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 
-	collectormetricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/metrics/v1"
-	collectortracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/trace/v1"
-	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
-	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/otlptest"
 	"go.opentelemetry.io/otel/exporters/otlp/otlphttp"
+	collectormetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
+	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
 type mockCollector struct {
@@ -96,7 +97,7 @@ func (c *mockCollector) serveMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response := collectormetricpb.ExportMetricsServiceResponse{}
-	rawResponse, err := response.Marshal()
+	rawResponse, err := proto.Marshal(&response)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -124,10 +125,10 @@ func (c *mockCollector) serveMetrics(w http.ResponseWriter, r *http.Request) {
 func unmarshalMetricsRequest(rawRequest []byte, contentType string) (*collectormetricpb.ExportMetricsServiceRequest, error) {
 	request := &collectormetricpb.ExportMetricsServiceRequest{}
 	if contentType == "application/json" {
-		err := jsonpb.UnmarshalString(string(rawRequest), request)
+		err := jsonpb.Unmarshal(rawRequest, request)
 		return request, err
 	}
-	err := request.Unmarshal(rawRequest)
+	err := proto.Unmarshal(rawRequest, request)
 	return request, err
 }
 
@@ -137,7 +138,7 @@ func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response := collectortracepb.ExportTraceServiceResponse{}
-	rawResponse, err := response.Marshal()
+	rawResponse, err := proto.Marshal(&response)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -166,10 +167,10 @@ func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
 func unmarshalTraceRequest(rawRequest []byte, contentType string) (*collectortracepb.ExportTraceServiceRequest, error) {
 	request := &collectortracepb.ExportTraceServiceRequest{}
 	if contentType == "application/json" {
-		err := jsonpb.UnmarshalString(string(rawRequest), request)
+		err := jsonpb.Unmarshal(rawRequest, request)
 		return request, err
 	}
-	err := request.Unmarshal(rawRequest)
+	err := proto.Unmarshal(rawRequest, request)
 	return request, err
 }
 
