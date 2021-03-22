@@ -6,7 +6,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/agent"
 	"go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
+	"go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/zipkincore"
 	"go.opentelemetry.io/otel/exporters/trace/jaeger/internal/third_party/thrift/lib/go/thrift"
 	"math"
 	"net"
@@ -17,12 +19,15 @@ import (
 )
 
 var _ = jaeger.GoUnusedProtection__
+var _ = zipkincore.GoUnusedProtection__
+var _ = agent.GoUnusedProtection__
 
 func Usage() {
 	fmt.Fprintln(os.Stderr, "Usage of ", os.Args[0], " [-h host:port] [-u url] [-f[ramed]] function [arg1 [arg2...]]:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "\nFunctions:")
-	fmt.Fprintln(os.Stderr, "   submitBatches( batches)")
+	fmt.Fprintln(os.Stderr, "  void emitZipkinBatch( spans)")
+	fmt.Fprintln(os.Stderr, "  void emitBatch(Batch batch)")
 	fmt.Fprintln(os.Stderr)
 	os.Exit(0)
 }
@@ -137,37 +142,62 @@ func main() {
 	}
 	iprot := protocolFactory.GetProtocol(trans)
 	oprot := protocolFactory.GetProtocol(trans)
-	client := jaeger.NewCollectorClient(thrift.NewTStandardClient(iprot, oprot))
+	client := agent.NewAgentClient(thrift.NewTStandardClient(iprot, oprot))
 	if err := trans.Open(); err != nil {
 		fmt.Fprintln(os.Stderr, "Error opening socket to ", host, ":", port, " ", err)
 		os.Exit(1)
 	}
 
 	switch cmd {
-	case "submitBatches":
+	case "emitZipkinBatch":
 		if flag.NArg()-1 != 1 {
-			fmt.Fprintln(os.Stderr, "SubmitBatches requires 1 args")
+			fmt.Fprintln(os.Stderr, "EmitZipkinBatch requires 1 args")
 			flag.Usage()
 		}
-		arg19 := flag.Arg(1)
-		mbTrans20 := thrift.NewTMemoryBufferLen(len(arg19))
-		defer mbTrans20.Close()
-		_, err21 := mbTrans20.WriteString(arg19)
-		if err21 != nil {
+		arg5 := flag.Arg(1)
+		mbTrans6 := thrift.NewTMemoryBufferLen(len(arg5))
+		defer mbTrans6.Close()
+		_, err7 := mbTrans6.WriteString(arg5)
+		if err7 != nil {
 			Usage()
 			return
 		}
-		factory22 := thrift.NewTJSONProtocolFactory()
-		jsProt23 := factory22.GetProtocol(mbTrans20)
-		containerStruct0 := jaeger.NewCollectorSubmitBatchesArgs()
-		err24 := containerStruct0.ReadField1(context.Background(), jsProt23)
-		if err24 != nil {
+		factory8 := thrift.NewTJSONProtocolFactory()
+		jsProt9 := factory8.GetProtocol(mbTrans6)
+		containerStruct0 := agent.NewAgentEmitZipkinBatchArgs()
+		err10 := containerStruct0.ReadField1(context.Background(), jsProt9)
+		if err10 != nil {
 			Usage()
 			return
 		}
-		argvalue0 := containerStruct0.Batches
+		argvalue0 := containerStruct0.Spans
 		value0 := argvalue0
-		fmt.Print(client.SubmitBatches(context.Background(), value0))
+		fmt.Print(client.EmitZipkinBatch(context.Background(), value0))
+		fmt.Print("\n")
+		break
+	case "emitBatch":
+		if flag.NArg()-1 != 1 {
+			fmt.Fprintln(os.Stderr, "EmitBatch requires 1 args")
+			flag.Usage()
+		}
+		arg11 := flag.Arg(1)
+		mbTrans12 := thrift.NewTMemoryBufferLen(len(arg11))
+		defer mbTrans12.Close()
+		_, err13 := mbTrans12.WriteString(arg11)
+		if err13 != nil {
+			Usage()
+			return
+		}
+		factory14 := thrift.NewTJSONProtocolFactory()
+		jsProt15 := factory14.GetProtocol(mbTrans12)
+		argvalue0 := jaeger.NewBatch()
+		err16 := argvalue0.Read(context.Background(), jsProt15)
+		if err16 != nil {
+			Usage()
+			return
+		}
+		value0 := argvalue0
+		fmt.Print(client.EmitBatch(context.Background(), value0))
 		fmt.Print("\n")
 		break
 	case "":
