@@ -23,10 +23,10 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
-	resourcepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/resource/v1"
-	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
 	"go.opentelemetry.io/otel/trace"
+	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
+	resourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 
 	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -42,15 +42,15 @@ func TestExportSpans(t *testing.T) {
 
 	for _, test := range []struct {
 		sd   []*tracesdk.SpanSnapshot
-		want []tracepb.ResourceSpans
+		want []*tracepb.ResourceSpans
 	}{
 		{
 			[]*tracesdk.SpanSnapshot(nil),
-			[]tracepb.ResourceSpans(nil),
+			[]*tracepb.ResourceSpans(nil),
 		},
 		{
 			[]*tracesdk.SpanSnapshot{},
-			[]tracepb.ResourceSpans(nil),
+			[]*tracepb.ResourceSpans(nil),
 		},
 		{
 			[]*tracesdk.SpanSnapshot{
@@ -144,7 +144,7 @@ func TestExportSpans(t *testing.T) {
 					},
 				},
 			},
-			[]tracepb.ResourceSpans{
+			[]*tracepb.ResourceSpans{
 				{
 					Resource: &resourcepb.Resource{
 						Attributes: []*commonpb.KeyValue{

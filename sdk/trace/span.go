@@ -548,18 +548,15 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 	span.links = newEvictedQueue(spanLimits.LinkCountLimit)
 	span.spanLimits = spanLimits
 
-	data := samplingData{
-		noParent:     hasEmptySpanContext(parent),
-		remoteParent: remoteParent,
-		parent:       parent,
-		name:         name,
-		sampler:      provider.sampler,
-		span:         span,
-		attributes:   o.Attributes,
-		links:        o.Links,
-		kind:         o.SpanKind,
-	}
-	samplingResult := makeSamplingDecision(data)
+	samplingResult := provider.sampler.ShouldSample(SamplingParameters{
+		ParentContext:   parent,
+		TraceID:         span.spanContext.TraceID(),
+		Name:            name,
+		HasRemoteParent: remoteParent,
+		Kind:            o.SpanKind,
+		Attributes:      o.Attributes,
+		Links:           o.Links,
+	})
 	if isSampled(samplingResult) {
 		span.spanContext = span.spanContext.WithTraceFlags(span.spanContext.TraceFlags() | trace.FlagsSampled)
 	} else {
@@ -592,30 +589,6 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 
 func hasEmptySpanContext(parent trace.SpanContext) bool {
 	return parent.Equal(emptySpanContext)
-}
-
-type samplingData struct {
-	noParent     bool
-	remoteParent bool
-	parent       trace.SpanContext
-	name         string
-	sampler      Sampler
-	span         *span
-	attributes   []attribute.KeyValue
-	links        []trace.Link
-	kind         trace.SpanKind
-}
-
-func makeSamplingDecision(data samplingData) SamplingResult {
-	return data.sampler.ShouldSample(SamplingParameters{
-		ParentContext:   data.parent,
-		TraceID:         data.span.spanContext.TraceID(),
-		Name:            data.name,
-		HasRemoteParent: data.remoteParent,
-		Kind:            data.kind,
-		Attributes:      data.attributes,
-		Links:           data.links,
-	})
 }
 
 func isRecording(s SamplingResult) bool {

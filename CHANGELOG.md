@@ -8,55 +8,59 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Jaeger exporter was updated to use thrift v0.14.1. (#1712)
+- Migrate from using internally built and maintained version of the OTLP to the one hosted at `go.opentelemetry.io/proto/otlp`. (#1713)
+- Migrate from using `github.com/gogo/protobuf` to `google.golang.org/protobuf` to match `go.opentelemetry.io/proto/otlp`. (#1713)
+
+## [0.19.0] - 2021-03-18
+
 ### Added
 
 - Added `Marshaler` config option to `otlphttp` to enable otlp over json or protobufs. (#1586)
 - A `ForceFlush` method to the `"go.opentelemetry.io/otel/sdk/trace".TracerProvider` to flush all registered `SpanProcessor`s. (#1608)
 - Added `WithSampler` and `WithSpanLimits` to tracer provider. (#1633, #1702)
-- Jaeger exporter falls back to `resource.Default`'s `service.name` if the exported Span does not have one. (#1673)
 - `"go.opentelemetry.io/otel/trace".SpanContext` now has a `remote` property, and `IsRemote()` predicate, that is true when the `SpanContext` has been extracted from remote context data. (#1701)
 - A `Valid` method to the `"go.opentelemetry.io/otel/attribute".KeyValue` type. (#1703)
 
 ### Changed
 
+- `trace.SpanContext` is now immutable and has no exported fields. (#1573)
+  - `trace.NewSpanContext()` can be used in conjunction with the `trace.SpanContextConfig` struct to initialize a new `SpanContext` where all values are known.
 - Update the `ForceFlush` method signature to the `"go.opentelemetry.io/otel/sdk/trace".SpanProcessor` to accept a `context.Context` and return an error. (#1608)
 - Update the `Shutdown` method to the `"go.opentelemetry.io/otel/sdk/trace".TracerProvider` return an error on shutdown failure. (#1608)
 - The SimpleSpanProcessor will now shut down the enclosed `SpanExporter` and gracefully ignore subsequent calls to `OnEnd` after `Shutdown` is called. (#1612)
 - `"go.opentelemetry.io/sdk/metric/controller.basic".WithPusher` is replaced with `WithExporter` to provide consistent naming across project. (#1656)
 - Added non-empty string check for trace `Attribute` keys. (#1659)
 - Add `description` to SpanStatus only when `StatusCode` is set to error. (#1662)
-- `trace.SpanContext` is now immutable and has no exported fields. (#1573)
-  - `trace.NewSpanContext()` can be used in conjunction with the `trace.SpanContextConfig` struct to initialize a new `SpanContext` where all values are known.
-- Renamed the `LabelSet` method of `"go.opentelemetry.io/otel/sdk/resource".Resource` to `Set`. (#1692)
+- Jaeger exporter falls back to `resource.Default`'s `service.name` if the exported Span does not have one. (#1673)
 - Jaeger exporter populates Jaeger's Span Process from Resource. (#1673)
-- `"go.opentelemetry.io/otel/sdk/resource".NewWithAttributes` will now drop any invalid attributes passed. (#1703)
-- `"go.opentelemetry.io/otel/sdk/resource".StringDetector` will now error if the produced attribute is invalid. (#1703)
+- Renamed the `LabelSet` method of `"go.opentelemetry.io/otel/sdk/resource".Resource` to `Set`. (#1692)
 - Changed `WithSDK` to `WithSDKOptions` to accept variadic arguments of `TracerProviderOption` type in `go.opentelemetry.io/otel/exporters/trace/jaeger` package. (#1693)
 - Changed `WithSDK` to `WithSDKOptions` to accept variadic arguments of `TracerProviderOption` type in `go.opentelemetry.io/otel/exporters/trace/zipkin` package. (#1693)
-- Jaeger exporter was updated to use thrift v0.14.1. (#1712)
-  
+
 ### Removed
 
-- Removed `WithRecord()` from `trace.SpanOption` when creating a span. (#1660)
+- Removed `serviceName` parameter from Zipkin exporter and uses resource instead. (#1549)
+- Removed `WithConfig` from tracer provider to avoid overriding configuration. (#1633)
 - Removed the exported `SimpleSpanProcessor` and `BatchSpanProcessor` structs.
    These are now returned as a SpanProcessor interface from their respective constructors. (#1638)
+- Removed `WithRecord()` from `trace.SpanOption` when creating a span. (#1660)
 - Removed setting status to `Error` while recording an error as a span event in `RecordError`. (#1663)
-- Removed `WithConfig` from tracer provider to avoid overriding configuration. (#1633)
-- Removed `serviceName` parameter from Zipkin exporter and uses resource instead. (#1549)
-- Removed `jaeger.WithProcess`. (#1673)
-- Removed `ApplyConfig` method and `Config` struct from tracer provider. (#1693)
+- Removed `jaeger.WithProcess` configuration option. (#1673)
+- Removed `ApplyConfig` method from `"go.opentelemetry.io/otel/sdk/trace".TracerProvider` and the now unneeded `Config` struct. (#1693)
 
 ### Fixed
 
-- `SamplingResult.TraceState` is correctly propagated to a newly created
-  span's `SpanContext`. (#1655)
 - Jaeger Exporter: Ensure mapping between OTEL and Jaeger span data complies with the specification. (#1626)
+- `SamplingResult.TraceState` is correctly propagated to a newly created span's `SpanContext`. (#1655)
 - The `otel-collector` example now correctly flushes metric events prior to shutting down the exporter. (#1678)
-- Synchronization issues in global trace delegate implementation. (#1686)
 - Do not set span status message in `SpanStatusFromHTTPStatusCode` if it can be inferred from `http.status_code`. (#1681)
+- Synchronization issues in global trace delegate implementation. (#1686)
 - Reduced excess memory usage by global `TracerProvider`. (#1687)
 
-## [0.18.0] - 2020-03-03
+## [0.18.0] - 2021-03-03
 
 ### Added
 
@@ -119,7 +123,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Validate tracestate header keys with vendors according to the W3C TraceContext specification (#1475). (#1581)
 - The OTLP exporter includes related labels for translations of a GaugeArray (#1563). (#1570)
 
-## [0.17.0] - 2020-02-12
+## [0.17.0] - 2021-02-12
 
 ### Changed
 
@@ -135,7 +139,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The example code in the README.md of `go.opentelemetry.io/otel/exporters/otlp` is moved to a compiled example test and used the new `WithAddress` instead of `WithEndpoint`. (#1513)
 - The otel-collector example now uses the default OTLP receiver port of the collector.
 
-## [0.16.0] - 2020-01-13
+## [0.16.0] - 2021-01-13
 
 ### Added
 
@@ -1157,7 +1161,8 @@ It contains api and sdk for trace and meter.
 - CODEOWNERS file to track owners of this project.
 
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.18.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.19.0...HEAD
+[0.19.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.19.0
 [0.18.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.18.0
 [0.17.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.17.0
 [0.16.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.16.0
