@@ -198,23 +198,6 @@ func TestTracer(t *testing.T) {
 			e.Expect(childSpanContext.SpanID()).NotToEqual(parentSpanContext.SpanID())
 			e.Expect(childSpanContext.SpanID()).NotToEqual(remoteParentSpanContext.SpanID())
 			e.Expect(testSpan.ParentSpanID().IsValid()).ToBeFalse()
-
-			expectedLinks := []trace.Link{
-				{
-					SpanContext: parentSpanContext,
-					Attributes: []attribute.KeyValue{
-						attribute.String("ignored-on-demand", "current"),
-					},
-				},
-				{
-					SpanContext: remoteParentSpanContext,
-					Attributes: []attribute.KeyValue{
-						attribute.String("ignored-on-demand", "remote"),
-					},
-				},
-			}
-			gotLinks := testSpan.Links()
-			e.Expect(gotLinks).ToMatchInAnyOrder(expectedLinks)
 		})
 
 		t.Run("uses the links provided through WithLinks", func(t *testing.T) {
