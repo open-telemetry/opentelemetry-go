@@ -24,6 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/internal/trace/parent"
 	"go.opentelemetry.io/otel/trace"
 
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -76,8 +77,6 @@ type ReadWriteSpan interface {
 	trace.Span
 	ReadOnlySpan
 }
-
-var emptySpanContext = trace.SpanContext{}
 
 // span is an implementation of the OpenTelemetry Span API representing the
 // individual component of a trace.
@@ -518,29 +517,29 @@ func (s *span) addDroppedAttributeCount(delta int) {
 
 func (*span) private() {}
 
-func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trace.SpanContext, remoteParent bool, o *trace.SpanConfig) *span {
+func startSpanInternal(ctx context.Context, tr *tracer, name string, o *trace.SpanConfig) *span {
 	span := &span{}
 
 	provider := tr.provider
 
-	var tid trace.TraceID
-	var sid trace.SpanID
-
-	if hasEmptySpanContext(parent) {
-		// Generate both TraceID and SpanID
-		tid, sid = provider.idGenerator.NewIDs(ctx)
-	} else {
-		// TraceID already exists, just generate a SpanID
-		tid = parent.TraceID()
-		sid = provider.idGenerator.NewSpanID(ctx, tid)
+	// If told explicitly to make this a new root use a zero value SpanContext
+	// as a parent which contains an invalid trace ID and is not remote.
+	var psc trace.SpanContext
+	if !o.NewRoot {
+		psc = parent.SpanContext(ctx)
 	}
 
-	span.spanContext = trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    tid,
-		SpanID:     sid,
-		TraceFlags: parent.TraceFlags(),
-		TraceState: parent.TraceState(),
-	})
+	// If there is a valid parent trace ID, use it to ensure the continuity of
+	// the trace. Always generate a new span ID so other components can rely
+	// on a unique span ID, even if the Span is non-recording.
+	var tid trace.TraceID
+	var sid trace.SpanID
+	if !psc.TraceID().IsValid() {
+		tid, sid = provider.idGenerator.NewIDs(ctx)
+	} else {
+		tid = psc.TraceID()
+		sid = provider.idGenerator.NewSpanID(ctx, tid)
+	}
 
 	spanLimits := provider.spanLimits
 	span.attributes = newAttributesMap(spanLimits.AttributeCountLimit)
@@ -549,20 +548,26 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 	span.spanLimits = spanLimits
 
 	samplingResult := provider.sampler.ShouldSample(SamplingParameters{
-		ParentContext:   parent,
-		TraceID:         span.spanContext.TraceID(),
+		ParentContext:   psc,
+		TraceID:         tid,
 		Name:            name,
-		HasRemoteParent: remoteParent,
+		HasRemoteParent: psc.IsRemote(),
 		Kind:            o.SpanKind,
 		Attributes:      o.Attributes,
 		Links:           o.Links,
 	})
-	if isSampled(samplingResult) {
-		span.spanContext = span.spanContext.WithTraceFlags(span.spanContext.TraceFlags() | trace.FlagsSampled)
-	} else {
-		span.spanContext = span.spanContext.WithTraceFlags(span.spanContext.TraceFlags() &^ trace.FlagsSampled)
+
+	scc := trace.SpanContextConfig{
+		TraceID:    tid,
+		SpanID:     sid,
+		TraceState: samplingResult.Tracestate,
 	}
-	span.spanContext = span.spanContext.WithTraceState(samplingResult.Tracestate)
+	if isSampled(samplingResult) {
+		scc.TraceFlags = psc.TraceFlags() | trace.FlagsSampled
+	} else {
+		scc.TraceFlags = psc.TraceFlags() &^ trace.FlagsSampled
+	}
+	span.spanContext = trace.NewSpanContext(scc)
 
 	if !isRecording(samplingResult) {
 		return span
@@ -576,19 +581,15 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 
 	span.spanKind = trace.ValidateSpanKind(o.SpanKind)
 	span.name = name
-	span.hasRemoteParent = remoteParent
+	span.hasRemoteParent = psc.IsRemote()
 	span.resource = provider.resource
 	span.instrumentationLibrary = tr.instrumentationLibrary
 
 	span.SetAttributes(samplingResult.Attributes...)
 
-	span.parent = parent
+	span.parent = psc
 
 	return span
-}
-
-func hasEmptySpanContext(parent trace.SpanContext) bool {
-	return parent.Equal(emptySpanContext)
 }
 
 func isRecording(s SamplingResult) bool {
