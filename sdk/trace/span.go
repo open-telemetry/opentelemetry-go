@@ -110,9 +110,6 @@ type span struct {
 	// statusMessage represents the status of this span as a string.
 	statusMessage string
 
-	// hasRemoteParent is true when this span has a remote parent span.
-	hasRemoteParent bool
-
 	// childSpanCount holds the number of child spans created for this span.
 	childSpanCount int
 
@@ -448,7 +445,7 @@ func (s *span) Snapshot() *export.SpanSnapshot {
 
 	sd.ChildSpanCount = s.childSpanCount
 	sd.EndTime = s.endTime
-	sd.HasRemoteParent = s.hasRemoteParent
+	sd.HasRemoteParent = s.parent.IsRemote()
 	sd.InstrumentationLibrary = s.instrumentationLibrary
 	sd.Name = s.name
 	sd.ParentSpanID = s.parent.SpanID()
@@ -576,13 +573,11 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 
 	span.spanKind = trace.ValidateSpanKind(o.SpanKind)
 	span.name = name
-	span.hasRemoteParent = remoteParent
+	span.parent = parent
 	span.resource = provider.resource
 	span.instrumentationLibrary = tr.instrumentationLibrary
 
 	span.SetAttributes(samplingResult.Attributes...)
-
-	span.parent = parent
 
 	return span
 }
