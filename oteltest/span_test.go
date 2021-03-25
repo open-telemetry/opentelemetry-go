@@ -167,37 +167,9 @@ func TestSpan(t *testing.T) {
 					},
 				}}
 				e.Expect(subject.Events()).ToEqual(expectedEvents)
-				e.Expect(subject.StatusCode()).ToEqual(codes.Error)
+				e.Expect(subject.StatusCode()).ToEqual(codes.Unset)
 				e.Expect(subject.StatusMessage()).ToEqual("")
 			}
-		})
-
-		t.Run("sets span status if provided", func(t *testing.T) {
-			t.Parallel()
-
-			e := matchers.NewExpecter(t)
-
-			tracer := tp.Tracer(t.Name())
-			_, span := tracer.Start(context.Background(), "test")
-
-			subject, ok := span.(*oteltest.Span)
-			e.Expect(ok).ToBeTrue()
-
-			errMsg := "test error message"
-			testErr := ottest.NewTestError(errMsg)
-			testTime := time.Now()
-			subject.RecordError(testErr, trace.WithTimestamp(testTime))
-
-			expectedEvents := []oteltest.Event{{
-				Timestamp: testTime,
-				Name:      "error",
-				Attributes: map[attribute.Key]attribute.Value{
-					attribute.Key("error.type"):    attribute.StringValue("go.opentelemetry.io/otel/internal/internaltest.TestError"),
-					attribute.Key("error.message"): attribute.StringValue(errMsg),
-				},
-			}}
-			e.Expect(subject.Events()).ToEqual(expectedEvents)
-			e.Expect(subject.StatusCode()).ToEqual(codes.Error)
 		})
 
 		t.Run("cannot be set after the span has ended", func(t *testing.T) {
