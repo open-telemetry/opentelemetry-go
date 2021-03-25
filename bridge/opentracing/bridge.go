@@ -655,10 +655,9 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 	header := http.Header(hhcarrier)
 	ctx := t.getPropagator().Extract(context.Background(), propagation.HeaderCarrier(header))
 	baggage := baggage.MapFromContext(ctx)
-	otelSC, _, _ := otelparent.GetSpanContextAndLinks(ctx, false)
 	bridgeSC := &bridgeSpanContext{
 		baggageItems:    baggage,
-		otelSpanContext: otelSC,
+		otelSpanContext: otelparent.SpanContext(ctx),
 	}
 	if !bridgeSC.otelSpanContext.IsValid() {
 		return nil, ot.ErrSpanContextNotFound

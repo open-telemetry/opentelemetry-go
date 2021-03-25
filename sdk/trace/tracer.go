@@ -18,7 +18,6 @@ import (
 	"context"
 	rt "runtime/trace"
 
-	"go.opentelemetry.io/otel/internal/trace/parent"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -40,18 +39,14 @@ var _ trace.Tracer = &tracer{}
 func (tr *tracer) Start(ctx context.Context, name string, options ...trace.SpanOption) (context.Context, trace.Span) {
 	config := trace.NewSpanConfig(options...)
 
-	parentSpanContext, remoteParent, links := parent.GetSpanContextAndLinks(ctx, config.NewRoot)
-
+	// For local spans created by this SDK, track child span count.
 	if p := trace.SpanFromContext(ctx); p != nil {
 		if sdkSpan, ok := p.(*span); ok {
 			sdkSpan.addChild()
 		}
 	}
 
-	span := startSpanInternal(ctx, tr, name, parentSpanContext, remoteParent, config)
-	for _, l := range links {
-		span.addLink(l)
-	}
+	span := startSpanInternal(ctx, tr, name, config)
 	for _, l := range config.Links {
 		span.addLink(l)
 	}

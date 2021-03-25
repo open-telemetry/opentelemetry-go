@@ -17,37 +17,12 @@ package parent
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
-func GetSpanContextAndLinks(ctx context.Context, ignoreContext bool) (trace.SpanContext, bool, []trace.Link) {
-	lsctx := trace.SpanContextFromContext(ctx)
-	rsctx := trace.RemoteSpanContextFromContext(ctx)
-
-	if ignoreContext {
-		links := addLinkIfValid(nil, lsctx, "current")
-		links = addLinkIfValid(links, rsctx, "remote")
-
-		return trace.SpanContext{}, false, links
+func SpanContext(ctx context.Context) trace.SpanContext {
+	if p := trace.SpanContextFromContext(ctx); p.IsValid() {
+		return p
 	}
-	if lsctx.IsValid() {
-		return lsctx, false, nil
-	}
-	if rsctx.IsValid() {
-		return rsctx, true, nil
-	}
-	return trace.SpanContext{}, false, nil
-}
-
-func addLinkIfValid(links []trace.Link, sc trace.SpanContext, kind string) []trace.Link {
-	if !sc.IsValid() {
-		return links
-	}
-	return append(links, trace.Link{
-		SpanContext: sc,
-		Attributes: []attribute.KeyValue{
-			attribute.String("ignored-on-demand", kind),
-		},
-	})
+	return trace.RemoteSpanContextFromContext(ctx)
 }
