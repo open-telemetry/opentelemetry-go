@@ -14,6 +14,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Migrate from using internally built and maintained version of the OTLP to the one hosted at `go.opentelemetry.io/proto/otlp`. (#1713)
 - Migrate from using `github.com/gogo/protobuf` to `google.golang.org/protobuf` to match `go.opentelemetry.io/proto/otlp`. (#1713)
 
+### Removed
+
+- No longer set the links for a `Span` in `go.opentelemetry.io/otel/sdk/trace` that is configured to be a new root.
+  This is unspecified behavior that the OpenTelemetry community plans to standardize in the future.
+  To prevent backwards incompatible changes when it is specified, these links are removed. (#1726)
+
 ## [0.19.0] - 2021-03-18
 
 ### Added

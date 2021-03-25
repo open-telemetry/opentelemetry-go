@@ -137,8 +137,10 @@ func (t *MockTracer) getParentSpanID(ctx context.Context, config *trace.SpanConf
 }
 
 func (t *MockTracer) getParentSpanContext(ctx context.Context, config *trace.SpanConfig) trace.SpanContext {
-	spanCtx, _, _ := otelparent.GetSpanContextAndLinks(ctx, config.NewRoot)
-	return spanCtx
+	if !config.NewRoot {
+		return otelparent.SpanContext(ctx)
+	}
+	return trace.SpanContext{}
 }
 
 func (t *MockTracer) getSpanID() trace.SpanID {
