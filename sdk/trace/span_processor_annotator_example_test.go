@@ -22,6 +22,14 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/trace/tracetest"
 )
 
+/*
+Sometimes information about a runtime environment can change dynamically or be
+delayed from startup. Instead of continuously recreating and distributing a
+TracerProvider with an immutable Resource or delaying the startup of your
+application on a slow loading piece of information, annotate the created spans
+dynamically using a SpanProcessor.
+*/
+
 // AttrsFunc is called when annotations for a Span need to be determined.
 type AttrsFunc func(context.Context) []attribute.KeyValue
 
@@ -44,13 +52,6 @@ func (a Annotator) ForceFlush(ctx context.Context) error { return a.Next.ForceFl
 func (a Annotator) OnEnd(s ReadOnlySpan)                 { a.Next.OnEnd(s) }
 
 func ExampleSpanProcessor_annotated() {
-	// Sometimes information about a runtime environment can change
-	// dynamically or be delayed from startup. Instead of continuously
-	// recreating and distributing a TracerProvider with an immutable Resource
-	// or delaying the startup of your application on a slow loading piece of
-	// information annotate the created spans dynamically using a
-	// SpanProcessor.
-
 	// Use this chan to signal when an owner of the process is known.
 	ownerCh := make(chan string, 1)
 	ownerKey := attribute.Key("owner")
