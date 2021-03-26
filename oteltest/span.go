@@ -91,7 +91,6 @@ func (s *Span) RecordError(err error, opts ...trace.EventOption) {
 		errTypeString = errType.String()
 	}
 
-	s.SetStatus(codes.Error, "")
 	opts = append(opts, trace.WithAttributes(
 		errorTypeKey.String(errTypeString),
 		errorMessageKey.String(err.Error()),

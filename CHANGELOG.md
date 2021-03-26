@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - No longer set the links for a `Span` in `go.opentelemetry.io/otel/sdk/trace` that is configured to be a new root.
   This is unspecified behavior that the OpenTelemetry community plans to standardize in the future.
   To prevent backwards incompatible changes when it is specified, these links are removed. (#1726)
+- Setting error status while recording error with Span from oteltest package. (#1729)
 
 ## [0.19.0] - 2021-03-18
 
