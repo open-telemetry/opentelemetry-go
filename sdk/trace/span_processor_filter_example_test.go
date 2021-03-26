@@ -76,7 +76,7 @@ func (f InstrumentationBlacklist) OnEnd(s ReadOnlySpan) {
 	f.Next.OnEnd(s)
 }
 
-func ExampleSpanProcessor() {
+func ExampleSpanProcessor_filtered() {
 	exportSP := NewSimpleSpanProcessor(tracetest.NewNoopExporter())
 
 	// Build a SpanProcessor chain to filter out all spans from the pernicious
