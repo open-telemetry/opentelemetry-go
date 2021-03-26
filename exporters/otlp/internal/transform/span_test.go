@@ -185,11 +185,11 @@ func TestNilSpan(t *testing.T) {
 }
 
 func TestNilSpanSnapshot(t *testing.T) {
-	assert.Nil(t, SpanSnapshot(nil))
+	assert.Nil(t, SpanSnapshots(nil))
 }
 
 func TestEmptySpanSnapshot(t *testing.T) {
-	assert.Nil(t, SpanSnapshot(nil))
+	assert.Nil(t, SpanSnapshots(nil))
 }
 
 func TestSpanSnapshot(t *testing.T) {
@@ -281,7 +281,7 @@ func TestSpanSnapshot(t *testing.T) {
 		DroppedLinksCount:      3,
 	}
 
-	got := SpanSnapshot([]*export.SpanSnapshot{spanData})
+	got := SpanSnapshots([]*export.SpanSnapshot{spanData})
 	require.Len(t, got, 1)
 
 	assert.Equal(t, got[0].GetResource(), Resource(spanData.Resource))
@@ -298,7 +298,7 @@ func TestSpanSnapshot(t *testing.T) {
 
 // Empty parent span ID should be treated as root span.
 func TestRootSpanSnapshot(t *testing.T) {
-	sd := SpanSnapshot([]*export.SpanSnapshot{{}})
+	sd := SpanSnapshots([]*export.SpanSnapshot{{}})
 	require.Len(t, sd, 1)
 	rs := sd[0]
 	got := rs.GetInstrumentationLibrarySpans()[0].GetSpans()[0].GetParentSpanId()
@@ -308,5 +308,5 @@ func TestRootSpanSnapshot(t *testing.T) {
 }
 
 func TestSpanSnapshotNilResource(t *testing.T) {
-	assert.NotPanics(t, func() { SpanSnapshot([]*export.SpanSnapshot{{}}) })
+	assert.NotPanics(t, func() { SpanSnapshots([]*export.SpanSnapshot{{}}) })
 }

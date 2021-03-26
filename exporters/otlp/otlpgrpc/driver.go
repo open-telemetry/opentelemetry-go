@@ -132,7 +132,7 @@ func (d *driver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) 
 	ctx, cancel := d.connection.contextWithStop(ctx)
 	defer cancel()
 
-	protoSpans := transform.SpanSnapshot(ss)
+	protoSpans := transform.SpanSnapshots(ss)
 	if len(protoSpans) == 0 {
 		return nil
 	}

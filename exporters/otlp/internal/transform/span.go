@@ -28,9 +28,9 @@ const (
 	maxMessageEventsPerSpan = 128
 )
 
-// SpanSnapshot transforms a slice of SpanSnapshot into a slice of OTLP
+// SpanSnapshots transforms a slice of SpanSnapshot into a slice of OTLP
 // ResourceSpans.
-func SpanSnapshot(sdl []*export.SpanSnapshot) []*tracepb.ResourceSpans {
+func SpanSnapshots(sdl []*export.SpanSnapshot) []*tracepb.ResourceSpans {
 	if len(sdl) == 0 {
 		return nil
 	}

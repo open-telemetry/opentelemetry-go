@@ -144,7 +144,7 @@ func (m *stubTransformingProtocolDriver) ExportMetrics(parent context.Context, c
 }
 
 func (m *stubTransformingProtocolDriver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
-	for _, rs := range transform.SpanSnapshot(ss) {
+	for _, rs := range transform.SpanSnapshots(ss) {
 		if rs == nil {
 			continue
 		}
