@@ -184,15 +184,15 @@ func TestNilSpan(t *testing.T) {
 	assert.Nil(t, span(nil))
 }
 
-func TestNilSpanData(t *testing.T) {
-	assert.Nil(t, SpanData(nil))
+func TestNilSpanSnapshot(t *testing.T) {
+	assert.Nil(t, SpanSnapshot(nil))
 }
 
-func TestEmptySpanData(t *testing.T) {
-	assert.Nil(t, SpanData(nil))
+func TestEmptySpanSnapshot(t *testing.T) {
+	assert.Nil(t, SpanSnapshot(nil))
 }
 
-func TestSpanData(t *testing.T) {
+func TestSpanSnapshot(t *testing.T) {
 	// Full test of span data transform.
 
 	// March 31, 2020 5:01:26 1234nanos (UTC)
@@ -281,7 +281,7 @@ func TestSpanData(t *testing.T) {
 		DroppedLinksCount:      3,
 	}
 
-	got := SpanData([]*export.SpanSnapshot{spanData})
+	got := SpanSnapshot([]*export.SpanSnapshot{spanData})
 	require.Len(t, got, 1)
 
 	assert.Equal(t, got[0].GetResource(), Resource(spanData.Resource))
@@ -297,8 +297,8 @@ func TestSpanData(t *testing.T) {
 }
 
 // Empty parent span ID should be treated as root span.
-func TestRootSpanData(t *testing.T) {
-	sd := SpanData([]*export.SpanSnapshot{{}})
+func TestRootSpanSnapshot(t *testing.T) {
+	sd := SpanSnapshot([]*export.SpanSnapshot{{}})
 	require.Len(t, sd, 1)
 	rs := sd[0]
 	got := rs.GetInstrumentationLibrarySpans()[0].GetSpans()[0].GetParentSpanId()
@@ -307,6 +307,6 @@ func TestRootSpanData(t *testing.T) {
 	assert.Nil(t, got, "incorrect transform of root parent span ID")
 }
 
-func TestSpanDataNilResource(t *testing.T) {
-	assert.NotPanics(t, func() { SpanData([]*export.SpanSnapshot{{}}) })
+func TestSpanSnapshotNilResource(t *testing.T) {
+	assert.NotPanics(t, func() { SpanSnapshot([]*export.SpanSnapshot{{}}) })
 }
