@@ -1099,6 +1099,7 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 	s.executionTracerTaskEnd = executionTracerTaskEnd
 	spans = append(spans, s) // parent not sampled
 
+	tp.sampler = AlwaysSample()
 	_, apiSpan = tr.Start(context.Background(), "foo")
 	s = apiSpan.(*span)
 	s.executionTracerTaskEnd = executionTracerTaskEnd
@@ -1107,7 +1108,8 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 	for _, span := range spans {
 		span.End()
 	}
-	if got, want := n, uint64(len(spans)); got != want {
+	//Only one span should execute TracerTaskEnd
+	if got, want := n, uint64(1); got != want {
 		t.Fatalf("Execution tracer task ended for %v spans; want %v", got, want)
 	}
 }
