@@ -24,8 +24,8 @@ import (
 
 type AttrsFunc func(context.Context) []attribute.KeyValue
 
-// annotator is a SpanProcessor that adds attributes to all started spans.
-type annotator struct {
+// Annotator is a SpanProcessor that adds attributes to all started spans.
+type Annotator struct {
 	// Next is the next SpanProcessor in the chain.
 	Next SpanProcessor
 
@@ -34,21 +34,13 @@ type annotator struct {
 	AttrsFunc AttrsFunc
 }
 
-// NewAnnotator returns a SpanProcessor that adds attrs to all started spans.
-func NewAnnotator(next SpanProcessor, attrsFunc AttrsFunc) SpanProcessor {
-	return annotator{
-		Next:      next,
-		AttrsFunc: attrsFunc,
-	}
-}
-
-func (a annotator) OnStart(parent context.Context, s ReadWriteSpan) {
+func (a Annotator) OnStart(parent context.Context, s ReadWriteSpan) {
 	s.SetAttributes(a.AttrsFunc(parent)...)
 	a.Next.OnStart(parent, s)
 }
-func (a annotator) Shutdown(ctx context.Context) error   { return a.Next.Shutdown(ctx) }
-func (a annotator) ForceFlush(ctx context.Context) error { return a.Next.ForceFlush(ctx) }
-func (a annotator) OnEnd(s ReadOnlySpan)                 { a.Next.OnEnd(s) }
+func (a Annotator) Shutdown(ctx context.Context) error   { return a.Next.Shutdown(ctx) }
+func (a Annotator) ForceFlush(ctx context.Context) error { return a.Next.ForceFlush(ctx) }
+func (a Annotator) OnEnd(s ReadOnlySpan)                 { a.Next.OnEnd(s) }
 
 func ExampleSpanProcessor_annotated() {
 	// Sometimes information about a runtime environment can change
@@ -63,11 +55,12 @@ func ExampleSpanProcessor_annotated() {
 	ownerKey := attribute.Key("owner")
 
 	exporter := tracetest.NewInMemoryExporter()
-	a := NewAnnotator(
+
+	a := Annotator{
 		// Chain the export pipeline downstream of this SpanProcessor.
-		NewSimpleSpanProcessor(exporter),
+		Next: NewSimpleSpanProcessor(exporter),
 		// Dynamically lookup the owner and annotate accordingly.
-		func(ctx context.Context) []attribute.KeyValue {
+		AttrsFunc: func(ctx context.Context) []attribute.KeyValue {
 			select {
 			case name := <-ownerCh:
 				return []attribute.KeyValue{ownerKey.String(name)}
@@ -75,7 +68,7 @@ func ExampleSpanProcessor_annotated() {
 				return []attribute.KeyValue{ownerKey.String("unknown")}
 			}
 		},
-	)
+	}
 
 	// Instead of waiting for the owner to be known before starting and
 	// blocking here, start the tracing process and update when the
