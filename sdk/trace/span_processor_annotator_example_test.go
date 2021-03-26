@@ -22,6 +22,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/trace/tracetest"
 )
 
+// AttrsFunc is called when annotations for a Span need to be determined.
 type AttrsFunc func(context.Context) []attribute.KeyValue
 
 // Annotator is a SpanProcessor that adds attributes to all started spans.
