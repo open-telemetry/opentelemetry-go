@@ -217,13 +217,26 @@ func TestSetName(t *testing.T) {
 	}
 }
 
-func TestRecordingIsOn(t *testing.T) {
-	tp := NewTracerProvider()
-	_, span := tp.Tracer("Recording on").Start(context.Background(), "StartSpan")
-	defer span.End()
-	if span.IsRecording() == false {
-		t.Error("new span is not recording events")
-	}
+func TestSpanIsRecording(t *testing.T) {
+	t.Run("is recording on", func(t *testing.T) {
+		tp := NewTracerProvider()
+		_, span := tp.Tracer("Recording on").Start(context.Background(), "StartSpan")
+		defer span.End()
+		if span.IsRecording() == false {
+			t.Error("new span is not recording events")
+		}
+	})
+
+	t.Run("is recording off", func(t *testing.T) {
+		tp := NewTracerProvider(WithSampler(NeverSample()))
+		_, span := tp.Tracer("Recording off").Start(context.Background(), "StartSpan")
+		defer span.End()
+		if span.IsRecording() == true {
+			t.Error("new span is recording events")
+		}
+
+	})
+
 }
 
 func TestSampling(t *testing.T) {
