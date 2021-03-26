@@ -30,7 +30,7 @@ func ContextWithSpan(parent context.Context, span Span) context.Context {
 // that wraps rsc is non-recording and performs no operations other than to
 // return rsc as the SpanContext from the SpanContext method.
 func ContextWithRemoteSpanContext(parent context.Context, rsc SpanContext) context.Context {
-	return context.WithValue(parent, currentSpanKey, nonRecordingSpan{sc: rsc.WithRemote(true)})
+	return ContextWithSpan(parent, nonRecordingSpan{sc: rsc.WithRemote(true)})
 }
 
 // SpanFromContext returns the current Span from ctx.
