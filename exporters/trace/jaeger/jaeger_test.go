@@ -277,24 +277,24 @@ func TestNewRawExporterShouldFailIfCollectorUnset(t *testing.T) {
 	assert.Error(t, err)
 }
 
-type testCollectorEnpoint struct {
+type testCollectorEndpoint struct {
 	batchesUploaded []*gen.Batch
 }
 
-func (c *testCollectorEnpoint) upload(batch *gen.Batch) error {
+func (c *testCollectorEndpoint) upload(batch *gen.Batch) error {
 	c.batchesUploaded = append(c.batchesUploaded, batch)
 	return nil
 }
 
-var _ batchUploader = (*testCollectorEnpoint)(nil)
+var _ batchUploader = (*testCollectorEndpoint)(nil)
 
 func withTestCollectorEndpoint() func() (batchUploader, error) {
 	return func() (batchUploader, error) {
-		return &testCollectorEnpoint{}, nil
+		return &testCollectorEndpoint{}, nil
 	}
 }
 
-func withTestCollectorEndpointInjected(ce *testCollectorEnpoint) func() (batchUploader, error) {
+func withTestCollectorEndpointInjected(ce *testCollectorEndpoint) func() (batchUploader, error) {
 	return func() (batchUploader, error) {
 		return ce, nil
 	}
@@ -319,10 +319,8 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithSyncer(exp),
-	)
+	opts := append(exp.o.TracerProviderOptions, sdktrace.WithSyncer(exp))
+	tp := sdktrace.NewTracerProvider(opts...)
 	otel.SetTracerProvider(tp)
 	_, span := otel.Tracer("test-tracer").Start(context.Background(), "test-span")
 	span.End()
@@ -330,8 +328,14 @@ func TestExporter_ExportSpan(t *testing.T) {
 	assert.True(t, span.SpanContext().IsValid())
 
 	exp.Flush()
-	tc := exp.uploader.(*testCollectorEnpoint)
+	tc := exp.uploader.(*testCollectorEndpoint)
 	assert.True(t, len(tc.batchesUploaded) == 1)
+
+	assert.Equal(t, serviceName, tc.batchesUploaded[0].GetProcess().GetServiceName())
+	assert.Equal(t, 1, len(tc.batchesUploaded[0].GetProcess().GetTags()))
+	assert.Equal(t, tagKey, tc.batchesUploaded[0].GetProcess().GetTags()[0].GetKey())
+	assert.Equal(t, tagVal, tc.batchesUploaded[0].GetProcess().GetTags()[0].GetVStr())
+
 	assert.True(t, len(tc.batchesUploaded[0].GetSpans()) == 1)
 }
 
@@ -905,7 +909,7 @@ func TestNewExporterPipelineWithOptions(t *testing.T) {
 		eventCountLimit = 10
 	)
 
-	testCollector := &testCollectorEnpoint{}
+	testCollector := &testCollectorEndpoint{}
 	tp, spanFlush, err := NewExportPipeline(
 		withTestCollectorEndpointInjected(testCollector),
 		WithSDKOptions(
