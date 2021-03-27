@@ -21,6 +21,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   To prevent backwards incompatible changes when it is specified, these links are removed. (#1726)
 - Setting error status while recording error with Span from oteltest package. (#1729)
 
+### Fixed
+
+- Fixes the typo `testCollectorEnpoint` to `testCollectorEndpoint` and added assertion on `gen.Batch` process. (#TBD)
+
 ## [0.19.0] - 2021-03-18
 
 ### Added
