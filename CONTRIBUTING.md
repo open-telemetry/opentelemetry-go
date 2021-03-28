@@ -368,6 +368,7 @@ Approvers:
 - [Josh MacDonald](https://github.com/jmacd), LightStep
 - [Sam Xie](https://github.com/XSAM)
 - [David Ashpole](https://github.com/dashpole), Google
+- [Gustavo Silva Paiva](https://github.com/paivagustavo), LightStep
 
 Maintainers:
 
