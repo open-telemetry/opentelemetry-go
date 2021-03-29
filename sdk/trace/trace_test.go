@@ -218,7 +218,7 @@ func TestSetName(t *testing.T) {
 }
 
 func TestSpanIsRecording(t *testing.T) {
-	t.Run("Defer ending the span", func(t *testing.T) {
+	t.Run("while Span active", func(t *testing.T) {
 		for name, tc := range map[string]struct {
 			sampler Sampler
 			want    bool
