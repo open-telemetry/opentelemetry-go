@@ -17,7 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The Span's SpanContext can now self-identify as being remote or not.
   This means that `"go.opentelemetry.io/otel/trace".ContextWithRemoteSpanContext` will now overwrite any existing current Span, not just existing remote Spans, and make it the current Span in a `context.Context`. (#1731)
 - The `ParentContext` field of the `"go.opentelemetry.io/otel/sdk/trace".SamplingParameters` is updated to hold a `context.Context` containing the parent span.
-  This changes it to make `SamplingParameters` conform with the OpenTelemetry specification. (TBD)
+  This changes it to make `SamplingParameters` conform with the OpenTelemetry specification. (#1749)
 
 ### Removed
 
@@ -30,7 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Instead, `"go.opentelemetry.io/otel/trace".SpanContextFromContex` can be used to return the current Span.
   If needed, that Span's `SpanContext.IsRemote()` can then be used to determine if it is remote or not. (#1731)
 - The `HasRemoteParent` field of the `"go.opentelemetry.io/otel/sdk/trace".SamplingParameters` is removed.
-  This field is redundant to the information returned from the `Remote` method of the `SpanContext` held in the `ParentContext` field. (TBD)
+  This field is redundant to the information returned from the `Remote` method of the `SpanContext` held in the `ParentContext` field. (#1749)
 
 ## [0.19.0] - 2021-03-18
 
