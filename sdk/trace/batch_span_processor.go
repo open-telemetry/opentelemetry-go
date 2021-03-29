@@ -133,6 +133,9 @@ func (bsp *batchSpanProcessor) Shutdown(ctx context.Context) error {
 				if err := bsp.e.Shutdown(ctx); err != nil {
 					otel.Handle(err)
 				}
+				bsp.batchMutex.Lock()
+				bsp.e = nil
+				bsp.batchMutex.Unlock()
 			}
 			close(wait)
 		}()
@@ -181,6 +184,11 @@ func (bsp *batchSpanProcessor) exportSpans(ctx context.Context) error {
 
 	bsp.batchMutex.Lock()
 	defer bsp.batchMutex.Unlock()
+
+	// The span processor is shut down
+	if bsp.e == nil {
+		return nil
+	}
 
 	if len(bsp.batch) > 0 {
 		if err := bsp.e.ExportSpans(ctx, bsp.batch); err != nil {
