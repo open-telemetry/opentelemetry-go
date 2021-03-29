@@ -8,6 +8,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+- Default extract the resource attributes from environment variable and merge with the resource.Default resource in the TracerProvider and metric Collector. 
+
 ### Changed
 
 - Jaeger exporter was updated to use thrift v0.14.1. (#1712)
