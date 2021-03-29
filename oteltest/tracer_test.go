@@ -102,19 +102,19 @@ func TestTracer(t *testing.T) {
 			e.Expect(testSpan.ParentSpanID()).ToEqual(parentSpanContext.SpanID())
 		})
 
-		t.Run("uses the current span from context as parent, even if it has remote span context", func(t *testing.T) {
+		t.Run("uses the current span from context as parent, even if it is remote", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
 
 			subject := tp.Tracer(t.Name())
 
-			parent, parentSpan := subject.Start(context.Background(), "parent")
-			_, remoteParentSpan := subject.Start(context.Background(), "remote not-a-parent")
-			parent = trace.ContextWithRemoteSpanContext(parent, remoteParentSpan.SpanContext())
-			parentSpanContext := parentSpan.SpanContext()
+			ctx, _ := subject.Start(context.Background(), "local grandparent")
+			_, s := subject.Start(ctx, "remote parent")
+			ctx = trace.ContextWithRemoteSpanContext(ctx, s.SpanContext())
+			parentSpanContext := trace.SpanContextFromContext(ctx)
 
-			_, span := subject.Start(parent, "child")
+			_, span := subject.Start(ctx, "child")
 
 			testSpan, ok := span.(*oteltest.Span)
 			e.Expect(ok).ToBeTrue()
@@ -125,39 +125,15 @@ func TestTracer(t *testing.T) {
 			e.Expect(testSpan.ParentSpanID()).ToEqual(parentSpanContext.SpanID())
 		})
 
-		t.Run("uses the remote span context from context as parent, if current span is missing", func(t *testing.T) {
+		t.Run("creates new root when context does not have a current span", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
 
 			subject := tp.Tracer(t.Name())
 
-			_, remoteParentSpan := subject.Start(context.Background(), "remote parent")
-			parent := trace.ContextWithRemoteSpanContext(context.Background(), remoteParentSpan.SpanContext())
-			remoteParentSpanContext := remoteParentSpan.SpanContext()
-
-			_, span := subject.Start(parent, "child")
-
-			testSpan, ok := span.(*oteltest.Span)
-			e.Expect(ok).ToBeTrue()
-
-			childSpanContext := testSpan.SpanContext()
-			e.Expect(childSpanContext.TraceID()).ToEqual(remoteParentSpanContext.TraceID())
-			e.Expect(childSpanContext.SpanID()).NotToEqual(remoteParentSpanContext.SpanID())
-			e.Expect(testSpan.ParentSpanID()).ToEqual(remoteParentSpanContext.SpanID())
-		})
-
-		t.Run("creates new root when both current span and remote span context are missing", func(t *testing.T) {
-			t.Parallel()
-
-			e := matchers.NewExpecter(t)
-
-			subject := tp.Tracer(t.Name())
-
-			_, parentSpan := subject.Start(context.Background(), "not-a-parent")
-			_, remoteParentSpan := subject.Start(context.Background(), "remote not-a-parent")
-			parentSpanContext := parentSpan.SpanContext()
-			remoteParentSpanContext := remoteParentSpan.SpanContext()
+			_, napSpan := subject.Start(context.Background(), "not-a-parent")
+			napSpanContext := napSpan.SpanContext()
 
 			_, span := subject.Start(context.Background(), "child")
 
@@ -165,38 +141,28 @@ func TestTracer(t *testing.T) {
 			e.Expect(ok).ToBeTrue()
 
 			childSpanContext := testSpan.SpanContext()
-			e.Expect(childSpanContext.TraceID()).NotToEqual(parentSpanContext.TraceID())
-			e.Expect(childSpanContext.TraceID()).NotToEqual(remoteParentSpanContext.TraceID())
-			e.Expect(childSpanContext.SpanID()).NotToEqual(parentSpanContext.SpanID())
-			e.Expect(childSpanContext.SpanID()).NotToEqual(remoteParentSpanContext.SpanID())
+			e.Expect(childSpanContext.TraceID()).NotToEqual(napSpanContext.TraceID())
+			e.Expect(childSpanContext.SpanID()).NotToEqual(napSpanContext.SpanID())
 			e.Expect(testSpan.ParentSpanID().IsValid()).ToBeFalse()
 		})
 
-		t.Run("creates new root when requested, even if both current span and remote span context are in context", func(t *testing.T) {
+		t.Run("creates new root when requested, even if context has current span", func(t *testing.T) {
 			t.Parallel()
 
 			e := matchers.NewExpecter(t)
 
 			subject := tp.Tracer(t.Name())
 
-			parentCtx, parentSpan := subject.Start(context.Background(), "not-a-parent")
-			_, remoteParentSpan := subject.Start(context.Background(), "remote not-a-parent")
-			parentSpanContext := parentSpan.SpanContext()
-			remoteParentSpanContext := remoteParentSpan.SpanContext()
-			parentCtx = trace.ContextWithRemoteSpanContext(parentCtx, remoteParentSpanContext)
-			// remote SpanContexts will be marked as remote
-			remoteParentSpanContext = remoteParentSpanContext.WithRemote(true)
-
-			_, span := subject.Start(parentCtx, "child", trace.WithNewRoot())
+			ctx, napSpan := subject.Start(context.Background(), "not-a-parent")
+			napSpanContext := napSpan.SpanContext()
+			_, span := subject.Start(ctx, "child", trace.WithNewRoot())
 
 			testSpan, ok := span.(*oteltest.Span)
 			e.Expect(ok).ToBeTrue()
 
 			childSpanContext := testSpan.SpanContext()
-			e.Expect(childSpanContext.TraceID()).NotToEqual(parentSpanContext.TraceID())
-			e.Expect(childSpanContext.TraceID()).NotToEqual(remoteParentSpanContext.TraceID())
-			e.Expect(childSpanContext.SpanID()).NotToEqual(parentSpanContext.SpanID())
-			e.Expect(childSpanContext.SpanID()).NotToEqual(remoteParentSpanContext.SpanID())
+			e.Expect(childSpanContext.TraceID()).NotToEqual(napSpanContext.TraceID())
+			e.Expect(childSpanContext.SpanID()).NotToEqual(napSpanContext.SpanID())
 			e.Expect(testSpan.ParentSpanID().IsValid()).ToBeFalse()
 		})
 

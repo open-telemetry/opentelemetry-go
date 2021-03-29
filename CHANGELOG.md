@@ -13,6 +13,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Jaeger exporter was updated to use thrift v0.14.1. (#1712)
 - Migrate from using internally built and maintained version of the OTLP to the one hosted at `go.opentelemetry.io/proto/otlp`. (#1713)
 - Migrate from using `github.com/gogo/protobuf` to `google.golang.org/protobuf` to match `go.opentelemetry.io/proto/otlp`. (#1713)
+- The storage of a local or remote Span in a `context.Context` using its SpanContext is unified to store just the current Span.
+  The Span's SpanContext can now self-identify as being remote or not.
+  This means that `"go.opentelemetry.io/otel/trace".ContextWithRemoteSpanContext` will now overwrite any existing current Span, not just existing remote Spans, and make it the current Span in a `context.Context`. (#1731)
 
 ### Removed
 
@@ -20,6 +23,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This is unspecified behavior that the OpenTelemetry community plans to standardize in the future.
   To prevent backwards incompatible changes when it is specified, these links are removed. (#1726)
 - Setting error status while recording error with Span from oteltest package. (#1729)
+- The concept of a remote and local Span stored in a context is unified to just the current Span.
+  Because of this `"go.opentelemetry.io/otel/trace".RemoteSpanContextFromContext` is removed as it is no longer needed.
+  Instead, `"go.opentelemetry.io/otel/trace".SpanContextFromContex` can be used to return the current Span.
+  If needed, that Span's `SpanContext.IsRemote()` can then be used to determine if it is remote or not. (#1731)
 
 ## [0.19.0] - 2021-03-18
 
