@@ -89,6 +89,11 @@ func New(checkpointer export.Checkpointer, opts ...Option) *Controller {
 	if c.Resource == nil {
 		c.Resource = resource.Default()
 	}
+	detector := &resource.FromEnv{}
+	res, err := detector.Detect(context.Background())
+	if err != nil {
+		c.Resource = resource.Merge(res, c.Resource)
+	}
 
 	impl := sdk.NewAccumulator(
 		checkpointer,
