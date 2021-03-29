@@ -234,7 +234,7 @@ func TestSpanIsRecording(t *testing.T) {
 		}
 	})
 
-	t.Run("End span immediately", func(t *testing.T) {
+	t.Run("after Span end", func(t *testing.T) {
 		for name, tc := range map[string]Sampler{
 			"Always Sample": AlwaysSample(),
 			"Never Sample":  NeverSample(),
