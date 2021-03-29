@@ -319,8 +319,10 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	opts := append(exp.o.TracerProviderOptions, sdktrace.WithSyncer(exp))
-	tp := sdktrace.NewTracerProvider(opts...)
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithSyncer(exp),
+	)
 	otel.SetTracerProvider(tp)
 	_, span := otel.Tracer("test-tracer").Start(context.Background(), "test-span")
 	span.End()
@@ -330,12 +332,6 @@ func TestExporter_ExportSpan(t *testing.T) {
 	exp.Flush()
 	tc := exp.uploader.(*testCollectorEndpoint)
 	assert.True(t, len(tc.batchesUploaded) == 1)
-
-	assert.Equal(t, serviceName, tc.batchesUploaded[0].GetProcess().GetServiceName())
-	assert.Equal(t, 1, len(tc.batchesUploaded[0].GetProcess().GetTags()))
-	assert.Equal(t, tagKey, tc.batchesUploaded[0].GetProcess().GetTags()[0].GetKey())
-	assert.Equal(t, tagVal, tc.batchesUploaded[0].GetProcess().GetTags()[0].GetVStr())
-
 	assert.True(t, len(tc.batchesUploaded[0].GetSpans()) == 1)
 }
 
@@ -907,6 +903,8 @@ func TestNewExporterPipelineWithOptions(t *testing.T) {
 	const (
 		serviceName     = "test-service"
 		eventCountLimit = 10
+		tagKey          = "key"
+		tagVal          = "val"
 	)
 
 	testCollector := &testCollectorEndpoint{}
@@ -915,6 +913,7 @@ func TestNewExporterPipelineWithOptions(t *testing.T) {
 		WithSDKOptions(
 			sdktrace.WithResource(resource.NewWithAttributes(
 				semconv.ServiceNameKey.String(serviceName),
+				attribute.String(tagKey, tagVal),
 			)),
 			sdktrace.WithSpanLimits(sdktrace.SpanLimits{
 				EventCountLimit: eventCountLimit,
@@ -940,4 +939,8 @@ func TestNewExporterPipelineWithOptions(t *testing.T) {
 	assert.True(t, len(uploadedBatch.GetSpans()) == 1)
 	uploadedSpan := uploadedBatch.GetSpans()[0]
 	assert.Equal(t, eventCountLimit, len(uploadedSpan.GetLogs()))
+
+	assert.Equal(t, 1, len(uploadedBatch.GetProcess().GetTags()))
+	assert.Equal(t, tagKey, uploadedBatch.GetProcess().GetTags()[0].GetKey())
+	assert.Equal(t, tagVal, uploadedBatch.GetProcess().GetTags()[0].GetVStr())
 }
