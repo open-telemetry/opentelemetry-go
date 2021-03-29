@@ -218,25 +218,34 @@ func TestSetName(t *testing.T) {
 }
 
 func TestSpanIsRecording(t *testing.T) {
-	t.Run("is recording on", func(t *testing.T) {
-		tp := NewTracerProvider()
-		_, span := tp.Tracer("Recording on").Start(context.Background(), "StartSpan")
-		defer span.End()
-		if span.IsRecording() == false {
-			t.Error("new span is not recording events")
+	t.Run("Defer ending the span", func(t *testing.T) {
+		for name, tc := range map[string]struct {
+			sampler Sampler
+			want    bool
+		}{
+			"Always sample, recording on": {sampler: AlwaysSample(), want: true},
+			"Never sample recording off":  {sampler: NeverSample(), want: false},
+		} {
+			tp := NewTracerProvider(WithSampler(tc.sampler))
+			_, span := tp.Tracer(name).Start(context.Background(), "StartSpan")
+			defer span.End()
+			got := span.IsRecording()
+			assert.Equal(t, got, tc.want, name)
 		}
 	})
 
-	t.Run("is recording off", func(t *testing.T) {
-		tp := NewTracerProvider(WithSampler(NeverSample()))
-		_, span := tp.Tracer("Recording off").Start(context.Background(), "StartSpan")
-		defer span.End()
-		if span.IsRecording() == true {
-			t.Error("new span is recording events")
+	t.Run("End span immediately", func(t *testing.T) {
+		for name, tc := range map[string]Sampler{
+			"Always Sample": AlwaysSample(),
+			"Never Sample":  NeverSample(),
+		} {
+			tp := NewTracerProvider(WithSampler(tc))
+			_, span := tp.Tracer(name).Start(context.Background(), "StartSpan")
+			span.End()
+			got := span.IsRecording()
+			assert.False(t, got, name)
 		}
-
 	})
-
 }
 
 func TestSampling(t *testing.T) {
