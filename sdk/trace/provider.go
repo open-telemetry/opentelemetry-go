@@ -85,6 +85,12 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 
 	ensureValidTracerProviderConfig(o)
 
+	detector := &resource.FromEnv{}
+	res, err := detector.Detect(context.Background())
+	if err != nil {
+		o.resource = resource.Merge(res, o.resource)
+	}	
+
 	tp := &TracerProvider{
 		namedTracer: make(map[instrumentation.Library]*tracer),
 		sampler:     o.sampler,
