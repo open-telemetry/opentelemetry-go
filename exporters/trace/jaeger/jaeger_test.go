@@ -277,24 +277,24 @@ func TestNewRawExporterShouldFailIfCollectorUnset(t *testing.T) {
 	assert.Error(t, err)
 }
 
-type testCollectorEnpoint struct {
+type testCollectorEndpoint struct {
 	batchesUploaded []*gen.Batch
 }
 
-func (c *testCollectorEnpoint) upload(batch *gen.Batch) error {
+func (c *testCollectorEndpoint) upload(batch *gen.Batch) error {
 	c.batchesUploaded = append(c.batchesUploaded, batch)
 	return nil
 }
 
-var _ batchUploader = (*testCollectorEnpoint)(nil)
+var _ batchUploader = (*testCollectorEndpoint)(nil)
 
 func withTestCollectorEndpoint() func() (batchUploader, error) {
 	return func() (batchUploader, error) {
-		return &testCollectorEnpoint{}, nil
+		return &testCollectorEndpoint{}, nil
 	}
 }
 
-func withTestCollectorEndpointInjected(ce *testCollectorEnpoint) func() (batchUploader, error) {
+func withTestCollectorEndpointInjected(ce *testCollectorEndpoint) func() (batchUploader, error) {
 	return func() (batchUploader, error) {
 		return ce, nil
 	}
@@ -330,7 +330,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 	assert.True(t, span.SpanContext().IsValid())
 
 	exp.Flush()
-	tc := exp.uploader.(*testCollectorEnpoint)
+	tc := exp.uploader.(*testCollectorEndpoint)
 	assert.True(t, len(tc.batchesUploaded) == 1)
 	assert.True(t, len(tc.batchesUploaded[0].GetSpans()) == 1)
 }
@@ -903,14 +903,17 @@ func TestNewExporterPipelineWithOptions(t *testing.T) {
 	const (
 		serviceName     = "test-service"
 		eventCountLimit = 10
+		tagKey          = "key"
+		tagVal          = "val"
 	)
 
-	testCollector := &testCollectorEnpoint{}
+	testCollector := &testCollectorEndpoint{}
 	tp, spanFlush, err := NewExportPipeline(
 		withTestCollectorEndpointInjected(testCollector),
 		WithSDKOptions(
 			sdktrace.WithResource(resource.NewWithAttributes(
 				semconv.ServiceNameKey.String(serviceName),
+				attribute.String(tagKey, tagVal),
 			)),
 			sdktrace.WithSpanLimits(sdktrace.SpanLimits{
 				EventCountLimit: eventCountLimit,
@@ -936,4 +939,8 @@ func TestNewExporterPipelineWithOptions(t *testing.T) {
 	assert.True(t, len(uploadedBatch.GetSpans()) == 1)
 	uploadedSpan := uploadedBatch.GetSpans()[0]
 	assert.Equal(t, eventCountLimit, len(uploadedSpan.GetLogs()))
+
+	assert.Equal(t, 1, len(uploadedBatch.GetProcess().GetTags()))
+	assert.Equal(t, tagKey, uploadedBatch.GetProcess().GetTags()[0].GetKey())
+	assert.Equal(t, tagVal, uploadedBatch.GetProcess().GetTags()[0].GetVStr())
 }
