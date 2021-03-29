@@ -1117,7 +1117,8 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 	for _, span := range spans {
 		span.End()
 	}
-	//Only one span should execute TracerTaskEnd
+	// Only one span should be sampled meaning only one execution of
+	// executionTracerTaskEnd.
 	if got, want := n, uint64(1); got != want {
 		t.Fatalf("Execution tracer task ended for %v spans; want %v", got, want)
 	}
