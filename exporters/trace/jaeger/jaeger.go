@@ -98,7 +98,6 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 	}
 
 	o := options{}
-	opts = append(opts, WithProcessFromEnv())
 	for _, opt := range opts {
 		opt(&o)
 	}
