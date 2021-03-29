@@ -58,6 +58,7 @@ func (s *storingHandler) Reset() {
 var (
 	tid trace.TraceID
 	sid trace.SpanID
+	sc  trace.SpanContext
 
 	handler *storingHandler = &storingHandler{}
 
@@ -68,6 +69,11 @@ var (
 func init() {
 	tid, _ = trace.TraceIDFromHex("01020304050607080102040810203040")
 	sid, _ = trace.SpanIDFromHex("0102040810203040")
+	sc = trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    tid,
+		SpanID:     sid,
+		TraceFlags: 0x1,
+	})
 
 	k1 = attribute.Key("k1")
 	kv1 = k1.String("v1")
@@ -314,18 +320,13 @@ func TestStartSpanWithParent(t *testing.T) {
 	tr := tp.Tracer("SpanWithParent")
 	ctx := context.Background()
 
-	sc1 := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    tid,
-		SpanID:     sid,
-		TraceFlags: 0x1,
-	})
-	_, s1 := tr.Start(trace.ContextWithRemoteSpanContext(ctx, sc1), "span1-unsampled-parent1")
-	if err := checkChild(t, sc1, s1); err != nil {
+	_, s1 := tr.Start(trace.ContextWithRemoteSpanContext(ctx, sc), "span1-unsampled-parent1")
+	if err := checkChild(t, sc, s1); err != nil {
 		t.Error(err)
 	}
 
-	_, s2 := tr.Start(trace.ContextWithRemoteSpanContext(ctx, sc1), "span2-unsampled-parent1")
-	if err := checkChild(t, sc1, s2); err != nil {
+	_, s2 := tr.Start(trace.ContextWithRemoteSpanContext(ctx, sc), "span2-unsampled-parent1")
+	if err := checkChild(t, sc, s2); err != nil {
 		t.Error(err)
 	}
 
@@ -333,12 +334,7 @@ func TestStartSpanWithParent(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	sc2 := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    tid,
-		SpanID:     sid,
-		TraceFlags: 0x1,
-		TraceState: ts,
-	})
+	sc2 := sc.WithTraceState(ts)
 	_, s3 := tr.Start(trace.ContextWithRemoteSpanContext(ctx, sc2), "span3-sampled-parent2")
 	if err := checkChild(t, sc2, s3); err != nil {
 		t.Error(err)
@@ -374,14 +370,13 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		}),
-		ParentSpanID: sid,
-		Name:         "span0",
+		Parent: sc.WithRemote(true),
+		Name:   "span0",
 		Attributes: []attribute.KeyValue{
 			attribute.String("key1", "value1"),
 			attribute.String("key2", "value2"),
 		},
 		SpanKind:               trace.SpanKindInternal,
-		HasRemoteParent:        true,
 		InstrumentationLibrary: instrumentation.Library{Name: "StartSpanAttribute"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
@@ -404,13 +399,12 @@ func TestSetSpanAttributes(t *testing.T) {
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		}),
-		ParentSpanID: sid,
-		Name:         "span0",
+		Parent: sc.WithRemote(true),
+		Name:   "span0",
 		Attributes: []attribute.KeyValue{
 			attribute.String("key1", "value1"),
 		},
 		SpanKind:               trace.SpanKindInternal,
-		HasRemoteParent:        true,
 		InstrumentationLibrary: instrumentation.Library{Name: "SpanAttribute"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
@@ -418,8 +412,6 @@ func TestSetSpanAttributes(t *testing.T) {
 	}
 }
 
-// Test that the sampler is called for local child spans. This is verified by checking
-// that the attributes set in the sampler are set on the child span.
 func TestSamplerAttributesLocalChildSpan(t *testing.T) {
 	sampler := &testSampler{prefix: "span", t: t}
 	te := NewTestExporter()
@@ -433,55 +425,13 @@ func TestSamplerAttributesLocalChildSpan(t *testing.T) {
 	span.End()
 
 	got := te.Spans()
-
-	// endSpan expects only a single span in the test exporter, so manually clear the
-	// fields that can't be tested for easily (times, span and trace ids).
-	pid := got[0].SpanContext.SpanID()
-	got[0].SpanContext = got[0].SpanContext.WithTraceID(tid)
-	got[0].ParentSpanID = sid
-
-	checkTime(&got[0].StartTime)
-	checkTime(&got[0].EndTime)
-
-	got[1].SpanContext = got[1].SpanContext.WithSpanID(trace.SpanID{})
-	got[1].SpanContext = got[1].SpanContext.WithTraceID(tid)
-	got[1].ParentSpanID = pid
-	got[0].SpanContext = got[0].SpanContext.WithSpanID(trace.SpanID{})
-
-	checkTime(&got[1].StartTime)
-	checkTime(&got[1].EndTime)
-
-	want := []*export.SpanSnapshot{
-		{
-			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
-				TraceID:    tid,
-				TraceFlags: 0x1,
-			}),
-			ParentSpanID:           sid,
-			Name:                   "span1",
-			Attributes:             []attribute.KeyValue{attribute.Int("callCount", 2)},
-			SpanKind:               trace.SpanKindInternal,
-			HasRemoteParent:        false,
-			InstrumentationLibrary: instrumentation.Library{Name: "SpanTwo"},
-		},
-		{
-			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
-				TraceID:    tid,
-				TraceFlags: 0x1,
-			}),
-			ParentSpanID:           pid,
-			Name:                   "span0",
-			Attributes:             []attribute.KeyValue{attribute.Int("callCount", 1)},
-			SpanKind:               trace.SpanKindInternal,
-			HasRemoteParent:        false,
-			ChildSpanCount:         1,
-			InstrumentationLibrary: instrumentation.Library{Name: "SpanOne"},
-		},
-	}
-
-	if diff := cmpDiff(got, want); diff != "" {
-		t.Errorf("SetSpanAttributesLocalChildSpan: -got +want %s", diff)
-	}
+	require.Len(t, got, 2)
+	// FILO order above means spanTwo <-> gotSpan0 and span <-> gotSpan1.
+	gotSpan0, gotSpan1 := got[0], got[1]
+	// Ensure sampler is called for local child spans by verifying the
+	// attributes set by the sampler are set on the child span.
+	assert.Equal(t, []attribute.KeyValue{attribute.Int("callCount", 2)}, gotSpan0.Attributes)
+	assert.Equal(t, []attribute.KeyValue{attribute.Int("callCount", 1)}, gotSpan1.Attributes)
 }
 
 func TestSetSpanAttributesOverLimit(t *testing.T) {
@@ -505,14 +455,13 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		}),
-		ParentSpanID: sid,
-		Name:         "span0",
+		Parent: sc.WithRemote(true),
+		Name:   "span0",
 		Attributes: []attribute.KeyValue{
 			attribute.Bool("key1", false),
 			attribute.Int64("key4", 4),
 		},
 		SpanKind:               trace.SpanKindInternal,
-		HasRemoteParent:        true,
 		DroppedAttributeCount:  1,
 		InstrumentationLibrary: instrumentation.Library{Name: "SpanAttributesOverLimit"},
 	}
@@ -540,13 +489,12 @@ func TestSetSpanAttributesWithInvalidKey(t *testing.T) {
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		}),
-		ParentSpanID: sid,
-		Name:         "span0",
+		Parent: sc.WithRemote(true),
+		Name:   "span0",
 		Attributes: []attribute.KeyValue{
 			attribute.Bool("key1", false),
 		},
 		SpanKind:               trace.SpanKindInternal,
-		HasRemoteParent:        true,
 		DroppedAttributeCount:  0,
 		InstrumentationLibrary: instrumentation.Library{Name: "SpanToSetInvalidKeyOrValue"},
 	}
@@ -585,9 +533,8 @@ func TestEvents(t *testing.T) {
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		}),
-		ParentSpanID:    sid,
-		Name:            "span0",
-		HasRemoteParent: true,
+		Parent: sc.WithRemote(true),
+		Name:   "span0",
 		MessageEvents: []trace.Event{
 			{Name: "foo", Attributes: []attribute.KeyValue{k1v1}},
 			{Name: "bar", Attributes: []attribute.KeyValue{k2v2, k3v3}},
@@ -635,14 +582,13 @@ func TestEventsOverLimit(t *testing.T) {
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		}),
-		ParentSpanID: sid,
-		Name:         "span0",
+		Parent: sc.WithRemote(true),
+		Name:   "span0",
 		MessageEvents: []trace.Event{
 			{Name: "foo", Attributes: []attribute.KeyValue{k1v1}},
 			{Name: "bar", Attributes: []attribute.KeyValue{k2v2, k3v3}},
 		},
 		DroppedMessageEventCount: 2,
-		HasRemoteParent:          true,
 		SpanKind:                 trace.SpanKindInternal,
 		InstrumentationLibrary:   instrumentation.Library{Name: "EventsOverLimit"},
 	}
@@ -678,9 +624,8 @@ func TestLinks(t *testing.T) {
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		}),
-		ParentSpanID:           sid,
+		Parent:                 sc.WithRemote(true),
 		Name:                   "span0",
-		HasRemoteParent:        true,
 		Links:                  links,
 		SpanKind:               trace.SpanKindInternal,
 		InstrumentationLibrary: instrumentation.Library{Name: "Links"},
@@ -720,14 +665,13 @@ func TestLinksOverLimit(t *testing.T) {
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		}),
-		ParentSpanID: sid,
-		Name:         "span0",
+		Parent: sc.WithRemote(true),
+		Name:   "span0",
 		Links: []trace.Link{
 			{SpanContext: sc2, Attributes: []attribute.KeyValue{k2v2}},
 			{SpanContext: sc3, Attributes: []attribute.KeyValue{k3v3}},
 		},
 		DroppedLinkCount:       1,
-		HasRemoteParent:        true,
 		SpanKind:               trace.SpanKindInternal,
 		InstrumentationLibrary: instrumentation.Library{Name: "LinksOverLimit"},
 	}
@@ -742,11 +686,7 @@ func TestSetSpanName(t *testing.T) {
 	ctx := context.Background()
 
 	want := "SpanName-1"
-	ctx = trace.ContextWithRemoteSpanContext(ctx, trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    tid,
-		SpanID:     sid,
-		TraceFlags: 1,
-	}))
+	ctx = trace.ContextWithRemoteSpanContext(ctx, sc)
 	_, span := tp.Tracer("SetSpanName").Start(ctx, "SpanName-1")
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -774,12 +714,11 @@ func TestSetSpanStatus(t *testing.T) {
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		}),
-		ParentSpanID:           sid,
+		Parent:                 sc.WithRemote(true),
 		Name:                   "span0",
 		SpanKind:               trace.SpanKindInternal,
 		StatusCode:             codes.Error,
 		StatusMessage:          "Error",
-		HasRemoteParent:        true,
 		InstrumentationLibrary: instrumentation.Library{Name: "SpanStatus"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
@@ -803,12 +742,11 @@ func TestSetSpanStatusWithoutMessageWhenStatusIsNotError(t *testing.T) {
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		}),
-		ParentSpanID:           sid,
+		Parent:                 sc.WithRemote(true),
 		Name:                   "span0",
 		SpanKind:               trace.SpanKindInternal,
 		StatusCode:             codes.Ok,
 		StatusMessage:          "",
-		HasRemoteParent:        true,
 		InstrumentationLibrary: instrumentation.Library{Name: "SpanStatus"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
@@ -821,14 +759,6 @@ func cmpDiff(x, y interface{}) string {
 		cmp.AllowUnexported(attribute.Value{}),
 		cmp.AllowUnexported(trace.Event{}),
 		cmp.AllowUnexported(trace.TraceState{}))
-}
-
-func remoteSpanContext() trace.SpanContext {
-	return trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    tid,
-		SpanID:     sid,
-		TraceFlags: 1,
-	})
 }
 
 // checkChild is test utility function that tests that c has fields set appropriately,
@@ -863,10 +793,8 @@ func startSpan(tp *TracerProvider, trName string, args ...trace.SpanOption) trac
 // context contains TraceFlags with sampled bit set. This allows the
 // span to be automatically sampled.
 func startNamedSpan(tp *TracerProvider, trName, name string, args ...trace.SpanOption) trace.Span {
-	ctx := context.Background()
-	ctx = trace.ContextWithRemoteSpanContext(ctx, remoteSpanContext())
 	_, span := tp.Tracer(trName).Start(
-		ctx,
+		trace.ContextWithRemoteSpanContext(context.Background(), sc),
 		name,
 		args...,
 	)
@@ -958,7 +886,7 @@ func TestStartSpanAfterEnd(t *testing.T) {
 	ctx := context.Background()
 
 	tr := tp.Tracer("SpanAfterEnd")
-	ctx, span0 := tr.Start(trace.ContextWithRemoteSpanContext(ctx, remoteSpanContext()), "parent")
+	ctx, span0 := tr.Start(trace.ContextWithRemoteSpanContext(ctx, sc), "parent")
 	ctx1, span1 := tr.Start(ctx, "span-1")
 	span1.End()
 	// Start a new span with the context containing span-1
@@ -989,10 +917,10 @@ func TestStartSpanAfterEnd(t *testing.T) {
 	if got, want := gotSpan2.SpanContext.TraceID(), gotParent.SpanContext.TraceID(); got != want {
 		t.Errorf("span-2.TraceID=%q; want %q", got, want)
 	}
-	if got, want := gotSpan1.ParentSpanID, gotParent.SpanContext.SpanID(); got != want {
+	if got, want := gotSpan1.Parent.SpanID(), gotParent.SpanContext.SpanID(); got != want {
 		t.Errorf("span-1.ParentSpanID=%q; want %q (parent.SpanID)", got, want)
 	}
-	if got, want := gotSpan2.ParentSpanID, gotSpan1.SpanContext.SpanID(); got != want {
+	if got, want := gotSpan2.Parent.SpanID(), gotSpan1.SpanContext.SpanID(); got != want {
 		t.Errorf("span-2.ParentSpanID=%q; want %q (span1.SpanID)", got, want)
 	}
 }
@@ -1160,11 +1088,10 @@ func TestRecordError(t *testing.T) {
 				TraceID:    tid,
 				TraceFlags: 0x1,
 			}),
-			ParentSpanID:    sid,
-			Name:            "span0",
-			StatusCode:      codes.Unset,
-			SpanKind:        trace.SpanKindInternal,
-			HasRemoteParent: true,
+			Parent:     sc.WithRemote(true),
+			Name:       "span0",
+			StatusCode: codes.Unset,
+			SpanKind:   trace.SpanKindInternal,
 			MessageEvents: []trace.Event{
 				{
 					Name: errorEventName,
@@ -1200,10 +1127,9 @@ func TestRecordErrorNil(t *testing.T) {
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		}),
-		ParentSpanID:           sid,
+		Parent:                 sc.WithRemote(true),
 		Name:                   "span0",
 		SpanKind:               trace.SpanKindInternal,
-		HasRemoteParent:        true,
 		StatusCode:             codes.Unset,
 		StatusMessage:          "",
 		InstrumentationLibrary: instrumentation.Library{Name: "RecordErrorNil"},
@@ -1298,13 +1224,12 @@ func TestWithResource(t *testing.T) {
 					TraceID:    tid,
 					TraceFlags: 0x1,
 				}),
-				ParentSpanID: sid,
-				Name:         "span0",
+				Parent: sc.WithRemote(true),
+				Name:   "span0",
 				Attributes: []attribute.KeyValue{
 					attribute.String("key1", "value1"),
 				},
 				SpanKind:               trace.SpanKindInternal,
-				HasRemoteParent:        true,
 				Resource:               tc.want,
 				InstrumentationLibrary: instrumentation.Library{Name: "WithResource"},
 			}
@@ -1320,7 +1245,7 @@ func TestWithInstrumentationVersion(t *testing.T) {
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
 
 	ctx := context.Background()
-	ctx = trace.ContextWithRemoteSpanContext(ctx, remoteSpanContext())
+	ctx = trace.ContextWithRemoteSpanContext(ctx, sc)
 	_, span := tp.Tracer(
 		"WithInstrumentationVersion",
 		trace.WithInstrumentationVersion("v0.1.0"),
@@ -1335,10 +1260,9 @@ func TestWithInstrumentationVersion(t *testing.T) {
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		}),
-		ParentSpanID:    sid,
-		Name:            "span0",
-		SpanKind:        trace.SpanKindInternal,
-		HasRemoteParent: true,
+		Parent:   sc.WithRemote(true),
+		Name:     "span0",
+		SpanKind: trace.SpanKindInternal,
 		InstrumentationLibrary: instrumentation.Library{
 			Name:    "WithInstrumentationVersion",
 			Version: "v0.1.0",
@@ -1524,9 +1448,9 @@ func TestAddEventsWithMoreAttributesThanLimit(t *testing.T) {
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		}),
-		ParentSpanID: sid,
-		Name:         "span0",
-		Attributes:   nil,
+		Parent:     sc.WithRemote(true),
+		Name:       "span0",
+		Attributes: nil,
 		MessageEvents: []trace.Event{
 			{
 				Name: "test1",
@@ -1544,7 +1468,6 @@ func TestAddEventsWithMoreAttributesThanLimit(t *testing.T) {
 			},
 		},
 		SpanKind:               trace.SpanKindInternal,
-		HasRemoteParent:        true,
 		DroppedAttributeCount:  2,
 		InstrumentationLibrary: instrumentation.Library{Name: "AddSpanEventWithOverLimitedAttributes"},
 	}
@@ -1584,9 +1507,8 @@ func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		}),
-		ParentSpanID:    sid,
-		Name:            "span0",
-		HasRemoteParent: true,
+		Parent: sc.WithRemote(true),
+		Name:   "span0",
 		Links: []trace.Link{
 			{SpanContext: sc1, Attributes: []attribute.KeyValue{k1v1}},
 			{SpanContext: sc2, Attributes: []attribute.KeyValue{k2v2}},
