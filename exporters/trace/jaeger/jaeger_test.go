@@ -301,14 +301,23 @@ func withTestCollectorEndpointInjected(ce *testCollectorEndpoint) func() (batchU
 }
 
 func TestExporter_ExportSpan(t *testing.T) {
+	envStore, err := ottest.SetEnvVariables(map[string]string{
+		envDisabled: "false",
+	})
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, envStore.Restore())
+	}()
+
 	const (
 		serviceName = "test-service"
 		tagKey      = "key"
 		tagVal      = "val"
 	)
-	// Create Jaeger Exporter
-	exp, err := NewRawExporter(
-		withTestCollectorEndpoint(),
+
+	testCollector := &testCollectorEndpoint{}
+	tp, spanFlush, err := NewExportPipeline(
+		withTestCollectorEndpointInjected(testCollector),
 		WithSDKOptions(
 			sdktrace.WithResource(resource.NewWithAttributes(
 				semconv.ServiceNameKey.String(serviceName),
@@ -316,23 +325,25 @@ func TestExporter_ExportSpan(t *testing.T) {
 			)),
 		),
 	)
-
 	assert.NoError(t, err)
-
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithSyncer(exp),
-	)
 	otel.SetTracerProvider(tp)
-	_, span := otel.Tracer("test-tracer").Start(context.Background(), "test-span")
-	span.End()
+	tracer := otel.Tracer("test-tracer")
+	for i := 0; i < 3; i++ {
+		_, span := tracer.Start(context.Background(), fmt.Sprintf("test-span-%d", i))
+		span.End()
+		assert.True(t, span.SpanContext().IsValid())
+	}
 
-	assert.True(t, span.SpanContext().IsValid())
+	spanFlush()
+	batchesUploaded := testCollector.batchesUploaded
+	assert.True(t, len(batchesUploaded) == 1)
+	uploadedBatch := batchesUploaded[0]
+	assert.Equal(t, serviceName, uploadedBatch.GetProcess().GetServiceName())
+	assert.True(t, len(uploadedBatch.GetSpans()) == 3)
 
-	exp.Flush()
-	tc := exp.uploader.(*testCollectorEndpoint)
-	assert.True(t, len(tc.batchesUploaded) == 1)
-	assert.True(t, len(tc.batchesUploaded[0].GetSpans()) == 1)
+	assert.Equal(t, 1, len(uploadedBatch.GetProcess().GetTags()))
+	assert.Equal(t, tagKey, uploadedBatch.GetProcess().GetTags()[0].GetKey())
+	assert.Equal(t, tagVal, uploadedBatch.GetProcess().GetTags()[0].GetVStr())
 }
 
 func Test_spanSnapshotToThrift(t *testing.T) {
