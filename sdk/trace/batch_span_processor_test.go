@@ -265,12 +265,12 @@ func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
 		name:           "default BatchSpanProcessorOptions",
 		o: []sdktrace.BatchSpanProcessorOption{
 			sdktrace.WithMaxQueueSize(0),
+			sdktrace.WithMaxExportBatchSize(3000),
 		},
-		wantNumSpans:   2053,
-		wantBatchCount: 4,
-		genNumSpans:    2053,
+		wantNumSpans:   512,
+		wantBatchCount: 1,
+		genNumSpans:    512,
 	}
-	
 	ssp := createAndRegisterBatchSP(option, &te)
 	if ssp == nil {
 		t.Fatalf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)
