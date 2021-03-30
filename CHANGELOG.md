@@ -16,6 +16,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The storage of a local or remote Span in a `context.Context` using its SpanContext is unified to store just the current Span.
   The Span's SpanContext can now self-identify as being remote or not.
   This means that `"go.opentelemetry.io/otel/trace".ContextWithRemoteSpanContext` will now overwrite any existing current Span, not just existing remote Spans, and make it the current Span in a `context.Context`. (#1731)
+- Information about a parent span context in a `"go.opentelemetry.io/otel/export/trace".SpanSnapshot` is unified in a new `Parent` field.
+  The existing `ParentSpanID` and `HasRemoteParent` fields are removed in favor of this. (#1748)
 
 ### Removed
 

@@ -314,11 +314,12 @@ func spanSnapshotToThrift(ss *export.SpanSnapshot) *gen.Span {
 
 	tid := ss.SpanContext.TraceID()
 	sid := ss.SpanContext.SpanID()
+	psid := ss.Parent.SpanID()
 	return &gen.Span{
 		TraceIdHigh:   int64(binary.BigEndian.Uint64(tid[0:8])),
 		TraceIdLow:    int64(binary.BigEndian.Uint64(tid[8:16])),
 		SpanId:        int64(binary.BigEndian.Uint64(sid[:])),
-		ParentSpanId:  int64(binary.BigEndian.Uint64(ss.ParentSpanID[:])),
+		ParentSpanId:  int64(binary.BigEndian.Uint64(psid[:])),
 		OperationName: ss.Name, // TODO: if span kind is added then add prefix "Sent"/"Recv"
 		Flags:         int32(ss.SpanContext.TraceFlags()),
 		StartTime:     ss.StartTime.UnixNano() / 1000,
