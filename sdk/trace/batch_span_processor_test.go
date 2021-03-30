@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace_test
+package trace
 
 import (
 	"context"
@@ -26,7 +26,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	export "go.opentelemetry.io/otel/sdk/export/trace"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 type testBatchExporter struct {
@@ -67,8 +66,8 @@ func (t *testBatchExporter) getBatchCount() int {
 var _ export.SpanExporter = (*testBatchExporter)(nil)
 
 func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
-	tp := basicTracerProvider(t)
-	bsp := sdktrace.NewBatchSpanProcessor(nil)
+	tp := NewTracerProvider(WithSampler(AlwaysSample()))
+	bsp := NewBatchSpanProcessor(nil)
 	tp.RegisterSpanProcessor(bsp)
 	tr := tp.Tracer("NilExporter")
 
@@ -76,8 +75,8 @@ func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
 	span.End()
 
 	// These should not panic.
-	bsp.OnStart(context.Background(), span.(sdktrace.ReadWriteSpan))
-	bsp.OnEnd(span.(sdktrace.ReadOnlySpan))
+	bsp.OnStart(context.Background(), span.(ReadWriteSpan))
+	bsp.OnEnd(span.(ReadOnlySpan))
 	if err := bsp.ForceFlush(context.Background()); err != nil {
 		t.Errorf("failed to ForceFlush the BatchSpanProcessor: %v", err)
 	}
@@ -88,7 +87,7 @@ func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
 
 type testOption struct {
 	name           string
-	o              []sdktrace.BatchSpanProcessorOption
+	o              []BatchSpanProcessorOption
 	wantNumSpans   int
 	wantBatchCount int
 	genNumSpans    int
@@ -106,8 +105,8 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 		},
 		{
 			name: "non-default BatchTimeout",
-			o: []sdktrace.BatchSpanProcessorOption{
-				sdktrace.WithBatchTimeout(schDelay),
+			o: []BatchSpanProcessorOption{
+				WithBatchTimeout(schDelay),
 			},
 			wantNumSpans:   2053,
 			wantBatchCount: 4,
@@ -115,9 +114,9 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 		},
 		{
 			name: "non-default MaxQueueSize and BatchTimeout",
-			o: []sdktrace.BatchSpanProcessorOption{
-				sdktrace.WithBatchTimeout(schDelay),
-				sdktrace.WithMaxQueueSize(200),
+			o: []BatchSpanProcessorOption{
+				WithBatchTimeout(schDelay),
+				WithMaxQueueSize(200),
 			},
 			wantNumSpans:   205,
 			wantBatchCount: 1,
@@ -125,10 +124,10 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 		},
 		{
 			name: "non-default MaxQueueSize, BatchTimeout and MaxExportBatchSize",
-			o: []sdktrace.BatchSpanProcessorOption{
-				sdktrace.WithBatchTimeout(schDelay),
-				sdktrace.WithMaxQueueSize(205),
-				sdktrace.WithMaxExportBatchSize(20),
+			o: []BatchSpanProcessorOption{
+				WithBatchTimeout(schDelay),
+				WithMaxQueueSize(205),
+				WithMaxExportBatchSize(20),
 			},
 			wantNumSpans:   210,
 			wantBatchCount: 11,
@@ -136,10 +135,10 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 		},
 		{
 			name: "blocking option",
-			o: []sdktrace.BatchSpanProcessorOption{
-				sdktrace.WithBatchTimeout(schDelay),
-				sdktrace.WithMaxQueueSize(200),
-				sdktrace.WithMaxExportBatchSize(20),
+			o: []BatchSpanProcessorOption{
+				WithBatchTimeout(schDelay),
+				WithMaxQueueSize(200),
+				WithMaxExportBatchSize(20),
 			},
 			wantNumSpans:   205,
 			wantBatchCount: 11,
@@ -147,9 +146,9 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 		},
 		{
 			name: "parallel span generation",
-			o: []sdktrace.BatchSpanProcessorOption{
-				sdktrace.WithBatchTimeout(schDelay),
-				sdktrace.WithMaxQueueSize(200),
+			o: []BatchSpanProcessorOption{
+				WithBatchTimeout(schDelay),
+				WithMaxQueueSize(200),
 			},
 			wantNumSpans:   205,
 			wantBatchCount: 1,
@@ -158,9 +157,9 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 		},
 		{
 			name: "parallel span blocking",
-			o: []sdktrace.BatchSpanProcessorOption{
-				sdktrace.WithBatchTimeout(schDelay),
-				sdktrace.WithMaxExportBatchSize(200),
+			o: []BatchSpanProcessorOption{
+				WithBatchTimeout(schDelay),
+				WithMaxExportBatchSize(200),
 			},
 			wantNumSpans:   2000,
 			wantBatchCount: 10,
@@ -171,7 +170,7 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 	for _, option := range options {
 		t.Run(option.name, func(t *testing.T) {
 			te := testBatchExporter{}
-			tp := basicTracerProvider(t)
+			tp := NewTracerProvider(WithSampler(AlwaysSample()))
 			ssp := createAndRegisterBatchSP(option, &te)
 			if ssp == nil {
 				t.Fatalf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)
@@ -199,10 +198,10 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 	}
 }
 
-func createAndRegisterBatchSP(option testOption, te *testBatchExporter) sdktrace.SpanProcessor {
+func createAndRegisterBatchSP(option testOption, te *testBatchExporter) SpanProcessor {
 	// Always use blocking queue to avoid flaky tests.
-	options := append(option.o, sdktrace.WithBlocking())
-	return sdktrace.NewBatchSpanProcessor(te, options...)
+	options := append(option.o, WithBlocking())
+	return NewBatchSpanProcessor(te, options...)
 }
 
 func generateSpan(t *testing.T, parallel bool, tr trace.Tracer, option testOption) {
@@ -242,7 +241,7 @@ func getSpanContext() trace.SpanContext {
 
 func TestBatchSpanProcessorShutdown(t *testing.T) {
 	var bp testBatchExporter
-	bsp := sdktrace.NewBatchSpanProcessor(&bp)
+	bsp := NewBatchSpanProcessor(&bp)
 
 	err := bsp.Shutdown(context.Background())
 	if err != nil {
