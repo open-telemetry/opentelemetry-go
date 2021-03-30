@@ -30,7 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Fixes the typo `testCollectorEnpoint` to `testCollectorEndpoint` and added assertion on `gen.Batch` process. (#TBD)
+- Fixes the typo `testCollectorEnpoint` to `testCollectorEndpoint` and added assertion on `gen.Batch` process. (#1753)
 
 ## [0.19.0] - 2021-03-18
 
