@@ -28,10 +28,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Instead, `"go.opentelemetry.io/otel/trace".SpanContextFromContex` can be used to return the current Span.
   If needed, that Span's `SpanContext.IsRemote()` can then be used to determine if it is remote or not. (#1731)
 
-### Fixed
-
-- Fixes the typo `testCollectorEnpoint` to `testCollectorEndpoint` and added assertion on `gen.Batch` process. (#1753)
-
 ## [0.19.0] - 2021-03-18
 
 ### Added
