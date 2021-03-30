@@ -263,6 +263,9 @@ func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
 	tp := basicTracerProvider(t)
 	option := testOption{
 		name:           "default BatchSpanProcessorOptions",
+		o: []sdktrace.BatchSpanProcessorOption{
+			sdktrace.WithMaxQueueSize(0),
+		},
 		wantNumSpans:   2053,
 		wantBatchCount: 4,
 		genNumSpans:    2053,
