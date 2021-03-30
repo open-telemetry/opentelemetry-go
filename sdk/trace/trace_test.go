@@ -223,13 +223,35 @@ func TestSetName(t *testing.T) {
 	}
 }
 
-func TestRecordingIsOn(t *testing.T) {
-	tp := NewTracerProvider()
-	_, span := tp.Tracer("Recording on").Start(context.Background(), "StartSpan")
-	defer span.End()
-	if span.IsRecording() == false {
-		t.Error("new span is not recording events")
-	}
+func TestSpanIsRecording(t *testing.T) {
+	t.Run("while Span active", func(t *testing.T) {
+		for name, tc := range map[string]struct {
+			sampler Sampler
+			want    bool
+		}{
+			"Always sample, recording on": {sampler: AlwaysSample(), want: true},
+			"Never sample recording off":  {sampler: NeverSample(), want: false},
+		} {
+			tp := NewTracerProvider(WithSampler(tc.sampler))
+			_, span := tp.Tracer(name).Start(context.Background(), "StartSpan")
+			defer span.End()
+			got := span.IsRecording()
+			assert.Equal(t, got, tc.want, name)
+		}
+	})
+
+	t.Run("after Span end", func(t *testing.T) {
+		for name, tc := range map[string]Sampler{
+			"Always Sample": AlwaysSample(),
+			"Never Sample":  NeverSample(),
+		} {
+			tp := NewTracerProvider(WithSampler(tc))
+			_, span := tp.Tracer(name).Start(context.Background(), "StartSpan")
+			span.End()
+			got := span.IsRecording()
+			assert.False(t, got, name)
+		}
+	})
 }
 
 func TestSampling(t *testing.T) {
@@ -1014,6 +1036,7 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 	s.executionTracerTaskEnd = executionTracerTaskEnd
 	spans = append(spans, s) // parent not sampled
 
+	tp.sampler = AlwaysSample()
 	_, apiSpan = tr.Start(context.Background(), "foo")
 	s = apiSpan.(*span)
 	s.executionTracerTaskEnd = executionTracerTaskEnd
@@ -1022,7 +1045,9 @@ func TestExecutionTracerTaskEnd(t *testing.T) {
 	for _, span := range spans {
 		span.End()
 	}
-	if got, want := n, uint64(len(spans)); got != want {
+	// Only one span should be sampled meaning only one execution of
+	// executionTracerTaskEnd.
+	if got, want := n, uint64(1); got != want {
 		t.Fatalf("Execution tracer task ended for %v spans; want %v", got, want)
 	}
 }

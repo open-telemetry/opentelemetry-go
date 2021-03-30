@@ -160,7 +160,8 @@ func (s *span) IsRecording() bool {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.endTime.IsZero()
+
+	return !s.startTime.IsZero() && s.endTime.IsZero()
 }
 
 // SetStatus sets the status of this span in the form of a code and a
