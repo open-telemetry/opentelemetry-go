@@ -157,7 +157,7 @@ func (bsp *batchSpanProcessor) ForceFlush(ctx context.Context) error {
 			}
 			close(wait)
 		}()
-		// Wait until the wait group is done or the context is cancelled/timed out
+		// Wait until the export is finished or the context is cancelled/timed out
 		select {
 		case <-wait:
 		case <-ctx.Done():
