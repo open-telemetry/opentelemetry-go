@@ -543,13 +543,12 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, o *trace.Sp
 	span.spanLimits = spanLimits
 
 	samplingResult := provider.sampler.ShouldSample(SamplingParameters{
-		ParentContext:   psc,
-		TraceID:         tid,
-		Name:            name,
-		HasRemoteParent: psc.IsRemote(),
-		Kind:            o.SpanKind,
-		Attributes:      o.Attributes,
-		Links:           o.Links,
+		ParentContext: ctx,
+		TraceID:       tid,
+		Name:          name,
+		Kind:          o.SpanKind,
+		Attributes:    o.Attributes,
+		Links:         o.Links,
 	})
 
 	scc := trace.SpanContextConfig{

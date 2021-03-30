@@ -1532,7 +1532,8 @@ func (s *stateSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	if strings.HasPrefix(p.Name, s.prefix) {
 		decision = RecordAndSample
 	}
-	return SamplingResult{Decision: decision, Tracestate: s.f(p.ParentContext.TraceState())}
+	ts := s.f(trace.SpanContextFromContext(p.ParentContext).TraceState())
+	return SamplingResult{Decision: decision, Tracestate: ts}
 }
 
 func (s stateSampler) Description() string {
