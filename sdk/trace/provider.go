@@ -85,12 +85,6 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 
 	ensureValidTracerProviderConfig(o)
 
-	detector := &resource.FromEnv{}
-	res, err := detector.Detect(context.Background())
-	if err != nil {
-		o.resource = resource.Merge(res, o.resource)
-	}	
-
 	tp := &TracerProvider{
 		namedTracer: make(map[instrumentation.Library]*tracer),
 		sampler:     o.sampler,
@@ -270,8 +264,9 @@ func WithSpanProcessor(sp SpanProcessor) TracerProviderOption {
 func WithResource(r *resource.Resource) TracerProviderOption {
 	return func(opts *TracerProviderConfig) {
 		if r != nil {
-			opts.resource = r
+			opts.resource = resource.Merge(resource.Environment(), r)
 		}
+		opts.resource = resource.Environment()
 	}
 }
 

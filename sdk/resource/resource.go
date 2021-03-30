@@ -141,7 +141,23 @@ func Empty() *Resource {
 // Default returns an instance of Resource with a default
 // "service.name" and OpenTelemetrySDK attributes
 func Default() *Resource {
+	detector := &FromEnv{}
+	res, err := detector.Detect(context.Background())
+	if err != nil {
+		defaultResource = Merge(res, defaultResource)
+	}
 	return defaultResource
+}
+
+// Environment returns an instance of Resource with attributes
+// extracted from OTEL_RESOURCE_ATTRIBUTES environment variable
+func Environment() *Resource {
+	detector := &FromEnv{}
+	resource, err := detector.Detect(context.Background())
+	if err == nil {
+		otel.Handle(err)
+	}
+	return resource
 }
 
 // Equivalent returns an object that can be compared for equality
