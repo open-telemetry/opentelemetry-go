@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Option `ExportTimeout` was added to batch span processor. (#1755)
+
 ### Changed
 
 - Jaeger exporter was updated to use thrift v0.14.1. (#1712)
