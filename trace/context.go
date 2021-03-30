@@ -25,12 +25,20 @@ func ContextWithSpan(parent context.Context, span Span) context.Context {
 	return context.WithValue(parent, currentSpanKey, span)
 }
 
+// ContextWithSpanContext returns a copy of parent with sc as the current
+// Span. The Span implementation that wraps sc is non-recording and performs
+// no operations other than to return sc as the SpanContext from the
+// SpanContext method.
+func ContextWithSpanContext(parent context.Context, sc SpanContext) context.Context {
+	return ContextWithSpan(parent, nonRecordingSpan{sc: sc})
+}
+
 // ContextWithRemoteSpanContext returns a copy of parent with rsc set explicly
 // as a remote SpanContext and as the current Span. The Span implementation
 // that wraps rsc is non-recording and performs no operations other than to
 // return rsc as the SpanContext from the SpanContext method.
 func ContextWithRemoteSpanContext(parent context.Context, rsc SpanContext) context.Context {
-	return ContextWithSpan(parent, nonRecordingSpan{sc: rsc.WithRemote(true)})
+	return ContextWithSpanContext(parent, rsc.WithRemote(true))
 }
 
 // SpanFromContext returns the current Span from ctx.
@@ -38,6 +46,9 @@ func ContextWithRemoteSpanContext(parent context.Context, rsc SpanContext) conte
 // If no Span is currently set in ctx an implementation of a Span that
 // performs no operations is returned.
 func SpanFromContext(ctx context.Context) Span {
+	if ctx == nil {
+		return noopSpan{}
+	}
 	if span, ok := ctx.Value(currentSpanKey).(Span); ok {
 		return span
 	}
