@@ -35,11 +35,19 @@ type testBatchExporter struct {
 	sizes         []int
 	batchCount    int
 	shutdownCount int
+	err           error
 }
 
 func (t *testBatchExporter) ExportSpans(ctx context.Context, ss []*export.SpanSnapshot) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
+	select {
+	case <-ctx.Done():
+		t.err = ctx.Err()
+		return ctx.Err()
+	default:
+	}
 
 	t.spans = append(t.spans, ss...)
 	t.sizes = append(t.sizes, len(ss))
@@ -87,22 +95,34 @@ func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
 }
 
 type testOption struct {
-	name           string
-	o              []sdktrace.BatchSpanProcessorOption
-	wantNumSpans   int
-	wantBatchCount int
-	genNumSpans    int
-	parallel       bool
+	name              string
+	o                 []sdktrace.BatchSpanProcessorOption
+	wantNumSpans      int
+	wantBatchCount    int
+	wantExportTimeout bool
+	genNumSpans       int
+	parallel          bool
 }
 
 func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 	schDelay := 200 * time.Millisecond
+	exportTimeout := time.Nanosecond // to ensure context deadline
 	options := []testOption{
 		{
 			name:           "default BatchSpanProcessorOptions",
 			wantNumSpans:   2053,
 			wantBatchCount: 4,
 			genNumSpans:    2053,
+		},
+		{
+			name: "non-default ExportTimeout",
+			o: []sdktrace.BatchSpanProcessorOption{
+				sdktrace.WithExportTimeout(exportTimeout),
+			},
+			wantNumSpans:      0,
+			wantBatchCount:    0,
+			wantExportTimeout: true,
+			genNumSpans:       2053,
 		},
 		{
 			name: "non-default BatchTimeout",
@@ -194,6 +214,11 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 				t.Errorf("number batches: got %+v, want >= %+v\n",
 					gotBatchCount, option.wantBatchCount)
 				t.Errorf("Batches %v\n", te.sizes)
+			}
+
+			if option.wantExportTimeout && te.err != context.DeadlineExceeded {
+				t.Errorf("context deadline: got err %+v, want %+v\n",
+					te.err, context.DeadlineExceeded)
 			}
 		})
 	}
