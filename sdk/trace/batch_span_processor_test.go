@@ -259,11 +259,37 @@ func TestBatchSpanProcessorShutdown(t *testing.T) {
 }
 
 func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
-	var bp testBatchExporter
-	bsp := sdktrace.NewBatchSpanProcessor(&bp)
+	te := testBatchExporter{}
+	tp := basicTracerProvider(t)
+	option := testOption{
+		name:           "default BatchSpanProcessorOptions",
+		wantNumSpans:   2053,
+		wantBatchCount: 4,
+		genNumSpans:    2053,
+	}
+	ssp := createAndRegisterBatchSP(option, &te)
+	if ssp == nil {
+		t.Fatalf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)
+	}
+	tp.RegisterSpanProcessor(ssp)
+	tr := tp.Tracer("BatchSpanProcessorWithOption")
+	generateSpan(t, option.parallel, tr, option)
 
-	err := bsp.ForceFlush(context.Background())
-	assert.Equal(t, nil, err)
+	// Force flush any held span batches
+	err := ssp.ForceFlush(context.Background())
+
+	gotNumOfSpans := te.len()
+	if option.wantNumSpans != gotNumOfSpans {
+		t.Errorf("number of exported span: got %+v, want %+v\n",
+			gotNumOfSpans, option.wantNumSpans)
+	}
+	gotBatchCount := te.getBatchCount()
+	if gotBatchCount < option.wantBatchCount {
+		t.Errorf("number batches: got %+v, want >= %+v\n",
+			gotBatchCount, option.wantBatchCount)
+		t.Errorf("Batches %v\n", te.sizes)
+	}
+	assert.NoError(t, err)
 }
 
 func TestBatchSpanProcessorForceFlushTimeout(t *testing.T) {
