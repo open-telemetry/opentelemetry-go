@@ -54,20 +54,19 @@ type SpanExporter interface {
 // SpanSnapshot should be treated as immutable. Changes to the span from which
 // the SpanSnapshot was created are NOT reflected in the SpanSnapshot.
 type SpanSnapshot struct {
-	SpanContext  trace.SpanContext
-	ParentSpanID trace.SpanID
-	SpanKind     trace.SpanKind
-	Name         string
-	StartTime    time.Time
+	SpanContext trace.SpanContext
+	Parent      trace.SpanContext
+	SpanKind    trace.SpanKind
+	Name        string
+	StartTime   time.Time
 	// The wall clock time of EndTime will be adjusted to always be offset
 	// from StartTime by the duration of the span.
-	EndTime         time.Time
-	Attributes      []attribute.KeyValue
-	MessageEvents   []trace.Event
-	Links           []trace.Link
-	StatusCode      codes.Code
-	StatusMessage   string
-	HasRemoteParent bool
+	EndTime       time.Time
+	Attributes    []attribute.KeyValue
+	MessageEvents []trace.Event
+	Links         []trace.Link
+	StatusCode    codes.Code
+	StatusMessage string
 
 	// DroppedAttributeCount contains dropped attributes for the span itself, events and links.
 	DroppedAttributeCount    int
