@@ -270,6 +270,7 @@ func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
 		wantBatchCount: 4,
 		genNumSpans:    2053,
 	}
+	
 	ssp := createAndRegisterBatchSP(option, &te)
 	if ssp == nil {
 		t.Fatalf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)
