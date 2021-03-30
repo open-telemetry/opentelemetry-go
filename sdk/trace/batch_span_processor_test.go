@@ -255,4 +255,9 @@ func TestBatchSpanProcessorShutdown(t *testing.T) {
 		t.Error("Error shutting the BatchSpanProcessor down\n")
 	}
 	assert.Equal(t, 1, bp.shutdownCount)
+
+	bspCopy, ok := bsp.(*batchSpanProcessor)
+	if ok {
+		assert.Nil(t, bspCopy.e)
+	}
 }
