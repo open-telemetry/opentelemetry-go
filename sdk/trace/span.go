@@ -443,10 +443,9 @@ func (s *span) Snapshot() *export.SpanSnapshot {
 
 	sd.ChildSpanCount = s.childSpanCount
 	sd.EndTime = s.endTime
-	sd.HasRemoteParent = s.parent.IsRemote()
 	sd.InstrumentationLibrary = s.instrumentationLibrary
 	sd.Name = s.name
-	sd.ParentSpanID = s.parent.SpanID()
+	sd.Parent = s.parent
 	sd.Resource = s.resource
 	sd.SpanContext = s.spanContext
 	sd.SpanKind = s.spanKind
