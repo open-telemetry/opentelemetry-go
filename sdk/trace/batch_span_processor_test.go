@@ -257,3 +257,33 @@ func TestBatchSpanProcessorShutdown(t *testing.T) {
 	}
 	assert.Equal(t, 1, bp.shutdownCount)
 }
+
+func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
+	var bp testBatchExporter
+	bsp := sdktrace.NewBatchSpanProcessor(&bp)
+
+	err := bsp.ForceFlush(context.Background())
+	assert.Equal(t, nil, err)
+}
+
+func TestBatchSpanProcessorForceFlushTimeout(t *testing.T) {
+	var bp testBatchExporter
+	bsp := sdktrace.NewBatchSpanProcessor(&bp)
+	// Add timeout to context to test deadline
+	ctx, cancel := context.WithTimeout(context.Background(), 0)
+	defer cancel()
+
+	err := bsp.ForceFlush(ctx)
+	assert.Equal(t, context.DeadlineExceeded, err)
+}
+
+func TestBatchSpanProcessorForceFlushCancellation(t *testing.T) {
+	var bp testBatchExporter
+	bsp := sdktrace.NewBatchSpanProcessor(&bp)
+	ctx, cancel := context.WithCancel(context.Background())
+	// Cancel the context
+	cancel()
+
+	err := bsp.ForceFlush(ctx)
+	assert.Equal(t, context.Canceled, err)
+}
