@@ -24,7 +24,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/internal/trace/parent"
 	"go.opentelemetry.io/otel/trace"
 
 	export "go.opentelemetry.io/otel/sdk/export/trace"
@@ -523,7 +522,7 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, o *trace.Sp
 	// as a parent which contains an invalid trace ID and is not remote.
 	var psc trace.SpanContext
 	if !o.NewRoot {
-		psc = parent.SpanContext(ctx)
+		psc = trace.SpanContextFromContext(ctx)
 	}
 
 	// If there is a valid parent trace ID, use it to ensure the continuity of

@@ -12,17 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package parent
+package trace // import "go.opentelemetry.io/otel/trace"
 
-import (
-	"context"
+// nonRecordingSpan is a minimal implementation of a Span that wraps a
+// SpanContext. It performs no operations other than to return the wrapped
+// SpanContext.
+type nonRecordingSpan struct {
+	noopSpan
 
-	"go.opentelemetry.io/otel/trace"
-)
-
-func SpanContext(ctx context.Context) trace.SpanContext {
-	if p := trace.SpanContextFromContext(ctx); p.IsValid() {
-		return p
-	}
-	return trace.RemoteSpanContextFromContext(ctx)
+	sc SpanContext
 }
+
+// SpanContext returns the wrapped SpanContext.
+func (s nonRecordingSpan) SpanContext() SpanContext { return s.sc }
