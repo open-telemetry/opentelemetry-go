@@ -39,6 +39,11 @@ var (
 		if err != nil {
 			otel.Handle(err)
 		}
+		detector := &FromEnv{}
+		res, err := detector.Detect(context.Background())
+		if err != nil {
+			r = Merge(r, res)
+		}
 		return r
 	}(Detect(context.Background(), defaultServiceNameDetector{}, TelemetrySDK{}))
 )
@@ -141,11 +146,6 @@ func Empty() *Resource {
 // Default returns an instance of Resource with a default
 // "service.name" and OpenTelemetrySDK attributes
 func Default() *Resource {
-	detector := &FromEnv{}
-	res, err := detector.Detect(context.Background())
-	if err != nil {
-		defaultResource = Merge(res, defaultResource)
-	}
 	return defaultResource
 }
 

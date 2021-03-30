@@ -83,6 +83,10 @@ func TestControllerUsesResource(t *testing.T) {
 			},
 			wanted: "R=S",
 		},
+		{
+			name:    "explicitly environment resource",
+			options: []controller.Option{controller.WithResource(resource.Environment())},
+			wanted:  resource.Environment().Encoded(attribute.DefaultEncoder())},
 	}
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
