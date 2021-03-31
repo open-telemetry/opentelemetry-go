@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
-	"math"
 	"sync"
 	"testing"
 	"time"
@@ -285,8 +284,9 @@ func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
 	err := ssp.ForceFlush(context.Background())
 
 	gotNumOfSpans := te.len()
-	if math.Abs(float64(option.wantNumSpans-gotNumOfSpans)) > 10 {
-		t.Errorf("number of exported span: got %+v, want %+v\n",
+	spanDifference := option.wantNumSpans - gotNumOfSpans
+	if spanDifference > 10 || spanDifference < 0 {
+		t.Errorf("number of exported span not equal to or within 10 less than: got %+v, want %+v\n",
 			gotNumOfSpans, option.wantNumSpans)
 	}
 	gotBatchCount := te.getBatchCount()
