@@ -41,8 +41,7 @@ type driver struct {
 }
 
 var (
-	errNoClient     = errors.New("no client")
-	errDisconnected = errors.New("exporter disconnected")
+	errNoClient = errors.New("no client")
 )
 
 // NewDriver creates a new gRPC protocol driver.
@@ -88,7 +87,7 @@ func (d *driver) Stop(ctx context.Context) error {
 // to protobuf binary format and sends the result to the collector.
 func (d *driver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error {
 	if !d.connection.connected() {
-		return errDisconnected
+		return fmt.Errorf("exporter disconnected: %w", d.connection.lastConnectError())
 	}
 	ctx, cancel := d.connection.contextWithStop(ctx)
 	defer cancel()
@@ -127,7 +126,7 @@ func (d *driver) uploadMetrics(ctx context.Context, protoMetrics []*metricpb.Res
 // protobuf binary format and sends the result to the collector.
 func (d *driver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
 	if !d.connection.connected() {
-		return errDisconnected
+		return fmt.Errorf("exporter disconnected: %w", d.connection.lastConnectError())
 	}
 	ctx, cancel := d.connection.contextWithStop(ctx)
 	defer cancel()
