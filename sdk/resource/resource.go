@@ -39,13 +39,8 @@ var (
 		if err != nil {
 			otel.Handle(err)
 		}
-		detector := &FromEnv{}
-		res, err := detector.Detect(context.Background())
-		if err != nil {
-			r = Merge(r, res)
-		}
 		return r
-	}(Detect(context.Background(), defaultServiceNameDetector{}, TelemetrySDK{}))
+	}(Detect(context.Background(), FromEnv{}, defaultServiceNameDetector{}, TelemetrySDK{}))
 )
 
 // NewWithAttributes creates a resource from attrs. If attrs contains
