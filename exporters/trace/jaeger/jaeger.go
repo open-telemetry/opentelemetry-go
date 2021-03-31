@@ -37,6 +37,10 @@ import (
 const (
 	keyInstrumentationLibraryName    = "otel.library.name"
 	keyInstrumentationLibraryVersion = "otel.library.version"
+	keyError                         = "error"
+	keySpanKind                      = "span.kind"
+	keyStatusCode                    = "otel.status_code"
+	keyStatusMessage                 = "otel.status_description"
 )
 
 type Option func(*options)
@@ -269,18 +273,18 @@ func spanSnapshotToThrift(ss *export.SpanSnapshot) *gen.Span {
 
 	if ss.SpanKind != trace.SpanKindInternal {
 		tags = append(tags,
-			getStringTag("span.kind", ss.SpanKind.String()),
+			getStringTag(keySpanKind, ss.SpanKind.String()),
 		)
 	}
 
 	if ss.StatusCode != codes.Unset {
-		tags = append(tags,
-			getInt64Tag("status.code", int64(ss.StatusCode)),
-			getStringTag("status.message", ss.StatusMessage),
-		)
+		tags = append(tags, getInt64Tag(keyStatusCode, int64(ss.StatusCode)))
+		if ss.StatusMessage != "" {
+			tags = append(tags, getStringTag(keyStatusMessage, ss.StatusMessage))
+		}
 
 		if ss.StatusCode == codes.Error {
-			tags = append(tags, getBoolTag("error", true))
+			tags = append(tags, getBoolTag(keyError, true))
 		}
 	}
 
