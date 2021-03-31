@@ -336,12 +336,12 @@ func TestExporter_ExportSpan(t *testing.T) {
 
 	spanFlush()
 	batchesUploaded := testCollector.batchesUploaded
-	assert.Len(t, batchesUploaded, 1)
+	require.Len(t, batchesUploaded, 1)
 	uploadedBatch := batchesUploaded[0]
 	assert.Equal(t, serviceName, uploadedBatch.GetProcess().GetServiceName())
 	assert.Len(t, uploadedBatch.GetSpans(), 3)
 
-	assert.Len(t, uploadedBatch.GetProcess().GetTags(), 1)
+	require.Len(t, uploadedBatch.GetProcess().GetTags(), 1)
 	assert.Equal(t, tagKey, uploadedBatch.GetProcess().GetTags()[0].GetKey())
 	assert.Equal(t, tagVal, uploadedBatch.GetProcess().GetTags()[0].GetVStr())
 }
@@ -944,14 +944,14 @@ func TestNewExporterPipelineWithOptions(t *testing.T) {
 	assert.True(t, span.SpanContext().IsValid())
 
 	batchesUploaded := testCollector.batchesUploaded
-	assert.Len(t, batchesUploaded, 1)
+	require.Len(t, batchesUploaded, 1)
 	uploadedBatch := batchesUploaded[0]
 	assert.Equal(t, serviceName, uploadedBatch.GetProcess().GetServiceName())
-	assert.Len(t, uploadedBatch.GetSpans(), 1)
+	require.Len(t, uploadedBatch.GetSpans(), 1)
 	uploadedSpan := uploadedBatch.GetSpans()[0]
 	assert.Len(t, uploadedSpan.GetLogs(), eventCountLimit)
 
-	assert.Len(t, uploadedBatch.GetProcess().GetTags(), 1)
+	require.Len(t, uploadedBatch.GetProcess().GetTags(), 1)
 	assert.Equal(t, tagKey, uploadedBatch.GetProcess().GetTags()[0].GetKey())
 	assert.Equal(t, tagVal, uploadedBatch.GetProcess().GetTags()[0].GetVStr())
 }
