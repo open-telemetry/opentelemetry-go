@@ -180,15 +180,15 @@ func WithBlocking() BatchSpanProcessorOption {
 
 // exportSpans is a subroutine of processing and draining the queue.
 func (bsp *batchSpanProcessor) exportSpans(ctx context.Context) error {
-	// The span processor is shut down
-	if bsp.e == nil {
-		return nil
-	}
-
 	bsp.timer.Reset(bsp.o.BatchTimeout)
 
 	bsp.batchMutex.Lock()
 	defer bsp.batchMutex.Unlock()
+
+	// The span processor is shut down
+	if bsp.e == nil {
+		return nil
+	}
 
 	if len(bsp.batch) > 0 {
 		if err := bsp.e.ExportSpans(ctx, bsp.batch); err != nil {
