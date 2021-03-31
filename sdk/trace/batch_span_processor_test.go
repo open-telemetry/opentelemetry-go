@@ -17,6 +17,7 @@ package trace_test
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"math"
 	"sync"
 	"testing"
@@ -301,11 +302,15 @@ func TestBatchSpanProcessorForceFlushTimeout(t *testing.T) {
 	var bp testBatchExporter
 	bsp := sdktrace.NewBatchSpanProcessor(&bp)
 	// Add timeout to context to test deadline
-	ctx, cancel := context.WithTimeout(context.Background(), 0)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
 	defer cancel()
+	<-ctx.Done()
 
-	err := bsp.ForceFlush(ctx)
-	assert.Equal(t, context.DeadlineExceeded, err)
+	if err := bsp.ForceFlush(ctx); err == nil {
+		t.Error("expected context DeadlineExceeded error, got nil")
+	} else if !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("expected context DeadlineExceeded error, got %v", err)
+	}
 }
 
 func TestBatchSpanProcessorForceFlushCancellation(t *testing.T) {
@@ -315,6 +320,9 @@ func TestBatchSpanProcessorForceFlushCancellation(t *testing.T) {
 	// Cancel the context
 	cancel()
 
-	err := bsp.ForceFlush(ctx)
-	assert.Equal(t, context.Canceled, err)
+	if err := bsp.ForceFlush(ctx); err == nil {
+		t.Error("expected context canceled error, got nil")
+	} else if !errors.Is(err, context.Canceled) {
+		t.Errorf("expected context canceled error, got %v", err)
+	}
 }
