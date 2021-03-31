@@ -316,6 +316,27 @@ func TestNewExporter_withHeaders(t *testing.T) {
 	assert.Equal(t, "value1", headers.Get("header1")[0])
 }
 
+func TestNewExporter_withInvalidSecurityConfiguration(t *testing.T) {
+	mc := runMockCollector(t)
+	defer func() {
+		_ = mc.stop()
+	}()
+
+	ctx := context.Background()
+	driver := otlpgrpc.NewDriver(otlpgrpc.WithEndpoint(mc.endpoint))
+	exp, err := otlp.NewExporter(ctx, driver)
+	if err != nil {
+		t.Fatalf("failed to create a new collector exporter: %v", err)
+	}
+
+	err = exp.ExportSpans(ctx, []*exporttrace.SpanSnapshot{{Name: "misconfiguration"}})
+	require.Equal(t, err.Error(), "exporter disconnected: grpc: no transport security set (use grpc.WithInsecure() explicitly or set credentials)")
+
+	defer func() {
+		_ = exp.Shutdown(ctx)
+	}()
+}
+
 func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 	mc := runMockCollector(t)
 
