@@ -265,10 +265,11 @@ func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
 		name: "default BatchSpanProcessorOptions",
 		o: []sdktrace.BatchSpanProcessorOption{
 			sdktrace.WithMaxQueueSize(0),
+			sdktrace.WithMaxExportBatchSize(10),
 		},
-		wantNumSpans:   517,
+		wantNumSpans:   6,
 		wantBatchCount: 1,
-		genNumSpans:    517,
+		genNumSpans:    6,
 	}
 	ssp := createAndRegisterBatchSP(option, &te)
 	if ssp == nil {
@@ -276,16 +277,17 @@ func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
 	}
 	tp.RegisterSpanProcessor(ssp)
 	tr := tp.Tracer("BatchSpanProcessorWithOption")
-	generateSpan(t, option.parallel, tr, option)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		// Force flush any held span batches
-		ssp.ForceFlush(context.Background())
+		generateSpan(t, option.parallel, tr, option)
 	}()
 	wg.Wait()
+
+	// Force flush any held span batches
+	err := ssp.ForceFlush(context.Background())
 
 	gotNumOfSpans := te.len()
 	if option.wantNumSpans != gotNumOfSpans {
@@ -298,6 +300,7 @@ func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
 			gotBatchCount, option.wantBatchCount)
 		t.Errorf("Batches %v\n", te.sizes)
 	}
+	assert.NoError(t, err)
 }
 
 func TestBatchSpanProcessorForceFlushTimeout(t *testing.T) {
