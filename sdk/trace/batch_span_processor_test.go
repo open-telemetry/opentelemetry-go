@@ -262,7 +262,7 @@ func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
 	te := testBatchExporter{}
 	tp := basicTracerProvider(t)
 	option := testOption{
-		name:           "default BatchSpanProcessorOptions",
+		name: "default BatchSpanProcessorOptions",
 		o: []sdktrace.BatchSpanProcessorOption{
 			sdktrace.WithMaxQueueSize(0),
 		},
