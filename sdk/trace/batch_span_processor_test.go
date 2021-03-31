@@ -265,11 +265,10 @@ func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
 		name:           "default BatchSpanProcessorOptions",
 		o: []sdktrace.BatchSpanProcessorOption{
 			sdktrace.WithMaxQueueSize(0),
-			sdktrace.WithMaxExportBatchSize(3000),
 		},
-		wantNumSpans:   512,
+		wantNumSpans:   517,
 		wantBatchCount: 1,
-		genNumSpans:    512,
+		genNumSpans:    517,
 	}
 	ssp := createAndRegisterBatchSP(option, &te)
 	if ssp == nil {
