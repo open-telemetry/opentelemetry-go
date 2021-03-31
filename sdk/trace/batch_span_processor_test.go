@@ -17,6 +17,7 @@ package trace_test
 import (
 	"context"
 	"encoding/binary"
+	"math"
 	"sync"
 	"testing"
 	"time"
@@ -265,11 +266,11 @@ func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
 		name: "default BatchSpanProcessorOptions",
 		o: []sdktrace.BatchSpanProcessorOption{
 			sdktrace.WithMaxQueueSize(0),
-			sdktrace.WithMaxExportBatchSize(10),
+			sdktrace.WithMaxExportBatchSize(3000),
 		},
-		wantNumSpans:   6,
+		wantNumSpans:   2053,
 		wantBatchCount: 1,
-		genNumSpans:    6,
+		genNumSpans:    2053,
 	}
 	ssp := createAndRegisterBatchSP(option, &te)
 	if ssp == nil {
@@ -277,20 +278,13 @@ func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
 	}
 	tp.RegisterSpanProcessor(ssp)
 	tr := tp.Tracer("BatchSpanProcessorWithOption")
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		generateSpan(t, option.parallel, tr, option)
-	}()
-	wg.Wait()
+	generateSpan(t, option.parallel, tr, option)
 
 	// Force flush any held span batches
 	err := ssp.ForceFlush(context.Background())
 
 	gotNumOfSpans := te.len()
-	if option.wantNumSpans != gotNumOfSpans {
+	if math.Abs(float64(option.wantNumSpans-gotNumOfSpans)) > 10 {
 		t.Errorf("number of exported span: got %+v, want %+v\n",
 			gotNumOfSpans, option.wantNumSpans)
 	}
