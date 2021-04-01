@@ -41,6 +41,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The existing `ParentSpanID` and `HasRemoteParent` fields are removed in favor of this. (#1748)
 - The `ParentContext` field of the `"go.opentelemetry.io/otel/sdk/trace".SamplingParameters` is updated to hold a `context.Context` containing the parent span.
   This changes it to make `SamplingParameters` conform with the OpenTelemetry specification. (#1749)
+- Modify `BatchSpanProcessor.ForceFlush` to abort after timeout/cancellation. (#1757)
 - Improve OTLP/gRPC exporter connection errors. (#1737)
 
 ### Removed
