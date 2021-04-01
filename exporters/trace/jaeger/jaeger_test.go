@@ -283,14 +283,6 @@ func withTestCollectorEndpointInjected(ce *testCollectorEndpoint) func() (batchU
 }
 
 func TestExporter_ExportSpan(t *testing.T) {
-	envStore, err := ottest.SetEnvVariables(map[string]string{
-		envDisabled: "false",
-	})
-	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
-
 	const (
 		serviceName = "test-service"
 		tagKey      = "key"
@@ -925,12 +917,6 @@ func TestProcess(t *testing.T) {
 }
 
 func TestNewExporterPipelineWithOptions(t *testing.T) {
-	envStore, err := ottest.SetEnvVariables(map[string]string{})
-	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
-
 	const (
 		serviceName     = "test-service"
 		eventCountLimit = 10
