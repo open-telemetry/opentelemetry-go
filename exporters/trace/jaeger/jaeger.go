@@ -41,6 +41,7 @@ const (
 	keySpanKind                      = "span.kind"
 	keyStatusCode                    = "otel.status_code"
 	keyStatusMessage                 = "otel.status_description"
+	keyDroppedAttributeCount         = "otel.event.dropped_attributes_count"
 )
 
 type Option func(*options)
@@ -290,7 +291,11 @@ func spanSnapshotToThrift(ss *export.SpanSnapshot) *gen.Span {
 
 	var logs []*gen.Log
 	for _, a := range ss.MessageEvents {
-		fields := make([]*gen.Tag, 0, len(a.Attributes))
+		nTags := len(a.Attributes) + 1
+		if a.DroppedAttributeCount != 0 {
+			nTags++
+		}
+		fields := make([]*gen.Tag, 0, nTags)
 		for _, kv := range a.Attributes {
 			tag := keyValueToTag(kv)
 			if tag != nil {
@@ -298,6 +303,9 @@ func spanSnapshotToThrift(ss *export.SpanSnapshot) *gen.Span {
 			}
 		}
 		fields = append(fields, getStringTag("name", a.Name))
+		if a.DroppedAttributeCount != 0 {
+			fields = append(fields, getInt64Tag(keyDroppedAttributeCount, int64(a.DroppedAttributeCount)))
+		}
 		logs = append(logs, &gen.Log{
 			Timestamp: a.Time.UnixNano() / 1000,
 			Fields:    fields,
