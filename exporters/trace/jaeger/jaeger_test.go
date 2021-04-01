@@ -445,10 +445,13 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 		{
 			name: "with parent",
 			data: &export.SpanSnapshot{
-				ParentSpanID: parentSpanID,
 				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID: traceID,
 					SpanID:  spanID,
+				}),
+				Parent: trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID: traceID,
+					SpanID:  parentSpanID,
 				}),
 				Links: []trace.Link{
 					{
@@ -499,10 +502,13 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 		{
 			name: "resources do not affect the tags",
 			data: &export.SpanSnapshot{
-				ParentSpanID: parentSpanID,
 				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID: traceID,
 					SpanID:  spanID,
+				}),
+				Parent: trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID: traceID,
+					SpanID:  parentSpanID,
 				}),
 				Name:      "/foo",
 				StartTime: now,

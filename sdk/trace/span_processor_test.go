@@ -31,7 +31,7 @@ type testSpanProcessor struct {
 }
 
 func (t *testSpanProcessor) OnStart(parent context.Context, s sdktrace.ReadWriteSpan) {
-	psc := trace.RemoteSpanContextFromContext(parent)
+	psc := trace.SpanContextFromContext(parent)
 	kv := []attribute.KeyValue{
 		{
 			Key:   "SpanProcessorName",
