@@ -121,8 +121,8 @@ func span(sd *export.SpanSnapshot) *tracepb.Span {
 		DroppedLinksCount:      uint32(sd.DroppedLinkCount),
 	}
 
-	if sd.ParentSpanID.IsValid() {
-		s.ParentSpanId = sd.ParentSpanID[:]
+	if psid := sd.Parent.SpanID(); psid.IsValid() {
+		s.ParentSpanId = psid[:]
 	}
 
 	return s

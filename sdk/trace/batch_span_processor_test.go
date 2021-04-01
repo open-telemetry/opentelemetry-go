@@ -17,6 +17,7 @@ package trace_test
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -256,4 +257,72 @@ func TestBatchSpanProcessorShutdown(t *testing.T) {
 		t.Error("Error shutting the BatchSpanProcessor down\n")
 	}
 	assert.Equal(t, 1, bp.shutdownCount)
+}
+
+func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
+	te := testBatchExporter{}
+	tp := basicTracerProvider(t)
+	option := testOption{
+		name: "default BatchSpanProcessorOptions",
+		o: []sdktrace.BatchSpanProcessorOption{
+			sdktrace.WithMaxQueueSize(0),
+			sdktrace.WithMaxExportBatchSize(3000),
+		},
+		wantNumSpans:   2053,
+		wantBatchCount: 1,
+		genNumSpans:    2053,
+	}
+	ssp := createAndRegisterBatchSP(option, &te)
+	if ssp == nil {
+		t.Fatalf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)
+	}
+	tp.RegisterSpanProcessor(ssp)
+	tr := tp.Tracer("BatchSpanProcessorWithOption")
+	generateSpan(t, option.parallel, tr, option)
+
+	// Force flush any held span batches
+	err := ssp.ForceFlush(context.Background())
+
+	gotNumOfSpans := te.len()
+	spanDifference := option.wantNumSpans - gotNumOfSpans
+	if spanDifference > 10 || spanDifference < 0 {
+		t.Errorf("number of exported span not equal to or within 10 less than: got %+v, want %+v\n",
+			gotNumOfSpans, option.wantNumSpans)
+	}
+	gotBatchCount := te.getBatchCount()
+	if gotBatchCount < option.wantBatchCount {
+		t.Errorf("number batches: got %+v, want >= %+v\n",
+			gotBatchCount, option.wantBatchCount)
+		t.Errorf("Batches %v\n", te.sizes)
+	}
+	assert.NoError(t, err)
+}
+
+func TestBatchSpanProcessorForceFlushTimeout(t *testing.T) {
+	var bp testBatchExporter
+	bsp := sdktrace.NewBatchSpanProcessor(&bp)
+	// Add timeout to context to test deadline
+	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
+	defer cancel()
+	<-ctx.Done()
+
+	if err := bsp.ForceFlush(ctx); err == nil {
+		t.Error("expected context DeadlineExceeded error, got nil")
+	} else if !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("expected context DeadlineExceeded error, got %v", err)
+	}
+}
+
+func TestBatchSpanProcessorForceFlushCancellation(t *testing.T) {
+	var bp testBatchExporter
+	bsp := sdktrace.NewBatchSpanProcessor(&bp)
+	ctx, cancel := context.WithCancel(context.Background())
+	// Cancel the context
+	cancel()
+
+	if err := bsp.ForceFlush(ctx); err == nil {
+		t.Error("expected context canceled error, got nil")
+	} else if !errors.Is(err, context.Canceled) {
+		t.Errorf("expected context canceled error, got %v", err)
+	}
 }

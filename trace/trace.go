@@ -481,48 +481,6 @@ func (sc SpanContext) MarshalJSON() ([]byte, error) {
 	})
 }
 
-type traceContextKeyType int
-
-const (
-	currentSpanKey traceContextKeyType = iota
-	remoteContextKey
-)
-
-// ContextWithSpan returns a copy of parent with span set to current.
-func ContextWithSpan(parent context.Context, span Span) context.Context {
-	return context.WithValue(parent, currentSpanKey, span)
-}
-
-// SpanFromContext returns the current span from ctx, or noop span if none set.
-func SpanFromContext(ctx context.Context) Span {
-	if span, ok := ctx.Value(currentSpanKey).(Span); ok {
-		return span
-	}
-	return noopSpan{}
-}
-
-// SpanContextFromContext returns the current SpanContext from ctx, or an empty SpanContext if none set.
-func SpanContextFromContext(ctx context.Context) SpanContext {
-	if span := SpanFromContext(ctx); span != nil {
-		return span.SpanContext()
-	}
-	return SpanContext{}
-}
-
-// ContextWithRemoteSpanContext returns a copy of parent with a remote set as
-// the remote span context.
-func ContextWithRemoteSpanContext(parent context.Context, remote SpanContext) context.Context {
-	return context.WithValue(parent, remoteContextKey, remote.WithRemote(true))
-}
-
-// RemoteSpanContextFromContext returns the remote span context from ctx.
-func RemoteSpanContextFromContext(ctx context.Context) SpanContext {
-	if sc, ok := ctx.Value(remoteContextKey).(SpanContext); ok {
-		return sc
-	}
-	return SpanContext{}
-}
-
 // Span is the individual component of a trace. It represents a single named
 // and timed operation of a workflow that is traced. A Tracer is used to
 // create a Span and it is then up to the operation the Span represents to

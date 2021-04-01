@@ -24,7 +24,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/internal/baggage"
-	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
@@ -138,7 +137,7 @@ func (t *MockTracer) getParentSpanID(ctx context.Context, config *trace.SpanConf
 
 func (t *MockTracer) getParentSpanContext(ctx context.Context, config *trace.SpanConfig) trace.SpanContext {
 	if !config.NewRoot {
-		return otelparent.SpanContext(ctx)
+		return trace.SpanContextFromContext(ctx)
 	}
 	return trace.SpanContext{}
 }

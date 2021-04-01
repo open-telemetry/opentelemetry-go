@@ -205,11 +205,16 @@ func TestSpanData(t *testing.T) {
 			SpanID:     trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 			TraceState: traceState,
 		}),
-		SpanKind:     trace.SpanKindServer,
-		ParentSpanID: trace.SpanID{0xEF, 0xEE, 0xED, 0xEC, 0xEB, 0xEA, 0xE9, 0xE8},
-		Name:         "span data to span data",
-		StartTime:    startTime,
-		EndTime:      endTime,
+		Parent: trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+			SpanID:     trace.SpanID{0xEF, 0xEE, 0xED, 0xEC, 0xEB, 0xEA, 0xE9, 0xE8},
+			TraceState: traceState,
+			Remote:     true,
+		}),
+		SpanKind:  trace.SpanKindServer,
+		Name:      "span data to span data",
+		StartTime: startTime,
+		EndTime:   endTime,
 		MessageEvents: []trace.Event{
 			{Time: startTime,
 				Attributes: []attribute.KeyValue{
@@ -244,9 +249,8 @@ func TestSpanData(t *testing.T) {
 				},
 			},
 		},
-		StatusCode:      codes.Error,
-		StatusMessage:   "utterly unrecognized",
-		HasRemoteParent: true,
+		StatusCode:    codes.Error,
+		StatusMessage: "utterly unrecognized",
 		Attributes: []attribute.KeyValue{
 			attribute.Int64("timeout_ns", 12e9),
 		},

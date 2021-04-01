@@ -148,7 +148,23 @@ func (bsp *batchSpanProcessor) Shutdown(ctx context.Context) error {
 
 // ForceFlush exports all ended spans that have not yet been exported.
 func (bsp *batchSpanProcessor) ForceFlush(ctx context.Context) error {
-	return bsp.exportSpans(ctx)
+	var err error
+	if bsp.e != nil {
+		wait := make(chan struct{})
+		go func() {
+			if err := bsp.exportSpans(ctx); err != nil {
+				otel.Handle(err)
+			}
+			close(wait)
+		}()
+		// Wait until the export is finished or the context is cancelled/timed out
+		select {
+		case <-wait:
+		case <-ctx.Done():
+			err = ctx.Err()
+		}
+	}
+	return err
 }
 
 func WithMaxQueueSize(size int) BatchSpanProcessorOption {

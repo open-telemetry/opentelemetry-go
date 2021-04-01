@@ -72,7 +72,7 @@ func toZipkinSpanContext(data *export.SpanSnapshot) zkmodel.SpanContext {
 	return zkmodel.SpanContext{
 		TraceID:  toZipkinTraceID(data.SpanContext.TraceID()),
 		ID:       toZipkinID(data.SpanContext.SpanID()),
-		ParentID: toZipkinParentID(data.ParentSpanID),
+		ParentID: toZipkinParentID(data.Parent.SpanID()),
 		Debug:    false,
 		Sampled:  nil,
 		Err:      nil,
