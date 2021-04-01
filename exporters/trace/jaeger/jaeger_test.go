@@ -392,7 +392,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 					{Key: keyInstrumentationLibraryName, VType: gen.TagType_STRING, VStr: &instrLibName},
 					{Key: keyInstrumentationLibraryVersion, VType: gen.TagType_STRING, VStr: &instrLibVersion},
 					{Key: keyStatusCode, VType: gen.TagType_LONG, VLong: &statusCodeValue},
-					// Should not have a status message becuase it was unset
+					// Should not have a status message because it was unset
 					{Key: keySpanKind, VType: gen.TagType_STRING, VStr: &spanKind},
 				},
 			},
