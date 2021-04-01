@@ -27,6 +27,7 @@ import (
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/internal/matchers"
 	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -160,10 +161,10 @@ func TestSpan(t *testing.T) {
 
 				expectedEvents := []oteltest.Event{{
 					Timestamp: testTime,
-					Name:      "error",
+					Name:      semconv.ExceptionEventName,
 					Attributes: map[attribute.Key]attribute.Value{
-						attribute.Key("error.type"):    attribute.StringValue(s.typ),
-						attribute.Key("error.message"): attribute.StringValue(s.msg),
+						semconv.ExceptionTypeKey:    attribute.StringValue(s.typ),
+						semconv.ExceptionMessageKey: attribute.StringValue(s.msg),
 					},
 				}}
 				e.Expect(subject.Events()).ToEqual(expectedEvents)
