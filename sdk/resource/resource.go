@@ -40,7 +40,7 @@ var (
 			otel.Handle(err)
 		}
 		return r
-	}(Detect(context.Background(), FromEnv{}, defaultServiceNameDetector{}, TelemetrySDK{}))
+	}(Detect(context.Background(), defaultServiceNameDetector{}, FromEnv{}, TelemetrySDK{}))
 )
 
 // NewWithAttributes creates a resource from attrs. If attrs contains

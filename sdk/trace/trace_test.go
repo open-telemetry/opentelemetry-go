@@ -43,6 +43,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
+const envVar = "OTEL_RESOURCE_ATTRIBUTES"
+
 type storingHandler struct {
 	errs []error
 }
@@ -1252,6 +1254,12 @@ func TestWithSpanKind(t *testing.T) {
 }
 
 func TestWithResource(t *testing.T) {
+	store, err := ottest.SetEnvVariables(map[string]string{
+		envVar: "key=value,rk5=7",
+	})
+	require.NoError(t, err)
+	defer func() { require.NoError(t, store.Restore()) }()
+
 	cases := []struct {
 		name    string
 		options []TracerProviderOption
@@ -1264,11 +1272,6 @@ func TestWithResource(t *testing.T) {
 			want:    resource.Environment(),
 		},
 		{
-			name:    "explicitly environment resource",
-			options: []TracerProviderOption{WithResource(resource.Environment())},
-			want:    resource.Empty(),
-		},
-		{
 			name:    "uses default if no resource option",
 			options: []TracerProviderOption{},
 			want:    resource.Default(),
@@ -1276,14 +1279,19 @@ func TestWithResource(t *testing.T) {
 		{
 			name:    "explicit resource",
 			options: []TracerProviderOption{WithResource(resource.NewWithAttributes(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5)))},
-			want:    resource.Merge(resource.Environment(),resource.NewWithAttributes(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5))),
+			want:    resource.Merge(resource.Environment(), resource.NewWithAttributes(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5))),
 		},
 		{
 			name: "last resource wins",
 			options: []TracerProviderOption{
 				WithResource(resource.NewWithAttributes(attribute.String("rk1", "vk1"), attribute.Int64("rk2", 5))),
 				WithResource(resource.NewWithAttributes(attribute.String("rk3", "rv3"), attribute.Int64("rk4", 10)))},
-			want: resource.Merge(resource.Environment(),resource.NewWithAttributes(attribute.String("rk3", "rv3"), attribute.Int64("rk4", 10))),
+			want: resource.Merge(resource.Environment(), resource.NewWithAttributes(attribute.String("rk3", "rv3"), attribute.Int64("rk4", 10))),
+		},
+		{
+			name:    "overlapping attributes with environment resource",
+			options: []TracerProviderOption{WithResource(resource.NewWithAttributes(attribute.String("rk1", "rv1"), attribute.Int64("rk5", 10)))},
+			want:    resource.Merge(resource.Environment(), resource.NewWithAttributes(attribute.String("rk1", "rv1"), attribute.Int64("rk5", 10))),
 		},
 	}
 	for _, tc := range cases {

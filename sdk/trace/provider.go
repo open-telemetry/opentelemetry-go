@@ -265,7 +265,6 @@ func WithResource(r *resource.Resource) TracerProviderOption {
 	return func(opts *TracerProviderConfig) {
 		if r != nil {
 			opts.resource = resource.Merge(resource.Environment(), r)
-			// opts.resource = r
 		} else {
 			opts.resource = resource.Environment()
 		}
