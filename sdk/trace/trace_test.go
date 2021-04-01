@@ -30,6 +30,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/google/go-cmp/cmp"
@@ -1119,11 +1120,11 @@ func TestRecordError(t *testing.T) {
 			SpanKind:   trace.SpanKindInternal,
 			MessageEvents: []trace.Event{
 				{
-					Name: errorEventName,
+					Name: semconv.ExceptionEventName,
 					Time: errTime,
 					Attributes: []attribute.KeyValue{
-						errorTypeKey.String(s.typ),
-						errorMessageKey.String(s.msg),
+						semconv.ExceptionTypeKey.String(s.typ),
+						semconv.ExceptionMessageKey.String(s.msg),
 					},
 				},
 			},
@@ -1314,10 +1315,10 @@ func TestSpanCapturesPanic(t *testing.T) {
 	spans := te.Spans()
 	require.Len(t, spans, 1)
 	require.Len(t, spans[0].MessageEvents, 1)
-	assert.Equal(t, spans[0].MessageEvents[0].Name, errorEventName)
+	assert.Equal(t, spans[0].MessageEvents[0].Name, semconv.ExceptionEventName)
 	assert.Equal(t, spans[0].MessageEvents[0].Attributes, []attribute.KeyValue{
-		errorTypeKey.String("*errors.errorString"),
-		errorMessageKey.String("error message"),
+		semconv.ExceptionTypeKey.String("*errors.errorString"),
+		semconv.ExceptionMessageKey.String("error message"),
 	})
 }
 
