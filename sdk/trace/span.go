@@ -160,7 +160,8 @@ func (s *span) IsRecording() bool {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.endTime.IsZero()
+
+	return !s.startTime.IsZero() && s.endTime.IsZero()
 }
 
 // SetStatus sets the status of this span in the form of a code and a
@@ -443,10 +444,9 @@ func (s *span) Snapshot() *export.SpanSnapshot {
 
 	sd.ChildSpanCount = s.childSpanCount
 	sd.EndTime = s.endTime
-	sd.HasRemoteParent = s.parent.IsRemote()
 	sd.InstrumentationLibrary = s.instrumentationLibrary
 	sd.Name = s.name
-	sd.ParentSpanID = s.parent.SpanID()
+	sd.Parent = s.parent
 	sd.Resource = s.resource
 	sd.SpanContext = s.spanContext
 	sd.SpanKind = s.spanKind
@@ -544,13 +544,12 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, o *trace.Sp
 	span.spanLimits = spanLimits
 
 	samplingResult := provider.sampler.ShouldSample(SamplingParameters{
-		ParentContext:   psc,
-		TraceID:         tid,
-		Name:            name,
-		HasRemoteParent: psc.IsRemote(),
-		Kind:            o.SpanKind,
-		Attributes:      o.Attributes,
-		Links:           o.Links,
+		ParentContext: ctx,
+		TraceID:       tid,
+		Name:          name,
+		Kind:          o.SpanKind,
+		Attributes:    o.Attributes,
+		Links:         o.Links,
 	})
 
 	scc := trace.SpanContextConfig{

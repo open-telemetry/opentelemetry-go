@@ -8,6 +8,27 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Added support for configuring OTLP/HTTP Endpoints, Headers, Compression and Timeout via the Environment Variables. (#1758)
+  - `OTEL_EXPORTER_OTLP_ENDPOINT`
+  - `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`
+  - `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`
+  - `OTEL_EXPORTER_OTLP_HEADERS`
+  - `OTEL_EXPORTER_OTLP_TRACES_HEADERS`
+  - `OTEL_EXPORTER_OTLP_METRICS_HEADERS`
+  - `OTEL_EXPORTER_OTLP_COMPRESSION`
+  - `OTEL_EXPORTER_OTLP_TRACES_COMPRESSION`
+  - `OTEL_EXPORTER_OTLP_METRICS_COMPRESSION`
+  - `OTEL_EXPORTER_OTLP_TIMEOUT`
+  - `OTEL_EXPORTER_OTLP_TRACES_TIMEOUT`
+  - `OTEL_EXPORTER_OTLP_METRICS_TIMEOUT`
+### Fixed
+
+- The `Span.IsRecording` implementation from `go.opentelemetry.io/otel/sdk/trace` always returns false when not being sampled. (#1750)
+- The Jaeger exporter now correctly sets tags for the Span status code and message.
+  This means it uses the correct tag keys (`"otel.status_code"`, `"otel.status_description"`) and does not set the status message as a tag unless it is set on the span. (#1761)
+
 ### Changed
 
 - Jaeger exporter was updated to use thrift v0.14.1. (#1712)
@@ -16,6 +37,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The storage of a local or remote Span in a `context.Context` using its SpanContext is unified to store just the current Span.
   The Span's SpanContext can now self-identify as being remote or not.
   This means that `"go.opentelemetry.io/otel/trace".ContextWithRemoteSpanContext` will now overwrite any existing current Span, not just existing remote Spans, and make it the current Span in a `context.Context`. (#1731)
+- Information about a parent span context in a `"go.opentelemetry.io/otel/export/trace".SpanSnapshot` is unified in a new `Parent` field.
+  The existing `ParentSpanID` and `HasRemoteParent` fields are removed in favor of this. (#1748)
+- The `ParentContext` field of the `"go.opentelemetry.io/otel/sdk/trace".SamplingParameters` is updated to hold a `context.Context` containing the parent span.
+  This changes it to make `SamplingParameters` conform with the OpenTelemetry specification. (#1749)
+- Improve OTLP/gRPC exporter connection errors. (#1737)
 
 ### Removed
 
@@ -27,6 +53,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Because of this `"go.opentelemetry.io/otel/trace".RemoteSpanContextFromContext` is removed as it is no longer needed.
   Instead, `"go.opentelemetry.io/otel/trace".SpanContextFromContex` can be used to return the current Span.
   If needed, that Span's `SpanContext.IsRemote()` can then be used to determine if it is remote or not. (#1731)
+- The `HasRemoteParent` field of the `"go.opentelemetry.io/otel/sdk/trace".SamplingParameters` is removed.
+  This field is redundant to the information returned from the `Remote` method of the `SpanContext` held in the `ParentContext` field. (#1749)
 
 ## [0.19.0] - 2021-03-18
 

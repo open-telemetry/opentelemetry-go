@@ -84,7 +84,13 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"Key":"key",` +
 		`"Value":{"Type":"STRING","Value":"val"}` +
 		`}],"Remote":false},` +
-		`"ParentSpanID":"0000000000000000",` +
+		`"Parent":{` +
+		`"TraceID":"00000000000000000000000000000000",` +
+		`"SpanID":"0000000000000000",` +
+		`"TraceFlags":0,` +
+		`"TraceState":null,` +
+		`"Remote":false` +
+		`},` +
 		`"SpanKind":1,` +
 		`"Name":"/foo",` +
 		`"StartTime":` + string(expectedSerializedNow) + "," +
@@ -123,7 +129,6 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"Links":null,` +
 		`"StatusCode":"Error",` +
 		`"StatusMessage":"interesting",` +
-		`"HasRemoteParent":false,` +
 		`"DroppedAttributeCount":0,` +
 		`"DroppedMessageEventCount":0,` +
 		`"DroppedLinkCount":0,` +
