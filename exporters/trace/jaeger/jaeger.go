@@ -293,7 +293,7 @@ func spanSnapshotToThrift(ss *export.SpanSnapshot) *gen.Span {
 	for _, a := range ss.MessageEvents {
 		nTags := len(a.Attributes)
 		if a.Name != "" {
-			nTags += 1
+			nTags++
 		}
 		fields := make([]*gen.Tag, 0, nTags)
 		if a.Name != "" {
