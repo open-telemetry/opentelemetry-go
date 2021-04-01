@@ -85,7 +85,7 @@ func TestNewRawExporterWithEnvImplicitly(t *testing.T) {
 	assert.Equal(t, password, uploader.password)
 }
 
-func TestWithAgentEndpointOptionFromEnv(t *testing.T) {
+func TestAgentEndpointFromEnv(t *testing.T) {
 	testCases := []struct {
 		name             string
 		envAgentHost     string
@@ -133,7 +133,7 @@ func TestWithAgentEndpointOptionFromEnv(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			require.NoError(t, os.Setenv(envAgentHost, tc.envAgentHost))
 			require.NoError(t, os.Setenv(envAgentPort, tc.envAgentPort))
-			AgentEndpointOptionFromEnv(&tc.hostPort)
+			AgentEndpointFromEnv(&tc.hostPort)
 			assert.Equal(t, tc.hostPort, tc.expectedHostPort)
 		})
 	}

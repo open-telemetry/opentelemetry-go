@@ -36,8 +36,8 @@ const (
 	envPassword = "OTEL_EXPORTER_JAEGER_PASSWORD"
 )
 
-// AgentEndpointOptionFromEnv uses environment variables to return the Jaeger agent hostport
-func AgentEndpointOptionFromEnv(e *string) {
+// AgentEndpointFromEnv uses environment variables to return the Jaeger agent hostport
+func AgentEndpointFromEnv(e *string) {
 	if h, p := os.Getenv(envAgentHost), os.Getenv(envAgentPort); h != "" && p != "" {
 		*e = fmt.Sprintf("%s:%s", h, p)
 	}
