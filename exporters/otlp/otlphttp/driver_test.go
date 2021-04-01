@@ -17,6 +17,7 @@ package otlphttp_test
 import (
 	"context"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -165,6 +166,27 @@ func TestRetry(t *testing.T) {
 	err = exporter.ExportSpans(ctx, otlptest.SingleSpanSnapshot())
 	assert.NoError(t, err)
 	assert.Len(t, mc.GetSpans(), 1)
+}
+
+func TestTimeout(t *testing.T) {
+	mcCfg := mockCollectorConfig{
+		InjectDelay: 100 * time.Millisecond,
+	}
+	mc := runMockCollector(t, mcCfg)
+	defer mc.MustStop(t)
+	driver := otlphttp.NewDriver(
+		otlphttp.WithEndpoint(mc.Endpoint()),
+		otlphttp.WithInsecure(),
+		otlphttp.WithTimeout(50*time.Millisecond),
+	)
+	ctx := context.Background()
+	exporter, err := otlp.NewExporter(ctx, driver)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, exporter.Shutdown(ctx))
+	}()
+	err = exporter.ExportSpans(ctx, otlptest.SingleSpanSnapshot())
+	assert.Equal(t, true, os.IsTimeout(err))
 }
 
 func TestRetryFailed(t *testing.T) {

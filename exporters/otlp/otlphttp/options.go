@@ -16,7 +16,10 @@ package otlphttp
 
 import (
 	"crypto/tls"
+	"fmt"
 	"time"
+
+	"go.opentelemetry.io/otel/exporters/otlp"
 )
 
 // Compression describes the compression used for payloads sent to the
@@ -46,6 +49,9 @@ const (
 	// DefaultBackoff is a default base backoff time used in the
 	// exponential backoff strategy.
 	DefaultBackoff time.Duration = 300 * time.Millisecond
+	// DefaultTimeout is a default max waiting time for the backend to process
+	// each span or metrics batch.
+	DefaultTimeout time.Duration = 10 * time.Second
 )
 
 // Marshaler describes the kind of message format sent to the collector
@@ -58,17 +64,44 @@ const (
 	MarshalJSON
 )
 
+type signalConfig struct {
+	endpoint    string
+	insecure    bool
+	tlsCfg      *tls.Config
+	headers     map[string]string
+	compression Compression
+	timeout     time.Duration
+	urlPath     string
+}
+
 type config struct {
-	endpoint       string
-	compression    Compression
-	tracesURLPath  string
-	metricsURLPath string
-	maxAttempts    int
-	backoff        time.Duration
-	tlsCfg         *tls.Config
-	insecure       bool
-	headers        map[string]string
-	marshaler      Marshaler
+	metrics signalConfig
+	traces  signalConfig
+
+	maxAttempts int
+	backoff     time.Duration
+	marshaler   Marshaler
+}
+
+func newDefaultConfig() config {
+	c := config{
+		traces: signalConfig{
+			endpoint:    fmt.Sprintf("%s:%d", otlp.DefaultCollectorHost, otlp.DefaultCollectorPort),
+			urlPath:     DefaultTracesPath,
+			compression: NoCompression,
+			timeout:     DefaultTimeout,
+		},
+		metrics: signalConfig{
+			endpoint:    fmt.Sprintf("%s:%d", otlp.DefaultCollectorHost, otlp.DefaultCollectorPort),
+			urlPath:     DefaultMetricsPath,
+			compression: NoCompression,
+			timeout:     DefaultTimeout,
+		},
+		maxAttempts: DefaultMaxAttempts,
+		backoff:     DefaultBackoff,
+	}
+
+	return c
 }
 
 // Option applies an option to the HTTP driver.
@@ -81,13 +114,19 @@ type Option interface {
 	private()
 }
 
-type endpointOption string
-
-func (o endpointOption) Apply(cfg *config) {
-	cfg.endpoint = (string)(o)
+type genericOption struct {
+	fn func(*config)
 }
 
-func (endpointOption) private() {}
+func (g *genericOption) Apply(cfg *config) {
+	g.fn(cfg)
+}
+
+func (genericOption) private() {}
+
+func newGenericOption(fn func(cfg *config)) Option {
+	return &genericOption{fn: fn}
+}
 
 // WithEndpoint allows one to set the address of the collector
 // endpoint that the driver will use to send metrics and spans. If
@@ -95,133 +134,180 @@ func (endpointOption) private() {}
 // DefaultCollectorHost:DefaultCollectorPort. Note that the endpoint
 // must not contain any URL path.
 func WithEndpoint(endpoint string) Option {
-	return (endpointOption)(endpoint)
+	return newGenericOption(func(cfg *config) {
+		cfg.traces.endpoint = endpoint
+		cfg.metrics.endpoint = endpoint
+	})
 }
 
-type compressionOption Compression
-
-func (o compressionOption) Apply(cfg *config) {
-	cfg.compression = (Compression)(o)
+// WithTracesEndpoint allows one to set the address of the collector
+// endpoint that the driver will use to send spans. If
+// unset, it will instead try to use the Endpoint configuration.
+// Note that the endpoint must not contain any URL path.
+func WithTracesEndpoint(endpoint string) Option {
+	return newGenericOption(func(cfg *config) {
+		cfg.traces.endpoint = endpoint
+	})
 }
 
-func (compressionOption) private() {}
+// WithMetricsEndpoint allows one to set the address of the collector
+// endpoint that the driver will use to send metrics. If
+// unset, it will instead try to use the Endpoint configuration.
+// Note that the endpoint must not contain any URL path.
+func WithMetricsEndpoint(endpoint string) Option {
+	return newGenericOption(func(cfg *config) {
+		cfg.metrics.endpoint = endpoint
+	})
+}
 
 // WithCompression tells the driver to compress the sent data.
 func WithCompression(compression Compression) Option {
-	return (compressionOption)(compression)
+	return newGenericOption(func(cfg *config) {
+		cfg.traces.compression = compression
+		cfg.metrics.compression = compression
+	})
 }
 
-type tracesURLPathOption string
-
-func (o tracesURLPathOption) Apply(cfg *config) {
-	cfg.tracesURLPath = (string)(o)
+// WithTracesCompression tells the driver to compress the sent traces data.
+func WithTracesCompression(compression Compression) Option {
+	return newGenericOption(func(cfg *config) {
+		cfg.traces.compression = compression
+	})
 }
 
-func (tracesURLPathOption) private() {}
+// WithMetricsCompression tells the driver to compress the sent metrics data.
+func WithMetricsCompression(compression Compression) Option {
+	return newGenericOption(func(cfg *config) {
+		cfg.metrics.compression = compression
+	})
+}
 
 // WithTracesURLPath allows one to override the default URL path used
 // for sending traces. If unset, DefaultTracesPath will be used.
 func WithTracesURLPath(urlPath string) Option {
-	return (tracesURLPathOption)(urlPath)
+	return newGenericOption(func(cfg *config) {
+		cfg.traces.urlPath = urlPath
+	})
 }
-
-type metricsURLPathOption string
-
-func (o metricsURLPathOption) Apply(cfg *config) {
-	cfg.metricsURLPath = (string)(o)
-}
-
-func (metricsURLPathOption) private() {}
 
 // WithMetricsURLPath allows one to override the default URL path used
 // for sending metrics. If unset, DefaultMetricsPath will be used.
 func WithMetricsURLPath(urlPath string) Option {
-	return (metricsURLPathOption)(urlPath)
+	return newGenericOption(func(cfg *config) {
+		cfg.metrics.urlPath = urlPath
+	})
 }
-
-type maxAttemptsOption int
-
-func (o maxAttemptsOption) Apply(cfg *config) {
-	cfg.maxAttempts = (int)(o)
-}
-
-func (maxAttemptsOption) private() {}
 
 // WithMaxAttempts allows one to override how many times the driver
 // will try to send the payload in case of retryable errors. If unset,
 // DefaultMaxAttempts will be used.
 func WithMaxAttempts(maxAttempts int) Option {
-	return maxAttemptsOption(maxAttempts)
+	return newGenericOption(func(cfg *config) {
+		cfg.maxAttempts = maxAttempts
+	})
 }
-
-type backoffOption time.Duration
-
-func (o backoffOption) Apply(cfg *config) {
-	cfg.backoff = (time.Duration)(o)
-}
-
-func (backoffOption) private() {}
 
 // WithBackoff tells the driver to use the duration as a base of the
 // exponential backoff strategy. If unset, DefaultBackoff will be
 // used.
 func WithBackoff(duration time.Duration) Option {
-	return (backoffOption)(duration)
+	return newGenericOption(func(cfg *config) {
+		cfg.backoff = duration
+	})
 }
-
-type tlsClientConfigOption tls.Config
-
-func (o *tlsClientConfigOption) Apply(cfg *config) {
-	cfg.tlsCfg = (*tls.Config)(o)
-}
-
-func (*tlsClientConfigOption) private() {}
 
 // WithTLSClientConfig can be used to set up a custom TLS
 // configuration for the client used to send payloads to the
 // collector. Use it if you want to use a custom certificate.
 func WithTLSClientConfig(tlsCfg *tls.Config) Option {
-	return (*tlsClientConfigOption)(tlsCfg)
+	return newGenericOption(func(cfg *config) {
+		cfg.traces.tlsCfg = tlsCfg
+		cfg.metrics.tlsCfg = tlsCfg
+	})
 }
-
-type insecureOption struct{}
-
-func (insecureOption) Apply(cfg *config) {
-	cfg.insecure = true
-}
-
-func (insecureOption) private() {}
 
 // WithInsecure tells the driver to connect to the collector using the
 // HTTP scheme, instead of HTTPS.
 func WithInsecure() Option {
-	return insecureOption{}
+	return newGenericOption(func(cfg *config) {
+		cfg.traces.insecure = true
+		cfg.metrics.insecure = true
+	})
 }
 
-type headersOption map[string]string
-
-func (o headersOption) Apply(cfg *config) {
-	cfg.headers = (map[string]string)(o)
+// WithInsecureTraces tells the driver to connect to the traces collector using the
+// HTTP scheme, instead of HTTPS.
+func WithInsecureTraces() Option {
+	return newGenericOption(func(cfg *config) {
+		cfg.traces.insecure = true
+	})
 }
 
-func (headersOption) private() {}
+// WithInsecure tells the driver to connect to the metrics collector using the
+// HTTP scheme, instead of HTTPS.
+func WithInsecureMetrics() Option {
+	return newGenericOption(func(cfg *config) {
+		cfg.metrics.insecure = true
+	})
+}
 
 // WithHeaders allows one to tell the driver to send additional HTTP
 // headers with the payloads. Specifying headers like Content-Length,
 // Content-Encoding and Content-Type may result in a broken driver.
 func WithHeaders(headers map[string]string) Option {
-	return (headersOption)(headers)
+	return newGenericOption(func(cfg *config) {
+		cfg.traces.headers = headers
+		cfg.metrics.headers = headers
+	})
 }
 
-type marshalerOption Marshaler
-
-func (o marshalerOption) Apply(cfg *config) {
-	cfg.marshaler = Marshaler(o)
+// WithTracesHeaders allows one to tell the driver to send additional HTTP
+// headers with the trace payloads. Specifying headers like Content-Length,
+// Content-Encoding and Content-Type may result in a broken driver.
+func WithTracesHeaders(headers map[string]string) Option {
+	return newGenericOption(func(cfg *config) {
+		cfg.traces.headers = headers
+	})
 }
-func (marshalerOption) private() {}
+
+// WithMetricsHeaders allows one to tell the driver to send additional HTTP
+// headers with the metrics payloads. Specifying headers like Content-Length,
+// Content-Encoding and Content-Type may result in a broken driver.
+func WithMetricsHeaders(headers map[string]string) Option {
+	return newGenericOption(func(cfg *config) {
+		cfg.metrics.headers = headers
+	})
+}
 
 // WithMarshal tells the driver which wire format to use when sending to the
 // collector.  If unset, MarshalProto will be used
 func WithMarshal(m Marshaler) Option {
-	return marshalerOption(m)
+	return newGenericOption(func(cfg *config) {
+		cfg.marshaler = m
+	})
+}
+
+// WithTimeout tells the driver the max waiting time for the backend to process
+// each spans or metrics batch.  If unset, the default will be 10 seconds.
+func WithTimeout(duration time.Duration) Option {
+	return newGenericOption(func(cfg *config) {
+		cfg.traces.timeout = duration
+		cfg.metrics.timeout = duration
+	})
+}
+
+// WithTracesTimeout tells the driver the max waiting time for the backend to process
+// each spans batch.  If unset, the default will be 10 seconds.
+func WithTracesTimeout(duration time.Duration) Option {
+	return newGenericOption(func(cfg *config) {
+		cfg.traces.timeout = duration
+	})
+}
+
+// WithMetricsTimeout tells the driver the max waiting time for the backend to process
+// each metrics batch.  If unset, the default will be 10 seconds.
+func WithMetricsTimeout(duration time.Duration) Option {
+	return newGenericOption(func(cfg *config) {
+		cfg.metrics.timeout = duration
+	})
 }
