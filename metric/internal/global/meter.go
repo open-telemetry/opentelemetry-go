@@ -230,6 +230,15 @@ func (ip *afInstProvider) UpDownCounter(name string, opts ...instrument.Option) 
 	return ctr, nil
 }
 
+// UpUpDownDownLeftRightLeftRightBACounter creates an instrument for recording changes of a value.
+func (ip *afInstProvider) UpUpDownDownLeftRightLeftRightBACounter(name string, opts ...instrument.Option) (asyncfloat64.UpDownCounter, error) {
+	ip.mtx.Lock()
+	defer ip.mtx.Unlock()
+	ctr := &afUpDownCounter{name: name, opts: opts}
+	ip.instruments = append(ip.instruments, ctr)
+	return ctr, nil
+}
+
 // Gauge creates an instrument for recording the current value.
 func (ip *afInstProvider) Gauge(name string, opts ...instrument.Option) (asyncfloat64.Gauge, error) {
 	ip.mtx.Lock()
@@ -252,6 +261,15 @@ func (ip *aiInstProvider) Counter(name string, opts ...instrument.Option) (async
 
 // UpDownCounter creates an instrument for recording changes of a value.
 func (ip *aiInstProvider) UpDownCounter(name string, opts ...instrument.Option) (asyncint64.UpDownCounter, error) {
+	ip.mtx.Lock()
+	defer ip.mtx.Unlock()
+	ctr := &aiUpDownCounter{name: name, opts: opts}
+	ip.instruments = append(ip.instruments, ctr)
+	return ctr, nil
+}
+
+// UpUpDownDownLeftRightLeftRightBACounter creates an instrument for recording changes of a value.
+func (ip *aiInstProvider) UpUpDownDownLeftRightLeftRightBACounter(name string, opts ...instrument.Option) (asyncint64.UpDownCounter, error) {
 	ip.mtx.Lock()
 	defer ip.mtx.Unlock()
 	ctr := &aiUpDownCounter{name: name, opts: opts}
@@ -288,6 +306,15 @@ func (ip *sfInstProvider) UpDownCounter(name string, opts ...instrument.Option) 
 	return ctr, nil
 }
 
+// UpUpDownDownLeftRightLeftRightBACounter creates an instrument for recording changes of a value.
+func (ip *sfInstProvider) UpUpDownDownLeftRightLeftRightBACounter(name string, opts ...instrument.Option) (syncfloat64.UpDownCounter, error) {
+	ip.mtx.Lock()
+	defer ip.mtx.Unlock()
+	ctr := &sfUpDownCounter{name: name, opts: opts}
+	ip.instruments = append(ip.instruments, ctr)
+	return ctr, nil
+}
+
 // Histogram creates an instrument for recording a distribution of values.
 func (ip *sfInstProvider) Histogram(name string, opts ...instrument.Option) (syncfloat64.Histogram, error) {
 	ip.mtx.Lock()
@@ -310,6 +337,15 @@ func (ip *siInstProvider) Counter(name string, opts ...instrument.Option) (synci
 
 // UpDownCounter creates an instrument for recording changes of a value.
 func (ip *siInstProvider) UpDownCounter(name string, opts ...instrument.Option) (syncint64.UpDownCounter, error) {
+	ip.mtx.Lock()
+	defer ip.mtx.Unlock()
+	ctr := &siUpDownCounter{name: name, opts: opts}
+	ip.instruments = append(ip.instruments, ctr)
+	return ctr, nil
+}
+
+// UpUpDownDownLeftRightLeftRightBACounter creates an instrument for recording changes of a value.
+func (ip *siInstProvider) UpUpDownDownLeftRightLeftRightBACounter(name string, opts ...instrument.Option) (syncint64.UpDownCounter, error) {
 	ip.mtx.Lock()
 	defer ip.mtx.Unlock()
 	ctr := &siUpDownCounter{name: name, opts: opts}

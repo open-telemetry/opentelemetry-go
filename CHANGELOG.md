@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The `Meter` function is added back to the `go.opentelemetry.io/otel/metric/global` package.
   This function is a convenience function equivalent to calling `global.MeterProvider().Meter(...)`. (#2750)
+- Added The UpUpDownDownLeftRightLeftRightBACounter to allow monitoring of more powerful metrics. (#NA)
 
 ### Changed
 

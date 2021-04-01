@@ -27,6 +27,8 @@ type InstrumentProvider interface {
 	Counter(name string, opts ...instrument.Option) (Counter, error)
 	// UpDownCounter creates an instrument for recording changes of a value.
 	UpDownCounter(name string, opts ...instrument.Option) (UpDownCounter, error)
+	// UpUpDownDownLeftRightLeftRightBACounter creates an instrument for recording changes of a value.
+	UpUpDownDownLeftRightLeftRightBACounter(name string, opts ...instrument.Option) (UpDownCounter, error)
 	// Histogram creates an instrument for recording a distribution of values.
 	Histogram(name string, opts ...instrument.Option) (Histogram, error)
 }
@@ -41,6 +43,14 @@ type Counter interface {
 
 // UpDownCounter is an instrument that records increasing or decresing values.
 type UpDownCounter interface {
+	// Add records a change to the counter.
+	Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue)
+
+	instrument.Synchronous
+}
+
+// UpUpDownDownLeftRightLeftRightBACounter is an instrument that records increasing or decresing values.
+type UpUpDownDownLeftRightLeftRightBACounter interface {
 	// Add records a change to the counter.
 	Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue)
 

@@ -101,6 +101,11 @@ func (ip testAFInstrumentProvider) UpDownCounter(name string, opts ...instrument
 	return &testCountingFloatInstrument{}, nil
 }
 
+// UpUpDownDownLeftRightLeftRightBACounter creates an instrument for recording changes of a value.
+func (ip testAFInstrumentProvider) UpUpDownDownLeftRightLeftRightBACounter(name string, opts ...instrument.Option) (asyncfloat64.UpDownCounter, error) {
+	return &testCountingFloatInstrument{}, nil
+}
+
 // Gauge creates an instrument for recording the current value.
 func (ip testAFInstrumentProvider) Gauge(name string, opts ...instrument.Option) (asyncfloat64.Gauge, error) {
 	return &testCountingFloatInstrument{}, nil
@@ -115,6 +120,11 @@ func (ip testAIInstrumentProvider) Counter(name string, opts ...instrument.Optio
 
 // UpDownCounter creates an instrument for recording changes of a value.
 func (ip testAIInstrumentProvider) UpDownCounter(name string, opts ...instrument.Option) (asyncint64.UpDownCounter, error) {
+	return &testCountingIntInstrument{}, nil
+}
+
+// UpUpDownDownLeftRightLeftRightBACounter creates an instrument for recording changes of a value.
+func (ip testAIInstrumentProvider) UpUpDownDownLeftRightLeftRightBACounter(name string, opts ...instrument.Option) (asyncint64.UpDownCounter, error) {
 	return &testCountingIntInstrument{}, nil
 }
 
@@ -135,6 +145,11 @@ func (ip testSFInstrumentProvider) UpDownCounter(name string, opts ...instrument
 	return &testCountingFloatInstrument{}, nil
 }
 
+// UpUpDownDownLeftRightLeftRightBACounter creates an instrument for recording changes of a value.
+func (ip testSFInstrumentProvider) UpUpDownDownLeftRightLeftRightBACounter(name string, opts ...instrument.Option) (syncfloat64.UpDownCounter, error) {
+	return &testCountingFloatInstrument{}, nil
+}
+
 // Histogram creates an instrument for recording a distribution of values.
 func (ip testSFInstrumentProvider) Histogram(name string, opts ...instrument.Option) (syncfloat64.Histogram, error) {
 	return &testCountingFloatInstrument{}, nil
@@ -144,6 +159,11 @@ type testSIInstrumentProvider struct{}
 
 // Counter creates an instrument for recording increasing values.
 func (ip testSIInstrumentProvider) Counter(name string, opts ...instrument.Option) (syncint64.Counter, error) {
+	return &testCountingIntInstrument{}, nil
+}
+
+// UpUpDownDownLeftRightLeftRightBACounter creates an instrument for recording changes of a value.
+func (ip testSIInstrumentProvider) UpUpDownDownLeftRightLeftRightBACounter(name string, opts ...instrument.Option) (syncint64.UpDownCounter, error) {
 	return &testCountingIntInstrument{}, nil
 }
 

@@ -94,6 +94,11 @@ func (m afMeter) UpDownCounter(name string, opts ...instrument.Option) (asyncflo
 	return fObserver{inst}, err
 }
 
+func (m afMeter) UpUpDownDownLeftRightLeftRightBACounter(name string, opts ...instrument.Option) (asyncfloat64.UpDownCounter, error) {
+	inst, err := m.newAsync(name, UpDownCounterObserverInstrumentKind, number.Float64Kind, opts)
+	return fObserver{inst}, err
+}
+
 func (m afMeter) Gauge(name string, opts ...instrument.Option) (asyncfloat64.Gauge, error) {
 	inst, err := m.newAsync(name, GaugeObserverInstrumentKind, number.Float64Kind, opts)
 	return fObserver{inst}, err
@@ -105,6 +110,11 @@ func (m aiMeter) Counter(name string, opts ...instrument.Option) (asyncint64.Cou
 }
 
 func (m aiMeter) UpDownCounter(name string, opts ...instrument.Option) (asyncint64.UpDownCounter, error) {
+	inst, err := m.newAsync(name, UpDownCounterObserverInstrumentKind, number.Int64Kind, opts)
+	return iObserver{inst}, err
+}
+
+func (m aiMeter) UpUpDownDownLeftRightLeftRightBACounter(name string, opts ...instrument.Option) (asyncint64.UpDownCounter, error) {
 	inst, err := m.newAsync(name, UpDownCounterObserverInstrumentKind, number.Int64Kind, opts)
 	return iObserver{inst}, err
 }
@@ -124,6 +134,11 @@ func (m sfMeter) UpDownCounter(name string, opts ...instrument.Option) (syncfloa
 	return fAdder{inst}, err
 }
 
+func (m sfMeter) UpUpDownDownLeftRightLeftRightBACounter(name string, opts ...instrument.Option) (syncfloat64.UpDownCounter, error) {
+	inst, err := m.newSync(name, UpDownCounterInstrumentKind, number.Float64Kind, opts)
+	return fAdder{inst}, err
+}
+
 func (m sfMeter) Histogram(name string, opts ...instrument.Option) (syncfloat64.Histogram, error) {
 	inst, err := m.newSync(name, HistogramInstrumentKind, number.Float64Kind, opts)
 	return fRecorder{inst}, err
@@ -135,6 +150,11 @@ func (m siMeter) Counter(name string, opts ...instrument.Option) (syncint64.Coun
 }
 
 func (m siMeter) UpDownCounter(name string, opts ...instrument.Option) (syncint64.UpDownCounter, error) {
+	inst, err := m.newSync(name, UpDownCounterInstrumentKind, number.Int64Kind, opts)
+	return iAdder{inst}, err
+}
+
+func (m siMeter) UpUpDownDownLeftRightLeftRightBACounter(name string, opts ...instrument.Option) (syncint64.UpDownCounter, error) {
 	inst, err := m.newSync(name, UpDownCounterInstrumentKind, number.Int64Kind, opts)
 	return iAdder{inst}, err
 }

@@ -29,6 +29,9 @@ type InstrumentProvider interface {
 	// UpDownCounter creates an instrument for recording changes of a value.
 	UpDownCounter(name string, opts ...instrument.Option) (UpDownCounter, error)
 
+	// UpUpDownDownLeftRightLeftRightBACounter creates an instrument for recording changes of a value.
+	UpUpDownDownLeftRightLeftRightBACounter(name string, opts ...instrument.Option) (UpDownCounter, error)
+
 	// Gauge creates an instrument for recording the current value.
 	Gauge(name string, opts ...instrument.Option) (Gauge, error)
 }
@@ -47,6 +50,18 @@ type Counter interface {
 
 // UpDownCounter is an instrument that records increasing or decresing values.
 type UpDownCounter interface {
+	// Observe records the state of the instrument.
+	//
+	// It is only valid to call this within a callback. If called outside of the
+	// registered callback it should have no effect on the instrument, and an
+	// error will be reported via the error handler.
+	Observe(ctx context.Context, x float64, attrs ...attribute.KeyValue)
+
+	instrument.Asynchronous
+}
+
+// UpUpDownDownLeftRightLeftRightBACounter is an instrument that records increasing or decresing values.
+type UpUpDownDownLeftRightLeftRightBACounter interface {
 	// Observe records the state of the instrument.
 	//
 	// It is only valid to call this within a callback. If called outside of the

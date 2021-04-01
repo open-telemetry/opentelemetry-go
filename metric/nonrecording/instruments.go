@@ -44,6 +44,10 @@ func (n nonrecordingAsyncFloat64Instrument) UpDownCounter(name string, opts ...i
 	return n, nil
 }
 
+func (n nonrecordingAsyncFloat64Instrument) UpUpDownDownLeftRightLeftRightBACounter(name string, opts ...instrument.Option) (asyncfloat64.UpDownCounter, error) {
+	return n, nil
+}
+
 func (n nonrecordingAsyncFloat64Instrument) Gauge(name string, opts ...instrument.Option) (asyncfloat64.Gauge, error) {
 	return n, nil
 }
@@ -71,6 +75,10 @@ func (n nonrecordingAsyncInt64Instrument) UpDownCounter(name string, opts ...ins
 	return n, nil
 }
 
+func (n nonrecordingAsyncInt64Instrument) UpUpDownDownLeftRightLeftRightBACounter(name string, opts ...instrument.Option) (asyncint64.UpDownCounter, error) {
+	return n, nil
+}
+
 func (n nonrecordingAsyncInt64Instrument) Gauge(name string, opts ...instrument.Option) (asyncint64.Gauge, error) {
 	return n, nil
 }
@@ -94,6 +102,10 @@ func (n nonrecordingSyncFloat64Instrument) Counter(name string, opts ...instrume
 }
 
 func (n nonrecordingSyncFloat64Instrument) UpDownCounter(name string, opts ...instrument.Option) (syncfloat64.UpDownCounter, error) {
+	return n, nil
+}
+
+func (n nonrecordingSyncFloat64Instrument) UpUpDownDownLeftRightLeftRightBACounter(name string, opts ...instrument.Option) (syncfloat64.UpDownCounter, error) {
 	return n, nil
 }
 
@@ -125,6 +137,10 @@ func (n nonrecordingSyncInt64Instrument) Counter(name string, opts ...instrument
 }
 
 func (n nonrecordingSyncInt64Instrument) UpDownCounter(name string, opts ...instrument.Option) (syncint64.UpDownCounter, error) {
+	return n, nil
+}
+
+func (n nonrecordingSyncInt64Instrument) UpUpDownDownLeftRightLeftRightBACounter(name string, opts ...instrument.Option) (syncint64.UpDownCounter, error) {
 	return n, nil
 }
 
