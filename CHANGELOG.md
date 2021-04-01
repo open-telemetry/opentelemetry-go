@@ -23,8 +23,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `OTEL_EXPORTER_OTLP_TIMEOUT`
   - `OTEL_EXPORTER_OTLP_TRACES_TIMEOUT`
   - `OTEL_EXPORTER_OTLP_METRICS_TIMEOUT`
-- The `Event` and `Link` struct types from the `go.opentelemetry.io/otel` package now include a `DroppedAttributeCount` field to record the number of attributes that were not recorded due to configured limits being reached. (TBD)
-- The Jaeger exporter now reports dropped attributes for a Span event in the exported log. (TBD)
+- The `Event` and `Link` struct types from the `go.opentelemetry.io/otel` package now include a `DroppedAttributeCount` field to record the number of attributes that were not recorded due to configured limits being reached. (#1771)
+- The Jaeger exporter now reports dropped attributes for a Span event in the exported log. (#1771)
  
 ### Fixed
 
@@ -47,7 +47,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Modify `BatchSpanProcessor.ForceFlush` to abort after timeout/cancellation. (#1757)
 - Improve OTLP/gRPC exporter connection errors. (#1737)
 - The `DroppedAttributeCount` field of the `Span` in the `go.opentelemetry.io/otel` package now only represents the number of attributes dropped for the span itself.
-  It no longer is a conglomerate of itself, events, and link attributes that have been dropped. (TBD)
+  It no longer is a conglomerate of itself, events, and link attributes that have been dropped. (#1771)
 
 ### Removed
 
