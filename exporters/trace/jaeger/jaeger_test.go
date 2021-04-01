@@ -364,6 +364,40 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 		want *gen.Span
 	}{
 		{
+			name: "no status description",
+			data: &export.SpanSnapshot{
+				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID: traceID,
+					SpanID:  spanID,
+				}),
+				Name:       "/foo",
+				StartTime:  now,
+				EndTime:    now,
+				StatusCode: codes.Error,
+				SpanKind:   trace.SpanKindClient,
+				InstrumentationLibrary: instrumentation.Library{
+					Name:    instrLibName,
+					Version: instrLibVersion,
+				},
+			},
+			want: &gen.Span{
+				TraceIdLow:    651345242494996240,
+				TraceIdHigh:   72623859790382856,
+				SpanId:        72623859790382856,
+				OperationName: "/foo",
+				StartTime:     now.UnixNano() / 1000,
+				Duration:      0,
+				Tags: []*gen.Tag{
+					{Key: keyError, VType: gen.TagType_BOOL, VBool: &boolTrue},
+					{Key: keyInstrumentationLibraryName, VType: gen.TagType_STRING, VStr: &instrLibName},
+					{Key: keyInstrumentationLibraryVersion, VType: gen.TagType_STRING, VStr: &instrLibVersion},
+					{Key: keyStatusCode, VType: gen.TagType_LONG, VLong: &statusCodeValue},
+					// Should not have a status message because it was unset
+					{Key: keySpanKind, VType: gen.TagType_STRING, VStr: &spanKind},
+				},
+			},
+		},
+		{
 			name: "no parent",
 			data: &export.SpanSnapshot{
 				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
@@ -408,12 +442,12 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 					{Key: "double", VType: gen.TagType_DOUBLE, VDouble: &doubleValue},
 					{Key: "key", VType: gen.TagType_STRING, VStr: &keyValue},
 					{Key: "int", VType: gen.TagType_LONG, VLong: &intValue},
-					{Key: "error", VType: gen.TagType_BOOL, VBool: &boolTrue},
-					{Key: "otel.library.name", VType: gen.TagType_STRING, VStr: &instrLibName},
-					{Key: "otel.library.version", VType: gen.TagType_STRING, VStr: &instrLibVersion},
-					{Key: "status.code", VType: gen.TagType_LONG, VLong: &statusCodeValue},
-					{Key: "status.message", VType: gen.TagType_STRING, VStr: &statusMessage},
-					{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
+					{Key: keyError, VType: gen.TagType_BOOL, VBool: &boolTrue},
+					{Key: keyInstrumentationLibraryName, VType: gen.TagType_STRING, VStr: &instrLibName},
+					{Key: keyInstrumentationLibraryVersion, VType: gen.TagType_STRING, VStr: &instrLibVersion},
+					{Key: keyStatusCode, VType: gen.TagType_LONG, VLong: &statusCodeValue},
+					{Key: keyStatusMessage, VType: gen.TagType_STRING, VStr: &statusMessage},
+					{Key: keySpanKind, VType: gen.TagType_STRING, VStr: &spanKind},
 				},
 				References: []*gen.SpanRef{
 					{
@@ -486,8 +520,8 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 				Tags: []*gen.Tag{
 					// status code, message and span kind should NOT be populated
 					{Key: "arr", VType: gen.TagType_STRING, VStr: &arrValue},
-					{Key: "otel.library.name", VType: gen.TagType_STRING, VStr: &instrLibName},
-					{Key: "otel.library.version", VType: gen.TagType_STRING, VStr: &instrLibVersion},
+					{Key: keyInstrumentationLibraryName, VType: gen.TagType_STRING, VStr: &instrLibName},
+					{Key: keyInstrumentationLibraryVersion, VType: gen.TagType_STRING, VStr: &instrLibVersion},
 				},
 				References: []*gen.SpanRef{
 					{
@@ -535,8 +569,8 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 				StartTime:     now.UnixNano() / 1000,
 				Duration:      0,
 				Tags: []*gen.Tag{
-					{Key: "otel.library.name", VType: gen.TagType_STRING, VStr: &instrLibName},
-					{Key: "otel.library.version", VType: gen.TagType_STRING, VStr: &instrLibVersion},
+					{Key: keyInstrumentationLibraryName, VType: gen.TagType_STRING, VStr: &instrLibName},
+					{Key: keyInstrumentationLibraryVersion, VType: gen.TagType_STRING, VStr: &instrLibVersion},
 				},
 			},
 		},
@@ -649,7 +683,7 @@ func TestJaegerBatchList(t *testing.T) {
 						{
 							OperationName: "s1",
 							Tags: []*gen.Tag{
-								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
+								{Key: keySpanKind, VType: gen.TagType_STRING, VStr: &spanKind},
 							},
 							StartTime: now.UnixNano() / 1000,
 						},
