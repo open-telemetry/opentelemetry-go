@@ -90,7 +90,7 @@ func TestNewExportPipeline(t *testing.T) {
 			if tc.testSpanSampling {
 				_, span := tp.Tracer("zipkin test").Start(context.Background(), tc.name)
 				spanCtx := span.SpanContext()
-				assert.Equal(t, tc.spanShouldBeSampled, spanCtx.IsSampled())
+				assert.Equal(t, tc.spanShouldBeSampled, spanCtx.TraceFlags().IsSampled())
 				span.End()
 			}
 		})
