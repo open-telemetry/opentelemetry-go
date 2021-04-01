@@ -29,14 +29,12 @@ func TestNewRawExporterWithEnv(t *testing.T) {
 		collectorEndpoint = "http://localhost"
 		username          = "user"
 		password          = "password"
-		disabled          = "false"
 	)
 
 	envStore, err := ottest.SetEnvVariables(map[string]string{
 		envEndpoint: collectorEndpoint,
 		envUser:     username,
 		envPassword: password,
-		envDisabled: disabled,
 	})
 	require.NoError(t, err)
 	defer func() {
@@ -46,12 +44,9 @@ func TestNewRawExporterWithEnv(t *testing.T) {
 	// Create Jaeger Exporter with environment variables
 	exp, err := NewRawExporter(
 		WithCollectorEndpoint(CollectorEndpointFromEnv(), WithCollectorEndpointOptionFromEnv()),
-		WithDisabled(true),
-		WithDisabledFromEnv(),
 	)
 
 	assert.NoError(t, err)
-	assert.Equal(t, false, exp.o.Disabled)
 	require.IsType(t, &collectorUploader{}, exp.uploader)
 	uploader := exp.uploader.(*collectorUploader)
 	assert.Equal(t, collectorEndpoint, uploader.endpoint)
@@ -64,14 +59,12 @@ func TestNewRawExporterWithEnvImplicitly(t *testing.T) {
 		collectorEndpoint = "http://localhost"
 		username          = "user"
 		password          = "password"
-		disabled          = "false"
 	)
 
 	envStore, err := ottest.SetEnvVariables(map[string]string{
 		envEndpoint: collectorEndpoint,
 		envUser:     username,
 		envPassword: password,
-		envDisabled: disabled,
 	})
 	require.NoError(t, err)
 	defer func() {
@@ -81,18 +74,69 @@ func TestNewRawExporterWithEnvImplicitly(t *testing.T) {
 	// Create Jaeger Exporter with environment variables
 	exp, err := NewRawExporter(
 		WithCollectorEndpoint("should be overwritten"),
-		WithDisabled(true),
 	)
 
 	assert.NoError(t, err)
-	// NewRawExporter will ignore Disabled env
-	assert.Equal(t, true, exp.o.Disabled)
 
 	require.IsType(t, &collectorUploader{}, exp.uploader)
 	uploader := exp.uploader.(*collectorUploader)
 	assert.Equal(t, collectorEndpoint, uploader.endpoint)
 	assert.Equal(t, username, uploader.username)
 	assert.Equal(t, password, uploader.password)
+}
+
+func TestWithAgentEndpointOptionFromEnv(t *testing.T) {
+	testCases := []struct {
+		name             string
+		envAgentHost     string
+		envAgentPort     string
+		hostPort         string
+		expectedHostPort string
+	}{
+		{
+			name:             "overrides HostPort value via environment variables",
+			envAgentHost:     "localhost",
+			envAgentPort:     "6832",
+			hostPort:         "hostNameToBeReplaced:8203",
+			expectedHostPort: "localhost:6832",
+		},
+		{
+			name:             "envAgentHost is empty, will not overwrite HostPort value",
+			envAgentHost:     "",
+			envAgentPort:     "6832",
+			hostPort:         "hostNameNotToBeReplaced:8203",
+			expectedHostPort: "hostNameNotToBeReplaced:8203",
+		},
+		{
+			name:             "envAgentPort is empty, will not overwrite HostPort value",
+			envAgentHost:     "localhost",
+			envAgentPort:     "",
+			hostPort:         "hostNameNotToBeReplaced:8203",
+			expectedHostPort: "hostNameNotToBeReplaced:8203",
+		},
+		{
+			name:             "envAgentHost and envAgentPort are empty, will not overwrite HostPort value",
+			envAgentHost:     "",
+			envAgentPort:     "",
+			hostPort:         "hostNameNotToBeReplaced:8203",
+			expectedHostPort: "hostNameNotToBeReplaced:8203",
+		},
+	}
+
+	envStore := ottest.NewEnvStore()
+	envStore.Record(envAgentHost)
+	envStore.Record(envAgentPort)
+	defer func() {
+		require.NoError(t, envStore.Restore())
+	}()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.NoError(t, os.Setenv(envAgentHost, tc.envAgentHost))
+			require.NoError(t, os.Setenv(envAgentPort, tc.envAgentPort))
+			AgentEndpointOptionFromEnv(&tc.hostPort)
+			assert.Equal(t, tc.hostPort, tc.expectedHostPort)
+		})
+	}
 }
 
 func TestCollectorEndpointFromEnv(t *testing.T) {
@@ -162,44 +206,6 @@ func TestWithCollectorEndpointOptionFromEnv(t *testing.T) {
 			f(&tc.collectorEndpointOptions)
 
 			assert.Equal(t, tc.expectedCollectorEndpointOptions, tc.collectorEndpointOptions)
-		})
-	}
-}
-
-func TestWithDisabledFromEnv(t *testing.T) {
-	testCases := []struct {
-		name            string
-		env             string
-		options         options
-		expectedOptions options
-	}{
-		{
-			name:            "overwriting",
-			env:             "true",
-			options:         options{},
-			expectedOptions: options{Disabled: true},
-		},
-		{
-			name:            "no overwriting",
-			env:             "",
-			options:         options{Disabled: true},
-			expectedOptions: options{Disabled: true},
-		},
-	}
-
-	envStore := ottest.NewEnvStore()
-	envStore.Record(envDisabled)
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			require.NoError(t, os.Setenv(envDisabled, tc.env))
-
-			f := WithDisabledFromEnv()
-			f(&tc.options)
-
-			assert.Equal(t, tc.expectedOptions, tc.options)
 		})
 	}
 }

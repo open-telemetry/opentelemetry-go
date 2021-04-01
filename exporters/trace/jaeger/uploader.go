@@ -41,6 +41,9 @@ type EndpointOption func() (batchUploader, error)
 // For example, localhost:6831.
 func WithAgentEndpoint(agentEndpoint string, options ...AgentEndpointOption) EndpointOption {
 	return func() (batchUploader, error) {
+		// Overwrite agent endpoint if environment variables are available.
+		AgentEndpointOptionFromEnv(&agentEndpoint)
+
 		if agentEndpoint == "" {
 			return nil, errors.New("agentEndpoint must not be empty")
 		}

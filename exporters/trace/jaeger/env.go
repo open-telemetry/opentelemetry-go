@@ -15,14 +15,18 @@
 package jaeger // import "go.opentelemetry.io/otel/exporters/trace/jaeger"
 
 import (
+	"fmt"
 	"os"
-	"strconv"
 )
 
 // Environment variable names
 const (
-	// Whether the exporter is disabled or not. (default false).
-	envDisabled = "OTEL_EXPORTER_JAEGER_DISABLED"
+	// Hostname for the Jaeger agent, part of address where exporter sends spans
+	// i.e.	"localhost"
+	envAgentHost = "OTEL_EXPORTER_JAEGER_AGENT_HOST"
+	// Port for the Jaeger agent, part of address where exporter sends spans
+	// i.e. 6832
+	envAgentPort = "OTEL_EXPORTER_JAEGER_AGENT_PORT"
 	// The HTTP endpoint for sending spans directly to a collector,
 	// i.e. http://jaeger-collector:14268/api/traces.
 	envEndpoint = "OTEL_EXPORTER_JAEGER_ENDPOINT"
@@ -31,6 +35,13 @@ const (
 	// Password to send as part of "Basic" authentication to the collector endpoint.
 	envPassword = "OTEL_EXPORTER_JAEGER_PASSWORD"
 )
+
+// AgentEndpointOptionFromEnv uses environment variables to return the Jaeger agent hostport
+func AgentEndpointOptionFromEnv(e *string) {
+	if h, p := os.Getenv(envAgentHost), os.Getenv(envAgentPort); h != "" && p != "" {
+		*e = fmt.Sprintf("%s:%s", h, p)
+	}
+}
 
 // CollectorEndpointFromEnv return environment variable value of JAEGER_ENDPOINT
 func CollectorEndpointFromEnv() string {
@@ -45,18 +56,7 @@ func WithCollectorEndpointOptionFromEnv() CollectorEndpointOption {
 			o.username = e
 		}
 		if e := os.Getenv(envPassword); e != "" {
-			o.password = os.Getenv(envPassword)
-		}
-	}
-}
-
-// WithDisabledFromEnv uses environment variables and overrides disabled field.
-func WithDisabledFromEnv() Option {
-	return func(o *options) {
-		if e := os.Getenv(envDisabled); e != "" {
-			if v, err := strconv.ParseBool(e); err == nil {
-				o.Disabled = v
-			}
+			o.password = e
 		}
 	}
 }

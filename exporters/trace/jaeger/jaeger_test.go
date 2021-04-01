@@ -155,24 +155,6 @@ func TestNewExportPipeline(t *testing.T) {
 	}
 }
 
-func TestNewExportPipelineWithDisabledFromEnv(t *testing.T) {
-	envStore, err := ottest.SetEnvVariables(map[string]string{
-		envDisabled: "true",
-	})
-	require.NoError(t, err)
-	envStore.Record(envDisabled)
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
-
-	tp, fn, err := NewExportPipeline(
-		WithCollectorEndpoint(collectorEndpoint),
-	)
-	defer fn()
-	assert.NoError(t, err)
-	assert.IsType(t, trace.NewNoopTracerProvider(), tp)
-}
-
 func TestNewRawExporter(t *testing.T) {
 	testCases := []struct {
 		name                                                           string
@@ -892,9 +874,7 @@ func TestProcess(t *testing.T) {
 }
 
 func TestNewExporterPipelineWithOptions(t *testing.T) {
-	envStore, err := ottest.SetEnvVariables(map[string]string{
-		envDisabled: "false",
-	})
+	envStore, err := ottest.SetEnvVariables(map[string]string{})
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, envStore.Restore())
