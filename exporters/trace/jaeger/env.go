@@ -20,7 +20,6 @@ import (
 	"strconv"
 	"strings"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 )
 
@@ -67,38 +66,6 @@ func WithDisabledFromEnv() Option {
 			if v, err := strconv.ParseBool(e); err == nil {
 				o.Disabled = v
 			}
-		}
-	}
-}
-
-// ProcessFromEnv parse environment variables into jaeger exporter's Process.
-// It will return a nil tag slice if the environment variable JAEGER_TAGS is malformed.
-func ProcessFromEnv() Process {
-	var p Process
-	if e := os.Getenv(envServiceName); e != "" {
-		p.ServiceName = e
-	}
-	if e := os.Getenv(envTags); e != "" {
-		tags, err := parseTags(e)
-		if err != nil {
-			otel.Handle(err)
-		} else {
-			p.Tags = tags
-		}
-	}
-
-	return p
-}
-
-// WithProcessFromEnv uses environment variables and overrides jaeger exporter's Process.
-func WithProcessFromEnv() Option {
-	return func(o *options) {
-		p := ProcessFromEnv()
-		if p.ServiceName != "" {
-			o.Process.ServiceName = p.ServiceName
-		}
-		if len(p.Tags) != 0 {
-			o.Process.Tags = p.Tags
 		}
 	}
 }
