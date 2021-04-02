@@ -210,13 +210,13 @@ func (e *Exporter) ExportSpans(ctx context.Context, ss []*export.SpanSnapshot) e
 		return nil
 	}
 
-	var bunderr error
+	var bundlerErr error
 	done := make(chan struct{})
 	go func() {
 		for _, span := range ss {
 			err := e.bundler.AddWait(ctx, span, 1)
 			if err != nil {
-				bunderr = fmt.Errorf("failed to bundle %q: %w", span.Name, err)
+				bundlerErr = fmt.Errorf("failed to bundle %q: %w", span.Name, err)
 				close(done)
 				return
 			}
@@ -229,7 +229,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, ss []*export.SpanSnapshot) e
 		return ctx.Err()
 	case <-done:
 	}
-	return bunderr
+	return bundlerErr
 }
 
 // flush is used to wrap the bundler's Flush method for testing.
