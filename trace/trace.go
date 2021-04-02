@@ -321,8 +321,8 @@ func (tf TraceFlags) IsSampled() bool {
 	return tf&FlagsSampled == FlagsSampled
 }
 
-// Sampled sets the sampling bit in a new copy of the TraceFlags.
-func (tf TraceFlags) Sampled(sampled bool) TraceFlags {
+// WithSampled sets the sampling bit in a new copy of the TraceFlags.
+func (tf TraceFlags) WithSampled(sampled bool) TraceFlags {
 	if sampled {
 		return tf | FlagsSampled
 	}

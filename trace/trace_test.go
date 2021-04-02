@@ -196,7 +196,7 @@ func TestTraceFlagsIsSampled(t *testing.T) {
 	}
 }
 
-func TestTraceFlagsSampled(t *testing.T) {
+func TestTraceFlagsWithSampled(t *testing.T) {
 	for _, testcase := range []struct {
 		name   string
 		start  TraceFlags
@@ -228,7 +228,7 @@ func TestTraceFlagsSampled(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			have := testcase.start.Sampled(testcase.sample)
+			have := testcase.start.WithSampled(testcase.sample)
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
 			}
