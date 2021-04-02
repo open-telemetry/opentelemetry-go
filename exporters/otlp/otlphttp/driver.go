@@ -24,7 +24,6 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
-	"os"
 	"path"
 	"strings"
 	"time"
@@ -82,7 +81,7 @@ var _ otlp.ProtocolDriver = (*driver)(nil)
 // NewDriver creates a new HTTP driver.
 func NewDriver(opts ...Option) otlp.ProtocolDriver {
 	cfg := newDefaultConfig()
-	applyEnvConfigs(&cfg, os.Getenv)
+	applyEnvConfigs(&cfg)
 
 	for _, opt := range opts {
 		opt.Apply(&cfg)

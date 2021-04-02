@@ -15,72 +15,115 @@
 package otlphttp
 
 import (
+	"crypto/tls"
 	"fmt"
+	"io/ioutil"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"go.opentelemetry.io/otel"
+
+	"go.opentelemetry.io/otel/exporters/otlp/internal/otlpconfig"
 )
 
-func applyEnvConfigs(cfg *config, getEnv func(string) string) *config {
-	opts := getOptionsFromEnv(getEnv)
+func applyEnvConfigs(cfg *config) {
+	e := envOptionsReader{
+		getEnv:   os.Getenv,
+		readFile: ioutil.ReadFile,
+	}
+
+	opts := e.getOptionsFromEnv()
 	for _, opt := range opts {
 		opt.Apply(cfg)
 	}
-	return cfg
 }
 
-func getOptionsFromEnv(env func(string) string) []Option {
+type envOptionsReader struct {
+	getEnv   func(string) string
+	readFile func(filename string) ([]byte, error)
+}
+
+func (e *envOptionsReader) applyEnvConfigs(cfg *config) {
+	opts := e.getOptionsFromEnv()
+	for _, opt := range opts {
+		opt.Apply(cfg)
+	}
+}
+
+func (e *envOptionsReader) getOptionsFromEnv() []Option {
 	var opts []Option
 
 	// Endpoint
-	if v, ok := getEnv(env, "ENDPOINT"); ok {
+	if v, ok := e.getEnvValue("ENDPOINT"); ok {
 		opts = append(opts, WithEndpoint(v))
 	}
-	if v, ok := getEnv(env, "TRACES_ENDPOINT"); ok {
+	if v, ok := e.getEnvValue("TRACES_ENDPOINT"); ok {
 		opts = append(opts, WithTracesEndpoint(v))
 	}
-	if v, ok := getEnv(env, "METRICS_ENDPOINT"); ok {
+	if v, ok := e.getEnvValue("METRICS_ENDPOINT"); ok {
 		opts = append(opts, WithMetricsEndpoint(v))
 	}
 
 	// Certificate File
-	// TODO: add certificate file env config support
+	if path, ok := e.getEnvValue("CERTIFICATE"); ok {
+		if tls, err := e.readTLSConfig(path); err == nil {
+			opts = append(opts, WithTLSClientConfig(tls))
+		} else {
+			otel.Handle(fmt.Errorf("failed to configure otlp exporter certificate '%s': %w", path, err))
+		}
+	}
+	if path, ok := e.getEnvValue("TRACES_CERTIFICATE"); ok {
+		if tls, err := e.readTLSConfig(path); err == nil {
+			opts = append(opts, WithTracesTLSClientConfig(tls))
+		} else {
+			otel.Handle(fmt.Errorf("failed to configure otlp traces exporter certificate '%s': %w", path, err))
+		}
+	}
+	if path, ok := e.getEnvValue("METRICS_CERTIFICATE"); ok {
+		if tls, err := e.readTLSConfig(path); err == nil {
+			opts = append(opts, WithMetricsTLSClientConfig(tls))
+		} else {
+			otel.Handle(fmt.Errorf("failed to configure otlp metrics exporter certificate '%s': %w", path, err))
+		}
+	}
 
 	// Headers
-	if h, ok := getEnv(env, "HEADERS"); ok {
+	if h, ok := e.getEnvValue("HEADERS"); ok {
 		opts = append(opts, WithHeaders(stringToHeader(h)))
 	}
-	if h, ok := getEnv(env, "TRACES_HEADERS"); ok {
+	if h, ok := e.getEnvValue("TRACES_HEADERS"); ok {
 		opts = append(opts, WithTracesHeaders(stringToHeader(h)))
 	}
-	if h, ok := getEnv(env, "METRICS_HEADERS"); ok {
+	if h, ok := e.getEnvValue("METRICS_HEADERS"); ok {
 		opts = append(opts, WithMetricsHeaders(stringToHeader(h)))
 	}
 
 	// Compression
-	if c, ok := getEnv(env, "COMPRESSION"); ok {
+	if c, ok := e.getEnvValue("COMPRESSION"); ok {
 		opts = append(opts, WithCompression(stringToCompression(c)))
 	}
-	if c, ok := getEnv(env, "TRACES_COMPRESSION"); ok {
+	if c, ok := e.getEnvValue("TRACES_COMPRESSION"); ok {
 		opts = append(opts, WithTracesCompression(stringToCompression(c)))
 	}
-	if c, ok := getEnv(env, "METRICS_COMPRESSION"); ok {
+	if c, ok := e.getEnvValue("METRICS_COMPRESSION"); ok {
 		opts = append(opts, WithMetricsCompression(stringToCompression(c)))
 	}
 
 	// Timeout
-	if t, ok := getEnv(env, "TIMEOUT"); ok {
+	if t, ok := e.getEnvValue("TIMEOUT"); ok {
 		if d, err := strconv.Atoi(t); err == nil {
 			opts = append(opts, WithTimeout(time.Duration(d)*time.Millisecond))
 		}
 	}
-	if t, ok := getEnv(env, "TRACES_TIMEOUT"); ok {
+	if t, ok := e.getEnvValue("TRACES_TIMEOUT"); ok {
 		if d, err := strconv.Atoi(t); err == nil {
 			opts = append(opts, WithTracesTimeout(time.Duration(d)*time.Millisecond))
 		}
 	}
-	if t, ok := getEnv(env, "METRICS_TIMEOUT"); ok {
+	if t, ok := e.getEnvValue("METRICS_TIMEOUT"); ok {
 		if d, err := strconv.Atoi(t); err == nil {
 			opts = append(opts, WithMetricsTimeout(time.Duration(d)*time.Millisecond))
 		}
@@ -89,11 +132,19 @@ func getOptionsFromEnv(env func(string) string) []Option {
 	return opts
 }
 
-// getEnv gets an OTLP environment variable value of the specified key using the env function.
+// getEnvValue gets an OTLP environment variable value of the specified key using the getEnv function.
 // This function already prepends the OTLP prefix to all key lookup.
-func getEnv(env func(string) string, key string) (string, bool) {
-	v := strings.TrimSpace(env(fmt.Sprintf("OTEL_EXPORTER_OTLP_%s", key)))
+func (e *envOptionsReader) getEnvValue(key string) (string, bool) {
+	v := strings.TrimSpace(e.getEnv(fmt.Sprintf("OTEL_EXPORTER_OTLP_%s", key)))
 	return v, v != ""
+}
+
+func (e *envOptionsReader) readTLSConfig(path string) (*tls.Config, error) {
+	b, err := e.readFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return otlpconfig.CreateTLSConfig(b)
 }
 
 func stringToCompression(value string) Compression {
