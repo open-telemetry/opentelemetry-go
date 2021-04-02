@@ -271,15 +271,21 @@ func TestBatchSpanProcessorPostShutdown(t *testing.T) {
 		o: []sdktrace.BatchSpanProcessorOption{
 			sdktrace.WithMaxExportBatchSize(50),
 		},
-		genNumSpans:    60,
+		genNumSpans: 60,
 	})
 
-	bsp.Shutdown(context.Background())
+	err := bsp.Shutdown(context.Background())
+	if err != nil {
+		t.Error("Error shutting the BatchSpanProcessor down\n")
+	}
 	lenJustAfterShutdown := be.len()
 
 	_, span := tr.Start(context.Background(), "foo")
 	span.End()
-	bsp.ForceFlush(context.Background())
+	err = bsp.ForceFlush(context.Background())
+	if err != nil {
+		t.Error("Error force flushing \n")
+	}
 	lenAfterFlush := be.len()
 
 	assert.Equal(t, lenJustAfterShutdown, lenAfterFlush)
