@@ -441,6 +441,11 @@ func (sc SpanContext) TraceFlags() TraceFlags {
 	return sc.traceFlags
 }
 
+// IsSampled returns if the sampling bit is set in the SpanContext's TraceFlags.
+func (sc SpanContext) IsSampled() bool {
+	return sc.traceFlags.IsSampled()
+}
+
 // WithTraceFlags returns a new SpanContext with the TraceFlags replaced.
 func (sc SpanContext) WithTraceFlags(flags TraceFlags) SpanContext {
 	return SpanContext{

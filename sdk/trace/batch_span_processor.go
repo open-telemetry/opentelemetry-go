@@ -272,7 +272,7 @@ func (bsp *batchSpanProcessor) drainQueue() {
 }
 
 func (bsp *batchSpanProcessor) enqueue(sd *export.SpanSnapshot) {
-	if !sd.SpanContext.TraceFlags().IsSampled() {
+	if !sd.SpanContext.IsSampled() {
 		return
 	}
 

@@ -24,7 +24,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `OTEL_EXPORTER_OTLP_TIMEOUT`
   - `OTEL_EXPORTER_OTLP_TRACES_TIMEOUT`
   - `OTEL_EXPORTER_OTLP_METRICS_TIMEOUT`
-- Added `trace.TraceFlags.Sampled(bool)` method to construct a `trace.TraceFlags` with a specified value of the `sampled` flag. (#1770)
+- `trace.TraceFlags` is now a defined type over `byte` and `WithSampled(bool) TraceFlags` and `IsSampled() bool` methods have been added to it. (#1770)
 
 ### Fixed
 
@@ -47,7 +47,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This changes it to make `SamplingParameters` conform with the OpenTelemetry specification. (#1749)
 - Modify `BatchSpanProcessor.ForceFlush` to abort after timeout/cancellation. (#1757)
 - Improve OTLP/gRPC exporter connection errors. (#1737)
-- Moved the `IsSampled()` method from `trace.SpanContext` to `trace.TraceFlags`. (#1770)
 
 ### Removed
 

@@ -25,7 +25,7 @@ import (
 // error handler.
 func OTelSpanContextToOC(sc trace.SpanContext) octrace.SpanContext {
 	var to octrace.TraceOptions
-	if sc.TraceFlags().IsSampled() {
+	if sc.IsSampled() {
 		// OpenCensus doesn't expose functions to directly set sampled
 		to = 0x1
 	}

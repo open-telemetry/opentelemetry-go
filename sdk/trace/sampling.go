@@ -264,13 +264,13 @@ func (pb parentBased) ShouldSample(p SamplingParameters) SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
 	if psc.IsValid() {
 		if psc.IsRemote() {
-			if psc.TraceFlags().IsSampled() {
+			if psc.IsSampled() {
 				return pb.config.remoteParentSampled.ShouldSample(p)
 			}
 			return pb.config.remoteParentNotSampled.ShouldSample(p)
 		}
 
-		if psc.TraceFlags().IsSampled() {
+		if psc.IsSampled() {
 			return pb.config.localParentSampled.ShouldSample(p)
 		}
 		return pb.config.localParentNotSampled.ShouldSample(p)

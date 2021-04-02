@@ -317,7 +317,7 @@ func TestSampling(t *testing.T) {
 					ctx = trace.ContextWithRemoteSpanContext(ctx, psc)
 				}
 				_, span := tr.Start(ctx, "test")
-				if span.SpanContext().TraceFlags().IsSampled() {
+				if span.SpanContext().IsSampled() {
 					sampled++
 				}
 			}
@@ -851,7 +851,7 @@ func endSpan(te *testExporter, span trace.Span) (*export.SpanSnapshot, error) {
 	if !span.IsRecording() {
 		return nil, fmt.Errorf("IsRecording: got false, want true")
 	}
-	if !span.SpanContext().TraceFlags().IsSampled() {
+	if !span.SpanContext().IsSampled() {
 		return nil, fmt.Errorf("IsSampled: got false, want true")
 	}
 	span.End()
