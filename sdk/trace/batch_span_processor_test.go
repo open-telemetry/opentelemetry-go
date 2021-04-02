@@ -259,6 +259,32 @@ func TestBatchSpanProcessorShutdown(t *testing.T) {
 	assert.Equal(t, 1, bp.shutdownCount)
 }
 
+func TestBatchSpanProcessorPostShutdown(t *testing.T) {
+	tp := basicTracerProvider(t)
+	be := testBatchExporter{}
+	bsp := sdktrace.NewBatchSpanProcessor(&be)
+
+	tp.RegisterSpanProcessor(bsp)
+	tr := tp.Tracer("Normal")
+
+	generateSpan(t, true, tr, testOption{
+		o: []sdktrace.BatchSpanProcessorOption{
+			sdktrace.WithMaxExportBatchSize(50),
+		},
+		genNumSpans:    60,
+	})
+
+	bsp.Shutdown(context.Background())
+	lenJustAfterShutdown := be.len()
+
+	_, span := tr.Start(context.Background(), "foo")
+	span.End()
+	bsp.ForceFlush(context.Background())
+	lenAfterFlush := be.len()
+
+	assert.Equal(t, lenJustAfterShutdown, lenAfterFlush)
+}
+
 func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
 	te := testBatchExporter{}
 	tp := basicTracerProvider(t)
