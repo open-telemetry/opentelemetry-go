@@ -37,6 +37,10 @@ import (
 const (
 	keyInstrumentationLibraryName    = "otel.library.name"
 	keyInstrumentationLibraryVersion = "otel.library.version"
+	keyError                         = "error"
+	keySpanKind                      = "span.kind"
+	keyStatusCode                    = "otel.status_code"
+	keyStatusMessage                 = "otel.status_description"
 )
 
 type Option func(*options)
@@ -281,18 +285,18 @@ func spanSnapshotToThrift(ss *export.SpanSnapshot) *gen.Span {
 
 	if ss.SpanKind != trace.SpanKindInternal {
 		tags = append(tags,
-			getStringTag("span.kind", ss.SpanKind.String()),
+			getStringTag(keySpanKind, ss.SpanKind.String()),
 		)
 	}
 
 	if ss.StatusCode != codes.Unset {
-		tags = append(tags,
-			getInt64Tag("status.code", int64(ss.StatusCode)),
-			getStringTag("status.message", ss.StatusMessage),
-		)
+		tags = append(tags, getInt64Tag(keyStatusCode, int64(ss.StatusCode)))
+		if ss.StatusMessage != "" {
+			tags = append(tags, getStringTag(keyStatusMessage, ss.StatusMessage))
+		}
 
 		if ss.StatusCode == codes.Error {
-			tags = append(tags, getBoolTag("error", true))
+			tags = append(tags, getBoolTag(keyError, true))
 		}
 	}
 
@@ -326,11 +330,12 @@ func spanSnapshotToThrift(ss *export.SpanSnapshot) *gen.Span {
 
 	tid := ss.SpanContext.TraceID()
 	sid := ss.SpanContext.SpanID()
+	psid := ss.Parent.SpanID()
 	return &gen.Span{
 		TraceIdHigh:   int64(binary.BigEndian.Uint64(tid[0:8])),
 		TraceIdLow:    int64(binary.BigEndian.Uint64(tid[8:16])),
 		SpanId:        int64(binary.BigEndian.Uint64(sid[:])),
-		ParentSpanId:  int64(binary.BigEndian.Uint64(ss.ParentSpanID[:])),
+		ParentSpanId:  int64(binary.BigEndian.Uint64(psid[:])),
 		OperationName: ss.Name, // TODO: if span kind is added then add prefix "Sent"/"Recv"
 		Flags:         int32(ss.SpanContext.TraceFlags()),
 		StartTime:     ss.StartTime.UnixNano() / 1000,

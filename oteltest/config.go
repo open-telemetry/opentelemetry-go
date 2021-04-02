@@ -28,10 +28,8 @@ func defaultSpanContextFunc() func(context.Context) trace.SpanContext {
 	var traceID, spanID uint64 = 1, 1
 	return func(ctx context.Context) trace.SpanContext {
 		var sc trace.SpanContext
-		if lsc := trace.SpanContextFromContext(ctx); lsc.IsValid() {
-			sc = lsc
-		} else if rsc := trace.RemoteSpanContextFromContext(ctx); rsc.IsValid() {
-			sc = rsc
+		if current := trace.SpanContextFromContext(ctx); current.IsValid() {
+			sc = current
 		} else {
 			var tid trace.TraceID
 			binary.BigEndian.PutUint64(tid[:], atomic.AddUint64(&traceID, 1))
