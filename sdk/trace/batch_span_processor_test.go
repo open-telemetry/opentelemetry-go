@@ -111,7 +111,7 @@ type testOption struct {
 
 func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 	schDelay := 200 * time.Millisecond
-	exportTimeout := time.Nanosecond
+	exportTimeout := time.Millisecond
 	options := []testOption{
 		{
 			name:           "default BatchSpanProcessorOptions",
