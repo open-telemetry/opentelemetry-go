@@ -57,7 +57,7 @@ func TestEndToEnd(t *testing.T) {
 		{
 			name: "with gzip compression",
 			opts: []otlphttp.Option{
-				otlphttp.WithCompression(otlphttp.GzipCompression),
+				otlphttp.WithCompression(otlp.GzipCompression),
 			},
 		},
 		{
@@ -109,7 +109,7 @@ func TestEndToEnd(t *testing.T) {
 		{
 			name: "with json encoding",
 			opts: []otlphttp.Option{
-				otlphttp.WithMarshal(otlphttp.MarshalJSON),
+				otlphttp.WithMarshal(otlp.MarshalJSON),
 			},
 		},
 	}
@@ -154,6 +154,7 @@ func TestRetry(t *testing.T) {
 	defer mc.MustStop(t)
 	driver := otlphttp.NewDriver(
 		otlphttp.WithEndpoint(mc.Endpoint()),
+		otlphttp.WithTracesEndpoint(mc.Endpoint()),
 		otlphttp.WithInsecure(),
 		otlphttp.WithMaxAttempts(len(statuses)+1),
 	)

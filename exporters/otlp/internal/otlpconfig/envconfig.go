@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlphttp
+package otlpconfig
 
 import (
 	"crypto/tls"
@@ -24,36 +24,36 @@ import (
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp"
 
-	"go.opentelemetry.io/otel/exporters/otlp/internal/otlpconfig"
+	"go.opentelemetry.io/otel"
 )
 
-func applyEnvConfigs(cfg *config) {
-	e := envOptionsReader{
-		getEnv:   os.Getenv,
-		readFile: ioutil.ReadFile,
+func ApplyEnvConfigs(cfg *Config) {
+	e := EnvOptionsReader{
+		GetEnv:   os.Getenv,
+		ReadFile: ioutil.ReadFile,
 	}
 
-	opts := e.getOptionsFromEnv()
+	opts := e.GetOptionsFromEnv()
 	for _, opt := range opts {
 		opt.Apply(cfg)
 	}
 }
 
-type envOptionsReader struct {
-	getEnv   func(string) string
-	readFile func(filename string) ([]byte, error)
+type EnvOptionsReader struct {
+	GetEnv   func(string) string
+	ReadFile func(filename string) ([]byte, error)
 }
 
-func (e *envOptionsReader) applyEnvConfigs(cfg *config) {
-	opts := e.getOptionsFromEnv()
+func (e *EnvOptionsReader) ApplyEnvConfigs(cfg *Config) {
+	opts := e.GetOptionsFromEnv()
 	for _, opt := range opts {
 		opt.Apply(cfg)
 	}
 }
 
-func (e *envOptionsReader) getOptionsFromEnv() []Option {
+func (e *EnvOptionsReader) GetOptionsFromEnv() []Option {
 	var opts []Option
 
 	// Endpoint
@@ -132,28 +132,28 @@ func (e *envOptionsReader) getOptionsFromEnv() []Option {
 	return opts
 }
 
-// getEnvValue gets an OTLP environment variable value of the specified key using the getEnv function.
+// getEnvValue gets an OTLP environment variable value of the specified key using the GetEnv function.
 // This function already prepends the OTLP prefix to all key lookup.
-func (e *envOptionsReader) getEnvValue(key string) (string, bool) {
-	v := strings.TrimSpace(e.getEnv(fmt.Sprintf("OTEL_EXPORTER_OTLP_%s", key)))
+func (e *EnvOptionsReader) getEnvValue(key string) (string, bool) {
+	v := strings.TrimSpace(e.GetEnv(fmt.Sprintf("OTEL_EXPORTER_OTLP_%s", key)))
 	return v, v != ""
 }
 
-func (e *envOptionsReader) readTLSConfig(path string) (*tls.Config, error) {
-	b, err := e.readFile(path)
+func (e *EnvOptionsReader) readTLSConfig(path string) (*tls.Config, error) {
+	b, err := e.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	return otlpconfig.CreateTLSConfig(b)
+	return CreateTLSConfig(b)
 }
 
-func stringToCompression(value string) Compression {
+func stringToCompression(value string) otlp.Compression {
 	switch value {
 	case "gzip":
-		return GzipCompression
+		return otlp.GzipCompression
 	}
 
-	return NoCompression
+	return otlp.NoCompression
 }
 
 func stringToHeader(value string) map[string]string {
