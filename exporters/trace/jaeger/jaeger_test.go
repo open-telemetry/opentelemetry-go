@@ -676,7 +676,7 @@ func TestExporterExportSpansHonorsCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	assert.EqualErrorf(t, e.ExportSpans(ctx, ss), context.Canceled.Error())
+	assert.EqualError(t, e.ExportSpans(ctx, ss), context.Canceled.Error())
 }
 
 func TestExporterExportSpansHonorsTimeout(t *testing.T) {
@@ -707,7 +707,7 @@ func TestExporterExportSpansHonorsTimeout(t *testing.T) {
 	defer cancel()
 	<-ctx.Done()
 
-	assert.EqualErrorf(t, e.ExportSpans(ctx, ss), context.DeadlineExceeded.Error())
+	assert.EqualError(t, e.ExportSpans(ctx, ss), context.DeadlineExceeded.Error())
 }
 
 func TestJaegerBatchList(t *testing.T) {
