@@ -38,8 +38,9 @@ type batchUploader interface {
 type EndpointOption func() (batchUploader, error)
 
 // WithAgentEndpoint instructs exporter to send spans to jaeger-agent at this address.
-// For example, localhost:6831.
-func WithAgentEndpoint(agentEndpoint string, options ...AgentEndpointOption) EndpointOption {
+// Agent endpoint is resolved from environment variables first and then overridden with default values if not present
+// Default agent endpoint value: localhost:6832
+func WithAgentEndpoint(options ...AgentEndpointOption) EndpointOption {
 	return func() (batchUploader, error) {
 		// Get agent host and port from environment variables
 		host, port := agentEndpointFromEnv()
@@ -49,7 +50,7 @@ func WithAgentEndpoint(agentEndpoint string, options ...AgentEndpointOption) End
 		if port == "" {
 			port = "6832"
 		}
-		agentEndpoint = fmt.Sprintf("%s:%s", host, port)
+		agentEndpoint := fmt.Sprintf("%s:%s", host, port)
 
 		o := &AgentEndpointOptions{
 			agentClientUDPParams{

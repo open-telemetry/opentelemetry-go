@@ -147,7 +147,7 @@ func TestAgentEndpointFromEnv(t *testing.T) {
 				port = tc.port
 			}
 			hostPort := fmt.Sprintf("%s:%s", host, port)
-			assert.Equal(t, hostPort, tc.expectedHostPort)
+			assert.Equal(t, tc.expectedHostPort, hostPort)
 		})
 	}
 }

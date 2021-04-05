@@ -44,7 +44,6 @@ import (
 
 const (
 	collectorEndpoint = "http://localhost:14268/api/traces"
-	agentEndpoint     = "localhost:6831"
 )
 
 func TestInstallNewPipeline(t *testing.T) {
@@ -61,7 +60,7 @@ func TestInstallNewPipeline(t *testing.T) {
 		},
 		{
 			name:             "with agent endpoint",
-			endpoint:         WithAgentEndpoint(agentEndpoint),
+			endpoint:         WithAgentEndpoint(),
 			expectedProvider: &sdktrace.TracerProvider{},
 		},
 		{
@@ -172,7 +171,7 @@ func TestNewRawExporter(t *testing.T) {
 		},
 		{
 			name:                   "default exporter with agent endpoint",
-			endpoint:               WithAgentEndpoint(agentEndpoint),
+			endpoint:               WithAgentEndpoint(),
 			expectedServiceName:    "unknown_service",
 			expectedBufferMaxCount: bundler.DefaultBufferedByteLimit,
 			expectedBatchMaxCount:  bundler.DefaultBundleCountThreshold,
