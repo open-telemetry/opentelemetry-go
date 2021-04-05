@@ -42,6 +42,7 @@ const (
 	keyStatusCode                    = "otel.status_code"
 	keyStatusMessage                 = "otel.status_description"
 	keyDroppedAttributeCount         = "otel.event.dropped_attributes_count"
+	keyEventName                     = "event"
 )
 
 type Option func(*options)
@@ -291,18 +292,25 @@ func spanSnapshotToThrift(ss *export.SpanSnapshot) *gen.Span {
 
 	var logs []*gen.Log
 	for _, a := range ss.MessageEvents {
-		nTags := len(a.Attributes) + 1
+		nTags := len(a.Attributes)
+		if a.Name != "" {
+			nTags++
+		}
 		if a.DroppedAttributeCount != 0 {
 			nTags++
 		}
 		fields := make([]*gen.Tag, 0, nTags)
+		if a.Name != "" {
+			// If an event contains an attribute with the same key, it needs
+			// to be given precedence and overwrite this.
+			fields = append(fields, getStringTag(keyEventName, a.Name))
+		}
 		for _, kv := range a.Attributes {
 			tag := keyValueToTag(kv)
 			if tag != nil {
 				fields = append(fields, tag)
 			}
 		}
-		fields = append(fields, getStringTag("name", a.Name))
 		if a.DroppedAttributeCount != 0 {
 			fields = append(fields, getInt64Tag(keyDroppedAttributeCount, int64(a.DroppedAttributeCount)))
 		}
