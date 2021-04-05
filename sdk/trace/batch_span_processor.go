@@ -28,6 +28,7 @@ import (
 const (
 	DefaultMaxQueueSize       = 2048
 	DefaultBatchTimeout       = 5000 * time.Millisecond
+	DefaultExportTimeout      = 30000 * time.Millisecond
 	DefaultMaxExportBatchSize = 512
 )
 
@@ -43,6 +44,11 @@ type BatchSpanProcessorOptions struct {
 	// forcefully sends available spans when timeout is reached.
 	// The default value of BatchTimeout is 5000 msec.
 	BatchTimeout time.Duration
+
+	// ExportTimeout specifies the maximum duration for exporting spans. If the timeout
+	// is reached, the export will be cancelled.
+	// The default value of ExportTimeout is 30000 msec.
+	ExportTimeout time.Duration
 
 	// MaxExportBatchSize is the maximum number of spans to process in a single batch.
 	// If there are more than one batch worth of spans then it processes multiple batches
@@ -83,6 +89,7 @@ var _ SpanProcessor = (*batchSpanProcessor)(nil)
 func NewBatchSpanProcessor(exporter export.SpanExporter, options ...BatchSpanProcessorOption) SpanProcessor {
 	o := BatchSpanProcessorOptions{
 		BatchTimeout:       DefaultBatchTimeout,
+		ExportTimeout:      DefaultExportTimeout,
 		MaxQueueSize:       DefaultMaxQueueSize,
 		MaxExportBatchSize: DefaultMaxExportBatchSize,
 	}
@@ -185,6 +192,12 @@ func WithBatchTimeout(delay time.Duration) BatchSpanProcessorOption {
 	}
 }
 
+func WithExportTimeout(timeout time.Duration) BatchSpanProcessorOption {
+	return func(o *BatchSpanProcessorOptions) {
+		o.ExportTimeout = timeout
+	}
+}
+
 func WithBlocking() BatchSpanProcessorOption {
 	return func(o *BatchSpanProcessorOptions) {
 		o.BlockOnQueueFull = true
@@ -197,6 +210,12 @@ func (bsp *batchSpanProcessor) exportSpans(ctx context.Context) error {
 
 	bsp.batchMutex.Lock()
 	defer bsp.batchMutex.Unlock()
+
+	if bsp.o.ExportTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, bsp.o.ExportTimeout)
+		defer cancel()
+	}
 
 	if len(bsp.batch) > 0 {
 		if err := bsp.e.ExportSpans(ctx, bsp.batch); err != nil {

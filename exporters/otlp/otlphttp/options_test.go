@@ -15,8 +15,13 @@
 package otlphttp
 
 import (
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"testing"
 	"time"
+
+	"go.opentelemetry.io/otel/exporters/otlp/internal/otlpconfig"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -27,12 +32,25 @@ func (e *env) getEnv(env string) string {
 	return (*e)[env]
 }
 
+type fileReader map[string][]byte
+
+func (f *fileReader) readFile(filename string) ([]byte, error) {
+	if b, ok := (*f)[filename]; ok {
+		return b, nil
+	}
+	return nil, errors.New("File not found")
+}
+
 func TestConfigs(t *testing.T) {
+	tlsCert, err := otlpconfig.CreateTLSConfig([]byte(otlpconfig.WeakCertificate))
+	assert.NoError(t, err)
+
 	tests := []struct {
-		name    string
-		opts    []Option
-		env     env
-		asserts func(t *testing.T, c *config)
+		name       string
+		opts       []Option
+		env        env
+		fileReader fileReader
+		asserts    func(t *testing.T, c *config)
 	}{
 		{
 			name: "Test default configs",
@@ -104,6 +122,75 @@ func TestConfigs(t *testing.T) {
 			asserts: func(t *testing.T, c *config) {
 				assert.Equal(t, "traces_endpoint", c.traces.endpoint)
 				assert.Equal(t, "env_endpoint", c.metrics.endpoint)
+			},
+		},
+
+		// Certificate tests
+		{
+			name: "Test With Certificate",
+			opts: []Option{
+				WithTLSClientConfig(tlsCert),
+			},
+			asserts: func(t *testing.T, c *config) {
+				assert.Equal(t, tlsCert.RootCAs.Subjects(), c.traces.tlsCfg.RootCAs.Subjects())
+				assert.Equal(t, tlsCert.RootCAs.Subjects(), c.metrics.tlsCfg.RootCAs.Subjects())
+			},
+		},
+		{
+			name: "Test With Signal Specific Endpoint",
+			opts: []Option{
+				WithTLSClientConfig(&tls.Config{}),
+				WithTracesTLSClientConfig(tlsCert),
+				WithMetricsTLSClientConfig(&tls.Config{RootCAs: x509.NewCertPool()}),
+			},
+			asserts: func(t *testing.T, c *config) {
+				assert.Equal(t, tlsCert.RootCAs.Subjects(), c.traces.tlsCfg.RootCAs.Subjects())
+				assert.Equal(t, 0, len(c.metrics.tlsCfg.RootCAs.Subjects()))
+			},
+		},
+		{
+			name: "Test Environment Endpoint",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_CERTIFICATE": "cert_path",
+			},
+			fileReader: fileReader{
+				"cert_path": []byte(otlpconfig.WeakCertificate),
+			},
+			asserts: func(t *testing.T, c *config) {
+				assert.Equal(t, tlsCert.RootCAs.Subjects(), c.traces.tlsCfg.RootCAs.Subjects())
+				assert.Equal(t, tlsCert.RootCAs.Subjects(), c.metrics.tlsCfg.RootCAs.Subjects())
+			},
+		},
+		{
+			name: "Test Environment Signal Specific Endpoint",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_CERTIFICATE":         "overrode_by_signal_specific",
+				"OTEL_EXPORTER_OTLP_TRACES_CERTIFICATE":  "cert_path",
+				"OTEL_EXPORTER_OTLP_METRICS_CERTIFICATE": "invalid_cert",
+			},
+			fileReader: fileReader{
+				"cert_path":    []byte(otlpconfig.WeakCertificate),
+				"invalid_cert": []byte("invalid certificate file."),
+			},
+			asserts: func(t *testing.T, c *config) {
+				assert.Equal(t, tlsCert.RootCAs.Subjects(), c.traces.tlsCfg.RootCAs.Subjects())
+				assert.Equal(t, (*tls.Config)(nil), c.metrics.tlsCfg)
+			},
+		},
+		{
+			name: "Test Mixed Environment and With Endpoint",
+			opts: []Option{
+				WithMetricsTLSClientConfig(&tls.Config{RootCAs: x509.NewCertPool()}),
+			},
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_CERTIFICATE": "cert_path",
+			},
+			fileReader: fileReader{
+				"cert_path": []byte(otlpconfig.WeakCertificate),
+			},
+			asserts: func(t *testing.T, c *config) {
+				assert.Equal(t, tlsCert.RootCAs.Subjects(), c.traces.tlsCfg.RootCAs.Subjects())
+				assert.Equal(t, 0, len(c.metrics.tlsCfg.RootCAs.Subjects()))
 			},
 		},
 
@@ -286,7 +373,13 @@ func TestConfigs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := newDefaultConfig()
-			applyEnvConfigs(&cfg, tt.env.getEnv)
+
+			e := envOptionsReader{
+				getEnv:   tt.env.getEnv,
+				readFile: tt.fileReader.readFile,
+			}
+			e.applyEnvConfigs(&cfg)
+
 			for _, opt := range tt.opts {
 				opt.Apply(&cfg)
 			}
