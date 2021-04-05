@@ -58,19 +58,6 @@ func TestOTelSpanContextToOC(t *testing.T) {
 				TraceOptions: octrace.TraceOptions(0),
 			},
 		},
-		{
-			description: "debug flag",
-			input: trace.NewSpanContext(trace.SpanContextConfig{
-				TraceID:    trace.TraceID([16]byte{1}),
-				SpanID:     trace.SpanID([8]byte{2}),
-				TraceFlags: trace.FlagsDebug,
-			}),
-			expected: octrace.SpanContext{
-				TraceID:      octrace.TraceID([16]byte{1}),
-				SpanID:       octrace.SpanID([8]byte{2}),
-				TraceOptions: octrace.TraceOptions(0),
-			},
-		},
 	} {
 		t.Run(tc.description, func(t *testing.T) {
 			output := OTelSpanContextToOC(tc.input)

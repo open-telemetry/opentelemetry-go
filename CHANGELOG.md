@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Adds test to check BatchSpanProcessor ignores `OnEnd` and `ForceFlush` post `Shutdown`. (#1772)
+- Option `ExportTimeout` was added to batch span processor. (#1755)
 - Adds semantic conventions for exceptions. (#1492)
 - Added support for configuring OTLP/HTTP Endpoints, Headers, Compression and Timeout via the Environment Variables. (#1758)
   - `OTEL_EXPORTER_OTLP_ENDPOINT`
@@ -25,12 +26,19 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `OTEL_EXPORTER_OTLP_TIMEOUT`
   - `OTEL_EXPORTER_OTLP_TRACES_TIMEOUT`
   - `OTEL_EXPORTER_OTLP_METRICS_TIMEOUT`
+- Added support for configuring OTLP/HTTP TLS Certificates via the Environment Variables. (#1769)
+  - `OTEL_EXPORTER_OTLP_CERTIFICATE`
+  - `OTEL_EXPORTER_OTLP_TRACES_CERTIFICATE`
+  - `OTEL_EXPORTER_OTLP_METRICS_CERTIFICATE`
+- `trace.TraceFlags` is now a defined type over `byte` and `WithSampled(bool) TraceFlags` and `IsSampled() bool` methods have been added to it. (#1770)
 
 ### Fixed
 
 - The `Span.IsRecording` implementation from `go.opentelemetry.io/otel/sdk/trace` always returns false when not being sampled. (#1750)
 - The Jaeger exporter now correctly sets tags for the Span status code and message.
   This means it uses the correct tag keys (`"otel.status_code"`, `"otel.status_description"`) and does not set the status message as a tag unless it is set on the span. (#1761)
+- The Jaeger exporter now correctly records Span event's names using the `"event"` key for a tag.
+  Additionally, this tag is overridden, as specified in the OTel specification, if the event contains an attribute with that key. (#1768)
 
 ### Changed
 
@@ -60,6 +68,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   If needed, that Span's `SpanContext.IsRemote()` can then be used to determine if it is remote or not. (#1731)
 - The `HasRemoteParent` field of the `"go.opentelemetry.io/otel/sdk/trace".SamplingParameters` is removed.
   This field is redundant to the information returned from the `Remote` method of the `SpanContext` held in the `ParentContext` field. (#1749)
+- The `trace.FlagsDebug` and `trace.FlagsDeferred` constants have been removed and will be localized to the B3 propagator. (#1770)
 
 ## [0.19.0] - 2021-03-18
 
