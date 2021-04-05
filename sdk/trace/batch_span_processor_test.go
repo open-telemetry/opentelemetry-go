@@ -35,12 +35,15 @@ type testBatchExporter struct {
 	sizes         []int
 	batchCount    int
 	shutdownCount int
+	delay         time.Duration
 	err           error
 }
 
 func (t *testBatchExporter) ExportSpans(ctx context.Context, ss []*export.SpanSnapshot) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
+	time.Sleep(t.delay)
 
 	select {
 	case <-ctx.Done():
@@ -101,12 +104,13 @@ type testOption struct {
 	wantBatchCount    int
 	wantExportTimeout bool
 	genNumSpans       int
+	delayExportBy     time.Duration
 	parallel          bool
 }
 
 func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 	schDelay := 200 * time.Millisecond
-	exportTimeout := time.Nanosecond // to ensure context deadline
+	exportTimeout := time.Nanosecond
 	options := []testOption{
 		{
 			name:           "default BatchSpanProcessorOptions",
@@ -119,10 +123,9 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 			o: []sdktrace.BatchSpanProcessorOption{
 				sdktrace.WithExportTimeout(exportTimeout),
 			},
-			wantNumSpans:      0,
-			wantBatchCount:    0,
 			wantExportTimeout: true,
 			genNumSpans:       2053,
+			delayExportBy:     2 * exportTimeout, // to ensure export timeout
 		},
 		{
 			name: "non-default BatchTimeout",
@@ -190,7 +193,9 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 	}
 	for _, option := range options {
 		t.Run(option.name, func(t *testing.T) {
-			te := testBatchExporter{}
+			te := testBatchExporter{
+				delay: option.delayExportBy,
+			}
 			tp := basicTracerProvider(t)
 			ssp := createAndRegisterBatchSP(option, &te)
 			if ssp == nil {
@@ -204,13 +209,13 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 			tp.UnregisterSpanProcessor(ssp)
 
 			gotNumOfSpans := te.len()
-			if option.wantNumSpans != gotNumOfSpans {
+			if option.wantNumSpans > 0 && option.wantNumSpans != gotNumOfSpans {
 				t.Errorf("number of exported span: got %+v, want %+v\n",
 					gotNumOfSpans, option.wantNumSpans)
 			}
 
 			gotBatchCount := te.getBatchCount()
-			if gotBatchCount < option.wantBatchCount {
+			if option.wantBatchCount > 0 && gotBatchCount < option.wantBatchCount {
 				t.Errorf("number batches: got %+v, want >= %+v\n",
 					gotBatchCount, option.wantBatchCount)
 				t.Errorf("Batches %v\n", te.sizes)
