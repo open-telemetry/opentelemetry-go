@@ -15,6 +15,7 @@
 package jaeger
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -90,35 +91,40 @@ func TestAgentEndpointFromEnv(t *testing.T) {
 		name             string
 		envAgentHost     string
 		envAgentPort     string
-		hostPort         string
+		host             string
+		port             string
 		expectedHostPort string
 	}{
 		{
 			name:             "overrides HostPort value via environment variables",
 			envAgentHost:     "localhost",
 			envAgentPort:     "6832",
-			hostPort:         "hostNameToBeReplaced:8203",
+			host:             "hostNameToBeReplaced",
+			port:             "8203",
 			expectedHostPort: "localhost:6832",
 		},
 		{
-			name:             "envAgentHost is empty, will not overwrite HostPort value",
+			name:             "envAgentHost is empty, will not overwrite host value",
 			envAgentHost:     "",
 			envAgentPort:     "6832",
-			hostPort:         "hostNameNotToBeReplaced:8203",
-			expectedHostPort: "hostNameNotToBeReplaced:8203",
+			host:             "hostNameNotToBeReplaced",
+			port:             "8203",
+			expectedHostPort: "hostNameNotToBeReplaced:6832",
 		},
 		{
-			name:             "envAgentPort is empty, will not overwrite HostPort value",
+			name:             "envAgentPort is empty, will not overwrite port value",
 			envAgentHost:     "localhost",
 			envAgentPort:     "",
-			hostPort:         "hostNameNotToBeReplaced:8203",
-			expectedHostPort: "hostNameNotToBeReplaced:8203",
+			host:             "hostNameToBeReplaced",
+			port:             "8203",
+			expectedHostPort: "localhost:8203",
 		},
 		{
 			name:             "envAgentHost and envAgentPort are empty, will not overwrite HostPort value",
 			envAgentHost:     "",
 			envAgentPort:     "",
-			hostPort:         "hostNameNotToBeReplaced:8203",
+			host:             "hostNameNotToBeReplaced",
+			port:             "8203",
 			expectedHostPort: "hostNameNotToBeReplaced:8203",
 		},
 	}
@@ -133,8 +139,15 @@ func TestAgentEndpointFromEnv(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			require.NoError(t, os.Setenv(envAgentHost, tc.envAgentHost))
 			require.NoError(t, os.Setenv(envAgentPort, tc.envAgentPort))
-			AgentEndpointFromEnv(&tc.hostPort)
-			assert.Equal(t, tc.hostPort, tc.expectedHostPort)
+			host, port := agentEndpointFromEnv()
+			if host == "" {
+				host = tc.host
+			}
+			if port == "" {
+				port = tc.port
+			}
+			hostPort := fmt.Sprintf("%s:%s", host, port)
+			assert.Equal(t, hostPort, tc.expectedHostPort)
 		})
 	}
 }

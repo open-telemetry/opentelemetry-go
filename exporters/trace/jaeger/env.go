@@ -15,7 +15,6 @@
 package jaeger // import "go.opentelemetry.io/otel/exporters/trace/jaeger"
 
 import (
-	"fmt"
 	"os"
 )
 
@@ -36,14 +35,14 @@ const (
 	envPassword = "OTEL_EXPORTER_JAEGER_PASSWORD"
 )
 
-// AgentEndpointFromEnv uses environment variables to return the Jaeger agent hostport
-func AgentEndpointFromEnv(e *string) {
-	if h, p := os.Getenv(envAgentHost), os.Getenv(envAgentPort); h != "" && p != "" {
-		*e = fmt.Sprintf("%s:%s", h, p)
-	}
+// agentEndpointFromEnv returns env vars values of OTEL_EXPORTER_JAEGER_AGENT_HOST and OTEL_EXPORTER_JAEGER_AGENT_PORT
+func agentEndpointFromEnv() (string, string) {
+	h := os.Getenv(envAgentHost)
+	p := os.Getenv(envAgentPort)
+	return h, p
 }
 
-// CollectorEndpointFromEnv return environment variable value of JAEGER_ENDPOINT
+// CollectorEndpointFromEnv return environment variable value of OTEL_EXPORTER_JAEGER_ENDPOINT
 func CollectorEndpointFromEnv() string {
 	return os.Getenv(envEndpoint)
 }

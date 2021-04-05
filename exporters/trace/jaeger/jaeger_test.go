@@ -217,16 +217,6 @@ func TestNewRawExporterShouldFail(t *testing.T) {
 			endpoint:       WithCollectorEndpoint(""),
 			expectedErrMsg: "collectorEndpoint must not be empty",
 		},
-		{
-			name:           "with empty agent endpoint",
-			endpoint:       WithAgentEndpoint(""),
-			expectedErrMsg: "agentEndpoint must not be empty",
-		},
-		{
-			name:           "with invalid agent endpoint",
-			endpoint:       WithAgentEndpoint("localhost"),
-			expectedErrMsg: "address localhost: missing port in address",
-		},
 	}
 
 	for _, tc := range testCases {

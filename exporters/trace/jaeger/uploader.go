@@ -41,12 +41,15 @@ type EndpointOption func() (batchUploader, error)
 // For example, localhost:6831.
 func WithAgentEndpoint(agentEndpoint string, options ...AgentEndpointOption) EndpointOption {
 	return func() (batchUploader, error) {
-		// Overwrite agent endpoint if environment variables are available.
-		AgentEndpointFromEnv(&agentEndpoint)
-
-		if agentEndpoint == "" {
-			return nil, errors.New("agentEndpoint must not be empty")
+		// Get agent host and port from environment variables
+		host, port := agentEndpointFromEnv()
+		if host == "" {
+			host = "localhost"
 		}
+		if port == "" {
+			port = "6832"
+		}
+		agentEndpoint = fmt.Sprintf("%s:%s", host, port)
 
 		o := &AgentEndpointOptions{
 			agentClientUDPParams{
