@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -52,6 +53,7 @@ type mockCollector struct {
 
 	injectHTTPStatus  []int
 	injectContentType string
+	injectDelay       time.Duration
 
 	clientTLSConfig *tls.Config
 	expectedHeaders map[string]string
@@ -92,6 +94,10 @@ func (c *mockCollector) ClientTLSConfig() *tls.Config {
 }
 
 func (c *mockCollector) serveMetrics(w http.ResponseWriter, r *http.Request) {
+	if c.injectDelay != 0 {
+		time.Sleep(c.injectDelay)
+	}
+
 	if !c.checkHeaders(r) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -133,6 +139,10 @@ func unmarshalMetricsRequest(rawRequest []byte, contentType string) (*collectorm
 }
 
 func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
+	if c.injectDelay != 0 {
+		time.Sleep(c.injectDelay)
+	}
+
 	if !c.checkHeaders(r) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -237,6 +247,7 @@ type mockCollectorConfig struct {
 	Port              int
 	InjectHTTPStatus  []int
 	InjectContentType string
+	InjectDelay       time.Duration
 	WithTLS           bool
 	ExpectedHeaders   map[string]string
 }
@@ -262,6 +273,7 @@ func runMockCollector(t *testing.T, cfg mockCollectorConfig) *mockCollector {
 		metricsStorage:    otlptest.NewMetricsStorage(),
 		injectHTTPStatus:  cfg.InjectHTTPStatus,
 		injectContentType: cfg.InjectContentType,
+		injectDelay:       cfg.InjectDelay,
 		expectedHeaders:   cfg.ExpectedHeaders,
 	}
 	mux := http.NewServeMux()

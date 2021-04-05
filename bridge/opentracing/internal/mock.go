@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/internal/baggage"
+	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
@@ -255,10 +256,10 @@ func (s *MockSpan) RecordError(err error, opts ...trace.EventOption) {
 
 	s.SetStatus(codes.Error, "")
 	opts = append(opts, trace.WithAttributes(
-		attribute.String("error.type", reflect.TypeOf(err).String()),
-		attribute.String("error.message", err.Error()),
+		semconv.ExceptionTypeKey.String(reflect.TypeOf(err).String()),
+		semconv.ExceptionMessageKey.String(err.Error()),
 	))
-	s.AddEvent("error", opts...)
+	s.AddEvent(semconv.ExceptionEventName, opts...)
 }
 
 func (s *MockSpan) Tracer() trace.Tracer {

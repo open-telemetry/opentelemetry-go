@@ -37,6 +37,11 @@ import (
 const (
 	keyInstrumentationLibraryName    = "otel.library.name"
 	keyInstrumentationLibraryVersion = "otel.library.version"
+	keyError                         = "error"
+	keySpanKind                      = "span.kind"
+	keyStatusCode                    = "otel.status_code"
+	keyStatusMessage                 = "otel.status_description"
+	keyEventName                     = "event"
 )
 
 type Option func(*options)
@@ -269,31 +274,39 @@ func spanSnapshotToThrift(ss *export.SpanSnapshot) *gen.Span {
 
 	if ss.SpanKind != trace.SpanKindInternal {
 		tags = append(tags,
-			getStringTag("span.kind", ss.SpanKind.String()),
+			getStringTag(keySpanKind, ss.SpanKind.String()),
 		)
 	}
 
 	if ss.StatusCode != codes.Unset {
-		tags = append(tags,
-			getInt64Tag("status.code", int64(ss.StatusCode)),
-			getStringTag("status.message", ss.StatusMessage),
-		)
+		tags = append(tags, getInt64Tag(keyStatusCode, int64(ss.StatusCode)))
+		if ss.StatusMessage != "" {
+			tags = append(tags, getStringTag(keyStatusMessage, ss.StatusMessage))
+		}
 
 		if ss.StatusCode == codes.Error {
-			tags = append(tags, getBoolTag("error", true))
+			tags = append(tags, getBoolTag(keyError, true))
 		}
 	}
 
 	var logs []*gen.Log
 	for _, a := range ss.MessageEvents {
-		fields := make([]*gen.Tag, 0, len(a.Attributes))
+		nTags := len(a.Attributes)
+		if a.Name != "" {
+			nTags++
+		}
+		fields := make([]*gen.Tag, 0, nTags)
+		if a.Name != "" {
+			// If an event contains an attribute with the same key, it needs
+			// to be given precedence and overwrite this.
+			fields = append(fields, getStringTag(keyEventName, a.Name))
+		}
 		for _, kv := range a.Attributes {
 			tag := keyValueToTag(kv)
 			if tag != nil {
 				fields = append(fields, tag)
 			}
 		}
-		fields = append(fields, getStringTag("name", a.Name))
 		logs = append(logs, &gen.Log{
 			Timestamp: a.Time.UnixNano() / 1000,
 			Fields:    fields,

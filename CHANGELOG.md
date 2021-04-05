@@ -11,9 +11,36 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Option `ExportTimeout` was added to batch span processor. (#1755)
+- Adds semantic conventions for exceptions. (#1492)
+- Added support for configuring OTLP/HTTP Endpoints, Headers, Compression and Timeout via the Environment Variables. (#1758)
+  - `OTEL_EXPORTER_OTLP_ENDPOINT`
+  - `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`
+  - `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`
+  - `OTEL_EXPORTER_OTLP_HEADERS`
+  - `OTEL_EXPORTER_OTLP_TRACES_HEADERS`
+  - `OTEL_EXPORTER_OTLP_METRICS_HEADERS`
+  - `OTEL_EXPORTER_OTLP_COMPRESSION`
+  - `OTEL_EXPORTER_OTLP_TRACES_COMPRESSION`
+  - `OTEL_EXPORTER_OTLP_METRICS_COMPRESSION`
+  - `OTEL_EXPORTER_OTLP_TIMEOUT`
+  - `OTEL_EXPORTER_OTLP_TRACES_TIMEOUT`
+  - `OTEL_EXPORTER_OTLP_METRICS_TIMEOUT`
+- Added support for configuring OTLP/HTTP TLS Certificates via the Environment Variables. (#1769)
+  - `OTEL_EXPORTER_OTLP_CERTIFICATE`
+  - `OTEL_EXPORTER_OTLP_TRACES_CERTIFICATE`
+  - `OTEL_EXPORTER_OTLP_METRICS_CERTIFICATE`
+
+### Fixed
+
+- The `Span.IsRecording` implementation from `go.opentelemetry.io/otel/sdk/trace` always returns false when not being sampled. (#1750)
+- The Jaeger exporter now correctly sets tags for the Span status code and message.
+  This means it uses the correct tag keys (`"otel.status_code"`, `"otel.status_description"`) and does not set the status message as a tag unless it is set on the span. (#1761)
+- The Jaeger exporter now correctly records Span event's names using the `"event"` key for a tag.
+  Additionally, this tag is overridden, as specified in the OTel specification, if the event contains an attribute with that key. (#1768)
 
 ### Changed
 
+- Span `RecordError` now records an `exception` event to comply with the semantic convention specification. (#1492)
 - Jaeger exporter was updated to use thrift v0.14.1. (#1712)
 - Migrate from using internally built and maintained version of the OTLP to the one hosted at `go.opentelemetry.io/proto/otlp`. (#1713)
 - Migrate from using `github.com/gogo/protobuf` to `google.golang.org/protobuf` to match `go.opentelemetry.io/proto/otlp`. (#1713)
@@ -24,6 +51,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The existing `ParentSpanID` and `HasRemoteParent` fields are removed in favor of this. (#1748)
 - The `ParentContext` field of the `"go.opentelemetry.io/otel/sdk/trace".SamplingParameters` is updated to hold a `context.Context` containing the parent span.
   This changes it to make `SamplingParameters` conform with the OpenTelemetry specification. (#1749)
+- Modify `BatchSpanProcessor.ForceFlush` to abort after timeout/cancellation. (#1757)
+- Improve OTLP/gRPC exporter connection errors. (#1737)
 
 ### Removed
 
