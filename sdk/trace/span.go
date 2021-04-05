@@ -74,9 +74,6 @@ type ReadWriteSpan interface {
 // span is an implementation of the OpenTelemetry Span API representing the
 // individual component of a trace.
 type span struct {
-	// droppedAttributeCount contains dropped attributes for the span itself.
-	droppedAttributeCount int64
-
 	// mu protects the contents of this span.
 	mu sync.Mutex
 
@@ -450,10 +447,9 @@ func (s *span) Snapshot() *export.SpanSnapshot {
 	sd.StatusCode = s.statusCode
 	sd.StatusMessage = s.statusMessage
 
-	sd.DroppedAttributeCount = int(s.droppedAttributeCount)
 	if s.attributes.evictList.Len() > 0 {
 		sd.Attributes = s.attributes.toKeyValue()
-		sd.DroppedAttributeCount += s.attributes.droppedCount
+		sd.DroppedAttributeCount = s.attributes.droppedCount
 	}
 	if len(s.messageEvents.queue) > 0 {
 		sd.MessageEvents = s.interfaceArrayToMessageEventArray()
