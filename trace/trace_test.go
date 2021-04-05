@@ -164,41 +164,71 @@ func TestHasSpanID(t *testing.T) {
 	}
 }
 
-func TestSpanContextIsSampled(t *testing.T) {
+func TestTraceFlagsIsSampled(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
-		sc   SpanContext
+		tf   TraceFlags
 		want bool
 	}{
 		{
 			name: "sampled",
-			sc: SpanContext{
-				traceID:    TraceID([16]byte{1}),
-				traceFlags: FlagsSampled,
-			},
+			tf:   FlagsSampled,
 			want: true,
 		}, {
 			name: "unused bits are ignored, still not sampled",
-			sc: SpanContext{
-				traceID:    TraceID([16]byte{1}),
-				traceFlags: ^FlagsSampled,
-			},
+			tf:   ^FlagsSampled,
 			want: false,
 		}, {
 			name: "unused bits are ignored, still sampled",
-			sc: SpanContext{
-				traceID:    TraceID([16]byte{1}),
-				traceFlags: FlagsSampled | ^FlagsSampled,
-			},
+			tf:   FlagsSampled | ^FlagsSampled,
 			want: true,
 		}, {
 			name: "not sampled/default",
-			sc:   SpanContext{traceID: TraceID{}},
 			want: false,
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			have := testcase.sc.IsSampled()
+			have := testcase.tf.IsSampled()
+			if have != testcase.want {
+				t.Errorf("Want: %v, but have: %v", testcase.want, have)
+			}
+		})
+	}
+}
+
+func TestTraceFlagsWithSampled(t *testing.T) {
+	for _, testcase := range []struct {
+		name   string
+		start  TraceFlags
+		sample bool
+		want   TraceFlags
+	}{
+		{
+			name:   "sampled unchanged",
+			start:  FlagsSampled,
+			want:   FlagsSampled,
+			sample: true,
+		}, {
+			name:   "become sampled",
+			want:   FlagsSampled,
+			sample: true,
+		}, {
+			name:   "unused bits are ignored, still not sampled",
+			start:  ^FlagsSampled,
+			want:   ^FlagsSampled,
+			sample: false,
+		}, {
+			name:   "unused bits are ignored, becomes sampled",
+			start:  ^FlagsSampled,
+			want:   FlagsSampled | ^FlagsSampled,
+			sample: true,
+		}, {
+			name:   "not sampled/default",
+			sample: false,
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			have := testcase.start.WithSampled(testcase.sample)
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
 			}

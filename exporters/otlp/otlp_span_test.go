@@ -58,7 +58,7 @@ func TestExportSpans(t *testing.T) {
 					SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 						TraceID:    trace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
 						SpanID:     trace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
-						TraceFlags: byte(1),
+						TraceFlags: trace.FlagsSampled,
 					}),
 					SpanKind:  trace.SpanKindServer,
 					Name:      "parent process",
@@ -80,7 +80,7 @@ func TestExportSpans(t *testing.T) {
 					SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 						TraceID:    trace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}),
 						SpanID:     trace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
-						TraceFlags: byte(1),
+						TraceFlags: trace.FlagsSampled,
 					}),
 					SpanKind:  trace.SpanKindServer,
 					Name:      "secondary parent process",
@@ -102,12 +102,12 @@ func TestExportSpans(t *testing.T) {
 					SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 						TraceID:    trace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
 						SpanID:     trace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 2}),
-						TraceFlags: byte(1),
+						TraceFlags: trace.FlagsSampled,
 					}),
 					Parent: trace.NewSpanContext(trace.SpanContextConfig{
 						TraceID:    trace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
 						SpanID:     trace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
-						TraceFlags: byte(1),
+						TraceFlags: trace.FlagsSampled,
 					}),
 					SpanKind:  trace.SpanKindInternal,
 					Name:      "internal process",
@@ -129,7 +129,7 @@ func TestExportSpans(t *testing.T) {
 					SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 						TraceID:    trace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}),
 						SpanID:     trace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
-						TraceFlags: byte(1),
+						TraceFlags: trace.FlagsSampled,
 					}),
 					SpanKind:  trace.SpanKindServer,
 					Name:      "parent process",
