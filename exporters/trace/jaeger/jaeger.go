@@ -214,26 +214,20 @@ func (e *Exporter) ExportSpans(ctx context.Context, ss []*export.SpanSnapshot) e
 		return nil
 	}
 
-	var bundlerErr error
-	done := make(chan struct{})
-	go func() {
-		for _, span := range ss {
-			err := e.bundler.AddWait(ctx, span, 1)
-			if err != nil {
-				bundlerErr = fmt.Errorf("failed to bundle %q: %w", span.Name, err)
-				close(done)
-				return
-			}
+	for _, span := range ss {
+		// TODO(jbd): Handle oversized bundlers.
+		err := e.bundler.AddWait(ctx, span, 1)
+		if err != nil {
+			return fmt.Errorf("failed to bundle %q: %w", span.Name, err)
 		}
-		close(done)
-	}()
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-done:
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
 	}
-	return bundlerErr
+
+	return nil
 }
 
 // flush is used to wrap the bundler's Flush method for testing.
