@@ -226,6 +226,24 @@ func WithTLSClientConfig(tlsCfg *tls.Config) Option {
 	})
 }
 
+// WithTracesTLSClientConfig can be used to set up a custom TLS
+// configuration for the client used to send traces.
+// Use it if you want to use a custom certificate.
+func WithTracesTLSClientConfig(tlsCfg *tls.Config) Option {
+	return newGenericOption(func(cfg *config) {
+		cfg.traces.tlsCfg = tlsCfg
+	})
+}
+
+// WithMetricsTLSClientConfig can be used to set up a custom TLS
+// configuration for the client used to send metrics.
+// Use it if you want to use a custom certificate.
+func WithMetricsTLSClientConfig(tlsCfg *tls.Config) Option {
+	return newGenericOption(func(cfg *config) {
+		cfg.metrics.tlsCfg = tlsCfg
+	})
+}
+
 // WithInsecure tells the driver to connect to the collector using the
 // HTTP scheme, instead of HTTPS.
 func WithInsecure() Option {
