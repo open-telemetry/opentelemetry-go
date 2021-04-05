@@ -30,13 +30,7 @@ import (
 const (
 	// FlagsSampled is a bitmask with the sampled bit set. A SpanContext
 	// with the sampling bit set means the span is sampled.
-	FlagsSampled = byte(0x01)
-	// FlagsDeferred is a bitmask with the deferred bit set. A SpanContext
-	// with the deferred bit set means the sampling decision has been
-	// defered to the receiver.
-	FlagsDeferred = byte(0x02)
-	// FlagsDebug is a bitmask with the debug bit set.
-	FlagsDebug = byte(0x04)
+	FlagsSampled = TraceFlags(0x01)
 
 	errInvalidHexID errorConst = "trace-id and span-id can only contain [0-9a-f] characters, all lowercase"
 
@@ -319,12 +313,40 @@ func isTraceStateKeyValueValid(kv attribute.KeyValue) bool {
 		valueFormatRegExp.MatchString(kv.Value.Emit())
 }
 
+// TraceFlags contains flags that can be set on a SpanContext
+type TraceFlags byte //nolint:golint
+
+// IsSampled returns if the sampling bit is set in the TraceFlags.
+func (tf TraceFlags) IsSampled() bool {
+	return tf&FlagsSampled == FlagsSampled
+}
+
+// WithSampled sets the sampling bit in a new copy of the TraceFlags.
+func (tf TraceFlags) WithSampled(sampled bool) TraceFlags {
+	if sampled {
+		return tf | FlagsSampled
+	}
+
+	return tf &^ FlagsSampled
+}
+
+// MarshalJSON implements a custom marshal function to encode TraceFlags
+// as a hex string.
+func (tf TraceFlags) MarshalJSON() ([]byte, error) {
+	return json.Marshal(tf.String())
+}
+
+// String returns the hex string representation form of TraceFlags
+func (tf TraceFlags) String() string {
+	return hex.EncodeToString([]byte{byte(tf)}[:])
+}
+
 // SpanContextConfig contains mutable fields usable for constructing
 // an immutable SpanContext.
 type SpanContextConfig struct {
 	TraceID    TraceID
 	SpanID     SpanID
-	TraceFlags byte
+	TraceFlags TraceFlags
 	TraceState TraceState
 	Remote     bool
 }
@@ -345,7 +367,7 @@ func NewSpanContext(config SpanContextConfig) SpanContext {
 type SpanContext struct {
 	traceID    TraceID
 	spanID     SpanID
-	traceFlags byte
+	traceFlags TraceFlags
 	traceState TraceState
 	remote     bool
 }
@@ -415,12 +437,17 @@ func (sc SpanContext) WithSpanID(spanID SpanID) SpanContext {
 }
 
 // TraceFlags returns the flags from the SpanContext.
-func (sc SpanContext) TraceFlags() byte {
+func (sc SpanContext) TraceFlags() TraceFlags {
 	return sc.traceFlags
 }
 
+// IsSampled returns if the sampling bit is set in the SpanContext's TraceFlags.
+func (sc SpanContext) IsSampled() bool {
+	return sc.traceFlags.IsSampled()
+}
+
 // WithTraceFlags returns a new SpanContext with the TraceFlags replaced.
-func (sc SpanContext) WithTraceFlags(flags byte) SpanContext {
+func (sc SpanContext) WithTraceFlags(flags TraceFlags) SpanContext {
 	return SpanContext{
 		traceID:    sc.traceID,
 		spanID:     sc.spanID,
@@ -428,21 +455,6 @@ func (sc SpanContext) WithTraceFlags(flags byte) SpanContext {
 		traceState: sc.traceState,
 		remote:     sc.remote,
 	}
-}
-
-// IsDeferred returns if the deferred bit is set in the trace flags.
-func (sc SpanContext) IsDeferred() bool {
-	return sc.traceFlags&FlagsDeferred == FlagsDeferred
-}
-
-// IsDebug returns if the debug bit is set in the trace flags.
-func (sc SpanContext) IsDebug() bool {
-	return sc.traceFlags&FlagsDebug == FlagsDebug
-}
-
-// IsSampled returns if the sampling bit is set in the trace flags.
-func (sc SpanContext) IsSampled() bool {
-	return sc.traceFlags&FlagsSampled == FlagsSampled
 }
 
 // TraceState returns the TraceState from the SpanContext.

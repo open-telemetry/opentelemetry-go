@@ -78,7 +78,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 	got := b.String()
 	expectedOutput := `[{"SpanContext":{` +
 		`"TraceID":"0102030405060708090a0b0c0d0e0f10",` +
-		`"SpanID":"0102030405060708","TraceFlags":0,` +
+		`"SpanID":"0102030405060708","TraceFlags":"00",` +
 		`"TraceState":[` +
 		`{` +
 		`"Key":"key",` +
@@ -87,7 +87,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"Parent":{` +
 		`"TraceID":"00000000000000000000000000000000",` +
 		`"SpanID":"0000000000000000",` +
-		`"TraceFlags":0,` +
+		`"TraceFlags":"00",` +
 		`"TraceState":null,` +
 		`"Remote":false` +
 		`},` +
