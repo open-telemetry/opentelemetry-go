@@ -68,10 +68,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   If needed, that Span's `SpanContext.IsRemote()` can then be used to determine if it is remote or not. (#1731)
 - The `HasRemoteParent` field of the `"go.opentelemetry.io/otel/sdk/trace".SamplingParameters` is removed.
   This field is redundant to the information returned from the `Remote` method of the `SpanContext` held in the `ParentContext` field. (#1749)
-<<<<<<< HEAD
 - The `trace.FlagsDebug` and `trace.FlagsDeferred` constants have been removed and will be localized to the B3 propagator. (#1770)
-=======
->>>>>>> c0438683a86f7b2c33435591b4b7a98a20534829
 - Remove `Process` configuration for Jaeger exporter. The information that could be configured in the `Process` struct should be configured in a `Resource` instead. (#TBD)
 
 ## [0.19.0] - 2021-03-18
