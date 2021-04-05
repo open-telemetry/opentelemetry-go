@@ -473,13 +473,13 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 						Timestamp: now.UnixNano() / 1000,
 						Fields: []*gen.Tag{
 							{
-								Key:   "k1",
-								VStr:  &keyValue,
+								Key:   keyEventName,
+								VStr:  &eventNameValue,
 								VType: gen.TagType_STRING,
 							},
 							{
-								Key:   "name",
-								VStr:  &eventNameValue,
+								Key:   "k1",
+								VStr:  &keyValue,
 								VType: gen.TagType_STRING,
 							},
 						},
