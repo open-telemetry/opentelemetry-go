@@ -274,10 +274,7 @@ func TestBatchSpanProcessorPostShutdown(t *testing.T) {
 		genNumSpans: 60,
 	})
 
-	err := bsp.Shutdown(context.Background())
-	if err != nil {
-		t.Error("Error shutting the BatchSpanProcessor down\n")
-	}
+	require.NoError(t, bsp.Shutdown(context.Background()), "shutting down BatchSpanProcessor")
 	lenJustAfterShutdown := be.len()
 
 	_, span := tr.Start(context.Background(), "foo")
