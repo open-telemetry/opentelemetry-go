@@ -54,6 +54,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This changes it to make `SamplingParameters` conform with the OpenTelemetry specification. (#1749)
 - Modify `BatchSpanProcessor.ForceFlush` to abort after timeout/cancellation. (#1757)
 - Improve OTLP/gRPC exporter connection errors. (#1737)
+- Make `ExportSpans` in Jaeger Exporter honor context deadline. (#1773)
 
 ### Removed
 
