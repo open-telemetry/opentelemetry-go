@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Option `ExportTimeout` was added to batch span processor. (#1755)
 - Adds semantic conventions for exceptions. (#1492)
 - Added support for configuring OTLP/HTTP Endpoints, Headers, Compression and Timeout via the Environment Variables. (#1758)
   - `OTEL_EXPORTER_OTLP_ENDPOINT`
