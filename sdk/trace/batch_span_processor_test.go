@@ -279,10 +279,7 @@ func TestBatchSpanProcessorPostShutdown(t *testing.T) {
 
 	_, span := tr.Start(context.Background(), "foo")
 	span.End()
-	err = bsp.ForceFlush(context.Background())
-	if err != nil {
-		t.Error("Error force flushing \n")
-	}
+	assert.NoError(t, bsp.ForceFlush(context.Background()), "force flushing BatchSpanProcessor")
 	lenAfterFlush := be.len()
 
 	assert.Equal(t, lenJustAfterShutdown, lenAfterFlush)
