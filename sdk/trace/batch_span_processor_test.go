@@ -281,9 +281,8 @@ func TestBatchSpanProcessorPostShutdown(t *testing.T) {
 	_, span := tr.Start(context.Background(), "foo")
 	span.End()
 	assert.NoError(t, bsp.ForceFlush(context.Background()), "force flushing BatchSpanProcessor")
-	lenAfterFlush := be.len()
 
-	assert.Equal(t, lenJustAfterShutdown, lenAfterFlush)
+	assert.Equal(t, lenJustAfterShutdown, be.len(), "OnEnd and ForceFlush should have no effect after Shutdown")
 }
 
 func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
