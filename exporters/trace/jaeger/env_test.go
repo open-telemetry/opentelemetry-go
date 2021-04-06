@@ -229,13 +229,10 @@ func TestNewRawExporterWithEnv(t *testing.T) {
 		WithCollectorEndpoint(CollectorEndpointFromEnv(), WithCollectorEndpointOptionFromEnv()),
 		WithDisabled(true),
 		WithDisabledFromEnv(),
-		WithProcessFromEnv(),
 	)
 
 	assert.NoError(t, err)
 	assert.Equal(t, false, exp.o.Disabled)
-	assert.EqualValues(t, serviceName, exp.o.Process.ServiceName)
-	assert.Len(t, exp.o.Process.Tags, 1)
 
 	require.IsType(t, &collectorUploader{}, exp.uploader)
 	uploader := exp.uploader.(*collectorUploader)
@@ -276,8 +273,6 @@ func TestNewRawExporterWithEnvImplicitly(t *testing.T) {
 	assert.NoError(t, err)
 	// NewRawExporter will ignore Disabled env
 	assert.Equal(t, true, exp.o.Disabled)
-	assert.EqualValues(t, serviceName, exp.o.Process.ServiceName)
-	assert.Len(t, exp.o.Process.Tags, 1)
 
 	require.IsType(t, &collectorUploader{}, exp.uploader)
 	uploader := exp.uploader.(*collectorUploader)
@@ -388,122 +383,6 @@ func TestWithDisabledFromEnv(t *testing.T) {
 			require.NoError(t, os.Setenv(envDisabled, tc.env))
 
 			f := WithDisabledFromEnv()
-			f(&tc.options)
-
-			assert.Equal(t, tc.expectedOptions, tc.options)
-		})
-	}
-}
-
-func TestProcessFromEnv(t *testing.T) {
-	testCases := []struct {
-		name            string
-		serviceName     string
-		tags            string
-		expectedProcess Process
-	}{
-		{
-			name:        "set process",
-			serviceName: "test-service",
-			tags:        "key=value,key2=123",
-			expectedProcess: Process{
-				ServiceName: "test-service",
-				Tags: []attribute.KeyValue{
-					attribute.String("key", "value"),
-					attribute.Int64("key2", 123),
-				},
-			},
-		},
-		{
-			name:        "malformed tags",
-			serviceName: "test-service",
-			tags:        "key",
-			expectedProcess: Process{
-				ServiceName: "test-service",
-			},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			envStore, err := ottest.SetEnvVariables(map[string]string{
-				envServiceName: tc.serviceName,
-				envTags:        tc.tags,
-			})
-			require.NoError(t, err)
-
-			p := ProcessFromEnv()
-			assert.Equal(t, tc.expectedProcess, p)
-
-			require.NoError(t, envStore.Restore())
-		})
-	}
-}
-
-func TestWithProcessFromEnv(t *testing.T) {
-	testCases := []struct {
-		name            string
-		envServiceName  string
-		envTags         string
-		options         options
-		expectedOptions options
-	}{
-		{
-			name:           "overwriting",
-			envServiceName: "service-name",
-			envTags:        "key=value",
-			options: options{
-				Process: Process{
-					ServiceName: "old-name",
-					Tags: []attribute.KeyValue{
-						attribute.String("old-key", "old-value"),
-					},
-				},
-			},
-			expectedOptions: options{
-				Process: Process{
-					ServiceName: "service-name",
-					Tags: []attribute.KeyValue{
-						attribute.String("key", "value"),
-					},
-				},
-			},
-		},
-		{
-			name:           "no overwriting",
-			envServiceName: "",
-			envTags:        "",
-			options: options{
-				Process: Process{
-					ServiceName: "old-name",
-					Tags: []attribute.KeyValue{
-						attribute.String("old-key", "old-value"),
-					},
-				},
-			},
-			expectedOptions: options{
-				Process: Process{
-					ServiceName: "old-name",
-					Tags: []attribute.KeyValue{
-						attribute.String("old-key", "old-value"),
-					},
-				},
-			},
-		},
-	}
-
-	envStore := ottest.NewEnvStore()
-	envStore.Record(envServiceName)
-	envStore.Record(envTags)
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			require.NoError(t, os.Setenv(envServiceName, tc.envServiceName))
-			require.NoError(t, os.Setenv(envTags, tc.envTags))
-
-			f := WithProcessFromEnv()
 			f(&tc.options)
 
 			assert.Equal(t, tc.expectedOptions, tc.options)
