@@ -728,11 +728,10 @@ func TestJaegerBatchList(t *testing.T) {
 	now := time.Now()
 
 	testCases := []struct {
-		name                string
-		spanSnapshotList    []*sdktrace.SpanSnapshot
-		defaultServiceName  string
-		resourceFromProcess *resource.Resource
-		expectedBatchList   []*gen.Batch
+		name               string
+		spanSnapshotList   []*sdktrace.SpanSnapshot
+		defaultServiceName string
+		expectedBatchList  []*gen.Batch
 	}{
 		{
 			name:              "no span shots",
@@ -849,82 +848,7 @@ func TestJaegerBatchList(t *testing.T) {
 			},
 		},
 		{
-			name: "merge resources that come from process",
-			spanSnapshotList: []*sdktrace.SpanSnapshot{
-				{
-					Name: "s1",
-					Resource: resource.NewWithAttributes(
-						semconv.ServiceNameKey.String("name"),
-						attribute.Key("r1").String("v1"),
-						attribute.Key("r2").String("v2"),
-					),
-					StartTime: now,
-					EndTime:   now,
-				},
-			},
-			resourceFromProcess: resource.NewWithAttributes(
-				semconv.ServiceNameKey.String("new-name"),
-				attribute.Key("r1").String("v2"),
-			),
-			expectedBatchList: []*gen.Batch{
-				{
-					Process: &gen.Process{
-						ServiceName: "new-name",
-						Tags: []*gen.Tag{
-							{Key: "r1", VType: gen.TagType_STRING, VStr: newString("v2")},
-							{Key: "r2", VType: gen.TagType_STRING, VStr: newString("v2")},
-						},
-					},
-					Spans: []*gen.Span{
-						{
-							OperationName: "s1",
-							Tags: []*gen.Tag{
-								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
-							},
-							StartTime: now.UnixNano() / 1000,
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "span's snapshot contains no service name but resourceFromProcess does",
-			spanSnapshotList: []*sdktrace.SpanSnapshot{
-				{
-					Name: "s1",
-					Resource: resource.NewWithAttributes(
-						attribute.Key("r1").String("v1"),
-					),
-					StartTime: now,
-					EndTime:   now,
-				},
-				nil,
-			},
-			resourceFromProcess: resource.NewWithAttributes(
-				semconv.ServiceNameKey.String("new-name"),
-			),
-			expectedBatchList: []*gen.Batch{
-				{
-					Process: &gen.Process{
-						ServiceName: "new-name",
-						Tags: []*gen.Tag{
-							{Key: "r1", VType: gen.TagType_STRING, VStr: newString("v1")},
-						},
-					},
-					Spans: []*gen.Span{
-						{
-							OperationName: "s1",
-							Tags: []*gen.Tag{
-								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
-							},
-							StartTime: now.UnixNano() / 1000,
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "no service name in spans and resourceFromProcess",
+			name: "no service name in spans",
 			spanSnapshotList: []*sdktrace.SpanSnapshot{
 				{
 					Name: "s1",
@@ -961,7 +885,7 @@ func TestJaegerBatchList(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			batchList := jaegerBatchList(tc.spanSnapshotList, tc.defaultServiceName, tc.resourceFromProcess)
+			batchList := jaegerBatchList(tc.spanSnapshotList, tc.defaultServiceName)
 
 			assert.ElementsMatch(t, tc.expectedBatchList, batchList)
 		})
