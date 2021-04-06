@@ -26,7 +26,6 @@ import (
 	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/internal"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -53,7 +52,7 @@ type ReadOnlySpan interface {
 	IsRecording() bool
 	InstrumentationLibrary() instrumentation.Library
 	Resource() *resource.Resource
-	Snapshot() *export.SpanSnapshot
+	Snapshot() *SpanSnapshot
 
 	// A private method to prevent users implementing the
 	// interface and so future additions to it will not
@@ -430,8 +429,8 @@ func (s *span) addLink(link trace.Link) {
 
 // Snapshot creates a snapshot representing the current state of the span as an
 // export.SpanSnapshot and returns a pointer to it.
-func (s *span) Snapshot() *export.SpanSnapshot {
-	var sd export.SpanSnapshot
+func (s *span) Snapshot() *SpanSnapshot {
+	var sd SpanSnapshot
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -579,4 +578,40 @@ func isRecording(s SamplingResult) bool {
 
 func isSampled(s SamplingResult) bool {
 	return s.Decision == RecordAndSample
+}
+
+// SpanSnapshot is a snapshot of a span which contains all the information
+// collected by the span. Its main purpose is exporting completed spans.
+// Although SpanSnapshot fields can be accessed and potentially modified,
+// SpanSnapshot should be treated as immutable. Changes to the span from which
+// the SpanSnapshot was created are NOT reflected in the SpanSnapshot.
+type SpanSnapshot struct {
+	SpanContext trace.SpanContext
+	Parent      trace.SpanContext
+	SpanKind    trace.SpanKind
+	Name        string
+	StartTime   time.Time
+	// The wall clock time of EndTime will be adjusted to always be offset
+	// from StartTime by the duration of the span.
+	EndTime       time.Time
+	Attributes    []attribute.KeyValue
+	MessageEvents []trace.Event
+	Links         []trace.Link
+	StatusCode    codes.Code
+	StatusMessage string
+
+	// DroppedAttributeCount contains dropped attributes for the span itself.
+	DroppedAttributeCount    int
+	DroppedMessageEventCount int
+	DroppedLinkCount         int
+
+	// ChildSpanCount holds the number of child span created for this span.
+	ChildSpanCount int
+
+	// Resource contains attributes representing an entity that produced this span.
+	Resource *resource.Resource
+
+	// InstrumentationLibrary defines the instrumentation library used to
+	// provide instrumentation.
+	InstrumentationLibrary instrumentation.Library
 }

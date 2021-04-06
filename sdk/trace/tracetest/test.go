@@ -20,7 +20,7 @@ import (
 	"context"
 	"sync"
 
-	"go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 var _ trace.SpanExporter = (*NoopExporter)(nil)

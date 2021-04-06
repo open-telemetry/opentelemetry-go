@@ -39,7 +39,6 @@ import (
 
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -102,14 +101,14 @@ func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
 type testExporter struct {
 	mu    sync.RWMutex
 	idx   map[string]int
-	spans []*export.SpanSnapshot
+	spans []*SpanSnapshot
 }
 
 func NewTestExporter() *testExporter {
 	return &testExporter{idx: make(map[string]int)}
 }
 
-func (te *testExporter) ExportSpans(_ context.Context, ss []*export.SpanSnapshot) error {
+func (te *testExporter) ExportSpans(_ context.Context, ss []*SpanSnapshot) error {
 	te.mu.Lock()
 	defer te.mu.Unlock()
 
@@ -122,16 +121,16 @@ func (te *testExporter) ExportSpans(_ context.Context, ss []*export.SpanSnapshot
 	return nil
 }
 
-func (te *testExporter) Spans() []*export.SpanSnapshot {
+func (te *testExporter) Spans() []*SpanSnapshot {
 	te.mu.RLock()
 	defer te.mu.RUnlock()
 
-	cp := make([]*export.SpanSnapshot, len(te.spans))
+	cp := make([]*SpanSnapshot, len(te.spans))
 	copy(cp, te.spans)
 	return cp
 }
 
-func (te *testExporter) GetSpan(name string) (*export.SpanSnapshot, bool) {
+func (te *testExporter) GetSpan(name string) (*SpanSnapshot, bool) {
 	te.mu.RLock()
 	defer te.mu.RUnlock()
 	i, ok := te.idx[name]
@@ -388,7 +387,7 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &export.SpanSnapshot{
+	want := &SpanSnapshot{
 		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -417,7 +416,7 @@ func TestSetSpanAttributes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &export.SpanSnapshot{
+	want := &SpanSnapshot{
 		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -473,7 +472,7 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &export.SpanSnapshot{
+	want := &SpanSnapshot{
 		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -507,7 +506,7 @@ func TestSetSpanAttributesWithInvalidKey(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &export.SpanSnapshot{
+	want := &SpanSnapshot{
 		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -551,7 +550,7 @@ func TestEvents(t *testing.T) {
 		}
 	}
 
-	want := &export.SpanSnapshot{
+	want := &SpanSnapshot{
 		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -600,7 +599,7 @@ func TestEventsOverLimit(t *testing.T) {
 		}
 	}
 
-	want := &export.SpanSnapshot{
+	want := &SpanSnapshot{
 		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -642,7 +641,7 @@ func TestLinks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &export.SpanSnapshot{
+	want := &SpanSnapshot{
 		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -683,7 +682,7 @@ func TestLinksOverLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &export.SpanSnapshot{
+	want := &SpanSnapshot{
 		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -732,7 +731,7 @@ func TestSetSpanStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &export.SpanSnapshot{
+	want := &SpanSnapshot{
 		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -760,7 +759,7 @@ func TestSetSpanStatusWithoutMessageWhenStatusIsNotError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &export.SpanSnapshot{
+	want := &SpanSnapshot{
 		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -847,7 +846,7 @@ func startLocalSpan(tp *TracerProvider, ctx context.Context, trName, name string
 // It also does some basic tests on the span.
 // It also clears spanID in the export.SpanSnapshot to make the comparison
 // easier.
-func endSpan(te *testExporter, span trace.Span) (*export.SpanSnapshot, error) {
+func endSpan(te *testExporter, span trace.Span) (*SpanSnapshot, error) {
 	if !span.IsRecording() {
 		return nil, fmt.Errorf("IsRecording: got false, want true")
 	}
@@ -1109,7 +1108,7 @@ func TestRecordError(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		want := &export.SpanSnapshot{
+		want := &SpanSnapshot{
 			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    tid,
 				TraceFlags: 0x1,
@@ -1148,7 +1147,7 @@ func TestRecordErrorNil(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &export.SpanSnapshot{
+	want := &SpanSnapshot{
 		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -1245,7 +1244,7 @@ func TestWithResource(t *testing.T) {
 			if err != nil {
 				t.Error(err.Error())
 			}
-			want := &export.SpanSnapshot{
+			want := &SpanSnapshot{
 				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID:    tid,
 					TraceFlags: 0x1,
@@ -1281,7 +1280,7 @@ func TestWithInstrumentationVersion(t *testing.T) {
 		t.Error(err.Error())
 	}
 
-	want := &export.SpanSnapshot{
+	want := &SpanSnapshot{
 		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -1469,7 +1468,7 @@ func TestAddEventsWithMoreAttributesThanLimit(t *testing.T) {
 		}
 	}
 
-	want := &export.SpanSnapshot{
+	want := &SpanSnapshot{
 		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -1528,7 +1527,7 @@ func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &export.SpanSnapshot{
+	want := &SpanSnapshot{
 		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,

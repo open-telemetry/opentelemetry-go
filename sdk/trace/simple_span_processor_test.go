@@ -20,7 +20,6 @@ import (
 
 	"go.opentelemetry.io/otel/trace"
 
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -30,11 +29,11 @@ var (
 )
 
 type testExporter struct {
-	spans    []*export.SpanSnapshot
+	spans    []*sdktrace.SpanSnapshot
 	shutdown bool
 }
 
-func (t *testExporter) ExportSpans(ctx context.Context, ss []*export.SpanSnapshot) error {
+func (t *testExporter) ExportSpans(ctx context.Context, ss []*sdktrace.SpanSnapshot) error {
 	t.spans = append(t.spans, ss...)
 	return nil
 }
@@ -44,7 +43,7 @@ func (t *testExporter) Shutdown(context.Context) error {
 	return nil
 }
 
-var _ export.SpanExporter = (*testExporter)(nil)
+var _ sdktrace.SpanExporter = (*testExporter)(nil)
 
 func TestNewSimpleSpanProcessor(t *testing.T) {
 	if ssp := sdktrace.NewSimpleSpanProcessor(&testExporter{}); ssp == nil {
