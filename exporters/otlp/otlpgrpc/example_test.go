@@ -26,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -48,11 +49,11 @@ func Example_insecure() {
 	}()
 
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithBatcher(
 			exp,
 			// add following two options to ensure flush
-			sdktrace.WithBatchTimeout(5),
+			sdktrace.WithBatchTimeout(5*time.Second),
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	)
@@ -101,11 +102,11 @@ func Example_withTLS() {
 	}()
 
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithBatcher(
 			exp,
 			// add following two options to ensure flush
-			sdktrace.WithBatchTimeout(5),
+			sdktrace.WithBatchTimeout(5*time.Second),
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	)
@@ -162,11 +163,11 @@ func Example_withDifferentSignalCollectors() {
 	}()
 
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithBatcher(
 			exp,
 			// add following two options to ensure flush
-			sdktrace.WithBatchTimeout(5),
+			sdktrace.WithBatchTimeout(5*time.Second),
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	)
@@ -184,10 +185,10 @@ func Example_withDifferentSignalCollectors() {
 			simple.NewWithExactDistribution(),
 			exp,
 		),
-		controller.WithPusher(exp),
+		controller.WithExporter(exp),
 		controller.WithCollectPeriod(2*time.Second),
 	)
-	otel.SetMeterProvider(pusher.MeterProvider())
+	global.SetMeterProvider(pusher.MeterProvider())
 
 	if err := pusher.Start(ctx); err != nil {
 		log.Fatalf("could not start metric controoler: %v", err)
@@ -202,7 +203,7 @@ func Example_withDifferentSignalCollectors() {
 	}()
 
 	tracer := otel.Tracer("test-tracer")
-	meter := otel.Meter("test-meter")
+	meter := global.Meter("test-meter")
 
 	// Recorder metric example
 	counter := metric.Must(meter).

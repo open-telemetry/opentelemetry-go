@@ -17,9 +17,10 @@ package jaeger
 import (
 	"context"
 	"encoding/binary"
-	"math"
+	"fmt"
 	"os"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -29,14 +30,15 @@ import (
 	"google.golang.org/api/support/bundler"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
-	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -113,9 +115,7 @@ func TestNewExportPipeline(t *testing.T) {
 			name:     "always on",
 			endpoint: WithCollectorEndpoint(collectorEndpoint),
 			options: []Option{
-				WithSDK(&sdktrace.Config{
-					DefaultSampler: sdktrace.AlwaysSample(),
-				}),
+				WithSDKOptions(sdktrace.WithSampler(sdktrace.AlwaysSample())),
 			},
 			expectedProviderType: &sdktrace.TracerProvider{},
 			testSpanSampling:     true,
@@ -125,9 +125,7 @@ func TestNewExportPipeline(t *testing.T) {
 			name:     "never",
 			endpoint: WithCollectorEndpoint(collectorEndpoint),
 			options: []Option{
-				WithSDK(&sdktrace.Config{
-					DefaultSampler: sdktrace.NeverSample(),
-				}),
+				WithSDKOptions(sdktrace.WithSampler(sdktrace.NeverSample())),
 			},
 			expectedProviderType: &sdktrace.TracerProvider{},
 			testSpanSampling:     true,
@@ -186,32 +184,14 @@ func TestNewRawExporter(t *testing.T) {
 		{
 			name:                   "default exporter",
 			endpoint:               WithCollectorEndpoint(collectorEndpoint),
-			expectedServiceName:    defaultServiceName,
+			expectedServiceName:    "unknown_service",
 			expectedBufferMaxCount: bundler.DefaultBufferedByteLimit,
 			expectedBatchMaxCount:  bundler.DefaultBundleCountThreshold,
 		},
 		{
 			name:                   "default exporter with agent endpoint",
 			endpoint:               WithAgentEndpoint(agentEndpoint),
-			expectedServiceName:    defaultServiceName,
-			expectedBufferMaxCount: bundler.DefaultBufferedByteLimit,
-			expectedBatchMaxCount:  bundler.DefaultBundleCountThreshold,
-		},
-		{
-			name:     "with process",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
-			options: []Option{
-				WithProcess(
-					Process{
-						ServiceName: "jaeger-test",
-						Tags: []label.KeyValue{
-							label.String("key", "val"),
-						},
-					},
-				),
-			},
-			expectedServiceName:    "jaeger-test",
-			expectedTagsLen:        1,
+			expectedServiceName:    "unknown_service",
 			expectedBufferMaxCount: bundler.DefaultBufferedByteLimit,
 			expectedBatchMaxCount:  bundler.DefaultBundleCountThreshold,
 		},
@@ -219,15 +199,10 @@ func TestNewRawExporter(t *testing.T) {
 			name:     "with buffer and batch max count",
 			endpoint: WithCollectorEndpoint(collectorEndpoint),
 			options: []Option{
-				WithProcess(
-					Process{
-						ServiceName: "jaeger-test",
-					},
-				),
 				WithBufferMaxCount(99),
 				WithBatchMaxCount(99),
 			},
-			expectedServiceName:    "jaeger-test",
+			expectedServiceName:    "unknown_service",
 			expectedBufferMaxCount: 99,
 			expectedBatchMaxCount:  99,
 		},
@@ -241,10 +216,10 @@ func TestNewRawExporter(t *testing.T) {
 			)
 
 			assert.NoError(t, err)
-			assert.Equal(t, tc.expectedServiceName, exp.process.ServiceName)
-			assert.Len(t, exp.process.Tags, tc.expectedTagsLen)
 			assert.Equal(t, tc.expectedBufferMaxCount, exp.bundler.BufferedByteLimit)
 			assert.Equal(t, tc.expectedBatchMaxCount, exp.bundler.BundleCountThreshold)
+			assert.NotEmpty(t, exp.defaultServiceName)
+			assert.True(t, strings.HasPrefix(exp.defaultServiceName, tc.expectedServiceName))
 		})
 	}
 }
@@ -302,71 +277,92 @@ func TestNewRawExporterShouldFailIfCollectorUnset(t *testing.T) {
 	assert.Error(t, err)
 }
 
-type testCollectorEnpoint struct {
-	spansUploaded []*gen.Span
+type testCollectorEndpoint struct {
+	batchesUploaded []*gen.Batch
 }
 
-func (c *testCollectorEnpoint) upload(batch *gen.Batch) error {
-	c.spansUploaded = append(c.spansUploaded, batch.Spans...)
+func (c *testCollectorEndpoint) upload(batch *gen.Batch) error {
+	c.batchesUploaded = append(c.batchesUploaded, batch)
 	return nil
 }
 
-var _ batchUploader = (*testCollectorEnpoint)(nil)
+var _ batchUploader = (*testCollectorEndpoint)(nil)
 
 func withTestCollectorEndpoint() func() (batchUploader, error) {
 	return func() (batchUploader, error) {
-		return &testCollectorEnpoint{}, nil
+		return &testCollectorEndpoint{}, nil
+	}
+}
+
+func withTestCollectorEndpointInjected(ce *testCollectorEndpoint) func() (batchUploader, error) {
+	return func() (batchUploader, error) {
+		return ce, nil
 	}
 }
 
 func TestExporter_ExportSpan(t *testing.T) {
+	envStore, err := ottest.SetEnvVariables(map[string]string{
+		envDisabled: "false",
+	})
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, envStore.Restore())
+	}()
+
 	const (
 		serviceName = "test-service"
 		tagKey      = "key"
 		tagVal      = "val"
 	)
-	// Create Jaeger Exporter
-	exp, err := NewRawExporter(
-		withTestCollectorEndpoint(),
-		WithProcess(Process{
-			ServiceName: serviceName,
-			Tags: []label.KeyValue{
-				label.String(tagKey, tagVal),
-			},
-		}),
-	)
 
+	testCollector := &testCollectorEndpoint{}
+	tp, spanFlush, err := NewExportPipeline(
+		withTestCollectorEndpointInjected(testCollector),
+		WithSDKOptions(
+			sdktrace.WithResource(resource.NewWithAttributes(
+				semconv.ServiceNameKey.String(serviceName),
+				attribute.String(tagKey, tagVal),
+			)),
+		),
+	)
 	assert.NoError(t, err)
-
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithSyncer(exp),
-	)
 	otel.SetTracerProvider(tp)
-	_, span := otel.Tracer("test-tracer").Start(context.Background(), "test-span")
-	span.End()
+	tracer := otel.Tracer("test-tracer")
+	for i := 0; i < 3; i++ {
+		_, span := tracer.Start(context.Background(), fmt.Sprintf("test-span-%d", i))
+		span.End()
+		assert.True(t, span.SpanContext().IsValid())
+	}
 
-	assert.True(t, span.SpanContext().IsValid())
+	spanFlush()
+	batchesUploaded := testCollector.batchesUploaded
+	require.Len(t, batchesUploaded, 1)
+	uploadedBatch := batchesUploaded[0]
+	assert.Equal(t, serviceName, uploadedBatch.GetProcess().GetServiceName())
+	assert.Len(t, uploadedBatch.GetSpans(), 3)
 
-	exp.Flush()
-	tc := exp.uploader.(*testCollectorEnpoint)
-	assert.True(t, len(tc.spansUploaded) == 1)
+	require.Len(t, uploadedBatch.GetProcess().GetTags(), 1)
+	assert.Equal(t, tagKey, uploadedBatch.GetProcess().GetTags()[0].GetKey())
+	assert.Equal(t, tagVal, uploadedBatch.GetProcess().GetTags()[0].GetVStr())
 }
 
 func Test_spanSnapshotToThrift(t *testing.T) {
 	now := time.Now()
 	traceID, _ := trace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
 	spanID, _ := trace.SpanIDFromHex("0102030405060708")
+	parentSpanID, _ := trace.SpanIDFromHex("0807060504030201")
 
 	linkTraceID, _ := trace.TraceIDFromHex("0102030405060709090a0b0c0d0e0f11")
 	linkSpanID, _ := trace.SpanIDFromHex("0102030405060709")
 
 	eventNameValue := "event-test"
+	eventDropped := int64(10)
 	keyValue := "value"
 	statusCodeValue := int64(1)
 	doubleValue := 123.456
-	uintValue := int64(123)
+	intValue := int64(123)
 	boolTrue := true
+	arrValue := "[0,1,2,3]"
 	statusMessage := "this is a problem"
 	spanKind := "client"
 	rv1 := "rv11"
@@ -380,36 +376,73 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 		want *gen.Span
 	}{
 		{
-			name: "no parent",
+			name: "no status description",
 			data: &export.SpanSnapshot{
-				SpanContext: trace.SpanContext{
+				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID: traceID,
 					SpanID:  spanID,
+				}),
+				Name:       "/foo",
+				StartTime:  now,
+				EndTime:    now,
+				StatusCode: codes.Error,
+				SpanKind:   trace.SpanKindClient,
+				InstrumentationLibrary: instrumentation.Library{
+					Name:    instrLibName,
+					Version: instrLibVersion,
 				},
+			},
+			want: &gen.Span{
+				TraceIdLow:    651345242494996240,
+				TraceIdHigh:   72623859790382856,
+				SpanId:        72623859790382856,
+				OperationName: "/foo",
+				StartTime:     now.UnixNano() / 1000,
+				Duration:      0,
+				Tags: []*gen.Tag{
+					{Key: keyError, VType: gen.TagType_BOOL, VBool: &boolTrue},
+					{Key: keyInstrumentationLibraryName, VType: gen.TagType_STRING, VStr: &instrLibName},
+					{Key: keyInstrumentationLibraryVersion, VType: gen.TagType_STRING, VStr: &instrLibVersion},
+					{Key: keyStatusCode, VType: gen.TagType_LONG, VLong: &statusCodeValue},
+					// Should not have a status message because it was unset
+					{Key: keySpanKind, VType: gen.TagType_STRING, VStr: &spanKind},
+				},
+			},
+		},
+		{
+			name: "no parent",
+			data: &export.SpanSnapshot{
+				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID: traceID,
+					SpanID:  spanID,
+				}),
 				Name:      "/foo",
 				StartTime: now,
 				EndTime:   now,
 				Links: []trace.Link{
 					{
-						SpanContext: trace.SpanContext{
+						SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 							TraceID: linkTraceID,
 							SpanID:  linkSpanID,
-						},
+						}),
 					},
 				},
-				Attributes: []label.KeyValue{
-					label.String("key", keyValue),
-					label.Float64("double", doubleValue),
-					label.Uint64("uint", uint64(uintValue)),
-					label.Uint64("overflows", math.MaxUint64),
+				Attributes: []attribute.KeyValue{
+					attribute.String("key", keyValue),
+					attribute.Float64("double", doubleValue),
+					attribute.Int64("int", intValue),
 				},
 				MessageEvents: []trace.Event{
-					{Name: eventNameValue, Attributes: []label.KeyValue{label.String("k1", keyValue)}, Time: now},
+					{
+						Name:                  eventNameValue,
+						Attributes:            []attribute.KeyValue{attribute.String("k1", keyValue)},
+						DroppedAttributeCount: int(eventDropped),
+						Time:                  now,
+					},
 				},
 				StatusCode:    codes.Error,
 				StatusMessage: statusMessage,
 				SpanKind:      trace.SpanKindClient,
-				Resource:      resource.NewWithAttributes(label.String("rk1", rv1), label.Int64("rk2", rv2)),
 				InstrumentationLibrary: instrumentation.Library{
 					Name:    instrLibName,
 					Version: instrLibVersion,
@@ -425,19 +458,17 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 				Tags: []*gen.Tag{
 					{Key: "double", VType: gen.TagType_DOUBLE, VDouble: &doubleValue},
 					{Key: "key", VType: gen.TagType_STRING, VStr: &keyValue},
-					{Key: "uint", VType: gen.TagType_LONG, VLong: &uintValue},
-					{Key: "error", VType: gen.TagType_BOOL, VBool: &boolTrue},
-					{Key: "otel.instrumentation_library.name", VType: gen.TagType_STRING, VStr: &instrLibName},
-					{Key: "otel.instrumentation_library.version", VType: gen.TagType_STRING, VStr: &instrLibVersion},
-					{Key: "status.code", VType: gen.TagType_LONG, VLong: &statusCodeValue},
-					{Key: "status.message", VType: gen.TagType_STRING, VStr: &statusMessage},
-					{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
-					{Key: "rk1", VType: gen.TagType_STRING, VStr: &rv1},
-					{Key: "rk2", VType: gen.TagType_LONG, VLong: &rv2},
+					{Key: "int", VType: gen.TagType_LONG, VLong: &intValue},
+					{Key: keyError, VType: gen.TagType_BOOL, VBool: &boolTrue},
+					{Key: keyInstrumentationLibraryName, VType: gen.TagType_STRING, VStr: &instrLibName},
+					{Key: keyInstrumentationLibraryVersion, VType: gen.TagType_STRING, VStr: &instrLibVersion},
+					{Key: keyStatusCode, VType: gen.TagType_LONG, VLong: &statusCodeValue},
+					{Key: keyStatusMessage, VType: gen.TagType_STRING, VStr: &statusMessage},
+					{Key: keySpanKind, VType: gen.TagType_STRING, VStr: &spanKind},
 				},
 				References: []*gen.SpanRef{
 					{
-						RefType:     gen.SpanRefType_CHILD_OF,
+						RefType:     gen.SpanRefType_FOLLOWS_FROM,
 						TraceIdHigh: int64(binary.BigEndian.Uint64(linkTraceID[0:8])),
 						TraceIdLow:  int64(binary.BigEndian.Uint64(linkTraceID[8:16])),
 						SpanId:      int64(binary.BigEndian.Uint64(linkSpanID[:])),
@@ -448,17 +479,120 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 						Timestamp: now.UnixNano() / 1000,
 						Fields: []*gen.Tag{
 							{
+								Key:   keyEventName,
+								VStr:  &eventNameValue,
+								VType: gen.TagType_STRING,
+							},
+							{
 								Key:   "k1",
 								VStr:  &keyValue,
 								VType: gen.TagType_STRING,
 							},
 							{
-								Key:   "name",
-								VStr:  &eventNameValue,
-								VType: gen.TagType_STRING,
+								Key:   keyDroppedAttributeCount,
+								VLong: &eventDropped,
+								VType: gen.TagType_LONG,
 							},
 						},
 					},
+				},
+			},
+		},
+		{
+			name: "with parent",
+			data: &export.SpanSnapshot{
+				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID: traceID,
+					SpanID:  spanID,
+				}),
+				Parent: trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID: traceID,
+					SpanID:  parentSpanID,
+				}),
+				Links: []trace.Link{
+					{
+						SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+							TraceID: linkTraceID,
+							SpanID:  linkSpanID,
+						}),
+					},
+				},
+				Name:      "/foo",
+				StartTime: now,
+				EndTime:   now,
+				Attributes: []attribute.KeyValue{
+					attribute.Array("arr", []int{0, 1, 2, 3}),
+				},
+				StatusCode:    codes.Unset,
+				StatusMessage: statusMessage,
+				SpanKind:      trace.SpanKindInternal,
+				InstrumentationLibrary: instrumentation.Library{
+					Name:    instrLibName,
+					Version: instrLibVersion,
+				},
+			},
+			want: &gen.Span{
+				TraceIdLow:    651345242494996240,
+				TraceIdHigh:   72623859790382856,
+				SpanId:        72623859790382856,
+				ParentSpanId:  578437695752307201,
+				OperationName: "/foo",
+				StartTime:     now.UnixNano() / 1000,
+				Duration:      0,
+				Tags: []*gen.Tag{
+					// status code, message and span kind should NOT be populated
+					{Key: "arr", VType: gen.TagType_STRING, VStr: &arrValue},
+					{Key: keyInstrumentationLibraryName, VType: gen.TagType_STRING, VStr: &instrLibName},
+					{Key: keyInstrumentationLibraryVersion, VType: gen.TagType_STRING, VStr: &instrLibVersion},
+				},
+				References: []*gen.SpanRef{
+					{
+						RefType:     gen.SpanRefType_FOLLOWS_FROM,
+						TraceIdHigh: int64(binary.BigEndian.Uint64(linkTraceID[0:8])),
+						TraceIdLow:  int64(binary.BigEndian.Uint64(linkTraceID[8:16])),
+						SpanId:      int64(binary.BigEndian.Uint64(linkSpanID[:])),
+					},
+				},
+			},
+		},
+		{
+			name: "resources do not affect the tags",
+			data: &export.SpanSnapshot{
+				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID: traceID,
+					SpanID:  spanID,
+				}),
+				Parent: trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID: traceID,
+					SpanID:  parentSpanID,
+				}),
+				Name:      "/foo",
+				StartTime: now,
+				EndTime:   now,
+				Resource: resource.NewWithAttributes(
+					attribute.String("rk1", rv1),
+					attribute.Int64("rk2", rv2),
+					semconv.ServiceNameKey.String("service name"),
+				),
+				StatusCode:    codes.Unset,
+				StatusMessage: statusMessage,
+				SpanKind:      trace.SpanKindInternal,
+				InstrumentationLibrary: instrumentation.Library{
+					Name:    instrLibName,
+					Version: instrLibVersion,
+				},
+			},
+			want: &gen.Span{
+				TraceIdLow:    651345242494996240,
+				TraceIdHigh:   72623859790382856,
+				SpanId:        72623859790382856,
+				ParentSpanId:  578437695752307201,
+				OperationName: "/foo",
+				StartTime:     now.UnixNano() / 1000,
+				Duration:      0,
+				Tags: []*gen.Tag{
+					{Key: keyInstrumentationLibraryName, VType: gen.TagType_STRING, VStr: &instrLibName},
+					{Key: keyInstrumentationLibraryVersion, VType: gen.TagType_STRING, VStr: &instrLibVersion},
 				},
 			},
 		},
@@ -524,4 +658,336 @@ func TestErrorOnExportShutdownExporter(t *testing.T) {
 	require.NoError(t, err)
 	assert.NoError(t, e.Shutdown(context.Background()))
 	assert.NoError(t, e.ExportSpans(context.Background(), nil))
+}
+
+func TestExporterExportSpansHonorsCancel(t *testing.T) {
+	e, err := NewRawExporter(withTestCollectorEndpoint())
+	require.NoError(t, err)
+	now := time.Now()
+	ss := []*export.SpanSnapshot{
+		{
+			Name: "s1",
+			Resource: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("name"),
+				attribute.Key("r1").String("v1"),
+			),
+			StartTime: now,
+			EndTime:   now,
+		},
+		{
+			Name: "s2",
+			Resource: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("name"),
+				attribute.Key("r2").String("v2"),
+			),
+			StartTime: now,
+			EndTime:   now,
+		},
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	assert.EqualError(t, e.ExportSpans(ctx, ss), context.Canceled.Error())
+}
+
+func TestExporterExportSpansHonorsTimeout(t *testing.T) {
+	e, err := NewRawExporter(withTestCollectorEndpoint())
+	require.NoError(t, err)
+	now := time.Now()
+	ss := []*export.SpanSnapshot{
+		{
+			Name: "s1",
+			Resource: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("name"),
+				attribute.Key("r1").String("v1"),
+			),
+			StartTime: now,
+			EndTime:   now,
+		},
+		{
+			Name: "s2",
+			Resource: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("name"),
+				attribute.Key("r2").String("v2"),
+			),
+			StartTime: now,
+			EndTime:   now,
+		},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
+	defer cancel()
+	<-ctx.Done()
+
+	assert.EqualError(t, e.ExportSpans(ctx, ss), context.DeadlineExceeded.Error())
+}
+
+func TestJaegerBatchList(t *testing.T) {
+	newString := func(value string) *string {
+		return &value
+	}
+	spanKind := "unspecified"
+	now := time.Now()
+
+	testCases := []struct {
+		name               string
+		spanSnapshotList   []*export.SpanSnapshot
+		defaultServiceName string
+		expectedBatchList  []*gen.Batch
+	}{
+		{
+			name:              "no span shots",
+			spanSnapshotList:  nil,
+			expectedBatchList: nil,
+		},
+		{
+			name: "span's snapshot contains nil span",
+			spanSnapshotList: []*export.SpanSnapshot{
+				{
+					Name: "s1",
+					Resource: resource.NewWithAttributes(
+						semconv.ServiceNameKey.String("name"),
+						attribute.Key("r1").String("v1"),
+					),
+					StartTime: now,
+					EndTime:   now,
+				},
+				nil,
+			},
+			expectedBatchList: []*gen.Batch{
+				{
+					Process: &gen.Process{
+						ServiceName: "name",
+						Tags: []*gen.Tag{
+							{Key: "r1", VType: gen.TagType_STRING, VStr: newString("v1")},
+						},
+					},
+					Spans: []*gen.Span{
+						{
+							OperationName: "s1",
+							Tags: []*gen.Tag{
+								{Key: keySpanKind, VType: gen.TagType_STRING, VStr: &spanKind},
+							},
+							StartTime: now.UnixNano() / 1000,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "merge spans that have the same resources",
+			spanSnapshotList: []*export.SpanSnapshot{
+				{
+					Name: "s1",
+					Resource: resource.NewWithAttributes(
+						semconv.ServiceNameKey.String("name"),
+						attribute.Key("r1").String("v1"),
+					),
+					StartTime: now,
+					EndTime:   now,
+				},
+				{
+					Name: "s2",
+					Resource: resource.NewWithAttributes(
+						semconv.ServiceNameKey.String("name"),
+						attribute.Key("r1").String("v1"),
+					),
+					StartTime: now,
+					EndTime:   now,
+				},
+				{
+					Name: "s3",
+					Resource: resource.NewWithAttributes(
+						semconv.ServiceNameKey.String("name"),
+						attribute.Key("r2").String("v2"),
+					),
+					StartTime: now,
+					EndTime:   now,
+				},
+			},
+			expectedBatchList: []*gen.Batch{
+				{
+					Process: &gen.Process{
+						ServiceName: "name",
+						Tags: []*gen.Tag{
+							{Key: "r1", VType: gen.TagType_STRING, VStr: newString("v1")},
+						},
+					},
+					Spans: []*gen.Span{
+						{
+							OperationName: "s1",
+							Tags: []*gen.Tag{
+								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
+							},
+							StartTime: now.UnixNano() / 1000,
+						},
+						{
+							OperationName: "s2",
+							Tags: []*gen.Tag{
+								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
+							},
+							StartTime: now.UnixNano() / 1000,
+						},
+					},
+				},
+				{
+					Process: &gen.Process{
+						ServiceName: "name",
+						Tags: []*gen.Tag{
+							{Key: "r2", VType: gen.TagType_STRING, VStr: newString("v2")},
+						},
+					},
+					Spans: []*gen.Span{
+						{
+							OperationName: "s3",
+							Tags: []*gen.Tag{
+								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
+							},
+							StartTime: now.UnixNano() / 1000,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "no service name in spans",
+			spanSnapshotList: []*export.SpanSnapshot{
+				{
+					Name: "s1",
+					Resource: resource.NewWithAttributes(
+						attribute.Key("r1").String("v1"),
+					),
+					StartTime: now,
+					EndTime:   now,
+				},
+				nil,
+			},
+			defaultServiceName: "default service name",
+			expectedBatchList: []*gen.Batch{
+				{
+					Process: &gen.Process{
+						ServiceName: "default service name",
+						Tags: []*gen.Tag{
+							{Key: "r1", VType: gen.TagType_STRING, VStr: newString("v1")},
+						},
+					},
+					Spans: []*gen.Span{
+						{
+							OperationName: "s1",
+							Tags: []*gen.Tag{
+								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
+							},
+							StartTime: now.UnixNano() / 1000,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			batchList := jaegerBatchList(tc.spanSnapshotList, tc.defaultServiceName)
+
+			assert.ElementsMatch(t, tc.expectedBatchList, batchList)
+		})
+	}
+}
+
+func TestProcess(t *testing.T) {
+	v1 := "v1"
+
+	testCases := []struct {
+		name               string
+		res                *resource.Resource
+		defaultServiceName string
+		expectedProcess    *gen.Process
+	}{
+		{
+			name: "resources contain service name",
+			res: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("service name"),
+				attribute.Key("r1").String("v1"),
+			),
+			defaultServiceName: "default service name",
+			expectedProcess: &gen.Process{
+				ServiceName: "service name",
+				Tags: []*gen.Tag{
+					{Key: "r1", VType: gen.TagType_STRING, VStr: &v1},
+				},
+			},
+		},
+		{
+			name:               "resources don't have service name",
+			res:                resource.NewWithAttributes(attribute.Key("r1").String("v1")),
+			defaultServiceName: "default service name",
+			expectedProcess: &gen.Process{
+				ServiceName: "default service name",
+				Tags: []*gen.Tag{
+					{Key: "r1", VType: gen.TagType_STRING, VStr: &v1},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			pro := process(tc.res, tc.defaultServiceName)
+
+			assert.Equal(t, tc.expectedProcess, pro)
+		})
+	}
+}
+
+func TestNewExporterPipelineWithOptions(t *testing.T) {
+	envStore, err := ottest.SetEnvVariables(map[string]string{
+		envDisabled: "false",
+	})
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, envStore.Restore())
+	}()
+
+	const (
+		serviceName     = "test-service"
+		eventCountLimit = 10
+		tagKey          = "key"
+		tagVal          = "val"
+	)
+
+	testCollector := &testCollectorEndpoint{}
+	tp, spanFlush, err := NewExportPipeline(
+		withTestCollectorEndpointInjected(testCollector),
+		WithSDKOptions(
+			sdktrace.WithResource(resource.NewWithAttributes(
+				semconv.ServiceNameKey.String(serviceName),
+				attribute.String(tagKey, tagVal),
+			)),
+			sdktrace.WithSpanLimits(sdktrace.SpanLimits{
+				EventCountLimit: eventCountLimit,
+			}),
+		),
+	)
+	assert.NoError(t, err)
+
+	otel.SetTracerProvider(tp)
+	_, span := otel.Tracer("test-tracer").Start(context.Background(), "test-span")
+	for i := 0; i < eventCountLimit*2; i++ {
+		span.AddEvent(fmt.Sprintf("event-%d", i))
+	}
+	span.End()
+	spanFlush()
+
+	assert.True(t, span.SpanContext().IsValid())
+
+	batchesUploaded := testCollector.batchesUploaded
+	require.Len(t, batchesUploaded, 1)
+	uploadedBatch := batchesUploaded[0]
+	assert.Equal(t, serviceName, uploadedBatch.GetProcess().GetServiceName())
+	require.Len(t, uploadedBatch.GetSpans(), 1)
+	uploadedSpan := uploadedBatch.GetSpans()[0]
+	assert.Len(t, uploadedSpan.GetLogs(), eventCountLimit)
+
+	require.Len(t, uploadedBatch.GetProcess().GetTags(), 1)
+	assert.Equal(t, tagKey, uploadedBatch.GetProcess().GetTags()[0].GetKey())
+	assert.Equal(t, tagVal, uploadedBatch.GetProcess().GetTags()[0].GetVStr())
 }

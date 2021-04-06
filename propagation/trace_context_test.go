@@ -21,7 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -37,72 +37,80 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 		{
 			name:   "valid w3cHeader",
 			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00",
-			wantSc: trace.SpanContext{
+			wantSc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID: traceID,
 				SpanID:  spanID,
-			},
+				Remote:  true,
+			}),
 		},
 		{
 			name:   "valid w3cHeader and sampled",
 			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
-			wantSc: trace.SpanContext{
+			wantSc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
-			},
+				Remote:     true,
+			}),
 		},
 		{
 			name:   "future version",
 			header: "02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
-			wantSc: trace.SpanContext{
+			wantSc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
-			},
+				Remote:     true,
+			}),
 		},
 		{
 			name:   "future options with sampled bit set",
 			header: "02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-09",
-			wantSc: trace.SpanContext{
+			wantSc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
-			},
+				Remote:     true,
+			}),
 		},
 		{
 			name:   "future options with sampled bit cleared",
 			header: "02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-08",
-			wantSc: trace.SpanContext{
+			wantSc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID: traceID,
 				SpanID:  spanID,
-			},
+				Remote:  true,
+			}),
 		},
 		{
 			name:   "future additional data",
 			header: "02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-09-XYZxsf09",
-			wantSc: trace.SpanContext{
+			wantSc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
-			},
+				Remote:     true,
+			}),
 		},
 		{
 			name:   "valid b3Header ending in dash",
 			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01-",
-			wantSc: trace.SpanContext{
+			wantSc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
-			},
+				Remote:     true,
+			}),
 		},
 		{
 			name:   "future valid b3Header ending in dash",
 			header: "01-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-09-",
-			wantSc: trace.SpanContext{
+			wantSc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
-			},
+				Remote:     true,
+			}),
 		},
 	}
 
@@ -112,9 +120,9 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			req.Header.Set("traceparent", tt.header)
 
 			ctx := context.Background()
-			ctx = prop.Extract(ctx, req.Header)
-			gotSc := trace.RemoteSpanContextFromContext(ctx)
-			if diff := cmp.Diff(gotSc, tt.wantSc, cmp.AllowUnexported(trace.TraceState{})); diff != "" {
+			ctx = prop.Extract(ctx, propagation.HeaderCarrier(req.Header))
+			gotSc := trace.SpanContextFromContext(ctx)
+			if diff := cmp.Diff(gotSc, tt.wantSc, cmp.Comparer(func(sc, other trace.SpanContext) bool { return sc.Equal(other) })); diff != "" {
 				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
 			}
 		})
@@ -200,8 +208,8 @@ func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 			req.Header.Set("traceparent", tt.header)
 
 			ctx := context.Background()
-			ctx = prop.Extract(ctx, req.Header)
-			gotSc := trace.RemoteSpanContextFromContext(ctx)
+			ctx = prop.Extract(ctx, propagation.HeaderCarrier(req.Header))
+			gotSc := trace.SpanContextFromContext(ctx)
 			if diff := cmp.Diff(gotSc, wantSc, cmp.AllowUnexported(trace.TraceState{})); diff != "" {
 				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
 			}
@@ -219,28 +227,28 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 	}{
 		{
 			name: "valid spancontext, sampled",
-			sc: trace.SpanContext{
+			sc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
-			},
+			}),
 			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000002-01",
 		},
 		{
 			name: "valid spancontext, not sampled",
-			sc: trace.SpanContext{
+			sc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID: traceID,
 				SpanID:  spanID,
-			},
+			}),
 			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000003-00",
 		},
 		{
 			name: "valid spancontext, with unsupported bit set in traceflags",
-			sc: trace.SpanContext{
+			sc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: 0xff,
-			},
+			}),
 			wantHeader: "00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000004-01",
 		},
 		{
@@ -257,7 +265,7 @@ func TestInjectTraceContextToHTTPReq(t *testing.T) {
 				ctx = trace.ContextWithRemoteSpanContext(ctx, tt.sc)
 				ctx, _ = mockTracer.Start(ctx, "inject")
 			}
-			prop.Inject(ctx, req.Header)
+			prop.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 			gotHeader := req.Header.Get("traceparent")
 			if diff := cmp.Diff(gotHeader, tt.wantHeader); diff != "" {
@@ -280,7 +288,7 @@ func TestTraceStatePropagation(t *testing.T) {
 	prop := propagation.TraceContext{}
 	stateHeader := "tracestate"
 	parentHeader := "traceparent"
-	state, err := trace.TraceStateFromKeyValues(label.String("key1", "value1"), label.String("key2", "value2"))
+	state, err := trace.TraceStateFromKeyValues(attribute.String("key1", "value1"), attribute.String("key2", "value2"))
 	if err != nil {
 		t.Fatalf("Unable to construct expected TraceState: %s", err.Error())
 	}
@@ -298,11 +306,12 @@ func TestTraceStatePropagation(t *testing.T) {
 				stateHeader:  "key1=value1,key2=value2",
 			},
 			valid: true,
-			wantSc: trace.SpanContext{
+			wantSc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceState: state,
-			},
+				Remote:     true,
+			}),
 		},
 		{
 			name: "valid parent, invalid state",
@@ -311,10 +320,11 @@ func TestTraceStatePropagation(t *testing.T) {
 				stateHeader:  "key1=value1,invalid$@#=invalid",
 			},
 			valid: false,
-			wantSc: trace.SpanContext{
+			wantSc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID: traceID,
 				SpanID:  spanID,
-			},
+				Remote:  true,
+			}),
 		},
 		{
 			name: "valid parent, malformed state",
@@ -323,10 +333,11 @@ func TestTraceStatePropagation(t *testing.T) {
 				stateHeader:  "key1=value1,invalid",
 			},
 			valid: false,
-			wantSc: trace.SpanContext{
+			wantSc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID: traceID,
 				SpanID:  spanID,
-			},
+				Remote:  true,
+			}),
 		},
 	}
 
@@ -337,11 +348,11 @@ func TestTraceStatePropagation(t *testing.T) {
 				inReq.Header.Add(hk, hv)
 			}
 
-			ctx := prop.Extract(context.Background(), inReq.Header)
+			ctx := prop.Extract(context.Background(), propagation.HeaderCarrier(inReq.Header))
 			if diff := cmp.Diff(
-				trace.RemoteSpanContextFromContext(ctx),
+				trace.SpanContextFromContext(ctx),
 				tt.wantSc,
-				cmp.AllowUnexported(label.Value{}),
+				cmp.AllowUnexported(attribute.Value{}),
 				cmp.AllowUnexported(trace.TraceState{}),
 			); diff != "" {
 				t.Errorf("Extracted tracestate: -got +want %s", diff)
@@ -351,7 +362,7 @@ func TestTraceStatePropagation(t *testing.T) {
 				mockTracer := oteltest.DefaultTracer()
 				ctx, _ = mockTracer.Start(ctx, "inject")
 				outReq, _ := http.NewRequest(http.MethodGet, "http://www.example.com", nil)
-				prop.Inject(ctx, outReq.Header)
+				prop.Inject(ctx, propagation.HeaderCarrier(outReq.Header))
 
 				if diff := cmp.Diff(outReq.Header.Get(stateHeader), tt.headers[stateHeader]); diff != "" {
 					t.Errorf("Propagated tracestate: -got +want %s", diff)

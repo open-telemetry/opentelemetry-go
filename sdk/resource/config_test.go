@@ -23,8 +23,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -114,7 +114,7 @@ func TestWithoutBuiltin(t *testing.T) {
 	res, err := resource.New(
 		ctx,
 		resource.WithoutBuiltin(),
-		resource.WithAttributes(label.String("hello", "collector")),
+		resource.WithAttributes(attribute.String("hello", "collector")),
 	)
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{

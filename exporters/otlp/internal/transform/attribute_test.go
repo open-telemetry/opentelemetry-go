@@ -19,12 +19,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
+	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 )
 
 type attributeTest struct {
-	attrs    []label.KeyValue
+	attrs    []attribute.KeyValue
 	expected []*commonpb.KeyValue
 }
 
@@ -32,17 +32,12 @@ func TestAttributes(t *testing.T) {
 	for _, test := range []attributeTest{
 		{nil, nil},
 		{
-			[]label.KeyValue{
-				label.Int("int to int", 123),
-				label.Uint("uint to int", 1234),
-				label.Int32("int32 to int", 12345),
-				label.Uint32("uint32 to int", 123456),
-				label.Int64("int64 to int64", 1234567),
-				label.Uint64("uint64 to int64", 12345678),
-				label.Float32("float32 to double", 3.14),
-				label.Float32("float64 to double", 1.61),
-				label.String("string to string", "string"),
-				label.Bool("bool to bool", true),
+			[]attribute.KeyValue{
+				attribute.Int("int to int", 123),
+				attribute.Int64("int64 to int64", 1234567),
+				attribute.Float64("float64 to double", 1.61),
+				attribute.String("string to string", "string"),
+				attribute.Bool("bool to bool", true),
 			},
 			[]*commonpb.KeyValue{
 				{
@@ -54,50 +49,10 @@ func TestAttributes(t *testing.T) {
 					},
 				},
 				{
-					Key: "uint to int",
-					Value: &commonpb.AnyValue{
-						Value: &commonpb.AnyValue_IntValue{
-							IntValue: 1234,
-						},
-					},
-				},
-				{
-					Key: "int32 to int",
-					Value: &commonpb.AnyValue{
-						Value: &commonpb.AnyValue_IntValue{
-							IntValue: 12345,
-						},
-					},
-				},
-				{
-					Key: "uint32 to int",
-					Value: &commonpb.AnyValue{
-						Value: &commonpb.AnyValue_IntValue{
-							IntValue: 123456,
-						},
-					},
-				},
-				{
 					Key: "int64 to int64",
 					Value: &commonpb.AnyValue{
 						Value: &commonpb.AnyValue_IntValue{
 							IntValue: 1234567,
-						},
-					},
-				},
-				{
-					Key: "uint64 to int64",
-					Value: &commonpb.AnyValue{
-						Value: &commonpb.AnyValue_IntValue{
-							IntValue: 12345678,
-						},
-					},
-				},
-				{
-					Key: "float32 to double",
-					Value: &commonpb.AnyValue{
-						Value: &commonpb.AnyValue_DoubleValue{
-							DoubleValue: 3.14,
 						},
 					},
 				},
@@ -151,14 +106,13 @@ func TestAttributes(t *testing.T) {
 
 func TestArrayAttributes(t *testing.T) {
 	// Array KeyValue supports only arrays of primitive types:
-	// "bool", "int", "int32", "int64",
-	// "float32", "float64", "string",
-	// "uint", "uint32", "uint64"
+	// "bool", "int", "int64",
+	// "float64", "string",
 	for _, test := range []attributeTest{
 		{nil, nil},
 		{
-			[]label.KeyValue{
-				label.Array("invalid", [][]string{{"1", "2"}, {"a"}}),
+			[]attribute.KeyValue{
+				attribute.Array("invalid", [][]string{{"1", "2"}, {"a"}}),
 			},
 			[]*commonpb.KeyValue{
 				{
@@ -172,27 +126,17 @@ func TestArrayAttributes(t *testing.T) {
 			},
 		},
 		{
-			[]label.KeyValue{
-				label.Array("bool array to bool array", []bool{true, false}),
-				label.Array("int array to int64 array", []int{1, 2, 3}),
-				label.Array("uint array to int64 array", []uint{1, 2, 3}),
-				label.Array("int32 array to int64 array", []int32{1, 2, 3}),
-				label.Array("uint32 array to int64 array", []uint32{1, 2, 3}),
-				label.Array("int64 array to int64 array", []int64{1, 2, 3}),
-				label.Array("uint64 array to int64 array", []uint64{1, 2, 3}),
-				label.Array("float32 array to double array", []float32{1.11, 2.22, 3.33}),
-				label.Array("float64 array to double array", []float64{1.11, 2.22, 3.33}),
-				label.Array("string array to string array", []string{"foo", "bar", "baz"}),
+			[]attribute.KeyValue{
+				attribute.Array("bool array to bool array", []bool{true, false}),
+				attribute.Array("int array to int64 array", []int{1, 2, 3}),
+				attribute.Array("int64 array to int64 array", []int64{1, 2, 3}),
+				attribute.Array("float64 array to double array", []float64{1.11, 2.22, 3.33}),
+				attribute.Array("string array to string array", []string{"foo", "bar", "baz"}),
 			},
 			[]*commonpb.KeyValue{
 				newOTelBoolArray("bool array to bool array", []bool{true, false}),
 				newOTelIntArray("int array to int64 array", []int64{1, 2, 3}),
-				newOTelIntArray("uint array to int64 array", []int64{1, 2, 3}),
-				newOTelIntArray("int32 array to int64 array", []int64{1, 2, 3}),
-				newOTelIntArray("uint32 array to int64 array", []int64{1, 2, 3}),
 				newOTelIntArray("int64 array to int64 array", []int64{1, 2, 3}),
-				newOTelIntArray("uint64 array to int64 array", []int64{1, 2, 3}),
-				newOTelDoubleArray("float32 array to double array", []float64{1.11, 2.22, 3.33}),
 				newOTelDoubleArray("float64 array to double array", []float64{1.11, 2.22, 3.33}),
 				newOTelStringArray("string array to string array", []string{"foo", "bar", "baz"}),
 			},

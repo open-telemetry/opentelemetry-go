@@ -25,26 +25,42 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/trace/zipkin"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/semconv"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var logger = log.New(os.Stderr, "zipkin-example", log.Ldate|log.Ltime|log.Llongfile)
 
 // initTracer creates a new trace provider instance and registers it as global trace provider.
-func initTracer(url string) {
+func initTracer(url string) func() {
 	// Create Zipkin Exporter and install it as a global tracer.
 	//
 	// For demoing purposes, always sample. In a production application, you should
 	// configure the sampler to a trace.ParentBased(trace.TraceIDRatioBased) set at the desired
 	// ratio.
-	err := zipkin.InstallNewPipeline(
+	exporter, err := zipkin.NewRawExporter(
 		url,
-		"zipkin-test",
 		zipkin.WithLogger(logger),
-		zipkin.WithSDK(&sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		zipkin.WithSDKOptions(sdktrace.WithSampler(sdktrace.AlwaysSample())),
 	)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	batcher := sdktrace.NewBatchSpanProcessor(exporter)
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(batcher),
+		sdktrace.WithResource(resource.NewWithAttributes(
+			semconv.ServiceNameKey.String("zipkin-test"),
+		)),
+	)
+	otel.SetTracerProvider(tp)
+
+	return func() {
+		_ = tp.Shutdown(context.Background())
 	}
 }
 
@@ -52,19 +68,17 @@ func main() {
 	url := flag.String("zipkin", "http://localhost:9411/api/v2/spans", "zipkin url")
 	flag.Parse()
 
-	initTracer(*url)
+	shutdown := initTracer(*url)
+	defer shutdown()
 
 	ctx := context.Background()
 
 	tr := otel.GetTracerProvider().Tracer("component-main")
-	ctx, span := tr.Start(ctx, "foo")
+	ctx, span := tr.Start(ctx, "foo", trace.WithSpanKind(trace.SpanKindServer))
 	<-time.After(6 * time.Millisecond)
 	bar(ctx)
 	<-time.After(6 * time.Millisecond)
 	span.End()
-
-	// Wait for the spans to be exported.
-	<-time.After(5 * time.Second)
 }
 
 func bar(ctx context.Context) {

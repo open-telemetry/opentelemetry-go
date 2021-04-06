@@ -20,15 +20,10 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
-)
-
-const (
-	errorTypeKey    = label.Key("error.type")
-	errorMessageKey = label.Key("error.message")
-	errorEventName  = "error"
 )
 
 var _ trace.Span = (*Span)(nil)
@@ -45,7 +40,7 @@ type Span struct {
 	endTime       time.Time
 	statusCode    codes.Code
 	statusMessage string
-	attributes    map[label.Key]label.Value
+	attributes    map[attribute.Key]attribute.Value
 	events        []Event
 	links         []trace.Link
 	spanKind      trace.SpanKind
@@ -79,7 +74,7 @@ func (s *Span) End(opts ...trace.SpanOption) {
 	}
 }
 
-// RecordError records an error as a Span event.
+// RecordError records an error as an exception Span event.
 func (s *Span) RecordError(err error, opts ...trace.EventOption) {
 	if err == nil || s.ended {
 		return
@@ -91,13 +86,12 @@ func (s *Span) RecordError(err error, opts ...trace.EventOption) {
 		errTypeString = errType.String()
 	}
 
-	s.SetStatus(codes.Error, "")
 	opts = append(opts, trace.WithAttributes(
-		errorTypeKey.String(errTypeString),
-		errorMessageKey.String(err.Error()),
+		semconv.ExceptionTypeKey.String(errTypeString),
+		semconv.ExceptionMessageKey.String(err.Error()),
 	))
 
-	s.AddEvent(errorEventName, opts...)
+	s.AddEvent(semconv.ExceptionEventName, opts...)
 }
 
 // AddEvent adds an event to s.
@@ -111,9 +105,9 @@ func (s *Span) AddEvent(name string, o ...trace.EventOption) {
 
 	c := trace.NewEventConfig(o...)
 
-	var attributes map[label.Key]label.Value
+	var attributes map[attribute.Key]attribute.Value
 	if l := len(c.Attributes); l > 0 {
-		attributes = make(map[label.Key]label.Value, l)
+		attributes = make(map[attribute.Key]attribute.Value, l)
 		for _, attr := range c.Attributes {
 			attributes[attr.Key] = attr.Value
 		}
@@ -162,7 +156,7 @@ func (s *Span) SetName(name string) {
 }
 
 // SetAttributes sets attrs as attributes of s.
-func (s *Span) SetAttributes(attrs ...label.KeyValue) {
+func (s *Span) SetAttributes(attrs ...attribute.KeyValue) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -187,11 +181,11 @@ func (s *Span) ParentSpanID() trace.SpanID { return s.parentSpanID }
 // Attributes returns the attributes set on s, either at or after creation
 // time. If the same attribute key was set multiple times, the last call will
 // be used. Attributes cannot be changed after End has been called on s.
-func (s *Span) Attributes() map[label.Key]label.Value {
+func (s *Span) Attributes() map[attribute.Key]attribute.Value {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	attributes := make(map[label.Key]label.Value)
+	attributes := make(map[attribute.Key]attribute.Value)
 
 	for k, v := range s.attributes {
 		attributes[k] = v

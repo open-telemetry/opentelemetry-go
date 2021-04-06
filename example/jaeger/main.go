@@ -21,8 +21,10 @@ import (
 	"log"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/semconv"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/trace/jaeger"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -32,14 +34,14 @@ func initTracer() func() {
 	// Create and install Jaeger export pipeline.
 	flush, err := jaeger.InstallNewPipeline(
 		jaeger.WithCollectorEndpoint("http://localhost:14268/api/traces"),
-		jaeger.WithProcess(jaeger.Process{
-			ServiceName: "trace-demo",
-			Tags: []label.KeyValue{
-				label.String("exporter", "jaeger"),
-				label.Float64("float", 312.23),
-			},
-		}),
-		jaeger.WithSDK(&sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		jaeger.WithSDKOptions(
+			sdktrace.WithSampler(sdktrace.AlwaysSample()),
+			sdktrace.WithResource(resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("trace-demo"),
+				attribute.String("exporter", "jaeger"),
+				attribute.Float64("float", 312.23),
+			)),
+		),
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -63,6 +65,7 @@ func main() {
 func bar(ctx context.Context) {
 	tr := otel.Tracer("component-bar")
 	_, span := tr.Start(ctx, "bar")
+	span.SetAttributes(attribute.Key("testset").String("value"))
 	defer span.End()
 
 	// Do bar...

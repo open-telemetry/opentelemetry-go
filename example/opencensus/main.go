@@ -12,31 +12,63 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main // import "go.opentelemetry.io/otel/bridge/opencensus/examples/simple"
+package main
 
 import (
 	"context"
 	"log"
+	"time"
 
+	"go.opencensus.io/metric/metricdata"
+
+	"go.opencensus.io/metric"
+	"go.opencensus.io/metric/metricexport"
+	"go.opencensus.io/metric/metricproducer"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/stats/view"
+	"go.opencensus.io/tag"
 	octrace "go.opencensus.io/trace"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/bridge/opencensus"
 	"go.opentelemetry.io/otel/exporters/stdout"
+	otmetricexport "go.opentelemetry.io/otel/sdk/export/metric"
+	ottraceexport "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
+var (
+	// instrumenttype differentiates between our gauge and view metrics.
+	keyType = tag.MustNewKey("instrumenttype")
+	// Counts the number of lines read in from standard input
+	countMeasure = stats.Int64("test_count", "A count of something", stats.UnitDimensionless)
+	countView    = &view.View{
+		Name:        "test_count",
+		Measure:     countMeasure,
+		Description: "A count of something",
+		Aggregation: view.Count(),
+		TagKeys:     []tag.Key{keyType},
+	}
+)
+
 func main() {
+	log.Println("Using OpenTelemetry stdout exporter.")
+	otExporter, err := stdout.NewExporter(stdout.WithPrettyPrint())
+	if err != nil {
+		log.Fatal(err)
+	}
+	tracing(otExporter)
+	monitoring(otExporter)
+}
+
+// tracing demonstrates overriding the OpenCensus DefaultTracer to send spans
+// to the OpenTelemetry exporter by calling OpenCensus APIs.
+func tracing(otExporter ottraceexport.SpanExporter) {
 	ctx := context.Background()
 
 	log.Println("Configuring OpenCensus.  Not Registering any OpenCensus exporters.")
 	octrace.ApplyConfig(octrace.Config{DefaultSampler: octrace.AlwaysSample()})
 
-	log.Println("Registering OpenTelemetry stdout exporter.")
-	otExporter, err := stdout.NewExporter(stdout.WithPrettyPrint())
-	if err != nil {
-		log.Fatal(err)
-	}
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(otExporter))
 	otel.SetTracerProvider(tp)
 
@@ -55,4 +87,57 @@ func main() {
 	log.Println("Creating OpenCensus span, which should be printed out using the OpenTelemetry stdout exporter.\n-- It should have the OpenTelemetry span as a parent, since it was written using OpenTelemetry APIs")
 	_, innerOCSpan := octrace.StartSpan(ctx, "OpenCensusInnerSpan")
 	innerOCSpan.End()
+}
+
+// monitoring demonstrates creating an IntervalReader using the OpenTelemetry
+// exporter to send metrics to the exporter by using either an OpenCensus
+// registry or an OpenCensus view.
+func monitoring(otExporter otmetricexport.Exporter) {
+	log.Println("Using the OpenTelemetry stdout exporter to export OpenCensus metrics.  This allows routing telemetry from both OpenTelemetry and OpenCensus to a single exporter.")
+	ocExporter := opencensus.NewMetricExporter(otExporter)
+	intervalReader, err := metricexport.NewIntervalReader(&metricexport.Reader{}, ocExporter)
+	if err != nil {
+		log.Fatalf("Failed to create interval reader: %v\n", err)
+	}
+	intervalReader.ReportingInterval = 10 * time.Second
+	log.Println("Emitting metrics using OpenCensus APIs.  These should be printed out using the OpenTelemetry stdout exporter.")
+	err = intervalReader.Start()
+	if err != nil {
+		log.Fatalf("Failed to start interval reader: %v\n", err)
+	}
+	defer intervalReader.Stop()
+
+	log.Println("Registering a gauge metric using an OpenCensus registry.")
+	r := metric.NewRegistry()
+	metricproducer.GlobalManager().AddProducer(r)
+	gauge, err := r.AddInt64Gauge(
+		"test_gauge",
+		metric.WithDescription("A gauge for testing"),
+		metric.WithConstLabel(map[metricdata.LabelKey]metricdata.LabelValue{
+			{Key: keyType.Name()}: metricdata.NewLabelValue("gauge"),
+		}),
+	)
+	if err != nil {
+		log.Fatalf("Failed to add gauge: %v\n", err)
+	}
+	entry, err := gauge.GetEntry()
+	if err != nil {
+		log.Fatalf("Failed to get gauge entry: %v\n", err)
+	}
+
+	log.Println("Registering a cumulative metric using an OpenCensus view.")
+	if err := view.Register(countView); err != nil {
+		log.Fatalf("Failed to register views: %v", err)
+	}
+	ctx, err := tag.New(context.Background(), tag.Insert(keyType, "view"))
+	if err != nil {
+		log.Fatalf("Failed to set tag: %v\n", err)
+	}
+	for i := int64(1); true; i++ {
+		// update stats for our gauge
+		entry.Set(i)
+		// update stats for our view
+		stats.Record(ctx, countMeasure.M(1))
+		time.Sleep(time.Second)
+	}
 }

@@ -18,14 +18,14 @@ import (
 	"io"
 	"os"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 var (
 	defaultWriter              = os.Stdout
 	defaultPrettyPrint         = false
 	defaultTimestamps          = true
-	defaultLabelEncoder        = label.DefaultEncoder()
+	defaultLabelEncoder        = attribute.DefaultEncoder()
 	defaultDisableTraceExport  = false
 	defaultDisableMetricExport = false
 )
@@ -44,7 +44,7 @@ type Config struct {
 	Timestamps bool
 
 	// LabelEncoder encodes the labels.
-	LabelEncoder label.Encoder
+	LabelEncoder attribute.Encoder
 
 	// DisableTraceExport prevents any export of trace telemetry.
 	DisableTraceExport bool
@@ -74,6 +74,11 @@ func NewConfig(options ...Option) (Config, error) {
 type Option interface {
 	// Apply option value to Config.
 	Apply(*Config)
+
+	// A private method to prevent users implementing the
+	// interface and so future additions to it will not
+	// violate compatibility.
+	private()
 }
 
 // WithWriter sets the export stream destination.
@@ -89,6 +94,8 @@ func (o writerOption) Apply(config *Config) {
 	config.Writer = o.W
 }
 
+func (writerOption) private() {}
+
 // WithPrettyPrint sets the export stream format to use JSON.
 func WithPrettyPrint() Option {
 	return prettyPrintOption(true)
@@ -99,6 +106,8 @@ type prettyPrintOption bool
 func (o prettyPrintOption) Apply(config *Config) {
 	config.PrettyPrint = bool(o)
 }
+
+func (prettyPrintOption) private() {}
 
 // WithoutTimestamps sets the export stream to not include timestamps.
 func WithoutTimestamps() Option {
@@ -111,18 +120,22 @@ func (o timestampsOption) Apply(config *Config) {
 	config.Timestamps = bool(o)
 }
 
+func (timestampsOption) private() {}
+
 // WithLabelEncoder sets the label encoder used in export.
-func WithLabelEncoder(enc label.Encoder) Option {
+func WithLabelEncoder(enc attribute.Encoder) Option {
 	return labelEncoderOption{enc}
 }
 
 type labelEncoderOption struct {
-	LabelEncoder label.Encoder
+	LabelEncoder attribute.Encoder
 }
 
 func (o labelEncoderOption) Apply(config *Config) {
 	config.LabelEncoder = o.LabelEncoder
 }
+
+func (labelEncoderOption) private() {}
 
 // WithoutTraceExport disables all trace exporting.
 func WithoutTraceExport() Option {
@@ -135,6 +148,8 @@ func (o disableTraceExportOption) Apply(config *Config) {
 	config.DisableTraceExport = bool(o)
 }
 
+func (disableTraceExportOption) private() {}
+
 // WithoutMetricExport disables all metric exporting.
 func WithoutMetricExport() Option {
 	return disableMetricExportOption(true)
@@ -145,3 +160,5 @@ type disableMetricExportOption bool
 func (o disableMetricExportOption) Apply(config *Config) {
 	config.DisableMetricExport = bool(o)
 }
+
+func (disableMetricExportOption) private() {}

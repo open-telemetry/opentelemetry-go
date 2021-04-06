@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/sdk/export/metric"
 	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
@@ -66,7 +67,7 @@ func NewExportPipeline(exportOpts []Option, pushOpts []controller.Option) (trace
 		),
 		append(
 			pushOpts,
-			controller.WithPusher(exporter),
+			controller.WithExporter(exporter),
 		)...,
 	)
 	err = pusher.Start(context.Background())
@@ -92,6 +93,6 @@ func InstallNewPipeline(exportOpts []Option, pushOpts []controller.Option) (*con
 		return controller, err
 	}
 	otel.SetTracerProvider(tracerProvider)
-	otel.SetMeterProvider(controller.MeterProvider())
+	global.SetMeterProvider(controller.MeterProvider())
 	return controller, err
 }

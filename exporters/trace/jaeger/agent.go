@@ -15,14 +15,16 @@
 package jaeger // import "go.opentelemetry.io/otel/exporters/trace/jaeger"
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"time"
 
-	"github.com/apache/thrift/lib/go/thrift"
+	"go.opentelemetry.io/otel/exporters/trace/jaeger/internal/third_party/thrift/lib/go/thrift"
 
+	genAgent "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/agent"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 )
 
@@ -31,11 +33,11 @@ const udpPacketMaxLength = 65000
 
 // agentClientUDP is a UDP client to Jaeger agent that implements gen.Agent interface.
 type agentClientUDP struct {
-	gen.Agent
+	genAgent.Agent
 	io.Closer
 
 	connUDP       udpConn
-	client        *gen.AgentClient
+	client        *genAgent.AgentClient
 	maxPacketSize int                   // max size of datagram in bytes
 	thriftBuffer  *thrift.TMemoryBuffer // buffer used to calculate byte size of a span
 }
@@ -70,8 +72,8 @@ func newAgentClientUDP(params agentClientUDPParams) (*agentClientUDP, error) {
 	}
 
 	thriftBuffer := thrift.NewTMemoryBufferLen(params.MaxPacketSize)
-	protocolFactory := thrift.NewTCompactProtocolFactory()
-	client := gen.NewAgentClientFactory(thriftBuffer, protocolFactory)
+	protocolFactory := thrift.NewTCompactProtocolFactoryConf(&thrift.TConfiguration{})
+	client := genAgent.NewAgentClientFactory(thriftBuffer, protocolFactory)
 
 	var connUDP udpConn
 	var err error
@@ -109,8 +111,7 @@ func newAgentClientUDP(params agentClientUDPParams) (*agentClientUDP, error) {
 // EmitBatch implements EmitBatch() of Agent interface
 func (a *agentClientUDP) EmitBatch(batch *gen.Batch) error {
 	a.thriftBuffer.Reset()
-	a.client.SeqId = 0 // we have no need for distinct SeqIds for our one-way UDP messages
-	if err := a.client.EmitBatch(batch); err != nil {
+	if err := a.client.EmitBatch(context.Background(), batch); err != nil {
 		return err
 	}
 	if a.thriftBuffer.Len() > a.maxPacketSize {

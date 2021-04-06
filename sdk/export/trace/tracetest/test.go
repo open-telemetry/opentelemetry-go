@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// tracetest is a testing helper package for the SDK. User can configure no-op or in-memory exporters to verify
+// Package tracetest is a testing helper package for the SDK. User can configure no-op or in-memory exporters to verify
 // different SDK behaviors or custom instrumentation.
 package tracetest // import "go.opentelemetry.io/otel/sdk/export/trace/tracetest"
 

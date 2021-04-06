@@ -83,6 +83,23 @@ func (e *Expectation) ToBeFalse() {
 	}
 }
 
+func (e *Expectation) NotToPanic() {
+	switch a := e.actual.(type) {
+	case func():
+		func() {
+			defer func() {
+				if recovered := recover(); recovered != nil {
+					e.fail(fmt.Sprintf("Expected panic\n\t%v\nto have not been raised", recovered))
+				}
+			}()
+
+			a()
+		}()
+	default:
+		e.fail(fmt.Sprintf("Cannot check if non-func value\n\t%v\nis truthy", a))
+	}
+}
+
 func (e *Expectation) ToSucceed() {
 	switch actual := e.actual.(type) {
 	case error:

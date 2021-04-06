@@ -21,8 +21,9 @@ import (
 
 	zkmodel "github.com/openzipkin/zipkin-go/model"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -31,15 +32,26 @@ const (
 	keyInstrumentationLibraryVersion = "otel.instrumentation_library.version"
 )
 
-func toZipkinSpanModels(batch []*export.SpanSnapshot, serviceName string) []zkmodel.SpanModel {
+func toZipkinSpanModels(batch []*export.SpanSnapshot) []zkmodel.SpanModel {
 	models := make([]zkmodel.SpanModel, 0, len(batch))
 	for _, data := range batch {
-		models = append(models, toZipkinSpanModel(data, serviceName))
+		models = append(models, toZipkinSpanModel(data))
 	}
 	return models
 }
 
-func toZipkinSpanModel(data *export.SpanSnapshot, serviceName string) zkmodel.SpanModel {
+func getServiceName(attrs []attribute.KeyValue) string {
+	for _, kv := range attrs {
+		if kv.Key == semconv.ServiceNameKey {
+			return kv.Value.AsString()
+		}
+	}
+
+	// Resource holds a default value so this might not be reach.
+	return ""
+}
+
+func toZipkinSpanModel(data *export.SpanSnapshot) zkmodel.SpanModel {
 	return zkmodel.SpanModel{
 		SpanContext: toZipkinSpanContext(data),
 		Name:        data.Name,
@@ -48,7 +60,7 @@ func toZipkinSpanModel(data *export.SpanSnapshot, serviceName string) zkmodel.Sp
 		Duration:    data.EndTime.Sub(data.StartTime),
 		Shared:      false,
 		LocalEndpoint: &zkmodel.Endpoint{
-			ServiceName: serviceName,
+			ServiceName: getServiceName(data.Resource.Attributes()),
 		},
 		RemoteEndpoint: nil, // *Endpoint
 		Annotations:    toZipkinAnnotations(data.MessageEvents),
@@ -58,9 +70,9 @@ func toZipkinSpanModel(data *export.SpanSnapshot, serviceName string) zkmodel.Sp
 
 func toZipkinSpanContext(data *export.SpanSnapshot) zkmodel.SpanContext {
 	return zkmodel.SpanContext{
-		TraceID:  toZipkinTraceID(data.SpanContext.TraceID),
-		ID:       toZipkinID(data.SpanContext.SpanID),
-		ParentID: toZipkinParentID(data.ParentSpanID),
+		TraceID:  toZipkinTraceID(data.SpanContext.TraceID()),
+		ID:       toZipkinID(data.SpanContext.SpanID()),
+		ParentID: toZipkinParentID(data.Parent.SpanID()),
 		Debug:    false,
 		Sampled:  nil,
 		Err:      nil,
@@ -127,7 +139,7 @@ func toZipkinAnnotations(events []trace.Event) []zkmodel.Annotation {
 	return annotations
 }
 
-func attributesToJSONMapString(attributes []label.KeyValue) string {
+func attributesToJSONMapString(attributes []attribute.KeyValue) string {
 	m := make(map[string]interface{}, len(attributes))
 	for _, attribute := range attributes {
 		m[(string)(attribute.Key)] = attribute.Value.AsInterface()

@@ -18,7 +18,7 @@ import (
 	"context"
 	"testing"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -43,10 +43,9 @@ func BenchmarkSpanWithAttributes_4(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			_, span := t.Start(ctx, "/foo")
 			span.SetAttributes(
-				label.Bool("key1", false),
-				label.String("key2", "hello"),
-				label.Uint64("key3", 123),
-				label.Float64("key4", 123.456),
+				attribute.Bool("key1", false),
+				attribute.String("key2", "hello"),
+				attribute.Float64("key4", 123.456),
 			)
 			span.End()
 		}
@@ -61,14 +60,12 @@ func BenchmarkSpanWithAttributes_8(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			_, span := t.Start(ctx, "/foo")
 			span.SetAttributes(
-				label.Bool("key1", false),
-				label.String("key2", "hello"),
-				label.Uint64("key3", 123),
-				label.Float64("key4", 123.456),
-				label.Bool("key21", false),
-				label.String("key22", "hello"),
-				label.Uint64("key23", 123),
-				label.Float64("key24", 123.456),
+				attribute.Bool("key1", false),
+				attribute.String("key2", "hello"),
+				attribute.Float64("key4", 123.456),
+				attribute.Bool("key21", false),
+				attribute.String("key22", "hello"),
+				attribute.Float64("key24", 123.456),
 			)
 			span.End()
 		}
@@ -83,16 +80,11 @@ func BenchmarkSpanWithAttributes_all(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			_, span := t.Start(ctx, "/foo")
 			span.SetAttributes(
-				label.Bool("key1", false),
-				label.String("key2", "hello"),
-				label.Int64("key3", 123),
-				label.Uint64("key4", 123),
-				label.Int32("key5", 123),
-				label.Uint32("key6", 123),
-				label.Float64("key7", 123.456),
-				label.Float32("key8", 123.456),
-				label.Int("key9", 123),
-				label.Uint("key10", 123),
+				attribute.Bool("key1", false),
+				attribute.String("key2", "hello"),
+				attribute.Int64("key3", 123),
+				attribute.Float64("key7", 123.456),
+				attribute.Int("key9", 123),
 			)
 			span.End()
 		}
@@ -107,26 +99,16 @@ func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			_, span := t.Start(ctx, "/foo")
 			span.SetAttributes(
-				label.Bool("key1", false),
-				label.String("key2", "hello"),
-				label.Int64("key3", 123),
-				label.Uint64("key4", 123),
-				label.Int32("key5", 123),
-				label.Uint32("key6", 123),
-				label.Float64("key7", 123.456),
-				label.Float32("key8", 123.456),
-				label.Int("key10", 123),
-				label.Uint("key11", 123),
-				label.Bool("key21", false),
-				label.String("key22", "hello"),
-				label.Int64("key23", 123),
-				label.Uint64("key24", 123),
-				label.Int32("key25", 123),
-				label.Uint32("key26", 123),
-				label.Float64("key27", 123.456),
-				label.Float32("key28", 123.456),
-				label.Int("key210", 123),
-				label.Uint("key211", 123),
+				attribute.Bool("key1", false),
+				attribute.String("key2", "hello"),
+				attribute.Int64("key3", 123),
+				attribute.Float64("key7", 123.456),
+				attribute.Int("key10", 123),
+				attribute.Bool("key21", false),
+				attribute.String("key22", "hello"),
+				attribute.Int64("key23", 123),
+				attribute.Float64("key27", 123.456),
+				attribute.Int("key210", 123),
 			)
 			span.End()
 		}
@@ -135,21 +117,21 @@ func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
 
 func BenchmarkTraceID_DotString(b *testing.B) {
 	t, _ := trace.TraceIDFromHex("0000000000000001000000000000002a")
-	sc := trace.SpanContext{TraceID: t}
+	sc := trace.NewSpanContext(trace.SpanContextConfig{TraceID: t})
 
 	want := "0000000000000001000000000000002a"
 	for i := 0; i < b.N; i++ {
-		if got := sc.TraceID.String(); got != want {
+		if got := sc.TraceID().String(); got != want {
 			b.Fatalf("got = %q want = %q", got, want)
 		}
 	}
 }
 
 func BenchmarkSpanID_DotString(b *testing.B) {
-	sc := trace.SpanContext{SpanID: trace.SpanID{1}}
+	sc := trace.NewSpanContext(trace.SpanContextConfig{SpanID: trace.SpanID{1}})
 	want := "0100000000000000"
 	for i := 0; i < b.N; i++ {
-		if got := sc.SpanID.String(); got != want {
+		if got := sc.SpanID().String(); got != want {
 			b.Fatalf("got = %q want = %q", got, want)
 		}
 	}
@@ -167,6 +149,6 @@ func traceBenchmark(b *testing.B, name string, fn func(*testing.B, trace.Tracer)
 }
 
 func tracer(b *testing.B, name string, sampler sdktrace.Sampler) trace.Tracer {
-	tp := sdktrace.NewTracerProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sampler}))
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSampler(sampler))
 	return tp.Tracer(name)
 }

@@ -31,7 +31,7 @@ func BenchmarkInject(b *testing.B) {
 		req, _ := http.NewRequest("GET", "http://example.com", nil)
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			t.Inject(ctx, req.Header)
+			t.Inject(ctx, propagation.HeaderCarrier(req.Header))
 		}
 	})
 }
@@ -43,11 +43,11 @@ func injectSubBenchmarks(b *testing.B, fn func(context.Context, *testing.B)) {
 
 		mockTracer := oteltest.DefaultTracer()
 		b.ReportAllocs()
-		sc := trace.SpanContext{
+		sc := trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    traceID,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
-		}
+		})
 		ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
 		ctx, _ = mockTracer.Start(ctx, "inject")
 		fn(ctx, b)
@@ -66,7 +66,7 @@ func BenchmarkExtract(b *testing.B) {
 		ctx := context.Background()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			propagator.Extract(ctx, req.Header)
+			propagator.Extract(ctx, propagation.HeaderCarrier(req.Header))
 		}
 	})
 }

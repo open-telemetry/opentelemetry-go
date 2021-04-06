@@ -20,7 +20,7 @@ may be introduced in subsequent minor version releases as we work to track the
 evolving OpenTelemetry specification and user feedback.
 
 The metrics Processor component this package implements applies a
-`label.Filter` to each processed `export.Accumulation` to remove labels before
+`attribute.Filter` to each processed `export.Accumulation` to remove labels before
 passing the result to another Processor.  This Processor can be used to reduce
 inherent dimensionality in the data, as a way to control the cost of
 collecting high cardinality metric data.
@@ -33,7 +33,7 @@ type someFilter struct{
         // ...
 }
 
-func (someFilter) LabelFilterFor(_ *metric.Descriptor) label.Filter {
+func (someFilter) LabelFilterFor(_ *metric.Descriptor) attribute.Filter {
         return func(label kv.KeyValue) bool {
                 // return true to keep this label, false to drop this label
                 // ...

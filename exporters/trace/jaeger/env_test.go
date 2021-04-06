@@ -22,8 +22,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
-	"go.opentelemetry.io/otel/label"
 )
 
 func Test_parseTags(t *testing.T) {
@@ -38,78 +38,78 @@ func Test_parseTags(t *testing.T) {
 	testCases := []struct {
 		name          string
 		tagStr        string
-		expectedTags  []label.KeyValue
+		expectedTags  []attribute.KeyValue
 		expectedError error
 	}{
 		{
 			name:   "string",
 			tagStr: "key=value",
-			expectedTags: []label.KeyValue{
+			expectedTags: []attribute.KeyValue{
 				{
 					Key:   "key",
-					Value: label.StringValue("value"),
+					Value: attribute.StringValue("value"),
 				},
 			},
 		},
 		{
 			name:   "int64",
 			tagStr: "k=9223372036854775807,k2=-9223372036854775808",
-			expectedTags: []label.KeyValue{
+			expectedTags: []attribute.KeyValue{
 				{
 					Key:   "k",
-					Value: label.Int64Value(math.MaxInt64),
+					Value: attribute.Int64Value(math.MaxInt64),
 				},
 				{
 					Key:   "k2",
-					Value: label.Int64Value(math.MinInt64),
+					Value: attribute.Int64Value(math.MinInt64),
 				},
 			},
 		},
 		{
 			name:   "float64",
 			tagStr: "k=1.797693134862315708145274237317043567981e+308,k2=4.940656458412465441765687928682213723651e-324,k3=-1.2",
-			expectedTags: []label.KeyValue{
+			expectedTags: []attribute.KeyValue{
 				{
 					Key:   "k",
-					Value: label.Float64Value(math.MaxFloat64),
+					Value: attribute.Float64Value(math.MaxFloat64),
 				},
 				{
 					Key:   "k2",
-					Value: label.Float64Value(math.SmallestNonzeroFloat64),
+					Value: attribute.Float64Value(math.SmallestNonzeroFloat64),
 				},
 				{
 					Key:   "k3",
-					Value: label.Float64Value(-1.2),
+					Value: attribute.Float64Value(-1.2),
 				},
 			},
 		},
 		{
 			name:   "multiple type values",
 			tagStr: "k=v,k2=123, k3=v3 ,k4=-1.2, k5=${existing:default},k6=${nonExisting:default}",
-			expectedTags: []label.KeyValue{
+			expectedTags: []attribute.KeyValue{
 				{
 					Key:   "k",
-					Value: label.StringValue("v"),
+					Value: attribute.StringValue("v"),
 				},
 				{
 					Key:   "k2",
-					Value: label.Int64Value(123),
+					Value: attribute.Int64Value(123),
 				},
 				{
 					Key:   "k3",
-					Value: label.StringValue("v3"),
+					Value: attribute.StringValue("v3"),
 				},
 				{
 					Key:   "k4",
-					Value: label.Float64Value(-1.2),
+					Value: attribute.Float64Value(-1.2),
 				},
 				{
 					Key:   "k5",
-					Value: label.StringValue("not-default"),
+					Value: attribute.StringValue("not-default"),
 				},
 				{
 					Key:   "k6",
-					Value: label.StringValue("default"),
+					Value: attribute.StringValue("default"),
 				},
 			},
 		},
@@ -144,52 +144,52 @@ func Test_parseValue(t *testing.T) {
 	testCases := []struct {
 		name     string
 		str      string
-		expected label.Value
+		expected attribute.Value
 	}{
 		{
 			name:     "bool: true",
 			str:      "true",
-			expected: label.BoolValue(true),
+			expected: attribute.BoolValue(true),
 		},
 		{
 			name:     "bool: false",
 			str:      "false",
-			expected: label.BoolValue(false),
+			expected: attribute.BoolValue(false),
 		},
 		{
 			name:     "int64: 012340",
 			str:      "012340",
-			expected: label.Int64Value(12340),
+			expected: attribute.Int64Value(12340),
 		},
 		{
 			name:     "int64: -012340",
 			str:      "-012340",
-			expected: label.Int64Value(-12340),
+			expected: attribute.Int64Value(-12340),
 		},
 		{
 			name:     "int64: 0",
 			str:      "0",
-			expected: label.Int64Value(0),
+			expected: attribute.Int64Value(0),
 		},
 		{
 			name:     "float64: -0.1",
 			str:      "-0.1",
-			expected: label.Float64Value(-0.1),
+			expected: attribute.Float64Value(-0.1),
 		},
 		{
 			name:     "float64: 00.001",
 			str:      "00.001",
-			expected: label.Float64Value(0.001),
+			expected: attribute.Float64Value(0.001),
 		},
 		{
 			name:     "float64: 1E23",
 			str:      "1E23",
-			expected: label.Float64Value(1e23),
+			expected: attribute.Float64Value(1e23),
 		},
 		{
 			name:     "string: foo",
 			str:      "foo",
-			expected: label.StringValue("foo"),
+			expected: attribute.StringValue("foo"),
 		},
 	}
 
@@ -229,13 +229,10 @@ func TestNewRawExporterWithEnv(t *testing.T) {
 		WithCollectorEndpoint(CollectorEndpointFromEnv(), WithCollectorEndpointOptionFromEnv()),
 		WithDisabled(true),
 		WithDisabledFromEnv(),
-		WithProcessFromEnv(),
 	)
 
 	assert.NoError(t, err)
 	assert.Equal(t, false, exp.o.Disabled)
-	assert.EqualValues(t, serviceName, exp.process.ServiceName)
-	assert.Len(t, exp.process.Tags, 1)
 
 	require.IsType(t, &collectorUploader{}, exp.uploader)
 	uploader := exp.uploader.(*collectorUploader)
@@ -276,8 +273,6 @@ func TestNewRawExporterWithEnvImplicitly(t *testing.T) {
 	assert.NoError(t, err)
 	// NewRawExporter will ignore Disabled env
 	assert.Equal(t, true, exp.o.Disabled)
-	assert.EqualValues(t, serviceName, exp.process.ServiceName)
-	assert.Len(t, exp.process.Tags, 1)
 
 	require.IsType(t, &collectorUploader{}, exp.uploader)
 	uploader := exp.uploader.(*collectorUploader)
@@ -388,122 +383,6 @@ func TestWithDisabledFromEnv(t *testing.T) {
 			require.NoError(t, os.Setenv(envDisabled, tc.env))
 
 			f := WithDisabledFromEnv()
-			f(&tc.options)
-
-			assert.Equal(t, tc.expectedOptions, tc.options)
-		})
-	}
-}
-
-func TestProcessFromEnv(t *testing.T) {
-	testCases := []struct {
-		name            string
-		serviceName     string
-		tags            string
-		expectedProcess Process
-	}{
-		{
-			name:        "set process",
-			serviceName: "test-service",
-			tags:        "key=value,key2=123",
-			expectedProcess: Process{
-				ServiceName: "test-service",
-				Tags: []label.KeyValue{
-					label.String("key", "value"),
-					label.Int64("key2", 123),
-				},
-			},
-		},
-		{
-			name:        "malformed tags",
-			serviceName: "test-service",
-			tags:        "key",
-			expectedProcess: Process{
-				ServiceName: "test-service",
-			},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			envStore, err := ottest.SetEnvVariables(map[string]string{
-				envServiceName: tc.serviceName,
-				envTags:        tc.tags,
-			})
-			require.NoError(t, err)
-
-			p := ProcessFromEnv()
-			assert.Equal(t, tc.expectedProcess, p)
-
-			require.NoError(t, envStore.Restore())
-		})
-	}
-}
-
-func TestWithProcessFromEnv(t *testing.T) {
-	testCases := []struct {
-		name            string
-		envServiceName  string
-		envTags         string
-		options         options
-		expectedOptions options
-	}{
-		{
-			name:           "overwriting",
-			envServiceName: "service-name",
-			envTags:        "key=value",
-			options: options{
-				Process: Process{
-					ServiceName: "old-name",
-					Tags: []label.KeyValue{
-						label.String("old-key", "old-value"),
-					},
-				},
-			},
-			expectedOptions: options{
-				Process: Process{
-					ServiceName: "service-name",
-					Tags: []label.KeyValue{
-						label.String("key", "value"),
-					},
-				},
-			},
-		},
-		{
-			name:           "no overwriting",
-			envServiceName: "",
-			envTags:        "",
-			options: options{
-				Process: Process{
-					ServiceName: "old-name",
-					Tags: []label.KeyValue{
-						label.String("old-key", "old-value"),
-					},
-				},
-			},
-			expectedOptions: options{
-				Process: Process{
-					ServiceName: "old-name",
-					Tags: []label.KeyValue{
-						label.String("old-key", "old-value"),
-					},
-				},
-			},
-		},
-	}
-
-	envStore := ottest.NewEnvStore()
-	envStore.Record(envServiceName)
-	envStore.Record(envTags)
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			require.NoError(t, os.Setenv(envServiceName, tc.envServiceName))
-			require.NoError(t, os.Setenv(envTags, tc.envTags))
-
-			f := WithProcessFromEnv()
 			f(&tc.options)
 
 			assert.Equal(t, tc.expectedOptions, tc.options)
