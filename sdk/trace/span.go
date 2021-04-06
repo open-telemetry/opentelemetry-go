@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -75,9 +74,6 @@ type ReadWriteSpan interface {
 // span is an implementation of the OpenTelemetry Span API representing the
 // individual component of a trace.
 type span struct {
-	// droppedAttributeCount contains dropped attributes for the events and links.
-	droppedAttributeCount int64
-
 	// mu protects the contents of this span.
 	mu sync.Mutex
 
@@ -292,17 +288,19 @@ func (s *span) addEvent(name string, o ...trace.EventOption) {
 	c := trace.NewEventConfig(o...)
 
 	// Discard over limited attributes
+	var discarded int
 	if len(c.Attributes) > s.spanLimits.AttributePerEventCountLimit {
-		s.addDroppedAttributeCount(len(c.Attributes) - s.spanLimits.AttributePerEventCountLimit)
+		discarded = len(c.Attributes) - s.spanLimits.AttributePerEventCountLimit
 		c.Attributes = c.Attributes[:s.spanLimits.AttributePerEventCountLimit]
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.messageEvents.add(trace.Event{
-		Name:       name,
-		Attributes: c.Attributes,
-		Time:       c.Timestamp,
+		Name:                  name,
+		Attributes:            c.Attributes,
+		DroppedAttributeCount: discarded,
+		Time:                  c.Timestamp,
 	})
 }
 
@@ -423,7 +421,7 @@ func (s *span) addLink(link trace.Link) {
 
 	// Discard over limited attributes
 	if len(link.Attributes) > s.spanLimits.AttributePerLinkCountLimit {
-		s.addDroppedAttributeCount(len(link.Attributes) - s.spanLimits.AttributePerLinkCountLimit)
+		link.DroppedAttributeCount = len(link.Attributes) - s.spanLimits.AttributePerLinkCountLimit
 		link.Attributes = link.Attributes[:s.spanLimits.AttributePerLinkCountLimit]
 	}
 
@@ -449,10 +447,9 @@ func (s *span) Snapshot() *export.SpanSnapshot {
 	sd.StatusCode = s.statusCode
 	sd.StatusMessage = s.statusMessage
 
-	sd.DroppedAttributeCount = int(s.droppedAttributeCount)
 	if s.attributes.evictList.Len() > 0 {
 		sd.Attributes = s.attributes.toKeyValue()
-		sd.DroppedAttributeCount += s.attributes.droppedCount
+		sd.DroppedAttributeCount = s.attributes.droppedCount
 	}
 	if len(s.messageEvents.queue) > 0 {
 		sd.MessageEvents = s.interfaceArrayToMessageEventArray()
@@ -500,10 +497,6 @@ func (s *span) addChild() {
 	s.mu.Lock()
 	s.childSpanCount++
 	s.mu.Unlock()
-}
-
-func (s *span) addDroppedAttributeCount(delta int) {
-	atomic.AddInt64(&s.droppedAttributeCount, int64(delta))
 }
 
 func (*span) private() {}

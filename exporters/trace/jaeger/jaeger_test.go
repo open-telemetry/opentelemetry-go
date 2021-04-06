@@ -356,6 +356,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 	linkSpanID, _ := trace.SpanIDFromHex("0102030405060709")
 
 	eventNameValue := "event-test"
+	eventDropped := int64(10)
 	keyValue := "value"
 	statusCodeValue := int64(1)
 	doubleValue := 123.456
@@ -432,7 +433,12 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 					attribute.Int64("int", intValue),
 				},
 				MessageEvents: []trace.Event{
-					{Name: eventNameValue, Attributes: []attribute.KeyValue{attribute.String("k1", keyValue)}, Time: now},
+					{
+						Name:                  eventNameValue,
+						Attributes:            []attribute.KeyValue{attribute.String("k1", keyValue)},
+						DroppedAttributeCount: int(eventDropped),
+						Time:                  now,
+					},
 				},
 				StatusCode:    codes.Error,
 				StatusMessage: statusMessage,
@@ -481,6 +487,11 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 								Key:   "k1",
 								VStr:  &keyValue,
 								VType: gen.TagType_STRING,
+							},
+							{
+								Key:   keyDroppedAttributeCount,
+								VLong: &eventDropped,
+								VType: gen.TagType_LONG,
 							},
 						},
 					},
