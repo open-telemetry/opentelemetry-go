@@ -69,7 +69,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `HasRemoteParent` field of the `"go.opentelemetry.io/otel/sdk/trace".SamplingParameters` is removed.
   This field is redundant to the information returned from the `Remote` method of the `SpanContext` held in the `ParentContext` field. (#1749)
 - The `trace.FlagsDebug` and `trace.FlagsDeferred` constants have been removed and will be localized to the B3 propagator. (#1770)
-- Remove `Process` configuration for Jaeger exporter. The information that could be configured in the `Process` struct should be configured in a `Resource` instead. (#TBD)
+- Remove `Process` configuration for Jaeger exporter. The information that could be configured in the `Process` struct should be configured in a `Resource` instead. (#1776)
 
 ## [0.19.0] - 2021-03-18
 
