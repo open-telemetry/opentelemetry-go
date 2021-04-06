@@ -547,6 +547,10 @@ type Event struct {
 	// Attributes describe the aspects of the event.
 	Attributes []attribute.KeyValue
 
+	// DroppedAttributeCount is the number of attributes that were not
+	// recorded due to configured limits being reached.
+	DroppedAttributeCount int
+
 	// Time at which this event was recorded.
 	Time time.Time
 }
@@ -567,8 +571,15 @@ type Event struct {
 //      form. A Link is used to keep reference to the original SpanContext and
 //      track the relationship.
 type Link struct {
+	// SpanContext of the linked Span.
 	SpanContext
+
+	// Attributes describe the aspects of the link.
 	Attributes []attribute.KeyValue
+
+	// DroppedAttributeCount is the number of attributes that were not
+	// recorded due to configured limits being reached.
+	DroppedAttributeCount int
 }
 
 // SpanKind is the role a Span plays in a Trace.

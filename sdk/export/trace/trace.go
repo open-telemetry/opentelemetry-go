@@ -68,7 +68,7 @@ type SpanSnapshot struct {
 	StatusCode    codes.Code
 	StatusMessage string
 
-	// DroppedAttributeCount contains dropped attributes for the span itself, events and links.
+	// DroppedAttributeCount contains dropped attributes for the span itself.
 	DroppedAttributeCount    int
 	DroppedMessageEventCount int
 	DroppedLinkCount         int
