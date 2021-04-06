@@ -356,6 +356,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 	linkSpanID, _ := trace.SpanIDFromHex("0102030405060709")
 
 	eventNameValue := "event-test"
+	eventDropped := int64(10)
 	keyValue := "value"
 	statusCodeValue := int64(1)
 	doubleValue := 123.456
@@ -432,7 +433,12 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 					attribute.Int64("int", intValue),
 				},
 				MessageEvents: []trace.Event{
-					{Name: eventNameValue, Attributes: []attribute.KeyValue{attribute.String("k1", keyValue)}, Time: now},
+					{
+						Name:                  eventNameValue,
+						Attributes:            []attribute.KeyValue{attribute.String("k1", keyValue)},
+						DroppedAttributeCount: int(eventDropped),
+						Time:                  now,
+					},
 				},
 				StatusCode:    codes.Error,
 				StatusMessage: statusMessage,
@@ -481,6 +487,11 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 								Key:   "k1",
 								VStr:  &keyValue,
 								VType: gen.TagType_STRING,
+							},
+							{
+								Key:   keyDroppedAttributeCount,
+								VLong: &eventDropped,
+								VType: gen.TagType_LONG,
 							},
 						},
 					},
@@ -647,6 +658,67 @@ func TestErrorOnExportShutdownExporter(t *testing.T) {
 	require.NoError(t, err)
 	assert.NoError(t, e.Shutdown(context.Background()))
 	assert.NoError(t, e.ExportSpans(context.Background(), nil))
+}
+
+func TestExporterExportSpansHonorsCancel(t *testing.T) {
+	e, err := NewRawExporter(withTestCollectorEndpoint())
+	require.NoError(t, err)
+	now := time.Now()
+	ss := []*export.SpanSnapshot{
+		{
+			Name: "s1",
+			Resource: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("name"),
+				attribute.Key("r1").String("v1"),
+			),
+			StartTime: now,
+			EndTime:   now,
+		},
+		{
+			Name: "s2",
+			Resource: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("name"),
+				attribute.Key("r2").String("v2"),
+			),
+			StartTime: now,
+			EndTime:   now,
+		},
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	assert.EqualError(t, e.ExportSpans(ctx, ss), context.Canceled.Error())
+}
+
+func TestExporterExportSpansHonorsTimeout(t *testing.T) {
+	e, err := NewRawExporter(withTestCollectorEndpoint())
+	require.NoError(t, err)
+	now := time.Now()
+	ss := []*export.SpanSnapshot{
+		{
+			Name: "s1",
+			Resource: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("name"),
+				attribute.Key("r1").String("v1"),
+			),
+			StartTime: now,
+			EndTime:   now,
+		},
+		{
+			Name: "s2",
+			Resource: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("name"),
+				attribute.Key("r2").String("v2"),
+			),
+			StartTime: now,
+			EndTime:   now,
+		},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
+	defer cancel()
+	<-ctx.Done()
+
+	assert.EqualError(t, e.ExportSpans(ctx, ss), context.DeadlineExceeded.Error())
 }
 
 func TestJaegerBatchList(t *testing.T) {

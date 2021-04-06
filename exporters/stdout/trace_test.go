@@ -113,6 +113,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"Value":{"Type":"STRING","Value":"value"}` +
 		`}` +
 		`],` +
+		`"DroppedAttributeCount":0,` +
 		`"Time":` + string(expectedSerializedNow) +
 		`},` +
 		`{` +
@@ -123,6 +124,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"Value":{"Type":"FLOAT64","Value":123.456}` +
 		`}` +
 		`],` +
+		`"DroppedAttributeCount":0,` +
 		`"Time":` + string(expectedSerializedNow) +
 		`}` +
 		`],` +

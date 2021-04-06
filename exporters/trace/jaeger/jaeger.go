@@ -41,6 +41,7 @@ const (
 	keySpanKind                      = "span.kind"
 	keyStatusCode                    = "otel.status_code"
 	keyStatusMessage                 = "otel.status_description"
+	keyDroppedAttributeCount         = "otel.event.dropped_attributes_count"
 	keyEventName                     = "event"
 )
 
@@ -217,11 +218,17 @@ func (e *Exporter) ExportSpans(ctx context.Context, ss []*export.SpanSnapshot) e
 
 	for _, span := range ss {
 		// TODO(jbd): Handle oversized bundlers.
-		err := e.bundler.Add(span, 1)
+		err := e.bundler.AddWait(ctx, span, 1)
 		if err != nil {
 			return fmt.Errorf("failed to bundle %q: %w", span.Name, err)
 		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
 	}
+
 	return nil
 }
 
@@ -295,6 +302,9 @@ func spanSnapshotToThrift(ss *export.SpanSnapshot) *gen.Span {
 		if a.Name != "" {
 			nTags++
 		}
+		if a.DroppedAttributeCount != 0 {
+			nTags++
+		}
 		fields := make([]*gen.Tag, 0, nTags)
 		if a.Name != "" {
 			// If an event contains an attribute with the same key, it needs
@@ -306,6 +316,9 @@ func spanSnapshotToThrift(ss *export.SpanSnapshot) *gen.Span {
 			if tag != nil {
 				fields = append(fields, tag)
 			}
+		}
+		if a.DroppedAttributeCount != 0 {
+			fields = append(fields, getInt64Tag(keyDroppedAttributeCount, int64(a.DroppedAttributeCount)))
 		}
 		logs = append(logs, &gen.Log{
 			Timestamp: a.Time.UnixNano() / 1000,

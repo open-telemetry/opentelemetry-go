@@ -1491,10 +1491,10 @@ func TestAddEventsWithMoreAttributesThanLimit(t *testing.T) {
 					attribute.Bool("key1", true),
 					attribute.String("key2", "value2"),
 				},
+				DroppedAttributeCount: 2,
 			},
 		},
 		SpanKind:               trace.SpanKindInternal,
-		DroppedAttributeCount:  2,
 		InstrumentationLibrary: instrumentation.Library{Name: "AddSpanEventWithOverLimitedAttributes"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
@@ -1536,10 +1536,17 @@ func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 		Parent: sc.WithRemote(true),
 		Name:   "span0",
 		Links: []trace.Link{
-			{SpanContext: sc1, Attributes: []attribute.KeyValue{k1v1}},
-			{SpanContext: sc2, Attributes: []attribute.KeyValue{k2v2}},
+			{
+				SpanContext:           sc1,
+				Attributes:            []attribute.KeyValue{k1v1},
+				DroppedAttributeCount: 1,
+			},
+			{
+				SpanContext:           sc2,
+				Attributes:            []attribute.KeyValue{k2v2},
+				DroppedAttributeCount: 2,
+			},
 		},
-		DroppedAttributeCount:  3,
 		SpanKind:               trace.SpanKindInternal,
 		InstrumentationLibrary: instrumentation.Library{Name: "Links"},
 	}
