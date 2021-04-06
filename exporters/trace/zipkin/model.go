@@ -22,7 +22,7 @@ import (
 	zkmodel "github.com/openzipkin/zipkin-go/model"
 
 	"go.opentelemetry.io/otel/attribute"
-	export "go.opentelemetry.io/otel/sdk/export/trace"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -32,7 +32,7 @@ const (
 	keyInstrumentationLibraryVersion = "otel.instrumentation_library.version"
 )
 
-func toZipkinSpanModels(batch []*export.SpanSnapshot) []zkmodel.SpanModel {
+func toZipkinSpanModels(batch []*tracesdk.SpanSnapshot) []zkmodel.SpanModel {
 	models := make([]zkmodel.SpanModel, 0, len(batch))
 	for _, data := range batch {
 		models = append(models, toZipkinSpanModel(data))
@@ -51,7 +51,7 @@ func getServiceName(attrs []attribute.KeyValue) string {
 	return ""
 }
 
-func toZipkinSpanModel(data *export.SpanSnapshot) zkmodel.SpanModel {
+func toZipkinSpanModel(data *tracesdk.SpanSnapshot) zkmodel.SpanModel {
 	return zkmodel.SpanModel{
 		SpanContext: toZipkinSpanContext(data),
 		Name:        data.Name,
@@ -68,7 +68,7 @@ func toZipkinSpanModel(data *export.SpanSnapshot) zkmodel.SpanModel {
 	}
 }
 
-func toZipkinSpanContext(data *export.SpanSnapshot) zkmodel.SpanContext {
+func toZipkinSpanContext(data *tracesdk.SpanSnapshot) zkmodel.SpanContext {
 	return zkmodel.SpanContext{
 		TraceID:  toZipkinTraceID(data.SpanContext.TraceID()),
 		ID:       toZipkinID(data.SpanContext.SpanID()),
@@ -157,7 +157,7 @@ var extraZipkinTags = []string{
 	keyInstrumentationLibraryVersion,
 }
 
-func toZipkinTags(data *export.SpanSnapshot) map[string]string {
+func toZipkinTags(data *tracesdk.SpanSnapshot) map[string]string {
 	m := make(map[string]string, len(data.Attributes)+len(extraZipkinTags))
 	for _, kv := range data.Attributes {
 		m[(string)(kv.Key)] = kv.Value.Emit()

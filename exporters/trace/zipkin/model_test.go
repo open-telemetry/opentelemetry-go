@@ -27,9 +27,9 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -39,7 +39,7 @@ func TestModelConversion(t *testing.T) {
 		semconv.ServiceNameKey.String("model-test"),
 	)
 
-	inputBatch := []*export.SpanSnapshot{
+	inputBatch := []*tracesdk.SpanSnapshot{
 		// typical span data
 		{
 			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
@@ -710,12 +710,12 @@ func Test_toZipkinTags(t *testing.T) {
 
 	tests := []struct {
 		name string
-		data *export.SpanSnapshot
+		data *tracesdk.SpanSnapshot
 		want map[string]string
 	}{
 		{
 			name: "attributes",
-			data: &export.SpanSnapshot{
+			data: &tracesdk.SpanSnapshot{
 				Attributes: []attribute.KeyValue{
 					attribute.String("key", keyValue),
 					attribute.Float64("double", doubleValue),
@@ -734,7 +734,7 @@ func Test_toZipkinTags(t *testing.T) {
 		},
 		{
 			name: "no attributes",
-			data: &export.SpanSnapshot{},
+			data: &tracesdk.SpanSnapshot{},
 			want: map[string]string{
 				"otel.status_code":        codes.Unset.String(),
 				"otel.status_description": "",
@@ -742,7 +742,7 @@ func Test_toZipkinTags(t *testing.T) {
 		},
 		{
 			name: "omit-noerror",
-			data: &export.SpanSnapshot{
+			data: &tracesdk.SpanSnapshot{
 				Attributes: []attribute.KeyValue{
 					attribute.Bool("error", false),
 				},
@@ -754,7 +754,7 @@ func Test_toZipkinTags(t *testing.T) {
 		},
 		{
 			name: "statusCode",
-			data: &export.SpanSnapshot{
+			data: &tracesdk.SpanSnapshot{
 				Attributes: []attribute.KeyValue{
 					attribute.String("key", keyValue),
 					attribute.Bool("error", true),
@@ -771,7 +771,7 @@ func Test_toZipkinTags(t *testing.T) {
 		},
 		{
 			name: "instrLib-empty",
-			data: &export.SpanSnapshot{
+			data: &tracesdk.SpanSnapshot{
 				InstrumentationLibrary: instrumentation.Library{},
 			},
 			want: map[string]string{
@@ -781,7 +781,7 @@ func Test_toZipkinTags(t *testing.T) {
 		},
 		{
 			name: "instrLib-noversion",
-			data: &export.SpanSnapshot{
+			data: &tracesdk.SpanSnapshot{
 				Attributes: []attribute.KeyValue{},
 				InstrumentationLibrary: instrumentation.Library{
 					Name: instrLibName,
@@ -795,7 +795,7 @@ func Test_toZipkinTags(t *testing.T) {
 		},
 		{
 			name: "instrLib-with-version",
-			data: &export.SpanSnapshot{
+			data: &tracesdk.SpanSnapshot{
 				Attributes: []attribute.KeyValue{},
 				InstrumentationLibrary: instrumentation.Library{
 					Name:    instrLibName,

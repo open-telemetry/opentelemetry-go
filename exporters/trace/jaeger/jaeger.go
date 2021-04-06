@@ -27,7 +27,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv"
@@ -125,8 +124,8 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 		defaultServiceName:  defaultServiceName,
 		resourceFromProcess: processToResource(o.Process),
 	}
-	bundler := bundler.NewBundler((*export.SpanSnapshot)(nil), func(bundle interface{}) {
-		if err := e.upload(bundle.([]*export.SpanSnapshot)); err != nil {
+	bundler := bundler.NewBundler((*sdktrace.SpanSnapshot)(nil), func(bundle interface{}) {
+		if err := e.upload(bundle.([]*sdktrace.SpanSnapshot)); err != nil {
 			otel.Handle(err)
 		}
 	})
@@ -205,10 +204,10 @@ type Exporter struct {
 	resourceFromProcess *resource.Resource
 }
 
-var _ export.SpanExporter = (*Exporter)(nil)
+var _ sdktrace.SpanExporter = (*Exporter)(nil)
 
 // ExportSpans exports SpanSnapshots to Jaeger.
-func (e *Exporter) ExportSpans(ctx context.Context, ss []*export.SpanSnapshot) error {
+func (e *Exporter) ExportSpans(ctx context.Context, ss []*sdktrace.SpanSnapshot) error {
 	e.stoppedMu.RLock()
 	stopped := e.stopped
 	e.stoppedMu.RUnlock()
@@ -263,7 +262,7 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func spanSnapshotToThrift(ss *export.SpanSnapshot) *gen.Span {
+func spanSnapshotToThrift(ss *sdktrace.SpanSnapshot) *gen.Span {
 	tags := make([]*gen.Tag, 0, len(ss.Attributes))
 	for _, kv := range ss.Attributes {
 		tag := keyValueToTag(kv)
@@ -430,7 +429,7 @@ func (e *Exporter) Flush() {
 	flush(e)
 }
 
-func (e *Exporter) upload(spans []*export.SpanSnapshot) error {
+func (e *Exporter) upload(spans []*sdktrace.SpanSnapshot) error {
 	batchList := jaegerBatchList(spans, e.defaultServiceName, e.resourceFromProcess)
 	for _, batch := range batchList {
 		err := e.uploader.upload(batch)
@@ -444,7 +443,7 @@ func (e *Exporter) upload(spans []*export.SpanSnapshot) error {
 
 // jaegerBatchList transforms a slice of SpanSnapshot into a slice of jaeger
 // Batch.
-func jaegerBatchList(ssl []*export.SpanSnapshot, defaultServiceName string, resourceFromProcess *resource.Resource) []*gen.Batch {
+func jaegerBatchList(ssl []*sdktrace.SpanSnapshot, defaultServiceName string, resourceFromProcess *resource.Resource) []*gen.Batch {
 	if len(ssl) == 0 {
 		return nil
 	}
