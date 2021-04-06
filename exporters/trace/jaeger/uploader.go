@@ -38,30 +38,37 @@ type batchUploader interface {
 type EndpointOption func() (batchUploader, error)
 
 // WithAgentEndpoint instructs exporter to send spans to jaeger-agent at this address.
-// Agent endpoint is resolved from environment variables first and then overridden with default values if not present
+// Agent endpoint is resolved in the following order: options, env vars, and then default values
 // Default agent endpoint value: localhost:6832
 func WithAgentEndpoint(options ...AgentEndpointOption) EndpointOption {
 	return func() (batchUploader, error) {
-		// Get agent host and port from environment variables
-		host, port := agentEndpointFromEnv()
-		if host == "" {
-			host = "localhost"
-		}
-		if port == "" {
-			port = "6832"
-		}
-		agentEndpoint := fmt.Sprintf("%s:%s", host, port)
-
 		o := &AgentEndpointOptions{
 			agentClientUDPParams{
-				HostPort:            agentEndpoint,
 				AttemptReconnecting: true,
 			},
 		}
-
 		for _, opt := range options {
 			opt(o)
 		}
+
+		envHost, envPort := agentEndpointFromEnv()  // Get agent host and port from environment variables
+		host := o.agentClientUDPParams.Host
+		if host == "" {
+			if envHost == "" {
+				host = "localhost"
+			} else {
+				host = envHost
+			}
+		}
+		port := o.agentClientUDPParams.Port
+		if port == "" {
+			if envPort == "" {
+				port = "6832"
+			} else {
+				port = envPort
+			}
+		}
+		o.agentClientUDPParams.HostPort = fmt.Sprintf("%s:%s", host, port)
 
 		client, err := newAgentClientUDP(o.agentClientUDPParams)
 		if err != nil {
@@ -76,6 +83,20 @@ type AgentEndpointOption func(o *AgentEndpointOptions)
 
 type AgentEndpointOptions struct {
 	agentClientUDPParams
+}
+
+// WithAgentHost sets a host to be used in the agent client endpoint.
+func WithAgentHostPort(host string) AgentEndpointOption {
+	return func(o *AgentEndpointOptions) {
+		o.Host = host
+	}
+}
+
+// WithAgentPort sets a port to be used in the agent client endpoint.
+func WithAgentPort(port string) AgentEndpointOption {
+	return func(o *AgentEndpointOptions) {
+		o.Port = port
+	}
 }
 
 // WithLogger sets a logger to be used by agent client.
