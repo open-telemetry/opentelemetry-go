@@ -51,7 +51,7 @@ func WithAgentEndpoint(options ...AgentEndpointOption) EndpointOption {
 			opt(o)
 		}
 
-		envHost, envPort := agentEndpointFromEnv()  // Get agent host and port from environment variables
+		envHost, envPort := agentEndpointFromEnv() // Get agent host and port from environment variables
 		host := o.agentClientUDPParams.Host
 		if host == "" {
 			if envHost == "" {
@@ -59,6 +59,7 @@ func WithAgentEndpoint(options ...AgentEndpointOption) EndpointOption {
 			} else {
 				host = envHost
 			}
+			o.agentClientUDPParams.Host = host
 		}
 		port := o.agentClientUDPParams.Port
 		if port == "" {
@@ -67,6 +68,7 @@ func WithAgentEndpoint(options ...AgentEndpointOption) EndpointOption {
 			} else {
 				port = envPort
 			}
+			o.agentClientUDPParams.Port = port
 		}
 		o.agentClientUDPParams.HostPort = fmt.Sprintf("%s:%s", host, port)
 
