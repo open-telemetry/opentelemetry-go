@@ -813,6 +813,61 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 			},
 		},
 		{
+			name: "http-host-rank",
+			data: &export.SpanSnapshot{
+				SpanKind: trace.SpanKindProducer,
+				Attributes: []attribute.KeyValue{
+					semconv.HTTPHostKey.String("http-host-test"),
+					semconv.DBNameKey.String("db-name-test"),
+				},
+			},
+			want: &zkmodel.Endpoint{
+				ServiceName: "http-host-test",
+			},
+		},
+		{
+			name: "db-name-rank",
+			data: &export.SpanSnapshot{
+				SpanKind: trace.SpanKindProducer,
+				Attributes: []attribute.KeyValue{
+					attribute.String("foo", "bar"),
+					semconv.DBNameKey.String("db-name-test"),
+				},
+			},
+			want: &zkmodel.Endpoint{
+				ServiceName: "db-name-test",
+			},
+		},
+		{
+			name: "peer-hostname-rank",
+			data: &export.SpanSnapshot{
+				SpanKind: trace.SpanKindProducer,
+				Attributes: []attribute.KeyValue{
+					keyPeerHostname.String("peer-hostname-test"),
+					keyPeerAddress.String("peer-address-test"),
+					semconv.HTTPHostKey.String("http-host-test"),
+					semconv.DBNameKey.String("http-host-test"),
+				},
+			},
+			want: &zkmodel.Endpoint{
+				ServiceName: "peer-hostname-test",
+			},
+		},
+		{
+			name: "peer-address-rank",
+			data: &export.SpanSnapshot{
+				SpanKind: trace.SpanKindProducer,
+				Attributes: []attribute.KeyValue{
+					keyPeerAddress.String("peer-address-test"),
+					semconv.HTTPHostKey.String("http-host-test"),
+					semconv.DBNameKey.String("http-host-test"),
+				},
+			},
+			want: &zkmodel.Endpoint{
+				ServiceName: "peer-address-test",
+			},
+		},
+		{
 			name: "net-peer-invalid-ip",
 			data: &export.SpanSnapshot{
 				SpanKind: trace.SpanKindProducer,
