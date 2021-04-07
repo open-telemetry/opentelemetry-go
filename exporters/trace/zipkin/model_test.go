@@ -179,6 +179,9 @@ func TestModelConversion(t *testing.T) {
 			Attributes: []attribute.KeyValue{
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
+				attribute.String("peer.hostname", "test-peer-hostname"),
+				attribute.String("net.peer.ip", "1.2.3.4"),
+				attribute.Int64("net.peer.port", 9876),
 			},
 			MessageEvents: []trace.Event{
 				{
@@ -243,9 +246,6 @@ func TestModelConversion(t *testing.T) {
 			Attributes: []attribute.KeyValue{
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
-				attribute.String("peer.hostname", "test-peer-hostname"),
-				attribute.String("net.peer.ip", "1.2.3.4"),
-				attribute.Int64("net.peer.port", 9876),
 			},
 			MessageEvents: []trace.Event{
 				{
@@ -494,7 +494,10 @@ func TestModelConversion(t *testing.T) {
 			LocalEndpoint: &zkmodel.Endpoint{
 				ServiceName: "model-test",
 			},
-			RemoteEndpoint: nil,
+			RemoteEndpoint: &zkmodel.Endpoint{
+				IPv4: net.ParseIP("1.2.3.4"),
+				Port: 9876,
+			},
 			Annotations: []zkmodel.Annotation{
 				{
 					Timestamp: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
@@ -508,6 +511,9 @@ func TestModelConversion(t *testing.T) {
 			Tags: map[string]string{
 				"attr1":            "42",
 				"attr2":            "bar",
+				"net.peer.ip":      "1.2.3.4",
+				"net.peer.port":    "9876",
+				"peer.hostname":    "test-peer-hostname",
 				"otel.status_code": "Error",
 				"error":            "404, file not found",
 			},
@@ -572,10 +578,7 @@ func TestModelConversion(t *testing.T) {
 			LocalEndpoint: &zkmodel.Endpoint{
 				ServiceName: "model-test",
 			},
-			RemoteEndpoint: &zkmodel.Endpoint{
-				IPv4: net.ParseIP("1.2.3.4"),
-				Port: 9876,
-			},
+			RemoteEndpoint: nil,
 			Annotations: []zkmodel.Annotation{
 				{
 					Timestamp: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
@@ -589,9 +592,6 @@ func TestModelConversion(t *testing.T) {
 			Tags: map[string]string{
 				"attr1":            "42",
 				"attr2":            "bar",
-				"net.peer.ip":      "1.2.3.4",
-				"net.peer.port":    "9876",
-				"peer.hostname":    "test-peer-hostname",
 				"otel.status_code": "Error",
 				"error":            "404, file not found",
 			},

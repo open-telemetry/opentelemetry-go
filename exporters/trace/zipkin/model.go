@@ -170,10 +170,7 @@ func toZipkinTags(data *export.SpanSnapshot) map[string]string {
 
 	if data.StatusCode == codes.Error {
 		m["error"] = data.StatusMessage
-	}
-
-	// If boolean with 'false' is present, should be removed.
-	if v, ok := m["error"]; ok && v == "false" {
+	} else {
 		delete(m, "error")
 	}
 
@@ -192,7 +189,7 @@ func toZipkinTags(data *export.SpanSnapshot) map[string]string {
 }
 
 // Rank determines selection order for remote endpoint. See the specification
-// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/sdk_exporters/zipkin.md#remote-endpoint
+// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.0.1/specification/trace/sdk_exporters/zipkin.md#otlp---zipkin
 var remoteEndpointKeyRank = map[attribute.Key]int{
 	semconv.PeerServiceKey: 0,
 	semconv.NetPeerNameKey: 1,
@@ -204,8 +201,8 @@ var remoteEndpointKeyRank = map[attribute.Key]int{
 }
 
 func toZipkinRemoteEndpoint(data *export.SpanSnapshot) *zkmodel.Endpoint {
-	// Should be set only for consumer or producer kind
-	if data.SpanKind != trace.SpanKindConsumer &&
+	// Should be set only for client or producer kind
+	if data.SpanKind != trace.SpanKindClient &&
 		data.SpanKind != trace.SpanKindProducer {
 		return nil
 	}
@@ -218,12 +215,10 @@ func toZipkinRemoteEndpoint(data *export.SpanSnapshot) *zkmodel.Endpoint {
 		}
 
 		currentKeyRank, ok := remoteEndpointKeyRank[endpointAttr.Key]
-		if !ok {
+		if ok && rank < currentKeyRank {
 			endpointAttr = kv
-		} else {
-			if rank < currentKeyRank {
-				endpointAttr = kv
-			}
+		} else if !ok {
+			endpointAttr = kv
 		}
 	}
 
