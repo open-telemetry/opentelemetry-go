@@ -25,8 +25,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/stdout"
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -47,7 +47,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 	doubleValue := 123.456
 	resource := resource.NewWithAttributes(attribute.String("rk1", "rv11"))
 
-	testSpan := &export.SpanSnapshot{
+	testSpan := &tracesdk.SpanSnapshot{
 		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    traceID,
 			SpanID:     spanID,
@@ -69,7 +69,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		StatusMessage: "interesting",
 		Resource:      resource,
 	}
-	if err := ex.ExportSpans(context.Background(), []*export.SpanSnapshot{testSpan}); err != nil {
+	if err := ex.ExportSpans(context.Background(), []*tracesdk.SpanSnapshot{testSpan}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -78,13 +78,19 @@ func TestExporter_ExportSpan(t *testing.T) {
 	got := b.String()
 	expectedOutput := `[{"SpanContext":{` +
 		`"TraceID":"0102030405060708090a0b0c0d0e0f10",` +
-		`"SpanID":"0102030405060708","TraceFlags":0,` +
+		`"SpanID":"0102030405060708","TraceFlags":"00",` +
 		`"TraceState":[` +
 		`{` +
 		`"Key":"key",` +
 		`"Value":{"Type":"STRING","Value":"val"}` +
 		`}],"Remote":false},` +
-		`"ParentSpanID":"0000000000000000",` +
+		`"Parent":{` +
+		`"TraceID":"00000000000000000000000000000000",` +
+		`"SpanID":"0000000000000000",` +
+		`"TraceFlags":"00",` +
+		`"TraceState":null,` +
+		`"Remote":false` +
+		`},` +
 		`"SpanKind":1,` +
 		`"Name":"/foo",` +
 		`"StartTime":` + string(expectedSerializedNow) + "," +
@@ -107,6 +113,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"Value":{"Type":"STRING","Value":"value"}` +
 		`}` +
 		`],` +
+		`"DroppedAttributeCount":0,` +
 		`"Time":` + string(expectedSerializedNow) +
 		`},` +
 		`{` +
@@ -117,13 +124,13 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"Value":{"Type":"FLOAT64","Value":123.456}` +
 		`}` +
 		`],` +
+		`"DroppedAttributeCount":0,` +
 		`"Time":` + string(expectedSerializedNow) +
 		`}` +
 		`],` +
 		`"Links":null,` +
 		`"StatusCode":"Error",` +
 		`"StatusMessage":"interesting",` +
-		`"HasRemoteParent":false,` +
 		`"DroppedAttributeCount":0,` +
 		`"DroppedMessageEventCount":0,` +
 		`"DroppedLinkCount":0,` +

@@ -19,7 +19,7 @@ import (
 	"sync"
 
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
-	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 )
 
 // ProtocolDriver is an interface used by OTLP exporter. It's

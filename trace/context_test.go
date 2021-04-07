@@ -51,6 +51,11 @@ func TestSpanFromContext(t *testing.T) {
 	}{
 		{
 			name:         "empty context",
+			context:      nil,
+			expectedSpan: emptySpan,
+		},
+		{
+			name:         "background context",
 			context:      context.Background(),
 			expectedSpan: emptySpan,
 		},

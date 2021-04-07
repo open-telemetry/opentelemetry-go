@@ -28,9 +28,9 @@ import (
 	resourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 
-	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func TestExportSpans(t *testing.T) {
@@ -58,7 +58,7 @@ func TestExportSpans(t *testing.T) {
 					SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 						TraceID:    trace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
 						SpanID:     trace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
-						TraceFlags: byte(1),
+						TraceFlags: trace.FlagsSampled,
 					}),
 					SpanKind:  trace.SpanKindServer,
 					Name:      "parent process",
@@ -80,7 +80,7 @@ func TestExportSpans(t *testing.T) {
 					SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 						TraceID:    trace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}),
 						SpanID:     trace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
-						TraceFlags: byte(1),
+						TraceFlags: trace.FlagsSampled,
 					}),
 					SpanKind:  trace.SpanKindServer,
 					Name:      "secondary parent process",
@@ -102,13 +102,17 @@ func TestExportSpans(t *testing.T) {
 					SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 						TraceID:    trace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
 						SpanID:     trace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 2}),
-						TraceFlags: byte(1),
+						TraceFlags: trace.FlagsSampled,
 					}),
-					ParentSpanID: trace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
-					SpanKind:     trace.SpanKindInternal,
-					Name:         "internal process",
-					StartTime:    startTime,
-					EndTime:      endTime,
+					Parent: trace.NewSpanContext(trace.SpanContextConfig{
+						TraceID:    trace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
+						SpanID:     trace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
+						TraceFlags: trace.FlagsSampled,
+					}),
+					SpanKind:  trace.SpanKindInternal,
+					Name:      "internal process",
+					StartTime: startTime,
+					EndTime:   endTime,
 					Attributes: []attribute.KeyValue{
 						attribute.String("user", "alice"),
 						attribute.Bool("authenticated", true),
@@ -125,7 +129,7 @@ func TestExportSpans(t *testing.T) {
 					SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 						TraceID:    trace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}),
 						SpanID:     trace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
-						TraceFlags: byte(1),
+						TraceFlags: trace.FlagsSampled,
 					}),
 					SpanKind:  trace.SpanKindServer,
 					Name:      "parent process",
