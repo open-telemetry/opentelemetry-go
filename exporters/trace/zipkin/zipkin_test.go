@@ -32,7 +32,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv"
@@ -234,7 +233,7 @@ func TestExportSpans(t *testing.T) {
 		semconv.ServiceNameKey.String("exporter-test"),
 	)
 
-	spans := []*export.SpanSnapshot{
+	spans := []*sdktrace.SpanSnapshot{
 		// parent
 		{
 			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{

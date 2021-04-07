@@ -29,9 +29,9 @@ import (
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 
 	"go.opentelemetry.io/otel/codes"
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func TestSpanKind(t *testing.T) {
@@ -199,7 +199,7 @@ func TestSpanData(t *testing.T) {
 	startTime := time.Unix(1585674086, 1234)
 	endTime := startTime.Add(10 * time.Second)
 	traceState, _ := trace.TraceStateFromKeyValues(attribute.String("key1", "val1"), attribute.String("key2", "val2"))
-	spanData := &export.SpanSnapshot{
+	spanData := &tracesdk.SpanSnapshot{
 		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
 			SpanID:     trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
@@ -285,7 +285,7 @@ func TestSpanData(t *testing.T) {
 		DroppedLinksCount:      3,
 	}
 
-	got := SpanData([]*export.SpanSnapshot{spanData})
+	got := SpanData([]*tracesdk.SpanSnapshot{spanData})
 	require.Len(t, got, 1)
 
 	assert.Equal(t, got[0].GetResource(), Resource(spanData.Resource))
@@ -302,7 +302,7 @@ func TestSpanData(t *testing.T) {
 
 // Empty parent span ID should be treated as root span.
 func TestRootSpanData(t *testing.T) {
-	sd := SpanData([]*export.SpanSnapshot{{}})
+	sd := SpanData([]*tracesdk.SpanSnapshot{{}})
 	require.Len(t, sd, 1)
 	rs := sd[0]
 	got := rs.GetInstrumentationLibrarySpans()[0].GetSpans()[0].GetParentSpanId()
@@ -312,5 +312,5 @@ func TestRootSpanData(t *testing.T) {
 }
 
 func TestSpanDataNilResource(t *testing.T) {
-	assert.NotPanics(t, func() { SpanData([]*export.SpanSnapshot{{}}) })
+	assert.NotPanics(t, func() { SpanData([]*tracesdk.SpanSnapshot{{}}) })
 }

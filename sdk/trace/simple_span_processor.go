@@ -19,14 +19,13 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel"
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 )
 
 // simpleSpanProcessor is a SpanProcessor that synchronously sends all
 // completed Spans to a trace.Exporter immediately.
 type simpleSpanProcessor struct {
 	exporterMu sync.RWMutex
-	exporter   export.SpanExporter
+	exporter   SpanExporter
 	stopOnce   sync.Once
 }
 
@@ -34,7 +33,7 @@ var _ SpanProcessor = (*simpleSpanProcessor)(nil)
 
 // NewSimpleSpanProcessor returns a new SpanProcessor that will synchronously
 // send completed spans to the exporter immediately.
-func NewSimpleSpanProcessor(exporter export.SpanExporter) SpanProcessor {
+func NewSimpleSpanProcessor(exporter SpanExporter) SpanProcessor {
 	ssp := &simpleSpanProcessor{
 		exporter: exporter,
 	}
@@ -51,7 +50,7 @@ func (ssp *simpleSpanProcessor) OnEnd(s ReadOnlySpan) {
 
 	if ssp.exporter != nil && s.SpanContext().TraceFlags().IsSampled() {
 		ss := s.Snapshot()
-		if err := ssp.exporter.ExportSpans(context.Background(), []*export.SpanSnapshot{ss}); err != nil {
+		if err := ssp.exporter.ExportSpans(context.Background(), []*SpanSnapshot{ss}); err != nil {
 			otel.Handle(err)
 		}
 	}

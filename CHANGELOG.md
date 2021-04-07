@@ -60,6 +60,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `DroppedAttributeCount` field of the `Span` in the `go.opentelemetry.io/otel` package now only represents the number of attributes dropped for the span itself.
   It no longer is a conglomerate of itself, events, and link attributes that have been dropped. (#1771)
 - Make `ExportSpans` in Jaeger Exporter honor context deadline. (#1773)
+- The `go.opentelemetry.io/otel/sdk/export/trace` package is merged into the `go.opentelemetry.io/otel/sdk/trace` package. (#1778)
 
 ### Removed
 

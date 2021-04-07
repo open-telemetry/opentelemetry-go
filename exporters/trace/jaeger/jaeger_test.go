@@ -34,7 +34,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -372,12 +371,12 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 
 	tests := []struct {
 		name string
-		data *export.SpanSnapshot
+		data *sdktrace.SpanSnapshot
 		want *gen.Span
 	}{
 		{
 			name: "no status description",
-			data: &export.SpanSnapshot{
+			data: &sdktrace.SpanSnapshot{
 				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID: traceID,
 					SpanID:  spanID,
@@ -411,7 +410,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 		},
 		{
 			name: "no parent",
-			data: &export.SpanSnapshot{
+			data: &sdktrace.SpanSnapshot{
 				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID: traceID,
 					SpanID:  spanID,
@@ -500,7 +499,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 		},
 		{
 			name: "with parent",
-			data: &export.SpanSnapshot{
+			data: &sdktrace.SpanSnapshot{
 				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID: traceID,
 					SpanID:  spanID,
@@ -557,7 +556,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 		},
 		{
 			name: "resources do not affect the tags",
-			data: &export.SpanSnapshot{
+			data: &sdktrace.SpanSnapshot{
 				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID: traceID,
 					SpanID:  spanID,
@@ -664,7 +663,7 @@ func TestExporterExportSpansHonorsCancel(t *testing.T) {
 	e, err := NewRawExporter(withTestCollectorEndpoint())
 	require.NoError(t, err)
 	now := time.Now()
-	ss := []*export.SpanSnapshot{
+	ss := []*sdktrace.SpanSnapshot{
 		{
 			Name: "s1",
 			Resource: resource.NewWithAttributes(
@@ -694,7 +693,7 @@ func TestExporterExportSpansHonorsTimeout(t *testing.T) {
 	e, err := NewRawExporter(withTestCollectorEndpoint())
 	require.NoError(t, err)
 	now := time.Now()
-	ss := []*export.SpanSnapshot{
+	ss := []*sdktrace.SpanSnapshot{
 		{
 			Name: "s1",
 			Resource: resource.NewWithAttributes(
@@ -730,7 +729,7 @@ func TestJaegerBatchList(t *testing.T) {
 
 	testCases := []struct {
 		name               string
-		spanSnapshotList   []*export.SpanSnapshot
+		spanSnapshotList   []*sdktrace.SpanSnapshot
 		defaultServiceName string
 		expectedBatchList  []*gen.Batch
 	}{
@@ -741,7 +740,7 @@ func TestJaegerBatchList(t *testing.T) {
 		},
 		{
 			name: "span's snapshot contains nil span",
-			spanSnapshotList: []*export.SpanSnapshot{
+			spanSnapshotList: []*sdktrace.SpanSnapshot{
 				{
 					Name: "s1",
 					Resource: resource.NewWithAttributes(
@@ -775,7 +774,7 @@ func TestJaegerBatchList(t *testing.T) {
 		},
 		{
 			name: "merge spans that have the same resources",
-			spanSnapshotList: []*export.SpanSnapshot{
+			spanSnapshotList: []*sdktrace.SpanSnapshot{
 				{
 					Name: "s1",
 					Resource: resource.NewWithAttributes(
@@ -850,7 +849,7 @@ func TestJaegerBatchList(t *testing.T) {
 		},
 		{
 			name: "no service name in spans",
-			spanSnapshotList: []*export.SpanSnapshot{
+			spanSnapshotList: []*sdktrace.SpanSnapshot{
 				{
 					Name: "s1",
 					Resource: resource.NewWithAttributes(

@@ -33,7 +33,6 @@ import (
 	"go.opentelemetry.io/otel/bridge/opencensus"
 	"go.opentelemetry.io/otel/exporters/stdout"
 	otmetricexport "go.opentelemetry.io/otel/sdk/export/metric"
-	ottraceexport "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -63,7 +62,7 @@ func main() {
 
 // tracing demonstrates overriding the OpenCensus DefaultTracer to send spans
 // to the OpenTelemetry exporter by calling OpenCensus APIs.
-func tracing(otExporter ottraceexport.SpanExporter) {
+func tracing(otExporter sdktrace.SpanExporter) {
 	ctx := context.Background()
 
 	log.Println("Configuring OpenCensus.  Not Registering any OpenCensus exporters.")

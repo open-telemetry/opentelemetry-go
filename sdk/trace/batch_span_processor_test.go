@@ -27,13 +27,12 @@ import (
 
 	"go.opentelemetry.io/otel/trace"
 
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 type testBatchExporter struct {
 	mu            sync.Mutex
-	spans         []*export.SpanSnapshot
+	spans         []*sdktrace.SpanSnapshot
 	sizes         []int
 	batchCount    int
 	shutdownCount int
@@ -41,7 +40,7 @@ type testBatchExporter struct {
 	err           error
 }
 
-func (t *testBatchExporter) ExportSpans(ctx context.Context, ss []*export.SpanSnapshot) error {
+func (t *testBatchExporter) ExportSpans(ctx context.Context, ss []*sdktrace.SpanSnapshot) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -77,7 +76,7 @@ func (t *testBatchExporter) getBatchCount() int {
 	return t.batchCount
 }
 
-var _ export.SpanExporter = (*testBatchExporter)(nil)
+var _ sdktrace.SpanExporter = (*testBatchExporter)(nil)
 
 func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
 	tp := basicTracerProvider(t)
