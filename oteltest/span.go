@@ -22,13 +22,8 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
-)
-
-const (
-	errorTypeKey    = attribute.Key("error.type")
-	errorMessageKey = attribute.Key("error.message")
-	errorEventName  = "error"
 )
 
 var _ trace.Span = (*Span)(nil)
@@ -79,7 +74,7 @@ func (s *Span) End(opts ...trace.SpanOption) {
 	}
 }
 
-// RecordError records an error as a Span event.
+// RecordError records an error as an exception Span event.
 func (s *Span) RecordError(err error, opts ...trace.EventOption) {
 	if err == nil || s.ended {
 		return
@@ -91,13 +86,12 @@ func (s *Span) RecordError(err error, opts ...trace.EventOption) {
 		errTypeString = errType.String()
 	}
 
-	s.SetStatus(codes.Error, "")
 	opts = append(opts, trace.WithAttributes(
-		errorTypeKey.String(errTypeString),
-		errorMessageKey.String(err.Error()),
+		semconv.ExceptionTypeKey.String(errTypeString),
+		semconv.ExceptionMessageKey.String(err.Error()),
 	))
 
-	s.AddEvent(errorEventName, opts...)
+	s.AddEvent(semconv.ExceptionEventName, opts...)
 }
 
 // AddEvent adds an event to s.

@@ -25,7 +25,9 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/trace/zipkin"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -40,9 +42,8 @@ func initTracer(url string) func() {
 	// ratio.
 	exporter, err := zipkin.NewRawExporter(
 		url,
-		"zipkin-test",
 		zipkin.WithLogger(logger),
-		zipkin.WithSDK(&sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		zipkin.WithSDKOptions(sdktrace.WithSampler(sdktrace.AlwaysSample())),
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -50,7 +51,12 @@ func initTracer(url string) func() {
 
 	batcher := sdktrace.NewBatchSpanProcessor(exporter)
 
-	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(batcher))
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(batcher),
+		sdktrace.WithResource(resource.NewWithAttributes(
+			semconv.ServiceNameKey.String("zipkin-test"),
+		)),
+	)
 	otel.SetTracerProvider(tp)
 
 	return func() {

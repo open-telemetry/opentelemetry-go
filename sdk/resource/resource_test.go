@@ -168,9 +168,9 @@ func TestMerge(t *testing.T) {
 func TestDefault(t *testing.T) {
 	res := resource.Default()
 	require.False(t, res.Equal(resource.Empty()))
-	require.True(t, res.LabelSet().HasValue(semconv.ServiceNameKey))
+	require.True(t, res.Set().HasValue(semconv.ServiceNameKey))
 
-	serviceName, _ := res.LabelSet().Value(semconv.ServiceNameKey)
+	serviceName, _ := res.Set().Value(semconv.ServiceNameKey)
 	require.True(t, strings.HasPrefix(serviceName.AsString(), "unknown_service:"))
 	require.Greaterf(t, len(serviceName.AsString()), len("unknown_service:"),
 		"default service.name should include executable name")
@@ -236,6 +236,14 @@ func TestString(t *testing.T) {
 		{
 			kvs:  []attribute.KeyValue{attribute.String(`A=a\,B`, `b`)},
 			want: `A\=a\\\,B=b`,
+		},
+		{
+			kvs:  []attribute.KeyValue{attribute.String("", "invalid")},
+			want: "",
+		},
+		{
+			kvs:  []attribute.KeyValue{attribute.String("", "invalid"), attribute.String("B", "b")},
+			want: "B=b",
 		},
 	} {
 		if got := resource.NewWithAttributes(test.kvs...).String(); got != test.want {

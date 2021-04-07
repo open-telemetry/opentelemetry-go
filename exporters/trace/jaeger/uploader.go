@@ -16,6 +16,7 @@ package jaeger // import "go.opentelemetry.io/otel/exporters/trace/jaeger"
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -209,7 +210,7 @@ func (c *collectorUploader) upload(batch *gen.Batch) error {
 
 func serialize(obj thrift.TStruct) (*bytes.Buffer, error) {
 	buf := thrift.NewTMemoryBuffer()
-	if err := obj.Write(thrift.NewTBinaryProtocolTransport(buf)); err != nil {
+	if err := obj.Write(context.Background(), thrift.NewTBinaryProtocolConf(buf, &thrift.TConfiguration{})); err != nil {
 		return nil, err
 	}
 	return buf.Buffer, nil

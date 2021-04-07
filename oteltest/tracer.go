@@ -53,28 +53,11 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 
 	if c.NewRoot {
 		span.spanContext = trace.SpanContext{}
-
-		iodKey := attribute.Key("ignored-on-demand")
-		if lsc := trace.SpanContextFromContext(ctx); lsc.IsValid() {
-			span.links = append(span.links, trace.Link{
-				SpanContext: lsc,
-				Attributes:  []attribute.KeyValue{iodKey.String("current")},
-			})
-		}
-		if rsc := trace.RemoteSpanContextFromContext(ctx); rsc.IsValid() {
-			span.links = append(span.links, trace.Link{
-				SpanContext: rsc,
-				Attributes:  []attribute.KeyValue{iodKey.String("remote")},
-			})
-		}
 	} else {
 		span.spanContext = t.config.SpanContextFunc(ctx)
-		if lsc := trace.SpanContextFromContext(ctx); lsc.IsValid() {
-			span.spanContext = span.spanContext.WithTraceID(lsc.TraceID())
-			span.parentSpanID = lsc.SpanID()
-		} else if rsc := trace.RemoteSpanContextFromContext(ctx); rsc.IsValid() {
-			span.spanContext = span.spanContext.WithTraceID(rsc.TraceID())
-			span.parentSpanID = rsc.SpanID()
+		if current := trace.SpanContextFromContext(ctx); current.IsValid() {
+			span.spanContext = span.spanContext.WithTraceID(current.TraceID())
+			span.parentSpanID = current.SpanID()
 		}
 	}
 

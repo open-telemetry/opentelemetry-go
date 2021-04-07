@@ -23,29 +23,38 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	zkmodel "github.com/openzipkin/zipkin-go/model"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
 func TestModelConversion(t *testing.T) {
-	inputBatch := []*export.SpanSnapshot{
+	resource := resource.NewWithAttributes(
+		semconv.ServiceNameKey.String("model-test"),
+	)
+
+	inputBatch := []*tracesdk.SpanSnapshot{
 		// typical span data
 		{
 			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
 				SpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 			}),
-			ParentSpanID: trace.SpanID{0x3F, 0x3E, 0x3D, 0x3C, 0x3B, 0x3A, 0x39, 0x38},
-			SpanKind:     trace.SpanKindServer,
-			Name:         "foo",
-			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
-			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
+			Parent: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+				SpanID:  trace.SpanID{0x3F, 0x3E, 0x3D, 0x3C, 0x3B, 0x3A, 0x39, 0x38},
+			}),
+			SpanKind:  trace.SpanKindServer,
+			Name:      "foo",
+			StartTime: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			EndTime:   time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
 			Attributes: []attribute.KeyValue{
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
@@ -67,6 +76,7 @@ func TestModelConversion(t *testing.T) {
 			},
 			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
+			Resource:      resource,
 		},
 		// span data with no parent (same as typical, but has
 		// invalid parent)
@@ -75,11 +85,10 @@ func TestModelConversion(t *testing.T) {
 				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
 				SpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 			}),
-			ParentSpanID: trace.SpanID{},
-			SpanKind:     trace.SpanKindServer,
-			Name:         "foo",
-			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
-			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
+			SpanKind:  trace.SpanKindServer,
+			Name:      "foo",
+			StartTime: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			EndTime:   time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
 			Attributes: []attribute.KeyValue{
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
@@ -100,6 +109,7 @@ func TestModelConversion(t *testing.T) {
 			},
 			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
+			Resource:      resource,
 		},
 		// span data of unspecified kind
 		{
@@ -107,11 +117,14 @@ func TestModelConversion(t *testing.T) {
 				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
 				SpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 			}),
-			ParentSpanID: trace.SpanID{0x3F, 0x3E, 0x3D, 0x3C, 0x3B, 0x3A, 0x39, 0x38},
-			SpanKind:     trace.SpanKindUnspecified,
-			Name:         "foo",
-			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
-			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
+			Parent: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+				SpanID:  trace.SpanID{0x3F, 0x3E, 0x3D, 0x3C, 0x3B, 0x3A, 0x39, 0x38},
+			}),
+			SpanKind:  trace.SpanKindUnspecified,
+			Name:      "foo",
+			StartTime: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			EndTime:   time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
 			Attributes: []attribute.KeyValue{
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
@@ -132,6 +145,7 @@ func TestModelConversion(t *testing.T) {
 			},
 			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
+			Resource:      resource,
 		},
 		// span data of internal kind
 		{
@@ -139,11 +153,14 @@ func TestModelConversion(t *testing.T) {
 				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
 				SpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 			}),
-			ParentSpanID: trace.SpanID{0x3F, 0x3E, 0x3D, 0x3C, 0x3B, 0x3A, 0x39, 0x38},
-			SpanKind:     trace.SpanKindInternal,
-			Name:         "foo",
-			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
-			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
+			Parent: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+				SpanID:  trace.SpanID{0x3F, 0x3E, 0x3D, 0x3C, 0x3B, 0x3A, 0x39, 0x38},
+			}),
+			SpanKind:  trace.SpanKindInternal,
+			Name:      "foo",
+			StartTime: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			EndTime:   time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
 			Attributes: []attribute.KeyValue{
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
@@ -164,6 +181,7 @@ func TestModelConversion(t *testing.T) {
 			},
 			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
+			Resource:      resource,
 		},
 		// span data of client kind
 		{
@@ -171,11 +189,14 @@ func TestModelConversion(t *testing.T) {
 				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
 				SpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 			}),
-			ParentSpanID: trace.SpanID{0x3F, 0x3E, 0x3D, 0x3C, 0x3B, 0x3A, 0x39, 0x38},
-			SpanKind:     trace.SpanKindClient,
-			Name:         "foo",
-			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
-			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
+			Parent: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+				SpanID:  trace.SpanID{0x3F, 0x3E, 0x3D, 0x3C, 0x3B, 0x3A, 0x39, 0x38},
+			}),
+			SpanKind:  trace.SpanKindClient,
+			Name:      "foo",
+			StartTime: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			EndTime:   time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
 			Attributes: []attribute.KeyValue{
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
@@ -199,6 +220,7 @@ func TestModelConversion(t *testing.T) {
 			},
 			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
+			Resource:      resource,
 		},
 		// span data of producer kind
 		{
@@ -206,11 +228,14 @@ func TestModelConversion(t *testing.T) {
 				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
 				SpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 			}),
-			ParentSpanID: trace.SpanID{0x3F, 0x3E, 0x3D, 0x3C, 0x3B, 0x3A, 0x39, 0x38},
-			SpanKind:     trace.SpanKindProducer,
-			Name:         "foo",
-			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
-			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
+			Parent: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+				SpanID:  trace.SpanID{0x3F, 0x3E, 0x3D, 0x3C, 0x3B, 0x3A, 0x39, 0x38},
+			}),
+			SpanKind:  trace.SpanKindProducer,
+			Name:      "foo",
+			StartTime: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			EndTime:   time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
 			Attributes: []attribute.KeyValue{
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
@@ -231,6 +256,7 @@ func TestModelConversion(t *testing.T) {
 			},
 			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
+			Resource:      resource,
 		},
 		// span data of consumer kind
 		{
@@ -238,11 +264,14 @@ func TestModelConversion(t *testing.T) {
 				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
 				SpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 			}),
-			ParentSpanID: trace.SpanID{0x3F, 0x3E, 0x3D, 0x3C, 0x3B, 0x3A, 0x39, 0x38},
-			SpanKind:     trace.SpanKindConsumer,
-			Name:         "foo",
-			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
-			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
+			Parent: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+				SpanID:  trace.SpanID{0x3F, 0x3E, 0x3D, 0x3C, 0x3B, 0x3A, 0x39, 0x38},
+			}),
+			SpanKind:  trace.SpanKindConsumer,
+			Name:      "foo",
+			StartTime: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			EndTime:   time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
 			Attributes: []attribute.KeyValue{
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
@@ -263,6 +292,7 @@ func TestModelConversion(t *testing.T) {
 			},
 			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
+			Resource:      resource,
 		},
 		// span data with no events
 		{
@@ -270,11 +300,14 @@ func TestModelConversion(t *testing.T) {
 				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
 				SpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 			}),
-			ParentSpanID: trace.SpanID{0x3F, 0x3E, 0x3D, 0x3C, 0x3B, 0x3A, 0x39, 0x38},
-			SpanKind:     trace.SpanKindServer,
-			Name:         "foo",
-			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
-			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
+			Parent: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+				SpanID:  trace.SpanID{0x3F, 0x3E, 0x3D, 0x3C, 0x3B, 0x3A, 0x39, 0x38},
+			}),
+			SpanKind:  trace.SpanKindServer,
+			Name:      "foo",
+			StartTime: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			EndTime:   time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
 			Attributes: []attribute.KeyValue{
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
@@ -282,6 +315,7 @@ func TestModelConversion(t *testing.T) {
 			MessageEvents: nil,
 			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
+			Resource:      resource,
 		},
 		// span data with an "error" attribute set to "false"
 		{
@@ -289,11 +323,14 @@ func TestModelConversion(t *testing.T) {
 				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
 				SpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 			}),
-			ParentSpanID: trace.SpanID{0x3F, 0x3E, 0x3D, 0x3C, 0x3B, 0x3A, 0x39, 0x38},
-			SpanKind:     trace.SpanKindServer,
-			Name:         "foo",
-			StartTime:    time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
-			EndTime:      time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
+			Parent: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+				SpanID:  trace.SpanID{0x3F, 0x3E, 0x3D, 0x3C, 0x3B, 0x3A, 0x39, 0x38},
+			}),
+			SpanKind:  trace.SpanKindServer,
+			Name:      "foo",
+			StartTime: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			EndTime:   time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
 			Attributes: []attribute.KeyValue{
 				attribute.String("error", "false"),
 			},
@@ -312,6 +349,7 @@ func TestModelConversion(t *testing.T) {
 				},
 			},
 			StatusCode: codes.Unset,
+			Resource:   resource,
 		},
 	}
 
@@ -661,7 +699,7 @@ func TestModelConversion(t *testing.T) {
 			Tags: nil, // should be omitted
 		},
 	}
-	gottenOutputBatch := toZipkinSpanModels(inputBatch, "model-test")
+	gottenOutputBatch := toZipkinSpanModels(inputBatch)
 	require.Equal(t, expectedOutputBatch, gottenOutputBatch)
 }
 
@@ -680,12 +718,12 @@ func TestTagsTransformation(t *testing.T) {
 
 	tests := []struct {
 		name string
-		data *export.SpanSnapshot
+		data *tracesdk.SpanSnapshot
 		want map[string]string
 	}{
 		{
 			name: "attributes",
-			data: &export.SpanSnapshot{
+			data: &tracesdk.SpanSnapshot{
 				Attributes: []attribute.KeyValue{
 					attribute.String("key", keyValue),
 					attribute.Float64("double", doubleValue),
@@ -702,12 +740,12 @@ func TestTagsTransformation(t *testing.T) {
 		},
 		{
 			name: "no attributes",
-			data: &export.SpanSnapshot{},
+			data: &tracesdk.SpanSnapshot{},
 			want: nil,
 		},
 		{
 			name: "omit-noerror",
-			data: &export.SpanSnapshot{
+			data: &tracesdk.SpanSnapshot{
 				Attributes: []attribute.KeyValue{
 					attribute.Bool("error", false),
 				},
@@ -716,7 +754,7 @@ func TestTagsTransformation(t *testing.T) {
 		},
 		{
 			name: "statusCode",
-			data: &export.SpanSnapshot{
+			data: &tracesdk.SpanSnapshot{
 				Attributes: []attribute.KeyValue{
 					attribute.String("key", keyValue),
 					attribute.Bool("error", true),
@@ -732,14 +770,14 @@ func TestTagsTransformation(t *testing.T) {
 		},
 		{
 			name: "instrLib-empty",
-			data: &export.SpanSnapshot{
+			data: &tracesdk.SpanSnapshot{
 				InstrumentationLibrary: instrumentation.Library{},
 			},
 			want: nil,
 		},
 		{
 			name: "instrLib-noversion",
-			data: &export.SpanSnapshot{
+			data: &tracesdk.SpanSnapshot{
 				Attributes: []attribute.KeyValue{},
 				InstrumentationLibrary: instrumentation.Library{
 					Name: instrLibName,
@@ -751,7 +789,7 @@ func TestTagsTransformation(t *testing.T) {
 		},
 		{
 			name: "instrLib-with-version",
-			data: &export.SpanSnapshot{
+			data: &tracesdk.SpanSnapshot{
 				Attributes: []attribute.KeyValue{},
 				InstrumentationLibrary: instrumentation.Library{
 					Name:    instrLibName,
@@ -777,12 +815,12 @@ func TestTagsTransformation(t *testing.T) {
 func TestRemoteEndpointTransformation(t *testing.T) {
 	tests := []struct {
 		name string
-		data *export.SpanSnapshot
+		data *tracesdk.SpanSnapshot
 		want *zkmodel.Endpoint
 	}{
 		{
 			name: "nil-not-applicable",
-			data: &export.SpanSnapshot{
+			data: &tracesdk.SpanSnapshot{
 				SpanKind:   trace.SpanKindClient,
 				Attributes: []attribute.KeyValue{},
 			},
@@ -790,7 +828,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 		},
 		{
 			name: "nil-not-found",
-			data: &export.SpanSnapshot{
+			data: &tracesdk.SpanSnapshot{
 				SpanKind: trace.SpanKindConsumer,
 				Attributes: []attribute.KeyValue{
 					attribute.String("attr", "test"),
@@ -800,7 +838,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 		},
 		{
 			name: "peer-service-rank",
-			data: &export.SpanSnapshot{
+			data: &tracesdk.SpanSnapshot{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
 					semconv.PeerServiceKey.String("peer-service-test"),
@@ -814,7 +852,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 		},
 		{
 			name: "http-host-rank",
-			data: &export.SpanSnapshot{
+			data: &tracesdk.SpanSnapshot{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
 					semconv.HTTPHostKey.String("http-host-test"),
@@ -827,7 +865,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 		},
 		{
 			name: "db-name-rank",
-			data: &export.SpanSnapshot{
+			data: &tracesdk.SpanSnapshot{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
 					attribute.String("foo", "bar"),
@@ -840,7 +878,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 		},
 		{
 			name: "peer-hostname-rank",
-			data: &export.SpanSnapshot{
+			data: &tracesdk.SpanSnapshot{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
 					keyPeerHostname.String("peer-hostname-test"),
@@ -855,7 +893,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 		},
 		{
 			name: "peer-address-rank",
-			data: &export.SpanSnapshot{
+			data: &tracesdk.SpanSnapshot{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
 					keyPeerAddress.String("peer-address-test"),
@@ -869,7 +907,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 		},
 		{
 			name: "net-peer-invalid-ip",
-			data: &export.SpanSnapshot{
+			data: &tracesdk.SpanSnapshot{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
 					semconv.NetPeerIPKey.String("INVALID"),
@@ -879,7 +917,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 		},
 		{
 			name: "net-peer-ipv6-no-port",
-			data: &export.SpanSnapshot{
+			data: &tracesdk.SpanSnapshot{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
 					semconv.NetPeerIPKey.String("0:0:1:5ee:bad:c0de:0:0"),
@@ -891,7 +929,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 		},
 		{
 			name: "net-peer-ipv4-port",
-			data: &export.SpanSnapshot{
+			data: &tracesdk.SpanSnapshot{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
 					semconv.NetPeerIPKey.String("1.2.3.4"),
@@ -912,4 +950,15 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestServiceName(t *testing.T) {
+	attrs := []attribute.KeyValue{}
+	assert.Empty(t, getServiceName(attrs))
+
+	attrs = append(attrs, attribute.String("test_key", "test_value"))
+	assert.Empty(t, getServiceName(attrs))
+
+	attrs = append(attrs, semconv.ServiceNameKey.String("my_service"))
+	assert.Equal(t, "my_service", getServiceName(attrs))
 }

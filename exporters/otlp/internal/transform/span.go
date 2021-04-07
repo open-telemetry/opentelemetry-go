@@ -17,10 +17,10 @@ package transform
 import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -30,7 +30,7 @@ const (
 
 // SpanData transforms a slice of SpanSnapshot into a slice of OTLP
 // ResourceSpans.
-func SpanData(sdl []*export.SpanSnapshot) []*tracepb.ResourceSpans {
+func SpanData(sdl []*tracesdk.SpanSnapshot) []*tracepb.ResourceSpans {
 	if len(sdl) == 0 {
 		return nil
 	}
@@ -96,7 +96,7 @@ func SpanData(sdl []*export.SpanSnapshot) []*tracepb.ResourceSpans {
 }
 
 // span transforms a Span into an OTLP span.
-func span(sd *export.SpanSnapshot) *tracepb.Span {
+func span(sd *tracesdk.SpanSnapshot) *tracepb.Span {
 	if sd == nil {
 		return nil
 	}
@@ -121,8 +121,8 @@ func span(sd *export.SpanSnapshot) *tracepb.Span {
 		DroppedLinksCount:      uint32(sd.DroppedLinkCount),
 	}
 
-	if sd.ParentSpanID.IsValid() {
-		s.ParentSpanId = sd.ParentSpanID[:]
+	if psid := sd.Parent.SpanID(); psid.IsValid() {
+		s.ParentSpanId = psid[:]
 	}
 
 	return s

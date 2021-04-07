@@ -40,6 +40,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			wantSc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID: traceID,
 				SpanID:  spanID,
+				Remote:  true,
 			}),
 		},
 		{
@@ -49,6 +50,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
+				Remote:     true,
 			}),
 		},
 		{
@@ -58,6 +60,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
+				Remote:     true,
 			}),
 		},
 		{
@@ -67,6 +70,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
+				Remote:     true,
 			}),
 		},
 		{
@@ -75,6 +79,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 			wantSc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID: traceID,
 				SpanID:  spanID,
+				Remote:  true,
 			}),
 		},
 		{
@@ -84,6 +89,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
+				Remote:     true,
 			}),
 		},
 		{
@@ -93,6 +99,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
+				Remote:     true,
 			}),
 		},
 		{
@@ -102,6 +109,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
+				Remote:     true,
 			}),
 		},
 	}
@@ -113,7 +121,7 @@ func TestExtractValidTraceContextFromHTTPReq(t *testing.T) {
 
 			ctx := context.Background()
 			ctx = prop.Extract(ctx, propagation.HeaderCarrier(req.Header))
-			gotSc := trace.RemoteSpanContextFromContext(ctx)
+			gotSc := trace.SpanContextFromContext(ctx)
 			if diff := cmp.Diff(gotSc, tt.wantSc, cmp.Comparer(func(sc, other trace.SpanContext) bool { return sc.Equal(other) })); diff != "" {
 				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
 			}
@@ -201,7 +209,7 @@ func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 
 			ctx := context.Background()
 			ctx = prop.Extract(ctx, propagation.HeaderCarrier(req.Header))
-			gotSc := trace.RemoteSpanContextFromContext(ctx)
+			gotSc := trace.SpanContextFromContext(ctx)
 			if diff := cmp.Diff(gotSc, wantSc, cmp.AllowUnexported(trace.TraceState{})); diff != "" {
 				t.Errorf("Extract Tracecontext: %s: -got +want %s", tt.name, diff)
 			}
@@ -302,6 +310,7 @@ func TestTraceStatePropagation(t *testing.T) {
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceState: state,
+				Remote:     true,
 			}),
 		},
 		{
@@ -314,6 +323,7 @@ func TestTraceStatePropagation(t *testing.T) {
 			wantSc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID: traceID,
 				SpanID:  spanID,
+				Remote:  true,
 			}),
 		},
 		{
@@ -326,6 +336,7 @@ func TestTraceStatePropagation(t *testing.T) {
 			wantSc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID: traceID,
 				SpanID:  spanID,
+				Remote:  true,
 			}),
 		},
 	}
@@ -339,7 +350,7 @@ func TestTraceStatePropagation(t *testing.T) {
 
 			ctx := prop.Extract(context.Background(), propagation.HeaderCarrier(inReq.Header))
 			if diff := cmp.Diff(
-				trace.RemoteSpanContextFromContext(ctx),
+				trace.SpanContextFromContext(ctx),
 				tt.wantSc,
 				cmp.AllowUnexported(attribute.Value{}),
 				cmp.AllowUnexported(trace.TraceState{}),

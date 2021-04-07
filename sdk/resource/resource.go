@@ -29,7 +29,7 @@ import (
 // (`*resource.Resource`).  The `nil` value is equivalent to an empty
 // Resource.
 type Resource struct {
-	labels attribute.Set
+	attrs attribute.Set
 }
 
 var (
@@ -43,13 +43,26 @@ var (
 	}(Detect(context.Background(), defaultServiceNameDetector{}, TelemetrySDK{}))
 )
 
-// NewWithAttributes creates a resource from a set of attributes.  If there are
-// duplicate keys present in the list of attributes, then the last
-// value found for the key is preserved.
-func NewWithAttributes(kvs ...attribute.KeyValue) *Resource {
-	return &Resource{
-		labels: attribute.NewSet(kvs...),
+// NewWithAttributes creates a resource from attrs. If attrs contains
+// duplicate keys, the last value will be used. If attrs contains any invalid
+// items those items will be dropped.
+func NewWithAttributes(attrs ...attribute.KeyValue) *Resource {
+	if len(attrs) == 0 {
+		return &emptyResource
 	}
+
+	// Ensure attributes comply with the specification:
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.0.1/specification/common/common.md#attributes
+	s, _ := attribute.NewSetWithFiltered(attrs, func(kv attribute.KeyValue) bool {
+		return kv.Valid()
+	})
+
+	// If attrs only contains invalid entries do not allocate a new resource.
+	if s.Len() == 0 {
+		return &emptyResource
+	}
+
+	return &Resource{s} //nolint
 }
 
 // String implements the Stringer interface and provides a
@@ -61,7 +74,7 @@ func (r *Resource) String() string {
 	if r == nil {
 		return ""
 	}
-	return r.labels.Encoded(attribute.DefaultEncoder())
+	return r.attrs.Encoded(attribute.DefaultEncoder())
 }
 
 // Attributes returns a copy of attributes from the resource in a sorted order.
@@ -70,7 +83,7 @@ func (r *Resource) Attributes() []attribute.KeyValue {
 	if r == nil {
 		r = Empty()
 	}
-	return r.labels.ToSlice()
+	return r.attrs.ToSlice()
 }
 
 // Iter returns an interator of the Resource attributes.
@@ -79,7 +92,7 @@ func (r *Resource) Iter() attribute.Iterator {
 	if r == nil {
 		r = Empty()
 	}
-	return r.labels.Iter()
+	return r.attrs.Iter()
 }
 
 // Equal returns true when a Resource is equivalent to this Resource.
@@ -109,9 +122,9 @@ func Merge(a, b *Resource) *Resource {
 		return a
 	}
 
-	// Note: 'b' labels will overwrite 'a' with last-value-wins in attribute.Key()
+	// Note: 'b' attributes will overwrite 'a' with last-value-wins in attribute.Key()
 	// Meaning this is equivalent to: append(a.Attributes(), b.Attributes()...)
-	mi := attribute.NewMergeIterator(b.LabelSet(), a.LabelSet())
+	mi := attribute.NewMergeIterator(b.Set(), a.Set())
 	combine := make([]attribute.KeyValue, 0, a.Len()+b.Len())
 	for mi.Next() {
 		combine = append(combine, mi.Label())
@@ -135,24 +148,24 @@ func Default() *Resource {
 // between two resources.  This value is suitable for use as a key in
 // a map.
 func (r *Resource) Equivalent() attribute.Distinct {
-	return r.LabelSet().Equivalent()
+	return r.Set().Equivalent()
 }
 
-// LabelSet returns the equivalent *attribute.Set.
-func (r *Resource) LabelSet() *attribute.Set {
+// Set returns the equivalent *attribute.Set of this resources attributes.
+func (r *Resource) Set() *attribute.Set {
 	if r == nil {
 		r = Empty()
 	}
-	return &r.labels
+	return &r.attrs
 }
 
-// MarshalJSON encodes labels as a JSON list of { "Key": "...", "Value": ... }
-// pairs in order sorted by key.
+// MarshalJSON encodes the resource attributes as a JSON list of { "Key":
+// "...", "Value": ... } pairs in order sorted by key.
 func (r *Resource) MarshalJSON() ([]byte, error) {
 	if r == nil {
 		r = Empty()
 	}
-	return r.labels.MarshalJSON()
+	return r.attrs.MarshalJSON()
 }
 
 // Len returns the number of unique key-values in this Resource.
@@ -160,15 +173,13 @@ func (r *Resource) Len() int {
 	if r == nil {
 		return 0
 	}
-	return r.labels.Len()
+	return r.attrs.Len()
 }
 
-// Encoded returns an encoded representation of the resource by
-// applying a label encoder.  The result is cached by the underlying
-// label set.
+// Encoded returns an encoded representation of the resource.
 func (r *Resource) Encoded(enc attribute.Encoder) string {
 	if r == nil {
 		return ""
 	}
-	return r.labels.Encoded(enc)
+	return r.attrs.Encoded(enc)
 }

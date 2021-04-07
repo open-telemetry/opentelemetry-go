@@ -100,21 +100,24 @@ func TestMultiplePropagators(t *testing.T) {
 	// generates the valid span context out of thin air
 	{
 		ctx := ootaProp.Extract(bg, ns)
-		sc := trace.RemoteSpanContextFromContext(ctx)
+		sc := trace.SpanContextFromContext(ctx)
 		require.True(t, sc.IsValid(), "oota prop failed sanity check")
+		require.True(t, sc.IsRemote(), "oota prop is remote")
 	}
 	// sanity check for real propagators, ensuring that they
 	// really are not putting any valid span context into an empty
 	// go context in absence of the HTTP headers.
 	for _, prop := range testProps {
 		ctx := prop.Extract(bg, ns)
-		sc := trace.RemoteSpanContextFromContext(ctx)
+		sc := trace.SpanContextFromContext(ctx)
 		require.Falsef(t, sc.IsValid(), "%#v failed sanity check", prop)
+		require.Falsef(t, sc.IsRemote(), "%#v prop set a remote", prop)
 	}
 	for _, prop := range testProps {
 		props := propagation.NewCompositeTextMapPropagator(ootaProp, prop)
 		ctx := props.Extract(bg, ns)
-		sc := trace.RemoteSpanContextFromContext(ctx)
+		sc := trace.SpanContextFromContext(ctx)
+		assert.Truef(t, sc.IsRemote(), "%#v prop is remote", prop)
 		assert.Truef(t, sc.IsValid(), "%#v clobbers span context", prop)
 	}
 }

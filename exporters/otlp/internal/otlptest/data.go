@@ -24,10 +24,10 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	exportmetric "go.opentelemetry.io/otel/sdk/export/metric"
-	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/resource"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -80,14 +80,18 @@ func (OneRecordCheckpointSet) ForEach(kindSelector exportmetric.ExportKindSelect
 
 // SingleSpanSnapshot returns a one-element slice with a snapshot. It
 // may be useful for testing driver's trace export.
-func SingleSpanSnapshot() []*exporttrace.SpanSnapshot {
-	sd := &exporttrace.SpanSnapshot{
+func SingleSpanSnapshot() []*tracesdk.SpanSnapshot {
+	sd := &tracesdk.SpanSnapshot{
 		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    trace.TraceID{2, 3, 4, 5, 6, 7, 8, 9, 2, 3, 4, 5, 6, 7, 8, 9},
 			SpanID:     trace.SpanID{3, 4, 5, 6, 7, 8, 9, 0},
 			TraceFlags: trace.FlagsSampled,
 		}),
-		ParentSpanID:             trace.SpanID{1, 2, 3, 4, 5, 6, 7, 8},
+		Parent: trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    trace.TraceID{2, 3, 4, 5, 6, 7, 8, 9, 2, 3, 4, 5, 6, 7, 8, 9},
+			SpanID:     trace.SpanID{1, 2, 3, 4, 5, 6, 7, 8},
+			TraceFlags: trace.FlagsSampled,
+		}),
 		SpanKind:                 trace.SpanKindInternal,
 		Name:                     "foo",
 		StartTime:                time.Date(2020, time.December, 8, 20, 23, 0, 0, time.UTC),
@@ -97,7 +101,6 @@ func SingleSpanSnapshot() []*exporttrace.SpanSnapshot {
 		Links:                    []trace.Link{},
 		StatusCode:               codes.Ok,
 		StatusMessage:            "",
-		HasRemoteParent:          false,
 		DroppedAttributeCount:    0,
 		DroppedMessageEventCount: 0,
 		DroppedLinkCount:         0,
@@ -108,7 +111,7 @@ func SingleSpanSnapshot() []*exporttrace.SpanSnapshot {
 			Version: "0.0.0",
 		},
 	}
-	return []*exporttrace.SpanSnapshot{sd}
+	return []*tracesdk.SpanSnapshot{sd}
 }
 
 // EmptyCheckpointSet is a checkpointer that has no records at all.

@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/internal/baggage"
-	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
+	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
@@ -137,8 +137,10 @@ func (t *MockTracer) getParentSpanID(ctx context.Context, config *trace.SpanConf
 }
 
 func (t *MockTracer) getParentSpanContext(ctx context.Context, config *trace.SpanConfig) trace.SpanContext {
-	spanCtx, _, _ := otelparent.GetSpanContextAndLinks(ctx, config.NewRoot)
-	return spanCtx
+	if !config.NewRoot {
+		return trace.SpanContextFromContext(ctx)
+	}
+	return trace.SpanContext{}
 }
 
 func (t *MockTracer) getSpanID() trace.SpanID {
@@ -254,10 +256,10 @@ func (s *MockSpan) RecordError(err error, opts ...trace.EventOption) {
 
 	s.SetStatus(codes.Error, "")
 	opts = append(opts, trace.WithAttributes(
-		attribute.String("error.type", reflect.TypeOf(err).String()),
-		attribute.String("error.message", err.Error()),
+		semconv.ExceptionTypeKey.String(reflect.TypeOf(err).String()),
+		semconv.ExceptionMessageKey.String(err.Error()),
 	))
-	s.AddEvent("error", opts...)
+	s.AddEvent(semconv.ExceptionEventName, opts...)
 }
 
 func (s *MockSpan) Tracer() trace.Tracer {

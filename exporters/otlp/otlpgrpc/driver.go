@@ -23,13 +23,13 @@ import (
 	"google.golang.org/grpc"
 
 	"go.opentelemetry.io/otel/exporters/otlp"
-	colmetricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/metrics/v1"
-	coltracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/trace/v1"
-	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
-	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
-	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
+	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
+	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
 type driver struct {
@@ -41,8 +41,7 @@ type driver struct {
 }
 
 var (
-	errNoClient     = errors.New("no client")
-	errDisconnected = errors.New("exporter disconnected")
+	errNoClient = errors.New("no client")
 )
 
 // NewDriver creates a new gRPC protocol driver.
@@ -88,7 +87,7 @@ func (d *driver) Stop(ctx context.Context) error {
 // to protobuf binary format and sends the result to the collector.
 func (d *driver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error {
 	if !d.connection.connected() {
-		return errDisconnected
+		return fmt.Errorf("exporter disconnected: %w", d.connection.lastConnectError())
 	}
 	ctx, cancel := d.connection.contextWithStop(ctx)
 	defer cancel()
@@ -127,7 +126,7 @@ func (d *driver) uploadMetrics(ctx context.Context, protoMetrics []*metricpb.Res
 // protobuf binary format and sends the result to the collector.
 func (d *driver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
 	if !d.connection.connected() {
-		return errDisconnected
+		return fmt.Errorf("exporter disconnected: %w", d.connection.lastConnectError())
 	}
 	ctx, cancel := d.connection.contextWithStop(ctx)
 	defer cancel()

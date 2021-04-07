@@ -36,24 +36,44 @@ func TestBuiltinStringDetector(t *testing.T) {
 	require.Nil(t, res)
 }
 
-func TestBuiltinStringConfig(t *testing.T) {
-	res, err := resource.New(
-		context.Background(),
-		resource.WithoutBuiltin(),
-		resource.WithAttributes(attribute.String("A", "B")),
-		resource.WithDetectors(resource.StringDetector(attribute.Key("K"), func() (string, error) {
-			return "", fmt.Errorf("K-IS-MISSING")
-		})),
-	)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "K-IS-MISSING")
-	require.NotNil(t, res)
-
-	m := map[string]string{}
-	for _, kv := range res.Attributes() {
-		m[string(kv.Key)] = kv.Value.Emit()
+func TestStringDetectorErrors(t *testing.T) {
+	tests := []struct {
+		desc        string
+		s           resource.Detector
+		errContains string
+	}{
+		{
+			desc: "explicit error from func should be returned",
+			s: resource.StringDetector(attribute.Key("K"), func() (string, error) {
+				return "", fmt.Errorf("K-IS-MISSING")
+			}),
+			errContains: "K-IS-MISSING",
+		},
+		{
+			desc: "empty key is an invalid",
+			s: resource.StringDetector(attribute.Key(""), func() (string, error) {
+				return "not-empty", nil
+			}),
+			errContains: "invalid attribute: \"\" -> \"not-empty\"",
+		},
 	}
-	require.EqualValues(t, map[string]string{
-		"A": "B",
-	}, m)
+
+	for _, test := range tests {
+		res, err := resource.New(
+			context.Background(),
+			resource.WithoutBuiltin(),
+			resource.WithAttributes(attribute.String("A", "B")),
+			resource.WithDetectors(test.s),
+		)
+		require.Error(t, err, test.desc)
+		require.Contains(t, err.Error(), test.errContains)
+		require.NotNil(t, res, "resource contains remaining valid entries")
+
+		m := map[string]string{}
+		for _, kv := range res.Attributes() {
+			m[string(kv.Key)] = kv.Value.Emit()
+		}
+		require.EqualValues(t, map[string]string{"A": "B"}, m)
+	}
+
 }

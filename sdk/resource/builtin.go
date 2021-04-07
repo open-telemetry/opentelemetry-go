@@ -81,6 +81,10 @@ func (sd stringDetector) Detect(ctx context.Context) (*Resource, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", string(sd.K), err)
 	}
+	a := sd.K.String(value)
+	if !a.Valid() {
+		return nil, fmt.Errorf("invalid attribute: %q -> %q", a.Key, a.Value.Emit())
+	}
 	return NewWithAttributes(sd.K.String(value)), nil
 }
 

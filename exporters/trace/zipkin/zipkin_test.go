@@ -32,20 +32,19 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
-	export "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
 const (
 	collectorURL = "http://localhost:9411/api/v2/spans"
-	serviceName  = "zipkin-test"
 )
 
 func TestInstallNewPipeline(t *testing.T) {
 	err := InstallNewPipeline(
 		collectorURL,
-		serviceName,
 	)
 	assert.NoError(t, err)
 	assert.IsType(t, &sdktrace.TracerProvider{}, otel.GetTracerProvider())
@@ -63,9 +62,7 @@ func TestNewExportPipeline(t *testing.T) {
 		{
 			name: "always on",
 			options: []Option{
-				WithSDK(&sdktrace.Config{
-					DefaultSampler: sdktrace.AlwaysSample(),
-				}),
+				WithSDKOptions(sdktrace.WithSampler(sdktrace.AlwaysSample())),
 			},
 			testSpanSampling:    true,
 			spanShouldBeSampled: true,
@@ -73,9 +70,7 @@ func TestNewExportPipeline(t *testing.T) {
 		{
 			name: "never",
 			options: []Option{
-				WithSDK(&sdktrace.Config{
-					DefaultSampler: sdktrace.NeverSample(),
-				}),
+				WithSDKOptions(sdktrace.WithSampler(sdktrace.NeverSample())),
 			},
 			testSpanSampling:    true,
 			spanShouldBeSampled: false,
@@ -86,7 +81,6 @@ func TestNewExportPipeline(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tp, err := NewExportPipeline(
 				collectorURL,
-				serviceName,
 				tc.options...,
 			)
 			assert.NoError(t, err)
@@ -103,13 +97,11 @@ func TestNewExportPipeline(t *testing.T) {
 }
 
 func TestNewRawExporter(t *testing.T) {
-	exp, err := NewRawExporter(
+	_, err := NewRawExporter(
 		collectorURL,
-		serviceName,
 	)
 
 	assert.NoError(t, err)
-	assert.EqualValues(t, serviceName, exp.serviceName)
 }
 
 func TestNewRawExporterShouldFailInvalidCollectorURL(t *testing.T) {
@@ -121,7 +113,6 @@ func TestNewRawExporterShouldFailInvalidCollectorURL(t *testing.T) {
 	// cannot be empty
 	exp, err = NewRawExporter(
 		"",
-		serviceName,
 	)
 
 	assert.Error(t, err)
@@ -131,7 +122,6 @@ func TestNewRawExporterShouldFailInvalidCollectorURL(t *testing.T) {
 	// invalid URL
 	exp, err = NewRawExporter(
 		"localhost",
-		serviceName,
 	)
 
 	assert.Error(t, err)
@@ -239,14 +229,17 @@ func logStoreLogger(s *logStore) *log.Logger {
 }
 
 func TestExportSpans(t *testing.T) {
-	spans := []*export.SpanSnapshot{
+	resource := resource.NewWithAttributes(
+		semconv.ServiceNameKey.String("exporter-test"),
+	)
+
+	spans := []*sdktrace.SpanSnapshot{
 		// parent
 		{
 			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
 				SpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 			}),
-			ParentSpanID:  trace.SpanID{},
 			SpanKind:      trace.SpanKindServer,
 			Name:          "foo",
 			StartTime:     time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
@@ -255,6 +248,7 @@ func TestExportSpans(t *testing.T) {
 			MessageEvents: nil,
 			StatusCode:    codes.Error,
 			StatusMessage: "404, file not found",
+			Resource:      resource,
 		},
 		// child
 		{
@@ -262,7 +256,10 @@ func TestExportSpans(t *testing.T) {
 				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
 				SpanID:  trace.SpanID{0xDF, 0xDE, 0xDD, 0xDC, 0xDB, 0xDA, 0xD9, 0xD8},
 			}),
-			ParentSpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
+			Parent: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+				SpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
+			}),
 			SpanKind:      trace.SpanKindServer,
 			Name:          "bar",
 			StartTime:     time.Date(2020, time.March, 11, 19, 24, 15, 0, time.UTC),
@@ -271,6 +268,7 @@ func TestExportSpans(t *testing.T) {
 			MessageEvents: nil,
 			StatusCode:    codes.Error,
 			StatusMessage: "403, forbidden",
+			Resource:      resource,
 		},
 	}
 	models := []zkmodel.SpanModel{
@@ -336,7 +334,7 @@ func TestExportSpans(t *testing.T) {
 	defer collector.Close()
 	ls := &logStore{T: t}
 	logger := logStoreLogger(ls)
-	exporter, err := NewRawExporter(collector.url, "exporter-test", WithLogger(logger))
+	exporter, err := NewRawExporter(collector.url, WithLogger(logger))
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.Len(t, ls.Messages, 0)
@@ -361,7 +359,7 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	exp, err := NewRawExporter(collectorURL, serviceName)
+	exp, err := NewRawExporter(collectorURL)
 	require.NoError(t, err)
 
 	innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
@@ -374,7 +372,7 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	exp, err := NewRawExporter(collectorURL, serviceName)
+	exp, err := NewRawExporter(collectorURL)
 	require.NoError(t, err)
 
 	innerCtx, innerCancel := context.WithCancel(ctx)
@@ -383,8 +381,39 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 }
 
 func TestErrorOnExportShutdownExporter(t *testing.T) {
-	exp, err := NewRawExporter(collectorURL, serviceName)
+	exp, err := NewRawExporter(collectorURL)
 	require.NoError(t, err)
 	assert.NoError(t, exp.Shutdown(context.Background()))
 	assert.NoError(t, exp.ExportSpans(context.Background(), nil))
+}
+
+func TestNewExportPipelineWithOptions(t *testing.T) {
+	const eventCountLimit = 10
+
+	collector := startMockZipkinCollector(t)
+	defer collector.Close()
+
+	tp, err := NewExportPipeline(collector.url,
+		WithSDKOptions(
+			sdktrace.WithResource(resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("zipkin-test"),
+			)),
+			sdktrace.WithSpanLimits(sdktrace.SpanLimits{
+				EventCountLimit: eventCountLimit,
+			}),
+		),
+	)
+	require.NoError(t, err)
+
+	otel.SetTracerProvider(tp)
+	_, span := otel.Tracer("zipkin-tracer").Start(context.Background(), "test-span")
+	for i := 0; i < eventCountLimit*2; i++ {
+		span.AddEvent(fmt.Sprintf("event-%d", i))
+	}
+	span.End()
+
+	require.NoError(t, tp.Shutdown(context.Background()))
+	require.Equal(t, 1, collector.ModelsLen())
+	model := collector.StealModels()[0]
+	require.Equal(t, len(model.Annotations), eventCountLimit)
 }

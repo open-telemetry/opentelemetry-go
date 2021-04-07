@@ -31,7 +31,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/internal/baggage"
 	"go.opentelemetry.io/otel/internal/trace/noop"
-	otelparent "go.opentelemetry.io/otel/internal/trace/parent"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -655,10 +654,9 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 	header := http.Header(hhcarrier)
 	ctx := t.getPropagator().Extract(context.Background(), propagation.HeaderCarrier(header))
 	baggage := baggage.MapFromContext(ctx)
-	otelSC, _, _ := otelparent.GetSpanContextAndLinks(ctx, false)
 	bridgeSC := &bridgeSpanContext{
 		baggageItems:    baggage,
-		otelSpanContext: otelSC,
+		otelSpanContext: trace.SpanContextFromContext(ctx),
 	}
 	if !bridgeSC.otelSpanContext.IsValid() {
 		return nil, ot.ErrSpanContextNotFound

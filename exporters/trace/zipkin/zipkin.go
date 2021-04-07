@@ -28,7 +28,6 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel"
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -36,25 +35,24 @@ import (
 // the SpanBatcher interface, so it needs to be used together with the
 // WithBatcher option when setting up the exporter pipeline.
 type Exporter struct {
-	url         string
-	serviceName string
-	client      *http.Client
-	logger      *log.Logger
-	o           options
+	url    string
+	client *http.Client
+	logger *log.Logger
+	o      options
 
 	stoppedMu sync.RWMutex
 	stopped   bool
 }
 
 var (
-	_ export.SpanExporter = &Exporter{}
+	_ sdktrace.SpanExporter = &Exporter{}
 )
 
 // Options contains configuration for the exporter.
 type options struct {
 	client *http.Client
 	logger *log.Logger
-	config *sdktrace.Config
+	tpOpts []sdktrace.TracerProviderOption
 }
 
 // Option defines a function that configures the exporter.
@@ -74,15 +72,15 @@ func WithClient(client *http.Client) Option {
 	}
 }
 
-// WithSDK sets the SDK config for the exporter pipeline.
-func WithSDK(config *sdktrace.Config) Option {
-	return func(o *options) {
-		o.config = config
+// WithSDKOptions configures options passed to the created TracerProvider.
+func WithSDKOptions(tpOpts ...sdktrace.TracerProviderOption) Option {
+	return func(opts *options) {
+		opts.tpOpts = tpOpts
 	}
 }
 
 // NewRawExporter creates a new Zipkin exporter.
-func NewRawExporter(collectorURL, serviceName string, opts ...Option) (*Exporter, error) {
+func NewRawExporter(collectorURL string, opts ...Option) (*Exporter, error) {
 	if collectorURL == "" {
 		return nil, errors.New("collector URL cannot be empty")
 	}
@@ -102,34 +100,31 @@ func NewRawExporter(collectorURL, serviceName string, opts ...Option) (*Exporter
 		o.client = http.DefaultClient
 	}
 	return &Exporter{
-		url:         collectorURL,
-		client:      o.client,
-		logger:      o.logger,
-		serviceName: serviceName,
-		o:           o,
+		url:    collectorURL,
+		client: o.client,
+		logger: o.logger,
+		o:      o,
 	}, nil
 }
 
 // NewExportPipeline sets up a complete export pipeline
 // with the recommended setup for trace provider
-func NewExportPipeline(collectorURL, serviceName string, opts ...Option) (*sdktrace.TracerProvider, error) {
-	exporter, err := NewRawExporter(collectorURL, serviceName, opts...)
+func NewExportPipeline(collectorURL string, opts ...Option) (*sdktrace.TracerProvider, error) {
+	exporter, err := NewRawExporter(collectorURL, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(exporter))
-	if exporter.o.config != nil {
-		tp.ApplyConfig(*exporter.o.config)
-	}
+	tpOpts := append(exporter.o.tpOpts, sdktrace.WithBatcher(exporter))
+	tp := sdktrace.NewTracerProvider(tpOpts...)
 
 	return tp, err
 }
 
 // InstallNewPipeline instantiates a NewExportPipeline with the
 // recommended configuration and registers it globally.
-func InstallNewPipeline(collectorURL, serviceName string, opts ...Option) error {
-	tp, err := NewExportPipeline(collectorURL, serviceName, opts...)
+func InstallNewPipeline(collectorURL string, opts ...Option) error {
+	tp, err := NewExportPipeline(collectorURL, opts...)
 	if err != nil {
 		return err
 	}
@@ -139,7 +134,7 @@ func InstallNewPipeline(collectorURL, serviceName string, opts ...Option) error 
 }
 
 // ExportSpans exports SpanSnapshots to a Zipkin receiver.
-func (e *Exporter) ExportSpans(ctx context.Context, ss []*export.SpanSnapshot) error {
+func (e *Exporter) ExportSpans(ctx context.Context, ss []*sdktrace.SpanSnapshot) error {
 	e.stoppedMu.RLock()
 	stopped := e.stopped
 	e.stoppedMu.RUnlock()
@@ -152,7 +147,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, ss []*export.SpanSnapshot) e
 		e.logf("no spans to export")
 		return nil
 	}
-	models := toZipkinSpanModels(ss, e.serviceName)
+	models := toZipkinSpanModels(ss)
 	body, err := json.Marshal(models)
 	if err != nil {
 		return e.errf("failed to serialize zipkin models to JSON: %v", err)
