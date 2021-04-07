@@ -55,7 +55,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Modify `BatchSpanProcessor.ForceFlush` to abort after timeout/cancellation. (#1757)
 - Improve OTLP/gRPC exporter connection errors. (#1737)
 - Make `ExportSpans` in Jaeger Exporter honor context deadline. (#1773)
-- Make `NewSplitDriver` from `go.opentelemetry.io/exporters` take variadic arguments instead of a `SplitConfig` item. 
+- Make `NewSplitDriver` from `go.opentelemetry.io/otel/exporters/otlp` take variadic arguments instead of a `SplitConfig` item. 
   `NewSplitDriver` now automically implements an internal `noopDriver` when all `SplitConfig` fields are not initialized. (#TBD)
 
 ### Removed
