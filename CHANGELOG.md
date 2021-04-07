@@ -41,6 +41,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This means it uses the correct tag keys (`"otel.status_code"`, `"otel.status_description"`) and does not set the status message as a tag unless it is set on the span. (#1761)
 - The Jaeger exporter now correctly records Span event's names using the `"event"` key for a tag.
   Additionally, this tag is overridden, as specified in the OTel specification, if the event contains an attribute with that key. (#1768)
+- Zipkin Exporter: Ensure mapping between OTel and Zipkin span data complies with the specification. (#1688)
 
 ### Changed
 
