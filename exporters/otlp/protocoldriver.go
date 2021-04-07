@@ -96,7 +96,6 @@ var _ ProtocolDriver = (*splitDriver)(nil)
 // protocol drivers and will forward traces to one of them and metrics
 // to another.
 func NewSplitDriver(opts ...Option) ProtocolDriver {
-
 	driver := splitDriver{
 		metric: &noopDriver{},
 		trace:  &noopDriver{},
