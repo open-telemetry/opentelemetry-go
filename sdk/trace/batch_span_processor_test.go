@@ -23,16 +23,16 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/trace"
 
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 type testBatchExporter struct {
 	mu            sync.Mutex
-	spans         []*export.SpanSnapshot
+	spans         []*sdktrace.SpanSnapshot
 	sizes         []int
 	batchCount    int
 	shutdownCount int
@@ -40,7 +40,7 @@ type testBatchExporter struct {
 	err           error
 }
 
-func (t *testBatchExporter) ExportSpans(ctx context.Context, ss []*export.SpanSnapshot) error {
+func (t *testBatchExporter) ExportSpans(ctx context.Context, ss []*sdktrace.SpanSnapshot) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -76,7 +76,7 @@ func (t *testBatchExporter) getBatchCount() int {
 	return t.batchCount
 }
 
-var _ export.SpanExporter = (*testBatchExporter)(nil)
+var _ sdktrace.SpanExporter = (*testBatchExporter)(nil)
 
 func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
 	tp := basicTracerProvider(t)
@@ -287,6 +287,31 @@ func TestBatchSpanProcessorShutdown(t *testing.T) {
 		t.Error("Error shutting the BatchSpanProcessor down\n")
 	}
 	assert.Equal(t, 1, bp.shutdownCount)
+}
+
+func TestBatchSpanProcessorPostShutdown(t *testing.T) {
+	tp := basicTracerProvider(t)
+	be := testBatchExporter{}
+	bsp := sdktrace.NewBatchSpanProcessor(&be)
+
+	tp.RegisterSpanProcessor(bsp)
+	tr := tp.Tracer("Normal")
+
+	generateSpan(t, true, tr, testOption{
+		o: []sdktrace.BatchSpanProcessorOption{
+			sdktrace.WithMaxExportBatchSize(50),
+		},
+		genNumSpans: 60,
+	})
+
+	require.NoError(t, bsp.Shutdown(context.Background()), "shutting down BatchSpanProcessor")
+	lenJustAfterShutdown := be.len()
+
+	_, span := tr.Start(context.Background(), "foo")
+	span.End()
+	assert.NoError(t, bsp.ForceFlush(context.Background()), "force flushing BatchSpanProcessor")
+
+	assert.Equal(t, lenJustAfterShutdown, be.len(), "OnEnd and ForceFlush should have no effect after Shutdown")
 }
 
 func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {

@@ -47,6 +47,7 @@ func TestNewRawExporterWithEnv(t *testing.T) {
 	)
 
 	assert.NoError(t, err)
+
 	require.IsType(t, &collectorUploader{}, exp.uploader)
 	uploader := exp.uploader.(*collectorUploader)
 	assert.Equal(t, collectorEndpoint, uploader.endpoint)

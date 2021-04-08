@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Added Jaeger Environment variables: `OTEL_EXPORTER_JAEGER_AGENT_HOST`, `OTEL_EXPORTER_JAEGER_AGENT_PORT`
   These environment variables can be used to override Jaeger agent hostname and port (#1752)
+- Adds test to check BatchSpanProcessor ignores `OnEnd` and `ForceFlush` post `Shutdown`. (#1772)
 - Option `ExportTimeout` was added to batch span processor. (#1755)
 - Adds semantic conventions for exceptions. (#1492)
 - Added support for configuring OTLP/HTTP Endpoints, Headers, Compression and Timeout via the Environment Variables. (#1758)
@@ -32,6 +33,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `OTEL_EXPORTER_OTLP_TRACES_CERTIFICATE`
   - `OTEL_EXPORTER_OTLP_METRICS_CERTIFICATE`
 - `trace.TraceFlags` is now a defined type over `byte` and `WithSampled(bool) TraceFlags` and `IsSampled() bool` methods have been added to it. (#1770)
+- The `Event` and `Link` struct types from the `go.opentelemetry.io/otel` package now include a `DroppedAttributeCount` field to record the number of attributes that were not recorded due to configured limits being reached. (#1771)
+- The Jaeger exporter now reports dropped attributes for a Span event in the exported log. (#1771)
 
 ### Fixed
 
@@ -40,6 +43,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This means it uses the correct tag keys (`"otel.status_code"`, `"otel.status_description"`) and does not set the status message as a tag unless it is set on the span. (#1761)
 - The Jaeger exporter now correctly records Span event's names using the `"event"` key for a tag.
   Additionally, this tag is overridden, as specified in the OTel specification, if the event contains an attribute with that key. (#1768)
+- Zipkin Exporter: Ensure mapping between OTel and Zipkin span data complies with the specification. (#1688)
 
 ### Changed
 
@@ -59,6 +63,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This changes it to make `SamplingParameters` conform with the OpenTelemetry specification. (#1749)
 - Modify `BatchSpanProcessor.ForceFlush` to abort after timeout/cancellation. (#1757)
 - Improve OTLP/gRPC exporter connection errors. (#1737)
+- The `DroppedAttributeCount` field of the `Span` in the `go.opentelemetry.io/otel` package now only represents the number of attributes dropped for the span itself.
+  It no longer is a conglomerate of itself, events, and link attributes that have been dropped. (#1771)
+- Make `ExportSpans` in Jaeger Exporter honor context deadline. (#1773)
+- The `go.opentelemetry.io/otel/sdk/export/trace` package is merged into the `go.opentelemetry.io/otel/sdk/trace` package. (#1778)
 
 ### Removed
 
@@ -75,6 +83,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `HasRemoteParent` field of the `"go.opentelemetry.io/otel/sdk/trace".SamplingParameters` is removed.
   This field is redundant to the information returned from the `Remote` method of the `SpanContext` held in the `ParentContext` field. (#1749)
 - The `trace.FlagsDebug` and `trace.FlagsDeferred` constants have been removed and will be localized to the B3 propagator. (#1770)
+- Remove `Process` configuration, `WithProcessFromEnv` and `ProcessFromEnv`, from the Jaeger exporter package.
+  The information that could be configured in the `Process` struct should be configured in a `Resource` instead. (#1776)
 
 ## [0.19.0] - 2021-03-18
 

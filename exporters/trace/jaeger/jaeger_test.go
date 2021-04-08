@@ -34,7 +34,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -319,6 +318,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 	linkSpanID, _ := trace.SpanIDFromHex("0102030405060709")
 
 	eventNameValue := "event-test"
+	eventDropped := int64(10)
 	keyValue := "value"
 	statusCodeValue := int64(1)
 	doubleValue := 123.456
@@ -334,12 +334,12 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 
 	tests := []struct {
 		name string
-		data *export.SpanSnapshot
+		data *sdktrace.SpanSnapshot
 		want *gen.Span
 	}{
 		{
 			name: "no status description",
-			data: &export.SpanSnapshot{
+			data: &sdktrace.SpanSnapshot{
 				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID: traceID,
 					SpanID:  spanID,
@@ -373,7 +373,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 		},
 		{
 			name: "no parent",
-			data: &export.SpanSnapshot{
+			data: &sdktrace.SpanSnapshot{
 				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID: traceID,
 					SpanID:  spanID,
@@ -395,7 +395,12 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 					attribute.Int64("int", intValue),
 				},
 				MessageEvents: []trace.Event{
-					{Name: eventNameValue, Attributes: []attribute.KeyValue{attribute.String("k1", keyValue)}, Time: now},
+					{
+						Name:                  eventNameValue,
+						Attributes:            []attribute.KeyValue{attribute.String("k1", keyValue)},
+						DroppedAttributeCount: int(eventDropped),
+						Time:                  now,
+					},
 				},
 				StatusCode:    codes.Error,
 				StatusMessage: statusMessage,
@@ -445,6 +450,11 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 								VStr:  &keyValue,
 								VType: gen.TagType_STRING,
 							},
+							{
+								Key:   keyDroppedAttributeCount,
+								VLong: &eventDropped,
+								VType: gen.TagType_LONG,
+							},
 						},
 					},
 				},
@@ -452,7 +462,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 		},
 		{
 			name: "with parent",
-			data: &export.SpanSnapshot{
+			data: &sdktrace.SpanSnapshot{
 				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID: traceID,
 					SpanID:  spanID,
@@ -509,7 +519,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 		},
 		{
 			name: "resources do not affect the tags",
-			data: &export.SpanSnapshot{
+			data: &sdktrace.SpanSnapshot{
 				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID: traceID,
 					SpanID:  spanID,
@@ -612,6 +622,67 @@ func TestErrorOnExportShutdownExporter(t *testing.T) {
 	assert.NoError(t, e.ExportSpans(context.Background(), nil))
 }
 
+func TestExporterExportSpansHonorsCancel(t *testing.T) {
+	e, err := NewRawExporter(withTestCollectorEndpoint())
+	require.NoError(t, err)
+	now := time.Now()
+	ss := []*sdktrace.SpanSnapshot{
+		{
+			Name: "s1",
+			Resource: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("name"),
+				attribute.Key("r1").String("v1"),
+			),
+			StartTime: now,
+			EndTime:   now,
+		},
+		{
+			Name: "s2",
+			Resource: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("name"),
+				attribute.Key("r2").String("v2"),
+			),
+			StartTime: now,
+			EndTime:   now,
+		},
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	assert.EqualError(t, e.ExportSpans(ctx, ss), context.Canceled.Error())
+}
+
+func TestExporterExportSpansHonorsTimeout(t *testing.T) {
+	e, err := NewRawExporter(withTestCollectorEndpoint())
+	require.NoError(t, err)
+	now := time.Now()
+	ss := []*sdktrace.SpanSnapshot{
+		{
+			Name: "s1",
+			Resource: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("name"),
+				attribute.Key("r1").String("v1"),
+			),
+			StartTime: now,
+			EndTime:   now,
+		},
+		{
+			Name: "s2",
+			Resource: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("name"),
+				attribute.Key("r2").String("v2"),
+			),
+			StartTime: now,
+			EndTime:   now,
+		},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
+	defer cancel()
+	<-ctx.Done()
+
+	assert.EqualError(t, e.ExportSpans(ctx, ss), context.DeadlineExceeded.Error())
+}
+
 func TestJaegerBatchList(t *testing.T) {
 	newString := func(value string) *string {
 		return &value
@@ -620,11 +691,10 @@ func TestJaegerBatchList(t *testing.T) {
 	now := time.Now()
 
 	testCases := []struct {
-		name                string
-		spanSnapshotList    []*export.SpanSnapshot
-		defaultServiceName  string
-		resourceFromProcess *resource.Resource
-		expectedBatchList   []*gen.Batch
+		name               string
+		spanSnapshotList   []*sdktrace.SpanSnapshot
+		defaultServiceName string
+		expectedBatchList  []*gen.Batch
 	}{
 		{
 			name:              "no span shots",
@@ -633,7 +703,7 @@ func TestJaegerBatchList(t *testing.T) {
 		},
 		{
 			name: "span's snapshot contains nil span",
-			spanSnapshotList: []*export.SpanSnapshot{
+			spanSnapshotList: []*sdktrace.SpanSnapshot{
 				{
 					Name: "s1",
 					Resource: resource.NewWithAttributes(
@@ -667,7 +737,7 @@ func TestJaegerBatchList(t *testing.T) {
 		},
 		{
 			name: "merge spans that have the same resources",
-			spanSnapshotList: []*export.SpanSnapshot{
+			spanSnapshotList: []*sdktrace.SpanSnapshot{
 				{
 					Name: "s1",
 					Resource: resource.NewWithAttributes(
@@ -741,83 +811,8 @@ func TestJaegerBatchList(t *testing.T) {
 			},
 		},
 		{
-			name: "merge resources that come from process",
-			spanSnapshotList: []*export.SpanSnapshot{
-				{
-					Name: "s1",
-					Resource: resource.NewWithAttributes(
-						semconv.ServiceNameKey.String("name"),
-						attribute.Key("r1").String("v1"),
-						attribute.Key("r2").String("v2"),
-					),
-					StartTime: now,
-					EndTime:   now,
-				},
-			},
-			resourceFromProcess: resource.NewWithAttributes(
-				semconv.ServiceNameKey.String("new-name"),
-				attribute.Key("r1").String("v2"),
-			),
-			expectedBatchList: []*gen.Batch{
-				{
-					Process: &gen.Process{
-						ServiceName: "new-name",
-						Tags: []*gen.Tag{
-							{Key: "r1", VType: gen.TagType_STRING, VStr: newString("v2")},
-							{Key: "r2", VType: gen.TagType_STRING, VStr: newString("v2")},
-						},
-					},
-					Spans: []*gen.Span{
-						{
-							OperationName: "s1",
-							Tags: []*gen.Tag{
-								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
-							},
-							StartTime: now.UnixNano() / 1000,
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "span's snapshot contains no service name but resourceFromProcess does",
-			spanSnapshotList: []*export.SpanSnapshot{
-				{
-					Name: "s1",
-					Resource: resource.NewWithAttributes(
-						attribute.Key("r1").String("v1"),
-					),
-					StartTime: now,
-					EndTime:   now,
-				},
-				nil,
-			},
-			resourceFromProcess: resource.NewWithAttributes(
-				semconv.ServiceNameKey.String("new-name"),
-			),
-			expectedBatchList: []*gen.Batch{
-				{
-					Process: &gen.Process{
-						ServiceName: "new-name",
-						Tags: []*gen.Tag{
-							{Key: "r1", VType: gen.TagType_STRING, VStr: newString("v1")},
-						},
-					},
-					Spans: []*gen.Span{
-						{
-							OperationName: "s1",
-							Tags: []*gen.Tag{
-								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
-							},
-							StartTime: now.UnixNano() / 1000,
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "no service name in spans and resourceFromProcess",
-			spanSnapshotList: []*export.SpanSnapshot{
+			name: "no service name in spans",
+			spanSnapshotList: []*sdktrace.SpanSnapshot{
 				{
 					Name: "s1",
 					Resource: resource.NewWithAttributes(
@@ -853,7 +848,7 @@ func TestJaegerBatchList(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			batchList := jaegerBatchList(tc.spanSnapshotList, tc.defaultServiceName, tc.resourceFromProcess)
+			batchList := jaegerBatchList(tc.spanSnapshotList, tc.defaultServiceName)
 
 			assert.ElementsMatch(t, tc.expectedBatchList, batchList)
 		})

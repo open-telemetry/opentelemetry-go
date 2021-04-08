@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -27,7 +26,6 @@ import (
 	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/internal"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -54,7 +52,7 @@ type ReadOnlySpan interface {
 	IsRecording() bool
 	InstrumentationLibrary() instrumentation.Library
 	Resource() *resource.Resource
-	Snapshot() *export.SpanSnapshot
+	Snapshot() *SpanSnapshot
 
 	// A private method to prevent users implementing the
 	// interface and so future additions to it will not
@@ -75,9 +73,6 @@ type ReadWriteSpan interface {
 // span is an implementation of the OpenTelemetry Span API representing the
 // individual component of a trace.
 type span struct {
-	// droppedAttributeCount contains dropped attributes for the events and links.
-	droppedAttributeCount int64
-
 	// mu protects the contents of this span.
 	mu sync.Mutex
 
@@ -292,17 +287,19 @@ func (s *span) addEvent(name string, o ...trace.EventOption) {
 	c := trace.NewEventConfig(o...)
 
 	// Discard over limited attributes
+	var discarded int
 	if len(c.Attributes) > s.spanLimits.AttributePerEventCountLimit {
-		s.addDroppedAttributeCount(len(c.Attributes) - s.spanLimits.AttributePerEventCountLimit)
+		discarded = len(c.Attributes) - s.spanLimits.AttributePerEventCountLimit
 		c.Attributes = c.Attributes[:s.spanLimits.AttributePerEventCountLimit]
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.messageEvents.add(trace.Event{
-		Name:       name,
-		Attributes: c.Attributes,
-		Time:       c.Timestamp,
+		Name:                  name,
+		Attributes:            c.Attributes,
+		DroppedAttributeCount: discarded,
+		Time:                  c.Timestamp,
 	})
 }
 
@@ -423,7 +420,7 @@ func (s *span) addLink(link trace.Link) {
 
 	// Discard over limited attributes
 	if len(link.Attributes) > s.spanLimits.AttributePerLinkCountLimit {
-		s.addDroppedAttributeCount(len(link.Attributes) - s.spanLimits.AttributePerLinkCountLimit)
+		link.DroppedAttributeCount = len(link.Attributes) - s.spanLimits.AttributePerLinkCountLimit
 		link.Attributes = link.Attributes[:s.spanLimits.AttributePerLinkCountLimit]
 	}
 
@@ -432,8 +429,8 @@ func (s *span) addLink(link trace.Link) {
 
 // Snapshot creates a snapshot representing the current state of the span as an
 // export.SpanSnapshot and returns a pointer to it.
-func (s *span) Snapshot() *export.SpanSnapshot {
-	var sd export.SpanSnapshot
+func (s *span) Snapshot() *SpanSnapshot {
+	var sd SpanSnapshot
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -449,10 +446,9 @@ func (s *span) Snapshot() *export.SpanSnapshot {
 	sd.StatusCode = s.statusCode
 	sd.StatusMessage = s.statusMessage
 
-	sd.DroppedAttributeCount = int(s.droppedAttributeCount)
 	if s.attributes.evictList.Len() > 0 {
 		sd.Attributes = s.attributes.toKeyValue()
-		sd.DroppedAttributeCount += s.attributes.droppedCount
+		sd.DroppedAttributeCount = s.attributes.droppedCount
 	}
 	if len(s.messageEvents.queue) > 0 {
 		sd.MessageEvents = s.interfaceArrayToMessageEventArray()
@@ -500,10 +496,6 @@ func (s *span) addChild() {
 	s.mu.Lock()
 	s.childSpanCount++
 	s.mu.Unlock()
-}
-
-func (s *span) addDroppedAttributeCount(delta int) {
-	atomic.AddInt64(&s.droppedAttributeCount, int64(delta))
 }
 
 func (*span) private() {}
@@ -586,4 +578,40 @@ func isRecording(s SamplingResult) bool {
 
 func isSampled(s SamplingResult) bool {
 	return s.Decision == RecordAndSample
+}
+
+// SpanSnapshot is a snapshot of a span which contains all the information
+// collected by the span. Its main purpose is exporting completed spans.
+// Although SpanSnapshot fields can be accessed and potentially modified,
+// SpanSnapshot should be treated as immutable. Changes to the span from which
+// the SpanSnapshot was created are NOT reflected in the SpanSnapshot.
+type SpanSnapshot struct {
+	SpanContext trace.SpanContext
+	Parent      trace.SpanContext
+	SpanKind    trace.SpanKind
+	Name        string
+	StartTime   time.Time
+	// The wall clock time of EndTime will be adjusted to always be offset
+	// from StartTime by the duration of the span.
+	EndTime       time.Time
+	Attributes    []attribute.KeyValue
+	MessageEvents []trace.Event
+	Links         []trace.Link
+	StatusCode    codes.Code
+	StatusMessage string
+
+	// DroppedAttributeCount contains dropped attributes for the span itself.
+	DroppedAttributeCount    int
+	DroppedMessageEventCount int
+	DroppedLinkCount         int
+
+	// ChildSpanCount holds the number of child span created for this span.
+	ChildSpanCount int
+
+	// Resource contains attributes representing an entity that produced this span.
+	Resource *resource.Resource
+
+	// InstrumentationLibrary defines the instrumentation library used to
+	// provide instrumentation.
+	InstrumentationLibrary instrumentation.Library
 }

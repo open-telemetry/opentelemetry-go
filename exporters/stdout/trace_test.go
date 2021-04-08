@@ -25,8 +25,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/stdout"
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -47,7 +47,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 	doubleValue := 123.456
 	resource := resource.NewWithAttributes(attribute.String("rk1", "rv11"))
 
-	testSpan := &export.SpanSnapshot{
+	testSpan := &tracesdk.SpanSnapshot{
 		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    traceID,
 			SpanID:     spanID,
@@ -69,7 +69,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		StatusMessage: "interesting",
 		Resource:      resource,
 	}
-	if err := ex.ExportSpans(context.Background(), []*export.SpanSnapshot{testSpan}); err != nil {
+	if err := ex.ExportSpans(context.Background(), []*tracesdk.SpanSnapshot{testSpan}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -113,6 +113,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"Value":{"Type":"STRING","Value":"value"}` +
 		`}` +
 		`],` +
+		`"DroppedAttributeCount":0,` +
 		`"Time":` + string(expectedSerializedNow) +
 		`},` +
 		`{` +
@@ -123,6 +124,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"Value":{"Type":"FLOAT64","Value":123.456}` +
 		`}` +
 		`],` +
+		`"DroppedAttributeCount":0,` +
 		`"Time":` + string(expectedSerializedNow) +
 		`}` +
 		`],` +
