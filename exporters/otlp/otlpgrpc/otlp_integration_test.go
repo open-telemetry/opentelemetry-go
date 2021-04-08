@@ -32,7 +32,6 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/otlptest"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
-	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 )
@@ -161,7 +160,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 	// trigger almost immediate reconnection
 	require.Error(
 		t,
-		exp.ExportSpans(ctx, []*exporttrace.SpanSnapshot{{Name: "in the midst"}}),
+		exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "in the midst"}}),
 		"transport: Error while dialing dial tcp %s: connect: connection refused",
 		mc.endpoint,
 	)
@@ -173,7 +172,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 	// send message to disconnected channel but this time reconnection gouroutine will be in (rest mode, not listening to the disconnected channel)
 	require.Error(
 		t,
-		exp.ExportSpans(ctx, []*exporttrace.SpanSnapshot{{Name: "in the midst"}}),
+		exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "in the midst"}}),
 		"transport: Error while dialing dial tcp %s: connect: connection refused2",
 		mc.endpoint,
 	)
@@ -191,7 +190,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 	for i := 0; i < n; i++ {
 		// when disconnected exp.ExportSpans doesnt send disconnected messages again
 		// it just quits and return last connection error
-		require.NoError(t, exp.ExportSpans(ctx, []*exporttrace.SpanSnapshot{{Name: "Resurrected"}}))
+		require.NoError(t, exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Resurrected"}}))
 	}
 
 	nmaSpans := nmc.getSpans()
@@ -231,7 +230,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 		// No endpoint up.
 		require.Error(
 			t,
-			exp.ExportSpans(ctx, []*exporttrace.SpanSnapshot{{Name: "in the midst"}}),
+			exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "in the midst"}}),
 			"transport: Error while dialing dial tcp %s: connect: connection refused",
 			mc.endpoint,
 		)
@@ -245,7 +244,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 
 		n := 10
 		for i := 0; i < n; i++ {
-			require.NoError(t, exp.ExportSpans(ctx, []*exporttrace.SpanSnapshot{{Name: "Resurrected"}}))
+			require.NoError(t, exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Resurrected"}}))
 		}
 
 		nmaSpans := nmc.getSpans()
@@ -305,7 +304,7 @@ func TestNewExporter_withHeaders(t *testing.T) {
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint,
 		otlpgrpc.WithHeaders(map[string]string{"header1": "value1"}))
-	require.NoError(t, exp.ExportSpans(ctx, []*exporttrace.SpanSnapshot{{Name: "in the midst"}}))
+	require.NoError(t, exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "in the midst"}}))
 
 	defer func() {
 		_ = exp.Shutdown(ctx)
@@ -329,7 +328,7 @@ func TestNewExporter_withInvalidSecurityConfiguration(t *testing.T) {
 		t.Fatalf("failed to create a new collector exporter: %v", err)
 	}
 
-	err = exp.ExportSpans(ctx, []*exporttrace.SpanSnapshot{{Name: "misconfiguration"}})
+	err = exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "misconfiguration"}})
 	require.Equal(t, err.Error(), "exporter disconnected: grpc: no transport security set (use grpc.WithInsecure() explicitly or set credentials)")
 
 	defer func() {

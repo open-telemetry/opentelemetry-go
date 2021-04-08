@@ -32,7 +32,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv"
@@ -234,7 +233,7 @@ func TestExportSpans(t *testing.T) {
 		semconv.ServiceNameKey.String("exporter-test"),
 	)
 
-	spans := []*export.SpanSnapshot{
+	spans := []*sdktrace.SpanSnapshot{
 		// parent
 		{
 			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
@@ -297,8 +296,8 @@ func TestExportSpans(t *testing.T) {
 			RemoteEndpoint: nil,
 			Annotations:    nil,
 			Tags: map[string]string{
-				"otel.status_code":        "Error",
-				"otel.status_description": "404, file not found",
+				"otel.status_code": "Error",
+				"error":            "404, file not found",
 			},
 		},
 		// model of child
@@ -325,8 +324,8 @@ func TestExportSpans(t *testing.T) {
 			RemoteEndpoint: nil,
 			Annotations:    nil,
 			Tags: map[string]string{
-				"otel.status_code":        "Error",
-				"otel.status_description": "403, forbidden",
+				"otel.status_code": "Error",
+				"error":            "403, forbidden",
 			},
 		},
 	}
