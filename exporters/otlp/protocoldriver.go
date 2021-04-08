@@ -62,9 +62,9 @@ func WithMetricDriver(dr ProtocolDriver) Option {
 	}
 }
 
-// Tracer driver allows one to set the driver used for traces
+// WithTrace driver allows one to set the driver used for traces
 // in a SplitDriver
-func TraceDriver(dr ProtocolDriver) Option {
+func WithTraceDriver(dr ProtocolDriver) Option {
 	return func(d *splitDriver) {
 		d.trace = dr
 	}
