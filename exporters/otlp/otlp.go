@@ -136,7 +136,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, ss []*tracesdk.SpanSnapshot)
 }
 
 // NewExportPipeline sets up a complete export pipeline
-// with the recommended setup for trace provider.
+// with the recommended TracerProvider setup.
 func NewExportPipeline(ctx context.Context, driver ProtocolDriver, exporterOpts ...ExporterOption) (*Exporter,
 	*sdktrace.TracerProvider, *basic.Controller, error) {
 
