@@ -54,9 +54,9 @@ type ProtocolDriver interface {
 // Provides options for setting up a split driver
 type Option func(d *splitDriver)
 
-// Metric driver allows one to set the driver used for metrics
+// WithMetric driver allows one to set the driver used for metrics
 // in a SplitDriver
-func MetricDriver(dr ProtocolDriver) Option {
+func WithMetricDriver(dr ProtocolDriver) Option {
 	return func(d *splitDriver) {
 		d.metric = dr
 	}
