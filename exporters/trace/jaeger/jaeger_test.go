@@ -238,7 +238,7 @@ func TestNewRawExporterShouldFailIfCollectorUnset(t *testing.T) {
 		require.NoError(t, envStore.Restore())
 	}()
 
-	// If the user sets the environment variable JAEGER_ENDPOINT, endpoint will always get a value.
+	// If the user sets the environment variable OTEL_EXPORTER_JAEGER_ENDPOINT, endpoint will always get a value.
 	require.NoError(t, os.Unsetenv(envEndpoint))
 
 	_, err := NewRawExporter(

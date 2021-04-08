@@ -15,7 +15,6 @@
 package jaeger
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -86,46 +85,51 @@ func TestNewRawExporterWithEnvImplicitly(t *testing.T) {
 	assert.Equal(t, password, uploader.password)
 }
 
-func TestAgentEndpointFromEnv(t *testing.T) {
+func TestEnvOrWithAgentHostPortFromEnv(t *testing.T) {
 	testCases := []struct {
-		name             string
-		envAgentHost     string
-		envAgentPort     string
-		host             string
-		port             string
-		expectedHostPort string
+		name         string
+		envAgentHost string
+		envAgentPort string
+		defaultHost  string
+		defaultPort  string
+		expectedHost string
+		expectedPort string
 	}{
 		{
-			name:             "overrides HostPort value via environment variables",
-			envAgentHost:     "localhost",
-			envAgentPort:     "6832",
-			host:             "hostNameToBeReplaced",
-			port:             "8203",
-			expectedHostPort: "localhost:6832",
+			name:         "overrides default host/port values via environment variables",
+			envAgentHost: "localhost",
+			envAgentPort: "6832",
+			defaultHost:  "hostNameToBeReplaced",
+			defaultPort:  "8203",
+			expectedHost: "localhost",
+			expectedPort: "6832",
 		},
 		{
-			name:             "envAgentHost is empty, will not overwrite host value",
-			envAgentHost:     "",
-			envAgentPort:     "6832",
-			host:             "hostNameNotToBeReplaced",
-			port:             "8203",
-			expectedHostPort: "hostNameNotToBeReplaced:6832",
+			name:         "envAgentHost is empty, will not overwrite default host value",
+			envAgentHost: "",
+			envAgentPort: "6832",
+			defaultHost:  "hostNameNotToBeReplaced",
+			defaultPort:  "8203",
+			expectedHost: "hostNameNotToBeReplaced",
+			expectedPort: "6832",
 		},
 		{
-			name:             "envAgentPort is empty, will not overwrite port value",
-			envAgentHost:     "localhost",
-			envAgentPort:     "",
-			host:             "hostNameToBeReplaced",
-			port:             "8203",
-			expectedHostPort: "localhost:8203",
+			name:         "envAgentPort is empty, will not overwrite default port value",
+			envAgentHost: "localhost",
+			envAgentPort: "",
+			defaultHost:  "hostNameToBeReplaced",
+			defaultPort:  "8203",
+			expectedHost: "localhost",
+			expectedPort: "8203",
 		},
 		{
-			name:             "envAgentHost and envAgentPort are empty, will not overwrite HostPort value",
-			envAgentHost:     "",
-			envAgentPort:     "",
-			host:             "hostNameNotToBeReplaced",
-			port:             "8203",
-			expectedHostPort: "hostNameNotToBeReplaced:8203",
+			name:         "envAgentHost and envAgentPort are empty, will not overwrite default host/port values",
+			envAgentHost: "",
+			envAgentPort: "",
+			defaultHost:  "hostNameNotToBeReplaced",
+			defaultPort:  "8203",
+			expectedHost: "hostNameNotToBeReplaced",
+			expectedPort: "8203",
 		},
 	}
 
@@ -139,15 +143,10 @@ func TestAgentEndpointFromEnv(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			require.NoError(t, os.Setenv(envAgentHost, tc.envAgentHost))
 			require.NoError(t, os.Setenv(envAgentPort, tc.envAgentPort))
-			host, port := agentEndpointFromEnv()
-			if host == "" {
-				host = tc.host
-			}
-			if port == "" {
-				port = tc.port
-			}
-			hostPort := fmt.Sprintf("%s:%s", host, port)
-			assert.Equal(t, tc.expectedHostPort, hostPort)
+			host := envOr(envAgentHost, tc.defaultHost)
+			port := envOr(envAgentPort, tc.defaultPort)
+			assert.Equal(t, tc.expectedHost, host)
+			assert.Equal(t, tc.expectedPort, port)
 		})
 	}
 }

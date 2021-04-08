@@ -45,7 +45,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Updated Jaeger Environment Variables: `JAEGER_ENDPOINT`, `JAEGER_USER`, `JAEGER_PASSWORD`
   to `OTEL_EXPORTER_JAEGER_ENDPOINT`, `OTEL_EXPORTER_JAEGER_USER`, `OTEL_EXPORTER_JAEGER_PASSWORD` 
-  in compliance with Otel spec (#1752)
+  in compliance with OTel spec (#1752)
 - Span `RecordError` now records an `exception` event to comply with the semantic convention specification. (#1492)
 - Jaeger exporter was updated to use thrift v0.14.1. (#1712)
 - Migrate from using internally built and maintained version of the OTLP to the one hosted at `go.opentelemetry.io/proto/otlp`. (#1713)

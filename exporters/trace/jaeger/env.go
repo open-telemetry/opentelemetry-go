@@ -35,11 +35,12 @@ const (
 	envPassword = "OTEL_EXPORTER_JAEGER_PASSWORD"
 )
 
-// agentEndpointFromEnv returns env vars values of OTEL_EXPORTER_JAEGER_AGENT_HOST and OTEL_EXPORTER_JAEGER_AGENT_PORT
-func agentEndpointFromEnv() (string, string) {
-	h := os.Getenv(envAgentHost)
-	p := os.Getenv(envAgentPort)
-	return h, p
+// envOr returns an env variable's value if it is exists or the default if not
+func envOr(key, defaultValue string) string {
+	if v, ok := os.LookupEnv(key); ok && v != "" {
+		return v
+	}
+	return defaultValue
 }
 
 // CollectorEndpointFromEnv return environment variable value of OTEL_EXPORTER_JAEGER_ENDPOINT

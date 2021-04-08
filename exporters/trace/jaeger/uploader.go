@@ -37,40 +37,26 @@ type batchUploader interface {
 
 type EndpointOption func() (batchUploader, error)
 
-// WithAgentEndpoint instructs exporter to send spans to jaeger-agent at this address.
-// Agent endpoint is resolved in the following order: options, env vars, and then default values
-// Default agent endpoint value: localhost:6832
+// WithAgentEndpoint configures the Jaeger exporter to send spans to a jaeger-agent. This will
+// use the following environment variables for configuration if no explicit option is provided:
+//
+// - OTEL_EXPORTER_JAEGER_AGENT_HOST is used for the agent address host
+// - OTEL_EXPORTER_JAEGER_AGENT_PORT is used for the agent address port
+//
+// The passed options will take precedence over any environment variables and default values
+// will be used if neither are provided.
 func WithAgentEndpoint(options ...AgentEndpointOption) EndpointOption {
 	return func() (batchUploader, error) {
 		o := &AgentEndpointOptions{
 			agentClientUDPParams{
 				AttemptReconnecting: true,
+				Host:                envOr(envAgentHost, "localhost"),
+				Port:                envOr(envAgentPort, "6832"),
 			},
 		}
 		for _, opt := range options {
 			opt(o)
 		}
-
-		envHost, envPort := agentEndpointFromEnv() // Get agent host and port from environment variables
-		host := o.agentClientUDPParams.Host
-		if host == "" {
-			if envHost == "" {
-				host = "localhost"
-			} else {
-				host = envHost
-			}
-			o.agentClientUDPParams.Host = host
-		}
-		port := o.agentClientUDPParams.Port
-		if port == "" {
-			if envPort == "" {
-				port = "6832"
-			} else {
-				port = envPort
-			}
-			o.agentClientUDPParams.Port = port
-		}
-		o.agentClientUDPParams.HostPort = fmt.Sprintf("%s:%s", host, port)
 
 		client, err := newAgentClientUDP(o.agentClientUDPParams)
 		if err != nil {
@@ -88,13 +74,19 @@ type AgentEndpointOptions struct {
 }
 
 // WithAgentHost sets a host to be used in the agent client endpoint.
-func WithAgentHostPort(host string) AgentEndpointOption {
+// This option overrides any value set for the
+// OTEL_EXPORTER_JAEGER_AGENT_HOST environment variable.
+// If this option is not passed and the env var is not set, "localhost" will be used by default.
+func WithAgentHost(host string) AgentEndpointOption {
 	return func(o *AgentEndpointOptions) {
 		o.Host = host
 	}
 }
 
 // WithAgentPort sets a port to be used in the agent client endpoint.
+// This option overrides any value set for the
+// OTEL_EXPORTER_JAEGER_AGENT_PORT environment variable.
+// If this option is not passed and the env var is not set, "6832" will be used by default.
 func WithAgentPort(port string) AgentEndpointOption {
 	return func(o *AgentEndpointOptions) {
 		o.Port = port
