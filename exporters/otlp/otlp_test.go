@@ -26,12 +26,11 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp"
-	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
-	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
-	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
 func stubSpanSnapshot(count int) []*tracesdk.SpanSnapshot {
@@ -117,8 +116,8 @@ func (m *stubProtocolDriver) ExportTraces(ctx context.Context, ss []*tracesdk.Sp
 }
 
 type stubTransformingProtocolDriver struct {
-	rm []metricpb.ResourceMetrics
-	rs []tracepb.ResourceSpans
+	rm []*metricpb.ResourceMetrics
+	rs []*tracepb.ResourceSpans
 }
 
 var _ otlp.ProtocolDriver = (*stubTransformingProtocolDriver)(nil)
@@ -140,7 +139,7 @@ func (m *stubTransformingProtocolDriver) ExportMetrics(parent context.Context, c
 		if rm == nil {
 			continue
 		}
-		m.rm = append(m.rm, *rm)
+		m.rm = append(m.rm, rm)
 	}
 	return nil
 }
@@ -150,7 +149,7 @@ func (m *stubTransformingProtocolDriver) ExportTraces(ctx context.Context, ss []
 		if rs == nil {
 			continue
 		}
-		m.rs = append(m.rs, *rs)
+		m.rs = append(m.rs, rs)
 	}
 	return nil
 }
@@ -250,7 +249,7 @@ func TestInstallNewPipeline(t *testing.T) {
 	ctx := context.Background()
 	_, _, _, err := otlp.InstallNewPipeline(ctx, &stubProtocolDriver{})
 	assert.NoError(t, err)
-	assert.IsType(t, &sdktrace.TracerProvider{}, otel.GetTracerProvider())
+	assert.IsType(t, &tracesdk.TracerProvider{}, otel.GetTracerProvider())
 }
 
 func TestNewExportPipeline(t *testing.T) {

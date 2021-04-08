@@ -23,12 +23,12 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	"go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 )
 
 // Exporter is an OpenTelemetry exporter. It exports both traces and metrics
@@ -117,8 +117,7 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	return err
 }
 
-// Export implements the "go.opentelemetry.io/otel/sdk/export/metric".Exporter
-// interface. It transforms and batches metric Records into OTLP Metrics and
+// Export transforms and batches metric Records into OTLP Metrics and
 // transmits them to the configured collector.
 func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) error {
 	return e.driver.ExportMetrics(parent, cps, e.cfg.exportKindSelector)
@@ -130,10 +129,8 @@ func (e *Exporter) ExportKindFor(desc *metric.Descriptor, kind aggregation.Kind)
 	return e.cfg.exportKindSelector.ExportKindFor(desc, kind)
 }
 
-// ExportSpans implements the
-// "go.opentelemetry.io/otel/sdk/export/trace".SpanExporter interface. It
-// transforms and batches trace SpanSnapshots into OTLP Trace and transmits them
-// to the configured collector.
+// ExportSpans transforms and batches trace SpanSnapshots into OTLP Trace and
+// transmits them to the configured collector.
 func (e *Exporter) ExportSpans(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
 	return e.driver.ExportTraces(ctx, ss)
 }

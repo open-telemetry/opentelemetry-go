@@ -28,7 +28,6 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel"
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -46,14 +45,14 @@ type Exporter struct {
 }
 
 var (
-	_ export.SpanExporter = &Exporter{}
+	_ sdktrace.SpanExporter = &Exporter{}
 )
 
 // Options contains configuration for the exporter.
 type options struct {
 	client *http.Client
 	logger *log.Logger
-	config *sdktrace.Config
+	tpOpts []sdktrace.TracerProviderOption
 }
 
 // Option defines a function that configures the exporter.
@@ -73,10 +72,10 @@ func WithClient(client *http.Client) Option {
 	}
 }
 
-// WithSDK sets the SDK config for the exporter pipeline.
-func WithSDK(config *sdktrace.Config) Option {
-	return func(o *options) {
-		o.config = config
+// WithSDKOptions configures options passed to the created TracerProvider.
+func WithSDKOptions(tpOpts ...sdktrace.TracerProviderOption) Option {
+	return func(opts *options) {
+		opts.tpOpts = tpOpts
 	}
 }
 
@@ -116,10 +115,8 @@ func NewExportPipeline(collectorURL string, opts ...Option) (*sdktrace.TracerPro
 		return nil, err
 	}
 
-	tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(exporter))
-	if exporter.o.config != nil {
-		tp.ApplyConfig(*exporter.o.config)
-	}
+	tpOpts := append(exporter.o.tpOpts, sdktrace.WithBatcher(exporter))
+	tp := sdktrace.NewTracerProvider(tpOpts...)
 
 	return tp, err
 }
@@ -137,7 +134,7 @@ func InstallNewPipeline(collectorURL string, opts ...Option) error {
 }
 
 // ExportSpans exports SpanSnapshots to a Zipkin receiver.
-func (e *Exporter) ExportSpans(ctx context.Context, ss []*export.SpanSnapshot) error {
+func (e *Exporter) ExportSpans(ctx context.Context, ss []*sdktrace.SpanSnapshot) error {
 	e.stoppedMu.RLock()
 	stopped := e.stopped
 	e.stoppedMu.RUnlock()
