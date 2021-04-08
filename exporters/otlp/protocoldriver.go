@@ -90,6 +90,8 @@ type splitDriver struct {
 // all drivers configured.
 type noopDriver struct{}
 
+var _ ProtocolDriver = (*noopDriver)(nil)
+
 var _ ProtocolDriver = (*splitDriver)(nil)
 
 // NewSplitDriver creates a protocol driver which contains two other
