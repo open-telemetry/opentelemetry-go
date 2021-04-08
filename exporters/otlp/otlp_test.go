@@ -249,7 +249,7 @@ func TestSplitDriver(t *testing.T) {
 		driverTraces := &stubProtocolDriver{}
 		driverMetrics := &stubProtocolDriver{}
 
-		driver := otlp.NewSplitDriver(otlp.MetricDriver(driverMetrics), otlp.TraceDriver(driverTraces))
+		driver := otlp.NewSplitDriver(otlp.WithMetricDriver(driverMetrics), otlp.WithTraceDriver(driverTraces))
 		ctx := context.Background()
 		assert.NoError(t, driver.Start(ctx))
 		assert.Equal(t, 1, driverTraces.started)
@@ -288,7 +288,7 @@ func TestSplitDriver(t *testing.T) {
 	t.Run("with just metric driver", func(t *testing.T) {
 		driverMetrics := &stubProtocolDriver{}
 
-		driver := otlp.NewSplitDriver(otlp.MetricDriver(driverMetrics))
+		driver := otlp.NewSplitDriver(otlp.WithMetricDriver(driverMetrics))
 		ctx := context.Background()
 		assert.NoError(t, driver.Start(ctx))
 
@@ -315,7 +315,7 @@ func TestSplitDriver(t *testing.T) {
 	t.Run("with just trace driver", func(t *testing.T) {
 		driverTraces := &stubProtocolDriver{}
 
-		driver := otlp.NewSplitDriver(otlp.TraceDriver(driverTraces))
+		driver := otlp.NewSplitDriver(otlp.WithTraceDriver(driverTraces))
 		ctx := context.Background()
 		assert.NoError(t, driver.Start(ctx))
 		assert.Equal(t, 1, driverTraces.started)
@@ -382,7 +382,7 @@ func TestSplitDriverFail(t *testing.T) {
 			injectedStartError: errStartMetric,
 			injectedStopError:  errStopMetric,
 		}
-		driver := otlp.NewSplitDriver(otlp.MetricDriver(driverMetrics), otlp.TraceDriver(driverTraces))
+		driver := otlp.NewSplitDriver(otlp.WithMetricDriver(driverMetrics), otlp.WithTraceDriver(driverTraces))
 		errStart := driver.Start(ctx)
 		if shouldStartFail {
 			assert.Error(t, errStart)

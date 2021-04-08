@@ -51,25 +51,6 @@ type ProtocolDriver interface {
 	ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error
 }
 
-// Provides options for setting up a split driver
-type Option func(d *splitDriver)
-
-// WithMetric driver allows one to set the driver used for metrics
-// in a SplitDriver
-func WithMetricDriver(dr ProtocolDriver) Option {
-	return func(d *splitDriver) {
-		d.metric = dr
-	}
-}
-
-// WithTrace driver allows one to set the driver used for traces
-// in a SplitDriver
-func WithTraceDriver(dr ProtocolDriver) Option {
-	return func(d *splitDriver) {
-		d.trace = dr
-	}
-}
-
 // SplitConfig is used to configure a split driver.
 type SplitConfig struct {
 	// ForMetrics driver will be used for sending metrics to the
@@ -97,7 +78,7 @@ var _ ProtocolDriver = (*splitDriver)(nil)
 // NewSplitDriver creates a protocol driver which contains two other
 // protocol drivers and will forward traces to one of them and metrics
 // to another.
-func NewSplitDriver(opts ...Option) ProtocolDriver {
+func NewSplitDriver(opts ...ProtocolDriverOption) ProtocolDriver {
 	driver := splitDriver{
 		metric: &noopDriver{},
 		trace:  &noopDriver{},
