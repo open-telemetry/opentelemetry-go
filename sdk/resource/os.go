@@ -24,14 +24,15 @@ import (
 
 type osDetector struct{}
 
-// Detect returns a *Resource that describes the operating system type the service is running on.
+// Detect returns a *Resource that describes the operating system type the
+// service is running on.
 func (osDetector) Detect(ctx context.Context) (*Resource, error) {
 	return NewWithAttributes(
 		semconv.OSTypeKey.String(strings.ToUpper(runtime.GOOS)),
 	), nil
 }
 
-// WithOS
+// WithOS adds an attribute with the operating system type to the configured Resource.
 func WithOS() Option {
 	return WithDetectors(osDetector{})
 }
