@@ -129,7 +129,7 @@ const (
 	K8SClusterNameKey = attribute.Key("k8s.cluster.name")
 	
 	// The name of the Node.
-	K8sNodeNameKey = attribute.Key("k8s.node.name")
+	K8SNodeNameKey = attribute.Key("k8s.node.name")
 	
 	// The UID of the Node.
 	K8sNodeUIDKey = attribute.Key("k8s.node.uid")
