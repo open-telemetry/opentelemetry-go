@@ -127,6 +127,12 @@ const (
 	// set to any meaningful value within the environment. For example,
 	// GKE clusters have a name which can be used for this attribute.
 	K8SClusterNameKey = attribute.Key("k8s.cluster.name")
+	
+	// The name of the Node.
+	K8sNodeNameKey = attribute.Key("k8s.node.name")
+	
+	// The UID of the Node.
+	K8sNodeUIDKey = attribute.Key("k8s.node.uid")
 
 	// The name of the namespace that the pod is running in.
 	K8SNamespaceNameKey = attribute.Key("k8s.namespace.name")
