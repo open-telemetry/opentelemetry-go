@@ -15,7 +15,6 @@
 package trace
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -25,88 +24,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 )
-
-type testSpan struct {
-	noopSpan
-
-	ID byte
-}
-
-func (s testSpan) SpanContext() SpanContext { return SpanContext{spanID: [8]byte{s.ID}} }
-
-func TestContextSpan(t *testing.T) {
-	testCases := []struct {
-		name         string
-		context      context.Context
-		expectedSpan Span
-	}{
-		{
-			name:         "empty context",
-			context:      context.Background(),
-			expectedSpan: noopSpan{},
-		},
-		{
-			name:         "span 0",
-			context:      ContextWithSpan(context.Background(), testSpan{ID: 0}),
-			expectedSpan: testSpan{ID: 0},
-		},
-		{
-			name:         "span 1",
-			context:      ContextWithSpan(context.Background(), testSpan{ID: 1}),
-			expectedSpan: testSpan{ID: 1},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			span := SpanFromContext(tc.context)
-			assert.Equal(t, tc.expectedSpan, span)
-
-			if _, ok := tc.expectedSpan.(noopSpan); !ok {
-				span, ok := tc.context.Value(currentSpanKey).(testSpan)
-				assert.True(t, ok)
-				assert.Equal(t, tc.expectedSpan.(testSpan), span)
-			}
-		})
-	}
-}
-
-func TestContextRemoteSpanContext(t *testing.T) {
-	ctx := context.Background()
-	got, empty := RemoteSpanContextFromContext(ctx), SpanContext{}
-	if !assertSpanContextEqual(got, empty) {
-		t.Errorf("RemoteSpanContextFromContext returned %v from an empty context, want %v", got, empty)
-	}
-
-	want := SpanContext{traceID: [16]byte{1}, spanID: [8]byte{42}}
-	ctx = ContextWithRemoteSpanContext(ctx, want)
-	want = want.WithRemote(true)
-
-	if got, ok := ctx.Value(remoteContextKey).(SpanContext); !ok {
-		t.Errorf("failed to set SpanContext with %#v", want)
-	} else if !assertSpanContextEqual(got, want) {
-		t.Errorf("got %#v from context with remote set, want %#v", got, want)
-	}
-
-	if got := RemoteSpanContextFromContext(ctx); !assertSpanContextEqual(got, want) {
-		t.Errorf("RemoteSpanContextFromContext returned %v from a set context, want %v", got, want)
-	}
-
-	want = SpanContext{traceID: [16]byte{1}, spanID: [8]byte{43}}
-	ctx = ContextWithRemoteSpanContext(ctx, want)
-	want = want.WithRemote(true)
-
-	if got, ok := ctx.Value(remoteContextKey).(SpanContext); !ok {
-		t.Errorf("failed to set SpanContext with %#v", want)
-	} else if !assertSpanContextEqual(got, want) {
-		t.Errorf("got %#v from context with remote set, want %#v", got, want)
-	}
-
-	got = RemoteSpanContextFromContext(ctx)
-	if !assertSpanContextEqual(got, want) {
-		t.Errorf("RemoteSpanContextFromContext returned %v from a set context, want %v", got, want)
-	}
-}
 
 func TestIsValid(t *testing.T) {
 	for _, testcase := range []struct {
@@ -247,41 +164,71 @@ func TestHasSpanID(t *testing.T) {
 	}
 }
 
-func TestSpanContextIsSampled(t *testing.T) {
+func TestTraceFlagsIsSampled(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
-		sc   SpanContext
+		tf   TraceFlags
 		want bool
 	}{
 		{
 			name: "sampled",
-			sc: SpanContext{
-				traceID:    TraceID([16]byte{1}),
-				traceFlags: FlagsSampled,
-			},
+			tf:   FlagsSampled,
 			want: true,
 		}, {
 			name: "unused bits are ignored, still not sampled",
-			sc: SpanContext{
-				traceID:    TraceID([16]byte{1}),
-				traceFlags: ^FlagsSampled,
-			},
+			tf:   ^FlagsSampled,
 			want: false,
 		}, {
 			name: "unused bits are ignored, still sampled",
-			sc: SpanContext{
-				traceID:    TraceID([16]byte{1}),
-				traceFlags: FlagsSampled | ^FlagsSampled,
-			},
+			tf:   FlagsSampled | ^FlagsSampled,
 			want: true,
 		}, {
 			name: "not sampled/default",
-			sc:   SpanContext{traceID: TraceID{}},
 			want: false,
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			have := testcase.sc.IsSampled()
+			have := testcase.tf.IsSampled()
+			if have != testcase.want {
+				t.Errorf("Want: %v, but have: %v", testcase.want, have)
+			}
+		})
+	}
+}
+
+func TestTraceFlagsWithSampled(t *testing.T) {
+	for _, testcase := range []struct {
+		name   string
+		start  TraceFlags
+		sample bool
+		want   TraceFlags
+	}{
+		{
+			name:   "sampled unchanged",
+			start:  FlagsSampled,
+			want:   FlagsSampled,
+			sample: true,
+		}, {
+			name:   "become sampled",
+			want:   FlagsSampled,
+			sample: true,
+		}, {
+			name:   "unused bits are ignored, still not sampled",
+			start:  ^FlagsSampled,
+			want:   ^FlagsSampled,
+			sample: false,
+		}, {
+			name:   "unused bits are ignored, becomes sampled",
+			start:  ^FlagsSampled,
+			want:   FlagsSampled | ^FlagsSampled,
+			sample: true,
+		}, {
+			name:   "not sampled/default",
+			sample: false,
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			have := testcase.start.WithSampled(testcase.sample)
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
 			}
@@ -420,31 +367,6 @@ func TestSpanKindString(t *testing.T) {
 		if got := test.in.String(); got != test.want {
 			t.Errorf("%#v.String() = %#v, want %#v", test.in, got, test.want)
 		}
-	}
-}
-
-func TestSpanContextFromContext(t *testing.T) {
-	testCases := []struct {
-		name                string
-		context             context.Context
-		expectedSpanContext SpanContext
-	}{
-		{
-			name:    "empty context",
-			context: context.Background(),
-		},
-		{
-			name:                "span 1",
-			context:             ContextWithSpan(context.Background(), testSpan{ID: 1}),
-			expectedSpanContext: SpanContext{spanID: [8]byte{1}},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			spanContext := SpanContextFromContext(tc.context)
-			assert.Equal(t, tc.expectedSpanContext, spanContext)
-		})
 	}
 }
 

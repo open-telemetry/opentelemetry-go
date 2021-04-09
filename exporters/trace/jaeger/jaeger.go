@@ -27,7 +27,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv"
@@ -37,14 +36,18 @@ import (
 const (
 	keyInstrumentationLibraryName    = "otel.library.name"
 	keyInstrumentationLibraryVersion = "otel.library.version"
+	keyError                         = "error"
+	keySpanKind                      = "span.kind"
+	keyStatusCode                    = "otel.status_code"
+	keyStatusMessage                 = "otel.status_description"
+	keyDroppedAttributeCount         = "otel.event.dropped_attributes_count"
+	keyEventName                     = "event"
 )
 
 type Option func(*options)
 
 // options are the options to be used when initializing a Jaeger export.
 type options struct {
-	// Process contains the information about the exporting process.
-	Process Process
 
 	// BufferMaxCount defines the total number of traces that can be buffered in memory
 	BufferMaxCount int
@@ -98,7 +101,6 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 	}
 
 	o := options{}
-	opts = append(opts, WithProcessFromEnv())
 	for _, opt := range opts {
 		opt(&o)
 	}
@@ -114,13 +116,12 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 	}
 
 	e := &Exporter{
-		uploader:            uploader,
-		o:                   o,
-		defaultServiceName:  defaultServiceName,
-		resourceFromProcess: processToResource(o.Process),
+		uploader:           uploader,
+		o:                  o,
+		defaultServiceName: defaultServiceName,
 	}
-	bundler := bundler.NewBundler((*export.SpanSnapshot)(nil), func(bundle interface{}) {
-		if err := e.upload(bundle.([]*export.SpanSnapshot)); err != nil {
+	bundler := bundler.NewBundler((*sdktrace.SpanSnapshot)(nil), func(bundle interface{}) {
+		if err := e.upload(bundle.([]*sdktrace.SpanSnapshot)); err != nil {
 			otel.Handle(err)
 		}
 	})
@@ -195,14 +196,13 @@ type Exporter struct {
 	stoppedMu sync.RWMutex
 	stopped   bool
 
-	defaultServiceName  string
-	resourceFromProcess *resource.Resource
+	defaultServiceName string
 }
 
-var _ export.SpanExporter = (*Exporter)(nil)
+var _ sdktrace.SpanExporter = (*Exporter)(nil)
 
 // ExportSpans exports SpanSnapshots to Jaeger.
-func (e *Exporter) ExportSpans(ctx context.Context, ss []*export.SpanSnapshot) error {
+func (e *Exporter) ExportSpans(ctx context.Context, ss []*sdktrace.SpanSnapshot) error {
 	e.stoppedMu.RLock()
 	stopped := e.stopped
 	e.stoppedMu.RUnlock()
@@ -212,11 +212,17 @@ func (e *Exporter) ExportSpans(ctx context.Context, ss []*export.SpanSnapshot) e
 
 	for _, span := range ss {
 		// TODO(jbd): Handle oversized bundlers.
-		err := e.bundler.Add(span, 1)
+		err := e.bundler.AddWait(ctx, span, 1)
 		if err != nil {
 			return fmt.Errorf("failed to bundle %q: %w", span.Name, err)
 		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
 	}
+
 	return nil
 }
 
@@ -251,7 +257,7 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func spanSnapshotToThrift(ss *export.SpanSnapshot) *gen.Span {
+func spanSnapshotToThrift(ss *sdktrace.SpanSnapshot) *gen.Span {
 	tags := make([]*gen.Tag, 0, len(ss.Attributes))
 	for _, kv := range ss.Attributes {
 		tag := keyValueToTag(kv)
@@ -269,31 +275,45 @@ func spanSnapshotToThrift(ss *export.SpanSnapshot) *gen.Span {
 
 	if ss.SpanKind != trace.SpanKindInternal {
 		tags = append(tags,
-			getStringTag("span.kind", ss.SpanKind.String()),
+			getStringTag(keySpanKind, ss.SpanKind.String()),
 		)
 	}
 
 	if ss.StatusCode != codes.Unset {
-		tags = append(tags,
-			getInt64Tag("status.code", int64(ss.StatusCode)),
-			getStringTag("status.message", ss.StatusMessage),
-		)
+		tags = append(tags, getInt64Tag(keyStatusCode, int64(ss.StatusCode)))
+		if ss.StatusMessage != "" {
+			tags = append(tags, getStringTag(keyStatusMessage, ss.StatusMessage))
+		}
 
 		if ss.StatusCode == codes.Error {
-			tags = append(tags, getBoolTag("error", true))
+			tags = append(tags, getBoolTag(keyError, true))
 		}
 	}
 
 	var logs []*gen.Log
 	for _, a := range ss.MessageEvents {
-		fields := make([]*gen.Tag, 0, len(a.Attributes))
+		nTags := len(a.Attributes)
+		if a.Name != "" {
+			nTags++
+		}
+		if a.DroppedAttributeCount != 0 {
+			nTags++
+		}
+		fields := make([]*gen.Tag, 0, nTags)
+		if a.Name != "" {
+			// If an event contains an attribute with the same key, it needs
+			// to be given precedence and overwrite this.
+			fields = append(fields, getStringTag(keyEventName, a.Name))
+		}
 		for _, kv := range a.Attributes {
 			tag := keyValueToTag(kv)
 			if tag != nil {
 				fields = append(fields, tag)
 			}
 		}
-		fields = append(fields, getStringTag("name", a.Name))
+		if a.DroppedAttributeCount != 0 {
+			fields = append(fields, getInt64Tag(keyDroppedAttributeCount, int64(a.DroppedAttributeCount)))
+		}
 		logs = append(logs, &gen.Log{
 			Timestamp: a.Time.UnixNano() / 1000,
 			Fields:    fields,
@@ -314,11 +334,12 @@ func spanSnapshotToThrift(ss *export.SpanSnapshot) *gen.Span {
 
 	tid := ss.SpanContext.TraceID()
 	sid := ss.SpanContext.SpanID()
+	psid := ss.Parent.SpanID()
 	return &gen.Span{
 		TraceIdHigh:   int64(binary.BigEndian.Uint64(tid[0:8])),
 		TraceIdLow:    int64(binary.BigEndian.Uint64(tid[8:16])),
 		SpanId:        int64(binary.BigEndian.Uint64(sid[:])),
-		ParentSpanId:  int64(binary.BigEndian.Uint64(ss.ParentSpanID[:])),
+		ParentSpanId:  int64(binary.BigEndian.Uint64(psid[:])),
 		OperationName: ss.Name, // TODO: if span kind is added then add prefix "Sent"/"Recv"
 		Flags:         int32(ss.SpanContext.TraceFlags()),
 		StartTime:     ss.StartTime.UnixNano() / 1000,
@@ -403,8 +424,8 @@ func (e *Exporter) Flush() {
 	flush(e)
 }
 
-func (e *Exporter) upload(spans []*export.SpanSnapshot) error {
-	batchList := jaegerBatchList(spans, e.defaultServiceName, e.resourceFromProcess)
+func (e *Exporter) upload(spans []*sdktrace.SpanSnapshot) error {
+	batchList := jaegerBatchList(spans, e.defaultServiceName)
 	for _, batch := range batchList {
 		err := e.uploader.upload(batch)
 		if err != nil {
@@ -417,7 +438,7 @@ func (e *Exporter) upload(spans []*export.SpanSnapshot) error {
 
 // jaegerBatchList transforms a slice of SpanSnapshot into a slice of jaeger
 // Batch.
-func jaegerBatchList(ssl []*export.SpanSnapshot, defaultServiceName string, resourceFromProcess *resource.Resource) []*gen.Batch {
+func jaegerBatchList(ssl []*sdktrace.SpanSnapshot, defaultServiceName string) []*gen.Batch {
 	if len(ssl) == 0 {
 		return nil
 	}
@@ -429,16 +450,11 @@ func jaegerBatchList(ssl []*export.SpanSnapshot, defaultServiceName string, reso
 			continue
 		}
 
-		newResource := ss.Resource
-		if resourceFromProcess != nil {
-			// The value from process will overwrite the value from span's resources
-			newResource = resource.Merge(ss.Resource, resourceFromProcess)
-		}
-		resourceKey := newResource.Equivalent()
+		resourceKey := ss.Resource.Equivalent()
 		batch, bOK := batchDict[resourceKey]
 		if !bOK {
 			batch = &gen.Batch{
-				Process: process(newResource, defaultServiceName),
+				Process: process(ss.Resource, defaultServiceName),
 				Spans:   []*gen.Span{},
 			}
 		}
@@ -480,17 +496,4 @@ func process(res *resource.Resource, defaultServiceName string) *gen.Process {
 	process.ServiceName = serviceName.Value.AsString()
 
 	return &process
-}
-
-func processToResource(process Process) *resource.Resource {
-	var attrs []attribute.KeyValue
-	if process.ServiceName != "" {
-		attrs = append(attrs, semconv.ServiceNameKey.String(process.ServiceName))
-	}
-	attrs = append(attrs, process.Tags...)
-
-	if len(attrs) == 0 {
-		return nil
-	}
-	return resource.NewWithAttributes(attrs...)
 }
