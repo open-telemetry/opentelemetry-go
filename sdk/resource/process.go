@@ -85,7 +85,11 @@ func (processRuntimeVersionDetector) Detect(ctx context.Context) (*Resource, err
 
 // Detect returns a *Resource that describes the runtime of this process.
 func (processRuntimeDescriptionDetector) Detect(ctx context.Context) (*Resource, error) {
-	return NewWithAttributes(semconv.ProcessRuntimeDescriptionKey.String(fmt.Sprintf("go version %s %s/%s", runtime.Version(), runtime.GOOS, runtime.GOARCH))), nil
+	return NewWithAttributes(
+		semconv.ProcessRuntimeDescriptionKey.String(
+			fmt.Sprintf("go version %s %s/%s", runtime.Version(), runtime.GOOS, runtime.GOARCH),
+		),
+	), nil
 }
 
 // WithProcessPID adds an attribute with the process identifier (PID) to the
