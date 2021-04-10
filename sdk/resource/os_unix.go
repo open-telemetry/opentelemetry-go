@@ -12,20 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris zos
+
 package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
 import (
 	"fmt"
-	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
 // osDescription issues a uname(2) system call and formats the output in a single
 // string, similar to the output of the `uname` commandline program. The final string
 // resembles the one obtained with a call to `uname -snrvm`.
 func osDescription() (string, error) {
-	var utsName syscall.Utsname
+	var utsName unix.Utsname
 
-	err := syscall.Uname(&utsName)
+	err := unix.Uname(&utsName)
 	if err != nil {
 		return "", err
 	}
@@ -40,7 +43,7 @@ func osDescription() (string, error) {
 }
 
 // charsToString converts a C-like null-terminated char array to a Go string.
-func charsToString(charArray []int8) string {
+func charsToString(charArray []byte) string {
 	s := make([]byte, len(charArray))
 
 	var i int

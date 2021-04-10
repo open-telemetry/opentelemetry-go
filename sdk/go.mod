@@ -10,6 +10,7 @@ require (
 	go.opentelemetry.io/otel v0.20.0
 	go.opentelemetry.io/otel/oteltest v0.20.0
 	go.opentelemetry.io/otel/trace v0.20.0
+	golang.org/x/sys v0.0.0-20210403161142-5e06dd20ab57
 )
 
 replace go.opentelemetry.io/otel/bridge/opencensus => ../bridge/opencensus
