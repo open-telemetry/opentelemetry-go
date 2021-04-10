@@ -16,6 +16,8 @@ package resource_test
 
 import (
 	"context"
+	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -60,11 +62,30 @@ func TestWithOSDescription(t *testing.T) {
 
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{
-		"os.description": description(),
+		"os.description": osDescription(),
 	}, toMap(res))
 }
 
-func description() string {
+func TestWithOS(t *testing.T) {
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithoutBuiltin(),
+		resource.WithOS(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"os.type":        osType(),
+		"os.description": osDescription(),
+	}, toMap(res))
+}
+
+func osType() string {
+	return strings.ToUpper(runtime.GOOS)
+}
+
+func osDescription() string {
 	description, _ := resource.OSDescription()
 
 	return description
