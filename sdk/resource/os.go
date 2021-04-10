@@ -22,17 +22,17 @@ import (
 	"go.opentelemetry.io/otel/semconv"
 )
 
-type osDetector struct{}
+type osTypeDetector struct{}
 
 // Detect returns a *Resource that describes the operating system type the
 // service is running on.
-func (osDetector) Detect(ctx context.Context) (*Resource, error) {
+func (osTypeDetector) Detect(ctx context.Context) (*Resource, error) {
 	return NewWithAttributes(
 		semconv.OSTypeKey.String(strings.ToUpper(runtime.GOOS)),
 	), nil
 }
 
 // WithOS adds an attribute with the operating system type to the configured Resource.
-func WithOS() Option {
-	return WithDetectors(osDetector{})
+func WithOSType() Option {
+	return WithDetectors(osTypeDetector{})
 }

@@ -25,12 +25,12 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-func TestWithOS(t *testing.T) {
+func TestWithOSType(t *testing.T) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
 		resource.WithoutBuiltin(),
-		resource.WithOS(),
+		resource.WithOSType(),
 	)
 
 	require.NoError(t, err)
