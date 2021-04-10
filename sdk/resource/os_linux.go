@@ -15,34 +15,9 @@
 package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
 import (
-	"context"
 	"fmt"
 	"syscall"
-
-	"go.opentelemetry.io/otel/semconv"
 )
-
-type osDescriptionDetector struct{}
-
-// Detect returns a *Resource that describes the operating system the
-// service is running on.
-func (osDescriptionDetector) Detect(ctx context.Context) (*Resource, error) {
-	description, err := osDescription()
-
-	if err != nil {
-		return nil, err
-	}
-
-	return NewWithAttributes(
-		semconv.OSDescriptionKey.String(description),
-	), nil
-}
-
-// WithOS adds an attribute with the operating system description to the configured Resource.
-// The formatted string is equivalent to the output of the `uname -snrvm` command.
-func WithOSDescription() Option {
-	return WithDetectors(osDescriptionDetector{})
-}
 
 // osDescription issues a uname(2) system call and formats the output in a single
 // string, similar to the output of the `uname` commandline program. The final string

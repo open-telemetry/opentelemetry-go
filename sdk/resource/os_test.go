@@ -49,3 +49,23 @@ func TestWithOSType(t *testing.T) {
 
 	restoreProcessAttributesProviders()
 }
+
+func TestWithOSDescription(t *testing.T) {
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithoutBuiltin(),
+		resource.WithOSDescription(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"os.description": description(),
+	}, toMap(res))
+}
+
+func description() string {
+	description, _ := resource.OSDescription()
+
+	return description
+}

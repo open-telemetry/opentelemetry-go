@@ -12,22 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +build !linux
+
 package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
-var (
-	SetDefaultOSProviders      = setDefaultOSProviders
-	SetOSProviders             = setOSProviders
-	SetDefaultRuntimeProviders = setDefaultRuntimeProviders
-	SetRuntimeProviders        = setRuntimeProviders
-	SetDefaultUserProviders    = setDefaultUserProviders
-	SetUserProviders           = setUserProviders
+import (
+	"fmt"
+	"runtime"
 )
 
-var (
-	CommandArgs = commandArgs
-	RuntimeName = runtimeName
-	RuntimeOS   = runtimeOS
-	RuntimeArch = runtimeArch
-)
-
-var OSDescription = osDescription
+// osDescription
+func osDescription() (string, error) {
+	return fmt.Sprintf("OS description not implemented for %s", runtime.GOOS), nil
+}
