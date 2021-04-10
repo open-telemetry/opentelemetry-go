@@ -14,4 +14,185 @@
 
 package resource_test
 
-// TODO: add tests
+import (
+	"context"
+	"fmt"
+	"os"
+	"os/user"
+	"path/filepath"
+	"runtime"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel/sdk/resource"
+)
+
+func TestWithProcessPID(t *testing.T) {
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithoutBuiltin(),
+		resource.WithProcessPID(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.pid": fmt.Sprint(pid()),
+	}, toMap(res))
+}
+
+func TestWithProcessExecutableName(t *testing.T) {
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithoutBuiltin(),
+		resource.WithProcessExecutableName(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.executable.name": executableName(),
+	}, toMap(res))
+}
+
+func TestWithProcessExecutablePath(t *testing.T) {
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithoutBuiltin(),
+		resource.WithProcessExecutablePath(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.executable.path": executablePath(),
+	}, toMap(res))
+}
+
+func TestWithProcessCommandArgs(t *testing.T) {
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithoutBuiltin(),
+		resource.WithProcessCommandArgs(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.command_args": fmt.Sprint(commandArgs()),
+	}, toMap(res))
+}
+
+func TestWithProcessOwner(t *testing.T) {
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithoutBuiltin(),
+		resource.WithProcessOwner(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.owner": owner(),
+	}, toMap(res))
+}
+
+func TestWithProcessRuntimeName(t *testing.T) {
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithoutBuiltin(),
+		resource.WithProcessRuntimeName(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.runtime.name": runtimeName(),
+	}, toMap(res))
+}
+
+func TestWithProcessRuntimeVersion(t *testing.T) {
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithoutBuiltin(),
+		resource.WithProcessRuntimeVersion(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.runtime.version": runtimeVersion(),
+	}, toMap(res))
+}
+
+func TestWithProcessRuntimeDescription(t *testing.T) {
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithoutBuiltin(),
+		resource.WithProcessRuntimeDescription(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.runtime.description": runtimeDescription(),
+	}, toMap(res))
+}
+
+func TestWithProcess(t *testing.T) {
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithoutBuiltin(),
+		resource.WithProcess(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.pid":                 fmt.Sprint(pid()),
+		"process.executable.name":     executableName(),
+		"process.executable.path":     executablePath(),
+		"process.command_args":        fmt.Sprint(commandArgs()),
+		"process.owner":               owner(),
+		"process.runtime.name":        runtimeName(),
+		"process.runtime.version":     runtimeVersion(),
+		"process.runtime.description": runtimeDescription(),
+	}, toMap(res))
+}
+
+func pid() int {
+	return os.Getpid()
+}
+
+func executableName() string {
+	return filepath.Base(os.Args[0])
+}
+
+func executablePath() string {
+	executable, _ := os.Executable()
+
+	return executable
+}
+
+func commandArgs() []string {
+	return os.Args
+}
+
+func owner() string {
+	user, _ := user.Current()
+
+	return user.Username
+}
+
+func runtimeName() string {
+	return runtime.Compiler
+}
+
+func runtimeVersion() string {
+	return runtime.Version()
+}
+
+func runtimeDescription() string {
+	return fmt.Sprintf("go version %s %s/%s", runtime.Version(), runtime.GOOS, runtime.GOARCH)
+}
