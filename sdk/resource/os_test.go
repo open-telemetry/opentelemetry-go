@@ -14,4 +14,31 @@
 
 package resource_test
 
-// TODO: add tests
+import (
+	"context"
+	"runtime"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel/sdk/resource"
+)
+
+func TestWithOS(t *testing.T) {
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithoutBuiltin(),
+		resource.WithOS(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"os.type": osType(),
+	}, toMap(res))
+}
+
+func osType() string {
+	return strings.ToUpper(runtime.GOOS)
+}
