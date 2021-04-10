@@ -43,7 +43,6 @@ import (
 
 const (
 	collectorEndpoint = "http://localhost:14268/api/traces"
-	agentEndpoint     = "localhost:6831"
 )
 
 func TestInstallNewPipeline(t *testing.T) {
@@ -60,7 +59,7 @@ func TestInstallNewPipeline(t *testing.T) {
 		},
 		{
 			name:             "with agent endpoint",
-			endpoint:         WithAgentEndpoint(agentEndpoint),
+			endpoint:         WithAgentEndpoint(),
 			expectedProvider: &sdktrace.TracerProvider{},
 		},
 		{
@@ -154,24 +153,6 @@ func TestNewExportPipeline(t *testing.T) {
 	}
 }
 
-func TestNewExportPipelineWithDisabledFromEnv(t *testing.T) {
-	envStore, err := ottest.SetEnvVariables(map[string]string{
-		envDisabled: "true",
-	})
-	require.NoError(t, err)
-	envStore.Record(envDisabled)
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
-
-	tp, fn, err := NewExportPipeline(
-		WithCollectorEndpoint(collectorEndpoint),
-	)
-	defer fn()
-	assert.NoError(t, err)
-	assert.IsType(t, trace.NewNoopTracerProvider(), tp)
-}
-
 func TestNewRawExporter(t *testing.T) {
 	testCases := []struct {
 		name                                                           string
@@ -189,7 +170,7 @@ func TestNewRawExporter(t *testing.T) {
 		},
 		{
 			name:                   "default exporter with agent endpoint",
-			endpoint:               WithAgentEndpoint(agentEndpoint),
+			endpoint:               WithAgentEndpoint(),
 			expectedServiceName:    "unknown_service",
 			expectedBufferMaxCount: bundler.DefaultBufferedByteLimit,
 			expectedBatchMaxCount:  bundler.DefaultBundleCountThreshold,
@@ -234,16 +215,6 @@ func TestNewRawExporterShouldFail(t *testing.T) {
 			endpoint:       WithCollectorEndpoint(""),
 			expectedErrMsg: "collectorEndpoint must not be empty",
 		},
-		{
-			name:           "with empty agent endpoint",
-			endpoint:       WithAgentEndpoint(""),
-			expectedErrMsg: "agentEndpoint must not be empty",
-		},
-		{
-			name:           "with invalid agent endpoint",
-			endpoint:       WithAgentEndpoint("localhost"),
-			expectedErrMsg: "address localhost: missing port in address",
-		},
 	}
 
 	for _, tc := range testCases {
@@ -266,7 +237,7 @@ func TestNewRawExporterShouldFailIfCollectorUnset(t *testing.T) {
 		require.NoError(t, envStore.Restore())
 	}()
 
-	// If the user sets the environment variable JAEGER_ENDPOINT, endpoint will always get a value.
+	// If the user sets the environment variable OTEL_EXPORTER_JAEGER_ENDPOINT, endpoint will always get a value.
 	require.NoError(t, os.Unsetenv(envEndpoint))
 
 	_, err := NewRawExporter(
@@ -300,14 +271,6 @@ func withTestCollectorEndpointInjected(ce *testCollectorEndpoint) func() (batchU
 }
 
 func TestExporter_ExportSpan(t *testing.T) {
-	envStore, err := ottest.SetEnvVariables(map[string]string{
-		envDisabled: "false",
-	})
-	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
-
 	const (
 		serviceName = "test-service"
 		tagKey      = "key"
@@ -938,14 +901,6 @@ func TestProcess(t *testing.T) {
 }
 
 func TestNewExporterPipelineWithOptions(t *testing.T) {
-	envStore, err := ottest.SetEnvVariables(map[string]string{
-		envDisabled: "false",
-	})
-	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
-
 	const (
 		serviceName     = "test-service"
 		eventCountLimit = 10
