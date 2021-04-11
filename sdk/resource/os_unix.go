@@ -17,7 +17,10 @@
 package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
 import (
+	"bufio"
 	"fmt"
+	"os"
+	"strings"
 
 	"golang.org/x/sys/unix"
 )
@@ -28,6 +31,20 @@ import (
 // of the `uname` commandline program. The final string resembles the one
 // obtained with a call to `uname -snrvm`.
 func osDescription() (string, error) {
+	uname, err := uname()
+	if err != nil {
+		return "", err
+	}
+
+	osRelease := osRelease()
+	if osRelease != "" {
+		return fmt.Sprintf("%s (%s)", osRelease, uname), nil
+	}
+
+	return uname, nil
+}
+
+func uname() (string, error) {
 	var utsName unix.Utsname
 
 	err := unix.Uname(&utsName)
@@ -54,4 +71,105 @@ func charsToString(charArray []byte) string {
 	}
 
 	return string(s[0:i])
+}
+
+func osRelease() string {
+	file, err := getOSReleaseFile()
+	if err != nil {
+		return ""
+	}
+
+	defer file.Close()
+
+	values := parseOSReleaseFile(file)
+
+	return buildOSRelease(values)
+}
+
+func getOSReleaseFile() (*os.File, error) {
+	file, err := os.Open("/etc/os-release")
+	if err != nil {
+		file, err = os.Open("/usr/lib/os-release")
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return file, nil
+}
+
+func parseOSReleaseFile(file *os.File) map[string]string {
+	values := make(map[string]string)
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		if skip(line) {
+			continue
+		}
+
+		key, value, ok := parse(line)
+		if ok {
+			values[key] = value
+		}
+	}
+
+	return values
+}
+
+func skip(line string) bool {
+	line = strings.TrimSpace(line)
+
+	return len(line) == 0 || strings.HasPrefix(line, "#")
+}
+
+func parse(line string) (string, string, bool) {
+	parts := strings.SplitN(line, "=", 2)
+
+	if len(parts) != 2 {
+		return "", "", false
+	}
+
+	key := strings.TrimSpace(parts[0])
+	value := unescape(unquote(strings.TrimSpace(parts[1])))
+
+	return key, value, true
+}
+
+func unquote(s string) string {
+	if (s[0] == '"' || s[0] == '\'') && s[0] == s[len(s)-1] {
+		return s[1 : len(s)-1]
+	}
+
+	return s
+}
+
+func unescape(s string) string {
+	s = strings.ReplaceAll(s, `\$`, `$`)
+	s = strings.ReplaceAll(s, `\"`, `"`)
+	s = strings.ReplaceAll(s, `\'`, `'`)
+	s = strings.ReplaceAll(s, `\\`, `\`)
+	s = strings.ReplaceAll(s, "\\`", "`")
+
+	return s
+}
+
+func buildOSRelease(values map[string]string) string {
+	var osRelease string
+
+	name := values["NAME"]
+	version := values["VERSION"]
+
+	if version == "" {
+		version = values["VERSION_ID"]
+	}
+
+	if name != "" && version != "" {
+		osRelease = fmt.Sprintf("%s %s", name, version)
+	} else {
+		osRelease = values["PRETTY_NAME"]
+	}
+
+	return osRelease
 }
