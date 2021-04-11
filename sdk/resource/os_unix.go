@@ -22,9 +22,11 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// osDescription issues a uname(2) system call and formats the output in a single
-// string, similar to the output of the `uname` commandline program. The final string
-// resembles the one obtained with a call to `uname -snrvm`.
+// osDescription returns a human readable OS version information string.
+// It issues a uname(2) system call (or equivalent on systems which doesn't
+// have one) and formats the output in a single string, similar to the output
+// of the `uname` commandline program. The final string resembles the one
+// obtained with a call to `uname -snrvm`.
 func osDescription() (string, error) {
 	var utsName unix.Utsname
 
