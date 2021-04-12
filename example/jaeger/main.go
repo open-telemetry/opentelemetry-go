@@ -29,31 +29,22 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-// initTracer creates a new trace provider instance and registers it as global trace provider.
-func initTracer() func() {
+func main() {
+	ctx := context.Background()
+
 	// Create and install Jaeger export pipeline.
-	flush, err := jaeger.InstallNewPipeline(
+	err := jaeger.InstallNewPipeline(
 		jaeger.WithCollectorEndpoint("http://localhost:14268/api/traces"),
-		jaeger.WithSDKOptions(
-			sdktrace.WithSampler(sdktrace.AlwaysSample()),
-			sdktrace.WithResource(resource.NewWithAttributes(
-				semconv.ServiceNameKey.String("trace-demo"),
-				attribute.String("exporter", "jaeger"),
-				attribute.Float64("float", 312.23),
-			)),
-		),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithResource(resource.NewWithAttributes(
+			semconv.ServiceNameKey.String("trace-demo"),
+			attribute.String("exporter", "jaeger"),
+			attribute.Float64("float", 312.23),
+		)),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
-	return flush
-}
-
-func main() {
-	ctx := context.Background()
-
-	flush := initTracer()
-	defer flush()
 
 	tr := otel.Tracer("component-main")
 	ctx, span := tr.Start(ctx, "foo")

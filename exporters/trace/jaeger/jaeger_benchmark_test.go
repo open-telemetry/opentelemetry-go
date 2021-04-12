@@ -71,11 +71,7 @@ func spans(n int) []*tracesdk.SpanSnapshot {
 func benchmarkExportSpans(b *testing.B, i int) {
 	ctx := context.Background()
 	s := spans(i)
-	exp, err := NewRawExporter(
-		withTestCollectorEndpoint(),
-		WithBatchMaxCount(i+1),
-		WithBufferMaxCount(i+1),
-	)
+	exp, err := NewRawExporter(withTestCollectorEndpoint())
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -87,7 +83,6 @@ func benchmarkExportSpans(b *testing.B, i int) {
 		if err := exp.ExportSpans(ctx, s); err != nil {
 			b.Error(err)
 		}
-		exp.bundler.Flush()
 	}
 }
 
