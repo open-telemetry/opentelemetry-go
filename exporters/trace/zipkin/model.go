@@ -21,14 +21,16 @@ import (
 	"net"
 	"strconv"
 
-	zkmodel "github.com/openzipkin/zipkin-go/model"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	tracesdk "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
+
+	zkmodel "github.com/openzipkin/zipkin-go/model"
+
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 )
 
 const (
@@ -38,6 +40,16 @@ const (
 	keyPeerHostname attribute.Key = "peer.hostname"
 	keyPeerAddress  attribute.Key = "peer.address"
 )
+
+var defaultServiceName string
+
+func init() {
+	// fetch service.name from default resource for backup
+	defaultResource := resource.Default()
+	if value, exists := defaultResource.Set().Value(semconv.ServiceNameKey); exists {
+		defaultServiceName = value.AsString()
+	}
+}
 
 func toZipkinSpanModels(batch []*tracesdk.SpanSnapshot) []zkmodel.SpanModel {
 	models := make([]zkmodel.SpanModel, 0, len(batch))
@@ -54,8 +66,7 @@ func getServiceName(attrs []attribute.KeyValue) string {
 		}
 	}
 
-	// Resource holds a default value so this might not be reach.
-	return ""
+	return defaultServiceName
 }
 
 func toZipkinSpanModel(data *tracesdk.SpanSnapshot) zkmodel.SpanModel {

@@ -954,10 +954,10 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 
 func TestServiceName(t *testing.T) {
 	attrs := []attribute.KeyValue{}
-	assert.Empty(t, getServiceName(attrs))
+	assert.Equal(t, defaultServiceName, getServiceName(attrs))
 
 	attrs = append(attrs, attribute.String("test_key", "test_value"))
-	assert.Empty(t, getServiceName(attrs))
+	assert.Equal(t, defaultServiceName, getServiceName(attrs))
 
 	attrs = append(attrs, semconv.ServiceNameKey.String("my_service"))
 	assert.Equal(t, "my_service", getServiceName(attrs))
