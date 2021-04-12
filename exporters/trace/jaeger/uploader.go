@@ -37,21 +37,23 @@ type batchUploader interface {
 
 type EndpointOption func() (batchUploader, error)
 
-// WithAgentEndpoint instructs exporter to send spans to jaeger-agent at this address.
-// For example, localhost:6831.
-func WithAgentEndpoint(agentEndpoint string, options ...AgentEndpointOption) EndpointOption {
+// WithAgentEndpoint configures the Jaeger exporter to send spans to a jaeger-agent. This will
+// use the following environment variables for configuration if no explicit option is provided:
+//
+// - OTEL_EXPORTER_JAEGER_AGENT_HOST is used for the agent address host
+// - OTEL_EXPORTER_JAEGER_AGENT_PORT is used for the agent address port
+//
+// The passed options will take precedence over any environment variables and default values
+// will be used if neither are provided.
+func WithAgentEndpoint(options ...AgentEndpointOption) EndpointOption {
 	return func() (batchUploader, error) {
-		if agentEndpoint == "" {
-			return nil, errors.New("agentEndpoint must not be empty")
-		}
-
 		o := &AgentEndpointOptions{
 			agentClientUDPParams{
-				HostPort:            agentEndpoint,
 				AttemptReconnecting: true,
+				Host:                envOr(envAgentHost, "localhost"),
+				Port:                envOr(envAgentPort, "6832"),
 			},
 		}
-
 		for _, opt := range options {
 			opt(o)
 		}
@@ -69,6 +71,26 @@ type AgentEndpointOption func(o *AgentEndpointOptions)
 
 type AgentEndpointOptions struct {
 	agentClientUDPParams
+}
+
+// WithAgentHost sets a host to be used in the agent client endpoint.
+// This option overrides any value set for the
+// OTEL_EXPORTER_JAEGER_AGENT_HOST environment variable.
+// If this option is not passed and the env var is not set, "localhost" will be used by default.
+func WithAgentHost(host string) AgentEndpointOption {
+	return func(o *AgentEndpointOptions) {
+		o.Host = host
+	}
+}
+
+// WithAgentPort sets a port to be used in the agent client endpoint.
+// This option overrides any value set for the
+// OTEL_EXPORTER_JAEGER_AGENT_PORT environment variable.
+// If this option is not passed and the env var is not set, "6832" will be used by default.
+func WithAgentPort(port string) AgentEndpointOption {
+	return func(o *AgentEndpointOptions) {
+		o.Port = port
+	}
 }
 
 // WithLogger sets a logger to be used by agent client.
