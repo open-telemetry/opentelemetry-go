@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go.opentelemetry.io/otel/exporters/otlp/internal/otlpconfig"
 	"sync"
 
 	"google.golang.org/grpc"
@@ -33,11 +34,22 @@ import (
 )
 
 type driver struct {
+	metricsDriver metricsDriver
+	tracesDriver  tracesDriver
+}
+
+type metricsDriver struct {
 	connection *connection
 
 	lock          sync.Mutex
 	metricsClient colmetricpb.MetricsServiceClient
-	tracesClient  coltracepb.TraceServiceClient
+}
+
+type tracesDriver struct {
+	connection *connection
+
+	lock         sync.Mutex
+	tracesClient coltracepb.TraceServiceClient
 }
 
 var (
@@ -46,26 +58,39 @@ var (
 
 // NewDriver creates a new gRPC protocol driver.
 func NewDriver(opts ...Option) otlp.ProtocolDriver {
-	cfg := config{
-		collectorEndpoint: fmt.Sprintf("%s:%d", otlp.DefaultCollectorHost, otlp.DefaultCollectorPort),
-		serviceConfig:     DefaultServiceConfig,
-	}
+
+	cfg := otlpconfig.NewDefaultConfig()
 	for _, opt := range opts {
-		opt(&cfg)
+		opt.Apply(&cfg)
 	}
 	d := &driver{}
-	d.connection = newConnection(cfg, d.handleNewConnection)
+
+	d.tracesDriver = tracesDriver{
+		connection: newConnection(cfg, cfg.Traces, d.tracesDriver.handleNewConnection),
+	}
+
+	d.metricsDriver = metricsDriver{
+		connection: newConnection(cfg, cfg.Metrics, d.metricsDriver.handleNewConnection),
+	}
 	return d
 }
 
-func (d *driver) handleNewConnection(cc *grpc.ClientConn) {
+func (d *metricsDriver) handleNewConnection(cc *grpc.ClientConn) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 	if cc != nil {
 		d.metricsClient = colmetricpb.NewMetricsServiceClient(cc)
-		d.tracesClient = coltracepb.NewTraceServiceClient(cc)
 	} else {
 		d.metricsClient = nil
+	}
+}
+
+func (d *tracesDriver) handleNewConnection(cc *grpc.ClientConn) {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+	if cc != nil {
+		d.tracesClient = coltracepb.NewTraceServiceClient(cc)
+	} else {
 		d.tracesClient = nil
 	}
 }
@@ -73,23 +98,28 @@ func (d *driver) handleNewConnection(cc *grpc.ClientConn) {
 // Start implements otlp.ProtocolDriver. It establishes a connection
 // to the collector.
 func (d *driver) Start(ctx context.Context) error {
-	d.connection.startConnection(ctx)
+	d.tracesDriver.connection.startConnection(ctx)
+	d.metricsDriver.connection.startConnection(ctx)
 	return nil
 }
 
 // Stop implements otlp.ProtocolDriver. It shuts down the connection
 // to the collector.
 func (d *driver) Stop(ctx context.Context) error {
-	return d.connection.shutdown(ctx)
+	if err := d.tracesDriver.connection.shutdown(ctx); err != nil {
+		return err
+	}
+
+	return d.metricsDriver.connection.shutdown(ctx)
 }
 
 // ExportMetrics implements otlp.ProtocolDriver. It transforms metrics
 // to protobuf binary format and sends the result to the collector.
 func (d *driver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error {
-	if !d.connection.connected() {
-		return fmt.Errorf("exporter disconnected: %w", d.connection.lastConnectError())
+	if !d.metricsDriver.connection.connected() {
+		return fmt.Errorf("metrics exporter is disconnected from the server %s: %w", d.metricsDriver.connection.sCfg.Endpoint, d.metricsDriver.connection.lastConnectError())
 	}
-	ctx, cancel := d.connection.contextWithStop(ctx)
+	ctx, cancel := d.metricsDriver.connection.contextWithStop(ctx)
 	defer cancel()
 
 	rms, err := transform.CheckpointSet(ctx, selector, cps, 1)
@@ -100,24 +130,24 @@ func (d *driver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet,
 		return nil
 	}
 
-	return d.uploadMetrics(ctx, rms)
+	return d.metricsDriver.uploadMetrics(ctx, rms)
 }
 
-func (d *driver) uploadMetrics(ctx context.Context, protoMetrics []*metricpb.ResourceMetrics) error {
-	ctx = d.connection.contextWithMetadata(ctx)
+func (md *metricsDriver) uploadMetrics(ctx context.Context, protoMetrics []*metricpb.ResourceMetrics) error {
+	ctx = md.connection.contextWithMetadata(ctx)
 	err := func() error {
-		d.lock.Lock()
-		defer d.lock.Unlock()
-		if d.metricsClient == nil {
+		md.lock.Lock()
+		defer md.lock.Unlock()
+		if md.metricsClient == nil {
 			return errNoClient
 		}
-		_, err := d.metricsClient.Export(ctx, &colmetricpb.ExportMetricsServiceRequest{
+		_, err := md.metricsClient.Export(ctx, &colmetricpb.ExportMetricsServiceRequest{
 			ResourceMetrics: protoMetrics,
 		})
 		return err
 	}()
 	if err != nil {
-		d.connection.setStateDisconnected(err)
+		md.connection.setStateDisconnected(err)
 	}
 	return err
 }
@@ -125,10 +155,10 @@ func (d *driver) uploadMetrics(ctx context.Context, protoMetrics []*metricpb.Res
 // ExportTraces implements otlp.ProtocolDriver. It transforms spans to
 // protobuf binary format and sends the result to the collector.
 func (d *driver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
-	if !d.connection.connected() {
-		return fmt.Errorf("exporter disconnected: %w", d.connection.lastConnectError())
+	if !d.tracesDriver.connection.connected() {
+		return fmt.Errorf("traces exporter is disconnected from the server %s: %w", d.tracesDriver.connection.sCfg.Endpoint, d.tracesDriver.connection.lastConnectError())
 	}
-	ctx, cancel := d.connection.contextWithStop(ctx)
+	ctx, cancel := d.tracesDriver.connection.contextWithStop(ctx)
 	defer cancel()
 
 	protoSpans := transform.SpanData(ss)
@@ -136,24 +166,24 @@ func (d *driver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) 
 		return nil
 	}
 
-	return d.uploadTraces(ctx, protoSpans)
+	return d.tracesDriver.uploadTraces(ctx, protoSpans)
 }
 
-func (d *driver) uploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) error {
-	ctx = d.connection.contextWithMetadata(ctx)
+func (td *tracesDriver) uploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) error {
+	ctx = td.connection.contextWithMetadata(ctx)
 	err := func() error {
-		d.lock.Lock()
-		defer d.lock.Unlock()
-		if d.tracesClient == nil {
+		td.lock.Lock()
+		defer td.lock.Unlock()
+		if td.tracesClient == nil {
 			return errNoClient
 		}
-		_, err := d.tracesClient.Export(ctx, &coltracepb.ExportTraceServiceRequest{
+		_, err := td.tracesClient.Export(ctx, &coltracepb.ExportTraceServiceRequest{
 			ResourceSpans: protoSpans,
 		})
 		return err
 	}()
 	if err != nil {
-		d.connection.setStateDisconnected(err)
+		td.connection.setStateDisconnected(err)
 	}
 	return err
 }

@@ -17,6 +17,8 @@ package otlpconfig // import "go.opentelemetry.io/otel/exporters/otlp/internal/o
 import (
 	"crypto/tls"
 	"fmt"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"time"
 
 	"go.opentelemetry.io/otel/exporters/otlp"
@@ -39,6 +41,31 @@ const (
 	// DefaultTimeout is a default max waiting time for the backend to process
 	// each span or metrics batch.
 	DefaultTimeout time.Duration = 10 * time.Second
+	// DefaultServiceConfig is the gRPC service config used if none is
+	// provided by the user.
+	DefaultServiceConfig = `{
+	"methodConfig":[{
+		"name":[
+			{ "service":"opentelemetry.proto.collector.metrics.v1.MetricsService" },
+			{ "service":"opentelemetry.proto.collector.trace.v1.TraceService" }
+		],
+		"retryPolicy":{
+			"MaxAttempts":5,
+			"InitialBackoff":"0.3s",
+			"MaxBackoff":"5s",
+			"BackoffMultiplier":2,
+			"RetryableStatusCodes":[
+				"CANCELLED",
+				"DEADLINE_EXCEEDED",
+				"RESOURCE_EXHAUSTED",
+				"ABORTED",
+				"OUT_OF_RANGE",
+				"UNAVAILABLE",
+				"DATA_LOSS"
+			]
+		}
+	}]
+}`
 )
 
 type SignalConfig struct {
@@ -49,15 +76,27 @@ type SignalConfig struct {
 	Compression otlp.Compression
 	Timeout     time.Duration
 	URLPath     string
+
+	// gRPC configurations
+	GrpcCredentials credentials.TransportCredentials
 }
 
 type Config struct {
+	// Signal specific configurations
 	Metrics SignalConfig
 	Traces  SignalConfig
 
+	// General configurations
 	MaxAttempts int
 	Backoff     time.Duration
-	Marshaler   otlp.Marshaler
+
+	// HTTP configuration
+	Marshaler otlp.Marshaler
+
+	// gRPC configurations
+	ReconnectionPeriod time.Duration
+	ServiceConfig      string
+	DialOptions        []grpc.DialOption
 }
 
 func NewDefaultConfig() Config {
@@ -74,8 +113,9 @@ func NewDefaultConfig() Config {
 			Compression: otlp.NoCompression,
 			Timeout:     DefaultTimeout,
 		},
-		MaxAttempts: DefaultMaxAttempts,
-		Backoff:     DefaultBackoff,
+		MaxAttempts:   DefaultMaxAttempts,
+		Backoff:       DefaultBackoff,
+		ServiceConfig: DefaultServiceConfig,
 	}
 
 	return c
@@ -304,5 +344,63 @@ func WithTracesTimeout(duration time.Duration) Option {
 func WithMetricsTimeout(duration time.Duration) Option {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Metrics.Timeout = duration
+	})
+}
+
+// WithReconnectionPeriod allows one to set the delay between next connection attempt
+// after failing to connect with the collector.
+func WithReconnectionPeriod(rp time.Duration) Option {
+	return newGenericOption(func(cfg *Config) {
+		cfg.ReconnectionPeriod = rp
+	})
+}
+
+// WithTLSCredentials allows the connection to use TLS credentials
+// when talking to the server. It takes in grpc.TransportCredentials instead
+// of say a Certificate file or a tls.Certificate, because the retrieving
+// these credentials can be done in many ways e.g. plain file, in code tls.Config
+// or by certificate rotation, so it is up to the caller to decide what to use.
+func WithTLSCredentials(creds credentials.TransportCredentials) Option {
+	return newGenericOption(func(cfg *Config) {
+		cfg.Traces.GrpcCredentials = creds
+		cfg.Metrics.GrpcCredentials = creds
+	})
+}
+
+// WithTracesTLSCredentials allows the connection to use TLS credentials
+// when talking to the traces server. It takes in grpc.TransportCredentials instead
+// of say a Certificate file or a tls.Certificate, because the retrieving
+// these credentials can be done in many ways e.g. plain file, in code tls.Config
+// or by certificate rotation, so it is up to the caller to decide what to use.
+func WithTracesTLSCredentials(creds credentials.TransportCredentials) Option {
+	return newGenericOption(func(cfg *Config) {
+		cfg.Traces.GrpcCredentials = creds
+	})
+}
+
+// WithMetricsTLSCredentials allows the connection to use TLS credentials
+// when talking to the metrics server. It takes in grpc.TransportCredentials instead
+// of say a Certificate file or a tls.Certificate, because the retrieving
+// these credentials can be done in many ways e.g. plain file, in code tls.Config
+// or by certificate rotation, so it is up to the caller to decide what to use.
+func WithMetricsTLSCredentials(creds credentials.TransportCredentials) Option {
+	return newGenericOption(func(cfg *Config) {
+		cfg.Metrics.GrpcCredentials = creds
+	})
+}
+
+// WithServiceConfig defines the default gRPC service config used.
+func WithServiceConfig(serviceConfig string) Option {
+	return newGenericOption(func(cfg *Config) {
+		cfg.ServiceConfig = serviceConfig
+	})
+}
+
+// WithDialOption opens support to any grpc.DialOption to be used. If it conflicts
+// with some other configuration the GRPC specified via the collector the ones here will
+// take preference since they are set last.
+func WithDialOption(opts ...grpc.DialOption) Option {
+	return newGenericOption(func(cfg *Config) {
+		cfg.DialOptions = opts
 	})
 }
