@@ -46,6 +46,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The Jaeger exporter now correctly records Span event's names using the `"event"` key for a tag.
   Additionally, this tag is overridden, as specified in the OTel specification, if the event contains an attribute with that key. (#1768)
 - Zipkin Exporter: Ensure mapping between OTel and Zipkin span data complies with the specification. (#1688)
+- Fixed typo for default service name in Jaeger Exporter. (#1797)
 
 ### Changed
 
