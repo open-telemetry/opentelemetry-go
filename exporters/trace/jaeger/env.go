@@ -15,33 +15,35 @@
 package jaeger // import "go.opentelemetry.io/otel/exporters/trace/jaeger"
 
 import (
-	"errors"
 	"os"
-	"strconv"
-	"strings"
-
-	"go.opentelemetry.io/otel/attribute"
 )
 
 // Environment variable names
 const (
-	// The service name.
-	envServiceName = "JAEGER_SERVICE_NAME"
-	// Whether the exporter is disabled or not. (default false).
-	envDisabled = "JAEGER_DISABLED"
-	// A comma separated list of name=value tracer-level tags, which get added to all reported spans.
-	// The value can also refer to an environment variable using the format ${envVarName:defaultValue}.
-	envTags = "JAEGER_TAGS"
+	// Hostname for the Jaeger agent, part of address where exporter sends spans
+	// i.e.	"localhost"
+	envAgentHost = "OTEL_EXPORTER_JAEGER_AGENT_HOST"
+	// Port for the Jaeger agent, part of address where exporter sends spans
+	// i.e. 6832
+	envAgentPort = "OTEL_EXPORTER_JAEGER_AGENT_PORT"
 	// The HTTP endpoint for sending spans directly to a collector,
 	// i.e. http://jaeger-collector:14268/api/traces.
-	envEndpoint = "JAEGER_ENDPOINT"
+	envEndpoint = "OTEL_EXPORTER_JAEGER_ENDPOINT"
 	// Username to send as part of "Basic" authentication to the collector endpoint.
-	envUser = "JAEGER_USER"
+	envUser = "OTEL_EXPORTER_JAEGER_USER"
 	// Password to send as part of "Basic" authentication to the collector endpoint.
-	envPassword = "JAEGER_PASSWORD"
+	envPassword = "OTEL_EXPORTER_JAEGER_PASSWORD"
 )
 
-// CollectorEndpointFromEnv return environment variable value of JAEGER_ENDPOINT
+// envOr returns an env variable's value if it is exists or the default if not
+func envOr(key, defaultValue string) string {
+	if v, ok := os.LookupEnv(key); ok && v != "" {
+		return v
+	}
+	return defaultValue
+}
+
+// CollectorEndpointFromEnv return environment variable value of OTEL_EXPORTER_JAEGER_ENDPOINT
 func CollectorEndpointFromEnv() string {
 	return os.Getenv(envEndpoint)
 }
@@ -54,76 +56,7 @@ func WithCollectorEndpointOptionFromEnv() CollectorEndpointOption {
 			o.username = e
 		}
 		if e := os.Getenv(envPassword); e != "" {
-			o.password = os.Getenv(envPassword)
+			o.password = e
 		}
 	}
-}
-
-// WithDisabledFromEnv uses environment variables and overrides disabled field.
-func WithDisabledFromEnv() Option {
-	return func(o *options) {
-		if e := os.Getenv(envDisabled); e != "" {
-			if v, err := strconv.ParseBool(e); err == nil {
-				o.Disabled = v
-			}
-		}
-	}
-}
-
-var errTagValueNotFound = errors.New("missing tag value")
-var errTagEnvironmentDefaultValueNotFound = errors.New("missing default value for tag environment value")
-
-// parseTags parses the given string into a collection of Tags.
-// Spec for this value:
-// - comma separated list of key=value
-// - value can be specified using the notation ${envVar:defaultValue}, where `envVar`
-// is an environment variable and `defaultValue` is the value to use in case the env var is not set
-func parseTags(sTags string) ([]attribute.KeyValue, error) {
-	pairs := strings.Split(sTags, ",")
-	tags := make([]attribute.KeyValue, len(pairs))
-	for i, p := range pairs {
-		field := strings.SplitN(p, "=", 2)
-		if len(field) != 2 {
-			return nil, errTagValueNotFound
-		}
-		k, v := strings.TrimSpace(field[0]), strings.TrimSpace(field[1])
-
-		if strings.HasPrefix(v, "${") && strings.HasSuffix(v, "}") {
-			ed := strings.SplitN(v[2:len(v)-1], ":", 2)
-			if len(ed) != 2 {
-				return nil, errTagEnvironmentDefaultValueNotFound
-			}
-			e, d := ed[0], ed[1]
-			v = os.Getenv(e)
-			if v == "" && d != "" {
-				v = d
-			}
-		}
-
-		tags[i] = parseKeyValue(k, v)
-	}
-
-	return tags, nil
-}
-
-func parseKeyValue(k, v string) attribute.KeyValue {
-	return attribute.KeyValue{
-		Key:   attribute.Key(k),
-		Value: parseValue(v),
-	}
-}
-
-func parseValue(str string) attribute.Value {
-	if v, err := strconv.ParseInt(str, 10, 64); err == nil {
-		return attribute.Int64Value(v)
-	}
-	if v, err := strconv.ParseFloat(str, 64); err == nil {
-		return attribute.Float64Value(v)
-	}
-	if v, err := strconv.ParseBool(str); err == nil {
-		return attribute.BoolValue(v)
-	}
-
-	// Fallback
-	return attribute.StringValue(str)
 }
