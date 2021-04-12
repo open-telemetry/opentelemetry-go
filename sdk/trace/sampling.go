@@ -15,6 +15,7 @@
 package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 
@@ -30,13 +31,12 @@ type Sampler interface {
 
 // SamplingParameters contains the values passed to a Sampler.
 type SamplingParameters struct {
-	ParentContext   trace.SpanContext
-	TraceID         trace.TraceID
-	Name            string
-	HasRemoteParent bool
-	Kind            trace.SpanKind
-	Attributes      []attribute.KeyValue
-	Links           []trace.Link
+	ParentContext context.Context
+	TraceID       trace.TraceID
+	Name          string
+	Kind          trace.SpanKind
+	Attributes    []attribute.KeyValue
+	Links         []trace.Link
 }
 
 // SamplingDecision indicates whether a span is dropped, recorded and/or sampled.
@@ -69,16 +69,17 @@ type traceIDRatioSampler struct {
 }
 
 func (ts traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
+	psc := trace.SpanContextFromContext(p.ParentContext)
 	x := binary.BigEndian.Uint64(p.TraceID[0:8]) >> 1
 	if x < ts.traceIDUpperBound {
 		return SamplingResult{
 			Decision:   RecordAndSample,
-			Tracestate: p.ParentContext.TraceState(),
+			Tracestate: psc.TraceState(),
 		}
 	}
 	return SamplingResult{
 		Decision:   Drop,
-		Tracestate: p.ParentContext.TraceState(),
+		Tracestate: psc.TraceState(),
 	}
 }
 
@@ -111,7 +112,7 @@ type alwaysOnSampler struct{}
 func (as alwaysOnSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	return SamplingResult{
 		Decision:   RecordAndSample,
-		Tracestate: p.ParentContext.TraceState(),
+		Tracestate: trace.SpanContextFromContext(p.ParentContext).TraceState(),
 	}
 }
 
@@ -132,7 +133,7 @@ type alwaysOffSampler struct{}
 func (as alwaysOffSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	return SamplingResult{
 		Decision:   Drop,
-		Tracestate: p.ParentContext.TraceState(),
+		Tracestate: trace.SpanContextFromContext(p.ParentContext).TraceState(),
 	}
 }
 
@@ -260,15 +261,16 @@ func (o localParentNotSampledOption) Apply(config *config) {
 func (localParentNotSampledOption) private() {}
 
 func (pb parentBased) ShouldSample(p SamplingParameters) SamplingResult {
-	if p.ParentContext.IsValid() {
-		if p.HasRemoteParent {
-			if p.ParentContext.IsSampled() {
+	psc := trace.SpanContextFromContext(p.ParentContext)
+	if psc.IsValid() {
+		if psc.IsRemote() {
+			if psc.IsSampled() {
 				return pb.config.remoteParentSampled.ShouldSample(p)
 			}
 			return pb.config.remoteParentNotSampled.ShouldSample(p)
 		}
 
-		if p.ParentContext.IsSampled() {
+		if psc.IsSampled() {
 			return pb.config.localParentSampled.ShouldSample(p)
 		}
 		return pb.config.localParentNotSampled.ShouldSample(p)

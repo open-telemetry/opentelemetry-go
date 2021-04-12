@@ -17,8 +17,6 @@ package trace
 import (
 	"context"
 	"time"
-
-	"go.opentelemetry.io/otel/sdk/export/trace/tracetest"
 )
 
 // DurationFilter is a SpanProcessor that filters spans that have lifetimes
@@ -76,8 +74,13 @@ func (f InstrumentationBlacklist) OnEnd(s ReadOnlySpan) {
 	f.Next.OnEnd(s)
 }
 
+type noopExporter struct{}
+
+func (noopExporter) ExportSpans(context.Context, []*SpanSnapshot) error { return nil }
+func (noopExporter) Shutdown(context.Context) error                     { return nil }
+
 func ExampleSpanProcessor() {
-	exportSP := NewSimpleSpanProcessor(tracetest.NewNoopExporter())
+	exportSP := NewSimpleSpanProcessor(noopExporter{})
 
 	// Build a SpanProcessor chain to filter out all spans from the pernicious
 	// "naughty-instrumentation" dependency and only allow spans shorter than

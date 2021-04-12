@@ -20,6 +20,7 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -30,11 +31,14 @@ func TestParentBasedDefaultLocalParentSampled(t *testing.T) {
 	sampler := ParentBased(AlwaysSample())
 	traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
-	parentCtx := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    traceID,
-		SpanID:     spanID,
-		TraceFlags: trace.FlagsSampled,
-	})
+	parentCtx := trace.ContextWithSpanContext(
+		context.Background(),
+		trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled,
+		}),
+	)
 	if sampler.ShouldSample(SamplingParameters{ParentContext: parentCtx}).Decision != RecordAndSample {
 		t.Error("Sampling decision should be RecordAndSample")
 	}
@@ -44,10 +48,13 @@ func TestParentBasedDefaultLocalParentNotSampled(t *testing.T) {
 	sampler := ParentBased(AlwaysSample())
 	traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
-	parentCtx := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID: traceID,
-		SpanID:  spanID,
-	})
+	parentCtx := trace.ContextWithSpanContext(
+		context.Background(),
+		trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID: traceID,
+			SpanID:  spanID,
+		}),
+	)
 	if sampler.ShouldSample(SamplingParameters{ParentContext: parentCtx}).Decision != Drop {
 		t.Error("Sampling decision should be Drop")
 	}
@@ -108,18 +115,20 @@ func TestParentBasedWithSamplerOptions(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 			spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
-			parentCtx := trace.NewSpanContext(trace.SpanContextConfig{
+			pscc := trace.SpanContextConfig{
 				TraceID: traceID,
 				SpanID:  spanID,
-			})
-
+				Remote:  tc.isParentRemote,
+			}
 			if tc.isParentSampled {
-				parentCtx = parentCtx.WithTraceFlags(trace.FlagsSampled)
+				pscc.TraceFlags = trace.FlagsSampled
 			}
 
-			params := SamplingParameters{ParentContext: parentCtx}
-			if tc.isParentRemote {
-				params.HasRemoteParent = true
+			params := SamplingParameters{
+				ParentContext: trace.ContextWithSpanContext(
+					context.Background(),
+					trace.NewSpanContext(pscc),
+				),
 			}
 
 			sampler := ParentBased(
@@ -127,16 +136,27 @@ func TestParentBasedWithSamplerOptions(t *testing.T) {
 				tc.samplerOption,
 			)
 
+			var wantStr, gotStr string
 			switch tc.expectedDecision {
 			case RecordAndSample:
-				if sampler.ShouldSample(params).Decision != tc.expectedDecision {
-					t.Error("Sampling decision should be RecordAndSample")
-				}
+				wantStr = "RecordAndSample"
 			case Drop:
-				if sampler.ShouldSample(params).Decision != tc.expectedDecision {
-					t.Error("Sampling decision should be Drop")
-				}
+				wantStr = "Drop"
+			default:
+				wantStr = "unknown"
 			}
+
+			actualDecision := sampler.ShouldSample(params).Decision
+			switch actualDecision {
+			case RecordAndSample:
+				gotStr = "RecordAndSample"
+			case Drop:
+				gotStr = "Drop"
+			default:
+				gotStr = "unknown"
+			}
+
+			assert.Equalf(t, tc.expectedDecision, actualDecision, "want %s, got %s", wantStr, gotStr)
 		})
 	}
 }
@@ -225,10 +245,14 @@ func TestTracestateIsPassed(t *testing.T) {
 				t.Error(err)
 			}
 
-			parentCtx := trace.NewSpanContext(trace.SpanContextConfig{
-				TraceState: traceState,
-			})
-			params := SamplingParameters{ParentContext: parentCtx}
+			params := SamplingParameters{
+				ParentContext: trace.ContextWithSpanContext(
+					context.Background(),
+					trace.NewSpanContext(trace.SpanContextConfig{
+						TraceState: traceState,
+					}),
+				),
+			}
 
 			require.Equal(t, traceState, tc.sampler.ShouldSample(params).Tracestate, "TraceState is not equal")
 		})
