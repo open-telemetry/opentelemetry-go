@@ -23,12 +23,10 @@ import (
 )
 
 func TestNewAgentClientUDPWithParamsBadHostport(t *testing.T) {
-	hostPort := "blahblah"
-
 	agentClient, err := newAgentClientUDP(agentClientUDPParams{
-		HostPort: hostPort,
+		Host: "blahblah",
+		Port: "",
 	})
-
 	assert.Error(t, err)
 	assert.Nil(t, agentClient)
 }
@@ -37,9 +35,12 @@ func TestNewAgentClientUDPWithParams(t *testing.T) {
 	mockServer, err := newUDPListener()
 	require.NoError(t, err)
 	defer mockServer.Close()
+	host, port, err := net.SplitHostPort(mockServer.LocalAddr().String())
+	assert.NoError(t, err)
 
 	agentClient, err := newAgentClientUDP(agentClientUDPParams{
-		HostPort:            mockServer.LocalAddr().String(),
+		Host:                host,
+		Port:                port,
 		MaxPacketSize:       25000,
 		AttemptReconnecting: true,
 	})
@@ -58,9 +59,12 @@ func TestNewAgentClientUDPWithParamsDefaults(t *testing.T) {
 	mockServer, err := newUDPListener()
 	require.NoError(t, err)
 	defer mockServer.Close()
+	host, port, err := net.SplitHostPort(mockServer.LocalAddr().String())
+	assert.NoError(t, err)
 
 	agentClient, err := newAgentClientUDP(agentClientUDPParams{
-		HostPort:            mockServer.LocalAddr().String(),
+		Host:                host,
+		Port:                port,
 		AttemptReconnecting: true,
 	})
 	assert.NoError(t, err)
@@ -78,9 +82,12 @@ func TestNewAgentClientUDPWithParamsReconnectingDisabled(t *testing.T) {
 	mockServer, err := newUDPListener()
 	require.NoError(t, err)
 	defer mockServer.Close()
+	host, port, err := net.SplitHostPort(mockServer.LocalAddr().String())
+	assert.NoError(t, err)
 
 	agentClient, err := newAgentClientUDP(agentClientUDPParams{
-		HostPort:            mockServer.LocalAddr().String(),
+		Host:                host,
+		Port:                port,
 		Logger:              nil,
 		AttemptReconnecting: false,
 	})

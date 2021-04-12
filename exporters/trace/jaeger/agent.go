@@ -49,7 +49,8 @@ type udpConn interface {
 }
 
 type agentClientUDPParams struct {
-	HostPort                 string
+	Host                     string
+	Port                     string
 	MaxPacketSize            int
 	Logger                   *log.Logger
 	AttemptReconnecting      bool
@@ -58,8 +59,9 @@ type agentClientUDPParams struct {
 
 // newAgentClientUDP creates a client that sends spans to Jaeger Agent over UDP.
 func newAgentClientUDP(params agentClientUDPParams) (*agentClientUDP, error) {
+	hostPort := net.JoinHostPort(params.Host, params.Port)
 	// validate hostport
-	if _, _, err := net.SplitHostPort(params.HostPort); err != nil {
+	if _, _, err := net.SplitHostPort(hostPort); err != nil {
 		return nil, err
 	}
 
@@ -80,12 +82,12 @@ func newAgentClientUDP(params agentClientUDPParams) (*agentClientUDP, error) {
 
 	if params.AttemptReconnecting {
 		// host is hostname, setup resolver loop in case host record changes during operation
-		connUDP, err = newReconnectingUDPConn(params.HostPort, params.MaxPacketSize, params.AttemptReconnectInterval, net.ResolveUDPAddr, net.DialUDP, params.Logger)
+		connUDP, err = newReconnectingUDPConn(hostPort, params.MaxPacketSize, params.AttemptReconnectInterval, net.ResolveUDPAddr, net.DialUDP, params.Logger)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		destAddr, err := net.ResolveUDPAddr("udp", params.HostPort)
+		destAddr, err := net.ResolveUDPAddr("udp", hostPort)
 		if err != nil {
 			return nil, err
 		}

@@ -15,209 +15,26 @@
 package jaeger
 
 import (
-	"math"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/attribute"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 )
-
-func Test_parseTags(t *testing.T) {
-	envStore, err := ottest.SetEnvVariables(map[string]string{
-		"existing": "not-default",
-	})
-	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
-
-	testCases := []struct {
-		name          string
-		tagStr        string
-		expectedTags  []attribute.KeyValue
-		expectedError error
-	}{
-		{
-			name:   "string",
-			tagStr: "key=value",
-			expectedTags: []attribute.KeyValue{
-				{
-					Key:   "key",
-					Value: attribute.StringValue("value"),
-				},
-			},
-		},
-		{
-			name:   "int64",
-			tagStr: "k=9223372036854775807,k2=-9223372036854775808",
-			expectedTags: []attribute.KeyValue{
-				{
-					Key:   "k",
-					Value: attribute.Int64Value(math.MaxInt64),
-				},
-				{
-					Key:   "k2",
-					Value: attribute.Int64Value(math.MinInt64),
-				},
-			},
-		},
-		{
-			name:   "float64",
-			tagStr: "k=1.797693134862315708145274237317043567981e+308,k2=4.940656458412465441765687928682213723651e-324,k3=-1.2",
-			expectedTags: []attribute.KeyValue{
-				{
-					Key:   "k",
-					Value: attribute.Float64Value(math.MaxFloat64),
-				},
-				{
-					Key:   "k2",
-					Value: attribute.Float64Value(math.SmallestNonzeroFloat64),
-				},
-				{
-					Key:   "k3",
-					Value: attribute.Float64Value(-1.2),
-				},
-			},
-		},
-		{
-			name:   "multiple type values",
-			tagStr: "k=v,k2=123, k3=v3 ,k4=-1.2, k5=${existing:default},k6=${nonExisting:default}",
-			expectedTags: []attribute.KeyValue{
-				{
-					Key:   "k",
-					Value: attribute.StringValue("v"),
-				},
-				{
-					Key:   "k2",
-					Value: attribute.Int64Value(123),
-				},
-				{
-					Key:   "k3",
-					Value: attribute.StringValue("v3"),
-				},
-				{
-					Key:   "k4",
-					Value: attribute.Float64Value(-1.2),
-				},
-				{
-					Key:   "k5",
-					Value: attribute.StringValue("not-default"),
-				},
-				{
-					Key:   "k6",
-					Value: attribute.StringValue("default"),
-				},
-			},
-		},
-		{
-			name:          "malformed: only have key",
-			tagStr:        "key",
-			expectedError: errTagValueNotFound,
-		},
-		{
-			name:          "malformed: environment key has no default value",
-			tagStr:        "key=${foo}",
-			expectedError: errTagEnvironmentDefaultValueNotFound,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			tags, err := parseTags(tc.tagStr)
-			if tc.expectedError == nil {
-				assert.NoError(t, err)
-				assert.Equal(t, tc.expectedTags, tags)
-			} else {
-				assert.Error(t, err)
-				assert.Equal(t, tc.expectedError, err)
-				assert.Equal(t, tc.expectedTags, tags)
-			}
-		})
-	}
-}
-
-func Test_parseValue(t *testing.T) {
-	testCases := []struct {
-		name     string
-		str      string
-		expected attribute.Value
-	}{
-		{
-			name:     "bool: true",
-			str:      "true",
-			expected: attribute.BoolValue(true),
-		},
-		{
-			name:     "bool: false",
-			str:      "false",
-			expected: attribute.BoolValue(false),
-		},
-		{
-			name:     "int64: 012340",
-			str:      "012340",
-			expected: attribute.Int64Value(12340),
-		},
-		{
-			name:     "int64: -012340",
-			str:      "-012340",
-			expected: attribute.Int64Value(-12340),
-		},
-		{
-			name:     "int64: 0",
-			str:      "0",
-			expected: attribute.Int64Value(0),
-		},
-		{
-			name:     "float64: -0.1",
-			str:      "-0.1",
-			expected: attribute.Float64Value(-0.1),
-		},
-		{
-			name:     "float64: 00.001",
-			str:      "00.001",
-			expected: attribute.Float64Value(0.001),
-		},
-		{
-			name:     "float64: 1E23",
-			str:      "1E23",
-			expected: attribute.Float64Value(1e23),
-		},
-		{
-			name:     "string: foo",
-			str:      "foo",
-			expected: attribute.StringValue("foo"),
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			v := parseValue(tc.str)
-			assert.Equal(t, tc.expected, v)
-		})
-	}
-}
 
 func TestNewRawExporterWithEnv(t *testing.T) {
 	const (
 		collectorEndpoint = "http://localhost"
 		username          = "user"
 		password          = "password"
-		serviceName       = "test-service"
-		disabled          = "false"
-		tags              = "key=value"
 	)
 
 	envStore, err := ottest.SetEnvVariables(map[string]string{
-		envEndpoint:    collectorEndpoint,
-		envUser:        username,
-		envPassword:    password,
-		envDisabled:    disabled,
-		envServiceName: serviceName,
-		envTags:        tags,
+		envEndpoint: collectorEndpoint,
+		envUser:     username,
+		envPassword: password,
 	})
 	require.NoError(t, err)
 	defer func() {
@@ -227,12 +44,9 @@ func TestNewRawExporterWithEnv(t *testing.T) {
 	// Create Jaeger Exporter with environment variables
 	exp, err := NewRawExporter(
 		WithCollectorEndpoint(CollectorEndpointFromEnv(), WithCollectorEndpointOptionFromEnv()),
-		WithDisabled(true),
-		WithDisabledFromEnv(),
 	)
 
 	assert.NoError(t, err)
-	assert.Equal(t, false, exp.o.Disabled)
 
 	require.IsType(t, &collectorUploader{}, exp.uploader)
 	uploader := exp.uploader.(*collectorUploader)
@@ -246,18 +60,12 @@ func TestNewRawExporterWithEnvImplicitly(t *testing.T) {
 		collectorEndpoint = "http://localhost"
 		username          = "user"
 		password          = "password"
-		serviceName       = "test-service"
-		disabled          = "false"
-		tags              = "key=value"
 	)
 
 	envStore, err := ottest.SetEnvVariables(map[string]string{
-		envEndpoint:    collectorEndpoint,
-		envUser:        username,
-		envPassword:    password,
-		envDisabled:    disabled,
-		envServiceName: serviceName,
-		envTags:        tags,
+		envEndpoint: collectorEndpoint,
+		envUser:     username,
+		envPassword: password,
 	})
 	require.NoError(t, err)
 	defer func() {
@@ -267,18 +75,81 @@ func TestNewRawExporterWithEnvImplicitly(t *testing.T) {
 	// Create Jaeger Exporter with environment variables
 	exp, err := NewRawExporter(
 		WithCollectorEndpoint("should be overwritten"),
-		WithDisabled(true),
 	)
 
 	assert.NoError(t, err)
-	// NewRawExporter will ignore Disabled env
-	assert.Equal(t, true, exp.o.Disabled)
 
 	require.IsType(t, &collectorUploader{}, exp.uploader)
 	uploader := exp.uploader.(*collectorUploader)
 	assert.Equal(t, collectorEndpoint, uploader.endpoint)
 	assert.Equal(t, username, uploader.username)
 	assert.Equal(t, password, uploader.password)
+}
+
+func TestEnvOrWithAgentHostPortFromEnv(t *testing.T) {
+	testCases := []struct {
+		name         string
+		envAgentHost string
+		envAgentPort string
+		defaultHost  string
+		defaultPort  string
+		expectedHost string
+		expectedPort string
+	}{
+		{
+			name:         "overrides default host/port values via environment variables",
+			envAgentHost: "localhost",
+			envAgentPort: "6832",
+			defaultHost:  "hostNameToBeReplaced",
+			defaultPort:  "8203",
+			expectedHost: "localhost",
+			expectedPort: "6832",
+		},
+		{
+			name:         "envAgentHost is empty, will not overwrite default host value",
+			envAgentHost: "",
+			envAgentPort: "6832",
+			defaultHost:  "hostNameNotToBeReplaced",
+			defaultPort:  "8203",
+			expectedHost: "hostNameNotToBeReplaced",
+			expectedPort: "6832",
+		},
+		{
+			name:         "envAgentPort is empty, will not overwrite default port value",
+			envAgentHost: "localhost",
+			envAgentPort: "",
+			defaultHost:  "hostNameToBeReplaced",
+			defaultPort:  "8203",
+			expectedHost: "localhost",
+			expectedPort: "8203",
+		},
+		{
+			name:         "envAgentHost and envAgentPort are empty, will not overwrite default host/port values",
+			envAgentHost: "",
+			envAgentPort: "",
+			defaultHost:  "hostNameNotToBeReplaced",
+			defaultPort:  "8203",
+			expectedHost: "hostNameNotToBeReplaced",
+			expectedPort: "8203",
+		},
+	}
+
+	envStore := ottest.NewEnvStore()
+	envStore.Record(envAgentHost)
+	envStore.Record(envAgentPort)
+	defer func() {
+		require.NoError(t, envStore.Restore())
+	}()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.NoError(t, os.Setenv(envAgentHost, tc.envAgentHost))
+			require.NoError(t, os.Setenv(envAgentPort, tc.envAgentPort))
+			host := envOr(envAgentHost, tc.defaultHost)
+			port := envOr(envAgentPort, tc.defaultPort)
+			assert.Equal(t, tc.expectedHost, host)
+			assert.Equal(t, tc.expectedPort, port)
+		})
+	}
 }
 
 func TestCollectorEndpointFromEnv(t *testing.T) {
@@ -348,44 +219,6 @@ func TestWithCollectorEndpointOptionFromEnv(t *testing.T) {
 			f(&tc.collectorEndpointOptions)
 
 			assert.Equal(t, tc.expectedCollectorEndpointOptions, tc.collectorEndpointOptions)
-		})
-	}
-}
-
-func TestWithDisabledFromEnv(t *testing.T) {
-	testCases := []struct {
-		name            string
-		env             string
-		options         options
-		expectedOptions options
-	}{
-		{
-			name:            "overwriting",
-			env:             "true",
-			options:         options{},
-			expectedOptions: options{Disabled: true},
-		},
-		{
-			name:            "no overwriting",
-			env:             "",
-			options:         options{Disabled: true},
-			expectedOptions: options{Disabled: true},
-		},
-	}
-
-	envStore := ottest.NewEnvStore()
-	envStore.Record(envDisabled)
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			require.NoError(t, os.Setenv(envDisabled, tc.env))
-
-			f := WithDisabledFromEnv()
-			f(&tc.options)
-
-			assert.Equal(t, tc.expectedOptions, tc.options)
 		})
 	}
 }

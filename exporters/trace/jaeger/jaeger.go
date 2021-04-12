@@ -146,7 +146,6 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 // with the recommended setup for trace provider
 func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (trace.TracerProvider, func(), error) {
 	o := options{}
-	opts = append(opts, WithDisabledFromEnv())
 	for _, opt := range opts {
 		opt(&o)
 	}
