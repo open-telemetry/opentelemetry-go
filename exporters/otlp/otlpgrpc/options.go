@@ -78,20 +78,23 @@ func WithReconnectionPeriod(rp time.Duration) Option {
 	return otlpconfig.WithReconnectionPeriod(rp)
 }
 
+func compressorToCompression(compressor string) otlp.Compression {
+	switch compressor {
+	case "gzip":
+		return otlp.GzipCompression
+	}
+
+	otel.Handle(fmt.Errorf("invalid compression type: '%s', using no compression.", compressor))
+	return otlp.NoCompression
+}
+
 // WithCompressor will set the compressor for the gRPC client to use when sending requests.
 // It is the responsibility of the caller to ensure that the compressor set has been registered
 // with google.golang.org/grpc/encoding. This can be done by encoding.RegisterCompressor. Some
 // compressors auto-register on import, such as gzip, which can be registered by calling
 // `import _ "google.golang.org/grpc/encoding/gzip"`
 func WithCompressor(compressor string) Option {
-	switch compressor {
-	case "gzip":
-		return otlpconfig.WithCompression(otlp.GzipCompression)
-	}
-
-	otel.Handle(fmt.Errorf("invalid compression type: '%s', using no compression.", compressor))
-
-	return otlpconfig.WithCompression(otlp.NoCompression)
+	return otlpconfig.WithCompression(compressorToCompression(compressor))
 }
 
 // WithTracesCompression will set the compressor for the gRPC client to use when sending traces requests.
@@ -100,14 +103,7 @@ func WithCompressor(compressor string) Option {
 // compressors auto-register on import, such as gzip, which can be registered by calling
 // `import _ "google.golang.org/grpc/encoding/gzip"`
 func WithTracesCompression(compressor string) Option {
-	switch compressor {
-	case "gzip":
-		return otlpconfig.WithTracesCompression(otlp.GzipCompression)
-	}
-
-	otel.Handle(fmt.Errorf("invalid compression type: '%s', using no compression.", compressor))
-
-	return otlpconfig.WithTracesCompression(otlp.NoCompression)
+	return otlpconfig.WithTracesCompression(compressorToCompression(compressor))
 }
 
 // WithMetricsCompression will set the compressor for the gRPC client to use when sending metrics requests.
@@ -116,14 +112,7 @@ func WithTracesCompression(compressor string) Option {
 // compressors auto-register on import, such as gzip, which can be registered by calling
 // `import _ "google.golang.org/grpc/encoding/gzip"`
 func WithMetricsCompression(compressor string) Option {
-	switch compressor {
-	case "gzip":
-		return otlpconfig.WithMetricsCompression(otlp.GzipCompression)
-	}
-
-	otel.Handle(fmt.Errorf("invalid compression type: '%s', using no compression.", compressor))
-
-	return otlpconfig.WithMetricsCompression(otlp.NoCompression)
+	return otlpconfig.WithMetricsCompression(compressorToCompression(compressor))
 }
 
 // WithHeaders will send the provided headers with gRPC requests
