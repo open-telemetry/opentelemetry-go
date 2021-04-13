@@ -17,10 +17,6 @@ package resource_test
 import (
 	"context"
 	"fmt"
-	"os"
-	"os/user"
-	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -28,7 +24,47 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-func TestWithProcessPID(t *testing.T) {
+var (
+	fakePID                = 123
+	fakeExecutableName     = "mock"
+	fakeExecutablePath     = "/fake/path"
+	fakeCommandArgs        = []string{"-t", "30"}
+	fakeOwner              = "gopher"
+	fakeRuntimeName        = "gcmock"
+	fakeRuntimeVersion     = "go1.2.3"
+	fakeRuntimeDescription = "go version go1.2.3 mock/mock"
+)
+
+func mockProcessAttributesProviders() {
+	resource.SetProcessAttributesProviders(
+		func() int { return fakePID },
+		func() string { return fakeExecutableName },
+		func() (string, error) { return fakeExecutablePath, nil },
+		func() []string { return fakeCommandArgs },
+		func() (string, error) { return fakeOwner, nil },
+		func() string { return fakeRuntimeName },
+		func() string { return fakeRuntimeVersion },
+		func() string { return fakeRuntimeDescription },
+	)
+}
+
+func TestWithProcessFuncs(t *testing.T) {
+	mockProcessAttributesProviders()
+
+	t.Run("WithPID", testWithProcessPID)
+	t.Run("WithExecutableName", testWithProcessExecutableName)
+	t.Run("WithExecutablePath", testWithProcessExecutablePath)
+	t.Run("WithCommandArgs", testWithProcessCommandArgs)
+	t.Run("WithOwner", testWithProcessOwner)
+	t.Run("WithRuntimeName", testWithProcessRuntimeName)
+	t.Run("WithRuntimeVersion", testWithProcessRuntimeVersion)
+	t.Run("WithRuntimeDescription", testWithProcessRuntimeDescription)
+	t.Run("WithProcess", testWithProcess)
+
+	// TODO: tear down (revert to original functions?)
+}
+
+func testWithProcessPID(t *testing.T) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
@@ -38,11 +74,11 @@ func TestWithProcessPID(t *testing.T) {
 
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{
-		"process.pid": fmt.Sprint(pid()),
+		"process.pid": fmt.Sprint(fakePID),
 	}, toMap(res))
 }
 
-func TestWithProcessExecutableName(t *testing.T) {
+func testWithProcessExecutableName(t *testing.T) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
@@ -52,11 +88,11 @@ func TestWithProcessExecutableName(t *testing.T) {
 
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{
-		"process.executable.name": executableName(),
+		"process.executable.name": fakeExecutableName,
 	}, toMap(res))
 }
 
-func TestWithProcessExecutablePath(t *testing.T) {
+func testWithProcessExecutablePath(t *testing.T) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
@@ -66,11 +102,11 @@ func TestWithProcessExecutablePath(t *testing.T) {
 
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{
-		"process.executable.path": executablePath(),
+		"process.executable.path": fakeExecutablePath,
 	}, toMap(res))
 }
 
-func TestWithProcessCommandArgs(t *testing.T) {
+func testWithProcessCommandArgs(t *testing.T) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
@@ -80,11 +116,11 @@ func TestWithProcessCommandArgs(t *testing.T) {
 
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{
-		"process.command_args": fmt.Sprint(commandArgs()),
+		"process.command_args": fmt.Sprint(fakeCommandArgs),
 	}, toMap(res))
 }
 
-func TestWithProcessOwner(t *testing.T) {
+func testWithProcessOwner(t *testing.T) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
@@ -94,11 +130,11 @@ func TestWithProcessOwner(t *testing.T) {
 
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{
-		"process.owner": owner(),
+		"process.owner": fakeOwner,
 	}, toMap(res))
 }
 
-func TestWithProcessRuntimeName(t *testing.T) {
+func testWithProcessRuntimeName(t *testing.T) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
@@ -108,11 +144,11 @@ func TestWithProcessRuntimeName(t *testing.T) {
 
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{
-		"process.runtime.name": runtimeName(),
+		"process.runtime.name": fakeRuntimeName,
 	}, toMap(res))
 }
 
-func TestWithProcessRuntimeVersion(t *testing.T) {
+func testWithProcessRuntimeVersion(t *testing.T) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
@@ -122,11 +158,11 @@ func TestWithProcessRuntimeVersion(t *testing.T) {
 
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{
-		"process.runtime.version": runtimeVersion(),
+		"process.runtime.version": fakeRuntimeVersion,
 	}, toMap(res))
 }
 
-func TestWithProcessRuntimeDescription(t *testing.T) {
+func testWithProcessRuntimeDescription(t *testing.T) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
@@ -136,11 +172,11 @@ func TestWithProcessRuntimeDescription(t *testing.T) {
 
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{
-		"process.runtime.description": runtimeDescription(),
+		"process.runtime.description": fakeRuntimeDescription,
 	}, toMap(res))
 }
 
-func TestWithProcess(t *testing.T) {
+func testWithProcess(t *testing.T) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
@@ -150,49 +186,13 @@ func TestWithProcess(t *testing.T) {
 
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{
-		"process.pid":                 fmt.Sprint(pid()),
-		"process.executable.name":     executableName(),
-		"process.executable.path":     executablePath(),
-		"process.command_args":        fmt.Sprint(commandArgs()),
-		"process.owner":               owner(),
-		"process.runtime.name":        runtimeName(),
-		"process.runtime.version":     runtimeVersion(),
-		"process.runtime.description": runtimeDescription(),
+		"process.pid":                 fmt.Sprint(fakePID),
+		"process.executable.name":     fakeExecutableName,
+		"process.executable.path":     fakeExecutablePath,
+		"process.command_args":        fmt.Sprint(fakeCommandArgs),
+		"process.owner":               fakeOwner,
+		"process.runtime.name":        fakeRuntimeName,
+		"process.runtime.version":     fakeRuntimeVersion,
+		"process.runtime.description": fakeRuntimeDescription,
 	}, toMap(res))
-}
-
-func pid() int {
-	return os.Getpid()
-}
-
-func executableName() string {
-	return filepath.Base(os.Args[0])
-}
-
-func executablePath() string {
-	executable, _ := os.Executable()
-
-	return executable
-}
-
-func commandArgs() []string {
-	return os.Args
-}
-
-func owner() string {
-	user, _ := user.Current()
-
-	return user.Username
-}
-
-func runtimeName() string {
-	return runtime.Compiler
-}
-
-func runtimeVersion() string {
-	return runtime.Version()
-}
-
-func runtimeDescription() string {
-	return fmt.Sprintf("go version %s %s/%s", runtime.Version(), runtime.GOOS, runtime.GOARCH)
 }
