@@ -62,14 +62,6 @@ func TestInstallNewPipeline(t *testing.T) {
 			endpoint:         WithAgentEndpoint(),
 			expectedProvider: &sdktrace.TracerProvider{},
 		},
-		{
-			name:     "with disabled",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
-			options: []Option{
-				WithDisabled(true),
-			},
-			expectedProvider: trace.NewNoopTracerProvider(),
-		},
 	}
 
 	for _, tc := range testCases {
@@ -100,14 +92,6 @@ func TestNewExportPipeline(t *testing.T) {
 			name:                 "simple pipeline",
 			endpoint:             WithCollectorEndpoint(collectorEndpoint),
 			expectedProviderType: &sdktrace.TracerProvider{},
-		},
-		{
-			name:     "with disabled",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
-			options: []Option{
-				WithDisabled(true),
-			},
-			expectedProviderType: trace.NewNoopTracerProvider(),
 		},
 		{
 			name:     "always on",
