@@ -175,16 +175,6 @@ func InstallNewPipeline(endpointOption EndpointOption, opts ...Option) (func(), 
 	return flushFn, nil
 }
 
-// Process contains the information exported to jaeger about the source
-// of the trace data.
-type Process struct {
-	// ServiceName is the Jaeger service name.
-	ServiceName string
-
-	// Tags are added to Jaeger Process exports
-	Tags []attribute.KeyValue
-}
-
 // Exporter is an implementation of an OTel SpanSyncer that uploads spans to
 // Jaeger.
 type Exporter struct {
