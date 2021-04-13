@@ -17,9 +17,10 @@ package otlpconfig // import "go.opentelemetry.io/otel/exporters/otlp/internal/o
 import (
 	"crypto/tls"
 	"fmt"
+	"time"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"time"
 
 	"go.opentelemetry.io/otel/exporters/otlp"
 )
@@ -68,36 +69,38 @@ const (
 }`
 )
 
-type SignalConfig struct {
-	Endpoint    string
-	Insecure    bool
-	TLSCfg      *tls.Config
-	Headers     map[string]string
-	Compression otlp.Compression
-	Timeout     time.Duration
-	URLPath     string
+type (
+	SignalConfig struct {
+		Endpoint    string
+		Insecure    bool
+		TLSCfg      *tls.Config
+		Headers     map[string]string
+		Compression otlp.Compression
+		Timeout     time.Duration
+		URLPath     string
 
-	// gRPC configurations
-	GrpcCredentials credentials.TransportCredentials
-}
+		// gRPC configurations
+		GrpcCredentials credentials.TransportCredentials
+	}
 
-type Config struct {
-	// Signal specific configurations
-	Metrics SignalConfig
-	Traces  SignalConfig
+	Config struct {
+		// Signal specific configurations
+		Metrics SignalConfig
+		Traces  SignalConfig
 
-	// General configurations
-	MaxAttempts int
-	Backoff     time.Duration
+		// General configurations
+		MaxAttempts int
+		Backoff     time.Duration
 
-	// HTTP configuration
-	Marshaler otlp.Marshaler
+		// HTTP configuration
+		Marshaler otlp.Marshaler
 
-	// gRPC configurations
-	ReconnectionPeriod time.Duration
-	ServiceConfig      string
-	DialOptions        []grpc.DialOption
-}
+		// gRPC configurations
+		ReconnectionPeriod time.Duration
+		ServiceConfig      string
+		DialOptions        []grpc.DialOption
+	}
+)
 
 func NewDefaultConfig() Config {
 	c := Config{
@@ -121,28 +124,102 @@ func NewDefaultConfig() Config {
 	return c
 }
 
-// Option applies an option to the HTTP driver.
-type Option interface {
-	Apply(*Config)
+type (
+	// GenericOption applies an option to the HTTP or gRPC driver.
+	GenericOption interface {
+		ApplyHTTPOption(*Config)
+		ApplyGRPCOption(*Config)
 
-	// A private method to prevent users implementing the
-	// interface and so future additions to it will not
-	// violate compatibility.
-	private()
-}
+		// A private method to prevent users implementing the
+		// interface and so future additions to it will not
+		// violate compatibility.
+		private()
+	}
+
+	// HTTPOption applies an option to the HTTP driver.
+	HTTPOption interface {
+		ApplyHTTPOption(*Config)
+
+		// A private method to prevent users implementing the
+		// interface and so future additions to it will not
+		// violate compatibility.
+		private()
+	}
+
+	// GRPCOption applies an option to the gRPC driver.
+	GRPCOption interface {
+		ApplyGRPCOption(*Config)
+
+		// A private method to prevent users implementing the
+		// interface and so future additions to it will not
+		// violate compatibility.
+		private()
+	}
+)
 
 type genericOption struct {
 	fn func(*Config)
 }
 
-func (g *genericOption) Apply(cfg *Config) {
+func (g *genericOption) ApplyGRPCOption(cfg *Config) {
+	g.fn(cfg)
+}
+
+func (g *genericOption) ApplyHTTPOption(cfg *Config) {
 	g.fn(cfg)
 }
 
 func (genericOption) private() {}
 
-func newGenericOption(fn func(cfg *Config)) Option {
+func newGenericOption(fn func(cfg *Config)) GenericOption {
 	return &genericOption{fn: fn}
+}
+
+type splitOption struct {
+	httpFn func(*Config)
+	grpcFn func(*Config)
+}
+
+func (g *splitOption) ApplyGRPCOption(cfg *Config) {
+	g.grpcFn(cfg)
+}
+
+func (g *splitOption) ApplyHTTPOption(cfg *Config) {
+	g.httpFn(cfg)
+}
+
+func (splitOption) private() {}
+
+func newSplitOption(httpFn func(cfg *Config), grpcFn func(cfg *Config)) GenericOption {
+	return &splitOption{httpFn: httpFn, grpcFn: grpcFn}
+}
+
+type httpOption struct {
+	fn func(*Config)
+}
+
+func (h *httpOption) ApplyHTTPOption(cfg *Config) {
+	h.fn(cfg)
+}
+
+func (httpOption) private() {}
+
+func NewHTTPOption(fn func(cfg *Config)) HTTPOption {
+	return &httpOption{fn: fn}
+}
+
+type grpcOption struct {
+	fn func(*Config)
+}
+
+func (h *grpcOption) ApplyGRPCOption(cfg *Config) {
+	h.fn(cfg)
+}
+
+func (grpcOption) private() {}
+
+func NewGRPCOption(fn func(cfg *Config)) GRPCOption {
+	return &grpcOption{fn: fn}
 }
 
 // WithEndpoint allows one to set the address of the collector
@@ -150,7 +227,7 @@ func newGenericOption(fn func(cfg *Config)) Option {
 // unset, it will instead try to use
 // DefaultCollectorHost:DefaultCollectorPort. Note that the endpoint
 // must not contain any URL path.
-func WithEndpoint(endpoint string) Option {
+func WithEndpoint(endpoint string) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Endpoint = endpoint
 		cfg.Metrics.Endpoint = endpoint
@@ -161,7 +238,7 @@ func WithEndpoint(endpoint string) Option {
 // endpoint that the driver will use to send spans. If
 // unset, it will instead try to use the Endpoint configuration.
 // Note that the endpoint must not contain any URL path.
-func WithTracesEndpoint(endpoint string) Option {
+func WithTracesEndpoint(endpoint string) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Endpoint = endpoint
 	})
@@ -171,14 +248,14 @@ func WithTracesEndpoint(endpoint string) Option {
 // endpoint that the driver will use to send metrics. If
 // unset, it will instead try to use the Endpoint configuration.
 // Note that the endpoint must not contain any URL path.
-func WithMetricsEndpoint(endpoint string) Option {
+func WithMetricsEndpoint(endpoint string) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Metrics.Endpoint = endpoint
 	})
 }
 
 // WithCompression tells the driver to compress the sent data.
-func WithCompression(compression otlp.Compression) Option {
+func WithCompression(compression otlp.Compression) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Compression = compression
 		cfg.Metrics.Compression = compression
@@ -186,14 +263,14 @@ func WithCompression(compression otlp.Compression) Option {
 }
 
 // WithTracesCompression tells the driver to compress the sent traces data.
-func WithTracesCompression(compression otlp.Compression) Option {
+func WithTracesCompression(compression otlp.Compression) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Compression = compression
 	})
 }
 
 // WithMetricsCompression tells the driver to compress the sent metrics data.
-func WithMetricsCompression(compression otlp.Compression) Option {
+func WithMetricsCompression(compression otlp.Compression) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Metrics.Compression = compression
 	})
@@ -201,7 +278,7 @@ func WithMetricsCompression(compression otlp.Compression) Option {
 
 // WithTracesURLPath allows one to override the default URL path used
 // for sending traces. If unset, DefaultTracesPath will be used.
-func WithTracesURLPath(urlPath string) Option {
+func WithTracesURLPath(urlPath string) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.URLPath = urlPath
 	})
@@ -209,7 +286,7 @@ func WithTracesURLPath(urlPath string) Option {
 
 // WithMetricsURLPath allows one to override the default URL path used
 // for sending metrics. If unset, DefaultMetricsPath will be used.
-func WithMetricsURLPath(urlPath string) Option {
+func WithMetricsURLPath(urlPath string) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Metrics.URLPath = urlPath
 	})
@@ -218,7 +295,7 @@ func WithMetricsURLPath(urlPath string) Option {
 // WithMaxAttempts allows one to override how many times the driver
 // will try to send the payload in case of retryable errors. If unset,
 // DefaultMaxAttempts will be used.
-func WithMaxAttempts(maxAttempts int) Option {
+func WithMaxAttempts(maxAttempts int) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.MaxAttempts = maxAttempts
 	})
@@ -227,7 +304,7 @@ func WithMaxAttempts(maxAttempts int) Option {
 // WithBackoff tells the driver to use the duration as a base of the
 // exponential backoff strategy. If unset, DefaultBackoff will be
 // used.
-func WithBackoff(duration time.Duration) Option {
+func WithBackoff(duration time.Duration) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Backoff = duration
 	})
@@ -236,34 +313,41 @@ func WithBackoff(duration time.Duration) Option {
 // WithTLSClientConfig can be used to set up a custom TLS
 // configuration for the client used to send payloads to the
 // collector. Use it if you want to use a custom certificate.
-func WithTLSClientConfig(tlsCfg *tls.Config) Option {
-	return newGenericOption(func(cfg *Config) {
+func WithTLSClientConfig(tlsCfg *tls.Config) GenericOption {
+	return newSplitOption(func(cfg *Config) {
 		cfg.Traces.TLSCfg = tlsCfg
 		cfg.Metrics.TLSCfg = tlsCfg
+	}, func(cfg *Config) {
+		cfg.Traces.GrpcCredentials = credentials.NewTLS(tlsCfg)
+		cfg.Metrics.GrpcCredentials = credentials.NewTLS(tlsCfg)
 	})
 }
 
 // WithTracesTLSClientConfig can be used to set up a custom TLS
 // configuration for the client used to send traces.
 // Use it if you want to use a custom certificate.
-func WithTracesTLSClientConfig(tlsCfg *tls.Config) Option {
-	return newGenericOption(func(cfg *Config) {
+func WithTracesTLSClientConfig(tlsCfg *tls.Config) GenericOption {
+	return newSplitOption(func(cfg *Config) {
 		cfg.Traces.TLSCfg = tlsCfg
+	}, func(cfg *Config) {
+		cfg.Traces.GrpcCredentials = credentials.NewTLS(tlsCfg)
 	})
 }
 
 // WithMetricsTLSClientConfig can be used to set up a custom TLS
 // configuration for the client used to send metrics.
 // Use it if you want to use a custom certificate.
-func WithMetricsTLSClientConfig(tlsCfg *tls.Config) Option {
-	return newGenericOption(func(cfg *Config) {
+func WithMetricsTLSClientConfig(tlsCfg *tls.Config) GenericOption {
+	return newSplitOption(func(cfg *Config) {
 		cfg.Metrics.TLSCfg = tlsCfg
+	}, func(cfg *Config) {
+		cfg.Metrics.GrpcCredentials = credentials.NewTLS(tlsCfg)
 	})
 }
 
 // WithInsecure tells the driver to connect to the collector using the
 // HTTP scheme, instead of HTTPS.
-func WithInsecure() Option {
+func WithInsecure() GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Insecure = true
 		cfg.Metrics.Insecure = true
@@ -272,7 +356,7 @@ func WithInsecure() Option {
 
 // WithInsecureTraces tells the driver to connect to the traces collector using the
 // HTTP scheme, instead of HTTPS.
-func WithInsecureTraces() Option {
+func WithInsecureTraces() GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Insecure = true
 	})
@@ -280,7 +364,7 @@ func WithInsecureTraces() Option {
 
 // WithInsecure tells the driver to connect to the metrics collector using the
 // HTTP scheme, instead of HTTPS.
-func WithInsecureMetrics() Option {
+func WithInsecureMetrics() GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Metrics.Insecure = true
 	})
@@ -289,7 +373,7 @@ func WithInsecureMetrics() Option {
 // WithHeaders allows one to tell the driver to send additional HTTP
 // headers with the payloads. Specifying headers like Content-Length,
 // Content-Encoding and Content-Type may result in a broken driver.
-func WithHeaders(headers map[string]string) Option {
+func WithHeaders(headers map[string]string) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Headers = headers
 		cfg.Metrics.Headers = headers
@@ -299,7 +383,7 @@ func WithHeaders(headers map[string]string) Option {
 // WithTracesHeaders allows one to tell the driver to send additional HTTP
 // headers with the trace payloads. Specifying headers like Content-Length,
 // Content-Encoding and Content-Type may result in a broken driver.
-func WithTracesHeaders(headers map[string]string) Option {
+func WithTracesHeaders(headers map[string]string) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Headers = headers
 	})
@@ -308,7 +392,7 @@ func WithTracesHeaders(headers map[string]string) Option {
 // WithMetricsHeaders allows one to tell the driver to send additional HTTP
 // headers with the metrics payloads. Specifying headers like Content-Length,
 // Content-Encoding and Content-Type may result in a broken driver.
-func WithMetricsHeaders(headers map[string]string) Option {
+func WithMetricsHeaders(headers map[string]string) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Metrics.Headers = headers
 	})
@@ -316,15 +400,15 @@ func WithMetricsHeaders(headers map[string]string) Option {
 
 // WithMarshal tells the driver which wire format to use when sending to the
 // collector.  If unset, MarshalProto will be used
-func WithMarshal(m otlp.Marshaler) Option {
-	return newGenericOption(func(cfg *Config) {
+func WithMarshal(m otlp.Marshaler) HTTPOption {
+	return NewHTTPOption(func(cfg *Config) {
 		cfg.Marshaler = m
 	})
 }
 
 // WithTimeout tells the driver the max waiting time for the backend to process
 // each spans or metrics batch.  If unset, the default will be 10 seconds.
-func WithTimeout(duration time.Duration) Option {
+func WithTimeout(duration time.Duration) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Timeout = duration
 		cfg.Metrics.Timeout = duration
@@ -333,7 +417,7 @@ func WithTimeout(duration time.Duration) Option {
 
 // WithTracesTimeout tells the driver the max waiting time for the backend to process
 // each spans batch.  If unset, the default will be 10 seconds.
-func WithTracesTimeout(duration time.Duration) Option {
+func WithTracesTimeout(duration time.Duration) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Timeout = duration
 	})
@@ -341,66 +425,8 @@ func WithTracesTimeout(duration time.Duration) Option {
 
 // WithMetricsTimeout tells the driver the max waiting time for the backend to process
 // each metrics batch.  If unset, the default will be 10 seconds.
-func WithMetricsTimeout(duration time.Duration) Option {
+func WithMetricsTimeout(duration time.Duration) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Metrics.Timeout = duration
-	})
-}
-
-// WithReconnectionPeriod allows one to set the delay between next connection attempt
-// after failing to connect with the collector.
-func WithReconnectionPeriod(rp time.Duration) Option {
-	return newGenericOption(func(cfg *Config) {
-		cfg.ReconnectionPeriod = rp
-	})
-}
-
-// WithTLSCredentials allows the connection to use TLS credentials
-// when talking to the server. It takes in grpc.TransportCredentials instead
-// of say a Certificate file or a tls.Certificate, because the retrieving
-// these credentials can be done in many ways e.g. plain file, in code tls.Config
-// or by certificate rotation, so it is up to the caller to decide what to use.
-func WithTLSCredentials(creds credentials.TransportCredentials) Option {
-	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.GrpcCredentials = creds
-		cfg.Metrics.GrpcCredentials = creds
-	})
-}
-
-// WithTracesTLSCredentials allows the connection to use TLS credentials
-// when talking to the traces server. It takes in grpc.TransportCredentials instead
-// of say a Certificate file or a tls.Certificate, because the retrieving
-// these credentials can be done in many ways e.g. plain file, in code tls.Config
-// or by certificate rotation, so it is up to the caller to decide what to use.
-func WithTracesTLSCredentials(creds credentials.TransportCredentials) Option {
-	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.GrpcCredentials = creds
-	})
-}
-
-// WithMetricsTLSCredentials allows the connection to use TLS credentials
-// when talking to the metrics server. It takes in grpc.TransportCredentials instead
-// of say a Certificate file or a tls.Certificate, because the retrieving
-// these credentials can be done in many ways e.g. plain file, in code tls.Config
-// or by certificate rotation, so it is up to the caller to decide what to use.
-func WithMetricsTLSCredentials(creds credentials.TransportCredentials) Option {
-	return newGenericOption(func(cfg *Config) {
-		cfg.Metrics.GrpcCredentials = creds
-	})
-}
-
-// WithServiceConfig defines the default gRPC service config used.
-func WithServiceConfig(serviceConfig string) Option {
-	return newGenericOption(func(cfg *Config) {
-		cfg.ServiceConfig = serviceConfig
-	})
-}
-
-// WithDialOption opens support to any grpc.DialOption to be used. If it conflicts
-// with some other configuration the GRPC specified via the collector the ones here will
-// take preference since they are set last.
-func WithDialOption(opts ...grpc.DialOption) Option {
-	return newGenericOption(func(cfg *Config) {
-		cfg.DialOptions = opts
 	})
 }

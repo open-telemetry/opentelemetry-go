@@ -16,10 +16,11 @@ package otlpgrpc
 
 import (
 	"fmt"
+	"time"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/otlpconfig"
-	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -27,7 +28,7 @@ import (
 
 // Option applies an option to the gRPC driver.
 type Option interface {
-	otlpconfig.Option
+	otlpconfig.GRPCOption
 }
 
 // WithInsecure disables client transport security for the exporter's gRPC connection
@@ -74,8 +75,10 @@ func WithMetricsEndpoint(endpoint string) Option {
 
 // WithReconnectionPeriod allows one to set the delay between next connection attempt
 // after failing to connect with the collector.
-func WithReconnectionPeriod(rp time.Duration) Option {
-	return otlpconfig.WithReconnectionPeriod(rp)
+func WithReconnectionPeriod(rp time.Duration) otlpconfig.GRPCOption {
+	return otlpconfig.NewGRPCOption(func(cfg *otlpconfig.Config) {
+		cfg.ReconnectionPeriod = rp
+	})
 }
 
 func compressorToCompression(compressor string) otlp.Compression {
@@ -84,7 +87,7 @@ func compressorToCompression(compressor string) otlp.Compression {
 		return otlp.GzipCompression
 	}
 
-	otel.Handle(fmt.Errorf("invalid compression type: '%s', using no compression.", compressor))
+	otel.Handle(fmt.Errorf("invalid compression type: '%s', using no compression as default", compressor))
 	return otlp.NoCompression
 }
 
@@ -136,7 +139,10 @@ func WithMetricsHeaders(headers map[string]string) Option {
 // these credentials can be done in many ways e.g. plain file, in code tls.Config
 // or by certificate rotation, so it is up to the caller to decide what to use.
 func WithTLSCredentials(creds credentials.TransportCredentials) Option {
-	return otlpconfig.WithTLSCredentials(creds)
+	return otlpconfig.NewGRPCOption(func(cfg *otlpconfig.Config) {
+		cfg.Traces.GrpcCredentials = creds
+		cfg.Metrics.GrpcCredentials = creds
+	})
 }
 
 // WithTracesTLSCredentials allows the connection to use TLS credentials
@@ -145,7 +151,9 @@ func WithTLSCredentials(creds credentials.TransportCredentials) Option {
 // these credentials can be done in many ways e.g. plain file, in code tls.Config
 // or by certificate rotation, so it is up to the caller to decide what to use.
 func WithTracesTLSCredentials(creds credentials.TransportCredentials) Option {
-	return otlpconfig.WithTracesTLSCredentials(creds)
+	return otlpconfig.NewGRPCOption(func(cfg *otlpconfig.Config) {
+		cfg.Traces.GrpcCredentials = creds
+	})
 }
 
 // WithMetricsTLSCredentials allows the connection to use TLS credentials
@@ -154,17 +162,23 @@ func WithTracesTLSCredentials(creds credentials.TransportCredentials) Option {
 // these credentials can be done in many ways e.g. plain file, in code tls.Config
 // or by certificate rotation, so it is up to the caller to decide what to use.
 func WithMetricsTLSCredentials(creds credentials.TransportCredentials) Option {
-	return otlpconfig.WithMetricsTLSCredentials(creds)
+	return otlpconfig.NewGRPCOption(func(cfg *otlpconfig.Config) {
+		cfg.Metrics.GrpcCredentials = creds
+	})
 }
 
 // WithServiceConfig defines the default gRPC service config used.
 func WithServiceConfig(serviceConfig string) Option {
-	return otlpconfig.WithServiceConfig(serviceConfig)
+	return otlpconfig.NewGRPCOption(func(cfg *otlpconfig.Config) {
+		cfg.ServiceConfig = serviceConfig
+	})
 }
 
 // WithDialOption opens support to any grpc.DialOption to be used. If it conflicts
 // with some other configuration the GRPC specified via the collector the ones here will
 // take preference since they are set last.
 func WithDialOption(opts ...grpc.DialOption) Option {
-	return otlpconfig.WithDialOption(opts...)
+	return otlpconfig.NewGRPCOption(func(cfg *otlpconfig.Config) {
+		cfg.DialOptions = opts
+	})
 }

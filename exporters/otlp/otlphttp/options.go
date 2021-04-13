@@ -43,7 +43,7 @@ const (
 
 // Option applies an option to the HTTP driver.
 type Option interface {
-	otlpconfig.Option
+	otlpconfig.HTTPOption
 }
 
 // WithEndpoint allows one to set the address of the collector

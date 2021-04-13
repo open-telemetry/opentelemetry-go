@@ -47,7 +47,7 @@ func TestConfigs(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		opts       []Option
+		opts       []GenericOption
 		env        env
 		fileReader fileReader
 		asserts    func(t *testing.T, c *Config)
@@ -69,7 +69,7 @@ func TestConfigs(t *testing.T) {
 		// Endpoint Tests
 		{
 			name: "Test With Endpoint",
-			opts: []Option{
+			opts: []GenericOption{
 				WithEndpoint("someendpoint"),
 			},
 			asserts: func(t *testing.T, c *Config) {
@@ -79,7 +79,7 @@ func TestConfigs(t *testing.T) {
 		},
 		{
 			name: "Test With Signal Specific Endpoint",
-			opts: []Option{
+			opts: []GenericOption{
 				WithEndpoint("overrode_by_signal_specific"),
 				WithTracesEndpoint("traces_endpoint"),
 				WithMetricsEndpoint("metrics_endpoint"),
@@ -113,7 +113,7 @@ func TestConfigs(t *testing.T) {
 		},
 		{
 			name: "Test Mixed Environment and With Endpoint",
-			opts: []Option{
+			opts: []GenericOption{
 				WithTracesEndpoint("traces_endpoint"),
 			},
 			env: map[string]string{
@@ -128,7 +128,7 @@ func TestConfigs(t *testing.T) {
 		// Certificate tests
 		{
 			name: "Test With Certificate",
-			opts: []Option{
+			opts: []GenericOption{
 				WithTLSClientConfig(tlsCert),
 			},
 			asserts: func(t *testing.T, c *Config) {
@@ -138,7 +138,7 @@ func TestConfigs(t *testing.T) {
 		},
 		{
 			name: "Test With Signal Specific Endpoint",
-			opts: []Option{
+			opts: []GenericOption{
 				WithTLSClientConfig(&tls.Config{}),
 				WithTracesTLSClientConfig(tlsCert),
 				WithMetricsTLSClientConfig(&tls.Config{RootCAs: x509.NewCertPool()}),
@@ -179,7 +179,7 @@ func TestConfigs(t *testing.T) {
 		},
 		{
 			name: "Test Mixed Environment and With Endpoint",
-			opts: []Option{
+			opts: []GenericOption{
 				WithMetricsTLSClientConfig(&tls.Config{RootCAs: x509.NewCertPool()}),
 			},
 			env: map[string]string{
@@ -197,7 +197,7 @@ func TestConfigs(t *testing.T) {
 		// Headers tests
 		{
 			name: "Test With Headers",
-			opts: []Option{
+			opts: []GenericOption{
 				WithHeaders(map[string]string{"h1": "v1"}),
 			},
 			asserts: func(t *testing.T, c *Config) {
@@ -207,7 +207,7 @@ func TestConfigs(t *testing.T) {
 		},
 		{
 			name: "Test With Signal Specific Headers",
-			opts: []Option{
+			opts: []GenericOption{
 				WithHeaders(map[string]string{"overrode": "by_signal_specific"}),
 				WithMetricsHeaders(map[string]string{"m1": "mv1"}),
 				WithTracesHeaders(map[string]string{"t1": "tv1"}),
@@ -240,7 +240,7 @@ func TestConfigs(t *testing.T) {
 		{
 			name: "Test Mixed Environment and With Headers",
 			env:  map[string]string{"OTEL_EXPORTER_OTLP_HEADERS": "h1=v1,h2=v2"},
-			opts: []Option{
+			opts: []GenericOption{
 				WithMetricsHeaders(map[string]string{"m1": "mv1"}),
 			},
 			asserts: func(t *testing.T, c *Config) {
@@ -252,7 +252,7 @@ func TestConfigs(t *testing.T) {
 		// Compression Tests
 		{
 			name: "Test With Compression",
-			opts: []Option{
+			opts: []GenericOption{
 				WithCompression(otlp.GzipCompression),
 			},
 			asserts: func(t *testing.T, c *Config) {
@@ -262,7 +262,7 @@ func TestConfigs(t *testing.T) {
 		},
 		{
 			name: "Test With Signal Specific Compression",
-			opts: []Option{
+			opts: []GenericOption{
 				WithCompression(otlp.NoCompression), // overrode by signal specific configs
 				WithTracesCompression(otlp.GzipCompression),
 				WithMetricsCompression(otlp.GzipCompression),
@@ -295,7 +295,7 @@ func TestConfigs(t *testing.T) {
 		},
 		{
 			name: "Test Mixed Environment and With Compression",
-			opts: []Option{
+			opts: []GenericOption{
 				WithTracesCompression(otlp.NoCompression),
 			},
 			env: map[string]string{
@@ -311,7 +311,7 @@ func TestConfigs(t *testing.T) {
 		// Timeout Tests
 		{
 			name: "Test With Timeout",
-			opts: []Option{
+			opts: []GenericOption{
 				WithTimeout(time.Duration(5 * time.Second)),
 			},
 			asserts: func(t *testing.T, c *Config) {
@@ -321,7 +321,7 @@ func TestConfigs(t *testing.T) {
 		},
 		{
 			name: "Test With Signal Specific Timeout",
-			opts: []Option{
+			opts: []GenericOption{
 				WithTimeout(time.Duration(5 * time.Second)),
 				WithTracesTimeout(time.Duration(13 * time.Second)),
 				WithMetricsTimeout(time.Duration(14 * time.Second)),
@@ -360,7 +360,7 @@ func TestConfigs(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_TRACES_TIMEOUT":  "27000",
 				"OTEL_EXPORTER_OTLP_METRICS_TIMEOUT": "28000",
 			},
-			opts: []Option{
+			opts: []GenericOption{
 				WithTracesTimeout(5 * time.Second),
 			},
 			asserts: func(t *testing.T, c *Config) {
@@ -378,10 +378,10 @@ func TestConfigs(t *testing.T) {
 				GetEnv:   tt.env.getEnv,
 				ReadFile: tt.fileReader.readFile,
 			}
-			e.ApplyEnvConfigs(&cfg)
+			e.ApplyHTTPEnvConfigs(&cfg)
 
 			for _, opt := range tt.opts {
-				opt.Apply(&cfg)
+				opt.ApplyHTTPOption(&cfg)
 			}
 			tt.asserts(t, &cfg)
 		})

@@ -18,8 +18,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.opentelemetry.io/otel/exporters/otlp/internal/otlpconfig"
 	"sync"
+
+	"go.opentelemetry.io/otel/exporters/otlp/internal/otlpconfig"
 
 	"google.golang.org/grpc"
 
@@ -58,11 +59,12 @@ var (
 
 // NewDriver creates a new gRPC protocol driver.
 func NewDriver(opts ...Option) otlp.ProtocolDriver {
-
 	cfg := otlpconfig.NewDefaultConfig()
+	otlpconfig.ApplyGRPCEnvConfigs(&cfg)
 	for _, opt := range opts {
-		opt.Apply(&cfg)
+		opt.ApplyGRPCOption(&cfg)
 	}
+
 	d := &driver{}
 
 	d.tracesDriver = tracesDriver{
@@ -75,23 +77,23 @@ func NewDriver(opts ...Option) otlp.ProtocolDriver {
 	return d
 }
 
-func (d *metricsDriver) handleNewConnection(cc *grpc.ClientConn) {
-	d.lock.Lock()
-	defer d.lock.Unlock()
+func (md *metricsDriver) handleNewConnection(cc *grpc.ClientConn) {
+	md.lock.Lock()
+	defer md.lock.Unlock()
 	if cc != nil {
-		d.metricsClient = colmetricpb.NewMetricsServiceClient(cc)
+		md.metricsClient = colmetricpb.NewMetricsServiceClient(cc)
 	} else {
-		d.metricsClient = nil
+		md.metricsClient = nil
 	}
 }
 
-func (d *tracesDriver) handleNewConnection(cc *grpc.ClientConn) {
-	d.lock.Lock()
-	defer d.lock.Unlock()
+func (td *tracesDriver) handleNewConnection(cc *grpc.ClientConn) {
+	td.lock.Lock()
+	defer td.lock.Unlock()
 	if cc != nil {
-		d.tracesClient = coltracepb.NewTraceServiceClient(cc)
+		td.tracesClient = coltracepb.NewTraceServiceClient(cc)
 	} else {
-		d.tracesClient = nil
+		td.tracesClient = nil
 	}
 }
 

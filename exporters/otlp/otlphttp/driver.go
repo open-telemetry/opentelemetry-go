@@ -83,11 +83,11 @@ var _ otlp.ProtocolDriver = (*driver)(nil)
 // NewDriver creates a new HTTP driver.
 func NewDriver(opts ...Option) otlp.ProtocolDriver {
 	cfg := otlpconfig.NewDefaultConfig()
-	otlpconfig.ApplyEnvConfigs(&cfg)
-
+	otlpconfig.ApplyHTTPEnvConfigs(&cfg)
 	for _, opt := range opts {
-		opt.Apply(&cfg)
+		opt.ApplyHTTPOption(&cfg)
 	}
+
 	for pathPtr, defaultPath := range map[*string]string{
 		&cfg.Traces.URLPath:  DefaultTracesPath,
 		&cfg.Metrics.URLPath: DefaultMetricsPath,

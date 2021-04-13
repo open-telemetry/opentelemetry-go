@@ -29,16 +29,22 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
-func ApplyEnvConfigs(cfg *Config) {
+func ApplyGRPCEnvConfigs(cfg *Config) {
 	e := EnvOptionsReader{
 		GetEnv:   os.Getenv,
 		ReadFile: ioutil.ReadFile,
 	}
 
-	opts := e.GetOptionsFromEnv()
-	for _, opt := range opts {
-		opt.Apply(cfg)
+	e.ApplyGRPCEnvConfigs(cfg)
+}
+
+func ApplyHTTPEnvConfigs(cfg *Config) {
+	e := EnvOptionsReader{
+		GetEnv:   os.Getenv,
+		ReadFile: ioutil.ReadFile,
 	}
+
+	e.ApplyHTTPEnvConfigs(cfg)
 }
 
 type EnvOptionsReader struct {
@@ -46,15 +52,22 @@ type EnvOptionsReader struct {
 	ReadFile func(filename string) ([]byte, error)
 }
 
-func (e *EnvOptionsReader) ApplyEnvConfigs(cfg *Config) {
+func (e *EnvOptionsReader) ApplyHTTPEnvConfigs(cfg *Config) {
 	opts := e.GetOptionsFromEnv()
 	for _, opt := range opts {
-		opt.Apply(cfg)
+		opt.ApplyHTTPOption(cfg)
 	}
 }
 
-func (e *EnvOptionsReader) GetOptionsFromEnv() []Option {
-	var opts []Option
+func (e *EnvOptionsReader) ApplyGRPCEnvConfigs(cfg *Config) {
+	opts := e.GetOptionsFromEnv()
+	for _, opt := range opts {
+		opt.ApplyGRPCOption(cfg)
+	}
+}
+
+func (e *EnvOptionsReader) GetOptionsFromEnv() []GenericOption {
+	var opts []GenericOption
 
 	// Endpoint
 	if v, ok := e.getEnvValue("ENDPOINT"); ok {
