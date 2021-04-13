@@ -14,4 +14,18 @@
 
 package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
-var SetProcessAttributesProviders = setProcessAttributesProviders
+var (
+	SetDefaultOSProviders      = setDefaultOSProviders
+	SetOSProviders             = setOSProviders
+	SetDefaultRuntimeProviders = setDefaultRuntimeProviders
+	SetRuntimeProviders        = setRuntimeProviders
+	SetDefaultUserProviders    = setDefaultUserProviders
+	SetUserProviders           = setUserProviders
+)
+
+var (
+	CommandArgs = commandArgs
+	RuntimeName = runtimeName
+	RuntimeOS   = runtimeOS
+	RuntimeArch = runtimeArch
+)

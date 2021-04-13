@@ -17,6 +17,9 @@ package resource_test
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/user"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -25,27 +28,79 @@ import (
 )
 
 var (
-	fakePID                = 123
+	fakePID            = 123
+	fakeExecutablePath = "/fake/path/mock"
+	fakeCommandArgs    = []string{"mock", "-t", "30"}
+	fakeOwner          = "gopher"
+	fakeRuntimeName    = "gcmock"
+	fakeRuntimeVersion = "go1.2.3"
+	fakeRuntimeOS      = "linux"
+	fakeRuntimeArch    = "amd64"
+)
+
+var (
 	fakeExecutableName     = "mock"
-	fakeExecutablePath     = "/fake/path"
-	fakeCommandArgs        = []string{"-t", "30"}
-	fakeOwner              = "gopher"
-	fakeRuntimeName        = "gcmock"
-	fakeRuntimeVersion     = "go1.2.3"
-	fakeRuntimeDescription = "go version go1.2.3 mock/mock"
+	fakeRuntimeDescription = "go version go1.2.3 linux/amd64"
+)
+
+var (
+	fakePidProvider            = func() int { return fakePID }
+	fakeExecutablePathProvider = func() (string, error) { return fakeExecutablePath, nil }
+	fakeCommandArgsProvider    = func() []string { return fakeCommandArgs }
+	fakeOwnerProvider          = func() (*user.User, error) { return &user.User{Username: fakeOwner}, nil }
+	fakeRuntimeNameProvider    = func() string { return fakeRuntimeName }
+	fakeRuntimeVersionProvider = func() string { return fakeRuntimeVersion }
+	fakeRuntimeOSProvider      = func() string { return fakeRuntimeOS }
+	fakeRuntimeArchProvider    = func() string { return fakeRuntimeArch }
+)
+
+var (
+	fakeExecutablePathProviderWithError = func() (string, error) {
+		return "", fmt.Errorf("Unable to get process executable")
+	}
+	fakeOwnerProviderWithError = func() (*user.User, error) {
+		return nil, fmt.Errorf("Unable to get process user")
+	}
 )
 
 func mockProcessAttributesProviders() {
-	resource.SetProcessAttributesProviders(
-		func() int { return fakePID },
-		func() string { return fakeExecutableName },
-		func() (string, error) { return fakeExecutablePath, nil },
-		func() []string { return fakeCommandArgs },
-		func() (string, error) { return fakeOwner, nil },
-		func() string { return fakeRuntimeName },
-		func() string { return fakeRuntimeVersion },
-		func() string { return fakeRuntimeDescription },
+	resource.SetOSProviders(
+		fakePidProvider,
+		fakeExecutablePathProvider,
+		fakeCommandArgsProvider,
 	)
+	resource.SetRuntimeProviders(
+		fakeRuntimeNameProvider,
+		fakeRuntimeVersionProvider,
+		fakeRuntimeOSProvider,
+		fakeRuntimeArchProvider,
+	)
+	resource.SetUserProviders(
+		fakeOwnerProvider,
+	)
+}
+
+func mockProcessAttributesProvidersWithErrors() {
+	resource.SetOSProviders(
+		fakePidProvider,
+		fakeExecutablePathProviderWithError,
+		fakeCommandArgsProvider,
+	)
+	resource.SetRuntimeProviders(
+		fakeRuntimeNameProvider,
+		fakeRuntimeVersionProvider,
+		fakeRuntimeOSProvider,
+		fakeRuntimeArchProvider,
+	)
+	resource.SetUserProviders(
+		fakeOwnerProviderWithError,
+	)
+}
+
+func restoreProcessAttributesProviders() {
+	resource.SetDefaultOSProviders()
+	resource.SetDefaultRuntimeProviders()
+	resource.SetDefaultUserProviders()
 }
 
 func TestWithProcessFuncs(t *testing.T) {
@@ -61,7 +116,32 @@ func TestWithProcessFuncs(t *testing.T) {
 	t.Run("WithRuntimeDescription", testWithProcessRuntimeDescription)
 	t.Run("WithProcess", testWithProcess)
 
-	// TODO: tear down (revert to original functions?)
+	restoreProcessAttributesProviders()
+}
+
+func TestWithProcessFuncsErrors(t *testing.T) {
+	mockProcessAttributesProvidersWithErrors()
+
+	t.Run("WithPID", testWithProcessExecutablePathError)
+	t.Run("WithExecutableName", testWithProcessOwnerError)
+
+	restoreProcessAttributesProviders()
+}
+
+func TestCommandArgs(t *testing.T) {
+	require.EqualValues(t, os.Args, resource.CommandArgs())
+}
+
+func TestRuntimeName(t *testing.T) {
+	require.EqualValues(t, runtime.Compiler, resource.RuntimeName())
+}
+
+func TestRuntimeOS(t *testing.T) {
+	require.EqualValues(t, runtime.GOOS, resource.RuntimeOS())
+}
+
+func TestRuntimeArch(t *testing.T) {
+	require.EqualValues(t, runtime.GOARCH, resource.RuntimeArch())
 }
 
 func testWithProcessPID(t *testing.T) {
@@ -195,4 +275,28 @@ func testWithProcess(t *testing.T) {
 		"process.runtime.version":     fakeRuntimeVersion,
 		"process.runtime.description": fakeRuntimeDescription,
 	}, toMap(res))
+}
+
+func testWithProcessExecutablePathError(t *testing.T) {
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithoutBuiltin(),
+		resource.WithProcessExecutablePath(),
+	)
+
+	require.Error(t, err)
+	require.EqualValues(t, map[string]string{}, toMap(res))
+}
+
+func testWithProcessOwnerError(t *testing.T) {
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithoutBuiltin(),
+		resource.WithProcessOwner(),
+	)
+
+	require.Error(t, err)
+	require.EqualValues(t, map[string]string{}, toMap(res))
 }
