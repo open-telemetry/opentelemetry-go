@@ -91,7 +91,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Remove `Process` configuration, `WithProcessFromEnv` and `ProcessFromEnv`, and type from the Jaeger exporter package.
   The information that could be configured in the `Process` struct should be configured in a `Resource` instead. (#1776, #1804)
 - Remove the `WithDisabled` option from the Jaeger exporter.
-  To disable the exporter unregister it from the `TracerProvider` or use a no-operation `TracerProvider`. (TBD)
+  To disable the exporter unregister it from the `TracerProvider` or use a no-operation `TracerProvider`. (#1806)
 
 ## [0.19.0] - 2021-03-18
 
