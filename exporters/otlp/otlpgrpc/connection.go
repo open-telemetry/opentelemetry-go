@@ -16,14 +16,16 @@ package otlpgrpc
 
 import (
 	"context"
-	"go.opentelemetry.io/otel/exporters/otlp"
-	"go.opentelemetry.io/otel/exporters/otlp/internal/otlpconfig"
-	"google.golang.org/grpc/encoding/gzip"
 	"math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
+
+	"google.golang.org/grpc/encoding/gzip"
+
+	"go.opentelemetry.io/otel/exporters/otlp"
+	"go.opentelemetry.io/otel/exporters/otlp/internal/otlpconfig"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
