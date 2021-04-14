@@ -294,8 +294,8 @@ func WithBackoff(duration time.Duration) GenericOption {
 
 func WithTLSClientConfig(tlsCfg *tls.Config) GenericOption {
 	return newSplitOption(func(cfg *Config) {
-		cfg.Traces.TLSCfg = tlsCfg
-		cfg.Metrics.TLSCfg = tlsCfg
+		cfg.Traces.TLSCfg = tlsCfg.Clone()
+		cfg.Metrics.TLSCfg = tlsCfg.Clone()
 	}, func(cfg *Config) {
 		cfg.Traces.GrpcCredentials = credentials.NewTLS(tlsCfg)
 		cfg.Metrics.GrpcCredentials = credentials.NewTLS(tlsCfg)
@@ -304,7 +304,7 @@ func WithTLSClientConfig(tlsCfg *tls.Config) GenericOption {
 
 func WithTracesTLSClientConfig(tlsCfg *tls.Config) GenericOption {
 	return newSplitOption(func(cfg *Config) {
-		cfg.Traces.TLSCfg = tlsCfg
+		cfg.Traces.TLSCfg = tlsCfg.Clone()
 	}, func(cfg *Config) {
 		cfg.Traces.GrpcCredentials = credentials.NewTLS(tlsCfg)
 	})
@@ -312,7 +312,7 @@ func WithTracesTLSClientConfig(tlsCfg *tls.Config) GenericOption {
 
 func WithMetricsTLSClientConfig(tlsCfg *tls.Config) GenericOption {
 	return newSplitOption(func(cfg *Config) {
-		cfg.Metrics.TLSCfg = tlsCfg
+		cfg.Metrics.TLSCfg = tlsCfg.Clone()
 	}, func(cfg *Config) {
 		cfg.Metrics.GrpcCredentials = credentials.NewTLS(tlsCfg)
 	})
