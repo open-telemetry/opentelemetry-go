@@ -46,6 +46,10 @@ type (
 	}
 
 	defaultServiceNameDetector struct{}
+
+	// NoOp is a Detector that only provides an empty resource.  Used
+	// to disable automatic detection.
+	NoOp struct{}
 )
 
 var (
@@ -100,4 +104,10 @@ func (defaultServiceNameDetector) Detect(ctx context.Context) (*Resource, error)
 			return "unknown_service:" + filepath.Base(executable), nil
 		},
 	).Detect(ctx)
+}
+
+// Detector that does nothing. Used to disable other builtin Detectors.
+// Detect implements Detector
+func (NoOp) Detect(_ context.Context) (*Resource, error) {
+	return &emptyResource, nil
 }

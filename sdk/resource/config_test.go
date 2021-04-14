@@ -23,7 +23,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -31,95 +30,81 @@ import (
 const envVar = "OTEL_RESOURCE_ATTRIBUTES"
 
 func TestDefaultConfig(t *testing.T) {
-	store, err := ottest.SetEnvVariables(map[string]string{
-		envVar: "",
-	})
-	require.NoError(t, err)
-	defer func() { require.NoError(t, store.Restore()) }()
+	tc := []struct {
+		name      string
+		envars    string
+		detectors []resource.Detector
 
-	ctx := context.Background()
-	res, err := resource.New(ctx)
-	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"host.name":              hostname(),
-		"telemetry.sdk.name":     "opentelemetry",
-		"telemetry.sdk.language": "go",
-		"telemetry.sdk.version":  otel.Version(),
-	}, toMap(res))
-}
+		resouceValues map[string]string
+	}{
+		{
+			name:   "DefaultConfig",
+			envars: "",
+			resouceValues: map[string]string{
+				"host.name":              hostname(),
+				"telemetry.sdk.name":     "opentelemetry",
+				"telemetry.sdk.language": "go",
+				"telemetry.sdk.version":  otel.Version(),
+			},
+		},
+		{
+			name:   "Only Host",
+			envars: "from=here",
+			detectors: []resource.Detector{
+				resource.Host{},
+			},
+			resouceValues: map[string]string{
+				"host.name": hostname(),
+			},
+		},
+		{
+			name:   "Only Env",
+			envars: "key=value,other=attr",
+			detectors: []resource.Detector{
+				resource.FromEnv{},
+			},
+			resouceValues: map[string]string{
+				"key":   "value",
+				"other": "attr",
+			},
+		},
+		{
+			name:   "Only TelemetrySDK",
+			envars: "",
+			detectors: []resource.Detector{
+				resource.TelemetrySDK{},
+			},
+			resouceValues: map[string]string{
+				"telemetry.sdk.name":     "opentelemetry",
+				"telemetry.sdk.language": "go",
+				"telemetry.sdk.version":  otel.Version(),
+			},
+		},
+		{
+			name:   "Disable Detectors",
+			envars: "key=value,other=attr",
+			detectors: []resource.Detector{
+				resource.NoOp{},
+			},
+			resouceValues: map[string]string{},
+		},
+	}
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
+			store, err := ottest.SetEnvVariables(map[string]string{
+				envVar: tt.envars,
+			})
+			require.NoError(t, err)
+			defer func() { require.NoError(t, store.Restore()) }()
 
-func TestDefaultConfigNoHost(t *testing.T) {
-	store, err := ottest.SetEnvVariables(map[string]string{
-		envVar: "",
-	})
-	require.NoError(t, err)
-	defer func() { require.NoError(t, store.Restore()) }()
-
-	ctx := context.Background()
-	res, err := resource.New(ctx, resource.WithHost(nil))
-	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"telemetry.sdk.name":     "opentelemetry",
-		"telemetry.sdk.language": "go",
-		"telemetry.sdk.version":  otel.Version(),
-	}, toMap(res))
-}
-
-func TestDefaultConfigNoEnv(t *testing.T) {
-	store, err := ottest.SetEnvVariables(map[string]string{
-		envVar: "from=here",
-	})
-	require.NoError(t, err)
-	defer func() { require.NoError(t, store.Restore()) }()
-
-	ctx := context.Background()
-	res, err := resource.New(ctx, resource.WithFromEnv(nil))
-	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"host.name":              hostname(),
-		"telemetry.sdk.name":     "opentelemetry",
-		"telemetry.sdk.language": "go",
-		"telemetry.sdk.version":  otel.Version(),
-	}, toMap(res))
-}
-
-func TestDefaultConfigWithEnv(t *testing.T) {
-	store, err := ottest.SetEnvVariables(map[string]string{
-		envVar: "key=value,other=attr",
-	})
-	require.NoError(t, err)
-	defer func() { require.NoError(t, store.Restore()) }()
-
-	ctx := context.Background()
-	res, err := resource.New(ctx)
-	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"key":                    "value",
-		"other":                  "attr",
-		"host.name":              hostname(),
-		"telemetry.sdk.name":     "opentelemetry",
-		"telemetry.sdk.language": "go",
-		"telemetry.sdk.version":  otel.Version(),
-	}, toMap(res))
-}
-
-func TestWithoutBuiltin(t *testing.T) {
-	store, err := ottest.SetEnvVariables(map[string]string{
-		envVar: "key=value,other=attr",
-	})
-	require.NoError(t, err)
-	defer func() { require.NoError(t, store.Restore()) }()
-
-	ctx := context.Background()
-	res, err := resource.New(
-		ctx,
-		resource.WithoutBuiltin(),
-		resource.WithAttributes(attribute.String("hello", "collector")),
-	)
-	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"hello": "collector",
-	}, toMap(res))
+			ctx := context.Background()
+			res, err := resource.New(ctx,
+				resource.WithDetectors(tt.detectors...),
+			)
+			require.NoError(t, err)
+			require.EqualValues(t, tt.resouceValues, toMap(res))
+		})
+	}
 }
 
 func toMap(res *resource.Resource) map[string]string {
