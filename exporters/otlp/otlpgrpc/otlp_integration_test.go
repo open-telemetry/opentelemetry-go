@@ -168,11 +168,10 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 
 	// Give the exporter sometime to reconnect
 	func() {
-		timer := time.NewTimer(reconnectionPeriod * 4)
-		defer timer.Stop()
+		timer := time.After(reconnectionPeriod * 10)
 		for {
 			select {
-			case <-timer.C:
+			case <-timer:
 				return
 			default:
 				runtime.Gosched()
@@ -197,11 +196,10 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 	// make sure reconnection loop hits beginning and goes back to waiting mode
 	// after hitting beginning of the loop it should reconnect
 	func() {
-		timer := time.NewTimer(reconnectionPeriod * 4)
-		defer timer.Stop()
+		timer := time.After(reconnectionPeriod * 10)
 		for {
 			select {
-			case <-timer.C:
+			case <-timer:
 				return
 			default:
 				runtime.Gosched()
@@ -264,11 +262,10 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 
 		// Give the exporter sometime to reconnect
 		func() {
-			timer := time.NewTimer(reconnectionPeriod * 4)
-			defer timer.Stop()
+			timer := time.After(reconnectionPeriod * 10)
 			for {
 				select {
-				case <-timer.C:
+				case <-timer:
 					return
 				default:
 					runtime.Gosched()
