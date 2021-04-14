@@ -218,7 +218,9 @@ func (s *syncInstrument) acquireHandle(kvs []attribute.KeyValue, labelPtr *attri
 		// needed for the `sortSlice` field, to avoid an
 		// allocation while sorting.
 		rec = &record{}
-		rec.storage = attribute.NewSetWithSortable(kvs, &rec.sortSlice)
+		tmpKvs := make([]attribute.KeyValue, len(kvs))
+		copy(tmpKvs, kvs)
+		rec.storage = attribute.NewSetWithSortable(tmpKvs, &rec.sortSlice)
 		rec.labels = &rec.storage
 		equiv = rec.storage.Equivalent()
 	} else {
