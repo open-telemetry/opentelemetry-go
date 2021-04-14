@@ -54,7 +54,7 @@ func TestInstallNewPipeline(t *testing.T) {
 	}{
 		{
 			name:             "simple pipeline",
-			endpoint:         WithCollectorEndpoint(collectorEndpoint),
+			endpoint:         WithCollectorEndpoint(WithEndpoint(collectorEndpoint)),
 			expectedProvider: &sdktrace.TracerProvider{},
 		},
 		{
@@ -64,7 +64,7 @@ func TestInstallNewPipeline(t *testing.T) {
 		},
 		{
 			name:     "with disabled",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
+			endpoint: WithCollectorEndpoint(WithEndpoint(collectorEndpoint)),
 			options: []Option{
 				WithDisabled(true),
 			},
@@ -98,12 +98,12 @@ func TestNewExportPipeline(t *testing.T) {
 	}{
 		{
 			name:                 "simple pipeline",
-			endpoint:             WithCollectorEndpoint(collectorEndpoint),
+			endpoint:             WithCollectorEndpoint(WithEndpoint(collectorEndpoint)),
 			expectedProviderType: &sdktrace.TracerProvider{},
 		},
 		{
 			name:     "with disabled",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
+			endpoint: WithCollectorEndpoint(WithEndpoint(collectorEndpoint)),
 			options: []Option{
 				WithDisabled(true),
 			},
@@ -111,7 +111,7 @@ func TestNewExportPipeline(t *testing.T) {
 		},
 		{
 			name:     "always on",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
+			endpoint: WithCollectorEndpoint(WithEndpoint(collectorEndpoint)),
 			options: []Option{
 				WithSDKOptions(sdktrace.WithSampler(sdktrace.AlwaysSample())),
 			},
@@ -121,7 +121,7 @@ func TestNewExportPipeline(t *testing.T) {
 		},
 		{
 			name:     "never",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
+			endpoint: WithCollectorEndpoint(WithEndpoint(collectorEndpoint)),
 			options: []Option{
 				WithSDKOptions(sdktrace.WithSampler(sdktrace.NeverSample())),
 			},
@@ -163,7 +163,7 @@ func TestNewRawExporter(t *testing.T) {
 	}{
 		{
 			name:                   "default exporter",
-			endpoint:               WithCollectorEndpoint(collectorEndpoint),
+			endpoint:               WithCollectorEndpoint(),
 			expectedServiceName:    "unknown_service",
 			expectedBufferMaxCount: bundler.DefaultBufferedByteLimit,
 			expectedBatchMaxCount:  bundler.DefaultBundleCountThreshold,
@@ -177,7 +177,7 @@ func TestNewRawExporter(t *testing.T) {
 		},
 		{
 			name:     "with buffer and batch max count",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
+			endpoint: WithCollectorEndpoint(WithEndpoint(collectorEndpoint)),
 			options: []Option{
 				WithBufferMaxCount(99),
 				WithBatchMaxCount(99),
@@ -204,32 +204,7 @@ func TestNewRawExporter(t *testing.T) {
 	}
 }
 
-func TestNewRawExporterShouldFail(t *testing.T) {
-	testCases := []struct {
-		name           string
-		endpoint       EndpointOption
-		expectedErrMsg string
-	}{
-		{
-			name:           "with empty collector endpoint",
-			endpoint:       WithCollectorEndpoint(""),
-			expectedErrMsg: "collectorEndpoint must not be empty",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := NewRawExporter(
-				tc.endpoint,
-			)
-
-			assert.Error(t, err)
-			assert.EqualError(t, err, tc.expectedErrMsg)
-		})
-	}
-}
-
-func TestNewRawExporterShouldFailIfCollectorUnset(t *testing.T) {
+func TestNewRawExporterUseEnvVarIfOptionUnset(t *testing.T) {
 	// Record and restore env
 	envStore := ottest.NewEnvStore()
 	envStore.Record(envEndpoint)
@@ -239,12 +214,11 @@ func TestNewRawExporterShouldFailIfCollectorUnset(t *testing.T) {
 
 	// If the user sets the environment variable OTEL_EXPORTER_JAEGER_ENDPOINT, endpoint will always get a value.
 	require.NoError(t, os.Unsetenv(envEndpoint))
-
 	_, err := NewRawExporter(
-		WithCollectorEndpoint(""),
+		WithCollectorEndpoint(),
 	)
 
-	assert.Error(t, err)
+	assert.NoError(t, err)
 }
 
 type testCollectorEndpoint struct {

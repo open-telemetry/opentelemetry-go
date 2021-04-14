@@ -50,6 +50,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Updated Jaeger Environment Variable: `OTEL_EXPORTER_JAEGER_ENDPOINT` to have a default value of 
+  `http://localhost:14250` when not set in compliance with OTel spec.
 - Modify Zipkin Exporter default service name, use default resouce's serviceName instead of empty. (#1777)
 - Updated Jaeger Environment Variables: `JAEGER_ENDPOINT`, `JAEGER_USER`, `JAEGER_PASSWORD`
   to `OTEL_EXPORTER_JAEGER_ENDPOINT`, `OTEL_EXPORTER_JAEGER_USER`, `OTEL_EXPORTER_JAEGER_PASSWORD` 
