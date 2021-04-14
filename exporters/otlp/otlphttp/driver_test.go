@@ -16,6 +16,7 @@ package otlphttp_test
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"testing"
@@ -238,6 +239,7 @@ func TestNoRetry(t *testing.T) {
 	}()
 	err = exporter.ExportSpans(ctx, otlptest.SingleSpanSnapshot())
 	assert.Error(t, err)
+	assert.Equal(t, fmt.Sprintf("failed to send traces to http://%s/v1/traces with HTTP status 400 Bad Request", mc.endpoint), err.Error())
 	assert.Empty(t, mc.GetSpans())
 }
 

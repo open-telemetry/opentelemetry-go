@@ -72,6 +72,7 @@ type driver struct {
 }
 
 type signalDriver struct {
+	name       string
 	cfg        otlpconfig.SignalConfig
 	generalCfg otlpconfig.Config
 	client     *http.Client
@@ -136,12 +137,14 @@ func NewDriver(opts ...Option) otlp.ProtocolDriver {
 	stopCh := make(chan struct{})
 	return &driver{
 		tracesDriver: signalDriver{
+			name:       "traces",
 			cfg:        cfg.Traces,
 			generalCfg: cfg,
 			stopCh:     stopCh,
 			client:     tracesClient,
 		},
 		metricsDriver: signalDriver{
+			name:       "metrics",
 			cfg:        cfg.Metrics,
 			generalCfg: cfg,
 			stopCh:     stopCh,
@@ -234,7 +237,7 @@ func (d *signalDriver) send(ctx context.Context, rawRequest []byte) error {
 				return ctx.Err()
 			}
 		default:
-			return fmt.Errorf("failed with HTTP status %s", response.Status)
+			return fmt.Errorf("failed to send %s to %s with HTTP status %s", d.name, address, response.Status)
 		}
 	}
 	return fmt.Errorf("failed to send data to %s after %d tries", address, d.generalCfg.MaxAttempts)
