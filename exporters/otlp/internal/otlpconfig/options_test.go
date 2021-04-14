@@ -133,6 +133,7 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				if grpcOption {
+					//TODO: make sure gRPC's credentials actually works
 					assert.NotNil(t, c.Traces.GrpcCredentials)
 					assert.NotNil(t, c.Metrics.GrpcCredentials)
 				} else {
