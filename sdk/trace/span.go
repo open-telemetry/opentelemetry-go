@@ -183,6 +183,19 @@ func (s *span) SetAttributes(attributes ...attribute.KeyValue) {
 	s.copyToCappedAttributes(attributes...)
 }
 
+func (s *span) SetAttribute(attribute attribute.KeyValue) {
+	if !s.IsRecording() {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	// Ensure attributes conform to the specification:
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.0.1/specification/common/common.md#attributes
+	if attribute.Valid() {
+		s.attributes.add(attribute)
+	}
+}
+
 // End ends the span. This method does nothing if the span is already ended or
 // is not being recorded.
 //
