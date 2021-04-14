@@ -117,7 +117,6 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 	stopCh := make(chan struct{})
 	e := &Exporter{
 		uploader:           uploader,
-		o:                  o,
 		stopCh:             stopCh,
 		defaultServiceName: defaultServiceName,
 	}
@@ -159,7 +158,7 @@ func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (trace.Tra
 		return nil, nil, err
 	}
 
-	pOpts := append(exporter.o.TracerProviderOptions, sdktrace.WithSyncer(exporter))
+	pOpts := append(o.TracerProviderOptions, sdktrace.WithSyncer(exporter))
 	tp := sdktrace.NewTracerProvider(pOpts...)
 	return tp, exporter.Flush, nil
 }
@@ -181,7 +180,6 @@ func InstallNewPipeline(endpointOption EndpointOption, opts ...Option) (func(), 
 type Exporter struct {
 	bundler  *bundler.Bundler
 	uploader batchUploader
-	o        options
 
 	stopCh chan struct{}
 
