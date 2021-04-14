@@ -157,6 +157,8 @@ type (
 	}
 )
 
+// genericOption is an option that applies the same logic
+// for both gRPC and HTTP.
 type genericOption struct {
 	fn func(*Config)
 }
@@ -175,6 +177,8 @@ func newGenericOption(fn func(cfg *Config)) GenericOption {
 	return &genericOption{fn: fn}
 }
 
+// splitOption is an option that applies different logics
+// for gRPC and HTTP.
 type splitOption struct {
 	httpFn func(*Config)
 	grpcFn func(*Config)
@@ -194,6 +198,7 @@ func newSplitOption(httpFn func(cfg *Config), grpcFn func(cfg *Config)) GenericO
 	return &splitOption{httpFn: httpFn, grpcFn: grpcFn}
 }
 
+// httpOption is an option that is only applied to the HTTP driver.
 type httpOption struct {
 	fn func(*Config)
 }
@@ -208,6 +213,7 @@ func NewHTTPOption(fn func(cfg *Config)) HTTPOption {
 	return &httpOption{fn: fn}
 }
 
+// grpcOption is an option that is only applied to the gRPC driver.
 type grpcOption struct {
 	fn func(*Config)
 }
@@ -222,11 +228,8 @@ func NewGRPCOption(fn func(cfg *Config)) GRPCOption {
 	return &grpcOption{fn: fn}
 }
 
-// WithEndpoint allows one to set the address of the collector
-// endpoint that the driver will use to send metrics and spans. If
-// unset, it will instead try to use
-// DefaultCollectorHost:DefaultCollectorPort. Note that the endpoint
-// must not contain any URL path.
+// Generic Options
+
 func WithEndpoint(endpoint string) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Endpoint = endpoint
@@ -234,27 +237,18 @@ func WithEndpoint(endpoint string) GenericOption {
 	})
 }
 
-// WithTracesEndpoint allows one to set the address of the collector
-// endpoint that the driver will use to send spans. If
-// unset, it will instead try to use the Endpoint configuration.
-// Note that the endpoint must not contain any URL path.
 func WithTracesEndpoint(endpoint string) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Endpoint = endpoint
 	})
 }
 
-// WithMetricsEndpoint allows one to set the address of the collector
-// endpoint that the driver will use to send metrics. If
-// unset, it will instead try to use the Endpoint configuration.
-// Note that the endpoint must not contain any URL path.
 func WithMetricsEndpoint(endpoint string) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Metrics.Endpoint = endpoint
 	})
 }
 
-// WithCompression tells the driver to compress the sent data.
 func WithCompression(compression otlp.Compression) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Compression = compression
@@ -262,57 +256,42 @@ func WithCompression(compression otlp.Compression) GenericOption {
 	})
 }
 
-// WithTracesCompression tells the driver to compress the sent traces data.
 func WithTracesCompression(compression otlp.Compression) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Compression = compression
 	})
 }
 
-// WithMetricsCompression tells the driver to compress the sent metrics data.
 func WithMetricsCompression(compression otlp.Compression) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Metrics.Compression = compression
 	})
 }
 
-// WithTracesURLPath allows one to override the default URL path used
-// for sending traces. If unset, DefaultTracesPath will be used.
 func WithTracesURLPath(urlPath string) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.URLPath = urlPath
 	})
 }
 
-// WithMetricsURLPath allows one to override the default URL path used
-// for sending metrics. If unset, DefaultMetricsPath will be used.
 func WithMetricsURLPath(urlPath string) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Metrics.URLPath = urlPath
 	})
 }
 
-// WithMaxAttempts allows one to override how many times the driver
-// will try to send the payload in case of retryable errors. If unset,
-// DefaultMaxAttempts will be used.
 func WithMaxAttempts(maxAttempts int) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.MaxAttempts = maxAttempts
 	})
 }
 
-// WithBackoff tells the driver to use the duration as a base of the
-// exponential backoff strategy. If unset, DefaultBackoff will be
-// used.
 func WithBackoff(duration time.Duration) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Backoff = duration
 	})
 }
 
-// WithTLSClientConfig can be used to set up a custom TLS
-// configuration for the client used to send payloads to the
-// collector. Use it if you want to use a custom certificate.
 func WithTLSClientConfig(tlsCfg *tls.Config) GenericOption {
 	return newSplitOption(func(cfg *Config) {
 		cfg.Traces.TLSCfg = tlsCfg
@@ -323,9 +302,6 @@ func WithTLSClientConfig(tlsCfg *tls.Config) GenericOption {
 	})
 }
 
-// WithTracesTLSClientConfig can be used to set up a custom TLS
-// configuration for the client used to send traces.
-// Use it if you want to use a custom certificate.
 func WithTracesTLSClientConfig(tlsCfg *tls.Config) GenericOption {
 	return newSplitOption(func(cfg *Config) {
 		cfg.Traces.TLSCfg = tlsCfg
@@ -334,9 +310,6 @@ func WithTracesTLSClientConfig(tlsCfg *tls.Config) GenericOption {
 	})
 }
 
-// WithMetricsTLSClientConfig can be used to set up a custom TLS
-// configuration for the client used to send metrics.
-// Use it if you want to use a custom certificate.
 func WithMetricsTLSClientConfig(tlsCfg *tls.Config) GenericOption {
 	return newSplitOption(func(cfg *Config) {
 		cfg.Metrics.TLSCfg = tlsCfg
@@ -345,8 +318,6 @@ func WithMetricsTLSClientConfig(tlsCfg *tls.Config) GenericOption {
 	})
 }
 
-// WithInsecure tells the driver to connect to the collector using the
-// HTTP scheme, instead of HTTPS.
 func WithInsecure() GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Insecure = true
@@ -354,25 +325,18 @@ func WithInsecure() GenericOption {
 	})
 }
 
-// WithInsecureTraces tells the driver to connect to the traces collector using the
-// HTTP scheme, instead of HTTPS.
 func WithInsecureTraces() GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Insecure = true
 	})
 }
 
-// WithInsecure tells the driver to connect to the metrics collector using the
-// HTTP scheme, instead of HTTPS.
 func WithInsecureMetrics() GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Metrics.Insecure = true
 	})
 }
 
-// WithHeaders allows one to tell the driver to send additional HTTP
-// headers with the payloads. Specifying headers like Content-Length,
-// Content-Encoding and Content-Type may result in a broken driver.
 func WithHeaders(headers map[string]string) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Headers = headers
@@ -380,34 +344,18 @@ func WithHeaders(headers map[string]string) GenericOption {
 	})
 }
 
-// WithTracesHeaders allows one to tell the driver to send additional HTTP
-// headers with the trace payloads. Specifying headers like Content-Length,
-// Content-Encoding and Content-Type may result in a broken driver.
 func WithTracesHeaders(headers map[string]string) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Headers = headers
 	})
 }
 
-// WithMetricsHeaders allows one to tell the driver to send additional HTTP
-// headers with the metrics payloads. Specifying headers like Content-Length,
-// Content-Encoding and Content-Type may result in a broken driver.
 func WithMetricsHeaders(headers map[string]string) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Metrics.Headers = headers
 	})
 }
 
-// WithMarshal tells the driver which wire format to use when sending to the
-// collector.  If unset, MarshalProto will be used
-func WithMarshal(m otlp.Marshaler) HTTPOption {
-	return NewHTTPOption(func(cfg *Config) {
-		cfg.Marshaler = m
-	})
-}
-
-// WithTimeout tells the driver the max waiting time for the backend to process
-// each spans or metrics batch.  If unset, the default will be 10 seconds.
 func WithTimeout(duration time.Duration) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Timeout = duration
@@ -415,16 +363,12 @@ func WithTimeout(duration time.Duration) GenericOption {
 	})
 }
 
-// WithTracesTimeout tells the driver the max waiting time for the backend to process
-// each spans batch.  If unset, the default will be 10 seconds.
 func WithTracesTimeout(duration time.Duration) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Timeout = duration
 	})
 }
 
-// WithMetricsTimeout tells the driver the max waiting time for the backend to process
-// each metrics batch.  If unset, the default will be 10 seconds.
 func WithMetricsTimeout(duration time.Duration) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Metrics.Timeout = duration

@@ -174,8 +174,10 @@ func WithMetricsHeaders(headers map[string]string) Option {
 
 // WithMarshal tells the driver which wire format to use when sending to the
 // collector.  If unset, MarshalProto will be used
-func WithMarshal(m otlp.Marshaler) Option {
-	return otlpconfig.WithMarshal(m)
+func WithMarshal(m otlp.Marshaler) otlpconfig.HTTPOption {
+	return otlpconfig.NewHTTPOption(func(cfg *otlpconfig.Config) {
+		cfg.Marshaler = m
+	})
 }
 
 // WithTimeout tells the driver the max waiting time for the backend to process
