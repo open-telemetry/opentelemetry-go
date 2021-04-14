@@ -117,7 +117,6 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 
 	e := &Exporter{
 		uploader:           uploader,
-		o:                  o,
 		defaultServiceName: defaultServiceName,
 	}
 	bundler := bundler.NewBundler((*sdktrace.SpanSnapshot)(nil), func(bundle interface{}) {
@@ -158,7 +157,7 @@ func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (trace.Tra
 		return nil, nil, err
 	}
 
-	pOpts := append(exporter.o.TracerProviderOptions, sdktrace.WithSyncer(exporter))
+	pOpts := append(o.TracerProviderOptions, sdktrace.WithSyncer(exporter))
 	tp := sdktrace.NewTracerProvider(pOpts...)
 	return tp, exporter.Flush, nil
 }
@@ -175,22 +174,11 @@ func InstallNewPipeline(endpointOption EndpointOption, opts ...Option) (func(), 
 	return flushFn, nil
 }
 
-// Process contains the information exported to jaeger about the source
-// of the trace data.
-type Process struct {
-	// ServiceName is the Jaeger service name.
-	ServiceName string
-
-	// Tags are added to Jaeger Process exports
-	Tags []attribute.KeyValue
-}
-
 // Exporter is an implementation of an OTel SpanSyncer that uploads spans to
 // Jaeger.
 type Exporter struct {
 	bundler  *bundler.Bundler
 	uploader batchUploader
-	o        options
 
 	stoppedMu sync.RWMutex
 	stopped   bool
@@ -490,7 +478,7 @@ func process(res *resource.Resource, defaultServiceName string) *gen.Process {
 	// If no service.name is contained in a Span's Resource,
 	// that field MUST be populated from the default Resource.
 	if serviceName.Value.AsString() == "" {
-		serviceName = semconv.ServiceVersionKey.String(defaultServiceName)
+		serviceName = semconv.ServiceNameKey.String(defaultServiceName)
 	}
 	process.ServiceName = serviceName.Value.AsString()
 
