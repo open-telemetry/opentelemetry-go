@@ -106,8 +106,7 @@ func (defaultServiceNameDetector) Detect(ctx context.Context) (*Resource, error)
 	).Detect(ctx)
 }
 
-// Detector that does nothing. Used to disable other builtin Detectors.
-// Detect implements Detector
+// Detector that does nothing. Used to disable default Detector behavior.
 func (NoOp) Detect(_ context.Context) (*Resource, error) {
 	return &emptyResource, nil
 }

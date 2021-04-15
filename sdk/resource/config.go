@@ -55,9 +55,23 @@ func (d detectAttributes) Detect(context.Context) (*Resource, error) {
 }
 
 // WithDetectors adds detectors to be evaluated for the configured resource.
-// If no detectors are passed, a resource will default to use BuiltinDetectors.
-// To disable this behavior use a NoOp Detector
+// Any use of WithDetectors disabled the default behavior, to reenable this
+// inlcude a WithDetectors(BuiltinDetectors...),
+// Examples:
+// `New(ctx)`: Use builtin `Detector`s.
+// `New(ctx, WithDetectors())`: Use no `Detector`s
+// `New(ctx, WithDetectors(d1, d2))`: Use Detector `d1`, then overlay Detector `d2`
+// ```
+// New(ctx,
+//      WithDetectors(BuiltinDetectors...),
+//      WithDetectors(d1),
+// )
+// ```
+// Use The `BuiltinDetectors`, then overlay Detector `d1`
 func WithDetectors(detectors ...Detector) Option {
+	if len(detectors) == 0 {
+		return detectorsOption{detectors: []Detector{NoOp{}}}
+	}
 	return detectorsOption{detectors: detectors}
 }
 
