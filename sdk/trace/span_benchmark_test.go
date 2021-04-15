@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func attributes(n int) []attribute.KeyValue {
@@ -45,18 +46,48 @@ func benchmarkSetAttributes(b *testing.B, i int) {
 		s.SetAttributes(attrs...)
 	}
 }
+func benchmarkSetAttributesInterface(b *testing.B, i int) {
+	attrs := attributes(i)
 
-func BenchmarkSpan_SetAttributes_1(b *testing.B)    { benchmarkSetAttributes(b, 1) }
-func BenchmarkSpan_SetAttributes_10(b *testing.B)   { benchmarkSetAttributes(b, 10) }
-func BenchmarkSpan_SetAttributes_100(b *testing.B)  { benchmarkSetAttributes(b, 100) }
-func BenchmarkSpan_SetAttributes_1000(b *testing.B) { benchmarkSetAttributes(b, 1000) }
+	var s trace.Span
+	s = &span{
+		startTime:  time.Now(),
+		attributes: newAttributesMap(256),
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+
+		s.SetAttributes(attrs...)
+	}
+}
+
+func BenchmarkSpan_SetAttributes_1(b *testing.B)           { benchmarkSetAttributes(b, 1) }
+func BenchmarkSpan_SetAttributes_Interface_1(b *testing.B) { benchmarkSetAttributesInterface(b, 1) }
+func BenchmarkSpan_SetAttributes_10(b *testing.B)          { benchmarkSetAttributes(b, 10) }
+
+func BenchmarkSpan_SetAttributes_Interface_10(b *testing.B) { benchmarkSetAttributesInterface(b, 10) }
+func BenchmarkSpan_SetAttributes_100(b *testing.B)          { benchmarkSetAttributes(b, 100) }
+
+func BenchmarkSpan_SetAttributes_Interface_100(b *testing.B) { benchmarkSetAttributesInterface(b, 100) }
+func BenchmarkSpan_SetAttributes_1000(b *testing.B)          { benchmarkSetAttributes(b, 1000) }
+
+func BenchmarkSpan_SetAttributes_Interface_1000(b *testing.B) {
+	benchmarkSetAttributesInterface(b, 1000)
+}
 
 func BenchmarkSpan_SetAttribute(b *testing.B) {
 	attr := attribute.Int("1", 1)
 
-	s := &span{
+	var s interface {
+		SetAttribute(attribute.KeyValue)
+	}
+
+	s = &span{
 		startTime:  time.Now(),
-		attributes: newAttributesMap(1),
+		attributes: newAttributesMap(10),
 	}
 
 	b.ReportAllocs()
