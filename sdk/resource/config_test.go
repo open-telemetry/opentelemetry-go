@@ -29,7 +29,7 @@ import (
 
 const envVar = "OTEL_RESOURCE_ATTRIBUTES"
 
-func TestDefaultConfig(t *testing.T) {
+func TestConfig(t *testing.T) {
 	tc := []struct {
 		name      string
 		envars    string
@@ -38,14 +38,16 @@ func TestDefaultConfig(t *testing.T) {
 		resouceValues map[string]string
 	}{
 		{
-			name:   "DefaultConfig",
-			envars: "",
-			resouceValues: map[string]string{
-				"host.name":              hostname(),
-				"telemetry.sdk.name":     "opentelemetry",
-				"telemetry.sdk.language": "go",
-				"telemetry.sdk.version":  otel.Version(),
-			},
+			name:          "No detectors",
+			envars:        "",
+			detectors:     []resource.Detector{},
+			resouceValues: map[string]string{},
+		},
+		{
+			name:          "Nil detectors",
+			envars:        "",
+			detectors:     nil,
+			resouceValues: map[string]string{},
 		},
 		{
 			name:   "Only Host",
@@ -101,10 +103,32 @@ func TestDefaultConfig(t *testing.T) {
 			res, err := resource.New(ctx,
 				resource.WithDetectors(tt.detectors...),
 			)
+
 			require.NoError(t, err)
 			require.EqualValues(t, tt.resouceValues, toMap(res))
 		})
 	}
+}
+
+func TestDefaultConfig(t *testing.T) {
+	resouceValues := map[string]string{
+		"host.name":              hostname(),
+		"telemetry.sdk.name":     "opentelemetry",
+		"telemetry.sdk.language": "go",
+		"telemetry.sdk.version":  otel.Version(),
+	}
+	store, err := ottest.SetEnvVariables(map[string]string{
+		envVar: "",
+	})
+	require.NoError(t, err)
+	defer func() { require.NoError(t, store.Restore()) }()
+
+	ctx := context.Background()
+
+	res, err := resource.New(ctx)
+
+	require.NoError(t, err)
+	require.EqualValues(t, resouceValues, toMap(res))
 }
 
 func toMap(res *resource.Resource) map[string]string {
