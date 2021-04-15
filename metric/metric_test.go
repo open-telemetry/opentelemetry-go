@@ -20,7 +20,9 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/metric/prometheus"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/unit"
@@ -469,4 +471,28 @@ func TestNilCallbackObserverNoop(t *testing.T) {
 
 	_, ok := observer.AsyncImpl().(metric.NoopAsync)
 	require.True(t, ok)
+}
+
+func TestRecordBatchDoesNotMutateOriginalAttributes(t *testing.T) {
+	_, err := prometheus.InstallNewPipeline(prometheus.Config{})
+	if err != nil {
+		t.Error(err)
+	}
+	meter := global.Meter("test")
+	counter, err := meter.NewInt64UpDownCounter("example")
+	if err != nil {
+		t.Error(err)
+	}
+
+	ctx := context.Background()
+	labels := []attribute.KeyValue{
+		attribute.String("B", "val"),
+		attribute.String("C", "val"),
+		attribute.String("A", "val"),
+	}
+	meter.RecordBatch(ctx, labels, counter.Measurement(100))
+
+	assert.Equal(t, "B", string(labels[0].Key))
+	assert.Equal(t, "C", string(labels[1].Key))
+	assert.Equal(t, "A", string(labels[2].Key))
 }
