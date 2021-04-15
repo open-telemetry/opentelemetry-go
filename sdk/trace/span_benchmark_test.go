@@ -52,7 +52,7 @@ func benchmarkSetAttributesInterface(b *testing.B, i int) {
 	var s trace.Span
 	s = &span{
 		startTime:  time.Now(),
-		attributes: newAttributesMap(256),
+		attributes: newAttributesMap(50),
 	}
 
 	b.ReportAllocs()
@@ -64,21 +64,19 @@ func benchmarkSetAttributesInterface(b *testing.B, i int) {
 	}
 }
 
-func BenchmarkSpan_SetAttributes_1(b *testing.B)           { benchmarkSetAttributes(b, 1) }
-func BenchmarkSpan_SetAttributes_Interface_1(b *testing.B) { benchmarkSetAttributesInterface(b, 1) }
-func BenchmarkSpan_SetAttributes_10(b *testing.B)          { benchmarkSetAttributes(b, 10) }
+func BenchmarkSpan_SetAttributes_1(b *testing.B)    { benchmarkSetAttributes(b, 1) }
+func BenchmarkSpan_SetAttributes_10(b *testing.B)   { benchmarkSetAttributes(b, 10) }
+func BenchmarkSpan_SetAttributes_100(b *testing.B)  { benchmarkSetAttributes(b, 100) }
+func BenchmarkSpan_SetAttributes_1000(b *testing.B) { benchmarkSetAttributes(b, 1000) }
 
-func BenchmarkSpan_SetAttributes_Interface_10(b *testing.B) { benchmarkSetAttributesInterface(b, 10) }
-func BenchmarkSpan_SetAttributes_100(b *testing.B)          { benchmarkSetAttributes(b, 100) }
-
+func BenchmarkSpan_SetAttributes_Interface_1(b *testing.B)   { benchmarkSetAttributesInterface(b, 1) }
+func BenchmarkSpan_SetAttributes_Interface_10(b *testing.B)  { benchmarkSetAttributesInterface(b, 10) }
 func BenchmarkSpan_SetAttributes_Interface_100(b *testing.B) { benchmarkSetAttributesInterface(b, 100) }
-func BenchmarkSpan_SetAttributes_1000(b *testing.B)          { benchmarkSetAttributes(b, 1000) }
-
 func BenchmarkSpan_SetAttributes_Interface_1000(b *testing.B) {
 	benchmarkSetAttributesInterface(b, 1000)
 }
 
-func BenchmarkSpan_SetAttribute(b *testing.B) {
+func BenchmarkSpan_SetAttribute_Interface(b *testing.B) {
 	attr := attribute.Int("1", 1)
 
 	var s interface {
@@ -89,6 +87,46 @@ func BenchmarkSpan_SetAttribute(b *testing.B) {
 		startTime:  time.Now(),
 		attributes: newAttributesMap(10),
 	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+		s.SetAttribute(attr)
+	}
+}
+
+func BenchmarkSpan_SetAttribute_FullMap(b *testing.B) {
+	attr := attribute.Int("1", 1)
+
+	s := &span{
+		startTime:  time.Now(),
+		attributes: newAttributesMap(1),
+	}
+
+	s.SetAttribute(attribute.Int("2", 2))
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+		s.SetAttribute(attr)
+	}
+}
+
+func BenchmarkSpan_SetAttribute_Interface_FullMap(b *testing.B) {
+	attr := attribute.Int("1", 1)
+
+	var s interface {
+		SetAttribute(attribute.KeyValue)
+	}
+
+	s = &span{
+		startTime:  time.Now(),
+		attributes: newAttributesMap(1),
+	}
+
+	s.SetAttribute(attribute.Int("2", 2))
 
 	b.ReportAllocs()
 	b.ResetTimer()
