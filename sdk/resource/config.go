@@ -60,6 +60,7 @@ func (d detectAttributes) Detect(context.Context) (*Resource, error) {
 // Examples:
 // `New(ctx)`: Use builtin `Detector`s.
 // `New(ctx, WithDetectors())`: Use no `Detector`s
+// `New(ctx, WithDetectors(NoOp{}))`: Use no `Detector`s
 // `New(ctx, WithDetectors(d1, d2))`: Use Detector `d1`, then overlay Detector `d2`
 // ```
 // New(ctx,
