@@ -220,8 +220,10 @@ func runMockCollectorAtEndpoint(t *testing.T, endpoint string) *mockCollector {
 type listener struct {
 	wrapped net.Listener
 
-	C      chan struct{}
-	closed chan struct{}
+	C chan struct{}
+
+	closed    chan struct{}
+	closeOnce sync.Once
 }
 
 func newListener(wrapped net.Listener) *listener {
@@ -243,7 +245,7 @@ func (l *listener) Accept() (net.Conn, error) {
 	case <-l.closed:
 		// Close l.C here so we do not have a race between the Close function
 		// and the write below.
-		close(l.C)
+		l.closeOnce.Do(func() { close(l.C) })
 		return conn, err
 	default:
 	}
