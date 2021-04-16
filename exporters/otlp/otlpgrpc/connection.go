@@ -22,6 +22,11 @@ import (
 	"time"
 	"unsafe"
 
+	"google.golang.org/grpc/encoding/gzip"
+
+	"go.opentelemetry.io/otel/exporters/otlp"
+	"go.opentelemetry.io/otel/exporters/otlp/internal/otlpconfig"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -36,7 +41,8 @@ type connection struct {
 	cc *grpc.ClientConn
 
 	// these fields are read-only after constructor is finished
-	cfg                  config
+	cfg                  otlpconfig.Config
+	sCfg                 otlpconfig.SignalConfig
 	metadata             metadata.MD
 	newConnectionHandler func(cc *grpc.ClientConn)
 
@@ -51,12 +57,13 @@ type connection struct {
 	closeBackgroundConnectionDoneCh func(ch chan struct{})
 }
 
-func newConnection(cfg config, handler func(cc *grpc.ClientConn)) *connection {
+func newConnection(cfg otlpconfig.Config, sCfg otlpconfig.SignalConfig, handler func(cc *grpc.ClientConn)) *connection {
 	c := new(connection)
 	c.newConnectionHandler = handler
 	c.cfg = cfg
-	if len(c.cfg.headers) > 0 {
-		c.metadata = metadata.New(c.cfg.headers)
+	c.sCfg = sCfg
+	if len(c.sCfg.Headers) > 0 {
+		c.metadata = metadata.New(c.sCfg.Headers)
 	}
 	c.closeBackgroundConnectionDoneCh = func(ch chan struct{}) {
 		close(ch)
@@ -117,7 +124,7 @@ func (c *connection) indefiniteBackgroundConnection() {
 		c.closeBackgroundConnectionDoneCh(c.backgroundConnectionDoneCh)
 	}()
 
-	connReattemptPeriod := c.cfg.reconnectionPeriod
+	connReattemptPeriod := c.cfg.ReconnectionPeriod
 	if connReattemptPeriod <= 0 {
 		connReattemptPeriod = defaultConnReattemptPeriod
 	}
@@ -204,28 +211,26 @@ func (c *connection) setConnection(cc *grpc.ClientConn) bool {
 }
 
 func (c *connection) dialToCollector(ctx context.Context) (*grpc.ClientConn, error) {
-	endpoint := c.cfg.collectorEndpoint
-
 	dialOpts := []grpc.DialOption{}
-	if c.cfg.serviceConfig != "" {
-		dialOpts = append(dialOpts, grpc.WithDefaultServiceConfig(c.cfg.serviceConfig))
+	if c.cfg.ServiceConfig != "" {
+		dialOpts = append(dialOpts, grpc.WithDefaultServiceConfig(c.cfg.ServiceConfig))
 	}
-	if c.cfg.clientCredentials != nil {
-		dialOpts = append(dialOpts, grpc.WithTransportCredentials(c.cfg.clientCredentials))
-	} else if c.cfg.canDialInsecure {
+	if c.sCfg.GRPCCredentials != nil {
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(c.sCfg.GRPCCredentials))
+	} else if c.sCfg.Insecure {
 		dialOpts = append(dialOpts, grpc.WithInsecure())
 	}
-	if c.cfg.compressor != "" {
-		dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.UseCompressor(c.cfg.compressor)))
+	if c.sCfg.Compression == otlp.GzipCompression {
+		dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
 	}
-	if len(c.cfg.dialOptions) != 0 {
-		dialOpts = append(dialOpts, c.cfg.dialOptions...)
+	if len(c.cfg.DialOptions) != 0 {
+		dialOpts = append(dialOpts, c.cfg.DialOptions...)
 	}
 
 	ctx, cancel := c.contextWithStop(ctx)
 	defer cancel()
 	ctx = c.contextWithMetadata(ctx)
-	return grpc.DialContext(ctx, endpoint, dialOpts...)
+	return grpc.DialContext(ctx, c.sCfg.Endpoint, dialOpts...)
 }
 
 func (c *connection) contextWithMetadata(ctx context.Context) context.Context {
