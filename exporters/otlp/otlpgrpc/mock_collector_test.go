@@ -16,10 +16,10 @@ package otlpgrpc_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"runtime"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -229,10 +229,17 @@ func (l *listener) Addr() net.Addr { return l.wrapped.Addr() }
 func (l *listener) Accept() (net.Conn, error) {
 	conn, err := l.wrapped.Accept()
 
-	// If the listener has been closed do not allow callers of WaitForConn to
-	// wait for a connection that will never come.
-	if errors.Is(err, net.ErrClosed) {
-		l.closeOnce.Do(func() { close(l.C) })
+	if err != nil {
+		// Go 1.16 exported net.ErrClosed that could clean up this check, but to
+		// remain backwards compatible with previous versions of Go that we
+		// support the following string evaluation is used instead to keep in line
+		// with the previously recommended way to check this:
+		// https://github.com/golang/go/issues/4373#issuecomment-353076799
+		if strings.Contains(err.Error(), "use of closed network connection") {
+			// If the listener has been closed do not allow callers of WaitForConn to
+			// wait for a connection that will never come.
+			l.closeOnce.Do(func() { close(l.C) })
+		}
 		return conn, err
 	}
 
