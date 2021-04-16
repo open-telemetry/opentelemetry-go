@@ -21,6 +21,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
@@ -587,4 +588,26 @@ func TestSyncInAsync(t *testing.T) {
 		"counter.sum//R=V":        100,
 		"observer.lastvalue//R=V": 10,
 	}, out.Map())
+}
+
+func TestMeterDoesNotMutateOriginalAttributes(t *testing.T) {
+	ctx := context.Background()
+	meter, sdk, _ := newSDK(t)
+	counter := Must(meter).NewInt64Counter("name.sum")
+
+	labels := []attribute.KeyValue{
+		attribute.String("B", "val"),
+		attribute.String("C", "val"),
+		attribute.String("A", "val"),
+	}
+
+	sdk.RecordBatch(
+		ctx,
+		labels,
+		counter.Measurement(1),
+	)
+
+	assert.Equal(t, "B", string(labels[0].Key))
+	assert.Equal(t, "C", string(labels[1].Key))
+	assert.Equal(t, "A", string(labels[2].Key))
 }
