@@ -215,8 +215,8 @@ func (c *connection) dialToCollector(ctx context.Context) (*grpc.ClientConn, err
 	if c.cfg.ServiceConfig != "" {
 		dialOpts = append(dialOpts, grpc.WithDefaultServiceConfig(c.cfg.ServiceConfig))
 	}
-	if c.sCfg.GrpcCredentials != nil {
-		dialOpts = append(dialOpts, grpc.WithTransportCredentials(c.sCfg.GrpcCredentials))
+	if c.sCfg.GRPCCredentials != nil {
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(c.sCfg.GRPCCredentials))
 	} else if c.sCfg.Insecure {
 		dialOpts = append(dialOpts, grpc.WithInsecure())
 	}

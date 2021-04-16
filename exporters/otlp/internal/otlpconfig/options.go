@@ -80,7 +80,7 @@ type (
 		URLPath     string
 
 		// gRPC configurations
-		GrpcCredentials credentials.TransportCredentials
+		GRPCCredentials credentials.TransportCredentials
 	}
 
 	Config struct {
@@ -297,8 +297,8 @@ func WithTLSClientConfig(tlsCfg *tls.Config) GenericOption {
 		cfg.Traces.TLSCfg = tlsCfg.Clone()
 		cfg.Metrics.TLSCfg = tlsCfg.Clone()
 	}, func(cfg *Config) {
-		cfg.Traces.GrpcCredentials = credentials.NewTLS(tlsCfg)
-		cfg.Metrics.GrpcCredentials = credentials.NewTLS(tlsCfg)
+		cfg.Traces.GRPCCredentials = credentials.NewTLS(tlsCfg)
+		cfg.Metrics.GRPCCredentials = credentials.NewTLS(tlsCfg)
 	})
 }
 
@@ -306,7 +306,7 @@ func WithTracesTLSClientConfig(tlsCfg *tls.Config) GenericOption {
 	return newSplitOption(func(cfg *Config) {
 		cfg.Traces.TLSCfg = tlsCfg.Clone()
 	}, func(cfg *Config) {
-		cfg.Traces.GrpcCredentials = credentials.NewTLS(tlsCfg)
+		cfg.Traces.GRPCCredentials = credentials.NewTLS(tlsCfg)
 	})
 }
 
@@ -314,7 +314,7 @@ func WithMetricsTLSClientConfig(tlsCfg *tls.Config) GenericOption {
 	return newSplitOption(func(cfg *Config) {
 		cfg.Metrics.TLSCfg = tlsCfg.Clone()
 	}, func(cfg *Config) {
-		cfg.Metrics.GrpcCredentials = credentials.NewTLS(tlsCfg)
+		cfg.Metrics.GRPCCredentials = credentials.NewTLS(tlsCfg)
 	})
 }
 

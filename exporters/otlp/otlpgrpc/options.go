@@ -95,7 +95,7 @@ func compressorToCompression(compressor string) otlp.Compression {
 // It is the responsibility of the caller to ensure that the compressor set has been registered
 // with google.golang.org/grpc/encoding. This can be done by encoding.RegisterCompressor. Some
 // compressors auto-register on import, such as gzip, which can be registered by calling
-// `import _ "google.golang.org/grpc/encoding/gzip"`
+// `import _ "google.golang.org/grpc/encoding/gzip"`.
 func WithCompressor(compressor string) Option {
 	return otlpconfig.WithCompression(compressorToCompression(compressor))
 }
@@ -104,7 +104,7 @@ func WithCompressor(compressor string) Option {
 // It is the responsibility of the caller to ensure that the compressor set has been registered
 // with google.golang.org/grpc/encoding. This can be done by encoding.RegisterCompressor. Some
 // compressors auto-register on import, such as gzip, which can be registered by calling
-// `import _ "google.golang.org/grpc/encoding/gzip"`
+// `import _ "google.golang.org/grpc/encoding/gzip"`.
 func WithTracesCompression(compressor string) Option {
 	return otlpconfig.WithTracesCompression(compressorToCompression(compressor))
 }
@@ -113,57 +113,57 @@ func WithTracesCompression(compressor string) Option {
 // It is the responsibility of the caller to ensure that the compressor set has been registered
 // with google.golang.org/grpc/encoding. This can be done by encoding.RegisterCompressor. Some
 // compressors auto-register on import, such as gzip, which can be registered by calling
-// `import _ "google.golang.org/grpc/encoding/gzip"`
+// `import _ "google.golang.org/grpc/encoding/gzip"`.
 func WithMetricsCompression(compressor string) Option {
 	return otlpconfig.WithMetricsCompression(compressorToCompression(compressor))
 }
 
-// WithHeaders will send the provided headers with gRPC requests
+// WithHeaders will send the provided headers with gRPC requests.
 func WithHeaders(headers map[string]string) Option {
 	return otlpconfig.WithHeaders(headers)
 }
 
-// WithTracesHeaders will send the provided headers with gRPC traces requests
+// WithTracesHeaders will send the provided headers with gRPC traces requests.
 func WithTracesHeaders(headers map[string]string) Option {
 	return otlpconfig.WithTracesHeaders(headers)
 }
 
-// WithMetricsHeaders will send the provided headers with gRPC metrics requests
+// WithMetricsHeaders will send the provided headers with gRPC metrics requests.
 func WithMetricsHeaders(headers map[string]string) Option {
 	return otlpconfig.WithMetricsHeaders(headers)
 }
 
 // WithTLSCredentials allows the connection to use TLS credentials
 // when talking to the server. It takes in grpc.TransportCredentials instead
-// of say a Certificate file or a tls.Certificate, because the retrieving
+// of say a Certificate file or a tls.Certificate, because the retrieving of
 // these credentials can be done in many ways e.g. plain file, in code tls.Config
 // or by certificate rotation, so it is up to the caller to decide what to use.
 func WithTLSCredentials(creds credentials.TransportCredentials) Option {
 	return otlpconfig.NewGRPCOption(func(cfg *otlpconfig.Config) {
-		cfg.Traces.GrpcCredentials = creds
-		cfg.Metrics.GrpcCredentials = creds
+		cfg.Traces.GRPCCredentials = creds
+		cfg.Metrics.GRPCCredentials = creds
 	})
 }
 
 // WithTracesTLSCredentials allows the connection to use TLS credentials
 // when talking to the traces server. It takes in grpc.TransportCredentials instead
-// of say a Certificate file or a tls.Certificate, because the retrieving
+// of say a Certificate file or a tls.Certificate, because the retrieving of
 // these credentials can be done in many ways e.g. plain file, in code tls.Config
 // or by certificate rotation, so it is up to the caller to decide what to use.
 func WithTracesTLSCredentials(creds credentials.TransportCredentials) Option {
 	return otlpconfig.NewGRPCOption(func(cfg *otlpconfig.Config) {
-		cfg.Traces.GrpcCredentials = creds
+		cfg.Traces.GRPCCredentials = creds
 	})
 }
 
 // WithMetricsTLSCredentials allows the connection to use TLS credentials
 // when talking to the metrics server. It takes in grpc.TransportCredentials instead
-// of say a Certificate file or a tls.Certificate, because the retrieving
+// of say a Certificate file or a tls.Certificate, because the retrieving of
 // these credentials can be done in many ways e.g. plain file, in code tls.Config
 // or by certificate rotation, so it is up to the caller to decide what to use.
 func WithMetricsTLSCredentials(creds credentials.TransportCredentials) Option {
 	return otlpconfig.NewGRPCOption(func(cfg *otlpconfig.Config) {
-		cfg.Metrics.GrpcCredentials = creds
+		cfg.Metrics.GRPCCredentials = creds
 	})
 }
 

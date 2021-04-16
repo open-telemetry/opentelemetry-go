@@ -174,7 +174,7 @@ func WithMetricsHeaders(headers map[string]string) Option {
 
 // WithMarshal tells the driver which wire format to use when sending to the
 // collector.  If unset, MarshalProto will be used
-func WithMarshal(m otlp.Marshaler) otlpconfig.HTTPOption {
+func WithMarshal(m otlp.Marshaler) Option {
 	return otlpconfig.NewHTTPOption(func(cfg *otlpconfig.Config) {
 		cfg.Marshaler = m
 	})

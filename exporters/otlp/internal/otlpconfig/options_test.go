@@ -134,8 +134,8 @@ func TestConfigs(t *testing.T) {
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				if grpcOption {
 					//TODO: make sure gRPC's credentials actually works
-					assert.NotNil(t, c.Traces.GrpcCredentials)
-					assert.NotNil(t, c.Metrics.GrpcCredentials)
+					assert.NotNil(t, c.Traces.GRPCCredentials)
+					assert.NotNil(t, c.Metrics.GRPCCredentials)
 				} else {
 					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects())
 					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Metrics.TLSCfg.RootCAs.Subjects())
@@ -152,8 +152,8 @@ func TestConfigs(t *testing.T) {
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 
 				if grpcOption {
-					assert.NotNil(t, c.Traces.GrpcCredentials)
-					assert.NotNil(t, c.Metrics.GrpcCredentials)
+					assert.NotNil(t, c.Traces.GRPCCredentials)
+					assert.NotNil(t, c.Metrics.GRPCCredentials)
 				} else {
 					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects())
 					assert.Equal(t, 0, len(c.Metrics.TLSCfg.RootCAs.Subjects()))
@@ -170,8 +170,8 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				if grpcOption {
-					assert.NotNil(t, c.Traces.GrpcCredentials)
-					assert.NotNil(t, c.Metrics.GrpcCredentials)
+					assert.NotNil(t, c.Traces.GRPCCredentials)
+					assert.NotNil(t, c.Metrics.GRPCCredentials)
 				} else {
 					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects())
 					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Metrics.TLSCfg.RootCAs.Subjects())
@@ -191,8 +191,8 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				if grpcOption {
-					assert.NotNil(t, c.Traces.GrpcCredentials)
-					assert.Nil(t, c.Metrics.GrpcCredentials)
+					assert.NotNil(t, c.Traces.GRPCCredentials)
+					assert.Nil(t, c.Metrics.GRPCCredentials)
 				} else {
 					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects())
 					assert.Equal(t, (*tls.Config)(nil), c.Metrics.TLSCfg)
@@ -212,8 +212,8 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				if grpcOption {
-					assert.NotNil(t, c.Traces.GrpcCredentials)
-					assert.NotNil(t, c.Metrics.GrpcCredentials)
+					assert.NotNil(t, c.Traces.GRPCCredentials)
+					assert.NotNil(t, c.Metrics.GRPCCredentials)
 				} else {
 					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects())
 					assert.Equal(t, 0, len(c.Metrics.TLSCfg.RootCAs.Subjects()))
