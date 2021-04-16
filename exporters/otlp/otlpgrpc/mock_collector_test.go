@@ -16,6 +16,7 @@ package otlpgrpc_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"runtime"
@@ -177,19 +178,6 @@ func (mc *mockCollector) GetMetrics() []*metricpb.Metric {
 	return mc.getMetrics()
 }
 
-// WaitForConn will wait indefintely for a connection to be estabilished
-// with the mockCollector before returning.
-func (mc *mockCollector) WaitForConn() {
-	for {
-		select {
-		case <-mc.ln.C:
-			return
-		default:
-			runtime.Gosched()
-		}
-	}
-}
-
 // runMockCollector is a helper function to create a mock Collector
 func runMockCollector(t *testing.T) *mockCollector {
 	return runMockCollectorAtEndpoint(t, "localhost:0")
@@ -222,7 +210,6 @@ type listener struct {
 
 	C chan struct{}
 
-	closed    chan struct{}
 	closeOnce sync.Once
 }
 
@@ -230,24 +217,23 @@ func newListener(wrapped net.Listener) *listener {
 	return &listener{
 		wrapped: wrapped,
 		C:       make(chan struct{}, 1),
-		closed:  make(chan struct{}),
 	}
 }
 
+func (l *listener) Close() error { return l.wrapped.Close() }
+
+func (l *listener) Addr() net.Addr { return l.wrapped.Addr() }
+
+// Accept waits for and returns the next connection to the listener. It will
+// send a signal on l.C that a connection has been made before returning.
 func (l *listener) Accept() (net.Conn, error) {
 	conn, err := l.wrapped.Accept()
 
 	// If the listener has been closed do not allow callers of WaitForConn to
-	// wait for a connection that will never come. This is not in the select
-	// statement below because of their non-deterministic execution order of
-	// select.
-	select {
-	case <-l.closed:
-		// Close l.C here so we do not have a race between the Close function
-		// and the write below.
+	// wait for a connection that will never come.
+	if errors.Is(err, net.ErrClosed) {
 		l.closeOnce.Do(func() { close(l.C) })
 		return conn, err
-	default:
 	}
 
 	select {
@@ -258,9 +244,15 @@ func (l *listener) Accept() (net.Conn, error) {
 	return conn, err
 }
 
-func (l *listener) Close() error {
-	close(l.closed)
-	return l.wrapped.Close()
+// WaitForConn will wait indefintely for a connection to be estabilished with
+// the listener before returning.
+func (l *listener) WaitForConn() {
+	for {
+		select {
+		case <-l.C:
+			return
+		default:
+			runtime.Gosched()
+		}
+	}
 }
-
-func (l *listener) Addr() net.Addr { return l.wrapped.Addr() }

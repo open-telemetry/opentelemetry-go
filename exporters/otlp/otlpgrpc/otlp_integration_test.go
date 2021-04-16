@@ -151,7 +151,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 	defer func() { require.NoError(t, exp.Shutdown(ctx)) }()
 
 	// Wait for a connection.
-	mc.WaitForConn()
+	mc.ln.WaitForConn()
 
 	// We'll now stop the collector right away to simulate a connection
 	// dying in the midst of communication or even not existing before.
@@ -172,7 +172,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 
 	// make sure reconnection loop hits beginning and goes back to waiting mode
 	// after hitting beginning of the loop it should reconnect
-	nmc.WaitForConn()
+	nmc.ln.WaitForConn()
 
 	n := 10
 	for i := 0; i < n; i++ {
@@ -206,7 +206,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 		otlpgrpc.WithReconnectionPeriod(reconnectionPeriod))
 	defer func() { require.NoError(t, exp.Shutdown(ctx)) }()
 
-	mc.WaitForConn()
+	mc.ln.WaitForConn()
 
 	// We'll now stop the collector right away to simulate a connection
 	// dying in the midst of communication or even not existing before.
@@ -225,7 +225,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 		nmc := runMockCollectorAtEndpoint(t, mc.endpoint)
 
 		// Give the exporter sometime to reconnect
-		nmc.WaitForConn()
+		nmc.ln.WaitForConn()
 
 		n := 10
 		for i := 0; i < n; i++ {
