@@ -206,11 +206,9 @@ func runMockCollectorAtEndpoint(t *testing.T, endpoint string) *mockCollector {
 }
 
 type listener struct {
-	wrapped net.Listener
-
-	C chan struct{}
-
 	closeOnce sync.Once
+	wrapped   net.Listener
+	C         chan struct{}
 }
 
 func newListener(wrapped net.Listener) *listener {
@@ -228,7 +226,6 @@ func (l *listener) Addr() net.Addr { return l.wrapped.Addr() }
 // send a signal on l.C that a connection has been made before returning.
 func (l *listener) Accept() (net.Conn, error) {
 	conn, err := l.wrapped.Accept()
-
 	if err != nil {
 		// Go 1.16 exported net.ErrClosed that could clean up this check, but to
 		// remain backwards compatible with previous versions of Go that we
@@ -236,8 +233,8 @@ func (l *listener) Accept() (net.Conn, error) {
 		// with the previously recommended way to check this:
 		// https://github.com/golang/go/issues/4373#issuecomment-353076799
 		if strings.Contains(err.Error(), "use of closed network connection") {
-			// If the listener has been closed do not allow callers of WaitForConn to
-			// wait for a connection that will never come.
+			// If the listener has been closed, do not allow callers of
+			// WaitForConn to wait for a connection that will never come.
 			l.closeOnce.Do(func() { close(l.C) })
 		}
 		return conn, err
@@ -248,7 +245,7 @@ func (l *listener) Accept() (net.Conn, error) {
 	default:
 		// If C is full, assume nobody is listening and move on.
 	}
-	return conn, err
+	return conn, nil
 }
 
 // WaitForConn will wait indefintely for a connection to be estabilished with
