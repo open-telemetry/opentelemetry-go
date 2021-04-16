@@ -123,6 +123,8 @@ func (d *driver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet,
 	}
 	ctx, cancel := d.metricsDriver.connection.contextWithStop(ctx)
 	defer cancel()
+	ctx, tCancel := context.WithTimeout(ctx, d.metricsDriver.connection.sCfg.Timeout)
+	defer tCancel()
 
 	rms, err := transform.CheckpointSet(ctx, selector, cps, 1)
 	if err != nil {
@@ -162,6 +164,8 @@ func (d *driver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) 
 	}
 	ctx, cancel := d.tracesDriver.connection.contextWithStop(ctx)
 	defer cancel()
+	ctx, tCancel := context.WithTimeout(ctx, d.tracesDriver.connection.sCfg.Timeout)
+	defer tCancel()
 
 	protoSpans := transform.SpanData(ss)
 	if len(protoSpans) == 0 {

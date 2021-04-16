@@ -50,6 +50,7 @@ type mockTraceService struct {
 	mu      sync.RWMutex
 	storage otlptest.SpansStorage
 	headers metadata.MD
+	delay   time.Duration
 }
 
 func (mts *mockTraceService) getHeaders() metadata.MD {
@@ -71,6 +72,9 @@ func (mts *mockTraceService) getResourceSpans() []*tracepb.ResourceSpans {
 }
 
 func (mts *mockTraceService) Export(ctx context.Context, exp *collectortracepb.ExportTraceServiceRequest) (*collectortracepb.ExportTraceServiceResponse, error) {
+	if mts.delay > 0 {
+		time.Sleep(mts.delay)
+	}
 	reply := &collectortracepb.ExportTraceServiceResponse{}
 	mts.mu.Lock()
 	defer mts.mu.Unlock()
@@ -84,6 +88,7 @@ type mockMetricService struct {
 
 	mu      sync.RWMutex
 	storage otlptest.MetricsStorage
+	delay   time.Duration
 }
 
 func (mms *mockMetricService) getMetrics() []*metricpb.Metric {
@@ -93,6 +98,9 @@ func (mms *mockMetricService) getMetrics() []*metricpb.Metric {
 }
 
 func (mms *mockMetricService) Export(ctx context.Context, exp *collectormetricpb.ExportMetricsServiceRequest) (*collectormetricpb.ExportMetricsServiceResponse, error) {
+	if mms.delay > 0 {
+		time.Sleep(mms.delay)
+	}
 	reply := &collectormetricpb.ExportMetricsServiceResponse{}
 	mms.mu.Lock()
 	defer mms.mu.Unlock()

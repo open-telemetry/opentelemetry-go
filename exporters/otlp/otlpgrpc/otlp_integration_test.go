@@ -17,6 +17,8 @@ package otlpgrpc_test
 import (
 	"context"
 	"fmt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"net"
 	"runtime"
 	"strings"
@@ -344,6 +346,84 @@ func TestNewExporter_withHeaders(t *testing.T) {
 	headers := mc.getHeaders()
 	require.Len(t, headers.Get("header1"), 1)
 	assert.Equal(t, "value1", headers.Get("header1")[0])
+}
+
+func TestNewExporter_WithTimeout(t *testing.T) {
+	tts := []struct {
+		name    string
+		fn      func(exp *otlp.Exporter) error
+		timeout time.Duration
+		metrics int
+		spans   int
+		code    codes.Code
+	}{
+		{
+			name: "Timeout Spans",
+			fn: func(exp *otlp.Exporter) error {
+				return exp.ExportSpans(context.Background(), []*sdktrace.SpanSnapshot{{Name: "timed out"}})
+			},
+			timeout: time.Nanosecond,
+			code:    codes.DeadlineExceeded,
+		},
+		{
+			name: "Timeout Metrics",
+			fn: func(exp *otlp.Exporter) error {
+				return exp.Export(context.Background(), otlptest.OneRecordCheckpointSet{})
+			},
+			timeout: time.Nanosecond,
+			code:    codes.DeadlineExceeded,
+		},
+
+		{
+			name: "No Timeout Spans",
+			fn: func(exp *otlp.Exporter) error {
+				return exp.ExportSpans(context.Background(), []*sdktrace.SpanSnapshot{{Name: "timed out"}})
+			},
+			timeout: time.Minute,
+			spans:   1,
+			code:    codes.OK,
+		},
+		{
+			name: "No Timeout Metrics",
+			fn: func(exp *otlp.Exporter) error {
+				return exp.Export(context.Background(), otlptest.OneRecordCheckpointSet{})
+			},
+			timeout: time.Minute,
+			metrics: 1,
+			code:    codes.OK,
+		},
+	}
+
+	for _, tt := range tts {
+		t.Run(tt.name, func(t *testing.T) {
+
+			mc := runMockCollector(t)
+			mc.traceSvc.delay = time.Second * 10
+			mc.metricSvc.delay = time.Second * 10
+			defer func() {
+				_ = mc.stop()
+			}()
+
+			ctx := context.Background()
+			exp := newGRPCExporter(t, ctx, mc.endpoint, otlpgrpc.WithTimeout(tt.timeout))
+			defer func() {
+				_ = exp.Shutdown(ctx)
+			}()
+
+			err := tt.fn(exp)
+
+			if tt.code == codes.OK {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+				s := status.Convert(err)
+				require.Equal(t, codes.DeadlineExceeded, s.Code())
+			}
+
+			require.Equal(t, tt.spans, len(mc.getSpans()))
+			require.Equal(t, tt.metrics, len(mc.getMetrics()))
+		})
+	}
 }
 
 func TestNewExporter_withInvalidSecurityConfiguration(t *testing.T) {
