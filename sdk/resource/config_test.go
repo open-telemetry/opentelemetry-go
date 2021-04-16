@@ -38,14 +38,14 @@ func TestConfig(t *testing.T) {
 		resouceValues map[string]string
 	}{
 		{
-			name:          "No detectors",
-			envars:        "",
+			name:          "No detectors disables detection",
+			envars:        "key=value,other=attr",
 			detectors:     []resource.Detector{},
 			resouceValues: map[string]string{},
 		},
 		{
-			name:          "Nil detectors",
-			envars:        "",
+			name:          "Nil detectors disables detection",
+			envars:        "key=value,other=attr",
 			detectors:     nil,
 			resouceValues: map[string]string{},
 		},
@@ -83,12 +83,17 @@ func TestConfig(t *testing.T) {
 			},
 		},
 		{
-			name:   "Disable Detectors",
-			envars: "key=value,other=attr",
-			detectors: []resource.Detector{
-				resource.NoOp{},
+			name:      "Builtins",
+			envars:    "key=value,other=attr",
+			detectors: resource.BuiltinDetectors,
+			resouceValues: map[string]string{
+				"host.name":              hostname(),
+				"telemetry.sdk.name":     "opentelemetry",
+				"telemetry.sdk.language": "go",
+				"telemetry.sdk.version":  otel.Version(),
+				"key":                    "value",
+				"other":                  "attr",
 			},
-			resouceValues: map[string]string{},
 		},
 	}
 	for _, tt := range tc {

@@ -60,7 +60,7 @@ func (d detectAttributes) Detect(context.Context) (*Resource, error) {
 // Examples:
 // `New(ctx)`: Use builtin `Detector`s.
 // `New(ctx, WithDetectors())`: Use no `Detector`s
-// `New(ctx, WithDetectors(NoOp{}))`: Use no `Detector`s
+
 // `New(ctx, WithDetectors(d1, d2))`: Use Detector `d1`, then overlay Detector `d2`
 // ```
 // New(ctx,
@@ -71,7 +71,7 @@ func (d detectAttributes) Detect(context.Context) (*Resource, error) {
 // Use The `BuiltinDetectors`, then overlay Detector `d1`
 func WithDetectors(detectors ...Detector) Option {
 	if len(detectors) == 0 {
-		return detectorsOption{detectors: []Detector{NoOp{}}}
+		return detectorsOption{detectors: []Detector{noOp{}}}
 	}
 	return detectorsOption{detectors: detectors}
 }
@@ -93,7 +93,7 @@ var BuiltinDetectors = []Detector{
 }
 
 // New returns a Resource combined from the provided attributes,
-// user-provided detectors and builtin detectors.
+// user-provided detectors or builtin detectors.
 func New(ctx context.Context, opts ...Option) (*Resource, error) {
 	cfg := config{}
 	for _, opt := range opts {
