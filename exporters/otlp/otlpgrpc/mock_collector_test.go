@@ -18,8 +18,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"runtime"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -50,12 +48,12 @@ func makeMockCollector(t *testing.T, mockConfig *mockConfig) *mockCollector {
 type mockTraceService struct {
 	collectortracepb.UnimplementedTraceServiceServer
 
-	errors  []error
-	errIdx  int
-	mu      sync.RWMutex
-	storage otlptest.SpansStorage
-	headers metadata.MD
-	delay   time.Duration
+	errors   []error
+	requests int
+	mu       sync.RWMutex
+	storage  otlptest.SpansStorage
+	headers  metadata.MD
+	delay    time.Duration
 }
 
 func (mts *mockTraceService) getHeaders() metadata.MD {
@@ -82,14 +80,15 @@ func (mts *mockTraceService) Export(ctx context.Context, exp *collectortracepb.E
 	}
 
 	mts.mu.Lock()
-	defer mts.mu.Unlock()
+	defer func() {
+		mts.requests++
+		mts.mu.Unlock()
+	}()
 
 	reply := &collectortracepb.ExportTraceServiceResponse{}
-	if mts.errIdx < len(mts.errors) {
-		idx := mts.errIdx
-		mts.errIdx++
+	if mts.requests < len(mts.errors) {
+		idx := mts.requests
 		return reply, mts.errors[idx]
-
 	}
 
 	mts.headers, _ = metadata.FromIncomingContext(ctx)

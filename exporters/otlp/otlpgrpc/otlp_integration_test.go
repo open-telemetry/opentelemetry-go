@@ -206,10 +206,6 @@ func TestNewExporter_FailThreeTimesAndSucceedAfter(t *testing.T) {
 	mc := runMockCollectorWithConfig(t, &mockConfig{
 		errors: []error{
 			status.Error(codes.Unavailable, "some error"),
-			status.Error(codes.Unavailable, "some error"),
-			status.Error(codes.Unavailable, "some error"),
-
-			//status.New(codes.Unavailable, "some error").WithDetails(errdetails.RetryInfo{RetryDelay: }),
 		},
 	})
 
@@ -219,15 +215,11 @@ func TestNewExporter_FailThreeTimesAndSucceedAfter(t *testing.T) {
 		_ = exp.Shutdown(ctx)
 	}()
 
-	n := 10
-	for i := 0; i < n; i++ {
-		require.NoError(t, exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Spans"}}))
-	}
+	require.NoError(t, exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Spans"}}))
 
-	dSpans := mc.getSpans()
-	// Expecting 0 spans to have been received by the original but now dead collector
-	if g, w := len(dSpans), n; g != w {
-		t.Fatalf("Disconnected collector: spans: got %d want %d", g, w)
+	span := mc.getSpans()
+	if g, w := len(span), 1; g != w {
+		t.Fatalf("Collector spans: got %d want %d", g, w)
 	}
 }
 
