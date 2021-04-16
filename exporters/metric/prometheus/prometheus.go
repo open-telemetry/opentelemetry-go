@@ -128,16 +128,6 @@ func NewExportPipeline(config Config, options ...controller.Option) (*Exporter, 
 }
 
 // InstallNewPipeline instantiates a NewExportPipeline and registers it globally.
-// Typically called as:
-//
-// 	hf, err := prometheus.InstallNewPipeline(prometheus.Config{...})
-//
-// 	if err != nil {
-// 		...
-// 	}
-// 	http.HandleFunc("/metrics", hf)
-// 	defer pipeline.Stop()
-// 	... Done
 func InstallNewPipeline(config Config, options ...controller.Option) (*Exporter, error) {
 	exp, err := NewExportPipeline(config, options...)
 	if err != nil {

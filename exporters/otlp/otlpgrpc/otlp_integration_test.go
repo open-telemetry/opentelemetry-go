@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -144,7 +145,7 @@ func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
 func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *testing.T) {
 	mc := runMockCollector(t)
 
-	reconnectionPeriod := 2 * time.Second // 2 second + jitter rest time after reconnection
+	reconnectionPeriod := 20 * time.Millisecond
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint,
 		otlpgrpc.WithReconnectionPeriod(reconnectionPeriod))
@@ -165,8 +166,18 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 		mc.endpoint,
 	)
 
-	// give it time for first reconnection
-	<-time.After(time.Millisecond * 20)
+	// Give the exporter sometime to reconnect
+	func() {
+		timer := time.After(reconnectionPeriod * 10)
+		for {
+			select {
+			case <-timer:
+				return
+			default:
+				runtime.Gosched()
+			}
+		}
+	}()
 
 	// second export, it will detect connection issue, change state of exporter to disconnected and
 	// send message to disconnected channel but this time reconnection gouroutine will be in (rest mode, not listening to the disconnected channel)
@@ -184,7 +195,17 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 
 	// make sure reconnection loop hits beginning and goes back to waiting mode
 	// after hitting beginning of the loop it should reconnect
-	<-time.After(time.Second * 4)
+	func() {
+		timer := time.After(reconnectionPeriod * 10)
+		for {
+			select {
+			case <-timer:
+				return
+			default:
+				runtime.Gosched()
+			}
+		}
+	}()
 
 	n := 10
 	for i := 0; i < n; i++ {
@@ -240,7 +261,17 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 		nmc := runMockCollectorAtEndpoint(t, mc.endpoint)
 
 		// Give the exporter sometime to reconnect
-		<-time.After(reconnectionPeriod * 4)
+		func() {
+			timer := time.After(reconnectionPeriod * 10)
+			for {
+				select {
+				case <-timer:
+					return
+				default:
+					runtime.Gosched()
+				}
+			}
+		}()
 
 		n := 10
 		for i := 0; i < n; i++ {
