@@ -360,7 +360,10 @@ func TestNewExporter_withInvalidSecurityConfiguration(t *testing.T) {
 	}
 
 	err = exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "misconfiguration"}})
-	require.Equal(t, err.Error(), "exporter disconnected: grpc: no transport security set (use grpc.WithInsecure() explicitly or set credentials)")
+
+	expectedErr := fmt.Sprintf("traces exporter is disconnected from the server %s: grpc: no transport security set (use grpc.WithInsecure() explicitly or set credentials)", mc.endpoint)
+
+	require.Equal(t, expectedErr, err.Error())
 
 	defer func() {
 		_ = exp.Shutdown(ctx)
