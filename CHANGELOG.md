@@ -16,7 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Adds test to check BatchSpanProcessor ignores `OnEnd` and `ForceFlush` post `Shutdown`. (#1772)
 - Option `ExportTimeout` was added to batch span processor. (#1755)
 - Adds semantic conventions for exceptions. (#1492)
-- Added support for configuring OTLP/HTTP Endpoints, Headers, Compression and Timeout via the Environment Variables. (#1758)
+- Added support for configuring OTLP/HTTP and OTLP/gRPC Endpoints, TLS Certificates, Headers, Compression and Timeout via Environment Variables. (#1758, #1769 and #1811)
   - `OTEL_EXPORTER_OTLP_ENDPOINT`
   - `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`
   - `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`
@@ -29,7 +29,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `OTEL_EXPORTER_OTLP_TIMEOUT`
   - `OTEL_EXPORTER_OTLP_TRACES_TIMEOUT`
   - `OTEL_EXPORTER_OTLP_METRICS_TIMEOUT`
-- Added support for configuring OTLP/HTTP TLS Certificates via the Environment Variables. (#1769)
   - `OTEL_EXPORTER_OTLP_CERTIFICATE`
   - `OTEL_EXPORTER_OTLP_TRACES_CERTIFICATE`
   - `OTEL_EXPORTER_OTLP_METRICS_CERTIFICATE`
@@ -47,6 +46,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Additionally, this tag is overridden, as specified in the OTel specification, if the event contains an attribute with that key. (#1768)
 - Zipkin Exporter: Ensure mapping between OTel and Zipkin span data complies with the specification. (#1688)
 - Fixed typo for default service name in Jaeger Exporter. (#1797)
+- Fix flaky OTLP for the reconnnection of the client connection. (#1527, TBD)
 
 ### Changed
 
