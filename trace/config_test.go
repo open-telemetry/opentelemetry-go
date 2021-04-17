@@ -41,7 +41,7 @@ func TestNewSpanConfig(t *testing.T) {
 	}
 
 	withStatusOpt := WithStatus(true)
-	//just for coverage
+	// For coverage
 	withStatusOpt.private()
 
 	tests := []struct {
