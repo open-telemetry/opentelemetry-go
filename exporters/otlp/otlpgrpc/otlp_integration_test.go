@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -149,44 +148,22 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint,
 		otlpgrpc.WithReconnectionPeriod(reconnectionPeriod))
-	defer func() {
-		_ = exp.Shutdown(ctx)
-	}()
+	defer func() { require.NoError(t, exp.Shutdown(ctx)) }()
+
+	// Wait for a connection.
+	mc.ln.WaitForConn()
 
 	// We'll now stop the collector right away to simulate a connection
 	// dying in the midst of communication or even not existing before.
-	_ = mc.stop()
+	require.NoError(t, mc.stop())
 
 	// first export, it will send disconnected message to the channel on export failure,
 	// trigger almost immediate reconnection
-	require.Error(
-		t,
-		exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "in the midst"}}),
-		"transport: Error while dialing dial tcp %s: connect: connection refused",
-		mc.endpoint,
-	)
-
-	// Give the exporter sometime to reconnect
-	func() {
-		timer := time.After(reconnectionPeriod * 10)
-		for {
-			select {
-			case <-timer:
-				return
-			default:
-				runtime.Gosched()
-			}
-		}
-	}()
+	require.Error(t, exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "in the midst"}}))
 
 	// second export, it will detect connection issue, change state of exporter to disconnected and
 	// send message to disconnected channel but this time reconnection gouroutine will be in (rest mode, not listening to the disconnected channel)
-	require.Error(
-		t,
-		exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "in the midst"}}),
-		"transport: Error while dialing dial tcp %s: connect: connection refused2",
-		mc.endpoint,
-	)
+	require.Error(t, exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "in the midst"}}))
 
 	// as a result we have exporter in disconnected state waiting for disconnection message to reconnect
 
@@ -195,17 +172,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 
 	// make sure reconnection loop hits beginning and goes back to waiting mode
 	// after hitting beginning of the loop it should reconnect
-	func() {
-		timer := time.After(reconnectionPeriod * 10)
-		for {
-			select {
-			case <-timer:
-				return
-			default:
-				runtime.Gosched()
-			}
-		}
-	}()
+	nmc.ln.WaitForConn()
 
 	n := 10
 	for i := 0; i < n; i++ {
@@ -226,22 +193,24 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 	if g, w := len(dSpans), 0; g != w {
 		t.Fatalf("Disconnected collector: spans: got %d want %d", g, w)
 	}
+
+	require.NoError(t, nmc.Stop())
 }
 
 func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 	mc := runMockCollector(t)
 
-	reconnectionPeriod := 20 * time.Millisecond
+	reconnectionPeriod := 50 * time.Millisecond
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint,
 		otlpgrpc.WithReconnectionPeriod(reconnectionPeriod))
-	defer func() {
-		_ = exp.Shutdown(ctx)
-	}()
+	defer func() { require.NoError(t, exp.Shutdown(ctx)) }()
+
+	mc.ln.WaitForConn()
 
 	// We'll now stop the collector right away to simulate a connection
 	// dying in the midst of communication or even not existing before.
-	_ = mc.stop()
+	require.NoError(t, mc.stop())
 
 	// In the test below, we'll stop the collector many times,
 	// while exporting traces and test to ensure that we can
@@ -249,29 +218,14 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 	for j := 0; j < 3; j++ {
 
 		// No endpoint up.
-		require.Error(
-			t,
-			exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "in the midst"}}),
-			"transport: Error while dialing dial tcp %s: connect: connection refused",
-			mc.endpoint,
-		)
+		require.Error(t, exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "in the midst"}}))
 
 		// Now resurrect the collector by making a new one but reusing the
 		// old endpoint, and the collector should reconnect automatically.
 		nmc := runMockCollectorAtEndpoint(t, mc.endpoint)
 
 		// Give the exporter sometime to reconnect
-		func() {
-			timer := time.After(reconnectionPeriod * 10)
-			for {
-				select {
-				case <-timer:
-					return
-				default:
-					runtime.Gosched()
-				}
-			}
-		}()
+		nmc.ln.WaitForConn()
 
 		n := 10
 		for i := 0; i < n; i++ {
@@ -289,7 +243,9 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 		if g, w := len(dSpans), 0; g != w {
 			t.Fatalf("Round #%d: Disconnected collector: spans: got %d want %d", j, g, w)
 		}
-		_ = nmc.stop()
+
+		// Disconnect for the next try.
+		require.NoError(t, nmc.stop())
 	}
 }
 
