@@ -75,7 +75,7 @@ func (s *Span) End(opts ...trace.SpanOption) {
 }
 
 // RecordError records an error as an exception Span event.
-func (s *Span) RecordError(err error, opts ...trace.EventOption) {
+func (s *Span) RecordError(err error, options ...trace.ErrorOption) {
 	if err == nil || s.ended {
 		return
 	}
@@ -86,12 +86,14 @@ func (s *Span) RecordError(err error, opts ...trace.EventOption) {
 		errTypeString = errType.String()
 	}
 
-	opts = append(opts, trace.WithAttributes(
+	c := trace.NewErrorConfig(options...)
+	eventOpts := c.EventOpts
+	eventOpts = append(eventOpts, trace.WithAttributes(
 		semconv.ExceptionTypeKey.String(errTypeString),
 		semconv.ExceptionMessageKey.String(err.Error()),
 	))
 
-	s.AddEvent(semconv.ExceptionEventName, opts...)
+	s.AddEvent(semconv.ExceptionEventName, eventOpts...)
 }
 
 // AddEvent adds an event to s.

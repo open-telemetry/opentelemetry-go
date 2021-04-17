@@ -18,6 +18,8 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/codes"
+
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -39,10 +41,6 @@ func TestNewSpanConfig(t *testing.T) {
 		SpanContext: SpanContext{traceID: TraceID([16]byte{1, 1}), spanID: SpanID{3}},
 		Attributes:  []attribute.KeyValue{k1v2, k2v2},
 	}
-
-	withStatusOpt := WithStatus(true)
-	// For coverage
-	withStatusOpt.private()
 
 	tests := []struct {
 		options  []SpanOption
@@ -156,14 +154,6 @@ func TestNewSpanConfig(t *testing.T) {
 			},
 		},
 		{
-			[]SpanOption{
-				withStatusOpt,
-			},
-			&SpanConfig{
-				WithStatus: true,
-			},
-		},
-		{
 			// Everything should work together.
 			[]SpanOption{
 				WithAttributes(k1v1),
@@ -171,7 +161,6 @@ func TestNewSpanConfig(t *testing.T) {
 				WithLinks(link1, link2),
 				WithNewRoot(),
 				WithSpanKind(SpanKindConsumer),
-				WithStatus(true),
 			},
 			&SpanConfig{
 				Attributes: []attribute.KeyValue{k1v1},
@@ -179,7 +168,6 @@ func TestNewSpanConfig(t *testing.T) {
 				Links:      []Link{link1, link2},
 				NewRoot:    true,
 				SpanKind:   SpanKindConsumer,
-				WithStatus: true,
 			},
 		},
 	}
@@ -222,5 +210,65 @@ func TestTracerConfig(t *testing.T) {
 	for _, test := range tests {
 		config := NewTracerConfig(test.options...)
 		assert.Equal(t, test.expected, config)
+	}
+}
+
+func TestErrorConfig(t *testing.T) {
+	k1v1 := attribute.String("key1", "value1")
+	k2v2 := attribute.String("key2", "value2")
+	timestamp := time.Unix(0, 0)
+
+	withErrorStatusOpt := WithErrorStatus(codes.Error, "invalid data type")
+	// For coverage
+	withErrorStatusOpt.private()
+
+	withEventOpts := WithEventOpts(WithTimestamp(timestamp), WithAttributes(k1v1, k2v2))
+	// For coverage
+	withEventOpts.private()
+
+	tests := []struct {
+		options  []ErrorOption
+		expected *ErrorConfig
+	}{
+		{
+			// No non-zero-values should be set.
+			[]ErrorOption{},
+			&ErrorConfig{},
+		},
+		{
+			// unset should not be set
+			[]ErrorOption{
+				WithErrorStatus(codes.Unset, ""),
+			},
+			&ErrorConfig{},
+		},
+		{
+			// errorStatus options
+			[]ErrorOption{
+				withErrorStatusOpt,
+			},
+			&ErrorConfig{
+				Code:    codes.Error,
+				Message: "invalid data type",
+			},
+		},
+		{
+			// mulit options
+			[]ErrorOption{
+				withErrorStatusOpt,
+				withEventOpts,
+			},
+			&ErrorConfig{
+				Code:    codes.Error,
+				Message: "invalid data type",
+				EventOpts: []EventOption{
+					WithTimestamp(timestamp),
+					WithAttributes(k1v1, k2v2),
+				},
+			},
+		},
+	}
+	for _, test := range tests {
+		assert.Equal(t, test.expected, NewErrorConfig(test.options...))
 	}
 }

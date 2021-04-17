@@ -157,7 +157,7 @@ func TestSpan(t *testing.T) {
 				e.Expect(ok).ToBeTrue()
 
 				testTime := time.Now()
-				subject.RecordError(s.err, trace.WithTimestamp(testTime))
+				subject.RecordError(s.err, trace.WithEventOpts(trace.WithTimestamp(testTime)))
 
 				expectedEvents := []oteltest.Event{{
 					Timestamp: testTime,

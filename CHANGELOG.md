@@ -141,7 +141,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Added `WithStatus` event option to set Span status at the same time when call RecordError. (#1677)
 - Added `resource.Default()` for use with meter and tracer providers. (#1507)
 - `AttributePerEventCountLimit` and `AttributePerLinkCountLimit` for `SpanLimits`. (#1535)
 - Added `Keys()` method to `propagation.TextMapCarrier` and `propagation.HeaderCarrier` to adapt `http.Header` to this interface. (#1544)
@@ -162,6 +161,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Changed signature of the Span `RecordError` , replace EventOption by ErrorOption
 - Replaced interface `oteltest.SpanRecorder` with its existing implementation
   `StandardSpanRecorder`. (#1542)
 - Default span limit values to 128. (#1535)

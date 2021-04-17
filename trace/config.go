@@ -17,6 +17,8 @@ package trace
 import (
 	"time"
 
+	"go.opentelemetry.io/otel/codes"
+
 	"go.opentelemetry.io/otel/attribute"
 )
 
@@ -60,8 +62,6 @@ type SpanConfig struct {
 	NewRoot bool
 	// SpanKind is the role a Span has in a trace.
 	SpanKind SpanKind
-	// WithStatus is used to control whether or not set Span status when RecordError
-	WithStatus bool
 }
 
 // NewSpanConfig applies all the options to a returned SpanConfig.
@@ -206,14 +206,55 @@ func (i instrumentationVersionOption) ApplyTracer(config *TracerConfig) {
 
 func (instrumentationVersionOption) private() {}
 
-type withStatusSpanOption bool
+// ErrorConfig is a group of options for error.
+type ErrorConfig struct {
+	Code    codes.Code
+	Message string
+	// EventOpts will be passed to addEvent
+	EventOpts []EventOption
+}
 
-func (o withStatusSpanOption) ApplySpan(c *SpanConfig)  { o.apply(c) }
-func (o withStatusSpanOption) ApplyEvent(c *SpanConfig) { o.apply(c) }
-func (withStatusSpanOption) private()                   {}
-func (o withStatusSpanOption) apply(c *SpanConfig)      { c.WithStatus = bool(o) }
+// ErrorOption applies an option to a ErrorConfig.
+type ErrorOption interface {
+	ApplyError(config *ErrorConfig)
 
-// WithStatus set the status at the same time when RecordError
-func WithStatus(o bool) LifeCycleOption {
-	return withStatusSpanOption(o)
+	// A private method to prevent users implementing the
+	// interface and so future additions to it will not
+	// violate compatibility.
+	private()
+}
+
+// NewErrorConfig applies all the options to a returned ErrorConfig.
+func NewErrorConfig(options ...ErrorOption) *ErrorConfig {
+	c := new(ErrorConfig)
+	for _, option := range options {
+		option.ApplyError(c)
+	}
+	return c
+}
+
+type statusErrorOption struct {
+	Code    codes.Code
+	Message string
+}
+
+func (o statusErrorOption) ApplyError(c *ErrorConfig) {
+	c.Code = o.Code
+	c.Message = o.Message
+}
+func (statusErrorOption) private() {}
+
+// WithErrorStatus set the error code and message when code is not codes.Unset
+func WithErrorStatus(code codes.Code, message string) ErrorOption {
+	return statusErrorOption{code, message}
+}
+
+type eventOptsErrorOption []EventOption
+
+func (o eventOptsErrorOption) ApplyError(c *ErrorConfig) { c.EventOpts = o }
+func (eventOptsErrorOption) private()                    {}
+
+// WithEventOpts set event options, will be passed to addEvent
+func WithEventOpts(option ...EventOption) ErrorOption {
+	return eventOptsErrorOption(option)
 }

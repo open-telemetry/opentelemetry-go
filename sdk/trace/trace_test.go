@@ -1101,7 +1101,7 @@ func TestRecordError(t *testing.T) {
 		span := startSpan(tp, "RecordError")
 
 		errTime := time.Now()
-		span.RecordError(s.err, trace.WithTimestamp(errTime))
+		span.RecordError(s.err, trace.WithEventOpts(trace.WithTimestamp(errTime)))
 
 		got, err := endSpan(te, span)
 		if err != nil {
@@ -1164,14 +1164,34 @@ func TestRecordErrorNil(t *testing.T) {
 	}
 }
 
-func TestRecordErrorWithStatus(t *testing.T) {
+func TestRecordErrorOptions(t *testing.T) {
 	errTime := time.Now()
 	scenarios := []struct {
-		err  error
-		want *SpanSnapshot
+		err     error
+		options []trace.ErrorOption
+		want    *SpanSnapshot
 	}{
 		{
+			err:     nil,
+			options: []trace.ErrorOption{},
+			want: &SpanSnapshot{
+				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID:    tid,
+					TraceFlags: 0x1,
+				}),
+				Parent:                 sc.WithRemote(true),
+				Name:                   "span0",
+				StatusCode:             codes.Unset,
+				SpanKind:               trace.SpanKindInternal,
+				InstrumentationLibrary: instrumentation.Library{Name: "RecordError"},
+			},
+		},
+		{
 			err: ottest.NewTestError("test error"),
+			options: []trace.ErrorOption{
+				trace.WithErrorStatus(codes.Error, "test error"),
+				trace.WithEventOpts(trace.WithTimestamp(errTime)),
+			},
 			want: &SpanSnapshot{
 				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID:    tid,
@@ -1191,20 +1211,42 @@ func TestRecordErrorWithStatus(t *testing.T) {
 						},
 					},
 				},
+				StatusMessage:          "test error",
 				InstrumentationLibrary: instrumentation.Library{Name: "RecordError"},
 			},
 		},
 		{
-			err: nil,
+			err: ottest.NewTestError("test error"),
+			options: []trace.ErrorOption{
+				trace.WithErrorStatus(codes.Error, "test error"),
+				trace.WithEventOpts(
+					trace.WithTimestamp(errTime),
+					trace.WithAttributes(attribute.String("key1", "value1")),
+					trace.WithAttributes(attribute.String("key2", "value2")),
+				),
+			},
 			want: &SpanSnapshot{
 				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID:    tid,
 					TraceFlags: 0x1,
 				}),
-				Parent:                 sc.WithRemote(true),
-				Name:                   "span0",
-				StatusCode:             codes.Unset,
-				SpanKind:               trace.SpanKindInternal,
+				Parent:     sc.WithRemote(true),
+				Name:       "span0",
+				StatusCode: codes.Error,
+				SpanKind:   trace.SpanKindInternal,
+				MessageEvents: []trace.Event{
+					{
+						Name: semconv.ExceptionEventName,
+						Time: errTime,
+						Attributes: []attribute.KeyValue{
+							attribute.String("key1", "value1"),
+							attribute.String("key2", "value2"),
+							semconv.ExceptionTypeKey.String("go.opentelemetry.io/otel/internal/internaltest.TestError"),
+							semconv.ExceptionMessageKey.String("test error"),
+						},
+					},
+				},
+				StatusMessage:          "test error",
 				InstrumentationLibrary: instrumentation.Library{Name: "RecordError"},
 			},
 		},
@@ -1215,7 +1257,7 @@ func TestRecordErrorWithStatus(t *testing.T) {
 		tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
 
 		span := startSpan(tp, "RecordError")
-		span.RecordError(s.err, trace.WithTimestamp(errTime), trace.WithStatus(true))
+		span.RecordError(s.err, s.options...)
 		got, err := endSpan(te, span)
 		if err != nil {
 			t.Fatal(err)

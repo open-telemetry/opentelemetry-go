@@ -248,20 +248,22 @@ func (s *span) End(options ...trace.SpanOption) {
 // This method does not change the Span status in default
 // To change Span status, pass `WithStatus` as options.
 // This method does nothing If this span is not being recorded or err is nil.
-func (s *span) RecordError(err error, opts ...trace.EventOption) {
+func (s *span) RecordError(err error, options ...trace.ErrorOption) {
 	if s == nil || err == nil || !s.IsRecording() {
 		return
 	}
-	c := trace.NewEventConfig(opts...)
-	if c.WithStatus {
-		s.SetStatus(codes.Error, "")
+
+	c := trace.NewErrorConfig(options...)
+	if c.Code != codes.Unset {
+		s.SetStatus(c.Code, c.Message)
 	}
 
-	opts = append(opts, trace.WithAttributes(
+	eventOpts := c.EventOpts
+	eventOpts = append(eventOpts, trace.WithAttributes(
 		semconv.ExceptionTypeKey.String(typeStr(err)),
 		semconv.ExceptionMessageKey.String(err.Error()),
 	))
-	s.addEvent(semconv.ExceptionEventName, opts...)
+	s.addEvent(semconv.ExceptionEventName, eventOpts...)
 }
 
 func typeStr(i interface{}) string {
