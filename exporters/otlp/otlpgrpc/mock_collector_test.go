@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"runtime"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -107,7 +109,8 @@ type mockCollector struct {
 	metricSvc *mockMetricService
 
 	endpoint string
-	stopFunc func() error
+	ln       *listener
+	stopFunc func()
 	stopOnce sync.Once
 }
 
@@ -119,8 +122,9 @@ var errAlreadyStopped = fmt.Errorf("already stopped")
 func (mc *mockCollector) stop() error {
 	var err = errAlreadyStopped
 	mc.stopOnce.Do(func() {
+		err = nil
 		if mc.stopFunc != nil {
-			err = mc.stopFunc()
+			mc.stopFunc()
 		}
 	})
 	// Give it sometime to shutdown.
@@ -189,19 +193,70 @@ func runMockCollectorAtEndpoint(t *testing.T, endpoint string) *mockCollector {
 	mc := makeMockCollector(t)
 	collectortracepb.RegisterTraceServiceServer(srv, mc.traceSvc)
 	collectormetricpb.RegisterMetricsServiceServer(srv, mc.metricSvc)
+	mc.ln = newListener(ln)
 	go func() {
-		_ = srv.Serve(ln)
+		_ = srv.Serve((net.Listener)(mc.ln))
 	}()
 
-	deferFunc := func() error {
-		srv.Stop()
-		return ln.Close()
-	}
-
-	_, collectorPortStr, _ := net.SplitHostPort(ln.Addr().String())
-
-	mc.endpoint = "localhost:" + collectorPortStr
-	mc.stopFunc = deferFunc
+	mc.endpoint = ln.Addr().String()
+	// srv.Stop calls Close on mc.ln.
+	mc.stopFunc = srv.Stop
 
 	return mc
+}
+
+type listener struct {
+	closeOnce sync.Once
+	wrapped   net.Listener
+	C         chan struct{}
+}
+
+func newListener(wrapped net.Listener) *listener {
+	return &listener{
+		wrapped: wrapped,
+		C:       make(chan struct{}, 1),
+	}
+}
+
+func (l *listener) Close() error { return l.wrapped.Close() }
+
+func (l *listener) Addr() net.Addr { return l.wrapped.Addr() }
+
+// Accept waits for and returns the next connection to the listener. It will
+// send a signal on l.C that a connection has been made before returning.
+func (l *listener) Accept() (net.Conn, error) {
+	conn, err := l.wrapped.Accept()
+	if err != nil {
+		// Go 1.16 exported net.ErrClosed that could clean up this check, but to
+		// remain backwards compatible with previous versions of Go that we
+		// support the following string evaluation is used instead to keep in line
+		// with the previously recommended way to check this:
+		// https://github.com/golang/go/issues/4373#issuecomment-353076799
+		if strings.Contains(err.Error(), "use of closed network connection") {
+			// If the listener has been closed, do not allow callers of
+			// WaitForConn to wait for a connection that will never come.
+			l.closeOnce.Do(func() { close(l.C) })
+		}
+		return conn, err
+	}
+
+	select {
+	case l.C <- struct{}{}:
+	default:
+		// If C is full, assume nobody is listening and move on.
+	}
+	return conn, nil
+}
+
+// WaitForConn will wait indefintely for a connection to be estabilished with
+// the listener before returning.
+func (l *listener) WaitForConn() {
+	for {
+		select {
+		case <-l.C:
+			return
+		default:
+			runtime.Gosched()
+		}
+	}
 }
