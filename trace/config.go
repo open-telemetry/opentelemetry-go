@@ -60,6 +60,8 @@ type SpanConfig struct {
 	NewRoot bool
 	// SpanKind is the role a Span has in a trace.
 	SpanKind SpanKind
+	// WithStatus is used to control whether or not set Span status when RecordError
+	WithStatus bool
 }
 
 // NewSpanConfig applies all the options to a returned SpanConfig.
@@ -203,3 +205,15 @@ func (i instrumentationVersionOption) ApplyTracer(config *TracerConfig) {
 }
 
 func (instrumentationVersionOption) private() {}
+
+type withStatusSpanOption bool
+
+func (o withStatusSpanOption) ApplySpan(c *SpanConfig)  { o.apply(c) }
+func (o withStatusSpanOption) ApplyEvent(c *SpanConfig) { o.apply(c) }
+func (withStatusSpanOption) private()                   {}
+func (o withStatusSpanOption) apply(c *SpanConfig)      { c.WithStatus = bool(o) }
+
+// WithStatus set the status at the same time when RecordError
+func WithStatus(o bool) LifeCycleOption {
+	return withStatusSpanOption(o)
+}

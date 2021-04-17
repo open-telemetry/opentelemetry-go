@@ -40,6 +40,10 @@ func TestNewSpanConfig(t *testing.T) {
 		Attributes:  []attribute.KeyValue{k1v2, k2v2},
 	}
 
+	withStatusOpt := WithStatus(true)
+	//just for coverage
+	withStatusOpt.private()
+
 	tests := []struct {
 		options  []SpanOption
 		expected *SpanConfig
@@ -152,6 +156,14 @@ func TestNewSpanConfig(t *testing.T) {
 			},
 		},
 		{
+			[]SpanOption{
+				withStatusOpt,
+			},
+			&SpanConfig{
+				WithStatus: true,
+			},
+		},
+		{
 			// Everything should work together.
 			[]SpanOption{
 				WithAttributes(k1v1),
@@ -159,6 +171,7 @@ func TestNewSpanConfig(t *testing.T) {
 				WithLinks(link1, link2),
 				WithNewRoot(),
 				WithSpanKind(SpanKindConsumer),
+				WithStatus(true),
 			},
 			&SpanConfig{
 				Attributes: []attribute.KeyValue{k1v1},
@@ -166,6 +179,7 @@ func TestNewSpanConfig(t *testing.T) {
 				Links:      []Link{link1, link2},
 				NewRoot:    true,
 				SpanKind:   SpanKindConsumer,
+				WithStatus: true,
 			},
 		},
 	}
