@@ -16,6 +16,7 @@ package otlphttp_test
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"testing"
@@ -57,7 +58,7 @@ func TestEndToEnd(t *testing.T) {
 		{
 			name: "with gzip compression",
 			opts: []otlphttp.Option{
-				otlphttp.WithCompression(otlphttp.GzipCompression),
+				otlphttp.WithCompression(otlp.GzipCompression),
 			},
 		},
 		{
@@ -109,7 +110,7 @@ func TestEndToEnd(t *testing.T) {
 		{
 			name: "with json encoding",
 			opts: []otlphttp.Option{
-				otlphttp.WithMarshal(otlphttp.MarshalJSON),
+				otlphttp.WithMarshal(otlp.MarshalJSON),
 			},
 		},
 	}
@@ -154,6 +155,7 @@ func TestRetry(t *testing.T) {
 	defer mc.MustStop(t)
 	driver := otlphttp.NewDriver(
 		otlphttp.WithEndpoint(mc.Endpoint()),
+		otlphttp.WithTracesEndpoint(mc.Endpoint()),
 		otlphttp.WithInsecure(),
 		otlphttp.WithMaxAttempts(len(statuses)+1),
 	)
@@ -237,6 +239,7 @@ func TestNoRetry(t *testing.T) {
 	}()
 	err = exporter.ExportSpans(ctx, otlptest.SingleSpanSnapshot())
 	assert.Error(t, err)
+	assert.Equal(t, fmt.Sprintf("failed to send traces to http://%s/v1/traces with HTTP status 400 Bad Request", mc.endpoint), err.Error())
 	assert.Empty(t, mc.GetSpans())
 }
 
