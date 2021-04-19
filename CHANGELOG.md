@@ -71,6 +71,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   It no longer is a conglomerate of itself, events, and link attributes that have been dropped. (#1771)
 - Make `ExportSpans` in Jaeger Exporter honor context deadline. (#1773)
 - The `go.opentelemetry.io/otel/sdk/export/trace` package is merged into the `go.opentelemetry.io/otel/sdk/trace` package. (#1778)
+- Resources default detectors are overwritten by using `WithDetectors()` (#1810)
 
 ### Removed
 
@@ -89,6 +90,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `trace.FlagsDebug` and `trace.FlagsDeferred` constants have been removed and will be localized to the B3 propagator. (#1770)
 - Remove `Process` configuration, `WithProcessFromEnv` and `ProcessFromEnv`, from the Jaeger exporter package.
   The information that could be configured in the `Process` struct should be configured in a `Resource` instead. (#1776)
+- Remove `resource.WithoutBuiltin()`.  Any use of `resource.WithDetecors()` will have the same effect (#1810)
+- Remove `resource.WithHost()`, `resource.WithTelemetrySDK()`, and `resource.WithFromEnv()`.  To replace these effects use `resource.WithDetectors()` (#1810)
 
 ## [0.19.0] - 2021-03-18
 

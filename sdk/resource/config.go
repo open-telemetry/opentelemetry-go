@@ -59,16 +59,16 @@ func (d detectAttributes) Detect(context.Context) (*Resource, error) {
 // inlcude a WithDetectors(BuiltinDetectors...),
 // Examples:
 // `New(ctx)`: Use builtin `Detector`s.
-// `New(ctx, WithDetectors())`: Use no `Detector`s
+// `New(ctx, WithDetectors())`: Use no `Detector`s.
 
-// `New(ctx, WithDetectors(d1, d2))`: Use Detector `d1`, then overlay Detector `d2`
+// `New(ctx, WithDetectors(d1, d2))`: Use Detector `d1`, then overlay Detector `d2`.
 // ```
 // New(ctx,
 //      WithDetectors(BuiltinDetectors...),
 //      WithDetectors(d1),
 // )
 // ```
-// Use The `BuiltinDetectors`, then overlay Detector `d1`
+// Use The `BuiltinDetectors`, then overlay Detector `d1`.
 func WithDetectors(detectors ...Detector) Option {
 	if len(detectors) == 0 {
 		return detectorsOption{detectors: []Detector{noOp{}}}
