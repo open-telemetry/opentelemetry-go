@@ -21,12 +21,9 @@ import (
 	"log"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/semconv"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/trace/jaeger"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 // initTracer creates a new trace provider instance and registers it as global trace provider.
@@ -34,14 +31,6 @@ func initTracer() func() {
 	// Create and install Jaeger export pipeline.
 	flush, err := jaeger.InstallNewPipeline(
 		jaeger.WithCollectorEndpoint("http://localhost:14268/api/traces"),
-		jaeger.WithSDKOptions(
-			sdktrace.WithSampler(sdktrace.AlwaysSample()),
-			sdktrace.WithResource(resource.NewWithAttributes(
-				semconv.ServiceNameKey.String("trace-demo"),
-				attribute.String("exporter", "jaeger"),
-				attribute.Float64("float", 312.23),
-			)),
-		),
 	)
 	if err != nil {
 		log.Fatal(err)
