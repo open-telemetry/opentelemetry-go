@@ -433,7 +433,8 @@ func (e *Exporter) Flush() {
 func (e *Exporter) upload(spans []*sdktrace.SpanSnapshot) error {
 	batchList := jaegerBatchList(spans, e.defaultServiceName)
 	for _, batch := range batchList {
-		err := e.uploader.upload(batch)
+		// TODO (MrAlias): pass an appropriate context (#1799, #1803).
+		err := e.uploader.upload(context.TODO(), batch)
 		if err != nil {
 			return err
 		}
