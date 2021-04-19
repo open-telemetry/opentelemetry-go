@@ -251,7 +251,7 @@ type testCollectorEndpoint struct {
 	batchesUploaded []*gen.Batch
 }
 
-func (c *testCollectorEndpoint) upload(batch *gen.Batch) error {
+func (c *testCollectorEndpoint) upload(_ context.Context, batch *gen.Batch) error {
 	c.batchesUploaded = append(c.batchesUploaded, batch)
 	return nil
 }

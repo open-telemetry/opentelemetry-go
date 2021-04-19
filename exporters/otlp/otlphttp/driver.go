@@ -28,6 +28,8 @@ import (
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/otel/exporters/otlp/internal/otlpconfig"
+
 	jsonpb "google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
@@ -64,14 +66,15 @@ var ourTransport *http.Transport = &http.Transport{
 type driver struct {
 	metricsDriver signalDriver
 	tracesDriver  signalDriver
-	cfg           config
+	cfg           otlpconfig.Config
 
 	stopCh chan struct{}
 }
 
 type signalDriver struct {
-	cfg        signalConfig
-	generalCfg config
+	name       string
+	cfg        otlpconfig.SignalConfig
+	generalCfg otlpconfig.Config
 	client     *http.Client
 	stopCh     chan struct{}
 }
@@ -80,15 +83,15 @@ var _ otlp.ProtocolDriver = (*driver)(nil)
 
 // NewDriver creates a new HTTP driver.
 func NewDriver(opts ...Option) otlp.ProtocolDriver {
-	cfg := newDefaultConfig()
-	applyEnvConfigs(&cfg)
-
+	cfg := otlpconfig.NewDefaultConfig()
+	otlpconfig.ApplyHTTPEnvConfigs(&cfg)
 	for _, opt := range opts {
-		opt.Apply(&cfg)
+		opt.ApplyHTTPOption(&cfg)
 	}
+
 	for pathPtr, defaultPath := range map[*string]string{
-		&cfg.traces.urlPath:  DefaultTracesPath,
-		&cfg.metrics.urlPath: DefaultMetricsPath,
+		&cfg.Traces.URLPath:  DefaultTracesPath,
+		&cfg.Metrics.URLPath: DefaultMetricsPath,
 	} {
 		tmp := strings.TrimSpace(*pathPtr)
 		if tmp == "" {
@@ -101,46 +104,48 @@ func NewDriver(opts ...Option) otlp.ProtocolDriver {
 		}
 		*pathPtr = tmp
 	}
-	if cfg.maxAttempts <= 0 {
-		cfg.maxAttempts = DefaultMaxAttempts
+	if cfg.MaxAttempts <= 0 {
+		cfg.MaxAttempts = DefaultMaxAttempts
 	}
-	if cfg.maxAttempts > DefaultMaxAttempts {
-		cfg.maxAttempts = DefaultMaxAttempts
+	if cfg.MaxAttempts > DefaultMaxAttempts {
+		cfg.MaxAttempts = DefaultMaxAttempts
 	}
-	if cfg.backoff <= 0 {
-		cfg.backoff = DefaultBackoff
+	if cfg.Backoff <= 0 {
+		cfg.Backoff = DefaultBackoff
 	}
 
 	metricsClient := &http.Client{
 		Transport: ourTransport,
-		Timeout:   cfg.metrics.timeout,
+		Timeout:   cfg.Metrics.Timeout,
 	}
-	if cfg.metrics.tlsCfg != nil {
+	if cfg.Metrics.TLSCfg != nil {
 		transport := ourTransport.Clone()
-		transport.TLSClientConfig = cfg.metrics.tlsCfg
+		transport.TLSClientConfig = cfg.Metrics.TLSCfg
 		metricsClient.Transport = transport
 	}
 
 	tracesClient := &http.Client{
 		Transport: ourTransport,
-		Timeout:   cfg.traces.timeout,
+		Timeout:   cfg.Traces.Timeout,
 	}
-	if cfg.traces.tlsCfg != nil {
+	if cfg.Traces.TLSCfg != nil {
 		transport := ourTransport.Clone()
-		transport.TLSClientConfig = cfg.traces.tlsCfg
+		transport.TLSClientConfig = cfg.Traces.TLSCfg
 		tracesClient.Transport = transport
 	}
 
 	stopCh := make(chan struct{})
 	return &driver{
 		tracesDriver: signalDriver{
-			cfg:        cfg.traces,
+			name:       "traces",
+			cfg:        cfg.Traces,
 			generalCfg: cfg,
 			stopCh:     stopCh,
 			client:     tracesClient,
 		},
 		metricsDriver: signalDriver{
-			cfg:        cfg.metrics,
+			name:       "metrics",
+			cfg:        cfg.Metrics,
 			generalCfg: cfg,
 			stopCh:     stopCh,
 			client:     metricsClient,
@@ -198,18 +203,18 @@ func (d *driver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) 
 }
 
 func (d *driver) marshal(msg proto.Message) ([]byte, error) {
-	if d.cfg.marshaler == MarshalJSON {
+	if d.cfg.Marshaler == otlp.MarshalJSON {
 		return jsonpb.Marshal(msg)
 	}
 	return proto.Marshal(msg)
 }
 
 func (d *signalDriver) send(ctx context.Context, rawRequest []byte) error {
-	address := fmt.Sprintf("%s://%s%s", d.getScheme(), d.cfg.endpoint, d.cfg.urlPath)
+	address := fmt.Sprintf("%s://%s%s", d.getScheme(), d.cfg.Endpoint, d.cfg.URLPath)
 	var cancel context.CancelFunc
 	ctx, cancel = d.contextWithStop(ctx)
 	defer cancel()
-	for i := 0; i < d.generalCfg.maxAttempts; i++ {
+	for i := 0; i < d.generalCfg.MaxAttempts; i++ {
 		response, err := d.singleSend(ctx, rawRequest, address)
 		if err != nil {
 			return err
@@ -226,20 +231,20 @@ func (d *signalDriver) send(ctx context.Context, rawRequest []byte) error {
 			fallthrough
 		case http.StatusServiceUnavailable:
 			select {
-			case <-time.After(getWaitDuration(d.generalCfg.backoff, i)):
+			case <-time.After(getWaitDuration(d.generalCfg.Backoff, i)):
 				continue
 			case <-ctx.Done():
 				return ctx.Err()
 			}
 		default:
-			return fmt.Errorf("failed with HTTP status %s", response.Status)
+			return fmt.Errorf("failed to send %s to %s with HTTP status %s", d.name, address, response.Status)
 		}
 	}
-	return fmt.Errorf("failed to send data to %s after %d tries", address, d.generalCfg.maxAttempts)
+	return fmt.Errorf("failed to send data to %s after %d tries", address, d.generalCfg.MaxAttempts)
 }
 
 func (d *signalDriver) getScheme() string {
-	if d.cfg.insecure {
+	if d.cfg.Insecure {
 		return "http"
 	}
 	return "https"
@@ -302,20 +307,20 @@ func (d *signalDriver) singleSend(ctx context.Context, rawRequest []byte, addres
 func (d *signalDriver) prepareBody(rawRequest []byte) (io.ReadCloser, int64, http.Header) {
 	var bodyReader io.ReadCloser
 	headers := http.Header{}
-	for k, v := range d.cfg.headers {
+	for k, v := range d.cfg.Headers {
 		headers.Set(k, v)
 	}
 	contentLength := (int64)(len(rawRequest))
-	if d.generalCfg.marshaler == MarshalJSON {
+	if d.generalCfg.Marshaler == otlp.MarshalJSON {
 		headers.Set("Content-Type", contentTypeJSON)
 	} else {
 		headers.Set("Content-Type", contentTypeProto)
 	}
 	requestReader := bytes.NewBuffer(rawRequest)
-	switch d.cfg.compression {
-	case NoCompression:
+	switch d.cfg.Compression {
+	case otlp.NoCompression:
 		bodyReader = ioutil.NopCloser(requestReader)
-	case GzipCompression:
+	case otlp.GzipCompression:
 		preader, pwriter := io.Pipe()
 		go func() {
 			defer pwriter.Close()
