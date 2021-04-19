@@ -56,7 +56,7 @@ func WithMetricDriver(dr ProtocolDriver) SplitDriverOption {
 }
 
 // WithTraceDriver allows one to set the driver used for traces
-// in a SplitDriver
+// in a SplitDriver.
 func WithTraceDriver(dr ProtocolDriver) SplitDriverOption {
 	return func(d *splitDriver) {
 		d.trace = dr
