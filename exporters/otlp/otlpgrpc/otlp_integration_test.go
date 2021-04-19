@@ -356,22 +356,25 @@ func TestNewExporter_WithTimeout(t *testing.T) {
 		metrics int
 		spans   int
 		code    codes.Code
+		delay   bool
 	}{
 		{
 			name: "Timeout Spans",
 			fn: func(exp *otlp.Exporter) error {
 				return exp.ExportSpans(context.Background(), []*sdktrace.SpanSnapshot{{Name: "timed out"}})
 			},
-			timeout: time.Nanosecond,
+			timeout: time.Millisecond * 100,
 			code:    codes.DeadlineExceeded,
+			delay:   true,
 		},
 		{
 			name: "Timeout Metrics",
 			fn: func(exp *otlp.Exporter) error {
 				return exp.Export(context.Background(), otlptest.OneRecordCheckpointSet{})
 			},
-			timeout: time.Nanosecond,
+			timeout: time.Millisecond * 100,
 			code:    codes.DeadlineExceeded,
+			delay:   true,
 		},
 
 		{
@@ -398,8 +401,10 @@ func TestNewExporter_WithTimeout(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			mc := runMockCollector(t)
-			mc.traceSvc.delay = time.Second * 10
-			mc.metricSvc.delay = time.Second * 10
+			if tt.delay {
+				mc.traceSvc.delay = time.Second * 10
+				mc.metricSvc.delay = time.Second * 10
+			}
 			defer func() {
 				_ = mc.stop()
 			}()
