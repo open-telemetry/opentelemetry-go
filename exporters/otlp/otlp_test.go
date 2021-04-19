@@ -336,8 +336,9 @@ func TestSplitDriver(t *testing.T) {
 		assert.Equal(t, 0, driverMetrics.metricsExported)
 
 		recordCount := 5
+		spanCount := 7
 		assert.NoError(t, driver.ExportMetrics(ctx, stubCheckpointSet{recordCount}, metricsdk.StatelessExportKindSelector()))
-		assert.NoError(t, driver.ExportTraces(ctx, nil))
+		assert.NoError(t, driver.ExportTraces(ctx, stubSpanSnapshot(spanCount)))
 		assert.Len(t, driverMetrics.rm, recordCount)
 		assert.Len(t, driverMetrics.rs, 0)
 		assert.Equal(t, 0, driverMetrics.tracesExported)
@@ -361,8 +362,9 @@ func TestSplitDriver(t *testing.T) {
 		assert.Equal(t, 0, driverTraces.tracesExported)
 		assert.Equal(t, 0, driverTraces.metricsExported)
 
+		recordCount := 5
 		spanCount := 7
-		assert.NoError(t, driver.ExportMetrics(ctx, nil, nil))
+		assert.NoError(t, driver.ExportMetrics(ctx, stubCheckpointSet{recordCount}, metricsdk.StatelessExportKindSelector()))
 		assert.NoError(t, driver.ExportTraces(ctx, stubSpanSnapshot(spanCount)))
 		assert.Len(t, driverTraces.rm, 0)
 		assert.Len(t, driverTraces.rs, spanCount)
@@ -382,8 +384,10 @@ func TestSplitDriver(t *testing.T) {
 		ctx := context.Background()
 		assert.NoError(t, driver.Start(ctx))
 
-		assert.NoError(t, driver.ExportMetrics(ctx, nil, nil))
-		assert.NoError(t, driver.ExportTraces(ctx, nil))
+		recordCount := 5
+		spanCount := 7
+		assert.NoError(t, driver.ExportMetrics(ctx, stubCheckpointSet{recordCount}, metricsdk.StatelessExportKindSelector()))
+		assert.NoError(t, driver.ExportTraces(ctx, stubSpanSnapshot(spanCount)))
 		assert.NoError(t, driver.Stop(ctx))
 	})
 }
