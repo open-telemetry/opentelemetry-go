@@ -56,8 +56,6 @@ type options struct {
 
 	// TracerProviderOptions defines the options for tracer provider of sdk.
 	TracerProviderOptions []sdktrace.TracerProviderOption
-
-	Disabled bool
 }
 
 // WithBufferMaxCount defines the total number of traces that can be buffered in memory
@@ -81,18 +79,8 @@ func WithSDKOptions(opts ...sdktrace.TracerProviderOption) Option {
 	}
 }
 
-// WithDisabled option will cause pipeline methods to use
-// a no-op provider
-func WithDisabled(disabled bool) Option {
-	return func(o *options) {
-		o.Disabled = disabled
-	}
-}
-
 // NewRawExporter returns an OTel Exporter implementation that exports the
 // collected spans to Jaeger.
-//
-// It will IGNORE Disabled option.
 func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, error) {
 	uploader, err := endpointOption()
 	if err != nil {
@@ -148,9 +136,6 @@ func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (trace.Tra
 	o := options{}
 	for _, opt := range opts {
 		opt(&o)
-	}
-	if o.Disabled {
-		return trace.NewNoopTracerProvider(), func() {}, nil
 	}
 
 	exporter, err := NewRawExporter(endpointOption, opts...)
