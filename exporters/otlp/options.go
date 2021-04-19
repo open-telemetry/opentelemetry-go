@@ -48,7 +48,7 @@ func WithMetricExportKindSelector(selector metricsdk.ExportKindSelector) Exporte
 type SplitDriverOption func(d *splitDriver)
 
 // WithMetricDriver allows one to set the driver used for metrics
-// in a SplitDriver
+// in a SplitDriver.
 func WithMetricDriver(dr ProtocolDriver) SplitDriverOption {
 	return func(d *splitDriver) {
 		d.metric = dr
