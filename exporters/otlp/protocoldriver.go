@@ -160,7 +160,7 @@ func (d *noopDriver) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop does nothing
+// Stop does nothing.
 func (d *noopDriver) Stop(ctx context.Context) error {
 	return nil
 }
