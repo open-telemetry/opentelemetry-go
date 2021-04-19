@@ -165,7 +165,7 @@ func (d *noopDriver) Stop(ctx context.Context) error {
 	return nil
 }
 
-// ExportMetrics does nothing
+// ExportMetrics does nothing.
 func (d *noopDriver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error {
 	return nil
 }
