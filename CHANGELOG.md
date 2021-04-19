@@ -16,7 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Adds test to check BatchSpanProcessor ignores `OnEnd` and `ForceFlush` post `Shutdown`. (#1772)
 - Option `ExportTimeout` was added to batch span processor. (#1755)
 - Adds semantic conventions for exceptions. (#1492)
-- Added support for configuring OTLP/HTTP Endpoints, Headers, Compression and Timeout via the Environment Variables. (#1758)
+- Added support for configuring OTLP/HTTP and OTLP/gRPC Endpoints, TLS Certificates, Headers, Compression and Timeout via Environment Variables. (#1758, #1769 and #1811)
   - `OTEL_EXPORTER_OTLP_ENDPOINT`
   - `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`
   - `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`
@@ -29,7 +29,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `OTEL_EXPORTER_OTLP_TIMEOUT`
   - `OTEL_EXPORTER_OTLP_TRACES_TIMEOUT`
   - `OTEL_EXPORTER_OTLP_METRICS_TIMEOUT`
-- Added support for configuring OTLP/HTTP TLS Certificates via the Environment Variables. (#1769)
   - `OTEL_EXPORTER_OTLP_CERTIFICATE`
   - `OTEL_EXPORTER_OTLP_TRACES_CERTIFICATE`
   - `OTEL_EXPORTER_OTLP_METRICS_CERTIFICATE`
@@ -57,6 +56,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Additionally, this tag is overridden, as specified in the OTel specification, if the event contains an attribute with that key. (#1768)
 - Zipkin Exporter: Ensure mapping between OTel and Zipkin span data complies with the specification. (#1688)
 - Fixed typo for default service name in Jaeger Exporter. (#1797)
+- Fix flaky OTLP for the reconnnection of the client connection. (#1527, TBD)
 
 ### Changed
 
@@ -81,6 +81,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   It no longer is a conglomerate of itself, events, and link attributes that have been dropped. (#1771)
 - Make `ExportSpans` in Jaeger Exporter honor context deadline. (#1773)
 - The `go.opentelemetry.io/otel/sdk/export/trace` package is merged into the `go.opentelemetry.io/otel/sdk/trace` package. (#1778)
+- The prometheus.InstallNewPipeline example is moved from comment to example test (#1796)
+- Convenience functions for stdout exporter have been updated to return the `TracerProvider` implementation and enable the shutdown of the exporter. (#1800)
 
 ### Removed
 
@@ -97,8 +99,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `HasRemoteParent` field of the `"go.opentelemetry.io/otel/sdk/trace".SamplingParameters` is removed.
   This field is redundant to the information returned from the `Remote` method of the `SpanContext` held in the `ParentContext` field. (#1749)
 - The `trace.FlagsDebug` and `trace.FlagsDeferred` constants have been removed and will be localized to the B3 propagator. (#1770)
-- Remove `Process` configuration, `WithProcessFromEnv` and `ProcessFromEnv`, from the Jaeger exporter package.
-  The information that could be configured in the `Process` struct should be configured in a `Resource` instead. (#1776)
+- Remove `Process` configuration, `WithProcessFromEnv` and `ProcessFromEnv`, and type from the Jaeger exporter package.
+  The information that could be configured in the `Process` struct should be configured in a `Resource` instead. (#1776, #1804)
+- Remove the `WithDisabled` option from the Jaeger exporter.
+  To disable the exporter unregister it from the `TracerProvider` or use a no-operation `TracerProvider`. (#1806)
 
 ## [0.19.0] - 2021-03-18
 
