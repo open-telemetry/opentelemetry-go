@@ -170,7 +170,7 @@ func (d *noopDriver) ExportMetrics(ctx context.Context, cps metricsdk.Checkpoint
 	return nil
 }
 
-// Export traces does nothing
+// ExportTraces does nothing.
 func (d *noopDriver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
 	return nil
 }
