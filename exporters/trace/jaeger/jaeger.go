@@ -132,7 +132,7 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 
 // NewExportPipeline sets up a complete export pipeline
 // with the recommended setup for trace provider
-func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (trace.TracerProvider, func(), error) {
+func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (*sdktrace.TracerProvider, error) {
 	o := options{}
 	for _, opt := range opts {
 		opt(&o)
@@ -140,24 +140,24 @@ func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (trace.Tra
 
 	exporter, err := NewRawExporter(endpointOption, opts...)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	pOpts := append(o.TracerProviderOptions, sdktrace.WithSyncer(exporter))
 	tp := sdktrace.NewTracerProvider(pOpts...)
-	return tp, exporter.Flush, nil
+	return tp, nil
 }
 
 // InstallNewPipeline instantiates a NewExportPipeline with the
 // recommended configuration and registers it globally.
-func InstallNewPipeline(endpointOption EndpointOption, opts ...Option) (func(), error) {
-	tp, flushFn, err := NewExportPipeline(endpointOption, opts...)
+func InstallNewPipeline(endpointOption EndpointOption, opts ...Option) (*sdktrace.TracerProvider, error) {
+	tp, err := NewExportPipeline(endpointOption, opts...)
 	if err != nil {
-		return nil, err
+		return tp, err
 	}
 
 	otel.SetTracerProvider(tp)
-	return flushFn, nil
+	return tp, nil
 }
 
 // Exporter is an implementation of an OTel SpanSyncer that uploads spans to
