@@ -155,7 +155,7 @@ func (d *splitDriver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnaps
 	return d.trace.ExportTraces(ctx, ss)
 }
 
-// Start does nothing
+// Start does nothing.
 func (d *noopDriver) Start(ctx context.Context) error {
 	return nil
 }
