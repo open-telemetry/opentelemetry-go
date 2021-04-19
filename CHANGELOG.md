@@ -96,7 +96,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Removed the Jaeger exporter `WithSDKOptions` `Option`.
   This option was used to set SDK options for the exporter creation convenience functions.
   These functions are provided as a way to easily setup or install the exporter with what are deemed reasonable SDK settings for common use cases.
-  If the SDK needs to be configured differently, the `NewRawExporter` function and direct setup of the SDK with the desired settings should be used. (TBD)
+  If the SDK needs to be configured differently, the `NewRawExporter` function and direct setup of the SDK with the desired settings should be used. (#1825)
 
 ## [0.19.0] - 2021-03-18
 

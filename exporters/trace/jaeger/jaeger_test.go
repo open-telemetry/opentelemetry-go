@@ -258,7 +258,7 @@ func TestExporterExportSpan(t *testing.T) {
 		assert.True(t, span.SpanContext().IsValid())
 	}
 
-	tp.Shutdown(ctx)
+	require.NoError(t, tp.Shutdown(ctx))
 
 	batchesUploaded := testCollector.batchesUploaded
 	require.Len(t, batchesUploaded, 1)

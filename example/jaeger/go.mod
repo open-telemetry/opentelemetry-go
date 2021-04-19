@@ -11,7 +11,6 @@ replace (
 require (
 	go.opentelemetry.io/otel v0.19.0
 	go.opentelemetry.io/otel/exporters/trace/jaeger v0.19.0
-	go.opentelemetry.io/otel/sdk v0.19.0
 )
 
 replace go.opentelemetry.io/otel/bridge/opencensus => ../../bridge/opencensus
