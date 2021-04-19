@@ -378,12 +378,13 @@ func TestNewExporter_WithTimeout(t *testing.T) {
 				require.NoError(t, err)
 			} else {
 				require.Error(t, err)
-				s := status.Convert(err)
-				require.Equal(t, codes.DeadlineExceeded, s.Code())
 			}
 
-			require.Equal(t, tt.spans, len(mc.getSpans()))
-			require.Equal(t, tt.metrics, len(mc.getMetrics()))
+			s := status.Convert(err)
+			require.Equal(t, tt.code, s.Code())
+
+			require.Len(t, mc.getSpans(), tt.spans)
+			require.Len(t, mc.getMetrics(), tt.metrics)
 		})
 	}
 }
