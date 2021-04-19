@@ -590,9 +590,9 @@ func TestSyncInAsync(t *testing.T) {
 	}, out.Map())
 }
 
-func TestMeterDoesNotMutateOriginalAttributes(t *testing.T) {
+func TestAttributesOrder(t *testing.T) {
 	ctx := context.Background()
-	meter, sdk, _ := newSDK(t)
+	meter, sdk, processor := newSDK(t)
 	counter := Must(meter).NewInt64Counter("name.sum")
 
 	labels := []attribute.KeyValue{
@@ -607,7 +607,26 @@ func TestMeterDoesNotMutateOriginalAttributes(t *testing.T) {
 		counter.Measurement(1),
 	)
 
+	sdk.Collect(ctx)
+
+	// The order of labels in the original variable should not be mutated.
 	assert.Equal(t, "B", string(labels[0].Key))
 	assert.Equal(t, "C", string(labels[1].Key))
 	assert.Equal(t, "A", string(labels[2].Key))
+
+	var actual [][]attribute.KeyValue
+	for _, rec := range processor.accumulations {
+		kvs := rec.Labels().ToSlice()
+		actual = append(actual, kvs)
+	}
+
+	// The order of labels in the result should be sorted.
+	expect := [][]attribute.KeyValue{
+		{
+			attribute.String("A", "val"),
+			attribute.String("B", "val"),
+			attribute.String("C", "val"),
+		},
+	}
+	assert.ElementsMatch(t, expect, actual)
 }
