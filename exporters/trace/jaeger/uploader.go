@@ -117,8 +117,8 @@ func WithAttemptReconnectingInterval(interval time.Duration) AgentEndpointOption
 // use the following environment variables for configuration if no explicit option is provided:
 //
 // - OTEL_EXPORTER_JAEGER_ENDPOINT is the HTTP endpoint for sending spans directly to a collector
-// - OTEL_EXPORTER_JAEGER_USER is the username to be sent as "Basic" authentication to the collector endpoint.
-// - OTEL_EXPORTER_JAEGER_PASSWORD is the password to be sent as "Basic" authentication to the collector endpoint.
+// - OTEL_EXPORTER_JAEGER_USER is the username to be sent as authentication to the collector endpoint.
+// - OTEL_EXPORTER_JAEGER_PASSWORD is the password to be sent as authentication to the collector endpoint.
 //
 // The passed options will take precedence over any environment variables. Default values will be
 // used if neither are provided.
@@ -150,10 +150,10 @@ type CollectorEndpointOptions struct {
 	// endpoint for sending spans directly to a collector
 	endpoint string
 
-	// username to be used if basic auth is required.
+	// username to be used to authenticate collector endpoint
 	username string
 
-	// password to be used if basic auth is required.
+	// password to be used to authenticate collector endpoint
 	password string
 
 	// httpClient to be used to make requests to the collector endpoint.
@@ -170,20 +170,20 @@ func WithEndpoint(endpoint string) CollectorEndpointOption {
 	}
 }
 
-// WithUsername sets the username to be used if basic auth is required.
+// WithUsername sets the username to be used if auth is required.
 // This option overrides any value set for the
 // OTEL_EXPORTER_JAEGER_USER environment variable.
-// If this option is not passed and the env var is not set, "" will be used by default.
+// If this option is not passed and the env var is not set, default value will be used.
 func WithUsername(username string) CollectorEndpointOption {
 	return func(o *CollectorEndpointOptions) {
 		o.username = username
 	}
 }
 
-// WithPassword sets the password to be used if basic auth is required.
+// WithPassword sets the password to be used if auth is required.
 // This option overrides any value set for the
 // OTEL_EXPORTER_JAEGER_PASSWORD environment variable.
-// If this option is not passed and the env var is not set, "" will be used by default.
+// If this option is not passed and the env var is not set, default value will be used.
 func WithPassword(password string) CollectorEndpointOption {
 	return func(o *CollectorEndpointOptions) {
 		o.password = password
