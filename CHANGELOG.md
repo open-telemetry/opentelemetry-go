@@ -74,7 +74,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The prometheus.InstallNewPipeline example is moved from comment to example test (#1796)
 - The convenience functions for the stdout exporter have been updated to return the `TracerProvider` implementation and enable the shutdown of the exporter. (#1800)
 - Replace the flush function returned from the Jaeger exporter's convenience creation functions (`InstallNewPipeline` and `NewExportPipeline`) with the `TracerProvider` implementation they create.
-  This enables the caller to shutdown and flushing of the using the related `TracerProvider` methods. (#1822)
+  This enables the caller to shutdown and flush using the related `TracerProvider` methods. (#1822)
 
 ### Removed
 
