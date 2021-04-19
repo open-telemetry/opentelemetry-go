@@ -24,14 +24,14 @@ jobs:
         echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
         echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
     - name: Module cache
-      uses: actions/cache@v2.1.4
+      uses: actions/cache@v2.1.5
       env:
         cache-name: go-mod-cache
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/go.sum') }}
     - name: Tools cache
-      uses: actions/cache@v2.1.4
+      uses: actions/cache@v2.1.5
       env:
         cache-name: go-tools-cache
       with:
@@ -58,7 +58,7 @@ jobs:
         echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
         echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
     - name: Module cache
-      uses: actions/cache@v2.1.4
+      uses: actions/cache@v2.1.5
       env:
         cache-name: go-mod-cache
       with:
@@ -81,7 +81,7 @@ jobs:
         echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
         echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
     - name: Module cache
-      uses: actions/cache@v2.1.4
+      uses: actions/cache@v2.1.5
       env:
         cache-name: go-mod-cache
       with:
@@ -134,7 +134,7 @@ jobs:
         echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
       shell: bash
     - name: Module cache
-      uses: actions/cache@v2.1.4
+      uses: actions/cache@v2.1.5
       env:
         cache-name: go-mod-cache
       with:
