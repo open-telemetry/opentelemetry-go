@@ -47,6 +47,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Additionally, this tag is overridden, as specified in the OTel specification, if the event contains an attribute with that key. (#1768)
 - Zipkin Exporter: Ensure mapping between OTel and Zipkin span data complies with the specification. (#1688)
 - Fixed typo for default service name in Jaeger Exporter. (#1797)
+- Fix flaky OTLP for the reconnnection of the client connection. (#1527, TBD)
 
 ### Changed
 
@@ -91,6 +92,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `trace.FlagsDebug` and `trace.FlagsDeferred` constants have been removed and will be localized to the B3 propagator. (#1770)
 - Remove `Process` configuration, `WithProcessFromEnv` and `ProcessFromEnv`, and type from the Jaeger exporter package.
   The information that could be configured in the `Process` struct should be configured in a `Resource` instead. (#1776, #1804)
+- Remove the `WithDisabled` option from the Jaeger exporter.
+  To disable the exporter unregister it from the `TracerProvider` or use a no-operation `TracerProvider`. (#1806)
 
 ## [0.19.0] - 2021-03-18
 
