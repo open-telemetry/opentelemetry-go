@@ -19,9 +19,15 @@ import (
 	"errors"
 	"sync"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+
+	"go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -127,4 +133,47 @@ func (e *Exporter) ExportKindFor(desc *metric.Descriptor, kind aggregation.Kind)
 // transmits them to the configured collector.
 func (e *Exporter) ExportSpans(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
 	return e.driver.ExportTraces(ctx, ss)
+}
+
+// NewExportPipeline sets up a complete export pipeline
+// with the recommended TracerProvider setup.
+func NewExportPipeline(ctx context.Context, driver ProtocolDriver, exporterOpts ...ExporterOption) (*Exporter,
+	*sdktrace.TracerProvider, *basic.Controller, error) {
+
+	exp, err := NewExporter(ctx, driver, exporterOpts...)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	tracerProvider := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exp),
+	)
+
+	cntr := basic.New(
+		processor.New(
+			simple.NewWithInexpensiveDistribution(),
+			exp,
+		),
+	)
+
+	return exp, tracerProvider, cntr, nil
+}
+
+// InstallNewPipeline instantiates a NewExportPipeline with the
+// recommended configuration and registers it globally.
+func InstallNewPipeline(ctx context.Context, driver ProtocolDriver, exporterOpts ...ExporterOption) (*Exporter,
+	*sdktrace.TracerProvider, *basic.Controller, error) {
+
+	exp, tp, cntr, err := NewExportPipeline(ctx, driver, exporterOpts...)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	otel.SetTracerProvider(tp)
+	err = cntr.Start(ctx)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return exp, tp, cntr, err
 }

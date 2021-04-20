@@ -145,7 +145,7 @@ func Default() *Resource {
 }
 
 // Environment returns an instance of Resource with attributes
-// extracted from OTEL_RESOURCE_ATTRIBUTES environment variable
+// extracted from the OTEL_RESOURCE_ATTRIBUTES environment variable.
 func Environment() *Resource {
 	detector := &FromEnv{}
 	resource, err := detector.Detect(context.Background())

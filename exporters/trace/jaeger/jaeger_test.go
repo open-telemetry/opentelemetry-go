@@ -43,133 +43,38 @@ import (
 
 const (
 	collectorEndpoint = "http://localhost:14268/api/traces"
-	agentEndpoint     = "localhost:6831"
 )
 
 func TestInstallNewPipeline(t *testing.T) {
-	testCases := []struct {
-		name             string
-		endpoint         EndpointOption
-		options          []Option
-		expectedProvider trace.TracerProvider
-	}{
-		{
-			name:             "simple pipeline",
-			endpoint:         WithCollectorEndpoint(collectorEndpoint),
-			expectedProvider: &sdktrace.TracerProvider{},
-		},
-		{
-			name:             "with agent endpoint",
-			endpoint:         WithAgentEndpoint(agentEndpoint),
-			expectedProvider: &sdktrace.TracerProvider{},
-		},
-		{
-			name:     "with disabled",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
-			options: []Option{
-				WithDisabled(true),
-			},
-			expectedProvider: trace.NewNoopTracerProvider(),
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			fn, err := InstallNewPipeline(
-				tc.endpoint,
-				tc.options...,
-			)
-			defer fn()
-
-			assert.NoError(t, err)
-			assert.IsType(t, tc.expectedProvider, otel.GetTracerProvider())
-
-			otel.SetTracerProvider(nil)
-		})
-	}
-}
-
-func TestNewExportPipeline(t *testing.T) {
-	testCases := []struct {
-		name                                  string
-		endpoint                              EndpointOption
-		options                               []Option
-		expectedProviderType                  trace.TracerProvider
-		testSpanSampling, spanShouldBeSampled bool
-	}{
-		{
-			name:                 "simple pipeline",
-			endpoint:             WithCollectorEndpoint(collectorEndpoint),
-			expectedProviderType: &sdktrace.TracerProvider{},
-		},
-		{
-			name:     "with disabled",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
-			options: []Option{
-				WithDisabled(true),
-			},
-			expectedProviderType: trace.NewNoopTracerProvider(),
-		},
-		{
-			name:     "always on",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
-			options: []Option{
-				WithSDKOptions(sdktrace.WithSampler(sdktrace.AlwaysSample())),
-			},
-			expectedProviderType: &sdktrace.TracerProvider{},
-			testSpanSampling:     true,
-			spanShouldBeSampled:  true,
-		},
-		{
-			name:     "never",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
-			options: []Option{
-				WithSDKOptions(sdktrace.WithSampler(sdktrace.NeverSample())),
-			},
-			expectedProviderType: &sdktrace.TracerProvider{},
-			testSpanSampling:     true,
-			spanShouldBeSampled:  false,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			tp, fn, err := NewExportPipeline(
-				tc.endpoint,
-				tc.options...,
-			)
-			defer fn()
-
-			assert.NoError(t, err)
-			assert.NotEqual(t, tp, otel.GetTracerProvider())
-			assert.IsType(t, tc.expectedProviderType, tp)
-
-			if tc.testSpanSampling {
-				_, span := tp.Tracer("jaeger test").Start(context.Background(), tc.name)
-				spanCtx := span.SpanContext()
-				assert.Equal(t, tc.spanShouldBeSampled, spanCtx.IsSampled())
-				span.End()
-			}
-		})
-	}
-}
-
-func TestNewExportPipelineWithDisabledFromEnv(t *testing.T) {
-	envStore, err := ottest.SetEnvVariables(map[string]string{
-		envDisabled: "true",
-	})
+	tp, err := InstallNewPipeline(WithCollectorEndpoint(collectorEndpoint))
 	require.NoError(t, err)
-	envStore.Record(envDisabled)
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
+	// Ensure InstallNewPipeline sets the global TracerProvider. By default
+	// the global tracer provider will be a NoOp implementation, this checks
+	// if that has been overwritten.
+	assert.IsType(t, tp, otel.GetTracerProvider())
+}
 
-	tp, fn, err := NewExportPipeline(
-		WithCollectorEndpoint(collectorEndpoint),
-	)
-	defer fn()
-	assert.NoError(t, err)
-	assert.IsType(t, trace.NewNoopTracerProvider(), tp)
+func TestNewRawExporterOptions(t *testing.T) {
+	testCases := []struct {
+		name     string
+		endpoint EndpointOption
+	}{
+		{
+			name:     "default exporter with collector endpoint",
+			endpoint: WithCollectorEndpoint(collectorEndpoint),
+		},
+		{
+			name:     "default exporter with agent endpoint",
+			endpoint: WithAgentEndpoint(),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := NewRawExporter(tc.endpoint)
+			assert.NoError(t, err)
+		})
+	}
 }
 
 func TestNewRawExporter(t *testing.T) {
@@ -189,7 +94,7 @@ func TestNewRawExporter(t *testing.T) {
 		},
 		{
 			name:                   "default exporter with agent endpoint",
-			endpoint:               WithAgentEndpoint(agentEndpoint),
+			endpoint:               WithAgentEndpoint(),
 			expectedServiceName:    "unknown_service",
 			expectedBufferMaxCount: bundler.DefaultBufferedByteLimit,
 			expectedBatchMaxCount:  bundler.DefaultBundleCountThreshold,
@@ -234,16 +139,6 @@ func TestNewRawExporterShouldFail(t *testing.T) {
 			endpoint:       WithCollectorEndpoint(""),
 			expectedErrMsg: "collectorEndpoint must not be empty",
 		},
-		{
-			name:           "with empty agent endpoint",
-			endpoint:       WithAgentEndpoint(""),
-			expectedErrMsg: "agentEndpoint must not be empty",
-		},
-		{
-			name:           "with invalid agent endpoint",
-			endpoint:       WithAgentEndpoint("localhost"),
-			expectedErrMsg: "address localhost: missing port in address",
-		},
 	}
 
 	for _, tc := range testCases {
@@ -266,7 +161,7 @@ func TestNewRawExporterShouldFailIfCollectorUnset(t *testing.T) {
 		require.NoError(t, envStore.Restore())
 	}()
 
-	// If the user sets the environment variable JAEGER_ENDPOINT, endpoint will always get a value.
+	// If the user sets the environment variable OTEL_EXPORTER_JAEGER_ENDPOINT, endpoint will always get a value.
 	require.NoError(t, os.Unsetenv(envEndpoint))
 
 	_, err := NewRawExporter(
@@ -280,7 +175,7 @@ type testCollectorEndpoint struct {
 	batchesUploaded []*gen.Batch
 }
 
-func (c *testCollectorEndpoint) upload(batch *gen.Batch) error {
+func (c *testCollectorEndpoint) upload(_ context.Context, batch *gen.Batch) error {
 	c.batchesUploaded = append(c.batchesUploaded, batch)
 	return nil
 }
@@ -299,15 +194,7 @@ func withTestCollectorEndpointInjected(ce *testCollectorEndpoint) func() (batchU
 	}
 }
 
-func TestExporter_ExportSpan(t *testing.T) {
-	envStore, err := ottest.SetEnvVariables(map[string]string{
-		envDisabled: "false",
-	})
-	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
-
+func TestExporterExportSpan(t *testing.T) {
 	const (
 		serviceName = "test-service"
 		tagKey      = "key"
@@ -315,7 +202,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 	)
 
 	testCollector := &testCollectorEndpoint{}
-	tp, spanFlush, err := NewExportPipeline(
+	tp, err := NewExportPipeline(
 		withTestCollectorEndpointInjected(testCollector),
 		WithSDKOptions(
 			sdktrace.WithResource(resource.NewWithAttributes(
@@ -324,16 +211,16 @@ func TestExporter_ExportSpan(t *testing.T) {
 			)),
 		),
 	)
-	assert.NoError(t, err)
-	otel.SetTracerProvider(tp)
-	tracer := otel.Tracer("test-tracer")
+	require.NoError(t, err)
+	tracer := tp.Tracer("test-tracer")
+	ctx := context.Background()
 	for i := 0; i < 3; i++ {
-		_, span := tracer.Start(context.Background(), fmt.Sprintf("test-span-%d", i))
+		_, span := tracer.Start(ctx, fmt.Sprintf("test-span-%d", i))
 		span.End()
 		assert.True(t, span.SpanContext().IsValid())
 	}
 
-	spanFlush()
+	require.NoError(t, tp.Shutdown(ctx))
 	batchesUploaded := testCollector.batchesUploaded
 	require.Len(t, batchesUploaded, 1)
 	uploadedBatch := batchesUploaded[0]
@@ -938,14 +825,6 @@ func TestProcess(t *testing.T) {
 }
 
 func TestNewExporterPipelineWithOptions(t *testing.T) {
-	envStore, err := ottest.SetEnvVariables(map[string]string{
-		envDisabled: "false",
-	})
-	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
-
 	const (
 		serviceName     = "test-service"
 		eventCountLimit = 10
@@ -954,7 +833,7 @@ func TestNewExporterPipelineWithOptions(t *testing.T) {
 	)
 
 	testCollector := &testCollectorEndpoint{}
-	tp, spanFlush, err := NewExportPipeline(
+	tp, err := NewExportPipeline(
 		withTestCollectorEndpointInjected(testCollector),
 		WithSDKOptions(
 			sdktrace.WithResource(resource.NewWithAttributes(
@@ -966,15 +845,15 @@ func TestNewExporterPipelineWithOptions(t *testing.T) {
 			}),
 		),
 	)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	otel.SetTracerProvider(tp)
-	_, span := otel.Tracer("test-tracer").Start(context.Background(), "test-span")
+	ctx := context.Background()
+	_, span := tp.Tracer("test-tracer").Start(ctx, "test-span")
 	for i := 0; i < eventCountLimit*2; i++ {
 		span.AddEvent(fmt.Sprintf("event-%d", i))
 	}
 	span.End()
-	spanFlush()
+	require.NoError(t, tp.Shutdown(ctx))
 
 	assert.True(t, span.SpanContext().IsValid())
 

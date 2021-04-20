@@ -262,11 +262,7 @@ func WithSpanProcessor(sp SpanProcessor) TracerProviderOption {
 // resource.Default() Resource by default.
 func WithResource(r *resource.Resource) TracerProviderOption {
 	return func(opts *TracerProviderConfig) {
-		if r != nil {
-			opts.resource = resource.Merge(resource.Environment(), r)
-		} else {
-			opts.resource = resource.Environment()
-		}
+		opts.resource = resource.Environment()
 	}
 }
 
