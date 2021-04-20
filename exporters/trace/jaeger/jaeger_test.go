@@ -17,6 +17,7 @@ package jaeger
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -54,25 +55,35 @@ func TestInstallNewPipeline(t *testing.T) {
 	assert.IsType(t, tp, otel.GetTracerProvider())
 }
 
-func TestNewRawExporterOptions(t *testing.T) {
-	testCases := []struct {
-		name     string
-		endpoint EndpointOption
+func TestNewExportPipelinePassthroughError(t *testing.T) {
+	for _, testcase := range []struct {
+		name    string
+		failing bool
+		epo     EndpointOption
 	}{
 		{
-			name:     "default exporter with collector endpoint",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
+			name:    "failing underlying NewRawExporter",
+			failing: true,
+			epo: func() (batchUploader, error) {
+				return nil, errors.New("error")
+			},
 		},
 		{
-			name:     "default exporter with agent endpoint",
-			endpoint: WithAgentEndpoint(),
+			name: "with default agent endpoint",
+			epo:  WithAgentEndpoint(),
 		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := NewRawExporter(tc.endpoint)
-			assert.NoError(t, err)
+		{
+			name: "with collector endpoint",
+			epo:  WithCollectorEndpoint(collectorEndpoint),
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			_, err := NewExportPipeline(testcase.epo)
+			if testcase.failing {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
 		})
 	}
 }
@@ -202,17 +213,18 @@ func TestExporterExportSpan(t *testing.T) {
 	)
 
 	testCollector := &testCollectorEndpoint{}
-	tp, err := NewExportPipeline(
-		withTestCollectorEndpointInjected(testCollector),
-		WithSDKOptions(
-			sdktrace.WithResource(resource.NewWithAttributes(
-				semconv.ServiceNameKey.String(serviceName),
-				attribute.String(tagKey, tagVal),
-			)),
-		),
-	)
+	exp, err := NewRawExporter(withTestCollectorEndpointInjected(testCollector))
 	require.NoError(t, err)
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSyncer(exp),
+		sdktrace.WithResource(resource.NewWithAttributes(
+			semconv.ServiceNameKey.String(serviceName),
+			attribute.String(tagKey, tagVal),
+		)),
+	)
+
 	tracer := tp.Tracer("test-tracer")
+
 	ctx := context.Background()
 	for i := 0; i < 3; i++ {
 		_, span := tracer.Start(ctx, fmt.Sprintf("test-span-%d", i))
@@ -221,6 +233,7 @@ func TestExporterExportSpan(t *testing.T) {
 	}
 
 	require.NoError(t, tp.Shutdown(ctx))
+
 	batchesUploaded := testCollector.batchesUploaded
 	require.Len(t, batchesUploaded, 1)
 	uploadedBatch := batchesUploaded[0]
@@ -822,50 +835,4 @@ func TestProcess(t *testing.T) {
 			assert.Equal(t, tc.expectedProcess, pro)
 		})
 	}
-}
-
-func TestNewExporterPipelineWithOptions(t *testing.T) {
-	const (
-		serviceName     = "test-service"
-		eventCountLimit = 10
-		tagKey          = "key"
-		tagVal          = "val"
-	)
-
-	testCollector := &testCollectorEndpoint{}
-	tp, err := NewExportPipeline(
-		withTestCollectorEndpointInjected(testCollector),
-		WithSDKOptions(
-			sdktrace.WithResource(resource.NewWithAttributes(
-				semconv.ServiceNameKey.String(serviceName),
-				attribute.String(tagKey, tagVal),
-			)),
-			sdktrace.WithSpanLimits(sdktrace.SpanLimits{
-				EventCountLimit: eventCountLimit,
-			}),
-		),
-	)
-	require.NoError(t, err)
-
-	ctx := context.Background()
-	_, span := tp.Tracer("test-tracer").Start(ctx, "test-span")
-	for i := 0; i < eventCountLimit*2; i++ {
-		span.AddEvent(fmt.Sprintf("event-%d", i))
-	}
-	span.End()
-	require.NoError(t, tp.Shutdown(ctx))
-
-	assert.True(t, span.SpanContext().IsValid())
-
-	batchesUploaded := testCollector.batchesUploaded
-	require.Len(t, batchesUploaded, 1)
-	uploadedBatch := batchesUploaded[0]
-	assert.Equal(t, serviceName, uploadedBatch.GetProcess().GetServiceName())
-	require.Len(t, uploadedBatch.GetSpans(), 1)
-	uploadedSpan := uploadedBatch.GetSpans()[0]
-	assert.Len(t, uploadedSpan.GetLogs(), eventCountLimit)
-
-	require.Len(t, uploadedBatch.GetProcess().GetTags(), 1)
-	assert.Equal(t, tagKey, uploadedBatch.GetProcess().GetTags()[0].GetKey())
-	assert.Equal(t, tagVal, uploadedBatch.GetProcess().GetTags()[0].GetVStr())
 }
