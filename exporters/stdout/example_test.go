@@ -81,7 +81,7 @@ func Example() {
 		stdout.WithPrettyPrint(),
 	}
 	// Registers both a trace and meter Provider globally.
-	pusher, err := stdout.InstallNewPipeline(exportOpts, nil)
+	tracerProvider, pusher, err := stdout.InstallNewPipeline(exportOpts, nil)
 	if err != nil {
 		log.Fatal("Could not initialize stdout exporter:", err)
 	}
@@ -91,5 +91,8 @@ func Example() {
 
 	if err := pusher.Stop(ctx); err != nil {
 		log.Fatal("Could not stop stdout exporter:", err)
+	}
+	if err := tracerProvider.Shutdown(ctx); err != nil {
+		log.Fatal("Could not stop stdout tracer:", err)
 	}
 }

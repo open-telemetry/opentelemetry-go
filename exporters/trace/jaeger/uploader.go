@@ -32,7 +32,7 @@ import (
 
 // batchUploader send a batch of spans to Jaeger
 type batchUploader interface {
-	upload(batch *gen.Batch) error
+	upload(ctx context.Context, batch *gen.Batch) error
 }
 
 type EndpointOption func() (batchUploader, error)
@@ -187,8 +187,8 @@ type agentUploader struct {
 
 var _ batchUploader = (*agentUploader)(nil)
 
-func (a *agentUploader) upload(batch *gen.Batch) error {
-	return a.client.EmitBatch(batch)
+func (a *agentUploader) upload(ctx context.Context, batch *gen.Batch) error {
+	return a.client.EmitBatch(ctx, batch)
 }
 
 // collectorUploader implements batchUploader interface sending batches to
@@ -202,12 +202,12 @@ type collectorUploader struct {
 
 var _ batchUploader = (*collectorUploader)(nil)
 
-func (c *collectorUploader) upload(batch *gen.Batch) error {
+func (c *collectorUploader) upload(ctx context.Context, batch *gen.Batch) error {
 	body, err := serialize(batch)
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("POST", c.endpoint, body)
+	req, err := http.NewRequestWithContext(ctx, "POST", c.endpoint, body)
 	if err != nil {
 		return err
 	}
