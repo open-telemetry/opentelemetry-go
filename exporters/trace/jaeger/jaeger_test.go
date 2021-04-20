@@ -20,12 +20,14 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/api/support/bundler"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -71,6 +73,57 @@ func TestNewRawExporterOptions(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := NewRawExporter(tc.endpoint)
 			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestNewRawExporter(t *testing.T) {
+	testCases := []struct {
+		name                                                           string
+		endpoint                                                       EndpointOption
+		options                                                        []Option
+		expectedServiceName                                            string
+		expectedTagsLen, expectedBufferMaxCount, expectedBatchMaxCount int
+	}{
+		{
+			name:                   "default exporter",
+			endpoint:               WithCollectorEndpoint(collectorEndpoint),
+			expectedServiceName:    "unknown_service",
+			expectedBufferMaxCount: bundler.DefaultBufferedByteLimit,
+			expectedBatchMaxCount:  bundler.DefaultBundleCountThreshold,
+		},
+		{
+			name:                   "default exporter with agent endpoint",
+			endpoint:               WithAgentEndpoint(),
+			expectedServiceName:    "unknown_service",
+			expectedBufferMaxCount: bundler.DefaultBufferedByteLimit,
+			expectedBatchMaxCount:  bundler.DefaultBundleCountThreshold,
+		},
+		{
+			name:     "with buffer and batch max count",
+			endpoint: WithCollectorEndpoint(collectorEndpoint),
+			options: []Option{
+				WithBufferMaxCount(99),
+				WithBatchMaxCount(99),
+			},
+			expectedServiceName:    "unknown_service",
+			expectedBufferMaxCount: 99,
+			expectedBatchMaxCount:  99,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			exp, err := NewRawExporter(
+				tc.endpoint,
+				tc.options...,
+			)
+
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectedBufferMaxCount, exp.bundler.BufferedByteLimit)
+			assert.Equal(t, tc.expectedBatchMaxCount, exp.bundler.BundleCountThreshold)
+			assert.NotEmpty(t, exp.defaultServiceName)
+			assert.True(t, strings.HasPrefix(exp.defaultServiceName, tc.expectedServiceName))
 		})
 	}
 }
