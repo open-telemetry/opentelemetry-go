@@ -122,10 +122,10 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 
 // NewExportPipeline sets up a complete export pipeline
 // with the recommended setup for trace provider
-func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (trace.TracerProvider, func(), error) {
+func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (*sdktrace.TracerProvider, error) {
 	exporter, err := NewRawExporter(endpointOption, opts...)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// TODO (MrAlias): The recommended default setup needs to register the
@@ -134,19 +134,19 @@ func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (trace.Tra
 	// be updated.
 	// https://github.com/open-telemetry/opentelemetry-go/issues/1799
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
-	return tp, exporter.Flush, nil
+	return tp, nil
 }
 
 // InstallNewPipeline instantiates a NewExportPipeline with the
 // recommended configuration and registers it globally.
-func InstallNewPipeline(endpointOption EndpointOption, opts ...Option) (func(), error) {
-	tp, flushFn, err := NewExportPipeline(endpointOption, opts...)
+func InstallNewPipeline(endpointOption EndpointOption, opts ...Option) (*sdktrace.TracerProvider, error) {
+	tp, err := NewExportPipeline(endpointOption, opts...)
 	if err != nil {
-		return nil, err
+		return tp, err
 	}
 
 	otel.SetTracerProvider(tp)
-	return flushFn, nil
+	return tp, nil
 }
 
 // Exporter is an implementation of an OTel SpanSyncer that uploads spans to

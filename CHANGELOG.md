@@ -46,7 +46,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Additionally, this tag is overridden, as specified in the OTel specification, if the event contains an attribute with that key. (#1768)
 - Zipkin Exporter: Ensure mapping between OTel and Zipkin span data complies with the specification. (#1688)
 - Fixed typo for default service name in Jaeger Exporter. (#1797)
-- Fix flaky OTLP for the reconnnection of the client connection. (#1527, TBD)
+- Fix flaky OTLP for the reconnnection of the client connection. (#1527, #1814)
 
 ### Changed
 
@@ -72,7 +72,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Make `ExportSpans` in Jaeger Exporter honor context deadline. (#1773)
 - The `go.opentelemetry.io/otel/sdk/export/trace` package is merged into the `go.opentelemetry.io/otel/sdk/trace` package. (#1778)
 - The prometheus.InstallNewPipeline example is moved from comment to example test (#1796)
-- Convenience functions for stdout exporter have been updated to return the `TracerProvider` implementation and enable the shutdown of the exporter. (#1800)
+- The convenience functions for the stdout exporter have been updated to return the `TracerProvider` implementation and enable the shutdown of the exporter. (#1800)
+- Replace the flush function returned from the Jaeger exporter's convenience creation functions (`InstallNewPipeline` and `NewExportPipeline`) with the `TracerProvider` implementation they create.
+  This enables the caller to shutdown and flush using the related `TracerProvider` methods. (#1822)
 
 ### Removed
 

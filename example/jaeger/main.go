@@ -26,25 +26,23 @@ import (
 	"go.opentelemetry.io/otel/exporters/trace/jaeger"
 )
 
-// initTracer creates a new trace provider instance and registers it as global trace provider.
-func initTracer() func() {
-	// Create and install Jaeger export pipeline.
-	flush, err := jaeger.InstallNewPipeline(
+func main() {
+	// Create and install Jaeger export pipeline as the global.
+	tp, err := jaeger.InstallNewPipeline(
 		jaeger.WithCollectorEndpoint("http://localhost:14268/api/traces"),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
-	return flush
-}
+	defer func() {
+		if err := tp.Shutdown(context.Background()); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
-func main() {
+	tr := tp.Tracer("component-main")
+
 	ctx := context.Background()
-
-	flush := initTracer()
-	defer flush()
-
-	tr := otel.Tracer("component-main")
 	ctx, span := tr.Start(ctx, "foo")
 	defer span.End()
 
@@ -52,6 +50,7 @@ func main() {
 }
 
 func bar(ctx context.Context) {
+	// Use the global TracerProvider.
 	tr := otel.Tracer("component-bar")
 	_, span := tr.Start(ctx, "bar")
 	span.SetAttributes(attribute.Key("testset").String("value"))
