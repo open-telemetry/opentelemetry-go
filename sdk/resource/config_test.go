@@ -35,19 +35,19 @@ func TestConfig(t *testing.T) {
 		envars    string
 		detectors []resource.Detector
 
-		resouceValues map[string]string
+		resourceValues map[string]string
 	}{
 		{
-			name:          "No detectors disables detection",
-			envars:        "key=value,other=attr",
-			detectors:     []resource.Detector{},
-			resouceValues: map[string]string{},
+			name:           "No detectors disables detection",
+			envars:         "key=value,other=attr",
+			detectors:      []resource.Detector{},
+			resourceValues: map[string]string{},
 		},
 		{
-			name:          "Nil detectors disables detection",
-			envars:        "key=value,other=attr",
-			detectors:     nil,
-			resouceValues: map[string]string{},
+			name:           "Nil detectors disables detection",
+			envars:         "key=value,other=attr",
+			detectors:      nil,
+			resourceValues: map[string]string{},
 		},
 		{
 			name:   "Only Host",
@@ -55,7 +55,7 @@ func TestConfig(t *testing.T) {
 			detectors: []resource.Detector{
 				resource.Host{},
 			},
-			resouceValues: map[string]string{
+			resourceValues: map[string]string{
 				"host.name": hostname(),
 			},
 		},
@@ -65,7 +65,7 @@ func TestConfig(t *testing.T) {
 			detectors: []resource.Detector{
 				resource.FromEnv{},
 			},
-			resouceValues: map[string]string{
+			resourceValues: map[string]string{
 				"key":   "value",
 				"other": "attr",
 			},
@@ -76,7 +76,7 @@ func TestConfig(t *testing.T) {
 			detectors: []resource.Detector{
 				resource.TelemetrySDK{},
 			},
-			resouceValues: map[string]string{
+			resourceValues: map[string]string{
 				"telemetry.sdk.name":     "opentelemetry",
 				"telemetry.sdk.language": "go",
 				"telemetry.sdk.version":  otel.Version(),
@@ -86,7 +86,7 @@ func TestConfig(t *testing.T) {
 			name:      "Builtins",
 			envars:    "key=value,other=attr",
 			detectors: resource.BuiltinDetectors,
-			resouceValues: map[string]string{
+			resourceValues: map[string]string{
 				"host.name":              hostname(),
 				"telemetry.sdk.name":     "opentelemetry",
 				"telemetry.sdk.language": "go",
@@ -110,7 +110,7 @@ func TestConfig(t *testing.T) {
 			)
 
 			require.NoError(t, err)
-			require.EqualValues(t, tt.resouceValues, toMap(res))
+			require.EqualValues(t, tt.resourceValues, toMap(res))
 		})
 	}
 }

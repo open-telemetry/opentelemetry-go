@@ -55,8 +55,8 @@ func (d detectAttributes) Detect(context.Context) (*Resource, error) {
 }
 
 // WithDetectors adds detectors to be evaluated for the configured resource.
-// Any use of WithDetectors disabled the default behavior, to reenable this
-// inlcude a WithDetectors(BuiltinDetectors...),
+// Any use of WithDetectors disables the default detectors. Use
+// WithDetectors(BuiltinDetectors...) to reenable the default detectors.
 // Examples:
 // `New(ctx)`: Use builtin `Detector`s.
 // `New(ctx, WithDetectors())`: Use no `Detector`s.

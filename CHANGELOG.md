@@ -90,7 +90,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `trace.FlagsDebug` and `trace.FlagsDeferred` constants have been removed and will be localized to the B3 propagator. (#1770)
 - Remove `Process` configuration, `WithProcessFromEnv` and `ProcessFromEnv`, from the Jaeger exporter package.
   The information that could be configured in the `Process` struct should be configured in a `Resource` instead. (#1776)
-- Remove `resource.WithoutBuiltin()`.  Any use of `resource.WithDetecors()` will have the same effect (#1810)
+- Remove `resource.WithoutBuiltin()`. Any use of `resource.WithDetecors()` will have the same effect (#1810)
 - Remove `resource.WithHost()`, `resource.WithTelemetrySDK()`, and `resource.WithFromEnv()`.  To replace these effects use `resource.WithDetectors()` (#1810)
 
 ## [0.19.0] - 2021-03-18
