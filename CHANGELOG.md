@@ -96,6 +96,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The information that could be configured in the `Process` struct should be configured in a `Resource` instead. (#1776, #1804)
 - Remove the `WithDisabled` option from the Jaeger exporter.
   To disable the exporter unregister it from the `TracerProvider` or use a no-operation `TracerProvider`. (#1806)
+- Removed the Jaeger exporter `WithSDKOptions` `Option`.
+  This option was used to set SDK options for the exporter creation convenience functions.
+  These functions are provided as a way to easily setup or install the exporter with what are deemed reasonable SDK settings for common use cases.
+  If the SDK needs to be configured differently, the `NewRawExporter` function and direct setup of the SDK with the desired settings should be used. (#1825)
 
 ## [0.19.0] - 2021-03-18
 
