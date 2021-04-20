@@ -218,10 +218,7 @@ func (s *syncInstrument) acquireHandle(kvs []attribute.KeyValue, labelPtr *attri
 		// needed for the `sortSlice` field, to avoid an
 		// allocation while sorting.
 		rec = &record{}
-		// Make a copy of `kvs` so that the original set will not be sorted
-		tmpKvs := make([]attribute.KeyValue, len(kvs))
-		copy(tmpKvs, kvs)
-		rec.storage = attribute.NewSetWithSortable(tmpKvs, &rec.sortSlice)
+		rec.storage = attribute.NewSetWithSortable(kvs, &rec.sortSlice)
 		rec.labels = &rec.storage
 		equiv = rec.storage.Equivalent()
 	} else {
@@ -285,10 +282,12 @@ func (s *syncInstrument) acquireHandle(kvs []attribute.KeyValue, labelPtr *attri
 	}
 }
 
+// The order of the input array `kvs` may be sorted after the function is called.
 func (s *syncInstrument) Bind(kvs []attribute.KeyValue) metric.BoundSyncImpl {
 	return s.acquireHandle(kvs, nil)
 }
 
+// The order of the input array `kvs` may be sorted after the function is called.
 func (s *syncInstrument) RecordOne(ctx context.Context, num number.Number, kvs []attribute.KeyValue) {
 	h := s.acquireHandle(kvs, nil)
 	defer h.Unbind()
@@ -399,6 +398,7 @@ func (m *Accumulator) collectSyncInstruments() int {
 }
 
 // CollectAsync implements internal.AsyncCollector.
+// The order of the input array `kvs` may be sorted after the function is called.
 func (m *Accumulator) CollectAsync(kv []attribute.KeyValue, obs ...metric.Observation) {
 	labels := attribute.NewSetWithSortable(kv, &m.asyncSortSlice)
 
@@ -475,6 +475,7 @@ func (m *Accumulator) checkpointAsync(a *asyncInstrument) int {
 }
 
 // RecordBatch enters a batch of metric events.
+// The order of the input array `kvs` may be sorted after the function is called.
 func (m *Accumulator) RecordBatch(ctx context.Context, kvs []attribute.KeyValue, measurements ...metric.Measurement) {
 	// Labels will be computed the first time acquireHandle is
 	// called.  Subsequent calls to acquireHandle will re-use the
