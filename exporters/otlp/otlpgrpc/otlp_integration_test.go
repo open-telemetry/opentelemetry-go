@@ -24,9 +24,6 @@ import (
 	"testing"
 	"time"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -205,12 +202,21 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 func TestNewExporter_FailThreeTimesAndSucceedAfter(t *testing.T) {
 	mc := runMockCollectorWithConfig(t, &mockConfig{
 		errors: []error{
-			status.Error(codes.Unavailable, "some error"),
+			status.Error(codes.Unavailable, "backend under pressure"),
+			status.Error(codes.Unavailable, "backend under pressure"),
+			status.Error(codes.Unavailable, "backend under pressure"),
 		},
 	})
 
 	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, mc.endpoint)
+	rs := otlp.RetrySettings{
+		Enabled:         true,
+		MaxElapsedTime:  300 * time.Millisecond,
+		InitialInterval: 2 * time.Millisecond,
+		MaxInterval:     10 * time.Millisecond,
+	}
+
+	exp := newGRPCExporter(t, ctx, mc.endpoint, otlpgrpc.WithRetry(rs))
 	defer func() {
 		_ = exp.Shutdown(ctx)
 	}()
@@ -218,9 +224,31 @@ func TestNewExporter_FailThreeTimesAndSucceedAfter(t *testing.T) {
 	require.NoError(t, exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Spans"}}))
 
 	span := mc.getSpans()
-	if g, w := len(span), 1; g != w {
-		t.Fatalf("Collector spans: got %d want %d", g, w)
-	}
+
+	require.Len(t, span, 1)
+	require.Equal(t, 4, mc.traceSvc.requests, "trace service must receive 3 failure requests and 1 success request.")
+}
+
+func TestNewExporter_FailWithPermanentError(t *testing.T) {
+	mc := runMockCollectorWithConfig(t, &mockConfig{
+		errors: []error{
+			status.Error(codes.InvalidArgument, "invalid arguments"),
+		},
+	})
+
+	ctx := context.Background()
+
+	exp := newGRPCExporter(t, ctx, mc.endpoint)
+	defer func() {
+		_ = exp.Shutdown(ctx)
+	}()
+
+	require.Error(t, exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Spans"}}))
+
+	span := mc.getSpans()
+
+	require.Len(t, span, 0)
+	require.Equal(t, 1, mc.traceSvc.requests, "trace service must receive 1 error requests.")
 }
 
 func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
@@ -328,25 +356,6 @@ func TestNewExporter_withHeaders(t *testing.T) {
 	assert.Equal(t, "value1", headers.Get("header1")[0])
 }
 
-func TestNewExporter_Retry(t *testing.T) {
-	mc := runMockCollector(t)
-	defer func() {
-		_ = mc.stop()
-	}()
-
-	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, mc.endpoint)
-	require.NoError(t, exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "in the midst"}}))
-
-	defer func() {
-		_ = exp.Shutdown(ctx)
-	}()
-
-	headers := mc.getHeaders()
-	require.Len(t, headers.Get("header1"), 1)
-	assert.Equal(t, "value1", headers.Get("header1")[0])
-}
-
 func TestNewExporter_WithTimeout(t *testing.T) {
 	tts := []struct {
 		name    string
@@ -409,7 +418,7 @@ func TestNewExporter_WithTimeout(t *testing.T) {
 			}()
 
 			ctx := context.Background()
-			exp := newGRPCExporter(t, ctx, mc.endpoint, otlpgrpc.WithTimeout(tt.timeout))
+			exp := newGRPCExporter(t, ctx, mc.endpoint, otlpgrpc.WithTimeout(tt.timeout), otlpgrpc.WithRetry(otlp.RetrySettings{Enabled: false}))
 			defer func() {
 				_ = exp.Shutdown(ctx)
 			}()

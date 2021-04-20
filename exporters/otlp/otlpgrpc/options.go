@@ -200,3 +200,9 @@ func WithTracesTimeout(duration time.Duration) Option {
 func WithMetricsTimeout(duration time.Duration) Option {
 	return otlpconfig.WithMetricsTimeout(duration)
 }
+
+func WithRetry(settings otlp.RetrySettings) Option {
+	return otlpconfig.NewGRPCOption(func(cfg *otlpconfig.Config) {
+		cfg.RetrySettings = settings
+	})
+}

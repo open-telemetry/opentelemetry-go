@@ -4,33 +4,26 @@ import (
 	"context"
 	"fmt"
 	"github.com/cenkalti/backoff/v4"
+	"go.opentelemetry.io/otel/exporters/otlp"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"time"
 )
 
-func doRequest(ctx context.Context, fn func(context.Context) error, stopCh chan struct{}) error {
-	// Do not use NewExponentialBackOff since it calls Reset and the code here must
-	// call Reset after changing the InitialInterval (this saves an unnecessary call to Now).
-	expBackoff := backoff.ExponentialBackOff{
-		InitialInterval:     time.Millisecond * 100,
-		RandomizationFactor: backoff.DefaultRandomizationFactor,
-		Multiplier:          backoff.DefaultMultiplier,
-		MaxInterval:         30 * time.Second,
-		MaxElapsedTime:      5 * time.Minute,
-		Stop:                backoff.Stop,
-		Clock:               backoff.SystemClock,
-	}
-	expBackoff.Reset()
+func doRequest(ctx context.Context, fn func(context.Context) error, rs otlp.RetrySettings, stopCh chan struct{}) error {
+	expBackoff := otlp.NewExponentialConfig(rs)
 
 	retryNum := 0
-
 	for {
 		err := fn(ctx)
 		if err == nil {
-			// request succeded.
+			// request succeeded.
 			return nil
+		}
+
+		if !rs.Enabled {
+			return err
 		}
 
 		// We have an error, check gRPC status code.

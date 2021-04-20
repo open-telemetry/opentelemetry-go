@@ -151,7 +151,7 @@ func (md *metricsDriver) uploadMetrics(ctx context.Context, protoMetrics []*metr
 			})
 			return err
 		}
-		return doRequest(ctx, req, md.connection.stopCh)
+		return doRequest(ctx, req, md.connection.cfg.RetrySettings, md.connection.stopCh)
 	}()
 	if err != nil {
 		md.connection.setStateDisconnected(err)
@@ -192,7 +192,7 @@ func (td *tracesDriver) uploadTraces(ctx context.Context, protoSpans []*tracepb.
 			})
 			return err
 		}
-		return doRequest(ctx, req, td.connection.stopCh)
+		return doRequest(ctx, req, td.connection.cfg.RetrySettings, td.connection.stopCh)
 	}()
 	if err != nil {
 		td.connection.setStateDisconnected(err)

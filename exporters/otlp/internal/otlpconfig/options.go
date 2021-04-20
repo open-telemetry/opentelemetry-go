@@ -88,11 +88,10 @@ type (
 		Metrics SignalConfig
 		Traces  SignalConfig
 
-		// General configurations
-		MaxAttempts int
-		Backoff     time.Duration
+		// Retry configurations
+		RetrySettings otlp.RetrySettings
 
-		// HTTP configuration
+		// HTTP configurations
 		Marshaler otlp.Marshaler
 
 		// gRPC configurations
@@ -116,8 +115,7 @@ func NewDefaultConfig() Config {
 			Compression: otlp.NoCompression,
 			Timeout:     DefaultTimeout,
 		},
-		MaxAttempts:   DefaultMaxAttempts,
-		Backoff:       DefaultBackoff,
+		RetrySettings: otlp.DefaultRetrySettings(),
 		ServiceConfig: DefaultServiceConfig,
 	}
 
@@ -280,15 +278,9 @@ func WithMetricsURLPath(urlPath string) GenericOption {
 	})
 }
 
-func WithMaxAttempts(maxAttempts int) GenericOption {
+func WithRetry(settings otlp.RetrySettings) GenericOption {
 	return newGenericOption(func(cfg *Config) {
-		cfg.MaxAttempts = maxAttempts
-	})
-}
-
-func WithBackoff(duration time.Duration) GenericOption {
-	return newGenericOption(func(cfg *Config) {
-		cfg.Backoff = duration
+		cfg.RetrySettings = settings
 	})
 }
 
