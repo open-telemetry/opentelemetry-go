@@ -116,12 +116,13 @@ func WithAttemptReconnectingInterval(interval time.Duration) AgentEndpointOption
 // WithCollectorEndpoint defines the full url to the Jaeger HTTP Thrift collector. This will
 // use the following environment variables for configuration if no explicit option is provided:
 //
-// - OTEL_EXPORTER_JAEGER_ENDPOINT is the HTTP endpoint for sending spans directly to a collector
+// - OTEL_EXPORTER_JAEGER_ENDPOINT is the HTTP endpoint for sending spans directly to a collector.
 // - OTEL_EXPORTER_JAEGER_USER is the username to be sent as authentication to the collector endpoint.
 // - OTEL_EXPORTER_JAEGER_PASSWORD is the password to be sent as authentication to the collector endpoint.
 //
-// The passed options will take precedence over any environment variables. Default values will be
-// used if neither are provided.
+// The passed options will take precedence over any environment variables.
+// If neither values are provided for the endpoint, the default value of "http://localhost:14250" will be used.
+// If neither values are provided for the username or the password, they will not be set since there is no default.
 func WithCollectorEndpoint(options ...CollectorEndpointOption) EndpointOption {
 	return func() (batchUploader, error) {
 		o := &CollectorEndpointOptions{
@@ -147,43 +148,44 @@ func WithCollectorEndpoint(options ...CollectorEndpointOption) EndpointOption {
 type CollectorEndpointOption func(o *CollectorEndpointOptions)
 
 type CollectorEndpointOptions struct {
-	// endpoint for sending spans directly to a collector
+	// endpoint for sending spans directly to a collector.
 	endpoint string
 
-	// username to be used to authenticate collector endpoint
+	// username to be used for authentication with the collector endpoint.
 	username string
 
-	// password to be used to authenticate collector endpoint
+	// password to be used for authentication with the collector endpoint.
 	password string
 
 	// httpClient to be used to make requests to the collector endpoint.
 	httpClient *http.Client
 }
 
-// WithEndpoint is the HTTP endpoint for sending spans directly to a collector
+// WithEndpoint is the URL for the Jaeger collector that spans are sent to.
 // This option overrides any value set for the
 // OTEL_EXPORTER_JAEGER_ENDPOINT environment variable.
-// If this option is not passed and the env var is not set, "http://localhost:14250" will be used by default.
+// If this option is not passed and the environment variable is not set,
+// "http://localhost:14250" will be used by default.
 func WithEndpoint(endpoint string) CollectorEndpointOption {
 	return func(o *CollectorEndpointOptions) {
 		o.endpoint = endpoint
 	}
 }
 
-// WithUsername sets the username to be used if auth is required.
+// WithUsername sets the username to be used in the authorization header sent for all requests to the collector.
 // This option overrides any value set for the
 // OTEL_EXPORTER_JAEGER_USER environment variable.
-// If this option is not passed and the env var is not set, default value will be used.
+// If this option is not passed and the environment variable is not set, no username will be set.
 func WithUsername(username string) CollectorEndpointOption {
 	return func(o *CollectorEndpointOptions) {
 		o.username = username
 	}
 }
 
-// WithPassword sets the password to be used if auth is required.
+// WithPassword sets the password to be used in the authorization header sent for all requests to the collector.
 // This option overrides any value set for the
 // OTEL_EXPORTER_JAEGER_PASSWORD environment variable.
-// If this option is not passed and the env var is not set, default value will be used.
+// If this option is not passed and the environment variable is not set, no password will be set.
 func WithPassword(password string) CollectorEndpointOption {
 	return func(o *CollectorEndpointOptions) {
 		o.password = password
