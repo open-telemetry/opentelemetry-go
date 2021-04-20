@@ -88,8 +88,8 @@ func (s *HandlerTestSuite) TestNoDropsOnDelegate() {
 	SetErrorHandler(secondary)
 
 	causeErr()
-	s.Require().Len(s.errLogger.Got(), 1, "original Handler used after delegation")
-	s.Require().Len(newErrLogger.Got(), 1, "new Handler not used after delegation")
+	s.Assert().Len(s.errLogger.Got(), 1, "original Handler used after delegation")
+	s.Assert().Len(newErrLogger.Got(), 1, "new Handler not used after delegation")
 }
 
 func TestHandlerTestSuite(t *testing.T) {
