@@ -46,93 +46,33 @@ const (
 )
 
 func TestInstallNewPipeline(t *testing.T) {
-	testCases := []struct {
-		name             string
-		endpoint         EndpointOption
-		options          []Option
-		expectedProvider trace.TracerProvider
-	}{
-		{
-			name:             "simple pipeline",
-			endpoint:         WithCollectorEndpoint(collectorEndpoint),
-			expectedProvider: &sdktrace.TracerProvider{},
-		},
-		{
-			name:             "with agent endpoint",
-			endpoint:         WithAgentEndpoint(),
-			expectedProvider: &sdktrace.TracerProvider{},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			fn, err := InstallNewPipeline(
-				tc.endpoint,
-				tc.options...,
-			)
-			defer fn()
-
-			assert.NoError(t, err)
-			assert.IsType(t, tc.expectedProvider, otel.GetTracerProvider())
-
-			otel.SetTracerProvider(nil)
-		})
-	}
+	tp, err := InstallNewPipeline(WithCollectorEndpoint(collectorEndpoint))
+	require.NoError(t, err)
+	// Ensure InstallNewPipeline sets the global TracerProvider. By default
+	// the global tracer provider will be a NoOp implementation, this checks
+	// if that has been overwritten.
+	assert.IsType(t, tp, otel.GetTracerProvider())
 }
 
-func TestNewExportPipeline(t *testing.T) {
+func TestNewRawExporterOptions(t *testing.T) {
 	testCases := []struct {
-		name                                  string
-		endpoint                              EndpointOption
-		options                               []Option
-		expectedProviderType                  trace.TracerProvider
-		testSpanSampling, spanShouldBeSampled bool
+		name     string
+		endpoint EndpointOption
 	}{
 		{
-			name:                 "simple pipeline",
-			endpoint:             WithCollectorEndpoint(collectorEndpoint),
-			expectedProviderType: &sdktrace.TracerProvider{},
+			name:     "default exporter with collector endpoint",
+			endpoint: WithCollectorEndpoint(collectorEndpoint),
 		},
 		{
-			name:     "always on",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
-			options: []Option{
-				WithSDKOptions(sdktrace.WithSampler(sdktrace.AlwaysSample())),
-			},
-			expectedProviderType: &sdktrace.TracerProvider{},
-			testSpanSampling:     true,
-			spanShouldBeSampled:  true,
-		},
-		{
-			name:     "never",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
-			options: []Option{
-				WithSDKOptions(sdktrace.WithSampler(sdktrace.NeverSample())),
-			},
-			expectedProviderType: &sdktrace.TracerProvider{},
-			testSpanSampling:     true,
-			spanShouldBeSampled:  false,
+			name:     "default exporter with agent endpoint",
+			endpoint: WithAgentEndpoint(),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tp, fn, err := NewExportPipeline(
-				tc.endpoint,
-				tc.options...,
-			)
-			defer fn()
-
+			_, err := NewRawExporter(tc.endpoint)
 			assert.NoError(t, err)
-			assert.NotEqual(t, tp, otel.GetTracerProvider())
-			assert.IsType(t, tc.expectedProviderType, tp)
-
-			if tc.testSpanSampling {
-				_, span := tp.Tracer("jaeger test").Start(context.Background(), tc.name)
-				spanCtx := span.SpanContext()
-				assert.Equal(t, tc.spanShouldBeSampled, spanCtx.IsSampled())
-				span.End()
-			}
 		})
 	}
 }
@@ -254,7 +194,7 @@ func withTestCollectorEndpointInjected(ce *testCollectorEndpoint) func() (batchU
 	}
 }
 
-func TestExporter_ExportSpan(t *testing.T) {
+func TestExporterExportSpan(t *testing.T) {
 	const (
 		serviceName = "test-service"
 		tagKey      = "key"
@@ -262,7 +202,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 	)
 
 	testCollector := &testCollectorEndpoint{}
-	tp, spanFlush, err := NewExportPipeline(
+	tp, err := NewExportPipeline(
 		withTestCollectorEndpointInjected(testCollector),
 		WithSDKOptions(
 			sdktrace.WithResource(resource.NewWithAttributes(
@@ -271,16 +211,16 @@ func TestExporter_ExportSpan(t *testing.T) {
 			)),
 		),
 	)
-	assert.NoError(t, err)
-	otel.SetTracerProvider(tp)
-	tracer := otel.Tracer("test-tracer")
+	require.NoError(t, err)
+	tracer := tp.Tracer("test-tracer")
+	ctx := context.Background()
 	for i := 0; i < 3; i++ {
-		_, span := tracer.Start(context.Background(), fmt.Sprintf("test-span-%d", i))
+		_, span := tracer.Start(ctx, fmt.Sprintf("test-span-%d", i))
 		span.End()
 		assert.True(t, span.SpanContext().IsValid())
 	}
 
-	spanFlush()
+	require.NoError(t, tp.Shutdown(ctx))
 	batchesUploaded := testCollector.batchesUploaded
 	require.Len(t, batchesUploaded, 1)
 	uploadedBatch := batchesUploaded[0]
@@ -893,7 +833,7 @@ func TestNewExporterPipelineWithOptions(t *testing.T) {
 	)
 
 	testCollector := &testCollectorEndpoint{}
-	tp, spanFlush, err := NewExportPipeline(
+	tp, err := NewExportPipeline(
 		withTestCollectorEndpointInjected(testCollector),
 		WithSDKOptions(
 			sdktrace.WithResource(resource.NewWithAttributes(
@@ -905,15 +845,15 @@ func TestNewExporterPipelineWithOptions(t *testing.T) {
 			}),
 		),
 	)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	otel.SetTracerProvider(tp)
-	_, span := otel.Tracer("test-tracer").Start(context.Background(), "test-span")
+	ctx := context.Background()
+	_, span := tp.Tracer("test-tracer").Start(ctx, "test-span")
 	for i := 0; i < eventCountLimit*2; i++ {
 		span.AddEvent(fmt.Sprintf("event-%d", i))
 	}
 	span.End()
-	spanFlush()
+	require.NoError(t, tp.Shutdown(ctx))
 
 	assert.True(t, span.SpanContext().IsValid())
 
