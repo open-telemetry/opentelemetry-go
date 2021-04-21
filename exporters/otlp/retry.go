@@ -26,7 +26,7 @@ func DefaultRetrySettings() RetrySettings {
 		Enabled:         true,
 		InitialInterval: 5 * time.Second,
 		MaxInterval:     30 * time.Second,
-		MaxElapsedTime:  5 * time.Minute,
+		MaxElapsedTime:  time.Minute,
 	}
 }
 
