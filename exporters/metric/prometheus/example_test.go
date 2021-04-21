@@ -95,3 +95,21 @@ func ExampleNewExportPipeline() {
 	// a_valuerecorder_sum{R="V",key="value"} 100
 	// a_valuerecorder_count{R="V",key="value"} 1
 }
+
+func ExampleInstallNewPipeline() {
+	exporter, err := prometheus.InstallNewPipeline(prometheus.Config{})
+	if err != nil {
+		panic(err)
+	}
+
+	// Expose metrics via HTTP in your handler/muxer
+	http.Handle("/metrics", exporter)
+
+	// When exiting from your process, call Stop for last collection cycle.
+	defer func() {
+		err := exporter.Controller().Stop(context.TODO())
+		if err != nil {
+			panic(err)
+		}
+	}()
+}

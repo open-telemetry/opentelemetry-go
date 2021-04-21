@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/export/trace/tracetest"
 )
 
 /*
@@ -51,16 +50,25 @@ func (a Annotator) Shutdown(ctx context.Context) error   { return a.Next.Shutdow
 func (a Annotator) ForceFlush(ctx context.Context) error { return a.Next.ForceFlush(ctx) }
 func (a Annotator) OnEnd(s ReadOnlySpan)                 { a.Next.OnEnd(s) }
 
+type exporter struct{}
+
+func (exporter) Shutdown(context.Context) error { return nil }
+func (exporter) ExportSpans(_ context.Context, spans []*SpanSnapshot) error {
+	for _, span := range spans {
+		attr := span.Attributes[0]
+		fmt.Printf("%s: %s\n", attr.Key, attr.Value.AsString())
+	}
+	return nil
+}
+
 func ExampleSpanProcessor_annotated() {
 	// Use this chan to signal when an owner of the process is known.
 	ownerCh := make(chan string, 1)
 	ownerKey := attribute.Key("owner")
 
-	exporter := tracetest.NewInMemoryExporter()
-
 	a := Annotator{
 		// Chain the export pipeline downstream of this SpanProcessor.
-		Next: NewSimpleSpanProcessor(exporter),
+		Next: NewSimpleSpanProcessor(exporter{}),
 		// Dynamically lookup the owner and annotate accordingly.
 		AttrsFunc: func(ctx context.Context) []attribute.KeyValue {
 			select {
@@ -86,11 +94,6 @@ func ExampleSpanProcessor_annotated() {
 	_, s1 := tracer.Start(ctx, "span1")
 	s0.End()
 	s1.End()
-
-	spans := exporter.GetSpans()
-	a0, a1 := spans[0].Attributes[0], spans[1].Attributes[0]
-	fmt.Printf("%s: %s\n", a0.Key, a0.Value.AsString())
-	fmt.Printf("%s: %s\n", a1.Key, a1.Value.AsString())
 
 	// Output:
 	// owner: unknown

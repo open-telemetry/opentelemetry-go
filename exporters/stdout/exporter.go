@@ -20,12 +20,10 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/sdk/export/metric"
-	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type Exporter struct {
@@ -34,8 +32,8 @@ type Exporter struct {
 }
 
 var (
-	_ metric.Exporter          = &Exporter{}
-	_ exporttrace.SpanExporter = &Exporter{}
+	_ metric.Exporter       = &Exporter{}
+	_ sdktrace.SpanExporter = &Exporter{}
 )
 
 // NewExporter creates an Exporter with the passed options.
@@ -52,8 +50,8 @@ func NewExporter(options ...Option) (*Exporter, error) {
 
 // NewExportPipeline creates a complete export pipeline with the default
 // selectors, processors, and trace registration. It is the responsibility
-// of the caller to stop the returned push Controller.
-func NewExportPipeline(exportOpts []Option, pushOpts []controller.Option) (trace.TracerProvider, *controller.Controller, error) {
+// of the caller to stop the returned tracer provider and push Controller.
+func NewExportPipeline(exportOpts []Option, pushOpts []controller.Option) (*sdktrace.TracerProvider, *controller.Controller, error) {
 	exporter, err := NewExporter(exportOpts...)
 	if err != nil {
 		return nil, nil, err
@@ -77,7 +75,7 @@ func NewExportPipeline(exportOpts []Option, pushOpts []controller.Option) (trace
 
 // InstallNewPipeline creates a complete export pipelines with defaults and
 // registers it globally. It is the responsibility of the caller to stop the
-// returned push Controller.
+// returned tracer provider and push Controller.
 //
 // Typically this is called as:
 //
@@ -87,12 +85,12 @@ func NewExportPipeline(exportOpts []Option, pushOpts []controller.Option) (trace
 // 	}
 // 	defer pipeline.Stop()
 // 	... Done
-func InstallNewPipeline(exportOpts []Option, pushOpts []controller.Option) (*controller.Controller, error) {
+func InstallNewPipeline(exportOpts []Option, pushOpts []controller.Option) (*sdktrace.TracerProvider, *controller.Controller, error) {
 	tracerProvider, controller, err := NewExportPipeline(exportOpts, pushOpts)
 	if err != nil {
-		return controller, err
+		return tracerProvider, controller, err
 	}
 	otel.SetTracerProvider(tracerProvider)
 	global.SetMeterProvider(controller.MeterProvider())
-	return controller, err
+	return tracerProvider, controller, err
 }

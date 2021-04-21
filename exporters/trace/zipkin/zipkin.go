@@ -28,7 +28,6 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel"
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -46,7 +45,7 @@ type Exporter struct {
 }
 
 var (
-	_ export.SpanExporter = &Exporter{}
+	_ sdktrace.SpanExporter = &Exporter{}
 )
 
 // Options contains configuration for the exporter.
@@ -135,7 +134,7 @@ func InstallNewPipeline(collectorURL string, opts ...Option) error {
 }
 
 // ExportSpans exports SpanSnapshots to a Zipkin receiver.
-func (e *Exporter) ExportSpans(ctx context.Context, ss []*export.SpanSnapshot) error {
+func (e *Exporter) ExportSpans(ctx context.Context, ss []*sdktrace.SpanSnapshot) error {
 	e.stoppedMu.RLock()
 	stopped := e.stopped
 	e.stoppedMu.RUnlock()

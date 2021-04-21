@@ -16,7 +16,9 @@ package otlphttp_test
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -56,7 +58,7 @@ func TestEndToEnd(t *testing.T) {
 		{
 			name: "with gzip compression",
 			opts: []otlphttp.Option{
-				otlphttp.WithCompression(otlphttp.GzipCompression),
+				otlphttp.WithCompression(otlp.GzipCompression),
 			},
 		},
 		{
@@ -108,7 +110,7 @@ func TestEndToEnd(t *testing.T) {
 		{
 			name: "with json encoding",
 			opts: []otlphttp.Option{
-				otlphttp.WithMarshal(otlphttp.MarshalJSON),
+				otlphttp.WithMarshal(otlp.MarshalJSON),
 			},
 		},
 	}
@@ -153,6 +155,7 @@ func TestRetry(t *testing.T) {
 	defer mc.MustStop(t)
 	driver := otlphttp.NewDriver(
 		otlphttp.WithEndpoint(mc.Endpoint()),
+		otlphttp.WithTracesEndpoint(mc.Endpoint()),
 		otlphttp.WithInsecure(),
 		otlphttp.WithMaxAttempts(len(statuses)+1),
 	)
@@ -165,6 +168,27 @@ func TestRetry(t *testing.T) {
 	err = exporter.ExportSpans(ctx, otlptest.SingleSpanSnapshot())
 	assert.NoError(t, err)
 	assert.Len(t, mc.GetSpans(), 1)
+}
+
+func TestTimeout(t *testing.T) {
+	mcCfg := mockCollectorConfig{
+		InjectDelay: 100 * time.Millisecond,
+	}
+	mc := runMockCollector(t, mcCfg)
+	defer mc.MustStop(t)
+	driver := otlphttp.NewDriver(
+		otlphttp.WithEndpoint(mc.Endpoint()),
+		otlphttp.WithInsecure(),
+		otlphttp.WithTimeout(50*time.Millisecond),
+	)
+	ctx := context.Background()
+	exporter, err := otlp.NewExporter(ctx, driver)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, exporter.Shutdown(ctx))
+	}()
+	err = exporter.ExportSpans(ctx, otlptest.SingleSpanSnapshot())
+	assert.Equal(t, true, os.IsTimeout(err))
 }
 
 func TestRetryFailed(t *testing.T) {
@@ -215,6 +239,7 @@ func TestNoRetry(t *testing.T) {
 	}()
 	err = exporter.ExportSpans(ctx, otlptest.SingleSpanSnapshot())
 	assert.Error(t, err)
+	assert.Equal(t, fmt.Sprintf("failed to send traces to http://%s/v1/traces with HTTP status 400 Bad Request", mc.endpoint), err.Error())
 	assert.Empty(t, mc.GetSpans())
 }
 

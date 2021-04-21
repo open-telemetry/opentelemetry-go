@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"sync"
 
-	"go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 // Exporter is an implementation of trace.SpanSyncer that writes spans to stdout.
