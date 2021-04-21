@@ -39,32 +39,21 @@ var (
 
 // Annotator is a SpanProcessor that adds attributes to all started spans.
 type Annotator struct {
-	ExportPipe SpanProcessor
-
 	// AttrsFunc is called when a span is started. The attributes it returns
 	// are set on the Span being started.
 	AttrsFunc func() []attribute.KeyValue
 }
 
 func (a Annotator) OnStart(_ context.Context, s ReadWriteSpan) { s.SetAttributes(a.AttrsFunc()...) }
-func (a Annotator) Shutdown(ctx context.Context) error         { return a.ExportPipe.Shutdown(ctx) }
-func (a Annotator) ForceFlush(ctx context.Context) error       { return a.ExportPipe.ForceFlush(ctx) }
-func (a Annotator) OnEnd(s ReadOnlySpan)                       { a.ExportPipe.OnEnd(s) }
-
-type exporter struct{}
-
-func (exporter) Shutdown(context.Context) error { return nil }
-func (exporter) ExportSpans(_ context.Context, spans []*SpanSnapshot) error {
-	for _, span := range spans {
-		attr := span.Attributes[0]
-		fmt.Printf("%s: %s\n", attr.Key, attr.Value.AsString())
-	}
-	return nil
+func (a Annotator) Shutdown(context.Context) error             { return nil }
+func (a Annotator) ForceFlush(context.Context) error           { return nil }
+func (a Annotator) OnEnd(s ReadOnlySpan) {
+	attr := s.Attributes()[0]
+	fmt.Printf("%s: %s\n", attr.Key, attr.Value.AsString())
 }
 
 func ExampleSpanProcessor_annotated() {
 	a := Annotator{
-		ExportPipe: NewSimpleSpanProcessor(exporter{}),
 		AttrsFunc: func() []attribute.KeyValue {
 			return []attribute.KeyValue{ownerKey.String(owner)}
 		},
