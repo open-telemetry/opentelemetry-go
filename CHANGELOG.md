@@ -36,6 +36,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `Event` and `Link` struct types from the `go.opentelemetry.io/otel` package now include a `DroppedAttributeCount` field to record the number of attributes that were not recorded due to configured limits being reached. (#1771)
 - The Jaeger exporter now reports dropped attributes for a Span event in the exported log. (#1771)
 - Adds `k8s.node.name` and `k8s.node.uid` attribute keys to the `semconv` package. (#1789)
+- Adds `otlpgrpc.WithTimeout` option for configuring timeout to the otlp/gRPC exporter. (#1821)
 - Added `WithOSType` resource configuration option to set OS (Operating System) type resource attribute (`os.type`).
 - Added `WithProcess*` resource configuration options to set Process resource attributes.
   - `process.pid`
@@ -56,7 +57,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Additionally, this tag is overridden, as specified in the OTel specification, if the event contains an attribute with that key. (#1768)
 - Zipkin Exporter: Ensure mapping between OTel and Zipkin span data complies with the specification. (#1688)
 - Fixed typo for default service name in Jaeger Exporter. (#1797)
-- Fix flaky OTLP for the reconnnection of the client connection. (#1527, TBD)
+- Fix flaky OTLP for the reconnnection of the client connection. (#1527, #1814)
 
 ### Changed
 
@@ -82,7 +83,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Make `ExportSpans` in Jaeger Exporter honor context deadline. (#1773)
 - The `go.opentelemetry.io/otel/sdk/export/trace` package is merged into the `go.opentelemetry.io/otel/sdk/trace` package. (#1778)
 - The prometheus.InstallNewPipeline example is moved from comment to example test (#1796)
-- Convenience functions for stdout exporter have been updated to return the `TracerProvider` implementation and enable the shutdown of the exporter. (#1800)
+- The convenience functions for the stdout exporter have been updated to return the `TracerProvider` implementation and enable the shutdown of the exporter. (#1800)
+- Replace the flush function returned from the Jaeger exporter's convenience creation functions (`InstallNewPipeline` and `NewExportPipeline`) with the `TracerProvider` implementation they create.
+  This enables the caller to shutdown and flush using the related `TracerProvider` methods. (#1822)
 
 ### Removed
 
@@ -103,6 +106,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The information that could be configured in the `Process` struct should be configured in a `Resource` instead. (#1776, #1804)
 - Remove the `WithDisabled` option from the Jaeger exporter.
   To disable the exporter unregister it from the `TracerProvider` or use a no-operation `TracerProvider`. (#1806)
+- Removed the Jaeger exporter `WithSDKOptions` `Option`.
+  This option was used to set SDK options for the exporter creation convenience functions.
+  These functions are provided as a way to easily setup or install the exporter with what are deemed reasonable SDK settings for common use cases.
+  If the SDK needs to be configured differently, the `NewRawExporter` function and direct setup of the SDK with the desired settings should be used. (#1825)
 
 ## [0.19.0] - 2021-03-18
 
