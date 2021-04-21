@@ -52,6 +52,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Updated Jaeger Environment Variable: `OTEL_EXPORTER_JAEGER_ENDPOINT` to have a default value of 
+  `http://localhost:14250` when not set, in compliance with OTel spec. Changed the function `WithCollectorEndpoint`
+  in the Jaeger exporter package to no longer accept an endpoint as an argument. 
+  The endpoint can be passed in as a `CollectorEndpointOption` using the `WithEndpoint` function or 
+  specified through the `OTEL_EXPORTER_JAEGER_ENDPOINT` environment variable. (#1824)
 - Modify Zipkin Exporter default service name, use default resouce's serviceName instead of empty. (#1777)
 - Updated Jaeger Environment Variables: `JAEGER_ENDPOINT`, `JAEGER_USER`, `JAEGER_PASSWORD`
   to `OTEL_EXPORTER_JAEGER_ENDPOINT`, `OTEL_EXPORTER_JAEGER_USER`, `OTEL_EXPORTER_JAEGER_PASSWORD` 
@@ -80,6 +85,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
+- Removed the functions `CollectorEndpointFromEnv` and `WithCollectorEndpointOptionFromEnv` from the Jaeger exporter.
+  These functions for retrieving specific environment variable values are redundant of other internal functions and
+  are not intended for end user use. (#1824)
 - Removed Jaeger Environment variables: `JAEGER_SERVICE_NAME`, `JAEGER_DISABLED`, `JAEGER_TAGS`
   These environment variables will no longer be used to override values of the Jaeger exporter (#1752)
 - No longer set the links for a `Span` in `go.opentelemetry.io/otel/sdk/trace` that is configured to be a new root.

@@ -42,7 +42,7 @@ const (
 // about the application.
 func tracerProvider(url string) (*tracesdk.TracerProvider, error) {
 	// Create the Jaeger exporter
-	exp, err := jaeger.NewRawExporter(jaeger.WithCollectorEndpoint(url))
+	exp, err := jaeger.NewRawExporter(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(url)))
 	if err != nil {
 		return nil, err
 	}

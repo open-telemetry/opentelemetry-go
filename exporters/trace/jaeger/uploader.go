@@ -17,7 +17,6 @@ package jaeger // import "go.opentelemetry.io/otel/exporters/trace/jaeger"
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -114,30 +113,31 @@ func WithAttemptReconnectingInterval(interval time.Duration) AgentEndpointOption
 	}
 }
 
-// WithCollectorEndpoint defines the full url to the Jaeger HTTP Thrift collector.
-// For example, http://localhost:14268/api/traces
-func WithCollectorEndpoint(collectorEndpoint string, options ...CollectorEndpointOption) EndpointOption {
+// WithCollectorEndpoint defines the full url to the Jaeger HTTP Thrift collector. This will
+// use the following environment variables for configuration if no explicit option is provided:
+//
+// - OTEL_EXPORTER_JAEGER_ENDPOINT is the HTTP endpoint for sending spans directly to a collector.
+// - OTEL_EXPORTER_JAEGER_USER is the username to be sent as authentication to the collector endpoint.
+// - OTEL_EXPORTER_JAEGER_PASSWORD is the password to be sent as authentication to the collector endpoint.
+//
+// The passed options will take precedence over any environment variables.
+// If neither values are provided for the endpoint, the default value of "http://localhost:14250" will be used.
+// If neither values are provided for the username or the password, they will not be set since there is no default.
+func WithCollectorEndpoint(options ...CollectorEndpointOption) EndpointOption {
 	return func() (batchUploader, error) {
-		// Overwrite collector endpoint if environment variables are available.
-		if e := CollectorEndpointFromEnv(); e != "" {
-			collectorEndpoint = e
-		}
-
-		if collectorEndpoint == "" {
-			return nil, errors.New("collectorEndpoint must not be empty")
-		}
-
 		o := &CollectorEndpointOptions{
+			endpoint:   envOr(envEndpoint, "http://localhost:14250"),
+			username:   envOr(envUser, ""),
+			password:   envOr(envPassword, ""),
 			httpClient: http.DefaultClient,
 		}
 
-		options = append(options, WithCollectorEndpointOptionFromEnv())
 		for _, opt := range options {
 			opt(o)
 		}
 
 		return &collectorUploader{
-			endpoint:   collectorEndpoint,
+			endpoint:   o.endpoint,
 			username:   o.username,
 			password:   o.password,
 			httpClient: o.httpClient,
@@ -148,24 +148,44 @@ func WithCollectorEndpoint(collectorEndpoint string, options ...CollectorEndpoin
 type CollectorEndpointOption func(o *CollectorEndpointOptions)
 
 type CollectorEndpointOptions struct {
-	// username to be used if basic auth is required.
+	// endpoint for sending spans directly to a collector.
+	endpoint string
+
+	// username to be used for authentication with the collector endpoint.
 	username string
 
-	// password to be used if basic auth is required.
+	// password to be used for authentication with the collector endpoint.
 	password string
 
 	// httpClient to be used to make requests to the collector endpoint.
 	httpClient *http.Client
 }
 
-// WithUsername sets the username to be used if basic auth is required.
+// WithEndpoint is the URL for the Jaeger collector that spans are sent to.
+// This option overrides any value set for the
+// OTEL_EXPORTER_JAEGER_ENDPOINT environment variable.
+// If this option is not passed and the environment variable is not set,
+// "http://localhost:14250" will be used by default.
+func WithEndpoint(endpoint string) CollectorEndpointOption {
+	return func(o *CollectorEndpointOptions) {
+		o.endpoint = endpoint
+	}
+}
+
+// WithUsername sets the username to be used in the authorization header sent for all requests to the collector.
+// This option overrides any value set for the
+// OTEL_EXPORTER_JAEGER_USER environment variable.
+// If this option is not passed and the environment variable is not set, no username will be set.
 func WithUsername(username string) CollectorEndpointOption {
 	return func(o *CollectorEndpointOptions) {
 		o.username = username
 	}
 }
 
-// WithPassword sets the password to be used if basic auth is required.
+// WithPassword sets the password to be used in the authorization header sent for all requests to the collector.
+// This option overrides any value set for the
+// OTEL_EXPORTER_JAEGER_PASSWORD environment variable.
+// If this option is not passed and the environment variable is not set, no password will be set.
 func WithPassword(password string) CollectorEndpointOption {
 	return func(o *CollectorEndpointOptions) {
 		o.password = password
