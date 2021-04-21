@@ -58,13 +58,13 @@ func ExampleSpanProcessor_annotated() {
 			return []attribute.KeyValue{ownerKey.String(owner)}
 		},
 	}
+	tracer := NewTracerProvider(WithSpanProcessor(a)).Tracer("annotated")
 
 	// Simulate the situation where we want to annotate spans with an owner,
 	// but at startup we do not now this information. Instead of waiting for
 	// the owner to be known before starting and blocking here, start doing
 	// work and update when the information becomes available.
 	ctx := context.Background()
-	tracer := NewTracerProvider(WithSpanProcessor(a)).Tracer("annotated")
 	_, s0 := tracer.Start(ctx, "span0")
 
 	// Simulate an asynchronous call to determine the owner succeeding. We now
