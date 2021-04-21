@@ -152,6 +152,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 	reconnectionPeriod := 20 * time.Millisecond
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint,
+		otlpgrpc.WithRetry(otlp.RetrySettings{Enabled: false}),
 		otlpgrpc.WithReconnectionPeriod(reconnectionPeriod))
 	defer func() { require.NoError(t, exp.Shutdown(ctx)) }()
 
@@ -304,7 +305,7 @@ func TestNewExporter_FailThreeTimesAndSucceedAfter(t *testing.T) {
 			rs: otlp.RetrySettings{
 				Enabled:         true,
 				MaxElapsedTime:  time.Millisecond * 10,
-				InitialInterval: time.Millisecond * 5,
+				InitialInterval: time.Millisecond * 8,
 				MaxInterval:     time.Millisecond * 10,
 			},
 			errors: []error{
@@ -321,7 +322,7 @@ func TestNewExporter_FailThreeTimesAndSucceedAfter(t *testing.T) {
 				span := mc.getSpans()
 
 				require.Len(t, span, 0)
-				require.Equal(t, 2, mc.traceSvc.requests, "trace service must receive 2 failure requests.")
+				require.GreaterOrEqual(t, 2, mc.traceSvc.requests, "trace service must receive 2 failure requests.")
 			},
 		},
 		{
@@ -380,6 +381,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 	reconnectionPeriod := 50 * time.Millisecond
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint,
+		otlpgrpc.WithRetry(otlp.RetrySettings{Enabled: false}),
 		otlpgrpc.WithReconnectionPeriod(reconnectionPeriod))
 	defer func() { require.NoError(t, exp.Shutdown(ctx)) }()
 
