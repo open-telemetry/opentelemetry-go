@@ -45,7 +45,7 @@ const (
 )
 
 func TestInstallNewPipeline(t *testing.T) {
-	tp, err := InstallNewPipeline(WithCollectorEndpoint(collectorEndpoint))
+	tp, err := InstallNewPipeline(WithCollectorEndpoint(WithEndpoint(collectorEndpoint)))
 	require.NoError(t, err)
 	// Ensure InstallNewPipeline sets the global TracerProvider. By default
 	// the global tracer provider will be a NoOp implementation, this checks
@@ -72,7 +72,7 @@ func TestNewExportPipelinePassthroughError(t *testing.T) {
 		},
 		{
 			name: "with collector endpoint",
-			epo:  WithCollectorEndpoint(collectorEndpoint),
+			epo:  WithCollectorEndpoint(WithEndpoint(collectorEndpoint)),
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
@@ -93,7 +93,7 @@ func TestNewRawExporter(t *testing.T) {
 	}{
 		{
 			name:     "default exporter with collector endpoint",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
+			endpoint: WithCollectorEndpoint(),
 		},
 		{
 			name:     "default exporter with agent endpoint",
@@ -109,32 +109,7 @@ func TestNewRawExporter(t *testing.T) {
 	}
 }
 
-func TestNewRawExporterShouldFail(t *testing.T) {
-	testCases := []struct {
-		name           string
-		endpoint       EndpointOption
-		expectedErrMsg string
-	}{
-		{
-			name:           "with empty collector endpoint",
-			endpoint:       WithCollectorEndpoint(""),
-			expectedErrMsg: "collectorEndpoint must not be empty",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := NewRawExporter(
-				tc.endpoint,
-			)
-
-			assert.Error(t, err)
-			assert.EqualError(t, err, tc.expectedErrMsg)
-		})
-	}
-}
-
-func TestNewRawExporterShouldFailIfCollectorUnset(t *testing.T) {
+func TestNewRawExporterUseEnvVarIfOptionUnset(t *testing.T) {
 	// Record and restore env
 	envStore := ottest.NewEnvStore()
 	envStore.Record(envEndpoint)
@@ -144,12 +119,11 @@ func TestNewRawExporterShouldFailIfCollectorUnset(t *testing.T) {
 
 	// If the user sets the environment variable OTEL_EXPORTER_JAEGER_ENDPOINT, endpoint will always get a value.
 	require.NoError(t, os.Unsetenv(envEndpoint))
-
 	_, err := NewRawExporter(
-		WithCollectorEndpoint(""),
+		WithCollectorEndpoint(),
 	)
 
-	assert.Error(t, err)
+	assert.NoError(t, err)
 }
 
 type testCollectorEndpoint struct {

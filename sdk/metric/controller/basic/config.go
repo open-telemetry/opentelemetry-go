@@ -64,9 +64,11 @@ type Option interface {
 	Apply(*Config)
 }
 
-// WithResource sets the Resource configuration option of a Config.
+// WithResource sets the Resource configuration option of a Config by merging it
+// with the Resource configuration in the environment.
 func WithResource(r *resource.Resource) Option {
-	return resourceOption{r}
+	res := resource.Merge(resource.Environment(), r)
+	return resourceOption{res}
 }
 
 type resourceOption struct{ *resource.Resource }
