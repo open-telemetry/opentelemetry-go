@@ -17,14 +17,15 @@ package otlpgrpc_test
 import (
 	"context"
 	"fmt"
-	"google.golang.org/genproto/googleapis/rpc/errdetails"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/durationpb"
 	"net"
 	"strings"
 	"testing"
 	"time"
+
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

@@ -17,12 +17,14 @@ package otlpgrpc
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/cenkalti/backoff/v4"
-	"go.opentelemetry.io/otel/exporters/otlp"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"time"
+
+	"go.opentelemetry.io/otel/exporters/otlp"
 )
 
 func doRequest(ctx context.Context, fn func(context.Context) error, rs otlp.RetrySettings, stopCh chan struct{}) error {

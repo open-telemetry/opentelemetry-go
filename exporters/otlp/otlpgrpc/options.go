@@ -207,7 +207,5 @@ func WithMetricsTimeout(duration time.Duration) Option {
 // retry policy will retry after 5 seconds and increase exponentially after each
 // error for a total of 1 minute.
 func WithRetry(settings otlp.RetrySettings) Option {
-	return otlpconfig.NewGRPCOption(func(cfg *otlpconfig.Config) {
-		cfg.RetrySettings = settings
-	})
+	return otlpconfig.WithRetry(settings)
 }

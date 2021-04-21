@@ -49,22 +49,7 @@ const (
 		"name":[
 			{ "service":"opentelemetry.proto.collector.metrics.v1.MetricsService" },
 			{ "service":"opentelemetry.proto.collector.trace.v1.TraceService" }
-		],
-		"retryPolicy":{
-			"MaxAttempts":5,
-			"InitialBackoff":"0.3s",
-			"MaxBackoff":"5s",
-			"BackoffMultiplier":2,
-			"RetryableStatusCodes":[
-				"CANCELLED",
-				"DEADLINE_EXCEEDED",
-				"RESOURCE_EXHAUSTED",
-				"ABORTED",
-				"OUT_OF_RANGE",
-				"UNAVAILABLE",
-				"DATA_LOSS"
-			]
-		}
+		]
 	}]
 }`
 )
@@ -88,16 +73,16 @@ type (
 		Metrics SignalConfig
 		Traces  SignalConfig
 
-		// Retry configurations
-		RetrySettings otlp.RetrySettings
-
 		// HTTP configurations
-		Marshaler otlp.Marshaler
+		Marshaler   otlp.Marshaler
+		MaxAttempts int
+		Backoff     time.Duration
 
 		// gRPC configurations
 		ReconnectionPeriod time.Duration
 		ServiceConfig      string
 		DialOptions        []grpc.DialOption
+		RetrySettings      otlp.RetrySettings
 	}
 )
 
@@ -115,6 +100,8 @@ func NewDefaultConfig() Config {
 			Compression: otlp.NoCompression,
 			Timeout:     DefaultTimeout,
 		},
+		MaxAttempts:   DefaultMaxAttempts,
+		Backoff:       DefaultBackoff,
 		RetrySettings: otlp.DefaultRetrySettings(),
 		ServiceConfig: DefaultServiceConfig,
 	}
@@ -364,5 +351,17 @@ func WithTracesTimeout(duration time.Duration) GenericOption {
 func WithMetricsTimeout(duration time.Duration) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Metrics.Timeout = duration
+	})
+}
+
+func WithMaxAttempts(maxAttempts int) GenericOption {
+	return newGenericOption(func(cfg *Config) {
+		cfg.MaxAttempts = maxAttempts
+	})
+}
+
+func WithBackoff(duration time.Duration) GenericOption {
+	return newGenericOption(func(cfg *Config) {
+		cfg.Backoff = duration
 	})
 }
