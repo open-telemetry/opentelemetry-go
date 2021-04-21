@@ -17,8 +17,10 @@ package otlpgrpc_test
 import (
 	"context"
 	"fmt"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"net"
 	"strings"
 	"testing"
@@ -200,55 +202,175 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 }
 
 func TestNewExporter_FailThreeTimesAndSucceedAfter(t *testing.T) {
-	mc := runMockCollectorWithConfig(t, &mockConfig{
-		errors: []error{
-			status.Error(codes.Unavailable, "backend under pressure"),
-			status.Error(codes.Unavailable, "backend under pressure"),
-			status.Error(codes.Unavailable, "backend under pressure"),
-		},
-	})
+	tts := []struct {
+		name   string
+		errors []error
+		rs     otlp.RetrySettings
+		fn     func(t *testing.T, ctx context.Context, exp *otlp.Exporter, mc *mockCollector)
+	}{
+		{
+			name: "Fail three times and succeed",
+			rs: otlp.RetrySettings{
+				Enabled:         true,
+				MaxElapsedTime:  300 * time.Millisecond,
+				InitialInterval: 2 * time.Millisecond,
+				MaxInterval:     10 * time.Millisecond,
+			},
+			errors: []error{
+				status.Error(codes.Unavailable, "backend under pressure"),
+				status.Error(codes.Unavailable, "backend under pressure"),
+				status.Error(codes.Unavailable, "backend under pressure"),
+			},
+			fn: func(t *testing.T, ctx context.Context, exp *otlp.Exporter, mc *mockCollector) {
+				require.NoError(t, exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Spans"}}))
 
-	ctx := context.Background()
-	rs := otlp.RetrySettings{
-		Enabled:         true,
-		MaxElapsedTime:  300 * time.Millisecond,
-		InitialInterval: 2 * time.Millisecond,
-		MaxInterval:     10 * time.Millisecond,
+				span := mc.getSpans()
+
+				require.Len(t, span, 1)
+				require.Equal(t, 4, mc.traceSvc.requests, "trace service must receive 3 failure requests and 1 success request.")
+			},
+		},
+		{
+			name: "Permanent error should not be retried",
+			rs: otlp.RetrySettings{
+				Enabled:         true,
+				MaxElapsedTime:  300 * time.Millisecond,
+				InitialInterval: 2 * time.Millisecond,
+				MaxInterval:     10 * time.Millisecond,
+			},
+			errors: []error{
+				status.Error(codes.InvalidArgument, "invalid arguments"),
+			},
+			fn: func(t *testing.T, ctx context.Context, exp *otlp.Exporter, mc *mockCollector) {
+				require.Error(t, exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Spans"}}))
+
+				span := mc.getSpans()
+
+				require.Len(t, span, 0)
+				require.Equal(t, 1, mc.traceSvc.requests, "trace service must receive 1 error requests.")
+			},
+		},
+		{
+			name: "Test all transient errors and succeed",
+			rs: otlp.RetrySettings{
+				Enabled:         true,
+				MaxElapsedTime:  500 * time.Millisecond,
+				InitialInterval: 1 * time.Millisecond,
+				MaxInterval:     2 * time.Millisecond,
+			},
+			errors: []error{
+				status.Error(codes.Canceled, ""),
+				status.Error(codes.DeadlineExceeded, ""),
+				status.Error(codes.PermissionDenied, ""),
+				status.Error(codes.ResourceExhausted, ""),
+				status.Error(codes.Aborted, ""),
+				status.Error(codes.OutOfRange, ""),
+				status.Error(codes.Unavailable, ""),
+				status.Error(codes.DataLoss, ""),
+				status.Error(codes.Unauthenticated, ""),
+			},
+			fn: func(t *testing.T, ctx context.Context, exp *otlp.Exporter, mc *mockCollector) {
+				require.NoError(t, exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Spans"}}))
+
+				span := mc.getSpans()
+
+				require.Len(t, span, 1)
+				require.Equal(t, 10, mc.traceSvc.requests, "trace service must receive 9 failure requests and 1 success request.")
+			},
+		},
+		{
+			name: "Retry should honor server throttling",
+			rs: otlp.RetrySettings{
+				Enabled:         true,
+				MaxElapsedTime:  time.Minute,
+				InitialInterval: time.Minute,
+				MaxInterval:     time.Minute,
+			},
+			errors: []error{
+				newThrottlingError(codes.ResourceExhausted, 10*time.Millisecond),
+			},
+			fn: func(t *testing.T, ctx context.Context, exp *otlp.Exporter, mc *mockCollector) {
+				require.NoError(t, exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Spans"}}))
+
+				span := mc.getSpans()
+
+				require.Len(t, span, 1)
+				require.Equal(t, 2, mc.traceSvc.requests, "trace service must receive 1 failure requests and 1 success request.")
+			},
+		},
+		{
+			name: "Retry stops if takes too long",
+			rs: otlp.RetrySettings{
+				Enabled:         true,
+				MaxElapsedTime:  time.Millisecond * 10,
+				InitialInterval: time.Millisecond * 5,
+				MaxInterval:     time.Millisecond * 10,
+			},
+			errors: []error{
+				status.Error(codes.Unavailable, "unavailable"),
+				status.Error(codes.Unavailable, "unavailable"),
+				status.Error(codes.Unavailable, "unavailable"),
+			},
+			fn: func(t *testing.T, ctx context.Context, exp *otlp.Exporter, mc *mockCollector) {
+				err := exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Spans"}})
+				require.Error(t, err)
+
+				require.Equal(t, "max elapsed time expired rpc error: code = Unavailable desc = unavailable", err.Error())
+
+				span := mc.getSpans()
+
+				require.Len(t, span, 0)
+				require.Equal(t, 2, mc.traceSvc.requests, "trace service must receive 2 failure requests.")
+			},
+		},
+		{
+			name: "Disabled retry",
+			rs: otlp.RetrySettings{
+				Enabled: false,
+			},
+			errors: []error{
+				status.Error(codes.Unavailable, "unavailable"),
+			},
+			fn: func(t *testing.T, ctx context.Context, exp *otlp.Exporter, mc *mockCollector) {
+				err := exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Spans"}})
+				require.Error(t, err)
+
+				require.Equal(t, "rpc error: code = Unavailable desc = unavailable", err.Error())
+
+				span := mc.getSpans()
+
+				require.Len(t, span, 0)
+				require.Equal(t, 1, mc.traceSvc.requests, "trace service must receive 1 failure requests.")
+			},
+		},
 	}
 
-	exp := newGRPCExporter(t, ctx, mc.endpoint, otlpgrpc.WithRetry(rs))
-	defer func() {
-		_ = exp.Shutdown(ctx)
-	}()
+	for _, tt := range tts {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
 
-	require.NoError(t, exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Spans"}}))
+			mc := runMockCollectorWithConfig(t, &mockConfig{
+				errors: tt.errors,
+			})
 
-	span := mc.getSpans()
+			exp := newGRPCExporter(t, ctx, mc.endpoint, otlpgrpc.WithRetry(tt.rs))
 
-	require.Len(t, span, 1)
-	require.Equal(t, 4, mc.traceSvc.requests, "trace service must receive 3 failure requests and 1 success request.")
+			tt.fn(t, ctx, exp, mc)
+
+			defer func() {
+				_ = exp.Shutdown(ctx)
+			}()
+		})
+	}
+
 }
 
-func TestNewExporter_FailWithPermanentError(t *testing.T) {
-	mc := runMockCollectorWithConfig(t, &mockConfig{
-		errors: []error{
-			status.Error(codes.InvalidArgument, "invalid arguments"),
-		},
-	})
+func newThrottlingError(code codes.Code, duration time.Duration) error {
+	s := status.New(code, "")
 
-	ctx := context.Background()
+	s, _ = s.WithDetails(&errdetails.RetryInfo{RetryDelay: durationpb.New(duration)})
 
-	exp := newGRPCExporter(t, ctx, mc.endpoint)
-	defer func() {
-		_ = exp.Shutdown(ctx)
-	}()
-
-	require.Error(t, exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Spans"}}))
-
-	span := mc.getSpans()
-
-	require.Len(t, span, 0)
-	require.Equal(t, 1, mc.traceSvc.requests, "trace service must receive 1 error requests.")
+	return s.Err()
 }
 
 func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
@@ -457,6 +579,7 @@ func TestNewExporter_withInvalidSecurityConfiguration(t *testing.T) {
 
 	expectedErr := fmt.Sprintf("traces exporter is disconnected from the server %s: grpc: no transport security set (use grpc.WithInsecure() explicitly or set credentials)", mc.endpoint)
 
+	require.Error(t, err)
 	require.Equal(t, expectedErr, err.Error())
 
 	defer func() {

@@ -1,3 +1,17 @@
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package otlpgrpc
 
 import (
@@ -14,7 +28,6 @@ import (
 func doRequest(ctx context.Context, fn func(context.Context) error, rs otlp.RetrySettings, stopCh chan struct{}) error {
 	expBackoff := otlp.NewExponentialConfig(rs)
 
-	retryNum := 0
 	for {
 		err := fn(ctx)
 		if err == nil {
@@ -41,26 +54,20 @@ func doRequest(ctx context.Context, fn func(context.Context) error, rs otlp.Retr
 		}
 
 		// Need to retry.
-
-		// Check if server returned throttling information.
-		throttle := getThrottleDuration(st)
-
-		backoffDelay := expBackoff.NextBackOff()
-		if backoffDelay == backoff.Stop {
-			// throw away the batch
-			err = fmt.Errorf("max elapsed time expired %w", err)
-			fmt.Println("Exporting failed. No more retries left. Dropping data.", err)
-			return err
-		}
+		var delay time.Duration
 
 		// Respect server throttling.
-		if throttle > backoffDelay {
-			backoffDelay = throttle
+		if throttle := getThrottleDuration(st); throttle != 0 {
+			delay = throttle
+		} else {
+			backoffDelay := expBackoff.NextBackOff()
+			if backoffDelay == backoff.Stop {
+				// throw away the batch
+				err = fmt.Errorf("max elapsed time expired %w", err)
+				return err
+			}
+			delay = backoffDelay
 		}
-
-		retryNum++
-
-		fmt.Println("Attempt #", retryNum, ": retrying in ", backoffDelay.String())
 
 		// back-off, but get interrupted when shutting down or request is cancelled or timed out.
 		select {
@@ -68,41 +75,9 @@ func doRequest(ctx context.Context, fn func(context.Context) error, rs otlp.Retr
 			return fmt.Errorf("request is cancelled or timed out %w", err)
 		case <-stopCh:
 			return fmt.Errorf("interrupted due to shutdown %w", err)
-		case <-time.After(backoffDelay):
+		case <-time.After(delay):
 		}
-
 	}
-
-}
-
-// Send a trace or metrics request to the server. "perform" function is expected to make
-// the actual gRPC unary call that sends the request. This function implements the
-// common OTLP logic around request handling such as retries and throttling.
-func processError(err error) (e error, throttleDur time.Duration) {
-	if err == nil {
-		// Request is successful, we are done.
-		return nil, 0
-	}
-
-	// We have an error, check gRPC status code.
-
-	st := status.Convert(err)
-	if st.Code() == codes.OK {
-		// Not really an error, still success.
-		return nil, 0
-	}
-
-	// Now, this is this a real error.
-
-	if !shouldRetry(st.Code()) {
-		// It is not a retryable error, we should not retry.
-		return err, 0
-	}
-
-	// Need to retry.
-
-	// Check if server returned throttling information.
-	return err, getThrottleDuration(st)
 }
 
 func shouldRetry(code codes.Code) bool {
