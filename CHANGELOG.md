@@ -38,8 +38,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The Jaeger exporter now reports dropped attributes for a Span event in the exported log. (#1771)
 - Adds `k8s.node.name` and `k8s.node.uid` attribute keys to the `semconv` package. (#1789)
 - Adds `otlpgrpc.WithTimeout` option for configuring timeout to the otlp/gRPC exporter. (#1821)
-- Adds `otlpgrpc.WithRetry`option for configuring the retry policy for transient errors on the otlp/gRPC exporter.(#TBD)
-  The list of transient errors considered for this retry policy:
+- Adds `otlpgrpc.WithRetry`option for configuring the retry policy for transient errors on the otlp/gRPC exporter.(#1832)
+  - The following status codes are defined as transient errors:
   | gRPC Status Code | Description |
   | ---------------- | ----------- |
   | 1  | Cancelled |

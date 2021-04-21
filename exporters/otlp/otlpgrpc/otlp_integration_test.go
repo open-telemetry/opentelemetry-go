@@ -322,7 +322,7 @@ func TestNewExporter_FailThreeTimesAndSucceedAfter(t *testing.T) {
 				span := mc.getSpans()
 
 				require.Len(t, span, 0)
-				require.GreaterOrEqual(t, 2, mc.traceSvc.requests, "trace service must receive 2 failure requests.")
+				require.GreaterOrEqual(t, 2, mc.traceSvc.requests, "trace service must receive at most 2 failure requests.")
 			},
 		},
 		{
