@@ -182,3 +182,21 @@ func WithDialOption(opts ...grpc.DialOption) Option {
 		cfg.DialOptions = opts
 	})
 }
+
+// WithTimeout tells the driver the max waiting time for the backend to process
+// each spans or metrics batch. If unset, the default will be 10 seconds.
+func WithTimeout(duration time.Duration) Option {
+	return otlpconfig.WithTimeout(duration)
+}
+
+// WithTracesTimeout tells the driver the max waiting time for the backend to process
+// each spans batch. If unset, the default will be 10 seconds.
+func WithTracesTimeout(duration time.Duration) Option {
+	return otlpconfig.WithTracesTimeout(duration)
+}
+
+// WithMetricsTimeout tells the driver the max waiting time for the backend to process
+// each metrics batch. If unset, the default will be 10 seconds.
+func WithMetricsTimeout(duration time.Duration) Option {
+	return otlpconfig.WithMetricsTimeout(duration)
+}
