@@ -85,8 +85,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - Removed the functions `CollectorEndpointFromEnv` and `WithCollectorEndpointOptionFromEnv` from the Jaeger exporter.
-  These functions for retrieving specific environment variable values are redundant and can instead utilize `envOr` 
-  which works generically for all environment variables. (#1824)
+  These functions for retrieving specific environment variable values are redundant of other internal functions and
+  are not intended for end user use. (#1824)
 - Removed Jaeger Environment variables: `JAEGER_SERVICE_NAME`, `JAEGER_DISABLED`, `JAEGER_TAGS`
   These environment variables will no longer be used to override values of the Jaeger exporter (#1752)
 - No longer set the links for a `Span` in `go.opentelemetry.io/otel/sdk/trace` that is configured to be a new root.
