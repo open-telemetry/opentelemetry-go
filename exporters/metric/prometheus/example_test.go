@@ -38,7 +38,7 @@ import (
 
 func ExampleNewExportPipeline() {
 	// Create a resource, with builtin attributes plus R=V.
-	res, err := resource.New(
+	res, err := resource.NewEmptyResouce(
 		context.Background(),
 		resource.WithAttributes(attribute.String("R", "V")),
 	)
