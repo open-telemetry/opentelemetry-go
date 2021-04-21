@@ -79,7 +79,7 @@ type noopExporter struct{}
 func (noopExporter) ExportSpans(context.Context, []*SpanSnapshot) error { return nil }
 func (noopExporter) Shutdown(context.Context) error                     { return nil }
 
-func ExampleSpanProcessor() {
+func ExampleSpanProcessor_filtered() {
 	exportSP := NewSimpleSpanProcessor(noopExporter{})
 
 	// Build a SpanProcessor chain to filter out all spans from the pernicious
