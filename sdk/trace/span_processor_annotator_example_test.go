@@ -37,16 +37,13 @@ var (
 	ownerKey = attribute.Key("owner")
 )
 
-// AttrsFunc returns attributes to set on a Span.
-type AttrsFunc func() []attribute.KeyValue
-
 // Annotator is a SpanProcessor that adds attributes to all started spans.
 type Annotator struct {
 	ExportPipe SpanProcessor
 
 	// AttrsFunc is called when a span is started. The attributes it returns
 	// are set on the Span being started.
-	AttrsFunc AttrsFunc
+	AttrsFunc func() []attribute.KeyValue
 }
 
 func (a Annotator) OnStart(_ context.Context, s ReadWriteSpan) { s.SetAttributes(a.AttrsFunc()...) }
