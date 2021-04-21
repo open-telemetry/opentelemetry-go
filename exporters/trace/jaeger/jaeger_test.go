@@ -17,6 +17,7 @@ package jaeger
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -46,7 +47,7 @@ const (
 )
 
 func TestInstallNewPipeline(t *testing.T) {
-	tp, err := InstallNewPipeline(WithCollectorEndpoint(collectorEndpoint))
+	tp, err := InstallNewPipeline(WithCollectorEndpoint(WithEndpoint(collectorEndpoint)))
 	require.NoError(t, err)
 	// Ensure InstallNewPipeline sets the global TracerProvider. By default
 	// the global tracer provider will be a NoOp implementation, this checks
@@ -54,25 +55,35 @@ func TestInstallNewPipeline(t *testing.T) {
 	assert.IsType(t, tp, otel.GetTracerProvider())
 }
 
-func TestNewRawExporterOptions(t *testing.T) {
-	testCases := []struct {
-		name     string
-		endpoint EndpointOption
+func TestNewExportPipelinePassthroughError(t *testing.T) {
+	for _, testcase := range []struct {
+		name    string
+		failing bool
+		epo     EndpointOption
 	}{
 		{
-			name:     "default exporter with collector endpoint",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
+			name:    "failing underlying NewRawExporter",
+			failing: true,
+			epo: func() (batchUploader, error) {
+				return nil, errors.New("error")
+			},
 		},
 		{
-			name:     "default exporter with agent endpoint",
-			endpoint: WithAgentEndpoint(),
+			name: "with default agent endpoint",
+			epo:  WithAgentEndpoint(),
 		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := NewRawExporter(tc.endpoint)
-			assert.NoError(t, err)
+		{
+			name: "with collector endpoint",
+			epo:  WithCollectorEndpoint(WithEndpoint(collectorEndpoint)),
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			_, err := NewExportPipeline(testcase.epo)
+			if testcase.failing {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
 		})
 	}
 }
@@ -87,7 +98,7 @@ func TestNewRawExporter(t *testing.T) {
 	}{
 		{
 			name:                   "default exporter",
-			endpoint:               WithCollectorEndpoint(collectorEndpoint),
+			endpoint:               WithCollectorEndpoint(),
 			expectedServiceName:    "unknown_service",
 			expectedBufferMaxCount: bundler.DefaultBufferedByteLimit,
 			expectedBatchMaxCount:  bundler.DefaultBundleCountThreshold,
@@ -101,7 +112,7 @@ func TestNewRawExporter(t *testing.T) {
 		},
 		{
 			name:     "with buffer and batch max count",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
+			endpoint: WithCollectorEndpoint(WithEndpoint(collectorEndpoint)),
 			options: []Option{
 				WithBufferMaxCount(99),
 				WithBatchMaxCount(99),
@@ -128,32 +139,7 @@ func TestNewRawExporter(t *testing.T) {
 	}
 }
 
-func TestNewRawExporterShouldFail(t *testing.T) {
-	testCases := []struct {
-		name           string
-		endpoint       EndpointOption
-		expectedErrMsg string
-	}{
-		{
-			name:           "with empty collector endpoint",
-			endpoint:       WithCollectorEndpoint(""),
-			expectedErrMsg: "collectorEndpoint must not be empty",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := NewRawExporter(
-				tc.endpoint,
-			)
-
-			assert.Error(t, err)
-			assert.EqualError(t, err, tc.expectedErrMsg)
-		})
-	}
-}
-
-func TestNewRawExporterShouldFailIfCollectorUnset(t *testing.T) {
+func TestNewRawExporterUseEnvVarIfOptionUnset(t *testing.T) {
 	// Record and restore env
 	envStore := ottest.NewEnvStore()
 	envStore.Record(envEndpoint)
@@ -163,12 +149,11 @@ func TestNewRawExporterShouldFailIfCollectorUnset(t *testing.T) {
 
 	// If the user sets the environment variable OTEL_EXPORTER_JAEGER_ENDPOINT, endpoint will always get a value.
 	require.NoError(t, os.Unsetenv(envEndpoint))
-
 	_, err := NewRawExporter(
-		WithCollectorEndpoint(""),
+		WithCollectorEndpoint(),
 	)
 
-	assert.Error(t, err)
+	assert.NoError(t, err)
 }
 
 type testCollectorEndpoint struct {
@@ -202,17 +187,18 @@ func TestExporterExportSpan(t *testing.T) {
 	)
 
 	testCollector := &testCollectorEndpoint{}
-	tp, err := NewExportPipeline(
-		withTestCollectorEndpointInjected(testCollector),
-		WithSDKOptions(
-			sdktrace.WithResource(resource.NewWithAttributes(
-				semconv.ServiceNameKey.String(serviceName),
-				attribute.String(tagKey, tagVal),
-			)),
-		),
-	)
+	exp, err := NewRawExporter(withTestCollectorEndpointInjected(testCollector))
 	require.NoError(t, err)
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSyncer(exp),
+		sdktrace.WithResource(resource.NewWithAttributes(
+			semconv.ServiceNameKey.String(serviceName),
+			attribute.String(tagKey, tagVal),
+		)),
+	)
+
 	tracer := tp.Tracer("test-tracer")
+
 	ctx := context.Background()
 	for i := 0; i < 3; i++ {
 		_, span := tracer.Start(ctx, fmt.Sprintf("test-span-%d", i))
@@ -221,6 +207,7 @@ func TestExporterExportSpan(t *testing.T) {
 	}
 
 	require.NoError(t, tp.Shutdown(ctx))
+
 	batchesUploaded := testCollector.batchesUploaded
 	require.Len(t, batchesUploaded, 1)
 	uploadedBatch := batchesUploaded[0]
@@ -822,50 +809,4 @@ func TestProcess(t *testing.T) {
 			assert.Equal(t, tc.expectedProcess, pro)
 		})
 	}
-}
-
-func TestNewExporterPipelineWithOptions(t *testing.T) {
-	const (
-		serviceName     = "test-service"
-		eventCountLimit = 10
-		tagKey          = "key"
-		tagVal          = "val"
-	)
-
-	testCollector := &testCollectorEndpoint{}
-	tp, err := NewExportPipeline(
-		withTestCollectorEndpointInjected(testCollector),
-		WithSDKOptions(
-			sdktrace.WithResource(resource.NewWithAttributes(
-				semconv.ServiceNameKey.String(serviceName),
-				attribute.String(tagKey, tagVal),
-			)),
-			sdktrace.WithSpanLimits(sdktrace.SpanLimits{
-				EventCountLimit: eventCountLimit,
-			}),
-		),
-	)
-	require.NoError(t, err)
-
-	ctx := context.Background()
-	_, span := tp.Tracer("test-tracer").Start(ctx, "test-span")
-	for i := 0; i < eventCountLimit*2; i++ {
-		span.AddEvent(fmt.Sprintf("event-%d", i))
-	}
-	span.End()
-	require.NoError(t, tp.Shutdown(ctx))
-
-	assert.True(t, span.SpanContext().IsValid())
-
-	batchesUploaded := testCollector.batchesUploaded
-	require.Len(t, batchesUploaded, 1)
-	uploadedBatch := batchesUploaded[0]
-	assert.Equal(t, serviceName, uploadedBatch.GetProcess().GetServiceName())
-	require.Len(t, uploadedBatch.GetSpans(), 1)
-	uploadedSpan := uploadedBatch.GetSpans()[0]
-	assert.Len(t, uploadedSpan.GetLogs(), eventCountLimit)
-
-	require.Len(t, uploadedBatch.GetProcess().GetTags(), 1)
-	assert.Equal(t, tagKey, uploadedBatch.GetProcess().GetTags()[0].GetKey())
-	assert.Equal(t, tagVal, uploadedBatch.GetProcess().GetTags()[0].GetVStr())
 }

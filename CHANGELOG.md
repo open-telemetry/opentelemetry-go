@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- - Extract resource attributes from the `OTEL_RESOURCE_ATTRIBUTES` environment variable and merge them with the `resource.Default` resource as well as resources provided to the `TracerProvider` and metric `Controller`. (#1785)
 - Added Jaeger Environment variables: `OTEL_EXPORTER_JAEGER_AGENT_HOST`, `OTEL_EXPORTER_JAEGER_AGENT_PORT`
   These environment variables can be used to override Jaeger agent hostname and port (#1752)
 - The OTLP exporter now has two new convenience functions, `NewExportPipeline` and `InstallNewPipeline`, setup and install the exporter in tracing and metrics pipelines. (#1373)
@@ -51,6 +52,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Updated Jaeger Environment Variable: `OTEL_EXPORTER_JAEGER_ENDPOINT` to have a default value of 
+  `http://localhost:14250` when not set, in compliance with OTel spec. Changed the function `WithCollectorEndpoint`
+  in the Jaeger exporter package to no longer accept an endpoint as an argument. 
+  The endpoint can be passed in as a `CollectorEndpointOption` using the `WithEndpoint` function or 
+  specified through the `OTEL_EXPORTER_JAEGER_ENDPOINT` environment variable. (#1824)
 - Modify Zipkin Exporter default service name, use default resouce's serviceName instead of empty. (#1777)
 - Updated Jaeger Environment Variables: `JAEGER_ENDPOINT`, `JAEGER_USER`, `JAEGER_PASSWORD`
   to `OTEL_EXPORTER_JAEGER_ENDPOINT`, `OTEL_EXPORTER_JAEGER_USER`, `OTEL_EXPORTER_JAEGER_PASSWORD` 
@@ -79,6 +85,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
+- Removed the functions `CollectorEndpointFromEnv` and `WithCollectorEndpointOptionFromEnv` from the Jaeger exporter.
+  These functions for retrieving specific environment variable values are redundant of other internal functions and
+  are not intended for end user use. (#1824)
 - Removed Jaeger Environment variables: `JAEGER_SERVICE_NAME`, `JAEGER_DISABLED`, `JAEGER_TAGS`
   These environment variables will no longer be used to override values of the Jaeger exporter (#1752)
 - No longer set the links for a `Span` in `go.opentelemetry.io/otel/sdk/trace` that is configured to be a new root.
@@ -96,6 +105,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The information that could be configured in the `Process` struct should be configured in a `Resource` instead. (#1776, #1804)
 - Remove the `WithDisabled` option from the Jaeger exporter.
   To disable the exporter unregister it from the `TracerProvider` or use a no-operation `TracerProvider`. (#1806)
+- Removed the Jaeger exporter `WithSDKOptions` `Option`.
+  This option was used to set SDK options for the exporter creation convenience functions.
+  These functions are provided as a way to easily setup or install the exporter with what are deemed reasonable SDK settings for common use cases.
+  If the SDK needs to be configured differently, the `NewRawExporter` function and direct setup of the SDK with the desired settings should be used. (#1825)
 
 ## [0.19.0] - 2021-03-18
 

@@ -53,9 +53,6 @@ type options struct {
 
 	// BatchMaxCount defines the maximum number of spans sent in one batch
 	BatchMaxCount int
-
-	// TracerProviderOptions defines the options for tracer provider of sdk.
-	TracerProviderOptions []sdktrace.TracerProviderOption
 }
 
 // WithBufferMaxCount defines the total number of traces that can be buffered in memory
@@ -69,13 +66,6 @@ func WithBufferMaxCount(bufferMaxCount int) Option {
 func WithBatchMaxCount(batchMaxCount int) Option {
 	return func(o *options) {
 		o.BatchMaxCount = batchMaxCount
-	}
-}
-
-// WithSDKOptions configures options for tracer provider of sdk.
-func WithSDKOptions(opts ...sdktrace.TracerProviderOption) Option {
-	return func(o *options) {
-		o.TracerProviderOptions = opts
 	}
 }
 
@@ -133,18 +123,17 @@ func NewRawExporter(endpointOption EndpointOption, opts ...Option) (*Exporter, e
 // NewExportPipeline sets up a complete export pipeline
 // with the recommended setup for trace provider
 func NewExportPipeline(endpointOption EndpointOption, opts ...Option) (*sdktrace.TracerProvider, error) {
-	o := options{}
-	for _, opt := range opts {
-		opt(&o)
-	}
-
 	exporter, err := NewRawExporter(endpointOption, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	pOpts := append(o.TracerProviderOptions, sdktrace.WithSyncer(exporter))
-	tp := sdktrace.NewTracerProvider(pOpts...)
+	// TODO (MrAlias): The recommended default setup needs to register the
+	// exporter as a batcher, not a syncer. This will conflict with batching
+	// of the bundler currently, but when the bundler is removed it needs to
+	// be updated.
+	// https://github.com/open-telemetry/opentelemetry-go/issues/1799
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
 	return tp, nil
 }
 
