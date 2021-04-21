@@ -55,24 +55,7 @@ func (d detectAttributes) Detect(context.Context) (*Resource, error) {
 }
 
 // WithDetectors adds detectors to be evaluated for the configured resource.
-// Any use of WithDetectors disables the default detectors. Use
-// WithDetectors(BuiltinDetectors...) to reenable the default detectors.
-// Examples:
-// `New(ctx)`: Use builtin `Detector`s.
-// `New(ctx, WithDetectors())`: Use no `Detector`s.
-
-// `New(ctx, WithDetectors(d1, d2))`: Use Detector `d1`, then overlay Detector `d2`.
-// ```
-// New(ctx,
-//      WithDetectors(BuiltinDetectors...),
-//      WithDetectors(d1),
-// )
-// ```
-// Use The `BuiltinDetectors`, then overlay Detector `d1`.
 func WithDetectors(detectors ...Detector) Option {
-	if len(detectors) == 0 {
-		return detectorsOption{detectors: []Detector{noOp{}}}
-	}
 	return detectorsOption{detectors: detectors}
 }
 
@@ -86,23 +69,24 @@ func (o detectorsOption) Apply(cfg *config) {
 	cfg.detectors = append(cfg.detectors, o.detectors...)
 }
 
-var BuiltinDetectors = []Detector{
-	TelemetrySDK{},
-	Host{},
-	FromEnv{},
+// WithBuiltinDetectors adds the built detectors to the configured resoruce.
+func WithBuiltinDetectors() Option {
+	return WithDetectors(telemetrySDK{},
+		host{},
+		fromEnv{})
 }
 
-// New returns a Resource combined from the provided attributes,
-// user-provided detectors or builtin detectors.
-func New(ctx context.Context, opts ...Option) (*Resource, error) {
-	cfg := config{}
-	for _, opt := range opts {
-		opt.Apply(&cfg)
-	}
+// WithFromEnv adds attributes from environment variables to the  configured resoruce.
+func WithFromEnv() Option {
+	return WithDetectors(fromEnv{})
+}
 
-	if cfg.detectors == nil {
-		cfg.detectors = BuiltinDetectors
-	}
+// WithHost adds attributes from the host to the configured resoruce.
+func WithHost() Option {
+	return WithDetectors(host{})
+}
 
-	return Detect(ctx, cfg.detectors...)
+// WithTelemetrySDK adds TelemetrySDK version info to the configured resoruce.
+func WithTelemetrySDK() Option {
+	return WithDetectors(telemetrySDK{})
 }

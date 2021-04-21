@@ -36,6 +36,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `Event` and `Link` struct types from the `go.opentelemetry.io/otel` package now include a `DroppedAttributeCount` field to record the number of attributes that were not recorded due to configured limits being reached. (#1771)
 - The Jaeger exporter now reports dropped attributes for a Span event in the exported log. (#1771)
 - Adds `k8s.node.name` and `k8s.node.uid` attribute keys to the `semconv` package. (#1789)
+- Adds `resource.NewEmptyResouce()` for creating a Resouce without builtin detectors (#1810)
 - Adds `otlpgrpc.WithTimeout` option for configuring timeout to the otlp/gRPC exporter. (#1821)
 
 ### Fixed
@@ -74,7 +75,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/otel/sdk/export/trace` package is merged into the `go.opentelemetry.io/otel/sdk/trace` package. (#1778)
 - The prometheus.InstallNewPipeline example is moved from comment to example test (#1796)
 - The convenience functions for the stdout exporter have been updated to return the `TracerProvider` implementation and enable the shutdown of the exporter. (#1800)
-- Resources default detectors are overwritten by using `WithDetectors()` (#1810)
 - Replace the flush function returned from the Jaeger exporter's convenience creation functions (`InstallNewPipeline` and `NewExportPipeline`) with the `TracerProvider` implementation they create.
   This enables the caller to shutdown and flush using the related `TracerProvider` methods. (#1822)
 
@@ -97,8 +97,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The information that could be configured in the `Process` struct should be configured in a `Resource` instead. (#1776, #1804)
 - Remove the `WithDisabled` option from the Jaeger exporter.
   To disable the exporter unregister it from the `TracerProvider` or use a no-operation `TracerProvider`. (#1806)
-- Remove `resource.WithoutBuiltin()`. Any use of `resource.WithDetecors()` will have the same effect (#1810)
-- Remove `resource.WithHost()`, `resource.WithTelemetrySDK()`, and `resource.WithFromEnv()`.  To replace these effects use `resource.WithDetectors()` (#1810)
+- Remove `resource.WithoutBuiltin()`. Use `resource.NewEmptyResource()`. (#1810)
+- Unexported types `resouce.FromEnv`, `resource.Host`, and `resource.TelemetrySDK`, Use the corresponding `With*()` to use individually. (#1810)
 - Removed the Jaeger exporter `WithSDKOptions` `Option`.
   This option was used to set SDK options for the exporter creation convenience functions.
   These functions are provided as a way to easily setup or install the exporter with what are deemed reasonable SDK settings for common use cases.

@@ -40,8 +40,24 @@ var (
 			otel.Handle(err)
 		}
 		return r
-	}(Detect(context.Background(), defaultServiceNameDetector{}, TelemetrySDK{}))
+	}(Detect(context.Background(), defaultServiceNameDetector{}, telemetrySDK{}))
 )
+
+// New returns a Resource combined from the builtin detectors and user-provided detectors.
+func New(ctx context.Context, opts ...Option) (*Resource, error) {
+	opts = append([]Option{WithBuiltinDetectors()}, opts...)
+	return NewEmptyResouce(ctx, opts...)
+}
+
+// NewEmptyResouce returns a Resource combined from the user-provided detectors.
+func NewEmptyResouce(ctx context.Context, opts ...Option) (*Resource, error) {
+	cfg := config{}
+	for _, opt := range opts {
+		opt.Apply(&cfg)
+	}
+
+	return Detect(ctx, cfg.detectors...)
+}
 
 // NewWithAttributes creates a resource from attrs. If attrs contains
 // duplicate keys, the last value will be used. If attrs contains any invalid
