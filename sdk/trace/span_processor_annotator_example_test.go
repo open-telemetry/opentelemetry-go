@@ -25,30 +25,34 @@ import (
 Sometimes information about a runtime environment can change dynamically or be
 delayed from startup. Instead of continuously recreating and distributing a
 TracerProvider with an immutable Resource or delaying the startup of your
-application on a slow loading piece of information, annotate the created spans
+application on a slow-loading piece of information, annotate the created spans
 dynamically using a SpanProcessor.
 */
 
-// AttrsFunc is called when annotations for a Span need to be determined.
-type AttrsFunc func(context.Context) []attribute.KeyValue
+var (
+	// owner represents the owner of the application. In this example it is
+	// stored as a simple string, but in real-world use this may be the
+	// response to an asynchronous request.
+	owner    = "unknown"
+	ownerKey = attribute.Key("owner")
+)
+
+// AttrsFunc returns attributes to set on a Span.
+type AttrsFunc func() []attribute.KeyValue
 
 // Annotator is a SpanProcessor that adds attributes to all started spans.
 type Annotator struct {
-	// Next is the next SpanProcessor in the chain.
-	Next SpanProcessor
+	ExportPipe SpanProcessor
 
-	// AttrsFunc is called when a span is started and the returned attributes
-	// are added to that span.
+	// AttrsFunc is called when a span is started. The attributes it returns
+	// are set on the Span being started.
 	AttrsFunc AttrsFunc
 }
 
-func (a Annotator) OnStart(parent context.Context, s ReadWriteSpan) {
-	s.SetAttributes(a.AttrsFunc(parent)...)
-	a.Next.OnStart(parent, s)
-}
-func (a Annotator) Shutdown(ctx context.Context) error   { return a.Next.Shutdown(ctx) }
-func (a Annotator) ForceFlush(ctx context.Context) error { return a.Next.ForceFlush(ctx) }
-func (a Annotator) OnEnd(s ReadOnlySpan)                 { a.Next.OnEnd(s) }
+func (a Annotator) OnStart(_ context.Context, s ReadWriteSpan) { s.SetAttributes(a.AttrsFunc()...) }
+func (a Annotator) Shutdown(ctx context.Context) error         { return a.ExportPipe.Shutdown(ctx) }
+func (a Annotator) ForceFlush(ctx context.Context) error       { return a.ExportPipe.ForceFlush(ctx) }
+func (a Annotator) OnEnd(s ReadOnlySpan)                       { a.ExportPipe.OnEnd(s) }
 
 type exporter struct{}
 
@@ -62,34 +66,25 @@ func (exporter) ExportSpans(_ context.Context, spans []*SpanSnapshot) error {
 }
 
 func ExampleSpanProcessor_annotated() {
-	// Use this chan to signal when an owner of the process is known.
-	ownerCh := make(chan string, 1)
-	ownerKey := attribute.Key("owner")
-
 	a := Annotator{
-		// Chain the export pipeline downstream of this SpanProcessor.
-		Next: NewSimpleSpanProcessor(exporter{}),
-		// Dynamically lookup the owner and annotate accordingly.
-		AttrsFunc: func(ctx context.Context) []attribute.KeyValue {
-			select {
-			case name := <-ownerCh:
-				return []attribute.KeyValue{ownerKey.String(name)}
-			default:
-				return []attribute.KeyValue{ownerKey.String("unknown")}
-			}
+		ExportPipe: NewSimpleSpanProcessor(exporter{}),
+		AttrsFunc: func() []attribute.KeyValue {
+			return []attribute.KeyValue{ownerKey.String(owner)}
 		},
 	}
 
-	// Instead of waiting for the owner to be known before starting and
-	// blocking here, start the tracing process and update when the
-	// information becomes available.
+	// Simulate the situation where we want to annotate spans with an owner,
+	// but at startup we do not now this information. Instead of waiting for
+	// the owner to be known before starting and blocking here, start doing
+	// work and update when the information becomes available.
 	ctx := context.Background()
 	tracer := NewTracerProvider(WithSpanProcessor(a)).Tracer("annotated")
 	_, s0 := tracer.Start(ctx, "span0")
 
-	// It was determined that Alice is the owner of this task, make sure all
-	// subsequent spans are annotated appropriately.
-	ownerCh <- "alice"
+	// Simulate an asynchronous call to determine the owner succeeding. We now
+	// know that the owner of this application has been determined to be
+	// Alice. Make sure all subsequent spans are annotated appropriately.
+	owner = "alice"
 
 	_, s1 := tracer.Start(ctx, "span1")
 	s0.End()
