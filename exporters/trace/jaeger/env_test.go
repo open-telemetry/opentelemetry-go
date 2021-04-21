@@ -24,6 +24,27 @@ import (
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 )
 
+func TestNewRawExporterWithDefault(t *testing.T) {
+	const (
+		collectorEndpoint = "http://localhost:14250"
+		username          = ""
+		password          = ""
+	)
+
+	// Create Jaeger Exporter with default values
+	exp, err := NewRawExporter(
+		WithCollectorEndpoint(),
+	)
+
+	assert.NoError(t, err)
+
+	require.IsType(t, &collectorUploader{}, exp.uploader)
+	uploader := exp.uploader.(*collectorUploader)
+	assert.Equal(t, collectorEndpoint, uploader.endpoint)
+	assert.Equal(t, username, uploader.username)
+	assert.Equal(t, password, uploader.password)
+}
+
 func TestNewRawExporterWithEnv(t *testing.T) {
 	const (
 		collectorEndpoint = "http://localhost"
@@ -43,7 +64,7 @@ func TestNewRawExporterWithEnv(t *testing.T) {
 
 	// Create Jaeger Exporter with environment variables
 	exp, err := NewRawExporter(
-		WithCollectorEndpoint(CollectorEndpointFromEnv(), WithCollectorEndpointOptionFromEnv()),
+		WithCollectorEndpoint(),
 	)
 
 	assert.NoError(t, err)
@@ -55,11 +76,12 @@ func TestNewRawExporterWithEnv(t *testing.T) {
 	assert.Equal(t, password, uploader.password)
 }
 
-func TestNewRawExporterWithEnvImplicitly(t *testing.T) {
+func TestNewRawExporterWithPassedOption(t *testing.T) {
 	const (
 		collectorEndpoint = "http://localhost"
 		username          = "user"
 		password          = "password"
+		optionEndpoint    = "should not be overwritten"
 	)
 
 	envStore, err := ottest.SetEnvVariables(map[string]string{
@@ -72,16 +94,16 @@ func TestNewRawExporterWithEnvImplicitly(t *testing.T) {
 		require.NoError(t, envStore.Restore())
 	}()
 
-	// Create Jaeger Exporter with environment variables
+	// Create Jaeger Exporter with passed endpoint option, should be used over envEndpoint
 	exp, err := NewRawExporter(
-		WithCollectorEndpoint("should be overwritten"),
+		WithCollectorEndpoint(WithEndpoint(optionEndpoint)),
 	)
 
 	assert.NoError(t, err)
 
 	require.IsType(t, &collectorUploader{}, exp.uploader)
 	uploader := exp.uploader.(*collectorUploader)
-	assert.Equal(t, collectorEndpoint, uploader.endpoint)
+	assert.Equal(t, optionEndpoint, uploader.endpoint)
 	assert.Equal(t, username, uploader.username)
 	assert.Equal(t, password, uploader.password)
 }
@@ -152,52 +174,43 @@ func TestEnvOrWithAgentHostPortFromEnv(t *testing.T) {
 	}
 }
 
-func TestCollectorEndpointFromEnv(t *testing.T) {
-	const (
-		collectorEndpoint = "http://localhost"
-	)
-
-	envStore, err := ottest.SetEnvVariables(map[string]string{
-		envEndpoint: collectorEndpoint,
-	})
-	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
-
-	assert.Equal(t, collectorEndpoint, CollectorEndpointFromEnv())
-}
-
-func TestWithCollectorEndpointOptionFromEnv(t *testing.T) {
+func TestEnvOrWithCollectorEndpointOptionsFromEnv(t *testing.T) {
 	testCases := []struct {
 		name                             string
+		envEndpoint                      string
 		envUsername                      string
 		envPassword                      string
-		collectorEndpointOptions         CollectorEndpointOptions
+		defaultCollectorEndpointOptions  CollectorEndpointOptions
 		expectedCollectorEndpointOptions CollectorEndpointOptions
 	}{
 		{
 			name:        "overrides value via environment variables",
+			envEndpoint: "http://localhost:14252",
 			envUsername: "username",
 			envPassword: "password",
-			collectorEndpointOptions: CollectorEndpointOptions{
+			defaultCollectorEndpointOptions: CollectorEndpointOptions{
+				endpoint: "endpoint not to be used",
 				username: "foo",
 				password: "bar",
 			},
 			expectedCollectorEndpointOptions: CollectorEndpointOptions{
+				endpoint: "http://localhost:14252",
 				username: "username",
 				password: "password",
 			},
 		},
 		{
 			name:        "environment variables is empty, will not overwrite value",
+			envEndpoint: "",
 			envUsername: "",
 			envPassword: "",
-			collectorEndpointOptions: CollectorEndpointOptions{
+			defaultCollectorEndpointOptions: CollectorEndpointOptions{
+				endpoint: "endpoint to be used",
 				username: "foo",
 				password: "bar",
 			},
 			expectedCollectorEndpointOptions: CollectorEndpointOptions{
+				endpoint: "endpoint to be used",
 				username: "foo",
 				password: "bar",
 			},
@@ -205,6 +218,7 @@ func TestWithCollectorEndpointOptionFromEnv(t *testing.T) {
 	}
 
 	envStore := ottest.NewEnvStore()
+	envStore.Record(envEndpoint)
 	envStore.Record(envUser)
 	envStore.Record(envPassword)
 	defer func() {
@@ -212,13 +226,17 @@ func TestWithCollectorEndpointOptionFromEnv(t *testing.T) {
 	}()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			require.NoError(t, os.Setenv(envEndpoint, tc.envEndpoint))
 			require.NoError(t, os.Setenv(envUser, tc.envUsername))
 			require.NoError(t, os.Setenv(envPassword, tc.envPassword))
 
-			f := WithCollectorEndpointOptionFromEnv()
-			f(&tc.collectorEndpointOptions)
+			endpoint := envOr(envEndpoint, tc.defaultCollectorEndpointOptions.endpoint)
+			username := envOr(envUser, tc.defaultCollectorEndpointOptions.username)
+			password := envOr(envPassword, tc.defaultCollectorEndpointOptions.password)
 
-			assert.Equal(t, tc.expectedCollectorEndpointOptions, tc.collectorEndpointOptions)
+			assert.Equal(t, tc.expectedCollectorEndpointOptions.endpoint, endpoint)
+			assert.Equal(t, tc.expectedCollectorEndpointOptions.username, username)
+			assert.Equal(t, tc.expectedCollectorEndpointOptions.password, password)
 		})
 	}
 }
