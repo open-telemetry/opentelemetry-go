@@ -227,11 +227,11 @@ func (l *Set) Encoded(encoder Encoder) string {
 				l.encodedCache[idx] = encodedSet
 				atomic.StoreUint64(&e.ready, 1)
 				return encodedSet
-			} else {
-				// Other goroutine wrote to this entry, we need to load ID again
-				// to check if it was the same encoder.
-				eid = atomic.LoadUint64(&e.id)
 			}
+
+			// Other goroutine wrote to this entry, we need to load ID again
+			// to check if it was the same encoder.
+			eid = atomic.LoadUint64(&e.id)
 		}
 
 		if eid == id.value {
