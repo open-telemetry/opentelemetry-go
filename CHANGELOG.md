@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- - Extract resource attributes from the `OTEL_RESOURCE_ATTRIBUTES` environment variable and merge them with the `resource.Default` resource as well as resources provided to the `TracerProvider` and metric `Controller`. (#1785)
 - Added Jaeger Environment variables: `OTEL_EXPORTER_JAEGER_AGENT_HOST`, `OTEL_EXPORTER_JAEGER_AGENT_PORT`
   These environment variables can be used to override Jaeger agent hostname and port (#1752)
 - The OTLP exporter now has two new convenience functions, `NewExportPipeline` and `InstallNewPipeline`, setup and install the exporter in tracing and metrics pipelines. (#1373)
@@ -36,6 +37,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `Event` and `Link` struct types from the `go.opentelemetry.io/otel` package now include a `DroppedAttributeCount` field to record the number of attributes that were not recorded due to configured limits being reached. (#1771)
 - The Jaeger exporter now reports dropped attributes for a Span event in the exported log. (#1771)
 - Adds `k8s.node.name` and `k8s.node.uid` attribute keys to the `semconv` package. (#1789)
+- Adds `otlpgrpc.WithTimeout` option for configuring timeout to the otlp/gRPC exporter. (#1821)
 
 ### Fixed
 
@@ -46,10 +48,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Additionally, this tag is overridden, as specified in the OTel specification, if the event contains an attribute with that key. (#1768)
 - Zipkin Exporter: Ensure mapping between OTel and Zipkin span data complies with the specification. (#1688)
 - Fixed typo for default service name in Jaeger Exporter. (#1797)
-- Fix flaky OTLP for the reconnnection of the client connection. (#1527, TBD)
+- Fix flaky OTLP for the reconnnection of the client connection. (#1527, #1814)
 
 ### Changed
 
+- Updated Jaeger Environment Variable: `OTEL_EXPORTER_JAEGER_ENDPOINT` to have a default value of 
+  `http://localhost:14250` when not set, in compliance with OTel spec. Changed the function `WithCollectorEndpoint`
+  in the Jaeger exporter package to no longer accept an endpoint as an argument. 
+  The endpoint can be passed in as a `CollectorEndpointOption` using the `WithEndpoint` function or 
+  specified through the `OTEL_EXPORTER_JAEGER_ENDPOINT` environment variable. (#1824)
 - Modify Zipkin Exporter default service name, use default resouce's serviceName instead of empty. (#1777)
 - Updated Jaeger Environment Variables: `JAEGER_ENDPOINT`, `JAEGER_USER`, `JAEGER_PASSWORD`
   to `OTEL_EXPORTER_JAEGER_ENDPOINT`, `OTEL_EXPORTER_JAEGER_USER`, `OTEL_EXPORTER_JAEGER_PASSWORD` 
@@ -74,10 +81,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Make `NewSplitDriver` from `go.opentelemetry.io/otel/exporters/otlp` take variadic arguments instead of a `SplitConfig` item. 
   `NewSplitDriver` now automically implements an internal `noopDriver` for `SplitConfig` fields that are not initialized. (#1798)
 - The prometheus.InstallNewPipeline example is moved from comment to example test (#1796)
-- Convenience functions for stdout exporter have been updated to return the `TracerProvider` implementation and enable the shutdown of the exporter. (#1800)
+- The convenience functions for the stdout exporter have been updated to return the `TracerProvider` implementation and enable the shutdown of the exporter. (#1800)
+- Replace the flush function returned from the Jaeger exporter's convenience creation functions (`InstallNewPipeline` and `NewExportPipeline`) with the `TracerProvider` implementation they create.
+  This enables the caller to shutdown and flush using the related `TracerProvider` methods. (#1822)
+- The Jaeger exporter no longer batches exported spans itself, instead it relies on the SDK's `BatchSpanProcessor` for this functionality. (#1830)
+- The Jaeger exporter creation functions (`NewRawExporter`, `NewExportPipeline`, and `InstallNewPipeline`) no longer accept the removed `Option` type as a variadic argument. (#1830)
 
 ### Removed
 
+- Removed the functions `CollectorEndpointFromEnv` and `WithCollectorEndpointOptionFromEnv` from the Jaeger exporter.
+  These functions for retrieving specific environment variable values are redundant of other internal functions and
+  are not intended for end user use. (#1824)
 - Removed Jaeger Environment variables: `JAEGER_SERVICE_NAME`, `JAEGER_DISABLED`, `JAEGER_TAGS`
   These environment variables will no longer be used to override values of the Jaeger exporter (#1752)
 - No longer set the links for a `Span` in `go.opentelemetry.io/otel/sdk/trace` that is configured to be a new root.
@@ -93,6 +107,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `trace.FlagsDebug` and `trace.FlagsDeferred` constants have been removed and will be localized to the B3 propagator. (#1770)
 - Remove `Process` configuration, `WithProcessFromEnv` and `ProcessFromEnv`, and type from the Jaeger exporter package.
   The information that could be configured in the `Process` struct should be configured in a `Resource` instead. (#1776, #1804)
+- Remove the `WithDisabled` option from the Jaeger exporter.
+  To disable the exporter unregister it from the `TracerProvider` or use a no-operation `TracerProvider`. (#1806)
+- Removed the Jaeger exporter `WithSDKOptions` `Option`.
+  This option was used to set SDK options for the exporter creation convenience functions.
+  These functions are provided as a way to easily setup or install the exporter with what are deemed reasonable SDK settings for common use cases.
+  If the SDK needs to be configured differently, the `NewRawExporter` function and direct setup of the SDK with the desired settings should be used. (#1825)
+- The `WithBufferMaxCount` and `WithBatchMaxCount` `Option`s from the Jaeger exporter are removed.
+  The exporter no longer batches exports, instead relying on the SDK's `BatchSpanProcessor` for this functionality. (#1830)
+- The Jaeger exporter `Option` type is removed.
+  The type is no longer used by the exporter to configure anything.
+  All of the previous configuration these options provided were duplicates of SDK configuration.
+  They have all been removed in favor of using the SDK configuration and focuses the exporter configuration to be only about the endpoints it will send telemetry to. (#1830)
 
 ## [0.19.0] - 2021-03-18
 
