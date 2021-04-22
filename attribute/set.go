@@ -42,8 +42,8 @@ type (
 
 	entry struct {
 		id    EncoderID
-		value string
 		ready int32
+		value string
 	}
 
 	// Distinct wraps a variable-size array of `KeyValue`,
