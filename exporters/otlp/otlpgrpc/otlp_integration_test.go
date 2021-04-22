@@ -203,13 +203,38 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 	require.NoError(t, nmc.Stop())
 }
 
-func TestNewExporter_FailThreeTimesAndSucceedAfter(t *testing.T) {
+func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 	tts := []struct {
 		name   string
 		errors []error
 		rs     otlp.RetrySettings
 		fn     func(t *testing.T, ctx context.Context, exp *otlp.Exporter, mc *mockCollector)
 	}{
+		{
+			name: "Do not retry if succeeded",
+			fn: func(t *testing.T, ctx context.Context, exp *otlp.Exporter, mc *mockCollector) {
+				require.NoError(t, exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Spans"}}))
+
+				span := mc.getSpans()
+
+				require.Len(t, span, 1)
+				require.Equal(t, 1, mc.traceSvc.requests, "trace service must receive 1 success request.")
+			},
+		},
+		{
+			name: "Do not retry if 'error' is ok",
+			errors: []error{
+				status.Error(codes.OK, ""),
+			},
+			fn: func(t *testing.T, ctx context.Context, exp *otlp.Exporter, mc *mockCollector) {
+				require.NoError(t, exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Spans"}}))
+
+				span := mc.getSpans()
+
+				require.Len(t, span, 0)
+				require.Equal(t, 1, mc.traceSvc.requests, "trace service must receive 1 error OK request.")
+			},
+		},
 		{
 			name: "Fail three times and succeed",
 			rs: otlp.RetrySettings{
@@ -310,8 +335,8 @@ func TestNewExporter_FailThreeTimesAndSucceedAfter(t *testing.T) {
 			},
 			errors: []error{
 				status.Error(codes.Unavailable, "unavailable"),
-				status.Error(codes.Unavailable, "unavailable"),
-				status.Error(codes.Unavailable, "unavailable"),
+				status.Error(codes.InvalidArgument, "unavailable"),
+				status.Error(codes.Unauthenticated, "unavailable"),
 			},
 			fn: func(t *testing.T, ctx context.Context, exp *otlp.Exporter, mc *mockCollector) {
 				err := exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Spans"}})
@@ -365,6 +390,39 @@ func TestNewExporter_FailThreeTimesAndSucceedAfter(t *testing.T) {
 		})
 	}
 
+}
+
+func TestPermanentErrorsShouldNotBeRetried(t *testing.T) {
+	permanentErrors := []*status.Status{
+		status.New(codes.Unknown, "Unknown"),
+		status.New(codes.InvalidArgument, "InvalidArgument"),
+		status.New(codes.NotFound, "NotFound"),
+		status.New(codes.AlreadyExists, "AlreadyExists"),
+		status.New(codes.FailedPrecondition, "FailedPrecondition"),
+		status.New(codes.Unimplemented, "Unimplemented"),
+		status.New(codes.Internal, "Internal"),
+	}
+
+	for _, sts := range permanentErrors {
+		t.Run(sts.Code().String(), func(t *testing.T) {
+			ctx := context.Background()
+
+			mc := runMockCollectorWithConfig(t, &mockConfig{
+				errors: []error{sts.Err()},
+			})
+
+			exp := newGRPCExporter(t, ctx, mc.endpoint)
+
+			err := exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Spans"}})
+			require.Error(t, err)
+			require.Len(t, mc.getSpans(), 0)
+			require.Equal(t, 1, mc.traceSvc.requests, "trace service must receive 1 permanent error requests.")
+
+			defer func() {
+				_ = exp.Shutdown(ctx)
+			}()
+		})
+	}
 }
 
 func newThrottlingError(code codes.Code, duration time.Duration) error {

@@ -16,6 +16,11 @@ package otlpgrpc
 
 import (
 	"context"
+	"fmt"
+	"github.com/cenkalti/backoff/v4"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"math/rand"
 	"sync"
 	"sync/atomic"
@@ -275,4 +280,125 @@ func (c *connection) contextWithStop(ctx context.Context) (context.Context, cont
 		}
 	}(ctx, cancel)
 	return ctx, cancel
+}
+
+func (c *connection) doRequest(ctx context.Context, fn func(context.Context) error) error {
+	expBackoff := newExponentialBackoff(c.cfg.RetrySettings)
+
+	for {
+		err := fn(ctx)
+		if err == nil {
+			// request succeeded.
+			return nil
+		}
+
+		if !c.cfg.RetrySettings.Enabled {
+			return err
+		}
+
+		// We have an error, check gRPC status code.
+		st := status.Convert(err)
+		if st.Code() == codes.OK {
+			// Not really an error, still success.
+			return nil
+		}
+
+		// Now, this is this a real error.
+
+		if !shouldRetry(st.Code()) {
+			// It is not a retryable error, we should not retry.
+			return err
+		}
+
+		// Need to retry.
+		var delay time.Duration
+
+		// Respect server throttling.
+		if throttle := getThrottleDuration(st); throttle != 0 {
+			delay = throttle
+		} else {
+			backoffDelay := expBackoff.NextBackOff()
+			if backoffDelay == backoff.Stop {
+				// throw away the batch
+				err = fmt.Errorf("max elapsed time expired %w", err)
+				return err
+			}
+			delay = backoffDelay
+		}
+
+		// back-off, but get interrupted when shutting down or request is cancelled or timed out.
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-c.stopCh:
+			return fmt.Errorf("interrupted due to shutdown %w", err)
+		case <-time.After(delay):
+		}
+	}
+}
+
+func shouldRetry(code codes.Code) bool {
+	switch code {
+	case codes.OK:
+		// Success. This function should not be called for this code, the best we
+		// can do is tell the caller not to retry.
+		return false
+
+	case codes.Canceled,
+		codes.DeadlineExceeded,
+		codes.PermissionDenied,
+		codes.Unauthenticated,
+		codes.ResourceExhausted,
+		codes.Aborted,
+		codes.OutOfRange,
+		codes.Unavailable,
+		codes.DataLoss:
+		// These are retryable errors.
+		return true
+
+	case codes.Unknown,
+		codes.InvalidArgument,
+		codes.NotFound,
+		codes.AlreadyExists,
+		codes.FailedPrecondition,
+		codes.Unimplemented,
+		codes.Internal:
+		// These are fatal errors, don't retry.
+		return false
+
+	default:
+		// Don't retry on unknown codes.
+		return false
+	}
+}
+
+func getThrottleDuration(status *status.Status) time.Duration {
+	// See if throttling information is available.
+	for _, detail := range status.Details() {
+		if t, ok := detail.(*errdetails.RetryInfo); ok {
+			if t.RetryDelay.Seconds > 0 || t.RetryDelay.Nanos > 0 {
+				// We are throttled. Wait before retrying as requested by the server.
+				return time.Duration(t.RetryDelay.Seconds)*time.Second + time.Duration(t.RetryDelay.Nanos)*time.Nanosecond
+			}
+			return 0
+		}
+	}
+	return 0
+}
+
+func newExponentialBackoff(rs otlp.RetrySettings) *backoff.ExponentialBackOff {
+	// Do not use NewExponentialBackOff since it calls Reset and the code here must
+	// call Reset after changing the InitialInterval (this saves an unnecessary call to Now).
+	expBackoff := &backoff.ExponentialBackOff{
+		InitialInterval:     rs.InitialInterval,
+		RandomizationFactor: backoff.DefaultRandomizationFactor,
+		Multiplier:          backoff.DefaultMultiplier,
+		MaxInterval:         rs.MaxInterval,
+		MaxElapsedTime:      rs.MaxElapsedTime,
+		Stop:                backoff.Stop,
+		Clock:               backoff.SystemClock,
+	}
+	expBackoff.Reset()
+
+	return expBackoff
 }

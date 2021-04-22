@@ -145,13 +145,13 @@ func (md *metricsDriver) uploadMetrics(ctx context.Context, protoMetrics []*metr
 		if md.metricsClient == nil {
 			return errNoClient
 		}
-		req := func(ctx context.Context) error {
+
+		return md.connection.doRequest(ctx, func(ctx context.Context) error {
 			_, err := md.metricsClient.Export(ctx, &colmetricpb.ExportMetricsServiceRequest{
 				ResourceMetrics: protoMetrics,
 			})
 			return err
-		}
-		return doRequest(ctx, req, md.connection.cfg.RetrySettings, md.connection.stopCh)
+		})
 	}()
 	if err != nil {
 		md.connection.setStateDisconnected(err)
@@ -186,13 +186,12 @@ func (td *tracesDriver) uploadTraces(ctx context.Context, protoSpans []*tracepb.
 		if td.tracesClient == nil {
 			return errNoClient
 		}
-		req := func(ctx context.Context) error {
+		return td.connection.doRequest(ctx, func(ctx context.Context) error {
 			_, err := td.tracesClient.Export(ctx, &coltracepb.ExportTraceServiceRequest{
 				ResourceSpans: protoSpans,
 			})
 			return err
-		}
-		return doRequest(ctx, req, td.connection.cfg.RetrySettings, td.connection.stopCh)
+		})
 	}()
 	if err != nil {
 		td.connection.setStateDisconnected(err)

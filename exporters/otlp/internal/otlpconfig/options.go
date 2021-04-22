@@ -17,10 +17,9 @@ package otlpconfig // import "go.opentelemetry.io/otel/exporters/otlp/internal/o
 import (
 	"crypto/tls"
 	"fmt"
-	"time"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"time"
 
 	"go.opentelemetry.io/otel/exporters/otlp"
 )
@@ -42,16 +41,16 @@ const (
 	// DefaultTimeout is a default max waiting time for the backend to process
 	// each span or metrics batch.
 	DefaultTimeout time.Duration = 10 * time.Second
-	// DefaultServiceConfig is the gRPC service config used if none is
-	// provided by the user.
-	DefaultServiceConfig = `{
-	"methodConfig":[{
-		"name":[
-			{ "service":"opentelemetry.proto.collector.metrics.v1.MetricsService" },
-			{ "service":"opentelemetry.proto.collector.trace.v1.TraceService" }
-		]
-	}]
-}`
+)
+
+var (
+	// DefaultRetrySettings is a default settings for the retry policy.
+	DefaultRetrySettings = otlp.RetrySettings{
+		Enabled:         true,
+		InitialInterval: 5 * time.Second,
+		MaxInterval:     30 * time.Second,
+		MaxElapsedTime:  time.Minute,
+	}
 )
 
 type (
@@ -102,8 +101,7 @@ func NewDefaultConfig() Config {
 		},
 		MaxAttempts:   DefaultMaxAttempts,
 		Backoff:       DefaultBackoff,
-		RetrySettings: otlp.DefaultRetrySettings(),
-		ServiceConfig: DefaultServiceConfig,
+		RetrySettings: DefaultRetrySettings,
 	}
 
 	return c
