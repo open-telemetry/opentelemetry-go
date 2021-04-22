@@ -48,7 +48,7 @@ func TestBoolKey(t *testing.T) {
 		go runner(e3, "2k1=true")
 	}
 
-	<-time.After(time.Millisecond * 511100)
+	<-time.After(time.Millisecond * 500)
 	close(done)
 }
 
