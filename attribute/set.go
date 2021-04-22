@@ -43,7 +43,7 @@ type (
 	entry struct {
 		id    EncoderID
 		value string
-		ready bool
+		ready int32
 	}
 
 	// Distinct wraps a variable-size array of `KeyValue`,
@@ -200,8 +200,8 @@ func (l *Set) Encoded(encoder Encoder) string {
 	}
 
 	for idx := 0; idx < maxConcurrentEncoders; idx++ {
-		if e := &l.cache[idx]; e.id == id {
-			for !e.ready {
+		if e := &l.cache[idx]; atomic.LoadUint64(&e.id.value) == id.value {
+			for atomic.LoadInt32(&e.ready)&1 == 0 {
 				// wait for this entry to be ready to be used.
 				runtime.Gosched()
 			}
@@ -213,22 +213,30 @@ func (l *Set) Encoded(encoder Encoder) string {
 	for idx := 0; idx < maxConcurrentEncoders; idx++ {
 		e := &l.cache[idx]
 
-		if !e.id.Valid() {
+		eid := atomic.LoadUint64(&e.id.value)
+		var swapped bool
+		if eid == 0 {
 			// If we found an invalid id it means that the current
 			// encoder was not cached yet.
 			// We should try to cache it now.
-			swapped := atomic.CompareAndSwapUint64(&e.id.value, 0, id.value)
+			swapped = atomic.CompareAndSwapUint64(&e.id.value, 0, id.value)
 			if swapped {
 				// This entry now belongs to the current encoder.
 				// In order to avoid race conditions, the encoded value
 				// must be updated before making this entry ready to be used.
 				e.value = encodedSet
-				e.ready = true
+				atomic.StoreInt32(&e.ready, 1)
+				return encodedSet
 			}
 		}
 
-		if e.id == id {
-			for !e.ready {
+		if !swapped {
+			// Other goroutine wrote to this entry, we need to load ID again.
+			eid = atomic.LoadUint64(&e.id.value)
+		}
+
+		if eid == id.value {
+			for atomic.LoadInt32(&e.ready)&1 == 0 {
 				// wait for this entry to be ready to be used.
 				runtime.Gosched()
 			}
@@ -258,7 +266,7 @@ func NewSet(kvs ...KeyValue) Set {
 		return empty()
 	}
 	s, _ := NewSetWithSortableFiltered(kvs, new(Sortable), nil)
-	return s //nolint
+	return s
 }
 
 // NewSetWithSortable returns a new `Set`.  See the documentation for
@@ -271,7 +279,7 @@ func NewSetWithSortable(kvs []KeyValue, tmp *Sortable) Set {
 		return empty()
 	}
 	s, _ := NewSetWithSortableFiltered(kvs, tmp, nil)
-	return s //nolint
+	return s
 }
 
 // NewSetWithFiltered returns a new `Set`.  See the documentation for

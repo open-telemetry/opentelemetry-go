@@ -15,9 +15,10 @@
 package attribute
 
 import (
-	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestBoolKey(t *testing.T) {
@@ -47,11 +48,11 @@ func TestBoolKey(t *testing.T) {
 		go runner(e3, "2k1=true")
 	}
 
-	<-time.After(time.Millisecond * 500)
+	<-time.After(time.Millisecond * 511100)
 	close(done)
 }
 
-func BenchmarkEncoded(b *testing.B) {
+func newEncoderAndSet() ([3]Encoder, Set) {
 	e1 := DefaultEncoder()
 	e2 := newEncoderPrefix("1", e1)
 	e3 := newEncoderPrefix("2", e1)
@@ -60,23 +61,33 @@ func BenchmarkEncoded(b *testing.B) {
 
 	s := NewSet(Bool("k1", true), String("k2", "v2"), Int("k3", 13))
 
+	return encoders, s
+}
+
+func BenchmarkEncoded(b *testing.B) {
 	b.Run("single encoder", func(b *testing.B) {
 		b.ReportAllocs()
+
+		encoders, s := newEncoderAndSet()
 		for i := 0; i < b.N; i++ {
 			_ = s.Encoded(encoders[0])
 		}
 	})
 
 	b.Run("sequential encoders", func(b *testing.B) {
+		b.ResetTimer()
 		b.ReportAllocs()
+		encoders, s := newEncoderAndSet()
 		for i := 0; i < b.N; i++ {
 			_ = s.Encoded(encoders[i%3])
 		}
 	})
 
 	b.Run("parallel single encoders", func(b *testing.B) {
+		b.ResetTimer()
 		b.ReportAllocs()
 		b.RunParallel(func(pb *testing.PB) {
+			encoders, s := newEncoderAndSet()
 			for pb.Next() {
 				_ = s.Encoded(encoders[0])
 			}
@@ -84,9 +95,11 @@ func BenchmarkEncoded(b *testing.B) {
 	})
 
 	b.Run("parallel encoders", func(b *testing.B) {
+		b.ResetTimer()
 		b.ReportAllocs()
 		b.RunParallel(func(pb *testing.PB) {
 			i := 0
+			encoders, s := newEncoderAndSet()
 			for pb.Next() {
 				_ = s.Encoded(encoders[i%3])
 				i++
