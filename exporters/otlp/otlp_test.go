@@ -283,6 +283,15 @@ func TestNewExportPipeline(t *testing.T) {
 }
 
 func TestSplitDriver(t *testing.T) {
+
+	recordCount := 5
+	spanCount := 7
+	assertExport := func(t testing.TB, ctx context.Context, driver otlp.ProtocolDriver) {
+		t.Helper()
+		assert.NoError(t, driver.ExportMetrics(ctx, stubCheckpointSet{recordCount}, metricsdk.StatelessExportKindSelector()))
+		assert.NoError(t, driver.ExportTraces(ctx, stubSpanSnapshot(spanCount)))
+	}
+
 	t.Run("with metric/trace drivers configured", func(t *testing.T) {
 		driverTraces := &stubProtocolDriver{}
 		driverMetrics := &stubProtocolDriver{}
@@ -299,10 +308,7 @@ func TestSplitDriver(t *testing.T) {
 		assert.Equal(t, 0, driverMetrics.tracesExported)
 		assert.Equal(t, 0, driverMetrics.metricsExported)
 
-		recordCount := 5
-		spanCount := 7
-		assert.NoError(t, driver.ExportMetrics(ctx, stubCheckpointSet{recordCount}, metricsdk.StatelessExportKindSelector()))
-		assert.NoError(t, driver.ExportTraces(ctx, stubSpanSnapshot(spanCount)))
+		assertExport(t, ctx, driver)
 		assert.Len(t, driverTraces.rm, 0)
 		assert.Len(t, driverTraces.rs, spanCount)
 		assert.Len(t, driverMetrics.rm, recordCount)
@@ -335,10 +341,7 @@ func TestSplitDriver(t *testing.T) {
 		assert.Equal(t, 0, driverMetrics.tracesExported)
 		assert.Equal(t, 0, driverMetrics.metricsExported)
 
-		recordCount := 5
-		spanCount := 7
-		assert.NoError(t, driver.ExportMetrics(ctx, stubCheckpointSet{recordCount}, metricsdk.StatelessExportKindSelector()))
-		assert.NoError(t, driver.ExportTraces(ctx, stubSpanSnapshot(spanCount)))
+		assertExport(t, ctx, driver)
 		assert.Len(t, driverMetrics.rm, recordCount)
 		assert.Len(t, driverMetrics.rs, 0)
 		assert.Equal(t, 0, driverMetrics.tracesExported)
@@ -362,10 +365,7 @@ func TestSplitDriver(t *testing.T) {
 		assert.Equal(t, 0, driverTraces.tracesExported)
 		assert.Equal(t, 0, driverTraces.metricsExported)
 
-		recordCount := 5
-		spanCount := 7
-		assert.NoError(t, driver.ExportMetrics(ctx, stubCheckpointSet{recordCount}, metricsdk.StatelessExportKindSelector()))
-		assert.NoError(t, driver.ExportTraces(ctx, stubSpanSnapshot(spanCount)))
+		assertExport(t, ctx, driver)
 		assert.Len(t, driverTraces.rm, 0)
 		assert.Len(t, driverTraces.rs, spanCount)
 		assert.Equal(t, 1, driverTraces.tracesExported)
@@ -384,12 +384,11 @@ func TestSplitDriver(t *testing.T) {
 		ctx := context.Background()
 		assert.NoError(t, driver.Start(ctx))
 
-		recordCount := 5
-		spanCount := 7
 		assert.NoError(t, driver.ExportMetrics(ctx, stubCheckpointSet{recordCount}, metricsdk.StatelessExportKindSelector()))
 		assert.NoError(t, driver.ExportTraces(ctx, stubSpanSnapshot(spanCount)))
 		assert.NoError(t, driver.Stop(ctx))
 	})
+
 }
 
 func TestSplitDriverFail(t *testing.T) {

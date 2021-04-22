@@ -84,7 +84,7 @@ func NewSplitDriver(opts ...SplitDriverOption) ProtocolDriver {
 		trace:  &noopDriver{},
 	}
 	for _, opt := range opts {
-		opt(&driver)
+		opt.Apply(&driver)
 	}
 	return &driver
 }
