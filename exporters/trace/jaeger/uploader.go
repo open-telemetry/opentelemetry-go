@@ -31,7 +31,8 @@ import (
 
 // batchUploader send a batch of spans to Jaeger
 type batchUploader interface {
-	upload(ctx context.Context, batch *gen.Batch) error
+	upload(context.Context, *gen.Batch) error
+	shutdown(context.Context) error
 }
 
 type EndpointOption func() (batchUploader, error)
@@ -207,6 +208,22 @@ type agentUploader struct {
 
 var _ batchUploader = (*agentUploader)(nil)
 
+func (a *agentUploader) shutdown(ctx context.Context) error {
+	done := make(chan error, 1)
+	go func() {
+		done <- a.client.Close()
+	}()
+
+	select {
+	case <-ctx.Done():
+		// Prioritize not blocking the calling thread and just leak the
+		// spawned goroutine to close the client.
+		return ctx.Err()
+	case err := <-done:
+		return err
+	}
+}
+
 func (a *agentUploader) upload(ctx context.Context, batch *gen.Batch) error {
 	return a.client.EmitBatch(ctx, batch)
 }
@@ -221,6 +238,12 @@ type collectorUploader struct {
 }
 
 var _ batchUploader = (*collectorUploader)(nil)
+
+func (c *collectorUploader) shutdown(ctx context.Context) error {
+	// The Exporter will cancel any active exports and will prevent all
+	// subsequent exports, so nothing to do here.
+	return nil
+}
 
 func (c *collectorUploader) upload(ctx context.Context, batch *gen.Batch) error {
 	body, err := serialize(batch)
