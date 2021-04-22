@@ -200,8 +200,11 @@ func (l *Set) Encoded(encoder Encoder) string {
 	}
 
 	for idx := 0; idx < maxConcurrentEncoders; idx++ {
-		if en := l.cache[idx]; en.id == id {
-			return en.value
+		if e := &l.cache[idx]; e.id == id {
+			for !e.ok {
+				runtime.Gosched()
+			}
+			return e.value
 		}
 	}
 
