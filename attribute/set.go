@@ -42,6 +42,8 @@ type (
 	}
 
 	entry struct {
+		// entry must be 64-bit aligned to be correctly used in atomic operations.
+
 		id    uint64
 		ready uint64
 	}
