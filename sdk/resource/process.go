@@ -197,7 +197,7 @@ func WithProcessCommandArgs() Option {
 	return WithDetectors(processCommandArgsDetector{})
 }
 
-// WithProcessOwner adds an attribute the username of the user that owns the process
+// WithProcessOwner adds an attribute with the username of the user that owns the process
 // to the configured Resource.
 func WithProcessOwner() Option {
 	return WithDetectors(processOwnerDetector{})
