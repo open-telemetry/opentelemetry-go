@@ -329,14 +329,17 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 			name: "Retry stops if takes too long",
 			rs: otlp.RetrySettings{
 				Enabled:         true,
-				MaxElapsedTime:  time.Millisecond * 10,
-				InitialInterval: time.Millisecond * 8,
-				MaxInterval:     time.Millisecond * 10,
+				MaxElapsedTime:  time.Millisecond * 100,
+				InitialInterval: time.Millisecond * 50,
+				MaxInterval:     time.Millisecond * 50,
 			},
 			errors: []error{
 				status.Error(codes.Unavailable, "unavailable"),
-				status.Error(codes.InvalidArgument, "unavailable"),
-				status.Error(codes.Unauthenticated, "unavailable"),
+				status.Error(codes.Unavailable, "unavailable"),
+				status.Error(codes.Unavailable, "unavailable"),
+				status.Error(codes.Unavailable, "unavailable"),
+				status.Error(codes.Unavailable, "unavailable"),
+				status.Error(codes.Unavailable, "unavailable"),
 			},
 			fn: func(t *testing.T, ctx context.Context, exp *otlp.Exporter, mc *mockCollector) {
 				err := exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Spans"}})
@@ -347,7 +350,7 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 				span := mc.getSpans()
 
 				require.Len(t, span, 0)
-				require.GreaterOrEqual(t, 2, mc.traceSvc.requests, "trace service must receive at most 2 failure requests.")
+				require.LessOrEqual(t, 1, mc.traceSvc.requests, "trace service must receive at least 1 failure requests.")
 			},
 		},
 		{

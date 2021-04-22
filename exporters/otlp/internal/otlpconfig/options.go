@@ -17,9 +17,10 @@ package otlpconfig // import "go.opentelemetry.io/otel/exporters/otlp/internal/o
 import (
 	"crypto/tls"
 	"fmt"
+	"time"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"time"
 
 	"go.opentelemetry.io/otel/exporters/otlp"
 )

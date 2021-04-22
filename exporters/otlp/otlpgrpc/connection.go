@@ -17,15 +17,16 @@ package otlpgrpc
 import (
 	"context"
 	"fmt"
-	"github.com/cenkalti/backoff/v4"
-	"google.golang.org/genproto/googleapis/rpc/errdetails"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
+
+	"github.com/cenkalti/backoff/v4"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"google.golang.org/grpc/encoding/gzip"
 
@@ -314,16 +315,19 @@ func (c *connection) doRequest(ctx context.Context, fn func(context.Context) err
 		var delay time.Duration
 
 		// Respect server throttling.
-		if throttle := getThrottleDuration(st); throttle != 0 {
-			delay = throttle
-		} else {
-			backoffDelay := expBackoff.NextBackOff()
-			if backoffDelay == backoff.Stop {
-				// throw away the batch
-				err = fmt.Errorf("max elapsed time expired %w", err)
-				return err
-			}
+		throttle := getThrottleDuration(st)
+
+		backoffDelay := expBackoff.NextBackOff()
+		if backoffDelay == backoff.Stop {
+			// throw away the batch
+			err = fmt.Errorf("max elapsed time expired %w", err)
+			return err
+		}
+
+		if backoffDelay > throttle {
 			delay = backoffDelay
+		} else {
+			delay = throttle
 		}
 
 		// back-off, but get interrupted when shutting down or request is cancelled or timed out.
