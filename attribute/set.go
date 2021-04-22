@@ -42,7 +42,7 @@ type (
 	}
 
 	entry struct {
-		id    EncoderID
+		id    uint64
 		ready int32
 	}
 
@@ -200,7 +200,7 @@ func (l *Set) Encoded(encoder Encoder) string {
 	}
 
 	for idx := 0; idx < maxConcurrentEncoders; idx++ {
-		if e := &l.cache[idx]; atomic.LoadUint64(&e.id.value) == id.value {
+		if e := &l.cache[idx]; atomic.LoadUint64(&e.id) == id.value {
 			for atomic.LoadInt32(&e.ready)&1 == 0 {
 				// wait for this entry to be ready to be used.
 				runtime.Gosched()
@@ -213,13 +213,13 @@ func (l *Set) Encoded(encoder Encoder) string {
 	for idx := 0; idx < maxConcurrentEncoders; idx++ {
 		e := &l.cache[idx]
 
-		eid := atomic.LoadUint64(&e.id.value)
+		eid := atomic.LoadUint64(&e.id)
 		var swapped bool
 		if eid == 0 {
 			// If we found an invalid id it means that the current
 			// encoder was not cached yet.
 			// We should try to cache it now.
-			swapped = atomic.CompareAndSwapUint64(&e.id.value, 0, id.value)
+			swapped = atomic.CompareAndSwapUint64(&e.id, 0, id.value)
 			if swapped {
 				// This entry now belongs to the current encoder.
 				// In order to avoid race conditions, the encoded value
@@ -232,7 +232,7 @@ func (l *Set) Encoded(encoder Encoder) string {
 
 		if !swapped {
 			// Other goroutine wrote to this entry, we need to load ID again.
-			eid = atomic.LoadUint64(&e.id.value)
+			eid = atomic.LoadUint64(&e.id)
 		}
 
 		if eid == id.value {
