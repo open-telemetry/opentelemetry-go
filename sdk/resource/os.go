@@ -16,7 +16,6 @@ package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
 import (
 	"context"
-	"runtime"
 	"strings"
 
 	"go.opentelemetry.io/otel/semconv"
@@ -27,8 +26,10 @@ type osTypeDetector struct{}
 // Detect returns a *Resource that describes the operating system type the
 // service is running on.
 func (osTypeDetector) Detect(ctx context.Context) (*Resource, error) {
+	osType := runtimeOS()
+
 	return NewWithAttributes(
-		semconv.OSTypeKey.String(strings.ToUpper(runtime.GOOS)),
+		semconv.OSTypeKey.String(strings.ToLower(osType)),
 	), nil
 }
 
