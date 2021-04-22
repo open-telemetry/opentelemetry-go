@@ -43,7 +43,7 @@ type (
 	entry struct {
 		id    EncoderID
 		value string
-		ok    bool
+		ready bool
 	}
 
 	// Distinct wraps a variable-size array of `KeyValue`,
@@ -201,32 +201,35 @@ func (l *Set) Encoded(encoder Encoder) string {
 
 	for idx := 0; idx < maxConcurrentEncoders; idx++ {
 		if e := &l.cache[idx]; e.id == id {
-			for !e.ok {
+			for !e.ready {
+				// wait for this entry to be ready to be used.
 				runtime.Gosched()
 			}
 			return e.value
 		}
 	}
 
-	encodedSet := entry{
-		id:    id,
-		value: encoder.Encode(l.Iter()),
-		ok:    true,
-	}
-
+	encodedSet := encoder.Encode(l.Iter())
 	for idx := 0; idx < maxConcurrentEncoders; idx++ {
 		e := &l.cache[idx]
 
 		if !e.id.Valid() {
-			swapped := atomic.CompareAndSwapUint64(&e.id.value, 0, encodedSet.id.value)
+			// If we found an invalid id it means that the current
+			// encoder was not cached yet.
+			// We should try to cache it now.
+			swapped := atomic.CompareAndSwapUint64(&e.id.value, 0, id.value)
 			if swapped {
-				l.cache[idx] = encodedSet
-				return encodedSet.value
+				// This entry now belongs to the current encoder.
+				// In order to avoid race conditions, the encoded value
+				// must be updated before making this entry ready to be used.
+				e.value = encodedSet
+				e.ready = true
 			}
 		}
 
 		if e.id == id {
-			for !e.ok {
+			for !e.ready {
+				// wait for this entry to be ready to be used.
 				runtime.Gosched()
 			}
 			return e.value
@@ -235,7 +238,7 @@ func (l *Set) Encoded(encoder Encoder) string {
 
 	// TODO: This is a performance cliff.  Find a way for this to
 	// generate a warning.
-	return encodedSet.value
+	return encodedSet
 }
 
 func empty() Set {
