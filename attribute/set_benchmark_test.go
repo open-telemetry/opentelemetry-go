@@ -15,29 +15,10 @@
 package attribute
 
 import (
-	"go.opentelemetry.io/otel/internal/internaltest"
-	"os"
+	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
-	"unsafe"
-
-	"github.com/stretchr/testify/require"
 )
-
-// TestMain ensures struct alignment prior to running tests.
-func TestMain(m *testing.M) {
-	fields := []internaltest.FieldOffset{
-		{
-			Name:   "entry.id",
-			Offset: unsafe.Offsetof(entry{}.id),
-		},
-	}
-	if !internaltest.Aligned8Byte(fields, os.Stderr) {
-		os.Exit(1)
-	}
-
-	os.Exit(m.Run())
-}
 
 func TestBoolKey(t *testing.T) {
 	e1 := DefaultEncoder()

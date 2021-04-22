@@ -37,13 +37,13 @@ type (
 	Set struct {
 		equivalent Distinct
 
-		cache [maxConcurrentEncoders]entry
+		cache        [maxConcurrentEncoders]entry
+		encodedCache [maxConcurrentEncoders]string
 	}
 
 	entry struct {
 		id    EncoderID
 		ready int32
-		value string
 	}
 
 	// Distinct wraps a variable-size array of `KeyValue`,
@@ -205,7 +205,7 @@ func (l *Set) Encoded(encoder Encoder) string {
 				// wait for this entry to be ready to be used.
 				runtime.Gosched()
 			}
-			return e.value
+			return l.encodedCache[idx]
 		}
 	}
 
@@ -224,7 +224,7 @@ func (l *Set) Encoded(encoder Encoder) string {
 				// This entry now belongs to the current encoder.
 				// In order to avoid race conditions, the encoded value
 				// must be updated before making this entry ready to be used.
-				e.value = encodedSet
+				l.encodedCache[idx] = encodedSet
 				atomic.StoreInt32(&e.ready, 1)
 				return encodedSet
 			}
@@ -240,7 +240,7 @@ func (l *Set) Encoded(encoder Encoder) string {
 				// wait for this entry to be ready to be used.
 				runtime.Gosched()
 			}
-			return e.value
+			return l.encodedCache[idx]
 		}
 	}
 
