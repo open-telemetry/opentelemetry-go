@@ -44,7 +44,7 @@ func WithMetricExportKindSelector(selector metricsdk.ExportKindSelector) Exporte
 	}
 }
 
-// ProtocolDriverOption provides options for setting up a split driver.
+// SplitDriverOption provides options for setting up a split driver.
 type SplitDriverOption func(d *splitDriver)
 
 // WithMetricDriver allows one to set the driver used for metrics
