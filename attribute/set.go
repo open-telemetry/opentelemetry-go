@@ -17,8 +17,9 @@ package attribute // import "go.opentelemetry.io/otel/attribute"
 import (
 	"encoding/json"
 	"reflect"
+	"runtime"
 	"sort"
-	"sync"
+	"sync/atomic"
 )
 
 type (
@@ -36,9 +37,13 @@ type (
 	Set struct {
 		equivalent Distinct
 
-		lock     sync.Mutex
-		encoders [maxConcurrentEncoders]EncoderID
-		encoded  [maxConcurrentEncoders]string
+		cache [maxConcurrentEncoders]entry
+	}
+
+	entry struct {
+		id    EncoderID
+		value string
+		ok    bool
 	}
 
 	// Distinct wraps a variable-size array of `KeyValue`,
@@ -194,39 +199,40 @@ func (l *Set) Encoded(encoder Encoder) string {
 		return encoder.Encode(l.Iter())
 	}
 
-	var lookup *string
-	l.lock.Lock()
 	for idx := 0; idx < maxConcurrentEncoders; idx++ {
-		if l.encoders[idx] == id {
-			lookup = &l.encoded[idx]
-			break
+		if en := l.cache[idx]; en.id == id {
+			return en.value
 		}
 	}
-	l.lock.Unlock()
 
-	if lookup != nil {
-		return *lookup
+	encodedSet := entry{
+		id:    id,
+		value: encoder.Encode(l.Iter()),
+		ok:    true,
 	}
 
-	r := encoder.Encode(l.Iter())
-
-	l.lock.Lock()
-	defer l.lock.Unlock()
-
 	for idx := 0; idx < maxConcurrentEncoders; idx++ {
-		if l.encoders[idx] == id {
-			return l.encoded[idx]
+		e := &l.cache[idx]
+
+		if !e.id.Valid() {
+			swapped := atomic.CompareAndSwapUint64(&e.id.value, 0, encodedSet.id.value)
+			if swapped {
+				l.cache[idx] = encodedSet
+				return encodedSet.value
+			}
 		}
-		if !l.encoders[idx].Valid() {
-			l.encoders[idx] = id
-			l.encoded[idx] = r
-			return r
+
+		if e.id == id {
+			for !e.ok {
+				runtime.Gosched()
+			}
+			return e.value
 		}
 	}
 
 	// TODO: This is a performance cliff.  Find a way for this to
 	// generate a warning.
-	return r
+	return encodedSet.value
 }
 
 func empty() Set {
