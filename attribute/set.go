@@ -216,25 +216,22 @@ func (l *Set) Encoded(encoder Encoder) string {
 		e := &l.cache[idx]
 
 		eid := atomic.LoadUint64(&e.id)
-		var swapped bool
 		if eid == 0 {
 			// If we found an invalid id it means that the current
 			// encoder was not cached yet.
 			// We should try to cache it now.
-			swapped = atomic.CompareAndSwapUint64(&e.id, 0, id.value)
-			if swapped {
+			if atomic.CompareAndSwapUint64(&e.id, 0, id.value) {
 				// This entry now belongs to the current encoder.
 				// In order to avoid race conditions, the encoded value
 				// must be updated before making this entry ready to be used.
 				l.encodedCache[idx] = encodedSet
 				atomic.StoreUint64(&e.ready, 1)
 				return encodedSet
+			} else {
+				// Other goroutine wrote to this entry, we need to load ID again
+				// to check if it was the same encoder.
+				eid = atomic.LoadUint64(&e.id)
 			}
-		}
-
-		if !swapped {
-			// Other goroutine wrote to this entry, we need to load ID again.
-			eid = atomic.LoadUint64(&e.id)
 		}
 
 		if eid == id.value {
