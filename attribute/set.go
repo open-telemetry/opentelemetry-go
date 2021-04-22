@@ -43,7 +43,7 @@ type (
 
 	entry struct {
 		id    uint64
-		ready int32
+		ready uint64
 	}
 
 	// Distinct wraps a variable-size array of `KeyValue`,
@@ -201,7 +201,7 @@ func (l *Set) Encoded(encoder Encoder) string {
 
 	for idx := 0; idx < maxConcurrentEncoders; idx++ {
 		if e := &l.cache[idx]; atomic.LoadUint64(&e.id) == id.value {
-			for atomic.LoadInt32(&e.ready)&1 == 0 {
+			for atomic.LoadUint64(&e.ready)&1 == 0 {
 				// wait for this entry to be ready to be used.
 				runtime.Gosched()
 			}
@@ -225,7 +225,7 @@ func (l *Set) Encoded(encoder Encoder) string {
 				// In order to avoid race conditions, the encoded value
 				// must be updated before making this entry ready to be used.
 				l.encodedCache[idx] = encodedSet
-				atomic.StoreInt32(&e.ready, 1)
+				atomic.StoreUint64(&e.ready, 1)
 				return encodedSet
 			}
 		}
@@ -236,7 +236,7 @@ func (l *Set) Encoded(encoder Encoder) string {
 		}
 
 		if eid == id.value {
-			for atomic.LoadInt32(&e.ready)&1 == 0 {
+			for atomic.LoadUint64(&e.ready)&1 == 0 {
 				// wait for this entry to be ready to be used.
 				runtime.Gosched()
 			}
