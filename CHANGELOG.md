@@ -37,7 +37,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `Event` and `Link` struct types from the `go.opentelemetry.io/otel` package now include a `DroppedAttributeCount` field to record the number of attributes that were not recorded due to configured limits being reached. (#1771)
 - The Jaeger exporter now reports dropped attributes for a Span event in the exported log. (#1771)
 - Adds `k8s.node.name` and `k8s.node.uid` attribute keys to the `semconv` package. (#1789)
-- Adds `resource.NewEmptyResouce()` for creating a Resouce without builtin detectors (#1810)
+- Adds `resource.NewEmptyResource()` for creating a Resource without builtin detectors (#1810)
 - Adds `otlpgrpc.WithTimeout` option for configuring timeout to the otlp/gRPC exporter. (#1821)
 
 ### Fixed
@@ -107,7 +107,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Remove the `WithDisabled` option from the Jaeger exporter.
   To disable the exporter unregister it from the `TracerProvider` or use a no-operation `TracerProvider`. (#1806)
 - Remove `resource.WithoutBuiltin()`. Use `resource.NewEmptyResource()`. (#1810)
-- Unexported types `resouce.FromEnv`, `resource.Host`, and `resource.TelemetrySDK`, Use the corresponding `With*()` to use individually. (#1810)
+- Unexported types `resource.FromEnv`, `resource.Host`, and `resource.TelemetrySDK`, Use the corresponding `With*()` to use individually. (#1810)
 - Removed the Jaeger exporter `WithSDKOptions` `Option`.
   This option was used to set SDK options for the exporter creation convenience functions.
   These functions are provided as a way to easily setup or install the exporter with what are deemed reasonable SDK settings for common use cases.

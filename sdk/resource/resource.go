@@ -46,11 +46,11 @@ var (
 // New returns a Resource combined from the builtin detectors and user-provided detectors.
 func New(ctx context.Context, opts ...Option) (*Resource, error) {
 	opts = append([]Option{WithBuiltinDetectors()}, opts...)
-	return NewEmptyResouce(ctx, opts...)
+	return NewEmptyResource(ctx, opts...)
 }
 
-// NewEmptyResouce returns a Resource combined from the user-provided detectors.
-func NewEmptyResouce(ctx context.Context, opts ...Option) (*Resource, error) {
+// NewEmptyResource returns a Resource combined from the user-provided detectors.
+func NewEmptyResource(ctx context.Context, opts ...Option) (*Resource, error) {
 	cfg := config{}
 	for _, opt := range opts {
 		opt.Apply(&cfg)

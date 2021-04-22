@@ -357,7 +357,7 @@ func TestNewRawResource(t *testing.T) {
 			defer func() { require.NoError(t, store.Restore()) }()
 
 			ctx := context.Background()
-			res, err := resource.NewEmptyResouce(ctx, tt.options...)
+			res, err := resource.NewEmptyResource(ctx, tt.options...)
 
 			require.NoError(t, err)
 			require.EqualValues(t, tt.resourceValues, toMap(res))

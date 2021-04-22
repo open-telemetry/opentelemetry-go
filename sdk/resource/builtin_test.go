@@ -59,7 +59,7 @@ func TestStringDetectorErrors(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		res, err := resource.NewEmptyResouce(
+		res, err := resource.NewEmptyResource(
 			context.Background(),
 			resource.WithAttributes(attribute.String("A", "B")),
 			resource.WithDetectors(test.s),
