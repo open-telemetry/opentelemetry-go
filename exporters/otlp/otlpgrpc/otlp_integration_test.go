@@ -209,6 +209,7 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 		errors []error
 		rs     otlp.RetrySettings
 		fn     func(t *testing.T, ctx context.Context, exp *otlp.Exporter, mc *mockCollector)
+		opts   []otlpgrpc.Option
 	}{
 		{
 			name: "Do not retry if succeeded",
@@ -310,19 +311,24 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 			rs: otlp.RetrySettings{
 				Enabled:         true,
 				MaxElapsedTime:  time.Minute,
-				InitialInterval: time.Minute,
-				MaxInterval:     time.Minute,
+				InitialInterval: time.Nanosecond,
+				MaxInterval:     time.Nanosecond,
+			},
+			opts: []otlpgrpc.Option{
+				otlpgrpc.WithTimeout(time.Millisecond * 100),
 			},
 			errors: []error{
-				newThrottlingError(codes.ResourceExhausted, 10*time.Millisecond),
+				newThrottlingError(codes.ResourceExhausted, time.Minute),
 			},
 			fn: func(t *testing.T, ctx context.Context, exp *otlp.Exporter, mc *mockCollector) {
-				require.NoError(t, exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Spans"}}))
+				err := exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Spans"}})
+				require.Error(t, err)
+				require.Equal(t, "context deadline exceeded", err.Error())
 
 				span := mc.getSpans()
 
-				require.Len(t, span, 1)
-				require.Equal(t, 2, mc.traceSvc.requests, "trace service must receive 1 failure requests and 1 success request.")
+				require.Len(t, span, 0)
+				require.Equal(t, 1, mc.traceSvc.requests, "trace service must receive 1 failure requests and 1 success request.")
 			},
 		},
 		{
@@ -383,7 +389,15 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 				errors: tt.errors,
 			})
 
-			exp := newGRPCExporter(t, ctx, mc.endpoint, otlpgrpc.WithRetry(tt.rs))
+			opts := []otlpgrpc.Option{
+				otlpgrpc.WithRetry(tt.rs),
+			}
+
+			if len(tt.opts) != 0 {
+				opts = append(opts, tt.opts...)
+			}
+
+			exp := newGRPCExporter(t, ctx, mc.endpoint, opts...)
 
 			tt.fn(t, ctx, exp, mc)
 
