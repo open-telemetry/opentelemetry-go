@@ -16,8 +16,6 @@ package resource_test
 
 import (
 	"context"
-	"runtime"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -25,7 +23,18 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
+func mockRuntimeProviders() {
+	resource.SetRuntimeProviders(
+		fakeRuntimeNameProvider,
+		fakeRuntimeVersionProvider,
+		func() string { return "LINUX" },
+		fakeRuntimeArchProvider,
+	)
+}
+
 func TestWithOSType(t *testing.T) {
+	mockRuntimeProviders()
+
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
@@ -35,10 +44,8 @@ func TestWithOSType(t *testing.T) {
 
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{
-		"os.type": osType(),
+		"os.type": "linux",
 	}, toMap(res))
-}
 
-func osType() string {
-	return strings.ToUpper(runtime.GOOS)
+	restoreProcessAttributesProviders()
 }
