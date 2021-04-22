@@ -32,7 +32,7 @@ func (osTypeDetector) Detect(ctx context.Context) (*Resource, error) {
 	), nil
 }
 
-// WithOS adds an attribute with the operating system type to the configured Resource.
+// WithOSType adds an attribute with the operating system type to the configured Resource.
 func WithOSType() Option {
 	return WithDetectors(osTypeDetector{})
 }
