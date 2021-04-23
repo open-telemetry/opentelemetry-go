@@ -40,7 +40,7 @@ var (
 			otel.Handle(err)
 		}
 		return r
-	}(Detect(context.Background(), defaultServiceNameDetector{}, TelemetrySDK{}))
+	}(Detect(context.Background(), defaultServiceNameDetector{}, FromEnv{}, TelemetrySDK{}))
 )
 
 // NewWithAttributes creates a resource from attrs. If attrs contains
@@ -142,6 +142,17 @@ func Empty() *Resource {
 // "service.name" and OpenTelemetrySDK attributes
 func Default() *Resource {
 	return defaultResource
+}
+
+// Environment returns an instance of Resource with attributes
+// extracted from the OTEL_RESOURCE_ATTRIBUTES environment variable.
+func Environment() *Resource {
+	detector := &FromEnv{}
+	resource, err := detector.Detect(context.Background())
+	if err == nil {
+		otel.Handle(err)
+	}
+	return resource
 }
 
 // Equivalent returns an object that can be compared for equality

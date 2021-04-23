@@ -111,9 +111,9 @@ func newAgentClientUDP(params agentClientUDPParams) (*agentClientUDP, error) {
 }
 
 // EmitBatch implements EmitBatch() of Agent interface
-func (a *agentClientUDP) EmitBatch(batch *gen.Batch) error {
+func (a *agentClientUDP) EmitBatch(ctx context.Context, batch *gen.Batch) error {
 	a.thriftBuffer.Reset()
-	if err := a.client.EmitBatch(context.Background(), batch); err != nil {
+	if err := a.client.EmitBatch(ctx, batch); err != nil {
 		return err
 	}
 	if a.thriftBuffer.Len() > a.maxPacketSize {

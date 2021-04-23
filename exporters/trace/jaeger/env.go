@@ -42,21 +42,3 @@ func envOr(key, defaultValue string) string {
 	}
 	return defaultValue
 }
-
-// CollectorEndpointFromEnv return environment variable value of OTEL_EXPORTER_JAEGER_ENDPOINT
-func CollectorEndpointFromEnv() string {
-	return os.Getenv(envEndpoint)
-}
-
-// WithCollectorEndpointOptionFromEnv uses environment variables to set the username and password
-// if basic auth is required.
-func WithCollectorEndpointOptionFromEnv() CollectorEndpointOption {
-	return func(o *CollectorEndpointOptions) {
-		if e := os.Getenv(envUser); e != "" {
-			o.username = e
-		}
-		if e := os.Getenv(envPassword); e != "" {
-			o.password = e
-		}
-	}
-}

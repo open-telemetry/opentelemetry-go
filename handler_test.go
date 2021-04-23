@@ -17,10 +17,8 @@ package otel
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"log"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -72,53 +70,15 @@ func (s *HandlerTestSuite) TestGlobalHandler() {
 }
 
 func (s *HandlerTestSuite) TestNoDropsOnDelegate() {
-	// max time to wait for goroutine to Handle an error.
-	pause := 10 * time.Millisecond
-
-	var sent int
-	err := errors.New("")
-	stop := make(chan struct{})
-	beat := make(chan struct{})
-	done := make(chan struct{})
-
-	// Wait for a error to be submitted from the following goroutine.
-	wait := func(d time.Duration) error {
-		timer := time.NewTimer(d)
-		select {
-		case <-timer.C:
-			// We are about to fail, stop the spawned goroutine.
-			stop <- struct{}{}
-			return fmt.Errorf("no errors sent in %v", d)
-		case <-beat:
-			// Allow the timer to be reclaimed by GC.
-			timer.Stop()
-			return nil
-		}
-	}
-
-	go func() {
-		// Slow down to speed up: do not overload the processor.
-		ticker := time.NewTicker(100 * time.Microsecond)
-		for {
-			select {
-			case <-stop:
-				ticker.Stop()
-				done <- struct{}{}
-				return
-			case <-ticker.C:
-				sent++
-				Handle(err)
-			}
-
-			select {
-			case beat <- struct{}{}:
-			default:
-			}
+	causeErr := func() func() {
+		err := errors.New("")
+		return func() {
+			Handle(err)
 		}
 	}()
 
-	// Wait for the spice to flow
-	s.Require().NoError(wait(pause), "starting error stream")
+	causeErr()
+	s.Require().Len(s.errLogger.Got(), 1)
 
 	// Change to another Handler. We are testing this is loss-less.
 	newErrLogger := new(errLogger)
@@ -126,16 +86,10 @@ func (s *HandlerTestSuite) TestNoDropsOnDelegate() {
 		l: log.New(newErrLogger, "", 0),
 	}
 	SetErrorHandler(secondary)
-	s.Require().NoError(wait(pause), "switched to new Handler")
 
-	// Testing done, stop sending errors.
-	stop <- struct{}{}
-	// Ensure we do not lose any straglers.
-	<-done
-
-	got := append(s.errLogger.Got(), newErrLogger.Got()...)
-	s.Assert().Greater(len(got), 1, "at least 2 errors should have been sent")
-	s.Assert().Len(got, sent)
+	causeErr()
+	s.Assert().Len(s.errLogger.Got(), 1, "original Handler used after delegation")
+	s.Assert().Len(newErrLogger.Got(), 1, "new Handler not used after delegation")
 }
 
 func TestHandlerTestSuite(t *testing.T) {
