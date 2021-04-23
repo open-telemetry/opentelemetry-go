@@ -66,16 +66,27 @@ type splitDriver struct {
 	trace  ProtocolDriver
 }
 
+// noopDriver implements the ProtocolDriver interface and
+// is used internally to implement split drivers that do not have
+// all drivers configured.
+type noopDriver struct{}
+
+var _ ProtocolDriver = (*noopDriver)(nil)
+
 var _ ProtocolDriver = (*splitDriver)(nil)
 
 // NewSplitDriver creates a protocol driver which contains two other
 // protocol drivers and will forward traces to one of them and metrics
 // to another.
-func NewSplitDriver(cfg SplitConfig) ProtocolDriver {
-	return &splitDriver{
-		metric: cfg.ForMetrics,
-		trace:  cfg.ForTraces,
+func NewSplitDriver(opts ...SplitDriverOption) ProtocolDriver {
+	driver := splitDriver{
+		metric: &noopDriver{},
+		trace:  &noopDriver{},
 	}
+	for _, opt := range opts {
+		opt.Apply(&driver)
+	}
+	return &driver
 }
 
 // Start implements ProtocolDriver. It starts both drivers at the same
@@ -142,4 +153,24 @@ func (d *splitDriver) ExportMetrics(ctx context.Context, cps metricsdk.Checkpoin
 // driver used for sending spans.
 func (d *splitDriver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
 	return d.trace.ExportTraces(ctx, ss)
+}
+
+// Start does nothing.
+func (d *noopDriver) Start(ctx context.Context) error {
+	return nil
+}
+
+// Stop does nothing.
+func (d *noopDriver) Stop(ctx context.Context) error {
+	return nil
+}
+
+// ExportMetrics does nothing.
+func (d *noopDriver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error {
+	return nil
+}
+
+// ExportTraces does nothing.
+func (d *noopDriver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
+	return nil
 }
