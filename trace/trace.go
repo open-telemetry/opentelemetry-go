@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"log"
 	"regexp"
 	"strings"
 	"time"
@@ -78,6 +79,21 @@ func (t TraceID) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.String())
 }
 
+// UnmarshalJSON implements a custom unmarshal function to decode TraceID
+// from bytes
+func (t TraceID) UnmarshalJSON(b []byte) error {
+	var hexSpan string
+	if err := json.Unmarshal(b, &hexSpan); err != nil {
+		return err
+	}
+	t, err := TraceIDFromHex(hexSpan)
+	log.Printf("traceID: %v", t)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // String returns the hex string representation form of a TraceID
 func (t TraceID) String() string {
 	return hex.EncodeToString(t[:])
@@ -99,6 +115,21 @@ func (s SpanID) IsValid() bool {
 // as a hex string.
 func (s SpanID) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
+}
+
+// UnmarshalJSON implements a custom unmarshal function to decode SpanID
+// from bytes
+func (s SpanID) UnmarshalJSON(b []byte) error {
+	var hexSpan string
+	if err := json.Unmarshal(b, &hexSpan); err != nil {
+		return err
+	}
+	s, err := SpanIDFromHex(hexSpan)
+	log.Printf("spanID: %v", s)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // String returns the hex string representation form of a SpanID
@@ -143,6 +174,23 @@ func SpanIDFromHex(h string) (SpanID, error) {
 		return s, errNilSpanID
 	}
 	return s, nil
+}
+
+// TraceFlagsFromHex returns TraceFlags from a hex string if it is compliant
+// with the w3c trace-context specification.
+// See more at https://www.w3.org/TR/trace-context/#parent-id
+// nolint:golint
+func TraceFlagsFromHex(h string) (TraceFlags, error) {
+	var tf TraceFlags
+	if len(h) != 2 {
+		return tf, errInvalidSpanIDLength
+	}
+	s := []byte{byte(tf)}
+
+	if err := decodeHex(h, s[:]); err != nil {
+		return tf, err
+	}
+	return TraceFlags(s[0]), nil
 }
 
 func decodeHex(h string, b []byte) error {
@@ -194,6 +242,39 @@ var valueFormatRegExp = regexp.MustCompile(`^(` + traceStateValueFormat + `)$`)
 func (ts TraceState) MarshalJSON() ([]byte, error) {
 	return json.Marshal(ts.kvs)
 }
+
+// UnmarshalJSON implements a custom unmarshal function to decode trace state.
+func (ts TraceState) UnmarshalJSON(b []byte) error {
+	if err := json.Unmarshal(b, &ts.kvs); err != nil {
+		return err
+	}
+	log.Printf("traceState: %v", ts.kvs)
+	return nil
+}
+
+// This works
+//func (ts TraceState) UnmarshalJSON(b []byte) error {
+//	//[map[Key:foo Value:map[Type:STRING Value:bar]]]
+//	var arr []struct{
+//		Key string 
+//		Value struct{
+//			Type string
+//			Value string
+//		}
+//	}
+//	if err := json.Unmarshal(b, &arr); err != nil {
+//		log.Printf("The error: %v", err)
+//		return err
+//	}
+//	for _, ar := range arr {
+//		value, _ := attribute.FromString(ar.Value.Type, ar.Value.Value)
+//		ts.kvs = append(ts.kvs, attribute.KeyValue{
+//			Key: attribute.Key(ar.Key), 
+//			Value: value})
+//	}
+//	log.Printf("traceState: %v", ts.kvs)
+//	return nil
+//}
 
 // String returns trace state as a string valid according to the
 // W3C Trace Context specification.
@@ -334,6 +415,21 @@ func (tf TraceFlags) WithSampled(sampled bool) TraceFlags {
 // as a hex string.
 func (tf TraceFlags) MarshalJSON() ([]byte, error) {
 	return json.Marshal(tf.String())
+}
+
+// UnmarshalJSON implements a custom unmarshal function to decode SpanID
+// from bytes
+func (tf TraceFlags) UnmarshalJSON(b []byte) error {
+	var hexFlags string
+	if err := json.Unmarshal(b, &hexFlags); err != nil {
+		return err
+	}
+	tf, err := TraceFlagsFromHex(hexFlags)
+	log.Printf("traceFlags: %v", tf)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // String returns the hex string representation form of TraceFlags
@@ -491,6 +587,17 @@ func (sc SpanContext) MarshalJSON() ([]byte, error) {
 		TraceState: sc.traceState,
 		Remote:     sc.remote,
 	})
+}
+
+// UnmarshalJSON implements a custom unmarshal function to decode a SpanContext.
+func (sc SpanContext) UnmarshalJSON(b []byte) error {
+	scc := SpanContextConfig{}
+	if err := json.Unmarshal(b, &scc); err != nil {
+		return err
+	}
+	sc = NewSpanContext(scc)
+	log.Printf("spancontext: %v", sc)
+	return nil
 }
 
 // Span is the individual component of a trace. It represents a single named

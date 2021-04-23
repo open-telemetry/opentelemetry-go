@@ -17,6 +17,7 @@ package attribute // import "go.opentelemetry.io/otel/attribute"
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"reflect"
 	"strconv"
 
@@ -192,6 +193,41 @@ func (v Value) Emit() string {
 	}
 }
 
+// FromString returns Value's data as interface{}.
+func FromString(t string, v string) (Value, error) {
+	switch t {
+	case "ARRAY":
+		return ArrayValue(v), nil
+	case "BOOL":
+		{
+			b, err := strconv.ParseBool(v)
+			if err != nil {
+				return Value{vtype: INVALID}, err
+			}
+			return BoolValue(b), nil
+		}
+	case "INT64":
+		{
+			i64, err := strconv.ParseInt(v, 10, 64)
+			if err != nil {
+				return Value{vtype: INVALID}, err
+			}
+			return Int64Value(i64), nil
+		}
+	case "FLOAT64":
+		{
+			f64, err := strconv.ParseFloat(v, 64)
+			if err != nil {
+				return Value{vtype: INVALID}, err
+			}
+			return Float64Value(f64), nil
+		}
+	case "STRING":
+		return StringValue(v), nil
+	}
+	return Value{vtype: INVALID}, nil
+}
+
 // MarshalJSON returns the JSON encoding of the Value.
 func (v Value) MarshalJSON() ([]byte, error) {
 	var jsonVal struct {
@@ -201,4 +237,21 @@ func (v Value) MarshalJSON() ([]byte, error) {
 	jsonVal.Type = v.Type().String()
 	jsonVal.Value = v.AsInterface()
 	return json.Marshal(jsonVal)
+}
+
+// UnmarshalJSON implements a custom unmarshal function to decode the value.
+func (v Value) UnmarshalJSON(b []byte) error {
+	var jsonVal struct {
+		Type  string
+		Value string
+	}
+	if err := json.Unmarshal(b, &jsonVal); err != nil {
+		return err
+	}
+	v, err := FromString(jsonVal.Type, jsonVal.Value)
+	if err != nil {
+		return err
+	}
+	log.Printf("The unmarshaled value: %v and the transformed Value type: %v", jsonVal, v)
+	return nil
 }

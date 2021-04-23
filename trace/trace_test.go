@@ -15,6 +15,7 @@
 package trace
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -1021,5 +1022,54 @@ func TestSpanContextDerivation(t *testing.T) {
 	modified = from.WithTraceState(to.TraceState())
 	if !assertSpanContextEqual(modified, to) {
 		t.Fatalf("WithTraceState: Unexpected context created: %s", cmp.Diff(modified, to))
+	}
+}
+
+func TestUnmarshallSpanContext(t *testing.T) {
+	testCases := []struct {
+		name                string
+		expectedSpanContext SpanContext
+	}{
+		{
+			name: "Complete SpanContext",
+			expectedSpanContext: SpanContext{
+				traceID:    TraceID([16]byte{1}),
+				spanID:     SpanID([8]byte{42}),
+				traceFlags: 0x1,
+				traceState: TraceState{kvs: []attribute.KeyValue{
+					attribute.String("foo", "bar"),
+				}},
+			},
+		},
+		// {
+		// 	name: "Empty SpanContext",
+		// 	expectedSpanContext: SpanContext{},
+		// },
+		// {
+		// 	name: "Partial SpanContext",
+		// 	expectedSpanContext: SpanContext{
+		// 		traceID:    TraceID([16]byte{1}),
+		// 		spanID:     SpanID([8]byte{42}),
+		// 		traceFlags: 0x0,
+		// 		traceState: TraceState{},
+		// 	},
+		// },
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			bsctx, _ := json.Marshal(tc.expectedSpanContext)
+			sctx := SpanContext{}
+			err := json.Unmarshal(bsctx, &sctx)
+			if assertSpanContextEqual(sctx, tc.expectedSpanContext) && err != nil {
+				t.Errorf("Expected SpanContext %v to be valid but end with error %s", tc.expectedSpanContext, err.Error())
+			}
+			if !assertSpanContextEqual(sctx, tc.expectedSpanContext) && err == nil {
+				t.Errorf("Expected SpanContext %v to be invalid but end no error", tc.expectedSpanContext)
+			}
+			if !assertSpanContextEqual(sctx, tc.expectedSpanContext) {
+				t.Fatalf("%s: Unexpected SpanContext created: %s", tc.name, cmp.Diff(sctx, tc.expectedSpanContext))
+			}
+		})
 	}
 }
