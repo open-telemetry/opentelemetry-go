@@ -15,13 +15,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
       | ---------------- | ----------- |
       | 1  | Cancelled |
       | 4  | Deadline Exceeded |
-      | 7  | Permission Denied |
       | 8  | Resource Exhausted |
       | 10 | Aborted |
       | 10 | Out of Range |
       | 14 | Unavailable |
       | 15 | Data Loss |
-      | 16 | Unauthenticated |
       
 ### Changed
 
