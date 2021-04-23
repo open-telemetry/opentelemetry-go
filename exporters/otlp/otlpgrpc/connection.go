@@ -350,8 +350,6 @@ func shouldRetry(code codes.Code) bool {
 
 	case codes.Canceled,
 		codes.DeadlineExceeded,
-		codes.PermissionDenied,
-		codes.Unauthenticated,
 		codes.ResourceExhausted,
 		codes.Aborted,
 		codes.OutOfRange,
@@ -362,6 +360,8 @@ func shouldRetry(code codes.Code) bool {
 
 	case codes.Unknown,
 		codes.InvalidArgument,
+		codes.Unauthenticated,
+		codes.PermissionDenied,
 		codes.NotFound,
 		codes.AlreadyExists,
 		codes.FailedPrecondition,

@@ -289,13 +289,11 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 			errors: []error{
 				status.Error(codes.Canceled, ""),
 				status.Error(codes.DeadlineExceeded, ""),
-				status.Error(codes.PermissionDenied, ""),
 				status.Error(codes.ResourceExhausted, ""),
 				status.Error(codes.Aborted, ""),
 				status.Error(codes.OutOfRange, ""),
 				status.Error(codes.Unavailable, ""),
 				status.Error(codes.DataLoss, ""),
-				status.Error(codes.Unauthenticated, ""),
 			},
 			fn: func(t *testing.T, ctx context.Context, exp *otlp.Exporter, mc *mockCollector) {
 				require.NoError(t, exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Spans"}}))
@@ -303,7 +301,7 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 				span := mc.getSpans()
 
 				require.Len(t, span, 1)
-				require.Equal(t, 10, mc.traceSvc.requests, "trace service must receive 9 failure requests and 1 success request.")
+				require.Equal(t, 8, mc.traceSvc.requests, "trace service must receive 9 failure requests and 1 success request.")
 			},
 		},
 		{
@@ -401,9 +399,8 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 
 			tt.fn(t, ctx, exp, mc)
 
-			defer func() {
-				_ = exp.Shutdown(ctx)
-			}()
+			require.NoError(t, mc.Stop())
+			require.NoError(t, exp.Shutdown(ctx))
 		})
 	}
 
@@ -418,6 +415,8 @@ func TestPermanentErrorsShouldNotBeRetried(t *testing.T) {
 		status.New(codes.FailedPrecondition, "FailedPrecondition"),
 		status.New(codes.Unimplemented, "Unimplemented"),
 		status.New(codes.Internal, "Internal"),
+		status.New(codes.PermissionDenied, ""),
+		status.New(codes.Unauthenticated, ""),
 	}
 
 	for _, sts := range permanentErrors {
@@ -435,9 +434,8 @@ func TestPermanentErrorsShouldNotBeRetried(t *testing.T) {
 			require.Len(t, mc.getSpans(), 0)
 			require.Equal(t, 1, mc.traceSvc.requests, "trace service must receive 1 permanent error requests.")
 
-			defer func() {
-				_ = exp.Shutdown(ctx)
-			}()
+			require.NoError(t, mc.Stop())
+			require.NoError(t, exp.Shutdown(ctx))
 		})
 	}
 }
