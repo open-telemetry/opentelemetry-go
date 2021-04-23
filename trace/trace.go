@@ -582,6 +582,26 @@ type Link struct {
 	DroppedAttributeCount int
 }
 
+// MarshalJSON implements a custom marshal function to encode a Link.
+// This is a workaround to correctly marshal Link. Without this custom
+// MarshalJSON method, fields other than SpanContext will not be
+// marshalled.
+func (l Link) MarshalJSON() ([]byte, error) {
+	lJSON, err := json.Marshal(struct {
+		SpanContext           SpanContext
+		Attributes            []attribute.KeyValue
+		DroppedAttributeCount int
+	}{
+		SpanContext:           l.SpanContext,
+		Attributes:            l.Attributes,
+		DroppedAttributeCount: l.DroppedAttributeCount,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return lJSON, nil
+}
+
 // SpanKind is the role a Span plays in a Trace.
 type SpanKind int
 

@@ -15,6 +15,8 @@
 package trace
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -1021,5 +1023,31 @@ func TestSpanContextDerivation(t *testing.T) {
 	modified = from.WithTraceState(to.TraceState())
 	if !assertSpanContextEqual(modified, to) {
 		t.Fatalf("WithTraceState: Unexpected context created: %s", cmp.Diff(modified, to))
+	}
+}
+
+func TestTraceLinkMarshalJSON(t *testing.T) {
+	link := Link{
+		SpanContext: SpanContext{
+			traceID:    TraceID([16]byte{1}),
+			spanID:     SpanID([8]byte{42}),
+			traceFlags: 0x0,
+			traceState: TraceState{},
+		},
+		Attributes: []attribute.KeyValue{
+			attribute.String("foo", "1"),
+			attribute.String("bar", "2"),
+		},
+		DroppedAttributeCount: 1,
+	}
+
+	expected := "{\"SpanContext\":{\"TraceID\":\"01000000000000000000000000000000\",\"SpanID\":\"2a00000000000000\",\"TraceFlags\":\"00\",\"TraceState\":null,\"Remote\":false},\"Attributes\":[{\"Key\":\"foo\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"1\"}},{\"Key\":\"bar\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"2\"}}],\"DroppedAttributeCount\":1}"
+
+	m, err := json.Marshal(link)
+	if err != nil {
+		t.Fatalf("Link.MarshalJSON() errored: %v", err)
+	}
+	if !bytes.Equal(m, []byte(expected)) {
+		t.Errorf("Link.MarshalJSON() returned %s, want %s", string(m), expected)
 	}
 }
