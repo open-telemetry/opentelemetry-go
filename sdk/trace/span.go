@@ -361,7 +361,7 @@ func (s *span) Attributes() []attribute.KeyValue {
 	return s.attributes.toKeyValue()
 }
 
-// Events returns the links of this span.
+// Links returns the links of this span.
 func (s *span) Links() []trace.Link {
 	s.mu.Lock()
 	defer s.mu.Unlock()
