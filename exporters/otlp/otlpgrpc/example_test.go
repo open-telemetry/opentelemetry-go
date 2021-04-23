@@ -143,11 +143,7 @@ func Example_withDifferentSignalCollectors() {
 		otlpgrpc.WithInsecure(),
 		otlpgrpc.WithEndpoint("localhost:30082"),
 	)
-	splitCfg := otlp.SplitConfig{
-		ForMetrics: metricsDriver,
-		ForTraces:  tracesDriver,
-	}
-	driver := otlp.NewSplitDriver(splitCfg)
+	driver := otlp.NewSplitDriver(otlp.WithMetricDriver(metricsDriver), otlp.WithTraceDriver(tracesDriver))
 	ctx := context.Background()
 	exp, err := otlp.NewExporter(ctx, driver)
 	if err != nil {
