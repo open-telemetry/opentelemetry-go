@@ -38,6 +38,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The Jaeger exporter now reports dropped attributes for a Span event in the exported log. (#1771)
 - Adds `k8s.node.name` and `k8s.node.uid` attribute keys to the `semconv` package. (#1789)
 - Adds `otlpgrpc.WithTimeout` option for configuring timeout to the otlp/gRPC exporter. (#1821)
+- Added `WithOSType` resource configuration option to set OS (Operating System) type resource attribute (`os.type`). (#1788)
+- Added `WithProcess*` resource configuration options to set Process resource attributes. (#1788)
+  - `process.pid`
+  - `process.executable.name`
+  - `process.executable.path`
+  - `process.command_args`
+  - `process.owner`
+  - `process.runtime.name`
+  - `process.runtime.version`
+  - `process.runtime.description`
 - Adds `otlpgrpc.WithRetry`option for configuring the retry policy for transient errors on the otlp/gRPC exporter.(#1832)
   - The following status codes are defined as transient errors:
   | gRPC Status Code | Description |
@@ -96,6 +106,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The convenience functions for the stdout exporter have been updated to return the `TracerProvider` implementation and enable the shutdown of the exporter. (#1800)
 - Replace the flush function returned from the Jaeger exporter's convenience creation functions (`InstallNewPipeline` and `NewExportPipeline`) with the `TracerProvider` implementation they create.
   This enables the caller to shutdown and flush using the related `TracerProvider` methods. (#1822)
+- The Jaeger exporter no longer batches exported spans itself, instead it relies on the SDK's `BatchSpanProcessor` for this functionality. (#1830)
+- The Jaeger exporter creation functions (`NewRawExporter`, `NewExportPipeline`, and `InstallNewPipeline`) no longer accept the removed `Option` type as a variadic argument. (#1830)
 
 ### Removed
 
@@ -123,6 +135,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This option was used to set SDK options for the exporter creation convenience functions.
   These functions are provided as a way to easily setup or install the exporter with what are deemed reasonable SDK settings for common use cases.
   If the SDK needs to be configured differently, the `NewRawExporter` function and direct setup of the SDK with the desired settings should be used. (#1825)
+- The `WithBufferMaxCount` and `WithBatchMaxCount` `Option`s from the Jaeger exporter are removed.
+  The exporter no longer batches exports, instead relying on the SDK's `BatchSpanProcessor` for this functionality. (#1830)
+- The Jaeger exporter `Option` type is removed.
+  The type is no longer used by the exporter to configure anything.
+  All of the previous configuration these options provided were duplicates of SDK configuration.
+  They have all been removed in favor of using the SDK configuration and focuses the exporter configuration to be only about the endpoints it will send telemetry to. (#1830)
 
 ## [0.19.0] - 2021-03-18
 
