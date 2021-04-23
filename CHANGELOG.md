@@ -12,6 +12,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Make `NewSplitDriver` from `go.opentelemetry.io/otel/exporters/otlp` take variadic arguments instead of a `SplitConfig` item. 
+  `NewSplitDriver` now automically implements an internal `noopDriver` for `SplitConfig` fields that are not initialized. (#1798)
+
 ### Deprecated
 
 ### Removed
@@ -97,8 +100,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Make `ExportSpans` in Jaeger Exporter honor context deadline. (#1773)
 - Modify Zipkin Exporter default service name, use default resouce's serviceName instead of empty. (#1777)
 - The `go.opentelemetry.io/otel/sdk/export/trace` package is merged into the `go.opentelemetry.io/otel/sdk/trace` package. (#1778)
-- Make `NewSplitDriver` from `go.opentelemetry.io/otel/exporters/otlp` take variadic arguments instead of a `SplitConfig` item. 
-  `NewSplitDriver` now automically implements an internal `noopDriver` for `SplitConfig` fields that are not initialized. (#1798)
 - The prometheus.InstallNewPipeline example is moved from comment to example test (#1796)
 - The convenience functions for the stdout exporter have been updated to return the `TracerProvider` implementation and enable the shutdown of the exporter. (#1800)
 - Replace the flush function returned from the Jaeger exporter's convenience creation functions (`InstallNewPipeline` and `NewExportPipeline`) with the `TracerProvider` implementation they create.
