@@ -51,7 +51,7 @@ func TestWithOSType(t *testing.T) {
 		"os.type": "linux",
 	}, toMap(res))
 
-	restoreProcessAttributesProviders()
+	restoreAttributesProviders()
 }
 
 func TestWithOSDescription(t *testing.T) {
@@ -69,7 +69,7 @@ func TestWithOSDescription(t *testing.T) {
 		"os.description": "Test",
 	}, toMap(res))
 
-	restoreProcessAttributesProviders()
+	restoreAttributesProviders()
 }
 
 func TestWithOS(t *testing.T) {
@@ -88,5 +88,5 @@ func TestWithOS(t *testing.T) {
 		"os.description": "Test",
 	}, toMap(res))
 
-	restoreProcessAttributesProviders()
+	restoreAttributesProviders()
 }

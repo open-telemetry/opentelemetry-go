@@ -97,7 +97,7 @@ func mockProcessAttributesProvidersWithErrors() {
 	)
 }
 
-func restoreProcessAttributesProviders() {
+func restoreAttributesProviders() {
 	resource.SetDefaultOSProviders()
 	resource.SetDefaultRuntimeProviders()
 	resource.SetDefaultUserProviders()
@@ -117,7 +117,7 @@ func TestWithProcessFuncs(t *testing.T) {
 	t.Run("WithRuntimeDescription", testWithProcessRuntimeDescription)
 	t.Run("WithProcess", testWithProcess)
 
-	restoreProcessAttributesProviders()
+	restoreAttributesProviders()
 }
 
 func TestWithProcessFuncsErrors(t *testing.T) {
@@ -126,7 +126,7 @@ func TestWithProcessFuncsErrors(t *testing.T) {
 	t.Run("WithPID", testWithProcessExecutablePathError)
 	t.Run("WithExecutableName", testWithProcessOwnerError)
 
-	restoreProcessAttributesProviders()
+	restoreAttributesProviders()
 }
 
 func TestCommandArgs(t *testing.T) {
