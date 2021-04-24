@@ -35,11 +35,7 @@ func ExampleNewExporter() {
 	tracesDriver := otlpgrpc.NewDriver(
 	// Configure traces driver here
 	)
-	config := otlp.SplitConfig{
-		ForMetrics: metricsDriver,
-		ForTraces:  tracesDriver,
-	}
-	driver := otlp.NewSplitDriver(config)
+	driver := otlp.NewSplitDriver(otlp.WithMetricDriver(metricsDriver), otlp.WithTraceDriver(tracesDriver))
 	exporter, err := otlp.NewExporter(ctx, driver) // Configure as needed.
 	if err != nil {
 		log.Fatalf("failed to create exporter: %v", err)

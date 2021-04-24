@@ -46,15 +46,15 @@ Attributes are keys and values that are applied as metadata to your spans and ar
 
 ```go
 // setting attributes at creation...
-ctx, span = tracer.Start(ctx, "attributesAtCreation", trace.WithAttributes(label.String("hello", "world")))
+ctx, span = tracer.Start(ctx, "attributesAtCreation", trace.WithAttributes(attribute.String("hello", "world")))
 // ... and after creation
-span.SetAttributes(label.Bool("isTrue", true), label.String("stringAttr", "hi!"))
+span.SetAttributes(attribute.Bool("isTrue", true), attribute.String("stringAttr", "hi!"))
 ```
 
 Attribute keys can be precomputed, as well -
 
 ```go
-var myKey = label.Key("myCoolAttribute")
+var myKey = attribute.Key("myCoolAttribute")
 span.SetAttributes(myKey.String("a value"))
 ```
 
@@ -82,7 +82,7 @@ A useful characteristic of events is that their timestamps are displayed as offs
 Events can also have attributes of their own -
 
 ```go
-span.AddEvent("Cancelled wait due to external signal", trace.WithAttributes(label.Int("pid", 4328), label.String("signal", "SIGHUP")))
+span.AddEvent("Cancelled wait due to external signal", trace.WithAttributes(attribute.Int("pid", 4328), attribute.String("signal", "SIGHUP")))
 ```
 
 # Creating Metrics

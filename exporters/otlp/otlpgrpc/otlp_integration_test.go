@@ -626,11 +626,7 @@ func TestMultiConnectionDriver(t *testing.T) {
 
 	tracesDriver := otlpgrpc.NewDriver(optsTraces...)
 	metricsDriver := otlpgrpc.NewDriver(optsMetrics...)
-	splitCfg := otlp.SplitConfig{
-		ForMetrics: metricsDriver,
-		ForTraces:  tracesDriver,
-	}
-	driver := otlp.NewSplitDriver(splitCfg)
+	driver := otlp.NewSplitDriver(otlp.WithMetricDriver(metricsDriver), otlp.WithTraceDriver(tracesDriver))
 	ctx := context.Background()
 	exp, err := otlp.NewExporter(ctx, driver)
 	if err != nil {
