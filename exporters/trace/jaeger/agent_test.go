@@ -14,12 +14,15 @@
 package jaeger
 
 import (
+	"context"
 	"log"
 	"net"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func TestNewAgentClientUDPWithParamsBadHostport(t *testing.T) {
@@ -98,4 +101,27 @@ func TestNewAgentClientUDPWithParamsReconnectingDisabled(t *testing.T) {
 	assert.IsType(t, &net.UDPConn{}, agentClient.connUDP)
 
 	assert.NoError(t, agentClient.Close())
+}
+
+type errorHandler struct{ t *testing.T }
+
+func (eh errorHandler) Handle(err error) { assert.NoError(eh.t, err) }
+
+func TestJaegerAgentUDPLimitBatching(t *testing.T) {
+	otel.SetErrorHandler(errorHandler{t})
+
+	n := 1500
+	s := make([]*tracesdk.SpanSnapshot, n)
+	for i := 0; i < n; i++ {
+		s[i] = &tracesdk.SpanSnapshot{}
+	}
+
+	exp, err := NewRawExporter(
+		WithAgentEndpoint(WithAgentHost("localhost"), WithAgentPort("6831")),
+	)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	assert.NoError(t, exp.ExportSpans(ctx, s))
+	assert.NoError(t, exp.Shutdown(ctx))
 }
