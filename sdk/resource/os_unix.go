@@ -23,9 +23,9 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// platformOSDescription returns a human readable OS version information string. The final
-// string combines the data of the os-release file (where available) and the result
-// of the `uname` system call.
+// platformOSDescription returns a human readable OS version information string.
+// The final string combines OS release information (where available) and the
+// result of the `uname` system call.
 func platformOSDescription() (string, error) {
 	uname, err := uname()
 	if err != nil {
