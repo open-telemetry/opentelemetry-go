@@ -101,6 +101,7 @@ func restoreProcessAttributesProviders() {
 	resource.SetDefaultOSProviders()
 	resource.SetDefaultRuntimeProviders()
 	resource.SetDefaultUserProviders()
+	resource.SetDefaultOSDescriptionProvider()
 }
 
 func TestWithProcessFuncs(t *testing.T) {

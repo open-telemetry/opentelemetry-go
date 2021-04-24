@@ -21,6 +21,20 @@ import (
 	"go.opentelemetry.io/otel/semconv"
 )
 
+type osDescriptionProvider func() (string, error)
+
+var defaultOSDescriptionProvider osDescriptionProvider = platformOSDescription
+
+var osDescription = defaultOSDescriptionProvider
+
+func setDefaultOSDescriptionProvider() {
+	setOSDescriptionProvider(defaultOSDescriptionProvider)
+}
+
+func setOSDescriptionProvider(osDescriptionProvider osDescriptionProvider) {
+	osDescription = osDescriptionProvider
+}
+
 type osTypeDetector struct{}
 type osDescriptionDetector struct{}
 

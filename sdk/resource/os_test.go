@@ -16,8 +16,6 @@ package resource_test
 
 import (
 	"context"
-	"runtime"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -31,6 +29,10 @@ func mockRuntimeProviders() {
 		fakeRuntimeVersionProvider,
 		func() string { return "LINUX" },
 		fakeRuntimeArchProvider,
+	)
+
+	resource.SetOSDescriptionProvider(
+		func() (string, error) { return "Test", nil },
 	)
 }
 
@@ -53,6 +55,8 @@ func TestWithOSType(t *testing.T) {
 }
 
 func TestWithOSDescription(t *testing.T) {
+	mockRuntimeProviders()
+
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
@@ -62,11 +66,15 @@ func TestWithOSDescription(t *testing.T) {
 
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{
-		"os.description": osDescription(),
+		"os.description": "Test",
 	}, toMap(res))
+
+	restoreProcessAttributesProviders()
 }
 
 func TestWithOS(t *testing.T) {
+	mockRuntimeProviders()
+
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
@@ -76,17 +84,9 @@ func TestWithOS(t *testing.T) {
 
 	require.NoError(t, err)
 	require.EqualValues(t, map[string]string{
-		"os.type":        osType(),
-		"os.description": osDescription(),
+		"os.type":        "linux",
+		"os.description": "Test",
 	}, toMap(res))
-}
 
-func osType() string {
-	return strings.ToUpper(runtime.GOOS)
-}
-
-func osDescription() string {
-	description, _ := resource.OSDescription()
-
-	return description
+	restoreProcessAttributesProviders()
 }

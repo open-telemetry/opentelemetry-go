@@ -20,11 +20,11 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-// osDescription returns a human readable OS version information string.
+// platformOSDescription returns a human readable OS version information string.
 // It does so by querying registry values under the
 // `SOFTWARE\Microsoft\Windows NT\CurrentVersion` key. The final string
 // resembles the one displayed by the Version Reporter Applet (winver.exe).
-func osDescription() (string, error) {
+func platformOSDescription() (string, error) {
 	k, err := registry.OpenKey(
 		registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
 

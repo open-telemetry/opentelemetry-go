@@ -22,10 +22,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// osDescription returns a human readable OS version information string. The final
+// platformOSDescription returns a human readable OS version information string. The final
 // string combines the data of the os-release file (where available) and the result
 // of the `uname` system call.
-func osDescription() (string, error) {
+func platformOSDescription() (string, error) {
 	uname, err := uname()
 	if err != nil {
 		return "", err
