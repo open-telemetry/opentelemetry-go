@@ -53,17 +53,12 @@ func osRelease() string {
 }
 
 // getPlistFile returns a *os.File pointing to one of the well-known .plist files
-// available on macOS. If no file can be opened, it returns the last error.
+// available on macOS. If no file can be opened, it returns an error.
 func getPlistFile() (*os.File, error) {
-	file, err := os.Open("/System/Library/CoreServices/SystemVersion.plist")
-	if err != nil {
-		file, err = os.Open("/System/Library/CoreServices/ServerVersion.plist")
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return file, nil
+	return getFirstAvailableFile([]string{
+		"/System/Library/CoreServices/SystemVersion.plist",
+		"/System/Library/CoreServices/ServerVersion.plist",
+	})
 }
 
 // parsePlistFile process the file pointed by `file` as a .plist file and returns

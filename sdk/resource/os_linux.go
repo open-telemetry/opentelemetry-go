@@ -43,17 +43,9 @@ func osRelease() string {
 
 // getOSReleaseFile returns a *os.File pointing to one of the well-known os-release
 // files, according to their order of preference. If no file can be opened, it
-// returns the last error.
+// returns an error.
 func getOSReleaseFile() (*os.File, error) {
-	file, err := os.Open("/etc/os-release")
-	if err != nil {
-		file, err = os.Open("/usr/lib/os-release")
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return file, nil
+	return getFirstAvailableFile([]string{"/etc/os-release", "/usr/lib/os-release"})
 }
 
 // parseOSReleaseFile process the file pointed by `file` as an os-release file and

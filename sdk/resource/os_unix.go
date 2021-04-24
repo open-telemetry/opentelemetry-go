@@ -18,6 +18,7 @@ package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
 import (
 	"fmt"
+	"os"
 
 	"golang.org/x/sys/unix"
 )
@@ -70,4 +71,17 @@ func charsToString(charArray []byte) string {
 	}
 
 	return string(s[0:i])
+}
+
+// getFirstAvailableFile returns an *os.File of the first available
+// file from a list of candidate file paths.
+func getFirstAvailableFile(candidates []string) (*os.File, error) {
+	for _, c := range candidates {
+		file, err := os.Open(c)
+		if err == nil {
+			return file, nil
+		}
+	}
+
+	return nil, fmt.Errorf("no candidate file available: %v", candidates)
 }
