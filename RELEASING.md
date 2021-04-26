@@ -32,7 +32,6 @@ Update go.mod for submodules to depend on the new release which will happen in t
 4. Push the changes to upstream and create a Pull Request on GitHub.
     Be sure to include the curated changes from the [Changelog](./CHANGELOG.md) in the description.
 
-
 ## Tag
 
 Once the Pull Request with all the version changes has been approved and merged it is time to tag the merged commit.

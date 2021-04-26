@@ -19,7 +19,7 @@ You can view and edit the source code by cloning this repository:
 git clone https://github.com/open-telemetry/opentelemetry-go.git
 ```
 
-Run `make test` to run the tests instead of `go test`. 
+Run `make test` to run the tests instead of `go test`.
 
 There are some generated files checked into the repo. To make sure
 that the generated files are up-to-date, run `make` (or `make
@@ -43,7 +43,7 @@ To create a new PR, fork the project in GitHub and clone the upstream
 repo:
 
 ```sh
-$ go get -d go.opentelemetry.io/otel
+go get -d go.opentelemetry.io/otel
 ```
 
 (This may print some warning about "build constraints exclude all Go
@@ -53,7 +53,7 @@ This will put the project in `${GOPATH}/src/go.opentelemetry.io/otel`. You
 can alternatively use `git` directly with:
 
 ```sh
-$ git clone https://github.com/open-telemetry/opentelemetry-go
+git clone https://github.com/open-telemetry/opentelemetry-go
 ```
 
 (Note that `git clone` is *not* using the `go.opentelemetry.io/otel` name -
@@ -66,20 +66,20 @@ current working directory.
 Enter the newly created directory and add your fork as a new remote:
 
 ```sh
-$ git remote add <YOUR_FORK> git@github.com:<YOUR_GITHUB_USERNAME>/opentelemetry-go
+git remote add <YOUR_FORK> git@github.com:<YOUR_GITHUB_USERNAME>/opentelemetry-go
 ```
 
 Check out a new branch, make modifications, run linters and tests, update
 `CHANGELOG.md`, and push the branch to your fork:
 
 ```sh
-$ git checkout -b <YOUR_BRANCH_NAME>
+git checkout -b <YOUR_BRANCH_NAME>
 # edit files
 # update changelog
-$ make precommit
-$ git add -p
-$ git commit
-$ git push <YOUR_FORK> <YOUR_BRANCH_NAME>
+make precommit
+git add -p
+git commit
+git push <YOUR_FORK> <YOUR_BRANCH_NAME>
 ```
 
 Open a pull request against the main `opentelemetry-go` repo. Be sure to add the pull
@@ -140,8 +140,8 @@ It is preferable to have contributions follow the idioms of the
 language rather than conform to specific API names or argument
 patterns in the spec.
 
-For a deeper discussion, see:
-https://github.com/open-telemetry/opentelemetry-specification/issues/165
+For a deeper discussion, see
+[this](https://github.com/open-telemetry/opentelemetry-specification/issues/165).
 
 ## Style Guide
 
