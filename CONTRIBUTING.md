@@ -229,7 +229,7 @@ type Option interface {
 ```
 
 Having `apply` unexpoorted makes sure that it will not be used externally.
-Moreover, the the interface becomes sealed so the user cannot easily implement
+Moreover, the interface becomes sealed so the user cannot easily implement
 the interface on its own.
 
 The name of the interface should be prefixed in the same way the
