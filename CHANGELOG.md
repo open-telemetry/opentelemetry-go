@@ -12,7 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Make `NewSplitDriver` from `go.opentelemetry.io/otel/exporters/otlp` take variadic arguments instead of a `SplitConfig` item. 
+- Make `NewSplitDriver` from `go.opentelemetry.io/otel/exporters/otlp` take variadic arguments instead of a `SplitConfig` item.
   `NewSplitDriver` now automically implements an internal `noopDriver` for `SplitConfig` fields that are not initialized. (#1798)
 
 ### Deprecated
@@ -92,8 +92,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `ParentContext` field of the `"go.opentelemetry.io/otel/sdk/trace".SamplingParameters` is updated to hold a `context.Context` containing the parent span.
   This changes it to make `SamplingParameters` conform with the OpenTelemetry specification. (#1749)
 - Updated Jaeger Environment Variables: `JAEGER_ENDPOINT`, `JAEGER_USER`, `JAEGER_PASSWORD`
-  to `OTEL_EXPORTER_JAEGER_ENDPOINT`, `OTEL_EXPORTER_JAEGER_USER`, `OTEL_EXPORTER_JAEGER_PASSWORD` 
-  in compliance with OTel spec (#1752)
+  to `OTEL_EXPORTER_JAEGER_ENDPOINT`, `OTEL_EXPORTER_JAEGER_USER`, `OTEL_EXPORTER_JAEGER_PASSWORD` in compliance with OTel specification. (#1752)
 - Modify `BatchSpanProcessor.ForceFlush` to abort after timeout/cancellation. (#1757)
 - The `DroppedAttributeCount` field of the `Span` in the `go.opentelemetry.io/otel` package now only represents the number of attributes dropped for the span itself.
   It no longer is a conglomerate of itself, events, and link attributes that have been dropped. (#1771)
@@ -223,7 +222,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Stagger timestamps in exact aggregator tests. (#1569)
 - Changed all examples to use `WithBatchTimeout(5 * time.Second)` rather than `WithBatchTimeout(5)`. (#1621)
 - Prevent end-users from implementing some interfaces (#1575)
-```
+
+  ```
       "otel/exporters/otlp/otlphttp".Option
       "otel/exporters/stdout".Option
       "otel/oteltest".Option
@@ -236,7 +236,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
       "otel/sdk/trace".ParentBasedSamplerOption
       "otel/sdk/trace".ReadOnlySpan
       "otel/sdk/trace".ReadWriteSpan
-```
+  ```
+
 ### Removed
 
 - Removed attempt to resample spans upon changing the span name with `span.SetName()`. (#1545)
@@ -921,7 +922,6 @@ This release implements the v0.5.0 version of the OpenTelemetry specification.
 - Create a new recorder rather than reuse when multiple observations in same epoch for asynchronous instruments. #610
 - The default port the OTLP exporter uses to connect to the OpenTelemetry collector is updated to match the one the collector listens on by default. (#611)
 
-
 ## [0.4.2] - 2020-03-31
 
 ### Fixed
@@ -1073,7 +1073,6 @@ There is still a possibility of breaking changes.
 - `DefaultPropagator` function and have it return `trace.TraceContext` as the default context propagator. (#456)
 - `AlwaysParentSample` sampler to the trace API. (#455)
 - `WithNewRoot` option function to the trace API to specify the created span should be considered a root span. (#451)
-
 
 ### Changed
 
@@ -1228,7 +1227,6 @@ There is still a possibility of breaking changes.
    This allowed distinct label sets through, but any metrics sharing a label set could be overwritten or merged incorrectly.
    This was corrected. (#333)
 
-
 ## [0.1.2] - 2019-11-18
 
 ### Fixed
@@ -1287,7 +1285,6 @@ It contains api and sdk for trace and meter.
 - Apache-2.0 license.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
-
 
 [Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.20.0...HEAD
 [0.20.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.20.0
