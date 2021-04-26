@@ -222,7 +222,7 @@ func TestErrorConfig(t *testing.T) {
 	// For coverage
 	withErrorStatusOpt.private()
 
-	withEventOpts := WithEventOpts(WithTimestamp(timestamp), WithAttributes(k1v1, k2v2))
+	withEventOpts := WithEventOptions(WithTimestamp(timestamp), WithAttributes(k1v1, k2v2))
 	// For coverage
 	withEventOpts.private()
 

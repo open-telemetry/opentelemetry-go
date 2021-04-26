@@ -254,7 +254,7 @@ type eventOptsErrorOption []EventOption
 func (o eventOptsErrorOption) ApplyError(c *ErrorConfig) { c.EventOpts = o }
 func (eventOptsErrorOption) private()                    {}
 
-// WithEventOpts set event options, will be passed to addEvent
-func WithEventOpts(option ...EventOption) ErrorOption {
+// WithEventOptions set event options, will be passed to addEvent
+func WithEventOptions(option ...EventOption) ErrorOption {
 	return eventOptsErrorOption(option)
 }

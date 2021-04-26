@@ -47,7 +47,7 @@ replace go.opentelemetry.io/otel/sdk/metric => ../sdk/metric
 replace go.opentelemetry.io/otel/trace => ../trace
 
 require (
-	go.opentelemetry.io/otel v0.19.0
-	go.opentelemetry.io/otel/metric v0.19.0
-	go.opentelemetry.io/otel/trace v0.19.0
+	go.opentelemetry.io/otel v0.20.0
+	go.opentelemetry.io/otel/metric v0.20.0
+	go.opentelemetry.io/otel/trace v0.20.0
 )

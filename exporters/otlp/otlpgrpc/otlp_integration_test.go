@@ -18,10 +18,12 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -149,44 +151,22 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint,
 		otlpgrpc.WithReconnectionPeriod(reconnectionPeriod))
-	defer func() {
-		_ = exp.Shutdown(ctx)
-	}()
+	defer func() { require.NoError(t, exp.Shutdown(ctx)) }()
+
+	// Wait for a connection.
+	mc.ln.WaitForConn()
 
 	// We'll now stop the collector right away to simulate a connection
 	// dying in the midst of communication or even not existing before.
-	_ = mc.stop()
+	require.NoError(t, mc.stop())
 
 	// first export, it will send disconnected message to the channel on export failure,
 	// trigger almost immediate reconnection
-	require.Error(
-		t,
-		exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "in the midst"}}),
-		"transport: Error while dialing dial tcp %s: connect: connection refused",
-		mc.endpoint,
-	)
-
-	// Give the exporter sometime to reconnect
-	func() {
-		timer := time.After(reconnectionPeriod * 10)
-		for {
-			select {
-			case <-timer:
-				return
-			default:
-				runtime.Gosched()
-			}
-		}
-	}()
+	require.Error(t, exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "in the midst"}}))
 
 	// second export, it will detect connection issue, change state of exporter to disconnected and
 	// send message to disconnected channel but this time reconnection gouroutine will be in (rest mode, not listening to the disconnected channel)
-	require.Error(
-		t,
-		exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "in the midst"}}),
-		"transport: Error while dialing dial tcp %s: connect: connection refused2",
-		mc.endpoint,
-	)
+	require.Error(t, exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "in the midst"}}))
 
 	// as a result we have exporter in disconnected state waiting for disconnection message to reconnect
 
@@ -195,17 +175,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 
 	// make sure reconnection loop hits beginning and goes back to waiting mode
 	// after hitting beginning of the loop it should reconnect
-	func() {
-		timer := time.After(reconnectionPeriod * 10)
-		for {
-			select {
-			case <-timer:
-				return
-			default:
-				runtime.Gosched()
-			}
-		}
-	}()
+	nmc.ln.WaitForConn()
 
 	n := 10
 	for i := 0; i < n; i++ {
@@ -226,22 +196,24 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 	if g, w := len(dSpans), 0; g != w {
 		t.Fatalf("Disconnected collector: spans: got %d want %d", g, w)
 	}
+
+	require.NoError(t, nmc.Stop())
 }
 
 func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 	mc := runMockCollector(t)
 
-	reconnectionPeriod := 20 * time.Millisecond
+	reconnectionPeriod := 50 * time.Millisecond
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint,
 		otlpgrpc.WithReconnectionPeriod(reconnectionPeriod))
-	defer func() {
-		_ = exp.Shutdown(ctx)
-	}()
+	defer func() { require.NoError(t, exp.Shutdown(ctx)) }()
+
+	mc.ln.WaitForConn()
 
 	// We'll now stop the collector right away to simulate a connection
 	// dying in the midst of communication or even not existing before.
-	_ = mc.stop()
+	require.NoError(t, mc.stop())
 
 	// In the test below, we'll stop the collector many times,
 	// while exporting traces and test to ensure that we can
@@ -249,29 +221,14 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 	for j := 0; j < 3; j++ {
 
 		// No endpoint up.
-		require.Error(
-			t,
-			exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "in the midst"}}),
-			"transport: Error while dialing dial tcp %s: connect: connection refused",
-			mc.endpoint,
-		)
+		require.Error(t, exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "in the midst"}}))
 
 		// Now resurrect the collector by making a new one but reusing the
 		// old endpoint, and the collector should reconnect automatically.
 		nmc := runMockCollectorAtEndpoint(t, mc.endpoint)
 
 		// Give the exporter sometime to reconnect
-		func() {
-			timer := time.After(reconnectionPeriod * 10)
-			for {
-				select {
-				case <-timer:
-					return
-				default:
-					runtime.Gosched()
-				}
-			}
-		}()
+		nmc.ln.WaitForConn()
 
 		n := 10
 		for i := 0; i < n; i++ {
@@ -289,7 +246,9 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 		if g, w := len(dSpans), 0; g != w {
 			t.Fatalf("Round #%d: Disconnected collector: spans: got %d want %d", j, g, w)
 		}
-		_ = nmc.stop()
+
+		// Disconnect for the next try.
+		require.NoError(t, nmc.stop())
 	}
 }
 
@@ -344,6 +303,90 @@ func TestNewExporter_withHeaders(t *testing.T) {
 	headers := mc.getHeaders()
 	require.Len(t, headers.Get("header1"), 1)
 	assert.Equal(t, "value1", headers.Get("header1")[0])
+}
+
+func TestNewExporter_WithTimeout(t *testing.T) {
+	tts := []struct {
+		name    string
+		fn      func(exp *otlp.Exporter) error
+		timeout time.Duration
+		metrics int
+		spans   int
+		code    codes.Code
+		delay   bool
+	}{
+		{
+			name: "Timeout Spans",
+			fn: func(exp *otlp.Exporter) error {
+				return exp.ExportSpans(context.Background(), []*sdktrace.SpanSnapshot{{Name: "timed out"}})
+			},
+			timeout: time.Millisecond * 100,
+			code:    codes.DeadlineExceeded,
+			delay:   true,
+		},
+		{
+			name: "Timeout Metrics",
+			fn: func(exp *otlp.Exporter) error {
+				return exp.Export(context.Background(), otlptest.OneRecordCheckpointSet{})
+			},
+			timeout: time.Millisecond * 100,
+			code:    codes.DeadlineExceeded,
+			delay:   true,
+		},
+
+		{
+			name: "No Timeout Spans",
+			fn: func(exp *otlp.Exporter) error {
+				return exp.ExportSpans(context.Background(), []*sdktrace.SpanSnapshot{{Name: "timed out"}})
+			},
+			timeout: time.Minute,
+			spans:   1,
+			code:    codes.OK,
+		},
+		{
+			name: "No Timeout Metrics",
+			fn: func(exp *otlp.Exporter) error {
+				return exp.Export(context.Background(), otlptest.OneRecordCheckpointSet{})
+			},
+			timeout: time.Minute,
+			metrics: 1,
+			code:    codes.OK,
+		},
+	}
+
+	for _, tt := range tts {
+		t.Run(tt.name, func(t *testing.T) {
+
+			mc := runMockCollector(t)
+			if tt.delay {
+				mc.traceSvc.delay = time.Second * 10
+				mc.metricSvc.delay = time.Second * 10
+			}
+			defer func() {
+				_ = mc.stop()
+			}()
+
+			ctx := context.Background()
+			exp := newGRPCExporter(t, ctx, mc.endpoint, otlpgrpc.WithTimeout(tt.timeout))
+			defer func() {
+				_ = exp.Shutdown(ctx)
+			}()
+
+			err := tt.fn(exp)
+
+			if tt.code == codes.OK {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+			}
+
+			s := status.Convert(err)
+			require.Equal(t, tt.code, s.Code())
+
+			require.Len(t, mc.getSpans(), tt.spans)
+			require.Len(t, mc.getMetrics(), tt.metrics)
+		})
+	}
 }
 
 func TestNewExporter_withInvalidSecurityConfiguration(t *testing.T) {
@@ -583,11 +626,7 @@ func TestMultiConnectionDriver(t *testing.T) {
 
 	tracesDriver := otlpgrpc.NewDriver(optsTraces...)
 	metricsDriver := otlpgrpc.NewDriver(optsMetrics...)
-	splitCfg := otlp.SplitConfig{
-		ForMetrics: metricsDriver,
-		ForTraces:  tracesDriver,
-	}
-	driver := otlp.NewSplitDriver(splitCfg)
+	driver := otlp.NewSplitDriver(otlp.WithMetricDriver(metricsDriver), otlp.WithTraceDriver(tracesDriver))
 	ctx := context.Background()
 	exp, err := otlp.NewExporter(ctx, driver)
 	if err != nil {

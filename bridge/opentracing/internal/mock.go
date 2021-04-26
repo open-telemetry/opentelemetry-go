@@ -254,7 +254,6 @@ func (s *MockSpan) RecordError(err error, options ...trace.ErrorOption) {
 		return // already finished
 	}
 
-	s.SetStatus(codes.Error, "")
 	c := trace.NewErrorConfig(options...)
 	eventOpts := c.EventOpts
 	eventOpts = append(eventOpts, trace.WithAttributes(

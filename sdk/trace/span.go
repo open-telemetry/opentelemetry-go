@@ -245,14 +245,13 @@ func (s *span) End(options ...trace.SpanOption) {
 }
 
 // RecordError will record err as a span event for this span.
-// This method does not change the Span status in default
-// To change Span status, pass `WithStatus` as options.
-// This method does nothing If this span is not being recorded or err is nil.
+// This method does not change the Span status by default
+// To set the Span status, pass a `WithErrorStatus(code, message)` option.
+// This method does nothing if this span is not being recorded or if err is nil.
 func (s *span) RecordError(err error, options ...trace.ErrorOption) {
 	if s == nil || err == nil || !s.IsRecording() {
 		return
 	}
-
 	c := trace.NewErrorConfig(options...)
 	if c.Code != codes.Unset {
 		s.SetStatus(c.Code, c.Message)
@@ -367,7 +366,7 @@ func (s *span) Attributes() []attribute.KeyValue {
 	return s.attributes.toKeyValue()
 }
 
-// Events returns the links of this span.
+// Links returns the links of this span.
 func (s *span) Links() []trace.Link {
 	s.mu.Lock()
 	defer s.mu.Unlock()

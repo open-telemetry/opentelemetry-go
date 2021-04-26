@@ -10,12 +10,44 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+### Changed
+
+- Make `NewSplitDriver` from `go.opentelemetry.io/otel/exporters/otlp` take variadic arguments instead of a `SplitConfig` item.
+  `NewSplitDriver` now automically implements an internal `noopDriver` for `SplitConfig` fields that are not initialized. (#1798)
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [0.20.0] - 2021-04-23
+
+### Added
+
+- The OTLP exporter now has two new convenience functions, `NewExportPipeline` and `InstallNewPipeline`, setup and install the exporter in tracing and metrics pipelines. (#1373)
+- Adds semantic conventions for exceptions. (#1492)
 - Added Jaeger Environment variables: `OTEL_EXPORTER_JAEGER_AGENT_HOST`, `OTEL_EXPORTER_JAEGER_AGENT_PORT`
   These environment variables can be used to override Jaeger agent hostname and port (#1752)
-- The OTLP exporter now has two new convenience functions, `NewExportPipeline` and `InstallNewPipeline`, setup and install the exporter in tracing and metrics pipelines. (#1373)
-- Adds test to check BatchSpanProcessor ignores `OnEnd` and `ForceFlush` post `Shutdown`. (#1772)
 - Option `ExportTimeout` was added to batch span processor. (#1755)
-- Adds semantic conventions for exceptions. (#1492)
+- `trace.TraceFlags` is now a defined type over `byte` and `WithSampled(bool) TraceFlags` and `IsSampled() bool` methods have been added to it. (#1770)
+- The `Event` and `Link` struct types from the `go.opentelemetry.io/otel` package now include a `DroppedAttributeCount` field to record the number of attributes that were not recorded due to configured limits being reached. (#1771)
+- The Jaeger exporter now reports dropped attributes for a Span event in the exported log. (#1771)
+- Adds test to check BatchSpanProcessor ignores `OnEnd` and `ForceFlush` post `Shutdown`. (#1772)
+- Extract resource attributes from the `OTEL_RESOURCE_ATTRIBUTES` environment variable and merge them with the `resource.Default` resource as well as resources provided to the `TracerProvider` and metric `Controller`. (#1785)
+- Added `WithOSType` resource configuration option to set OS (Operating System) type resource attribute (`os.type`). (#1788)
+- Added `WithProcess*` resource configuration options to set Process resource attributes. (#1788)
+  - `process.pid`
+  - `process.executable.name`
+  - `process.executable.path`
+  - `process.command_args`
+  - `process.owner`
+  - `process.runtime.name`
+  - `process.runtime.version`
+  - `process.runtime.description`
+- Adds `k8s.node.name` and `k8s.node.uid` attribute keys to the `semconv` package. (#1789)
 - Added support for configuring OTLP/HTTP and OTLP/gRPC Endpoints, TLS Certificates, Headers, Compression and Timeout via Environment Variables. (#1758, #1769 and #1811)
   - `OTEL_EXPORTER_OTLP_ENDPOINT`
   - `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`
@@ -32,10 +64,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `OTEL_EXPORTER_OTLP_CERTIFICATE`
   - `OTEL_EXPORTER_OTLP_TRACES_CERTIFICATE`
   - `OTEL_EXPORTER_OTLP_METRICS_CERTIFICATE`
-- `trace.TraceFlags` is now a defined type over `byte` and `WithSampled(bool) TraceFlags` and `IsSampled() bool` methods have been added to it. (#1770)
-- The `Event` and `Link` struct types from the `go.opentelemetry.io/otel` package now include a `DroppedAttributeCount` field to record the number of attributes that were not recorded due to configured limits being reached. (#1771)
-- The Jaeger exporter now reports dropped attributes for a Span event in the exported log. (#1771)
-- Adds `k8s.node.name` and `k8s.node.uid` attribute keys to the `semconv` package. (#1789)
+- Adds `otlpgrpc.WithTimeout` option for configuring timeout to the otlp/gRPC exporter. (#1821)
 
 ### Fixed
 
@@ -46,13 +75,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Additionally, this tag is overridden, as specified in the OTel specification, if the event contains an attribute with that key. (#1768)
 - Zipkin Exporter: Ensure mapping between OTel and Zipkin span data complies with the specification. (#1688)
 - Fixed typo for default service name in Jaeger Exporter. (#1797)
+- Fix flaky OTLP for the reconnnection of the client connection. (#1527, #1814)
 
 ### Changed
 
-- Modify Zipkin Exporter default service name, use default resouce's serviceName instead of empty. (#1777)
-- Updated Jaeger Environment Variables: `JAEGER_ENDPOINT`, `JAEGER_USER`, `JAEGER_PASSWORD`
-  to `OTEL_EXPORTER_JAEGER_ENDPOINT`, `OTEL_EXPORTER_JAEGER_USER`, `OTEL_EXPORTER_JAEGER_PASSWORD` 
-  in compliance with OTel spec (#1752)
 - Span `RecordError` now records an `exception` event to comply with the semantic convention specification. (#1492)
 - Jaeger exporter was updated to use thrift v0.14.1. (#1712)
 - Migrate from using internally built and maintained version of the OTLP to the one hosted at `go.opentelemetry.io/proto/otlp`. (#1713)
@@ -60,18 +86,28 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The storage of a local or remote Span in a `context.Context` using its SpanContext is unified to store just the current Span.
   The Span's SpanContext can now self-identify as being remote or not.
   This means that `"go.opentelemetry.io/otel/trace".ContextWithRemoteSpanContext` will now overwrite any existing current Span, not just existing remote Spans, and make it the current Span in a `context.Context`. (#1731)
+- Improve OTLP/gRPC exporter connection errors. (#1737)
 - Information about a parent span context in a `"go.opentelemetry.io/otel/export/trace".SpanSnapshot` is unified in a new `Parent` field.
   The existing `ParentSpanID` and `HasRemoteParent` fields are removed in favor of this. (#1748)
 - The `ParentContext` field of the `"go.opentelemetry.io/otel/sdk/trace".SamplingParameters` is updated to hold a `context.Context` containing the parent span.
   This changes it to make `SamplingParameters` conform with the OpenTelemetry specification. (#1749)
+- Updated Jaeger Environment Variables: `JAEGER_ENDPOINT`, `JAEGER_USER`, `JAEGER_PASSWORD`
+  to `OTEL_EXPORTER_JAEGER_ENDPOINT`, `OTEL_EXPORTER_JAEGER_USER`, `OTEL_EXPORTER_JAEGER_PASSWORD` in compliance with OTel specification. (#1752)
 - Modify `BatchSpanProcessor.ForceFlush` to abort after timeout/cancellation. (#1757)
-- Improve OTLP/gRPC exporter connection errors. (#1737)
 - The `DroppedAttributeCount` field of the `Span` in the `go.opentelemetry.io/otel` package now only represents the number of attributes dropped for the span itself.
   It no longer is a conglomerate of itself, events, and link attributes that have been dropped. (#1771)
 - Make `ExportSpans` in Jaeger Exporter honor context deadline. (#1773)
+- Modify Zipkin Exporter default service name, use default resource's serviceName instead of empty. (#1777)
 - The `go.opentelemetry.io/otel/sdk/export/trace` package is merged into the `go.opentelemetry.io/otel/sdk/trace` package. (#1778)
 - The prometheus.InstallNewPipeline example is moved from comment to example test (#1796)
-- Convenience functions for stdout exporter have been updated to return the `TracerProvider` implementation and enable the shutdown of the exporter. (#1800)
+- The convenience functions for the stdout exporter have been updated to return the `TracerProvider` implementation and enable the shutdown of the exporter. (#1800)
+- Replace the flush function returned from the Jaeger exporter's convenience creation functions (`InstallNewPipeline` and `NewExportPipeline`) with the `TracerProvider` implementation they create.
+  This enables the caller to shutdown and flush using the related `TracerProvider` methods. (#1822)
+- Updated the Jaeger exporter to have a default endpoint, `http://localhost:14250`, for the collector. (#1824)
+- Changed the function `WithCollectorEndpoint` in the Jaeger exporter to no longer accept an endpoint as an argument.
+  The endpoint can be passed with the `CollectorEndpointOption` using the `WithEndpoint` function or by setting the `OTEL_EXPORTER_JAEGER_ENDPOINT` environment variable value appropriately. (#1824)
+- The Jaeger exporter no longer batches exported spans itself, instead it relies on the SDK's `BatchSpanProcessor` for this functionality. (#1830)
+- The Jaeger exporter creation functions (`NewRawExporter`, `NewExportPipeline`, and `InstallNewPipeline`) no longer accept the removed `Option` type as a variadic argument. (#1830)
 
 ### Removed
 
@@ -90,6 +126,21 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `trace.FlagsDebug` and `trace.FlagsDeferred` constants have been removed and will be localized to the B3 propagator. (#1770)
 - Remove `Process` configuration, `WithProcessFromEnv` and `ProcessFromEnv`, and type from the Jaeger exporter package.
   The information that could be configured in the `Process` struct should be configured in a `Resource` instead. (#1776, #1804)
+- Remove the `WithDisabled` option from the Jaeger exporter.
+  To disable the exporter unregister it from the `TracerProvider` or use a no-operation `TracerProvider`. (#1806)
+- Removed the functions `CollectorEndpointFromEnv` and `WithCollectorEndpointOptionFromEnv` from the Jaeger exporter.
+  These functions for retrieving specific environment variable values are redundant of other internal functions and
+  are not intended for end user use. (#1824)
+- Removed the Jaeger exporter `WithSDKOptions` `Option`.
+  This option was used to set SDK options for the exporter creation convenience functions.
+  These functions are provided as a way to easily setup or install the exporter with what are deemed reasonable SDK settings for common use cases.
+  If the SDK needs to be configured differently, the `NewRawExporter` function and direct setup of the SDK with the desired settings should be used. (#1825)
+- The `WithBufferMaxCount` and `WithBatchMaxCount` `Option`s from the Jaeger exporter are removed.
+  The exporter no longer batches exports, instead relying on the SDK's `BatchSpanProcessor` for this functionality. (#1830)
+- The Jaeger exporter `Option` type is removed.
+  The type is no longer used by the exporter to configure anything.
+  All the previous configurations these options provided were duplicates of SDK configuration.
+  They have been removed in favor of using the SDK configuration and focuses the exporter configuration to be only about the endpoints it will send telemetry to. (#1830)
 
 ## [0.19.0] - 2021-03-18
 
@@ -161,7 +212,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Changed signature of the Span `RecordError` , replace EventOption by ErrorOption
+- Changed signature of the Span `RecordError`, replace EventOption with ErrorOption. (#1817)
 - Replaced interface `oteltest.SpanRecorder` with its existing implementation
   `StandardSpanRecorder`. (#1542)
 - Default span limit values to 128. (#1535)
@@ -172,7 +223,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Stagger timestamps in exact aggregator tests. (#1569)
 - Changed all examples to use `WithBatchTimeout(5 * time.Second)` rather than `WithBatchTimeout(5)`. (#1621)
 - Prevent end-users from implementing some interfaces (#1575)
-```
+
+  ```
       "otel/exporters/otlp/otlphttp".Option
       "otel/exporters/stdout".Option
       "otel/oteltest".Option
@@ -185,7 +237,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
       "otel/sdk/trace".ParentBasedSamplerOption
       "otel/sdk/trace".ReadOnlySpan
       "otel/sdk/trace".ReadWriteSpan
-```
+  ```
+
 ### Removed
 
 - Removed attempt to resample spans upon changing the span name with `span.SetName()`. (#1545)
@@ -767,7 +820,7 @@ This release implements the v0.5.0 version of the OpenTelemetry specification.
 - Rename `Observer` instrument to `ValueObserver`. (#734)
 - The push controller now has a method (`Provider()`) to return a `metric.Provider` instead of the old `Meter` method that acted as a `metric.Provider`. (#738)
 - Replace `Measure` instrument by `ValueRecorder` instrument. (#732)
-- Rename correlation context header from `"Correlation-Context"` to `"otcorrelations"` to match the OpenTelemetry specification. 727)
+- Rename correlation context header from `"Correlation-Context"` to `"otcorrelations"` to match the OpenTelemetry specification. (#727)
 
 ### Fixed
 
@@ -870,7 +923,6 @@ This release implements the v0.5.0 version of the OpenTelemetry specification.
 - Create a new recorder rather than reuse when multiple observations in same epoch for asynchronous instruments. #610
 - The default port the OTLP exporter uses to connect to the OpenTelemetry collector is updated to match the one the collector listens on by default. (#611)
 
-
 ## [0.4.2] - 2020-03-31
 
 ### Fixed
@@ -930,7 +982,7 @@ There is still a possibility of breaking changes.
 - Simplified export setup pipeline for the jaeger exporter to match other exporters. (#459)
 - The zipkin trace exporter. (#495)
 - The OTLP exporter to export metric and trace telemetry to the OpenTelemetry collector. (#497) (#544) (#545)
-- The `StatusMessage` field was add to the trace `Span`. (#524)
+- Add `StatusMessage` field to the trace `Span`. (#524)
 - Context propagation in OpenTracing bridge in terms of OpenTelemetry context propagation. (#525)
 - The `Resource` type was added to the SDK. (#528)
 - The global API now supports a `Tracer` and `Meter` function as shortcuts to getting a global `*Provider` and calling these methods directly. (#538)
@@ -1023,14 +1075,12 @@ There is still a possibility of breaking changes.
 - `AlwaysParentSample` sampler to the trace API. (#455)
 - `WithNewRoot` option function to the trace API to specify the created span should be considered a root span. (#451)
 
-
 ### Changed
 
 - Renamed `WithMap` to `ContextWithMap` in the correlation package. (#481)
 - Renamed `FromContext` to `MapFromContext` in the correlation package. (#481)
 - Move correlation context propagation to correlation package. (#479)
 - Do not default to putting remote span context into links. (#480)
-- Propagators extrac
 - `Tracer.WithSpan` updated to accept `StartOptions`. (#472)
 - Renamed `MetricKind` to `Kind` to not stutter in the type usage. (#432)
 - Renamed the `export` package to `metric` to match directory structure. (#432)
@@ -1178,7 +1228,6 @@ There is still a possibility of breaking changes.
    This allowed distinct label sets through, but any metrics sharing a label set could be overwritten or merged incorrectly.
    This was corrected. (#333)
 
-
 ## [0.1.2] - 2019-11-18
 
 ### Fixed
@@ -1238,8 +1287,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.19.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.20.0...HEAD
+[0.20.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.20.0
 [0.19.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.19.0
 [0.18.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.18.0
 [0.17.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.17.0
