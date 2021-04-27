@@ -146,36 +146,24 @@ func TestSimpleSpanProcessorShutdownOnEndConcurrency(t *testing.T) {
 }
 
 func TestSimpleSpanProcessorShutdownHonorsContextDeadline(t *testing.T) {
-	exporter := &testExporter{}
-	ssp := sdktrace.NewSimpleSpanProcessor(exporter)
-	tp := basicTracerProvider(t)
-	tp.RegisterSpanProcessor(ssp)
+	ssp := sdktrace.NewSimpleSpanProcessor(&testExporter{})
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
 	defer cancel()
 	<-ctx.Done()
 	err := ssp.Shutdown(ctx)
-	if err == nil {
-		t.Error("expected error shutting the SimpleSpanProcessor down, got nil")
-	}
 	if got, want := err, context.DeadlineExceeded; !errors.Is(got, want) {
-		t.Errorf("SimpleSpanProcessor.Shutdown did not return %v: %v", want, got)
+		t.Errorf("SimpleSpanProcessor.Shutdown did not return %v, got %v", want, got)
 	}
 }
 
 func TestSimpleSpanProcessorShutdownHonorsContextCancel(t *testing.T) {
-	exporter := &testExporter{}
-	ssp := sdktrace.NewSimpleSpanProcessor(exporter)
-	tp := basicTracerProvider(t)
-	tp.RegisterSpanProcessor(ssp)
+	ssp := sdktrace.NewSimpleSpanProcessor(&testExporter{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	err := ssp.Shutdown(ctx)
-	if err == nil {
-		t.Error("expected error shutting the SimpleSpanProcessor down, got nil")
-	}
 	if got, want := err, context.Canceled; !errors.Is(got, want) {
-		t.Errorf("SimpleSpanProcessor.Shutdown did not return %v: %v", want, got)
+		t.Errorf("SimpleSpanProcessor.Shutdown did not return %v, got %v", want, got)
 	}
 }
