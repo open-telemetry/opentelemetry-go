@@ -21,14 +21,12 @@ import (
 	"fmt"
 	"os"
 	"sort"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/api/support/bundler"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -90,51 +88,23 @@ func TestNewExportPipelinePassthroughError(t *testing.T) {
 
 func TestNewRawExporter(t *testing.T) {
 	testCases := []struct {
-		name                                                           string
-		endpoint                                                       EndpointOption
-		options                                                        []Option
-		expectedServiceName                                            string
-		expectedTagsLen, expectedBufferMaxCount, expectedBatchMaxCount int
+		name     string
+		endpoint EndpointOption
 	}{
 		{
-			name:                   "default exporter",
-			endpoint:               WithCollectorEndpoint(),
-			expectedServiceName:    "unknown_service",
-			expectedBufferMaxCount: bundler.DefaultBufferedByteLimit,
-			expectedBatchMaxCount:  bundler.DefaultBundleCountThreshold,
+			name:     "default exporter with collector endpoint",
+			endpoint: WithCollectorEndpoint(),
 		},
 		{
-			name:                   "default exporter with agent endpoint",
-			endpoint:               WithAgentEndpoint(),
-			expectedServiceName:    "unknown_service",
-			expectedBufferMaxCount: bundler.DefaultBufferedByteLimit,
-			expectedBatchMaxCount:  bundler.DefaultBundleCountThreshold,
-		},
-		{
-			name:     "with buffer and batch max count",
-			endpoint: WithCollectorEndpoint(WithEndpoint(collectorEndpoint)),
-			options: []Option{
-				WithBufferMaxCount(99),
-				WithBatchMaxCount(99),
-			},
-			expectedServiceName:    "unknown_service",
-			expectedBufferMaxCount: 99,
-			expectedBatchMaxCount:  99,
+			name:     "default exporter with agent endpoint",
+			endpoint: WithAgentEndpoint(),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			exp, err := NewRawExporter(
-				tc.endpoint,
-				tc.options...,
-			)
-
+			_, err := NewRawExporter(tc.endpoint)
 			assert.NoError(t, err)
-			assert.Equal(t, tc.expectedBufferMaxCount, exp.bundler.BufferedByteLimit)
-			assert.Equal(t, tc.expectedBatchMaxCount, exp.bundler.BundleCountThreshold)
-			assert.NotEmpty(t, exp.defaultServiceName)
-			assert.True(t, strings.HasPrefix(exp.defaultServiceName, tc.expectedServiceName))
 		})
 	}
 }
@@ -158,6 +128,10 @@ func TestNewRawExporterUseEnvVarIfOptionUnset(t *testing.T) {
 
 type testCollectorEndpoint struct {
 	batchesUploaded []*gen.Batch
+}
+
+func (c *testCollectorEndpoint) shutdown(context.Context) error {
+	return nil
 }
 
 func (c *testCollectorEndpoint) upload(_ context.Context, batch *gen.Batch) error {
@@ -190,7 +164,7 @@ func TestExporterExportSpan(t *testing.T) {
 	exp, err := NewRawExporter(withTestCollectorEndpointInjected(testCollector))
 	require.NoError(t, err)
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSyncer(exp),
+		sdktrace.WithBatcher(exp),
 		sdktrace.WithResource(resource.NewWithAttributes(
 			semconv.ServiceNameKey.String(serviceName),
 			attribute.String(tagKey, tagVal),
@@ -487,43 +461,22 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 }
 
 func TestExporterShutdownHonorsCancel(t *testing.T) {
-	orig := flush
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	// Do this after the parent context is canceled to avoid a race.
-	defer func() {
-		<-ctx.Done()
-		flush = orig
-	}()
-	defer cancel()
-	flush = func(e *Exporter) {
-		<-ctx.Done()
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
 
 	e, err := NewRawExporter(withTestCollectorEndpoint())
 	require.NoError(t, err)
-	innerCtx, innerCancel := context.WithCancel(ctx)
-	go innerCancel()
-	assert.Errorf(t, e.Shutdown(innerCtx), context.Canceled.Error())
+	assert.EqualError(t, e.Shutdown(ctx), context.Canceled.Error())
 }
 
 func TestExporterShutdownHonorsTimeout(t *testing.T) {
-	orig := flush
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	// Do this after the parent context is canceled to avoid a race.
-	defer func() {
-		<-ctx.Done()
-		flush = orig
-	}()
-	defer cancel()
-	flush = func(e *Exporter) {
-		<-ctx.Done()
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+	<-ctx.Done()
 
 	e, err := NewRawExporter(withTestCollectorEndpoint())
 	require.NoError(t, err)
-	innerCtx, innerCancel := context.WithTimeout(ctx, time.Microsecond*10)
-	assert.Errorf(t, e.Shutdown(innerCtx), context.DeadlineExceeded.Error())
-	innerCancel()
+	assert.EqualError(t, e.Shutdown(ctx), context.DeadlineExceeded.Error())
+	cancel()
 }
 
 func TestErrorOnExportShutdownExporter(t *testing.T) {

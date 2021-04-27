@@ -15,7 +15,7 @@ To get started with this guide, create a new directory and add a new file named 
 
 To install the necessary prerequisites for OpenTelemetry, you'll want to run the following command in the directory with your `go.mod`:
 
-`go get go.opentelemetry.io/otel@v0.16.0 go.opentelemetry.io/otel/sdk@v0.16.0 go.opentelemetry.io/otel/exporters/stdout@v0.16.0`
+`go get go.opentelemetry.io/otel@v0.20.0 go.opentelemetry.io/otel/sdk@v0.20.0 go.opentelemetry.io/otel/exporters/stdout@v0.20.0`
 
 In your `main.go` file, you'll need to import several packages:
 
@@ -30,7 +30,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/exporters/stdout"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
@@ -128,22 +128,22 @@ It's important to note that if you do not set a propagator, the default is to us
 
 The next step is to create metric instruments that will capture measurements. There are two kinds of instruments: synchronous and asynchronous. Synchronous instruments capture measurements by explicitly calling the capture either by the application or by an instrumented library. Depending on the semantics of the measurements, we can say that synchronous instruments record or add measurements. Asynchronous instruments provide a callback that captures measurements. The callback is periodically called by meter in the background. We can say that asynchronous instrument performs observations.
 
-Each measurement can be associated with labels that can later be used by visualisation software to categorize and filter measurements. In case of synchronous instruments the labels can be passed at the moment of capturing a measurement or can be passed when binding the instrument. Such a bound instrument can be later used to capture measurements without passing the labels. In case of asynchronous instruments, the labels are passed each time an observation is made explicitly in the callback.
+Each measurement can be associated with attributes that can later be used by visualisation software to categorize and filter measurements. In case of synchronous instruments the attributes can be passed at the moment of capturing a measurement or can be passed when binding the instrument. Such a bound instrument can be later used to capture measurements without passing the attributes. In case of asynchronous instruments, the attributes are passed each time an observation is made explicitly in the callback.
 
 To set up some metric instruments, add the following code to your `main.go` file -
 
 ```go
-	fooKey := label.Key("ex.com/foo")
-	barKey := label.Key("ex.com/bar")
-	lemonsKey := label.Key("ex.com/lemons")
-	anotherKey := label.Key("ex.com/another")
+	fooKey := attribute.Key("ex.com/foo")
+	barKey := attribute.Key("ex.com/bar")
+	lemonsKey := attribute.Key("ex.com/lemons")
+	anotherKey := attribute.Key("ex.com/another")
 
-	commonLabels := []label.KeyValue{lemonsKey.Int(10), label.String("A", "1"), label.String("B", "2"), label.String("C", "3")}
+	commonAttributes := []attribute.KeyValue{lemonsKey.Int(10), attribute.String("A", "1"), attribute.String("B", "2"), attribute.String("C", "3")}
 
 	meter := otel.Meter("ex.com/basic")
 
 	observerCallback := func(_ context.Context, result metric.Float64ObserverResult) {
-		result.Observe(1, commonLabels...)
+		result.Observe(1, commonAttributes...)
 	}
 	_ = metric.Must(meter).NewFloat64ValueObserver("ex.com.one", observerCallback,
 		metric.WithDescription("A ValueObserver set to 1.0"),
@@ -151,11 +151,11 @@ To set up some metric instruments, add the following code to your `main.go` file
 
 	valueRecorder := metric.Must(meter).NewFloat64ValueRecorder("ex.com.two")
 
-	boundRecorder := valueRecorder.Bind(commonLabels...)
+	boundRecorder := valueRecorder.Bind(commonAttributes...)
 	defer boundRecorder.Unbind()
 ```
 
-In this block we first create some keys and labels that we will later use when capturing the measurements. Then we ask a global meter provider to give us a named meter instance ("ex.com/basic"). This acts as a way to namespace our instruments and make them distinct from other instruments in this process or another. Then we use the meter to create two instruments - an asynchronous value observer and a synchronous value recorder.
+In this block we first create some keys and attributes that we will later use when capturing the measurements. Then we ask a global meter provider to give us a named meter instance ("ex.com/basic"). This acts as a way to namespace our instruments and make them distinct from other instruments in this process or another. Then we use the meter to create two instruments - an asynchronous value observer and a synchronous value recorder.
 
 # Quick Start
 
@@ -173,13 +173,13 @@ Let's put the concepts we've just covered together, and create a trace and some 
 		ctx, span = tracer.Start(ctx, "operation")
 		defer span.End()
 
-		span.AddEvent("Nice operation!", trace.WithAttributes(label.Int("bogons", 100)))
+		span.AddEvent("Nice operation!", trace.WithAttributes(attribute.Int("bogons", 100)))
 		span.SetAttributes(anotherKey.String("yes"))
 
 		meter.RecordBatch(
 			// Note: call-site variables added as context Entries:
 			baggage.ContextWithValues(ctx, anotherKey.String("xyz")),
-			commonLabels,
+			commonAttributes,
 
 			valueRecorder.Measurement(2.0),
 		)
