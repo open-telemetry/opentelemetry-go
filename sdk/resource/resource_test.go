@@ -357,7 +357,7 @@ func TestNewRawResource(t *testing.T) {
 			defer func() { require.NoError(t, store.Restore()) }()
 
 			ctx := context.Background()
-			res, err := resource.NewEmptyResource(ctx, tt.options...)
+			res, err := resource.New(ctx, tt.options...)
 
 			require.NoError(t, err)
 			require.EqualValues(t, tt.resourceValues, toMap(res))
@@ -365,7 +365,7 @@ func TestNewRawResource(t *testing.T) {
 	}
 }
 
-func TestNew(t *testing.T) {
+func TestNew_WithBuiltinDetectors(t *testing.T) {
 	tc := []struct {
 		name      string
 		envars    string
@@ -413,7 +413,8 @@ func TestNew(t *testing.T) {
 			defer func() { require.NoError(t, store.Restore()) }()
 
 			ctx := context.Background()
-			res, err := resource.New(ctx, tt.options...)
+			options := append([]resource.Option{resource.WithBuiltinDetectors()}, tt.options...)
+			res, err := resource.New(ctx, options...)
 
 			require.NoError(t, err)
 			require.EqualValues(t, tt.resourceValues, toMap(res))

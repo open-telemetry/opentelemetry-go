@@ -43,14 +43,8 @@ var (
 	}(Detect(context.Background(), defaultServiceNameDetector{}, fromEnv{}, telemetrySDK{}))
 )
 
-// New returns a Resource combined from the builtin detectors and user-provided detectors.
+// New returns a Resource combined from the user-provided detectors.
 func New(ctx context.Context, opts ...Option) (*Resource, error) {
-	opts = append([]Option{WithBuiltinDetectors()}, opts...)
-	return NewEmptyResource(ctx, opts...)
-}
-
-// NewEmptyResource returns a Resource combined from the user-provided detectors.
-func NewEmptyResource(ctx context.Context, opts ...Option) (*Resource, error) {
 	cfg := config{}
 	for _, opt := range opts {
 		opt.Apply(&cfg)
