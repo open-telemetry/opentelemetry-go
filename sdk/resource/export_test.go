@@ -12,9 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otel // import "go.opentelemetry.io/otel"
+package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
-// Version is the current release version of OpenTelemetry in use.
-func Version() string {
-	return "0.20.0"
-}
+var (
+	SetDefaultOSProviders      = setDefaultOSProviders
+	SetOSProviders             = setOSProviders
+	SetDefaultRuntimeProviders = setDefaultRuntimeProviders
+	SetRuntimeProviders        = setRuntimeProviders
+	SetDefaultUserProviders    = setDefaultUserProviders
+	SetUserProviders           = setUserProviders
+)
+
+var (
+	CommandArgs = commandArgs
+	RuntimeName = runtimeName
+	RuntimeOS   = runtimeOS
+	RuntimeArch = runtimeArch
+)

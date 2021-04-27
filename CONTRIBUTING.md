@@ -15,11 +15,11 @@ join the meeting or get in touch on
 
 You can view and edit the source code by cloning this repository:
 
-```bash
+```sh
 git clone https://github.com/open-telemetry/opentelemetry-go.git
 ```
 
-Run `make test` to run the tests instead of `go test`. 
+Run `make test` to run the tests instead of `go test`.
 
 There are some generated files checked into the repo. To make sure
 that the generated files are up-to-date, run `make` (or `make
@@ -43,7 +43,7 @@ To create a new PR, fork the project in GitHub and clone the upstream
 repo:
 
 ```sh
-$ go get -d go.opentelemetry.io/otel
+go get -d go.opentelemetry.io/otel
 ```
 
 (This may print some warning about "build constraints exclude all Go
@@ -53,7 +53,7 @@ This will put the project in `${GOPATH}/src/go.opentelemetry.io/otel`. You
 can alternatively use `git` directly with:
 
 ```sh
-$ git clone https://github.com/open-telemetry/opentelemetry-go
+git clone https://github.com/open-telemetry/opentelemetry-go
 ```
 
 (Note that `git clone` is *not* using the `go.opentelemetry.io/otel` name -
@@ -66,20 +66,20 @@ current working directory.
 Enter the newly created directory and add your fork as a new remote:
 
 ```sh
-$ git remote add <YOUR_FORK> git@github.com:<YOUR_GITHUB_USERNAME>/opentelemetry-go
+git remote add <YOUR_FORK> git@github.com:<YOUR_GITHUB_USERNAME>/opentelemetry-go
 ```
 
 Check out a new branch, make modifications, run linters and tests, update
 `CHANGELOG.md`, and push the branch to your fork:
 
 ```sh
-$ git checkout -b <YOUR_BRANCH_NAME>
+git checkout -b <YOUR_BRANCH_NAME>
 # edit files
 # update changelog
-$ make precommit
-$ git add -p
-$ git commit
-$ git push <YOUR_FORK> <YOUR_BRANCH_NAME>
+make precommit
+git add -p
+git commit
+git push <YOUR_FORK> <YOUR_BRANCH_NAME>
 ```
 
 Open a pull request against the main `opentelemetry-go` repo. Be sure to add the pull
@@ -140,8 +140,8 @@ It is preferable to have contributions follow the idioms of the
 language rather than conform to specific API names or argument
 patterns in the spec.
 
-For a deeper discussion, see:
-https://github.com/open-telemetry/opentelemetry-specification/issues/165
+For a deeper discussion, see
+[this](https://github.com/open-telemetry/opentelemetry-specification/issues/165).
 
 ## Style Guide
 
@@ -166,16 +166,16 @@ to the reasons why.
 
 ### Configuration
 
-When creating an instantiation function for a complex `struct` it is useful
-to allow variable number of options to be applied. However, the strong type
-system of Go restricts the function design options. There are a few ways to
-solve this problem, but we have landed on the following design.
+When creating an instantiation function for a complex `type T struct`, it is
+useful to allow variable number of options to be applied. However, the strong
+type system of Go restricts the function design options. There are a few ways
+to solve this problem, but we have landed on the following design.
 
 #### `config`
 
 Configuration should be held in a `struct` named `config`, or prefixed with
 specific type name this Configuration applies to if there are multiple
-`config` in the package. This `struct` must contain configuration options.
+`config` in the package. This type must contain configuration options.
 
 ```go
 // config contains configuration options for a thing.
@@ -184,7 +184,7 @@ type config struct {
 }
 ```
 
-In general the `config` `struct` will not need to be used externally to the
+In general the `config` type will not need to be used externally to the
 package and should be unexported. If, however, it is expected that the user
 will likely want to build custom options for the configuration, the `config`
 should be exported. Please, include in the documentation for the `config`
@@ -203,7 +203,7 @@ func newConfig([]Option) config {
     // Set default values for config.
     config := config{/* […] */}
     for _, option := range options {
-        option.Apply(&config)
+        option.apply(&config)
     }
     // Preform any validation here.
     return config
@@ -224,9 +224,13 @@ To set the value of the options a `config` contains, a corresponding
 
 ```go
 type Option interface {
-  Apply(*config)
+    apply(*config)
 }
 ```
+
+Having `apply` unexported makes sure that it will not be used externally.
+Moreover, the interface becomes sealed so the user cannot easily implement
+the interface on its own.
 
 The name of the interface should be prefixed in the same way the
 corresponding `config` is (if at all).
@@ -250,11 +254,11 @@ func With*(…) Option { … }
 ```go
 type defaultFalseOption bool
 
-func (o defaultFalseOption) Apply(c *config) {
+func (o defaultFalseOption) apply(c *config) {
     c.Bool = bool(o)
 }
 
-// WithOption sets a T* to have an option included.
+// WithOption sets a T to have an option included.
 func WithOption() Option {
     return defaultFalseOption(true)
 }
@@ -263,15 +267,15 @@ func WithOption() Option {
 ```go
 type defaultTrueOption bool
 
-func (o defaultTrueOption) Apply(c *config) {
+func (o defaultTrueOption) apply(c *config) {
     c.Bool = bool(o)
 }
 
-// WithoutOption sets a T* to have Bool option excluded.
+// WithoutOption sets a T to have Bool option excluded.
 func WithoutOption() Option {
     return defaultTrueOption(false)
 }
-````
+```
 
 ##### Declared Type Options
 
@@ -280,11 +284,11 @@ type myTypeOption struct {
     MyType MyType
 }
 
-func (o myTypeOption) Apply(c *config) {
+func (o myTypeOption) apply(c *config) {
     c.MyType = o.MyType
 }
 
-// WithMyType sets T* to have include MyType.
+// WithMyType sets T to have include MyType.
 func WithMyType(t MyType) Option {
     return myTypeOption{t}
 }
@@ -292,11 +296,11 @@ func WithMyType(t MyType) Option {
 
 #### Instantiation
 
-Using this configuration pattern to configure instantiation with a `New*`
+Using this configuration pattern to configure instantiation with a `NewT`
 function.
 
 ```go
-func NewT*(options ...Option) T* {…}
+func NewT(options ...Option) T {…}
 ```
 
 Any required parameters can be declared before the variadic `options`.
@@ -313,38 +317,38 @@ For example.
 ```go
 // config holds options for all animals.
 type config struct {
-	Weight      float64
-	Color       string
-	MaxAltitude float64
+    Weight      float64
+    Color       string
+    MaxAltitude float64
 }
 
 // DogOption apply Dog specific options.
 type DogOption interface {
-	ApplyDog(*config)
+    applyDog(*config)
 }
 
 // BirdOption apply Bird specific options.
 type BirdOption interface {
-	ApplyBird(*config)
+    applyBird(*config)
 }
 
 // Option apply options for all animals.
 type Option interface {
-	BirdOption
-	DogOption
+    BirdOption
+    DogOption
 }
 
 type weightOption float64
-func (o weightOption) ApplyDog(c *config)  { c.Weight = float64(o) }
-func (o weightOption) ApplyBird(c *config) { c.Weight = float64(o) }
+func (o weightOption) applyDog(c *config)  { c.Weight = float64(o) }
+func (o weightOption) applyBird(c *config) { c.Weight = float64(o) }
 func WithWeight(w float64) Option          { return weightOption(w) }
 
 type furColorOption string
-func (o furColorOption) ApplyDog(c *config) { c.Color = string(o) }
+func (o furColorOption) applyDog(c *config) { c.Color = string(o) }
 func WithFurColor(c string) DogOption       { return furColorOption(c) }
 
 type maxAltitudeOption float64
-func (o maxAltitudeOption) ApplyBird(c *config) { c.MaxAltitude = float64(o) }
+func (o maxAltitudeOption) applyBird(c *config) { c.MaxAltitude = float64(o) }
 func WithMaxAltitude(a float64) BirdOption      { return maxAltitudeOption(a) }
 
 func NewDog(name string, o ...DogOption) Dog    {…}
