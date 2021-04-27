@@ -73,7 +73,8 @@ func (ssp *simpleSpanProcessor) Shutdown(ctx context.Context) error {
 
 		// The exporter field of the simpleSpanProcessor needs to be zeroed to
 		// signal it is shut down, meaning all subsequent calls to OnEnd will
-		// be gracefully ignored.
+		// be gracefully ignored. This needs to be done synchronously to avoid
+		// any race condition.
 		//
 		// A closure is used to keep reference to the exporter and then the
 		// field is zeroed. This ensures the simpleSpanProcessor is shut down
