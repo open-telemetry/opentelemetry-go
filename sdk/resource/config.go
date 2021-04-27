@@ -69,24 +69,24 @@ func (o detectorsOption) Apply(cfg *config) {
 	cfg.detectors = append(cfg.detectors, o.detectors...)
 }
 
-// WithBuiltinDetectors adds the built detectors to the configured resoruce.
+// WithBuiltinDetectors adds the built detectors to the configured resource.
 func WithBuiltinDetectors() Option {
 	return WithDetectors(telemetrySDK{},
 		host{},
 		fromEnv{})
 }
 
-// WithFromEnv adds attributes from environment variables to the  configured resoruce.
+// WithFromEnv adds attributes from environment variables to the  configured resource.
 func WithFromEnv() Option {
 	return WithDetectors(fromEnv{})
 }
 
-// WithHost adds attributes from the host to the configured resoruce.
+// WithHost adds attributes from the host to the configured resource.
 func WithHost() Option {
 	return WithDetectors(host{})
 }
 
-// WithTelemetrySDK adds TelemetrySDK version info to the configured resoruce.
+// WithTelemetrySDK adds TelemetrySDK version info to the configured resource.
 func WithTelemetrySDK() Option {
 	return WithDetectors(telemetrySDK{})
 }
