@@ -320,7 +320,7 @@ func (c *connection) doRequest(ctx context.Context, fn func(context.Context) err
 		backoffDelay := expBackoff.NextBackOff()
 		if backoffDelay == backoff.Stop {
 			// throw away the batch
-			err = fmt.Errorf("max elapsed time expired %w", err)
+			err = fmt.Errorf("max elapsed time expired: %w", err)
 			return err
 		}
 
@@ -331,13 +331,25 @@ func (c *connection) doRequest(ctx context.Context, fn func(context.Context) err
 		}
 
 		// back-off, but get interrupted when shutting down or request is cancelled or timed out.
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-c.stopCh:
-			return fmt.Errorf("interrupted due to shutdown %w", err)
-		case <-time.After(delay):
+		err = func() error {
+			dt := time.NewTimer(delay)
+			defer dt.Stop()
+
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-c.stopCh:
+				return fmt.Errorf("interrupted due to shutdown: %w", err)
+			case <-dt.C:
+			}
+
+			return nil
+		}()
+
+		if err != nil {
+			return err
 		}
+
 	}
 }
 
