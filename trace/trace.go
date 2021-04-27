@@ -587,7 +587,7 @@ type Link struct {
 // MarshalJSON method, fields other than SpanContext will not be
 // marshalled.
 func (l Link) MarshalJSON() ([]byte, error) {
-	lJSON, err := json.Marshal(struct {
+	return json.Marshal(struct {
 		SpanContext           SpanContext
 		Attributes            []attribute.KeyValue
 		DroppedAttributeCount int
@@ -596,10 +596,6 @@ func (l Link) MarshalJSON() ([]byte, error) {
 		Attributes:            l.Attributes,
 		DroppedAttributeCount: l.DroppedAttributeCount,
 	})
-	if err != nil {
-		return nil, err
-	}
-	return lJSON, nil
 }
 
 // SpanKind is the role a Span plays in a Trace.
