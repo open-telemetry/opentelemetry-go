@@ -15,7 +15,7 @@ join the meeting or get in touch on
 
 You can view and edit the source code by cloning this repository:
 
-```bash
+```sh
 git clone https://github.com/open-telemetry/opentelemetry-go.git
 ```
 
@@ -224,7 +224,7 @@ To set the value of the options a `config` contains, a corresponding
 
 ```go
 type Option interface {
-  apply(*config)
+    apply(*config)
 }
 ```
 
@@ -317,25 +317,25 @@ For example.
 ```go
 // config holds options for all animals.
 type config struct {
-	Weight      float64
-	Color       string
-	MaxAltitude float64
+    Weight      float64
+    Color       string
+    MaxAltitude float64
 }
 
 // DogOption apply Dog specific options.
 type DogOption interface {
-	applyDog(*config)
+    applyDog(*config)
 }
 
 // BirdOption apply Bird specific options.
 type BirdOption interface {
-	applyBird(*config)
+    applyBird(*config)
 }
 
 // Option apply options for all animals.
 type Option interface {
-	BirdOption
-	DogOption
+    BirdOption
+    DogOption
 }
 
 type weightOption float64
