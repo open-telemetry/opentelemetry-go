@@ -33,6 +33,12 @@ var _ SpanProcessor = (*simpleSpanProcessor)(nil)
 
 // NewSimpleSpanProcessor returns a new SpanProcessor that will synchronously
 // send completed spans to the exporter immediately.
+//
+// This SpanProcessor is not recommended for production use. The synchronous
+// nature of this SpanProcessor make it good for testing, debugging, or
+// showing examples of other feature, but it will be slow and have a high
+// computation resource usage overhead. The BatchSpanProcessor is recommended
+// for production use instead.
 func NewSimpleSpanProcessor(exporter SpanExporter) SpanProcessor {
 	ssp := &simpleSpanProcessor{
 		exporter: exporter,
