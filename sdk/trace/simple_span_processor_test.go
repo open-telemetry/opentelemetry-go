@@ -146,24 +146,22 @@ func TestSimpleSpanProcessorShutdownOnEndConcurrency(t *testing.T) {
 }
 
 func TestSimpleSpanProcessorShutdownHonorsContextDeadline(t *testing.T) {
-	ssp := sdktrace.NewSimpleSpanProcessor(&testExporter{})
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
 	defer cancel()
 	<-ctx.Done()
-	err := ssp.Shutdown(ctx)
-	if got, want := err, context.DeadlineExceeded; !errors.Is(got, want) {
+
+	ssp := sdktrace.NewSimpleSpanProcessor(&testExporter{})
+	if got, want := ssp.Shutdown(ctx), context.DeadlineExceeded; !errors.Is(got, want) {
 		t.Errorf("SimpleSpanProcessor.Shutdown did not return %v, got %v", want, got)
 	}
 }
 
 func TestSimpleSpanProcessorShutdownHonorsContextCancel(t *testing.T) {
-	ssp := sdktrace.NewSimpleSpanProcessor(&testExporter{})
-
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	err := ssp.Shutdown(ctx)
-	if got, want := err, context.Canceled; !errors.Is(got, want) {
+
+	ssp := sdktrace.NewSimpleSpanProcessor(&testExporter{})
+	if got, want := ssp.Shutdown(ctx), context.Canceled; !errors.Is(got, want) {
 		t.Errorf("SimpleSpanProcessor.Shutdown did not return %v, got %v", want, got)
 	}
 }
