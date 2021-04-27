@@ -583,10 +583,10 @@ type Link struct {
 }
 
 // MarshalJSON implements a custom marshal function to encode a Link.
-// This is a workaround to correctly marshal Link. Without this custom
-// MarshalJSON method, fields other than SpanContext will not be
-// marshalled.
 func (l Link) MarshalJSON() ([]byte, error) {
+	// This is a workaround to correctly marshal Link. Without this custom
+	// MarshalJSON method, fields other than SpanContext will not be
+	// marshaled.
 	return json.Marshal(struct {
 		SpanContext           SpanContext
 		Attributes            []attribute.KeyValue
