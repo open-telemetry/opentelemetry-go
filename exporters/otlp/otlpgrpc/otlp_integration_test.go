@@ -316,12 +316,34 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 				otlpgrpc.WithTimeout(time.Millisecond * 100),
 			},
 			errors: []error{
-				newThrottlingError(codes.ResourceExhausted, time.Minute),
+				newThrottlingError(codes.ResourceExhausted, time.Second*30),
 			},
 			fn: func(t *testing.T, ctx context.Context, exp *otlp.Exporter, mc *mockCollector) {
 				err := exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Spans"}})
 				require.Error(t, err)
 				require.Equal(t, "context deadline exceeded", err.Error())
+
+				span := mc.getSpans()
+
+				require.Len(t, span, 0)
+				require.Equal(t, 1, mc.traceSvc.requests, "trace service must receive 1 failure requests and 1 success request.")
+			},
+		},
+		{
+			name: "Retry should fail if server throttling is higher than the MaxElapsedTime",
+			rs: otlp.RetrySettings{
+				Enabled:         true,
+				MaxElapsedTime:  time.Millisecond * 100,
+				InitialInterval: time.Nanosecond,
+				MaxInterval:     time.Nanosecond,
+			},
+			errors: []error{
+				newThrottlingError(codes.ResourceExhausted, time.Minute),
+			},
+			fn: func(t *testing.T, ctx context.Context, exp *otlp.Exporter, mc *mockCollector) {
+				err := exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Spans"}})
+				require.Error(t, err)
+				require.Equal(t, "max elapsed time expired when respecting server throttle: rpc error: code = ResourceExhausted desc = ", err.Error())
 
 				span := mc.getSpans()
 

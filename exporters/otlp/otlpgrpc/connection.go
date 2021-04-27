@@ -312,9 +312,7 @@ func (c *connection) doRequest(ctx context.Context, fn func(context.Context) err
 		}
 
 		// Need to retry.
-		var delay time.Duration
 
-		// Respect server throttling.
 		throttle := getThrottleDuration(st)
 
 		backoffDelay := expBackoff.NextBackOff()
@@ -324,9 +322,17 @@ func (c *connection) doRequest(ctx context.Context, fn func(context.Context) err
 			return err
 		}
 
+		var delay time.Duration
+
 		if backoffDelay > throttle {
 			delay = backoffDelay
 		} else {
+			if expBackoff.GetElapsedTime()+throttle > expBackoff.MaxElapsedTime {
+				err = fmt.Errorf("max elapsed time expired when respecting server throttle: %w", err)
+				return err
+			}
+
+			// Respect server throttling.
 			delay = throttle
 		}
 
