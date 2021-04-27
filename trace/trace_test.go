@@ -15,6 +15,8 @@
 package trace
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -128,7 +130,7 @@ func TestHasTraceID(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (sc SpanContext) HasTraceID() bool{}
+			// proto: func (sc SpanContext) HasTraceID() bool{}
 			sc := SpanContext{traceID: testcase.tid}
 			have := sc.HasTraceID()
 			if have != testcase.want {
@@ -155,7 +157,7 @@ func TestHasSpanID(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (sc SpanContext) HasSpanID() bool {}
+			// proto: func (sc SpanContext) HasSpanID() bool {}
 			have := testcase.sc.HasSpanID()
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
@@ -254,7 +256,7 @@ func TestStringTraceID(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (t TraceID) String() string {}
+			// proto: func (t TraceID) String() string {}
 			have := testcase.tid.String()
 			if have != testcase.want {
 				t.Errorf("Want: %s, but have: %s", testcase.want, have)
@@ -281,7 +283,7 @@ func TestStringSpanID(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (t TraceID) String() string {}
+			// proto: func (t TraceID) String() string {}
 			have := testcase.sid.String()
 			if have != testcase.want {
 				t.Errorf("Want: %s, but have: %s", testcase.want, have)
@@ -1021,5 +1023,31 @@ func TestSpanContextDerivation(t *testing.T) {
 	modified = from.WithTraceState(to.TraceState())
 	if !assertSpanContextEqual(modified, to) {
 		t.Fatalf("WithTraceState: Unexpected context created: %s", cmp.Diff(modified, to))
+	}
+}
+
+func TestTraceLinkMarshalJSON(t *testing.T) {
+	link := Link{
+		SpanContext: SpanContext{
+			traceID:    TraceID([16]byte{1}),
+			spanID:     SpanID([8]byte{42}),
+			traceFlags: 0x0,
+			traceState: TraceState{},
+		},
+		Attributes: []attribute.KeyValue{
+			attribute.String("foo", "8"),
+			attribute.String("bar", "22"),
+		},
+		DroppedAttributeCount: 1,
+	}
+
+	expected := "{\"SpanContext\":{\"TraceID\":\"01000000000000000000000000000000\",\"SpanID\":\"2a00000000000000\",\"TraceFlags\":\"00\",\"TraceState\":null,\"Remote\":false},\"Attributes\":[{\"Key\":\"foo\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"8\"}},{\"Key\":\"bar\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"22\"}}],\"DroppedAttributeCount\":1}"
+
+	m, err := json.Marshal(link)
+	if err != nil {
+		t.Fatalf("Link MarshalJSON() err: %v", err)
+	}
+	if !bytes.Equal(m, []byte(expected)) {
+		t.Errorf("Link MarshalJSON() expected %s, got %s", expected, string(m))
 	}
 }

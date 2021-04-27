@@ -20,6 +20,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 ### Fixed
+- Adds `trace.Link`'s own MarshalJSON method to marshal all fields, not just fields under embedded struct `trace.SpanContext` (#1820)
 
 ### Security
 

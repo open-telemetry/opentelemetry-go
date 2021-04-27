@@ -176,7 +176,7 @@ func decodeHex(h string, b []byte) error {
 //
 // Trace state must be valid according to the W3C Trace Context specification at all times. All
 // mutating operations validate their input and, in case of valid parameters, return a new TraceState.
-type TraceState struct { //nolint:golint
+type TraceState struct { // nolint:golint
 	// TODO @matej-g: Consider implementing this as attribute.Set, see
 	// comment https://github.com/open-telemetry/opentelemetry-go/pull/1340#discussion_r540599226
 	kvs []attribute.KeyValue
@@ -278,7 +278,7 @@ func (ts TraceState) copyKVsAndDeleteEntry(key attribute.Key) []attribute.KeyVal
 
 // TraceStateFromKeyValues is a convenience method to create a new TraceState from
 // provided key/value pairs.
-func TraceStateFromKeyValues(kvs ...attribute.KeyValue) (TraceState, error) { //nolint:golint
+func TraceStateFromKeyValues(kvs ...attribute.KeyValue) (TraceState, error) { // nolint:golint
 	if len(kvs) == 0 {
 		return TraceState{}, nil
 	}
@@ -314,7 +314,7 @@ func isTraceStateKeyValueValid(kv attribute.KeyValue) bool {
 }
 
 // TraceFlags contains flags that can be set on a SpanContext
-type TraceFlags byte //nolint:golint
+type TraceFlags byte // nolint:golint
 
 // IsSampled returns if the sampling bit is set in the TraceFlags.
 func (tf TraceFlags) IsSampled() bool {
@@ -580,6 +580,19 @@ type Link struct {
 	// DroppedAttributeCount is the number of attributes that were not
 	// recorded due to configured limits being reached.
 	DroppedAttributeCount int
+}
+
+// Implements MarshalJSON to marshal all fields of link not just SpanContext
+func (l Link) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		SpanContext           SpanContext
+		Attributes            []attribute.KeyValue
+		DroppedAttributeCount int
+	}{
+		SpanContext:           l.SpanContext,
+		Attributes:            l.Attributes,
+		DroppedAttributeCount: l.DroppedAttributeCount,
+	})
 }
 
 // SpanKind is the role a Span plays in a Trace.
