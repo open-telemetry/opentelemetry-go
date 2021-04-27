@@ -67,7 +67,7 @@ func (p *TracerProvider) Tracer(instName string, opts ...trace.TracerOption) tra
 	return t
 }
 
-// DefaulTracer returns a default tracer for testing purposes.
+// DefaultTracer returns a default tracer for testing purposes.
 func DefaultTracer() trace.Tracer {
 	return NewTracerProvider().Tracer("")
 }
