@@ -349,7 +349,7 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 				err := exp.ExportSpans(ctx, []*sdktrace.SpanSnapshot{{Name: "Spans"}})
 				require.Error(t, err)
 
-				require.Equal(t, "max elapsed time expired rpc error: code = Unavailable desc = unavailable", err.Error())
+				require.Equal(t, "max elapsed time expired: rpc error: code = Unavailable desc = unavailable", err.Error())
 
 				span := mc.getSpans()
 
