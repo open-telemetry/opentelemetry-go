@@ -266,7 +266,7 @@ func TestMarshalJSON(t *testing.T) {
 		string(data))
 }
 
-func TestNewRawResource(t *testing.T) {
+func TestNew(t *testing.T) {
 	tc := []struct {
 		name      string
 		envars    string
