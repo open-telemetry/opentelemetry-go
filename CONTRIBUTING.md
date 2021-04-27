@@ -228,7 +228,7 @@ type Option interface {
 }
 ```
 
-Having `apply` unexpoorted makes sure that it will not be used externally.
+Having `apply` unexported makes sure that it will not be used externally.
 Moreover, the interface becomes sealed so the user cannot easily implement
 the interface on its own.
 
