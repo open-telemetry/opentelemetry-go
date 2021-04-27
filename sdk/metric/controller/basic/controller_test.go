@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
+	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -33,6 +34,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
+
+const envVar = "OTEL_RESOURCE_ATTRIBUTES"
 
 func getMap(t *testing.T, cont *controller.Controller) map[string]float64 {
 	out := processortest.NewOutput(attribute.DefaultEncoder())
@@ -58,6 +61,12 @@ func checkTestContext(t *testing.T, ctx context.Context) {
 }
 
 func TestControllerUsesResource(t *testing.T) {
+	store, err := ottest.SetEnvVariables(map[string]string{
+		envVar: "key=value,T=U",
+	})
+	require.NoError(t, err)
+	defer func() { require.NoError(t, store.Restore()) }()
+
 	cases := []struct {
 		name    string
 		options []controller.Option
@@ -66,7 +75,7 @@ func TestControllerUsesResource(t *testing.T) {
 		{
 			name:    "explicitly empty resource",
 			options: []controller.Option{controller.WithResource(resource.Empty())},
-			wanted:  ""},
+			wanted:  resource.Environment().Encoded(attribute.DefaultEncoder())},
 		{
 			name:    "uses default if no resource option",
 			options: nil,
@@ -74,15 +83,18 @@ func TestControllerUsesResource(t *testing.T) {
 		{
 			name:    "explicit resource",
 			options: []controller.Option{controller.WithResource(resource.NewWithAttributes(attribute.String("R", "S")))},
-			wanted:  "R=S"},
+			wanted:  "R=S,T=U,key=value"},
 		{
 			name: "last resource wins",
 			options: []controller.Option{
 				controller.WithResource(resource.Default()),
 				controller.WithResource(resource.NewWithAttributes(attribute.String("R", "S"))),
 			},
-			wanted: "R=S",
-		},
+			wanted: "R=S,T=U,key=value"},
+		{
+			name:    "overlapping attributes with environment resource",
+			options: []controller.Option{controller.WithResource(resource.NewWithAttributes(attribute.String("T", "V")))},
+			wanted:  "T=V,key=value"},
 	}
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
