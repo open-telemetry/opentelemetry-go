@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Make `NewSplitDriver` from `go.opentelemetry.io/otel/exporters/otlp` take variadic arguments instead of a `SplitConfig` item.
   `NewSplitDriver` now automically implements an internal `noopDriver` for `SplitConfig` fields that are not initialized. (#1798)
 - `Set.Encoded(Encoder)` no longer caches the result of an encoding. (#1855)
+
 ### Deprecated
 
 ### Removed
