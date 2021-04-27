@@ -45,8 +45,8 @@ const (
 )
 
 var (
-	// DefaultRetrySettings is a default settings for the retry policy.
-	DefaultRetrySettings = otlp.RetrySettings{
+	// defaultRetrySettings is a default settings for the retry policy.
+	defaultRetrySettings = otlp.RetrySettings{
 		Enabled:         true,
 		InitialInterval: 5 * time.Second,
 		MaxInterval:     30 * time.Second,
@@ -102,7 +102,7 @@ func NewDefaultConfig() Config {
 		},
 		MaxAttempts:   DefaultMaxAttempts,
 		Backoff:       DefaultBackoff,
-		RetrySettings: DefaultRetrySettings,
+		RetrySettings: defaultRetrySettings,
 	}
 
 	return c
