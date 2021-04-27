@@ -180,7 +180,7 @@ specific type name this Configuration applies to if there are multiple
 ```go
 // config contains configuration options for a thing.
 type config struct {
-    // options ...
+	// options ...
 }
 ```
 
@@ -200,13 +200,13 @@ all options to create a configured `config`.
 ```go
 // newConfig returns an appropriately configured config.
 func newConfig([]Option) config {
-    // Set default values for config.
-    config := config{/* […] */}
-    for _, option := range options {
-        option.apply(&config)
-    }
-    // Preform any validation here.
-    return config
+	// Set default values for config.
+	config := config{/* […] */}
+	for _, option := range options {
+		option.apply(&config)
+	}
+	// Preform any validation here.
+	return config
 }
 ```
 
@@ -224,7 +224,7 @@ To set the value of the options a `config` contains, a corresponding
 
 ```go
 type Option interface {
-    apply(*config)
+	apply(*config)
 }
 ```
 
@@ -255,12 +255,12 @@ func With*(…) Option { … }
 type defaultFalseOption bool
 
 func (o defaultFalseOption) apply(c *config) {
-    c.Bool = bool(o)
+	c.Bool = bool(o)
 }
 
 // WithOption sets a T to have an option included.
 func WithOption() Option {
-    return defaultFalseOption(true)
+	return defaultFalseOption(true)
 }
 ```
 
@@ -268,12 +268,12 @@ func WithOption() Option {
 type defaultTrueOption bool
 
 func (o defaultTrueOption) apply(c *config) {
-    c.Bool = bool(o)
+	c.Bool = bool(o)
 }
 
 // WithoutOption sets a T to have Bool option excluded.
 func WithoutOption() Option {
-    return defaultTrueOption(false)
+	return defaultTrueOption(false)
 }
 ```
 
@@ -281,16 +281,16 @@ func WithoutOption() Option {
 
 ```go
 type myTypeOption struct {
-    MyType MyType
+	MyType MyType
 }
 
 func (o myTypeOption) apply(c *config) {
-    c.MyType = o.MyType
+	c.MyType = o.MyType
 }
 
 // WithMyType sets T to have include MyType.
 func WithMyType(t MyType) Option {
-    return myTypeOption{t}
+	return myTypeOption{t}
 }
 ```
 
@@ -317,25 +317,25 @@ For example.
 ```go
 // config holds options for all animals.
 type config struct {
-    Weight      float64
-    Color       string
-    MaxAltitude float64
+	Weight      float64
+	Color       string
+	MaxAltitude float64
 }
 
 // DogOption apply Dog specific options.
 type DogOption interface {
-    applyDog(*config)
+	applyDog(*config)
 }
 
 // BirdOption apply Bird specific options.
 type BirdOption interface {
-    applyBird(*config)
+	applyBird(*config)
 }
 
 // Option apply options for all animals.
 type Option interface {
-    BirdOption
-    DogOption
+	BirdOption
+	DogOption
 }
 
 type weightOption float64
