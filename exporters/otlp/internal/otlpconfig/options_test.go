@@ -423,3 +423,56 @@ func TestConfigs(t *testing.T) {
 		})
 	}
 }
+
+func TestHTTPConfigs(t *testing.T) {
+	customTransport := DefaultTransport.Clone()
+	customTransport.MaxConnsPerHost = 42
+
+	tests := []struct {
+		name    string
+		opts    []HTTPOption
+		asserts func(t *testing.T, c *Config)
+	}{
+		// HTTP Transport Tests
+		{
+			name: "Test with custom traces transport",
+			opts: []HTTPOption{
+				WithTracesHTTPTransport(customTransport),
+			},
+			asserts: func(t *testing.T, c *Config) {
+				assert.Equal(t, customTransport, c.Traces.HTTPTransport)
+				assert.Equal(t, DefaultTransport, c.Metrics.HTTPTransport)
+			},
+		},
+		{
+			name: "Test with custom metrics transport",
+			opts: []HTTPOption{
+				WithMetricsHTTPTransport(customTransport),
+			},
+			asserts: func(t *testing.T, c *Config) {
+				assert.Equal(t, DefaultTransport, c.Traces.HTTPTransport)
+				assert.Equal(t, customTransport, c.Metrics.HTTPTransport)
+			},
+		},
+		{
+			name: "Test with custom transports",
+			opts: []HTTPOption{
+				WithHTTPTransport(customTransport),
+			},
+			asserts: func(t *testing.T, c *Config) {
+				assert.Equal(t, customTransport, c.Traces.HTTPTransport)
+				assert.Equal(t, customTransport, c.Metrics.HTTPTransport)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := NewDefaultConfig()
+			for _, opt := range tt.opts {
+				opt.ApplyHTTPOption(&cfg)
+			}
+			tt.asserts(t, &cfg)
+		})
+	}
+}

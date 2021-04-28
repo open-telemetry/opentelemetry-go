@@ -17,6 +17,8 @@ package otlpconfig // import "go.opentelemetry.io/otel/exporters/otlp/internal/o
 import (
 	"crypto/tls"
 	"fmt"
+	"net"
+	"net/http"
 	"time"
 
 	"google.golang.org/grpc"
@@ -69,6 +71,24 @@ const (
 }`
 )
 
+// Keep it in sync with golang's DefaultTransport from net/http! We
+// have our own copy to avoid handling a situation where the
+// DefaultTransport is overwritten with some different implementation
+// of http.RoundTripper or it's modified by other package.
+var DefaultTransport = &http.Transport{
+	Proxy: http.ProxyFromEnvironment,
+	DialContext: (&net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+		DualStack: true,
+	}).DialContext,
+	ForceAttemptHTTP2:     true,
+	MaxIdleConns:          100,
+	IdleConnTimeout:       90 * time.Second,
+	TLSHandshakeTimeout:   10 * time.Second,
+	ExpectContinueTimeout: 1 * time.Second,
+}
+
 type (
 	SignalConfig struct {
 		Endpoint    string
@@ -78,6 +98,9 @@ type (
 		Compression otlp.Compression
 		Timeout     time.Duration
 		URLPath     string
+
+		// http configurations
+		HTTPTransport http.RoundTripper
 
 		// gRPC configurations
 		GRPCCredentials credentials.TransportCredentials
@@ -105,16 +128,18 @@ type (
 func NewDefaultConfig() Config {
 	c := Config{
 		Traces: SignalConfig{
-			Endpoint:    fmt.Sprintf("%s:%d", otlp.DefaultCollectorHost, otlp.DefaultCollectorPort),
-			URLPath:     DefaultTracesPath,
-			Compression: otlp.NoCompression,
-			Timeout:     DefaultTimeout,
+			Endpoint:      fmt.Sprintf("%s:%d", otlp.DefaultCollectorHost, otlp.DefaultCollectorPort),
+			URLPath:       DefaultTracesPath,
+			Compression:   otlp.NoCompression,
+			Timeout:       DefaultTimeout,
+			HTTPTransport: DefaultTransport,
 		},
 		Metrics: SignalConfig{
-			Endpoint:    fmt.Sprintf("%s:%d", otlp.DefaultCollectorHost, otlp.DefaultCollectorPort),
-			URLPath:     DefaultMetricsPath,
-			Compression: otlp.NoCompression,
-			Timeout:     DefaultTimeout,
+			Endpoint:      fmt.Sprintf("%s:%d", otlp.DefaultCollectorHost, otlp.DefaultCollectorPort),
+			URLPath:       DefaultMetricsPath,
+			Compression:   otlp.NoCompression,
+			Timeout:       DefaultTimeout,
+			HTTPTransport: DefaultTransport,
 		},
 		MaxAttempts:   DefaultMaxAttempts,
 		Backoff:       DefaultBackoff,
@@ -372,5 +397,24 @@ func WithTracesTimeout(duration time.Duration) GenericOption {
 func WithMetricsTimeout(duration time.Duration) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Metrics.Timeout = duration
+	})
+}
+
+func WithMetricsHTTPTransport(transport http.RoundTripper) HTTPOption {
+	return NewHTTPOption(func(cfg *Config) {
+		cfg.Metrics.HTTPTransport = transport
+	})
+}
+
+func WithTracesHTTPTransport(transport http.RoundTripper) HTTPOption {
+	return NewHTTPOption(func(cfg *Config) {
+		cfg.Traces.HTTPTransport = transport
+	})
+}
+
+func WithHTTPTransport(transport http.RoundTripper) HTTPOption {
+	return NewHTTPOption(func(cfg *Config) {
+		cfg.Metrics.HTTPTransport = transport
+		cfg.Traces.HTTPTransport = transport
 	})
 }
