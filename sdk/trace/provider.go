@@ -236,6 +236,12 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 
 // WithSyncer registers the exporter with the TracerProvider using a
 // SimpleSpanProcessor.
+//
+// This is not recommended for production use. The synchronous nature of the
+// SimpleSpanProcessor that will wrap the exporter make it good for testing,
+// debugging, or showing examples of other feature, but it will be slow and
+// have a high computation resource usage overhead. The WithBatcher option is
+// recommended for production use instead.
 func WithSyncer(e SpanExporter) TracerProviderOption {
 	return WithSpanProcessor(NewSimpleSpanProcessor(e))
 }
