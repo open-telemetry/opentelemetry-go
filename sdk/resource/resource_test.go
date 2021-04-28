@@ -365,7 +365,7 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestNew_WithBuiltinDetectors(t *testing.T) {
+func TestNewWithBuiltinDetectors(t *testing.T) {
 	tc := []struct {
 		name      string
 		envars    string
