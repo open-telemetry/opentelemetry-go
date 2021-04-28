@@ -21,20 +21,20 @@ In Go, the `context` package is used to store the active span. When you start a 
 
 ```go
 func parentFunction() {
-  ctx := context.Background()
-  var parentSpan trace.Span
-  ctx, parentSpan = tracer.Start(ctx, "parent")
-  defer parentSpan.End()
-  // call our child function
-  childFunction(ctx)
-  // do more work, when this function ends, parentSpan will complete.
+	ctx := context.Background()
+	var parentSpan trace.Span
+	ctx, parentSpan = tracer.Start(ctx, "parent")
+	defer parentSpan.End()
+	// call our child function
+	childFunction(ctx)
+	// do more work, when this function ends, parentSpan will complete.
 }
 
 func childFunction(ctx context.Context) {
-  var childSpan trace.Span
-  ctx, childSpan = tracer.Start(ctx, "child")
-  defer childSpan.End()
-  // do work here, when this function returns, childSpan will complete.
+	var childSpan trace.Span
+	ctx, childSpan = tracer.Start(ctx, "child")
+	defer childSpan.End()
+	// do work here, when this function returns, childSpan will complete.
 }
 ```
 
