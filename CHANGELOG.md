@@ -14,8 +14,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Make `NewSplitDriver` from `go.opentelemetry.io/otel/exporters/otlp` take variadic arguments instead of a `SplitConfig` item.
   `NewSplitDriver` now automically implements an internal `noopDriver` for `SplitConfig` fields that are not initialized. (#1798)
-- BatchSpanProcessor now drops span batches that failed to be exported. (#TBD)
-- BatchSpanProcessor now report export failures when calling `ForceFlush()` method. (#TBD)
+- BatchSpanProcessor now drops span batches that failed to be exported. (#1860)
+- BatchSpanProcessor now report export failures when calling `ForceFlush()` method. (#1860)
 
 ### Deprecated
 
