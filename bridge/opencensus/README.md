@@ -10,7 +10,7 @@ In a perfect world, one would simply migrate their entire go application --inclu
 
 However, if you create the following spans in a go application:
 
-```golang
+```go
 ctx, ocSpan := opencensus.StartSpan(context.Background(), "OuterSpan")
 defer ocSpan.End()
 ctx, otSpan := opentelemetryTracer.Start(ctx, "MiddleSpan")
@@ -54,11 +54,11 @@ Starting from an application using entirely OpenCensus APIs:
 4. Remove OpenCensus exporters and configuration
 
 To override OpenCensus' DefaultTracer with the bridge:
-```golang
+```go
 import (
-    octrace "go.opencensus.io/trace"
-    "go.opentelemetry.io/otel/bridge/opencensus"
-    "go.opentelemetry.io/otel"
+	octrace "go.opencensus.io/trace"
+	"go.opentelemetry.io/otel/bridge/opencensus"
+	"go.opentelemetry.io/otel"
 )
 
 tracer := otel.GetTracerProvider().Tracer("bridge")
@@ -102,12 +102,12 @@ Starting from an application using entirely OpenCensus APIs:
 4. Remove OpenCensus Exporters and configuration.
 
 For example, to swap out the OpenCensus logging exporter for the OpenTelemetry stdout exporter:
-```golang
+```go
 import (
 	"go.opencensus.io/metric/metricexport"
-    "go.opentelemetry.io/otel/bridge/opencensus"
+	"go.opentelemetry.io/otel/bridge/opencensus"
 	"go.opentelemetry.io/otel/exporters/stdout" 
-    "go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel"
 )
 // With OpenCensus, you could have previously configured the logging exporter like this:
 //       import logexporter "go.opencensus.io/examples/exporter"
