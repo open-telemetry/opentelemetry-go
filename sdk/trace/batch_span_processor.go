@@ -16,7 +16,6 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
 	"context"
-	"fmt"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -227,7 +226,6 @@ func (bsp *batchSpanProcessor) exportSpans(ctx context.Context) error {
 		bsp.batch = bsp.batch[:0]
 
 		if err != nil {
-			otel.Handle(fmt.Errorf("dropping %d spans: %w", l, err))
 			return err
 		}
 	}
