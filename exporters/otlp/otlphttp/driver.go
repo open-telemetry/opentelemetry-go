@@ -22,7 +22,6 @@ import (
 	"io"
 	"io/ioutil"
 	"math/rand"
-	"net"
 	"net/http"
 	"path"
 	"strings"
@@ -44,24 +43,6 @@ import (
 
 const contentTypeProto = "application/x-protobuf"
 const contentTypeJSON = "application/json"
-
-// Keep it in sync with golang's DefaultTransport from net/http! We
-// have our own copy to avoid handling a situation where the
-// DefaultTransport is overwritten with some different implementation
-// of http.RoundTripper or it's modified by other package.
-var ourTransport *http.Transport = &http.Transport{
-	Proxy: http.ProxyFromEnvironment,
-	DialContext: (&net.Dialer{
-		Timeout:   30 * time.Second,
-		KeepAlive: 30 * time.Second,
-		DualStack: true,
-	}).DialContext,
-	ForceAttemptHTTP2:     true,
-	MaxIdleConns:          100,
-	IdleConnTimeout:       90 * time.Second,
-	TLSHandshakeTimeout:   10 * time.Second,
-	ExpectContinueTimeout: 1 * time.Second,
-}
 
 type driver struct {
 	metricsDriver signalDriver
@@ -115,23 +96,29 @@ func NewDriver(opts ...Option) otlp.ProtocolDriver {
 	}
 
 	metricsClient := &http.Client{
-		Transport: ourTransport,
+		Transport: cfg.Metrics.HTTPTransport,
 		Timeout:   cfg.Metrics.Timeout,
 	}
 	if cfg.Metrics.TLSCfg != nil {
-		transport := ourTransport.Clone()
-		transport.TLSClientConfig = cfg.Metrics.TLSCfg
-		metricsClient.Transport = transport
+		// only support TLS config when the HTTP transport is a *http.Transport
+		if tr, ok := metricsClient.Transport.(*http.Transport); ok {
+			transport := tr.Clone()
+			transport.TLSClientConfig = cfg.Metrics.TLSCfg
+			metricsClient.Transport = transport
+		}
 	}
 
 	tracesClient := &http.Client{
-		Transport: ourTransport,
+		Transport: cfg.Traces.HTTPTransport,
 		Timeout:   cfg.Traces.Timeout,
 	}
 	if cfg.Traces.TLSCfg != nil {
-		transport := ourTransport.Clone()
-		transport.TLSClientConfig = cfg.Traces.TLSCfg
-		tracesClient.Transport = transport
+		// only support TLS config when the HTTP transport is a *http.Transport
+		if tr, ok := tracesClient.Transport.(*http.Transport); ok {
+			transport := tr.Clone()
+			transport.TLSClientConfig = cfg.Traces.TLSCfg
+			tracesClient.Transport = transport
+		}
 	}
 
 	stopCh := make(chan struct{})

@@ -16,6 +16,7 @@ package otlphttp
 
 import (
 	"crypto/tls"
+	"net/http"
 	"time"
 
 	"go.opentelemetry.io/otel/exporters/otlp"
@@ -196,4 +197,28 @@ func WithTracesTimeout(duration time.Duration) Option {
 // each metrics batch.  If unset, the default will be 10 seconds.
 func WithMetricsTimeout(duration time.Duration) Option {
 	return otlpconfig.WithMetricsTimeout(duration)
+}
+
+// WithMetricsHTTPTransport can be used to customize the HTTP transport that is used to
+// handle the HTTP connection to the metrics server
+func WithMetricsHTTPTransport(transport http.RoundTripper) Option {
+	return otlpconfig.WithMetricsHTTPTransport(transport)
+}
+
+// WithTracesHTTPTransport can be used to customize the HTTP transport that is used to
+// handle the HTTP connection to the traces server
+//
+// Note that a client should not provide a otelhttp.Transport to this method, as it will
+// create spans for every outgoing request, causing never-ending trace data.
+func WithTracesHTTPTransport(transport http.RoundTripper) Option {
+	return otlpconfig.WithTracesHTTPTransport(transport)
+}
+
+// WithTracesHTTPTransport can be used to customize the HTTP transport that is used to
+// handle both the HTTP connection to the traces and the metrics server.
+//
+// Note that a client should not provide a otelhttp.Transport to this method, as it will
+// create spans for every outgoing request, causing never-ending trace data.
+func WithHTTPTransport(transport http.RoundTripper) Option {
+	return otlpconfig.WithHTTPTransport(transport)
 }

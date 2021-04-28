@@ -17,6 +17,7 @@ package otlpconfig // import "go.opentelemetry.io/otel/exporters/otlp/internal/o
 import (
 	"crypto/tls"
 	"fmt"
+	"net/http"
 	"time"
 
 	"google.golang.org/grpc"
@@ -64,6 +65,9 @@ type (
 		Timeout     time.Duration
 		URLPath     string
 
+		// http configurations
+		HTTPTransport http.RoundTripper
+
 		// gRPC configurations
 		GRPCCredentials credentials.TransportCredentials
 	}
@@ -89,16 +93,18 @@ type (
 func NewDefaultConfig() Config {
 	c := Config{
 		Traces: SignalConfig{
-			Endpoint:    fmt.Sprintf("%s:%d", otlp.DefaultCollectorHost, otlp.DefaultCollectorPort),
-			URLPath:     DefaultTracesPath,
-			Compression: otlp.NoCompression,
-			Timeout:     DefaultTimeout,
+			Endpoint:      fmt.Sprintf("%s:%d", otlp.DefaultCollectorHost, otlp.DefaultCollectorPort),
+			URLPath:       DefaultTracesPath,
+			Compression:   otlp.NoCompression,
+			Timeout:       DefaultTimeout,
+			HTTPTransport: http.DefaultTransport,
 		},
 		Metrics: SignalConfig{
-			Endpoint:    fmt.Sprintf("%s:%d", otlp.DefaultCollectorHost, otlp.DefaultCollectorPort),
-			URLPath:     DefaultMetricsPath,
-			Compression: otlp.NoCompression,
-			Timeout:     DefaultTimeout,
+			Endpoint:      fmt.Sprintf("%s:%d", otlp.DefaultCollectorHost, otlp.DefaultCollectorPort),
+			URLPath:       DefaultMetricsPath,
+			Compression:   otlp.NoCompression,
+			Timeout:       DefaultTimeout,
+			HTTPTransport: http.DefaultTransport,
 		},
 		MaxAttempts:   DefaultMaxAttempts,
 		Backoff:       DefaultBackoff,
@@ -362,5 +368,24 @@ func WithMaxAttempts(maxAttempts int) GenericOption {
 func WithBackoff(duration time.Duration) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Backoff = duration
+	})
+}
+
+func WithMetricsHTTPTransport(transport http.RoundTripper) HTTPOption {
+	return NewHTTPOption(func(cfg *Config) {
+		cfg.Metrics.HTTPTransport = transport
+	})
+}
+
+func WithTracesHTTPTransport(transport http.RoundTripper) HTTPOption {
+	return NewHTTPOption(func(cfg *Config) {
+		cfg.Traces.HTTPTransport = transport
+	})
+}
+
+func WithHTTPTransport(transport http.RoundTripper) HTTPOption {
+	return NewHTTPOption(func(cfg *Config) {
+		cfg.Metrics.HTTPTransport = transport
+		cfg.Traces.HTTPTransport = transport
 	})
 }
