@@ -251,7 +251,7 @@ func (bsp *batchSpanProcessor) processQueue() {
 		case sd := <-bsp.queue:
 			bsp.batchMutex.Lock()
 			bsp.batch = append(bsp.batch, sd)
-			shouldExport := len(bsp.batch) == bsp.o.MaxExportBatchSize
+			shouldExport := len(bsp.batch) >= bsp.o.MaxExportBatchSize
 			bsp.batchMutex.Unlock()
 			if shouldExport {
 				if !bsp.timer.Stop() {
