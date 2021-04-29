@@ -156,16 +156,14 @@ func (bsp *batchSpanProcessor) Shutdown(ctx context.Context) error {
 func (bsp *batchSpanProcessor) ForceFlush(ctx context.Context) error {
 	var err error
 	if bsp.e != nil {
-		wait := make(chan struct{})
+		wait := make(chan error)
 		go func() {
-			if err := bsp.exportSpans(ctx); err != nil {
-				otel.Handle(err)
-			}
+			wait <- bsp.exportSpans(ctx)
 			close(wait)
 		}()
 		// Wait until the export is finished or the context is cancelled/timed out
 		select {
-		case <-wait:
+		case err = <-wait:
 		case <-ctx.Done():
 			err = ctx.Err()
 		}
@@ -216,11 +214,18 @@ func (bsp *batchSpanProcessor) exportSpans(ctx context.Context) error {
 		defer cancel()
 	}
 
-	if len(bsp.batch) > 0 {
-		if err := bsp.e.ExportSpans(ctx, bsp.batch); err != nil {
+	if l := len(bsp.batch); l > 0 {
+		err := bsp.e.ExportSpans(ctx, bsp.batch)
+
+		// A new batch is always created after exporting, even if the batch failed to be exported.
+		//
+		// It is up to the exporter to implement any type of retry logic if a batch is failing
+		// to be exported, since it is specific to the protocol and backend being sent to.
+		bsp.batch = bsp.batch[:0]
+
+		if err != nil {
 			return err
 		}
-		bsp.batch = bsp.batch[:0]
 	}
 	return nil
 }
@@ -244,7 +249,7 @@ func (bsp *batchSpanProcessor) processQueue() {
 		case sd := <-bsp.queue:
 			bsp.batchMutex.Lock()
 			bsp.batch = append(bsp.batch, sd)
-			shouldExport := len(bsp.batch) == bsp.o.MaxExportBatchSize
+			shouldExport := len(bsp.batch) >= bsp.o.MaxExportBatchSize
 			bsp.batchMutex.Unlock()
 			if shouldExport {
 				if !bsp.timer.Stop() {
