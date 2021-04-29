@@ -407,12 +407,12 @@ func TestBatchSpanProcessorDropBatchIfFailed(t *testing.T) {
 	}
 }
 
-func assertMaxSpanDiff(t *testing.T, want int, got int, maxDif int) {
+func assertMaxSpanDiff(t *testing.T, want, got, maxDif int) {
 	spanDifference := want - got
 	if spanDifference < 0 {
 		spanDifference = spanDifference * -1
 	}
-	if spanDifference > maxDif || spanDifference < 0 {
+	if spanDifference > maxDif {
 		t.Errorf("number of exported span not equal to or within %d less than: got %+v, want %+v\n",
 			maxDif, got, want)
 	}

@@ -158,9 +158,7 @@ func (bsp *batchSpanProcessor) ForceFlush(ctx context.Context) error {
 	if bsp.e != nil {
 		wait := make(chan error)
 		go func() {
-			if err := bsp.exportSpans(ctx); err != nil {
-				wait <- err
-			}
+			wait <- bsp.exportSpans(ctx)
 			close(wait)
 		}()
 		// Wait until the export is finished or the context is cancelled/timed out
