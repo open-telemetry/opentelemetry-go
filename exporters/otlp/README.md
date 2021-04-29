@@ -4,13 +4,12 @@
 
 This exporter exports OpenTelemetry spans and metrics to the OpenTelemetry Collector.
 
-
 ## Installation and Setup
 
 The exporter can be installed using standard `go` functionality.
 
 ```bash
-$ go get -u go.opentelemetry.io/otel/exporters/otlp
+go get -u go.opentelemetry.io/otel/exporters/otlp
 ```
 
 A new exporter can be created using the `NewExporter` function.
