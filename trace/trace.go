@@ -17,6 +17,7 @@ package trace // import "go.opentelemetry.io/otel/trace"
 import (
 	"bytes"
 	"context"
+	"encoding/gob"
 	"encoding/hex"
 	"encoding/json"
 	"regexp"
@@ -188,6 +189,29 @@ var keyFormatRegExp = regexp.MustCompile(
 	`^((` + traceStateKeyFormat + `)|(` + traceStateKeyFormatWithMultiTenantVendor + `))$`,
 )
 var valueFormatRegExp = regexp.MustCompile(`^(` + traceStateValueFormat + `)$`)
+
+// GobDecode implements a custom unmarshal function to decode trace state.
+func (ts *TraceState) GobDecode(input []byte) error {
+	var kvs []attribute.KeyValue
+	dec := gob.NewDecoder(bytes.NewBuffer(input))
+	if err := dec.Decode(&kvs); err != nil {
+		return err
+	}
+	if v, err := TraceStateFromKeyValues(kvs...); err == nil {
+		*ts = v
+		return nil
+	} else {
+		return err
+	}
+}
+
+// GobEncode implements a custom marshal function to encode trace state.
+func (ts TraceState) GobEncode() ([]byte, error) {
+	buf := bytes.Buffer{}
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(ts.kvs)
+	return buf.Bytes(), err
+}
 
 // MarshalJSON implements a custom marshal function to encode trace state.
 func (ts TraceState) MarshalJSON() ([]byte, error) {

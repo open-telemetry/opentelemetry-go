@@ -15,6 +15,8 @@
 package trace
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"testing"
 
@@ -902,6 +904,61 @@ func TestTraceStateFromKeyValues(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestTraceStateGobEncoding(t *testing.T) {
+	ts := TraceState{kvs: []attribute.KeyValue{
+		attribute.Bool("attr-bool", true),
+		attribute.Array("attr-bool-array", [2]bool{true, false}),
+		attribute.Int("attr-int", 42),
+		attribute.Array("attr-int-array", [2]int{11, 22}),
+		attribute.Int64("attr-int64", 42),
+		attribute.Array("attr-int64-array", [2]int64{11, 22}),
+		attribute.Float64("attr-float64", 42.1),
+		attribute.Array("attr-float64-array", [2]float64{11.1, 22.2}),
+		attribute.String("attr-string", "foo"),
+		attribute.Array("attr-string-array", [2]string{"foo", "bar baz"}),
+	}}
+
+	encoded, err := ts.GobEncode()
+	assert.NoError(t, err)
+	var decoded TraceState
+	err = decoded.GobDecode(encoded)
+	assert.NoError(t, err)
+	assert.Equal(t, ts, decoded)
+}
+
+func TestSpanContextConfigGobEncoding(t *testing.T) {
+	scc := SpanContextConfig{
+		Remote:     false,
+		SpanID:     SpanID([8]byte{42}),
+		TraceID:    TraceID([16]byte{43}),
+		TraceFlags: TraceFlags(3),
+		TraceState: TraceState{kvs: []attribute.KeyValue{
+			attribute.Bool("attr-bool", true),
+			attribute.Array("attr-bool-array", [2]bool{true, false}),
+			attribute.Int("attr-int", 42),
+			attribute.Array("attr-int-array", [2]int{11, 22}),
+			attribute.Int64("attr-int64", 42),
+			attribute.Array("attr-int64-array", [2]int64{11, 22}),
+			attribute.Float64("attr-float64", 42.1),
+			attribute.Array("attr-float64-array", [2]float64{11.1, 22.2}),
+			attribute.String("attr-string", "foo"),
+			attribute.Array("attr-string-array", [2]string{"foo", "bar baz"}),
+		}},
+	}
+
+	buf := bytes.Buffer{}
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(scc)
+	assert.NoError(t, err)
+	encoded := buf.Bytes()
+
+	var decoded SpanContextConfig
+	dec := gob.NewDecoder(bytes.NewBuffer(encoded))
+	err = dec.Decode(&decoded)
+	assert.NoError(t, err)
+	assert.Equal(t, scc, decoded)
 }
 
 func assertSpanContextEqual(got SpanContext, want SpanContext) bool {
