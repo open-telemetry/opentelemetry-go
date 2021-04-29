@@ -21,6 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
       | 10 | Out of Range |
       | 14 | Unavailable |
       | 15 | Data Loss |
+- Added gob encoding support for attribute value and trace state. (#1868)
 
 ### Changed
 
