@@ -13,7 +13,7 @@ A sampler needs to be set on the tracer provider when its configured, as follows
 
 ```go
 provider := sdktrace.NewTracerProvider(
-  sdktrace.WithSampler(sdktrace.AlwaysSample()),
+	sdktrace.WithSampler(sdktrace.AlwaysSample()),
 )
 ```
 
@@ -34,14 +34,14 @@ Resources should be assigned to a tracer provider at its initialization, and are
 
 ```go
 resources := resource.New(
-  attribute.String("service.name", "myService"),
-  attribute.String("service.version", "1.0.0"),
-  attribute.String("instance.id", "abcdef12345"),
+	attribute.String("service.name", "myService"),
+	attribute.String("service.version", "1.0.0"),
+	attribute.String("instance.id", "abcdef12345"),
 )
 
 provider := sdktrace.NewTracerProvider(
-  ...
-  sdktrace.WithResources(resources),
+	...
+	sdktrace.WithResources(resources),
 )
 ```
 
