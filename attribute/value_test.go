@@ -136,3 +136,93 @@ func TestAsArrayValue(t *testing.T) {
 		t.Errorf("AsArray() returned %T, want %T", got, want)
 	}
 }
+
+func TestGobEncoding(t *testing.T) {
+	k := attribute.Key("test")
+	bli := getBitlessInfo(42)
+	for _, testcase := range []struct {
+		name      string
+		value     attribute.Value
+		wantType  attribute.Type
+		wantValue interface{}
+	}{
+		{
+			name:      "Key.Bool() correctly processed with gob encoding",
+			value:     k.Bool(true).Value,
+			wantType:  attribute.BOOL,
+			wantValue: true,
+		},
+		{
+			name:      "Key.Array([]bool) correctly processed with gob encoding",
+			value:     k.Array([]bool{true, false}).Value,
+			wantType:  attribute.ARRAY,
+			wantValue: [2]bool{true, false},
+		},
+		{
+			name:      "Key.Int64() correctly processed with gob encoding",
+			value:     k.Int64(42).Value,
+			wantType:  attribute.INT64,
+			wantValue: int64(42),
+		},
+		{
+			name:      "Key.Float64() correctly processed with gob encoding",
+			value:     k.Float64(42.1).Value,
+			wantType:  attribute.FLOAT64,
+			wantValue: 42.1,
+		},
+		{
+			name:      "Key.String() correctly processed with gob encoding",
+			value:     k.String("foo").Value,
+			wantType:  attribute.STRING,
+			wantValue: "foo",
+		},
+		{
+			name:      "Key.Int() correctly processed with gob encoding",
+			value:     k.Int(bli.intValue).Value,
+			wantType:  bli.signedType,
+			wantValue: bli.signedValue,
+		},
+		{
+			name:      "Key.Array([]int64) correctly processed with gob encoding",
+			value:     k.Array([]int64{42, 43}).Value,
+			wantType:  attribute.ARRAY,
+			wantValue: [2]int64{42, 43},
+		},
+		{
+			name:      "Key.Array([]float64) correctly processed with gob encoding",
+			value:     k.Array([]float64{42, 43}).Value,
+			wantType:  attribute.ARRAY,
+			wantValue: [2]float64{42, 43},
+		},
+		{
+			name:      "Key.Array([]string) correctly processed with gob encoding",
+			value:     k.Array([]string{"foo", "bar"}).Value,
+			wantType:  attribute.ARRAY,
+			wantValue: [2]string{"foo", "bar"},
+		},
+		{
+			name:      "Key.Array([]int) correctly processed with gob encoding",
+			value:     k.Array([]int{42, 43}).Value,
+			wantType:  attribute.ARRAY,
+			wantValue: [2]int{42, 43},
+		},
+	} {
+		t.Logf("Running test case %s", testcase.name)
+		encoded, err := testcase.value.GobEncode()
+		if err != nil {
+			t.Errorf("encode error: %v", err)
+		}
+		var decoded attribute.Value
+		err = decoded.GobDecode(encoded)
+		if err != nil {
+			t.Errorf("decode error: %v", err)
+		}
+		if decoded.Type() != testcase.wantType {
+			t.Errorf("wrong value type, got %#v, expected %#v", testcase.value.Type(), testcase.wantType)
+		}
+		got := decoded.AsInterface()
+		if diff := cmp.Diff(testcase.wantValue, got); diff != "" {
+			t.Errorf("+got, -want: %s", diff)
+		}
+	}
+}

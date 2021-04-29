@@ -15,6 +15,8 @@
 package attribute // import "go.opentelemetry.io/otel/attribute"
 
 import (
+	"bytes"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -201,4 +203,86 @@ func (v Value) MarshalJSON() ([]byte, error) {
 	jsonVal.Type = v.Type().String()
 	jsonVal.Value = v.AsInterface()
 	return json.Marshal(jsonVal)
+}
+
+// GobDecode implements a custom unmarshal function to decode value.
+func (v *Value) GobDecode(input []byte) error {
+	var gobVal struct {
+		Vtype    Type
+		Numeric  uint64
+		Stringly string
+		Slice    interface{}
+	}
+	dec := gob.NewDecoder(bytes.NewBuffer(input))
+	if err := dec.Decode(&gobVal); err != nil {
+		return err
+	}
+	if gobVal.Vtype == ARRAY {
+		*v = ArrayValue(gobVal.Slice)
+		return nil
+	}
+	*v = Value{
+		vtype:    gobVal.Vtype,
+		numeric:  gobVal.Numeric,
+		stringly: gobVal.Stringly,
+	}
+	return nil
+}
+
+// GobEncode implements a custom marshal function to encode value.
+func (v Value) GobEncode() ([]byte, error) {
+	gobVal := struct {
+		Vtype    Type
+		Numeric  uint64
+		Stringly string
+		Slice    interface{}
+	}{
+		Vtype:    v.vtype,
+		Numeric:  v.numeric,
+		Stringly: v.stringly,
+	}
+	// convert array to slice for use preregistered gob types
+	if v.vtype == ARRAY {
+		switch reflect.TypeOf(v.array).Kind() {
+		case reflect.Array, reflect.Slice:
+			val := reflect.ValueOf(v.array)
+			kind := reflect.TypeOf(v.array).Elem().Kind()
+			switch kind {
+			case reflect.Bool:
+				s := make([]bool, val.Len())
+				for i := range s {
+					s[i] = val.Index(i).Bool()
+				}
+				gobVal.Slice = s
+			case reflect.Int:
+				s := make([]int, val.Len())
+				for i := range s {
+					s[i] = int(val.Index(i).Int())
+				}
+				gobVal.Slice = s
+			case reflect.Int64:
+				s := make([]int64, val.Len())
+				for i := range s {
+					s[i] = val.Index(i).Int()
+				}
+				gobVal.Slice = s
+			case reflect.Float64:
+				s := make([]float64, val.Len())
+				for i := range s {
+					s[i] = val.Index(i).Float()
+				}
+				gobVal.Slice = s
+			case reflect.String:
+				s := make([]string, val.Len())
+				for i := range s {
+					s[i] = val.Index(i).String()
+				}
+				gobVal.Slice = s
+			}
+		}
+	}
+	buf := bytes.Buffer{}
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(gobVal)
+	return buf.Bytes(), err
 }
