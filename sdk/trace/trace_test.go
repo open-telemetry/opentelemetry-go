@@ -559,7 +559,7 @@ func TestEvents(t *testing.T) {
 		}),
 		Parent: sc.WithRemote(true),
 		Name:   "span0",
-		MessageEvents: []trace.Event{
+		MessageEvents: []Event{
 			{Name: "foo", Attributes: []attribute.KeyValue{k1v1}},
 			{Name: "bar", Attributes: []attribute.KeyValue{k2v2, k3v3}},
 		},
@@ -608,7 +608,7 @@ func TestEventsOverLimit(t *testing.T) {
 		}),
 		Parent: sc.WithRemote(true),
 		Name:   "span0",
-		MessageEvents: []trace.Event{
+		MessageEvents: []Event{
 			{Name: "foo", Attributes: []attribute.KeyValue{k1v1}},
 			{Name: "bar", Attributes: []attribute.KeyValue{k2v2, k3v3}},
 		},
@@ -781,7 +781,7 @@ func TestSetSpanStatusWithoutMessageWhenStatusIsNotError(t *testing.T) {
 func cmpDiff(x, y interface{}) string {
 	return cmp.Diff(x, y,
 		cmp.AllowUnexported(attribute.Value{}),
-		cmp.AllowUnexported(trace.Event{}),
+		cmp.AllowUnexported(Event{}),
 		cmp.AllowUnexported(trace.TraceState{}))
 }
 
@@ -1119,7 +1119,7 @@ func TestRecordError(t *testing.T) {
 			Name:       "span0",
 			StatusCode: codes.Unset,
 			SpanKind:   trace.SpanKindInternal,
-			MessageEvents: []trace.Event{
+			MessageEvents: []Event{
 				{
 					Name: semconv.ExceptionEventName,
 					Time: errTime,
@@ -1489,7 +1489,7 @@ func TestAddEventsWithMoreAttributesThanLimit(t *testing.T) {
 		Parent:     sc.WithRemote(true),
 		Name:       "span0",
 		Attributes: nil,
-		MessageEvents: []trace.Event{
+		MessageEvents: []Event{
 			{
 				Name: "test1",
 				Attributes: []attribute.KeyValue{

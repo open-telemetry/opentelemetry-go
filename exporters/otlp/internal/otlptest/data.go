@@ -97,7 +97,7 @@ func SingleSpanSnapshot() []*tracesdk.SpanSnapshot {
 		StartTime:                time.Date(2020, time.December, 8, 20, 23, 0, 0, time.UTC),
 		EndTime:                  time.Date(2020, time.December, 0, 20, 24, 0, 0, time.UTC),
 		Attributes:               []attribute.KeyValue{},
-		MessageEvents:            []trace.Event{},
+		MessageEvents:            []tracesdk.Event{},
 		Links:                    []trace.Link{},
 		StatusCode:               codes.Ok,
 		StatusMessage:            "",

@@ -159,7 +159,7 @@ func Default() *Resource {
 func Environment() *Resource {
 	detector := &fromEnv{}
 	resource, err := detector.Detect(context.Background())
-	if err == nil {
+	if err != nil {
 		otel.Handle(err)
 	}
 	return resource

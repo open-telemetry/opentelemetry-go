@@ -16,7 +16,9 @@ package trace_test
 
 import (
 	"context"
+	"errors"
 	"testing"
+	"time"
 
 	"go.opentelemetry.io/otel/trace"
 
@@ -141,4 +143,25 @@ func TestSimpleSpanProcessorShutdownOnEndConcurrency(t *testing.T) {
 
 	stop <- struct{}{}
 	<-done
+}
+
+func TestSimpleSpanProcessorShutdownHonorsContextDeadline(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
+	defer cancel()
+	<-ctx.Done()
+
+	ssp := sdktrace.NewSimpleSpanProcessor(&testExporter{})
+	if got, want := ssp.Shutdown(ctx), context.DeadlineExceeded; !errors.Is(got, want) {
+		t.Errorf("SimpleSpanProcessor.Shutdown did not return %v, got %v", want, got)
+	}
+}
+
+func TestSimpleSpanProcessorShutdownHonorsContextCancel(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	ssp := sdktrace.NewSimpleSpanProcessor(&testExporter{})
+	if got, want := ssp.Shutdown(ctx), context.Canceled; !errors.Is(got, want) {
+		t.Errorf("SimpleSpanProcessor.Shutdown did not return %v, got %v", want, got)
+	}
 }
