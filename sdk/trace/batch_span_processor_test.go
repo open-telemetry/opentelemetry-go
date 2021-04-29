@@ -418,31 +418,33 @@ func assertMaxSpanDiff(t *testing.T, want, got, maxDif int) {
 	}
 }
 
+type indefiniteExporter struct{}
+
+func (indefiniteExporter) Shutdown(context.Context) error { return nil }
+func (indefiniteExporter) ExportSpans(ctx context.Context, _ []*sdktrace.SpanSnapshot) error {
+	<-ctx.Done()
+	return ctx.Err()
+}
+
 func TestBatchSpanProcessorForceFlushTimeout(t *testing.T) {
-	var bp testBatchExporter
-	bsp := sdktrace.NewBatchSpanProcessor(&bp)
 	// Add timeout to context to test deadline
 	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
 	defer cancel()
 	<-ctx.Done()
 
-	if err := bsp.ForceFlush(ctx); err == nil {
-		t.Error("expected context DeadlineExceeded error, got nil")
-	} else if !errors.Is(err, context.DeadlineExceeded) {
-		t.Errorf("expected context DeadlineExceeded error, got %v", err)
+	bsp := sdktrace.NewBatchSpanProcessor(indefiniteExporter{})
+	if got, want := bsp.ForceFlush(ctx), context.DeadlineExceeded; !errors.Is(got, want) {
+		t.Errorf("expected %q error, got %v", want, got)
 	}
 }
 
 func TestBatchSpanProcessorForceFlushCancellation(t *testing.T) {
-	var bp testBatchExporter
-	bsp := sdktrace.NewBatchSpanProcessor(&bp)
 	ctx, cancel := context.WithCancel(context.Background())
 	// Cancel the context
 	cancel()
 
-	if err := bsp.ForceFlush(ctx); err == nil {
-		t.Error("expected context canceled error, got nil")
-	} else if !errors.Is(err, context.Canceled) {
-		t.Errorf("expected context canceled error, got %v", err)
+	bsp := sdktrace.NewBatchSpanProcessor(indefiniteExporter{})
+	if got, want := bsp.ForceFlush(ctx), context.Canceled; !errors.Is(got, want) {
+		t.Errorf("expected %q error, got %v", want, got)
 	}
 }

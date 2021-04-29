@@ -45,7 +45,7 @@ type ReadOnlySpan interface {
 	EndTime() time.Time
 	Attributes() []attribute.KeyValue
 	Links() []trace.Link
-	Events() []trace.Event
+	Events() []Event
 	StatusCode() codes.Code
 	StatusMessage() string
 	Tracer() trace.Tracer
@@ -295,7 +295,7 @@ func (s *span) addEvent(name string, o ...trace.EventOption) {
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.messageEvents.add(trace.Event{
+	s.messageEvents.add(Event{
 		Name:                  name,
 		Attributes:            c.Attributes,
 		DroppedAttributeCount: discarded,
@@ -372,11 +372,11 @@ func (s *span) Links() []trace.Link {
 }
 
 // Events returns the events of this span.
-func (s *span) Events() []trace.Event {
+func (s *span) Events() []Event {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if len(s.messageEvents.queue) == 0 {
-		return []trace.Event{}
+		return []Event{}
 	}
 	return s.interfaceArrayToMessageEventArray()
 }
@@ -469,10 +469,10 @@ func (s *span) interfaceArrayToLinksArray() []trace.Link {
 	return linkArr
 }
 
-func (s *span) interfaceArrayToMessageEventArray() []trace.Event {
-	messageEventArr := make([]trace.Event, 0)
+func (s *span) interfaceArrayToMessageEventArray() []Event {
+	messageEventArr := make([]Event, 0)
 	for _, value := range s.messageEvents.queue {
-		messageEventArr = append(messageEventArr, value.(trace.Event))
+		messageEventArr = append(messageEventArr, value.(Event))
 	}
 	return messageEventArr
 }
@@ -595,7 +595,7 @@ type SpanSnapshot struct {
 	// from StartTime by the duration of the span.
 	EndTime       time.Time
 	Attributes    []attribute.KeyValue
-	MessageEvents []trace.Event
+	MessageEvents []Event
 	Links         []trace.Link
 	StatusCode    codes.Code
 	StatusMessage string
