@@ -34,11 +34,12 @@ import (
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
-func makeMockCollector(t *testing.T) *mockCollector {
+func makeMockCollector(t *testing.T, mockConfig *mockConfig) *mockCollector {
 	return &mockCollector{
 		t: t,
 		traceSvc: &mockTraceService{
 			storage: otlptest.NewSpansStorage(),
+			errors:  mockConfig.errors,
 		},
 		metricSvc: &mockMetricService{
 			storage: otlptest.NewMetricsStorage(),
@@ -49,10 +50,12 @@ func makeMockCollector(t *testing.T) *mockCollector {
 type mockTraceService struct {
 	collectortracepb.UnimplementedTraceServiceServer
 
-	mu      sync.RWMutex
-	storage otlptest.SpansStorage
-	headers metadata.MD
-	delay   time.Duration
+	errors   []error
+	requests int
+	mu       sync.RWMutex
+	storage  otlptest.SpansStorage
+	headers  metadata.MD
+	delay    time.Duration
 }
 
 func (mts *mockTraceService) getHeaders() metadata.MD {
@@ -77,9 +80,19 @@ func (mts *mockTraceService) Export(ctx context.Context, exp *collectortracepb.E
 	if mts.delay > 0 {
 		time.Sleep(mts.delay)
 	}
-	reply := &collectortracepb.ExportTraceServiceResponse{}
+
 	mts.mu.Lock()
-	defer mts.mu.Unlock()
+	defer func() {
+		mts.requests++
+		mts.mu.Unlock()
+	}()
+
+	reply := &collectortracepb.ExportTraceServiceResponse{}
+	if mts.requests < len(mts.errors) {
+		idx := mts.requests
+		return reply, mts.errors[idx]
+	}
+
 	mts.headers, _ = metadata.FromIncomingContext(ctx)
 	mts.storage.AddSpans(exp)
 	return reply, nil
@@ -120,6 +133,11 @@ type mockCollector struct {
 	ln       *listener
 	stopFunc func()
 	stopOnce sync.Once
+}
+
+type mockConfig struct {
+	errors   []error
+	endpoint string
 }
 
 var _ collectortracepb.TraceServiceServer = (*mockTraceService)(nil)
@@ -192,13 +210,17 @@ func runMockCollector(t *testing.T) *mockCollector {
 }
 
 func runMockCollectorAtEndpoint(t *testing.T, endpoint string) *mockCollector {
-	ln, err := net.Listen("tcp", endpoint)
+	return runMockCollectorWithConfig(t, &mockConfig{endpoint: endpoint})
+}
+
+func runMockCollectorWithConfig(t *testing.T, mockConfig *mockConfig) *mockCollector {
+	ln, err := net.Listen("tcp", mockConfig.endpoint)
 	if err != nil {
 		t.Fatalf("Failed to get an endpoint: %v", err)
 	}
 
 	srv := grpc.NewServer()
-	mc := makeMockCollector(t)
+	mc := makeMockCollector(t, mockConfig)
 	collectortracepb.RegisterTraceServiceServer(srv, mc.traceSvc)
 	collectormetricpb.RegisterMetricsServiceServer(srv, mc.metricSvc)
 	mc.ln = newListener(ln)

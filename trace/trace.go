@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"regexp"
 	"strings"
-	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -537,22 +536,6 @@ type Span interface {
 	// already exists for an attribute of the Span it will be overwritten with
 	// the value contained in kv.
 	SetAttributes(kv ...attribute.KeyValue)
-}
-
-// Event is a thing that happened during a Span's lifetime.
-type Event struct {
-	// Name is the name of this event
-	Name string
-
-	// Attributes describe the aspects of the event.
-	Attributes []attribute.KeyValue
-
-	// DroppedAttributeCount is the number of attributes that were not
-	// recorded due to configured limits being reached.
-	DroppedAttributeCount int
-
-	// Time at which this event was recorded.
-	Time time.Time
 }
 
 // Link is the relationship between two Spans. The relationship can be within

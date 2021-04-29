@@ -10,16 +10,33 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Adds `otlpgrpc.WithRetry`option for configuring the retry policy for transient errors on the otlp/gRPC exporter. (#1832)
+  - The following status codes are defined as transient errors:
+      | gRPC Status Code | Description |
+      | ---------------- | ----------- |
+      | 1  | Cancelled |
+      | 4  | Deadline Exceeded |
+      | 8  | Resource Exhausted |
+      | 10 | Aborted |
+      | 10 | Out of Range |
+      | 14 | Unavailable |
+      | 15 | Data Loss |
+
 ### Changed
 
 - Make `NewSplitDriver` from `go.opentelemetry.io/otel/exporters/otlp` take variadic arguments instead of a `SplitConfig` item.
   `NewSplitDriver` now automatically implements an internal `noopDriver` for `SplitConfig` fields that are not initialized. (#1798)
+- `resource.New()` now creates a Resource without builtin detectors. Previous behavior is now achieved by using `WithBuiltinDetectors` Option. (#1810)
+- Move the `Event` type from the `go.opentelemetry.io/otel` package to the `go.opentelemetry.io/otel/sdk/trace` package. (#1846)
 - BatchSpanProcessor now report export failures when calling `ForceFlush()` method. (#1860)
 - `Set.Encoded(Encoder)` no longer caches the result of an encoding. (#1855)
 
 ### Deprecated
 
 ### Removed
+
+- Remove `resource.WithoutBuiltin()`. Use `resource.New()`. (#1810)
+- Unexported types `resource.FromEnv`, `resource.Host`, and `resource.TelemetrySDK`, Use the corresponding `With*()` to use individually. (#1810)
 
 ### Fixed
 

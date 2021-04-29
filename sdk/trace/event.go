@@ -12,39 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package resource_test
+package trace
 
 import (
-	"context"
-	"testing"
+	"time"
 
-	"github.com/stretchr/testify/require"
-
-	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/attribute"
 )
 
-func mockRuntimeProviders() {
-	resource.SetRuntimeProviders(
-		fakeRuntimeNameProvider,
-		fakeRuntimeVersionProvider,
-		func() string { return "LINUX" },
-		fakeRuntimeArchProvider,
-	)
-}
+// Event is a thing that happened during a Span's lifetime.
+type Event struct {
+	// Name is the name of this event
+	Name string
 
-func TestWithOSType(t *testing.T) {
-	mockRuntimeProviders()
+	// Attributes describe the aspects of the event.
+	Attributes []attribute.KeyValue
 
-	ctx := context.Background()
+	// DroppedAttributeCount is the number of attributes that were not
+	// recorded due to configured limits being reached.
+	DroppedAttributeCount int
 
-	res, err := resource.New(ctx,
-		resource.WithOSType(),
-	)
-
-	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"os.type": "linux",
-	}, toMap(res))
-
-	restoreProcessAttributesProviders()
+	// Time at which this event was recorded.
+	Time time.Time
 }
