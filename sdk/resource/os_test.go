@@ -38,7 +38,6 @@ func TestWithOSType(t *testing.T) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
-		resource.WithoutBuiltin(),
 		resource.WithOSType(),
 	)
 

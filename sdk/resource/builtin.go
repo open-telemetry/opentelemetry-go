@@ -26,19 +26,19 @@ import (
 )
 
 type (
-	// TelemetrySDK is a Detector that provides information about
+	// telemetrySDK is a Detector that provides information about
 	// the OpenTelemetry SDK used.  This Detector is included as a
 	// builtin. If these resource attributes are not wanted, use
 	// the WithTelemetrySDK(nil) or WithoutBuiltin() options to
 	// explicitly disable them.
-	TelemetrySDK struct{}
+	telemetrySDK struct{}
 
-	// Host is a Detector that provides information about the host
+	// host is a Detector that provides information about the host
 	// being run on. This Detector is included as a builtin. If
 	// these resource attributes are not wanted, use the
 	// WithHost(nil) or WithoutBuiltin() options to explicitly
 	// disable them.
-	Host struct{}
+	host struct{}
 
 	stringDetector struct {
 		K attribute.Key
@@ -49,14 +49,14 @@ type (
 )
 
 var (
-	_ Detector = TelemetrySDK{}
-	_ Detector = Host{}
+	_ Detector = telemetrySDK{}
+	_ Detector = host{}
 	_ Detector = stringDetector{}
 	_ Detector = defaultServiceNameDetector{}
 )
 
 // Detect returns a *Resource that describes the OpenTelemetry SDK used.
-func (TelemetrySDK) Detect(context.Context) (*Resource, error) {
+func (telemetrySDK) Detect(context.Context) (*Resource, error) {
 	return NewWithAttributes(
 		semconv.TelemetrySDKNameKey.String("opentelemetry"),
 		semconv.TelemetrySDKLanguageKey.String("go"),
@@ -65,7 +65,7 @@ func (TelemetrySDK) Detect(context.Context) (*Resource, error) {
 }
 
 // Detect returns a *Resource that describes the host being run on.
-func (Host) Detect(ctx context.Context) (*Resource, error) {
+func (host) Detect(ctx context.Context) (*Resource, error) {
 	return StringDetector(semconv.HostNameKey, os.Hostname).Detect(ctx)
 }
 

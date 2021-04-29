@@ -31,18 +31,18 @@ var (
 	errMissingValue = fmt.Errorf("%w: missing value", ErrPartialResource)
 )
 
-// FromEnv is a Detector that implements the Detector and collects
+// fromEnv is a Detector that implements the Detector and collects
 // resources from environment.  This Detector is included as a
 // builtin.  If these resource attributes are not wanted, use the
 // WithFromEnv(nil) or WithoutBuiltin() options to explicitly disable
 // them.
-type FromEnv struct{}
+type fromEnv struct{}
 
 // compile time assertion that FromEnv implements Detector interface
-var _ Detector = FromEnv{}
+var _ Detector = fromEnv{}
 
 // Detect collects resources from environment
-func (FromEnv) Detect(context.Context) (*Resource, error) {
+func (fromEnv) Detect(context.Context) (*Resource, error) {
 	attrs := strings.TrimSpace(os.Getenv(envVar))
 
 	if attrs == "" {

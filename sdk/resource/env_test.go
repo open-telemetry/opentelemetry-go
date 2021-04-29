@@ -33,7 +33,7 @@ func TestDetectOnePair(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { require.NoError(t, store.Restore()) }()
 
-	detector := &FromEnv{}
+	detector := &fromEnv{}
 	res, err := detector.Detect(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, NewWithAttributes(attribute.String("key", "value")), res)
@@ -47,7 +47,7 @@ func TestDetectMultiPairs(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { require.NoError(t, store.Restore()) }()
 
-	detector := &FromEnv{}
+	detector := &fromEnv{}
 	res, err := detector.Detect(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, res, NewWithAttributes(
@@ -65,7 +65,7 @@ func TestEmpty(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { require.NoError(t, store.Restore()) }()
 
-	detector := &FromEnv{}
+	detector := &fromEnv{}
 	res, err := detector.Detect(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, Empty(), res)
@@ -78,7 +78,7 @@ func TestMissingKeyError(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { require.NoError(t, store.Restore()) }()
 
-	detector := &FromEnv{}
+	detector := &fromEnv{}
 	res, err := detector.Detect(context.Background())
 	assert.Error(t, err)
 	assert.Equal(t, err, fmt.Errorf("%w: %v", errMissingValue, "[key]"))

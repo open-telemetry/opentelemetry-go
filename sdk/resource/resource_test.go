@@ -15,8 +15,10 @@
 package resource_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -25,6 +27,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/semconv"
 )
@@ -38,7 +41,7 @@ var (
 	kv42 = attribute.String("k4", "")
 )
 
-func TestNew(t *testing.T) {
+func TestNewWithAttributes(t *testing.T) {
 	cases := []struct {
 		name string
 		in   []attribute.KeyValue
@@ -252,6 +255,8 @@ func TestString(t *testing.T) {
 	}
 }
 
+const envVar = "OTEL_RESOURCE_ATTRIBUTES"
+
 func TestMarshalJSON(t *testing.T) {
 	r := resource.NewWithAttributes(attribute.Int64("A", 1), attribute.String("C", "D"))
 	data, err := json.Marshal(r)
@@ -259,4 +264,176 @@ func TestMarshalJSON(t *testing.T) {
 	require.Equal(t,
 		`[{"Key":"A","Value":{"Type":"INT64","Value":1}},{"Key":"C","Value":{"Type":"STRING","Value":"D"}}]`,
 		string(data))
+}
+
+func TestNew(t *testing.T) {
+	tc := []struct {
+		name      string
+		envars    string
+		detectors []resource.Detector
+		options   []resource.Option
+
+		resourceValues map[string]string
+	}{
+		{
+			name:           "No Options returns empty resrouce",
+			envars:         "key=value,other=attr",
+			options:        nil,
+			resourceValues: map[string]string{},
+		},
+		{
+			name:   "Nil Detectors works",
+			envars: "key=value,other=attr",
+			options: []resource.Option{
+				resource.WithDetectors(),
+			},
+			resourceValues: map[string]string{},
+		},
+		{
+			name:   "Only Host",
+			envars: "from=here",
+			options: []resource.Option{
+				resource.WithHost(),
+			},
+			resourceValues: map[string]string{
+				"host.name": hostname(),
+			},
+		},
+		{
+			name:   "Only Env",
+			envars: "key=value,other=attr",
+			options: []resource.Option{
+				resource.WithFromEnv(),
+			},
+			resourceValues: map[string]string{
+				"key":   "value",
+				"other": "attr",
+			},
+		},
+		{
+			name:   "Only TelemetrySDK",
+			envars: "",
+			options: []resource.Option{
+				resource.WithTelemetrySDK(),
+			},
+			resourceValues: map[string]string{
+				"telemetry.sdk.name":     "opentelemetry",
+				"telemetry.sdk.language": "go",
+				"telemetry.sdk.version":  otel.Version(),
+			},
+		},
+		{
+			name:   "WithAttributes",
+			envars: "key=value,other=attr",
+			options: []resource.Option{
+				resource.WithAttributes(attribute.String("A", "B")),
+			},
+			resourceValues: map[string]string{
+				"A": "B",
+			},
+		},
+		{
+			name:   "Builtins",
+			envars: "key=value,other=attr",
+			options: []resource.Option{
+				resource.WithBuiltinDetectors(),
+			},
+			resourceValues: map[string]string{
+				"host.name":              hostname(),
+				"telemetry.sdk.name":     "opentelemetry",
+				"telemetry.sdk.language": "go",
+				"telemetry.sdk.version":  otel.Version(),
+				"key":                    "value",
+				"other":                  "attr",
+			},
+		},
+	}
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
+			store, err := ottest.SetEnvVariables(map[string]string{
+				envVar: tt.envars,
+			})
+			require.NoError(t, err)
+			defer func() { require.NoError(t, store.Restore()) }()
+
+			ctx := context.Background()
+			res, err := resource.New(ctx, tt.options...)
+
+			require.NoError(t, err)
+			require.EqualValues(t, tt.resourceValues, toMap(res))
+		})
+	}
+}
+
+func TestNewWithBuiltinDetectors(t *testing.T) {
+	tc := []struct {
+		name      string
+		envars    string
+		detectors []resource.Detector
+		options   []resource.Option
+
+		resourceValues map[string]string
+	}{
+		{
+			name:    "No Options returns builtin",
+			envars:  "key=value,other=attr",
+			options: nil,
+			resourceValues: map[string]string{
+				"host.name":              hostname(),
+				"telemetry.sdk.name":     "opentelemetry",
+				"telemetry.sdk.language": "go",
+				"telemetry.sdk.version":  otel.Version(),
+				"key":                    "value",
+				"other":                  "attr",
+			},
+		},
+		{
+			name:   "WithAttributes",
+			envars: "key=value,other=attr",
+			options: []resource.Option{
+				resource.WithAttributes(attribute.String("A", "B")),
+			},
+			resourceValues: map[string]string{
+				"host.name":              hostname(),
+				"telemetry.sdk.name":     "opentelemetry",
+				"telemetry.sdk.language": "go",
+				"telemetry.sdk.version":  otel.Version(),
+				"key":                    "value",
+				"other":                  "attr",
+				"A":                      "B",
+			},
+		},
+	}
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
+			store, err := ottest.SetEnvVariables(map[string]string{
+				envVar: tt.envars,
+			})
+			require.NoError(t, err)
+			defer func() { require.NoError(t, store.Restore()) }()
+
+			ctx := context.Background()
+			options := append([]resource.Option{resource.WithBuiltinDetectors()}, tt.options...)
+			res, err := resource.New(ctx, options...)
+
+			require.NoError(t, err)
+			require.EqualValues(t, tt.resourceValues, toMap(res))
+		})
+	}
+}
+
+func toMap(res *resource.Resource) map[string]string {
+	m := map[string]string{}
+	for _, attr := range res.Attributes() {
+		m[string(attr.Key)] = attr.Value.Emit()
+	}
+	return m
+}
+
+func hostname() string {
+	hn, err := os.Hostname()
+	if err != nil {
+		return fmt.Sprintf("hostname(%s)", err)
+	}
+	return hn
 }

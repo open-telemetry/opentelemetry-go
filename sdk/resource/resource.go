@@ -40,8 +40,18 @@ var (
 			otel.Handle(err)
 		}
 		return r
-	}(Detect(context.Background(), defaultServiceNameDetector{}, FromEnv{}, TelemetrySDK{}))
+	}(Detect(context.Background(), defaultServiceNameDetector{}, fromEnv{}, telemetrySDK{}))
 )
+
+// New returns a Resource combined from the user-provided detectors.
+func New(ctx context.Context, opts ...Option) (*Resource, error) {
+	cfg := config{}
+	for _, opt := range opts {
+		opt.Apply(&cfg)
+	}
+
+	return Detect(ctx, cfg.detectors...)
+}
 
 // NewWithAttributes creates a resource from attrs. If attrs contains
 // duplicate keys, the last value will be used. If attrs contains any invalid
@@ -147,7 +157,7 @@ func Default() *Resource {
 // Environment returns an instance of Resource with attributes
 // extracted from the OTEL_RESOURCE_ATTRIBUTES environment variable.
 func Environment() *Resource {
-	detector := &FromEnv{}
+	detector := &fromEnv{}
 	resource, err := detector.Detect(context.Background())
 	if err != nil {
 		otel.Handle(err)
