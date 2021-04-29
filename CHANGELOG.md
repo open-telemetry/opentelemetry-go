@@ -29,6 +29,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `resource.New()` now creates a Resource without builtin detectors. Previous behavior is now achieved by using `WithBuiltinDetectors` Option. (#1810)
 - Move the `Event` type from the `go.opentelemetry.io/otel` package to the `go.opentelemetry.io/otel/sdk/trace` package. (#1846)
 - BatchSpanProcessor now report export failures when calling `ForceFlush()` method. (#1860)
+- `Set.Encoded(Encoder)` no longer caches the result of an encoding. (#1855)
 
 ### Deprecated
 
