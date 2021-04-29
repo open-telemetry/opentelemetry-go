@@ -42,31 +42,16 @@ const (
 	// DefaultTimeout is a default max waiting time for the backend to process
 	// each span or metrics batch.
 	DefaultTimeout time.Duration = 10 * time.Second
-	// DefaultServiceConfig is the gRPC service config used if none is
-	// provided by the user.
-	DefaultServiceConfig = `{
-	"methodConfig":[{
-		"name":[
-			{ "service":"opentelemetry.proto.collector.metrics.v1.MetricsService" },
-			{ "service":"opentelemetry.proto.collector.trace.v1.TraceService" }
-		],
-		"retryPolicy":{
-			"MaxAttempts":5,
-			"InitialBackoff":"0.3s",
-			"MaxBackoff":"5s",
-			"BackoffMultiplier":2,
-			"RetryableStatusCodes":[
-				"CANCELLED",
-				"DEADLINE_EXCEEDED",
-				"RESOURCE_EXHAUSTED",
-				"ABORTED",
-				"OUT_OF_RANGE",
-				"UNAVAILABLE",
-				"DATA_LOSS"
-			]
-		}
-	}]
-}`
+)
+
+var (
+	// defaultRetrySettings is a default settings for the retry policy.
+	defaultRetrySettings = otlp.RetrySettings{
+		Enabled:         true,
+		InitialInterval: 5 * time.Second,
+		MaxInterval:     30 * time.Second,
+		MaxElapsedTime:  time.Minute,
+	}
 )
 
 type (
@@ -88,17 +73,16 @@ type (
 		Metrics SignalConfig
 		Traces  SignalConfig
 
-		// General configurations
+		// HTTP configurations
+		Marshaler   otlp.Marshaler
 		MaxAttempts int
 		Backoff     time.Duration
-
-		// HTTP configuration
-		Marshaler otlp.Marshaler
 
 		// gRPC configurations
 		ReconnectionPeriod time.Duration
 		ServiceConfig      string
 		DialOptions        []grpc.DialOption
+		RetrySettings      otlp.RetrySettings
 	}
 )
 
@@ -118,7 +102,7 @@ func NewDefaultConfig() Config {
 		},
 		MaxAttempts:   DefaultMaxAttempts,
 		Backoff:       DefaultBackoff,
-		ServiceConfig: DefaultServiceConfig,
+		RetrySettings: defaultRetrySettings,
 	}
 
 	return c
@@ -280,15 +264,9 @@ func WithMetricsURLPath(urlPath string) GenericOption {
 	})
 }
 
-func WithMaxAttempts(maxAttempts int) GenericOption {
+func WithRetry(settings otlp.RetrySettings) GenericOption {
 	return newGenericOption(func(cfg *Config) {
-		cfg.MaxAttempts = maxAttempts
-	})
-}
-
-func WithBackoff(duration time.Duration) GenericOption {
-	return newGenericOption(func(cfg *Config) {
-		cfg.Backoff = duration
+		cfg.RetrySettings = settings
 	})
 }
 
@@ -372,5 +350,17 @@ func WithTracesTimeout(duration time.Duration) GenericOption {
 func WithMetricsTimeout(duration time.Duration) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Metrics.Timeout = duration
+	})
+}
+
+func WithMaxAttempts(maxAttempts int) GenericOption {
+	return newGenericOption(func(cfg *Config) {
+		cfg.MaxAttempts = maxAttempts
+	})
+}
+
+func WithBackoff(duration time.Duration) GenericOption {
+	return newGenericOption(func(cfg *Config) {
+		cfg.Backoff = duration
 	})
 }

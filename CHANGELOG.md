@@ -10,6 +10,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Adds `otlpgrpc.WithRetry`option for configuring the retry policy for transient errors on the otlp/gRPC exporter. (#1832)
+  - The following status codes are defined as transient errors:
+      | gRPC Status Code | Description |
+      | ---------------- | ----------- |
+      | 1  | Cancelled |
+      | 4  | Deadline Exceeded |
+      | 8  | Resource Exhausted |
+      | 10 | Aborted |
+      | 10 | Out of Range |
+      | 14 | Unavailable |
+      | 15 | Data Loss |
+
 ### Changed
 
 - Make `NewSplitDriver` from `go.opentelemetry.io/otel/exporters/otlp` take variadic arguments instead of a `SplitConfig` item.
