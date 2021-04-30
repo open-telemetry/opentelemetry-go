@@ -68,9 +68,11 @@ func TestExportSpans(t *testing.T) {
 						attribute.String("user", "alice"),
 						attribute.Bool("authenticated", true),
 					},
-					StatusCode:    codes.Ok,
-					StatusMessage: "Ok",
-					Resource:      resource.NewWithAttributes(attribute.String("instance", "tester-a")),
+					Status: tracesdk.Status{
+						Code:        codes.Ok,
+						Description: "Ok",
+					},
+					Resource: resource.NewWithAttributes(attribute.String("instance", "tester-a")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-a",
 						Version: "v0.1.0",
@@ -90,9 +92,11 @@ func TestExportSpans(t *testing.T) {
 						attribute.String("user", "alice"),
 						attribute.Bool("authenticated", true),
 					},
-					StatusCode:    codes.Ok,
-					StatusMessage: "Ok",
-					Resource:      resource.NewWithAttributes(attribute.String("instance", "tester-a")),
+					Status: tracesdk.Status{
+						Code:        codes.Ok,
+						Description: "Ok",
+					},
+					Resource: resource.NewWithAttributes(attribute.String("instance", "tester-a")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-b",
 						Version: "v0.1.0",
@@ -117,9 +121,11 @@ func TestExportSpans(t *testing.T) {
 						attribute.String("user", "alice"),
 						attribute.Bool("authenticated", true),
 					},
-					StatusCode:    codes.Ok,
-					StatusMessage: "Ok",
-					Resource:      resource.NewWithAttributes(attribute.String("instance", "tester-a")),
+					Status: tracesdk.Status{
+						Code:        codes.Ok,
+						Description: "Ok",
+					},
+					Resource: resource.NewWithAttributes(attribute.String("instance", "tester-a")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-a",
 						Version: "v0.1.0",
@@ -139,9 +145,11 @@ func TestExportSpans(t *testing.T) {
 						attribute.String("user", "bob"),
 						attribute.Bool("authenticated", false),
 					},
-					StatusCode:    codes.Error,
-					StatusMessage: "Unauthenticated",
-					Resource:      resource.NewWithAttributes(attribute.String("instance", "tester-b")),
+					Status: tracesdk.Status{
+						Code:        codes.Error,
+						Description: "Unauthenticated",
+					},
+					Resource: resource.NewWithAttributes(attribute.String("instance", "tester-b")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-a",
 						Version: "v1.1.0",
