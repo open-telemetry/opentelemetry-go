@@ -46,7 +46,6 @@ type ReadOnlySpan interface {
 	Events() []Event
 	StatusCode() codes.Code
 	StatusMessage() string
-	Tracer() trace.Tracer
 	IsRecording() bool
 	InstrumentationLibrary() instrumentation.Library
 	Resource() *resource.Resource
