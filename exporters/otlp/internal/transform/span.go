@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	maxMessageEventsPerSpan = 128
+	maxEventsPerSpan = 128
 )
 
 // SpanData transforms a slice of SpanSnapshot into a slice of OTLP
@@ -115,9 +115,9 @@ func span(sd *tracesdk.SpanSnapshot) *tracepb.Span {
 		Kind:                   spanKind(sd.SpanKind),
 		Name:                   sd.Name,
 		Attributes:             Attributes(sd.Attributes),
-		Events:                 spanEvents(sd.MessageEvents),
+		Events:                 spanEvents(sd.Events),
 		DroppedAttributesCount: uint32(sd.DroppedAttributeCount),
-		DroppedEventsCount:     uint32(sd.DroppedMessageEventCount),
+		DroppedEventsCount:     uint32(sd.DroppedEventCount),
 		DroppedLinksCount:      uint32(sd.DroppedLinkCount),
 	}
 
@@ -174,18 +174,18 @@ func spanEvents(es []tracesdk.Event) []*tracepb.Span_Event {
 	}
 
 	evCount := len(es)
-	if evCount > maxMessageEventsPerSpan {
-		evCount = maxMessageEventsPerSpan
+	if evCount > maxEventsPerSpan {
+		evCount = maxEventsPerSpan
 	}
 	events := make([]*tracepb.Span_Event, 0, evCount)
-	messageEvents := 0
+	nEvents := 0
 
 	// Transform message events
 	for _, e := range es {
-		if messageEvents >= maxMessageEventsPerSpan {
+		if nEvents >= maxEventsPerSpan {
 			break
 		}
-		messageEvents++
+		nEvents++
 		events = append(events,
 			&tracepb.Span_Event{
 				Name:         e.Name,

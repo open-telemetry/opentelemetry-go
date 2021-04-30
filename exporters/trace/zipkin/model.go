@@ -81,7 +81,7 @@ func toZipkinSpanModel(data *tracesdk.SpanSnapshot) zkmodel.SpanModel {
 			ServiceName: getServiceName(data.Resource.Attributes()),
 		},
 		RemoteEndpoint: toZipkinRemoteEndpoint(data),
-		Annotations:    toZipkinAnnotations(data.MessageEvents),
+		Annotations:    toZipkinAnnotations(data.Events),
 		Tags:           toZipkinTags(data),
 	}
 }

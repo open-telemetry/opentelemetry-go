@@ -126,8 +126,8 @@ type span struct {
 	// an oldest entry is removed to create room for a new entry.
 	attributes *attributesMap
 
-	// messageEvents are stored in FIFO queue capped by configured limit.
-	messageEvents *evictedQueue
+	// events are stored in FIFO queue capped by configured limit.
+	events *evictedQueue
 
 	// links are stored in FIFO queue capped by configured limit.
 	links *evictedQueue
@@ -308,7 +308,7 @@ func (s *span) addEvent(name string, o ...trace.EventOption) {
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.messageEvents.add(Event{
+	s.events.add(Event{
 		Name:                  name,
 		Attributes:            c.Attributes,
 		DroppedAttributeCount: discarded,
@@ -388,10 +388,10 @@ func (s *span) Links() []trace.Link {
 func (s *span) Events() []Event {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if len(s.messageEvents.queue) == 0 {
+	if len(s.events.queue) == 0 {
 		return []Event{}
 	}
-	return s.interfaceArrayToMessageEventArray()
+	return s.interfaceArrayToEventArray()
 }
 
 // Status returns the status of this span.
@@ -455,9 +455,9 @@ func (s *span) Snapshot() *SpanSnapshot {
 		sd.Attributes = s.attributes.toKeyValue()
 		sd.DroppedAttributeCount = s.attributes.droppedCount
 	}
-	if len(s.messageEvents.queue) > 0 {
-		sd.MessageEvents = s.interfaceArrayToMessageEventArray()
-		sd.DroppedMessageEventCount = s.messageEvents.droppedCount
+	if len(s.events.queue) > 0 {
+		sd.Events = s.interfaceArrayToEventArray()
+		sd.DroppedEventCount = s.events.droppedCount
 	}
 	if len(s.links.queue) > 0 {
 		sd.Links = s.interfaceArrayToLinksArray()
@@ -474,12 +474,12 @@ func (s *span) interfaceArrayToLinksArray() []trace.Link {
 	return linkArr
 }
 
-func (s *span) interfaceArrayToMessageEventArray() []Event {
-	messageEventArr := make([]Event, 0)
-	for _, value := range s.messageEvents.queue {
-		messageEventArr = append(messageEventArr, value.(Event))
+func (s *span) interfaceArrayToEventArray() []Event {
+	eventArr := make([]Event, 0)
+	for _, value := range s.events.queue {
+		eventArr = append(eventArr, value.(Event))
 	}
-	return messageEventArr
+	return eventArr
 }
 
 func (s *span) copyToCappedAttributes(attributes ...attribute.KeyValue) {
@@ -531,7 +531,7 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, o *trace.Sp
 
 	spanLimits := provider.spanLimits
 	span.attributes = newAttributesMap(spanLimits.AttributeCountLimit)
-	span.messageEvents = newEvictedQueue(spanLimits.EventCountLimit)
+	span.events = newEvictedQueue(spanLimits.EventCountLimit)
 	span.links = newEvictedQueue(spanLimits.LinkCountLimit)
 	span.spanLimits = spanLimits
 
@@ -607,16 +607,16 @@ type SpanSnapshot struct {
 	StartTime   time.Time
 	// The wall clock time of EndTime will be adjusted to always be offset
 	// from StartTime by the duration of the span.
-	EndTime       time.Time
-	Attributes    []attribute.KeyValue
-	MessageEvents []Event
-	Links         []trace.Link
-	Status        Status
+	EndTime    time.Time
+	Attributes []attribute.KeyValue
+	Events     []Event
+	Links      []trace.Link
+	Status     Status
 
 	// DroppedAttributeCount contains dropped attributes for the span itself.
-	DroppedAttributeCount    int
-	DroppedMessageEventCount int
-	DroppedLinkCount         int
+	DroppedAttributeCount int
+	DroppedEventCount     int
+	DroppedLinkCount      int
 
 	// ChildSpanCount holds the number of child span created for this span.
 	ChildSpanCount int

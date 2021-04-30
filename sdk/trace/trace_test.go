@@ -546,8 +546,8 @@ func TestEvents(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for i := range got.MessageEvents {
-		if !checkTime(&got.MessageEvents[i].Time) {
+	for i := range got.Events {
+		if !checkTime(&got.Events[i].Time) {
 			t.Error("exporting span: expected nonzero Event Time")
 		}
 	}
@@ -559,7 +559,7 @@ func TestEvents(t *testing.T) {
 		}),
 		Parent: sc.WithRemote(true),
 		Name:   "span0",
-		MessageEvents: []Event{
+		Events: []Event{
 			{Name: "foo", Attributes: []attribute.KeyValue{k1v1}},
 			{Name: "bar", Attributes: []attribute.KeyValue{k2v2, k3v3}},
 		},
@@ -595,8 +595,8 @@ func TestEventsOverLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for i := range got.MessageEvents {
-		if !checkTime(&got.MessageEvents[i].Time) {
+	for i := range got.Events {
+		if !checkTime(&got.Events[i].Time) {
 			t.Error("exporting span: expected nonzero Event Time")
 		}
 	}
@@ -608,13 +608,13 @@ func TestEventsOverLimit(t *testing.T) {
 		}),
 		Parent: sc.WithRemote(true),
 		Name:   "span0",
-		MessageEvents: []Event{
+		Events: []Event{
 			{Name: "foo", Attributes: []attribute.KeyValue{k1v1}},
 			{Name: "bar", Attributes: []attribute.KeyValue{k2v2, k3v3}},
 		},
-		DroppedMessageEventCount: 2,
-		SpanKind:                 trace.SpanKindInternal,
-		InstrumentationLibrary:   instrumentation.Library{Name: "EventsOverLimit"},
+		DroppedEventCount:      2,
+		SpanKind:               trace.SpanKindInternal,
+		InstrumentationLibrary: instrumentation.Library{Name: "EventsOverLimit"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Message Event over limit: -got +want %s", diff)
@@ -1123,7 +1123,7 @@ func TestRecordError(t *testing.T) {
 			Name:     "span0",
 			Status:   Status{Code: codes.Unset},
 			SpanKind: trace.SpanKindInternal,
-			MessageEvents: []Event{
+			Events: []Event{
 				{
 					Name: semconv.ExceptionEventName,
 					Time: errTime,
@@ -1332,9 +1332,9 @@ func TestSpanCapturesPanic(t *testing.T) {
 	require.PanicsWithError(t, "error message", f)
 	spans := te.Spans()
 	require.Len(t, spans, 1)
-	require.Len(t, spans[0].MessageEvents, 1)
-	assert.Equal(t, spans[0].MessageEvents[0].Name, semconv.ExceptionEventName)
-	assert.Equal(t, spans[0].MessageEvents[0].Attributes, []attribute.KeyValue{
+	require.Len(t, spans[0].Events, 1)
+	assert.Equal(t, spans[0].Events[0].Name, semconv.ExceptionEventName)
+	assert.Equal(t, spans[0].Events[0].Attributes, []attribute.KeyValue{
 		semconv.ExceptionTypeKey.String("*errors.errorString"),
 		semconv.ExceptionMessageKey.String("error message"),
 	})
@@ -1402,13 +1402,13 @@ func TestReadOnlySpan(t *testing.T) {
 	d1 := ro.Snapshot()
 	span.AddEvent("baz")
 	d2 := ro.Snapshot()
-	for _, e := range d1.MessageEvents {
+	for _, e := range d1.Events {
 		if e.Name == "baz" {
 			t.Errorf("Didn't expect to find 'baz' event")
 		}
 	}
 	var exists bool
-	for _, e := range d2.MessageEvents {
+	for _, e := range d2.Events {
 		if e.Name == "baz" {
 			exists = true
 		}
@@ -1481,8 +1481,8 @@ func TestAddEventsWithMoreAttributesThanLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for i := range got.MessageEvents {
-		if !checkTime(&got.MessageEvents[i].Time) {
+	for i := range got.Events {
+		if !checkTime(&got.Events[i].Time) {
 			t.Error("exporting span: expected nonzero Event Time")
 		}
 	}
@@ -1495,7 +1495,7 @@ func TestAddEventsWithMoreAttributesThanLimit(t *testing.T) {
 		Parent:     sc.WithRemote(true),
 		Name:       "span0",
 		Attributes: nil,
-		MessageEvents: []Event{
+		Events: []Event{
 			{
 				Name: "test1",
 				Attributes: []attribute.KeyValue{

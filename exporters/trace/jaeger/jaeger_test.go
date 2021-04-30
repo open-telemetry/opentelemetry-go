@@ -279,7 +279,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 					attribute.Float64("double", doubleValue),
 					attribute.Int64("int", intValue),
 				},
-				MessageEvents: []sdktrace.Event{
+				Events: []sdktrace.Event{
 					{
 						Name:                  eventNameValue,
 						Attributes:            []attribute.KeyValue{attribute.String("k1", keyValue)},

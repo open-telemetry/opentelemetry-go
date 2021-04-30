@@ -60,7 +60,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 			attribute.String("key", keyValue),
 			attribute.Float64("double", doubleValue),
 		},
-		MessageEvents: []tracesdk.Event{
+		Events: []tracesdk.Event{
 			{Name: "foo", Attributes: []attribute.KeyValue{attribute.String("key", keyValue)}, Time: now},
 			{Name: "bar", Attributes: []attribute.KeyValue{attribute.Float64("double", doubleValue)}, Time: now},
 		},
@@ -106,7 +106,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"Key":"double",` +
 		`"Value":{"Type":"FLOAT64","Value":123.456}` +
 		`}],` +
-		`"MessageEvents":[` +
+		`"Events":[` +
 		`{` +
 		`"Name":"foo",` +
 		`"Attributes":[` +
@@ -133,7 +133,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`"Links":null,` +
 		`"Status":{"Code":"Error","Description":"interesting"},` +
 		`"DroppedAttributeCount":0,` +
-		`"DroppedMessageEventCount":0,` +
+		`"DroppedEventCount":0,` +
 		`"DroppedLinkCount":0,` +
 		`"ChildSpanCount":0,` +
 		`"Resource":[` +

@@ -182,7 +182,7 @@ func spanSnapshotToThrift(ss *sdktrace.SpanSnapshot) *gen.Span {
 	}
 
 	var logs []*gen.Log
-	for _, a := range ss.MessageEvents {
+	for _, a := range ss.Events {
 		nTags := len(a.Attributes)
 		if a.Name != "" {
 			nTags++

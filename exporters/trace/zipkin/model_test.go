@@ -61,7 +61,7 @@ func TestModelConversion(t *testing.T) {
 				attribute.String("attr2", "bar"),
 				attribute.Array("attr3", []int{0, 1, 2}),
 			},
-			MessageEvents: []tracesdk.Event{
+			Events: []tracesdk.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
@@ -96,7 +96,7 @@ func TestModelConversion(t *testing.T) {
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
 			},
-			MessageEvents: []tracesdk.Event{
+			Events: []tracesdk.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
@@ -134,7 +134,7 @@ func TestModelConversion(t *testing.T) {
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
 			},
-			MessageEvents: []tracesdk.Event{
+			Events: []tracesdk.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
@@ -172,7 +172,7 @@ func TestModelConversion(t *testing.T) {
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
 			},
-			MessageEvents: []tracesdk.Event{
+			Events: []tracesdk.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
@@ -213,7 +213,7 @@ func TestModelConversion(t *testing.T) {
 				attribute.String("net.peer.ip", "1.2.3.4"),
 				attribute.Int64("net.peer.port", 9876),
 			},
-			MessageEvents: []tracesdk.Event{
+			Events: []tracesdk.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
@@ -251,7 +251,7 @@ func TestModelConversion(t *testing.T) {
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
 			},
-			MessageEvents: []tracesdk.Event{
+			Events: []tracesdk.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
@@ -289,7 +289,7 @@ func TestModelConversion(t *testing.T) {
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
 			},
-			MessageEvents: []tracesdk.Event{
+			Events: []tracesdk.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",
@@ -327,7 +327,7 @@ func TestModelConversion(t *testing.T) {
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
 			},
-			MessageEvents: nil,
+			Events: nil,
 			Status: sdktrace.Status{
 				Code:        codes.Error,
 				Description: "404, file not found",
@@ -351,7 +351,7 @@ func TestModelConversion(t *testing.T) {
 			Attributes: []attribute.KeyValue{
 				attribute.String("error", "false"),
 			},
-			MessageEvents: []tracesdk.Event{
+			Events: []tracesdk.Event{
 				{
 					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
 					Name: "ev1",

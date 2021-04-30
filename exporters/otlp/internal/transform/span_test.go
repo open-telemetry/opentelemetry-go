@@ -101,15 +101,15 @@ func TestSpanEvent(t *testing.T) {
 }
 
 func TestExcessiveSpanEvents(t *testing.T) {
-	e := make([]tracesdk.Event, maxMessageEventsPerSpan+1)
-	for i := 0; i < maxMessageEventsPerSpan+1; i++ {
+	e := make([]tracesdk.Event, maxEventsPerSpan+1)
+	for i := 0; i < maxEventsPerSpan+1; i++ {
 		e[i] = tracesdk.Event{Name: strconv.Itoa(i)}
 	}
-	assert.Len(t, e, maxMessageEventsPerSpan+1)
+	assert.Len(t, e, maxEventsPerSpan+1)
 	got := spanEvents(e)
-	assert.Len(t, got, maxMessageEventsPerSpan)
+	assert.Len(t, got, maxEventsPerSpan)
 	// Ensure the drop order.
-	assert.Equal(t, strconv.Itoa(maxMessageEventsPerSpan-1), got[len(got)-1].Name)
+	assert.Equal(t, strconv.Itoa(maxEventsPerSpan-1), got[len(got)-1].Name)
 }
 
 func TestNilLinks(t *testing.T) {
@@ -215,7 +215,7 @@ func TestSpanData(t *testing.T) {
 		Name:      "span data to span data",
 		StartTime: startTime,
 		EndTime:   endTime,
-		MessageEvents: []tracesdk.Event{
+		Events: []tracesdk.Event{
 			{Time: startTime,
 				Attributes: []attribute.KeyValue{
 					attribute.Int64("CompressedByteSize", 512),
@@ -223,7 +223,7 @@ func TestSpanData(t *testing.T) {
 			},
 			{Time: endTime,
 				Attributes: []attribute.KeyValue{
-					attribute.String("MessageEventType", "Recv"),
+					attribute.String("EventType", "Recv"),
 				},
 			},
 		},
@@ -256,10 +256,10 @@ func TestSpanData(t *testing.T) {
 		Attributes: []attribute.KeyValue{
 			attribute.Int64("timeout_ns", 12e9),
 		},
-		DroppedAttributeCount:    1,
-		DroppedMessageEventCount: 2,
-		DroppedLinkCount:         3,
-		Resource:                 resource.NewWithAttributes(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5)),
+		DroppedAttributeCount: 1,
+		DroppedEventCount:     2,
+		DroppedLinkCount:      3,
+		Resource:              resource.NewWithAttributes(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5)),
 		InstrumentationLibrary: instrumentation.Library{
 			Name:    "go.opentelemetry.io/test/otel",
 			Version: "v0.0.1",
@@ -279,7 +279,7 @@ func TestSpanData(t *testing.T) {
 		StartTimeUnixNano:      uint64(startTime.UnixNano()),
 		EndTimeUnixNano:        uint64(endTime.UnixNano()),
 		Status:                 status(spanData.Status.Code, spanData.Status.Description),
-		Events:                 spanEvents(spanData.MessageEvents),
+		Events:                 spanEvents(spanData.Events),
 		Links:                  links(spanData.Links),
 		Attributes:             Attributes(spanData.Attributes),
 		DroppedAttributesCount: 1,
