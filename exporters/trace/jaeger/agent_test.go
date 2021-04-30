@@ -21,6 +21,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -110,6 +111,7 @@ func (eh errorHandler) Handle(err error) { assert.NoError(eh.t, err) }
 func TestJaegerAgentUDPLimitBatching(t *testing.T) {
 	otel.SetErrorHandler(errorHandler{t})
 
+	// 1500 spans, size 79559, does not fit within one UDP packet with the default size of 65000.
 	n := 1500
 	s := make([]*tracesdk.SpanSnapshot, n)
 	for i := 0; i < n; i++ {
@@ -119,9 +121,31 @@ func TestJaegerAgentUDPLimitBatching(t *testing.T) {
 	exp, err := NewRawExporter(
 		WithAgentEndpoint(WithAgentHost("localhost"), WithAgentPort("6831")),
 	)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	ctx := context.Background()
 	assert.NoError(t, exp.ExportSpans(ctx, s))
+	assert.NoError(t, exp.Shutdown(ctx))
+}
+
+func TestSpanExceedsMaxPacketLimit(t *testing.T) {
+	otel.SetErrorHandler(errorHandler{t})
+
+	// 102 is the serialized size of a span with default values.
+	maxSize := 102
+	span := &tracesdk.SpanSnapshot{
+		Name: "a-longger-name-that-make-it-exceeds-limit",
+	}
+	largeSpans := []*tracesdk.SpanSnapshot{span, {}}
+	normalSpans := []*tracesdk.SpanSnapshot{{}, {}}
+
+	exp, err := NewRawExporter(
+		WithAgentEndpoint(WithAgentHost("localhost"), WithAgentPort("6831"), WithMaxPacketSize(maxSize+1)),
+	)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	assert.Error(t, exp.ExportSpans(ctx, largeSpans))
+	assert.NoError(t, exp.ExportSpans(ctx, normalSpans))
 	assert.NoError(t, exp.Shutdown(ctx))
 }

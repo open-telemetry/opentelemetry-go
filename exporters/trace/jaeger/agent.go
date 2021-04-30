@@ -20,6 +20,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/exporters/trace/jaeger/internal/third_party/thrift/lib/go/thrift"
@@ -113,12 +114,12 @@ func newAgentClientUDP(params agentClientUDPParams) (*agentClientUDP, error) {
 	}, nil
 }
 
-// EmitBatch implements EmitBatch() of Agent interface
+// EmitBatch buffers batch to fit into UDP packets and sends the data to the agent.
 func (a *agentClientUDP) EmitBatch(ctx context.Context, batch *gen.Batch) error {
 	var errs []error
 	processSize, err := a.calcSizeOfSerializedThrift(ctx, batch.Process)
 	if err != nil {
-		// drop the bath if serialization of process fails.
+		// drop the batch if serialization of process fails.
 		return err
 	}
 	totalSize := processSize
@@ -157,10 +158,22 @@ func (a *agentClientUDP) EmitBatch(ctx context.Context, batch *gen.Batch) error 
 		}
 	}
 
-	if len(errs) > 0 {
-		return fmt.Errorf("multiple errors during transform")
+	if len(errs) == 1 {
+		return errs[0]
+	} else if len(errs) > 1 {
+		joined := a.makeJoinedErrorString(errs)
+		return fmt.Errorf("multiple errors during transform: %s", joined)
 	}
 	return nil
+}
+
+// makeJoinedErrorString join all the errors to one error message.
+func (a *agentClientUDP) makeJoinedErrorString(errs []error) string {
+	var errMsgs []string
+	for _, err := range errs {
+		errMsgs = append(errMsgs, err.Error())
+	}
+	return strings.Join(errMsgs, ", ")
 }
 
 // flush will send the batch of spans to the agent.
