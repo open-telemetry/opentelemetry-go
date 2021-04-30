@@ -45,6 +45,6 @@ jobs:
           base-branch: 'main'
           use-quiet-mode: 'yes'
           use-verbose-mode: 'yes'
-          config-file: '.markdown-links.json'
+          config-file: '.markdown-link.json'
           check-modified-files-only: 'yes'
           folder-path: ''
