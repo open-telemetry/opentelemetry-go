@@ -244,37 +244,37 @@ func (ts TraceState) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON implements a custom unmarshal function to decode trace state.
+// func (ts TraceState) UnmarshalJSON(b []byte) error {
+// 	if err := json.Unmarshal(b, &ts.kvs); err != nil {
+// 		return err
+// 	}
+// 	log.Printf("traceState: %v", ts.kvs)
+// 	return nil
+// }
+
+// UnmarshalJSON implements a custom unmarshal function to decode trace state.
 func (ts TraceState) UnmarshalJSON(b []byte) error {
-	if err := json.Unmarshal(b, &ts.kvs); err != nil {
+	//[map[Key:foo Value:map[Type:STRING Value:bar]]]
+	var arr []struct{
+		Key string
+		Value struct{
+			Type string
+			Value interface{}
+		}
+	}
+	if err := json.Unmarshal(b, &arr); err != nil {
+		log.Printf("The error: %v", err)
 		return err
+	}
+	for _, ar := range arr {
+		value := attribute.ToValue(ar.Value.Type, ar.Value.Value)
+		ts.kvs = append(ts.kvs, attribute.KeyValue{
+			Key: attribute.Key(ar.Key),
+			Value: value})
 	}
 	log.Printf("traceState: %v", ts.kvs)
 	return nil
 }
-
-// This works
-//func (ts TraceState) UnmarshalJSON(b []byte) error {
-//	//[map[Key:foo Value:map[Type:STRING Value:bar]]]
-//	var arr []struct{
-//		Key string 
-//		Value struct{
-//			Type string
-//			Value string
-//		}
-//	}
-//	if err := json.Unmarshal(b, &arr); err != nil {
-//		log.Printf("The error: %v", err)
-//		return err
-//	}
-//	for _, ar := range arr {
-//		value, _ := attribute.FromString(ar.Value.Type, ar.Value.Value)
-//		ts.kvs = append(ts.kvs, attribute.KeyValue{
-//			Key: attribute.Key(ar.Key), 
-//			Value: value})
-//	}
-//	log.Printf("traceState: %v", ts.kvs)
-//	return nil
-//}
 
 // String returns trace state as a string valid according to the
 // W3C Trace Context specification.
@@ -440,11 +440,11 @@ func (tf TraceFlags) String() string {
 // SpanContextConfig contains mutable fields usable for constructing
 // an immutable SpanContext.
 type SpanContextConfig struct {
-	TraceID    TraceID
-	SpanID     SpanID
-	TraceFlags TraceFlags
-	TraceState TraceState
-	Remote     bool
+	TraceID    TraceID `json:"TraceID"`
+	SpanID     SpanID `json:"SpanID"`
+	TraceFlags TraceFlags `json:"TraceFlags"`
+	TraceState TraceState `json:"TraceState"`
+	Remote     bool `json:"Remote"`
 }
 
 // NewSpanContext constructs a SpanContext using values from the provided
@@ -595,6 +595,7 @@ func (sc SpanContext) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &scc); err != nil {
 		return err
 	}
+	log.Printf("spancontextconfig: %v", scc)
 	sc = NewSpanContext(scc)
 	log.Printf("spancontext: %v", sc)
 	return nil

@@ -1038,6 +1038,7 @@ func TestUnmarshallSpanContext(t *testing.T) {
 				traceFlags: 0x1,
 				traceState: TraceState{kvs: []attribute.KeyValue{
 					attribute.String("foo", "bar"),
+					attribute.Int64("foo2", 2),
 				}},
 			},
 		},
