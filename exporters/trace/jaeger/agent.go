@@ -115,11 +115,56 @@ func newAgentClientUDP(params agentClientUDPParams) (*agentClientUDP, error) {
 
 // EmitBatch implements EmitBatch() of Agent interface
 func (a *agentClientUDP) EmitBatch(ctx context.Context, batch *gen.Batch) error {
-	return a.splitAndFlush(ctx, batch)
+	var errs []error
+	processSize, err := a.calcSizeOfSerializedThrift(ctx, batch.Process)
+	if err != nil {
+		// drop the bath if serialization of process fails.
+		return err
+	}
+	totalSize := processSize
+	var spans []*gen.Span
+	for _, span := range batch.Spans {
+		spanSize, err := a.calcSizeOfSerializedThrift(ctx, span)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("thrift serialization failed: %v", span))
+			continue
+		}
+		if spanSize+processSize >= a.maxPacketSize {
+			// drop the span that exceeds the limit.
+			errs = append(errs, fmt.Errorf("span too large to send: %v", span))
+			continue
+		}
+		if totalSize+spanSize >= a.maxPacketSize {
+			if err := a.flush(ctx, &gen.Batch{
+				Process: batch.Process,
+				Spans:   spans,
+			}); err != nil {
+				errs = append(errs, err)
+			}
+			spans = spans[:0]
+			totalSize = processSize
+		}
+		totalSize += spanSize
+		spans = append(spans, span)
+	}
+
+	if len(spans) > 0 {
+		if err := a.flush(ctx, &gen.Batch{
+			Process: batch.Process,
+			Spans:   spans,
+		}); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("multiple errors during transform")
+	}
+	return nil
 }
 
-// Flush will send the batched spans though underlying thrift transport
-func (a *agentClientUDP) Flush(ctx context.Context, batch *gen.Batch) error {
+// flush will send the batch of spans to the agent.
+func (a *agentClientUDP) flush(ctx context.Context, batch *gen.Batch) error {
 	a.thriftBuffer.Reset()
 	if err := a.client.EmitBatch(ctx, batch); err != nil {
 		return err
@@ -132,44 +177,11 @@ func (a *agentClientUDP) Flush(ctx context.Context, batch *gen.Batch) error {
 	return err
 }
 
-// calcSizeOfSerializedThrift calculate the serialized thrift packet size
-func (a *agentClientUDP) calcSizeOfSerializedThrift(ctx context.Context, thriftStruct thrift.TStruct) int {
+// calcSizeOfSerializedThrift calculate the serialized thrift packet size.
+func (a *agentClientUDP) calcSizeOfSerializedThrift(ctx context.Context, thriftStruct thrift.TStruct) (int, error) {
 	a.thriftBuffer.Reset()
-	_ = thriftStruct.Write(ctx, a.thriftProtocol)
-	return a.thriftBuffer.Len()
-}
-
-// splitAndFlush split large batch into small ones to fit the udp packet limit
-func (a *agentClientUDP) splitAndFlush(ctx context.Context, batch *gen.Batch) error {
-	var err error
-	processSize := a.calcSizeOfSerializedThrift(ctx, batch.Process)
-	totalSize := processSize
-	var spans []*gen.Span
-	for _, span := range batch.Spans {
-		spanSize := a.calcSizeOfSerializedThrift(ctx, span)
-		if spanSize+processSize >= a.maxPacketSize {
-			// drop the span that exceeds the limit
-			continue
-		}
-		if totalSize+spanSize >= a.maxPacketSize {
-			err = a.Flush(ctx, &gen.Batch{
-				Process: batch.Process,
-				Spans:   spans,
-			})
-			spans = spans[:0]
-			totalSize = processSize
-		}
-		totalSize += spanSize
-		spans = append(spans, span)
-	}
-
-	if len(spans) > 0 {
-		err = a.Flush(ctx, &gen.Batch{
-			Process: batch.Process,
-			Spans:   spans,
-		})
-	}
-	return err
+	err := thriftStruct.Write(ctx, a.thriftProtocol)
+	return a.thriftBuffer.Len(), err
 }
 
 // Close implements Close() of io.Closer and closes the underlying UDP connection.
