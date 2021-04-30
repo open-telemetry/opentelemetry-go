@@ -34,8 +34,6 @@ import (
 // ReadOnlySpan allows reading information from the data structure underlying a
 // trace.Span. It is used in places where reading information from a span is
 // necessary but changing the span isn't necessary or allowed.
-// TODO: Should we make the methods unexported? The purpose of this interface
-// is controlling access to `span` fields, not having multiple implementations.
 type ReadOnlySpan interface {
 	Name() string
 	SpanContext() trace.SpanContext
