@@ -7,7 +7,7 @@
     "replacementPatterns": [
         {
             "pattern": "^/registry",
-            "replacement": "https://opentelemetry.io/registry/"
+            "replacement": "https://opentelemetry.io/registry"
         }
     ],
     "retryOn429": true,
