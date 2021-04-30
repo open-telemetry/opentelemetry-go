@@ -45,7 +45,6 @@ type ReadOnlySpan interface {
 	Links() []trace.Link
 	Events() []Event
 	Status() Status
-	IsRecording() bool
 	InstrumentationLibrary() instrumentation.Library
 	Resource() *resource.Resource
 	Snapshot() *SpanSnapshot
