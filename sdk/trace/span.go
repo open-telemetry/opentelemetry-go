@@ -35,18 +35,36 @@ import (
 // trace.Span. It is used in places where reading information from a span is
 // necessary but changing the span isn't necessary or allowed.
 type ReadOnlySpan interface {
+	// Name returns the name of the span.
 	Name() string
+	// SpanContext returns the unique SpanContext that identifies the span.
 	SpanContext() trace.SpanContext
+	// Parent returns the unique SpanContext that identifies the parent of the
+	// span if one exists. If the span has no parent the returned SpanContext
+	// will be invalid.
 	Parent() trace.SpanContext
+	// SpanKind returns the role the span plays in a Trace.
 	SpanKind() trace.SpanKind
+	// StartTime returns the time the span started recording.
 	StartTime() time.Time
+	// EndTime returns the time the span stopped recording. It will be zero if
+	// the span has not ended.
 	EndTime() time.Time
+	// Attributes returns the defining attributes of the span.
 	Attributes() []attribute.KeyValue
+	// Links returns all the links the span has to other spans.
 	Links() []trace.Link
+	// Events returns all the events that occurred within in the spans
+	// lifetime.
 	Events() []Event
+	// Status returns the spans status.
 	Status() Status
+	// InstrumentationLibrary returns information about the instrumentation
+	// library that created the span.
 	InstrumentationLibrary() instrumentation.Library
+	// Resource returns information about the entity that produced the span.
 	Resource() *resource.Resource
+	// TODO: remove this.
 	Snapshot() *SpanSnapshot
 
 	// A private method to prevent users implementing the
