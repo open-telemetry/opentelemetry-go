@@ -249,8 +249,10 @@ func TestSpanData(t *testing.T) {
 				},
 			},
 		},
-		StatusCode:    codes.Error,
-		StatusMessage: "utterly unrecognized",
+		Status: tracesdk.Status{
+			Code:        codes.Error,
+			Description: "utterly unrecognized",
+		},
 		Attributes: []attribute.KeyValue{
 			attribute.Int64("timeout_ns", 12e9),
 		},
@@ -276,7 +278,7 @@ func TestSpanData(t *testing.T) {
 		Kind:                   tracepb.Span_SPAN_KIND_SERVER,
 		StartTimeUnixNano:      uint64(startTime.UnixNano()),
 		EndTimeUnixNano:        uint64(endTime.UnixNano()),
-		Status:                 status(spanData.StatusCode, spanData.StatusMessage),
+		Status:                 status(spanData.Status.Code, spanData.Status.Description),
 		Events:                 spanEvents(spanData.MessageEvents),
 		Links:                  links(spanData.Links),
 		Attributes:             Attributes(spanData.Attributes),

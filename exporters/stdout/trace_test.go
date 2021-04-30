@@ -64,10 +64,12 @@ func TestExporter_ExportSpan(t *testing.T) {
 			{Name: "foo", Attributes: []attribute.KeyValue{attribute.String("key", keyValue)}, Time: now},
 			{Name: "bar", Attributes: []attribute.KeyValue{attribute.Float64("double", doubleValue)}, Time: now},
 		},
-		SpanKind:      trace.SpanKindInternal,
-		StatusCode:    codes.Error,
-		StatusMessage: "interesting",
-		Resource:      resource,
+		SpanKind: trace.SpanKindInternal,
+		Status: tracesdk.Status{
+			Code:        codes.Error,
+			Description: "interesting",
+		},
+		Resource: resource,
 	}
 	if err := ex.ExportSpans(context.Background(), []*tracesdk.SpanSnapshot{testSpan}); err != nil {
 		t.Fatal(err)
@@ -129,8 +131,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 		`}` +
 		`],` +
 		`"Links":null,` +
-		`"StatusCode":"Error",` +
-		`"StatusMessage":"interesting",` +
+		`"Status":{"Code":"Error","Description":"interesting"},` +
 		`"DroppedAttributeCount":0,` +
 		`"DroppedMessageEventCount":0,` +
 		`"DroppedLinkCount":0,` +

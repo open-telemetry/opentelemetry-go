@@ -246,9 +246,11 @@ func TestExportSpans(t *testing.T) {
 			EndTime:       time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
 			Attributes:    nil,
 			MessageEvents: nil,
-			StatusCode:    codes.Error,
-			StatusMessage: "404, file not found",
-			Resource:      resource,
+			Status: sdktrace.Status{
+				Code:        codes.Error,
+				Description: "404, file not found",
+			},
+			Resource: resource,
 		},
 		// child
 		{
@@ -266,9 +268,11 @@ func TestExportSpans(t *testing.T) {
 			EndTime:       time.Date(2020, time.March, 11, 19, 24, 45, 0, time.UTC),
 			Attributes:    nil,
 			MessageEvents: nil,
-			StatusCode:    codes.Error,
-			StatusMessage: "403, forbidden",
-			Resource:      resource,
+			Status: sdktrace.Status{
+				Code:        codes.Error,
+				Description: "403, forbidden",
+			},
+			Resource: resource,
 		},
 	}
 	models := []zkmodel.SpanModel{

@@ -229,11 +229,11 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 					TraceID: traceID,
 					SpanID:  spanID,
 				}),
-				Name:       "/foo",
-				StartTime:  now,
-				EndTime:    now,
-				StatusCode: codes.Error,
-				SpanKind:   trace.SpanKindClient,
+				Name:      "/foo",
+				StartTime: now,
+				EndTime:   now,
+				Status:    sdktrace.Status{Code: codes.Error},
+				SpanKind:  trace.SpanKindClient,
 				InstrumentationLibrary: instrumentation.Library{
 					Name:    instrLibName,
 					Version: instrLibVersion,
@@ -287,9 +287,11 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 						Time:                  now,
 					},
 				},
-				StatusCode:    codes.Error,
-				StatusMessage: statusMessage,
-				SpanKind:      trace.SpanKindClient,
+				Status: sdktrace.Status{
+					Code:        codes.Error,
+					Description: statusMessage,
+				},
+				SpanKind: trace.SpanKindClient,
 				InstrumentationLibrary: instrumentation.Library{
 					Name:    instrLibName,
 					Version: instrLibVersion,
@@ -370,9 +372,11 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 				Attributes: []attribute.KeyValue{
 					attribute.Array("arr", []int{0, 1, 2, 3}),
 				},
-				StatusCode:    codes.Unset,
-				StatusMessage: statusMessage,
-				SpanKind:      trace.SpanKindInternal,
+				Status: sdktrace.Status{
+					Code:        codes.Unset,
+					Description: statusMessage,
+				},
+				SpanKind: trace.SpanKindInternal,
 				InstrumentationLibrary: instrumentation.Library{
 					Name:    instrLibName,
 					Version: instrLibVersion,
@@ -421,9 +425,11 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 					attribute.Int64("rk2", rv2),
 					semconv.ServiceNameKey.String("service name"),
 				),
-				StatusCode:    codes.Unset,
-				StatusMessage: statusMessage,
-				SpanKind:      trace.SpanKindInternal,
+				Status: sdktrace.Status{
+					Code:        codes.Unset,
+					Description: statusMessage,
+				},
+				SpanKind: trace.SpanKindInternal,
 				InstrumentationLibrary: instrumentation.Library{
 					Name:    instrLibName,
 					Version: instrLibVersion,
