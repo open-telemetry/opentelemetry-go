@@ -64,6 +64,19 @@ type ReadOnlySpan interface {
 	InstrumentationLibrary() instrumentation.Library
 	// Resource returns information about the entity that produced the span.
 	Resource() *resource.Resource
+	// DroppedAttributes returns the number of attributes dropped by the span
+	// due to limits being reached.
+	DroppedAttributes() int
+	// DroppedLinks returns the number of links dropped by the span due to
+	// limits being reached.
+	DroppedLinks() int
+	// DroppedEvents returns the number of events dropped by the span due to
+	// limits being reached.
+	DroppedEvents() int
+	// ChildSpanCount returns the count of spans that consider the span a
+	// direct parent.
+	ChildSpanCount() int
+
 	// TODO: remove this.
 	Snapshot() *SpanSnapshot
 
@@ -431,6 +444,38 @@ func (s *span) addLink(link trace.Link) {
 	}
 
 	s.links.add(link)
+}
+
+// DroppedAttributes returns the number of attributes dropped by the span
+// due to limits being reached.
+func (s *span) DroppedAttributes() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.attributes.droppedCount
+}
+
+// DroppedLinks returns the number of links dropped by the span due to limits
+// being reached.
+func (s *span) DroppedLinks() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.links.droppedCount
+}
+
+// DroppedEvents returns the number of events dropped by the span due to
+// limits being reached.
+func (s *span) DroppedEvents() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.events.droppedCount
+}
+
+// ChildSpanCount returns the count of spans that consider the span a
+// direct parent.
+func (s *span) ChildSpanCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.childSpanCount
 }
 
 // Snapshot creates a snapshot representing the current state of the span as an
