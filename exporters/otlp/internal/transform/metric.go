@@ -209,6 +209,8 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 		case *metricpb.Metric_Summary:
 			m.GetSummary().DataPoints = append(m.GetSummary().DataPoints, res.Metric.GetSummary().DataPoints...)
 		default:
+			err := fmt.Sprintf("unsupported metric type: %T", res.Metric.Data)
+			errStrings = append(errStrings, err)
 		}
 	}
 
