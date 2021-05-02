@@ -136,8 +136,3 @@ func (s snapshot) DroppedEvents() int {
 func (s snapshot) ChildSpanCount() int {
 	return s.childSpanCount
 }
-
-// TODO: remove this.
-func (s snapshot) Snapshot() *snapshot {
-	return &s
-}
