@@ -573,9 +573,9 @@ func isSampled(s SamplingResult) bool {
 
 // Status is the classified state of a Span.
 type Status struct {
-	// Code is an identifier of a Spans state classification.
+	// Code is an identifier of a Span's state classification.
 	Code codes.Code
-	// Message is a user hint about why that status was set. It is only
+	// Message is a user hint about why the status was set. It is only
 	// applicable when Code is Error.
 	Description string
 }
