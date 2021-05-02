@@ -77,9 +77,6 @@ type ReadOnlySpan interface {
 	// direct parent.
 	ChildSpanCount() int
 
-	// TODO: remove this.
-	Snapshot() *SpanSnapshot
-
 	// A private method to prevent users implementing the
 	// interface and so future additions to it will not
 	// violate compatibility.
@@ -265,7 +262,7 @@ func (s *span) End(options ...trace.SpanOption) {
 	mustExportOrProcess := ok && len(sps) > 0
 	if mustExportOrProcess {
 		for _, sp := range sps {
-			sp.sp.OnEnd(s)
+			sp.sp.OnEnd(s.snapshot())
 		}
 	}
 }
@@ -478,35 +475,34 @@ func (s *span) ChildSpanCount() int {
 	return s.childSpanCount
 }
 
-// Snapshot creates a snapshot representing the current state of the span as an
-// export.SpanSnapshot and returns a pointer to it.
-func (s *span) Snapshot() *SpanSnapshot {
+// snapshot creates a read-only copy of the current state of the span.
+func (s *span) snapshot() ReadOnlySpan {
 	var sd SpanSnapshot
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	sd.ChildSpanCount = s.childSpanCount
-	sd.EndTime = s.endTime
-	sd.InstrumentationLibrary = s.instrumentationLibrary
-	sd.Name = s.name
-	sd.Parent = s.parent
-	sd.Resource = s.resource
-	sd.SpanContext = s.spanContext
-	sd.SpanKind = s.spanKind
-	sd.StartTime = s.startTime
-	sd.Status = s.status
+	sd.endTime = s.endTime
+	sd.instrumentationLibrary = s.instrumentationLibrary
+	sd.name = s.name
+	sd.parent = s.parent
+	sd.resource = s.resource
+	sd.spanContext = s.spanContext
+	sd.spanKind = s.spanKind
+	sd.startTime = s.startTime
+	sd.status = s.status
+	sd.childSpanCount = s.childSpanCount
 
 	if s.attributes.evictList.Len() > 0 {
-		sd.Attributes = s.attributes.toKeyValue()
-		sd.DroppedAttributeCount = s.attributes.droppedCount
+		sd.attributes = s.attributes.toKeyValue()
+		sd.droppedAttributeCount = s.attributes.droppedCount
 	}
 	if len(s.events.queue) > 0 {
-		sd.Events = s.interfaceArrayToEventArray()
-		sd.DroppedEventCount = s.events.droppedCount
+		sd.events = s.interfaceArrayToEventArray()
+		sd.droppedEventCount = s.events.droppedCount
 	}
 	if len(s.links.queue) > 0 {
-		sd.Links = s.interfaceArrayToLinksArray()
-		sd.DroppedLinkCount = s.links.droppedCount
+		sd.links = s.interfaceArrayToLinksArray()
+		sd.droppedLinkCount = s.links.droppedCount
 	}
 	return &sd
 }

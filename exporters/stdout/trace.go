@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
 // Exporter is an implementation of trace.SpanSyncer that writes spans to stdout.
@@ -32,7 +33,7 @@ type traceExporter struct {
 }
 
 // ExportSpans writes SpanSnapshots in json format to stdout.
-func (e *traceExporter) ExportSpans(ctx context.Context, ss []*trace.SpanSnapshot) error {
+func (e *traceExporter) ExportSpans(ctx context.Context, ss []trace.ReadOnlySpan) error {
 	e.stoppedMu.RLock()
 	stopped := e.stopped
 	e.stoppedMu.RUnlock()
@@ -43,7 +44,7 @@ func (e *traceExporter) ExportSpans(ctx context.Context, ss []*trace.SpanSnapsho
 	if e.config.DisableTraceExport || len(ss) == 0 {
 		return nil
 	}
-	out, err := e.marshal(ss)
+	out, err := e.marshal(tracetest.SpanStubsFromReadOnlySpans(ss))
 	if err != nil {
 		return err
 	}

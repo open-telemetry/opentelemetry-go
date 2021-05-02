@@ -161,7 +161,7 @@ func (md *metricsDriver) uploadMetrics(ctx context.Context, protoMetrics []*metr
 
 // ExportTraces implements otlp.ProtocolDriver. It transforms spans to
 // protobuf binary format and sends the result to the collector.
-func (d *driver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
+func (d *driver) ExportTraces(ctx context.Context, ss []tracesdk.ReadOnlySpan) error {
 	if !d.tracesDriver.connection.connected() {
 		return fmt.Errorf("traces exporter is disconnected from the server %s: %w", d.tracesDriver.connection.sCfg.Endpoint, d.tracesDriver.connection.lastConnectError())
 	}
@@ -170,7 +170,7 @@ func (d *driver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) 
 	ctx, tCancel := context.WithTimeout(ctx, d.tracesDriver.connection.sCfg.Timeout)
 	defer tCancel()
 
-	protoSpans := transform.SpanData(ss)
+	protoSpans := transform.Spans(ss)
 	if len(protoSpans) == 0 {
 		return nil
 	}

@@ -34,6 +34,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -233,7 +234,7 @@ func TestExportSpans(t *testing.T) {
 		semconv.ServiceNameKey.String("exporter-test"),
 	)
 
-	spans := []*sdktrace.SpanSnapshot{
+	spans := tracetest.SpanStubs{
 		// parent
 		{
 			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
@@ -274,7 +275,7 @@ func TestExportSpans(t *testing.T) {
 			},
 			Resource: resource,
 		},
-	}
+	}.Snapshots()
 	models := []zkmodel.SpanModel{
 		// model of parent
 		{

@@ -134,7 +134,7 @@ func InstallNewPipeline(collectorURL string, opts ...Option) error {
 }
 
 // ExportSpans exports SpanSnapshots to a Zipkin receiver.
-func (e *Exporter) ExportSpans(ctx context.Context, ss []*sdktrace.SpanSnapshot) error {
+func (e *Exporter) ExportSpans(ctx context.Context, ss []sdktrace.ReadOnlySpan) error {
 	e.stoppedMu.RLock()
 	stopped := e.stopped
 	e.stoppedMu.RUnlock()

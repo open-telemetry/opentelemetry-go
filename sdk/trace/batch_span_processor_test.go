@@ -32,7 +32,7 @@ import (
 
 type testBatchExporter struct {
 	mu            sync.Mutex
-	spans         []*sdktrace.SpanSnapshot
+	spans         []sdktrace.ReadOnlySpan
 	sizes         []int
 	batchCount    int
 	shutdownCount int
@@ -43,7 +43,7 @@ type testBatchExporter struct {
 	err           error
 }
 
-func (t *testBatchExporter) ExportSpans(ctx context.Context, ss []*sdktrace.SpanSnapshot) error {
+func (t *testBatchExporter) ExportSpans(ctx context.Context, ss []sdktrace.ReadOnlySpan) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -421,7 +421,7 @@ func assertMaxSpanDiff(t *testing.T, want, got, maxDif int) {
 type indefiniteExporter struct{}
 
 func (indefiniteExporter) Shutdown(context.Context) error { return nil }
-func (indefiniteExporter) ExportSpans(ctx context.Context, _ []*sdktrace.SpanSnapshot) error {
+func (indefiniteExporter) ExportSpans(ctx context.Context, _ []sdktrace.ReadOnlySpan) error {
 	<-ctx.Done()
 	return ctx.Err()
 }

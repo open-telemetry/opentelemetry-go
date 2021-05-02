@@ -32,6 +32,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -41,7 +42,7 @@ func TestModelConversion(t *testing.T) {
 		semconv.ServiceNameKey.String("model-test"),
 	)
 
-	inputBatch := []*tracesdk.SpanSnapshot{
+	inputBatch := tracetest.SpanStubs{
 		// typical span data
 		{
 			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
@@ -367,7 +368,7 @@ func TestModelConversion(t *testing.T) {
 			},
 			Resource: resource,
 		},
-	}
+	}.Snapshots()
 
 	expectedOutputBatch := []zkmodel.SpanModel{
 		// model for typical span data
@@ -734,12 +735,12 @@ func TestTagsTransformation(t *testing.T) {
 
 	tests := []struct {
 		name string
-		data *tracesdk.SpanSnapshot
+		data tracetest.SpanStub
 		want map[string]string
 	}{
 		{
 			name: "attributes",
-			data: &tracesdk.SpanSnapshot{
+			data: tracetest.SpanStub{
 				Attributes: []attribute.KeyValue{
 					attribute.String("key", keyValue),
 					attribute.Float64("double", doubleValue),
@@ -756,12 +757,12 @@ func TestTagsTransformation(t *testing.T) {
 		},
 		{
 			name: "no attributes",
-			data: &tracesdk.SpanSnapshot{},
+			data: tracetest.SpanStub{},
 			want: nil,
 		},
 		{
 			name: "omit-noerror",
-			data: &tracesdk.SpanSnapshot{
+			data: tracetest.SpanStub{
 				Attributes: []attribute.KeyValue{
 					attribute.Bool("error", false),
 				},
@@ -770,7 +771,7 @@ func TestTagsTransformation(t *testing.T) {
 		},
 		{
 			name: "statusCode",
-			data: &tracesdk.SpanSnapshot{
+			data: tracetest.SpanStub{
 				Attributes: []attribute.KeyValue{
 					attribute.String("key", keyValue),
 					attribute.Bool("error", true),
@@ -788,14 +789,14 @@ func TestTagsTransformation(t *testing.T) {
 		},
 		{
 			name: "instrLib-empty",
-			data: &tracesdk.SpanSnapshot{
+			data: tracetest.SpanStub{
 				InstrumentationLibrary: instrumentation.Library{},
 			},
 			want: nil,
 		},
 		{
 			name: "instrLib-noversion",
-			data: &tracesdk.SpanSnapshot{
+			data: tracetest.SpanStub{
 				Attributes: []attribute.KeyValue{},
 				InstrumentationLibrary: instrumentation.Library{
 					Name: instrLibName,
@@ -807,7 +808,7 @@ func TestTagsTransformation(t *testing.T) {
 		},
 		{
 			name: "instrLib-with-version",
-			data: &tracesdk.SpanSnapshot{
+			data: tracetest.SpanStub{
 				Attributes: []attribute.KeyValue{},
 				InstrumentationLibrary: instrumentation.Library{
 					Name:    instrLibName,
@@ -822,7 +823,7 @@ func TestTagsTransformation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := toZipkinTags(tt.data)
+			got := toZipkinTags(tt.data.Snapshot())
 			if diff := cmp.Diff(got, tt.want); diff != "" {
 				t.Errorf("Diff%v", diff)
 			}
@@ -833,12 +834,12 @@ func TestTagsTransformation(t *testing.T) {
 func TestRemoteEndpointTransformation(t *testing.T) {
 	tests := []struct {
 		name string
-		data *tracesdk.SpanSnapshot
+		data tracetest.SpanStub
 		want *zkmodel.Endpoint
 	}{
 		{
 			name: "nil-not-applicable",
-			data: &tracesdk.SpanSnapshot{
+			data: tracetest.SpanStub{
 				SpanKind:   trace.SpanKindClient,
 				Attributes: []attribute.KeyValue{},
 			},
@@ -846,7 +847,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 		},
 		{
 			name: "nil-not-found",
-			data: &tracesdk.SpanSnapshot{
+			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindConsumer,
 				Attributes: []attribute.KeyValue{
 					attribute.String("attr", "test"),
@@ -856,7 +857,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 		},
 		{
 			name: "peer-service-rank",
-			data: &tracesdk.SpanSnapshot{
+			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
 					semconv.PeerServiceKey.String("peer-service-test"),
@@ -870,7 +871,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 		},
 		{
 			name: "http-host-rank",
-			data: &tracesdk.SpanSnapshot{
+			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
 					semconv.HTTPHostKey.String("http-host-test"),
@@ -883,7 +884,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 		},
 		{
 			name: "db-name-rank",
-			data: &tracesdk.SpanSnapshot{
+			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
 					attribute.String("foo", "bar"),
@@ -896,7 +897,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 		},
 		{
 			name: "peer-hostname-rank",
-			data: &tracesdk.SpanSnapshot{
+			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
 					keyPeerHostname.String("peer-hostname-test"),
@@ -911,7 +912,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 		},
 		{
 			name: "peer-address-rank",
-			data: &tracesdk.SpanSnapshot{
+			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
 					keyPeerAddress.String("peer-address-test"),
@@ -925,7 +926,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 		},
 		{
 			name: "net-peer-invalid-ip",
-			data: &tracesdk.SpanSnapshot{
+			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
 					semconv.NetPeerIPKey.String("INVALID"),
@@ -935,7 +936,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 		},
 		{
 			name: "net-peer-ipv6-no-port",
-			data: &tracesdk.SpanSnapshot{
+			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
 					semconv.NetPeerIPKey.String("0:0:1:5ee:bad:c0de:0:0"),
@@ -947,7 +948,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 		},
 		{
 			name: "net-peer-ipv4-port",
-			data: &tracesdk.SpanSnapshot{
+			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
 					semconv.NetPeerIPKey.String("1.2.3.4"),
@@ -962,7 +963,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := toZipkinRemoteEndpoint(tt.data)
+			got := toZipkinRemoteEndpoint(tt.data.Snapshot())
 			if diff := cmp.Diff(got, tt.want); diff != "" {
 				t.Errorf("Diff%v", diff)
 			}

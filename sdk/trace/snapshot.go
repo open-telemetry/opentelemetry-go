@@ -28,32 +28,122 @@ import (
 // Although SpanSnapshot fields can be accessed and potentially modified,
 // SpanSnapshot should be treated as immutable. Changes to the span from which
 // the SpanSnapshot was created are NOT reflected in the SpanSnapshot.
+//
+// TODO: unexport and rename to snapshot.
+// TODO: clean project docs of this type after rename.
 type SpanSnapshot struct {
-	SpanContext trace.SpanContext
-	Parent      trace.SpanContext
-	SpanKind    trace.SpanKind
-	Name        string
-	StartTime   time.Time
-	// The wall clock time of EndTime will be adjusted to always be offset
-	// from StartTime by the duration of the span.
-	EndTime    time.Time
-	Attributes []attribute.KeyValue
-	Events     []Event
-	Links      []trace.Link
-	Status     Status
+	name                   string
+	spanContext            trace.SpanContext
+	parent                 trace.SpanContext
+	spanKind               trace.SpanKind
+	startTime              time.Time
+	endTime                time.Time
+	attributes             []attribute.KeyValue
+	events                 []Event
+	links                  []trace.Link
+	status                 Status
+	childSpanCount         int
+	droppedAttributeCount  int
+	droppedEventCount      int
+	droppedLinkCount       int
+	resource               *resource.Resource
+	instrumentationLibrary instrumentation.Library
+}
 
-	// DroppedAttributeCount contains dropped attributes for the span itself.
-	DroppedAttributeCount int
-	DroppedEventCount     int
-	DroppedLinkCount      int
+var _ ReadOnlySpan = SpanSnapshot{}
 
-	// ChildSpanCount holds the number of child span created for this span.
-	ChildSpanCount int
+func (s SpanSnapshot) private() {}
 
-	// Resource contains attributes representing an entity that produced this span.
-	Resource *resource.Resource
+// Name returns the name of the span.
+func (s SpanSnapshot) Name() string {
+	return s.name
+}
 
-	// InstrumentationLibrary defines the instrumentation library used to
-	// provide instrumentation.
-	InstrumentationLibrary instrumentation.Library
+// SpanContext returns the unique SpanContext that identifies the span.
+func (s SpanSnapshot) SpanContext() trace.SpanContext {
+	return s.spanContext
+}
+
+// Parent returns the unique SpanContext that identifies the parent of the
+// span if one exists. If the span has no parent the returned SpanContext
+// will be invalid.
+func (s SpanSnapshot) Parent() trace.SpanContext {
+	return s.parent
+}
+
+// SpanKind returns the role the span plays in a Trace.
+func (s SpanSnapshot) SpanKind() trace.SpanKind {
+	return s.spanKind
+}
+
+// StartTime returns the time the span started recording.
+func (s SpanSnapshot) StartTime() time.Time {
+	return s.startTime
+}
+
+// EndTime returns the time the span stopped recording. It will be zero if
+// the span has not ended.
+func (s SpanSnapshot) EndTime() time.Time {
+	return s.endTime
+}
+
+// Attributes returns the defining attributes of the span.
+func (s SpanSnapshot) Attributes() []attribute.KeyValue {
+	return s.attributes
+}
+
+// Links returns all the links the span has to other spans.
+func (s SpanSnapshot) Links() []trace.Link {
+	return s.links
+}
+
+// Events returns all the events that occurred within in the spans
+// lifetime.
+func (s SpanSnapshot) Events() []Event {
+	return s.events
+}
+
+// Status returns the spans status.
+func (s SpanSnapshot) Status() Status {
+	return s.status
+}
+
+// InstrumentationLibrary returns information about the instrumentation
+// library that created the span.
+func (s SpanSnapshot) InstrumentationLibrary() instrumentation.Library {
+	return s.instrumentationLibrary
+}
+
+// Resource returns information about the entity that produced the span.
+func (s SpanSnapshot) Resource() *resource.Resource {
+	return s.resource
+}
+
+// DroppedAttributes returns the number of attributes dropped by the span
+// due to limits being reached.
+func (s SpanSnapshot) DroppedAttributes() int {
+	return s.droppedAttributeCount
+}
+
+// DroppedLinks returns the number of links dropped by the span due to limits
+// being reached.
+func (s SpanSnapshot) DroppedLinks() int {
+	return s.droppedLinkCount
+}
+
+// DroppedEvents returns the number of events dropped by the span due to
+// limits being reached.
+func (s SpanSnapshot) DroppedEvents() int {
+	return s.droppedEventCount
+}
+
+// ChildSpanCount returns the count of spans that consider the span a
+// direct parent.
+func (s SpanSnapshot) ChildSpanCount() int {
+	return s.childSpanCount
+}
+
+// TODO: remove this.
+func (s SpanSnapshot) Snapshot() *SpanSnapshot {
+	return &s
 }

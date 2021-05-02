@@ -131,7 +131,7 @@ func (e *Exporter) ExportKindFor(desc *metric.Descriptor, kind aggregation.Kind)
 
 // ExportSpans transforms and batches trace SpanSnapshots into OTLP Trace and
 // transmits them to the configured collector.
-func (e *Exporter) ExportSpans(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
+func (e *Exporter) ExportSpans(ctx context.Context, ss []tracesdk.ReadOnlySpan) error {
 	return e.driver.ExportTraces(ctx, ss)
 }
 
