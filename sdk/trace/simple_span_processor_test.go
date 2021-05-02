@@ -35,8 +35,8 @@ type testExporter struct {
 	shutdown bool
 }
 
-func (t *testExporter) ExportSpans(ctx context.Context, ss []sdktrace.ReadOnlySpan) error {
-	t.spans = append(t.spans, ss...)
+func (t *testExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
+	t.spans = append(t.spans, spans...)
 	return nil
 }
 

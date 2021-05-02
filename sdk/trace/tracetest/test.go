@@ -31,11 +31,11 @@ func NewNoopExporter() *NoopExporter {
 	return new(NoopExporter)
 }
 
-// NoopExporter is an exporter that drops all received SpanSnapshots and
-// performs no action.
+// NoopExporter is an exporter that drops all received spans and performs no
+// action.
 type NoopExporter struct{}
 
-// ExportSpans handles export of SpanSnapshots by dropping them.
+// ExportSpans handles export of spans by dropping them.
 func (nsb *NoopExporter) ExportSpans(context.Context, []trace.ReadOnlySpan) error { return nil }
 
 // Shutdown stops the exporter by doing nothing.
@@ -54,15 +54,15 @@ type InMemoryExporter struct {
 	ss SpanStubs
 }
 
-// ExportSpans handles export of SpanSnapshots by storing them in memory.
-func (imsb *InMemoryExporter) ExportSpans(_ context.Context, ss []trace.ReadOnlySpan) error {
+// ExportSpans handles export of spans by storing them in memory.
+func (imsb *InMemoryExporter) ExportSpans(_ context.Context, spans []trace.ReadOnlySpan) error {
 	imsb.mu.Lock()
 	defer imsb.mu.Unlock()
-	imsb.ss = append(imsb.ss, SpanStubsFromReadOnlySpans(ss)...)
+	imsb.ss = append(imsb.ss, SpanStubsFromReadOnlySpans(spans)...)
 	return nil
 }
 
-// Shutdown stops the exporter by clearing SpanSnapshots held in memory.
+// Shutdown stops the exporter by clearing spans held in memory.
 func (imsb *InMemoryExporter) Shutdown(context.Context) error {
 	imsb.Reset()
 	return nil

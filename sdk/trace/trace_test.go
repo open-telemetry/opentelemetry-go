@@ -103,36 +103,36 @@ func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
 type testExporter struct {
 	mu    sync.RWMutex
 	idx   map[string]int
-	spans []*SpanSnapshot
+	spans []*snapshot
 }
 
 func NewTestExporter() *testExporter {
 	return &testExporter{idx: make(map[string]int)}
 }
 
-func (te *testExporter) ExportSpans(_ context.Context, ss []ReadOnlySpan) error {
+func (te *testExporter) ExportSpans(_ context.Context, spans []ReadOnlySpan) error {
 	te.mu.Lock()
 	defer te.mu.Unlock()
 
 	i := len(te.spans)
-	for _, s := range ss {
+	for _, s := range spans {
 		te.idx[s.Name()] = i
-		te.spans = append(te.spans, s.(*SpanSnapshot))
+		te.spans = append(te.spans, s.(*snapshot))
 		i++
 	}
 	return nil
 }
 
-func (te *testExporter) Spans() []*SpanSnapshot {
+func (te *testExporter) Spans() []*snapshot {
 	te.mu.RLock()
 	defer te.mu.RUnlock()
 
-	cp := make([]*SpanSnapshot, len(te.spans))
+	cp := make([]*snapshot, len(te.spans))
 	copy(cp, te.spans)
 	return cp
 }
 
-func (te *testExporter) GetSpan(name string) (*SpanSnapshot, bool) {
+func (te *testExporter) GetSpan(name string) (*snapshot, bool) {
 	te.mu.RLock()
 	defer te.mu.RUnlock()
 	i, ok := te.idx[name]
@@ -389,7 +389,7 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &SpanSnapshot{
+	want := &snapshot{
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -418,7 +418,7 @@ func TestSetSpanAttributes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &SpanSnapshot{
+	want := &snapshot{
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -474,7 +474,7 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &SpanSnapshot{
+	want := &snapshot{
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -508,7 +508,7 @@ func TestSetSpanAttributesWithInvalidKey(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &SpanSnapshot{
+	want := &snapshot{
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -552,7 +552,7 @@ func TestEvents(t *testing.T) {
 		}
 	}
 
-	want := &SpanSnapshot{
+	want := &snapshot{
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -601,7 +601,7 @@ func TestEventsOverLimit(t *testing.T) {
 		}
 	}
 
-	want := &SpanSnapshot{
+	want := &snapshot{
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -643,7 +643,7 @@ func TestLinks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &SpanSnapshot{
+	want := &snapshot{
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -684,7 +684,7 @@ func TestLinksOverLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &SpanSnapshot{
+	want := &snapshot{
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -733,7 +733,7 @@ func TestSetSpanStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &SpanSnapshot{
+	want := &snapshot{
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -763,7 +763,7 @@ func TestSetSpanStatusWithoutMessageWhenStatusIsNotError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &SpanSnapshot{
+	want := &snapshot{
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -784,7 +784,7 @@ func TestSetSpanStatusWithoutMessageWhenStatusIsNotError(t *testing.T) {
 
 func cmpDiff(x, y interface{}) string {
 	return cmp.Diff(x, y,
-		cmp.AllowUnexported(SpanSnapshot{}),
+		cmp.AllowUnexported(snapshot{}),
 		cmp.AllowUnexported(attribute.Value{}),
 		cmp.AllowUnexported(Event{}),
 		cmp.AllowUnexported(trace.TraceState{}))
@@ -852,7 +852,7 @@ func startLocalSpan(tp *TracerProvider, ctx context.Context, trName, name string
 //
 // It also does some basic tests on the span.
 // It also clears spanID in the to make the comparison easier.
-func endSpan(te *testExporter, span trace.Span) (*SpanSnapshot, error) {
+func endSpan(te *testExporter, span trace.Span) (*snapshot, error) {
 	if !span.IsRecording() {
 		return nil, fmt.Errorf("IsRecording: got false, want true")
 	}
@@ -1114,7 +1114,7 @@ func TestRecordError(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		want := &SpanSnapshot{
+		want := &snapshot{
 			spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    tid,
 				TraceFlags: 0x1,
@@ -1153,7 +1153,7 @@ func TestRecordErrorNil(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &SpanSnapshot{
+	want := &snapshot{
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -1263,7 +1263,7 @@ func TestWithResource(t *testing.T) {
 			if err != nil {
 				t.Error(err.Error())
 			}
-			want := &SpanSnapshot{
+			want := &snapshot{
 				spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID:    tid,
 					TraceFlags: 0x1,
@@ -1299,7 +1299,7 @@ func TestWithInstrumentationVersion(t *testing.T) {
 		t.Error(err.Error())
 	}
 
-	want := &SpanSnapshot{
+	want := &snapshot{
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -1487,7 +1487,7 @@ func TestAddEventsWithMoreAttributesThanLimit(t *testing.T) {
 		}
 	}
 
-	want := &SpanSnapshot{
+	want := &snapshot{
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -1546,7 +1546,7 @@ func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &SpanSnapshot{
+	want := &snapshot{
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,

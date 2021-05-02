@@ -192,7 +192,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 
 	nmaSpans := nmc.getSpans()
 
-	// Expecting 10 SpanSnapshots that were sampled, given that
+	// Expecting 10 spans that were sampled, given that
 	if g, w := len(nmaSpans), n; g != w {
 		t.Fatalf("Connected collector: spans: got %d want %d", g, w)
 	}
@@ -510,7 +510,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 		}
 
 		nmaSpans := nmc.getSpans()
-		// Expecting 10 SpanSnapshots that were sampled, given that
+		// Expecting 10 spans that were sampled, given that
 		if g, w := len(nmaSpans), n; g != w {
 			t.Fatalf("Round #%d: Connected collector: spans: got %d want %d", j, g, w)
 		}
@@ -836,7 +836,7 @@ func TestDisconnected(t *testing.T) {
 	}()
 
 	assert.Error(t, exp.Export(ctx, otlptest.OneRecordCheckpointSet{}))
-	assert.Error(t, exp.ExportSpans(ctx, otlptest.SingleSpanSnapshot()))
+	assert.Error(t, exp.ExportSpans(ctx, otlptest.SingleReadOnlySpan()))
 }
 
 func TestEmptyData(t *testing.T) {

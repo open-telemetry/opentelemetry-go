@@ -30,7 +30,7 @@ type SpanExporter interface {
 	// calls this function will not implement any retry logic. All errors
 	// returned by this function are considered unrecoverable and will be
 	// reported to a configured error Handler.
-	ExportSpans(ctx context.Context, ss []ReadOnlySpan) error
+	ExportSpans(ctx context.Context, spans []ReadOnlySpan) error
 	// Shutdown notifies the exporter of a pending halt to operations. The
 	// exporter is expected to preform any cleanup or synchronization it
 	// requires while honoring all timeouts and cancellations contained in

@@ -79,9 +79,9 @@ func (OneRecordCheckpointSet) ForEach(kindSelector exportmetric.ExportKindSelect
 	return recordFunc(rec)
 }
 
-// SingleSpanSnapshot returns a one-element slice with a snapshot. It
+// SingleReadOnlySpan returns a one-element slice with a read-only span. It
 // may be useful for testing driver's trace export.
-func SingleSpanSnapshot() []tracesdk.ReadOnlySpan {
+func SingleReadOnlySpan() []tracesdk.ReadOnlySpan {
 	return tracetest.SpanStubs{
 		{
 			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{

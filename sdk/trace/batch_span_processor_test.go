@@ -43,12 +43,12 @@ type testBatchExporter struct {
 	err           error
 }
 
-func (t *testBatchExporter) ExportSpans(ctx context.Context, ss []sdktrace.ReadOnlySpan) error {
+func (t *testBatchExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
 	if t.idx < len(t.errors) {
-		t.droppedCount += len(ss)
+		t.droppedCount += len(spans)
 		err := t.errors[t.idx]
 		t.idx++
 		return err
@@ -63,8 +63,8 @@ func (t *testBatchExporter) ExportSpans(ctx context.Context, ss []sdktrace.ReadO
 	default:
 	}
 
-	t.spans = append(t.spans, ss...)
-	t.sizes = append(t.sizes, len(ss))
+	t.spans = append(t.spans, spans...)
+	t.sizes = append(t.sizes, len(spans))
 	t.batchCount++
 	return nil
 }

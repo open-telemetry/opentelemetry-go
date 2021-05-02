@@ -63,7 +63,7 @@ type BatchSpanProcessorOptions struct {
 }
 
 // batchSpanProcessor is a SpanProcessor that batches asynchronously-received
-// SpanSnapshots and sends them to a trace.Exporter when complete.
+// spans and sends them to a trace.Exporter when complete.
 type batchSpanProcessor struct {
 	e SpanExporter
 	o BatchSpanProcessorOptions

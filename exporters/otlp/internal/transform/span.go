@@ -28,7 +28,7 @@ const (
 	maxEventsPerSpan = 128
 )
 
-// Spans transforms a slice of SpanSnapshot into a slice of OTLP
+// Spans transforms a slice of OpenTelemetry spans into a slice of OTLP
 // ResourceSpans.
 func Spans(sdl []tracesdk.ReadOnlySpan) []*tracepb.ResourceSpans {
 	if len(sdl) == 0 {

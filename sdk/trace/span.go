@@ -477,7 +477,7 @@ func (s *span) ChildSpanCount() int {
 
 // snapshot creates a read-only copy of the current state of the span.
 func (s *span) snapshot() ReadOnlySpan {
-	var sd SpanSnapshot
+	var sd snapshot
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
