@@ -31,7 +31,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Move the `Event` type from the `go.opentelemetry.io/otel` package to the `go.opentelemetry.io/otel/sdk/trace` package. (#1846)
 - BatchSpanProcessor now report export failures when calling `ForceFlush()` method. (#1860)
 - `Set.Encoded(Encoder)` no longer caches the result of an encoding. (#1855)
-- The `StatusCode` and `StatusMessage` methods of the `ReadOnlySpan` interfaceand the `Span` produced by the `go.opentelemetry.io/otel/sdk/trace` package have been replaced with a single `Status` method.
+- The `StatusCode` and `StatusMessage` methods of the `ReadOnlySpan` interface and the `Span` produced by the `go.opentelemetry.io/otel/sdk/trace` package have been replaced with a single `Status` method.
   This method returns the status of a span using the new `Status` type. (#1874)
 
 ### Deprecated
