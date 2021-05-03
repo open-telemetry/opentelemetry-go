@@ -30,6 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Move the `Event` type from the `go.opentelemetry.io/otel` package to the `go.opentelemetry.io/otel/sdk/trace` package. (#1846)
 - BatchSpanProcessor now report export failures when calling `ForceFlush()` method. (#1860)
 - `Set.Encoded(Encoder)` no longer caches the result of an encoding. (#1855)
+- Renamed `CloudZoneKey` to `CloudAvailabilityZoneKey` in Resource semantic conventions according to spec. (#1871)
 
 ### Deprecated
 
