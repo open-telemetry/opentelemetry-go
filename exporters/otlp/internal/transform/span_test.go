@@ -148,7 +148,7 @@ func TestLinks(t *testing.T) {
 	assert.Equal(t, expected, got[1])
 
 	// Changes to our links should not change the produced links.
-	l[1].SpanContext = l[1].WithTraceID(trace.TraceID{})
+	l[1].SpanContext = l[1].SpanContext.WithTraceID(trace.TraceID{})
 	assert.Equal(t, expected, got[1])
 }
 

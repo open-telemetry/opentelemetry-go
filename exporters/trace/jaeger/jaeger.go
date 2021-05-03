@@ -213,8 +213,8 @@ func spanSnapshotToThrift(ss *sdktrace.SpanSnapshot) *gen.Span {
 
 	var refs []*gen.SpanRef
 	for _, link := range ss.Links {
-		tid := link.TraceID()
-		sid := link.SpanID()
+		tid := link.SpanContext.TraceID()
+		sid := link.SpanContext.SpanID()
 		refs = append(refs, &gen.SpanRef{
 			TraceIdHigh: int64(binary.BigEndian.Uint64(tid[0:8])),
 			TraceIdLow:  int64(binary.BigEndian.Uint64(tid[8:16])),
