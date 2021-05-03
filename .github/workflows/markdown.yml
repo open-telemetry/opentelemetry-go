@@ -19,6 +19,7 @@ jobs:
         id: changes
         run: |
           echo "::set-output name=md::$(git diff --name-only --diff-filter=ACMRTUXB origin/${{ github.event.pull_request.base.ref }} ${{ github.event.pull_request.head.sha }} | grep .md$ | xargs)"
+
   lint:
     name: lint markdown files
     runs-on: ubuntu-latest
@@ -31,3 +32,19 @@ jobs:
       uses: docker://avtodev/markdown-lint:v1
       with:
         args: ${{needs.changedfiles.outputs.md}}
+
+  check-links:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          base-branch: 'main'
+          use-quiet-mode: 'yes'
+          use-verbose-mode: 'yes'
+          config-file: '.markdown-link.json'
+          check-modified-files-only: 'yes'
+          folder-path: ''
