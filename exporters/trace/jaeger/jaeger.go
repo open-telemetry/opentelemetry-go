@@ -170,13 +170,13 @@ func spanSnapshotToThrift(ss *sdktrace.SpanSnapshot) *gen.Span {
 		)
 	}
 
-	if ss.StatusCode != codes.Unset {
-		tags = append(tags, getInt64Tag(keyStatusCode, int64(ss.StatusCode)))
-		if ss.StatusMessage != "" {
-			tags = append(tags, getStringTag(keyStatusMessage, ss.StatusMessage))
+	if ss.Status.Code != codes.Unset {
+		tags = append(tags, getInt64Tag(keyStatusCode, int64(ss.Status.Code)))
+		if ss.Status.Description != "" {
+			tags = append(tags, getStringTag(keyStatusMessage, ss.Status.Description))
 		}
 
-		if ss.StatusCode == codes.Error {
+		if ss.Status.Code == codes.Error {
 			tags = append(tags, getBoolTag(keyError, true))
 		}
 	}

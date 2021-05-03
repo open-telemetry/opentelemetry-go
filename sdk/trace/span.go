@@ -46,8 +46,7 @@ type ReadOnlySpan interface {
 	Attributes() []attribute.KeyValue
 	Links() []trace.Link
 	Events() []Event
-	StatusCode() codes.Code
-	StatusMessage() string
+	Status() Status
 	Tracer() trace.Tracer
 	IsRecording() bool
 	InstrumentationLibrary() instrumentation.Library
@@ -92,11 +91,8 @@ type span struct {
 	// value of time.Time until the span is ended.
 	endTime time.Time
 
-	// statusCode represents the status of this span as a codes.Code value.
-	statusCode codes.Code
-
-	// statusMessage represents the status of this span as a string.
-	statusMessage string
+	// status is the status of this span.
+	status Status
 
 	// childSpanCount holds the number of child spans created for this span.
 	childSpanCount int
@@ -154,19 +150,22 @@ func (s *span) IsRecording() bool {
 	return !s.startTime.IsZero() && s.endTime.IsZero()
 }
 
-// SetStatus sets the status of this span in the form of a code and a
-// message. This overrides the existing value of this span's status if one
-// exists. Message will be set only if status is error. If this span is not being
-// recorded than this method does nothing.
-func (s *span) SetStatus(code codes.Code, msg string) {
+// SetStatus sets the status of the Span in the form of a code and a
+// description, overriding previous values set. The description is only
+// included in the set status when the code is for an error. If this span is
+// not being recorded than this method does nothing.
+func (s *span) SetStatus(code codes.Code, description string) {
 	if !s.IsRecording() {
 		return
 	}
-	s.mu.Lock()
-	s.statusCode = code
+
+	status := Status{Code: code}
 	if code == codes.Error {
-		s.statusMessage = msg
+		status.Description = description
 	}
+
+	s.mu.Lock()
+	s.status = status
 	s.mu.Unlock()
 }
 
@@ -381,18 +380,11 @@ func (s *span) Events() []Event {
 	return s.interfaceArrayToMessageEventArray()
 }
 
-// StatusCode returns the status code of this span.
-func (s *span) StatusCode() codes.Code {
+// Status returns the status of this span.
+func (s *span) Status() Status {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.statusCode
-}
-
-// StatusMessage returns the status message of this span.
-func (s *span) StatusMessage() string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.statusMessage
+	return s.status
 }
 
 // InstrumentationLibrary returns the instrumentation.Library associated with
@@ -443,8 +435,7 @@ func (s *span) Snapshot() *SpanSnapshot {
 	sd.SpanContext = s.spanContext
 	sd.SpanKind = s.spanKind
 	sd.StartTime = s.startTime
-	sd.StatusCode = s.statusCode
-	sd.StatusMessage = s.statusMessage
+	sd.Status = s.status
 
 	if s.attributes.evictList.Len() > 0 {
 		sd.Attributes = s.attributes.toKeyValue()
@@ -580,6 +571,15 @@ func isSampled(s SamplingResult) bool {
 	return s.Decision == RecordAndSample
 }
 
+// Status is the classified state of a Span.
+type Status struct {
+	// Code is an identifier of a Span's state classification.
+	Code codes.Code
+	// Message is a user hint about why the status was set. It is only
+	// applicable when Code is Error.
+	Description string
+}
+
 // SpanSnapshot is a snapshot of a span which contains all the information
 // collected by the span. Its main purpose is exporting completed spans.
 // Although SpanSnapshot fields can be accessed and potentially modified,
@@ -597,8 +597,7 @@ type SpanSnapshot struct {
 	Attributes    []attribute.KeyValue
 	MessageEvents []Event
 	Links         []trace.Link
-	StatusCode    codes.Code
-	StatusMessage string
+	Status        Status
 
 	// DroppedAttributeCount contains dropped attributes for the span itself.
 	DroppedAttributeCount    int

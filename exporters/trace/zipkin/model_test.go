@@ -74,9 +74,11 @@ func TestModelConversion(t *testing.T) {
 					Attributes: nil,
 				},
 			},
-			StatusCode:    codes.Error,
-			StatusMessage: "404, file not found",
-			Resource:      resource,
+			Status: tracesdk.Status{
+				Code:        codes.Error,
+				Description: "404, file not found",
+			},
+			Resource: resource,
 		},
 		// span data with no parent (same as typical, but has
 		// invalid parent)
@@ -107,9 +109,11 @@ func TestModelConversion(t *testing.T) {
 					Attributes: nil,
 				},
 			},
-			StatusCode:    codes.Error,
-			StatusMessage: "404, file not found",
-			Resource:      resource,
+			Status: tracesdk.Status{
+				Code:        codes.Error,
+				Description: "404, file not found",
+			},
+			Resource: resource,
 		},
 		// span data of unspecified kind
 		{
@@ -143,9 +147,11 @@ func TestModelConversion(t *testing.T) {
 					Attributes: nil,
 				},
 			},
-			StatusCode:    codes.Error,
-			StatusMessage: "404, file not found",
-			Resource:      resource,
+			Status: tracesdk.Status{
+				Code:        codes.Error,
+				Description: "404, file not found",
+			},
+			Resource: resource,
 		},
 		// span data of internal kind
 		{
@@ -179,9 +185,11 @@ func TestModelConversion(t *testing.T) {
 					Attributes: nil,
 				},
 			},
-			StatusCode:    codes.Error,
-			StatusMessage: "404, file not found",
-			Resource:      resource,
+			Status: tracesdk.Status{
+				Code:        codes.Error,
+				Description: "404, file not found",
+			},
+			Resource: resource,
 		},
 		// span data of client kind
 		{
@@ -218,9 +226,11 @@ func TestModelConversion(t *testing.T) {
 					Attributes: nil,
 				},
 			},
-			StatusCode:    codes.Error,
-			StatusMessage: "404, file not found",
-			Resource:      resource,
+			Status: tracesdk.Status{
+				Code:        codes.Error,
+				Description: "404, file not found",
+			},
+			Resource: resource,
 		},
 		// span data of producer kind
 		{
@@ -254,9 +264,11 @@ func TestModelConversion(t *testing.T) {
 					Attributes: nil,
 				},
 			},
-			StatusCode:    codes.Error,
-			StatusMessage: "404, file not found",
-			Resource:      resource,
+			Status: tracesdk.Status{
+				Code:        codes.Error,
+				Description: "404, file not found",
+			},
+			Resource: resource,
 		},
 		// span data of consumer kind
 		{
@@ -290,9 +302,11 @@ func TestModelConversion(t *testing.T) {
 					Attributes: nil,
 				},
 			},
-			StatusCode:    codes.Error,
-			StatusMessage: "404, file not found",
-			Resource:      resource,
+			Status: tracesdk.Status{
+				Code:        codes.Error,
+				Description: "404, file not found",
+			},
+			Resource: resource,
 		},
 		// span data with no events
 		{
@@ -313,9 +327,11 @@ func TestModelConversion(t *testing.T) {
 				attribute.String("attr2", "bar"),
 			},
 			MessageEvents: nil,
-			StatusCode:    codes.Error,
-			StatusMessage: "404, file not found",
-			Resource:      resource,
+			Status: tracesdk.Status{
+				Code:        codes.Error,
+				Description: "404, file not found",
+			},
+			Resource: resource,
 		},
 		// span data with an "error" attribute set to "false"
 		{
@@ -348,8 +364,7 @@ func TestModelConversion(t *testing.T) {
 					Attributes: nil,
 				},
 			},
-			StatusCode: codes.Unset,
-			Resource:   resource,
+			Resource: resource,
 		},
 	}
 
@@ -759,8 +774,10 @@ func TestTagsTransformation(t *testing.T) {
 					attribute.String("key", keyValue),
 					attribute.Bool("error", true),
 				},
-				StatusCode:    codes.Error,
-				StatusMessage: statusMessage,
+				Status: tracesdk.Status{
+					Code:        codes.Error,
+					Description: statusMessage,
+				},
 			},
 			want: map[string]string{
 				"error":            statusMessage,

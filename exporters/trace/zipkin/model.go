@@ -187,12 +187,12 @@ func toZipkinTags(data *tracesdk.SpanSnapshot) map[string]string {
 		}
 	}
 
-	if data.StatusCode != codes.Unset {
-		m["otel.status_code"] = data.StatusCode.String()
+	if data.Status.Code != codes.Unset {
+		m["otel.status_code"] = data.Status.Code.String()
 	}
 
-	if data.StatusCode == codes.Error {
-		m["error"] = data.StatusMessage
+	if data.Status.Code == codes.Error {
+		m["error"] = data.Status.Description
 	} else {
 		delete(m, "error")
 	}

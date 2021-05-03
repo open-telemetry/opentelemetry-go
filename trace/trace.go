@@ -525,9 +525,9 @@ type Span interface {
 	SpanContext() SpanContext
 
 	// SetStatus sets the status of the Span in the form of a code and a
-	// message. SetStatus overrides the value of previous calls to SetStatus
-	// on the Span.
-	SetStatus(code codes.Code, msg string)
+	// description, overriding previous values set. The description is only
+	// included in a status when the code is for an error.
+	SetStatus(code codes.Code, description string)
 
 	// SetName sets the Span name.
 	SetName(name string)

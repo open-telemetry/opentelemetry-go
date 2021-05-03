@@ -738,11 +738,13 @@ func TestSetSpanStatus(t *testing.T) {
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		}),
-		Parent:                 sc.WithRemote(true),
-		Name:                   "span0",
-		SpanKind:               trace.SpanKindInternal,
-		StatusCode:             codes.Error,
-		StatusMessage:          "Error",
+		Parent:   sc.WithRemote(true),
+		Name:     "span0",
+		SpanKind: trace.SpanKindInternal,
+		Status: Status{
+			Code:        codes.Error,
+			Description: "Error",
+		},
 		InstrumentationLibrary: instrumentation.Library{Name: "SpanStatus"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
@@ -766,11 +768,13 @@ func TestSetSpanStatusWithoutMessageWhenStatusIsNotError(t *testing.T) {
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		}),
-		Parent:                 sc.WithRemote(true),
-		Name:                   "span0",
-		SpanKind:               trace.SpanKindInternal,
-		StatusCode:             codes.Ok,
-		StatusMessage:          "",
+		Parent:   sc.WithRemote(true),
+		Name:     "span0",
+		SpanKind: trace.SpanKindInternal,
+		Status: Status{
+			Code:        codes.Ok,
+			Description: "",
+		},
 		InstrumentationLibrary: instrumentation.Library{Name: "SpanStatus"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
@@ -1115,10 +1119,10 @@ func TestRecordError(t *testing.T) {
 				TraceID:    tid,
 				TraceFlags: 0x1,
 			}),
-			Parent:     sc.WithRemote(true),
-			Name:       "span0",
-			StatusCode: codes.Unset,
-			SpanKind:   trace.SpanKindInternal,
+			Parent:   sc.WithRemote(true),
+			Name:     "span0",
+			Status:   Status{Code: codes.Unset},
+			SpanKind: trace.SpanKindInternal,
 			MessageEvents: []Event{
 				{
 					Name: semconv.ExceptionEventName,
@@ -1154,11 +1158,13 @@ func TestRecordErrorNil(t *testing.T) {
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		}),
-		Parent:                 sc.WithRemote(true),
-		Name:                   "span0",
-		SpanKind:               trace.SpanKindInternal,
-		StatusCode:             codes.Unset,
-		StatusMessage:          "",
+		Parent:   sc.WithRemote(true),
+		Name:     "span0",
+		SpanKind: trace.SpanKindInternal,
+		Status: Status{
+			Code:        codes.Unset,
+			Description: "",
+		},
 		InstrumentationLibrary: instrumentation.Library{Name: "RecordErrorNil"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
@@ -1380,8 +1386,8 @@ func TestReadOnlySpan(t *testing.T) {
 	assert.Equal(t, linked, ro.Links()[0].SpanContext)
 	assert.Equal(t, kv.Key, ro.Events()[0].Attributes[0].Key)
 	assert.Equal(t, kv.Value, ro.Events()[0].Attributes[0].Value)
-	assert.Equal(t, codes.Ok, ro.StatusCode())
-	assert.Equal(t, "", ro.StatusMessage())
+	assert.Equal(t, codes.Ok, ro.Status().Code)
+	assert.Equal(t, "", ro.Status().Description)
 	assert.Equal(t, "ReadOnlySpan", ro.InstrumentationLibrary().Name)
 	assert.Equal(t, "3", ro.InstrumentationLibrary().Version)
 	assert.Equal(t, kv.Key, ro.Resource().Attributes()[0].Key)

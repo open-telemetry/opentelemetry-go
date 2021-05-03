@@ -21,6 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
       | 10 | Out of Range |
       | 14 | Unavailable |
       | 15 | Data Loss |
+- The `Status` type was added to the `go.opentelemetry.io/otel/sdk/trace` package to represent the status of a span. (#1874)
 
 ### Changed
 
@@ -31,6 +32,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - BatchSpanProcessor now report export failures when calling `ForceFlush()` method. (#1860)
 - `Set.Encoded(Encoder)` no longer caches the result of an encoding. (#1855)
 - Renamed `CloudZoneKey` to `CloudAvailabilityZoneKey` in Resource semantic conventions according to spec. (#1871)
+- The `StatusCode` and `StatusMessage` methods of the `ReadOnlySpan` interface and the `Span` produced by the `go.opentelemetry.io/otel/sdk/trace` package have been replaced with a single `Status` method.
+  This method returns the status of a span using the new `Status` type. (#1874)
 
 ### Deprecated
 

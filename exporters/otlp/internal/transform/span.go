@@ -108,7 +108,7 @@ func span(sd *tracesdk.SpanSnapshot) *tracepb.Span {
 		TraceId:                tid[:],
 		SpanId:                 sid[:],
 		TraceState:             sd.SpanContext.TraceState().String(),
-		Status:                 status(sd.StatusCode, sd.StatusMessage),
+		Status:                 status(sd.Status.Code, sd.Status.Description),
 		StartTimeUnixNano:      uint64(sd.StartTime.UnixNano()),
 		EndTimeUnixNano:        uint64(sd.EndTime.UnixNano()),
 		Links:                  links(sd.Links),
