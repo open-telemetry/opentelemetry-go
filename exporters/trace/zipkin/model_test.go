@@ -30,7 +30,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
@@ -75,7 +74,7 @@ func TestModelConversion(t *testing.T) {
 					Attributes: nil,
 				},
 			},
-			Status: sdktrace.Status{
+			Status: tracesdk.Status{
 				Code:        codes.Error,
 				Description: "404, file not found",
 			},
@@ -110,7 +109,7 @@ func TestModelConversion(t *testing.T) {
 					Attributes: nil,
 				},
 			},
-			Status: sdktrace.Status{
+			Status: tracesdk.Status{
 				Code:        codes.Error,
 				Description: "404, file not found",
 			},
@@ -148,7 +147,7 @@ func TestModelConversion(t *testing.T) {
 					Attributes: nil,
 				},
 			},
-			Status: sdktrace.Status{
+			Status: tracesdk.Status{
 				Code:        codes.Error,
 				Description: "404, file not found",
 			},
@@ -186,7 +185,7 @@ func TestModelConversion(t *testing.T) {
 					Attributes: nil,
 				},
 			},
-			Status: sdktrace.Status{
+			Status: tracesdk.Status{
 				Code:        codes.Error,
 				Description: "404, file not found",
 			},
@@ -227,7 +226,7 @@ func TestModelConversion(t *testing.T) {
 					Attributes: nil,
 				},
 			},
-			Status: sdktrace.Status{
+			Status: tracesdk.Status{
 				Code:        codes.Error,
 				Description: "404, file not found",
 			},
@@ -265,7 +264,7 @@ func TestModelConversion(t *testing.T) {
 					Attributes: nil,
 				},
 			},
-			Status: sdktrace.Status{
+			Status: tracesdk.Status{
 				Code:        codes.Error,
 				Description: "404, file not found",
 			},
@@ -303,7 +302,7 @@ func TestModelConversion(t *testing.T) {
 					Attributes: nil,
 				},
 			},
-			Status: sdktrace.Status{
+			Status: tracesdk.Status{
 				Code:        codes.Error,
 				Description: "404, file not found",
 			},
@@ -328,7 +327,7 @@ func TestModelConversion(t *testing.T) {
 				attribute.String("attr2", "bar"),
 			},
 			MessageEvents: nil,
-			Status: sdktrace.Status{
+			Status: tracesdk.Status{
 				Code:        codes.Error,
 				Description: "404, file not found",
 			},
@@ -775,7 +774,7 @@ func TestTagsTransformation(t *testing.T) {
 					attribute.String("key", keyValue),
 					attribute.Bool("error", true),
 				},
-				Status: sdktrace.Status{
+				Status: tracesdk.Status{
 					Code:        codes.Error,
 					Description: statusMessage,
 				},
