@@ -93,6 +93,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `OTEL_EXPORTER_OTLP_TRACES_CERTIFICATE`
   - `OTEL_EXPORTER_OTLP_METRICS_CERTIFICATE`
 - Adds `otlpgrpc.WithTimeout` option for configuring timeout to the otlp/gRPC exporter. (#1821)
+- Adds `jaeger.WithMaxPacketSize` option for configuring maximum UDP packet size used when connecting to the Jaeger agent. (#1853)
 
 ### Fixed
 
@@ -104,6 +105,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Zipkin Exporter: Ensure mapping between OTel and Zipkin span data complies with the specification. (#1688)
 - Fixed typo for default service name in Jaeger Exporter. (#1797)
 - Fix flaky OTLP for the reconnnection of the client connection. (#1527, #1814)
+- Fix Jaeger exporter dropping of span batches that exceed the UDP packet size limit.
+  Instead, the exporter now splits the batch into smaller sendable batches. (#1828)
 
 ### Changed
 
