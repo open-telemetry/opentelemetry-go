@@ -38,6 +38,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This method returns the status of a span using the new `Status` type. (#1874)
 - The `ExportSpans` method of the`SpanExporter` interface type was updated to accept `ReadOnlySpan`s instead of the removed `SpanSnapshot`.
   This brings the export interface into compliance with the specification in that it now accepts an explicitly immutable type instead of just an implied one. (#1873)
+- Unembed `SpanContext` in `Link`. (#1877)
 
 ### Deprecated
 
