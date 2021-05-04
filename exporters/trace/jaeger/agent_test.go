@@ -128,16 +128,22 @@ func TestJaegerAgentUDPLimitBatching(t *testing.T) {
 	assert.NoError(t, exp.Shutdown(ctx))
 }
 
+// generateALargeSpan generates a span with a long name.
+func generateALargeSpan() *tracesdk.SpanSnapshot {
+	span := &tracesdk.SpanSnapshot{
+		Name: "a-longer-name-that-makes-it-exceeds-limit",
+	}
+	return span
+}
+
 func TestSpanExceedsMaxPacketLimit(t *testing.T) {
 	otel.SetErrorHandler(errorHandler{t})
 
 	// 106 is the serialized size of a span with default values.
 	maxSize := 106
-	span := &tracesdk.SpanSnapshot{
-		Name: "a-longer-name-that-makes-it-exceeds-limit",
-	}
-	oneLargeSpan := []*tracesdk.SpanSnapshot{span}
-	largeSpans := []*tracesdk.SpanSnapshot{span, span, {}}
+	span := generateALargeSpan()
+
+	largeSpans := []*tracesdk.SpanSnapshot{span, {}}
 	normalSpans := []*tracesdk.SpanSnapshot{{}, {}}
 
 	exp, err := NewRawExporter(
@@ -146,8 +152,25 @@ func TestSpanExceedsMaxPacketLimit(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.Background()
-	assert.Error(t, exp.ExportSpans(ctx, oneLargeSpan))
 	assert.Error(t, exp.ExportSpans(ctx, largeSpans))
 	assert.NoError(t, exp.ExportSpans(ctx, normalSpans))
 	assert.NoError(t, exp.Shutdown(ctx))
+}
+
+func TestEmitBatchWithMultipleErrors(t *testing.T) {
+	otel.SetErrorHandler(errorHandler{t})
+
+	span := generateALargeSpan()
+	largeSpans := []*tracesdk.SpanSnapshot{span, span}
+	// make max packet size smaller than span
+	maxSize := len(span.Name)
+	exp, err := NewRawExporter(
+		WithAgentEndpoint(WithAgentHost("localhost"), WithAgentPort("6831"), WithMaxPacketSize(maxSize)),
+	)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	err = exp.ExportSpans(ctx, largeSpans)
+	assert.Error(t, err)
+	require.Contains(t, err.Error(), "multiple errors")
 }
