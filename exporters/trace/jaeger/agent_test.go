@@ -14,12 +14,16 @@
 package jaeger
 
 import (
+	"context"
 	"log"
 	"net"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func TestNewAgentClientUDPWithParamsBadHostport(t *testing.T) {
@@ -98,4 +102,75 @@ func TestNewAgentClientUDPWithParamsReconnectingDisabled(t *testing.T) {
 	assert.IsType(t, &net.UDPConn{}, agentClient.connUDP)
 
 	assert.NoError(t, agentClient.Close())
+}
+
+type errorHandler struct{ t *testing.T }
+
+func (eh errorHandler) Handle(err error) { assert.NoError(eh.t, err) }
+
+func TestJaegerAgentUDPLimitBatching(t *testing.T) {
+	otel.SetErrorHandler(errorHandler{t})
+
+	// 1500 spans, size 79559, does not fit within one UDP packet with the default size of 65000.
+	n := 1500
+	s := make([]*tracesdk.SpanSnapshot, n)
+	for i := 0; i < n; i++ {
+		s[i] = &tracesdk.SpanSnapshot{}
+	}
+
+	exp, err := NewRawExporter(
+		WithAgentEndpoint(WithAgentHost("localhost"), WithAgentPort("6831")),
+	)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	assert.NoError(t, exp.ExportSpans(ctx, s))
+	assert.NoError(t, exp.Shutdown(ctx))
+}
+
+// generateALargeSpan generates a span with a long name.
+func generateALargeSpan() *tracesdk.SpanSnapshot {
+	span := &tracesdk.SpanSnapshot{
+		Name: "a-longer-name-that-makes-it-exceeds-limit",
+	}
+	return span
+}
+
+func TestSpanExceedsMaxPacketLimit(t *testing.T) {
+	otel.SetErrorHandler(errorHandler{t})
+
+	// 106 is the serialized size of a span with default values.
+	maxSize := 106
+	span := generateALargeSpan()
+
+	largeSpans := []*tracesdk.SpanSnapshot{span, {}}
+	normalSpans := []*tracesdk.SpanSnapshot{{}, {}}
+
+	exp, err := NewRawExporter(
+		WithAgentEndpoint(WithAgentHost("localhost"), WithAgentPort("6831"), WithMaxPacketSize(maxSize+1)),
+	)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	assert.Error(t, exp.ExportSpans(ctx, largeSpans))
+	assert.NoError(t, exp.ExportSpans(ctx, normalSpans))
+	assert.NoError(t, exp.Shutdown(ctx))
+}
+
+func TestEmitBatchWithMultipleErrors(t *testing.T) {
+	otel.SetErrorHandler(errorHandler{t})
+
+	span := generateALargeSpan()
+	largeSpans := []*tracesdk.SpanSnapshot{span, span}
+	// make max packet size smaller than span
+	maxSize := len(span.Name)
+	exp, err := NewRawExporter(
+		WithAgentEndpoint(WithAgentHost("localhost"), WithAgentPort("6831"), WithMaxPacketSize(maxSize)),
+	)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	err = exp.ExportSpans(ctx, largeSpans)
+	assert.Error(t, err)
+	require.Contains(t, err.Error(), "multiple errors")
 }
