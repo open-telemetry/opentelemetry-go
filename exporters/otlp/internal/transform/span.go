@@ -155,8 +155,8 @@ func links(links []trace.Link) []*tracepb.Span_Link {
 		// being reused -- in short we need a new otLink per iteration.
 		otLink := otLink
 
-		tid := otLink.TraceID()
-		sid := otLink.SpanID()
+		tid := otLink.SpanContext.TraceID()
+		sid := otLink.SpanContext.SpanID()
 
 		sl = append(sl, &tracepb.Span_Link{
 			TraceId:    tid[:],

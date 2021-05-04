@@ -555,7 +555,7 @@ type Span interface {
 //      track the relationship.
 type Link struct {
 	// SpanContext of the linked Span.
-	SpanContext
+	SpanContext SpanContext
 
 	// Attributes describe the aspects of the link.
 	Attributes []attribute.KeyValue
