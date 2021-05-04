@@ -25,12 +25,12 @@ import (
 )
 
 const (
-	maxMessageEventsPerSpan = 128
+	maxEventsPerSpan = 128
 )
 
-// SpanData transforms a slice of SpanSnapshot into a slice of OTLP
+// Spans transforms a slice of OpenTelemetry spans into a slice of OTLP
 // ResourceSpans.
-func SpanData(sdl []*tracesdk.SpanSnapshot) []*tracepb.ResourceSpans {
+func Spans(sdl []tracesdk.ReadOnlySpan) []*tracepb.ResourceSpans {
 	if len(sdl) == 0 {
 		return nil
 	}
@@ -49,16 +49,16 @@ func SpanData(sdl []*tracesdk.SpanSnapshot) []*tracepb.ResourceSpans {
 			continue
 		}
 
-		rKey := sd.Resource.Equivalent()
+		rKey := sd.Resource().Equivalent()
 		iKey := ilsKey{
 			r:  rKey,
-			il: sd.InstrumentationLibrary,
+			il: sd.InstrumentationLibrary(),
 		}
 		ils, iOk := ilsm[iKey]
 		if !iOk {
 			// Either the resource or instrumentation library were unknown.
 			ils = &tracepb.InstrumentationLibrarySpans{
-				InstrumentationLibrary: instrumentationLibrary(sd.InstrumentationLibrary),
+				InstrumentationLibrary: instrumentationLibrary(sd.InstrumentationLibrary()),
 				Spans:                  []*tracepb.Span{},
 			}
 		}
@@ -70,7 +70,7 @@ func SpanData(sdl []*tracesdk.SpanSnapshot) []*tracepb.ResourceSpans {
 			resources++
 			// The resource was unknown.
 			rs = &tracepb.ResourceSpans{
-				Resource:                    Resource(sd.Resource),
+				Resource:                    Resource(sd.Resource()),
 				InstrumentationLibrarySpans: []*tracepb.InstrumentationLibrarySpans{ils},
 			}
 			rsm[rKey] = rs
@@ -96,32 +96,32 @@ func SpanData(sdl []*tracesdk.SpanSnapshot) []*tracepb.ResourceSpans {
 }
 
 // span transforms a Span into an OTLP span.
-func span(sd *tracesdk.SpanSnapshot) *tracepb.Span {
+func span(sd tracesdk.ReadOnlySpan) *tracepb.Span {
 	if sd == nil {
 		return nil
 	}
 
-	tid := sd.SpanContext.TraceID()
-	sid := sd.SpanContext.SpanID()
+	tid := sd.SpanContext().TraceID()
+	sid := sd.SpanContext().SpanID()
 
 	s := &tracepb.Span{
 		TraceId:                tid[:],
 		SpanId:                 sid[:],
-		TraceState:             sd.SpanContext.TraceState().String(),
-		Status:                 status(sd.Status.Code, sd.Status.Description),
-		StartTimeUnixNano:      uint64(sd.StartTime.UnixNano()),
-		EndTimeUnixNano:        uint64(sd.EndTime.UnixNano()),
-		Links:                  links(sd.Links),
-		Kind:                   spanKind(sd.SpanKind),
-		Name:                   sd.Name,
-		Attributes:             Attributes(sd.Attributes),
-		Events:                 spanEvents(sd.MessageEvents),
-		DroppedAttributesCount: uint32(sd.DroppedAttributeCount),
-		DroppedEventsCount:     uint32(sd.DroppedMessageEventCount),
-		DroppedLinksCount:      uint32(sd.DroppedLinkCount),
+		TraceState:             sd.SpanContext().TraceState().String(),
+		Status:                 status(sd.Status().Code, sd.Status().Description),
+		StartTimeUnixNano:      uint64(sd.StartTime().UnixNano()),
+		EndTimeUnixNano:        uint64(sd.EndTime().UnixNano()),
+		Links:                  links(sd.Links()),
+		Kind:                   spanKind(sd.SpanKind()),
+		Name:                   sd.Name(),
+		Attributes:             Attributes(sd.Attributes()),
+		Events:                 spanEvents(sd.Events()),
+		DroppedAttributesCount: uint32(sd.DroppedAttributes()),
+		DroppedEventsCount:     uint32(sd.DroppedEvents()),
+		DroppedLinksCount:      uint32(sd.DroppedLinks()),
 	}
 
-	if psid := sd.Parent.SpanID(); psid.IsValid() {
+	if psid := sd.Parent().SpanID(); psid.IsValid() {
 		s.ParentSpanId = psid[:]
 	}
 
@@ -174,18 +174,18 @@ func spanEvents(es []tracesdk.Event) []*tracepb.Span_Event {
 	}
 
 	evCount := len(es)
-	if evCount > maxMessageEventsPerSpan {
-		evCount = maxMessageEventsPerSpan
+	if evCount > maxEventsPerSpan {
+		evCount = maxEventsPerSpan
 	}
 	events := make([]*tracepb.Span_Event, 0, evCount)
-	messageEvents := 0
+	nEvents := 0
 
 	// Transform message events
 	for _, e := range es {
-		if messageEvents >= maxMessageEventsPerSpan {
+		if nEvents >= maxEventsPerSpan {
 			break
 		}
-		messageEvents++
+		nEvents++
 		events = append(events,
 			&tracepb.Span_Event{
 				Name:         e.Name,

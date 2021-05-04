@@ -34,6 +34,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -233,19 +234,19 @@ func TestExportSpans(t *testing.T) {
 		semconv.ServiceNameKey.String("exporter-test"),
 	)
 
-	spans := []*sdktrace.SpanSnapshot{
+	spans := tracetest.SpanStubs{
 		// parent
 		{
 			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
 				SpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 			}),
-			SpanKind:      trace.SpanKindServer,
-			Name:          "foo",
-			StartTime:     time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
-			EndTime:       time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
-			Attributes:    nil,
-			MessageEvents: nil,
+			SpanKind:   trace.SpanKindServer,
+			Name:       "foo",
+			StartTime:  time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			EndTime:    time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
+			Attributes: nil,
+			Events:     nil,
 			Status: sdktrace.Status{
 				Code:        codes.Error,
 				Description: "404, file not found",
@@ -262,19 +263,19 @@ func TestExportSpans(t *testing.T) {
 				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
 				SpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 			}),
-			SpanKind:      trace.SpanKindServer,
-			Name:          "bar",
-			StartTime:     time.Date(2020, time.March, 11, 19, 24, 15, 0, time.UTC),
-			EndTime:       time.Date(2020, time.March, 11, 19, 24, 45, 0, time.UTC),
-			Attributes:    nil,
-			MessageEvents: nil,
+			SpanKind:   trace.SpanKindServer,
+			Name:       "bar",
+			StartTime:  time.Date(2020, time.March, 11, 19, 24, 15, 0, time.UTC),
+			EndTime:    time.Date(2020, time.March, 11, 19, 24, 45, 0, time.UTC),
+			Attributes: nil,
+			Events:     nil,
 			Status: sdktrace.Status{
 				Code:        codes.Error,
 				Description: "403, forbidden",
 			},
 			Resource: resource,
 		},
-	}
+	}.Snapshots()
 	models := []zkmodel.SpanModel{
 		// model of parent
 		{

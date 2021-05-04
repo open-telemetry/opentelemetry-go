@@ -22,6 +22,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
       | 14 | Unavailable |
       | 15 | Data Loss |
 - The `Status` type was added to the `go.opentelemetry.io/otel/sdk/trace` package to represent the status of a span. (#1874)
+- The `SpanStub` type and its associated functions were added to the `go.opentelemetry.io/otel/sdk/trace/tracetest` package.
+  This type can be used as a testing replacement for the `SpanSnapshot` that was removed from the `go.opentelemetry.io/otel/sdk/trace` package. (#1873)
 
 ### Changed
 
@@ -34,6 +36,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Renamed `CloudZoneKey` to `CloudAvailabilityZoneKey` in Resource semantic conventions according to spec. (#1871)
 - The `StatusCode` and `StatusMessage` methods of the `ReadOnlySpan` interface and the `Span` produced by the `go.opentelemetry.io/otel/sdk/trace` package have been replaced with a single `Status` method.
   This method returns the status of a span using the new `Status` type. (#1874)
+- The `ExportSpans` method of the`SpanExporter` interface type was updated to accept `ReadOnlySpan`s instead of the removed `SpanSnapshot`.
+  This brings the export interface into compliance with the specification in that it now accepts an explicitly immutable type instead of just an implied one. (#1873)
 - Unembed `SpanContext` in `Link`. (#1877)
 
 ### Deprecated
@@ -42,6 +46,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Remove `resource.WithoutBuiltin()`. Use `resource.New()`. (#1810)
 - Unexported types `resource.FromEnv`, `resource.Host`, and `resource.TelemetrySDK`, Use the corresponding `With*()` to use individually. (#1810)
+- Removed the `Tracer` and `IsRecording` method from the `ReadOnlySpan` in the `go.opentelemetry.io/otel/sdk/trace`.
+  The `Tracer` method is not a required to be included in this interface and given the mutable nature of the tracer that is associated with a span, this method is not appropriate.
+  The `IsRecording` method returns if the span is recording or not.
+  A read-only span value does not need to know if updates to it will be recorded or not.
+  By definition, it cannot be updated so there is no point in communicating if an update is recorded. (#1873)
+- Removed the `SpanSnapshot` type from the `go.opentelemetry.io/otel/sdk/trace` package.
+  The use of this type has been replaced with the use of the explicitly immutable `ReadOnlySpan` type.
+  When a concrete representation of a read-only span is needed for testing, the newly added `SpanStub` in the `go.opentelemetry.io/otel/sdk/trace/tracetest` package should be used. (#1873)
 
 ### Fixed
 

@@ -31,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
 func TestExportSpans(t *testing.T) {
@@ -41,19 +42,19 @@ func TestExportSpans(t *testing.T) {
 	endTime := startTime.Add(10 * time.Second)
 
 	for _, test := range []struct {
-		sd   []*tracesdk.SpanSnapshot
+		sd   tracetest.SpanStubs
 		want []*tracepb.ResourceSpans
 	}{
 		{
-			[]*tracesdk.SpanSnapshot(nil),
+			tracetest.SpanStubsFromReadOnlySpans(nil),
 			[]*tracepb.ResourceSpans(nil),
 		},
 		{
-			[]*tracesdk.SpanSnapshot{},
+			tracetest.SpanStubs{},
 			[]*tracepb.ResourceSpans(nil),
 		},
 		{
-			[]*tracesdk.SpanSnapshot{
+			tracetest.SpanStubs{
 				{
 					SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 						TraceID:    trace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
@@ -338,7 +339,7 @@ func TestExportSpans(t *testing.T) {
 		},
 	} {
 		driver.Reset()
-		assert.NoError(t, exp.ExportSpans(context.Background(), test.sd))
+		assert.NoError(t, exp.ExportSpans(context.Background(), test.sd.Snapshots()))
 		assert.ElementsMatch(t, test.want, driver.rs)
 	}
 }

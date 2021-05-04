@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
-	tracesdk "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
 func TestNewAgentClientUDPWithParamsBadHostport(t *testing.T) {
@@ -113,10 +113,7 @@ func TestJaegerAgentUDPLimitBatching(t *testing.T) {
 
 	// 1500 spans, size 79559, does not fit within one UDP packet with the default size of 65000.
 	n := 1500
-	s := make([]*tracesdk.SpanSnapshot, n)
-	for i := 0; i < n; i++ {
-		s[i] = &tracesdk.SpanSnapshot{}
-	}
+	s := make(tracetest.SpanStubs, n).Snapshots()
 
 	exp, err := NewRawExporter(
 		WithAgentEndpoint(WithAgentHost("localhost"), WithAgentPort("6831")),
@@ -129,11 +126,10 @@ func TestJaegerAgentUDPLimitBatching(t *testing.T) {
 }
 
 // generateALargeSpan generates a span with a long name.
-func generateALargeSpan() *tracesdk.SpanSnapshot {
-	span := &tracesdk.SpanSnapshot{
+func generateALargeSpan() tracetest.SpanStub {
+	return tracetest.SpanStub{
 		Name: "a-longer-name-that-makes-it-exceeds-limit",
 	}
-	return span
 }
 
 func TestSpanExceedsMaxPacketLimit(t *testing.T) {
@@ -141,10 +137,9 @@ func TestSpanExceedsMaxPacketLimit(t *testing.T) {
 
 	// 106 is the serialized size of a span with default values.
 	maxSize := 106
-	span := generateALargeSpan()
 
-	largeSpans := []*tracesdk.SpanSnapshot{span, {}}
-	normalSpans := []*tracesdk.SpanSnapshot{{}, {}}
+	largeSpans := tracetest.SpanStubs{generateALargeSpan(), {}}.Snapshots()
+	normalSpans := tracetest.SpanStubs{{}, {}}.Snapshots()
 
 	exp, err := NewRawExporter(
 		WithAgentEndpoint(WithAgentHost("localhost"), WithAgentPort("6831"), WithMaxPacketSize(maxSize+1)),
@@ -161,7 +156,7 @@ func TestEmitBatchWithMultipleErrors(t *testing.T) {
 	otel.SetErrorHandler(errorHandler{t})
 
 	span := generateALargeSpan()
-	largeSpans := []*tracesdk.SpanSnapshot{span, span}
+	largeSpans := tracetest.SpanStubs{span, span}.Snapshots()
 	// make max packet size smaller than span
 	maxSize := len(span.Name)
 	exp, err := NewRawExporter(

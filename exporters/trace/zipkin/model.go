@@ -51,7 +51,7 @@ func init() {
 	}
 }
 
-func toZipkinSpanModels(batch []*tracesdk.SpanSnapshot) []zkmodel.SpanModel {
+func toZipkinSpanModels(batch []tracesdk.ReadOnlySpan) []zkmodel.SpanModel {
 	models := make([]zkmodel.SpanModel, 0, len(batch))
 	for _, data := range batch {
 		models = append(models, toZipkinSpanModel(data))
@@ -69,28 +69,28 @@ func getServiceName(attrs []attribute.KeyValue) string {
 	return defaultServiceName
 }
 
-func toZipkinSpanModel(data *tracesdk.SpanSnapshot) zkmodel.SpanModel {
+func toZipkinSpanModel(data tracesdk.ReadOnlySpan) zkmodel.SpanModel {
 	return zkmodel.SpanModel{
 		SpanContext: toZipkinSpanContext(data),
-		Name:        data.Name,
-		Kind:        toZipkinKind(data.SpanKind),
-		Timestamp:   data.StartTime,
-		Duration:    data.EndTime.Sub(data.StartTime),
+		Name:        data.Name(),
+		Kind:        toZipkinKind(data.SpanKind()),
+		Timestamp:   data.StartTime(),
+		Duration:    data.EndTime().Sub(data.StartTime()),
 		Shared:      false,
 		LocalEndpoint: &zkmodel.Endpoint{
-			ServiceName: getServiceName(data.Resource.Attributes()),
+			ServiceName: getServiceName(data.Resource().Attributes()),
 		},
 		RemoteEndpoint: toZipkinRemoteEndpoint(data),
-		Annotations:    toZipkinAnnotations(data.MessageEvents),
+		Annotations:    toZipkinAnnotations(data.Events()),
 		Tags:           toZipkinTags(data),
 	}
 }
 
-func toZipkinSpanContext(data *tracesdk.SpanSnapshot) zkmodel.SpanContext {
+func toZipkinSpanContext(data tracesdk.ReadOnlySpan) zkmodel.SpanContext {
 	return zkmodel.SpanContext{
-		TraceID:  toZipkinTraceID(data.SpanContext.TraceID()),
-		ID:       toZipkinID(data.SpanContext.SpanID()),
-		ParentID: toZipkinParentID(data.Parent.SpanID()),
+		TraceID:  toZipkinTraceID(data.SpanContext().TraceID()),
+		ID:       toZipkinID(data.SpanContext().SpanID()),
+		ParentID: toZipkinParentID(data.Parent().SpanID()),
 		Debug:    false,
 		Sampled:  nil,
 		Err:      nil,
@@ -174,9 +174,10 @@ var extraZipkinTags = []string{
 	keyInstrumentationLibraryVersion,
 }
 
-func toZipkinTags(data *tracesdk.SpanSnapshot) map[string]string {
-	m := make(map[string]string, len(data.Attributes)+len(extraZipkinTags))
-	for _, kv := range data.Attributes {
+func toZipkinTags(data tracesdk.ReadOnlySpan) map[string]string {
+	attr := data.Attributes()
+	m := make(map[string]string, len(attr)+len(extraZipkinTags))
+	for _, kv := range attr {
 		switch kv.Value.Type() {
 		// For array attributes, serialize as JSON list string.
 		case attribute.ARRAY:
@@ -187,17 +188,17 @@ func toZipkinTags(data *tracesdk.SpanSnapshot) map[string]string {
 		}
 	}
 
-	if data.Status.Code != codes.Unset {
-		m["otel.status_code"] = data.Status.Code.String()
+	if data.Status().Code != codes.Unset {
+		m["otel.status_code"] = data.Status().Code.String()
 	}
 
-	if data.Status.Code == codes.Error {
-		m["error"] = data.Status.Description
+	if data.Status().Code == codes.Error {
+		m["error"] = data.Status().Description
 	} else {
 		delete(m, "error")
 	}
 
-	if il := data.InstrumentationLibrary; il.Name != "" {
+	if il := data.InstrumentationLibrary(); il.Name != "" {
 		m[keyInstrumentationLibraryName] = il.Name
 		if il.Version != "" {
 			m[keyInstrumentationLibraryVersion] = il.Version
@@ -223,15 +224,15 @@ var remoteEndpointKeyRank = map[attribute.Key]int{
 	semconv.DBNameKey:      6,
 }
 
-func toZipkinRemoteEndpoint(data *sdktrace.SpanSnapshot) *zkmodel.Endpoint {
+func toZipkinRemoteEndpoint(data sdktrace.ReadOnlySpan) *zkmodel.Endpoint {
 	// Should be set only for client or producer kind
-	if data.SpanKind != trace.SpanKindClient &&
-		data.SpanKind != trace.SpanKindProducer {
+	if sk := data.SpanKind(); sk != trace.SpanKindClient && sk != trace.SpanKindProducer {
 		return nil
 	}
 
+	attr := data.Attributes()
 	var endpointAttr attribute.KeyValue
-	for _, kv := range data.Attributes {
+	for _, kv := range attr {
 		rank, ok := remoteEndpointKeyRank[kv.Key]
 		if !ok {
 			continue
@@ -256,7 +257,7 @@ func toZipkinRemoteEndpoint(data *sdktrace.SpanSnapshot) *zkmodel.Endpoint {
 		}
 	}
 
-	return remoteEndpointPeerIPWithPort(endpointAttr.Value.AsString(), data.Attributes)
+	return remoteEndpointPeerIPWithPort(endpointAttr.Value.AsString(), attr)
 }
 
 // Handles `net.peer.ip` remote endpoint separately (should include `net.peer.ip`
