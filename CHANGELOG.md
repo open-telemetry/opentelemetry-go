@@ -24,8 +24,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `Status` type was added to the `go.opentelemetry.io/otel/sdk/trace` package to represent the status of a span. (#1874)
 - The `SpanStub` type and its associated functions were added to the `go.opentelemetry.io/otel/sdk/trace/tracetest` package.
   This type can be used as a testing replacement for the `SpanSnapshot` that was removed from the `go.opentelemetry.io/otel/sdk/trace` package. (#1873)
-- Added `WithOSDescription` resource configuration option to set OS (Operating System) description resource attribute (`os.description`).
-- Added `WithOS` resource configuration option to set all OS (Operating System) resource attributes at once.
+- Added `WithOSDescription` resource configuration option to set OS (Operating System) description resource attribute (`os.description`). (#1840)
+- Added `WithOS` resource configuration option to set all OS (Operating System) resource attributes at once. (#1840)
 
 ### Changed
 
