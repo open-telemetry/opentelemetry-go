@@ -59,7 +59,6 @@ func TestWithOSDescription(t *testing.T) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
-		resource.WithoutBuiltin(),
 		resource.WithOSDescription(),
 	)
 
@@ -77,7 +76,6 @@ func TestWithOS(t *testing.T) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
-		resource.WithoutBuiltin(),
 		resource.WithOS(),
 	)
 
