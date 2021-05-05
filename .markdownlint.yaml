@@ -14,6 +14,9 @@ MD013: false
 MD024:
   siblings_only: true
 
+#single-title
+MD025: false
+
 # ol-prefix
 MD029:
   style: ordered

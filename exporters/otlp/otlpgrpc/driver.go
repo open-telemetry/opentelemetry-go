@@ -145,10 +145,13 @@ func (md *metricsDriver) uploadMetrics(ctx context.Context, protoMetrics []*metr
 		if md.metricsClient == nil {
 			return errNoClient
 		}
-		_, err := md.metricsClient.Export(ctx, &colmetricpb.ExportMetricsServiceRequest{
-			ResourceMetrics: protoMetrics,
+
+		return md.connection.doRequest(ctx, func(ctx context.Context) error {
+			_, err := md.metricsClient.Export(ctx, &colmetricpb.ExportMetricsServiceRequest{
+				ResourceMetrics: protoMetrics,
+			})
+			return err
 		})
-		return err
 	}()
 	if err != nil {
 		md.connection.setStateDisconnected(err)
@@ -158,7 +161,7 @@ func (md *metricsDriver) uploadMetrics(ctx context.Context, protoMetrics []*metr
 
 // ExportTraces implements otlp.ProtocolDriver. It transforms spans to
 // protobuf binary format and sends the result to the collector.
-func (d *driver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
+func (d *driver) ExportTraces(ctx context.Context, ss []tracesdk.ReadOnlySpan) error {
 	if !d.tracesDriver.connection.connected() {
 		return fmt.Errorf("traces exporter is disconnected from the server %s: %w", d.tracesDriver.connection.sCfg.Endpoint, d.tracesDriver.connection.lastConnectError())
 	}
@@ -167,7 +170,7 @@ func (d *driver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) 
 	ctx, tCancel := context.WithTimeout(ctx, d.tracesDriver.connection.sCfg.Timeout)
 	defer tCancel()
 
-	protoSpans := transform.SpanData(ss)
+	protoSpans := transform.Spans(ss)
 	if len(protoSpans) == 0 {
 		return nil
 	}
@@ -183,10 +186,12 @@ func (td *tracesDriver) uploadTraces(ctx context.Context, protoSpans []*tracepb.
 		if td.tracesClient == nil {
 			return errNoClient
 		}
-		_, err := td.tracesClient.Export(ctx, &coltracepb.ExportTraceServiceRequest{
-			ResourceSpans: protoSpans,
+		return td.connection.doRequest(ctx, func(ctx context.Context) error {
+			_, err := td.tracesClient.Export(ctx, &coltracepb.ExportTraceServiceRequest{
+				ResourceSpans: protoSpans,
+			})
+			return err
 		})
-		return err
 	}()
 	if err != nil {
 		td.connection.setStateDisconnected(err)

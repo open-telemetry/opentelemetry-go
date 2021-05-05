@@ -239,8 +239,8 @@ const (
 	// Geographical region where this resource is.
 	CloudRegionKey = attribute.Key("cloud.region")
 
-	// Zone of the region where this resource is.
-	CloudZoneKey = attribute.Key("cloud.zone")
+	// Availability zone of the region where this resource is.
+	CloudAvailabilityZoneKey = attribute.Key("cloud.availability_zone")
 )
 
 // Semantic conventions for common cloud provider resource attributes.

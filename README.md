@@ -5,7 +5,8 @@
 [![Go Report Card](https://goreportcard.com/badge/go.opentelemetry.io/otel)](https://goreportcard.com/report/go.opentelemetry.io/otel)
 [![Slack](https://img.shields.io/badge/slack-@cncf/otel--go-brightgreen.svg?logo=slack)](https://cloud-native.slack.com/archives/C01NPAXACKT)
 
-The Go [OpenTelemetry](https://opentelemetry.io/) implementation.
+OpenTelemetry-Go is the [Go](https://golang.org/) implementation of [OpenTelemetry](https://opentelemetry.io/).
+It provides a set of APIs to directly measure performance and behavior of your software and send this data to observability platforms.
 
 ## Project Status
 
@@ -25,6 +26,17 @@ and
 
 Project versioning information and stability guarantees can be found in the
 [versioning documentation](./VERSIONING.md).
+
+| Signal | Status |
+| --- | --- |
+| Traces | Stable [release](https://github.com/orgs/open-telemetry/projects/5) is primary focus |
+| Metrics | Development paused [1] |
+| Logs | Frozen [2] |
+
+- [1]: The development of the metrics API and SDK has paused due to limited development resources, prioritization of a stable Traces release, and instability of the official overall design from the OpenTelemetry specification.
+   Pull Requests for metrics related issues are not being accepted currently outside of security vulnerability mitigations.
+- [2]: The Logs signal development is halted for this project while we develop both Traces and Metrics.
+   No Logs Pull Requests are currently being accepted.
 
 ### Compatibility
 

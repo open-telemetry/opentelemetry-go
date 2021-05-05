@@ -148,7 +148,6 @@ func testWithProcessPID(t *testing.T) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
-		resource.WithoutBuiltin(),
 		resource.WithProcessPID(),
 	)
 
@@ -162,7 +161,6 @@ func testWithProcessExecutableName(t *testing.T) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
-		resource.WithoutBuiltin(),
 		resource.WithProcessExecutableName(),
 	)
 
@@ -176,7 +174,6 @@ func testWithProcessExecutablePath(t *testing.T) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
-		resource.WithoutBuiltin(),
 		resource.WithProcessExecutablePath(),
 	)
 
@@ -190,7 +187,6 @@ func testWithProcessCommandArgs(t *testing.T) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
-		resource.WithoutBuiltin(),
 		resource.WithProcessCommandArgs(),
 	)
 
@@ -204,7 +200,6 @@ func testWithProcessOwner(t *testing.T) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
-		resource.WithoutBuiltin(),
 		resource.WithProcessOwner(),
 	)
 
@@ -218,7 +213,6 @@ func testWithProcessRuntimeName(t *testing.T) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
-		resource.WithoutBuiltin(),
 		resource.WithProcessRuntimeName(),
 	)
 
@@ -232,7 +226,6 @@ func testWithProcessRuntimeVersion(t *testing.T) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
-		resource.WithoutBuiltin(),
 		resource.WithProcessRuntimeVersion(),
 	)
 
@@ -246,7 +239,6 @@ func testWithProcessRuntimeDescription(t *testing.T) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
-		resource.WithoutBuiltin(),
 		resource.WithProcessRuntimeDescription(),
 	)
 
@@ -260,7 +252,6 @@ func testWithProcess(t *testing.T) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
-		resource.WithoutBuiltin(),
 		resource.WithProcess(),
 	)
 
@@ -281,7 +272,6 @@ func testWithProcessExecutablePathError(t *testing.T) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
-		resource.WithoutBuiltin(),
 		resource.WithProcessExecutablePath(),
 	)
 
@@ -293,7 +283,6 @@ func testWithProcessOwnerError(t *testing.T) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
-		resource.WithoutBuiltin(),
 		resource.WithProcessOwner(),
 	)
 
