@@ -200,3 +200,12 @@ func WithTracesTimeout(duration time.Duration) Option {
 func WithMetricsTimeout(duration time.Duration) Option {
 	return otlpconfig.WithMetricsTimeout(duration)
 }
+
+// WithRetry configures the retry policy for transient errors that may occurs when
+// exporting metrics or traces. An exponential back-off algorithm is used to
+// ensure endpoints are not overwhelmed with retries. If unset, the default
+// retry policy will retry after 5 seconds and increase exponentially after each
+// error for a total of 1 minute.
+func WithRetry(settings otlp.RetrySettings) Option {
+	return otlpconfig.WithRetry(settings)
+}

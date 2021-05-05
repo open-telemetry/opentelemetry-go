@@ -16,10 +16,10 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import "context"
 
-// SpanExporter handles the delivery of SpanSnapshot structs to external
-// receivers. This is the final component in the trace export pipeline.
+// SpanExporter handles the delivery of spans to external receivers. This is
+// the final component in the trace export pipeline.
 type SpanExporter interface {
-	// ExportSpans exports a batch of SpanSnapshots.
+	// ExportSpans exports a batch of spans.
 	//
 	// This function is called synchronously, so there is no concurrency
 	// safety requirement. However, due to the synchronous calling pattern,
@@ -30,7 +30,7 @@ type SpanExporter interface {
 	// calls this function will not implement any retry logic. All errors
 	// returned by this function are considered unrecoverable and will be
 	// reported to a configured error Handler.
-	ExportSpans(ctx context.Context, ss []*SpanSnapshot) error
+	ExportSpans(ctx context.Context, spans []ReadOnlySpan) error
 	// Shutdown notifies the exporter of a pending halt to operations. The
 	// exporter is expected to preform any cleanup or synchronization it
 	// requires while honoring all timeouts and cancellations contained in

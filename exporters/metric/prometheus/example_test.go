@@ -40,7 +40,6 @@ func ExampleNewExportPipeline() {
 	// Create a resource, with builtin attributes plus R=V.
 	res, err := resource.New(
 		context.Background(),
-		resource.WithoutBuiltin(), // Test-only!
 		resource.WithAttributes(attribute.String("R", "V")),
 	)
 	if err != nil {

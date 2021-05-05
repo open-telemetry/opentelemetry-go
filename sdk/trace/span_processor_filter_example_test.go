@@ -76,8 +76,8 @@ func (f InstrumentationBlacklist) OnEnd(s ReadOnlySpan) {
 
 type noopExporter struct{}
 
-func (noopExporter) ExportSpans(context.Context, []*SpanSnapshot) error { return nil }
-func (noopExporter) Shutdown(context.Context) error                     { return nil }
+func (noopExporter) ExportSpans(context.Context, []ReadOnlySpan) error { return nil }
+func (noopExporter) Shutdown(context.Context) error                    { return nil }
 
 func ExampleSpanProcessor_filtered() {
 	exportSP := NewSimpleSpanProcessor(noopExporter{})

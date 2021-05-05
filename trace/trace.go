@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"regexp"
 	"strings"
-	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -526,9 +525,9 @@ type Span interface {
 	SpanContext() SpanContext
 
 	// SetStatus sets the status of the Span in the form of a code and a
-	// message. SetStatus overrides the value of previous calls to SetStatus
-	// on the Span.
-	SetStatus(code codes.Code, msg string)
+	// description, overriding previous values set. The description is only
+	// included in a status when the code is for an error.
+	SetStatus(code codes.Code, description string)
 
 	// SetName sets the Span name.
 	SetName(name string)
@@ -537,22 +536,6 @@ type Span interface {
 	// already exists for an attribute of the Span it will be overwritten with
 	// the value contained in kv.
 	SetAttributes(kv ...attribute.KeyValue)
-}
-
-// Event is a thing that happened during a Span's lifetime.
-type Event struct {
-	// Name is the name of this event
-	Name string
-
-	// Attributes describe the aspects of the event.
-	Attributes []attribute.KeyValue
-
-	// DroppedAttributeCount is the number of attributes that were not
-	// recorded due to configured limits being reached.
-	DroppedAttributeCount int
-
-	// Time at which this event was recorded.
-	Time time.Time
 }
 
 // Link is the relationship between two Spans. The relationship can be within
@@ -572,7 +555,7 @@ type Event struct {
 //      track the relationship.
 type Link struct {
 	// SpanContext of the linked Span.
-	SpanContext
+	SpanContext SpanContext
 
 	// Attributes describe the aspects of the link.
 	Attributes []attribute.KeyValue
@@ -655,7 +638,19 @@ func (sk SpanKind) String() string {
 
 // Tracer is the creator of Spans.
 type Tracer interface {
-	// Start creates a span.
+	// Start creates a span and a context.Context containing the newly-created span.
+	//
+	// If the context.Context provided in `ctx` contains a Span then the newly-created
+	// Span will be a child of that span, otherwise it will be a root span. This behavior
+	// can be overridden by providing `WithNewRoot()` as a SpanOption, causing the
+	// newly-created Span to be a root span even if `ctx` contains a Span.
+	//
+	// When creating a Span it is recommended to provide all known span attributes using
+	// the `WithAttributes()` SpanOption as samplers will only have access to the
+	// attributes provided when a Span is created.
+	//
+	// Any Span that is created MUST also be ended. This is the responsibility of the user.
+	// Implementations of this API may leak memory or other resources if Spans are not ended.
 	Start(ctx context.Context, spanName string, opts ...SpanOption) (context.Context, Span)
 }
 

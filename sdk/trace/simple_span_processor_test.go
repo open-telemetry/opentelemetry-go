@@ -16,7 +16,9 @@ package trace_test
 
 import (
 	"context"
+	"errors"
 	"testing"
+	"time"
 
 	"go.opentelemetry.io/otel/trace"
 
@@ -29,12 +31,12 @@ var (
 )
 
 type testExporter struct {
-	spans    []*sdktrace.SpanSnapshot
+	spans    []sdktrace.ReadOnlySpan
 	shutdown bool
 }
 
-func (t *testExporter) ExportSpans(ctx context.Context, ss []*sdktrace.SpanSnapshot) error {
-	t.spans = append(t.spans, ss...)
+func (t *testExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
+	t.spans = append(t.spans, spans...)
 	return nil
 }
 
@@ -78,7 +80,7 @@ func TestSimpleSpanProcessorOnEnd(t *testing.T) {
 	startSpan(tp).End()
 
 	wantTraceID := tid
-	gotTraceID := te.spans[0].SpanContext.TraceID()
+	gotTraceID := te.spans[0].SpanContext().TraceID()
 	if wantTraceID != gotTraceID {
 		t.Errorf("SimplerSpanProcessor OnEnd() check: got %+v, want %+v\n", gotTraceID, wantTraceID)
 	}
@@ -141,4 +143,25 @@ func TestSimpleSpanProcessorShutdownOnEndConcurrency(t *testing.T) {
 
 	stop <- struct{}{}
 	<-done
+}
+
+func TestSimpleSpanProcessorShutdownHonorsContextDeadline(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
+	defer cancel()
+	<-ctx.Done()
+
+	ssp := sdktrace.NewSimpleSpanProcessor(&testExporter{})
+	if got, want := ssp.Shutdown(ctx), context.DeadlineExceeded; !errors.Is(got, want) {
+		t.Errorf("SimpleSpanProcessor.Shutdown did not return %v, got %v", want, got)
+	}
+}
+
+func TestSimpleSpanProcessorShutdownHonorsContextCancel(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	ssp := sdktrace.NewSimpleSpanProcessor(&testExporter{})
+	if got, want := ssp.Shutdown(ctx), context.Canceled; !errors.Is(got, want) {
+		t.Errorf("SimpleSpanProcessor.Shutdown did not return %v, got %v", want, got)
+	}
 }
