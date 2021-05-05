@@ -246,7 +246,7 @@ func (statusErrorOption) private() {}
 
 // WithErrorStatus set the error code and message when code is not codes.Unset
 func WithErrorStatus(code codes.Code, message string) ErrorOption {
-	return statusErrorOption{code, message}
+	return statusErrorOption{Code: code, Message: message}
 }
 
 type eventOptsErrorOption []EventOption
