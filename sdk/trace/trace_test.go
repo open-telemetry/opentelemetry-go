@@ -1177,21 +1177,21 @@ func TestRecordErrorOptions(t *testing.T) {
 	scenarios := []struct {
 		err     error
 		options []trace.ErrorOption
-		want    *SpanSnapshot
+		want    *snapshot
 	}{
 		{
 			err:     nil,
 			options: []trace.ErrorOption{},
-			want: &SpanSnapshot{
-				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+			want: &snapshot{
+				spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID:    tid,
 					TraceFlags: 0x1,
 				}),
-				Parent:                 sc.WithRemote(true),
-				Name:                   "span0",
-				StatusCode:             codes.Unset,
-				SpanKind:               trace.SpanKindInternal,
-				InstrumentationLibrary: instrumentation.Library{Name: "RecordError"},
+				parent:                 sc.WithRemote(true),
+				name:                   "span0",
+				status:                 Status{Code: codes.Unset, Description: ""},
+				spanKind:               trace.SpanKindInternal,
+				instrumentationLibrary: instrumentation.Library{Name: "RecordError"},
 			},
 		},
 		{
@@ -1200,16 +1200,16 @@ func TestRecordErrorOptions(t *testing.T) {
 				trace.WithErrorStatus(codes.Error, "test error"),
 				trace.WithEventOptions(trace.WithTimestamp(errTime)),
 			},
-			want: &SpanSnapshot{
-				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+			want: &snapshot{
+				spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID:    tid,
 					TraceFlags: 0x1,
 				}),
-				Parent:     sc.WithRemote(true),
-				Name:       "span0",
-				StatusCode: codes.Error,
-				SpanKind:   trace.SpanKindInternal,
-				MessageEvents: []trace.Event{
+				parent:   sc.WithRemote(true),
+				name:     "span0",
+				status:   Status{Code: codes.Error, Description: "test error"},
+				spanKind: trace.SpanKindInternal,
+				events: []Event{
 					{
 						Name: semconv.ExceptionEventName,
 						Time: errTime,
@@ -1219,8 +1219,7 @@ func TestRecordErrorOptions(t *testing.T) {
 						},
 					},
 				},
-				StatusMessage:          "test error",
-				InstrumentationLibrary: instrumentation.Library{Name: "RecordError"},
+				instrumentationLibrary: instrumentation.Library{Name: "RecordError"},
 			},
 		},
 		{
@@ -1233,16 +1232,16 @@ func TestRecordErrorOptions(t *testing.T) {
 					trace.WithAttributes(attribute.String("key2", "value2")),
 				),
 			},
-			want: &SpanSnapshot{
-				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+			want: &snapshot{
+				spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID:    tid,
 					TraceFlags: 0x1,
 				}),
-				Parent:     sc.WithRemote(true),
-				Name:       "span0",
-				StatusCode: codes.Error,
-				SpanKind:   trace.SpanKindInternal,
-				MessageEvents: []trace.Event{
+				parent:   sc.WithRemote(true),
+				name:     "span0",
+				status:   Status{Code: codes.Error, Description: "test error"},
+				spanKind: trace.SpanKindInternal,
+				events: []Event{
 					{
 						Name: semconv.ExceptionEventName,
 						Time: errTime,
@@ -1254,8 +1253,7 @@ func TestRecordErrorOptions(t *testing.T) {
 						},
 					},
 				},
-				StatusMessage:          "test error",
-				InstrumentationLibrary: instrumentation.Library{Name: "RecordError"},
+				instrumentationLibrary: instrumentation.Library{Name: "RecordError"},
 			},
 		},
 	}
