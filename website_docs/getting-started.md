@@ -7,7 +7,7 @@ Welcome to the OpenTelemetry for Go getting started guide! This guide will walk 
 
 # Installation
 
-OpenTelemetry packages for Go are available in the `go.opentelemetry.io/otel` namespace. You will need to add references to them in the `import` statement. We suggest using Go 1.14 or newer, for module support.
+OpenTelemetry packages for Go are available in the `go.opentelemetry.io/otel` namespace. You will need to add references to them in the `import` statement. We suggest using Go 1.15 or newer, for module support.
 
 To get started with this guide, create a new directory and add a new file named `main.go` to it. In your terminal, run the command `go mod init main` in the same directory. This will create a `go.mod` file, which is used by Go to manage imports.
 

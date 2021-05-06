@@ -15,7 +15,7 @@ A clear and concise description of what the bug is.
 
 - OS: [e.g. iOS]
 - Architecture: [e.g. x86, i386]
-- Go Version: [e.g. 1.14]
+- Go Version: [e.g. 1.15]
 - opentelemetry-go version: [e.g. v0.14.0, 3c7face]
 
 ### Steps To Reproduce
