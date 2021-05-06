@@ -63,15 +63,15 @@ type BatchSpanProcessorOptions struct {
 }
 
 // batchSpanProcessor is a SpanProcessor that batches asynchronously-received
-// SpanSnapshots and sends them to a trace.Exporter when complete.
+// spans and sends them to a trace.Exporter when complete.
 type batchSpanProcessor struct {
 	e SpanExporter
 	o BatchSpanProcessorOptions
 
-	queue   chan *SpanSnapshot
+	queue   chan ReadOnlySpan
 	dropped uint32
 
-	batch      []*SpanSnapshot
+	batch      []ReadOnlySpan
 	batchMutex sync.Mutex
 	timer      *time.Timer
 	stopWait   sync.WaitGroup
@@ -98,9 +98,9 @@ func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorO
 	bsp := &batchSpanProcessor{
 		e:      exporter,
 		o:      o,
-		batch:  make([]*SpanSnapshot, 0, o.MaxExportBatchSize),
+		batch:  make([]ReadOnlySpan, 0, o.MaxExportBatchSize),
 		timer:  time.NewTimer(o.BatchTimeout),
-		queue:  make(chan *SpanSnapshot, o.MaxQueueSize),
+		queue:  make(chan ReadOnlySpan, o.MaxQueueSize),
 		stopCh: make(chan struct{}),
 	}
 
@@ -123,7 +123,7 @@ func (bsp *batchSpanProcessor) OnEnd(s ReadOnlySpan) {
 	if bsp.e == nil {
 		return
 	}
-	bsp.enqueue(s.Snapshot())
+	bsp.enqueue(s)
 }
 
 // Shutdown flushes the queue and waits until all spans are processed.
@@ -294,8 +294,8 @@ func (bsp *batchSpanProcessor) drainQueue() {
 	}
 }
 
-func (bsp *batchSpanProcessor) enqueue(sd *SpanSnapshot) {
-	if !sd.SpanContext.IsSampled() {
+func (bsp *batchSpanProcessor) enqueue(sd ReadOnlySpan) {
+	if !sd.SpanContext().IsSampled() {
 		return
 	}
 

@@ -165,7 +165,7 @@ func TestRetry(t *testing.T) {
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
-	err = exporter.ExportSpans(ctx, otlptest.SingleSpanSnapshot())
+	err = exporter.ExportSpans(ctx, otlptest.SingleReadOnlySpan())
 	assert.NoError(t, err)
 	assert.Len(t, mc.GetSpans(), 1)
 }
@@ -187,7 +187,7 @@ func TestTimeout(t *testing.T) {
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
-	err = exporter.ExportSpans(ctx, otlptest.SingleSpanSnapshot())
+	err = exporter.ExportSpans(ctx, otlptest.SingleReadOnlySpan())
 	assert.Equal(t, true, os.IsTimeout(err))
 }
 
@@ -212,7 +212,7 @@ func TestRetryFailed(t *testing.T) {
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
-	err = exporter.ExportSpans(ctx, otlptest.SingleSpanSnapshot())
+	err = exporter.ExportSpans(ctx, otlptest.SingleReadOnlySpan())
 	assert.Error(t, err)
 	assert.Empty(t, mc.GetSpans())
 }
@@ -237,7 +237,7 @@ func TestNoRetry(t *testing.T) {
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
-	err = exporter.ExportSpans(ctx, otlptest.SingleSpanSnapshot())
+	err = exporter.ExportSpans(ctx, otlptest.SingleReadOnlySpan())
 	assert.Error(t, err)
 	assert.Equal(t, fmt.Sprintf("failed to send traces to http://%s/v1/traces with HTTP status 400 Bad Request", mc.endpoint), err.Error())
 	assert.Empty(t, mc.GetSpans())
@@ -325,7 +325,7 @@ func TestUnreasonableMaxAttempts(t *testing.T) {
 			defer func() {
 				assert.NoError(t, exporter.Shutdown(ctx))
 			}()
-			err = exporter.ExportSpans(ctx, otlptest.SingleSpanSnapshot())
+			err = exporter.ExportSpans(ctx, otlptest.SingleReadOnlySpan())
 			assert.Error(t, err)
 			assert.Empty(t, mc.GetSpans())
 		})
@@ -361,7 +361,7 @@ func TestUnreasonableBackoff(t *testing.T) {
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
-	err = exporter.ExportSpans(ctx, otlptest.SingleSpanSnapshot())
+	err = exporter.ExportSpans(ctx, otlptest.SingleReadOnlySpan())
 	assert.Error(t, err)
 	assert.Empty(t, mc.GetSpans())
 }
@@ -381,7 +381,7 @@ func TestCancelledContext(t *testing.T) {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
 	cancel()
-	err = exporter.ExportSpans(ctx, otlptest.SingleSpanSnapshot())
+	err = exporter.ExportSpans(ctx, otlptest.SingleReadOnlySpan())
 	assert.Error(t, err)
 	assert.Empty(t, mc.GetSpans())
 }
@@ -409,7 +409,7 @@ func TestDeadlineContext(t *testing.T) {
 	}()
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
-	err = exporter.ExportSpans(ctx, otlptest.SingleSpanSnapshot())
+	err = exporter.ExportSpans(ctx, otlptest.SingleReadOnlySpan())
 	assert.Error(t, err)
 	assert.Empty(t, mc.GetSpans())
 }
@@ -437,7 +437,7 @@ func TestStopWhileExporting(t *testing.T) {
 	}()
 	doneCh := make(chan struct{})
 	go func() {
-		err := exporter.ExportSpans(ctx, otlptest.SingleSpanSnapshot())
+		err := exporter.ExportSpans(ctx, otlptest.SingleReadOnlySpan())
 		assert.Error(t, err)
 		assert.Empty(t, mc.GetSpans())
 		close(doneCh)

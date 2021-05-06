@@ -114,6 +114,13 @@ func WithAttemptReconnectingInterval(interval time.Duration) AgentEndpointOption
 	}
 }
 
+// WithMaxPacketSize sets the maximum UDP packet size for transport to the Jaeger agent.
+func WithMaxPacketSize(size int) AgentEndpointOption {
+	return func(o *AgentEndpointOptions) {
+		o.MaxPacketSize = size
+	}
+}
+
 // WithCollectorEndpoint defines the full url to the Jaeger HTTP Thrift collector. This will
 // use the following environment variables for configuration if no explicit option is provided:
 //

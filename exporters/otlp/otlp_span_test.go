@@ -31,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
 func TestExportSpans(t *testing.T) {
@@ -41,19 +42,19 @@ func TestExportSpans(t *testing.T) {
 	endTime := startTime.Add(10 * time.Second)
 
 	for _, test := range []struct {
-		sd   []*tracesdk.SpanSnapshot
+		sd   tracetest.SpanStubs
 		want []*tracepb.ResourceSpans
 	}{
 		{
-			[]*tracesdk.SpanSnapshot(nil),
+			tracetest.SpanStubsFromReadOnlySpans(nil),
 			[]*tracepb.ResourceSpans(nil),
 		},
 		{
-			[]*tracesdk.SpanSnapshot{},
+			tracetest.SpanStubs{},
 			[]*tracepb.ResourceSpans(nil),
 		},
 		{
-			[]*tracesdk.SpanSnapshot{
+			tracetest.SpanStubs{
 				{
 					SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 						TraceID:    trace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
@@ -68,9 +69,11 @@ func TestExportSpans(t *testing.T) {
 						attribute.String("user", "alice"),
 						attribute.Bool("authenticated", true),
 					},
-					StatusCode:    codes.Ok,
-					StatusMessage: "Ok",
-					Resource:      resource.NewWithAttributes(attribute.String("instance", "tester-a")),
+					Status: tracesdk.Status{
+						Code:        codes.Ok,
+						Description: "Ok",
+					},
+					Resource: resource.NewWithAttributes(attribute.String("instance", "tester-a")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-a",
 						Version: "v0.1.0",
@@ -90,9 +93,11 @@ func TestExportSpans(t *testing.T) {
 						attribute.String("user", "alice"),
 						attribute.Bool("authenticated", true),
 					},
-					StatusCode:    codes.Ok,
-					StatusMessage: "Ok",
-					Resource:      resource.NewWithAttributes(attribute.String("instance", "tester-a")),
+					Status: tracesdk.Status{
+						Code:        codes.Ok,
+						Description: "Ok",
+					},
+					Resource: resource.NewWithAttributes(attribute.String("instance", "tester-a")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-b",
 						Version: "v0.1.0",
@@ -117,9 +122,11 @@ func TestExportSpans(t *testing.T) {
 						attribute.String("user", "alice"),
 						attribute.Bool("authenticated", true),
 					},
-					StatusCode:    codes.Ok,
-					StatusMessage: "Ok",
-					Resource:      resource.NewWithAttributes(attribute.String("instance", "tester-a")),
+					Status: tracesdk.Status{
+						Code:        codes.Ok,
+						Description: "Ok",
+					},
+					Resource: resource.NewWithAttributes(attribute.String("instance", "tester-a")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-a",
 						Version: "v0.1.0",
@@ -139,9 +146,11 @@ func TestExportSpans(t *testing.T) {
 						attribute.String("user", "bob"),
 						attribute.Bool("authenticated", false),
 					},
-					StatusCode:    codes.Error,
-					StatusMessage: "Unauthenticated",
-					Resource:      resource.NewWithAttributes(attribute.String("instance", "tester-b")),
+					Status: tracesdk.Status{
+						Code:        codes.Error,
+						Description: "Unauthenticated",
+					},
+					Resource: resource.NewWithAttributes(attribute.String("instance", "tester-b")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-a",
 						Version: "v1.1.0",
@@ -330,7 +339,7 @@ func TestExportSpans(t *testing.T) {
 		},
 	} {
 		driver.Reset()
-		assert.NoError(t, exp.ExportSpans(context.Background(), test.sd))
+		assert.NoError(t, exp.ExportSpans(context.Background(), test.sd.Snapshots()))
 		assert.ElementsMatch(t, test.want, driver.rs)
 	}
 }

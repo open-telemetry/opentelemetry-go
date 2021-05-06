@@ -129,10 +129,10 @@ func (e *Exporter) ExportKindFor(desc *metric.Descriptor, kind aggregation.Kind)
 	return e.cfg.exportKindSelector.ExportKindFor(desc, kind)
 }
 
-// ExportSpans transforms and batches trace SpanSnapshots into OTLP Trace and
+// ExportSpans transforms and batches OpenTelemetry spans into OTLP Trace and
 // transmits them to the configured collector.
-func (e *Exporter) ExportSpans(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
-	return e.driver.ExportTraces(ctx, ss)
+func (e *Exporter) ExportSpans(ctx context.Context, spans []tracesdk.ReadOnlySpan) error {
+	return e.driver.ExportTraces(ctx, spans)
 }
 
 // NewExportPipeline sets up a complete export pipeline

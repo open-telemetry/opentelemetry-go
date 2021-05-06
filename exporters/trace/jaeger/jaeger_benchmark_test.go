@@ -22,6 +22,7 @@ import (
 
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -49,12 +50,12 @@ func init() {
 	})
 }
 
-func spans(n int) []*tracesdk.SpanSnapshot {
+func spans(n int) []tracesdk.ReadOnlySpan {
 	now := time.Now()
-	s := make([]*tracesdk.SpanSnapshot, n)
+	s := make(tracetest.SpanStubs, n)
 	for i := 0; i < n; i++ {
 		name := fmt.Sprintf("span %d", i)
-		s[i] = &tracesdk.SpanSnapshot{
+		s[i] = tracetest.SpanStub{
 			SpanContext: spanContext,
 			Name:        name,
 			StartTime:   now,
@@ -65,7 +66,7 @@ func spans(n int) []*tracesdk.SpanSnapshot {
 			},
 		}
 	}
-	return s
+	return s.Snapshots()
 }
 
 func benchmarkExportSpans(b *testing.B, o EndpointOption, i int) {

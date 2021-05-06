@@ -31,12 +31,12 @@ var (
 )
 
 type testExporter struct {
-	spans    []*sdktrace.SpanSnapshot
+	spans    []sdktrace.ReadOnlySpan
 	shutdown bool
 }
 
-func (t *testExporter) ExportSpans(ctx context.Context, ss []*sdktrace.SpanSnapshot) error {
-	t.spans = append(t.spans, ss...)
+func (t *testExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
+	t.spans = append(t.spans, spans...)
 	return nil
 }
 
@@ -80,7 +80,7 @@ func TestSimpleSpanProcessorOnEnd(t *testing.T) {
 	startSpan(tp).End()
 
 	wantTraceID := tid
-	gotTraceID := te.spans[0].SpanContext.TraceID()
+	gotTraceID := te.spans[0].SpanContext().TraceID()
 	if wantTraceID != gotTraceID {
 		t.Errorf("SimplerSpanProcessor OnEnd() check: got %+v, want %+v\n", gotTraceID, wantTraceID)
 	}

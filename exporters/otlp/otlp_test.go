@@ -29,16 +29,17 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
-func stubSpanSnapshot(count int) []*tracesdk.SpanSnapshot {
-	spans := make([]*tracesdk.SpanSnapshot, 0, count)
+func readonlyspans(count int) []tracesdk.ReadOnlySpan {
+	spans := make(tracetest.SpanStubs, 0, count)
 	for i := 0; i < count; i++ {
-		spans = append(spans, new(tracesdk.SpanSnapshot))
+		spans = append(spans, tracetest.SpanStub{})
 	}
-	return spans
+	return spans.Snapshots()
 }
 
 type stubCheckpointSet struct {
@@ -71,7 +72,7 @@ type stubProtocolDriver struct {
 	injectedStopError  error
 
 	rm []metricsdk.Record
-	rs []tracesdk.SpanSnapshot
+	rs tracetest.SpanStubs
 }
 
 var _ otlp.ProtocolDriver = (*stubProtocolDriver)(nil)
@@ -104,13 +105,13 @@ func (m *stubProtocolDriver) ExportMetrics(parent context.Context, cps metricsdk
 	})
 }
 
-func (m *stubProtocolDriver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
+func (m *stubProtocolDriver) ExportTraces(ctx context.Context, ss []tracesdk.ReadOnlySpan) error {
 	m.tracesExported++
 	for _, rs := range ss {
 		if rs == nil {
 			continue
 		}
-		m.rs = append(m.rs, *rs)
+		m.rs = append(m.rs, tracetest.SpanStubFromReadOnlySpan(rs))
 	}
 	return nil
 }
@@ -144,8 +145,8 @@ func (m *stubTransformingProtocolDriver) ExportMetrics(parent context.Context, c
 	return nil
 }
 
-func (m *stubTransformingProtocolDriver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
-	for _, rs := range transform.SpanData(ss) {
+func (m *stubTransformingProtocolDriver) ExportTraces(ctx context.Context, ss []tracesdk.ReadOnlySpan) error {
+	for _, rs := range transform.Spans(ss) {
 		if rs == nil {
 			continue
 		}
@@ -289,7 +290,7 @@ func TestSplitDriver(t *testing.T) {
 	assertExport := func(t testing.TB, ctx context.Context, driver otlp.ProtocolDriver) {
 		t.Helper()
 		assert.NoError(t, driver.ExportMetrics(ctx, stubCheckpointSet{recordCount}, metricsdk.StatelessExportKindSelector()))
-		assert.NoError(t, driver.ExportTraces(ctx, stubSpanSnapshot(spanCount)))
+		assert.NoError(t, driver.ExportTraces(ctx, readonlyspans(spanCount)))
 	}
 
 	t.Run("with metric/trace drivers configured", func(t *testing.T) {
@@ -385,7 +386,7 @@ func TestSplitDriver(t *testing.T) {
 		assert.NoError(t, driver.Start(ctx))
 
 		assert.NoError(t, driver.ExportMetrics(ctx, stubCheckpointSet{recordCount}, metricsdk.StatelessExportKindSelector()))
-		assert.NoError(t, driver.ExportTraces(ctx, stubSpanSnapshot(spanCount)))
+		assert.NoError(t, driver.ExportTraces(ctx, readonlyspans(spanCount)))
 		assert.NoError(t, driver.Stop(ctx))
 	})
 
