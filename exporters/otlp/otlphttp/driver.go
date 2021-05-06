@@ -187,8 +187,8 @@ func (d *driver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet,
 }
 
 // ExportTraces implements otlp.ProtocolDriver.
-func (d *driver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
-	protoSpans := transform.SpanData(ss)
+func (d *driver) ExportTraces(ctx context.Context, ss []tracesdk.ReadOnlySpan) error {
+	protoSpans := transform.Spans(ss)
 	if len(protoSpans) == 0 {
 		return nil
 	}

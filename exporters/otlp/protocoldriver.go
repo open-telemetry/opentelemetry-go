@@ -48,7 +48,7 @@ type ProtocolDriver interface {
 	// format and send it to the collector. May be called
 	// concurrently with ExportMetrics, so the manager needs to
 	// take this into account by doing proper locking.
-	ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error
+	ExportTraces(ctx context.Context, ss []tracesdk.ReadOnlySpan) error
 }
 
 // SplitConfig is used to configure a split driver.
@@ -151,7 +151,7 @@ func (d *splitDriver) ExportMetrics(ctx context.Context, cps metricsdk.Checkpoin
 
 // ExportTraces implements ProtocolDriver. It forwards the call to the
 // driver used for sending spans.
-func (d *splitDriver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
+func (d *splitDriver) ExportTraces(ctx context.Context, ss []tracesdk.ReadOnlySpan) error {
 	return d.trace.ExportTraces(ctx, ss)
 }
 
@@ -171,6 +171,6 @@ func (d *noopDriver) ExportMetrics(ctx context.Context, cps metricsdk.Checkpoint
 }
 
 // ExportTraces does nothing.
-func (d *noopDriver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
+func (d *noopDriver) ExportTraces(ctx context.Context, ss []tracesdk.ReadOnlySpan) error {
 	return nil
 }

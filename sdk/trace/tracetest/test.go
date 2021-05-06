@@ -31,12 +31,12 @@ func NewNoopExporter() *NoopExporter {
 	return new(NoopExporter)
 }
 
-// NoopExporter is an exporter that drops all received SpanSnapshots and
-// performs no action.
+// NoopExporter is an exporter that drops all received spans and performs no
+// action.
 type NoopExporter struct{}
 
-// ExportSpans handles export of SpanSnapshots by dropping them.
-func (nsb *NoopExporter) ExportSpans(context.Context, []*trace.SpanSnapshot) error { return nil }
+// ExportSpans handles export of spans by dropping them.
+func (nsb *NoopExporter) ExportSpans(context.Context, []trace.ReadOnlySpan) error { return nil }
 
 // Shutdown stops the exporter by doing nothing.
 func (nsb *NoopExporter) Shutdown(context.Context) error { return nil }
@@ -51,18 +51,18 @@ func NewInMemoryExporter() *InMemoryExporter {
 // InMemoryExporter is an exporter that stores all received spans in-memory.
 type InMemoryExporter struct {
 	mu sync.Mutex
-	ss []*trace.SpanSnapshot
+	ss SpanStubs
 }
 
-// ExportSpans handles export of SpanSnapshots by storing them in memory.
-func (imsb *InMemoryExporter) ExportSpans(_ context.Context, ss []*trace.SpanSnapshot) error {
+// ExportSpans handles export of spans by storing them in memory.
+func (imsb *InMemoryExporter) ExportSpans(_ context.Context, spans []trace.ReadOnlySpan) error {
 	imsb.mu.Lock()
 	defer imsb.mu.Unlock()
-	imsb.ss = append(imsb.ss, ss...)
+	imsb.ss = append(imsb.ss, SpanStubsFromReadOnlySpans(spans)...)
 	return nil
 }
 
-// Shutdown stops the exporter by clearing SpanSnapshots held in memory.
+// Shutdown stops the exporter by clearing spans held in memory.
 func (imsb *InMemoryExporter) Shutdown(context.Context) error {
 	imsb.Reset()
 	return nil
@@ -76,10 +76,10 @@ func (imsb *InMemoryExporter) Reset() {
 }
 
 // GetSpans returns the current in-memory stored spans.
-func (imsb *InMemoryExporter) GetSpans() []*trace.SpanSnapshot {
+func (imsb *InMemoryExporter) GetSpans() SpanStubs {
 	imsb.mu.Lock()
 	defer imsb.mu.Unlock()
-	ret := make([]*trace.SpanSnapshot, len(imsb.ss))
+	ret := make(SpanStubs, len(imsb.ss))
 	copy(ret, imsb.ss)
 	return ret
 }

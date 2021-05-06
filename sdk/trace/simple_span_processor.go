@@ -55,8 +55,7 @@ func (ssp *simpleSpanProcessor) OnEnd(s ReadOnlySpan) {
 	defer ssp.exporterMu.RUnlock()
 
 	if ssp.exporter != nil && s.SpanContext().TraceFlags().IsSampled() {
-		ss := s.Snapshot()
-		if err := ssp.exporter.ExportSpans(context.Background(), []*SpanSnapshot{ss}); err != nil {
+		if err := ssp.exporter.ExportSpans(context.Background(), []ReadOnlySpan{s}); err != nil {
 			otel.Handle(err)
 		}
 	}

@@ -20,6 +20,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/exporters/trace/jaeger/internal/third_party/thrift/lib/go/thrift"
@@ -36,10 +37,11 @@ type agentClientUDP struct {
 	genAgent.Agent
 	io.Closer
 
-	connUDP       udpConn
-	client        *genAgent.AgentClient
-	maxPacketSize int                   // max size of datagram in bytes
-	thriftBuffer  *thrift.TMemoryBuffer // buffer used to calculate byte size of a span
+	connUDP        udpConn
+	client         *genAgent.AgentClient
+	maxPacketSize  int                   // max size of datagram in bytes
+	thriftBuffer   *thrift.TMemoryBuffer // buffer used to calculate byte size of a span
+	thriftProtocol thrift.TProtocol
 }
 
 type udpConn interface {
@@ -75,6 +77,7 @@ func newAgentClientUDP(params agentClientUDPParams) (*agentClientUDP, error) {
 
 	thriftBuffer := thrift.NewTMemoryBufferLen(params.MaxPacketSize)
 	protocolFactory := thrift.NewTCompactProtocolFactoryConf(&thrift.TConfiguration{})
+	thriftProtocol := protocolFactory.GetProtocol(thriftBuffer)
 	client := genAgent.NewAgentClientFactory(thriftBuffer, protocolFactory)
 
 	var connUDP udpConn
@@ -103,15 +106,78 @@ func newAgentClientUDP(params agentClientUDPParams) (*agentClientUDP, error) {
 	}
 
 	return &agentClientUDP{
-		connUDP:       connUDP,
-		client:        client,
-		maxPacketSize: params.MaxPacketSize,
-		thriftBuffer:  thriftBuffer,
+		connUDP:        connUDP,
+		client:         client,
+		maxPacketSize:  params.MaxPacketSize,
+		thriftBuffer:   thriftBuffer,
+		thriftProtocol: thriftProtocol,
 	}, nil
 }
 
-// EmitBatch implements EmitBatch() of Agent interface
+// EmitBatch buffers batch to fit into UDP packets and sends the data to the agent.
 func (a *agentClientUDP) EmitBatch(ctx context.Context, batch *gen.Batch) error {
+	var errs []error
+	processSize, err := a.calcSizeOfSerializedThrift(ctx, batch.Process)
+	if err != nil {
+		// drop the batch if serialization of process fails.
+		return err
+	}
+	totalSize := processSize
+	var spans []*gen.Span
+	for _, span := range batch.Spans {
+		spanSize, err := a.calcSizeOfSerializedThrift(ctx, span)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("thrift serialization failed: %v", span))
+			continue
+		}
+		if spanSize+processSize >= a.maxPacketSize {
+			// drop the span that exceeds the limit.
+			errs = append(errs, fmt.Errorf("span too large to send: %v", span))
+			continue
+		}
+		if totalSize+spanSize >= a.maxPacketSize {
+			if err := a.flush(ctx, &gen.Batch{
+				Process: batch.Process,
+				Spans:   spans,
+			}); err != nil {
+				errs = append(errs, err)
+			}
+			spans = spans[:0]
+			totalSize = processSize
+		}
+		totalSize += spanSize
+		spans = append(spans, span)
+	}
+
+	if len(spans) > 0 {
+		if err := a.flush(ctx, &gen.Batch{
+			Process: batch.Process,
+			Spans:   spans,
+		}); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if len(errs) == 1 {
+		return errs[0]
+	} else if len(errs) > 1 {
+		joined := a.makeJoinedErrorString(errs)
+		return fmt.Errorf("multiple errors during transform: %s", joined)
+	}
+	return nil
+}
+
+// makeJoinedErrorString join all the errors to one error message.
+func (a *agentClientUDP) makeJoinedErrorString(errs []error) string {
+	var errMsgs []string
+	for _, err := range errs {
+		errMsgs = append(errMsgs, err.Error())
+	}
+	return strings.Join(errMsgs, ", ")
+}
+
+// flush will send the batch of spans to the agent.
+func (a *agentClientUDP) flush(ctx context.Context, batch *gen.Batch) error {
 	a.thriftBuffer.Reset()
 	if err := a.client.EmitBatch(ctx, batch); err != nil {
 		return err
@@ -122,6 +188,13 @@ func (a *agentClientUDP) EmitBatch(ctx context.Context, batch *gen.Batch) error 
 	}
 	_, err := a.connUDP.Write(a.thriftBuffer.Bytes())
 	return err
+}
+
+// calcSizeOfSerializedThrift calculate the serialized thrift packet size.
+func (a *agentClientUDP) calcSizeOfSerializedThrift(ctx context.Context, thriftStruct thrift.TStruct) (int, error) {
+	a.thriftBuffer.Reset()
+	err := thriftStruct.Write(ctx, a.thriftProtocol)
+	return a.thriftBuffer.Len(), err
 }
 
 // Close implements Close() of io.Closer and closes the underlying UDP connection.
