@@ -44,16 +44,16 @@ This project is tested on the following systems.
 
 | OS      | Go Version | Architecture |
 | ------- | ---------- | ------------ |
+| Ubuntu  | 1.16       | amd64        |
 | Ubuntu  | 1.15       | amd64        |
-| Ubuntu  | 1.14       | amd64        |
+| Ubuntu  | 1.16       | 386          |
 | Ubuntu  | 1.15       | 386          |
-| Ubuntu  | 1.14       | 386          |
+| MacOS   | 1.16       | amd64        |
 | MacOS   | 1.15       | amd64        |
-| MacOS   | 1.14       | amd64        |
+| Windows | 1.16       | amd64        |
 | Windows | 1.15       | amd64        |
-| Windows | 1.14       | amd64        |
+| Windows | 1.16       | 386          |
 | Windows | 1.15       | 386          |
-| Windows | 1.14       | 386          |
 
 While this project should work for other systems, no compatibility guarantees
 are made for those systems currently.
