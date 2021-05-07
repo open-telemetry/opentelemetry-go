@@ -206,17 +206,17 @@ func (i instrumentationVersionOption) ApplyTracer(config *TracerConfig) {
 
 func (instrumentationVersionOption) private() {}
 
-// ErrorConfig is a group of options for error.
-type ErrorConfig struct {
+// errorConfig is a group of options for error.
+type errorConfig struct {
 	Code    codes.Code
 	Message string
 	// EventOpts will be passed to addEvent
 	EventOpts []EventOption
 }
 
-// ErrorOption applies an option to a ErrorConfig.
+// ErrorOption applies an option to a errorConfig.
 type ErrorOption interface {
-	ApplyError(config *ErrorConfig)
+	applyError(config *errorConfig)
 
 	// A private method to prevent users implementing the
 	// interface and so future additions to it will not
@@ -224,11 +224,11 @@ type ErrorOption interface {
 	private()
 }
 
-// NewErrorConfig applies all the options to a returned ErrorConfig.
-func NewErrorConfig(options ...ErrorOption) *ErrorConfig {
-	c := new(ErrorConfig)
+// NewErrorConfig applies all the options to a returned errorConfig.
+func NewErrorConfig(options ...ErrorOption) *errorConfig {
+	c := new(errorConfig)
 	for _, option := range options {
-		option.ApplyError(c)
+		option.applyError(c)
 	}
 	return c
 }
@@ -238,7 +238,7 @@ type statusErrorOption struct {
 	Message string
 }
 
-func (o statusErrorOption) ApplyError(c *ErrorConfig) {
+func (o statusErrorOption) applyError(c *errorConfig) {
 	c.Code = o.Code
 	c.Message = o.Message
 }
@@ -251,7 +251,7 @@ func WithErrorStatus(code codes.Code, message string) ErrorOption {
 
 type eventOptsErrorOption []EventOption
 
-func (o eventOptsErrorOption) ApplyError(c *ErrorConfig) { c.EventOpts = o }
+func (o eventOptsErrorOption) applyError(c *errorConfig) { c.EventOpts = o }
 func (eventOptsErrorOption) private()                    {}
 
 // WithEventOptions set event options, will be passed to addEvent

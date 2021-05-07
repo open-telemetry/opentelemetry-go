@@ -228,26 +228,26 @@ func TestErrorConfig(t *testing.T) {
 
 	tests := []struct {
 		options  []ErrorOption
-		expected *ErrorConfig
+		expected *errorConfig
 	}{
 		{
 			// No non-zero-values should be set.
 			[]ErrorOption{},
-			&ErrorConfig{},
+			&errorConfig{},
 		},
 		{
 			// unset should not be set
 			[]ErrorOption{
 				WithErrorStatus(codes.Unset, ""),
 			},
-			&ErrorConfig{},
+			&errorConfig{},
 		},
 		{
 			// errorStatus options
 			[]ErrorOption{
 				withErrorStatusOpt,
 			},
-			&ErrorConfig{
+			&errorConfig{
 				Code:    codes.Error,
 				Message: "invalid data type",
 			},
@@ -258,7 +258,7 @@ func TestErrorConfig(t *testing.T) {
 				withErrorStatusOpt,
 				withEventOpts,
 			},
-			&ErrorConfig{
+			&errorConfig{
 				Code:    codes.Error,
 				Message: "invalid data type",
 				EventOpts: []EventOption{
