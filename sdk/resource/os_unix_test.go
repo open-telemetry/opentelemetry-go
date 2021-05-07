@@ -17,6 +17,7 @@
 package resource_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -24,7 +25,45 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/sdk/resource"
+
+	"golang.org/x/sys/unix"
 )
+
+func fakeUnameProvider(buf *unix.Utsname) error {
+	copy(buf.Sysname[:], "Mock OS")
+	copy(buf.Nodename[:], "DESKTOP-PC")
+	copy(buf.Release[:], "5.0.0")
+	copy(buf.Version[:], "#1 SMP Thu May 6 12:34:56 UTC 2021")
+	copy(buf.Machine[:], "x86_64")
+
+	return nil
+}
+
+func fakeUnameProviderWithError(buf *unix.Utsname) error {
+	return fmt.Errorf("Error invoking uname(2)")
+}
+
+func TestUname(t *testing.T) {
+	resource.SetUnameProvider(fakeUnameProvider)
+
+	uname, err := resource.Uname()
+
+	require.Equal(t, uname, "Mock OS DESKTOP-PC 5.0.0 #1 SMP Thu May 6 12:34:56 UTC 2021 x86_64")
+	require.NoError(t, err)
+
+	resource.SetDefaultUnameProvider()
+}
+
+func TestUnameError(t *testing.T) {
+	resource.SetUnameProvider(fakeUnameProviderWithError)
+
+	uname, err := resource.Uname()
+
+	require.Empty(t, uname)
+	require.Error(t, err)
+
+	resource.SetDefaultUnameProvider()
+}
 
 func TestCharsToString(t *testing.T) {
 	tt := []struct {
