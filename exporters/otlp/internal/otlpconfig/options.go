@@ -297,21 +297,33 @@ func WithMetricsTLSClientConfig(tlsCfg *tls.Config) GenericOption {
 }
 
 func WithInsecure() GenericOption {
+	return withInsecure(true)
+}
+
+func withInsecure(insecure bool) GenericOption {
 	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.Insecure = true
-		cfg.Metrics.Insecure = true
+		cfg.Traces.Insecure = insecure
+		cfg.Metrics.Insecure = insecure
 	})
 }
 
 func WithInsecureTraces() GenericOption {
+	return withInsecureTraces(true)
+}
+
+func withInsecureTraces(insecure bool) GenericOption {
 	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.Insecure = true
+		cfg.Traces.Insecure = insecure
 	})
 }
 
 func WithInsecureMetrics() GenericOption {
+	return withInsecureMetrics(true)
+}
+
+func withInsecureMetrics(insecure bool) GenericOption {
 	return newGenericOption(func(cfg *Config) {
-		cfg.Metrics.Insecure = true
+		cfg.Metrics.Insecure = insecure
 	})
 }
 

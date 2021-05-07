@@ -71,13 +71,13 @@ func (e *EnvOptionsReader) GetOptionsFromEnv() []GenericOption {
 
 	// Endpoint
 	if v, ok := e.getEnvValue("ENDPOINT"); ok {
-		opts = append(opts, WithEndpoint(v))
+		opts = append(opts, endpointOptions(v, WithEndpoint, withInsecure)...)
 	}
 	if v, ok := e.getEnvValue("TRACES_ENDPOINT"); ok {
-		opts = append(opts, WithTracesEndpoint(v))
+		opts = append(opts, endpointOptions(v, WithTracesEndpoint, withInsecureTraces)...)
 	}
 	if v, ok := e.getEnvValue("METRICS_ENDPOINT"); ok {
-		opts = append(opts, WithMetricsEndpoint(v))
+		opts = append(opts, endpointOptions(v, WithMetricsEndpoint, withInsecureMetrics)...)
 	}
 
 	// Certificate File
@@ -143,6 +143,18 @@ func (e *EnvOptionsReader) GetOptionsFromEnv() []GenericOption {
 	}
 
 	return opts
+}
+
+func endpointOptions(endpoint string, endpointOption func(endpoint string) GenericOption, insecureOption func(insecure bool) GenericOption) []GenericOption {
+	var endpointOptions []GenericOption
+
+	endpointOptions = append(endpointOptions, insecureOption(strings.HasPrefix(endpoint, "http://")))
+
+	endpoint = strings.Replace(endpoint, "https://", "", 1)
+	endpoint = strings.Replace(endpoint, "http://", "", 1)
+	endpointOptions = append(endpointOptions, endpointOption(endpoint))
+
+	return endpointOptions
 }
 
 // getEnvValue gets an OTLP environment variable value of the specified key using the GetEnv function.
