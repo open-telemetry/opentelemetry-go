@@ -384,26 +384,26 @@ const (
 	// invocations, if it is known to the client. This is, for example, not the case,
 	// when the transport layer is abstracted in a FaaS client framework without
 	// access to its configuration.
-	FaasTriggerKey = attribute.Key("faas.trigger")
+	FaaSTriggerKey = attribute.Key("faas.trigger")
 	// The execution ID of the current function execution.
 	//
 	// Type: string
 	// Required: No
 	// Examples: 'af9d5aa4-a685-4c5f-a22b-444f80b3cc28'
-	FaasExecutionKey = attribute.Key("faas.execution")
+	FaaSExecutionKey = attribute.Key("faas.execution")
 )
 
 var (
 	// A response to some data source operation such as a database or filesystem read/write
-	FaasTriggerDatasource = FaasTriggerKey.String("datasource")
+	FaaSTriggerDatasource = FaaSTriggerKey.String("datasource")
 	// To provide an answer to an inbound HTTP request
-	FaasTriggerHTTP = FaasTriggerKey.String("http")
+	FaaSTriggerHTTP = FaaSTriggerKey.String("http")
 	// A function is set to be executed when messages are sent to a messaging system
-	FaasTriggerPubsub = FaasTriggerKey.String("pubsub")
+	FaaSTriggerPubsub = FaaSTriggerKey.String("pubsub")
 	// A function is scheduled to be executed regularly
-	FaasTriggerTimer = FaasTriggerKey.String("timer")
+	FaaSTriggerTimer = FaaSTriggerKey.String("timer")
 	// If none of the others apply
-	FaasTriggerOther = FaasTriggerKey.String("other")
+	FaaSTriggerOther = FaaSTriggerKey.String("other")
 )
 
 // Semantic Convention for FaaS triggered as a response to some data source operation such as a database or filesystem read/write.
@@ -415,12 +415,12 @@ const (
 	// Type: string
 	// Required: Always
 	// Examples: 'myBucketName', 'myDBName'
-	FaasDocumentCollectionKey = attribute.Key("faas.document.collection")
+	FaaSDocumentCollectionKey = attribute.Key("faas.document.collection")
 	// Describes the type of the operation that was performed on the data.
 	//
 	// Type: Enum
 	// Required: Always
-	FaasDocumentOperationKey = attribute.Key("faas.document.operation")
+	FaaSDocumentOperationKey = attribute.Key("faas.document.operation")
 	// A string containing the time when the data was accessed in the [ISO
 	// 8601](https://www.iso.org/iso-8601-date-and-time-format.html) format expressed
 	// in [UTC](https://www.w3.org/TR/NOTE-datetime).
@@ -428,23 +428,23 @@ const (
 	// Type: string
 	// Required: Always
 	// Examples: '2020-01-23T13:47:06Z'
-	FaasDocumentTimeKey = attribute.Key("faas.document.time")
+	FaaSDocumentTimeKey = attribute.Key("faas.document.time")
 	// The document name/table subjected to the operation. For example, in Cloud
 	// Storage or S3 is the name of the file, and in Cosmos DB the table name.
 	//
 	// Type: string
 	// Required: No
 	// Examples: 'myFile.txt', 'myTableName'
-	FaasDocumentNameKey = attribute.Key("faas.document.name")
+	FaaSDocumentNameKey = attribute.Key("faas.document.name")
 )
 
 var (
 	// When a new object is created
-	FaasDocumentOperationInsert = FaasDocumentOperationKey.String("insert")
+	FaaSDocumentOperationInsert = FaaSDocumentOperationKey.String("insert")
 	// When an object is modified
-	FaasDocumentOperationEdit = FaasDocumentOperationKey.String("edit")
+	FaaSDocumentOperationEdit = FaaSDocumentOperationKey.String("edit")
 	// When an object is deleted
-	FaasDocumentOperationDelete = FaasDocumentOperationKey.String("delete")
+	FaaSDocumentOperationDelete = FaaSDocumentOperationKey.String("delete")
 )
 
 // Semantic Convention for FaaS scheduled to be executed regularly.
@@ -456,14 +456,14 @@ const (
 	// Type: string
 	// Required: Always
 	// Examples: '2020-01-23T13:47:06Z'
-	FaasTimeKey = attribute.Key("faas.time")
+	FaaSTimeKey = attribute.Key("faas.time")
 	// A string containing the schedule period as [Cron Expression](https://docs.oracl
 	// e.com/cd/E12058_01/doc/doc.1014/e12030/cron_expressions.htm).
 	//
 	// Type: string
 	// Required: No
 	// Examples: '0/5 * * * ? *'
-	FaasCronKey = attribute.Key("faas.cron")
+	FaaSCronKey = attribute.Key("faas.cron")
 )
 
 // Contains additional attributes for incoming FaaS spans.
@@ -473,7 +473,7 @@ const (
 	//
 	// Type: boolean
 	// Required: No
-	FaasColdstartKey = attribute.Key("faas.coldstart")
+	FaaSColdstartKey = attribute.Key("faas.coldstart")
 )
 
 // Contains additional attributes for outgoing FaaS spans.
@@ -485,7 +485,7 @@ const (
 	// Examples: 'my-function'
 	// Note: SHOULD be equal to the `faas.name` resource attribute of the invoked
 	// function.
-	FaasInvokedNameKey = attribute.Key("faas.invoked_name")
+	FaaSInvokedNameKey = attribute.Key("faas.invoked_name")
 	// The cloud provider of the invoked function.
 	//
 	// Type: Enum
@@ -493,7 +493,7 @@ const (
 	// Examples: 'aws'
 	// Note: SHOULD be equal to the `cloud.provider` resource attribute of the invoked
 	// function.
-	FaasInvokedProviderKey = attribute.Key("faas.invoked_provider")
+	FaaSInvokedProviderKey = attribute.Key("faas.invoked_provider")
 	// The cloud region of the invoked function.
 	//
 	// Type: string
@@ -506,16 +506,16 @@ const (
 	// Examples: 'eu-central-1'
 	// Note: SHOULD be equal to the `cloud.region` resource attribute of the invoked
 	// function.
-	FaasInvokedRegionKey = attribute.Key("faas.invoked_region")
+	FaaSInvokedRegionKey = attribute.Key("faas.invoked_region")
 )
 
 var (
 	// Amazon Web Services
-	FaasInvokedProviderAWS = FaasInvokedProviderKey.String("aws")
+	FaaSInvokedProviderAWS = FaaSInvokedProviderKey.String("aws")
 	// Amazon Web Services
-	FaasInvokedProviderAzure = FaasInvokedProviderKey.String("azure")
+	FaaSInvokedProviderAzure = FaaSInvokedProviderKey.String("azure")
 	// Google Cloud Platform
-	FaasInvokedProviderGCP = FaasInvokedProviderKey.String("gcp")
+	FaaSInvokedProviderGCP = FaaSInvokedProviderKey.String("gcp")
 )
 
 // These attributes may be used for any network related operation.

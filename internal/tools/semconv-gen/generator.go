@@ -262,6 +262,7 @@ var replacements = map[string]string{
 	"Inproc":       "InProc",
 	"IPTCP":        "TCP",
 	"IPUDP":        "UDP",
+	"Faas":         "FaaS",
 }
 
 func fixInitialisms(fn string) error {

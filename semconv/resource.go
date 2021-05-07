@@ -256,7 +256,7 @@ const (
 	// Type: string
 	// Required: Always
 	// Examples: 'my-function'
-	FaasNameKey = attribute.Key("faas.name")
+	FaaSNameKey = attribute.Key("faas.name")
 	// The unique ID of the function being executed.
 	//
 	// Type: string
@@ -267,20 +267,20 @@ const (
 	// namespaces.html) value, in GCP to the URI of the resource, and in Azure to the
 	// [FunctionDirectory](https://github.com/Azure/azure-functions-
 	// host/wiki/Retrieving-information-about-the-currently-running-function) field.
-	FaasIDKey = attribute.Key("faas.id")
+	FaaSIDKey = attribute.Key("faas.id")
 	// The version string of the function being executed as defined in [Version
 	// Attributes](../../resource/semantic_conventions/README.md#version-attributes).
 	//
 	// Type: string
 	// Required: No
 	// Examples: '2.0.0'
-	FaasVersionKey = attribute.Key("faas.version")
+	FaaSVersionKey = attribute.Key("faas.version")
 	// The execution environment ID as a string.
 	//
 	// Type: string
 	// Required: No
 	// Examples: 'my-function:instance-0001'
-	FaasInstanceKey = attribute.Key("faas.instance")
+	FaaSInstanceKey = attribute.Key("faas.instance")
 	// The amount of memory available to the serverless function in MiB.
 	//
 	// Type: int
@@ -290,7 +290,7 @@ const (
 	// easily stop a Java AWS Lambda function from working correctly. On AWS Lambda,
 	// the environment variable `AWS_LAMBDA_FUNCTION_MEMORY_SIZE` provides this
 	// information.
-	FaasMaxMemoryKey = attribute.Key("faas.max_memory")
+	FaaSMaxMemoryKey = attribute.Key("faas.max_memory")
 )
 
 // A host is defined as a general computing instance.
