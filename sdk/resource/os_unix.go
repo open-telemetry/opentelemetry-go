@@ -23,6 +23,20 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+type unameProvider func(buf *unix.Utsname) (err error)
+
+var defaultUnameProvider unameProvider = unix.Uname
+
+var currentUnameProvider = defaultUnameProvider
+
+func setDefaultUnameProvider() {
+	setUnameProvider(defaultUnameProvider)
+}
+
+func setUnameProvider(unameProvider unameProvider) {
+	currentUnameProvider = unameProvider
+}
+
 // platformOSDescription returns a human readable OS version information string.
 // The final string combines OS release information (where available) and the
 // result of the `uname` system call.
@@ -47,7 +61,7 @@ func platformOSDescription() (string, error) {
 func uname() (string, error) {
 	var utsName unix.Utsname
 
-	err := unix.Uname(&utsName)
+	err := currentUnameProvider(&utsName)
 	if err != nil {
 		return "", err
 	}
