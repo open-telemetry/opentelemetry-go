@@ -25,7 +25,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `SpanStub` type and its associated functions were added to the `go.opentelemetry.io/otel/sdk/trace/tracetest` package.
   This type can be used as a testing replacement for the `SpanSnapshot` that was removed from the `go.opentelemetry.io/otel/sdk/trace` package. (#1873)
 - Adds `otlphttp.WithHTTPTransport`, `otlphttp.WithTracesHTTPTransport` and `otlphttp.WithMetricsHTTPTransport` options for 
-  configuring a custom HTTP transport used to deliver the traces and metric data to the otlp/http endpoint. (#1858)
+  configuring a custom HTTP transport used to deliver the traces and metric data to the otlp/http endpoint. (#1881)
  
 ### Changed
 
