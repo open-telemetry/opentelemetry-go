@@ -1,3 +1,17 @@
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
@@ -43,11 +57,11 @@ func main() {
 }
 
 type config struct {
-	input string
-	output string
-	target string
+	input    string
+	output   string
+	target   string
 	template string
-	image string
+	image    string
 }
 
 func buildConfig() (*config, error) {
@@ -76,11 +90,11 @@ func buildConfig() (*config, error) {
 	}
 
 	return &config{
-		input: *inputPath,
-		output: *outputPath,
-		target: *outputFn,
+		input:    *inputPath,
+		output:   *outputPath,
+		target:   *outputFn,
 		template: *templateFn,
-		image: *containerImage,
+		image:    *containerImage,
 	}, nil
 }
 
@@ -161,57 +175,93 @@ func findRepoRoot() (string, error) {
 	}
 }
 
-var commonInitialisms = map[string]bool{
-	"ACL":   true,
-	"API":   true,
-	"ASCII": true,
-	"CPU":   true,
-	"CSS":   true,
-	"DB":    true,
-	"DNS":   true,
-	"EOF":   true,
-	"GUID":  true,
-	"HTML":  true,
-	"HTTP":  true,
-	"HTTPS": true,
-	"ID":    true,
-	"IP":    true,
-	"JSON":  true,
-	"LHS":   true,
-	"OS":    true,
-	"PID":   true,
-	"QPS":   true,
-	"QUIC":  true,
-	"RAM":   true,
-	"RHS":   true,
-	"RPC":   true,
-	"SDK":   true,
-	"SLA":   true,
-	"SMTP":  true,
-	"SPDY":  true,
-	"SQL":   true,
-	"SSH":   true,
-	"TCP":   true,
-	"TLS":   true,
-	"TTL":   true,
-	"UDP":   true,
-	"UI":    true,
-	"UID":   true,
-	"UUID":  true,
-	"URI":   true,
-	"URL":   true,
-	"UTF8":  true,
-	"VM":    true,
-	"XML":   true,
-	"XMPP":  true,
-	"XSRF":  true,
-	"XSS":   true,
+var commonInitialisms = []string{
+	"ACL",
+	"AIX",
+	"AKS",
+	"AMD64",
+	"API",
+	"ARM32",
+	"ARM64",
+	"ARN",
+	"ASCII",
+	"AWS",
+	"CPU",
+	"CSS",
+	"DB",
+	"DNS",
+	"EC2",
+	"ECS",
+	"EDB",
+	"EKS",
+	"EOF",
+	"GCP",
+	"GUID",
+	"HPUX",
+	"HSQLDB",
+	"HTML",
+	"HTTP",
+	"HTTPS",
+	"IA64",
+	"ID",
+	"IP",
+	"JDBC",
+	"JSON",
+	"LHS",
+	"MSSQL",
+	"OS",
+	"PHP",
+	"PID",
+	"PPC32",
+	"PPC64",
+	"QPS",
+	"QUIC",
+	"RAM",
+	"RHS",
+	"RPC",
+	"SDK",
+	"SLA",
+	"SMTP",
+	"SPDY",
+	"SQL",
+	"SSH",
+	"TCP",
+	"TLS",
+	"TTL",
+	"UDP",
+	"UID",
+	"UI",
+	"UUID",
+	"URI",
+	"URL",
+	"UTF8",
+	"VM",
+	"XML",
+	"XMPP",
+	"XSRF",
+	"XSS",
+	"ZOS",
 }
 
 var replacements = map[string]string{
-	"Inproc": "InProc",
-	"IPTCP": "TCP",
-	"IPUDP": "UDP",
+	"Mysql":        "MySQL",
+	"Postgresql":   "PostgreSQL",
+	"Mariadb":      "MariaDB",
+	"Maxdb":        "MaxDB",
+	"Firstsql":     "FirstSQL",
+	"Instantdb":    "InstantDB",
+	"Hbase":        "HBase",
+	"Mongodb":      "MongoDB",
+	"Couchdb":      "CouchDB",
+	"Cosmosdb":     "CosmosDB",
+	"Dynamodb":     "DynamoDB",
+	"Freebsd":      "FreeBSD",
+	"Netbsd":       "NetBSD",
+	"Openbsd":      "OpenBSD",
+	"Dragonflybsd": "DragonflyBSD",
+	"Inproc":       "InProc",
+	"IPTCP":        "TCP",
+	"IPUDP":        "UDP",
 }
 
 func fixInitialisms(fn string) error {
@@ -220,9 +270,9 @@ func fixInitialisms(fn string) error {
 		return fmt.Errorf("unable to read file: %w", err)
 	}
 
-	for init := range commonInitialisms {
-		re := regexp.MustCompile(strings.Title(strings.ToLower(init)))
-		data = re.ReplaceAllLiteral(data, []byte(init))
+	for _, init := range commonInitialisms {
+		re := regexp.MustCompile(strings.Title(strings.ToLower(init)) + `([A-Z\s\d]|$)`)
+		data = re.ReplaceAll(data, []byte(init+`$1`))
 	}
 
 	for old, new := range replacements {

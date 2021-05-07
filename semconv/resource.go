@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Code generated from semantic convention specification. DO NOT EDIT.
+
 package semconv // import "go.opentelemetry.io/otel/semconv"
 
 import "go.opentelemetry.io/otel/attribute"
@@ -62,44 +64,44 @@ const (
 
 var (
 	// Amazon Web Services
-	CloudProviderAws = CloudProviderKey.String("aws")
+	CloudProviderAWS = CloudProviderKey.String("aws")
 	// Microsoft Azure
 	CloudProviderAzure = CloudProviderKey.String("azure")
 	// Google Cloud Platform
-	CloudProviderGcp = CloudProviderKey.String("gcp")
+	CloudProviderGCP = CloudProviderKey.String("gcp")
 )
 
 var (
 	// AWS Elastic Compute Cloud
-	CloudPlatformAwsEc2 = CloudPlatformKey.String("aws_ec2")
+	CloudPlatformAWSEC2 = CloudPlatformKey.String("aws_ec2")
 	// AWS Elastic Container Service
-	CloudPlatformAwsEcs = CloudPlatformKey.String("aws_ecs")
+	CloudPlatformAWSECS = CloudPlatformKey.String("aws_ecs")
 	// AWS Elastic Kubernetes Service
-	CloudPlatformAwsEks = CloudPlatformKey.String("aws_eks")
+	CloudPlatformAWSEKS = CloudPlatformKey.String("aws_eks")
 	// AWS Lambda
-	CloudPlatformAwsLambda = CloudPlatformKey.String("aws_lambda")
+	CloudPlatformAWSLambda = CloudPlatformKey.String("aws_lambda")
 	// AWS Elastic Beanstalk
-	CloudPlatformAwsElasticbeanstalk = CloudPlatformKey.String("aws_elastic_beanstalk")
+	CloudPlatformAWSElasticbeanstalk = CloudPlatformKey.String("aws_elastic_beanstalk")
 	// Azure Virtual Machines
 	CloudPlatformAzureVM = CloudPlatformKey.String("azure_vm")
 	// Azure Container Instances
 	CloudPlatformAzureContainerinstances = CloudPlatformKey.String("azure_container_instances")
 	// Azure Kubernetes Service
-	CloudPlatformAzureAks = CloudPlatformKey.String("azure_aks")
+	CloudPlatformAzureAKS = CloudPlatformKey.String("azure_aks")
 	// Azure Functions
 	CloudPlatformAzureFunctions = CloudPlatformKey.String("azure_functions")
 	// Azure App Service
 	CloudPlatformAzureAppservice = CloudPlatformKey.String("azure_app_service")
 	// Google Cloud Compute Engine (GCE)
-	CloudPlatformGcpComputeengine = CloudPlatformKey.String("gcp_compute_engine")
+	CloudPlatformGCPComputeengine = CloudPlatformKey.String("gcp_compute_engine")
 	// Google Cloud Run
-	CloudPlatformGcpCloudrun = CloudPlatformKey.String("gcp_cloud_run")
+	CloudPlatformGCPCloudrun = CloudPlatformKey.String("gcp_cloud_run")
 	// Google Cloud Kubernetes Engine (GKE)
-	CloudPlatformGcpKubernetesengine = CloudPlatformKey.String("gcp_kubernetes_engine")
+	CloudPlatformGCPKubernetesengine = CloudPlatformKey.String("gcp_kubernetes_engine")
 	// Google Cloud Functions (GCF)
-	CloudPlatformGcpCloudfunctions = CloudPlatformKey.String("gcp_cloud_functions")
+	CloudPlatformGCPCloudfunctions = CloudPlatformKey.String("gcp_cloud_functions")
 	// Google Cloud App Engine (GAE)
-	CloudPlatformGcpAppengine = CloudPlatformKey.String("gcp_app_engine")
+	CloudPlatformGCPAppengine = CloudPlatformKey.String("gcp_app_engine")
 )
 
 // Resources used by AWS Elastic Container Service (ECS).
@@ -111,21 +113,21 @@ const (
 	// Required: No
 	// Examples: 'arn:aws:ecs:us-
 	// west-1:123456789123:container/32624152-9086-4f0e-acae-1a75b14fe4d9'
-	AwsEcsContainerArnKey = attribute.Key("aws.ecs.container.arn")
+	AWSECSContainerARNKey = attribute.Key("aws.ecs.container.arn")
 	// The ARN of an [ECS cluster](https://docs.aws.amazon.com/AmazonECS/latest/develo
 	// perguide/clusters.html).
 	//
 	// Type: string
 	// Required: No
 	// Examples: 'arn:aws:ecs:us-west-2:123456789123:cluster/my-cluster'
-	AwsEcsClusterArnKey = attribute.Key("aws.ecs.cluster.arn")
+	AWSECSClusterARNKey = attribute.Key("aws.ecs.cluster.arn")
 	// The [launch type](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/l
 	// aunch_types.html) for an ECS task.
 	//
 	// Type: Enum
 	// Required: No
 	// Examples: 'ec2', 'fargate'
-	AwsEcsLaunchtypeKey = attribute.Key("aws.ecs.launchtype")
+	AWSECSLaunchtypeKey = attribute.Key("aws.ecs.launchtype")
 	// The ARN of an [ECS task definition](https://docs.aws.amazon.com/AmazonECS/lates
 	// t/developerguide/task_definitions.html).
 	//
@@ -133,20 +135,20 @@ const (
 	// Required: No
 	// Examples: 'arn:aws:ecs:us-
 	// west-1:123456789123:task/10838bed-421f-43ef-870a-f43feacbbb5b'
-	AwsEcsTaskArnKey = attribute.Key("aws.ecs.task.arn")
+	AWSECSTaskARNKey = attribute.Key("aws.ecs.task.arn")
 	// The task definition family this task definition is a member of.
 	//
 	// Type: string
 	// Required: No
 	// Examples: 'opentelemetry-family'
-	AwsEcsTaskFamilyKey = attribute.Key("aws.ecs.task.family")
+	AWSECSTaskFamilyKey = attribute.Key("aws.ecs.task.family")
 )
 
 var (
 	// ec2
-	AwsEcsLaunchtypeEc2 = AwsEcsLaunchtypeKey.String("ec2")
+	AWSECSLaunchtypeEC2 = AWSECSLaunchtypeKey.String("ec2")
 	// fargate
-	AwsEcsLaunchtypeFargate = AwsEcsLaunchtypeKey.String("fargate")
+	AWSECSLaunchtypeFargate = AWSECSLaunchtypeKey.String("fargate")
 )
 
 // Resources used by AWS Elastic Kubernetes Service (EKS).
@@ -156,7 +158,7 @@ const (
 	// Type: string
 	// Required: No
 	// Examples: 'arn:aws:ecs:us-west-2:123456789123:cluster/my-cluster'
-	AwsEksClusterArnKey = attribute.Key("aws.eks.cluster.arn")
+	AWSEKSClusterARNKey = attribute.Key("aws.eks.cluster.arn")
 )
 
 // Resources specific to Amazon Web Services.
@@ -169,7 +171,7 @@ const (
 	// Note: Multiple log groups must be supported for cases like multi-container
 	// applications, where a single application has sidecar containers, and each write
 	// to their own log group.
-	AwsLogGroupNamesKey = attribute.Key("aws.log.group.names")
+	AWSLogGroupNamesKey = attribute.Key("aws.log.group.names")
 	// The Amazon Resource Name(s) (ARN) of the AWS log group(s).
 	//
 	// Type: string[]
@@ -178,13 +180,13 @@ const (
 	// Note: See the [log group ARN format
 	// documentation](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/iam-
 	// access-control-overview-cwl.html#CWL_ARN_Format).
-	AwsLogGroupArnsKey = attribute.Key("aws.log.group.arns")
+	AWSLogGroupArnsKey = attribute.Key("aws.log.group.arns")
 	// The name(s) of the AWS log stream(s) an application is writing to.
 	//
 	// Type: string[]
 	// Required: No
 	// Examples: 'logs/main/10838bed-421f-43ef-870a-f43feacbbb5b'
-	AwsLogStreamNamesKey = attribute.Key("aws.log.stream.names")
+	AWSLogStreamNamesKey = attribute.Key("aws.log.stream.names")
 	// The ARN(s) of the AWS log stream(s).
 	//
 	// Type: string[]
@@ -196,7 +198,7 @@ const (
 	// access-control-overview-cwl.html#CWL_ARN_Format). One log group can contain
 	// several log streams, so these ARNs necessarily identify both a log group and a
 	// log stream.
-	AwsLogStreamArnsKey = attribute.Key("aws.log.stream.arns")
+	AWSLogStreamArnsKey = attribute.Key("aws.log.stream.arns")
 )
 
 // A container instance.
@@ -342,17 +344,17 @@ const (
 
 var (
 	// AMD64
-	HostArchAmd64 = HostArchKey.String("amd64")
+	HostArchAMD64 = HostArchKey.String("amd64")
 	// ARM32
-	HostArchArm32 = HostArchKey.String("arm32")
+	HostArchARM32 = HostArchKey.String("arm32")
 	// ARM64
-	HostArchArm64 = HostArchKey.String("arm64")
+	HostArchARM64 = HostArchKey.String("arm64")
 	// Itanium
-	HostArchIa64 = HostArchKey.String("ia64")
+	HostArchIA64 = HostArchKey.String("ia64")
 	// 32-bit PowerPC
-	HostArchPpc32 = HostArchKey.String("ppc32")
+	HostArchPPC32 = HostArchKey.String("ppc32")
 	// 64-bit PowerPC
-	HostArchPpc64 = HostArchKey.String("ppc64")
+	HostArchPPC64 = HostArchKey.String("ppc64")
 	// 32-bit x86
 	HostArchX86 = HostArchKey.String("x86")
 )
@@ -380,7 +382,7 @@ const (
 	// Type: string
 	// Required: No
 	// Examples: '1eb3a0c6-0477-4080-a9cb-0cb7db65c6a2'
-	K8sNodeUIdKey = attribute.Key("k8s.node.uid")
+	K8sNodeUIDKey = attribute.Key("k8s.node.uid")
 )
 
 // A Kubernetes Namespace.
@@ -400,7 +402,7 @@ const (
 	// Type: string
 	// Required: No
 	// Examples: '275ecb36-5aa8-4c2a-9c47-d8bb681b9aff'
-	K8sPodUIdKey = attribute.Key("k8s.pod.uid")
+	K8sPodUIDKey = attribute.Key("k8s.pod.uid")
 	// The name of the Pod.
 	//
 	// Type: string
@@ -426,7 +428,7 @@ const (
 	// Type: string
 	// Required: No
 	// Examples: '275ecb36-5aa8-4c2a-9c47-d8bb681b9aff'
-	K8sReplicasetUIdKey = attribute.Key("k8s.replicaset.uid")
+	K8sReplicasetUIDKey = attribute.Key("k8s.replicaset.uid")
 	// The name of the ReplicaSet.
 	//
 	// Type: string
@@ -442,7 +444,7 @@ const (
 	// Type: string
 	// Required: No
 	// Examples: '275ecb36-5aa8-4c2a-9c47-d8bb681b9aff'
-	K8sDeploymentUIdKey = attribute.Key("k8s.deployment.uid")
+	K8sDeploymentUIDKey = attribute.Key("k8s.deployment.uid")
 	// The name of the Deployment.
 	//
 	// Type: string
@@ -458,7 +460,7 @@ const (
 	// Type: string
 	// Required: No
 	// Examples: '275ecb36-5aa8-4c2a-9c47-d8bb681b9aff'
-	K8sStatefulsetUIdKey = attribute.Key("k8s.statefulset.uid")
+	K8sStatefulsetUIDKey = attribute.Key("k8s.statefulset.uid")
 	// The name of the StatefulSet.
 	//
 	// Type: string
@@ -474,7 +476,7 @@ const (
 	// Type: string
 	// Required: No
 	// Examples: '275ecb36-5aa8-4c2a-9c47-d8bb681b9aff'
-	K8sDaemonsetUIdKey = attribute.Key("k8s.daemonset.uid")
+	K8sDaemonsetUIDKey = attribute.Key("k8s.daemonset.uid")
 	// The name of the DaemonSet.
 	//
 	// Type: string
@@ -490,7 +492,7 @@ const (
 	// Type: string
 	// Required: No
 	// Examples: '275ecb36-5aa8-4c2a-9c47-d8bb681b9aff'
-	K8sJobUIdKey = attribute.Key("k8s.job.uid")
+	K8sJobUIDKey = attribute.Key("k8s.job.uid")
 	// The name of the Job.
 	//
 	// Type: string
@@ -506,7 +508,7 @@ const (
 	// Type: string
 	// Required: No
 	// Examples: '275ecb36-5aa8-4c2a-9c47-d8bb681b9aff'
-	K8sCronjobUIdKey = attribute.Key("k8s.cronjob.uid")
+	K8sCronjobUIDKey = attribute.Key("k8s.cronjob.uid")
 	// The name of the CronJob.
 	//
 	// Type: string
@@ -539,21 +541,21 @@ var (
 	// Apple Darwin
 	OSTypeDarwin = OSTypeKey.String("DARWIN")
 	// FreeBSD
-	OSTypeFreebsd = OSTypeKey.String("FREEBSD")
+	OSTypeFreeBSD = OSTypeKey.String("FREEBSD")
 	// NetBSD
-	OSTypeNetbsd = OSTypeKey.String("NETBSD")
+	OSTypeNetBSD = OSTypeKey.String("NETBSD")
 	// OpenBSD
-	OSTypeOpenbsd = OSTypeKey.String("OPENBSD")
+	OSTypeOpenBSD = OSTypeKey.String("OPENBSD")
 	// DragonFly BSD
-	OSTypeDragonflybsd = OSTypeKey.String("DRAGONFLYBSD")
+	OSTypeDragonflyBSD = OSTypeKey.String("DRAGONFLYBSD")
 	// HP-UX (Hewlett Packard Unix)
-	OSTypeHpux = OSTypeKey.String("HPUX")
+	OSTypeHPUX = OSTypeKey.String("HPUX")
 	// AIX (Advanced Interactive eXecutive)
-	OSTypeAix = OSTypeKey.String("AIX")
+	OSTypeAIX = OSTypeKey.String("AIX")
 	// Oracle Solaris
 	OSTypeSolaris = OSTypeKey.String("SOLARIS")
 	// IBM z/OS
-	OSTypeZos = OSTypeKey.String("ZOS")
+	OSTypeZOS = OSTypeKey.String("ZOS")
 )
 
 // An operating system process.
@@ -733,7 +735,7 @@ var (
 	// nodejs
 	TelemetrySDKLanguageNodejs = TelemetrySDKLanguageKey.String("nodejs")
 	// php
-	TelemetrySDKLanguagePhp = TelemetrySDKLanguageKey.String("php")
+	TelemetrySDKLanguagePHP = TelemetrySDKLanguageKey.String("php")
 	// python
 	TelemetrySDKLanguagePython = TelemetrySDKLanguageKey.String("python")
 	// ruby

@@ -26,7 +26,7 @@ import (
 )
 
 var (
-	HTTPSchemeHTTP = HTTPSchemeKey.String("http")
+	HTTPSchemeHTTP  = HTTPSchemeKey.String("http")
 	HTTPSchemeHTTPS = HTTPSchemeKey.String("https")
 )
 

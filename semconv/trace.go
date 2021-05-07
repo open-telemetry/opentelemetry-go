@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Code generated from semantic convention specification. DO NOT EDIT.
+
 package semconv // import "go.opentelemetry.io/otel/semconv"
 
 import "go.opentelemetry.io/otel/attribute"
@@ -45,7 +47,7 @@ const (
 	// Required: No
 	// Examples: 'org.postgresql.Driver',
 	// 'com.microsoft.sqlserver.jdbc.SQLServerDriver'
-	DBJdbcDriverClassnameKey = attribute.Key("db.jdbc.driver_classname")
+	DBJDBCDriverClassnameKey = attribute.Key("db.jdbc.driver_classname")
 	// If no [tech-specific attribute](#call-level-attributes-for-specific-
 	// technologies) is defined, this attribute is used to report the name of the
 	// database being accessed. For commands that switch the database, this should be
@@ -83,15 +85,15 @@ var (
 	// Some other SQL database. Fallback only. See notes
 	DBSystemOtherSQL = DBSystemKey.String("other_sql")
 	// Microsoft SQL Server
-	DBSystemMssql = DBSystemKey.String("mssql")
+	DBSystemMSSQL = DBSystemKey.String("mssql")
 	// MySQL
-	DBSystemMysql = DBSystemKey.String("mysql")
+	DBSystemMySQL = DBSystemKey.String("mysql")
 	// Oracle Database
 	DBSystemOracle = DBSystemKey.String("oracle")
 	// IBM DB2
 	DBSystemDB2 = DBSystemKey.String("db2")
 	// PostgreSQL
-	DBSystemPostgresql = DBSystemKey.String("postgresql")
+	DBSystemPostgreSQL = DBSystemKey.String("postgresql")
 	// Amazon Redshift
 	DBSystemRedshift = DBSystemKey.String("redshift")
 	// Apache Hive
@@ -99,19 +101,19 @@ var (
 	// Cloudscape
 	DBSystemCloudscape = DBSystemKey.String("cloudscape")
 	// HyperSQL DataBase
-	DBSystemHsqldb = DBSystemKey.String("hsqldb")
+	DBSystemHSQLDB = DBSystemKey.String("hsqldb")
 	// Progress Database
 	DBSystemProgress = DBSystemKey.String("progress")
 	// SAP MaxDB
-	DBSystemMaxdb = DBSystemKey.String("maxdb")
+	DBSystemMaxDB = DBSystemKey.String("maxdb")
 	// SAP HANA
 	DBSystemHanadb = DBSystemKey.String("hanadb")
 	// Ingres
 	DBSystemIngres = DBSystemKey.String("ingres")
 	// FirstSQL
-	DBSystemFirstsql = DBSystemKey.String("firstsql")
+	DBSystemFirstSQL = DBSystemKey.String("firstsql")
 	// EnterpriseDB
-	DBSystemEdb = DBSystemKey.String("edb")
+	DBSystemEDB = DBSystemKey.String("edb")
 	// InterSystems Caché
 	DBSystemCache = DBSystemKey.String("cache")
 	// Adabas (Adaptable Database System)
@@ -125,11 +127,11 @@ var (
 	// Informix
 	DBSystemInformix = DBSystemKey.String("informix")
 	// InstantDB
-	DBSystemInstantdb = DBSystemKey.String("instantdb")
+	DBSystemInstantDB = DBSystemKey.String("instantdb")
 	// InterBase
 	DBSystemInterbase = DBSystemKey.String("interbase")
 	// MariaDB
-	DBSystemMariadb = DBSystemKey.String("mariadb")
+	DBSystemMariaDB = DBSystemKey.String("mariadb")
 	// Netezza
 	DBSystemNetezza = DBSystemKey.String("netezza")
 	// Pervasive PSQL
@@ -137,7 +139,7 @@ var (
 	// PointBase
 	DBSystemPointbase = DBSystemKey.String("pointbase")
 	// SQLite
-	DBSystemSQLite = DBSystemKey.String("sqlite")
+	DBSystemSqlite = DBSystemKey.String("sqlite")
 	// Sybase
 	DBSystemSybase = DBSystemKey.String("sybase")
 	// Teradata
@@ -151,19 +153,19 @@ var (
 	// Apache Cassandra
 	DBSystemCassandra = DBSystemKey.String("cassandra")
 	// Apache HBase
-	DBSystemHbase = DBSystemKey.String("hbase")
+	DBSystemHBase = DBSystemKey.String("hbase")
 	// MongoDB
-	DBSystemMongodb = DBSystemKey.String("mongodb")
+	DBSystemMongoDB = DBSystemKey.String("mongodb")
 	// Redis
 	DBSystemRedis = DBSystemKey.String("redis")
 	// Couchbase
 	DBSystemCouchbase = DBSystemKey.String("couchbase")
 	// CouchDB
-	DBSystemCouchdb = DBSystemKey.String("couchdb")
+	DBSystemCouchDB = DBSystemKey.String("couchdb")
 	// Microsoft Azure Cosmos DB
-	DBSystemCosmosdb = DBSystemKey.String("cosmosdb")
+	DBSystemCosmosDB = DBSystemKey.String("cosmosdb")
 	// Amazon DynamoDB
-	DBSystemDynamodb = DBSystemKey.String("dynamodb")
+	DBSystemDynamoDB = DBSystemKey.String("dynamodb")
 	// Neo4j
 	DBSystemNeo4j = DBSystemKey.String("neo4j")
 	// Apache Geode
@@ -183,7 +185,7 @@ const (
 	// Examples: 'MSSQLSERVER'
 	// Note: If setting a `db.mssql.instance_name`, `net.peer.port` is no longer
 	// required (but still recommended if non-standard).
-	DBMssqlInstanceNameKey = attribute.Key("db.mssql.instance_name")
+	DBMSSQLInstanceNameKey = attribute.Key("db.mssql.instance_name")
 )
 
 // Call-level attributes for Cassandra
@@ -224,7 +226,7 @@ const (
 	//
 	// Type: boolean
 	// Required: No
-	DBCassandraIDempotenceKey = attribute.Key("db.cassandra.idempotence")
+	DBCassandraIdempotenceKey = attribute.Key("db.cassandra.idempotence")
 	// The number of times a query was speculatively executed. Not set or `0` if the
 	// query was not executed speculatively.
 	//
@@ -279,7 +281,7 @@ const (
 	// Type: string
 	// Required: Always
 	// Examples: 'default'
-	DBHbaseNamespaceKey = attribute.Key("db.hbase.namespace")
+	DBHBaseNamespaceKey = attribute.Key("db.hbase.namespace")
 )
 
 // Call-level attributes for Redis
@@ -301,7 +303,7 @@ const (
 	// Type: string
 	// Required: Always
 	// Examples: 'customers', 'products'
-	DBMongodbCollectionKey = attribute.Key("db.mongodb.collection")
+	DBMongoDBCollectionKey = attribute.Key("db.mongodb.collection")
 )
 
 // Call-level attrbiutes for SQL databases
@@ -509,11 +511,11 @@ const (
 
 var (
 	// Amazon Web Services
-	FaasInvokedProviderAws = FaasInvokedProviderKey.String("aws")
+	FaasInvokedProviderAWS = FaasInvokedProviderKey.String("aws")
 	// Amazon Web Services
 	FaasInvokedProviderAzure = FaasInvokedProviderKey.String("azure")
 	// Google Cloud Platform
-	FaasInvokedProviderGcp = FaasInvokedProviderKey.String("gcp")
+	FaasInvokedProviderGCP = FaasInvokedProviderKey.String("gcp")
 )
 
 // These attributes may be used for any network related operation.
@@ -868,7 +870,7 @@ const (
 	//
 	// Type: string
 	// Required: No
-	// Examples: 'MyConversationID'
+	// Examples: 'MyConversationId'
 	MessagingConversationIDKey = attribute.Key("messaging.conversation_id")
 	// The (uncompressed) size of the message payload in bytes. Also use this
 	// attribute if it is unknown whether the compressed or uncompressed payload size
