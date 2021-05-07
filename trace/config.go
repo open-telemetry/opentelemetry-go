@@ -216,7 +216,7 @@ type ErrorConfig struct {
 
 // ErrorOption applies an option to a ErrorConfig.
 type ErrorOption interface {
-	ApplyError(config *ErrorConfig)
+	applyError(config *ErrorConfig)
 
 	// A private method to prevent users implementing the
 	// interface and so future additions to it will not
@@ -228,7 +228,7 @@ type ErrorOption interface {
 func NewErrorConfig(options ...ErrorOption) *ErrorConfig {
 	c := new(ErrorConfig)
 	for _, option := range options {
-		option.ApplyError(c)
+		option.applyError(c)
 	}
 	return c
 }
@@ -238,7 +238,7 @@ type statusErrorOption struct {
 	Message string
 }
 
-func (o statusErrorOption) ApplyError(c *ErrorConfig) {
+func (o statusErrorOption) applyError(c *ErrorConfig) {
 	c.Code = o.Code
 	c.Message = o.Message
 }
@@ -251,7 +251,7 @@ func WithErrorStatus(code codes.Code, message string) ErrorOption {
 
 type eventOptsErrorOption []EventOption
 
-func (o eventOptsErrorOption) ApplyError(c *ErrorConfig) { c.EventOpts = o }
+func (o eventOptsErrorOption) applyError(c *ErrorConfig) { c.EventOpts = o }
 func (eventOptsErrorOption) private()                    {}
 
 // WithEventOptions set event options, will be passed to addEvent
