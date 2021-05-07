@@ -17,12 +17,131 @@
 package resource_test
 
 import (
+	"bytes"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/sdk/resource"
 )
+
+func TestParseOSReleaseFile(t *testing.T) {
+	osReleaseUbuntu := bytes.NewBufferString(`NAME="Ubuntu"
+VERSION="20.04.2 LTS (Focal Fossa)"
+ID=ubuntu
+ID_LIKE=debian
+PRETTY_NAME="Ubuntu 20.04.2 LTS"
+VERSION_ID="20.04"
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+VERSION_CODENAME=focal
+UBUNTU_CODENAME=focal`)
+
+	parsedUbuntu := map[string]string{
+		"NAME":               "Ubuntu",
+		"VERSION":            "20.04.2 LTS (Focal Fossa)",
+		"ID":                 "ubuntu",
+		"ID_LIKE":            "debian",
+		"PRETTY_NAME":        "Ubuntu 20.04.2 LTS",
+		"VERSION_ID":         "20.04",
+		"HOME_URL":           "https://www.ubuntu.com/",
+		"SUPPORT_URL":        "https://help.ubuntu.com/",
+		"BUG_REPORT_URL":     "https://bugs.launchpad.net/ubuntu/",
+		"PRIVACY_POLICY_URL": "https://www.ubuntu.com/legal/terms-and-policies/privacy-policy",
+		"VERSION_CODENAME":   "focal",
+		"UBUNTU_CODENAME":    "focal",
+	}
+
+	osReleaseDebian := bytes.NewBufferString(`PRETTY_NAME="Debian GNU/Linux 10 (buster)"
+NAME="Debian GNU/Linux"
+VERSION_ID="10"
+VERSION="10 (buster)"
+VERSION_CODENAME=buster
+ID=debian
+HOME_URL="https://www.debian.org/"
+SUPPORT_URL="https://www.debian.org/support"
+BUG_REPORT_URL="https://bugs.debian.org/"`)
+
+	parsedDebian := map[string]string{
+		"PRETTY_NAME":      "Debian GNU/Linux 10 (buster)",
+		"NAME":             "Debian GNU/Linux",
+		"VERSION_ID":       "10",
+		"VERSION":          "10 (buster)",
+		"VERSION_CODENAME": "buster",
+		"ID":               "debian",
+		"HOME_URL":         "https://www.debian.org/",
+		"SUPPORT_URL":      "https://www.debian.org/support",
+		"BUG_REPORT_URL":   "https://bugs.debian.org/",
+	}
+
+	osReleaseAlpine := bytes.NewBufferString(`NAME="Alpine Linux"
+ID=alpine
+VERSION_ID=3.13.4
+PRETTY_NAME="Alpine Linux v3.13"
+HOME_URL="https://alpinelinux.org/"
+BUG_REPORT_URL="https://bugs.alpinelinux.org/"`)
+
+	parsedAlpine := map[string]string{
+		"NAME":           "Alpine Linux",
+		"ID":             "alpine",
+		"VERSION_ID":     "3.13.4",
+		"PRETTY_NAME":    "Alpine Linux v3.13",
+		"HOME_URL":       "https://alpinelinux.org/",
+		"BUG_REPORT_URL": "https://bugs.alpinelinux.org/",
+	}
+
+	osReleaseMock := bytes.NewBufferString(`
+# This line should be skipped
+
+QUOTED1="Quoted value 1"
+QUOTED2='Quoted value 2'
+ESCAPED1="\$HOME"
+ESCAPED2="\"release\""
+ESCAPED3="rock\'n\'roll"
+ESCAPED4="\\var"
+
+=line with missing key should be skipped
+
+PROP1=name=john
+	PROP2  =  Value  
+PROP3='This value will be overwritten by the next one'
+PROP3='Final value'`)
+
+	parsedMock := map[string]string{
+		"QUOTED1":  "Quoted value 1",
+		"QUOTED2":  "Quoted value 2",
+		"ESCAPED1": "$HOME",
+		"ESCAPED2": `"release"`,
+		"ESCAPED3": "rock'n'roll",
+		"ESCAPED4": `\var`,
+		"PROP1":    "name=john",
+		"PROP2":    "Value",
+		"PROP3":    "Final value",
+	}
+
+	tt := []struct {
+		Name      string
+		OSRelease io.Reader
+		Parsed    map[string]string
+	}{
+		{"Ubuntu", osReleaseUbuntu, parsedUbuntu},
+		{"Debian", osReleaseDebian, parsedDebian},
+		{"Alpine", osReleaseAlpine, parsedAlpine},
+		{"Mock", osReleaseMock, parsedMock},
+	}
+
+	for _, tc := range tt {
+		tc := tc
+
+		t.Run(tc.Name, func(t *testing.T) {
+			result := resource.ParseOSReleaseFile(tc.OSRelease)
+			require.EqualValues(t, tc.Parsed, result)
+		})
+	}
+}
 
 func TestSkip(t *testing.T) {
 	tt := []struct {
