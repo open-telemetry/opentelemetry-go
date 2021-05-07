@@ -19,6 +19,7 @@ package resource // import "go.opentelemetry.io/otel/sdk/resource"
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 )
@@ -52,7 +53,7 @@ func getOSReleaseFile() (*os.File, error) {
 // returns a map with the key-values contained in it. Empty lines or lines starting
 // with a '#' character are ignored, as well as lines with the missing key=value
 // separator. Values are unquoted and unescaped.
-func parseOSReleaseFile(file *os.File) map[string]string {
+func parseOSReleaseFile(file io.Reader) map[string]string {
 	values := make(map[string]string)
 	scanner := bufio.NewScanner(file)
 
