@@ -17,6 +17,7 @@
 package resource_test
 
 import (
+	"io/ioutil"
 	"os"
 	"testing"
 
@@ -49,8 +50,8 @@ func TestCharsToString(t *testing.T) {
 }
 
 func TestGetFirstAvailableFile(t *testing.T) {
-	file1, _ := os.CreateTemp("", "candidate_")
-	file2, _ := os.CreateTemp("", "candidate_")
+	file1, _ := ioutil.TempFile("", "candidate_")
+	file2, _ := ioutil.TempFile("", "candidate_")
 
 	filename1, filename2 := file1.Name(), file2.Name()
 
