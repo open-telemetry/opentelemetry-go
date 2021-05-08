@@ -65,9 +65,9 @@ metadata:
 spec:
   ports:
     - name: otlp # Default endpoint for otlp receiver.
-      port: 55680
+      port: 4317
       protocol: TCP
-      targetPort: 55680
+      targetPort: 4317
       nodePort: 30080
     - name: metrics # Default endpoint for metrics.
       port: 8889

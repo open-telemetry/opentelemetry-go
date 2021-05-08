@@ -165,7 +165,7 @@ spec:
     NodePort
 ```
 
-This service will bind the `55680` port used to access the otlp receiver to port `30080` on your cluster's node. By doing so, it makes it possible for us to access the Collector by using the static address `<node-ip>:30080`. In case you are running a local cluster, this will be `localhost:30080`. Note that you can also change this to a LoadBalancer or have an ingress extension for accessing the service.
+This service will bind the `4317` port used to access the otlp receiver to port `30080` on your cluster's node. By doing so, it makes it possible for us to access the Collector by using the static address `<node-ip>:30080`. In case you are running a local cluster, this will be `localhost:30080`. Note that you can also change this to a LoadBalancer or have an ingress extension for accessing the service.
 
 # Running the code
 
