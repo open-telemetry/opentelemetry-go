@@ -145,7 +145,7 @@ func WithInsecureTraces() Option {
 	return otlpconfig.WithInsecureTraces()
 }
 
-// WithInsecure tells the driver to connect to the metrics collector using the
+// WithInsecureMetrics tells the driver to connect to the metrics collector using the
 // HTTP scheme, instead of HTTPS.
 func WithInsecureMetrics() Option {
 	return otlpconfig.WithInsecureMetrics()
