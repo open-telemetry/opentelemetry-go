@@ -366,7 +366,7 @@ const (
 	// Type: string
 	// Required: No
 	// Examples: 'opentelemetry-cluster'
-	K8sClusterNameKey = attribute.Key("k8s.cluster.name")
+	K8SClusterNameKey = attribute.Key("k8s.cluster.name")
 )
 
 // A Kubernetes Node object.
@@ -376,13 +376,13 @@ const (
 	// Type: string
 	// Required: No
 	// Examples: 'node-1'
-	K8sNodeNameKey = attribute.Key("k8s.node.name")
+	K8SNodeNameKey = attribute.Key("k8s.node.name")
 	// The UID of the Node.
 	//
 	// Type: string
 	// Required: No
 	// Examples: '1eb3a0c6-0477-4080-a9cb-0cb7db65c6a2'
-	K8sNodeUIDKey = attribute.Key("k8s.node.uid")
+	K8SNodeUIDKey = attribute.Key("k8s.node.uid")
 )
 
 // A Kubernetes Namespace.
@@ -392,7 +392,7 @@ const (
 	// Type: string
 	// Required: No
 	// Examples: 'default'
-	K8sNamespaceNameKey = attribute.Key("k8s.namespace.name")
+	K8SNamespaceNameKey = attribute.Key("k8s.namespace.name")
 )
 
 // A Kubernetes Pod object.
@@ -402,13 +402,13 @@ const (
 	// Type: string
 	// Required: No
 	// Examples: '275ecb36-5aa8-4c2a-9c47-d8bb681b9aff'
-	K8sPodUIDKey = attribute.Key("k8s.pod.uid")
+	K8SPodUIDKey = attribute.Key("k8s.pod.uid")
 	// The name of the Pod.
 	//
 	// Type: string
 	// Required: No
 	// Examples: 'opentelemetry-pod-autoconf'
-	K8sPodNameKey = attribute.Key("k8s.pod.name")
+	K8SPodNameKey = attribute.Key("k8s.pod.name")
 )
 
 // A container in a [PodTemplate](https://kubernetes.io/docs/concepts/workloads/pods/#pod-templates).
@@ -418,7 +418,7 @@ const (
 	// Type: string
 	// Required: No
 	// Examples: 'redis'
-	K8sContainerNameKey = attribute.Key("k8s.container.name")
+	K8SContainerNameKey = attribute.Key("k8s.container.name")
 )
 
 // A Kubernetes ReplicaSet object.
@@ -428,13 +428,13 @@ const (
 	// Type: string
 	// Required: No
 	// Examples: '275ecb36-5aa8-4c2a-9c47-d8bb681b9aff'
-	K8sReplicasetUIDKey = attribute.Key("k8s.replicaset.uid")
+	K8SReplicasetUIDKey = attribute.Key("k8s.replicaset.uid")
 	// The name of the ReplicaSet.
 	//
 	// Type: string
 	// Required: No
 	// Examples: 'opentelemetry'
-	K8sReplicasetNameKey = attribute.Key("k8s.replicaset.name")
+	K8SReplicasetNameKey = attribute.Key("k8s.replicaset.name")
 )
 
 // A Kubernetes Deployment object.
@@ -444,13 +444,13 @@ const (
 	// Type: string
 	// Required: No
 	// Examples: '275ecb36-5aa8-4c2a-9c47-d8bb681b9aff'
-	K8sDeploymentUIDKey = attribute.Key("k8s.deployment.uid")
+	K8SDeploymentUIDKey = attribute.Key("k8s.deployment.uid")
 	// The name of the Deployment.
 	//
 	// Type: string
 	// Required: No
 	// Examples: 'opentelemetry'
-	K8sDeploymentNameKey = attribute.Key("k8s.deployment.name")
+	K8SDeploymentNameKey = attribute.Key("k8s.deployment.name")
 )
 
 // A Kubernetes StatefulSet object.
@@ -460,13 +460,13 @@ const (
 	// Type: string
 	// Required: No
 	// Examples: '275ecb36-5aa8-4c2a-9c47-d8bb681b9aff'
-	K8sStatefulsetUIDKey = attribute.Key("k8s.statefulset.uid")
+	K8SStatefulsetUIDKey = attribute.Key("k8s.statefulset.uid")
 	// The name of the StatefulSet.
 	//
 	// Type: string
 	// Required: No
 	// Examples: 'opentelemetry'
-	K8sStatefulsetNameKey = attribute.Key("k8s.statefulset.name")
+	K8SStatefulsetNameKey = attribute.Key("k8s.statefulset.name")
 )
 
 // A Kubernetes DaemonSet object.
@@ -476,13 +476,13 @@ const (
 	// Type: string
 	// Required: No
 	// Examples: '275ecb36-5aa8-4c2a-9c47-d8bb681b9aff'
-	K8sDaemonsetUIDKey = attribute.Key("k8s.daemonset.uid")
+	K8SDaemonsetUIDKey = attribute.Key("k8s.daemonset.uid")
 	// The name of the DaemonSet.
 	//
 	// Type: string
 	// Required: No
 	// Examples: 'opentelemetry'
-	K8sDaemonsetNameKey = attribute.Key("k8s.daemonset.name")
+	K8SDaemonsetNameKey = attribute.Key("k8s.daemonset.name")
 )
 
 // A Kubernetes Job object.
@@ -492,13 +492,13 @@ const (
 	// Type: string
 	// Required: No
 	// Examples: '275ecb36-5aa8-4c2a-9c47-d8bb681b9aff'
-	K8sJobUIDKey = attribute.Key("k8s.job.uid")
+	K8SJobUIDKey = attribute.Key("k8s.job.uid")
 	// The name of the Job.
 	//
 	// Type: string
 	// Required: No
 	// Examples: 'opentelemetry'
-	K8sJobNameKey = attribute.Key("k8s.job.name")
+	K8SJobNameKey = attribute.Key("k8s.job.name")
 )
 
 // A Kubernetes CronJob object.
@@ -508,13 +508,13 @@ const (
 	// Type: string
 	// Required: No
 	// Examples: '275ecb36-5aa8-4c2a-9c47-d8bb681b9aff'
-	K8sCronjobUIDKey = attribute.Key("k8s.cronjob.uid")
+	K8SCronjobUIDKey = attribute.Key("k8s.cronjob.uid")
 	// The name of the CronJob.
 	//
 	// Type: string
 	// Required: No
 	// Examples: 'opentelemetry'
-	K8sCronjobNameKey = attribute.Key("k8s.cronjob.name")
+	K8SCronjobNameKey = attribute.Key("k8s.cronjob.name")
 )
 
 // The operating system (OS) on which the process represented by this resource is running.

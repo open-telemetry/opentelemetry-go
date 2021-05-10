@@ -293,7 +293,7 @@ const (
 	// Type: int
 	// Required: Required, if other than the default database (`0`).
 	// Examples: 0, 1, 15
-	DBRedisDatabaseIndexKey = attribute.Key("db.redis.database_index")
+	DBRedisDBIndexKey = attribute.Key("db.redis.database_index")
 )
 
 // Call-level attributes for MongoDB
@@ -670,7 +670,7 @@ const (
 	// Type: int
 	// Required: No
 	// Examples: 42
-	CodeLinenoKey = attribute.Key("code.lineno")
+	CodeLineNumberKey = attribute.Key("code.lineno")
 )
 
 // This document defines semantic conventions for HTTP client and server Spans.
