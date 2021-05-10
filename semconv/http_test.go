@@ -22,8 +22,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/label"
 )
 
 type tlsOption int
@@ -47,7 +47,7 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 		url        *url.URL
 		header     http.Header
 
-		expected []label.KeyValue
+		expected []attribute.KeyValue
 	}
 	testcases := []testcase{
 		{
@@ -62,8 +62,8 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []label.KeyValue{
-				label.String("net.transport", "IP.TCP"),
+			expected: []attribute.KeyValue{
+				attribute.String("net.transport", "IP.TCP"),
 			},
 		},
 		{
@@ -78,8 +78,8 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []label.KeyValue{
-				label.String("net.transport", "IP.UDP"),
+			expected: []attribute.KeyValue{
+				attribute.String("net.transport", "IP.UDP"),
 			},
 		},
 		{
@@ -94,8 +94,8 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []label.KeyValue{
-				label.String("net.transport", "IP"),
+			expected: []attribute.KeyValue{
+				attribute.String("net.transport", "IP"),
 			},
 		},
 		{
@@ -110,8 +110,8 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []label.KeyValue{
-				label.String("net.transport", "Unix"),
+			expected: []attribute.KeyValue{
+				attribute.String("net.transport", "Unix"),
 			},
 		},
 		{
@@ -126,8 +126,8 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []label.KeyValue{
-				label.String("net.transport", "other"),
+			expected: []attribute.KeyValue{
+				attribute.String("net.transport", "other"),
 			},
 		},
 		{
@@ -142,10 +142,10 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []label.KeyValue{
-				label.String("net.transport", "IP.TCP"),
-				label.String("net.peer.ip", "1.2.3.4"),
-				label.Int("net.peer.port", 56),
+			expected: []attribute.KeyValue{
+				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.peer.ip", "1.2.3.4"),
+				attribute.Int("net.peer.port", 56),
 			},
 		},
 		{
@@ -160,10 +160,10 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []label.KeyValue{
-				label.String("net.transport", "IP.TCP"),
-				label.String("net.peer.name", "example.com"),
-				label.Int("net.peer.port", 56),
+			expected: []attribute.KeyValue{
+				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.peer.name", "example.com"),
+				attribute.Int("net.peer.port", 56),
 			},
 		},
 		{
@@ -178,9 +178,9 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []label.KeyValue{
-				label.String("net.transport", "IP.TCP"),
-				label.String("net.peer.ip", "1.2.3.4"),
+			expected: []attribute.KeyValue{
+				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.peer.ip", "1.2.3.4"),
 			},
 		},
 		{
@@ -195,9 +195,9 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []label.KeyValue{
-				label.String("net.transport", "IP.TCP"),
-				label.String("net.peer.name", "example.com"),
+			expected: []attribute.KeyValue{
+				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.peer.name", "example.com"),
 			},
 		},
 		{
@@ -212,8 +212,8 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []label.KeyValue{
-				label.String("net.transport", "IP.TCP"),
+			expected: []attribute.KeyValue{
+				attribute.String("net.transport", "IP.TCP"),
 			},
 		},
 		{
@@ -228,11 +228,11 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []label.KeyValue{
-				label.String("net.transport", "IP.TCP"),
-				label.String("net.peer.ip", "1.2.3.4"),
-				label.Int("net.peer.port", 56),
-				label.String("net.host.name", "example.com"),
+			expected: []attribute.KeyValue{
+				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.peer.ip", "1.2.3.4"),
+				attribute.Int("net.peer.port", 56),
+				attribute.String("net.host.name", "example.com"),
 			},
 		},
 		{
@@ -247,11 +247,11 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []label.KeyValue{
-				label.String("net.transport", "IP.TCP"),
-				label.String("net.peer.ip", "1.2.3.4"),
-				label.Int("net.peer.port", 56),
-				label.String("net.host.ip", "4.3.2.1"),
+			expected: []attribute.KeyValue{
+				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.peer.ip", "1.2.3.4"),
+				attribute.Int("net.peer.port", 56),
+				attribute.String("net.host.ip", "4.3.2.1"),
 			},
 		},
 		{
@@ -266,12 +266,12 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []label.KeyValue{
-				label.String("net.transport", "IP.TCP"),
-				label.String("net.peer.ip", "1.2.3.4"),
-				label.Int("net.peer.port", 56),
-				label.String("net.host.name", "example.com"),
-				label.Int("net.host.port", 78),
+			expected: []attribute.KeyValue{
+				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.peer.ip", "1.2.3.4"),
+				attribute.Int("net.peer.port", 56),
+				attribute.String("net.host.name", "example.com"),
+				attribute.Int("net.host.port", 78),
 			},
 		},
 		{
@@ -286,12 +286,12 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []label.KeyValue{
-				label.String("net.transport", "IP.TCP"),
-				label.String("net.peer.ip", "1.2.3.4"),
-				label.Int("net.peer.port", 56),
-				label.String("net.host.ip", "4.3.2.1"),
-				label.Int("net.host.port", 78),
+			expected: []attribute.KeyValue{
+				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.peer.ip", "1.2.3.4"),
+				attribute.Int("net.peer.port", 56),
+				attribute.String("net.host.ip", "4.3.2.1"),
+				attribute.Int("net.host.port", 78),
 			},
 		},
 		{
@@ -306,11 +306,11 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []label.KeyValue{
-				label.String("net.transport", "IP.TCP"),
-				label.String("net.peer.ip", "1.2.3.4"),
-				label.Int("net.peer.port", 56),
-				label.String("net.host.name", "example.com"),
+			expected: []attribute.KeyValue{
+				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.peer.ip", "1.2.3.4"),
+				attribute.Int("net.peer.port", 56),
+				attribute.String("net.host.name", "example.com"),
 			},
 		},
 		{
@@ -325,11 +325,11 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []label.KeyValue{
-				label.String("net.transport", "IP.TCP"),
-				label.String("net.peer.ip", "1.2.3.4"),
-				label.Int("net.peer.port", 56),
-				label.String("net.host.ip", "4.3.2.1"),
+			expected: []attribute.KeyValue{
+				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.peer.ip", "1.2.3.4"),
+				attribute.Int("net.peer.port", 56),
+				attribute.String("net.host.ip", "4.3.2.1"),
 			},
 		},
 		{
@@ -344,10 +344,10 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []label.KeyValue{
-				label.String("net.transport", "IP.TCP"),
-				label.String("net.peer.ip", "1.2.3.4"),
-				label.Int("net.peer.port", 56),
+			expected: []attribute.KeyValue{
+				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.peer.ip", "1.2.3.4"),
+				attribute.Int("net.peer.port", 56),
 			},
 		},
 		{
@@ -364,12 +364,12 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 			header: http.Header{
 				"Host": []string{"4.3.2.1:78"},
 			},
-			expected: []label.KeyValue{
-				label.String("net.transport", "IP.TCP"),
-				label.String("net.peer.ip", "1.2.3.4"),
-				label.Int("net.peer.port", 56),
-				label.String("net.host.ip", "4.3.2.1"),
-				label.Int("net.host.port", 78),
+			expected: []attribute.KeyValue{
+				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.peer.ip", "1.2.3.4"),
+				attribute.Int("net.peer.port", 56),
+				attribute.String("net.host.ip", "4.3.2.1"),
+				attribute.Int("net.host.port", 78),
 			},
 		},
 		{
@@ -385,12 +385,12 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []label.KeyValue{
-				label.String("net.transport", "IP.TCP"),
-				label.String("net.peer.ip", "1.2.3.4"),
-				label.Int("net.peer.port", 56),
-				label.String("net.host.ip", "4.3.2.1"),
-				label.Int("net.host.port", 78),
+			expected: []attribute.KeyValue{
+				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.peer.ip", "1.2.3.4"),
+				attribute.Int("net.peer.port", 56),
+				attribute.String("net.host.ip", "4.3.2.1"),
+				attribute.Int("net.host.port", 78),
 			},
 		},
 	}
@@ -403,11 +403,11 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 
 func TestEndUserAttributesFromHTTPRequest(t *testing.T) {
 	r := testRequest("GET", "/user/123", "HTTP/1.1", "", "", nil, http.Header{}, withTLS)
-	var expected []label.KeyValue
+	var expected []attribute.KeyValue
 	got := EndUserAttributesFromHTTPRequest(r)
 	assert.ElementsMatch(t, expected, got)
 	r.SetBasicAuth("admin", "password")
-	expected = []label.KeyValue{label.String("enduser.id", "admin")}
+	expected = []attribute.KeyValue{attribute.String("enduser.id", "admin")}
 	got = EndUserAttributesFromHTTPRequest(r)
 	assert.ElementsMatch(t, expected, got)
 }
@@ -429,7 +429,7 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 		tls           tlsOption
 		contentLength int64
 
-		expected []label.KeyValue
+		expected []attribute.KeyValue
 	}
 	testcases := []testcase{
 		{
@@ -446,11 +446,11 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			tls:    noTLS,
-			expected: []label.KeyValue{
-				label.String("http.method", "GET"),
-				label.String("http.target", "/user/123"),
-				label.String("http.scheme", "http"),
-				label.String("http.flavor", "1.0"),
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.target", "/user/123"),
+				attribute.String("http.scheme", "http"),
+				attribute.String("http.flavor", "1.0"),
 			},
 		},
 		{
@@ -467,12 +467,12 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			tls:    noTLS,
-			expected: []label.KeyValue{
-				label.String("http.method", "GET"),
-				label.String("http.target", "/user/123"),
-				label.String("http.scheme", "http"),
-				label.String("http.flavor", "1.0"),
-				label.String("http.server_name", "my-server-name"),
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.target", "/user/123"),
+				attribute.String("http.scheme", "http"),
+				attribute.String("http.flavor", "1.0"),
+				attribute.String("http.server_name", "my-server-name"),
 			},
 		},
 		{
@@ -489,12 +489,12 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			tls:    withTLS,
-			expected: []label.KeyValue{
-				label.String("http.method", "GET"),
-				label.String("http.target", "/user/123"),
-				label.String("http.scheme", "https"),
-				label.String("http.flavor", "1.0"),
-				label.String("http.server_name", "my-server-name"),
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.target", "/user/123"),
+				attribute.String("http.scheme", "https"),
+				attribute.String("http.flavor", "1.0"),
+				attribute.String("http.server_name", "my-server-name"),
 			},
 		},
 		{
@@ -511,13 +511,13 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			tls:    withTLS,
-			expected: []label.KeyValue{
-				label.String("http.method", "GET"),
-				label.String("http.target", "/user/123"),
-				label.String("http.scheme", "https"),
-				label.String("http.flavor", "1.0"),
-				label.String("http.server_name", "my-server-name"),
-				label.String("http.route", "/user/:id"),
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.target", "/user/123"),
+				attribute.String("http.scheme", "https"),
+				attribute.String("http.flavor", "1.0"),
+				attribute.String("http.server_name", "my-server-name"),
+				attribute.String("http.route", "/user/:id"),
 			},
 		},
 		{
@@ -534,14 +534,14 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			tls:    withTLS,
-			expected: []label.KeyValue{
-				label.String("http.method", "GET"),
-				label.String("http.target", "/user/123"),
-				label.String("http.scheme", "https"),
-				label.String("http.flavor", "1.0"),
-				label.String("http.server_name", "my-server-name"),
-				label.String("http.route", "/user/:id"),
-				label.String("http.host", "example.com"),
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.target", "/user/123"),
+				attribute.String("http.scheme", "https"),
+				attribute.String("http.flavor", "1.0"),
+				attribute.String("http.server_name", "my-server-name"),
+				attribute.String("http.route", "/user/:id"),
+				attribute.String("http.host", "example.com"),
 			},
 		},
 		{
@@ -560,15 +560,15 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 				"User-Agent": []string{"foodownloader"},
 			},
 			tls: withTLS,
-			expected: []label.KeyValue{
-				label.String("http.method", "GET"),
-				label.String("http.target", "/user/123"),
-				label.String("http.scheme", "https"),
-				label.String("http.flavor", "1.0"),
-				label.String("http.server_name", "my-server-name"),
-				label.String("http.route", "/user/:id"),
-				label.String("http.host", "example.com"),
-				label.String("http.user_agent", "foodownloader"),
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.target", "/user/123"),
+				attribute.String("http.scheme", "https"),
+				attribute.String("http.flavor", "1.0"),
+				attribute.String("http.server_name", "my-server-name"),
+				attribute.String("http.route", "/user/:id"),
+				attribute.String("http.host", "example.com"),
+				attribute.String("http.user_agent", "foodownloader"),
 			},
 		},
 		{
@@ -588,16 +588,16 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 				"X-Forwarded-For": []string{"1.2.3.4"},
 			},
 			tls: withTLS,
-			expected: []label.KeyValue{
-				label.String("http.method", "GET"),
-				label.String("http.target", "/user/123"),
-				label.String("http.scheme", "https"),
-				label.String("http.flavor", "1.0"),
-				label.String("http.server_name", "my-server-name"),
-				label.String("http.route", "/user/:id"),
-				label.String("http.host", "example.com"),
-				label.String("http.user_agent", "foodownloader"),
-				label.String("http.client_ip", "1.2.3.4"),
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.target", "/user/123"),
+				attribute.String("http.scheme", "https"),
+				attribute.String("http.flavor", "1.0"),
+				attribute.String("http.server_name", "my-server-name"),
+				attribute.String("http.route", "/user/:id"),
+				attribute.String("http.host", "example.com"),
+				attribute.String("http.user_agent", "foodownloader"),
+				attribute.String("http.client_ip", "1.2.3.4"),
 			},
 		},
 		{
@@ -617,16 +617,16 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 				"X-Forwarded-For": []string{"1.2.3.4"},
 			},
 			tls: withTLS,
-			expected: []label.KeyValue{
-				label.String("http.method", "GET"),
-				label.String("http.target", "/user/123"),
-				label.String("http.scheme", "https"),
-				label.String("http.flavor", "1.1"),
-				label.String("http.server_name", "my-server-name"),
-				label.String("http.route", "/user/:id"),
-				label.String("http.host", "example.com"),
-				label.String("http.user_agent", "foodownloader"),
-				label.String("http.client_ip", "1.2.3.4"),
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.target", "/user/123"),
+				attribute.String("http.scheme", "https"),
+				attribute.String("http.flavor", "1.1"),
+				attribute.String("http.server_name", "my-server-name"),
+				attribute.String("http.route", "/user/:id"),
+				attribute.String("http.host", "example.com"),
+				attribute.String("http.user_agent", "foodownloader"),
+				attribute.String("http.client_ip", "1.2.3.4"),
 			},
 		},
 		{
@@ -646,16 +646,16 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 				"X-Forwarded-For": []string{"1.2.3.4"},
 			},
 			tls: withTLS,
-			expected: []label.KeyValue{
-				label.String("http.method", "GET"),
-				label.String("http.target", "/user/123"),
-				label.String("http.scheme", "https"),
-				label.String("http.flavor", "2"),
-				label.String("http.server_name", "my-server-name"),
-				label.String("http.route", "/user/:id"),
-				label.String("http.host", "example.com"),
-				label.String("http.user_agent", "foodownloader"),
-				label.String("http.client_ip", "1.2.3.4"),
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.target", "/user/123"),
+				attribute.String("http.scheme", "https"),
+				attribute.String("http.flavor", "2"),
+				attribute.String("http.server_name", "my-server-name"),
+				attribute.String("http.route", "/user/:id"),
+				attribute.String("http.host", "example.com"),
+				attribute.String("http.user_agent", "foodownloader"),
+				attribute.String("http.client_ip", "1.2.3.4"),
 			},
 		},
 		{
@@ -663,11 +663,11 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 			method:        "GET",
 			requestURI:    "/user/123",
 			contentLength: 100,
-			expected: []label.KeyValue{
-				label.String("http.method", "GET"),
-				label.String("http.target", "/user/123"),
-				label.String("http.scheme", "http"),
-				label.Int64("http.request_content_length", 100),
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.target", "/user/123"),
+				attribute.String("http.scheme", "http"),
+				attribute.Int64("http.request_content_length", 100),
 			},
 		},
 	}
@@ -680,14 +680,14 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 }
 
 func TestHTTPAttributesFromHTTPStatusCode(t *testing.T) {
-	expected := []label.KeyValue{
-		label.Int("http.status_code", 404),
+	expected := []attribute.KeyValue{
+		attribute.Int("http.status_code", 404),
 	}
 	got := HTTPAttributesFromHTTPStatusCode(http.StatusNotFound)
 	assertElementsMatch(t, expected, got, "with valid HTTP status code")
 	assert.ElementsMatch(t, expected, got)
-	expected = []label.KeyValue{
-		label.Int("http.status_code", 499),
+	expected = []attribute.KeyValue{
+		attribute.Int("http.status_code", 499),
 	}
 	got = HTTPAttributesFromHTTPStatusCode(499)
 	assertElementsMatch(t, expected, got, "with invalid HTTP status code")
@@ -696,8 +696,15 @@ func TestHTTPAttributesFromHTTPStatusCode(t *testing.T) {
 func TestSpanStatusFromHTTPStatusCode(t *testing.T) {
 	for code := 0; code < 1000; code++ {
 		expected := getExpectedCodeForHTTPCode(code)
-		got, _ := SpanStatusFromHTTPStatusCode(code)
+		got, msg := SpanStatusFromHTTPStatusCode(code)
 		assert.Equalf(t, expected, got, "%s vs %s", expected, got)
+
+		_, valid := validateHTTPStatusCode(code)
+		if !valid {
+			assert.NotEmpty(t, msg, "message should be set if error cannot be inferred from code")
+		} else {
+			assert.Empty(t, msg, "message should not be set if error can be inferred from code")
+		}
 	}
 }
 
@@ -723,7 +730,7 @@ func getExpectedCodeForHTTPCode(code int) codes.Code {
 	return codes.Error
 }
 
-func assertElementsMatch(t *testing.T, expected, got []label.KeyValue, format string, args ...interface{}) {
+func assertElementsMatch(t *testing.T, expected, got []attribute.KeyValue, format string, args ...interface{}) {
 	if !assert.ElementsMatchf(t, expected, got, format, args...) {
 		t.Log("expected:", kvStr(expected))
 		t.Log("got:", kvStr(got))
@@ -765,7 +772,7 @@ func protoToInts(proto string) (int, int) {
 	return 13, 42
 }
 
-func kvStr(kvs []label.KeyValue) string {
+func kvStr(kvs []attribute.KeyValue) string {
 	sb := strings.Builder{}
 	sb.WriteRune('[')
 	for idx, label := range kvs {
@@ -794,7 +801,7 @@ func TestHTTPClientAttributesFromHTTPRequest(t *testing.T) {
 		tls           tlsOption
 		contentLength int64
 
-		expected []label.KeyValue
+		expected []attribute.KeyValue
 	}{
 		{
 			name:       "stripped",
@@ -808,11 +815,11 @@ func TestHTTPClientAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			tls:    noTLS,
-			expected: []label.KeyValue{
-				label.String("http.method", "GET"),
-				label.String("http.url", "/user/123"),
-				label.String("http.scheme", "http"),
-				label.String("http.flavor", "1.0"),
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.url", "/user/123"),
+				attribute.String("http.scheme", "http"),
+				attribute.String("http.flavor", "1.0"),
 			},
 		},
 		{
@@ -827,11 +834,11 @@ func TestHTTPClientAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			tls:    withTLS,
-			expected: []label.KeyValue{
-				label.String("http.method", "GET"),
-				label.String("http.url", "/user/123"),
-				label.String("http.scheme", "https"),
-				label.String("http.flavor", "1.0"),
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.url", "/user/123"),
+				attribute.String("http.scheme", "https"),
+				attribute.String("http.flavor", "1.0"),
 			},
 		},
 		{
@@ -846,12 +853,12 @@ func TestHTTPClientAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			tls:    withTLS,
-			expected: []label.KeyValue{
-				label.String("http.method", "GET"),
-				label.String("http.url", "/user/123"),
-				label.String("http.scheme", "https"),
-				label.String("http.flavor", "1.0"),
-				label.String("http.host", "example.com"),
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.url", "/user/123"),
+				attribute.String("http.scheme", "https"),
+				attribute.String("http.flavor", "1.0"),
+				attribute.String("http.host", "example.com"),
 			},
 		},
 		{
@@ -868,13 +875,13 @@ func TestHTTPClientAttributesFromHTTPRequest(t *testing.T) {
 				"User-Agent": []string{"foodownloader"},
 			},
 			tls: withTLS,
-			expected: []label.KeyValue{
-				label.String("http.method", "GET"),
-				label.String("http.url", "/user/123"),
-				label.String("http.scheme", "https"),
-				label.String("http.flavor", "1.0"),
-				label.String("http.host", "example.com"),
-				label.String("http.user_agent", "foodownloader"),
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.url", "/user/123"),
+				attribute.String("http.scheme", "https"),
+				attribute.String("http.flavor", "1.0"),
+				attribute.String("http.host", "example.com"),
+				attribute.String("http.user_agent", "foodownloader"),
 			},
 		},
 		{
@@ -891,13 +898,13 @@ func TestHTTPClientAttributesFromHTTPRequest(t *testing.T) {
 				"User-Agent": []string{"foodownloader"},
 			},
 			tls: withTLS,
-			expected: []label.KeyValue{
-				label.String("http.method", "GET"),
-				label.String("http.url", "/user/123"),
-				label.String("http.scheme", "https"),
-				label.String("http.flavor", "1.1"),
-				label.String("http.host", "example.com"),
-				label.String("http.user_agent", "foodownloader"),
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.url", "/user/123"),
+				attribute.String("http.scheme", "https"),
+				attribute.String("http.flavor", "1.1"),
+				attribute.String("http.host", "example.com"),
+				attribute.String("http.user_agent", "foodownloader"),
 			},
 		},
 		{
@@ -914,13 +921,13 @@ func TestHTTPClientAttributesFromHTTPRequest(t *testing.T) {
 				"User-Agent": []string{"foodownloader"},
 			},
 			tls: withTLS,
-			expected: []label.KeyValue{
-				label.String("http.method", "GET"),
-				label.String("http.url", "/user/123"),
-				label.String("http.scheme", "https"),
-				label.String("http.flavor", "2"),
-				label.String("http.host", "example.com"),
-				label.String("http.user_agent", "foodownloader"),
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.url", "/user/123"),
+				attribute.String("http.scheme", "https"),
+				attribute.String("http.flavor", "2"),
+				attribute.String("http.host", "example.com"),
+				attribute.String("http.user_agent", "foodownloader"),
 			},
 		},
 		{
@@ -930,11 +937,11 @@ func TestHTTPClientAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			contentLength: 100,
-			expected: []label.KeyValue{
-				label.String("http.method", "GET"),
-				label.String("http.url", "/user/123"),
-				label.String("http.scheme", "http"),
-				label.Int64("http.request_content_length", 100),
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.url", "/user/123"),
+				attribute.String("http.scheme", "http"),
+				attribute.Int64("http.request_content_length", 100),
 			},
 		},
 		{
@@ -943,10 +950,10 @@ func TestHTTPClientAttributesFromHTTPRequest(t *testing.T) {
 			url: &url.URL{
 				Path: "/user/123",
 			},
-			expected: []label.KeyValue{
-				label.String("http.method", "GET"),
-				label.String("http.url", "/user/123"),
-				label.String("http.scheme", "http"),
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.url", "/user/123"),
+				attribute.String("http.scheme", "http"),
 			},
 		},
 	}

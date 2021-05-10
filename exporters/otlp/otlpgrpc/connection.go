@@ -16,11 +16,22 @@ package otlpgrpc
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
+
+	"github.com/cenkalti/backoff/v4"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
+	"google.golang.org/grpc/encoding/gzip"
+
+	"go.opentelemetry.io/otel/exporters/otlp"
+	"go.opentelemetry.io/otel/exporters/otlp/internal/otlpconfig"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -36,7 +47,8 @@ type connection struct {
 	cc *grpc.ClientConn
 
 	// these fields are read-only after constructor is finished
-	cfg                  config
+	cfg                  otlpconfig.Config
+	sCfg                 otlpconfig.SignalConfig
 	metadata             metadata.MD
 	newConnectionHandler func(cc *grpc.ClientConn)
 
@@ -51,12 +63,13 @@ type connection struct {
 	closeBackgroundConnectionDoneCh func(ch chan struct{})
 }
 
-func newConnection(cfg config, handler func(cc *grpc.ClientConn)) *connection {
+func newConnection(cfg otlpconfig.Config, sCfg otlpconfig.SignalConfig, handler func(cc *grpc.ClientConn)) *connection {
 	c := new(connection)
 	c.newConnectionHandler = handler
 	c.cfg = cfg
-	if len(c.cfg.headers) > 0 {
-		c.metadata = metadata.New(c.cfg.headers)
+	c.sCfg = sCfg
+	if len(c.sCfg.Headers) > 0 {
+		c.metadata = metadata.New(c.sCfg.Headers)
 	}
 	c.closeBackgroundConnectionDoneCh = func(ch chan struct{}) {
 		close(ch)
@@ -66,7 +79,7 @@ func newConnection(cfg config, handler func(cc *grpc.ClientConn)) *connection {
 
 func (c *connection) startConnection(ctx context.Context) {
 	c.stopCh = make(chan struct{})
-	c.disconnectedCh = make(chan bool)
+	c.disconnectedCh = make(chan bool, 1)
 	c.backgroundConnectionDoneCh = make(chan struct{})
 
 	if err := c.connect(ctx); err == nil {
@@ -117,7 +130,7 @@ func (c *connection) indefiniteBackgroundConnection() {
 		c.closeBackgroundConnectionDoneCh(c.backgroundConnectionDoneCh)
 	}()
 
-	connReattemptPeriod := c.cfg.reconnectionPeriod
+	connReattemptPeriod := c.cfg.ReconnectionPeriod
 	if connReattemptPeriod <= 0 {
 		connReattemptPeriod = defaultConnReattemptPeriod
 	}
@@ -155,6 +168,8 @@ func (c *connection) indefiniteBackgroundConnection() {
 		if err := c.connect(context.Background()); err == nil {
 			c.setStateConnected()
 		} else {
+			// this code is unreachable in most cases
+			// c.connect does not establish connection
 			c.setStateDisconnected(err)
 		}
 
@@ -202,28 +217,26 @@ func (c *connection) setConnection(cc *grpc.ClientConn) bool {
 }
 
 func (c *connection) dialToCollector(ctx context.Context) (*grpc.ClientConn, error) {
-	endpoint := c.cfg.collectorEndpoint
-
 	dialOpts := []grpc.DialOption{}
-	if c.cfg.serviceConfig != "" {
-		dialOpts = append(dialOpts, grpc.WithDefaultServiceConfig(c.cfg.serviceConfig))
+	if c.cfg.ServiceConfig != "" {
+		dialOpts = append(dialOpts, grpc.WithDefaultServiceConfig(c.cfg.ServiceConfig))
 	}
-	if c.cfg.clientCredentials != nil {
-		dialOpts = append(dialOpts, grpc.WithTransportCredentials(c.cfg.clientCredentials))
-	} else if c.cfg.canDialInsecure {
+	if c.sCfg.GRPCCredentials != nil {
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(c.sCfg.GRPCCredentials))
+	} else if c.sCfg.Insecure {
 		dialOpts = append(dialOpts, grpc.WithInsecure())
 	}
-	if c.cfg.compressor != "" {
-		dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.UseCompressor(c.cfg.compressor)))
+	if c.sCfg.Compression == otlp.GzipCompression {
+		dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
 	}
-	if len(c.cfg.dialOptions) != 0 {
-		dialOpts = append(dialOpts, c.cfg.dialOptions...)
+	if len(c.cfg.DialOptions) != 0 {
+		dialOpts = append(dialOpts, c.cfg.DialOptions...)
 	}
 
 	ctx, cancel := c.contextWithStop(ctx)
 	defer cancel()
 	ctx = c.contextWithMetadata(ctx)
-	return grpc.DialContext(ctx, endpoint, dialOpts...)
+	return grpc.DialContext(ctx, c.sCfg.Endpoint, dialOpts...)
 }
 
 func (c *connection) contextWithMetadata(ctx context.Context) context.Context {
@@ -268,4 +281,146 @@ func (c *connection) contextWithStop(ctx context.Context) (context.Context, cont
 		}
 	}(ctx, cancel)
 	return ctx, cancel
+}
+
+func (c *connection) doRequest(ctx context.Context, fn func(context.Context) error) error {
+	expBackoff := newExponentialBackoff(c.cfg.RetrySettings)
+
+	for {
+		err := fn(ctx)
+		if err == nil {
+			// request succeeded.
+			return nil
+		}
+
+		if !c.cfg.RetrySettings.Enabled {
+			return err
+		}
+
+		// We have an error, check gRPC status code.
+		st := status.Convert(err)
+		if st.Code() == codes.OK {
+			// Not really an error, still success.
+			return nil
+		}
+
+		// Now, this is this a real error.
+
+		if !shouldRetry(st.Code()) {
+			// It is not a retryable error, we should not retry.
+			return err
+		}
+
+		// Need to retry.
+
+		throttle := getThrottleDuration(st)
+
+		backoffDelay := expBackoff.NextBackOff()
+		if backoffDelay == backoff.Stop {
+			// throw away the batch
+			err = fmt.Errorf("max elapsed time expired: %w", err)
+			return err
+		}
+
+		var delay time.Duration
+
+		if backoffDelay > throttle {
+			delay = backoffDelay
+		} else {
+			if expBackoff.GetElapsedTime()+throttle > expBackoff.MaxElapsedTime {
+				err = fmt.Errorf("max elapsed time expired when respecting server throttle: %w", err)
+				return err
+			}
+
+			// Respect server throttling.
+			delay = throttle
+		}
+
+		// back-off, but get interrupted when shutting down or request is cancelled or timed out.
+		err = func() error {
+			dt := time.NewTimer(delay)
+			defer dt.Stop()
+
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-c.stopCh:
+				return fmt.Errorf("interrupted due to shutdown: %w", err)
+			case <-dt.C:
+			}
+
+			return nil
+		}()
+
+		if err != nil {
+			return err
+		}
+
+	}
+}
+
+func shouldRetry(code codes.Code) bool {
+	switch code {
+	case codes.OK:
+		// Success. This function should not be called for this code, the best we
+		// can do is tell the caller not to retry.
+		return false
+
+	case codes.Canceled,
+		codes.DeadlineExceeded,
+		codes.ResourceExhausted,
+		codes.Aborted,
+		codes.OutOfRange,
+		codes.Unavailable,
+		codes.DataLoss:
+		// These are retryable errors.
+		return true
+
+	case codes.Unknown,
+		codes.InvalidArgument,
+		codes.Unauthenticated,
+		codes.PermissionDenied,
+		codes.NotFound,
+		codes.AlreadyExists,
+		codes.FailedPrecondition,
+		codes.Unimplemented,
+		codes.Internal:
+		// These are fatal errors, don't retry.
+		return false
+
+	default:
+		// Don't retry on unknown codes.
+		return false
+	}
+}
+
+func getThrottleDuration(status *status.Status) time.Duration {
+	// See if throttling information is available.
+	for _, detail := range status.Details() {
+		if t, ok := detail.(*errdetails.RetryInfo); ok {
+			if t.RetryDelay.Seconds > 0 || t.RetryDelay.Nanos > 0 {
+				// We are throttled. Wait before retrying as requested by the server.
+				return time.Duration(t.RetryDelay.Seconds)*time.Second + time.Duration(t.RetryDelay.Nanos)*time.Nanosecond
+			}
+			return 0
+		}
+	}
+	return 0
+}
+
+func newExponentialBackoff(rs otlp.RetrySettings) *backoff.ExponentialBackOff {
+	// Do not use NewExponentialBackOff since it calls Reset and the code here must
+	// call Reset after changing the InitialInterval (this saves an unnecessary call to Now).
+	expBackoff := &backoff.ExponentialBackOff{
+		InitialInterval:     rs.InitialInterval,
+		RandomizationFactor: backoff.DefaultRandomizationFactor,
+		Multiplier:          backoff.DefaultMultiplier,
+		MaxInterval:         rs.MaxInterval,
+		MaxElapsedTime:      rs.MaxElapsedTime,
+		Stop:                backoff.Stop,
+		Clock:               backoff.SystemClock,
+	}
+	expBackoff.Reset()
+
+	return expBackoff
 }

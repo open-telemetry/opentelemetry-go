@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/example/namedtracer
 
-go 1.14
+go 1.15
 
 replace (
 	go.opentelemetry.io/otel => ../..
@@ -9,10 +9,10 @@ replace (
 )
 
 require (
-	go.opentelemetry.io/otel v0.16.0
-	go.opentelemetry.io/otel/exporters/stdout v0.16.0
-	go.opentelemetry.io/otel/sdk v0.16.0
-	go.opentelemetry.io/otel/trace v0.0.0-00010101000000-000000000000
+	go.opentelemetry.io/otel v0.20.0
+	go.opentelemetry.io/otel/exporters/stdout v0.20.0
+	go.opentelemetry.io/otel/sdk v0.20.0
+	go.opentelemetry.io/otel/trace v0.20.0
 )
 
 replace go.opentelemetry.io/otel/bridge/opencensus => ../../bridge/opencensus

@@ -21,9 +21,9 @@ import (
 	octrace "go.opencensus.io/trace"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/bridge/opencensus/utils"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -114,29 +114,29 @@ func (s *span) AddAttributes(attributes ...octrace.Attribute) {
 	s.otSpan.SetAttributes(convertAttributes(attributes)...)
 }
 
-func convertAttributes(attributes []octrace.Attribute) []label.KeyValue {
-	otAttributes := make([]label.KeyValue, len(attributes))
+func convertAttributes(attributes []octrace.Attribute) []attribute.KeyValue {
+	otAttributes := make([]attribute.KeyValue, len(attributes))
 	for i, a := range attributes {
-		otAttributes[i] = label.KeyValue{
-			Key:   label.Key(a.Key()),
+		otAttributes[i] = attribute.KeyValue{
+			Key:   attribute.Key(a.Key()),
 			Value: convertValue(a.Value()),
 		}
 	}
 	return otAttributes
 }
 
-func convertValue(ocval interface{}) label.Value {
+func convertValue(ocval interface{}) attribute.Value {
 	switch v := ocval.(type) {
 	case bool:
-		return label.BoolValue(v)
+		return attribute.BoolValue(v)
 	case int64:
-		return label.Int64Value(v)
+		return attribute.Int64Value(v)
 	case float64:
-		return label.Float64Value(v)
+		return attribute.Float64Value(v)
 	case string:
-		return label.StringValue(v)
+		return attribute.StringValue(v)
 	default:
-		return label.StringValue("unknown")
+		return attribute.StringValue("unknown")
 	}
 }
 
@@ -149,20 +149,20 @@ func (s *span) Annotatef(attributes []octrace.Attribute, format string, a ...int
 }
 
 var (
-	uncompressedKey = label.Key("uncompressed byte size")
-	compressedKey   = label.Key("compressed byte size")
+	uncompressedKey = attribute.Key("uncompressed byte size")
+	compressedKey   = attribute.Key("compressed byte size")
 )
 
 func (s *span) AddMessageSendEvent(messageID, uncompressedByteSize, compressedByteSize int64) {
 	s.otSpan.AddEvent("message send",
 		trace.WithAttributes(
-			label.KeyValue{
+			attribute.KeyValue{
 				Key:   uncompressedKey,
-				Value: label.Int64Value(uncompressedByteSize),
+				Value: attribute.Int64Value(uncompressedByteSize),
 			},
-			label.KeyValue{
+			attribute.KeyValue{
 				Key:   compressedKey,
-				Value: label.Int64Value(compressedByteSize),
+				Value: attribute.Int64Value(compressedByteSize),
 			}),
 	)
 }
@@ -170,13 +170,13 @@ func (s *span) AddMessageSendEvent(messageID, uncompressedByteSize, compressedBy
 func (s *span) AddMessageReceiveEvent(messageID, uncompressedByteSize, compressedByteSize int64) {
 	s.otSpan.AddEvent("message receive",
 		trace.WithAttributes(
-			label.KeyValue{
+			attribute.KeyValue{
 				Key:   uncompressedKey,
-				Value: label.Int64Value(uncompressedByteSize),
+				Value: attribute.Int64Value(uncompressedByteSize),
 			},
-			label.KeyValue{
+			attribute.KeyValue{
 				Key:   compressedKey,
-				Value: label.Int64Value(compressedByteSize),
+				Value: attribute.Int64Value(compressedByteSize),
 			}),
 	)
 }
@@ -186,5 +186,5 @@ func (s *span) AddLink(l octrace.Link) {
 }
 
 func (s *span) String() string {
-	return fmt.Sprintf("span %s", s.otSpan.SpanContext().SpanID.String())
+	return fmt.Sprintf("span %s", s.otSpan.SpanContext().SpanID().String())
 }

@@ -24,11 +24,11 @@ data:
   otel-collector-config: |
     receivers:
       # Make sure to add the otlp receiver.
-      # This will open up the receiver on port 55680
+      # This will open up the receiver on port 4317
       otlp:
         protocols:
           grpc:
-            endpoint: "0.0.0.0:55680"
+            endpoint: "0.0.0.0:4317"
     processors:
     extensions:
       health_check: {}
@@ -65,9 +65,9 @@ metadata:
 spec:
   ports:
     - name: otlp # Default endpoint for otlp receiver.
-      port: 55680
+      port: 4317
       protocol: TCP
-      targetPort: 55680
+      targetPort: 4317
       nodePort: 30080
     - name: metrics # Default endpoint for metrics.
       port: 8889
@@ -122,7 +122,7 @@ spec:
               cpu: 200m
               memory: 400Mi
           ports:
-            - containerPort: 55680 # Default endpoint for otlp receiver.
+            - containerPort: 4317 # Default endpoint for otlp receiver.
             - containerPort: 8889 # Default endpoint for querying metrics.
           volumeMounts:
             - name: otel-collector-config-vol

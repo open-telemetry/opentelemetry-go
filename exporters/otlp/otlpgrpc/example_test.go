@@ -49,11 +49,11 @@ func Example_insecure() {
 	}()
 
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithBatcher(
 			exp,
 			// add following two options to ensure flush
-			sdktrace.WithBatchTimeout(5),
+			sdktrace.WithBatchTimeout(5*time.Second),
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	)
@@ -102,11 +102,11 @@ func Example_withTLS() {
 	}()
 
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithBatcher(
 			exp,
 			// add following two options to ensure flush
-			sdktrace.WithBatchTimeout(5),
+			sdktrace.WithBatchTimeout(5*time.Second),
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	)
@@ -143,11 +143,7 @@ func Example_withDifferentSignalCollectors() {
 		otlpgrpc.WithInsecure(),
 		otlpgrpc.WithEndpoint("localhost:30082"),
 	)
-	splitCfg := otlp.SplitConfig{
-		ForMetrics: metricsDriver,
-		ForTraces:  tracesDriver,
-	}
-	driver := otlp.NewSplitDriver(splitCfg)
+	driver := otlp.NewSplitDriver(otlp.WithMetricDriver(metricsDriver), otlp.WithTraceDriver(tracesDriver))
 	ctx := context.Background()
 	exp, err := otlp.NewExporter(ctx, driver)
 	if err != nil {
@@ -163,11 +159,11 @@ func Example_withDifferentSignalCollectors() {
 	}()
 
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithBatcher(
 			exp,
 			// add following two options to ensure flush
-			sdktrace.WithBatchTimeout(5),
+			sdktrace.WithBatchTimeout(5*time.Second),
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	)
@@ -185,7 +181,7 @@ func Example_withDifferentSignalCollectors() {
 			simple.NewWithExactDistribution(),
 			exp,
 		),
-		controller.WithPusher(exp),
+		controller.WithExporter(exp),
 		controller.WithCollectPeriod(2*time.Second),
 	)
 	global.SetMeterProvider(pusher.MeterProvider())

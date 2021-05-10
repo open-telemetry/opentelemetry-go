@@ -1,12 +1,15 @@
 module go.opentelemetry.io/otel/bridge/opencensus
 
-go 1.14
+go 1.15
 
 require (
 	go.opencensus.io v0.22.6-0.20201102222123-380f4078db9f
-	go.opentelemetry.io/otel v0.16.0
-	go.opentelemetry.io/otel/oteltest v0.0.0-00010101000000-000000000000
-	go.opentelemetry.io/otel/trace v0.0.0-00010101000000-000000000000
+	go.opentelemetry.io/otel v0.20.0
+	go.opentelemetry.io/otel/metric v0.20.0
+	go.opentelemetry.io/otel/oteltest v0.20.0
+	go.opentelemetry.io/otel/sdk v0.20.0
+	go.opentelemetry.io/otel/sdk/export/metric v0.20.0
+	go.opentelemetry.io/otel/trace v0.20.0
 )
 
 replace go.opentelemetry.io/otel => ../..

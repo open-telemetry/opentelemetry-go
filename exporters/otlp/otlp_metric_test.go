@@ -23,11 +23,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp"
-	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
-	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
-	resourcepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/resource/v1"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
@@ -36,6 +33,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/resource"
+	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	resourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
 )
 
 var (
@@ -73,15 +73,15 @@ type record struct {
 	nKind    number.Kind
 	resource *resource.Resource
 	opts     []metric.InstrumentOption
-	labels   []label.KeyValue
+	labels   []attribute.KeyValue
 }
 
 var (
-	baseKeyValues = []label.KeyValue{label.String("host", "test.com")}
-	cpuKey        = label.Key("CPU")
+	baseKeyValues = []attribute.KeyValue{attribute.String("host", "test.com")}
+	cpuKey        = attribute.Key("CPU")
 
-	testInstA = resource.NewWithAttributes(label.String("instance", "tester-a"))
-	testInstB = resource.NewWithAttributes(label.String("instance", "tester-b"))
+	testInstA = resource.NewWithAttributes(attribute.String("instance", "tester-a"))
+	testInstB = resource.NewWithAttributes(attribute.String("instance", "tester-b"))
 
 	testHistogramBoundaries = []float64{2.0, 4.0, 8.0}
 
@@ -154,7 +154,7 @@ func TestNoGroupingExport(t *testing.T) {
 				append(baseKeyValues, cpuKey.Int(2)),
 			},
 		},
-		[]metricpb.ResourceMetrics{
+		[]*metricpb.ResourceMetrics{
 			{
 				Resource: nil,
 				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
@@ -200,7 +200,7 @@ func TestValuerecorderMetricGroupingExport(t *testing.T) {
 		nil,
 		append(baseKeyValues, cpuKey.Int(1)),
 	}
-	expected := []metricpb.ResourceMetrics{
+	expected := []*metricpb.ResourceMetrics{
 		{
 			Resource: nil,
 			InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
@@ -273,7 +273,7 @@ func TestCountInt64MetricGroupingExport(t *testing.T) {
 		t,
 		nil,
 		[]record{r, r},
-		[]metricpb.ResourceMetrics{
+		[]*metricpb.ResourceMetrics{
 			{
 				Resource: nil,
 				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
@@ -323,7 +323,7 @@ func TestCountFloat64MetricGroupingExport(t *testing.T) {
 		t,
 		nil,
 		[]record{r, r},
-		[]metricpb.ResourceMetrics{
+		[]*metricpb.ResourceMetrics{
 			{
 				Resource: nil,
 				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
@@ -416,7 +416,7 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 		},
-		[]metricpb.ResourceMetrics{
+		[]*metricpb.ResourceMetrics{
 			{
 				Resource: testerAResource,
 				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
@@ -550,7 +550,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 		},
-		[]metricpb.ResourceMetrics{
+		[]*metricpb.ResourceMetrics{
 			{
 				Resource: testerAResource,
 				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
@@ -708,7 +708,7 @@ func TestStatelessExportKind(t *testing.T) {
 						append(baseKeyValues, cpuKey.Int(1)),
 					},
 				},
-				[]metricpb.ResourceMetrics{
+				[]*metricpb.ResourceMetrics{
 					{
 						Resource: testerAResource,
 						InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
@@ -741,16 +741,16 @@ func TestStatelessExportKind(t *testing.T) {
 	}
 }
 
-func runMetricExportTests(t *testing.T, opts []otlp.ExporterOption, rs []record, expected []metricpb.ResourceMetrics) {
+func runMetricExportTests(t *testing.T, opts []otlp.ExporterOption, rs []record, expected []*metricpb.ResourceMetrics) {
 	exp, driver := newExporter(t, opts...)
 
-	recs := map[label.Distinct][]metricsdk.Record{}
-	resources := map[label.Distinct]*resource.Resource{}
+	recs := map[attribute.Distinct][]metricsdk.Record{}
+	resources := map[attribute.Distinct]*resource.Resource{}
 	for _, r := range rs {
-		lcopy := make([]label.KeyValue, len(r.labels))
+		lcopy := make([]attribute.KeyValue, len(r.labels))
 		copy(lcopy, r.labels)
 		desc := metric.NewDescriptor(r.name, r.iKind, r.nKind, r.opts...)
-		labs := label.NewSet(lcopy...)
+		labs := attribute.NewSet(lcopy...)
 
 		var agg, ckpt metricsdk.Aggregator
 		if r.iKind.Adding() {
@@ -886,15 +886,15 @@ func TestEmptyMetricExport(t *testing.T) {
 
 	for _, test := range []struct {
 		records []metricsdk.Record
-		want    []metricpb.ResourceMetrics
+		want    []*metricpb.ResourceMetrics
 	}{
 		{
 			[]metricsdk.Record(nil),
-			[]metricpb.ResourceMetrics(nil),
+			[]*metricpb.ResourceMetrics(nil),
 		},
 		{
 			[]metricsdk.Record{},
-			[]metricpb.ResourceMetrics(nil),
+			[]*metricpb.ResourceMetrics(nil),
 		},
 	} {
 		driver.Reset()

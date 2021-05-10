@@ -22,8 +22,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -40,8 +40,7 @@ func ExampleNewExportPipeline() {
 	// Create a resource, with builtin attributes plus R=V.
 	res, err := resource.New(
 		context.Background(),
-		resource.WithoutBuiltin(), // Test-only!
-		resource.WithAttributes(label.String("R", "V")),
+		resource.WithAttributes(attribute.String("R", "V")),
 	)
 	if err != nil {
 		panic(err)
@@ -68,8 +67,8 @@ func ExampleNewExportPipeline() {
 		metric.WithDescription("Records values"),
 	)
 
-	counter.Add(ctx, 100, label.String("key", "value"))
-	recorder.Record(ctx, 100, label.String("key", "value"))
+	counter.Add(ctx, 100, attribute.String("key", "value"))
+	recorder.Record(ctx, 100, attribute.String("key", "value"))
 
 	// GET the HTTP endpoint
 	var input bytes.Buffer
@@ -94,4 +93,22 @@ func ExampleNewExportPipeline() {
 	// a_valuerecorder_bucket{R="V",key="value",le="+Inf"} 1
 	// a_valuerecorder_sum{R="V",key="value"} 100
 	// a_valuerecorder_count{R="V",key="value"} 1
+}
+
+func ExampleInstallNewPipeline() {
+	exporter, err := prometheus.InstallNewPipeline(prometheus.Config{})
+	if err != nil {
+		panic(err)
+	}
+
+	// Expose metrics via HTTP in your handler/muxer
+	http.Handle("/metrics", exporter)
+
+	// When exiting from your process, call Stop for last collection cycle.
+	defer func() {
+		err := exporter.Controller().Stop(context.TODO())
+		if err != nil {
+			panic(err)
+		}
+	}()
 }

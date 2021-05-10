@@ -24,20 +24,22 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp"
-	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
-	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
-	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
-func stubSpanSnapshot(count int) []*tracesdk.SpanSnapshot {
-	spans := make([]*tracesdk.SpanSnapshot, 0, count)
+func readonlyspans(count int) []tracesdk.ReadOnlySpan {
+	spans := make(tracetest.SpanStubs, 0, count)
 	for i := 0; i < count; i++ {
-		spans = append(spans, new(tracesdk.SpanSnapshot))
+		spans = append(spans, tracetest.SpanStub{})
 	}
-	return spans
+	return spans.Snapshots()
 }
 
 type stubCheckpointSet struct {
@@ -70,7 +72,7 @@ type stubProtocolDriver struct {
 	injectedStopError  error
 
 	rm []metricsdk.Record
-	rs []tracesdk.SpanSnapshot
+	rs tracetest.SpanStubs
 }
 
 var _ otlp.ProtocolDriver = (*stubProtocolDriver)(nil)
@@ -103,20 +105,20 @@ func (m *stubProtocolDriver) ExportMetrics(parent context.Context, cps metricsdk
 	})
 }
 
-func (m *stubProtocolDriver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
+func (m *stubProtocolDriver) ExportTraces(ctx context.Context, ss []tracesdk.ReadOnlySpan) error {
 	m.tracesExported++
 	for _, rs := range ss {
 		if rs == nil {
 			continue
 		}
-		m.rs = append(m.rs, *rs)
+		m.rs = append(m.rs, tracetest.SpanStubFromReadOnlySpan(rs))
 	}
 	return nil
 }
 
 type stubTransformingProtocolDriver struct {
-	rm []metricpb.ResourceMetrics
-	rs []tracepb.ResourceSpans
+	rm []*metricpb.ResourceMetrics
+	rs []*tracepb.ResourceSpans
 }
 
 var _ otlp.ProtocolDriver = (*stubTransformingProtocolDriver)(nil)
@@ -138,17 +140,17 @@ func (m *stubTransformingProtocolDriver) ExportMetrics(parent context.Context, c
 		if rm == nil {
 			continue
 		}
-		m.rm = append(m.rm, *rm)
+		m.rm = append(m.rm, rm)
 	}
 	return nil
 }
 
-func (m *stubTransformingProtocolDriver) ExportTraces(ctx context.Context, ss []*tracesdk.SpanSnapshot) error {
-	for _, rs := range transform.SpanData(ss) {
+func (m *stubTransformingProtocolDriver) ExportTraces(ctx context.Context, ss []tracesdk.ReadOnlySpan) error {
+	for _, rs := range transform.Spans(ss) {
 		if rs == nil {
 			continue
 		}
-		m.rs = append(m.rs, *rs)
+		m.rs = append(m.rs, rs)
 	}
 	return nil
 }
@@ -244,47 +246,150 @@ func TestExporterShutdownManyTimes(t *testing.T) {
 	}
 }
 
-func TestSplitDriver(t *testing.T) {
-	driverTraces := &stubProtocolDriver{}
-	driverMetrics := &stubProtocolDriver{}
-	config := otlp.SplitConfig{
-		ForMetrics: driverMetrics,
-		ForTraces:  driverTraces,
-	}
-	driver := otlp.NewSplitDriver(config)
+func TestInstallNewPipeline(t *testing.T) {
 	ctx := context.Background()
-	assert.NoError(t, driver.Start(ctx))
-	assert.Equal(t, 1, driverTraces.started)
-	assert.Equal(t, 1, driverMetrics.started)
-	assert.Equal(t, 0, driverTraces.stopped)
-	assert.Equal(t, 0, driverMetrics.stopped)
-	assert.Equal(t, 0, driverTraces.tracesExported)
-	assert.Equal(t, 0, driverTraces.metricsExported)
-	assert.Equal(t, 0, driverMetrics.tracesExported)
-	assert.Equal(t, 0, driverMetrics.metricsExported)
+	_, _, _, err := otlp.InstallNewPipeline(ctx, &stubProtocolDriver{})
+	assert.NoError(t, err)
+	assert.IsType(t, &tracesdk.TracerProvider{}, otel.GetTracerProvider())
+}
+
+func TestNewExportPipeline(t *testing.T) {
+	testCases := []struct {
+		name             string
+		expOpts          []otlp.ExporterOption
+		testSpanSampling bool
+	}{
+		{
+			name: "simple pipeline",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, tp, _, err := otlp.NewExportPipeline(
+				context.Background(),
+				&stubProtocolDriver{},
+				tc.expOpts...,
+			)
+
+			assert.NoError(t, err)
+			assert.NotEqual(t, tp, otel.GetTracerProvider())
+
+			_, span := tp.Tracer("otlp test").Start(context.Background(), tc.name)
+			spanCtx := span.SpanContext()
+			assert.Equal(t, true, spanCtx.IsSampled())
+			span.End()
+		})
+	}
+}
+
+func TestSplitDriver(t *testing.T) {
 
 	recordCount := 5
 	spanCount := 7
-	assert.NoError(t, driver.ExportMetrics(ctx, stubCheckpointSet{recordCount}, metricsdk.StatelessExportKindSelector()))
-	assert.NoError(t, driver.ExportTraces(ctx, stubSpanSnapshot(spanCount)))
-	assert.Len(t, driverTraces.rm, 0)
-	assert.Len(t, driverTraces.rs, spanCount)
-	assert.Len(t, driverMetrics.rm, recordCount)
-	assert.Len(t, driverMetrics.rs, 0)
-	assert.Equal(t, 1, driverTraces.tracesExported)
-	assert.Equal(t, 0, driverTraces.metricsExported)
-	assert.Equal(t, 0, driverMetrics.tracesExported)
-	assert.Equal(t, 1, driverMetrics.metricsExported)
+	assertExport := func(t testing.TB, ctx context.Context, driver otlp.ProtocolDriver) {
+		t.Helper()
+		assert.NoError(t, driver.ExportMetrics(ctx, stubCheckpointSet{recordCount}, metricsdk.StatelessExportKindSelector()))
+		assert.NoError(t, driver.ExportTraces(ctx, readonlyspans(spanCount)))
+	}
 
-	assert.NoError(t, driver.Stop(ctx))
-	assert.Equal(t, 1, driverTraces.started)
-	assert.Equal(t, 1, driverMetrics.started)
-	assert.Equal(t, 1, driverTraces.stopped)
-	assert.Equal(t, 1, driverMetrics.stopped)
-	assert.Equal(t, 1, driverTraces.tracesExported)
-	assert.Equal(t, 0, driverTraces.metricsExported)
-	assert.Equal(t, 0, driverMetrics.tracesExported)
-	assert.Equal(t, 1, driverMetrics.metricsExported)
+	t.Run("with metric/trace drivers configured", func(t *testing.T) {
+		driverTraces := &stubProtocolDriver{}
+		driverMetrics := &stubProtocolDriver{}
+
+		driver := otlp.NewSplitDriver(otlp.WithMetricDriver(driverMetrics), otlp.WithTraceDriver(driverTraces))
+		ctx := context.Background()
+		assert.NoError(t, driver.Start(ctx))
+		assert.Equal(t, 1, driverTraces.started)
+		assert.Equal(t, 1, driverMetrics.started)
+		assert.Equal(t, 0, driverTraces.stopped)
+		assert.Equal(t, 0, driverMetrics.stopped)
+		assert.Equal(t, 0, driverTraces.tracesExported)
+		assert.Equal(t, 0, driverTraces.metricsExported)
+		assert.Equal(t, 0, driverMetrics.tracesExported)
+		assert.Equal(t, 0, driverMetrics.metricsExported)
+
+		assertExport(t, ctx, driver)
+		assert.Len(t, driverTraces.rm, 0)
+		assert.Len(t, driverTraces.rs, spanCount)
+		assert.Len(t, driverMetrics.rm, recordCount)
+		assert.Len(t, driverMetrics.rs, 0)
+		assert.Equal(t, 1, driverTraces.tracesExported)
+		assert.Equal(t, 0, driverTraces.metricsExported)
+		assert.Equal(t, 0, driverMetrics.tracesExported)
+		assert.Equal(t, 1, driverMetrics.metricsExported)
+
+		assert.NoError(t, driver.Stop(ctx))
+		assert.Equal(t, 1, driverTraces.started)
+		assert.Equal(t, 1, driverMetrics.started)
+		assert.Equal(t, 1, driverTraces.stopped)
+		assert.Equal(t, 1, driverMetrics.stopped)
+		assert.Equal(t, 1, driverTraces.tracesExported)
+		assert.Equal(t, 0, driverTraces.metricsExported)
+		assert.Equal(t, 0, driverMetrics.tracesExported)
+		assert.Equal(t, 1, driverMetrics.metricsExported)
+	})
+
+	t.Run("with just metric driver", func(t *testing.T) {
+		driverMetrics := &stubProtocolDriver{}
+
+		driver := otlp.NewSplitDriver(otlp.WithMetricDriver(driverMetrics))
+		ctx := context.Background()
+		assert.NoError(t, driver.Start(ctx))
+
+		assert.Equal(t, 1, driverMetrics.started)
+		assert.Equal(t, 0, driverMetrics.stopped)
+		assert.Equal(t, 0, driverMetrics.tracesExported)
+		assert.Equal(t, 0, driverMetrics.metricsExported)
+
+		assertExport(t, ctx, driver)
+		assert.Len(t, driverMetrics.rm, recordCount)
+		assert.Len(t, driverMetrics.rs, 0)
+		assert.Equal(t, 0, driverMetrics.tracesExported)
+		assert.Equal(t, 1, driverMetrics.metricsExported)
+
+		assert.NoError(t, driver.Stop(ctx))
+		assert.Equal(t, 1, driverMetrics.started)
+		assert.Equal(t, 1, driverMetrics.stopped)
+		assert.Equal(t, 0, driverMetrics.tracesExported)
+		assert.Equal(t, 1, driverMetrics.metricsExported)
+	})
+
+	t.Run("with just trace driver", func(t *testing.T) {
+		driverTraces := &stubProtocolDriver{}
+
+		driver := otlp.NewSplitDriver(otlp.WithTraceDriver(driverTraces))
+		ctx := context.Background()
+		assert.NoError(t, driver.Start(ctx))
+		assert.Equal(t, 1, driverTraces.started)
+		assert.Equal(t, 0, driverTraces.stopped)
+		assert.Equal(t, 0, driverTraces.tracesExported)
+		assert.Equal(t, 0, driverTraces.metricsExported)
+
+		assertExport(t, ctx, driver)
+		assert.Len(t, driverTraces.rm, 0)
+		assert.Len(t, driverTraces.rs, spanCount)
+		assert.Equal(t, 1, driverTraces.tracesExported)
+		assert.Equal(t, 0, driverTraces.metricsExported)
+
+		assert.NoError(t, driver.Stop(ctx))
+		assert.Equal(t, 1, driverTraces.started)
+		assert.Equal(t, 1, driverTraces.stopped)
+		assert.Equal(t, 1, driverTraces.tracesExported)
+		assert.Equal(t, 0, driverTraces.metricsExported)
+	})
+
+	t.Run("with no drivers configured", func(t *testing.T) {
+
+		driver := otlp.NewSplitDriver()
+		ctx := context.Background()
+		assert.NoError(t, driver.Start(ctx))
+
+		assert.NoError(t, driver.ExportMetrics(ctx, stubCheckpointSet{recordCount}, metricsdk.StatelessExportKindSelector()))
+		assert.NoError(t, driver.ExportTraces(ctx, readonlyspans(spanCount)))
+		assert.NoError(t, driver.Stop(ctx))
+	})
+
 }
 
 func TestSplitDriverFail(t *testing.T) {
@@ -319,11 +424,7 @@ func TestSplitDriverFail(t *testing.T) {
 			injectedStartError: errStartMetric,
 			injectedStopError:  errStopMetric,
 		}
-		config := otlp.SplitConfig{
-			ForMetrics: driverMetrics,
-			ForTraces:  driverTraces,
-		}
-		driver := otlp.NewSplitDriver(config)
+		driver := otlp.NewSplitDriver(otlp.WithMetricDriver(driverMetrics), otlp.WithTraceDriver(driverTraces))
 		errStart := driver.Start(ctx)
 		if shouldStartFail {
 			assert.Error(t, errStart)

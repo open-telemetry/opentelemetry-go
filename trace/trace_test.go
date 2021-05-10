@@ -15,93 +15,15 @@
 package trace
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
-	"go.opentelemetry.io/otel/label"
-
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel/attribute"
 )
-
-type testSpan struct {
-	noopSpan
-
-	ID byte
-}
-
-func (s testSpan) SpanContext() SpanContext { return SpanContext{SpanID: [8]byte{s.ID}} }
-
-func TestContextSpan(t *testing.T) {
-	testCases := []struct {
-		name         string
-		context      context.Context
-		expectedSpan Span
-	}{
-		{
-			name:         "empty context",
-			context:      context.Background(),
-			expectedSpan: noopSpan{},
-		},
-		{
-			name:         "span 0",
-			context:      ContextWithSpan(context.Background(), testSpan{ID: 0}),
-			expectedSpan: testSpan{ID: 0},
-		},
-		{
-			name:         "span 1",
-			context:      ContextWithSpan(context.Background(), testSpan{ID: 1}),
-			expectedSpan: testSpan{ID: 1},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			span := SpanFromContext(tc.context)
-			assert.Equal(t, tc.expectedSpan, span)
-
-			if _, ok := tc.expectedSpan.(noopSpan); !ok {
-				span, ok := tc.context.Value(currentSpanKey).(testSpan)
-				assert.True(t, ok)
-				assert.Equal(t, tc.expectedSpan.(testSpan), span)
-			}
-		})
-	}
-}
-
-func TestContextRemoteSpanContext(t *testing.T) {
-	ctx := context.Background()
-	got, empty := RemoteSpanContextFromContext(ctx), SpanContext{}
-	if !assertSpanContextEqual(got, empty) {
-		t.Errorf("RemoteSpanContextFromContext returned %v from an empty context, want %v", got, empty)
-	}
-
-	want := SpanContext{TraceID: [16]byte{1}, SpanID: [8]byte{42}}
-	ctx = ContextWithRemoteSpanContext(ctx, want)
-	if got, ok := ctx.Value(remoteContextKey).(SpanContext); !ok {
-		t.Errorf("failed to set SpanContext with %#v", want)
-	} else if !assertSpanContextEqual(got, want) {
-		t.Errorf("got %#v from context with remote set, want %#v", got, want)
-	}
-
-	if got := RemoteSpanContextFromContext(ctx); !assertSpanContextEqual(got, want) {
-		t.Errorf("RemoteSpanContextFromContext returned %v from a set context, want %v", got, want)
-	}
-
-	want = SpanContext{TraceID: [16]byte{1}, SpanID: [8]byte{43}}
-	ctx = ContextWithRemoteSpanContext(ctx, want)
-	if got, ok := ctx.Value(remoteContextKey).(SpanContext); !ok {
-		t.Errorf("failed to set SpanContext with %#v", want)
-	} else if !assertSpanContextEqual(got, want) {
-		t.Errorf("got %#v from context with remote set, want %#v", got, want)
-	}
-
-	got = RemoteSpanContextFromContext(ctx)
-	if !assertSpanContextEqual(got, want) {
-		t.Errorf("RemoteSpanContextFromContext returned %v from a set context, want %v", got, want)
-	}
-}
 
 func TestIsValid(t *testing.T) {
 	for _, testcase := range []struct {
@@ -134,8 +56,8 @@ func TestIsValid(t *testing.T) {
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			sc := SpanContext{
-				TraceID: testcase.tid,
-				SpanID:  testcase.sid,
+				traceID: testcase.tid,
+				spanID:  testcase.sid,
 			}
 			have := sc.IsValid()
 			if have != testcase.want {
@@ -207,7 +129,7 @@ func TestHasTraceID(t *testing.T) {
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			//proto: func (sc SpanContext) HasTraceID() bool{}
-			sc := SpanContext{TraceID: testcase.tid}
+			sc := SpanContext{traceID: testcase.tid}
 			have := sc.HasTraceID()
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
@@ -224,7 +146,7 @@ func TestHasSpanID(t *testing.T) {
 	}{
 		{
 			name: "SpanContext.HasSpanID() returns true if self.SpanID != 0",
-			sc:   SpanContext{SpanID: [8]byte{42}},
+			sc:   SpanContext{spanID: [8]byte{42}},
 			want: true,
 		}, {
 			name: "SpanContext.HasSpanID() returns false if self.SpanID == 0",
@@ -242,41 +164,71 @@ func TestHasSpanID(t *testing.T) {
 	}
 }
 
-func TestSpanContextIsSampled(t *testing.T) {
+func TestTraceFlagsIsSampled(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
-		sc   SpanContext
+		tf   TraceFlags
 		want bool
 	}{
 		{
 			name: "sampled",
-			sc: SpanContext{
-				TraceID:    TraceID([16]byte{1}),
-				TraceFlags: FlagsSampled,
-			},
+			tf:   FlagsSampled,
 			want: true,
 		}, {
 			name: "unused bits are ignored, still not sampled",
-			sc: SpanContext{
-				TraceID:    TraceID([16]byte{1}),
-				TraceFlags: ^FlagsSampled,
-			},
+			tf:   ^FlagsSampled,
 			want: false,
 		}, {
 			name: "unused bits are ignored, still sampled",
-			sc: SpanContext{
-				TraceID:    TraceID([16]byte{1}),
-				TraceFlags: FlagsSampled | ^FlagsSampled,
-			},
+			tf:   FlagsSampled | ^FlagsSampled,
 			want: true,
 		}, {
 			name: "not sampled/default",
-			sc:   SpanContext{TraceID: TraceID{}},
 			want: false,
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			have := testcase.sc.IsSampled()
+			have := testcase.tf.IsSampled()
+			if have != testcase.want {
+				t.Errorf("Want: %v, but have: %v", testcase.want, have)
+			}
+		})
+	}
+}
+
+func TestTraceFlagsWithSampled(t *testing.T) {
+	for _, testcase := range []struct {
+		name   string
+		start  TraceFlags
+		sample bool
+		want   TraceFlags
+	}{
+		{
+			name:   "sampled unchanged",
+			start:  FlagsSampled,
+			want:   FlagsSampled,
+			sample: true,
+		}, {
+			name:   "become sampled",
+			want:   FlagsSampled,
+			sample: true,
+		}, {
+			name:   "unused bits are ignored, still not sampled",
+			start:  ^FlagsSampled,
+			want:   ^FlagsSampled,
+			sample: false,
+		}, {
+			name:   "unused bits are ignored, becomes sampled",
+			start:  ^FlagsSampled,
+			want:   FlagsSampled | ^FlagsSampled,
+			sample: true,
+		}, {
+			name:   "not sampled/default",
+			sample: false,
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			have := testcase.start.WithSampled(testcase.sample)
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
 			}
@@ -418,31 +370,6 @@ func TestSpanKindString(t *testing.T) {
 	}
 }
 
-func TestSpanContextFromContext(t *testing.T) {
-	testCases := []struct {
-		name                string
-		context             context.Context
-		expectedSpanContext SpanContext
-	}{
-		{
-			name:    "empty context",
-			context: context.Background(),
-		},
-		{
-			name:                "span 1",
-			context:             ContextWithSpan(context.Background(), testSpan{ID: 1}),
-			expectedSpanContext: SpanContext{SpanID: [8]byte{1}},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			spanContext := SpanContextFromContext(tc.context)
-			assert.Equal(t, tc.expectedSpanContext, spanContext)
-		})
-	}
-}
-
 func TestTraceStateString(t *testing.T) {
 	testCases := []struct {
 		name        string
@@ -452,10 +379,10 @@ func TestTraceStateString(t *testing.T) {
 		{
 			name: "Non-empty trace state",
 			traceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key1", "val1"),
-					label.String("key2", "val2"),
-					label.String("key3@vendor", "val3"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key1", "val1"),
+					attribute.String("key2", "val2"),
+					attribute.String("key3@vendor", "val3"),
 				},
 			},
 			expectedStr: "key1=val1,key2=val2,key3@vendor=val3",
@@ -478,7 +405,7 @@ func TestTraceStateGet(t *testing.T) {
 	testCases := []struct {
 		name          string
 		traceState    TraceState
-		key           label.Key
+		key           attribute.Key
 		expectedValue string
 	}{
 		{
@@ -513,60 +440,60 @@ func TestTraceStateDelete(t *testing.T) {
 	testCases := []struct {
 		name               string
 		traceState         TraceState
-		key                label.Key
+		key                attribute.Key
 		expectedTraceState TraceState
 		expectedErr        error
 	}{
 		{
 			name: "OK case",
 			traceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key1", "val1"),
-					label.String("key2", "val2"),
-					label.String("key3", "val3"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key1", "val1"),
+					attribute.String("key2", "val2"),
+					attribute.String("key3", "val3"),
 				},
 			},
 			key: "key2",
 			expectedTraceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key1", "val1"),
-					label.String("key3", "val3"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key1", "val1"),
+					attribute.String("key3", "val3"),
 				},
 			},
 		},
 		{
 			name: "Non-existing key",
 			traceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key1", "val1"),
-					label.String("key2", "val2"),
-					label.String("key3", "val3"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key1", "val1"),
+					attribute.String("key2", "val2"),
+					attribute.String("key3", "val3"),
 				},
 			},
 			key: "keyx",
 			expectedTraceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key1", "val1"),
-					label.String("key2", "val2"),
-					label.String("key3", "val3"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key1", "val1"),
+					attribute.String("key2", "val2"),
+					attribute.String("key3", "val3"),
 				},
 			},
 		},
 		{
 			name: "Invalid key",
 			traceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key1", "val1"),
-					label.String("key2", "val2"),
-					label.String("key3", "val3"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key1", "val1"),
+					attribute.String("key2", "val2"),
+					attribute.String("key3", "val3"),
 				},
 			},
 			key: "in va lid",
 			expectedTraceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key1", "val1"),
-					label.String("key2", "val2"),
-					label.String("key3", "val3"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key1", "val1"),
+					attribute.String("key2", "val2"),
+					attribute.String("key3", "val3"),
 				},
 			},
 			expectedErr: errInvalidTraceStateKeyValue,
@@ -592,58 +519,58 @@ func TestTraceStateInsert(t *testing.T) {
 	testCases := []struct {
 		name               string
 		traceState         TraceState
-		keyValue           label.KeyValue
+		keyValue           attribute.KeyValue
 		expectedTraceState TraceState
 		expectedErr        error
 	}{
 		{
 			name: "OK case - add new",
 			traceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key1", "val1"),
-					label.String("key2", "val2"),
-					label.String("key3", "val3"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key1", "val1"),
+					attribute.String("key2", "val2"),
+					attribute.String("key3", "val3"),
 				},
 			},
-			keyValue: label.String("key4@vendor", "val4"),
+			keyValue: attribute.String("key4@vendor", "val4"),
 			expectedTraceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key4@vendor", "val4"),
-					label.String("key1", "val1"),
-					label.String("key2", "val2"),
-					label.String("key3", "val3"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key4@vendor", "val4"),
+					attribute.String("key1", "val1"),
+					attribute.String("key2", "val2"),
+					attribute.String("key3", "val3"),
 				},
 			},
 		},
 		{
 			name: "OK case - replace",
 			traceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key1", "val1"),
-					label.String("key2", "val2"),
-					label.String("key3", "val3"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key1", "val1"),
+					attribute.String("key2", "val2"),
+					attribute.String("key3", "val3"),
 				},
 			},
-			keyValue: label.String("key2", "valX"),
+			keyValue: attribute.String("key2", "valX"),
 			expectedTraceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key2", "valX"),
-					label.String("key1", "val1"),
-					label.String("key3", "val3"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key2", "valX"),
+					attribute.String("key1", "val1"),
+					attribute.String("key3", "val3"),
 				},
 			},
 		},
 		{
 			name: "Invalid key/value",
 			traceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key1", "val1"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key1", "val1"),
 				},
 			},
-			keyValue: label.String("key!", "val!"),
+			keyValue: attribute.String("key!", "val!"),
 			expectedTraceState: TraceState{
-				kvs: []label.KeyValue{
-					label.String("key1", "val1"),
+				kvs: []attribute.KeyValue{
+					attribute.String("key1", "val1"),
 				},
 			},
 			expectedErr: errInvalidTraceStateKeyValue,
@@ -651,7 +578,7 @@ func TestTraceStateInsert(t *testing.T) {
 		{
 			name:               "Too many entries",
 			traceState:         TraceState{kvsWithMaxMembers},
-			keyValue:           label.String("keyx", "valx"),
+			keyValue:           attribute.String("keyx", "valx"),
 			expectedTraceState: TraceState{kvsWithMaxMembers},
 			expectedErr:        errInvalidTraceStateMembersNumber,
 		},
@@ -675,7 +602,7 @@ func TestTraceStateInsert(t *testing.T) {
 func TestTraceStateFromKeyValues(t *testing.T) {
 	testCases := []struct {
 		name               string
-		kvs                []label.KeyValue
+		kvs                []attribute.KeyValue
 		expectedTraceState TraceState
 		expectedErr        error
 	}{
@@ -690,55 +617,299 @@ func TestTraceStateFromKeyValues(t *testing.T) {
 		},
 		{
 			name: "Too many entries",
-			kvs: func() []label.KeyValue {
+			kvs: func() []attribute.KeyValue {
 				kvs := kvsWithMaxMembers
-				kvs = append(kvs, label.String("keyx", "valX"))
+				kvs = append(kvs, attribute.String("keyx", "valX"))
 				return kvs
 			}(),
 			expectedTraceState: TraceState{},
 			expectedErr:        errInvalidTraceStateMembersNumber,
 		},
 		{
-			name: "Duplicate",
-			kvs: []label.KeyValue{
-				label.String("key1", "val1"),
-				label.String("key1", "val2"),
+			name: "Duplicate key",
+			kvs: []attribute.KeyValue{
+				attribute.String("key1", "val1"),
+				attribute.String("key1", "val2"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateDuplicate,
+		},
+		{
+			name: "Duplicate key/value",
+			kvs: []attribute.KeyValue{
+				attribute.String("key1", "val1"),
+				attribute.String("key1", "val1"),
 			},
 			expectedTraceState: TraceState{},
 			expectedErr:        errInvalidTraceStateDuplicate,
 		},
 		{
 			name: "Invalid key/value",
-			kvs: []label.KeyValue{
-				label.String("key!", "val!"),
+			kvs: []attribute.KeyValue{
+				attribute.String("key!", "val!"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Full character set",
+			kvs: []attribute.KeyValue{
+				attribute.String(
+					"abcdefghijklmnopqrstuvwxyz0123456789_-*/",
+					" !\"#$%&'()*+-./0123456789:;<>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",
+				),
+			},
+			expectedTraceState: TraceState{[]attribute.KeyValue{
+				attribute.String(
+					"abcdefghijklmnopqrstuvwxyz0123456789_-*/",
+					" !\"#$%&'()*+-./0123456789:;<>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",
+				),
+			}},
+		},
+		{
+			name: "Full character set with vendor",
+			kvs: []attribute.KeyValue{
+				attribute.String(
+					"abcdefghijklmnopqrstuvwxyz0123456789_-*/@a-z0-9_-*/",
+					"!\"#$%&'()*+-./0123456789:;<>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",
+				),
+			},
+			expectedTraceState: TraceState{[]attribute.KeyValue{
+				attribute.String(
+					"abcdefghijklmnopqrstuvwxyz0123456789_-*/@a-z0-9_-*/",
+					"!\"#$%&'()*+-./0123456789:;<>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",
+				),
+			}},
+		},
+		{
+			name: "Full character with vendor starting with number",
+			kvs: []attribute.KeyValue{
+				attribute.String(
+					"0123456789_-*/abcdefghijklmnopqrstuvwxyz@a-z0-9_-*/",
+					"!\"#$%&'()*+-./0123456789:;<>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",
+				),
+			},
+			expectedTraceState: TraceState{[]attribute.KeyValue{
+				attribute.String(
+					"0123456789_-*/abcdefghijklmnopqrstuvwxyz@a-z0-9_-*/",
+					"!\"#$%&'()*+-./0123456789:;<>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",
+				),
+			}},
+		},
+		{
+			name: "One field",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo", "1"),
+			},
+			expectedTraceState: TraceState{[]attribute.KeyValue{
+				attribute.String("foo", "1"),
+			}},
+		},
+		{
+			name: "Two fields",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo", "1"),
+				attribute.String("bar", "2"),
+			},
+			expectedTraceState: TraceState{[]attribute.KeyValue{
+				attribute.String("foo", "1"),
+				attribute.String("bar", "2"),
+			}},
+		},
+		{
+			name: "Long field key",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo", "1"),
+				attribute.String(
+					"zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+					"1",
+				),
+			},
+			expectedTraceState: TraceState{[]attribute.KeyValue{
+				attribute.String("foo", "1"),
+				attribute.String(
+					"zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+					"1",
+				),
+			}},
+		},
+		{
+			name: "Long field key with vendor",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo", "1"),
+				attribute.String(
+					"ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt@vvvvvvvvvvvvvv",
+					"1",
+				),
+			},
+			expectedTraceState: TraceState{[]attribute.KeyValue{
+				attribute.String("foo", "1"),
+				attribute.String(
+					"ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt@vvvvvvvvvvvvvv",
+					"1",
+				),
+			}},
+		},
+		{
+			name: "Invalid whitespace value",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo", "1 \t "),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Invalid whitespace key",
+			kvs: []attribute.KeyValue{
+				attribute.String(" \t bar", "2"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Empty header value",
+			kvs: []attribute.KeyValue{
+				attribute.String("", ""),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Space in key",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo ", "1"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Capitalized key",
+			kvs: []attribute.KeyValue{
+				attribute.String("FOO", "1"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Period in key",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo.bar", "1"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Empty vendor",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo@", "1"),
+				attribute.String("bar", "2"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Empty key for vendor",
+			kvs: []attribute.KeyValue{
+				attribute.String("@foo", "1"),
+				attribute.String("bar", "2"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Double @",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo@@bar", "1"),
+				attribute.String("bar", "2"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Compound vendor",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo@bar@baz", "1"),
+				attribute.String("bar", "2"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Key too long",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo", "1"),
+				attribute.String("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz", "1"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Key too long with vendor",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo", "1"),
+				attribute.String("tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt@v", "1"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Vendor too long",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo", "1"),
+				attribute.String("t@vvvvvvvvvvvvvvv", "1"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Equal sign in value",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo", "bar=baz"),
+			},
+			expectedTraceState: TraceState{},
+			expectedErr:        errInvalidTraceStateKeyValue,
+		},
+		{
+			name: "Empty value",
+			kvs: []attribute.KeyValue{
+				attribute.String("foo", ""),
+				attribute.String("bar", "3"),
 			},
 			expectedTraceState: TraceState{},
 			expectedErr:        errInvalidTraceStateKeyValue,
 		},
 	}
 
+	messageFunc := func(kvs []attribute.KeyValue) []string {
+		var out []string
+		for _, kv := range kvs {
+			out = append(out, fmt.Sprintf("%s=%s", kv.Key, kv.Value.AsString()))
+		}
+		return out
+	}
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result, err := TraceStateFromKeyValues(tc.kvs...)
 			if tc.expectedErr != nil {
-				require.Error(t, err)
+				require.Error(t, err, messageFunc(tc.kvs))
 				assert.Equal(t, TraceState{}, result)
 				assert.Equal(t, tc.expectedErr, err)
 			} else {
-				require.NoError(t, err)
+				require.NoError(t, err, messageFunc(tc.kvs))
 				assert.NotNil(t, tc.expectedTraceState)
 				assert.Equal(t, tc.expectedTraceState, result)
 			}
 		})
 	}
-
 }
 
 func assertSpanContextEqual(got SpanContext, want SpanContext) bool {
-	return got.SpanID == want.SpanID &&
-		got.TraceID == want.TraceID &&
-		got.TraceFlags == want.TraceFlags &&
-		assertTraceStateEqual(got.TraceState, want.TraceState)
+	return got.spanID == want.spanID &&
+		got.traceID == want.traceID &&
+		got.traceFlags == want.traceFlags &&
+		got.remote == want.remote &&
+		assertTraceStateEqual(got.traceState, want.traceState)
 }
 
 func assertTraceStateEqual(got TraceState, want TraceState) bool {
@@ -755,11 +926,100 @@ func assertTraceStateEqual(got TraceState, want TraceState) bool {
 	return true
 }
 
-var kvsWithMaxMembers = func() []label.KeyValue {
-	kvs := make([]label.KeyValue, traceStateMaxListMembers)
+var kvsWithMaxMembers = func() []attribute.KeyValue {
+	kvs := make([]attribute.KeyValue, traceStateMaxListMembers)
 	for i := 0; i < traceStateMaxListMembers; i++ {
-		kvs[i] = label.String(fmt.Sprintf("key%d", i+1),
+		kvs[i] = attribute.String(fmt.Sprintf("key%d", i+1),
 			fmt.Sprintf("value%d", i+1))
 	}
 	return kvs
 }()
+
+func TestNewSpanContext(t *testing.T) {
+	testCases := []struct {
+		name                string
+		config              SpanContextConfig
+		expectedSpanContext SpanContext
+	}{
+		{
+			name: "Complete SpanContext",
+			config: SpanContextConfig{
+				TraceID:    TraceID([16]byte{1}),
+				SpanID:     SpanID([8]byte{42}),
+				TraceFlags: 0x1,
+				TraceState: TraceState{kvs: []attribute.KeyValue{
+					attribute.String("foo", "bar"),
+				}},
+			},
+			expectedSpanContext: SpanContext{
+				traceID:    TraceID([16]byte{1}),
+				spanID:     SpanID([8]byte{42}),
+				traceFlags: 0x1,
+				traceState: TraceState{kvs: []attribute.KeyValue{
+					attribute.String("foo", "bar"),
+				}},
+			},
+		},
+		{
+			name:                "Empty SpanContext",
+			config:              SpanContextConfig{},
+			expectedSpanContext: SpanContext{},
+		},
+		{
+			name: "Partial SpanContext",
+			config: SpanContextConfig{
+				TraceID: TraceID([16]byte{1}),
+				SpanID:  SpanID([8]byte{42}),
+			},
+			expectedSpanContext: SpanContext{
+				traceID:    TraceID([16]byte{1}),
+				spanID:     SpanID([8]byte{42}),
+				traceFlags: 0x0,
+				traceState: TraceState{},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			sctx := NewSpanContext(tc.config)
+			if !assertSpanContextEqual(sctx, tc.expectedSpanContext) {
+				t.Fatalf("%s: Unexpected context created: %s", tc.name, cmp.Diff(sctx, tc.expectedSpanContext))
+			}
+		})
+	}
+}
+
+func TestSpanContextDerivation(t *testing.T) {
+	from := SpanContext{}
+	to := SpanContext{traceID: TraceID([16]byte{1})}
+
+	modified := from.WithTraceID(to.TraceID())
+	if !assertSpanContextEqual(modified, to) {
+		t.Fatalf("WithTraceID: Unexpected context created: %s", cmp.Diff(modified, to))
+	}
+
+	from = to
+	to.spanID = SpanID([8]byte{42})
+
+	modified = from.WithSpanID(to.SpanID())
+	if !assertSpanContextEqual(modified, to) {
+		t.Fatalf("WithSpanID: Unexpected context created: %s", cmp.Diff(modified, to))
+	}
+
+	from = to
+	to.traceFlags = 0x13
+
+	modified = from.WithTraceFlags(to.TraceFlags())
+	if !assertSpanContextEqual(modified, to) {
+		t.Fatalf("WithTraceFlags: Unexpected context created: %s", cmp.Diff(modified, to))
+	}
+
+	from = to
+	to.traceState = TraceState{kvs: []attribute.KeyValue{attribute.String("foo", "bar")}}
+
+	modified = from.WithTraceState(to.TraceState())
+	if !assertSpanContextEqual(modified, to) {
+		t.Fatalf("WithTraceState: Unexpected context created: %s", cmp.Diff(modified, to))
+	}
+}

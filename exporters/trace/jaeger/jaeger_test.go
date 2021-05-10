@@ -17,7 +17,8 @@ package jaeger
 import (
 	"context"
 	"encoding/binary"
-	"math"
+	"errors"
+	"fmt"
 	"os"
 	"sort"
 	"testing"
@@ -26,265 +27,90 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/api/support/bundler"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
-	"go.opentelemetry.io/otel/label"
-	export "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
 const (
 	collectorEndpoint = "http://localhost:14268/api/traces"
-	agentEndpoint     = "localhost:6831"
 )
 
 func TestInstallNewPipeline(t *testing.T) {
-	testCases := []struct {
-		name             string
-		endpoint         EndpointOption
-		options          []Option
-		expectedProvider trace.TracerProvider
-	}{
-		{
-			name:             "simple pipeline",
-			endpoint:         WithCollectorEndpoint(collectorEndpoint),
-			expectedProvider: &sdktrace.TracerProvider{},
-		},
-		{
-			name:             "with agent endpoint",
-			endpoint:         WithAgentEndpoint(agentEndpoint),
-			expectedProvider: &sdktrace.TracerProvider{},
-		},
-		{
-			name:     "with disabled",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
-			options: []Option{
-				WithDisabled(true),
-			},
-			expectedProvider: trace.NewNoopTracerProvider(),
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			fn, err := InstallNewPipeline(
-				tc.endpoint,
-				tc.options...,
-			)
-			defer fn()
-
-			assert.NoError(t, err)
-			assert.IsType(t, tc.expectedProvider, otel.GetTracerProvider())
-
-			otel.SetTracerProvider(nil)
-		})
-	}
-}
-
-func TestNewExportPipeline(t *testing.T) {
-	testCases := []struct {
-		name                                  string
-		endpoint                              EndpointOption
-		options                               []Option
-		expectedProviderType                  trace.TracerProvider
-		testSpanSampling, spanShouldBeSampled bool
-	}{
-		{
-			name:                 "simple pipeline",
-			endpoint:             WithCollectorEndpoint(collectorEndpoint),
-			expectedProviderType: &sdktrace.TracerProvider{},
-		},
-		{
-			name:     "with disabled",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
-			options: []Option{
-				WithDisabled(true),
-			},
-			expectedProviderType: trace.NewNoopTracerProvider(),
-		},
-		{
-			name:     "always on",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
-			options: []Option{
-				WithSDK(&sdktrace.Config{
-					DefaultSampler: sdktrace.AlwaysSample(),
-				}),
-			},
-			expectedProviderType: &sdktrace.TracerProvider{},
-			testSpanSampling:     true,
-			spanShouldBeSampled:  true,
-		},
-		{
-			name:     "never",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
-			options: []Option{
-				WithSDK(&sdktrace.Config{
-					DefaultSampler: sdktrace.NeverSample(),
-				}),
-			},
-			expectedProviderType: &sdktrace.TracerProvider{},
-			testSpanSampling:     true,
-			spanShouldBeSampled:  false,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			tp, fn, err := NewExportPipeline(
-				tc.endpoint,
-				tc.options...,
-			)
-			defer fn()
-
-			assert.NoError(t, err)
-			assert.NotEqual(t, tp, otel.GetTracerProvider())
-			assert.IsType(t, tc.expectedProviderType, tp)
-
-			if tc.testSpanSampling {
-				_, span := tp.Tracer("jaeger test").Start(context.Background(), tc.name)
-				spanCtx := span.SpanContext()
-				assert.Equal(t, tc.spanShouldBeSampled, spanCtx.IsSampled())
-				span.End()
-			}
-		})
-	}
-}
-
-func TestNewExportPipelineWithDisabledFromEnv(t *testing.T) {
-	envStore, err := ottest.SetEnvVariables(map[string]string{
-		envDisabled: "true",
-	})
+	tp, err := InstallNewPipeline(WithCollectorEndpoint(WithEndpoint(collectorEndpoint)))
 	require.NoError(t, err)
-	envStore.Record(envDisabled)
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
+	// Ensure InstallNewPipeline sets the global TracerProvider. By default
+	// the global tracer provider will be a NoOp implementation, this checks
+	// if that has been overwritten.
+	assert.IsType(t, tp, otel.GetTracerProvider())
+}
 
-	tp, fn, err := NewExportPipeline(
-		WithCollectorEndpoint(collectorEndpoint),
-	)
-	defer fn()
-	assert.NoError(t, err)
-	assert.IsType(t, trace.NewNoopTracerProvider(), tp)
+func TestNewExportPipelinePassthroughError(t *testing.T) {
+	for _, testcase := range []struct {
+		name    string
+		failing bool
+		epo     EndpointOption
+	}{
+		{
+			name:    "failing underlying NewRawExporter",
+			failing: true,
+			epo: func() (batchUploader, error) {
+				return nil, errors.New("error")
+			},
+		},
+		{
+			name: "with default agent endpoint",
+			epo:  WithAgentEndpoint(),
+		},
+		{
+			name: "with collector endpoint",
+			epo:  WithCollectorEndpoint(WithEndpoint(collectorEndpoint)),
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			_, err := NewExportPipeline(testcase.epo)
+			if testcase.failing {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
 }
 
 func TestNewRawExporter(t *testing.T) {
 	testCases := []struct {
-		name                                                           string
-		endpoint                                                       EndpointOption
-		options                                                        []Option
-		expectedServiceName                                            string
-		expectedTagsLen, expectedBufferMaxCount, expectedBatchMaxCount int
+		name     string
+		endpoint EndpointOption
 	}{
 		{
-			name:                   "default exporter",
-			endpoint:               WithCollectorEndpoint(collectorEndpoint),
-			expectedServiceName:    defaultServiceName,
-			expectedBufferMaxCount: bundler.DefaultBufferedByteLimit,
-			expectedBatchMaxCount:  bundler.DefaultBundleCountThreshold,
+			name:     "default exporter with collector endpoint",
+			endpoint: WithCollectorEndpoint(),
 		},
 		{
-			name:                   "default exporter with agent endpoint",
-			endpoint:               WithAgentEndpoint(agentEndpoint),
-			expectedServiceName:    defaultServiceName,
-			expectedBufferMaxCount: bundler.DefaultBufferedByteLimit,
-			expectedBatchMaxCount:  bundler.DefaultBundleCountThreshold,
-		},
-		{
-			name:     "with process",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
-			options: []Option{
-				WithProcess(
-					Process{
-						ServiceName: "jaeger-test",
-						Tags: []label.KeyValue{
-							label.String("key", "val"),
-						},
-					},
-				),
-			},
-			expectedServiceName:    "jaeger-test",
-			expectedTagsLen:        1,
-			expectedBufferMaxCount: bundler.DefaultBufferedByteLimit,
-			expectedBatchMaxCount:  bundler.DefaultBundleCountThreshold,
-		},
-		{
-			name:     "with buffer and batch max count",
-			endpoint: WithCollectorEndpoint(collectorEndpoint),
-			options: []Option{
-				WithProcess(
-					Process{
-						ServiceName: "jaeger-test",
-					},
-				),
-				WithBufferMaxCount(99),
-				WithBatchMaxCount(99),
-			},
-			expectedServiceName:    "jaeger-test",
-			expectedBufferMaxCount: 99,
-			expectedBatchMaxCount:  99,
+			name:     "default exporter with agent endpoint",
+			endpoint: WithAgentEndpoint(),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			exp, err := NewRawExporter(
-				tc.endpoint,
-				tc.options...,
-			)
-
+			_, err := NewRawExporter(tc.endpoint)
 			assert.NoError(t, err)
-			assert.Equal(t, tc.expectedServiceName, exp.process.ServiceName)
-			assert.Len(t, exp.process.Tags, tc.expectedTagsLen)
-			assert.Equal(t, tc.expectedBufferMaxCount, exp.bundler.BufferedByteLimit)
-			assert.Equal(t, tc.expectedBatchMaxCount, exp.bundler.BundleCountThreshold)
 		})
 	}
 }
 
-func TestNewRawExporterShouldFail(t *testing.T) {
-	testCases := []struct {
-		name           string
-		endpoint       EndpointOption
-		expectedErrMsg string
-	}{
-		{
-			name:           "with empty collector endpoint",
-			endpoint:       WithCollectorEndpoint(""),
-			expectedErrMsg: "collectorEndpoint must not be empty",
-		},
-		{
-			name:           "with empty agent endpoint",
-			endpoint:       WithAgentEndpoint(""),
-			expectedErrMsg: "agentEndpoint must not be empty",
-		},
-		{
-			name:           "with invalid agent endpoint",
-			endpoint:       WithAgentEndpoint("localhost"),
-			expectedErrMsg: "address localhost: missing port in address",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := NewRawExporter(
-				tc.endpoint,
-			)
-
-			assert.Error(t, err)
-			assert.EqualError(t, err, tc.expectedErrMsg)
-		})
-	}
-}
-
-func TestNewRawExporterShouldFailIfCollectorUnset(t *testing.T) {
+func TestNewRawExporterUseEnvVarIfOptionUnset(t *testing.T) {
 	// Record and restore env
 	envStore := ottest.NewEnvStore()
 	envStore.Record(envEndpoint)
@@ -292,81 +118,99 @@ func TestNewRawExporterShouldFailIfCollectorUnset(t *testing.T) {
 		require.NoError(t, envStore.Restore())
 	}()
 
-	// If the user sets the environment variable JAEGER_ENDPOINT, endpoint will always get a value.
+	// If the user sets the environment variable OTEL_EXPORTER_JAEGER_ENDPOINT, endpoint will always get a value.
 	require.NoError(t, os.Unsetenv(envEndpoint))
-
 	_, err := NewRawExporter(
-		WithCollectorEndpoint(""),
+		WithCollectorEndpoint(),
 	)
 
-	assert.Error(t, err)
+	assert.NoError(t, err)
 }
 
-type testCollectorEnpoint struct {
-	spansUploaded []*gen.Span
+type testCollectorEndpoint struct {
+	batchesUploaded []*gen.Batch
 }
 
-func (c *testCollectorEnpoint) upload(batch *gen.Batch) error {
-	c.spansUploaded = append(c.spansUploaded, batch.Spans...)
+func (c *testCollectorEndpoint) shutdown(context.Context) error {
 	return nil
 }
 
-var _ batchUploader = (*testCollectorEnpoint)(nil)
+func (c *testCollectorEndpoint) upload(_ context.Context, batch *gen.Batch) error {
+	c.batchesUploaded = append(c.batchesUploaded, batch)
+	return nil
+}
+
+var _ batchUploader = (*testCollectorEndpoint)(nil)
 
 func withTestCollectorEndpoint() func() (batchUploader, error) {
 	return func() (batchUploader, error) {
-		return &testCollectorEnpoint{}, nil
+		return &testCollectorEndpoint{}, nil
 	}
 }
 
-func TestExporter_ExportSpan(t *testing.T) {
+func withTestCollectorEndpointInjected(ce *testCollectorEndpoint) func() (batchUploader, error) {
+	return func() (batchUploader, error) {
+		return ce, nil
+	}
+}
+
+func TestExporterExportSpan(t *testing.T) {
 	const (
 		serviceName = "test-service"
 		tagKey      = "key"
 		tagVal      = "val"
 	)
-	// Create Jaeger Exporter
-	exp, err := NewRawExporter(
-		withTestCollectorEndpoint(),
-		WithProcess(Process{
-			ServiceName: serviceName,
-			Tags: []label.KeyValue{
-				label.String(tagKey, tagVal),
-			},
-		}),
-	)
 
-	assert.NoError(t, err)
-
+	testCollector := &testCollectorEndpoint{}
+	exp, err := NewRawExporter(withTestCollectorEndpointInjected(testCollector))
+	require.NoError(t, err)
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithSyncer(exp),
+		sdktrace.WithBatcher(exp),
+		sdktrace.WithResource(resource.NewWithAttributes(
+			semconv.ServiceNameKey.String(serviceName),
+			attribute.String(tagKey, tagVal),
+		)),
 	)
-	otel.SetTracerProvider(tp)
-	_, span := otel.Tracer("test-tracer").Start(context.Background(), "test-span")
-	span.End()
 
-	assert.True(t, span.SpanContext().IsValid())
+	tracer := tp.Tracer("test-tracer")
 
-	exp.Flush()
-	tc := exp.uploader.(*testCollectorEnpoint)
-	assert.True(t, len(tc.spansUploaded) == 1)
+	ctx := context.Background()
+	for i := 0; i < 3; i++ {
+		_, span := tracer.Start(ctx, fmt.Sprintf("test-span-%d", i))
+		span.End()
+		assert.True(t, span.SpanContext().IsValid())
+	}
+
+	require.NoError(t, tp.Shutdown(ctx))
+
+	batchesUploaded := testCollector.batchesUploaded
+	require.Len(t, batchesUploaded, 1)
+	uploadedBatch := batchesUploaded[0]
+	assert.Equal(t, serviceName, uploadedBatch.GetProcess().GetServiceName())
+	assert.Len(t, uploadedBatch.GetSpans(), 3)
+
+	require.Len(t, uploadedBatch.GetProcess().GetTags(), 1)
+	assert.Equal(t, tagKey, uploadedBatch.GetProcess().GetTags()[0].GetKey())
+	assert.Equal(t, tagVal, uploadedBatch.GetProcess().GetTags()[0].GetVStr())
 }
 
 func Test_spanSnapshotToThrift(t *testing.T) {
 	now := time.Now()
 	traceID, _ := trace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
 	spanID, _ := trace.SpanIDFromHex("0102030405060708")
+	parentSpanID, _ := trace.SpanIDFromHex("0807060504030201")
 
 	linkTraceID, _ := trace.TraceIDFromHex("0102030405060709090a0b0c0d0e0f11")
 	linkSpanID, _ := trace.SpanIDFromHex("0102030405060709")
 
 	eventNameValue := "event-test"
+	eventDropped := int64(10)
 	keyValue := "value"
 	statusCodeValue := int64(1)
 	doubleValue := 123.456
-	uintValue := int64(123)
+	intValue := int64(123)
 	boolTrue := true
+	arrValue := "[0,1,2,3]"
 	statusMessage := "this is a problem"
 	spanKind := "client"
 	rv1 := "rv11"
@@ -376,40 +220,79 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 
 	tests := []struct {
 		name string
-		data *export.SpanSnapshot
+		data tracetest.SpanStub
 		want *gen.Span
 	}{
 		{
-			name: "no parent",
-			data: &export.SpanSnapshot{
-				SpanContext: trace.SpanContext{
+			name: "no status description",
+			data: tracetest.SpanStub{
+				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID: traceID,
 					SpanID:  spanID,
+				}),
+				Name:      "/foo",
+				StartTime: now,
+				EndTime:   now,
+				Status:    sdktrace.Status{Code: codes.Error},
+				SpanKind:  trace.SpanKindClient,
+				InstrumentationLibrary: instrumentation.Library{
+					Name:    instrLibName,
+					Version: instrLibVersion,
 				},
+			},
+			want: &gen.Span{
+				TraceIdLow:    651345242494996240,
+				TraceIdHigh:   72623859790382856,
+				SpanId:        72623859790382856,
+				OperationName: "/foo",
+				StartTime:     now.UnixNano() / 1000,
+				Duration:      0,
+				Tags: []*gen.Tag{
+					{Key: keyError, VType: gen.TagType_BOOL, VBool: &boolTrue},
+					{Key: keyInstrumentationLibraryName, VType: gen.TagType_STRING, VStr: &instrLibName},
+					{Key: keyInstrumentationLibraryVersion, VType: gen.TagType_STRING, VStr: &instrLibVersion},
+					{Key: keyStatusCode, VType: gen.TagType_LONG, VLong: &statusCodeValue},
+					// Should not have a status message because it was unset
+					{Key: keySpanKind, VType: gen.TagType_STRING, VStr: &spanKind},
+				},
+			},
+		},
+		{
+			name: "no parent",
+			data: tracetest.SpanStub{
+				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID: traceID,
+					SpanID:  spanID,
+				}),
 				Name:      "/foo",
 				StartTime: now,
 				EndTime:   now,
 				Links: []trace.Link{
 					{
-						SpanContext: trace.SpanContext{
+						SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 							TraceID: linkTraceID,
 							SpanID:  linkSpanID,
-						},
+						}),
 					},
 				},
-				Attributes: []label.KeyValue{
-					label.String("key", keyValue),
-					label.Float64("double", doubleValue),
-					label.Uint64("uint", uint64(uintValue)),
-					label.Uint64("overflows", math.MaxUint64),
+				Attributes: []attribute.KeyValue{
+					attribute.String("key", keyValue),
+					attribute.Float64("double", doubleValue),
+					attribute.Int64("int", intValue),
 				},
-				MessageEvents: []trace.Event{
-					{Name: eventNameValue, Attributes: []label.KeyValue{label.String("k1", keyValue)}, Time: now},
+				Events: []sdktrace.Event{
+					{
+						Name:                  eventNameValue,
+						Attributes:            []attribute.KeyValue{attribute.String("k1", keyValue)},
+						DroppedAttributeCount: int(eventDropped),
+						Time:                  now,
+					},
 				},
-				StatusCode:    codes.Error,
-				StatusMessage: statusMessage,
-				SpanKind:      trace.SpanKindClient,
-				Resource:      resource.NewWithAttributes(label.String("rk1", rv1), label.Int64("rk2", rv2)),
+				Status: sdktrace.Status{
+					Code:        codes.Error,
+					Description: statusMessage,
+				},
+				SpanKind: trace.SpanKindClient,
 				InstrumentationLibrary: instrumentation.Library{
 					Name:    instrLibName,
 					Version: instrLibVersion,
@@ -425,19 +308,17 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 				Tags: []*gen.Tag{
 					{Key: "double", VType: gen.TagType_DOUBLE, VDouble: &doubleValue},
 					{Key: "key", VType: gen.TagType_STRING, VStr: &keyValue},
-					{Key: "uint", VType: gen.TagType_LONG, VLong: &uintValue},
-					{Key: "error", VType: gen.TagType_BOOL, VBool: &boolTrue},
-					{Key: "otel.instrumentation_library.name", VType: gen.TagType_STRING, VStr: &instrLibName},
-					{Key: "otel.instrumentation_library.version", VType: gen.TagType_STRING, VStr: &instrLibVersion},
-					{Key: "status.code", VType: gen.TagType_LONG, VLong: &statusCodeValue},
-					{Key: "status.message", VType: gen.TagType_STRING, VStr: &statusMessage},
-					{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
-					{Key: "rk1", VType: gen.TagType_STRING, VStr: &rv1},
-					{Key: "rk2", VType: gen.TagType_LONG, VLong: &rv2},
+					{Key: "int", VType: gen.TagType_LONG, VLong: &intValue},
+					{Key: keyError, VType: gen.TagType_BOOL, VBool: &boolTrue},
+					{Key: keyInstrumentationLibraryName, VType: gen.TagType_STRING, VStr: &instrLibName},
+					{Key: keyInstrumentationLibraryVersion, VType: gen.TagType_STRING, VStr: &instrLibVersion},
+					{Key: keyStatusCode, VType: gen.TagType_LONG, VLong: &statusCodeValue},
+					{Key: keyStatusMessage, VType: gen.TagType_STRING, VStr: &statusMessage},
+					{Key: keySpanKind, VType: gen.TagType_STRING, VStr: &spanKind},
 				},
 				References: []*gen.SpanRef{
 					{
-						RefType:     gen.SpanRefType_CHILD_OF,
+						RefType:     gen.SpanRefType_FOLLOWS_FROM,
 						TraceIdHigh: int64(binary.BigEndian.Uint64(linkTraceID[0:8])),
 						TraceIdLow:  int64(binary.BigEndian.Uint64(linkTraceID[8:16])),
 						SpanId:      int64(binary.BigEndian.Uint64(linkSpanID[:])),
@@ -448,24 +329,131 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 						Timestamp: now.UnixNano() / 1000,
 						Fields: []*gen.Tag{
 							{
+								Key:   keyEventName,
+								VStr:  &eventNameValue,
+								VType: gen.TagType_STRING,
+							},
+							{
 								Key:   "k1",
 								VStr:  &keyValue,
 								VType: gen.TagType_STRING,
 							},
 							{
-								Key:   "name",
-								VStr:  &eventNameValue,
-								VType: gen.TagType_STRING,
+								Key:   keyDroppedAttributeCount,
+								VLong: &eventDropped,
+								VType: gen.TagType_LONG,
 							},
 						},
 					},
 				},
 			},
 		},
+		{
+			name: "with parent",
+			data: tracetest.SpanStub{
+				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID: traceID,
+					SpanID:  spanID,
+				}),
+				Parent: trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID: traceID,
+					SpanID:  parentSpanID,
+				}),
+				Links: []trace.Link{
+					{
+						SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+							TraceID: linkTraceID,
+							SpanID:  linkSpanID,
+						}),
+					},
+				},
+				Name:      "/foo",
+				StartTime: now,
+				EndTime:   now,
+				Attributes: []attribute.KeyValue{
+					attribute.Array("arr", []int{0, 1, 2, 3}),
+				},
+				Status: sdktrace.Status{
+					Code:        codes.Unset,
+					Description: statusMessage,
+				},
+				SpanKind: trace.SpanKindInternal,
+				InstrumentationLibrary: instrumentation.Library{
+					Name:    instrLibName,
+					Version: instrLibVersion,
+				},
+			},
+			want: &gen.Span{
+				TraceIdLow:    651345242494996240,
+				TraceIdHigh:   72623859790382856,
+				SpanId:        72623859790382856,
+				ParentSpanId:  578437695752307201,
+				OperationName: "/foo",
+				StartTime:     now.UnixNano() / 1000,
+				Duration:      0,
+				Tags: []*gen.Tag{
+					// status code, message and span kind should NOT be populated
+					{Key: "arr", VType: gen.TagType_STRING, VStr: &arrValue},
+					{Key: keyInstrumentationLibraryName, VType: gen.TagType_STRING, VStr: &instrLibName},
+					{Key: keyInstrumentationLibraryVersion, VType: gen.TagType_STRING, VStr: &instrLibVersion},
+				},
+				References: []*gen.SpanRef{
+					{
+						RefType:     gen.SpanRefType_FOLLOWS_FROM,
+						TraceIdHigh: int64(binary.BigEndian.Uint64(linkTraceID[0:8])),
+						TraceIdLow:  int64(binary.BigEndian.Uint64(linkTraceID[8:16])),
+						SpanId:      int64(binary.BigEndian.Uint64(linkSpanID[:])),
+					},
+				},
+			},
+		},
+		{
+			name: "resources do not affect the tags",
+			data: tracetest.SpanStub{
+				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID: traceID,
+					SpanID:  spanID,
+				}),
+				Parent: trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID: traceID,
+					SpanID:  parentSpanID,
+				}),
+				Name:      "/foo",
+				StartTime: now,
+				EndTime:   now,
+				Resource: resource.NewWithAttributes(
+					attribute.String("rk1", rv1),
+					attribute.Int64("rk2", rv2),
+					semconv.ServiceNameKey.String("service name"),
+				),
+				Status: sdktrace.Status{
+					Code:        codes.Unset,
+					Description: statusMessage,
+				},
+				SpanKind: trace.SpanKindInternal,
+				InstrumentationLibrary: instrumentation.Library{
+					Name:    instrLibName,
+					Version: instrLibVersion,
+				},
+			},
+			want: &gen.Span{
+				TraceIdLow:    651345242494996240,
+				TraceIdHigh:   72623859790382856,
+				SpanId:        72623859790382856,
+				ParentSpanId:  578437695752307201,
+				OperationName: "/foo",
+				StartTime:     now.UnixNano() / 1000,
+				Duration:      0,
+				Tags: []*gen.Tag{
+					{Key: keyInstrumentationLibraryName, VType: gen.TagType_STRING, VStr: &instrLibName},
+					{Key: keyInstrumentationLibraryVersion, VType: gen.TagType_STRING, VStr: &instrLibVersion},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := spanSnapshotToThrift(tt.data)
+			got := spanToThrift(tt.data.Snapshot())
 			sort.Slice(got.Tags, func(i, j int) bool {
 				return got.Tags[i].Key < got.Tags[j].Key
 			})
@@ -480,43 +468,22 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 }
 
 func TestExporterShutdownHonorsCancel(t *testing.T) {
-	orig := flush
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	// Do this after the parent context is canceled to avoid a race.
-	defer func() {
-		<-ctx.Done()
-		flush = orig
-	}()
-	defer cancel()
-	flush = func(e *Exporter) {
-		<-ctx.Done()
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
 
 	e, err := NewRawExporter(withTestCollectorEndpoint())
 	require.NoError(t, err)
-	innerCtx, innerCancel := context.WithCancel(ctx)
-	go innerCancel()
-	assert.Errorf(t, e.Shutdown(innerCtx), context.Canceled.Error())
+	assert.EqualError(t, e.Shutdown(ctx), context.Canceled.Error())
 }
 
 func TestExporterShutdownHonorsTimeout(t *testing.T) {
-	orig := flush
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	// Do this after the parent context is canceled to avoid a race.
-	defer func() {
-		<-ctx.Done()
-		flush = orig
-	}()
-	defer cancel()
-	flush = func(e *Exporter) {
-		<-ctx.Done()
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+	<-ctx.Done()
 
 	e, err := NewRawExporter(withTestCollectorEndpoint())
 	require.NoError(t, err)
-	innerCtx, innerCancel := context.WithTimeout(ctx, time.Microsecond*10)
-	assert.Errorf(t, e.Shutdown(innerCtx), context.DeadlineExceeded.Error())
-	innerCancel()
+	assert.EqualError(t, e.Shutdown(ctx), context.DeadlineExceeded.Error())
+	cancel()
 }
 
 func TestErrorOnExportShutdownExporter(t *testing.T) {
@@ -524,4 +491,281 @@ func TestErrorOnExportShutdownExporter(t *testing.T) {
 	require.NoError(t, err)
 	assert.NoError(t, e.Shutdown(context.Background()))
 	assert.NoError(t, e.ExportSpans(context.Background(), nil))
+}
+
+func TestExporterExportSpansHonorsCancel(t *testing.T) {
+	e, err := NewRawExporter(withTestCollectorEndpoint())
+	require.NoError(t, err)
+	now := time.Now()
+	ss := tracetest.SpanStubs{
+		{
+			Name: "s1",
+			Resource: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("name"),
+				attribute.Key("r1").String("v1"),
+			),
+			StartTime: now,
+			EndTime:   now,
+		},
+		{
+			Name: "s2",
+			Resource: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("name"),
+				attribute.Key("r2").String("v2"),
+			),
+			StartTime: now,
+			EndTime:   now,
+		},
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	assert.EqualError(t, e.ExportSpans(ctx, ss.Snapshots()), context.Canceled.Error())
+}
+
+func TestExporterExportSpansHonorsTimeout(t *testing.T) {
+	e, err := NewRawExporter(withTestCollectorEndpoint())
+	require.NoError(t, err)
+	now := time.Now()
+	ss := tracetest.SpanStubs{
+		{
+			Name: "s1",
+			Resource: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("name"),
+				attribute.Key("r1").String("v1"),
+			),
+			StartTime: now,
+			EndTime:   now,
+		},
+		{
+			Name: "s2",
+			Resource: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("name"),
+				attribute.Key("r2").String("v2"),
+			),
+			StartTime: now,
+			EndTime:   now,
+		},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
+	defer cancel()
+	<-ctx.Done()
+
+	assert.EqualError(t, e.ExportSpans(ctx, ss.Snapshots()), context.DeadlineExceeded.Error())
+}
+
+func TestJaegerBatchList(t *testing.T) {
+	newString := func(value string) *string {
+		return &value
+	}
+	spanKind := "unspecified"
+	now := time.Now()
+
+	testCases := []struct {
+		name               string
+		roSpans            []sdktrace.ReadOnlySpan
+		defaultServiceName string
+		expectedBatchList  []*gen.Batch
+	}{
+		{
+			name:              "no span shots",
+			roSpans:           nil,
+			expectedBatchList: nil,
+		},
+		{
+			name: "span's snapshot contains nil span",
+			roSpans: []sdktrace.ReadOnlySpan{
+				tracetest.SpanStub{
+					Name: "s1",
+					Resource: resource.NewWithAttributes(
+						semconv.ServiceNameKey.String("name"),
+						attribute.Key("r1").String("v1"),
+					),
+					StartTime: now,
+					EndTime:   now,
+				}.Snapshot(),
+				nil,
+			},
+			expectedBatchList: []*gen.Batch{
+				{
+					Process: &gen.Process{
+						ServiceName: "name",
+						Tags: []*gen.Tag{
+							{Key: "r1", VType: gen.TagType_STRING, VStr: newString("v1")},
+						},
+					},
+					Spans: []*gen.Span{
+						{
+							OperationName: "s1",
+							Tags: []*gen.Tag{
+								{Key: keySpanKind, VType: gen.TagType_STRING, VStr: &spanKind},
+							},
+							StartTime: now.UnixNano() / 1000,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "merge spans that have the same resources",
+			roSpans: tracetest.SpanStubs{
+				{
+					Name: "s1",
+					Resource: resource.NewWithAttributes(
+						semconv.ServiceNameKey.String("name"),
+						attribute.Key("r1").String("v1"),
+					),
+					StartTime: now,
+					EndTime:   now,
+				},
+				{
+					Name: "s2",
+					Resource: resource.NewWithAttributes(
+						semconv.ServiceNameKey.String("name"),
+						attribute.Key("r1").String("v1"),
+					),
+					StartTime: now,
+					EndTime:   now,
+				},
+				{
+					Name: "s3",
+					Resource: resource.NewWithAttributes(
+						semconv.ServiceNameKey.String("name"),
+						attribute.Key("r2").String("v2"),
+					),
+					StartTime: now,
+					EndTime:   now,
+				},
+			}.Snapshots(),
+			expectedBatchList: []*gen.Batch{
+				{
+					Process: &gen.Process{
+						ServiceName: "name",
+						Tags: []*gen.Tag{
+							{Key: "r1", VType: gen.TagType_STRING, VStr: newString("v1")},
+						},
+					},
+					Spans: []*gen.Span{
+						{
+							OperationName: "s1",
+							Tags: []*gen.Tag{
+								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
+							},
+							StartTime: now.UnixNano() / 1000,
+						},
+						{
+							OperationName: "s2",
+							Tags: []*gen.Tag{
+								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
+							},
+							StartTime: now.UnixNano() / 1000,
+						},
+					},
+				},
+				{
+					Process: &gen.Process{
+						ServiceName: "name",
+						Tags: []*gen.Tag{
+							{Key: "r2", VType: gen.TagType_STRING, VStr: newString("v2")},
+						},
+					},
+					Spans: []*gen.Span{
+						{
+							OperationName: "s3",
+							Tags: []*gen.Tag{
+								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
+							},
+							StartTime: now.UnixNano() / 1000,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "no service name in spans",
+			roSpans: tracetest.SpanStubs{
+				{
+					Name: "s1",
+					Resource: resource.NewWithAttributes(
+						attribute.Key("r1").String("v1"),
+					),
+					StartTime: now,
+					EndTime:   now,
+				},
+			}.Snapshots(),
+			defaultServiceName: "default service name",
+			expectedBatchList: []*gen.Batch{
+				{
+					Process: &gen.Process{
+						ServiceName: "default service name",
+						Tags: []*gen.Tag{
+							{Key: "r1", VType: gen.TagType_STRING, VStr: newString("v1")},
+						},
+					},
+					Spans: []*gen.Span{
+						{
+							OperationName: "s1",
+							Tags: []*gen.Tag{
+								{Key: "span.kind", VType: gen.TagType_STRING, VStr: &spanKind},
+							},
+							StartTime: now.UnixNano() / 1000,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			batchList := jaegerBatchList(tc.roSpans, tc.defaultServiceName)
+
+			assert.ElementsMatch(t, tc.expectedBatchList, batchList)
+		})
+	}
+}
+
+func TestProcess(t *testing.T) {
+	v1 := "v1"
+
+	testCases := []struct {
+		name               string
+		res                *resource.Resource
+		defaultServiceName string
+		expectedProcess    *gen.Process
+	}{
+		{
+			name: "resources contain service name",
+			res: resource.NewWithAttributes(
+				semconv.ServiceNameKey.String("service name"),
+				attribute.Key("r1").String("v1"),
+			),
+			defaultServiceName: "default service name",
+			expectedProcess: &gen.Process{
+				ServiceName: "service name",
+				Tags: []*gen.Tag{
+					{Key: "r1", VType: gen.TagType_STRING, VStr: &v1},
+				},
+			},
+		},
+		{
+			name:               "resources don't have service name",
+			res:                resource.NewWithAttributes(attribute.Key("r1").String("v1")),
+			defaultServiceName: "default service name",
+			expectedProcess: &gen.Process{
+				ServiceName: "default service name",
+				Tags: []*gen.Tag{
+					{Key: "r1", VType: gen.TagType_STRING, VStr: &v1},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			pro := process(tc.res, tc.defaultServiceName)
+
+			assert.Equal(t, tc.expectedProcess, pro)
+		})
+	}
 }

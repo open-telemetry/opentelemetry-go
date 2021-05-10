@@ -17,7 +17,7 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 import (
 	"container/list"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // attributesMap is a capped map of attributes, holding the most recent attributes.
@@ -25,9 +25,9 @@ import (
 // Updates are allowed and they refresh the usage of the key.
 //
 // This is based from https://github.com/hashicorp/golang-lru/blob/master/simplelru/lru.go
-// With a subset of the its operations and specific for holding label.KeyValue
+// With a subset of the its operations and specific for holding attribute.KeyValue
 type attributesMap struct {
-	attributes   map[label.Key]*list.Element
+	attributes   map[attribute.Key]*list.Element
 	evictList    *list.List
 	droppedCount int
 	capacity     int
@@ -35,14 +35,14 @@ type attributesMap struct {
 
 func newAttributesMap(capacity int) *attributesMap {
 	lm := &attributesMap{
-		attributes: make(map[label.Key]*list.Element),
+		attributes: make(map[attribute.Key]*list.Element),
 		evictList:  list.New(),
 		capacity:   capacity,
 	}
 	return lm
 }
 
-func (am *attributesMap) add(kv label.KeyValue) {
+func (am *attributesMap) add(kv attribute.KeyValue) {
 	// Check for existing item
 	if ent, ok := am.attributes[kv.Key]; ok {
 		am.evictList.MoveToFront(ent)
@@ -61,18 +61,18 @@ func (am *attributesMap) add(kv label.KeyValue) {
 	}
 }
 
-// toKeyValue copies the attributesMap into a slice of label.KeyValue and
+// toKeyValue copies the attributesMap into a slice of attribute.KeyValue and
 // returns it. If the map is empty, a nil is returned.
 // TODO: Is it more efficient to return a pointer to the slice?
-func (am *attributesMap) toKeyValue() []label.KeyValue {
+func (am *attributesMap) toKeyValue() []attribute.KeyValue {
 	len := am.evictList.Len()
 	if len == 0 {
 		return nil
 	}
 
-	attributes := make([]label.KeyValue, 0, len)
+	attributes := make([]attribute.KeyValue, 0, len)
 	for ent := am.evictList.Back(); ent != nil; ent = ent.Prev() {
-		if value, ok := ent.Value.(*label.KeyValue); ok {
+		if value, ok := ent.Value.(*attribute.KeyValue); ok {
 			attributes = append(attributes, *value)
 		}
 	}
@@ -85,7 +85,7 @@ func (am *attributesMap) removeOldest() {
 	ent := am.evictList.Back()
 	if ent != nil {
 		am.evictList.Remove(ent)
-		kv := ent.Value.(*label.KeyValue)
+		kv := ent.Value.(*attribute.KeyValue)
 		delete(am.attributes, kv.Key)
 	}
 }

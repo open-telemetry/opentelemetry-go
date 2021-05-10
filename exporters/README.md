@@ -10,7 +10,6 @@ Additionally, there are [metric](./metric) and [trace](./trace) only exporters.
 ## Metric Telemetry Only
 
 - [prometheus](./metric/prometheus): Exposes metric telemetry as Prometheus metrics.
-- [test](./metric/test): A development tool when testing the telemetry pipeline.
 
 ## Trace Telemetry Only
 

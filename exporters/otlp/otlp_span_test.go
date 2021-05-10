@@ -21,16 +21,17 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	commonpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/common/v1"
-	resourcepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/resource/v1"
-	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/trace"
+	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
+	resourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 
-	tracesdk "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
 func TestExportSpans(t *testing.T) {
@@ -41,110 +42,122 @@ func TestExportSpans(t *testing.T) {
 	endTime := startTime.Add(10 * time.Second)
 
 	for _, test := range []struct {
-		sd   []*tracesdk.SpanSnapshot
-		want []tracepb.ResourceSpans
+		sd   tracetest.SpanStubs
+		want []*tracepb.ResourceSpans
 	}{
 		{
-			[]*tracesdk.SpanSnapshot(nil),
-			[]tracepb.ResourceSpans(nil),
+			tracetest.SpanStubsFromReadOnlySpans(nil),
+			[]*tracepb.ResourceSpans(nil),
 		},
 		{
-			[]*tracesdk.SpanSnapshot{},
-			[]tracepb.ResourceSpans(nil),
+			tracetest.SpanStubs{},
+			[]*tracepb.ResourceSpans(nil),
 		},
 		{
-			[]*tracesdk.SpanSnapshot{
+			tracetest.SpanStubs{
 				{
-					SpanContext: trace.SpanContext{
+					SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 						TraceID:    trace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
 						SpanID:     trace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
-						TraceFlags: byte(1),
-					},
+						TraceFlags: trace.FlagsSampled,
+					}),
 					SpanKind:  trace.SpanKindServer,
 					Name:      "parent process",
 					StartTime: startTime,
 					EndTime:   endTime,
-					Attributes: []label.KeyValue{
-						label.String("user", "alice"),
-						label.Bool("authenticated", true),
+					Attributes: []attribute.KeyValue{
+						attribute.String("user", "alice"),
+						attribute.Bool("authenticated", true),
 					},
-					StatusCode:    codes.Ok,
-					StatusMessage: "Ok",
-					Resource:      resource.NewWithAttributes(label.String("instance", "tester-a")),
+					Status: tracesdk.Status{
+						Code:        codes.Ok,
+						Description: "Ok",
+					},
+					Resource: resource.NewWithAttributes(attribute.String("instance", "tester-a")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-a",
 						Version: "v0.1.0",
 					},
 				},
 				{
-					SpanContext: trace.SpanContext{
+					SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 						TraceID:    trace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}),
 						SpanID:     trace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
-						TraceFlags: byte(1),
-					},
+						TraceFlags: trace.FlagsSampled,
+					}),
 					SpanKind:  trace.SpanKindServer,
 					Name:      "secondary parent process",
 					StartTime: startTime,
 					EndTime:   endTime,
-					Attributes: []label.KeyValue{
-						label.String("user", "alice"),
-						label.Bool("authenticated", true),
+					Attributes: []attribute.KeyValue{
+						attribute.String("user", "alice"),
+						attribute.Bool("authenticated", true),
 					},
-					StatusCode:    codes.Ok,
-					StatusMessage: "Ok",
-					Resource:      resource.NewWithAttributes(label.String("instance", "tester-a")),
+					Status: tracesdk.Status{
+						Code:        codes.Ok,
+						Description: "Ok",
+					},
+					Resource: resource.NewWithAttributes(attribute.String("instance", "tester-a")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-b",
 						Version: "v0.1.0",
 					},
 				},
 				{
-					SpanContext: trace.SpanContext{
+					SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 						TraceID:    trace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
 						SpanID:     trace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 2}),
-						TraceFlags: byte(1),
+						TraceFlags: trace.FlagsSampled,
+					}),
+					Parent: trace.NewSpanContext(trace.SpanContextConfig{
+						TraceID:    trace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
+						SpanID:     trace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
+						TraceFlags: trace.FlagsSampled,
+					}),
+					SpanKind:  trace.SpanKindInternal,
+					Name:      "internal process",
+					StartTime: startTime,
+					EndTime:   endTime,
+					Attributes: []attribute.KeyValue{
+						attribute.String("user", "alice"),
+						attribute.Bool("authenticated", true),
 					},
-					ParentSpanID: trace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
-					SpanKind:     trace.SpanKindInternal,
-					Name:         "internal process",
-					StartTime:    startTime,
-					EndTime:      endTime,
-					Attributes: []label.KeyValue{
-						label.String("user", "alice"),
-						label.Bool("authenticated", true),
+					Status: tracesdk.Status{
+						Code:        codes.Ok,
+						Description: "Ok",
 					},
-					StatusCode:    codes.Ok,
-					StatusMessage: "Ok",
-					Resource:      resource.NewWithAttributes(label.String("instance", "tester-a")),
+					Resource: resource.NewWithAttributes(attribute.String("instance", "tester-a")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-a",
 						Version: "v0.1.0",
 					},
 				},
 				{
-					SpanContext: trace.SpanContext{
+					SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 						TraceID:    trace.TraceID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}),
 						SpanID:     trace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
-						TraceFlags: byte(1),
-					},
+						TraceFlags: trace.FlagsSampled,
+					}),
 					SpanKind:  trace.SpanKindServer,
 					Name:      "parent process",
 					StartTime: startTime,
 					EndTime:   endTime,
-					Attributes: []label.KeyValue{
-						label.String("user", "bob"),
-						label.Bool("authenticated", false),
+					Attributes: []attribute.KeyValue{
+						attribute.String("user", "bob"),
+						attribute.Bool("authenticated", false),
 					},
-					StatusCode:    codes.Error,
-					StatusMessage: "Unauthenticated",
-					Resource:      resource.NewWithAttributes(label.String("instance", "tester-b")),
+					Status: tracesdk.Status{
+						Code:        codes.Error,
+						Description: "Unauthenticated",
+					},
+					Resource: resource.NewWithAttributes(attribute.String("instance", "tester-b")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-a",
 						Version: "v1.1.0",
 					},
 				},
 			},
-			[]tracepb.ResourceSpans{
+			[]*tracepb.ResourceSpans{
 				{
 					Resource: &resourcepb.Resource{
 						Attributes: []*commonpb.KeyValue{
@@ -326,7 +339,7 @@ func TestExportSpans(t *testing.T) {
 		},
 	} {
 		driver.Reset()
-		assert.NoError(t, exp.ExportSpans(context.Background(), test.sd))
+		assert.NoError(t, exp.ExportSpans(context.Background(), test.sd.Snapshots()))
 		assert.ElementsMatch(t, test.want, driver.rs)
 	}
 }

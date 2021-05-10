@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/example/prom-collector
 
-go 1.14
+go 1.15
 
 replace (
 	go.opentelemetry.io/otel => ../..
@@ -10,13 +10,13 @@ replace (
 )
 
 require (
-	go.opentelemetry.io/otel v0.16.0
-	go.opentelemetry.io/otel/exporters/metric/prometheus v0.16.0
-	go.opentelemetry.io/otel/exporters/otlp v0.16.0
-	go.opentelemetry.io/otel/metric v0.0.0-00010101000000-000000000000
-	go.opentelemetry.io/otel/sdk v0.16.0
-	go.opentelemetry.io/otel/sdk/metric v0.0.0-00010101000000-000000000000
-	google.golang.org/grpc v1.35.0
+	go.opentelemetry.io/otel v0.20.0
+	go.opentelemetry.io/otel/exporters/metric/prometheus v0.20.0
+	go.opentelemetry.io/otel/exporters/otlp v0.20.0
+	go.opentelemetry.io/otel/metric v0.20.0
+	go.opentelemetry.io/otel/sdk v0.20.0
+	go.opentelemetry.io/otel/sdk/metric v0.20.0
+	google.golang.org/grpc v1.37.0
 )
 
 replace go.opentelemetry.io/otel/bridge/opencensus => ../../bridge/opencensus

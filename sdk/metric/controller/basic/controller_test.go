@@ -17,12 +17,14 @@ package basic_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
+	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -30,10 +32,13 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
+const envVar = "OTEL_RESOURCE_ATTRIBUTES"
+
 func getMap(t *testing.T, cont *controller.Controller) map[string]float64 {
-	out := processortest.NewOutput(label.DefaultEncoder())
+	out := processortest.NewOutput(attribute.DefaultEncoder())
 
 	require.NoError(t, cont.ForEach(
 		export.CumulativeExportKindSelector(),
@@ -55,6 +60,67 @@ func checkTestContext(t *testing.T, ctx context.Context) {
 	require.Equal(t, "B", ctx.Value(testContextKey("A")))
 }
 
+func TestControllerUsesResource(t *testing.T) {
+	store, err := ottest.SetEnvVariables(map[string]string{
+		envVar: "key=value,T=U",
+	})
+	require.NoError(t, err)
+	defer func() { require.NoError(t, store.Restore()) }()
+
+	cases := []struct {
+		name    string
+		options []controller.Option
+		wanted  string
+	}{
+		{
+			name:    "explicitly empty resource",
+			options: []controller.Option{controller.WithResource(resource.Empty())},
+			wanted:  resource.Environment().Encoded(attribute.DefaultEncoder())},
+		{
+			name:    "uses default if no resource option",
+			options: nil,
+			wanted:  resource.Default().Encoded(attribute.DefaultEncoder())},
+		{
+			name:    "explicit resource",
+			options: []controller.Option{controller.WithResource(resource.NewWithAttributes(attribute.String("R", "S")))},
+			wanted:  "R=S,T=U,key=value"},
+		{
+			name: "last resource wins",
+			options: []controller.Option{
+				controller.WithResource(resource.Default()),
+				controller.WithResource(resource.NewWithAttributes(attribute.String("R", "S"))),
+			},
+			wanted: "R=S,T=U,key=value"},
+		{
+			name:    "overlapping attributes with environment resource",
+			options: []controller.Option{controller.WithResource(resource.NewWithAttributes(attribute.String("T", "V")))},
+			wanted:  "T=V,key=value"},
+	}
+	for _, c := range cases {
+		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
+			cont := controller.New(
+				processor.New(
+					processortest.AggregatorSelector(),
+					export.CumulativeExportKindSelector(),
+				),
+				c.options...,
+			)
+			prov := cont.MeterProvider()
+
+			ctr := metric.Must(prov.Meter("named")).NewFloat64Counter("calls.sum")
+			ctr.Add(context.Background(), 1.)
+
+			// Collect once
+			require.NoError(t, cont.Collect(context.Background()))
+
+			expect := map[string]float64{
+				"calls.sum//" + c.wanted: 1.,
+			}
+			require.EqualValues(t, expect, getMap(t, cont))
+		})
+	}
+}
+
 func TestStartNoExporter(t *testing.T) {
 	cont := controller.New(
 		processor.New(
@@ -62,6 +128,7 @@ func TestStartNoExporter(t *testing.T) {
 			export.CumulativeExportKindSelector(),
 		),
 		controller.WithCollectPeriod(time.Second),
+		controller.WithResource(resource.Empty()),
 	)
 	mock := controllertest.NewMockClock()
 	cont.SetClock(mock)
@@ -73,7 +140,7 @@ func TestStartNoExporter(t *testing.T) {
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			calls++
 			checkTestContext(t, ctx)
-			result.Observe(calls, label.String("A", "B"))
+			result.Observe(calls, attribute.String("A", "B"))
 		},
 	)
 
@@ -132,6 +199,7 @@ func TestObserverCanceled(t *testing.T) {
 		),
 		controller.WithCollectPeriod(0),
 		controller.WithCollectTimeout(time.Millisecond),
+		controller.WithResource(resource.Empty()),
 	)
 
 	prov := cont.MeterProvider()
@@ -163,6 +231,7 @@ func TestObserverContext(t *testing.T) {
 			export.CumulativeExportKindSelector(),
 		),
 		controller.WithCollectTimeout(0),
+		controller.WithResource(resource.Empty()),
 	)
 
 	prov := cont.MeterProvider()
@@ -194,7 +263,7 @@ func newBlockingExporter() *blockingExporter {
 	return &blockingExporter{
 		exporter: processortest.NewExporter(
 			export.CumulativeExportKindSelector(),
-			label.DefaultEncoder(),
+			attribute.DefaultEncoder(),
 		),
 	}
 }
@@ -227,7 +296,8 @@ func TestExportTimeout(t *testing.T) {
 		),
 		controller.WithCollectPeriod(time.Second),
 		controller.WithPushTimeout(time.Millisecond),
-		controller.WithPusher(exporter),
+		controller.WithExporter(exporter),
+		controller.WithResource(resource.Empty()),
 	)
 	mock := controllertest.NewMockClock()
 	cont.SetClock(mock)
@@ -274,7 +344,7 @@ func TestExportTimeout(t *testing.T) {
 func TestCollectAfterStopThenStartAgain(t *testing.T) {
 	exp := processortest.NewExporter(
 		export.CumulativeExportKindSelector(),
-		label.DefaultEncoder(),
+		attribute.DefaultEncoder(),
 	)
 	cont := controller.New(
 		processor.New(
@@ -282,7 +352,8 @@ func TestCollectAfterStopThenStartAgain(t *testing.T) {
 			exp,
 		),
 		controller.WithCollectPeriod(time.Second),
-		controller.WithPusher(exp),
+		controller.WithExporter(exp),
+		controller.WithResource(resource.Empty()),
 	)
 	mock := controllertest.NewMockClock()
 	cont.SetClock(mock)

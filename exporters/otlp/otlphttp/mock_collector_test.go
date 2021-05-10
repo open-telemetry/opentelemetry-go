@@ -26,16 +26,19 @@ import (
 	"net/http"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	jsonpb "google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 
-	collectormetricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/metrics/v1"
-	collectortracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/trace/v1"
-	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
-	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/otlptest"
 	"go.opentelemetry.io/otel/exporters/otlp/otlphttp"
+	collectormetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
+	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
 type mockCollector struct {
@@ -50,6 +53,7 @@ type mockCollector struct {
 
 	injectHTTPStatus  []int
 	injectContentType string
+	injectDelay       time.Duration
 
 	clientTLSConfig *tls.Config
 	expectedHeaders map[string]string
@@ -90,12 +94,16 @@ func (c *mockCollector) ClientTLSConfig() *tls.Config {
 }
 
 func (c *mockCollector) serveMetrics(w http.ResponseWriter, r *http.Request) {
+	if c.injectDelay != 0 {
+		time.Sleep(c.injectDelay)
+	}
+
 	if !c.checkHeaders(r) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	response := collectormetricpb.ExportMetricsServiceResponse{}
-	rawResponse, err := response.Marshal()
+	rawResponse, err := proto.Marshal(&response)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -109,24 +117,38 @@ func (c *mockCollector) serveMetrics(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	request := collectormetricpb.ExportMetricsServiceRequest{}
-	if err := request.Unmarshal(rawRequest); err != nil {
+	request, err := unmarshalMetricsRequest(rawRequest, r.Header.Get("content-type"))
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	writeReply(w, rawResponse, 0, c.injectContentType)
 	c.metricLock.Lock()
 	defer c.metricLock.Unlock()
-	c.metricsStorage.AddMetrics(&request)
+	c.metricsStorage.AddMetrics(request)
+}
+
+func unmarshalMetricsRequest(rawRequest []byte, contentType string) (*collectormetricpb.ExportMetricsServiceRequest, error) {
+	request := &collectormetricpb.ExportMetricsServiceRequest{}
+	if contentType == "application/json" {
+		err := jsonpb.Unmarshal(rawRequest, request)
+		return request, err
+	}
+	err := proto.Unmarshal(rawRequest, request)
+	return request, err
 }
 
 func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
+	if c.injectDelay != 0 {
+		time.Sleep(c.injectDelay)
+	}
+
 	if !c.checkHeaders(r) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	response := collectortracepb.ExportTraceServiceResponse{}
-	rawResponse, err := response.Marshal()
+	rawResponse, err := proto.Marshal(&response)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -140,15 +162,26 @@ func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	request := collectortracepb.ExportTraceServiceRequest{}
-	if err := request.Unmarshal(rawRequest); err != nil {
+
+	request, err := unmarshalTraceRequest(rawRequest, r.Header.Get("content-type"))
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	writeReply(w, rawResponse, 0, c.injectContentType)
 	c.spanLock.Lock()
 	defer c.spanLock.Unlock()
-	c.spansStorage.AddSpans(&request)
+	c.spansStorage.AddSpans(request)
+}
+
+func unmarshalTraceRequest(rawRequest []byte, contentType string) (*collectortracepb.ExportTraceServiceRequest, error) {
+	request := &collectortracepb.ExportTraceServiceRequest{}
+	if contentType == "application/json" {
+		err := jsonpb.Unmarshal(rawRequest, request)
+		return request, err
+	}
+	err := proto.Unmarshal(rawRequest, request)
+	return request, err
 }
 
 func (c *mockCollector) checkHeaders(r *http.Request) bool {
@@ -214,6 +247,7 @@ type mockCollectorConfig struct {
 	Port              int
 	InjectHTTPStatus  []int
 	InjectContentType string
+	InjectDelay       time.Duration
 	WithTLS           bool
 	ExpectedHeaders   map[string]string
 }
@@ -239,6 +273,7 @@ func runMockCollector(t *testing.T, cfg mockCollectorConfig) *mockCollector {
 		metricsStorage:    otlptest.NewMetricsStorage(),
 		injectHTTPStatus:  cfg.InjectHTTPStatus,
 		injectContentType: cfg.InjectContentType,
+		injectDelay:       cfg.InjectDelay,
 		expectedHeaders:   cfg.ExpectedHeaders,
 	}
 	mux := http.NewServeMux()

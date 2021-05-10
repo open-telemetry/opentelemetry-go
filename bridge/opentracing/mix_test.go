@@ -22,8 +22,8 @@ import (
 	ot "github.com/opentracing/opentracing-go"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	otelbaggage "go.opentelemetry.io/otel/internal/baggage"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/internal"
@@ -229,12 +229,12 @@ func (cast *currentActiveSpanTest) runOTOtelOT(t *testing.T, ctx context.Context
 }
 
 func (cast *currentActiveSpanTest) recordSpans(t *testing.T, ctx context.Context) context.Context {
-	spanID := trace.SpanContextFromContext(ctx).SpanID
+	spanID := trace.SpanContextFromContext(ctx).SpanID()
 	cast.recordedCurrentOtelSpanIDs = append(cast.recordedCurrentOtelSpanIDs, spanID)
 
 	spanID = trace.SpanID{}
 	if bridgeSpan, ok := ot.SpanFromContext(ctx).(*bridgeSpan); ok {
-		spanID = bridgeSpan.otelSpan.SpanContext().SpanID
+		spanID = bridgeSpan.otelSpan.SpanContext().SpanID()
 	}
 	cast.recordedActiveOTSpanIDs = append(cast.recordedActiveOTSpanIDs, spanID)
 	return ctx
@@ -589,7 +589,7 @@ func (bio *baggageInteroperationTest) addAndRecordBaggage(t *testing.T, ctx cont
 	value := bio.baggageItems[idx].value
 
 	otSpan.SetBaggageItem(otKey, value)
-	ctx = otelbaggage.NewContext(ctx, label.String(otelKey, value))
+	ctx = otelbaggage.NewContext(ctx, attribute.String(otelKey, value))
 
 	otRecording := make(map[string]string)
 	otSpan.Context().ForeachBaggageItem(func(key, value string) bool {
@@ -597,7 +597,7 @@ func (bio *baggageInteroperationTest) addAndRecordBaggage(t *testing.T, ctx cont
 		return true
 	})
 	otelRecording := make(map[string]string)
-	otelbaggage.MapFromContext(ctx).Foreach(func(kv label.KeyValue) bool {
+	otelbaggage.MapFromContext(ctx).Foreach(func(kv attribute.KeyValue) bool {
 		otelRecording[string(kv.Key)] = kv.Value.Emit()
 		return true
 	})
@@ -637,19 +637,19 @@ func checkTraceAndSpans(t *testing.T, tracer *internal.MockTracer, expectedTrace
 	}
 	for idx, span := range tracer.FinishedSpans {
 		sctx := span.SpanContext()
-		if sctx.TraceID != expectedTraceID {
-			t.Errorf("Expected trace ID %v in span %d (%d), got %v", expectedTraceID, idx, sctx.SpanID, sctx.TraceID)
+		if sctx.TraceID() != expectedTraceID {
+			t.Errorf("Expected trace ID %v in span %d (%d), got %v", expectedTraceID, idx, sctx.SpanID(), sctx.TraceID())
 		}
 		expectedSpanID := spanIDs[idx]
 		expectedParentSpanID := parentSpanIDs[idx]
-		if sctx.SpanID != expectedSpanID {
-			t.Errorf("Expected finished span %d to have span ID %d, but got %d", idx, expectedSpanID, sctx.SpanID)
+		if sctx.SpanID() != expectedSpanID {
+			t.Errorf("Expected finished span %d to have span ID %d, but got %d", idx, expectedSpanID, sctx.SpanID())
 		}
 		if span.ParentSpanID != expectedParentSpanID {
-			t.Errorf("Expected finished span %d (span ID: %d) to have parent span ID %d, but got %d", idx, sctx.SpanID, expectedParentSpanID, span.ParentSpanID)
+			t.Errorf("Expected finished span %d (span ID: %d) to have parent span ID %d, but got %d", idx, sctx.SpanID(), expectedParentSpanID, span.ParentSpanID)
 		}
-		if span.SpanKind != sks[span.SpanContext().SpanID] {
-			t.Errorf("Expected finished span %d (span ID: %d) to have span.kind to be '%v' but was '%v'", idx, sctx.SpanID, sks[span.SpanContext().SpanID], span.SpanKind)
+		if span.SpanKind != sks[span.SpanContext().SpanID()] {
+			t.Errorf("Expected finished span %d (span ID: %d) to have span.kind to be '%v' but was '%v'", idx, sctx.SpanID(), sks[span.SpanContext().SpanID()], span.SpanKind)
 		}
 	}
 }
@@ -715,4 +715,78 @@ func runOTOtelOT(t *testing.T, ctx context.Context, name string, callback func(*
 			_ = callback(t, ctx3)
 		}(ctx2)
 	}(ctx)
+}
+
+func TestOtTagToOTelLabel_CheckTypeConversions(t *testing.T) {
+	tableTest := []struct {
+		key               string
+		value             interface{}
+		expectedValueType attribute.Type
+	}{
+		{
+			key:               "bool to bool",
+			value:             true,
+			expectedValueType: attribute.BOOL,
+		},
+		{
+			key:               "int to int64",
+			value:             123,
+			expectedValueType: attribute.INT64,
+		},
+		{
+			key:               "uint to string",
+			value:             uint(1234),
+			expectedValueType: attribute.STRING,
+		},
+		{
+			key:               "int32 to int64",
+			value:             int32(12345),
+			expectedValueType: attribute.INT64,
+		},
+		{
+			key:               "uint32 to int64",
+			value:             uint32(123456),
+			expectedValueType: attribute.INT64,
+		},
+		{
+			key:               "int64 to int64",
+			value:             int64(1234567),
+			expectedValueType: attribute.INT64,
+		},
+		{
+			key:               "uint64 to string",
+			value:             uint64(12345678),
+			expectedValueType: attribute.STRING,
+		},
+		{
+			key:               "float32 to float64",
+			value:             float32(3.14),
+			expectedValueType: attribute.FLOAT64,
+		},
+		{
+			key:               "float64 to float64",
+			value:             float64(3.14),
+			expectedValueType: attribute.FLOAT64,
+		},
+		{
+			key:               "string to string",
+			value:             "string_value",
+			expectedValueType: attribute.STRING,
+		},
+		{
+			key:               "unexpected type to string",
+			value:             struct{}{},
+			expectedValueType: attribute.STRING,
+		},
+	}
+
+	for _, test := range tableTest {
+		got := otTagToOTelLabel(test.key, test.value)
+		if test.expectedValueType != got.Value.Type() {
+			t.Errorf("Expected type %s, but got %s after conversion '%v' value",
+				test.expectedValueType,
+				got.Value.Type(),
+				test.value)
+		}
+	}
 }

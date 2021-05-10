@@ -18,8 +18,8 @@ import (
 	"context"
 	"testing"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/baggage"
-	"go.opentelemetry.io/otel/label"
 )
 
 func TestBaggage(t *testing.T) {
@@ -31,7 +31,7 @@ func TestBaggage(t *testing.T) {
 		t.Fatalf("empty baggage returned a set with %d elements", b.Len())
 	}
 
-	first, second, third := label.Key("first"), label.Key("second"), label.Key("third")
+	first, second, third := attribute.Key("first"), attribute.Key("second"), attribute.Key("third")
 	ctx = ContextWithValues(ctx, first.Bool(true), second.String("2"))
 	m := baggage.MapFromContext(ctx)
 	v, ok := m.Value(first)
@@ -59,11 +59,11 @@ func TestBaggage(t *testing.T) {
 	}
 
 	v = Value(ctx, first)
-	if v.Type() != label.BOOL || !v.AsBool() {
+	if v.Type() != attribute.BOOL || !v.AsBool() {
 		t.Fatal("Value failed to get correct first value")
 	}
 	v = Value(ctx, second)
-	if v.Type() != label.STRING || v.AsString() != "2" {
+	if v.Type() != attribute.STRING || v.AsString() != "2" {
 		t.Fatal("Value failed to get correct second value")
 	}
 

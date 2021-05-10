@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/example/zipkin
 
-go 1.14
+go 1.15
 
 replace (
 	go.opentelemetry.io/otel => ../..
@@ -9,9 +9,10 @@ replace (
 )
 
 require (
-	go.opentelemetry.io/otel v0.16.0
-	go.opentelemetry.io/otel/exporters/trace/zipkin v0.16.0
-	go.opentelemetry.io/otel/sdk v0.16.0
+	go.opentelemetry.io/otel v0.20.0
+	go.opentelemetry.io/otel/exporters/trace/zipkin v0.20.0
+	go.opentelemetry.io/otel/sdk v0.20.0
+	go.opentelemetry.io/otel/trace v0.20.0
 )
 
 replace go.opentelemetry.io/otel/bridge/opencensus => ../../bridge/opencensus

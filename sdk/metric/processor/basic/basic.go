@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -48,13 +48,13 @@ type (
 		// instead of the descriptor pointer.  See
 		// https://github.com/open-telemetry/opentelemetry-go/issues/862.
 		descriptor *metric.Descriptor
-		distinct   label.Distinct
-		resource   label.Distinct
+		distinct   attribute.Distinct
+		resource   attribute.Distinct
 	}
 
 	stateValue struct {
 		// labels corresponds to the stateKey.distinct field.
-		labels *label.Set
+		labels *attribute.Set
 
 		// resource corresponds to the stateKey.resource field.
 		resource *resource.Resource

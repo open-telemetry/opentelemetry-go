@@ -21,8 +21,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	metricglobal "go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/number"
@@ -40,9 +40,9 @@ func TestDirect(t *testing.T) {
 	ctx := context.Background()
 	meter1 := metricglobal.Meter("test1", metric.WithInstrumentationVersion("semver:v1.0.0"))
 	meter2 := metricglobal.Meter("test2")
-	labels1 := []label.KeyValue{label.String("A", "B")}
-	labels2 := []label.KeyValue{label.String("C", "D")}
-	labels3 := []label.KeyValue{label.String("E", "F")}
+	labels1 := []attribute.KeyValue{attribute.String("A", "B")}
+	labels2 := []attribute.KeyValue{attribute.String("C", "D")}
+	labels3 := []attribute.KeyValue{attribute.String("E", "F")}
 
 	counter := Must(meter1).NewInt64Counter("test.counter")
 	counter.Add(ctx, 1, labels1...)
@@ -139,7 +139,7 @@ func TestBound(t *testing.T) {
 	// vs. the above, to cover all the instruments.
 	ctx := context.Background()
 	glob := metricglobal.Meter("test")
-	labels1 := []label.KeyValue{label.String("A", "B")}
+	labels1 := []attribute.KeyValue{attribute.String("A", "B")}
 
 	counter := Must(glob).NewFloat64Counter("test.counter")
 	boundC := counter.Bind(labels1...)
@@ -183,7 +183,7 @@ func TestUnbind(t *testing.T) {
 	global.ResetForTest()
 
 	glob := metricglobal.Meter("test")
-	labels1 := []label.KeyValue{label.String("A", "B")}
+	labels1 := []attribute.KeyValue{attribute.String("A", "B")}
 
 	counter := Must(glob).NewFloat64Counter("test.counter")
 	boundC := counter.Bind(labels1...)

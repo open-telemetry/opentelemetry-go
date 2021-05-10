@@ -3,9 +3,10 @@
 [![CI](https://github.com/open-telemetry/opentelemetry-go/workflows/ci/badge.svg)](https://github.com/open-telemetry/opentelemetry-go/actions?query=workflow%3Aci+branch%3Amain)
 [![PkgGoDev](https://pkg.go.dev/badge/go.opentelemetry.io/otel)](https://pkg.go.dev/go.opentelemetry.io/otel)
 [![Go Report Card](https://goreportcard.com/badge/go.opentelemetry.io/otel)](https://goreportcard.com/report/go.opentelemetry.io/otel)
-[![Gitter](https://badges.gitter.im/open-telemetry/opentelemetry-go.svg)](https://gitter.im/open-telemetry/opentelemetry-go?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Slack](https://img.shields.io/badge/slack-@cncf/otel--go-brightgreen.svg?logo=slack)](https://cloud-native.slack.com/archives/C01NPAXACKT)
 
-The Go [OpenTelemetry](https://opentelemetry.io/) implementation.
+OpenTelemetry-Go is the [Go](https://golang.org/) implementation of [OpenTelemetry](https://opentelemetry.io/).
+It provides a set of APIs to directly measure performance and behavior of your software and send this data to observability platforms.
 
 ## Project Status
 
@@ -25,6 +26,37 @@ and
 
 Project versioning information and stability guarantees can be found in the
 [versioning documentation](./VERSIONING.md).
+
+| Signal | Status |
+| --- | --- |
+| Traces | Stable [release](https://github.com/orgs/open-telemetry/projects/5) is primary focus |
+| Metrics | Development paused [1] |
+| Logs | Frozen [2] |
+
+- [1]: The development of the metrics API and SDK has paused due to limited development resources, prioritization of a stable Traces release, and instability of the official overall design from the OpenTelemetry specification.
+   Pull Requests for metrics related issues are not being accepted currently outside of security vulnerability mitigations.
+- [2]: The Logs signal development is halted for this project while we develop both Traces and Metrics.
+   No Logs Pull Requests are currently being accepted.
+
+### Compatibility
+
+This project is tested on the following systems.
+
+| OS      | Go Version | Architecture |
+| ------- | ---------- | ------------ |
+| Ubuntu  | 1.16       | amd64        |
+| Ubuntu  | 1.15       | amd64        |
+| Ubuntu  | 1.16       | 386          |
+| Ubuntu  | 1.15       | 386          |
+| MacOS   | 1.16       | amd64        |
+| MacOS   | 1.15       | amd64        |
+| Windows | 1.16       | amd64        |
+| Windows | 1.15       | amd64        |
+| Windows | 1.16       | 386          |
+| Windows | 1.15       | 386          |
+
+While this project should work for other systems, no compatibility guarantees
+are made for those systems currently.
 
 ## Getting Started
 

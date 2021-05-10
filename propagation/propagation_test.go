@@ -30,6 +30,8 @@ var (
 
 type carrier []string
 
+func (c *carrier) Keys() []string { return nil }
+
 func (c *carrier) Get(string) string { return "" }
 
 func (c *carrier) Set(setter, _ string) {

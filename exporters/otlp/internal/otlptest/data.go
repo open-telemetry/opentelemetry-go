@@ -19,15 +19,16 @@ import (
 	"fmt"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	exportmetric "go.opentelemetry.io/otel/sdk/export/metric"
-	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/resource"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -66,49 +67,52 @@ func (OneRecordCheckpointSet) ForEach(kindSelector exportmetric.ExportKindSelect
 		metric.CounterInstrumentKind,
 		number.Int64Kind,
 	)
-	res := resource.NewWithAttributes(label.String("a", "b"))
+	res := resource.NewWithAttributes(attribute.String("a", "b"))
 	agg := sum.New(1)
 	if err := agg[0].Update(context.Background(), number.NewInt64Number(42), &desc); err != nil {
 		return err
 	}
 	start := time.Date(2020, time.December, 8, 19, 15, 0, 0, time.UTC)
 	end := time.Date(2020, time.December, 8, 19, 16, 0, 0, time.UTC)
-	labels := label.NewSet(label.String("abc", "def"), label.Int64("one", 1))
+	labels := attribute.NewSet(attribute.String("abc", "def"), attribute.Int64("one", 1))
 	rec := exportmetric.NewRecord(&desc, &labels, res, agg[0].Aggregation(), start, end)
 	return recordFunc(rec)
 }
 
-// SingleSpanSnapshot returns a one-element slice with a snapshot. It
+// SingleReadOnlySpan returns a one-element slice with a read-only span. It
 // may be useful for testing driver's trace export.
-func SingleSpanSnapshot() []*exporttrace.SpanSnapshot {
-	sd := &exporttrace.SpanSnapshot{
-		SpanContext: trace.SpanContext{
-			TraceID:    trace.TraceID{2, 3, 4, 5, 6, 7, 8, 9, 2, 3, 4, 5, 6, 7, 8, 9},
-			SpanID:     trace.SpanID{3, 4, 5, 6, 7, 8, 9, 0},
-			TraceFlags: trace.FlagsSampled,
+func SingleReadOnlySpan() []tracesdk.ReadOnlySpan {
+	return tracetest.SpanStubs{
+		{
+			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    trace.TraceID{2, 3, 4, 5, 6, 7, 8, 9, 2, 3, 4, 5, 6, 7, 8, 9},
+				SpanID:     trace.SpanID{3, 4, 5, 6, 7, 8, 9, 0},
+				TraceFlags: trace.FlagsSampled,
+			}),
+			Parent: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    trace.TraceID{2, 3, 4, 5, 6, 7, 8, 9, 2, 3, 4, 5, 6, 7, 8, 9},
+				SpanID:     trace.SpanID{1, 2, 3, 4, 5, 6, 7, 8},
+				TraceFlags: trace.FlagsSampled,
+			}),
+			SpanKind:          trace.SpanKindInternal,
+			Name:              "foo",
+			StartTime:         time.Date(2020, time.December, 8, 20, 23, 0, 0, time.UTC),
+			EndTime:           time.Date(2020, time.December, 0, 20, 24, 0, 0, time.UTC),
+			Attributes:        []attribute.KeyValue{},
+			Events:            []tracesdk.Event{},
+			Links:             []trace.Link{},
+			Status:            tracesdk.Status{Code: codes.Ok},
+			DroppedAttributes: 0,
+			DroppedEvents:     0,
+			DroppedLinks:      0,
+			ChildSpanCount:    0,
+			Resource:          resource.NewWithAttributes(attribute.String("a", "b")),
+			InstrumentationLibrary: instrumentation.Library{
+				Name:    "bar",
+				Version: "0.0.0",
+			},
 		},
-		ParentSpanID:             trace.SpanID{1, 2, 3, 4, 5, 6, 7, 8},
-		SpanKind:                 trace.SpanKindInternal,
-		Name:                     "foo",
-		StartTime:                time.Date(2020, time.December, 8, 20, 23, 0, 0, time.UTC),
-		EndTime:                  time.Date(2020, time.December, 0, 20, 24, 0, 0, time.UTC),
-		Attributes:               []label.KeyValue{},
-		MessageEvents:            []trace.Event{},
-		Links:                    []trace.Link{},
-		StatusCode:               codes.Ok,
-		StatusMessage:            "",
-		HasRemoteParent:          false,
-		DroppedAttributeCount:    0,
-		DroppedMessageEventCount: 0,
-		DroppedLinkCount:         0,
-		ChildSpanCount:           0,
-		Resource:                 resource.NewWithAttributes(label.String("a", "b")),
-		InstrumentationLibrary: instrumentation.Library{
-			Name:    "bar",
-			Version: "0.0.0",
-		},
-	}
-	return []*exporttrace.SpanSnapshot{sd}
+	}.Snapshots()
 }
 
 // EmptyCheckpointSet is a checkpointer that has no records at all.

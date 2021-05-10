@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"runtime"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -25,18 +27,19 @@ import (
 	"google.golang.org/grpc"
 	metadata "google.golang.org/grpc/metadata"
 
-	collectormetricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/metrics/v1"
-	collectortracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/collector/trace/v1"
-	metricpb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/metrics/v1"
-	tracepb "go.opentelemetry.io/otel/exporters/otlp/internal/opentelemetry-proto-gen/trace/v1"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/otlptest"
+	collectormetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
+	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
-func makeMockCollector(t *testing.T) *mockCollector {
+func makeMockCollector(t *testing.T, mockConfig *mockConfig) *mockCollector {
 	return &mockCollector{
 		t: t,
 		traceSvc: &mockTraceService{
 			storage: otlptest.NewSpansStorage(),
+			errors:  mockConfig.errors,
 		},
 		metricSvc: &mockMetricService{
 			storage: otlptest.NewMetricsStorage(),
@@ -45,9 +48,14 @@ func makeMockCollector(t *testing.T) *mockCollector {
 }
 
 type mockTraceService struct {
-	mu      sync.RWMutex
-	storage otlptest.SpansStorage
-	headers metadata.MD
+	collectortracepb.UnimplementedTraceServiceServer
+
+	errors   []error
+	requests int
+	mu       sync.RWMutex
+	storage  otlptest.SpansStorage
+	headers  metadata.MD
+	delay    time.Duration
 }
 
 func (mts *mockTraceService) getHeaders() metadata.MD {
@@ -69,17 +77,33 @@ func (mts *mockTraceService) getResourceSpans() []*tracepb.ResourceSpans {
 }
 
 func (mts *mockTraceService) Export(ctx context.Context, exp *collectortracepb.ExportTraceServiceRequest) (*collectortracepb.ExportTraceServiceResponse, error) {
-	reply := &collectortracepb.ExportTraceServiceResponse{}
+	if mts.delay > 0 {
+		time.Sleep(mts.delay)
+	}
+
 	mts.mu.Lock()
-	defer mts.mu.Unlock()
+	defer func() {
+		mts.requests++
+		mts.mu.Unlock()
+	}()
+
+	reply := &collectortracepb.ExportTraceServiceResponse{}
+	if mts.requests < len(mts.errors) {
+		idx := mts.requests
+		return reply, mts.errors[idx]
+	}
+
 	mts.headers, _ = metadata.FromIncomingContext(ctx)
 	mts.storage.AddSpans(exp)
 	return reply, nil
 }
 
 type mockMetricService struct {
+	collectormetricpb.UnimplementedMetricsServiceServer
+
 	mu      sync.RWMutex
 	storage otlptest.MetricsStorage
+	delay   time.Duration
 }
 
 func (mms *mockMetricService) getMetrics() []*metricpb.Metric {
@@ -89,6 +113,9 @@ func (mms *mockMetricService) getMetrics() []*metricpb.Metric {
 }
 
 func (mms *mockMetricService) Export(ctx context.Context, exp *collectormetricpb.ExportMetricsServiceRequest) (*collectormetricpb.ExportMetricsServiceResponse, error) {
+	if mms.delay > 0 {
+		time.Sleep(mms.delay)
+	}
 	reply := &collectormetricpb.ExportMetricsServiceResponse{}
 	mms.mu.Lock()
 	defer mms.mu.Unlock()
@@ -103,8 +130,14 @@ type mockCollector struct {
 	metricSvc *mockMetricService
 
 	endpoint string
-	stopFunc func() error
+	ln       *listener
+	stopFunc func()
 	stopOnce sync.Once
+}
+
+type mockConfig struct {
+	errors   []error
+	endpoint string
 }
 
 var _ collectortracepb.TraceServiceServer = (*mockTraceService)(nil)
@@ -115,8 +148,9 @@ var errAlreadyStopped = fmt.Errorf("already stopped")
 func (mc *mockCollector) stop() error {
 	var err = errAlreadyStopped
 	mc.stopOnce.Do(func() {
+		err = nil
 		if mc.stopFunc != nil {
-			err = mc.stopFunc()
+			mc.stopFunc()
 		}
 	})
 	// Give it sometime to shutdown.
@@ -176,28 +210,83 @@ func runMockCollector(t *testing.T) *mockCollector {
 }
 
 func runMockCollectorAtEndpoint(t *testing.T, endpoint string) *mockCollector {
-	ln, err := net.Listen("tcp", endpoint)
+	return runMockCollectorWithConfig(t, &mockConfig{endpoint: endpoint})
+}
+
+func runMockCollectorWithConfig(t *testing.T, mockConfig *mockConfig) *mockCollector {
+	ln, err := net.Listen("tcp", mockConfig.endpoint)
 	if err != nil {
 		t.Fatalf("Failed to get an endpoint: %v", err)
 	}
 
 	srv := grpc.NewServer()
-	mc := makeMockCollector(t)
+	mc := makeMockCollector(t, mockConfig)
 	collectortracepb.RegisterTraceServiceServer(srv, mc.traceSvc)
 	collectormetricpb.RegisterMetricsServiceServer(srv, mc.metricSvc)
+	mc.ln = newListener(ln)
 	go func() {
-		_ = srv.Serve(ln)
+		_ = srv.Serve((net.Listener)(mc.ln))
 	}()
 
-	deferFunc := func() error {
-		srv.Stop()
-		return ln.Close()
-	}
-
-	_, collectorPortStr, _ := net.SplitHostPort(ln.Addr().String())
-
-	mc.endpoint = "localhost:" + collectorPortStr
-	mc.stopFunc = deferFunc
+	mc.endpoint = ln.Addr().String()
+	// srv.Stop calls Close on mc.ln.
+	mc.stopFunc = srv.Stop
 
 	return mc
+}
+
+type listener struct {
+	closeOnce sync.Once
+	wrapped   net.Listener
+	C         chan struct{}
+}
+
+func newListener(wrapped net.Listener) *listener {
+	return &listener{
+		wrapped: wrapped,
+		C:       make(chan struct{}, 1),
+	}
+}
+
+func (l *listener) Close() error { return l.wrapped.Close() }
+
+func (l *listener) Addr() net.Addr { return l.wrapped.Addr() }
+
+// Accept waits for and returns the next connection to the listener. It will
+// send a signal on l.C that a connection has been made before returning.
+func (l *listener) Accept() (net.Conn, error) {
+	conn, err := l.wrapped.Accept()
+	if err != nil {
+		// Go 1.16 exported net.ErrClosed that could clean up this check, but to
+		// remain backwards compatible with previous versions of Go that we
+		// support the following string evaluation is used instead to keep in line
+		// with the previously recommended way to check this:
+		// https://github.com/golang/go/issues/4373#issuecomment-353076799
+		if strings.Contains(err.Error(), "use of closed network connection") {
+			// If the listener has been closed, do not allow callers of
+			// WaitForConn to wait for a connection that will never come.
+			l.closeOnce.Do(func() { close(l.C) })
+		}
+		return conn, err
+	}
+
+	select {
+	case l.C <- struct{}{}:
+	default:
+		// If C is full, assume nobody is listening and move on.
+	}
+	return conn, nil
+}
+
+// WaitForConn will wait indefintely for a connection to be estabilished with
+// the listener before returning.
+func (l *listener) WaitForConn() {
+	for {
+		select {
+		case <-l.C:
+			return
+		default:
+			runtime.Gosched()
+		}
+	}
 }
