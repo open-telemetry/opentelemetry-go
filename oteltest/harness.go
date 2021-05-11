@@ -119,7 +119,6 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 
 			e.Expect(span).NotToBeNil()
 
-			e.Expect(span.Tracer()).ToEqual(subject)
 			e.Expect(span.SpanContext().IsValid()).ToBeTrue()
 		})
 

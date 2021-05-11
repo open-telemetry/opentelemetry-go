@@ -32,20 +32,6 @@ import (
 )
 
 func TestSpan(t *testing.T) {
-	t.Run("#Tracer", func(t *testing.T) {
-		tp := oteltest.NewTracerProvider()
-		t.Run("returns the tracer used to start the span", func(t *testing.T) {
-			t.Parallel()
-
-			e := matchers.NewExpecter(t)
-
-			tracer := tp.Tracer(t.Name())
-			_, subject := tracer.Start(context.Background(), "test")
-
-			e.Expect(subject.Tracer()).ToEqual(tracer)
-		})
-	})
-
 	t.Run("#End", func(t *testing.T) {
 		tp := oteltest.NewTracerProvider()
 		t.Run("ends the span", func(t *testing.T) {
