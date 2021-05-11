@@ -294,6 +294,23 @@ func WithMyType(t MyType) Option {
 }
 ```
 
+##### Functional Options
+
+```go
+type optionFunc func(*config)
+
+func (fn optionFunc) apply(c *config) {
+	fn(c)
+}
+
+// WithMyType sets T to have include MyType.
+func WithMyType(t MyType) Option {
+	return optionFunc(func(c *config) {
+		c.MyType = t.MyType
+	})
+}
+```
+
 #### Instantiation
 
 Using this configuration pattern to configure instantiation with a `NewT`
