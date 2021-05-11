@@ -22,8 +22,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/oteltest"
-	"go.opentelemetry.io/otel/unit"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
