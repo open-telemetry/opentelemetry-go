@@ -306,7 +306,7 @@ func (fn optionFunc) apply(c *config) {
 // WithMyType sets T to have include MyType.
 func WithMyType(t MyType) Option {
 	return optionFunc(func(c *config) {
-		c.MyType = t.MyType
+		c.MyType = t
 	})
 }
 ```
