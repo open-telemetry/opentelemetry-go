@@ -15,5 +15,6 @@
 package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
 var (
+	ParsePlistFile = parsePlistFile
 	BuildOSRelease = buildOSRelease
 )
