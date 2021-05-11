@@ -303,7 +303,7 @@ func (fn optionFunc) apply(c *config) {
 	fn(c)
 }
 
-// WithMyType sets T to have include MyType.
+// WithMyType sets t as MyType.
 func WithMyType(t MyType) Option {
 	return optionFunc(func(c *config) {
 		c.MyType = t
