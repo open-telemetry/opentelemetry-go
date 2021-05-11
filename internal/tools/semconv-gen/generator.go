@@ -175,7 +175,7 @@ func findRepoRoot() (string, error) {
 	}
 }
 
-var commonInitialisms = []string{
+var capitalizations = []string{
 	"ACL",
 	"AIX",
 	"AKS",
@@ -253,30 +253,31 @@ var commonInitialisms = []string{
 	"CloudFunctions",
 	"AppEngine",
 	"CronJob",
+	"WebEngine",
+	"MySQL",
+	"PostgreSQL",
+	"MariaDB",
+	"MaxDB",
+	"FirstSQL",
+	"InstantDB",
+	"HBase",
+	"MongoDB",
+	"CouchDB",
+	"CosmosDB",
+	"DynamoDB",
+	"HanaDB",
+	"FreeBSD",
+	"NetBSD",
+	"OpenBSD",
+	"DragonflyBSD",
+	"InProc",
+	"FaaS",
 }
 
 var replacements = map[string]string{
-	"Mysql":         "MySQL",
-	"Postgresql":    "PostgreSQL",
-	"Mariadb":       "MariaDB",
-	"Maxdb":         "MaxDB",
-	"Firstsql":      "FirstSQL",
-	"Instantdb":     "InstantDB",
 	"RedisDatabase": "RedisDB",
-	"Hbase":         "HBase",
-	"Mongodb":       "MongoDB",
-	"Couchdb":       "CouchDB",
-	"Cosmosdb":      "CosmosDB",
-	"Dynamodb":      "DynamoDB",
-	"Hanadb":        "HanaDB",
-	"Freebsd":       "FreeBSD",
-	"Netbsd":        "NetBSD",
-	"Openbsd":       "OpenBSD",
-	"Dragonflybsd":  "DragonflyBSD",
-	"Inproc":        "InProc",
 	"IPTCP":         "TCP",
 	"IPUDP":         "UDP",
-	"Faas":          "FaaS",
 	"Lineno":        "LineNumber",
 }
 
@@ -286,7 +287,7 @@ func fixInitialisms(fn string) error {
 		return fmt.Errorf("unable to read file: %w", err)
 	}
 
-	for _, init := range commonInitialisms {
+	for _, init := range capitalizations {
 		re := regexp.MustCompile(strings.Title(strings.ToLower(init)) + `([A-Z\s\d]|$)`)
 		data = re.ReplaceAll(data, []byte(init+`$1`))
 	}
