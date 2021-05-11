@@ -26,8 +26,8 @@ import (
 
 // osRelease builds a string describing the operating system release based on the
 // properties of the os-release file. If no os-release file is found, or if the
-// required properties to build de release description string are missing, an empty
-// string is returned instead. For more information about the os-release file, see:
+// required properties to build the release description string are missing, an empty
+// string is returned instead. For more information about os-release files, see:
 // https://www.freedesktop.org/software/systemd/man/os-release.html
 func osRelease() string {
 	file, err := getOSReleaseFile()
