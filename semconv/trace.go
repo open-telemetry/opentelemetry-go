@@ -107,7 +107,7 @@ var (
 	// SAP MaxDB
 	DBSystemMaxDB = DBSystemKey.String("maxdb")
 	// SAP HANA
-	DBSystemHanadb = DBSystemKey.String("hanadb")
+	DBSystemHanaDB = DBSystemKey.String("hanadb")
 	// Ingres
 	DBSystemIngres = DBSystemKey.String("ingres")
 	// FirstSQL
@@ -245,7 +245,7 @@ const (
 	// Type: string
 	// Required: No
 	// Examples: 'us-west-2'
-	DBCassandraCoordinatorDcKey = attribute.Key("db.cassandra.coordinator.dc")
+	DBCassandraCoordinatorDCKey = attribute.Key("db.cassandra.coordinator.dc")
 )
 
 var (
@@ -986,42 +986,42 @@ const (
 	// Type: Enum
 	// Required: Always
 	// Examples: 0, 1, 16
-	RPCGrpcStatusCodeKey = attribute.Key("rpc.grpc.status_code")
+	RPCGRPCStatusCodeKey = attribute.Key("rpc.grpc.status_code")
 )
 
 var (
 	// OK
-	RPCGrpcStatusCodeOk = RPCGrpcStatusCodeKey.Int(0)
+	RPCGRPCStatusCodeOk = RPCGRPCStatusCodeKey.Int(0)
 	// CANCELLED
-	RPCGrpcStatusCodeCancelled = RPCGrpcStatusCodeKey.Int(1)
+	RPCGRPCStatusCodeCancelled = RPCGRPCStatusCodeKey.Int(1)
 	// UNKNOWN
-	RPCGrpcStatusCodeUnknown = RPCGrpcStatusCodeKey.Int(2)
+	RPCGRPCStatusCodeUnknown = RPCGRPCStatusCodeKey.Int(2)
 	// INVALID_ARGUMENT
-	RPCGrpcStatusCodeInvalidArgument = RPCGrpcStatusCodeKey.Int(3)
+	RPCGRPCStatusCodeInvalidArgument = RPCGRPCStatusCodeKey.Int(3)
 	// DEADLINE_EXCEEDED
-	RPCGrpcStatusCodeDeadlineExceeded = RPCGrpcStatusCodeKey.Int(4)
+	RPCGRPCStatusCodeDeadlineExceeded = RPCGRPCStatusCodeKey.Int(4)
 	// NOT_FOUND
-	RPCGrpcStatusCodeNotFound = RPCGrpcStatusCodeKey.Int(5)
+	RPCGRPCStatusCodeNotFound = RPCGRPCStatusCodeKey.Int(5)
 	// ALREADY_EXISTS
-	RPCGrpcStatusCodeAlreadyExists = RPCGrpcStatusCodeKey.Int(6)
+	RPCGRPCStatusCodeAlreadyExists = RPCGRPCStatusCodeKey.Int(6)
 	// PERMISSION_DENIED
-	RPCGrpcStatusCodePermissionDenied = RPCGrpcStatusCodeKey.Int(7)
+	RPCGRPCStatusCodePermissionDenied = RPCGRPCStatusCodeKey.Int(7)
 	// RESOURCE_EXHAUSTED
-	RPCGrpcStatusCodeResourceExhausted = RPCGrpcStatusCodeKey.Int(8)
+	RPCGRPCStatusCodeResourceExhausted = RPCGRPCStatusCodeKey.Int(8)
 	// FAILED_PRECONDITION
-	RPCGrpcStatusCodeFailedPrecondition = RPCGrpcStatusCodeKey.Int(9)
+	RPCGRPCStatusCodeFailedPrecondition = RPCGRPCStatusCodeKey.Int(9)
 	// ABORTED
-	RPCGrpcStatusCodeAborted = RPCGrpcStatusCodeKey.Int(10)
+	RPCGRPCStatusCodeAborted = RPCGRPCStatusCodeKey.Int(10)
 	// OUT_OF_RANGE
-	RPCGrpcStatusCodeOutOfRange = RPCGrpcStatusCodeKey.Int(11)
+	RPCGRPCStatusCodeOutOfRange = RPCGRPCStatusCodeKey.Int(11)
 	// UNIMPLEMENTED
-	RPCGrpcStatusCodeUnimplemented = RPCGrpcStatusCodeKey.Int(12)
+	RPCGRPCStatusCodeUnimplemented = RPCGRPCStatusCodeKey.Int(12)
 	// INTERNAL
-	RPCGrpcStatusCodeInternal = RPCGrpcStatusCodeKey.Int(13)
+	RPCGRPCStatusCodeInternal = RPCGRPCStatusCodeKey.Int(13)
 	// UNAVAILABLE
-	RPCGrpcStatusCodeUnavailable = RPCGrpcStatusCodeKey.Int(14)
+	RPCGRPCStatusCodeUnavailable = RPCGRPCStatusCodeKey.Int(14)
 	// DATA_LOSS
-	RPCGrpcStatusCodeDataLoss = RPCGrpcStatusCodeKey.Int(15)
+	RPCGRPCStatusCodeDataLoss = RPCGRPCStatusCodeKey.Int(15)
 	// UNAUTHENTICATED
-	RPCGrpcStatusCodeUnauthenticated = RPCGrpcStatusCodeKey.Int(16)
+	RPCGRPCStatusCodeUnauthenticated = RPCGRPCStatusCodeKey.Int(16)
 )

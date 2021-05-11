@@ -85,23 +85,23 @@ var (
 	// Azure Virtual Machines
 	CloudPlatformAzureVM = CloudPlatformKey.String("azure_vm")
 	// Azure Container Instances
-	CloudPlatformAzureContainerinstances = CloudPlatformKey.String("azure_container_instances")
+	CloudPlatformAzureContainerInstances = CloudPlatformKey.String("azure_container_instances")
 	// Azure Kubernetes Service
 	CloudPlatformAzureAKS = CloudPlatformKey.String("azure_aks")
 	// Azure Functions
 	CloudPlatformAzureFunctions = CloudPlatformKey.String("azure_functions")
 	// Azure App Service
-	CloudPlatformAzureAppservice = CloudPlatformKey.String("azure_app_service")
+	CloudPlatformAzureAppService = CloudPlatformKey.String("azure_app_service")
 	// Google Cloud Compute Engine (GCE)
-	CloudPlatformGCPComputeengine = CloudPlatformKey.String("gcp_compute_engine")
+	CloudPlatformGCPComputeEngine = CloudPlatformKey.String("gcp_compute_engine")
 	// Google Cloud Run
-	CloudPlatformGCPCloudrun = CloudPlatformKey.String("gcp_cloud_run")
+	CloudPlatformGCPCloudRun = CloudPlatformKey.String("gcp_cloud_run")
 	// Google Cloud Kubernetes Engine (GKE)
-	CloudPlatformGCPKubernetesengine = CloudPlatformKey.String("gcp_kubernetes_engine")
+	CloudPlatformGCPKubernetesEngine = CloudPlatformKey.String("gcp_kubernetes_engine")
 	// Google Cloud Functions (GCF)
-	CloudPlatformGCPCloudfunctions = CloudPlatformKey.String("gcp_cloud_functions")
+	CloudPlatformGCPCloudFunctions = CloudPlatformKey.String("gcp_cloud_functions")
 	// Google Cloud App Engine (GAE)
-	CloudPlatformGCPAppengine = CloudPlatformKey.String("gcp_app_engine")
+	CloudPlatformGCPAppEngine = CloudPlatformKey.String("gcp_app_engine")
 )
 
 // Resources used by AWS Elastic Container Service (ECS).
@@ -180,7 +180,7 @@ const (
 	// Note: See the [log group ARN format
 	// documentation](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/iam-
 	// access-control-overview-cwl.html#CWL_ARN_Format).
-	AWSLogGroupArnsKey = attribute.Key("aws.log.group.arns")
+	AWSLogGroupARNsKey = attribute.Key("aws.log.group.arns")
 	// The name(s) of the AWS log stream(s) an application is writing to.
 	//
 	// Type: string[]
@@ -198,7 +198,7 @@ const (
 	// access-control-overview-cwl.html#CWL_ARN_Format). One log group can contain
 	// several log streams, so these ARNs necessarily identify both a log group and a
 	// log stream.
-	AWSLogStreamArnsKey = attribute.Key("aws.log.stream.arns")
+	AWSLogStreamARNsKey = attribute.Key("aws.log.stream.arns")
 )
 
 // A container instance.
@@ -508,13 +508,13 @@ const (
 	// Type: string
 	// Required: No
 	// Examples: '275ecb36-5aa8-4c2a-9c47-d8bb681b9aff'
-	K8SCronjobUIDKey = attribute.Key("k8s.cronjob.uid")
+	K8SCronJobUIDKey = attribute.Key("k8s.cronjob.uid")
 	// The name of the CronJob.
 	//
 	// Type: string
 	// Required: No
 	// Examples: 'opentelemetry'
-	K8SCronjobNameKey = attribute.Key("k8s.cronjob.name")
+	K8SCronJobNameKey = attribute.Key("k8s.cronjob.name")
 )
 
 // The operating system (OS) on which the process represented by this resource is running.
