@@ -56,7 +56,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   When a concrete representation of a read-only span is needed for testing, the newly added `SpanStub` in the `go.opentelemetry.io/otel/sdk/trace/tracetest` package should be used. (#1873)
 - Remove the `Tracer` method from the `Span` interface in the `go.opentelemetry.io/otel/trace` package.
   Using the same tracer that created a span introduces the error where an instrumentation library's `Tracer` is used by other code instead of their own.
-  The `"go.opentelemetry.io/otel".Tracer` function should be used to aquire a library specific `Tracer` instead. (TBD)
+  The `"go.opentelemetry.io/otel".Tracer` function should be used to aquire a library specific `Tracer` instead. (#1900)
 
 ### Fixed
 
