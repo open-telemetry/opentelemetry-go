@@ -81,7 +81,7 @@ var (
 	// AWS Lambda
 	CloudPlatformAWSLambda = CloudPlatformKey.String("aws_lambda")
 	// AWS Elastic Beanstalk
-	CloudPlatformAWSElasticbeanstalk = CloudPlatformKey.String("aws_elastic_beanstalk")
+	CloudPlatformAWSElasticBeanstalk = CloudPlatformKey.String("aws_elastic_beanstalk")
 	// Azure Virtual Machines
 	CloudPlatformAzureVM = CloudPlatformKey.String("azure_vm")
 	// Azure Container Instances
@@ -142,6 +142,12 @@ const (
 	// Required: No
 	// Examples: 'opentelemetry-family'
 	AWSECSTaskFamilyKey = attribute.Key("aws.ecs.task.family")
+	// The revision for this task definition.
+	//
+	// Type: string
+	// Required: No
+	// Examples: '8', '26'
+	AWSECSTaskRevisionKey = attribute.Key("aws.ecs.task.revision")
 )
 
 var (
@@ -535,27 +541,27 @@ const (
 
 var (
 	// Microsoft Windows
-	OSTypeWindows = OSTypeKey.String("WINDOWS")
+	OSTypeWindows = OSTypeKey.String("windows")
 	// Linux
-	OSTypeLinux = OSTypeKey.String("LINUX")
+	OSTypeLinux = OSTypeKey.String("linux")
 	// Apple Darwin
-	OSTypeDarwin = OSTypeKey.String("DARWIN")
+	OSTypeDarwin = OSTypeKey.String("darwin")
 	// FreeBSD
-	OSTypeFreeBSD = OSTypeKey.String("FREEBSD")
+	OSTypeFreeBSD = OSTypeKey.String("freebsd")
 	// NetBSD
-	OSTypeNetBSD = OSTypeKey.String("NETBSD")
+	OSTypeNetBSD = OSTypeKey.String("netbsd")
 	// OpenBSD
-	OSTypeOpenBSD = OSTypeKey.String("OPENBSD")
+	OSTypeOpenBSD = OSTypeKey.String("openbsd")
 	// DragonFly BSD
-	OSTypeDragonflyBSD = OSTypeKey.String("DRAGONFLYBSD")
+	OSTypeDragonflyBSD = OSTypeKey.String("dragonflybsd")
 	// HP-UX (Hewlett Packard Unix)
-	OSTypeHPUX = OSTypeKey.String("HPUX")
+	OSTypeHPUX = OSTypeKey.String("hpux")
 	// AIX (Advanced Interactive eXecutive)
-	OSTypeAIX = OSTypeKey.String("AIX")
+	OSTypeAIX = OSTypeKey.String("aix")
 	// Oracle Solaris
-	OSTypeSolaris = OSTypeKey.String("SOLARIS")
+	OSTypeSolaris = OSTypeKey.String("solaris")
 	// IBM z/OS
-	OSTypeZOS = OSTypeKey.String("ZOS")
+	OSTypeZOS = OSTypeKey.String("z_os")
 )
 
 // An operating system process.
@@ -742,4 +748,27 @@ var (
 	TelemetrySDKLanguageRuby = TelemetrySDKLanguageKey.String("ruby")
 	// webjs
 	TelemetrySDKLanguageWebjs = TelemetrySDKLanguageKey.String("webjs")
+)
+
+// Resource describing the packaged software running the application code. Web engines are typically executed using process.runtime.
+const (
+	// The name of the web engine.
+	//
+	// Type: string
+	// Required: Always
+	// Examples: 'WildFly'
+	WebEngineNameKey = attribute.Key("webengine.name")
+	// The version of the web engine.
+	//
+	// Type: string
+	// Required: No
+	// Examples: '21.0.0'
+	WebEngineVersionKey = attribute.Key("webengine.version")
+	// Additional description of the web engine (e.g. detailed version and edition
+	// information).
+	//
+	// Type: string
+	// Required: No
+	// Examples: 'WildFly Full 21.0.0.Final (WildFly Core 13.0.1.Final) - 2.2.2.Final'
+	WebEngineDescriptionKey = attribute.Key("webengine.description")
 )

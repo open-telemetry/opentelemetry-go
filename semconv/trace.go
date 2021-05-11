@@ -62,7 +62,8 @@ const (
 	// The database statement being executed.
 	//
 	// Type: string
-	// Required: Required if applicable.
+	// Required: Required if applicable and not explicitly disabled via
+	// instrumentation configuration.
 	// Examples: 'SELECT * FROM wuser_table', 'SET mykey "WuValue"'
 	// Note: The value may be sanitized to exclude sensitive information.
 	DBStatementKey = attribute.Key("db.statement")
@@ -249,28 +250,28 @@ const (
 )
 
 var (
-	// ALL
-	DBCassandraConsistencyLevelAll = DBCassandraConsistencyLevelKey.String("ALL")
-	// EACH_QUORUM
-	DBCassandraConsistencyLevelEachQuorum = DBCassandraConsistencyLevelKey.String("EACH_QUORUM")
-	// QUORUM
-	DBCassandraConsistencyLevelQuorum = DBCassandraConsistencyLevelKey.String("QUORUM")
-	// LOCAL_QUORUM
-	DBCassandraConsistencyLevelLocalQuorum = DBCassandraConsistencyLevelKey.String("LOCAL_QUORUM")
-	// ONE
-	DBCassandraConsistencyLevelOne = DBCassandraConsistencyLevelKey.String("ONE")
-	// TWO
-	DBCassandraConsistencyLevelTwo = DBCassandraConsistencyLevelKey.String("TWO")
-	// THREE
-	DBCassandraConsistencyLevelThree = DBCassandraConsistencyLevelKey.String("THREE")
-	// LOCAL_ONE
-	DBCassandraConsistencyLevelLocalOne = DBCassandraConsistencyLevelKey.String("LOCAL_ONE")
-	// ANY
-	DBCassandraConsistencyLevelAny = DBCassandraConsistencyLevelKey.String("ANY")
-	// SERIAL
-	DBCassandraConsistencyLevelSerial = DBCassandraConsistencyLevelKey.String("SERIAL")
-	// LOCAL_SERIAL
-	DBCassandraConsistencyLevelLocalSerial = DBCassandraConsistencyLevelKey.String("LOCAL_SERIAL")
+	// all
+	DBCassandraConsistencyLevelAll = DBCassandraConsistencyLevelKey.String("all")
+	// each_quorum
+	DBCassandraConsistencyLevelEachQuorum = DBCassandraConsistencyLevelKey.String("each_quorum")
+	// quorum
+	DBCassandraConsistencyLevelQuorum = DBCassandraConsistencyLevelKey.String("quorum")
+	// local_quorum
+	DBCassandraConsistencyLevelLocalQuorum = DBCassandraConsistencyLevelKey.String("local_quorum")
+	// one
+	DBCassandraConsistencyLevelOne = DBCassandraConsistencyLevelKey.String("one")
+	// two
+	DBCassandraConsistencyLevelTwo = DBCassandraConsistencyLevelKey.String("two")
+	// three
+	DBCassandraConsistencyLevelThree = DBCassandraConsistencyLevelKey.String("three")
+	// local_one
+	DBCassandraConsistencyLevelLocalOne = DBCassandraConsistencyLevelKey.String("local_one")
+	// any
+	DBCassandraConsistencyLevelAny = DBCassandraConsistencyLevelKey.String("any")
+	// serial
+	DBCassandraConsistencyLevelSerial = DBCassandraConsistencyLevelKey.String("serial")
+	// local_serial
+	DBCassandraConsistencyLevelLocalSerial = DBCassandraConsistencyLevelKey.String("local_serial")
 )
 
 // Call-level attributes for Apache HBase
@@ -512,7 +513,7 @@ const (
 var (
 	// Amazon Web Services
 	FaaSInvokedProviderAWS = FaaSInvokedProviderKey.String("aws")
-	// Amazon Web Services
+	// Microsoft Azure
 	FaaSInvokedProviderAzure = FaaSInvokedProviderKey.String("azure")
 	// Google Cloud Platform
 	FaaSInvokedProviderGCP = FaaSInvokedProviderKey.String("gcp")
@@ -524,7 +525,7 @@ const (
 	//
 	// Type: Enum
 	// Required: No
-	// Examples: 'IP.TCP'
+	// Examples: 'ip_tcp'
 	NetTransportKey = attribute.Key("net.transport")
 	// Remote address of the peer (dotted decimal for IPv4 or
 	// [RFC5952](https://tools.ietf.org/html/rfc5952) for IPv6)
@@ -566,14 +567,14 @@ const (
 )
 
 var (
-	// IP.TCP
-	NetTransportTCP = NetTransportKey.String("IP.TCP")
-	// IP.UDP
-	NetTransportUDP = NetTransportKey.String("IP.UDP")
+	// ip_tcp
+	NetTransportTCP = NetTransportKey.String("ip_tcp")
+	// ip_udp
+	NetTransportUDP = NetTransportKey.String("ip_udp")
 	// Another IP-based protocol
-	NetTransportIP = NetTransportKey.String("IP")
+	NetTransportIP = NetTransportKey.String("ip")
 	// Unix Domain socket. See below
-	NetTransportUnix = NetTransportKey.String("Unix")
+	NetTransportUnix = NetTransportKey.String("unix")
 	// Named or anonymous pipe. See note below
 	NetTransportPipe = NetTransportKey.String("pipe")
 	// In-process communication
@@ -813,6 +814,185 @@ const (
 	HTTPClientIPKey = attribute.Key("http.client_ip")
 )
 
+// Attributes that exist for multiple DynamoDB request types.
+const (
+	// The keys in the `RequestItems` object field.
+	//
+	// Type: string[]
+	// Required: No
+	// Examples: 'Users', 'Cats'
+	AWSDynamoDBTableNamesKey = attribute.Key("aws.dynamodb.table_names")
+	// The JSON-serialized value of each item in the `ConsumedCapacity` response
+	// field.
+	//
+	// Type: string[]
+	// Required: No
+	// Examples: '{ "CapacityUnits": number, "GlobalSecondaryIndexes": { "string" : {
+	// "CapacityUnits": number, "ReadCapacityUnits": number, "WriteCapacityUnits":
+	// number } }, "LocalSecondaryIndexes": { "string" : { "CapacityUnits": number,
+	// "ReadCapacityUnits": number, "WriteCapacityUnits": number } },
+	// "ReadCapacityUnits": number, "Table": { "CapacityUnits": number,
+	// "ReadCapacityUnits": number, "WriteCapacityUnits": number }, "TableName":
+	// "string", "WriteCapacityUnits": number }'
+	AWSDynamoDBConsumedCapacityKey = attribute.Key("aws.dynamodb.consumed_capacity")
+	// The JSON-serialized value of the `ItemCollectionMetrics` response field.
+	//
+	// Type: string
+	// Required: No
+	// Examples: '{ "string" : [ { "ItemCollectionKey": { "string" : { "B": blob,
+	// "BOOL": boolean, "BS": [ blob ], "L": [ "AttributeValue" ], "M": { "string" :
+	// "AttributeValue" }, "N": "string", "NS": [ "string" ], "NULL": boolean, "S":
+	// "string", "SS": [ "string" ] } }, "SizeEstimateRangeGB": [ number ] } ] }'
+	AWSDynamoDBItemCollectionMetricsKey = attribute.Key("aws.dynamodb.item_collection_metrics")
+	// The value of the `ProvisionedThroughput.ReadCapacityUnits` request parameter.
+	//
+	// Type: double
+	// Required: No
+	// Examples: 1.0, 2.0
+	AWSDynamoDBProvisionedReadCapacityKey = attribute.Key("aws.dynamodb.provisioned_read_capacity")
+	// The value of the `ProvisionedThroughput.WriteCapacityUnits` request parameter.
+	//
+	// Type: double
+	// Required: No
+	// Examples: 1.0, 2.0
+	AWSDynamoDBProvisionedWriteCapacityKey = attribute.Key("aws.dynamodb.provisioned_write_capacity")
+	// The value of the `ConsistentRead` request parameter.
+	//
+	// Type: boolean
+	// Required: No
+	AWSDynamoDBConsistentReadKey = attribute.Key("aws.dynamodb.consistent_read")
+	// The value of the `ProjectionExpression` request parameter.
+	//
+	// Type: string
+	// Required: No
+	// Examples: 'Title', 'Title, Price, Color', 'Title, Description, RelatedItems,
+	// ProductReviews'
+	AWSDynamoDBProjectionKey = attribute.Key("aws.dynamodb.projection")
+	// The value of the `Limit` request parameter.
+	//
+	// Type: int
+	// Required: No
+	// Examples: 10
+	AWSDynamoDBLimitKey = attribute.Key("aws.dynamodb.limit")
+	// The value of the `AttributesToGet` request parameter.
+	//
+	// Type: string[]
+	// Required: No
+	// Examples: 'lives', 'id'
+	AWSDynamoDBAttributesToGetKey = attribute.Key("aws.dynamodb.attributes_to_get")
+	// The value of the `IndexName` request parameter.
+	//
+	// Type: string
+	// Required: No
+	// Examples: 'name_to_group'
+	AWSDynamoDBIndexNameKey = attribute.Key("aws.dynamodb.index_name")
+	// The value of the `Select` request parameter.
+	//
+	// Type: string
+	// Required: No
+	// Examples: 'ALL_ATTRIBUTES', 'COUNT'
+	AWSDynamoDBSelectKey = attribute.Key("aws.dynamodb.select")
+)
+
+// DynamoDB.CreateTable
+const (
+	// The JSON-serialized value of each item of the `GlobalSecondaryIndexes` request
+	// field
+	//
+	// Type: string[]
+	// Required: No
+	// Examples: '{ "IndexName": "string", "KeySchema": [ { "AttributeName": "string",
+	// "KeyType": "string" } ], "Projection": { "NonKeyAttributes": [ "string" ],
+	// "ProjectionType": "string" }, "ProvisionedThroughput": { "ReadCapacityUnits":
+	// number, "WriteCapacityUnits": number } }'
+	AWSDynamoDBGlobalSecondaryIndexesKey = attribute.Key("aws.dynamodb.global_secondary_indexes")
+	// The JSON-serialized value of each item of the `LocalSecondaryIndexes` request
+	// field.
+	//
+	// Type: string[]
+	// Required: No
+	// Examples: '{ "IndexArn": "string", "IndexName": "string", "IndexSizeBytes":
+	// number, "ItemCount": number, "KeySchema": [ { "AttributeName": "string",
+	// "KeyType": "string" } ], "Projection": { "NonKeyAttributes": [ "string" ],
+	// "ProjectionType": "string" } }'
+	AWSDynamoDBLocalSecondaryIndexesKey = attribute.Key("aws.dynamodb.local_secondary_indexes")
+)
+
+// DynamoDB.ListTables
+const (
+	// The value of the `ExclusiveStartTableName` request parameter.
+	//
+	// Type: string
+	// Required: No
+	// Examples: 'Users', 'CatsTable'
+	AWSDynamoDBExclusiveStartTableKey = attribute.Key("aws.dynamodb.exclusive_start_table")
+	// The the number of items in the `TableNames` response parameter.
+	//
+	// Type: int
+	// Required: No
+	// Examples: 20
+	AWSDynamoDBTableCountKey = attribute.Key("aws.dynamodb.table_count")
+)
+
+// DynamoDB.Query
+const (
+	// The value of the `ScanIndexForward` request parameter.
+	//
+	// Type: boolean
+	// Required: No
+	AWSDynamoDBScanForwardKey = attribute.Key("aws.dynamodb.scan_forward")
+)
+
+// DynamoDB.Scan
+const (
+	// The value of the `Segment` request parameter.
+	//
+	// Type: int
+	// Required: No
+	// Examples: 10
+	AWSDynamoDBSegmentKey = attribute.Key("aws.dynamodb.segment")
+	// The value of the `TotalSegments` request parameter.
+	//
+	// Type: int
+	// Required: No
+	// Examples: 100
+	AWSDynamoDBTotalSegmentsKey = attribute.Key("aws.dynamodb.total_segments")
+	// The value of the `Count` response parameter.
+	//
+	// Type: int
+	// Required: No
+	// Examples: 10
+	AWSDynamoDBCountKey = attribute.Key("aws.dynamodb.count")
+	// The value of the `ScannedCount` response parameter.
+	//
+	// Type: int
+	// Required: No
+	// Examples: 50
+	AWSDynamoDBScannedCountKey = attribute.Key("aws.dynamodb.scanned_count")
+)
+
+// DynamoDB.UpdateTable
+const (
+	// The JSON-serialized value of each item in the `AttributeDefinitions` request
+	// field.
+	//
+	// Type: string[]
+	// Required: No
+	// Examples: '{ "AttributeName": "string", "AttributeType": "string" }'
+	AWSDynamoDBAttributeDefinitionsKey = attribute.Key("aws.dynamodb.attribute_definitions")
+	// The JSON-serialized value of each item in the the `GlobalSecondaryIndexUpdates`
+	// request field.
+	//
+	// Type: string[]
+	// Required: No
+	// Examples: '{ "Create": { "IndexName": "string", "KeySchema": [ {
+	// "AttributeName": "string", "KeyType": "string" } ], "Projection": {
+	// "NonKeyAttributes": [ "string" ], "ProjectionType": "string" },
+	// "ProvisionedThroughput": { "ReadCapacityUnits": number, "WriteCapacityUnits":
+	// number } }'
+	AWSDynamoDBGlobalSecondaryIndexUpdatesKey = attribute.Key("aws.dynamodb.global_secondary_index_updates")
+)
+
 // This document defines the attributes used in messaging systems.
 const (
 	// A string identifying the messaging system.
@@ -912,6 +1092,16 @@ var (
 	MessagingOperationReceive = MessagingOperationKey.String("receive")
 	// process
 	MessagingOperationProcess = MessagingOperationKey.String("process")
+)
+
+// Attributes for RabbitMQ
+const (
+	// RabbitMQ message routing key.
+	//
+	// Type: string
+	// Required: Unless it is empty.
+	// Examples: 'myKey'
+	MessagingRabbitmqRoutingKeyKey = attribute.Key("messaging.rabbitmq.routing_key")
 )
 
 // Attributes for Apache Kafka
