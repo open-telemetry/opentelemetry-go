@@ -17,6 +17,7 @@ package resource // import "go.opentelemetry.io/otel/sdk/resource"
 import (
 	"encoding/xml"
 	"fmt"
+	"io"
 	"os"
 )
 
@@ -64,7 +65,7 @@ func getPlistFile() (*os.File, error) {
 // parsePlistFile process the file pointed by `file` as a .plist file and returns
 // a map with the key-values for each pair of correlated <key> and <string> elements
 // contained in it.
-func parsePlistFile(file *os.File) (map[string]string, error) {
+func parsePlistFile(file io.Reader) (map[string]string, error) {
 	var v plist
 
 	err := xml.NewDecoder(file).Decode(&v)
