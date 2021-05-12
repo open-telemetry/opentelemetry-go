@@ -179,7 +179,7 @@ func TestTimeout(t *testing.T) {
 	driver := otlphttp.NewDriver(
 		otlphttp.WithEndpoint(mc.Endpoint()),
 		otlphttp.WithInsecure(),
-		otlphttp.WithTimeout(50*time.Millisecond),
+		otlphttp.WithTimeout(time.Nanosecond),
 	)
 	ctx := context.Background()
 	exporter, err := otlp.NewExporter(ctx, driver)
