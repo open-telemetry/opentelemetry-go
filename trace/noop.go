@@ -74,9 +74,6 @@ func (noopSpan) End(...SpanOption) {}
 // RecordError does nothing.
 func (noopSpan) RecordError(error, ...EventOption) {}
 
-// Tracer returns the Tracer that created this Span.
-func (noopSpan) Tracer() Tracer { return noopTracer{} }
-
 // AddEvent does nothing.
 func (noopSpan) AddEvent(string, ...EventOption) {}
 

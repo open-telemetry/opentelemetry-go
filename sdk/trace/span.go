@@ -292,11 +292,6 @@ func typeStr(i interface{}) string {
 	return fmt.Sprintf("%s.%s", t.PkgPath(), t.Name())
 }
 
-// Tracer returns the Tracer that created this span.
-func (s *span) Tracer() trace.Tracer {
-	return s.tracer
-}
-
 // AddEvent adds an event with the provided name and options. If this span is
 // not being recorded than this method does nothing.
 func (s *span) AddEvent(name string, o ...trace.EventOption) {
