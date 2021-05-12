@@ -497,10 +497,6 @@ func (sc SpanContext) MarshalJSON() ([]byte, error) {
 // create a Span and it is then up to the operation the Span represents to
 // properly end the Span when the operation itself ends.
 type Span interface {
-	// Tracer returns the Tracer that created the Span. Tracer MUST NOT be
-	// nil.
-	Tracer() Tracer
-
 	// End completes the Span. The Span is considered complete and ready to be
 	// delivered through the rest of the telemetry pipeline after this method
 	// is called. Therefore, updates to the Span are not allowed after this
