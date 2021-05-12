@@ -41,6 +41,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This brings the export interface into compliance with the specification in that it now accepts an explicitly immutable type instead of just an implied one. (#1873)
 - Unembed `SpanContext` in `Link`. (#1877)
 - Spans created by the global `Tracer` obtained from `go.opentelemetry.io/otel`, prior to a functioning `TracerProvider` being set, now propagate the span context from their parent if one exists. (#1901)
+- Move the `go.opentelemetry.io/otel/unit` package to `go.opentelemetry.io/otel/metric/unit`. (#1903)
 
 ### Deprecated
 
