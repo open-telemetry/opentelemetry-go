@@ -297,33 +297,40 @@ func WithMetricsTLSClientConfig(tlsCfg *tls.Config) GenericOption {
 }
 
 func WithInsecure() GenericOption {
-	return withInsecure(true)
+	return newGenericOption(func(cfg *Config) {
+		cfg.Traces.Insecure = true
+		cfg.Metrics.Insecure = true
+	})
 }
 
-func withInsecure(insecure bool) GenericOption {
+func WithSecure() GenericOption {
 	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.Insecure = insecure
-		cfg.Metrics.Insecure = insecure
+		cfg.Traces.Insecure = false
+		cfg.Metrics.Insecure = false
 	})
 }
 
 func WithInsecureTraces() GenericOption {
-	return withInsecureTraces(true)
+	return newGenericOption(func(cfg *Config) {
+		cfg.Traces.Insecure = true
+	})
 }
 
-func withInsecureTraces(insecure bool) GenericOption {
+func WithSecureTraces() GenericOption {
 	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.Insecure = insecure
+		cfg.Traces.Insecure = false
 	})
 }
 
 func WithInsecureMetrics() GenericOption {
-	return withInsecureMetrics(true)
+	return newGenericOption(func(cfg *Config) {
+		cfg.Metrics.Insecure = true
+	})
 }
 
-func withInsecureMetrics(insecure bool) GenericOption {
+func WithSecureMetrics() GenericOption {
 	return newGenericOption(func(cfg *Config) {
-		cfg.Metrics.Insecure = insecure
+		cfg.Metrics.Insecure = false
 	})
 }
 

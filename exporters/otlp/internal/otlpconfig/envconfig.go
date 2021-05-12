@@ -71,13 +71,31 @@ func (e *EnvOptionsReader) GetOptionsFromEnv() []GenericOption {
 
 	// Endpoint
 	if v, ok := e.getEnvValue("ENDPOINT"); ok {
-		opts = append(opts, endpointOptions(v, WithEndpoint, withInsecure)...)
+		if isInsecureEndpoint(v) {
+			opts = append(opts, WithInsecure())
+		} else {
+			opts = append(opts, WithSecure())
+		}
+
+		opts = append(opts, WithEndpoint(trimSchema(v)))
 	}
 	if v, ok := e.getEnvValue("TRACES_ENDPOINT"); ok {
-		opts = append(opts, endpointOptions(v, WithTracesEndpoint, withInsecureTraces)...)
+		if isInsecureEndpoint(v) {
+			opts = append(opts, WithInsecureTraces())
+		} else {
+			opts = append(opts, WithSecureTraces())
+		}
+
+		opts = append(opts, WithTracesEndpoint(trimSchema(v)))
 	}
 	if v, ok := e.getEnvValue("METRICS_ENDPOINT"); ok {
-		opts = append(opts, endpointOptions(v, WithMetricsEndpoint, withInsecureMetrics)...)
+		if isInsecureEndpoint(v) {
+			opts = append(opts, WithInsecureMetrics())
+		} else {
+			opts = append(opts, WithSecureMetrics())
+		}
+
+		opts = append(opts, WithMetricsEndpoint(trimSchema(v)))
 	}
 
 	// Certificate File
@@ -145,16 +163,17 @@ func (e *EnvOptionsReader) GetOptionsFromEnv() []GenericOption {
 	return opts
 }
 
-func endpointOptions(endpoint string, endpointOption func(endpoint string) GenericOption, insecureOption func(insecure bool) GenericOption) []GenericOption {
-	var endpointOptions []GenericOption
+func isInsecureEndpoint(v string) bool {
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(v)), "http://")
+}
 
-	endpointOptions = append(endpointOptions, insecureOption(strings.HasPrefix(endpoint, "http://")))
-
+func trimSchema(endpoint string) string {
 	endpoint = strings.Replace(endpoint, "https://", "", 1)
+	endpoint = strings.Replace(endpoint, "HTTPS://", "", 1)
 	endpoint = strings.Replace(endpoint, "http://", "", 1)
-	endpointOptions = append(endpointOptions, endpointOption(endpoint))
+	endpoint = strings.Replace(endpoint, "HTTP://", "", 1)
 
-	return endpointOptions
+	return endpoint
 }
 
 // getEnvValue gets an OTLP environment variable value of the specified key using the GetEnv function.
