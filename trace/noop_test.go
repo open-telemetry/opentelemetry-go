@@ -69,8 +69,4 @@ func TestNoopSpan(t *testing.T) {
 	if got, want := span.IsRecording(), false; got != want {
 		t.Errorf("span.IsRecording() returned %#v, want %#v", got, want)
 	}
-
-	if got, want := span.Tracer(), tracer; got != want {
-		t.Errorf("span.Tracer() returned %#v, want %#v", got, want)
-	}
 }
