@@ -129,12 +129,12 @@ func WithMaxPacketSize(size int) AgentEndpointOption {
 // - OTEL_EXPORTER_JAEGER_PASSWORD is the password to be sent as authentication to the collector endpoint.
 //
 // The passed options will take precedence over any environment variables.
-// If neither values are provided for the endpoint, the default value of "http://localhost:14250" will be used.
+// If neither values are provided for the endpoint, the default value of "http://localhost:14268/api/traces" will be used.
 // If neither values are provided for the username or the password, they will not be set since there is no default.
 func WithCollectorEndpoint(options ...CollectorEndpointOption) EndpointOption {
 	return func() (batchUploader, error) {
 		o := &CollectorEndpointOptions{
-			endpoint:   envOr(envEndpoint, "http://localhost:14250"),
+			endpoint:   envOr(envEndpoint, "http://localhost:14268/api/traces"),
 			username:   envOr(envUser, ""),
 			password:   envOr(envPassword, ""),
 			httpClient: http.DefaultClient,
@@ -173,7 +173,7 @@ type CollectorEndpointOptions struct {
 // This option overrides any value set for the
 // OTEL_EXPORTER_JAEGER_ENDPOINT environment variable.
 // If this option is not passed and the environment variable is not set,
-// "http://localhost:14250" will be used by default.
+// "http://localhost:14268/api/traces" will be used by default.
 func WithEndpoint(endpoint string) CollectorEndpointOption {
 	return func(o *CollectorEndpointOptions) {
 		o.endpoint = endpoint

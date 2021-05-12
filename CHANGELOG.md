@@ -41,6 +41,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `ExportSpans` method of the`SpanExporter` interface type was updated to accept `ReadOnlySpan`s instead of the removed `SpanSnapshot`.
   This brings the export interface into compliance with the specification in that it now accepts an explicitly immutable type instead of just an implied one. (#1873)
 - Unembed `SpanContext` in `Link`. (#1877)
+- Semantic conventions are now generated from the specification YAML. (#1891)
+- Spans created by the global `Tracer` obtained from `go.opentelemetry.io/otel`, prior to a functioning `TracerProvider` being set, now propagate the span context from their parent if one exists. (#1901)
+- Move the `go.opentelemetry.io/otel/unit` package to `go.opentelemetry.io/otel/metric/unit`. (#1903)
 
 ### Deprecated
 
@@ -56,12 +59,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Removed the `SpanSnapshot` type from the `go.opentelemetry.io/otel/sdk/trace` package.
   The use of this type has been replaced with the use of the explicitly immutable `ReadOnlySpan` type.
   When a concrete representation of a read-only span is needed for testing, the newly added `SpanStub` in the `go.opentelemetry.io/otel/sdk/trace/tracetest` package should be used. (#1873)
+- Remove the `Tracer` method from the `Span` interface in the `go.opentelemetry.io/otel/trace` package.
+  Using the same tracer that created a span introduces the error where an instrumentation library's `Tracer` is used by other code instead of their own.
+  The `"go.opentelemetry.io/otel".Tracer` function or a `TracerProvider` should be used to acquire a library specific `Tracer` instead. (#1900)
 
 ### Fixed
 
 - Only report errors from the `"go.opentelemetry.io/otel/sdk/resource".Environment` function when they are not `nil`. (#1850, #1851)
 - The `Shutdown` method of the simple `SpanProcessor` in the `go.opentelemetry.io/otel/sdk/trace` package now honors the context deadline or cancellation. (#1616, #1856)
 - BatchSpanProcessor now drops span batches that failed to be exported. (#1860)
+- Use `http://localhost:14268/api/traces` as default Jaeger collector endpoint instead of `http://localhost:14250`. (#1898)
 
 ### Security
 
