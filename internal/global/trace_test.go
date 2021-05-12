@@ -213,3 +213,19 @@ func TestTraceProviderDelegatesSameInstance(t *testing.T) {
 
 	assert.NotSame(t, tracer, gtp.Tracer("abc", trace.WithInstrumentationVersion("xyz")))
 }
+
+func TestSpanContextPropagatedWithNonRecordingSpan(t *testing.T) {
+	global.ResetForTest()
+
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    [16]byte{0x01},
+		SpanID:     [8]byte{0x01},
+		TraceFlags: trace.FlagsSampled,
+		Remote:     true,
+	})
+	ctx := trace.ContextWithSpanContext(context.Background(), sc)
+	_, span := otel.Tracer("test").Start(ctx, "test")
+
+	assert.Equal(t, sc, span.SpanContext())
+	assert.False(t, span.IsRecording())
+}
