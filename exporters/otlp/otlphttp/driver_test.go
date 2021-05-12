@@ -171,11 +171,11 @@ func TestRetry(t *testing.T) {
 }
 
 func TestTimeout(t *testing.T) {
-	mcCfg := mockCollectorConfig{
-		InjectDelay: 100 * time.Millisecond,
-	}
+	delay := make(chan struct{})
+	mcCfg := mockCollectorConfig{Delay: delay}
 	mc := runMockCollector(t, mcCfg)
 	defer mc.MustStop(t)
+	defer func() { close(delay) }()
 	driver := otlphttp.NewDriver(
 		otlphttp.WithEndpoint(mc.Endpoint()),
 		otlphttp.WithInsecure(),
@@ -188,7 +188,7 @@ func TestTimeout(t *testing.T) {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
 	err = exporter.ExportSpans(ctx, otlptest.SingleReadOnlySpan())
-	assert.Equal(t, true, os.IsTimeout(err))
+	assert.Equalf(t, true, os.IsTimeout(err), "expected timeout error, got: %v", err)
 }
 
 func TestRetryFailed(t *testing.T) {
