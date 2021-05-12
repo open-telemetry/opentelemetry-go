@@ -19,7 +19,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/number"
-	"go.opentelemetry.io/otel/unit"
+	"go.opentelemetry.io/otel/metric/unit"
 )
 
 // MeterProvider supports named Meter instances.
