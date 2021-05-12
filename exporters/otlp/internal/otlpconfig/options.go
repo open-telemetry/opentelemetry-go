@@ -303,15 +303,34 @@ func WithInsecure() GenericOption {
 	})
 }
 
+func WithSecure() GenericOption {
+	return newGenericOption(func(cfg *Config) {
+		cfg.Traces.Insecure = false
+		cfg.Metrics.Insecure = false
+	})
+}
+
 func WithInsecureTraces() GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Insecure = true
 	})
 }
 
+func WithSecureTraces() GenericOption {
+	return newGenericOption(func(cfg *Config) {
+		cfg.Traces.Insecure = false
+	})
+}
+
 func WithInsecureMetrics() GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Metrics.Insecure = true
+	})
+}
+
+func WithSecureMetrics() GenericOption {
+	return newGenericOption(func(cfg *Config) {
+		cfg.Metrics.Insecure = false
 	})
 }
 
