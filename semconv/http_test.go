@@ -63,7 +63,7 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			expected: []attribute.KeyValue{
-				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.transport", "ip_tcp"),
 			},
 		},
 		{
@@ -79,7 +79,7 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			expected: []attribute.KeyValue{
-				attribute.String("net.transport", "IP.UDP"),
+				attribute.String("net.transport", "ip_udp"),
 			},
 		},
 		{
@@ -95,7 +95,7 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			expected: []attribute.KeyValue{
-				attribute.String("net.transport", "IP"),
+				attribute.String("net.transport", "ip"),
 			},
 		},
 		{
@@ -111,7 +111,7 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			expected: []attribute.KeyValue{
-				attribute.String("net.transport", "Unix"),
+				attribute.String("net.transport", "unix"),
 			},
 		},
 		{
@@ -143,7 +143,7 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			expected: []attribute.KeyValue{
-				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.transport", "ip_tcp"),
 				attribute.String("net.peer.ip", "1.2.3.4"),
 				attribute.Int("net.peer.port", 56),
 			},
@@ -161,7 +161,7 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			expected: []attribute.KeyValue{
-				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.transport", "ip_tcp"),
 				attribute.String("net.peer.name", "example.com"),
 				attribute.Int("net.peer.port", 56),
 			},
@@ -179,7 +179,7 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			expected: []attribute.KeyValue{
-				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.transport", "ip_tcp"),
 				attribute.String("net.peer.ip", "1.2.3.4"),
 			},
 		},
@@ -196,7 +196,7 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			expected: []attribute.KeyValue{
-				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.transport", "ip_tcp"),
 				attribute.String("net.peer.name", "example.com"),
 			},
 		},
@@ -213,7 +213,7 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			expected: []attribute.KeyValue{
-				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.transport", "ip_tcp"),
 			},
 		},
 		{
@@ -229,7 +229,7 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			expected: []attribute.KeyValue{
-				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.transport", "ip_tcp"),
 				attribute.String("net.peer.ip", "1.2.3.4"),
 				attribute.Int("net.peer.port", 56),
 				attribute.String("net.host.name", "example.com"),
@@ -248,7 +248,7 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			expected: []attribute.KeyValue{
-				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.transport", "ip_tcp"),
 				attribute.String("net.peer.ip", "1.2.3.4"),
 				attribute.Int("net.peer.port", 56),
 				attribute.String("net.host.ip", "4.3.2.1"),
@@ -267,7 +267,7 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			expected: []attribute.KeyValue{
-				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.transport", "ip_tcp"),
 				attribute.String("net.peer.ip", "1.2.3.4"),
 				attribute.Int("net.peer.port", 56),
 				attribute.String("net.host.name", "example.com"),
@@ -287,7 +287,7 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			expected: []attribute.KeyValue{
-				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.transport", "ip_tcp"),
 				attribute.String("net.peer.ip", "1.2.3.4"),
 				attribute.Int("net.peer.port", 56),
 				attribute.String("net.host.ip", "4.3.2.1"),
@@ -307,7 +307,7 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			expected: []attribute.KeyValue{
-				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.transport", "ip_tcp"),
 				attribute.String("net.peer.ip", "1.2.3.4"),
 				attribute.Int("net.peer.port", 56),
 				attribute.String("net.host.name", "example.com"),
@@ -326,7 +326,7 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			expected: []attribute.KeyValue{
-				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.transport", "ip_tcp"),
 				attribute.String("net.peer.ip", "1.2.3.4"),
 				attribute.Int("net.peer.port", 56),
 				attribute.String("net.host.ip", "4.3.2.1"),
@@ -345,7 +345,7 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			expected: []attribute.KeyValue{
-				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.transport", "ip_tcp"),
 				attribute.String("net.peer.ip", "1.2.3.4"),
 				attribute.Int("net.peer.port", 56),
 			},
@@ -365,7 +365,7 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				"Host": []string{"4.3.2.1:78"},
 			},
 			expected: []attribute.KeyValue{
-				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.transport", "ip_tcp"),
 				attribute.String("net.peer.ip", "1.2.3.4"),
 				attribute.Int("net.peer.port", 56),
 				attribute.String("net.host.ip", "4.3.2.1"),
@@ -386,7 +386,7 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			expected: []attribute.KeyValue{
-				attribute.String("net.transport", "IP.TCP"),
+				attribute.String("net.transport", "ip_tcp"),
 				attribute.String("net.peer.ip", "1.2.3.4"),
 				attribute.Int("net.peer.port", 56),
 				attribute.String("net.host.ip", "4.3.2.1"),

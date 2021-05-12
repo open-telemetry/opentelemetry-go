@@ -25,6 +25,11 @@ import (
 	"go.opentelemetry.io/otel/codes"
 )
 
+var (
+	HTTPSchemeHTTP  = HTTPSchemeKey.String("http")
+	HTTPSchemeHTTPS = HTTPSchemeKey.String("https")
+)
+
 // NetAttributesFromHTTPRequest generates attributes of the net
 // namespace as specified by the OpenTelemetry specification for a
 // span.  The network parameter is a string that net.Dial function
