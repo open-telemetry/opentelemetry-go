@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -28,6 +29,8 @@ import (
 
 	"go.opentelemetry.io/otel"
 )
+
+var httpSchemeRegexp = regexp.MustCompile(`(?i)^http://|https://`)
 
 func ApplyGRPCEnvConfigs(cfg *Config) {
 	e := EnvOptionsReader{
@@ -163,17 +166,12 @@ func (e *EnvOptionsReader) GetOptionsFromEnv() []GenericOption {
 	return opts
 }
 
-func isInsecureEndpoint(v string) bool {
-	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(v)), "http://")
+func isInsecureEndpoint(endpoint string) bool {
+	return strings.HasPrefix(strings.ToLower(endpoint), "http://")
 }
 
 func trimSchema(endpoint string) string {
-	endpoint = strings.Replace(endpoint, "https://", "", 1)
-	endpoint = strings.Replace(endpoint, "HTTPS://", "", 1)
-	endpoint = strings.Replace(endpoint, "http://", "", 1)
-	endpoint = strings.Replace(endpoint, "HTTP://", "", 1)
-
-	return endpoint
+	return httpSchemeRegexp.ReplaceAllString(endpoint, "")
 }
 
 // getEnvValue gets an OTLP environment variable value of the specified key using the GetEnv function.

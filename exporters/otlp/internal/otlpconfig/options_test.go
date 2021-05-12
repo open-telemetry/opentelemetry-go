@@ -137,6 +137,18 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		{
+			name: "Test Environment Endpoint with HTTP scheme and leading & trailingspaces",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "      http://env_endpoint    ",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Equal(t, "env_endpoint", c.Traces.Endpoint)
+				assert.Equal(t, "env_endpoint", c.Metrics.Endpoint)
+				assert.Equal(t, true, c.Traces.Insecure)
+				assert.Equal(t, true, c.Metrics.Insecure)
+			},
+		},
+		{
 			name: "Test Environment Endpoint with HTTPS scheme",
 			env: map[string]string{
 				"OTEL_EXPORTER_OTLP_ENDPOINT": "https://env_endpoint",
@@ -180,7 +192,7 @@ func TestConfigs(t *testing.T) {
 			name: "Test Environment Signal Specific Endpoint with uppercase scheme",
 			env: map[string]string{
 				"OTEL_EXPORTER_OTLP_ENDPOINT":         "HTTP://overrode_by_signal_specific",
-				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT":  "HTTP://env_traces_endpoint",
+				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT":  "HtTp://env_traces_endpoint",
 				"OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "env_metrics_endpoint",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
