@@ -9,7 +9,11 @@ replace (
 
 require (
 	github.com/cenkalti/backoff/v4 v4.1.0
+	github.com/envoyproxy/go-control-plane v0.9.9-0.20210217033140-668b12f5399d // indirect
+	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-cmp v0.5.5
+	github.com/google/uuid v1.1.2 // indirect
+	github.com/grpc-ecosystem/grpc-gateway v1.14.6 // indirect
 	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/otel v0.20.0
 	go.opentelemetry.io/otel/metric v0.20.0
@@ -17,9 +21,10 @@ require (
 	go.opentelemetry.io/otel/sdk/export/metric v0.20.0
 	go.opentelemetry.io/otel/sdk/metric v0.20.0
 	go.opentelemetry.io/otel/trace v0.20.0
-	go.opentelemetry.io/proto/otlp v0.8.0
+	golang.org/x/net v0.0.0-20200822124328-c89045814202 // indirect
+	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
-	google.golang.org/grpc v1.37.0
+	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.26.0
 )
 
