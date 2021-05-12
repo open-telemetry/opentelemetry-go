@@ -26,7 +26,7 @@ import (
 
 func TestNewRawExporterWithDefault(t *testing.T) {
 	const (
-		collectorEndpoint = "http://localhost:14250"
+		collectorEndpoint = "http://localhost:14268/api/traces"
 		username          = ""
 		password          = ""
 	)
