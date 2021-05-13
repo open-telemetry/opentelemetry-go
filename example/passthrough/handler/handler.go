@@ -39,7 +39,7 @@ func New(next func(r *http.Request)) *Handler {
 	// global progatators and tracer providers.
 	return &Handler{
 		propagators: otel.GetTextMapPropagator(),
-		tracer:      otel.GetTracerProvider().Tracer("examples/passthrough/handler"),
+		tracer:      otel.Tracer("examples/passthrough/handler"),
 		next:        next,
 	}
 }
