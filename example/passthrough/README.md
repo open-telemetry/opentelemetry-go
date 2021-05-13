@@ -15,7 +15,7 @@ But the following will propagate context _and_ create new, potentially recorded 
 // Setup SDK
 exp, _ := stdout.NewExporter(stdout.WithPrettyPrint())
 tp = sdktrace.NewTracerProvider(
-    sdktrace.WithSpanProcessor(sdktrace.NewBatchSpanProcessor(exp)),
+    sdktrace.WithBatcher(exp),
 )
 otel.SetTracerProvider(tp)
 // Setup Propagators
