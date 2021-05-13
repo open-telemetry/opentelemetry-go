@@ -1,0 +1,76 @@
+{%- macro to_go_attr_type(type, val) -%}
+  {%- if type == "string" -%}
+    String("{{val}}")
+  {%- elif type == "int" -%}
+    Int({{val}})
+  {%- endif -%}
+{%- endmacro -%}
+{%- macro to_go_name(fqn) -%}
+{{fqn | replace(".", " ") | replace("_", " ") | title | replace(" ", "")}}
+{%- endmacro -%}
+{%- macro godoc(attr) -%}
+{{ attr.brief }}
+//
+{%- if attr.attr_type is string %}
+Type: {{ attr.attr_type }}
+{%- else %}
+Type: Enum
+{%- endif %}
+{%- if attr.required == Required.ALWAYS %}
+Required: Always
+{%- elif attr.required == Required.CONDITIONAL %}
+Required: {{ attr.required_msg }}
+{%- else %}
+Required: No
+{%- endif %}
+{%- if attr.examples is iterable %}
+Examples: {{ attr.examples | pprint | trim("[]")  }}
+{%- endif %}
+{%- if attr.note %}
+Note: {{ attr.note }}
+{%- endif %}
+{%- endmacro -%}
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Code generated from semantic convention specification. DO NOT EDIT.
+
+package semconv  // import "go.opentelemetry.io/otel/semconv"
+
+import "go.opentelemetry.io/otel/attribute"
+
+{% for semconv in semconvs -%}
+{%- if semconvs[semconv].attributes | rejectattr("ref") | selectattr("is_local") | sort(attribute=fqn) | length > 0 -%}
+// {{ semconvs[semconv].brief }}
+const (
+{% for attr in semconvs[semconv].attributes if attr.is_local and not attr.ref -%}
+    // {{ godoc(attr) | wordwrap | indent(3) | replace("   ", "\t// ") | replace("// //", "//") }}
+    {{to_go_name(attr.fqn)}}Key = attribute.Key("{{attr.fqn}}")
+{% endfor %}
+)
+{%- for attr in semconvs[semconv].attributes if attr.is_local and not attr.ref -%}
+{%- if attr.attr_type is not string %}
+
+var (
+{%- for val in attr.attr_type.members %}
+    // {{ val.brief | to_doc_brief }}
+    {{to_go_name("{}.{}".format(attr.fqn, val.member_id))}} = {{to_go_name(attr.fqn)}}Key.{{to_go_attr_type(attr.attr_type.enum_type, val.value)}}
+{%- endfor %}
+)
+{%- endif -%}
+{%- endfor %}
+
+{% endif %}
+{% endfor -%}
+

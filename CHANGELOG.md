@@ -24,6 +24,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `Status` type was added to the `go.opentelemetry.io/otel/sdk/trace` package to represent the status of a span. (#1874)
 - The `SpanStub` type and its associated functions were added to the `go.opentelemetry.io/otel/sdk/trace/tracetest` package.
   This type can be used as a testing replacement for the `SpanSnapshot` that was removed from the `go.opentelemetry.io/otel/sdk/trace` package. (#1873)
+- Adds support for scheme in `OTEL_EXPORTER_OTLP_ENDPOINT` according to the spec. (#1886)
 
 ### Changed
 
@@ -40,6 +41,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `ExportSpans` method of the`SpanExporter` interface type was updated to accept `ReadOnlySpan`s instead of the removed `SpanSnapshot`.
   This brings the export interface into compliance with the specification in that it now accepts an explicitly immutable type instead of just an implied one. (#1873)
 - Unembed `SpanContext` in `Link`. (#1877)
+- Semantic conventions are now generated from the specification YAML. (#1891)
 - Spans created by the global `Tracer` obtained from `go.opentelemetry.io/otel`, prior to a functioning `TracerProvider` being set, now propagate the span context from their parent if one exists. (#1901)
 - The `"go.opentelemetry.io/otel".Tracer` function now accepts tracer options. (#1902)
 - Move the `go.opentelemetry.io/otel/unit` package to `go.opentelemetry.io/otel/metric/unit`. (#1903)
