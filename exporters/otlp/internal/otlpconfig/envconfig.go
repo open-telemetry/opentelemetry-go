@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -28,6 +29,8 @@ import (
 
 	"go.opentelemetry.io/otel"
 )
+
+var httpSchemeRegexp = regexp.MustCompile(`(?i)^http://|https://`)
 
 func ApplyGRPCEnvConfigs(cfg *Config) {
 	e := EnvOptionsReader{
@@ -71,13 +74,31 @@ func (e *EnvOptionsReader) GetOptionsFromEnv() []GenericOption {
 
 	// Endpoint
 	if v, ok := e.getEnvValue("ENDPOINT"); ok {
-		opts = append(opts, WithEndpoint(v))
+		if isInsecureEndpoint(v) {
+			opts = append(opts, WithInsecure())
+		} else {
+			opts = append(opts, WithSecure())
+		}
+
+		opts = append(opts, WithEndpoint(trimSchema(v)))
 	}
 	if v, ok := e.getEnvValue("TRACES_ENDPOINT"); ok {
-		opts = append(opts, WithTracesEndpoint(v))
+		if isInsecureEndpoint(v) {
+			opts = append(opts, WithInsecureTraces())
+		} else {
+			opts = append(opts, WithSecureTraces())
+		}
+
+		opts = append(opts, WithTracesEndpoint(trimSchema(v)))
 	}
 	if v, ok := e.getEnvValue("METRICS_ENDPOINT"); ok {
-		opts = append(opts, WithMetricsEndpoint(v))
+		if isInsecureEndpoint(v) {
+			opts = append(opts, WithInsecureMetrics())
+		} else {
+			opts = append(opts, WithSecureMetrics())
+		}
+
+		opts = append(opts, WithMetricsEndpoint(trimSchema(v)))
 	}
 
 	// Certificate File
@@ -143,6 +164,14 @@ func (e *EnvOptionsReader) GetOptionsFromEnv() []GenericOption {
 	}
 
 	return opts
+}
+
+func isInsecureEndpoint(endpoint string) bool {
+	return strings.HasPrefix(strings.ToLower(endpoint), "http://")
+}
+
+func trimSchema(endpoint string) string {
+	return httpSchemeRegexp.ReplaceAllString(endpoint, "")
 }
 
 // getEnvValue gets an OTLP environment variable value of the specified key using the GetEnv function.
