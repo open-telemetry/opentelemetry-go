@@ -66,22 +66,22 @@ func (fn optionFunc) apply(cfg *config) {
 
 // WithLogger configures the exporter to use the passed logger.
 func WithLogger(logger *log.Logger) Option {
-	return optionFunc(func(opts *config) {
-		opts.logger = logger
+	return optionFunc(func(cfg *config) {
+		cfg.logger = logger
 	})
 }
 
 // WithClient configures the exporter to use the passed HTTP client.
 func WithClient(client *http.Client) Option {
-	return optionFunc(func(opts *config) {
-		opts.client = client
+	return optionFunc(func(cfg *config) {
+		cfg.client = client
 	})
 }
 
 // WithSDKOptions configures options passed to the created TracerProvider.
 func WithSDKOptions(tpOpts ...sdktrace.TracerProviderOption) Option {
-	return optionFunc(func(opts *config) {
-		opts.tpOpts = tpOpts
+	return optionFunc(func(cfg *config) {
+		cfg.tpOpts = tpOpts
 	})
 }
 
