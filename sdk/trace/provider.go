@@ -264,8 +264,8 @@ func WithBatcher(e SpanExporter, opts ...BatchSpanProcessorOption) TracerProvide
 
 // WithSpanProcessor registers the SpanProcessor with a TracerProvider.
 func WithSpanProcessor(sp SpanProcessor) TracerProviderOption {
-	return traceProviderOptionFunc(func(opts *tracerProviderConfig) {
-		opts.processors = append(opts.processors, sp)
+	return traceProviderOptionFunc(func(cfg *tracerProviderConfig) {
+		cfg.processors = append(cfg.processors, sp)
 	})
 }
 
@@ -277,8 +277,8 @@ func WithSpanProcessor(sp SpanProcessor) TracerProviderOption {
 // If this option is not used, the TracerProvider will use the
 // resource.Default() Resource by default.
 func WithResource(r *resource.Resource) TracerProviderOption {
-	return traceProviderOptionFunc(func(opts *tracerProviderConfig) {
-		opts.resource = resource.Merge(resource.Environment(), r)
+	return traceProviderOptionFunc(func(cfg *tracerProviderConfig) {
+		cfg.resource = resource.Merge(resource.Environment(), r)
 	})
 }
 
@@ -290,9 +290,9 @@ func WithResource(r *resource.Resource) TracerProviderOption {
 // If this option is not used, the TracerProvider will use a random number
 // IDGenerator by default.
 func WithIDGenerator(g IDGenerator) TracerProviderOption {
-	return traceProviderOptionFunc(func(opts *tracerProviderConfig) {
+	return traceProviderOptionFunc(func(cfg *tracerProviderConfig) {
 		if g != nil {
-			opts.idGenerator = g
+			cfg.idGenerator = g
 		}
 	})
 }
@@ -305,9 +305,9 @@ func WithIDGenerator(g IDGenerator) TracerProviderOption {
 // If this option is not used, the TracerProvider will use a
 // ParentBased(AlwaysSample) Sampler by default.
 func WithSampler(s Sampler) TracerProviderOption {
-	return traceProviderOptionFunc(func(opts *tracerProviderConfig) {
+	return traceProviderOptionFunc(func(cfg *tracerProviderConfig) {
 		if s != nil {
-			opts.sampler = s
+			cfg.sampler = s
 		}
 	})
 }
@@ -320,8 +320,8 @@ func WithSampler(s Sampler) TracerProviderOption {
 // If this option is not used, the TracerProvider will use the default
 // SpanLimits.
 func WithSpanLimits(sl SpanLimits) TracerProviderOption {
-	return traceProviderOptionFunc(func(opts *tracerProviderConfig) {
-		opts.spanLimits = sl
+	return traceProviderOptionFunc(func(cfg *tracerProviderConfig) {
+		cfg.spanLimits = sl
 	})
 }
 
