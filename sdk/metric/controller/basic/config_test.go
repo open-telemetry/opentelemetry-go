@@ -26,12 +26,12 @@ import (
 func TestWithResource(t *testing.T) {
 	r := resource.NewWithAttributes(attribute.String("A", "a"))
 
-	c := &Config{}
-	WithResource(r).Apply(c)
+	c := &config{}
+	WithResource(r).apply(c)
 	assert.Equal(t, r.Equivalent(), c.Resource.Equivalent())
 
 	// Ensure overwriting works.
-	c = &Config{Resource: &resource.Resource{}}
-	WithResource(r).Apply(c)
+	c = &config{Resource: &resource.Resource{}}
+	WithResource(r).apply(c)
 	assert.Equal(t, r.Equivalent(), c.Resource.Equivalent())
 }

@@ -43,7 +43,15 @@ const (
 
 // Option applies an option to the HTTP driver.
 type Option interface {
+	applyHTTPOption(*otlpconfig.Config)
+}
+
+type wrappedOption struct {
 	otlpconfig.HTTPOption
+}
+
+func (w wrappedOption) applyHTTPOption(cfg *otlpconfig.Config) {
+	w.ApplyHTTPOption(cfg)
 }
 
 // WithEndpoint allows one to set the address of the collector
@@ -52,7 +60,7 @@ type Option interface {
 // DefaultCollectorHost:DefaultCollectorPort. Note that the endpoint
 // must not contain any URL path.
 func WithEndpoint(endpoint string) Option {
-	return otlpconfig.WithEndpoint(endpoint)
+	return wrappedOption{otlpconfig.WithEndpoint(endpoint)}
 }
 
 // WithTracesEndpoint allows one to set the address of the collector
@@ -60,7 +68,7 @@ func WithEndpoint(endpoint string) Option {
 // unset, it will instead try to use the Endpoint configuration.
 // Note that the endpoint must not contain any URL path.
 func WithTracesEndpoint(endpoint string) Option {
-	return otlpconfig.WithTracesEndpoint(endpoint)
+	return wrappedOption{otlpconfig.WithTracesEndpoint(endpoint)}
 }
 
 // WithMetricsEndpoint allows one to set the address of the collector
@@ -68,132 +76,132 @@ func WithTracesEndpoint(endpoint string) Option {
 // unset, it will instead try to use the Endpoint configuration.
 // Note that the endpoint must not contain any URL path.
 func WithMetricsEndpoint(endpoint string) Option {
-	return otlpconfig.WithMetricsEndpoint(endpoint)
+	return wrappedOption{otlpconfig.WithMetricsEndpoint(endpoint)}
 }
 
 // WithCompression tells the driver to compress the sent data.
 func WithCompression(compression otlp.Compression) Option {
-	return otlpconfig.WithCompression(compression)
+	return wrappedOption{otlpconfig.WithCompression(compression)}
 }
 
 // WithTracesCompression tells the driver to compress the sent traces data.
 func WithTracesCompression(compression otlp.Compression) Option {
-	return otlpconfig.WithTracesCompression(compression)
+	return wrappedOption{otlpconfig.WithTracesCompression(compression)}
 }
 
 // WithMetricsCompression tells the driver to compress the sent metrics data.
 func WithMetricsCompression(compression otlp.Compression) Option {
-	return otlpconfig.WithMetricsCompression(compression)
+	return wrappedOption{otlpconfig.WithMetricsCompression(compression)}
 }
 
 // WithTracesURLPath allows one to override the default URL path used
 // for sending traces. If unset, DefaultTracesPath will be used.
 func WithTracesURLPath(urlPath string) Option {
-	return otlpconfig.WithTracesURLPath(urlPath)
+	return wrappedOption{otlpconfig.WithTracesURLPath(urlPath)}
 }
 
 // WithMetricsURLPath allows one to override the default URL path used
 // for sending metrics. If unset, DefaultMetricsPath will be used.
 func WithMetricsURLPath(urlPath string) Option {
-	return otlpconfig.WithMetricsURLPath(urlPath)
+	return wrappedOption{otlpconfig.WithMetricsURLPath(urlPath)}
 }
 
 // WithMaxAttempts allows one to override how many times the driver
 // will try to send the payload in case of retryable errors. If unset,
 // DefaultMaxAttempts will be used.
 func WithMaxAttempts(maxAttempts int) Option {
-	return otlpconfig.WithMaxAttempts(maxAttempts)
+	return wrappedOption{otlpconfig.WithMaxAttempts(maxAttempts)}
 }
 
 // WithBackoff tells the driver to use the duration as a base of the
 // exponential backoff strategy. If unset, DefaultBackoff will be
 // used.
 func WithBackoff(duration time.Duration) Option {
-	return otlpconfig.WithBackoff(duration)
+	return wrappedOption{otlpconfig.WithBackoff(duration)}
 }
 
 // WithTLSClientConfig can be used to set up a custom TLS
 // configuration for the client used to send payloads to the
 // collector. Use it if you want to use a custom certificate.
 func WithTLSClientConfig(tlsCfg *tls.Config) Option {
-	return otlpconfig.WithTLSClientConfig(tlsCfg)
+	return wrappedOption{otlpconfig.WithTLSClientConfig(tlsCfg)}
 }
 
 // WithTracesTLSClientConfig can be used to set up a custom TLS
 // configuration for the client used to send traces.
 // Use it if you want to use a custom certificate.
 func WithTracesTLSClientConfig(tlsCfg *tls.Config) Option {
-	return otlpconfig.WithTracesTLSClientConfig(tlsCfg)
+	return wrappedOption{otlpconfig.WithTracesTLSClientConfig(tlsCfg)}
 }
 
 // WithMetricsTLSClientConfig can be used to set up a custom TLS
 // configuration for the client used to send metrics.
 // Use it if you want to use a custom certificate.
 func WithMetricsTLSClientConfig(tlsCfg *tls.Config) Option {
-	return otlpconfig.WithMetricsTLSClientConfig(tlsCfg)
+	return wrappedOption{otlpconfig.WithMetricsTLSClientConfig(tlsCfg)}
 }
 
 // WithInsecure tells the driver to connect to the collector using the
 // HTTP scheme, instead of HTTPS.
 func WithInsecure() Option {
-	return otlpconfig.WithInsecure()
+	return wrappedOption{otlpconfig.WithInsecure()}
 }
 
 // WithInsecureTraces tells the driver to connect to the traces collector using the
 // HTTP scheme, instead of HTTPS.
 func WithInsecureTraces() Option {
-	return otlpconfig.WithInsecureTraces()
+	return wrappedOption{otlpconfig.WithInsecureTraces()}
 }
 
 // WithInsecureMetrics tells the driver to connect to the metrics collector using the
 // HTTP scheme, instead of HTTPS.
 func WithInsecureMetrics() Option {
-	return otlpconfig.WithInsecureMetrics()
+	return wrappedOption{otlpconfig.WithInsecureMetrics()}
 }
 
 // WithHeaders allows one to tell the driver to send additional HTTP
 // headers with the payloads. Specifying headers like Content-Length,
 // Content-Encoding and Content-Type may result in a broken driver.
 func WithHeaders(headers map[string]string) Option {
-	return otlpconfig.WithHeaders(headers)
+	return wrappedOption{otlpconfig.WithHeaders(headers)}
 }
 
 // WithTracesHeaders allows one to tell the driver to send additional HTTP
 // headers with the trace payloads. Specifying headers like Content-Length,
 // Content-Encoding and Content-Type may result in a broken driver.
 func WithTracesHeaders(headers map[string]string) Option {
-	return otlpconfig.WithTracesHeaders(headers)
+	return wrappedOption{otlpconfig.WithTracesHeaders(headers)}
 }
 
 // WithMetricsHeaders allows one to tell the driver to send additional HTTP
 // headers with the metrics payloads. Specifying headers like Content-Length,
 // Content-Encoding and Content-Type may result in a broken driver.
 func WithMetricsHeaders(headers map[string]string) Option {
-	return otlpconfig.WithMetricsHeaders(headers)
+	return wrappedOption{otlpconfig.WithMetricsHeaders(headers)}
 }
 
 // WithMarshal tells the driver which wire format to use when sending to the
 // collector.  If unset, MarshalProto will be used
 func WithMarshal(m otlp.Marshaler) Option {
-	return otlpconfig.NewHTTPOption(func(cfg *otlpconfig.Config) {
+	return wrappedOption{otlpconfig.NewHTTPOption(func(cfg *otlpconfig.Config) {
 		cfg.Marshaler = m
-	})
+	})}
 }
 
 // WithTimeout tells the driver the max waiting time for the backend to process
 // each spans or metrics batch.  If unset, the default will be 10 seconds.
 func WithTimeout(duration time.Duration) Option {
-	return otlpconfig.WithTimeout(duration)
+	return wrappedOption{otlpconfig.WithTimeout(duration)}
 }
 
 // WithTracesTimeout tells the driver the max waiting time for the backend to process
 // each spans batch.  If unset, the default will be 10 seconds.
 func WithTracesTimeout(duration time.Duration) Option {
-	return otlpconfig.WithTracesTimeout(duration)
+	return wrappedOption{otlpconfig.WithTracesTimeout(duration)}
 }
 
 // WithMetricsTimeout tells the driver the max waiting time for the backend to process
 // each metrics batch.  If unset, the default will be 10 seconds.
 func WithMetricsTimeout(duration time.Duration) Option {
-	return otlpconfig.WithMetricsTimeout(duration)
+	return wrappedOption{otlpconfig.WithMetricsTimeout(duration)}
 }

@@ -28,7 +28,7 @@ import (
 )
 
 type metricExporter struct {
-	config Config
+	config config
 }
 
 var _ exportmetric.Exporter = &metricExporter{}
