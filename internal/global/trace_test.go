@@ -93,7 +93,6 @@ func TestTraceProviderDelegates(t *testing.T) {
 		tracer: func(name string, opts ...trace.TracerOption) trace.Tracer {
 			called = true
 			assert.Equal(t, "abc", name)
-			assert.Equal(t, []trace.TracerOption{trace.WithInstrumentationVersion("xyz")}, opts)
 			return trace.NewNoopTracerProvider().Tracer("")
 		},
 	})
@@ -131,7 +130,6 @@ func TestTraceProviderDelegatesConcurrentSafe(t *testing.T) {
 		tracer: func(name string, opts ...trace.TracerOption) trace.Tracer {
 			newVal := atomic.AddInt32(&called, 1)
 			assert.Equal(t, "abc", name)
-			assert.Equal(t, []trace.TracerOption{trace.WithInstrumentationVersion("xyz")}, opts)
 			if newVal == 10 {
 				// Signal the goroutine to finish.
 				close(quit)
@@ -175,7 +173,6 @@ func TestTracerDelegatesConcurrentSafe(t *testing.T) {
 	otel.SetTracerProvider(fnTracerProvider{
 		tracer: func(name string, opts ...trace.TracerOption) trace.Tracer {
 			assert.Equal(t, "abc", name)
-			assert.Equal(t, []trace.TracerOption{trace.WithInstrumentationVersion("xyz")}, opts)
 			return fnTracer{
 				start: func(ctx context.Context, spanName string, opts ...trace.SpanOption) (context.Context, trace.Span) {
 					newVal := atomic.AddInt32(&called, 1)

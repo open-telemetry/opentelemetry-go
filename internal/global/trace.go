@@ -92,7 +92,7 @@ func (p *tracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 
 	key := il{
 		name:    name,
-		version: trace.NewTracerConfig(opts...).InstrumentationVersion,
+		version: trace.NewTracerConfig(opts...).InstrumentationVersion(),
 	}
 
 	if p.tracers == nil {

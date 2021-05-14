@@ -191,7 +191,7 @@ func TestTracerConfig(t *testing.T) {
 				WithInstrumentationVersion(v1),
 			},
 			&TracerConfig{
-				InstrumentationVersion: v1,
+				instrumentationVersion: v1,
 			},
 		},
 		{
@@ -201,7 +201,7 @@ func TestTracerConfig(t *testing.T) {
 				WithInstrumentationVersion(v2),
 			},
 			&TracerConfig{
-				InstrumentationVersion: v2,
+				instrumentationVersion: v2,
 			},
 		},
 	}

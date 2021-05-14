@@ -20,30 +20,34 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-// TracerConfig is a group of options for a Tracer.
+// tracerConfig is a group of options for a Tracer.
 type TracerConfig struct {
-	// InstrumentationVersion is the version of the library providing
-	// instrumentation.
-	InstrumentationVersion string
+	instrumentationVersion string
+}
+
+// InstrumentationVersion returns the version of the library providing instrumentation.
+func (t *TracerConfig) InstrumentationVersion() string {
+	return t.instrumentationVersion
 }
 
 // NewTracerConfig applies all the options to a returned TracerConfig.
 func NewTracerConfig(options ...TracerOption) *TracerConfig {
 	config := new(TracerConfig)
 	for _, option := range options {
-		option.ApplyTracer(config)
+		option.apply(config)
 	}
 	return config
 }
 
 // TracerOption applies an option to a TracerConfig.
 type TracerOption interface {
-	ApplyTracer(*TracerConfig)
+	apply(*TracerConfig)
+}
 
-	// A private method to prevent users implementing the
-	// interface and so future additions to it will not
-	// violate compatibility.
-	private()
+type tracerOptionFunc func(*TracerConfig)
+
+func (fn tracerOptionFunc) apply(cfg *TracerConfig) {
+	fn(cfg)
 }
 
 // SpanConfig is a group of options for a Span.
@@ -82,6 +86,13 @@ type SpanOption interface {
 	// interface and so future additions to it will not
 	// violate compatibility.
 	private()
+}
+
+type EventConfig struct {
+	// Attributes describe the associated qualities of a Event.
+	Attributes []attribute.KeyValue
+	// Timestamp is a time in a Event was recorded.
+	Timestamp time.Time
 }
 
 // NewEventConfig applies all the EventOptions to a returned SpanConfig. If no
@@ -185,21 +196,9 @@ func WithSpanKind(kind SpanKind) SpanOption {
 	return spanKindSpanOption(kind)
 }
 
-// InstrumentationOption is an interface for applying instrumentation specific
-// options.
-type InstrumentationOption interface {
-	TracerOption
-}
-
 // WithInstrumentationVersion sets the instrumentation version.
-func WithInstrumentationVersion(version string) InstrumentationOption {
-	return instrumentationVersionOption(version)
+func WithInstrumentationVersion(version string) TracerOption {
+	return tracerOptionFunc(func(cfg *TracerConfig) {
+		cfg.instrumentationVersion = version
+	})
 }
-
-type instrumentationVersionOption string
-
-func (i instrumentationVersionOption) ApplyTracer(config *TracerConfig) {
-	config.InstrumentationVersion = string(i)
-}
-
-func (instrumentationVersionOption) private() {}
