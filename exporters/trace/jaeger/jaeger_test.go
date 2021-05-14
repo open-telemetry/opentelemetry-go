@@ -63,9 +63,9 @@ func TestNewExportPipelinePassthroughError(t *testing.T) {
 		{
 			name:    "failing underlying NewRawExporter",
 			failing: true,
-			epo: func() (batchUploader, error) {
+			epo: endpointOptionFunc(func() (batchUploader, error) {
 				return nil, errors.New("error")
-			},
+			}),
 		},
 		{
 			name: "with default agent endpoint",
@@ -142,16 +142,16 @@ func (c *testCollectorEndpoint) upload(_ context.Context, batch *gen.Batch) erro
 
 var _ batchUploader = (*testCollectorEndpoint)(nil)
 
-func withTestCollectorEndpoint() func() (batchUploader, error) {
-	return func() (batchUploader, error) {
+func withTestCollectorEndpoint() EndpointOption {
+	return endpointOptionFunc(func() (batchUploader, error) {
 		return &testCollectorEndpoint{}, nil
-	}
+	})
 }
 
-func withTestCollectorEndpointInjected(ce *testCollectorEndpoint) func() (batchUploader, error) {
-	return func() (batchUploader, error) {
+func withTestCollectorEndpointInjected(ce *testCollectorEndpoint) EndpointOption {
+	return endpointOptionFunc(func() (batchUploader, error) {
 		return ce, nil
-	}
+	})
 }
 
 func TestExporterExportSpan(t *testing.T) {

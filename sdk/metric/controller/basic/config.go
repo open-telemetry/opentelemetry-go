@@ -21,8 +21,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// Config contains configuration for a basic Controller.
-type Config struct {
+// config contains configuration for a basic Controller.
+type config struct {
 	// Resource is the OpenTelemetry resource associated with all Meters
 	// created by the Controller.
 	Resource *resource.Resource
@@ -60,8 +60,8 @@ type Config struct {
 
 // Option is the interface that applies the value to a configuration option.
 type Option interface {
-	// Apply sets the Option value of a Config.
-	Apply(*Config)
+	// apply sets the Option value of a Config.
+	apply(*config)
 }
 
 // WithResource sets the Resource configuration option of a Config by merging it
@@ -73,8 +73,8 @@ func WithResource(r *resource.Resource) Option {
 
 type resourceOption struct{ *resource.Resource }
 
-func (o resourceOption) Apply(config *Config) {
-	config.Resource = o.Resource
+func (o resourceOption) apply(cfg *config) {
+	cfg.Resource = o.Resource
 }
 
 // WithCollectPeriod sets the CollectPeriod configuration option of a Config.
@@ -84,8 +84,8 @@ func WithCollectPeriod(period time.Duration) Option {
 
 type collectPeriodOption time.Duration
 
-func (o collectPeriodOption) Apply(config *Config) {
-	config.CollectPeriod = time.Duration(o)
+func (o collectPeriodOption) apply(cfg *config) {
+	cfg.CollectPeriod = time.Duration(o)
 }
 
 // WithCollectTimeout sets the CollectTimeout configuration option of a Config.
@@ -95,8 +95,8 @@ func WithCollectTimeout(timeout time.Duration) Option {
 
 type collectTimeoutOption time.Duration
 
-func (o collectTimeoutOption) Apply(config *Config) {
-	config.CollectTimeout = time.Duration(o)
+func (o collectTimeoutOption) apply(cfg *config) {
+	cfg.CollectTimeout = time.Duration(o)
 }
 
 // WithExporter sets the exporter configuration option of a Config.
@@ -106,8 +106,8 @@ func WithExporter(exporter export.Exporter) Option {
 
 type exporterOption struct{ exporter export.Exporter }
 
-func (o exporterOption) Apply(config *Config) {
-	config.Exporter = o.exporter
+func (o exporterOption) apply(cfg *config) {
+	cfg.Exporter = o.exporter
 }
 
 // WithPushTimeout sets the PushTimeout configuration option of a Config.
@@ -117,6 +117,6 @@ func WithPushTimeout(timeout time.Duration) Option {
 
 type pushTimeoutOption time.Duration
 
-func (o pushTimeoutOption) Apply(config *Config) {
-	config.PushTimeout = time.Duration(o)
+func (o pushTimeoutOption) apply(cfg *config) {
+	cfg.PushTimeout = time.Duration(o)
 }

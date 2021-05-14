@@ -53,7 +53,7 @@ type config struct {
 func newConfig(opts ...Option) config {
 	conf := config{}
 	for _, opt := range opts {
-		opt.Apply(&conf)
+		opt.apply(&conf)
 	}
 	if conf.SpanContextFunc == nil {
 		conf.SpanContextFunc = defaultSpanContextFunc()
@@ -63,24 +63,14 @@ func newConfig(opts ...Option) config {
 
 // Option applies an option to a config.
 type Option interface {
-	Apply(*config)
-
-	// A private method to prevent users implementing the
-	// interface and so future additions to it will not
-	// violate compatibility.
-	private()
+	apply(*config)
 }
 
-type option struct{}
-
-func (option) private() {}
-
 type spanContextFuncOption struct {
-	option
 	SpanContextFunc func(context.Context) trace.SpanContext
 }
 
-func (o spanContextFuncOption) Apply(c *config) {
+func (o spanContextFuncOption) apply(c *config) {
 	c.SpanContextFunc = o.SpanContextFunc
 }
 
@@ -91,11 +81,10 @@ func WithSpanContextFunc(f func(context.Context) trace.SpanContext) Option {
 }
 
 type spanRecorderOption struct {
-	option
 	SpanRecorder *SpanRecorder
 }
 
-func (o spanRecorderOption) Apply(c *config) {
+func (o spanRecorderOption) apply(c *config) {
 	c.SpanRecorder = o.SpanRecorder
 }
 

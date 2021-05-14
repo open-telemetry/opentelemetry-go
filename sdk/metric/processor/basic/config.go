@@ -14,8 +14,8 @@
 
 package basic // import "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 
-// Config contains the options for configuring a basic metric processor.
-type Config struct {
+// config contains the options for configuring a basic metric processor.
+type config struct {
 	// Memory controls whether the processor remembers metric
 	// instruments and label sets that were previously reported.
 	// When Memory is true, CheckpointSet.ForEach() will visit
@@ -24,7 +24,7 @@ type Config struct {
 }
 
 type Option interface {
-	ApplyProcessor(*Config)
+	applyProcessor(*config)
 }
 
 // WithMemory sets the memory behavior of a Processor.  If this is
@@ -37,6 +37,6 @@ func WithMemory(memory bool) Option {
 
 type memoryOption bool
 
-func (m memoryOption) ApplyProcessor(config *Config) {
-	config.Memory = bool(m)
+func (m memoryOption) applyProcessor(cfg *config) {
+	cfg.Memory = bool(m)
 }

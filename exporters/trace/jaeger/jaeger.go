@@ -45,7 +45,7 @@ const (
 // NewRawExporter returns an OTel Exporter implementation that exports the
 // collected spans to Jaeger.
 func NewRawExporter(endpointOption EndpointOption) (*Exporter, error) {
-	uploader, err := endpointOption()
+	uploader, err := endpointOption.newBatchUploader()
 	if err != nil {
 		return nil, err
 	}
