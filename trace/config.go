@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
 	"time"
@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-// tracerConfig is a group of options for a Tracer.
+// TracerConfig is a group of options for a Tracer.
 type TracerConfig struct {
 	instrumentationVersion string
 }
