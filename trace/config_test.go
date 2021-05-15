@@ -54,7 +54,7 @@ func TestNewSpanConfig(t *testing.T) {
 				WithAttributes(k1v1),
 			},
 			&SpanConfig{
-				Attributes: []attribute.KeyValue{k1v1},
+				attributes: []attribute.KeyValue{k1v1},
 			},
 		},
 		{
@@ -66,7 +66,7 @@ func TestNewSpanConfig(t *testing.T) {
 			},
 			&SpanConfig{
 				// No uniqueness is guaranteed by the API.
-				Attributes: []attribute.KeyValue{k1v1, k1v2, k2v2},
+				attributes: []attribute.KeyValue{k1v1, k1v2, k2v2},
 			},
 		},
 		{
@@ -75,7 +75,7 @@ func TestNewSpanConfig(t *testing.T) {
 			},
 			&SpanConfig{
 				// No uniqueness is guaranteed by the API.
-				Attributes: []attribute.KeyValue{k1v1, k1v2, k2v2},
+				attributes: []attribute.KeyValue{k1v1, k1v2, k2v2},
 			},
 		},
 		{
@@ -83,7 +83,7 @@ func TestNewSpanConfig(t *testing.T) {
 				WithTimestamp(timestamp0),
 			},
 			&SpanConfig{
-				Timestamp: timestamp0,
+				timestamp: timestamp0,
 			},
 		},
 		{
@@ -93,7 +93,7 @@ func TestNewSpanConfig(t *testing.T) {
 				WithTimestamp(timestamp1),
 			},
 			&SpanConfig{
-				Timestamp: timestamp1,
+				timestamp: timestamp1,
 			},
 		},
 		{
@@ -101,7 +101,7 @@ func TestNewSpanConfig(t *testing.T) {
 				WithLinks(link1),
 			},
 			&SpanConfig{
-				Links: []Link{link1},
+				links: []Link{link1},
 			},
 		},
 		{
@@ -112,7 +112,7 @@ func TestNewSpanConfig(t *testing.T) {
 			},
 			&SpanConfig{
 				// No uniqueness is guaranteed by the API.
-				Links: []Link{link1, link1, link2},
+				links: []Link{link1, link1, link2},
 			},
 		},
 		{
@@ -120,7 +120,7 @@ func TestNewSpanConfig(t *testing.T) {
 				WithNewRoot(),
 			},
 			&SpanConfig{
-				NewRoot: true,
+				newRoot: true,
 			},
 		},
 		{
@@ -130,7 +130,7 @@ func TestNewSpanConfig(t *testing.T) {
 				WithNewRoot(),
 			},
 			&SpanConfig{
-				NewRoot: true,
+				newRoot: true,
 			},
 		},
 		{
@@ -138,7 +138,7 @@ func TestNewSpanConfig(t *testing.T) {
 				WithSpanKind(SpanKindConsumer),
 			},
 			&SpanConfig{
-				SpanKind: SpanKindConsumer,
+				spanKind: SpanKindConsumer,
 			},
 		},
 		{
@@ -148,7 +148,7 @@ func TestNewSpanConfig(t *testing.T) {
 				WithSpanKind(SpanKindConsumer),
 			},
 			&SpanConfig{
-				SpanKind: SpanKindConsumer,
+				spanKind: SpanKindConsumer,
 			},
 		},
 		{
@@ -161,16 +161,16 @@ func TestNewSpanConfig(t *testing.T) {
 				WithSpanKind(SpanKindConsumer),
 			},
 			&SpanConfig{
-				Attributes: []attribute.KeyValue{k1v1},
-				Timestamp:  timestamp0,
-				Links:      []Link{link1, link2},
-				NewRoot:    true,
-				SpanKind:   SpanKindConsumer,
+				attributes: []attribute.KeyValue{k1v1},
+				timestamp:  timestamp0,
+				links:      []Link{link1, link2},
+				newRoot:    true,
+				spanKind:   SpanKindConsumer,
 			},
 		},
 	}
 	for _, test := range tests {
-		assert.Equal(t, test.expected, NewSpanConfig(test.options...))
+		assert.Equal(t, test.expected, NewSpanStartConfig(test.options...))
 	}
 }
 

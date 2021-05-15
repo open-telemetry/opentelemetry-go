@@ -69,7 +69,7 @@ func (noopSpan) SetError(bool) {}
 func (noopSpan) SetAttributes(...attribute.KeyValue) {}
 
 // End does nothing.
-func (noopSpan) End(...SpanOption) {}
+func (noopSpan) End(...SpanEndOption) {}
 
 // RecordError does nothing.
 func (noopSpan) RecordError(error, ...EventOption) {}

@@ -175,7 +175,7 @@ func (nonRecordingSpan) SetError(bool) {}
 func (nonRecordingSpan) SetAttributes(...attribute.KeyValue) {}
 
 // End does nothing.
-func (nonRecordingSpan) End(...trace.SpanOption) {}
+func (nonRecordingSpan) End(...trace.SpanEndOption) {}
 
 // RecordError does nothing.
 func (nonRecordingSpan) RecordError(error, ...trace.EventOption) {}

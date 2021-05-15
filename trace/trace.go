@@ -501,7 +501,7 @@ type Span interface {
 	// delivered through the rest of the telemetry pipeline after this method
 	// is called. Therefore, updates to the Span are not allowed after this
 	// method has been called.
-	End(options ...SpanOption)
+	End(options ...SpanEndOption)
 
 	// AddEvent adds an event with the provided name and options.
 	AddEvent(name string, options ...EventOption)

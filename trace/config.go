@@ -52,90 +52,129 @@ func (fn tracerOptionFunc) apply(cfg *TracerConfig) {
 
 // SpanConfig is a group of options for a Span.
 type SpanConfig struct {
-	// Attributes describe the associated qualities of a Span.
-	Attributes []attribute.KeyValue
-	// Timestamp is a time in a Span life-cycle.
-	Timestamp time.Time
-	// Links are the associations a Span has with other Spans.
-	Links []Link
-	// NewRoot identifies a Span as the root Span for a new trace. This is
-	// commonly used when an existing trace crosses trust boundaries and the
-	// remote parent span context should be ignored for security.
-	NewRoot bool
-	// SpanKind is the role a Span has in a trace.
-	SpanKind SpanKind
+	attributes []attribute.KeyValue
+	timestamp  time.Time
+	links      []Link
+	newRoot    bool
+	spanKind   SpanKind
 }
 
-// NewSpanConfig applies all the options to a returned SpanConfig.
+// Attributes describe the associated qualities of a Span.
+func (cfg *SpanConfig) Attributes() []attribute.KeyValue {
+	return cfg.attributes
+}
+
+// Timestamp is a time in a Span life-cycle.
+func (cfg *SpanConfig) Timestamp() time.Time {
+	return cfg.timestamp
+}
+
+// Links are the associations a Span has with other Spans.
+func (cfg *SpanConfig) Links() []Link {
+	return cfg.links
+}
+
+// NewRoot identifies a Span as the root Span for a new trace. This is
+// commonly used when an existing trace crosses trust boundaries and the
+// remote parent span context should be ignored for security.
+func (cfg *SpanConfig) NewRoot() bool {
+	return cfg.newRoot
+}
+
+// SpanKind is the role a Span has in a trace.
+func (cfg *SpanConfig) SpanKind() SpanKind {
+	return cfg.spanKind
+}
+
+// NewSpanStartConfig applies all the options to a returned SpanConfig.
 // No validation is performed on the returned SpanConfig (e.g. no uniqueness
 // checking or bounding of data), it is left to the SDK to perform this
 // action.
-func NewSpanConfig(options ...SpanOption) *SpanConfig {
+func NewSpanStartConfig(options ...SpanOption) *SpanConfig {
 	c := new(SpanConfig)
 	for _, option := range options {
-		option.ApplySpan(c)
+		option.applySpanStart(c)
 	}
 	return c
 }
 
-// SpanOption applies an option to a SpanConfig.
-type SpanOption interface {
-	ApplySpan(*SpanConfig)
+// NewSpanEndConfig applies all the options to a returned SpanConfig.
+// No validation is performed on the returned SpanConfig (e.g. no uniqueness
+// checking or bounding of data), it is left to the SDK to perform this
+// action.
+func NewSpanEndConfig(options ...SpanEndOption) *SpanConfig {
+	c := new(SpanConfig)
+	for _, option := range options {
+		option.applySpanEnd(c)
+	}
+	return c
+}
 
-	// A private method to prevent users implementing the
-	// interface and so future additions to it will not
-	// violate compatibility.
-	private()
+// SpanOptions applies an option to a SpanConfig. These options are applyable
+// Only when the span is created
+type SpanOption interface {
+	applySpanStart(*SpanConfig)
+}
+
+type SpanOptionFunc func(*SpanConfig)
+
+func (fn SpanOptionFunc) applySpanStart(cfg *SpanConfig) {
+	fn(cfg)
+}
+
+type SpanEndOption interface {
+	applySpanEnd(*SpanConfig)
 }
 
 type EventConfig struct {
 	// Attributes describe the associated qualities of a Event.
-	Attributes []attribute.KeyValue
+	attributes []attribute.KeyValue
 	// Timestamp is a time in a Event was recorded.
-	Timestamp time.Time
+	timestamp time.Time
+}
+
+// Attributes describe the associated qualities of an Event.
+func (cfg *EventConfig) Attributes() []attribute.KeyValue {
+	return cfg.attributes
+}
+
+// Timestamp is a time in an Event life-cycle.
+func (cfg *EventConfig) Timestamp() time.Time {
+	return cfg.timestamp
 }
 
 // NewEventConfig applies all the EventOptions to a returned SpanConfig. If no
 // timestamp option is passed, the returned SpanConfig will have a Timestamp
 // set to the call time, otherwise no validation is performed on the returned
 // SpanConfig.
-func NewEventConfig(options ...EventOption) *SpanConfig {
-	c := new(SpanConfig)
+func NewEventConfig(options ...EventOption) *EventConfig {
+	c := new(EventConfig)
 	for _, option := range options {
-		option.ApplyEvent(c)
+		option.applyEvent(c)
 	}
-	if c.Timestamp.IsZero() {
-		c.Timestamp = time.Now()
+	if c.timestamp.IsZero() {
+		c.timestamp = time.Now()
 	}
 	return c
 }
 
-// EventOption applies span event options to a SpanConfig.
+// EventOption applies span event options to an EventConfig.
 type EventOption interface {
-	ApplyEvent(*SpanConfig)
-
-	// A private method to prevent users implementing the
-	// interface and so future additions to it will not
-	// violate compatibility.
-	private()
+	applyEvent(*EventConfig)
 }
 
-// LifeCycleOption applies span life-cycle options to a SpanConfig. These
-// options set values releated to events in a spans life-cycle like starting,
-// ending, experiencing an error and other user defined notable events.
-type LifeCycleOption interface {
-	SpanOption
-	EventOption
+type attributeOption []attribute.KeyValue
+
+func (o attributeOption) applySpan(c *SpanConfig) {
+	c.attributes = append(c.attributes, []attribute.KeyValue(o)...)
+}
+func (o attributeOption) applySpanStart(c *SpanConfig) { o.applySpan(c) }
+func (o attributeOption) applyEvent(c *EventConfig) {
+	c.attributes = append(c.attributes, []attribute.KeyValue(o)...)
 }
 
-type attributeSpanOption []attribute.KeyValue
-
-func (o attributeSpanOption) ApplySpan(c *SpanConfig)  { o.apply(c) }
-func (o attributeSpanOption) ApplyEvent(c *SpanConfig) { o.apply(c) }
-func (attributeSpanOption) private()                   {}
-func (o attributeSpanOption) apply(c *SpanConfig) {
-	c.Attributes = append(c.Attributes, []attribute.KeyValue(o)...)
-}
+var _ SpanOption = attributeOption{}
+var _ EventOption = attributeOption{}
 
 // WithAttributes adds the attributes related to a span life-cycle event.
 // These attributes are used to describe the work a Span represents when this
@@ -146,54 +185,51 @@ func (o attributeSpanOption) apply(c *SpanConfig) {
 // If multiple of these options are passed the attributes of each successive
 // option will extend the attributes instead of overwriting. There is no
 // guarantee of uniqueness in the resulting attributes.
-func WithAttributes(attributes ...attribute.KeyValue) LifeCycleOption {
-	return attributeSpanOption(attributes)
+//nolint:golint
+func WithAttributes(attributes ...attribute.KeyValue) attributeOption {
+	return attributeOption(attributes)
 }
 
-type timestampSpanOption time.Time
+type timestampOption time.Time
 
-func (o timestampSpanOption) ApplySpan(c *SpanConfig)  { o.apply(c) }
-func (o timestampSpanOption) ApplyEvent(c *SpanConfig) { o.apply(c) }
-func (timestampSpanOption) private()                   {}
-func (o timestampSpanOption) apply(c *SpanConfig)      { c.Timestamp = time.Time(o) }
+func (o timestampOption) applySpan(c *SpanConfig)      { c.timestamp = time.Time(o) }
+func (o timestampOption) applySpanStart(c *SpanConfig) { o.applySpan(c) }
+func (o timestampOption) applySpanEnd(c *SpanConfig)   { o.applySpan(c) }
+func (o timestampOption) applyEvent(c *EventConfig)    { c.timestamp = time.Time(o) }
 
-// WithTimestamp sets the time of a Span life-cycle moment (e.g. started,
-// stopped, errored).
-func WithTimestamp(t time.Time) LifeCycleOption {
-	return timestampSpanOption(t)
+var _ SpanOption = timestampOption{}
+var _ SpanEndOption = timestampOption{}
+var _ EventOption = timestampOption{}
+
+// WithTimestamp sets the time of a Span or Event life-cycle moment (e.g.
+// started, stopped, errored).
+//nolint:golint
+func WithTimestamp(t time.Time) timestampOption {
+	return timestampOption(t)
 }
-
-type linksSpanOption []Link
-
-func (o linksSpanOption) ApplySpan(c *SpanConfig) { c.Links = append(c.Links, []Link(o)...) }
-func (linksSpanOption) private()                  {}
 
 // WithLinks adds links to a Span. The links are added to the existing Span
 // links, i.e. this does not overwrite.
 func WithLinks(links ...Link) SpanOption {
-	return linksSpanOption(links)
+	return SpanOptionFunc(func(cfg *SpanConfig) {
+		cfg.links = append(cfg.links, links...)
+	})
 }
-
-type newRootSpanOption bool
-
-func (o newRootSpanOption) ApplySpan(c *SpanConfig) { c.NewRoot = bool(o) }
-func (newRootSpanOption) private()                  {}
 
 // WithNewRoot specifies that the Span should be treated as a root Span. Any
 // existing parent span context will be ignored when defining the Span's trace
 // identifiers.
 func WithNewRoot() SpanOption {
-	return newRootSpanOption(true)
+	return SpanOptionFunc(func(cfg *SpanConfig) {
+		cfg.newRoot = true
+	})
 }
-
-type spanKindSpanOption SpanKind
-
-func (o spanKindSpanOption) ApplySpan(c *SpanConfig) { c.SpanKind = SpanKind(o) }
-func (o spanKindSpanOption) private()                {}
 
 // WithSpanKind sets the SpanKind of a Span.
 func WithSpanKind(kind SpanKind) SpanOption {
-	return spanKindSpanOption(kind)
+	return SpanOptionFunc(func(cfg *SpanConfig) {
+		cfg.spanKind = kind
+	})
 }
 
 // WithInstrumentationVersion sets the instrumentation version.
