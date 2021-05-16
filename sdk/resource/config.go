@@ -28,18 +28,9 @@ type config struct {
 
 // Option is the interface that applies a configuration option.
 type Option interface {
-	// Apply sets the Option value of a config.
-	Apply(*config)
-
-	// A private method to prevent users implementing the
-	// interface and so future additions to it will not
-	// violate compatibility.
-	private()
+	// apply sets the Option value of a config.
+	apply(*config)
 }
-
-type option struct{}
-
-func (option) private() {}
 
 // WithAttributes adds attributes to the configured Resource.
 func WithAttributes(attributes ...attribute.KeyValue) Option {
@@ -60,12 +51,10 @@ func WithDetectors(detectors ...Detector) Option {
 }
 
 type detectorsOption struct {
-	option
 	detectors []Detector
 }
 
-// Apply implements Option.
-func (o detectorsOption) Apply(cfg *config) {
+func (o detectorsOption) apply(cfg *config) {
 	cfg.detectors = append(cfg.detectors, o.detectors...)
 }
 

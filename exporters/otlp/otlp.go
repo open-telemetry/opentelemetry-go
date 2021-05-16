@@ -66,7 +66,7 @@ func NewUnstartedExporter(driver ProtocolDriver, opts ...ExporterOption) *Export
 		exportKindSelector: metricsdk.CumulativeExportKindSelector(),
 	}
 	for _, opt := range opts {
-		opt(&cfg)
+		opt.apply(&cfg)
 	}
 	return &Exporter{
 		cfg:    cfg,

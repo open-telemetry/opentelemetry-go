@@ -1,5 +1,24 @@
 # Release Process
 
+## Semantic Convention Generation
+
+If a new version of the OpenTelemetry Specification has been released it will be necessary to generate a new
+semantic convention package from the YAML definitions in the specification repository. There is a utility in
+`internal/tools/semconv-gen` that can be used to generate the `semconv` package. This will ideally be done
+shortly after the specification release is tagged, but it is also good practice to ensure that current conventions
+are current before creating a release tag.
+
+There are currently two categories of semantic conventions that must be generated, `resource` and `trace`.
+
+```
+cd internal/tools/semconv-gen
+go run generate.go -i /path/to/specification/repo/semantic_conventions/resource
+go run generate.go -i /path/to/specification/repo/semantic_conventions/trace
+```
+
+Using default values for all options other than `input` will result in using the `template.j2` template to
+generate `resource.go` and `trace.go` in `/path/to/otelgo/repo/semconv`.
+
 ## Pre-Release
 
 Update go.mod for submodules to depend on the new release which will happen in the next step.

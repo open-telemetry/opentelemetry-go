@@ -78,13 +78,13 @@ type Controller struct {
 // options (including optional exporter) to configure a metric
 // export pipeline.
 func New(checkpointer export.Checkpointer, opts ...Option) *Controller {
-	c := &Config{
+	c := &config{
 		CollectPeriod:  DefaultPeriod,
 		CollectTimeout: DefaultPeriod,
 		PushTimeout:    DefaultPeriod,
 	}
 	for _, opt := range opts {
-		opt.Apply(c)
+		opt.apply(c)
 	}
 	if c.Resource == nil {
 		c.Resource = resource.Default()

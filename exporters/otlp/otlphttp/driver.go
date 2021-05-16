@@ -86,7 +86,7 @@ func NewDriver(opts ...Option) otlp.ProtocolDriver {
 	cfg := otlpconfig.NewDefaultConfig()
 	otlpconfig.ApplyHTTPEnvConfigs(&cfg)
 	for _, opt := range opts {
-		opt.ApplyHTTPOption(&cfg)
+		opt.applyHTTPOption(&cfg)
 	}
 
 	for pathPtr, defaultPath := range map[*string]string{

@@ -11,27 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package semconv
-
-import "go.opentelemetry.io/otel/attribute"
-
-// Semantic conventions for exception attribute keys.
-const (
-	// The Go type containing the error or exception.
-	ExceptionTypeKey = attribute.Key("exception.type")
-
-	// The exception message.
-	ExceptionMessageKey = attribute.Key("exception.message")
-
-	// A stacktrace as a string. This most commonly will come from
-	// "runtime/debug".Stack.
-	ExceptionStacktraceKey = attribute.Key("exception.stacktrace")
-
-	// If the exception event is recorded at a point where it is known
-	// that the exception is escaping the scope of the span this
-	// attribute is set to true.
-	ExceptionEscapedKey = attribute.Key("exception.escaped")
-)
 
 const (
 	// ExceptionEventName is the name of the Span event representing an exception.

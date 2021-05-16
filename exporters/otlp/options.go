@@ -28,7 +28,15 @@ const (
 )
 
 // ExporterOption are setting options passed to an Exporter on creation.
-type ExporterOption func(*config)
+type ExporterOption interface {
+	apply(*config)
+}
+
+type exporterOptionFunc func(*config)
+
+func (fn exporterOptionFunc) apply(cfg *config) {
+	fn(cfg)
+}
 
 type config struct {
 	exportKindSelector metricsdk.ExportKindSelector
@@ -39,14 +47,14 @@ type config struct {
 // aggregation). If not specified otherwise, exporter will use a
 // cumulative export kind selector.
 func WithMetricExportKindSelector(selector metricsdk.ExportKindSelector) ExporterOption {
-	return func(cfg *config) {
+	return exporterOptionFunc(func(cfg *config) {
 		cfg.exportKindSelector = selector
-	}
+	})
 }
 
 // SplitDriverOption provides options for setting up a split driver.
 type SplitDriverOption interface {
-	Apply(*splitDriver)
+	apply(*splitDriver)
 }
 
 // WithMetricDriver allows one to set the driver used for metrics
@@ -59,7 +67,7 @@ type metricDriverOption struct {
 	driver ProtocolDriver
 }
 
-func (o metricDriverOption) Apply(s *splitDriver) {
+func (o metricDriverOption) apply(s *splitDriver) {
 	s.metric = o.driver
 }
 
@@ -73,6 +81,6 @@ type traceDriverOption struct {
 	driver ProtocolDriver
 }
 
-func (o traceDriverOption) Apply(s *splitDriver) {
+func (o traceDriverOption) apply(s *splitDriver) {
 	s.trace = o.driver
 }

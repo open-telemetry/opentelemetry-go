@@ -40,7 +40,7 @@ func NewHarness(t *testing.T) *Harness {
 	}
 }
 
-// TestTracer runs validation tests for an implementation of the OpenTelemetry
+// TestTracerProvider runs validation tests for an implementation of the OpenTelemetry
 // TracerProvider API.
 func (h *Harness) TestTracerProvider(subjectFactory func() trace.TracerProvider) {
 	h.t.Run("#Start", func(t *testing.T) {
@@ -119,7 +119,6 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 
 			e.Expect(span).NotToBeNil()
 
-			e.Expect(span.Tracer()).ToEqual(subject)
 			e.Expect(span.SpanContext().IsValid()).ToBeTrue()
 		})
 
