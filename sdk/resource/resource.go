@@ -47,7 +47,7 @@ var (
 func New(ctx context.Context, opts ...Option) (*Resource, error) {
 	cfg := config{}
 	for _, opt := range opts {
-		opt.Apply(&cfg)
+		opt.apply(&cfg)
 	}
 
 	return Detect(ctx, cfg.detectors...)

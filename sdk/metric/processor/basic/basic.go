@@ -93,7 +93,7 @@ type (
 	}
 
 	state struct {
-		config Config
+		config config
 
 		// RWMutex implements locking for the `CheckpointSet` interface.
 		sync.RWMutex
@@ -139,7 +139,7 @@ func New(aselector export.AggregatorSelector, eselector export.ExportKindSelecto
 		},
 	}
 	for _, opt := range opts {
-		opt.ApplyProcessor(&p.config)
+		opt.applyProcessor(&p.config)
 	}
 	return p
 }
