@@ -1,6 +1,6 @@
 # "Passthrough" setup for OpenTelemetry
 
-Some go programs may wish to propagate context without recording spans.  To do this in OpenTelemetry, simply install `TextMapPropagators`, but do not install a TracerProvider using the SDK.  This works because the default TracerProvider implementation returns a "Non-Recording" span that keeps the context of the caller, but does not record spans.
+Some Go programs may wish to propagate context without recording spans. To do this in OpenTelemetry, simply install `TextMapPropagators`, but do not install a TracerProvider using the SDK. This works because the default TracerProvider implementation returns a "Non-Recording" span that keeps the context of the caller but does not record spans.
 
 For example, when you initialize your global settings, the following will propagate context without recording spans:
 
@@ -37,7 +37,7 @@ If all components had both an SDK and propagators registered, we would expect th
     |---inner---|
 ```
 
-However, in this demo, only the outer and inner have TracerProvider backed by the SDK.  All components have Propagators set.  In this case, we expect to see:
+However, in this demo, only the outer and inner have TracerProvider backed by the SDK. All components have Propagators set. In this case, we expect to see:
 
 ```
 |-------outer---------|

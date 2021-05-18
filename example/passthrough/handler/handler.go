@@ -25,7 +25,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// handler is a minimal implementation of the handler and client from
+// Handler is a minimal implementation of the handler and client from
 // go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp for demonstration purposes.
 // It handles an incoming http request, and makes an outgoing http request.
 type Handler struct {
