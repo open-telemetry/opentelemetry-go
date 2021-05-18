@@ -12,6 +12,6 @@
 #  https://help.github.com/en/articles/about-code-owners
 #
 
-* @jmacd @MrAlias @Aneurysm9 @evantorrie @XSAM @dashpole @paivagustavo @MadVikingGod
+* @open-telemetry/go-approvers
 
-CODEOWNERS @MrAlias @Aneurysm9
+CODEOWNERS @open-telemetry/go-maintainers
