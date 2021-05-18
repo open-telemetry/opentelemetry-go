@@ -22,7 +22,7 @@ import (
 
 // Client is an interface used by OTLP exporter. It's
 // responsible for connecting to and disconnecting from the collector,
-// and for transforming traces and metrics into wire format and
+// and for transforming traces into wire format and
 // transmitting them to the collector.
 type Client interface {
 	// Start should establish connection(s) to endpoint(s). It is

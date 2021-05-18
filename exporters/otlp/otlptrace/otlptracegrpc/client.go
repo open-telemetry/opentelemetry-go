@@ -47,7 +47,7 @@ func NewClient(opts ...Option) otlptrace.Client {
 	cfg := otlpconfig.NewDefaultConfig()
 	otlpconfig.ApplyGRPCEnvConfigs(&cfg)
 	for _, opt := range opts {
-		opt.ApplyGRPCOption(&cfg)
+		opt.applyGRPCOption(&cfg)
 	}
 
 	c := &client{}

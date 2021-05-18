@@ -11,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 package otlptracegrpc_test
 
 import (
@@ -89,8 +88,8 @@ func newGRPCExporter(t *testing.T, ctx context.Context, endpoint string, additio
 	}
 
 	opts = append(opts, additionalOpts...)
-	driver := otlptracegrpc.NewClient(opts...)
-	exp, err := otlptrace.NewExporter(ctx, driver)
+	client := otlptracegrpc.NewClient(opts...)
+	exp, err := otlptrace.NewExporter(ctx, client)
 	if err != nil {
 		t.Fatalf("failed to create a new collector exporter: %v", err)
 	}
@@ -117,6 +116,22 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlptracegrpc.Option
 	}()
 
 	otlptracetest.RunEndToEndTest(ctx, t, exp, mc)
+}
+
+func TestExporterShutdown(t *testing.T) {
+	mc := runMockCollectorAtEndpoint(t, "localhost:56561")
+	defer func() {
+		_ = mc.stop()
+	}()
+
+	<-time.After(5 * time.Millisecond)
+
+	otlptracetest.RunExporterShutdownTest(t, func() otlptrace.Client {
+		return otlptracegrpc.NewClient(
+			otlptracegrpc.WithInsecure(),
+			otlptracegrpc.WithEndpoint(mc.endpoint),
+			otlptracegrpc.WithReconnectionPeriod(50*time.Millisecond))
+	})
 }
 
 func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {

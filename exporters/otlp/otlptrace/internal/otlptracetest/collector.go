@@ -37,13 +37,6 @@ type SpansStorage struct {
 	spanCount int
 }
 
-// NewSpansStorage creates a new spans storage.
-func NewSpansStorage() SpansStorage {
-	return SpansStorage{
-		rsm: make(map[string]*tracepb.ResourceSpans),
-	}
-}
-
 // AddSpans adds spans to the spans storage.
 func (s *SpansStorage) AddSpans(request *collectortracepb.ExportTraceServiceRequest) {
 	for _, rs := range request.GetResourceSpans() {

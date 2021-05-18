@@ -26,6 +26,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This type can be used as a testing replacement for the `SpanSnapshot` that was removed from the `go.opentelemetry.io/otel/sdk/trace` package. (#1873)
 - Adds support for scheme in `OTEL_EXPORTER_OTLP_ENDPOINT` according to the spec. (#1886)
 - An example of using OpenTelemetry Go as a trace context forwarder. (#1912)
+- Refactor out the OTLP gRPC trace exporter in its own module. (#TBD)
 
 ### Changed
 
