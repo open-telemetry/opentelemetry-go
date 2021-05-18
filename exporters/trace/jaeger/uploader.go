@@ -35,7 +35,15 @@ type batchUploader interface {
 	shutdown(context.Context) error
 }
 
-type EndpointOption func() (batchUploader, error)
+type EndpointOption interface {
+	newBatchUploader() (batchUploader, error)
+}
+
+type endpointOptionFunc func() (batchUploader, error)
+
+func (fn endpointOptionFunc) newBatchUploader() (batchUploader, error) {
+	return fn()
+}
 
 // WithAgentEndpoint configures the Jaeger exporter to send spans to a jaeger-agent. This will
 // use the following environment variables for configuration if no explicit option is provided:
@@ -46,8 +54,8 @@ type EndpointOption func() (batchUploader, error)
 // The passed options will take precedence over any environment variables and default values
 // will be used if neither are provided.
 func WithAgentEndpoint(options ...AgentEndpointOption) EndpointOption {
-	return func() (batchUploader, error) {
-		o := &AgentEndpointOptions{
+	return endpointOptionFunc(func() (batchUploader, error) {
+		cfg := &agentEndpointConfig{
 			agentClientUDPParams{
 				AttemptReconnecting: true,
 				Host:                envOr(envAgentHost, "localhost"),
@@ -55,22 +63,30 @@ func WithAgentEndpoint(options ...AgentEndpointOption) EndpointOption {
 			},
 		}
 		for _, opt := range options {
-			opt(o)
+			opt.apply(cfg)
 		}
 
-		client, err := newAgentClientUDP(o.agentClientUDPParams)
+		client, err := newAgentClientUDP(cfg.agentClientUDPParams)
 		if err != nil {
 			return nil, err
 		}
 
 		return &agentUploader{client: client}, nil
-	}
+	})
 }
 
-type AgentEndpointOption func(o *AgentEndpointOptions)
+type AgentEndpointOption interface {
+	apply(*agentEndpointConfig)
+}
 
-type AgentEndpointOptions struct {
+type agentEndpointConfig struct {
 	agentClientUDPParams
+}
+
+type agentEndpointOptionFunc func(*agentEndpointConfig)
+
+func (fn agentEndpointOptionFunc) apply(cfg *agentEndpointConfig) {
+	fn(cfg)
 }
 
 // WithAgentHost sets a host to be used in the agent client endpoint.
@@ -78,9 +94,9 @@ type AgentEndpointOptions struct {
 // OTEL_EXPORTER_JAEGER_AGENT_HOST environment variable.
 // If this option is not passed and the env var is not set, "localhost" will be used by default.
 func WithAgentHost(host string) AgentEndpointOption {
-	return func(o *AgentEndpointOptions) {
+	return agentEndpointOptionFunc(func(o *agentEndpointConfig) {
 		o.Host = host
-	}
+	})
 }
 
 // WithAgentPort sets a port to be used in the agent client endpoint.
@@ -88,37 +104,37 @@ func WithAgentHost(host string) AgentEndpointOption {
 // OTEL_EXPORTER_JAEGER_AGENT_PORT environment variable.
 // If this option is not passed and the env var is not set, "6832" will be used by default.
 func WithAgentPort(port string) AgentEndpointOption {
-	return func(o *AgentEndpointOptions) {
+	return agentEndpointOptionFunc(func(o *agentEndpointConfig) {
 		o.Port = port
-	}
+	})
 }
 
 // WithLogger sets a logger to be used by agent client.
 func WithLogger(logger *log.Logger) AgentEndpointOption {
-	return func(o *AgentEndpointOptions) {
+	return agentEndpointOptionFunc(func(o *agentEndpointConfig) {
 		o.Logger = logger
-	}
+	})
 }
 
 // WithDisableAttemptReconnecting sets option to disable reconnecting udp client.
 func WithDisableAttemptReconnecting() AgentEndpointOption {
-	return func(o *AgentEndpointOptions) {
+	return agentEndpointOptionFunc(func(o *agentEndpointConfig) {
 		o.AttemptReconnecting = false
-	}
+	})
 }
 
 // WithAttemptReconnectingInterval sets the interval between attempts to re resolve agent endpoint.
 func WithAttemptReconnectingInterval(interval time.Duration) AgentEndpointOption {
-	return func(o *AgentEndpointOptions) {
+	return agentEndpointOptionFunc(func(o *agentEndpointConfig) {
 		o.AttemptReconnectInterval = interval
-	}
+	})
 }
 
 // WithMaxPacketSize sets the maximum UDP packet size for transport to the Jaeger agent.
 func WithMaxPacketSize(size int) AgentEndpointOption {
-	return func(o *AgentEndpointOptions) {
+	return agentEndpointOptionFunc(func(o *agentEndpointConfig) {
 		o.MaxPacketSize = size
-	}
+	})
 }
 
 // WithCollectorEndpoint defines the full url to the Jaeger HTTP Thrift collector. This will
@@ -132,8 +148,8 @@ func WithMaxPacketSize(size int) AgentEndpointOption {
 // If neither values are provided for the endpoint, the default value of "http://localhost:14268/api/traces" will be used.
 // If neither values are provided for the username or the password, they will not be set since there is no default.
 func WithCollectorEndpoint(options ...CollectorEndpointOption) EndpointOption {
-	return func() (batchUploader, error) {
-		o := &CollectorEndpointOptions{
+	return endpointOptionFunc(func() (batchUploader, error) {
+		cfg := &collectorEndpointConfig{
 			endpoint:   envOr(envEndpoint, "http://localhost:14268/api/traces"),
 			username:   envOr(envUser, ""),
 			password:   envOr(envPassword, ""),
@@ -141,21 +157,23 @@ func WithCollectorEndpoint(options ...CollectorEndpointOption) EndpointOption {
 		}
 
 		for _, opt := range options {
-			opt(o)
+			opt.apply(cfg)
 		}
 
 		return &collectorUploader{
-			endpoint:   o.endpoint,
-			username:   o.username,
-			password:   o.password,
-			httpClient: o.httpClient,
+			endpoint:   cfg.endpoint,
+			username:   cfg.username,
+			password:   cfg.password,
+			httpClient: cfg.httpClient,
 		}, nil
-	}
+	})
 }
 
-type CollectorEndpointOption func(o *CollectorEndpointOptions)
+type CollectorEndpointOption interface {
+	apply(*collectorEndpointConfig)
+}
 
-type CollectorEndpointOptions struct {
+type collectorEndpointConfig struct {
 	// endpoint for sending spans directly to a collector.
 	endpoint string
 
@@ -169,15 +187,21 @@ type CollectorEndpointOptions struct {
 	httpClient *http.Client
 }
 
+type collectorEndpointOptionFunc func(*collectorEndpointConfig)
+
+func (fn collectorEndpointOptionFunc) apply(cfg *collectorEndpointConfig) {
+	fn(cfg)
+}
+
 // WithEndpoint is the URL for the Jaeger collector that spans are sent to.
 // This option overrides any value set for the
 // OTEL_EXPORTER_JAEGER_ENDPOINT environment variable.
 // If this option is not passed and the environment variable is not set,
 // "http://localhost:14268/api/traces" will be used by default.
 func WithEndpoint(endpoint string) CollectorEndpointOption {
-	return func(o *CollectorEndpointOptions) {
+	return collectorEndpointOptionFunc(func(o *collectorEndpointConfig) {
 		o.endpoint = endpoint
-	}
+	})
 }
 
 // WithUsername sets the username to be used in the authorization header sent for all requests to the collector.
@@ -185,9 +209,9 @@ func WithEndpoint(endpoint string) CollectorEndpointOption {
 // OTEL_EXPORTER_JAEGER_USER environment variable.
 // If this option is not passed and the environment variable is not set, no username will be set.
 func WithUsername(username string) CollectorEndpointOption {
-	return func(o *CollectorEndpointOptions) {
+	return collectorEndpointOptionFunc(func(o *collectorEndpointConfig) {
 		o.username = username
-	}
+	})
 }
 
 // WithPassword sets the password to be used in the authorization header sent for all requests to the collector.
@@ -195,16 +219,16 @@ func WithUsername(username string) CollectorEndpointOption {
 // OTEL_EXPORTER_JAEGER_PASSWORD environment variable.
 // If this option is not passed and the environment variable is not set, no password will be set.
 func WithPassword(password string) CollectorEndpointOption {
-	return func(o *CollectorEndpointOptions) {
+	return collectorEndpointOptionFunc(func(o *collectorEndpointConfig) {
 		o.password = password
-	}
+	})
 }
 
 // WithHTTPClient sets the http client to be used to make request to the collector endpoint.
 func WithHTTPClient(client *http.Client) CollectorEndpointOption {
-	return func(o *CollectorEndpointOptions) {
+	return collectorEndpointOptionFunc(func(o *collectorEndpointConfig) {
 		o.httpClient = client
-	}
+	})
 }
 
 // agentUploader implements batchUploader interface sending batches to

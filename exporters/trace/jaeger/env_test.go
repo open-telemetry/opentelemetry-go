@@ -180,20 +180,20 @@ func TestEnvOrWithCollectorEndpointOptionsFromEnv(t *testing.T) {
 		envEndpoint                      string
 		envUsername                      string
 		envPassword                      string
-		defaultCollectorEndpointOptions  CollectorEndpointOptions
-		expectedCollectorEndpointOptions CollectorEndpointOptions
+		defaultCollectorEndpointOptions  collectorEndpointConfig
+		expectedCollectorEndpointOptions collectorEndpointConfig
 	}{
 		{
 			name:        "overrides value via environment variables",
 			envEndpoint: "http://localhost:14252",
 			envUsername: "username",
 			envPassword: "password",
-			defaultCollectorEndpointOptions: CollectorEndpointOptions{
+			defaultCollectorEndpointOptions: collectorEndpointConfig{
 				endpoint: "endpoint not to be used",
 				username: "foo",
 				password: "bar",
 			},
-			expectedCollectorEndpointOptions: CollectorEndpointOptions{
+			expectedCollectorEndpointOptions: collectorEndpointConfig{
 				endpoint: "http://localhost:14252",
 				username: "username",
 				password: "password",
@@ -204,12 +204,12 @@ func TestEnvOrWithCollectorEndpointOptionsFromEnv(t *testing.T) {
 			envEndpoint: "",
 			envUsername: "",
 			envPassword: "",
-			defaultCollectorEndpointOptions: CollectorEndpointOptions{
+			defaultCollectorEndpointOptions: collectorEndpointConfig{
 				endpoint: "endpoint to be used",
 				username: "foo",
 				password: "bar",
 			},
-			expectedCollectorEndpointOptions: CollectorEndpointOptions{
+			expectedCollectorEndpointOptions: collectorEndpointConfig{
 				endpoint: "endpoint to be used",
 				username: "foo",
 				password: "bar",

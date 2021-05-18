@@ -956,6 +956,19 @@ func TestHTTPClientAttributesFromHTTPRequest(t *testing.T) {
 				attribute.String("http.scheme", "http"),
 			},
 		},
+		{
+			name:   "authentication information is stripped",
+			method: "",
+			url: &url.URL{
+				Path: "/user/123",
+				User: url.UserPassword("foo", "bar"),
+			},
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.url", "/user/123"),
+				attribute.String("http.scheme", "http"),
+			},
+		},
 	}
 
 	for _, tc := range testCases {
