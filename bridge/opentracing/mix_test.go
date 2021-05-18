@@ -42,7 +42,6 @@ func getMixedAPIsTestCases() []mixedAPIsTestCase {
 	cast := newCurrentActiveSpanTest()
 	coin := newContextIntactTest()
 	bip := newBaggageItemsPreservationTest()
-	tm := newTracerMessTest()
 	bio := newBaggageInteroperationTest()
 
 	return []mixedAPIsTestCase{
@@ -93,18 +92,6 @@ func getMixedAPIsTestCases() []mixedAPIsTestCase {
 			setup: bip.setup,
 			run:   bip.runOTOtelOT,
 			check: bip.check,
-		},
-		{
-			desc:  "consistent tracers otel -> ot -> otel",
-			setup: tm.setup,
-			run:   tm.runOtelOTOtel,
-			check: tm.check,
-		},
-		{
-			desc:  "consistent tracers ot -> otel -> ot",
-			setup: tm.setup,
-			run:   tm.runOTOtelOT,
-			check: tm.check,
 		},
 		{
 			desc:  "baggage items interoperation across layers ot -> otel -> ot",
@@ -416,67 +403,6 @@ func (bip *baggageItemsPreservationTest) addAndRecordBaggage(t *testing.T, ctx c
 		return true
 	})
 	bip.recordedBaggage = append(bip.recordedBaggage, recording)
-	return ctx
-}
-
-// tracer mess test
-
-type tracerMessTest struct {
-	recordedOTSpanTracers   []ot.Tracer
-	recordedOtelSpanTracers []trace.Tracer
-}
-
-func newTracerMessTest() *tracerMessTest {
-	return &tracerMessTest{
-		recordedOTSpanTracers:   nil,
-		recordedOtelSpanTracers: nil,
-	}
-}
-
-func (tm *tracerMessTest) setup(t *testing.T, tracer *internal.MockTracer) {
-	tm.recordedOTSpanTracers = nil
-	tm.recordedOtelSpanTracers = nil
-}
-
-func (tm *tracerMessTest) check(t *testing.T, tracer *internal.MockTracer) {
-	globalOtTracer := ot.GlobalTracer()
-	globalOtelTracer := otel.Tracer("")
-	if len(tm.recordedOTSpanTracers) != 3 {
-		t.Errorf("Expected 3 recorded OpenTracing tracers from spans, got %d", len(tm.recordedOTSpanTracers))
-	}
-	if len(tm.recordedOtelSpanTracers) != 3 {
-		t.Errorf("Expected 3 recorded OpenTelemetry tracers from spans, got %d", len(tm.recordedOtelSpanTracers))
-	}
-	for idx, tracer := range tm.recordedOTSpanTracers {
-		if tracer != globalOtTracer {
-			t.Errorf("Expected OpenTracing tracer %d to be the same as global tracer (%#v), but got %#v", idx, globalOtTracer, tracer)
-		}
-	}
-	for idx, tracer := range tm.recordedOtelSpanTracers {
-		if tracer != globalOtelTracer {
-			t.Errorf("Expected OpenTelemetry tracer %d to be the same as global tracer (%#v), but got %#v", idx, globalOtelTracer, tracer)
-		}
-	}
-}
-
-func (tm *tracerMessTest) runOtelOTOtel(t *testing.T, ctx context.Context) {
-	runOtelOTOtel(t, ctx, "tm", tm.recordTracers)
-}
-
-func (tm *tracerMessTest) runOTOtelOT(t *testing.T, ctx context.Context) {
-	runOTOtelOT(t, ctx, "tm", tm.recordTracers)
-}
-
-func (tm *tracerMessTest) recordTracers(t *testing.T, ctx context.Context) context.Context {
-	otSpan := ot.SpanFromContext(ctx)
-	if otSpan == nil {
-		t.Errorf("No current OpenTracing span?")
-	} else {
-		tm.recordedOTSpanTracers = append(tm.recordedOTSpanTracers, otSpan.Tracer())
-	}
-
-	otelSpan := trace.SpanFromContext(ctx)
-	tm.recordedOtelSpanTracers = append(tm.recordedOtelSpanTracers, otelSpan.Tracer())
 	return ctx
 }
 

@@ -129,12 +129,10 @@ func TestMinMaxSumCountDatapoints(t *testing.T) {
 	assert.NoError(t, mmsc.Update(context.Background(), 1, &desc))
 	assert.NoError(t, mmsc.Update(context.Background(), 10, &desc))
 	require.NoError(t, mmsc.SynchronizedMove(ckpt, &desc))
-	expected := []*metricpb.IntHistogramDataPoint{
+	expected := []*metricpb.SummaryDataPoint{
 		{
 			Count:             2,
 			Sum:               11,
-			ExplicitBounds:    []float64{0.0, 100.0},
-			BucketCounts:      []uint64{1, 10},
 			StartTimeUnixNano: uint64(intervalStart.UnixNano()),
 			TimeUnixNano:      uint64(intervalEnd.UnixNano()),
 			Labels: []*commonpb.StringKeyValue{
@@ -143,16 +141,28 @@ func TestMinMaxSumCountDatapoints(t *testing.T) {
 					Value: "1",
 				},
 			},
+			QuantileValues: []*metricpb.SummaryDataPoint_ValueAtQuantile{
+				{
+					Quantile: 0.0,
+					Value:    1.0,
+				},
+				{
+					Quantile: 1.0,
+					Value:    10.0,
+				},
+			},
 		},
 	}
 	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
 	m, err := minMaxSumCount(record, ckpt.(aggregation.MinMaxSumCount))
 	if assert.NoError(t, err) {
-		assert.Nil(t, m.GetIntGauge())
-		assert.Equal(t, expected, m.GetIntHistogram().DataPoints)
-		assert.Nil(t, m.GetIntSum())
-		assert.Nil(t, m.GetDoubleGauge())
-		assert.Nil(t, m.GetDoubleHistogram())
+		assert.Nil(t, m.GetGauge())
+		assert.Nil(t, m.GetSum())
+		assert.Nil(t, m.GetHistogram())
+		assert.Equal(t, expected, m.GetSummary().DataPoints)
+		assert.Nil(t, m.GetIntGauge())     // nolint
+		assert.Nil(t, m.GetIntSum())       // nolint
+		assert.Nil(t, m.GetIntHistogram()) // nolint
 	}
 }
 
@@ -179,13 +189,11 @@ func TestSumIntDataPoints(t *testing.T) {
 	require.NoError(t, err)
 
 	if m, err := sumPoint(record, value, record.StartTime(), record.EndTime(), export.CumulativeExportKind, true); assert.NoError(t, err) {
-		assert.Nil(t, m.GetIntGauge())
-		assert.Nil(t, m.GetIntHistogram())
-		assert.Equal(t, &metricpb.IntSum{
+		assert.Nil(t, m.GetGauge())
+		assert.Equal(t, &metricpb.Sum{
 			AggregationTemporality: otelCumulative,
 			IsMonotonic:            true,
-			DataPoints: []*metricpb.IntDataPoint{{
-				Value:             1,
+			DataPoints: []*metricpb.NumberDataPoint{{
 				StartTimeUnixNano: uint64(intervalStart.UnixNano()),
 				TimeUnixNano:      uint64(intervalEnd.UnixNano()),
 				Labels: []*commonpb.StringKeyValue{
@@ -194,9 +202,16 @@ func TestSumIntDataPoints(t *testing.T) {
 						Value: "1",
 					},
 				},
-			}}}, m.GetIntSum())
-		assert.Nil(t, m.GetDoubleGauge())
-		assert.Nil(t, m.GetDoubleHistogram())
+				Value: &metricpb.NumberDataPoint_AsInt{
+					AsInt: 1,
+				},
+			}},
+		}, m.GetSum())
+		assert.Nil(t, m.GetHistogram())
+		assert.Nil(t, m.GetSummary())
+		assert.Nil(t, m.GetIntGauge())     // nolint
+		assert.Nil(t, m.GetIntSum())       // nolint
+		assert.Nil(t, m.GetIntHistogram()) // nolint
 	}
 }
 
@@ -213,16 +228,14 @@ func TestSumFloatDataPoints(t *testing.T) {
 	require.NoError(t, err)
 
 	if m, err := sumPoint(record, value, record.StartTime(), record.EndTime(), export.DeltaExportKind, false); assert.NoError(t, err) {
-		assert.Nil(t, m.GetIntGauge())
-		assert.Nil(t, m.GetIntHistogram())
-		assert.Nil(t, m.GetIntSum())
-		assert.Nil(t, m.GetDoubleGauge())
-		assert.Nil(t, m.GetDoubleHistogram())
-		assert.Equal(t, &metricpb.DoubleSum{
+		assert.Nil(t, m.GetGauge())
+		assert.Equal(t, &metricpb.Sum{
 			IsMonotonic:            false,
 			AggregationTemporality: otelDelta,
-			DataPoints: []*metricpb.DoubleDataPoint{{
-				Value:             1,
+			DataPoints: []*metricpb.NumberDataPoint{{
+				Value: &metricpb.NumberDataPoint_AsDouble{
+					AsDouble: 1.0,
+				},
 				StartTimeUnixNano: uint64(intervalStart.UnixNano()),
 				TimeUnixNano:      uint64(intervalEnd.UnixNano()),
 				Labels: []*commonpb.StringKeyValue{
@@ -231,7 +244,12 @@ func TestSumFloatDataPoints(t *testing.T) {
 						Value: "1",
 					},
 				},
-			}}}, m.GetDoubleSum())
+			}}}, m.GetSum())
+		assert.Nil(t, m.GetHistogram())
+		assert.Nil(t, m.GetSummary())
+		assert.Nil(t, m.GetIntGauge())     // nolint
+		assert.Nil(t, m.GetIntSum())       // nolint
+		assert.Nil(t, m.GetIntHistogram()) // nolint
 	}
 }
 
@@ -248,8 +266,7 @@ func TestLastValueIntDataPoints(t *testing.T) {
 	require.NoError(t, err)
 
 	if m, err := gaugePoint(record, value, time.Time{}, timestamp); assert.NoError(t, err) {
-		assert.Equal(t, []*metricpb.IntDataPoint{{
-			Value:             100,
+		assert.Equal(t, []*metricpb.NumberDataPoint{{
 			StartTimeUnixNano: 0,
 			TimeUnixNano:      uint64(timestamp.UnixNano()),
 			Labels: []*commonpb.StringKeyValue{
@@ -258,12 +275,16 @@ func TestLastValueIntDataPoints(t *testing.T) {
 					Value: "1",
 				},
 			},
-		}}, m.GetIntGauge().DataPoints)
-		assert.Nil(t, m.GetIntHistogram())
-		assert.Nil(t, m.GetIntSum())
-		assert.Nil(t, m.GetDoubleGauge())
-		assert.Nil(t, m.GetDoubleHistogram())
-		assert.Nil(t, m.GetDoubleSum())
+			Value: &metricpb.NumberDataPoint_AsInt{
+				AsInt: 100,
+			},
+		}}, m.GetGauge().DataPoints)
+		assert.Nil(t, m.GetSum())
+		assert.Nil(t, m.GetHistogram())
+		assert.Nil(t, m.GetSummary())
+		assert.Nil(t, m.GetIntGauge())     // nolint
+		assert.Nil(t, m.GetIntSum())       // nolint
+		assert.Nil(t, m.GetIntHistogram()) // nolint
 	}
 }
 
@@ -280,8 +301,7 @@ func TestExactIntDataPoints(t *testing.T) {
 	require.NoError(t, err)
 
 	if m, err := gaugeArray(record, pts); assert.NoError(t, err) {
-		assert.Equal(t, []*metricpb.IntDataPoint{{
-			Value:             100,
+		assert.Equal(t, []*metricpb.NumberDataPoint{{
 			StartTimeUnixNano: toNanos(intervalStart),
 			TimeUnixNano:      toNanos(intervalEnd),
 			Labels: []*commonpb.StringKeyValue{
@@ -290,12 +310,16 @@ func TestExactIntDataPoints(t *testing.T) {
 					Value: "1",
 				},
 			},
-		}}, m.GetIntGauge().DataPoints)
-		assert.Nil(t, m.GetIntHistogram())
-		assert.Nil(t, m.GetIntSum())
-		assert.Nil(t, m.GetDoubleGauge())
-		assert.Nil(t, m.GetDoubleHistogram())
-		assert.Nil(t, m.GetDoubleSum())
+			Value: &metricpb.NumberDataPoint_AsInt{
+				AsInt: 100,
+			},
+		}}, m.GetGauge().DataPoints)
+		assert.Nil(t, m.GetSum())
+		assert.Nil(t, m.GetHistogram())
+		assert.Nil(t, m.GetSummary())
+		assert.Nil(t, m.GetIntGauge())     // nolint
+		assert.Nil(t, m.GetIntSum())       // nolint
+		assert.Nil(t, m.GetIntHistogram()) // nolint
 	}
 }
 
@@ -312,8 +336,10 @@ func TestExactFloatDataPoints(t *testing.T) {
 	require.NoError(t, err)
 
 	if m, err := gaugeArray(record, pts); assert.NoError(t, err) {
-		assert.Equal(t, []*metricpb.DoubleDataPoint{{
-			Value:             100,
+		assert.Equal(t, []*metricpb.NumberDataPoint{{
+			Value: &metricpb.NumberDataPoint_AsDouble{
+				AsDouble: 100,
+			},
 			StartTimeUnixNano: toNanos(intervalStart),
 			TimeUnixNano:      toNanos(intervalEnd),
 			Labels: []*commonpb.StringKeyValue{
@@ -322,12 +348,13 @@ func TestExactFloatDataPoints(t *testing.T) {
 					Value: "1",
 				},
 			},
-		}}, m.GetDoubleGauge().DataPoints)
-		assert.Nil(t, m.GetIntHistogram())
-		assert.Nil(t, m.GetIntSum())
-		assert.Nil(t, m.GetIntGauge())
-		assert.Nil(t, m.GetDoubleHistogram())
-		assert.Nil(t, m.GetDoubleSum())
+		}}, m.GetGauge().DataPoints)
+		assert.Nil(t, m.GetSum())
+		assert.Nil(t, m.GetHistogram())
+		assert.Nil(t, m.GetSummary())
+		assert.Nil(t, m.GetIntGauge())     // nolint
+		assert.Nil(t, m.GetIntSum())       // nolint
+		assert.Nil(t, m.GetIntHistogram()) // nolint
 	}
 }
 

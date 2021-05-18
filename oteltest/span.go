@@ -46,11 +46,6 @@ type Span struct {
 	spanKind      trace.SpanKind
 }
 
-// Tracer returns the Tracer that created s.
-func (s *Span) Tracer() trace.Tracer {
-	return s.tracer
-}
-
 // End ends s. If the Tracer that created s was configured with a
 // SpanRecorder, that recorder's OnEnd method is called as the final part of
 // this method.

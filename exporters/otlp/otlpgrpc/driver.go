@@ -62,7 +62,7 @@ func NewDriver(opts ...Option) otlp.ProtocolDriver {
 	cfg := otlpconfig.NewDefaultConfig()
 	otlpconfig.ApplyGRPCEnvConfigs(&cfg)
 	for _, opt := range opts {
-		opt.ApplyGRPCOption(&cfg)
+		opt.applyGRPCOption(&cfg)
 	}
 
 	d := &driver{}

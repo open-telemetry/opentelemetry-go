@@ -36,7 +36,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go.opentelemetry.io/otel/internal/trace/noop"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -143,5 +144,44 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 	if delegate != nil {
 		return delegate.(trace.Tracer).Start(ctx, name, opts...)
 	}
-	return noop.Tracer.Start(ctx, name, opts...)
+
+	s := nonRecordingSpan{sc: trace.SpanContextFromContext(ctx)}
+	ctx = trace.ContextWithSpan(ctx, s)
+	return ctx, s
 }
+
+// nonRecordingSpan is a minimal implementation of a Span that wraps a
+// SpanContext. It performs no operations other than to return the wrapped
+// SpanContext.
+type nonRecordingSpan struct {
+	sc trace.SpanContext
+}
+
+var _ trace.Span = nonRecordingSpan{}
+
+// SpanContext returns the wrapped SpanContext.
+func (s nonRecordingSpan) SpanContext() trace.SpanContext { return s.sc }
+
+// IsRecording always returns false.
+func (nonRecordingSpan) IsRecording() bool { return false }
+
+// SetStatus does nothing.
+func (nonRecordingSpan) SetStatus(codes.Code, string) {}
+
+// SetError does nothing.
+func (nonRecordingSpan) SetError(bool) {}
+
+// SetAttributes does nothing.
+func (nonRecordingSpan) SetAttributes(...attribute.KeyValue) {}
+
+// End does nothing.
+func (nonRecordingSpan) End(...trace.SpanOption) {}
+
+// RecordError does nothing.
+func (nonRecordingSpan) RecordError(error, ...trace.EventOption) {}
+
+// AddEvent does nothing.
+func (nonRecordingSpan) AddEvent(string, ...trace.EventOption) {}
+
+// SetName does nothing.
+func (nonRecordingSpan) SetName(string) {}

@@ -26,7 +26,7 @@ import (
 
 // Exporter is an implementation of trace.SpanSyncer that writes spans to stdout.
 type traceExporter struct {
-	config Config
+	config config
 
 	stoppedMu sync.RWMutex
 	stopped   bool

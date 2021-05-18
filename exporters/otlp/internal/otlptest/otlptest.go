@@ -34,6 +34,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
 // RunEndToEndTest can be used by protocol driver tests to validate
@@ -209,50 +210,32 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlp.Exporter, mcTr
 		seen[m.Name] = struct{}{}
 
 		switch data.iKind {
-		case metric.CounterInstrumentKind:
-			switch data.nKind {
-			case number.Int64Kind:
-				if dp := m.GetIntSum().DataPoints; assert.Len(t, dp, 1) {
-					assert.Equal(t, data.val, dp[0].Value, "invalid value for %q", m.Name)
-				}
-			case number.Float64Kind:
-				if dp := m.GetDoubleSum().DataPoints; assert.Len(t, dp, 1) {
-					assert.Equal(t, float64(data.val), dp[0].Value, "invalid value for %q", m.Name)
-				}
-			default:
-				assert.Failf(t, "invalid number kind", data.nKind.String())
+		case metric.CounterInstrumentKind, metric.ValueObserverInstrumentKind:
+			var dp []*metricpb.NumberDataPoint
+			switch data.iKind {
+			case metric.CounterInstrumentKind:
+				require.NotNil(t, m.GetSum())
+				dp = m.GetSum().GetDataPoints()
+			case metric.ValueObserverInstrumentKind:
+				require.NotNil(t, m.GetGauge())
+				dp = m.GetGauge().GetDataPoints()
 			}
-		case metric.ValueObserverInstrumentKind:
-			switch data.nKind {
-			case number.Int64Kind:
-				if dp := m.GetIntGauge().DataPoints; assert.Len(t, dp, 1) {
-					assert.Equal(t, data.val, dp[0].Value, "invalid value for %q", m.Name)
+			if assert.Len(t, dp, 1) {
+				switch data.nKind {
+				case number.Int64Kind:
+					v := &metricpb.NumberDataPoint_AsInt{AsInt: data.val}
+					assert.Equal(t, v, dp[0].Value, "invalid value for %q", m.Name)
+				case number.Float64Kind:
+					v := &metricpb.NumberDataPoint_AsDouble{AsDouble: float64(data.val)}
+					assert.Equal(t, v, dp[0].Value, "invalid value for %q", m.Name)
 				}
-			case number.Float64Kind:
-				if dp := m.GetDoubleGauge().DataPoints; assert.Len(t, dp, 1) {
-					assert.Equal(t, float64(data.val), dp[0].Value, "invalid value for %q", m.Name)
-				}
-			default:
-				assert.Failf(t, "invalid number kind", data.nKind.String())
 			}
 		case metric.ValueRecorderInstrumentKind:
-			switch data.nKind {
-			case number.Int64Kind:
-				assert.NotNil(t, m.GetIntHistogram())
-				if dp := m.GetIntHistogram().DataPoints; assert.Len(t, dp, 1) {
-					count := dp[0].Count
-					assert.Equal(t, uint64(1), count, "invalid count for %q", m.Name)
-					assert.Equal(t, int64(data.val*int64(count)), dp[0].Sum, "invalid sum for %q (value %d)", m.Name, data.val)
-				}
-			case number.Float64Kind:
-				assert.NotNil(t, m.GetDoubleHistogram())
-				if dp := m.GetDoubleHistogram().DataPoints; assert.Len(t, dp, 1) {
-					count := dp[0].Count
-					assert.Equal(t, uint64(1), count, "invalid count for %q", m.Name)
-					assert.Equal(t, float64(data.val*int64(count)), dp[0].Sum, "invalid sum for %q (value %d)", m.Name, data.val)
-				}
-			default:
-				assert.Failf(t, "invalid number kind", data.nKind.String())
+			require.NotNil(t, m.GetSummary())
+			if dp := m.GetSummary().DataPoints; assert.Len(t, dp, 1) {
+				count := dp[0].Count
+				assert.Equal(t, uint64(1), count, "invalid count for %q", m.Name)
+				assert.Equal(t, float64(data.val*int64(count)), dp[0].Sum, "invalid sum for %q (value %d)", m.Name, data.val)
 			}
 		default:
 			assert.Failf(t, "invalid metrics kind", data.iKind.String())
