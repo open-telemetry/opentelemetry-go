@@ -38,6 +38,8 @@ type client struct {
 	tracesClient coltracepb.TraceServiceClient
 }
 
+var _ otlptrace.Client = (*client)(nil)
+
 var (
 	errNoClient = errors.New("no client")
 )
@@ -66,13 +68,13 @@ func (c *client) handleNewConnection(cc *grpc.ClientConn) {
 	}
 }
 
-// Start implements otlp.ProtocolDriver. It establishes a connection
+// Start implements otlptrace.Client. It establishes a connection
 // to the collector.
 func (c *client) Start(ctx context.Context) error {
 	return c.connection.StartConnection(ctx)
 }
 
-// Stop implements otlp.ProtocolDriver. It shuts down the connection
+// Stop implements otlptrace.Client. It shuts down the connection
 // to the collector.
 func (c *client) Stop(ctx context.Context) error {
 	return c.connection.Shutdown(ctx)

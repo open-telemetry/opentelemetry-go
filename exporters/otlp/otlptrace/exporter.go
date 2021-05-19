@@ -60,7 +60,6 @@ func (e *Exporter) Start(ctx context.Context) error {
 }
 
 func (e *Exporter) Shutdown(ctx context.Context) error {
-
 	e.mu.RLock()
 	started := e.started
 	e.mu.RUnlock()
@@ -94,11 +93,9 @@ func NewExporter(ctx context.Context, client Client) (*Exporter, error) {
 
 // NewUnstartedExporter constructs a new Exporter and does not start it.
 func NewUnstartedExporter(client Client) *Exporter {
-	e := &Exporter{
+	return &Exporter{
 		client: client,
 	}
-
-	return e
 }
 
 // NewExportPipeline sets up a complete export pipeline

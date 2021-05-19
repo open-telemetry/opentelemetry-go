@@ -61,8 +61,7 @@ func TestInstallNewPipeline(t *testing.T) {
 
 func TestNewExportPipeline(t *testing.T) {
 	testCases := []struct {
-		name             string
-		testSpanSampling bool
+		name string
 	}{
 		{
 			name: "simple pipeline",

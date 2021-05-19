@@ -24,10 +24,11 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlptracetest"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
-	"go.opentelemetry.io/otel/exporters/otlp/internal/otlptest"
 	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
@@ -36,7 +37,7 @@ func makeMockCollector(t *testing.T, mockConfig *mockConfig) *mockCollector {
 	return &mockCollector{
 		t: t,
 		traceSvc: &mockTraceService{
-			storage: otlptest.NewSpansStorage(),
+			storage: otlptracetest.NewSpansStorage(),
 			errors:  mockConfig.errors,
 		},
 	}
@@ -48,7 +49,7 @@ type mockTraceService struct {
 	errors   []error
 	requests int
 	mu       sync.RWMutex
-	storage  otlptest.SpansStorage
+	storage  otlptracetest.SpansStorage
 	headers  metadata.MD
 	delay    time.Duration
 }
