@@ -26,7 +26,7 @@ import (
 func TestTraceStateFromKeyValues(t *testing.T) {
 	ts, err := TraceStateFromKeyValues()
 	require.NoError(t, err)
-	assert.True(t, ts.IsEmpty(), "empty attributes creats zero value TraceState")
+	assert.Equal(t, 0, ts.Len(), "empty attributes creats zero value TraceState")
 
 	ts, err = TraceStateFromKeyValues(
 		attribute.String("key0", "string"),

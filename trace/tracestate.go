@@ -172,7 +172,7 @@ func (ts TraceState) Get(key string) string {
 	return ""
 }
 
-// Insert adds a new key/value, if one doesn't exists; otherwise updates the existing entry.
+// Insert adds a new key/value pair, if one doesn't exists; otherwise updates the existing entry.
 // The new or updated entry is always inserted at the beginning of the TraceState, i.e.
 // on the left side, as per the W3C Trace Context specification requirement.
 func (ts TraceState) Insert(key, value string) (TraceState, error) {
@@ -182,7 +182,7 @@ func (ts TraceState) Insert(key, value string) (TraceState, error) {
 	}
 
 	cTS := ts.remove(key)
-	if cTS.len()+1 > maxListMembers {
+	if cTS.Len()+1 > maxListMembers {
 		return ts, fmt.Errorf("failed to insert: %w", errMemberNumber)
 	}
 
@@ -202,15 +202,15 @@ func (ts TraceState) Delete(key string) (TraceState, error) {
 	return ts.remove(key), nil
 }
 
-// IsEmpty returns true if the TraceState does not contain any entries
-func (ts TraceState) IsEmpty() bool {
-	return ts.len() == 0
+// Len returns the number of list-members in the TraceState.
+func (ts TraceState) Len() int {
+	return len(ts.members)
 }
 
 // remove returns a copy of ts with key removed, if it exists.
 func (ts TraceState) remove(key string) TraceState {
 	// allocate the same size in case key is not contained in ts.
-	members := make([]member, ts.len())
+	members := make([]member, ts.Len())
 	copy(members, ts.members)
 
 	for i, member := range ts.members {
@@ -221,9 +221,4 @@ func (ts TraceState) remove(key string) TraceState {
 	}
 
 	return TraceState{members: members}
-}
-
-// len returns the number of list-members are in the TraceState.
-func (ts TraceState) len() int {
-	return len(ts.members)
 }

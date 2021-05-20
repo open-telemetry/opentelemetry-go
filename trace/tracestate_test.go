@@ -473,13 +473,13 @@ func TestTraceStateInsert(t *testing.T) {
 
 func TestTraceStateIsEmpty(t *testing.T) {
 	ts := TraceState{}
-	assert.True(t, ts.IsEmpty(), "zero value TraceState is empty")
+	assert.Equal(t, 0, ts.Len(), "zero value TraceState is empty")
 
 	ts, err := ts.Insert("key", "value")
 	require.NoError(t, err)
-	assert.False(t, ts.IsEmpty(), "TraceState with inserted value")
+	assert.Equal(t, 1, ts.Len(), "TraceState with inserted value")
 
 	ts, err = ts.Delete("key")
 	require.NoError(t, err)
-	assert.True(t, ts.IsEmpty(), "TraceState with all values deleted")
+	assert.Equal(t, 0, ts.Len(), "TraceState with all values deleted")
 }
