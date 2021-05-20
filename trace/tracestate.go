@@ -38,9 +38,9 @@ var (
 
 	errInvalidKey    errorConst = "invalid tracestate key"
 	errInvalidValue  errorConst = "invalid tracestate value"
-	errInvalidMember errorConst = "invalid tracestate list member"
-	errMemberNumber  errorConst = "too many list members in tracestate"
-	errDuplicate     errorConst = "duplicate list member in tracestate"
+	errInvalidMember errorConst = "invalid tracestate list-member"
+	errMemberNumber  errorConst = "too many list-members in tracestate"
+	errDuplicate     errorConst = "duplicate list-member in tracestate"
 )
 
 type member struct {
@@ -71,7 +71,7 @@ func parseMemeber(m string) (member, error) {
 
 }
 
-// String encodes member into a string compliant with the W3C tracecontext
+// String encodes member into a string compliant with the W3C Trace Context
 // specification.
 func (m member) String() string {
 	return fmt.Sprintf("%s=%s", m.Key, m.Value)
@@ -80,24 +80,24 @@ func (m member) String() string {
 // TraceState provides additional vendor-specific trace identification
 // information across different distributed tracing systems. It represents an
 // immutable list consisting of key/value pairs, each pair is referred to as a
-// member. There can be a maximum of 32 list members.
+// list-member.
 //
-// The key and value of each list member must be valid according to the W3C
-// Trace Context specification (see https://www.w3.org/TR/trace-context-1/#key
-// and https://www.w3.org/TR/trace-context-1/#value respectively).
-//
-// Trace state must be valid according to the W3C Trace Context specification
-// at all times. All mutating operations validate their input and, in case of
-// valid parameters, return a new TraceState.
+// TraceState conforms to the W3C Trace Context specification
+// (https://www.w3.org/TR/trace-context-1). All operations that create or copy
+// a TraceState do so by validating all input and will only produce TraceState
+// that conform to the specification. Specifically, this means that all
+// list-member's key/value pairs are valid, no duplicate list-members exist,
+// and the maximum number of list-members (32) is not exceeded.
 type TraceState struct { //nolint:golint
-	members []member
+	// list is the members in order.
+	list []member
 }
 
 var _ json.Marshaler = TraceState{}
 
 // ParseTraceState attempts to decode a TraceState from the passed
 // string. It returns an error if the input is invalid according to the W3C
-// tracecontext specification.
+// Trace Context specification.
 func ParseTraceState(tracestate string) (TraceState, error) {
 	if tracestate == "" {
 		return TraceState{}, nil
@@ -130,7 +130,7 @@ func ParseTraceState(tracestate string) (TraceState, error) {
 		}
 	}
 
-	return TraceState{members: members}, nil
+	return TraceState{list: members}, nil
 }
 
 // MarshalJSON marshals the TraceState into JSON.
@@ -139,24 +139,20 @@ func (ts TraceState) MarshalJSON() ([]byte, error) {
 }
 
 // String encodes the TraceState into a string compliant with the W3C
-// tracecontext specification. The returned string will be invalid if the
+// Trace Context specification. The returned string will be invalid if the
 // TraceState contains any invalid members.
 func (ts TraceState) String() string {
-	members := make([]string, len(ts.members))
-	for i, m := range ts.members {
+	members := make([]string, len(ts.list))
+	for i, m := range ts.list {
 		members[i] = m.String()
 	}
 	return strings.Join(members, listDelimiter)
 }
 
-// Get returns a value for given key from the trace state.
-// If no key is found or provided key is invalid, returns an empty string.
+// Get returns the value paired with key from the corresponding TraceState
+// list-member if it exists, otherwise an empty string is returned.
 func (ts TraceState) Get(key string) string {
-	if !keyRe.MatchString(key) {
-		return ""
-	}
-
-	for _, member := range ts.members {
+	for _, member := range ts.list {
 		if member.Key == key {
 			return member.Value
 		}
@@ -165,53 +161,57 @@ func (ts TraceState) Get(key string) string {
 	return ""
 }
 
-// Insert adds a new key/value pair, if one doesn't exists; otherwise updates the existing entry.
-// The new or updated entry is always inserted at the beginning of the TraceState, i.e.
-// on the left side, as per the W3C Trace Context specification requirement.
+// Insert adds a new list-member defined by the key/value pair to the
+// TraceState. If a list-member already exists for the given key, that
+// list-member's value is updated. The new or updated list-member is always
+// moved to the beginning of the TraceState as specified by the W3C Trace
+// Context specification.
+//
+// If key or value are invalid according to the W3C Trace Context
+// specification an error is returned with the original TraceState.
+//
+// If adding a new list-member means the TraceState would have more members
+// than is allowed an error is returned instead with the original TraceState.
 func (ts TraceState) Insert(key, value string) (TraceState, error) {
 	m, err := newMember(key, value)
 	if err != nil {
 		return ts, err
 	}
 
-	cTS := ts.remove(key)
+	cTS := ts.Delete(key)
 	if cTS.Len()+1 > maxListMembers {
+		// TODO (MrAlias): When the second version of the Trace Context
+		// specification is published this needs to not return an error.
+		// Instead it should drop the "right-most" member and insert the new
+		// member at the front.
+		//
+		// https://github.com/w3c/trace-context/pull/448
 		return ts, fmt.Errorf("failed to insert: %w", errMemberNumber)
 	}
 
-	cTS.members = append(cTS.members, member{})
-	copy(cTS.members[1:], cTS.members)
-	cTS.members[0] = m
+	cTS.list = append(cTS.list, member{})
+	copy(cTS.list[1:], cTS.list)
+	cTS.list[0] = m
 
 	return cTS, nil
 }
 
-// Delete removes specified entry from the trace state.
-func (ts TraceState) Delete(key string) (TraceState, error) {
-	if !keyRe.MatchString(key) {
-		return ts, fmt.Errorf("%w: %s", errInvalidKey, key)
+// Delete returns a copy of the TraceState with the list-member identified by
+// key removed.
+func (ts TraceState) Delete(key string) TraceState {
+	members := make([]member, ts.Len())
+	copy(members, ts.list)
+	for i, member := range ts.list {
+		if member.Key == key {
+			members = append(members[:i], members[i+1:]...)
+			// TraceState should contain no duplicate members.
+			break
+		}
 	}
-
-	return ts.remove(key), nil
+	return TraceState{list: members}
 }
 
 // Len returns the number of list-members in the TraceState.
 func (ts TraceState) Len() int {
-	return len(ts.members)
-}
-
-// remove returns a copy of ts with key removed, if it exists.
-func (ts TraceState) remove(key string) TraceState {
-	// allocate the same size in case key is not contained in ts.
-	members := make([]member, ts.Len())
-	copy(members, ts.members)
-
-	for i, member := range ts.members {
-		if member.Key == key {
-			members = append(members[:i], members[i+1:]...)
-			break
-		}
-	}
-
-	return TraceState{members: members}
+	return len(ts.list)
 }

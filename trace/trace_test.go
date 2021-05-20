@@ -370,21 +370,7 @@ func assertSpanContextEqual(got SpanContext, want SpanContext) bool {
 		got.traceID == want.traceID &&
 		got.traceFlags == want.traceFlags &&
 		got.remote == want.remote &&
-		assertTraceStateEqual(got.traceState, want.traceState)
-}
-
-func assertTraceStateEqual(got TraceState, want TraceState) bool {
-	if len(got.members) != len(want.members) {
-		return false
-	}
-
-	for i, kv := range got.members {
-		if kv != want.members[i] {
-			return false
-		}
-	}
-
-	return true
+		got.traceState.String() == want.traceState.String()
 }
 
 func TestNewSpanContext(t *testing.T) {
@@ -399,7 +385,7 @@ func TestNewSpanContext(t *testing.T) {
 				TraceID:    TraceID([16]byte{1}),
 				SpanID:     SpanID([8]byte{42}),
 				TraceFlags: 0x1,
-				TraceState: TraceState{members: []member{
+				TraceState: TraceState{list: []member{
 					{"foo", "bar"},
 				}},
 			},
@@ -407,7 +393,7 @@ func TestNewSpanContext(t *testing.T) {
 				traceID:    TraceID([16]byte{1}),
 				spanID:     SpanID([8]byte{42}),
 				traceFlags: 0x1,
-				traceState: TraceState{members: []member{
+				traceState: TraceState{list: []member{
 					{"foo", "bar"},
 				}},
 			},
@@ -468,7 +454,7 @@ func TestSpanContextDerivation(t *testing.T) {
 	}
 
 	from = to
-	to.traceState = TraceState{members: []member{{"foo", "bar"}}}
+	to.traceState = TraceState{list: []member{{"foo", "bar"}}}
 
 	modified = from.WithTraceState(to.TraceState())
 	if !assertSpanContextEqual(modified, to) {

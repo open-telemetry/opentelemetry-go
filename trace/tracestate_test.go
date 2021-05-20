@@ -94,7 +94,7 @@ var testcases = []struct {
 	{
 		in:  "abcdefghijklmnopqrstuvwxyz0123456789_-*/= !\"#$%&'()*+-./0123456789:;<>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",
 		out: "abcdefghijklmnopqrstuvwxyz0123456789_-*/= !\"#$%&'()*+-./0123456789:;<>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",
-		tracestate: TraceState{members: []member{
+		tracestate: TraceState{list: []member{
 			{
 				Key:   "abcdefghijklmnopqrstuvwxyz0123456789_-*/",
 				Value: " !\"#$%&'()*+-./0123456789:;<>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",
@@ -104,7 +104,7 @@ var testcases = []struct {
 	{
 		in:  "abcdefghijklmnopqrstuvwxyz0123456789_-*/@a-z0-9_-*/= !\"#$%&'()*+-./0123456789:;<>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",
 		out: "abcdefghijklmnopqrstuvwxyz0123456789_-*/@a-z0-9_-*/= !\"#$%&'()*+-./0123456789:;<>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",
-		tracestate: TraceState{members: []member{
+		tracestate: TraceState{list: []member{
 			{
 				Key:   "abcdefghijklmnopqrstuvwxyz0123456789_-*/@a-z0-9_-*/",
 				Value: " !\"#$%&'()*+-./0123456789:;<>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",
@@ -119,21 +119,21 @@ var testcases = []struct {
 	{
 		in:  "foo=1",
 		out: "foo=1",
-		tracestate: TraceState{members: []member{
+		tracestate: TraceState{list: []member{
 			{Key: "foo", Value: "1"},
 		}},
 	},
 	{
 		in:  "foo=1,",
 		out: "foo=1",
-		tracestate: TraceState{members: []member{
+		tracestate: TraceState{list: []member{
 			{Key: "foo", Value: "1"},
 		}},
 	},
 	{
 		in:  "foo=1,bar=2",
 		out: "foo=1,bar=2",
-		tracestate: TraceState{members: []member{
+		tracestate: TraceState{list: []member{
 			{Key: "foo", Value: "1"},
 			{Key: "bar", Value: "2"},
 		}},
@@ -141,7 +141,7 @@ var testcases = []struct {
 	{
 		in:  "foo=1,zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz=1",
 		out: "foo=1,zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz=1",
-		tracestate: TraceState{members: []member{
+		tracestate: TraceState{list: []member{
 			{
 				Key:   "foo",
 				Value: "1",
@@ -155,7 +155,7 @@ var testcases = []struct {
 	{
 		in:  "foo=1,ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt@vvvvvvvvvvvvvv=1",
 		out: "foo=1,ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt@vvvvvvvvvvvvvv=1",
-		tracestate: TraceState{members: []member{
+		tracestate: TraceState{list: []member{
 			{
 				Key:   "foo",
 				Value: "1",
@@ -169,7 +169,7 @@ var testcases = []struct {
 	{
 		in:  "bar01=01,bar02=02,bar03=03,bar04=04,bar05=05,bar06=06,bar07=07,bar08=08,bar09=09,bar10=10,bar11=11,bar12=12,bar13=13,bar14=14,bar15=15,bar16=16,bar17=17,bar18=18,bar19=19,bar20=20,bar21=21,bar22=22,bar23=23,bar24=24,bar25=25,bar26=26,bar27=27,bar28=28,bar29=29,bar30=30,bar31=31,bar32=32",
 		out: "bar01=01,bar02=02,bar03=03,bar04=04,bar05=05,bar06=06,bar07=07,bar08=08,bar09=09,bar10=10,bar11=11,bar12=12,bar13=13,bar14=14,bar15=15,bar16=16,bar17=17,bar18=18,bar19=19,bar20=20,bar21=21,bar22=22,bar23=23,bar24=24,bar25=25,bar26=26,bar27=27,bar28=28,bar29=29,bar30=30,bar31=31,bar32=32",
-		tracestate: TraceState{members: []member{
+		tracestate: TraceState{list: []member{
 			{Key: "bar01", Value: "01"},
 			{Key: "bar02", Value: "02"},
 			{Key: "bar03", Value: "03"},
@@ -207,7 +207,7 @@ var testcases = []struct {
 	{
 		in:  "foo=1,bar=2,rojo=1,congo=2,baz=3",
 		out: "foo=1,bar=2,rojo=1,congo=2,baz=3",
-		tracestate: TraceState{members: []member{
+		tracestate: TraceState{list: []member{
 			{Key: "foo", Value: "1"},
 			{Key: "bar", Value: "2"},
 			{Key: "rojo", Value: "1"},
@@ -218,7 +218,7 @@ var testcases = []struct {
 	{
 		in:  "foo=1 \t , \t bar=2, \t baz=3",
 		out: "foo=1,bar=2,baz=3",
-		tracestate: TraceState{members: []member{
+		tracestate: TraceState{list: []member{
 			{Key: "foo", Value: "1"},
 			{Key: "bar", Value: "2"},
 			{Key: "baz", Value: "3"},
@@ -227,7 +227,7 @@ var testcases = []struct {
 	{
 		in:  "foo=1\t \t,\t \tbar=2,\t \tbaz=3",
 		out: "foo=1,bar=2,baz=3",
-		tracestate: TraceState{members: []member{
+		tracestate: TraceState{list: []member{
 			{Key: "foo", Value: "1"},
 			{Key: "bar", Value: "2"},
 			{Key: "baz", Value: "3"},
@@ -236,21 +236,21 @@ var testcases = []struct {
 	{
 		in:  "foo=1 ",
 		out: "foo=1",
-		tracestate: TraceState{members: []member{
+		tracestate: TraceState{list: []member{
 			{Key: "foo", Value: "1"},
 		}},
 	},
 	{
 		in:  "foo=1\t",
 		out: "foo=1",
-		tracestate: TraceState{members: []member{
+		tracestate: TraceState{list: []member{
 			{Key: "foo", Value: "1"},
 		}},
 	},
 	{
 		in:  "foo=1 \t",
 		out: "foo=1",
-		tracestate: TraceState{members: []member{
+		tracestate: TraceState{list: []member{
 			{Key: "foo", Value: "1"},
 		}},
 	},
@@ -264,7 +264,7 @@ var maxMembers = func() TraceState {
 			Value: fmt.Sprintf("value%d", i+1),
 		}
 	}
-	return TraceState{members: members}
+	return TraceState{list: members}
 }()
 
 func TestParseTraceState(t *testing.T) {
@@ -337,7 +337,7 @@ func TestTraceStateGet(t *testing.T) {
 }
 
 func TestTraceStateDelete(t *testing.T) {
-	ts := TraceState{members: []member{
+	ts := TraceState{list: []member{
 		{Key: "key1", Value: "val1"},
 		{Key: "key2", Value: "val2"},
 		{Key: "key3", Value: "val3"},
@@ -347,12 +347,11 @@ func TestTraceStateDelete(t *testing.T) {
 		name     string
 		key      string
 		expected TraceState
-		err      error
 	}{
 		{
 			name: "OK case",
 			key:  "key2",
-			expected: TraceState{members: []member{
+			expected: TraceState{list: []member{
 				{Key: "key1", Value: "val1"},
 				{Key: "key3", Value: "val3"},
 			}},
@@ -360,7 +359,7 @@ func TestTraceStateDelete(t *testing.T) {
 		{
 			name: "Non-existing key",
 			key:  "keyx",
-			expected: TraceState{members: []member{
+			expected: TraceState{list: []member{
 				{Key: "key1", Value: "val1"},
 				{Key: "key2", Value: "val2"},
 				{Key: "key3", Value: "val3"},
@@ -369,28 +368,21 @@ func TestTraceStateDelete(t *testing.T) {
 		{
 			name: "Invalid key",
 			key:  "in va lid",
-			expected: TraceState{members: []member{
+			expected: TraceState{list: []member{
 				{Key: "key1", Value: "val1"},
 				{Key: "key2", Value: "val2"},
 				{Key: "key3", Value: "val3"},
 			}},
-			err: errInvalidKey,
 		},
 	}
 
 	for _, tc := range testCases {
-		actual, err := ts.Delete(tc.key)
-		assert.ErrorIs(t, err, tc.err, tc.name)
-		if tc.err != nil {
-			assert.Equal(t, ts, actual, tc.name)
-		} else {
-			assert.Equal(t, tc.expected, actual, tc.name)
-		}
+		assert.Equal(t, tc.expected, ts.Delete(tc.key), tc.name)
 	}
 }
 
 func TestTraceStateInsert(t *testing.T) {
-	ts := TraceState{members: []member{
+	ts := TraceState{list: []member{
 		{Key: "key1", Value: "val1"},
 		{Key: "key2", Value: "val2"},
 		{Key: "key3", Value: "val3"},
@@ -408,7 +400,7 @@ func TestTraceStateInsert(t *testing.T) {
 			tracestate: ts,
 			key:        "key4@vendor",
 			value:      "val4",
-			expected: TraceState{members: []member{
+			expected: TraceState{list: []member{
 				{Key: "key4@vendor", Value: "val4"},
 				{Key: "key1", Value: "val1"},
 				{Key: "key2", Value: "val2"},
@@ -420,7 +412,7 @@ func TestTraceStateInsert(t *testing.T) {
 			tracestate: ts,
 			key:        "key2",
 			value:      "valX",
-			expected: TraceState{members: []member{
+			expected: TraceState{list: []member{
 				{Key: "key2", Value: "valX"},
 				{Key: "key1", Value: "val1"},
 				{Key: "key3", Value: "val3"},
@@ -471,15 +463,15 @@ func TestTraceStateInsert(t *testing.T) {
 	}
 }
 
-func TestTraceStateIsEmpty(t *testing.T) {
+func TestTraceStateLen(t *testing.T) {
 	ts := TraceState{}
 	assert.Equal(t, 0, ts.Len(), "zero value TraceState is empty")
 
-	ts, err := ts.Insert("key", "value")
+	key := "key"
+	ts, err := ts.Insert(key, "value")
 	require.NoError(t, err)
 	assert.Equal(t, 1, ts.Len(), "TraceState with inserted value")
 
-	ts, err = ts.Delete("key")
-	require.NoError(t, err)
+	ts = ts.Delete(key)
 	assert.Equal(t, 0, ts.Len(), "TraceState with all values deleted")
 }
