@@ -475,3 +475,36 @@ func TestTraceStateLen(t *testing.T) {
 	ts = ts.Delete(key)
 	assert.Equal(t, 0, ts.Len(), "TraceState with all values deleted")
 }
+
+func TestTraceStateImmutable(t *testing.T) {
+	k0, v0 := "k0", "v0"
+	ts0 := TraceState{list: []member{{k0, v0}}}
+	assert.Equal(t, v0, ts0.Get(k0))
+
+	// Insert should not modify the original.
+	k1, v1 := "k1", "v1"
+	ts1, err := ts0.Insert(k1, v1)
+	require.NoError(t, err)
+	assert.Equal(t, v0, ts0.Get(k0))
+	assert.Equal(t, "", ts0.Get(k1))
+	assert.Equal(t, v0, ts1.Get(k0))
+	assert.Equal(t, v1, ts1.Get(k1))
+
+	// Update should not modify the original.
+	v2 := "v2"
+	ts2, err := ts1.Insert(k1, v2)
+	require.NoError(t, err)
+	assert.Equal(t, v0, ts0.Get(k0))
+	assert.Equal(t, "", ts0.Get(k1))
+	assert.Equal(t, v0, ts1.Get(k0))
+	assert.Equal(t, v1, ts1.Get(k1))
+	assert.Equal(t, v0, ts2.Get(k0))
+	assert.Equal(t, v2, ts2.Get(k1))
+
+	// Delete should not modify the original.
+	ts3 := ts2.Delete(k0)
+	assert.Equal(t, v0, ts0.Get(k0))
+	assert.Equal(t, v0, ts1.Get(k0))
+	assert.Equal(t, v0, ts2.Get(k0))
+	assert.Equal(t, "", ts3.Get(k0))
+}
