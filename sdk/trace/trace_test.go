@@ -1603,7 +1603,7 @@ func TestSamplerTraceState(t *testing.T) {
 	makeDeleter := func(k attribute.Key, prefix string) Sampler {
 		return &stateSampler{
 			prefix: prefix,
-			f:      func(t trace.TraceState) trace.TraceState { return mustTS(t.Delete(string(k))) },
+			f:      func(t trace.TraceState) trace.TraceState { return t.Delete(string(k)) },
 		}
 	}
 	clearer := func(prefix string) Sampler {

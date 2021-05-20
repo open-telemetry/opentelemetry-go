@@ -52,7 +52,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Move the `go.opentelemetry.io/otel/unit` package to `go.opentelemetry.io/otel/metric/unit`. (#1903)
 - Refactor option types according to the contribution style guide. (#1882)
 - Move the `go.opentelemetry.io/otel/trace.TraceStateFromKeyValues` function to the `go.opentelemetry.io/otel/oteltest` package.
-  This function is perserved for testing purposes where it may be useful to create a `TraceState` from `attribute.KeyValue`s, but it is not intended for production use.
+  This function is preserved for testing purposes where it may be useful to create a `TraceState` from `attribute.KeyValue`s, but it is not intended for production use.
   The new `ParseTraceState` function should be used to create a `TraceState`. (#1931)
 - The `MarshalJSON` method of the `go.opentelemetry.io/otel/trace.TraceState` type is updated to marshal the type in to the string representation of the `TraceState`. (#1931)
 - The `TraceState.Delete` method from the `go.opentelemetry.io/otel/trace` package no longer returns an error in addition to a `TraceState`. (#1931)
