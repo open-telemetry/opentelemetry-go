@@ -140,7 +140,7 @@ func (tc TraceContext) extract(carrier TextMapCarrier) trace.SpanContext {
 	// Ignore the error returned here. Failure to parse tracestate MUST NOT
 	// affect the parsing of traceparent according to the W3C tracecontext
 	// specification.
-	scc.TraceState, _ = trace.ParseTraceStateString(carrier.Get(tracestateHeader))
+	scc.TraceState, _ = trace.ParseTraceState(carrier.Get(tracestateHeader))
 	scc.Remote = true
 
 	sc := trace.NewSpanContext(scc)

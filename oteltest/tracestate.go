@@ -37,5 +37,5 @@ func TraceStateFromKeyValues(kvs ...attribute.KeyValue) (trace.TraceState, error
 	for i, kv := range kvs {
 		members[i] = fmt.Sprintf("%s=%s", string(kv.Key), kv.Value.Emit())
 	}
-	return trace.ParseTraceStateString(strings.Join(members, ","))
+	return trace.ParseTraceState(strings.Join(members, ","))
 }

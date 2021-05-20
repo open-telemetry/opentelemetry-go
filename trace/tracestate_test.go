@@ -267,9 +267,9 @@ var maxMembers = func() TraceState {
 	return TraceState{members: members}
 }()
 
-func TestParseTraceStateString(t *testing.T) {
+func TestParseTraceState(t *testing.T) {
 	for _, tc := range testcases {
-		got, err := ParseTraceState([]byte(tc.in))
+		got, err := ParseTraceState(tc.in)
 		assert.Equal(t, tc.tracestate, got)
 		if tc.err != nil {
 			assert.ErrorIs(t, err, tc.err, tc.in)

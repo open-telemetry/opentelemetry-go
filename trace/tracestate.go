@@ -95,17 +95,10 @@ type TraceState struct { //nolint:golint
 
 var _ json.Marshaler = TraceState{}
 
-// ParseTraceState attempts to decode a TraceState from the passed byte slice.
-// It returns an error if the input is invalid according to the W3C
-// tracecontext specification.
-func ParseTraceState(tracestate []byte) (TraceState, error) {
-	return ParseTraceStateString(string(tracestate))
-}
-
-// ParseTraceStateString attempts to decode a TraceState from the passed
+// ParseTraceState attempts to decode a TraceState from the passed
 // string. It returns an error if the input is invalid according to the W3C
 // tracecontext specification.
-func ParseTraceStateString(tracestate string) (TraceState, error) {
+func ParseTraceState(tracestate string) (TraceState, error) {
 	if tracestate == "" {
 		return TraceState{}, nil
 	}
