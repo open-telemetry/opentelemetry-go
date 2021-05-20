@@ -56,6 +56,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The new `ParseTraceState` function should be used to create a `TraceState`. (#1931)
 - The `MarshalJSON` method of the `go.opentelemetry.io/otel/trace.TraceState` type is updated to marshal the type in to the string representation of the `TraceState`. (#1931)
 - The `TraceState.Delete` method from the `go.opentelemetry.io/otel/trace` package no longer returns an error in addition to a `TraceState`. (#1931)
+- The `Get` method of the `TraceState` type from the `go.opentelemetry.io/otel/trace` package has been updated to accept a `string` instead of an `attribute.Key` type. (#1931)
+- The `Insert` method of the `TraceState` type from the `go.opentelemetry.io/otel/trace` package has been updated to accept a pair of `string`s instead of an `attribute.KeyValue` type. (#1931)
+- The `Delete` method of the `TraceState` type from the `go.opentelemetry.io/otel/trace` package has been updated to accept a `string` instead of an `attribute.Key` type. (#1931)
 
 ### Deprecated
 
