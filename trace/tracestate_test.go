@@ -468,12 +468,8 @@ func TestTraceStateLen(t *testing.T) {
 	assert.Equal(t, 0, ts.Len(), "zero value TraceState is empty")
 
 	key := "key"
-	ts, err := ts.Insert(key, "value")
-	require.NoError(t, err)
-	assert.Equal(t, 1, ts.Len(), "TraceState with inserted value")
-
-	ts = ts.Delete(key)
-	assert.Equal(t, 0, ts.Len(), "TraceState with all values deleted")
+	ts = TraceState{list: []member{{key, "value"}}}
+	assert.Equal(t, 1, ts.Len(), "TraceState with one value")
 }
 
 func TestTraceStateImmutable(t *testing.T) {
