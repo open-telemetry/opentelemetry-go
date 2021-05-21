@@ -168,7 +168,7 @@ dependabot-check:
 	); \
 	if [ -n "$$result" ]; then \
 		echo "missing go.mod dependabot check:"; echo "$$result"; \
-		echo "new modules needs to be added to the .github/dependabot.yml file"; \
+		echo "new modules need to be added to the .github/dependabot.yml file"; \
 		exit 1; \
 	fi
 
