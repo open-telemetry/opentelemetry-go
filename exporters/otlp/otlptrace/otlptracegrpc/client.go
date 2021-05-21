@@ -20,10 +20,10 @@ import (
 	"fmt"
 	"sync"
 
-	"go.opentelemetry.io/otel/exporters/otlp/grpc/connection"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/connection"
 
-	"go.opentelemetry.io/otel/exporters/otlp/internal/otlpconfig"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
 
 	"google.golang.org/grpc"
 

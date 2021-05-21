@@ -32,7 +32,7 @@ type Client interface {
 	// Stop should close the connections. The function is called
 	// only once by the exporter, so the implementation does not
 	// need to worry about idempotence, but it may be called
-	// concurrently with ExportMetrics or ExportTraces, so proper
+	// concurrently with UploadTraces, so proper
 	// locking is required. The function serves as a
 	// synchronization point - after the function returns, the
 	// process of closing connections is assumed to be finished.

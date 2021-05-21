@@ -19,8 +19,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp"
-	"go.opentelemetry.io/otel/exporters/otlp/internal/otlpconfig"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -30,6 +29,8 @@ import (
 type Option interface {
 	applyGRPCOption(*otlpconfig.Config)
 }
+
+type RetrySettings otlpconfig.RetrySettings
 
 type wrappedOption struct {
 	otlpconfig.GRPCOption
@@ -75,14 +76,14 @@ func WithReconnectionPeriod(rp time.Duration) Option {
 	})}
 }
 
-func compressorToCompression(compressor string) otlp.Compression {
+func compressorToCompression(compressor string) otlpconfig.Compression {
 	switch compressor {
 	case "gzip":
-		return otlp.GzipCompression
+		return otlpconfig.GzipCompression
 	}
 
 	otel.Handle(fmt.Errorf("invalid compression type: '%s', using no compression as default", compressor))
-	return otlp.NoCompression
+	return otlpconfig.NoCompression
 }
 
 // WithCompressor will set the compressor for the gRPC client to use when sending requests.
@@ -169,6 +170,6 @@ func WithTracesTimeout(duration time.Duration) Option {
 // ensure endpoints are not overwhelmed with retries. If unset, the default
 // retry policy will retry after 5 seconds and increase exponentially after each
 // error for a total of 1 minute.
-func WithRetry(settings otlp.RetrySettings) Option {
-	return wrappedOption{otlpconfig.WithRetry(settings)}
+func WithRetry(settings RetrySettings) Option {
+	return wrappedOption{otlpconfig.WithRetry(otlpconfig.RetrySettings(settings))}
 }

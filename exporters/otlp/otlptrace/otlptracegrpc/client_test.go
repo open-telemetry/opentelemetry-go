@@ -37,7 +37,6 @@ import (
 	"google.golang.org/grpc/encoding/gzip"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/otlp"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
@@ -172,7 +171,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 	reconnectionPeriod := 20 * time.Millisecond
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint,
-		otlptracegrpc.WithRetry(otlp.RetrySettings{Enabled: false}),
+		otlptracegrpc.WithRetry(otlptracegrpc.RetrySettings{Enabled: false}),
 		otlptracegrpc.WithReconnectionPeriod(reconnectionPeriod))
 	defer func() { require.NoError(t, exp.Shutdown(ctx)) }()
 
@@ -227,7 +226,7 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 	tts := []struct {
 		name   string
 		errors []error
-		rs     otlp.RetrySettings
+		rs     otlptracegrpc.RetrySettings
 		fn     func(t *testing.T, ctx context.Context, exp *otlptrace.Exporter, mc *mockCollector)
 		opts   []otlptracegrpc.Option
 	}{
@@ -258,7 +257,7 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 		},
 		{
 			name: "Fail three times and succeed",
-			rs: otlp.RetrySettings{
+			rs: otlptracegrpc.RetrySettings{
 				Enabled:         true,
 				MaxElapsedTime:  300 * time.Millisecond,
 				InitialInterval: 2 * time.Millisecond,
@@ -280,7 +279,7 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 		},
 		{
 			name: "Permanent error should not be retried",
-			rs: otlp.RetrySettings{
+			rs: otlptracegrpc.RetrySettings{
 				Enabled:         true,
 				MaxElapsedTime:  300 * time.Millisecond,
 				InitialInterval: 2 * time.Millisecond,
@@ -300,7 +299,7 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 		},
 		{
 			name: "Test all transient errors and succeed",
-			rs: otlp.RetrySettings{
+			rs: otlptracegrpc.RetrySettings{
 				Enabled:         true,
 				MaxElapsedTime:  500 * time.Millisecond,
 				InitialInterval: 1 * time.Millisecond,
@@ -326,7 +325,7 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 		},
 		{
 			name: "Retry should honor server throttling",
-			rs: otlp.RetrySettings{
+			rs: otlptracegrpc.RetrySettings{
 				Enabled:         true,
 				MaxElapsedTime:  time.Minute,
 				InitialInterval: time.Nanosecond,
@@ -351,7 +350,7 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 		},
 		{
 			name: "Retry should fail if server throttling is higher than the MaxElapsedTime",
-			rs: otlp.RetrySettings{
+			rs: otlptracegrpc.RetrySettings{
 				Enabled:         true,
 				MaxElapsedTime:  time.Millisecond * 100,
 				InitialInterval: time.Nanosecond,
@@ -373,7 +372,7 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 		},
 		{
 			name: "Retry stops if takes too long",
-			rs: otlp.RetrySettings{
+			rs: otlptracegrpc.RetrySettings{
 				Enabled:         true,
 				MaxElapsedTime:  time.Millisecond * 100,
 				InitialInterval: time.Millisecond * 50,
@@ -401,7 +400,7 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 		},
 		{
 			name: "Disabled retry",
-			rs: otlp.RetrySettings{
+			rs: otlptracegrpc.RetrySettings{
 				Enabled: false,
 			},
 			errors: []error{
@@ -496,7 +495,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 	reconnectionPeriod := 50 * time.Millisecond
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint,
-		otlptracegrpc.WithRetry(otlp.RetrySettings{Enabled: false}),
+		otlptracegrpc.WithRetry(otlptracegrpc.RetrySettings{Enabled: false}),
 		otlptracegrpc.WithReconnectionPeriod(reconnectionPeriod))
 	defer func() { require.NoError(t, exp.Shutdown(ctx)) }()
 
@@ -601,7 +600,6 @@ func TestNewExporter_WithTimeout(t *testing.T) {
 		name    string
 		fn      func(exp *otlptrace.Exporter) error
 		timeout time.Duration
-		metrics int
 		spans   int
 		code    codes.Code
 		delay   bool
@@ -639,7 +637,7 @@ func TestNewExporter_WithTimeout(t *testing.T) {
 			}()
 
 			ctx := context.Background()
-			exp := newGRPCExporter(t, ctx, mc.endpoint, otlptracegrpc.WithTimeout(tt.timeout), otlptracegrpc.WithRetry(otlp.RetrySettings{Enabled: false}))
+			exp := newGRPCExporter(t, ctx, mc.endpoint, otlptracegrpc.WithTimeout(tt.timeout), otlptracegrpc.WithRetry(otlptracegrpc.RetrySettings{Enabled: false}))
 			defer func() {
 				_ = exp.Shutdown(ctx)
 			}()

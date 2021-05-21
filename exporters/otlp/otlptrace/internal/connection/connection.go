@@ -30,8 +30,7 @@ import (
 
 	"google.golang.org/grpc/encoding/gzip"
 
-	"go.opentelemetry.io/otel/exporters/otlp"
-	"go.opentelemetry.io/otel/exporters/otlp/internal/otlpconfig"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -230,7 +229,7 @@ func (c *Connection) dialToCollector(ctx context.Context) (*grpc.ClientConn, err
 	} else if c.SCfg.Insecure {
 		dialOpts = append(dialOpts, grpc.WithInsecure())
 	}
-	if c.SCfg.Compression == otlp.GzipCompression {
+	if c.SCfg.Compression == otlpconfig.GzipCompression {
 		dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
 	}
 	if len(c.cfg.DialOptions) != 0 {
@@ -412,7 +411,7 @@ func getThrottleDuration(status *status.Status) time.Duration {
 	return 0
 }
 
-func newExponentialBackoff(rs otlp.RetrySettings) *backoff.ExponentialBackOff {
+func newExponentialBackoff(rs otlpconfig.RetrySettings) *backoff.ExponentialBackOff {
 	// Do not use NewExponentialBackOff since it calls Reset and the code here must
 	// call Reset after changing the InitialInterval (this saves an unnecessary call to Now).
 	expBackoff := &backoff.ExponentialBackOff{

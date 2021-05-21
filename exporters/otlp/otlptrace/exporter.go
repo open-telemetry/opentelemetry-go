@@ -19,8 +19,9 @@ import (
 	"errors"
 	"sync"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/tracetransform"
+
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -39,7 +40,7 @@ type Exporter struct {
 }
 
 func (e *Exporter) ExportSpans(ctx context.Context, ss []tracesdk.ReadOnlySpan) error {
-	protoSpans := transform.Spans(ss)
+	protoSpans := tracetransform.Spans(ss)
 	if len(protoSpans) == 0 {
 		return nil
 	}
