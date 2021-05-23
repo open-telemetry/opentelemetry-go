@@ -120,7 +120,7 @@ func (p *CheckpointSet) ForEach(_ export.ExportKindSelector, f func(export.Recor
 	return nil
 }
 
-// Takes a slice of []some.Aggregator and returns a slice of []export.Aggregator
+// Unslice2 takes a slice of []some.Aggregator and returns a slice of []export.Aggregator
 func Unslice2(sl interface{}) (one, two export.Aggregator) {
 	slv := reflect.ValueOf(sl)
 	if slv.Type().Kind() != reflect.Slice {

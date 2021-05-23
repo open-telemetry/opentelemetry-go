@@ -147,7 +147,7 @@ var (
 	_ metric.SyncImpl      = &syncInstrument{}
 	_ metric.BoundSyncImpl = &record{}
 
-	ErrUninitializedInstrument = fmt.Errorf("use of an uninitialized instrument")
+	ErrUninitializedInstrument = fmt.Errorf("use of an uninitialized instrument") //nolint:revive
 )
 
 func (inst *instrument) Descriptor() metric.Descriptor {

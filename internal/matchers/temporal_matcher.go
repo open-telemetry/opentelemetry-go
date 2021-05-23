@@ -16,6 +16,7 @@ package matchers
 
 type TemporalMatcher byte
 
+//nolint:revive
 const (
 	Before TemporalMatcher = iota
 	BeforeOrSameTime

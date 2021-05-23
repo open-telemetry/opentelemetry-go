@@ -8,6 +8,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+- Replaces [_golint_](https://github.com/golang/lint) with (_revive_)[https://github.com/mgechev/revive]
+    and fixes lint issues risen by _revive_. (#TODO)
+
 ### Added
 
 - Adds `otlpgrpc.WithRetry`option for configuring the retry policy for transient errors on the otlp/gRPC exporter. (#1832)

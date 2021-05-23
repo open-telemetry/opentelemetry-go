@@ -30,6 +30,7 @@ import (
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 )
 
+//nolint:revive
 var (
 	ComponentKey     = attribute.Key("component")
 	ServiceKey       = attribute.Key("service")

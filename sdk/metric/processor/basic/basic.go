@@ -119,8 +119,8 @@ type (
 var _ export.Processor = &Processor{}
 var _ export.Checkpointer = &Processor{}
 var _ export.CheckpointSet = &state{}
-var ErrInconsistentState = fmt.Errorf("inconsistent processor state")
-var ErrInvalidExportKind = fmt.Errorf("invalid export kind")
+var ErrInconsistentState = fmt.Errorf("inconsistent processor state") //nolint:revive
+var ErrInvalidExportKind = fmt.Errorf("invalid export kind")          //nolint:revive
 
 // New returns a basic Processor that is also a Checkpointer using the provided
 // AggregatorSelector to select Aggregators.  The ExportKindSelector

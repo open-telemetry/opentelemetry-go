@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 )
 
+//nolint:revive
 const (
 	WeakCertificate = `
 -----BEGIN CERTIFICATE-----

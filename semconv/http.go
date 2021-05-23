@@ -26,8 +26,8 @@ import (
 )
 
 var (
-	HTTPSchemeHTTP  = HTTPSchemeKey.String("http")
-	HTTPSchemeHTTPS = HTTPSchemeKey.String("https")
+	httpSchemeHTTP  = HTTPSchemeKey.String("http")
+	httpSchemeHTTPS = HTTPSchemeKey.String("https")
 )
 
 // NetAttributesFromHTTPRequest generates attributes of the net
@@ -175,9 +175,9 @@ func httpBasicAttributesFromHTTPRequest(request *http.Request) []attribute.KeyVa
 	attrs := []attribute.KeyValue{}
 
 	if request.TLS != nil {
-		attrs = append(attrs, HTTPSchemeHTTPS)
+		attrs = append(attrs, httpSchemeHTTPS)
 	} else {
-		attrs = append(attrs, HTTPSchemeHTTP)
+		attrs = append(attrs, httpSchemeHTTP)
 	}
 
 	if request.Host != "" {

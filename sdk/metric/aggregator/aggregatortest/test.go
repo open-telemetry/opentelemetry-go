@@ -77,7 +77,7 @@ func RunProfiles(t *testing.T, f func(*testing.T, Profile)) {
 	}
 }
 
-// Ensure local struct alignment prior to running tests.
+// TestMain ensures local struct alignment prior to running tests.
 func TestMain(m *testing.M) {
 	fields := []ottest.FieldOffset{
 		{
@@ -148,7 +148,7 @@ func (n *Numbers) Points() []number.Number {
 	return n.numbers
 }
 
-// Performs the same range test the SDK does on behalf of the aggregator.
+// CheckedUpdate performs the same range test the SDK does on behalf of the aggregator.
 func CheckedUpdate(t *testing.T, agg export.Aggregator, number number.Number, descriptor *metric.Descriptor) {
 	ctx := context.Background()
 
