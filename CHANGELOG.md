@@ -8,8 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-- Replaces [_golint_](https://github.com/golang/lint) with (_revive_)[https://github.com/mgechev/revive]
-    and fixes lint issues risen by _revive_. (#TODO)
+- Replaces [_golint_](https://github.com/golang/lint) with [_revive_](https://github.com/mgechev/revive)
+    and fixes lint issues risen by _revive_. (#1946)
 
 ### Added
 
