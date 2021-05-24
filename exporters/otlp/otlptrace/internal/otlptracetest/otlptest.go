@@ -27,7 +27,7 @@ import (
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 )
 
-// RunEndToEndTest can be used by protocol driver tests to validate
+// RunEndToEndTest can be used by otlptrace.Client tests to validate
 // themselves.
 func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlptrace.Exporter, tracesCollector TracesCollector) {
 	pOpts := []sdktrace.TracerProviderOption{
