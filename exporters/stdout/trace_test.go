@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/stdout"
+	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
@@ -45,7 +46,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 	now := time.Now()
 	traceID, _ := trace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
 	spanID, _ := trace.SpanIDFromHex("0102030405060708")
-	traceState, _ := trace.TraceStateFromKeyValues(attribute.String("key", "val"))
+	traceState, _ := oteltest.TraceStateFromKeyValues(attribute.String("key", "val"))
 	keyValue := "value"
 	doubleValue := 123.456
 	resource := resource.NewWithAttributes(attribute.String("rk1", "rv11"))
@@ -90,22 +91,14 @@ func TestExporter_ExportSpan(t *testing.T) {
 			"TraceID": "0102030405060708090a0b0c0d0e0f10",
 			"SpanID": "0102030405060708",
 			"TraceFlags": "00",
-			"TraceState": [
-				{
-					"Key": "key",
-					"Value": {
-						"Type": "STRING",
-						"Value": "val"
-					}
-				}
-			],
+			"TraceState": "key=val",
 			"Remote": false
 		},
 		"Parent": {
 			"TraceID": "00000000000000000000000000000000",
 			"SpanID": "0000000000000000",
 			"TraceFlags": "00",
-			"TraceState": null,
+			"TraceState": "",
 			"Remote": false
 		},
 		"SpanKind": 1,
