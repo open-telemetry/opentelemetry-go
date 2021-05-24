@@ -16,7 +16,7 @@ package unit // import "go.opentelemetry.io/otel/metric/unit"
 
 type Unit string
 
-//nolint:revive // ignoring missing comments for obvious constants.
+// Units defined by OpenTelemetry.
 const (
 	Dimensionless Unit = "1"
 	Bytes         Unit = "By"
