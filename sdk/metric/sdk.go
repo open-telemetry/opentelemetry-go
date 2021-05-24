@@ -147,7 +147,8 @@ var (
 	_ metric.SyncImpl      = &syncInstrument{}
 	_ metric.BoundSyncImpl = &record{}
 
-	ErrUninitializedInstrument = fmt.Errorf("use of an uninitialized instrument") //nolint:revive
+	// ErrUninitializedInstrument is passed to otel.ErrorHandler to be returned when an instrument is uninitialized.
+	ErrUninitializedInstrument = fmt.Errorf("use of an uninitialized instrument")
 )
 
 func (inst *instrument) Descriptor() metric.Descriptor {

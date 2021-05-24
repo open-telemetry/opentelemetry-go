@@ -25,9 +25,10 @@ import (
 	"go.opentelemetry.io/otel/codes"
 )
 
+// HTTP scheme key-value pairs.
 var (
-	httpSchemeHTTP  = HTTPSchemeKey.String("http")
-	httpSchemeHTTPS = HTTPSchemeKey.String("https")
+	HTTPSchemeHTTP  = HTTPSchemeKey.String("http")
+	HTTPSchemeHTTPS = HTTPSchemeKey.String("https")
 )
 
 // NetAttributesFromHTTPRequest generates attributes of the net
@@ -175,9 +176,9 @@ func httpBasicAttributesFromHTTPRequest(request *http.Request) []attribute.KeyVa
 	attrs := []attribute.KeyValue{}
 
 	if request.TLS != nil {
-		attrs = append(attrs, httpSchemeHTTPS)
+		attrs = append(attrs, HTTPSchemeHTTPS)
 	} else {
-		attrs = append(attrs, httpSchemeHTTP)
+		attrs = append(attrs, HTTPSchemeHTTP)
 	}
 
 	if request.Host != "" {

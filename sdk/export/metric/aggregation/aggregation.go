@@ -128,7 +128,7 @@ type (
 	Kind string
 )
 
-//nolint:revive
+// Kind description constants.
 const (
 	SumKind            Kind = "Sum"
 	MinMaxSumCountKind Kind = "MinMaxSumCount"
@@ -137,7 +137,7 @@ const (
 	ExactKind          Kind = "Exact"
 )
 
-//nolint:revive
+// Sentinel errors for Aggregation interface.
 var (
 	ErrNegativeInput    = fmt.Errorf("negative value is out of range for this instrument")
 	ErrNaNInput         = fmt.Errorf("NaN value is an invalid input")

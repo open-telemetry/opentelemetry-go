@@ -45,7 +45,7 @@ func (e errorConst) Error() string {
 }
 
 // TraceID is a unique identity of a trace.
-// nolint:revive
+// nolint:revive // revive complains about stutter of `trace.TraceID`.
 type TraceID [16]byte
 
 var nilTraceID TraceID
