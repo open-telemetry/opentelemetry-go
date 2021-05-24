@@ -89,7 +89,7 @@ func (c *Connection) StartConnection(ctx context.Context) error {
 	go c.indefiniteBackgroundConnection()
 
 	// TODO: proper error handling when initializing connections.
-	// 		We can report permanent errors like invalid settings.
+	// We can report permanent errors, e.g., invalid settings.
 	return nil
 }
 

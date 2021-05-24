@@ -29,6 +29,7 @@ var (
 	errAlreadyStarted = errors.New("already started")
 )
 
+// Exporter exports trace data in the OTLP wire format.
 type Exporter struct {
 	client Client
 
@@ -39,6 +40,7 @@ type Exporter struct {
 	stopOnce  sync.Once
 }
 
+// ExportSpans exports a batch of spans.
 func (e *Exporter) ExportSpans(ctx context.Context, ss []tracesdk.ReadOnlySpan) error {
 	protoSpans := tracetransform.Spans(ss)
 	if len(protoSpans) == 0 {
@@ -48,6 +50,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, ss []tracesdk.ReadOnlySpan) 
 	return e.client.UploadTraces(ctx, protoSpans)
 }
 
+// Start establishes a connection to the receiving endpoint.
 func (e *Exporter) Start(ctx context.Context) error {
 	var err = errAlreadyStarted
 	e.startOnce.Do(func() {
@@ -60,6 +63,7 @@ func (e *Exporter) Start(ctx context.Context) error {
 	return err
 }
 
+// Shutdown flushes all exports and closes all connections to the receiving endpoint.
 func (e *Exporter) Shutdown(ctx context.Context) error {
 	e.mu.RLock()
 	started := e.started

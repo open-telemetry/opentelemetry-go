@@ -43,7 +43,9 @@ func RunExporterShutdownTest(t *testing.T, factory func() otlptrace.Client) {
 }
 
 func initializeExporter(t *testing.T, client otlptrace.Client) *otlptrace.Exporter {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
 	e, err := otlptrace.NewExporter(ctx, client)
 	if err != nil {
 		t.Fatalf("failed to create exporter")
@@ -53,13 +55,10 @@ func initializeExporter(t *testing.T, client otlptrace.Client) *otlptrace.Export
 }
 
 func testClientStopHonorsTimeout(t *testing.T, client otlptrace.Client) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer cancel()
-
 	e := initializeExporter(t, client)
 
-	innerCtx, innerCancel := context.WithTimeout(ctx, time.Microsecond)
-	<-time.After(time.Second)
+	innerCtx, innerCancel := context.WithTimeout(context.Background(), time.Microsecond)
+	<-innerCtx.Done()
 	if err := e.Shutdown(innerCtx); err == nil {
 		t.Error("expected context DeadlineExceeded error, got nil")
 	} else if !errors.Is(err, context.DeadlineExceeded) {
@@ -69,13 +68,9 @@ func testClientStopHonorsTimeout(t *testing.T, client otlptrace.Client) {
 }
 
 func testClientStopHonorsCancel(t *testing.T, client otlptrace.Client) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer cancel()
-
 	e := initializeExporter(t, client)
 
-	var innerCancel context.CancelFunc
-	ctx, innerCancel = context.WithCancel(ctx)
+	ctx, innerCancel := context.WithCancel(context.Background())
 	innerCancel()
 	if err := e.Shutdown(ctx); err == nil {
 		t.Error("expected context canceled error, got nil")
@@ -95,7 +90,8 @@ func testClientStopNoError(t *testing.T, client otlptrace.Client) {
 }
 
 func testClientStopManyTimes(t *testing.T, client otlptrace.Client) {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
 	e := initializeExporter(t, client)
 
 	ch := make(chan struct{})

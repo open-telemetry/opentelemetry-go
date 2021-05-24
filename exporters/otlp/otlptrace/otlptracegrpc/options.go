@@ -30,6 +30,8 @@ type Option interface {
 	applyGRPCOption(*otlpconfig.Config)
 }
 
+// RetrySettings defines configuration for retrying batches in case of export failure
+// using an exponential backoff.
 type RetrySettings otlpconfig.RetrySettings
 
 type wrappedOption struct {

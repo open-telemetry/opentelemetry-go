@@ -23,14 +23,13 @@ import (
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
-// TracesCollector is an interface that mock collectors should implements,
-// so they can be used for the end-to-end testing.
+// TracesCollector mocks a collector for the end-to-end testing.
 type TracesCollector interface {
 	Stop() error
 	GetResourceSpans() []*tracepb.ResourceSpans
 }
 
-// SpansStorage stores the spans. Mock collectors could use it to
+// SpansStorage stores the spans. Mock collectors can use it to
 // store spans they have received.
 type SpansStorage struct {
 	rsm       map[string]*tracepb.ResourceSpans

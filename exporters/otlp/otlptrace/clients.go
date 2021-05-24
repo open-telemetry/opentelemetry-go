@@ -20,10 +20,9 @@ import (
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
-// Client is an interface used by OTLP exporter. It's
-// responsible for connecting to and disconnecting from the collector,
-// and for transforming traces into wire format and
-// transmitting them to the collector.
+// Client manages connections to the collector, handles the
+// transformation of data into wire format, and the transmission of that
+// data to the collector.
 type Client interface {
 	// Start should establish connection(s) to endpoint(s). It is
 	// called just once by the exporter, so the implementation

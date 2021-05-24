@@ -26,7 +26,7 @@ import (
 func TestMain(m *testing.M) {
 	fields := []ottest.FieldOffset{
 		{
-			Name:   "connection.lastConnectErrPtr",
+			Name:   "Connection.lastConnectErrPtr",
 			Offset: unsafe.Offsetof(Connection{}.lastConnectErrPtr),
 		},
 	}

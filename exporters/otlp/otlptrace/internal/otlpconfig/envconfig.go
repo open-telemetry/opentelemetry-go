@@ -28,7 +28,7 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
-var httpSchemeRegexp = regexp.MustCompile(`(?i)^http://|https://`)
+var httpSchemeRegexp = regexp.MustCompile(`(?i)^(http://|https://)`)
 
 func ApplyGRPCEnvConfigs(cfg *Config) {
 	e := EnvOptionsReader{

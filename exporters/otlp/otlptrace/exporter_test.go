@@ -60,28 +60,7 @@ func TestInstallNewPipeline(t *testing.T) {
 }
 
 func TestNewExportPipeline(t *testing.T) {
-	testCases := []struct {
-		name string
-	}{
-		{
-			name: "simple pipeline",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			_, tp, err := otlptrace.NewExportPipeline(
-				context.Background(),
-				&noopClient{},
-			)
-
-			assert.NoError(t, err)
-			assert.NotEqual(t, tp, otel.GetTracerProvider())
-
-			_, span := tp.Tracer("otlp test").Start(context.Background(), tc.name)
-			spanCtx := span.SpanContext()
-			assert.Equal(t, true, spanCtx.IsSampled())
-			span.End()
-		})
-	}
+	_, tp, err := otlptrace.NewExportPipeline(context.Background(), &noopClient{})
+	assert.NoError(t, err)
+	assert.NotEqual(t, tp, otel.GetTracerProvider())
 }

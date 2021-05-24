@@ -44,7 +44,7 @@ var (
 	errNoClient = errors.New("no client")
 )
 
-// NewClient creates a new gRPC protocol driver.
+// NewClient creates a new gRPC trace client.
 func NewClient(opts ...Option) otlptrace.Client {
 	cfg := otlpconfig.NewDefaultConfig()
 	otlpconfig.ApplyGRPCEnvConfigs(&cfg)
@@ -68,18 +68,17 @@ func (c *client) handleNewConnection(cc *grpc.ClientConn) {
 	}
 }
 
-// Start implements otlptrace.Client. It establishes a connection
-// to the collector.
+// Start establishes a connection to the collector.
 func (c *client) Start(ctx context.Context) error {
 	return c.connection.StartConnection(ctx)
 }
 
-// Stop implements otlptrace.Client. It shuts down the connection
-// to the collector.
+// Stop shuts down the connection to the collector.
 func (c *client) Stop(ctx context.Context) error {
 	return c.connection.Shutdown(ctx)
 }
 
+// UploadTraces sends a batch of spans to the collector.
 func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) error {
 	if !c.connection.Connected() {
 		return fmt.Errorf("traces exporter is disconnected from the server %s: %w", c.connection.SCfg.Endpoint, c.connection.LastConnectError())
