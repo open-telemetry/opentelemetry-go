@@ -26,7 +26,7 @@ import (
 
 type SpanStubs []SpanStub
 
-// SpanStubFromReadOnlySpan returns SpanStubs populated from ro.
+// SpanStubsFromReadOnlySpans returns SpanStubs populated from ro.
 func SpanStubsFromReadOnlySpans(ro []tracesdk.ReadOnlySpan) SpanStubs {
 	if len(ro) == 0 {
 		return nil
