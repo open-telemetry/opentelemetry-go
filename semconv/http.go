@@ -25,7 +25,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 )
 
-// HTTP scheme key-value pairs.
+// HTTP scheme attributes.
 var (
 	HTTPSchemeHTTP  = HTTPSchemeKey.String("http")
 	HTTPSchemeHTTPS = HTTPSchemeKey.String("https")
