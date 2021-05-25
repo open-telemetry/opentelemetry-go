@@ -16,6 +16,7 @@ package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
 import (
 	"fmt"
+	"strconv"
 
 	"golang.org/x/sys/windows/registry"
 )
@@ -44,7 +45,7 @@ func platformOSDescription() (string, error) {
 		ubr                       = readUBR(k)
 	)
 
-	return fmt.Sprintf("%s %s (%s) [Version %d.%d.%s.%d]",
+	return fmt.Sprintf("%s %s (%s) [Version %s.%s.%s.%s]",
 		productName,
 		displayVersion,
 		releaseID,
@@ -79,18 +80,18 @@ func readReleaseID(k registry.Key) string {
 	return getStringValue("ReleaseID", k)
 }
 
-func readCurrentMajorVersionNumber(k registry.Key) uint64 {
-	return getIntegerValue("CurrentMajorVersionNumber", k)
+func readCurrentMajorVersionNumber(k registry.Key) string {
+	return strconv.FormatUint(getIntegerValue("CurrentMajorVersionNumber", k), 10)
 }
 
-func readCurrentMinorVersionNumber(k registry.Key) uint64 {
-	return getIntegerValue("CurrentMinorVersionNumber", k)
+func readCurrentMinorVersionNumber(k registry.Key) string {
+	return strconv.FormatUint(getIntegerValue("CurrentMinorVersionNumber", k), 10)
 }
 
 func readCurrentBuildNumber(k registry.Key) string {
 	return getStringValue("CurrentBuildNumber", k)
 }
 
-func readUBR(k registry.Key) uint64 {
-	return getIntegerValue("UBR", k)
+func readUBR(k registry.Key) string {
+	return strconv.FormatUint(getIntegerValue("UBR", k), 10)
 }

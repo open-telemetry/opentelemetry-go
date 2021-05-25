@@ -81,7 +81,7 @@ func testReadCurrentMinorVersionNumber(t *testing.T, key registry.Key) func(*tes
 	return func(t *testing.T) {
 		value := resource.ReadCurrentMinorVersionNumber(key)
 
-		require.Zero(t, value)
+		require.NotEmpty(t, value)
 	}
 }
 
