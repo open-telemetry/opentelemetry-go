@@ -25,7 +25,8 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-var errInvalidAsyncRunner = errors.New("unknown async runner type")
+//nolint:revive // ignoring missing comments for exported error in an internal package
+var ErrInvalidAsyncRunner = errors.New("unknown async runner type")
 
 // AsyncCollector is an interface used between the MeterImpl and the
 // AsyncInstrumentState helper below.  This interface is implemented by
@@ -142,7 +143,7 @@ func (a *AsyncInstrumentState) Run(ctx context.Context, collector AsyncCollector
 		}
 
 		a.errorOnce.Do(func() {
-			otel.Handle(fmt.Errorf("%w: type %T (reported once)", errInvalidAsyncRunner, rp))
+			otel.Handle(fmt.Errorf("%w: type %T (reported once)", ErrInvalidAsyncRunner, rp))
 		})
 	}
 }
