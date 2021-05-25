@@ -34,40 +34,15 @@ func platformOSDescription() (string, error) {
 
 	defer k.Close()
 
-	productName, _, err := k.GetStringValue("ProductName")
-	if err != nil {
-		return "", err
-	}
-
-	displayVersion, _, err := k.GetStringValue("DisplayVersion")
-	if err != nil {
-		return "", err
-	}
-
-	releaseID, _, err := k.GetStringValue("ReleaseID")
-	if err != nil {
-		return "", err
-	}
-
-	currentMajorVersionNumber, _, err := k.GetIntegerValue("CurrentMajorVersionNumber")
-	if err != nil {
-		return "", err
-	}
-
-	currentMinorVersionNumber, _, err := k.GetIntegerValue("CurrentMinorVersionNumber")
-	if err != nil {
-		return "", err
-	}
-
-	currentBuildNumber, _, err := k.GetStringValue("CurrentBuildNumber")
-	if err != nil {
-		return "", err
-	}
-
-	ubr, _, err := k.GetIntegerValue("UBR")
-	if err != nil {
-		return "", err
-	}
+	var (
+		productName               = readProductName(k)
+		displayVersion            = readDisplayVersion(k)
+		releaseID                 = readReleaseID(k)
+		currentMajorVersionNumber = readCurrentMajorVersionNumber(k)
+		currentMinorVersionNumber = readCurrentMinorVersionNumber(k)
+		currentBuildNumber        = readCurrentBuildNumber(k)
+		ubr                       = readUBR(k)
+	)
 
 	return fmt.Sprintf("%s %s (%s) [Version %d.%d.%s.%d]",
 		productName,
@@ -78,4 +53,44 @@ func platformOSDescription() (string, error) {
 		currentBuildNumber,
 		ubr,
 	), nil
+}
+
+func getStringValue(name string, k registry.Key) string {
+	value, _, _ := k.GetStringValue(name)
+
+	return value
+}
+
+func getIntegerValue(name string, k registry.Key) uint64 {
+	value, _, _ := k.GetIntegerValue(name)
+
+	return value
+}
+
+func readProductName(k registry.Key) string {
+	return getStringValue("ProductName", k)
+}
+
+func readDisplayVersion(k registry.Key) string {
+	return getStringValue("DisplayVersion", k)
+}
+
+func readReleaseID(k registry.Key) string {
+	return getStringValue("ReleaseID", k)
+}
+
+func readCurrentMajorVersionNumber(k registry.Key) uint64 {
+	return getIntegerValue("CurrentMajorVersionNumber", k)
+}
+
+func readCurrentMinorVersionNumber(k registry.Key) uint64 {
+	return getIntegerValue("CurrentMinorVersionNumber", k)
+}
+
+func readCurrentBuildNumber(k registry.Key) string {
+	return getStringValue("CurrentBuildNumber", k)
+}
+
+func readUBR(k registry.Key) uint64 {
+	return getIntegerValue("UBR", k)
 }
