@@ -120,7 +120,7 @@ func NewMeterConfig(opts ...MeterOption) MeterConfig {
 
 // InstrumentMeterOption are options that can be used as both an InstrumentOption
 // and MeterOption
-type InstrumentMeterOption {
+type InstrumentMeterOption interface {
 	InstrumentOption
 	MeterOption
 }
