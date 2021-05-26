@@ -17,6 +17,7 @@ package resource_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/windows/registry"
 
@@ -33,71 +34,16 @@ func TestPlatformOSDescription(t *testing.T) {
 func TestReadRegistryValues(t *testing.T) {
 	k, err := registry.OpenKey(
 		registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
+
 	require.NoError(t, err, "should open Windows CurrentVersion registry key")
 
 	defer k.Close()
 
-	t.Run("ReadProductName", testReadProductName(t, k))
-	t.Run("ReadDisplayVersion", testReadDisplayVersion(t, k))
-	t.Run("ReadReleaseID", testReadReleaseID(t, k))
-	t.Run("ReadCurrentMajorVersionNumber", testReadCurrentMajorVersionNumber(t, k))
-	t.Run("ReadCurrentMinorVersionNumber", testReadCurrentMinorVersionNumber(t, k))
-	t.Run("ReadCurrentBuildNumber", testReadCurrentBuildNumber(t, k))
-	t.Run("ReadUBR", testReadUBR(t, k))
-}
-
-func testReadProductName(t *testing.T, key registry.Key) func(*testing.T) {
-	return func(t *testing.T) {
-		value := resource.ReadProductName(key)
-
-		require.NotEmpty(t, value)
-	}
-}
-
-func testReadDisplayVersion(t *testing.T, key registry.Key) func(*testing.T) {
-	return func(t *testing.T) {
-		value := resource.ReadDisplayVersion(key)
-
-		require.NotEmpty(t, value)
-	}
-}
-
-func testReadReleaseID(t *testing.T, key registry.Key) func(*testing.T) {
-	return func(t *testing.T) {
-		value := resource.ReadReleaseID(key)
-
-		require.NotEmpty(t, value)
-	}
-}
-
-func testReadCurrentMajorVersionNumber(t *testing.T, key registry.Key) func(*testing.T) {
-	return func(t *testing.T) {
-		value := resource.ReadCurrentMajorVersionNumber(key)
-
-		require.NotEmpty(t, value)
-	}
-}
-
-func testReadCurrentMinorVersionNumber(t *testing.T, key registry.Key) func(*testing.T) {
-	return func(t *testing.T) {
-		value := resource.ReadCurrentMinorVersionNumber(key)
-
-		require.NotEmpty(t, value)
-	}
-}
-
-func testReadCurrentBuildNumber(t *testing.T, key registry.Key) func(*testing.T) {
-	return func(t *testing.T) {
-		value := resource.ReadCurrentBuildNumber(key)
-
-		require.NotEmpty(t, value)
-	}
-}
-
-func testReadUBR(t *testing.T, key registry.Key) func(*testing.T) {
-	return func(t *testing.T) {
-		value := resource.ReadUBR(key)
-
-		require.NotEmpty(t, value)
-	}
+	assert.NotEmpty(t, resource.ReadProductName(k), "should read ProductName")
+	assert.NotEmpty(t, resource.ReadDisplayVersion(k), "should read DisplayVersion")
+	assert.NotEmpty(t, resource.ReadReleaseID(k), "should read ReleaseID")
+	assert.NotEmpty(t, resource.ReadCurrentMajorVersionNumber(k), "should read CurrentMajorVersionNumber")
+	assert.NotEmpty(t, resource.ReadCurrentMinorVersionNumber(k), "should read CurrentMinorVersionNumber")
+	assert.NotEmpty(t, resource.ReadCurrentBuildNumber(k), "should read CurrentBuildNumber")
+	assert.NotEmpty(t, resource.ReadUBR(k), "should read UBR")
 }
