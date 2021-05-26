@@ -36,7 +36,7 @@ var _ trace.Tracer = &tracer{}
 // span context found in the passed context. The created Span will be
 // configured appropriately by any SpanOption passed. Any Timestamp option
 // passed will be used as the start time of the Span's life-cycle.
-func (tr *tracer) Start(ctx context.Context, name string, options ...trace.SpanOption) (context.Context, trace.Span) {
+func (tr *tracer) Start(ctx context.Context, name string, options ...trace.SpanStartOption) (context.Context, trace.Span) {
 	config := trace.NewSpanStartConfig(options...)
 
 	// For local spans created by this SDK, track child span count.

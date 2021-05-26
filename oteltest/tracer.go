@@ -36,7 +36,7 @@ type Tracer struct {
 
 // Start creates a span. If t is configured with a SpanRecorder its OnStart
 // method will be called after the created Span has been initialized.
-func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOption) (context.Context, trace.Span) {
+func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
 	c := trace.NewSpanStartConfig(opts...)
 	startTime := time.Now()
 	if st := c.Timestamp(); !st.IsZero() {

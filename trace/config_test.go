@@ -41,16 +41,16 @@ func TestNewSpanConfig(t *testing.T) {
 	}
 
 	tests := []struct {
-		options  []SpanOption
+		options  []SpanStartOption
 		expected *SpanConfig
 	}{
 		{
 			// No non-zero-values should be set.
-			[]SpanOption{},
+			[]SpanStartOption{},
 			new(SpanConfig),
 		},
 		{
-			[]SpanOption{
+			[]SpanStartOption{
 				WithAttributes(k1v1),
 			},
 			&SpanConfig{
@@ -59,7 +59,7 @@ func TestNewSpanConfig(t *testing.T) {
 		},
 		{
 			// Multiple calls should append not overwrite.
-			[]SpanOption{
+			[]SpanStartOption{
 				WithAttributes(k1v1),
 				WithAttributes(k1v2),
 				WithAttributes(k2v2),
@@ -70,7 +70,7 @@ func TestNewSpanConfig(t *testing.T) {
 			},
 		},
 		{
-			[]SpanOption{
+			[]SpanStartOption{
 				WithAttributes(k1v1, k1v2, k2v2),
 			},
 			&SpanConfig{
@@ -79,7 +79,7 @@ func TestNewSpanConfig(t *testing.T) {
 			},
 		},
 		{
-			[]SpanOption{
+			[]SpanStartOption{
 				WithTimestamp(timestamp0),
 			},
 			&SpanConfig{
@@ -87,7 +87,7 @@ func TestNewSpanConfig(t *testing.T) {
 			},
 		},
 		{
-			[]SpanOption{
+			[]SpanStartOption{
 				// Multiple calls overwrites with last-one-wins.
 				WithTimestamp(timestamp0),
 				WithTimestamp(timestamp1),
@@ -97,7 +97,7 @@ func TestNewSpanConfig(t *testing.T) {
 			},
 		},
 		{
-			[]SpanOption{
+			[]SpanStartOption{
 				WithLinks(link1),
 			},
 			&SpanConfig{
@@ -105,7 +105,7 @@ func TestNewSpanConfig(t *testing.T) {
 			},
 		},
 		{
-			[]SpanOption{
+			[]SpanStartOption{
 				// Multiple calls should append not overwrite.
 				WithLinks(link1),
 				WithLinks(link1, link2),
@@ -116,7 +116,7 @@ func TestNewSpanConfig(t *testing.T) {
 			},
 		},
 		{
-			[]SpanOption{
+			[]SpanStartOption{
 				WithNewRoot(),
 			},
 			&SpanConfig{
@@ -124,7 +124,7 @@ func TestNewSpanConfig(t *testing.T) {
 			},
 		},
 		{
-			[]SpanOption{
+			[]SpanStartOption{
 				// Multiple calls should not change NewRoot state.
 				WithNewRoot(),
 				WithNewRoot(),
@@ -134,7 +134,7 @@ func TestNewSpanConfig(t *testing.T) {
 			},
 		},
 		{
-			[]SpanOption{
+			[]SpanStartOption{
 				WithSpanKind(SpanKindConsumer),
 			},
 			&SpanConfig{
@@ -142,7 +142,7 @@ func TestNewSpanConfig(t *testing.T) {
 			},
 		},
 		{
-			[]SpanOption{
+			[]SpanStartOption{
 				// Multiple calls overwrites with last-one-wins.
 				WithSpanKind(SpanKindClient),
 				WithSpanKind(SpanKindConsumer),
@@ -153,7 +153,7 @@ func TestNewSpanConfig(t *testing.T) {
 		},
 		{
 			// Everything should work together.
-			[]SpanOption{
+			[]SpanStartOption{
 				WithAttributes(k1v1),
 				WithTimestamp(timestamp0),
 				WithLinks(link1, link2),

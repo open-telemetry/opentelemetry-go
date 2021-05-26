@@ -94,11 +94,10 @@ func WithInstrumentationName(name string) InstrumentOption {
 
 // MeterConfig contains options for Meters.
 type MeterConfig struct {
-	// InstrumentationVersion is the version of the library providing
-	// instrumentation.
 	instrumentationVersion string
 }
 
+// InstrumentationVersion is the version of the library providing instrumentation.
 func (cfg MeterConfig) InstrumentationVersion() string {
 	return cfg.instrumentationVersion
 }
@@ -119,9 +118,15 @@ func NewMeterConfig(opts ...MeterOption) MeterConfig {
 	return config
 }
 
+// InstrumentMeterOption are options that can be used as both an InstrumentOption
+// and MeterOption
+type InstrumentMeterOption {
+	InstrumentOption
+	MeterOption
+}
+
 // WithInstrumentationVersion sets the instrumentation version.
-//nolint:golint
-func WithInstrumentationVersion(version string) instrumentationVersionOption {
+func WithInstrumentationVersion(version string) InstrumentMeterOption {
 	return instrumentationVersionOption(version)
 }
 

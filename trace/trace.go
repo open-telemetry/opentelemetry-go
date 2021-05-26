@@ -647,7 +647,7 @@ type Tracer interface {
 	//
 	// Any Span that is created MUST also be ended. This is the responsibility of the user.
 	// Implementations of this API may leak memory or other resources if Spans are not ended.
-	Start(ctx context.Context, spanName string, opts ...SpanOption) (context.Context, Span)
+	Start(ctx context.Context, spanName string, opts ...SpanStartOption) (context.Context, Span)
 }
 
 // TracerProvider provides access to instrumentation Tracers.

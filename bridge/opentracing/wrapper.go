@@ -74,7 +74,7 @@ func (t *WrapperTracer) otelTracer() trace.Tracer {
 // Start forwards the call to the wrapped tracer. It also tries to
 // override the tracer of the returned span if the span implements the
 // OverrideTracerSpanExtension interface.
-func (t *WrapperTracer) Start(ctx context.Context, name string, opts ...trace.SpanOption) (context.Context, trace.Span) {
+func (t *WrapperTracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
 	ctx, span := t.otelTracer().Start(ctx, name, opts...)
 	if spanWithExtension, ok := span.(migration.OverrideTracerSpanExtension); ok {
 		spanWithExtension.OverrideTracer(t)

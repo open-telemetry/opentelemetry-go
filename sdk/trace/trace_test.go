@@ -813,7 +813,7 @@ func checkChild(t *testing.T, p trace.SpanContext, apiSpan trace.Span) error {
 
 // startSpan starts a span with a name "span0". See startNamedSpan for
 // details.
-func startSpan(tp *TracerProvider, trName string, args ...trace.SpanOption) trace.Span {
+func startSpan(tp *TracerProvider, trName string, args ...trace.SpanStartOption) trace.Span {
 	return startNamedSpan(tp, trName, "span0", args...)
 }
 
@@ -821,7 +821,7 @@ func startSpan(tp *TracerProvider, trName string, args ...trace.SpanOption) trac
 // passed name and with remote span context as parent. The remote span
 // context contains TraceFlags with sampled bit set. This allows the
 // span to be automatically sampled.
-func startNamedSpan(tp *TracerProvider, trName, name string, args ...trace.SpanOption) trace.Span {
+func startNamedSpan(tp *TracerProvider, trName, name string, args ...trace.SpanStartOption) trace.Span {
 	_, span := tp.Tracer(trName).Start(
 		trace.ContextWithRemoteSpanContext(context.Background(), sc),
 		name,
@@ -834,7 +834,7 @@ func startNamedSpan(tp *TracerProvider, trName, name string, args ...trace.SpanO
 // passed name and with the passed context. The context is returned
 // along with the span so this parent can be used to create child
 // spans.
-func startLocalSpan(tp *TracerProvider, ctx context.Context, trName, name string, args ...trace.SpanOption) (context.Context, trace.Span) {
+func startLocalSpan(tp *TracerProvider, ctx context.Context, trName, name string, args ...trace.SpanStartOption) (context.Context, trace.Span) {
 	ctx, span := tp.Tracer(trName).Start(
 		ctx,
 		name,

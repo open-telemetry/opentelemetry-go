@@ -74,10 +74,10 @@ func (fn fnTracerProvider) Tracer(instrumentationName string, opts ...trace.Trac
 }
 
 type fnTracer struct {
-	start func(ctx context.Context, spanName string, opts ...trace.SpanOption) (context.Context, trace.Span)
+	start func(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span)
 }
 
-func (fn fnTracer) Start(ctx context.Context, spanName string, opts ...trace.SpanOption) (context.Context, trace.Span) {
+func (fn fnTracer) Start(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
 	return fn.start(ctx, spanName, opts...)
 }
 
@@ -174,7 +174,7 @@ func TestTracerDelegatesConcurrentSafe(t *testing.T) {
 		tracer: func(name string, opts ...trace.TracerOption) trace.Tracer {
 			assert.Equal(t, "abc", name)
 			return fnTracer{
-				start: func(ctx context.Context, spanName string, opts ...trace.SpanOption) (context.Context, trace.Span) {
+				start: func(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
 					newVal := atomic.AddInt32(&called, 1)
 					assert.Equal(t, "name", spanName)
 					if newVal == 10 {
