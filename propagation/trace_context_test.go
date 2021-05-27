@@ -288,7 +288,7 @@ func TestTraceStatePropagation(t *testing.T) {
 	prop := propagation.TraceContext{}
 	stateHeader := "tracestate"
 	parentHeader := "traceparent"
-	state, err := trace.TraceStateFromKeyValues(attribute.String("key1", "value1"), attribute.String("key2", "value2"))
+	state, err := oteltest.TraceStateFromKeyValues(attribute.String("key1", "value1"), attribute.String("key2", "value2"))
 	if err != nil {
 		t.Fatalf("Unable to construct expected TraceState: %s", err.Error())
 	}

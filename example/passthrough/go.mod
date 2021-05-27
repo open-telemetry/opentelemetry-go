@@ -1,12 +1,6 @@
-module go.opentelemetry.io/otel/example/namedtracer
+module go.opentelemetry.io/otel/example/passthrough
 
-go 1.15
-
-replace (
-	go.opentelemetry.io/otel => ../..
-	go.opentelemetry.io/otel/exporters/stdout => ../../exporters/stdout
-	go.opentelemetry.io/otel/sdk => ../../sdk
-)
+go 1.16
 
 require (
 	go.opentelemetry.io/otel v0.20.0
@@ -15,17 +9,26 @@ require (
 	go.opentelemetry.io/otel/trace v0.20.0
 )
 
+replace (
+	go.opentelemetry.io/otel => ../..
+	go.opentelemetry.io/otel/exporters/stdout => ../../exporters/stdout
+	go.opentelemetry.io/otel/sdk => ../../sdk
+	go.opentelemetry.io/otel/trace => ../../trace
+)
+
 replace go.opentelemetry.io/otel/bridge/opencensus => ../../bridge/opencensus
 
 replace go.opentelemetry.io/otel/bridge/opentracing => ../../bridge/opentracing
 
 replace go.opentelemetry.io/otel/example/jaeger => ../jaeger
 
-replace go.opentelemetry.io/otel/example/namedtracer => ./
+replace go.opentelemetry.io/otel/example/namedtracer => ../namedtracer
 
 replace go.opentelemetry.io/otel/example/opencensus => ../opencensus
 
 replace go.opentelemetry.io/otel/example/otel-collector => ../otel-collector
+
+replace go.opentelemetry.io/otel/example/passthrough => ./
 
 replace go.opentelemetry.io/otel/example/prom-collector => ../prom-collector
 
@@ -51,6 +54,4 @@ replace go.opentelemetry.io/otel/sdk/export/metric => ../../sdk/export/metric
 
 replace go.opentelemetry.io/otel/sdk/metric => ../../sdk/metric
 
-replace go.opentelemetry.io/otel/trace => ../../trace
-
-replace go.opentelemetry.io/otel/example/passthrough => ../passthrough
+replace go.opentelemetry.io/otel/sdk/trace => ../../sdk/trace

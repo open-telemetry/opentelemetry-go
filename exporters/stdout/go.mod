@@ -11,6 +11,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/otel v0.20.0
 	go.opentelemetry.io/otel/metric v0.20.0
+	go.opentelemetry.io/otel/oteltest v0.20.0
 	go.opentelemetry.io/otel/sdk v0.20.0
 	go.opentelemetry.io/otel/sdk/export/metric v0.20.0
 	go.opentelemetry.io/otel/sdk/metric v0.20.0
@@ -56,3 +57,5 @@ replace go.opentelemetry.io/otel/sdk/export/metric => ../../sdk/export/metric
 replace go.opentelemetry.io/otel/sdk/metric => ../../sdk/metric
 
 replace go.opentelemetry.io/otel/trace => ../../trace
+
+replace go.opentelemetry.io/otel/example/passthrough => ../../example/passthrough
