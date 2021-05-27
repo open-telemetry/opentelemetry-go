@@ -56,7 +56,7 @@ const (
 func TestStringKeyValues(t *testing.T) {
 	tests := []struct {
 		kvs      []attribute.KeyValue
-		expected []*commonpb.StringKeyValue
+		expected []*commonpb.KeyValue
 	}{
 		{
 			nil,
@@ -79,24 +79,24 @@ func TestStringKeyValues(t *testing.T) {
 				attribute.Int("eight", 8),
 				attribute.String("the", "final word"),
 			},
-			[]*commonpb.StringKeyValue{
-				{Key: "eight", Value: "8"},
-				{Key: "five", Value: "5"},
-				{Key: "four", Value: "4"},
-				{Key: "one", Value: "1"},
-				{Key: "seven", Value: "7"},
-				{Key: "six", Value: "6"},
-				{Key: "the", Value: "final word"},
-				{Key: "three", Value: "3"},
-				{Key: "true", Value: "true"},
-				{Key: "two", Value: "2"},
+			[]*commonpb.KeyValue{
+				{Key: "eight", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_IntValue{IntValue: 8}}},
+				{Key: "five", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_IntValue{IntValue: 5}}},
+				{Key: "four", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_IntValue{IntValue: 4}}},
+				{Key: "one", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_IntValue{IntValue: 1}}},
+				{Key: "seven", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_IntValue{IntValue: 7}}},
+				{Key: "six", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_DoubleValue{DoubleValue: 6.0}}},
+				{Key: "the", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: "final word"}}},
+				{Key: "three", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_DoubleValue{DoubleValue: 3.0}}},
+				{Key: "true", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_BoolValue{BoolValue: true}}},
+				{Key: "two", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_IntValue{IntValue: 2}}},
 			},
 		},
 	}
 
 	for _, test := range tests {
 		labels := attribute.NewSet(test.kvs...)
-		assert.Equal(t, test.expected, stringKeyValues(labels.Iter()))
+		assert.Equal(t, test.expected, keyValues(labels.Iter()))
 	}
 }
 
@@ -135,10 +135,10 @@ func TestMinMaxSumCountDatapoints(t *testing.T) {
 			Sum:               11,
 			StartTimeUnixNano: uint64(intervalStart.UnixNano()),
 			TimeUnixNano:      uint64(intervalEnd.UnixNano()),
-			Labels: []*commonpb.StringKeyValue{
+			Attributes: []*commonpb.KeyValue{
 				{
 					Key:   "one",
-					Value: "1",
+					Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: "1"}},
 				},
 			},
 			QuantileValues: []*metricpb.SummaryDataPoint_ValueAtQuantile{
@@ -196,10 +196,10 @@ func TestSumIntDataPoints(t *testing.T) {
 			DataPoints: []*metricpb.NumberDataPoint{{
 				StartTimeUnixNano: uint64(intervalStart.UnixNano()),
 				TimeUnixNano:      uint64(intervalEnd.UnixNano()),
-				Labels: []*commonpb.StringKeyValue{
+				Attributes: []*commonpb.KeyValue{
 					{
 						Key:   "one",
-						Value: "1",
+						Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: "1"}},
 					},
 				},
 				Value: &metricpb.NumberDataPoint_AsInt{
@@ -238,10 +238,10 @@ func TestSumFloatDataPoints(t *testing.T) {
 				},
 				StartTimeUnixNano: uint64(intervalStart.UnixNano()),
 				TimeUnixNano:      uint64(intervalEnd.UnixNano()),
-				Labels: []*commonpb.StringKeyValue{
+				Attributes: []*commonpb.KeyValue{
 					{
 						Key:   "one",
-						Value: "1",
+						Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: "1"}},
 					},
 				},
 			}}}, m.GetSum())
@@ -269,10 +269,10 @@ func TestLastValueIntDataPoints(t *testing.T) {
 		assert.Equal(t, []*metricpb.NumberDataPoint{{
 			StartTimeUnixNano: 0,
 			TimeUnixNano:      uint64(timestamp.UnixNano()),
-			Labels: []*commonpb.StringKeyValue{
+			Attributes: []*commonpb.KeyValue{
 				{
 					Key:   "one",
-					Value: "1",
+					Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: "1"}},
 				},
 			},
 			Value: &metricpb.NumberDataPoint_AsInt{
@@ -304,10 +304,10 @@ func TestExactIntDataPoints(t *testing.T) {
 		assert.Equal(t, []*metricpb.NumberDataPoint{{
 			StartTimeUnixNano: toNanos(intervalStart),
 			TimeUnixNano:      toNanos(intervalEnd),
-			Labels: []*commonpb.StringKeyValue{
+			Attributes: []*commonpb.KeyValue{
 				{
 					Key:   "one",
-					Value: "1",
+					Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: "1"}},
 				},
 			},
 			Value: &metricpb.NumberDataPoint_AsInt{
@@ -342,10 +342,10 @@ func TestExactFloatDataPoints(t *testing.T) {
 			},
 			StartTimeUnixNano: toNanos(intervalStart),
 			TimeUnixNano:      toNanos(intervalEnd),
-			Labels: []*commonpb.StringKeyValue{
+			Attributes: []*commonpb.KeyValue{
 				{
 					Key:   "one",
-					Value: "1",
+					Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: "1"}},
 				},
 			},
 		}}, m.GetGauge().DataPoints)
