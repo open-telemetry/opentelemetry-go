@@ -45,12 +45,12 @@ func (o *otelTracer) StartSpan(ctx context.Context, name string, s ...octrace.St
 	return ctx, octrace.NewSpan(&span{otSpan: sp})
 }
 
-func convertStartOptions(optFns []octrace.StartOption, name string) []trace.SpanOption {
+func convertStartOptions(optFns []octrace.StartOption, name string) []trace.SpanStartOption {
 	var ocOpts octrace.StartOptions
 	for _, fn := range optFns {
 		fn(&ocOpts)
 	}
-	otOpts := []trace.SpanOption{}
+	otOpts := []trace.SpanStartOption{}
 	switch ocOpts.SpanKind {
 	case octrace.SpanKindClient:
 		otOpts = append(otOpts, trace.WithSpanKind(trace.SpanKindClient))

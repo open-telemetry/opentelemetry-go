@@ -51,7 +51,7 @@ func (p *TracerProvider) Tracer(instName string, opts ...trace.TracerOption) tra
 
 	inst := instrumentation{
 		Name:    instName,
-		Version: conf.InstrumentationVersion,
+		Version: conf.InstrumentationVersion(),
 	}
 	p.tracersMu.Lock()
 	defer p.tracersMu.Unlock()
@@ -59,7 +59,7 @@ func (p *TracerProvider) Tracer(instName string, opts ...trace.TracerOption) tra
 	if !ok {
 		t = &Tracer{
 			Name:    instName,
-			Version: conf.InstrumentationVersion,
+			Version: conf.InstrumentationVersion(),
 			config:  &p.config,
 		}
 		p.tracers[inst] = t

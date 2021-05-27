@@ -43,7 +43,7 @@ type noopTracer struct{}
 var _ Tracer = noopTracer{}
 
 // Start starts a noop span.
-func (t noopTracer) Start(ctx context.Context, name string, _ ...SpanOption) (context.Context, Span) {
+func (t noopTracer) Start(ctx context.Context, name string, _ ...SpanStartOption) (context.Context, Span) {
 	span := noopSpan{}
 	return ContextWithSpan(ctx, span), span
 }
@@ -69,7 +69,7 @@ func (noopSpan) SetError(bool) {}
 func (noopSpan) SetAttributes(...attribute.KeyValue) {}
 
 // End does nothing.
-func (noopSpan) End(...SpanOption) {}
+func (noopSpan) End(...SpanEndOption) {}
 
 // RecordError does nothing.
 func (noopSpan) RecordError(error, ...EventOption) {}

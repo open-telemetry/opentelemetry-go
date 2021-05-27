@@ -214,7 +214,7 @@ func (s *span) SetAttributes(attributes ...attribute.KeyValue) {
 //
 // If this method is called while panicking an error event is added to the
 // Span before ending it and the panic is continued.
-func (s *span) End(options ...trace.SpanOption) {
+func (s *span) End(options ...trace.SpanEndOption) {
 	// Do not start by checking if the span is being recorded which requires
 	// acquiring a lock. Make a minimal check that the span is not nil.
 	if s == nil {
@@ -247,14 +247,14 @@ func (s *span) End(options ...trace.SpanOption) {
 		s.executionTracerTaskEnd()
 	}
 
-	config := trace.NewSpanConfig(options...)
+	config := trace.NewSpanEndConfig(options...)
 
 	s.mu.Lock()
 	// Setting endTime to non-zero marks the span as ended and not recording.
-	if config.Timestamp.IsZero() {
+	if config.Timestamp().IsZero() {
 		s.endTime = et
 	} else {
-		s.endTime = config.Timestamp
+		s.endTime = config.Timestamp()
 	}
 	s.mu.Unlock()
 
@@ -305,19 +305,19 @@ func (s *span) addEvent(name string, o ...trace.EventOption) {
 	c := trace.NewEventConfig(o...)
 
 	// Discard over limited attributes
+	attributes := c.Attributes()
 	var discarded int
-	if len(c.Attributes) > s.spanLimits.AttributePerEventCountLimit {
-		discarded = len(c.Attributes) - s.spanLimits.AttributePerEventCountLimit
-		c.Attributes = c.Attributes[:s.spanLimits.AttributePerEventCountLimit]
+	if len(attributes) > s.spanLimits.AttributePerEventCountLimit {
+		discarded = len(attributes) - s.spanLimits.AttributePerEventCountLimit
+		attributes = attributes[:s.spanLimits.AttributePerEventCountLimit]
 	}
-
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.events.add(Event{
 		Name:                  name,
-		Attributes:            c.Attributes,
+		Attributes:            attributes,
 		DroppedAttributeCount: discarded,
-		Time:                  c.Timestamp,
+		Time:                  c.Timestamp(),
 	})
 }
 
@@ -549,7 +549,7 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, o *trace.Sp
 	// If told explicitly to make this a new root use a zero value SpanContext
 	// as a parent which contains an invalid trace ID and is not remote.
 	var psc trace.SpanContext
-	if !o.NewRoot {
+	if !o.NewRoot() {
 		psc = trace.SpanContextFromContext(ctx)
 	}
 
@@ -575,9 +575,9 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, o *trace.Sp
 		ParentContext: ctx,
 		TraceID:       tid,
 		Name:          name,
-		Kind:          o.SpanKind,
-		Attributes:    o.Attributes,
-		Links:         o.Links,
+		Kind:          o.SpanKind(),
+		Attributes:    o.Attributes(),
+		Links:         o.Links(),
 	})
 
 	scc := trace.SpanContextConfig{
@@ -596,13 +596,13 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, o *trace.Sp
 		return span
 	}
 
-	startTime := o.Timestamp
+	startTime := o.Timestamp()
 	if startTime.IsZero() {
 		startTime = time.Now()
 	}
 	span.startTime = startTime
 
-	span.spanKind = trace.ValidateSpanKind(o.SpanKind)
+	span.spanKind = trace.ValidateSpanKind(o.SpanKind())
 	span.name = name
 	span.parent = psc
 	span.resource = provider.resource
