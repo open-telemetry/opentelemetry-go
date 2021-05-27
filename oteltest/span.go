@@ -49,7 +49,7 @@ type Span struct {
 // End ends s. If the Tracer that created s was configured with a
 // SpanRecorder, that recorder's OnEnd method is called as the final part of
 // this method.
-func (s *Span) End(opts ...trace.SpanOption) {
+func (s *Span) End(opts ...trace.SpanEndOption) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -57,9 +57,9 @@ func (s *Span) End(opts ...trace.SpanOption) {
 		return
 	}
 
-	c := trace.NewSpanConfig(opts...)
+	c := trace.NewSpanEndConfig(opts...)
 	s.endTime = time.Now()
-	if endTime := c.Timestamp; !endTime.IsZero() {
+	if endTime := c.Timestamp(); !endTime.IsZero() {
 		s.endTime = endTime
 	}
 
@@ -101,15 +101,15 @@ func (s *Span) AddEvent(name string, o ...trace.EventOption) {
 	c := trace.NewEventConfig(o...)
 
 	var attributes map[attribute.Key]attribute.Value
-	if l := len(c.Attributes); l > 0 {
+	if l := len(c.Attributes()); l > 0 {
 		attributes = make(map[attribute.Key]attribute.Value, l)
-		for _, attr := range c.Attributes {
+		for _, attr := range c.Attributes() {
 			attributes[attr.Key] = attr.Value
 		}
 	}
 
 	s.events = append(s.events, Event{
-		Timestamp:  c.Timestamp,
+		Timestamp:  c.Timestamp(),
 		Name:       name,
 		Attributes: attributes,
 	})

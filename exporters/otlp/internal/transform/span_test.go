@@ -25,6 +25,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/trace"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 
@@ -199,7 +200,7 @@ func TestSpanData(t *testing.T) {
 	// March 31, 2020 5:01:26 1234nanos (UTC)
 	startTime := time.Unix(1585674086, 1234)
 	endTime := startTime.Add(10 * time.Second)
-	traceState, _ := trace.TraceStateFromKeyValues(attribute.String("key1", "val1"), attribute.String("key2", "val2"))
+	traceState, _ := oteltest.TraceStateFromKeyValues(attribute.String("key1", "val1"), attribute.String("key2", "val2"))
 	spanData := tracetest.SpanStub{
 		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
@@ -262,8 +263,9 @@ func TestSpanData(t *testing.T) {
 		DroppedLinks:      3,
 		Resource:          resource.NewWithAttributes(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5)),
 		InstrumentationLibrary: instrumentation.Library{
-			Name:    "go.opentelemetry.io/test/otel",
-			Version: "v0.0.1",
+			Name:      "go.opentelemetry.io/test/otel",
+			Version:   "v0.0.1",
+			SchemaURL: "https://opentelemetry.io/schemas/1.2.0",
 		},
 	}
 
@@ -294,6 +296,7 @@ func TestSpanData(t *testing.T) {
 	assert.Equal(t, got[0].GetResource(), Resource(spanData.Resource))
 	ilSpans := got[0].GetInstrumentationLibrarySpans()
 	require.Len(t, ilSpans, 1)
+	// TODO: Add SchemaURL field checking once the field is added to the proto.
 	assert.Equal(t, ilSpans[0].GetInstrumentationLibrary(), instrumentationLibrary(spanData.InstrumentationLibrary))
 	require.Len(t, ilSpans[0].Spans, 1)
 	actualSpan := ilSpans[0].Spans[0]

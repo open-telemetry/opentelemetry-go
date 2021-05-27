@@ -262,7 +262,7 @@ func (c *Controller) export(ctx context.Context) error {
 	return c.exporter.Export(ctx, ckpt)
 }
 
-// Foreach gives the caller read-locked access to the current
+// ForEach gives the caller read-locked access to the current
 // export.CheckpointSet.
 func (c *Controller) ForEach(ks export.ExportKindSelector, f func(export.Record) error) error {
 	ckpt := c.checkpointer.CheckpointSet()

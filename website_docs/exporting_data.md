@@ -24,7 +24,7 @@ Other samplers include:
 * `TraceIDRatioBased`, which will sample a fraction of traces, based on the fraction given to the sampler. Thus, if you set this to .5, half of traces will be sampled.
 * `ParentBased`, which behaves differently based on the incoming sampling decision. In general, this will sample spans that have parents that were sampled, and will not sample spans whose parents were _not_ sampled.
 
-When you're in production, you should consider using the `TraceIDRatioBased` sampler with the `ParentBased` samler.
+When you're in production, you should consider using the `TraceIDRatioBased` sampler with the `ParentBased` sampler.
 
 # Resources
 

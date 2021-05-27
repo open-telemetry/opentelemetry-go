@@ -52,3 +52,5 @@ require (
 	go.opentelemetry.io/otel v0.20.0
 	go.opentelemetry.io/otel/oteltest v0.20.0
 )
+
+replace go.opentelemetry.io/otel/example/passthrough => ../example/passthrough

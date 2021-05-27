@@ -153,7 +153,7 @@ func (p *meterProvider) Meter(instrumentationName string, opts ...metric.MeterOp
 
 	key := meterKey{
 		Name:    instrumentationName,
-		Version: metric.NewMeterConfig(opts...).InstrumentationVersion,
+		Version: metric.NewMeterConfig(opts...).InstrumentationVersion(),
 	}
 	entry, ok := p.meters[key]
 	if !ok {

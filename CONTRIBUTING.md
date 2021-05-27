@@ -190,8 +190,16 @@ will likely want to build custom options for the configuration, the `config`
 should be exported. Please, include in the documentation for the `config`
 how the user can extend the configuration.
 
-It is important that `config` are not shared across package boundaries.
-Meaning a `config` from one package should not be directly used by another.
+It is important that internal `config` are not shared across package boundaries.
+Meaning a `config` from one package should not be directly used by another. The
+one exception is the API packages.  The configs from the base API, eg.
+`go.opentelemetry.io/otel/trace.TracerConfig` and
+`go.opentelemetry.io/otel/metric.InstrumentConfig`, are intended to be consumed
+by the SDK therefor it is expected that these are exported.
+
+When a config is exported we want to maintain forward and backward
+compatibility, to achieve this no fields should be exported but should
+instead be accessed by methods.
 
 Optionally, it is common to include a `newConfig` function (with the same
 naming scheme). This function wraps any defaults setting and looping over

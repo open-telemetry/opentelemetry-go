@@ -20,6 +20,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
 type basicSpanProcesor struct {
@@ -81,4 +83,14 @@ func TestFailedProcessorShutdownInUnregister(t *testing.T) {
 
 	err := stp.Shutdown(context.Background())
 	assert.NoError(t, err)
+}
+
+func TestSchemaURL(t *testing.T) {
+	stp := NewTracerProvider()
+	schemaURL := "https://opentelemetry.io/schemas/1.2.0"
+	tracerIface := stp.Tracer("tracername", trace.WithSchemaURL(schemaURL))
+
+	// Verify that the SchemaURL of the constructed Tracer is correctly populated.
+	tracerStruct := tracerIface.(*tracer)
+	assert.EqualValues(t, schemaURL, tracerStruct.instrumentationLibrary.SchemaURL)
 }

@@ -354,7 +354,7 @@ func TestStartSpanWithParent(t *testing.T) {
 		t.Error(err)
 	}
 
-	ts, err := trace.TraceStateFromKeyValues(attribute.String("k", "v"))
+	ts, err := oteltest.TraceStateFromKeyValues(attribute.String("k", "v"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -813,7 +813,7 @@ func checkChild(t *testing.T, p trace.SpanContext, apiSpan trace.Span) error {
 
 // startSpan starts a span with a name "span0". See startNamedSpan for
 // details.
-func startSpan(tp *TracerProvider, trName string, args ...trace.SpanOption) trace.Span {
+func startSpan(tp *TracerProvider, trName string, args ...trace.SpanStartOption) trace.Span {
 	return startNamedSpan(tp, trName, "span0", args...)
 }
 
@@ -821,7 +821,7 @@ func startSpan(tp *TracerProvider, trName string, args ...trace.SpanOption) trac
 // passed name and with remote span context as parent. The remote span
 // context contains TraceFlags with sampled bit set. This allows the
 // span to be automatically sampled.
-func startNamedSpan(tp *TracerProvider, trName, name string, args ...trace.SpanOption) trace.Span {
+func startNamedSpan(tp *TracerProvider, trName, name string, args ...trace.SpanStartOption) trace.Span {
 	_, span := tp.Tracer(trName).Start(
 		trace.ContextWithRemoteSpanContext(context.Background(), sc),
 		name,
@@ -834,7 +834,7 @@ func startNamedSpan(tp *TracerProvider, trName, name string, args ...trace.SpanO
 // passed name and with the passed context. The context is returned
 // along with the span so this parent can be used to create child
 // spans.
-func startLocalSpan(tp *TracerProvider, ctx context.Context, trName, name string, args ...trace.SpanOption) (context.Context, trace.Span) {
+func startLocalSpan(tp *TracerProvider, ctx context.Context, trName, name string, args ...trace.SpanStartOption) (context.Context, trace.Span) {
 	ctx, span := tp.Tracer(trName).Start(
 		ctx,
 		name,
@@ -1284,7 +1284,7 @@ func TestWithResource(t *testing.T) {
 	}
 }
 
-func TestWithInstrumentationVersion(t *testing.T) {
+func TestWithInstrumentationVersionAndSchema(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
 
@@ -1293,6 +1293,7 @@ func TestWithInstrumentationVersion(t *testing.T) {
 	_, span := tp.Tracer(
 		"WithInstrumentationVersion",
 		trace.WithInstrumentationVersion("v0.1.0"),
+		trace.WithSchemaURL("https://opentelemetry.io/schemas/1.2.0"),
 	).Start(ctx, "span0")
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -1308,8 +1309,9 @@ func TestWithInstrumentationVersion(t *testing.T) {
 		name:     "span0",
 		spanKind: trace.SpanKindInternal,
 		instrumentationLibrary: instrumentation.Library{
-			Name:    "WithInstrumentationVersion",
-			Version: "v0.1.0",
+			Name:      "WithInstrumentationVersion",
+			Version:   "v0.1.0",
+			SchemaURL: "https://opentelemetry.io/schemas/1.2.0",
 		},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
@@ -1597,13 +1599,13 @@ func TestSamplerTraceState(t *testing.T) {
 	makeInserter := func(k attribute.KeyValue, prefix string) Sampler {
 		return &stateSampler{
 			prefix: prefix,
-			f:      func(t trace.TraceState) trace.TraceState { return mustTS(t.Insert(k)) },
+			f:      func(t trace.TraceState) trace.TraceState { return mustTS(t.Insert(string(k.Key), k.Value.Emit())) },
 		}
 	}
 	makeDeleter := func(k attribute.Key, prefix string) Sampler {
 		return &stateSampler{
 			prefix: prefix,
-			f:      func(t trace.TraceState) trace.TraceState { return mustTS(t.Delete(k)) },
+			f:      func(t trace.TraceState) trace.TraceState { return t.Delete(string(k)) },
 		}
 	}
 	clearer := func(prefix string) Sampler {
@@ -1624,55 +1626,55 @@ func TestSamplerTraceState(t *testing.T) {
 		{
 			name:       "alwaysOn",
 			sampler:    AlwaysSample(),
-			input:      mustTS(trace.TraceStateFromKeyValues(kv1)),
-			want:       mustTS(trace.TraceStateFromKeyValues(kv1)),
+			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1)),
+			want:       mustTS(oteltest.TraceStateFromKeyValues(kv1)),
 			exportSpan: true,
 		},
 		{
 			name:       "alwaysOff",
 			sampler:    NeverSample(),
-			input:      mustTS(trace.TraceStateFromKeyValues(kv1)),
-			want:       mustTS(trace.TraceStateFromKeyValues(kv1)),
+			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1)),
+			want:       mustTS(oteltest.TraceStateFromKeyValues(kv1)),
 			exportSpan: false,
 		},
 		{
 			name:       "insertKeySampled",
 			sampler:    makeInserter(kv2, "span"),
 			spanName:   "span0",
-			input:      mustTS(trace.TraceStateFromKeyValues(kv1)),
-			want:       mustTS(trace.TraceStateFromKeyValues(kv2, kv1)),
+			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1)),
+			want:       mustTS(oteltest.TraceStateFromKeyValues(kv2, kv1)),
 			exportSpan: true,
 		},
 		{
 			name:       "insertKeyDropped",
 			sampler:    makeInserter(kv2, "span"),
 			spanName:   "nospan0",
-			input:      mustTS(trace.TraceStateFromKeyValues(kv1)),
-			want:       mustTS(trace.TraceStateFromKeyValues(kv2, kv1)),
+			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1)),
+			want:       mustTS(oteltest.TraceStateFromKeyValues(kv2, kv1)),
 			exportSpan: false,
 		},
 		{
 			name:       "deleteKeySampled",
 			sampler:    makeDeleter(k1, "span"),
 			spanName:   "span0",
-			input:      mustTS(trace.TraceStateFromKeyValues(kv1, kv2)),
-			want:       mustTS(trace.TraceStateFromKeyValues(kv2)),
+			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1, kv2)),
+			want:       mustTS(oteltest.TraceStateFromKeyValues(kv2)),
 			exportSpan: true,
 		},
 		{
 			name:       "deleteKeyDropped",
 			sampler:    makeDeleter(k1, "span"),
 			spanName:   "nospan0",
-			input:      mustTS(trace.TraceStateFromKeyValues(kv1, kv2, kv3)),
-			want:       mustTS(trace.TraceStateFromKeyValues(kv2, kv3)),
+			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1, kv2, kv3)),
+			want:       mustTS(oteltest.TraceStateFromKeyValues(kv2, kv3)),
 			exportSpan: false,
 		},
 		{
 			name:       "clearer",
 			sampler:    clearer("span"),
 			spanName:   "span0",
-			input:      mustTS(trace.TraceStateFromKeyValues(kv1, kv3)),
-			want:       mustTS(trace.TraceStateFromKeyValues()),
+			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1, kv3)),
+			want:       mustTS(oteltest.TraceStateFromKeyValues()),
 			exportSpan: true,
 		},
 	}
