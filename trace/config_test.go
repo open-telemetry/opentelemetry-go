@@ -177,6 +177,7 @@ func TestNewSpanConfig(t *testing.T) {
 func TestTracerConfig(t *testing.T) {
 	v1 := "semver:0.0.1"
 	v2 := "semver:1.0.0"
+	schemaURL := "https://opentelemetry.io/schemas/1.2.0"
 	tests := []struct {
 		options  []TracerOption
 		expected *TracerConfig
@@ -202,6 +203,14 @@ func TestTracerConfig(t *testing.T) {
 			},
 			&TracerConfig{
 				instrumentationVersion: v2,
+			},
+		},
+		{
+			[]TracerOption{
+				WithSchemaURL(schemaURL),
+			},
+			&TracerConfig{
+				schemaURL: schemaURL,
 			},
 		},
 	}
