@@ -356,7 +356,7 @@ func TestBaggageString(t *testing.T) {
 		},
 		{
 			name: "two members with properties",
-			out:  "foo=1;red;state=on,bar=2;yellow",
+			out:  "bar=2;yellow,foo=1;red;state=on",
 			baggage: map[string]value{
 				"foo": {
 					v: "1",
@@ -382,6 +382,7 @@ func TestBaggageString(t *testing.T) {
 				members[i] = strings.Join(parts, propertyDelimiter)
 			}
 		}
+		sort.Strings(members)
 		return strings.Join(members, listDelimiter)
 	}
 
@@ -389,4 +390,200 @@ func TestBaggageString(t *testing.T) {
 		b := Baggage{tc.baggage}
 		assert.Equal(t, tc.out, orderer(b.String()))
 	}
+}
+
+func TestBaggageLen(t *testing.T) {
+	b := Baggage{}
+	assert.Equal(t, 0, b.Len())
+
+	b.list = make(map[string]value, 1)
+	assert.Equal(t, 0, b.Len())
+
+	b.list["k"] = value{}
+	assert.Equal(t, 1, b.Len())
+}
+
+func TestBaggageDeleteMember(t *testing.T) {
+	key := "k"
+
+	b0 := Baggage{}
+	b1 := b0.DeleteMember(key)
+	assert.NotContains(t, b1.list, key)
+
+	b0 = Baggage{list: map[string]value{
+		key:     {},
+		"other": {},
+	}}
+	b1 = b0.DeleteMember(key)
+	assert.Contains(t, b0.list, key)
+	assert.NotContains(t, b1.list, key)
+}
+
+func TestBaggageSetMemberError(t *testing.T) {
+	_, err := Baggage{}.SetMember(Member{})
+	assert.ErrorIs(t, err, errInvalidMember)
+}
+
+func TestBaggageSetMember(t *testing.T) {
+	b0 := Baggage{}
+
+	key := "k"
+	m := Member{key: key}
+	b1, err := b0.SetMember(m)
+	assert.NoError(t, err)
+	assert.NotContains(t, b0.list, key)
+	assert.Equal(t, value{}, b1.list[key])
+	assert.Equal(t, 0, len(b0.list))
+	assert.Equal(t, 1, len(b1.list))
+
+	m.value = "v"
+	b2, err := b1.SetMember(m)
+	assert.NoError(t, err)
+	assert.Equal(t, value{}, b1.list[key])
+	assert.Equal(t, value{v: "v"}, b2.list[key])
+	assert.Equal(t, 1, len(b1.list))
+	assert.Equal(t, 1, len(b2.list))
+
+	p := properties{{key: "p"}}
+	m.properties = p
+	b3, err := b2.SetMember(m)
+	assert.NoError(t, err)
+	assert.Equal(t, value{v: "v"}, b2.list[key])
+	assert.Equal(t, value{v: "v", p: p}, b3.list[key])
+	assert.Equal(t, 1, len(b2.list))
+	assert.Equal(t, 1, len(b3.list))
+
+	// The returned baggage needs to be immutable and should use a copy of the
+	// properties slice.
+	p[0] = Property{key: "different"}
+	assert.Equal(t, value{v: "v", p: properties{{key: "p"}}}, b3.list[key])
+	// Reset for below.
+	p[0] = Property{key: "p"}
+
+	m = Member{key: "another"}
+	b4, err := b3.SetMember(m)
+	assert.NoError(t, err)
+	assert.Equal(t, value{v: "v", p: p}, b3.list[key])
+	assert.NotContains(t, b3.list, m.key)
+	assert.Equal(t, value{v: "v", p: p}, b4.list[key])
+	assert.Equal(t, value{}, b4.list[m.key])
+	assert.Equal(t, 1, len(b3.list))
+	assert.Equal(t, 2, len(b4.list))
+}
+
+func TestNilBaggageMembers(t *testing.T) {
+	assert.Nil(t, Baggage{}.Members())
+}
+
+func TestBaggageMembers(t *testing.T) {
+	members := []Member{
+		{
+			key:   "foo",
+			value: "1",
+			properties: properties{
+				{key: "state", value: "on", hasValue: true},
+				{key: "red"},
+			},
+		},
+		{
+			key:   "bar",
+			value: "2",
+			properties: properties{
+				{key: "yellow"},
+			},
+		},
+	}
+
+	baggage := Baggage{list: map[string]value{
+		"foo": {
+			v: "1",
+			p: properties{
+				{key: "state", value: "on", hasValue: true},
+				{key: "red"},
+			},
+		},
+		"bar": {
+			v: "2",
+			p: properties{{key: "yellow"}},
+		},
+	}}
+
+	assert.ElementsMatch(t, members, baggage.Members())
+}
+
+func TestBaggageMember(t *testing.T) {
+	baggage := Baggage{list: map[string]value{"foo": {v: "1"}}}
+	assert.Equal(t, Member{key: "foo", value: "1"}, baggage.Member("foo"))
+	assert.Equal(t, Member{}, baggage.Member("bar"))
+}
+
+func TestMemberKey(t *testing.T) {
+	m := Member{}
+	assert.Equal(t, "", m.Key(), "even invalid values should be returned")
+
+	key := "k"
+	m.key = key
+	assert.Equal(t, key, m.Key())
+}
+
+func TestMemberValue(t *testing.T) {
+	m := Member{key: "k", value: "\\"}
+	assert.Equal(t, "\\", m.Value(), "even invalid values should be returned")
+
+	value := "v"
+	m.value = value
+	assert.Equal(t, value, m.Value())
+}
+
+func TestMemberProperties(t *testing.T) {
+	m := Member{key: "k", value: "v"}
+	assert.Nil(t, m.Properties())
+
+	p := []Property{{key: "foo"}}
+	m.properties = properties(p)
+	got := m.Properties()
+	assert.Equal(t, p, got)
+
+	// Returned slice needs to be a copy so the orginal is immutable.
+	got[0] = Property{key: "bar"}
+	assert.NotEqual(t, m.properties, got)
+}
+
+func TestMemberValidation(t *testing.T) {
+	m := Member{}
+	assert.ErrorIs(t, m.validate(), errInvalidKey)
+
+	m.key, m.value = "k", "\\"
+	assert.ErrorIs(t, m.validate(), errInvalidValue)
+
+	m.value = "v"
+	assert.NoError(t, m.validate())
+}
+
+func TestNewMember(t *testing.T) {
+	m, err := NewMember("", "")
+	assert.ErrorIs(t, err, errInvalidKey)
+	assert.Equal(t, Member{}, m)
+
+	key, val := "k", "v"
+	p := Property{key: "foo"}
+	m, err = NewMember(key, val, p)
+	assert.NoError(t, err)
+	expected := Member{key: key, value: val, properties: properties{{key: "foo"}}}
+	assert.Equal(t, expected, m)
+
+	// Ensure new member is immutable.
+	p.key = "bar"
+	assert.Equal(t, expected, m)
+}
+
+func TestPropertiesValidate(t *testing.T) {
+	p := properties{{}}
+	assert.ErrorIs(t, p.validate(), errInvalidKey)
+
+	p[0].key = "foo"
+	assert.NoError(t, p.validate())
+
+	p = append(p, Property{key: "bar"})
+	assert.NoError(t, p.validate())
 }

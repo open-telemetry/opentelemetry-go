@@ -150,6 +150,10 @@ func (p Property) String() string {
 type properties []Property
 
 func (p properties) Copy() properties {
+	if len(p) == 0 {
+		return nil
+	}
+
 	props := make(properties, len(p))
 	copy(props, p)
 	return props
@@ -183,20 +187,16 @@ type Member struct {
 	properties properties
 }
 
+// NewMember returns a new Member from the passed arguments. An error is
+// returned if the created Member would be invalid according to the W3C
+// Baggage specification.
 func NewMember(key, value string, props ...Property) (Member, error) {
-	m := Member{}
-	if !keyRe.MatchString(key) {
-		return m, fmt.Errorf("invalid key: %q", key)
-	}
-	if !valueRe.MatchString(value) {
-		return m, fmt.Errorf("invalid value: %q", value)
-	}
-	p := properties(props)
-	if err := p.validate(); err != nil {
-		return m, err
+	m := Member{key: key, value: value, properties: properties(props).Copy()}
+	if err := m.validate(); err != nil {
+		return Member{}, err
 	}
 
-	return Member{key: key, value: value, properties: p.Copy()}, nil
+	return m, nil
 }
 
 // parseMember attempts to decode a Member from the passed string. It returns
@@ -230,7 +230,10 @@ func parseMember(member string) (Member, error) {
 		}
 		key, value = match[1], match[2]
 	default:
-		return Member{}, fmt.Errorf("%w: %q", errInvalidMember, member)
+		// This should never happen unless a developer has changed the string
+		// splitting somehow. Panic instead of failing silently and allowing
+		// the bug to slip past the CI checks.
+		panic("failed to parse baggage member")
 	}
 
 	return Member{key: key, value: value, properties: props}, nil
@@ -240,10 +243,10 @@ func parseMember(member string) (Member, error) {
 // error otherwise.
 func (m Member) validate() error {
 	if !keyRe.MatchString(m.key) {
-		return fmt.Errorf("%w: invalid key: %q", errInvalidMember, m.key)
+		return fmt.Errorf("%w: %q", errInvalidKey, m.key)
 	}
 	if !valueRe.MatchString(m.value) {
-		return fmt.Errorf("%w: invalid value: %q", errInvalidMember, m.value)
+		return fmt.Errorf("%w: %q", errInvalidValue, m.value)
 	}
 	return m.properties.validate()
 }
@@ -311,25 +314,37 @@ func Parse(baggage string) (Baggage, error) {
 	return Baggage{b}, nil
 }
 
-// Member returns the baggage list-member identified by key and a boolean
-// value indicating if the list-member existed or not.
-func (b Baggage) Member(key string) (Member, bool) {
+// Member returns the baggage list-member identified by key.
+//
+// If there is no list-member matching the passed key the returned Member will
+// be a zero-value Member.
+func (b Baggage) Member(key string) Member {
 	v, ok := b.list[key]
-	return Member{
-		key:        key,
-		value:      v.v,
-		properties: v.p.Copy(),
-	}, ok
+	if !ok {
+		// We do not need to worry about distiguising between the situation
+		// where a zero-valued Member is included in the Baggage because a
+		// zero-valued Member is invalid according to the W3C Baggage
+		// specification (it has an empty key).
+		return Member{}
+	}
+
+	return Member{key: key, value: v.v, properties: v.p.Copy()}
 }
 
-// Members returns all the baggage list-member.
+// Members returns all the baggage list-members.
 // The order of the returned list-members does not have significance.
 func (b Baggage) Members() []Member {
-	members := make([]Member, len(b.list))
-	for key := range b.list {
-		// No need to verify the key exists.
-		m, _ := b.Member(key)
-		members = append(members, m)
+	if len(b.list) == 0 {
+		return nil
+	}
+
+	members := make([]Member, 0, len(b.list))
+	for k, v := range b.list {
+		members = append(members, Member{
+			key:        k,
+			value:      v.v,
+			properties: v.p.Copy(),
+		})
 	}
 	return members
 }
@@ -342,7 +357,7 @@ func (b Baggage) Members() []Member {
 // is returned with the original Baggage.
 func (b Baggage) SetMember(member Member) (Baggage, error) {
 	if err := member.validate(); err != nil {
-		return b, err
+		return b, fmt.Errorf("%w: %s", errInvalidMember, err)
 	}
 
 	n := len(b.list)
@@ -352,15 +367,16 @@ func (b Baggage) SetMember(member Member) (Baggage, error) {
 	list := make(map[string]value, n)
 
 	for k, v := range b.list {
-		// Update instead of just copy and overwrite.
+		// Do not copy if we are just going to overwrite.
 		if k == member.key {
-			list[member.key] = value{
-				v: member.value,
-				p: member.properties.Copy(),
-			}
 			continue
 		}
 		list[k] = v
+	}
+
+	list[member.key] = value{
+		v: member.value,
+		p: member.properties.Copy(),
 	}
 
 	return Baggage{list: list}, nil
