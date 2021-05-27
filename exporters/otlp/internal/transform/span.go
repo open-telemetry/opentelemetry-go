@@ -61,6 +61,8 @@ func Spans(sdl []tracesdk.ReadOnlySpan) []*tracepb.ResourceSpans {
 				InstrumentationLibrary: instrumentationLibrary(sd.InstrumentationLibrary()),
 				Spans:                  []*tracepb.Span{},
 			}
+			// TODO: set schema_url field of ils when it is available in the proto.
+			_ = sd.InstrumentationLibrary().SchemaURL
 		}
 		ils.Spans = append(ils.Spans, span(sd))
 		ilsm[iKey] = ils

@@ -115,8 +115,9 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 		name = defaultTracerName
 	}
 	il := instrumentation.Library{
-		Name:    name,
-		Version: c.InstrumentationVersion(),
+		Name:      name,
+		Version:   c.InstrumentationVersion(),
+		SchemaURL: c.SchemaURL(),
 	}
 	t, ok := p.namedTracer[il]
 	if !ok {

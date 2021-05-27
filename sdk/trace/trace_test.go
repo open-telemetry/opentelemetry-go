@@ -1284,7 +1284,7 @@ func TestWithResource(t *testing.T) {
 	}
 }
 
-func TestWithInstrumentationVersion(t *testing.T) {
+func TestWithInstrumentationVersionAndSchema(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
 
@@ -1293,6 +1293,7 @@ func TestWithInstrumentationVersion(t *testing.T) {
 	_, span := tp.Tracer(
 		"WithInstrumentationVersion",
 		trace.WithInstrumentationVersion("v0.1.0"),
+		trace.WithSchemaURL("https://opentelemetry.io/schemas/1.2.0"),
 	).Start(ctx, "span0")
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -1308,8 +1309,9 @@ func TestWithInstrumentationVersion(t *testing.T) {
 		name:     "span0",
 		spanKind: trace.SpanKindInternal,
 		instrumentationLibrary: instrumentation.Library{
-			Name:    "WithInstrumentationVersion",
-			Version: "v0.1.0",
+			Name:      "WithInstrumentationVersion",
+			Version:   "v0.1.0",
+			SchemaURL: "https://opentelemetry.io/schemas/1.2.0",
 		},
 	}
 	if diff := cmpDiff(got, want); diff != "" {

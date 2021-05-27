@@ -23,11 +23,18 @@ import (
 // TracerConfig is a group of options for a Tracer.
 type TracerConfig struct {
 	instrumentationVersion string
+	// Schema URL of the telemetry emitted by the Tracer.
+	schemaURL string
 }
 
 // InstrumentationVersion returns the version of the library providing instrumentation.
 func (t *TracerConfig) InstrumentationVersion() string {
 	return t.instrumentationVersion
+}
+
+// SchemaURL returns the Schema URL of the telemetry emitted by the Tracer.
+func (t *TracerConfig) SchemaURL() string {
+	return t.schemaURL
 }
 
 // NewTracerConfig applies all the options to a returned TracerConfig.
@@ -250,5 +257,12 @@ func WithSpanKind(kind SpanKind) SpanStartOption {
 func WithInstrumentationVersion(version string) TracerOption {
 	return tracerOptionFunc(func(cfg *TracerConfig) {
 		cfg.instrumentationVersion = version
+	})
+}
+
+// WithSchemaURL sets the schema URL for the Tracer.
+func WithSchemaURL(schemaURL string) TracerOption {
+	return tracerOptionFunc(func(cfg *TracerConfig) {
+		cfg.schemaURL = schemaURL
 	})
 }

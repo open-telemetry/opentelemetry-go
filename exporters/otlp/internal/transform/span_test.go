@@ -263,8 +263,9 @@ func TestSpanData(t *testing.T) {
 		DroppedLinks:      3,
 		Resource:          resource.NewWithAttributes(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5)),
 		InstrumentationLibrary: instrumentation.Library{
-			Name:    "go.opentelemetry.io/test/otel",
-			Version: "v0.0.1",
+			Name:      "go.opentelemetry.io/test/otel",
+			Version:   "v0.0.1",
+			SchemaURL: "https://opentelemetry.io/schemas/1.2.0",
 		},
 	}
 
@@ -295,6 +296,7 @@ func TestSpanData(t *testing.T) {
 	assert.Equal(t, got[0].GetResource(), Resource(spanData.Resource))
 	ilSpans := got[0].GetInstrumentationLibrarySpans()
 	require.Len(t, ilSpans, 1)
+	// TODO: Add SchemaURL field checking once the field is added to the proto.
 	assert.Equal(t, ilSpans[0].GetInstrumentationLibrary(), instrumentationLibrary(spanData.InstrumentationLibrary))
 	require.Len(t, ilSpans[0].Spans, 1)
 	actualSpan := ilSpans[0].Spans[0]
