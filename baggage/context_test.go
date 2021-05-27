@@ -18,69 +18,34 @@ import (
 	"context"
 	"testing"
 
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/internal/baggage"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestBaggage(t *testing.T) {
+func TestContextWithBaggage(t *testing.T) {
 	ctx := context.Background()
-	ctx = baggage.ContextWithMap(ctx, baggage.NewEmptyMap())
+	b := Baggage{list: map[string]value{"foo": {v: "1"}}}
 
-	b := Set(ctx)
-	if b.Len() != 0 {
-		t.Fatalf("empty baggage returned a set with %d elements", b.Len())
-	}
+	nCtx := ContextWithBaggage(ctx, b)
+	assert.Equal(t, b, nCtx.Value(baggageKey))
+	assert.Nil(t, ctx.Value(baggageKey))
+}
 
-	first, second, third := attribute.Key("first"), attribute.Key("second"), attribute.Key("third")
-	ctx = ContextWithValues(ctx, first.Bool(true), second.String("2"))
-	m := baggage.MapFromContext(ctx)
-	v, ok := m.Value(first)
-	if !ok {
-		t.Fatal("WithValues failed to set first value")
-	}
-	if !v.AsBool() {
-		t.Fatal("WithValues failed to set first correct value")
-	}
-	v, ok = m.Value(second)
-	if !ok {
-		t.Fatal("WithValues failed to set second value")
-	}
-	if v.AsString() != "2" {
-		t.Fatal("WithValues failed to set second correct value")
-	}
-	_, ok = m.Value(third)
-	if ok {
-		t.Fatal("WithValues set an unexpected third value")
-	}
+func TestContextWithoutBaggage(t *testing.T) {
+	b := Baggage{list: map[string]value{"foo": {v: "1"}}}
 
-	b = Set(ctx)
-	if b.Len() != 2 {
-		t.Fatalf("Baggage returned a set with %d elements, want 2", b.Len())
-	}
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, baggageKey, b)
 
-	v = Value(ctx, first)
-	if v.Type() != attribute.BOOL || !v.AsBool() {
-		t.Fatal("Value failed to get correct first value")
-	}
-	v = Value(ctx, second)
-	if v.Type() != attribute.STRING || v.AsString() != "2" {
-		t.Fatal("Value failed to get correct second value")
-	}
+	nCtx := ContextWithoutBaggage(ctx)
+	assert.Nil(t, nCtx.Value(baggageKey))
+	assert.Equal(t, b, ctx.Value(baggageKey))
+}
 
-	ctx = ContextWithoutValues(ctx, first)
-	m = baggage.MapFromContext(ctx)
-	_, ok = m.Value(first)
-	if ok {
-		t.Fatal("WithoutValues failed to remove a baggage value")
-	}
-	_, ok = m.Value(second)
-	if !ok {
-		t.Fatal("WithoutValues removed incorrect value")
-	}
+func TestFromContext(t *testing.T) {
+	ctx := context.Background()
+	assert.Equal(t, Baggage{}, FromContext(ctx))
 
-	ctx = ContextWithEmpty(ctx)
-	m = baggage.MapFromContext(ctx)
-	if m.Len() != 0 {
-		t.Fatal("WithoutBaggage failed to clear baggage")
-	}
+	b := Baggage{list: map[string]value{"foo": {v: "1"}}}
+	ctx = context.WithValue(ctx, baggageKey, b)
+	assert.Equal(t, b, FromContext(ctx))
 }
