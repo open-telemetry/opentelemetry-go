@@ -42,7 +42,9 @@ var (
 )
 
 var (
-	errInvalidProperty = errors.New("invalid baggage property")
+	errInvalidKey      = errors.New("invalid key")
+	errInvalidValue    = errors.New("invalid value")
+	errInvalidProperty = errors.New("invalid baggage list-member property")
 	errInvalidMember   = errors.New("invalid baggage list-member")
 	errMemberNumber    = errors.New("too many list-members in baggage-string")
 	errMemberBytes     = errors.New("list-member too large")
@@ -61,7 +63,7 @@ type Property struct {
 func NewKeyProperty(key string) (Property, error) {
 	p := Property{}
 	if !keyRe.MatchString(key) {
-		return p, fmt.Errorf("invalid key: %q", key)
+		return p, fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
 	p.key = key
 	return p, nil
@@ -70,10 +72,10 @@ func NewKeyProperty(key string) (Property, error) {
 func NewKeyValueProperty(key, value string) (Property, error) {
 	p := Property{}
 	if !keyRe.MatchString(key) {
-		return p, fmt.Errorf("invalid key: %q", key)
+		return p, fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
 	if !valueRe.MatchString(value) {
-		return p, fmt.Errorf("invalid value: %q", value)
+		return p, fmt.Errorf("%w: %q", errInvalidValue, value)
 	}
 	p.key = key
 	p.value = value
@@ -108,14 +110,18 @@ func parseProperty(property string) (Property, error) {
 // validate ensures p conforms to the W3C Baggage specification, returning an
 // error otherwise.
 func (p Property) validate() error {
+	errFunc := func(err error) error {
+		return fmt.Errorf("invalid property: %w", err)
+	}
+
 	if !keyRe.MatchString(p.key) {
-		return fmt.Errorf("%w: invalid key: %q", errInvalidProperty, p.key)
+		return errFunc(fmt.Errorf("%w: %q", errInvalidKey, p.key))
 	}
 	if p.hasValue && !valueRe.MatchString(p.value) {
-		return fmt.Errorf("%w: invalid value: %q", errInvalidProperty, p.value)
+		return errFunc(fmt.Errorf("%w: %q", errInvalidValue, p.value))
 	}
 	if !p.hasValue && p.value != "" {
-		return fmt.Errorf("%w: inconsistent value", errInvalidProperty)
+		return errFunc(errors.New("inconsistent value"))
 	}
 	return nil
 }
@@ -198,7 +204,7 @@ func NewMember(key, value string, props ...Property) (Member, error) {
 // specification.
 func parseMember(member string) (Member, error) {
 	if n := len(member); n > maxBytesPerMembers {
-		return Member{}, fmt.Errorf("%w: %d", errBaggageBytes, n)
+		return Member{}, fmt.Errorf("%w: %d", errMemberBytes, n)
 	}
 
 	var (
@@ -262,8 +268,8 @@ func (m Member) String() string {
 }
 
 type value struct {
-	value      string
-	properties properties
+	v string
+	p properties
 }
 
 // Baggage is a list of baggage members representing the baggage-string as
@@ -281,33 +287,28 @@ type Baggage struct { //nolint:golint
 // from the W3C Baggage specification which allows duplicate list-members, but
 // conforms to the OpenTelemetry Baggage specification.
 func Parse(baggage string) (Baggage, error) {
-	var b Baggage
 	if baggage == "" {
-		return b, nil
+		return Baggage{}, nil
 	}
 
 	if n := len(baggage); n > maxBytesPerBaggageString {
-		return b, fmt.Errorf("%w: %d", errBaggageBytes, n)
+		return Baggage{}, fmt.Errorf("%w: %d", errBaggageBytes, n)
 	}
 
-	for _, memberStr := range strings.Split(baggage, listDelimiter) {
-		// Trim empty baggage members.
-		if len(memberStr) == 0 {
-			continue
-		}
+	members := strings.Split(baggage, listDelimiter)
+	if len(members) > maxMembers {
+		return Baggage{}, errMemberNumber
+	}
 
+	b := make(map[string]value, len(members))
+	for _, memberStr := range members {
 		m, err := parseMember(memberStr)
 		if err != nil {
 			return Baggage{}, err
 		}
-
-		b.list[m.key] = value{m.value, m.properties}
-		if n := len(b.list); n > maxMembers {
-			return Baggage{}, errMemberNumber
-		}
+		b[m.key] = value{m.value, m.properties}
 	}
-
-	return b, nil
+	return Baggage{b}, nil
 }
 
 // Member returns the baggage list-member identified by key and a boolean
@@ -316,8 +317,8 @@ func (b Baggage) Member(key string) (Member, bool) {
 	v, ok := b.list[key]
 	return Member{
 		key:        key,
-		value:      v.value,
-		properties: v.properties.Copy(),
+		value:      v.v,
+		properties: v.p.Copy(),
 	}, ok
 }
 
@@ -354,8 +355,8 @@ func (b Baggage) SetMember(member Member) (Baggage, error) {
 		// Update instead of just copy and overwrite.
 		if k == member.key {
 			list[member.key] = value{
-				value:      member.value,
-				properties: member.properties.Copy(),
+				v: member.value,
+				p: member.properties.Copy(),
 			}
 			continue
 		}
@@ -397,8 +398,8 @@ func (b Baggage) String() string {
 	for k, v := range b.list {
 		members = append(members, Member{
 			key:        k,
-			value:      v.value,
-			properties: v.properties,
+			value:      v.v,
+			properties: v.p,
 		}.String())
 	}
 	return strings.Join(members, listDelimiter)
