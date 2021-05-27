@@ -150,7 +150,6 @@ func TestRetry(t *testing.T) {
 	defer mc.MustStop(t)
 	client := otlptracehttp.NewClient(
 		otlptracehttp.WithEndpoint(mc.Endpoint()),
-		otlptracehttp.WithTracesEndpoint(mc.Endpoint()),
 		otlptracehttp.WithInsecure(),
 		otlptracehttp.WithMaxAttempts(len(statuses)+1),
 	)
