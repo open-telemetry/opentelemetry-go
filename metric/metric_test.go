@@ -148,25 +148,31 @@ func checkSyncBatches(ctx context.Context, t *testing.T, labels []attribute.KeyV
 
 func TestOptions(t *testing.T) {
 	type testcase struct {
-		name string
-		opts []metric.InstrumentOption
-		desc string
-		unit unit.Unit
+		name  string
+		opts  []metric.InstrumentOption
+		desc  string
+		unit  unit.Unit
+		iName string
+		iVer  string
 	}
 	testcases := []testcase{
 		{
-			name: "no opts",
-			opts: nil,
-			desc: "",
-			unit: "",
+			name:  "no opts",
+			opts:  nil,
+			desc:  "",
+			unit:  "",
+			iName: "",
+			iVer:  "",
 		},
 		{
 			name: "description",
 			opts: []metric.InstrumentOption{
 				metric.WithDescription("stuff"),
 			},
-			desc: "stuff",
-			unit: "",
+			desc:  "stuff",
+			unit:  "",
+			iName: "",
+			iVer:  "",
 		},
 		{
 			name: "description override",
@@ -174,34 +180,126 @@ func TestOptions(t *testing.T) {
 				metric.WithDescription("stuff"),
 				metric.WithDescription("things"),
 			},
-			desc: "things",
-			unit: "",
+			desc:  "things",
+			unit:  "",
+			iName: "",
+			iVer:  "",
 		},
 		{
 			name: "unit",
 			opts: []metric.InstrumentOption{
 				metric.WithUnit("s"),
 			},
-			desc: "",
-			unit: "s",
+			desc:  "",
+			unit:  "s",
+			iName: "",
+			iVer:  "",
 		},
+		{
+			name: "description override",
+			opts: []metric.InstrumentOption{
+				metric.WithDescription("stuff"),
+				metric.WithDescription("things"),
+			},
+			desc:  "things",
+			unit:  "",
+			iName: "",
+			iVer:  "",
+		},
+		{
+			name: "unit",
+			opts: []metric.InstrumentOption{
+				metric.WithUnit("s"),
+			},
+			desc:  "",
+			unit:  "s",
+			iName: "",
+			iVer:  "",
+		},
+
 		{
 			name: "unit override",
 			opts: []metric.InstrumentOption{
 				metric.WithUnit("s"),
 				metric.WithUnit("h"),
 			},
-			desc: "",
-			unit: "h",
+			desc:  "",
+			unit:  "h",
+			iName: "",
+			iVer:  "",
+		},
+		{
+			name: "name",
+			opts: []metric.InstrumentOption{
+				metric.WithInstrumentationName("n"),
+			},
+			desc:  "",
+			unit:  "",
+			iName: "n",
+			iVer:  "",
+		},
+
+		{
+			name: "name override",
+			opts: []metric.InstrumentOption{
+				metric.WithInstrumentationName("n"),
+				metric.WithInstrumentationName("o"),
+			},
+			desc:  "",
+			unit:  "",
+			iName: "o",
+			iVer:  "",
+		},
+		{
+			name: "version",
+			opts: []metric.InstrumentOption{
+				metric.WithInstrumentationVersion("v"),
+			},
+			desc:  "",
+			unit:  "",
+			iName: "",
+			iVer:  "v",
+		},
+
+		{
+			name: "version override",
+			opts: []metric.InstrumentOption{
+				metric.WithInstrumentationVersion("v"),
+				metric.WithInstrumentationVersion("q"),
+			},
+			desc:  "",
+			unit:  "",
+			iName: "",
+			iVer:  "q",
+		},
+		{
+			name: "all",
+			opts: []metric.InstrumentOption{
+				metric.WithDescription("stuff"),
+				metric.WithUnit("s"),
+				metric.WithInstrumentationName("n"),
+				metric.WithInstrumentationVersion("v"),
+			},
+			desc:  "stuff",
+			unit:  "s",
+			iName: "n",
+			iVer:  "v",
 		},
 	}
 	for idx, tt := range testcases {
 		t.Logf("Testing counter case %s (%d)", tt.name, idx)
-		if diff := cmp.Diff(metric.NewInstrumentConfig(tt.opts...), metric.InstrumentConfig{
-			Description: tt.desc,
-			Unit:        tt.unit,
-		}); diff != "" {
-			t.Errorf("Compare options: -got +want %s", diff)
+		cfg := metric.NewInstrumentConfig(tt.opts...)
+		if diff := cmp.Diff(cfg.Description(), tt.desc); diff != "" {
+			t.Errorf("Compare Description: -got +want %s", diff)
+		}
+		if diff := cmp.Diff(cfg.Unit(), tt.unit); diff != "" {
+			t.Errorf("Compare Unit: -got +want %s", diff)
+		}
+		if diff := cmp.Diff(cfg.InstrumentationName(), tt.iName); diff != "" {
+			t.Errorf("Compare InstrumentationNam: -got +want %s", diff)
+		}
+		if diff := cmp.Diff(cfg.InstrumentationVersion(), tt.iVer); diff != "" {
+			t.Errorf("Compare InstrumentationVersion: -got +want %s", diff)
 		}
 	}
 }

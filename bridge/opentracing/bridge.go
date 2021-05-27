@@ -98,7 +98,7 @@ func (s *bridgeSpan) Finish() {
 }
 
 func (s *bridgeSpan) FinishWithOptions(opts ot.FinishOptions) {
-	var otelOpts []trace.SpanOption
+	var otelOpts []trace.SpanEndOption
 
 	if !opts.FinishTime.IsZero() {
 		otelOpts = append(otelOpts, trace.WithTimestamp(opts.FinishTime))

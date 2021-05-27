@@ -70,9 +70,9 @@ func NewMockTracer() *MockTracer {
 	}
 }
 
-func (t *MockTracer) Start(ctx context.Context, name string, opts ...trace.SpanOption) (context.Context, trace.Span) {
-	config := trace.NewSpanConfig(opts...)
-	startTime := config.Timestamp
+func (t *MockTracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
+	config := trace.NewSpanStartConfig(opts...)
+	startTime := config.Timestamp()
 	if startTime.IsZero() {
 		startTime = time.Now()
 	}
@@ -86,13 +86,13 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...trace.SpanO
 		officialTracer: t,
 		spanContext:    spanContext,
 		Attributes: baggage.NewMap(baggage.MapUpdate{
-			MultiKV: config.Attributes,
+			MultiKV: config.Attributes(),
 		}),
 		StartTime:    startTime,
 		EndTime:      time.Time{},
 		ParentSpanID: t.getParentSpanID(ctx, config),
 		Events:       nil,
-		SpanKind:     trace.ValidateSpanKind(config.SpanKind),
+		SpanKind:     trace.ValidateSpanKind(config.SpanKind()),
 	}
 	if !migration.SkipContextSetup(ctx) {
 		ctx = trace.ContextWithSpan(ctx, span)
@@ -137,7 +137,7 @@ func (t *MockTracer) getParentSpanID(ctx context.Context, config *trace.SpanConf
 }
 
 func (t *MockTracer) getParentSpanContext(ctx context.Context, config *trace.SpanConfig) trace.SpanContext {
-	if !config.NewRoot {
+	if !config.NewRoot() {
 		return trace.SpanContextFromContext(ctx)
 	}
 	return trace.SpanContext{}
@@ -232,12 +232,12 @@ func (s *MockSpan) applyUpdate(update baggage.MapUpdate) {
 	s.Attributes = s.Attributes.Apply(update)
 }
 
-func (s *MockSpan) End(options ...trace.SpanOption) {
+func (s *MockSpan) End(options ...trace.SpanEndOption) {
 	if !s.EndTime.IsZero() {
 		return // already finished
 	}
-	config := trace.NewSpanConfig(options...)
-	endTime := config.Timestamp
+	config := trace.NewSpanEndConfig(options...)
+	endTime := config.Timestamp()
 	if endTime.IsZero() {
 		endTime = time.Now()
 	}
@@ -269,10 +269,10 @@ func (s *MockSpan) Tracer() trace.Tracer {
 func (s *MockSpan) AddEvent(name string, o ...trace.EventOption) {
 	c := trace.NewEventConfig(o...)
 	s.Events = append(s.Events, MockEvent{
-		Timestamp: c.Timestamp,
+		Timestamp: c.Timestamp(),
 		Name:      name,
 		Attributes: baggage.NewMap(baggage.MapUpdate{
-			MultiKV: c.Attributes,
+			MultiKV: c.Attributes(),
 		}),
 	})
 }

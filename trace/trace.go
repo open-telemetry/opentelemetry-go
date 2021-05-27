@@ -342,7 +342,7 @@ type Span interface {
 	// delivered through the rest of the telemetry pipeline after this method
 	// is called. Therefore, updates to the Span are not allowed after this
 	// method has been called.
-	End(options ...SpanOption)
+	End(options ...SpanEndOption)
 
 	// AddEvent adds an event with the provided name and options.
 	AddEvent(name string, options ...EventOption)
@@ -488,7 +488,7 @@ type Tracer interface {
 	//
 	// Any Span that is created MUST also be ended. This is the responsibility of the user.
 	// Implementations of this API may leak memory or other resources if Spans are not ended.
-	Start(ctx context.Context, spanName string, opts ...SpanOption) (context.Context, Span)
+	Start(ctx context.Context, spanName string, opts ...SpanStartOption) (context.Context, Span)
 }
 
 // TracerProvider provides access to instrumentation Tracers.
