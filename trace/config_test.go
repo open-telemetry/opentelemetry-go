@@ -41,119 +41,119 @@ func TestNewSpanConfig(t *testing.T) {
 	}
 
 	tests := []struct {
-		options  []SpanOption
+		options  []SpanStartOption
 		expected *SpanConfig
 	}{
 		{
 			// No non-zero-values should be set.
-			[]SpanOption{},
+			[]SpanStartOption{},
 			new(SpanConfig),
 		},
 		{
-			[]SpanOption{
+			[]SpanStartOption{
 				WithAttributes(k1v1),
 			},
 			&SpanConfig{
-				Attributes: []attribute.KeyValue{k1v1},
+				attributes: []attribute.KeyValue{k1v1},
 			},
 		},
 		{
 			// Multiple calls should append not overwrite.
-			[]SpanOption{
+			[]SpanStartOption{
 				WithAttributes(k1v1),
 				WithAttributes(k1v2),
 				WithAttributes(k2v2),
 			},
 			&SpanConfig{
 				// No uniqueness is guaranteed by the API.
-				Attributes: []attribute.KeyValue{k1v1, k1v2, k2v2},
+				attributes: []attribute.KeyValue{k1v1, k1v2, k2v2},
 			},
 		},
 		{
-			[]SpanOption{
+			[]SpanStartOption{
 				WithAttributes(k1v1, k1v2, k2v2),
 			},
 			&SpanConfig{
 				// No uniqueness is guaranteed by the API.
-				Attributes: []attribute.KeyValue{k1v1, k1v2, k2v2},
+				attributes: []attribute.KeyValue{k1v1, k1v2, k2v2},
 			},
 		},
 		{
-			[]SpanOption{
+			[]SpanStartOption{
 				WithTimestamp(timestamp0),
 			},
 			&SpanConfig{
-				Timestamp: timestamp0,
+				timestamp: timestamp0,
 			},
 		},
 		{
-			[]SpanOption{
+			[]SpanStartOption{
 				// Multiple calls overwrites with last-one-wins.
 				WithTimestamp(timestamp0),
 				WithTimestamp(timestamp1),
 			},
 			&SpanConfig{
-				Timestamp: timestamp1,
+				timestamp: timestamp1,
 			},
 		},
 		{
-			[]SpanOption{
+			[]SpanStartOption{
 				WithLinks(link1),
 			},
 			&SpanConfig{
-				Links: []Link{link1},
+				links: []Link{link1},
 			},
 		},
 		{
-			[]SpanOption{
+			[]SpanStartOption{
 				// Multiple calls should append not overwrite.
 				WithLinks(link1),
 				WithLinks(link1, link2),
 			},
 			&SpanConfig{
 				// No uniqueness is guaranteed by the API.
-				Links: []Link{link1, link1, link2},
+				links: []Link{link1, link1, link2},
 			},
 		},
 		{
-			[]SpanOption{
+			[]SpanStartOption{
 				WithNewRoot(),
 			},
 			&SpanConfig{
-				NewRoot: true,
+				newRoot: true,
 			},
 		},
 		{
-			[]SpanOption{
+			[]SpanStartOption{
 				// Multiple calls should not change NewRoot state.
 				WithNewRoot(),
 				WithNewRoot(),
 			},
 			&SpanConfig{
-				NewRoot: true,
+				newRoot: true,
 			},
 		},
 		{
-			[]SpanOption{
+			[]SpanStartOption{
 				WithSpanKind(SpanKindConsumer),
 			},
 			&SpanConfig{
-				SpanKind: SpanKindConsumer,
+				spanKind: SpanKindConsumer,
 			},
 		},
 		{
-			[]SpanOption{
+			[]SpanStartOption{
 				// Multiple calls overwrites with last-one-wins.
 				WithSpanKind(SpanKindClient),
 				WithSpanKind(SpanKindConsumer),
 			},
 			&SpanConfig{
-				SpanKind: SpanKindConsumer,
+				spanKind: SpanKindConsumer,
 			},
 		},
 		{
 			// Everything should work together.
-			[]SpanOption{
+			[]SpanStartOption{
 				WithAttributes(k1v1),
 				WithTimestamp(timestamp0),
 				WithLinks(link1, link2),
@@ -161,16 +161,16 @@ func TestNewSpanConfig(t *testing.T) {
 				WithSpanKind(SpanKindConsumer),
 			},
 			&SpanConfig{
-				Attributes: []attribute.KeyValue{k1v1},
-				Timestamp:  timestamp0,
-				Links:      []Link{link1, link2},
-				NewRoot:    true,
-				SpanKind:   SpanKindConsumer,
+				attributes: []attribute.KeyValue{k1v1},
+				timestamp:  timestamp0,
+				links:      []Link{link1, link2},
+				newRoot:    true,
+				spanKind:   SpanKindConsumer,
 			},
 		},
 	}
 	for _, test := range tests {
-		assert.Equal(t, test.expected, NewSpanConfig(test.options...))
+		assert.Equal(t, test.expected, NewSpanStartConfig(test.options...))
 	}
 }
 
@@ -191,7 +191,7 @@ func TestTracerConfig(t *testing.T) {
 				WithInstrumentationVersion(v1),
 			},
 			&TracerConfig{
-				InstrumentationVersion: v1,
+				instrumentationVersion: v1,
 			},
 		},
 		{
@@ -201,7 +201,7 @@ func TestTracerConfig(t *testing.T) {
 				WithInstrumentationVersion(v2),
 			},
 			&TracerConfig{
-				InstrumentationVersion: v2,
+				instrumentationVersion: v2,
 			},
 		},
 	}
