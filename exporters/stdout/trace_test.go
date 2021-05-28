@@ -170,7 +170,8 @@ func TestExporter_ExportSpan(t *testing.T) {
 		],
 		"InstrumentationLibrary": {
 			"Name": "",
-			"Version": ""
+			"Version": "",
+			"SchemaURL": ""
 		}
 	}
 ]

@@ -56,3 +56,7 @@ require (
 )
 
 replace go.opentelemetry.io/otel/example/passthrough => ../../example/passthrough
+
+replace go.opentelemetry.io/otel/exporters/otlp/otlptrace => ../../exporters/otlp/otlptrace
+
+replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc => ../../exporters/otlp/otlptrace/otlptracegrpc

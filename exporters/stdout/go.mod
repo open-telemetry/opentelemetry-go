@@ -59,3 +59,7 @@ replace go.opentelemetry.io/otel/sdk/metric => ../../sdk/metric
 replace go.opentelemetry.io/otel/trace => ../../trace
 
 replace go.opentelemetry.io/otel/example/passthrough => ../../example/passthrough
+
+replace go.opentelemetry.io/otel/exporters/otlp/otlptrace => ../otlp/otlptrace
+
+replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc => ../otlp/otlptrace/otlptracegrpc
