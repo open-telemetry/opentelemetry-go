@@ -60,7 +60,10 @@ func (h *loggingErrorHandler) Handle(err error) {
 		d.(ErrorHandler).Handle(err)
 		return
 	}
-	h.l.Print(err)
+	if err != nil {
+		h.l.Print(err)
+	}
+	
 }
 
 // GetErrorHandler returns the global ErrorHandler instance. If no ErrorHandler
