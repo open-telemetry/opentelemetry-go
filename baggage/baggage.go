@@ -281,6 +281,36 @@ type Baggage struct { //nolint:golint
 	list map[string]value
 }
 
+// New returns a new valid Baggage. It returns an error if the passed members
+// are invalid according to the W3C Baggage specification or if it results in
+// a Baggage exceeding limits set in that specification.
+func New(members ...Member) (Baggage, error) {
+	if len(members) == 0 {
+		return Baggage{}, nil
+	}
+
+	b := make(map[string]value)
+	for _, m := range members {
+		if err := m.validate(); err != nil {
+			return Baggage{}, err
+		}
+		// OpenTelemetry resolves duplicates by last-one-wins.
+		b[m.key] = value{m.value, m.properties.Copy()}
+	}
+
+	// Check member numbers after deduplicating.
+	if len(b) > maxMembers {
+		return Baggage{}, errMemberNumber
+	}
+
+	bag := Baggage{b}
+	if n := len(bag.String()); n > maxBytesPerBaggageString {
+		return Baggage{}, fmt.Errorf("%w: %d", errBaggageBytes, n)
+	}
+
+	return bag, nil
+}
+
 // Parse attempts to decode a baggage-string from the passed string. It
 // returns an error if the input is invalid according to the W3C Baggage
 // specification.
@@ -298,19 +328,23 @@ func Parse(baggage string) (Baggage, error) {
 		return Baggage{}, fmt.Errorf("%w: %d", errBaggageBytes, n)
 	}
 
-	members := strings.Split(baggage, listDelimiter)
-	if len(members) > maxMembers {
-		return Baggage{}, errMemberNumber
-	}
-
-	b := make(map[string]value, len(members))
-	for _, memberStr := range members {
+	b := make(map[string]value)
+	for _, memberStr := range strings.Split(baggage, listDelimiter) {
 		m, err := parseMember(memberStr)
 		if err != nil {
 			return Baggage{}, err
 		}
+		// OpenTelemetry resolves duplicates by last-one-wins.
 		b[m.key] = value{m.value, m.properties}
 	}
+
+	// OpenTelemetry does not allow for duplicate list-members, but the W3C
+	// specification does. Now that we have deduplicated, ensure the baggage
+	// does not exceed list-member limits.
+	if len(b) > maxMembers {
+		return Baggage{}, errMemberNumber
+	}
+
 	return Baggage{b}, nil
 }
 

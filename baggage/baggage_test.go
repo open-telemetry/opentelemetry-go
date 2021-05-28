@@ -16,6 +16,7 @@ package baggage
 
 import (
 	"fmt"
+	"math/rand"
 	"sort"
 	"strings"
 	"testing"
@@ -162,22 +163,70 @@ func TestPropertyValidate(t *testing.T) {
 	assert.NoError(t, p.validate())
 }
 
-func TestBaggageParse(t *testing.T) {
-	b := make([]rune, maxBytesPerBaggageString+1)
-	for i := range b {
-		b[i] = 'a'
-	}
-	tooLarge := string(b)
+func TestNewEmptyBaggage(t *testing.T) {
+	b, err := New()
+	assert.NoError(t, err)
+	assert.Equal(t, Baggage{}, b)
+}
 
-	b = make([]rune, maxBytesPerMembers+1)
-	for i := range b {
-		b[i] = 'a'
+func TestNewBaggage(t *testing.T) {
+	b, err := New(Member{key: "k"})
+	assert.NoError(t, err)
+	assert.Equal(t, Baggage{list: map[string]value{"k": {}}}, b)
+}
+
+func TestNewBaggageWithDuplicates(t *testing.T) {
+	m := make([]Member, maxMembers+1)
+	for i := range m {
+		// Duplicates are collapsed.
+		m[i] = Member{key: "a"}
 	}
-	tooLargeMember := string(b)
+	b, err := New(m...)
+	assert.NoError(t, err)
+	assert.Equal(t, Baggage{list: map[string]value{"a": {}}}, b)
+}
+
+func TestNewBaggageErrorInvalidMember(t *testing.T) {
+	_, err := New(Member{key: ""})
+	assert.ErrorIs(t, err, errInvalidKey)
+}
+
+func key(n int) string {
+	r := []rune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = r[rand.Intn(len(r))]
+	}
+	return string(b)
+}
+
+func TestNewBaggageErrorTooManyBytes(t *testing.T) {
+	m := make([]Member, (maxBytesPerBaggageString/maxBytesPerMembers)+1)
+	for i := range m {
+		m[i] = Member{key: key(maxBytesPerMembers)}
+	}
+	_, err := New(m...)
+	assert.ErrorIs(t, err, errBaggageBytes)
+}
+
+func TestNewBaggageErrorTooManyMembers(t *testing.T) {
+	m := make([]Member, maxMembers+1)
+	for i := range m {
+		m[i] = Member{key: fmt.Sprintf("%d", i)}
+	}
+	_, err := New(m...)
+	assert.ErrorIs(t, err, errMemberNumber)
+}
+
+func TestBaggageParse(t *testing.T) {
+	tooLarge := key(maxBytesPerBaggageString + 1)
+
+	tooLargeMember := key(maxBytesPerMembers + 1)
 
 	m := make([]string, maxMembers+1)
 	for i := range m {
-		m[i] = "a="
+		m[i] = fmt.Sprintf("a%d=", i)
 	}
 	tooManyMembers := strings.Join(m, listDelimiter)
 
@@ -544,7 +593,7 @@ func TestMemberProperties(t *testing.T) {
 	got := m.Properties()
 	assert.Equal(t, p, got)
 
-	// Returned slice needs to be a copy so the orginal is immutable.
+	// Returned slice needs to be a copy so the original is immutable.
 	got[0] = Property{key: "bar"}
 	assert.NotEqual(t, m.properties, got)
 }
