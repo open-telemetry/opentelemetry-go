@@ -80,8 +80,8 @@ var (
 	baseKeyValues = []attribute.KeyValue{attribute.String("host", "test.com")}
 	cpuKey        = attribute.Key("CPU")
 
-	testInstA = resource.NewWithAttributes(attribute.String("instance", "tester-a"))
-	testInstB = resource.NewWithAttributes(attribute.String("instance", "tester-b"))
+	testInstA = resource.NewSchemaless(attribute.String("instance", "tester-a"))
+	testInstB = resource.NewSchemaless(attribute.String("instance", "tester-b"))
 
 	testHistogramBoundaries = []float64{2.0, 4.0, 8.0}
 

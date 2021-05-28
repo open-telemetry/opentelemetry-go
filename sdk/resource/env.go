@@ -57,14 +57,22 @@ func (fromEnv) Detect(context.Context) (*Resource, error) {
 	var res *Resource
 
 	if svcName != "" {
-		res = NewWithAttributes(semconv.ServiceNameKey.String(svcName))
+		res = NewSchemaless(semconv.ServiceNameKey.String(svcName))
 	}
 
 	r2, err := constructOTResources(attrs)
 
 	// Ensure that the resource with the service name from OTEL_SERVICE_NAME
 	// takes precedence, if it was defined.
-	return Merge(r2, res), err
+	res, err2 := Merge(r2, res)
+
+	if err == nil {
+		err = err2
+	} else if err2 != nil {
+		err = fmt.Errorf("detecting resources: %s", []string{err.Error(), err2.Error()})
+	}
+
+	return res, err
 }
 
 func constructOTResources(s string) (*Resource, error) {
@@ -84,5 +92,5 @@ func constructOTResources(s string) (*Resource, error) {
 	if len(invalid) > 0 {
 		err = fmt.Errorf("%w: %v", errMissingValue, invalid)
 	}
-	return NewWithAttributes(attrs...), err
+	return NewSchemaless(attrs...), err
 }

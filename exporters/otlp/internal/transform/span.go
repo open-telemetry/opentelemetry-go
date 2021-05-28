@@ -75,6 +75,7 @@ func Spans(sdl []tracesdk.ReadOnlySpan) []*tracepb.ResourceSpans {
 				Resource:                    Resource(sd.Resource()),
 				InstrumentationLibrarySpans: []*tracepb.InstrumentationLibrarySpans{ils},
 			}
+			// TODO: populate ResourceSpans.SchemaURL when the field is added to the Protobuf message.
 			rsm[rKey] = rs
 			continue
 		}

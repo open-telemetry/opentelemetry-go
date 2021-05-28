@@ -54,6 +54,7 @@ func initTracer(url string) func() {
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSpanProcessor(batcher),
 		sdktrace.WithResource(resource.NewWithAttributes(
+			semconv.SchemaURL,
 			semconv.ServiceNameKey.String("zipkin-test"),
 		)),
 	)

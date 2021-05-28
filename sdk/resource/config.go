@@ -24,6 +24,8 @@ import (
 type config struct {
 	// detectors that will be evaluated.
 	detectors []Detector
+	// SchemaURL to associate with the Resource.
+	schemaURL string
 }
 
 // Option is the interface that applies a configuration option.
@@ -42,7 +44,7 @@ type detectAttributes struct {
 }
 
 func (d detectAttributes) Detect(context.Context) (*Resource, error) {
-	return NewWithAttributes(d.attributes...), nil
+	return NewSchemaless(d.attributes...), nil
 }
 
 // WithDetectors adds detectors to be evaluated for the configured resource.
@@ -65,7 +67,7 @@ func WithBuiltinDetectors() Option {
 		fromEnv{})
 }
 
-// WithFromEnv adds attributes from environment variables to the  configured resource.
+// WithFromEnv adds attributes from environment variables to the configured resource.
 func WithFromEnv() Option {
 	return WithDetectors(fromEnv{})
 }
@@ -78,4 +80,15 @@ func WithHost() Option {
 // WithTelemetrySDK adds TelemetrySDK version info to the configured resource.
 func WithTelemetrySDK() Option {
 	return WithDetectors(telemetrySDK{})
+}
+
+// WithSchemaURL sets the schema URL for the configured resource.
+func WithSchemaURL(schemaURL string) Option {
+	return schemaURLOption(schemaURL)
+}
+
+type schemaURLOption string
+
+func (o schemaURLOption) apply(cfg *config) {
+	cfg.schemaURL = string(o)
 }

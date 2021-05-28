@@ -126,7 +126,7 @@ func convertResource(res *ocresource.Resource) *resource.Resource {
 	for k, v := range res.Labels {
 		labels = append(labels, attribute.KeyValue{Key: attribute.Key(k), Value: attribute.StringValue(v)})
 	}
-	return resource.NewWithAttributes(labels...)
+	return resource.NewSchemaless(labels...)
 }
 
 // convertDescriptor converts an OpenCensus Descriptor to an OpenTelemetry Descriptor

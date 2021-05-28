@@ -37,7 +37,7 @@ func TestDetectOnePair(t *testing.T) {
 	detector := &fromEnv{}
 	res, err := detector.Detect(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, NewWithAttributes(attribute.String("key", "value")), res)
+	assert.Equal(t, NewSchemaless(attribute.String("key", "value")), res)
 }
 
 func TestDetectMultiPairs(t *testing.T) {
@@ -51,7 +51,7 @@ func TestDetectMultiPairs(t *testing.T) {
 	detector := &fromEnv{}
 	res, err := detector.Detect(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, res, NewWithAttributes(
+	assert.Equal(t, res, NewSchemaless(
 		attribute.String("key", "value"),
 		attribute.String("k", "v"),
 		attribute.String("a", "x"),
@@ -83,7 +83,7 @@ func TestMissingKeyError(t *testing.T) {
 	res, err := detector.Detect(context.Background())
 	assert.Error(t, err)
 	assert.Equal(t, err, fmt.Errorf("%w: %v", errMissingValue, "[key]"))
-	assert.Equal(t, res, NewWithAttributes(
+	assert.Equal(t, res, NewSchemaless(
 		attribute.String("key", "value"),
 	))
 }
@@ -99,7 +99,7 @@ func TestDetectServiceNameFromEnv(t *testing.T) {
 	detector := &fromEnv{}
 	res, err := detector.Detect(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, res, NewWithAttributes(
+	assert.Equal(t, res, NewSchemaless(
 		attribute.String("key", "value"),
 		semconv.ServiceNameKey.String("bar"),
 	))
