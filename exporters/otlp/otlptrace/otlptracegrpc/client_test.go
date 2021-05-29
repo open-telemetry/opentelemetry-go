@@ -816,13 +816,12 @@ func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
 
 func TestDisconnected(t *testing.T) {
 	ctx := context.Background()
-	// The endpoint is whatever, we want to be disconnected. But we
-	// setting a blocking connection, so dialing to the invalid
-	// endpoint actually fails.
+	// The endpoint is whatever, we want to be disconnected. We don't
+	// need to set a blocking connection, and dialing to the invalid
+	// endpoint actually fails indeed.
 	exp := newGRPCExporter(t, ctx, "invalid",
 		otlptracegrpc.WithReconnectionPeriod(time.Hour),
 		otlptracegrpc.WithDialOption(
-			grpc.WithBlock(),
 			grpc.FailOnNonTempDialError(true),
 		),
 	)
