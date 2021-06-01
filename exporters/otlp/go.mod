@@ -9,7 +9,7 @@ replace (
 
 require (
 	github.com/cenkalti/backoff/v4 v4.1.0
-	github.com/google/go-cmp v0.5.5
+	github.com/google/go-cmp v0.5.6
 	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/otel v0.20.0
 	go.opentelemetry.io/otel/metric v0.20.0
