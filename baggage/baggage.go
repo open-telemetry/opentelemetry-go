@@ -17,6 +17,7 @@ package baggage
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"regexp"
 	"strings"
 )
@@ -263,7 +264,8 @@ func (m Member) Properties() []Property { return m.properties.Copy() }
 // String encodes Member into a string compliant with the W3C Baggage
 // specification.
 func (m Member) String() string {
-	s := fmt.Sprintf("%s=%s", m.key, m.value)
+	// A key is just an ASCII string, but a value is URL encoded UTF-8.
+	s := fmt.Sprintf("%s=%s", m.key, url.QueryEscape(m.value))
 	if len(m.properties) > 0 {
 		s = fmt.Sprintf("%s%s%s", s, propertyDelimiter, m.properties.String())
 	}

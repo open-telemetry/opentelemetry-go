@@ -378,6 +378,13 @@ func TestBaggageString(t *testing.T) {
 			},
 		},
 		{
+			name: "URL encoded value",
+			out:  "foo=1%3D1",
+			baggage: map[string]value{
+				"foo": {v: "1=1"},
+			},
+		},
+		{
 			name: "single member empty value with properties",
 			out:  "foo=;red;state=on",
 			baggage: map[string]value{
@@ -392,13 +399,16 @@ func TestBaggageString(t *testing.T) {
 		},
 		{
 			name: "single member with properties",
-			out:  "foo=1;red;state=on",
+			// Properties are "opaque values" meaning they are sent as they
+			// are set and no encoding is performed.
+			out: "foo=1;red;state=on;z=z=z",
 			baggage: map[string]value{
 				"foo": {
 					v: "1",
 					p: properties{
 						{key: "state", value: "on", hasValue: true},
 						{key: "red"},
+						{key: "z", value: "z=z", hasValue: true},
 					},
 				},
 			},
