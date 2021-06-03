@@ -326,7 +326,10 @@ func New(members ...Member) (Baggage, error) {
 			return Baggage{}, err
 		}
 		// OpenTelemetry resolves duplicates by last-one-wins.
-		b[m.key] = baggage.Item{m.value, m.properties.asInternal()}
+		b[m.key] = baggage.Item{
+			Value:      m.value,
+			Properties: m.properties.asInternal(),
+		}
 	}
 
 	// Check member numbers after deduplicating.
@@ -366,7 +369,10 @@ func Parse(bStr string) (Baggage, error) {
 			return Baggage{}, err
 		}
 		// OpenTelemetry resolves duplicates by last-one-wins.
-		b[m.key] = baggage.Item{m.value, m.properties.asInternal()}
+		b[m.key] = baggage.Item{
+			Value:      m.value,
+			Properties: m.properties.asInternal(),
+		}
 	}
 
 	// OpenTelemetry does not allow for duplicate list-members, but the W3C
