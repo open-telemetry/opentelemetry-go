@@ -91,7 +91,7 @@ func TestMissingKeyError(t *testing.T) {
 func TestDetectServiceNameFromEnv(t *testing.T) {
 	store, err := ottest.SetEnvVariables(map[string]string{
 		resourceAttrKey: "key=value,service.name=foo",
-		svcNameKey: "bar",
+		svcNameKey:      "bar",
 	})
 	require.NoError(t, err)
 	defer func() { require.NoError(t, store.Restore()) }()
