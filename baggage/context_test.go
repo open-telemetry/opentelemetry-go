@@ -19,33 +19,17 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel/internal/baggage"
 )
 
-func TestContextWithBaggage(t *testing.T) {
-	ctx := context.Background()
-	b := Baggage{list: map[string]value{"foo": {v: "1"}}}
-
-	nCtx := ContextWithBaggage(ctx, b)
-	assert.Equal(t, b, nCtx.Value(baggageKey))
-	assert.Nil(t, ctx.Value(baggageKey))
-}
-
-func TestContextWithoutBaggage(t *testing.T) {
-	b := Baggage{list: map[string]value{"foo": {v: "1"}}}
-
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, baggageKey, b)
-
-	nCtx := ContextWithoutBaggage(ctx)
-	assert.Nil(t, nCtx.Value(baggageKey))
-	assert.Equal(t, b, ctx.Value(baggageKey))
-}
-
-func TestFromContext(t *testing.T) {
+func TestContext(t *testing.T) {
 	ctx := context.Background()
 	assert.Equal(t, Baggage{}, FromContext(ctx))
 
-	b := Baggage{list: map[string]value{"foo": {v: "1"}}}
-	ctx = context.WithValue(ctx, baggageKey, b)
+	b := Baggage{list: baggage.List{"key": baggage.Item{Value: "val"}}}
+	ctx = ContextWithBaggage(ctx, b)
 	assert.Equal(t, b, FromContext(ctx))
+
+	ctx = ContextWithoutBaggage(ctx)
+	assert.Equal(t, Baggage{}, FromContext(ctx))
 }

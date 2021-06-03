@@ -20,6 +20,8 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+
+	"go.opentelemetry.io/otel/internal/baggage"
 )
 
 const (
@@ -150,6 +152,38 @@ func (p Property) String() string {
 
 type properties []Property
 
+func fromInternalProperties(iProps []baggage.Property) properties {
+	if len(iProps) == 0 {
+		return nil
+	}
+
+	props := make(properties, len(iProps))
+	for i, p := range iProps {
+		props[i] = Property{
+			key:      p.Key,
+			value:    p.Value,
+			hasValue: p.HasValue,
+		}
+	}
+	return props
+}
+
+func (p properties) asInternal() []baggage.Property {
+	if len(p) == 0 {
+		return nil
+	}
+
+	iProps := make([]baggage.Property, len(p))
+	for i, prop := range p {
+		iProps[i] = baggage.Property{
+			Key:      prop.key,
+			Value:    prop.value,
+			HasValue: prop.hasValue,
+		}
+	}
+	return iProps
+}
+
 func (p properties) Copy() properties {
 	if len(p) == 0 {
 		return nil
@@ -272,15 +306,10 @@ func (m Member) String() string {
 	return s
 }
 
-type value struct {
-	v string
-	p properties
-}
-
 // Baggage is a list of baggage members representing the baggage-string as
 // defined by the W3C Baggage specification.
 type Baggage struct { //nolint:golint
-	list map[string]value
+	list baggage.List
 }
 
 // New returns a new valid Baggage. It returns an error if the passed members
@@ -291,13 +320,13 @@ func New(members ...Member) (Baggage, error) {
 		return Baggage{}, nil
 	}
 
-	b := make(map[string]value)
+	b := make(baggage.List)
 	for _, m := range members {
 		if err := m.validate(); err != nil {
 			return Baggage{}, err
 		}
 		// OpenTelemetry resolves duplicates by last-one-wins.
-		b[m.key] = value{m.value, m.properties.Copy()}
+		b[m.key] = baggage.Item{m.value, m.properties.asInternal()}
 	}
 
 	// Check member numbers after deduplicating.
@@ -321,23 +350,23 @@ func New(members ...Member) (Baggage, error) {
 // defined (reading left-to-right) will be the only one kept. This diverges
 // from the W3C Baggage specification which allows duplicate list-members, but
 // conforms to the OpenTelemetry Baggage specification.
-func Parse(baggage string) (Baggage, error) {
-	if baggage == "" {
+func Parse(bStr string) (Baggage, error) {
+	if bStr == "" {
 		return Baggage{}, nil
 	}
 
-	if n := len(baggage); n > maxBytesPerBaggageString {
+	if n := len(bStr); n > maxBytesPerBaggageString {
 		return Baggage{}, fmt.Errorf("%w: %d", errBaggageBytes, n)
 	}
 
-	b := make(map[string]value)
-	for _, memberStr := range strings.Split(baggage, listDelimiter) {
+	b := make(baggage.List)
+	for _, memberStr := range strings.Split(bStr, listDelimiter) {
 		m, err := parseMember(memberStr)
 		if err != nil {
 			return Baggage{}, err
 		}
 		// OpenTelemetry resolves duplicates by last-one-wins.
-		b[m.key] = value{m.value, m.properties}
+		b[m.key] = baggage.Item{m.value, m.properties.asInternal()}
 	}
 
 	// OpenTelemetry does not allow for duplicate list-members, but the W3C
@@ -364,7 +393,11 @@ func (b Baggage) Member(key string) Member {
 		return Member{}
 	}
 
-	return Member{key: key, value: v.v, properties: v.p.Copy()}
+	return Member{
+		key:        key,
+		value:      v.Value,
+		properties: fromInternalProperties(v.Properties),
+	}
 }
 
 // Members returns all the baggage list-members.
@@ -378,8 +411,8 @@ func (b Baggage) Members() []Member {
 	for k, v := range b.list {
 		members = append(members, Member{
 			key:        k,
-			value:      v.v,
-			properties: v.p.Copy(),
+			value:      v.Value,
+			properties: fromInternalProperties(v.Properties),
 		})
 	}
 	return members
@@ -400,7 +433,7 @@ func (b Baggage) SetMember(member Member) (Baggage, error) {
 	if _, ok := b.list[member.key]; !ok {
 		n++
 	}
-	list := make(map[string]value, n)
+	list := make(baggage.List, n)
 
 	for k, v := range b.list {
 		// Do not copy if we are just going to overwrite.
@@ -410,9 +443,9 @@ func (b Baggage) SetMember(member Member) (Baggage, error) {
 		list[k] = v
 	}
 
-	list[member.key] = value{
-		v: member.value,
-		p: member.properties.Copy(),
+	list[member.key] = baggage.Item{
+		Value:      member.value,
+		Properties: member.properties.asInternal(),
 	}
 
 	return Baggage{list: list}, nil
@@ -425,7 +458,7 @@ func (b Baggage) DeleteMember(key string) Baggage {
 	if _, ok := b.list[key]; ok {
 		n--
 	}
-	list := make(map[string]value, n)
+	list := make(baggage.List, n)
 
 	for k, v := range b.list {
 		if k == key {
@@ -450,8 +483,8 @@ func (b Baggage) String() string {
 	for k, v := range b.list {
 		members = append(members, Member{
 			key:        k,
-			value:      v.v,
-			properties: v.p,
+			value:      v.Value,
+			properties: fromInternalProperties(v.Properties),
 		}.String())
 	}
 	return strings.Join(members, listDelimiter)

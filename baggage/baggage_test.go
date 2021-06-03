@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel/internal/baggage"
 )
 
 func TestKeyRegExp(t *testing.T) {
@@ -172,7 +173,7 @@ func TestNewEmptyBaggage(t *testing.T) {
 func TestNewBaggage(t *testing.T) {
 	b, err := New(Member{key: "k"})
 	assert.NoError(t, err)
-	assert.Equal(t, Baggage{list: map[string]value{"k": {}}}, b)
+	assert.Equal(t, Baggage{list: baggage.List{"k": {}}}, b)
 }
 
 func TestNewBaggageWithDuplicates(t *testing.T) {
@@ -183,7 +184,7 @@ func TestNewBaggageWithDuplicates(t *testing.T) {
 	}
 	b, err := New(m...)
 	assert.NoError(t, err)
-	assert.Equal(t, Baggage{list: map[string]value{"a": {}}}, b)
+	assert.Equal(t, Baggage{list: baggage.List{"a": {}}}, b)
 }
 
 func TestNewBaggageErrorInvalidMember(t *testing.T) {
@@ -233,37 +234,37 @@ func TestBaggageParse(t *testing.T) {
 	testcases := []struct {
 		name    string
 		in      string
-		baggage map[string]value
+		baggage baggage.List
 		err     error
 	}{
 		{
 			name:    "empty value",
 			in:      "",
-			baggage: map[string]value(nil),
+			baggage: baggage.List(nil),
 		},
 		{
 			name: "single member empty value no properties",
 			in:   "foo=",
-			baggage: map[string]value{
-				"foo": {v: ""},
+			baggage: baggage.List{
+				"foo": {Value: ""},
 			},
 		},
 		{
 			name: "single member no properties",
 			in:   "foo=1",
-			baggage: map[string]value{
-				"foo": {v: "1"},
+			baggage: baggage.List{
+				"foo": {Value: "1"},
 			},
 		},
 		{
 			name: "single member empty value with properties",
 			in:   "foo=;state=on;red",
-			baggage: map[string]value{
+			baggage: baggage.List{
 				"foo": {
-					v: "",
-					p: properties{
-						{key: "state", value: "on", hasValue: true},
-						{key: "red"},
+					Value: "",
+					Properties: []baggage.Property{
+						{Key: "state", Value: "on", HasValue: true},
+						{Key: "red"},
 					},
 				},
 			},
@@ -271,12 +272,12 @@ func TestBaggageParse(t *testing.T) {
 		{
 			name: "single member with properties",
 			in:   "foo=1;state=on;red",
-			baggage: map[string]value{
+			baggage: baggage.List{
 				"foo": {
-					v: "1",
-					p: properties{
-						{key: "state", value: "on", hasValue: true},
-						{key: "red"},
+					Value: "1",
+					Properties: []baggage.Property{
+						{Key: "state", Value: "on", HasValue: true},
+						{Key: "red"},
 					},
 				},
 			},
@@ -284,17 +285,17 @@ func TestBaggageParse(t *testing.T) {
 		{
 			name: "two members with properties",
 			in:   "foo=1;state=on;red,bar=2;yellow",
-			baggage: map[string]value{
+			baggage: baggage.List{
 				"foo": {
-					v: "1",
-					p: properties{
-						{key: "state", value: "on", hasValue: true},
-						{key: "red"},
+					Value: "1",
+					Properties: []baggage.Property{
+						{Key: "state", Value: "on", HasValue: true},
+						{Key: "red"},
 					},
 				},
 				"bar": {
-					v: "2",
-					p: properties{{key: "yellow"}},
+					Value:      "2",
+					Properties: []baggage.Property{{Key: "yellow"}},
 				},
 			},
 		},
@@ -302,8 +303,8 @@ func TestBaggageParse(t *testing.T) {
 			// According to the OTel spec, last value wins.
 			name: "duplicate key",
 			in:   "foo=1;state=on;red,foo=2",
-			baggage: map[string]value{
-				"foo": {v: "2"},
+			baggage: baggage.List{
+				"foo": {Value: "2"},
 			},
 		},
 		{
@@ -356,43 +357,43 @@ func TestBaggageString(t *testing.T) {
 	testcases := []struct {
 		name    string
 		out     string
-		baggage map[string]value
+		baggage baggage.List
 	}{
 		{
 			name:    "empty value",
 			out:     "",
-			baggage: map[string]value(nil),
+			baggage: baggage.List(nil),
 		},
 		{
 			name: "single member empty value no properties",
 			out:  "foo=",
-			baggage: map[string]value{
-				"foo": {v: ""},
+			baggage: baggage.List{
+				"foo": {Value: ""},
 			},
 		},
 		{
 			name: "single member no properties",
 			out:  "foo=1",
-			baggage: map[string]value{
-				"foo": {v: "1"},
+			baggage: baggage.List{
+				"foo": {Value: "1"},
 			},
 		},
 		{
 			name: "URL encoded value",
 			out:  "foo=1%3D1",
-			baggage: map[string]value{
-				"foo": {v: "1=1"},
+			baggage: baggage.List{
+				"foo": {Value: "1=1"},
 			},
 		},
 		{
 			name: "single member empty value with properties",
 			out:  "foo=;red;state=on",
-			baggage: map[string]value{
+			baggage: baggage.List{
 				"foo": {
-					v: "",
-					p: properties{
-						{key: "state", value: "on", hasValue: true},
-						{key: "red"},
+					Value: "",
+					Properties: []baggage.Property{
+						{Key: "state", Value: "on", HasValue: true},
+						{Key: "red"},
 					},
 				},
 			},
@@ -402,13 +403,13 @@ func TestBaggageString(t *testing.T) {
 			// Properties are "opaque values" meaning they are sent as they
 			// are set and no encoding is performed.
 			out: "foo=1;red;state=on;z=z=z",
-			baggage: map[string]value{
+			baggage: baggage.List{
 				"foo": {
-					v: "1",
-					p: properties{
-						{key: "state", value: "on", hasValue: true},
-						{key: "red"},
-						{key: "z", value: "z=z", hasValue: true},
+					Value: "1",
+					Properties: []baggage.Property{
+						{Key: "state", Value: "on", HasValue: true},
+						{Key: "red"},
+						{Key: "z", Value: "z=z", HasValue: true},
 					},
 				},
 			},
@@ -416,17 +417,17 @@ func TestBaggageString(t *testing.T) {
 		{
 			name: "two members with properties",
 			out:  "bar=2;yellow,foo=1;red;state=on",
-			baggage: map[string]value{
+			baggage: baggage.List{
 				"foo": {
-					v: "1",
-					p: properties{
-						{key: "state", value: "on", hasValue: true},
-						{key: "red"},
+					Value: "1",
+					Properties: []baggage.Property{
+						{Key: "state", Value: "on", HasValue: true},
+						{Key: "red"},
 					},
 				},
 				"bar": {
-					v: "2",
-					p: properties{{key: "yellow"}},
+					Value:      "2",
+					Properties: []baggage.Property{{Key: "yellow"}},
 				},
 			},
 		},
@@ -455,10 +456,10 @@ func TestBaggageLen(t *testing.T) {
 	b := Baggage{}
 	assert.Equal(t, 0, b.Len())
 
-	b.list = make(map[string]value, 1)
+	b.list = make(baggage.List, 1)
 	assert.Equal(t, 0, b.Len())
 
-	b.list["k"] = value{}
+	b.list["k"] = baggage.Item{}
 	assert.Equal(t, 1, b.Len())
 }
 
@@ -469,7 +470,7 @@ func TestBaggageDeleteMember(t *testing.T) {
 	b1 := b0.DeleteMember(key)
 	assert.NotContains(t, b1.list, key)
 
-	b0 = Baggage{list: map[string]value{
+	b0 = Baggage{list: baggage.List{
 		key:     {},
 		"other": {},
 	}}
@@ -491,15 +492,15 @@ func TestBaggageSetMember(t *testing.T) {
 	b1, err := b0.SetMember(m)
 	assert.NoError(t, err)
 	assert.NotContains(t, b0.list, key)
-	assert.Equal(t, value{}, b1.list[key])
+	assert.Equal(t, baggage.Item{}, b1.list[key])
 	assert.Equal(t, 0, len(b0.list))
 	assert.Equal(t, 1, len(b1.list))
 
 	m.value = "v"
 	b2, err := b1.SetMember(m)
 	assert.NoError(t, err)
-	assert.Equal(t, value{}, b1.list[key])
-	assert.Equal(t, value{v: "v"}, b2.list[key])
+	assert.Equal(t, baggage.Item{}, b1.list[key])
+	assert.Equal(t, baggage.Item{Value: "v"}, b2.list[key])
 	assert.Equal(t, 1, len(b1.list))
 	assert.Equal(t, 1, len(b2.list))
 
@@ -507,25 +508,25 @@ func TestBaggageSetMember(t *testing.T) {
 	m.properties = p
 	b3, err := b2.SetMember(m)
 	assert.NoError(t, err)
-	assert.Equal(t, value{v: "v"}, b2.list[key])
-	assert.Equal(t, value{v: "v", p: p}, b3.list[key])
+	assert.Equal(t, baggage.Item{Value: "v"}, b2.list[key])
+	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b3.list[key])
 	assert.Equal(t, 1, len(b2.list))
 	assert.Equal(t, 1, len(b3.list))
 
 	// The returned baggage needs to be immutable and should use a copy of the
 	// properties slice.
 	p[0] = Property{key: "different"}
-	assert.Equal(t, value{v: "v", p: properties{{key: "p"}}}, b3.list[key])
+	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b3.list[key])
 	// Reset for below.
 	p[0] = Property{key: "p"}
 
 	m = Member{key: "another"}
 	b4, err := b3.SetMember(m)
 	assert.NoError(t, err)
-	assert.Equal(t, value{v: "v", p: p}, b3.list[key])
+	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b3.list[key])
 	assert.NotContains(t, b3.list, m.key)
-	assert.Equal(t, value{v: "v", p: p}, b4.list[key])
-	assert.Equal(t, value{}, b4.list[m.key])
+	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b4.list[key])
+	assert.Equal(t, baggage.Item{}, b4.list[m.key])
 	assert.Equal(t, 1, len(b3.list))
 	assert.Equal(t, 2, len(b4.list))
 }
@@ -553,17 +554,17 @@ func TestBaggageMembers(t *testing.T) {
 		},
 	}
 
-	baggage := Baggage{list: map[string]value{
+	baggage := Baggage{list: baggage.List{
 		"foo": {
-			v: "1",
-			p: properties{
-				{key: "state", value: "on", hasValue: true},
-				{key: "red"},
+			Value: "1",
+			Properties: []baggage.Property{
+				{Key: "state", Value: "on", HasValue: true},
+				{Key: "red"},
 			},
 		},
 		"bar": {
-			v: "2",
-			p: properties{{key: "yellow"}},
+			Value:      "2",
+			Properties: []baggage.Property{{Key: "yellow"}},
 		},
 	}}
 
@@ -571,7 +572,7 @@ func TestBaggageMembers(t *testing.T) {
 }
 
 func TestBaggageMember(t *testing.T) {
-	baggage := Baggage{list: map[string]value{"foo": {v: "1"}}}
+	baggage := Baggage{list: baggage.List{"foo": {Value: "1"}}}
 	assert.Equal(t, Member{key: "foo", value: "1"}, baggage.Member("foo"))
 	assert.Equal(t, Member{}, baggage.Member("bar"))
 }
