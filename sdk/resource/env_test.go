@@ -17,7 +17,6 @@ package resource
 import (
 	"context"
 	"fmt"
-	"go.opentelemetry.io/otel/semconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,6 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
+	"go.opentelemetry.io/otel/semconv"
 )
 
 func TestDetectOnePair(t *testing.T) {

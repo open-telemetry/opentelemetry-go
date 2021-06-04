@@ -17,11 +17,11 @@ package resource // import "go.opentelemetry.io/otel/sdk/resource"
 import (
 	"context"
 	"fmt"
-	"go.opentelemetry.io/otel/semconv"
 	"os"
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/semconv"
 )
 
 const (
