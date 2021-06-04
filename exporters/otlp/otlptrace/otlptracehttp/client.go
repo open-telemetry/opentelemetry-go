@@ -147,15 +147,11 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 	pbRequest := &coltracepb.ExportTraceServiceRequest{
 		ResourceSpans: protoSpans,
 	}
-	rawRequest, err := d.marshal(pbRequest)
+	rawRequest, err := proto.Marshal(pbRequest)
 	if err != nil {
 		return err
 	}
 	return d.send(ctx, rawRequest)
-}
-
-func (d *client) marshal(msg proto.Message) ([]byte, error) {
-	return proto.Marshal(msg)
 }
 
 func (d *client) send(ctx context.Context, rawRequest []byte) error {

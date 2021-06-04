@@ -47,7 +47,7 @@ const (
 	GzipCompression = Compression(otlpconfig.GzipCompression)
 )
 
-// Option applies an option to the HTTP driver.
+// Option applies an option to the HTTP client.
 type Option interface {
 	applyHTTPOption(*otlpconfig.Config)
 }
@@ -67,7 +67,7 @@ func (w wrappedOption) applyHTTPOption(cfg *otlpconfig.Config) {
 // WithEndpoint allows one to set the address of the collector
 // endpoint that the driver will use to send spans. If
 // unset, it will instead try to use
-// DefaultCollectorHost:DefaultCollectorPort. Note that the endpoint
+// the default endpoint (localhost:4317). Note that the endpoint
 // must not contain any URL path.
 func WithEndpoint(endpoint string) Option {
 	return wrappedOption{otlpconfig.WithEndpoint(endpoint)}
@@ -79,20 +79,21 @@ func WithCompression(compression Compression) Option {
 }
 
 // WithTracesURLPath allows one to override the default URL path used
-// for sending traces. If unset, defaultTracesPath will be used.
+// for sending traces. If unset, default ("/v1/traces") will be used.
 func WithTracesURLPath(urlPath string) Option {
 	return wrappedOption{otlpconfig.WithTracesURLPath(urlPath)}
 }
 
 // WithMaxAttempts allows one to override how many times the driver
-// will try to send the payload in case of retryable errors. If unset,
-// defaultMaxAttempts will be used.
+// will try to send the payload in case of retryable errors.
+// The max attempts is limited to at most 5 retries. If unset,
+// default (5) will be used.
 func WithMaxAttempts(maxAttempts int) Option {
 	return wrappedOption{otlpconfig.WithMaxAttempts(maxAttempts)}
 }
 
 // WithBackoff tells the driver to use the duration as a base of the
-// exponential backoff strategy. If unset, defaultBackoff will be
+// exponential backoff strategy. If unset, default (300ms) will be
 // used.
 func WithBackoff(duration time.Duration) Option {
 	return wrappedOption{otlpconfig.WithBackoff(duration)}
