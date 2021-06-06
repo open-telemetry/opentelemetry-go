@@ -178,14 +178,24 @@ func TestNewBaggage(t *testing.T) {
 }
 
 func TestNewBaggageWithDuplicates(t *testing.T) {
+	// Having this many members would normally cause this to error, but since
+	// these are duplicates of the same key they will be collapsed into a
+	// single entry.
 	m := make([]Member, maxMembers+1)
 	for i := range m {
 		// Duplicates are collapsed.
-		m[i] = Member{key: "a"}
+		m[i] = Member{
+			key:   "a",
+			value: fmt.Sprintf("%d", i),
+		}
 	}
 	b, err := New(m...)
 	assert.NoError(t, err)
-	assert.Equal(t, Baggage{list: baggage.List{"a": {}}}, b)
+
+	// Ensure that the last-one-wins by verifying the value.
+	v := fmt.Sprintf("%d", maxMembers)
+	want := Baggage{list: baggage.List{"a": {Value: v}}}
+	assert.Equal(t, want, b)
 }
 
 func TestNewBaggageErrorInvalidMember(t *testing.T) {
