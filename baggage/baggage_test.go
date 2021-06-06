@@ -233,34 +233,34 @@ func TestBaggageParse(t *testing.T) {
 	tooManyMembers := strings.Join(m, listDelimiter)
 
 	testcases := []struct {
-		name    string
-		in      string
-		baggage baggage.List
-		err     error
+		name string
+		in   string
+		want baggage.List
+		err  error
 	}{
 		{
-			name:    "empty value",
-			in:      "",
-			baggage: baggage.List(nil),
+			name: "empty value",
+			in:   "",
+			want: baggage.List(nil),
 		},
 		{
 			name: "single member empty value no properties",
 			in:   "foo=",
-			baggage: baggage.List{
+			want: baggage.List{
 				"foo": {Value: ""},
 			},
 		},
 		{
 			name: "single member no properties",
 			in:   "foo=1",
-			baggage: baggage.List{
+			want: baggage.List{
 				"foo": {Value: "1"},
 			},
 		},
 		{
 			name: "single member empty value with properties",
 			in:   "foo=;state=on;red",
-			baggage: baggage.List{
+			want: baggage.List{
 				"foo": {
 					Value: "",
 					Properties: []baggage.Property{
@@ -273,7 +273,7 @@ func TestBaggageParse(t *testing.T) {
 		{
 			name: "single member with properties",
 			in:   "foo=1;state=on;red",
-			baggage: baggage.List{
+			want: baggage.List{
 				"foo": {
 					Value: "1",
 					Properties: []baggage.Property{
@@ -286,7 +286,7 @@ func TestBaggageParse(t *testing.T) {
 		{
 			name: "two members with properties",
 			in:   "foo=1;state=on;red,bar=2;yellow",
-			baggage: baggage.List{
+			want: baggage.List{
 				"foo": {
 					Value: "1",
 					Properties: []baggage.Property{
@@ -304,7 +304,7 @@ func TestBaggageParse(t *testing.T) {
 			// According to the OTel spec, last value wins.
 			name: "duplicate key",
 			in:   "foo=1;state=on;red,foo=2",
-			baggage: baggage.List{
+			want: baggage.List{
 				"foo": {Value: "2"},
 			},
 		},
@@ -349,7 +349,7 @@ func TestBaggageParse(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			actual, err := Parse(tc.in)
 			assert.ErrorIs(t, err, tc.err)
-			assert.Equal(t, Baggage{list: tc.baggage}, actual)
+			assert.Equal(t, Baggage{list: tc.want}, actual)
 		})
 	}
 }
