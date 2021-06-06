@@ -26,6 +26,13 @@ import (
 	"go.opentelemetry.io/otel/internal/baggage"
 )
 
+var rng *rand.Rand
+
+func init() {
+	// Seed with a static value to ensure deterministic results.
+	rng = rand.New(rand.NewSource(1))
+}
+
 func TestKeyRegExp(t *testing.T) {
 	// ASCII only
 	invalidKeyRune := []rune{
@@ -208,7 +215,7 @@ func key(n int) string {
 
 	b := make([]rune, n)
 	for i := range b {
-		b[i] = r[rand.Intn(len(r))]
+		b[i] = r[rng.Intn(len(r))]
 	}
 	return string(b)
 }
