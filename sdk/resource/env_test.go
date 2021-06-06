@@ -24,11 +24,12 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
+	"go.opentelemetry.io/otel/semconv"
 )
 
 func TestDetectOnePair(t *testing.T) {
 	store, err := ottest.SetEnvVariables(map[string]string{
-		envVar: "key=value",
+		resourceAttrKey: "key=value",
 	})
 	require.NoError(t, err)
 	defer func() { require.NoError(t, store.Restore()) }()
@@ -41,8 +42,8 @@ func TestDetectOnePair(t *testing.T) {
 
 func TestDetectMultiPairs(t *testing.T) {
 	store, err := ottest.SetEnvVariables(map[string]string{
-		"x":    "1",
-		envVar: "key=value, k = v , a= x, a=z",
+		"x":             "1",
+		resourceAttrKey: "key=value, k = v , a= x, a=z",
 	})
 	require.NoError(t, err)
 	defer func() { require.NoError(t, store.Restore()) }()
@@ -60,7 +61,7 @@ func TestDetectMultiPairs(t *testing.T) {
 
 func TestEmpty(t *testing.T) {
 	store, err := ottest.SetEnvVariables(map[string]string{
-		envVar: "   ",
+		resourceAttrKey: "   ",
 	})
 	require.NoError(t, err)
 	defer func() { require.NoError(t, store.Restore()) }()
@@ -73,7 +74,7 @@ func TestEmpty(t *testing.T) {
 
 func TestMissingKeyError(t *testing.T) {
 	store, err := ottest.SetEnvVariables(map[string]string{
-		envVar: "key=value,key",
+		resourceAttrKey: "key=value,key",
 	})
 	require.NoError(t, err)
 	defer func() { require.NoError(t, store.Restore()) }()
@@ -84,5 +85,22 @@ func TestMissingKeyError(t *testing.T) {
 	assert.Equal(t, err, fmt.Errorf("%w: %v", errMissingValue, "[key]"))
 	assert.Equal(t, res, NewWithAttributes(
 		attribute.String("key", "value"),
+	))
+}
+
+func TestDetectServiceNameFromEnv(t *testing.T) {
+	store, err := ottest.SetEnvVariables(map[string]string{
+		resourceAttrKey: "key=value,service.name=foo",
+		svcNameKey:      "bar",
+	})
+	require.NoError(t, err)
+	defer func() { require.NoError(t, store.Restore()) }()
+
+	detector := &fromEnv{}
+	res, err := detector.Detect(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, res, NewWithAttributes(
+		attribute.String("key", "value"),
+		semconv.ServiceNameKey.String("bar"),
 	))
 }

@@ -36,6 +36,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `Baggage`, `Member`, and `Property` types are added to the `go.opentelemetry.io/otel/baggage` package along with their related functions. (#1967)
 - The new `ContextWithBaggage`, `ContextWithoutBaggage`, and `FromContext` functions were added to the `go.opentelemetry.io/otel/baggage` package.
   These functions replace the `Set`, `Value`, `ContextWithValue`, `ContextWithoutValue`, and `ContextWithEmpty` functions from that package and directly work with the new `Baggage` type. (#1967)
+- The `OTEL_SERVICE_NAME` environment variable is the preferred source for `service.name`, used by the environment resource detector if a service name is present both there and in `OTEL_RESOURCE_ATTRIBUTES`. (#1969)
 
 ### Changed
 
