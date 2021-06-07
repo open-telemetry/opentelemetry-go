@@ -78,9 +78,9 @@ func WithCompression(compression Compression) Option {
 	return wrappedOption{otlpconfig.WithCompression(otlpconfig.Compression(compression))}
 }
 
-// WithTracesURLPath allows one to override the default URL path used
+// WithURLPath allows one to override the default URL path used
 // for sending traces. If unset, default ("/v1/traces") will be used.
-func WithTracesURLPath(urlPath string) Option {
+func WithURLPath(urlPath string) Option {
 	return wrappedOption{otlpconfig.WithTracesURLPath(urlPath)}
 }
 

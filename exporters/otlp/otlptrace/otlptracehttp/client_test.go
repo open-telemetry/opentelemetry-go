@@ -63,13 +63,13 @@ func TestEndToEnd(t *testing.T) {
 		{
 			name: "with empty paths (forced to defaults)",
 			opts: []otlptracehttp.Option{
-				otlptracehttp.WithTracesURLPath(""),
+				otlptracehttp.WithURLPath(""),
 			},
 		},
 		{
 			name: "with relative paths",
 			opts: []otlptracehttp.Option{
-				otlptracehttp.WithTracesURLPath(relOtherTracesPath),
+				otlptracehttp.WithURLPath(relOtherTracesPath),
 			},
 			mcCfg: mockCollectorConfig{
 				TracesURLPath: otherTracesPath,
