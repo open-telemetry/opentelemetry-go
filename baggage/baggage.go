@@ -30,17 +30,17 @@ const (
 	maxBytesPerBaggageString = 8192
 
 	listDelimiter     = ","
+	keyValueDelimiter = "="
 	propertyDelimiter = ";"
 
 	keyDef      = `([\x21\x23-\x27\x2A\x2B\x2D\x2E\x30-\x39\x41-\x5a\x5e-\x7a\x7c\x7e]+)`
 	valueDef    = `([\x21\x23-\x2b\x2d-\x3a\x3c-\x5B\x5D-\x7e]*)`
-	keyValueDef = `\s*` + keyDef + `\s*=\s*` + valueDef + `\s*`
+	keyValueDef = `\s*` + keyDef + `\s*` + keyValueDelimiter + `\s*` + valueDef + `\s*`
 )
 
 var (
 	keyRe      = regexp.MustCompile(`^` + keyDef + `$`)
 	valueRe    = regexp.MustCompile(`^` + valueDef + `$`)
-	keyValueRe = regexp.MustCompile(`^` + keyValueDef + `$`)
 	propertyRe = regexp.MustCompile(`^(?:\s*` + keyDef + `\s*|` + keyValueDef + `)$`)
 )
 
@@ -145,7 +145,7 @@ func (p Property) Value() (string, bool) {
 // specification.
 func (p Property) String() string {
 	if p.hasValue {
-		return fmt.Sprintf("%s=%v", p.key, p.value)
+		return fmt.Sprintf("%s%s%v", p.key, keyValueDelimiter, p.value)
 	}
 	return p.key
 }
@@ -250,6 +250,7 @@ func parseMember(member string) (Member, error) {
 	parts := strings.SplitN(member, propertyDelimiter, 2)
 	switch len(parts) {
 	case 2:
+		// Parse the member properties.
 		for _, pStr := range strings.Split(parts[1], propertyDelimiter) {
 			p, err := parseProperty(pStr)
 			if err != nil {
@@ -259,11 +260,20 @@ func parseMember(member string) (Member, error) {
 		}
 		fallthrough
 	case 1:
-		match := keyValueRe.FindStringSubmatch(parts[0])
-		if len(match) != 3 {
+		// Parse the member key/value pair.
+
+		// Take into account a value can contain equal signs (=).
+		kv := strings.SplitN(parts[0], keyValueDelimiter, 2)
+		if len(kv) != 2 {
 			return Member{}, fmt.Errorf("%w: %q", errInvalidMember, member)
 		}
-		key, value = match[1], match[2]
+		key, value = kv[0], kv[1]
+		if !keyRe.MatchString(key) {
+			return Member{}, fmt.Errorf("%w: %q", errInvalidKey, key)
+		}
+		if !valueRe.MatchString(value) {
+			return Member{}, fmt.Errorf("%w: %q", errInvalidValue, value)
+		}
 	default:
 		// This should never happen unless a developer has changed the string
 		// splitting somehow. Panic instead of failing silently and allowing
@@ -299,7 +309,7 @@ func (m Member) Properties() []Property { return m.properties.Copy() }
 // specification.
 func (m Member) String() string {
 	// A key is just an ASCII string, but a value is URL encoded UTF-8.
-	s := fmt.Sprintf("%s=%s", m.key, url.QueryEscape(m.value))
+	s := fmt.Sprintf("%s%s%s", m.key, keyValueDelimiter, url.QueryEscape(m.value))
 	if len(m.properties) > 0 {
 		s = fmt.Sprintf("%s%s%s", s, propertyDelimiter, m.properties.String())
 	}

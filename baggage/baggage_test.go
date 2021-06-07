@@ -326,14 +326,29 @@ func TestBaggageParse(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid member: empty key",
+			name: "invalid member: empty",
 			in:   "foo=,,bar=",
 			err:  errInvalidMember,
 		},
 		{
+			name: "invalid member: no key",
+			in:   "=foo",
+			err:  errInvalidKey,
+		},
+		{
+			name: "invalid member: no value",
+			in:   "foo",
+			err:  errInvalidMember,
+		},
+		{
+			name: "invalid member: invalid key",
+			in:   "\\=value",
+			err:  errInvalidKey,
+		},
+		{
 			name: "invalid member: invalid value",
 			in:   "foo=\\",
-			err:  errInvalidMember,
+			err:  errInvalidValue,
 		},
 		{
 			name: "invalid property: invalid key",
