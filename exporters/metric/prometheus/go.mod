@@ -8,7 +8,7 @@ replace (
 )
 
 require (
-	github.com/prometheus/client_golang v1.10.0
+	github.com/prometheus/client_golang v1.11.0
 	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/otel v0.20.0
 	go.opentelemetry.io/otel/metric v0.20.0
@@ -62,3 +62,5 @@ replace go.opentelemetry.io/otel/example/passthrough => ../../../example/passthr
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace => ../../otlp/otlptrace
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc => ../../otlp/otlptrace/otlptracegrpc
+
+replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp => ../../otlp/otlptrace/otlptracehttp

@@ -37,6 +37,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The new `ContextWithBaggage`, `ContextWithoutBaggage`, and `FromContext` functions were added to the `go.opentelemetry.io/otel/baggage` package.
   These functions replace the `Set`, `Value`, `ContextWithValue`, `ContextWithoutValue`, and `ContextWithEmpty` functions from that package and directly work with the new `Baggage` type. (#1967)
 - The `OTEL_SERVICE_NAME` environment variable is the preferred source for `service.name`, used by the environment resource detector if a service name is present both there and in `OTEL_RESOURCE_ATTRIBUTES`. (#1969)
+- Creates package `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` implementing a HTTP `otlptrace.Client` and offers convenience functions, `NewExportPipeline` and `InstallNewPipeline`, to setup and install a `otlptrace.Exporter` in tracing. (#1963)
 
 ### Changed
 

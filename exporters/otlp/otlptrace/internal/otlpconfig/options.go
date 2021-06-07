@@ -68,7 +68,6 @@ type (
 		Traces SignalConfig
 
 		// HTTP configurations
-		Marshaler   Marshaler
 		MaxAttempts int
 		Backoff     time.Duration
 

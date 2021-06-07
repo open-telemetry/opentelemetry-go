@@ -8,7 +8,7 @@ replace (
 )
 
 require (
-	github.com/cenkalti/backoff/v4 v4.1.0
+	github.com/cenkalti/backoff/v4 v4.1.1
 	github.com/google/go-cmp v0.5.6
 	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/otel v0.20.0
@@ -69,3 +69,5 @@ replace go.opentelemetry.io/otel/exporters/otlp/otlptrace => ./otlptrace
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc => ./otlptrace/otlptracegrpc
 
 replace go.opentelemetry.io/otel/example/passthrough => ../../example/passthrough
+
+replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp => ./otlptrace/otlptracehttp
