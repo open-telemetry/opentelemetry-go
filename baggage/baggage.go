@@ -267,7 +267,9 @@ func parseMember(member string) (Member, error) {
 		if len(kv) != 2 {
 			return Member{}, fmt.Errorf("%w: %q", errInvalidMember, member)
 		}
-		key, value = kv[0], kv[1]
+		// "Leading and trailing whitespaces are allowed but MUST be trimmed
+		// when converting the header into a data structure."
+		key, value = strings.TrimSpace(kv[0]), strings.TrimSpace(kv[1])
 		if !keyRe.MatchString(key) {
 			return Member{}, fmt.Errorf("%w: %q", errInvalidKey, key)
 		}

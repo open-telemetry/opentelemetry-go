@@ -275,6 +275,13 @@ func TestBaggageParse(t *testing.T) {
 			},
 		},
 		{
+			name: "single member with spaces",
+			in:   " foo \t= 1\t\t ",
+			want: baggage.List{
+				"foo": {Value: "1"},
+			},
+		},
+		{
 			name: "single member empty value with properties",
 			in:   "foo=;state=on;red",
 			want: baggage.List{
