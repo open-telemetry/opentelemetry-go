@@ -97,7 +97,9 @@ func assertConnWritable(t *testing.T, conn udpConn, serverConn net.PacketConn) {
 func waitForCallWithTimeout(call *mock.Call) bool {
 	called := make(chan struct{})
 	call.Run(func(args mock.Arguments) {
-		close(called)
+		if !isChannelClosed(called) {
+			close(called)
+		}
 	})
 
 	var wasCalled bool
@@ -112,6 +114,15 @@ func waitForCallWithTimeout(call *mock.Call) bool {
 	cancel()
 
 	return wasCalled
+}
+
+func isChannelClosed(ch <-chan struct{}) bool {
+	select {
+	case <-ch:
+		return true
+	default:
+	}
+	return false
 }
 
 func waitForConnCondition(conn *reconnectingUDPConn, condition func(conn *reconnectingUDPConn) bool) bool {
