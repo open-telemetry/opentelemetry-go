@@ -301,6 +301,13 @@ func TestBaggageParse(t *testing.T) {
 			},
 		},
 		{
+			name: "single member with value containing equal signs",
+			in:   "foo=0=0=0",
+			want: baggage.List{
+				"foo": {Value: "0=0=0"},
+			},
+		},
+		{
 			name: "two members with properties",
 			in:   "foo=1;state=on;red,bar=2;yellow",
 			want: baggage.List{
