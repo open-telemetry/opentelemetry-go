@@ -342,7 +342,7 @@ type Span interface {
 	// delivered through the rest of the telemetry pipeline after this method
 	// is called. Therefore, updates to the Span are not allowed after this
 	// method has been called.
-	End(options ...SpanOption)
+	End(options ...SpanEndOption)
 
 	// AddEvent adds an event with the provided name and options.
 	AddEvent(name string, options ...EventOption)
@@ -352,13 +352,13 @@ type Span interface {
 	IsRecording() bool
 
 	// RecordError will record err as an exception span event for this span. An
-	// additional call toSetStatus is required if the Status of the Span should
-	// be set to Error, this method does not change the Span status. If this
-	// span is not being recorded or err is nil than this method does nothing.
+	// additional call to SetStatus is required if the Status of the Span should
+	// be set to Error, as this method does not change the Span status. If this
+	// span is not being recorded or err is nil then this method does nothing.
 	RecordError(err error, options ...EventOption)
 
-	// SpanContext returns the SpanContext of the Span. The returned
-	// SpanContext is usable even after the End has been called for the Span.
+	// SpanContext returns the SpanContext of the Span. The returned SpanContext
+	// is usable even after the End method has been called for the Span.
 	SpanContext() SpanContext
 
 	// SetStatus sets the status of the Span in the form of a code and a
@@ -488,7 +488,7 @@ type Tracer interface {
 	//
 	// Any Span that is created MUST also be ended. This is the responsibility of the user.
 	// Implementations of this API may leak memory or other resources if Spans are not ended.
-	Start(ctx context.Context, spanName string, opts ...SpanOption) (context.Context, Span)
+	Start(ctx context.Context, spanName string, opts ...SpanStartOption) (context.Context, Span)
 }
 
 // TracerProvider provides access to instrumentation Tracers.

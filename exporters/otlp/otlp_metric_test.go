@@ -85,24 +85,40 @@ var (
 
 	testHistogramBoundaries = []float64{2.0, 4.0, 8.0}
 
-	cpu1Labels = []*commonpb.StringKeyValue{
+	cpu1Labels = []*commonpb.KeyValue{
 		{
-			Key:   "CPU",
-			Value: "1",
+			Key: "CPU",
+			Value: &commonpb.AnyValue{
+				Value: &commonpb.AnyValue_IntValue{
+					IntValue: 1,
+				},
+			},
 		},
 		{
-			Key:   "host",
-			Value: "test.com",
+			Key: "host",
+			Value: &commonpb.AnyValue{
+				Value: &commonpb.AnyValue_StringValue{
+					StringValue: "test.com",
+				},
+			},
 		},
 	}
-	cpu2Labels = []*commonpb.StringKeyValue{
+	cpu2Labels = []*commonpb.KeyValue{
 		{
-			Key:   "CPU",
-			Value: "2",
+			Key: "CPU",
+			Value: &commonpb.AnyValue{
+				Value: &commonpb.AnyValue_IntValue{
+					IntValue: 2,
+				},
+			},
 		},
 		{
-			Key:   "host",
-			Value: "test.com",
+			Key: "host",
+			Value: &commonpb.AnyValue{
+				Value: &commonpb.AnyValue_StringValue{
+					StringValue: "test.com",
+				},
+			},
 		},
 	}
 
@@ -169,13 +185,13 @@ func TestNoGroupingExport(t *testing.T) {
 										DataPoints: []*metricpb.NumberDataPoint{
 											{
 												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
-												Labels:            cpu1Labels,
+												Attributes:        cpu1Labels,
 												StartTimeUnixNano: startTime(),
 												TimeUnixNano:      pointTime(),
 											},
 											{
 												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
-												Labels:            cpu2Labels,
+												Attributes:        cpu2Labels,
 												StartTimeUnixNano: startTime(),
 												TimeUnixNano:      pointTime(),
 											},
@@ -213,16 +229,7 @@ func TestValuerecorderMetricGroupingExport(t *testing.T) {
 									AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
 									DataPoints: []*metricpb.HistogramDataPoint{
 										{
-											Labels: []*commonpb.StringKeyValue{
-												{
-													Key:   "CPU",
-													Value: "1",
-												},
-												{
-													Key:   "host",
-													Value: "test.com",
-												},
-											},
+											Attributes:        cpu1Labels,
 											StartTimeUnixNano: startTime(),
 											TimeUnixNano:      pointTime(),
 											Count:             2,
@@ -231,16 +238,7 @@ func TestValuerecorderMetricGroupingExport(t *testing.T) {
 											BucketCounts:      []uint64{1, 0, 0, 1},
 										},
 										{
-											Labels: []*commonpb.StringKeyValue{
-												{
-													Key:   "CPU",
-													Value: "1",
-												},
-												{
-													Key:   "host",
-													Value: "test.com",
-												},
-											},
+											Attributes:        cpu1Labels,
 											Count:             2,
 											Sum:               11,
 											ExplicitBounds:    testHistogramBoundaries,
@@ -288,13 +286,13 @@ func TestCountInt64MetricGroupingExport(t *testing.T) {
 										DataPoints: []*metricpb.NumberDataPoint{
 											{
 												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
-												Labels:            cpu1Labels,
+												Attributes:        cpu1Labels,
 												StartTimeUnixNano: startTime(),
 												TimeUnixNano:      pointTime(),
 											},
 											{
 												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
-												Labels:            cpu1Labels,
+												Attributes:        cpu1Labels,
 												StartTimeUnixNano: startTime(),
 												TimeUnixNano:      pointTime(),
 											},
@@ -337,32 +335,14 @@ func TestCountFloat64MetricGroupingExport(t *testing.T) {
 										AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
 										DataPoints: []*metricpb.NumberDataPoint{
 											{
-												Value: &metricpb.NumberDataPoint_AsDouble{AsDouble: 11.0},
-												Labels: []*commonpb.StringKeyValue{
-													{
-														Key:   "CPU",
-														Value: "1",
-													},
-													{
-														Key:   "host",
-														Value: "test.com",
-													},
-												},
+												Value:             &metricpb.NumberDataPoint_AsDouble{AsDouble: 11.0},
+												Attributes:        cpu1Labels,
 												StartTimeUnixNano: startTime(),
 												TimeUnixNano:      pointTime(),
 											},
 											{
-												Value: &metricpb.NumberDataPoint_AsDouble{AsDouble: 11.0},
-												Labels: []*commonpb.StringKeyValue{
-													{
-														Key:   "CPU",
-														Value: "1",
-													},
-													{
-														Key:   "host",
-														Value: "test.com",
-													},
-												},
+												Value:             &metricpb.NumberDataPoint_AsDouble{AsDouble: 11.0},
+												Attributes:        cpu1Labels,
 												StartTimeUnixNano: startTime(),
 												TimeUnixNano:      pointTime(),
 											},
@@ -431,19 +411,19 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 										DataPoints: []*metricpb.NumberDataPoint{
 											{
 												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
-												Labels:            cpu1Labels,
+												Attributes:        cpu1Labels,
 												StartTimeUnixNano: startTime(),
 												TimeUnixNano:      pointTime(),
 											},
 											{
 												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
-												Labels:            cpu1Labels,
+												Attributes:        cpu1Labels,
 												StartTimeUnixNano: startTime(),
 												TimeUnixNano:      pointTime(),
 											},
 											{
 												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
-												Labels:            cpu2Labels,
+												Attributes:        cpu2Labels,
 												StartTimeUnixNano: startTime(),
 												TimeUnixNano:      pointTime(),
 											},
@@ -469,7 +449,7 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 										DataPoints: []*metricpb.NumberDataPoint{
 											{
 												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
-												Labels:            cpu1Labels,
+												Attributes:        cpu1Labels,
 												StartTimeUnixNano: startTime(),
 												TimeUnixNano:      pointTime(),
 											},
@@ -569,19 +549,19 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 										DataPoints: []*metricpb.NumberDataPoint{
 											{
 												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
-												Labels:            cpu1Labels,
+												Attributes:        cpu1Labels,
 												StartTimeUnixNano: startTime(),
 												TimeUnixNano:      pointTime(),
 											},
 											{
 												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
-												Labels:            cpu1Labels,
+												Attributes:        cpu1Labels,
 												StartTimeUnixNano: startTime(),
 												TimeUnixNano:      pointTime(),
 											},
 											{
 												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
-												Labels:            cpu2Labels,
+												Attributes:        cpu2Labels,
 												StartTimeUnixNano: startTime(),
 												TimeUnixNano:      pointTime(),
 											},
@@ -606,7 +586,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 										DataPoints: []*metricpb.NumberDataPoint{
 											{
 												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
-												Labels:            cpu1Labels,
+												Attributes:        cpu1Labels,
 												StartTimeUnixNano: startTime(),
 												TimeUnixNano:      pointTime(),
 											},
@@ -630,7 +610,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 										DataPoints: []*metricpb.NumberDataPoint{
 											{
 												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
-												Labels:            cpu1Labels,
+												Attributes:        cpu1Labels,
 												StartTimeUnixNano: startTime(),
 												TimeUnixNano:      pointTime(),
 											},
@@ -660,7 +640,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 										DataPoints: []*metricpb.NumberDataPoint{
 											{
 												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
-												Labels:            cpu1Labels,
+												Attributes:        cpu1Labels,
 												StartTimeUnixNano: startTime(),
 												TimeUnixNano:      pointTime(),
 											},
@@ -723,7 +703,7 @@ func TestStatelessExportKind(t *testing.T) {
 												DataPoints: []*metricpb.NumberDataPoint{
 													{
 														Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
-														Labels:            cpu1Labels,
+														Attributes:        cpu1Labels,
 														StartTimeUnixNano: startTime(),
 														TimeUnixNano:      pointTime(),
 													},

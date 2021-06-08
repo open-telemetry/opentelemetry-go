@@ -23,7 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	otelbaggage "go.opentelemetry.io/otel/internal/baggage"
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/internal"
@@ -515,7 +515,18 @@ func (bio *baggageInteroperationTest) addAndRecordBaggage(t *testing.T, ctx cont
 	value := bio.baggageItems[idx].value
 
 	otSpan.SetBaggageItem(otKey, value)
-	ctx = otelbaggage.NewContext(ctx, attribute.String(otelKey, value))
+
+	m, err := baggage.NewMember(otelKey, value)
+	if err != nil {
+		t.Error(err)
+		return ctx
+	}
+	b, err := baggage.FromContext(ctx).SetMember(m)
+	if err != nil {
+		t.Error(err)
+		return ctx
+	}
+	ctx = baggage.ContextWithBaggage(ctx, b)
 
 	otRecording := make(map[string]string)
 	otSpan.Context().ForeachBaggageItem(func(key, value string) bool {
@@ -523,10 +534,9 @@ func (bio *baggageInteroperationTest) addAndRecordBaggage(t *testing.T, ctx cont
 		return true
 	})
 	otelRecording := make(map[string]string)
-	otelbaggage.MapFromContext(ctx).Foreach(func(kv attribute.KeyValue) bool {
-		otelRecording[string(kv.Key)] = kv.Value.Emit()
-		return true
-	})
+	for _, m := range baggage.FromContext(ctx).Members() {
+		otelRecording[m.Key()] = m.Value()
+	}
 	bio.recordedOTBaggage = append(bio.recordedOTBaggage, otRecording)
 	bio.recordedOtelBaggage = append(bio.recordedOtelBaggage, otelRecording)
 	return ctx

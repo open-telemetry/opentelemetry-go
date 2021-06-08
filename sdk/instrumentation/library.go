@@ -32,4 +32,6 @@ type Library struct {
 	Name string
 	// Version is the version of the instrumentation library.
 	Version string
+	// SchemaURL of the telemetry emitted by the library.
+	SchemaURL string
 }

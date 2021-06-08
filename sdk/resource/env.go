@@ -21,10 +21,16 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/semconv"
 )
 
-// envVar is the environment variable name OpenTelemetry Resource information can be assigned to.
-const envVar = "OTEL_RESOURCE_ATTRIBUTES"
+const (
+	// resourceAttrKey is the environment variable name OpenTelemetry Resource information will be read from.
+	resourceAttrKey = "OTEL_RESOURCE_ATTRIBUTES"
+
+	// svcNameKey is the environment variable name that Service Name information will be read from.
+	svcNameKey = "OTEL_SERVICE_NAME"
+)
 
 var (
 	// errMissingValue is returned when a resource value is missing.
@@ -33,9 +39,7 @@ var (
 
 // fromEnv is a Detector that implements the Detector and collects
 // resources from environment.  This Detector is included as a
-// builtin.  If these resource attributes are not wanted, use the
-// WithFromEnv(nil) or WithoutBuiltin() options to explicitly disable
-// them.
+// builtin.
 type fromEnv struct{}
 
 // compile time assertion that FromEnv implements Detector interface
@@ -43,12 +47,24 @@ var _ Detector = fromEnv{}
 
 // Detect collects resources from environment
 func (fromEnv) Detect(context.Context) (*Resource, error) {
-	attrs := strings.TrimSpace(os.Getenv(envVar))
+	attrs := strings.TrimSpace(os.Getenv(resourceAttrKey))
+	svcName := strings.TrimSpace(os.Getenv(svcNameKey))
 
-	if attrs == "" {
+	if attrs == "" && svcName == "" {
 		return Empty(), nil
 	}
-	return constructOTResources(attrs)
+
+	var res *Resource
+
+	if svcName != "" {
+		res = NewWithAttributes(semconv.ServiceNameKey.String(svcName))
+	}
+
+	r2, err := constructOTResources(attrs)
+
+	// Ensure that the resource with the service name from OTEL_SERVICE_NAME
+	// takes precedence, if it was defined.
+	return Merge(r2, res), err
 }
 
 func constructOTResources(s string) (*Resource, error) {

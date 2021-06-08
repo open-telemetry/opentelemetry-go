@@ -36,10 +36,10 @@ type Tracer struct {
 
 // Start creates a span. If t is configured with a SpanRecorder its OnStart
 // method will be called after the created Span has been initialized.
-func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOption) (context.Context, trace.Span) {
-	c := trace.NewSpanConfig(opts...)
+func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
+	c := trace.NewSpanStartConfig(opts...)
 	startTime := time.Now()
-	if st := c.Timestamp; !st.IsZero() {
+	if st := c.Timestamp(); !st.IsZero() {
 		startTime = st
 	}
 
@@ -48,10 +48,10 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 		startTime:  startTime,
 		attributes: make(map[attribute.Key]attribute.Value),
 		links:      []trace.Link{},
-		spanKind:   c.SpanKind,
+		spanKind:   c.SpanKind(),
 	}
 
-	if c.NewRoot {
+	if c.NewRoot() {
 		span.spanContext = trace.SpanContext{}
 	} else {
 		span.spanContext = t.config.SpanContextFunc(ctx)
@@ -61,7 +61,7 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 		}
 	}
 
-	for _, link := range c.Links {
+	for _, link := range c.Links() {
 		for i, sl := range span.links {
 			if sl.SpanContext.SpanID() == link.SpanContext.SpanID() &&
 				sl.SpanContext.TraceID() == link.SpanContext.TraceID() &&
@@ -75,7 +75,7 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanOptio
 	}
 
 	span.SetName(name)
-	span.SetAttributes(c.Attributes...)
+	span.SetAttributes(c.Attributes()...)
 
 	if t.config.SpanRecorder != nil {
 		t.config.SpanRecorder.OnStart(span)
