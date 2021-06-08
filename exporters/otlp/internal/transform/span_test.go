@@ -261,7 +261,7 @@ func TestSpanData(t *testing.T) {
 		DroppedAttributes: 1,
 		DroppedEvents:     2,
 		DroppedLinks:      3,
-		Resource:          resource.NewWithAttributes(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5)),
+		Resource:          resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5)),
 		InstrumentationLibrary: instrumentation.Library{
 			Name:      "go.opentelemetry.io/test/otel",
 			Version:   "v0.0.1",

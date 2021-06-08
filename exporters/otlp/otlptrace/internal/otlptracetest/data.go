@@ -53,7 +53,7 @@ func SingleReadOnlySpan() []tracesdk.ReadOnlySpan {
 			DroppedEvents:     0,
 			DroppedLinks:      0,
 			ChildSpanCount:    0,
-			Resource:          resource.NewWithAttributes(attribute.String("a", "b")),
+			Resource:          resource.NewSchemaless(attribute.String("a", "b")),
 			InstrumentationLibrary: instrumentation.Library{
 				Name:    "bar",
 				Version: "0.0.0",

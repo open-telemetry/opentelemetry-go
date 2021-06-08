@@ -47,7 +47,7 @@ func makeLabels(n int) (_, _ *resource.Resource) {
 		}
 
 	}
-	return resource.NewWithAttributes(l1...), resource.NewWithAttributes(l2...)
+	return resource.NewSchemaless(l1...), resource.NewSchemaless(l2...)
 }
 
 func benchmarkMergeResource(b *testing.B, size int) {
@@ -57,7 +57,7 @@ func benchmarkMergeResource(b *testing.B, size int) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_ = resource.Merge(r1, r2)
+		_, _ = resource.Merge(r1, r2)
 	}
 }
 

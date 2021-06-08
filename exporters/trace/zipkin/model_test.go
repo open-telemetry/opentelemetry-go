@@ -37,7 +37,7 @@ import (
 )
 
 func TestModelConversion(t *testing.T) {
-	resource := resource.NewWithAttributes(
+	resource := resource.NewSchemaless(
 		semconv.ServiceNameKey.String("model-test"),
 	)
 

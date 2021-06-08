@@ -279,7 +279,11 @@ func WithSpanProcessor(sp SpanProcessor) TracerProviderOption {
 // resource.Default() Resource by default.
 func WithResource(r *resource.Resource) TracerProviderOption {
 	return traceProviderOptionFunc(func(cfg *tracerProviderConfig) {
-		cfg.resource = resource.Merge(resource.Environment(), r)
+		var err error
+		cfg.resource, err = resource.Merge(resource.Environment(), r)
+		if err != nil {
+			otel.Handle(err)
+		}
 	})
 }
 

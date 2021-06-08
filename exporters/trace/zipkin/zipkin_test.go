@@ -230,7 +230,7 @@ func logStoreLogger(s *logStore) *log.Logger {
 }
 
 func TestExportSpans(t *testing.T) {
-	resource := resource.NewWithAttributes(
+	resource := resource.NewSchemaless(
 		semconv.ServiceNameKey.String("exporter-test"),
 	)
 
@@ -400,7 +400,7 @@ func TestNewExportPipelineWithOptions(t *testing.T) {
 
 	tp, err := NewExportPipeline(collector.url,
 		WithSDKOptions(
-			sdktrace.WithResource(resource.NewWithAttributes(
+			sdktrace.WithResource(resource.NewSchemaless(
 				semconv.ServiceNameKey.String("zipkin-test"),
 			)),
 			sdktrace.WithSpanLimits(sdktrace.SpanLimits{

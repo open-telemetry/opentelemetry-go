@@ -73,7 +73,7 @@ func TestExportSpans(t *testing.T) {
 						Code:        codes.Ok,
 						Description: "Ok",
 					},
-					Resource: resource.NewWithAttributes(attribute.String("instance", "tester-a")),
+					Resource: resource.NewSchemaless(attribute.String("instance", "tester-a")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-a",
 						Version: "v0.1.0",
@@ -97,7 +97,7 @@ func TestExportSpans(t *testing.T) {
 						Code:        codes.Ok,
 						Description: "Ok",
 					},
-					Resource: resource.NewWithAttributes(attribute.String("instance", "tester-a")),
+					Resource: resource.NewSchemaless(attribute.String("instance", "tester-a")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-b",
 						Version: "v0.1.0",
@@ -126,7 +126,7 @@ func TestExportSpans(t *testing.T) {
 						Code:        codes.Ok,
 						Description: "Ok",
 					},
-					Resource: resource.NewWithAttributes(attribute.String("instance", "tester-a")),
+					Resource: resource.NewSchemaless(attribute.String("instance", "tester-a")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-a",
 						Version: "v0.1.0",
@@ -150,7 +150,7 @@ func TestExportSpans(t *testing.T) {
 						Code:        codes.Error,
 						Description: "Unauthenticated",
 					},
-					Resource: resource.NewWithAttributes(attribute.String("instance", "tester-b")),
+					Resource: resource.NewSchemaless(attribute.String("instance", "tester-b")),
 					InstrumentationLibrary: instrumentation.Library{
 						Name:    "lib-a",
 						Version: "v1.1.0",
