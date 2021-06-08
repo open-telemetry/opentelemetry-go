@@ -88,7 +88,7 @@ func (m member) String() string {
 // that conform to the specification. Specifically, this means that all
 // list-member's key/value pairs are valid, no duplicate list-members exist,
 // and the maximum number of list-members (32) is not exceeded.
-type TraceState struct { //nolint:golint
+type TraceState struct { //nolint:revive // revive complains about stutter of `trace.TraceState`
 	// list is the members in order.
 	list []member
 }

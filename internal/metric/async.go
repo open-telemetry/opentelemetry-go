@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
+//nolint:revive // ignoring missing comments for exported error in an internal package
 var ErrInvalidAsyncRunner = errors.New("unknown async runner type")
 
 // AsyncCollector is an interface used between the MeterImpl and the

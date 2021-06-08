@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 )
 
+//nolint:revive // ignoring missing comments for unexported constants in an internal package.
 const (
 	WeakCertificate = `
 -----BEGIN CERTIFICATE-----

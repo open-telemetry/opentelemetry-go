@@ -25,7 +25,7 @@ import (
 type ctxKeyType uint
 
 var (
-	ctxKey ctxKeyType = 0
+	ctxKey ctxKeyType
 )
 
 type carrier []string

@@ -49,7 +49,7 @@ const contentTypeJSON = "application/json"
 // have our own copy to avoid handling a situation where the
 // DefaultTransport is overwritten with some different implementation
 // of http.RoundTripper or it's modified by other package.
-var ourTransport *http.Transport = &http.Transport{
+var ourTransport = &http.Transport{
 	Proxy: http.ProxyFromEnvironment,
 	DialContext: (&net.Dialer{
 		Timeout:   30 * time.Second,

@@ -38,7 +38,7 @@ type Resource struct {
 var (
 	emptyResource Resource
 
-	defaultResource *Resource = func(r *Resource, err error) *Resource {
+	defaultResource = func(r *Resource, err error) *Resource {
 		if err != nil {
 			otel.Handle(err)
 		}

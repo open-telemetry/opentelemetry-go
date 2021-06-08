@@ -26,7 +26,7 @@ func ContextWithBaggage(parent context.Context, b Baggage) context.Context {
 	return baggage.ContextWithList(parent, b.list)
 }
 
-// ContextWithBaggage returns a copy of parent with no baggage.
+// ContextWithoutBaggage returns a copy of parent with no baggage.
 func ContextWithoutBaggage(parent context.Context) context.Context {
 	// Delegate so any hooks for the OpenTracing bridge are handled.
 	return baggage.ContextWithList(parent, nil)

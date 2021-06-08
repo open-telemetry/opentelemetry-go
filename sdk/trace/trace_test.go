@@ -62,7 +62,7 @@ var (
 	sid trace.SpanID
 	sc  trace.SpanContext
 
-	handler *storingHandler = &storingHandler{}
+	handler = &storingHandler{}
 
 	k1, k2, k3    attribute.Key
 	kv1, kv2, kv3 attribute.KeyValue
