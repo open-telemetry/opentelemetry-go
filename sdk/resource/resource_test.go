@@ -17,12 +17,14 @@ package resource_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
@@ -65,7 +67,7 @@ func TestNewWithAttributes(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
-			res := resource.NewWithAttributes(c.in...)
+			res := resource.NewSchemaless(c.in...)
 			if diff := cmp.Diff(
 				res.Attributes(),
 				c.want,
@@ -78,86 +80,121 @@ func TestNewWithAttributes(t *testing.T) {
 
 func TestMerge(t *testing.T) {
 	cases := []struct {
-		name string
-		a, b *resource.Resource
-		want []attribute.KeyValue
+		name      string
+		a, b      *resource.Resource
+		want      []attribute.KeyValue
+		isErr     bool
+		schemaURL string
 	}{
 		{
+			name: "Merge 2 nils",
+			a:    nil,
+			b:    nil,
+			want: nil,
+		},
+		{
 			name: "Merge with no overlap, no nil",
-			a:    resource.NewWithAttributes(kv11, kv31),
-			b:    resource.NewWithAttributes(kv21, kv41),
+			a:    resource.NewSchemaless(kv11, kv31),
+			b:    resource.NewSchemaless(kv21, kv41),
 			want: []attribute.KeyValue{kv11, kv21, kv31, kv41},
 		},
 		{
 			name: "Merge with no overlap, no nil, not interleaved",
-			a:    resource.NewWithAttributes(kv11, kv21),
-			b:    resource.NewWithAttributes(kv31, kv41),
+			a:    resource.NewSchemaless(kv11, kv21),
+			b:    resource.NewSchemaless(kv31, kv41),
 			want: []attribute.KeyValue{kv11, kv21, kv31, kv41},
 		},
 		{
 			name: "Merge with common key order1",
-			a:    resource.NewWithAttributes(kv11),
-			b:    resource.NewWithAttributes(kv12, kv21),
+			a:    resource.NewSchemaless(kv11),
+			b:    resource.NewSchemaless(kv12, kv21),
 			want: []attribute.KeyValue{kv12, kv21},
 		},
 		{
 			name: "Merge with common key order2",
-			a:    resource.NewWithAttributes(kv12, kv21),
-			b:    resource.NewWithAttributes(kv11),
+			a:    resource.NewSchemaless(kv12, kv21),
+			b:    resource.NewSchemaless(kv11),
 			want: []attribute.KeyValue{kv11, kv21},
 		},
 		{
 			name: "Merge with common key order4",
-			a:    resource.NewWithAttributes(kv11, kv21, kv41),
-			b:    resource.NewWithAttributes(kv31, kv41),
+			a:    resource.NewSchemaless(kv11, kv21, kv41),
+			b:    resource.NewSchemaless(kv31, kv41),
 			want: []attribute.KeyValue{kv11, kv21, kv31, kv41},
 		},
 		{
 			name: "Merge with no keys",
-			a:    resource.NewWithAttributes(),
-			b:    resource.NewWithAttributes(),
+			a:    resource.NewSchemaless(),
+			b:    resource.NewSchemaless(),
 			want: nil,
 		},
 		{
 			name: "Merge with first resource no keys",
-			a:    resource.NewWithAttributes(),
-			b:    resource.NewWithAttributes(kv21),
+			a:    resource.NewSchemaless(),
+			b:    resource.NewSchemaless(kv21),
 			want: []attribute.KeyValue{kv21},
 		},
 		{
 			name: "Merge with second resource no keys",
-			a:    resource.NewWithAttributes(kv11),
-			b:    resource.NewWithAttributes(),
+			a:    resource.NewSchemaless(kv11),
+			b:    resource.NewSchemaless(),
 			want: []attribute.KeyValue{kv11},
 		},
 		{
 			name: "Merge with first resource nil",
 			a:    nil,
-			b:    resource.NewWithAttributes(kv21),
+			b:    resource.NewSchemaless(kv21),
 			want: []attribute.KeyValue{kv21},
 		},
 		{
 			name: "Merge with second resource nil",
-			a:    resource.NewWithAttributes(kv11),
+			a:    resource.NewSchemaless(kv11),
 			b:    nil,
 			want: []attribute.KeyValue{kv11},
 		},
 		{
 			name: "Merge with first resource value empty string",
-			a:    resource.NewWithAttributes(kv42),
-			b:    resource.NewWithAttributes(kv41),
+			a:    resource.NewSchemaless(kv42),
+			b:    resource.NewSchemaless(kv41),
 			want: []attribute.KeyValue{kv41},
 		},
 		{
 			name: "Merge with second resource value empty string",
-			a:    resource.NewWithAttributes(kv41),
-			b:    resource.NewWithAttributes(kv42),
+			a:    resource.NewSchemaless(kv41),
+			b:    resource.NewSchemaless(kv42),
 			want: []attribute.KeyValue{kv42},
+		},
+		{
+			name:      "Merge with first resource with schema",
+			a:         resource.NewWithAttributes("https://opentelemetry.io/schemas/1.4.0", kv41),
+			b:         resource.NewSchemaless(kv42),
+			want:      []attribute.KeyValue{kv42},
+			schemaURL: "https://opentelemetry.io/schemas/1.4.0",
+		},
+		{
+			name:      "Merge with second resource with schema",
+			a:         resource.NewSchemaless(kv41),
+			b:         resource.NewWithAttributes("https://opentelemetry.io/schemas/1.4.0", kv42),
+			want:      []attribute.KeyValue{kv42},
+			schemaURL: "https://opentelemetry.io/schemas/1.4.0",
+		},
+		{
+			name:  "Merge with different schemas",
+			a:     resource.NewWithAttributes("https://opentelemetry.io/schemas/1.4.0", kv41),
+			b:     resource.NewWithAttributes("https://opentelemetry.io/schemas/1.3.0", kv42),
+			want:  nil,
+			isErr: true,
 		},
 	}
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
-			res := resource.Merge(c.a, c.b)
+			res, err := resource.Merge(c.a, c.b)
+			if c.isErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.EqualValues(t, c.schemaURL, res.SchemaURL())
 			if diff := cmp.Diff(
 				res.Attributes(),
 				c.want,
@@ -249,7 +286,7 @@ func TestString(t *testing.T) {
 			want: "B=b",
 		},
 	} {
-		if got := resource.NewWithAttributes(test.kvs...).String(); got != test.want {
+		if got := resource.NewSchemaless(test.kvs...).String(); got != test.want {
 			t.Errorf("Resource(%v).String() = %q, want %q", test.kvs, got, test.want)
 		}
 	}
@@ -258,7 +295,7 @@ func TestString(t *testing.T) {
 const envVar = "OTEL_RESOURCE_ATTRIBUTES"
 
 func TestMarshalJSON(t *testing.T) {
-	r := resource.NewWithAttributes(attribute.Int64("A", 1), attribute.String("C", "D"))
+	r := resource.NewSchemaless(attribute.Int64("A", 1), attribute.String("C", "D"))
 	data, err := json.Marshal(r)
 	require.NoError(t, err)
 	require.Equal(t,
@@ -274,9 +311,11 @@ func TestNew(t *testing.T) {
 		options   []resource.Option
 
 		resourceValues map[string]string
+		schemaURL      string
+		isErr          bool
 	}{
 		{
-			name:           "No Options returns empty resrouce",
+			name:           "No Options returns empty resource",
 			envars:         "key=value,other=attr",
 			options:        nil,
 			resourceValues: map[string]string{},
@@ -298,6 +337,7 @@ func TestNew(t *testing.T) {
 			resourceValues: map[string]string{
 				"host.name": hostname(),
 			},
+			schemaURL: semconv.SchemaURL,
 		},
 		{
 			name:   "Only Env",
@@ -321,6 +361,7 @@ func TestNew(t *testing.T) {
 				"telemetry.sdk.language": "go",
 				"telemetry.sdk.version":  otel.Version(),
 			},
+			schemaURL: semconv.SchemaURL,
 		},
 		{
 			name:   "WithAttributes",
@@ -346,6 +387,46 @@ func TestNew(t *testing.T) {
 				"key":                    "value",
 				"other":                  "attr",
 			},
+			schemaURL: semconv.SchemaURL,
+		},
+		{
+			name:   "With schema url",
+			envars: "",
+			options: []resource.Option{
+				resource.WithAttributes(attribute.String("A", "B")),
+				resource.WithSchemaURL("https://opentelemetry.io/schemas/1.0.0"),
+			},
+			resourceValues: map[string]string{
+				"A": "B",
+			},
+			schemaURL: "https://opentelemetry.io/schemas/1.0.0",
+		},
+		{
+			name:   "With conflicting schema urls",
+			envars: "",
+			options: []resource.Option{
+				resource.WithDetectors(
+					resource.StringDetector("https://opentelemetry.io/schemas/1.0.0", semconv.HostNameKey, os.Hostname),
+				),
+				resource.WithSchemaURL("https://opentelemetry.io/schemas/1.1.0"),
+			},
+			resourceValues: map[string]string{},
+			schemaURL:      "",
+			isErr:          true,
+		},
+		{
+			name:   "With conflicting detector schema urls",
+			envars: "",
+			options: []resource.Option{
+				resource.WithDetectors(
+					resource.StringDetector("https://opentelemetry.io/schemas/1.0.0", semconv.HostNameKey, os.Hostname),
+					resource.StringDetector("https://opentelemetry.io/schemas/1.1.0", semconv.HostNameKey, func() (string, error) { return "", errors.New("fail") }),
+				),
+				resource.WithSchemaURL("https://opentelemetry.io/schemas/1.2.0"),
+			},
+			resourceValues: map[string]string{},
+			schemaURL:      "",
+			isErr:          true,
 		},
 	}
 	for _, tt := range tc {
@@ -359,8 +440,19 @@ func TestNew(t *testing.T) {
 			ctx := context.Background()
 			res, err := resource.New(ctx, tt.options...)
 
-			require.NoError(t, err)
+			if tt.isErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+
 			require.EqualValues(t, tt.resourceValues, toMap(res))
+
+			// TODO: do we need to ensure that resource is never nil and eliminate the
+			// following if?
+			if res != nil {
+				assert.EqualValues(t, tt.schemaURL, res.SchemaURL())
+			}
 		})
 	}
 }

@@ -49,7 +49,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 	traceState, _ := oteltest.TraceStateFromKeyValues(attribute.String("key", "val"))
 	keyValue := "value"
 	doubleValue := 123.456
-	resource := resource.NewWithAttributes(attribute.String("rk1", "rv11"))
+	resource := resource.NewSchemaless(attribute.String("rk1", "rv11"))
 
 	ro := tracetest.SpanStubs{
 		{

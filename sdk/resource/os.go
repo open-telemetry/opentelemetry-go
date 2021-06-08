@@ -29,6 +29,7 @@ func (osTypeDetector) Detect(ctx context.Context) (*Resource, error) {
 	osType := runtimeOS()
 
 	return NewWithAttributes(
+		semconv.SchemaURL,
 		semconv.OSTypeKey.String(strings.ToLower(osType)),
 	), nil
 }
