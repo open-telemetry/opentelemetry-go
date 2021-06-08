@@ -13,8 +13,8 @@ There are currently two categories of semantic conventions that must be generate
 
 ```
 cd internal/tools/semconv-gen
-go run generate.go -i /path/to/specification/repo/semantic_conventions/resource
-go run generate.go -i /path/to/specification/repo/semantic_conventions/trace
+go run generator.go -i /path/to/specification/repo/semantic_conventions/resource
+go run generator.go -i /path/to/specification/repo/semantic_conventions/trace
 ```
 
 Using default values for all options other than `input` will result in using the `template.j2` template to
