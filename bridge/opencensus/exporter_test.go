@@ -155,7 +155,7 @@ func TestExportMetrics(t *testing.T) {
 				export.NewRecord(
 					&basicDesc,
 					attribute.EmptySet(),
-					resource.NewWithAttributes(),
+					resource.NewSchemaless(),
 					&ocExactAggregator{
 						points: []aggregation.Point{
 							{
@@ -187,7 +187,7 @@ func TestExportMetrics(t *testing.T) {
 				export.NewRecord(
 					&basicDesc,
 					attribute.EmptySet(),
-					resource.NewWithAttributes(),
+					resource.NewSchemaless(),
 					&ocExactAggregator{
 						points: []aggregation.Point{
 							{
@@ -222,7 +222,7 @@ func TestExportMetrics(t *testing.T) {
 				export.NewRecord(
 					&basicDesc,
 					attribute.EmptySet(),
-					resource.NewWithAttributes(),
+					resource.NewSchemaless(),
 					&ocExactAggregator{
 						points: []aggregation.Point{
 							{
@@ -349,7 +349,7 @@ func TestConvertResource(t *testing.T) {
 			input: &ocresource.Resource{
 				Labels: map[string]string{},
 			},
-			expected: resource.NewWithAttributes(),
+			expected: resource.NewSchemaless(),
 		},
 		{
 			desc: "resource with labels",
@@ -359,7 +359,7 @@ func TestConvertResource(t *testing.T) {
 					"tick": "tock",
 				},
 			},
-			expected: resource.NewWithAttributes(
+			expected: resource.NewSchemaless(
 				attribute.KeyValue{Key: attribute.Key("foo"), Value: attribute.StringValue("bar")},
 				attribute.KeyValue{Key: attribute.Key("tick"), Value: attribute.StringValue("tock")},
 			),

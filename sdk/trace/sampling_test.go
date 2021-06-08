@@ -174,10 +174,10 @@ func TestParentBasedDefaultDescription(t *testing.T) {
 		NeverSample().Description())
 
 	if sampler.Description() != expectedDescription {
-		t.Error(fmt.Sprintf("Sampler description should be %s, got '%s' instead",
+		t.Errorf("Sampler description should be %s, got '%s' instead",
 			expectedDescription,
 			sampler.Description(),
-		))
+		)
 	}
 
 }

@@ -67,7 +67,7 @@ func (OneRecordCheckpointSet) ForEach(kindSelector exportmetric.ExportKindSelect
 		metric.CounterInstrumentKind,
 		number.Int64Kind,
 	)
-	res := resource.NewWithAttributes(attribute.String("a", "b"))
+	res := resource.NewSchemaless(attribute.String("a", "b"))
 	agg := sum.New(1)
 	if err := agg[0].Update(context.Background(), number.NewInt64Number(42), &desc); err != nil {
 		return err
@@ -106,7 +106,7 @@ func SingleReadOnlySpan() []tracesdk.ReadOnlySpan {
 			DroppedEvents:     0,
 			DroppedLinks:      0,
 			ChildSpanCount:    0,
-			Resource:          resource.NewWithAttributes(attribute.String("a", "b")),
+			Resource:          resource.NewSchemaless(attribute.String("a", "b")),
 			InstrumentationLibrary: instrumentation.Library{
 				Name:    "bar",
 				Version: "0.0.0",

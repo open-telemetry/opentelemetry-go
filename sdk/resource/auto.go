@@ -53,7 +53,10 @@ func Detect(ctx context.Context, detectors ...Detector) (*Resource, error) {
 				continue
 			}
 		}
-		autoDetectedRes = Merge(autoDetectedRes, res)
+		autoDetectedRes, err = Merge(autoDetectedRes, res)
+		if err != nil {
+			errInfo = append(errInfo, err.Error())
+		}
 	}
 
 	var aggregatedError error

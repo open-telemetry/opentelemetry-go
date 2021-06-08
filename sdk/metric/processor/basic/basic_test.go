@@ -126,7 +126,7 @@ func testProcessor(
 	// Note: this selector uses the instrument name to dictate
 	// aggregation kind.
 	selector := processorTest.AggregatorSelector()
-	res := resource.NewWithAttributes(attribute.String("R", "V"))
+	res := resource.NewSchemaless(attribute.String("R", "V"))
 
 	labs1 := []attribute.KeyValue{attribute.String("L1", "V")}
 	labs2 := []attribute.KeyValue{attribute.String("L2", "V")}
@@ -368,7 +368,7 @@ func TestBasicTimestamps(t *testing.T) {
 }
 
 func TestStatefulNoMemoryCumulative(t *testing.T) {
-	res := resource.NewWithAttributes(attribute.String("R", "V"))
+	res := resource.NewSchemaless(attribute.String("R", "V"))
 	ekindSel := export.CumulativeExportKindSelector()
 
 	desc := metric.NewDescriptor("inst.sum", metric.CounterInstrumentKind, number.Int64Kind)
@@ -402,7 +402,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 }
 
 func TestStatefulNoMemoryDelta(t *testing.T) {
-	res := resource.NewWithAttributes(attribute.String("R", "V"))
+	res := resource.NewSchemaless(attribute.String("R", "V"))
 	ekindSel := export.DeltaExportKindSelector()
 
 	desc := metric.NewDescriptor("inst.sum", metric.SumObserverInstrumentKind, number.Int64Kind)
@@ -441,7 +441,7 @@ func TestMultiObserverSum(t *testing.T) {
 		export.DeltaExportKindSelector(),
 	} {
 
-		res := resource.NewWithAttributes(attribute.String("R", "V"))
+		res := resource.NewSchemaless(attribute.String("R", "V"))
 		desc := metric.NewDescriptor("observe.sum", metric.SumObserverInstrumentKind, number.Int64Kind)
 		selector := processorTest.AggregatorSelector()
 

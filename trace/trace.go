@@ -45,7 +45,7 @@ func (e errorConst) Error() string {
 }
 
 // TraceID is a unique identity of a trace.
-// nolint:golint
+// nolint:revive // revive complains about stutter of `trace.TraceID`.
 type TraceID [16]byte
 
 var nilTraceID TraceID
@@ -94,7 +94,7 @@ func (s SpanID) String() string {
 // TraceIDFromHex returns a TraceID from a hex string if it is compliant with
 // the W3C trace-context specification.  See more at
 // https://www.w3.org/TR/trace-context/#trace-id
-// nolint:golint
+// nolint:revive // revive complains about stutter of `trace.TraceIDFromHex`.
 func TraceIDFromHex(h string) (TraceID, error) {
 	t := TraceID{}
 	if len(h) != 32 {
@@ -152,7 +152,7 @@ func decodeHex(h string, b []byte) error {
 }
 
 // TraceFlags contains flags that can be set on a SpanContext
-type TraceFlags byte //nolint:golint
+type TraceFlags byte //nolint:revive // revive complains about stutter of `trace.TraceFlags`.
 
 // IsSampled returns if the sampling bit is set in the TraceFlags.
 func (tf TraceFlags) IsSampled() bool {

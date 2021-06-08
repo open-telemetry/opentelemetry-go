@@ -40,13 +40,13 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlptrace.Exporter,
 		),
 	}
 	tp1 := sdktrace.NewTracerProvider(append(pOpts,
-		sdktrace.WithResource(resource.NewWithAttributes(
+		sdktrace.WithResource(resource.NewSchemaless(
 			attribute.String("rk1", "rv11)"),
 			attribute.Int64("rk2", 5),
 		)))...)
 
 	tp2 := sdktrace.NewTracerProvider(append(pOpts,
-		sdktrace.WithResource(resource.NewWithAttributes(
+		sdktrace.WithResource(resource.NewSchemaless(
 			attribute.String("rk1", "rv12)"),
 			attribute.Float64("rk3", 6.5),
 		)))...)

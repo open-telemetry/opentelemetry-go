@@ -12,14 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package matchers
+package semconv
 
-type TemporalMatcher byte
-
-//nolint:revive // ignoring missing comments for unexported constants in an internal package
-const (
-	Before TemporalMatcher = iota
-	BeforeOrSameTime
-	After
-	AfterOrSameTime
-)
+// SchemaURL is the schema URL that matches the version of the semantic conventions
+// that this package defines. This package defines semantic conventions for spec
+// v1.3.0 which was released before the concept of schemas was introduce, thus the
+// schema URL is empty. Semconv packages starting from v1.4.0 must declare non-empty
+// schema URL in the form https://opentelemetry.io/schemas/<version>
+const SchemaURL = ""

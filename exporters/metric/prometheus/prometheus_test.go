@@ -84,7 +84,7 @@ func TestPrometheusExporter(t *testing.T) {
 			DefaultHistogramBoundaries: []float64{-0.5, 1},
 		},
 		controller.WithCollectPeriod(0),
-		controller.WithResource(resource.NewWithAttributes(attribute.String("R", "V"))),
+		controller.WithResource(resource.NewSchemaless(attribute.String("R", "V"))),
 	)
 	require.NoError(t, err)
 
