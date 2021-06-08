@@ -158,8 +158,6 @@ func render(cfg config) error {
 		"--template", path.Join("/data", path.Base(cfg.templateFilename)),
 		"--output", path.Join("/data/output", path.Base(cfg.outputFilename)),
 	)
-
-	fmt.Println(cmd)
 	err = cmd.Run()
 	if err != nil {
 		return fmt.Errorf("unable to render template: %w", err)
