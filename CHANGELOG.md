@@ -102,6 +102,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - BatchSpanProcessor now drops span batches that failed to be exported. (#1860)
 - Use `http://localhost:14268/api/traces` as default Jaeger collector endpoint instead of `http://localhost:14250`. (#1898)
 - Allow trailing and leading whitespace in the parsing of a `tracestate` header. (#1931)
+- Add logic to determine if the channel is closed to fix Jaeger exporter test panic with close closed channel. (#1870, #1973)
 
 ### Security
 
