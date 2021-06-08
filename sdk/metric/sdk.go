@@ -147,7 +147,7 @@ var (
 	_ metric.SyncImpl      = &syncInstrument{}
 	_ metric.BoundSyncImpl = &record{}
 
-	// ErrUninitializedInstrument is passed to otel.ErrorHandler to be returned when an instrument is uninitialized.
+	// ErrUninitializedInstrument is returned when an instrument is used when uninitialized.
 	ErrUninitializedInstrument = fmt.Errorf("use of an uninitialized instrument")
 )
 
