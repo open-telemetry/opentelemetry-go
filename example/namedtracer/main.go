@@ -59,7 +59,11 @@ func main() {
 	tracer := tp.Tracer("example/namedtracer/main")
 	ctx := context.Background()
 	defer func() { _ = tp.Shutdown(ctx) }()
-	ctx = baggage.ContextWithValues(ctx, fooKey.String("foo1"), barKey.String("bar1"))
+
+	m0, _ := baggage.NewMember(string(fooKey), "foo1")
+	m1, _ := baggage.NewMember(string(barKey), "bar1")
+	b, _ := baggage.New(m0, m1)
+	ctx = baggage.ContextWithBaggage(ctx, b)
 
 	var span trace.Span
 	ctx, span = tracer.Start(ctx, "operation")
