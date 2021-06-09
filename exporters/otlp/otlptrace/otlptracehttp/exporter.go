@@ -25,7 +25,7 @@ func New(ctx context.Context, opts ...Option) (*otlptrace.Exporter, error) {
 	return otlptrace.New(ctx, NewClient(opts...))
 }
 
-// NewUnstartedExporter constructs a new Exporter and does not start it.
-func NewUnstartedExporter(opts ...Option) *otlptrace.Exporter {
-	return otlptrace.NewUnstartedExporter(NewClient(opts...))
+// NewUnstarted constructs a new Exporter and does not start it.
+func NewUnstarted(opts ...Option) *otlptrace.Exporter {
+	return otlptrace.NewUnstarted(NewClient(opts...))
 }

@@ -88,15 +88,15 @@ var _ tracesdk.SpanExporter = (*Exporter)(nil)
 
 // New constructs a new Exporter and starts it.
 func New(ctx context.Context, client Client) (*Exporter, error) {
-	exp := NewUnstartedExporter(client)
+	exp := NewUnstarted(client)
 	if err := exp.Start(ctx); err != nil {
 		return nil, err
 	}
 	return exp, nil
 }
 
-// NewUnstartedExporter constructs a new Exporter and does not start it.
-func NewUnstartedExporter(client Client) *Exporter {
+// NewUnstarted constructs a new Exporter and does not start it.
+func NewUnstarted(client Client) *Exporter {
 	return &Exporter{
 		client: client,
 	}
