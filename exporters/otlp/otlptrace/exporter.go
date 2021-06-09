@@ -21,7 +21,6 @@ import (
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/tracetransform"
 
-	"go.opentelemetry.io/otel"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -101,31 +100,4 @@ func NewUnstartedExporter(client Client) *Exporter {
 	return &Exporter{
 		client: client,
 	}
-}
-
-// NewExportPipeline sets up a complete export pipeline
-// with the recommended TracerProvider setup.
-func NewExportPipeline(ctx context.Context, client Client) (*Exporter, *tracesdk.TracerProvider, error) {
-	exp, err := NewExporter(ctx, client)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	tracerProvider := tracesdk.NewTracerProvider(
-		tracesdk.WithBatcher(exp),
-	)
-
-	return exp, tracerProvider, nil
-}
-
-// InstallNewPipeline instantiates a NewExportPipeline with the
-// recommended configuration and registers it globally.
-func InstallNewPipeline(ctx context.Context, client Client) (*Exporter, *tracesdk.TracerProvider, error) {
-	exp, tp, err := NewExportPipeline(ctx, client)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	otel.SetTracerProvider(tp)
-	return exp, tp, err
 }

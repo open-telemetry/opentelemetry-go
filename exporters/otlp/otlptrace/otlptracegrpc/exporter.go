@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
-	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 )
 
 // NewExporter constructs a new Exporter and starts it.
@@ -29,16 +28,4 @@ func NewExporter(ctx context.Context, opts ...Option) (*otlptrace.Exporter, erro
 // NewUnstartedExporter constructs a new Exporter and does not start it.
 func NewUnstartedExporter(opts ...Option) *otlptrace.Exporter {
 	return otlptrace.NewUnstartedExporter(NewClient(opts...))
-}
-
-// NewExportPipeline sets up a complete export pipeline
-// with the recommended TracerProvider setup.
-func NewExportPipeline(ctx context.Context, opts ...Option) (*otlptrace.Exporter, *tracesdk.TracerProvider, error) {
-	return otlptrace.NewExportPipeline(ctx, NewClient(opts...))
-}
-
-// InstallNewPipeline instantiates a NewExportPipeline with the
-// recommended configuration and registers it globally.
-func InstallNewPipeline(ctx context.Context, opts ...Option) (*otlptrace.Exporter, *tracesdk.TracerProvider, error) {
-	return otlptrace.InstallNewPipeline(ctx, NewClient(opts...))
 }

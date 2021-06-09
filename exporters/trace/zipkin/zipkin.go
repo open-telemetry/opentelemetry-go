@@ -27,7 +27,6 @@ import (
 	"net/url"
 	"sync"
 
-	"go.opentelemetry.io/otel"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -111,32 +110,6 @@ func NewRawExporter(collectorURL string, opts ...Option) (*Exporter, error) {
 		logger: cfg.logger,
 		config: cfg,
 	}, nil
-}
-
-// NewExportPipeline sets up a complete export pipeline
-// with the recommended setup for trace provider
-func NewExportPipeline(collectorURL string, opts ...Option) (*sdktrace.TracerProvider, error) {
-	exporter, err := NewRawExporter(collectorURL, opts...)
-	if err != nil {
-		return nil, err
-	}
-
-	tpOpts := append(exporter.config.tpOpts, sdktrace.WithBatcher(exporter))
-	tp := sdktrace.NewTracerProvider(tpOpts...)
-
-	return tp, err
-}
-
-// InstallNewPipeline instantiates a NewExportPipeline with the
-// recommended configuration and registers it globally.
-func InstallNewPipeline(collectorURL string, opts ...Option) error {
-	tp, err := NewExportPipeline(collectorURL, opts...)
-	if err != nil {
-		return err
-	}
-
-	otel.SetTracerProvider(tp)
-	return nil
 }
 
 // ExportSpans exports spans to a Zipkin receiver.

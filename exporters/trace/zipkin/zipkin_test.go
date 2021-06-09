@@ -30,7 +30,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -42,60 +41,6 @@ import (
 const (
 	collectorURL = "http://localhost:9411/api/v2/spans"
 )
-
-func TestInstallNewPipeline(t *testing.T) {
-	err := InstallNewPipeline(
-		collectorURL,
-	)
-	assert.NoError(t, err)
-	assert.IsType(t, &sdktrace.TracerProvider{}, otel.GetTracerProvider())
-}
-
-func TestNewExportPipeline(t *testing.T) {
-	testCases := []struct {
-		name                                  string
-		options                               []Option
-		testSpanSampling, spanShouldBeSampled bool
-	}{
-		{
-			name: "simple pipeline",
-		},
-		{
-			name: "always on",
-			options: []Option{
-				WithSDKOptions(sdktrace.WithSampler(sdktrace.AlwaysSample())),
-			},
-			testSpanSampling:    true,
-			spanShouldBeSampled: true,
-		},
-		{
-			name: "never",
-			options: []Option{
-				WithSDKOptions(sdktrace.WithSampler(sdktrace.NeverSample())),
-			},
-			testSpanSampling:    true,
-			spanShouldBeSampled: false,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			tp, err := NewExportPipeline(
-				collectorURL,
-				tc.options...,
-			)
-			assert.NoError(t, err)
-			assert.NotEqual(t, tp, otel.GetTracerProvider())
-
-			if tc.testSpanSampling {
-				_, span := tp.Tracer("zipkin test").Start(context.Background(), tc.name)
-				spanCtx := span.SpanContext()
-				assert.Equal(t, tc.spanShouldBeSampled, spanCtx.IsSampled())
-				span.End()
-			}
-		})
-	}
-}
 
 func TestNewRawExporter(t *testing.T) {
 	_, err := NewRawExporter(
@@ -390,35 +335,4 @@ func TestErrorOnExportShutdownExporter(t *testing.T) {
 	require.NoError(t, err)
 	assert.NoError(t, exp.Shutdown(context.Background()))
 	assert.NoError(t, exp.ExportSpans(context.Background(), nil))
-}
-
-func TestNewExportPipelineWithOptions(t *testing.T) {
-	const eventCountLimit = 10
-
-	collector := startMockZipkinCollector(t)
-	defer collector.Close()
-
-	tp, err := NewExportPipeline(collector.url,
-		WithSDKOptions(
-			sdktrace.WithResource(resource.NewSchemaless(
-				semconv.ServiceNameKey.String("zipkin-test"),
-			)),
-			sdktrace.WithSpanLimits(sdktrace.SpanLimits{
-				EventCountLimit: eventCountLimit,
-			}),
-		),
-	)
-	require.NoError(t, err)
-
-	otel.SetTracerProvider(tp)
-	_, span := otel.Tracer("zipkin-tracer").Start(context.Background(), "test-span")
-	for i := 0; i < eventCountLimit*2; i++ {
-		span.AddEvent(fmt.Sprintf("event-%d", i))
-	}
-	span.End()
-
-	require.NoError(t, tp.Shutdown(context.Background()))
-	require.Equal(t, 1, collector.ModelsLen())
-	model := collector.StealModels()[0]
-	require.Equal(t, len(model.Annotations), eventCountLimit)
 }

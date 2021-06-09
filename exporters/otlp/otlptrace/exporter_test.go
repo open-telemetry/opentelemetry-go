@@ -16,14 +16,9 @@ package otlptrace_test
 
 import (
 	"context"
-	"testing"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 
-	"github.com/stretchr/testify/assert"
-
-	"go.opentelemetry.io/otel"
-	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
@@ -50,17 +45,4 @@ func (m *noopClient) UploadTraces(_ context.Context, _ []*tracepb.ResourceSpans)
 }
 
 func (m *noopClient) Reset() {
-}
-
-func TestInstallNewPipeline(t *testing.T) {
-	ctx := context.Background()
-	_, _, err := otlptrace.InstallNewPipeline(ctx, &noopClient{})
-	assert.NoError(t, err)
-	assert.IsType(t, &tracesdk.TracerProvider{}, otel.GetTracerProvider())
-}
-
-func TestNewExportPipeline(t *testing.T) {
-	_, tp, err := otlptrace.NewExportPipeline(context.Background(), &noopClient{})
-	assert.NoError(t, err)
-	assert.NotEqual(t, tp, otel.GetTracerProvider())
 }

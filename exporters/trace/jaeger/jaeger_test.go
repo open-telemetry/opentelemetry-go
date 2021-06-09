@@ -17,7 +17,6 @@ package jaeger
 import (
 	"context"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -28,7 +27,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
@@ -40,52 +38,6 @@ import (
 	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
-
-const (
-	collectorEndpoint = "http://localhost:14268/api/traces"
-)
-
-func TestInstallNewPipeline(t *testing.T) {
-	tp, err := InstallNewPipeline(WithCollectorEndpoint(WithEndpoint(collectorEndpoint)))
-	require.NoError(t, err)
-	// Ensure InstallNewPipeline sets the global TracerProvider. By default
-	// the global tracer provider will be a NoOp implementation, this checks
-	// if that has been overwritten.
-	assert.IsType(t, tp, otel.GetTracerProvider())
-}
-
-func TestNewExportPipelinePassthroughError(t *testing.T) {
-	for _, testcase := range []struct {
-		name    string
-		failing bool
-		epo     EndpointOption
-	}{
-		{
-			name:    "failing underlying NewRawExporter",
-			failing: true,
-			epo: endpointOptionFunc(func() (batchUploader, error) {
-				return nil, errors.New("error")
-			}),
-		},
-		{
-			name: "with default agent endpoint",
-			epo:  WithAgentEndpoint(),
-		},
-		{
-			name: "with collector endpoint",
-			epo:  WithCollectorEndpoint(WithEndpoint(collectorEndpoint)),
-		},
-	} {
-		t.Run(testcase.name, func(t *testing.T) {
-			_, err := NewExportPipeline(testcase.epo)
-			if testcase.failing {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
-		})
-	}
-}
 
 func TestNewRawExporter(t *testing.T) {
 	testCases := []struct {
