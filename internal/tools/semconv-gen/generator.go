@@ -78,6 +78,10 @@ type config struct {
 }
 
 func validateConfig(cfg config) (config, error) {
+	if cfg.inputPath == "" {
+		return config{}, errors.New("input path must be provided")
+	}
+
 	if cfg.outputFilename == "" {
 		cfg.outputFilename = fmt.Sprintf("%s.go", path.Base(cfg.inputPath))
 	}
