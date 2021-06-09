@@ -22,8 +22,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/oteltest"
 	"go.opentelemetry.io/otel/metric/registry"
-	"go.opentelemetry.io/otel/oteltest"
 )
 
 type (

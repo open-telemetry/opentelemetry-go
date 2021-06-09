@@ -17,17 +17,15 @@ package global_test
 import (
 	"testing"
 
-	"go.opentelemetry.io/otel/internal/global"
+	internalglobal "go.opentelemetry.io/otel/internal/metric/global"
+	metricglobal "go.opentelemetry.io/otel/metric/global"
 )
 
 func TestResetsOfGlobalsPanic(t *testing.T) {
-	global.ResetForTest()
+	internalglobal.ResetForTest()
 	tests := map[string]func(){
-		"SetTextMapPropagator": func() {
-			global.SetTextMapPropagator(global.TextMapPropagator())
-		},
-		"SetTracerProvider": func() {
-			global.SetTracerProvider(global.TracerProvider())
+		"SetMeterProvider": func() {
+			metricglobal.SetMeterProvider(metricglobal.GetMeterProvider())
 		},
 	}
 

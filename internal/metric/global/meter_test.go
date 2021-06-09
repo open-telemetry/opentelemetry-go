@@ -22,11 +22,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/internal/metric/global"
 	"go.opentelemetry.io/otel/metric"
 	metricglobal "go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/number"
-	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/metric/oteltest"
 )
 
 var Must = metric.Must
