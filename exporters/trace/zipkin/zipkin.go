@@ -84,8 +84,8 @@ func WithSDKOptions(tpOpts ...sdktrace.TracerProviderOption) Option {
 	})
 }
 
-// NewRawExporter creates a new Zipkin exporter.
-func NewRawExporter(collectorURL string, opts ...Option) (*Exporter, error) {
+// New creates a new Zipkin exporter.
+func New(collectorURL string, opts ...Option) (*Exporter, error) {
 	if collectorURL == "" {
 		return nil, errors.New("collector URL cannot be empty")
 	}

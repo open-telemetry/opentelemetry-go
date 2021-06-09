@@ -43,7 +43,7 @@ const (
 )
 
 func TestNewRawExporter(t *testing.T) {
-	_, err := NewRawExporter(
+	_, err := New(
 		collectorURL,
 	)
 
@@ -57,7 +57,7 @@ func TestNewRawExporterShouldFailInvalidCollectorURL(t *testing.T) {
 	)
 
 	// cannot be empty
-	exp, err = NewRawExporter(
+	exp, err = New(
 		"",
 	)
 
@@ -66,7 +66,7 @@ func TestNewRawExporterShouldFailInvalidCollectorURL(t *testing.T) {
 	assert.Nil(t, exp)
 
 	// invalid URL
-	exp, err = NewRawExporter(
+	exp, err = New(
 		"localhost",
 	)
 
@@ -284,7 +284,7 @@ func TestExportSpans(t *testing.T) {
 	defer collector.Close()
 	ls := &logStore{T: t}
 	logger := logStoreLogger(ls)
-	exporter, err := NewRawExporter(collector.url, WithLogger(logger))
+	exporter, err := New(collector.url, WithLogger(logger))
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.Len(t, ls.Messages, 0)
@@ -309,7 +309,7 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	exp, err := NewRawExporter(collectorURL)
+	exp, err := New(collectorURL)
 	require.NoError(t, err)
 
 	innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
@@ -322,7 +322,7 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	exp, err := NewRawExporter(collectorURL)
+	exp, err := New(collectorURL)
 	require.NoError(t, err)
 
 	innerCtx, innerCancel := context.WithCancel(ctx)
@@ -331,7 +331,7 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 }
 
 func TestErrorOnExportShutdownExporter(t *testing.T) {
-	exp, err := NewRawExporter(collectorURL)
+	exp, err := New(collectorURL)
 	require.NoError(t, err)
 	assert.NoError(t, exp.Shutdown(context.Background()))
 	assert.NoError(t, exp.ExportSpans(context.Background(), nil))

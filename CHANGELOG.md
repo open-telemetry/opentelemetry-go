@@ -77,6 +77,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Rename `NewExporter` to `New` in the `go.opentelemetry.io/otel/exporters/stdout` package. (TBD)
 - Rename `NewExporter` to `New` in the `go.opentelemetry.io/otel/exporters/metric/prometheus` package. (TBD)
 - Rename `NewExporter` to `New` in the `go.opentelemetry.io/otel/exporters/trace/jaeger` package. (TBD)
+- Rename `NewExporter` to `New` in the `go.opentelemetry.io/otel/exporters/trace/zipkin` package. (TBD)
 
 ### Deprecated
 
