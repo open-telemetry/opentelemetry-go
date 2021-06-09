@@ -103,7 +103,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `Set`, `Value`, `ContextWithValue`, `ContextWithoutValue`, and `ContextWithEmpty` functions in the `go.opentelemetry.io/otel/baggage` package are removed.
   Handling of baggage is now done using the added `Baggage` type and related context functions (`ContextWithBaggage`, `ContextWithoutBaggage`, and `FromContext`) in that package. (TBD)
 - The `InstallNewPipeline` and `NewExportPipeline` creation functions in all the exporters (prometheus, otlp, stdout, jaeger, and zipkin) have been removed.
-  These functions were deemed permature attempts to provide convenience that did not achieve this aim. (#1985)
+  These functions were deemed premature attempts to provide convenience that did not achieve this aim. (#1985)
 
 ### Fixed
 
