@@ -76,7 +76,7 @@ func initMeter() {
 		log.Fatal("could not start controller:", err)
 	}
 
-	promExporter, err := prometheus.NewExporter(prometheus.Config{}, cont)
+	promExporter, err := prometheus.New(prometheus.Config{}, cont)
 	if err != nil {
 		log.Fatal("could not initialize prometheus:", err)
 	}

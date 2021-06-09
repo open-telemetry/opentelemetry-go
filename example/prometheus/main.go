@@ -48,7 +48,7 @@ func initMeter() {
 			processor.WithMemory(true),
 		),
 	)
-	exporter, err := prometheus.NewExporter(config, c)
+	exporter, err := prometheus.New(config, c)
 	if err != nil {
 		log.Panicf("failed to initialize prometheus exporter %v", err)
 	}

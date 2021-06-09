@@ -93,7 +93,7 @@ func newPipeline(config prometheus.Config, options ...controller.Option) (*prome
 		),
 		options...,
 	)
-	return prometheus.NewExporter(config, c)
+	return prometheus.New(config, c)
 }
 
 func TestPrometheusExporter(t *testing.T) {

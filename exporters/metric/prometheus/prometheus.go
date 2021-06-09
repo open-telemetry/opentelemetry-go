@@ -85,9 +85,9 @@ type Config struct {
 	DefaultHistogramBoundaries []float64
 }
 
-// NewExporter returns a new Prometheus exporter using the configured
-// metric controller.  See controller.New().
-func NewExporter(config Config, controller *controller.Controller) (*Exporter, error) {
+// New returns a new Prometheus exporter using the configured metric
+// controller.  See controller.New().
+func New(config Config, controller *controller.Controller) (*Exporter, error) {
 	if config.Registry == nil {
 		config.Registry = prometheus.NewRegistry()
 	}
