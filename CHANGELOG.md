@@ -74,12 +74,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `Get` method of the `TraceState` type from the `go.opentelemetry.io/otel/trace` package has been updated to accept a `string` instead of an `attribute.Key` type. (#1931)
 - The `Insert` method of the `TraceState` type from the `go.opentelemetry.io/otel/trace` package has been updated to accept a pair of `string`s instead of an `attribute.KeyValue` type. (#1931)
 - The `Delete` method of the `TraceState` type from the `go.opentelemetry.io/otel/trace` package has been updated to accept a `string` instead of an `attribute.Key` type. (#1931)
-- Rename `NewExporter` to `New` in the `go.opentelemetry.io/otel/exporters/stdout` package. (TBD)
-- Rename `NewExporter` to `New` in the `go.opentelemetry.io/otel/exporters/metric/prometheus` package. (TBD)
-- Rename `NewExporter` to `New` in the `go.opentelemetry.io/otel/exporters/trace/jaeger` package. (TBD)
-- Rename `NewExporter` to `New` in the `go.opentelemetry.io/otel/exporters/trace/zipkin` package. (TBD)
-- Rename `NewExporter` to `New` in the `go.opentelemetry.io/otel/exporters/otlp` package. (TBD)
-- Rename `NewUnstartedExporter` to `NewUnstarted` in the `go.opentelemetry.io/otel/exporters/otlp` package. (TBD)
+- Rename `NewExporter` to `New` in the `go.opentelemetry.io/otel/exporters/stdout` package. (#1985)
+- Rename `NewExporter` to `New` in the `go.opentelemetry.io/otel/exporters/metric/prometheus` package. (#1985)
+- Rename `NewExporter` to `New` in the `go.opentelemetry.io/otel/exporters/trace/jaeger` package. (#1985)
+- Rename `NewExporter` to `New` in the `go.opentelemetry.io/otel/exporters/trace/zipkin` package. (#1985)
+- Rename `NewExporter` to `New` in the `go.opentelemetry.io/otel/exporters/otlp` package. (#1985)
+- Rename `NewUnstartedExporter` to `NewUnstarted` in the `go.opentelemetry.io/otel/exporters/otlp` package. (#1985)
 
 ### Deprecated
 
@@ -103,7 +103,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `Set`, `Value`, `ContextWithValue`, `ContextWithoutValue`, and `ContextWithEmpty` functions in the `go.opentelemetry.io/otel/baggage` package are removed.
   Handling of baggage is now done using the added `Baggage` type and related context functions (`ContextWithBaggage`, `ContextWithoutBaggage`, and `FromContext`) in that package. (TBD)
 - The `InstallNewPipeline` and `NewExportPipeline` creation functions in all the exporters (prometheus, otlp, stdout, jaeger, and zipkin) have been removed.
-  These functions were deemed permature attempts to provide convenience that did not achieve this aim. (TBD)
+  These functions were deemed permature attempts to provide convenience that did not achieve this aim. (#1985)
 
 ### Fixed
 
