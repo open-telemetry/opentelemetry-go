@@ -19,6 +19,6 @@
 // the evolving OpenTelemetry specification and user feedback.
 //
 // OpenTelemetry semantic conventions are agreed standardized naming
-// patterns for OpenTelemetry things. This package aims to be the
-// centralized place to interact with these conventions.
-package semconv // import "go.opentelemetry.io/otel/semconv"
+// patterns for OpenTelemetry things. This package represents the conventions
+// as of the v1.4.0 version of the OpenTelemetry specification.
+package semconv // import "go.opentelemetry.io/otel/semconv/v1.4.0"
