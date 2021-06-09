@@ -12,4 +12,4 @@ The exporter can be installed using standard `go` functionality.
 go get -u go.opentelemetry.io/otel/exporters/otlp
 ```
 
-A new exporter can be created using the `NewExporter` function.
+A new exporter can be created using the `New` function.

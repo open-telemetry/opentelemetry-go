@@ -161,7 +161,7 @@ func (m *stubTransformingProtocolDriver) Reset() {
 
 func newExporter(t *testing.T, opts ...otlp.ExporterOption) (*otlp.Exporter, *stubTransformingProtocolDriver) {
 	driver := &stubTransformingProtocolDriver{}
-	exp, err := otlp.NewExporter(context.Background(), driver, opts...)
+	exp, err := otlp.New(context.Background(), driver, opts...)
 	require.NoError(t, err)
 	return exp, driver
 }
@@ -170,7 +170,7 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	e := otlp.NewUnstartedExporter(&stubProtocolDriver{})
+	e := otlp.NewUnstarted(&stubProtocolDriver{})
 	if err := e.Start(ctx); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
@@ -189,7 +189,7 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	e := otlp.NewUnstartedExporter(&stubProtocolDriver{})
+	e := otlp.NewUnstarted(&stubProtocolDriver{})
 	if err := e.Start(ctx); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
@@ -208,7 +208,7 @@ func TestExporterShutdownNoError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	e := otlp.NewUnstartedExporter(&stubProtocolDriver{})
+	e := otlp.NewUnstarted(&stubProtocolDriver{})
 	if err := e.Start(ctx); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
@@ -220,7 +220,7 @@ func TestExporterShutdownNoError(t *testing.T) {
 
 func TestExporterShutdownManyTimes(t *testing.T) {
 	ctx := context.Background()
-	e, err := otlp.NewExporter(ctx, &stubProtocolDriver{})
+	e, err := otlp.New(ctx, &stubProtocolDriver{})
 	if err != nil {
 		t.Fatalf("failed to start an exporter: %v", err)
 	}

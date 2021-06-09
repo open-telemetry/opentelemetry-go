@@ -86,8 +86,8 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 
 var _ tracesdk.SpanExporter = (*Exporter)(nil)
 
-// NewExporter constructs a new Exporter and starts it.
-func NewExporter(ctx context.Context, client Client) (*Exporter, error) {
+// New constructs a new Exporter and starts it.
+func New(ctx context.Context, client Client) (*Exporter, error) {
 	exp := NewUnstartedExporter(client)
 	if err := exp.Start(ctx); err != nil {
 		return nil, err

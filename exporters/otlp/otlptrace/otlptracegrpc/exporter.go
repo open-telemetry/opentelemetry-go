@@ -20,9 +20,9 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 )
 
-// NewExporter constructs a new Exporter and starts it.
-func NewExporter(ctx context.Context, opts ...Option) (*otlptrace.Exporter, error) {
-	return otlptrace.NewExporter(ctx, NewClient(opts...))
+// New constructs a new Exporter and starts it.
+func New(ctx context.Context, opts ...Option) (*otlptrace.Exporter, error) {
+	return otlptrace.New(ctx, NewClient(opts...))
 }
 
 // NewUnstartedExporter constructs a new Exporter and does not start it.

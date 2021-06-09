@@ -43,17 +43,17 @@ type Exporter struct {
 var _ tracesdk.SpanExporter = (*Exporter)(nil)
 var _ metricsdk.Exporter = (*Exporter)(nil)
 
-// NewExporter constructs a new Exporter and starts it.
-func NewExporter(ctx context.Context, driver ProtocolDriver, opts ...ExporterOption) (*Exporter, error) {
-	exp := NewUnstartedExporter(driver, opts...)
+// New constructs a new Exporter and starts it.
+func New(ctx context.Context, driver ProtocolDriver, opts ...ExporterOption) (*Exporter, error) {
+	exp := NewUnstarted(driver, opts...)
 	if err := exp.Start(ctx); err != nil {
 		return nil, err
 	}
 	return exp, nil
 }
 
-// NewUnstartedExporter constructs a new Exporter and does not start it.
-func NewUnstartedExporter(driver ProtocolDriver, opts ...ExporterOption) *Exporter {
+// NewUnstarted constructs a new Exporter and does not start it.
+func NewUnstarted(driver ProtocolDriver, opts ...ExporterOption) *Exporter {
 	cfg := config{
 		// Note: the default ExportKindSelector is specified
 		// as Cumulative:
