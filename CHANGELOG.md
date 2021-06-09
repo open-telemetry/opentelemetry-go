@@ -74,7 +74,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `Get` method of the `TraceState` type from the `go.opentelemetry.io/otel/trace` package has been updated to accept a `string` instead of an `attribute.Key` type. (#1931)
 - The `Insert` method of the `TraceState` type from the `go.opentelemetry.io/otel/trace` package has been updated to accept a pair of `string`s instead of an `attribute.KeyValue` type. (#1931)
 - The `Delete` method of the `TraceState` type from the `go.opentelemetry.io/otel/trace` package has been updated to accept a `string` instead of an `attribute.Key` type. (#1931)
-- Moved duplicated func `findRepoRoot` used in `internal/tools` to new package `internal/tools/common` (#1978).
 
 ### Deprecated
 
