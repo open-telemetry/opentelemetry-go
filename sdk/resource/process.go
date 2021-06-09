@@ -22,7 +22,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"go.opentelemetry.io/otel/semconv/v1.4.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
 type pidProvider func() int
