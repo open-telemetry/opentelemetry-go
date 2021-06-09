@@ -56,7 +56,7 @@ func TestNewRawExporter(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := NewRawExporter(tc.endpoint)
+			_, err := New(tc.endpoint)
 			assert.NoError(t, err)
 		})
 	}
@@ -72,7 +72,7 @@ func TestNewRawExporterUseEnvVarIfOptionUnset(t *testing.T) {
 
 	// If the user sets the environment variable OTEL_EXPORTER_JAEGER_ENDPOINT, endpoint will always get a value.
 	require.NoError(t, os.Unsetenv(envEndpoint))
-	_, err := NewRawExporter(
+	_, err := New(
 		WithCollectorEndpoint(),
 	)
 
@@ -114,7 +114,7 @@ func TestExporterExportSpan(t *testing.T) {
 	)
 
 	testCollector := &testCollectorEndpoint{}
-	exp, err := NewRawExporter(withTestCollectorEndpointInjected(testCollector))
+	exp, err := New(withTestCollectorEndpointInjected(testCollector))
 	require.NoError(t, err)
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exp),
@@ -423,7 +423,7 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	e, err := NewRawExporter(withTestCollectorEndpoint())
+	e, err := New(withTestCollectorEndpoint())
 	require.NoError(t, err)
 	assert.EqualError(t, e.Shutdown(ctx), context.Canceled.Error())
 }
@@ -432,21 +432,21 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
 	<-ctx.Done()
 
-	e, err := NewRawExporter(withTestCollectorEndpoint())
+	e, err := New(withTestCollectorEndpoint())
 	require.NoError(t, err)
 	assert.EqualError(t, e.Shutdown(ctx), context.DeadlineExceeded.Error())
 	cancel()
 }
 
 func TestErrorOnExportShutdownExporter(t *testing.T) {
-	e, err := NewRawExporter(withTestCollectorEndpoint())
+	e, err := New(withTestCollectorEndpoint())
 	require.NoError(t, err)
 	assert.NoError(t, e.Shutdown(context.Background()))
 	assert.NoError(t, e.ExportSpans(context.Background(), nil))
 }
 
 func TestExporterExportSpansHonorsCancel(t *testing.T) {
-	e, err := NewRawExporter(withTestCollectorEndpoint())
+	e, err := New(withTestCollectorEndpoint())
 	require.NoError(t, err)
 	now := time.Now()
 	ss := tracetest.SpanStubs{
@@ -476,7 +476,7 @@ func TestExporterExportSpansHonorsCancel(t *testing.T) {
 }
 
 func TestExporterExportSpansHonorsTimeout(t *testing.T) {
-	e, err := NewRawExporter(withTestCollectorEndpoint())
+	e, err := New(withTestCollectorEndpoint())
 	require.NoError(t, err)
 	now := time.Now()
 	ss := tracetest.SpanStubs{
