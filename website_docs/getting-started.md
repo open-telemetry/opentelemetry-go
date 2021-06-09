@@ -51,7 +51,7 @@ To initialize the console exporter, add the following code to the file your `mai
 
 ```go
 func main() {
-	exporter, err := stdout.NewExporter(
+	exporter, err := stdout.New(
 		stdout.WithPrettyPrint(),
 	)
 	if err != nil {

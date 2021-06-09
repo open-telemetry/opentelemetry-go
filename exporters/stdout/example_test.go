@@ -92,7 +92,7 @@ func Resource() *resource.Resource {
 }
 
 func InstallExportPipeline(ctx context.Context) func() {
-	exporter, err := stdout.NewExporter(stdout.WithPrettyPrint())
+	exporter, err := stdout.New(stdout.WithPrettyPrint())
 	if err != nil {
 		log.Fatalf("creating stdout exporter: %v", err)
 	}
