@@ -19,7 +19,6 @@ import (
 	"sync"
 
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
-	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 )
 
 // ProtocolDriver is an interface used by OTLP exporter. It's
@@ -44,11 +43,6 @@ type ProtocolDriver interface {
 	// concurrently with ExportTraces, so the manager needs to
 	// take this into account by doing proper locking.
 	ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error
-	// ExportTraces should transform the passed traces to the wire
-	// format and send it to the collector. May be called
-	// concurrently with ExportMetrics, so the manager needs to
-	// take this into account by doing proper locking.
-	ExportTraces(ctx context.Context, ss []tracesdk.ReadOnlySpan) error
 }
 
 // SplitConfig is used to configure a split driver.
@@ -56,14 +50,10 @@ type SplitConfig struct {
 	// ForMetrics driver will be used for sending metrics to the
 	// collector.
 	ForMetrics ProtocolDriver
-	// ForTraces driver will be used for sending spans to the
-	// collector.
-	ForTraces ProtocolDriver
 }
 
 type splitDriver struct {
 	metric ProtocolDriver
-	trace  ProtocolDriver
 }
 
 // noopDriver implements the ProtocolDriver interface and
@@ -75,13 +65,11 @@ var _ ProtocolDriver = (*noopDriver)(nil)
 
 var _ ProtocolDriver = (*splitDriver)(nil)
 
-// NewSplitDriver creates a protocol driver which contains two other
-// protocol drivers and will forward traces to one of them and metrics
-// to another.
+// NewSplitDriver creates a protocol driver which may contain multiple
+// protocol drivers and will forward signals to the appropriate driver.
 func NewSplitDriver(opts ...SplitDriverOption) ProtocolDriver {
 	driver := splitDriver{
 		metric: &noopDriver{},
-		trace:  &noopDriver{},
 	}
 	for _, opt := range opts {
 		opt.apply(&driver)
@@ -89,56 +77,40 @@ func NewSplitDriver(opts ...SplitDriverOption) ProtocolDriver {
 	return &driver
 }
 
-// Start implements ProtocolDriver. It starts both drivers at the same
+// Start implements ProtocolDriver. It starts all drivers at the same
 // time.
 func (d *splitDriver) Start(ctx context.Context) error {
 	wg := sync.WaitGroup{}
-	wg.Add(2)
+	wg.Add(1)
 	var (
 		metricErr error
-		traceErr  error
 	)
 	go func() {
 		defer wg.Done()
 		metricErr = d.metric.Start(ctx)
 	}()
-	go func() {
-		defer wg.Done()
-		traceErr = d.trace.Start(ctx)
-	}()
 	wg.Wait()
 	if metricErr != nil {
 		return metricErr
 	}
-	if traceErr != nil {
-		return traceErr
-	}
 	return nil
 }
 
-// Stop implements ProtocolDriver. It stops both drivers at the same
+// Stop implements ProtocolDriver. It stops all drivers at the same
 // time.
 func (d *splitDriver) Stop(ctx context.Context) error {
 	wg := sync.WaitGroup{}
-	wg.Add(2)
+	wg.Add(1)
 	var (
 		metricErr error
-		traceErr  error
 	)
 	go func() {
 		defer wg.Done()
 		metricErr = d.metric.Stop(ctx)
 	}()
-	go func() {
-		defer wg.Done()
-		traceErr = d.trace.Stop(ctx)
-	}()
 	wg.Wait()
 	if metricErr != nil {
 		return metricErr
-	}
-	if traceErr != nil {
-		return traceErr
 	}
 	return nil
 }
@@ -147,12 +119,6 @@ func (d *splitDriver) Stop(ctx context.Context) error {
 // the driver used for sending metrics.
 func (d *splitDriver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error {
 	return d.metric.ExportMetrics(ctx, cps, selector)
-}
-
-// ExportTraces implements ProtocolDriver. It forwards the call to the
-// driver used for sending spans.
-func (d *splitDriver) ExportTraces(ctx context.Context, ss []tracesdk.ReadOnlySpan) error {
-	return d.trace.ExportTraces(ctx, ss)
 }
 
 // Start does nothing.
@@ -167,10 +133,5 @@ func (d *noopDriver) Stop(ctx context.Context) error {
 
 // ExportMetrics does nothing.
 func (d *noopDriver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet, selector metricsdk.ExportKindSelector) error {
-	return nil
-}
-
-// ExportTraces does nothing.
-func (d *noopDriver) ExportTraces(ctx context.Context, ss []tracesdk.ReadOnlySpan) error {
 	return nil
 }

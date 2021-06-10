@@ -35,17 +35,12 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/internal/otlptest"
 	"go.opentelemetry.io/otel/exporters/otlp/otlphttp"
 	collectormetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
-	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
-	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
 type mockCollector struct {
 	endpoint string
 	server   *http.Server
-
-	spanLock     sync.Mutex
-	spansStorage otlptest.SpansStorage
 
 	metricLock     sync.Mutex
 	metricsStorage otlptest.MetricsStorage
@@ -64,18 +59,6 @@ func (c *mockCollector) Stop() error {
 
 func (c *mockCollector) MustStop(t *testing.T) {
 	assert.NoError(t, c.server.Shutdown(context.Background()))
-}
-
-func (c *mockCollector) GetSpans() []*tracepb.Span {
-	c.spanLock.Lock()
-	defer c.spanLock.Unlock()
-	return c.spansStorage.GetSpans()
-}
-
-func (c *mockCollector) GetResourceSpans() []*tracepb.ResourceSpans {
-	c.spanLock.Lock()
-	defer c.spanLock.Unlock()
-	return c.spansStorage.GetResourceSpans()
 }
 
 func (c *mockCollector) GetMetrics() []*metricpb.Metric {
@@ -133,56 +116,6 @@ func (c *mockCollector) serveMetrics(w http.ResponseWriter, r *http.Request) {
 
 func unmarshalMetricsRequest(rawRequest []byte, contentType string) (*collectormetricpb.ExportMetricsServiceRequest, error) {
 	request := &collectormetricpb.ExportMetricsServiceRequest{}
-	if contentType == "application/json" {
-		err := jsonpb.Unmarshal(rawRequest, request)
-		return request, err
-	}
-	err := proto.Unmarshal(rawRequest, request)
-	return request, err
-}
-
-func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
-	if c.delay != nil {
-		select {
-		case <-c.delay:
-		case <-r.Context().Done():
-			return
-		}
-	}
-
-	if !c.checkHeaders(r) {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	response := collectortracepb.ExportTraceServiceResponse{}
-	rawResponse, err := proto.Marshal(&response)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	if injectedStatus := c.getInjectHTTPStatus(); injectedStatus != 0 {
-		writeReply(w, rawResponse, injectedStatus, c.injectContentType)
-		return
-	}
-	rawRequest, err := readRequest(r)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	request, err := unmarshalTraceRequest(rawRequest, r.Header.Get("content-type"))
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	writeReply(w, rawResponse, 0, c.injectContentType)
-	c.spanLock.Lock()
-	defer c.spanLock.Unlock()
-	c.spansStorage.AddSpans(request)
-}
-
-func unmarshalTraceRequest(rawRequest []byte, contentType string) (*collectortracepb.ExportTraceServiceRequest, error) {
-	request := &collectortracepb.ExportTraceServiceRequest{}
 	if contentType == "application/json" {
 		err := jsonpb.Unmarshal(rawRequest, request)
 		return request, err
@@ -263,9 +196,6 @@ func (c *mockCollectorConfig) fillInDefaults() {
 	if c.MetricsURLPath == "" {
 		c.MetricsURLPath = otlphttp.DefaultMetricsPath
 	}
-	if c.TracesURLPath == "" {
-		c.TracesURLPath = otlphttp.DefaultTracesPath
-	}
 }
 
 func runMockCollector(t *testing.T, cfg mockCollectorConfig) *mockCollector {
@@ -276,7 +206,6 @@ func runMockCollector(t *testing.T, cfg mockCollectorConfig) *mockCollector {
 	require.NoError(t, err)
 	m := &mockCollector{
 		endpoint:          fmt.Sprintf("localhost:%s", portStr),
-		spansStorage:      otlptest.NewSpansStorage(),
 		metricsStorage:    otlptest.NewMetricsStorage(),
 		injectHTTPStatus:  cfg.InjectHTTPStatus,
 		injectContentType: cfg.InjectContentType,
@@ -285,7 +214,6 @@ func runMockCollector(t *testing.T, cfg mockCollectorConfig) *mockCollector {
 	}
 	mux := http.NewServeMux()
 	mux.Handle(cfg.MetricsURLPath, http.HandlerFunc(m.serveMetrics))
-	mux.Handle(cfg.TracesURLPath, http.HandlerFunc(m.serveTraces))
 	server := &http.Server{
 		Handler: mux,
 	}

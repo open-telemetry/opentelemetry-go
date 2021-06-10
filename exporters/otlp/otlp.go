@@ -22,11 +22,9 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-
-	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 )
 
-// Exporter is an OpenTelemetry exporter. It exports both traces and metrics
+// Exporter is an OpenTelemetry exporter. It exports metrics
 // from OpenTelemetry instrumented to code using OpenTelemetry protocol
 // buffers to a configurable receiver.
 type Exporter struct {
@@ -40,7 +38,6 @@ type Exporter struct {
 	stopOnce  sync.Once
 }
 
-var _ tracesdk.SpanExporter = (*Exporter)(nil)
 var _ metricsdk.Exporter = (*Exporter)(nil)
 
 // New constructs a new Exporter and starts it.
@@ -122,10 +119,4 @@ func (e *Exporter) Export(parent context.Context, cps metricsdk.CheckpointSet) e
 // metric telemetry that it needs to be provided in a configured format.
 func (e *Exporter) ExportKindFor(desc *metric.Descriptor, kind aggregation.Kind) metricsdk.ExportKind {
 	return e.cfg.exportKindSelector.ExportKindFor(desc, kind)
-}
-
-// ExportSpans transforms and batches OpenTelemetry spans into OTLP Trace and
-// transmits them to the configured collector.
-func (e *Exporter) ExportSpans(ctx context.Context, spans []tracesdk.ReadOnlySpan) error {
-	return e.driver.ExportTraces(ctx, spans)
 }

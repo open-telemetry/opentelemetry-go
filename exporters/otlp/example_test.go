@@ -19,23 +19,20 @@ import (
 	"log"
 
 	"go.opentelemetry.io/otel/exporters/otlp"
-
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/internal/global"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
 func ExampleNew() {
 	ctx := context.Background()
 
-	// Set different endpoints for the metrics and traces collectors
 	metricsDriver := otlpgrpc.NewDriver(
 	// Configure metrics driver here
 	)
-	tracesDriver := otlpgrpc.NewDriver(
-	// Configure traces driver here
-	)
-	driver := otlp.NewSplitDriver(otlp.WithMetricDriver(metricsDriver), otlp.WithTraceDriver(tracesDriver))
+	driver := otlp.NewSplitDriver(otlp.WithMetricDriver(metricsDriver))
 	exporter, err := otlp.New(ctx, driver) // Configure as needed.
 	if err != nil {
 		log.Fatalf("failed to create exporter: %v", err)
@@ -47,6 +44,11 @@ func ExampleNew() {
 		}
 	}()
 
-	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithBatcher(exporter))
-	otel.SetTracerProvider(tracerProvider)
+	c := controller.New(
+		processor.New(
+			simple.NewWithExactDistribution(),
+			exporter),
+		controller.WithExporter(exporter))
+
+	global.SetMeterProvider(c.MeterProvider())
 }

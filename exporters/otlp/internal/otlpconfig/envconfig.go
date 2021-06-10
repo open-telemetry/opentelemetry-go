@@ -82,15 +82,6 @@ func (e *EnvOptionsReader) GetOptionsFromEnv() []GenericOption {
 
 		opts = append(opts, WithEndpoint(trimSchema(v)))
 	}
-	if v, ok := e.getEnvValue("TRACES_ENDPOINT"); ok {
-		if isInsecureEndpoint(v) {
-			opts = append(opts, WithInsecureTraces())
-		} else {
-			opts = append(opts, WithSecureTraces())
-		}
-
-		opts = append(opts, WithTracesEndpoint(trimSchema(v)))
-	}
 	if v, ok := e.getEnvValue("METRICS_ENDPOINT"); ok {
 		if isInsecureEndpoint(v) {
 			opts = append(opts, WithInsecureMetrics())
@@ -109,13 +100,6 @@ func (e *EnvOptionsReader) GetOptionsFromEnv() []GenericOption {
 			otel.Handle(fmt.Errorf("failed to configure otlp exporter certificate '%s': %w", path, err))
 		}
 	}
-	if path, ok := e.getEnvValue("TRACES_CERTIFICATE"); ok {
-		if tls, err := e.readTLSConfig(path); err == nil {
-			opts = append(opts, WithTracesTLSClientConfig(tls))
-		} else {
-			otel.Handle(fmt.Errorf("failed to configure otlp traces exporter certificate '%s': %w", path, err))
-		}
-	}
 	if path, ok := e.getEnvValue("METRICS_CERTIFICATE"); ok {
 		if tls, err := e.readTLSConfig(path); err == nil {
 			opts = append(opts, WithMetricsTLSClientConfig(tls))
@@ -128,9 +112,6 @@ func (e *EnvOptionsReader) GetOptionsFromEnv() []GenericOption {
 	if h, ok := e.getEnvValue("HEADERS"); ok {
 		opts = append(opts, WithHeaders(stringToHeader(h)))
 	}
-	if h, ok := e.getEnvValue("TRACES_HEADERS"); ok {
-		opts = append(opts, WithTracesHeaders(stringToHeader(h)))
-	}
 	if h, ok := e.getEnvValue("METRICS_HEADERS"); ok {
 		opts = append(opts, WithMetricsHeaders(stringToHeader(h)))
 	}
@@ -138,9 +119,6 @@ func (e *EnvOptionsReader) GetOptionsFromEnv() []GenericOption {
 	// Compression
 	if c, ok := e.getEnvValue("COMPRESSION"); ok {
 		opts = append(opts, WithCompression(stringToCompression(c)))
-	}
-	if c, ok := e.getEnvValue("TRACES_COMPRESSION"); ok {
-		opts = append(opts, WithTracesCompression(stringToCompression(c)))
 	}
 	if c, ok := e.getEnvValue("METRICS_COMPRESSION"); ok {
 		opts = append(opts, WithMetricsCompression(stringToCompression(c)))
@@ -150,11 +128,6 @@ func (e *EnvOptionsReader) GetOptionsFromEnv() []GenericOption {
 	if t, ok := e.getEnvValue("TIMEOUT"); ok {
 		if d, err := strconv.Atoi(t); err == nil {
 			opts = append(opts, WithTimeout(time.Duration(d)*time.Millisecond))
-		}
-	}
-	if t, ok := e.getEnvValue("TRACES_TIMEOUT"); ok {
-		if d, err := strconv.Atoi(t); err == nil {
-			opts = append(opts, WithTracesTimeout(time.Duration(d)*time.Millisecond))
 		}
 	}
 	if t, ok := e.getEnvValue("METRICS_TIMEOUT"); ok {

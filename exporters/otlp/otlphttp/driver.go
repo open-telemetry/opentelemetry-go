@@ -37,9 +37,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
-	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	colmetricspb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
-	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 )
 
 const contentTypeProto = "application/x-protobuf"
@@ -65,7 +63,6 @@ var ourTransport = &http.Transport{
 
 type driver struct {
 	metricsDriver signalDriver
-	tracesDriver  signalDriver
 	cfg           otlpconfig.Config
 
 	stopCh chan struct{}
@@ -90,7 +87,6 @@ func NewDriver(opts ...Option) otlp.ProtocolDriver {
 	}
 
 	for pathPtr, defaultPath := range map[*string]string{
-		&cfg.Traces.URLPath:  DefaultTracesPath,
 		&cfg.Metrics.URLPath: DefaultMetricsPath,
 	} {
 		tmp := strings.TrimSpace(*pathPtr)
@@ -124,25 +120,8 @@ func NewDriver(opts ...Option) otlp.ProtocolDriver {
 		metricsClient.Transport = transport
 	}
 
-	tracesClient := &http.Client{
-		Transport: ourTransport,
-		Timeout:   cfg.Traces.Timeout,
-	}
-	if cfg.Traces.TLSCfg != nil {
-		transport := ourTransport.Clone()
-		transport.TLSClientConfig = cfg.Traces.TLSCfg
-		tracesClient.Transport = transport
-	}
-
 	stopCh := make(chan struct{})
 	return &driver{
-		tracesDriver: signalDriver{
-			name:       "traces",
-			cfg:        cfg.Traces,
-			generalCfg: cfg,
-			stopCh:     stopCh,
-			client:     tracesClient,
-		},
 		metricsDriver: signalDriver{
 			name:       "metrics",
 			cfg:        cfg.Metrics,
@@ -184,22 +163,6 @@ func (d *driver) ExportMetrics(ctx context.Context, cps metricsdk.CheckpointSet,
 		return err
 	}
 	return d.metricsDriver.send(ctx, rawRequest)
-}
-
-// ExportTraces implements otlp.ProtocolDriver.
-func (d *driver) ExportTraces(ctx context.Context, ss []tracesdk.ReadOnlySpan) error {
-	protoSpans := transform.Spans(ss)
-	if len(protoSpans) == 0 {
-		return nil
-	}
-	pbRequest := &coltracepb.ExportTraceServiceRequest{
-		ResourceSpans: protoSpans,
-	}
-	rawRequest, err := d.marshal(pbRequest)
-	if err != nil {
-		return err
-	}
-	return d.tracesDriver.send(ctx, rawRequest)
 }
 
 func (d *driver) marshal(msg proto.Message) ([]byte, error) {

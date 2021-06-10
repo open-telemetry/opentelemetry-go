@@ -16,11 +16,8 @@ package otlpgrpc_test
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
-
-	"google.golang.org/grpc/credentials"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp"
@@ -30,120 +27,15 @@ import (
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-func Example_insecure() {
-	ctx := context.Background()
-	driver := otlpgrpc.NewDriver(otlpgrpc.WithInsecure())
-	exp, err := otlp.New(ctx, driver)
-	if err != nil {
-		log.Fatalf("Failed to create the collector exporter: %v", err)
-	}
-	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, time.Second)
-		defer cancel()
-		if err := exp.Shutdown(ctx); err != nil {
-			otel.Handle(err)
-		}
-	}()
-
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithBatcher(
-			exp,
-			// add following two options to ensure flush
-			sdktrace.WithBatchTimeout(5*time.Second),
-			sdktrace.WithMaxExportBatchSize(10),
-		),
-	)
-	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, time.Second)
-		defer cancel()
-		if err := tp.Shutdown(ctx); err != nil {
-			otel.Handle(err)
-		}
-	}()
-	otel.SetTracerProvider(tp)
-
-	tracer := otel.Tracer("test-tracer")
-
-	// Then use the OpenTelemetry tracing library, like we normally would.
-	ctx, span := tracer.Start(ctx, "CollectorExporter-Example")
-	defer span.End()
-
-	for i := 0; i < 10; i++ {
-		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))
-		<-time.After(6 * time.Millisecond)
-		iSpan.End()
-	}
-}
-
-func Example_withTLS() {
-	// Please take at look at https://pkg.go.dev/google.golang.org/grpc/credentials#TransportCredentials
-	// for ways on how to initialize gRPC TransportCredentials.
-	creds, err := credentials.NewClientTLSFromFile("my-cert.pem", "")
-	if err != nil {
-		log.Fatalf("failed to create gRPC client TLS credentials: %v", err)
-	}
-
-	ctx := context.Background()
-	driver := otlpgrpc.NewDriver(otlpgrpc.WithTLSCredentials(creds))
-	exp, err := otlp.New(ctx, driver)
-	if err != nil {
-		log.Fatalf("failed to create the collector exporter: %v", err)
-	}
-	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, time.Second)
-		defer cancel()
-		if err := exp.Shutdown(ctx); err != nil {
-			otel.Handle(err)
-		}
-	}()
-
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithBatcher(
-			exp,
-			// add following two options to ensure flush
-			sdktrace.WithBatchTimeout(5*time.Second),
-			sdktrace.WithMaxExportBatchSize(10),
-		),
-	)
-	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, time.Second)
-		defer cancel()
-		if err := tp.Shutdown(ctx); err != nil {
-			otel.Handle(err)
-		}
-	}()
-	otel.SetTracerProvider(tp)
-
-	tracer := otel.Tracer("test-tracer")
-
-	// Then use the OpenTelemetry tracing library, like we normally would.
-	ctx, span := tracer.Start(ctx, "Securely-Talking-To-Collector-Span")
-	defer span.End()
-
-	for i := 0; i < 10; i++ {
-		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))
-		<-time.After(6 * time.Millisecond)
-		iSpan.End()
-	}
-}
-
-func Example_withDifferentSignalCollectors() {
-
+func Example_metrics() {
 	// Set different endpoints for the metrics and traces collectors
 	metricsDriver := otlpgrpc.NewDriver(
 		otlpgrpc.WithInsecure(),
 		otlpgrpc.WithEndpoint("localhost:30080"),
 	)
-	tracesDriver := otlpgrpc.NewDriver(
-		otlpgrpc.WithInsecure(),
-		otlpgrpc.WithEndpoint("localhost:30082"),
-	)
-	driver := otlp.NewSplitDriver(otlp.WithMetricDriver(metricsDriver), otlp.WithTraceDriver(tracesDriver))
+	driver := otlp.NewSplitDriver(otlp.WithMetricDriver(metricsDriver))
 	ctx := context.Background()
 	exp, err := otlp.New(ctx, driver)
 	if err != nil {
@@ -157,24 +49,6 @@ func Example_withDifferentSignalCollectors() {
 			otel.Handle(err)
 		}
 	}()
-
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithBatcher(
-			exp,
-			// add following two options to ensure flush
-			sdktrace.WithBatchTimeout(5*time.Second),
-			sdktrace.WithMaxExportBatchSize(10),
-		),
-	)
-	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, time.Second)
-		defer cancel()
-		if err := tp.Shutdown(ctx); err != nil {
-			otel.Handle(err)
-		}
-	}()
-	otel.SetTracerProvider(tp)
 
 	pusher := controller.New(
 		processor.New(
@@ -198,7 +72,6 @@ func Example_withDifferentSignalCollectors() {
 		}
 	}()
 
-	tracer := otel.Tracer("test-tracer")
 	meter := global.Meter("test-meter")
 
 	// Recorder metric example
@@ -209,17 +82,11 @@ func Example_withDifferentSignalCollectors() {
 		)
 
 	// work begins
-	ctx, span := tracer.Start(
-		ctx,
-		"DifferentCollectors-Example")
-	defer span.End()
 	for i := 0; i < 10; i++ {
-		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))
 		log.Printf("Doing really hard work (%d / 10)\n", i+1)
 		counter.Add(ctx, 1.0)
 
 		<-time.After(time.Second)
-		iSpan.End()
 	}
 
 	log.Printf("Done!")

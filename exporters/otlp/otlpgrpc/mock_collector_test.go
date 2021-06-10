@@ -25,77 +25,19 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
-	metadata "google.golang.org/grpc/metadata"
 
 	"go.opentelemetry.io/otel/exporters/otlp/internal/otlptest"
 	collectormetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
-	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
-	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
 func makeMockCollector(t *testing.T, mockConfig *mockConfig) *mockCollector {
 	return &mockCollector{
 		t: t,
-		traceSvc: &mockTraceService{
-			storage: otlptest.NewSpansStorage(),
-			errors:  mockConfig.errors,
-		},
 		metricSvc: &mockMetricService{
 			storage: otlptest.NewMetricsStorage(),
 		},
 	}
-}
-
-type mockTraceService struct {
-	collectortracepb.UnimplementedTraceServiceServer
-
-	errors   []error
-	requests int
-	mu       sync.RWMutex
-	storage  otlptest.SpansStorage
-	headers  metadata.MD
-	delay    time.Duration
-}
-
-func (mts *mockTraceService) getHeaders() metadata.MD {
-	mts.mu.RLock()
-	defer mts.mu.RUnlock()
-	return mts.headers
-}
-
-func (mts *mockTraceService) getSpans() []*tracepb.Span {
-	mts.mu.RLock()
-	defer mts.mu.RUnlock()
-	return mts.storage.GetSpans()
-}
-
-func (mts *mockTraceService) getResourceSpans() []*tracepb.ResourceSpans {
-	mts.mu.RLock()
-	defer mts.mu.RUnlock()
-	return mts.storage.GetResourceSpans()
-}
-
-func (mts *mockTraceService) Export(ctx context.Context, exp *collectortracepb.ExportTraceServiceRequest) (*collectortracepb.ExportTraceServiceResponse, error) {
-	if mts.delay > 0 {
-		time.Sleep(mts.delay)
-	}
-
-	mts.mu.Lock()
-	defer func() {
-		mts.requests++
-		mts.mu.Unlock()
-	}()
-
-	reply := &collectortracepb.ExportTraceServiceResponse{}
-	if mts.requests < len(mts.errors) {
-		idx := mts.requests
-		return reply, mts.errors[idx]
-	}
-
-	mts.headers, _ = metadata.FromIncomingContext(ctx)
-	mts.storage.AddSpans(exp)
-	return reply, nil
 }
 
 type mockMetricService struct {
@@ -126,7 +68,6 @@ func (mms *mockMetricService) Export(ctx context.Context, exp *collectormetricpb
 type mockCollector struct {
 	t *testing.T
 
-	traceSvc  *mockTraceService
 	metricSvc *mockMetricService
 
 	endpoint string
@@ -136,11 +77,9 @@ type mockCollector struct {
 }
 
 type mockConfig struct {
-	errors   []error
 	endpoint string
 }
 
-var _ collectortracepb.TraceServiceServer = (*mockTraceService)(nil)
 var _ collectormetricpb.MetricsServiceServer = (*mockMetricService)(nil)
 
 var errAlreadyStopped = fmt.Errorf("already stopped")
@@ -160,13 +99,6 @@ func (mc *mockCollector) stop() error {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		// Getting the lock ensures the traceSvc is done flushing.
-		mc.traceSvc.mu.Lock()
-		defer mc.traceSvc.mu.Unlock()
-		wg.Done()
-	}()
-	wg.Add(1)
-	go func() {
 		// Getting the lock ensures the metricSvc is done flushing.
 		mc.metricSvc.mu.Lock()
 		defer mc.metricSvc.mu.Unlock()
@@ -178,22 +110,6 @@ func (mc *mockCollector) stop() error {
 
 func (mc *mockCollector) Stop() error {
 	return mc.stop()
-}
-
-func (mc *mockCollector) getSpans() []*tracepb.Span {
-	return mc.traceSvc.getSpans()
-}
-
-func (mc *mockCollector) getResourceSpans() []*tracepb.ResourceSpans {
-	return mc.traceSvc.getResourceSpans()
-}
-
-func (mc *mockCollector) GetResourceSpans() []*tracepb.ResourceSpans {
-	return mc.getResourceSpans()
-}
-
-func (mc *mockCollector) getHeaders() metadata.MD {
-	return mc.traceSvc.getHeaders()
 }
 
 func (mc *mockCollector) getMetrics() []*metricpb.Metric {
@@ -221,7 +137,6 @@ func runMockCollectorWithConfig(t *testing.T, mockConfig *mockConfig) *mockColle
 
 	srv := grpc.NewServer()
 	mc := makeMockCollector(t, mockConfig)
-	collectortracepb.RegisterTraceServiceServer(srv, mc.traceSvc)
 	collectormetricpb.RegisterMetricsServiceServer(srv, mc.metricSvc)
 	mc.ln = newListener(ln)
 	go func() {

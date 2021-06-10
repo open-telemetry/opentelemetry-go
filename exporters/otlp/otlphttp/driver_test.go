@@ -32,9 +32,7 @@ import (
 
 const (
 	relOtherMetricsPath = "post/metrics/here"
-	relOtherTracesPath  = "post/traces/here"
 	otherMetricsPath    = "/post/metrics/here"
-	otherTracesPath     = "/post/traces/here"
 )
 
 var (
@@ -65,29 +63,24 @@ func TestEndToEnd(t *testing.T) {
 			name: "with empty paths (forced to defaults)",
 			opts: []otlphttp.Option{
 				otlphttp.WithMetricsURLPath(""),
-				otlphttp.WithTracesURLPath(""),
 			},
 		},
 		{
 			name: "with different paths",
 			opts: []otlphttp.Option{
 				otlphttp.WithMetricsURLPath(otherMetricsPath),
-				otlphttp.WithTracesURLPath(otherTracesPath),
 			},
 			mcCfg: mockCollectorConfig{
 				MetricsURLPath: otherMetricsPath,
-				TracesURLPath:  otherTracesPath,
 			},
 		},
 		{
 			name: "with relative paths",
 			opts: []otlphttp.Option{
 				otlphttp.WithMetricsURLPath(relOtherMetricsPath),
-				otlphttp.WithTracesURLPath(relOtherTracesPath),
 			},
 			mcCfg: mockCollectorConfig{
 				MetricsURLPath: otherMetricsPath,
-				TracesURLPath:  otherTracesPath,
 			},
 		},
 		{
@@ -155,7 +148,6 @@ func TestRetry(t *testing.T) {
 	defer mc.MustStop(t)
 	driver := otlphttp.NewDriver(
 		otlphttp.WithEndpoint(mc.Endpoint()),
-		otlphttp.WithTracesEndpoint(mc.Endpoint()),
 		otlphttp.WithInsecure(),
 		otlphttp.WithMaxAttempts(len(statuses)+1),
 	)
@@ -165,9 +157,9 @@ func TestRetry(t *testing.T) {
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
-	err = exporter.ExportSpans(ctx, otlptest.SingleReadOnlySpan())
+	err = exporter.Export(ctx, otlptest.OneRecordCheckpointSet{})
 	assert.NoError(t, err)
-	assert.Len(t, mc.GetSpans(), 1)
+	assert.Len(t, mc.GetMetrics(), 1)
 }
 
 func TestTimeout(t *testing.T) {
@@ -187,7 +179,7 @@ func TestTimeout(t *testing.T) {
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
-	err = exporter.ExportSpans(ctx, otlptest.SingleReadOnlySpan())
+	err = exporter.Export(ctx, otlptest.OneRecordCheckpointSet{})
 	assert.Equalf(t, true, os.IsTimeout(err), "expected timeout error, got: %v", err)
 }
 
@@ -212,9 +204,9 @@ func TestRetryFailed(t *testing.T) {
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
-	err = exporter.ExportSpans(ctx, otlptest.SingleReadOnlySpan())
+	err = exporter.Export(ctx, otlptest.OneRecordCheckpointSet{})
 	assert.Error(t, err)
-	assert.Empty(t, mc.GetSpans())
+	assert.Empty(t, mc.GetMetrics())
 }
 
 func TestNoRetry(t *testing.T) {
@@ -237,10 +229,10 @@ func TestNoRetry(t *testing.T) {
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
-	err = exporter.ExportSpans(ctx, otlptest.SingleReadOnlySpan())
+	err = exporter.Export(ctx, otlptest.OneRecordCheckpointSet{})
 	assert.Error(t, err)
-	assert.Equal(t, fmt.Sprintf("failed to send traces to http://%s/v1/traces with HTTP status 400 Bad Request", mc.endpoint), err.Error())
-	assert.Empty(t, mc.GetSpans())
+	assert.Equal(t, fmt.Sprintf("failed to send metrics to http://%s/v1/metrics with HTTP status 400 Bad Request", mc.endpoint), err.Error())
+	assert.Empty(t, mc.GetMetrics())
 }
 
 func TestFailedCheckpoint(t *testing.T) {
@@ -278,10 +270,7 @@ func TestEmptyData(t *testing.T) {
 	}()
 	err = exporter.Export(ctx, otlptest.EmptyCheckpointSet{})
 	assert.NoError(t, err)
-	err = exporter.ExportSpans(ctx, nil)
-	assert.NoError(t, err)
 	assert.Empty(t, mc.GetMetrics())
-	assert.Empty(t, mc.GetSpans())
 }
 
 func TestUnreasonableMaxAttempts(t *testing.T) {
@@ -325,9 +314,9 @@ func TestUnreasonableMaxAttempts(t *testing.T) {
 			defer func() {
 				assert.NoError(t, exporter.Shutdown(ctx))
 			}()
-			err = exporter.ExportSpans(ctx, otlptest.SingleReadOnlySpan())
+			err = exporter.Export(ctx, otlptest.OneRecordCheckpointSet{})
 			assert.Error(t, err)
-			assert.Empty(t, mc.GetSpans())
+			assert.Empty(t, mc.GetMetrics())
 		})
 	}
 }
@@ -361,9 +350,9 @@ func TestUnreasonableBackoff(t *testing.T) {
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
-	err = exporter.ExportSpans(ctx, otlptest.SingleReadOnlySpan())
+	err = exporter.Export(ctx, otlptest.OneRecordCheckpointSet{})
 	assert.Error(t, err)
-	assert.Empty(t, mc.GetSpans())
+	assert.Empty(t, mc.GetMetrics())
 }
 
 func TestCancelledContext(t *testing.T) {
@@ -381,9 +370,9 @@ func TestCancelledContext(t *testing.T) {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
 	cancel()
-	err = exporter.ExportSpans(ctx, otlptest.SingleReadOnlySpan())
+	err = exporter.Export(ctx, otlptest.OneRecordCheckpointSet{})
 	assert.Error(t, err)
-	assert.Empty(t, mc.GetSpans())
+	assert.Empty(t, mc.GetMetrics())
 }
 
 func TestDeadlineContext(t *testing.T) {
@@ -409,9 +398,9 @@ func TestDeadlineContext(t *testing.T) {
 	}()
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
-	err = exporter.ExportSpans(ctx, otlptest.SingleReadOnlySpan())
+	err = exporter.Export(ctx, otlptest.OneRecordCheckpointSet{})
 	assert.Error(t, err)
-	assert.Empty(t, mc.GetSpans())
+	assert.Empty(t, mc.GetMetrics())
 }
 
 func TestStopWhileExporting(t *testing.T) {
@@ -437,9 +426,9 @@ func TestStopWhileExporting(t *testing.T) {
 	}()
 	doneCh := make(chan struct{})
 	go func() {
-		err := exporter.ExportSpans(ctx, otlptest.SingleReadOnlySpan())
+		err := exporter.Export(ctx, otlptest.OneRecordCheckpointSet{})
 		assert.Error(t, err)
-		assert.Empty(t, mc.GetSpans())
+		assert.Empty(t, mc.GetMetrics())
 		close(doneCh)
 	}()
 	<-time.After(time.Second)

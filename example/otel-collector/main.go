@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Example using the OTLP exporter + collector + third-party backends. For
+// Example using OTLP exporters + collector + third-party backends. For
 // information about using the exporter, see:
 // https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp?tab=doc#example-package-Insecure
 package main
@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/propagation"
@@ -46,19 +47,6 @@ import (
 func initProvider() func() {
 	ctx := context.Background()
 
-	// If the OpenTelemetry Collector is running on a local cluster (minikube or
-	// microk8s), it should be accessible through the NodePort service at the
-	// `localhost:30080` endpoint. Otherwise, replace `localhost` with the
-	// endpoint of your cluster. If you run the app inside k8s, then you can
-	// probably connect directly to the service through dns
-	driver := otlpgrpc.NewDriver(
-		otlpgrpc.WithInsecure(),
-		otlpgrpc.WithEndpoint("localhost:30080"),
-		otlpgrpc.WithDialOption(grpc.WithBlock()), // useful for testing
-	)
-	exp, err := otlp.New(ctx, driver)
-	handleErr(err, "failed to create exporter")
-
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
 			// the service name used to display traces in backends
@@ -67,25 +55,50 @@ func initProvider() func() {
 	)
 	handleErr(err, "failed to create resource")
 
-	bsp := sdktrace.NewBatchSpanProcessor(exp)
+	// If the OpenTelemetry Collector is running on a local cluster (minikube or
+	// microk8s), it should be accessible through the NodePort service at the
+	// `localhost:30080` endpoint. Otherwise, replace `localhost` with the
+	// endpoint of your cluster. If you run the app inside k8s, then you can
+	// probably connect directly to the service through dns
+
+	// Set up a trace exporter
+	traceExporter, err := otlptracegrpc.New(ctx,
+		otlptracegrpc.WithInsecure(),
+		otlptracegrpc.WithEndpoint("localhost:30080"),
+		otlptracegrpc.WithDialOption(grpc.WithBlock()),
+	)
+	handleErr(err, "failed to create trace exporter")
+
+	// Register the trace exporter with a TracerProvider, using a batch
+	// span processor to aggregate spans before export.
+	bsp := sdktrace.NewBatchSpanProcessor(traceExporter)
 	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithResource(res),
 		sdktrace.WithSpanProcessor(bsp),
 	)
+	otel.SetTracerProvider(tracerProvider)
+
+	// Set up a metrics exporter
+	metricsDriver := otlpgrpc.NewDriver(
+		otlpgrpc.WithInsecure(),
+		otlpgrpc.WithEndpoint("localhost:30080"),
+		otlpgrpc.WithDialOption(grpc.WithBlock()), // useful for testing
+	)
+	metricsExporter, err := otlp.New(ctx, metricsDriver)
+	handleErr(err, "failed to create metrics exporter")
 
 	cont := controller.New(
 		processor.New(
 			simple.NewWithExactDistribution(),
-			exp,
+			metricsExporter,
 		),
-		controller.WithExporter(exp),
+		controller.WithExporter(metricsExporter),
 		controller.WithCollectPeriod(2*time.Second),
 	)
 
 	// set global propagator to tracecontext (the default is no-op).
 	otel.SetTextMapPropagator(propagation.TraceContext{})
-	otel.SetTracerProvider(tracerProvider)
 	global.SetMeterProvider(cont.MeterProvider())
 	handleErr(cont.Start(context.Background()), "failed to start controller")
 

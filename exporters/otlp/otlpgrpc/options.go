@@ -46,13 +46,6 @@ func WithInsecure() Option {
 	return wrappedOption{otlpconfig.WithInsecure()}
 }
 
-// WithTracesInsecure disables client transport security for the traces exporter's gRPC connection
-// just like grpc.WithInsecure() https://pkg.go.dev/google.golang.org/grpc#WithInsecure
-// does. Note, by default, client security is required unless WithInsecure is used.
-func WithTracesInsecure() Option {
-	return wrappedOption{otlpconfig.WithInsecureTraces()}
-}
-
 // WithInsecureMetrics disables client transport security for the metrics exporter's gRPC connection
 // just like grpc.WithInsecure() https://pkg.go.dev/google.golang.org/grpc#WithInsecure
 // does. Note, by default, client security is required unless WithInsecure is used.
@@ -65,13 +58,6 @@ func WithInsecureMetrics() Option {
 // connect to DefaultCollectorHost:DefaultCollectorPort.
 func WithEndpoint(endpoint string) Option {
 	return wrappedOption{otlpconfig.WithEndpoint(endpoint)}
-}
-
-// WithTracesEndpoint allows one to set the traces endpoint that the exporter will
-// connect to the collector on. If unset, it will instead try to use
-// connect to DefaultCollectorHost:DefaultCollectorPort.
-func WithTracesEndpoint(endpoint string) Option {
-	return wrappedOption{otlpconfig.WithTracesEndpoint(endpoint)}
 }
 
 // WithMetricsEndpoint allows one to set the metrics endpoint that the exporter will
@@ -108,15 +94,6 @@ func WithCompressor(compressor string) Option {
 	return wrappedOption{otlpconfig.WithCompression(compressorToCompression(compressor))}
 }
 
-// WithTracesCompression will set the compressor for the gRPC client to use when sending traces requests.
-// It is the responsibility of the caller to ensure that the compressor set has been registered
-// with google.golang.org/grpc/encoding. This can be done by encoding.RegisterCompressor. Some
-// compressors auto-register on import, such as gzip, which can be registered by calling
-// `import _ "google.golang.org/grpc/encoding/gzip"`.
-func WithTracesCompression(compressor string) Option {
-	return wrappedOption{otlpconfig.WithTracesCompression(compressorToCompression(compressor))}
-}
-
 // WithMetricsCompression will set the compressor for the gRPC client to use when sending metrics requests.
 // It is the responsibility of the caller to ensure that the compressor set has been registered
 // with google.golang.org/grpc/encoding. This can be done by encoding.RegisterCompressor. Some
@@ -131,11 +108,6 @@ func WithHeaders(headers map[string]string) Option {
 	return wrappedOption{otlpconfig.WithHeaders(headers)}
 }
 
-// WithTracesHeaders will send the provided headers with gRPC traces requests.
-func WithTracesHeaders(headers map[string]string) Option {
-	return wrappedOption{otlpconfig.WithTracesHeaders(headers)}
-}
-
 // WithMetricsHeaders will send the provided headers with gRPC metrics requests.
 func WithMetricsHeaders(headers map[string]string) Option {
 	return wrappedOption{otlpconfig.WithMetricsHeaders(headers)}
@@ -148,19 +120,7 @@ func WithMetricsHeaders(headers map[string]string) Option {
 // or by certificate rotation, so it is up to the caller to decide what to use.
 func WithTLSCredentials(creds credentials.TransportCredentials) Option {
 	return wrappedOption{otlpconfig.NewGRPCOption(func(cfg *otlpconfig.Config) {
-		cfg.Traces.GRPCCredentials = creds
 		cfg.Metrics.GRPCCredentials = creds
-	})}
-}
-
-// WithTracesTLSCredentials allows the connection to use TLS credentials
-// when talking to the traces server. It takes in grpc.TransportCredentials instead
-// of say a Certificate file or a tls.Certificate, because the retrieving of
-// these credentials can be done in many ways e.g. plain file, in code tls.Config
-// or by certificate rotation, so it is up to the caller to decide what to use.
-func WithTracesTLSCredentials(creds credentials.TransportCredentials) Option {
-	return wrappedOption{otlpconfig.NewGRPCOption(func(cfg *otlpconfig.Config) {
-		cfg.Traces.GRPCCredentials = creds
 	})}
 }
 
@@ -195,12 +155,6 @@ func WithDialOption(opts ...grpc.DialOption) Option {
 // each spans or metrics batch. If unset, the default will be 10 seconds.
 func WithTimeout(duration time.Duration) Option {
 	return wrappedOption{otlpconfig.WithTimeout(duration)}
-}
-
-// WithTracesTimeout tells the driver the max waiting time for the backend to process
-// each spans batch. If unset, the default will be 10 seconds.
-func WithTracesTimeout(duration time.Duration) Option {
-	return wrappedOption{otlpconfig.WithTracesTimeout(duration)}
 }
 
 // WithMetricsTimeout tells the driver the max waiting time for the backend to process

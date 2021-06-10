@@ -70,17 +70,3 @@ type metricDriverOption struct {
 func (o metricDriverOption) apply(s *splitDriver) {
 	s.metric = o.driver
 }
-
-// WithTraceDriver allows one to set the driver used for traces
-// in a SplitDriver.
-func WithTraceDriver(dr ProtocolDriver) SplitDriverOption {
-	return traceDriverOption{dr}
-}
-
-type traceDriverOption struct {
-	driver ProtocolDriver
-}
-
-func (o traceDriverOption) apply(s *splitDriver) {
-	s.trace = o.driver
-}

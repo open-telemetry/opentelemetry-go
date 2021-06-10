@@ -55,13 +55,9 @@ func TestConfigs(t *testing.T) {
 		{
 			name: "Test default configs",
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, "localhost:4317", c.Traces.Endpoint)
 				assert.Equal(t, "localhost:4317", c.Metrics.Endpoint)
-				assert.Equal(t, otlp.NoCompression, c.Traces.Compression)
 				assert.Equal(t, otlp.NoCompression, c.Metrics.Compression)
-				assert.Equal(t, map[string]string(nil), c.Traces.Headers)
 				assert.Equal(t, map[string]string(nil), c.Metrics.Headers)
-				assert.Equal(t, 10*time.Second, c.Traces.Timeout)
 				assert.Equal(t, 10*time.Second, c.Metrics.Timeout)
 			},
 		},
@@ -73,7 +69,6 @@ func TestConfigs(t *testing.T) {
 				WithEndpoint("someendpoint"),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, "someendpoint", c.Traces.Endpoint)
 				assert.Equal(t, "someendpoint", c.Metrics.Endpoint)
 			},
 		},
@@ -81,11 +76,9 @@ func TestConfigs(t *testing.T) {
 			name: "Test With Signal Specific Endpoint",
 			opts: []GenericOption{
 				WithEndpoint("overrode_by_signal_specific"),
-				WithTracesEndpoint("traces_endpoint"),
 				WithMetricsEndpoint("metrics_endpoint"),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, "traces_endpoint", c.Traces.Endpoint)
 				assert.Equal(t, "metrics_endpoint", c.Metrics.Endpoint)
 			},
 		},
@@ -95,7 +88,6 @@ func TestConfigs(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_ENDPOINT": "env_endpoint",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, "env_endpoint", c.Traces.Endpoint)
 				assert.Equal(t, "env_endpoint", c.Metrics.Endpoint)
 			},
 		},
@@ -103,25 +95,10 @@ func TestConfigs(t *testing.T) {
 			name: "Test Environment Signal Specific Endpoint",
 			env: map[string]string{
 				"OTEL_EXPORTER_OTLP_ENDPOINT":         "overrode_by_signal_specific",
-				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT":  "env_traces_endpoint",
 				"OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "env_metrics_endpoint",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, "env_traces_endpoint", c.Traces.Endpoint)
 				assert.Equal(t, "env_metrics_endpoint", c.Metrics.Endpoint)
-			},
-		},
-		{
-			name: "Test Mixed Environment and With Endpoint",
-			opts: []GenericOption{
-				WithTracesEndpoint("traces_endpoint"),
-			},
-			env: map[string]string{
-				"OTEL_EXPORTER_OTLP_ENDPOINT": "env_endpoint",
-			},
-			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, "traces_endpoint", c.Traces.Endpoint)
-				assert.Equal(t, "env_endpoint", c.Metrics.Endpoint)
 			},
 		},
 		{
@@ -130,9 +107,7 @@ func TestConfigs(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_ENDPOINT": "http://env_endpoint",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, "env_endpoint", c.Traces.Endpoint)
 				assert.Equal(t, "env_endpoint", c.Metrics.Endpoint)
-				assert.Equal(t, true, c.Traces.Insecure)
 				assert.Equal(t, true, c.Metrics.Insecure)
 			},
 		},
@@ -142,9 +117,7 @@ func TestConfigs(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_ENDPOINT": "      http://env_endpoint    ",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, "env_endpoint", c.Traces.Endpoint)
 				assert.Equal(t, "env_endpoint", c.Metrics.Endpoint)
-				assert.Equal(t, true, c.Traces.Insecure)
 				assert.Equal(t, true, c.Metrics.Insecure)
 			},
 		},
@@ -154,9 +127,7 @@ func TestConfigs(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_ENDPOINT": "https://env_endpoint",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, "env_endpoint", c.Traces.Endpoint)
 				assert.Equal(t, "env_endpoint", c.Metrics.Endpoint)
-				assert.Equal(t, false, c.Traces.Insecure)
 				assert.Equal(t, false, c.Metrics.Insecure)
 			},
 		},
@@ -164,13 +135,10 @@ func TestConfigs(t *testing.T) {
 			name: "Test Environment Signal Specific Endpoint",
 			env: map[string]string{
 				"OTEL_EXPORTER_OTLP_ENDPOINT":         "http://overrode_by_signal_specific",
-				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT":  "http://env_traces_endpoint",
 				"OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "https://env_metrics_endpoint",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, "env_traces_endpoint", c.Traces.Endpoint)
 				assert.Equal(t, "env_metrics_endpoint", c.Metrics.Endpoint)
-				assert.Equal(t, true, c.Traces.Insecure)
 				assert.Equal(t, false, c.Metrics.Insecure)
 			},
 		},
@@ -178,13 +146,10 @@ func TestConfigs(t *testing.T) {
 			name: "Test Environment Signal Specific Endpoint #2",
 			env: map[string]string{
 				"OTEL_EXPORTER_OTLP_ENDPOINT":         "http://overrode_by_signal_specific",
-				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT":  "http://env_traces_endpoint",
 				"OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "env_metrics_endpoint",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, "env_traces_endpoint", c.Traces.Endpoint)
 				assert.Equal(t, "env_metrics_endpoint", c.Metrics.Endpoint)
-				assert.Equal(t, true, c.Traces.Insecure)
 				assert.Equal(t, false, c.Metrics.Insecure)
 			},
 		},
@@ -192,13 +157,10 @@ func TestConfigs(t *testing.T) {
 			name: "Test Environment Signal Specific Endpoint with uppercase scheme",
 			env: map[string]string{
 				"OTEL_EXPORTER_OTLP_ENDPOINT":         "HTTP://overrode_by_signal_specific",
-				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT":  "HtTp://env_traces_endpoint",
 				"OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "env_metrics_endpoint",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, "env_traces_endpoint", c.Traces.Endpoint)
 				assert.Equal(t, "env_metrics_endpoint", c.Metrics.Endpoint)
-				assert.Equal(t, true, c.Traces.Insecure)
 				assert.Equal(t, false, c.Metrics.Insecure)
 			},
 		},
@@ -212,10 +174,8 @@ func TestConfigs(t *testing.T) {
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				if grpcOption {
 					//TODO: make sure gRPC's credentials actually works
-					assert.NotNil(t, c.Traces.GRPCCredentials)
 					assert.NotNil(t, c.Metrics.GRPCCredentials)
 				} else {
-					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects())
 					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Metrics.TLSCfg.RootCAs.Subjects())
 				}
 			},
@@ -224,16 +184,13 @@ func TestConfigs(t *testing.T) {
 			name: "Test With Signal Specific Certificate",
 			opts: []GenericOption{
 				WithTLSClientConfig(&tls.Config{}),
-				WithTracesTLSClientConfig(tlsCert),
 				WithMetricsTLSClientConfig(&tls.Config{RootCAs: x509.NewCertPool()}),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 
 				if grpcOption {
-					assert.NotNil(t, c.Traces.GRPCCredentials)
 					assert.NotNil(t, c.Metrics.GRPCCredentials)
 				} else {
-					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects())
 					assert.Equal(t, 0, len(c.Metrics.TLSCfg.RootCAs.Subjects()))
 				}
 			},
@@ -248,10 +205,8 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				if grpcOption {
-					assert.NotNil(t, c.Traces.GRPCCredentials)
 					assert.NotNil(t, c.Metrics.GRPCCredentials)
 				} else {
-					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects())
 					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Metrics.TLSCfg.RootCAs.Subjects())
 				}
 			},
@@ -260,7 +215,6 @@ func TestConfigs(t *testing.T) {
 			name: "Test Environment Signal Specific Certificate",
 			env: map[string]string{
 				"OTEL_EXPORTER_OTLP_CERTIFICATE":         "overrode_by_signal_specific",
-				"OTEL_EXPORTER_OTLP_TRACES_CERTIFICATE":  "cert_path",
 				"OTEL_EXPORTER_OTLP_METRICS_CERTIFICATE": "invalid_cert",
 			},
 			fileReader: fileReader{
@@ -269,10 +223,8 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				if grpcOption {
-					assert.NotNil(t, c.Traces.GRPCCredentials)
 					assert.Nil(t, c.Metrics.GRPCCredentials)
 				} else {
-					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects())
 					assert.Equal(t, (*tls.Config)(nil), c.Metrics.TLSCfg)
 				}
 			},
@@ -290,10 +242,8 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				if grpcOption {
-					assert.NotNil(t, c.Traces.GRPCCredentials)
 					assert.NotNil(t, c.Metrics.GRPCCredentials)
 				} else {
-					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects())
 					assert.Equal(t, 0, len(c.Metrics.TLSCfg.RootCAs.Subjects()))
 				}
 			},
@@ -307,7 +257,6 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, map[string]string{"h1": "v1"}, c.Metrics.Headers)
-				assert.Equal(t, map[string]string{"h1": "v1"}, c.Traces.Headers)
 			},
 		},
 		{
@@ -315,11 +264,9 @@ func TestConfigs(t *testing.T) {
 			opts: []GenericOption{
 				WithHeaders(map[string]string{"overrode": "by_signal_specific"}),
 				WithMetricsHeaders(map[string]string{"m1": "mv1"}),
-				WithTracesHeaders(map[string]string{"t1": "tv1"}),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, map[string]string{"m1": "mv1"}, c.Metrics.Headers)
-				assert.Equal(t, map[string]string{"t1": "tv1"}, c.Traces.Headers)
 			},
 		},
 		{
@@ -327,19 +274,16 @@ func TestConfigs(t *testing.T) {
 			env:  map[string]string{"OTEL_EXPORTER_OTLP_HEADERS": "h1=v1,h2=v2"},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, map[string]string{"h1": "v1", "h2": "v2"}, c.Metrics.Headers)
-				assert.Equal(t, map[string]string{"h1": "v1", "h2": "v2"}, c.Traces.Headers)
 			},
 		},
 		{
 			name: "Test Environment Signal Specific Headers",
 			env: map[string]string{
 				"OTEL_EXPORTER_OTLP_HEADERS":         "overrode_by_signal_specific",
-				"OTEL_EXPORTER_OTLP_TRACES_HEADERS":  "h1=v1,h2=v2",
 				"OTEL_EXPORTER_OTLP_METRICS_HEADERS": "h1=v1,h2=v2",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, map[string]string{"h1": "v1", "h2": "v2"}, c.Metrics.Headers)
-				assert.Equal(t, map[string]string{"h1": "v1", "h2": "v2"}, c.Traces.Headers)
 			},
 		},
 		{
@@ -350,7 +294,6 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, map[string]string{"m1": "mv1"}, c.Metrics.Headers)
-				assert.Equal(t, map[string]string{"h1": "v1", "h2": "v2"}, c.Traces.Headers)
 			},
 		},
 
@@ -361,7 +304,6 @@ func TestConfigs(t *testing.T) {
 				WithCompression(otlp.GzipCompression),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, otlp.GzipCompression, c.Traces.Compression)
 				assert.Equal(t, otlp.GzipCompression, c.Metrics.Compression)
 			},
 		},
@@ -369,11 +311,9 @@ func TestConfigs(t *testing.T) {
 			name: "Test With Signal Specific Compression",
 			opts: []GenericOption{
 				WithCompression(otlp.NoCompression), // overrode by signal specific configs
-				WithTracesCompression(otlp.GzipCompression),
 				WithMetricsCompression(otlp.GzipCompression),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, otlp.GzipCompression, c.Traces.Compression)
 				assert.Equal(t, otlp.GzipCompression, c.Metrics.Compression)
 			},
 		},
@@ -383,32 +323,25 @@ func TestConfigs(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_COMPRESSION": "gzip",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, otlp.GzipCompression, c.Traces.Compression)
 				assert.Equal(t, otlp.GzipCompression, c.Metrics.Compression)
 			},
 		},
 		{
 			name: "Test Environment Signal Specific Compression",
 			env: map[string]string{
-				"OTEL_EXPORTER_OTLP_TRACES_COMPRESSION":  "gzip",
 				"OTEL_EXPORTER_OTLP_METRICS_COMPRESSION": "gzip",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, otlp.GzipCompression, c.Traces.Compression)
 				assert.Equal(t, otlp.GzipCompression, c.Metrics.Compression)
 			},
 		},
 		{
 			name: "Test Mixed Environment and With Compression",
-			opts: []GenericOption{
-				WithTracesCompression(otlp.NoCompression),
-			},
+			opts: []GenericOption{},
 			env: map[string]string{
-				"OTEL_EXPORTER_OTLP_TRACES_COMPRESSION":  "gzip",
 				"OTEL_EXPORTER_OTLP_METRICS_COMPRESSION": "gzip",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, otlp.NoCompression, c.Traces.Compression)
 				assert.Equal(t, otlp.GzipCompression, c.Metrics.Compression)
 			},
 		},
@@ -420,7 +353,6 @@ func TestConfigs(t *testing.T) {
 				WithTimeout(time.Duration(5 * time.Second)),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, 5*time.Second, c.Traces.Timeout)
 				assert.Equal(t, 5*time.Second, c.Metrics.Timeout)
 			},
 		},
@@ -428,11 +360,9 @@ func TestConfigs(t *testing.T) {
 			name: "Test With Signal Specific Timeout",
 			opts: []GenericOption{
 				WithTimeout(time.Duration(5 * time.Second)),
-				WithTracesTimeout(time.Duration(13 * time.Second)),
 				WithMetricsTimeout(time.Duration(14 * time.Second)),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, 13*time.Second, c.Traces.Timeout)
 				assert.Equal(t, 14*time.Second, c.Metrics.Timeout)
 			},
 		},
@@ -443,18 +373,15 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, c.Metrics.Timeout, 15*time.Second)
-				assert.Equal(t, c.Traces.Timeout, 15*time.Second)
 			},
 		},
 		{
 			name: "Test Environment Signal Specific Timeout",
 			env: map[string]string{
 				"OTEL_EXPORTER_OTLP_TIMEOUT":         "15000",
-				"OTEL_EXPORTER_OTLP_TRACES_TIMEOUT":  "27000",
 				"OTEL_EXPORTER_OTLP_METRICS_TIMEOUT": "28000",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, c.Traces.Timeout, 27*time.Second)
 				assert.Equal(t, c.Metrics.Timeout, 28*time.Second)
 			},
 		},
@@ -462,14 +389,10 @@ func TestConfigs(t *testing.T) {
 			name: "Test Mixed Environment and With Timeout",
 			env: map[string]string{
 				"OTEL_EXPORTER_OTLP_TIMEOUT":         "15000",
-				"OTEL_EXPORTER_OTLP_TRACES_TIMEOUT":  "27000",
 				"OTEL_EXPORTER_OTLP_METRICS_TIMEOUT": "28000",
 			},
-			opts: []GenericOption{
-				WithTracesTimeout(5 * time.Second),
-			},
+			opts: []GenericOption{},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, c.Traces.Timeout, 5*time.Second)
 				assert.Equal(t, c.Metrics.Timeout, 28*time.Second)
 			},
 		},

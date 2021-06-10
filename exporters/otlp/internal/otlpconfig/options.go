@@ -30,9 +30,6 @@ const (
 	// should retry the sending of the payload in case of a
 	// retryable error.
 	DefaultMaxAttempts int = 5
-	// DefaultTracesPath is a default URL path for endpoint that
-	// receives spans.
-	DefaultTracesPath string = "/v1/traces"
 	// DefaultMetricsPath is a default URL path for endpoint that
 	// receives metrics.
 	DefaultMetricsPath string = "/v1/metrics"
@@ -71,7 +68,6 @@ type (
 	Config struct {
 		// Signal specific configurations
 		Metrics SignalConfig
-		Traces  SignalConfig
 
 		// HTTP configurations
 		Marshaler   otlp.Marshaler
@@ -88,12 +84,6 @@ type (
 
 func NewDefaultConfig() Config {
 	c := Config{
-		Traces: SignalConfig{
-			Endpoint:    fmt.Sprintf("%s:%d", otlp.DefaultCollectorHost, otlp.DefaultCollectorPort),
-			URLPath:     DefaultTracesPath,
-			Compression: otlp.NoCompression,
-			Timeout:     DefaultTimeout,
-		},
 		Metrics: SignalConfig{
 			Endpoint:    fmt.Sprintf("%s:%d", otlp.DefaultCollectorHost, otlp.DefaultCollectorPort),
 			URLPath:     DefaultMetricsPath,
@@ -216,14 +206,7 @@ func NewGRPCOption(fn func(cfg *Config)) GRPCOption {
 
 func WithEndpoint(endpoint string) GenericOption {
 	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.Endpoint = endpoint
 		cfg.Metrics.Endpoint = endpoint
-	})
-}
-
-func WithTracesEndpoint(endpoint string) GenericOption {
-	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.Endpoint = endpoint
 	})
 }
 
@@ -235,26 +218,13 @@ func WithMetricsEndpoint(endpoint string) GenericOption {
 
 func WithCompression(compression otlp.Compression) GenericOption {
 	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.Compression = compression
 		cfg.Metrics.Compression = compression
-	})
-}
-
-func WithTracesCompression(compression otlp.Compression) GenericOption {
-	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.Compression = compression
 	})
 }
 
 func WithMetricsCompression(compression otlp.Compression) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Metrics.Compression = compression
-	})
-}
-
-func WithTracesURLPath(urlPath string) GenericOption {
-	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.URLPath = urlPath
 	})
 }
 
@@ -272,19 +242,9 @@ func WithRetry(settings otlp.RetrySettings) GenericOption {
 
 func WithTLSClientConfig(tlsCfg *tls.Config) GenericOption {
 	return newSplitOption(func(cfg *Config) {
-		cfg.Traces.TLSCfg = tlsCfg.Clone()
 		cfg.Metrics.TLSCfg = tlsCfg.Clone()
 	}, func(cfg *Config) {
-		cfg.Traces.GRPCCredentials = credentials.NewTLS(tlsCfg)
 		cfg.Metrics.GRPCCredentials = credentials.NewTLS(tlsCfg)
-	})
-}
-
-func WithTracesTLSClientConfig(tlsCfg *tls.Config) GenericOption {
-	return newSplitOption(func(cfg *Config) {
-		cfg.Traces.TLSCfg = tlsCfg.Clone()
-	}, func(cfg *Config) {
-		cfg.Traces.GRPCCredentials = credentials.NewTLS(tlsCfg)
 	})
 }
 
@@ -298,27 +258,13 @@ func WithMetricsTLSClientConfig(tlsCfg *tls.Config) GenericOption {
 
 func WithInsecure() GenericOption {
 	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.Insecure = true
 		cfg.Metrics.Insecure = true
 	})
 }
 
 func WithSecure() GenericOption {
 	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.Insecure = false
 		cfg.Metrics.Insecure = false
-	})
-}
-
-func WithInsecureTraces() GenericOption {
-	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.Insecure = true
-	})
-}
-
-func WithSecureTraces() GenericOption {
-	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.Insecure = false
 	})
 }
 
@@ -336,14 +282,7 @@ func WithSecureMetrics() GenericOption {
 
 func WithHeaders(headers map[string]string) GenericOption {
 	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.Headers = headers
 		cfg.Metrics.Headers = headers
-	})
-}
-
-func WithTracesHeaders(headers map[string]string) GenericOption {
-	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.Headers = headers
 	})
 }
 
@@ -355,14 +294,7 @@ func WithMetricsHeaders(headers map[string]string) GenericOption {
 
 func WithTimeout(duration time.Duration) GenericOption {
 	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.Timeout = duration
 		cfg.Metrics.Timeout = duration
-	})
-}
-
-func WithTracesTimeout(duration time.Duration) GenericOption {
-	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.Timeout = duration
 	})
 }
 
