@@ -59,6 +59,6 @@ Please find more documentation on [GitHub](https://github.com/open-telemetry/ope
 
 # Prometheus Exporter
 
-Prometheus export is available in the `go.opentelemetry.io/otel/exporters/metric/prometheus` package.
+Prometheus export is available in the `go.opentelemetry.io/otel/exporters/prometheus` package.
 
-Please find more documentation on [GitHub](https://github.com/open-telemetry/opentelemetry-go/tree/main/exporters/metric/prometheus)
+Please find more documentation on [GitHub](https://github.com/open-telemetry/opentelemetry-go/tree/main/exporters/prometheus)

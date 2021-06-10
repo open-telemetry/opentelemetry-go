@@ -32,7 +32,7 @@ replace go.opentelemetry.io/otel/example/prometheus => ../prometheus
 
 replace go.opentelemetry.io/otel/example/zipkin => ../zipkin
 
-replace go.opentelemetry.io/otel/exporters/metric/prometheus => ../../exporters/metric/prometheus
+replace go.opentelemetry.io/otel/exporters/prometheus => ../../exporters/prometheus
 
 replace go.opentelemetry.io/otel/exporters/otlp => ../../exporters/otlp
 

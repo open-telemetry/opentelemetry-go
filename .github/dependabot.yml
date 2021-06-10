@@ -128,7 +128,7 @@ updates:
       interval: weekly
   -
     package-ecosystem: gomod
-    directory: /exporters/metric/prometheus
+    directory: /exporters/prometheus
     labels:
       - dependencies
       - go

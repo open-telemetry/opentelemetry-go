@@ -4,13 +4,13 @@ go 1.15
 
 replace (
 	go.opentelemetry.io/otel => ../..
-	go.opentelemetry.io/otel/exporters/metric/prometheus => ../../exporters/metric/prometheus
+	go.opentelemetry.io/otel/exporters/prometheus => ../../exporters/prometheus
 	go.opentelemetry.io/otel/sdk => ../../sdk
 )
 
 require (
 	go.opentelemetry.io/otel v0.20.0
-	go.opentelemetry.io/otel/exporters/metric/prometheus v0.20.0
+	go.opentelemetry.io/otel/exporters/prometheus v0.20.0
 	go.opentelemetry.io/otel/metric v0.20.0
 	go.opentelemetry.io/otel/sdk/export/metric v0.20.0
 	go.opentelemetry.io/otel/sdk/metric v0.20.0
