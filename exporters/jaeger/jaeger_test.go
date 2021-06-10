@@ -29,7 +29,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
+	gen "go.opentelemetry.io/otel/exporters/jaeger/internal/gen-go/jaeger"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"

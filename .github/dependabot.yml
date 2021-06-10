@@ -158,7 +158,7 @@ updates:
       interval: weekly
   -
     package-ecosystem: gomod
-    directory: /exporters/trace/jaeger
+    directory: /exporters/jaeger
     labels:
       - dependencies
       - go

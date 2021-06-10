@@ -83,6 +83,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/otel/semconv` package has been moved to `go.opentelemetry.io/otel/semconv/v1.4.0` to allow for multiple [telemetry schema](https://github.com/open-telemetry/oteps/blob/main/text/0152-telemetry-schemas.md) versions to be used concurrently. (#1987)
 - Metrics test helpers in `go.opentelemetry.io/otel/oteltest` have been moved to `go.opentelemetry.io/otel/metric/metrictest`. (#1988)
 - The `go.opentelemetry.io/otel/exporters/metric/prometheus` is renamed to `go.opentelemetry.io/otel/exporters/prometheus`. (#TBD)
+- The `go.opentelemetry.io/otel/exporters/trace/jaeger` is renamed to `go.opentelemetry.io/otel/exporters/jaeger`. (#TBD)
 
 ### Deprecated
 

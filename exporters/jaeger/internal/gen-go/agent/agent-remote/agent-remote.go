@@ -6,16 +6,17 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/agent"
-	"go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
-	"go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/zipkincore"
-	"go.opentelemetry.io/otel/exporters/trace/jaeger/internal/third_party/thrift/lib/go/thrift"
 	"math"
 	"net"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
+
+	"go.opentelemetry.io/otel/exporters/jaeger/internal/gen-go/agent"
+	"go.opentelemetry.io/otel/exporters/jaeger/internal/gen-go/jaeger"
+	"go.opentelemetry.io/otel/exporters/jaeger/internal/gen-go/zipkincore"
+	"go.opentelemetry.io/otel/exporters/jaeger/internal/third_party/thrift/lib/go/thrift"
 )
 
 var _ = jaeger.GoUnusedProtection__

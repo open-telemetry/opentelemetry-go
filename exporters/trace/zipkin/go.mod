@@ -40,7 +40,7 @@ replace go.opentelemetry.io/otel/exporters/otlp => ../../otlp
 
 replace go.opentelemetry.io/otel/exporters/stdout => ../../stdout
 
-replace go.opentelemetry.io/otel/exporters/trace/jaeger => ../jaeger
+replace go.opentelemetry.io/otel/exporters/jaeger => ../../jaeger
 
 replace go.opentelemetry.io/otel/exporters/trace/zipkin => ./
 

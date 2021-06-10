@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package jaeger // import "go.opentelemetry.io/otel/exporters/trace/jaeger"
+package jaeger // import "go.opentelemetry.io/otel/exporters/jaeger"
 
 import (
 	"context"
@@ -23,7 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
+	gen "go.opentelemetry.io/otel/exporters/jaeger/internal/gen-go/jaeger"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"

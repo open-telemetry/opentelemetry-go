@@ -6,10 +6,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
-	"go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/zipkincore"
-	"go.opentelemetry.io/otel/exporters/trace/jaeger/internal/third_party/thrift/lib/go/thrift"
 	"time"
+
+	"go.opentelemetry.io/otel/exporters/jaeger/internal/gen-go/jaeger"
+	"go.opentelemetry.io/otel/exporters/jaeger/internal/gen-go/zipkincore"
+	"go.opentelemetry.io/otel/exporters/jaeger/internal/third_party/thrift/lib/go/thrift"
 )
 
 // (needed to ensure safety because of naive import list construction.)

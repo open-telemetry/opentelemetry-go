@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package jaeger // import "go.opentelemetry.io/otel/exporters/trace/jaeger"
+package jaeger // import "go.opentelemetry.io/otel/exporters/jaeger"
 
 import (
 	"context"
@@ -23,10 +23,10 @@ import (
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/otel/exporters/trace/jaeger/internal/third_party/thrift/lib/go/thrift"
+	"go.opentelemetry.io/otel/exporters/jaeger/internal/third_party/thrift/lib/go/thrift"
 
-	genAgent "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/agent"
-	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
+	genAgent "go.opentelemetry.io/otel/exporters/jaeger/internal/gen-go/agent"
+	gen "go.opentelemetry.io/otel/exporters/jaeger/internal/gen-go/jaeger"
 )
 
 // udpPacketMaxLength is the max size of UDP packet we want to send, synced with jaeger-agent
