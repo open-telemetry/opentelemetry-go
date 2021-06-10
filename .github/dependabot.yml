@@ -276,3 +276,23 @@ updates:
     schedule:
       day: sunday
       interval: weekly
+  -
+    package-ecosystem: gomod
+    directory: /exporters/otlp/otlpmetric
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
+    directory: /exporters/otlp/otlpmetric/otlpmetricgrpc
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      day: sunday
+      interval: weekly
