@@ -27,15 +27,8 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/otlp"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/propagation"
-	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
-	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
@@ -79,33 +72,10 @@ func initProvider() func() {
 	)
 	otel.SetTracerProvider(tracerProvider)
 
-	// Set up a metrics exporter
-	metricsDriver := otlpgrpc.NewDriver(
-		otlpgrpc.WithInsecure(),
-		otlpgrpc.WithEndpoint("localhost:30080"),
-		otlpgrpc.WithDialOption(grpc.WithBlock()), // useful for testing
-	)
-	metricsExporter, err := otlp.New(ctx, metricsDriver)
-	handleErr(err, "failed to create metrics exporter")
-
-	cont := controller.New(
-		processor.New(
-			simple.NewWithExactDistribution(),
-			metricsExporter,
-		),
-		controller.WithExporter(metricsExporter),
-		controller.WithCollectPeriod(2*time.Second),
-	)
-
 	// set global propagator to tracecontext (the default is no-op).
 	otel.SetTextMapPropagator(propagation.TraceContext{})
-	global.SetMeterProvider(cont.MeterProvider())
-	handleErr(cont.Start(context.Background()), "failed to start controller")
 
 	return func() {
-		// Push any last metric events to the exporter.
-		handleErr(cont.Stop(context.Background()), "failed to stop controller")
-
 		// Shutdown will flush any remaining spans and shut down the exporter.
 		handleErr(tracerProvider.Shutdown(ctx), "failed to shutdown TracerProvider")
 	}
@@ -118,7 +88,6 @@ func main() {
 	defer shutdown()
 
 	tracer := otel.Tracer("test-tracer")
-	meter := global.Meter("test-meter")
 
 	// labels represent additional key-value descriptors that can be bound to a
 	// metric observer or recorder.
@@ -127,14 +96,6 @@ func main() {
 		attribute.String("labelB", "raspberry"),
 		attribute.String("labelC", "vanilla"),
 	}
-
-	// Recorder metric example
-	valuerecorder := metric.Must(meter).
-		NewFloat64Counter(
-			"an_important_metric",
-			metric.WithDescription("Measures the cumulative epicness of the app"),
-		).Bind(commonLabels...)
-	defer valuerecorder.Unbind()
 
 	// work begins
 	ctx, span := tracer.Start(
@@ -145,7 +106,6 @@ func main() {
 	for i := 0; i < 10; i++ {
 		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))
 		log.Printf("Doing really hard work (%d / 10)\n", i+1)
-		valuerecorder.Add(ctx, 1.0)
 
 		<-time.After(time.Second)
 		iSpan.End()
