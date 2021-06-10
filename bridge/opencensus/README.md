@@ -2,6 +2,10 @@
 
 The OpenCensus Bridge helps facilitate the migration of an application from OpenCensus to OpenTelemetry.
 
+## Caveat about OpenCensus
+
+Installing a metric or tracing bridge will cause OpenCensus telemetry to be exported by OpenTelemetry exporters.  Since OpenCensus telemetry uses globals, installing a bridge will result in telemetry collection from _all_ libraries that use OpenCensus, including some you may not expect.  For example ([#1928](https://github.com/open-telemetry/opentelemetry-go/issues/1928)), if a client library generates traces with OpenCensus, installing the bridge will cause those traces to be exported by OpenTelemetry.
+
 ## Tracing
 
 ### The Problem: Mixing OpenCensus and OpenTelemetry libraries
@@ -115,7 +119,7 @@ import (
 //       import logexporter "go.opencensus.io/examples/exporter"
 //       exporter, _ := logexporter.NewLogExporter(logexporter.Options{})
 // Instead, we can create an equivalent using the OpenTelemetry stdout exporter:
-openTelemetryExporter, _ := stdout.NewExporter(stdout.WithPrettyPrint())
+openTelemetryExporter, _ := stdout.New(stdout.WithPrettyPrint())
 exporter := opencensus.NewMetricExporter(openTelemetryExporter)
 
 // Use the wrapped OpenTelemetry exporter like you normally would with OpenCensus

@@ -25,7 +25,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-func ExampleNewExporter() {
+func ExampleNew() {
 	ctx := context.Background()
 
 	// Set different endpoints for the metrics and traces collectors
@@ -36,7 +36,7 @@ func ExampleNewExporter() {
 	// Configure traces driver here
 	)
 	driver := otlp.NewSplitDriver(otlp.WithMetricDriver(metricsDriver), otlp.WithTraceDriver(tracesDriver))
-	exporter, err := otlp.NewExporter(ctx, driver) // Configure as needed.
+	exporter, err := otlp.New(ctx, driver) // Configure as needed.
 	if err != nil {
 		log.Fatalf("failed to create exporter: %v", err)
 	}

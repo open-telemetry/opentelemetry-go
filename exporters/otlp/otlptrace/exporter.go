@@ -21,7 +21,6 @@ import (
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/tracetransform"
 
-	"go.opentelemetry.io/otel"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -87,45 +86,18 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 
 var _ tracesdk.SpanExporter = (*Exporter)(nil)
 
-// NewExporter constructs a new Exporter and starts it.
-func NewExporter(ctx context.Context, client Client) (*Exporter, error) {
-	exp := NewUnstartedExporter(client)
+// New constructs a new Exporter and starts it.
+func New(ctx context.Context, client Client) (*Exporter, error) {
+	exp := NewUnstarted(client)
 	if err := exp.Start(ctx); err != nil {
 		return nil, err
 	}
 	return exp, nil
 }
 
-// NewUnstartedExporter constructs a new Exporter and does not start it.
-func NewUnstartedExporter(client Client) *Exporter {
+// NewUnstarted constructs a new Exporter and does not start it.
+func NewUnstarted(client Client) *Exporter {
 	return &Exporter{
 		client: client,
 	}
-}
-
-// NewExportPipeline sets up a complete export pipeline
-// with the recommended TracerProvider setup.
-func NewExportPipeline(ctx context.Context, client Client) (*Exporter, *tracesdk.TracerProvider, error) {
-	exp, err := NewExporter(ctx, client)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	tracerProvider := tracesdk.NewTracerProvider(
-		tracesdk.WithBatcher(exp),
-	)
-
-	return exp, tracerProvider, nil
-}
-
-// InstallNewPipeline instantiates a NewExportPipeline with the
-// recommended configuration and registers it globally.
-func InstallNewPipeline(ctx context.Context, client Client) (*Exporter, *tracesdk.TracerProvider, error) {
-	exp, tp, err := NewExportPipeline(ctx, client)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	otel.SetTracerProvider(tp)
-	return exp, tp, err
 }

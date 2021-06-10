@@ -52,7 +52,7 @@ func initMeter() {
 		otlpgrpc.WithEndpoint("localhost:30080"),
 		otlpgrpc.WithDialOption(grpc.WithBlock()), // useful for testing
 	)
-	otlpExporter, err := otlp.NewExporter(ctx, driver)
+	otlpExporter, err := otlp.New(ctx, driver)
 
 	if err != nil {
 		log.Fatal("could not initialize OTLP:", err)
@@ -76,7 +76,7 @@ func initMeter() {
 		log.Fatal("could not start controller:", err)
 	}
 
-	promExporter, err := prometheus.NewExporter(prometheus.Config{}, cont)
+	promExporter, err := prometheus.New(prometheus.Config{}, cont)
 	if err != nil {
 		log.Fatal("could not initialize prometheus:", err)
 	}

@@ -37,7 +37,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -56,7 +56,7 @@ func initProvider() func() {
 		otlpgrpc.WithEndpoint("localhost:30080"),
 		otlpgrpc.WithDialOption(grpc.WithBlock()), // useful for testing
 	)
-	exp, err := otlp.NewExporter(ctx, driver)
+	exp, err := otlp.New(ctx, driver)
 	handleErr(err, "failed to create exporter")
 
 	res, err := resource.New(ctx,

@@ -14,7 +14,7 @@
 
 // Code generated from semantic convention specification. DO NOT EDIT.
 
-package semconv // import "go.opentelemetry.io/otel/semconv"
+package semconv // import "go.opentelemetry.io/otel/semconv/v1.4.0"
 
 import "go.opentelemetry.io/otel/attribute"
 
@@ -253,6 +253,44 @@ const (
 	// Required: No
 	// Examples: 'staging', 'production'
 	DeploymentEnvironmentKey = attribute.Key("deployment.environment")
+)
+
+// The device on which the process represented by this resource is running.
+const (
+	// A unique identifier representing the device
+	//
+	// Type: string
+	// Required: No
+	// Examples: '2ab2916d-a51f-4ac8-80ee-45ac31a28092'
+	// Note: The device identifier MUST only be defined using the values outlined
+	// below. This value is not an advertising identifier and MUST NOT be used as
+	// such. On iOS (Swift or Objective-C), this value MUST be equal to the [vendor id
+	// entifier](https://developer.apple.com/documentation/uikit/uidevice/1620059-iden
+	// tifierforvendor). On Android (Java or Kotlin), this value MUST be equal to the
+	// Firebase Installation ID or a globally unique UUID which is persisted across
+	// sessions in your application. More information can be found
+	// [here](https://developer.android.com/training/articles/user-data-ids) on best
+	// practices and exact implementation details. Caution should be taken when
+	// storing personal data or anything which can identify a user. GDPR and data
+	// protection laws may apply, ensure you do your own due diligence.
+	DeviceIDKey = attribute.Key("device.id")
+	// The model identifier for the device
+	//
+	// Type: string
+	// Required: No
+	// Examples: 'iPhone3,4', 'SM-G920F'
+	// Note: It's recommended this value represents a machine readable version of the
+	// model identifier rather than the market or consumer-friendly name of the
+	// device.
+	DeviceModelIdentifierKey = attribute.Key("device.model.identifier")
+	// The marketing name for the device model
+	//
+	// Type: string
+	// Required: No
+	// Examples: 'iPhone 6s Plus', 'Samsung Galaxy S6'
+	// Note: It's recommended this value represents a human readable version of the
+	// device model rather than a machine readable alternative.
+	DeviceModelNameKey = attribute.Key("device.model.name")
 )
 
 // A serverless instance.
@@ -537,6 +575,19 @@ const (
 	// Required: No
 	// Examples: 'Microsoft Windows [Version 10.0.18363.778]', 'Ubuntu 18.04.1 LTS'
 	OSDescriptionKey = attribute.Key("os.description")
+	// Human readable operating system name.
+	//
+	// Type: string
+	// Required: No
+	// Examples: 'iOS', 'Android', 'Ubuntu'
+	OSNameKey = attribute.Key("os.name")
+	// The version string of the operating system as defined in [Version
+	// Attributes](../../resource/semantic_conventions/README.md#version-attributes).
+	//
+	// Type: string
+	// Required: No
+	// Examples: '14.2.1', '18.04.1'
+	OSVersionKey = attribute.Key("os.version")
 )
 
 var (

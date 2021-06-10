@@ -72,7 +72,7 @@ func spans(n int) []tracesdk.ReadOnlySpan {
 func benchmarkExportSpans(b *testing.B, o EndpointOption, i int) {
 	ctx := context.Background()
 	s := spans(i)
-	exp, err := NewRawExporter(o)
+	exp, err := New(o)
 	if err != nil {
 		b.Fatal(err)
 	}

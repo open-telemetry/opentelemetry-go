@@ -52,7 +52,7 @@ var (
 
 func main() {
 	log.Println("Using OpenTelemetry stdout exporter.")
-	otExporter, err := stdout.NewExporter(stdout.WithPrettyPrint())
+	otExporter, err := stdout.New(stdout.WithPrettyPrint())
 	if err != nil {
 		log.Fatal(err)
 	}

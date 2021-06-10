@@ -76,7 +76,7 @@ func initPassthroughGlobals() {
 // set it as the global tracer provider
 func nonGlobalTracer() *sdktrace.TracerProvider {
 	var err error
-	exp, err := stdout.NewExporter(stdout.WithPrettyPrint())
+	exp, err := stdout.New(stdout.WithPrettyPrint())
 	if err != nil {
 		log.Panicf("failed to initialize stdout exporter %v\n", err)
 	}

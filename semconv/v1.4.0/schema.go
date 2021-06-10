@@ -15,8 +15,6 @@
 package semconv
 
 // SchemaURL is the schema URL that matches the version of the semantic conventions
-// that this package defines. This package defines semantic conventions for spec
-// v1.3.0 which was released before the concept of schemas was introduce, thus the
-// schema URL is empty. Semconv packages starting from v1.4.0 must declare non-empty
-// schema URL in the form https://opentelemetry.io/schemas/<version>
-const SchemaURL = ""
+// that this package defines. Semconv packages starting from v1.4.0 must declare
+// non-empty schema URL in the form https://opentelemetry.io/schemas/<version>
+const SchemaURL = "https://opentelemetry.io/schemas/v1.4.0"

@@ -19,15 +19,10 @@ import (
 	"errors"
 	"sync"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
-	"go.opentelemetry.io/otel/sdk/metric/controller/basic"
-	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -48,17 +43,17 @@ type Exporter struct {
 var _ tracesdk.SpanExporter = (*Exporter)(nil)
 var _ metricsdk.Exporter = (*Exporter)(nil)
 
-// NewExporter constructs a new Exporter and starts it.
-func NewExporter(ctx context.Context, driver ProtocolDriver, opts ...ExporterOption) (*Exporter, error) {
-	exp := NewUnstartedExporter(driver, opts...)
+// New constructs a new Exporter and starts it.
+func New(ctx context.Context, driver ProtocolDriver, opts ...ExporterOption) (*Exporter, error) {
+	exp := NewUnstarted(driver, opts...)
 	if err := exp.Start(ctx); err != nil {
 		return nil, err
 	}
 	return exp, nil
 }
 
-// NewUnstartedExporter constructs a new Exporter and does not start it.
-func NewUnstartedExporter(driver ProtocolDriver, opts ...ExporterOption) *Exporter {
+// NewUnstarted constructs a new Exporter and does not start it.
+func NewUnstarted(driver ProtocolDriver, opts ...ExporterOption) *Exporter {
 	cfg := config{
 		// Note: the default ExportKindSelector is specified
 		// as Cumulative:
@@ -133,47 +128,4 @@ func (e *Exporter) ExportKindFor(desc *metric.Descriptor, kind aggregation.Kind)
 // transmits them to the configured collector.
 func (e *Exporter) ExportSpans(ctx context.Context, spans []tracesdk.ReadOnlySpan) error {
 	return e.driver.ExportTraces(ctx, spans)
-}
-
-// NewExportPipeline sets up a complete export pipeline
-// with the recommended TracerProvider setup.
-func NewExportPipeline(ctx context.Context, driver ProtocolDriver, exporterOpts ...ExporterOption) (*Exporter,
-	*sdktrace.TracerProvider, *basic.Controller, error) {
-
-	exp, err := NewExporter(ctx, driver, exporterOpts...)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	tracerProvider := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exp),
-	)
-
-	cntr := basic.New(
-		processor.New(
-			simple.NewWithInexpensiveDistribution(),
-			exp,
-		),
-	)
-
-	return exp, tracerProvider, cntr, nil
-}
-
-// InstallNewPipeline instantiates a NewExportPipeline with the
-// recommended configuration and registers it globally.
-func InstallNewPipeline(ctx context.Context, driver ProtocolDriver, exporterOpts ...ExporterOption) (*Exporter,
-	*sdktrace.TracerProvider, *basic.Controller, error) {
-
-	exp, tp, cntr, err := NewExportPipeline(ctx, driver, exporterOpts...)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	otel.SetTracerProvider(tp)
-	err = cntr.Start(ctx)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	return exp, tp, cntr, err
 }

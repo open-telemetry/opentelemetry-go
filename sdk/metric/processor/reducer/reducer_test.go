@@ -94,7 +94,7 @@ func TestFilterBasicProcessor(t *testing.T) {
 		reducer.New(testFilter{}, basicProc),
 		resource.NewSchemaless(attribute.String("R", "V")),
 	)
-	exporter := processorTest.NewExporter(basicProc, attribute.DefaultEncoder())
+	exporter := processorTest.New(basicProc, attribute.DefaultEncoder())
 
 	generateData(accum)
 

@@ -27,7 +27,11 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
 	"go.opentelemetry.io/otel/metric"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	selector "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -78,8 +82,22 @@ func expectHistogram(name string, values ...string) expectedMetric {
 	}
 }
 
+func newPipeline(config prometheus.Config, options ...controller.Option) (*prometheus.Exporter, error) {
+	c := controller.New(
+		processor.New(
+			selector.NewWithHistogramDistribution(
+				histogram.WithExplicitBoundaries(config.DefaultHistogramBoundaries),
+			),
+			export.CumulativeExportKindSelector(),
+			processor.WithMemory(true),
+		),
+		options...,
+	)
+	return prometheus.New(config, c)
+}
+
 func TestPrometheusExporter(t *testing.T) {
-	exporter, err := prometheus.NewExportPipeline(
+	exporter, err := newPipeline(
 		prometheus.Config{
 			DefaultHistogramBoundaries: []float64{-0.5, 1},
 		},
@@ -155,7 +173,7 @@ func compareExport(t *testing.T, exporter *prometheus.Exporter, expected []expec
 
 func TestPrometheusStatefulness(t *testing.T) {
 	// Create a meter
-	exporter, err := prometheus.NewExportPipeline(
+	exporter, err := newPipeline(
 		prometheus.Config{},
 		controller.WithCollectPeriod(0),
 		controller.WithResource(resource.Empty()),

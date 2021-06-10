@@ -44,7 +44,7 @@ import (
 
 var roSpans = tracetest.SpanStubs{{Name: "Span 0"}}.Snapshots()
 
-func TestNewExporter_endToEnd(t *testing.T) {
+func TestNew_endToEnd(t *testing.T) {
 	tests := []struct {
 		name           string
 		additionalOpts []otlpgrpc.Option
@@ -88,7 +88,7 @@ func newGRPCExporter(t *testing.T, ctx context.Context, endpoint string, additio
 
 	opts = append(opts, additionalOpts...)
 	driver := otlpgrpc.NewDriver(opts...)
-	exp, err := otlp.NewExporter(ctx, driver)
+	exp, err := otlp.New(ctx, driver)
 	if err != nil {
 		t.Fatalf("failed to create a new collector exporter: %v", err)
 	}
@@ -117,7 +117,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlpgrpc.Option) {
 	otlptest.RunEndToEndTest(ctx, t, exp, mc, mc)
 }
 
-func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
+func TestNew_invokeStartThenStopManyTimes(t *testing.T) {
 	mc := runMockCollector(t)
 	defer func() {
 		_ = mc.stop()
@@ -149,7 +149,7 @@ func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
 	}
 }
 
-func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *testing.T) {
+func TestNew_collectorConnectionDiesThenReconnectsWhenInRestMode(t *testing.T) {
 	mc := runMockCollector(t)
 
 	reconnectionPeriod := 20 * time.Millisecond
@@ -473,7 +473,7 @@ func newThrottlingError(code codes.Code, duration time.Duration) error {
 	return s.Err()
 }
 
-func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
+func TestNew_collectorConnectionDiesThenReconnects(t *testing.T) {
 	mc := runMockCollector(t)
 
 	reconnectionPeriod := 50 * time.Millisecond
@@ -527,7 +527,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 }
 
 // This test takes a long time to run: to skip it, run tests using: -short
-func TestNewExporter_collectorOnBadConnection(t *testing.T) {
+func TestNew_collectorOnBadConnection(t *testing.T) {
 	if testing.Short() {
 		t.Skipf("Skipping this long running test")
 	}
@@ -548,7 +548,7 @@ func TestNewExporter_collectorOnBadConnection(t *testing.T) {
 	_ = exp.Shutdown(ctx)
 }
 
-func TestNewExporter_withEndpoint(t *testing.T) {
+func TestNew_withEndpoint(t *testing.T) {
 	mc := runMockCollector(t)
 	defer func() {
 		_ = mc.stop()
@@ -559,7 +559,7 @@ func TestNewExporter_withEndpoint(t *testing.T) {
 	_ = exp.Shutdown(ctx)
 }
 
-func TestNewExporter_withHeaders(t *testing.T) {
+func TestNew_withHeaders(t *testing.T) {
 	mc := runMockCollector(t)
 	defer func() {
 		_ = mc.stop()
@@ -579,7 +579,7 @@ func TestNewExporter_withHeaders(t *testing.T) {
 	assert.Equal(t, "value1", headers.Get("header1")[0])
 }
 
-func TestNewExporter_WithTimeout(t *testing.T) {
+func TestNew_WithTimeout(t *testing.T) {
 	tts := []struct {
 		name    string
 		fn      func(exp *otlp.Exporter) error
@@ -663,7 +663,7 @@ func TestNewExporter_WithTimeout(t *testing.T) {
 	}
 }
 
-func TestNewExporter_withInvalidSecurityConfiguration(t *testing.T) {
+func TestNew_withInvalidSecurityConfiguration(t *testing.T) {
 	mc := runMockCollector(t)
 	defer func() {
 		_ = mc.stop()
@@ -671,7 +671,7 @@ func TestNewExporter_withInvalidSecurityConfiguration(t *testing.T) {
 
 	ctx := context.Background()
 	driver := otlpgrpc.NewDriver(otlpgrpc.WithEndpoint(mc.endpoint))
-	exp, err := otlp.NewExporter(ctx, driver)
+	exp, err := otlp.New(ctx, driver)
 	if err != nil {
 		t.Fatalf("failed to create a new collector exporter: %v", err)
 	}
@@ -688,7 +688,7 @@ func TestNewExporter_withInvalidSecurityConfiguration(t *testing.T) {
 	}()
 }
 
-func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
+func TestNew_withMultipleAttributeTypes(t *testing.T) {
 	mc := runMockCollector(t)
 
 	defer func() {
@@ -903,7 +903,7 @@ func TestMultiConnectionDriver(t *testing.T) {
 	metricsDriver := otlpgrpc.NewDriver(optsMetrics...)
 	driver := otlp.NewSplitDriver(otlp.WithMetricDriver(metricsDriver), otlp.WithTraceDriver(tracesDriver))
 	ctx := context.Background()
-	exp, err := otlp.NewExporter(ctx, driver)
+	exp, err := otlp.New(ctx, driver)
 	if err != nil {
 		t.Fatalf("failed to create a new collector exporter: %v", err)
 	}
