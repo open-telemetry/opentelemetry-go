@@ -35,7 +35,7 @@ import (
 	"path/filepath"
 	"strings"
 	"text/tabwriter"
-	
+
 	"go.opentelemetry.io/otel/internal/tools"
 )
 
