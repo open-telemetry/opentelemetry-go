@@ -38,7 +38,7 @@ var tp *sdktrace.TracerProvider
 // initTracer creates and registers trace provider instance.
 func initTracer() {
 	var err error
-	exp, err := stdout.NewExporter(stdout.WithPrettyPrint())
+	exp, err := stdout.New(stdout.WithPrettyPrint())
 	if err != nil {
 		log.Panicf("failed to initialize stdout exporter %v\n", err)
 		return

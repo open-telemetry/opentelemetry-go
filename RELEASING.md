@@ -20,6 +20,19 @@ go run generator.go -i /path/to/specification/repo/semantic_conventions/trace
 Using default values for all options other than `input` will result in using the `template.j2` template to
 generate `resource.go` and `trace.go` in `/path/to/otelgo/repo/semconv/<version>`.
 
+There are several ancillary files that are not generated and should be copied into the new package from the
+prior package, with updates made as appropriate to canonical import path statements and constant values.
+These files include:
+
+* doc.go
+* exception.go
+* http(_test)?.go
+* schema.go
+
+Uses of the previous schema version in this repository should be updated to use the newly generated version.
+No tooling for this exists at present, so use find/replace in your editor of choice or craft a `grep | sed`
+pipeline if you like living on the edge.
+
 ## Pre-Release
 
 Update go.mod for submodules to depend on the new release which will happen in the next step.

@@ -36,7 +36,6 @@ type testBatchExporter struct {
 	sizes         []int
 	batchCount    int
 	shutdownCount int
-	delay         time.Duration
 	errors        []error
 	droppedCount  int
 	idx           int
@@ -53,8 +52,6 @@ func (t *testBatchExporter) ExportSpans(ctx context.Context, spans []sdktrace.Re
 		t.idx++
 		return err
 	}
-
-	time.Sleep(t.delay)
 
 	select {
 	case <-ctx.Done():
@@ -109,34 +106,22 @@ func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
 }
 
 type testOption struct {
-	name              string
-	o                 []sdktrace.BatchSpanProcessorOption
-	wantNumSpans      int
-	wantBatchCount    int
-	wantExportTimeout bool
-	genNumSpans       int
-	delayExportBy     time.Duration
-	parallel          bool
+	name           string
+	o              []sdktrace.BatchSpanProcessorOption
+	wantNumSpans   int
+	wantBatchCount int
+	genNumSpans    int
+	parallel       bool
 }
 
 func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 	schDelay := 200 * time.Millisecond
-	exportTimeout := time.Millisecond
 	options := []testOption{
 		{
 			name:           "default BatchSpanProcessorOptions",
 			wantNumSpans:   2053,
 			wantBatchCount: 4,
 			genNumSpans:    2053,
-		},
-		{
-			name: "non-default ExportTimeout",
-			o: []sdktrace.BatchSpanProcessorOption{
-				sdktrace.WithExportTimeout(exportTimeout),
-			},
-			wantExportTimeout: true,
-			genNumSpans:       2053,
-			delayExportBy:     2 * exportTimeout, // to ensure export timeout
 		},
 		{
 			name: "non-default BatchTimeout",
@@ -204,9 +189,7 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 	}
 	for _, option := range options {
 		t.Run(option.name, func(t *testing.T) {
-			te := testBatchExporter{
-				delay: option.delayExportBy,
-			}
+			te := testBatchExporter{}
 			tp := basicTracerProvider(t)
 			ssp := createAndRegisterBatchSP(option, &te)
 			if ssp == nil {
@@ -231,12 +214,38 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 					gotBatchCount, option.wantBatchCount)
 				t.Errorf("Batches %v\n", te.sizes)
 			}
-
-			if option.wantExportTimeout && te.err != context.DeadlineExceeded {
-				t.Errorf("context deadline: got err %+v, want %+v\n",
-					te.err, context.DeadlineExceeded)
-			}
 		})
+	}
+}
+
+type stuckExporter struct {
+	testBatchExporter
+}
+
+// ExportSpans waits for ctx to expire and returns that error.
+func (e *stuckExporter) ExportSpans(ctx context.Context, _ []sdktrace.ReadOnlySpan) error {
+	<-ctx.Done()
+	e.err = ctx.Err()
+	return ctx.Err()
+}
+
+func TestBatchSpanProcessorExportTimeout(t *testing.T) {
+	exp := new(stuckExporter)
+	bsp := sdktrace.NewBatchSpanProcessor(
+		exp,
+		// Set a non-zero export timeout so a deadline is set.
+		sdktrace.WithExportTimeout(1*time.Microsecond),
+		sdktrace.WithBlocking(),
+	)
+	tp := basicTracerProvider(t)
+	tp.RegisterSpanProcessor(bsp)
+
+	tr := tp.Tracer("BatchSpanProcessorExportTimeout")
+	generateSpan(t, false, tr, testOption{genNumSpans: 1})
+	tp.UnregisterSpanProcessor(bsp)
+
+	if exp.err != context.DeadlineExceeded {
+		t.Errorf("context deadline error not returned: got %+v", exp.err)
 	}
 }
 

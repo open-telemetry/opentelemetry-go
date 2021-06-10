@@ -21,13 +21,12 @@ import (
 	"fmt"
 	"sync"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	gen "go.opentelemetry.io/otel/exporters/trace/jaeger/internal/gen-go/jaeger"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -42,9 +41,9 @@ const (
 	keyEventName                     = "event"
 )
 
-// NewRawExporter returns an OTel Exporter implementation that exports the
-// collected spans to Jaeger.
-func NewRawExporter(endpointOption EndpointOption) (*Exporter, error) {
+// New returns an OTel Exporter implementation that exports the collected
+// spans to Jaeger.
+func New(endpointOption EndpointOption) (*Exporter, error) {
 	uploader, err := endpointOption.newBatchUploader()
 	if err != nil {
 		return nil, err
@@ -67,30 +66,6 @@ func NewRawExporter(endpointOption EndpointOption) (*Exporter, error) {
 		defaultServiceName: defaultServiceName,
 	}
 	return e, nil
-}
-
-// NewExportPipeline sets up a complete export pipeline
-// with the recommended setup for trace provider
-func NewExportPipeline(endpointOption EndpointOption) (*sdktrace.TracerProvider, error) {
-	exporter, err := NewRawExporter(endpointOption)
-	if err != nil {
-		return nil, err
-	}
-
-	tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(exporter))
-	return tp, nil
-}
-
-// InstallNewPipeline instantiates a NewExportPipeline with the
-// recommended configuration and registers it globally.
-func InstallNewPipeline(endpointOption EndpointOption) (*sdktrace.TracerProvider, error) {
-	tp, err := NewExportPipeline(endpointOption)
-	if err != nil {
-		return tp, err
-	}
-
-	otel.SetTracerProvider(tp)
-	return tp, nil
 }
 
 // Exporter exports OpenTelemetry spans to a Jaeger agent or collector.

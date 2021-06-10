@@ -60,7 +60,7 @@ span.SetAttributes(myKey.String("a value"))
 
 ### Semantic Attributes
 
-Semantic Attributes are attributes that are defined by the OpenTelemetry Specification in order to provide a shared set of attribute keys across multiple languages, frameworks, and runtimes for common concepts like HTTP methods, status codes, user agents, and more. These attributes are available in the `go.opentelemetry.io/otel/semconv` package.
+Semantic Attributes are attributes that are defined by the OpenTelemetry Specification in order to provide a shared set of attribute keys across multiple languages, frameworks, and runtimes for common concepts like HTTP methods, status codes, user agents, and more. These attributes are available in the `go.opentelemetry.io/otel/semconv/v1.4.0` package.
 
 Tracing semantic conventions can be found [in this document](https://github.com/open-telemetry/opentelemetry-specification/tree/main/specification/trace/semantic_conventions)
 

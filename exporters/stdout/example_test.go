@@ -23,6 +23,12 @@ import (
 	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -77,23 +83,54 @@ func multiply(ctx context.Context, x, y int64) int64 {
 	return x * y
 }
 
-func Example() {
-	exportOpts := []stdout.Option{
-		stdout.WithPrettyPrint(),
-	}
-	// Registers both a trace and meter Provider globally.
-	tracerProvider, pusher, err := stdout.InstallNewPipeline(exportOpts, nil)
+func Resource() *resource.Resource {
+	return resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceNameKey.String("stdout-example"),
+		semconv.ServiceVersionKey.String("0.0.1"),
+	)
+}
+
+func InstallExportPipeline(ctx context.Context) func() {
+	exporter, err := stdout.New(stdout.WithPrettyPrint())
 	if err != nil {
-		log.Fatal("Could not initialize stdout exporter:", err)
+		log.Fatalf("creating stdout exporter: %v", err)
 	}
+
+	tracerProvider := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(Resource()),
+	)
+	otel.SetTracerProvider(tracerProvider)
+
+	pusher := controller.New(
+		processor.New(
+			simple.NewWithInexpensiveDistribution(),
+			exporter,
+		),
+		controller.WithExporter(exporter),
+	)
+	if err = pusher.Start(ctx); err != nil {
+		log.Fatalf("starting push controller: %v", err)
+	}
+	global.SetMeterProvider(pusher.MeterProvider())
+
+	return func() {
+		if err := pusher.Stop(ctx); err != nil {
+			log.Fatalf("stopping push controller: %v", err)
+		}
+		if err := tracerProvider.Shutdown(ctx); err != nil {
+			log.Fatalf("stopping tracer provider: %v", err)
+		}
+	}
+}
+
+func Example() {
 	ctx := context.Background()
 
-	log.Println("the answer is", add(ctx, multiply(ctx, multiply(ctx, 2, 2), 10), 2))
+	// Registers both a tracer and meter Provider globally.
+	cleanup := InstallExportPipeline(ctx)
+	defer cleanup()
 
-	if err := pusher.Stop(ctx); err != nil {
-		log.Fatal("Could not stop stdout exporter:", err)
-	}
-	if err := tracerProvider.Shutdown(ctx); err != nil {
-		log.Fatal("Could not stop stdout tracer:", err)
-	}
+	log.Println("the answer is", add(ctx, multiply(ctx, multiply(ctx, 2, 2), 10), 2))
 }

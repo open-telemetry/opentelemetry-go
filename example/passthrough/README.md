@@ -13,7 +13,7 @@ But the following will propagate context _and_ create new, potentially recorded 
 
 ```golang
 // Setup SDK
-exp, _ := stdout.NewExporter(stdout.WithPrettyPrint())
+exp, _ := stdout.New(stdout.WithPrettyPrint())
 tp = sdktrace.NewTracerProvider(
     sdktrace.WithBatcher(exp),
 )

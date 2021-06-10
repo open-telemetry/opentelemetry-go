@@ -309,7 +309,7 @@ func (o *Output) AddAccumulation(acc export.Accumulation) error {
 	)
 }
 
-// NewExporter returns a new testing Exporter implementation.
+// New returns a new testing Exporter implementation.
 // Verify exporter outputs using Values(), e.g.,:
 //
 //     require.EqualValues(t, map[string]float64{
@@ -318,7 +318,7 @@ func (o *Output) AddAccumulation(acc export.Accumulation) error {
 //
 // Where in the example A=1,B=2 is the encoded labels and R=V is the
 // encoded resource value.
-func NewExporter(selector export.ExportKindSelector, encoder attribute.Encoder) *Exporter {
+func New(selector export.ExportKindSelector, encoder attribute.Encoder) *Exporter {
 	return &Exporter{
 		ExportKindSelector: selector,
 		output:             NewOutput(encoder),

@@ -6,7 +6,6 @@ require (
 	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/otel v0.20.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v0.0.0-00010101000000-000000000000
-	go.opentelemetry.io/otel/sdk v0.20.0
 	go.opentelemetry.io/proto/otlp v0.9.0
 	google.golang.org/protobuf v1.26.0
 )

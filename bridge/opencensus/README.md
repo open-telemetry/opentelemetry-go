@@ -119,7 +119,7 @@ import (
 //       import logexporter "go.opencensus.io/examples/exporter"
 //       exporter, _ := logexporter.NewLogExporter(logexporter.Options{})
 // Instead, we can create an equivalent using the OpenTelemetry stdout exporter:
-openTelemetryExporter, _ := stdout.NewExporter(stdout.WithPrettyPrint())
+openTelemetryExporter, _ := stdout.New(stdout.WithPrettyPrint())
 exporter := opencensus.NewMetricExporter(openTelemetryExporter)
 
 // Use the wrapped OpenTelemetry exporter like you normally would with OpenCensus

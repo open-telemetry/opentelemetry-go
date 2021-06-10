@@ -121,7 +121,7 @@ func TestJaegerAgentUDPLimitBatching(t *testing.T) {
 	n := 1500
 	s := make(tracetest.SpanStubs, n).Snapshots()
 
-	exp, err := NewRawExporter(
+	exp, err := New(
 		WithAgentEndpoint(WithAgentHost(host), WithAgentPort(port)),
 	)
 	require.NoError(t, err)
@@ -153,7 +153,7 @@ func TestSpanExceedsMaxPacketLimit(t *testing.T) {
 	largeSpans := tracetest.SpanStubs{generateALargeSpan(), {}}.Snapshots()
 	normalSpans := tracetest.SpanStubs{{}, {}}.Snapshots()
 
-	exp, err := NewRawExporter(
+	exp, err := New(
 		WithAgentEndpoint(WithAgentHost(host), WithAgentPort(port), WithMaxPacketSize(maxSize+1)),
 	)
 	require.NoError(t, err)
@@ -177,7 +177,7 @@ func TestEmitBatchWithMultipleErrors(t *testing.T) {
 	largeSpans := tracetest.SpanStubs{span, span}.Snapshots()
 	// make max packet size smaller than span
 	maxSize := len(span.Name)
-	exp, err := NewRawExporter(
+	exp, err := New(
 		WithAgentEndpoint(WithAgentHost(host), WithAgentPort(port), WithMaxPacketSize(maxSize)),
 	)
 	require.NoError(t, err)
