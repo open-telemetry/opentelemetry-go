@@ -196,12 +196,10 @@ func (c *Controller) collect(ctx context.Context) error {
 	if c.exporter == nil {
 		return nil
 	}
+
 	// Note: this is not subject to collectTimeout.  This blocks the next
 	// collection despite collectTimeout because it holds a lock.
-	if err := c.export(ctx); err != nil {
-		return err
-	}
-	return nil
+	return c.export(ctx)
 }
 
 // checkpoint calls the Accumulator and Checkpointer interfaces to

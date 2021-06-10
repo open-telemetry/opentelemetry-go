@@ -111,12 +111,18 @@ func (eh errorHandler) Handle(err error) { assert.NoError(eh.t, err) }
 func TestJaegerAgentUDPLimitBatching(t *testing.T) {
 	otel.SetErrorHandler(errorHandler{t})
 
+	mockServer, err := newUDPListener()
+	require.NoError(t, err)
+	defer mockServer.Close()
+	host, port, err := net.SplitHostPort(mockServer.LocalAddr().String())
+	assert.NoError(t, err)
+
 	// 1500 spans, size 79559, does not fit within one UDP packet with the default size of 65000.
 	n := 1500
 	s := make(tracetest.SpanStubs, n).Snapshots()
 
 	exp, err := NewRawExporter(
-		WithAgentEndpoint(WithAgentHost("localhost"), WithAgentPort("6831")),
+		WithAgentEndpoint(WithAgentHost(host), WithAgentPort(port)),
 	)
 	require.NoError(t, err)
 
@@ -135,6 +141,12 @@ func generateALargeSpan() tracetest.SpanStub {
 func TestSpanExceedsMaxPacketLimit(t *testing.T) {
 	otel.SetErrorHandler(errorHandler{t})
 
+	mockServer, err := newUDPListener()
+	require.NoError(t, err)
+	defer mockServer.Close()
+	host, port, err := net.SplitHostPort(mockServer.LocalAddr().String())
+	assert.NoError(t, err)
+
 	// 106 is the serialized size of a span with default values.
 	maxSize := 106
 
@@ -142,7 +154,7 @@ func TestSpanExceedsMaxPacketLimit(t *testing.T) {
 	normalSpans := tracetest.SpanStubs{{}, {}}.Snapshots()
 
 	exp, err := NewRawExporter(
-		WithAgentEndpoint(WithAgentHost("localhost"), WithAgentPort("6831"), WithMaxPacketSize(maxSize+1)),
+		WithAgentEndpoint(WithAgentHost(host), WithAgentPort(port), WithMaxPacketSize(maxSize+1)),
 	)
 	require.NoError(t, err)
 
@@ -155,12 +167,18 @@ func TestSpanExceedsMaxPacketLimit(t *testing.T) {
 func TestEmitBatchWithMultipleErrors(t *testing.T) {
 	otel.SetErrorHandler(errorHandler{t})
 
+	mockServer, err := newUDPListener()
+	require.NoError(t, err)
+	defer mockServer.Close()
+	host, port, err := net.SplitHostPort(mockServer.LocalAddr().String())
+	assert.NoError(t, err)
+
 	span := generateALargeSpan()
 	largeSpans := tracetest.SpanStubs{span, span}.Snapshots()
 	// make max packet size smaller than span
 	maxSize := len(span.Name)
 	exp, err := NewRawExporter(
-		WithAgentEndpoint(WithAgentHost("localhost"), WithAgentPort("6831"), WithMaxPacketSize(maxSize)),
+		WithAgentEndpoint(WithAgentHost(host), WithAgentPort(port), WithMaxPacketSize(maxSize)),
 	)
 	require.NoError(t, err)
 

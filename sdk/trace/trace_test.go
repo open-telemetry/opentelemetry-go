@@ -62,7 +62,7 @@ var (
 	sid trace.SpanID
 	sc  trace.SpanContext
 
-	handler *storingHandler = &storingHandler{}
+	handler = &storingHandler{}
 
 	k1, k2, k3    attribute.Key
 	kv1, kv2, kv3 attribute.KeyValue
@@ -1210,6 +1210,12 @@ func TestWithSpanKind(t *testing.T) {
 	}
 }
 
+func mergeResource(t *testing.T, r1, r2 *resource.Resource) *resource.Resource {
+	r, err := resource.Merge(r1, r2)
+	assert.NoError(t, err)
+	return r
+}
+
 func TestWithResource(t *testing.T) {
 	store, err := ottest.SetEnvVariables(map[string]string{
 		envVar: "key=value,rk5=7",
@@ -1235,20 +1241,20 @@ func TestWithResource(t *testing.T) {
 		},
 		{
 			name:    "explicit resource",
-			options: []TracerProviderOption{WithResource(resource.NewWithAttributes(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5)))},
-			want:    resource.Merge(resource.Environment(), resource.NewWithAttributes(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5))),
+			options: []TracerProviderOption{WithResource(resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5)))},
+			want:    mergeResource(t, resource.Environment(), resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5))),
 		},
 		{
 			name: "last resource wins",
 			options: []TracerProviderOption{
-				WithResource(resource.NewWithAttributes(attribute.String("rk1", "vk1"), attribute.Int64("rk2", 5))),
-				WithResource(resource.NewWithAttributes(attribute.String("rk3", "rv3"), attribute.Int64("rk4", 10)))},
-			want: resource.Merge(resource.Environment(), resource.NewWithAttributes(attribute.String("rk3", "rv3"), attribute.Int64("rk4", 10))),
+				WithResource(resource.NewSchemaless(attribute.String("rk1", "vk1"), attribute.Int64("rk2", 5))),
+				WithResource(resource.NewSchemaless(attribute.String("rk3", "rv3"), attribute.Int64("rk4", 10)))},
+			want: mergeResource(t, resource.Environment(), resource.NewSchemaless(attribute.String("rk3", "rv3"), attribute.Int64("rk4", 10))),
 		},
 		{
 			name:    "overlapping attributes with environment resource",
-			options: []TracerProviderOption{WithResource(resource.NewWithAttributes(attribute.String("rk1", "rv1"), attribute.Int64("rk5", 10)))},
-			want:    resource.Merge(resource.Environment(), resource.NewWithAttributes(attribute.String("rk1", "rv1"), attribute.Int64("rk5", 10))),
+			options: []TracerProviderOption{WithResource(resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk5", 10)))},
+			want:    mergeResource(t, resource.Environment(), resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk5", 10))),
 		},
 	}
 	for _, tc := range cases {
@@ -1345,7 +1351,7 @@ func TestSpanCapturesPanic(t *testing.T) {
 func TestReadOnlySpan(t *testing.T) {
 	kv := attribute.String("foo", "bar")
 
-	tp := NewTracerProvider(WithResource(resource.NewWithAttributes(kv)))
+	tp := NewTracerProvider(WithResource(resource.NewSchemaless(kv)))
 	tr := tp.Tracer("ReadOnlySpan", trace.WithInstrumentationVersion("3"))
 
 	// Initialize parent context.

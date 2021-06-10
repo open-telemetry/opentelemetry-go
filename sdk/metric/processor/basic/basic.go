@@ -119,7 +119,11 @@ type (
 var _ export.Processor = &Processor{}
 var _ export.Checkpointer = &Processor{}
 var _ export.CheckpointSet = &state{}
+
+// ErrInconsistentState is returned when the sequence of collection's starts and finishes are incorrectly balanced.
 var ErrInconsistentState = fmt.Errorf("inconsistent processor state")
+
+// ErrInvalidExportKind is returned for unknown metric.ExportKind.
 var ErrInvalidExportKind = fmt.Errorf("invalid export kind")
 
 // New returns a basic Processor that is also a Checkpointer using the provided

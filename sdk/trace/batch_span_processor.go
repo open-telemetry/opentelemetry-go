@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
+// Defaults for BatchSpanProcessorOptions.
 const (
 	DefaultMaxQueueSize       = 2048
 	DefaultBatchTimeout       = 5000 * time.Millisecond

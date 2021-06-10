@@ -23,13 +23,13 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/internal/baggage"
 	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 )
 
+//nolint:revive // ignoring missing comments for unexported global variables in an internal package.
 var (
 	ComponentKey     = attribute.Key("component")
 	ServiceKey       = attribute.Key("service")
@@ -45,7 +45,6 @@ type MockContextKeyValue struct {
 }
 
 type MockTracer struct {
-	Resources             baggage.Map
 	FinishedSpans         []*MockSpan
 	SpareTraceIDs         []trace.TraceID
 	SpareSpanIDs          []trace.SpanID
@@ -60,7 +59,6 @@ var _ migration.DeferredContextSetupTracerExtension = &MockTracer{}
 
 func NewMockTracer() *MockTracer {
 	return &MockTracer{
-		Resources:             baggage.NewEmptyMap(),
 		FinishedSpans:         nil,
 		SpareTraceIDs:         nil,
 		SpareSpanIDs:          nil,
@@ -85,14 +83,12 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...trace.SpanS
 		mockTracer:     t,
 		officialTracer: t,
 		spanContext:    spanContext,
-		Attributes: baggage.NewMap(baggage.MapUpdate{
-			MultiKV: config.Attributes(),
-		}),
-		StartTime:    startTime,
-		EndTime:      time.Time{},
-		ParentSpanID: t.getParentSpanID(ctx, config),
-		Events:       nil,
-		SpanKind:     trace.ValidateSpanKind(config.SpanKind()),
+		Attributes:     config.Attributes(),
+		StartTime:      startTime,
+		EndTime:        time.Time{},
+		ParentSpanID:   t.getParentSpanID(ctx, config),
+		Events:         nil,
+		SpanKind:       trace.ValidateSpanKind(config.SpanKind()),
 	}
 	if !migration.SkipContextSetup(ctx) {
 		ctx = trace.ContextWithSpan(ctx, span)
@@ -182,7 +178,7 @@ func (t *MockTracer) DeferredContextSetupHook(ctx context.Context, span trace.Sp
 type MockEvent struct {
 	Timestamp  time.Time
 	Name       string
-	Attributes baggage.Map
+	Attributes []attribute.KeyValue
 }
 
 type MockSpan struct {
@@ -192,7 +188,7 @@ type MockSpan struct {
 	SpanKind       trace.SpanKind
 	recording      bool
 
-	Attributes   baggage.Map
+	Attributes   []attribute.KeyValue
 	StartTime    time.Time
 	EndTime      time.Time
 	ParentSpanID trace.SpanID
@@ -223,13 +219,29 @@ func (s *MockSpan) SetError(v bool) {
 }
 
 func (s *MockSpan) SetAttributes(attributes ...attribute.KeyValue) {
-	s.applyUpdate(baggage.MapUpdate{
-		MultiKV: attributes,
-	})
+	s.applyUpdate(attributes)
 }
 
-func (s *MockSpan) applyUpdate(update baggage.MapUpdate) {
-	s.Attributes = s.Attributes.Apply(update)
+func (s *MockSpan) applyUpdate(update []attribute.KeyValue) {
+	updateM := make(map[attribute.Key]attribute.Value, len(update))
+	for _, kv := range update {
+		updateM[kv.Key] = kv.Value
+	}
+
+	seen := make(map[attribute.Key]struct{})
+	for i, kv := range s.Attributes {
+		if v, ok := updateM[kv.Key]; ok {
+			s.Attributes[i].Value = v
+			seen[kv.Key] = struct{}{}
+		}
+	}
+
+	for k, v := range updateM {
+		if _, ok := seen[k]; ok {
+			continue
+		}
+		s.Attributes = append(s.Attributes, attribute.KeyValue{Key: k, Value: v})
+	}
 }
 
 func (s *MockSpan) End(options ...trace.SpanEndOption) {
@@ -269,11 +281,9 @@ func (s *MockSpan) Tracer() trace.Tracer {
 func (s *MockSpan) AddEvent(name string, o ...trace.EventOption) {
 	c := trace.NewEventConfig(o...)
 	s.Events = append(s.Events, MockEvent{
-		Timestamp: c.Timestamp(),
-		Name:      name,
-		Attributes: baggage.NewMap(baggage.MapUpdate{
-			MultiKV: c.Attributes(),
-		}),
+		Timestamp:  c.Timestamp(),
+		Name:       name,
+		Attributes: c.Attributes(),
 	})
 }
 

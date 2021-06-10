@@ -129,8 +129,8 @@ func (fn spanOptionFunc) applySpanStart(cfg *SpanConfig) {
 	fn(cfg)
 }
 
-// SpanEndOptions applies an option to a SpanConfig. These options are applicable
-// only when the span is ended.
+// SpanEndOption applies an option to a SpanConfig. These options are
+// applicable only when the span is ended.
 type SpanEndOption interface {
 	applySpanEnd(*SpanConfig)
 }

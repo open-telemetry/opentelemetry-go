@@ -67,9 +67,9 @@ type Processor interface {
 
 	// Process is called by the SDK once per internal record,
 	// passing the export Accumulation (a Descriptor, the corresponding
-	// Labels, and the checkpointed Aggregator).  This call has no
+	// Labels, and the checkpointed Aggregator). This call has no
 	// Context argument because it is expected to perform only
-	// computation.  An SDK is not expected to call exporters from
+	// computation. An SDK is not expected to call exporters from
 	// with Process, use a controller for that (see
 	// ./controllers/{pull,push}.
 	Process(accum Accumulation) error

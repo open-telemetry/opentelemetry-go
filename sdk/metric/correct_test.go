@@ -35,7 +35,7 @@ import (
 )
 
 var Must = metric.Must
-var testResource = resource.NewWithAttributes(attribute.String("R", "V"))
+var testResource = resource.NewSchemaless(attribute.String("R", "V"))
 
 type handler struct {
 	sync.Mutex

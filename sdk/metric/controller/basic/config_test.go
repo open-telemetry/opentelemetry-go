@@ -24,7 +24,7 @@ import (
 )
 
 func TestWithResource(t *testing.T) {
-	r := resource.NewWithAttributes(attribute.String("A", "a"))
+	r := resource.NewSchemaless(attribute.String("A", "a"))
 
 	c := &config{}
 	WithResource(r).apply(c)

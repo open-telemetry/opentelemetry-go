@@ -82,18 +82,18 @@ func TestControllerUsesResource(t *testing.T) {
 			wanted:  resource.Default().Encoded(attribute.DefaultEncoder())},
 		{
 			name:    "explicit resource",
-			options: []controller.Option{controller.WithResource(resource.NewWithAttributes(attribute.String("R", "S")))},
+			options: []controller.Option{controller.WithResource(resource.NewSchemaless(attribute.String("R", "S")))},
 			wanted:  "R=S,T=U,key=value"},
 		{
 			name: "last resource wins",
 			options: []controller.Option{
 				controller.WithResource(resource.Default()),
-				controller.WithResource(resource.NewWithAttributes(attribute.String("R", "S"))),
+				controller.WithResource(resource.NewSchemaless(attribute.String("R", "S"))),
 			},
 			wanted: "R=S,T=U,key=value"},
 		{
 			name:    "overlapping attributes with environment resource",
-			options: []controller.Option{controller.WithResource(resource.NewWithAttributes(attribute.String("T", "V")))},
+			options: []controller.Option{controller.WithResource(resource.NewSchemaless(attribute.String("T", "V")))},
 			wanted:  "T=V,key=value"},
 	}
 	for _, c := range cases {

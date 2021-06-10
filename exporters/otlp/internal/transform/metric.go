@@ -167,6 +167,7 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 		Resource *resourcepb.Resource
 		// Group by instrumentation library name and then the MetricDescriptor.
 		InstrumentationLibraryBatches map[instrumentation.Library]map[string]*metricpb.Metric
+		SchemaURL                     string
 	}
 
 	// group by unique Resource string.
@@ -183,6 +184,9 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 			rb = resourceBatch{
 				Resource:                      Resource(res.Resource),
 				InstrumentationLibraryBatches: make(map[instrumentation.Library]map[string]*metricpb.Metric),
+			}
+			if res.Resource != nil {
+				rb.SchemaURL = res.Resource.SchemaURL()
 			}
 			grouped[rID] = rb
 		}
@@ -220,6 +224,7 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 
 	var rms []*metricpb.ResourceMetrics
 	for _, rb := range grouped {
+		// TODO: populate ResourceMetrics.SchemaURL when the field is added to the Protobuf message.
 		rm := &metricpb.ResourceMetrics{Resource: rb.Resource}
 		for il, mb := range rb.InstrumentationLibraryBatches {
 			ilm := &metricpb.InstrumentationLibraryMetrics{

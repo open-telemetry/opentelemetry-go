@@ -16,6 +16,7 @@ package matchers
 
 type TemporalMatcher byte
 
+//nolint:revive // ignoring missing comments for unexported constants in an internal package
 const (
 	Before TemporalMatcher = iota
 	BeforeOrSameTime

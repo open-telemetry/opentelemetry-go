@@ -166,7 +166,7 @@ func TestExporterExportSpan(t *testing.T) {
 	require.NoError(t, err)
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exp),
-		sdktrace.WithResource(resource.NewWithAttributes(
+		sdktrace.WithResource(resource.NewSchemaless(
 			semconv.ServiceNameKey.String(serviceName),
 			attribute.String(tagKey, tagVal),
 		)),
@@ -421,7 +421,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 				Name:      "/foo",
 				StartTime: now,
 				EndTime:   now,
-				Resource: resource.NewWithAttributes(
+				Resource: resource.NewSchemaless(
 					attribute.String("rk1", rv1),
 					attribute.Int64("rk2", rv2),
 					semconv.ServiceNameKey.String("service name"),
@@ -500,7 +500,7 @@ func TestExporterExportSpansHonorsCancel(t *testing.T) {
 	ss := tracetest.SpanStubs{
 		{
 			Name: "s1",
-			Resource: resource.NewWithAttributes(
+			Resource: resource.NewSchemaless(
 				semconv.ServiceNameKey.String("name"),
 				attribute.Key("r1").String("v1"),
 			),
@@ -509,7 +509,7 @@ func TestExporterExportSpansHonorsCancel(t *testing.T) {
 		},
 		{
 			Name: "s2",
-			Resource: resource.NewWithAttributes(
+			Resource: resource.NewSchemaless(
 				semconv.ServiceNameKey.String("name"),
 				attribute.Key("r2").String("v2"),
 			),
@@ -530,7 +530,7 @@ func TestExporterExportSpansHonorsTimeout(t *testing.T) {
 	ss := tracetest.SpanStubs{
 		{
 			Name: "s1",
-			Resource: resource.NewWithAttributes(
+			Resource: resource.NewSchemaless(
 				semconv.ServiceNameKey.String("name"),
 				attribute.Key("r1").String("v1"),
 			),
@@ -539,7 +539,7 @@ func TestExporterExportSpansHonorsTimeout(t *testing.T) {
 		},
 		{
 			Name: "s2",
-			Resource: resource.NewWithAttributes(
+			Resource: resource.NewSchemaless(
 				semconv.ServiceNameKey.String("name"),
 				attribute.Key("r2").String("v2"),
 			),
@@ -577,7 +577,7 @@ func TestJaegerBatchList(t *testing.T) {
 			roSpans: []sdktrace.ReadOnlySpan{
 				tracetest.SpanStub{
 					Name: "s1",
-					Resource: resource.NewWithAttributes(
+					Resource: resource.NewSchemaless(
 						semconv.ServiceNameKey.String("name"),
 						attribute.Key("r1").String("v1"),
 					),
@@ -611,7 +611,7 @@ func TestJaegerBatchList(t *testing.T) {
 			roSpans: tracetest.SpanStubs{
 				{
 					Name: "s1",
-					Resource: resource.NewWithAttributes(
+					Resource: resource.NewSchemaless(
 						semconv.ServiceNameKey.String("name"),
 						attribute.Key("r1").String("v1"),
 					),
@@ -620,7 +620,7 @@ func TestJaegerBatchList(t *testing.T) {
 				},
 				{
 					Name: "s2",
-					Resource: resource.NewWithAttributes(
+					Resource: resource.NewSchemaless(
 						semconv.ServiceNameKey.String("name"),
 						attribute.Key("r1").String("v1"),
 					),
@@ -629,7 +629,7 @@ func TestJaegerBatchList(t *testing.T) {
 				},
 				{
 					Name: "s3",
-					Resource: resource.NewWithAttributes(
+					Resource: resource.NewSchemaless(
 						semconv.ServiceNameKey.String("name"),
 						attribute.Key("r2").String("v2"),
 					),
@@ -686,7 +686,7 @@ func TestJaegerBatchList(t *testing.T) {
 			roSpans: tracetest.SpanStubs{
 				{
 					Name: "s1",
-					Resource: resource.NewWithAttributes(
+					Resource: resource.NewSchemaless(
 						attribute.Key("r1").String("v1"),
 					),
 					StartTime: now,
@@ -736,7 +736,7 @@ func TestProcess(t *testing.T) {
 	}{
 		{
 			name: "resources contain service name",
-			res: resource.NewWithAttributes(
+			res: resource.NewSchemaless(
 				semconv.ServiceNameKey.String("service name"),
 				attribute.Key("r1").String("v1"),
 			),
@@ -750,7 +750,7 @@ func TestProcess(t *testing.T) {
 		},
 		{
 			name:               "resources don't have service name",
-			res:                resource.NewWithAttributes(attribute.Key("r1").String("v1")),
+			res:                resource.NewSchemaless(attribute.Key("r1").String("v1")),
 			defaultServiceName: "default service name",
 			expectedProcess: &gen.Process{
 				ServiceName: "default service name",
