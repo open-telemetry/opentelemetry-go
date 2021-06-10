@@ -23,13 +23,14 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 
 	flag "github.com/spf13/pflag"
 	"golang.org/x/mod/semver"
+
+	"go.opentelemetry.io/otel/internal/tools"
 )
 
 func main() {
@@ -102,7 +103,7 @@ func validateConfig(cfg config) (config, error) {
 	}
 
 	if !path.IsAbs(cfg.outputPath) {
-		root, err := findRepoRoot()
+		root, err := tools.FindRepoRoot()
 		if err != nil {
 			return config{}, err
 		}
@@ -255,33 +256,6 @@ func checkoutSpecToDir(cfg config, toDir string) (doneFunc func(), err error) {
 	}
 
 	return doneFunc, nil
-}
-
-func findRepoRoot() (string, error) {
-	start, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
-	dir := start
-	for {
-		_, err := os.Stat(filepath.Join(dir, ".git"))
-		if errors.Is(err, os.ErrNotExist) {
-			dir = filepath.Dir(dir)
-			// From https://golang.org/pkg/path/filepath/#Dir:
-			// The returned path does not end in a separator unless it is the root directory.
-			if strings.HasSuffix(dir, string(filepath.Separator)) {
-				return "", fmt.Errorf("unable to find git repository enclosing working dir %s", start)
-			}
-			continue
-		}
-
-		if err != nil {
-			return "", err
-		}
-
-		return dir, nil
-	}
 }
 
 var capitalizations = []string{
