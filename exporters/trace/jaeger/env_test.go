@@ -32,7 +32,7 @@ func TestNewRawExporterWithDefault(t *testing.T) {
 	)
 
 	// Create Jaeger Exporter with default values
-	exp, err := NewRawExporter(
+	exp, err := New(
 		WithCollectorEndpoint(),
 	)
 
@@ -63,7 +63,7 @@ func TestNewRawExporterWithEnv(t *testing.T) {
 	}()
 
 	// Create Jaeger Exporter with environment variables
-	exp, err := NewRawExporter(
+	exp, err := New(
 		WithCollectorEndpoint(),
 	)
 
@@ -95,7 +95,7 @@ func TestNewRawExporterWithPassedOption(t *testing.T) {
 	}()
 
 	// Create Jaeger Exporter with passed endpoint option, should be used over envEndpoint
-	exp, err := NewRawExporter(
+	exp, err := New(
 		WithCollectorEndpoint(WithEndpoint(optionEndpoint)),
 	)
 

@@ -132,7 +132,7 @@ func TestEndToEnd(t *testing.T) {
 			allOpts = append(allOpts, tc.opts...)
 			driver := otlphttp.NewDriver(allOpts...)
 			ctx := context.Background()
-			exporter, err := otlp.NewExporter(ctx, driver)
+			exporter, err := otlp.New(ctx, driver)
 			if assert.NoError(t, err) {
 				defer func() {
 					assert.NoError(t, exporter.Shutdown(ctx))
@@ -160,7 +160,7 @@ func TestRetry(t *testing.T) {
 		otlphttp.WithMaxAttempts(len(statuses)+1),
 	)
 	ctx := context.Background()
-	exporter, err := otlp.NewExporter(ctx, driver)
+	exporter, err := otlp.New(ctx, driver)
 	require.NoError(t, err)
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
@@ -182,7 +182,7 @@ func TestTimeout(t *testing.T) {
 		otlphttp.WithTimeout(time.Nanosecond),
 	)
 	ctx := context.Background()
-	exporter, err := otlp.NewExporter(ctx, driver)
+	exporter, err := otlp.New(ctx, driver)
 	require.NoError(t, err)
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
@@ -207,7 +207,7 @@ func TestRetryFailed(t *testing.T) {
 		otlphttp.WithMaxAttempts(1),
 	)
 	ctx := context.Background()
-	exporter, err := otlp.NewExporter(ctx, driver)
+	exporter, err := otlp.New(ctx, driver)
 	require.NoError(t, err)
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
@@ -232,7 +232,7 @@ func TestNoRetry(t *testing.T) {
 		otlphttp.WithMaxAttempts(len(statuses)+1),
 	)
 	ctx := context.Background()
-	exporter, err := otlp.NewExporter(ctx, driver)
+	exporter, err := otlp.New(ctx, driver)
 	require.NoError(t, err)
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
@@ -252,7 +252,7 @@ func TestFailedCheckpoint(t *testing.T) {
 		otlphttp.WithInsecure(),
 	)
 	ctx := context.Background()
-	exporter, err := otlp.NewExporter(ctx, driver)
+	exporter, err := otlp.New(ctx, driver)
 	require.NoError(t, err)
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
@@ -271,7 +271,7 @@ func TestEmptyData(t *testing.T) {
 		otlphttp.WithInsecure(),
 	)
 	ctx := context.Background()
-	exporter, err := otlp.NewExporter(ctx, driver)
+	exporter, err := otlp.New(ctx, driver)
 	require.NoError(t, err)
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
@@ -320,7 +320,7 @@ func TestUnreasonableMaxAttempts(t *testing.T) {
 				otlphttp.WithBackoff(time.Millisecond),
 			)
 			ctx := context.Background()
-			exporter, err := otlp.NewExporter(ctx, driver)
+			exporter, err := otlp.New(ctx, driver)
 			require.NoError(t, err)
 			defer func() {
 				assert.NoError(t, exporter.Shutdown(ctx))
@@ -356,7 +356,7 @@ func TestUnreasonableBackoff(t *testing.T) {
 	)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*otlphttp.DefaultBackoff)
 	defer cancel()
-	exporter, err := otlp.NewExporter(ctx, driver)
+	exporter, err := otlp.New(ctx, driver)
 	require.NoError(t, err)
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
@@ -375,7 +375,7 @@ func TestCancelledContext(t *testing.T) {
 		otlphttp.WithInsecure(),
 	)
 	ctx, cancel := context.WithCancel(context.Background())
-	exporter, err := otlp.NewExporter(ctx, driver)
+	exporter, err := otlp.New(ctx, driver)
 	require.NoError(t, err)
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
@@ -402,7 +402,7 @@ func TestDeadlineContext(t *testing.T) {
 		otlphttp.WithBackoff(time.Minute),
 	)
 	ctx := context.Background()
-	exporter, err := otlp.NewExporter(ctx, driver)
+	exporter, err := otlp.New(ctx, driver)
 	require.NoError(t, err)
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
@@ -430,7 +430,7 @@ func TestStopWhileExporting(t *testing.T) {
 		otlphttp.WithBackoff(time.Minute),
 	)
 	ctx := context.Background()
-	exporter, err := otlp.NewExporter(ctx, driver)
+	exporter, err := otlp.New(ctx, driver)
 	require.NoError(t, err)
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))

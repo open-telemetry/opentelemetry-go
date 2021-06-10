@@ -56,7 +56,7 @@ func initProvider() func() {
 		otlpgrpc.WithEndpoint("localhost:30080"),
 		otlpgrpc.WithDialOption(grpc.WithBlock()), // useful for testing
 	)
-	exp, err := otlp.NewExporter(ctx, driver)
+	exp, err := otlp.New(ctx, driver)
 	handleErr(err, "failed to create exporter")
 
 	res, err := resource.New(ctx,

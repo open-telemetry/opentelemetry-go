@@ -500,7 +500,7 @@ func TestSumObserverEndToEnd(t *testing.T) {
 		accum.Collect(ctx)
 		require.NoError(t, proc.FinishCollection())
 
-		exporter := processortest.NewExporter(eselector, attribute.DefaultEncoder())
+		exporter := processortest.New(eselector, attribute.DefaultEncoder())
 		require.NoError(t, exporter.Export(ctx, data))
 
 		require.EqualValues(t, map[string]float64{

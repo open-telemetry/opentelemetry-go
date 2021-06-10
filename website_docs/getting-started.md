@@ -51,7 +51,7 @@ To initialize the console exporter, add the following code to the file your `mai
 
 ```go
 func main() {
-	exporter, err := stdout.NewExporter(
+	exporter, err := stdout.New(
 		stdout.WithPrettyPrint(),
 	)
 	if err != nil {
@@ -202,7 +202,3 @@ In this snippet, we're doing a few things. First, we're asking the global trace 
 Inside our function, we're creating a new span by calling `tracer.Start` with the context we just created, and a name. Passing the context will set our span as 'active' in it, which is used in our inner function to make a new child span. The name is important - every span needs a name, and these names are the primary method of indicating what a span represents.  Calling `defer span.End()` ensures that our span will complete once this function has finished its work. Spans can have attributes and events, which are metadata and log statements that help you interpret traces after-the-fact. Finally, in this code snippet we can see an example of creating a new function and propagating the span to it inside our code. When you run this program, you'll see that the 'Sub operation...' span has been created as a child of the 'operation' span.
 
 We also record some measurements. Recording measurements with asynchronous instruments is controlled by SDK and the controller we use, so we do not need to do anything else after creating the instrument and passing the callback to it. For synchronous instruments there are two ways of recording measurements - either through the instrument, bounded or not (in our case it's a value recorder, so we use the `Record` function), or by making a batched measurement (with `meter.RecordBatch`). Batched measurements allow you to use multiple instruments to create measurement and record them once.
-
-# Final notes
-
-You may have noticed that setting up a tracing and metric pipeline can be a bit involved (create an exporter, a batcher, a tracer provider, a selector, a processor and a controller, and then start the controller, then use the controller to get a meter provider, so it can be registered as a global instance together with the trace provider we got earlier). Some exporters provide a utility functions simplifying these steps. For example the stdout exporter used in this document provides a `NewExportPipeline` that creates all the necessary items, and a `InstallNewPipeline` function that also registers the tracer and meter providers globally.
