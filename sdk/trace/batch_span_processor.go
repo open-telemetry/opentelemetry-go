@@ -153,7 +153,8 @@ func (bsp *batchSpanProcessor) Shutdown(ctx context.Context) error {
 	return err
 }
 
-// ForceFlush exports all ended spans that have not yet been exported.
+// ForceFlush does a flush if some data is buffered, and
+// exports all ended spans that have not yet been exported.
 func (bsp *batchSpanProcessor) ForceFlush(ctx context.Context) error {
 	var err error
 	if bsp.e != nil {

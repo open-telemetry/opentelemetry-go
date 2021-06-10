@@ -97,7 +97,8 @@ func (ssp *simpleSpanProcessor) Shutdown(ctx context.Context) error {
 	return err
 }
 
-// ForceFlush does nothing as there is no data to flush.
+// ForceFlush has no need to be called in SimpleSpanProcessor
+// as there is no data to flush.
 func (ssp *simpleSpanProcessor) ForceFlush(context.Context) error {
 	return nil
 }
