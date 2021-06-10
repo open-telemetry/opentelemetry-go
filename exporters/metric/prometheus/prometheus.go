@@ -29,14 +29,10 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
-	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
-	selector "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
 // Exporter supports Prometheus pulls.  It does not implement the
@@ -89,9 +85,9 @@ type Config struct {
 	DefaultHistogramBoundaries []float64
 }
 
-// NewExporter returns a new Prometheus exporter using the configured
-// metric controller.  See controller.New().
-func NewExporter(config Config, controller *controller.Controller) (*Exporter, error) {
+// New returns a new Prometheus exporter using the configured metric
+// controller.  See controller.New().
+func New(config Config, controller *controller.Controller) (*Exporter, error) {
 	if config.Registry == nil {
 		config.Registry = prometheus.NewRegistry()
 	}
@@ -119,37 +115,6 @@ func NewExporter(config Config, controller *controller.Controller) (*Exporter, e
 		return nil, fmt.Errorf("cannot register the collector: %w", err)
 	}
 	return e, nil
-}
-
-// NewExportPipeline sets up a complete export pipeline with the recommended setup,
-// using the recommended selector and standard processor.  See the controller.Options.
-func NewExportPipeline(config Config, options ...controller.Option) (*Exporter, error) {
-	return NewExporter(config, defaultController(config, options...))
-}
-
-// InstallNewPipeline instantiates a NewExportPipeline and registers it globally.
-func InstallNewPipeline(config Config, options ...controller.Option) (*Exporter, error) {
-	exp, err := NewExportPipeline(config, options...)
-	if err != nil {
-		return nil, err
-	}
-	global.SetMeterProvider(exp.MeterProvider())
-	return exp, nil
-}
-
-// defaultController returns a standard *controller.Controller for use
-// with Prometheus.
-func defaultController(config Config, options ...controller.Option) *controller.Controller {
-	return controller.New(
-		processor.New(
-			selector.NewWithHistogramDistribution(
-				histogram.WithExplicitBoundaries(config.DefaultHistogramBoundaries),
-			),
-			export.CumulativeExportKindSelector(),
-			processor.WithMemory(true),
-		),
-		options...,
-	)
 }
 
 // MeterProvider returns the MeterProvider of this exporter.

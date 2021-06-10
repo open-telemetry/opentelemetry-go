@@ -44,7 +44,7 @@ import (
 
 var roSpans = tracetest.SpanStubs{{Name: "Span 0"}}.Snapshots()
 
-func TestNewExporter_endToEnd(t *testing.T) {
+func TestNew_endToEnd(t *testing.T) {
 	tests := []struct {
 		name           string
 		additionalOpts []otlptracegrpc.Option
@@ -88,7 +88,7 @@ func newGRPCExporter(t *testing.T, ctx context.Context, endpoint string, additio
 
 	opts = append(opts, additionalOpts...)
 	client := otlptracegrpc.NewClient(opts...)
-	exp, err := otlptrace.NewExporter(ctx, client)
+	exp, err := otlptrace.New(ctx, client)
 	if err != nil {
 		t.Fatalf("failed to create a new collector exporter: %v", err)
 	}
@@ -133,7 +133,7 @@ func TestExporterShutdown(t *testing.T) {
 	})
 }
 
-func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
+func TestNew_invokeStartThenStopManyTimes(t *testing.T) {
 	mc := runMockCollector(t)
 	defer func() {
 		_ = mc.stop()
@@ -165,7 +165,7 @@ func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
 	}
 }
 
-func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *testing.T) {
+func TestNew_collectorConnectionDiesThenReconnectsWhenInRestMode(t *testing.T) {
 	mc := runMockCollector(t)
 
 	reconnectionPeriod := 20 * time.Millisecond
@@ -489,7 +489,7 @@ func newThrottlingError(code codes.Code, duration time.Duration) error {
 	return s.Err()
 }
 
-func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
+func TestNew_collectorConnectionDiesThenReconnects(t *testing.T) {
 	mc := runMockCollector(t)
 
 	reconnectionPeriod := 50 * time.Millisecond
@@ -543,7 +543,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 }
 
 // This test takes a long time to run: to skip it, run tests using: -short
-func TestNewExporter_collectorOnBadConnection(t *testing.T) {
+func TestNew_collectorOnBadConnection(t *testing.T) {
 	if testing.Short() {
 		t.Skipf("Skipping this long running test")
 	}
@@ -564,7 +564,7 @@ func TestNewExporter_collectorOnBadConnection(t *testing.T) {
 	_ = exp.Shutdown(ctx)
 }
 
-func TestNewExporter_withEndpoint(t *testing.T) {
+func TestNew_withEndpoint(t *testing.T) {
 	mc := runMockCollector(t)
 	defer func() {
 		_ = mc.stop()
@@ -575,7 +575,7 @@ func TestNewExporter_withEndpoint(t *testing.T) {
 	_ = exp.Shutdown(ctx)
 }
 
-func TestNewExporter_withHeaders(t *testing.T) {
+func TestNew_withHeaders(t *testing.T) {
 	mc := runMockCollector(t)
 	defer func() {
 		_ = mc.stop()
@@ -595,7 +595,7 @@ func TestNewExporter_withHeaders(t *testing.T) {
 	assert.Equal(t, "value1", headers.Get("header1")[0])
 }
 
-func TestNewExporter_WithTimeout(t *testing.T) {
+func TestNew_WithTimeout(t *testing.T) {
 	tts := []struct {
 		name    string
 		fn      func(exp *otlptrace.Exporter) error
@@ -658,7 +658,7 @@ func TestNewExporter_WithTimeout(t *testing.T) {
 	}
 }
 
-func TestNewExporter_withInvalidSecurityConfiguration(t *testing.T) {
+func TestNew_withInvalidSecurityConfiguration(t *testing.T) {
 	mc := runMockCollector(t)
 	defer func() {
 		_ = mc.stop()
@@ -666,7 +666,7 @@ func TestNewExporter_withInvalidSecurityConfiguration(t *testing.T) {
 
 	ctx := context.Background()
 	driver := otlptracegrpc.NewClient(otlptracegrpc.WithEndpoint(mc.endpoint))
-	exp, err := otlptrace.NewExporter(ctx, driver)
+	exp, err := otlptrace.New(ctx, driver)
 	if err != nil {
 		t.Fatalf("failed to create a new collector exporter: %v", err)
 	}
@@ -683,7 +683,7 @@ func TestNewExporter_withInvalidSecurityConfiguration(t *testing.T) {
 	}()
 }
 
-func TestNewExporter_withMultipleAttributeTypes(t *testing.T) {
+func TestNew_withMultipleAttributeTypes(t *testing.T) {
 	mc := runMockCollector(t)
 
 	defer func() {

@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
@@ -162,7 +161,7 @@ func (m *stubTransformingProtocolDriver) Reset() {
 
 func newExporter(t *testing.T, opts ...otlp.ExporterOption) (*otlp.Exporter, *stubTransformingProtocolDriver) {
 	driver := &stubTransformingProtocolDriver{}
-	exp, err := otlp.NewExporter(context.Background(), driver, opts...)
+	exp, err := otlp.New(context.Background(), driver, opts...)
 	require.NoError(t, err)
 	return exp, driver
 }
@@ -171,7 +170,7 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	e := otlp.NewUnstartedExporter(&stubProtocolDriver{})
+	e := otlp.NewUnstarted(&stubProtocolDriver{})
 	if err := e.Start(ctx); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
@@ -190,7 +189,7 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	e := otlp.NewUnstartedExporter(&stubProtocolDriver{})
+	e := otlp.NewUnstarted(&stubProtocolDriver{})
 	if err := e.Start(ctx); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
@@ -209,7 +208,7 @@ func TestExporterShutdownNoError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	e := otlp.NewUnstartedExporter(&stubProtocolDriver{})
+	e := otlp.NewUnstarted(&stubProtocolDriver{})
 	if err := e.Start(ctx); err != nil {
 		t.Fatalf("failed to start exporter: %v", err)
 	}
@@ -221,7 +220,7 @@ func TestExporterShutdownNoError(t *testing.T) {
 
 func TestExporterShutdownManyTimes(t *testing.T) {
 	ctx := context.Background()
-	e, err := otlp.NewExporter(ctx, &stubProtocolDriver{})
+	e, err := otlp.New(ctx, &stubProtocolDriver{})
 	if err != nil {
 		t.Fatalf("failed to start an exporter: %v", err)
 	}
@@ -243,43 +242,6 @@ func TestExporterShutdownManyTimes(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to shutdown exporter: %v", err)
 		}
-	}
-}
-
-func TestInstallNewPipeline(t *testing.T) {
-	ctx := context.Background()
-	_, _, _, err := otlp.InstallNewPipeline(ctx, &stubProtocolDriver{})
-	assert.NoError(t, err)
-	assert.IsType(t, &tracesdk.TracerProvider{}, otel.GetTracerProvider())
-}
-
-func TestNewExportPipeline(t *testing.T) {
-	testCases := []struct {
-		name             string
-		expOpts          []otlp.ExporterOption
-		testSpanSampling bool
-	}{
-		{
-			name: "simple pipeline",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			_, tp, _, err := otlp.NewExportPipeline(
-				context.Background(),
-				&stubProtocolDriver{},
-				tc.expOpts...,
-			)
-
-			assert.NoError(t, err)
-			assert.NotEqual(t, tp, otel.GetTracerProvider())
-
-			_, span := tp.Tracer("otlp test").Start(context.Background(), tc.name)
-			spanCtx := span.SpanContext()
-			assert.Equal(t, true, spanCtx.IsSampled())
-			span.End()
-		})
 	}
 }
 

@@ -36,7 +36,7 @@ import (
 func Example_insecure() {
 	ctx := context.Background()
 	driver := otlpgrpc.NewDriver(otlpgrpc.WithInsecure())
-	exp, err := otlp.NewExporter(ctx, driver)
+	exp, err := otlp.New(ctx, driver)
 	if err != nil {
 		log.Fatalf("Failed to create the collector exporter: %v", err)
 	}
@@ -89,7 +89,7 @@ func Example_withTLS() {
 
 	ctx := context.Background()
 	driver := otlpgrpc.NewDriver(otlpgrpc.WithTLSCredentials(creds))
-	exp, err := otlp.NewExporter(ctx, driver)
+	exp, err := otlp.New(ctx, driver)
 	if err != nil {
 		log.Fatalf("failed to create the collector exporter: %v", err)
 	}
@@ -145,7 +145,7 @@ func Example_withDifferentSignalCollectors() {
 	)
 	driver := otlp.NewSplitDriver(otlp.WithMetricDriver(metricsDriver), otlp.WithTraceDriver(tracesDriver))
 	ctx := context.Background()
-	exp, err := otlp.NewExporter(ctx, driver)
+	exp, err := otlp.New(ctx, driver)
 	if err != nil {
 		log.Fatalf("failed to create the collector exporter: %v", err)
 	}

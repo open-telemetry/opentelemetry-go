@@ -52,7 +52,7 @@ func newFixture(t *testing.T, opts ...stdout.Option) testFixture {
 	buf := &bytes.Buffer{}
 	opts = append(opts, stdout.WithWriter(buf))
 	opts = append(opts, stdout.WithoutTimestamps())
-	exp, err := stdout.NewExporter(opts...)
+	exp, err := stdout.New(opts...)
 	if err != nil {
 		t.Fatal("Error building fixture: ", err)
 	}
@@ -77,7 +77,7 @@ func (fix testFixture) Export(checkpointSet export.CheckpointSet) {
 
 func TestStdoutTimestamp(t *testing.T) {
 	var buf bytes.Buffer
-	exporter, err := stdout.NewExporter(
+	exporter, err := stdout.New(
 		stdout.WithWriter(&buf),
 	)
 	if err != nil {
