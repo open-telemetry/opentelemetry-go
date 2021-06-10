@@ -65,3 +65,9 @@ replace go.opentelemetry.io/otel/sdk/export/metric => ../../sdk/export/metric
 replace go.opentelemetry.io/otel/sdk/metric => ../../sdk/metric
 
 replace go.opentelemetry.io/otel/trace => ../../trace
+
+replace go.opentelemetry.io/otel/exporters/metric/prometheus => ../metric/prometheus
+
+replace go.opentelemetry.io/otel/exporters/trace/jaeger => ../trace/jaeger
+
+replace go.opentelemetry.io/otel/exporters/trace/zipkin => ../trace/zipkin
