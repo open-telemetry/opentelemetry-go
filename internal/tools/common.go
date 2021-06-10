@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package common provides helper functions used in scripts within the
-// internal/tools module.
-package common
+// Package tools provides helper functions used in scripts within the
+// internal/tools module, as well as imports needed for a build with the
+// "tools" build tag.
+package tools
 
 import (
 	"errors"

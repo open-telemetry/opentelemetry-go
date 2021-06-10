@@ -29,7 +29,7 @@ import (
 	flag "github.com/spf13/pflag"
 	"golang.org/x/mod/semver"
 
-	"go.opentelemetry.io/otel/internal/tools/common"
+	"go.opentelemetry.io/otel/internal/tools"
 )
 
 func main() {
@@ -98,7 +98,7 @@ func validateConfig(cfg config) (config, error) {
 	}
 
 	if !path.IsAbs(cfg.outputPath) {
-		root, err := common.FindRepoRoot()
+		root, err := tools.FindRepoRoot()
 		if err != nil {
 			return config{}, err
 		}

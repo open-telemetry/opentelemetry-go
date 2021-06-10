@@ -35,8 +35,8 @@ import (
 	"path/filepath"
 	"strings"
 	"text/tabwriter"
-
-	"go.opentelemetry.io/otel/internal/tools/common"
+	
+	"go.opentelemetry.io/otel/internal/tools"
 )
 
 type repo string
@@ -132,7 +132,7 @@ func (m mods) crossLink() error {
 }
 
 func main() {
-	repoRootStr, err := common.FindRepoRoot()
+	repoRootStr, err := tools.FindRepoRoot()
 	if err != nil {
 		log.Fatalf("unable to find repo root: %v", err)
 	}
