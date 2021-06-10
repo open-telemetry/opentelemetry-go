@@ -68,7 +68,7 @@ func WithOSType() Option {
 }
 
 // WithOSDescription adds an attribute with the operating system description to the
-// configured Resource. the formatted string is equivalent to the output of the
+// configured Resource. The formatted string is equivalent to the output of the
 // `uname -snrvm` command.
 func WithOSDescription() Option {
 	return WithDetectors(osDescriptionDetector{})
