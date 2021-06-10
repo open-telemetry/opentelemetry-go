@@ -22,11 +22,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/internal/metric/global"
 	"go.opentelemetry.io/otel/metric"
 	metricglobal "go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
-	"go.opentelemetry.io/otel/oteltest"
 )
 
 var Must = metric.Must
@@ -66,7 +66,7 @@ func TestDirect(t *testing.T) {
 	second.Record(ctx, 1, labels3...)
 	second.Record(ctx, 2, labels3...)
 
-	mock, provider := oteltest.NewMeterProvider()
+	mock, provider := metrictest.NewMeterProvider()
 	metricglobal.SetMeterProvider(provider)
 
 	counter.Add(ctx, 1, labels1...)
@@ -75,56 +75,56 @@ func TestDirect(t *testing.T) {
 
 	mock.RunAsyncInstruments()
 
-	measurements := oteltest.AsStructs(mock.MeasurementBatches)
+	measurements := metrictest.AsStructs(mock.MeasurementBatches)
 
 	require.EqualValues(t,
-		[]oteltest.Measured{
+		[]metrictest.Measured{
 			{
 				Name:                   "test.counter",
 				InstrumentationName:    "test1",
 				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 oteltest.LabelsToMap(labels1...),
+				Labels:                 metrictest.LabelsToMap(labels1...),
 				Number:                 asInt(1),
 			},
 			{
 				Name:                   "test.valuerecorder",
 				InstrumentationName:    "test1",
 				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 oteltest.LabelsToMap(labels1...),
+				Labels:                 metrictest.LabelsToMap(labels1...),
 				Number:                 asFloat(3),
 			},
 			{
 				Name:                "test.second",
 				InstrumentationName: "test2",
-				Labels:              oteltest.LabelsToMap(labels3...),
+				Labels:              metrictest.LabelsToMap(labels3...),
 				Number:              asFloat(3),
 			},
 			{
 				Name:                   "test.valueobserver.float",
 				InstrumentationName:    "test1",
 				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 oteltest.LabelsToMap(labels1...),
+				Labels:                 metrictest.LabelsToMap(labels1...),
 				Number:                 asFloat(1),
 			},
 			{
 				Name:                   "test.valueobserver.float",
 				InstrumentationName:    "test1",
 				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 oteltest.LabelsToMap(labels2...),
+				Labels:                 metrictest.LabelsToMap(labels2...),
 				Number:                 asFloat(2),
 			},
 			{
 				Name:                   "test.valueobserver.int",
 				InstrumentationName:    "test1",
 				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 oteltest.LabelsToMap(labels1...),
+				Labels:                 metrictest.LabelsToMap(labels1...),
 				Number:                 asInt(1),
 			},
 			{
 				Name:                   "test.valueobserver.int",
 				InstrumentationName:    "test1",
 				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 oteltest.LabelsToMap(labels2...),
+				Labels:                 metrictest.LabelsToMap(labels2...),
 				Number:                 asInt(2),
 			},
 		},
@@ -151,28 +151,28 @@ func TestBound(t *testing.T) {
 	boundM.Record(ctx, 1)
 	boundM.Record(ctx, 2)
 
-	mock, provider := oteltest.NewMeterProvider()
+	mock, provider := metrictest.NewMeterProvider()
 	metricglobal.SetMeterProvider(provider)
 
 	boundC.Add(ctx, 1)
 	boundM.Record(ctx, 3)
 
 	require.EqualValues(t,
-		[]oteltest.Measured{
+		[]metrictest.Measured{
 			{
 				Name:                "test.counter",
 				InstrumentationName: "test",
-				Labels:              oteltest.LabelsToMap(labels1...),
+				Labels:              metrictest.LabelsToMap(labels1...),
 				Number:              asFloat(1),
 			},
 			{
 				Name:                "test.valuerecorder",
 				InstrumentationName: "test",
-				Labels:              oteltest.LabelsToMap(labels1...),
+				Labels:              metrictest.LabelsToMap(labels1...),
 				Number:              asInt(3),
 			},
 		},
-		oteltest.AsStructs(mock.MeasurementBatches))
+		metrictest.AsStructs(mock.MeasurementBatches))
 
 	boundC.Unbind()
 	boundM.Unbind()
@@ -199,7 +199,7 @@ func TestUnbindThenRecordOne(t *testing.T) {
 	global.ResetForTest()
 
 	ctx := context.Background()
-	mock, provider := oteltest.NewMeterProvider()
+	mock, provider := metrictest.NewMeterProvider()
 
 	meter := metricglobal.Meter("test")
 	counter := Must(meter).NewInt64Counter("test.counter")
@@ -238,7 +238,7 @@ func TestErrorInDeferredConstructor(t *testing.T) {
 	c1 := Must(meter).NewInt64Counter("test")
 	c2 := Must(meter).NewInt64Counter("test")
 
-	_, provider := oteltest.NewMeterProvider()
+	_, provider := metrictest.NewMeterProvider()
 	sdk := &meterProviderWithConstructorError{provider}
 
 	require.Panics(t, func() {
@@ -264,7 +264,7 @@ func TestImplementationIndirection(t *testing.T) {
 	ival := counter.Measurement(1).SyncImpl().Implementation()
 	require.NotNil(t, ival)
 
-	_, ok := ival.(*oteltest.Sync)
+	_, ok := ival.(*metrictest.Sync)
 	require.False(t, ok)
 
 	// Async: no SDK yet
@@ -276,11 +276,11 @@ func TestImplementationIndirection(t *testing.T) {
 	ival = valueobserver.AsyncImpl().Implementation()
 	require.NotNil(t, ival)
 
-	_, ok = ival.(*oteltest.Async)
+	_, ok = ival.(*metrictest.Async)
 	require.False(t, ok)
 
 	// Register the SDK
-	_, provider := oteltest.NewMeterProvider()
+	_, provider := metrictest.NewMeterProvider()
 	metricglobal.SetMeterProvider(provider)
 
 	// Repeat the above tests
@@ -289,14 +289,14 @@ func TestImplementationIndirection(t *testing.T) {
 	ival = counter.Measurement(1).SyncImpl().Implementation()
 	require.NotNil(t, ival)
 
-	_, ok = ival.(*oteltest.Sync)
+	_, ok = ival.(*metrictest.Sync)
 	require.True(t, ok)
 
 	// Async
 	ival = valueobserver.AsyncImpl().Implementation()
 	require.NotNil(t, ival)
 
-	_, ok = ival.(*oteltest.Async)
+	_, ok = ival.(*metrictest.Async)
 	require.True(t, ok)
 }
 
@@ -309,19 +309,19 @@ func TestRecordBatchMock(t *testing.T) {
 
 	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
 
-	mock, provider := oteltest.NewMeterProvider()
+	mock, provider := metrictest.NewMeterProvider()
 	metricglobal.SetMeterProvider(provider)
 
 	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
 
 	require.EqualValues(t,
-		[]oteltest.Measured{
+		[]metrictest.Measured{
 			{
 				Name:                "test.counter",
 				InstrumentationName: "builtin",
-				Labels:              oteltest.LabelsToMap(),
+				Labels:              metrictest.LabelsToMap(),
 				Number:              asInt(1),
 			},
 		},
-		oteltest.AsStructs(mock.MeasurementBatches))
+		metrictest.AsStructs(mock.MeasurementBatches))
 }
