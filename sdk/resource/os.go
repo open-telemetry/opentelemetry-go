@@ -18,7 +18,7 @@ import (
 	"context"
 	"strings"
 
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
 type osTypeDetector struct{}

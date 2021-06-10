@@ -14,7 +14,7 @@
 
 // Code generated from semantic convention specification. DO NOT EDIT.
 
-package semconv // import "go.opentelemetry.io/otel/semconv"
+package semconv // import "go.opentelemetry.io/otel/semconv/v1.4.0"
 
 import "go.opentelemetry.io/otel/attribute"
 
@@ -173,6 +173,10 @@ var (
 	DBSystemGeode = DBSystemKey.String("geode")
 	// Elasticsearch
 	DBSystemElasticsearch = DBSystemKey.String("elasticsearch")
+	// Memcached
+	DBSystemMemcached = DBSystemKey.String("memcached")
+	// CockroachDB
+	DBSystemCockroachdb = DBSystemKey.String("cockroachdb")
 )
 
 // Connection-level attributes for Microsoft SQL Server
@@ -1214,4 +1218,44 @@ var (
 	RPCGRPCStatusCodeDataLoss = RPCGRPCStatusCodeKey.Int(15)
 	// UNAUTHENTICATED
 	RPCGRPCStatusCodeUnauthenticated = RPCGRPCStatusCodeKey.Int(16)
+)
+
+// Tech-specific attributes for [JSON RPC](https://www.jsonrpc.org/).
+const (
+	// Protocol version as in `jsonrpc` property of request/response. Since JSON-RPC
+	// 1.0 does not specify this, the value can be omitted.
+	//
+	// Type: string
+	// Required: If missing, it is assumed to be "1.0".
+	// Examples: '2.0', '1.0'
+	RPCJsonrpcVersionKey = attribute.Key("rpc.jsonrpc.version")
+	// `method` property from request. Unlike `rpc.method`, this may not relate to the
+	// actual method being called. Useful for client-side traces since client does not
+	// know what will be called on the server.
+	//
+	// Type: string
+	// Required: Always
+	// Examples: 'users.create', 'get_users'
+	RPCJsonrpcMethodKey = attribute.Key("rpc.jsonrpc.method")
+	// `id` property of request or response. Since protocol allows id to be int,
+	// string, `null` or missing (for notifications), value is expected to be cast to
+	// string for simplicity. Use empty string in case of `null` value. Omit entirely
+	// if this is a notification.
+	//
+	// Type: string
+	// Required: No
+	// Examples: '10', 'request-7', ''
+	RPCJsonrpcRequestIDKey = attribute.Key("rpc.jsonrpc.request_id")
+	// `error.code` property of response if it is an error response.
+	//
+	// Type: int
+	// Required: If missing, response is assumed to be successful.
+	// Examples: -32700, 100
+	RPCJsonrpcErrorCodeKey = attribute.Key("rpc.jsonrpc.error_code")
+	// `error.message` property of response if it is an error response.
+	//
+	// Type: string
+	// Required: No
+	// Examples: 'Parse error', 'User already exists'
+	RPCJsonrpcErrorMessageKey = attribute.Key("rpc.jsonrpc.error_message")
 )
