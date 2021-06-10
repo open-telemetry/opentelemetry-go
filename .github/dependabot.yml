@@ -128,6 +128,16 @@ updates:
       interval: weekly
   -
     package-ecosystem: gomod
+    directory: /exporters/metric/prometheus
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
     directory: /exporters/prometheus
     labels:
       - dependencies
@@ -158,7 +168,27 @@ updates:
       interval: weekly
   -
     package-ecosystem: gomod
+    directory: /exporters/trace/jaeger
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
     directory: /exporters/jaeger
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
+    directory: /exporters/trace/zipkin
     labels:
       - dependencies
       - go
