@@ -18,19 +18,24 @@ import (
 	"context"
 	"testing"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/attribute"
+	internalglobal "go.opentelemetry.io/otel/internal/metric/global"
+	metricglobal "go.opentelemetry.io/otel/metric/global"
 )
 
-func BenchmarkStartEndSpanNoSDK(b *testing.B) {
-	// Compare with BenchmarkStartEndSpan() in
-	// ../../sdk/trace/benchmark_test.go.
-	global.ResetForTest()
-	t := otel.Tracer("Benchmark StartEndSpan")
+func BenchmarkGlobalInt64CounterAddNoSDK(b *testing.B) {
+	// Compare with BenchmarkGlobalInt64CounterAddWithSDK() in
+	// ../../sdk/metric/benchmark_test.go to see the overhead of the
+	// global no-op system against a registered SDK.
+	internalglobal.ResetForTest()
 	ctx := context.Background()
+	sdk := metricglobal.Meter("test")
+	labs := []attribute.KeyValue{attribute.String("A", "B")}
+	cnt := Must(sdk).NewInt64Counter("int64.counter")
+
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
-		_, span := t.Start(ctx, "/foo")
-		span.End()
+		cnt.Add(ctx, 1, labs...)
 	}
 }

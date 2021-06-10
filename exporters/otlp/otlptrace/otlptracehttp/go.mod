@@ -61,3 +61,5 @@ replace go.opentelemetry.io/otel/sdk/export/metric => ../../../../sdk/export/met
 replace go.opentelemetry.io/otel/sdk/metric => ../../../../sdk/metric
 
 replace go.opentelemetry.io/otel/trace => ../../../../trace
+
+replace go.opentelemetry.io/otel/internal/metric => ../../../../internal/metric
