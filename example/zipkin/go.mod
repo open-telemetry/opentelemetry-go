@@ -4,13 +4,13 @@ go 1.15
 
 replace (
 	go.opentelemetry.io/otel => ../..
-	go.opentelemetry.io/otel/exporters/trace/zipkin => ../../exporters/trace/zipkin
+	go.opentelemetry.io/otel/exporters/zipkin => ../../exporters/zipkin
 	go.opentelemetry.io/otel/sdk => ../../sdk
 )
 
 require (
 	go.opentelemetry.io/otel v0.20.0
-	go.opentelemetry.io/otel/exporters/trace/zipkin v0.20.0
+	go.opentelemetry.io/otel/exporters/zipkin v0.20.0
 	go.opentelemetry.io/otel/sdk v0.20.0
 	go.opentelemetry.io/otel/trace v0.20.0
 )

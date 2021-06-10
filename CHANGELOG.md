@@ -84,6 +84,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Metrics test helpers in `go.opentelemetry.io/otel/oteltest` have been moved to `go.opentelemetry.io/otel/metric/metrictest`. (#1988)
 - The `go.opentelemetry.io/otel/exporters/metric/prometheus` is renamed to `go.opentelemetry.io/otel/exporters/prometheus`. (#TBD)
 - The `go.opentelemetry.io/otel/exporters/trace/jaeger` is renamed to `go.opentelemetry.io/otel/exporters/jaeger`. (#TBD)
+- The `go.opentelemetry.io/otel/exporters/trace/zipkin` is renamed to `go.opentelemetry.io/otel/exporters/zipkin`. (#TBD)
 
 ### Deprecated
 

@@ -60,6 +60,6 @@ replace go.opentelemetry.io/otel/internal/metric => ../../internal/metric
 
 replace go.opentelemetry.io/otel => ../..
 
-replace go.opentelemetry.io/otel/exporters/trace/zipkin => ../trace/zipkin
+replace go.opentelemetry.io/otel/exporters/zipkin => ../zipkin
 
 replace go.opentelemetry.io/otel/sdk => ../../sdk

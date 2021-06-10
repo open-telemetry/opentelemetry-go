@@ -1,20 +1,13 @@
-module go.opentelemetry.io/otel/exporters/stdout
+module go.opentelemetry.io/otel/exporters/zipkin
 
 go 1.15
 
-replace (
-	go.opentelemetry.io/otel => ../..
-	go.opentelemetry.io/otel/sdk => ../../sdk
-)
-
 require (
+	github.com/google/go-cmp v0.5.6
+	github.com/openzipkin/zipkin-go v0.2.5
 	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/otel v0.20.0
-	go.opentelemetry.io/otel/metric v0.20.0
-	go.opentelemetry.io/otel/oteltest v0.20.0
 	go.opentelemetry.io/otel/sdk v0.20.0
-	go.opentelemetry.io/otel/sdk/export/metric v0.20.0
-	go.opentelemetry.io/otel/sdk/metric v0.20.0
 	go.opentelemetry.io/otel/trace v0.20.0
 )
 
@@ -40,11 +33,11 @@ replace go.opentelemetry.io/otel/exporters/prometheus => ../prometheus
 
 replace go.opentelemetry.io/otel/exporters/otlp => ../otlp
 
-replace go.opentelemetry.io/otel/exporters/stdout => ./
+replace go.opentelemetry.io/otel/exporters/stdout => ../stdout
 
 replace go.opentelemetry.io/otel/exporters/jaeger => ../jaeger
 
-replace go.opentelemetry.io/otel/exporters/zipkin => ../zipkin
+replace go.opentelemetry.io/otel/exporters/zipkin => ./
 
 replace go.opentelemetry.io/otel/internal/tools => ../../internal/tools
 
@@ -67,3 +60,7 @@ replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc => ../ot
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp => ../otlp/otlptrace/otlptracehttp
 
 replace go.opentelemetry.io/otel/internal/metric => ../../internal/metric
+
+replace go.opentelemetry.io/otel => ../..
+
+replace go.opentelemetry.io/otel/sdk => ../../sdk
