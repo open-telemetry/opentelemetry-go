@@ -82,12 +82,12 @@ func (e *EnvOptionsReader) GetOptionsFromEnv() []GenericOption {
 	}
 	if v, ok := e.getEnvValue("TRACES_ENDPOINT"); ok {
 		if isInsecureEndpoint(v) {
-			opts = append(opts, WithInsecureTraces())
+			opts = append(opts, WithInsecure())
 		} else {
-			opts = append(opts, WithSecureTraces())
+			opts = append(opts, WithSecure())
 		}
 
-		opts = append(opts, WithTracesEndpoint(trimSchema(v)))
+		opts = append(opts, WithEndpoint(trimSchema(v)))
 	}
 
 	// Certificate File
@@ -100,7 +100,7 @@ func (e *EnvOptionsReader) GetOptionsFromEnv() []GenericOption {
 	}
 	if path, ok := e.getEnvValue("TRACES_CERTIFICATE"); ok {
 		if tls, err := e.readTLSConfig(path); err == nil {
-			opts = append(opts, WithTracesTLSClientConfig(tls))
+			opts = append(opts, WithTLSClientConfig(tls))
 		} else {
 			otel.Handle(fmt.Errorf("failed to configure otlp traces exporter certificate '%s': %w", path, err))
 		}
@@ -111,7 +111,7 @@ func (e *EnvOptionsReader) GetOptionsFromEnv() []GenericOption {
 		opts = append(opts, WithHeaders(stringToHeader(h)))
 	}
 	if h, ok := e.getEnvValue("TRACES_HEADERS"); ok {
-		opts = append(opts, WithTracesHeaders(stringToHeader(h)))
+		opts = append(opts, WithHeaders(stringToHeader(h)))
 	}
 
 	// Compression
@@ -119,7 +119,7 @@ func (e *EnvOptionsReader) GetOptionsFromEnv() []GenericOption {
 		opts = append(opts, WithCompression(stringToCompression(c)))
 	}
 	if c, ok := e.getEnvValue("TRACES_COMPRESSION"); ok {
-		opts = append(opts, WithTracesCompression(stringToCompression(c)))
+		opts = append(opts, WithCompression(stringToCompression(c)))
 	}
 	// Timeout
 	if t, ok := e.getEnvValue("TIMEOUT"); ok {
@@ -129,7 +129,7 @@ func (e *EnvOptionsReader) GetOptionsFromEnv() []GenericOption {
 	}
 	if t, ok := e.getEnvValue("TRACES_TIMEOUT"); ok {
 		if d, err := strconv.Atoi(t); err == nil {
-			opts = append(opts, WithTracesTimeout(time.Duration(d)*time.Millisecond))
+			opts = append(opts, WithTimeout(time.Duration(d)*time.Millisecond))
 		}
 	}
 
