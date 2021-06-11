@@ -25,10 +25,6 @@ replace go.opentelemetry.io/otel/example/namedtracer => ../namedtracer
 
 replace go.opentelemetry.io/otel/example/opencensus => ../opencensus
 
-replace go.opentelemetry.io/otel/example/otel-collector => ../otel-collector
-
-replace go.opentelemetry.io/otel/example/prom-collector => ../prom-collector
-
 replace go.opentelemetry.io/otel/example/prometheus => ../prometheus
 
 replace go.opentelemetry.io/otel/example/zipkin => ./
@@ -64,3 +60,7 @@ replace go.opentelemetry.io/otel/internal/metric => ../../internal/metric
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric => ../../exporters/otlp/otlpmetric
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc => ../../exporters/otlp/otlpmetric/otlpmetricgrpc
+
+replace go.opentelemetry.io/otel/example/otlpmetric-otel-collector => ../otlpmetric-otel-collector
+
+replace go.opentelemetry.io/otel/example/otlptrace-otel-collector => ../otlptrace-otel-collector
