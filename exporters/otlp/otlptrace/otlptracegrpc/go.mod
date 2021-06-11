@@ -17,8 +17,6 @@ replace go.opentelemetry.io/otel => ../../../..
 
 replace go.opentelemetry.io/otel/sdk => ../../../../sdk
 
-replace go.opentelemetry.io/otel/exporters/otlp => ../..
-
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace => ../
 
 replace go.opentelemetry.io/otel/metric => ../../../../metric
