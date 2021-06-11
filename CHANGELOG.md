@@ -109,7 +109,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `InstallNewPipeline` and `NewExportPipeline` creation functions in all the exporters (prometheus, otlp, stdout, jaeger, and zipkin) have been removed.
   These functions were deemed premature attempts to provide convenience that did not achieve this aim. (#1985)
 - The `go.opentelemetry.io/otel/exporters/otlp` exporter has been removed.  Use `go.opentelemetry.io/otel/exporters/otlp/otlptrace` instead. (#1990)
-- Remove `WithTraces*` options from `otlptrace` and `otlptracegrpc` packages. (#1997)
 
 ### Fixed
 
