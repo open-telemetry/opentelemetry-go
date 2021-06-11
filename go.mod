@@ -60,3 +60,7 @@ replace go.opentelemetry.io/otel/exporters/otlp/otlptrace => ./exporters/otlp/ot
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc => ./exporters/otlp/otlptrace/otlptracegrpc
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp => ./exporters/otlp/otlptrace/otlptracehttp
+
+replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric => ./exporters/otlp/otlpmetric
+
+replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc => ./exporters/otlp/otlpmetric/otlpmetricgrpc
