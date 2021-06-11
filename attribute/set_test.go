@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-type testCase struct {
+type testCase struct { //nolint:govet // ignore 'fieldalignment' error
 	kvs []attribute.KeyValue
 
 	keyRe *regexp.Regexp

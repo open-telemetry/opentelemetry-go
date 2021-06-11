@@ -30,7 +30,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-type testBatchExporter struct {
+type testBatchExporter struct { //nolint:govet // ignore 'fieldalignment' error
 	mu            sync.Mutex
 	spans         []sdktrace.ReadOnlySpan
 	sizes         []int

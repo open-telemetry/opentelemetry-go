@@ -83,7 +83,7 @@ func pointTime() uint64 {
 	return uint64(intervalEnd.UnixNano())
 }
 
-type checkpointSet struct {
+type checkpointSet struct { //nolint:govet // ignore 'fieldalignment' error
 	sync.RWMutex
 	records []metricsdk.Record
 }
@@ -97,7 +97,7 @@ func (m *checkpointSet) ForEach(_ metricsdk.ExportKindSelector, fn func(metricsd
 	return nil
 }
 
-type record struct {
+type record struct { //nolint:govet // ignore 'fieldalignment' error
 	name     string
 	iKind    metric.InstrumentKind
 	nKind    number.Kind
@@ -687,7 +687,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 }
 
 func TestStatelessExportKind(t *testing.T) {
-	type testcase struct {
+	type testcase struct { //nolint:govet // ignore 'fieldalignment' error
 		name           string
 		instrumentKind metric.InstrumentKind
 		aggTemporality metricpb.AggregationTemporality

@@ -44,7 +44,7 @@ var (
 )
 
 func TestSpanFromContext(t *testing.T) {
-	testCases := []struct {
+	testCases := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name         string
 		context      context.Context
 		expectedSpan Span

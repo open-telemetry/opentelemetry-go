@@ -160,7 +160,7 @@ func TestHasSpanID(t *testing.T) {
 }
 
 func TestTraceFlagsIsSampled(t *testing.T) {
-	for _, testcase := range []struct {
+	for _, testcase := range []struct { //nolint:govet // ignore 'fieldalignment' error
 		name string
 		tf   TraceFlags
 		want bool
@@ -232,7 +232,7 @@ func TestTraceFlagsWithSampled(t *testing.T) {
 }
 
 func TestStringTraceID(t *testing.T) {
-	for _, testcase := range []struct {
+	for _, testcase := range []struct { //nolint:govet // ignore 'fieldalignment' error
 		name string
 		tid  TraceID
 		want string
@@ -259,7 +259,7 @@ func TestStringTraceID(t *testing.T) {
 }
 
 func TestStringSpanID(t *testing.T) {
-	for _, testcase := range []struct {
+	for _, testcase := range []struct { //nolint:govet // ignore 'fieldalignment' error
 		name string
 		sid  SpanID
 		want string
@@ -326,7 +326,7 @@ func TestValidateSpanKind(t *testing.T) {
 }
 
 func TestSpanKindString(t *testing.T) {
-	tests := []struct {
+	tests := []struct { //nolint:govet // ignore 'fieldalignment' error
 		in   SpanKind
 		want string
 	}{

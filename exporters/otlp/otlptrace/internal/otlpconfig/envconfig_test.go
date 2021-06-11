@@ -20,7 +20,7 @@ import (
 )
 
 func TestStringToHeader(t *testing.T) {
-	tests := []struct {
+	tests := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name  string
 		value string
 		want  map[string]string

@@ -67,7 +67,7 @@ func TestControllerUsesResource(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { require.NoError(t, store.Restore()) }()
 
-	cases := []struct {
+	cases := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name    string
 		options []controller.Option
 		wanted  string
@@ -255,8 +255,8 @@ func TestObserverContext(t *testing.T) {
 }
 
 type blockingExporter struct {
-	calls    int
 	exporter *processortest.Exporter
+	calls    int
 }
 
 func newBlockingExporter() *blockingExporter {

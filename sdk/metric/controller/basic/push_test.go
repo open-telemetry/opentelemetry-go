@@ -39,7 +39,7 @@ import (
 
 var testResource = resource.NewSchemaless(attribute.String("R", "V"))
 
-type handler struct {
+type handler struct { //nolint:govet // ignore 'fieldalignment' error
 	sync.Mutex
 	err error
 }
@@ -162,7 +162,7 @@ func TestPushExportError(t *testing.T) {
 		}
 	}
 	var errAggregator = fmt.Errorf("unexpected error")
-	var tests = []struct {
+	var tests = []struct { //nolint:govet // ignore 'fieldalignment' error
 		name          string
 		injectedError error
 		expected      map[string]float64

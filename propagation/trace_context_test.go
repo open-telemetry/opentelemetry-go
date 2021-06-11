@@ -220,7 +220,7 @@ func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 func TestInjectTraceContextToHTTPReq(t *testing.T) {
 	mockTracer := oteltest.DefaultTracer()
 	prop := propagation.TraceContext{}
-	tests := []struct {
+	tests := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name       string
 		sc         trace.SpanContext
 		wantHeader string
@@ -293,7 +293,7 @@ func TestTraceStatePropagation(t *testing.T) {
 		t.Fatalf("Unable to construct expected TraceState: %s", err.Error())
 	}
 
-	tests := []struct {
+	tests := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name    string
 		headers map[string]string
 		valid   bool

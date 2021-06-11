@@ -25,7 +25,7 @@ import (
 )
 
 func TestOTelSpanContextToOC(t *testing.T) {
-	for _, tc := range []struct {
+	for _, tc := range []struct { //nolint:govet // ignore 'fieldalignment' error
 		description string
 		input       trace.SpanContext
 		expected    octrace.SpanContext

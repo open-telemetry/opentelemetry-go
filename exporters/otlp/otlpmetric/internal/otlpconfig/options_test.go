@@ -66,7 +66,7 @@ func TestConfigs(t *testing.T) {
 	tlsCert, err := otlpconfig.CreateTLSConfig([]byte(WeakCertificate))
 	assert.NoError(t, err)
 
-	tests := []struct {
+	tests := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name       string
 		opts       []otlpconfig.GenericOption
 		env        env

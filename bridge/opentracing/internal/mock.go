@@ -44,7 +44,7 @@ type MockContextKeyValue struct {
 	Value interface{}
 }
 
-type MockTracer struct {
+type MockTracer struct { //nolint:govet // ignore 'fieldalignment' error
 	FinishedSpans         []*MockSpan
 	SpareTraceIDs         []trace.TraceID
 	SpareSpanIDs          []trace.SpanID
@@ -181,7 +181,7 @@ type MockEvent struct {
 	Attributes []attribute.KeyValue
 }
 
-type MockSpan struct {
+type MockSpan struct { //nolint:govet // ignore 'fieldalignment' error
 	mockTracer     *MockTracer
 	officialTracer trace.Tracer
 	spanContext    trace.SpanContext

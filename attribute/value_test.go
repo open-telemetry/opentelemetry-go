@@ -26,7 +26,7 @@ import (
 func TestValue(t *testing.T) {
 	k := attribute.Key("test")
 	bli := getBitlessInfo(42)
-	for _, testcase := range []struct {
+	for _, testcase := range []struct { //nolint:govet // ignore 'fieldalignment' error
 		name      string
 		value     attribute.Value
 		wantType  attribute.Type
@@ -113,7 +113,7 @@ func TestValue(t *testing.T) {
 	}
 }
 
-type bitlessInfo struct {
+type bitlessInfo struct { //nolint:govet // ignore 'fieldalignment' error
 	intValue    int
 	uintValue   uint
 	signedType  attribute.Type

@@ -147,7 +147,7 @@ func checkSyncBatches(ctx context.Context, t *testing.T, labels []attribute.KeyV
 }
 
 func TestOptions(t *testing.T) {
-	type testcase struct {
+	type testcase struct { //nolint:govet // ignore 'fieldalignment' error
 		name  string
 		opts  []metric.InstrumentOption
 		desc  string

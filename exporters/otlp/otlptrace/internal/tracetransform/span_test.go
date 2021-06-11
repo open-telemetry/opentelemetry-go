@@ -156,7 +156,7 @@ func TestLinks(t *testing.T) {
 }
 
 func TestStatus(t *testing.T) {
-	for _, test := range []struct {
+	for _, test := range []struct { //nolint:govet // ignore 'fieldalignment' error
 		code       codes.Code
 		message    string
 		otlpStatus tracepb.Status_StatusCode

@@ -221,7 +221,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 }
 
 func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
-	tts := []struct {
+	tts := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name   string
 		errors []error
 		rs     otlpmetricgrpc.RetrySettings
@@ -594,7 +594,7 @@ func TestNewExporter_withHeaders(t *testing.T) {
 }
 
 func TestNewExporter_WithTimeout(t *testing.T) {
-	tts := []struct {
+	tts := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name    string
 		fn      func(exp *otlpmetric.Exporter) error
 		timeout time.Duration

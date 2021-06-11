@@ -79,7 +79,7 @@ func TestNewWithAttributes(t *testing.T) {
 }
 
 func TestMerge(t *testing.T) {
-	cases := []struct {
+	cases := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name      string
 		a, b      *resource.Resource
 		want      []attribute.KeyValue
@@ -221,7 +221,7 @@ func TestDefault(t *testing.T) {
 }
 
 func TestString(t *testing.T) {
-	for _, test := range []struct {
+	for _, test := range []struct { //nolint:govet // ignore 'fieldalignment' error
 		kvs  []attribute.KeyValue
 		want string
 	}{
@@ -304,7 +304,7 @@ func TestMarshalJSON(t *testing.T) {
 }
 
 func TestNew(t *testing.T) {
-	tc := []struct {
+	tc := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name      string
 		envars    string
 		detectors []resource.Detector
@@ -458,7 +458,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestNewWithBuiltinDetectors(t *testing.T) {
-	tc := []struct {
+	tc := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name      string
 		envars    string
 		detectors []resource.Detector

@@ -44,7 +44,7 @@ func makeMockCollector(t *testing.T, mockConfig *mockConfig) *mockCollector {
 	}
 }
 
-type mockMetricService struct {
+type mockMetricService struct { //nolint:govet // ignore 'fieldalignment' error
 	collectormetricpb.UnimplementedMetricsServiceServer
 
 	requests int
@@ -90,7 +90,7 @@ func (mms *mockMetricService) Export(ctx context.Context, exp *collectormetricpb
 	return reply, nil
 }
 
-type mockCollector struct {
+type mockCollector struct { //nolint:govet // ignore 'fieldalignment' error
 	t *testing.T
 
 	metricSvc *mockMetricService
@@ -101,7 +101,7 @@ type mockCollector struct {
 	stopOnce sync.Once
 }
 
-type mockConfig struct {
+type mockConfig struct { //nolint:govet // ignore 'fieldalignment' error
 	errors   []error
 	endpoint string
 }
@@ -174,7 +174,7 @@ func runMockCollectorWithConfig(t *testing.T, mockConfig *mockConfig) *mockColle
 	return mc
 }
 
-type listener struct {
+type listener struct { //nolint:govet // ignore 'fieldalignment' error
 	closeOnce sync.Once
 	wrapped   net.Listener
 	C         chan struct{}

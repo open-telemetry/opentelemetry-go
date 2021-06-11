@@ -75,7 +75,7 @@ func TestNewRawExporterShouldFailInvalidCollectorURL(t *testing.T) {
 	assert.Nil(t, exp)
 }
 
-type mockZipkinCollector struct {
+type mockZipkinCollector struct { //nolint:govet // ignore 'fieldalignment' error
 	t       *testing.T
 	url     string
 	closing bool

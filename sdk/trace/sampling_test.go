@@ -76,7 +76,7 @@ func TestParentBasedWithNoParent(t *testing.T) {
 }
 
 func TestParentBasedWithSamplerOptions(t *testing.T) {
-	testCases := []struct {
+	testCases := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name                            string
 		samplerOption                   ParentBasedSamplerOption
 		isParentRemote, isParentSampled bool
@@ -213,7 +213,7 @@ func TestTraceIdRatioSamplesInclusively(t *testing.T) {
 }
 
 func TestTracestateIsPassed(t *testing.T) {
-	testCases := []struct {
+	testCases := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name    string
 		sampler Sampler
 	}{

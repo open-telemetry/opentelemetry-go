@@ -43,7 +43,7 @@ func makeMockCollector(t *testing.T, mockConfig *mockConfig) *mockCollector {
 	}
 }
 
-type mockTraceService struct {
+type mockTraceService struct { //nolint:govet // ignore 'fieldalignment' error
 	collectortracepb.UnimplementedTraceServiceServer
 
 	errors   []error
@@ -94,7 +94,7 @@ func (mts *mockTraceService) Export(ctx context.Context, exp *collectortracepb.E
 	return reply, nil
 }
 
-type mockCollector struct {
+type mockCollector struct { //nolint:govet // ignore 'fieldalignment' error
 	t *testing.T
 
 	traceSvc *mockTraceService
@@ -105,7 +105,7 @@ type mockCollector struct {
 	stopOnce sync.Once
 }
 
-type mockConfig struct {
+type mockConfig struct { //nolint:govet // ignore 'fieldalignment' error
 	errors   []error
 	endpoint string
 }
@@ -182,7 +182,7 @@ func runMockCollectorWithConfig(t *testing.T, mockConfig *mockConfig) *mockColle
 	return mc
 }
 
-type listener struct {
+type listener struct { //nolint:govet // ignore 'fieldalignment' error
 	closeOnce sync.Once
 	wrapped   net.Listener
 	C         chan struct{}

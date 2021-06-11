@@ -29,7 +29,7 @@ import (
 	"go.opentelemetry.io/otel/bridge/opentracing/internal"
 )
 
-type mixedAPIsTestCase struct {
+type mixedAPIsTestCase struct { //nolint:govet // ignore 'fieldalignment' error
 	desc string
 
 	setup func(*testing.T, *internal.MockTracer)
@@ -128,7 +128,7 @@ func TestMixedAPIs(t *testing.T) {
 
 // simple test
 
-type simpleTest struct {
+type simpleTest struct { //nolint:govet // ignore 'fieldalignment' error
 	traceID trace.TraceID
 	spanIDs []trace.SpanID
 }
@@ -163,7 +163,7 @@ func (st *simpleTest) noop(t *testing.T, ctx context.Context) context.Context {
 
 // current/active span test
 
-type currentActiveSpanTest struct {
+type currentActiveSpanTest struct { //nolint:govet // ignore 'fieldalignment' error
 	traceID trace.TraceID
 	spanIDs []trace.SpanID
 
@@ -316,7 +316,7 @@ type bipBaggage struct {
 	value string
 }
 
-type baggageItemsPreservationTest struct {
+type baggageItemsPreservationTest struct { //nolint:govet // ignore 'fieldalignment' error
 	baggageItems []bipBaggage
 
 	step            int
@@ -408,7 +408,7 @@ func (bip *baggageItemsPreservationTest) addAndRecordBaggage(t *testing.T, ctx c
 
 // baggage interoperation test
 
-type baggageInteroperationTest struct {
+type baggageInteroperationTest struct { //nolint:govet // ignore 'fieldalignment' error
 	baggageItems []bipBaggage
 
 	step                int
@@ -654,7 +654,7 @@ func runOTOtelOT(t *testing.T, ctx context.Context, name string, callback func(*
 }
 
 func TestOtTagToOTelLabel_CheckTypeConversions(t *testing.T) {
-	tableTest := []struct {
+	tableTest := []struct { //nolint:govet // ignore 'fieldalignment' error
 		key               string
 		value             interface{}
 		expectedValueType attribute.Type

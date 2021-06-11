@@ -25,8 +25,8 @@ import (
 )
 
 type basicSpanProcesor struct {
-	running             bool
 	injectShutdownError error
+	running             bool
 }
 
 func (t *basicSpanProcesor) Shutdown(context.Context) error {

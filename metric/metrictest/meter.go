@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/metric/registry"
 )
 
-type (
+type ( //nolint:govet // ignore 'fieldalignment' error
 	Handle struct {
 		Instrument *Sync
 		Labels     []attribute.KeyValue

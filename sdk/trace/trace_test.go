@@ -100,7 +100,7 @@ func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
 	})
 }
 
-type testExporter struct {
+type testExporter struct { //nolint:govet // ignore 'fieldalignment' error
 	mu    sync.RWMutex
 	idx   map[string]int
 	spans []*snapshot
@@ -160,7 +160,7 @@ func (te *testExporter) Reset() {
 	te.spans = te.spans[:0]
 }
 
-type testSampler struct {
+type testSampler struct { //nolint:govet // ignore 'fieldalignment' error
 	callCount int
 	prefix    string
 	t         *testing.T
@@ -1223,7 +1223,7 @@ func TestWithResource(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { require.NoError(t, store.Restore()) }()
 
-	cases := []struct {
+	cases := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name    string
 		options []TracerProviderOption
 		want    *resource.Resource
@@ -1581,7 +1581,7 @@ func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 	}
 }
 
-type stateSampler struct {
+type stateSampler struct { //nolint:govet // ignore 'fieldalignment' error
 	prefix string
 	f      func(trace.TraceState) trace.TraceState
 }

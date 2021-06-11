@@ -40,7 +40,7 @@ func TestNewSpanConfig(t *testing.T) {
 		Attributes:  []attribute.KeyValue{k1v2, k2v2},
 	}
 
-	tests := []struct {
+	tests := []struct { //nolint:govet // ignore 'fieldalignment' error
 		options  []SpanStartOption
 		expected *SpanConfig
 	}{
@@ -178,7 +178,7 @@ func TestTracerConfig(t *testing.T) {
 	v1 := "semver:0.0.1"
 	v2 := "semver:1.0.0"
 	schemaURL := "https://opentelemetry.io/schemas/1.2.0"
-	tests := []struct {
+	tests := []struct { //nolint:govet // ignore 'fieldalignment' error
 		options  []TracerOption
 		expected *TracerConfig
 	}{

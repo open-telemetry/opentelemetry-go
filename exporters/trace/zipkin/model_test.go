@@ -732,7 +732,7 @@ func TestTagsTransformation(t *testing.T) {
 	instrLibName := "instrumentation-library"
 	instrLibVersion := "semver:1.0.0"
 
-	tests := []struct {
+	tests := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name string
 		data tracetest.SpanStub
 		want map[string]string
@@ -831,7 +831,7 @@ func TestTagsTransformation(t *testing.T) {
 }
 
 func TestRemoteEndpointTransformation(t *testing.T) {
-	tests := []struct {
+	tests := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name string
 		data tracetest.SpanStub
 		want *zkmodel.Endpoint

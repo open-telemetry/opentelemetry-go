@@ -44,7 +44,7 @@ var (
 )
 
 func TestEndToEnd(t *testing.T) {
-	tests := []struct {
+	tests := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name  string
 		opts  []otlptracehttp.Option
 		mcCfg mockCollectorConfig

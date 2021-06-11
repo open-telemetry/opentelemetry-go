@@ -249,7 +249,7 @@ func TestBaggageParse(t *testing.T) {
 	}
 	tooManyMembers := strings.Join(m, listDelimiter)
 
-	testcases := []struct {
+	testcases := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name string
 		in   string
 		want baggage.List
@@ -401,7 +401,7 @@ func TestBaggageParse(t *testing.T) {
 }
 
 func TestBaggageString(t *testing.T) {
-	testcases := []struct {
+	testcases := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name    string
 		out     string
 		baggage baggage.List

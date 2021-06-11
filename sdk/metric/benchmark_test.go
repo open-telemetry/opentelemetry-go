@@ -28,7 +28,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 )
 
-type benchFixture struct {
+type benchFixture struct { //nolint:govet // ignore 'fieldalignment' error
 	meter       metric.Meter
 	accumulator *sdk.Accumulator
 	B           *testing.B

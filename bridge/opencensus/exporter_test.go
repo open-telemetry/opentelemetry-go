@@ -36,7 +36,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-type fakeExporter struct {
+type fakeExporter struct { //nolint:govet // ignore 'fieldalignment' error
 	export.Exporter
 	records []export.Record
 	err     error
@@ -76,7 +76,7 @@ func TestExportMetrics(t *testing.T) {
 	)
 	fakeErrorHandler := &fakeErrorHandler{}
 	otel.SetErrorHandler(fakeErrorHandler)
-	for _, tc := range []struct {
+	for _, tc := range []struct { //nolint:govet // ignore 'fieldalignment' error
 		desc                 string
 		input                []*metricdata.Metric
 		exportErr            error
@@ -287,7 +287,7 @@ func TestConvertLabels(t *testing.T) {
 		attribute.KeyValue{Key: attribute.Key("first"), Value: attribute.StringValue("1")},
 		attribute.KeyValue{Key: attribute.Key("second"), Value: attribute.StringValue("2")},
 	)
-	for _, tc := range []struct {
+	for _, tc := range []struct { //nolint:govet // ignore 'fieldalignment' error
 		desc        string
 		inputKeys   []metricdata.LabelKey
 		inputValues []metricdata.LabelValue
@@ -336,7 +336,7 @@ func TestConvertLabels(t *testing.T) {
 	}
 }
 func TestConvertResource(t *testing.T) {
-	for _, tc := range []struct {
+	for _, tc := range []struct { //nolint:govet // ignore 'fieldalignment' error
 		desc     string
 		input    *ocresource.Resource
 		expected *resource.Resource
@@ -374,7 +374,7 @@ func TestConvertResource(t *testing.T) {
 	}
 }
 func TestConvertDescriptor(t *testing.T) {
-	for _, tc := range []struct {
+	for _, tc := range []struct { //nolint:govet // ignore 'fieldalignment' error
 		desc        string
 		input       metricdata.Descriptor
 		expected    metric.Descriptor

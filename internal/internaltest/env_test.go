@@ -42,7 +42,7 @@ func (s *EnvStoreTestSuite) Test_add() {
 }
 
 func (s *EnvStoreTestSuite) TestRecord() {
-	testCases := []struct {
+	testCases := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name             string
 		env              Env
 		expectedEnvStore *envStore
@@ -111,7 +111,7 @@ func (s *EnvStoreTestSuite) TestRecord() {
 }
 
 func (s *EnvStoreTestSuite) TestRestore() {
-	testCases := []struct {
+	testCases := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name              string
 		env               Env
 		expectedEnvValue  string

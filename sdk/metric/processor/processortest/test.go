@@ -34,6 +34,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
+//nolint:govet // ignore 'fieldalignment' error
 type (
 	// mapKey is the unique key for a metric, consisting of its
 	// unique descriptor, distinct labels, and distinct resource

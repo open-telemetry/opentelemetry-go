@@ -413,7 +413,7 @@ func TestEndUserAttributesFromHTTPRequest(t *testing.T) {
 }
 
 func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
-	type testcase struct {
+	type testcase struct { //nolint:govet // ignore 'fieldalignment' error
 		name string
 
 		serverName string
@@ -788,7 +788,7 @@ func kvStr(kvs []attribute.KeyValue) string {
 }
 
 func TestHTTPClientAttributesFromHTTPRequest(t *testing.T) {
-	testCases := []struct {
+	testCases := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name string
 
 		method        string

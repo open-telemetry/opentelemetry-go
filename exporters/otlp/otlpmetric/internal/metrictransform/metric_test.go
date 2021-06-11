@@ -374,8 +374,8 @@ func TestSumErrUnknownValueType(t *testing.T) {
 }
 
 type testAgg struct {
-	kind aggregation.Kind
 	agg  aggregation.Aggregation
+	kind aggregation.Kind
 }
 
 func (t *testAgg) Kind() aggregation.Kind {

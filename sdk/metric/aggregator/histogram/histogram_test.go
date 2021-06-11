@@ -32,7 +32,7 @@ import (
 
 const count = 100
 
-type policy struct {
+type policy struct { //nolint:govet // ignore 'fieldalignment' error
 	name     string
 	absolute bool
 	sign     func() int

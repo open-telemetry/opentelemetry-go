@@ -39,7 +39,7 @@ import (
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
-type mockCollector struct {
+type mockCollector struct { //nolint:govet // ignore 'fieldalignment' error
 	endpoint string
 	server   *http.Server
 
@@ -184,7 +184,7 @@ func writeReply(w http.ResponseWriter, rawResponse []byte, injectHTTPStatus int,
 	_, _ = w.Write(rawResponse)
 }
 
-type mockCollectorConfig struct {
+type mockCollectorConfig struct { //nolint:govet // ignore 'fieldalignment' error
 	TracesURLPath     string
 	Port              int
 	InjectHTTPStatus  []int

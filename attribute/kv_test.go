@@ -24,7 +24,7 @@ import (
 )
 
 func TestKeyValueConstructors(t *testing.T) {
-	tt := []struct {
+	tt := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name     string
 		actual   attribute.KeyValue
 		expected attribute.KeyValue
@@ -94,7 +94,7 @@ func TestAny(t *testing.T) {
 	invalidStruct := struct {
 		N complex64
 	}{complex(0, 0)}
-	for _, testcase := range []struct {
+	for _, testcase := range []struct { //nolint:govet // ignore 'fieldalignment' error
 		key       string
 		value     interface{}
 		wantType  attribute.Type
@@ -162,7 +162,7 @@ func TestAny(t *testing.T) {
 }
 
 func TestKeyValueValid(t *testing.T) {
-	tests := []struct {
+	tests := []struct { //nolint:govet // ignore 'fieldalignment' error
 		desc  string
 		valid bool
 		kv    attribute.KeyValue

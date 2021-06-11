@@ -25,7 +25,7 @@ import (
 
 // Taken from the W3C tests:
 // https://github.com/w3c/trace-context/blob/dcd3ad9b7d6ac36f70ff3739874b73c11b0302a1/test/test_data.json
-var testcases = []struct {
+var testcases = []struct { //nolint:govet // ignore 'fieldalignment' error
 	in         string
 	tracestate TraceState
 	out        string
@@ -388,7 +388,7 @@ func TestTraceStateInsert(t *testing.T) {
 		{Key: "key3", Value: "val3"},
 	}}
 
-	testCases := []struct {
+	testCases := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name       string
 		tracestate TraceState
 		key, value string

@@ -45,7 +45,7 @@ import (
 var roSpans = tracetest.SpanStubs{{Name: "Span 0"}}.Snapshots()
 
 func TestNew_endToEnd(t *testing.T) {
-	tests := []struct {
+	tests := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name           string
 		additionalOpts []otlptracegrpc.Option
 	}{
@@ -223,7 +223,7 @@ func TestNew_collectorConnectionDiesThenReconnectsWhenInRestMode(t *testing.T) {
 }
 
 func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
-	tts := []struct {
+	tts := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name   string
 		errors []error
 		rs     otlptracegrpc.RetrySettings
@@ -596,7 +596,7 @@ func TestNew_withHeaders(t *testing.T) {
 }
 
 func TestNew_WithTimeout(t *testing.T) {
-	tts := []struct {
+	tts := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name    string
 		fn      func(exp *otlptrace.Exporter) error
 		timeout time.Duration

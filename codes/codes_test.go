@@ -22,7 +22,7 @@ import (
 )
 
 func TestCodeString(t *testing.T) {
-	tests := []struct {
+	tests := []struct { //nolint:govet // ignore 'fieldalignment' error
 		code Code
 		want string
 	}{
@@ -110,7 +110,7 @@ func TestCodeMarshalJSONNil(t *testing.T) {
 }
 
 func TestCodeMarshalJSON(t *testing.T) {
-	tests := []struct {
+	tests := []struct { //nolint:govet // ignore 'fieldalignment' error
 		code Code
 		want string
 	}{

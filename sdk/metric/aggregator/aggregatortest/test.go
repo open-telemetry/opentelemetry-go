@@ -36,8 +36,8 @@ import (
 const Magnitude = 1000
 
 type Profile struct {
-	NumberKind number.Kind
 	Random     func(sign int) number.Number
+	NumberKind number.Kind
 }
 
 type NoopAggregator struct{}

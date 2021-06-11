@@ -36,7 +36,7 @@ type mapkey struct {
 
 // CheckpointSet is useful for testing Exporters.
 // TODO(#872): Uses of this can be replaced by processortest.Output.
-type CheckpointSet struct {
+type CheckpointSet struct { //nolint:govet // ignore 'fieldalignment' error
 	sync.RWMutex
 	records  map[mapkey]export.Record
 	updates  []export.Record

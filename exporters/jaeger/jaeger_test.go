@@ -40,7 +40,7 @@ import (
 )
 
 func TestNewRawExporter(t *testing.T) {
-	testCases := []struct {
+	testCases := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name     string
 		endpoint EndpointOption
 	}{
@@ -170,7 +170,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 	instrLibName := "instrumentation-library"
 	instrLibVersion := "semver:1.0.0"
 
-	tests := []struct {
+	tests := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name string
 		data tracetest.SpanStub
 		want *gen.Span
@@ -680,7 +680,7 @@ func TestJaegerBatchList(t *testing.T) {
 func TestProcess(t *testing.T) {
 	v1 := "v1"
 
-	testCases := []struct {
+	testCases := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name               string
 		res                *resource.Resource
 		defaultServiceName string

@@ -175,7 +175,7 @@ func TestEnvOrWithAgentHostPortFromEnv(t *testing.T) {
 }
 
 func TestEnvOrWithCollectorEndpointOptionsFromEnv(t *testing.T) {
-	testCases := []struct {
+	testCases := []struct { //nolint:govet // ignore 'fieldalignment' error
 		name                             string
 		envEndpoint                      string
 		envUsername                      string

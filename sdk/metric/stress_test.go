@@ -48,6 +48,7 @@ const (
 
 var Must = metric.Must
 
+//nolint:govet // ignore 'fieldalignment' error
 type (
 	testFixture struct {
 		// stop has to be aligned for 64-bit atomic operations.

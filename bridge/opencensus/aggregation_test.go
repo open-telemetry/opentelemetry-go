@@ -26,7 +26,7 @@ import (
 
 func TestNewAggregationFromPoints(t *testing.T) {
 	now := time.Now()
-	for _, tc := range []struct {
+	for _, tc := range []struct { //nolint:govet // ignore 'fieldalignment' error
 		desc         string
 		input        []metricdata.Point
 		expectedKind aggregation.Kind
