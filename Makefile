@@ -127,12 +127,14 @@ test-coverage:
 
 .PHONY: lint
 lint: misspell lint-modules | $(GOLANGCI_LINT)
+	EXIT=0; \
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "golangci-lint in $${dir}"; \
 	  (cd "$${dir}" && \
-	    $(GOLANGCI_LINT) run --fix && \
-	    $(GOLANGCI_LINT) run); \
-	done
+	    $(GOLANGCI_LINT) run || \
+	    EXIT=$$? ); \
+	done; \
+	exit $$EXIT
 
 .PHONY: misspell
 misspell: | $(MISSPELL)

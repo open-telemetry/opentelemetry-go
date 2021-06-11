@@ -9,6 +9,7 @@ linters:
     - goimports
     - revive
     - gofmt
+    - govet
 
 issues:
   exclude-rules:
@@ -30,3 +31,6 @@ linters-settings:
       - cancelled
   goimports:
     local-prefixes: go.opentelemetry.io
+  govet:
+    enable:
+      - fieldalignment
