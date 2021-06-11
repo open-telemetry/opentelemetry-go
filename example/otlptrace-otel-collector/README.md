@@ -54,7 +54,7 @@ make jaeger-operator-k8s
 make jaeger-k8s
 
 # Finally, deploy the OpenTelemetry Collector
-make otlptrace-otel-collector-k8s
+make otel-collector-k8s
 ```
 
 If you want to clean up after this, you can use the `make clean-k8s` to delete

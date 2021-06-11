@@ -80,7 +80,7 @@ make namespace-k8s
 make prometheus-k8s
 
 # Finally, deploy the OpenTelemetry Collector
-make otlpmetric-otel-collector-k8s
+make otel-collector-k8s
 ```
 
 If you want to clean up after this, you can use the `make clean-k8s` to delete
