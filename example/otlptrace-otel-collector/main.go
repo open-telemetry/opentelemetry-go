@@ -35,8 +35,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// Initializes an OTLP exporter, and configures the corresponding trace and
-// metric providers.
+// Initializes an OTLP exporter, and configures the trace provider.
 func initProvider() func() {
 	ctx := context.Background()
 
@@ -89,8 +88,6 @@ func main() {
 
 	tracer := otel.Tracer("test-tracer")
 
-	// labels represent additional key-value descriptors that can be bound to a
-	// metric observer or recorder.
 	commonLabels := []attribute.KeyValue{
 		attribute.String("labelA", "chocolate"),
 		attribute.String("labelB", "raspberry"),

@@ -16,8 +16,8 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   labels:
-    serviceapp: otel-collector
-  name: otel-collector
+    serviceapp: otlpmetric-otel-collector
+  name: otlpmetric-otel-collector
   namespace: observability
 spec:
   endpoints:

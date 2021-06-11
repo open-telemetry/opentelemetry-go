@@ -1,22 +1,22 @@
-module go.opentelemetry.io/otel/example/opencensus
+module go.opentelemetry.io/otel/example/otlpmetric-otel-collector
 
 go 1.15
 
 replace (
 	go.opentelemetry.io/otel => ../..
-	go.opentelemetry.io/otel/bridge/opencensus => ../../bridge/opencensus
-	go.opentelemetry.io/otel/exporters/stdout => ../../exporters/stdout
 	go.opentelemetry.io/otel/sdk => ../../sdk
 )
 
 require (
-	go.opencensus.io v0.22.6-0.20201102222123-380f4078db9f
 	go.opentelemetry.io/otel v0.20.0
-	go.opentelemetry.io/otel/bridge/opencensus v0.20.0
-	go.opentelemetry.io/otel/exporters/stdout v0.20.0
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.0.0-00010101000000-000000000000
+	go.opentelemetry.io/otel/metric v0.20.0
 	go.opentelemetry.io/otel/sdk v0.20.0
-	go.opentelemetry.io/otel/sdk/export/metric v0.20.0
+	go.opentelemetry.io/otel/sdk/metric v0.20.0
+	google.golang.org/grpc v1.38.0
 )
+
+replace go.opentelemetry.io/otel/bridge/opencensus => ../../bridge/opencensus
 
 replace go.opentelemetry.io/otel/bridge/opentracing => ../../bridge/opentracing
 
@@ -24,13 +24,15 @@ replace go.opentelemetry.io/otel/example/jaeger => ../jaeger
 
 replace go.opentelemetry.io/otel/example/namedtracer => ../namedtracer
 
-replace go.opentelemetry.io/otel/example/opencensus => ./
+replace go.opentelemetry.io/otel/example/opencensus => ../opencensus
 
 replace go.opentelemetry.io/otel/example/prometheus => ../prometheus
 
 replace go.opentelemetry.io/otel/example/zipkin => ../zipkin
 
 replace go.opentelemetry.io/otel/exporters/metric/prometheus => ../../exporters/metric/prometheus
+
+replace go.opentelemetry.io/otel/exporters/stdout => ../../exporters/stdout
 
 replace go.opentelemetry.io/otel/exporters/trace/jaeger => ../../exporters/trace/jaeger
 
@@ -62,6 +64,6 @@ replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric => ../../exporters/ot
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc => ../../exporters/otlp/otlpmetric/otlpmetricgrpc
 
-replace go.opentelemetry.io/otel/example/otlpmetric-otel-collector => ../otlpmetric-otel-collector
+replace go.opentelemetry.io/otel/example/otlpmetric-otel-collector => ./
 
 replace go.opentelemetry.io/otel/example/otlptrace-otel-collector => ../otlptrace-otel-collector

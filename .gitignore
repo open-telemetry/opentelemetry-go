@@ -18,3 +18,5 @@ gen/
 /example/prom-collector/prom-collector
 /example/zipkin/zipkin
 /example/otel-collector/otel-collector
+/example/otlptrace-otel-collector/otlptrace-otel-collector
+/example/otlpmetric-otel-collector/otlpmetric-otel-collector
