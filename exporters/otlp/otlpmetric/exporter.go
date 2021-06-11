@@ -23,9 +23,6 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/controller/basic"
-	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
 var (
@@ -99,17 +96,17 @@ func (e *Exporter) ExportKindFor(descriptor *metric.Descriptor, aggregatorKind a
 
 var _ metricsdk.Exporter = (*Exporter)(nil)
 
-// NewExporter constructs a new Exporter and starts it.
-func NewExporter(ctx context.Context, client Client, opts ...ExporterOption) (*Exporter, error) {
-	exp := NewUnstartedExporter(client, opts...)
+// New constructs a new Exporter and starts it.
+func New(ctx context.Context, client Client, opts ...Option) (*Exporter, error) {
+	exp := NewUnstarted(client, opts...)
 	if err := exp.Start(ctx); err != nil {
 		return nil, err
 	}
 	return exp, nil
 }
 
-// NewUnstartedExporter constructs a new Exporter and does not start it.
-func NewUnstartedExporter(client Client, opts ...ExporterOption) *Exporter {
+// NewUnstarted constructs a new Exporter and does not start it.
+func NewUnstarted(client Client, opts ...Option) *Exporter {
 	cfg := config{
 		// Note: the default ExportKindSelector is specified
 		// as Cumulative:
@@ -118,7 +115,7 @@ func NewUnstartedExporter(client Client, opts ...ExporterOption) *Exporter {
 	}
 
 	for _, opt := range opts {
-		opt(&cfg)
+		opt.apply(&cfg)
 	}
 
 	e := &Exporter{
@@ -127,38 +124,4 @@ func NewUnstartedExporter(client Client, opts ...ExporterOption) *Exporter {
 	}
 
 	return e
-}
-
-// NewExportPipeline sets up a complete export pipeline
-// with the recommended TracerProvider setup.
-func NewExportPipeline(ctx context.Context, client Client, exporterOpts ...ExporterOption) (*Exporter, *basic.Controller, error) {
-	exp, err := NewExporter(ctx, client, exporterOpts...)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	cntr := basic.New(
-		processor.New(
-			simple.NewWithInexpensiveDistribution(),
-			exp,
-		),
-	)
-
-	return exp, cntr, nil
-}
-
-// InstallNewPipeline instantiates a NewExportPipeline with the
-// recommended configuration and registers it globally.
-func InstallNewPipeline(ctx context.Context, client Client, exporterOpts ...ExporterOption) (*Exporter, *basic.Controller, error) {
-	exp, cntr, err := NewExportPipeline(ctx, client, exporterOpts...)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	err = cntr.Start(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return exp, cntr, err
 }

@@ -86,7 +86,7 @@ func newGRPCExporter(t *testing.T, ctx context.Context, endpoint string, additio
 
 	opts = append(opts, additionalOpts...)
 	client := otlpmetricgrpc.NewClient(opts...)
-	exp, err := otlpmetric.NewExporter(ctx, client)
+	exp, err := otlpmetric.New(ctx, client)
 	if err != nil {
 		t.Fatalf("failed to create a new collector exporter: %v", err)
 	}
@@ -665,7 +665,7 @@ func TestNewExporter_withInvalidSecurityConfiguration(t *testing.T) {
 
 	ctx := context.Background()
 	client := otlpmetricgrpc.NewClient(otlpmetricgrpc.WithEndpoint(mc.endpoint))
-	exp, err := otlpmetric.NewExporter(ctx, client)
+	exp, err := otlpmetric.New(ctx, client)
 	if err != nil {
 		t.Fatalf("failed to create a new collector exporter: %v", err)
 	}

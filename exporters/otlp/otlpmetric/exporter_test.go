@@ -69,9 +69,9 @@ func (m *stubClient) Reset() {
 	m.rm = nil
 }
 
-func newExporter(t *testing.T, opts ...otlpmetric.ExporterOption) (*otlpmetric.Exporter, *stubClient) {
+func newExporter(t *testing.T, opts ...otlpmetric.Option) (*otlpmetric.Exporter, *stubClient) {
 	client := &stubClient{}
-	exp, _ := otlpmetric.NewExporter(context.Background(), client, opts...)
+	exp, _ := otlpmetric.New(context.Background(), client, opts...)
 	return exp, client
 }
 
@@ -703,7 +703,7 @@ func TestStatelessExportKind(t *testing.T) {
 		t.Run(k.name, func(t *testing.T) {
 			runMetricExportTests(
 				t,
-				[]otlpmetric.ExporterOption{
+				[]otlpmetric.Option{
 					otlpmetric.WithMetricExportKindSelector(
 						metricsdk.StatelessExportKindSelector(),
 					),
@@ -751,7 +751,7 @@ func TestStatelessExportKind(t *testing.T) {
 	}
 }
 
-func runMetricExportTests(t *testing.T, opts []otlpmetric.ExporterOption, rs []record, expected []*metricpb.ResourceMetrics) {
+func runMetricExportTests(t *testing.T, opts []otlpmetric.Option, rs []record, expected []*metricpb.ResourceMetrics) {
 	exp, driver := newExporter(t, opts...)
 
 	recs := map[attribute.Distinct][]metricsdk.Record{}

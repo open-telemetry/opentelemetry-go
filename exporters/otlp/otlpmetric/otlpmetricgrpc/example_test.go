@@ -35,7 +35,7 @@ import (
 func Example_insecure() {
 	ctx := context.Background()
 	client := otlpmetricgrpc.NewClient(otlpmetricgrpc.WithInsecure())
-	exp, err := otlpmetric.NewExporter(ctx, client)
+	exp, err := otlpmetric.New(ctx, client)
 	if err != nil {
 		log.Fatalf("Failed to create the collector exporter: %v", err)
 	}
@@ -94,7 +94,7 @@ func Example_withTLS() {
 
 	ctx := context.Background()
 	client := otlpmetricgrpc.NewClient(otlpmetricgrpc.WithTLSCredentials(creds))
-	exp, err := otlpmetric.NewExporter(ctx, client)
+	exp, err := otlpmetric.New(ctx, client)
 	if err != nil {
 		log.Fatalf("failed to create the collector exporter: %v", err)
 	}
@@ -150,7 +150,7 @@ func Example_withDifferentSignalCollectors() {
 		otlpmetricgrpc.WithEndpoint("localhost:30080"),
 	)
 	ctx := context.Background()
-	exp, err := otlpmetric.NewExporter(ctx, client)
+	exp, err := otlpmetric.New(ctx, client)
 	if err != nil {
 		log.Fatalf("failed to create the collector exporter: %v", err)
 	}

@@ -46,7 +46,7 @@ func initializeExporter(t *testing.T, client otlpmetric.Client) *otlpmetric.Expo
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	e, err := otlpmetric.NewExporter(ctx, client)
+	e, err := otlpmetric.New(ctx, client)
 	if err != nil {
 		t.Fatalf("failed to create exporter")
 	}

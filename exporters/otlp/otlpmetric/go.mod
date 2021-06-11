@@ -1,24 +1,6 @@
 module go.opentelemetry.io/otel/exporters/otlp/otlpmetric
 
-go 1.14
-
-replace (
-	go.opentelemetry.io/otel => ../../..
-
-	go.opentelemetry.io/otel/sdk => ../../../sdk
-)
-
-replace go.opentelemetry.io/otel/exporters/otlp => ../
-
-replace go.opentelemetry.io/otel/metric => ../../../metric
-
-replace go.opentelemetry.io/otel/oteltest => ../../../oteltest
-
-replace go.opentelemetry.io/otel/trace => ../../../trace
-
-replace go.opentelemetry.io/otel/sdk/export/metric => ../../../sdk/export/metric
-
-replace go.opentelemetry.io/otel/sdk/metric => ../../../sdk/metric
+go 1.15
 
 require (
 	github.com/cenkalti/backoff/v4 v4.1.1
@@ -32,8 +14,23 @@ require (
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
 	google.golang.org/grpc v1.38.0
 	google.golang.org/protobuf v1.26.0
-
 )
+
+replace go.opentelemetry.io/otel => ../../..
+
+replace go.opentelemetry.io/otel/sdk => ../../../sdk
+
+replace go.opentelemetry.io/otel/exporters/otlp => ../
+
+replace go.opentelemetry.io/otel/metric => ../../../metric
+
+replace go.opentelemetry.io/otel/oteltest => ../../../oteltest
+
+replace go.opentelemetry.io/otel/trace => ../../../trace
+
+replace go.opentelemetry.io/otel/sdk/export/metric => ../../../sdk/export/metric
+
+replace go.opentelemetry.io/otel/sdk/metric => ../../../sdk/metric
 
 replace go.opentelemetry.io/otel/bridge/opencensus => ../../../bridge/opencensus
 
@@ -74,3 +71,5 @@ replace go.opentelemetry.io/otel/exporters/trace/jaeger => ../../trace/jaeger
 replace go.opentelemetry.io/otel/exporters/trace/zipkin => ../../trace/zipkin
 
 replace go.opentelemetry.io/otel/internal/tools => ../../../internal/tools
+
+replace go.opentelemetry.io/otel/internal/metric => ../../../internal/metric

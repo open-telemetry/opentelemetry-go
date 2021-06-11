@@ -1,25 +1,6 @@
 module go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc
 
-go 1.14
-
-replace (
-	go.opentelemetry.io/otel => ../../../..
-
-	go.opentelemetry.io/otel/sdk => ../../../../sdk
-
-	go.opentelemetry.io/otel/sdk/metric => ../../../../sdk/metric
-
-)
-
-replace go.opentelemetry.io/otel/exporters/otlp => ../..
-
-replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric => ../
-
-replace go.opentelemetry.io/otel/metric => ../../../../metric
-
-replace go.opentelemetry.io/otel/oteltest => ../../../../oteltest
-
-replace go.opentelemetry.io/otel/trace => ../../../../trace
+go 1.15
 
 require (
 	github.com/stretchr/testify v1.7.0
@@ -32,6 +13,22 @@ require (
 	google.golang.org/grpc v1.38.0
 	google.golang.org/protobuf v1.26.0
 )
+
+replace go.opentelemetry.io/otel => ../../../..
+
+replace go.opentelemetry.io/otel/sdk => ../../../../sdk
+
+replace go.opentelemetry.io/otel/sdk/metric => ../../../../sdk/metric
+
+replace go.opentelemetry.io/otel/exporters/otlp => ../..
+
+replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric => ../
+
+replace go.opentelemetry.io/otel/metric => ../../../../metric
+
+replace go.opentelemetry.io/otel/oteltest => ../../../../oteltest
+
+replace go.opentelemetry.io/otel/trace => ../../../../trace
 
 replace go.opentelemetry.io/otel/bridge/opencensus => ../../../../bridge/opencensus
 
@@ -72,3 +69,5 @@ replace go.opentelemetry.io/otel/exporters/trace/zipkin => ../../../trace/zipkin
 replace go.opentelemetry.io/otel/internal/tools => ../../../../internal/tools
 
 replace go.opentelemetry.io/otel/sdk/export/metric => ../../../../sdk/export/metric
+
+replace go.opentelemetry.io/otel/internal/metric => ../../../../internal/metric
