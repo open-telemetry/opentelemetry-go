@@ -81,7 +81,7 @@ func WithCompression(compression Compression) Option {
 // WithURLPath allows one to override the default URL path used
 // for sending traces. If unset, default ("/v1/traces") will be used.
 func WithURLPath(urlPath string) Option {
-	return wrappedOption{otlpconfig.WithTracesURLPath(urlPath)}
+	return wrappedOption{otlpconfig.WithURLPath(urlPath)}
 }
 
 // WithMaxAttempts allows one to override how many times the driver
