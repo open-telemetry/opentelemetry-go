@@ -12,6 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package prometheus provices an OpenTelemetry metrics exporter for
+// Prometheus.
+//
+// Deprecated: Use Prometheus exporter in package
+// go.opentelemetry.io/otel/exporters/prometheus.
+//
+// This package is frozen and no new functionality will be added.
 package prometheus // import "go.opentelemetry.io/otel/exporters/metric/prometheus"
 
 // Note that this package does not support a way to export Prometheus

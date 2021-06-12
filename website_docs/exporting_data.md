@@ -53,12 +53,12 @@ Please find more documentation on [GitHub](https://github.com/open-telemetry/ope
 
 # Jaeger Exporter
 
-Jaeger export is available in the `go.opentelemetry.io/otel/exporters/trace/jaeger` package.
+Jaeger export is available in the `go.opentelemetry.io/otel/exporters/jaeger` package.
 
-Please find more documentation on [GitHub](https://github.com/open-telemetry/opentelemetry-go/tree/main/exporters/trace/jaeger)
+Please find more documentation on [GitHub](https://github.com/open-telemetry/opentelemetry-go/tree/main/exporters/jaeger)
 
 # Prometheus Exporter
 
-Prometheus export is available in the `go.opentelemetry.io/otel/exporters/metric/prometheus` package.
+Prometheus export is available in the `go.opentelemetry.io/otel/exporters/prometheus` package.
 
-Please find more documentation on [GitHub](https://github.com/open-telemetry/opentelemetry-go/tree/main/exporters/metric/prometheus)
+Please find more documentation on [GitHub](https://github.com/open-telemetry/opentelemetry-go/tree/main/exporters/prometheus)

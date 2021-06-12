@@ -89,15 +89,17 @@ practical uses of this process.
 Now that your application is instrumented to collect telemetry, it needs an
 export pipeline to send that telemetry to an observability platform.
 
-You can find officially supported exporters [here](./exporters/) and in the
-companion [contrib
-repository](https://github.com/open-telemetry/opentelemetry-go-contrib/tree/main/exporters/metric).
-Additionally, there are many vendor specific or 3rd party exporters for
-OpenTelemetry. These exporters are broken down by
-[trace](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/export/trace?tab=importedby)
-and
-[metric](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/export/metric?tab=importedby)
-support.
+All officially supported exporters for the OpenTelemetry project are contained in the [exporters directory](./exporters).
+
+| Exporter                              | Metrics | Traces |
+| :-----------------------------------: | :-----: | :----: |
+| [Jaeger](./exporters/jaeger/)         |         | ✓      |
+| [OTLP](./exporters/otlp/)             | ✓       | ✓      |
+| [Prometheus](./exporters/prometheus/) | ✓       |        |
+| [stdout](./exporters/stdout/)         | ✓       | ✓      |
+| [Zipkin](./exporters/zipkin/)         |         | ✓      |
+
+Additionally, OpenTelemetry community supported exporters can be found in the [contrib repository](https://github.com/open-telemetry/opentelemetry-go-contrib/tree/main/exporters).
 
 ## Contributing
 

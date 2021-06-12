@@ -71,3 +71,9 @@ replace go.opentelemetry.io/otel/internal/tools => ../../../../internal/tools
 replace go.opentelemetry.io/otel/sdk/export/metric => ../../../../sdk/export/metric
 
 replace go.opentelemetry.io/otel/internal/metric => ../../../../internal/metric
+
+replace go.opentelemetry.io/otel/exporters/jaeger => ../../../jaeger
+
+replace go.opentelemetry.io/otel/exporters/prometheus => ../../../prometheus
+
+replace go.opentelemetry.io/otel/exporters/zipkin => ../../../zipkin

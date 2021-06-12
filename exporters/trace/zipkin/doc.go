@@ -14,7 +14,8 @@
 
 // Package zipkin contains an OpenTelemetry tracing exporter for Zipkin.
 //
-// This package is currently in a pre-GA phase. Backwards incompatible changes
-// may be introduced in subsequent minor version releases as we work to track
-// the evolving OpenTelemetry specification and user feedback.
+// Deprecated: Use Zipkin exporter in package
+// go.opentelemetry.io/otel/exporters/zipkin.
+//
+// This package is frozen and no new functionality will be added.
 package zipkin // import "go.opentelemetry.io/otel/exporters/trace/zipkin"
