@@ -116,6 +116,14 @@ func WithDialOption(opts ...grpc.DialOption) Option {
 	})}
 }
 
+// WithGRPCConn allows reusing existing gRPC connection when it has already been
+// established for other services. When set, other dial options will be ignored.
+func WithGRPCConn(conn *grpc.ClientConn) Option {
+	return wrappedOption{otlpconfig.NewGRPCOption(func(cfg *otlpconfig.Config) {
+		cfg.GRPCConn = conn
+	})}
+}
+
 // WithTimeout tells the client the max waiting time for the backend to process
 // each metrics batch. If unset, the default will be 10 seconds.
 func WithTimeout(duration time.Duration) Option {
