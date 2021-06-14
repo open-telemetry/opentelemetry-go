@@ -26,7 +26,6 @@ var (
 	defaultPrettyPrint         = false
 	defaultTimestamps          = true
 	defaultLabelEncoder        = attribute.DefaultEncoder()
-	defaultDisableTraceExport  = false
 	defaultDisableMetricExport = false
 )
 
@@ -46,9 +45,6 @@ type config struct {
 	// LabelEncoder encodes the labels.
 	LabelEncoder attribute.Encoder
 
-	// DisableTraceExport prevents any export of trace telemetry.
-	DisableTraceExport bool
-
 	// DisableMetricExport prevents any export of metric telemetry.
 	DisableMetricExport bool
 }
@@ -60,7 +56,6 @@ func newConfig(options ...Option) (config, error) {
 		PrettyPrint:         defaultPrettyPrint,
 		Timestamps:          defaultTimestamps,
 		LabelEncoder:        defaultLabelEncoder,
-		DisableTraceExport:  defaultDisableTraceExport,
 		DisableMetricExport: defaultDisableMetricExport,
 	}
 	for _, opt := range options {
@@ -121,17 +116,6 @@ type labelEncoderOption struct {
 
 func (o labelEncoderOption) apply(cfg *config) {
 	cfg.LabelEncoder = o.LabelEncoder
-}
-
-// WithoutTraceExport disables all trace exporting.
-func WithoutTraceExport() Option {
-	return disableTraceExportOption(true)
-}
-
-type disableTraceExportOption bool
-
-func (o disableTraceExportOption) apply(cfg *config) {
-	cfg.DisableTraceExport = bool(o)
 }
 
 // WithoutMetricExport disables all metric exporting.
