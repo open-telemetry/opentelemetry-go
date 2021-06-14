@@ -42,6 +42,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Several builtin resource detectors now correctly populate the schema URL. (#1938)
 - Creates package `go.opentelemetry.io/otel/exporters/otlp/otlpmetric` that defines a metrics exporter that uses a `otlpmetric.Client` to send data.
   Creates package `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` implementing a gRPC `otlpmetric.Client` and offers convenience functions, `New` and `NewUnstarted`, to create an `otlpmetric.Exporter`.(#1991)
+- Add more tests for `go.opentelemetry.io/otel/trace` package. (#2003)
 
 ### Changed
 
