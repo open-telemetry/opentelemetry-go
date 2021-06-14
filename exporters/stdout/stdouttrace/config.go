@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stdout // import "go.opentelemetry.io/otel/exporters/stdout"
+package stdouttrace // import "go.opentelemetry.io/otel/exporters/stdouttrace"
 
 import (
 	"io"
@@ -39,7 +39,7 @@ type config struct {
 	// false.
 	PrettyPrint bool
 
-	// Timestamps specifies if timestamps should be pritted. Default is
+	// Timestamps specifies if timestamps should be printed. Default is
 	// true.
 	Timestamps bool
 

@@ -161,7 +161,7 @@ license-check:
 .PHONY: dependabot-check
 dependabot-check:
 	@result=$$( \
-		for f in $$( find . -type f -name go.mod -exec dirname {} \; | sed 's/^.\/\?/\//' ); \
+		for f in $$( find . -type f -name go.mod -exec dirname {} \; | sed 's/^.//' ); \
 			do grep -q "directory: \+$$f" .github/dependabot.yml \
 			|| echo "$$f"; \
 		done; \

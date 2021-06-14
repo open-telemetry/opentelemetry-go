@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stdout_test
+package stdoutmetric_test
 
 import (
 	"bytes"
@@ -23,11 +23,12 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -42,17 +43,17 @@ import (
 type testFixture struct {
 	t        *testing.T
 	ctx      context.Context
-	exporter *stdout.Exporter
+	exporter *stdoutmetric.Exporter
 	output   *bytes.Buffer
 }
 
 var testResource = resource.NewSchemaless(attribute.String("R", "V"))
 
-func newFixture(t *testing.T, opts ...stdout.Option) testFixture {
+func newFixture(t *testing.T, opts ...stdoutmetric.Option) testFixture {
 	buf := &bytes.Buffer{}
-	opts = append(opts, stdout.WithWriter(buf))
-	opts = append(opts, stdout.WithoutTimestamps())
-	exp, err := stdout.New(opts...)
+	opts = append(opts, stdoutmetric.WithWriter(buf))
+	opts = append(opts, stdoutmetric.WithoutTimestamps())
+	exp, err := stdoutmetric.New(opts...)
 	if err != nil {
 		t.Fatal("Error building fixture: ", err)
 	}
@@ -77,8 +78,8 @@ func (fix testFixture) Export(checkpointSet export.CheckpointSet) {
 
 func TestStdoutTimestamp(t *testing.T) {
 	var buf bytes.Buffer
-	exporter, err := stdout.New(
-		stdout.WithWriter(&buf),
+	exporter, err := stdoutmetric.New(
+		stdoutmetric.WithWriter(&buf),
 	)
 	if err != nil {
 		t.Fatal("Invalid config: ", err)
@@ -185,7 +186,7 @@ func TestStdoutMinMaxSumCount(t *testing.T) {
 }
 
 func TestStdoutValueRecorderFormat(t *testing.T) {
-	fix := newFixture(t, stdout.WithPrettyPrint())
+	fix := newFixture(t, stdoutmetric.WithPrettyPrint())
 
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
 
