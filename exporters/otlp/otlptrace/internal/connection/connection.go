@@ -220,6 +220,10 @@ func (c *Connection) setConnection(cc *grpc.ClientConn) bool {
 }
 
 func (c *Connection) dialToCollector(ctx context.Context) (*grpc.ClientConn, error) {
+	if c.cfg.GRPCConn != nil {
+		return c.cfg.GRPCConn, nil
+	}
+
 	dialOpts := []grpc.DialOption{}
 	if c.cfg.ServiceConfig != "" {
 		dialOpts = append(dialOpts, grpc.WithDefaultServiceConfig(c.cfg.ServiceConfig))

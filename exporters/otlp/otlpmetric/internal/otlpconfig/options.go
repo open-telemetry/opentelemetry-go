@@ -64,6 +64,7 @@ type (
 		ReconnectionPeriod time.Duration
 		ServiceConfig      string
 		DialOptions        []grpc.DialOption
+		GRPCConn           *grpc.ClientConn
 		RetrySettings      RetrySettings
 	}
 )
