@@ -122,6 +122,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Use `http://localhost:14268/api/traces` as default Jaeger collector endpoint instead of `http://localhost:14250`. (#1898)
 - Allow trailing and leading whitespace in the parsing of a `tracestate` header. (#1931)
 - Add logic to determine if the channel is closed to fix Jaeger exporter test panic with close closed channel. (#1870, #1973)
+- Avoid transport security when otlp endpoint is a Unix socket. (#2001)
 
 ### Security
 
