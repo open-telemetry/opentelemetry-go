@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stdouttrace // import "go.opentelemetry.io/otel/exporters/stdouttrace"
+package stdouttrace // import "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 
 import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
