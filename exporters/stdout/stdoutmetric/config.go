@@ -22,11 +22,10 @@ import (
 )
 
 var (
-	defaultWriter              = os.Stdout
-	defaultPrettyPrint         = false
-	defaultTimestamps          = true
-	defaultLabelEncoder        = attribute.DefaultEncoder()
-	defaultDisableMetricExport = false
+	defaultWriter       = os.Stdout
+	defaultPrettyPrint  = false
+	defaultTimestamps   = true
+	defaultLabelEncoder = attribute.DefaultEncoder()
 )
 
 // config contains options for the STDOUT exporter.
@@ -44,19 +43,15 @@ type config struct {
 
 	// LabelEncoder encodes the labels.
 	LabelEncoder attribute.Encoder
-
-	// DisableMetricExport prevents any export of metric telemetry.
-	DisableMetricExport bool
 }
 
 // newConfig creates a validated Config configured with options.
 func newConfig(options ...Option) (config, error) {
 	cfg := config{
-		Writer:              defaultWriter,
-		PrettyPrint:         defaultPrettyPrint,
-		Timestamps:          defaultTimestamps,
-		LabelEncoder:        defaultLabelEncoder,
-		DisableMetricExport: defaultDisableMetricExport,
+		Writer:       defaultWriter,
+		PrettyPrint:  defaultPrettyPrint,
+		Timestamps:   defaultTimestamps,
+		LabelEncoder: defaultLabelEncoder,
 	}
 	for _, opt := range options {
 		opt.apply(&cfg)
@@ -116,15 +111,4 @@ type labelEncoderOption struct {
 
 func (o labelEncoderOption) apply(cfg *config) {
 	cfg.LabelEncoder = o.LabelEncoder
-}
-
-// WithoutMetricExport disables all metric exporting.
-func WithoutMetricExport() Option {
-	return disableMetricExportOption(true)
-}
-
-type disableMetricExportOption bool
-
-func (o disableMetricExportOption) apply(cfg *config) {
-	cfg.DisableMetricExport = bool(o)
 }

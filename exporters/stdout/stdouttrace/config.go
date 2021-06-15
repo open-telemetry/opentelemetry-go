@@ -20,10 +20,9 @@ import (
 )
 
 var (
-	defaultWriter             = os.Stdout
-	defaultPrettyPrint        = false
-	defaultTimestamps         = true
-	defaultDisableTraceExport = false
+	defaultWriter      = os.Stdout
+	defaultPrettyPrint = false
+	defaultTimestamps  = true
 )
 
 // config contains options for the STDOUT exporter.
@@ -38,18 +37,14 @@ type config struct {
 	// Timestamps specifies if timestamps should be printed. Default is
 	// true.
 	Timestamps bool
-
-	// DisableTraceExport prevents any export of trace telemetry.
-	DisableTraceExport bool
 }
 
 // newConfig creates a validated Config configured with options.
 func newConfig(options ...Option) (config, error) {
 	cfg := config{
-		Writer:             defaultWriter,
-		PrettyPrint:        defaultPrettyPrint,
-		Timestamps:         defaultTimestamps,
-		DisableTraceExport: defaultDisableTraceExport,
+		Writer:      defaultWriter,
+		PrettyPrint: defaultPrettyPrint,
+		Timestamps:  defaultTimestamps,
 	}
 	for _, opt := range options {
 		opt.apply(&cfg)
@@ -96,15 +91,4 @@ type timestampsOption bool
 
 func (o timestampsOption) apply(cfg *config) {
 	cfg.Timestamps = bool(o)
-}
-
-// WithoutTraceExport disables all trace exporting.
-func WithoutTraceExport() Option {
-	return disableTraceExportOption(true)
-}
-
-type disableTraceExportOption bool
-
-func (o disableTraceExportOption) apply(cfg *config) {
-	cfg.DisableTraceExport = bool(o)
 }
