@@ -29,7 +29,8 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/baggage"
-	"go.opentelemetry.io/otel/exporters/stdout"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
@@ -51,11 +52,11 @@ To initialize the console exporter, add the following code to the file your `mai
 
 ```go
 func main() {
-	exporter, err := stdout.New(
-		stdout.WithPrettyPrint(),
+	traceExporter, err := stdouttrace.New(
+		stdouttrace.WithPrettyPrint(),
 	)
 	if err != nil {
-		log.Fatalf("failed to initialize stdout export pipeline: %v", err)
+		log.Fatalf("failed to initialize stdouttrace export pipeline: %v", err)
 	}
 ```
 
@@ -71,7 +72,7 @@ To create a trace provider, add the following code to your `main.go` file -
 
 ```go
 	ctx := context.Background()
-	bsp := sdktrace.NewBatchSpanProcessor(exporter)
+	bsp := sdktrace.NewBatchSpanProcessor(traceExporter)
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(bsp))
 
 	// Handle this error in a sensible manner where possible
@@ -89,12 +90,19 @@ OpenTelemetry requires a meter provider to be initialized in order to create ins
 To create a meter provider, add the following code to your `main.go` file -
 
 ```go
+	metricExporter, err := stdoutmetric.New(
+		stdoutmetric.WithPrettyPrint(),
+	)
+	if err != nil {
+		log.Fatalf("failed to initialize stdoutmetric export pipeline: %v", err)
+	}
+
 	pusher := controller.New(
 		processor.New(
 			simple.NewWithExactDistribution(),
-			exporter,
+			metricExporter,
 		),
-		controller.WithExporter(exporter),
+		controller.WithExporter(metricExporter),
 		controller.WithCollectPeriod(5*time.Second),
 	)
 
@@ -107,7 +115,7 @@ To create a meter provider, add the following code to your `main.go` file -
 	defer func() { _ = pusher.Stop(ctx) }()
 ```
 
-This creates a controller that uses a basic processor to aggregate and process metrics that are then sent to the exporter. The basic processor here uses a simple aggregator selector that decides what kind of an aggregator to use to aggregate measurements from a specific instrument. The processor also uses the exporter to learn how to prepare the aggregated measurements for the exporter to consume. The controller will periodically push aggregated measurements to the exporter.
+Again we create an exporter, this time using the `stdoutmetric` exporter package. Then we create a controller that uses a basic processor to aggregate and process metrics that are then sent to the exporter. The basic processor here uses a simple aggregator selector that decides what kind of an aggregator to use to aggregate measurements from a specific instrument. The processor also uses the exporter to learn how to prepare the aggregated measurements for the exporter to consume. The controller will periodically push aggregated measurements to the exporter.
 
 ## Setting Global Options
 

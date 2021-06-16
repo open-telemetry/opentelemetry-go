@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/example/namedtracer/foo"
-	"go.opentelemetry.io/otel/exporters/stdout"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -38,9 +38,9 @@ var tp *sdktrace.TracerProvider
 // initTracer creates and registers trace provider instance.
 func initTracer() {
 	var err error
-	exp, err := stdout.New(stdout.WithPrettyPrint())
+	exp, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
 	if err != nil {
-		log.Panicf("failed to initialize stdout exporter %v\n", err)
+		log.Panicf("failed to initialize stdouttrace exporter %v\n", err)
 		return
 	}
 	bsp := sdktrace.NewBatchSpanProcessor(exp)

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stdout // import "go.opentelemetry.io/otel/exporters/stdout"
+package stdouttrace // import "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 
 import (
 	"context"
@@ -41,7 +41,7 @@ func (e *traceExporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlyS
 		return nil
 	}
 
-	if e.config.DisableTraceExport || len(spans) == 0 {
+	if len(spans) == 0 {
 		return nil
 	}
 	out, err := e.marshal(tracetest.SpanStubsFromReadOnlySpans(spans))

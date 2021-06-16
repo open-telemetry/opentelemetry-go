@@ -12,10 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package stdout contains an OpenTelemetry exporter for both tracing and
-// metric telemetry to be written to an output destination as JSON.
-//
-// This package is currently in a pre-GA phase. Backwards incompatible changes
-// may be introduced in subsequent minor version releases as we work to track
-// the evolving OpenTelemetry specification and user feedback.
-package stdout // import "go.opentelemetry.io/otel/exporters/stdout"
+package stdouttrace // import "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+
+import (
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+)
+
+type Exporter struct {
+	traceExporter
+}
+
+var (
+	_ sdktrace.SpanExporter = &Exporter{}
+)
+
+// New creates an Exporter with the passed options.
+func New(options ...Option) (*Exporter, error) {
+	cfg, err := newConfig(options...)
+	if err != nil {
+		return nil, err
+	}
+	return &Exporter{
+		traceExporter: traceExporter{config: cfg},
+	}, nil
+}
