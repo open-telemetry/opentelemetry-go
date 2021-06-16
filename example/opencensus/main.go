@@ -74,24 +74,28 @@ func tracing(otExporter sdktrace.SpanExporter) {
 	log.Println("Configuring OpenCensus.  Not Registering any OpenCensus exporters.")
 	octrace.ApplyConfig(octrace.Config{DefaultSampler: octrace.AlwaysSample()})
 
-	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(otExporter))
+	tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(otExporter))
 	otel.SetTracerProvider(tp)
 
 	log.Println("Installing the OpenCensus bridge to make OpenCensus libraries write spans using OpenTelemetry.")
 	tracer := tp.Tracer("simple")
 	octrace.DefaultTracer = opencensus.NewTracer(tracer)
+	tp.ForceFlush(ctx)
 
 	log.Println("Creating OpenCensus span, which should be printed out using the OpenTelemetry stdouttrace exporter.\n-- It should have no parent, since it is the first span.")
 	ctx, outerOCSpan := octrace.StartSpan(ctx, "OpenCensusOuterSpan")
 	outerOCSpan.End()
+	tp.ForceFlush(ctx)
 
 	log.Println("Creating OpenTelemetry span\n-- It should have the OpenCensus span as a parent, since the OpenCensus span was written with using OpenTelemetry APIs.")
 	ctx, otspan := tracer.Start(ctx, "OpenTelemetrySpan")
 	otspan.End()
+	tp.ForceFlush(ctx)
 
 	log.Println("Creating OpenCensus span, which should be printed out using the OpenTelemetry stdouttrace exporter.\n-- It should have the OpenTelemetry span as a parent, since it was written using OpenTelemetry APIs")
 	_, innerOCSpan := octrace.StartSpan(ctx, "OpenCensusInnerSpan")
 	innerOCSpan.End()
+	tp.ForceFlush(ctx)
 }
 
 // monitoring demonstrates creating an IntervalReader using the OpenTelemetry
