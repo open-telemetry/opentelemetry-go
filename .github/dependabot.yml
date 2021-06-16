@@ -148,7 +148,17 @@ updates:
       interval: weekly
   -
     package-ecosystem: gomod
-    directory: /exporters/stdout
+    directory: /exporters/stdout/stdouttrace
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
+    directory: /exporters/stdout/stdoutmetric
     labels:
       - dependencies
       - go

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stdout // import "go.opentelemetry.io/otel/exporters/stdout"
+package stdoutmetric // import "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 
 import (
 	"context"
@@ -50,9 +50,6 @@ func (e *metricExporter) ExportKindFor(desc *metric.Descriptor, kind aggregation
 }
 
 func (e *metricExporter) Export(_ context.Context, checkpointSet exportmetric.CheckpointSet) error {
-	if e.config.DisableMetricExport {
-		return nil
-	}
 	var aggError error
 	var batch []line
 	aggError = checkpointSet.ForEach(e, func(record exportmetric.Record) error {
@@ -153,7 +150,7 @@ func (e *metricExporter) Export(_ context.Context, checkpointSet exportmetric.Ch
 	return aggError
 }
 
-// marshal v with approriate indentation.
+// marshal v with appropriate indentation.
 func (e *metricExporter) marshal(v interface{}) ([]byte, error) {
 	if e.config.PrettyPrint {
 		return json.MarshalIndent(v, "", "\t")

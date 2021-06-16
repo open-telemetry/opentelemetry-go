@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stdout // import "go.opentelemetry.io/otel/exporters/stdout"
+package stdoutmetric // import "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 
 import (
 	"io"
@@ -22,12 +22,10 @@ import (
 )
 
 var (
-	defaultWriter              = os.Stdout
-	defaultPrettyPrint         = false
-	defaultTimestamps          = true
-	defaultLabelEncoder        = attribute.DefaultEncoder()
-	defaultDisableTraceExport  = false
-	defaultDisableMetricExport = false
+	defaultWriter       = os.Stdout
+	defaultPrettyPrint  = false
+	defaultTimestamps   = true
+	defaultLabelEncoder = attribute.DefaultEncoder()
 )
 
 // config contains options for the STDOUT exporter.
@@ -39,29 +37,21 @@ type config struct {
 	// false.
 	PrettyPrint bool
 
-	// Timestamps specifies if timestamps should be pritted. Default is
+	// Timestamps specifies if timestamps should be printed. Default is
 	// true.
 	Timestamps bool
 
 	// LabelEncoder encodes the labels.
 	LabelEncoder attribute.Encoder
-
-	// DisableTraceExport prevents any export of trace telemetry.
-	DisableTraceExport bool
-
-	// DisableMetricExport prevents any export of metric telemetry.
-	DisableMetricExport bool
 }
 
 // newConfig creates a validated Config configured with options.
 func newConfig(options ...Option) (config, error) {
 	cfg := config{
-		Writer:              defaultWriter,
-		PrettyPrint:         defaultPrettyPrint,
-		Timestamps:          defaultTimestamps,
-		LabelEncoder:        defaultLabelEncoder,
-		DisableTraceExport:  defaultDisableTraceExport,
-		DisableMetricExport: defaultDisableMetricExport,
+		Writer:       defaultWriter,
+		PrettyPrint:  defaultPrettyPrint,
+		Timestamps:   defaultTimestamps,
+		LabelEncoder: defaultLabelEncoder,
 	}
 	for _, opt := range options {
 		opt.apply(&cfg)
@@ -121,26 +111,4 @@ type labelEncoderOption struct {
 
 func (o labelEncoderOption) apply(cfg *config) {
 	cfg.LabelEncoder = o.LabelEncoder
-}
-
-// WithoutTraceExport disables all trace exporting.
-func WithoutTraceExport() Option {
-	return disableTraceExportOption(true)
-}
-
-type disableTraceExportOption bool
-
-func (o disableTraceExportOption) apply(cfg *config) {
-	cfg.DisableTraceExport = bool(o)
-}
-
-// WithoutMetricExport disables all metric exporting.
-func WithoutMetricExport() Option {
-	return disableMetricExportOption(true)
-}
-
-type disableMetricExportOption bool
-
-func (o disableMetricExportOption) apply(cfg *config) {
-	cfg.DisableMetricExport = bool(o)
 }
