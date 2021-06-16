@@ -11,6 +11,11 @@ env:
   DEFAULT_GO_VERSION: 1.15
 jobs:
   lint:
+    strategy:
+      matrix:
+        arch: ["386", amd64]
+    env:
+      GOARCH: ${{ matrix.arch }}
     runs-on: ubuntu-latest
     steps:
     - name: Install Go
