@@ -26,6 +26,8 @@ import (
 
 // Aggregator aggregates counter events.
 type Aggregator struct {
+	_ int32
+
 	// current holds current increments to this counter record
 	// current needs to be aligned for 64-bit atomic operations.
 	value number.Number
