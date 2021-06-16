@@ -26,14 +26,18 @@ import (
 
 // Aggregator aggregates counter events.
 type Aggregator struct {
+	_ int32
+
 	// current holds current increments to this counter record
 	// current needs to be aligned for 64-bit atomic operations.
 	value number.Number
 }
 
-var _ export.Aggregator = &Aggregator{}
-var _ export.Subtractor = &Aggregator{}
-var _ aggregation.Sum = &Aggregator{}
+var (
+	_ export.Aggregator = &Aggregator{}
+	_ export.Subtractor = &Aggregator{}
+	_ aggregation.Sum   = &Aggregator{}
+)
 
 // New returns a new counter aggregator implemented by atomic
 // operations.  This aggregator implements the aggregation.Sum
