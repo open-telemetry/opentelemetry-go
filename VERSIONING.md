@@ -12,7 +12,8 @@ is designed so the following goals can be achieved.
   * [Semantic import
     versioning](https://github.com/golang/go/wiki/Modules#semantic-import-versioning)
     will be used.
-    * Versions will comply with [semver 2.0](https://semver.org/spec/v2.0.0.html) with the following exceptions.
+    * Versions will comply with [semver
+      2.0](https://semver.org/spec/v2.0.0.html) with the following exceptions.
       * New methods may be added to exported API interfaces. All exported
         interfaces that fall within this exception will include the following
         paragraph in their public documentation.
