@@ -33,6 +33,8 @@ type (
 	}
 
 	Batch struct {
+		_ int32
+
 		// Measurement needs to be aligned for 64-bit atomic operations.
 		Measurements []Measurement
 		Ctx          context.Context

@@ -37,6 +37,8 @@ import (
 )
 
 type Connection struct {
+	_ int32
+
 	// Ensure pointer is 64-bit aligned for atomic operations on both 32 and 64 bit machines.
 	lastConnectErrPtr unsafe.Pointer
 

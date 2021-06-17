@@ -26,6 +26,8 @@ import (
 // keep the state of mapping ('1' is used for unmapped and '0' is for mapped) and
 // the rest of the bits are used for refcounting.
 type refcountMapped struct {
+	_ int32
+
 	// refcount has to be aligned for 64-bit atomic operations.
 	value int64
 }

@@ -50,6 +50,8 @@ var Must = metric.Must
 
 type (
 	testFixture struct {
+		_ int32
+
 		// stop has to be aligned for 64-bit atomic operations.
 		stop     int64
 		expected sync.Map
@@ -95,6 +97,8 @@ type (
 	// where a race condition causes duplicate records.  We always
 	// take the later timestamp.
 	lastValueState struct {
+		_ int32
+
 		// raw has to be aligned for 64-bit atomic operations.
 		raw number.Number
 		ts  time.Time

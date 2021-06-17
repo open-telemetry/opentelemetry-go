@@ -40,11 +40,15 @@ type Profile struct {
 	Random     func(sign int) number.Number
 }
 
-type NoopAggregator struct{}
-type NoopAggregation struct{}
+type (
+	NoopAggregator  struct{}
+	NoopAggregation struct{}
+)
 
-var _ export.Aggregator = NoopAggregator{}
-var _ aggregation.Aggregation = NoopAggregation{}
+var (
+	_ export.Aggregator       = NoopAggregator{}
+	_ aggregation.Aggregation = NoopAggregation{}
+)
 
 func newProfiles() []Profile {
 	rnd := rand.New(rand.NewSource(rand.Int63()))
@@ -93,6 +97,8 @@ func TestMain(m *testing.M) {
 }
 
 type Numbers struct {
+	_ int32
+
 	// numbers has to be aligned for 64-bit atomic operations.
 	numbers []number.Number
 	kind    number.Kind
@@ -273,8 +279,6 @@ func SynchronizedMoveResetTest(t *testing.T, mkind metric.InstrumentKind, nf fun
 				require.Equal(t, input, v)
 				require.NoError(t, err)
 			}
-
 		})
 	})
-
 }

@@ -38,6 +38,8 @@ type (
 	// lastValueData stores the current value of a lastValue along with
 	// a sequence number to determine the winner of a race.
 	lastValueData struct {
+		_ int32
+
 		// value is the int64- or float64-encoded Set() data
 		//
 		// value needs to be aligned for 64-bit atomic operations.
@@ -51,8 +53,10 @@ type (
 	}
 )
 
-var _ export.Aggregator = &Aggregator{}
-var _ aggregation.LastValue = &Aggregator{}
+var (
+	_ export.Aggregator     = &Aggregator{}
+	_ aggregation.LastValue = &Aggregator{}
+)
 
 // An unset lastValue has zero timestamp and zero value.
 var unsetLastValue = &lastValueData{}
