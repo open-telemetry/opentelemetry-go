@@ -42,9 +42,14 @@ type noopTracer struct{}
 
 var _ Tracer = noopTracer{}
 
-// Start starts a noop span.
+// Start carries forward a non-recording Span, if one is present in the context, otherwise it
+// creates a no-op Span.
 func (t noopTracer) Start(ctx context.Context, name string, _ ...SpanStartOption) (context.Context, Span) {
-	span := noopSpan{}
+	span := SpanFromContext(ctx)
+	if _, ok := span.(nonRecordingSpan); !ok {
+		// span is likely already a noopSpan, but let's be sure
+		span = noopSpan{}
+	}
 	return ContextWithSpan(ctx, span), span
 }
 
