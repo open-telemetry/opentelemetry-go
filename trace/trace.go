@@ -373,6 +373,10 @@ type Span interface {
 	// already exists for an attribute of the Span it will be overwritten with
 	// the value contained in kv.
 	SetAttributes(kv ...attribute.KeyValue)
+
+	// TracerProvider returns a TracerProvider that can be used to generate
+	// additional Spans on the same telemetry pipeline as the current Span.
+	TracerProvider() TracerProvider
 }
 
 // Link is the relationship between two Spans. The relationship can be within

@@ -31,7 +31,8 @@ type Tracer struct {
 	// Version is the instrumentation version.
 	Version string
 
-	config *config
+	config   *config
+	provider *TracerProvider
 }
 
 // Start creates a span. If t is configured with a SpanRecorder its OnStart

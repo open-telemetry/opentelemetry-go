@@ -470,6 +470,12 @@ func (s *span) ChildSpanCount() int {
 	return s.childSpanCount
 }
 
+// TracerProvider returns a trace.TracerProvider that can be used to generate
+// additional Spans on the same telemetry pipeline as the current Span.
+func (s *span) TracerProvider() trace.TracerProvider {
+	return s.tracer.provider
+}
+
 // snapshot creates a read-only copy of the current state of the span.
 func (s *span) snapshot() ReadOnlySpan {
 	var sd snapshot
