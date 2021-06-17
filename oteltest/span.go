@@ -64,8 +64,8 @@ func (s *Span) End(opts ...trace.SpanEndOption) {
 	}
 
 	s.ended = true
-	if s.tracer.config.SpanRecorder != nil {
-		s.tracer.config.SpanRecorder.OnEnd(s)
+	if s.tracer.provider.config.SpanRecorder != nil {
+		s.tracer.provider.config.SpanRecorder.OnEnd(s)
 	}
 }
 

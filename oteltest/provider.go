@@ -60,7 +60,6 @@ func (p *TracerProvider) Tracer(instName string, opts ...trace.TracerOption) tra
 		t = &Tracer{
 			Name:     instName,
 			Version:  conf.InstrumentationVersion(),
-			config:   &p.config,
 			provider: p,
 		}
 		p.tracers[inst] = t
