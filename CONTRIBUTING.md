@@ -397,6 +397,60 @@ doumentation are allowed to be extended with additional methods.
 
 Otherwise, stable interfaces MUST NOT be modified.
 
+If new functionality is needed for an interface that cannot be changed it MUST
+be added by including an additional interface. That added interface can be a
+simple interface for the specific functionality that you want to add or it can
+be a super-set of the original interface. For example, if you wanted to a
+`Close` method to the `Exporter` interface:
+
+```go
+type Exporter interface {
+	Export()
+}
+```
+
+A new interface, `Closer`, can be added:
+
+```go
+type Closer interface {
+	Close()
+}
+```
+
+Code that is passed the `Exporter` interface can now check to see if the passed
+value also satisfies the new interface. E.g.
+
+```go
+func caller(e Exporter) {
+	/* ... */
+	if c, ok := e.(Closer); ok {
+		c.Close()
+	}
+	/* ... */
+}
+```
+
+Alternatively, a new type that is the super-set of an `Exporter` can be created.
+
+```go
+type ClosingExporter struct {
+	Exporter
+	Close()
+}
+```
+
+This new type can be used similar to the simple interface above in that a
+passed `Exporter` type can be asserted to satisfy the `ClosingExporter` type
+and the `Close` method called.
+
+This super-set approach can be useful if there is explicit behavior that needs
+to be coupled with the original type and passed as a unified type to a new
+function, but, because of this coupling, it also limits the applicability of
+the added functionality. If there exist other interfaces where this
+functionality should be added, each one will need their own super-set
+interfaces and will duplicate the pattern. For this reason, the simple targeted
+interface that defines the specific functionality should be preferred.
+
 ## Approvers and Maintainers
 
 Approvers:
