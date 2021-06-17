@@ -337,6 +337,8 @@ func (sc SpanContext) MarshalJSON() ([]byte, error) {
 // and timed operation of a workflow that is traced. A Tracer is used to
 // create a Span and it is then up to the operation the Span represents to
 // properly end the Span when the operation itself ends.
+//
+// Warning: methods may be added to this interface in minor releases.
 type Span interface {
 	// End completes the Span. The Span is considered complete and ready to be
 	// delivered through the rest of the telemetry pipeline after this method
@@ -478,6 +480,8 @@ func (sk SpanKind) String() string {
 }
 
 // Tracer is the creator of Spans.
+//
+// Warning: methods may be added to this interface in minor releases.
 type Tracer interface {
 	// Start creates a span and a context.Context containing the newly-created span.
 	//
@@ -496,6 +500,8 @@ type Tracer interface {
 }
 
 // TracerProvider provides access to instrumentation Tracers.
+//
+// Warning: methods may be added to this interface in minor releases.
 type TracerProvider interface {
 	// Tracer creates an implementation of the Tracer interface.
 	// The instrumentationName must be the name of the library providing

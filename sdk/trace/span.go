@@ -34,6 +34,8 @@ import (
 // ReadOnlySpan allows reading information from the data structure underlying a
 // trace.Span. It is used in places where reading information from a span is
 // necessary but changing the span isn't necessary or allowed.
+//
+// Warning: methods may be added to this interface in minor releases.
 type ReadOnlySpan interface {
 	// Name returns the name of the span.
 	Name() string
@@ -88,6 +90,8 @@ type ReadOnlySpan interface {
 // This interface exposes the union of the methods of trace.Span (which is a
 // "write-only" span) and ReadOnlySpan. New methods for writing or reading span
 // information should be added under trace.Span or ReadOnlySpan, respectively.
+//
+// Warning: methods may be added to this interface in minor releases.
 type ReadWriteSpan interface {
 	trace.Span
 	ReadOnlySpan
