@@ -15,7 +15,11 @@ To get started with this guide, create a new directory and add a new file named 
 
 To install the necessary prerequisites for OpenTelemetry, you'll want to run the following command in the directory with your `go.mod`:
 
-`go get go.opentelemetry.io/otel@v0.20.0 go.opentelemetry.io/otel/sdk@v0.20.0 go.opentelemetry.io/otel/exporters/stdout@v0.20.0`
+`go get go.opentelemetry.io/otel@v1.0.0-RC1 go.opentelemetry.io/otel/sdk@v1.0.0-RC1 go.opentelemetry.io/otel/exporters/stdout/stdouttrace@v1.0.0-RC1`
+
+If you wish to include the experimental metrics support you will need to include a few additional modules:
+
+`go get go.opentelemetry.io/otel/metric@v0.21.0 go.opentelemetry.io/otel/sdk/metric@v0.21.0 go.opentelemetry.io/otel/exporters/stdout/stdoutmetric@v0.21.0`
 
 In your `main.go` file, you'll need to import several packages:
 
@@ -28,17 +32,19 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
-	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
+
+	// For experimental metrics support, also include:
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/trace"
 )
 ```
 
@@ -48,7 +54,7 @@ These packages contain the basic requirements for OpenTelemetry Go - the API its
 
 The SDK requires an exporter to be created. Exporters are packages that allow telemetry data to be emitted somewhere - either to the console (which is what we're doing here), or to a remote system or collector for further analysis and/or enrichment. OpenTelemetry supports a variety of exporters through its ecosystem including popular open source tools like Jaeger, Zipkin, and Prometheus.
 
-To initialize the console exporter, add the following code to the file your `main.go` file -
+To initialize the console exporter, add the following code to the file your `main.go` file:
 
 ```go
 func main() {
@@ -68,7 +74,7 @@ A trace is a type of telemetry that represents work being done by a service. In 
 
 OpenTelemetry requires a trace provider to be initialized in order to generate traces. A trace provider can have multiple span processors, which are components that allow for span data to be modified or exported after it's created.
 
-To create a trace provider, add the following code to your `main.go` file -
+To create a trace provider, add the following code to your `main.go` file:
 
 ```go
 	ctx := context.Background()
@@ -87,7 +93,7 @@ A metric is a captured measurement about the execution of a computer program at 
 
 OpenTelemetry requires a meter provider to be initialized in order to create instruments that will generate metrics. The way metrics are exported depends on the used system. For example, prometheus uses a pull model, while OTLP uses a push model. In this document we use an stdout exporter which uses the latter. Thus we need to create a push controller that will periodically push the collected metrics to the exporter.
 
-To create a meter provider, add the following code to your `main.go` file -
+To create a meter provider, add the following code to your `main.go` file:
 
 ```go
 	metricExporter, err := stdoutmetric.New(
@@ -121,7 +127,7 @@ Again we create an exporter, this time using the `stdoutmetric` exporter package
 
 When using OpenTelemetry, it's a good practice to set a global tracer provider and a global meter provider. Doing so will make it easier for libraries and other dependencies that use the OpenTelemetry API to easily discover the SDK, and emit telemetry data. In addition, you'll want to configure context propagation options. Context propagation allows for OpenTelemetry to share values across multiple services - this includes trace identifiers, which ensure that all spans for a single request are part of the same trace, as well as baggage, which are arbitrary key/value pairs that you can use to pass observability data between services (for example, sharing a customer ID from one service to the next).
 
-Setting up global options uses the `otel` package - add these options to your `main.go` file as shown -
+Setting up global options uses the `otel` package - add these options to your `main.go` file as shown:
 
 ```go
 	otel.SetTracerProvider(tp)
@@ -141,8 +147,6 @@ Each measurement can be associated with attributes that can later be used by vis
 To set up some metric instruments, add the following code to your `main.go` file -
 
 ```go
-	fooKey := attribute.Key("ex.com/foo")
-	barKey := attribute.Key("ex.com/bar")
 	lemonsKey := attribute.Key("ex.com/lemons")
 	anotherKey := attribute.Key("ex.com/another")
 
@@ -171,10 +175,13 @@ Let's put the concepts we've just covered together, and create a trace and some 
 
 ```go
 	tracer := otel.Tracer("ex.com/basic")
-	ctx = baggage.ContextWithValues(ctx,
-		fooKey.String("foo1"),
-		barKey.String("bar1"),
-	)
+
+	// we're ignoring errors here since we know these values are valid,
+	// but do handle them appropriately if dealing with user-input
+	foo, _ := baggage.NewMember("ex.com.foo", "foo1")
+	bar, _ := baggage.NewMember("ex.com.bar", "bar1")
+	bag, _ := baggage.New(foo, bar)
+	ctx = baggage.ContextWithBaggage(ctx, bag)
 
 	func(ctx context.Context) {
 		var span trace.Span
@@ -185,8 +192,6 @@ Let's put the concepts we've just covered together, and create a trace and some 
 		span.SetAttributes(anotherKey.String("yes"))
 
 		meter.RecordBatch(
-			// Note: call-site variables added as context Entries:
-			baggage.ContextWithValues(ctx, anotherKey.String("xyz")),
 			commonAttributes,
 
 			valueRecorder.Measurement(2.0),
