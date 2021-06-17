@@ -26,8 +26,6 @@ import (
 // reconnectingUDPConn is an implementation of udpConn that resolves hostPort every resolveTimeout, if the resolved address is
 // different than the current conn then the new address is dialed and the conn is swapped.
 type reconnectingUDPConn struct {
-	_ int32
-
 	// `sync/atomic` expects the first word in an allocated struct to be 64-bit
 	// aligned on both ARM and x86-32. See https://goo.gl/zW7dgq for more details.
 	bufferBytes int64
