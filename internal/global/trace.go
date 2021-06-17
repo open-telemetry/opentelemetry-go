@@ -103,7 +103,7 @@ func (p *tracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 		return val
 	}
 
-	t := &tracer{name: name, opts: opts}
+	t := &tracer{name: name, opts: opts, provider: p}
 	p.tracers[key] = t
 	return t
 }
@@ -118,8 +118,9 @@ type il struct {
 // All Tracer functionality is forwarded to a delegate once configured.
 // Otherwise, all functionality is forwarded to a NoopTracer.
 type tracer struct {
-	name string
-	opts []trace.TracerOption
+	name     string
+	opts     []trace.TracerOption
+	provider *tracerProvider
 
 	delegate atomic.Value
 }
@@ -145,7 +146,7 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...trace.SpanStart
 		return delegate.(trace.Tracer).Start(ctx, name, opts...)
 	}
 
-	s := nonRecordingSpan{sc: trace.SpanContextFromContext(ctx)}
+	s := nonRecordingSpan{sc: trace.SpanContextFromContext(ctx), tracer: t}
 	ctx = trace.ContextWithSpan(ctx, s)
 	return ctx, s
 }
@@ -154,7 +155,8 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...trace.SpanStart
 // SpanContext. It performs no operations other than to return the wrapped
 // SpanContext.
 type nonRecordingSpan struct {
-	sc trace.SpanContext
+	sc     trace.SpanContext
+	tracer *tracer
 }
 
 var _ trace.Span = nonRecordingSpan{}
@@ -185,3 +187,5 @@ func (nonRecordingSpan) AddEvent(string, ...trace.EventOption) {}
 
 // SetName does nothing.
 func (nonRecordingSpan) SetName(string) {}
+
+func (s nonRecordingSpan) TracerProvider() trace.TracerProvider { return s.tracer.provider }

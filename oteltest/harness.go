@@ -287,6 +287,12 @@ func (h *Harness) testSpan(tracerFactory func() trace.Tracer) {
 
 			return subject
 		},
+		"Span created via span.TracerProvider()": func() trace.Span {
+			ctx, spanA := tracerFactory().Start(context.Background(), "span1")
+
+			_, spanB := spanA.TracerProvider().Tracer("second").Start(ctx, "span2")
+			return spanB
+		},
 	}
 
 	for mechanismName, mechanism := range mechanisms {
