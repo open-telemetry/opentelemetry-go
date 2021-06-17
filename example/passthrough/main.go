@@ -22,7 +22,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/example/passthrough/handler"
-	"go.opentelemetry.io/otel/exporters/stdout"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -76,9 +76,9 @@ func initPassthroughGlobals() {
 // set it as the global tracer provider
 func nonGlobalTracer() *sdktrace.TracerProvider {
 	var err error
-	exp, err := stdout.New(stdout.WithPrettyPrint())
+	exp, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
 	if err != nil {
-		log.Panicf("failed to initialize stdout exporter %v\n", err)
+		log.Panicf("failed to initialize stdouttrace exporter %v\n", err)
 	}
 	bsp := sdktrace.NewBatchSpanProcessor(exp)
 	tp := sdktrace.NewTracerProvider(

@@ -12,21 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stdout // import "go.opentelemetry.io/otel/exporters/stdout"
+package stdoutmetric // import "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 
 import (
 	"go.opentelemetry.io/otel/sdk/export/metric"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 type Exporter struct {
-	traceExporter
 	metricExporter
 }
 
 var (
-	_ metric.Exporter       = &Exporter{}
-	_ sdktrace.SpanExporter = &Exporter{}
+	_ metric.Exporter = &Exporter{}
 )
 
 // New creates an Exporter with the passed options.
@@ -36,7 +33,6 @@ func New(options ...Option) (*Exporter, error) {
 		return nil, err
 	}
 	return &Exporter{
-		traceExporter:  traceExporter{config: cfg},
 		metricExporter: metricExporter{cfg},
 	}, nil
 }

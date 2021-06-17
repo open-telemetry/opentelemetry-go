@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -31,7 +32,8 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/bridge/opencensus"
-	"go.opentelemetry.io/otel/exporters/stdout"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	otmetricexport "go.opentelemetry.io/otel/sdk/export/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -51,13 +53,17 @@ var (
 )
 
 func main() {
-	log.Println("Using OpenTelemetry stdout exporter.")
-	otExporter, err := stdout.New(stdout.WithPrettyPrint())
+	log.Println("Using OpenTelemetry stdout exporters.")
+	traceExporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(fmt.Errorf("error creating trace exporter: %w", err))
 	}
-	tracing(otExporter)
-	monitoring(otExporter)
+	metricsExporter, err := stdoutmetric.New(stdoutmetric.WithPrettyPrint())
+	if err != nil {
+		log.Fatal(fmt.Errorf("error creating metric exporter: %w", err))
+	}
+	tracing(traceExporter)
+	monitoring(metricsExporter)
 }
 
 // tracing demonstrates overriding the OpenCensus DefaultTracer to send spans
@@ -68,38 +74,42 @@ func tracing(otExporter sdktrace.SpanExporter) {
 	log.Println("Configuring OpenCensus.  Not Registering any OpenCensus exporters.")
 	octrace.ApplyConfig(octrace.Config{DefaultSampler: octrace.AlwaysSample()})
 
-	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(otExporter))
+	tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(otExporter))
 	otel.SetTracerProvider(tp)
 
 	log.Println("Installing the OpenCensus bridge to make OpenCensus libraries write spans using OpenTelemetry.")
 	tracer := tp.Tracer("simple")
 	octrace.DefaultTracer = opencensus.NewTracer(tracer)
+	tp.ForceFlush(ctx)
 
-	log.Println("Creating OpenCensus span, which should be printed out using the OpenTelemetry stdout exporter.\n-- It should have no parent, since it is the first span.")
+	log.Println("Creating OpenCensus span, which should be printed out using the OpenTelemetry stdouttrace exporter.\n-- It should have no parent, since it is the first span.")
 	ctx, outerOCSpan := octrace.StartSpan(ctx, "OpenCensusOuterSpan")
 	outerOCSpan.End()
+	tp.ForceFlush(ctx)
 
 	log.Println("Creating OpenTelemetry span\n-- It should have the OpenCensus span as a parent, since the OpenCensus span was written with using OpenTelemetry APIs.")
 	ctx, otspan := tracer.Start(ctx, "OpenTelemetrySpan")
 	otspan.End()
+	tp.ForceFlush(ctx)
 
-	log.Println("Creating OpenCensus span, which should be printed out using the OpenTelemetry stdout exporter.\n-- It should have the OpenTelemetry span as a parent, since it was written using OpenTelemetry APIs")
+	log.Println("Creating OpenCensus span, which should be printed out using the OpenTelemetry stdouttrace exporter.\n-- It should have the OpenTelemetry span as a parent, since it was written using OpenTelemetry APIs")
 	_, innerOCSpan := octrace.StartSpan(ctx, "OpenCensusInnerSpan")
 	innerOCSpan.End()
+	tp.ForceFlush(ctx)
 }
 
 // monitoring demonstrates creating an IntervalReader using the OpenTelemetry
 // exporter to send metrics to the exporter by using either an OpenCensus
 // registry or an OpenCensus view.
 func monitoring(otExporter otmetricexport.Exporter) {
-	log.Println("Using the OpenTelemetry stdout exporter to export OpenCensus metrics.  This allows routing telemetry from both OpenTelemetry and OpenCensus to a single exporter.")
+	log.Println("Using the OpenTelemetry stdoutmetric exporter to export OpenCensus metrics.  This allows routing telemetry from both OpenTelemetry and OpenCensus to a single exporter.")
 	ocExporter := opencensus.NewMetricExporter(otExporter)
 	intervalReader, err := metricexport.NewIntervalReader(&metricexport.Reader{}, ocExporter)
 	if err != nil {
 		log.Fatalf("Failed to create interval reader: %v\n", err)
 	}
 	intervalReader.ReportingInterval = 10 * time.Second
-	log.Println("Emitting metrics using OpenCensus APIs.  These should be printed out using the OpenTelemetry stdout exporter.")
+	log.Println("Emitting metrics using OpenCensus APIs.  These should be printed out using the OpenTelemetry stdoutmetric exporter.")
 	err = intervalReader.Start()
 	if err != nil {
 		log.Fatalf("Failed to start interval reader: %v\n", err)

@@ -5,7 +5,6 @@ go 1.15
 replace (
 	go.opentelemetry.io/otel => ../..
 	go.opentelemetry.io/otel/bridge/opencensus => ../../bridge/opencensus
-	go.opentelemetry.io/otel/exporters/stdout => ../../exporters/stdout
 	go.opentelemetry.io/otel/sdk => ../../sdk
 )
 
@@ -13,7 +12,8 @@ require (
 	go.opencensus.io v0.22.6-0.20201102222123-380f4078db9f
 	go.opentelemetry.io/otel v0.20.0
 	go.opentelemetry.io/otel/bridge/opencensus v0.20.0
-	go.opentelemetry.io/otel/exporters/stdout v0.20.0
+	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v0.20.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v0.20.0
 	go.opentelemetry.io/otel/sdk v0.20.0
 	go.opentelemetry.io/otel/sdk/export/metric v0.20.0
 )
@@ -71,3 +71,7 @@ replace go.opentelemetry.io/otel/exporters/trace/zipkin => ../../exporters/trace
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric => ../../exporters/otlp/otlpmetric
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc => ../../exporters/otlp/otlpmetric/otlpmetricgrpc
+
+replace go.opentelemetry.io/otel/exporters/stdout/stdoutmetric => ../../exporters/stdout/stdoutmetric
+
+replace go.opentelemetry.io/otel/exporters/stdout/stdouttrace => ../../exporters/stdout/stdouttrace

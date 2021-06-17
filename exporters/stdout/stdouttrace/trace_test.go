@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stdout_test
+package stdouttrace_test
 
 import (
 	"bytes"
@@ -26,7 +26,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/exporters/stdout"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
@@ -37,7 +37,7 @@ import (
 func TestExporter_ExportSpan(t *testing.T) {
 	// write to buffer for testing
 	var b bytes.Buffer
-	ex, err := stdout.New(stdout.WithWriter(&b), stdout.WithPrettyPrint())
+	ex, err := stdouttrace.New(stdouttrace.WithWriter(&b), stdouttrace.WithPrettyPrint())
 	if err != nil {
 		t.Errorf("Error constructing stdout exporter %s", err)
 	}
@@ -183,7 +183,7 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	e, err := stdout.New()
+	e, err := stdouttrace.New()
 	if err != nil {
 		t.Fatalf("failed to create exporter: %v", err)
 	}
@@ -202,7 +202,7 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	e, err := stdout.New()
+	e, err := stdouttrace.New()
 	if err != nil {
 		t.Fatalf("failed to create exporter: %v", err)
 	}
@@ -217,7 +217,7 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 }
 
 func TestExporterShutdownNoError(t *testing.T) {
-	e, err := stdout.New()
+	e, err := stdouttrace.New()
 	if err != nil {
 		t.Fatalf("failed to create exporter: %v", err)
 	}

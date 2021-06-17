@@ -138,7 +138,7 @@ func (e *EnvOptionsReader) GetOptionsFromEnv() []GenericOption {
 }
 
 func isInsecureEndpoint(endpoint string) bool {
-	return strings.HasPrefix(strings.ToLower(endpoint), "http://")
+	return strings.HasPrefix(strings.ToLower(endpoint), "http://") || strings.HasPrefix(strings.ToLower(endpoint), "unix://")
 }
 
 func trimSchema(endpoint string) string {
