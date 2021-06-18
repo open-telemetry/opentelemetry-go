@@ -25,8 +25,19 @@ import (
 
 // Sampler decides whether a trace should be sampled and exported.
 type Sampler interface {
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
+
+	// ShouldSample returns a SamplingResult based on a decision made from the
+	// passed parameters.
 	ShouldSample(parameters SamplingParameters) SamplingResult
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
+
+	// Description returns information describing the Sampler.
 	Description() string
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
 }
 
 // SamplingParameters contains the values passed to a Sampler.
