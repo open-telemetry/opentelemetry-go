@@ -16,9 +16,8 @@
 Package instrumentation provides an instrumentation library structure to be
 passed to both the OpenTelemetry Tracer and Meter components.
 
-This package is currently in a pre-GA phase. Backwards incompatible changes
-may be introduced in subsequent minor version releases as we work to track the
-evolving OpenTelemetry specification and user feedback.
+This package is currently in a Release Candidate phase. Backwards incompatible changes
+may be introduced prior to v1.0.0, but we believe the current API is ready to stabilize.
 
 For more information see
 [this](https://github.com/open-telemetry/oteps/blob/main/text/0083-component.md).
