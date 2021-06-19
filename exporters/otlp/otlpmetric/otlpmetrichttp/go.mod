@@ -6,11 +6,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/otel v1.0.0-RC1
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.21.0
-	go.opentelemetry.io/otel/metric v0.21.0
-	go.opentelemetry.io/otel/sdk/metric v0.21.0
 	go.opentelemetry.io/proto/otlp v0.9.0
-	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
-	google.golang.org/grpc v1.38.0
 	google.golang.org/protobuf v1.26.0
 )
 
@@ -79,3 +75,5 @@ replace go.opentelemetry.io/otel/exporters/zipkin => ../../../zipkin
 replace go.opentelemetry.io/otel/exporters/stdout/stdoutmetric => ../../../stdout/stdoutmetric
 
 replace go.opentelemetry.io/otel/exporters/stdout/stdouttrace => ../../../stdout/stdouttrace
+
+replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc => ../otlpmetricgrpc
