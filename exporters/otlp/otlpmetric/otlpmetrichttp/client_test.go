@@ -344,7 +344,12 @@ func TestUnreasonableBackoff(t *testing.T) {
 }
 
 func TestCancelledContext(t *testing.T) {
-	mcCfg := mockCollectorConfig{}
+	statuses := []int{
+		http.StatusBadRequest,
+	}
+	mcCfg := mockCollectorConfig{
+		InjectHTTPStatus: statuses,
+	}
 	mc := runMockCollector(t, mcCfg)
 	defer mc.MustStop(t)
 	driver := otlpmetrichttp.NewClient(
