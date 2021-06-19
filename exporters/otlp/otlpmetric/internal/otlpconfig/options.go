@@ -24,9 +24,16 @@ import (
 )
 
 const (
+	// DefaultMaxAttempts describes how many times the driver
+	// should retry the sending of the payload in case of a
+	// retryable error.
+	DefaultMaxAttempts int = 5
 	// DefaultMetricsPath is a default URL path for endpoint that
 	// receives metrics.
 	DefaultMetricsPath string = "/v1/metrics"
+	// DefaultBackoff is a default base backoff time used in the
+	// exponential backoff strategy.
+	DefaultBackoff time.Duration = 300 * time.Millisecond
 	// DefaultTimeout is a default max waiting time for the backend to process
 	// each span or metrics batch.
 	DefaultTimeout time.Duration = 10 * time.Second
@@ -59,6 +66,10 @@ type (
 	Config struct {
 		// Signal specific configurations
 		Metrics SignalConfig
+
+		// HTTP configurations
+		MaxAttempts int
+		Backoff     time.Duration
 
 		// gRPC configurations
 		ReconnectionPeriod time.Duration
@@ -241,5 +252,17 @@ func WithHeaders(headers map[string]string) GenericOption {
 func WithTimeout(duration time.Duration) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Metrics.Timeout = duration
+	})
+}
+
+func WithMaxAttempts(maxAttempts int) GenericOption {
+	return newGenericOption(func(cfg *Config) {
+		cfg.MaxAttempts = maxAttempts
+	})
+}
+
+func WithBackoff(duration time.Duration) GenericOption {
+	return newGenericOption(func(cfg *Config) {
+		cfg.Backoff = duration
 	})
 }
