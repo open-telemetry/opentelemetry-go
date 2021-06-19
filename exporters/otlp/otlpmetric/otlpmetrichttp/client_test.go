@@ -363,7 +363,7 @@ func TestCancelledContext(t *testing.T) {
 		assert.NoError(t, exporter.Shutdown(context.Background()))
 	}()
 	cancel()
-	err = exporter.Export(ctx, oneRecord)
+	_ = exporter.Export(ctx, oneRecord)
 	assert.Empty(t, mc.GetMetrics())
 }
 
