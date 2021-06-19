@@ -1,4 +1,4 @@
-module go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc
+module go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp
 
 go 1.15
 

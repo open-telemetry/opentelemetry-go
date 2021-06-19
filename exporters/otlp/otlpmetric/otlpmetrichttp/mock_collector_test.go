@@ -20,7 +20,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	"io"
 	"io/ioutil"
 	"net"
@@ -44,7 +43,7 @@ type mockCollector struct {
 	endpoint string
 	server   *http.Server
 
-	spanLock     sync.Mutex
+	spanLock       sync.Mutex
 	metricsStorage otlpmetrictest.MetricsStorage
 
 	injectHTTPStatus  []int
@@ -63,7 +62,7 @@ func (c *mockCollector) MustStop(t *testing.T) {
 	assert.NoError(t, c.server.Shutdown(context.Background()))
 }
 
-func (c *mockCollector) getMetrics() []*metricpb.Metric {
+func (c *mockCollector) GetMetrics() []*metricpb.Metric {
 	c.spanLock.Lock()
 	defer c.spanLock.Unlock()
 	return c.metricsStorage.GetMetrics()
@@ -77,7 +76,7 @@ func (c *mockCollector) ClientTLSConfig() *tls.Config {
 	return c.clientTLSConfig
 }
 
-func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
+func (c *mockCollector) serveMetrics(w http.ResponseWriter, r *http.Request) {
 	if c.injectDelay != 0 {
 		time.Sleep(c.injectDelay)
 	}
@@ -86,7 +85,7 @@ func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	response := collectortracepb.ExportTraceServiceResponse{}
+	response := collectormetricpb.ExportMetricsServiceResponse{}
 	rawResponse, err := proto.Marshal(&response)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -180,7 +179,7 @@ func writeReply(w http.ResponseWriter, rawResponse []byte, injectHTTPStatus int,
 }
 
 type mockCollectorConfig struct {
-	TracesURLPath     string
+	MetricsURLPath    string
 	Port              int
 	InjectHTTPStatus  []int
 	InjectContentType string
@@ -190,8 +189,8 @@ type mockCollectorConfig struct {
 }
 
 func (c *mockCollectorConfig) fillInDefaults() {
-	if c.TracesURLPath == "" {
-		c.TracesURLPath = otlpconfig.DefaultMetricsPath
+	if c.MetricsURLPath == "" {
+		c.MetricsURLPath = otlpconfig.DefaultMetricsPath
 	}
 }
 
@@ -203,14 +202,14 @@ func runMockCollector(t *testing.T, cfg mockCollectorConfig) *mockCollector {
 	require.NoError(t, err)
 	m := &mockCollector{
 		endpoint:          fmt.Sprintf("localhost:%s", portStr),
-		metricsStorage:      otlpmetrictest.NewMetricsStorage(),
+		metricsStorage:    otlpmetrictest.NewMetricsStorage(),
 		injectHTTPStatus:  cfg.InjectHTTPStatus,
 		injectContentType: cfg.InjectContentType,
 		injectDelay:       cfg.InjectDelay,
 		expectedHeaders:   cfg.ExpectedHeaders,
 	}
 	mux := http.NewServeMux()
-	mux.Handle(cfg.TracesURLPath, http.HandlerFunc(m.serveTraces))
+	mux.Handle(cfg.MetricsURLPath, http.HandlerFunc(m.serveMetrics))
 	server := &http.Server{
 		Handler: mux,
 	}
