@@ -52,8 +52,6 @@ replace go.opentelemetry.io/otel/example/prometheus => ../../../example/promethe
 
 replace go.opentelemetry.io/otel/example/zipkin => ../../../example/zipkin
 
-replace go.opentelemetry.io/otel/exporters/metric/prometheus => ../../metric/prometheus
-
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric => ./
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc => ./otlpmetricgrpc
@@ -63,10 +61,6 @@ replace go.opentelemetry.io/otel/exporters/otlp/otlptrace => ../otlptrace
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc => ../otlptrace/otlptracegrpc
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp => ../otlptrace/otlptracehttp
-
-replace go.opentelemetry.io/otel/exporters/trace/jaeger => ../../trace/jaeger
-
-replace go.opentelemetry.io/otel/exporters/trace/zipkin => ../../trace/zipkin
 
 replace go.opentelemetry.io/otel/internal/tools => ../../../internal/tools
 
