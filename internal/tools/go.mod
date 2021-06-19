@@ -5,11 +5,13 @@ go 1.15
 require (
 	github.com/client9/misspell v0.3.4
 	github.com/gogo/protobuf v1.3.2
-	github.com/golangci/golangci-lint v1.40.1
+	github.com/golangci/golangci-lint v1.41.1
 	github.com/itchyny/gojq v0.12.4
+	github.com/sanposhiho/wastedassign v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.5
+	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
 	golang.org/x/mod v0.4.2
-	golang.org/x/tools v0.1.2-0.20210512205948-8287d5da45e4
+	golang.org/x/tools v0.1.3
 )
 
 replace go.opentelemetry.io/otel => ../..
