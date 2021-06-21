@@ -13,7 +13,7 @@
 // limitations under the License.
 
 /*
-Package otlptracehttp a client that sends traces to the collector
+Package otlpmetrichttp provides a client that sends metrics to the collector
 using HTTP with binary protobuf payloads.
 
 This package is currently in a Release Candidate phase. Backwards incompatible changes
