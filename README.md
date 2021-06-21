@@ -11,14 +11,16 @@ It provides a set of APIs to directly measure performance and behavior of your s
 
 ## Project Status
 
-**Warning**: this project is currently in a pre-GA phase. Backwards
-incompatible changes may be introduced in subsequent minor version releases as
-we work to track the evolving OpenTelemetry specification and user feedback.
+| Signal  | Status                 | Project                                                     |
+| ------- | ---------------------- | ----------------------------------------------------------- |
+| Traces  | Release Candidate      | [1.0.0](https://github.com/orgs/open-telemetry/projects/15) |
+| Metrics | Development paused [1] | N/A                                                         |
+| Logs    | Frozen [2]             | N/A                                                         |
 
-Our progress towards a GA release candidate is tracked in [this project
-board](https://github.com/orgs/open-telemetry/projects/5). This release
-candidate will follow semantic versioning and will be released with a major
-version greater than zero.
+- [1]: The development of the metrics API and SDK has paused due to limited development resources, prioritization of a stable Traces release, and instability of the official overall design from the OpenTelemetry specification.
+   Pull Requests for metrics related issues are not being accepted currently outside of security vulnerability mitigations.
+- [2]: The Logs signal development is halted for this project while we develop both Traces and Metrics.
+   No Logs Pull Requests are currently being accepted.
 
 Progress and status specific to this repository is tracked in our local
 [project boards](https://github.com/open-telemetry/opentelemetry-go/projects)
@@ -27,17 +29,6 @@ and
 
 Project versioning information and stability guarantees can be found in the
 [versioning documentation](./VERSIONING.md).
-
-| Signal | Status |
-| --- | --- |
-| Traces | Stable [release](https://github.com/orgs/open-telemetry/projects/5) is primary focus |
-| Metrics | Development paused [1] |
-| Logs | Frozen [2] |
-
-- [1]: The development of the metrics API and SDK has paused due to limited development resources, prioritization of a stable Traces release, and instability of the official overall design from the OpenTelemetry specification.
-   Pull Requests for metrics related issues are not being accepted currently outside of security vulnerability mitigations.
-- [2]: The Logs signal development is halted for this project while we develop both Traces and Metrics.
-   No Logs Pull Requests are currently being accepted.
 
 ### Compatibility
 
@@ -89,15 +80,17 @@ practical uses of this process.
 Now that your application is instrumented to collect telemetry, it needs an
 export pipeline to send that telemetry to an observability platform.
 
-You can find officially supported exporters [here](./exporters/) and in the
-companion [contrib
-repository](https://github.com/open-telemetry/opentelemetry-go-contrib/tree/main/exporters/metric).
-Additionally, there are many vendor specific or 3rd party exporters for
-OpenTelemetry. These exporters are broken down by
-[trace](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/export/trace?tab=importedby)
-and
-[metric](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/export/metric?tab=importedby)
-support.
+All officially supported exporters for the OpenTelemetry project are contained in the [exporters directory](./exporters).
+
+| Exporter                              | Metrics | Traces |
+| :-----------------------------------: | :-----: | :----: |
+| [Jaeger](./exporters/jaeger/)         |         | ✓      |
+| [OTLP](./exporters/otlp/)             | ✓       | ✓      |
+| [Prometheus](./exporters/prometheus/) | ✓       |        |
+| [stdout](./exporters/stdout/)         | ✓       | ✓      |
+| [Zipkin](./exporters/zipkin/)         |         | ✓      |
+
+Additionally, OpenTelemetry community supported exporters can be found in the [contrib repository](https://github.com/open-telemetry/opentelemetry-go-contrib/tree/main/exporters).
 
 ## Contributing
 

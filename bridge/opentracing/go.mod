@@ -6,8 +6,8 @@ replace go.opentelemetry.io/otel => ../..
 
 require (
 	github.com/opentracing/opentracing-go v1.2.0
-	go.opentelemetry.io/otel v0.20.0
-	go.opentelemetry.io/otel/trace v0.20.0
+	go.opentelemetry.io/otel v1.0.0-RC1
+	go.opentelemetry.io/otel/trace v1.0.0-RC1
 )
 
 replace go.opentelemetry.io/otel/bridge/opencensus => ../opencensus
@@ -28,15 +28,11 @@ replace go.opentelemetry.io/otel/example/prometheus => ../../example/prometheus
 
 replace go.opentelemetry.io/otel/example/zipkin => ../../example/zipkin
 
-replace go.opentelemetry.io/otel/exporters/metric/prometheus => ../../exporters/metric/prometheus
+replace go.opentelemetry.io/otel/exporters/prometheus => ../../exporters/prometheus
 
-replace go.opentelemetry.io/otel/exporters/otlp => ../../exporters/otlp
+replace go.opentelemetry.io/otel/exporters/jaeger => ../../exporters/jaeger
 
-replace go.opentelemetry.io/otel/exporters/stdout => ../../exporters/stdout
-
-replace go.opentelemetry.io/otel/exporters/trace/jaeger => ../../exporters/trace/jaeger
-
-replace go.opentelemetry.io/otel/exporters/trace/zipkin => ../../exporters/trace/zipkin
+replace go.opentelemetry.io/otel/exporters/zipkin => ../../exporters/zipkin
 
 replace go.opentelemetry.io/otel/internal/tools => ../../internal/tools
 
@@ -59,3 +55,13 @@ replace go.opentelemetry.io/otel/exporters/otlp/otlptrace => ../../exporters/otl
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc => ../../exporters/otlp/otlptrace/otlptracegrpc
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp => ../../exporters/otlp/otlptrace/otlptracehttp
+
+replace go.opentelemetry.io/otel/internal/metric => ../../internal/metric
+
+replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric => ../../exporters/otlp/otlpmetric
+
+replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc => ../../exporters/otlp/otlpmetric/otlpmetricgrpc
+
+replace go.opentelemetry.io/otel/exporters/stdout/stdoutmetric => ../../exporters/stdout/stdoutmetric
+
+replace go.opentelemetry.io/otel/exporters/stdout/stdouttrace => ../../exporters/stdout/stdouttrace

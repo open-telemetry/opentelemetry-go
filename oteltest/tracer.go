@@ -31,7 +31,7 @@ type Tracer struct {
 	// Version is the instrumentation version.
 	Version string
 
-	config *config
+	provider *TracerProvider
 }
 
 // Start creates a span. If t is configured with a SpanRecorder its OnStart
@@ -54,7 +54,7 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanStart
 	if c.NewRoot() {
 		span.spanContext = trace.SpanContext{}
 	} else {
-		span.spanContext = t.config.SpanContextFunc(ctx)
+		span.spanContext = t.provider.config.SpanContextFunc(ctx)
 		if current := trace.SpanContextFromContext(ctx); current.IsValid() {
 			span.spanContext = span.spanContext.WithTraceID(current.TraceID())
 			span.parentSpanID = current.SpanID()
@@ -77,8 +77,8 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanStart
 	span.SetName(name)
 	span.SetAttributes(c.Attributes()...)
 
-	if t.config.SpanRecorder != nil {
-		t.config.SpanRecorder.OnStart(span)
+	if t.provider.config.SpanRecorder != nil {
+		t.provider.config.SpanRecorder.OnStart(span)
 	}
 	return trace.ContextWithSpan(ctx, span), span
 }

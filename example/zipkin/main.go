@@ -24,10 +24,10 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/trace/zipkin"
+	"go.opentelemetry.io/otel/exporters/zipkin"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -40,7 +40,7 @@ func initTracer(url string) func() {
 	// For demoing purposes, always sample. In a production application, you should
 	// configure the sampler to a trace.ParentBased(trace.TraceIDRatioBased) set at the desired
 	// ratio.
-	exporter, err := zipkin.NewRawExporter(
+	exporter, err := zipkin.New(
 		url,
 		zipkin.WithLogger(logger),
 		zipkin.WithSDKOptions(sdktrace.WithSampler(sdktrace.AlwaysSample())),

@@ -27,7 +27,7 @@ import (
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/internal/matchers"
 	"go.opentelemetry.io/otel/oteltest"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -568,5 +568,25 @@ func TestSpan(t *testing.T) {
 
 			e.Expect(subject.SpanKind()).ToEqual(trace.SpanKindConsumer)
 		})
+	})
+
+	t.Run("can provide a valid TracerProvider", func(t *testing.T) {
+		t.Parallel()
+
+		e := matchers.NewExpecter(t)
+
+		sr := new(oteltest.SpanRecorder)
+		tracerA := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr)).Tracer(t.Name())
+		ctx, spanA := tracerA.Start(context.Background(), "span1")
+
+		e.Expect(len(sr.Started())).ToEqual(1)
+
+		_, spanB := spanA.TracerProvider().Tracer("extracted").Start(ctx, "span2")
+
+		spans := sr.Started()
+
+		e.Expect(len(spans)).ToEqual(2)
+		e.Expect(spans[0]).ToEqual(spanA)
+		e.Expect(spans[1]).ToEqual(spanB)
 	})
 }

@@ -29,9 +29,6 @@ func TestResetsOfGlobalsPanic(t *testing.T) {
 		"SetTracerProvider": func() {
 			global.SetTracerProvider(global.TracerProvider())
 		},
-		"SetMeterProvider": func() {
-			global.SetMeterProvider(global.MeterProvider())
-		},
 	}
 
 	for name, test := range tests {

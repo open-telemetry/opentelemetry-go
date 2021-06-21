@@ -23,7 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -34,6 +34,8 @@ import (
 // ReadOnlySpan allows reading information from the data structure underlying a
 // trace.Span. It is used in places where reading information from a span is
 // necessary but changing the span isn't necessary or allowed.
+//
+// Warning: methods may be added to this interface in minor releases.
 type ReadOnlySpan interface {
 	// Name returns the name of the span.
 	Name() string
@@ -88,6 +90,8 @@ type ReadOnlySpan interface {
 // This interface exposes the union of the methods of trace.Span (which is a
 // "write-only" span) and ReadOnlySpan. New methods for writing or reading span
 // information should be added under trace.Span or ReadOnlySpan, respectively.
+//
+// Warning: methods may be added to this interface in minor releases.
 type ReadWriteSpan interface {
 	trace.Span
 	ReadOnlySpan
@@ -468,6 +472,12 @@ func (s *span) ChildSpanCount() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.childSpanCount
+}
+
+// TracerProvider returns a trace.TracerProvider that can be used to generate
+// additional Spans on the same telemetry pipeline as the current Span.
+func (s *span) TracerProvider() trace.TracerProvider {
+	return s.tracer.provider
 }
 
 // snapshot creates a read-only copy of the current state of the span.

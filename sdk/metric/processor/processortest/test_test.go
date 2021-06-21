@@ -73,7 +73,7 @@ func TestProcessorTesting(t *testing.T) {
 	require.EqualValues(t, expect, testProc.Values())
 
 	// Export the data and validate it again.
-	exporter := processorTest.NewExporter(
+	exporter := processorTest.New(
 		export.StatelessExportKindSelector(),
 		attribute.DefaultEncoder(),
 	)

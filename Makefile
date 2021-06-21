@@ -150,7 +150,7 @@ lint-modules: | $(CROSSLINK)
 
 .PHONY: license-check
 license-check:
-	@licRes=$$(for f in $$(find . -type f \( -iname '*.go' -o -iname '*.sh' \) ! -path '**/third_party/*' ! -path './exporters/otlp/internal/opentelemetry-proto/*') ; do \
+	@licRes=$$(for f in $$(find . -type f \( -iname '*.go' -o -iname '*.sh' \) ! -path '**/third_party/*') ; do \
 	           awk '/Copyright The OpenTelemetry Authors|generated|GENERATED/ && NR<=3 { found=1; next } END { if (!found) print FILENAME }' $$f; \
 	   done); \
 	   if [ -n "$${licRes}" ]; then \
@@ -161,8 +161,8 @@ license-check:
 .PHONY: dependabot-check
 dependabot-check:
 	@result=$$( \
-		for f in $$( find . -type f -name go.mod -exec dirname {} \; | sed 's/^.\/\?/\//' ); \
-			do grep -q "$$f" .github/dependabot.yml \
+		for f in $$( find . -type f -name go.mod -exec dirname {} \; | sed 's/^.//' ); \
+			do grep -q "directory: \+$$f" .github/dependabot.yml \
 			|| echo "$$f"; \
 		done; \
 	); \

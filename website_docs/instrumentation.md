@@ -11,7 +11,7 @@ Spans are created by tracers, which can be acquired from a Tracer Provider.
 
 ```go
 ctx := context.Background()
-tracer := provider.Tracer("example/main")
+tracer := otel.Tracer("example/main")
 var span trace.Span
 ctx, span = tracer.Start(ctx, "helloWorld")
 defer span.End()
@@ -60,7 +60,7 @@ span.SetAttributes(myKey.String("a value"))
 
 ### Semantic Attributes
 
-Semantic Attributes are attributes that are defined by the OpenTelemetry Specification in order to provide a shared set of attribute keys across multiple languages, frameworks, and runtimes for common concepts like HTTP methods, status codes, user agents, and more. These attributes are available in the `go.opentelemetry.io/otel/semconv` package.
+Semantic Attributes are attributes that are defined by the OpenTelemetry Specification in order to provide a shared set of attribute keys across multiple languages, frameworks, and runtimes for common concepts like HTTP methods, status codes, user agents, and more. These attributes are available in the `go.opentelemetry.io/otel/semconv/v1.4.0` package.
 
 Tracing semantic conventions can be found [in this document](https://github.com/open-telemetry/opentelemetry-specification/tree/main/specification/trace/semantic_conventions)
 
@@ -93,7 +93,7 @@ The metrics API is currently unstable, documentation TBA.
 
 Traces can extend beyond a single process. This requires _context propagation_, a mechanism where identifiers for a trace are sent to remote processes.
 
-In order to propagate trace context over the wire, a propagator must be registered with the OpenTelemetry SDK.
+In order to propagate trace context over the wire, a propagator must be registered with the OpenTelemetry API.
 
 ```go
 import (

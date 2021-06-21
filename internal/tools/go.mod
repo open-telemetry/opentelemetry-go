@@ -5,11 +5,11 @@ go 1.15
 require (
 	github.com/client9/misspell v0.3.4
 	github.com/gogo/protobuf v1.3.2
-	github.com/golangci/golangci-lint v1.40.1
+	github.com/golangci/golangci-lint v1.41.1
 	github.com/itchyny/gojq v0.12.4
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/mod v0.4.2
-	golang.org/x/tools v0.1.2-0.20210512205948-8287d5da45e4
+	golang.org/x/tools v0.1.3
 )
 
 replace go.opentelemetry.io/otel => ../..
@@ -32,15 +32,11 @@ replace go.opentelemetry.io/otel/example/prometheus => ../../example/prometheus
 
 replace go.opentelemetry.io/otel/example/zipkin => ../../example/zipkin
 
-replace go.opentelemetry.io/otel/exporters/metric/prometheus => ../../exporters/metric/prometheus
+replace go.opentelemetry.io/otel/exporters/prometheus => ../../exporters/prometheus
 
-replace go.opentelemetry.io/otel/exporters/otlp => ../../exporters/otlp
+replace go.opentelemetry.io/otel/exporters/jaeger => ../../exporters/jaeger
 
-replace go.opentelemetry.io/otel/exporters/stdout => ../../exporters/stdout
-
-replace go.opentelemetry.io/otel/exporters/trace/jaeger => ../../exporters/trace/jaeger
-
-replace go.opentelemetry.io/otel/exporters/trace/zipkin => ../../exporters/trace/zipkin
+replace go.opentelemetry.io/otel/exporters/zipkin => ../../exporters/zipkin
 
 replace go.opentelemetry.io/otel/internal/tools => ./
 
@@ -63,3 +59,13 @@ replace go.opentelemetry.io/otel/exporters/otlp/otlptrace => ../../exporters/otl
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc => ../../exporters/otlp/otlptrace/otlptracegrpc
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp => ../../exporters/otlp/otlptrace/otlptracehttp
+
+replace go.opentelemetry.io/otel/internal/metric => ../metric
+
+replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric => ../../exporters/otlp/otlpmetric
+
+replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc => ../../exporters/otlp/otlpmetric/otlpmetricgrpc
+
+replace go.opentelemetry.io/otel/exporters/stdout/stdoutmetric => ../../exporters/stdout/stdoutmetric
+
+replace go.opentelemetry.io/otel/exporters/stdout/stdouttrace => ../../exporters/stdout/stdouttrace

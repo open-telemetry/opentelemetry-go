@@ -207,25 +207,13 @@ func WithEndpoint(endpoint string) GenericOption {
 	})
 }
 
-func WithTracesEndpoint(endpoint string) GenericOption {
-	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.Endpoint = endpoint
-	})
-}
-
 func WithCompression(compression Compression) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Compression = compression
 	})
 }
 
-func WithTracesCompression(compression Compression) GenericOption {
-	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.Compression = compression
-	})
-}
-
-func WithTracesURLPath(urlPath string) GenericOption {
+func WithURLPath(urlPath string) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.URLPath = urlPath
 	})
@@ -245,14 +233,6 @@ func WithTLSClientConfig(tlsCfg *tls.Config) GenericOption {
 	})
 }
 
-func WithTracesTLSClientConfig(tlsCfg *tls.Config) GenericOption {
-	return newSplitOption(func(cfg *Config) {
-		cfg.Traces.TLSCfg = tlsCfg.Clone()
-	}, func(cfg *Config) {
-		cfg.Traces.GRPCCredentials = credentials.NewTLS(tlsCfg)
-	})
-}
-
 func WithInsecure() GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Insecure = true
@@ -265,37 +245,13 @@ func WithSecure() GenericOption {
 	})
 }
 
-func WithInsecureTraces() GenericOption {
-	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.Insecure = true
-	})
-}
-
-func WithSecureTraces() GenericOption {
-	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.Insecure = false
-	})
-}
-
 func WithHeaders(headers map[string]string) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Headers = headers
 	})
 }
 
-func WithTracesHeaders(headers map[string]string) GenericOption {
-	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.Headers = headers
-	})
-}
-
 func WithTimeout(duration time.Duration) GenericOption {
-	return newGenericOption(func(cfg *Config) {
-		cfg.Traces.Timeout = duration
-	})
-}
-
-func WithTracesTimeout(duration time.Duration) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Traces.Timeout = duration
 	})

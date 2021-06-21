@@ -66,7 +66,7 @@ func init() {
 }
 
 func newExporter() *processortest.Exporter {
-	return processortest.NewExporter(
+	return processortest.New(
 		export.StatelessExportKindSelector(),
 		attribute.DefaultEncoder(),
 	)

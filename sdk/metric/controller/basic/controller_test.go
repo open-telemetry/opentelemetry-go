@@ -261,7 +261,7 @@ type blockingExporter struct {
 
 func newBlockingExporter() *blockingExporter {
 	return &blockingExporter{
-		exporter: processortest.NewExporter(
+		exporter: processortest.New(
 			export.CumulativeExportKindSelector(),
 			attribute.DefaultEncoder(),
 		),
@@ -342,7 +342,7 @@ func TestExportTimeout(t *testing.T) {
 }
 
 func TestCollectAfterStopThenStartAgain(t *testing.T) {
-	exp := processortest.NewExporter(
+	exp := processortest.New(
 		export.CumulativeExportKindSelector(),
 		attribute.DefaultEncoder(),
 	)
