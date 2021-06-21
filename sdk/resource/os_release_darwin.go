@@ -33,7 +33,7 @@ type dict struct {
 
 // osRelease builds a string describing the operating system release based on the
 // contents of the property list (.plist) system files. If no .plist files are found,
-// or if the required properties to build de release description string are missing,
+// or if the required properties to build the release description string are missing,
 // an empty string is returned instead. The generated string resembles the output of
 // the `sw_vers` commandline program, but in a single-line string. For more information
 // about the `sw_vers` program, see: https://www.unix.com/man-page/osx/1/SW_VERS.
