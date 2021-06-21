@@ -114,13 +114,13 @@ func unquote(s string) string {
 // unescape removes the `\` prefix from some characters that are expected
 // to have it added in front of them for escaping purposes.
 func unescape(s string) string {
-	s = strings.ReplaceAll(s, `\$`, `$`)
-	s = strings.ReplaceAll(s, `\"`, `"`)
-	s = strings.ReplaceAll(s, `\'`, `'`)
-	s = strings.ReplaceAll(s, `\\`, `\`)
-	s = strings.ReplaceAll(s, "\\`", "`")
-
-	return s
+	return strings.NewReplacer(
+		`\$`, `$`,
+		`\"`, `"`,
+		`\'`, `'`,
+		`\\`, `\`,
+		"\\`", "`",
+	).Replace(s)
 }
 
 // buildOSRelease builds a string describing the OS release based on the properties
