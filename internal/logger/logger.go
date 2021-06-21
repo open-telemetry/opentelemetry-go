@@ -7,9 +7,6 @@ import (
 	"go.opentelemetry.io/otel/otellog"
 )
 
-// This internal package hides the actual logging functions from the user.
-
-// Logger instance used by xray to log. Set via xray.SetLogger().
 var Logger otellog.Logger = otellog.NewDefaultLogger(os.Stdout, otellog.LogLevelInfo)
 
 func Debugf(format string, args ...interface{}) {
