@@ -91,7 +91,7 @@ func TestParsePlistFile(t *testing.T) {
 		{"Standard", standardPlist, parsedPlist},
 		{"Empty", emptyPlist, map[string]string{}},
 		{"Missing dict", missingDictPlist, map[string]string{}},
-		{"Unknow elements", unknownElementsPlist, parsedUnknownElementsPlist},
+		{"Unknown elements", unknownElementsPlist, parsedUnknownElementsPlist},
 	}
 
 	for _, tc := range tt {
