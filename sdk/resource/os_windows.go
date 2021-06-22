@@ -45,7 +45,11 @@ func platformOSDescription() (string, error) {
 		ubr                       = readUBR(k)
 	)
 
-	return fmt.Sprintf("%s %s (%s) [Version %s.%s.%s.%s]",
+	if displayVersion != "" {
+		displayVersion += " "
+	}
+
+	return fmt.Sprintf("%s %s(%s) [Version %s.%s.%s.%s]",
 		productName,
 		displayVersion,
 		releaseID,
