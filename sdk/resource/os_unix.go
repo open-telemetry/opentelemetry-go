@@ -17,6 +17,7 @@
 package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 
@@ -77,14 +78,11 @@ func uname() (string, error) {
 
 // charsToString converts a C-like null-terminated char array to a Go string.
 func charsToString(charArray []byte) string {
-	s := make([]byte, len(charArray))
-
-	var i int
-	for ; i < len(charArray) && charArray[i] != 0; i++ {
-		s[i] = uint8(charArray[i])
+	if i := bytes.IndexByte(charArray, 0); i >= 0 {
+		charArray = charArray[:i]
 	}
 
-	return string(s[0:i])
+	return string(charArray)
 }
 
 // getFirstAvailableFile returns an *os.File of the first available

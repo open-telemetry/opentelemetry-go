@@ -71,6 +71,7 @@ func TestCharsToString(t *testing.T) {
 		Bytes    []byte
 		Expected string
 	}{
+		{"Nil array", nil, ""},
 		{"Empty array", []byte{}, ""},
 		{"Empty string (null terminated)", []byte{0x00}, ""},
 		{"Nonempty string (null terminated)", []byte{0x31, 0x32, 0x33, 0x00}, "123"},
