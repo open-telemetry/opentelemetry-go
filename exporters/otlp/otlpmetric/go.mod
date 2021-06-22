@@ -75,3 +75,5 @@ replace go.opentelemetry.io/otel/exporters/zipkin => ../../zipkin
 replace go.opentelemetry.io/otel/exporters/stdout/stdoutmetric => ../../stdout/stdoutmetric
 
 replace go.opentelemetry.io/otel/exporters/stdout/stdouttrace => ../../stdout/stdouttrace
+
+replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp => ./otlpmetrichttp
