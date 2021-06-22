@@ -12,6 +12,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- SpanModels renamed to be exported from exporters/zipkin package
+
 ### Deprecated
 
 ### Removed
