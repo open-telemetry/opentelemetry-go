@@ -19,7 +19,6 @@ package resource_test
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -90,8 +89,10 @@ func TestCharsToString(t *testing.T) {
 }
 
 func TestGetFirstAvailableFile(t *testing.T) {
-	file1, _ := ioutil.TempFile("", "candidate_")
-	file2, _ := ioutil.TempFile("", "candidate_")
+	tempDir := t.TempDir()
+
+	file1, _ := ioutil.TempFile(tempDir, "candidate_")
+	file2, _ := ioutil.TempFile(tempDir, "candidate_")
 
 	filename1, filename2 := file1.Name(), file2.Name()
 
@@ -130,7 +131,4 @@ func TestGetFirstAvailableFile(t *testing.T) {
 			require.Equal(t, tc.ExpectedErr, errString)
 		})
 	}
-
-	os.Remove(filename1)
-	os.Remove(filename2)
 }
