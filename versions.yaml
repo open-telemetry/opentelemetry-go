@@ -28,8 +28,6 @@ module-sets:
       - go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc
       - go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp
       - go.opentelemetry.io/otel/exporters/stdout/stdouttrace
-      - go.opentelemetry.io/otel/exporters/trace/jaeger
-      - go.opentelemetry.io/otel/exporters/trace/zipkin
       - go.opentelemetry.io/otel/oteltest
       - go.opentelemetry.io/otel/trace
       - go.opentelemetry.io/otel/sdk
@@ -37,7 +35,6 @@ module-sets:
     version: v0.21.0
     modules:
       - go.opentelemetry.io/otel/example/prometheus
-      - go.opentelemetry.io/otel/exporters/metric/prometheus
       - go.opentelemetry.io/otel/exporters/otlp/otlpmetric
       - go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc
       - go.opentelemetry.io/otel/exporters/prometheus
