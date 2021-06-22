@@ -12,7 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build js plan9
+// +build !aix
+// +build !darwin
+// +build !dragonfly
+// +build !freebsd
+// +build !linux
+// +build !netbsd
+// +build !openbsd
+// +build !solaris
+// +build !windows
+// +build !zos
 
 package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
