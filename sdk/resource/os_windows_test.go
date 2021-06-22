@@ -40,10 +40,10 @@ func TestReadRegistryValues(t *testing.T) {
 	defer k.Close()
 
 	assert.NotEmpty(t, resource.ReadProductName(k), "should read ProductName")
-	assert.NotEmpty(t, resource.ReadDisplayVersion(k), "should read DisplayVersion")
 	assert.NotEmpty(t, resource.ReadReleaseID(k), "should read ReleaseID")
 	assert.NotEmpty(t, resource.ReadCurrentMajorVersionNumber(k), "should read CurrentMajorVersionNumber")
 	assert.NotEmpty(t, resource.ReadCurrentMinorVersionNumber(k), "should read CurrentMinorVersionNumber")
 	assert.NotEmpty(t, resource.ReadCurrentBuildNumber(k), "should read CurrentBuildNumber")
 	assert.NotEmpty(t, resource.ReadUBR(k), "should read UBR")
+	assert.NotPanics(t, func() { resource.ReadDisplayVersion(k) }, "should not panic when reading DisplayVersion")
 }
