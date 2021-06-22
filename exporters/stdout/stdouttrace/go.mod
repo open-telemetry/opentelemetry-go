@@ -68,3 +68,5 @@ replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric => ../../otlp/otlpmet
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc => ../../otlp/otlpmetric/otlpmetricgrpc
 
 replace go.opentelemetry.io/otel/exporters/stdout/stdoutmetric => ../stdoutmetric
+
+replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp => ../../otlp/otlpmetric/otlpmetrichttp

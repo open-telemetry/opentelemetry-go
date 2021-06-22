@@ -321,6 +321,19 @@ func TestConfigs(t *testing.T) {
 				assert.Equal(t, otlpconfig.GzipCompression, c.Metrics.Compression)
 			},
 		},
+		{
+			name: "Test Mixed Environment and With Compression",
+			opts: []otlpconfig.GenericOption{
+				otlpconfig.WithCompression(otlpconfig.NoCompression),
+			},
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_METRICS_COMPRESSION": "gzip",
+			},
+			asserts: func(t *testing.T, c *otlpconfig.Config, grpcOption bool) {
+				assert.Equal(t, otlpconfig.NoCompression, c.Metrics.Compression)
+			},
+		},
+
 		// Timeout Tests
 		{
 			name: "Test With Timeout",
