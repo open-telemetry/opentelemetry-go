@@ -38,6 +38,7 @@ func mockRuntimeProviders() {
 
 func TestWithOSType(t *testing.T) {
 	mockRuntimeProviders()
+	t.Cleanup(restoreAttributesProviders)
 
 	ctx := context.Background()
 
@@ -49,12 +50,11 @@ func TestWithOSType(t *testing.T) {
 	require.EqualValues(t, map[string]string{
 		"os.type": "linux",
 	}, toMap(res))
-
-	restoreAttributesProviders()
 }
 
 func TestWithOSDescription(t *testing.T) {
 	mockRuntimeProviders()
+	t.Cleanup(restoreAttributesProviders)
 
 	ctx := context.Background()
 
@@ -66,12 +66,11 @@ func TestWithOSDescription(t *testing.T) {
 	require.EqualValues(t, map[string]string{
 		"os.description": "Test",
 	}, toMap(res))
-
-	restoreAttributesProviders()
 }
 
 func TestWithOS(t *testing.T) {
 	mockRuntimeProviders()
+	t.Cleanup(restoreAttributesProviders)
 
 	ctx := context.Background()
 
@@ -84,6 +83,4 @@ func TestWithOS(t *testing.T) {
 		"os.type":        "linux",
 		"os.description": "Test",
 	}, toMap(res))
-
-	restoreAttributesProviders()
 }
