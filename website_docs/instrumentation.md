@@ -11,7 +11,7 @@ Spans are created by tracers, which can be acquired from a Tracer Provider.
 
 ```go
 ctx := context.Background()
-tracer := provider.Tracer("example/main")
+tracer := otel.Tracer("example/main")
 var span trace.Span
 ctx, span = tracer.Start(ctx, "helloWorld")
 defer span.End()
@@ -93,7 +93,7 @@ The metrics API is currently unstable, documentation TBA.
 
 Traces can extend beyond a single process. This requires _context propagation_, a mechanism where identifiers for a trace are sent to remote processes.
 
-In order to propagate trace context over the wire, a propagator must be registered with the OpenTelemetry SDK.
+In order to propagate trace context over the wire, a propagator must be registered with the OpenTelemetry API.
 
 ```go
 import (

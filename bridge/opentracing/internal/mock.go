@@ -290,3 +290,5 @@ func (s *MockSpan) AddEvent(name string, o ...trace.EventOption) {
 func (s *MockSpan) OverrideTracer(tracer trace.Tracer) {
 	s.officialTracer = tracer
 }
+
+func (s *MockSpan) TracerProvider() trace.TracerProvider { return trace.NewNoopTracerProvider() }

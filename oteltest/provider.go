@@ -58,9 +58,9 @@ func (p *TracerProvider) Tracer(instName string, opts ...trace.TracerOption) tra
 	t, ok := p.tracers[inst]
 	if !ok {
 		t = &Tracer{
-			Name:    instName,
-			Version: conf.InstrumentationVersion(),
-			config:  &p.config,
+			Name:     instName,
+			Version:  conf.InstrumentationVersion(),
+			provider: p,
 		}
 		p.tracers[inst] = t
 	}

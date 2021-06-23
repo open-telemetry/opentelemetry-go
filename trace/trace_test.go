@@ -15,12 +15,13 @@
 package trace
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestIsValid(t *testing.T) {
+func TestSpanContextIsValid(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
 		tid  TraceID
@@ -62,6 +63,183 @@ func TestIsValid(t *testing.T) {
 	}
 }
 
+func TestSpanContextEqual(t *testing.T) {
+	a := SpanContext{
+		traceID: [16]byte{1},
+		spanID:  [8]byte{42},
+	}
+
+	b := SpanContext{
+		traceID: [16]byte{1},
+		spanID:  [8]byte{42},
+	}
+
+	c := SpanContext{
+		traceID: [16]byte{2},
+		spanID:  [8]byte{42},
+	}
+
+	if a.Equal(b) != true {
+		t.Error("Want: true, but have: false")
+	}
+
+	if a.Equal(c) != false {
+		t.Error("Want: false, but have: true")
+	}
+}
+
+func TestSpanContextIsSampled(t *testing.T) {
+	for _, testcase := range []struct {
+		name string
+		tf   TraceFlags
+		want bool
+	}{
+		{
+			name: "SpanContext.IsSampled() returns false if sc is not sampled",
+			want: false,
+		}, {
+			name: "SpanContext.IsSampled() returns true if sc is sampled",
+			tf:   FlagsSampled,
+			want: true,
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			sc := SpanContext{
+				traceFlags: testcase.tf,
+			}
+
+			have := sc.IsSampled()
+
+			if have != testcase.want {
+				t.Errorf("Want: %v, but have: %v", testcase.want, have)
+			}
+		})
+	}
+}
+
+func TestSpanContextIsRemote(t *testing.T) {
+	for _, testcase := range []struct {
+		name   string
+		remote bool
+		want   bool
+	}{
+		{
+			name: "SpanContext.IsRemote() returns false if sc is not remote",
+			want: false,
+		}, {
+			name:   "SpanContext.IsRemote() returns true if sc is remote",
+			remote: true,
+			want:   true,
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			sc := SpanContext{
+				remote: testcase.remote,
+			}
+
+			have := sc.IsRemote()
+
+			if have != testcase.want {
+				t.Errorf("Want: %v, but have: %v", testcase.want, have)
+			}
+		})
+	}
+}
+
+func TestSpanContextMarshalJSON(t *testing.T) {
+	for _, testcase := range []struct {
+		name     string
+		tid      TraceID
+		sid      SpanID
+		tstate   TraceState
+		tflags   TraceFlags
+		isRemote bool
+		want     []byte
+	}{
+		{
+			name: "SpanContext.MarshalJSON() returns json with partial data",
+			tid:  [16]byte{1},
+			sid:  [8]byte{42},
+			want: []byte(`{"TraceID":"01000000000000000000000000000000","SpanID":"2a00000000000000","TraceFlags":"00","TraceState":"","Remote":false}`),
+		},
+		{
+			name:     "SpanContext.MarshalJSON() returns json with full data",
+			tid:      [16]byte{1},
+			sid:      [8]byte{42},
+			tflags:   FlagsSampled,
+			isRemote: true,
+			tstate: TraceState{list: []member{
+				{Key: "foo", Value: "1"},
+			}},
+			want: []byte(`{"TraceID":"01000000000000000000000000000000","SpanID":"2a00000000000000","TraceFlags":"01","TraceState":"foo=1","Remote":true}`),
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			sc := SpanContext{
+				traceID:    testcase.tid,
+				spanID:     testcase.sid,
+				traceFlags: testcase.tflags,
+				traceState: testcase.tstate,
+				remote:     testcase.isRemote,
+			}
+			have, err := sc.MarshalJSON()
+			if err != nil {
+				t.Errorf("Marshaling failed: %w", err)
+			}
+
+			if !bytes.Equal(have, testcase.want) {
+				t.Errorf("Want: %v, but have: %v", string(testcase.want), string(have))
+			}
+		})
+	}
+}
+
+func TestSpanIDFromHex(t *testing.T) {
+	for _, testcase := range []struct {
+		name  string
+		hex   string
+		sid   SpanID
+		valid bool
+	}{
+		{
+			name:  "Valid SpanID",
+			sid:   SpanID([8]byte{42}),
+			hex:   "2a00000000000000",
+			valid: true,
+		}, {
+			name:  "Invalid SpanID with invalid length",
+			hex:   "80f198ee56343ba",
+			valid: false,
+		}, {
+			name:  "Invalid SpanID with invalid char",
+			hex:   "80f198ee563433g7",
+			valid: false,
+		}, {
+			name:  "Invalid SpanID with uppercase",
+			hex:   "80f198ee53ba86F7",
+			valid: false,
+		}, {
+			name:  "Invalid SpanID with zero value",
+			hex:   "0000000000000000",
+			valid: false,
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			sid, err := SpanIDFromHex(testcase.hex)
+
+			if testcase.valid && err != nil {
+				t.Errorf("Expected SpanID %s to be valid but end with error %s", testcase.hex, err.Error())
+			} else if !testcase.valid && err == nil {
+				t.Errorf("Expected SpanID %s to be invalid but end no error", testcase.hex)
+			}
+
+			if sid != testcase.sid {
+				t.Errorf("Want: %v, but have: %v", testcase.sid, sid)
+			}
+		})
+	}
+}
+
 func TestIsValidFromHex(t *testing.T) {
 	for _, testcase := range []struct {
 		name  string
@@ -86,6 +264,10 @@ func TestIsValidFromHex(t *testing.T) {
 			name:  "Invalid TraceID with uppercase",
 			hex:   "80f198ee56343ba864fe8b2a57d3efF7",
 			valid: false,
+		}, {
+			name:  "Invalid TraceID with zero value",
+			hex:   "00000000000000000000000000000000",
+			valid: false,
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
@@ -106,7 +288,7 @@ func TestIsValidFromHex(t *testing.T) {
 	}
 }
 
-func TestHasTraceID(t *testing.T) {
+func TestSpanContextHasTraceID(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
 		tid  TraceID
@@ -133,7 +315,7 @@ func TestHasTraceID(t *testing.T) {
 	}
 }
 
-func TestHasSpanID(t *testing.T) {
+func TestSpanContextHasSpanID(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
 		sc   SpanContext

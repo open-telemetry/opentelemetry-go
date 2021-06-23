@@ -12,12 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/*
-Package baggage provides functionality for storing and retrieving
-baggage items in Go context. For propagating the baggage, see the
-go.opentelemetry.io/otel/propagation package.
+package otlpmetrichttp // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 
-This package is currently in a Release Candidate phase. Backwards incompatible changes
-may be introduced prior to v1.0.0, but we believe the current API is ready to stabilize.
-*/
-package baggage // import "go.opentelemetry.io/otel/baggage"
+import (
+	"context"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
+)
+
+// New constructs a new Exporter and starts it.
+func New(ctx context.Context, opts ...Option) (*otlpmetric.Exporter, error) {
+	return otlpmetric.New(ctx, NewClient(opts...))
+}
+
+// NewUnstarted constructs a new Exporter and does not start it.
+func NewUnstarted(opts ...Option) *otlpmetric.Exporter {
+	return otlpmetric.NewUnstarted(NewClient(opts...))
+}

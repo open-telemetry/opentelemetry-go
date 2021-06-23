@@ -9,10 +9,10 @@ replace (
 
 require (
 	github.com/stretchr/testify v1.7.0
-	go.opentelemetry.io/otel v0.20.0
-	go.opentelemetry.io/otel/oteltest v0.20.0
-	go.opentelemetry.io/otel/sdk v0.20.0
-	go.opentelemetry.io/otel/trace v0.20.0
+	go.opentelemetry.io/otel v1.0.0-RC1
+	go.opentelemetry.io/otel/oteltest v1.0.0-RC1
+	go.opentelemetry.io/otel/sdk v1.0.0-RC1
+	go.opentelemetry.io/otel/trace v1.0.0-RC1
 )
 
 replace go.opentelemetry.io/otel/bridge/opencensus => ../../../bridge/opencensus
@@ -63,14 +63,10 @@ replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp => ../..
 
 replace go.opentelemetry.io/otel/internal/metric => ../../../internal/metric
 
-replace go.opentelemetry.io/otel/exporters/metric/prometheus => ../../metric/prometheus
-
-replace go.opentelemetry.io/otel/exporters/trace/jaeger => ../../trace/jaeger
-
-replace go.opentelemetry.io/otel/exporters/trace/zipkin => ../../trace/zipkin
-
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric => ../../otlp/otlpmetric
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc => ../../otlp/otlpmetric/otlpmetricgrpc
 
 replace go.opentelemetry.io/otel/exporters/stdout/stdoutmetric => ../stdoutmetric
+
+replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp => ../../otlp/otlpmetric/otlpmetrichttp

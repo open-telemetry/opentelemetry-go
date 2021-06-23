@@ -4,12 +4,12 @@ go 1.15
 
 require (
 	go.opencensus.io v0.22.6-0.20201102222123-380f4078db9f
-	go.opentelemetry.io/otel v0.20.0
-	go.opentelemetry.io/otel/metric v0.20.0
-	go.opentelemetry.io/otel/oteltest v0.20.0
-	go.opentelemetry.io/otel/sdk v0.20.0
-	go.opentelemetry.io/otel/sdk/export/metric v0.20.0
-	go.opentelemetry.io/otel/trace v0.20.0
+	go.opentelemetry.io/otel v1.0.0-RC1
+	go.opentelemetry.io/otel/metric v0.21.0
+	go.opentelemetry.io/otel/oteltest v1.0.0-RC1
+	go.opentelemetry.io/otel/sdk v1.0.0-RC1
+	go.opentelemetry.io/otel/sdk/export/metric v0.21.0
+	go.opentelemetry.io/otel/trace v1.0.0-RC1
 )
 
 replace go.opentelemetry.io/otel => ../..
@@ -62,12 +62,6 @@ replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp => ../..
 
 replace go.opentelemetry.io/otel/internal/metric => ../../internal/metric
 
-replace go.opentelemetry.io/otel/exporters/metric/prometheus => ../../exporters/metric/prometheus
-
-replace go.opentelemetry.io/otel/exporters/trace/jaeger => ../../exporters/trace/jaeger
-
-replace go.opentelemetry.io/otel/exporters/trace/zipkin => ../../exporters/trace/zipkin
-
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric => ../../exporters/otlp/otlpmetric
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc => ../../exporters/otlp/otlpmetric/otlpmetricgrpc
@@ -75,3 +69,5 @@ replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc => ../
 replace go.opentelemetry.io/otel/exporters/stdout/stdoutmetric => ../../exporters/stdout/stdoutmetric
 
 replace go.opentelemetry.io/otel/exporters/stdout/stdouttrace => ../../exporters/stdout/stdouttrace
+
+replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp => ../../exporters/otlp/otlpmetric/otlpmetrichttp

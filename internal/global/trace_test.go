@@ -53,6 +53,10 @@ func TestTraceWithSDK(t *testing.T) {
 	_, span3 := tracer2.Start(ctx, "span3")
 	span3.End()
 
+	// The noop-span should still provide access to a usable TracerProvider.
+	_, span4 := span1.TracerProvider().Tracer("fromSpan").Start(ctx, "span4")
+	span4.End()
+
 	filterNames := func(spans []*oteltest.Span) []string {
 		names := make([]string, len(spans))
 		for i := range spans {
@@ -60,7 +64,7 @@ func TestTraceWithSDK(t *testing.T) {
 		}
 		return names
 	}
-	expected := []string{"span2", "span3"}
+	expected := []string{"span2", "span3", "span4"}
 	assert.ElementsMatch(t, expected, filterNames(sr.Started()))
 	assert.ElementsMatch(t, expected, filterNames(sr.Completed()))
 }
