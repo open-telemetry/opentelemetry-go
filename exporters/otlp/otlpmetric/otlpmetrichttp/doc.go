@@ -13,11 +13,11 @@
 // limitations under the License.
 
 /*
-Package baggage provides functionality for storing and retrieving
-baggage items in Go context. For propagating the baggage, see the
-go.opentelemetry.io/otel/propagation package.
+Package otlpmetrichttp provides a client that sends metrics to the collector
+using HTTP with binary protobuf payloads.
 
-This package is currently in a Release Candidate phase. Backwards incompatible changes
-may be introduced prior to v1.0.0, but we believe the current API is ready to stabilize.
+This package is currently in a pre-GA phase. Backwards incompatible changes
+may be introduced in subsequent minor version releases as we work to track the
+evolving OpenTelemetry specification and user feedback.
 */
-package baggage // import "go.opentelemetry.io/otel/baggage"
+package otlpmetrichttp // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"

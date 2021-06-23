@@ -14,7 +14,7 @@ The current status of the major functional components for OpenTelemetry Go is as
 
 | Tracing | Metrics | Logging |
 | ------- | ------- | ------- |
-| Beta    | Alpha   | Not Yet Implemented |
+| Release Candidate    | Alpha   | Not Yet Implemented |
 
 The current release can be found [here](https://github.com/open-telemetry/opentelemetry-go/releases)
 
