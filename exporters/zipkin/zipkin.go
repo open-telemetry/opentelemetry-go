@@ -126,7 +126,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpa
 		e.logf("no spans to export")
 		return nil
 	}
-	models := toZipkinSpanModels(spans)
+	models := SpanModels(spans)
 	body, err := json.Marshal(models)
 	if err != nil {
 		return e.errf("failed to serialize zipkin models to JSON: %v", err)

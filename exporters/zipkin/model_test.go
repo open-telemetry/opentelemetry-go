@@ -715,7 +715,7 @@ func TestModelConversion(t *testing.T) {
 			Tags: nil, // should be omitted
 		},
 	}
-	gottenOutputBatch := toZipkinSpanModels(inputBatch)
+	gottenOutputBatch := SpanModels(inputBatch)
 	require.Equal(t, expectedOutputBatch, gottenOutputBatch)
 }
 

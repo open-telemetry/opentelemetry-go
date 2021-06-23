@@ -51,7 +51,9 @@ func init() {
 	}
 }
 
-func toZipkinSpanModels(batch []tracesdk.ReadOnlySpan) []zkmodel.SpanModel {
+// SpanModels converts OpenTelemetry spans into Zipkin model spans.
+// This is used for exporting to Zipkin compatible tracing services.
+func SpanModels(batch []tracesdk.ReadOnlySpan) []zkmodel.SpanModel {
 	models := make([]zkmodel.SpanModel, 0, len(batch))
 	for _, data := range batch {
 		models = append(models, toZipkinSpanModel(data))
