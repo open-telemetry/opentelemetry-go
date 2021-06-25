@@ -9,6 +9,14 @@ import (
 
 var Logger otellog.Logger = otellog.NewDefaultLogger(os.Stdout, otellog.LogLevelInfo)
 
+func Tracef(format string, args ...interface{}) {
+	Logger.Log(otellog.LogLevelTrace, printfArgs{format, args})
+}
+
+func Trace(args ...interface{}) {
+	Logger.Log(otellog.LogLevelTrace, printArgs(args))
+}
+
 func Debugf(format string, args ...interface{}) {
 	Logger.Log(otellog.LogLevelDebug, printfArgs{format, args})
 }
@@ -43,6 +51,14 @@ func Errorf(format string, args ...interface{}) {
 
 func Error(args ...interface{}) {
 	Logger.Log(otellog.LogLevelError, printArgs(args))
+}
+
+func Fatalf(format string, args ...interface{}) {
+	Logger.Log(otellog.LogLevelFatal, printfArgs{format, args})
+}
+
+func Fatal(args ...interface{}) {
+	Logger.Log(otellog.LogLevelFatal, printArgs(args))
 }
 
 type printfArgs struct {
