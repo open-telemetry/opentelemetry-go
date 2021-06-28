@@ -270,6 +270,7 @@ var capitalizations = []string{
 	"ARNs",
 	"ASCII",
 	"AWS",
+	"CPP",
 	"CPU",
 	"CSS",
 	"DB",
@@ -369,7 +370,7 @@ func fixIdentifiers(cfg config) error {
 		// Match the title-cased capitalization target, asserting that its followed by
 		// either a capital letter, whitespace, a digit, or the end of text.
 		// This is to avoid, e.g., turning "Identifier" into "IDentifier".
-		re := regexp.MustCompile(strings.Title(strings.ToLower(init)) + `([A-Z\s\d]|$)`)
+		re := regexp.MustCompile(strings.Title(strings.ToLower(init)) + `([A-Z\s\d]|\b|$)`)
 		// RE2 does not support zero-width lookahead assertions, so we have to replace
 		// the last character that may have matched the first capture group in the
 		// expression constructed above.

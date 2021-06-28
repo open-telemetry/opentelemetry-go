@@ -116,7 +116,9 @@ to the OpenTelemetry Collector, we need to first configure the `otlp` receiver:
       # Make sure to add the otlp receiver.
       # This will open up the receiver on port 4317.
       otlp:
-        endpoint: 0.0.0.0:4317
+        protocols:
+          grpc:
+            endpoint: "0.0.0.0:4317"
     processors:
 ...
 ```
