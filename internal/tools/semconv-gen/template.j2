@@ -23,6 +23,10 @@ Required: {{ attr.required_msg }}
 {%- else %}
 Required: No
 {%- endif %}
+{{ attr.stability |  replace("Level.", ": ") | capitalize }}
+{%- if attr.deprecated != None %}
+Deprecated: {{ attr.deprecated }}
+{%- endif %}
 {%- if attr.examples is iterable %}
 Examples: {{ attr.examples | pprint | trim("[]")  }}
 {%- endif %}
