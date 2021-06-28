@@ -26,6 +26,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- When using WithNewRoot, don't use the parent context for making sampling decisions. (#2032)
+
 ### Security
 
 ## [1.0.0-RC1] / 0.21.0 - 2021-06-18

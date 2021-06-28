@@ -559,7 +559,9 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, o *trace.Sp
 	// If told explicitly to make this a new root use a zero value SpanContext
 	// as a parent which contains an invalid trace ID and is not remote.
 	var psc trace.SpanContext
-	if !o.NewRoot() {
+	if o.NewRoot() {
+		ctx = trace.ContextWithSpanContext(ctx, psc)
+	} else {
 		psc = trace.SpanContextFromContext(ctx)
 	}
 
