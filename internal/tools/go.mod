@@ -9,7 +9,7 @@ require (
 	github.com/itchyny/gojq v0.12.4
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/mod v0.4.2
-	golang.org/x/tools v0.1.3
+	golang.org/x/tools v0.1.4
 )
 
 replace go.opentelemetry.io/otel => ../..
