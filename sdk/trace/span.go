@@ -559,7 +559,9 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, o *trace.Sp
 	// If told explicitly to make this a new root use a zero value SpanContext
 	// as a parent which contains an invalid trace ID and is not remote.
 	var psc trace.SpanContext
-	if !o.NewRoot() {
+	if o.NewRoot() {
+		ctx = trace.ContextWithSpanContext(ctx, psc)
+	} else {
 		psc = trace.SpanContextFromContext(ctx)
 	}
 
@@ -635,7 +637,7 @@ func isSampled(s SamplingResult) bool {
 type Status struct {
 	// Code is an identifier of a Spans state classification.
 	Code codes.Code
-	// Message is a user hint about why that status was set. It is only
+	// Description is a user hint about why that status was set. It is only
 	// applicable when Code is Error.
 	Description string
 }

@@ -376,6 +376,30 @@ func TestStartSpanWithParent(t *testing.T) {
 	}
 }
 
+func TestStartSpanNewRootNotSampled(t *testing.T) {
+	alwaysSampleTp := NewTracerProvider()
+	sampledTr := alwaysSampleTp.Tracer("AlwaysSampled")
+	neverSampleTp := NewTracerProvider(WithSampler(ParentBased(NeverSample())))
+	neverSampledTr := neverSampleTp.Tracer("ParentBasedNeverSample")
+	ctx := context.Background()
+
+	ctx, s1 := sampledTr.Start(trace.ContextWithRemoteSpanContext(ctx, sc), "span1-sampled")
+	if err := checkChild(t, sc, s1); err != nil {
+		t.Error(err)
+	}
+
+	_, s2 := neverSampledTr.Start(ctx, "span2-no-newroot")
+	if !s2.SpanContext().IsSampled() {
+		t.Error(fmt.Errorf("got child span is not sampled, want child span with sampler: ParentBased(NeverSample()) to be sampled"))
+	}
+
+	// Adding WithNewRoot causes child spans to not sample based on parent context
+	_, s3 := neverSampledTr.Start(ctx, "span3-newroot", trace.WithNewRoot())
+	if s3.SpanContext().IsSampled() {
+		t.Error(fmt.Errorf("got child span is sampled, want child span WithNewRoot() and with sampler: ParentBased(NeverSample()) to not be sampled"))
+	}
+}
+
 func TestSetSpanAttributesOnStart(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
