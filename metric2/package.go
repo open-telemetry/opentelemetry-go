@@ -1,7 +1,11 @@
 package metric2
 
 import (
+	"context"
+
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric2/asyncmetric"
+	"go.opentelemetry.io/otel/metric2/batch"
 	"go.opentelemetry.io/otel/metric2/float64metric"
 	"go.opentelemetry.io/otel/metric2/int64metric"
 )
@@ -23,4 +27,10 @@ func (m Meter) FloatingPoint() float64metric.Meter {
 
 func (m Meter) Asynchronous() asyncmetric.Meter {
 	return asyncmetric.Meter{}
+}
+
+func RecordBatch(
+	ctx context.Context,
+	attrs []attribute.KeyValue,
+	batch ...batch.Measurement) {
 }

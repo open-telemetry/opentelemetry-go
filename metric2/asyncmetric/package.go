@@ -3,6 +3,7 @@ package asyncmetric
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/metric2/instrument"
 	"go.opentelemetry.io/otel/metric2/asyncmetric/asyncfloat64metric"
 	"go.opentelemetry.io/otel/metric2/asyncmetric/asyncint64metric"
 )
@@ -13,13 +14,10 @@ type Meter struct {
 type Callback struct {
 }
 
-type Instrument interface {
-}
-
 // GOAL: Use RecordBatch inside async contexts, or individual Add()/Observe().
 // RecordBatch uses structs, so we only need to define async singletons here.
 
-func (m Meter) Callback(func(context.Context), ...Instrument) Callback {
+func (m Meter) Callback(func(context.Context), ...instrument.Instrument) Callback {
 	return Callback{}
 }
 

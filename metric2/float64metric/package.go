@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric2/batch"
 )
 
 type Meter struct {
@@ -37,4 +38,16 @@ func (u UpDownCounter) Add(ctx context.Context, x float64, attrs ...attribute.Ke
 }
 
 func (h Histogram) Record(ctx context.Context, x float64, attrs ...attribute.KeyValue) {
+}
+
+func (c Counter) Measure(x int64) batch.Measurement {
+	return batch.Measurement{}
+}
+
+func (u UpDownCounter) Measure(x int64) batch.Measurement {
+	return batch.Measurement{}
+}
+
+func (h Histogram) Measure(x int64) batch.Measurement {
+	return batch.Measurement{}
 }
