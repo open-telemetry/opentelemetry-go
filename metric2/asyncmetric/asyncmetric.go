@@ -14,9 +14,6 @@ type Meter struct {
 type Callback struct {
 }
 
-// GOAL: Use RecordBatch inside async contexts, or individual Add()/Observe().
-// RecordBatch uses structs, so we only need to define async singletons here.
-
 func (m Meter) Callback(func(context.Context), ...instrument.Instrument) Callback {
 	return Callback{}
 }
