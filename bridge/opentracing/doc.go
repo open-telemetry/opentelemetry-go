@@ -28,6 +28,11 @@
 // bridge tracer and then passing the chosen OpenTelemetry tracer to
 // the SetOpenTelemetryTracer() function of the bridge tracer.
 //
+// To use an OpenTelemetry span as the parent of an OpenTracing span,
+// create a context using the ContextWithBridgeSpan() function of
+// the bridge tracer, and then use the StartSpanFromContext function
+// of the OpenTracing API.
+//
 // Bridge tracer also allows the user to install a warning handler
 // through the SetWarningHandler() function. The warning handler will
 // be called when there is some misbehavior of the OpenTelemetry
