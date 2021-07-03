@@ -227,7 +227,7 @@ func (s *span) End(options ...trace.SpanEndOption) {
 
 	// Store the end time as soon as possible to avoid artificially increasing
 	// the span's duration in case some operation below takes a while.
-	et := internal.MonotonicEndTime(s.startTime)
+	et := internal.MonotonicEndTime(s.startTime, s.tracer.provider.clock)
 
 	// Do relative expensive check now that we have an end time and see if we
 	// need to do any more processing.
@@ -610,7 +610,7 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, o *trace.Sp
 
 	startTime := o.Timestamp()
 	if startTime.IsZero() {
-		startTime = time.Now()
+		startTime = tr.provider.clock.Now()
 	}
 	span.startTime = startTime
 

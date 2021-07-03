@@ -25,6 +25,7 @@ import (
 
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
+	tracetime "go.opentelemetry.io/otel/sdk/trace/time"
 )
 
 const (
@@ -61,6 +62,7 @@ type TracerProvider struct {
 	idGenerator    IDGenerator
 	spanLimits     SpanLimits
 	resource       *resource.Resource
+	clock          tracetime.Clock
 }
 
 var _ trace.TracerProvider = &TracerProvider{}
@@ -90,6 +92,7 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 		idGenerator: o.idGenerator,
 		spanLimits:  o.spanLimits,
 		resource:    o.resource,
+		clock:       tracetime.DefaultClock{},
 	}
 
 	for _, sp := range o.processors {
@@ -97,6 +100,14 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	}
 
 	return tp
+}
+
+// SetClock supports setting a mock clock for testing or some clock with custom
+// time correction logic.
+func (p *TracerProvider) SetClock(clock tracetime.Clock) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.clock = clock
 }
 
 // Tracer returns a Tracer with the given name and options. If a Tracer for

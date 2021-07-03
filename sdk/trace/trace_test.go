@@ -1605,6 +1605,46 @@ func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 	}
 }
 
+type FrozenClock struct {
+	now time.Time
+}
+
+// NewFrozenClock returns a clock which stops at time t
+func NewFrozenClock(t time.Time) FrozenClock {
+	return FrozenClock{
+		now: t,
+	}
+}
+
+func (c FrozenClock) Now() time.Time {
+	return c.now
+}
+
+func (c FrozenClock) Since(time.Time) time.Duration {
+	return 0
+}
+
+func TestCustomClock(t *testing.T) {
+	te := NewTestExporter()
+	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
+	tracer := tp.Tracer("custom-clock")
+	now := time.Now()
+	_, span := tracer.Start(context.Background(), "test-original-clock")
+	span.End()
+	got := te.Spans()[0]
+	assert.True(t, now.Before(got.StartTime()))
+	assert.True(t, got.StartTime().Before(got.EndTime()))
+
+	te.Reset()
+
+	tp.SetClock(NewFrozenClock(now))
+	_, span = tracer.Start(context.Background(), "test-frozen-clock")
+	span.End()
+	got = te.Spans()[0]
+	assert.Equal(t, now, got.StartTime())
+	assert.Equal(t, now, got.EndTime())
+}
+
 type stateSampler struct {
 	prefix string
 	f      func(trace.TraceState) trace.TraceState
