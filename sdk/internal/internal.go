@@ -16,8 +16,9 @@ package internal // import "go.opentelemetry.io/otel/sdk/internal"
 
 import (
 	"fmt"
-	tracetime "go.opentelemetry.io/otel/sdk/trace/time"
 	"time"
+
+	tracetime "go.opentelemetry.io/otel/sdk/trace/time"
 
 	"go.opentelemetry.io/otel"
 )
