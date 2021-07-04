@@ -1629,7 +1629,9 @@ func TestCustomClock(t *testing.T) {
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
 	tracer := tp.Tracer("custom-clock")
 	now := time.Now()
+	time.Sleep(time.Microsecond * 3)
 	_, span := tracer.Start(context.Background(), "test-original-clock")
+	time.Sleep(time.Microsecond * 3)
 	span.End()
 	got := te.Spans()[0]
 	assert.True(t, now.Before(got.StartTime()))
@@ -1638,7 +1640,9 @@ func TestCustomClock(t *testing.T) {
 	te.Reset()
 
 	tp.SetClock(NewFrozenClock(now))
+	time.Sleep(time.Microsecond * 3)
 	_, span = tracer.Start(context.Background(), "test-frozen-clock")
+	time.Sleep(time.Microsecond * 3)
 	span.End()
 	got = te.Spans()[0]
 	assert.Equal(t, now, got.StartTime())
