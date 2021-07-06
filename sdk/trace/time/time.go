@@ -20,17 +20,41 @@ import (
 
 type Clock interface {
 	Now() lib.Time
+}
+
+type RealClock interface {
+	Clock
 	Since(t lib.Time) lib.Duration
 }
 
-type DefaultClock struct {
+type FallbackRealClock struct {
+	NowFunc   func() lib.Time
+	SinceFunc func(lib.Time) lib.Duration
 }
 
-func (c DefaultClock) Now() lib.Time {
-	return lib.Now()
-}
-func (c DefaultClock) Since(t lib.Time) lib.Duration {
-	return lib.Since(t)
+func (c FallbackRealClock) Now() lib.Time {
+	return c.NowFunc()
 }
 
-var _ Clock = DefaultClock{}
+func (c FallbackRealClock) Since(t lib.Time) lib.Duration {
+	return c.SinceFunc(t)
+}
+
+func Default() RealClock {
+	return FallbackRealClock{
+		NowFunc:   lib.Now,
+		SinceFunc: lib.Since,
+	}
+}
+
+func ConvertClockToRealClock(clk Clock) RealClock {
+	if rclk, ok := clk.(RealClock); ok {
+		return rclk
+	}
+	return FallbackRealClock{
+		NowFunc: clk.Now,
+		SinceFunc: func(t lib.Time) lib.Duration {
+			return clk.Now().Sub(t)
+		},
+	}
+}

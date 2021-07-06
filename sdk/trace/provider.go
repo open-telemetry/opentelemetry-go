@@ -21,11 +21,10 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/trace"
-
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracetime "go.opentelemetry.io/otel/sdk/trace/time"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -52,6 +51,9 @@ type tracerProviderConfig struct {
 
 	// resource contains attributes representing an entity that produces telemetry.
 	resource *resource.Resource
+
+	// clock is used to provide start/end time for spans
+	clock tracetime.RealClock
 }
 
 type TracerProvider struct {
@@ -62,7 +64,7 @@ type TracerProvider struct {
 	idGenerator    IDGenerator
 	spanLimits     SpanLimits
 	resource       *resource.Resource
-	clock          tracetime.Clock
+	clock          tracetime.RealClock
 }
 
 var _ trace.TracerProvider = &TracerProvider{}
@@ -92,7 +94,7 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 		idGenerator: o.idGenerator,
 		spanLimits:  o.spanLimits,
 		resource:    o.resource,
-		clock:       tracetime.DefaultClock{},
+		clock:       o.clock,
 	}
 
 	for _, sp := range o.processors {
@@ -100,14 +102,6 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	}
 
 	return tp
-}
-
-// SetClock supports setting a mock clock for testing or some clock with custom
-// time correction logic.
-func (p *TracerProvider) SetClock(clock tracetime.Clock) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.clock = clock
 }
 
 // Tracer returns a Tracer with the given name and options. If a Tracer for
@@ -341,6 +335,20 @@ func WithSpanLimits(sl SpanLimits) TracerProviderOption {
 	})
 }
 
+// WithClock returns a TracerProviderOption that will configure the
+// Clock clk as a TracerProviders' Clock. The configured Clock
+// are used by the Tracers to generate span start/end time.
+// If this option is not used, the TracerProvider will use the default
+// Clock which just calls the time module. For the custom clock `Now`
+// must be implement (which is used in start time generation). Also user
+// can further provides a `Since` implementation to control how end time is
+// generated (fallback to call `clk.Now().Sub(t)` if not provided).
+func WithClock(clk tracetime.Clock) TracerProviderOption {
+	return traceProviderOptionFunc(func(cfg *tracerProviderConfig) {
+		cfg.clock = tracetime.ConvertClockToRealClock(clk)
+	})
+}
+
 // ensureValidTracerProviderConfig ensures that given TracerProviderConfig is valid.
 func ensureValidTracerProviderConfig(cfg *tracerProviderConfig) {
 	if cfg.sampler == nil {
@@ -352,5 +360,8 @@ func ensureValidTracerProviderConfig(cfg *tracerProviderConfig) {
 	cfg.spanLimits.ensureDefault()
 	if cfg.resource == nil {
 		cfg.resource = resource.Default()
+	}
+	if cfg.clock == nil {
+		cfg.clock = tracetime.Default()
 	}
 }

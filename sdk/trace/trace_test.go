@@ -1620,13 +1620,20 @@ func (c FrozenClock) Now() time.Time {
 	return c.now
 }
 
-func (c FrozenClock) Since(time.Time) time.Duration {
-	return 0
+type BackwardClock struct {
+}
+
+func (c BackwardClock) Now() time.Time {
+	return time.Now()
+}
+
+func (c BackwardClock) Since(t time.Time) time.Duration {
+	return -time.Since(t)
 }
 
 func TestCustomClock(t *testing.T) {
 	te := NewTestExporter()
-	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
+	tp := NewTracerProvider(WithSyncer(te))
 	tracer := tp.Tracer("custom-clock")
 	now := time.Now()
 	time.Sleep(time.Microsecond * 3)
@@ -1639,7 +1646,8 @@ func TestCustomClock(t *testing.T) {
 
 	te.Reset()
 
-	tp.SetClock(NewFrozenClock(now))
+	tp = NewTracerProvider(WithSyncer(te), WithClock(NewFrozenClock(now)))
+	tracer = tp.Tracer("custom-clock")
 	time.Sleep(time.Microsecond * 3)
 	_, span = tracer.Start(context.Background(), "test-frozen-clock")
 	time.Sleep(time.Microsecond * 3)
@@ -1647,6 +1655,18 @@ func TestCustomClock(t *testing.T) {
 	got = te.Spans()[0]
 	assert.Equal(t, now, got.StartTime())
 	assert.Equal(t, now, got.EndTime())
+
+	te.Reset()
+	tp = NewTracerProvider(WithSyncer(te), WithClock(BackwardClock{}))
+	tracer = tp.Tracer("custom-clock")
+	now = time.Now()
+	time.Sleep(time.Microsecond * 3)
+	_, span = tracer.Start(context.Background(), "test-backward-clock")
+	time.Sleep(time.Microsecond * 3)
+	span.End()
+	got = te.Spans()[0]
+	assert.True(t, now.Before(got.StartTime()))
+	assert.True(t, got.StartTime().After(got.EndTime()))
 }
 
 type stateSampler struct {
