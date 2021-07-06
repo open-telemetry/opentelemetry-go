@@ -53,7 +53,7 @@ type tracerProviderConfig struct {
 	resource *resource.Resource
 
 	// clock is used to provide start/end time for spans
-	clock tracetime.RealClock
+	clock tracetime.Clock
 }
 
 type TracerProvider struct {
@@ -64,7 +64,7 @@ type TracerProvider struct {
 	idGenerator    IDGenerator
 	spanLimits     SpanLimits
 	resource       *resource.Resource
-	clock          tracetime.RealClock
+	clock          tracetime.Clock
 }
 
 var _ trace.TracerProvider = &TracerProvider{}
@@ -336,16 +336,16 @@ func WithSpanLimits(sl SpanLimits) TracerProviderOption {
 }
 
 // WithClock returns a TracerProviderOption that will configure the
-// Clock clk as a TracerProviders' Clock. The configured Clock
+// SimpleClock clk as a TracerProvider's Clock. The configured Clock
 // are used by the Tracers to generate span start/end time.
 // If this option is not used, the TracerProvider will use the default
-// Clock which just calls the time module. For the custom clock `Now`
+// Clock which just calls the time module. For the custom SimpleClock `Now`
 // must be implement (which is used in start time generation). Also user
 // can further provides a `Since` implementation to control how end time is
 // generated (fallback to call `clk.Now().Sub(t)` if not provided).
-func WithClock(clk tracetime.Clock) TracerProviderOption {
+func WithClock(clk tracetime.SimpleClock) TracerProviderOption {
 	return traceProviderOptionFunc(func(cfg *tracerProviderConfig) {
-		cfg.clock = tracetime.ConvertClockToRealClock(clk)
+		cfg.clock = tracetime.ConvertFromSimpleClock(clk)
 	})
 }
 
