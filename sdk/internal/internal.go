@@ -16,6 +16,7 @@ package internal // import "go.opentelemetry.io/otel/sdk/internal"
 
 import (
 	"fmt"
+
 	"go.opentelemetry.io/otel"
 )
 
