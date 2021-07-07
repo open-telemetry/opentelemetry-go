@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
-	tracetime "go.opentelemetry.io/otel/sdk/trace/time"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -53,7 +53,7 @@ type tracerProviderConfig struct {
 	resource *resource.Resource
 
 	// clock is used to provide start/end time for spans
-	clock tracetime.Clock
+	clock *clockWrapper
 }
 
 type TracerProvider struct {
@@ -64,7 +64,7 @@ type TracerProvider struct {
 	idGenerator    IDGenerator
 	spanLimits     SpanLimits
 	resource       *resource.Resource
-	clock          tracetime.Clock
+	clock          *clockWrapper
 }
 
 var _ trace.TracerProvider = &TracerProvider{}
@@ -336,16 +336,28 @@ func WithSpanLimits(sl SpanLimits) TracerProviderOption {
 }
 
 // WithClock returns a TracerProviderOption that will configure the
-// SimpleClock clk as a TracerProvider's Clock. The configured Clock
-// are used by the Tracers to generate span start/end time.
+// TracerProvider's clock. The configured clock are used by the Tracers
+// to generate span start/end time.
 // If this option is not used, the TracerProvider will use the default
-// Clock which just calls the time module. For the custom SimpleClock `Now`
-// must be implement (which is used in start time generation). Also user
+// clock which just calls the time module. For the custom Clock `Now`
+// must be implemented (which is used in start time generation). Also user
 // can further provides a `Since` implementation to control how end time is
 // generated (fallback to call `clk.Now().Sub(t)` if not provided).
-func WithClock(clk tracetime.SimpleClock) TracerProviderOption {
+func WithClock(clk Clock) TracerProviderOption {
+	rclk := &clockWrapper{
+		NowFunc: clk.Now,
+	}
+	if x, ok := clk.(interface {
+		Since(t time.Time) time.Duration
+	}); ok {
+		rclk.SinceFunc = x.Since
+	} else {
+		rclk.SinceFunc = func(t time.Time) time.Duration {
+			return clk.Now().Sub(t)
+		}
+	}
 	return traceProviderOptionFunc(func(cfg *tracerProviderConfig) {
-		cfg.clock = tracetime.ConvertFromSimpleClock(clk)
+		cfg.clock = rclk
 	})
 }
 
@@ -362,6 +374,6 @@ func ensureValidTracerProviderConfig(cfg *tracerProviderConfig) {
 		cfg.resource = resource.Default()
 	}
 	if cfg.clock == nil {
-		cfg.clock = tracetime.Default()
+		cfg.clock = defaultClock()
 	}
 }

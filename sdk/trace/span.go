@@ -27,7 +27,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/internal"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -227,7 +226,7 @@ func (s *span) End(options ...trace.SpanEndOption) {
 
 	// Store the end time as soon as possible to avoid artificially increasing
 	// the span's duration in case some operation below takes a while.
-	et := internal.MonotonicEndTime(s.startTime, s.tracer.provider.clock)
+	et := monotonicEndTime(s.startTime, s.tracer.provider.clock)
 
 	// Do relative expensive check now that we have an end time and see if we
 	// need to do any more processing.
