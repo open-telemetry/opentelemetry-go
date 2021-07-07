@@ -8,7 +8,7 @@ To constructs a new Otlptrace Exporter and starts it:
 exp, err := otlptrace.New(ctx, opts...)
 ```
 
-# Installation
+## Installation
 
 ```
 go get -u go.opentelemetry.io/otel/exporters/otlp/otlptrace
