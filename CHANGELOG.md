@@ -11,11 +11,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Adds HTTP support for OTLP metrics exporter. (#2022)
+- Now `TraceProvider` includes a `Clock` field as well as a `WithClock` option to control span startTime/endTime generation. This defaults to use `time` module but users can provide their own implemention. (#2043)
 
 ### Changed
 
 - The `SpanModels` function is now exported from the `go.opentelemetry.io/otel/exporters/zipkin` package to convert OpenTelemetry spans into Zipkin model spans. (#2027)
-- Now `TraceProvider` includes a `Clock` field as well as a `WithClock` option to control span startTime/endTime generation. This defaults to use `time` module but users can provide their own implemention. (#2043)
 
 ### Deprecated
 

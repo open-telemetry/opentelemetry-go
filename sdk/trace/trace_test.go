@@ -1605,29 +1605,29 @@ func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 	}
 }
 
-type FrozenClock struct {
+type frozenClock struct {
 	now time.Time
 }
 
-// NewFrozenClock returns a clock which stops at time t
-func NewFrozenClock(t time.Time) FrozenClock {
-	return FrozenClock{
+// newFrozenClock returns a clock which stops at time t
+func newFrozenClock(t time.Time) frozenClock {
+	return frozenClock{
 		now: t,
 	}
 }
 
-func (c FrozenClock) Now() time.Time {
+func (c frozenClock) Now() time.Time {
 	return c.now
 }
 
-type BackwardClock struct {
+type backwardClock struct {
 }
 
-func (c BackwardClock) Now() time.Time {
+func (c backwardClock) Now() time.Time {
 	return time.Now()
 }
 
-func (c BackwardClock) Since(t time.Time) time.Duration {
+func (c backwardClock) Since(t time.Time) time.Duration {
 	return -time.Since(t)
 }
 
@@ -1646,7 +1646,7 @@ func TestCustomClock(t *testing.T) {
 
 	te.Reset()
 
-	tp = NewTracerProvider(WithSyncer(te), WithClock(NewFrozenClock(now)))
+	tp = NewTracerProvider(WithSyncer(te), WithClock(newFrozenClock(now)))
 	tracer = tp.Tracer("custom-clock")
 	time.Sleep(time.Microsecond * 3)
 	_, span = tracer.Start(context.Background(), "test-frozen-clock")
@@ -1657,7 +1657,7 @@ func TestCustomClock(t *testing.T) {
 	assert.Equal(t, now, got.EndTime())
 
 	te.Reset()
-	tp = NewTracerProvider(WithSyncer(te), WithClock(BackwardClock{}))
+	tp = NewTracerProvider(WithSyncer(te), WithClock(backwardClock{}))
 	tracer = tp.Tracer("custom-clock")
 	now = time.Now()
 	time.Sleep(time.Microsecond * 3)

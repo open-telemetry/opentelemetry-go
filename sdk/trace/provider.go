@@ -336,12 +336,12 @@ func WithSpanLimits(sl SpanLimits) TracerProviderOption {
 }
 
 // WithClock returns a TracerProviderOption that will configure the
-// TracerProvider's clock. The configured clock are used by the Tracers
+// TracerProvider's clock. The configured clock is used by Tracers
 // to generate span start/end time.
-// If this option is not used, the TracerProvider will use the default
+// If this option is not used, the TracerProvider will provide the default
 // clock which just calls the time module. For the custom Clock `Now`
 // must be implemented (which is used in start time generation). Also user
-// can further provides a `Since` implementation to control how end time is
+// can implement `Since(time.Time) time.Duration` to control how end time is
 // generated (fallback to call `clk.Now().Sub(t)` if not provided).
 func WithClock(clk Clock) TracerProviderOption {
 	rclk := &clockWrapper{

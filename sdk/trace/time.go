@@ -15,7 +15,7 @@
 package trace
 
 import (
-	lib "time"
+	"time"
 )
 
 // Clock is responsible for providing time for span's start/end timestamp.
@@ -23,26 +23,26 @@ import (
 // it with customized clock implementation (e.g. has additional clock
 // synchronization logic) by using the `WithClock` option.
 type Clock interface {
-	Now() lib.Time
+	Now() time.Time
 }
 
 type clockWrapper struct {
-	NowFunc   func() lib.Time
-	SinceFunc func(lib.Time) lib.Duration
+	NowFunc   func() time.Time
+	SinceFunc func(time.Time) time.Duration
 }
 
-func (c clockWrapper) Now() lib.Time {
+func (c clockWrapper) Now() time.Time {
 	return c.NowFunc()
 }
 
-func (c clockWrapper) Since(t lib.Time) lib.Duration {
+func (c clockWrapper) Since(t time.Time) time.Duration {
 	return c.SinceFunc(t)
 }
 
 func defaultClock() *clockWrapper {
 	return &clockWrapper{
-		NowFunc:   lib.Now,
-		SinceFunc: lib.Since,
+		NowFunc:   time.Now,
+		SinceFunc: time.Since,
 	}
 }
 
@@ -53,6 +53,6 @@ func defaultClock() *clockWrapper {
 // the duration since start added back to start gives
 // end as a monotonic time.
 // See https://golang.org/pkg/time/#hdr-Monotonic_Clocks
-func monotonicEndTime(start lib.Time, clock *clockWrapper) lib.Time {
+func monotonicEndTime(start time.Time, clock *clockWrapper) time.Time {
 	return start.Add(clock.Since(start))
 }
