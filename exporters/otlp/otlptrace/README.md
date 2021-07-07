@@ -14,15 +14,17 @@ exp, err := otlptrace.New(ctx, opts...)
 go get -u go.opentelemetry.io/otel/exporters/otlp/otlptrace
 ```
 
-# Otlptrace Client
+## [`otlptrace`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace)
 
-Otlptrace package define a trace exporter that uses a `otlptrace.Client` .
+`otlptrace` package implements a span exporter that uses a `otlptrace.Client` interface.
 
 `otlptrace.Client` manages connections to the collector, handles the transformation of data into wire format,
 and the transmission of that data to the collector.
 
-# Otlptracegrpc and Otlptracehttp
+## [`otlptracegrpc`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc)
 
-The otlptracegrpc and otlptracehttp implements a gRPC `otlptrace.Client` and
-an HTTP `otlptrace.Client`respectively,
-both offering convenience functions .
+The `otlptracegrpc` package implements a gRPC span exporter.
+
+##  [`otlptracehttp`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp)
+
+The `otlptracehttp` package implements a HTTP span exporter.
