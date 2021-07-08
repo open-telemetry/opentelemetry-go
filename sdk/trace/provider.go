@@ -345,14 +345,14 @@ func WithSpanLimits(sl SpanLimits) TracerProviderOption {
 // generated (fallback to call `clk.Now().Sub(t)` if not provided).
 func WithClock(clk Clock) TracerProviderOption {
 	rclk := &clockWrapper{
-		NowFunc: clk.Now,
+		nowFunc: clk.Now,
 	}
 	if x, ok := clk.(interface {
 		Since(t time.Time) time.Duration
 	}); ok {
-		rclk.SinceFunc = x.Since
+		rclk.sinceFunc = x.Since
 	} else {
-		rclk.SinceFunc = func(t time.Time) time.Duration {
+		rclk.sinceFunc = func(t time.Time) time.Duration {
 			return clk.Now().Sub(t)
 		}
 	}

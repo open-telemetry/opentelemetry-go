@@ -27,22 +27,22 @@ type Clock interface {
 }
 
 type clockWrapper struct {
-	NowFunc   func() time.Time
-	SinceFunc func(time.Time) time.Duration
+	nowFunc   func() time.Time
+	sinceFunc func(time.Time) time.Duration
 }
 
 func (c clockWrapper) Now() time.Time {
-	return c.NowFunc()
+	return c.nowFunc()
 }
 
 func (c clockWrapper) Since(t time.Time) time.Duration {
-	return c.SinceFunc(t)
+	return c.sinceFunc(t)
 }
 
 func defaultClock() *clockWrapper {
 	return &clockWrapper{
-		NowFunc:   time.Now,
-		SinceFunc: time.Since,
+		nowFunc:   time.Now,
+		sinceFunc: time.Since,
 	}
 }
 
