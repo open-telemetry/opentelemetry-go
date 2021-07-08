@@ -12,22 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris zos
+
 package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
 var (
-	SetDefaultOSProviders           = setDefaultOSProviders
-	SetOSProviders                  = setOSProviders
-	SetDefaultRuntimeProviders      = setDefaultRuntimeProviders
-	SetRuntimeProviders             = setRuntimeProviders
-	SetDefaultUserProviders         = setDefaultUserProviders
-	SetUserProviders                = setUserProviders
-	SetDefaultOSDescriptionProvider = setDefaultOSDescriptionProvider
-	SetOSDescriptionProvider        = setOSDescriptionProvider
+	Uname                 = uname
+	CharsToString         = charsToString
+	GetFirstAvailableFile = getFirstAvailableFile
 )
 
 var (
-	CommandArgs = commandArgs
-	RuntimeName = runtimeName
-	RuntimeOS   = runtimeOS
-	RuntimeArch = runtimeArch
+	SetUnameProvider        = setUnameProvider
+	SetDefaultUnameProvider = setDefaultUnameProvider
 )
