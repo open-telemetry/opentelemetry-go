@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Adds HTTP support for OTLP metrics exporter. (#2022)
-- Now `TraceProvider` includes a `Clock` field as well as a `WithClock` option to control span startTime/endTime generation. This defaults to use `time` module but users can provide their own implemention. (#2043)
+- Now `TraceProvider` includes a `Clock` field as well as a `WithClock` option to control span startTime/endTime generation. This defaults to use the `time` package but users can provide their own implementation. (#2052)
 
 ### Changed
 

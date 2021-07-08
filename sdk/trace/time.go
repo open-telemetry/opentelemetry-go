@@ -19,7 +19,7 @@ import (
 )
 
 // Clock is responsible for providing time for span's start/end timestamp.
-// By default the standard "time" module will be used. User can replace
+// By default the standard "time" package will be used. User can replace
 // it with customized clock implementation (e.g. has additional clock
 // synchronization logic) by using the `WithClock` option.
 type Clock interface {
