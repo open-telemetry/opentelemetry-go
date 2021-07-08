@@ -15,56 +15,16 @@
 package oteltest // import "go.opentelemetry.io/otel/oteltest"
 
 import (
-	"sync"
-
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
 
-// TracerProvider is a testing TracerProvider. It is an functioning
-// implementation of an OpenTelemetry TracerProvider and can be configured
-// with a SpanRecorder that it configure all Tracers it creates to record
-// their Spans with.
-type TracerProvider struct {
-	config config
-
-	tracersMu sync.Mutex
-	tracers   map[instrumentation]*Tracer
-}
-
-var _ trace.TracerProvider = (*TracerProvider)(nil)
-
 // NewTracerProvider returns a *TracerProvider configured with options.
-func NewTracerProvider(options ...Option) *TracerProvider {
-	return &TracerProvider{
-		config:  newConfig(options...),
-		tracers: make(map[instrumentation]*Tracer),
-	}
-}
-
-type instrumentation struct {
-	Name, Version string
-}
-
-// Tracer returns an OpenTelemetry Tracer used for testing.
-func (p *TracerProvider) Tracer(instName string, opts ...trace.TracerOption) trace.Tracer {
-	conf := trace.NewTracerConfig(opts...)
-
-	inst := instrumentation{
-		Name:    instName,
-		Version: conf.InstrumentationVersion(),
-	}
-	p.tracersMu.Lock()
-	defer p.tracersMu.Unlock()
-	t, ok := p.tracers[inst]
-	if !ok {
-		t = &Tracer{
-			Name:     instName,
-			Version:  conf.InstrumentationVersion(),
-			provider: p,
-		}
-		p.tracers[inst] = t
-	}
-	return t
+func NewTracerProvider(options ...Option) trace.TracerProvider {
+	cfg := newConfig(options)
+	return sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(cfg.SpanRecorder),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()))
 }
 
 // DefaultTracer returns a default tracer for testing purposes.

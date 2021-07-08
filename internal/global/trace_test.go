@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
@@ -57,7 +58,7 @@ func TestTraceWithSDK(t *testing.T) {
 	_, span4 := span1.TracerProvider().Tracer("fromSpan").Start(ctx, "span4")
 	span4.End()
 
-	filterNames := func(spans []*oteltest.Span) []string {
+	filterNames := func(spans []sdktrace.ReadOnlySpan) []string {
 		names := make([]string, len(spans))
 		for i := range spans {
 			names[i] = spans[i].Name()

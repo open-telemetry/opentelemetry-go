@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"go.opentelemetry.io/otel/sdk/trace/internal"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/oteltest"
@@ -288,7 +289,7 @@ func TestTraceStatePropagation(t *testing.T) {
 	prop := propagation.TraceContext{}
 	stateHeader := "tracestate"
 	parentHeader := "traceparent"
-	state, err := oteltest.TraceStateFromKeyValues(attribute.String("key1", "value1"), attribute.String("key2", "value2"))
+	state, err := internal.TraceStateFromKeyValues(attribute.String("key1", "value1"), attribute.String("key2", "value2"))
 	if err != nil {
 		t.Fatalf("Unable to construct expected TraceState: %s", err.Error())
 	}

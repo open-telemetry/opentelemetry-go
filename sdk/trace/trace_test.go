@@ -29,7 +29,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/sdk/trace/internal"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 
@@ -88,7 +88,7 @@ func init() {
 }
 
 func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
-	harness := oteltest.NewHarness(t)
+	harness := internal.NewHarness(t)
 
 	harness.TestTracerProvider(func() trace.TracerProvider {
 		return NewTracerProvider(WithSampler(TraceIDRatioBased(0)))
@@ -354,7 +354,7 @@ func TestStartSpanWithParent(t *testing.T) {
 		t.Error(err)
 	}
 
-	ts, err := oteltest.TraceStateFromKeyValues(attribute.String("k", "v"))
+	ts, err := internal.TraceStateFromKeyValues(attribute.String("k", "v"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -1656,55 +1656,55 @@ func TestSamplerTraceState(t *testing.T) {
 		{
 			name:       "alwaysOn",
 			sampler:    AlwaysSample(),
-			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1)),
-			want:       mustTS(oteltest.TraceStateFromKeyValues(kv1)),
+			input:      mustTS(internal.TraceStateFromKeyValues(kv1)),
+			want:       mustTS(internal.TraceStateFromKeyValues(kv1)),
 			exportSpan: true,
 		},
 		{
 			name:       "alwaysOff",
 			sampler:    NeverSample(),
-			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1)),
-			want:       mustTS(oteltest.TraceStateFromKeyValues(kv1)),
+			input:      mustTS(internal.TraceStateFromKeyValues(kv1)),
+			want:       mustTS(internal.TraceStateFromKeyValues(kv1)),
 			exportSpan: false,
 		},
 		{
 			name:       "insertKeySampled",
 			sampler:    makeInserter(kv2, "span"),
 			spanName:   "span0",
-			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1)),
-			want:       mustTS(oteltest.TraceStateFromKeyValues(kv2, kv1)),
+			input:      mustTS(internal.TraceStateFromKeyValues(kv1)),
+			want:       mustTS(internal.TraceStateFromKeyValues(kv2, kv1)),
 			exportSpan: true,
 		},
 		{
 			name:       "insertKeyDropped",
 			sampler:    makeInserter(kv2, "span"),
 			spanName:   "nospan0",
-			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1)),
-			want:       mustTS(oteltest.TraceStateFromKeyValues(kv2, kv1)),
+			input:      mustTS(internal.TraceStateFromKeyValues(kv1)),
+			want:       mustTS(internal.TraceStateFromKeyValues(kv2, kv1)),
 			exportSpan: false,
 		},
 		{
 			name:       "deleteKeySampled",
 			sampler:    makeDeleter(k1, "span"),
 			spanName:   "span0",
-			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1, kv2)),
-			want:       mustTS(oteltest.TraceStateFromKeyValues(kv2)),
+			input:      mustTS(internal.TraceStateFromKeyValues(kv1, kv2)),
+			want:       mustTS(internal.TraceStateFromKeyValues(kv2)),
 			exportSpan: true,
 		},
 		{
 			name:       "deleteKeyDropped",
 			sampler:    makeDeleter(k1, "span"),
 			spanName:   "nospan0",
-			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1, kv2, kv3)),
-			want:       mustTS(oteltest.TraceStateFromKeyValues(kv2, kv3)),
+			input:      mustTS(internal.TraceStateFromKeyValues(kv1, kv2, kv3)),
+			want:       mustTS(internal.TraceStateFromKeyValues(kv2, kv3)),
 			exportSpan: false,
 		},
 		{
 			name:       "clearer",
 			sampler:    clearer("span"),
 			spanName:   "span0",
-			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1, kv3)),
-			want:       mustTS(oteltest.TraceStateFromKeyValues()),
+			input:      mustTS(internal.TraceStateFromKeyValues(kv1, kv3)),
+			want:       mustTS(internal.TraceStateFromKeyValues()),
 			exportSpan: true,
 		},
 	}
