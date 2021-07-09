@@ -227,6 +227,10 @@ func (s *span) End(options ...trace.SpanEndOption) {
 		return
 	}
 
+	// If the span was not properly started, stopwatch will be nil.
+	// The normal check (IsRecording) happens after end time generation,
+	// so we add a simple check here to make sure end time is generated
+	// as early as possible.
 	if s.stopwatch == nil {
 		return
 	}
