@@ -1,11 +1,11 @@
-package metric2
+package meter
 
 import (
 	"context"
 
 	"go.opentelemetry.io/otel/attribute"
+	metric "go.opentelemetry.io/otel/metric2"
 	"go.opentelemetry.io/otel/metric2/async"
-	"go.opentelemetry.io/otel/metric2/batch"
 	"go.opentelemetry.io/otel/metric2/sync"
 )
 
@@ -29,13 +29,15 @@ func (m Meter) Synchronous() sync.Meter {
 func (m Meter) ProcessBatch(
 	ctx context.Context,
 	attrs []attribute.KeyValue,
-	batch ...batch.Measurement) {
+	batch ...metric.Measurement) {
 }
 
-// Process processes a single measurement.
+// Process processes a single measurement.  This offers the
+// convenience of passing a variable length list of attributes for a
+// processing a single measurement.
 func (m Meter) Process(
 	ctx context.Context,
-	ms batch.Measurement,
+	ms metric.Measurement,
 	attrs ...attribute.KeyValue) {
 	// Process a singleton batch
 	m.ProcessBatch(ctx, attrs, ms)

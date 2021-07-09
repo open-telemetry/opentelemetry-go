@@ -3,9 +3,9 @@ package async
 import (
 	"context"
 
+	metric "go.opentelemetry.io/otel/metric2"
 	asyncfloat64metric "go.opentelemetry.io/otel/metric2/async/float64"
 	asyncint64metric "go.opentelemetry.io/otel/metric2/async/int64"
-	"go.opentelemetry.io/otel/metric2/instrument"
 )
 
 type Meter struct {
@@ -14,7 +14,7 @@ type Meter struct {
 type Callback struct {
 }
 
-func (m Meter) Callback(func(context.Context), ...instrument.Instrument) Callback {
+func (m Meter) Callback(func(context.Context), ...metric.Instrument) Callback {
 	return Callback{}
 }
 

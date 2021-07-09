@@ -1,11 +1,13 @@
-package batch
+package metric2
 
 import (
 	"go.opentelemetry.io/otel/metric/number"
-	"go.opentelemetry.io/otel/metric2/instrument"
 )
 
 type Measurement struct {
-	instrument.Instrument
+	Instrument
 	number.Number
+}
+
+type Instrument interface {
 }
