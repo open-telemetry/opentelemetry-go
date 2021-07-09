@@ -15,6 +15,7 @@
 package trace // import "go.opentelemetry.io/otel/trace"
 
 import (
+	"context"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -234,6 +235,13 @@ func WithTimestamp(t time.Time) SpanEventOption {
 func WithLinks(links ...Link) SpanStartOption {
 	return spanOptionFunc(func(cfg *SpanConfig) {
 		cfg.links = append(cfg.links, links...)
+	})
+}
+
+// WithContextLink create a Link from context, and then add the link to the Span.
+func WithContextLink(ctx context.Context) SpanStartOption {
+	return WithLinks(Link{
+		SpanContext: SpanContextFromContext(ctx),
 	})
 }
 

@@ -15,6 +15,7 @@
 package trace
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -40,6 +41,10 @@ func TestNewSpanConfig(t *testing.T) {
 		Attributes:  []attribute.KeyValue{k1v2, k2v2},
 	}
 
+	ctx := context.Background()
+	linkWithCtx := Link{
+		SpanContext: SpanContextFromContext(ctx),
+	}
 	tests := []struct {
 		options  []SpanStartOption
 		expected *SpanConfig
@@ -117,6 +122,24 @@ func TestNewSpanConfig(t *testing.T) {
 		},
 		{
 			[]SpanStartOption{
+				WithContextLink(context.Background()),
+			},
+			&SpanConfig{
+				links: []Link{linkWithCtx},
+			},
+		},
+		{
+			[]SpanStartOption{
+				WithContextLink(context.Background()),
+				WithLinks(link1),
+			},
+			&SpanConfig{
+				links: []Link{linkWithCtx, link1},
+			},
+		},
+
+		{
+			[]SpanStartOption{
 				WithNewRoot(),
 			},
 			&SpanConfig{
@@ -157,13 +180,14 @@ func TestNewSpanConfig(t *testing.T) {
 				WithAttributes(k1v1),
 				WithTimestamp(timestamp0),
 				WithLinks(link1, link2),
+				WithContextLink(ctx),
 				WithNewRoot(),
 				WithSpanKind(SpanKindConsumer),
 			},
 			&SpanConfig{
 				attributes: []attribute.KeyValue{k1v1},
 				timestamp:  timestamp0,
-				links:      []Link{link1, link2},
+				links:      []Link{link1, link2, linkWithCtx},
 				newRoot:    true,
 				spanKind:   SpanKindConsumer,
 			},
