@@ -23,36 +23,28 @@ import (
 // it with customized clock implementation (e.g. has additional clock
 // synchronization logic) by using the `WithClock` option.
 type Clock interface {
-	Now() time.Time
+	Start() (time.Time, Stopwatch)
 }
 
-type clockWrapper struct {
-	nowFunc   func() time.Time
-	sinceFunc func(time.Time) time.Duration
+type Stopwatch interface {
+	Stop(time.Time) time.Time
 }
 
-func (c clockWrapper) Now() time.Time {
-	return c.nowFunc()
+func defaultClock() Clock {
+	return standardClock{}
 }
 
-func (c clockWrapper) Since(t time.Time) time.Duration {
-	return c.sinceFunc(t)
+func defaultStopwatch() Stopwatch {
+	return standardStopwatch{}
 }
 
-func defaultClock() *clockWrapper {
-	return &clockWrapper{
-		nowFunc:   time.Now,
-		sinceFunc: time.Since,
-	}
+type standardClock struct {}
+type standardStopwatch struct {}
+
+func (standardStopwatch) Stop(t time.Time) time.Time {
+	return t.Add(time.Since(t))
 }
 
-// monotonicEndTime returns the end time at present
-// but offset from start, monotonically.
-//
-// The monotonic clock is used in subtractions hence
-// the duration since start added back to start gives
-// end as a monotonic time.
-// See https://golang.org/pkg/time/#hdr-Monotonic_Clocks
-func monotonicEndTime(start time.Time, clock *clockWrapper) time.Time {
-	return start.Add(clock.Since(start))
+func (standardClock) Start() (time.Time, Stopwatch) {
+	return time.Now(), standardStopwatch{}
 }

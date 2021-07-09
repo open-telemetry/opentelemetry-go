@@ -17,14 +17,12 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 import (
 	"context"
 	"fmt"
-	"sync"
-	"sync/atomic"
-	"time"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
+	"sync"
+	"sync/atomic"
 )
 
 const (
@@ -53,7 +51,7 @@ type tracerProviderConfig struct {
 	resource *resource.Resource
 
 	// clock is used to provide start/end time for spans
-	clock *clockWrapper
+	clock Clock
 }
 
 type TracerProvider struct {
@@ -64,7 +62,7 @@ type TracerProvider struct {
 	idGenerator    IDGenerator
 	spanLimits     SpanLimits
 	resource       *resource.Resource
-	clock          *clockWrapper
+	clock          Clock
 }
 
 var _ trace.TracerProvider = &TracerProvider{}
@@ -344,20 +342,8 @@ func WithSpanLimits(sl SpanLimits) TracerProviderOption {
 // can implement `Since(time.Time) time.Duration` to control how end time is
 // generated (fallback to call `clk.Now().Sub(t)` if not provided).
 func WithClock(clk Clock) TracerProviderOption {
-	rclk := &clockWrapper{
-		nowFunc: clk.Now,
-	}
-	if x, ok := clk.(interface {
-		Since(t time.Time) time.Duration
-	}); ok {
-		rclk.sinceFunc = x.Since
-	} else {
-		rclk.sinceFunc = func(t time.Time) time.Duration {
-			return clk.Now().Sub(t)
-		}
-	}
 	return traceProviderOptionFunc(func(cfg *tracerProviderConfig) {
-		cfg.clock = rclk
+		cfg.clock = clk
 	})
 }
 

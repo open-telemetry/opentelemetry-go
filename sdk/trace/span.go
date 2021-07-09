@@ -153,6 +153,9 @@ type span struct {
 
 	// spanLimits holds the limits to this span.
 	spanLimits SpanLimits
+
+	// stopwatch holds the Stopwatch returned by Clock.Start method
+	stopwatch Stopwatch
 }
 
 var _ trace.Span = &span{}
@@ -224,9 +227,13 @@ func (s *span) End(options ...trace.SpanEndOption) {
 		return
 	}
 
+	if s.stopwatch == nil {
+		return
+	}
+
 	// Store the end time as soon as possible to avoid artificially increasing
 	// the span's duration in case some operation below takes a while.
-	et := monotonicEndTime(s.startTime, s.tracer.provider.clock)
+	et := s.stopwatch.Stop(s.startTime)
 
 	// Do relative expensive check now that we have an end time and see if we
 	// need to do any more processing.
@@ -608,10 +615,12 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, o *trace.Sp
 	}
 
 	startTime := o.Timestamp()
+	var stopwatch = defaultStopwatch()
 	if startTime.IsZero() {
-		startTime = tr.provider.clock.Now()
+		startTime, stopwatch = tr.provider.clock.Start()
 	}
 	span.startTime = startTime
+	span.stopwatch = stopwatch
 
 	span.spanKind = trace.ValidateSpanKind(o.SpanKind())
 	span.name = name
