@@ -21,7 +21,22 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
+type osDescriptionProvider func() (string, error)
+
+var defaultOSDescriptionProvider osDescriptionProvider = platformOSDescription
+
+var osDescription = defaultOSDescriptionProvider
+
+func setDefaultOSDescriptionProvider() {
+	setOSDescriptionProvider(defaultOSDescriptionProvider)
+}
+
+func setOSDescriptionProvider(osDescriptionProvider osDescriptionProvider) {
+	osDescription = osDescriptionProvider
+}
+
 type osTypeDetector struct{}
+type osDescriptionDetector struct{}
 
 // Detect returns a *Resource that describes the operating system type the
 // service is running on.
@@ -34,7 +49,38 @@ func (osTypeDetector) Detect(ctx context.Context) (*Resource, error) {
 	), nil
 }
 
+// Detect returns a *Resource that describes the operating system the
+// service is running on.
+func (osDescriptionDetector) Detect(ctx context.Context) (*Resource, error) {
+	description, err := osDescription()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.OSDescriptionKey.String(description),
+	), nil
+}
+
 // WithOSType adds an attribute with the operating system type to the configured Resource.
 func WithOSType() Option {
 	return WithDetectors(osTypeDetector{})
+}
+
+// WithOSDescription adds an attribute with the operating system description to the
+// configured Resource. The formatted string is equivalent to the output of the
+// `uname -snrvm` command.
+func WithOSDescription() Option {
+	return WithDetectors(osDescriptionDetector{})
+}
+
+// WithOS adds all the OS attributes to the configured Resource.
+// See individual WithOS* functions to configure specific attributes.
+func WithOS() Option {
+	return WithDetectors(
+		osTypeDetector{},
+		osDescriptionDetector{},
+	)
 }
