@@ -3,8 +3,8 @@ package async
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/metric2/async/asyncfloat64metric"
-	"go.opentelemetry.io/otel/metric2/async/asyncint64metric"
+	asyncfloat64metric "go.opentelemetry.io/otel/metric2/async/float64"
+	asyncint64metric "go.opentelemetry.io/otel/metric2/async/int64"
 	"go.opentelemetry.io/otel/metric2/instrument"
 )
 
