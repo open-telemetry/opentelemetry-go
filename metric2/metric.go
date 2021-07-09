@@ -29,8 +29,16 @@ func (m Meter) Asynchronous() asyncmetric.Meter {
 	return asyncmetric.Meter{}
 }
 
-func RecordBatch(
+func (m Meter) ProcessBatch(
 	ctx context.Context,
 	attrs []attribute.KeyValue,
 	batch ...batch.Measurement) {
+}
+
+func (m Meter) Process(
+	ctx context.Context,
+	ms batch.Measurement,
+	attrs ...attribute.KeyValue) {
+	// Make this a singleton batch.
+	m.ProcessBatch(ctx, attrs, ms)
 }
