@@ -402,10 +402,6 @@ type Link struct {
 
 	// Attributes describe the aspects of the link.
 	Attributes []attribute.KeyValue
-
-	// DroppedAttributeCount is the number of attributes that were not
-	// recorded due to configured limits being reached.
-	DroppedAttributeCount int
 }
 
 // SpanKind is the role a Span plays in a Trace.

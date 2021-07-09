@@ -1587,14 +1587,12 @@ func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 		name:   "span0",
 		links: []trace.Link{
 			{
-				SpanContext:           sc1,
-				Attributes:            []attribute.KeyValue{k1v1},
-				DroppedAttributeCount: 1,
+				SpanContext: sc1,
+				Attributes:  []attribute.KeyValue{k1v1},
 			},
 			{
-				SpanContext:           sc2,
-				Attributes:            []attribute.KeyValue{k2v2},
-				DroppedAttributeCount: 2,
+				SpanContext: sc2,
+				Attributes:  []attribute.KeyValue{k2v2},
 			},
 		},
 		spanKind:               trace.SpanKindInternal,
