@@ -15,6 +15,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This interface is called when determining the start and end times for a span.
   Additionally, a `WithClock` is also added to the package enabling users to set custom implementations of the `Clock` interface.
   The standard library `time` package is still used for this functionality by default if no option is set. (#2052)
+- Added `WithOSDescription` resource configuration option to set OS (Operating System) description resource attribute (`os.description`). (#1840)
+- Added `WithOS` resource configuration option to set all OS (Operating System) resource attributes at once. (#1840)
 
 ### Changed
 
