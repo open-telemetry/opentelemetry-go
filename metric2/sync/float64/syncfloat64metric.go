@@ -19,6 +19,18 @@ type UpDownCounter struct {
 type Histogram struct {
 }
 
+type Instrument interface {
+	metric.Instrument
+
+	Measure(x float64) metric.Measurement
+}
+
+var (
+	_ Instrument = Counter{}
+	_ Instrument = UpDownCounter{}
+	_ Instrument = Histogram{}
+)
+
 func (m Meter) Counter(name string) (Counter, error) {
 	return Counter{}, nil
 }
