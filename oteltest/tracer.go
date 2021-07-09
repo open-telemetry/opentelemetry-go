@@ -52,7 +52,7 @@ func (t *Tracer) Start(ctx context.Context, name string, opts ...trace.SpanStart
 	}
 
 	if c.NewRoot() {
-		span.spanContext = trace.SpanContext{}
+		span.spanContext = t.provider.config.SpanContextFunc(context.Background())
 	} else {
 		span.spanContext = t.provider.config.SpanContextFunc(ctx)
 		if current := trace.SpanContextFromContext(ctx); current.IsValid() {
