@@ -1,4 +1,4 @@
-package int64metric
+package syncfloat64metric
 
 import (
 	"context"
@@ -6,8 +6,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric2/batch"
 )
-
-// TODO instrument options
 
 type Meter struct {
 }
@@ -33,23 +31,23 @@ func (m Meter) Histogram(name string) (Histogram, error) {
 	return Histogram{}, nil
 }
 
-func (c Counter) Add(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
+func (c Counter) Add(ctx context.Context, x float64, attrs ...attribute.KeyValue) {
 }
 
-func (u UpDownCounter) Add(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
+func (u UpDownCounter) Add(ctx context.Context, x float64, attrs ...attribute.KeyValue) {
 }
 
-func (h Histogram) Record(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
+func (h Histogram) Record(ctx context.Context, x float64, attrs ...attribute.KeyValue) {
 }
 
-func (c Counter) Measure(x int64) batch.Measurement {
+func (c Counter) Measure(x float64) batch.Measurement {
 	return batch.Measurement{}
 }
 
-func (u UpDownCounter) Measure(x int64) batch.Measurement {
+func (u UpDownCounter) Measure(x float64) batch.Measurement {
 	return batch.Measurement{}
 }
 
-func (h Histogram) Measure(x int64) batch.Measurement {
+func (h Histogram) Measure(x float64) batch.Measurement {
 	return batch.Measurement{}
 }

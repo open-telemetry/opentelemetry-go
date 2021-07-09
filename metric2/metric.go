@@ -6,8 +6,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric2/asyncmetric"
 	"go.opentelemetry.io/otel/metric2/batch"
-	"go.opentelemetry.io/otel/metric2/float64metric"
-	"go.opentelemetry.io/otel/metric2/int64metric"
+	"go.opentelemetry.io/otel/metric2/syncmetric"
 )
 
 type MeterProvider interface {
@@ -17,28 +16,27 @@ type MeterProvider interface {
 type Meter struct {
 }
 
-func (m Meter) Integer() int64metric.Meter {
-	return int64metric.Meter{}
-}
-
-func (m Meter) FloatingPoint() float64metric.Meter {
-	return float64metric.Meter{}
-}
-
 func (m Meter) Asynchronous() asyncmetric.Meter {
 	return asyncmetric.Meter{}
 }
 
+func (m Meter) Synchronous() syncmetric.Meter {
+	return syncmetric.Meter{}
+}
+
+// ProcessBatch processes a batch of measurements as a single logical
+// event.
 func (m Meter) ProcessBatch(
 	ctx context.Context,
 	attrs []attribute.KeyValue,
 	batch ...batch.Measurement) {
 }
 
+// Process processes a single measurement.
 func (m Meter) Process(
 	ctx context.Context,
 	ms batch.Measurement,
 	attrs ...attribute.KeyValue) {
-	// Make this a singleton batch.
+	// Process a singleton batch
 	m.ProcessBatch(ctx, attrs, ms)
 }
