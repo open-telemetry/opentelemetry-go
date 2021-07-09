@@ -1,8 +1,8 @@
-package syncmetric
+package sync
 
 import (
-	syncfloat64metric "go.opentelemetry.io/otel/metric2/syncmetric/float64"
-	syncint64metric "go.opentelemetry.io/otel/metric2/syncmetric/int64"
+	syncfloat64metric "go.opentelemetry.io/otel/metric2/sync/float64"
+	syncint64metric "go.opentelemetry.io/otel/metric2/sync/int64"
 )
 
 type Meter struct{}

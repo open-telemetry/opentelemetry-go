@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric2/asyncmetric"
+	"go.opentelemetry.io/otel/metric2/async"
 	"go.opentelemetry.io/otel/metric2/batch"
-	"go.opentelemetry.io/otel/metric2/syncmetric"
+	"go.opentelemetry.io/otel/metric2/sync"
 )
 
 type MeterProvider interface {
@@ -16,12 +16,12 @@ type MeterProvider interface {
 type Meter struct {
 }
 
-func (m Meter) Asynchronous() asyncmetric.Meter {
-	return asyncmetric.Meter{}
+func (m Meter) Asynchronous() async.Meter {
+	return async.Meter{}
 }
 
-func (m Meter) Synchronous() syncmetric.Meter {
-	return syncmetric.Meter{}
+func (m Meter) Synchronous() sync.Meter {
+	return sync.Meter{}
 }
 
 // ProcessBatch processes a batch of measurements as a single logical

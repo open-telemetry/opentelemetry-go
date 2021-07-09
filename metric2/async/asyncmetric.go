@@ -1,11 +1,11 @@
-package asyncmetric
+package async
 
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/metric2/async/asyncfloat64metric"
+	"go.opentelemetry.io/otel/metric2/async/asyncint64metric"
 	"go.opentelemetry.io/otel/metric2/instrument"
-	"go.opentelemetry.io/otel/metric2/asyncmetric/asyncfloat64metric"
-	"go.opentelemetry.io/otel/metric2/asyncmetric/asyncint64metric"
 )
 
 type Meter struct {
