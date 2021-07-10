@@ -23,28 +23,42 @@ import (
 // it with customized clock implementation (e.g. has additional clock
 // synchronization logic) by using the `WithClock` option.
 type Clock interface {
-	Start() (time.Time, Stopwatch)
+	// Stopwatch returns a started Stopwatch measuring a time interval.
+	Stopwatch() Stopwatch
 }
 
 type Stopwatch interface {
-	Stop(time.Time) time.Time
+	// Started returns the time the Stopwatch was started
+	Started() time.Time
+	// Elapsed returns the duration from when this Stopwatch was started and now using a consistent monotonic time.
+	Elapsed() time.Duration
 }
 
 func defaultClock() Clock {
 	return standardClock{}
 }
 
-func defaultStopwatch() Stopwatch {
-	return standardStopwatch{}
+func defaultStopwatch(t time.Time) Stopwatch {
+	return standardStopwatch{
+		startTime: t,
+	}
+}
+
+func (standardClock) Stopwatch() Stopwatch {
+	return standardStopwatch{
+		startTime: time.Now(),
+	}
 }
 
 type standardClock struct{}
-type standardStopwatch struct{}
-
-func (standardStopwatch) Stop(t time.Time) time.Time {
-	return t.Add(time.Since(t))
+type standardStopwatch struct {
+	startTime time.Time
 }
 
-func (standardClock) Start() (time.Time, Stopwatch) {
-	return time.Now(), standardStopwatch{}
+func (w standardStopwatch) Started() time.Time {
+	return w.startTime
+}
+
+func (w standardStopwatch) Elapsed() time.Duration {
+	return time.Since(w.startTime)
 }

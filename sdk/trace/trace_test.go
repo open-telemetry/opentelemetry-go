@@ -1608,10 +1608,15 @@ func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 type frozenClock struct {
 	now time.Time
 }
-type frozenStopwatch struct{}
+type frozenStopwatch struct {
+	started time.Time
+}
 
-func (f frozenStopwatch) Stop(t time.Time) time.Time {
-	return t
+func (f frozenStopwatch) Started() time.Time {
+	return f.started
+}
+func (f frozenStopwatch) Elapsed() time.Duration {
+	return 0
 }
 
 // newFrozenClock returns a clock which stops at time t
@@ -1621,19 +1626,29 @@ func newFrozenClock(t time.Time) frozenClock {
 	}
 }
 
-func (c frozenClock) Start() (time.Time, Stopwatch) {
-	return c.now, frozenStopwatch{}
+func (c frozenClock) Stopwatch() Stopwatch {
+	return frozenStopwatch{
+		started: c.now,
+	}
 }
 
 type backwardClock struct{}
-type backwardStopwatch struct{}
-
-func (backwardStopwatch) Stop(t time.Time) time.Time {
-	return t.Add(-time.Since(t))
+type backwardStopwatch struct {
+	started time.Time
 }
 
-func (c backwardClock) Start() (time.Time, Stopwatch) {
-	return time.Now(), backwardStopwatch{}
+func (b backwardStopwatch) Started() time.Time {
+	return b.started
+}
+
+func (b backwardStopwatch) Elapsed() time.Duration {
+	return -time.Since(b.started)
+}
+
+func (b backwardClock) Stopwatch() Stopwatch {
+	return backwardStopwatch{
+		started: time.Now(),
+	}
 }
 
 func TestCustomClock(t *testing.T) {
