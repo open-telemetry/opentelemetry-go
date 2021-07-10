@@ -428,6 +428,11 @@ func (s *span) Resource() *resource.Resource {
 	return s.resource
 }
 
+type accountedLink struct {
+	Link                  trace.Link
+	DroppedAttributeCount int
+}
+
 func (s *span) addLink(link trace.Link) {
 	if !s.IsRecording() {
 		return
@@ -435,12 +440,15 @@ func (s *span) addLink(link trace.Link) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	var droppedAttributeCount int
+
 	// Discard over limited attributes
 	if len(link.Attributes) > s.spanLimits.AttributePerLinkCountLimit {
+		droppedAttributeCount = len(link.Attributes) - s.spanLimits.AttributePerLinkCountLimit
 		link.Attributes = link.Attributes[:s.spanLimits.AttributePerLinkCountLimit]
 	}
 
-	s.links.add(link)
+	s.links.add(accountedLink{link, droppedAttributeCount})
 }
 
 // DroppedAttributes returns the number of attributes dropped by the span
@@ -516,7 +524,7 @@ func (s *span) snapshot() ReadOnlySpan {
 func (s *span) interfaceArrayToLinksArray() []trace.Link {
 	linkArr := make([]trace.Link, 0)
 	for _, value := range s.links.queue {
-		linkArr = append(linkArr, value.(trace.Link))
+		linkArr = append(linkArr, value.(accountedLink).Link)
 	}
 	return linkArr
 }
