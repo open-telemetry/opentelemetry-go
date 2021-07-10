@@ -14,7 +14,7 @@ type Meter struct {
 type Callback struct {
 }
 
-func (m Meter) Callback(func(context.Context, Meter), ...metric.Instrument) Callback {
+func (m Meter) Callback(func(context.Context), ...metric.Instrument) Callback {
 	return Callback{}
 }
 
