@@ -1608,7 +1608,7 @@ func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 type frozenClock struct {
 	now time.Time
 }
-type frozenStopwatch struct {}
+type frozenStopwatch struct{}
 
 func (f frozenStopwatch) Stop(t time.Time) time.Time {
 	return t
@@ -1625,8 +1625,8 @@ func (c frozenClock) Start() (time.Time, Stopwatch) {
 	return c.now, frozenStopwatch{}
 }
 
-type backwardClock struct {}
-type backwardStopwatch struct {}
+type backwardClock struct{}
+type backwardStopwatch struct{}
 
 func (backwardStopwatch) Stop(t time.Time) time.Time {
 	return t.Add(-time.Since(t))

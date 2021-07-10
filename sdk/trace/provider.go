@@ -17,12 +17,13 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 import (
 	"context"
 	"fmt"
+	"sync"
+	"sync/atomic"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
-	"sync"
-	"sync/atomic"
 )
 
 const (

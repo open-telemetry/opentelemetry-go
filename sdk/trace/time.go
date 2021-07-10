@@ -38,8 +38,8 @@ func defaultStopwatch() Stopwatch {
 	return standardStopwatch{}
 }
 
-type standardClock struct {}
-type standardStopwatch struct {}
+type standardClock struct{}
+type standardStopwatch struct{}
 
 func (standardStopwatch) Stop(t time.Time) time.Time {
 	return t.Add(time.Since(t))
