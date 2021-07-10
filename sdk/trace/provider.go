@@ -336,10 +336,12 @@ func WithSpanLimits(sl SpanLimits) TracerProviderOption {
 
 // WithClock returns a TracerProviderOption that will configure the
 // TracerProvider's clock. The configured clock is used by Tracers
-// to generate span start/end time. Clock.Start will be called when
-// span starts and should returns the start time with a Stopwatch
-// implementation. Later when span ends Stopwatch.Stop will be called
-// with the start time passed in and should returns the end time.
+// to generate span start/end time. Clock.Stopwatch should start and
+// return a Stopwatch instance. For Stopwatch implementation,
+// Stopwatch.Started should return the time.Time when the stopwatch
+// started. Stopwatch.Elapsed should return the time.Duration measuring
+// the elapsed time from when the stopwatch started. Its value should be
+// positive to ensure monotonic start/end time of the span.
 //
 // If this option is not used, the TracerProvider will provide the default
 // clock which just calls the time package under the hood.
