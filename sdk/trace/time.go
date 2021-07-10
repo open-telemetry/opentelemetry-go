@@ -34,31 +34,25 @@ type Stopwatch interface {
 	Elapsed() time.Duration
 }
 
+type standardClock struct{}
+type standardStopwatch time.Time
+
 func defaultClock() Clock {
 	return standardClock{}
 }
 
 func defaultStopwatch(t time.Time) Stopwatch {
-	return standardStopwatch{
-		startTime: t,
-	}
+	return standardStopwatch(t)
 }
 
 func (standardClock) Stopwatch() Stopwatch {
-	return standardStopwatch{
-		startTime: time.Now(),
-	}
-}
-
-type standardClock struct{}
-type standardStopwatch struct {
-	startTime time.Time
+	return standardStopwatch(time.Now())
 }
 
 func (w standardStopwatch) Started() time.Time {
-	return w.startTime
+	return time.Time(w)
 }
 
 func (w standardStopwatch) Elapsed() time.Duration {
-	return time.Since(w.startTime)
+	return time.Since(time.Time(w))
 }
