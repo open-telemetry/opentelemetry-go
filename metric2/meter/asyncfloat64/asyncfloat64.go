@@ -1,4 +1,4 @@
-package asyncfloat64metric
+package asyncfloat64
 
 import (
 	"context"

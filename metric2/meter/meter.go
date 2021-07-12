@@ -5,8 +5,10 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric2/async"
-	"go.opentelemetry.io/otel/metric2/sync"
+	"go.opentelemetry.io/otel/metric2/meter/asyncfloat64"
+	"go.opentelemetry.io/otel/metric2/meter/asyncint64"
+	"go.opentelemetry.io/otel/metric2/meter/syncfloat64"
+	"go.opentelemetry.io/otel/metric2/meter/syncint64"
 )
 
 // MeterProvider supports creating named Meter instances, for
@@ -21,16 +23,20 @@ type MeterProvider interface {
 type Meter struct {
 }
 
-// Asynchronous provides access to an async.Meter for constructing
-// asynchronous metric instruments.
-func (m Meter) Asynchronous() async.Meter {
-	return async.Meter{}
+func (m Meter) AsyncInt64() asyncint64.Meter {
+	return asyncint64.Meter{}
 }
 
-// Synchronous provides access to a sync.Meter for constructing
-// synchronous metric instruments.
-func (m Meter) Synchronous() sync.Meter {
-	return sync.Meter{}
+func (m Meter) AsyncFloat64() asyncfloat64.Meter {
+	return asyncfloat64.Meter{}
+}
+
+func (m Meter) SyncInt64() syncint64.Meter {
+	return syncint64.Meter{}
+}
+
+func (m Meter) SyncFloat64() syncfloat64.Meter {
+	return syncfloat64.Meter{}
 }
 
 // ProcessBatch processes a batch of measurements as a single logical

@@ -1,4 +1,4 @@
-package syncfloat64metric
+package syncfloat64
 
 import (
 	"context"

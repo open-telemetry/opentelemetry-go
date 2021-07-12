@@ -1,4 +1,4 @@
-package syncint64metric
+package asyncint64
 
 import (
 	"context"
@@ -6,8 +6,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	metric "go.opentelemetry.io/otel/metric2"
 )
-
-// TODO instrument options
 
 type Meter struct {
 }
@@ -18,19 +16,20 @@ type Counter struct {
 type UpDownCounter struct {
 }
 
-type Histogram struct {
+type Gauge struct {
 }
 
 type Instrument interface {
 	metric.Instrument
 
+	Observe(ctx context.Context, x int64, attrs ...attribute.KeyValue)
 	Measure(x int64) metric.Measurement
 }
 
 var (
 	_ Instrument = Counter{}
 	_ Instrument = UpDownCounter{}
-	_ Instrument = Histogram{}
+	_ Instrument = Gauge{}
 )
 
 func (m Meter) Counter(name string) (Counter, error) {
@@ -41,17 +40,17 @@ func (m Meter) UpDownCounter(name string) (UpDownCounter, error) {
 	return UpDownCounter{}, nil
 }
 
-func (m Meter) Histogram(name string) (Histogram, error) {
-	return Histogram{}, nil
+func (m Meter) Gauge(name string) (Gauge, error) {
+	return Gauge{}, nil
 }
 
-func (c Counter) Add(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
+func (c Counter) Observe(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
 }
 
-func (u UpDownCounter) Add(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
+func (u UpDownCounter) Observe(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
 }
 
-func (h Histogram) Record(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
+func (g Gauge) Observe(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
 }
 
 func (c Counter) Measure(x int64) metric.Measurement {
@@ -62,6 +61,6 @@ func (u UpDownCounter) Measure(x int64) metric.Measurement {
 	return metric.Measurement{}
 }
 
-func (h Histogram) Measure(x int64) metric.Measurement {
+func (g Gauge) Measure(x int64) metric.Measurement {
 	return metric.Measurement{}
 }
