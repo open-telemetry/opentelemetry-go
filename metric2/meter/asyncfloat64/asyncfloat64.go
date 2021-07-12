@@ -7,7 +7,7 @@ import (
 	metric "go.opentelemetry.io/otel/metric2"
 )
 
-type Meter struct {
+type Builder struct {
 }
 
 type Counter struct {
@@ -32,15 +32,15 @@ var (
 	_ Instrument = Gauge{}
 )
 
-func (m Meter) Counter(name string) (Counter, error) {
+func (m Builder) Counter(name string) (Counter, error) {
 	return Counter{}, nil
 }
 
-func (m Meter) UpDownCounter(name string) (UpDownCounter, error) {
+func (m Builder) UpDownCounter(name string) (UpDownCounter, error) {
 	return UpDownCounter{}, nil
 }
 
-func (m Meter) Gauge(name string) (Gauge, error) {
+func (m Builder) Gauge(name string) (Gauge, error) {
 	return Gauge{}, nil
 }
 

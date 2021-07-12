@@ -7,7 +7,7 @@ import (
 	metric "go.opentelemetry.io/otel/metric2"
 )
 
-type Meter struct {
+type Builder struct {
 }
 
 type Counter struct {
@@ -31,15 +31,15 @@ var (
 	_ Instrument = Histogram{}
 )
 
-func (m Meter) Counter(name string) (Counter, error) {
+func (m Builder) Counter(name string) (Counter, error) {
 	return Counter{}, nil
 }
 
-func (m Meter) UpDownCounter(name string) (UpDownCounter, error) {
+func (m Builder) UpDownCounter(name string) (UpDownCounter, error) {
 	return UpDownCounter{}, nil
 }
 
-func (m Meter) Histogram(name string) (Histogram, error) {
+func (m Builder) Histogram(name string) (Histogram, error) {
 	return Histogram{}, nil
 }
 

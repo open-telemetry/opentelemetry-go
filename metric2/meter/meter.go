@@ -23,20 +23,20 @@ type MeterProvider interface {
 type Meter struct {
 }
 
-func (m Meter) AsyncInt64() asyncint64.Meter {
-	return asyncint64.Meter{}
+func (m Meter) AsyncInt64() asyncint64.Builder {
+	return asyncint64.Builder{}
 }
 
-func (m Meter) AsyncFloat64() asyncfloat64.Meter {
-	return asyncfloat64.Meter{}
+func (m Meter) AsyncFloat64() asyncfloat64.Builder {
+	return asyncfloat64.Builder{}
 }
 
-func (m Meter) SyncInt64() syncint64.Meter {
-	return syncint64.Meter{}
+func (m Meter) SyncInt64() syncint64.Builder {
+	return syncint64.Builder{}
 }
 
-func (m Meter) SyncFloat64() syncfloat64.Meter {
-	return syncfloat64.Meter{}
+func (m Meter) SyncFloat64() syncfloat64.Builder {
+	return syncfloat64.Builder{}
 }
 
 // ProcessBatch processes a batch of measurements as a single logical
