@@ -11,6 +11,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Adds HTTP support for OTLP metrics exporter. (#2022)
+- Added `WithOSDescription` resource configuration option to set OS (Operating System) description resource attribute (`os.description`). (#1840)
+- Added `WithOS` resource configuration option to set all OS (Operating System) resource attributes at once. (#1840)
 
 ### Changed
 
@@ -27,6 +29,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - When using WithNewRoot, don't use the parent context for making sampling decisions. (#2032)
+- `oteltest.Tracer` now creates a valid `SpanContext` when using `WithNewRoot`. (#2073)
 
 ### Security
 
