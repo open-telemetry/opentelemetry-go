@@ -1,6 +1,15 @@
 # OpenTelemetry-Go Jaeger Exporter
 
-OpenTelemetry Jaeger exporter
+[![Go Reference](https://pkg.go.dev/badge/go.opentelemetry.io/otel/exporters/jaeger.svg)](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/jaeger)
+
+[OpenTelemetry span exporter for Jaeger](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/sdk_exporters/jaeger.md) implementation.
+
+The exporter can be used to send spans to:
+
+- Jaeger agent using `jaeger.thrift` over binary thrift protocol via
+  [`WithAgentEndpoint`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/jaeger#WithAgentEndpoint) option.
+- Jaeger collector using `jaeger.thrift` over HTTP via
+  [`WithCollectorEndpoint`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/jaeger#WithCollectorEndpoint) option.
 
 ## Installation
 
@@ -8,6 +17,26 @@ OpenTelemetry Jaeger exporter
 go get -u go.opentelemetry.io/otel/exporters/jaeger
 ```
 
+## Example
+
+See [../../example/jaeger](../../example/jaeger).
+
+## Environment Variables
+
+The following environment variables can be used
+(instead of options objects) to override the default configuration.
+
+| Environment variable              | Option                                                                                        | Default value                       |
+| --------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------- |
+| `OTEL_EXPORTER_JAEGER_AGENT_HOST` | [`WithAgentHost`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/jaeger#WithAgentHost) | `localhost`                         |
+| `OTEL_EXPORTER_JAEGER_AGENT_PORT` | [`WithAgentPort`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/jaeger#WithAgentPort) |                                     |
+| `OTEL_EXPORTER_JAEGER_ENDPOINT`   | [`WithEndpoint`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/jaeger#WithEndpoint)   | `http://localhost:14268/api/traces` |
+| `OTEL_EXPORTER_JAEGER_USER`       | [`WithUsername`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/jaeger#WithUsername)   |                                     |
+| `OTEL_EXPORTER_JAEGER_PASSWORD`   | [`WithPassword`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/jaeger#WithPassword)   |                                     |
+
+Configuration using options have precedence over the environment variables.
+
 ## Maintenance
 
-This exporter uses a vendored copy of the Apache Thrift library (v0.14.1) at a custom import path. When re-generating Thrift code in future, please adapt import paths as necessary.
+This exporter uses a vendored copy of the Apache Thrift library (v0.14.1) at a custom import path.
+When re-generating Thrift code in the future, please adapt import paths as necessary.
