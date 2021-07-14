@@ -85,21 +85,20 @@ func WithUnit(unit unit.Unit) InstrumentOption {
 	})
 }
 
-// WithInstrumentationName sets the instrumentation name.
-func WithInstrumentationName(name string) InstrumentOption {
-	return instrumentOptionFunc(func(cfg *InstrumentConfig) {
-		cfg.instrumentationName = name
-	})
-}
-
 // MeterConfig contains options for Meters.
 type MeterConfig struct {
 	instrumentationVersion string
+	schemaURL              string
 }
 
 // InstrumentationVersion is the version of the library providing instrumentation.
 func (cfg MeterConfig) InstrumentationVersion() string {
 	return cfg.instrumentationVersion
+}
+
+// SchemaURL is the schema_url of the library providing instrumentation.
+func (cfg MeterConfig) SchemaURL() string {
+	return cfg.schemaURL
 }
 
 // MeterOption is an interface for applying Meter options.
@@ -118,15 +117,8 @@ func NewMeterConfig(opts ...MeterOption) MeterConfig {
 	return config
 }
 
-// InstrumentMeterOption are options that can be used as both an InstrumentOption
-// and MeterOption
-type InstrumentMeterOption interface {
-	InstrumentOption
-	MeterOption
-}
-
 // WithInstrumentationVersion sets the instrumentation version.
-func WithInstrumentationVersion(version string) InstrumentMeterOption {
+func WithInstrumentationVersion(version string) MeterOption {
 	return instrumentationVersionOption(version)
 }
 
@@ -136,6 +128,13 @@ func (i instrumentationVersionOption) applyMeter(config *MeterConfig) {
 	config.instrumentationVersion = string(i)
 }
 
-func (i instrumentationVersionOption) applyInstrument(config *InstrumentConfig) {
-	config.instrumentationVersion = string(i)
+// WithSchemaURL sets the schema URL.
+func WithSchemaURL(version string) MeterOption {
+	return schemaURLOption(version)
+}
+
+type schemaURLOption string
+
+func (s schemaURLOption) applyMeter(config *MeterConfig) {
+	config.schemaURL = string(s)
 }

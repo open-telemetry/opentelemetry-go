@@ -37,8 +37,7 @@ type MeterProvider interface {
 //
 // An uninitialized Meter is a no-op implementation.
 type Meter struct {
-	impl          MeterImpl
-	name, version string
+	impl MeterImpl
 }
 
 // RecordBatch atomically records a batch of measurements.
@@ -284,9 +283,8 @@ func (m Meter) newAsync(
 	if m.impl == nil {
 		return NoopAsync{}, nil
 	}
-	desc := NewDescriptor(name, mkind, nkind, opts...)
-	desc.config.instrumentationName = m.name
-	desc.config.instrumentationVersion = m.version
+	cfg := NewInstrumentConfig(opts...)
+	desc := NewDescriptor(name, mkind, nkind, cfg.description, cfg.unit)
 	return m.impl.NewAsyncInstrument(desc, runner)
 }
 
@@ -303,9 +301,8 @@ func (m Meter) newSync(
 	if m.impl == nil {
 		return NoopSync{}, nil
 	}
-	desc := NewDescriptor(name, metricKind, numberKind, opts...)
-	desc.config.instrumentationName = m.name
-	desc.config.instrumentationVersion = m.version
+	cfg := NewInstrumentConfig(opts...)
+	desc := NewDescriptor(name, metricKind, numberKind, cfg.description, cfg.unit)
 	return m.impl.NewSyncInstrument(desc)
 }
 
@@ -523,16 +520,18 @@ type Descriptor struct {
 	name           string
 	instrumentKind InstrumentKind
 	numberKind     number.Kind
-	config         InstrumentConfig
+	desc           string
+	unit           unit.Unit
 }
 
 // NewDescriptor returns a Descriptor with the given contents.
-func NewDescriptor(name string, ikind InstrumentKind, nkind number.Kind, opts ...InstrumentOption) Descriptor {
+func NewDescriptor(name string, ikind InstrumentKind, nkind number.Kind, desc string, unit unit.Unit) Descriptor {
 	return Descriptor{
 		name:           name,
 		instrumentKind: ikind,
 		numberKind:     nkind,
-		config:         NewInstrumentConfig(opts...),
+		desc:           desc,
+		unit:           unit,
 	}
 }
 
@@ -549,29 +548,17 @@ func (d Descriptor) InstrumentKind() InstrumentKind {
 // Description provides a human-readable description of the metric
 // instrument.
 func (d Descriptor) Description() string {
-	return d.config.Description()
+	return d.desc
 }
 
 // Unit describes the units of the metric instrument.  Unitless
 // metrics return the empty string.
 func (d Descriptor) Unit() unit.Unit {
-	return d.config.Unit()
+	return d.unit
 }
 
 // NumberKind returns whether this instrument is declared over int64,
 // float64, or uint64 values.
 func (d Descriptor) NumberKind() number.Kind {
 	return d.numberKind
-}
-
-// InstrumentationName returns the name of the library that provided
-// instrumentation for this instrument.
-func (d Descriptor) InstrumentationName() string {
-	return d.config.InstrumentationName()
-}
-
-// InstrumentationVersion returns the version of the library that provided
-// instrumentation for this instrument.
-func (d Descriptor) InstrumentationVersion() string {
-	return d.config.InstrumentationVersion()
 }

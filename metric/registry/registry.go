@@ -23,12 +23,54 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-// MeterProvider is a standard MeterProvider for wrapping `MeterImpl`
-type MeterProvider struct {
-	impl metric.MeterImpl
+// UniqueMeterProvider is a standard MeterProvider for wrapping `MeterImpl`
+type UniqueMeterProvider struct {
+	lock   sync.Mutex
+	impl   metric.MeterProvider
+	meters map[uniqueMeterKey]metric.Meter
 }
 
-var _ metric.MeterProvider = (*MeterProvider)(nil)
+type uniqueMeterKey struct {
+	name      string
+	version   string
+	schemaURL string
+}
+
+func keyOf(name string, opts ...metric.MeterOption) uniqueMeterKey {
+	cfg := metric.NewMeterConfig(opts...)
+	return uniqueMeterKey{
+		name:      name,
+		version:   cfg.InstrumentationVersion(),
+		schemaURL: cfg.SchemaURL(),
+	}
+}
+
+var _ metric.MeterProvider = (*UniqueMeterProvider)(nil)
+
+// NewUniqueMeterProvider returns a new provider that implements meter
+// name-uniqueness checking.
+func NewUniqueMeterProvider(impl metric.MeterProvider) *UniqueMeterProvider {
+	return &UniqueMeterProvider{
+		impl:   impl,
+		meters: map[uniqueMeterKey]metric.Meter{},
+	}
+}
+
+// Meter implements MeterProvider.
+func (p *UniqueMeterProvider) Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter {
+	k := keyOf(instrumentationName, opts...)
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	m, ok := p.meters[k]
+	if !ok {
+		m = metric.WrapMeterImpl(
+			NewUniqueInstrumentMeterImpl(
+				p.impl.Meter(instrumentationName, opts...).MeterImpl()))
+		p.meters[k] = m
+	}
+	return m
+
+}
 
 // uniqueInstrumentMeterImpl implements the metric.MeterImpl interface, adding
 // uniqueness checking for instrument descriptors.  Use NewUniqueInstrumentMeter
@@ -36,29 +78,10 @@ var _ metric.MeterProvider = (*MeterProvider)(nil)
 type uniqueInstrumentMeterImpl struct {
 	lock  sync.Mutex
 	impl  metric.MeterImpl
-	state map[key]metric.InstrumentImpl
+	state map[string]metric.InstrumentImpl
 }
 
 var _ metric.MeterImpl = (*uniqueInstrumentMeterImpl)(nil)
-
-type key struct {
-	instrumentName         string
-	instrumentationName    string
-	InstrumentationVersion string
-}
-
-// NewMeterProvider returns a new provider that implements instrument
-// name-uniqueness checking.
-func NewMeterProvider(impl metric.MeterImpl) *MeterProvider {
-	return &MeterProvider{
-		impl: NewUniqueInstrumentMeterImpl(impl),
-	}
-}
-
-// Meter implements MeterProvider.
-func (p *MeterProvider) Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter {
-	return metric.WrapMeterImpl(p.impl, instrumentationName, opts...)
-}
 
 // ErrMetricKindMismatch is the standard error for mismatched metric
 // instrument definitions.
@@ -70,7 +93,7 @@ var ErrMetricKindMismatch = fmt.Errorf(
 func NewUniqueInstrumentMeterImpl(impl metric.MeterImpl) metric.MeterImpl {
 	return &uniqueInstrumentMeterImpl{
 		impl:  impl,
-		state: map[key]metric.InstrumentImpl{},
+		state: map[string]metric.InstrumentImpl{},
 	}
 }
 
@@ -79,21 +102,11 @@ func (u *uniqueInstrumentMeterImpl) RecordBatch(ctx context.Context, labels []at
 	u.impl.RecordBatch(ctx, labels, ms...)
 }
 
-func keyOf(descriptor metric.Descriptor) key {
-	return key{
-		descriptor.Name(),
-		descriptor.InstrumentationName(),
-		descriptor.InstrumentationVersion(),
-	}
-}
-
 // NewMetricKindMismatchError formats an error that describes a
 // mismatched metric instrument definition.
 func NewMetricKindMismatchError(desc metric.Descriptor) error {
-	return fmt.Errorf("metric was %s (%s %s)registered as a %s %s: %w",
+	return fmt.Errorf("metric %s registered as %s %s: %w",
 		desc.Name(),
-		desc.InstrumentationName(),
-		desc.InstrumentationVersion(),
 		desc.NumberKind(),
 		desc.InstrumentKind(),
 		ErrMetricKindMismatch)
@@ -112,7 +125,7 @@ func Compatible(candidate, existing metric.Descriptor) bool {
 // registration, this returns the already-registered instrument.  If
 // there is no conflict and no prior registration, returns (nil, nil).
 func (u *uniqueInstrumentMeterImpl) checkUniqueness(descriptor metric.Descriptor) (metric.InstrumentImpl, error) {
-	impl, ok := u.state[keyOf(descriptor)]
+	impl, ok := u.state[descriptor.Name()]
 	if !ok {
 		return nil, nil
 	}
@@ -141,7 +154,7 @@ func (u *uniqueInstrumentMeterImpl) NewSyncInstrument(descriptor metric.Descript
 	if err != nil {
 		return nil, err
 	}
-	u.state[keyOf(descriptor)] = syncInst
+	u.state[descriptor.Name()] = syncInst
 	return syncInst, nil
 }
 
@@ -165,6 +178,6 @@ func (u *uniqueInstrumentMeterImpl) NewAsyncInstrument(
 	if err != nil {
 		return nil, err
 	}
-	u.state[keyOf(descriptor)] = asyncInst
+	u.state[descriptor.Name()] = asyncInst
 	return asyncInst, nil
 }
