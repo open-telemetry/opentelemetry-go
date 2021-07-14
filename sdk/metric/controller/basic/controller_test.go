@@ -99,10 +99,12 @@ func TestControllerUsesResource(t *testing.T) {
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
 			cont := controller.New(
-				processor.New(
-					processortest.AggregatorSelector(),
-					export.CumulativeExportKindSelector(),
-				),
+				func() export.Checkpointer {
+					return processor.New(
+						processortest.AggregatorSelector(),
+						export.CumulativeExportKindSelector(),
+					)
+				},
 				c.options...,
 			)
 			prov := cont.MeterProvider()
@@ -123,10 +125,12 @@ func TestControllerUsesResource(t *testing.T) {
 
 func TestStartNoExporter(t *testing.T) {
 	cont := controller.New(
-		processor.New(
-			processortest.AggregatorSelector(),
-			export.CumulativeExportKindSelector(),
-		),
+		func() export.Checkpointer {
+			return processor.New(
+				processortest.AggregatorSelector(),
+				export.CumulativeExportKindSelector(),
+			)
+		},
 		controller.WithCollectPeriod(time.Second),
 		controller.WithResource(resource.Empty()),
 	)
@@ -193,10 +197,12 @@ func TestStartNoExporter(t *testing.T) {
 
 func TestObserverCanceled(t *testing.T) {
 	cont := controller.New(
-		processor.New(
-			processortest.AggregatorSelector(),
-			export.CumulativeExportKindSelector(),
-		),
+		func() export.Checkpointer {
+			return processor.New(
+				processortest.AggregatorSelector(),
+				export.CumulativeExportKindSelector(),
+			)
+		},
 		controller.WithCollectPeriod(0),
 		controller.WithCollectTimeout(time.Millisecond),
 		controller.WithResource(resource.Empty()),
@@ -226,10 +232,12 @@ func TestObserverCanceled(t *testing.T) {
 
 func TestObserverContext(t *testing.T) {
 	cont := controller.New(
-		processor.New(
-			processortest.AggregatorSelector(),
-			export.CumulativeExportKindSelector(),
-		),
+		func() export.Checkpointer {
+			return processor.New(
+				processortest.AggregatorSelector(),
+				export.CumulativeExportKindSelector(),
+			)
+		},
 		controller.WithCollectTimeout(0),
 		controller.WithResource(resource.Empty()),
 	)
@@ -290,10 +298,12 @@ func (*blockingExporter) ExportKindFor(
 func TestExportTimeout(t *testing.T) {
 	exporter := newBlockingExporter()
 	cont := controller.New(
-		processor.New(
-			processortest.AggregatorSelector(),
-			export.CumulativeExportKindSelector(),
-		),
+		func() export.Checkpointer {
+			return processor.New(
+				processortest.AggregatorSelector(),
+				export.CumulativeExportKindSelector(),
+			)
+		},
 		controller.WithCollectPeriod(time.Second),
 		controller.WithPushTimeout(time.Millisecond),
 		controller.WithExporter(exporter),
@@ -347,10 +357,12 @@ func TestCollectAfterStopThenStartAgain(t *testing.T) {
 		attribute.DefaultEncoder(),
 	)
 	cont := controller.New(
-		processor.New(
-			processortest.AggregatorSelector(),
-			exp,
-		),
+		func() export.Checkpointer {
+			return processor.New(
+				processortest.AggregatorSelector(),
+				exp,
+			)
+		},
 		controller.WithCollectPeriod(time.Second),
 		controller.WithExporter(exp),
 		controller.WithResource(resource.Empty()),

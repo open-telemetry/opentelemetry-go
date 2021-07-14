@@ -84,8 +84,7 @@ func newCheckpointer() export.Checkpointer {
 func TestPushDoubleStop(t *testing.T) {
 	ctx := context.Background()
 	exporter := newExporter()
-	checkpointer := newCheckpointer()
-	p := controller.New(checkpointer, controller.WithExporter(exporter))
+	p := controller.New(newCheckpointer, controller.WithExporter(exporter))
 	require.NoError(t, p.Start(ctx))
 	require.NoError(t, p.Stop(ctx))
 	require.NoError(t, p.Stop(ctx))
@@ -94,8 +93,7 @@ func TestPushDoubleStop(t *testing.T) {
 func TestPushDoubleStart(t *testing.T) {
 	ctx := context.Background()
 	exporter := newExporter()
-	checkpointer := newCheckpointer()
-	p := controller.New(checkpointer, controller.WithExporter(exporter))
+	p := controller.New(newCheckpointer, controller.WithExporter(exporter))
 	require.NoError(t, p.Start(ctx))
 	err := p.Start(ctx)
 	require.Error(t, err)
@@ -105,9 +103,8 @@ func TestPushDoubleStart(t *testing.T) {
 
 func TestPushTicker(t *testing.T) {
 	exporter := newExporter()
-	checkpointer := newCheckpointer()
 	p := controller.New(
-		checkpointer,
+		newCheckpointer,
 		controller.WithExporter(exporter),
 		controller.WithCollectPeriod(time.Second),
 		controller.WithResource(testResource),
@@ -185,9 +182,11 @@ func TestPushExportError(t *testing.T) {
 			// This test validates the error handling
 			// behavior of the basic Processor is honored
 			// by the push processor.
-			checkpointer := processor.New(processortest.AggregatorSelector(), exporter)
+			newCheckpointer := func() export.Checkpointer {
+				return processor.New(processortest.AggregatorSelector(), exporter)
+			}
 			p := controller.New(
-				checkpointer,
+				newCheckpointer,
 				controller.WithExporter(exporter),
 				controller.WithCollectPeriod(time.Second),
 				controller.WithResource(testResource),

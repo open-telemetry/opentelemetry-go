@@ -72,6 +72,19 @@ func (p *UniqueMeterProvider) Meter(instrumentationName string, opts ...metric.M
 
 }
 
+// List provides a list of MeterImpl objects created through this
+// provider.
+func (p *UniqueMeterProvider) List() []metric.MeterImpl {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	var r []metric.MeterImpl
+	for _, meter := range p.meters {
+		r = append(r, meter.MeterImpl().(*uniqueInstrumentMeterImpl).impl)
+	}
+	return r
+}
+
 // uniqueInstrumentMeterImpl implements the metric.MeterImpl interface, adding
 // uniqueness checking for instrument descriptors.  Use NewUniqueInstrumentMeter
 // to wrap an implementation with uniqueness checking.

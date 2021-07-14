@@ -34,11 +34,13 @@ import (
 
 func TestPullNoCollect(t *testing.T) {
 	puller := controller.New(
-		processor.New(
-			processortest.AggregatorSelector(),
-			export.CumulativeExportKindSelector(),
-			processor.WithMemory(true),
-		),
+		func() export.Checkpointer {
+			return processor.New(
+				processortest.AggregatorSelector(),
+				export.CumulativeExportKindSelector(),
+				processor.WithMemory(true),
+			)
+		},
 		controller.WithCollectPeriod(0),
 		controller.WithResource(resource.Empty()),
 	)
@@ -70,11 +72,13 @@ func TestPullNoCollect(t *testing.T) {
 
 func TestPullWithCollect(t *testing.T) {
 	puller := controller.New(
-		processor.New(
-			processortest.AggregatorSelector(),
-			export.CumulativeExportKindSelector(),
-			processor.WithMemory(true),
-		),
+		func() export.Checkpointer {
+			return processor.New(
+				processortest.AggregatorSelector(),
+				export.CumulativeExportKindSelector(),
+				processor.WithMemory(true),
+			)
+		},
 		controller.WithCollectPeriod(time.Second),
 		controller.WithResource(resource.Empty()),
 	)
