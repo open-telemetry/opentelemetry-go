@@ -4,13 +4,6 @@
 
 [OpenTelemetry span exporter for Jaeger](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/sdk_exporters/jaeger.md) implementation.
 
-The exporter can be used to send spans to:
-
-- Jaeger agent using `jaeger.thrift` over binary thrift protocol via
-  [`WithAgentEndpoint`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/jaeger#WithAgentEndpoint) option.
-- Jaeger collector using `jaeger.thrift` over HTTP via
-  [`WithCollectorEndpoint`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/jaeger#WithCollectorEndpoint) option.
-
 ## Installation
 
 ```
@@ -21,7 +14,16 @@ go get -u go.opentelemetry.io/otel/exporters/jaeger
 
 See [../../example/jaeger](../../example/jaeger).
 
-## Environment Variables
+## Configuration
+
+The exporter can be used to send spans to:
+
+- Jaeger agent using `jaeger.thrift` over binary thrift protocol via
+  [`WithAgentEndpoint`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/jaeger#WithAgentEndpoint) option.
+- Jaeger collector using `jaeger.thrift` over HTTP via
+  [`WithCollectorEndpoint`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/jaeger#WithCollectorEndpoint) option.
+
+### Environment Variables
 
 The following environment variables can be used
 (instead of options objects) to override the default configuration.
@@ -36,7 +38,13 @@ The following environment variables can be used
 
 Configuration using options have precedence over the environment variables.
 
-## Maintenance
+## Contributing
 
 This exporter uses a vendored copy of the Apache Thrift library (v0.14.1) at a custom import path.
 When re-generating Thrift code in the future, please adapt import paths as necessary.
+
+## References
+
+- [Jaeger](https://www.jaegertracing.io/)
+- [OpenTelemetry to Jaeger Transformation](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/sdk_exporters/jaeger.md)
+- [OpenTelemetry Environment Variable Specification](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/sdk-environment-variables.md)
