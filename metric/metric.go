@@ -100,7 +100,7 @@ func (m Meter) NewFloat64UpDownCounter(name string, options ...InstrumentOption)
 // duplicate registration).
 func (m Meter) NewInt64ValueRecorder(name string, opts ...InstrumentOption) (Int64ValueRecorder, error) {
 	return wrapInt64ValueRecorderInstrument(
-		m.newSync(name, ValueRecorderInstrumentKind, number.Int64Kind, opts))
+		m.newSync(name, SyncHistogramInstrumentKind, number.Int64Kind, opts))
 }
 
 // NewFloat64ValueRecorder creates a new floating point ValueRecorder with the
@@ -109,7 +109,7 @@ func (m Meter) NewInt64ValueRecorder(name string, opts ...InstrumentOption) (Int
 // duplicate registration).
 func (m Meter) NewFloat64ValueRecorder(name string, opts ...InstrumentOption) (Float64ValueRecorder, error) {
 	return wrapFloat64ValueRecorderInstrument(
-		m.newSync(name, ValueRecorderInstrumentKind, number.Float64Kind, opts))
+		m.newSync(name, SyncHistogramInstrumentKind, number.Float64Kind, opts))
 }
 
 // NewInt64ValueObserver creates a new integer ValueObserver instrument
