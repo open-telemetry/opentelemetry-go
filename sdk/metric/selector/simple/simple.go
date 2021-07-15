@@ -79,9 +79,9 @@ func lastValueAggs(aggPtrs []*export.Aggregator) {
 
 func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch descriptor.InstrumentKind() {
-	case metric.ValueObserverInstrumentKind:
+	case metric.AsyncGaugeInstrumentKind:
 		lastValueAggs(aggPtrs)
-	case metric.ValueRecorderInstrumentKind:
+	case metric.SyncHistogramInstrumentKind:
 		aggs := minmaxsumcount.New(len(aggPtrs), descriptor)
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
@@ -93,9 +93,9 @@ func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor, aggPtrs 
 
 func (selectorExact) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch descriptor.InstrumentKind() {
-	case metric.ValueObserverInstrumentKind:
+	case metric.AsyncGaugeInstrumentKind:
 		lastValueAggs(aggPtrs)
-	case metric.ValueRecorderInstrumentKind:
+	case metric.SyncHistogramInstrumentKind:
 		aggs := exact.New(len(aggPtrs))
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
@@ -107,9 +107,9 @@ func (selectorExact) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*ex
 
 func (s selectorHistogram) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch descriptor.InstrumentKind() {
-	case metric.ValueObserverInstrumentKind:
+	case metric.AsyncGaugeInstrumentKind:
 		lastValueAggs(aggPtrs)
-	case metric.ValueRecorderInstrumentKind:
+	case metric.SyncHistogramInstrumentKind:
 		aggs := histogram.New(len(aggPtrs), descriptor, s.options...)
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]

@@ -185,7 +185,7 @@ func TestNoGroupingExport(t *testing.T) {
 		[]record{
 			{
 				"int64-count",
-				metric.CounterInstrumentKind,
+				metric.SyncCounterInstrumentKind,
 				number.Int64Kind,
 				nil,
 				nil,
@@ -193,7 +193,7 @@ func TestNoGroupingExport(t *testing.T) {
 			},
 			{
 				"int64-count",
-				metric.CounterInstrumentKind,
+				metric.SyncCounterInstrumentKind,
 				number.Int64Kind,
 				nil,
 				nil,
@@ -240,7 +240,7 @@ func TestNoGroupingExport(t *testing.T) {
 func TestValuerecorderMetricGroupingExport(t *testing.T) {
 	r := record{
 		"valuerecorder",
-		metric.ValueRecorderInstrumentKind,
+		metric.SyncHistogramInstrumentKind,
 		number.Int64Kind,
 		nil,
 		nil,
@@ -291,7 +291,7 @@ func TestValuerecorderMetricGroupingExport(t *testing.T) {
 func TestCountInt64MetricGroupingExport(t *testing.T) {
 	r := record{
 		"int64-count",
-		metric.CounterInstrumentKind,
+		metric.SyncCounterInstrumentKind,
 		number.Int64Kind,
 		nil,
 		nil,
@@ -341,7 +341,7 @@ func TestCountInt64MetricGroupingExport(t *testing.T) {
 func TestCountFloat64MetricGroupingExport(t *testing.T) {
 	r := record{
 		"float64-count",
-		metric.CounterInstrumentKind,
+		metric.SyncCounterInstrumentKind,
 		number.Float64Kind,
 		nil,
 		nil,
@@ -395,7 +395,7 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 		[]record{
 			{
 				"int64-count",
-				metric.CounterInstrumentKind,
+				metric.SyncCounterInstrumentKind,
 				number.Int64Kind,
 				testInstA,
 				nil,
@@ -403,7 +403,7 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 			},
 			{
 				"int64-count",
-				metric.CounterInstrumentKind,
+				metric.SyncCounterInstrumentKind,
 				number.Int64Kind,
 				testInstA,
 				nil,
@@ -411,7 +411,7 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 			},
 			{
 				"int64-count",
-				metric.CounterInstrumentKind,
+				metric.SyncCounterInstrumentKind,
 				number.Int64Kind,
 				testInstA,
 				nil,
@@ -419,7 +419,7 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 			},
 			{
 				"int64-count",
-				metric.CounterInstrumentKind,
+				metric.SyncCounterInstrumentKind,
 				number.Int64Kind,
 				testInstB,
 				nil,
@@ -513,7 +513,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 		[]record{
 			{
 				"int64-count",
-				metric.CounterInstrumentKind,
+				metric.SyncCounterInstrumentKind,
 				number.Int64Kind,
 				testInstA,
 				countingLib1,
@@ -521,7 +521,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 			},
 			{
 				"int64-count",
-				metric.CounterInstrumentKind,
+				metric.SyncCounterInstrumentKind,
 				number.Int64Kind,
 				testInstA,
 				countingLib2,
@@ -529,7 +529,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 			},
 			{
 				"int64-count",
-				metric.CounterInstrumentKind,
+				metric.SyncCounterInstrumentKind,
 				number.Int64Kind,
 				testInstA,
 				countingLib1,
@@ -537,7 +537,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 			},
 			{
 				"int64-count",
-				metric.CounterInstrumentKind,
+				metric.SyncCounterInstrumentKind,
 				number.Int64Kind,
 				testInstA,
 				countingLib1,
@@ -545,7 +545,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 			},
 			{
 				"int64-count",
-				metric.CounterInstrumentKind,
+				metric.SyncCounterInstrumentKind,
 				number.Int64Kind,
 				testInstA,
 				summingLib,
@@ -553,7 +553,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 			},
 			{
 				"int64-count",
-				metric.CounterInstrumentKind,
+				metric.SyncCounterInstrumentKind,
 				number.Int64Kind,
 				testInstB,
 				countingLib1,
@@ -695,10 +695,10 @@ func TestStatelessExportKind(t *testing.T) {
 	}
 
 	for _, k := range []testcase{
-		{"counter", metric.CounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA, true},
-		{"updowncounter", metric.UpDownCounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA, false},
-		{"sumobserver", metric.SumObserverInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, true},
-		{"updownsumobserver", metric.UpDownSumObserverInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, false},
+		{"counter", metric.SyncCounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA, true},
+		{"updowncounter", metric.SyncUpDownCounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA, false},
+		{"sumobserver", metric.AsyncCounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, true},
+		{"updownsumobserver", metric.AsyncUpDownCounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, false},
 	} {
 		t.Run(k.name, func(t *testing.T) {
 			runMetricExportTests(

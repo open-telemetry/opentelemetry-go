@@ -138,16 +138,16 @@ func convertDescriptor(ocDescriptor metricdata.Descriptor) (metric.Descriptor, e
 	switch ocDescriptor.Type {
 	case metricdata.TypeGaugeInt64:
 		nkind = number.Int64Kind
-		ikind = metric.ValueObserverInstrumentKind
+		ikind = metric.AsyncGaugeInstrumentKind
 	case metricdata.TypeGaugeFloat64:
 		nkind = number.Float64Kind
-		ikind = metric.ValueObserverInstrumentKind
+		ikind = metric.AsyncGaugeInstrumentKind
 	case metricdata.TypeCumulativeInt64:
 		nkind = number.Int64Kind
-		ikind = metric.SumObserverInstrumentKind
+		ikind = metric.AsyncCounterInstrumentKind
 	case metricdata.TypeCumulativeFloat64:
 		nkind = number.Float64Kind
-		ikind = metric.SumObserverInstrumentKind
+		ikind = metric.AsyncCounterInstrumentKind
 	default:
 		// Includes TypeGaugeDistribution, TypeCumulativeDistribution, TypeSummary
 		return metric.Descriptor{}, fmt.Errorf("%w; descriptor type: %v", errConversion, ocDescriptor.Type)

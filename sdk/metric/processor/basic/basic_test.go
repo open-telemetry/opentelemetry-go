@@ -62,12 +62,12 @@ func TestProcessor(t *testing.T) {
 	} {
 		t.Run(tc.kind.String(), func(t *testing.T) {
 			for _, ic := range []instrumentCase{
-				{kind: metric.CounterInstrumentKind},
-				{kind: metric.UpDownCounterInstrumentKind},
-				{kind: metric.ValueRecorderInstrumentKind},
-				{kind: metric.SumObserverInstrumentKind},
-				{kind: metric.UpDownSumObserverInstrumentKind},
-				{kind: metric.ValueObserverInstrumentKind},
+				{kind: metric.SyncCounterInstrumentKind},
+				{kind: metric.SyncUpDownCounterInstrumentKind},
+				{kind: metric.SyncHistogramInstrumentKind},
+				{kind: metric.AsyncCounterInstrumentKind},
+				{kind: metric.AsyncUpDownCounterInstrumentKind},
+				{kind: metric.AsyncGaugeInstrumentKind},
 			} {
 				t.Run(ic.kind.String(), func(t *testing.T) {
 					for _, nc := range []numberCase{
@@ -300,7 +300,7 @@ func TestBasicInconsistent(t *testing.T) {
 	// Test no start
 	b = basic.New(processorTest.AggregatorSelector(), export.StatelessExportKindSelector())
 
-	desc := metric.NewDescriptor("inst", metric.CounterInstrumentKind, number.Int64Kind)
+	desc := metric.NewDescriptor("inst", metric.SyncCounterInstrumentKind, number.Int64Kind)
 	accum := export.NewAccumulation(&desc, attribute.EmptySet(), resource.Empty(), metrictest.NoopAggregator{})
 	require.Equal(t, basic.ErrInconsistentState, b.Process(accum))
 
@@ -325,7 +325,7 @@ func TestBasicTimestamps(t *testing.T) {
 	time.Sleep(time.Nanosecond)
 	afterNew := time.Now()
 
-	desc := metric.NewDescriptor("inst", metric.CounterInstrumentKind, number.Int64Kind)
+	desc := metric.NewDescriptor("inst", metric.SyncCounterInstrumentKind, number.Int64Kind)
 	accum := export.NewAccumulation(&desc, attribute.EmptySet(), resource.Empty(), metrictest.NoopAggregator{})
 
 	b.StartCollection()
@@ -371,7 +371,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 	res := resource.NewSchemaless(attribute.String("R", "V"))
 	ekindSel := export.CumulativeExportKindSelector()
 
-	desc := metric.NewDescriptor("inst.sum", metric.CounterInstrumentKind, number.Int64Kind)
+	desc := metric.NewDescriptor("inst.sum", metric.SyncCounterInstrumentKind, number.Int64Kind)
 	selector := processorTest.AggregatorSelector()
 
 	processor := basic.New(selector, ekindSel, basic.WithMemory(false))
@@ -405,7 +405,7 @@ func TestStatefulNoMemoryDelta(t *testing.T) {
 	res := resource.NewSchemaless(attribute.String("R", "V"))
 	ekindSel := export.DeltaExportKindSelector()
 
-	desc := metric.NewDescriptor("inst.sum", metric.SumObserverInstrumentKind, number.Int64Kind)
+	desc := metric.NewDescriptor("inst.sum", metric.AsyncCounterInstrumentKind, number.Int64Kind)
 	selector := processorTest.AggregatorSelector()
 
 	processor := basic.New(selector, ekindSel, basic.WithMemory(false))
@@ -442,7 +442,7 @@ func TestMultiObserverSum(t *testing.T) {
 	} {
 
 		res := resource.NewSchemaless(attribute.String("R", "V"))
-		desc := metric.NewDescriptor("observe.sum", metric.SumObserverInstrumentKind, number.Int64Kind)
+		desc := metric.NewDescriptor("observe.sum", metric.AsyncCounterInstrumentKind, number.Int64Kind)
 		selector := processorTest.AggregatorSelector()
 
 		processor := basic.New(selector, ekindSel, basic.WithMemory(false))

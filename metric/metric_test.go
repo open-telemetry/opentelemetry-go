@@ -34,48 +34,48 @@ var Must = metric.Must
 
 var (
 	syncKinds = []metric.InstrumentKind{
-		metric.ValueRecorderInstrumentKind,
-		metric.CounterInstrumentKind,
-		metric.UpDownCounterInstrumentKind,
+		metric.SyncHistogramInstrumentKind,
+		metric.SyncCounterInstrumentKind,
+		metric.SyncUpDownCounterInstrumentKind,
 	}
 	asyncKinds = []metric.InstrumentKind{
-		metric.ValueObserverInstrumentKind,
-		metric.SumObserverInstrumentKind,
-		metric.UpDownSumObserverInstrumentKind,
+		metric.AsyncGaugeInstrumentKind,
+		metric.AsyncCounterInstrumentKind,
+		metric.AsyncUpDownCounterInstrumentKind,
 	}
 	addingKinds = []metric.InstrumentKind{
-		metric.CounterInstrumentKind,
-		metric.UpDownCounterInstrumentKind,
-		metric.SumObserverInstrumentKind,
-		metric.UpDownSumObserverInstrumentKind,
+		metric.SyncCounterInstrumentKind,
+		metric.SyncUpDownCounterInstrumentKind,
+		metric.AsyncCounterInstrumentKind,
+		metric.AsyncUpDownCounterInstrumentKind,
 	}
 	groupingKinds = []metric.InstrumentKind{
-		metric.ValueRecorderInstrumentKind,
-		metric.ValueObserverInstrumentKind,
+		metric.SyncHistogramInstrumentKind,
+		metric.AsyncGaugeInstrumentKind,
 	}
 
 	monotonicKinds = []metric.InstrumentKind{
-		metric.CounterInstrumentKind,
-		metric.SumObserverInstrumentKind,
+		metric.SyncCounterInstrumentKind,
+		metric.AsyncCounterInstrumentKind,
 	}
 
 	nonMonotonicKinds = []metric.InstrumentKind{
-		metric.UpDownCounterInstrumentKind,
-		metric.UpDownSumObserverInstrumentKind,
-		metric.ValueRecorderInstrumentKind,
-		metric.ValueObserverInstrumentKind,
+		metric.SyncUpDownCounterInstrumentKind,
+		metric.AsyncUpDownCounterInstrumentKind,
+		metric.SyncHistogramInstrumentKind,
+		metric.AsyncGaugeInstrumentKind,
 	}
 
 	precomputedSumKinds = []metric.InstrumentKind{
-		metric.SumObserverInstrumentKind,
-		metric.UpDownSumObserverInstrumentKind,
+		metric.AsyncCounterInstrumentKind,
+		metric.AsyncUpDownCounterInstrumentKind,
 	}
 
 	nonPrecomputedSumKinds = []metric.InstrumentKind{
-		metric.CounterInstrumentKind,
-		metric.UpDownCounterInstrumentKind,
-		metric.ValueRecorderInstrumentKind,
-		metric.ValueObserverInstrumentKind,
+		metric.SyncCounterInstrumentKind,
+		metric.SyncUpDownCounterInstrumentKind,
+		metric.SyncHistogramInstrumentKind,
+		metric.AsyncGaugeInstrumentKind,
 	}
 )
 
@@ -316,7 +316,7 @@ func TestCounter(t *testing.T) {
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, -742)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Float64Kind, metric.CounterInstrumentKind, c.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, number.Float64Kind, metric.SyncCounterInstrumentKind, c.SyncImpl(),
 			1994.1, -742, 42,
 		)
 	})
@@ -329,7 +329,7 @@ func TestCounter(t *testing.T) {
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, 4200)
 		meter.RecordBatch(ctx, labels, c.Measurement(420000))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Int64Kind, metric.CounterInstrumentKind, c.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, number.Int64Kind, metric.SyncCounterInstrumentKind, c.SyncImpl(),
 			42, 4200, 420000,
 		)
 
@@ -343,7 +343,7 @@ func TestCounter(t *testing.T) {
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, -100)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Int64Kind, metric.UpDownCounterInstrumentKind, c.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, number.Int64Kind, metric.SyncUpDownCounterInstrumentKind, c.SyncImpl(),
 			100, -100, 42,
 		)
 	})
@@ -356,7 +356,7 @@ func TestCounter(t *testing.T) {
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, -76)
 		meter.RecordBatch(ctx, labels, c.Measurement(-100.1))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Float64Kind, metric.UpDownCounterInstrumentKind, c.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, number.Float64Kind, metric.SyncUpDownCounterInstrumentKind, c.SyncImpl(),
 			100.1, -76, -100.1,
 		)
 	})
@@ -372,7 +372,7 @@ func TestValueRecorder(t *testing.T) {
 		boundInstrument := m.Bind(labels...)
 		boundInstrument.Record(ctx, 0)
 		meter.RecordBatch(ctx, labels, m.Measurement(-100.5))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Float64Kind, metric.ValueRecorderInstrumentKind, m.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, number.Float64Kind, metric.SyncHistogramInstrumentKind, m.SyncImpl(),
 			42, 0, -100.5,
 		)
 	})
@@ -385,7 +385,7 @@ func TestValueRecorder(t *testing.T) {
 		boundInstrument := m.Bind(labels...)
 		boundInstrument.Record(ctx, 80)
 		meter.RecordBatch(ctx, labels, m.Measurement(0))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Int64Kind, metric.ValueRecorderInstrumentKind, m.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, number.Int64Kind, metric.SyncHistogramInstrumentKind, m.SyncImpl(),
 			173, 80, 0,
 		)
 	})
@@ -399,7 +399,7 @@ func TestObserverInstruments(t *testing.T) {
 			result.Observe(42.1, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, metric.ValueObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, metric.AsyncGaugeInstrumentKind, o.AsyncImpl(),
 			42.1,
 		)
 	})
@@ -410,7 +410,7 @@ func TestObserverInstruments(t *testing.T) {
 			result.Observe(-142, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, metric.ValueObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, metric.AsyncGaugeInstrumentKind, o.AsyncImpl(),
 			-142,
 		)
 	})
@@ -421,7 +421,7 @@ func TestObserverInstruments(t *testing.T) {
 			result.Observe(42.1, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, metric.SumObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, metric.AsyncCounterInstrumentKind, o.AsyncImpl(),
 			42.1,
 		)
 	})
@@ -432,7 +432,7 @@ func TestObserverInstruments(t *testing.T) {
 			result.Observe(-142, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, metric.SumObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, metric.AsyncCounterInstrumentKind, o.AsyncImpl(),
 			-142,
 		)
 	})
@@ -443,7 +443,7 @@ func TestObserverInstruments(t *testing.T) {
 			result.Observe(42.1, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, metric.UpDownSumObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, metric.AsyncUpDownCounterInstrumentKind, o.AsyncImpl(),
 			42.1,
 		)
 	})
@@ -454,7 +454,7 @@ func TestObserverInstruments(t *testing.T) {
 			result.Observe(-142, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, metric.UpDownSumObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, metric.AsyncUpDownCounterInstrumentKind, o.AsyncImpl(),
 			-142,
 		)
 	})
