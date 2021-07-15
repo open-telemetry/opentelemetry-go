@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
 var (
@@ -41,17 +42,16 @@ type Exporter struct {
 	stopOnce  sync.Once
 }
 
+var _ metricsdk.Exporter = &Exporter{}
+
 // Export exports a batch of metrics.
-func (e *Exporter) Export(ctx context.Context, checkpointSet metricsdk.CheckpointSet) error {
-	rms, err := metrictransform.CheckpointSet(ctx, e, checkpointSet, 1)
+func (e *Exporter) Export(ctx context.Context, sourceData metricsdk.SourceData, checkpointSet metricsdk.CheckpointSet) error {
+	rms, err := metrictransform.CheckpointSet(ctx, e, sourceData, checkpointSet, 1)
 	if err != nil {
 		return err
 	}
-	if len(rms) == 0 {
-		return nil
-	}
 
-	return e.client.UploadMetrics(ctx, rms)
+	return e.client.UploadMetrics(ctx, []*metricpb.ResourceMetrics{rms})
 }
 
 // Start establishes a connection to the receiving endpoint.

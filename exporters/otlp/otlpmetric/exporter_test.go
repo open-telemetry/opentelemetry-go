@@ -98,12 +98,10 @@ func (m *checkpointSet) ForEach(_ metricsdk.ExportKindSelector, fn func(metricsd
 }
 
 type record struct {
-	name     string
-	iKind    metric.InstrumentKind
-	nKind    number.Kind
-	resource *resource.Resource
-	opts     []metric.InstrumentOption
-	labels   []attribute.KeyValue
+	name   string
+	iKind  metric.InstrumentKind
+	nKind  number.Kind
+	labels []attribute.KeyValue
 }
 
 var (
@@ -178,7 +176,7 @@ var (
 	}
 )
 
-func TestNoGroupingExport(t *testing.T) {
+func TestSimpleExport(t *testing.T) {
 	runMetricExportTests(
 		t,
 		nil,
@@ -187,16 +185,12 @@ func TestNoGroupingExport(t *testing.T) {
 				"int64-count",
 				metric.CounterInstrumentKind,
 				number.Int64Kind,
-				nil,
-				nil,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
 				metric.CounterInstrumentKind,
 				number.Int64Kind,
-				nil,
-				nil,
 				append(baseKeyValues, cpuKey.Int(2)),
 			},
 		},
@@ -237,13 +231,11 @@ func TestNoGroupingExport(t *testing.T) {
 	)
 }
 
-func TestValuerecorderMetricGroupingExport(t *testing.T) {
+func TestValuerecorderMetricExport(t *testing.T) {
 	r := record{
 		"valuerecorder",
 		metric.ValueRecorderInstrumentKind,
 		number.Int64Kind,
-		nil,
-		nil,
 		append(baseKeyValues, cpuKey.Int(1)),
 	}
 	expected := []*metricpb.ResourceMetrics{
@@ -288,13 +280,11 @@ func TestValuerecorderMetricGroupingExport(t *testing.T) {
 	runMetricExportTests(t, nil, []record{r, r}, expected)
 }
 
-func TestCountInt64MetricGroupingExport(t *testing.T) {
+func TestCountInt64MetricExport(t *testing.T) {
 	r := record{
 		"int64-count",
 		metric.CounterInstrumentKind,
 		number.Int64Kind,
-		nil,
-		nil,
 		append(baseKeyValues, cpuKey.Int(1)),
 	}
 	runMetricExportTests(
@@ -338,13 +328,11 @@ func TestCountInt64MetricGroupingExport(t *testing.T) {
 	)
 }
 
-func TestCountFloat64MetricGroupingExport(t *testing.T) {
+func TestCountFloat64MetricExport(t *testing.T) {
 	r := record{
 		"float64-count",
 		metric.CounterInstrumentKind,
 		number.Float64Kind,
-		nil,
-		nil,
 		append(baseKeyValues, cpuKey.Int(1)),
 	}
 	runMetricExportTests(
@@ -388,7 +376,7 @@ func TestCountFloat64MetricGroupingExport(t *testing.T) {
 	)
 }
 
-func TestResourceMetricGroupingExport(t *testing.T) {
+func TestResourceMetricExport(t *testing.T) {
 	runMetricExportTests(
 		t,
 		nil,
@@ -397,32 +385,24 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 				"int64-count",
 				metric.CounterInstrumentKind,
 				number.Int64Kind,
-				testInstA,
-				nil,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
 				metric.CounterInstrumentKind,
 				number.Int64Kind,
-				testInstA,
-				nil,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
 				metric.CounterInstrumentKind,
 				number.Int64Kind,
-				testInstA,
-				nil,
 				append(baseKeyValues, cpuKey.Int(2)),
 			},
 			{
 				"int64-count",
 				metric.CounterInstrumentKind,
 				number.Int64Kind,
-				testInstB,
-				nil,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 		},
@@ -495,18 +475,7 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 	)
 }
 
-func TestResourceInstLibMetricGroupingExport(t *testing.T) {
-	countingLib1 := []metric.InstrumentOption{
-		metric.WithInstrumentationName("counting-lib"),
-		metric.WithInstrumentationVersion("v1"),
-	}
-	countingLib2 := []metric.InstrumentOption{
-		metric.WithInstrumentationName("counting-lib"),
-		metric.WithInstrumentationVersion("v2"),
-	}
-	summingLib := []metric.InstrumentOption{
-		metric.WithInstrumentationName("summing-lib"),
-	}
+func TestResourceInstLibMetricExport(t *testing.T) {
 	runMetricExportTests(
 		t,
 		nil,
@@ -515,48 +484,36 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				"int64-count",
 				metric.CounterInstrumentKind,
 				number.Int64Kind,
-				testInstA,
-				countingLib1,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
 				metric.CounterInstrumentKind,
 				number.Int64Kind,
-				testInstA,
-				countingLib2,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
 				metric.CounterInstrumentKind,
 				number.Int64Kind,
-				testInstA,
-				countingLib1,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
 				metric.CounterInstrumentKind,
 				number.Int64Kind,
-				testInstA,
-				countingLib1,
 				append(baseKeyValues, cpuKey.Int(2)),
 			},
 			{
 				"int64-count",
 				metric.CounterInstrumentKind,
 				number.Int64Kind,
-				testInstA,
-				summingLib,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
 				metric.CounterInstrumentKind,
 				number.Int64Kind,
-				testInstB,
-				countingLib1,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 		},
@@ -713,8 +670,6 @@ func TestStatelessExportKind(t *testing.T) {
 						"instrument",
 						k.instrumentKind,
 						number.Int64Kind,
-						testInstA,
-						nil,
 						append(baseKeyValues, cpuKey.Int(1)),
 					},
 				},
@@ -751,15 +706,15 @@ func TestStatelessExportKind(t *testing.T) {
 	}
 }
 
-func runMetricExportTests(t *testing.T, opts []otlpmetric.Option, rs []record, expected []*metricpb.ResourceMetrics) {
+func runMetricExportTests(t *testing.T, opts []otlpmetric.Option, sourceData metricsdk.SourceData, rs []record, expected []*metricpb.ResourceMetrics) {
 	exp, driver := newExporter(t, opts...)
 
-	recs := map[attribute.Distinct][]metricsdk.Record{}
-	resources := map[attribute.Distinct]*resource.Resource{}
+	recs := []metricsdk.Record{}
+
 	for _, r := range rs {
 		lcopy := make([]attribute.KeyValue, len(r.labels))
 		copy(lcopy, r.labels)
-		desc := metric.NewDescriptor(r.name, r.iKind, r.nKind, r.opts...)
+		desc := metric.NewDescriptor(r.name, r.iKind, r.nKind, "", "")
 		labs := attribute.NewSet(lcopy...)
 
 		var agg, ckpt metricsdk.Aggregator
@@ -795,13 +750,9 @@ func runMetricExportTests(t *testing.T, opts []otlpmetric.Option, rs []record, e
 		}
 		require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
 
-		equiv := r.resource.Equivalent()
-		resources[equiv] = r.resource
-		recs[equiv] = append(recs[equiv], metricsdk.NewRecord(&desc, &labs, r.resource, ckpt.Aggregation(), intervalStart, intervalEnd))
+		recs = append(recs, metricsdk.NewRecord(&desc, &labs, ckpt.Aggregation(), intervalStart, intervalEnd))
 	}
-	for _, records := range recs {
-		assert.NoError(t, exp.Export(context.Background(), &checkpointSet{records: records}))
-	}
+	assert.NoError(t, exp.Export(context.Background(), sourceData, &checkpointSet{records: recs}))
 
 	// assert.ElementsMatch does not equate nested slices of different order,
 	// therefore this requires the top level slice to be broken down.
@@ -893,7 +844,7 @@ func TestEmptyMetricExport(t *testing.T) {
 		},
 	} {
 		driver.Reset()
-		require.NoError(t, exp.Export(context.Background(), &checkpointSet{records: test.records}))
+		require.NoError(t, exp.Export(context.Background(), metricsdk.SourceData{}, &checkpointSet{records: test.records}))
 		assert.Equal(t, test.want, driver.rm)
 	}
 }
