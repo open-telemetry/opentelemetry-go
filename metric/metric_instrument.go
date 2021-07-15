@@ -22,73 +22,32 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 )
 
 // ErrSDKReturnedNilImpl is returned when a new `MeterImpl` returns nil.
 var ErrSDKReturnedNilImpl = errors.New("SDK returned a nil implementation")
 
-// InstrumentKind describes the kind of instrument.
-type InstrumentKind int8
+// InstrumentKind is part of the API's interface to the SDK.
+type InstrumentKind = sdkapi.InstrumentKind
 
 const (
 	// ValueRecorderInstrumentKind indicates a ValueRecorder instrument.
-	ValueRecorderInstrumentKind InstrumentKind = iota
+	ValueRecorderInstrumentKind = sdkapi.ValueRecorderInstrumentKind
 	// ValueObserverInstrumentKind indicates an ValueObserver instrument.
-	ValueObserverInstrumentKind
+	ValueObserverInstrumentKind = sdkapi.ValueObserverInstrumentKind
 
 	// CounterInstrumentKind indicates a Counter instrument.
-	CounterInstrumentKind
+	CounterInstrumentKind = sdkapi.CounterInstrumentKind
 	// UpDownCounterInstrumentKind indicates a UpDownCounter instrument.
-	UpDownCounterInstrumentKind
+	UpDownCounterInstrumentKind = sdkapi.UpDownCounterInstrumentKind
 
 	// SumObserverInstrumentKind indicates a SumObserver instrument.
-	SumObserverInstrumentKind
+	SumObserverInstrumentKind = sdkapi.SumObserverInstrumentKind
 	// UpDownSumObserverInstrumentKind indicates a UpDownSumObserver
 	// instrument.
-	UpDownSumObserverInstrumentKind
+	UpDownSumObserverInstrumentKind = sdkapi.UpDownSumObserverInstrumentKind
 )
-
-// Synchronous returns whether this is a synchronous kind of instrument.
-func (k InstrumentKind) Synchronous() bool {
-	switch k {
-	case CounterInstrumentKind, UpDownCounterInstrumentKind, ValueRecorderInstrumentKind:
-		return true
-	}
-	return false
-}
-
-// Asynchronous returns whether this is an asynchronous kind of instrument.
-func (k InstrumentKind) Asynchronous() bool {
-	return !k.Synchronous()
-}
-
-// Adding returns whether this kind of instrument adds its inputs (as opposed to Grouping).
-func (k InstrumentKind) Adding() bool {
-	switch k {
-	case CounterInstrumentKind, UpDownCounterInstrumentKind, SumObserverInstrumentKind, UpDownSumObserverInstrumentKind:
-		return true
-	}
-	return false
-}
-
-// Grouping returns whether this kind of instrument groups its inputs (as opposed to Adding).
-func (k InstrumentKind) Grouping() bool {
-	return !k.Adding()
-}
-
-// Monotonic returns whether this kind of instrument exposes a non-decreasing sum.
-func (k InstrumentKind) Monotonic() bool {
-	switch k {
-	case CounterInstrumentKind, SumObserverInstrumentKind:
-		return true
-	}
-	return false
-}
-
-// PrecomputedSum returns whether this kind of instrument receives precomputed sums.
-func (k InstrumentKind) PrecomputedSum() bool {
-	return k.Adding() && k.Asynchronous()
-}
 
 // Observation is used for reporting an asynchronous  batch of metric
 // values. Instances of this type should be created by asynchronous
