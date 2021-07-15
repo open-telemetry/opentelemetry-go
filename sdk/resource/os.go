@@ -18,6 +18,7 @@ import (
 	"context"
 	"strings"
 
+	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
@@ -43,9 +44,32 @@ type osDescriptionDetector struct{}
 func (osTypeDetector) Detect(ctx context.Context) (*Resource, error) {
 	osType := runtimeOS()
 
+	// the elements in this map are the intersection between
+	// available GOOS values and semconv OS types
+	osTypeAttributeMap := map[string]attribute.KeyValue{
+		"darwin":    semconv.OSTypeDarwin,
+		"dragonfly": semconv.OSTypeDragonflyBSD,
+		"freebsd":   semconv.OSTypeFreeBSD,
+		"linux":     semconv.OSTypeLinux,
+		"netbsd":    semconv.OSTypeNetBSD,
+		"openbsd":   semconv.OSTypeOpenBSD,
+		"solaris":   semconv.OSTypeSolaris,
+		"windows":   semconv.OSTypeWindows,
+	}
+
+	var osTypeAttribute attribute.KeyValue
+
+	if attr, ok := osTypeAttributeMap[osType]; ok {
+		osTypeAttribute = attr
+	} else {
+		// fallback for new or unrecognized GOOS, the spec
+		// allows for custom values if none applies
+		osTypeAttribute = semconv.OSTypeKey.String(strings.ToLower(osType))
+	}
+
 	return NewWithAttributes(
 		semconv.SchemaURL,
-		semconv.OSTypeKey.String(strings.ToLower(osType)),
+		osTypeAttribute,
 	), nil
 }
 
