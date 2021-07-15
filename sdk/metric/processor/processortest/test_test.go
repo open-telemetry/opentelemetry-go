@@ -30,11 +30,8 @@ import (
 
 func generateTestData(proc export.Processor) {
 	ctx := context.Background()
-	accum := metricsdk.NewAccumulator(
-		proc,
-		resource.NewSchemaless(attribute.String("R", "V")),
-	)
-	meter := metric.WrapMeterImpl(accum, "testing")
+	accum := metricsdk.NewAccumulator(proc)
+	meter := metric.WrapMeterImpl(accum)
 
 	counter := metric.Must(meter).NewFloat64Counter("counter.sum")
 
@@ -58,6 +55,7 @@ func TestProcessorTesting(t *testing.T) {
 		processorTest.AggregatorSelector(),
 		attribute.DefaultEncoder(),
 	)
+	res := resource.NewSchemaless(attribute.String("R", "V"))
 	checkpointer := processorTest.Checkpointer(testProc)
 
 	generateTestData(checkpointer)
@@ -69,16 +67,19 @@ func TestProcessorTesting(t *testing.T) {
 		"observer.sum/K1=V2/R=V": 11,
 	}
 
-	// Validate the processor's checkpoint directly.
-	require.EqualValues(t, expect, testProc.Values())
-
-	// Export the data and validate it again.
+	// Export the data and validate it.
 	exporter := processorTest.New(
 		export.StatelessExportKindSelector(),
 		attribute.DefaultEncoder(),
 	)
 
-	err := exporter.Export(context.Background(), checkpointer.CheckpointSet())
+	err := exporter.Export(
+		context.Background(),
+		export.SourceData{
+			Resource: res,
+		},
+		checkpointer.CheckpointSet(),
+	)
 	require.NoError(t, err)
 	require.EqualValues(t, expect, exporter.Values())
 }

@@ -296,7 +296,12 @@ func (c *Controller) export1(ctx context.Context, ac *accumulatorCheckpointer) e
 		defer cancel()
 	}
 
-	return c.exporter.Export(ctx, ckpt)
+	return c.exporter.Export(ctx, export.SourceData{
+		Resource:               c.resource,
+		InstrumentationName:    ac.instrumentationName,
+		InstrumentationVersion: ac.instrumentationVersion,
+		SchemaURL:              ac.schemaURL,
+	}, ckpt)
 }
 
 // ForEach gives the caller read-locked access to the current

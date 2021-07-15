@@ -215,7 +215,6 @@ func (o *Output) ForEach(_ export.ExportKindSelector, ff func(export.Record) err
 		if err := ff(export.NewRecord(
 			key.desc,
 			value.labels,
-			value.resource,
 			value.aggregator.Aggregation(),
 			time.Time{},
 			time.Time{},
@@ -226,15 +225,22 @@ func (o *Output) ForEach(_ export.ExportKindSelector, ff func(export.Record) err
 	return nil
 }
 
-// AddRecord adds a string representation of the exported metric data
+func (o *Output) AddRecord(rec export.Record) error {
+	return o.AddRecordWithSource(rec, export.SourceData{
+		Resource: resource.Empty(),
+	})
+}
+
+// AddRecordWithResource adds a string representation of the exported metric data
 // to a map for use in testing.  The value taken from the record is
 // either the Sum() or the LastValue() of its Aggregation(), whichever
 // is defined.  Record timestamps are ignored.
-func (o *Output) AddRecord(rec export.Record) error {
+func (o *Output) AddRecordWithSource(rec export.Record, src export.SourceData) error {
+	// Note: instrumentation name, version, and schemaURL are not used.
 	key := mapKey{
 		desc:     rec.Descriptor(),
 		labels:   rec.Labels().Equivalent(),
-		resource: rec.Resource().Equivalent(),
+		resource: src.Resource.Equivalent(),
 	}
 	if _, ok := o.m[key]; !ok {
 		var agg export.Aggregator
@@ -242,7 +248,7 @@ func (o *Output) AddRecord(rec export.Record) error {
 		o.m[key] = mapValue{
 			aggregator: agg,
 			labels:     rec.Labels(),
-			resource:   rec.Resource(),
+			resource:   src.Resource,
 		}
 	}
 	return o.m[key].aggregator.Merge(rec.Aggregation().(export.Aggregator), rec.Descriptor())
@@ -301,7 +307,6 @@ func (o *Output) AddAccumulation(acc export.Accumulation) error {
 		export.NewRecord(
 			acc.Descriptor(),
 			acc.Labels(),
-			acc.Resource(),
 			acc.Aggregator().Aggregation(),
 			time.Time{},
 			time.Time{},
@@ -325,7 +330,9 @@ func New(selector export.ExportKindSelector, encoder attribute.Encoder) *Exporte
 	}
 }
 
-func (e *Exporter) Export(_ context.Context, ckpt export.CheckpointSet) error {
+var _ export.Exporter = &Exporter{}
+
+func (e *Exporter) Export(_ context.Context, sourceData export.SourceData, ckpt export.CheckpointSet) error {
 	e.output.Lock()
 	defer e.output.Unlock()
 	e.exportCount++
@@ -335,7 +342,7 @@ func (e *Exporter) Export(_ context.Context, ckpt export.CheckpointSet) error {
 				return err
 			}
 		}
-		return e.output.AddRecord(r)
+		return e.output.AddRecordWithSource(r, sourceData)
 	})
 }
 

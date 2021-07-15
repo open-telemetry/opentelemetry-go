@@ -432,7 +432,7 @@ func (m *Accumulator) checkpointRecord(r *record) int {
 		return 0
 	}
 
-	a := export.NewAccumulation(&r.inst.descriptor, r.labels, nil /*@@@*/, r.checkpoint)
+	a := export.NewAccumulation(&r.inst.descriptor, r.labels, r.checkpoint)
 	err = m.processor.Process(a)
 	if err != nil {
 		otel.Handle(err)
@@ -450,7 +450,7 @@ func (m *Accumulator) checkpointAsync(a *asyncInstrument) int {
 		epochDiff := m.currentEpoch - lrec.observedEpoch
 		if epochDiff == 0 {
 			if lrec.observed != nil {
-				a := export.NewAccumulation(&a.descriptor, lrec.labels, nil /*@@@*/, lrec.observed)
+				a := export.NewAccumulation(&a.descriptor, lrec.labels, lrec.observed)
 				err := m.processor.Process(a)
 				if err != nil {
 					otel.Handle(err)

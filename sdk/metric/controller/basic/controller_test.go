@@ -75,29 +75,38 @@ func TestControllerUsesResource(t *testing.T) {
 		{
 			name:    "explicitly empty resource",
 			options: []controller.Option{controller.WithResource(resource.Empty())},
-			wanted:  resource.Environment().Encoded(attribute.DefaultEncoder())},
+			wanted:  resource.Environment().Encoded(attribute.DefaultEncoder()),
+		},
 		{
 			name:    "uses default if no resource option",
 			options: nil,
-			wanted:  resource.Default().Encoded(attribute.DefaultEncoder())},
+			wanted:  resource.Default().Encoded(attribute.DefaultEncoder()),
+		},
 		{
 			name:    "explicit resource",
 			options: []controller.Option{controller.WithResource(resource.NewSchemaless(attribute.String("R", "S")))},
-			wanted:  "R=S,T=U,key=value"},
+			wanted:  "R=S,T=U,key=value",
+		},
 		{
 			name: "last resource wins",
 			options: []controller.Option{
 				controller.WithResource(resource.Default()),
 				controller.WithResource(resource.NewSchemaless(attribute.String("R", "S"))),
 			},
-			wanted: "R=S,T=U,key=value"},
+			wanted: "R=S,T=U,key=value",
+		},
 		{
 			name:    "overlapping attributes with environment resource",
 			options: []controller.Option{controller.WithResource(resource.NewSchemaless(attribute.String("T", "V")))},
-			wanted:  "T=V,key=value"},
+			wanted:  "T=V,key=value",
+		},
 	}
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
+			exporter := processortest.New(
+				export.CumulativeExportKindSelector(),
+				attribute.DefaultEncoder(),
+			)
 			cont := controller.New(
 				func() export.Checkpointer {
 					return processor.New(
@@ -105,20 +114,21 @@ func TestControllerUsesResource(t *testing.T) {
 						export.CumulativeExportKindSelector(),
 					)
 				},
-				c.options...,
+				append(c.options, controller.WithExporter(exporter))...,
 			)
 			prov := cont.MeterProvider()
 
-			ctr := metric.Must(prov.Meter("named")).NewFloat64Counter("calls.sum")
+			ctr := metric.Must(prov.Meter("uses")).NewFloat64Counter("calls.sum")
 			ctr.Add(context.Background(), 1.)
 
 			// Collect once
-			require.NoError(t, cont.Collect(context.Background()))
+			require.NoError(t, cont.Start(context.Background()))
+			require.NoError(t, cont.Stop(context.Background()))
 
 			expect := map[string]float64{
 				"calls.sum//" + c.wanted: 1.,
 			}
-			require.EqualValues(t, expect, getMap(t, cont))
+			require.EqualValues(t, expect, exporter.Values())
 		})
 	}
 }
@@ -276,9 +286,9 @@ func newBlockingExporter() *blockingExporter {
 	}
 }
 
-func (b *blockingExporter) Export(ctx context.Context, output export.CheckpointSet) error {
+func (b *blockingExporter) Export(ctx context.Context, sourceData export.SourceData, output export.CheckpointSet) error {
 	var err error
-	_ = b.exporter.Export(ctx, output)
+	_ = b.exporter.Export(ctx, sourceData, output)
 	if b.calls == 0 {
 		// timeout once
 		<-ctx.Done()

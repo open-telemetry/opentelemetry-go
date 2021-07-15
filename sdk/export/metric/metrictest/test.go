@@ -103,7 +103,7 @@ func (p *CheckpointSet) Add(desc *metric.Descriptor, newAgg export.Aggregator, l
 		return record.Aggregation().(export.Aggregator), false
 	}
 
-	rec := export.NewRecord(desc, &elabels, p.resource, newAgg.Aggregation(), time.Time{}, time.Time{})
+	rec := export.NewRecord(desc, &elabels, newAgg.Aggregation(), time.Time{}, time.Time{})
 	p.updates = append(p.updates, rec)
 	p.records[key] = rec
 	return newAgg, true

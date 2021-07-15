@@ -31,11 +31,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 var Must = metric.Must
-var testResource = resource.NewSchemaless(attribute.String("R", "V"))
 
 type handler struct {
 	sync.Mutex
@@ -95,11 +93,8 @@ func newSDK(t *testing.T) (metric.Meter, *metricsdk.Accumulator, *correctnessPro
 		t:            t,
 		testSelector: &testSelector{selector: processortest.AggregatorSelector()},
 	}
-	accum := metricsdk.NewAccumulator(
-		processor,
-		testResource,
-	)
-	meter := metric.WrapMeterImpl(accum, "test")
+	accum := metricsdk.NewAccumulator(processor)
+	meter := metric.WrapMeterImpl(accum)
 	return meter, accum, processor
 }
 
@@ -353,20 +348,20 @@ func TestObserverCollection(t *testing.T) {
 		}
 		mult := float64(mult)
 		require.EqualValues(t, map[string]float64{
-			"float.valueobserver.lastvalue/A=B/R=V": -mult,
-			"float.valueobserver.lastvalue/C=D/R=V": -mult,
-			"int.valueobserver.lastvalue//R=V":      mult,
-			"int.valueobserver.lastvalue/A=B/R=V":   mult,
+			"float.valueobserver.lastvalue/A=B/": -mult,
+			"float.valueobserver.lastvalue/C=D/": -mult,
+			"int.valueobserver.lastvalue//":      mult,
+			"int.valueobserver.lastvalue/A=B/":   mult,
 
-			"float.sumobserver.sum/A=B/R=V": 2 * mult,
-			"float.sumobserver.sum/C=D/R=V": mult,
-			"int.sumobserver.sum//R=V":      mult,
-			"int.sumobserver.sum/A=B/R=V":   mult,
+			"float.sumobserver.sum/A=B/": 2 * mult,
+			"float.sumobserver.sum/C=D/": mult,
+			"int.sumobserver.sum//":      mult,
+			"int.sumobserver.sum/A=B/":   mult,
 
-			"float.updownsumobserver.sum/A=B/R=V": -2 * mult,
-			"float.updownsumobserver.sum/C=D/R=V": mult,
-			"int.updownsumobserver.sum//R=V":      -mult,
-			"int.updownsumobserver.sum/A=B/R=V":   mult,
+			"float.updownsumobserver.sum/A=B/": -2 * mult,
+			"float.updownsumobserver.sum/C=D/": mult,
+			"int.updownsumobserver.sum//":      -mult,
+			"int.updownsumobserver.sum/A=B/":   mult,
 		}, out.Map())
 	}
 }
@@ -457,20 +452,20 @@ func TestObserverBatch(t *testing.T) {
 		require.NoError(t, out.AddAccumulation(rec))
 	}
 	require.EqualValues(t, map[string]float64{
-		"float.sumobserver.sum//R=V":    1.1,
-		"float.sumobserver.sum/A=B/R=V": 1000,
-		"int.sumobserver.sum//R=V":      10,
-		"int.sumobserver.sum/A=B/R=V":   100,
+		"float.sumobserver.sum//":    1.1,
+		"float.sumobserver.sum/A=B/": 1000,
+		"int.sumobserver.sum//":      10,
+		"int.sumobserver.sum/A=B/":   100,
 
-		"int.updownsumobserver.sum/A=B/R=V":   -100,
-		"float.updownsumobserver.sum/A=B/R=V": -1000,
-		"int.updownsumobserver.sum//R=V":      10,
-		"float.updownsumobserver.sum/C=D/R=V": -1,
+		"int.updownsumobserver.sum/A=B/":   -100,
+		"float.updownsumobserver.sum/A=B/": -1000,
+		"int.updownsumobserver.sum//":      10,
+		"float.updownsumobserver.sum/C=D/": -1,
 
-		"float.valueobserver.lastvalue/A=B/R=V": -1,
-		"float.valueobserver.lastvalue/C=D/R=V": -1,
-		"int.valueobserver.lastvalue//R=V":      1,
-		"int.valueobserver.lastvalue/A=B/R=V":   1,
+		"float.valueobserver.lastvalue/A=B/": -1,
+		"float.valueobserver.lastvalue/C=D/": -1,
+		"int.valueobserver.lastvalue//":      1,
+		"int.valueobserver.lastvalue/A=B/":   1,
 	}, out.Map())
 }
 
@@ -502,10 +497,10 @@ func TestRecordBatch(t *testing.T) {
 		require.NoError(t, out.AddAccumulation(rec))
 	}
 	require.EqualValues(t, map[string]float64{
-		"int64.sum/A=B,C=D/R=V":     1,
-		"float64.sum/A=B,C=D/R=V":   2,
-		"int64.exact/A=B,C=D/R=V":   3,
-		"float64.exact/A=B,C=D/R=V": 4,
+		"int64.sum/A=B,C=D/":     1,
+		"float64.sum/A=B,C=D/":   2,
+		"int64.exact/A=B,C=D/":   3,
+		"float64.exact/A=B,C=D/": 4,
 	}, out.Map())
 }
 
@@ -584,7 +579,7 @@ func TestSyncInAsync(t *testing.T) {
 		require.NoError(t, out.AddAccumulation(rec))
 	}
 	require.EqualValues(t, map[string]float64{
-		"counter.sum//R=V":        100,
-		"observer.lastvalue//R=V": 10,
+		"counter.sum//":        100,
+		"observer.lastvalue//": 10,
 	}, out.Map())
 }

@@ -77,6 +77,8 @@ func TestRangeTest(t *testing.T) {
 				"name",
 				metric.CounterInstrumentKind,
 				nkind,
+				"",
+				"",
 			)
 			testRangeNegative(t, &desc)
 		})
@@ -95,6 +97,8 @@ func TestNaNTest(t *testing.T) {
 					"name",
 					mkind,
 					nkind,
+					"",
+					"",
 				)
 				testRangeNaN(t, &desc)
 			}

@@ -24,7 +24,6 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type (
@@ -49,15 +48,11 @@ type (
 		// https://github.com/open-telemetry/opentelemetry-go/issues/862.
 		descriptor *metric.Descriptor
 		distinct   attribute.Distinct
-		resource   attribute.Distinct
 	}
 
 	stateValue struct {
 		// labels corresponds to the stateKey.distinct field.
 		labels *attribute.Set
-
-		// resource corresponds to the stateKey.resource field.
-		resource *resource.Resource
 
 		// updated indicates the last sequence number when this value had
 		// Process() called by an accumulator.
@@ -157,7 +152,6 @@ func (b *Processor) Process(accum export.Accumulation) error {
 	key := stateKey{
 		descriptor: desc,
 		distinct:   accum.Labels().Equivalent(),
-		resource:   accum.Resource().Equivalent(),
 	}
 	agg := accum.Aggregator()
 
@@ -168,7 +162,6 @@ func (b *Processor) Process(accum export.Accumulation) error {
 
 		newValue := &stateValue{
 			labels:   accum.Labels(),
-			resource: accum.Resource(),
 			updated:  b.state.finishedCollection,
 			stateful: stateful,
 			current:  agg,
@@ -369,7 +362,6 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 		if err := f(export.NewRecord(
 			key.descriptor,
 			value.labels,
-			value.resource,
 			agg,
 			start,
 			b.intervalEnd,
