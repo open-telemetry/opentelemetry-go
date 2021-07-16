@@ -151,7 +151,13 @@ func TestRetry(t *testing.T) {
 	client := otlptracehttp.NewClient(
 		otlptracehttp.WithEndpoint(mc.Endpoint()),
 		otlptracehttp.WithInsecure(),
-		otlptracehttp.WithMaxAttempts(len(statuses)+1),
+		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
+			Enabled:         true,
+			InitialInterval: 1 * time.Nanosecond,
+			MaxInterval:     1 * time.Nanosecond,
+			// Never stop retry of retry-able status.
+			MaxElapsedTime: 0,
+		}),
 	)
 	ctx := context.Background()
 	exporter, err := otlptrace.New(ctx, client)
