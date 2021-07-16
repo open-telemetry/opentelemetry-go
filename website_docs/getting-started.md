@@ -15,7 +15,7 @@ To get started with this guide, create a new directory and add a new file named 
 
 To install the necessary prerequisites for OpenTelemetry, you'll want to run the following command in the directory with your `go.mod`:
 
-`go get go.opentelemetry.io/otel@v1.0.0-RC1 go.opentelemetry.io/otel/sdk@v1.0.0-RC1 go.opentelemetry.io/otel/exporters/stdout/stdouttrace@v1.0.0-RC1`
+`go get go.opentelemetry.io/otel@v1.0.0-RC1 go.opentelemetry.io/otel/sdk@v1.0.0-RC1 go.opentelemetry.io/otel/exporters/stdout/stdouttrace@v1.0.0-RC1 go.opentelemetry.io/otel/trace@v1.0.0-RC1`
 
 If you wish to include the experimental metrics support you will need to include a few additional modules:
 
@@ -41,6 +41,7 @@ import (
 
 	// For experimental metrics support, also include:
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
@@ -131,7 +132,7 @@ Setting up global options uses the `otel` package - add these options to your `m
 
 ```go
 	otel.SetTracerProvider(tp)
-	otel.SetMeterProvider(pusher.MeterProvider())
+	global.SetMeterProvider(pusher.MeterProvider())
 	propagator := propagation.NewCompositeTextMapPropagator(propagation.Baggage{}, propagation.TraceContext{})
 	otel.SetTextMapPropagator(propagator)
 ```
@@ -192,8 +193,8 @@ Let's put the concepts we've just covered together, and create a trace and some 
 		span.SetAttributes(anotherKey.String("yes"))
 
 		meter.RecordBatch(
+			ctx,
 			commonAttributes,
-
 			valueRecorder.Measurement(2.0),
 		)
 
