@@ -152,7 +152,7 @@ To set up some metric instruments, add the following code to your `main.go` file
 
 	commonAttributes := []attribute.KeyValue{lemonsKey.Int(10), attribute.String("A", "1"), attribute.String("B", "2"), attribute.String("C", "3")}
 
-	meter := otel.Meter("ex.com/basic")
+	meter := global.Meter("ex.com/basic")
 
 	observerCallback := func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(1, commonAttributes...)
