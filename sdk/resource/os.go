@@ -44,28 +44,7 @@ type osDescriptionDetector struct{}
 func (osTypeDetector) Detect(ctx context.Context) (*Resource, error) {
 	osType := runtimeOS()
 
-	// the elements in this map are the intersection between
-	// available GOOS values and semconv OS types
-	osTypeAttributeMap := map[string]attribute.KeyValue{
-		"darwin":    semconv.OSTypeDarwin,
-		"dragonfly": semconv.OSTypeDragonflyBSD,
-		"freebsd":   semconv.OSTypeFreeBSD,
-		"linux":     semconv.OSTypeLinux,
-		"netbsd":    semconv.OSTypeNetBSD,
-		"openbsd":   semconv.OSTypeOpenBSD,
-		"solaris":   semconv.OSTypeSolaris,
-		"windows":   semconv.OSTypeWindows,
-	}
-
-	var osTypeAttribute attribute.KeyValue
-
-	if attr, ok := osTypeAttributeMap[osType]; ok {
-		osTypeAttribute = attr
-	} else {
-		// fallback for new or unrecognized GOOS, the spec
-		// allows for custom values if none applies
-		osTypeAttribute = semconv.OSTypeKey.String(strings.ToLower(osType))
-	}
+	osTypeAttribute := mapRuntimeOSToSemconvOSType(osType)
 
 	return NewWithAttributes(
 		semconv.SchemaURL,
@@ -107,4 +86,33 @@ func WithOS() Option {
 		osTypeDetector{},
 		osDescriptionDetector{},
 	)
+}
+
+// mapRuntimeOSToSemconvOSType translates the OS name as provided by the Go runtime
+// into an OS type attribute with the corresponding value defined by the semantic
+// conventions. In case the provided OS name isn't mapped, it's transformed to lowercase
+// and used as the value for the returned OS type attribute.
+func mapRuntimeOSToSemconvOSType(osType string) attribute.KeyValue {
+	// the elements in this map are the intersection between
+	// available GOOS values and defined semconv OS types
+	osTypeAttributeMap := map[string]attribute.KeyValue{
+		"darwin":    semconv.OSTypeDarwin,
+		"dragonfly": semconv.OSTypeDragonflyBSD,
+		"freebsd":   semconv.OSTypeFreeBSD,
+		"linux":     semconv.OSTypeLinux,
+		"netbsd":    semconv.OSTypeNetBSD,
+		"openbsd":   semconv.OSTypeOpenBSD,
+		"solaris":   semconv.OSTypeSolaris,
+		"windows":   semconv.OSTypeWindows,
+	}
+
+	var osTypeAttribute attribute.KeyValue
+
+	if attr, ok := osTypeAttributeMap[osType]; ok {
+		osTypeAttribute = attr
+	} else {
+		osTypeAttribute = semconv.OSTypeKey.String(strings.ToLower(osType))
+	}
+
+	return osTypeAttribute
 }
