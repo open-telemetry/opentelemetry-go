@@ -152,8 +152,8 @@ Each non-example Go Module should have its own `README.md` containing:
 - Brief description.
 - Installation instructions (and requirements if applicable).
 - Hyperlink to an example. Depending on the component the example can be:
-  - A `example_test.go` like [here](exporters/stdout/stdouttrace/example_test.go).
-  - An sample Go application with if its own `README.md` like [here](example/zipkin).
+  - An `example_test.go` like [here](exporters/stdout/stdouttrace/example_test.go).
+  - A sample Go application with its own `README.md`, like [here](example/zipkin).
 - Additional documentation sections such us:
   - Configuration,
   - Contributing,
