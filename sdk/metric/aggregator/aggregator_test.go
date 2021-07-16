@@ -75,7 +75,7 @@ func TestRangeTest(t *testing.T) {
 		t.Run(nkind.String(), func(t *testing.T) {
 			desc := metric.NewDescriptor(
 				"name",
-				metric.CounterInstrumentKind,
+				metric.SyncCounterInstrumentKind,
 				nkind,
 			)
 			testRangeNegative(t, &desc)
@@ -87,9 +87,9 @@ func TestNaNTest(t *testing.T) {
 	for _, nkind := range []number.Kind{number.Float64Kind, number.Int64Kind} {
 		t.Run(nkind.String(), func(t *testing.T) {
 			for _, mkind := range []metric.InstrumentKind{
-				metric.CounterInstrumentKind,
-				metric.ValueRecorderInstrumentKind,
-				metric.ValueObserverInstrumentKind,
+				metric.SyncCounterInstrumentKind,
+				metric.SyncHistogramInstrumentKind,
+				metric.AsyncGaugeInstrumentKind,
 			} {
 				desc := metric.NewDescriptor(
 					"name",

@@ -381,12 +381,12 @@ func (kind ExportKind) Includes(has ExportKind) bool {
 // memory to export correctly.
 func (kind ExportKind) MemoryRequired(mkind metric.InstrumentKind) bool {
 	switch mkind {
-	case metric.ValueRecorderInstrumentKind, metric.ValueObserverInstrumentKind,
-		metric.CounterInstrumentKind, metric.UpDownCounterInstrumentKind:
+	case metric.SyncHistogramInstrumentKind, metric.AsyncGaugeInstrumentKind,
+		metric.SyncCounterInstrumentKind, metric.SyncUpDownCounterInstrumentKind:
 		// Delta-oriented instruments:
 		return kind.Includes(CumulativeExportKind)
 
-	case metric.SumObserverInstrumentKind, metric.UpDownSumObserverInstrumentKind:
+	case metric.AsyncCounterInstrumentKind, metric.AsyncUpDownCounterInstrumentKind:
 		// Cumulative-oriented instruments:
 		return kind.Includes(DeltaExportKind)
 	}

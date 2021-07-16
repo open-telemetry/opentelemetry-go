@@ -66,7 +66,7 @@ func sumOf(samples []aggregation.Point, k number.Kind) number.Number {
 }
 
 func (ut *updateTest) run(t *testing.T, profile aggregatortest.Profile) {
-	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
+	descriptor := aggregatortest.NewAggregatorTest(metric.SyncHistogramInstrumentKind, profile.NumberKind)
 	agg, ckpt := new2()
 
 	all := aggregatortest.NewNumbers(profile.NumberKind)
@@ -128,7 +128,7 @@ func advance() {
 }
 
 func (mt *mergeTest) run(t *testing.T, profile aggregatortest.Profile) {
-	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
+	descriptor := aggregatortest.NewAggregatorTest(metric.SyncHistogramInstrumentKind, profile.NumberKind)
 	agg1, agg2, ckpt1, ckpt2 := new4()
 
 	all := aggregatortest.NewNumbers(profile.NumberKind)
@@ -214,7 +214,7 @@ func TestExactErrors(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg, ckpt := new2()
 
-		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(metric.SyncHistogramInstrumentKind, profile.NumberKind)
 
 		advance()
 		aggregatortest.CheckedUpdate(t, agg, number.Number(0), descriptor)
@@ -232,7 +232,7 @@ func TestExactErrors(t *testing.T) {
 }
 
 func TestExactFloat64(t *testing.T) {
-	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, number.Float64Kind)
+	descriptor := aggregatortest.NewAggregatorTest(metric.SyncHistogramInstrumentKind, number.Float64Kind)
 
 	fpsf := func(sign int) []float64 {
 		// Check behavior of a bunch of odd floating
@@ -310,7 +310,7 @@ func TestExactFloat64(t *testing.T) {
 func TestSynchronizedMoveReset(t *testing.T) {
 	aggregatortest.SynchronizedMoveResetTest(
 		t,
-		metric.ValueRecorderInstrumentKind,
+		metric.SyncHistogramInstrumentKind,
 		func(desc *metric.Descriptor) export.Aggregator {
 			return &New(1)[0]
 		},
@@ -321,7 +321,7 @@ func TestMergeBehavior(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		for _, forward := range []bool{false, true} {
 			t.Run(fmt.Sprint("Forward=", forward), func(t *testing.T) {
-				descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
+				descriptor := aggregatortest.NewAggregatorTest(metric.SyncHistogramInstrumentKind, profile.NumberKind)
 				agg1, agg2, ckpt, _ := new4()
 
 				all := aggregatortest.NewNumbers(profile.NumberKind)

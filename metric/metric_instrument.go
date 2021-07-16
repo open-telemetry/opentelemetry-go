@@ -31,27 +31,27 @@ var ErrSDKReturnedNilImpl = errors.New("SDK returned a nil implementation")
 type InstrumentKind int8
 
 const (
-	// ValueRecorderInstrumentKind indicates a ValueRecorder instrument.
-	ValueRecorderInstrumentKind InstrumentKind = iota
-	// ValueObserverInstrumentKind indicates an ValueObserver instrument.
-	ValueObserverInstrumentKind
+	// SyncHistogramInstrumentKind indicates a ValueRecorder instrument.
+	SyncHistogramInstrumentKind InstrumentKind = iota
+	// AsyncGaugeInstrumentKind indicates an ValueObserver instrument.
+	AsyncGaugeInstrumentKind
 
-	// CounterInstrumentKind indicates a Counter instrument.
-	CounterInstrumentKind
-	// UpDownCounterInstrumentKind indicates a UpDownCounter instrument.
-	UpDownCounterInstrumentKind
+	// SyncCounterInstrumentKind indicates a Counter instrument.
+	SyncCounterInstrumentKind
+	// SyncUpDownCounterInstrumentKind indicates a UpDownCounter instrument.
+	SyncUpDownCounterInstrumentKind
 
-	// SumObserverInstrumentKind indicates a SumObserver instrument.
-	SumObserverInstrumentKind
-	// UpDownSumObserverInstrumentKind indicates a UpDownSumObserver
+	// AsyncCounterInstrumentKind indicates a SumObserver instrument.
+	AsyncCounterInstrumentKind
+	// AsyncUpDownCounterInstrumentKind indicates a UpDownSumObserver
 	// instrument.
-	UpDownSumObserverInstrumentKind
+	AsyncUpDownCounterInstrumentKind
 )
 
 // Synchronous returns whether this is a synchronous kind of instrument.
 func (k InstrumentKind) Synchronous() bool {
 	switch k {
-	case CounterInstrumentKind, UpDownCounterInstrumentKind, ValueRecorderInstrumentKind:
+	case SyncCounterInstrumentKind, SyncUpDownCounterInstrumentKind, SyncHistogramInstrumentKind:
 		return true
 	}
 	return false
@@ -65,7 +65,7 @@ func (k InstrumentKind) Asynchronous() bool {
 // Adding returns whether this kind of instrument adds its inputs (as opposed to Grouping).
 func (k InstrumentKind) Adding() bool {
 	switch k {
-	case CounterInstrumentKind, UpDownCounterInstrumentKind, SumObserverInstrumentKind, UpDownSumObserverInstrumentKind:
+	case SyncCounterInstrumentKind, SyncUpDownCounterInstrumentKind, AsyncCounterInstrumentKind, AsyncUpDownCounterInstrumentKind:
 		return true
 	}
 	return false
@@ -79,7 +79,7 @@ func (k InstrumentKind) Grouping() bool {
 // Monotonic returns whether this kind of instrument exposes a non-decreasing sum.
 func (k InstrumentKind) Monotonic() bool {
 	switch k {
-	case CounterInstrumentKind, SumObserverInstrumentKind:
+	case SyncCounterInstrumentKind, AsyncCounterInstrumentKind:
 		return true
 	}
 	return false

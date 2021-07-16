@@ -122,7 +122,7 @@ func TestMinMaxSumCountValue(t *testing.T) {
 }
 
 func TestMinMaxSumCountDatapoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Int64Kind)
+	desc := metric.NewDescriptor("", metric.SyncHistogramInstrumentKind, number.Int64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
 	mmsc, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &desc))
 
@@ -177,7 +177,7 @@ func TestMinMaxSumCountPropagatesErrors(t *testing.T) {
 }
 
 func TestSumIntDataPoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Int64Kind)
+	desc := metric.NewDescriptor("", metric.SyncHistogramInstrumentKind, number.Int64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
 	s, ckpt := metrictest.Unslice2(sumAgg.New(2))
 	assert.NoError(t, s.Update(context.Background(), number.Number(1), &desc))
@@ -216,7 +216,7 @@ func TestSumIntDataPoints(t *testing.T) {
 }
 
 func TestSumFloatDataPoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Float64Kind)
+	desc := metric.NewDescriptor("", metric.SyncHistogramInstrumentKind, number.Float64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
 	s, ckpt := metrictest.Unslice2(sumAgg.New(2))
 	assert.NoError(t, s.Update(context.Background(), number.NewFloat64Number(1), &desc))
@@ -254,7 +254,7 @@ func TestSumFloatDataPoints(t *testing.T) {
 }
 
 func TestLastValueIntDataPoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Int64Kind)
+	desc := metric.NewDescriptor("", metric.SyncHistogramInstrumentKind, number.Int64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
 	s, ckpt := metrictest.Unslice2(lvAgg.New(2))
 	assert.NoError(t, s.Update(context.Background(), number.Number(100), &desc))
@@ -289,7 +289,7 @@ func TestLastValueIntDataPoints(t *testing.T) {
 }
 
 func TestExactIntDataPoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Int64Kind)
+	desc := metric.NewDescriptor("", metric.SyncHistogramInstrumentKind, number.Int64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
 	e, ckpt := metrictest.Unslice2(arrAgg.New(2))
 	assert.NoError(t, e.Update(context.Background(), number.Number(100), &desc))
@@ -324,7 +324,7 @@ func TestExactIntDataPoints(t *testing.T) {
 }
 
 func TestExactFloatDataPoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Float64Kind)
+	desc := metric.NewDescriptor("", metric.SyncHistogramInstrumentKind, number.Float64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
 	e, ckpt := metrictest.Unslice2(arrAgg.New(2))
 	assert.NoError(t, e.Update(context.Background(), number.NewFloat64Number(100), &desc))
@@ -359,7 +359,7 @@ func TestExactFloatDataPoints(t *testing.T) {
 }
 
 func TestSumErrUnknownValueType(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Kind(-1))
+	desc := metric.NewDescriptor("", metric.SyncHistogramInstrumentKind, number.Kind(-1))
 	labels := attribute.NewSet()
 	s := &sumAgg.New(1)[0]
 	record := export.NewRecord(&desc, &labels, nil, s, intervalStart, intervalEnd)
@@ -444,7 +444,7 @@ var _ aggregation.MinMaxSumCount = &testErrMinMaxSumCount{}
 
 func TestRecordAggregatorIncompatibleErrors(t *testing.T) {
 	makeMpb := func(kind aggregation.Kind, agg aggregation.Aggregation) (*metricpb.Metric, error) {
-		desc := metric.NewDescriptor("things", metric.CounterInstrumentKind, number.Int64Kind)
+		desc := metric.NewDescriptor("things", metric.SyncCounterInstrumentKind, number.Int64Kind)
 		labels := attribute.NewSet()
 		res := resource.Empty()
 		test := &testAgg{
@@ -481,7 +481,7 @@ func TestRecordAggregatorIncompatibleErrors(t *testing.T) {
 
 func TestRecordAggregatorUnexpectedErrors(t *testing.T) {
 	makeMpb := func(kind aggregation.Kind, agg aggregation.Aggregation) (*metricpb.Metric, error) {
-		desc := metric.NewDescriptor("things", metric.CounterInstrumentKind, number.Int64Kind)
+		desc := metric.NewDescriptor("things", metric.SyncCounterInstrumentKind, number.Int64Kind)
 		labels := attribute.NewSet()
 		res := resource.Empty()
 		return Record(export.CumulativeExportKindSelector(), export.NewRecord(&desc, &labels, res, agg, intervalStart, intervalEnd))

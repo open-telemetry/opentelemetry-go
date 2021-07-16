@@ -30,15 +30,15 @@ func TestExportKindIncludes(t *testing.T) {
 }
 
 var deltaMemoryKinds = []metric.InstrumentKind{
-	metric.SumObserverInstrumentKind,
-	metric.UpDownSumObserverInstrumentKind,
+	metric.AsyncCounterInstrumentKind,
+	metric.AsyncUpDownCounterInstrumentKind,
 }
 
 var cumulativeMemoryKinds = []metric.InstrumentKind{
-	metric.ValueRecorderInstrumentKind,
-	metric.ValueObserverInstrumentKind,
-	metric.CounterInstrumentKind,
-	metric.UpDownCounterInstrumentKind,
+	metric.SyncHistogramInstrumentKind,
+	metric.AsyncGaugeInstrumentKind,
+	metric.SyncCounterInstrumentKind,
+	metric.SyncUpDownCounterInstrumentKind,
 }
 
 func TestExportKindMemoryRequired(t *testing.T) {

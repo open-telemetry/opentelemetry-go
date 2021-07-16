@@ -59,7 +59,7 @@ var _ exportmetric.CheckpointSet = OneRecordCheckpointSet{}
 func (OneRecordCheckpointSet) ForEach(kindSelector exportmetric.ExportKindSelector, recordFunc func(exportmetric.Record) error) error {
 	desc := metric.NewDescriptor(
 		"foo",
-		metric.CounterInstrumentKind,
+		metric.SyncCounterInstrumentKind,
 		number.Int64Kind,
 	)
 	res := resource.NewSchemaless(attribute.String("a", "b"))
