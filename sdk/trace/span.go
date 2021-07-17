@@ -27,7 +27,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/internal"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -112,9 +111,6 @@ type span struct {
 	// name is the name of this span.
 	name string
 
-	// startTime is the time at which this span was started.
-	startTime time.Time
-
 	// endTime is the time at which this span was ended. It contains the zero
 	// value of time.Time until the span is ended.
 	endTime time.Time
@@ -154,6 +150,9 @@ type span struct {
 
 	// spanLimits holds the limits to this span.
 	spanLimits SpanLimits
+
+	// stopwatch holds the Stopwatch returned by Clock.Start method
+	stopwatch Stopwatch
 }
 
 var _ trace.Span = &span{}
@@ -175,7 +174,7 @@ func (s *span) IsRecording() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return !s.startTime.IsZero() && s.endTime.IsZero()
+	return !s.startTime().IsZero() && s.endTime.IsZero()
 }
 
 // SetStatus sets the status of the Span in the form of a code and a
@@ -225,9 +224,17 @@ func (s *span) End(options ...trace.SpanEndOption) {
 		return
 	}
 
+	// If the span was not properly started, stopwatch will be nil.
+	// The normal check (IsRecording) happens after end time generation,
+	// so we add a simple check here to make sure end time is generated
+	// as early as possible.
+	if s.stopwatch == nil {
+		return
+	}
+
 	// Store the end time as soon as possible to avoid artificially increasing
 	// the span's duration in case some operation below takes a while.
-	et := internal.MonotonicEndTime(s.startTime)
+	et := s.stopwatch.Started().Add(s.stopwatch.Elapsed())
 
 	// Do relative expensive check now that we have an end time and see if we
 	// need to do any more processing.
@@ -362,7 +369,7 @@ func (s *span) SpanKind() trace.SpanKind {
 func (s *span) StartTime() time.Time {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.startTime
+	return s.startTime()
 }
 
 // EndTime returns the time this span ended. For spans that have not yet
@@ -493,7 +500,7 @@ func (s *span) snapshot() ReadOnlySpan {
 	sd.resource = s.resource
 	sd.spanContext = s.spanContext
 	sd.spanKind = s.spanKind
-	sd.startTime = s.startTime
+	sd.startTime = s.startTime()
 	sd.status = s.status
 	sd.childSpanCount = s.childSpanCount
 
@@ -550,6 +557,13 @@ func (s *span) addChild() {
 }
 
 func (*span) private() {}
+
+func (s *span) startTime() time.Time {
+	if s.stopwatch == nil {
+		return time.Time{}
+	}
+	return s.stopwatch.Started()
+}
 
 func startSpanInternal(ctx context.Context, tr *tracer, name string, o *trace.SpanConfig) *span {
 	span := &span{}
@@ -609,11 +623,11 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, o *trace.Sp
 	}
 
 	startTime := o.Timestamp()
+	var stopwatch = defaultStopwatch(startTime)
 	if startTime.IsZero() {
-		startTime = time.Now()
+		stopwatch = tr.provider.clock.Stopwatch()
 	}
-	span.startTime = startTime
-
+	span.stopwatch = stopwatch
 	span.spanKind = trace.ValidateSpanKind(o.SpanKind())
 	span.name = name
 	span.parent = psc

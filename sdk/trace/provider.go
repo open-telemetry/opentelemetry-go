@@ -21,10 +21,9 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/trace"
-
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -51,6 +50,9 @@ type tracerProviderConfig struct {
 
 	// resource contains attributes representing an entity that produces telemetry.
 	resource *resource.Resource
+
+	// clock is used to provide start/end time for spans
+	clock Clock
 }
 
 type TracerProvider struct {
@@ -61,6 +63,7 @@ type TracerProvider struct {
 	idGenerator    IDGenerator
 	spanLimits     SpanLimits
 	resource       *resource.Resource
+	clock          Clock
 }
 
 var _ trace.TracerProvider = &TracerProvider{}
@@ -90,6 +93,7 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 		idGenerator: o.idGenerator,
 		spanLimits:  o.spanLimits,
 		resource:    o.resource,
+		clock:       o.clock,
 	}
 
 	for _, sp := range o.processors {
@@ -330,6 +334,23 @@ func WithSpanLimits(sl SpanLimits) TracerProviderOption {
 	})
 }
 
+// WithClock returns a TracerProviderOption that will configure the
+// TracerProvider's clock. The configured clock is used by Tracers
+// to generate span start/end time. Clock.Stopwatch should start and
+// return a Stopwatch instance. For Stopwatch implementation,
+// Stopwatch.Started should return the time.Time when the stopwatch
+// started. Stopwatch.Elapsed should return the time.Duration measuring
+// the elapsed time from when the stopwatch started. Its value should be
+// positive to ensure monotonic start/end time of the span.
+//
+// If this option is not used, the TracerProvider will provide the default
+// clock which just calls the time package under the hood.
+func WithClock(clk Clock) TracerProviderOption {
+	return traceProviderOptionFunc(func(cfg *tracerProviderConfig) {
+		cfg.clock = clk
+	})
+}
+
 // ensureValidTracerProviderConfig ensures that given TracerProviderConfig is valid.
 func ensureValidTracerProviderConfig(cfg *tracerProviderConfig) {
 	if cfg.sampler == nil {
@@ -341,5 +362,8 @@ func ensureValidTracerProviderConfig(cfg *tracerProviderConfig) {
 	cfg.spanLimits.ensureDefault()
 	if cfg.resource == nil {
 		cfg.resource = resource.Default()
+	}
+	if cfg.clock == nil {
+		cfg.clock = defaultClock()
 	}
 }

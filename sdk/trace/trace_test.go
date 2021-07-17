@@ -1605,6 +1605,90 @@ func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 	}
 }
 
+type frozenClock struct {
+	now time.Time
+}
+type frozenStopwatch struct {
+	started time.Time
+}
+
+func (f frozenStopwatch) Started() time.Time {
+	return f.started
+}
+func (f frozenStopwatch) Elapsed() time.Duration {
+	return 0
+}
+
+// newFrozenClock returns a clock which stops at time t
+func newFrozenClock(t time.Time) frozenClock {
+	return frozenClock{
+		now: t,
+	}
+}
+
+func (c frozenClock) Stopwatch() Stopwatch {
+	return frozenStopwatch{
+		started: c.now,
+	}
+}
+
+type backwardClock struct{}
+type backwardStopwatch struct {
+	started time.Time
+}
+
+func (b backwardStopwatch) Started() time.Time {
+	return b.started
+}
+
+func (b backwardStopwatch) Elapsed() time.Duration {
+	return -time.Since(b.started)
+}
+
+func (b backwardClock) Stopwatch() Stopwatch {
+	return backwardStopwatch{
+		started: time.Now(),
+	}
+}
+
+func TestCustomClock(t *testing.T) {
+	te := NewTestExporter()
+	tp := NewTracerProvider(WithSyncer(te))
+	tracer := tp.Tracer("custom-clock")
+	now := time.Now()
+	time.Sleep(time.Microsecond * 3)
+	_, span := tracer.Start(context.Background(), "test-original-clock")
+	time.Sleep(time.Microsecond * 3)
+	span.End()
+	got := te.Spans()[0]
+	assert.True(t, now.Before(got.StartTime()))
+	assert.True(t, got.StartTime().Before(got.EndTime()))
+
+	te.Reset()
+
+	tp = NewTracerProvider(WithSyncer(te), WithClock(newFrozenClock(now)))
+	tracer = tp.Tracer("custom-clock")
+	time.Sleep(time.Microsecond * 3)
+	_, span = tracer.Start(context.Background(), "test-frozen-clock")
+	time.Sleep(time.Microsecond * 3)
+	span.End()
+	got = te.Spans()[0]
+	assert.Equal(t, now, got.StartTime())
+	assert.Equal(t, now, got.EndTime())
+
+	te.Reset()
+	tp = NewTracerProvider(WithSyncer(te), WithClock(backwardClock{}))
+	tracer = tp.Tracer("custom-clock")
+	now = time.Now()
+	time.Sleep(time.Microsecond * 3)
+	_, span = tracer.Start(context.Background(), "test-backward-clock")
+	time.Sleep(time.Microsecond * 3)
+	span.End()
+	got = te.Spans()[0]
+	assert.True(t, now.Before(got.StartTime()))
+	assert.True(t, got.StartTime().After(got.EndTime()))
+}
+
 type stateSampler struct {
 	prefix string
 	f      func(trace.TraceState) trace.TraceState
