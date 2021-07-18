@@ -60,13 +60,6 @@ func (o detectorsOption) apply(cfg *config) {
 	cfg.detectors = append(cfg.detectors, o.detectors...)
 }
 
-// WithBuiltinDetectors adds the built detectors to the configured resource.
-func WithBuiltinDetectors() Option {
-	return WithDetectors(telemetrySDK{},
-		host{},
-		fromEnv{})
-}
-
 // WithFromEnv adds attributes from environment variables to the configured resource.
 func WithFromEnv() Option {
 	return WithDetectors(fromEnv{})
@@ -91,4 +84,28 @@ type schemaURLOption string
 
 func (o schemaURLOption) apply(cfg *config) {
 	cfg.schemaURL = string(o)
+}
+
+// WithOS adds all the OS attributes to the configured Resource.
+// See individual WithOS* functions to configure specific attributes.
+func WithOS() Option {
+	return WithDetectors(
+		osTypeDetector{},
+		osDescriptionDetector{},
+	)
+}
+
+// WithProcess adds all the Process attributes to the configured Resource.
+// See individual WithProcess* functions to configure specific attributes.
+func WithProcess() Option {
+	return WithDetectors(
+		processPIDDetector{},
+		processExecutableNameDetector{},
+		processExecutablePathDetector{},
+		processCommandArgsDetector{},
+		processOwnerDetector{},
+		processRuntimeNameDetector{},
+		processRuntimeVersionDetector{},
+		processRuntimeDescriptionDetector{},
+	)
 }

@@ -40,6 +40,7 @@ type (
 	// disable them.
 	host struct{}
 
+	// stringDetector is a Detector that provides information about the
 	stringDetector struct {
 		schemaURL string
 		K         attribute.Key
@@ -78,7 +79,8 @@ func StringDetector(schemaURL string, k attribute.Key, f func() (string, error))
 	return stringDetector{schemaURL: schemaURL, K: k, F: f}
 }
 
-// Detect implements Detector.
+// Detect returns a *Resource that describes the string as a value
+// corresponding to k as well as the specific schemaURL.
 func (sd stringDetector) Detect(ctx context.Context) (*Resource, error) {
 	value, err := sd.F()
 	if err != nil {

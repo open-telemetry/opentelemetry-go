@@ -221,18 +221,3 @@ func WithProcessRuntimeVersion() Option {
 func WithProcessRuntimeDescription() Option {
 	return WithDetectors(processRuntimeDescriptionDetector{})
 }
-
-// WithProcess adds all the Process attributes to the configured Resource.
-// See individual WithProcess* functions to configure specific attributes.
-func WithProcess() Option {
-	return WithDetectors(
-		processPIDDetector{},
-		processExecutableNameDetector{},
-		processExecutablePathDetector{},
-		processCommandArgsDetector{},
-		processOwnerDetector{},
-		processRuntimeNameDetector{},
-		processRuntimeVersionDetector{},
-		processRuntimeDescriptionDetector{},
-	)
-}

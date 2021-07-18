@@ -75,12 +75,3 @@ func WithOSType() Option {
 func WithOSDescription() Option {
 	return WithDetectors(osDescriptionDetector{})
 }
-
-// WithOS adds all the OS attributes to the configured Resource.
-// See individual WithOS* functions to configure specific attributes.
-func WithOS() Option {
-	return WithDetectors(
-		osTypeDetector{},
-		osDescriptionDetector{},
-	)
-}

@@ -374,11 +374,9 @@ func TestNew(t *testing.T) {
 			},
 		},
 		{
-			name:   "Builtins",
-			envars: "key=value,other=attr",
-			options: []resource.Option{
-				resource.WithBuiltinDetectors(),
-			},
+			name:    "Builtins",
+			envars:  "key=value,other=attr",
+			options: []resource.Option{},
 			resourceValues: map[string]string{
 				"host.name":              hostname(),
 				"telemetry.sdk.name":     "opentelemetry",
@@ -453,63 +451,6 @@ func TestNew(t *testing.T) {
 			if res != nil {
 				assert.EqualValues(t, tt.schemaURL, res.SchemaURL())
 			}
-		})
-	}
-}
-
-func TestNewWithBuiltinDetectors(t *testing.T) {
-	tc := []struct {
-		name      string
-		envars    string
-		detectors []resource.Detector
-		options   []resource.Option
-
-		resourceValues map[string]string
-	}{
-		{
-			name:    "No Options returns builtin",
-			envars:  "key=value,other=attr",
-			options: nil,
-			resourceValues: map[string]string{
-				"host.name":              hostname(),
-				"telemetry.sdk.name":     "opentelemetry",
-				"telemetry.sdk.language": "go",
-				"telemetry.sdk.version":  otel.Version(),
-				"key":                    "value",
-				"other":                  "attr",
-			},
-		},
-		{
-			name:   "WithAttributes",
-			envars: "key=value,other=attr",
-			options: []resource.Option{
-				resource.WithAttributes(attribute.String("A", "B")),
-			},
-			resourceValues: map[string]string{
-				"host.name":              hostname(),
-				"telemetry.sdk.name":     "opentelemetry",
-				"telemetry.sdk.language": "go",
-				"telemetry.sdk.version":  otel.Version(),
-				"key":                    "value",
-				"other":                  "attr",
-				"A":                      "B",
-			},
-		},
-	}
-	for _, tt := range tc {
-		t.Run(tt.name, func(t *testing.T) {
-			store, err := ottest.SetEnvVariables(map[string]string{
-				envVar: tt.envars,
-			})
-			require.NoError(t, err)
-			defer func() { require.NoError(t, store.Restore()) }()
-
-			ctx := context.Background()
-			options := append([]resource.Option{resource.WithBuiltinDetectors()}, tt.options...)
-			res, err := resource.New(ctx, options...)
-
-			require.NoError(t, err)
-			require.EqualValues(t, tt.resourceValues, toMap(res))
 		})
 	}
 }
