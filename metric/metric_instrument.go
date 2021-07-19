@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate stringer -type=InstrumentKind
-
 package metric // import "go.opentelemetry.io/otel/metric"
 
 import (
@@ -22,32 +20,10 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/number"
-	"go.opentelemetry.io/otel/metric/sdkapi"
 )
 
 // ErrSDKReturnedNilImpl is returned when a new `MeterImpl` returns nil.
 var ErrSDKReturnedNilImpl = errors.New("SDK returned a nil implementation")
-
-// InstrumentKind is part of the API's interface to the SDK.
-type InstrumentKind = sdkapi.InstrumentKind
-
-const (
-	// ValueRecorderInstrumentKind indicates a ValueRecorder instrument.
-	ValueRecorderInstrumentKind = sdkapi.ValueRecorderInstrumentKind
-	// ValueObserverInstrumentKind indicates an ValueObserver instrument.
-	ValueObserverInstrumentKind = sdkapi.ValueObserverInstrumentKind
-
-	// CounterInstrumentKind indicates a Counter instrument.
-	CounterInstrumentKind = sdkapi.CounterInstrumentKind
-	// UpDownCounterInstrumentKind indicates a UpDownCounter instrument.
-	UpDownCounterInstrumentKind = sdkapi.UpDownCounterInstrumentKind
-
-	// SumObserverInstrumentKind indicates a SumObserver instrument.
-	SumObserverInstrumentKind = sdkapi.SumObserverInstrumentKind
-	// UpDownSumObserverInstrumentKind indicates a UpDownSumObserver
-	// instrument.
-	UpDownSumObserverInstrumentKind = sdkapi.UpDownSumObserverInstrumentKind
-)
 
 // Observation is used for reporting an asynchronous  batch of metric
 // values. Instances of this type should be created by asynchronous
