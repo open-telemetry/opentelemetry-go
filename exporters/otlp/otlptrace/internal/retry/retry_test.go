@@ -83,7 +83,7 @@ func TestThrottledRetry(t *testing.T) {
 	throttleDelay, backoffDelay := time.Second, time.Nanosecond
 
 	ev := func(error) (bool, time.Duration) {
-		// Retry everyting with a throttle delay.
+		// Retry everything with a throttle delay.
 		return true, throttleDelay
 	}
 

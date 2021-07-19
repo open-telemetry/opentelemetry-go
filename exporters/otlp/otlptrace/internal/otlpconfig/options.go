@@ -19,9 +19,10 @@ import (
 	"fmt"
 	"time"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/retry"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/retry"
 )
 
 const (

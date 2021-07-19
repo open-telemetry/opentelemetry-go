@@ -21,6 +21,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/retry"
 
 	"google.golang.org/genproto/googleapis/rpc/errdetails"

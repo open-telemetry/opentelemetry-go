@@ -22,6 +22,7 @@ import (
 	"github.com/cenkalti/backoff/v4"
 )
 
+// DefaultConfig are the recommended defaults to use.
 var DefaultConfig = Config{
 	Enabled:         true,
 	InitialInterval: 5 * time.Second,
