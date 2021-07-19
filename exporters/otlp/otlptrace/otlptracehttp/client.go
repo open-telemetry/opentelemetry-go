@@ -162,6 +162,12 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 	}
 
 	return d.requestFunc(ctx, func(ctx context.Context) error {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		request.reset(ctx)
 		resp, err := d.client.Do(request.Request)
 		if err != nil {
@@ -213,6 +219,7 @@ func (d *client) newRequest(body []byte) (request, error) {
 	case GzipCompression:
 		// Ensure the content length is not used.
 		r.ContentLength = -1
+		r.Header.Set("Content-Encoding", "gzip")
 
 		gz := gzPool.Get().(*gzip.Writer)
 		defer gzPool.Put(gz)
@@ -234,6 +241,7 @@ func (d *client) newRequest(body []byte) (request, error) {
 	return req, nil
 }
 
+// bodyReader returns a closure returning a new reader for buf.
 func bodyReader(buf []byte) func() io.ReadCloser {
 	return func() io.ReadCloser {
 		return ioutil.NopCloser(bytes.NewReader(buf))
