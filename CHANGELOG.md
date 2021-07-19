@@ -32,7 +32,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Security
 
-## [Metrics v0.22.0] - 2021-07-19
+## [Experimental Metrics v0.22.0] - 2021-07-19
 
 ### Added
 
@@ -1438,7 +1438,7 @@ It contains api and sdk for trace and meter.
 - CODEOWNERS file to track owners of this project.
 
 [Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.0.0-RC1...HEAD
-[Metrics v0.22.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/metrics/v0.22.0
+[Experimental Metrics v0.22.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/metric%2Fv0.22.0
 [1.0.0-RC1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.0-RC1
 [0.20.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.20.0
 [0.19.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.19.0
