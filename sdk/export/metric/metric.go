@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -379,14 +380,14 @@ func (kind ExportKind) Includes(has ExportKind) bool {
 
 // MemoryRequired returns whether an exporter of this kind requires
 // memory to export correctly.
-func (kind ExportKind) MemoryRequired(mkind metric.InstrumentKind) bool {
+func (kind ExportKind) MemoryRequired(mkind sdkapi.InstrumentKind) bool {
 	switch mkind {
-	case metric.ValueRecorderInstrumentKind, metric.ValueObserverInstrumentKind,
-		metric.CounterInstrumentKind, metric.UpDownCounterInstrumentKind:
+	case sdkapi.ValueRecorderInstrumentKind, sdkapi.ValueObserverInstrumentKind,
+		sdkapi.CounterInstrumentKind, sdkapi.UpDownCounterInstrumentKind:
 		// Delta-oriented instruments:
 		return kind.Includes(CumulativeExportKind)
 
-	case metric.SumObserverInstrumentKind, metric.UpDownSumObserverInstrumentKind:
+	case sdkapi.SumObserverInstrumentKind, sdkapi.UpDownSumObserverInstrumentKind:
 		// Cumulative-oriented instruments:
 		return kind.Includes(DeltaExportKind)
 	}

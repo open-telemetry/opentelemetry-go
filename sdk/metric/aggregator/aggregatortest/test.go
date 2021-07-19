@@ -28,6 +28,7 @@ import (
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
@@ -64,7 +65,7 @@ func newProfiles() []Profile {
 	}
 }
 
-func NewAggregatorTest(mkind metric.InstrumentKind, nkind number.Kind) *metric.Descriptor {
+func NewAggregatorTest(mkind sdkapi.InstrumentKind, nkind number.Kind) *metric.Descriptor {
 	desc := metric.NewDescriptor("test.name", mkind, nkind)
 	return &desc
 }
@@ -191,7 +192,7 @@ func (NoopAggregator) Merge(export.Aggregator, *metric.Descriptor) error {
 	return nil
 }
 
-func SynchronizedMoveResetTest(t *testing.T, mkind metric.InstrumentKind, nf func(*metric.Descriptor) export.Aggregator) {
+func SynchronizedMoveResetTest(t *testing.T, mkind sdkapi.InstrumentKind, nf func(*metric.Descriptor) export.Aggregator) {
 	t.Run("reset on nil", func(t *testing.T) {
 		// Ensures that SynchronizedMove(nil, descriptor) discards and
 		// resets the aggregator.

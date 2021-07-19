@@ -16,6 +16,7 @@ package simple // import "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 
 import (
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
@@ -79,9 +80,9 @@ func lastValueAggs(aggPtrs []*export.Aggregator) {
 
 func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch descriptor.InstrumentKind() {
-	case metric.ValueObserverInstrumentKind:
+	case sdkapi.ValueObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
-	case metric.ValueRecorderInstrumentKind:
+	case sdkapi.ValueRecorderInstrumentKind:
 		aggs := minmaxsumcount.New(len(aggPtrs), descriptor)
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
@@ -93,9 +94,9 @@ func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor, aggPtrs 
 
 func (selectorExact) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch descriptor.InstrumentKind() {
-	case metric.ValueObserverInstrumentKind:
+	case sdkapi.ValueObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
-	case metric.ValueRecorderInstrumentKind:
+	case sdkapi.ValueRecorderInstrumentKind:
 		aggs := exact.New(len(aggPtrs))
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
@@ -107,9 +108,9 @@ func (selectorExact) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*ex
 
 func (s selectorHistogram) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch descriptor.InstrumentKind() {
-	case metric.ValueObserverInstrumentKind:
+	case sdkapi.ValueObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
-	case metric.ValueRecorderInstrumentKind:
+	case sdkapi.ValueRecorderInstrumentKind:
 		aggs := histogram.New(len(aggPtrs), descriptor, s.options...)
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]

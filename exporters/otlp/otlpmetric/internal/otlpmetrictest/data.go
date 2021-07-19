@@ -22,6 +22,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	exportmetric "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -59,7 +60,7 @@ var _ exportmetric.CheckpointSet = OneRecordCheckpointSet{}
 func (OneRecordCheckpointSet) ForEach(kindSelector exportmetric.ExportKindSelector, recordFunc func(exportmetric.Record) error) error {
 	desc := metric.NewDescriptor(
 		"foo",
-		metric.CounterInstrumentKind,
+		sdkapi.CounterInstrumentKind,
 		number.Int64Kind,
 	)
 	res := resource.NewSchemaless(attribute.String("a", "b"))
