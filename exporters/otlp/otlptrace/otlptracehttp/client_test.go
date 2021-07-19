@@ -61,6 +61,55 @@ func TestEndToEnd(t *testing.T) {
 			},
 		},
 		{
+			name: "retry",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
+					Enabled:         true,
+					InitialInterval: time.Nanosecond,
+					MaxInterval:     time.Nanosecond,
+					// Do not stop trying.
+					MaxElapsedTime: 0,
+				}),
+			},
+			mcCfg: mockCollectorConfig{
+				InjectHTTPStatus: []int{503, 503},
+			},
+		},
+		{
+			name: "retry with gzip compression",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithCompression(otlptracehttp.GzipCompression),
+				otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
+					Enabled:         true,
+					InitialInterval: time.Nanosecond,
+					MaxInterval:     time.Nanosecond,
+					// Do not stop trying.
+					MaxElapsedTime: 0,
+				}),
+			},
+			mcCfg: mockCollectorConfig{
+				InjectHTTPStatus: []int{503, 503},
+			},
+		},
+		{
+			name: "retry with throttle",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
+					Enabled:         true,
+					InitialInterval: time.Nanosecond,
+					MaxInterval:     time.Nanosecond,
+					// Do not stop trying.
+					MaxElapsedTime: 0,
+				}),
+			},
+			mcCfg: mockCollectorConfig{
+				InjectHTTPStatus: []int{503},
+				InjectResponseHeader: []map[string]string{
+					{"Retry-After": "10"},
+				},
+			},
+		},
+		{
 			name: "with empty paths (forced to defaults)",
 			opts: []otlptracehttp.Option{
 				otlptracehttp.WithURLPath(""),
