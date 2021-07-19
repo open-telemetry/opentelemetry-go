@@ -30,6 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - When using WithNewRoot, don't use the parent context for making sampling decisions. (#2032)
 - `oteltest.Tracer` now creates a valid `SpanContext` when using `WithNewRoot`. (#2073)
+- OS type detector now sets the correct `dragonflybsd` value for DragonFly BSD. (#2092)
 
 ### Security
 

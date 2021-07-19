@@ -31,3 +31,7 @@ var (
 	RuntimeOS   = runtimeOS
 	RuntimeArch = runtimeArch
 )
+
+var (
+	MapRuntimeOSToSemconvOSType = mapRuntimeOSToSemconvOSType
+)
