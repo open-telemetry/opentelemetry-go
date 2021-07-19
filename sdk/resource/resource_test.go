@@ -374,13 +374,6 @@ func TestNew(t *testing.T) {
 			},
 		},
 		{
-			name:    "Builtins",
-			envars:  "key=value,other=attr",
-			options: []resource.Option{},
-			resourceValues: map[string]string{},
-			schemaURL: semconv.SchemaURL,
-		},
-		{
 			name:   "With schema url",
 			envars: "",
 			options: []resource.Option{
