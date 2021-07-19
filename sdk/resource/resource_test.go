@@ -377,14 +377,7 @@ func TestNew(t *testing.T) {
 			name:    "Builtins",
 			envars:  "key=value,other=attr",
 			options: []resource.Option{},
-			resourceValues: map[string]string{
-				"host.name":              hostname(),
-				"telemetry.sdk.name":     "opentelemetry",
-				"telemetry.sdk.language": "go",
-				"telemetry.sdk.version":  otel.Version(),
-				"key":                    "value",
-				"other":                  "attr",
-			},
+			resourceValues: map[string]string{},
 			schemaURL: semconv.SchemaURL,
 		},
 		{
