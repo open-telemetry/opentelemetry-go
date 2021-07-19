@@ -72,7 +72,7 @@ func TestEndToEnd(t *testing.T) {
 				}),
 			},
 			mcCfg: mockCollectorConfig{
-				InjectHTTPStatus: []int{503, 503},
+				InjectHTTPStatus: []int{503, 429},
 			},
 		},
 		{
@@ -187,38 +187,6 @@ func TestExporterShutdown(t *testing.T) {
 	})
 }
 
-func TestRetry(t *testing.T) {
-	statuses := []int{
-		http.StatusTooManyRequests,
-		http.StatusServiceUnavailable,
-	}
-	mcCfg := mockCollectorConfig{
-		InjectHTTPStatus: statuses,
-	}
-	mc := runMockCollector(t, mcCfg)
-	defer mc.MustStop(t)
-	client := otlptracehttp.NewClient(
-		otlptracehttp.WithEndpoint(mc.Endpoint()),
-		otlptracehttp.WithInsecure(),
-		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
-			Enabled:         true,
-			InitialInterval: 1 * time.Nanosecond,
-			MaxInterval:     1 * time.Nanosecond,
-			// Never stop retry of retry-able status.
-			MaxElapsedTime: 0,
-		}),
-	)
-	ctx := context.Background()
-	exporter, err := otlptrace.New(ctx, client)
-	require.NoError(t, err)
-	defer func() {
-		assert.NoError(t, exporter.Shutdown(ctx))
-	}()
-	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-	assert.NoError(t, err)
-	assert.Len(t, mc.GetSpans(), 1)
-}
-
 func TestTimeout(t *testing.T) {
 	mcCfg := mockCollectorConfig{
 		InjectDelay: 100 * time.Millisecond,
@@ -241,13 +209,9 @@ func TestTimeout(t *testing.T) {
 }
 
 func TestNoRetry(t *testing.T) {
-	statuses := []int{
-		http.StatusBadRequest,
-	}
-	mcCfg := mockCollectorConfig{
-		InjectHTTPStatus: statuses,
-	}
-	mc := runMockCollector(t, mcCfg)
+	mc := runMockCollector(t, mockCollectorConfig{
+		InjectHTTPStatus: []int{http.StatusBadRequest},
+	})
 	defer mc.MustStop(t)
 	driver := otlptracehttp.NewClient(
 		otlptracehttp.WithEndpoint(mc.Endpoint()),
