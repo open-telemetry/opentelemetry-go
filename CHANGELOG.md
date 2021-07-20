@@ -29,6 +29,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - When using WithNewRoot, don't use the parent context for making sampling decisions. (#2032)
 - `oteltest.Tracer` now creates a valid `SpanContext` when using `WithNewRoot`. (#2073)
 - OS type detector now sets the correct `dragonflybsd` value for DragonFly BSD. (#2092)
+- The OTel span status is correctly transformed into the OTLP status in the `go.opentelemetry.io/otel/exporters/otlp/otlptrace` package.
+  This fix will by default set the status to `Unset` if it is not explicitly set to `Ok` or `Error`. (#2099 #2102)
 
 ### Security
 
