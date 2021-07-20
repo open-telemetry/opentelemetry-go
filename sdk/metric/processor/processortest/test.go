@@ -215,7 +215,6 @@ func (o *Output) ForEach(_ export.ExportKindSelector, ff func(export.Record) err
 		if err := ff(export.NewRecord(
 			key.desc,
 			value.labels,
-			value.resource,
 			value.aggregator.Aggregation(),
 			time.Time{},
 			time.Time{},
@@ -231,10 +230,14 @@ func (o *Output) ForEach(_ export.ExportKindSelector, ff func(export.Record) err
 // either the Sum() or the LastValue() of its Aggregation(), whichever
 // is defined.  Record timestamps are ignored.
 func (o *Output) AddRecord(rec export.Record) error {
+	return o.AddRecordWithResource(rec, resource.Empty())
+}
+
+func (o *Output) AddRecordWithResource(rec export.Record, res *resource.Resource) error {
 	key := mapKey{
 		desc:     rec.Descriptor(),
 		labels:   rec.Labels().Equivalent(),
-		resource: rec.Resource().Equivalent(),
+		resource: res.Equivalent(),
 	}
 	if _, ok := o.m[key]; !ok {
 		var agg export.Aggregator
@@ -242,7 +245,7 @@ func (o *Output) AddRecord(rec export.Record) error {
 		o.m[key] = mapValue{
 			aggregator: agg,
 			labels:     rec.Labels(),
-			resource:   rec.Resource(),
+			resource:   res,
 		}
 	}
 	return o.m[key].aggregator.Merge(rec.Aggregation().(export.Aggregator), rec.Descriptor())
@@ -301,7 +304,6 @@ func (o *Output) AddAccumulation(acc export.Accumulation) error {
 		export.NewRecord(
 			acc.Descriptor(),
 			acc.Labels(),
-			acc.Resource(),
 			acc.Aggregator().Aggregation(),
 			time.Time{},
 			time.Time{},
@@ -325,7 +327,7 @@ func New(selector export.ExportKindSelector, encoder attribute.Encoder) *Exporte
 	}
 }
 
-func (e *Exporter) Export(_ context.Context, ckpt export.CheckpointSet) error {
+func (e *Exporter) Export(_ context.Context, res *resource.Resource, ckpt export.CheckpointSet) error {
 	e.output.Lock()
 	defer e.output.Unlock()
 	e.exportCount++
@@ -335,7 +337,7 @@ func (e *Exporter) Export(_ context.Context, ckpt export.CheckpointSet) error {
 				return err
 			}
 		}
-		return e.output.AddRecord(r)
+		return e.output.AddRecordWithResource(r, res)
 	})
 }
 

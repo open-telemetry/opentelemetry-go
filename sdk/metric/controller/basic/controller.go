@@ -59,6 +59,7 @@ type Controller struct {
 	accumulator  *sdk.Accumulator
 	provider     *registry.MeterProvider
 	checkpointer export.Checkpointer
+	resource     *resource.Resource
 	exporter     export.Exporter
 	wg           sync.WaitGroup
 	stopCh       chan struct{}
@@ -89,15 +90,12 @@ func New(checkpointer export.Checkpointer, opts ...Option) *Controller {
 	if c.Resource == nil {
 		c.Resource = resource.Default()
 	}
-
-	impl := sdk.NewAccumulator(
-		checkpointer,
-		c.Resource,
-	)
+	impl := sdk.NewAccumulator(checkpointer)
 	return &Controller{
 		provider:     registry.NewMeterProvider(impl),
 		accumulator:  impl,
 		checkpointer: checkpointer,
+		resource:     c.Resource,
 		exporter:     c.Exporter,
 		stopCh:       nil,
 		clock:        controllerTime.RealClock{},
@@ -257,7 +255,7 @@ func (c *Controller) export(ctx context.Context) error {
 		defer cancel()
 	}
 
-	return c.exporter.Export(ctx, ckpt)
+	return c.exporter.Export(ctx, c.resource, ckpt)
 }
 
 // ForEach gives the caller read-locked access to the current

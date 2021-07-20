@@ -75,48 +75,44 @@ func TestControllerUsesResource(t *testing.T) {
 		{
 			name:    "explicitly empty resource",
 			options: []controller.Option{controller.WithResource(resource.Empty())},
-			wanted:  resource.Environment().Encoded(attribute.DefaultEncoder())},
+			wanted:  "",
+		},
 		{
 			name:    "uses default if no resource option",
 			options: nil,
-			wanted:  resource.Default().Encoded(attribute.DefaultEncoder())},
+			wanted:  resource.Default().Encoded(attribute.DefaultEncoder()),
+		},
 		{
 			name:    "explicit resource",
 			options: []controller.Option{controller.WithResource(resource.NewSchemaless(attribute.String("R", "S")))},
-			wanted:  "R=S,T=U,key=value"},
-		{
-			name: "last resource wins",
-			options: []controller.Option{
-				controller.WithResource(resource.Default()),
-				controller.WithResource(resource.NewSchemaless(attribute.String("R", "S"))),
-			},
-			wanted: "R=S,T=U,key=value"},
-		{
-			name:    "overlapping attributes with environment resource",
-			options: []controller.Option{controller.WithResource(resource.NewSchemaless(attribute.String("T", "V")))},
-			wanted:  "T=V,key=value"},
+			wanted:  "R=S",
+		},
 	}
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
+			sel := export.CumulativeExportKindSelector()
+			exp := processortest.New(sel, attribute.DefaultEncoder())
 			cont := controller.New(
 				processor.New(
 					processortest.AggregatorSelector(),
-					export.CumulativeExportKindSelector(),
+					exp,
 				),
-				c.options...,
+				append(c.options, controller.WithExporter(exp))...,
 			)
+			ctx := context.Background()
+			require.NoError(t, cont.Start(ctx))
 			prov := cont.MeterProvider()
 
 			ctr := metric.Must(prov.Meter("named")).NewFloat64Counter("calls.sum")
 			ctr.Add(context.Background(), 1.)
 
 			// Collect once
-			require.NoError(t, cont.Collect(context.Background()))
+			require.NoError(t, cont.Stop(ctx))
 
 			expect := map[string]float64{
 				"calls.sum//" + c.wanted: 1.,
 			}
-			require.EqualValues(t, expect, getMap(t, cont))
+			require.EqualValues(t, expect, exp.Values())
 		})
 	}
 }
@@ -268,9 +264,9 @@ func newBlockingExporter() *blockingExporter {
 	}
 }
 
-func (b *blockingExporter) Export(ctx context.Context, output export.CheckpointSet) error {
+func (b *blockingExporter) Export(ctx context.Context, res *resource.Resource, output export.CheckpointSet) error {
 	var err error
-	_ = b.exporter.Export(ctx, output)
+	_ = b.exporter.Export(ctx, res, output)
 	if b.calls == 0 {
 		// timeout once
 		<-ctx.Done()
