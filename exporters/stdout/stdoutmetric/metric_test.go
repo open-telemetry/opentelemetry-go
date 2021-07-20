@@ -110,7 +110,7 @@ func TestStdoutTimestamp(t *testing.T) {
 
 	counter.Add(ctx, 1)
 
-	cont.Stop(ctx)
+	require.NoError(t, cont.Stop(ctx))
 
 	// Ensure the timestamp is before after.
 	time.Sleep(time.Nanosecond)
