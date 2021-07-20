@@ -29,7 +29,6 @@ import (
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	arrAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	lvAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
@@ -101,18 +100,19 @@ func TestStringKeyValues(t *testing.T) {
 }
 
 func TestMinMaxSumCountValue(t *testing.T) {
-	mmsc, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &metric.Descriptor{}))
+	mmscs := minmaxsumcount.New(2, &metric.Descriptor{})
+	mmsc, ckpt := &mmscs[0], &mmscs[1]
 
 	assert.NoError(t, mmsc.Update(context.Background(), 1, &metric.Descriptor{}))
 	assert.NoError(t, mmsc.Update(context.Background(), 10, &metric.Descriptor{}))
 
 	// Prior to checkpointing ErrNoData should be returned.
-	_, _, _, _, err := minMaxSumCountValues(ckpt.(aggregation.MinMaxSumCount))
+	_, _, _, _, err := minMaxSumCountValues(ckpt)
 	assert.EqualError(t, err, aggregation.ErrNoData.Error())
 
 	// Checkpoint to set non-zero values
 	require.NoError(t, mmsc.SynchronizedMove(ckpt, &metric.Descriptor{}))
-	min, max, sum, count, err := minMaxSumCountValues(ckpt.(aggregation.MinMaxSumCount))
+	min, max, sum, count, err := minMaxSumCountValues(ckpt)
 	if assert.NoError(t, err) {
 		assert.Equal(t, min, number.NewInt64Number(1))
 		assert.Equal(t, max, number.NewInt64Number(10))
@@ -124,7 +124,8 @@ func TestMinMaxSumCountValue(t *testing.T) {
 func TestMinMaxSumCountDatapoints(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Int64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
-	mmsc, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &desc))
+	mmscs := minmaxsumcount.New(2, &metric.Descriptor{})
+	mmsc, ckpt := &mmscs[0], &mmscs[1]
 
 	assert.NoError(t, mmsc.Update(context.Background(), 1, &desc))
 	assert.NoError(t, mmsc.Update(context.Background(), 10, &desc))
@@ -154,7 +155,7 @@ func TestMinMaxSumCountDatapoints(t *testing.T) {
 		},
 	}
 	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
-	m, err := minMaxSumCount(record, ckpt.(aggregation.MinMaxSumCount))
+	m, err := minMaxSumCount(record, ckpt)
 	if assert.NoError(t, err) {
 		assert.Nil(t, m.GetGauge())
 		assert.Nil(t, m.GetSum())
@@ -179,13 +180,14 @@ func TestMinMaxSumCountPropagatesErrors(t *testing.T) {
 func TestSumIntDataPoints(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Int64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
-	s, ckpt := metrictest.Unslice2(sumAgg.New(2))
+	sums := sumAgg.New(2)
+	s, ckpt := &sums[0], &sums[1]
+
 	assert.NoError(t, s.Update(context.Background(), number.Number(1), &desc))
 	require.NoError(t, s.SynchronizedMove(ckpt, &desc))
 	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
-	sum, ok := ckpt.(aggregation.Sum)
-	require.True(t, ok, "ckpt is not an aggregation.Sum: %T", ckpt)
-	value, err := sum.Sum()
+
+	value, err := ckpt.Sum()
 	require.NoError(t, err)
 
 	if m, err := sumPoint(record, value, record.StartTime(), record.EndTime(), export.CumulativeExportKind, true); assert.NoError(t, err) {
@@ -218,13 +220,13 @@ func TestSumIntDataPoints(t *testing.T) {
 func TestSumFloatDataPoints(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Float64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
-	s, ckpt := metrictest.Unslice2(sumAgg.New(2))
+	sums := sumAgg.New(2)
+	s, ckpt := &sums[0], &sums[1]
+
 	assert.NoError(t, s.Update(context.Background(), number.NewFloat64Number(1), &desc))
 	require.NoError(t, s.SynchronizedMove(ckpt, &desc))
 	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
-	sum, ok := ckpt.(aggregation.Sum)
-	require.True(t, ok, "ckpt is not an aggregation.Sum: %T", ckpt)
-	value, err := sum.Sum()
+	value, err := ckpt.Sum()
 	require.NoError(t, err)
 
 	if m, err := sumPoint(record, value, record.StartTime(), record.EndTime(), export.DeltaExportKind, false); assert.NoError(t, err) {
@@ -256,13 +258,13 @@ func TestSumFloatDataPoints(t *testing.T) {
 func TestLastValueIntDataPoints(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Int64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
-	s, ckpt := metrictest.Unslice2(lvAgg.New(2))
-	assert.NoError(t, s.Update(context.Background(), number.Number(100), &desc))
-	require.NoError(t, s.SynchronizedMove(ckpt, &desc))
+	lvs := lvAgg.New(2)
+	lv, ckpt := &lvs[0], &lvs[1]
+
+	assert.NoError(t, lv.Update(context.Background(), number.Number(100), &desc))
+	require.NoError(t, lv.SynchronizedMove(ckpt, &desc))
 	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
-	sum, ok := ckpt.(aggregation.LastValue)
-	require.True(t, ok, "ckpt is not an aggregation.LastValue: %T", ckpt)
-	value, timestamp, err := sum.LastValue()
+	value, timestamp, err := ckpt.LastValue()
 	require.NoError(t, err)
 
 	if m, err := gaugePoint(record, value, time.Time{}, timestamp); assert.NoError(t, err) {
@@ -291,13 +293,13 @@ func TestLastValueIntDataPoints(t *testing.T) {
 func TestExactIntDataPoints(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Int64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
-	e, ckpt := metrictest.Unslice2(arrAgg.New(2))
+	arrs := arrAgg.New(2)
+	e, ckpt := &arrs[0], &arrs[1]
+
 	assert.NoError(t, e.Update(context.Background(), number.Number(100), &desc))
 	require.NoError(t, e.SynchronizedMove(ckpt, &desc))
 	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
-	p, ok := ckpt.(aggregation.Points)
-	require.True(t, ok, "ckpt is not an aggregation.Points: %T", ckpt)
-	pts, err := p.Points()
+	pts, err := ckpt.Points()
 	require.NoError(t, err)
 
 	if m, err := gaugeArray(record, pts); assert.NoError(t, err) {
@@ -326,13 +328,12 @@ func TestExactIntDataPoints(t *testing.T) {
 func TestExactFloatDataPoints(t *testing.T) {
 	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Float64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
-	e, ckpt := metrictest.Unslice2(arrAgg.New(2))
+	arrs := arrAgg.New(2)
+	e, ckpt := &arrs[0], &arrs[1]
 	assert.NoError(t, e.Update(context.Background(), number.NewFloat64Number(100), &desc))
 	require.NoError(t, e.SynchronizedMove(ckpt, &desc))
 	record := export.NewRecord(&desc, &labels, nil, ckpt.Aggregation(), intervalStart, intervalEnd)
-	p, ok := ckpt.(aggregation.Points)
-	require.True(t, ok, "ckpt is not an aggregation.Points: %T", ckpt)
-	pts, err := p.Points()
+	pts, err := ckpt.Points()
 	require.NoError(t, err)
 
 	if m, err := gaugeArray(record, pts); assert.NoError(t, err) {
