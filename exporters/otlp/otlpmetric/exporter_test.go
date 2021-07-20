@@ -16,26 +16,28 @@ package otlpmetric_test
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/metrictransform"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/number"
+	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
-
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/number"
-	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
-	resourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
+	"google.golang.org/protobuf/testing/protocmp"
 )
 
 var (
@@ -108,9 +110,6 @@ var (
 	baseKeyValues = []attribute.KeyValue{attribute.String("host", "test.com")}
 	cpuKey        = attribute.Key("CPU")
 
-	testInstA = resource.NewSchemaless(attribute.String("instance", "tester-a"))
-	testInstB = resource.NewSchemaless(attribute.String("instance", "tester-b"))
-
 	testHistogramBoundaries = []float64{2.0, 4.0, 8.0}
 
 	cpu1Labels = []*commonpb.KeyValue{
@@ -150,30 +149,11 @@ var (
 		},
 	}
 
-	testerAResource = &resourcepb.Resource{
-		Attributes: []*commonpb.KeyValue{
-			{
-				Key: "instance",
-				Value: &commonpb.AnyValue{
-					Value: &commonpb.AnyValue_StringValue{
-						StringValue: "tester-a",
-					},
-				},
-			},
-		},
-	}
-	testerBResource = &resourcepb.Resource{
-		Attributes: []*commonpb.KeyValue{
-			{
-				Key: "instance",
-				Value: &commonpb.AnyValue{
-					Value: &commonpb.AnyValue_StringValue{
-						StringValue: "tester-b",
-					},
-				},
-			},
-		},
-	}
+	testerAResource   = resource.NewSchemaless(attribute.String("instance", "tester-a"))
+	testerAResourcePb = metrictransform.Resource(testerAResource)
+
+	testerBResource   = resource.NewSchemaless(attribute.String("instance", "tester-b"))
+	testerBResourcePb = metrictransform.Resource(testerBResource)
 )
 
 func TestNoGroupingExport(t *testing.T) {
@@ -388,7 +368,7 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 	runMetricExportTests(
 		t,
 		nil,
-		nil,
+		testerAResource,
 		[]record{
 			{
 				"int64-count",
@@ -421,9 +401,115 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 		},
 		[]*metricpb.ResourceMetrics{
 			{
-				Resource: testerAResource,
+				Resource: testerAResourcePb,
 				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
 					{
+						Metrics: []*metricpb.Metric{
+							{
+								Name: "int64-count",
+								Data: &metricpb.Metric_Sum{
+									Sum: &metricpb.Sum{
+										IsMonotonic:            true,
+										AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+										DataPoints: []*metricpb.NumberDataPoint{
+											{
+												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
+												Attributes:        cpu1Labels,
+												StartTimeUnixNano: startTime(),
+												TimeUnixNano:      pointTime(),
+											},
+											{
+												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
+												Attributes:        cpu1Labels,
+												StartTimeUnixNano: startTime(),
+												TimeUnixNano:      pointTime(),
+											},
+											{
+												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
+												Attributes:        cpu2Labels,
+												StartTimeUnixNano: startTime(),
+												TimeUnixNano:      pointTime(),
+											},
+											{
+												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
+												Attributes:        cpu1Labels,
+												StartTimeUnixNano: startTime(),
+												TimeUnixNano:      pointTime(),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	)
+}
+
+func TestResourceInstLibMetricGroupingExport(t *testing.T) {
+	countingLib1 := []metric.InstrumentOption{
+		metric.WithInstrumentationName("counting-lib"),
+		metric.WithInstrumentationVersion("v1"),
+	}
+	countingLib2 := []metric.InstrumentOption{
+		metric.WithInstrumentationName("counting-lib"),
+		metric.WithInstrumentationVersion("v2"),
+	}
+	summingLib := []metric.InstrumentOption{
+		metric.WithInstrumentationName("summing-lib"),
+	}
+	runMetricExportTests(
+		t,
+		nil,
+		testerAResource,
+		[]record{
+			{
+				"int64-count",
+				metric.CounterInstrumentKind,
+				number.Int64Kind,
+				countingLib1,
+				append(baseKeyValues, cpuKey.Int(1)),
+			},
+			{
+				"int64-count",
+				metric.CounterInstrumentKind,
+				number.Int64Kind,
+				countingLib2,
+				append(baseKeyValues, cpuKey.Int(1)),
+			},
+			{
+				"int64-count",
+				metric.CounterInstrumentKind,
+				number.Int64Kind,
+				countingLib1,
+				append(baseKeyValues, cpuKey.Int(1)),
+			},
+			{
+				"int64-count",
+				metric.CounterInstrumentKind,
+				number.Int64Kind,
+				countingLib1,
+				append(baseKeyValues, cpuKey.Int(2)),
+			},
+			{
+				"int64-count",
+				metric.CounterInstrumentKind,
+				number.Int64Kind,
+				summingLib,
+				append(baseKeyValues, cpuKey.Int(1)),
+			},
+		},
+		[]*metricpb.ResourceMetrics{
+			{
+				Resource: testerAResourcePb,
+				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
+					{
+						InstrumentationLibrary: &commonpb.InstrumentationLibrary{
+							Name:    "counting-lib",
+							Version: "v1",
+						},
 						Metrics: []*metricpb.Metric{
 							{
 								Name: "int64-count",
@@ -456,12 +542,35 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 							},
 						},
 					},
-				},
-			},
-			{
-				Resource: testerBResource,
-				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
 					{
+						InstrumentationLibrary: &commonpb.InstrumentationLibrary{
+							Name:    "counting-lib",
+							Version: "v2",
+						},
+						Metrics: []*metricpb.Metric{
+							{
+								Name: "int64-count",
+								Data: &metricpb.Metric_Sum{
+									Sum: &metricpb.Sum{
+										IsMonotonic:            true,
+										AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+										DataPoints: []*metricpb.NumberDataPoint{
+											{
+												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
+												Attributes:        cpu1Labels,
+												StartTimeUnixNano: startTime(),
+												TimeUnixNano:      pointTime(),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					{
+						InstrumentationLibrary: &commonpb.InstrumentationLibrary{
+							Name: "summing-lib",
+						},
 						Metrics: []*metricpb.Metric{
 							{
 								Name: "int64-count",
@@ -488,268 +597,75 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 	)
 }
 
-// func TestResourceInstLibMetricGroupingExport(t *testing.T) {
-// 	countingLib1 := []metric.InstrumentOption{
-// 		metric.WithInstrumentationName("counting-lib"),
-// 		metric.WithInstrumentationVersion("v1"),
-// 	}
-// 	countingLib2 := []metric.InstrumentOption{
-// 		metric.WithInstrumentationName("counting-lib"),
-// 		metric.WithInstrumentationVersion("v2"),
-// 	}
-// 	summingLib := []metric.InstrumentOption{
-// 		metric.WithInstrumentationName("summing-lib"),
-// 	}
-// 	runMetricExportTests(
-// 		t,
-// 		nil,
-// 		testInstA,
-// 		[]record{
-// 			{
-// 				"int64-count",
-// 				metric.CounterInstrumentKind,
-// 				number.Int64Kind,
-// 				testInstA,
-// 				countingLib1,
-// 				append(baseKeyValues, cpuKey.Int(1)),
-// 			},
-// 			{
-// 				"int64-count",
-// 				metric.CounterInstrumentKind,
-// 				number.Int64Kind,
-// 				testInstA,
-// 				countingLib2,
-// 				append(baseKeyValues, cpuKey.Int(1)),
-// 			},
-// 			{
-// 				"int64-count",
-// 				metric.CounterInstrumentKind,
-// 				number.Int64Kind,
-// 				testInstA,
-// 				countingLib1,
-// 				append(baseKeyValues, cpuKey.Int(1)),
-// 			},
-// 			{
-// 				"int64-count",
-// 				metric.CounterInstrumentKind,
-// 				number.Int64Kind,
-// 				testInstA,
-// 				countingLib1,
-// 				append(baseKeyValues, cpuKey.Int(2)),
-// 			},
-// 			{
-// 				"int64-count",
-// 				metric.CounterInstrumentKind,
-// 				number.Int64Kind,
-// 				testInstA,
-// 				summingLib,
-// 				append(baseKeyValues, cpuKey.Int(1)),
-// 			},
-// 			{
-// 				"int64-count",
-// 				metric.CounterInstrumentKind,
-// 				number.Int64Kind,
-// 				testInstB,
-// 				countingLib1,
-// 				append(baseKeyValues, cpuKey.Int(1)),
-// 			},
-// 		},
-// 		[]*metricpb.ResourceMetrics{
-// 			{
-// 				Resource: testerAResource,
-// 				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
-// 					{
-// 						InstrumentationLibrary: &commonpb.InstrumentationLibrary{
-// 							Name:    "counting-lib",
-// 							Version: "v1",
-// 						},
-// 						Metrics: []*metricpb.Metric{
-// 							{
-// 								Name: "int64-count",
-// 								Data: &metricpb.Metric_Sum{
-// 									Sum: &metricpb.Sum{
-// 										IsMonotonic:            true,
-// 										AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
-// 										DataPoints: []*metricpb.NumberDataPoint{
-// 											{
-// 												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
-// 												Attributes:        cpu1Labels,
-// 												StartTimeUnixNano: startTime(),
-// 												TimeUnixNano:      pointTime(),
-// 											},
-// 											{
-// 												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
-// 												Attributes:        cpu1Labels,
-// 												StartTimeUnixNano: startTime(),
-// 												TimeUnixNano:      pointTime(),
-// 											},
-// 											{
-// 												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
-// 												Attributes:        cpu2Labels,
-// 												StartTimeUnixNano: startTime(),
-// 												TimeUnixNano:      pointTime(),
-// 											},
-// 										},
-// 									},
-// 								},
-// 							},
-// 						},
-// 					},
-// 					{
-// 						InstrumentationLibrary: &commonpb.InstrumentationLibrary{
-// 							Name:    "counting-lib",
-// 							Version: "v2",
-// 						},
-// 						Metrics: []*metricpb.Metric{
-// 							{
-// 								Name: "int64-count",
-// 								Data: &metricpb.Metric_Sum{
-// 									Sum: &metricpb.Sum{
-// 										IsMonotonic:            true,
-// 										AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
-// 										DataPoints: []*metricpb.NumberDataPoint{
-// 											{
-// 												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
-// 												Attributes:        cpu1Labels,
-// 												StartTimeUnixNano: startTime(),
-// 												TimeUnixNano:      pointTime(),
-// 											},
-// 										},
-// 									},
-// 								},
-// 							},
-// 						},
-// 					},
-// 					{
-// 						InstrumentationLibrary: &commonpb.InstrumentationLibrary{
-// 							Name: "summing-lib",
-// 						},
-// 						Metrics: []*metricpb.Metric{
-// 							{
-// 								Name: "int64-count",
-// 								Data: &metricpb.Metric_Sum{
-// 									Sum: &metricpb.Sum{
-// 										IsMonotonic:            true,
-// 										AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
-// 										DataPoints: []*metricpb.NumberDataPoint{
-// 											{
-// 												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
-// 												Attributes:        cpu1Labels,
-// 												StartTimeUnixNano: startTime(),
-// 												TimeUnixNano:      pointTime(),
-// 											},
-// 										},
-// 									},
-// 								},
-// 							},
-// 						},
-// 					},
-// 				},
-// 			},
-// 			{
-// 				Resource: testerBResource,
-// 				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
-// 					{
-// 						InstrumentationLibrary: &commonpb.InstrumentationLibrary{
-// 							Name:    "counting-lib",
-// 							Version: "v1",
-// 						},
-// 						Metrics: []*metricpb.Metric{
-// 							{
-// 								Name: "int64-count",
-// 								Data: &metricpb.Metric_Sum{
-// 									Sum: &metricpb.Sum{
-// 										IsMonotonic:            true,
-// 										AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
-// 										DataPoints: []*metricpb.NumberDataPoint{
-// 											{
-// 												Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
-// 												Attributes:        cpu1Labels,
-// 												StartTimeUnixNano: startTime(),
-// 												TimeUnixNano:      pointTime(),
-// 											},
-// 										},
-// 									},
-// 								},
-// 							},
-// 						},
-// 					},
-// 				},
-// 			},
-// 		},
-// 	)
-// }
+func TestStatelessExportKind(t *testing.T) {
+	type testcase struct {
+		name           string
+		instrumentKind metric.InstrumentKind
+		aggTemporality metricpb.AggregationTemporality
+		monotonic      bool
+	}
 
-// func TestStatelessExportKind(t *testing.T) {
-// 	type testcase struct {
-// 		name           string
-// 		instrumentKind metric.InstrumentKind
-// 		aggTemporality metricpb.AggregationTemporality
-// 		monotonic      bool
-// 	}
-
-// 	for _, k := range []testcase{
-// 		{"counter", metric.CounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA, true},
-// 		{"updowncounter", metric.UpDownCounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA, false},
-// 		{"sumobserver", metric.SumObserverInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, true},
-// 		{"updownsumobserver", metric.UpDownSumObserverInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, false},
-// 	} {
-// 		t.Run(k.name, func(t *testing.T) {
-// 			runMetricExportTests(
-// 				t,
-// 				[]otlpmetric.Option{
-// 					otlpmetric.WithMetricExportKindSelector(
-// 						metricsdk.StatelessExportKindSelector(),
-// 					),
-// 				},
-// 				[]record{
-// 					{
-// 						"instrument",
-// 						k.instrumentKind,
-// 						number.Int64Kind,
-// 						testInstA,
-// 						nil,
-// 						append(baseKeyValues, cpuKey.Int(1)),
-// 					},
-// 				},
-// 				[]*metricpb.ResourceMetrics{
-// 					{
-// 						Resource: testerAResource,
-// 						InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
-// 							{
-// 								Metrics: []*metricpb.Metric{
-// 									{
-// 										Name: "instrument",
-// 										Data: &metricpb.Metric_Sum{
-// 											Sum: &metricpb.Sum{
-// 												IsMonotonic:            k.monotonic,
-// 												AggregationTemporality: k.aggTemporality,
-// 												DataPoints: []*metricpb.NumberDataPoint{
-// 													{
-// 														Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
-// 														Attributes:        cpu1Labels,
-// 														StartTimeUnixNano: startTime(),
-// 														TimeUnixNano:      pointTime(),
-// 													},
-// 												},
-// 											},
-// 										},
-// 									},
-// 								},
-// 							},
-// 						},
-// 					},
-// 				},
-// 			)
-// 		})
-// 	}
-// }
+	for _, k := range []testcase{
+		{"counter", metric.CounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA, true},
+		{"updowncounter", metric.UpDownCounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA, false},
+		{"sumobserver", metric.SumObserverInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, true},
+		{"updownsumobserver", metric.UpDownSumObserverInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, false},
+	} {
+		t.Run(k.name, func(t *testing.T) {
+			runMetricExportTests(
+				t,
+				[]otlpmetric.Option{
+					otlpmetric.WithMetricExportKindSelector(
+						metricsdk.StatelessExportKindSelector(),
+					),
+				},
+				testerAResource,
+				[]record{
+					{
+						"instrument",
+						k.instrumentKind,
+						number.Int64Kind,
+						nil,
+						append(baseKeyValues, cpuKey.Int(1)),
+					},
+				},
+				[]*metricpb.ResourceMetrics{
+					{
+						Resource: testerAResourcePb,
+						InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
+							{
+								Metrics: []*metricpb.Metric{
+									{
+										Name: "instrument",
+										Data: &metricpb.Metric_Sum{
+											Sum: &metricpb.Sum{
+												IsMonotonic:            k.monotonic,
+												AggregationTemporality: k.aggTemporality,
+												DataPoints: []*metricpb.NumberDataPoint{
+													{
+														Value:             &metricpb.NumberDataPoint_AsInt{AsInt: 11},
+														Attributes:        cpu1Labels,
+														StartTimeUnixNano: startTime(),
+														TimeUnixNano:      pointTime(),
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			)
+		})
+	}
+}
 
 func runMetricExportTests(t *testing.T, opts []otlpmetric.Option, res *resource.Resource, records []record, expected []*metricpb.ResourceMetrics) {
 	exp, driver := newExporter(t, opts...)
 
-	recs := map[attribute.Distinct][]metricsdk.Record{}
-	resources := map[attribute.Distinct]*resource.Resource{}
+	recs := []metricsdk.Record{}
 	for _, r := range records {
 		lcopy := make([]attribute.KeyValue, len(r.labels))
 		copy(lcopy, r.labels)
@@ -789,105 +705,69 @@ func runMetricExportTests(t *testing.T, opts []otlpmetric.Option, res *resource.
 		}
 		require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
 
-		equiv := r.resource.Equivalent()
-		resources[equiv] = r.resource
-		recs[equiv] = append(recs[equiv], metricsdk.NewRecord(&desc, &labs, ckpt.Aggregation(), intervalStart, intervalEnd))
+		recs = append(recs, metricsdk.NewRecord(&desc, &labs, ckpt.Aggregation(), intervalStart, intervalEnd))
 	}
-	for key, records := range recs {
-		assert.NoError(t, exp.Export(context.Background(), resources[key], &checkpointSet{records: records}))
-	}
+	assert.NoError(t, exp.Export(context.Background(), res, &checkpointSet{records: recs}))
 
 	// assert.ElementsMatch does not equate nested slices of different order,
 	// therefore this requires the top level slice to be broken down.
 	// Build a map of Resource/InstrumentationLibrary pairs to Metrics, from
 	// that validate the metric elements match for all expected pairs. Finally,
 	// make we saw all expected pairs.
-	type key struct {
-		resource, instrumentationLibrary string
+	keyFor := func(ilm *metricpb.InstrumentationLibraryMetrics) string {
+		return fmt.Sprintf("%s/%s", ilm.GetInstrumentationLibrary().GetName(), ilm.GetInstrumentationLibrary().GetVersion())
 	}
-	got := map[key][]*metricpb.Metric{}
+	got := map[string][]*metricpb.Metric{}
 	for _, rm := range driver.rm {
 		for _, ilm := range rm.InstrumentationLibraryMetrics {
-			k := key{
-				resource:               rm.GetResource().String(),
-				instrumentationLibrary: ilm.GetInstrumentationLibrary().String(),
-			}
-			got[k] = ilm.GetMetrics()
+			k := keyFor(ilm)
+			got[k] = append(got[k], ilm.GetMetrics()...)
 		}
 	}
-	seen := map[key]struct{}{}
+
+	seen := map[string]struct{}{}
 	for _, rm := range expected {
 		for _, ilm := range rm.InstrumentationLibraryMetrics {
-			k := key{
-				resource:               rm.GetResource().String(),
-				instrumentationLibrary: ilm.GetInstrumentationLibrary().String(),
-			}
+			k := keyFor(ilm)
 			seen[k] = struct{}{}
 			g, ok := got[k]
 			if !ok {
-				t.Errorf("missing metrics for:\n\tResource: %s\n\tInstrumentationLibrary: %s\n", k.resource, k.instrumentationLibrary)
+				t.Errorf("missing metrics for:\n\tInstrumentationLibrary: %q\n", k)
 				continue
 			}
 			if !assert.Len(t, g, len(ilm.GetMetrics())) {
 				continue
 			}
 			for i, expected := range ilm.GetMetrics() {
-				assert.Equal(t, expected.Name, g[i].Name)
-				assert.Equal(t, expected.Unit, g[i].Unit)
-				assert.Equal(t, expected.Description, g[i].Description)
-				switch g[i].Data.(type) {
-				case *metricpb.Metric_Gauge:
-					assert.ElementsMatch(t, expected.GetGauge().GetDataPoints(), g[i].GetGauge().GetDataPoints())
-				case *metricpb.Metric_Sum:
-					assert.Equal(t,
-						expected.GetSum().GetAggregationTemporality(),
-						g[i].GetSum().GetAggregationTemporality(),
-					)
-					assert.Equal(t,
-						expected.GetSum().GetIsMonotonic(),
-						g[i].GetSum().GetIsMonotonic(),
-					)
-					assert.ElementsMatch(t, expected.GetSum().GetDataPoints(), g[i].GetSum().GetDataPoints())
-				case *metricpb.Metric_Histogram:
-					assert.Equal(
-						t,
-						expected.GetHistogram().GetAggregationTemporality(),
-						g[i].GetHistogram().GetAggregationTemporality(),
-					)
-					assert.ElementsMatch(t, expected.GetHistogram().GetDataPoints(), g[i].GetHistogram().GetDataPoints())
-				case *metricpb.Metric_Summary:
-					assert.ElementsMatch(t, expected.GetSummary().GetDataPoints(), g[i].GetSummary().GetDataPoints())
-				default:
-					assert.Failf(t, "unknown data type", g[i].Name)
-				}
+				assert.Equal(t, "", cmp.Diff(expected, g[i], protocmp.Transform()))
 			}
 		}
 	}
 	for k := range got {
 		if _, ok := seen[k]; !ok {
-			t.Errorf("did not expect metrics for:\n\tResource: %s\n\tInstrumentationLibrary: %s\n", k.resource, k.instrumentationLibrary)
+			t.Errorf("did not expect metrics for:\n\tInstrumentationLibrary: %s\n", k)
 		}
 	}
 }
 
-// func TestEmptyMetricExport(t *testing.T) {
-// 	exp, driver := newExporter(t)
+func TestEmptyMetricExport(t *testing.T) {
+	exp, driver := newExporter(t)
 
-// 	for _, test := range []struct {
-// 		records []metricsdk.Record
-// 		want    []*metricpb.ResourceMetrics
-// 	}{
-// 		{
-// 			[]metricsdk.Record(nil),
-// 			[]*metricpb.ResourceMetrics(nil),
-// 		},
-// 		{
-// 			[]metricsdk.Record{},
-// 			[]*metricpb.ResourceMetrics(nil),
-// 		},
-// 	} {
-// 		driver.Reset()
-// 		require.NoError(t, exp.Export(context.Background(), resource.Empty(), &checkpointSet{records: test.records}))
-// 		assert.Equal(t, test.want, driver.rm)
-// 	}
-// }
+	for _, test := range []struct {
+		records []metricsdk.Record
+		want    []*metricpb.ResourceMetrics
+	}{
+		{
+			[]metricsdk.Record(nil),
+			[]*metricpb.ResourceMetrics(nil),
+		},
+		{
+			[]metricsdk.Record{},
+			[]*metricpb.ResourceMetrics(nil),
+		},
+	} {
+		driver.Reset()
+		require.NoError(t, exp.Export(context.Background(), resource.Empty(), &checkpointSet{records: test.records}))
+		assert.Equal(t, test.want, driver.rm)
+	}
+}

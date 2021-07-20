@@ -92,6 +92,8 @@ func CheckpointSet(ctx context.Context, exportSelector export.ExportKindSelector
 		close(transformed)
 	}()
 
+	// fmt.Println("GRR", res.InstrumentationLibrary)
+
 	// Synchronously collect the transformed records and transmit.
 	rms, err := sink(ctx, res, transformed)
 	if err != nil {
@@ -167,6 +169,7 @@ func sink(ctx context.Context, res *resource.Resource, in <-chan result) ([]*met
 			errStrings = append(errStrings, res.Err.Error())
 			continue
 		}
+		// fmt.Println("GRR", res.InstrumentationLibrary)
 
 		mb, ok := grouped[res.InstrumentationLibrary]
 		if !ok {
