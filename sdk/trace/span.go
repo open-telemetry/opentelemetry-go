@@ -262,11 +262,13 @@ func (s *span) End(options ...trace.SpanEndOption) {
 	}
 	s.mu.Unlock()
 
-	sps, ok := s.tracer.provider.spanProcessors.Load().(spanProcessorStates)
-	mustExportOrProcess := ok && len(sps) > 0
-	if mustExportOrProcess {
+	if sps, ok := s.tracer.provider.spanProcessors.Load().(spanProcessorStates); ok {
+		if len(sps) == 0 {
+			return
+		}
+		snap := s.snapshot()
 		for _, sp := range sps {
-			sp.sp.OnEnd(s.snapshot())
+			sp.sp.OnEnd(snap)
 		}
 	}
 }
