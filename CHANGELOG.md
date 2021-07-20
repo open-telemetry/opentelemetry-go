@@ -10,7 +10,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Adds HTTP support for OTLP metrics exporter. (#2022)
 - Added `WithOSDescription` resource configuration option to set OS (Operating System) description resource attribute (`os.description`). (#1840)
 - Added `WithOS` resource configuration option to set all OS (Operating System) resource attributes at once. (#1840)
 
@@ -22,7 +21,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
-- Removed the deprecated package `go.opentelemetry.io/otel/exporters/metric/prometheus`. (#2020)
 - Removed the deprecated package `go.opentelemetry.io/otel/exporters/trace/jaeger`. (#2020)
 - Removed the deprecated package `go.opentelemetry.io/otel/exporters/trace/zipkin`. (#2020)
 - Removed metrics test package `go.opentelemetry.io/otel/sdk/export/metric/metrictest`. (#2105)
@@ -32,8 +30,20 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - When using WithNewRoot, don't use the parent context for making sampling decisions. (#2032)
 - `oteltest.Tracer` now creates a valid `SpanContext` when using `WithNewRoot`. (#2073)
 - OS type detector now sets the correct `dragonflybsd` value for DragonFly BSD. (#2092)
+- The OTel span status is correctly transformed into the OTLP status in the `go.opentelemetry.io/otel/exporters/otlp/otlptrace` package.
+  This fix will by default set the status to `Unset` if it is not explicitly set to `Ok` or `Error`. (#2099 #2102)
 
 ### Security
+
+## [Experimental Metrics v0.22.0] - 2021-07-19
+
+### Added
+
+- Adds HTTP support for OTLP metrics exporter. (#2022)
+
+### Removed
+
+- Removed the deprecated package `go.opentelemetry.io/otel/exporters/metric/prometheus`. (#2020)
 
 ## [1.0.0-RC1] / 0.21.0 - 2021-06-18
 
@@ -1431,6 +1441,7 @@ It contains api and sdk for trace and meter.
 - CODEOWNERS file to track owners of this project.
 
 [Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.0.0-RC1...HEAD
+[Experimental Metrics v0.22.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/metric/v0.22.0
 [1.0.0-RC1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.0-RC1
 [0.20.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.20.0
 [0.19.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.19.0
