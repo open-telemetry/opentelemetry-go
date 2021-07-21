@@ -45,9 +45,7 @@ type fakeExporter struct {
 
 func (f *fakeExporter) Export(ctx context.Context, res *resource.Resource, cps exportmetric.CheckpointSet) error {
 	return cps.ForEach(f, func(record exportmetric.Record) error {
-		if f.resource == nil {
-			f.resource = res
-		}
+		f.resource = res
 		f.records = append(f.records, record)
 		return f.err
 	})
@@ -146,6 +144,12 @@ func TestExportMetrics(t *testing.T) {
 			desc: "success",
 			input: []*metricdata.Metric{
 				{
+					Resource: &ocresource.Resource{
+						Labels: map[string]string{
+							"R1": "V1",
+							"R2": "V2",
+						},
+					},
 					TimeSeries: []*metricdata.TimeSeries{
 						{
 							StartTime: now,
@@ -156,7 +160,10 @@ func TestExportMetrics(t *testing.T) {
 					},
 				},
 			},
-			expectedResource: resource.NewSchemaless(),
+			expectedResource: resource.NewSchemaless(
+				attribute.String("R1", "V1"),
+				attribute.String("R2", "V2"),
+			),
 			expected: []export.Record{
 				export.NewRecord(
 					&basicDesc,
@@ -188,7 +195,6 @@ func TestExportMetrics(t *testing.T) {
 					},
 				},
 			},
-			expectedResource: resource.NewSchemaless(),
 			expected: []export.Record{
 				export.NewRecord(
 					&basicDesc,
@@ -223,7 +229,6 @@ func TestExportMetrics(t *testing.T) {
 				// TypeGaugeDistribution isn't supported
 				{Descriptor: metricdata.Descriptor{Type: metricdata.TypeGaugeDistribution}},
 			},
-			expectedResource: resource.NewSchemaless(),
 			expected: []export.Record{
 				export.NewRecord(
 					&basicDesc,
