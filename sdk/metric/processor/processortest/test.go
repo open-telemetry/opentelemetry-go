@@ -121,6 +121,11 @@ func (p *Processor) Values() map[string]float64 {
 	return p.output.Map()
 }
 
+// Reset clears the state of this test processor.
+func (p *Processor) Reset() {
+	p.output.Reset()
+}
+
 // Checkpointer returns a checkpointer that computes a single
 // interval.
 func Checkpointer(p *Processor) export.Checkpointer {
