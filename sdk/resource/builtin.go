@@ -40,7 +40,6 @@ type (
 	// disable them.
 	host struct{}
 
-	// stringDetector is a Detector that provides information about the
 	stringDetector struct {
 		schemaURL string
 		K         attribute.Key

@@ -107,15 +107,15 @@ func restoreAttributesProviders() {
 func TestWithProcessFuncs(t *testing.T) {
 	mockProcessAttributesProviders()
 
-	t.Run("WithPID", testWithProcessPID)
-	t.Run("WithExecutableName", testWithProcessExecutableName)
-	t.Run("WithExecutablePath", testWithProcessExecutablePath)
-	t.Run("WithCommandArgs", testWithProcessCommandArgs)
-	t.Run("WithOwner", testWithProcessOwner)
-	t.Run("WithRuntimeName", testWithProcessRuntimeName)
-	t.Run("WithRuntimeVersion", testWithProcessRuntimeVersion)
-	t.Run("WithRuntimeDescription", testWithProcessRuntimeDescription)
-	t.Run("WithProcess", testWithProcess)
+	t.Run("WithPID", TestWithProcessPID)
+	t.Run("WithExecutableName", TestWithProcessExecutableName)
+	t.Run("WithExecutablePath", TestWithProcessExecutablePath)
+	t.Run("WithCommandArgs", TestWithProcessCommandArgs)
+	t.Run("WithOwner", TestWithProcessOwner)
+	t.Run("WithRuntimeName", TestWithProcessRuntimeName)
+	t.Run("WithRuntimeVersion", TestWithProcessRuntimeVersion)
+	t.Run("WithRuntimeDescription", TestWithProcessRuntimeDescription)
+	t.Run("WithProcess", TestWithProcess)
 
 	restoreAttributesProviders()
 }
@@ -143,130 +143,6 @@ func TestRuntimeOS(t *testing.T) {
 
 func TestRuntimeArch(t *testing.T) {
 	require.EqualValues(t, runtime.GOARCH, resource.RuntimeArch())
-}
-
-func testWithProcessPID(t *testing.T) {
-	ctx := context.Background()
-
-	res, err := resource.New(ctx,
-		resource.WithProcessPID(),
-	)
-
-	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"process.pid": fmt.Sprint(fakePID),
-	}, toMap(res))
-}
-
-func testWithProcessExecutableName(t *testing.T) {
-	ctx := context.Background()
-
-	res, err := resource.New(ctx,
-		resource.WithProcessExecutableName(),
-	)
-
-	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"process.executable.name": fakeExecutableName,
-	}, toMap(res))
-}
-
-func testWithProcessExecutablePath(t *testing.T) {
-	ctx := context.Background()
-
-	res, err := resource.New(ctx,
-		resource.WithProcessExecutablePath(),
-	)
-
-	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"process.executable.path": fakeExecutablePath,
-	}, toMap(res))
-}
-
-func testWithProcessCommandArgs(t *testing.T) {
-	ctx := context.Background()
-
-	res, err := resource.New(ctx,
-		resource.WithProcessCommandArgs(),
-	)
-
-	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"process.command_args": fmt.Sprint(fakeCommandArgs),
-	}, toMap(res))
-}
-
-func testWithProcessOwner(t *testing.T) {
-	ctx := context.Background()
-
-	res, err := resource.New(ctx,
-		resource.WithProcessOwner(),
-	)
-
-	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"process.owner": fakeOwner,
-	}, toMap(res))
-}
-
-func testWithProcessRuntimeName(t *testing.T) {
-	ctx := context.Background()
-
-	res, err := resource.New(ctx,
-		resource.WithProcessRuntimeName(),
-	)
-
-	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"process.runtime.name": fakeRuntimeName,
-	}, toMap(res))
-}
-
-func testWithProcessRuntimeVersion(t *testing.T) {
-	ctx := context.Background()
-
-	res, err := resource.New(ctx,
-		resource.WithProcessRuntimeVersion(),
-	)
-
-	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"process.runtime.version": fakeRuntimeVersion,
-	}, toMap(res))
-}
-
-func testWithProcessRuntimeDescription(t *testing.T) {
-	ctx := context.Background()
-
-	res, err := resource.New(ctx,
-		resource.WithProcessRuntimeDescription(),
-	)
-
-	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"process.runtime.description": fakeRuntimeDescription,
-	}, toMap(res))
-}
-
-func testWithProcess(t *testing.T) {
-	ctx := context.Background()
-
-	res, err := resource.New(ctx,
-		resource.WithProcess(),
-	)
-
-	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"process.pid":                 fmt.Sprint(fakePID),
-		"process.executable.name":     fakeExecutableName,
-		"process.executable.path":     fakeExecutablePath,
-		"process.command_args":        fmt.Sprint(fakeCommandArgs),
-		"process.owner":               fakeOwner,
-		"process.runtime.name":        fakeRuntimeName,
-		"process.runtime.version":     fakeRuntimeVersion,
-		"process.runtime.description": fakeRuntimeDescription,
-	}, toMap(res))
 }
 
 func testWithProcessExecutablePathError(t *testing.T) {

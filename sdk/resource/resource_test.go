@@ -374,6 +374,16 @@ func TestNew(t *testing.T) {
 			},
 		},
 		{
+			name:   "WithOS",
+			envars: "key=value,other=attr",
+			options: []resource.Option{
+				resource.WithOS(),
+			},
+			resourceValues: map[string]string{
+				"A": "B",
+			},
+		},
+		{
 			name:   "With schema url",
 			envars: "",
 			options: []resource.Option{
@@ -439,6 +449,179 @@ func TestNew(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestWithOSType(t *testing.T) {
+	mockRuntimeProviders()
+	t.Cleanup(restoreAttributesProviders)
+
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithOSType(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"os.type": "linux",
+	}, toMap(res))
+}
+
+func TestWithOSDescription(t *testing.T) {
+	mockRuntimeProviders()
+	t.Cleanup(restoreAttributesProviders)
+
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithOSDescription(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"os.description": "Test",
+	}, toMap(res))
+}
+
+func TestWithOS(t *testing.T) {
+	mockRuntimeProviders()
+	t.Cleanup(restoreAttributesProviders)
+
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithOS(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"os.type":        "linux",
+		"os.description": "Test",
+	}, toMap(res))
+}
+
+func TestWithProcessPID(t *testing.T) {
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithProcessPID(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.pid": fmt.Sprint(fakePID),
+	}, toMap(res))
+}
+
+func TestWithProcessExecutableName(t *testing.T) {
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithProcessExecutableName(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.executable.name": fakeExecutableName,
+	}, toMap(res))
+}
+
+func TestWithProcessExecutablePath(t *testing.T) {
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithProcessExecutablePath(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.executable.path": fakeExecutablePath,
+	}, toMap(res))
+}
+
+func TestWithProcessCommandArgs(t *testing.T) {
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithProcessCommandArgs(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.command_args": fmt.Sprint(fakeCommandArgs),
+	}, toMap(res))
+}
+
+func TestWithProcessOwner(t *testing.T) {
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithProcessOwner(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.owner": fakeOwner,
+	}, toMap(res))
+}
+
+func TestWithProcessRuntimeName(t *testing.T) {
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithProcessRuntimeName(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.runtime.name": fakeRuntimeName,
+	}, toMap(res))
+}
+
+func TestWithProcessRuntimeVersion(t *testing.T) {
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithProcessRuntimeVersion(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.runtime.version": fakeRuntimeVersion,
+	}, toMap(res))
+}
+
+func TestWithProcessRuntimeDescription(t *testing.T) {
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithProcessRuntimeDescription(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.runtime.description": fakeRuntimeDescription,
+	}, toMap(res))
+}
+
+func TestWithProcess(t *testing.T) {
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithProcess(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.pid":                 fmt.Sprint(fakePID),
+		"process.executable.name":     fakeExecutableName,
+		"process.executable.path":     fakeExecutablePath,
+		"process.command_args":        fmt.Sprint(fakeCommandArgs),
+		"process.owner":               fakeOwner,
+		"process.runtime.name":        fakeRuntimeName,
+		"process.runtime.version":     fakeRuntimeVersion,
+		"process.runtime.description": fakeRuntimeDescription,
+	}, toMap(res))
 }
 
 func toMap(res *resource.Resource) map[string]string {
