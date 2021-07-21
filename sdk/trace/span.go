@@ -623,11 +623,11 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, o *trace.Sp
 	}
 
 	startTime := o.Timestamp()
-	var stopwatch = defaultStopwatch(startTime)
 	if startTime.IsZero() {
-		stopwatch = tr.provider.clock.Stopwatch()
+		span.stopwatch = tr.provider.clock.Stopwatch()
+	} else {
+		span.stopwatch = standardStopwatch(startTime)
 	}
-	span.stopwatch = stopwatch
 	span.spanKind = trace.ValidateSpanKind(o.SpanKind())
 	span.name = name
 	span.parent = psc
