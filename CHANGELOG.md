@@ -23,6 +23,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Removed the deprecated package `go.opentelemetry.io/otel/exporters/trace/jaeger`. (#2020)
 - Removed the deprecated package `go.opentelemetry.io/otel/exporters/trace/zipkin`. (#2020)
+- Removed metrics test package `go.opentelemetry.io/otel/sdk/export/metric/metrictest`. (#2105)
 
 ### Fixed
 

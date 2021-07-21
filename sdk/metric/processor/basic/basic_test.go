@@ -29,8 +29,8 @@ import (
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/processortest"
@@ -301,7 +301,7 @@ func TestBasicInconsistent(t *testing.T) {
 	b = basic.New(processorTest.AggregatorSelector(), export.StatelessExportKindSelector())
 
 	desc := metric.NewDescriptor("inst", metric.CounterInstrumentKind, number.Int64Kind)
-	accum := export.NewAccumulation(&desc, attribute.EmptySet(), resource.Empty(), metrictest.NoopAggregator{})
+	accum := export.NewAccumulation(&desc, attribute.EmptySet(), resource.Empty(), aggregatortest.NoopAggregator{})
 	require.Equal(t, basic.ErrInconsistentState, b.Process(accum))
 
 	// Test invalid kind:
@@ -326,7 +326,7 @@ func TestBasicTimestamps(t *testing.T) {
 	afterNew := time.Now()
 
 	desc := metric.NewDescriptor("inst", metric.CounterInstrumentKind, number.Int64Kind)
-	accum := export.NewAccumulation(&desc, attribute.EmptySet(), resource.Empty(), metrictest.NoopAggregator{})
+	accum := export.NewAccumulation(&desc, attribute.EmptySet(), resource.Empty(), aggregatortest.NoopAggregator{})
 
 	b.StartCollection()
 	_ = b.Process(accum)
