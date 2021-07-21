@@ -23,7 +23,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Removed the deprecated package `go.opentelemetry.io/otel/exporters/trace/jaeger`. (#2020)
 - Removed the deprecated package `go.opentelemetry.io/otel/exporters/trace/zipkin`. (#2020)
-- Removed the resource.WithBuiltinDetectors() function in favor of explicit WithFeature() options for every built-in detector. (#2026)
+- Removed the `"go.opentelemetry.io/otel/sdk/resource".WithBuiltinDetectors` function.
+  The explicit `With*` options for every built-in detector should be used instead. (#2026 #2097)
 
 ### Fixed
 
