@@ -31,6 +31,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - OS type detector now sets the correct `dragonflybsd` value for DragonFly BSD. (#2092)
 - The OTel span status is correctly transformed into the OTLP status in the `go.opentelemetry.io/otel/exporters/otlp/otlptrace` package.
   This fix will by default set the status to `Unset` if it is not explicitly set to `Ok` or `Error`. (#2099 #2102)
+- The `Inject` method for the `"go.opentelemetry.io/otel/propagation".TraceContext` type no longer injects empty `tracestate` values. (#2108)
 
 ### Security
 
