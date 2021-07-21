@@ -12,25 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package oteltest // import "go.opentelemetry.io/otel/oteltest"
+package propagationtest
 
 import (
-	"context"
-	"fmt"
-	"strconv"
-	"strings"
 	"sync"
 	"testing"
 
 	"go.opentelemetry.io/otel/propagation"
 )
 
-type ctxKeyType string
-
-// TextMapCarrier provides a testing storage medium to for a
-// TextMapPropagator. It records all the operations it performs.
-//
-// Deprecated: use the propagationtest package instead.
+// TextMapCarrier is a storage medium for a TextMapPropagator used in testing.
+// The methods of a TextMapCarrier are concurrent safe.
 type TextMapCarrier struct {
 	mtx sync.Mutex
 
@@ -39,9 +31,9 @@ type TextMapCarrier struct {
 	data map[string]string
 }
 
+var _ propagation.TextMapCarrier = (*TextMapCarrier)(nil)
+
 // NewTextMapCarrier returns a new *TextMapCarrier populated with data.
-//
-// Deprecated: use the propagationtest package instead.
 func NewTextMapCarrier(data map[string]string) *TextMapCarrier {
 	copied := make(map[string]string, len(data))
 	for k, v := range data {
@@ -133,98 +125,17 @@ func (c *TextMapCarrier) SetN(t *testing.T, n int) bool {
 	return true
 }
 
-// Reset zeros out the internal state recording of c.
-func (c *TextMapCarrier) Reset() {
+// Reset zeros out the recording state and sets the carried values to data.
+func (c *TextMapCarrier) Reset(data map[string]string) {
+	copied := make(map[string]string, len(data))
+	for k, v := range data {
+		copied[k] = v
+	}
+
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
 	c.gets = nil
 	c.sets = nil
-	c.data = make(map[string]string)
+	c.data = copied
 }
-
-type state struct {
-	Injections  uint64
-	Extractions uint64
-}
-
-func newState(encoded string) state {
-	if encoded == "" {
-		return state{}
-	}
-	split := strings.SplitN(encoded, ",", 2)
-	injects, _ := strconv.ParseUint(split[0], 10, 64)
-	extracts, _ := strconv.ParseUint(split[1], 10, 64)
-	return state{
-		Injections:  injects,
-		Extractions: extracts,
-	}
-}
-
-func (s state) String() string {
-	return fmt.Sprintf("%d,%d", s.Injections, s.Extractions)
-}
-
-// TextMapPropagator is a propagation.TextMapPropagator used for testing.
-//
-// Deprecated: use the propagationtest package instead.
-type TextMapPropagator struct {
-	Name   string
-	ctxKey ctxKeyType
-}
-
-// NewTextMapPropagator returns a new TextMapPropagator for testing.
-//
-// Deprecated: use the propagationtest package instead.
-func NewTextMapPropagator(name string) *TextMapPropagator {
-	return &TextMapPropagator{Name: name, ctxKey: ctxKeyType(name)}
-}
-
-func (p *TextMapPropagator) stateFromContext(ctx context.Context) state {
-	if v := ctx.Value(p.ctxKey); v != nil {
-		if s, ok := v.(state); ok {
-			return s
-		}
-	}
-	return state{}
-}
-
-func (p *TextMapPropagator) stateFromCarrier(carrier propagation.TextMapCarrier) state {
-	return newState(carrier.Get(p.Name))
-}
-
-// Inject set cross-cutting concerns for p from the Context into the carrier.
-func (p *TextMapPropagator) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
-	s := p.stateFromContext(ctx)
-	s.Injections++
-	carrier.Set(p.Name, s.String())
-}
-
-// InjectedN tests if p has made n injections to carrier.
-func (p *TextMapPropagator) InjectedN(t *testing.T, carrier *TextMapCarrier, n int) bool {
-	if actual := p.stateFromCarrier(carrier).Injections; actual != uint64(n) {
-		t.Errorf("TextMapPropagator{%q} injected %d times, not %d", p.Name, actual, n)
-		return false
-	}
-	return true
-}
-
-// Extract reads cross-cutting concerns for p from the carrier into a Context.
-func (p *TextMapPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
-	s := p.stateFromCarrier(carrier)
-	s.Extractions++
-	return context.WithValue(ctx, p.ctxKey, s)
-}
-
-// ExtractedN tests if p has made n extractions from the lineage of ctx.
-// nolint (context is not first arg)
-func (p *TextMapPropagator) ExtractedN(t *testing.T, ctx context.Context, n int) bool {
-	if actual := p.stateFromContext(ctx).Extractions; actual != uint64(n) {
-		t.Errorf("TextMapPropagator{%q} extracted %d time, not %d", p.Name, actual, n)
-		return false
-	}
-	return true
-}
-
-// Fields returns p.Name as the key who's value is set with Inject.
-func (p *TextMapPropagator) Fields() []string { return []string{p.Name} }
