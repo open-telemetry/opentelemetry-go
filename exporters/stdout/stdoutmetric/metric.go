@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	exportmetric "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type metricExporter struct {
@@ -49,14 +50,14 @@ func (e *metricExporter) ExportKindFor(desc *metric.Descriptor, kind aggregation
 	return exportmetric.StatelessExportKindSelector().ExportKindFor(desc, kind)
 }
 
-func (e *metricExporter) Export(_ context.Context, checkpointSet exportmetric.CheckpointSet) error {
+func (e *metricExporter) Export(_ context.Context, res *resource.Resource, checkpointSet exportmetric.CheckpointSet) error {
 	var aggError error
 	var batch []line
 	aggError = checkpointSet.ForEach(e, func(record exportmetric.Record) error {
 		desc := record.Descriptor()
 		agg := record.Aggregation()
 		kind := desc.NumberKind()
-		encodedResource := record.Resource().Encoded(e.config.LabelEncoder)
+		encodedResource := res.Encoded(e.config.LabelEncoder)
 
 		var instLabels []attribute.KeyValue
 		if name := desc.InstrumentationName(); name != "" {

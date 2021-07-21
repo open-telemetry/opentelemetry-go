@@ -70,7 +70,7 @@ func (fix testFixture) Output() string {
 }
 
 func (fix testFixture) Export(checkpointSet export.CheckpointSet) {
-	err := fix.exporter.Export(fix.ctx, checkpointSet)
+	err := fix.exporter.Export(fix.ctx, testResource, checkpointSet)
 	if err != nil {
 		fix.t.Error("export failed: ", err)
 	}
@@ -101,7 +101,7 @@ func TestStdoutTimestamp(t *testing.T) {
 
 	checkpointSet.Add(&desc, ckpt)
 
-	if err := exporter.Export(ctx, checkpointSet); err != nil {
+	if err := exporter.Export(ctx, testResource, checkpointSet); err != nil {
 		t.Fatal("Unexpected export error: ", err)
 	}
 
