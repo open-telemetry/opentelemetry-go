@@ -161,6 +161,7 @@ func TestTracer(t *testing.T) {
 			e.Expect(ok).ToBeTrue()
 
 			childSpanContext := testSpan.SpanContext()
+			e.Expect(childSpanContext.IsValid()).ToBeTrue()
 			e.Expect(childSpanContext.TraceID()).NotToEqual(napSpanContext.TraceID())
 			e.Expect(childSpanContext.SpanID()).NotToEqual(napSpanContext.SpanID())
 			e.Expect(testSpan.ParentSpanID().IsValid()).ToBeFalse()

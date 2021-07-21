@@ -10,10 +10,10 @@ replace (
 
 require (
 	go.opentelemetry.io/otel v1.0.0-RC1
-	go.opentelemetry.io/otel/exporters/prometheus v0.21.0
-	go.opentelemetry.io/otel/metric v0.21.0
-	go.opentelemetry.io/otel/sdk/export/metric v0.21.0
-	go.opentelemetry.io/otel/sdk/metric v0.21.0
+	go.opentelemetry.io/otel/exporters/prometheus v0.22.0
+	go.opentelemetry.io/otel/metric v0.22.0
+	go.opentelemetry.io/otel/sdk/export/metric v0.22.0
+	go.opentelemetry.io/otel/sdk/metric v0.22.0
 )
 
 replace go.opentelemetry.io/otel/bridge/opencensus => ../../bridge/opencensus
