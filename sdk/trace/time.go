@@ -41,10 +41,6 @@ func defaultClock() Clock {
 	return standardClock{}
 }
 
-func defaultStopwatch(t time.Time) Stopwatch {
-	return standardStopwatch(t)
-}
-
 func (standardClock) Stopwatch() Stopwatch {
 	return standardStopwatch(time.Now())
 }
