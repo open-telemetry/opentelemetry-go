@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
+	"go.opentelemetry.io/otel/sdk/resource"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,6 +39,8 @@ const (
 
 var (
 	oneRecord = otlpmetrictest.OneRecordCheckpointSet{}
+
+	testResource = resource.Empty()
 )
 
 var (
@@ -163,7 +166,7 @@ func TestRetry(t *testing.T) {
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
-	err = exporter.Export(ctx, oneRecord)
+	err = exporter.Export(ctx, testResource, oneRecord)
 	assert.NoError(t, err)
 	assert.Len(t, mc.GetMetrics(), 1)
 }
@@ -185,7 +188,7 @@ func TestTimeout(t *testing.T) {
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
-	err = exporter.Export(ctx, oneRecord)
+	err = exporter.Export(ctx, testResource, oneRecord)
 	assert.Equal(t, true, os.IsTimeout(err))
 }
 
@@ -210,7 +213,7 @@ func TestRetryFailed(t *testing.T) {
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
-	err = exporter.Export(ctx, oneRecord)
+	err = exporter.Export(ctx, testResource, oneRecord)
 	assert.Error(t, err)
 	assert.Empty(t, mc.GetMetrics())
 }
@@ -235,7 +238,7 @@ func TestNoRetry(t *testing.T) {
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
-	err = exporter.Export(ctx, oneRecord)
+	err = exporter.Export(ctx, testResource, oneRecord)
 	assert.Error(t, err)
 	assert.Equal(t, fmt.Sprintf("failed to send metrics to http://%s/v1/metrics with HTTP status 400 Bad Request", mc.endpoint), err.Error())
 	assert.Empty(t, mc.GetMetrics())
@@ -256,7 +259,7 @@ func TestEmptyData(t *testing.T) {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
 	assert.NoError(t, err)
-	err = exporter.Export(ctx, oneRecord)
+	err = exporter.Export(ctx, testResource, oneRecord)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, mc.GetMetrics())
 }
@@ -302,7 +305,7 @@ func TestUnreasonableMaxAttempts(t *testing.T) {
 			defer func() {
 				assert.NoError(t, exporter.Shutdown(ctx))
 			}()
-			err = exporter.Export(ctx, oneRecord)
+			err = exporter.Export(ctx, testResource, oneRecord)
 			assert.Error(t, err)
 			assert.Empty(t, mc.GetMetrics())
 		})
@@ -338,7 +341,7 @@ func TestUnreasonableBackoff(t *testing.T) {
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(context.Background()))
 	}()
-	err = exporter.Export(ctx, oneRecord)
+	err = exporter.Export(ctx, testResource, oneRecord)
 	assert.Error(t, err)
 	assert.Empty(t, mc.GetMetrics())
 }
@@ -363,7 +366,7 @@ func TestCancelledContext(t *testing.T) {
 		assert.NoError(t, exporter.Shutdown(context.Background()))
 	}()
 	cancel()
-	_ = exporter.Export(ctx, oneRecord)
+	_ = exporter.Export(ctx, testResource, oneRecord)
 	assert.Empty(t, mc.GetMetrics())
 }
 
@@ -390,7 +393,7 @@ func TestDeadlineContext(t *testing.T) {
 	}()
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
-	err = exporter.Export(ctx, oneRecord)
+	err = exporter.Export(ctx, testResource, oneRecord)
 	assert.Error(t, err)
 	assert.Empty(t, mc.GetMetrics())
 }
@@ -418,7 +421,7 @@ func TestStopWhileExporting(t *testing.T) {
 	}()
 	doneCh := make(chan struct{})
 	go func() {
-		err := exporter.Export(ctx, oneRecord)
+		err := exporter.Export(ctx, testResource, oneRecord)
 		assert.Error(t, err)
 		assert.Empty(t, mc.GetMetrics())
 		close(doneCh)

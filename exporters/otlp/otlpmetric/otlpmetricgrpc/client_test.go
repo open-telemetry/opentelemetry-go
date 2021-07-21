@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpmetrictest"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	"go.opentelemetry.io/otel/sdk/resource"
 
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
@@ -40,6 +41,8 @@ import (
 
 var (
 	oneRecord = otlpmetrictest.OneRecordCheckpointSet{}
+
+	testResource = resource.Empty()
 )
 
 func TestNewExporter_endToEnd(t *testing.T) {
@@ -183,11 +186,11 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 
 	// first export, it will send disconnected message to the channel on export failure,
 	// trigger almost immediate reconnection
-	require.Error(t, exp.Export(ctx, oneRecord))
+	require.Error(t, exp.Export(ctx, testResource, oneRecord))
 
 	// second export, it will detect connection issue, change state of exporter to disconnected and
 	// send message to disconnected channel but this time reconnection gouroutine will be in (rest mode, not listening to the disconnected channel)
-	require.Error(t, exp.Export(ctx, oneRecord))
+	require.Error(t, exp.Export(ctx, testResource, oneRecord))
 
 	// as a result we have exporter in disconnected state waiting for disconnection message to reconnect
 
@@ -202,7 +205,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *test
 	for i := 0; i < n; i++ {
 		// when disconnected exp.Export doesnt send disconnected messages again
 		// it just quits and return last connection error
-		require.NoError(t, exp.Export(ctx, oneRecord))
+		require.NoError(t, exp.Export(ctx, testResource, oneRecord))
 	}
 
 	nmaMetrics := nmc.getMetrics()
@@ -231,7 +234,7 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 		{
 			name: "Do not retry if succeeded",
 			fn: func(t *testing.T, ctx context.Context, exp *otlpmetric.Exporter, mc *mockCollector) {
-				require.NoError(t, exp.Export(ctx, oneRecord))
+				require.NoError(t, exp.Export(ctx, testResource, oneRecord))
 
 				metrics := mc.getMetrics()
 
@@ -245,7 +248,7 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 				status.Error(codes.OK, ""),
 			},
 			fn: func(t *testing.T, ctx context.Context, exp *otlpmetric.Exporter, mc *mockCollector) {
-				require.NoError(t, exp.Export(ctx, oneRecord))
+				require.NoError(t, exp.Export(ctx, testResource, oneRecord))
 
 				metrics := mc.getMetrics()
 
@@ -267,7 +270,7 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 				status.Error(codes.Unavailable, "backend under pressure"),
 			},
 			fn: func(t *testing.T, ctx context.Context, exp *otlpmetric.Exporter, mc *mockCollector) {
-				require.NoError(t, exp.Export(ctx, oneRecord))
+				require.NoError(t, exp.Export(ctx, testResource, oneRecord))
 
 				metrics := mc.getMetrics()
 
@@ -287,7 +290,7 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 				status.Error(codes.InvalidArgument, "invalid arguments"),
 			},
 			fn: func(t *testing.T, ctx context.Context, exp *otlpmetric.Exporter, mc *mockCollector) {
-				require.Error(t, exp.Export(ctx, oneRecord))
+				require.Error(t, exp.Export(ctx, testResource, oneRecord))
 
 				metric := mc.getMetrics()
 
@@ -313,7 +316,7 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 				status.Error(codes.DataLoss, ""),
 			},
 			fn: func(t *testing.T, ctx context.Context, exp *otlpmetric.Exporter, mc *mockCollector) {
-				require.NoError(t, exp.Export(ctx, oneRecord))
+				require.NoError(t, exp.Export(ctx, testResource, oneRecord))
 
 				metrics := mc.getMetrics()
 
@@ -336,7 +339,7 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 				newThrottlingError(codes.ResourceExhausted, time.Second*30),
 			},
 			fn: func(t *testing.T, ctx context.Context, exp *otlpmetric.Exporter, mc *mockCollector) {
-				err := exp.Export(ctx, oneRecord)
+				err := exp.Export(ctx, testResource, oneRecord)
 				require.Error(t, err)
 				require.Equal(t, "context deadline exceeded", err.Error())
 
@@ -358,7 +361,7 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 				newThrottlingError(codes.ResourceExhausted, time.Minute),
 			},
 			fn: func(t *testing.T, ctx context.Context, exp *otlpmetric.Exporter, mc *mockCollector) {
-				err := exp.Export(ctx, oneRecord)
+				err := exp.Export(ctx, testResource, oneRecord)
 				require.Error(t, err)
 				require.Equal(t, "max elapsed time expired when respecting server throttle: rpc error: code = ResourceExhausted desc = ", err.Error())
 
@@ -385,7 +388,7 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 				status.Error(codes.Unavailable, "unavailable"),
 			},
 			fn: func(t *testing.T, ctx context.Context, exp *otlpmetric.Exporter, mc *mockCollector) {
-				err := exp.Export(ctx, oneRecord)
+				err := exp.Export(ctx, testResource, oneRecord)
 				require.Error(t, err)
 
 				require.Equal(t, "max elapsed time expired: rpc error: code = Unavailable desc = unavailable", err.Error())
@@ -405,7 +408,7 @@ func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
 				status.Error(codes.Unavailable, "unavailable"),
 			},
 			fn: func(t *testing.T, ctx context.Context, exp *otlpmetric.Exporter, mc *mockCollector) {
-				err := exp.Export(ctx, oneRecord)
+				err := exp.Export(ctx, testResource, oneRecord)
 				require.Error(t, err)
 
 				require.Equal(t, "rpc error: code = Unavailable desc = unavailable", err.Error())
@@ -468,7 +471,7 @@ func TestPermanentErrorsShouldNotBeRetried(t *testing.T) {
 
 			exp := newGRPCExporter(t, ctx, mc.endpoint)
 
-			err := exp.Export(ctx, oneRecord)
+			err := exp.Export(ctx, testResource, oneRecord)
 			require.Error(t, err)
 			require.Len(t, mc.getMetrics(), 0)
 			require.Equal(t, 1, mc.metricSvc.requests, "metric service must receive 1 permanent error requests.")
@@ -509,7 +512,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 	for j := 0; j < 3; j++ {
 
 		// No endpoint up.
-		require.Error(t, exp.Export(ctx, oneRecord))
+		require.Error(t, exp.Export(ctx, testResource, oneRecord))
 
 		// Now resurrect the collector by making a new one but reusing the
 		// old endpoint, and the collector should reconnect automatically.
@@ -520,7 +523,7 @@ func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
 
 		n := 10
 		for i := 0; i < n; i++ {
-			require.NoError(t, exp.Export(ctx, oneRecord))
+			require.NoError(t, exp.Export(ctx, testResource, oneRecord))
 		}
 
 		nmaMetrics := nmc.getMetrics()
@@ -582,7 +585,7 @@ func TestNewExporter_withHeaders(t *testing.T) {
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint,
 		otlpmetricgrpc.WithHeaders(map[string]string{"header1": "value1"}))
-	require.NoError(t, exp.Export(ctx, oneRecord))
+	require.NoError(t, exp.Export(ctx, testResource, oneRecord))
 
 	defer func() {
 		_ = exp.Shutdown(ctx)
@@ -606,7 +609,7 @@ func TestNewExporter_WithTimeout(t *testing.T) {
 		{
 			name: "Timeout Metrics",
 			fn: func(exp *otlpmetric.Exporter) error {
-				return exp.Export(context.Background(), oneRecord)
+				return exp.Export(context.Background(), testResource, oneRecord)
 			},
 			timeout: time.Millisecond * 100,
 			code:    codes.DeadlineExceeded,
@@ -616,7 +619,7 @@ func TestNewExporter_WithTimeout(t *testing.T) {
 		{
 			name: "No Timeout Metrics",
 			fn: func(exp *otlpmetric.Exporter) error {
-				return exp.Export(context.Background(), oneRecord)
+				return exp.Export(context.Background(), testResource, oneRecord)
 			},
 			timeout: time.Minute,
 			metrics: 1,
@@ -670,7 +673,7 @@ func TestNewExporter_withInvalidSecurityConfiguration(t *testing.T) {
 		t.Fatalf("failed to create a new collector exporter: %v", err)
 	}
 
-	err = exp.Export(ctx, oneRecord)
+	err = exp.Export(ctx, testResource, oneRecord)
 
 	expectedErr := fmt.Sprintf("metrics exporter is disconnected from the server %s: grpc: no transport security set (use grpc.WithInsecure() explicitly or set credentials)", mc.endpoint)
 
@@ -698,7 +701,7 @@ func TestDisconnected(t *testing.T) {
 		assert.NoError(t, exp.Shutdown(ctx))
 	}()
 
-	assert.Error(t, exp.Export(ctx, oneRecord))
+	assert.Error(t, exp.Export(ctx, testResource, oneRecord))
 }
 
 func TestEmptyData(t *testing.T) {
@@ -716,7 +719,7 @@ func TestEmptyData(t *testing.T) {
 		assert.NoError(t, exp.Shutdown(ctx))
 	}()
 
-	assert.NoError(t, exp.Export(ctx, otlpmetrictest.EmptyCheckpointSet{}))
+	assert.NoError(t, exp.Export(ctx, testResource, otlpmetrictest.EmptyCheckpointSet{}))
 }
 
 func TestFailedMetricTransform(t *testing.T) {
@@ -734,5 +737,5 @@ func TestFailedMetricTransform(t *testing.T) {
 		assert.NoError(t, exp.Shutdown(ctx))
 	}()
 
-	assert.Error(t, exp.Export(ctx, otlpmetrictest.FailCheckpointSet{}))
+	assert.Error(t, exp.Export(ctx, testResource, otlpmetrictest.FailCheckpointSet{}))
 }
