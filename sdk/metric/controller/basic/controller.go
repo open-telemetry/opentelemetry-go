@@ -119,6 +119,12 @@ func (c *Controller) MeterProvider() metric.MeterProvider {
 	return c.provider
 }
 
+// Resource returns the *resource.Resource associated with this
+// controller.
+func (c *Controller) Resource() *resource.Resource {
+	return c.resource
+}
+
 // Start begins a ticker that periodically collects and exports
 // metrics with the configured interval.  This is required for calling
 // a configured Exporter (see WithExporter) and is otherwise optional
