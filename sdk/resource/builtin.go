@@ -79,7 +79,7 @@ func StringDetector(schemaURL string, k attribute.Key, f func() (string, error))
 }
 
 // Detect returns a *Resource that describes the string as a value
-// corresponding to k as well as the specific schemaURL.
+// corresponding to attribute.Key as well as the specific schemaURL.
 func (sd stringDetector) Detect(ctx context.Context) (*Resource, error) {
 	value, err := sd.F()
 	if err != nil {

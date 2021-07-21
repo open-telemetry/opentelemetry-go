@@ -104,22 +104,6 @@ func restoreAttributesProviders() {
 	resource.SetDefaultOSDescriptionProvider()
 }
 
-func TestWithProcessFuncs(t *testing.T) {
-	mockProcessAttributesProviders()
-
-	t.Run("WithPID", TestWithProcessPID)
-	t.Run("WithExecutableName", TestWithProcessExecutableName)
-	t.Run("WithExecutablePath", TestWithProcessExecutablePath)
-	t.Run("WithCommandArgs", TestWithProcessCommandArgs)
-	t.Run("WithOwner", TestWithProcessOwner)
-	t.Run("WithRuntimeName", TestWithProcessRuntimeName)
-	t.Run("WithRuntimeVersion", TestWithProcessRuntimeVersion)
-	t.Run("WithRuntimeDescription", TestWithProcessRuntimeDescription)
-	t.Run("WithProcess", TestWithProcess)
-
-	restoreAttributesProviders()
-}
-
 func TestWithProcessFuncsErrors(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
 

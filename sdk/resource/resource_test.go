@@ -374,16 +374,6 @@ func TestNew(t *testing.T) {
 			},
 		},
 		{
-			name:   "WithOS",
-			envars: "key=value,other=attr",
-			options: []resource.Option{
-				resource.WithOS(),
-			},
-			resourceValues: map[string]string{
-				"A": "B",
-			},
-		},
-		{
 			name:   "With schema url",
 			envars: "",
 			options: []resource.Option{
@@ -501,6 +491,7 @@ func TestWithOS(t *testing.T) {
 }
 
 func TestWithProcessPID(t *testing.T) {
+	mockProcessAttributesProvidersWithErrors()
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
@@ -514,6 +505,7 @@ func TestWithProcessPID(t *testing.T) {
 }
 
 func TestWithProcessExecutableName(t *testing.T) {
+	mockProcessAttributesProvidersWithErrors()
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
@@ -527,6 +519,7 @@ func TestWithProcessExecutableName(t *testing.T) {
 }
 
 func TestWithProcessExecutablePath(t *testing.T) {
+	mockProcessAttributesProviders()
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
@@ -540,6 +533,7 @@ func TestWithProcessExecutablePath(t *testing.T) {
 }
 
 func TestWithProcessCommandArgs(t *testing.T) {
+	mockProcessAttributesProvidersWithErrors()
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
@@ -553,6 +547,7 @@ func TestWithProcessCommandArgs(t *testing.T) {
 }
 
 func TestWithProcessOwner(t *testing.T) {
+	mockProcessAttributesProviders()
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
@@ -566,6 +561,7 @@ func TestWithProcessOwner(t *testing.T) {
 }
 
 func TestWithProcessRuntimeName(t *testing.T) {
+	mockProcessAttributesProvidersWithErrors()
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
@@ -579,6 +575,7 @@ func TestWithProcessRuntimeName(t *testing.T) {
 }
 
 func TestWithProcessRuntimeVersion(t *testing.T) {
+	mockProcessAttributesProvidersWithErrors()
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
@@ -592,6 +589,7 @@ func TestWithProcessRuntimeVersion(t *testing.T) {
 }
 
 func TestWithProcessRuntimeDescription(t *testing.T) {
+	mockProcessAttributesProvidersWithErrors()
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
@@ -605,6 +603,7 @@ func TestWithProcessRuntimeDescription(t *testing.T) {
 }
 
 func TestWithProcess(t *testing.T) {
+	mockProcessAttributesProviders()
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
