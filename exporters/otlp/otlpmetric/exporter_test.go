@@ -24,6 +24,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/testing/protocmp"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/metrictransform"
@@ -36,7 +38,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
-	"google.golang.org/protobuf/testing/protocmp"
 )
 
 var (
@@ -150,9 +151,6 @@ var (
 
 	testerAResource   = resource.NewSchemaless(attribute.String("instance", "tester-a"))
 	testerAResourcePb = metrictransform.Resource(testerAResource)
-
-	testerBResource   = resource.NewSchemaless(attribute.String("instance", "tester-b"))
-	testerBResourcePb = metrictransform.Resource(testerBResource)
 )
 
 func TestNoGroupingExport(t *testing.T) {
