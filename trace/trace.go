@@ -412,7 +412,7 @@ type Link struct {
 func LinkFromContext(ctx context.Context, attrs ...attribute.KeyValue) Link {
 	return Link{
 		SpanContext: SpanContextFromContext(ctx),
-		Attributes: attrs,
+		Attributes:  attrs,
 	}
 }
 

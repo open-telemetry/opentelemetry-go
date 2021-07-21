@@ -17,9 +17,11 @@ package trace
 import (
 	"bytes"
 	"context"
-	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/otel/attribute"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/google/go-cmp/cmp"
 )
