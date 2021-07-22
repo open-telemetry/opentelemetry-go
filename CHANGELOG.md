@@ -20,10 +20,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Deprecated
 
+- The `TextMapCarrier` and `TextMapPropagator` from the `go.opentelemetry.io/otel/oteltest` package and their associated creation functions (`TextMapCarrier`, `NewTextMapPropagator`) are deprecated. (#2114)
+
 ### Removed
 
 - Removed the deprecated package `go.opentelemetry.io/otel/exporters/trace/jaeger`. (#2020)
 - Removed the deprecated package `go.opentelemetry.io/otel/exporters/trace/zipkin`. (#2020)
+- Removed the `"go.opentelemetry.io/otel/sdk/resource".WithBuiltinDetectors` function.
+  The explicit `With*` options for every built-in detector should be used instead. (#2026 #2097)
 - Removed metrics test package `go.opentelemetry.io/otel/sdk/export/metric/metrictest`. (#2105)
 
 ### Fixed

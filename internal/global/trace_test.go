@@ -24,12 +24,34 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/trace"
 )
 
-func TestTraceWithSDK(t *testing.T) {
+type fnTracerProvider struct {
+	tracer func(string, ...trace.TracerOption) trace.Tracer
+}
+
+func (fn fnTracerProvider) Tracer(instrumentationName string, opts ...trace.TracerOption) trace.Tracer {
+	return fn.tracer(instrumentationName, opts...)
+}
+
+type fnTracer struct {
+	start func(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span)
+}
+
+func (fn fnTracer) Start(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
+	return fn.start(ctx, spanName, opts...)
+}
+
+func TestTraceProviderDelegation(t *testing.T) {
 	global.ResetForTest()
+
+	// Map of tracers to expected span names.
+	expected := map[string][]string{
+		"pre":      {"span2"},
+		"post":     {"span3"},
+		"fromSpan": {"span4"},
+	}
 
 	ctx := context.Background()
 	gtp := otel.GetTracerProvider()
@@ -37,9 +59,26 @@ func TestTraceWithSDK(t *testing.T) {
 	// This is started before an SDK was registered and should be dropped.
 	_, span1 := tracer1.Start(ctx, "span1")
 
-	sr := new(oteltest.SpanRecorder)
-	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
-	otel.SetTracerProvider(tp)
+	otel.SetTracerProvider(fnTracerProvider{
+		tracer: func(name string, opts ...trace.TracerOption) trace.Tracer {
+			spans, ok := expected[name]
+			assert.Truef(t, ok, "invalid tracer: %s", name)
+			return fnTracer{
+				start: func(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
+					if ok {
+						if len(spans) == 0 {
+							t.Errorf("unexpected span: %s", spanName)
+						} else {
+							var want string
+							want, spans = spans[0], spans[1:]
+							assert.Equal(t, want, spanName)
+						}
+					}
+					return trace.NewNoopTracerProvider().Tracer(name).Start(ctx, spanName)
+				},
+			}
+		},
+	})
 
 	// This span was started before initialization, it is expected to be dropped.
 	span1.End()
@@ -56,33 +95,6 @@ func TestTraceWithSDK(t *testing.T) {
 	// The noop-span should still provide access to a usable TracerProvider.
 	_, span4 := span1.TracerProvider().Tracer("fromSpan").Start(ctx, "span4")
 	span4.End()
-
-	filterNames := func(spans []*oteltest.Span) []string {
-		names := make([]string, len(spans))
-		for i := range spans {
-			names[i] = spans[i].Name()
-		}
-		return names
-	}
-	expected := []string{"span2", "span3", "span4"}
-	assert.ElementsMatch(t, expected, filterNames(sr.Started()))
-	assert.ElementsMatch(t, expected, filterNames(sr.Completed()))
-}
-
-type fnTracerProvider struct {
-	tracer func(string, ...trace.TracerOption) trace.Tracer
-}
-
-func (fn fnTracerProvider) Tracer(instrumentationName string, opts ...trace.TracerOption) trace.Tracer {
-	return fn.tracer(instrumentationName, opts...)
-}
-
-type fnTracer struct {
-	start func(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span)
-}
-
-func (fn fnTracer) Start(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
-	return fn.start(ctx, spanName, opts...)
 }
 
 func TestTraceProviderDelegates(t *testing.T) {
