@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Replaced usages of the `trace.Link` type in the SDK package with an equivalent `Link` struct that also counts the number of dropped link's attributes. (#2118)
 
 ### Removed
+
 - Removed `DroppedAttributeCount` field from `trace.Link` struct. (#2118)
 
 ### Deprecated
