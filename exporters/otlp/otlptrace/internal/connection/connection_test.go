@@ -15,10 +15,14 @@
 package connection
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/retry"
 
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
@@ -26,65 +30,117 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
-func TestGetThrottleDuration(t *testing.T) {
-	tts := []struct {
-		stsFn    func() (*status.Status, error)
-		throttle time.Duration
+func TestThrottleDuration(t *testing.T) {
+	c := codes.ResourceExhausted
+	testcases := []struct {
+		status   *status.Status
+		expected time.Duration
 	}{
 		{
-			stsFn: func() (*status.Status, error) {
-				return status.New(
-					codes.OK,
-					"status with no retry info",
-				), nil
-			},
-			throttle: 0,
+			status:   status.New(c, "no retry info"),
+			expected: 0,
 		},
 		{
-			stsFn: func() (*status.Status, error) {
-				st := status.New(codes.ResourceExhausted, "status with retry info")
-				return st.WithDetails(
-					&errdetails.RetryInfo{RetryDelay: durationpb.New(15 * time.Millisecond)},
+			status: func() *status.Status {
+				s, err := status.New(c, "single retry info").WithDetails(
+					&errdetails.RetryInfo{
+						RetryDelay: durationpb.New(15 * time.Millisecond),
+					},
 				)
-			},
-			throttle: 15 * time.Millisecond,
+				require.NoError(t, err)
+				return s
+			}(),
+			expected: 15 * time.Millisecond,
 		},
 		{
-			stsFn: func() (*status.Status, error) {
-				st := status.New(codes.ResourceExhausted, "status with error info detail")
-				return st.WithDetails(
+			status: func() *status.Status {
+				s, err := status.New(c, "error info").WithDetails(
 					&errdetails.ErrorInfo{Reason: "no throttle detail"},
 				)
-			},
-			throttle: 0,
+				require.NoError(t, err)
+				return s
+			}(),
+			expected: 0,
 		},
 		{
-			stsFn: func() (*status.Status, error) {
-				st := status.New(codes.ResourceExhausted, "status with error info and retry info")
-				return st.WithDetails(
-					&errdetails.ErrorInfo{Reason: "no throttle detail"},
-					&errdetails.RetryInfo{RetryDelay: durationpb.New(13 * time.Minute)},
+			status: func() *status.Status {
+				s, err := status.New(c, "error and retry info").WithDetails(
+					&errdetails.ErrorInfo{Reason: "with throttle detail"},
+					&errdetails.RetryInfo{
+						RetryDelay: durationpb.New(13 * time.Minute),
+					},
 				)
-			},
-			throttle: 13 * time.Minute,
+				require.NoError(t, err)
+				return s
+			}(),
+			expected: 13 * time.Minute,
 		},
 		{
-			stsFn: func() (*status.Status, error) {
-				st := status.New(codes.ResourceExhausted, "status with two retry info should take the first")
-				return st.WithDetails(
-					&errdetails.RetryInfo{RetryDelay: durationpb.New(13 * time.Minute)},
-					&errdetails.RetryInfo{RetryDelay: durationpb.New(18 * time.Minute)},
+			status: func() *status.Status {
+				s, err := status.New(c, "double retry info").WithDetails(
+					&errdetails.RetryInfo{
+						RetryDelay: durationpb.New(13 * time.Minute),
+					},
+					&errdetails.RetryInfo{
+						RetryDelay: durationpb.New(15 * time.Minute),
+					},
 				)
-			},
-			throttle: 13 * time.Minute,
+				require.NoError(t, err)
+				return s
+			}(),
+			expected: 13 * time.Minute,
 		},
 	}
 
-	for _, tt := range tts {
-		sts, _ := tt.stsFn()
-		t.Run(sts.Message(), func(t *testing.T) {
-			th := getThrottleDuration(sts)
-			require.Equal(t, tt.throttle, th)
+	for _, tc := range testcases {
+		t.Run(tc.status.Message(), func(t *testing.T) {
+			require.Equal(t, tc.expected, throttleDelay(tc.status))
 		})
 	}
+}
+
+func TestEvaluate(t *testing.T) {
+	retryable := map[codes.Code]bool{
+		codes.OK:                 false,
+		codes.Canceled:           true,
+		codes.Unknown:            false,
+		codes.InvalidArgument:    false,
+		codes.DeadlineExceeded:   true,
+		codes.NotFound:           false,
+		codes.AlreadyExists:      false,
+		codes.PermissionDenied:   false,
+		codes.ResourceExhausted:  true,
+		codes.FailedPrecondition: false,
+		codes.Aborted:            true,
+		codes.OutOfRange:         true,
+		codes.Unimplemented:      false,
+		codes.Internal:           false,
+		codes.Unavailable:        true,
+		codes.DataLoss:           true,
+		codes.Unauthenticated:    false,
+	}
+
+	for c, want := range retryable {
+		got, _ := evaluate(status.Error(c, ""))
+		assert.Equalf(t, want, got, "evaluate(%s)", c)
+	}
+}
+
+func TestDoRequest(t *testing.T) {
+	ev := func(error) (bool, time.Duration) { return false, 0 }
+
+	c := new(Connection)
+	c.requestFunc = retry.Config{}.RequestFunc(ev)
+	c.stopCh = make(chan struct{})
+
+	ctx := context.Background()
+	assert.NoError(t, c.DoRequest(ctx, func(ctx context.Context) error {
+		return nil
+	}))
+	assert.NoError(t, c.DoRequest(ctx, func(ctx context.Context) error {
+		return status.Error(codes.OK, "")
+	}))
+	assert.ErrorIs(t, c.DoRequest(ctx, func(ctx context.Context) error {
+		return assert.AnError
+	}), assert.AnError)
 }
