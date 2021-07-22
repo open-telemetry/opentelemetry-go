@@ -31,9 +31,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
@@ -204,8 +201,8 @@ func TestStdoutNoData(t *testing.T) {
 		})
 	}
 
-	runTwoAggs(metrictest.Unslice2(lastvalue.New(2)))
-	runTwoAggs(metrictest.Unslice2(minmaxsumcount.New(2, &desc)))
+	runTwoAggs("lastvalue")
+	runTwoAggs("minmaxsumcount")
 }
 
 func TestStdoutResource(t *testing.T) {

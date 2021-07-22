@@ -328,7 +328,6 @@ func TestBasicTimestamps(t *testing.T) {
 
 	desc := metric.NewDescriptor("inst", sdkapi.CounterInstrumentKind, number.Int64Kind)
 	accum := export.NewAccumulation(&desc, attribute.EmptySet(), resource.Empty(), aggregatortest.NoopAggregator{})
->>>>>>> d57c5a5604851ed8c97ea6bbf4addff82cf009cf
 
 	b.StartCollection()
 	_ = b.Process(accum)
