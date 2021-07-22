@@ -16,7 +16,12 @@ package trace
 
 import (
 	"bytes"
+	"context"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -642,4 +647,17 @@ func TestSpanContextDerivation(t *testing.T) {
 	if !assertSpanContextEqual(modified, to) {
 		t.Fatalf("WithTraceState: Unexpected context created: %s", cmp.Diff(modified, to))
 	}
+}
+
+func TestLinkFromContext(t *testing.T) {
+	k1v1 := attribute.String("key1", "value1")
+	spanCtx := SpanContext{traceID: TraceID([16]byte{1}), remote: true}
+
+	receiverCtx := ContextWithRemoteSpanContext(context.Background(), spanCtx)
+	link := LinkFromContext(receiverCtx, k1v1)
+
+	if !assertSpanContextEqual(link.SpanContext, spanCtx) {
+		t.Fatalf("LinkFromContext: Unexpected context created: %s", cmp.Diff(link.SpanContext, spanCtx))
+	}
+	assert.Equal(t, link.Attributes[0], k1v1)
 }
