@@ -26,7 +26,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
@@ -69,16 +68,6 @@ func init() {
 	otel.SetErrorHandler(testHandler)
 }
 
-// correctnessProcessor could be replaced with processortest.Processor
-// with a non-default aggregator selector.  TODO(#872) use the
-// processortest code here.
-type correctnessProcessor struct {
-	t *testing.T
-	*testSelector
-
-	accumulations []export.Accumulation
-}
-
 type testSelector struct {
 	selector    export.AggregatorSelector
 	newAggCount int
@@ -89,28 +78,24 @@ func (ts *testSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*expor
 	processortest.AggregatorSelector().AggregatorFor(desc, aggPtrs...)
 }
 
-func newSDK(t *testing.T) (metric.Meter, *metricsdk.Accumulator, *correctnessProcessor) {
+func newSDK(t *testing.T) (metric.Meter, *metricsdk.Accumulator, *testSelector, *processortest.Processor) {
 	testHandler.Reset()
-	processor := &correctnessProcessor{
-		t:            t,
-		testSelector: &testSelector{selector: processortest.AggregatorSelector()},
-	}
+	testSelector := &testSelector{selector: processortest.AggregatorSelector()}
+	processor := processortest.NewProcessor(
+		testSelector,
+		attribute.DefaultEncoder(),
+	)
 	accum := metricsdk.NewAccumulator(
 		processor,
 		testResource,
 	)
 	meter := metric.WrapMeterImpl(accum, "test")
-	return meter, accum, processor
-}
-
-func (ci *correctnessProcessor) Process(accumulation export.Accumulation) error {
-	ci.accumulations = append(ci.accumulations, accumulation)
-	return nil
+	return meter, accum, testSelector, processor
 }
 
 func TestInputRangeCounter(t *testing.T) {
 	ctx := context.Background()
-	meter, sdk, processor := newSDK(t)
+	meter, sdk, _, processor := newSDK(t)
 
 	counter := Must(meter).NewInt64Counter("name.sum")
 
@@ -120,19 +105,19 @@ func TestInputRangeCounter(t *testing.T) {
 	checkpointed := sdk.Collect(ctx)
 	require.Equal(t, 0, checkpointed)
 
-	processor.accumulations = nil
+	processor.Reset()
 	counter.Add(ctx, 1)
 	checkpointed = sdk.Collect(ctx)
-	sum, err := processor.accumulations[0].Aggregator().(aggregation.Sum).Sum()
-	require.Equal(t, int64(1), sum.AsInt64())
+	require.Equal(t, map[string]float64{
+		"name.sum//R=V": 1,
+	}, processor.Values())
 	require.Equal(t, 1, checkpointed)
-	require.Nil(t, err)
 	require.Nil(t, testHandler.Flush())
 }
 
 func TestInputRangeUpDownCounter(t *testing.T) {
 	ctx := context.Background()
-	meter, sdk, processor := newSDK(t)
+	meter, sdk, _, processor := newSDK(t)
 
 	counter := Must(meter).NewInt64UpDownCounter("name.sum")
 
@@ -142,16 +127,16 @@ func TestInputRangeUpDownCounter(t *testing.T) {
 	counter.Add(ctx, 1)
 
 	checkpointed := sdk.Collect(ctx)
-	sum, err := processor.accumulations[0].Aggregator().(aggregation.Sum).Sum()
-	require.Equal(t, int64(1), sum.AsInt64())
+	require.Equal(t, map[string]float64{
+		"name.sum//R=V": 1,
+	}, processor.Values())
 	require.Equal(t, 1, checkpointed)
-	require.Nil(t, err)
 	require.Nil(t, testHandler.Flush())
 }
 
 func TestInputRangeValueRecorder(t *testing.T) {
 	ctx := context.Background()
-	meter, sdk, processor := newSDK(t)
+	meter, sdk, _, processor := newSDK(t)
 
 	valuerecorder := Must(meter).NewFloat64ValueRecorder("name.exact")
 
@@ -164,19 +149,19 @@ func TestInputRangeValueRecorder(t *testing.T) {
 	valuerecorder.Record(ctx, 1)
 	valuerecorder.Record(ctx, 2)
 
-	processor.accumulations = nil
+	processor.Reset()
 	checkpointed = sdk.Collect(ctx)
 
-	count, err := processor.accumulations[0].Aggregator().(aggregation.Count).Count()
-	require.Equal(t, uint64(2), count)
+	require.Equal(t, map[string]float64{
+		"name.exact//R=V": 3,
+	}, processor.Values())
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, testHandler.Flush())
-	require.Nil(t, err)
 }
 
 func TestDisabledInstrument(t *testing.T) {
 	ctx := context.Background()
-	meter, sdk, processor := newSDK(t)
+	meter, sdk, _, processor := newSDK(t)
 
 	valuerecorder := Must(meter).NewFloat64ValueRecorder("name.disabled")
 
@@ -184,12 +169,12 @@ func TestDisabledInstrument(t *testing.T) {
 	checkpointed := sdk.Collect(ctx)
 
 	require.Equal(t, 0, checkpointed)
-	require.Equal(t, 0, len(processor.accumulations))
+	require.Equal(t, map[string]float64{}, processor.Values())
 }
 
 func TestRecordNaN(t *testing.T) {
 	ctx := context.Background()
-	meter, _, _ := newSDK(t)
+	meter, _, _, _ := newSDK(t)
 
 	c := Must(meter).NewFloat64Counter("name.sum")
 
@@ -200,7 +185,7 @@ func TestRecordNaN(t *testing.T) {
 
 func TestSDKLabelsDeduplication(t *testing.T) {
 	ctx := context.Background()
-	meter, sdk, processor := newSDK(t)
+	meter, sdk, _, processor := newSDK(t)
 
 	counter := Must(meter).NewInt64Counter("name.sum")
 
@@ -217,7 +202,7 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 		keysB = append(keysB, attribute.Key(fmt.Sprintf("B%03d", i)))
 	}
 
-	var allExpect [][]attribute.KeyValue
+	allExpect := map[string]float64{}
 	for numKeys := 0; numKeys < maxKeys; numKeys++ {
 
 		var kvsA []attribute.KeyValue
@@ -238,29 +223,24 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 
 		counter.Add(ctx, 1, kvsA...)
 		counter.Add(ctx, 1, kvsA...)
-		allExpect = append(allExpect, expectA)
+		format := func(attrs []attribute.KeyValue) string {
+			str := attribute.DefaultEncoder().Encode(newSetIter(attrs...))
+			return fmt.Sprint("name.sum/", str, "/R=V")
+		}
+		allExpect[format(expectA)] += 2
 
 		if numKeys != 0 {
 			// In this case A and B sets are the same.
 			counter.Add(ctx, 1, kvsB...)
 			counter.Add(ctx, 1, kvsB...)
-			allExpect = append(allExpect, expectB)
+			allExpect[format(expectB)] += 2
 		}
 
 	}
 
 	sdk.Collect(ctx)
 
-	var actual [][]attribute.KeyValue
-	for _, rec := range processor.accumulations {
-		sum, _ := rec.Aggregator().(aggregation.Sum).Sum()
-		require.Equal(t, sum, number.NewInt64Number(2))
-
-		kvs := rec.Labels().ToSlice()
-		actual = append(actual, kvs)
-	}
-
-	require.ElementsMatch(t, allExpect, actual)
+	require.EqualValues(t, allExpect, processor.Values())
 }
 
 func newSetIter(kvs ...attribute.KeyValue) attribute.Iterator {
@@ -295,7 +275,7 @@ func TestDefaultLabelEncoder(t *testing.T) {
 
 func TestObserverCollection(t *testing.T) {
 	ctx := context.Background()
-	meter, sdk, processor := newSDK(t)
+	meter, sdk, _, processor := newSDK(t)
 	mult := 1
 
 	_ = Must(meter).NewFloat64ValueObserver("float.valueobserver.lastvalue", func(_ context.Context, result metric.Float64ObserverResult) {
@@ -342,15 +322,11 @@ func TestObserverCollection(t *testing.T) {
 	})
 
 	for mult = 0; mult < 3; mult++ {
-		processor.accumulations = nil
+		processor.Reset()
 
 		collected := sdk.Collect(ctx)
-		require.Equal(t, collected, len(processor.accumulations))
+		require.Equal(t, collected, len(processor.Values()))
 
-		out := processortest.NewOutput(attribute.DefaultEncoder())
-		for _, rec := range processor.accumulations {
-			require.NoError(t, out.AddAccumulation(rec))
-		}
 		mult := float64(mult)
 		require.EqualValues(t, map[string]float64{
 			"float.valueobserver.lastvalue/A=B/R=V": -mult,
@@ -367,13 +343,13 @@ func TestObserverCollection(t *testing.T) {
 			"float.updownsumobserver.sum/C=D/R=V": mult,
 			"int.updownsumobserver.sum//R=V":      -mult,
 			"int.updownsumobserver.sum/A=B/R=V":   mult,
-		}, out.Map())
+		}, processor.Values())
 	}
 }
 
 func TestSumObserverInputRange(t *testing.T) {
 	ctx := context.Background()
-	meter, sdk, processor := newSDK(t)
+	meter, sdk, _, processor := newSDK(t)
 
 	// TODO: these tests are testing for negative values, not for _descending values_. Fix.
 	_ = Must(meter).NewFloat64SumObserver("float.sumobserver.sum", func(_ context.Context, result metric.Float64ObserverResult) {
@@ -392,7 +368,7 @@ func TestSumObserverInputRange(t *testing.T) {
 	collected := sdk.Collect(ctx)
 
 	require.Equal(t, 0, collected)
-	require.Equal(t, 0, len(processor.accumulations))
+	require.EqualValues(t, map[string]float64{}, processor.Values())
 
 	// check that the error condition was reset
 	require.NoError(t, testHandler.Flush())
@@ -400,7 +376,7 @@ func TestSumObserverInputRange(t *testing.T) {
 
 func TestObserverBatch(t *testing.T) {
 	ctx := context.Background()
-	meter, sdk, processor := newSDK(t)
+	meter, sdk, _, processor := newSDK(t)
 
 	var floatValueObs metric.Float64ValueObserver
 	var intValueObs metric.Int64ValueObserver
@@ -450,12 +426,8 @@ func TestObserverBatch(t *testing.T) {
 
 	collected := sdk.Collect(ctx)
 
-	require.Equal(t, collected, len(processor.accumulations))
+	require.Equal(t, collected, len(processor.Values()))
 
-	out := processortest.NewOutput(attribute.DefaultEncoder())
-	for _, rec := range processor.accumulations {
-		require.NoError(t, out.AddAccumulation(rec))
-	}
 	require.EqualValues(t, map[string]float64{
 		"float.sumobserver.sum//R=V":    1.1,
 		"float.sumobserver.sum/A=B/R=V": 1000,
@@ -471,12 +443,12 @@ func TestObserverBatch(t *testing.T) {
 		"float.valueobserver.lastvalue/C=D/R=V": -1,
 		"int.valueobserver.lastvalue//R=V":      1,
 		"int.valueobserver.lastvalue/A=B/R=V":   1,
-	}, out.Map())
+	}, processor.Values())
 }
 
 func TestRecordBatch(t *testing.T) {
 	ctx := context.Background()
-	meter, sdk, processor := newSDK(t)
+	meter, sdk, _, processor := newSDK(t)
 
 	counter1 := Must(meter).NewInt64Counter("int64.sum")
 	counter2 := Must(meter).NewFloat64Counter("float64.sum")
@@ -497,16 +469,12 @@ func TestRecordBatch(t *testing.T) {
 
 	sdk.Collect(ctx)
 
-	out := processortest.NewOutput(attribute.DefaultEncoder())
-	for _, rec := range processor.accumulations {
-		require.NoError(t, out.AddAccumulation(rec))
-	}
 	require.EqualValues(t, map[string]float64{
 		"int64.sum/A=B,C=D/R=V":     1,
 		"float64.sum/A=B,C=D/R=V":   2,
 		"int64.exact/A=B,C=D/R=V":   3,
 		"float64.exact/A=B,C=D/R=V": 4,
-	}, out.Map())
+	}, processor.Values())
 }
 
 // TestRecordPersistence ensures that a direct-called instrument that
@@ -514,7 +482,7 @@ func TestRecordBatch(t *testing.T) {
 // that its encoded labels will be cached across collection intervals.
 func TestRecordPersistence(t *testing.T) {
 	ctx := context.Background()
-	meter, sdk, processor := newSDK(t)
+	meter, sdk, selector, _ := newSDK(t)
 
 	c := Must(meter).NewFloat64Counter("name.sum")
 	b := c.Bind(attribute.String("bound", "true"))
@@ -526,7 +494,7 @@ func TestRecordPersistence(t *testing.T) {
 		sdk.Collect(ctx)
 	}
 
-	require.Equal(t, 4, processor.newAggCount)
+	require.Equal(t, 4, selector.newAggCount)
 }
 
 func TestIncorrectInstruments(t *testing.T) {
@@ -536,7 +504,7 @@ func TestIncorrectInstruments(t *testing.T) {
 	var observer metric.Int64ValueObserver
 
 	ctx := context.Background()
-	meter, sdk, _ := newSDK(t)
+	meter, sdk, _, processor := newSDK(t)
 
 	// Now try with uninitialized instruments.
 	meter.RecordBatch(ctx, nil, counter.Measurement(1))
@@ -562,12 +530,13 @@ func TestIncorrectInstruments(t *testing.T) {
 
 	collected = sdk.Collect(ctx)
 	require.Equal(t, 0, collected)
+	require.EqualValues(t, map[string]float64{}, processor.Values())
 	require.Equal(t, metricsdk.ErrUninitializedInstrument, testHandler.Flush())
 }
 
 func TestSyncInAsync(t *testing.T) {
 	ctx := context.Background()
-	meter, sdk, processor := newSDK(t)
+	meter, sdk, _, processor := newSDK(t)
 
 	counter := Must(meter).NewFloat64Counter("counter.sum")
 	_ = Must(meter).NewInt64ValueObserver("observer.lastvalue",
@@ -579,12 +548,8 @@ func TestSyncInAsync(t *testing.T) {
 
 	sdk.Collect(ctx)
 
-	out := processortest.NewOutput(attribute.DefaultEncoder())
-	for _, rec := range processor.accumulations {
-		require.NoError(t, out.AddAccumulation(rec))
-	}
 	require.EqualValues(t, map[string]float64{
 		"counter.sum//R=V":        100,
 		"observer.lastvalue//R=V": 10,
-	}, out.Map())
+	}, processor.Values())
 }
