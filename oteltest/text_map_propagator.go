@@ -29,6 +29,8 @@ type ctxKeyType string
 
 // TextMapCarrier provides a testing storage medium to for a
 // TextMapPropagator. It records all the operations it performs.
+//
+// Deprecated: this will be removed in the next major release.
 type TextMapCarrier struct {
 	mtx sync.Mutex
 
@@ -38,6 +40,8 @@ type TextMapCarrier struct {
 }
 
 // NewTextMapCarrier returns a new *TextMapCarrier populated with data.
+//
+// Deprecated: this will be removed in the next major release.
 func NewTextMapCarrier(data map[string]string) *TextMapCarrier {
 	copied := make(map[string]string, len(data))
 	for k, v := range data {
@@ -161,11 +165,17 @@ func (s state) String() string {
 	return fmt.Sprintf("%d,%d", s.Injections, s.Extractions)
 }
 
+// TextMapPropagator is a propagation.TextMapPropagator used for testing.
+//
+// Deprecated: this will be removed in the next major release.
 type TextMapPropagator struct {
 	Name   string
 	ctxKey ctxKeyType
 }
 
+// NewTextMapPropagator returns a new TextMapPropagator for testing.
+//
+// Deprecated: this will be removed in the next major release.
 func NewTextMapPropagator(name string) *TextMapPropagator {
 	return &TextMapPropagator{Name: name, ctxKey: ctxKeyType(name)}
 }
