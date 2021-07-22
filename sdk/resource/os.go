@@ -67,27 +67,6 @@ func (osDescriptionDetector) Detect(ctx context.Context) (*Resource, error) {
 	), nil
 }
 
-// WithOSType adds an attribute with the operating system type to the configured Resource.
-func WithOSType() Option {
-	return WithDetectors(osTypeDetector{})
-}
-
-// WithOSDescription adds an attribute with the operating system description to the
-// configured Resource. The formatted string is equivalent to the output of the
-// `uname -snrvm` command.
-func WithOSDescription() Option {
-	return WithDetectors(osDescriptionDetector{})
-}
-
-// WithOS adds all the OS attributes to the configured Resource.
-// See individual WithOS* functions to configure specific attributes.
-func WithOS() Option {
-	return WithDetectors(
-		osTypeDetector{},
-		osDescriptionDetector{},
-	)
-}
-
 // mapRuntimeOSToSemconvOSType translates the OS name as provided by the Go runtime
 // into an OS type attribute with the corresponding value defined by the semantic
 // conventions. In case the provided OS name isn't mapped, it's transformed to lowercase

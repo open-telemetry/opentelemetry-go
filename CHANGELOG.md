@@ -27,8 +27,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Removed the deprecated package `go.opentelemetry.io/otel/exporters/trace/jaeger`. (#2020)
 - Removed the deprecated package `go.opentelemetry.io/otel/exporters/trace/zipkin`. (#2020)
+- Removed the `"go.opentelemetry.io/otel/sdk/resource".WithBuiltinDetectors` function.
+  The explicit `With*` options for every built-in detector should be used instead. (#2026 #2097)
 - Removed the `WithMaxAttempts` and `WithBackoff` options from the `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` package.
   The retry logic of the package has been updated to match the `otlptracegrpc` package and accordingly a `WithRetry` option is added that should be used instead. (#2095)
+- Removed metrics test package `go.opentelemetry.io/otel/sdk/export/metric/metrictest`. (#2105)
 
 ### Fixed
 
@@ -37,6 +40,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - OS type detector now sets the correct `dragonflybsd` value for DragonFly BSD. (#2092)
 - The OTel span status is correctly transformed into the OTLP status in the `go.opentelemetry.io/otel/exporters/otlp/otlptrace` package.
   This fix will by default set the status to `Unset` if it is not explicitly set to `Ok` or `Error`. (#2099 #2102)
+- The `Inject` method for the `"go.opentelemetry.io/otel/propagation".TraceContext` type no longer injects empty `tracestate` values. (#2108)
 
 ### Security
 
