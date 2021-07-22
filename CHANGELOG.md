@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Added `WithOS` resource configuration option to set all OS (Operating System) resource attributes at once. (#1840)
 - Added the `WithRetry` option to the `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` package.
   This option is a replacement for the removed `WithMaxAttempts` and `WithBackoff` options. (#2095)
+- Added API `LinkFromContext` to return Link which encapsulates SpanContext from provided context and also encapsulates attributes. (#2115)
 
 ### Changed
 
