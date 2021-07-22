@@ -18,10 +18,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `SpanModels` function is now exported from the `go.opentelemetry.io/otel/exporters/zipkin` package to convert OpenTelemetry spans into Zipkin model spans. (#2027)
 - Replaced usages of the `trace.Link` type in the SDK package with an equivalent `Link` struct that also counts the number of dropped link's attributes. (#2118)
 
-### Removed
-
-- Removed `DroppedAttributeCount` field from `trace.Link` struct. (#2118)
-
 ### Deprecated
 
 ### Removed
@@ -29,6 +25,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Removed the deprecated package `go.opentelemetry.io/otel/exporters/trace/jaeger`. (#2020)
 - Removed the deprecated package `go.opentelemetry.io/otel/exporters/trace/zipkin`. (#2020)
 - Removed metrics test package `go.opentelemetry.io/otel/sdk/export/metric/metrictest`. (#2105)
+- Removed `DroppedAttributeCount` field from `trace.Link` struct. (#2118)
 
 ### Fixed
 
