@@ -63,7 +63,7 @@ type SpanStub struct {
 	EndTime                time.Time
 	Attributes             []attribute.KeyValue
 	Events                 []tracesdk.Event
-	Links                  []trace.Link
+	Links                  []tracesdk.Link
 	Status                 tracesdk.Status
 	DroppedAttributes      int
 	DroppedEvents          int
@@ -133,7 +133,7 @@ type spanSnapshot struct {
 	endTime                time.Time
 	attributes             []attribute.KeyValue
 	events                 []tracesdk.Event
-	links                  []trace.Link
+	links                  []tracesdk.Link
 	status                 tracesdk.Status
 	droppedAttributes      int
 	droppedEvents          int
@@ -150,7 +150,7 @@ func (s spanSnapshot) SpanKind() trace.SpanKind         { return s.spanKind }
 func (s spanSnapshot) StartTime() time.Time             { return s.startTime }
 func (s spanSnapshot) EndTime() time.Time               { return s.endTime }
 func (s spanSnapshot) Attributes() []attribute.KeyValue { return s.attributes }
-func (s spanSnapshot) Links() []trace.Link              { return s.links }
+func (s spanSnapshot) Links() []tracesdk.Link           { return s.links }
 func (s spanSnapshot) Events() []tracesdk.Event         { return s.events }
 func (s spanSnapshot) Status() tracesdk.Status          { return s.status }
 func (s spanSnapshot) DroppedAttributes() int           { return s.droppedAttributes }
