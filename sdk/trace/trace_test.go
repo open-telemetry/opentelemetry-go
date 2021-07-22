@@ -88,7 +88,7 @@ func init() {
 }
 
 func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
-	harness := oteltest.NewHarness(t)
+	harness := ottest.NewHarness(t)
 
 	harness.TestTracerProvider(func() trace.TracerProvider {
 		return NewTracerProvider(WithSampler(TraceIDRatioBased(0)))

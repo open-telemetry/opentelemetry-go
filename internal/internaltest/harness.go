@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package oteltest // import "go.opentelemetry.io/otel/oteltest"
+package internaltest // import "go.opentelemetry.io/otel/internal/internaltest"
 
 import (
 	"context"
@@ -29,15 +29,11 @@ import (
 
 // Harness is a testing harness used to test implementations of the
 // OpenTelemetry API.
-//
-// Deprecated: this will be removed in the next major release.
 type Harness struct {
 	t *testing.T
 }
 
 // NewHarness returns an instantiated *Harness using t.
-//
-// Deprecated: this will be removed in the next major release.
 func NewHarness(t *testing.T) *Harness {
 	return &Harness{
 		t: t,
