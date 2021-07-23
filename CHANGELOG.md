@@ -12,18 +12,29 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Added `WithOSDescription` resource configuration option to set OS (Operating System) description resource attribute (`os.description`). (#1840)
 - Added `WithOS` resource configuration option to set all OS (Operating System) resource attributes at once. (#1840)
+- Added the `WithRetry` option to the `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` package.
+  This option is a replacement for the removed `WithMaxAttempts` and `WithBackoff` options. (#2095)
+- Added API `LinkFromContext` to return Link which encapsulates SpanContext from provided context and also encapsulates attributes. (#2115)
 
 ### Changed
 
 - The `SpanModels` function is now exported from the `go.opentelemetry.io/otel/exporters/zipkin` package to convert OpenTelemetry spans into Zipkin model spans. (#2027)
+- Rename the `"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc".RetrySettings` to `RetryConfig`. (#2095)
+- Rename the `"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp".RetrySettings` to `RetryConfig`. (#2095)
 - Replaced usages of the `trace.Link` type in the SDK package with an equivalent `Link` struct that also counts the number of dropped link's attributes. (#2118)
 
 ### Deprecated
+
+- The `TextMapCarrier` and `TextMapPropagator` from the `go.opentelemetry.io/otel/oteltest` package and their associated creation functions (`TextMapCarrier`, `NewTextMapPropagator`) are deprecated. (#2114)
 
 ### Removed
 
 - Removed the deprecated package `go.opentelemetry.io/otel/exporters/trace/jaeger`. (#2020)
 - Removed the deprecated package `go.opentelemetry.io/otel/exporters/trace/zipkin`. (#2020)
+- Removed the `"go.opentelemetry.io/otel/sdk/resource".WithBuiltinDetectors` function.
+  The explicit `With*` options for every built-in detector should be used instead. (#2026 #2097)
+- Removed the `WithMaxAttempts` and `WithBackoff` options from the `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` package.
+  The retry logic of the package has been updated to match the `otlptracegrpc` package and accordingly a `WithRetry` option is added that should be used instead. (#2095)
 - Removed metrics test package `go.opentelemetry.io/otel/sdk/export/metric/metrictest`. (#2105)
 - Removed `DroppedAttributeCount` field from `trace.Link` struct. (#2118)
 
