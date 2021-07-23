@@ -38,7 +38,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Removed the `WithMaxAttempts` and `WithBackoff` options from the `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` package.
   The retry logic of the package has been updated to match the `otlptracegrpc` package and accordingly a `WithRetry` option is added that should be used instead. (#2095)
 - Removed metrics test package `go.opentelemetry.io/otel/sdk/export/metric/metrictest`. (#2105)
-- Removed `DroppedAttributeCount` field from `trace.Link` struct. (#2118)
+- Removed `DroppedAttributeCount` field from `otel/trace.Link` struct. (#2118)
 
 ### Fixed
 
