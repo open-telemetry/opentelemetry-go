@@ -169,7 +169,11 @@ func TestStatus(t *testing.T) {
 		{
 			codes.Unset,
 			"test Unset",
-			tracepb.Status_STATUS_CODE_OK,
+			tracepb.Status_STATUS_CODE_UNSET,
+		},
+		{
+			message:    "default code is unset",
+			otlpStatus: tracepb.Status_STATUS_CODE_UNSET,
 		},
 		{
 			codes.Error,

@@ -19,13 +19,13 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/internal/internaltest"
 )
 
 func TestTextMapPropagatorDelegation(t *testing.T) {
 	global.ResetForTest()
 	ctx := context.Background()
-	carrier := oteltest.NewTextMapCarrier(nil)
+	carrier := internaltest.NewTextMapCarrier(nil)
 
 	// The default should be a noop.
 	initial := global.TextMapPropagator()
@@ -36,7 +36,7 @@ func TestTextMapPropagatorDelegation(t *testing.T) {
 	}
 
 	// Make sure the delegate woks as expected.
-	delegate := oteltest.NewTextMapPropagator("test")
+	delegate := internaltest.NewTextMapPropagator("test")
 	delegate.Inject(ctx, carrier)
 	ctx = delegate.Extract(ctx, carrier)
 	if !delegate.InjectedN(t, carrier, 1) || !delegate.ExtractedN(t, ctx, 1) {
@@ -55,7 +55,7 @@ func TestTextMapPropagatorDelegation(t *testing.T) {
 func TestTextMapPropagatorDelegationNil(t *testing.T) {
 	global.ResetForTest()
 	ctx := context.Background()
-	carrier := oteltest.NewTextMapCarrier(nil)
+	carrier := internaltest.NewTextMapCarrier(nil)
 
 	// The default should be a noop.
 	initial := global.TextMapPropagator()
@@ -77,7 +77,7 @@ func TestTextMapPropagatorDelegationNil(t *testing.T) {
 func TestTextMapPropagatorFields(t *testing.T) {
 	global.ResetForTest()
 	initial := global.TextMapPropagator()
-	delegate := oteltest.NewTextMapPropagator("test")
+	delegate := internaltest.NewTextMapPropagator("test")
 	delegateFields := delegate.Fields()
 
 	// Sanity check on the initial Fields.

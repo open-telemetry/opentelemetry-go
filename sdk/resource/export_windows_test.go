@@ -12,19 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metrictest
+package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
-import (
-	"testing"
-
-	"github.com/stretchr/testify/require"
+var (
+	PlatformOSDescription         = platformOSDescription
+	ReadProductName               = readProductName
+	ReadDisplayVersion            = readDisplayVersion
+	ReadReleaseID                 = readReleaseID
+	ReadCurrentMajorVersionNumber = readCurrentMajorVersionNumber
+	ReadCurrentMinorVersionNumber = readCurrentMinorVersionNumber
+	ReadCurrentBuildNumber        = readCurrentBuildNumber
+	ReadUBR                       = readUBR
 )
-
-func TestUnslice(t *testing.T) {
-	in := make([]NoopAggregator, 2)
-
-	a, b := Unslice2(in)
-
-	require.Equal(t, a.(*NoopAggregator), &in[0])
-	require.Equal(t, b.(*NoopAggregator), &in[1])
-}
