@@ -27,4 +27,4 @@ The `otlptracegrpc` package implements a gRPC span exporter.
 
 ##  [`otlptracehttp`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp)
 
-The `otlptracehttp` package implements a HTTP span exporter.
+The `otlptracehttp` package implements a HTTP client to be used in the span exporter.
