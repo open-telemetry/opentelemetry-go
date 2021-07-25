@@ -2,11 +2,7 @@
 
 OpenTelemetry Protocol (OTLP) Span Exporter.
 
-To constructs a new Otlptrace Exporter and starts it:
 
-```
-exp, err := otlptrace.New(ctx, opts...)
-```
 
 ## Installation
 
