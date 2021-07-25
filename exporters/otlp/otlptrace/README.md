@@ -16,10 +16,9 @@ go get -u go.opentelemetry.io/otel/exporters/otlp/otlptrace
 
 ## [`otlptrace`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace)
 
-`otlptrace` package implements a span exporter that uses a `otlptrace.Client` interface.
-
-`otlptrace.Client` manages connections to the collector, handles the transformation of data into wire format,
-and the transmission of that data to the collector.
+The `otlptrace` package provides an exporter implementing the OTel span exporter interface.
+This exporter is configured using a client satisfying the `otlptrace.Client` interface.
+This client handles the transformation of data into wire format and the transmission of that data to the collector.
 
 ## [`otlptracegrpc`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc)
 
