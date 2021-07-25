@@ -2,7 +2,8 @@
 
 OpenTelemetry Protocol (OTLP) Span Exporter.
 
-
+To constructs a new Otlptrace Exporter ,you can follow this 
+ [`example`](https://github.com/open-telemetry/opentelemetry-go/blob/main/exporters/otlp/otlptrace/example_test.go).
 
 ## Installation
 
@@ -17,7 +18,7 @@ go get -u go.opentelemetry.io/otel/exporters/otlp/otlptrace
 `otlptrace.Client` manages connections to the collector, handles the transformation of data into wire format,
 and the transmission of that data to the collector.
 
-## [`otlptracegrpc`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc)
+##example
 
 The `otlptracegrpc` package implements a gRPC span exporter.
 
