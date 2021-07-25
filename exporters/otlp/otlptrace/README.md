@@ -23,7 +23,7 @@ and the transmission of that data to the collector.
 
 ## [`otlptracegrpc`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc)
 
-The `otlptracegrpc` package implements a gRPC span exporter.
+The `otlptracegrpc` package implements a gRPC client to be used in the span exporter.
 
 ##  [`otlptracehttp`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp)
 
