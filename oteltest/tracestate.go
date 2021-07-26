@@ -28,6 +28,8 @@ import (
 // by definition from the W3C tracecontext specification, stores values as
 // opaque strings.  Therefore, it is not possible to decode the original value
 // type from TraceState. Be sure to not use this outside of testing purposes.
+//
+// Deprecated: use trace.ParseTraceState instead.
 func TraceStateFromKeyValues(kvs ...attribute.KeyValue) (trace.TraceState, error) {
 	if len(kvs) == 0 {
 		return trace.TraceState{}, nil
