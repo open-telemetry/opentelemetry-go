@@ -29,7 +29,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/oteltest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 
@@ -78,7 +77,7 @@ func init() {
 }
 
 func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
-	harness := oteltest.NewHarness(t)
+	harness := ottest.NewHarness(t)
 
 	harness.TestTracerProvider(func() trace.TracerProvider {
 		return NewTracerProvider(WithSampler(TraceIDRatioBased(0)))

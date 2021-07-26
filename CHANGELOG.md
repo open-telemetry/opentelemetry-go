@@ -28,6 +28,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Deprecated
 
 - The `TextMapCarrier` and `TextMapPropagator` from the `go.opentelemetry.io/otel/oteltest` package and their associated creation functions (`TextMapCarrier`, `NewTextMapPropagator`) are deprecated. (#2114)
+- The `Harness` type from the `go.opentelemetry.io/otel/oteltest` package and its associated creation function, `NewHarness` are deprecated and will be removed in the next release. (#2123)
 - The `TraceStateFromKeyValues` function from the `go.opentelemetry.io/otel/oteltest` package is deprecated.
   Use the `trace.ParseTraceState` function instead. (#2122)
 
