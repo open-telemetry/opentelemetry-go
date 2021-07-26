@@ -87,6 +87,16 @@ func TestControllerUsesResource(t *testing.T) {
 			options: []controller.Option{controller.WithResource(resource.NewSchemaless(attribute.String("R", "S")))},
 			wanted:  "R=S",
 		},
+		{
+			name: "multi resource",
+			options: []controller.Option{
+				controller.WithResource(resource.NewSchemaless(attribute.String("R", "WRONG"))),
+				controller.WithResource(resource.NewSchemaless(attribute.String("R", "S"))),
+				controller.WithResource(resource.NewSchemaless(attribute.String("W", "X"))),
+				controller.WithResource(resource.NewSchemaless(attribute.String("T", "V"))),
+			},
+			wanted: "R=S,T=V,W=X",
+		},
 	}
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
