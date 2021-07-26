@@ -656,10 +656,10 @@ func TestLinks(t *testing.T) {
 	sc1 := trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}})
 	sc2 := trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}})
 
-	links := []trace.Link{
-		{SpanContext: sc1, Attributes: []attribute.KeyValue{k1v1}},
-		{SpanContext: sc2, Attributes: []attribute.KeyValue{k2v2, k3v3}},
-	}
+	l1 := trace.Link{SpanContext: sc1, Attributes: []attribute.KeyValue{k1v1}}
+	l2 := trace.Link{SpanContext: sc2, Attributes: []attribute.KeyValue{k2v2, k3v3}}
+
+	links := []trace.Link{l1, l2}
 	span := startSpan(tp, "Links", trace.WithLinks(links...))
 
 	got, err := endSpan(te, span)
@@ -674,7 +674,7 @@ func TestLinks(t *testing.T) {
 		}),
 		parent:                 sc.WithRemote(true),
 		name:                   "span0",
-		links:                  links,
+		links:                  []Link{{l1.SpanContext, l1.Attributes, 0}, {l2.SpanContext, l2.Attributes, 0}},
 		spanKind:               trace.SpanKindInternal,
 		instrumentationLibrary: instrumentation.Library{Name: "Links"},
 	}
@@ -715,9 +715,9 @@ func TestLinksOverLimit(t *testing.T) {
 		}),
 		parent: sc.WithRemote(true),
 		name:   "span0",
-		links: []trace.Link{
-			{SpanContext: sc2, Attributes: []attribute.KeyValue{k2v2}},
-			{SpanContext: sc3, Attributes: []attribute.KeyValue{k3v3}},
+		links: []Link{
+			{SpanContext: sc2, Attributes: []attribute.KeyValue{k2v2}, DroppedAttributeCount: 0},
+			{SpanContext: sc3, Attributes: []attribute.KeyValue{k3v3}, DroppedAttributeCount: 0},
 		},
 		droppedLinkCount:       1,
 		spanKind:               trace.SpanKindInternal,
@@ -1585,7 +1585,7 @@ func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 		}),
 		parent: sc.WithRemote(true),
 		name:   "span0",
-		links: []trace.Link{
+		links: []Link{
 			{
 				SpanContext:           sc1,
 				Attributes:            []attribute.KeyValue{k1v1},

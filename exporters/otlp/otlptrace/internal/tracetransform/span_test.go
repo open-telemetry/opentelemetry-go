@@ -120,12 +120,12 @@ func TestNilLinks(t *testing.T) {
 }
 
 func TestEmptyLinks(t *testing.T) {
-	assert.Nil(t, links([]trace.Link{}))
+	assert.Nil(t, links([]tracesdk.Link{}))
 }
 
 func TestLinks(t *testing.T) {
 	attrs := []attribute.KeyValue{attribute.Int("one", 1), attribute.Int("two", 2)}
-	l := []trace.Link{
+	l := []tracesdk.Link{
 		{},
 		{
 			SpanContext: trace.SpanContext{},
@@ -234,7 +234,7 @@ func TestSpanData(t *testing.T) {
 				},
 			},
 		},
-		Links: []trace.Link{
+		Links: []tracesdk.Link{
 			{
 				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID:    trace.TraceID{0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF},
@@ -244,6 +244,7 @@ func TestSpanData(t *testing.T) {
 				Attributes: []attribute.KeyValue{
 					attribute.String("LinkType", "Parent"),
 				},
+				DroppedAttributeCount: 0,
 			},
 			{
 				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
@@ -254,6 +255,7 @@ func TestSpanData(t *testing.T) {
 				Attributes: []attribute.KeyValue{
 					attribute.String("LinkType", "Child"),
 				},
+				DroppedAttributeCount: 0,
 			},
 		},
 		Status: tracesdk.Status{

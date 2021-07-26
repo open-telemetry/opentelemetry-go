@@ -15,6 +15,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Added the `WithRetry` option to the `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` package.
   This option is a replacement for the removed `WithMaxAttempts` and `WithBackoff` options. (#2095)
 - Added API `LinkFromContext` to return Link which encapsulates SpanContext from provided context and also encapsulates attributes. (#2115)
+- Added a new `Link` type under the SDK `otel/sdk/trace` package that counts the number of attributes that were dropped for surpassing the `AttributePerLinkCountLimit` configured in the Span's `SpanLimits`.
+  This new type replaces the equal-named API `Link` type found in the `otel/trace` package for most usages within the SDK.
+  For example, instances of this type are now returned by the `Links()` function of `ReadOnlySpan`s provided in places like the `OnEnd` function of `SpanProcessor` implementations. (#2118)
 
 ### Changed
 
@@ -35,6 +38,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Removed the `WithMaxAttempts` and `WithBackoff` options from the `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` package.
   The retry logic of the package has been updated to match the `otlptracegrpc` package and accordingly a `WithRetry` option is added that should be used instead. (#2095)
 - Removed metrics test package `go.opentelemetry.io/otel/sdk/export/metric/metrictest`. (#2105)
+- Removed `DroppedAttributeCount` field from `otel/trace.Link` struct. (#2118)
 
 ### Fixed
 
