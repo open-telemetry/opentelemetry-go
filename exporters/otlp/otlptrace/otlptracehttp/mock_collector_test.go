@@ -46,9 +46,10 @@ type mockCollector struct {
 	spanLock     sync.Mutex
 	spansStorage otlptracetest.SpansStorage
 
-	injectHTTPStatus  []int
-	injectContentType string
-	injectDelay       time.Duration
+	injectHTTPStatus     []int
+	injectResponseHeader []map[string]string
+	injectContentType    string
+	injectDelay          time.Duration
 
 	clientTLSConfig *tls.Config
 	expectedHeaders map[string]string
@@ -97,8 +98,9 @@ func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	h := c.getInjectResponseHeader()
 	if injectedStatus := c.getInjectHTTPStatus(); injectedStatus != 0 {
-		writeReply(w, rawResponse, injectedStatus, c.injectContentType)
+		writeReply(w, rawResponse, injectedStatus, c.injectContentType, h)
 		return
 	}
 	rawRequest, err := readRequest(r)
@@ -112,7 +114,7 @@ func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	writeReply(w, rawResponse, 0, c.injectContentType)
+	writeReply(w, rawResponse, 0, c.injectContentType, h)
 	c.spanLock.Lock()
 	defer c.spanLock.Unlock()
 	c.spansStorage.AddSpans(request)
@@ -149,6 +151,17 @@ func (c *mockCollector) getInjectHTTPStatus() int {
 	return status
 }
 
+func (c *mockCollector) getInjectResponseHeader() (h map[string]string) {
+	if len(c.injectResponseHeader) == 0 {
+		return
+	}
+	h, c.injectResponseHeader = c.injectResponseHeader[0], c.injectResponseHeader[1:]
+	if len(c.injectResponseHeader) == 0 {
+		c.injectResponseHeader = nil
+	}
+	return
+}
+
 func readRequest(r *http.Request) ([]byte, error) {
 	if r.Header.Get("Content-Encoding") == "gzip" {
 		return readGzipBody(r.Body)
@@ -170,28 +183,32 @@ func readGzipBody(body io.Reader) ([]byte, error) {
 	return rawRequest.Bytes(), nil
 }
 
-func writeReply(w http.ResponseWriter, rawResponse []byte, injectHTTPStatus int, injectContentType string) {
+func writeReply(w http.ResponseWriter, rawResponse []byte, s int, ct string, h map[string]string) {
 	status := http.StatusOK
-	if injectHTTPStatus != 0 {
-		status = injectHTTPStatus
+	if s != 0 {
+		status = s
 	}
 	contentType := "application/x-protobuf"
-	if injectContentType != "" {
-		contentType = injectContentType
+	if ct != "" {
+		contentType = ct
 	}
 	w.Header().Set("Content-Type", contentType)
+	for k, v := range h {
+		w.Header().Add(k, v)
+	}
 	w.WriteHeader(status)
 	_, _ = w.Write(rawResponse)
 }
 
 type mockCollectorConfig struct {
-	TracesURLPath     string
-	Port              int
-	InjectHTTPStatus  []int
-	InjectContentType string
-	InjectDelay       time.Duration
-	WithTLS           bool
-	ExpectedHeaders   map[string]string
+	TracesURLPath        string
+	Port                 int
+	InjectHTTPStatus     []int
+	InjectContentType    string
+	InjectResponseHeader []map[string]string
+	InjectDelay          time.Duration
+	WithTLS              bool
+	ExpectedHeaders      map[string]string
 }
 
 func (c *mockCollectorConfig) fillInDefaults() {
@@ -207,12 +224,13 @@ func runMockCollector(t *testing.T, cfg mockCollectorConfig) *mockCollector {
 	_, portStr, err := net.SplitHostPort(ln.Addr().String())
 	require.NoError(t, err)
 	m := &mockCollector{
-		endpoint:          fmt.Sprintf("localhost:%s", portStr),
-		spansStorage:      otlptracetest.NewSpansStorage(),
-		injectHTTPStatus:  cfg.InjectHTTPStatus,
-		injectContentType: cfg.InjectContentType,
-		injectDelay:       cfg.InjectDelay,
-		expectedHeaders:   cfg.ExpectedHeaders,
+		endpoint:             fmt.Sprintf("localhost:%s", portStr),
+		spansStorage:         otlptracetest.NewSpansStorage(),
+		injectHTTPStatus:     cfg.InjectHTTPStatus,
+		injectResponseHeader: cfg.InjectResponseHeader,
+		injectContentType:    cfg.InjectContentType,
+		injectDelay:          cfg.InjectDelay,
+		expectedHeaders:      cfg.ExpectedHeaders,
 	}
 	mux := http.NewServeMux()
 	mux.Handle(cfg.TracesURLPath, http.HandlerFunc(m.serveTraces))

@@ -402,10 +402,6 @@ type Link struct {
 
 	// Attributes describe the aspects of the link.
 	Attributes []attribute.KeyValue
-
-	// DroppedAttributeCount is the number of attributes that were not
-	// recorded due to configured limits being reached.
-	DroppedAttributeCount int
 }
 
 // LinkFromContext returns a link encapsulating the SpanContext in the provided ctx.
