@@ -63,9 +63,6 @@ var (
 	sc  trace.SpanContext
 
 	handler = &storingHandler{}
-
-	k1, k2, k3    attribute.Key
-	kv1, kv2, kv3 attribute.KeyValue
 )
 
 func init() {
@@ -76,13 +73,6 @@ func init() {
 		SpanID:     sid,
 		TraceFlags: 0x1,
 	})
-
-	k1 = attribute.Key("k1")
-	kv1 = k1.String("v1")
-	k2 = attribute.Key("k2")
-	kv2 = k2.String("v2")
-	k3 = attribute.Key("k3")
-	kv3 = k3.String("v3")
 
 	otel.SetErrorHandler(handler)
 }
@@ -354,7 +344,7 @@ func TestStartSpanWithParent(t *testing.T) {
 		t.Error(err)
 	}
 
-	ts, err := oteltest.TraceStateFromKeyValues(attribute.String("k", "v"))
+	ts, err := trace.ParseTraceState("k=v")
 	if err != nil {
 		t.Error(err)
 	}
@@ -1625,17 +1615,20 @@ func (s stateSampler) Description() string {
 
 // Check that a new span propagates the SamplerResult.TraceState
 func TestSamplerTraceState(t *testing.T) {
-	mustTS := func(t trace.TraceState, err error) trace.TraceState { return t }
-	makeInserter := func(k attribute.KeyValue, prefix string) Sampler {
+	mustTS := func(ts trace.TraceState, err error) trace.TraceState {
+		require.NoError(t, err)
+		return ts
+	}
+	makeInserter := func(k, v, prefix string) Sampler {
 		return &stateSampler{
 			prefix: prefix,
-			f:      func(t trace.TraceState) trace.TraceState { return mustTS(t.Insert(string(k.Key), k.Value.Emit())) },
+			f:      func(t trace.TraceState) trace.TraceState { return mustTS(t.Insert(k, v)) },
 		}
 	}
-	makeDeleter := func(k attribute.Key, prefix string) Sampler {
+	makeDeleter := func(k, prefix string) Sampler {
 		return &stateSampler{
 			prefix: prefix,
-			f:      func(t trace.TraceState) trace.TraceState { return t.Delete(string(k)) },
+			f:      func(t trace.TraceState) trace.TraceState { return t.Delete(k) },
 		}
 	}
 	clearer := func(prefix string) Sampler {
@@ -1656,55 +1649,55 @@ func TestSamplerTraceState(t *testing.T) {
 		{
 			name:       "alwaysOn",
 			sampler:    AlwaysSample(),
-			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1)),
-			want:       mustTS(oteltest.TraceStateFromKeyValues(kv1)),
+			input:      mustTS(trace.ParseTraceState("k1=v1")),
+			want:       mustTS(trace.ParseTraceState("k1=v1")),
 			exportSpan: true,
 		},
 		{
 			name:       "alwaysOff",
 			sampler:    NeverSample(),
-			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1)),
-			want:       mustTS(oteltest.TraceStateFromKeyValues(kv1)),
+			input:      mustTS(trace.ParseTraceState("k1=v1")),
+			want:       mustTS(trace.ParseTraceState("k1=v1")),
 			exportSpan: false,
 		},
 		{
 			name:       "insertKeySampled",
-			sampler:    makeInserter(kv2, "span"),
+			sampler:    makeInserter("k2", "v2", "span"),
 			spanName:   "span0",
-			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1)),
-			want:       mustTS(oteltest.TraceStateFromKeyValues(kv2, kv1)),
+			input:      mustTS(trace.ParseTraceState("k1=v1")),
+			want:       mustTS(trace.ParseTraceState("k2=v2,k1=v1")),
 			exportSpan: true,
 		},
 		{
 			name:       "insertKeyDropped",
-			sampler:    makeInserter(kv2, "span"),
+			sampler:    makeInserter("k2", "v2", "span"),
 			spanName:   "nospan0",
-			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1)),
-			want:       mustTS(oteltest.TraceStateFromKeyValues(kv2, kv1)),
+			input:      mustTS(trace.ParseTraceState("k1=v1")),
+			want:       mustTS(trace.ParseTraceState("k2=v2,k1=v1")),
 			exportSpan: false,
 		},
 		{
 			name:       "deleteKeySampled",
-			sampler:    makeDeleter(k1, "span"),
+			sampler:    makeDeleter("k1", "span"),
 			spanName:   "span0",
-			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1, kv2)),
-			want:       mustTS(oteltest.TraceStateFromKeyValues(kv2)),
+			input:      mustTS(trace.ParseTraceState("k1=v1,k2=v2")),
+			want:       mustTS(trace.ParseTraceState("k2=v2")),
 			exportSpan: true,
 		},
 		{
 			name:       "deleteKeyDropped",
-			sampler:    makeDeleter(k1, "span"),
+			sampler:    makeDeleter("k1", "span"),
 			spanName:   "nospan0",
-			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1, kv2, kv3)),
-			want:       mustTS(oteltest.TraceStateFromKeyValues(kv2, kv3)),
+			input:      mustTS(trace.ParseTraceState("k1=v1,k2=v2,k3=v3")),
+			want:       mustTS(trace.ParseTraceState("k2=v2,k3=v3")),
 			exportSpan: false,
 		},
 		{
 			name:       "clearer",
 			sampler:    clearer("span"),
 			spanName:   "span0",
-			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1, kv3)),
-			want:       mustTS(oteltest.TraceStateFromKeyValues()),
+			input:      mustTS(trace.ParseTraceState("k1=v1,k3=v3")),
+			want:       mustTS(trace.ParseTraceState("")),
 			exportSpan: true,
 		},
 	}
