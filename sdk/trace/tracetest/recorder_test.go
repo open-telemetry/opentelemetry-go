@@ -27,7 +27,7 @@ type rwSpan struct {
 	sdktrace.ReadWriteSpan
 }
 
-func TestOnStartAppends(t *testing.T) {
+func TestSpanRecorderOnStartAppends(t *testing.T) {
 	s0, s1 := new(rwSpan), new(rwSpan)
 	ctx := context.Background()
 	sr := new(SpanRecorder)
@@ -48,7 +48,7 @@ type roSpan struct {
 	sdktrace.ReadOnlySpan
 }
 
-func TestOnEndAppends(t *testing.T) {
+func TestSpanRecorderOnEndAppends(t *testing.T) {
 	s0, s1 := new(roSpan), new(roSpan)
 	sr := new(SpanRecorder)
 
@@ -64,7 +64,7 @@ func TestOnEndAppends(t *testing.T) {
 	assert.Same(t, s1, ended[1])
 }
 
-func TestShutdownNoError(t *testing.T) {
+func TestSpanRecorderShutdownNoError(t *testing.T) {
 	ctx := context.Background()
 	assert.NoError(t, new(SpanRecorder).Shutdown(ctx))
 
@@ -74,7 +74,7 @@ func TestShutdownNoError(t *testing.T) {
 	assert.NoError(t, new(SpanRecorder).Shutdown(ctx))
 }
 
-func TestForceFlushNoError(t *testing.T) {
+func TestSpanRecorderForceFlushNoError(t *testing.T) {
 	ctx := context.Background()
 	assert.NoError(t, new(SpanRecorder).ForceFlush(ctx))
 
