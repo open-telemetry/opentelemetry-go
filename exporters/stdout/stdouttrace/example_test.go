@@ -35,7 +35,7 @@ var (
 	tracer = otel.GetTracerProvider().Tracer(
 		instrumentationName,
 		trace.WithInstrumentationVersion(instrumentationVersion),
-		trace.WithSchemaURL("https://opentelemetry.io/schemas/1.2.0"),
+		trace.WithSchemaURL(semconv.SchemaURL),
 	)
 )
 
