@@ -55,7 +55,7 @@ type ReadOnlySpan interface {
 	// Attributes returns the defining attributes of the span.
 	Attributes() []attribute.KeyValue
 	// Links returns all the links the span has to other spans.
-	Links() []trace.Link
+	Links() []Link
 	// Events returns all the events that occurred within in the spans
 	// lifetime.
 	Events() []Event
@@ -386,11 +386,11 @@ func (s *span) Attributes() []attribute.KeyValue {
 }
 
 // Links returns the links of this span.
-func (s *span) Links() []trace.Link {
+func (s *span) Links() []Link {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if len(s.links.queue) == 0 {
-		return []trace.Link{}
+		return []Link{}
 	}
 	return s.interfaceArrayToLinksArray()
 }
@@ -435,13 +435,15 @@ func (s *span) addLink(link trace.Link) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	var droppedAttributeCount int
+
 	// Discard over limited attributes
 	if len(link.Attributes) > s.spanLimits.AttributePerLinkCountLimit {
-		link.DroppedAttributeCount = len(link.Attributes) - s.spanLimits.AttributePerLinkCountLimit
+		droppedAttributeCount = len(link.Attributes) - s.spanLimits.AttributePerLinkCountLimit
 		link.Attributes = link.Attributes[:s.spanLimits.AttributePerLinkCountLimit]
 	}
 
-	s.links.add(link)
+	s.links.add(Link{link.SpanContext, link.Attributes, droppedAttributeCount})
 }
 
 // DroppedAttributes returns the number of attributes dropped by the span
@@ -514,10 +516,10 @@ func (s *span) snapshot() ReadOnlySpan {
 	return &sd
 }
 
-func (s *span) interfaceArrayToLinksArray() []trace.Link {
-	linkArr := make([]trace.Link, 0)
+func (s *span) interfaceArrayToLinksArray() []Link {
+	linkArr := make([]Link, 0)
 	for _, value := range s.links.queue {
-		linkArr = append(linkArr, value.(trace.Link))
+		linkArr = append(linkArr, value.(Link))
 	}
 	return linkArr
 }
