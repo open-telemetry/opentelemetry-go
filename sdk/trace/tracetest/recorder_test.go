@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
