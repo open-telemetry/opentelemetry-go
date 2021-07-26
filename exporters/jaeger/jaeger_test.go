@@ -219,7 +219,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 				Name:      "/foo",
 				StartTime: now,
 				EndTime:   now,
-				Links: []trace.Link{
+				Links: []sdktrace.Link{
 					{
 						SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 							TraceID: linkTraceID,
@@ -311,7 +311,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 					TraceID: traceID,
 					SpanID:  parentSpanID,
 				}),
-				Links: []trace.Link{
+				Links: []sdktrace.Link{
 					{
 						SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 							TraceID: linkTraceID,

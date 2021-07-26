@@ -146,7 +146,7 @@ func status(status codes.Code, message string) *tracepb.Status {
 }
 
 // links transforms span Links to OTLP span links.
-func links(links []trace.Link) []*tracepb.Span_Link {
+func links(links []tracesdk.Link) []*tracepb.Span_Link {
 	if len(links) == 0 {
 		return nil
 	}
