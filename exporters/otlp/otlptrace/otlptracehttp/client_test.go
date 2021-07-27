@@ -61,6 +61,55 @@ func TestEndToEnd(t *testing.T) {
 			},
 		},
 		{
+			name: "retry",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
+					Enabled:         true,
+					InitialInterval: time.Nanosecond,
+					MaxInterval:     time.Nanosecond,
+					// Do not stop trying.
+					MaxElapsedTime: 0,
+				}),
+			},
+			mcCfg: mockCollectorConfig{
+				InjectHTTPStatus: []int{503, 429},
+			},
+		},
+		{
+			name: "retry with gzip compression",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithCompression(otlptracehttp.GzipCompression),
+				otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
+					Enabled:         true,
+					InitialInterval: time.Nanosecond,
+					MaxInterval:     time.Nanosecond,
+					// Do not stop trying.
+					MaxElapsedTime: 0,
+				}),
+			},
+			mcCfg: mockCollectorConfig{
+				InjectHTTPStatus: []int{503, 503},
+			},
+		},
+		{
+			name: "retry with throttle",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
+					Enabled:         true,
+					InitialInterval: time.Nanosecond,
+					MaxInterval:     time.Nanosecond,
+					// Do not stop trying.
+					MaxElapsedTime: 0,
+				}),
+			},
+			mcCfg: mockCollectorConfig{
+				InjectHTTPStatus: []int{503},
+				InjectResponseHeader: []map[string]string{
+					{"Retry-After": "10"},
+				},
+			},
+		},
+		{
 			name: "with empty paths (forced to defaults)",
 			opts: []otlptracehttp.Option{
 				otlptracehttp.WithURLPath(""),
@@ -138,32 +187,6 @@ func TestExporterShutdown(t *testing.T) {
 	})
 }
 
-func TestRetry(t *testing.T) {
-	statuses := []int{
-		http.StatusTooManyRequests,
-		http.StatusServiceUnavailable,
-	}
-	mcCfg := mockCollectorConfig{
-		InjectHTTPStatus: statuses,
-	}
-	mc := runMockCollector(t, mcCfg)
-	defer mc.MustStop(t)
-	client := otlptracehttp.NewClient(
-		otlptracehttp.WithEndpoint(mc.Endpoint()),
-		otlptracehttp.WithInsecure(),
-		otlptracehttp.WithMaxAttempts(len(statuses)+1),
-	)
-	ctx := context.Background()
-	exporter, err := otlptrace.New(ctx, client)
-	require.NoError(t, err)
-	defer func() {
-		assert.NoError(t, exporter.Shutdown(ctx))
-	}()
-	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-	assert.NoError(t, err)
-	assert.Len(t, mc.GetSpans(), 1)
-}
-
 func TestTimeout(t *testing.T) {
 	mcCfg := mockCollectorConfig{
 		InjectDelay: 100 * time.Millisecond,
@@ -185,45 +208,21 @@ func TestTimeout(t *testing.T) {
 	assert.Equal(t, true, os.IsTimeout(err))
 }
 
-func TestRetryFailed(t *testing.T) {
-	statuses := []int{
-		http.StatusTooManyRequests,
-		http.StatusServiceUnavailable,
-	}
-	mcCfg := mockCollectorConfig{
-		InjectHTTPStatus: statuses,
-	}
-	mc := runMockCollector(t, mcCfg)
-	defer mc.MustStop(t)
-	driver := otlptracehttp.NewClient(
-		otlptracehttp.WithEndpoint(mc.Endpoint()),
-		otlptracehttp.WithInsecure(),
-		otlptracehttp.WithMaxAttempts(1),
-	)
-	ctx := context.Background()
-	exporter, err := otlptrace.New(ctx, driver)
-	require.NoError(t, err)
-	defer func() {
-		assert.NoError(t, exporter.Shutdown(ctx))
-	}()
-	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-	assert.Error(t, err)
-	assert.Empty(t, mc.GetSpans())
-}
-
 func TestNoRetry(t *testing.T) {
-	statuses := []int{
-		http.StatusBadRequest,
-	}
-	mcCfg := mockCollectorConfig{
-		InjectHTTPStatus: statuses,
-	}
-	mc := runMockCollector(t, mcCfg)
+	mc := runMockCollector(t, mockCollectorConfig{
+		InjectHTTPStatus: []int{http.StatusBadRequest},
+	})
 	defer mc.MustStop(t)
 	driver := otlptracehttp.NewClient(
 		otlptracehttp.WithEndpoint(mc.Endpoint()),
 		otlptracehttp.WithInsecure(),
-		otlptracehttp.WithMaxAttempts(len(statuses)+1),
+		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
+			Enabled:         true,
+			InitialInterval: 1 * time.Nanosecond,
+			MaxInterval:     1 * time.Nanosecond,
+			// Never stop retry of retry-able status.
+			MaxElapsedTime: 0,
+		}),
 	)
 	ctx := context.Background()
 	exporter, err := otlptrace.New(ctx, driver)
@@ -233,7 +232,7 @@ func TestNoRetry(t *testing.T) {
 	}()
 	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
 	assert.Error(t, err)
-	assert.Equal(t, fmt.Sprintf("failed to send traces to http://%s/v1/traces with HTTP status 400 Bad Request", mc.endpoint), err.Error())
+	assert.Equal(t, fmt.Sprintf("failed to send traces to http://%s/v1/traces: 400 Bad Request", mc.endpoint), err.Error())
 	assert.Empty(t, mc.GetSpans())
 }
 
@@ -254,88 +253,6 @@ func TestEmptyData(t *testing.T) {
 	assert.NoError(t, err)
 	err = exporter.ExportSpans(ctx, nil)
 	assert.NoError(t, err)
-	assert.Empty(t, mc.GetSpans())
-}
-
-func TestUnreasonableMaxAttempts(t *testing.T) {
-	// Max attempts is 5, we set collector to fail 7 times and try
-	// to configure max attempts to be either negative or too
-	// large. Since we set max attempts to 5 in such cases,
-	// exporting to the collector should fail.
-	type testcase struct {
-		name        string
-		maxAttempts int
-	}
-	for _, tc := range []testcase{
-		{
-			name:        "negative max attempts",
-			maxAttempts: -3,
-		},
-		{
-			name:        "too large max attempts",
-			maxAttempts: 10,
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			statuses := make([]int, 0, 7)
-			for i := 0; i < cap(statuses); i++ {
-				statuses = append(statuses, http.StatusTooManyRequests)
-			}
-			mcCfg := mockCollectorConfig{
-				InjectHTTPStatus: statuses,
-			}
-			mc := runMockCollector(t, mcCfg)
-			defer mc.MustStop(t)
-			driver := otlptracehttp.NewClient(
-				otlptracehttp.WithEndpoint(mc.Endpoint()),
-				otlptracehttp.WithInsecure(),
-				otlptracehttp.WithMaxAttempts(tc.maxAttempts),
-				otlptracehttp.WithBackoff(time.Millisecond),
-			)
-			ctx := context.Background()
-			exporter, err := otlptrace.New(ctx, driver)
-			require.NoError(t, err)
-			defer func() {
-				assert.NoError(t, exporter.Shutdown(ctx))
-			}()
-			err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-			assert.Error(t, err)
-			assert.Empty(t, mc.GetSpans())
-		})
-	}
-}
-
-func TestUnreasonableBackoff(t *testing.T) {
-	// This sets backoff to negative value, which gets corrected
-	// to default backoff instead of being used. Default max
-	// attempts is 5, so we set the collector to fail 4 times, but
-	// we set the deadline to 3 times of the default backoff, so
-	// this should show that deadline is not met, meaning that the
-	// retries weren't immediate (as negative backoff could
-	// imply).
-	statuses := make([]int, 0, 4)
-	for i := 0; i < cap(statuses); i++ {
-		statuses = append(statuses, http.StatusTooManyRequests)
-	}
-	mcCfg := mockCollectorConfig{
-		InjectHTTPStatus: statuses,
-	}
-	mc := runMockCollector(t, mcCfg)
-	defer mc.MustStop(t)
-	driver := otlptracehttp.NewClient(
-		otlptracehttp.WithEndpoint(mc.Endpoint()),
-		otlptracehttp.WithInsecure(),
-		otlptracehttp.WithBackoff(-time.Millisecond),
-	)
-	ctx, cancel := context.WithTimeout(context.Background(), 3*(300*time.Millisecond))
-	defer cancel()
-	exporter, err := otlptrace.New(ctx, driver)
-	require.NoError(t, err)
-	defer func() {
-		assert.NoError(t, exporter.Shutdown(context.Background()))
-	}()
-	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-	assert.Error(t, err)
 	assert.Empty(t, mc.GetSpans())
 }
 
@@ -372,7 +289,13 @@ func TestDeadlineContext(t *testing.T) {
 	driver := otlptracehttp.NewClient(
 		otlptracehttp.WithEndpoint(mc.Endpoint()),
 		otlptracehttp.WithInsecure(),
-		otlptracehttp.WithBackoff(time.Minute),
+		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
+			Enabled:         true,
+			InitialInterval: 1 * time.Hour,
+			MaxInterval:     1 * time.Hour,
+			// Never stop retry of retry-able status.
+			MaxElapsedTime: 0,
+		}),
 	)
 	ctx := context.Background()
 	exporter, err := otlptrace.New(ctx, driver)
@@ -400,7 +323,13 @@ func TestStopWhileExporting(t *testing.T) {
 	driver := otlptracehttp.NewClient(
 		otlptracehttp.WithEndpoint(mc.Endpoint()),
 		otlptracehttp.WithInsecure(),
-		otlptracehttp.WithBackoff(time.Minute),
+		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
+			Enabled:         true,
+			InitialInterval: 1 * time.Hour,
+			MaxInterval:     1 * time.Hour,
+			// Never stop retry of retry-able status.
+			MaxElapsedTime: 0,
+		}),
 	)
 	ctx := context.Background()
 	exporter, err := otlptrace.New(ctx, driver)

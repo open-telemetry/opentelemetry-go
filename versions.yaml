@@ -14,9 +14,10 @@
 
 module-sets:
   stable-v1:
-    version: v1.0.0-RC1
+    version: v1.0.0-RC2
     modules:
       - go.opentelemetry.io/otel
+      - go.opentelemetry.io/otel/bridge/opentracing
       - go.opentelemetry.io/otel/example/jaeger
       - go.opentelemetry.io/otel/example/namedtracer
       - go.opentelemetry.io/otel/example/otel-collector
@@ -48,7 +49,6 @@ module-sets:
     version: v0.21.0
     modules:
       - go.opentelemetry.io/otel/bridge/opencensus
-      - go.opentelemetry.io/otel/bridge/opentracing
       - go.opentelemetry.io/otel/example/opencensus
 excluded-modules:
   - go.opentelemetry.io/otel/internal/tools
