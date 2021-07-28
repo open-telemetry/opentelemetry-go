@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal
+package internal_test
 
 import (
 	"testing"
@@ -20,6 +20,7 @@ import (
 	octrace "go.opencensus.io/trace"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/bridge/opencensus/internal"
 	"go.opentelemetry.io/otel/bridge/opencensus/internal/oc2otel"
 	"go.opentelemetry.io/otel/bridge/opencensus/internal/otel2oc"
 	"go.opentelemetry.io/otel/codes"
@@ -50,7 +51,7 @@ func (s *span) AddEvent(n string, o ...trace.EventOption) { s.eName, s.eOpts = n
 
 func TestSpanIsRecordingEvents(t *testing.T) {
 	s := &span{recording: true}
-	ocS := NewSpan(s)
+	ocS := internal.NewSpan(s)
 	if !ocS.IsRecordingEvents() {
 		t.Errorf("span.IsRecordingEvents() = false, want true")
 	}
@@ -62,7 +63,7 @@ func TestSpanIsRecordingEvents(t *testing.T) {
 
 func TestSpanEnd(t *testing.T) {
 	s := new(span)
-	ocS := NewSpan(s)
+	ocS := internal.NewSpan(s)
 	if s.ended {
 		t.Fatal("new span already ended")
 	}
@@ -82,7 +83,7 @@ func TestSpanSpanContext(t *testing.T) {
 	converted := otel2oc.SpanContext(sc)
 
 	s := &span{sc: sc}
-	ocS := NewSpan(s)
+	ocS := internal.NewSpan(s)
 	if ocS.SpanContext() != converted {
 		t.Error("span.SpanContext did not use OpenTelemetry SpanContext")
 	}
@@ -91,7 +92,7 @@ func TestSpanSpanContext(t *testing.T) {
 func TestSpanSetName(t *testing.T) {
 	// OpenCensus does not set a name if not recording.
 	s := &span{recording: true}
-	ocS := NewSpan(s)
+	ocS := internal.NewSpan(s)
 	name := "test name"
 	ocS.SetName(name)
 	if s.name != name {
@@ -102,7 +103,7 @@ func TestSpanSetName(t *testing.T) {
 func TestSpanSetStatus(t *testing.T) {
 	// OpenCensus does not set a status if not recording.
 	s := &span{recording: true}
-	ocS := NewSpan(s)
+	ocS := internal.NewSpan(s)
 
 	c, d := codes.Error, "error"
 	status := octrace.Status{Code: int32(c), Message: d}
@@ -125,7 +126,7 @@ func TestSpanAddAttributes(t *testing.T) {
 
 	// OpenCensus does not set attributes if not recording.
 	s := &span{recording: true}
-	ocS := NewSpan(s)
+	ocS := internal.NewSpan(s)
 	ocS.AddAttributes(attrs...)
 
 	if len(s.attrs) != len(converted) || s.attrs[0] != converted[0] {
@@ -143,7 +144,7 @@ func TestSpanAnnotate(t *testing.T) {
 
 	// OpenCensus does not set attributes if not recording.
 	s := &span{recording: true}
-	ocS := NewSpan(s)
+	ocS := internal.NewSpan(s)
 	ocS.Annotate(attrs, name)
 
 	if s.eName != name {
@@ -166,7 +167,7 @@ func TestSpanAnnotatef(t *testing.T) {
 
 	// OpenCensus does not set attributes if not recording.
 	s := &span{recording: true}
-	ocS := NewSpan(s)
+	ocS := internal.NewSpan(s)
 	ocS.Annotatef(attrs, format, "a")
 
 	if s.eName != "annotation a" {
@@ -184,10 +185,10 @@ func TestSpanAddMessageSendEvent(t *testing.T) {
 
 	// OpenCensus does not set attributes if not recording.
 	s := &span{recording: true}
-	ocS := NewSpan(s)
+	ocS := internal.NewSpan(s)
 	ocS.AddMessageSendEvent(0, u, c)
 
-	if s.eName != MessageSendEvent {
+	if s.eName != internal.MessageSendEvent {
 		t.Error("span.AddMessageSendEvent did not set event name")
 	}
 
@@ -196,12 +197,12 @@ func TestSpanAddMessageSendEvent(t *testing.T) {
 		t.Fatalf("span.AddMessageSendEvent set %d attributes, want 2", len(got))
 	}
 
-	want := attribute.KeyValue{Key: UncompressedKey, Value: attribute.Int64Value(u)}
+	want := attribute.KeyValue{Key: internal.UncompressedKey, Value: attribute.Int64Value(u)}
 	if got[0] != want {
 		t.Errorf("span.AddMessageSendEvent wrong uncompressed attribute: %v", got[0])
 	}
 
-	want = attribute.KeyValue{Key: CompressedKey, Value: attribute.Int64Value(c)}
+	want = attribute.KeyValue{Key: internal.CompressedKey, Value: attribute.Int64Value(c)}
 	if got[1] != want {
 		t.Errorf("span.AddMessageSendEvent wrong compressed attribute: %v", got[1])
 	}
@@ -212,10 +213,10 @@ func TestSpanAddMessageReceiveEvent(t *testing.T) {
 
 	// OpenCensus does not set attributes if not recording.
 	s := &span{recording: true}
-	ocS := NewSpan(s)
+	ocS := internal.NewSpan(s)
 	ocS.AddMessageReceiveEvent(0, u, c)
 
-	if s.eName != MessageReceiveEvent {
+	if s.eName != internal.MessageReceiveEvent {
 		t.Error("span.AddMessageReceiveEvent did not set event name")
 	}
 
@@ -224,12 +225,12 @@ func TestSpanAddMessageReceiveEvent(t *testing.T) {
 		t.Fatalf("span.AddMessageReceiveEvent set %d attributes, want 2", len(got))
 	}
 
-	want := attribute.KeyValue{Key: UncompressedKey, Value: attribute.Int64Value(u)}
+	want := attribute.KeyValue{Key: internal.UncompressedKey, Value: attribute.Int64Value(u)}
 	if got[0] != want {
 		t.Errorf("span.AddMessageReceiveEvent wrong uncompressed attribute: %v", got[0])
 	}
 
-	want = attribute.KeyValue{Key: CompressedKey, Value: attribute.Int64Value(c)}
+	want = attribute.KeyValue{Key: internal.CompressedKey, Value: attribute.Int64Value(c)}
 	if got[1] != want {
 		t.Errorf("span.AddMessageReceiveEvent wrong compressed attribute: %v", got[1])
 	}
@@ -245,7 +246,7 @@ func TestSpanAddLinkFails(t *testing.T) {
 
 	// OpenCensus does not set attributes if not recording.
 	s := &span{recording: true}
-	ocS := NewSpan(s)
+	ocS := internal.NewSpan(s)
 	ocS.AddLink(octrace.Link{})
 
 	if h.err == nil {
@@ -260,7 +261,7 @@ func TestSpanString(t *testing.T) {
 	})
 
 	s := &span{sc: sc}
-	ocS := NewSpan(s)
+	ocS := internal.NewSpan(s)
 	if expected := "span 0100000000000000"; ocS.String() != expected {
 		t.Errorf("span.String = %q, not %q", ocS.String(), expected)
 	}
