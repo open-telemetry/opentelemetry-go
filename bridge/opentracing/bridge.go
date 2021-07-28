@@ -620,6 +620,45 @@ func (s fakeSpan) SpanContext() trace.SpanContext {
 	return s.sc
 }
 
+// adapt OpenTracing TextMapReader or TextMapWriter to OpenTelemetry propagation.TextMapCarrier
+type textMapAdapter struct {
+	r ot.TextMapReader
+	w ot.TextMapWriter
+}
+
+func (a textMapAdapter) Get(key string) string {
+	if a.r == nil {
+		return "" // not implemented on writer
+	}
+	var ret string
+	_ = a.r.ForeachKey(func(k, v string) error {
+		if key == k {
+			ret = v
+		}
+		return nil
+	})
+	return ret
+}
+
+func (a textMapAdapter) Set(key string, value string) {
+	if a.w == nil {
+		return // not implemented on reader
+	}
+	a.w.Set(key, value)
+}
+
+func (a textMapAdapter) Keys() []string {
+	if a.r == nil {
+		return nil // not implemented on writer
+	}
+	var ret []string
+	_ = a.r.ForeachKey(func(k, v string) error {
+		ret = append(ret, k)
+		return nil
+	})
+	return ret
+}
+
 // Inject is a part of the implementation of the OpenTracing Tracer
 // interface.
 //
@@ -635,18 +674,22 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 	if builtinFormat, ok := format.(ot.BuiltinFormat); !ok || builtinFormat != ot.HTTPHeaders {
 		return ot.ErrUnsupportedFormat
 	}
-	hhcarrier, ok := carrier.(ot.HTTPHeadersCarrier)
+	// If carrier implements the required interface directly, use that
+	tmCarrier, ok := carrier.(propagation.TextMapCarrier)
 	if !ok {
-		return ot.ErrInvalidCarrier
+		tmWriter, ok := carrier.(ot.TextMapWriter) // otherwise see if we can wrap it
+		if !ok {
+			return ot.ErrInvalidCarrier
+		}
+		tmCarrier = textMapAdapter{w: tmWriter}
 	}
-	header := http.Header(hhcarrier)
 	fs := fakeSpan{
 		Span: noop.Span,
 		sc:   bridgeSC.otelSpanContext,
 	}
 	ctx := trace.ContextWithSpan(context.Background(), fs)
 	ctx = baggage.ContextWithBaggage(ctx, bridgeSC.bag)
-	t.getPropagator().Inject(ctx, propagation.HeaderCarrier(header))
+	t.getPropagator().Inject(ctx, tmCarrier)
 	return nil
 }
 
@@ -658,12 +701,16 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 	if builtinFormat, ok := format.(ot.BuiltinFormat); !ok || builtinFormat != ot.HTTPHeaders {
 		return nil, ot.ErrUnsupportedFormat
 	}
-	hhcarrier, ok := carrier.(ot.HTTPHeadersCarrier)
+	// If carrier implements the required interface directly, use that
+	tmCarrier, ok := carrier.(propagation.TextMapCarrier)
 	if !ok {
-		return nil, ot.ErrInvalidCarrier
+		tmReader, ok := carrier.(ot.TextMapReader) // otherwise see if we can wrap it
+		if !ok {
+			return nil, ot.ErrInvalidCarrier
+		}
+		tmCarrier = textMapAdapter{r: tmReader}
 	}
-	header := http.Header(hhcarrier)
-	ctx := t.getPropagator().Extract(context.Background(), propagation.HeaderCarrier(header))
+	ctx := t.getPropagator().Extract(context.Background(), tmCarrier)
 	baggage := baggage.FromContext(ctx)
 	bridgeSC := &bridgeSpanContext{
 		bag:             baggage,

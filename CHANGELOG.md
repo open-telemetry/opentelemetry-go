@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- OpenTracing Bridge: allow any OpenTracing propagation carrier. (#2141)
+
 ### Fixed
 
 - Delegated instruments are unwrapped before delegating Callbacks. (#2784)
