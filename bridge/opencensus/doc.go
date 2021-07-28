@@ -28,4 +28,8 @@
 //
 // - The NewContext method of the OpenCensus Tracer cannot embed an OpenCensus
 // Span in a context unless that Span was created by that Tracer.
+//
+// - Conversion of custom OpenCensus Samplers to OpenTelemetry is not
+// implemented. An error will be sent to the OpenTelemetry default
+// ErrorHandler if this is attempted.
 package opencensus // import "go.opentelemetry.io/otel/bridge/opencensus"
