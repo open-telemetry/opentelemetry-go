@@ -20,7 +20,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- The `fromEnv` detector throws an error when OTEL_RESOURCE_ATTRIBUTES is not set. (#2138)
+The `fromEnv` detector no longer throws an error when `OTEL_RESOURCE_ATTRIBUTES` environment variable is not set or empty. (#2138)
 
 ### Security
 
