@@ -18,27 +18,28 @@ import (
 	"fmt"
 
 	octrace "go.opencensus.io/trace"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 )
 
-func StartOptions(optFns []octrace.StartOption, name string) []trace.SpanStartOption {
+func StartOptions(optFuncs []octrace.StartOption) ([]trace.SpanStartOption, error) {
 	var ocOpts octrace.StartOptions
-	for _, fn := range optFns {
+	for _, fn := range optFuncs {
 		fn(&ocOpts)
 	}
-	otOpts := []trace.SpanStartOption{}
+
+	var otelOpts []trace.SpanStartOption
 	switch ocOpts.SpanKind {
 	case octrace.SpanKindClient:
-		otOpts = append(otOpts, trace.WithSpanKind(trace.SpanKindClient))
+		otelOpts = append(otelOpts, trace.WithSpanKind(trace.SpanKindClient))
 	case octrace.SpanKindServer:
-		otOpts = append(otOpts, trace.WithSpanKind(trace.SpanKindServer))
+		otelOpts = append(otelOpts, trace.WithSpanKind(trace.SpanKindServer))
 	case octrace.SpanKindUnspecified:
-		otOpts = append(otOpts, trace.WithSpanKind(trace.SpanKindUnspecified))
+		otelOpts = append(otelOpts, trace.WithSpanKind(trace.SpanKindUnspecified))
 	}
 
+	var err error
 	if ocOpts.Sampler != nil {
-		otel.Handle(fmt.Errorf("ignoring custom sampler for span %q created by OpenCensus because OpenTelemetry does not support creating a span with a custom sampler", name))
+		err = fmt.Errorf("unsupported sampler: %v", ocOpts.Sampler)
 	}
-	return otOpts
+	return otelOpts, err
 }

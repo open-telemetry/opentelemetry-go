@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	octrace "go.opencensus.io/trace"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/bridge/opencensus/internal/oc2otel"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -37,7 +36,11 @@ func NewTracer(tracer trace.Tracer) octrace.Tracer {
 // StartSpan starts a new child span of the current span in the context. If
 // there is no span in the context, it creates a new trace and span.
 func (o *Tracer) StartSpan(ctx context.Context, name string, s ...octrace.StartOption) (context.Context, *octrace.Span) {
-	ctx, sp := o.otelTracer.Start(ctx, name, oc2otel.StartOptions(s, name)...)
+	otelOpts, err := oc2otel.StartOptions(s)
+	if err != nil {
+		Handle(fmt.Errorf("starting span %q: %w", name, err))
+	}
+	ctx, sp := o.otelTracer.Start(ctx, name, otelOpts...)
 	return ctx, NewSpan(sp)
 }
 
@@ -60,6 +63,6 @@ func (o *Tracer) NewContext(parent context.Context, s *octrace.Span) context.Con
 	if otSpan, ok := s.Internal().(*Span); ok {
 		return trace.ContextWithSpan(parent, otSpan.otelSpan)
 	}
-	otel.Handle(fmt.Errorf("unable to create context with span %q, since it was created using a different tracer", s.String()))
+	Handle(fmt.Errorf("unable to create context with span %q, since it was created using a different tracer", s.String()))
 	return parent
 }

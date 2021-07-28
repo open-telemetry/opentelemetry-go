@@ -18,7 +18,6 @@ import (
 	"testing"
 
 	octrace "go.opencensus.io/trace"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/bridge/opencensus/internal"
 	"go.opentelemetry.io/otel/bridge/opencensus/internal/oc2otel"
@@ -236,13 +235,9 @@ func TestSpanAddMessageReceiveEvent(t *testing.T) {
 	}
 }
 
-type handler struct{ err error }
-
-func (h *handler) Handle(e error) { h.err = e }
-
 func TestSpanAddLinkFails(t *testing.T) {
-	h := new(handler)
-	otel.SetErrorHandler(h)
+	h, restore := withHandler()
+	defer restore()
 
 	// OpenCensus does not set attributes if not recording.
 	s := &span{recording: true}
