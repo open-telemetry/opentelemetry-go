@@ -17,6 +17,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - Removed metrics test package `go.opentelemetry.io/otel/sdk/export/metric/metrictest`. (#2105)
+- Removed the `go.opentelemetry.io/otel/bridge/opencensus/utils` package.
+  The contents of this package now exist in the `go.opentelemetry.io/otel/bridge/opencensus` package. (#2144)
 
 ### Fixed
 
