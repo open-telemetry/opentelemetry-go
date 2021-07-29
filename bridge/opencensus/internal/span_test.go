@@ -142,7 +142,7 @@ func TestSpanAnnotate(t *testing.T) {
 	// Do not test the conversion, only that the method is called.
 	want := oc2otel.Attributes(attrs)
 
-	// OpenCensus does not set attributes if not recording.
+	// OpenCensus does not set events if not recording.
 	s := &span{recording: true}
 	ocS := internal.NewSpan(s)
 	ocS.Annotate(attrs, name)
@@ -165,7 +165,7 @@ func TestSpanAnnotatef(t *testing.T) {
 	// Do not test the conversion, only that the method is called.
 	want := oc2otel.Attributes(attrs)
 
-	// OpenCensus does not set attributes if not recording.
+	// OpenCensus does not set events if not recording.
 	s := &span{recording: true}
 	ocS := internal.NewSpan(s)
 	ocS.Annotatef(attrs, format, "a")
@@ -183,7 +183,7 @@ func TestSpanAnnotatef(t *testing.T) {
 func TestSpanAddMessageSendEvent(t *testing.T) {
 	var u, c int64 = 1, 2
 
-	// OpenCensus does not set attributes if not recording.
+	// OpenCensus does not set events if not recording.
 	s := &span{recording: true}
 	ocS := internal.NewSpan(s)
 	ocS.AddMessageSendEvent(0, u, c)
@@ -211,7 +211,7 @@ func TestSpanAddMessageSendEvent(t *testing.T) {
 func TestSpanAddMessageReceiveEvent(t *testing.T) {
 	var u, c int64 = 3, 4
 
-	// OpenCensus does not set attributes if not recording.
+	// OpenCensus does not set events if not recording.
 	s := &span{recording: true}
 	ocS := internal.NewSpan(s)
 	ocS.AddMessageReceiveEvent(0, u, c)
@@ -240,7 +240,7 @@ func TestSpanAddLinkFails(t *testing.T) {
 	h, restore := withHandler()
 	defer restore()
 
-	// OpenCensus does not set attributes if not recording.
+	// OpenCensus does not try to set links if not recording.
 	s := &span{recording: true}
 	ocS := internal.NewSpan(s)
 	ocS.AddLink(octrace.Link{})
