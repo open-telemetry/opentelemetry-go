@@ -23,6 +23,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - The Metric SDK controller constructor does not automatically merge `resource.Environment()`. Multiple calls to `WithResource()` are handled correctly, and when no resources are provided `resource.Default()` is used. (#2120)
+- The `fromEnv` detector no longer throws an error when `OTEL_RESOURCE_ATTRIBUTES` environment variable is not set or empty. (#2138)
 
 ### Security
 
@@ -38,6 +39,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Added a new `Link` type under the SDK `otel/sdk/trace` package that counts the number of attributes that were dropped for surpassing the `AttributePerLinkCountLimit` configured in the Span's `SpanLimits`.
   This new type replaces the equal-named API `Link` type found in the `otel/trace` package for most usages within the SDK.
   For example, instances of this type are now returned by the `Links()` function of `ReadOnlySpan`s provided in places like the `OnEnd` function of `SpanProcessor` implementations. (#2118)
+- Added the `SpanRecorder` type to the `go.opentelemetry.io/otel/skd/trace/tracetest` package.
+  This type can be used with the default SDK as a `SpanProcessor` during testing. (#2132)
 
 ### Changed
 
@@ -70,6 +73,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The OTel span status is correctly transformed into the OTLP status in the `go.opentelemetry.io/otel/exporters/otlp/otlptrace` package.
   This fix will by default set the status to `Unset` if it is not explicitly set to `Ok` or `Error`. (#2099 #2102)
 - The `Inject` method for the `"go.opentelemetry.io/otel/propagation".TraceContext` type no longer injects empty `tracestate` values. (#2108)
+- Use `6831` as default Jaeger agent port instead of `6832`. (#2131)
 
 ## [Experimental Metrics v0.22.0] - 2021-07-19
 
