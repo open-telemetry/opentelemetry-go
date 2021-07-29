@@ -1,6 +1,14 @@
 module go.opentelemetry.io/otel/bridge/opencensus/test
 
-go 1.16
+go 1.15
+
+require (
+	go.opencensus.io v0.23.0
+	go.opentelemetry.io/otel v1.0.0-RC2
+	go.opentelemetry.io/otel/bridge/opencensus v0.21.0
+	go.opentelemetry.io/otel/sdk v1.0.0-RC2
+	go.opentelemetry.io/otel/trace v1.0.0-RC2
+)
 
 replace go.opentelemetry.io/otel => ../../..
 
@@ -61,11 +69,3 @@ replace go.opentelemetry.io/otel/sdk/export/metric => ../../../sdk/export/metric
 replace go.opentelemetry.io/otel/sdk/metric => ../../../sdk/metric
 
 replace go.opentelemetry.io/otel/trace => ../../../trace
-
-require (
-	go.opencensus.io v0.23.0
-	go.opentelemetry.io/otel v1.0.0-RC2
-	go.opentelemetry.io/otel/bridge/opencensus v0.0.0-00010101000000-000000000000
-	go.opentelemetry.io/otel/sdk v1.0.0-RC2
-	go.opentelemetry.io/otel/trace v1.0.0-RC2
-)
