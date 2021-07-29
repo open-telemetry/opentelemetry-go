@@ -18,7 +18,7 @@ See [../../example/jaeger](../../example/jaeger).
 
 The exporter can be used to send spans to:
 
-- Jaeger agent using `jaeger.thrift` over binary thrift protocol via
+- Jaeger agent using `jaeger.thrift` over compact thrift protocol via
   [`WithAgentEndpoint`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/jaeger#WithAgentEndpoint) option.
 - Jaeger collector using `jaeger.thrift` over HTTP via
   [`WithCollectorEndpoint`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/jaeger#WithCollectorEndpoint) option.
@@ -31,7 +31,7 @@ The following environment variables can be used
 | Environment variable              | Option                                                                                        | Default value                       |
 | --------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------- |
 | `OTEL_EXPORTER_JAEGER_AGENT_HOST` | [`WithAgentHost`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/jaeger#WithAgentHost) | `localhost`                         |
-| `OTEL_EXPORTER_JAEGER_AGENT_PORT` | [`WithAgentPort`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/jaeger#WithAgentPort) |                                     |
+| `OTEL_EXPORTER_JAEGER_AGENT_PORT` | [`WithAgentPort`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/jaeger#WithAgentPort) | `6831`                              |
 | `OTEL_EXPORTER_JAEGER_ENDPOINT`   | [`WithEndpoint`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/jaeger#WithEndpoint)   | `http://localhost:14268/api/traces` |
 | `OTEL_EXPORTER_JAEGER_USER`       | [`WithUsername`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/jaeger#WithUsername)   |                                     |
 | `OTEL_EXPORTER_JAEGER_PASSWORD`   | [`WithPassword`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/jaeger#WithPassword)   |                                     |
