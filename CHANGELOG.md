@@ -34,6 +34,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Added a new `Link` type under the SDK `otel/sdk/trace` package that counts the number of attributes that were dropped for surpassing the `AttributePerLinkCountLimit` configured in the Span's `SpanLimits`.
   This new type replaces the equal-named API `Link` type found in the `otel/trace` package for most usages within the SDK.
   For example, instances of this type are now returned by the `Links()` function of `ReadOnlySpan`s provided in places like the `OnEnd` function of `SpanProcessor` implementations. (#2118)
+- Added the `SpanRecorder` type to the `go.opentelemetry.io/otel/skd/trace/tracetest` package.
+  This type can be used with the default SDK as a `SpanProcessor` during testing. (#2132)
 
 ### Changed
 
