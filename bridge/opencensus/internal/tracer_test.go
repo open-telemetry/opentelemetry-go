@@ -49,6 +49,8 @@ func (t *tracer) Start(ctx context.Context, name string, opts ...trace.SpanStart
 	return noop.Start(ctx, name, opts...)
 }
 
+type ctxKey string
+
 func TestTracerStartSpan(t *testing.T) {
 	h, restore := withHandler()
 	defer restore()
@@ -56,7 +58,7 @@ func TestTracerStartSpan(t *testing.T) {
 	otelTracer := &tracer{}
 	ocTracer := internal.NewTracer(otelTracer)
 
-	ctx := context.WithValue(context.Background(), "key", "value")
+	ctx := context.WithValue(context.Background(), ctxKey("key"), "value")
 	name := "testing span"
 	ocTracer.StartSpan(ctx, name, octrace.WithSpanKind(octrace.SpanKindClient))
 	if h.err != nil {
