@@ -16,5 +16,6 @@ package internal
 
 import "go.opentelemetry.io/otel"
 
-// Handle is the package level ErrorHandle. It is overwritable for testing.
+// Handle is the package level function to handle errors. It can be
+// overwritten for testing.
 var Handle = otel.Handle
