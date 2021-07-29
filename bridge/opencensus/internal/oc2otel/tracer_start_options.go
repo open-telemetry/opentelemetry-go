@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	octrace "go.opencensus.io/trace"
+
 	"go.opentelemetry.io/otel/trace"
 )
 

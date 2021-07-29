@@ -16,6 +16,7 @@ package oc2otel
 
 import (
 	octrace "go.opencensus.io/trace"
+
 	"go.opentelemetry.io/otel/attribute"
 )
 

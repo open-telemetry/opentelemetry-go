@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	octrace "go.opencensus.io/trace"
+
 	"go.opentelemetry.io/otel/bridge/opencensus/internal"
 	"go.opentelemetry.io/otel/bridge/opencensus/internal/oc2otel"
 	"go.opentelemetry.io/otel/bridge/opencensus/internal/otel2oc"
