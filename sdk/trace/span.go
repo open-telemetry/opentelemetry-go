@@ -234,7 +234,7 @@ func (s *span) End(options ...trace.SpanEndOption) {
 
 	// Store the end time as soon as possible to avoid artificially increasing
 	// the span's duration in case some operation below takes a while.
-	et := s.stopwatch.Started().Add(s.stopwatch.Elapsed())
+	et := s.stopwatch.Started().Add(s.stopwatch.Stop())
 
 	// Do relative expensive check now that we have an end time and see if we
 	// need to do any more processing.

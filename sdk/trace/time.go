@@ -30,8 +30,10 @@ type Clock interface {
 type Stopwatch interface {
 	// Started returns the time the Stopwatch was started
 	Started() time.Time
-	// Elapsed returns the duration from when this Stopwatch was started and now using a consistent monotonic time.
-	Elapsed() time.Duration
+	// Stop stops the stopwatch and returns the duration from when this Stopwatch was started.
+	// This will only be called once when generating span's end time and should return a positive
+	// time.Duration in order to ensure the monotonicity of span's start/end time.
+	Stop() time.Duration
 }
 
 type standardClock struct{}
@@ -49,6 +51,6 @@ func (w standardStopwatch) Started() time.Time {
 	return time.Time(w)
 }
 
-func (w standardStopwatch) Elapsed() time.Duration {
+func (w standardStopwatch) Stop() time.Duration {
 	return time.Since(time.Time(w))
 }

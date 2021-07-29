@@ -1615,7 +1615,7 @@ type frozenStopwatch struct {
 func (f frozenStopwatch) Started() time.Time {
 	return f.started
 }
-func (f frozenStopwatch) Elapsed() time.Duration {
+func (f frozenStopwatch) Stop() time.Duration {
 	return 0
 }
 
@@ -1641,7 +1641,7 @@ func (b backwardStopwatch) Started() time.Time {
 	return b.started
 }
 
-func (b backwardStopwatch) Elapsed() time.Duration {
+func (b backwardStopwatch) Stop() time.Duration {
 	return -time.Since(b.started)
 }
 
