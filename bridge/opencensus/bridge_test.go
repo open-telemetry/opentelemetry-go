@@ -21,6 +21,7 @@ import (
 	octrace "go.opencensus.io/trace"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/bridge/opencensus/internal"
 	"go.opentelemetry.io/otel/bridge/opencensus/utils"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/oteltest"
@@ -129,7 +130,7 @@ func TestToFromContext(t *testing.T) {
 		defer otSpan1.End()
 
 		// Use NewContext instead of the context from Start
-		ctx = octrace.NewContext(ctx, octrace.NewSpan(&span{otSpan: otSpan1}))
+		ctx = octrace.NewContext(ctx, internal.NewSpan(otSpan1))
 
 		ctx, _ = tracer.Start(ctx, "OpenTelemetrySpan2")
 
@@ -256,22 +257,22 @@ func TestSetThings(t *testing.T) {
 	if v := annotateEvent.Attributes[attribute.Key("string")]; v.AsString() != "annotateval" {
 		t.Errorf("Got annotateEvent.Attributes[string] = %v, expected annotateval", v.AsString())
 	}
-	if sendEvent.Name != "message send" {
+	if sendEvent.Name != internal.MessageSendEvent {
 		t.Errorf("Got sendEvent.Name = %v, expected message send", sendEvent.Name)
 	}
-	if v := sendEvent.Attributes[uncompressedKey]; v.AsInt64() != 456 {
+	if v := sendEvent.Attributes[internal.UncompressedKey]; v.AsInt64() != 456 {
 		t.Errorf("Got sendEvent.Attributes[uncompressedKey] = %v, expected 456", v.AsInt64())
 	}
-	if v := sendEvent.Attributes[compressedKey]; v.AsInt64() != 789 {
+	if v := sendEvent.Attributes[internal.CompressedKey]; v.AsInt64() != 789 {
 		t.Errorf("Got sendEvent.Attributes[compressedKey] = %v, expected 789", v.AsInt64())
 	}
-	if receiveEvent.Name != "message receive" {
+	if receiveEvent.Name != internal.MessageReceiveEvent {
 		t.Errorf("Got receiveEvent.Name = %v, expected message receive", receiveEvent.Name)
 	}
-	if v := receiveEvent.Attributes[uncompressedKey]; v.AsInt64() != 135 {
+	if v := receiveEvent.Attributes[internal.UncompressedKey]; v.AsInt64() != 135 {
 		t.Errorf("Got receiveEvent.Attributes[uncompressedKey] = %v, expected 135", v.AsInt64())
 	}
-	if v := receiveEvent.Attributes[compressedKey]; v.AsInt64() != 369 {
+	if v := receiveEvent.Attributes[internal.CompressedKey]; v.AsInt64() != 369 {
 		t.Errorf("Got receiveEvent.Attributes[compressedKey] = %v, expected 369", v.AsInt64())
 	}
 }
