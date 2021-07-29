@@ -70,6 +70,7 @@ The `fromEnv` detector no longer throws an error when `OTEL_RESOURCE_ATTRIBUTES`
 - The OTel span status is correctly transformed into the OTLP status in the `go.opentelemetry.io/otel/exporters/otlp/otlptrace` package.
   This fix will by default set the status to `Unset` if it is not explicitly set to `Ok` or `Error`. (#2099 #2102)
 - The `Inject` method for the `"go.opentelemetry.io/otel/propagation".TraceContext` type no longer injects empty `tracestate` values. (#2108)
+- Use `6831` as default Jaeger agent port instead of `6832`. (#2131)
 
 ## [Experimental Metrics v0.22.0] - 2021-07-19
 
