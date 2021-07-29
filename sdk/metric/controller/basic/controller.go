@@ -89,6 +89,12 @@ func New(checkpointer export.Checkpointer, opts ...Option) *Controller {
 	}
 	if c.Resource == nil {
 		c.Resource = resource.Default()
+	} else {
+		var err error
+		c.Resource, err = resource.Merge(resource.Environment(), c.Resource)
+		if err != nil {
+			otel.Handle(err)
+		}
 	}
 	impl := sdk.NewAccumulator(checkpointer)
 	return &Controller{

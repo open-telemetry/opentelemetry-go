@@ -61,9 +61,11 @@ func checkTestContext(t *testing.T, ctx context.Context) {
 }
 
 func TestControllerUsesResource(t *testing.T) {
+	const envVal = "T=U,key=value"
 	store, err := ottest.SetEnvVariables(map[string]string{
-		envVar: "key=value,T=U",
+		envVar: envVal,
 	})
+
 	require.NoError(t, err)
 	defer func() { require.NoError(t, store.Restore()) }()
 
@@ -75,7 +77,7 @@ func TestControllerUsesResource(t *testing.T) {
 		{
 			name:    "explicitly empty resource",
 			options: []controller.Option{controller.WithResource(resource.Empty())},
-			wanted:  "",
+			wanted:  envVal,
 		},
 		{
 			name:    "uses default if no resource option",
@@ -85,7 +87,7 @@ func TestControllerUsesResource(t *testing.T) {
 		{
 			name:    "explicit resource",
 			options: []controller.Option{controller.WithResource(resource.NewSchemaless(attribute.String("R", "S")))},
-			wanted:  "R=S",
+			wanted:  "R=S," + envVal,
 		},
 		{
 			name: "multi resource",
@@ -95,7 +97,15 @@ func TestControllerUsesResource(t *testing.T) {
 				controller.WithResource(resource.NewSchemaless(attribute.String("W", "X"))),
 				controller.WithResource(resource.NewSchemaless(attribute.String("T", "V"))),
 			},
-			wanted: "R=S,T=V,W=X",
+			wanted: "R=S,T=V,W=X,key=value",
+		},
+		{
+			name: "user override environment",
+			options: []controller.Option{
+				controller.WithResource(resource.NewSchemaless(attribute.String("T", "V"))),
+				controller.WithResource(resource.NewSchemaless(attribute.String("key", "I win"))),
+			},
+			wanted: "T=V,key=I win",
 		},
 	}
 	for _, c := range cases {
