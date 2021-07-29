@@ -72,6 +72,20 @@ func TestEmpty(t *testing.T) {
 	assert.Equal(t, Empty(), res)
 }
 
+func TestNoResourceAttributesSet(t *testing.T) {
+	store, err := ottest.SetEnvVariables(map[string]string{
+		svcNameKey: "bar",
+	})
+	require.NoError(t, err)
+	defer func() { require.NoError(t, store.Restore()) }()
+	detector := &fromEnv{}
+	res, err := detector.Detect(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, res, NewSchemaless(
+		semconv.ServiceNameKey.String("bar"),
+	))
+}
+
 func TestMissingKeyError(t *testing.T) {
 	store, err := ottest.SetEnvVariables(map[string]string{
 		resourceAttrKey: "key=value,key",
