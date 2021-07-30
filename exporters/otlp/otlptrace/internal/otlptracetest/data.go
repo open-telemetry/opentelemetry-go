@@ -47,7 +47,7 @@ func SingleReadOnlySpan() []tracesdk.ReadOnlySpan {
 			EndTime:           time.Date(2020, time.December, 0, 20, 24, 0, 0, time.UTC),
 			Attributes:        []attribute.KeyValue{},
 			Events:            []tracesdk.Event{},
-			Links:             []trace.Link{},
+			Links:             []tracesdk.Link{},
 			Status:            tracesdk.Status{Code: codes.Ok},
 			DroppedAttributes: 0,
 			DroppedEvents:     0,
