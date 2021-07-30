@@ -1,5 +1,7 @@
 # OpenTelemetry-Go OTLP Span Exporter
 
+[![Go Reference](https://pkg.go.dev/badge/go.opentelemetry.io/otel/exporters/otlp/otlptrace.svg)](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace)
+
 OpenTelemetry Protocol (OTLP) Span Exporter.
 
 To constructs a new OTLP trace Exporter, you can follow this 
