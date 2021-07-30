@@ -28,7 +28,7 @@ type Clock interface {
 }
 
 type Stopwatch interface {
-	// Started returns the time the Stopwatch was started
+	// Started returns the time the Stopwatch was started.
 	Started() time.Time
 	// Stop stops the stopwatch and returns the duration from when this Stopwatch was started.
 	// This will only be called once when generating span's end time and should return a positive
