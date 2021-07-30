@@ -23,8 +23,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -241,7 +239,7 @@ func TestTracestateIsPassed(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			traceState, err := oteltest.TraceStateFromKeyValues(attribute.String("k", "v"))
+			traceState, err := trace.ParseTraceState("k=v")
 			if err != nil {
 				t.Error(err)
 			}

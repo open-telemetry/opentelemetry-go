@@ -374,22 +374,6 @@ func TestNew(t *testing.T) {
 			},
 		},
 		{
-			name:   "Builtins",
-			envars: "key=value,other=attr",
-			options: []resource.Option{
-				resource.WithBuiltinDetectors(),
-			},
-			resourceValues: map[string]string{
-				"host.name":              hostname(),
-				"telemetry.sdk.name":     "opentelemetry",
-				"telemetry.sdk.language": "go",
-				"telemetry.sdk.version":  otel.Version(),
-				"key":                    "value",
-				"other":                  "attr",
-			},
-			schemaURL: semconv.SchemaURL,
-		},
-		{
 			name:   "With schema url",
 			envars: "",
 			options: []resource.Option{
@@ -457,61 +441,186 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestNewWithBuiltinDetectors(t *testing.T) {
-	tc := []struct {
-		name      string
-		envars    string
-		detectors []resource.Detector
-		options   []resource.Option
+func TestWithOSType(t *testing.T) {
+	mockRuntimeProviders()
+	t.Cleanup(restoreAttributesProviders)
 
-		resourceValues map[string]string
-	}{
-		{
-			name:    "No Options returns builtin",
-			envars:  "key=value,other=attr",
-			options: nil,
-			resourceValues: map[string]string{
-				"host.name":              hostname(),
-				"telemetry.sdk.name":     "opentelemetry",
-				"telemetry.sdk.language": "go",
-				"telemetry.sdk.version":  otel.Version(),
-				"key":                    "value",
-				"other":                  "attr",
-			},
-		},
-		{
-			name:   "WithAttributes",
-			envars: "key=value,other=attr",
-			options: []resource.Option{
-				resource.WithAttributes(attribute.String("A", "B")),
-			},
-			resourceValues: map[string]string{
-				"host.name":              hostname(),
-				"telemetry.sdk.name":     "opentelemetry",
-				"telemetry.sdk.language": "go",
-				"telemetry.sdk.version":  otel.Version(),
-				"key":                    "value",
-				"other":                  "attr",
-				"A":                      "B",
-			},
-		},
-	}
-	for _, tt := range tc {
-		t.Run(tt.name, func(t *testing.T) {
-			store, err := ottest.SetEnvVariables(map[string]string{
-				envVar: tt.envars,
-			})
-			require.NoError(t, err)
-			defer func() { require.NoError(t, store.Restore()) }()
+	ctx := context.Background()
 
-			ctx := context.Background()
-			options := append([]resource.Option{resource.WithBuiltinDetectors()}, tt.options...)
-			res, err := resource.New(ctx, options...)
+	res, err := resource.New(ctx,
+		resource.WithOSType(),
+	)
 
-			require.NoError(t, err)
-			require.EqualValues(t, tt.resourceValues, toMap(res))
-		})
-	}
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"os.type": "linux",
+	}, toMap(res))
+}
+
+func TestWithOSDescription(t *testing.T) {
+	mockRuntimeProviders()
+	t.Cleanup(restoreAttributesProviders)
+
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithOSDescription(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"os.description": "Test",
+	}, toMap(res))
+}
+
+func TestWithOS(t *testing.T) {
+	mockRuntimeProviders()
+	t.Cleanup(restoreAttributesProviders)
+
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithOS(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"os.type":        "linux",
+		"os.description": "Test",
+	}, toMap(res))
+}
+
+func TestWithProcessPID(t *testing.T) {
+	mockProcessAttributesProvidersWithErrors()
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithProcessPID(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.pid": fmt.Sprint(fakePID),
+	}, toMap(res))
+}
+
+func TestWithProcessExecutableName(t *testing.T) {
+	mockProcessAttributesProvidersWithErrors()
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithProcessExecutableName(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.executable.name": fakeExecutableName,
+	}, toMap(res))
+}
+
+func TestWithProcessExecutablePath(t *testing.T) {
+	mockProcessAttributesProviders()
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithProcessExecutablePath(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.executable.path": fakeExecutablePath,
+	}, toMap(res))
+}
+
+func TestWithProcessCommandArgs(t *testing.T) {
+	mockProcessAttributesProvidersWithErrors()
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithProcessCommandArgs(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.command_args": fmt.Sprint(fakeCommandArgs),
+	}, toMap(res))
+}
+
+func TestWithProcessOwner(t *testing.T) {
+	mockProcessAttributesProviders()
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithProcessOwner(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.owner": fakeOwner,
+	}, toMap(res))
+}
+
+func TestWithProcessRuntimeName(t *testing.T) {
+	mockProcessAttributesProvidersWithErrors()
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithProcessRuntimeName(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.runtime.name": fakeRuntimeName,
+	}, toMap(res))
+}
+
+func TestWithProcessRuntimeVersion(t *testing.T) {
+	mockProcessAttributesProvidersWithErrors()
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithProcessRuntimeVersion(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.runtime.version": fakeRuntimeVersion,
+	}, toMap(res))
+}
+
+func TestWithProcessRuntimeDescription(t *testing.T) {
+	mockProcessAttributesProvidersWithErrors()
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithProcessRuntimeDescription(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.runtime.description": fakeRuntimeDescription,
+	}, toMap(res))
+}
+
+func TestWithProcess(t *testing.T) {
+	mockProcessAttributesProviders()
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithProcess(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.pid":                 fmt.Sprint(fakePID),
+		"process.executable.name":     fakeExecutableName,
+		"process.executable.path":     fakeExecutablePath,
+		"process.command_args":        fmt.Sprint(fakeCommandArgs),
+		"process.owner":               fakeOwner,
+		"process.runtime.name":        fakeRuntimeName,
+		"process.runtime.version":     fakeRuntimeVersion,
+		"process.runtime.description": fakeRuntimeDescription,
+	}, toMap(res))
 }
 
 func toMap(res *resource.Resource) map[string]string {

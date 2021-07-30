@@ -30,19 +30,18 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type testFixture struct {
 	t        *testing.T
 	ctx      context.Context
+	cont     *controller.Controller
+	meter    metric.Meter
 	exporter *stdoutmetric.Exporter
 	output   *bytes.Buffer
 }
@@ -50,6 +49,10 @@ type testFixture struct {
 var testResource = resource.NewSchemaless(attribute.String("R", "V"))
 
 func newFixture(t *testing.T, opts ...stdoutmetric.Option) testFixture {
+	return newFixtureWithResource(t, testResource, opts...)
+}
+
+func newFixtureWithResource(t *testing.T, res *resource.Resource, opts ...stdoutmetric.Option) testFixture {
 	buf := &bytes.Buffer{}
 	opts = append(opts, stdoutmetric.WithWriter(buf))
 	opts = append(opts, stdoutmetric.WithoutTimestamps())
@@ -57,10 +60,22 @@ func newFixture(t *testing.T, opts ...stdoutmetric.Option) testFixture {
 	if err != nil {
 		t.Fatal("Error building fixture: ", err)
 	}
+	aggSel := processortest.AggregatorSelector()
+	proc := processor.New(aggSel, export.StatelessExportKindSelector())
+	cont := controller.New(proc,
+		controller.WithExporter(exp),
+		controller.WithResource(res),
+	)
+	ctx := context.Background()
+	require.NoError(t, cont.Start(ctx))
+	meter := cont.MeterProvider().Meter("test")
+
 	return testFixture{
 		t:        t,
-		ctx:      context.Background(),
+		ctx:      ctx,
 		exporter: exp,
+		cont:     cont,
+		meter:    meter,
 		output:   buf,
 	}
 }
@@ -69,41 +84,33 @@ func (fix testFixture) Output() string {
 	return strings.TrimSpace(fix.output.String())
 }
 
-func (fix testFixture) Export(checkpointSet export.CheckpointSet) {
-	err := fix.exporter.Export(fix.ctx, checkpointSet)
-	if err != nil {
-		fix.t.Error("export failed: ", err)
-	}
-}
-
 func TestStdoutTimestamp(t *testing.T) {
 	var buf bytes.Buffer
+	aggSel := processortest.AggregatorSelector()
+	proc := processor.New(aggSel, export.CumulativeExportKindSelector())
 	exporter, err := stdoutmetric.New(
 		stdoutmetric.WithWriter(&buf),
 	)
 	if err != nil {
 		t.Fatal("Invalid config: ", err)
 	}
+	cont := controller.New(proc,
+		controller.WithExporter(exporter),
+		controller.WithResource(testResource),
+	)
+	ctx := context.Background()
+
+	require.NoError(t, cont.Start(ctx))
+	meter := cont.MeterProvider().Meter("test")
+	counter := metric.Must(meter).NewInt64Counter("name.lastvalue")
 
 	before := time.Now()
 	// Ensure the timestamp is after before.
 	time.Sleep(time.Nanosecond)
 
-	checkpointSet := metrictest.NewCheckpointSet(testResource)
+	counter.Add(ctx, 1)
 
-	ctx := context.Background()
-	desc := metric.NewDescriptor("test.name", metric.ValueObserverInstrumentKind, number.Int64Kind)
-
-	lvagg, ckpt := metrictest.Unslice2(lastvalue.New(2))
-
-	aggregatortest.CheckedUpdate(t, lvagg, number.NewInt64Number(321), &desc)
-	require.NoError(t, lvagg.SynchronizedMove(ckpt, &desc))
-
-	checkpointSet.Add(&desc, ckpt)
-
-	if err := exporter.Export(ctx, checkpointSet); err != nil {
-		t.Fatal("Unexpected export error: ", err)
-	}
+	require.NoError(t, cont.Stop(ctx))
 
 	// Ensure the timestamp is before after.
 	time.Sleep(time.Nanosecond)
@@ -131,129 +138,71 @@ func TestStdoutTimestamp(t *testing.T) {
 func TestStdoutCounterFormat(t *testing.T) {
 	fix := newFixture(t)
 
-	checkpointSet := metrictest.NewCheckpointSet(testResource)
+	counter := metric.Must(fix.meter).NewInt64Counter("name.sum")
+	counter.Add(fix.ctx, 123, attribute.String("A", "B"), attribute.String("C", "D"))
 
-	desc := metric.NewDescriptor("test.name", metric.CounterInstrumentKind, number.Int64Kind)
+	require.NoError(t, fix.cont.Stop(fix.ctx))
 
-	cagg, ckpt := metrictest.Unslice2(sum.New(2))
-
-	aggregatortest.CheckedUpdate(fix.t, cagg, number.NewInt64Number(123), &desc)
-	require.NoError(t, cagg.SynchronizedMove(ckpt, &desc))
-
-	checkpointSet.Add(&desc, ckpt, attribute.String("A", "B"), attribute.String("C", "D"))
-
-	fix.Export(checkpointSet)
-
-	require.Equal(t, `[{"Name":"test.name{R=V,A=B,C=D}","Sum":123}]`, fix.Output())
+	require.Equal(t, `[{"Name":"name.sum{R=V,instrumentation.name=test,A=B,C=D}","Sum":123}]`, fix.Output())
 }
 
 func TestStdoutLastValueFormat(t *testing.T) {
 	fix := newFixture(t)
 
-	checkpointSet := metrictest.NewCheckpointSet(testResource)
+	counter := metric.Must(fix.meter).NewFloat64Counter("name.lastvalue")
+	counter.Add(fix.ctx, 123.456, attribute.String("A", "B"), attribute.String("C", "D"))
 
-	desc := metric.NewDescriptor("test.name", metric.ValueObserverInstrumentKind, number.Float64Kind)
-	lvagg, ckpt := metrictest.Unslice2(lastvalue.New(2))
+	require.NoError(t, fix.cont.Stop(fix.ctx))
 
-	aggregatortest.CheckedUpdate(fix.t, lvagg, number.NewFloat64Number(123.456), &desc)
-	require.NoError(t, lvagg.SynchronizedMove(ckpt, &desc))
-
-	checkpointSet.Add(&desc, ckpt, attribute.String("A", "B"), attribute.String("C", "D"))
-
-	fix.Export(checkpointSet)
-
-	require.Equal(t, `[{"Name":"test.name{R=V,A=B,C=D}","Last":123.456}]`, fix.Output())
+	require.Equal(t, `[{"Name":"name.lastvalue{R=V,instrumentation.name=test,A=B,C=D}","Last":123.456}]`, fix.Output())
 }
 
 func TestStdoutMinMaxSumCount(t *testing.T) {
 	fix := newFixture(t)
 
-	checkpointSet := metrictest.NewCheckpointSet(testResource)
+	counter := metric.Must(fix.meter).NewFloat64Counter("name.minmaxsumcount")
+	counter.Add(fix.ctx, 123.456, attribute.String("A", "B"), attribute.String("C", "D"))
+	counter.Add(fix.ctx, 876.543, attribute.String("A", "B"), attribute.String("C", "D"))
 
-	desc := metric.NewDescriptor("test.name", metric.ValueRecorderInstrumentKind, number.Float64Kind)
+	require.NoError(t, fix.cont.Stop(fix.ctx))
 
-	magg, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &desc))
-
-	aggregatortest.CheckedUpdate(fix.t, magg, number.NewFloat64Number(123.456), &desc)
-	aggregatortest.CheckedUpdate(fix.t, magg, number.NewFloat64Number(876.543), &desc)
-	require.NoError(t, magg.SynchronizedMove(ckpt, &desc))
-
-	checkpointSet.Add(&desc, ckpt, attribute.String("A", "B"), attribute.String("C", "D"))
-
-	fix.Export(checkpointSet)
-
-	require.Equal(t, `[{"Name":"test.name{R=V,A=B,C=D}","Min":123.456,"Max":876.543,"Sum":999.999,"Count":2}]`, fix.Output())
+	require.Equal(t, `[{"Name":"name.minmaxsumcount{R=V,instrumentation.name=test,A=B,C=D}","Min":123.456,"Max":876.543,"Sum":999.999,"Count":2}]`, fix.Output())
 }
 
 func TestStdoutValueRecorderFormat(t *testing.T) {
 	fix := newFixture(t, stdoutmetric.WithPrettyPrint())
 
-	checkpointSet := metrictest.NewCheckpointSet(testResource)
-
-	desc := metric.NewDescriptor("test.name", metric.ValueRecorderInstrumentKind, number.Float64Kind)
-	aagg, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &desc))
+	inst := metric.Must(fix.meter).NewFloat64ValueRecorder("name.histogram")
 
 	for i := 0; i < 1000; i++ {
-		aggregatortest.CheckedUpdate(fix.t, aagg, number.NewFloat64Number(float64(i)+0.5), &desc)
+		inst.Record(fix.ctx, float64(i)+0.5, attribute.String("A", "B"), attribute.String("C", "D"))
 	}
+	require.NoError(t, fix.cont.Stop(fix.ctx))
 
-	require.NoError(t, aagg.SynchronizedMove(ckpt, &desc))
-
-	checkpointSet.Add(&desc, ckpt, attribute.String("A", "B"), attribute.String("C", "D"))
-
-	fix.Export(checkpointSet)
-
+	// TODO: Stdout does not export `Count` for histogram, nor the buckets.
 	require.Equal(t, `[
 	{
-		"Name": "test.name{R=V,A=B,C=D}",
-		"Min": 0.5,
-		"Max": 999.5,
-		"Sum": 500000,
-		"Count": 1000
+		"Name": "name.histogram{R=V,instrumentation.name=test,A=B,C=D}",
+		"Sum": 500000
 	}
 ]`, fix.Output())
 }
 
 func TestStdoutNoData(t *testing.T) {
-	desc := metric.NewDescriptor("test.name", metric.ValueRecorderInstrumentKind, number.Float64Kind)
-
-	runTwoAggs := func(agg, ckpt export.Aggregator) {
-		t.Run(fmt.Sprintf("%T", agg), func(t *testing.T) {
+	runTwoAggs := func(aggName string) {
+		t.Run(aggName, func(t *testing.T) {
 			t.Parallel()
 
 			fix := newFixture(t)
-
-			checkpointSet := metrictest.NewCheckpointSet(testResource)
-
-			require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
-
-			checkpointSet.Add(&desc, ckpt)
-
-			fix.Export(checkpointSet)
+			_ = metric.Must(fix.meter).NewFloat64Counter(fmt.Sprint("name.", aggName))
+			require.NoError(t, fix.cont.Stop(fix.ctx))
 
 			require.Equal(t, "", fix.Output())
 		})
 	}
 
-	runTwoAggs(metrictest.Unslice2(lastvalue.New(2)))
-	runTwoAggs(metrictest.Unslice2(minmaxsumcount.New(2, &desc)))
-}
-
-func TestStdoutLastValueNotSet(t *testing.T) {
-	fix := newFixture(t)
-
-	checkpointSet := metrictest.NewCheckpointSet(testResource)
-
-	desc := metric.NewDescriptor("test.name", metric.ValueObserverInstrumentKind, number.Float64Kind)
-
-	lvagg, ckpt := metrictest.Unslice2(lastvalue.New(2))
-	require.NoError(t, lvagg.SynchronizedMove(ckpt, &desc))
-
-	checkpointSet.Add(&desc, lvagg, attribute.String("A", "B"), attribute.String("C", "D"))
-
-	fix.Export(checkpointSet)
-
-	require.Equal(t, "", fix.Output())
+	runTwoAggs("lastvalue")
+	runTwoAggs("minmaxsumcount")
 }
 
 func TestStdoutResource(t *testing.T) {
@@ -270,41 +219,35 @@ func TestStdoutResource(t *testing.T) {
 		}
 	}
 	testCases := []testCase{
-		newCase("R1=V1,R2=V2,A=B,C=D",
+		newCase("R1=V1,R2=V2,instrumentation.name=test,A=B,C=D",
 			resource.NewSchemaless(attribute.String("R1", "V1"), attribute.String("R2", "V2")),
 			attribute.String("A", "B"),
 			attribute.String("C", "D")),
-		newCase("R1=V1,R2=V2",
+		newCase("R1=V1,R2=V2,instrumentation.name=test",
 			resource.NewSchemaless(attribute.String("R1", "V1"), attribute.String("R2", "V2")),
 		),
-		newCase("A=B,C=D",
+		newCase("instrumentation.name=test,A=B,C=D",
 			nil,
 			attribute.String("A", "B"),
 			attribute.String("C", "D"),
 		),
 		// We explicitly do not de-duplicate between resources
 		// and metric labels in this exporter.
-		newCase("R1=V1,R2=V2,R1=V3,R2=V4",
+		newCase("R1=V1,R2=V2,instrumentation.name=test,R1=V3,R2=V4",
 			resource.NewSchemaless(attribute.String("R1", "V1"), attribute.String("R2", "V2")),
 			attribute.String("R1", "V3"),
 			attribute.String("R2", "V4")),
 	}
 
 	for _, tc := range testCases {
-		fix := newFixture(t)
+		ctx := context.Background()
+		fix := newFixtureWithResource(t, tc.res)
 
-		checkpointSet := metrictest.NewCheckpointSet(tc.res)
+		counter := metric.Must(fix.meter).NewFloat64Counter("name.lastvalue")
+		counter.Add(ctx, 123.456, tc.attrs...)
 
-		desc := metric.NewDescriptor("test.name", metric.ValueObserverInstrumentKind, number.Float64Kind)
-		lvagg, ckpt := metrictest.Unslice2(lastvalue.New(2))
+		require.NoError(t, fix.cont.Stop(fix.ctx))
 
-		aggregatortest.CheckedUpdate(fix.t, lvagg, number.NewFloat64Number(123.456), &desc)
-		require.NoError(t, lvagg.SynchronizedMove(ckpt, &desc))
-
-		checkpointSet.Add(&desc, ckpt, tc.attrs...)
-
-		fix.Export(checkpointSet)
-
-		require.Equal(t, `[{"Name":"test.name{`+tc.expect+`}","Last":123.456}]`, fix.Output())
+		require.Equal(t, `[{"Name":"name.lastvalue{`+tc.expect+`}","Last":123.456}]`, fix.Output())
 	}
 }

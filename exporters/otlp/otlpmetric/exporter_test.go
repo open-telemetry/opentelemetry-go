@@ -22,7 +22,6 @@ import (
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 
@@ -764,9 +763,11 @@ func runMetricExportTests(t *testing.T, opts []otlpmetric.Option, rs []record, e
 
 		var agg, ckpt metricsdk.Aggregator
 		if r.iKind.Adding() {
-			agg, ckpt = metrictest.Unslice2(sum.New(2))
+			sums := sum.New(2)
+			agg, ckpt = &sums[0], &sums[1]
 		} else {
-			agg, ckpt = metrictest.Unslice2(histogram.New(2, &desc, histogram.WithExplicitBoundaries(testHistogramBoundaries)))
+			histos := histogram.New(2, &desc, histogram.WithExplicitBoundaries(testHistogramBoundaries))
+			agg, ckpt = &histos[0], &histos[1]
 		}
 
 		ctx := context.Background()

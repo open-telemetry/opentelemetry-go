@@ -15,7 +15,6 @@
 package resource_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -36,55 +35,6 @@ func mockRuntimeProviders() {
 	resource.SetOSDescriptionProvider(
 		func() (string, error) { return "Test", nil },
 	)
-}
-
-func TestWithOSType(t *testing.T) {
-	mockRuntimeProviders()
-	t.Cleanup(restoreAttributesProviders)
-
-	ctx := context.Background()
-
-	res, err := resource.New(ctx,
-		resource.WithOSType(),
-	)
-
-	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"os.type": "linux",
-	}, toMap(res))
-}
-
-func TestWithOSDescription(t *testing.T) {
-	mockRuntimeProviders()
-	t.Cleanup(restoreAttributesProviders)
-
-	ctx := context.Background()
-
-	res, err := resource.New(ctx,
-		resource.WithOSDescription(),
-	)
-
-	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"os.description": "Test",
-	}, toMap(res))
-}
-
-func TestWithOS(t *testing.T) {
-	mockRuntimeProviders()
-	t.Cleanup(restoreAttributesProviders)
-
-	ctx := context.Background()
-
-	res, err := resource.New(ctx,
-		resource.WithOS(),
-	)
-
-	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"os.type":        "linux",
-		"os.description": "Test",
-	}, toMap(res))
 }
 
 func TestMapRuntimeOSToSemconvOSType(t *testing.T) {

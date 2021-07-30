@@ -12,19 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metrictest
+package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
-func TestUnslice(t *testing.T) {
-	in := make([]NoopAggregator, 2)
+// Link is the relationship between two Spans. The relationship can be within
+// the same Trace or across different Traces.
+type Link struct {
+	// SpanContext of the linked Span.
+	SpanContext trace.SpanContext
 
-	a, b := Unslice2(in)
+	// Attributes describe the aspects of the link.
+	Attributes []attribute.KeyValue
 
-	require.Equal(t, a.(*NoopAggregator), &in[0])
-	require.Equal(t, b.(*NoopAggregator), &in[1])
+	// DroppedAttributeCount is the number of attributes that were not
+	// recorded due to configured limits being reached.
+	DroppedAttributeCount int
 }
