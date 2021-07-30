@@ -12,12 +12,8 @@ go get -u go.opentelemetry.io/otel/exporters/otlp/otlptrace
 
 ## Example
 
-To constructs a new OTLP trace Exporter, you can follow this
-[`OTLP Trace Exporter Example`](https://github.com/open-telemetry/opentelemetry-go/blob/main/exporters/otlp/otlptrace/example_test.go).
-
-Also,if you are not familiar with how to export trace and metric data from the OpenTelemetry-Go SDK to
-the OpenTelemetry Collector, you can reference this
-[`OpenTelemetry Collector Traces Example`](https://github.com/open-telemetry/opentelemetry-go/tree/main/example/otel-collector).
+- [example_test.go](example_test.go)
+- [../../example/otel-collector](../../example/otel-collector)
 
 
 ## [`otlptrace`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace)
