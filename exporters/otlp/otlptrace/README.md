@@ -2,7 +2,7 @@
 
 OpenTelemetry Protocol (OTLP) Span Exporter.
 
-To constructs a new Otlptrace Exporter ,you can follow this 
+To constructs a new OTLP trace Exporter, you can follow this 
  [`example`](https://github.com/open-telemetry/opentelemetry-go/blob/main/exporters/otlp/otlptrace/example_test.go).
 
 ## Installation
