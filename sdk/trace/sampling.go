@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"strconv"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -285,4 +286,86 @@ func (pb parentBased) Description() string {
 		pb.config.localParentSampled.Description(),
 		pb.config.localParentNotSampled.Description(),
 	)
+}
+
+type propagateSampler struct {
+}
+
+var _ Sampler = propagateSampler{}
+
+func PropagateSampler() Sampler {
+	return propagateSampler{}
+}
+
+func (ps propagateSampler) ShouldSample(p SamplingParameters) SamplingResult {
+	psc := trace.SpanContextFromContext(p.ParentContext)
+	pts := psc.TraceState().Get("otel")
+
+	if pts != "" {
+	}
+	randVal, err := parseTraceStateInt(pts, "r")
+	if err != nil {
+		// @@@
+	}
+
+	probVal, err := parseTraceStateInt(pts, "p")
+	if err != nil {
+		// @@@
+	}
+	_ = randVal
+	_ = probVal
+
+	return SamplingResult{}
+}
+
+var errTraceStateSyntax = fmt.Errorf("invalid 'otel' tracestate syntax")
+
+func parseTraceStateInt(ts, key string) (int, error) {
+	for {
+		eqPos := 0
+		for ; eqPos < len(ts); eqPos++ {
+			if ts[eqPos] >= 'a' && ts[eqPos] <= 'z' {
+				continue
+			}
+			break
+		}
+		if eqPos == 0 || eqPos == len(ts) || ts[eqPos] != ':' {
+			return 0, errTraceStateSyntax
+		}
+
+		isMatch := key == ts[0:eqPos]
+		ts = ts[eqPos+1:]
+
+		sepPos := 0
+		for ; sepPos < len(ts); sepPos++ {
+			if ts[sepPos] >= '0' && ts[sepPos] <= '9' {
+				continue
+			}
+			if ts[sepPos] >= 'a' && ts[sepPos] <= 'f' {
+				continue
+			}
+			break
+		}
+		value, err := strconv.ParseUint(ts[0:sepPos], 16, 32)
+		if err != nil {
+			return 0, err
+		}
+
+		if sepPos == 0 || (sepPos < len(ts) && ts[sepPos] != ';') {
+			return 0, errTraceStateSyntax
+		}
+		if !isMatch {
+			if sepPos == len(ts) {
+				return -1, nil
+			}
+			ts = ts[sepPos+1:]
+			continue
+		}
+
+		return int(value), nil
+	}
+}
+
+func (ps propagateSampler) Description() string {
+	return "Propagate{}"
 }
