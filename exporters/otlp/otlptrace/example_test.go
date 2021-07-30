@@ -59,7 +59,7 @@ func multiply(ctx context.Context, x, y int64) int64 {
 func Resource() *resource.Resource {
 	return resource.NewWithAttributes(
 		semconv.SchemaURL,
-		semconv.ServiceNameKey.String("stdout-example"),
+		semconv.ServiceNameKey.String("otlptrace-example"),
 		semconv.ServiceVersionKey.String("0.0.1"),
 	)
 }
