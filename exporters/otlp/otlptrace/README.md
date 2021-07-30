@@ -2,7 +2,7 @@
 
 [![Go Reference](https://pkg.go.dev/badge/go.opentelemetry.io/otel/exporters/otlp/otlptrace.svg)](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace)
 
-OpenTelemetry Protocol (OTLP) Span Exporter.
+[OpenTelemetry Protocol Exporter](https://github.com/open-telemetry/opentelemetry-specification/blob/v1.5.0/specification/protocol/exporter.md) implementation.
 
 ## Installation
 
