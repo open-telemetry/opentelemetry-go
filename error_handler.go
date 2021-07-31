@@ -25,3 +25,12 @@ type ErrorHandler interface {
 	// DO NOT CHANGE: any modification will not be backwards compatible and
 	// must never be done outside of a new major release.
 }
+
+// ErrorHandlerFunc is a convenience adapter to allow the use of a function
+// as ErrorHandler.
+type ErrorHandlerFunc func(error)
+
+// Handle implements ErrorHandler.
+func (f ErrorHandlerFunc) Handle(err error) {
+	f(err)
+}
