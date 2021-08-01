@@ -100,22 +100,31 @@ func IntValue(v int) Value {
 func ArrayValue(v interface{}) Value {
 	switch reflect.TypeOf(v).Kind() {
 	case reflect.Array, reflect.Slice:
+		val := reflect.ValueOf(v)
 		// get array type regardless of dimensions
 		typ := reflect.TypeOf(v).Elem()
 		kind := typ.Kind()
 		switch kind {
 		case reflect.Bool, reflect.Int, reflect.Int64,
 			reflect.Float64, reflect.String:
-			val := reflect.ValueOf(v)
-			length := val.Len()
-			frozen := reflect.Indirect(reflect.New(reflect.ArrayOf(length, typ)))
-			reflect.Copy(frozen, val)
-			return Value{
-				vtype: ARRAY,
-				array: frozen.Interface(),
+		case reflect.Interface:
+			for i := 0; i < val.Len(); i++ {
+				switch val.Index(i).Elem().Kind() {
+				case reflect.Bool, reflect.Int, reflect.Int64,
+					reflect.Float64, reflect.String:
+					continue
+				default:
+					return Value{vtype: INVALID}
+				}
 			}
 		default:
 			return Value{vtype: INVALID}
+		}
+		frozen := reflect.Indirect(reflect.New(reflect.ArrayOf(val.Len(), typ)))
+		reflect.Copy(frozen, val)
+		return Value{
+			vtype: ARRAY,
+			array: frozen.Interface(),
 		}
 	}
 	return Value{vtype: INVALID}

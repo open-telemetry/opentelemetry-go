@@ -98,6 +98,18 @@ func TestValue(t *testing.T) {
 			wantType:  attribute.INVALID,
 			wantValue: nil,
 		},
+		{
+			name:      "KeyArray([]interface{}) with primitive types correctly returns key's internal values",
+			value:     k.Array([]interface{}{"foo", 1}).Value,
+			wantType:  attribute.ARRAY,
+			wantValue: [2]interface{}{"foo", 1},
+		},
+		{
+			name:      "Key.Array([][]int) with complex types refuses to create multi-dimensional array",
+			value:     k.Array([]interface{}{"foo", []int{1}}).Value,
+			wantType:  attribute.INVALID,
+			wantValue: nil,
+		},
 	} {
 		t.Logf("Running test case %s", testcase.name)
 		if testcase.value.Type() != testcase.wantType {
