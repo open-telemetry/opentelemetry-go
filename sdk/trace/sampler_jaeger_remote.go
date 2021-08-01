@@ -65,8 +65,7 @@ func (s *jaegerRemoteSampler) pollSamplingStrategies() {
 }
 
 // updateSamplingStrategies fetches the sampling strategy from backend server.
-// This function is called automatically on a timer, but can also be safely
-// manually, e.g. from tests.
+// This function is called automatically on a timer.
 func (s *jaegerRemoteSampler) updateSamplingStrategies() error {
 	strategies, err := s.fetcher.Fetch()
 	if err != nil {

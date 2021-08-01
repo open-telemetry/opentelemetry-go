@@ -15,6 +15,7 @@
 package trace
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -22,6 +23,42 @@ import (
 	jaeger_api_v2 "github.com/jaegertracing/jaeger/proto-gen/api_v2"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestJaegerRemoteSampler_ShouldSample_probabilistic(t *testing.T) {
+	genProbabilisticStrategy := func(fraction float64) jaeger_api_v2.SamplingStrategyResponse {
+		return jaeger_api_v2.SamplingStrategyResponse{
+			StrategyType: jaeger_api_v2.SamplingStrategyType_PROBABILISTIC,
+			ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{
+				SamplingRate: fraction,
+			},
+		}
+	}
+
+	sampler := JaegerRemoteSampler("foo", "http://localhost:5778")
+	jaegerRemoteSampler := sampler.(*jaegerRemoteSampler)
+
+	idg := defaultIDGenerator()
+
+	// set fraction to 0, this should drop every trace
+	err := jaegerRemoteSampler.loadSamplingStrategies(genProbabilisticStrategy(0))
+	assert.NoError(t, err)
+
+	traceID, _ := idg.NewIDs(context.Background())
+	result := sampler.ShouldSample(SamplingParameters{
+		TraceID: traceID,
+	})
+	assert.Equal(t, Drop, result.Decision)
+
+	// set fraction to 0, this should sample every trace
+	err = jaegerRemoteSampler.loadSamplingStrategies(genProbabilisticStrategy(1))
+	assert.NoError(t, err)
+
+	traceID, _ = idg.NewIDs(context.Background())
+	result = sampler.ShouldSample(SamplingParameters{
+		TraceID: traceID,
+	})
+	assert.Equal(t, RecordAndSample, result.Decision)
+}
 
 func TestJaegerRemoteSampler_updateSamplingStrategies(t *testing.T) {
 	sampler := JaegerRemoteSampler("foo", "http://localhost:5778")
@@ -156,6 +193,7 @@ func Test_jaegerStrategiesFetcher_Fetch(t *testing.T) {
 			fetcher := jaegerSamplingStrategyFetcherImpl{
 				serviceName:       "foo",
 				samplingServerUrl: server.URL,
+				httpClient:        http.DefaultClient,
 			}
 
 			strategyResponse, err := fetcher.Fetch()
