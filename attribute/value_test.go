@@ -105,7 +105,7 @@ func TestValue(t *testing.T) {
 			wantValue: [2]interface{}{"foo", 1},
 		},
 		{
-			name:      "Key.Array([][]int) with complex types refuses to create multi-dimensional array",
+			name:      "Key.Array([]interface{}) with complex types refuses to create multi-dimensional array",
 			value:     k.Array([]interface{}{"foo", []int{1}}).Value,
 			wantType:  attribute.INVALID,
 			wantValue: nil,
