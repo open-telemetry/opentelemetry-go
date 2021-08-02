@@ -7,7 +7,7 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golangci/golangci-lint v1.41.1
 	github.com/itchyny/gojq v0.12.4
-	go.opentelemetry.io/build-tools/semconvgen v0.0.0-20210728220745-b78d910df94e
+	go.opentelemetry.io/build-tools/semconvgen v0.0.0-20210730171444-520d53fe242d
 	golang.org/x/tools v0.1.5
 )
 
