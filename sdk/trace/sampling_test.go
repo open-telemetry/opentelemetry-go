@@ -196,8 +196,8 @@ func TestTraceIdRatioSamplesInclusively(t *testing.T) {
 		if ratioHi < ratioLo {
 			ratioLo, ratioHi = ratioHi, ratioLo
 		}
-		samplerHi := TraceIDRatioBased(ratioHi)
-		samplerLo := TraceIDRatioBased(ratioLo)
+		samplerHi := ProbabilityBased(ratioHi)
+		samplerLo := ProbabilityBased(ratioLo)
 		for j := 0; j < numTraces; j++ {
 			traceID, _ := idg.NewIDs(context.Background())
 
@@ -232,8 +232,8 @@ func TestTracestateIsPassed(t *testing.T) {
 			ParentBased(NeverSample()),
 		},
 		{
-			"traceIDRatioSampler",
-			TraceIDRatioBased(.5),
+			"probabilitySampler",
+			ProbabilityBased(.5),
 		},
 	}
 

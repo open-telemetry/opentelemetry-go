@@ -92,12 +92,12 @@ type SamplingResult struct {
 	Tracestate trace.TraceState
 }
 
-type traceIDRatioSampler struct {
+type probabilitySampler struct {
 	traceIDUpperBound uint64
 	description       string
 }
 
-func (ts traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
+func (ts probabilitySampler) ShouldSample(p SamplingParameters) SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
 	x := binary.BigEndian.Uint64(p.TraceID[0:8]) >> 1
 	if x < ts.traceIDUpperBound {
@@ -112,27 +112,34 @@ func (ts traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult 
 	}
 }
 
-func (ts traceIDRatioSampler) Description() string {
+func (ts probabilitySampler) Description() string {
 	return ts.description
 }
 
-// TraceIDRatioBased samples a given fraction of traces. Fractions >= 1 will
-// always sample. Fractions < 0 are treated as zero. To respect the
-// parent trace's `SampledFlag`, the `TraceIDRatioBased` sampler should be used
-// as a delegate of a `Parent` sampler.
-//nolint:revive // revive complains about stutter of `trace.TraceIDRatioBased`
-func TraceIDRatioBased(fraction float64) Sampler {
+// ProbabilityBased samples a given fraction of traces, supports
+// arbitrary fractions.
+// - Fractions >= 1 will always sample.
+// - Fractions < 0 are treated as zero.
+//
+// Note: This Sampler implements the legacy behavior of
+// TraceIDRatioSampler prior to standardizing how to propagate
+// sampling probability.  This sampler does not guarantee consistent
+// sampling when used with other ProbabilityBased implementations.
+//
+// To respect the parent trace's `SampledFlag`, the `ProbabilityBased`
+// sampler should be used as a delegate of a `Parent` sampler.
+func ProbabilityBased(fraction float64) Sampler {
 	if fraction >= 1 {
 		return AlwaysSample()
 	}
 
 	if fraction <= 0 {
-		fraction = 0
+		return NeverSample()
 	}
 
-	return &traceIDRatioSampler{
+	return &probabilitySampler{
 		traceIDUpperBound: uint64(fraction * (1 << 63)),
-		description:       fmt.Sprintf("TraceIDRatioBased{%g}", fraction),
+		description:       fmt.Sprintf("ProbabilityBased{%g}", fraction),
 	}
 }
 

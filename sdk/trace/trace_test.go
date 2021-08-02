@@ -80,10 +80,10 @@ func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
 	harness := ottest.NewHarness(t)
 
 	harness.TestTracerProvider(func() trace.TracerProvider {
-		return NewTracerProvider(WithSampler(TraceIDRatioBased(0)))
+		return NewTracerProvider(WithSampler(NeverSample()))
 	})
 
-	tp := NewTracerProvider(WithSampler(TraceIDRatioBased(0)))
+	tp := NewTracerProvider(WithSampler(NeverSample()))
 	harness.TestTracer(func() trace.Tracer {
 		return tp.Tracer("")
 	})
@@ -257,24 +257,24 @@ func TestSampling(t *testing.T) {
 		// Span w/o a parent
 		"NeverSample":           {sampler: NeverSample(), expect: 0},
 		"AlwaysSample":          {sampler: AlwaysSample(), expect: 1.0},
-		"TraceIdRatioBased_-1":  {sampler: TraceIDRatioBased(-1.0), expect: 0},
-		"TraceIdRatioBased_.25": {sampler: TraceIDRatioBased(0.25), expect: .25},
-		"TraceIdRatioBased_.50": {sampler: TraceIDRatioBased(0.50), expect: .5},
-		"TraceIdRatioBased_.75": {sampler: TraceIDRatioBased(0.75), expect: .75},
-		"TraceIdRatioBased_2.0": {sampler: TraceIDRatioBased(2.0), expect: 1},
+		"TraceIdRatioBased_-1":  {sampler: ProbabilityBased(-1.0), expect: 0},
+		"TraceIdRatioBased_.25": {sampler: ProbabilityBased(0.25), expect: .25},
+		"TraceIdRatioBased_.50": {sampler: ProbabilityBased(0.50), expect: .5},
+		"TraceIdRatioBased_.75": {sampler: ProbabilityBased(0.75), expect: .75},
+		"TraceIdRatioBased_2.0": {sampler: ProbabilityBased(2.0), expect: 1},
 
 		// Spans w/o a parent and using ParentBased(DelegateSampler()) Sampler, receive DelegateSampler's sampling decision
 		"ParentNeverSample":           {sampler: ParentBased(NeverSample()), expect: 0},
 		"ParentAlwaysSample":          {sampler: ParentBased(AlwaysSample()), expect: 1},
-		"ParentTraceIdRatioBased_.50": {sampler: ParentBased(TraceIDRatioBased(0.50)), expect: .5},
+		"ParentTraceIdRatioBased_.50": {sampler: ParentBased(ProbabilityBased(0.50)), expect: .5},
 
-		// An unadorned TraceIDRatioBased sampler ignores parent spans
-		"UnsampledParentSpanWithTraceIdRatioBased_.25": {sampler: TraceIDRatioBased(0.25), expect: .25, parent: true},
-		"SampledParentSpanWithTraceIdRatioBased_.25":   {sampler: TraceIDRatioBased(0.25), expect: .25, parent: true, sampledParent: true},
-		"UnsampledParentSpanWithTraceIdRatioBased_.50": {sampler: TraceIDRatioBased(0.50), expect: .5, parent: true},
-		"SampledParentSpanWithTraceIdRatioBased_.50":   {sampler: TraceIDRatioBased(0.50), expect: .5, parent: true, sampledParent: true},
-		"UnsampledParentSpanWithTraceIdRatioBased_.75": {sampler: TraceIDRatioBased(0.75), expect: .75, parent: true},
-		"SampledParentSpanWithTraceIdRatioBased_.75":   {sampler: TraceIDRatioBased(0.75), expect: .75, parent: true, sampledParent: true},
+		// An unadorned ProbabilityBased sampler ignores parent spans
+		"UnsampledParentSpanWithTraceIdRatioBased_.25": {sampler: ProbabilityBased(0.25), expect: .25, parent: true},
+		"SampledParentSpanWithTraceIdRatioBased_.25":   {sampler: ProbabilityBased(0.25), expect: .25, parent: true, sampledParent: true},
+		"UnsampledParentSpanWithTraceIdRatioBased_.50": {sampler: ProbabilityBased(0.50), expect: .5, parent: true},
+		"SampledParentSpanWithTraceIdRatioBased_.50":   {sampler: ProbabilityBased(0.50), expect: .5, parent: true, sampledParent: true},
+		"UnsampledParentSpanWithTraceIdRatioBased_.75": {sampler: ProbabilityBased(0.75), expect: .75, parent: true},
+		"SampledParentSpanWithTraceIdRatioBased_.75":   {sampler: ProbabilityBased(0.75), expect: .75, parent: true, sampledParent: true},
 
 		// Spans with a sampled parent but using NeverSample Sampler, are not sampled
 		"SampledParentSpanWithNeverSample": {sampler: NeverSample(), expect: 0, parent: true, sampledParent: true},
@@ -284,8 +284,8 @@ func TestSampling(t *testing.T) {
 		"UnsampledParentSpanWithParentNeverSampler":          {sampler: ParentBased(NeverSample()), expect: 0, parent: true, sampledParent: false},
 		"SampledParentSpanWithParentAlwaysSampler":           {sampler: ParentBased(AlwaysSample()), expect: 1, parent: true, sampledParent: true},
 		"UnsampledParentSpanWithParentAlwaysSampler":         {sampler: ParentBased(AlwaysSample()), expect: 0, parent: true, sampledParent: false},
-		"SampledParentSpanWithParentTraceIdRatioBased_.50":   {sampler: ParentBased(TraceIDRatioBased(0.50)), expect: 1, parent: true, sampledParent: true},
-		"UnsampledParentSpanWithParentTraceIdRatioBased_.50": {sampler: ParentBased(TraceIDRatioBased(0.50)), expect: 0, parent: true, sampledParent: false},
+		"SampledParentSpanWithParentTraceIdRatioBased_.50":   {sampler: ParentBased(ProbabilityBased(0.50)), expect: 1, parent: true, sampledParent: true},
+		"UnsampledParentSpanWithParentTraceIdRatioBased_.50": {sampler: ParentBased(ProbabilityBased(0.50)), expect: 0, parent: true, sampledParent: false},
 	} {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
