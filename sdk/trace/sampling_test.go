@@ -291,9 +291,11 @@ func TestParseTraceStateInt(t *testing.T) {
 			val, err := parseTraceStateInt(test.in, test.key)
 
 			if err != nil {
-				require.Equal(t, BadSyntax, test.expect)
-			} else if test.expect == NoMatch {
-				require.Equal(t, -1, val)
+				if test.expect == NoMatch {
+					require.Equal(t, errTraceStateNotFound, err)
+				} else {
+					require.Equal(t, BadSyntax, test.expect)
+				}
 			} else {
 				require.Equal(t, int(test.expect), val)
 			}

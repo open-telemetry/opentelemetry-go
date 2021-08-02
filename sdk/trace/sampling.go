@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -66,6 +67,22 @@ const (
 	// RecordAndSample has span's `IsRecording() == true` and `Sampled` flag
 	// *must* be set
 	RecordAndSample
+)
+
+// Probability sampling constants
+const (
+	otelTraceStateKey                    = "otel"
+	otelTraceStateProbabilityValueSubkey = "p"
+	otelSamplingAttributePrefix          = "sampler."
+	otelSamplingAdjustedCountKey         = otelSamplingAttributePrefix + "adjusted_count"
+	otelSamplingNameKey                  = otelSamplingAttributePrefix + "name"
+	otelSamplingParentSampler            = "parent"
+)
+
+// Probability sampling errors
+var (
+	errTraceStateSyntax   = fmt.Errorf("otel tracestate: invalid syntax")
+	errTraceStateNotFound = fmt.Errorf("otel tracestate: subkey not found")
 )
 
 // SamplingResult conveys a SamplingDecision, set of Attributes and a Tracestate.
@@ -181,10 +198,10 @@ type parentBased struct {
 
 func configureSamplersForParentBased(samplers []ParentBasedSamplerOption) samplerConfig {
 	c := samplerConfig{
-		remoteParentSampled:    AlwaysSample(),
-		remoteParentNotSampled: NeverSample(),
-		localParentSampled:     AlwaysSample(),
-		localParentNotSampled:  NeverSample(),
+		remoteParentSampled:    propagateSampler{},
+		remoteParentNotSampled: propagateSampler{},
+		localParentSampled:     propagateSampler{},
+		localParentNotSampled:  propagateSampler{},
 	}
 
 	for _, so := range samplers {
@@ -288,8 +305,7 @@ func (pb parentBased) Description() string {
 	)
 }
 
-type propagateSampler struct {
-}
+type propagateSampler struct{}
 
 var _ Sampler = propagateSampler{}
 
@@ -298,30 +314,58 @@ func PropagateSampler() Sampler {
 }
 
 func (ps propagateSampler) ShouldSample(p SamplingParameters) SamplingResult {
+	var attrs []attribute.KeyValue
+	var decision SamplingDecision
+
 	psc := trace.SpanContextFromContext(p.ParentContext)
-	pts := psc.TraceState().Get("otel")
 
-	if pts != "" {
-	}
-	randVal, err := parseTraceStateInt(pts, "r")
-	if err != nil {
-		// @@@
+	if !psc.IsSampled() {
+		// For unsampled contexts we skip validating the OTel
+		// tracestate key; `attrs` are unset because they will
+		// not be recorded.
+		decision = Drop
+	} else {
+		decision = RecordAndSample
+
+		probVal, err := parseTraceStateInt(
+			psc.TraceState().Get(otelTraceStateKey),
+			otelTraceStateProbabilityValueSubkey,
+		)
+
+		if err == nil {
+			// We have known inclusion probability.  Set an
+			// attribute when the count is not 1.
+			if probVal != 0 {
+				attrs = append(attrs,
+					attribute.Int64(otelSamplingAdjustedCountKey, 1<<probVal),
+				)
+			}
+		} else {
+			// Set the sampler name to indicate an unknown
+			// adjusted count.
+			attrs = append(attrs,
+				attribute.String(otelSamplingNameKey, otelSamplingParentSampler),
+			)
+
+			// Spec error handling behavior (TODO).
+			if err != errTraceStateNotFound {
+				otel.Handle(err)
+			}
+		}
 	}
 
-	probVal, err := parseTraceStateInt(pts, "p")
-	if err != nil {
-		// @@@
+	return SamplingResult{
+		Decision:   decision,
+		Attributes: attrs,
+		Tracestate: psc.TraceState(),
 	}
-	_ = randVal
-	_ = probVal
-
-	return SamplingResult{}
 }
-
-var errTraceStateSyntax = fmt.Errorf("invalid 'otel' tracestate syntax")
 
 func parseTraceStateInt(ts, key string) (int, error) {
 	for {
+		if len(ts) == 0 {
+			return 0, errTraceStateNotFound
+		}
 		eqPos := 0
 		for ; eqPos < len(ts); eqPos++ {
 			if ts[eqPos] >= 'a' && ts[eqPos] <= 'z' {
@@ -356,7 +400,7 @@ func parseTraceStateInt(ts, key string) (int, error) {
 		}
 		if !isMatch {
 			if sepPos == len(ts) {
-				return -1, nil
+				return 0, errTraceStateNotFound
 			}
 			ts = ts[sepPos+1:]
 			continue
@@ -367,5 +411,5 @@ func parseTraceStateInt(ts, key string) (int, error) {
 }
 
 func (ps propagateSampler) Description() string {
-	return "Propagate{}"
+	return "Propagate"
 }
