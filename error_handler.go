@@ -27,10 +27,10 @@ type ErrorHandler interface {
 }
 
 // ErrorHandlerFunc is a convenience adapter to allow the use of a function
-// as ErrorHandler.
+// as an ErrorHandler.
 type ErrorHandlerFunc func(error)
 
-// Handle implements ErrorHandler.
+// Handle handles the irremediable error by calling the ErrorHandlerFunc itself.
 func (f ErrorHandlerFunc) Handle(err error) {
 	f(err)
 }
