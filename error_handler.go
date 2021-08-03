@@ -30,6 +30,8 @@ type ErrorHandler interface {
 // as an ErrorHandler.
 type ErrorHandlerFunc func(error)
 
+var _ ErrorHandler = ErrorHandlerFunc(nil)
+
 // Handle handles the irremediable error by calling the ErrorHandlerFunc itself.
 func (f ErrorHandlerFunc) Handle(err error) {
 	f(err)
