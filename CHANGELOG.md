@@ -9,6 +9,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Added
+- Update which go modules have a version() func with a version.go file. (#2143) 
 
 ### Changed
 
