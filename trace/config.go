@@ -151,10 +151,10 @@ func (cfg *EventConfig) Timestamp() time.Time {
 	return cfg.timestamp
 }
 
-// NewEventConfig applies all the EventOptions to a returned SpanConfig. If no
-// timestamp option is passed, the returned SpanConfig will have a Timestamp
+// NewEventConfig applies all the EventOptions to a returned EventConfig. If no
+// timestamp option is passed, the returned EventConfig will have a Timestamp
 // set to the call time, otherwise no validation is performed on the returned
-// SpanConfig.
+// EventConfig.
 func NewEventConfig(options ...EventOption) *EventConfig {
 	c := new(EventConfig)
 	for _, option := range options {
