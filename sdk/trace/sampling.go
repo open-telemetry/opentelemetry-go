@@ -77,17 +77,21 @@ const (
 	otelTraceStateKey                    = "otel"
 	otelTraceStateProbabilityValueSubkey = "p"
 	otelTraceStateRandomValueSubkey      = "r"
+	otelTraceStateNumberBase             = 16
 	otelSamplingAttributePrefix          = "sampler."
 	otelSamplingAdjustedCountKey         = otelSamplingAttributePrefix + "adjusted_count"
 	otelSamplingNameKey                  = otelSamplingAttributePrefix + "name"
 	otelSamplingParentSampler            = "parent"
-	otelSamplingMaxValue                 = 255
+
+	// TODO: the zero value is the maximum permissible value of
+	// the OTel TraceState `random` value, which equates with zero
+	otelSamplingZeroValue  = 64
+	otelTraceStateBitWidth = 6
 )
 
 // OTEP 168 sampling variables
 var (
-	errTraceStateSyntax   = fmt.Errorf("otel tracestate: invalid syntax")
-	errTraceStateNotFound = fmt.Errorf("otel tracestate: subkey not found")
+	errTraceStateSyntax = fmt.Errorf("otel tracestate: invalid syntax")
 )
 
 // SamplingResult conveys a SamplingDecision, set of Attributes and a Tracestate.
@@ -164,7 +168,7 @@ func AlwaysSample() Sampler {
 
 // NeverSample returns a Sampler that samples no traces.
 func NeverSample() Sampler {
-	return TraceIDRatioBased(otelSamplingMaxValue)
+	return TraceIDRatioBased(otelSamplingZeroValue)
 }
 
 // ParentBased returns a composite sampler which behaves differently,
@@ -337,7 +341,7 @@ func (ps propagateSampler) ShouldSample(p SamplingParameters) SamplingResult {
 		)
 
 		// Spec error handling behavior (TODO).
-		if err != errTraceStateNotFound {
+		if err != nil {
 			otel.Handle(err)
 		}
 	}
@@ -387,9 +391,13 @@ func parseOTelTraceState(ts string) (otelTraceState, error) {
 				}
 				break
 			}
-			value, err := strconv.ParseUint(tail[0:sepPos], 16, 8)
+			value, err := strconv.ParseUint(
+				tail[0:sepPos],
+				otelTraceStateNumberBase,
+				otelTraceStateBitWidth,
+			)
 			if err != nil {
-				return otts, err
+				return otts, fmt.Errorf("%w: %s", errTraceStateSyntax, err)
 			}
 			if key == otelTraceStateProbabilityValueSubkey {
 				otts.probability = int(value)
@@ -437,9 +445,9 @@ func (otts otelTraceState) hasRandom() bool {
 }
 
 func TraceIDRatioBased(logAdjCnt int) Sampler {
-	if logAdjCnt < 0 || logAdjCnt > otelSamplingMaxValue {
+	if logAdjCnt < 0 || logAdjCnt > otelSamplingZeroValue {
 		// Effective zero probability = 2^-255
-		logAdjCnt = otelSamplingMaxValue
+		logAdjCnt = otelSamplingZeroValue
 	}
 	return traceIDRatioSampler{
 		logAdjCnt: logAdjCnt,
@@ -462,7 +470,8 @@ func (t traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 		// TODO consult w/ #otel-go re: random source; see e.g.,
 		// https://stackoverflow.com/questions/45030618/generate-a-random-bool-in-go
 		// Note: this is limited to values < the maximum, which represents 0
-		for otts.random < otelSamplingMaxValue && rand.Intn(2) == 0 {
+		// TODO consult w/ @oertl about otelSamplingZeroValue.
+		for otts.random < otelSamplingZeroValue && rand.Intn(2) == 0 {
 			otts.random++
 		}
 
@@ -477,6 +486,8 @@ func (t traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 		if err != nil {
 			// TODO: Spec error treatment.
 		}
+		// TODO: Spec behavior when `random` is set badly or missing.
+		// e.g., what if random == otelSamplingZeroValue?
 	}
 
 	otts.probability = t.logAdjCnt
@@ -484,7 +495,9 @@ func (t traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	var decision SamplingDecision
 	var cnt int64
 
-	if t.logAdjCnt < otelSamplingMaxValue {
+	// Calculate the adjusted count.  Treat the max-value bucket
+	// as zero probability, thus adjusted count zero.
+	if t.logAdjCnt < otelSamplingZeroValue {
 		cnt = 1 << t.logAdjCnt
 	}
 

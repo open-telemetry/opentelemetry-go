@@ -16,6 +16,7 @@ package trace
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -258,47 +259,43 @@ func TestTracestateIsPassed(t *testing.T) {
 	}
 }
 
-// func TestParseTraceStateInt(t *testing.T) {
-// 	type testResult int
-// 	const NoMatch testResult = -1
-// 	const BadSyntax testResult = -2
-// 	type testCase struct {
-// 		in     string
-// 		key    string
-// 		expect testResult
-// 	}
-// 	for _, test := range []testCase{
-// 		{"r:1;p:2", "r", 1},
-// 		{"r:1;p:2", "p", 2},
-// 		{"r:1;p:2", "s", NoMatch},
-// 		{"r:1=p:2", "s", BadSyntax},
-// 		{"r:1;p:2=s:3", "r", 1},
-// 		{"r:1;p:2=s:3", "p", BadSyntax},
-// 		{":1;p:2=s:3", "p", BadSyntax},
-// 		{":;p:2=s:3", "p", BadSyntax},
-// 		{":;:", "p", BadSyntax},
-// 		{":", "p", BadSyntax},
-// 		{"", "p", BadSyntax},
-// 		{"r:", "p", BadSyntax},
-// 		{"r:;p=1", "p", BadSyntax},
-// 		{"r:1", "r", 1},
-// 		{"r:a", "r", 0xa},
-// 		{"r:10", "r", 0x10},
-// 		{"r:100", "r", 0x100},
-// 		{"r:1000", "r", 0x1000},
-// 	} {
-// 		t.Run(test.in, func(t *testing.T) {
-// 			otts, err := parseTraceState(test.in)
+func TestParseTraceState(t *testing.T) {
+	type testCase struct {
+		in         string
+		pval, rval int
+		expectErr  error
+	}
+	for _, test := range []testCase{
+		{"r:1;p:2", 2, 1, nil},
+		{"r:1;p:2;", 2, 1, nil},
+		{"p:2;r:1;", 2, 1, nil},
+		{"p:2;r:1", 2, 1, nil},
+		{"r:1;", -1, 1, nil},
+		{"r:1", -1, 1, nil},
+		{"r:1=p:2", -1, -1, errTraceStateSyntax},
+		{"r:1;p:2=s:3", -1, -1, errTraceStateSyntax},
+		{":1;p:2=s:3", -1, -1, errTraceStateSyntax},
+		{":;p:2=s:3", -1, -1, errTraceStateSyntax},
+		{":;:", -1, -1, errTraceStateSyntax},
+		{":", -1, -1, errTraceStateSyntax},
+		{"", -1, -1, nil},
+		{"r:", -1, -1, errTraceStateSyntax},
+		{"r:;p=1", -1, -1, errTraceStateSyntax},
+		{"r:1", -1, 1, nil},
+		{"r:10", -1, 0x10, nil},
+		{"r:3e", -1, 0x3e, nil},
+		{"r:3f", -1, 0x3f, nil},
+		{"r:40", -1, -1, errTraceStateSyntax},
+	} {
+		t.Run(test.in, func(t *testing.T) {
+			otts, err := parseOTelTraceState(test.in)
 
-// 			if err != nil {
-// 				if test.expect == NoMatch {
-// 					require.Equal(t, errTraceStateNotFound, err)
-// 				} else {
-// 					require.Equal(t, BadSyntax, test.expect)
-// 				}
-// 			} else {
-// 				require.Equal(t, int(test.expect), val)
-// 			}
-// 		})
-// 	}
-// }
+			if test.expectErr != nil {
+				require.True(t, errors.Is(err, test.expectErr))
+			} else {
+				require.Equal(t, test.rval, otts.random)
+				require.Equal(t, test.pval, otts.probability)
+			}
+		})
+	}
+}
