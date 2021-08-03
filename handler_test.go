@@ -17,7 +17,11 @@ package otel
 import (
 	"bytes"
 	"errors"
+	"io"
 	"log"
+	"os"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -37,6 +41,14 @@ func (l *errLogger) Reset() {
 
 func (l *errLogger) Got() []string {
 	return []string(*l)
+}
+
+type logger struct {
+	l *log.Logger
+}
+
+func (l *logger) Handle(err error) {
+	l.l.Print(err)
 }
 
 type HandlerTestSuite struct {
@@ -82,7 +94,7 @@ func (s *HandlerTestSuite) TestNoDropsOnDelegate() {
 
 	// Change to another Handler. We are testing this is loss-less.
 	newErrLogger := new(errLogger)
-	secondary := &loggingErrorHandler{
+	secondary := &logger{
 		l: log.New(newErrLogger, "", 0),
 	}
 	SetErrorHandler(secondary)
@@ -94,4 +106,143 @@ func (s *HandlerTestSuite) TestNoDropsOnDelegate() {
 
 func TestHandlerTestSuite(t *testing.T) {
 	suite.Run(t, new(HandlerTestSuite))
+}
+
+func BenchmarkErrorHandler(b *testing.B) {
+	primary := &loggingErrorHandler{l: log.New(io.Discard, "", 0)}
+	secondary := &logger{l: log.New(io.Discard, "", 0)}
+	tertiary := &logger{l: log.New(io.Discard, "", 0)}
+
+	globalErrorHandler = primary
+
+	err := errors.New("BenchmarkErrorHandler")
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		GetErrorHandler().Handle(err)
+		Handle(err)
+
+		SetErrorHandler(secondary)
+		GetErrorHandler().Handle(err)
+		Handle(err)
+
+		SetErrorHandler(tertiary)
+		GetErrorHandler().Handle(err)
+		Handle(err)
+
+		b.StopTimer()
+		primary.delegate = atomic.Value{}
+		globalErrorHandler = primary
+		delegateErrorHandlerOnce = sync.Once{}
+		b.StartTimer()
+	}
+
+	b.StopTimer()
+	reset()
+}
+
+var eh ErrorHandler
+
+func BenchmarkGetDefaultErrorHandler(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		eh = GetErrorHandler()
+	}
+}
+
+func BenchmarkGetDelegatedErrorHandler(b *testing.B) {
+	SetErrorHandler(&logger{l: log.New(io.Discard, "", 0)})
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		eh = GetErrorHandler()
+	}
+
+	b.StopTimer()
+	reset()
+}
+
+func BenchmarkDefaultErrorHandlerHandle(b *testing.B) {
+	globalErrorHandler = &loggingErrorHandler{
+		l: log.New(io.Discard, "", log.LstdFlags),
+	}
+
+	eh := GetErrorHandler()
+	err := errors.New("BenchmarkDefaultErrorHandlerHandle")
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		eh.Handle(err)
+	}
+
+	b.StopTimer()
+	reset()
+}
+
+func BenchmarkDelegatedErrorHandlerHandle(b *testing.B) {
+	eh := GetErrorHandler()
+	SetErrorHandler(&logger{l: log.New(io.Discard, "", 0)})
+	err := errors.New("BenchmarkDelegatedErrorHandlerHandle")
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		eh.Handle(err)
+	}
+
+	b.StopTimer()
+	reset()
+}
+
+func BenchmarkSetErrorHandlerDelegation(b *testing.B) {
+	alt := &logger{l: log.New(io.Discard, "", 0)}
+
+	globalErrorHandler = &loggingErrorHandler{
+		l: log.New(io.Discard, "", log.LstdFlags),
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		SetErrorHandler(alt)
+
+		b.StopTimer()
+		globalErrorHandler = &loggingErrorHandler{
+			l: log.New(io.Discard, "", log.LstdFlags),
+		}
+		delegateErrorHandlerOnce = sync.Once{}
+		b.StartTimer()
+	}
+
+	b.StopTimer()
+	reset()
+}
+
+func BenchmarkSetErrorHandlerNoDelegation(b *testing.B) {
+	eh := []ErrorHandler{
+		&logger{l: log.New(io.Discard, "", 0)},
+		&logger{l: log.New(io.Discard, "", 0)},
+	}
+	mod := len(eh)
+	// Do not measure delegation.
+	SetErrorHandler(eh[1])
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		SetErrorHandler(eh[i%mod])
+	}
+
+	b.StopTimer()
+	reset()
+}
+
+func reset() {
+	globalErrorHandler = &loggingErrorHandler{
+		l: log.New(os.Stderr, "", log.LstdFlags),
+	}
+	delegateErrorHandlerOnce = sync.Once{}
 }
