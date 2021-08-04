@@ -12,9 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric // import "go.opentelemetry.io/otel/sdk/metric"
+package internaltest
 
-// version is the current release version of sdk metric in use.
-func version() string {
-	return "v0.22.0"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestVersionSemver(t *testing.T) {
+	v := version()
+	assert.NotNil(t, VersionRegex.FindStringSubmatch(v), "version is not semver: %s", v)
 }

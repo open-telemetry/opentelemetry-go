@@ -12,9 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric // import "go.opentelemetry.io/otel/sdk/metric"
+package internaltest
 
-// version is the current release version of sdk metric in use.
+import (
+	"regexp"
+)
+
+// regex taken from https://github.com/Masterminds/semver/tree/v3.1.1
+var VersionRegex = regexp.MustCompile(`^v?([0-9]+)(\.[0-9]+)?(\.[0-9]+)?` +
+	`(-([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?` +
+	`(\+([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?$`)
+
+// version is the current release version of internal package.
 func version() string {
 	return "v0.22.0"
 }

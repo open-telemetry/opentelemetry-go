@@ -15,18 +15,13 @@
 package metric
 
 import (
-	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel/internal/internaltest"
 )
-
-// regex taken from https://github.com/Masterminds/semver/tree/v3.1.1
-var versionRegex = regexp.MustCompile(`^v?([0-9]+)(\.[0-9]+)?(\.[0-9]+)?` +
-	`(-([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?` +
-	`(\+([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?$`)
 
 func TestVersionSemver(t *testing.T) {
 	v := version()
-	assert.NotNil(t, versionRegex.FindStringSubmatch(v), "version is not semver: %s", v)
+	assert.NotNil(t, internaltest.VersionRegex.FindStringSubmatch(v), "version is not semver: %s", v)
 }
