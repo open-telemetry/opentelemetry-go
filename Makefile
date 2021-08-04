@@ -40,8 +40,8 @@ $(TOOLS)/%: | $(TOOLS)
 	cd $(TOOLS_MOD_DIR) && \
 	$(GO) build -o $@ $(PACKAGE)
 
-SEMCONVGEN = $(TOOLS)/semconv-gen
-$(TOOLS)/semconv-gen: PACKAGE=go.opentelemetry.io/otel/$(TOOLS_MOD_DIR)/semconv-gen
+SEMCONVGEN = $(TOOLS)/semconvgen
+$(TOOLS)/semconvgen: PACKAGE=go.opentelemetry.io/build-tools/semconvgen
 
 CROSSLINK = $(TOOLS)/crosslink
 $(TOOLS)/crosslink: PACKAGE=go.opentelemetry.io/otel/$(TOOLS_MOD_DIR)/crosslink
