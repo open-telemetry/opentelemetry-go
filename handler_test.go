@@ -17,7 +17,7 @@ package otel
 import (
 	"bytes"
 	"errors"
-	"io"
+	"io/ioutil"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -122,9 +122,9 @@ func TestHandlerTestSuite(t *testing.T) {
 }
 
 func BenchmarkErrorHandler(b *testing.B) {
-	primary := &delegator{l: log.New(io.Discard, "", 0)}
-	secondary := &logger{l: log.New(io.Discard, "", 0)}
-	tertiary := &logger{l: log.New(io.Discard, "", 0)}
+	primary := &delegator{l: log.New(ioutil.Discard, "", 0)}
+	secondary := &logger{l: log.New(ioutil.Discard, "", 0)}
+	tertiary := &logger{l: log.New(ioutil.Discard, "", 0)}
 
 	globalErrorHandler.Store(holder{eh: primary})
 
@@ -165,7 +165,7 @@ func BenchmarkGetDefaultErrorHandler(b *testing.B) {
 }
 
 func BenchmarkGetDelegatedErrorHandler(b *testing.B) {
-	SetErrorHandler(&logger{l: log.New(io.Discard, "", 0)})
+	SetErrorHandler(&logger{l: log.New(ioutil.Discard, "", 0)})
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -179,7 +179,7 @@ func BenchmarkGetDelegatedErrorHandler(b *testing.B) {
 
 func BenchmarkDefaultErrorHandlerHandle(b *testing.B) {
 	globalErrorHandler.Store(holder{
-		eh: &delegator{l: log.New(io.Discard, "", 0)},
+		eh: &delegator{l: log.New(ioutil.Discard, "", 0)},
 	})
 
 	eh := GetErrorHandler()
@@ -197,7 +197,7 @@ func BenchmarkDefaultErrorHandlerHandle(b *testing.B) {
 
 func BenchmarkDelegatedErrorHandlerHandle(b *testing.B) {
 	eh := GetErrorHandler()
-	SetErrorHandler(&logger{l: log.New(io.Discard, "", 0)})
+	SetErrorHandler(&logger{l: log.New(ioutil.Discard, "", 0)})
 	err := errors.New("BenchmarkDelegatedErrorHandlerHandle")
 
 	b.ReportAllocs()
@@ -211,7 +211,7 @@ func BenchmarkDelegatedErrorHandlerHandle(b *testing.B) {
 }
 
 func BenchmarkSetErrorHandlerDelegation(b *testing.B) {
-	alt := &logger{l: log.New(io.Discard, "", 0)}
+	alt := &logger{l: log.New(ioutil.Discard, "", 0)}
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -226,8 +226,8 @@ func BenchmarkSetErrorHandlerDelegation(b *testing.B) {
 
 func BenchmarkSetErrorHandlerNoDelegation(b *testing.B) {
 	eh := []ErrorHandler{
-		&logger{l: log.New(io.Discard, "", 0)},
-		&logger{l: log.New(io.Discard, "", 0)},
+		&logger{l: log.New(ioutil.Discard, "", 0)},
+		&logger{l: log.New(ioutil.Discard, "", 0)},
 	}
 	mod := len(eh)
 	// Do not measure delegation.
