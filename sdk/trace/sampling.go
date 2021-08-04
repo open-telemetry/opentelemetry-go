@@ -85,7 +85,7 @@ const (
 
 	// TODO: the zero value is the maximum permissible value of
 	// the OTel TraceState `random` value, which equates with zero
-	otelSamplingZeroValue  = 64
+	otelSamplingZeroValue  = 0x3f
 	otelTraceStateBitWidth = 6
 )
 
