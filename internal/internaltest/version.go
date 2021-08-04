@@ -22,8 +22,3 @@ import (
 var VersionRegex = regexp.MustCompile(`^v?([0-9]+)(\.[0-9]+)?(\.[0-9]+)?` +
 	`(-([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?` +
 	`(\+([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?$`)
-
-// version is the current release version of internal package.
-func version() string {
-	return "v0.22.0"
-}

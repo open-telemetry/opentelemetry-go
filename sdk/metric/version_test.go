@@ -23,6 +23,6 @@ import (
 )
 
 func TestVersionSemver(t *testing.T) {
-	v := version()
+	v := Version()
 	assert.NotNil(t, internaltest.VersionRegex.FindStringSubmatch(v), "version is not semver: %s", v)
 }

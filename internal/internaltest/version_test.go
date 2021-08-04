@@ -15,12 +15,37 @@
 package internaltest
 
 import (
-	"testing"
+	"github.com/stretchr/testify/suite"
 
-	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-func TestVersionSemver(t *testing.T) {
-	v := version()
-	assert.NotNil(t, VersionRegex.FindStringSubmatch(v), "version is not semver: %s", v)
+type VersionTestSuite struct {
+	suite.Suite
+}
+
+func (s *VersionTestSuite) TestVersionSemver() {
+	testCases := []struct {
+		name     string
+		version  string
+		expected string
+	}{
+		{
+			name:     "sdk trace version",
+			version:  trace.Version(),
+			expected: "1.0.0-RC2",
+		},
+		{
+			name:     "sdk metric version",
+			version:  metric.Version(),
+			expected: "v0.22.0",
+		},
+	}
+
+	for _, tc := range testCases {
+		s.Run(tc.name, func() {
+			s.Assert().Equal(tc.version, tc.expected)
+		})
+	}
 }
