@@ -14,7 +14,7 @@
 
 package trace // import "go.opentelemetry.io/otel/sdk/trace""
 
-// version is the current release version of sdk trace in use.
+// version is the current release version of the trace SDK in use.
 func version() string {
 	return "1.0.0-RC2"
 }
