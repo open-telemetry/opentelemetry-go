@@ -444,18 +444,61 @@ func (otts otelTraceState) hasRandom() bool {
 	return otts.random >= 0
 }
 
-func TraceIDRatioBased(logAdjCnt int) Sampler {
+type TraceIDRatioBasedRandomSource func() int
+
+type traceIDRatioBasedConfig struct {
+	source TraceIDRatioBasedRandomSource
+}
+
+type TraceIDRatioBasedOption interface {
+	apply(*traceIDRatioBasedConfig)
+}
+
+type traceIDRatioBasedRandomSource TraceIDRatioBasedRandomSource
+
+func WithRandomSource(source TraceIDRatioBasedRandomSource) TraceIDRatioBasedOption {
+	return traceIDRatioBasedRandomSource(source)
+}
+
+func (s traceIDRatioBasedRandomSource) apply(cfg *traceIDRatioBasedConfig) {
+	cfg.source = TraceIDRatioBasedRandomSource(s)
+}
+
+func TraceIDRatioBased(logAdjCnt int, opts ...TraceIDRatioBasedOption) Sampler {
+	cfg := traceIDRatioBasedConfig{
+		source: func() int {
+			// TODO: Optimize me; This wastes 61 bits of
+			// randomness on average.
+			var x int64
+
+			for x = rand.Int63(); x == 0; {
+			}
+
+			cnt := 0
+			for (x & 1) == 0 {
+				cnt++
+				x >>= 1
+			}
+			return cnt
+		},
+	}
+	for _, opt := range opts {
+		opt.apply(&cfg)
+	}
+
 	if logAdjCnt < 0 || logAdjCnt > otelSamplingZeroValue {
 		// Effective zero probability = 2^-255
 		logAdjCnt = otelSamplingZeroValue
 	}
 	return traceIDRatioSampler{
 		logAdjCnt: logAdjCnt,
+		source:    cfg.source,
 	}
 }
 
 type traceIDRatioSampler struct {
 	logAdjCnt int
+	source    TraceIDRatioBasedRandomSource
 }
 
 func (t traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
@@ -466,15 +509,7 @@ func (t traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	if !psc.IsValid() {
 		// A new root is happening.  Compute `random`.
 		otts = newOTelTraceState()
-
-		// TODO consult w/ #otel-go re: random source; see e.g.,
-		// https://stackoverflow.com/questions/45030618/generate-a-random-bool-in-go
-		// Note: this is limited to values < the maximum, which represents 0
-		// TODO consult w/ @oertl about otelSamplingZeroValue.
-		for otts.random < otelSamplingZeroValue && rand.Intn(2) == 0 {
-			otts.random++
-		}
-
+		otts.random = t.source()
 	} else {
 		// A valid parent context.
 		// It does not matter if psc.IsSampled().
@@ -511,7 +546,10 @@ func (t traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 		attribute.Int64(otelSamplingAdjustedCountKey, cnt),
 	}
 
-	state.Insert(otelTraceStateKey, otts.serialize())
+	state, err := state.Insert(otelTraceStateKey, otts.serialize())
+	if err != nil {
+		// TODO: Spec error treatment
+	}
 
 	return SamplingResult{
 		Decision:   decision,
@@ -527,10 +565,10 @@ func (ts traceIDRatioSampler) Description() string {
 func (otts otelTraceState) serialize() string {
 	var sb strings.Builder
 	if otts.hasProbability() {
-		_, _ = sb.WriteString(fmt.Sprintf("p:%2x;", otts.probability))
+		_, _ = sb.WriteString(fmt.Sprintf("p:%02x;", otts.probability))
 	}
 	if otts.hasRandom() {
-		_, _ = sb.WriteString(fmt.Sprintf("r:%2x;", otts.random))
+		_, _ = sb.WriteString(fmt.Sprintf("r:%02x;", otts.random))
 	}
 	for _, unk := range otts.unknown {
 		_, _ = sb.WriteString(unk)

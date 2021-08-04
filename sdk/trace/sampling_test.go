@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -298,4 +299,61 @@ func TestParseTraceState(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestProbabilitySamplingBasic(t *testing.T) {
+	ctx0 := context.Background()
+	te := NewTestExporter()
+
+	oneFunction := func() int { return 1 }
+
+	// 50% sampling at the root span
+	sampler1 := TraceIDRatioBased(1, WithRandomSource(oneFunction))
+	provider1 := NewTracerProvider(WithSyncer(te), WithSampler(sampler1))
+
+	ctx1, span1 := provider1.Tracer("test").Start(ctx0, "hello")
+
+	require.True(t, span1.IsRecording())
+	require.True(t, span1.SpanContext().IsSampled())
+	require.Equal(t, "p:01;r:01;", span1.SpanContext().TraceState().Get("otel"))
+
+	span1.End()
+
+	require.Equal(t, 1, te.Len())
+
+	got := te.Spans()[0]
+
+	require.True(t, got.SpanContext().SpanID().IsValid())
+	require.EqualValues(t, []attribute.KeyValue{
+		attribute.Int64("sampler.adjusted_count", 2),
+	}, got.Attributes())
+
+	te.Reset()
+
+	// Parent sampling using propgated probability
+	sampler2 := ParentBased(NeverSample())
+	provider2 := NewTracerProvider(WithSyncer(te), WithSampler(sampler2))
+
+	ctx2, span2 := provider2.Tracer("test").Start(ctx1, "hello")
+
+	require.True(t, span2.IsRecording())
+	require.True(t, span2.SpanContext().IsSampled())
+	require.Equal(t, "p:01;r:01;", span2.SpanContext().TraceState().Get("otel"))
+
+	span2.End()
+
+	require.Equal(t, 1, te.Len())
+
+	got = te.Spans()[0]
+
+	require.True(t, got.SpanContext().SpanID().IsValid())
+	require.EqualValues(t, []attribute.KeyValue{
+		attribute.Int64("sampler.adjusted_count", 2),
+	}, got.Attributes())
+
+	// Compare contexts
+	require.Equal(t, span1.SpanContext().TraceID(), span2.SpanContext().TraceID())
+	require.NotEqual(t, span1.SpanContext().SpanID(), span2.SpanContext().SpanID())
+
+	_ = ctx2
 }
