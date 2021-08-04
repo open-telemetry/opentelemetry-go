@@ -89,6 +89,23 @@ func (s *HandlerTestSuite) TestGlobalHandler() {
 	s.Assert().Equal(errs, s.errLogger.Got())
 }
 
+func (s *HandlerTestSuite) TestDelegatedHandler() {
+	eh := GetErrorHandler()
+
+	newErrLogger := new(errLogger)
+	SetErrorHandler(&logger{l: log.New(newErrLogger, "", 0)})
+
+	errs := []string{"TestDelegatedHandler"}
+	eh.Handle(errors.New(errs[0]))
+	s.Assert().Equal(errs, newErrLogger.Got())
+}
+
+func (s *HandlerTestSuite) TestSettingDefaultIsANoOp() {
+	SetErrorHandler(GetErrorHandler())
+	d := globalErrorHandler.Load().(holder).eh.(*delegator)
+	s.Assert().Nil(d.delegate.Load())
+}
+
 func (s *HandlerTestSuite) TestNoDropsOnDelegate() {
 	causeErr("")
 	s.Require().Len(s.errLogger.Got(), 1)
