@@ -487,7 +487,7 @@ func TraceIDRatioBased(logAdjCnt int, opts ...TraceIDRatioBasedOption) Sampler {
 	}
 
 	if logAdjCnt < 0 || logAdjCnt > otelSamplingZeroValue {
-		// Effective zero probability = 2^-255
+		// Zero probability
 		logAdjCnt = otelSamplingZeroValue
 	}
 	return traceIDRatioSampler{
@@ -525,8 +525,6 @@ func (t traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 		// e.g., what if random == otelSamplingZeroValue?
 	}
 
-	otts.probability = t.logAdjCnt
-
 	var decision SamplingDecision
 	var cnt int64
 
@@ -536,14 +534,18 @@ func (t traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 		cnt = 1 << t.logAdjCnt
 	}
 
-	if otts.probability <= otts.random {
+	if cnt != 0 && t.logAdjCnt <= otts.random {
 		decision = RecordAndSample
 	} else {
 		decision = Drop
 	}
 
-	attrs := []attribute.KeyValue{
-		attribute.Int64(otelSamplingAdjustedCountKey, cnt),
+	otts.probability = t.logAdjCnt
+
+	var attrs []attribute.KeyValue
+
+	if cnt != 1 {
+		attrs = append(attrs, attribute.Int64(otelSamplingAdjustedCountKey, cnt))
 	}
 
 	state, err := state.Insert(otelTraceStateKey, otts.serialize())

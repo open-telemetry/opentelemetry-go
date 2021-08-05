@@ -284,8 +284,8 @@ func TestParseTraceState(t *testing.T) {
 		{"r:;p=1", -1, -1, errTraceStateSyntax},
 		{"r:1", -1, 1, nil},
 		{"r:10", -1, 0x10, nil},
-		{"r:3e", -1, 0x3e, nil},
-		{"r:3f", -1, 0x3f, nil},
+		{"r:3e", -1, 62, nil}, // Smallest non-zero (62)
+		{"r:3f", -1, 63, nil}, // The zero value (63)
 		{"r:40", -1, -1, errTraceStateSyntax},
 	} {
 		t.Run(test.in, func(t *testing.T) {
@@ -301,59 +301,138 @@ func TestParseTraceState(t *testing.T) {
 	}
 }
 
-func TestProbabilitySamplingBasic(t *testing.T) {
-	ctx0 := context.Background()
-	te := NewTestExporter()
+func TestProbabilitySampling(t *testing.T) {
+	type testCase struct {
+		rand        int
+		prob        int
+		expectCount int64
+	}
 
-	oneFunction := func() int { return 1 }
+	for _, tc := range []testCase{
+		// 1-in-1
+		{0, 0, 1},
+		{1, 0, 1},
+		{2, 0, 1},
 
-	// 50% sampling at the root span
-	sampler1 := TraceIDRatioBased(1, WithRandomSource(oneFunction))
-	provider1 := NewTracerProvider(WithSyncer(te), WithSampler(sampler1))
+		// 1-in-2
+		{0, 1, 0},
+		{1, 1, 2},
+		{2, 1, 2},
 
-	ctx1, span1 := provider1.Tracer("test").Start(ctx0, "hello")
+		// 1-in-4
+		{0, 2, 0},
+		{1, 2, 0},
+		{2, 2, 4},
+		{3, 2, 4},
 
-	require.True(t, span1.IsRecording())
-	require.True(t, span1.SpanContext().IsSampled())
-	require.Equal(t, "p:01;r:01;", span1.SpanContext().TraceState().Get("otel"))
+		// 1-in-(2^62)
+		{0, 62, 0},
+		{61, 62, 0},
+		{62, 62, 1 << 62},
 
-	span1.End()
+		// Zero is a special case
+		{0, 63, 0},
+		{62, 63, 0},
+		{63, 63, 0},
+	} {
+		t.Run(fmt.Sprint(tc.rand, "/", tc.prob), func(t *testing.T) {
+			ctx0 := context.Background()
+			te := NewTestExporter()
+			expectTS := fmt.Sprintf("p:%02x;r:%02x;", tc.prob, tc.rand)
+			expectSampled := tc.expectCount != 0
+			var numSampled int
+			if tc.expectCount != 0 {
+				numSampled = 1
+			}
 
-	require.Equal(t, 1, te.Len())
+			var expectAttrs []attribute.KeyValue
 
-	got := te.Spans()[0]
+			if tc.expectCount != 1 {
+				expectAttrs = []attribute.KeyValue{
+					attribute.Int64("sampler.adjusted_count", tc.expectCount),
+				}
+			}
 
-	require.True(t, got.SpanContext().SpanID().IsValid())
-	require.EqualValues(t, []attribute.KeyValue{
-		attribute.Int64("sampler.adjusted_count", 2),
-	}, got.Attributes())
+			// 50% sampling at the root span
+			sampler1 := TraceIDRatioBased(tc.prob, WithRandomSource(func() int { return tc.rand }))
+			provider1 := NewTracerProvider(WithSyncer(te), WithSampler(sampler1))
 
-	te.Reset()
+			ctx1, span1 := provider1.Tracer("test").Start(ctx0, "hello")
 
-	// Parent sampling using propgated probability
-	sampler2 := ParentBased(NeverSample())
-	provider2 := NewTracerProvider(WithSyncer(te), WithSampler(sampler2))
+			require.Equal(t, expectSampled, span1.IsRecording())
+			require.Equal(t, expectSampled, span1.SpanContext().IsSampled())
 
-	ctx2, span2 := provider2.Tracer("test").Start(ctx1, "hello")
+			require.Equal(t, expectTS, span1.SpanContext().TraceState().Get("otel"))
 
-	require.True(t, span2.IsRecording())
-	require.True(t, span2.SpanContext().IsSampled())
-	require.Equal(t, "p:01;r:01;", span2.SpanContext().TraceState().Get("otel"))
+			span1.End()
 
-	span2.End()
+			require.Equal(t, numSampled, te.Len())
 
-	require.Equal(t, 1, te.Len())
+			if expectSampled {
+				got := te.Spans()[0]
 
-	got = te.Spans()[0]
+				require.True(t, got.SpanContext().SpanID().IsValid())
+				require.EqualValues(t, expectAttrs, got.Attributes())
 
-	require.True(t, got.SpanContext().SpanID().IsValid())
-	require.EqualValues(t, []attribute.KeyValue{
-		attribute.Int64("sampler.adjusted_count", 2),
-	}, got.Attributes())
+			}
+			te.Reset()
 
-	// Compare contexts
-	require.Equal(t, span1.SpanContext().TraceID(), span2.SpanContext().TraceID())
-	require.NotEqual(t, span1.SpanContext().SpanID(), span2.SpanContext().SpanID())
+			// Parent sampling using propagated probability
+			sampler2 := ParentBased(NeverSample())
+			provider2 := NewTracerProvider(WithSyncer(te), WithSampler(sampler2))
 
-	_ = ctx2
+			ctx2, span2 := provider2.Tracer("test").Start(ctx1, "hello")
+
+			require.Equal(t, expectSampled, span2.IsRecording())
+			require.Equal(t, expectSampled, span2.SpanContext().IsSampled())
+
+			require.Equal(t, expectTS, span2.SpanContext().TraceState().Get("otel"))
+
+			span2.End()
+
+			require.Equal(t, numSampled, te.Len())
+
+			if expectSampled {
+				got := te.Spans()[0]
+
+				require.True(t, got.SpanContext().SpanID().IsValid())
+				require.Equal(t, span1.SpanContext().SpanID(), got.Parent().SpanID())
+				require.EqualValues(t, expectAttrs, got.Attributes())
+			}
+			te.Reset()
+
+			require.Equal(t, span1.SpanContext().TraceID(), span2.SpanContext().TraceID())
+			require.NotEqual(t, span1.SpanContext().SpanID(), span2.SpanContext().SpanID())
+
+			// Repeat with a grandchild
+			sampler3 := ParentBased(NeverSample())
+			provider3 := NewTracerProvider(WithSyncer(te), WithSampler(sampler3))
+
+			ctx3, span3 := provider3.Tracer("test").Start(ctx2, "hello")
+
+			require.Equal(t, expectSampled, span3.IsRecording())
+			require.Equal(t, expectSampled, span3.SpanContext().IsSampled())
+
+			require.Equal(t, expectTS, span3.SpanContext().TraceState().Get("otel"))
+
+			span3.End()
+
+			require.Equal(t, numSampled, te.Len())
+
+			if expectSampled {
+				got := te.Spans()[0]
+
+				require.True(t, got.SpanContext().SpanID().IsValid())
+				require.Equal(t, span2.SpanContext().SpanID(), got.Parent().SpanID())
+				require.EqualValues(t, expectAttrs, got.Attributes())
+			}
+			te.Reset()
+
+			require.Equal(t, span1.SpanContext().TraceID(), span3.SpanContext().TraceID())
+			require.NotEqual(t, span1.SpanContext().SpanID(), span3.SpanContext().SpanID())
+			require.NotEqual(t, span2.SpanContext().SpanID(), span3.SpanContext().SpanID())
+
+			_ = ctx3
+		})
+	}
 }
