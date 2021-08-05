@@ -10,6 +10,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Added `ErrorHandlerFunc` to use a function as an `"go.opentelemetry.io/otel".ErrorHandler`. (#2149)
+
 ### Changed
 
 - The Metrics SDK export record no longer contains a Resource pointer, the SDK `Export()` function for push-based exporters now takes a single Resource argument, pull-based exporters use `controller.Resource()`. (#2120)
