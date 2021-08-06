@@ -44,5 +44,5 @@ func TestResourceAttributes(t *testing.T) {
 	if !assert.Len(t, attrs, 2) {
 		return
 	}
-	assert.ElementsMatch(t, Attributes(attrs), got)
+	assert.ElementsMatch(t, KeyValues(attrs), got)
 }
