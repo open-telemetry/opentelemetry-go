@@ -98,7 +98,7 @@ func TestSpanEvent(t *testing.T) {
 	eventTimestamp := uint64(1589932800 * 1e9)
 	assert.Equal(t, &tracepb.Span_Event{Name: "test 1", Attributes: nil, TimeUnixNano: eventTimestamp}, got[0])
 	// Do not test Attributes directly, just that the return value goes to the correct field.
-	assert.Equal(t, &tracepb.Span_Event{Name: "test 2", Attributes: Attributes(attrs), TimeUnixNano: eventTimestamp}, got[1])
+	assert.Equal(t, &tracepb.Span_Event{Name: "test 2", Attributes: KeyValues(attrs), TimeUnixNano: eventTimestamp}, got[1])
 }
 
 func TestExcessiveSpanEvents(t *testing.T) {
@@ -145,7 +145,7 @@ func TestLinks(t *testing.T) {
 	assert.Equal(t, expected, got[0])
 
 	// Do not test Attributes directly, just that the return value goes to the correct field.
-	expected.Attributes = Attributes(attrs)
+	expected.Attributes = KeyValues(attrs)
 	assert.Equal(t, expected, got[1])
 
 	// Changes to our links should not change the produced links.
@@ -288,7 +288,7 @@ func TestSpanData(t *testing.T) {
 		Status:                 status(spanData.Status.Code, spanData.Status.Description),
 		Events:                 spanEvents(spanData.Events),
 		Links:                  links(spanData.Links),
-		Attributes:             Attributes(spanData.Attributes),
+		Attributes:             KeyValues(spanData.Attributes),
 		DroppedAttributesCount: 1,
 		DroppedEventsCount:     2,
 		DroppedLinksCount:      3,
