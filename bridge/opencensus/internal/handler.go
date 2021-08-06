@@ -12,18 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package opencensus
+package internal
 
-import (
-	octrace "go.opencensus.io/trace"
+import "go.opentelemetry.io/otel"
 
-	"go.opentelemetry.io/otel/bridge/opencensus/internal"
-	"go.opentelemetry.io/otel/trace"
-)
-
-// NewTracer returns an implementation of the OpenCensus Tracer interface which
-// uses OpenTelemetry APIs.  Using this implementation of Tracer "upgrades"
-// libraries that use OpenCensus to OpenTelemetry to facilitate a migration.
-func NewTracer(tracer trace.Tracer) octrace.Tracer {
-	return internal.NewTracer(tracer)
-}
+// Handle is the package level function to handle errors. It can be
+// overwritten for testing.
+var Handle = otel.Handle

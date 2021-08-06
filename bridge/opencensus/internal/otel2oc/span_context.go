@@ -12,18 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package opencensus
+package otel2oc
 
 import (
 	octrace "go.opencensus.io/trace"
 
-	"go.opentelemetry.io/otel/bridge/opencensus/internal"
 	"go.opentelemetry.io/otel/trace"
 )
 
-// NewTracer returns an implementation of the OpenCensus Tracer interface which
-// uses OpenTelemetry APIs.  Using this implementation of Tracer "upgrades"
-// libraries that use OpenCensus to OpenTelemetry to facilitate a migration.
-func NewTracer(tracer trace.Tracer) octrace.Tracer {
-	return internal.NewTracer(tracer)
+func SpanContext(sc trace.SpanContext) octrace.SpanContext {
+	var to octrace.TraceOptions
+	if sc.IsSampled() {
+		// OpenCensus doesn't expose functions to directly set sampled
+		to = 0x1
+	}
+	return octrace.SpanContext{
+		TraceID:      octrace.TraceID(sc.TraceID()),
+		SpanID:       octrace.SpanID(sc.SpanID()),
+		TraceOptions: to,
+	}
 }
