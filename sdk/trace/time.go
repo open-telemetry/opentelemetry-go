@@ -20,7 +20,7 @@ import (
 
 // Clock is the entrypoint for providing time to span's start/end timestamp.
 // By default the standard "time" package will be used. User can replace
-// it with customized clock implementation (e.g. has additional clock
+// it with customized clock implementation (e.g. with additional clock
 // synchronization logic) by using the `WithClock` option.
 type Clock interface {
 	// Stopwatch returns a started Stopwatch measuring a time interval.
