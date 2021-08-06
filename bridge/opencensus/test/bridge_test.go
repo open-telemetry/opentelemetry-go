@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package opencensus
+package test
 
 import (
 	"context"
@@ -21,18 +21,20 @@ import (
 	octrace "go.opencensus.io/trace"
 
 	"go.opentelemetry.io/otel/attribute"
+	ocbridge "go.opentelemetry.io/otel/bridge/opencensus"
 	"go.opentelemetry.io/otel/bridge/opencensus/internal"
 	"go.opentelemetry.io/otel/bridge/opencensus/utils"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/oteltest"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 )
 
 func TestMixedAPIs(t *testing.T) {
-	sr := new(oteltest.SpanRecorder)
-	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+	sr := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 	tracer := tp.Tracer("mixedapitracer")
-	octrace.DefaultTracer = NewTracer(tracer)
+	octrace.DefaultTracer = ocbridge.NewTracer(tracer)
 
 	func() {
 		ctx := context.Background()
@@ -53,7 +55,7 @@ func TestMixedAPIs(t *testing.T) {
 		defer otspan2.End()
 	}()
 
-	spans := sr.Completed()
+	spans := sr.Ended()
 
 	if len(spans) != 4 {
 		for _, span := range spans {
@@ -62,28 +64,27 @@ func TestMixedAPIs(t *testing.T) {
 		t.Fatalf("Got %d spans, exepected %d.", len(spans), 4)
 	}
 
-	parent := &oteltest.Span{}
-	for i := range spans {
-		// Reverse the order we look at the spans in, since they are listed in last-to-first order.
-		i = len(spans) - i - 1
-		// Verify that OpenCensus spans and opentelemetry spans have each other as parents.
-		if spans[i].ParentSpanID() != parent.SpanContext().SpanID() {
-			t.Errorf("Span %v had parent %v.  Expected %d", spans[i].Name(), spans[i].ParentSpanID(), parent.SpanContext().SpanID())
+	var parent trace.SpanContext
+	for i := len(spans) - 1; i >= 0; i-- {
+		// Verify that OpenCensus spans and OpenTelemetry spans have each
+		// other as parents.
+		if psid := spans[i].Parent().SpanID(); psid != parent.SpanID() {
+			t.Errorf("Span %v had parent %v. Expected %v", spans[i].Name(), psid, parent.SpanID())
 		}
-		parent = spans[i]
+		parent = spans[i].SpanContext()
 	}
 }
 
 func TestStartOptions(t *testing.T) {
-	sr := new(oteltest.SpanRecorder)
-	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
-	octrace.DefaultTracer = NewTracer(tp.Tracer("startoptionstracer"))
+	sr := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+	octrace.DefaultTracer = ocbridge.NewTracer(tp.Tracer("startoptionstracer"))
 
 	ctx := context.Background()
 	_, span := octrace.StartSpan(ctx, "OpenCensusSpan", octrace.WithSpanKind(octrace.SpanKindClient))
 	span.End()
 
-	spans := sr.Completed()
+	spans := sr.Ended()
 
 	if len(spans) != 1 {
 		t.Fatalf("Got %d spans, exepected %d", len(spans), 1)
@@ -95,10 +96,10 @@ func TestStartOptions(t *testing.T) {
 }
 
 func TestStartSpanWithRemoteParent(t *testing.T) {
-	sr := new(oteltest.SpanRecorder)
-	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+	sr := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 	tracer := tp.Tracer("remoteparent")
-	octrace.DefaultTracer = NewTracer(tracer)
+	octrace.DefaultTracer = ocbridge.NewTracer(tracer)
 
 	ctx := context.Background()
 	ctx, parent := tracer.Start(ctx, "OpenTelemetrySpan1")
@@ -106,22 +107,22 @@ func TestStartSpanWithRemoteParent(t *testing.T) {
 	_, span := octrace.StartSpanWithRemoteParent(ctx, "OpenCensusSpan", utils.OTelSpanContextToOC(parent.SpanContext()))
 	span.End()
 
-	spans := sr.Completed()
+	spans := sr.Ended()
 
 	if len(spans) != 1 {
 		t.Fatalf("Got %d spans, exepected %d", len(spans), 1)
 	}
 
-	if spans[0].ParentSpanID() != parent.SpanContext().SpanID() {
-		t.Errorf("Span %v, had parent %v.  Expected %d", spans[0].Name(), spans[0].ParentSpanID(), parent.SpanContext().SpanID())
+	if psid := spans[0].Parent().SpanID(); psid != parent.SpanContext().SpanID() {
+		t.Errorf("Span %v, had parent %v.  Expected %d", spans[0].Name(), psid, parent.SpanContext().SpanID())
 	}
 }
 
 func TestToFromContext(t *testing.T) {
-	sr := new(oteltest.SpanRecorder)
-	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+	sr := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 	tracer := tp.Tracer("tofromcontext")
-	octrace.DefaultTracer = NewTracer(tracer)
+	octrace.DefaultTracer = ocbridge.NewTracer(tracer)
 
 	func() {
 		ctx := context.Background()
@@ -140,28 +141,27 @@ func TestToFromContext(t *testing.T) {
 
 	}()
 
-	spans := sr.Completed()
+	spans := sr.Ended()
 
 	if len(spans) != 2 {
 		t.Fatalf("Got %d spans, exepected %d.", len(spans), 2)
 	}
 
-	parent := &oteltest.Span{}
-	for i := range spans {
-		// Reverse the order we look at the spans in, since they are listed in last-to-first order.
-		i = len(spans) - i - 1
-		// Verify that OpenCensus spans and opentelemetry spans have each other as parents.
-		if spans[i].ParentSpanID() != parent.SpanContext().SpanID() {
-			t.Errorf("Span %v had parent %v.  Expected %d", spans[i].Name(), spans[i].ParentSpanID(), parent.SpanContext().SpanID())
+	var parent trace.SpanContext
+	for i := len(spans) - 1; i >= 0; i-- {
+		// Verify that OpenCensus spans and OpenTelemetry spans have each
+		// other as parents.
+		if psid := spans[i].Parent().SpanID(); psid != parent.SpanID() {
+			t.Errorf("Span %v had parent %v. Expected %v", spans[i].Name(), psid, parent.SpanID())
 		}
-		parent = spans[i]
+		parent = spans[i].SpanContext()
 	}
 }
 
 func TestIsRecordingEvents(t *testing.T) {
-	sr := new(oteltest.SpanRecorder)
-	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
-	octrace.DefaultTracer = NewTracer(tp.Tracer("isrecordingevents"))
+	sr := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+	octrace.DefaultTracer = ocbridge.NewTracer(tp.Tracer("isrecordingevents"))
 
 	ctx := context.Background()
 	_, ocspan := octrace.StartSpan(ctx, "OpenCensusSpan1")
@@ -170,10 +170,18 @@ func TestIsRecordingEvents(t *testing.T) {
 	}
 }
 
+func attrsMap(s []attribute.KeyValue) map[attribute.Key]attribute.Value {
+	m := make(map[attribute.Key]attribute.Value, len(s))
+	for _, a := range s {
+		m[a.Key] = a.Value
+	}
+	return m
+}
+
 func TestSetThings(t *testing.T) {
-	sr := new(oteltest.SpanRecorder)
-	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
-	octrace.DefaultTracer = NewTracer(tp.Tracer("setthings"))
+	sr := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+	octrace.DefaultTracer = ocbridge.NewTracer(tp.Tracer("setthings"))
 
 	ctx := context.Background()
 	_, ocspan := octrace.StartSpan(ctx, "OpenCensusSpan1")
@@ -200,7 +208,7 @@ func TestSetThings(t *testing.T) {
 	ocspan.AddMessageReceiveEvent(246, 135, 369)
 	ocspan.End()
 
-	spans := sr.Completed()
+	spans := sr.Ended()
 
 	if len(spans) != 1 {
 		t.Fatalf("Got %d spans, exepected %d.", len(spans), 1)
@@ -211,24 +219,25 @@ func TestSetThings(t *testing.T) {
 		t.Errorf("Got name %v, expected span-foo", s.Name())
 	}
 
-	if s.StatusCode().String() != codes.Error.String() {
-		t.Errorf("Got code %v, expected 1", s.StatusCode().String())
+	if s.Status().Code != codes.Error {
+		t.Errorf("Got code %v, expected %v", s.Status().Code, codes.Error)
 	}
 
-	if s.StatusMessage() != "foo" {
-		t.Errorf("Got code %v, expected foo", s.StatusMessage())
+	if s.Status().Description != "foo" {
+		t.Errorf("Got code %v, expected foo", s.Status().Description)
 	}
 
-	if v := s.Attributes()[attribute.Key("bool")]; !v.AsBool() {
+	attrs := attrsMap(s.Attributes())
+	if v := attrs[attribute.Key("bool")]; !v.AsBool() {
 		t.Errorf("Got attributes[bool] %v, expected true", v.AsBool())
 	}
-	if v := s.Attributes()[attribute.Key("int64")]; v.AsInt64() != 12345 {
+	if v := attrs[attribute.Key("int64")]; v.AsInt64() != 12345 {
 		t.Errorf("Got attributes[int64] %v, expected 12345", v.AsInt64())
 	}
-	if v := s.Attributes()[attribute.Key("float64")]; v.AsFloat64() != 12.345 {
+	if v := attrs[attribute.Key("float64")]; v.AsFloat64() != 12.345 {
 		t.Errorf("Got attributes[float64] %v, expected 12.345", v.AsFloat64())
 	}
-	if v := s.Attributes()[attribute.Key("string")]; v.AsString() != "stringval" {
+	if v := attrs[attribute.Key("string")]; v.AsString() != "stringval" {
 		t.Errorf("Got attributes[string] %v, expected stringval", v.AsString())
 	}
 
@@ -236,43 +245,47 @@ func TestSetThings(t *testing.T) {
 		t.Fatalf("Got len(events) = %v, expected 4", len(s.Events()))
 	}
 	annotateEvent := s.Events()[0]
+	aeAttrs := attrsMap(annotateEvent.Attributes)
 	annotatefEvent := s.Events()[1]
+	afeAttrs := attrsMap(annotatefEvent.Attributes)
 	sendEvent := s.Events()[2]
 	receiveEvent := s.Events()[3]
-	if v := annotateEvent.Attributes[attribute.Key("string")]; v.AsString() != "annotateval" {
+	if v := aeAttrs[attribute.Key("string")]; v.AsString() != "annotateval" {
 		t.Errorf("Got annotateEvent.Attributes[string] = %v, expected annotateval", v.AsString())
 	}
 	if annotateEvent.Name != "annotate" {
 		t.Errorf("Got annotateEvent.Name = %v, expected annotate", annotateEvent.Name)
 	}
-	if v := annotatefEvent.Attributes[attribute.Key("int64")]; v.AsInt64() != 12345 {
+	if v := afeAttrs[attribute.Key("int64")]; v.AsInt64() != 12345 {
 		t.Errorf("Got annotatefEvent.Attributes[int64] = %v, expected 12345", v.AsInt64())
 	}
-	if v := annotatefEvent.Attributes[attribute.Key("float64")]; v.AsFloat64() != 12.345 {
+	if v := afeAttrs[attribute.Key("float64")]; v.AsFloat64() != 12.345 {
 		t.Errorf("Got annotatefEvent.Attributes[float64] = %v, expected 12.345", v.AsFloat64())
 	}
 	if annotatefEvent.Name != "annotate67890" {
 		t.Errorf("Got annotatefEvent.Name = %v, expected annotate67890", annotatefEvent.Name)
 	}
-	if v := annotateEvent.Attributes[attribute.Key("string")]; v.AsString() != "annotateval" {
+	if v := aeAttrs[attribute.Key("string")]; v.AsString() != "annotateval" {
 		t.Errorf("Got annotateEvent.Attributes[string] = %v, expected annotateval", v.AsString())
 	}
+	seAttrs := attrsMap(sendEvent.Attributes)
+	reAttrs := attrsMap(receiveEvent.Attributes)
 	if sendEvent.Name != internal.MessageSendEvent {
 		t.Errorf("Got sendEvent.Name = %v, expected message send", sendEvent.Name)
 	}
-	if v := sendEvent.Attributes[internal.UncompressedKey]; v.AsInt64() != 456 {
+	if v := seAttrs[internal.UncompressedKey]; v.AsInt64() != 456 {
 		t.Errorf("Got sendEvent.Attributes[uncompressedKey] = %v, expected 456", v.AsInt64())
 	}
-	if v := sendEvent.Attributes[internal.CompressedKey]; v.AsInt64() != 789 {
+	if v := seAttrs[internal.CompressedKey]; v.AsInt64() != 789 {
 		t.Errorf("Got sendEvent.Attributes[compressedKey] = %v, expected 789", v.AsInt64())
 	}
 	if receiveEvent.Name != internal.MessageReceiveEvent {
 		t.Errorf("Got receiveEvent.Name = %v, expected message receive", receiveEvent.Name)
 	}
-	if v := receiveEvent.Attributes[internal.UncompressedKey]; v.AsInt64() != 135 {
+	if v := reAttrs[internal.UncompressedKey]; v.AsInt64() != 135 {
 		t.Errorf("Got receiveEvent.Attributes[uncompressedKey] = %v, expected 135", v.AsInt64())
 	}
-	if v := receiveEvent.Attributes[internal.CompressedKey]; v.AsInt64() != 369 {
+	if v := reAttrs[internal.CompressedKey]; v.AsInt64() != 369 {
 		t.Errorf("Got receiveEvent.Attributes[compressedKey] = %v, expected 369", v.AsInt64())
 	}
 }
