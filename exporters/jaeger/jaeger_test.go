@@ -323,7 +323,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 				StartTime: now,
 				EndTime:   now,
 				Attributes: []attribute.KeyValue{
-					attribute.Array("arr", []int{0, 1, 2, 3}),
+					attribute.IntSlice("arr", []int{0, 1, 2, 3}),
 				},
 				Status: sdktrace.Status{
 					Code:        codes.Unset,
