@@ -23,8 +23,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
@@ -308,25 +306,15 @@ func recordStackTrace(err error) string {
 	var stackTrace []uintptr
 	var convertedStackTrace string
 
-	if err, ok := err.(interface {
-		StackTrace() errors.StackTrace
-	}); ok {
-		for _, frame := range err.StackTrace() {
-			stackTrace = append(stackTrace, uintptr(frame))
-		}
-	}
-
-	if stackTrace == nil {
-		stackTrace = make([]uintptr, 32)
-		n := runtime.Callers(1, stackTrace)
-		stackTrace = stackTrace[:n]
-	}
+	stackTrace = make([]uintptr, 32)
+	n := runtime.Callers(1, stackTrace)
+	stackTrace = stackTrace[:n]
 
 	frames := runtime.CallersFrames(stackTrace)
 	d := true
 	for frame, more := frames.Next(); d; frame, more = frames.Next() {
 		if !strings.Contains(frame.Function, "runtime.") && !strings.Contains(frame.Function, "testing.") {
-			convertedStackTrace = convertedStackTrace + fmt.Sprintf("\n%s\n\t%s:%d", frame.Function, frame.File, frame.Line)
+			convertedStackTrace += fmt.Sprintf("\n%s\n\t%s:%d", frame.Function, frame.File, frame.Line)
 		}
 		d = more
 	}
