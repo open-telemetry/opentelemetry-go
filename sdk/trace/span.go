@@ -18,8 +18,12 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"runtime"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -243,6 +247,7 @@ func (s *span) End(options ...trace.SpanEndOption) {
 			trace.WithAttributes(
 				semconv.ExceptionTypeKey.String(typeStr(recovered)),
 				semconv.ExceptionMessageKey.String(fmt.Sprint(recovered)),
+				semconv.ExceptionStacktraceKey.String(recordStackTrace(recovered.(error))),
 			),
 		)
 	}
@@ -285,6 +290,7 @@ func (s *span) RecordError(err error, opts ...trace.EventOption) {
 	opts = append(opts, trace.WithAttributes(
 		semconv.ExceptionTypeKey.String(typeStr(err)),
 		semconv.ExceptionMessageKey.String(err.Error()),
+		semconv.ExceptionStacktraceKey.String(recordStackTrace(err)),
 	))
 	s.addEvent(semconv.ExceptionEventName, opts...)
 }
@@ -296,6 +302,36 @@ func typeStr(i interface{}) string {
 		return t.String()
 	}
 	return fmt.Sprintf("%s.%s", t.PkgPath(), t.Name())
+}
+
+func recordStackTrace(err error) string {
+	var stackTrace []uintptr
+	var convertedStackTrace string
+
+	if err, ok := err.(interface {
+		StackTrace() errors.StackTrace
+	}); ok {
+		for _, frame := range err.StackTrace() {
+			stackTrace = append(stackTrace, uintptr(frame))
+		}
+	}
+
+	if stackTrace == nil {
+		stackTrace = make([]uintptr, 32)
+		n := runtime.Callers(1, stackTrace)
+		stackTrace = stackTrace[:n]
+	}
+
+	frames := runtime.CallersFrames(stackTrace)
+	d := true
+	for frame, more := frames.Next(); d; frame, more = frames.Next() {
+		if !strings.Contains(frame.Function, "runtime.") && !strings.Contains(frame.Function, "testing.") {
+			convertedStackTrace = convertedStackTrace + fmt.Sprintf("\n%s\n\t%s:%d", frame.Function, frame.File, frame.Line)
+		}
+		d = more
+	}
+
+	return convertedStackTrace
 }
 
 // AddEvent adds an event with the provided name and options. If this span is

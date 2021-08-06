@@ -1148,9 +1148,18 @@ func TestRecordError(t *testing.T) {
 			},
 			instrumentationLibrary: instrumentation.Library{Name: "RecordError"},
 		}
-		if diff := cmpDiff(got, want); diff != "" {
-			t.Errorf("SpanErrorOptions: -got +want %s", diff)
-		}
+
+		assert.Equal(t, got.spanContext, want.spanContext)
+		assert.Equal(t, got.parent, want.parent)
+		assert.Equal(t, got.name, want.name)
+		assert.Equal(t, got.status, want.status)
+		assert.Equal(t, got.spanKind, want.spanKind)
+		assert.Equal(t, got.events[0].Attributes[0].Value.AsString(), want.events[0].Attributes[0].Value.AsString())
+		assert.Equal(t, got.events[0].Attributes[1].Value.AsString(), want.events[0].Attributes[1].Value.AsString())
+
+		gotStackTraceFunctionName := strings.Split(got.events[0].Attributes[2].Value.AsString(), "\n")
+		assert.Equal(t, gotStackTraceFunctionName[1], "go.opentelemetry.io/otel/sdk/trace.recordStackTrace")
+		assert.Equal(t, gotStackTraceFunctionName[3], "go.opentelemetry.io/otel/sdk/trace.(*span).RecordError")
 	}
 }
 
@@ -1355,10 +1364,12 @@ func TestSpanCapturesPanic(t *testing.T) {
 	require.Len(t, spans, 1)
 	require.Len(t, spans[0].Events(), 1)
 	assert.Equal(t, spans[0].Events()[0].Name, semconv.ExceptionEventName)
-	assert.Equal(t, spans[0].Events()[0].Attributes, []attribute.KeyValue{
-		semconv.ExceptionTypeKey.String("*errors.errorString"),
-		semconv.ExceptionMessageKey.String("error message"),
-	})
+	assert.Equal(t, spans[0].Events()[0].Attributes[0].Value.AsString(), "*errors.errorString")
+	assert.Equal(t, spans[0].Events()[0].Attributes[1].Value.AsString(), "error message")
+
+	gotStackTraceFunctionName := strings.Split(spans[0].Events()[0].Attributes[2].Value.AsString(), "\n")
+	assert.Equal(t, gotStackTraceFunctionName[1], "go.opentelemetry.io/otel/sdk/trace.recordStackTrace")
+	assert.Equal(t, gotStackTraceFunctionName[3], "go.opentelemetry.io/otel/sdk/trace.(*span).End")
 }
 
 func TestReadOnlySpan(t *testing.T) {
