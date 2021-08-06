@@ -12,19 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package otel2oc
 
 import (
 	"testing"
-
-	"go.opencensus.io/trace/tracestate"
 
 	octrace "go.opencensus.io/trace"
 
 	"go.opentelemetry.io/otel/trace"
 )
 
-func TestOTelSpanContextToOC(t *testing.T) {
+func TestSpanContextConversion(t *testing.T) {
 	for _, tc := range []struct {
 		description string
 		input       trace.SpanContext
@@ -60,64 +58,8 @@ func TestOTelSpanContextToOC(t *testing.T) {
 		},
 	} {
 		t.Run(tc.description, func(t *testing.T) {
-			output := OTelSpanContextToOC(tc.input)
+			output := SpanContext(tc.input)
 			if output != tc.expected {
-				t.Fatalf("Got %+v spancontext, exepected %+v.", output, tc.expected)
-			}
-		})
-	}
-}
-
-func TestOCSpanContextToOTel(t *testing.T) {
-	for _, tc := range []struct {
-		description string
-		input       octrace.SpanContext
-		expected    trace.SpanContext
-	}{
-		{
-			description: "empty",
-		},
-		{
-			description: "sampled",
-			input: octrace.SpanContext{
-				TraceID:      octrace.TraceID([16]byte{1}),
-				SpanID:       octrace.SpanID([8]byte{2}),
-				TraceOptions: octrace.TraceOptions(0x1),
-			},
-			expected: trace.NewSpanContext(trace.SpanContextConfig{
-				TraceID:    trace.TraceID([16]byte{1}),
-				SpanID:     trace.SpanID([8]byte{2}),
-				TraceFlags: trace.FlagsSampled,
-			}),
-		},
-		{
-			description: "not sampled",
-			input: octrace.SpanContext{
-				TraceID:      octrace.TraceID([16]byte{1}),
-				SpanID:       octrace.SpanID([8]byte{2}),
-				TraceOptions: octrace.TraceOptions(0),
-			},
-			expected: trace.NewSpanContext(trace.SpanContextConfig{
-				TraceID: trace.TraceID([16]byte{1}),
-				SpanID:  trace.SpanID([8]byte{2}),
-			}),
-		},
-		{
-			description: "trace state is ignored",
-			input: octrace.SpanContext{
-				TraceID:    octrace.TraceID([16]byte{1}),
-				SpanID:     octrace.SpanID([8]byte{2}),
-				Tracestate: &tracestate.Tracestate{},
-			},
-			expected: trace.NewSpanContext(trace.SpanContextConfig{
-				TraceID: trace.TraceID([16]byte{1}),
-				SpanID:  trace.SpanID([8]byte{2}),
-			}),
-		},
-	} {
-		t.Run(tc.description, func(t *testing.T) {
-			output := OCSpanContextToOTel(tc.input)
-			if !output.Equal(tc.expected) {
 				t.Fatalf("Got %+v spancontext, exepected %+v.", output, tc.expected)
 			}
 		})
