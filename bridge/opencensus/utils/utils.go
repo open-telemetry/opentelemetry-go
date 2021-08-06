@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package utils provides utilities of the OpenCensus bridge.
+// Package utils provides utilities for the OpenCensus bridge.
 //
 // Deprecated: Use the equivalent functions from the bridge/opencensus package
 // instead.
