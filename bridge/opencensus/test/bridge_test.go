@@ -267,27 +267,24 @@ func TestSetThings(t *testing.T) {
 	if v := aeAttrs[attribute.Key("string")]; v.AsString() != "annotateval" {
 		t.Errorf("Got annotateEvent.Attributes[string] = %v, expected annotateval", v.AsString())
 	}
-
-	uncompressedKey := attribute.Key("uncompressed byte size")
-	compressedKey := attribute.Key("compressed byte size")
 	seAttrs := attrsMap(sendEvent.Attributes)
 	reAttrs := attrsMap(receiveEvent.Attributes)
-	if sendEvent.Name != "message send" {
+	if sendEvent.Name != internal.MessageSendEvent {
 		t.Errorf("Got sendEvent.Name = %v, expected message send", sendEvent.Name)
 	}
-	if v := seAttrs[uncompressedKey]; v.AsInt64() != 456 {
+	if v := seAttrs[internal.UncompressedKey]; v.AsInt64() != 456 {
 		t.Errorf("Got sendEvent.Attributes[uncompressedKey] = %v, expected 456", v.AsInt64())
 	}
-	if v := seAttrs[compressedKey]; v.AsInt64() != 789 {
+	if v := seAttrs[internal.CompressedKey]; v.AsInt64() != 789 {
 		t.Errorf("Got sendEvent.Attributes[compressedKey] = %v, expected 789", v.AsInt64())
 	}
-	if receiveEvent.Name != "message receive" {
+	if receiveEvent.Name != internal.MessageReceiveEvent {
 		t.Errorf("Got receiveEvent.Name = %v, expected message receive", receiveEvent.Name)
 	}
-	if v := reAttrs[uncompressedKey]; v.AsInt64() != 135 {
+	if v := reAttrs[internal.UncompressedKey]; v.AsInt64() != 135 {
 		t.Errorf("Got receiveEvent.Attributes[uncompressedKey] = %v, expected 135", v.AsInt64())
 	}
-	if v := reAttrs[compressedKey]; v.AsInt64() != 369 {
+	if v := reAttrs[internal.CompressedKey]; v.AsInt64() != 369 {
 		t.Errorf("Got receiveEvent.Attributes[compressedKey] = %v, expected 369", v.AsInt64())
 	}
 }
