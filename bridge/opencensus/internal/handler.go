@@ -12,15 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build tools
+package internal
 
-package tools
+import "go.opentelemetry.io/otel"
 
-import (
-	_ "github.com/client9/misspell/cmd/misspell"
-	_ "github.com/gogo/protobuf/protoc-gen-gogofast"
-	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
-	_ "github.com/itchyny/gojq"
-	_ "go.opentelemetry.io/build-tools/semconvgen"
-	_ "golang.org/x/tools/cmd/stringer"
-)
+// Handle is the package level function to handle errors. It can be
+// overwritten for testing.
+var Handle = otel.Handle

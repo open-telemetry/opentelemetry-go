@@ -10,11 +10,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Added `ErrorHandlerFunc` to use a function as an `"go.opentelemetry.io/otel".ErrorHandler`. (#2149)
+
 ### Changed
 
 - The Metrics SDK export record no longer contains a Resource pointer, the SDK `Export()` function for push-based exporters now takes a single Resource argument, pull-based exporters use `controller.Resource()`. (#2120)
 
 ### Deprecated
+
+- The `go.opentelemetry.io/otel/bridge/opencensus/utils` package is deprecated.
+  All functionality from this package now exists in the `go.opentelemetry.io/otel/bridge/opencensus` package.
+  The functions from that package should be used instead. (#2166)
 
 ### Removed
 
@@ -22,8 +28,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- The Metric SDK controller constructor does not automatically merge `resource.Environment()`. Multiple calls to `WithResource()` are handled correctly, and when no resources are provided `resource.Default()` is used. (#2120)
 - The `fromEnv` detector no longer throws an error when `OTEL_RESOURCE_ATTRIBUTES` environment variable is not set or empty. (#2138)
+- Setting the global `ErrorHandler` with `"go.opentelemetry.io/otel".SetErrorHandler` multiple times is now supported. (#2160, #2140)
 
 ### Security
 
