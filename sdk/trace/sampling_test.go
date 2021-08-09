@@ -301,9 +301,9 @@ func TestParseTraceState(t *testing.T) {
 	}
 }
 
-func TestProbabilitySampling(t *testing.T) {
+func TestProbabilitySamplingParentBased(t *testing.T) {
 	type testCase struct {
-		rand        int
+		rand        uint
 		prob        int
 		expectCount int64
 	}
@@ -333,7 +333,6 @@ func TestProbabilitySampling(t *testing.T) {
 		// Zero is a special case
 		{0, 63, 0},
 		{62, 63, 0},
-		{63, 63, 0},
 	} {
 		t.Run(fmt.Sprint(tc.rand, "/", tc.prob), func(t *testing.T) {
 			ctx0 := context.Background()
@@ -353,8 +352,8 @@ func TestProbabilitySampling(t *testing.T) {
 				}
 			}
 
-			// 50% sampling at the root span
-			sampler1 := TraceIDRatioBased(tc.prob, WithRandomSource(func() int { return tc.rand }))
+			// Root span uses a TraceIDRatioBased Sampler
+			sampler1 := TraceIDRatioBased(tc.prob, WithRandomSource(func() uint { return tc.rand }))
 			provider1 := NewTracerProvider(WithSyncer(te), WithSampler(sampler1))
 
 			ctx1, span1 := provider1.Tracer("test").Start(ctx0, "hello")
@@ -377,7 +376,7 @@ func TestProbabilitySampling(t *testing.T) {
 			}
 			te.Reset()
 
-			// Parent sampling using propagated probability
+			// ParentBased sampler
 			sampler2 := ParentBased(NeverSample())
 			provider2 := NewTracerProvider(WithSyncer(te), WithSampler(sampler2))
 
@@ -433,6 +432,56 @@ func TestProbabilitySampling(t *testing.T) {
 			require.NotEqual(t, span2.SpanContext().SpanID(), span3.SpanContext().SpanID())
 
 			_ = ctx3
+		})
+	}
+}
+
+func TestProbabilitySamplingTraceIDRatioBased(t *testing.T) {
+	testWith := func(t *testing.T, rval uint) {
+		te := NewTestExporter()
+
+		var pvalFunc func(context.Context, int)
+
+		pvalFunc = func(ctx context.Context, pval int) {
+			if pval == otelSamplingZeroValue {
+				return
+			}
+
+			sampler := TraceIDRatioBased(pval, WithRandomSource(func() uint { return rval }))
+			provider := NewTracerProvider(WithSyncer(te), WithSampler(sampler))
+
+			childCtx, span := provider.Tracer("test").Start(ctx, "hello")
+
+			expectTS := fmt.Sprintf("p:%02x;r:%02x;", pval, rval)
+
+			require.Equal(t, expectTS, span.SpanContext().TraceState().Get("otel"))
+
+			pvalFunc(childCtx, pval+1)
+
+			span.End()
+		}
+		pvalFunc(context.Background(), 0)
+		expect := int(rval + 1) // count of values such that p <= rval
+		require.Equal(t, expect, te.Len())
+
+		var total int64
+		for _, got := range te.Spans() {
+			var this int64 = 1
+			for _, attr := range got.Attributes() {
+				if attr.Key == "sampler.adjusted_count" {
+					this = attr.Value.AsInt64()
+				}
+			}
+			total += this
+		}
+		// Note this is a geometric series, e.g., if we
+		// expected 4 spans the value is 1+2+4+8 == 15 == (2^4)-1.
+		require.Equal(t, (int64(1)<<expect)-1, total)
+	}
+
+	for i := uint(0); i < otelSamplingZeroValue; i++ {
+		t.Run(fmt.Sprint(i), func(t *testing.T) {
+			testWith(t, i)
 		})
 	}
 }

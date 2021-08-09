@@ -83,7 +83,7 @@ const (
 	otelSamplingNameKey                  = otelSamplingAttributePrefix + "name"
 	otelSamplingParentSampler            = "parent"
 
-	// TODO: the zero value is the maximum permissible value of
+	// Note: the zero value is the maximum permissible value of
 	// the OTel TraceState `random` value, which equates with zero
 	otelSamplingZeroValue  = 0x3f
 	otelTraceStateBitWidth = 6
@@ -340,7 +340,7 @@ func (ps propagateSampler) ShouldSample(p SamplingParameters) SamplingResult {
 			attribute.String(otelSamplingNameKey, otelSamplingParentSampler),
 		)
 
-		// Spec error handling behavior (TODO).
+		// Spec error handling behavior.
 		if err != nil {
 			otel.Handle(err)
 		}
@@ -361,7 +361,7 @@ func newOTelTraceState() otelTraceState {
 }
 
 func parseOTelTraceState(ts string) (otelTraceState, error) {
-	// TODO: Spec limit on trace state value length?
+	// Note: Spec limit on trace state value length?
 	otts := newOTelTraceState()
 	for len(ts) > 0 {
 		eqPos := 0
@@ -406,7 +406,7 @@ func parseOTelTraceState(ts string) (otelTraceState, error) {
 			}
 
 		} else {
-			// TODO: Spec valid character set for forward compatibility.
+			// Note: Spec valid character set for forward compatibility.
 			// Should this be the base64 characters?
 			for ; sepPos < len(tail); sepPos++ {
 				if (tail[sepPos] >= '0' && tail[sepPos] <= '9') ||
@@ -444,7 +444,7 @@ func (otts otelTraceState) hasRandom() bool {
 	return otts.random >= 0
 }
 
-type TraceIDRatioBasedRandomSource func() int
+type TraceIDRatioBasedRandomSource func() uint
 
 type traceIDRatioBasedConfig struct {
 	source TraceIDRatioBasedRandomSource
@@ -466,15 +466,16 @@ func (s traceIDRatioBasedRandomSource) apply(cfg *traceIDRatioBasedConfig) {
 
 func TraceIDRatioBased(logAdjCnt int, opts ...TraceIDRatioBasedOption) Sampler {
 	cfg := traceIDRatioBasedConfig{
-		source: func() int {
-			// TODO: Optimize me; This wastes 61 bits of
-			// randomness on average.
+		source: func() uint {
+			// Note: this could be optimized to store the
+			// unused random bits for later.  This wastes
+			// 61 bits in the expected case.
 			var x int64
 
 			for x = rand.Int63(); x == 0; {
 			}
 
-			cnt := 0
+			var cnt uint
 			for (x & 1) == 0 {
 				cnt++
 				x >>= 1
@@ -501,15 +502,27 @@ type traceIDRatioSampler struct {
 	source    TraceIDRatioBasedRandomSource
 }
 
+func (t traceIDRatioSampler) assignRandom(otts *otelTraceState) {
+	otts.random = int(t.source())
+
+	// A random value that is too large will be sampled at
+	// the smallest valid probability.
+	for otts.random >= otelSamplingZeroValue {
+		otts.random = otelSamplingZeroValue - 1
+	}
+}
+
 func (t traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
 	var otts otelTraceState
 	var state trace.TraceState
+	var unknownRandom bool
 
 	if !psc.IsValid() {
 		// A new root is happening.  Compute `random`.
 		otts = newOTelTraceState()
-		otts.random = t.source()
+
+		t.assignRandom(&otts)
 	} else {
 		// A valid parent context.
 		// It does not matter if psc.IsSampled().
@@ -519,10 +532,19 @@ func (t traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 		otts, err = parseOTelTraceState(state.Get(otelTraceStateKey))
 
 		if err != nil {
-			// TODO: Spec error treatment.
+			otel.Handle(err)
 		}
-		// TODO: Spec behavior when `random` is set badly or missing.
-		// e.g., what if random == otelSamplingZeroValue?
+
+		if !otts.hasRandom() {
+			// Note: This case demonstrates why we are
+			// better off relying on randomness built-in
+			// to the TraceID.
+			//
+			// TODO: What should happen?  Use the legacy
+			// behavior, which was under-specified, and record an
+			// unknown adjusted count
+			unknownRandom = true
+		}
 	}
 
 	var decision SamplingDecision
@@ -550,7 +572,7 @@ func (t traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 
 	state, err := state.Insert(otelTraceStateKey, otts.serialize())
 	if err != nil {
-		// TODO: Spec error treatment
+		otel.Handle(err)
 	}
 
 	return SamplingResult{
