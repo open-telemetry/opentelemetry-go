@@ -1120,7 +1120,7 @@ func TestRecordError(t *testing.T) {
 		span := startSpan(tp, "RecordError")
 
 		errTime := time.Now()
-		span.RecordError(s.err, trace.WithTimestamp(errTime), trace.WithStackTrace(true))
+		span.RecordError(s.err, trace.WithTimestamp(errTime))
 
 		got, err := endSpan(te, span)
 		if err != nil {
@@ -1148,21 +1148,63 @@ func TestRecordError(t *testing.T) {
 			},
 			instrumentationLibrary: instrumentation.Library{Name: "RecordError"},
 		}
-
-		assert.Equal(t, got.spanContext, want.spanContext)
-		assert.Equal(t, got.parent, want.parent)
-		assert.Equal(t, got.name, want.name)
-		assert.Equal(t, got.status, want.status)
-		assert.Equal(t, got.spanKind, want.spanKind)
-		assert.Equal(t, got.events[0].Attributes[0].Value.AsString(), want.events[0].Attributes[0].Value.AsString())
-		assert.Equal(t, got.events[0].Attributes[1].Value.AsString(), want.events[0].Attributes[1].Value.AsString())
-
-		gotStackTraceFunctionName := strings.Split(got.events[0].Attributes[2].Value.AsString(), "\n")
-		assert.Equal(t, gotStackTraceFunctionName[1], "go.opentelemetry.io/otel/sdk/trace.recordStackTrace")
-		assert.Equal(t, gotStackTraceFunctionName[3], "go.opentelemetry.io/otel/sdk/trace.(*span).RecordError")
+		if diff := cmpDiff(got, want); diff != "" {
+			t.Errorf("SpanErrorOptions: -got +want %s", diff)
+		}
 	}
 }
 
+func TestRecordErrorWithStackTrace(t *testing.T) {
+	err := ottest.NewTestError("test error")
+	typ := "go.opentelemetry.io/otel/internal/internaltest.TestError"
+	msg := "test error"
+
+	te := NewTestExporter()
+	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
+	span := startSpan(tp, "RecordError")
+
+	errTime := time.Now()
+	span.RecordError(err, trace.WithTimestamp(errTime), trace.WithStackTrace(true))
+
+	got, err := endSpan(te, span)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &snapshot{
+		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    tid,
+			TraceFlags: 0x1,
+		}),
+		parent:   sc.WithRemote(true),
+		name:     "span0",
+		status:   Status{Code: codes.Unset},
+		spanKind: trace.SpanKindInternal,
+		events: []Event{
+			{
+				Name: semconv.ExceptionEventName,
+				Time: errTime,
+				Attributes: []attribute.KeyValue{
+					semconv.ExceptionTypeKey.String(typ),
+					semconv.ExceptionMessageKey.String(msg),
+				},
+			},
+		},
+		instrumentationLibrary: instrumentation.Library{Name: "RecordError"},
+	}
+
+	assert.Equal(t, got.spanContext, want.spanContext)
+	assert.Equal(t, got.parent, want.parent)
+	assert.Equal(t, got.name, want.name)
+	assert.Equal(t, got.status, want.status)
+	assert.Equal(t, got.spanKind, want.spanKind)
+	assert.Equal(t, got.events[0].Attributes[0].Value.AsString(), want.events[0].Attributes[0].Value.AsString())
+	assert.Equal(t, got.events[0].Attributes[1].Value.AsString(), want.events[0].Attributes[1].Value.AsString())
+
+	gotStackTraceFunctionName := strings.Split(got.events[0].Attributes[2].Value.AsString(), "\n")
+	assert.Equal(t, gotStackTraceFunctionName[1], "go.opentelemetry.io/otel/sdk/trace.recordStackTrace")
+	assert.Equal(t, gotStackTraceFunctionName[3], "go.opentelemetry.io/otel/sdk/trace.(*span).RecordError")
+}
 func TestRecordErrorNil(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
@@ -1348,6 +1390,29 @@ func TestWithInstrumentationVersionAndSchema(t *testing.T) {
 }
 
 func TestSpanCapturesPanic(t *testing.T) {
+	te := NewTestExporter()
+	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
+	_, span := tp.Tracer("CatchPanic").Start(
+		context.Background(),
+		"span",
+	)
+
+	f := func() {
+		defer span.End()
+		panic(errors.New("error message"))
+	}
+	require.PanicsWithError(t, "error message", f)
+	spans := te.Spans()
+	require.Len(t, spans, 1)
+	require.Len(t, spans[0].Events(), 1)
+	assert.Equal(t, spans[0].Events()[0].Name, semconv.ExceptionEventName)
+	assert.Equal(t, spans[0].Events()[0].Attributes, []attribute.KeyValue{
+		semconv.ExceptionTypeKey.String("*errors.errorString"),
+		semconv.ExceptionMessageKey.String("error message"),
+	})
+}
+
+func TestSpanCapturesPanicWithStackTrace(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
 	_, span := tp.Tracer("CatchPanic").Start(
