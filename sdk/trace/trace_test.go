@@ -1120,7 +1120,7 @@ func TestRecordError(t *testing.T) {
 		span := startSpan(tp, "RecordError")
 
 		errTime := time.Now()
-		span.RecordError(s.err, trace.WithTimestamp(errTime))
+		span.RecordError(s.err, trace.WithTimestamp(errTime), trace.WithStackTrace(true))
 
 		got, err := endSpan(te, span)
 		if err != nil {
@@ -1356,7 +1356,7 @@ func TestSpanCapturesPanic(t *testing.T) {
 	)
 
 	f := func() {
-		defer span.End()
+		defer span.End(trace.WithStackTrace(true))
 		panic(errors.New("error message"))
 	}
 	require.PanicsWithError(t, "error message", f)

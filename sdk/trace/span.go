@@ -237,24 +237,31 @@ func (s *span) End(options ...trace.SpanEndOption) {
 		return
 	}
 
+	config := trace.NewSpanEndConfig(options...)
 	if recovered := recover(); recovered != nil {
 		// Record but don't stop the panic.
 		defer panic(recovered)
-		s.addEvent(
-			semconv.ExceptionEventName,
-			trace.WithAttributes(
-				semconv.ExceptionTypeKey.String(typeStr(recovered)),
-				semconv.ExceptionMessageKey.String(fmt.Sprint(recovered)),
-				semconv.ExceptionStacktraceKey.String(recordStackTrace(recovered.(error))),
-			),
-		)
+		if config.StackTrace() {
+			s.addEvent(semconv.ExceptionEventName,
+				trace.WithAttributes(
+					semconv.ExceptionTypeKey.String(typeStr(recovered)),
+					semconv.ExceptionMessageKey.String(fmt.Sprint(recovered)),
+					semconv.ExceptionStacktraceKey.String(recordStackTrace(recovered.(error)))),
+			)
+		} else {
+			s.addEvent(
+				semconv.ExceptionEventName,
+				trace.WithAttributes(
+					semconv.ExceptionTypeKey.String(typeStr(recovered)),
+					semconv.ExceptionMessageKey.String(fmt.Sprint(recovered)),
+				),
+			)
+		}
 	}
 
 	if s.executionTracerTaskEnd != nil {
 		s.executionTracerTaskEnd()
 	}
-
-	config := trace.NewSpanEndConfig(options...)
 
 	s.mu.Lock()
 	// Setting endTime to non-zero marks the span as ended and not recording.
@@ -288,8 +295,15 @@ func (s *span) RecordError(err error, opts ...trace.EventOption) {
 	opts = append(opts, trace.WithAttributes(
 		semconv.ExceptionTypeKey.String(typeStr(err)),
 		semconv.ExceptionMessageKey.String(err.Error()),
-		semconv.ExceptionStacktraceKey.String(recordStackTrace(err)),
 	))
+
+	c := trace.NewEventConfig(opts...)
+	if c.StackTrace() {
+		opts = append(opts, trace.WithAttributes(
+			semconv.ExceptionStacktraceKey.String(recordStackTrace(err)),
+		))
+	}
+
 	s.addEvent(semconv.ExceptionEventName, opts...)
 }
 
