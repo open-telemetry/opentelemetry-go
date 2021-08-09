@@ -30,6 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The `fromEnv` detector no longer throws an error when `OTEL_RESOURCE_ATTRIBUTES` environment variable is not set or empty. (#2138)
 - Setting the global `ErrorHandler` with `"go.opentelemetry.io/otel".SetErrorHandler` multiple times is now supported. (#2160, #2140)
+- The Metric SDK controller constructor does not automatically merge `resource.Environment()`. Multiple calls to `WithResource()` are handled correctly, and when no resources are provided `resource.Default()` is used. (#2120)
 
 ### Security
 
