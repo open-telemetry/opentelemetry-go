@@ -12,15 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build tools
-
-package tools
+package oc2otel
 
 import (
-	_ "github.com/client9/misspell/cmd/misspell"
-	_ "github.com/gogo/protobuf/protoc-gen-gogofast"
-	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
-	_ "github.com/itchyny/gojq"
-	_ "go.opentelemetry.io/build-tools/semconvgen"
-	_ "golang.org/x/tools/cmd/stringer"
+	octrace "go.opencensus.io/trace"
+
+	"go.opentelemetry.io/otel/trace"
 )
+
+func SpanContext(sc octrace.SpanContext) trace.SpanContext {
+	var traceFlags trace.TraceFlags
+	if sc.IsSampled() {
+		traceFlags = trace.FlagsSampled
+	}
+	return trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID(sc.TraceID),
+		SpanID:     trace.SpanID(sc.SpanID),
+		TraceFlags: traceFlags,
+	})
+}

@@ -7,8 +7,7 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golangci/golangci-lint v1.41.1
 	github.com/itchyny/gojq v0.12.4
-	github.com/spf13/pflag v1.0.5
-	golang.org/x/mod v0.4.2
+	go.opentelemetry.io/build-tools/semconvgen v0.0.0-20210730171444-520d53fe242d
 	golang.org/x/tools v0.1.5
 )
 
@@ -71,3 +70,5 @@ replace go.opentelemetry.io/otel/exporters/stdout/stdoutmetric => ../../exporter
 replace go.opentelemetry.io/otel/exporters/stdout/stdouttrace => ../../exporters/stdout/stdouttrace
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp => ../../exporters/otlp/otlpmetric/otlpmetrichttp
+
+replace go.opentelemetry.io/otel/bridge/opencensus/test => ../../bridge/opencensus/test
