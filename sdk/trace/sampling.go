@@ -82,6 +82,7 @@ const (
 	otelSamplingAdjustedCountKey         = otelSamplingAttributePrefix + "adjusted_count"
 	otelSamplingNameKey                  = otelSamplingAttributePrefix + "name"
 	otelSamplingParentSampler            = "parent"
+	otelSamplingProbabilitySampler       = "probability"
 
 	// Note: the zero value is the maximum permissible value of
 	// the OTel TraceState `random` value, which equates with zero
@@ -124,6 +125,9 @@ func (ts probabilitySampler) ShouldSample(p SamplingParameters) SamplingResult {
 	return SamplingResult{
 		Decision:   Drop,
 		Tracestate: psc.TraceState(),
+		Attributes: []attribute.KeyValue{
+			attribute.String(otelSamplingNameKey, otelSamplingProbabilitySampler),
+		},
 	}
 }
 
@@ -487,19 +491,24 @@ func TraceIDRatioBased(logAdjCnt int, opts ...TraceIDRatioBasedOption) Sampler {
 		opt.apply(&cfg)
 	}
 
+	var probability float64
 	if logAdjCnt < 0 || logAdjCnt > otelSamplingZeroValue {
 		// Zero probability
 		logAdjCnt = otelSamplingZeroValue
+	} else {
+		probability = 1.0 / float64(int64(1)<<logAdjCnt)
 	}
 	return traceIDRatioSampler{
 		logAdjCnt: logAdjCnt,
 		source:    cfg.source,
+		fallback:  ProbabilityBased(probability),
 	}
 }
 
 type traceIDRatioSampler struct {
 	logAdjCnt int
 	source    TraceIDRatioBasedRandomSource
+	fallback  Sampler
 }
 
 func (t traceIDRatioSampler) assignRandom(otts *otelTraceState) {
@@ -516,7 +525,6 @@ func (t traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
 	var otts otelTraceState
 	var state trace.TraceState
-	var unknownRandom bool
 
 	if !psc.IsValid() {
 		// A new root is happening.  Compute `random`.
@@ -540,15 +548,16 @@ func (t traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 			// better off relying on randomness built-in
 			// to the TraceID.
 			//
-			// TODO: What should happen?  Use the legacy
-			// behavior, which was under-specified, and record an
-			// unknown adjusted count
-			unknownRandom = true
+			// Use the legacy behavior, which was
+			// under-specified, and record an unknown
+			// adjusted count.
+			return t.fallback.ShouldSample(p)
 		}
 	}
 
 	var decision SamplingDecision
 	var cnt int64
+	var attrs []attribute.KeyValue
 
 	// Calculate the adjusted count.  Treat the max-value bucket
 	// as zero probability, thus adjusted count zero.
@@ -563,8 +572,6 @@ func (t traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	}
 
 	otts.probability = t.logAdjCnt
-
-	var attrs []attribute.KeyValue
 
 	if cnt != 1 {
 		attrs = append(attrs, attribute.Int64(otelSamplingAdjustedCountKey, cnt))
