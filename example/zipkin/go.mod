@@ -9,10 +9,10 @@ replace (
 )
 
 require (
-	go.opentelemetry.io/otel v1.0.0-RC1
-	go.opentelemetry.io/otel/exporters/zipkin v1.0.0-RC1
-	go.opentelemetry.io/otel/sdk v1.0.0-RC1
-	go.opentelemetry.io/otel/trace v1.0.0-RC1
+	go.opentelemetry.io/otel v1.0.0-RC2
+	go.opentelemetry.io/otel/exporters/zipkin v1.0.0-RC2
+	go.opentelemetry.io/otel/sdk v1.0.0-RC2
+	go.opentelemetry.io/otel/trace v1.0.0-RC2
 )
 
 replace go.opentelemetry.io/otel/bridge/opencensus => ../../bridge/opencensus
@@ -68,3 +68,5 @@ replace go.opentelemetry.io/otel/exporters/stdout/stdoutmetric => ../../exporter
 replace go.opentelemetry.io/otel/exporters/stdout/stdouttrace => ../../exporters/stdout/stdouttrace
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp => ../../exporters/otlp/otlpmetric/otlpmetrichttp
+
+replace go.opentelemetry.io/otel/bridge/opencensus/test => ../../bridge/opencensus/test

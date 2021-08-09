@@ -9,7 +9,7 @@ replace (
 )
 
 require (
-	go.opentelemetry.io/otel v1.0.0-RC1
+	go.opentelemetry.io/otel v1.0.0-RC2
 	go.opentelemetry.io/otel/exporters/prometheus v0.22.0
 	go.opentelemetry.io/otel/metric v0.22.0
 	go.opentelemetry.io/otel/sdk/export/metric v0.22.0
@@ -69,3 +69,5 @@ replace go.opentelemetry.io/otel/exporters/stdout/stdoutmetric => ../../exporter
 replace go.opentelemetry.io/otel/exporters/stdout/stdouttrace => ../../exporters/stdout/stdouttrace
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp => ../../exporters/otlp/otlpmetric/otlpmetrichttp
+
+replace go.opentelemetry.io/otel/bridge/opencensus/test => ../../bridge/opencensus/test

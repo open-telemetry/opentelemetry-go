@@ -6,10 +6,9 @@ require (
 	github.com/cenkalti/backoff/v4 v4.1.1
 	github.com/google/go-cmp v0.5.6
 	github.com/stretchr/testify v1.7.0
-	go.opentelemetry.io/otel v1.0.0-RC1
-	go.opentelemetry.io/otel/oteltest v1.0.0-RC1
-	go.opentelemetry.io/otel/sdk v1.0.0-RC1
-	go.opentelemetry.io/otel/trace v1.0.0-RC1
+	go.opentelemetry.io/otel v1.0.0-RC2
+	go.opentelemetry.io/otel/sdk v1.0.0-RC2
+	go.opentelemetry.io/otel/trace v1.0.0-RC2
 	go.opentelemetry.io/proto/otlp v0.9.0
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
 	google.golang.org/grpc v1.39.0
@@ -75,3 +74,5 @@ replace go.opentelemetry.io/otel/exporters/stdout/stdoutmetric => ../../stdout/s
 replace go.opentelemetry.io/otel/exporters/stdout/stdouttrace => ../../stdout/stdouttrace
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp => ../otlpmetric/otlpmetrichttp
+
+replace go.opentelemetry.io/otel/bridge/opencensus/test => ../../../bridge/opencensus/test

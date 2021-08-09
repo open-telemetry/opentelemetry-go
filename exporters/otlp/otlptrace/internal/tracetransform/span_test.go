@@ -19,8 +19,6 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/oteltest"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -120,12 +118,12 @@ func TestNilLinks(t *testing.T) {
 }
 
 func TestEmptyLinks(t *testing.T) {
-	assert.Nil(t, links([]trace.Link{}))
+	assert.Nil(t, links([]tracesdk.Link{}))
 }
 
 func TestLinks(t *testing.T) {
 	attrs := []attribute.KeyValue{attribute.Int("one", 1), attribute.Int("two", 2)}
-	l := []trace.Link{
+	l := []tracesdk.Link{
 		{},
 		{
 			SpanContext: trace.SpanContext{},
@@ -205,7 +203,7 @@ func TestSpanData(t *testing.T) {
 	// March 31, 2020 5:01:26 1234nanos (UTC)
 	startTime := time.Unix(1585674086, 1234)
 	endTime := startTime.Add(10 * time.Second)
-	traceState, _ := oteltest.TraceStateFromKeyValues(attribute.String("key1", "val1"), attribute.String("key2", "val2"))
+	traceState, _ := trace.ParseTraceState("key1=val1,key2=val2")
 	spanData := tracetest.SpanStub{
 		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
@@ -234,7 +232,7 @@ func TestSpanData(t *testing.T) {
 				},
 			},
 		},
-		Links: []trace.Link{
+		Links: []tracesdk.Link{
 			{
 				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID:    trace.TraceID{0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF},
@@ -244,6 +242,7 @@ func TestSpanData(t *testing.T) {
 				Attributes: []attribute.KeyValue{
 					attribute.String("LinkType", "Parent"),
 				},
+				DroppedAttributeCount: 0,
 			},
 			{
 				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
@@ -254,6 +253,7 @@ func TestSpanData(t *testing.T) {
 				Attributes: []attribute.KeyValue{
 					attribute.String("LinkType", "Child"),
 				},
+				DroppedAttributeCount: 0,
 			},
 		},
 		Status: tracesdk.Status{
