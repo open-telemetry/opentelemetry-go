@@ -555,13 +555,22 @@ func (t traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 		}
 
 		if !otts.hasRandom() {
+			// This uses the legacy behavior, which was
+			// under-specified, but records the adjusted
+			// count (which is known).
+			//
+			// This case corresponds with the TODO that
+			// appears in the specification for the
+			// TraceIDRatioBased Sampler.  We don't know
+			// how to handle non-root TraceIDs.
+			//
 			// Note: This case demonstrates why we are
 			// better off relying on randomness built-in
-			// to the TraceID.
-			//
-			// Use the legacy behavior, which was
-			// under-specified, and record an unknown
-			// adjusted count.
+			// to the TraceID.  If we go that route, and
+			// the input is a version-0 W3C tracestate
+			// lacking, should we instead fall back to
+			// recording `sampler.name=traceidratio`
+			// to imply an unknown adjusted count?
 			return t.fallback.ShouldSample(p)
 		}
 	}
