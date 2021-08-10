@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -168,10 +169,10 @@ func TestParentBasedDefaultDescription(t *testing.T) {
 	expectedDescription := fmt.Sprintf("ParentBased{root:%s,remoteParentSampled:%s,"+
 		"remoteParentNotSampled:%s,localParentSampled:%s,localParentNotSampled:%s}",
 		AlwaysSample().Description(),
-		AlwaysSample().Description(),
-		NeverSample().Description(),
-		AlwaysSample().Description(),
-		NeverSample().Description())
+		PropagateBased().Description(),
+		PropagateBased().Description(),
+		PropagateBased().Description(),
+		PropagateBased().Description())
 
 	if sampler.Description() != expectedDescription {
 		t.Errorf("Sampler description should be %s, got '%s' instead",
@@ -246,16 +247,23 @@ func TestTracestateIsPassed(t *testing.T) {
 				t.Error(err)
 			}
 
+			spanCtx := trace.NewSpanContext(trace.SpanContextConfig{
+				TraceState: traceState,
+				TraceID:    [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+				SpanID:     [8]byte{0, 0, 0, 0, 0, 0, 0, 1},
+			})
+
 			params := SamplingParameters{
 				ParentContext: trace.ContextWithSpanContext(
 					context.Background(),
-					trace.NewSpanContext(trace.SpanContextConfig{
-						TraceState: traceState,
-					}),
+					spanCtx,
 				),
 			}
+			require.True(t, spanCtx.IsValid())
 
-			require.Equal(t, traceState, tc.sampler.ShouldSample(params).Tracestate, "TraceState is not equal")
+			result := tc.sampler.ShouldSample(params)
+
+			require.Equal(t, "v", result.Tracestate.Get("k"), "incoming TraceState was not propagated: %v", result.Tracestate)
 		})
 	}
 }
@@ -288,7 +296,7 @@ func TestParseTraceState(t *testing.T) {
 		{"r:3f", -1, 63, nil}, // The zero value (63)
 		{"r:40", -1, -1, errTraceStateSyntax},
 	} {
-		t.Run(test.in, func(t *testing.T) {
+		t.Run(strings.NewReplacer(":", "_", ";", "_").Replace(test.in), func(t *testing.T) {
 			otts, err := parseOTelTraceState(test.in)
 
 			if test.expectErr != nil {

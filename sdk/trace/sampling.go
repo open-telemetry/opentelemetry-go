@@ -209,10 +209,10 @@ type parentBased struct {
 
 func configureSamplersForParentBased(samplers []ParentBasedSamplerOption) samplerConfig {
 	c := samplerConfig{
-		remoteParentSampled:    PropagateSampler(),
-		remoteParentNotSampled: PropagateSampler(),
-		localParentSampled:     PropagateSampler(),
-		localParentNotSampled:  PropagateSampler(),
+		remoteParentSampled:    PropagateBased(),
+		remoteParentNotSampled: PropagateBased(),
+		localParentSampled:     PropagateBased(),
+		localParentNotSampled:  PropagateBased(),
 	}
 
 	for _, so := range samplers {
@@ -318,7 +318,7 @@ func (pb parentBased) Description() string {
 
 type propagateSampler struct{}
 
-func PropagateSampler() Sampler {
+func PropagateBased() Sampler {
 	return propagateSampler{}
 }
 
@@ -542,6 +542,9 @@ func (t traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 		otts = newOTelTraceState()
 
 		t.assignRandom(&otts)
+
+		// TODO: Spec question: should we be taking the
+		// incoming Tracestate if the TraceID is not valid?
 	} else {
 		// A valid parent context.
 		// It does not matter if psc.IsSampled().

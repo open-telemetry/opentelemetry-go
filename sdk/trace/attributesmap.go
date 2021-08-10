@@ -16,6 +16,7 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
 	"container/list"
+	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -82,10 +83,22 @@ func (am *attributesMap) toKeyValue() []attribute.KeyValue {
 
 // removeOldest removes the oldest item from the cache.
 func (am *attributesMap) removeOldest() {
-	ent := am.evictList.Back()
-	if ent != nil {
-		am.evictList.Remove(ent)
-		kv := ent.Value.(*attribute.KeyValue)
-		delete(am.attributes, kv.Key)
+	try := am.evictList.Len()
+	for {
+		ent := am.evictList.Back()
+		if ent != nil {
+			kv := ent.Value.(*attribute.KeyValue)
+
+			if strings.HasPrefix(string(kv.Key), otelSamplingAttributePrefix) {
+				if try > 0 {
+					try--
+					am.evictList.MoveToFront(ent)
+					continue
+				}
+			}
+			am.evictList.Remove(ent)
+			delete(am.attributes, kv.Key)
+		}
+		return
 	}
 }

@@ -157,12 +157,14 @@ type testSampler struct {
 
 func (ts *testSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	ts.callCount++
-	ts.t.Logf("called sampler for name %q", p.Name)
 	decision := Drop
 	if strings.HasPrefix(p.Name, ts.prefix) {
 		decision = RecordAndSample
 	}
-	return SamplingResult{Decision: decision, Attributes: []attribute.KeyValue{attribute.Int("callCount", ts.callCount)}}
+	return SamplingResult{
+		Decision:   decision,
+		Attributes: []attribute.KeyValue{attribute.Int("callCount", ts.callCount)},
+	}
 }
 
 func (ts testSampler) Description() string {
@@ -410,6 +412,7 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 		parent: sc.WithRemote(true),
 		name:   "span0",
 		attributes: []attribute.KeyValue{
+			attribute.String(otelSamplingNameKey, otelSamplingParentSampler),
 			attribute.String("key1", "value1"),
 			attribute.String("key2", "value2"),
 		},
@@ -439,6 +442,7 @@ func TestSetSpanAttributes(t *testing.T) {
 		parent: sc.WithRemote(true),
 		name:   "span0",
 		attributes: []attribute.KeyValue{
+			attribute.String(otelSamplingNameKey, otelSamplingParentSampler),
 			attribute.String("key1", "value1"),
 		},
 		spanKind:               trace.SpanKindInternal,
@@ -473,7 +477,7 @@ func TestSamplerAttributesLocalChildSpan(t *testing.T) {
 
 func TestSetSpanAttributesOverLimit(t *testing.T) {
 	te := NewTestExporter()
-	tp := NewTracerProvider(WithSpanLimits(SpanLimits{AttributeCountLimit: 2}), WithSyncer(te), WithResource(resource.Empty()))
+	tp := NewTracerProvider(WithSpanLimits(SpanLimits{AttributeCountLimit: 3}), WithSyncer(te), WithResource(resource.Empty()))
 
 	span := startSpan(tp, "SpanAttributesOverLimit")
 	span.SetAttributes(
@@ -497,6 +501,8 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 		attributes: []attribute.KeyValue{
 			attribute.Bool("key1", false),
 			attribute.Int64("key4", 4),
+			// Note: the order is implementation dependent.
+			attribute.String(otelSamplingNameKey, otelSamplingParentSampler),
 		},
 		spanKind:               trace.SpanKindInternal,
 		droppedAttributeCount:  1,
@@ -529,6 +535,7 @@ func TestSetSpanAttributesWithInvalidKey(t *testing.T) {
 		parent: sc.WithRemote(true),
 		name:   "span0",
 		attributes: []attribute.KeyValue{
+			attribute.String(otelSamplingNameKey, otelSamplingParentSampler),
 			attribute.Bool("key1", false),
 		},
 		spanKind:               trace.SpanKindInternal,
@@ -572,6 +579,9 @@ func TestEvents(t *testing.T) {
 		}),
 		parent: sc.WithRemote(true),
 		name:   "span0",
+		attributes: []attribute.KeyValue{
+			attribute.String(otelSamplingNameKey, otelSamplingParentSampler),
+		},
 		events: []Event{
 			{Name: "foo", Attributes: []attribute.KeyValue{k1v1}},
 			{Name: "bar", Attributes: []attribute.KeyValue{k2v2, k3v3}},
@@ -621,6 +631,9 @@ func TestEventsOverLimit(t *testing.T) {
 		}),
 		parent: sc.WithRemote(true),
 		name:   "span0",
+		attributes: []attribute.KeyValue{
+			attribute.String(otelSamplingNameKey, otelSamplingParentSampler),
+		},
 		events: []Event{
 			{Name: "foo", Attributes: []attribute.KeyValue{k1v1}},
 			{Name: "bar", Attributes: []attribute.KeyValue{k2v2, k3v3}},
@@ -666,6 +679,9 @@ func TestLinks(t *testing.T) {
 		links:                  []Link{{l1.SpanContext, l1.Attributes, 0}, {l2.SpanContext, l2.Attributes, 0}},
 		spanKind:               trace.SpanKindInternal,
 		instrumentationLibrary: instrumentation.Library{Name: "Links"},
+		attributes: []attribute.KeyValue{
+			attribute.String(otelSamplingNameKey, otelSamplingParentSampler),
+		},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Link: -got +want %s", diff)
@@ -707,6 +723,9 @@ func TestLinksOverLimit(t *testing.T) {
 		links: []Link{
 			{SpanContext: sc2, Attributes: []attribute.KeyValue{k2v2}, DroppedAttributeCount: 0},
 			{SpanContext: sc3, Attributes: []attribute.KeyValue{k3v3}, DroppedAttributeCount: 0},
+		},
+		attributes: []attribute.KeyValue{
+			attribute.String(otelSamplingNameKey, otelSamplingParentSampler),
 		},
 		droppedLinkCount:       1,
 		spanKind:               trace.SpanKindInternal,
@@ -759,6 +778,9 @@ func TestSetSpanStatus(t *testing.T) {
 			Description: "Error",
 		},
 		instrumentationLibrary: instrumentation.Library{Name: "SpanStatus"},
+		attributes: []attribute.KeyValue{
+			attribute.String(otelSamplingNameKey, otelSamplingParentSampler),
+		},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("SetSpanStatus: -got +want %s", diff)
@@ -789,6 +811,9 @@ func TestSetSpanStatusWithoutMessageWhenStatusIsNotError(t *testing.T) {
 			Description: "",
 		},
 		instrumentationLibrary: instrumentation.Library{Name: "SpanStatus"},
+		attributes: []attribute.KeyValue{
+			attribute.String(otelSamplingNameKey, otelSamplingParentSampler),
+		},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("SetSpanStatus: -got +want %s", diff)
@@ -1147,6 +1172,9 @@ func TestRecordError(t *testing.T) {
 				},
 			},
 			instrumentationLibrary: instrumentation.Library{Name: "RecordError"},
+			attributes: []attribute.KeyValue{
+				attribute.String(otelSamplingNameKey, otelSamplingParentSampler),
+			},
 		}
 		if diff := cmpDiff(got, want); diff != "" {
 			t.Errorf("SpanErrorOptions: -got +want %s", diff)
@@ -1179,6 +1207,9 @@ func TestRecordErrorNil(t *testing.T) {
 			Description: "",
 		},
 		instrumentationLibrary: instrumentation.Library{Name: "RecordErrorNil"},
+		attributes: []attribute.KeyValue{
+			attribute.String(otelSamplingNameKey, otelSamplingParentSampler),
+		},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("SpanErrorOptions: -got +want %s", diff)
@@ -1332,6 +1363,9 @@ func TestWithInstrumentationVersionAndSchema(t *testing.T) {
 			Version:   "v0.1.0",
 			SchemaURL: "https://opentelemetry.io/schemas/1.2.0",
 		},
+		attributes: []attribute.KeyValue{
+			attribute.String(otelSamplingNameKey, otelSamplingParentSampler),
+		},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("WithResource:\n  -got +want %s", diff)
@@ -1402,8 +1436,14 @@ func TestReadOnlySpan(t *testing.T) {
 	assert.Equal(t, trace.SpanKindInternal, ro.SpanKind())
 	assert.Equal(t, st, ro.StartTime())
 	assert.True(t, ro.EndTime().IsZero())
-	assert.Equal(t, kv.Key, ro.Attributes()[0].Key)
-	assert.Equal(t, kv.Value, ro.Attributes()[0].Value)
+
+	assert.EqualValues(t,
+		[]attribute.KeyValue{
+			attribute.String(otelSamplingNameKey, otelSamplingParentSampler),
+			kv,
+		},
+		ro.Attributes(),
+	)
 	assert.Equal(t, linked, ro.Links()[0].SpanContext)
 	assert.Equal(t, kv.Key, ro.Events()[0].Attributes[0].Key)
 	assert.Equal(t, kv.Value, ro.Events()[0].Attributes[0].Value)
@@ -1513,9 +1553,11 @@ func TestAddEventsWithMoreAttributesThanLimit(t *testing.T) {
 			TraceID:    tid,
 			TraceFlags: 0x1,
 		}),
-		parent:     sc.WithRemote(true),
-		name:       "span0",
-		attributes: nil,
+		parent: sc.WithRemote(true),
+		name:   "span0",
+		attributes: []attribute.KeyValue{
+			attribute.String(otelSamplingNameKey, otelSamplingParentSampler),
+		},
 		events: []Event{
 			{
 				Name: "test1",
@@ -1588,6 +1630,9 @@ func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 		},
 		spanKind:               trace.SpanKindInternal,
 		instrumentationLibrary: instrumentation.Library{Name: "Links"},
+		attributes: []attribute.KeyValue{
+			attribute.String(otelSamplingNameKey, otelSamplingParentSampler),
+		},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Link: -got +want %s", diff)
