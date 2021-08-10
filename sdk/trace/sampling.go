@@ -113,6 +113,7 @@ type probabilitySampler struct {
 	description       string
 }
 
+// ShouldSample implements Sampler.
 func (ts probabilitySampler) ShouldSample(p SamplingParameters) SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
 	x := binary.BigEndian.Uint64(p.TraceID[0:8]) >> 1
@@ -137,6 +138,7 @@ func (ts probabilitySampler) ShouldSample(p SamplingParameters) SamplingResult {
 	}
 }
 
+// Description implements Sampler.
 func (ts probabilitySampler) Description() string {
 	return ts.description
 }
@@ -150,6 +152,8 @@ func (ts probabilitySampler) Description() string {
 // TraceIDRatioSampler prior to standardizing how to propagate
 // sampling probability.  This sampler does not guarantee consistent
 // sampling when used with other ProbabilityBased implementations.
+//
+// This Sampler sets the `sampler.adjusted_count` attribute.
 //
 // To respect the parent trace's `SampledFlag`, the `ProbabilityBased`
 // sampler should be used as a delegate of a `Parent` sampler.
@@ -178,12 +182,12 @@ func ProbabilityBased(fraction float64) Sampler {
 // significant traffic: a new trace will be started and exported for every
 // request.
 func AlwaysSample() Sampler {
-	return TraceIDRatioBased(0)
+	return TraceIDRatioBased(1)
 }
 
 // NeverSample returns a Sampler that samples no traces.
 func NeverSample() Sampler {
-	return TraceIDRatioBased(otelSamplingZeroValue)
+	return TraceIDRatioBased(0)
 }
 
 // ParentBased returns a composite sampler which behaves differently,
@@ -191,10 +195,13 @@ func NeverSample() Sampler {
 // the root(Sampler) is used to make sampling decision. If the span has
 // a parent, depending on whether the parent is remote and whether it
 // is sampled, one of the following samplers will apply:
-// - remoteParentSampled(Sampler) (default: AlwaysOn)
-// - remoteParentNotSampled(Sampler) (default: AlwaysOff)
-// - localParentSampled(Sampler) (default: AlwaysOn)
-// - localParentNotSampled(Sampler) (default: AlwaysOff)
+// - remoteParentSampled(Sampler) (default: Propagate)
+// - remoteParentNotSampled(Sampler) (default: Propagate)
+// - localParentSampled(Sampler) (default: Propagate)
+// - localParentNotSampled(Sampler) (default: Propagate)
+//
+// See PropagateSampler() for details about the default behavior when
+// not a root span context.
 func ParentBased(root Sampler, samplers ...ParentBasedSamplerOption) Sampler {
 	return parentBased{
 		root:   root,
@@ -287,6 +294,7 @@ func (o localParentNotSampledOption) apply(config *samplerConfig) {
 	config.localParentNotSampled = o.s
 }
 
+// ShouldSample implements Sampler.
 func (pb parentBased) ShouldSample(p SamplingParameters) SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
 	if psc.IsValid() {
@@ -305,6 +313,7 @@ func (pb parentBased) ShouldSample(p SamplingParameters) SamplingResult {
 	return pb.root.ShouldSample(p)
 }
 
+// Description implements Sampler.
 func (pb parentBased) Description() string {
 	return fmt.Sprintf("ParentBased{root:%s,remoteParentSampled:%s,"+
 		"remoteParentNotSampled:%s,localParentSampled:%s,localParentNotSampled:%s}",
@@ -318,10 +327,20 @@ func (pb parentBased) Description() string {
 
 type propagateSampler struct{}
 
+// PropagateBased() returns a Sampler that makes its decision based on
+// the parent span context.  This Sampler has no configurable options,
+// it is normally a delegate of the ParentBased Sampler.
+//
+// For a SampleAndRecord decision, this Sampler sets the
+// `sampler.adjusted_count` attribute when the head trace sampling
+// probability is known and not equal to 1.  When the head trace
+// sampling probability is unknown, the `sampler.name` attribute is
+// set to "parent".
 func PropagateBased() Sampler {
 	return propagateSampler{}
 }
 
+// ShouldSample implements Sampler.
 func (ps propagateSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
 
@@ -343,7 +362,12 @@ func (ps propagateSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	if err == nil && otts.hasProbability() {
 		// We have known inclusion probability.  Set an
 		// attribute when the count is not 1.
-		if otts.probability != 0 {
+		//
+		if otts.probability >= otelSamplingZeroValue {
+			attrs = append(attrs,
+				attribute.Int64(otelSamplingAdjustedCountKey, 0),
+			)
+		} else if otts.probability != 0 {
 			attrs = append(attrs,
 				attribute.Int64(otelSamplingAdjustedCountKey, 1<<otts.probability),
 			)
@@ -447,6 +471,7 @@ func parseOTelTraceState(ts string) (otelTraceState, error) {
 	return otts, nil
 }
 
+// Description implements Sampler.
 func (ps propagateSampler) Description() string {
 	return "Propagate"
 }
@@ -459,6 +484,8 @@ func (otts otelTraceState) hasRandom() bool {
 	return otts.random >= 0
 }
 
+// TraceIDRatioBasedRandomSource is used to support deterministic
+// testing of the TraceIDRatioBased sampler.
 type TraceIDRatioBasedRandomSource func() uint
 
 type traceIDRatioBasedConfig struct {
@@ -471,6 +498,9 @@ type TraceIDRatioBasedOption interface {
 
 type traceIDRatioBasedRandomSource TraceIDRatioBasedRandomSource
 
+// WithRandomSource sets the source of the random number used in this
+// prototype of OTEP 170, which assumes the randomness is not derived
+// from the TraceID.
 func WithRandomSource(source TraceIDRatioBasedRandomSource) TraceIDRatioBasedOption {
 	return traceIDRatioBasedRandomSource(source)
 }
@@ -479,7 +509,31 @@ func (s traceIDRatioBasedRandomSource) apply(cfg *traceIDRatioBasedConfig) {
 	cfg.source = TraceIDRatioBasedRandomSource(s)
 }
 
-func TraceIDRatioBased(logAdjCnt int, opts ...TraceIDRatioBasedOption) Sampler {
+func roundFraction(f float64) int {
+	if f <= 0 {
+		return otelSamplingZeroValue
+	}
+	x := 0
+	for f < 1 {
+		f *= 2
+		x++
+	}
+	return x
+}
+
+// TraceIDRatioBased samples a given fraction of traces.  Based on the
+// OpenTelemetry specification, this Sampler supports only power-of-two
+// fractions.  When the input fraction is not a power of two, it will
+// be rounded down.
+// - Fractions >= 1 will always sample.
+// - Fractions < 0 are treated as zero.
+//
+// This Sampler sets the `sampler.adjusted_count` attribute.
+//
+// To respect the parent trace's `SampledFlag`, this sampler should be
+// used as the root delegate of a `Parent` sampler.
+func TraceIDRatioBased(fraction float64, opts ...TraceIDRatioBasedOption) Sampler {
+	logAdjCnt := roundFraction(fraction)
 	cfg := traceIDRatioBasedConfig{
 		source: func() uint {
 			// Note: this could be optimized to store the
@@ -503,10 +557,7 @@ func TraceIDRatioBased(logAdjCnt int, opts ...TraceIDRatioBasedOption) Sampler {
 	}
 
 	var probability float64
-	if logAdjCnt < 0 || logAdjCnt > otelSamplingZeroValue {
-		// Zero probability
-		logAdjCnt = otelSamplingZeroValue
-	} else {
+	if logAdjCnt < otelSamplingZeroValue {
 		probability = 1.0 / float64(int64(1)<<logAdjCnt)
 	}
 	return traceIDRatioSampler{
@@ -532,6 +583,7 @@ func (t traceIDRatioSampler) assignRandom(otts *otelTraceState) {
 	}
 }
 
+// ShouldSample implements Sampler.
 func (t traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
 	var otts otelTraceState
@@ -612,6 +664,7 @@ func (t traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	}
 }
 
+// Description implements Sampler.
 func (ts traceIDRatioSampler) Description() string {
 	return fmt.Sprintf("TraceIDRatioBased{%g}", math.Pow(2, float64(-ts.logAdjCnt)))
 }

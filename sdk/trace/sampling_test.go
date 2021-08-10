@@ -312,40 +312,40 @@ func TestParseTraceState(t *testing.T) {
 func TestProbabilitySamplingParentBased(t *testing.T) {
 	type testCase struct {
 		rand        uint
-		prob        int
+		prob        float64
 		expectCount int64
 	}
 
 	for _, tc := range []testCase{
 		// 1-in-1
-		{0, 0, 1},
-		{1, 0, 1},
-		{2, 0, 1},
+		{0, 1, 1},
+		{1, 1, 1},
+		{2, 1, 1},
 
 		// 1-in-2
-		{0, 1, 0},
-		{1, 1, 2},
-		{2, 1, 2},
+		{0, 0.5, 0},
+		{1, 0.5, 2},
+		{2, 0.5, 2},
 
 		// 1-in-4
-		{0, 2, 0},
-		{1, 2, 0},
-		{2, 2, 4},
-		{3, 2, 4},
+		{0, 0.25, 0},
+		{1, 0.25, 0},
+		{2, 0.25, 4},
+		{3, 0.25, 4},
 
 		// 1-in-(2^62)
-		{0, 62, 0},
-		{61, 62, 0},
-		{62, 62, 1 << 62},
+		{0, 1.0 / (1 << 62), 0},
+		{61, 1.0 / (1 << 62), 0},
+		{62, 1.0 / (1 << 62), 1 << 62},
 
 		// Zero is a special case
-		{0, 63, 0},
-		{62, 63, 0},
+		{0, 0, 0},
+		{62, 0, 0},
 	} {
 		t.Run(fmt.Sprint(tc.rand, "/", tc.prob), func(t *testing.T) {
 			ctx0 := context.Background()
 			te := NewTestExporter()
-			expectTS := fmt.Sprintf("p:%02x;r:%02x;", tc.prob, tc.rand)
+			expectTS := fmt.Sprintf("p:%02x;r:%02x;", roundFraction(tc.prob), tc.rand)
 			expectSampled := tc.expectCount != 0
 			var numSampled int
 			if tc.expectCount != 0 {
@@ -455,7 +455,7 @@ func TestProbabilitySamplingTraceIDRatioBased(t *testing.T) {
 				return
 			}
 
-			sampler := TraceIDRatioBased(pval, WithRandomSource(func() uint { return rval }))
+			sampler := TraceIDRatioBased(1.0/float64(int64(1)<<pval), WithRandomSource(func() uint { return rval }))
 			provider := NewTracerProvider(WithSyncer(te), WithSampler(sampler))
 
 			childCtx, span := provider.Tracer("test").Start(ctx, "hello")
@@ -491,5 +491,28 @@ func TestProbabilitySamplingTraceIDRatioBased(t *testing.T) {
 		t.Run(fmt.Sprint(i), func(t *testing.T) {
 			testWith(t, i)
 		})
+	}
+}
+
+func TestRoundFraction(t *testing.T) {
+	for _, tc := range []struct {
+		in  float64
+		out int
+	}{
+		{1, 0},
+		{0.99999999999999, 1},
+		{0.9, 1},
+		{0.6, 1},
+		{0.5, 1},
+		{0.49999999999999, 2},
+		{0.3, 2},
+		{0.25, 2},
+		{0.24, 3},
+		{1.0 / (1 << 62), 62},
+		{1.0 / (1 << 63), 63},
+		{0, 63},
+	} {
+		got := roundFraction(tc.in)
+		require.Equal(t, tc.out, got, "got %v want %v", got, tc.out)
 	}
 }
