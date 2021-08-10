@@ -17,13 +17,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Deprecated
 
+- The `go.opentelemetry.io/otel/bridge/opencensus/utils` package is deprecated.
+  All functionality from this package now exists in the `go.opentelemetry.io/otel/bridge/opencensus` package.
+  The functions from that package should be used instead. (#2166)
+
 ### Removed
 
 - Removed metrics test package `go.opentelemetry.io/otel/sdk/export/metric/metrictest`. (#2105)
 
 ### Fixed
 
-The `fromEnv` detector no longer throws an error when `OTEL_RESOURCE_ATTRIBUTES` environment variable is not set or empty. (#2138)
+- The `fromEnv` detector no longer throws an error when `OTEL_RESOURCE_ATTRIBUTES` environment variable is not set or empty. (#2138)
+- Setting the global `ErrorHandler` with `"go.opentelemetry.io/otel".SetErrorHandler` multiple times is now supported. (#2160, #2140)
 
 ### Security
 

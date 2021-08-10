@@ -18,6 +18,8 @@ import (
 	octrace "go.opencensus.io/trace"
 
 	"go.opentelemetry.io/otel/bridge/opencensus/internal"
+	"go.opentelemetry.io/otel/bridge/opencensus/internal/oc2otel"
+	"go.opentelemetry.io/otel/bridge/opencensus/internal/otel2oc"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -26,4 +28,17 @@ import (
 // libraries that use OpenCensus to OpenTelemetry to facilitate a migration.
 func NewTracer(tracer trace.Tracer) octrace.Tracer {
 	return internal.NewTracer(tracer)
+}
+
+// OTelSpanContextToOC converts from an OpenTelemetry SpanContext to an
+// OpenCensus SpanContext, and handles any incompatibilities with the global
+// error handler.
+func OTelSpanContextToOC(sc trace.SpanContext) octrace.SpanContext {
+	return otel2oc.SpanContext(sc)
+}
+
+// OCSpanContextToOTel converts from an OpenCensus SpanContext to an
+// OpenTelemetry SpanContext.
+func OCSpanContextToOTel(sc octrace.SpanContext) trace.SpanContext {
+	return oc2otel.SpanContext(sc)
 }

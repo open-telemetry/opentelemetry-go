@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package utils provides utilities for the OpenCensus bridge.
+//
+// Deprecated: Use the equivalent functions from the bridge/opencensus package
+// instead.
 package utils // import "go.opentelemetry.io/otel/bridge/opencensus/utils"
 
 import (
@@ -25,12 +29,16 @@ import (
 // OTelSpanContextToOC converts from an OpenTelemetry SpanContext to an
 // OpenCensus SpanContext, and handles any incompatibilities with the global
 // error handler.
+//
+// Deprecated: Use OTelSpanContextToOC from bridge/opencensus instead.
 func OTelSpanContextToOC(sc trace.SpanContext) octrace.SpanContext {
 	return otel2oc.SpanContext(sc)
 }
 
 // OCSpanContextToOTel converts from an OpenCensus SpanContext to an
 // OpenTelemetry SpanContext.
+//
+// Deprecated: Use OCSpanContextToOTel from bridge/opencensus instead.
 func OCSpanContextToOTel(sc octrace.SpanContext) trace.SpanContext {
 	return oc2otel.SpanContext(sc)
 }
