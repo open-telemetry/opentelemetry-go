@@ -107,74 +107,204 @@ type otelTraceState struct {
 	unknown     []string
 }
 
-type probabilitySampler struct {
-	traceIDUpperBound uint64
-	adjCount          float64
-	description       string
+// TraceIDRatioBasedRandomSource is used to support deterministic
+// testing of the TraceIDRatioBased sampler.
+type TraceIDRatioBasedRandomSource func() uint
+
+type traceIDRatioBasedConfig struct {
+	source TraceIDRatioBasedRandomSource
+}
+
+type TraceIDRatioBasedOption interface {
+	apply(*traceIDRatioBasedConfig)
+}
+
+type traceIDRatioBasedRandomSource TraceIDRatioBasedRandomSource
+
+// WithRandomSource sets the source of the random number used in this
+// prototype of OTEP 170, which assumes the randomness is not derived
+// from the TraceID.
+func WithRandomSource(source TraceIDRatioBasedRandomSource) TraceIDRatioBasedOption {
+	return traceIDRatioBasedRandomSource(source)
+}
+
+func (s traceIDRatioBasedRandomSource) apply(cfg *traceIDRatioBasedConfig) {
+	cfg.source = TraceIDRatioBasedRandomSource(s)
+}
+
+func roundFraction(f float64) int {
+	if f <= 0 {
+		return otelSamplingZeroValue
+	}
+	x := 0
+	for f < 1 {
+		f *= 2
+		x++
+	}
+	return x
+}
+
+// TraceIDRatioBased samples a given fraction of traces.  Based on the
+// OpenTelemetry specification, this Sampler supports only power-of-two
+// fractions.  When the input fraction is not a power of two, it will
+// be rounded down.
+// - Fractions >= 1 will always sample.
+// - Fractions < 0 are treated as zero.
+//
+// This Sampler sets the `sampler.adjusted_count` attribute.
+//
+// To respect the parent trace's `SampledFlag`, this sampler should be
+// used as the root delegate of a `Parent` sampler.
+func TraceIDRatioBased(fraction float64, opts ...TraceIDRatioBasedOption) Sampler {
+	logAdjCnt := roundFraction(fraction)
+	cfg := traceIDRatioBasedConfig{
+		source: func() uint {
+			// Note: this could be optimized to store the
+			// unused random bits for later.  This wastes
+			// 61 bits in the expected case.
+			var x int64
+
+			for x = rand.Int63(); x == 0; {
+			}
+
+			var cnt uint
+			for (x & 1) == 0 {
+				cnt++
+				x >>= 1
+			}
+			return cnt
+		},
+	}
+	for _, opt := range opts {
+		opt.apply(&cfg)
+	}
+
+	var probability float64
+	if logAdjCnt < otelSamplingZeroValue {
+		probability = 1.0 / float64(int64(1)<<logAdjCnt)
+	}
+	return traceIDRatioSampler{
+		logAdjCnt: logAdjCnt,
+		source:    cfg.source,
+		fallback:  ProbabilityBased(probability),
+	}
+}
+
+type traceIDRatioSampler struct {
+	logAdjCnt int
+	source    TraceIDRatioBasedRandomSource
+	fallback  Sampler
+}
+
+func (t traceIDRatioSampler) assignRandom(otts *otelTraceState) {
+	otts.random = int(t.source())
+
+	// A random value that is too large will be sampled at
+	// the smallest valid probability.
+	for otts.random >= otelSamplingZeroValue {
+		otts.random = otelSamplingZeroValue - 1
+	}
 }
 
 // ShouldSample implements Sampler.
-func (ts probabilitySampler) ShouldSample(p SamplingParameters) SamplingResult {
+func (t traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
-	x := binary.BigEndian.Uint64(p.TraceID[0:8]) >> 1
-	if x >= ts.traceIDUpperBound {
-		return SamplingResult{
-			Decision:   Drop,
-			Tracestate: psc.TraceState(),
+	var otts otelTraceState
+	var state trace.TraceState
+
+	if !psc.IsValid() {
+		// A new root is happening.  Compute `random`.
+		otts = newOTelTraceState()
+
+		t.assignRandom(&otts)
+
+		// TODO: Spec question: should we be taking the
+		// incoming Tracestate if the TraceID is not valid?
+	} else {
+		// A valid parent context.
+		// It does not matter if psc.IsSampled().
+		state = psc.TraceState()
+
+		var err error
+		otts, err = parseOTelTraceState(state.Get(otelTraceStateKey))
+
+		if err != nil {
+			otel.Handle(err)
+		}
+
+		if !otts.hasRandom() {
+			// This uses the legacy behavior, which was
+			// under-specified, but records the adjusted
+			// count (which is known).
+			//
+			// This case corresponds with the TODO that
+			// appears in the specification for the
+			// TraceIDRatioBased Sampler.  We don't know
+			// how to handle non-root TraceIDs.
+			//
+			// Note: This case demonstrates why we are
+			// better off relying on randomness built-in
+			// to the TraceID.  If we go that route, and
+			// the input is a version-0 W3C tracestate
+			// lacking, should we instead fall back to
+			// recording `sampler.name=traceidratio`
+			// to imply an unknown adjusted count?
+			return t.fallback.ShouldSample(p)
 		}
 	}
+
+	var decision SamplingDecision
+	var cnt int64
 	var attrs []attribute.KeyValue
-	// We have known inclusion probability.  Set an
-	// attribute when the count is not 1.
-	if ts.adjCount != 1 {
-		attrs = append(attrs,
-			attribute.Float64(otelSamplingAdjustedCountKey, ts.adjCount),
-		)
+
+	// Calculate the adjusted count.  Treat the max-value bucket
+	// as zero probability, thus adjusted count zero.
+	if t.logAdjCnt < otelSamplingZeroValue {
+		cnt = 1 << t.logAdjCnt
 	}
+
+	if cnt != 0 && t.logAdjCnt <= otts.random {
+		decision = RecordAndSample
+	} else {
+		decision = Drop
+	}
+
+	otts.probability = t.logAdjCnt
+
+	if cnt != 1 {
+		attrs = append(attrs, attribute.Int64(otelSamplingAdjustedCountKey, cnt))
+	}
+
+	state, err := state.Insert(otelTraceStateKey, otts.serialize())
+	if err != nil {
+		otel.Handle(err)
+	}
+
 	return SamplingResult{
-		Decision:   RecordAndSample,
-		Tracestate: psc.TraceState(),
+		Decision:   decision,
 		Attributes: attrs,
+		Tracestate: state,
 	}
 }
 
 // Description implements Sampler.
-func (ts probabilitySampler) Description() string {
-	return ts.description
+func (ts traceIDRatioSampler) Description() string {
+	return fmt.Sprintf("TraceIDRatioBased{%g}", math.Pow(2, float64(-ts.logAdjCnt)))
 }
 
-// ProbabilityBased samples a given fraction of traces, supports
-// arbitrary fractions.
-// - Fractions >= 1 will always sample.
-// - Fractions < 0 are treated as zero.
-//
-// Note: This Sampler implements the legacy behavior of
-// TraceIDRatioSampler prior to standardizing how to propagate
-// sampling probability.  This sampler does not guarantee consistent
-// sampling when used with other ProbabilityBased implementations.
-//
-// This Sampler sets the `sampler.adjusted_count` attribute.
-//
-// To respect the parent trace's `SampledFlag`, the `ProbabilityBased`
-// sampler should be used as a delegate of a `Parent` sampler.
-func ProbabilityBased(fraction float64) Sampler {
-	if fraction >= 1 {
-		fraction = 1
+func (otts otelTraceState) serialize() string {
+	var sb strings.Builder
+	if otts.hasProbability() {
+		_, _ = sb.WriteString(fmt.Sprintf("p:%02x;", otts.probability))
 	}
-
-	var adjCount float64
-
-	if fraction <= 0 {
-		fraction = 0
-	} else {
-		adjCount = 1 / fraction
+	if otts.hasRandom() {
+		_, _ = sb.WriteString(fmt.Sprintf("r:%02x;", otts.random))
 	}
-
-	return &probabilitySampler{
-		traceIDUpperBound: uint64(fraction * (1 << 63)),
-		adjCount:          adjCount,
-		description:       fmt.Sprintf("ProbabilityBased{%g}", fraction),
+	for _, unk := range otts.unknown {
+		_, _ = sb.WriteString(unk)
+		_, _ = sb.WriteString(";")
 	}
+	return sb.String()
 }
 
 // AlwaysSample returns a Sampler that samples every trace.
@@ -484,202 +614,72 @@ func (otts otelTraceState) hasRandom() bool {
 	return otts.random >= 0
 }
 
-// TraceIDRatioBasedRandomSource is used to support deterministic
-// testing of the TraceIDRatioBased sampler.
-type TraceIDRatioBasedRandomSource func() uint
-
-type traceIDRatioBasedConfig struct {
-	source TraceIDRatioBasedRandomSource
-}
-
-type TraceIDRatioBasedOption interface {
-	apply(*traceIDRatioBasedConfig)
-}
-
-type traceIDRatioBasedRandomSource TraceIDRatioBasedRandomSource
-
-// WithRandomSource sets the source of the random number used in this
-// prototype of OTEP 170, which assumes the randomness is not derived
-// from the TraceID.
-func WithRandomSource(source TraceIDRatioBasedRandomSource) TraceIDRatioBasedOption {
-	return traceIDRatioBasedRandomSource(source)
-}
-
-func (s traceIDRatioBasedRandomSource) apply(cfg *traceIDRatioBasedConfig) {
-	cfg.source = TraceIDRatioBasedRandomSource(s)
-}
-
-func roundFraction(f float64) int {
-	if f <= 0 {
-		return otelSamplingZeroValue
-	}
-	x := 0
-	for f < 1 {
-		f *= 2
-		x++
-	}
-	return x
-}
-
-// TraceIDRatioBased samples a given fraction of traces.  Based on the
-// OpenTelemetry specification, this Sampler supports only power-of-two
-// fractions.  When the input fraction is not a power of two, it will
-// be rounded down.
-// - Fractions >= 1 will always sample.
-// - Fractions < 0 are treated as zero.
-//
-// This Sampler sets the `sampler.adjusted_count` attribute.
-//
-// To respect the parent trace's `SampledFlag`, this sampler should be
-// used as the root delegate of a `Parent` sampler.
-func TraceIDRatioBased(fraction float64, opts ...TraceIDRatioBasedOption) Sampler {
-	logAdjCnt := roundFraction(fraction)
-	cfg := traceIDRatioBasedConfig{
-		source: func() uint {
-			// Note: this could be optimized to store the
-			// unused random bits for later.  This wastes
-			// 61 bits in the expected case.
-			var x int64
-
-			for x = rand.Int63(); x == 0; {
-			}
-
-			var cnt uint
-			for (x & 1) == 0 {
-				cnt++
-				x >>= 1
-			}
-			return cnt
-		},
-	}
-	for _, opt := range opts {
-		opt.apply(&cfg)
-	}
-
-	var probability float64
-	if logAdjCnt < otelSamplingZeroValue {
-		probability = 1.0 / float64(int64(1)<<logAdjCnt)
-	}
-	return traceIDRatioSampler{
-		logAdjCnt: logAdjCnt,
-		source:    cfg.source,
-		fallback:  ProbabilityBased(probability),
-	}
-}
-
-type traceIDRatioSampler struct {
-	logAdjCnt int
-	source    TraceIDRatioBasedRandomSource
-	fallback  Sampler
-}
-
-func (t traceIDRatioSampler) assignRandom(otts *otelTraceState) {
-	otts.random = int(t.source())
-
-	// A random value that is too large will be sampled at
-	// the smallest valid probability.
-	for otts.random >= otelSamplingZeroValue {
-		otts.random = otelSamplingZeroValue - 1
-	}
+type probabilitySampler struct {
+	traceIDUpperBound uint64
+	adjCount          float64
+	description       string
 }
 
 // ShouldSample implements Sampler.
-func (t traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
+func (ts probabilitySampler) ShouldSample(p SamplingParameters) SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
-	var otts otelTraceState
-	var state trace.TraceState
-
-	if !psc.IsValid() {
-		// A new root is happening.  Compute `random`.
-		otts = newOTelTraceState()
-
-		t.assignRandom(&otts)
-
-		// TODO: Spec question: should we be taking the
-		// incoming Tracestate if the TraceID is not valid?
-	} else {
-		// A valid parent context.
-		// It does not matter if psc.IsSampled().
-		state = psc.TraceState()
-
-		var err error
-		otts, err = parseOTelTraceState(state.Get(otelTraceStateKey))
-
-		if err != nil {
-			otel.Handle(err)
-		}
-
-		if !otts.hasRandom() {
-			// This uses the legacy behavior, which was
-			// under-specified, but records the adjusted
-			// count (which is known).
-			//
-			// This case corresponds with the TODO that
-			// appears in the specification for the
-			// TraceIDRatioBased Sampler.  We don't know
-			// how to handle non-root TraceIDs.
-			//
-			// Note: This case demonstrates why we are
-			// better off relying on randomness built-in
-			// to the TraceID.  If we go that route, and
-			// the input is a version-0 W3C tracestate
-			// lacking, should we instead fall back to
-			// recording `sampler.name=traceidratio`
-			// to imply an unknown adjusted count?
-			return t.fallback.ShouldSample(p)
+	x := binary.BigEndian.Uint64(p.TraceID[0:8]) >> 1
+	if x >= ts.traceIDUpperBound {
+		return SamplingResult{
+			Decision:   Drop,
+			Tracestate: psc.TraceState(),
 		}
 	}
-
-	var decision SamplingDecision
-	var cnt int64
 	var attrs []attribute.KeyValue
-
-	// Calculate the adjusted count.  Treat the max-value bucket
-	// as zero probability, thus adjusted count zero.
-	if t.logAdjCnt < otelSamplingZeroValue {
-		cnt = 1 << t.logAdjCnt
+	// We have known inclusion probability.  Set an
+	// attribute when the count is not 1.
+	if ts.adjCount != 1 {
+		attrs = append(attrs,
+			attribute.Float64(otelSamplingAdjustedCountKey, ts.adjCount),
+		)
 	}
-
-	if cnt != 0 && t.logAdjCnt <= otts.random {
-		decision = RecordAndSample
-	} else {
-		decision = Drop
-	}
-
-	otts.probability = t.logAdjCnt
-
-	if cnt != 1 {
-		attrs = append(attrs, attribute.Int64(otelSamplingAdjustedCountKey, cnt))
-	}
-
-	state, err := state.Insert(otelTraceStateKey, otts.serialize())
-	if err != nil {
-		otel.Handle(err)
-	}
-
 	return SamplingResult{
-		Decision:   decision,
+		Decision:   RecordAndSample,
+		Tracestate: psc.TraceState(),
 		Attributes: attrs,
-		Tracestate: state,
 	}
 }
 
 // Description implements Sampler.
-func (ts traceIDRatioSampler) Description() string {
-	return fmt.Sprintf("TraceIDRatioBased{%g}", math.Pow(2, float64(-ts.logAdjCnt)))
+func (ts probabilitySampler) Description() string {
+	return ts.description
 }
 
-func (otts otelTraceState) serialize() string {
-	var sb strings.Builder
-	if otts.hasProbability() {
-		_, _ = sb.WriteString(fmt.Sprintf("p:%02x;", otts.probability))
+// ProbabilityBased samples a given fraction of traces, supports
+// arbitrary fractions.
+// - Fractions >= 1 will always sample.
+// - Fractions < 0 are treated as zero.
+//
+// Note: This Sampler implements the legacy behavior of
+// TraceIDRatioSampler prior to standardizing how to propagate
+// sampling probability.  This sampler does not guarantee consistent
+// sampling when used with other ProbabilityBased implementations.
+//
+// This Sampler sets the `sampler.adjusted_count` attribute.
+//
+// To respect the parent trace's `SampledFlag`, the `ProbabilityBased`
+// sampler should be used as a delegate of a `Parent` sampler.
+func ProbabilityBased(fraction float64) Sampler {
+	if fraction >= 1 {
+		fraction = 1
 	}
-	if otts.hasRandom() {
-		_, _ = sb.WriteString(fmt.Sprintf("r:%02x;", otts.random))
+
+	var adjCount float64
+
+	if fraction <= 0 {
+		fraction = 0
+	} else {
+		adjCount = 1 / fraction
 	}
-	for _, unk := range otts.unknown {
-		_, _ = sb.WriteString(unk)
-		_, _ = sb.WriteString(";")
+
+	return &probabilitySampler{
+		traceIDUpperBound: uint64(fraction * (1 << 63)),
+		adjCount:          adjCount,
+		description:       fmt.Sprintf("ProbabilityBased{%g}", fraction),
 	}
-	return sb.String()
 }
