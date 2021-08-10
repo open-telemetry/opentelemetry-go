@@ -82,7 +82,6 @@ const (
 	otelSamplingAdjustedCountKey         = otelSamplingAttributePrefix + "adjusted_count"
 	otelSamplingNameKey                  = otelSamplingAttributePrefix + "name"
 	otelSamplingParentSampler            = "parent"
-	otelSamplingProbabilitySampler       = "probability"
 
 	// Note: the zero value is the maximum permissible value of
 	// the OTel TraceState `random` value, which equates with zero
@@ -110,24 +109,31 @@ type otelTraceState struct {
 
 type probabilitySampler struct {
 	traceIDUpperBound uint64
+	adjCount          float64
 	description       string
 }
 
 func (ts probabilitySampler) ShouldSample(p SamplingParameters) SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
 	x := binary.BigEndian.Uint64(p.TraceID[0:8]) >> 1
-	if x < ts.traceIDUpperBound {
+	if x >= ts.traceIDUpperBound {
 		return SamplingResult{
-			Decision:   RecordAndSample,
+			Decision:   Drop,
 			Tracestate: psc.TraceState(),
 		}
 	}
+	var attrs []attribute.KeyValue
+	// We have known inclusion probability.  Set an
+	// attribute when the count is not 1.
+	if ts.adjCount != 1 {
+		attrs = append(attrs,
+			attribute.Float64(otelSamplingAdjustedCountKey, ts.adjCount),
+		)
+	}
 	return SamplingResult{
-		Decision:   Drop,
+		Decision:   RecordAndSample,
 		Tracestate: psc.TraceState(),
-		Attributes: []attribute.KeyValue{
-			attribute.String(otelSamplingNameKey, otelSamplingProbabilitySampler),
-		},
+		Attributes: attrs,
 	}
 }
 
@@ -152,12 +158,17 @@ func ProbabilityBased(fraction float64) Sampler {
 		fraction = 1
 	}
 
+	var adjCount float64
+
 	if fraction <= 0 {
 		fraction = 0
+	} else {
+		adjCount = 1 / fraction
 	}
 
 	return &probabilitySampler{
 		traceIDUpperBound: uint64(fraction * (1 << 63)),
+		adjCount:          adjCount,
 		description:       fmt.Sprintf("ProbabilityBased{%g}", fraction),
 	}
 }
