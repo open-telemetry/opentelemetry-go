@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/metric/unit"
 
 	"github.com/google/go-cmp/cmp"
@@ -33,49 +34,49 @@ import (
 var Must = metric.Must
 
 var (
-	syncKinds = []metric.InstrumentKind{
-		metric.ValueRecorderInstrumentKind,
-		metric.CounterInstrumentKind,
-		metric.UpDownCounterInstrumentKind,
+	syncKinds = []sdkapi.InstrumentKind{
+		sdkapi.ValueRecorderInstrumentKind,
+		sdkapi.CounterInstrumentKind,
+		sdkapi.UpDownCounterInstrumentKind,
 	}
-	asyncKinds = []metric.InstrumentKind{
-		metric.ValueObserverInstrumentKind,
-		metric.SumObserverInstrumentKind,
-		metric.UpDownSumObserverInstrumentKind,
+	asyncKinds = []sdkapi.InstrumentKind{
+		sdkapi.ValueObserverInstrumentKind,
+		sdkapi.SumObserverInstrumentKind,
+		sdkapi.UpDownSumObserverInstrumentKind,
 	}
-	addingKinds = []metric.InstrumentKind{
-		metric.CounterInstrumentKind,
-		metric.UpDownCounterInstrumentKind,
-		metric.SumObserverInstrumentKind,
-		metric.UpDownSumObserverInstrumentKind,
+	addingKinds = []sdkapi.InstrumentKind{
+		sdkapi.CounterInstrumentKind,
+		sdkapi.UpDownCounterInstrumentKind,
+		sdkapi.SumObserverInstrumentKind,
+		sdkapi.UpDownSumObserverInstrumentKind,
 	}
-	groupingKinds = []metric.InstrumentKind{
-		metric.ValueRecorderInstrumentKind,
-		metric.ValueObserverInstrumentKind,
-	}
-
-	monotonicKinds = []metric.InstrumentKind{
-		metric.CounterInstrumentKind,
-		metric.SumObserverInstrumentKind,
+	groupingKinds = []sdkapi.InstrumentKind{
+		sdkapi.ValueRecorderInstrumentKind,
+		sdkapi.ValueObserverInstrumentKind,
 	}
 
-	nonMonotonicKinds = []metric.InstrumentKind{
-		metric.UpDownCounterInstrumentKind,
-		metric.UpDownSumObserverInstrumentKind,
-		metric.ValueRecorderInstrumentKind,
-		metric.ValueObserverInstrumentKind,
+	monotonicKinds = []sdkapi.InstrumentKind{
+		sdkapi.CounterInstrumentKind,
+		sdkapi.SumObserverInstrumentKind,
 	}
 
-	precomputedSumKinds = []metric.InstrumentKind{
-		metric.SumObserverInstrumentKind,
-		metric.UpDownSumObserverInstrumentKind,
+	nonMonotonicKinds = []sdkapi.InstrumentKind{
+		sdkapi.UpDownCounterInstrumentKind,
+		sdkapi.UpDownSumObserverInstrumentKind,
+		sdkapi.ValueRecorderInstrumentKind,
+		sdkapi.ValueObserverInstrumentKind,
 	}
 
-	nonPrecomputedSumKinds = []metric.InstrumentKind{
-		metric.CounterInstrumentKind,
-		metric.UpDownCounterInstrumentKind,
-		metric.ValueRecorderInstrumentKind,
-		metric.ValueObserverInstrumentKind,
+	precomputedSumKinds = []sdkapi.InstrumentKind{
+		sdkapi.SumObserverInstrumentKind,
+		sdkapi.UpDownSumObserverInstrumentKind,
+	}
+
+	nonPrecomputedSumKinds = []sdkapi.InstrumentKind{
+		sdkapi.CounterInstrumentKind,
+		sdkapi.UpDownCounterInstrumentKind,
+		sdkapi.ValueRecorderInstrumentKind,
+		sdkapi.ValueObserverInstrumentKind,
 	}
 )
 
@@ -119,7 +120,7 @@ func TestPrecomputedSum(t *testing.T) {
 	}
 }
 
-func checkSyncBatches(ctx context.Context, t *testing.T, labels []attribute.KeyValue, mock *metrictest.MeterImpl, nkind number.Kind, mkind metric.InstrumentKind, instrument metric.InstrumentImpl, expected ...float64) {
+func checkSyncBatches(ctx context.Context, t *testing.T, labels []attribute.KeyValue, mock *metrictest.MeterImpl, nkind number.Kind, mkind sdkapi.InstrumentKind, instrument metric.InstrumentImpl, expected ...float64) {
 	t.Helper()
 
 	batchesCount := len(mock.MeasurementBatches)
@@ -316,7 +317,7 @@ func TestCounter(t *testing.T) {
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, -742)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Float64Kind, metric.CounterInstrumentKind, c.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, number.Float64Kind, sdkapi.CounterInstrumentKind, c.SyncImpl(),
 			1994.1, -742, 42,
 		)
 	})
@@ -329,7 +330,7 @@ func TestCounter(t *testing.T) {
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, 4200)
 		meter.RecordBatch(ctx, labels, c.Measurement(420000))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Int64Kind, metric.CounterInstrumentKind, c.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, number.Int64Kind, sdkapi.CounterInstrumentKind, c.SyncImpl(),
 			42, 4200, 420000,
 		)
 
@@ -343,7 +344,7 @@ func TestCounter(t *testing.T) {
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, -100)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Int64Kind, metric.UpDownCounterInstrumentKind, c.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, number.Int64Kind, sdkapi.UpDownCounterInstrumentKind, c.SyncImpl(),
 			100, -100, 42,
 		)
 	})
@@ -356,7 +357,7 @@ func TestCounter(t *testing.T) {
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, -76)
 		meter.RecordBatch(ctx, labels, c.Measurement(-100.1))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Float64Kind, metric.UpDownCounterInstrumentKind, c.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, number.Float64Kind, sdkapi.UpDownCounterInstrumentKind, c.SyncImpl(),
 			100.1, -76, -100.1,
 		)
 	})
@@ -372,7 +373,7 @@ func TestValueRecorder(t *testing.T) {
 		boundInstrument := m.Bind(labels...)
 		boundInstrument.Record(ctx, 0)
 		meter.RecordBatch(ctx, labels, m.Measurement(-100.5))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Float64Kind, metric.ValueRecorderInstrumentKind, m.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, number.Float64Kind, sdkapi.ValueRecorderInstrumentKind, m.SyncImpl(),
 			42, 0, -100.5,
 		)
 	})
@@ -385,7 +386,7 @@ func TestValueRecorder(t *testing.T) {
 		boundInstrument := m.Bind(labels...)
 		boundInstrument.Record(ctx, 80)
 		meter.RecordBatch(ctx, labels, m.Measurement(0))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Int64Kind, metric.ValueRecorderInstrumentKind, m.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, number.Int64Kind, sdkapi.ValueRecorderInstrumentKind, m.SyncImpl(),
 			173, 80, 0,
 		)
 	})
@@ -399,7 +400,7 @@ func TestObserverInstruments(t *testing.T) {
 			result.Observe(42.1, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, metric.ValueObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, sdkapi.ValueObserverInstrumentKind, o.AsyncImpl(),
 			42.1,
 		)
 	})
@@ -410,7 +411,7 @@ func TestObserverInstruments(t *testing.T) {
 			result.Observe(-142, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, metric.ValueObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, sdkapi.ValueObserverInstrumentKind, o.AsyncImpl(),
 			-142,
 		)
 	})
@@ -421,7 +422,7 @@ func TestObserverInstruments(t *testing.T) {
 			result.Observe(42.1, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, metric.SumObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, sdkapi.SumObserverInstrumentKind, o.AsyncImpl(),
 			42.1,
 		)
 	})
@@ -432,7 +433,7 @@ func TestObserverInstruments(t *testing.T) {
 			result.Observe(-142, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, metric.SumObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, sdkapi.SumObserverInstrumentKind, o.AsyncImpl(),
 			-142,
 		)
 	})
@@ -443,7 +444,7 @@ func TestObserverInstruments(t *testing.T) {
 			result.Observe(42.1, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, metric.UpDownSumObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, sdkapi.UpDownSumObserverInstrumentKind, o.AsyncImpl(),
 			42.1,
 		)
 	})
@@ -454,7 +455,7 @@ func TestObserverInstruments(t *testing.T) {
 			result.Observe(-142, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, metric.UpDownSumObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, sdkapi.UpDownSumObserverInstrumentKind, o.AsyncImpl(),
 			-142,
 		)
 	})
@@ -505,7 +506,7 @@ func TestBatchObserverInstruments(t *testing.T) {
 	require.Equal(t, 0, m2.Number.CompareNumber(number.Float64Kind, metrictest.ResolveNumberByKind(t, number.Float64Kind, 42)))
 }
 
-func checkObserverBatch(t *testing.T, labels []attribute.KeyValue, mock *metrictest.MeterImpl, nkind number.Kind, mkind metric.InstrumentKind, observer metric.AsyncImpl, expected float64) {
+func checkObserverBatch(t *testing.T, labels []attribute.KeyValue, mock *metrictest.MeterImpl, nkind number.Kind, mkind sdkapi.InstrumentKind, observer metric.AsyncImpl, expected float64) {
 	t.Helper()
 	assert.Len(t, mock.MeasurementBatches, 1)
 	if len(mock.MeasurementBatches) < 1 {

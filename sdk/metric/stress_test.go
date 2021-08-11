@@ -34,6 +34,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
@@ -265,13 +266,13 @@ func (f *testFixture) Process(accumulation export.Accumulation) error {
 
 	agg := accumulation.Aggregator()
 	switch accumulation.Descriptor().InstrumentKind() {
-	case metric.CounterInstrumentKind:
+	case sdkapi.CounterInstrumentKind:
 		sum, err := agg.(aggregation.Sum).Sum()
 		if err != nil {
 			f.T.Fatal("Sum error: ", err)
 		}
 		f.impl.storeCollect(actual, sum, time.Time{})
-	case metric.ValueRecorderInstrumentKind:
+	case sdkapi.ValueRecorderInstrumentKind:
 		lv, ts, err := agg.(aggregation.LastValue).LastValue()
 		if err != nil && err != aggregation.ErrNoData {
 			f.T.Fatal("Last value error: ", err)

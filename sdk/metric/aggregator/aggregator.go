@@ -20,6 +20,7 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
@@ -43,7 +44,7 @@ func RangeTest(num number.Number, descriptor *metric.Descriptor) error {
 	}
 
 	switch descriptor.InstrumentKind() {
-	case metric.CounterInstrumentKind, metric.SumObserverInstrumentKind:
+	case sdkapi.CounterInstrumentKind, sdkapi.SumObserverInstrumentKind:
 		if num.IsNegative(numberKind) {
 			return aggregation.ErrNegativeInput
 		}
