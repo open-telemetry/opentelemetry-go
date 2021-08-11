@@ -95,7 +95,7 @@ func TestStringKeyValues(t *testing.T) {
 
 	for _, test := range tests {
 		labels := attribute.NewSet(test.kvs...)
-		assert.Equal(t, test.expected, keyValues(labels.Iter()))
+		assert.Equal(t, test.expected, Iterator(labels.Iter()))
 	}
 }
 
