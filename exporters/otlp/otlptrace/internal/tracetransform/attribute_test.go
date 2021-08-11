@@ -83,7 +83,7 @@ func TestAttributes(t *testing.T) {
 			},
 		},
 	} {
-		got := Attributes(test.attrs)
+		got := KeyValues(test.attrs)
 		if !assert.Len(t, got, len(test.expected)) {
 			continue
 		}
@@ -142,7 +142,7 @@ func TestArrayAttributes(t *testing.T) {
 			},
 		},
 	} {
-		actualArrayAttributes := Attributes(test.attrs)
+		actualArrayAttributes := KeyValues(test.attrs)
 		expectedArrayAttributes := test.expected
 		if !assert.Len(t, actualArrayAttributes, len(expectedArrayAttributes)) {
 			continue

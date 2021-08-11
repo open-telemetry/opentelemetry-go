@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
@@ -47,7 +48,7 @@ func TestProcessor(t *testing.T) {
 		kind export.ExportKind
 	}
 	type instrumentCase struct {
-		kind metric.InstrumentKind
+		kind sdkapi.InstrumentKind
 	}
 	type numberCase struct {
 		kind number.Kind
@@ -62,12 +63,12 @@ func TestProcessor(t *testing.T) {
 	} {
 		t.Run(tc.kind.String(), func(t *testing.T) {
 			for _, ic := range []instrumentCase{
-				{kind: metric.CounterInstrumentKind},
-				{kind: metric.UpDownCounterInstrumentKind},
-				{kind: metric.ValueRecorderInstrumentKind},
-				{kind: metric.SumObserverInstrumentKind},
-				{kind: metric.UpDownSumObserverInstrumentKind},
-				{kind: metric.ValueObserverInstrumentKind},
+				{kind: sdkapi.CounterInstrumentKind},
+				{kind: sdkapi.UpDownCounterInstrumentKind},
+				{kind: sdkapi.ValueRecorderInstrumentKind},
+				{kind: sdkapi.SumObserverInstrumentKind},
+				{kind: sdkapi.UpDownSumObserverInstrumentKind},
+				{kind: sdkapi.ValueObserverInstrumentKind},
 			} {
 				t.Run(ic.kind.String(), func(t *testing.T) {
 					for _, nc := range []numberCase{
@@ -119,7 +120,7 @@ func updateFor(t *testing.T, desc *metric.Descriptor, selector export.Aggregator
 func testProcessor(
 	t *testing.T,
 	ekind export.ExportKind,
-	mkind metric.InstrumentKind,
+	mkind sdkapi.InstrumentKind,
 	nkind number.Kind,
 	akind aggregation.Kind,
 ) {
@@ -300,7 +301,7 @@ func TestBasicInconsistent(t *testing.T) {
 	// Test no start
 	b = basic.New(processorTest.AggregatorSelector(), export.StatelessExportKindSelector())
 
-	desc := metric.NewDescriptor("inst", metric.CounterInstrumentKind, number.Int64Kind)
+	desc := metric.NewDescriptor("inst", sdkapi.CounterInstrumentKind, number.Int64Kind)
 	accum := export.NewAccumulation(&desc, attribute.EmptySet(), resource.Empty(), aggregatortest.NoopAggregator{})
 	require.Equal(t, basic.ErrInconsistentState, b.Process(accum))
 
@@ -325,7 +326,7 @@ func TestBasicTimestamps(t *testing.T) {
 	time.Sleep(time.Nanosecond)
 	afterNew := time.Now()
 
-	desc := metric.NewDescriptor("inst", metric.CounterInstrumentKind, number.Int64Kind)
+	desc := metric.NewDescriptor("inst", sdkapi.CounterInstrumentKind, number.Int64Kind)
 	accum := export.NewAccumulation(&desc, attribute.EmptySet(), resource.Empty(), aggregatortest.NoopAggregator{})
 
 	b.StartCollection()
@@ -371,7 +372,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 	res := resource.NewSchemaless(attribute.String("R", "V"))
 	ekindSel := export.CumulativeExportKindSelector()
 
-	desc := metric.NewDescriptor("inst.sum", metric.CounterInstrumentKind, number.Int64Kind)
+	desc := metric.NewDescriptor("inst.sum", sdkapi.CounterInstrumentKind, number.Int64Kind)
 	selector := processorTest.AggregatorSelector()
 
 	processor := basic.New(selector, ekindSel, basic.WithMemory(false))
@@ -405,7 +406,7 @@ func TestStatefulNoMemoryDelta(t *testing.T) {
 	res := resource.NewSchemaless(attribute.String("R", "V"))
 	ekindSel := export.DeltaExportKindSelector()
 
-	desc := metric.NewDescriptor("inst.sum", metric.SumObserverInstrumentKind, number.Int64Kind)
+	desc := metric.NewDescriptor("inst.sum", sdkapi.SumObserverInstrumentKind, number.Int64Kind)
 	selector := processorTest.AggregatorSelector()
 
 	processor := basic.New(selector, ekindSel, basic.WithMemory(false))
@@ -442,7 +443,7 @@ func TestMultiObserverSum(t *testing.T) {
 	} {
 
 		res := resource.NewSchemaless(attribute.String("R", "V"))
-		desc := metric.NewDescriptor("observe.sum", metric.SumObserverInstrumentKind, number.Int64Kind)
+		desc := metric.NewDescriptor("observe.sum", sdkapi.SumObserverInstrumentKind, number.Int64Kind)
 		selector := processorTest.AggregatorSelector()
 
 		processor := basic.New(selector, ekindSel, basic.WithMemory(false))
