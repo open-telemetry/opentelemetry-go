@@ -63,6 +63,11 @@ func BoolValue(v bool) Value {
 	}
 }
 
+// IntValue creates an INT64 Value.
+func IntValue(v int) Value {
+	return Int64Value(int64(v))
+}
+
 // Int64Value creates an INT64 Value.
 func Int64Value(v int64) Value {
 	return Value{
@@ -85,11 +90,6 @@ func StringValue(v string) Value {
 		vtype:    STRING,
 		stringly: v,
 	}
-}
-
-// IntValue creates an INT64 Value.
-func IntValue(v int) Value {
-	return Int64Value(int64(v))
 }
 
 // ArrayValue creates an ARRAY value from an array or slice.
