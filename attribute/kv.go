@@ -31,52 +31,52 @@ func (kv KeyValue) Valid() bool {
 	return kv.Key != "" && kv.Value.Type() != INVALID
 }
 
-// Bool creates a BOOL type KeyValue.
+// Bool creates a KeyValue with a BOOL Value type.
 func Bool(k string, v bool) KeyValue {
 	return Key(k).Bool(v)
 }
 
-// BoolSlice creates a BOOLSLICE type KeyValue.
+// BoolSlice creates a KeyValue with a BOOLSLICE Value type.
 func BoolSlice(k string, v []bool) KeyValue {
 	return Key(k).BoolSlice(v)
 }
 
-// Int creates an INT64 type KeyValue.
+// Int creates a KeyValue with an INT64 Value type.
 func Int(k string, v int) KeyValue {
 	return Key(k).Int(v)
 }
 
-// IntSlice creates an INT64SLICE type KeyValue.
+// IntSlice creates a KeyValue with an INT64SLICE Value type.
 func IntSlice(k string, v []int) KeyValue {
 	return Key(k).IntSlice(v)
 }
 
-// Int64 creates an INT64 type KeyValue.
+// Int64 creates a KeyValue with an INT64 Value type.
 func Int64(k string, v int64) KeyValue {
 	return Key(k).Int64(v)
 }
 
-// Int64Slice creates an INT64SLICE type KeyValue.
+// Int64Slice creates a KeyValue with an INT64SLICE Value type.
 func Int64Slice(k string, v []int64) KeyValue {
 	return Key(k).Int64Slice(v)
 }
 
-// Float64 creates an FLOAT64 type KeyValue.
+// Float64 creates a KeyValue with a FLOAT64 Value type.
 func Float64(k string, v float64) KeyValue {
 	return Key(k).Float64(v)
 }
 
-// Float64Slice creates an FLOAT64SLICE type KeyValue.
+// Float64Slice creates a KeyValue with a FLOAT64SLICE Value type.
 func Float64Slice(k string, v []float64) KeyValue {
 	return Key(k).Float64Slice(v)
 }
 
-// String creates a STRING type KeyValue.
+// String creates a KeyValue with a STRING Value type.
 func String(k, v string) KeyValue {
 	return Key(k).String(v)
 }
 
-// StringSlice creates a STRINGSLICE type KeyValue.
+// StringSlice creates a KeyValue with a STRINGSLICE Value type.
 func StringSlice(k string, v []string) KeyValue {
 	return Key(k).StringSlice(v)
 }
@@ -128,9 +128,7 @@ func Any(k string, value interface{}) KeyValue {
 		}
 	case reflect.Bool:
 		return Bool(k, rv.Bool())
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32:
-		return Int(k, int(rv.Int()))
-	case reflect.Int64:
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return Int64(k, rv.Int())
 	case reflect.Float64:
 		return Float64(k, rv.Float())

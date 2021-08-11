@@ -340,9 +340,3 @@ func BenchmarkStringSlice(b *testing.B) {
 func BenchmarkBytes(b *testing.B) {
 	b.Run("Any", benchmarkAny("bytes", []byte("bytes")))
 }
-
-type test struct{}
-
-func BenchmarkStruct(b *testing.B) {
-	b.Run("Any", benchmarkAny("struct", test{}))
-}

@@ -20,8 +20,8 @@ type Key string
 
 // Bool creates a KeyValue instance with a BOOL Value.
 //
-// If creating both a key and value at the same time use the provided
-// convenience function instead -- attribute.Bool(name, value).
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- Bool(name, value).
 func (k Key) Bool(v bool) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -31,8 +31,8 @@ func (k Key) Bool(v bool) KeyValue {
 
 // BoolSlice creates a KeyValue instance with a BOOLSLICE Value.
 //
-// If creating both a key and value at the same time use the provided
-// convenience function instead -- attribute.BoolSlice(name, value).
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- BoolSlice(name, value).
 func (k Key) BoolSlice(v []bool) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -42,8 +42,8 @@ func (k Key) BoolSlice(v []bool) KeyValue {
 
 // Int creates a KeyValue instance with an INT64 Value.
 //
-// If creating both a key and value at the same time use the provided
-// convenience function instead -- attribute.Int(name, value).
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- Int(name, value).
 func (k Key) Int(v int) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -53,8 +53,8 @@ func (k Key) Int(v int) KeyValue {
 
 // IntSlice creates a KeyValue instance with an INT64SLICE Value.
 //
-// If creating both a key and value at the same time use the provided
-// convenience function instead -- attribute.IntSlice(name, value).
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- IntSlice(name, value).
 func (k Key) IntSlice(v []int) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -64,8 +64,8 @@ func (k Key) IntSlice(v []int) KeyValue {
 
 // Int64 creates a KeyValue instance with an INT64 Value.
 //
-// If creating both a key and value at the same time use the provided
-// convenience function instead -- attribute.Int64(name, value).
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- Int64(name, value).
 func (k Key) Int64(v int64) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -75,8 +75,8 @@ func (k Key) Int64(v int64) KeyValue {
 
 // Int64Slice creates a KeyValue instance with an INT64SLICE Value.
 //
-// If creating both a key and value at the same time use the provided
-// convenience function instead -- attribute.Int64Slice(name, value).
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- Int64Slice(name, value).
 func (k Key) Int64Slice(v []int64) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -86,8 +86,8 @@ func (k Key) Int64Slice(v []int64) KeyValue {
 
 // Float64 creates a KeyValue instance with a FLOAT64 Value.
 //
-// If creating both a key and value at the same time use the provided
-// convenience function instead -- attribute.Float64(name, value).
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- Float64(name, value).
 func (k Key) Float64(v float64) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -97,8 +97,8 @@ func (k Key) Float64(v float64) KeyValue {
 
 // Float64Slice creates a KeyValue instance with a FLOAT64SLICE Value.
 //
-// If creating both a key and value at the same time use the provided
-// convenience function instead -- attribute.Float64Slice(name, value).
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- Float64(name, value).
 func (k Key) Float64Slice(v []float64) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -108,8 +108,8 @@ func (k Key) Float64Slice(v []float64) KeyValue {
 
 // String creates a KeyValue instance with a STRING Value.
 //
-// If creating both a key and value at the same time use the provided
-// convenience function instead -- attribute.String(name, value).
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- String(name, value).
 func (k Key) String(v string) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -119,8 +119,8 @@ func (k Key) String(v string) KeyValue {
 
 // StringSlice creates a KeyValue instance with a STRINGSLICE Value.
 //
-// If creating both a key and value at the same time use the provided
-// convenience function instead -- attribute.StringSlice(name, value).
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- StringSlice(name, value).
 func (k Key) StringSlice(v []string) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -128,10 +128,10 @@ func (k Key) StringSlice(v []string) KeyValue {
 	}
 }
 
-// Array creates a KeyValue instance with a ARRAY Value.
+// Array creates a KeyValue instance with an ARRAY Value.
 //
-// If creating both a key and value at the same time use the provided
-// convenience function instead -- attribute.Array(name, value).
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- Array(name, value).
 //
 // Deprecated: Use the typed *Slice methods instead.
 func (k Key) Array(v interface{}) KeyValue {

@@ -21,7 +21,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// KeyValues transforms a slice of KeyValues into OTLP attribute key-values.
+// KeyValues transforms a slice of attribute KeyValues into OTLP key-values.
 func KeyValues(attrs []attribute.KeyValue) []*commonpb.KeyValue {
 	if len(attrs) == 0 {
 		return nil
@@ -34,25 +34,31 @@ func KeyValues(attrs []attribute.KeyValue) []*commonpb.KeyValue {
 	return out
 }
 
-// ResourceAttributes transforms a Resource into a slice of OTLP attribute key-values.
-func ResourceAttributes(resource *resource.Resource) []*commonpb.KeyValue {
-	if resource.Len() == 0 {
+// Iterator transforms an attribute iterator into OTLP key-values.
+func Iterator(iter attribute.Iterator) []*commonpb.KeyValue {
+	l := iter.Len()
+	if l == 0 {
 		return nil
 	}
 
-	out := make([]*commonpb.KeyValue, 0, resource.Len())
-	for iter := resource.Iter(); iter.Next(); {
+	out := make([]*commonpb.KeyValue, 0, l)
+	for iter.Next() {
 		out = append(out, KeyValue(iter.Attribute()))
 	}
-
 	return out
 }
 
-// KeyValue transforms an attribute KeyValue into an OTLP KeyValue.
+// ResourceAttributes transforms a Resource OTLP key-values.
+func ResourceAttributes(resource *resource.Resource) []*commonpb.KeyValue {
+	return Iterator(resource.Iter())
+}
+
+// KeyValue transforms an attribute KeyValue into an OTLP key-value.
 func KeyValue(kv attribute.KeyValue) *commonpb.KeyValue {
 	return &commonpb.KeyValue{Key: string(kv.Key), Value: Value(kv.Value)}
 }
 
+// Value transforms an attribute Value into an OTLP AnyValue.
 func Value(v attribute.Value) *commonpb.AnyValue {
 	av := new(commonpb.AnyValue)
 	switch v.Type() {

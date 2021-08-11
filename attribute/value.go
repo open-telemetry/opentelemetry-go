@@ -86,7 +86,7 @@ func IntValue(v int) Value {
 	return Int64Value(int64(v))
 }
 
-// IntSliceValue creates a INTSLICE Value.
+// IntSliceValue creates an INTSLICE Value.
 func IntSliceValue(v []int) Value {
 	cp := make([]int64, 0, len(v))
 	for _, i := range v {
@@ -106,7 +106,7 @@ func Int64Value(v int64) Value {
 	}
 }
 
-// Int64SliceValue creates a INT64SLICE Value.
+// Int64SliceValue creates an INT64SLICE Value.
 func Int64SliceValue(v []int64) Value {
 	cp := make([]int64, len(v))
 	copy(cp, v)
