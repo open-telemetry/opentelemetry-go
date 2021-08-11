@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
-	"strings"
 	"sync"
 	"time"
 
@@ -246,7 +245,7 @@ func (s *span) End(options ...trace.SpanEndOption) {
 				trace.WithAttributes(
 					semconv.ExceptionTypeKey.String(typeStr(recovered)),
 					semconv.ExceptionMessageKey.String(fmt.Sprint(recovered)),
-					semconv.ExceptionStacktraceKey.String(recordStackTrace(recovered.(error)))),
+					semconv.ExceptionStacktraceKey.String(recordStackTrace())),
 			)
 		} else {
 			s.addEvent(
@@ -300,7 +299,7 @@ func (s *span) RecordError(err error, opts ...trace.EventOption) {
 	c := trace.NewEventConfig(opts...)
 	if c.StackTrace() {
 		opts = append(opts, trace.WithAttributes(
-			semconv.ExceptionStacktraceKey.String(recordStackTrace(err)),
+			semconv.ExceptionStacktraceKey.String(recordStackTrace()),
 		))
 	}
 
@@ -316,24 +315,11 @@ func typeStr(i interface{}) string {
 	return fmt.Sprintf("%s.%s", t.PkgPath(), t.Name())
 }
 
-func recordStackTrace(err error) string {
-	var stackTrace []uintptr
-	var convertedStackTrace string
+func recordStackTrace() string {
+	stackTrace := make([]byte, 1024)
+	n := runtime.Stack(stackTrace, false)
 
-	stackTrace = make([]uintptr, 32)
-	n := runtime.Callers(1, stackTrace)
-	stackTrace = stackTrace[:n]
-
-	frames := runtime.CallersFrames(stackTrace)
-	d := true
-	for frame, more := frames.Next(); d; frame, more = frames.Next() {
-		if !strings.Contains(frame.Function, "runtime.") && !strings.Contains(frame.Function, "testing.") {
-			convertedStackTrace += fmt.Sprintf("\n%s\n\t%s:%d", frame.Function, frame.File, frame.Line)
-		}
-		d = more
-	}
-
-	return convertedStackTrace
+	return fmt.Sprintf("\n%s", stackTrace[0:n])
 }
 
 // AddEvent adds an event with the provided name and options. If this span is

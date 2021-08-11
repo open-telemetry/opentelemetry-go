@@ -1202,8 +1202,8 @@ func TestRecordErrorWithStackTrace(t *testing.T) {
 	assert.Equal(t, got.events[0].Attributes[1].Value.AsString(), want.events[0].Attributes[1].Value.AsString())
 
 	gotStackTraceFunctionName := strings.Split(got.events[0].Attributes[2].Value.AsString(), "\n")
-	assert.Equal(t, gotStackTraceFunctionName[1], "go.opentelemetry.io/otel/sdk/trace.recordStackTrace")
-	assert.Equal(t, gotStackTraceFunctionName[3], "go.opentelemetry.io/otel/sdk/trace.(*span).RecordError")
+	assert.Equal(t, strings.Split(gotStackTraceFunctionName[2], "(0x")[0], "go.opentelemetry.io/otel/sdk/trace.recordStackTrace")
+	assert.Equal(t, strings.Split(gotStackTraceFunctionName[4], "(0x")[0], "go.opentelemetry.io/otel/sdk/trace.(*span).RecordError")
 }
 func TestRecordErrorNil(t *testing.T) {
 	te := NewTestExporter()
@@ -1433,8 +1433,8 @@ func TestSpanCapturesPanicWithStackTrace(t *testing.T) {
 	assert.Equal(t, spans[0].Events()[0].Attributes[1].Value.AsString(), "error message")
 
 	gotStackTraceFunctionName := strings.Split(spans[0].Events()[0].Attributes[2].Value.AsString(), "\n")
-	assert.Equal(t, gotStackTraceFunctionName[1], "go.opentelemetry.io/otel/sdk/trace.recordStackTrace")
-	assert.Equal(t, gotStackTraceFunctionName[3], "go.opentelemetry.io/otel/sdk/trace.(*span).End")
+	assert.Equal(t, strings.Split(gotStackTraceFunctionName[2], "(0x")[0], "go.opentelemetry.io/otel/sdk/trace.recordStackTrace")
+	assert.Equal(t, strings.Split(gotStackTraceFunctionName[4], "(0x")[0], "go.opentelemetry.io/otel/sdk/trace.(*span).End")
 }
 
 func TestReadOnlySpan(t *testing.T) {
