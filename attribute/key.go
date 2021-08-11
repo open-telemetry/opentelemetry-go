@@ -20,7 +20,7 @@ type Key string
 
 // Bool creates a KeyValue instance with a BOOL Value.
 //
-// If creating both a key and value at the same time use the provided
+// If creating both a key and value at the same time, use the provided
 // convenience function instead -- Bool(name, value).
 func (k Key) Bool(v bool) KeyValue {
 	return KeyValue{
@@ -31,7 +31,7 @@ func (k Key) Bool(v bool) KeyValue {
 
 // Int creates a KeyValue instance with an INT64 Value.
 //
-// If creating both a key and value at the same time use the provided
+// If creating both a key and value at the same time, use the provided
 // convenience function instead -- Int(name, value).
 func (k Key) Int(v int) KeyValue {
 	return KeyValue{
@@ -42,7 +42,7 @@ func (k Key) Int(v int) KeyValue {
 
 // Int64 creates a KeyValue instance with an INT64 Value.
 //
-// If creating both a key and value at the same time use the provided
+// If creating both a key and value at the same time, use the provided
 // convenience function instead -- Int64(name, value).
 func (k Key) Int64(v int64) KeyValue {
 	return KeyValue{
@@ -53,7 +53,7 @@ func (k Key) Int64(v int64) KeyValue {
 
 // Float64 creates a KeyValue instance with a FLOAT64 Value.
 //
-// If creating both a key and value at the same time use the provided
+// If creating both a key and value at the same time, use the provided
 // convenience function instead -- Float64(name, value).
 func (k Key) Float64(v float64) KeyValue {
 	return KeyValue{
@@ -64,7 +64,7 @@ func (k Key) Float64(v float64) KeyValue {
 
 // String creates a KeyValue instance with a STRING Value.
 //
-// If creating both a key and value at the same time use the provided
+// If creating both a key and value at the same time, use the provided
 // convenience function instead -- String(name, value).
 func (k Key) String(v string) KeyValue {
 	return KeyValue{
@@ -73,9 +73,9 @@ func (k Key) String(v string) KeyValue {
 	}
 }
 
-// Array creates a KeyValue instance with a ARRAY Value.
+// Array creates a KeyValue instance with an ARRAY Value.
 //
-// If creating both a key and value at the same time use the provided
+// If creating both a key and value at the same time, use the provided
 // convenience function instead -- Array(name, value).
 func (k Key) Array(v interface{}) KeyValue {
 	return KeyValue{

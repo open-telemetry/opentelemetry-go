@@ -36,7 +36,7 @@ func Bool(k string, v bool) KeyValue {
 	return Key(k).Bool(v)
 }
 
-// Int creates a KeyValue with a INT64 Value type.
+// Int creates a KeyValue with an INT64 Value type.
 func Int(k string, v int) KeyValue {
 	return Key(k).Int(v)
 }
