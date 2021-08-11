@@ -92,9 +92,7 @@ func Any(k string, value interface{}) KeyValue {
 		return Array(k, value)
 	case reflect.Bool:
 		return Bool(k, rv.Bool())
-	case reflect.Int, reflect.Int8, reflect.Int16:
-		return Int(k, int(rv.Int()))
-	case reflect.Int64:
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return Int64(k, rv.Int())
 	case reflect.Float64:
 		return Float64(k, rv.Float())
