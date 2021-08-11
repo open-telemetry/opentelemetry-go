@@ -20,10 +20,8 @@ type Key string
 
 // Bool creates a KeyValue instance with a BOOL Value.
 //
-// If creating both key and a bool value at the same time, then
-// instead of calling Key(name).Bool(value) consider using a
-// convenience function provided by the api/key package -
-// key.Bool(name, value).
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- Bool(name, value).
 func (k Key) Bool(v bool) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -31,12 +29,21 @@ func (k Key) Bool(v bool) KeyValue {
 	}
 }
 
+// Int creates a KeyValue instance with an INT64 Value.
+//
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- Int(name, value).
+func (k Key) Int(v int) KeyValue {
+	return KeyValue{
+		Key:   k,
+		Value: IntValue(v),
+	}
+}
+
 // Int64 creates a KeyValue instance with an INT64 Value.
 //
-// If creating both key and an int64 value at the same time, then
-// instead of calling Key(name).Int64(value) consider using a
-// convenience function provided by the api/key package -
-// key.Int64(name, value).
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- Int64(name, value).
 func (k Key) Int64(v int64) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -46,10 +53,8 @@ func (k Key) Int64(v int64) KeyValue {
 
 // Float64 creates a KeyValue instance with a FLOAT64 Value.
 //
-// If creating both key and a float64 value at the same time, then
-// instead of calling Key(name).Float64(value) consider using a
-// convenience function provided by the api/key package -
-// key.Float64(name, value).
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- Float64(name, value).
 func (k Key) Float64(v float64) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -59,10 +64,8 @@ func (k Key) Float64(v float64) KeyValue {
 
 // String creates a KeyValue instance with a STRING Value.
 //
-// If creating both key and a string value at the same time, then
-// instead of calling Key(name).String(value) consider using a
-// convenience function provided by the api/key package -
-// key.String(name, value).
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- String(name, value).
 func (k Key) String(v string) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -70,33 +73,18 @@ func (k Key) String(v string) KeyValue {
 	}
 }
 
-// Int creates a KeyValue instance with an INT64 Value.
+// Array creates a KeyValue instance with an ARRAY Value.
 //
-// If creating both key and an int value at the same time, then
-// instead of calling Key(name).Int(value) consider using a
-// convenience function provided by the api/key package -
-// key.Int(name, value).
-func (k Key) Int(v int) KeyValue {
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- Array(name, value).
+func (k Key) Array(v interface{}) KeyValue {
 	return KeyValue{
 		Key:   k,
-		Value: IntValue(v),
+		Value: ArrayValue(v),
 	}
 }
 
 // Defined returns true for non-empty keys.
 func (k Key) Defined() bool {
 	return len(k) != 0
-}
-
-// Array creates a KeyValue instance with a ARRAY Value.
-//
-// If creating both key and a array value at the same time, then
-// instead of calling Key(name).String(value) consider using a
-// convenience function provided by the api/key package -
-// key.Array(name, value).
-func (k Key) Array(v interface{}) KeyValue {
-	return KeyValue{
-		Key:   k,
-		Value: ArrayValue(v),
-	}
 }
