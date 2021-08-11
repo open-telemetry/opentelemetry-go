@@ -16,6 +16,9 @@ package tracetest
 
 import (
 	"context"
+	"runtime"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -82,4 +85,99 @@ func TestSpanRecorderForceFlushNoError(t *testing.T) {
 	ctx, c = context.WithCancel(ctx)
 	c()
 	assert.NoError(t, new(SpanRecorder).ForceFlush(ctx))
+}
+
+func TestEndingConcurrency(t *testing.T) {
+	sr := NewSpanRecorder()
+	stop := make(chan struct{})
+
+	var (
+		wg    sync.WaitGroup
+		count uint64
+	)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		span := new(roSpan)
+		for {
+			sr.OnEnd(span)
+			atomic.AddUint64(&count, 1)
+			select {
+			case <-stop:
+				return
+			default:
+			}
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			sr.Ended()
+			select {
+			case <-stop:
+				return
+			default:
+			}
+		}
+	}()
+
+	for atomic.LoadUint64(&count) < 10 {
+		// Wait for things to flow.
+		runtime.Gosched()
+	}
+	close(stop)
+	wg.Wait()
+
+	assert.Equal(t, uint64(len(sr.Ended())), atomic.LoadUint64(&count))
+}
+
+func TestStartingConcurrency(t *testing.T) {
+	sr := NewSpanRecorder()
+	stop := make(chan struct{})
+
+	var (
+		wg    sync.WaitGroup
+		count uint64
+	)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		ctx := context.Background()
+		span := new(rwSpan)
+		for {
+			sr.OnStart(ctx, span)
+			atomic.AddUint64(&count, 1)
+			select {
+			case <-stop:
+				return
+			default:
+			}
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			sr.Started()
+			select {
+			case <-stop:
+				return
+			default:
+			}
+		}
+	}()
+
+	for atomic.LoadUint64(&count) < 10 {
+		// Wait for things to flow.
+		runtime.Gosched()
+	}
+	close(stop)
+	wg.Wait()
+
+	assert.Equal(t, uint64(len(sr.Started())), atomic.LoadUint64(&count))
 }
