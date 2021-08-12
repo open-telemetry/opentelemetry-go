@@ -16,9 +16,7 @@ package tracetest
 
 import (
 	"context"
-	"runtime"
 	"sync"
-	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -87,97 +85,41 @@ func TestSpanRecorderForceFlushNoError(t *testing.T) {
 	assert.NoError(t, new(SpanRecorder).ForceFlush(ctx))
 }
 
+func runConcurrently(funcs ...func()) {
+	var wg sync.WaitGroup
+
+	for _, f := range funcs {
+		wg.Add(1)
+		go func(f func()) {
+			f()
+			wg.Done()
+		}(f)
+	}
+
+	wg.Wait()
+}
+
 func TestEndingConcurrency(t *testing.T) {
 	sr := NewSpanRecorder()
-	stop := make(chan struct{})
 
-	var (
-		wg    sync.WaitGroup
-		count uint64
+	runConcurrently(
+		func() { sr.OnEnd(new(roSpan)) },
+		func() { sr.OnEnd(new(roSpan)) },
+		func() { sr.Ended() },
 	)
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		span := new(roSpan)
-		for {
-			sr.OnEnd(span)
-			atomic.AddUint64(&count, 1)
-			select {
-			case <-stop:
-				return
-			default:
-			}
-		}
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for {
-			sr.Ended()
-			select {
-			case <-stop:
-				return
-			default:
-			}
-		}
-	}()
-
-	for atomic.LoadUint64(&count) < 10 {
-		// Wait for things to flow.
-		runtime.Gosched()
-	}
-	close(stop)
-	wg.Wait()
-
-	assert.Equal(t, uint64(len(sr.Ended())), atomic.LoadUint64(&count))
+	assert.Len(t, sr.Ended(), 2)
 }
 
 func TestStartingConcurrency(t *testing.T) {
 	sr := NewSpanRecorder()
-	stop := make(chan struct{})
 
-	var (
-		wg    sync.WaitGroup
-		count uint64
+	ctx := context.Background()
+	runConcurrently(
+		func() { sr.OnStart(ctx, new(rwSpan)) },
+		func() { sr.OnStart(ctx, new(rwSpan)) },
+		func() { sr.Started() },
 	)
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		ctx := context.Background()
-		span := new(rwSpan)
-		for {
-			sr.OnStart(ctx, span)
-			atomic.AddUint64(&count, 1)
-			select {
-			case <-stop:
-				return
-			default:
-			}
-		}
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for {
-			sr.Started()
-			select {
-			case <-stop:
-				return
-			default:
-			}
-		}
-	}()
-
-	for atomic.LoadUint64(&count) < 10 {
-		// Wait for things to flow.
-		runtime.Gosched()
-	}
-	close(stop)
-	wg.Wait()
-
-	assert.Equal(t, uint64(len(sr.Started())), atomic.LoadUint64(&count))
+	assert.Len(t, sr.Started(), 2)
 }
