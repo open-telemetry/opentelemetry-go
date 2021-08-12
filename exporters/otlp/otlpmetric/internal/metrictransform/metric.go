@@ -24,10 +24,8 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/attribute"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
-	resourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
 
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -60,7 +58,6 @@ var (
 
 // result is the product of transforming Records into OTLP Metrics.
 type result struct {
-	Resource               *resource.Resource
 	InstrumentationLibrary instrumentation.Library
 	Metric                 *metricpb.Metric
 	Err                    error
@@ -76,7 +73,7 @@ func toNanos(t time.Time) uint64 {
 
 // CheckpointSet transforms all records contained in a checkpoint into
 // batched OTLP ResourceMetrics.
-func CheckpointSet(ctx context.Context, exportSelector export.ExportKindSelector, cps export.CheckpointSet, numWorkers uint) ([]*metricpb.ResourceMetrics, error) {
+func CheckpointSet(ctx context.Context, exportSelector export.ExportKindSelector, res *resource.Resource, cps export.CheckpointSet, numWorkers uint) ([]*metricpb.ResourceMetrics, error) {
 	records, errc := source(ctx, exportSelector, cps)
 
 	// Start a fixed number of goroutines to transform records.
@@ -95,7 +92,7 @@ func CheckpointSet(ctx context.Context, exportSelector export.ExportKindSelector
 	}()
 
 	// Synchronously collect the transformed records and transmit.
-	rms, err := sink(ctx, transformed)
+	rms, err := sink(ctx, res, transformed)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +136,6 @@ func transformer(ctx context.Context, exportSelector export.ExportKindSelector, 
 			continue
 		}
 		res := result{
-			Resource: r.Resource(),
 			InstrumentationLibrary: instrumentation.Library{
 				Name:    r.Descriptor().InstrumentationName(),
 				Version: r.Descriptor().InstrumentationVersion(),
@@ -160,41 +156,21 @@ func transformer(ctx context.Context, exportSelector export.ExportKindSelector, 
 // Any errors encoutered transforming input will be reported with an
 // ErrTransforming as well as the completed ResourceMetrics. It is up to the
 // caller to handle any incorrect data in these ResourceMetrics.
-func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, error) {
+func sink(ctx context.Context, res *resource.Resource, in <-chan result) ([]*metricpb.ResourceMetrics, error) {
 	var errStrings []string
 
-	type resourceBatch struct {
-		Resource *resourcepb.Resource
-		// Group by instrumentation library name and then the MetricDescriptor.
-		InstrumentationLibraryBatches map[instrumentation.Library]map[string]*metricpb.Metric
-		SchemaURL                     string
-	}
-
-	// group by unique Resource string.
-	grouped := make(map[attribute.Distinct]resourceBatch)
+	// Group by instrumentation library name and then the MetricDescriptor.
+	grouped := map[instrumentation.Library]map[string]*metricpb.Metric{}
 	for res := range in {
 		if res.Err != nil {
 			errStrings = append(errStrings, res.Err.Error())
 			continue
 		}
 
-		rID := res.Resource.Equivalent()
-		rb, ok := grouped[rID]
-		if !ok {
-			rb = resourceBatch{
-				Resource:                      Resource(res.Resource),
-				InstrumentationLibraryBatches: make(map[instrumentation.Library]map[string]*metricpb.Metric),
-			}
-			if res.Resource != nil {
-				rb.SchemaURL = res.Resource.SchemaURL()
-			}
-			grouped[rID] = rb
-		}
-
-		mb, ok := rb.InstrumentationLibraryBatches[res.InstrumentationLibrary]
+		mb, ok := grouped[res.InstrumentationLibrary]
 		if !ok {
 			mb = make(map[string]*metricpb.Metric)
-			rb.InstrumentationLibraryBatches[res.InstrumentationLibrary] = mb
+			grouped[res.InstrumentationLibrary] = mb
 		}
 
 		mID := res.Metric.GetName()
@@ -222,26 +198,26 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.ResourceMetrics, e
 		return nil, nil
 	}
 
-	var rms []*metricpb.ResourceMetrics
-	for _, rb := range grouped {
-		// TODO: populate ResourceMetrics.SchemaURL when the field is added to the Protobuf message.
-		rm := &metricpb.ResourceMetrics{Resource: rb.Resource}
-		for il, mb := range rb.InstrumentationLibraryBatches {
-			ilm := &metricpb.InstrumentationLibraryMetrics{
-				Metrics: make([]*metricpb.Metric, 0, len(mb)),
-			}
-			if il != (instrumentation.Library{}) {
-				ilm.InstrumentationLibrary = &commonpb.InstrumentationLibrary{
-					Name:    il.Name,
-					Version: il.Version,
-				}
-			}
-			for _, m := range mb {
-				ilm.Metrics = append(ilm.Metrics, m)
-			}
-			rm.InstrumentationLibraryMetrics = append(rm.InstrumentationLibraryMetrics, ilm)
+	rm := &metricpb.ResourceMetrics{
+		Resource: Resource(res),
+	}
+	if res != nil {
+		rm.SchemaUrl = res.SchemaURL()
+	}
+
+	rms := []*metricpb.ResourceMetrics{rm}
+	for il, mb := range grouped {
+		ilm := &metricpb.InstrumentationLibraryMetrics{
+			Metrics: make([]*metricpb.Metric, 0, len(mb)),
+			InstrumentationLibrary: &commonpb.InstrumentationLibrary{
+				Name:    il.Name,
+				Version: il.Version,
+			},
 		}
-		rms = append(rms, rm)
+		for _, m := range mb {
+			ilm.Metrics = append(ilm.Metrics, m)
+		}
+		rm.InstrumentationLibraryMetrics = append(rm.InstrumentationLibraryMetrics, ilm)
 	}
 
 	// Report any transform errors.

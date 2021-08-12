@@ -207,47 +207,62 @@ func TestStdoutNoData(t *testing.T) {
 
 func TestStdoutResource(t *testing.T) {
 	type testCase struct {
+		name   string
 		expect string
 		res    *resource.Resource
 		attrs  []attribute.KeyValue
 	}
-	newCase := func(expect string, res *resource.Resource, attrs ...attribute.KeyValue) testCase {
+	newCase := func(name, expect string, res *resource.Resource, attrs ...attribute.KeyValue) testCase {
 		return testCase{
+			name:   name,
 			expect: expect,
 			res:    res,
 			attrs:  attrs,
 		}
 	}
 	testCases := []testCase{
-		newCase("R1=V1,R2=V2,instrumentation.name=test,A=B,C=D",
+		newCase("resource and attribute",
+			"R1=V1,R2=V2,instrumentation.name=test,A=B,C=D",
 			resource.NewSchemaless(attribute.String("R1", "V1"), attribute.String("R2", "V2")),
 			attribute.String("A", "B"),
 			attribute.String("C", "D")),
-		newCase("R1=V1,R2=V2,instrumentation.name=test",
+		newCase("only resource",
+			"R1=V1,R2=V2,instrumentation.name=test",
 			resource.NewSchemaless(attribute.String("R1", "V1"), attribute.String("R2", "V2")),
 		),
-		newCase("instrumentation.name=test,A=B,C=D",
-			nil,
+		newCase("empty resource",
+			"instrumentation.name=test,A=B,C=D",
+			resource.Empty(),
+			attribute.String("A", "B"),
+			attribute.String("C", "D"),
+		),
+		newCase("default resource",
+			fmt.Sprint(resource.Default().Encoded(attribute.DefaultEncoder()),
+				",instrumentation.name=test,A=B,C=D"),
+			resource.Default(),
 			attribute.String("A", "B"),
 			attribute.String("C", "D"),
 		),
 		// We explicitly do not de-duplicate between resources
 		// and metric labels in this exporter.
-		newCase("R1=V1,R2=V2,instrumentation.name=test,R1=V3,R2=V4",
+		newCase("resource deduplication",
+			"R1=V1,R2=V2,instrumentation.name=test,R1=V3,R2=V4",
 			resource.NewSchemaless(attribute.String("R1", "V1"), attribute.String("R2", "V2")),
 			attribute.String("R1", "V3"),
 			attribute.String("R2", "V4")),
 	}
 
 	for _, tc := range testCases {
-		ctx := context.Background()
-		fix := newFixtureWithResource(t, tc.res)
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			fix := newFixtureWithResource(t, tc.res)
 
-		counter := metric.Must(fix.meter).NewFloat64Counter("name.lastvalue")
-		counter.Add(ctx, 123.456, tc.attrs...)
+			counter := metric.Must(fix.meter).NewFloat64Counter("name.lastvalue")
+			counter.Add(ctx, 123.456, tc.attrs...)
 
-		require.NoError(t, fix.cont.Stop(fix.ctx))
+			require.NoError(t, fix.cont.Stop(fix.ctx))
 
-		require.Equal(t, `[{"Name":"name.lastvalue{`+tc.expect+`}","Last":123.456}]`, fix.Output())
+			require.Equal(t, `[{"Name":"name.lastvalue{`+tc.expect+`}","Last":123.456}]`, fix.Output())
+		})
 	}
 }
