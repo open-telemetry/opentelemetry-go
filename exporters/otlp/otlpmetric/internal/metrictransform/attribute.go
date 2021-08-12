@@ -15,8 +15,6 @@
 package metrictransform
 
 import (
-	"reflect"
-
 	"go.opentelemetry.io/otel/attribute"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 
@@ -68,22 +66,40 @@ func Value(v attribute.Value) *commonpb.AnyValue {
 		av.Value = &commonpb.AnyValue_BoolValue{
 			BoolValue: v.AsBool(),
 		}
+	case attribute.BOOLSLICE:
+		av.Value = &commonpb.AnyValue_ArrayValue{
+			ArrayValue: &commonpb.ArrayValue{
+				Values: boolSliceValues(v.AsBoolSlice()),
+			},
+		}
 	case attribute.INT64:
 		av.Value = &commonpb.AnyValue_IntValue{
 			IntValue: v.AsInt64(),
+		}
+	case attribute.INT64SLICE:
+		av.Value = &commonpb.AnyValue_ArrayValue{
+			ArrayValue: &commonpb.ArrayValue{
+				Values: int64SliceValues(v.AsInt64Slice()),
+			},
 		}
 	case attribute.FLOAT64:
 		av.Value = &commonpb.AnyValue_DoubleValue{
 			DoubleValue: v.AsFloat64(),
 		}
+	case attribute.FLOAT64SLICE:
+		av.Value = &commonpb.AnyValue_ArrayValue{
+			ArrayValue: &commonpb.ArrayValue{
+				Values: float64SliceValues(v.AsFloat64Slice()),
+			},
+		}
 	case attribute.STRING:
 		av.Value = &commonpb.AnyValue_StringValue{
 			StringValue: v.AsString(),
 		}
-	case attribute.ARRAY:
+	case attribute.STRINGSLICE:
 		av.Value = &commonpb.AnyValue_ArrayValue{
 			ArrayValue: &commonpb.ArrayValue{
-				Values: arrayValues(v),
+				Values: stringSliceValues(v.AsStringSlice()),
 			},
 		}
 	default:
@@ -94,56 +110,50 @@ func Value(v attribute.Value) *commonpb.AnyValue {
 	return av
 }
 
-func arrayValues(v attribute.Value) []*commonpb.AnyValue {
-	a := v.AsArray()
-	aType := reflect.TypeOf(a)
-	var valueFunc func(reflect.Value) *commonpb.AnyValue
-	switch aType.Elem().Kind() {
-	case reflect.Bool:
-		valueFunc = func(v reflect.Value) *commonpb.AnyValue {
-			return &commonpb.AnyValue{
-				Value: &commonpb.AnyValue_BoolValue{
-					BoolValue: v.Bool(),
-				},
-			}
-		}
-	case reflect.Int, reflect.Int64:
-		valueFunc = func(v reflect.Value) *commonpb.AnyValue {
-			return &commonpb.AnyValue{
-				Value: &commonpb.AnyValue_IntValue{
-					IntValue: v.Int(),
-				},
-			}
-		}
-	case reflect.Uintptr:
-		valueFunc = func(v reflect.Value) *commonpb.AnyValue {
-			return &commonpb.AnyValue{
-				Value: &commonpb.AnyValue_IntValue{
-					IntValue: int64(v.Uint()),
-				},
-			}
-		}
-	case reflect.Float64:
-		valueFunc = func(v reflect.Value) *commonpb.AnyValue {
-			return &commonpb.AnyValue{
-				Value: &commonpb.AnyValue_DoubleValue{
-					DoubleValue: v.Float(),
-				},
-			}
-		}
-	case reflect.String:
-		valueFunc = func(v reflect.Value) *commonpb.AnyValue {
-			return &commonpb.AnyValue{
-				Value: &commonpb.AnyValue_StringValue{
-					StringValue: v.String(),
-				},
-			}
+func boolSliceValues(vals []bool) []*commonpb.AnyValue {
+	converted := make([]*commonpb.AnyValue, len(vals))
+	for i, v := range vals {
+		converted[i] = &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_BoolValue{
+				BoolValue: v,
+			},
 		}
 	}
+	return converted
+}
 
-	results := make([]*commonpb.AnyValue, aType.Len())
-	for i, aValue := 0, reflect.ValueOf(a); i < aValue.Len(); i++ {
-		results[i] = valueFunc(aValue.Index(i))
+func int64SliceValues(vals []int64) []*commonpb.AnyValue {
+	converted := make([]*commonpb.AnyValue, len(vals))
+	for i, v := range vals {
+		converted[i] = &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_IntValue{
+				IntValue: v,
+			},
+		}
 	}
-	return results
+	return converted
+}
+
+func float64SliceValues(vals []float64) []*commonpb.AnyValue {
+	converted := make([]*commonpb.AnyValue, len(vals))
+	for i, v := range vals {
+		converted[i] = &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_DoubleValue{
+				DoubleValue: v,
+			},
+		}
+	}
+	return converted
+}
+
+func stringSliceValues(vals []string) []*commonpb.AnyValue {
+	converted := make([]*commonpb.AnyValue, len(vals))
+	for i, v := range vals {
+		converted[i] = &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_StringValue{
+				StringValue: v,
+			},
+		}
+	}
+	return converted
 }

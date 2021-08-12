@@ -112,7 +112,10 @@ func TestArrayAttributes(t *testing.T) {
 		{nil, nil},
 		{
 			[]attribute.KeyValue{
-				attribute.Array("invalid", [][]string{{"1", "2"}, {"a"}}),
+				{
+					Key:   attribute.Key("invalid"),
+					Value: attribute.Value{},
+				},
 			},
 			[]*commonpb.KeyValue{
 				{
@@ -127,18 +130,18 @@ func TestArrayAttributes(t *testing.T) {
 		},
 		{
 			[]attribute.KeyValue{
-				attribute.Array("bool array to bool array", []bool{true, false}),
-				attribute.Array("int array to int64 array", []int{1, 2, 3}),
-				attribute.Array("int64 array to int64 array", []int64{1, 2, 3}),
-				attribute.Array("float64 array to double array", []float64{1.11, 2.22, 3.33}),
-				attribute.Array("string array to string array", []string{"foo", "bar", "baz"}),
+				attribute.BoolSlice("bool slice to bool array", []bool{true, false}),
+				attribute.IntSlice("int slice to int64 array", []int{1, 2, 3}),
+				attribute.Int64Slice("int64 slice to int64 array", []int64{1, 2, 3}),
+				attribute.Float64Slice("float64 slice to double array", []float64{1.11, 2.22, 3.33}),
+				attribute.StringSlice("string slice to string array", []string{"foo", "bar", "baz"}),
 			},
 			[]*commonpb.KeyValue{
-				newOTelBoolArray("bool array to bool array", []bool{true, false}),
-				newOTelIntArray("int array to int64 array", []int64{1, 2, 3}),
-				newOTelIntArray("int64 array to int64 array", []int64{1, 2, 3}),
-				newOTelDoubleArray("float64 array to double array", []float64{1.11, 2.22, 3.33}),
-				newOTelStringArray("string array to string array", []string{"foo", "bar", "baz"}),
+				newOTelBoolArray("bool slice to bool array", []bool{true, false}),
+				newOTelIntArray("int slice to int64 array", []int64{1, 2, 3}),
+				newOTelIntArray("int64 slice to int64 array", []int64{1, 2, 3}),
+				newOTelDoubleArray("float64 slice to double array", []float64{1.11, 2.22, 3.33}),
+				newOTelStringArray("string slice to string array", []string{"foo", "bar", "baz"}),
 			},
 		},
 	} {

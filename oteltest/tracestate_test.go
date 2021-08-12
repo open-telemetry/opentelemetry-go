@@ -33,9 +33,8 @@ func TestTraceStateFromKeyValues(t *testing.T) {
 		attribute.Bool("key1", true),
 		attribute.Int64("key2", 1),
 		attribute.Float64("key3", 1.1),
-		attribute.Array("key4", []int{1, 1}),
 	)
 	require.NoError(t, err)
-	expected := "key0=string,key1=true,key2=1,key3=1.1,key4=[1 1]"
+	expected := "key0=string,key1=true,key2=1,key3=1.1"
 	assert.Equal(t, expected, ts.String())
 }
