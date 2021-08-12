@@ -240,22 +240,20 @@ func (s *span) End(options ...trace.SpanEndOption) {
 	if recovered := recover(); recovered != nil {
 		// Record but don't stop the panic.
 		defer panic(recovered)
-		if config.StackTrace() {
-			s.addEvent(semconv.ExceptionEventName,
-				trace.WithAttributes(
-					semconv.ExceptionTypeKey.String(typeStr(recovered)),
-					semconv.ExceptionMessageKey.String(fmt.Sprint(recovered)),
-					semconv.ExceptionStacktraceKey.String(recordStackTrace())),
-			)
-		} else {
-			s.addEvent(
-				semconv.ExceptionEventName,
-				trace.WithAttributes(
-					semconv.ExceptionTypeKey.String(typeStr(recovered)),
-					semconv.ExceptionMessageKey.String(fmt.Sprint(recovered)),
-				),
-			)
+		opts := []trace.EventOption{
+			trace.WithAttributes(
+				semconv.ExceptionTypeKey.String(typeStr(recovered)),
+				semconv.ExceptionMessageKey.String(fmt.Sprint(recovered)),
+			),
 		}
+
+		if config.StackTrace() {
+			opts = append(opts, trace.WithAttributes(
+				semconv.ExceptionStacktraceKey.String(recordStackTrace()),
+			))
+		}
+
+		s.addEvent(semconv.ExceptionEventName, opts...)
 	}
 
 	if s.executionTracerTaskEnd != nil {
@@ -316,10 +314,10 @@ func typeStr(i interface{}) string {
 }
 
 func recordStackTrace() string {
-	stackTrace := make([]byte, 1024)
+	stackTrace := make([]byte, 2048)
 	n := runtime.Stack(stackTrace, false)
 
-	return fmt.Sprintf("\n%s", stackTrace[0:n])
+	return string(stackTrace[0:n])
 }
 
 // AddEvent adds an event with the provided name and options. If this span is
