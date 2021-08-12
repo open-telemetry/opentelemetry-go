@@ -2,7 +2,6 @@ package ratelimit
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -70,6 +69,7 @@ func TestRateLimitBasic(t *testing.T) {
 		simuTime = time.Now()
 		round    = 0
 	)
+	ctx := context.Background()
 	nowfunc := func() time.Time {
 		return simuTime.Add(time.Duration(round) * testInterval)
 	}
@@ -79,15 +79,45 @@ func TestRateLimitBasic(t *testing.T) {
 	provider := trace.NewTracerProvider(trace.WithSyncer(te), trace.WithSampler(rs))
 	tracer := provider.Tracer("test")
 
+	var created int64
+
 	// Simulate a linear rising request rate.
 	// Start at 10x the planned sampling rate
 	for ; round < 10; round++ {
-
 		for i := 0; i < ((round + 1) * initialRate); i++ {
-			_, span := tracer.Start(context.Background(), "span")
+			created++
+			_, span := tracer.Start(ctx, "span")
 			span.End()
 		}
-		fmt.Println("Finish round", round, "wrote", ((round + 1) * initialRate), "exporter has", len(te.spans))
+		t.Log("round", round, "wrote", ((round + 1) * initialRate), "exporter has", len(te.spans))
 	}
 
+	for ; round < 20; round++ {
+		for i := 0; i < ((20 - round) * initialRate); i++ {
+			created++
+			_, span := tracer.Start(ctx, "span")
+			span.End()
+		}
+		t.Log("round", round, "wrote", ((20 - round) * initialRate), "exporter has", len(te.spans))
+	}
+
+	// Sum the adjusted counts.
+	var estimatedCount int64
+	for _, sp := range te.spans {
+		for _, attr := range sp.Attributes() {
+			if attr.Key == "sampler.adjusted_count" {
+				estimatedCount += attr.Value.AsInt64()
+			}
+		}
+	}
+
+	// The estimated count error is less than 5%
+	require.InEpsilon(t, created, estimatedCount, 0.05)
+
+	// We had 100 spans in the first round, unconditionally.
+	spanCount := len(te.spans) - 100
+	avgRate := spanCount / 19
+
+	// The average rate error is less than 20%
+	require.InEpsilon(t, testRate, avgRate, 0.2)
 }

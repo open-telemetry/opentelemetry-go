@@ -38,10 +38,10 @@ type window struct {
 	// start is the beginning of this window
 	start time.Time
 
-	// lowS is the lower power-of-two probability
-	lowS int
-	// lowS is the higher power-of-two probability
-	highS int
+	// low is the lower power-of-two probability
+	low trace.Sampler
+	// high is the higher power-of-two probability
+	high trace.Sampler
 
 	// lowProb is the probability of sampling at the lowProb
 	lowProb float64
@@ -53,6 +53,7 @@ type window struct {
 type Sampler struct {
 	targetCount int
 	interval    time.Duration
+	nowfunc     func() time.Time
 
 	current atomic.Value
 
@@ -61,9 +62,10 @@ type Sampler struct {
 }
 
 const (
-	DefaultInterval = 10 * time.Second
-	MinInterval     = 10 * time.Millisecond
-	MinRate         = 0.00001
+	DefaultProbability = 1
+	DefaultInterval    = 10 * time.Second
+	MinInterval        = 10 * time.Millisecond
+	MinRate            = 0.00001
 )
 
 type intervalOption time.Duration
@@ -104,7 +106,7 @@ func NewSampler(maxRate float64, opts ...Option) *Sampler {
 		maxRate = MinRate
 	}
 
-	target := int(cfg.interval.Seconds() / maxRate)
+	target := int(maxRate / cfg.interval.Seconds())
 
 	if target < 1 {
 		target = 1
@@ -112,12 +114,13 @@ func NewSampler(maxRate float64, opts ...Option) *Sampler {
 
 	sampler := &Sampler{
 		interval:    cfg.interval,
+		nowfunc:     cfg.nowfunc,
 		targetCount: target,
 	}
 	sampler.current.Store(&window{
-		start:   time.Now(),
-		lowS:    0,
-		highS:   -1,
+		start:   sampler.nowfunc(),
+		low:     tidSamplerForLogAdjustedCount(0),
+		high:    nil,
 		lowProb: 1,
 	})
 	return sampler
@@ -140,9 +143,9 @@ func expToFloat64(e int) float64 {
 func splitProb(p float64) (int, int, float64) {
 	// Return the two values of log-adjusted-count nearest to p
 	// Example:
-	//   splitProb(0.75) returns (1, 0, 0.5)
-	// meaning to sample with probability (2^-1) 50% of the time
-	// and 2^0 50% of the time.
+	//   splitProb(0.375) returns (2, 1, 0.5)
+	// meaning to sample with probability (2^-2) 50% of the time
+	// and (2^-1) 50% of the time.
 	exp := expFromFloat64(p)
 
 	low := -exp
@@ -154,11 +157,13 @@ func splitProb(p float64) (int, int, float64) {
 	return low, high, (highP - p) / (highP - lowP)
 }
 
+func tidSamplerForLogAdjustedCount(logAdjustedCount int) trace.Sampler {
+	return trace.TraceIDRatioBased(1.0 / float64(int64(1)<<logAdjustedCount))
+}
+
 func (s *Sampler) ShouldSample(params trace.SamplingParameters) trace.SamplingResult {
 	state := s.current.Load().(*window)
-	now := time.Now()
-
-	_ = atomic.AddInt64(&state.count, 1)
+	now := s.nowfunc()
 
 	if now.Sub(state.start) >= s.interval {
 		state.compute.Do(func() {
@@ -166,18 +171,16 @@ func (s *Sampler) ShouldSample(params trace.SamplingParameters) trace.SamplingRe
 		})
 	}
 
-	var S int
+	_ = atomic.AddInt64(&state.count, 1)
+
+	var tid trace.Sampler
 	if rand.Float64() < state.lowProb {
-		S = state.lowS
+		tid = state.low
 	} else {
-		S = state.highS
+		tid = state.high
 	}
 
-	// Note: this prototype demonstrates the intended result, not
-	// an efficient implementation. Just do whatever
-	// TraceIDRatioBased() would do at this point.  Make a
-	// consistent sampling decision using S according to OTEP 168.
-	return trace.TraceIDRatioBased(1.0 / float64(int64(1)<<S)).ShouldSample(params)
+	return tid.ShouldSample(params)
 }
 
 func (s *Sampler) Description() string {
@@ -196,15 +199,15 @@ func (s *Sampler) updateWindow(expired *window, now time.Time) {
 	probability := durationFactor / countFactor
 
 	if probability > 1 {
-		probability = 1
+		probability = DefaultProbability
 	}
 
 	lowS, highS, lowProb := splitProb(probability)
 
 	next := &window{
 		start:   now,
-		lowS:    lowS,
-		highS:   highS,
+		low:     tidSamplerForLogAdjustedCount(lowS),
+		high:    tidSamplerForLogAdjustedCount(highS),
 		lowProb: lowProb,
 	}
 
