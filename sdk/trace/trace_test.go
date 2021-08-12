@@ -1150,7 +1150,6 @@ func TestRecordError(t *testing.T) {
 		}
 		if diff := cmpDiff(got, want); diff != "" {
 			t.Errorf("SpanErrorOptions: -got +want %s", diff)
-			t.Errorf("SpanErrorOptions: -got +want %s", diff)
 		}
 	}
 }
