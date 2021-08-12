@@ -31,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/metrictransform"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
@@ -100,7 +101,7 @@ func (m *checkpointSet) ForEach(_ metricsdk.ExportKindSelector, fn func(metricsd
 
 type record struct {
 	name   string
-	iKind  metric.InstrumentKind
+	iKind  sdkapi.InstrumentKind
 	nKind  number.Kind
 	opts   []metric.InstrumentOption
 	labels []attribute.KeyValue
@@ -161,14 +162,14 @@ func TestNoGroupingExport(t *testing.T) {
 		[]record{
 			{
 				"int64-count",
-				metric.CounterInstrumentKind,
+				sdkapi.CounterInstrumentKind,
 				number.Int64Kind,
 				nil,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
-				metric.CounterInstrumentKind,
+				sdkapi.CounterInstrumentKind,
 				number.Int64Kind,
 				nil,
 				append(baseKeyValues, cpuKey.Int(2)),
@@ -214,7 +215,7 @@ func TestNoGroupingExport(t *testing.T) {
 func TestValuerecorderMetricGroupingExport(t *testing.T) {
 	r := record{
 		"valuerecorder",
-		metric.ValueRecorderInstrumentKind,
+		sdkapi.ValueRecorderInstrumentKind,
 		number.Int64Kind,
 		nil,
 		append(baseKeyValues, cpuKey.Int(1)),
@@ -264,7 +265,7 @@ func TestValuerecorderMetricGroupingExport(t *testing.T) {
 func TestCountInt64MetricGroupingExport(t *testing.T) {
 	r := record{
 		"int64-count",
-		metric.CounterInstrumentKind,
+		sdkapi.CounterInstrumentKind,
 		number.Int64Kind,
 		nil,
 		append(baseKeyValues, cpuKey.Int(1)),
@@ -314,7 +315,7 @@ func TestCountInt64MetricGroupingExport(t *testing.T) {
 func TestCountFloat64MetricGroupingExport(t *testing.T) {
 	r := record{
 		"float64-count",
-		metric.CounterInstrumentKind,
+		sdkapi.CounterInstrumentKind,
 		number.Float64Kind,
 		nil,
 		append(baseKeyValues, cpuKey.Int(1)),
@@ -369,28 +370,28 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 		[]record{
 			{
 				"int64-count",
-				metric.CounterInstrumentKind,
+				sdkapi.CounterInstrumentKind,
 				number.Int64Kind,
 				nil,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
-				metric.CounterInstrumentKind,
+				sdkapi.CounterInstrumentKind,
 				number.Int64Kind,
 				nil,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
-				metric.CounterInstrumentKind,
+				sdkapi.CounterInstrumentKind,
 				number.Int64Kind,
 				nil,
 				append(baseKeyValues, cpuKey.Int(2)),
 			},
 			{
 				"int64-count",
-				metric.CounterInstrumentKind,
+				sdkapi.CounterInstrumentKind,
 				number.Int64Kind,
 				nil,
 				append(baseKeyValues, cpuKey.Int(1)),
@@ -464,35 +465,35 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 		[]record{
 			{
 				"int64-count",
-				metric.CounterInstrumentKind,
+				sdkapi.CounterInstrumentKind,
 				number.Int64Kind,
 				countingLib1,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
-				metric.CounterInstrumentKind,
+				sdkapi.CounterInstrumentKind,
 				number.Int64Kind,
 				countingLib2,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
-				metric.CounterInstrumentKind,
+				sdkapi.CounterInstrumentKind,
 				number.Int64Kind,
 				countingLib1,
 				append(baseKeyValues, cpuKey.Int(1)),
 			},
 			{
 				"int64-count",
-				metric.CounterInstrumentKind,
+				sdkapi.CounterInstrumentKind,
 				number.Int64Kind,
 				countingLib1,
 				append(baseKeyValues, cpuKey.Int(2)),
 			},
 			{
 				"int64-count",
-				metric.CounterInstrumentKind,
+				sdkapi.CounterInstrumentKind,
 				number.Int64Kind,
 				summingLib,
 				append(baseKeyValues, cpuKey.Int(1)),
@@ -597,16 +598,16 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 func TestStatelessExportKind(t *testing.T) {
 	type testcase struct {
 		name           string
-		instrumentKind metric.InstrumentKind
+		instrumentKind sdkapi.InstrumentKind
 		aggTemporality metricpb.AggregationTemporality
 		monotonic      bool
 	}
 
 	for _, k := range []testcase{
-		{"counter", metric.CounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA, true},
-		{"updowncounter", metric.UpDownCounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA, false},
-		{"sumobserver", metric.SumObserverInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, true},
-		{"updownsumobserver", metric.UpDownSumObserverInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, false},
+		{"counter", sdkapi.CounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA, true},
+		{"updowncounter", sdkapi.UpDownCounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA, false},
+		{"sumobserver", sdkapi.SumObserverInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, true},
+		{"updownsumobserver", sdkapi.UpDownSumObserverInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, false},
 	} {
 		t.Run(k.name, func(t *testing.T) {
 			runMetricExportTests(

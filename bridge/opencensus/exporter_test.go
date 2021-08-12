@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/metric/unit"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	exportmetric "go.opentelemetry.io/otel/sdk/export/metric"
@@ -72,7 +73,7 @@ func TestExportMetrics(t *testing.T) {
 	now := time.Now()
 	basicDesc := metric.NewDescriptor(
 		"",
-		metric.ValueObserverInstrumentKind,
+		sdkapi.ValueObserverInstrumentKind,
 		number.Int64Kind,
 		metric.WithInstrumentationName("OpenCensus Bridge"),
 	)
@@ -394,7 +395,7 @@ func TestConvertDescriptor(t *testing.T) {
 			desc: "empty descriptor",
 			expected: metric.NewDescriptor(
 				"",
-				metric.ValueObserverInstrumentKind,
+				sdkapi.ValueObserverInstrumentKind,
 				number.Int64Kind,
 				metric.WithInstrumentationName("OpenCensus Bridge"),
 			),
@@ -409,7 +410,7 @@ func TestConvertDescriptor(t *testing.T) {
 			},
 			expected: metric.NewDescriptor(
 				"foo",
-				metric.ValueObserverInstrumentKind,
+				sdkapi.ValueObserverInstrumentKind,
 				number.Int64Kind,
 				metric.WithInstrumentationName("OpenCensus Bridge"),
 				metric.WithDescription("bar"),
@@ -426,7 +427,7 @@ func TestConvertDescriptor(t *testing.T) {
 			},
 			expected: metric.NewDescriptor(
 				"foo",
-				metric.ValueObserverInstrumentKind,
+				sdkapi.ValueObserverInstrumentKind,
 				number.Float64Kind,
 				metric.WithInstrumentationName("OpenCensus Bridge"),
 				metric.WithDescription("bar"),
@@ -443,7 +444,7 @@ func TestConvertDescriptor(t *testing.T) {
 			},
 			expected: metric.NewDescriptor(
 				"foo",
-				metric.SumObserverInstrumentKind,
+				sdkapi.SumObserverInstrumentKind,
 				number.Int64Kind,
 				metric.WithInstrumentationName("OpenCensus Bridge"),
 				metric.WithDescription("bar"),
@@ -460,7 +461,7 @@ func TestConvertDescriptor(t *testing.T) {
 			},
 			expected: metric.NewDescriptor(
 				"foo",
-				metric.SumObserverInstrumentKind,
+				sdkapi.SumObserverInstrumentKind,
 				number.Float64Kind,
 				metric.WithInstrumentationName("OpenCensus Bridge"),
 				metric.WithDescription("bar"),

@@ -12,29 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package oteltest
+package sdkapi_test
 
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 )
 
-func TestTraceStateFromKeyValues(t *testing.T) {
-	ts, err := TraceStateFromKeyValues()
-	require.NoError(t, err)
-	assert.Equal(t, 0, ts.Len(), "empty attributes creats zero value TraceState")
-
-	ts, err = TraceStateFromKeyValues(
-		attribute.String("key0", "string"),
-		attribute.Bool("key1", true),
-		attribute.Int64("key2", 1),
-		attribute.Float64("key3", 1.1),
-	)
-	require.NoError(t, err)
-	expected := "key0=string,key1=true,key2=1,key3=1.1"
-	assert.Equal(t, expected, ts.String())
+func TestInstrumentKinds(t *testing.T) {
+	require.Equal(t, sdkapi.ValueRecorderInstrumentKind.String(), "ValueRecorderInstrumentKind")
+	require.Equal(t, sdkapi.ValueObserverInstrumentKind.String(), "ValueObserverInstrumentKind")
+	require.Equal(t, sdkapi.CounterInstrumentKind.String(), "CounterInstrumentKind")
+	require.Equal(t, sdkapi.UpDownCounterInstrumentKind.String(), "UpDownCounterInstrumentKind")
+	require.Equal(t, sdkapi.SumObserverInstrumentKind.String(), "SumObserverInstrumentKind")
+	require.Equal(t, sdkapi.UpDownSumObserverInstrumentKind.String(), "UpDownSumObserverInstrumentKind")
 }

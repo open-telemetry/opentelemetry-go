@@ -24,7 +24,6 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/attribute"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 
@@ -295,7 +294,7 @@ func gaugeArray(record export.Record, points []aggregation.Point) (*metricpb.Met
 		Unit:        string(desc.Unit()),
 	}
 
-	pbAttrs := keyValues(labels.Iter())
+	pbAttrs := Iterator(labels.Iter())
 
 	ndp := make([]*metricpb.NumberDataPoint, 0, len(points))
 	switch nk := desc.NumberKind(); nk {
@@ -352,7 +351,7 @@ func gaugePoint(record export.Record, num number.Number, start, end time.Time) (
 						Value: &metricpb.NumberDataPoint_AsInt{
 							AsInt: num.CoerceToInt64(n),
 						},
-						Attributes:        keyValues(labels.Iter()),
+						Attributes:        Iterator(labels.Iter()),
 						StartTimeUnixNano: toNanos(start),
 						TimeUnixNano:      toNanos(end),
 					},
@@ -367,7 +366,7 @@ func gaugePoint(record export.Record, num number.Number, start, end time.Time) (
 						Value: &metricpb.NumberDataPoint_AsDouble{
 							AsDouble: num.CoerceToFloat64(n),
 						},
-						Attributes:        keyValues(labels.Iter()),
+						Attributes:        Iterator(labels.Iter()),
 						StartTimeUnixNano: toNanos(start),
 						TimeUnixNano:      toNanos(end),
 					},
@@ -412,7 +411,7 @@ func sumPoint(record export.Record, num number.Number, start, end time.Time, ek 
 						Value: &metricpb.NumberDataPoint_AsInt{
 							AsInt: num.CoerceToInt64(n),
 						},
-						Attributes:        keyValues(labels.Iter()),
+						Attributes:        Iterator(labels.Iter()),
 						StartTimeUnixNano: toNanos(start),
 						TimeUnixNano:      toNanos(end),
 					},
@@ -429,7 +428,7 @@ func sumPoint(record export.Record, num number.Number, start, end time.Time, ek 
 						Value: &metricpb.NumberDataPoint_AsDouble{
 							AsDouble: num.CoerceToFloat64(n),
 						},
-						Attributes:        keyValues(labels.Iter()),
+						Attributes:        Iterator(labels.Iter()),
 						StartTimeUnixNano: toNanos(start),
 						TimeUnixNano:      toNanos(end),
 					},
@@ -479,7 +478,7 @@ func minMaxSumCount(record export.Record, a aggregation.MinMaxSumCount) (*metric
 				DataPoints: []*metricpb.SummaryDataPoint{
 					{
 						Sum:               sum.CoerceToFloat64(desc.NumberKind()),
-						Attributes:        keyValues(labels.Iter()),
+						Attributes:        Iterator(labels.Iter()),
 						StartTimeUnixNano: toNanos(record.StartTime()),
 						TimeUnixNano:      toNanos(record.EndTime()),
 						Count:             uint64(count),
@@ -543,7 +542,7 @@ func histogramPoint(record export.Record, ek export.ExportKind, a aggregation.Hi
 				DataPoints: []*metricpb.HistogramDataPoint{
 					{
 						Sum:               sum.CoerceToFloat64(desc.NumberKind()),
-						Attributes:        keyValues(labels.Iter()),
+						Attributes:        Iterator(labels.Iter()),
 						StartTimeUnixNano: toNanos(record.StartTime()),
 						TimeUnixNano:      toNanos(record.EndTime()),
 						Count:             uint64(count),
@@ -555,113 +554,4 @@ func histogramPoint(record export.Record, ek export.ExportKind, a aggregation.Hi
 		},
 	}
 	return m, nil
-}
-
-// keyValues transforms an attribute iterator into an OTLP KeyValues.
-func keyValues(iter attribute.Iterator) []*commonpb.KeyValue {
-	l := iter.Len()
-	if l == 0 {
-		return nil
-	}
-	result := make([]*commonpb.KeyValue, 0, l)
-	for iter.Next() {
-		kv := iter.Label()
-		result = append(result, &commonpb.KeyValue{
-			Key:   string(kv.Key),
-			Value: value(kv.Value),
-		})
-	}
-	return result
-}
-
-// value transforms an attribute Value into an OTLP AnyValue.
-func value(v attribute.Value) *commonpb.AnyValue {
-	switch v.Type() {
-	case attribute.BOOL:
-		return &commonpb.AnyValue{
-			Value: &commonpb.AnyValue_BoolValue{
-				BoolValue: v.AsBool(),
-			},
-		}
-	case attribute.INT64:
-		return &commonpb.AnyValue{
-			Value: &commonpb.AnyValue_IntValue{
-				IntValue: v.AsInt64(),
-			},
-		}
-	case attribute.FLOAT64:
-		return &commonpb.AnyValue{
-			Value: &commonpb.AnyValue_DoubleValue{
-				DoubleValue: v.AsFloat64(),
-			},
-		}
-	case attribute.ARRAY:
-		return &commonpb.AnyValue{
-			Value: &commonpb.AnyValue_ArrayValue{
-				ArrayValue: &commonpb.ArrayValue{
-					Values: arrayValue(v.AsArray()),
-				},
-			},
-		}
-	default:
-		return &commonpb.AnyValue{
-			Value: &commonpb.AnyValue_StringValue{
-				StringValue: v.Emit(),
-			},
-		}
-	}
-}
-
-// arrayValue transforms an attribute Value of ARRAY type into an slice of
-// OTLP AnyValue.
-func arrayValue(arr interface{}) []*commonpb.AnyValue {
-	var av []*commonpb.AnyValue
-	switch val := arr.(type) {
-	case []bool:
-		av = make([]*commonpb.AnyValue, len(val))
-		for i, v := range val {
-			av[i] = &commonpb.AnyValue{
-				Value: &commonpb.AnyValue_BoolValue{
-					BoolValue: v,
-				},
-			}
-		}
-	case []int:
-		av = make([]*commonpb.AnyValue, len(val))
-		for i, v := range val {
-			av[i] = &commonpb.AnyValue{
-				Value: &commonpb.AnyValue_IntValue{
-					IntValue: int64(v),
-				},
-			}
-		}
-	case []int64:
-		av = make([]*commonpb.AnyValue, len(val))
-		for i, v := range val {
-			av[i] = &commonpb.AnyValue{
-				Value: &commonpb.AnyValue_IntValue{
-					IntValue: v,
-				},
-			}
-		}
-	case []float64:
-		av = make([]*commonpb.AnyValue, len(val))
-		for i, v := range val {
-			av[i] = &commonpb.AnyValue{
-				Value: &commonpb.AnyValue_DoubleValue{
-					DoubleValue: v,
-				},
-			}
-		}
-	case []string:
-		av = make([]*commonpb.AnyValue, len(val))
-		for i, v := range val {
-			av[i] = &commonpb.AnyValue{
-				Value: &commonpb.AnyValue_StringValue{
-					StringValue: v,
-				},
-			}
-		}
-	}
-	return av
 }

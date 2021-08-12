@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	arrAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
@@ -94,7 +95,7 @@ func TestStringKeyValues(t *testing.T) {
 
 	for _, test := range tests {
 		labels := attribute.NewSet(test.kvs...)
-		assert.Equal(t, test.expected, keyValues(labels.Iter()))
+		assert.Equal(t, test.expected, Iterator(labels.Iter()))
 	}
 }
 
@@ -121,7 +122,7 @@ func TestMinMaxSumCountValue(t *testing.T) {
 }
 
 func TestMinMaxSumCountDatapoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Int64Kind)
+	desc := metric.NewDescriptor("", sdkapi.ValueRecorderInstrumentKind, number.Int64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
 	mmscs := minmaxsumcount.New(2, &metric.Descriptor{})
 	mmsc, ckpt := &mmscs[0], &mmscs[1]
@@ -177,7 +178,7 @@ func TestMinMaxSumCountPropagatesErrors(t *testing.T) {
 }
 
 func TestSumIntDataPoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Int64Kind)
+	desc := metric.NewDescriptor("", sdkapi.ValueRecorderInstrumentKind, number.Int64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
 	sums := sumAgg.New(2)
 	s, ckpt := &sums[0], &sums[1]
@@ -217,7 +218,7 @@ func TestSumIntDataPoints(t *testing.T) {
 }
 
 func TestSumFloatDataPoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Float64Kind)
+	desc := metric.NewDescriptor("", sdkapi.ValueRecorderInstrumentKind, number.Float64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
 	sums := sumAgg.New(2)
 	s, ckpt := &sums[0], &sums[1]
@@ -255,7 +256,7 @@ func TestSumFloatDataPoints(t *testing.T) {
 }
 
 func TestLastValueIntDataPoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Int64Kind)
+	desc := metric.NewDescriptor("", sdkapi.ValueRecorderInstrumentKind, number.Int64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
 	lvs := lvAgg.New(2)
 	lv, ckpt := &lvs[0], &lvs[1]
@@ -290,7 +291,7 @@ func TestLastValueIntDataPoints(t *testing.T) {
 }
 
 func TestExactIntDataPoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Int64Kind)
+	desc := metric.NewDescriptor("", sdkapi.ValueRecorderInstrumentKind, number.Int64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
 	arrs := arrAgg.New(2)
 	e, ckpt := &arrs[0], &arrs[1]
@@ -325,7 +326,7 @@ func TestExactIntDataPoints(t *testing.T) {
 }
 
 func TestExactFloatDataPoints(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Float64Kind)
+	desc := metric.NewDescriptor("", sdkapi.ValueRecorderInstrumentKind, number.Float64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
 	arrs := arrAgg.New(2)
 	e, ckpt := &arrs[0], &arrs[1]
@@ -359,7 +360,7 @@ func TestExactFloatDataPoints(t *testing.T) {
 }
 
 func TestSumErrUnknownValueType(t *testing.T) {
-	desc := metric.NewDescriptor("", metric.ValueRecorderInstrumentKind, number.Kind(-1))
+	desc := metric.NewDescriptor("", sdkapi.ValueRecorderInstrumentKind, number.Kind(-1))
 	labels := attribute.NewSet()
 	s := &sumAgg.New(1)[0]
 	record := export.NewRecord(&desc, &labels, s, intervalStart, intervalEnd)
@@ -444,7 +445,7 @@ var _ aggregation.MinMaxSumCount = &testErrMinMaxSumCount{}
 
 func TestRecordAggregatorIncompatibleErrors(t *testing.T) {
 	makeMpb := func(kind aggregation.Kind, agg aggregation.Aggregation) (*metricpb.Metric, error) {
-		desc := metric.NewDescriptor("things", metric.CounterInstrumentKind, number.Int64Kind)
+		desc := metric.NewDescriptor("things", sdkapi.CounterInstrumentKind, number.Int64Kind)
 		labels := attribute.NewSet()
 		test := &testAgg{
 			kind: kind,
@@ -480,7 +481,7 @@ func TestRecordAggregatorIncompatibleErrors(t *testing.T) {
 
 func TestRecordAggregatorUnexpectedErrors(t *testing.T) {
 	makeMpb := func(kind aggregation.Kind, agg aggregation.Aggregation) (*metricpb.Metric, error) {
-		desc := metric.NewDescriptor("things", metric.CounterInstrumentKind, number.Int64Kind)
+		desc := metric.NewDescriptor("things", sdkapi.CounterInstrumentKind, number.Int64Kind)
 		labels := attribute.NewSet()
 		return Record(export.CumulativeExportKindSelector(), export.NewRecord(&desc, &labels, agg, intervalStart, intervalEnd))
 	}
