@@ -24,6 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
@@ -110,7 +111,7 @@ func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
 
 // Validates min, max, sum and count for a given profile and policy
 func minMaxSumCount(t *testing.T, profile aggregatortest.Profile, policy policy) {
-	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
+	descriptor := aggregatortest.NewAggregatorTest(sdkapi.ValueRecorderInstrumentKind, profile.NumberKind)
 
 	agg, ckpt := new2(descriptor)
 
@@ -158,7 +159,7 @@ func minMaxSumCount(t *testing.T, profile aggregatortest.Profile, policy policy)
 
 func TestMinMaxSumCountMerge(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
-		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(sdkapi.ValueRecorderInstrumentKind, profile.NumberKind)
 
 		agg1, agg2, ckpt1, ckpt2 := new4(descriptor)
 
@@ -216,7 +217,7 @@ func TestMinMaxSumCountMerge(t *testing.T) {
 
 func TestMaxSumCountNotSet(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
-		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(sdkapi.ValueRecorderInstrumentKind, profile.NumberKind)
 
 		alloc := New(2, descriptor)
 		agg, ckpt := &alloc[0], &alloc[1]
@@ -240,7 +241,7 @@ func TestMaxSumCountNotSet(t *testing.T) {
 func TestSynchronizedMoveReset(t *testing.T) {
 	aggregatortest.SynchronizedMoveResetTest(
 		t,
-		metric.ValueRecorderInstrumentKind,
+		sdkapi.ValueRecorderInstrumentKind,
 		func(desc *metric.Descriptor) export.Aggregator {
 			return &New(1, desc)[0]
 		},

@@ -19,6 +19,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/metric/unit"
 )
 
@@ -64,7 +65,7 @@ func (m Meter) NewBatchObserver(callback BatchObserverFunc) BatchObserver {
 // duplicate registration).
 func (m Meter) NewInt64Counter(name string, options ...InstrumentOption) (Int64Counter, error) {
 	return wrapInt64CounterInstrument(
-		m.newSync(name, CounterInstrumentKind, number.Int64Kind, options))
+		m.newSync(name, sdkapi.CounterInstrumentKind, number.Int64Kind, options))
 }
 
 // NewFloat64Counter creates a new floating point Counter with the
@@ -73,7 +74,7 @@ func (m Meter) NewInt64Counter(name string, options ...InstrumentOption) (Int64C
 // duplicate registration).
 func (m Meter) NewFloat64Counter(name string, options ...InstrumentOption) (Float64Counter, error) {
 	return wrapFloat64CounterInstrument(
-		m.newSync(name, CounterInstrumentKind, number.Float64Kind, options))
+		m.newSync(name, sdkapi.CounterInstrumentKind, number.Float64Kind, options))
 }
 
 // NewInt64UpDownCounter creates a new integer UpDownCounter instrument with the
@@ -82,7 +83,7 @@ func (m Meter) NewFloat64Counter(name string, options ...InstrumentOption) (Floa
 // duplicate registration).
 func (m Meter) NewInt64UpDownCounter(name string, options ...InstrumentOption) (Int64UpDownCounter, error) {
 	return wrapInt64UpDownCounterInstrument(
-		m.newSync(name, UpDownCounterInstrumentKind, number.Int64Kind, options))
+		m.newSync(name, sdkapi.UpDownCounterInstrumentKind, number.Int64Kind, options))
 }
 
 // NewFloat64UpDownCounter creates a new floating point UpDownCounter with the
@@ -91,7 +92,7 @@ func (m Meter) NewInt64UpDownCounter(name string, options ...InstrumentOption) (
 // duplicate registration).
 func (m Meter) NewFloat64UpDownCounter(name string, options ...InstrumentOption) (Float64UpDownCounter, error) {
 	return wrapFloat64UpDownCounterInstrument(
-		m.newSync(name, UpDownCounterInstrumentKind, number.Float64Kind, options))
+		m.newSync(name, sdkapi.UpDownCounterInstrumentKind, number.Float64Kind, options))
 }
 
 // NewInt64ValueRecorder creates a new integer ValueRecorder instrument with the
@@ -100,7 +101,7 @@ func (m Meter) NewFloat64UpDownCounter(name string, options ...InstrumentOption)
 // duplicate registration).
 func (m Meter) NewInt64ValueRecorder(name string, opts ...InstrumentOption) (Int64ValueRecorder, error) {
 	return wrapInt64ValueRecorderInstrument(
-		m.newSync(name, ValueRecorderInstrumentKind, number.Int64Kind, opts))
+		m.newSync(name, sdkapi.ValueRecorderInstrumentKind, number.Int64Kind, opts))
 }
 
 // NewFloat64ValueRecorder creates a new floating point ValueRecorder with the
@@ -109,7 +110,7 @@ func (m Meter) NewInt64ValueRecorder(name string, opts ...InstrumentOption) (Int
 // duplicate registration).
 func (m Meter) NewFloat64ValueRecorder(name string, opts ...InstrumentOption) (Float64ValueRecorder, error) {
 	return wrapFloat64ValueRecorderInstrument(
-		m.newSync(name, ValueRecorderInstrumentKind, number.Float64Kind, opts))
+		m.newSync(name, sdkapi.ValueRecorderInstrumentKind, number.Float64Kind, opts))
 }
 
 // NewInt64ValueObserver creates a new integer ValueObserver instrument
@@ -121,7 +122,7 @@ func (m Meter) NewInt64ValueObserver(name string, callback Int64ObserverFunc, op
 		return wrapInt64ValueObserverInstrument(NoopAsync{}, nil)
 	}
 	return wrapInt64ValueObserverInstrument(
-		m.newAsync(name, ValueObserverInstrumentKind, number.Int64Kind, opts,
+		m.newAsync(name, sdkapi.ValueObserverInstrumentKind, number.Int64Kind, opts,
 			newInt64AsyncRunner(callback)))
 }
 
@@ -134,7 +135,7 @@ func (m Meter) NewFloat64ValueObserver(name string, callback Float64ObserverFunc
 		return wrapFloat64ValueObserverInstrument(NoopAsync{}, nil)
 	}
 	return wrapFloat64ValueObserverInstrument(
-		m.newAsync(name, ValueObserverInstrumentKind, number.Float64Kind, opts,
+		m.newAsync(name, sdkapi.ValueObserverInstrumentKind, number.Float64Kind, opts,
 			newFloat64AsyncRunner(callback)))
 }
 
@@ -147,7 +148,7 @@ func (m Meter) NewInt64SumObserver(name string, callback Int64ObserverFunc, opts
 		return wrapInt64SumObserverInstrument(NoopAsync{}, nil)
 	}
 	return wrapInt64SumObserverInstrument(
-		m.newAsync(name, SumObserverInstrumentKind, number.Int64Kind, opts,
+		m.newAsync(name, sdkapi.SumObserverInstrumentKind, number.Int64Kind, opts,
 			newInt64AsyncRunner(callback)))
 }
 
@@ -160,7 +161,7 @@ func (m Meter) NewFloat64SumObserver(name string, callback Float64ObserverFunc, 
 		return wrapFloat64SumObserverInstrument(NoopAsync{}, nil)
 	}
 	return wrapFloat64SumObserverInstrument(
-		m.newAsync(name, SumObserverInstrumentKind, number.Float64Kind, opts,
+		m.newAsync(name, sdkapi.SumObserverInstrumentKind, number.Float64Kind, opts,
 			newFloat64AsyncRunner(callback)))
 }
 
@@ -173,7 +174,7 @@ func (m Meter) NewInt64UpDownSumObserver(name string, callback Int64ObserverFunc
 		return wrapInt64UpDownSumObserverInstrument(NoopAsync{}, nil)
 	}
 	return wrapInt64UpDownSumObserverInstrument(
-		m.newAsync(name, UpDownSumObserverInstrumentKind, number.Int64Kind, opts,
+		m.newAsync(name, sdkapi.UpDownSumObserverInstrumentKind, number.Int64Kind, opts,
 			newInt64AsyncRunner(callback)))
 }
 
@@ -186,7 +187,7 @@ func (m Meter) NewFloat64UpDownSumObserver(name string, callback Float64Observer
 		return wrapFloat64UpDownSumObserverInstrument(NoopAsync{}, nil)
 	}
 	return wrapFloat64UpDownSumObserverInstrument(
-		m.newAsync(name, UpDownSumObserverInstrumentKind, number.Float64Kind, opts,
+		m.newAsync(name, sdkapi.UpDownSumObserverInstrumentKind, number.Float64Kind, opts,
 			newFloat64AsyncRunner(callback)))
 }
 
@@ -199,7 +200,7 @@ func (b BatchObserver) NewInt64ValueObserver(name string, opts ...InstrumentOpti
 		return wrapInt64ValueObserverInstrument(NoopAsync{}, nil)
 	}
 	return wrapInt64ValueObserverInstrument(
-		b.meter.newAsync(name, ValueObserverInstrumentKind, number.Int64Kind, opts, b.runner))
+		b.meter.newAsync(name, sdkapi.ValueObserverInstrumentKind, number.Int64Kind, opts, b.runner))
 }
 
 // NewFloat64ValueObserver creates a new floating point ValueObserver with
@@ -211,7 +212,7 @@ func (b BatchObserver) NewFloat64ValueObserver(name string, opts ...InstrumentOp
 		return wrapFloat64ValueObserverInstrument(NoopAsync{}, nil)
 	}
 	return wrapFloat64ValueObserverInstrument(
-		b.meter.newAsync(name, ValueObserverInstrumentKind, number.Float64Kind, opts,
+		b.meter.newAsync(name, sdkapi.ValueObserverInstrumentKind, number.Float64Kind, opts,
 			b.runner))
 }
 
@@ -224,7 +225,7 @@ func (b BatchObserver) NewInt64SumObserver(name string, opts ...InstrumentOption
 		return wrapInt64SumObserverInstrument(NoopAsync{}, nil)
 	}
 	return wrapInt64SumObserverInstrument(
-		b.meter.newAsync(name, SumObserverInstrumentKind, number.Int64Kind, opts, b.runner))
+		b.meter.newAsync(name, sdkapi.SumObserverInstrumentKind, number.Int64Kind, opts, b.runner))
 }
 
 // NewFloat64SumObserver creates a new floating point SumObserver with
@@ -236,7 +237,7 @@ func (b BatchObserver) NewFloat64SumObserver(name string, opts ...InstrumentOpti
 		return wrapFloat64SumObserverInstrument(NoopAsync{}, nil)
 	}
 	return wrapFloat64SumObserverInstrument(
-		b.meter.newAsync(name, SumObserverInstrumentKind, number.Float64Kind, opts,
+		b.meter.newAsync(name, sdkapi.SumObserverInstrumentKind, number.Float64Kind, opts,
 			b.runner))
 }
 
@@ -249,7 +250,7 @@ func (b BatchObserver) NewInt64UpDownSumObserver(name string, opts ...Instrument
 		return wrapInt64UpDownSumObserverInstrument(NoopAsync{}, nil)
 	}
 	return wrapInt64UpDownSumObserverInstrument(
-		b.meter.newAsync(name, UpDownSumObserverInstrumentKind, number.Int64Kind, opts, b.runner))
+		b.meter.newAsync(name, sdkapi.UpDownSumObserverInstrumentKind, number.Int64Kind, opts, b.runner))
 }
 
 // NewFloat64UpDownSumObserver creates a new floating point UpDownSumObserver with
@@ -261,7 +262,7 @@ func (b BatchObserver) NewFloat64UpDownSumObserver(name string, opts ...Instrume
 		return wrapFloat64UpDownSumObserverInstrument(NoopAsync{}, nil)
 	}
 	return wrapFloat64UpDownSumObserverInstrument(
-		b.meter.newAsync(name, UpDownSumObserverInstrumentKind, number.Float64Kind, opts,
+		b.meter.newAsync(name, sdkapi.UpDownSumObserverInstrumentKind, number.Float64Kind, opts,
 			b.runner))
 }
 
@@ -273,7 +274,7 @@ func (m Meter) MeterImpl() MeterImpl {
 // newAsync constructs one new asynchronous instrument.
 func (m Meter) newAsync(
 	name string,
-	mkind InstrumentKind,
+	mkind sdkapi.InstrumentKind,
 	nkind number.Kind,
 	opts []InstrumentOption,
 	runner AsyncRunner,
@@ -293,7 +294,7 @@ func (m Meter) newAsync(
 // newSync constructs one new synchronous instrument.
 func (m Meter) newSync(
 	name string,
-	metricKind InstrumentKind,
+	metricKind sdkapi.InstrumentKind,
 	numberKind number.Kind,
 	opts []InstrumentOption,
 ) (
@@ -521,13 +522,13 @@ func (bm BatchObserverMust) NewFloat64UpDownSumObserver(name string, oos ...Inst
 // options.
 type Descriptor struct {
 	name           string
-	instrumentKind InstrumentKind
+	instrumentKind sdkapi.InstrumentKind
 	numberKind     number.Kind
 	config         InstrumentConfig
 }
 
 // NewDescriptor returns a Descriptor with the given contents.
-func NewDescriptor(name string, ikind InstrumentKind, nkind number.Kind, opts ...InstrumentOption) Descriptor {
+func NewDescriptor(name string, ikind sdkapi.InstrumentKind, nkind number.Kind, opts ...InstrumentOption) Descriptor {
 	return Descriptor{
 		name:           name,
 		instrumentKind: ikind,
@@ -542,7 +543,7 @@ func (d Descriptor) Name() string {
 }
 
 // InstrumentKind returns the specific kind of instrument.
-func (d Descriptor) InstrumentKind() InstrumentKind {
+func (d Descriptor) InstrumentKind() sdkapi.InstrumentKind {
 	return d.instrumentKind
 }
 

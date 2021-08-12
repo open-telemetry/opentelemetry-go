@@ -21,6 +21,7 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
 
@@ -29,16 +30,16 @@ func TestExportKindIncludes(t *testing.T) {
 	require.True(t, DeltaExportKind.Includes(CumulativeExportKind|DeltaExportKind))
 }
 
-var deltaMemoryKinds = []metric.InstrumentKind{
-	metric.SumObserverInstrumentKind,
-	metric.UpDownSumObserverInstrumentKind,
+var deltaMemoryKinds = []sdkapi.InstrumentKind{
+	sdkapi.SumObserverInstrumentKind,
+	sdkapi.UpDownSumObserverInstrumentKind,
 }
 
-var cumulativeMemoryKinds = []metric.InstrumentKind{
-	metric.ValueRecorderInstrumentKind,
-	metric.ValueObserverInstrumentKind,
-	metric.CounterInstrumentKind,
-	metric.UpDownCounterInstrumentKind,
+var cumulativeMemoryKinds = []sdkapi.InstrumentKind{
+	sdkapi.ValueRecorderInstrumentKind,
+	sdkapi.ValueObserverInstrumentKind,
+	sdkapi.CounterInstrumentKind,
+	sdkapi.UpDownCounterInstrumentKind,
 }
 
 func TestExportKindMemoryRequired(t *testing.T) {

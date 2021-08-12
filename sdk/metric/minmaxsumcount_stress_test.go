@@ -22,11 +22,12 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 )
 
 func TestStressInt64MinMaxSumCount(t *testing.T) {
-	desc := metric.NewDescriptor("some_metric", metric.ValueRecorderInstrumentKind, number.Int64Kind)
+	desc := metric.NewDescriptor("some_metric", sdkapi.ValueRecorderInstrumentKind, number.Int64Kind)
 	alloc := minmaxsumcount.New(2, &desc)
 	mmsc, ckpt := &alloc[0], &alloc[1]
 

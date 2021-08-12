@@ -16,6 +16,7 @@ package tracetest
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -82,4 +83,43 @@ func TestSpanRecorderForceFlushNoError(t *testing.T) {
 	ctx, c = context.WithCancel(ctx)
 	c()
 	assert.NoError(t, new(SpanRecorder).ForceFlush(ctx))
+}
+
+func runConcurrently(funcs ...func()) {
+	var wg sync.WaitGroup
+
+	for _, f := range funcs {
+		wg.Add(1)
+		go func(f func()) {
+			f()
+			wg.Done()
+		}(f)
+	}
+
+	wg.Wait()
+}
+
+func TestEndingConcurrency(t *testing.T) {
+	sr := NewSpanRecorder()
+
+	runConcurrently(
+		func() { sr.OnEnd(new(roSpan)) },
+		func() { sr.OnEnd(new(roSpan)) },
+		func() { sr.Ended() },
+	)
+
+	assert.Len(t, sr.Ended(), 2)
+}
+
+func TestStartingConcurrency(t *testing.T) {
+	sr := NewSpanRecorder()
+
+	ctx := context.Background()
+	runConcurrently(
+		func() { sr.OnStart(ctx, new(rwSpan)) },
+		func() { sr.OnStart(ctx, new(rwSpan)) },
+		func() { sr.Started() },
+	)
+
+	assert.Len(t, sr.Started(), 2)
 }
