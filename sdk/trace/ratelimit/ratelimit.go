@@ -211,5 +211,8 @@ func (s *Sampler) updateWindow(expired *window, now time.Time) {
 		lowProb: lowProb,
 	}
 
+	s.priorDuration = duration
+	s.priorCount = count
+
 	s.current.Store(next)
 }
