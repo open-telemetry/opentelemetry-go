@@ -24,6 +24,7 @@ import (
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 )
@@ -67,7 +68,7 @@ func TestCounterSum(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg, ckpt := new2()
 
-		descriptor := aggregatortest.NewAggregatorTest(metric.CounterInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(sdkapi.CounterInstrumentKind, profile.NumberKind)
 
 		sum := number.Number(0)
 		for i := 0; i < count; i++ {
@@ -91,7 +92,7 @@ func TestValueRecorderSum(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg, ckpt := new2()
 
-		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(sdkapi.ValueRecorderInstrumentKind, profile.NumberKind)
 
 		sum := number.Number(0)
 
@@ -117,7 +118,7 @@ func TestCounterMerge(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg1, agg2, ckpt1, ckpt2 := new4()
 
-		descriptor := aggregatortest.NewAggregatorTest(metric.CounterInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(sdkapi.CounterInstrumentKind, profile.NumberKind)
 
 		sum := number.Number(0)
 		for i := 0; i < count; i++ {
@@ -146,7 +147,7 @@ func TestCounterMerge(t *testing.T) {
 func TestSynchronizedMoveReset(t *testing.T) {
 	aggregatortest.SynchronizedMoveResetTest(
 		t,
-		metric.SumObserverInstrumentKind,
+		sdkapi.SumObserverInstrumentKind,
 		func(desc *metric.Descriptor) export.Aggregator {
 			return &New(1)[0]
 		},

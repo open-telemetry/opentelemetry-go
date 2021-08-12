@@ -59,7 +59,7 @@ func TestModelConversion(t *testing.T) {
 			Attributes: []attribute.KeyValue{
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
-				attribute.Array("attr3", []int{0, 1, 2}),
+				attribute.IntSlice("attr3", []int{0, 1, 2}),
 			},
 			Events: []tracesdk.Event{
 				{

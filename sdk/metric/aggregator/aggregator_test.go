@@ -23,6 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
@@ -75,7 +76,7 @@ func TestRangeTest(t *testing.T) {
 		t.Run(nkind.String(), func(t *testing.T) {
 			desc := metric.NewDescriptor(
 				"name",
-				metric.CounterInstrumentKind,
+				sdkapi.CounterInstrumentKind,
 				nkind,
 			)
 			testRangeNegative(t, &desc)
@@ -86,10 +87,10 @@ func TestRangeTest(t *testing.T) {
 func TestNaNTest(t *testing.T) {
 	for _, nkind := range []number.Kind{number.Float64Kind, number.Int64Kind} {
 		t.Run(nkind.String(), func(t *testing.T) {
-			for _, mkind := range []metric.InstrumentKind{
-				metric.CounterInstrumentKind,
-				metric.ValueRecorderInstrumentKind,
-				metric.ValueObserverInstrumentKind,
+			for _, mkind := range []sdkapi.InstrumentKind{
+				sdkapi.CounterInstrumentKind,
+				sdkapi.ValueRecorderInstrumentKind,
+				sdkapi.ValueObserverInstrumentKind,
 			} {
 				desc := metric.NewDescriptor(
 					"name",

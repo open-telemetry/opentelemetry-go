@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	exportmetric "go.opentelemetry.io/otel/sdk/export/metric"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
@@ -47,22 +48,22 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 	labels := []attribute.KeyValue{attribute.Bool("test", true)}
 
 	type data struct {
-		iKind metric.InstrumentKind
+		iKind sdkapi.InstrumentKind
 		nKind number.Kind
 		val   int64
 	}
 	instruments := map[string]data{
-		"test-int64-counter":         {metric.CounterInstrumentKind, number.Int64Kind, 1},
-		"test-float64-counter":       {metric.CounterInstrumentKind, number.Float64Kind, 1},
-		"test-int64-valuerecorder":   {metric.ValueRecorderInstrumentKind, number.Int64Kind, 2},
-		"test-float64-valuerecorder": {metric.ValueRecorderInstrumentKind, number.Float64Kind, 2},
-		"test-int64-valueobserver":   {metric.ValueObserverInstrumentKind, number.Int64Kind, 3},
-		"test-float64-valueobserver": {metric.ValueObserverInstrumentKind, number.Float64Kind, 3},
+		"test-int64-counter":         {sdkapi.CounterInstrumentKind, number.Int64Kind, 1},
+		"test-float64-counter":       {sdkapi.CounterInstrumentKind, number.Float64Kind, 1},
+		"test-int64-valuerecorder":   {sdkapi.ValueRecorderInstrumentKind, number.Int64Kind, 2},
+		"test-float64-valuerecorder": {sdkapi.ValueRecorderInstrumentKind, number.Float64Kind, 2},
+		"test-int64-valueobserver":   {sdkapi.ValueObserverInstrumentKind, number.Int64Kind, 3},
+		"test-float64-valueobserver": {sdkapi.ValueObserverInstrumentKind, number.Float64Kind, 3},
 	}
 	for name, data := range instruments {
 		data := data
 		switch data.iKind {
-		case metric.CounterInstrumentKind:
+		case sdkapi.CounterInstrumentKind:
 			switch data.nKind {
 			case number.Int64Kind:
 				metric.Must(meter).NewInt64Counter(name).Add(ctx, data.val, labels...)
@@ -71,7 +72,7 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
-		case metric.ValueRecorderInstrumentKind:
+		case sdkapi.ValueRecorderInstrumentKind:
 			switch data.nKind {
 			case number.Int64Kind:
 				metric.Must(meter).NewInt64ValueRecorder(name).Record(ctx, data.val, labels...)
@@ -80,7 +81,7 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
-		case metric.ValueObserverInstrumentKind:
+		case sdkapi.ValueObserverInstrumentKind:
 			switch data.nKind {
 			case number.Int64Kind:
 				metric.Must(meter).NewInt64ValueObserver(name,
@@ -130,13 +131,13 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 		seen[m.Name] = struct{}{}
 
 		switch data.iKind {
-		case metric.CounterInstrumentKind, metric.ValueObserverInstrumentKind:
+		case sdkapi.CounterInstrumentKind, sdkapi.ValueObserverInstrumentKind:
 			var dp []*metricpb.NumberDataPoint
 			switch data.iKind {
-			case metric.CounterInstrumentKind:
+			case sdkapi.CounterInstrumentKind:
 				require.NotNil(t, m.GetSum())
 				dp = m.GetSum().GetDataPoints()
-			case metric.ValueObserverInstrumentKind:
+			case sdkapi.ValueObserverInstrumentKind:
 				require.NotNil(t, m.GetGauge())
 				dp = m.GetGauge().GetDataPoints()
 			}
@@ -150,7 +151,7 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 					assert.Equal(t, v, dp[0].Value, "invalid value for %q", m.Name)
 				}
 			}
-		case metric.ValueRecorderInstrumentKind:
+		case sdkapi.ValueRecorderInstrumentKind:
 			require.NotNil(t, m.GetSummary())
 			if dp := m.GetSummary().DataPoints; assert.Len(t, dp, 1) {
 				count := dp[0].Count
