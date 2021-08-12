@@ -110,7 +110,8 @@ func Any(k string, value interface{}) KeyValue {
 
 	switch rv.Kind() {
 	case reflect.Array:
-		return Array(k, value)
+		rv = rv.Slice(0, rv.Len())
+		fallthrough
 	case reflect.Slice:
 		switch reflect.TypeOf(value).Elem().Kind() {
 		case reflect.Bool:
@@ -124,7 +125,7 @@ func Any(k string, value interface{}) KeyValue {
 		case reflect.String:
 			return StringSlice(k, rv.Interface().([]string))
 		default:
-			return Array(k, value)
+			return KeyValue{Key: Key(k), Value: Value{vtype: INVALID}}
 		}
 	case reflect.Bool:
 		return Bool(k, rv.Bool())
