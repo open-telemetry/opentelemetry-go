@@ -11,6 +11,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Added `ErrorHandlerFunc` to use a function as an `"go.opentelemetry.io/otel".ErrorHandler`. (#2149)
+- Added typed slice attribute types and functionality to the `go.opentelemetry.io/otel/attribute` package to replace the existing array type and functions. (#2162)
+  - `BoolSlice`, `IntSlice`, `Int64Slice`, `Float64Slice`, and `StringSlice` replace the use of the `Array` function in the package.
 
 ### Changed
 
@@ -21,6 +23,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/otel/bridge/opencensus/utils` package is deprecated.
   All functionality from this package now exists in the `go.opentelemetry.io/otel/bridge/opencensus` package.
   The functions from that package should be used instead. (#2166)
+- The `"go.opentelemetry.io/otel/attribute".Array` function and the related `ARRAY` value type is deprecated.
+  Use the typed `*Slice` functions and types added to the package instead. (#2162)
 
 ### Removed
 
