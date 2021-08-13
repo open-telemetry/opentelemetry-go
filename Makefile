@@ -118,7 +118,7 @@ test-coverage: | $(GOCOVMERGE)
 	@set -e; \
 	printf "" > coverage.txt; \
 	for dir in $(ALL_COVERAGE_MOD_DIRS); do \
-	  echo "$(GO) test -coverpkg=go.opentelemetry.io/... -covermode=$(COVERAGE_MODE) -coverprofile="$(COVERAGE_PROFILE)" $${dir}/..."; \
+	  echo "$(GO) test -coverpkg=go.opentelemetry.io/otel/... -covermode=$(COVERAGE_MODE) -coverprofile="$(COVERAGE_PROFILE)" $${dir}/..."; \
 	  (cd "$${dir}" && \
 	    $(GO) list ./... \
 	    | grep -v third_party \
