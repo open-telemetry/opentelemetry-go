@@ -117,13 +117,13 @@ func TestRateLimitBasic(t *testing.T) {
 		estimatedCount += thisCnt
 	}
 
-	// The estimated-count error is less than 6%.
+	// The estimated-count error is <= 6%.
 	require.InEpsilon(t, created, estimatedCount, 0.06)
 
 	// We had 100 spans in the first round, unconditionally.
 	spanCount := len(te.spans) - 100
 	avgRate := spanCount / 19
 
-	// The average-rate error is less than 20%.
-	require.InEpsilon(t, testRate, avgRate, 0.20)
+	// The average-rate error is <= 20%.
+	require.InEpsilon(t, testRate, avgRate, 0.2)
 }

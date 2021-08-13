@@ -25,15 +25,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-type config struct {
-	interval time.Duration
-	nowfunc  func() time.Time
-}
-
-type Option interface {
-	apply(*config)
-}
-
 type window struct {
 	// start is the beginning of this window
 	start time.Time
@@ -46,15 +37,28 @@ type window struct {
 	// lowProb is the probability of sampling at the lowProb
 	lowProb float64
 
-	count   int64
+	// count is updated with atomic.AddInt64
+	count int64
+
+	// compute is called when the Sampler's current window
+	// expires. the first caller computes a new value and updates
+	// the Sampler's current window.
 	compute sync.Once
 }
 
+// Sampler dynamically adjusts its sampling rate based on the observed
+// arrival rate to produce an (expected) rate of sample spans.  This Sampler
+// is probabilistic in nature and does not ensure a hard rate limit.
 type Sampler struct {
-	targetCount int
-	interval    time.Duration
-	nowfunc     func() time.Time
+	targetRate float64
+	interval   time.Duration
+	nowfunc    func() time.Time
 
+	// current is an atomic variable storing the current *window
+	// used for estimating the next window's probability.  the
+	// first caller to discover a *window after the interval has
+	// expired will replace it with a new window.  updates are
+	// synchronized via the sync.Once of the expiring window.
 	current atomic.Value
 
 	priorCount    int64
@@ -62,11 +66,18 @@ type Sampler struct {
 }
 
 const (
-	DefaultProbability = 1
-	DefaultInterval    = 10 * time.Second
-	MinInterval        = 10 * time.Millisecond
-	MinRate            = 0.00001
+	DefaultInterval = 10 * time.Second
+	MinimumInterval = 10 * time.Millisecond
 )
+
+type config struct {
+	interval time.Duration
+	nowfunc  func() time.Time
+}
+
+type Option interface {
+	apply(*config)
+}
 
 type intervalOption time.Duration
 type nowfuncOption func() time.Time
@@ -89,7 +100,13 @@ func (n nowfuncOption) apply(cfg *config) {
 
 var _ trace.Sampler = &Sampler{}
 
-func NewSampler(maxRate float64, opts ...Option) *Sampler {
+// NewSampler returns a Sampler that adjusts its sampling probability
+// to achieve an expected rate.
+func NewSampler(targetRate float64, opts ...Option) trace.Sampler {
+	// Negatigve or zero rate means do not sample.
+	if targetRate <= 0 {
+		return trace.NeverSample()
+	}
 	cfg := config{
 		interval: DefaultInterval,
 		nowfunc:  time.Now,
@@ -97,68 +114,77 @@ func NewSampler(maxRate float64, opts ...Option) *Sampler {
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
-
-	if cfg.interval < MinInterval {
-		cfg.interval = MinInterval
-	}
-
-	if maxRate < MinRate {
-		maxRate = MinRate
-	}
-
-	target := int(maxRate / cfg.interval.Seconds())
-
-	if target < 1 {
-		target = 1
+	// MinimumInterval avoids bad configurations near the
+	// resolution of the runtime scheduler.
+	if cfg.interval < MinimumInterval {
+		cfg.interval = MinimumInterval
 	}
 
 	sampler := &Sampler{
-		interval:    cfg.interval,
-		nowfunc:     cfg.nowfunc,
-		targetCount: target,
+		interval:   cfg.interval,
+		nowfunc:    cfg.nowfunc,
+		targetRate: targetRate,
 	}
 	sampler.current.Store(&window{
 		start:   sampler.nowfunc(),
-		low:     tidSamplerForLogAdjustedCount(0),
+		low:     tidSamplerForLogAdjustedCount(0), // starting probability is 1
 		high:    nil,
 		lowProb: 1,
 	})
 	return sampler
 }
 
+// These are IEEE 754 double-width floating point constants used with
+// math.Float64bits.
 const (
 	offsetExponentMask = 0x7ff0000000000000
 	offsetExponentBias = 1023
 	significandBits    = 52
 )
 
-func expFromFloat64(p float64) int {
-	return int((math.Float64bits(p)&offsetExponentMask)>>significandBits) - offsetExponentBias
+// expFromFloat64 returns floor(log2(x)).
+func expFromFloat64(x float64) int {
+	return int((math.Float64bits(x)&offsetExponentMask)>>significandBits) - offsetExponentBias
 }
 
-func expToFloat64(e int) float64 {
-	return math.Float64frombits(uint64(offsetExponentBias+e) << significandBits)
+// expToFloat64 returns 2^x.
+func expToFloat64(x int) float64 {
+	return math.Float64frombits(uint64(offsetExponentBias+x) << significandBits)
 }
 
+// splitProb returns the two values of log-adjusted-count nearest to p
+// Example:
+//
+//   splitProb(0.375) => (2, 1, 0.5)
+//
+// indicates to sample with probability (2^-2) 50% of the time
+// and (2^-1) 50% of the time.
 func splitProb(p float64) (int, int, float64) {
-	// Return the two values of log-adjusted-count nearest to p
-	// Example:
-	//   splitProb(0.375) returns (2, 1, 0.5)
-	// meaning to sample with probability (2^-2) 50% of the time
-	// and (2^-1) 50% of the time.
+	// Take the exponent and drop the significand to locate the
+	// smaller of two powers of two.
 	exp := expFromFloat64(p)
 
+	// Low is the smaller of two log-adjusted counts, the negative
+	// of the exponent computed above.
 	low := -exp
+	// High is the greater of two log-adjusted counts (i.e., one
+	// less than low, a smaller adjusted count means a larger
+	// probability).
 	high := low - 1
 
+	// Return these to probability values and use linear
+	// interpolation to compute the required probability of
+	// choosing the low-probability Sampler.
 	lowP := expToFloat64(-low)
 	highP := expToFloat64(-high)
+	lowProb := (highP - p) / (highP - lowP)
 
-	return low, high, (highP - p) / (highP - lowP)
+	return low, high, lowProb
 }
 
+// tidSamplerForLogAdjustedCount
 func tidSamplerForLogAdjustedCount(logAdjustedCount int) trace.Sampler {
-	return trace.TraceIDRatioBased(1.0 / float64(int64(1)<<logAdjustedCount))
+	return trace.TraceIDRatioBased(expToFloat64(-logAdjustedCount))
 }
 
 func (s *Sampler) ShouldSample(params trace.SamplingParameters) trace.SamplingResult {
@@ -166,13 +192,18 @@ func (s *Sampler) ShouldSample(params trace.SamplingParameters) trace.SamplingRe
 	now := s.nowfunc()
 
 	if now.Sub(state.start) >= s.interval {
+		// If the window has expired, update it and re-load.
 		state.compute.Do(func() {
 			s.updateWindow(state, now)
 		})
+		state = s.current.Load().(*window)
 	}
 
+	// Count the span in this window's rate estimate.
 	_ = atomic.AddInt64(&state.count, 1)
 
+	// Compare a uniform random with lowProb, choose either the
+	// low or high probability TraceIDRatio Sampler.
 	var tid trace.Sampler
 	if rand.Float64() < state.lowProb {
 		tid = state.low
@@ -184,24 +215,33 @@ func (s *Sampler) ShouldSample(params trace.SamplingParameters) trace.SamplingRe
 }
 
 func (s *Sampler) Description() string {
-	return fmt.Sprintf("RateLimited{%g}", float64(s.targetCount)/s.interval.Seconds())
+	return fmt.Sprintf("RateLimited{%g}", s.targetRate)
 }
 
 func (s *Sampler) updateWindow(expired *window, now time.Time) {
+	// Capture the actual count and the corresponding interval
+	// that was measured since the probability was last updated.
 	count := atomic.LoadInt64(&expired.count)
 	duration := now.Sub(expired.start)
 
+	// Combine the new data and the old data.  In Bayesian terms,
+	// this is justified by modelling the arrival of spans as a
+	// Poisson process.  The maximum-a-posteriori estimate of the
+	// rate based on the observed data equals totalCount divided
+	// by totalDuration.
 	totalCount := count + s.priorCount
 	totalDuration := duration + s.priorDuration
+	predictedRate := float64(totalCount) / totalDuration.Seconds()
 
-	countFactor := float64(totalCount) / float64(s.targetCount)
-	durationFactor := float64(totalDuration) / float64(s.interval)
-	probability := durationFactor / countFactor
+	// Compute the probability that will yield the target rate.
+	probability := s.targetRate / predictedRate
 
 	if probability > 1 {
-		probability = DefaultProbability
+		probability = 1
 	}
 
+	// update the Sampler state, save this window's count and
+	// duration for the next window's update.
 	lowS, highS, lowProb := splitProb(probability)
 
 	next := &window{
