@@ -1630,7 +1630,7 @@ func TestCustomClock(t *testing.T) {
 	_, span := tracer.Start(context.Background(), "test-frozen-clock")
 	time.Sleep(time.Microsecond * 2)
 	span.End()
-	require.Equal(t, te.Len(), 1, "Should only have one span")
+	require.Equal(t, te.Len(), 1, "should only have one span")
 
 	got := te.Spans()[0]
 	assert.Equal(t, now, got.StartTime(), "StartTime should return the frozen time")
