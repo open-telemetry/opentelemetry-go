@@ -1435,8 +1435,8 @@ func TestSpanCapturesPanicWithStackTrace(t *testing.T) {
 
 	gotStackTraceFunctionName := strings.Split(spans[0].Events()[0].Attributes[2].Value.AsString(), "\n")
 	fmt.Println(strings.Split(gotStackTraceFunctionName[1], "(0x")[0])
-	assert.Equal(t, strings.TrimSuffix(strings.Split(gotStackTraceFunctionName[1], "(0x")[0], "(...)"), "go.opentelemetry.io/otel/sdk/trace.recordStackTrace")
-	assert.Equal(t, strings.TrimSuffix(strings.Split(gotStackTraceFunctionName[3], "(0x")[0], "(...)"), "go.opentelemetry.io/otel/sdk/trace.(*span).End")
+	assert.True(t, strings.HasPrefix(gotStackTraceFunctionName[1], "go.opentelemetry.io/otel/sdk/trace.recordStackTrace"))
+	assert.True(t, strings.HasPrefix(gotStackTraceFunctionName[3], "go.opentelemetry.io/otel/sdk/trace.(*span).End"))
 }
 
 func TestReadOnlySpan(t *testing.T) {
