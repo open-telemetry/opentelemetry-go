@@ -224,14 +224,6 @@ func (s *span) End(options ...trace.SpanEndOption) {
 		return
 	}
 
-	// If the span was not properly started, stopwatch will be nil.
-	// The normal check (IsRecording) happens after end time generation,
-	// so we add a simple check here to make sure end time is generated
-	// as early as possible.
-	if s.stopwatch == nil {
-		return
-	}
-
 	// Store the end time as soon as possible to avoid artificially increasing
 	// the span's duration in case some operation below takes a while.
 	et := s.stopwatch.Started().Add(s.stopwatch.Stop())
@@ -563,14 +555,13 @@ func (s *span) addChild() {
 func (*span) private() {}
 
 func (s *span) startTime() time.Time {
-	if s.stopwatch == nil {
-		return time.Time{}
-	}
 	return s.stopwatch.Started()
 }
 
 func startSpanInternal(ctx context.Context, tr *tracer, name string, o *trace.SpanConfig) *span {
-	span := &span{}
+	span := &span{
+		stopwatch: nilStopwatch{},
+	}
 
 	provider := tr.provider
 

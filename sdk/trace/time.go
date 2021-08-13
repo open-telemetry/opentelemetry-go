@@ -38,6 +38,7 @@ type Stopwatch interface {
 
 type standardClock struct{}
 type standardStopwatch time.Time
+type nilStopwatch struct{}
 
 func defaultClock() Clock {
 	return standardClock{}
@@ -53,4 +54,12 @@ func (w standardStopwatch) Started() time.Time {
 
 func (w standardStopwatch) Stop() time.Duration {
 	return time.Since(time.Time(w))
+}
+
+func (w nilStopwatch) Started() time.Time {
+	return time.Time{}
+}
+
+func (w nilStopwatch) Stop() time.Duration {
+	return 0
 }
