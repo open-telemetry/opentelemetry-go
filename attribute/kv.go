@@ -97,6 +97,8 @@ func Array(k string, v interface{}) KeyValue {
 
 // Any creates a new key-value pair instance with a passed name and
 // automatic type inference. This is slower, and not type-safe.
+//
+// Deprecated: Use the typed functions instead.
 func Any(k string, value interface{}) KeyValue {
 	if value == nil {
 		return String(k, "<nil>")
