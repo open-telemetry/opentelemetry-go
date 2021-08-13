@@ -26,6 +26,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The functions from that package should be used instead. (#2166)
 - The `"go.opentelemetry.io/otel/attribute".Array` function and the related `ARRAY` value type is deprecated.
   Use the typed `*Slice` functions and types added to the package instead. (#2162)
+- The `"go.opentelemetry.io/otel/attribute".Any` function is deprecated.
+  Use the typed functions instead. (#2181)
 
 ### Removed
 
