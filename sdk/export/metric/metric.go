@@ -211,7 +211,7 @@ type Exporter interface {
 	//
 	// The CheckpointSet interface refers to the Processor that just
 	// completed collection.
-	Export(ctx context.Context, checkpointSet CheckpointSet) error
+	Export(ctx context.Context, resource *resource.Resource, checkpointSet CheckpointSet) error
 
 	// ExportKindSelector is an interface used by the Processor
 	// in deciding whether to compute Delta or Cumulative
@@ -269,7 +269,6 @@ type CheckpointSet interface {
 type Metadata struct {
 	descriptor *metric.Descriptor
 	labels     *attribute.Set
-	resource   *resource.Resource
 }
 
 // Accumulation contains the exported data for a single metric instrument
@@ -300,21 +299,15 @@ func (m Metadata) Labels() *attribute.Set {
 	return m.labels
 }
 
-// Resource contains common attributes that apply to this metric event.
-func (m Metadata) Resource() *resource.Resource {
-	return m.resource
-}
-
 // NewAccumulation allows Accumulator implementations to construct new
-// Accumulations to send to Processors. The Descriptor, Labels, Resource,
+// Accumulations to send to Processors. The Descriptor, Labels,
 // and Aggregator represent aggregate metric events received over a single
 // collection period.
-func NewAccumulation(descriptor *metric.Descriptor, labels *attribute.Set, resource *resource.Resource, aggregator Aggregator) Accumulation {
+func NewAccumulation(descriptor *metric.Descriptor, labels *attribute.Set, aggregator Aggregator) Accumulation {
 	return Accumulation{
 		Metadata: Metadata{
 			descriptor: descriptor,
 			labels:     labels,
-			resource:   resource,
 		},
 		aggregator: aggregator,
 	}
@@ -329,12 +322,11 @@ func (r Accumulation) Aggregator() Aggregator {
 // NewRecord allows Processor implementations to construct export
 // records.  The Descriptor, Labels, and Aggregator represent
 // aggregate metric events received over a single collection period.
-func NewRecord(descriptor *metric.Descriptor, labels *attribute.Set, resource *resource.Resource, aggregation aggregation.Aggregation, start, end time.Time) Record {
+func NewRecord(descriptor *metric.Descriptor, labels *attribute.Set, aggregation aggregation.Aggregation, start, end time.Time) Record {
 	return Record{
 		Metadata: Metadata{
 			descriptor: descriptor,
 			labels:     labels,
-			resource:   resource,
 		},
 		aggregation: aggregation,
 		start:       start,

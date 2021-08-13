@@ -42,7 +42,7 @@ func newFixture(b *testing.B) *benchFixture {
 		AggregatorSelector: processortest.AggregatorSelector(),
 	}
 
-	bf.accumulator = sdk.NewAccumulator(bf, nil)
+	bf.accumulator = sdk.NewAccumulator(bf)
 	bf.meter = metric.WrapMeterImpl(bf.accumulator, "benchmarks")
 	return bf
 }
