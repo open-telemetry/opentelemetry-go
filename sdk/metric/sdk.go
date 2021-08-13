@@ -28,7 +28,6 @@ import (
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type (
@@ -64,9 +63,6 @@ type (
 		// place for sorting during labels creation to avoid
 		// allocation.  It is cleared after use.
 		asyncSortSlice attribute.Sortable
-
-		// resource is applied to all records in this Accumulator.
-		resource *resource.Resource
 	}
 
 	syncInstrument struct {
@@ -304,11 +300,10 @@ func (s *syncInstrument) RecordOne(ctx context.Context, num number.Number, kvs [
 // processor will call Collect() when it receives a request to scrape
 // current metric values.  A push-based processor should configure its
 // own periodic collection.
-func NewAccumulator(processor export.Processor, resource *resource.Resource) *Accumulator {
+func NewAccumulator(processor export.Processor) *Accumulator {
 	return &Accumulator{
 		processor:        processor,
 		asyncInstruments: internal.NewAsyncInstrumentState(),
-		resource:         resource,
 	}
 }
 
@@ -437,7 +432,7 @@ func (m *Accumulator) checkpointRecord(r *record) int {
 		return 0
 	}
 
-	a := export.NewAccumulation(&r.inst.descriptor, r.labels, m.resource, r.checkpoint)
+	a := export.NewAccumulation(&r.inst.descriptor, r.labels, r.checkpoint)
 	err = m.processor.Process(a)
 	if err != nil {
 		otel.Handle(err)
@@ -455,7 +450,7 @@ func (m *Accumulator) checkpointAsync(a *asyncInstrument) int {
 		epochDiff := m.currentEpoch - lrec.observedEpoch
 		if epochDiff == 0 {
 			if lrec.observed != nil {
-				a := export.NewAccumulation(&a.descriptor, lrec.labels, m.resource, lrec.observed)
+				a := export.NewAccumulation(&a.descriptor, lrec.labels, lrec.observed)
 				err := m.processor.Process(a)
 				if err != nil {
 					otel.Handle(err)

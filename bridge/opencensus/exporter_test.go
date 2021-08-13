@@ -39,12 +39,14 @@ import (
 
 type fakeExporter struct {
 	export.Exporter
-	records []export.Record
-	err     error
+	records  []export.Record
+	resource *resource.Resource
+	err      error
 }
 
-func (f *fakeExporter) Export(ctx context.Context, cps exportmetric.CheckpointSet) error {
+func (f *fakeExporter) Export(ctx context.Context, res *resource.Resource, cps exportmetric.CheckpointSet) error {
 	return cps.ForEach(f, func(record exportmetric.Record) error {
+		f.resource = res
 		f.records = append(f.records, record)
 		return f.err
 	})
@@ -82,6 +84,7 @@ func TestExportMetrics(t *testing.T) {
 		input                []*metricdata.Metric
 		exportErr            error
 		expected             []export.Record
+		expectedResource     *resource.Resource
 		expectedHandledError error
 	}{
 		{
@@ -142,6 +145,12 @@ func TestExportMetrics(t *testing.T) {
 			desc: "success",
 			input: []*metricdata.Metric{
 				{
+					Resource: &ocresource.Resource{
+						Labels: map[string]string{
+							"R1": "V1",
+							"R2": "V2",
+						},
+					},
 					TimeSeries: []*metricdata.TimeSeries{
 						{
 							StartTime: now,
@@ -152,11 +161,14 @@ func TestExportMetrics(t *testing.T) {
 					},
 				},
 			},
+			expectedResource: resource.NewSchemaless(
+				attribute.String("R1", "V1"),
+				attribute.String("R2", "V2"),
+			),
 			expected: []export.Record{
 				export.NewRecord(
 					&basicDesc,
 					attribute.EmptySet(),
-					resource.NewSchemaless(),
 					&ocExactAggregator{
 						points: []aggregation.Point{
 							{
@@ -188,7 +200,6 @@ func TestExportMetrics(t *testing.T) {
 				export.NewRecord(
 					&basicDesc,
 					attribute.EmptySet(),
-					resource.NewSchemaless(),
 					&ocExactAggregator{
 						points: []aggregation.Point{
 							{
@@ -223,7 +234,6 @@ func TestExportMetrics(t *testing.T) {
 				export.NewRecord(
 					&basicDesc,
 					attribute.EmptySet(),
-					resource.NewSchemaless(),
 					&ocExactAggregator{
 						points: []aggregation.Point{
 							{
@@ -255,15 +265,15 @@ func TestExportMetrics(t *testing.T) {
 			if len(tc.expected) != len(output) {
 				t.Fatalf("ExportMetrics(%+v) = %d records, want %d records", tc.input, len(output), len(tc.expected))
 			}
+			if fakeExporter.resource.String() != tc.expectedResource.String() {
+				t.Errorf("ExportMetrics(%+v)[i].Resource() = %+v, want %+v", tc.input, fakeExporter.resource.String(), tc.expectedResource.String())
+			}
 			for i, expected := range tc.expected {
 				if output[i].StartTime() != expected.StartTime() {
 					t.Errorf("ExportMetrics(%+v)[i].StartTime() = %+v, want %+v", tc.input, output[i].StartTime(), expected.StartTime())
 				}
 				if output[i].EndTime() != expected.EndTime() {
 					t.Errorf("ExportMetrics(%+v)[i].EndTime() = %+v, want %+v", tc.input, output[i].EndTime(), expected.EndTime())
-				}
-				if output[i].Resource().String() != expected.Resource().String() {
-					t.Errorf("ExportMetrics(%+v)[i].Resource() = %+v, want %+v", tc.input, output[i].Resource().String(), expected.Resource().String())
 				}
 				if output[i].Descriptor().Name() != expected.Descriptor().Name() {
 					t.Errorf("ExportMetrics(%+v)[i].Descriptor() = %+v, want %+v", tc.input, output[i].Descriptor().Name(), expected.Descriptor().Name())

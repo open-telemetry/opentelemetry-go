@@ -51,7 +51,11 @@ type exporter struct {
 
 // ExportMetrics implements the OpenCensus metric Exporter interface
 func (e *exporter) ExportMetrics(ctx context.Context, metrics []*metricdata.Metric) error {
-	return e.base.Export(ctx, &checkpointSet{metrics: metrics})
+	res := resource.Empty()
+	if len(metrics) != 0 {
+		res = convertResource(metrics[0].Resource)
+	}
+	return e.base.Export(ctx, res, &checkpointSet{metrics: metrics})
 }
 
 type checkpointSet struct {
@@ -69,7 +73,6 @@ func (d *checkpointSet) ForEach(exporter export.ExportKindSelector, f func(expor
 			otel.Handle(err)
 			continue
 		}
-		res := convertResource(m.Resource)
 		for _, ts := range m.TimeSeries {
 			if len(ts.Points) == 0 {
 				continue
@@ -87,7 +90,6 @@ func (d *checkpointSet) ForEach(exporter export.ExportKindSelector, f func(expor
 			if err := f(export.NewRecord(
 				&descriptor,
 				&ls,
-				res,
 				agg,
 				ts.StartTime,
 				agg.end(),
@@ -119,6 +121,7 @@ func convertLabels(keys []metricdata.LabelKey, values []metricdata.LabelValue) (
 }
 
 // convertResource converts an OpenCensus Resource to an OpenTelemetry Resource
+// Note: the ocresource.Resource Type field is not used.
 func convertResource(res *ocresource.Resource) *resource.Resource {
 	labels := []attribute.KeyValue{}
 	if res == nil {

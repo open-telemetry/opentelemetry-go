@@ -30,11 +30,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 var Must = metric.Must
-var testResource = resource.NewSchemaless(attribute.String("R", "V"))
 
 type handler struct {
 	sync.Mutex
@@ -87,7 +85,6 @@ func newSDK(t *testing.T) (metric.Meter, *metricsdk.Accumulator, *testSelector, 
 	)
 	accum := metricsdk.NewAccumulator(
 		processor,
-		testResource,
 	)
 	meter := metric.WrapMeterImpl(accum, "test")
 	return meter, accum, testSelector, processor
@@ -109,7 +106,7 @@ func TestInputRangeCounter(t *testing.T) {
 	counter.Add(ctx, 1)
 	checkpointed = sdk.Collect(ctx)
 	require.Equal(t, map[string]float64{
-		"name.sum//R=V": 1,
+		"name.sum//": 1,
 	}, processor.Values())
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, testHandler.Flush())
@@ -128,7 +125,7 @@ func TestInputRangeUpDownCounter(t *testing.T) {
 
 	checkpointed := sdk.Collect(ctx)
 	require.Equal(t, map[string]float64{
-		"name.sum//R=V": 1,
+		"name.sum//": 1,
 	}, processor.Values())
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, testHandler.Flush())
@@ -153,7 +150,7 @@ func TestInputRangeValueRecorder(t *testing.T) {
 	checkpointed = sdk.Collect(ctx)
 
 	require.Equal(t, map[string]float64{
-		"name.exact//R=V": 3,
+		"name.exact//": 3,
 	}, processor.Values())
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, testHandler.Flush())
@@ -225,7 +222,7 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 		counter.Add(ctx, 1, kvsA...)
 		format := func(attrs []attribute.KeyValue) string {
 			str := attribute.DefaultEncoder().Encode(newSetIter(attrs...))
-			return fmt.Sprint("name.sum/", str, "/R=V")
+			return fmt.Sprint("name.sum/", str, "/")
 		}
 		allExpect[format(expectA)] += 2
 
@@ -329,20 +326,20 @@ func TestObserverCollection(t *testing.T) {
 
 		mult := float64(mult)
 		require.EqualValues(t, map[string]float64{
-			"float.valueobserver.lastvalue/A=B/R=V": -mult,
-			"float.valueobserver.lastvalue/C=D/R=V": -mult,
-			"int.valueobserver.lastvalue//R=V":      mult,
-			"int.valueobserver.lastvalue/A=B/R=V":   mult,
+			"float.valueobserver.lastvalue/A=B/": -mult,
+			"float.valueobserver.lastvalue/C=D/": -mult,
+			"int.valueobserver.lastvalue//":      mult,
+			"int.valueobserver.lastvalue/A=B/":   mult,
 
-			"float.sumobserver.sum/A=B/R=V": 2 * mult,
-			"float.sumobserver.sum/C=D/R=V": mult,
-			"int.sumobserver.sum//R=V":      mult,
-			"int.sumobserver.sum/A=B/R=V":   mult,
+			"float.sumobserver.sum/A=B/": 2 * mult,
+			"float.sumobserver.sum/C=D/": mult,
+			"int.sumobserver.sum//":      mult,
+			"int.sumobserver.sum/A=B/":   mult,
 
-			"float.updownsumobserver.sum/A=B/R=V": -2 * mult,
-			"float.updownsumobserver.sum/C=D/R=V": mult,
-			"int.updownsumobserver.sum//R=V":      -mult,
-			"int.updownsumobserver.sum/A=B/R=V":   mult,
+			"float.updownsumobserver.sum/A=B/": -2 * mult,
+			"float.updownsumobserver.sum/C=D/": mult,
+			"int.updownsumobserver.sum//":      -mult,
+			"int.updownsumobserver.sum/A=B/":   mult,
 		}, processor.Values())
 	}
 }
@@ -429,20 +426,20 @@ func TestObserverBatch(t *testing.T) {
 	require.Equal(t, collected, len(processor.Values()))
 
 	require.EqualValues(t, map[string]float64{
-		"float.sumobserver.sum//R=V":    1.1,
-		"float.sumobserver.sum/A=B/R=V": 1000,
-		"int.sumobserver.sum//R=V":      10,
-		"int.sumobserver.sum/A=B/R=V":   100,
+		"float.sumobserver.sum//":    1.1,
+		"float.sumobserver.sum/A=B/": 1000,
+		"int.sumobserver.sum//":      10,
+		"int.sumobserver.sum/A=B/":   100,
 
-		"int.updownsumobserver.sum/A=B/R=V":   -100,
-		"float.updownsumobserver.sum/A=B/R=V": -1000,
-		"int.updownsumobserver.sum//R=V":      10,
-		"float.updownsumobserver.sum/C=D/R=V": -1,
+		"int.updownsumobserver.sum/A=B/":   -100,
+		"float.updownsumobserver.sum/A=B/": -1000,
+		"int.updownsumobserver.sum//":      10,
+		"float.updownsumobserver.sum/C=D/": -1,
 
-		"float.valueobserver.lastvalue/A=B/R=V": -1,
-		"float.valueobserver.lastvalue/C=D/R=V": -1,
-		"int.valueobserver.lastvalue//R=V":      1,
-		"int.valueobserver.lastvalue/A=B/R=V":   1,
+		"float.valueobserver.lastvalue/A=B/": -1,
+		"float.valueobserver.lastvalue/C=D/": -1,
+		"int.valueobserver.lastvalue//":      1,
+		"int.valueobserver.lastvalue/A=B/":   1,
 	}, processor.Values())
 }
 
@@ -470,10 +467,10 @@ func TestRecordBatch(t *testing.T) {
 	sdk.Collect(ctx)
 
 	require.EqualValues(t, map[string]float64{
-		"int64.sum/A=B,C=D/R=V":     1,
-		"float64.sum/A=B,C=D/R=V":   2,
-		"int64.exact/A=B,C=D/R=V":   3,
-		"float64.exact/A=B,C=D/R=V": 4,
+		"int64.sum/A=B,C=D/":     1,
+		"float64.sum/A=B,C=D/":   2,
+		"int64.exact/A=B,C=D/":   3,
+		"float64.exact/A=B,C=D/": 4,
 	}, processor.Values())
 }
 
@@ -549,7 +546,7 @@ func TestSyncInAsync(t *testing.T) {
 	sdk.Collect(ctx)
 
 	require.EqualValues(t, map[string]float64{
-		"counter.sum//R=V":        100,
-		"observer.lastvalue//R=V": 10,
+		"counter.sum//":        100,
+		"observer.lastvalue//": 10,
 	}, processor.Values())
 }

@@ -33,6 +33,7 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // Exporter supports Prometheus pulls.  It does not implement the
@@ -153,7 +154,7 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 
 	_ = c.exp.Controller().ForEach(c.exp, func(record export.Record) error {
 		var labelKeys []string
-		mergeLabels(record, &labelKeys, nil)
+		mergeLabels(record, c.exp.controller.Resource(), &labelKeys, nil)
 		ch <- c.toDesc(record, labelKeys)
 		return nil
 	})
@@ -178,7 +179,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		instrumentKind := record.Descriptor().InstrumentKind()
 
 		var labelKeys, labels []string
-		mergeLabels(record, &labelKeys, &labels)
+		mergeLabels(record, c.exp.controller.Resource(), &labelKeys, &labels)
 
 		desc := c.toDesc(record, labelKeys)
 
@@ -294,17 +295,17 @@ func (c *collector) toDesc(record export.Record, labelKeys []string) *prometheus
 // duplicate keys.  This outputs one or both of the keys and the
 // values as a slice, and either argument may be nil to avoid
 // allocating an unnecessary slice.
-func mergeLabels(record export.Record, keys, values *[]string) {
+func mergeLabels(record export.Record, res *resource.Resource, keys, values *[]string) {
 	if keys != nil {
-		*keys = make([]string, 0, record.Labels().Len()+record.Resource().Len())
+		*keys = make([]string, 0, record.Labels().Len()+res.Len())
 	}
 	if values != nil {
-		*values = make([]string, 0, record.Labels().Len()+record.Resource().Len())
+		*values = make([]string, 0, record.Labels().Len()+res.Len())
 	}
 
 	// Duplicate keys are resolved by taking the record label value over
 	// the resource value.
-	mi := attribute.NewMergeIterator(record.Labels(), record.Resource().Set())
+	mi := attribute.NewMergeIterator(record.Labels(), res.Set())
 	for mi.Next() {
 		label := mi.Label()
 		if keys != nil {
