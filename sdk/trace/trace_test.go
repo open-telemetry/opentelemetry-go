@@ -1626,12 +1626,15 @@ func TestCustomClock(t *testing.T) {
 	now := time.Now()
 	tp := NewTracerProvider(WithSyncer(te), WithClock(newFrozenClock(now)))
 	tracer := tp.Tracer("custom-clock")
+
 	_, span := tracer.Start(context.Background(), "test-frozen-clock")
 	time.Sleep(time.Microsecond * 2)
 	span.End()
+	assert.Equal(t, len(te.Spans()), 1, "Should only have one span")
+
 	got := te.Spans()[0]
-	assert.Equal(t, now, got.StartTime())
-	assert.Equal(t, now, got.EndTime())
+	assert.Equal(t, now, got.StartTime(), "StartTime should return the frozen time")
+	assert.Equal(t, now, got.EndTime(), "EndTime should return the frozen time")
 }
 
 type stateSampler struct {
