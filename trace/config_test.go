@@ -174,6 +174,39 @@ func TestNewSpanConfig(t *testing.T) {
 	}
 }
 
+func TestEndSpanConfig(t *testing.T) {
+	timestamp := time.Unix(0, 0)
+
+	tests := []struct {
+		options  []SpanEndOption
+		expected *SpanConfig
+	}{
+		{
+			[]SpanEndOption{},
+			new(SpanConfig),
+		},
+		{
+			[]SpanEndOption{
+				WithStackTrace(true),
+			},
+			&SpanConfig{
+				stackTrace: true,
+			},
+		},
+		{
+			[]SpanEndOption{
+				WithTimestamp(timestamp),
+			},
+			&SpanConfig{
+				timestamp: timestamp,
+			},
+		},
+	}
+	for _, test := range tests {
+		assert.Equal(t, test.expected, NewSpanEndConfig(test.options...))
+	}
+}
+
 func TestTracerConfig(t *testing.T) {
 	v1 := "semver:0.0.1"
 	v2 := "semver:1.0.0"

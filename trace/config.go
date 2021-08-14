@@ -64,6 +64,7 @@ type SpanConfig struct {
 	links      []Link
 	newRoot    bool
 	spanKind   SpanKind
+	stackTrace bool
 }
 
 // Attributes describe the associated qualities of a Span.
@@ -74,6 +75,11 @@ func (cfg *SpanConfig) Attributes() []attribute.KeyValue {
 // Timestamp is a time in a Span life-cycle.
 func (cfg *SpanConfig) Timestamp() time.Time {
 	return cfg.timestamp
+}
+
+// StackTrace checks whether stack trace capturing is enabled.
+func (cfg *SpanConfig) StackTrace() bool {
+	return cfg.stackTrace
 }
 
 // Links are the associations a Span has with other Spans.
@@ -139,6 +145,7 @@ type SpanEndOption interface {
 type EventConfig struct {
 	attributes []attribute.KeyValue
 	timestamp  time.Time
+	stackTrace bool
 }
 
 // Attributes describe the associated qualities of an Event.
@@ -149,6 +156,11 @@ func (cfg *EventConfig) Attributes() []attribute.KeyValue {
 // Timestamp is a time in an Event life-cycle.
 func (cfg *EventConfig) Timestamp() time.Time {
 	return cfg.timestamp
+}
+
+// StackTrace checks whether stack trace capturing is enabled.
+func (cfg *EventConfig) StackTrace() bool {
+	return cfg.stackTrace
 }
 
 // NewEventConfig applies all the EventOptions to a returned EventConfig. If no
@@ -180,6 +192,12 @@ type SpanOption interface {
 // SpanStartEventOption are options that can be used at the start of a span, or with an event.
 type SpanStartEventOption interface {
 	SpanStartOption
+	EventOption
+}
+
+// SpanEndEventOption are options that can be used at the end of a span, or with an event.
+type SpanEndEventOption interface {
+	SpanEndOption
 	EventOption
 }
 
@@ -227,6 +245,17 @@ var _ SpanEventOption = timestampOption{}
 // started, stopped, errored).
 func WithTimestamp(t time.Time) SpanEventOption {
 	return timestampOption(t)
+}
+
+type stackTraceOption bool
+
+func (o stackTraceOption) applyEvent(c *EventConfig)  { c.stackTrace = bool(o) }
+func (o stackTraceOption) applySpan(c *SpanConfig)    { c.stackTrace = bool(o) }
+func (o stackTraceOption) applySpanEnd(c *SpanConfig) { o.applySpan(c) }
+
+// WithStackTrace sets the flag to capture the error with stack trace (e.g. true, false).
+func WithStackTrace(b bool) SpanEndEventOption {
+	return stackTraceOption(b)
 }
 
 // WithLinks adds links to a Span. The links are added to the existing Span
