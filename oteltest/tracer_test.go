@@ -25,6 +25,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/internal/matchers"
+
+	//nolint:staticcheck
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/trace"
 )
