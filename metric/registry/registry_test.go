@@ -72,7 +72,7 @@ func unwrap(impl interface{}, err error) (metric.InstrumentImpl, error) {
 
 func TestRegistrySameInstruments(t *testing.T) {
 	for _, nf := range allNew {
-		_, provider := metrictest.NewMeterProvider()
+		provider := registry.NewMeterProvider(metrictest.NewMeterProvider())
 
 		meter := provider.Meter("meter")
 		inst1, err1 := nf(meter, "this")
@@ -86,7 +86,7 @@ func TestRegistrySameInstruments(t *testing.T) {
 
 func TestRegistryDifferentNamespace(t *testing.T) {
 	for _, nf := range allNew {
-		_, provider := metrictest.NewMeterProvider()
+		provider := metrictest.NewMeterProvider()
 
 		meter1 := provider.Meter("meter1")
 		meter2 := provider.Meter("meter2")
@@ -101,7 +101,7 @@ func TestRegistryDifferentNamespace(t *testing.T) {
 
 func TestRegistryDiffInstruments(t *testing.T) {
 	for origName, origf := range allNew {
-		_, provider := metrictest.NewMeterProvider()
+		provider := registry.NewMeterProvider(metrictest.NewMeterProvider())
 		meter := provider.Meter("meter")
 
 		_, err := origf(meter, "this")
@@ -121,8 +121,8 @@ func TestRegistryDiffInstruments(t *testing.T) {
 }
 
 func TestMeterProvider(t *testing.T) {
-	impl, _ := metrictest.NewMeter()
-	p := registry.NewMeterProvider(impl)
+	provider := metrictest.NewMeterProvider()
+	p := registry.NewMeterProvider(provider)
 	m1 := p.Meter("m1")
 	m1p := p.Meter("m1")
 	m2 := p.Meter("m2")

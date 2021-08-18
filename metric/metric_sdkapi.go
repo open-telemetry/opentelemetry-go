@@ -86,10 +86,8 @@ type AsyncImpl interface {
 
 // WrapMeterImpl constructs a `Meter` implementation from a
 // `MeterImpl` implementation.
-func WrapMeterImpl(impl MeterImpl, instrumentationName string, opts ...MeterOption) Meter {
+func WrapMeterImpl(impl MeterImpl) Meter {
 	return Meter{
-		impl:    impl,
-		name:    instrumentationName,
-		version: NewMeterConfig(opts...).InstrumentationVersion(),
+		impl: impl,
 	}
 }
