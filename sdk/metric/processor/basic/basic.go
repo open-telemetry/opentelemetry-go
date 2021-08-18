@@ -113,7 +113,7 @@ type (
 
 var _ export.Processor = &Processor{}
 var _ export.Checkpointer = &Processor{}
-var _ export.CheckpointSet = &state{}
+var _ export.MetricReader = &state{}
 
 // ErrInconsistentState is returned when the sequence of collection's starts and finishes are incorrectly balanced.
 var ErrInconsistentState = fmt.Errorf("inconsistent processor state")
@@ -127,20 +127,43 @@ var ErrInvalidExportKind = fmt.Errorf("invalid export kind")
 // data, so that this Processor can prepare to compute Delta or
 // Cumulative Aggregations as needed.
 func New(aselector export.AggregatorSelector, eselector export.ExportKindSelector, opts ...Option) *Processor {
+	return NewFactory(aselector, eselector, opts...).NewCheckpointer().(*Processor)
+}
+
+type factory struct {
+	aselector export.AggregatorSelector
+	eselector export.ExportKindSelector
+	config    config
+}
+
+func NewFactory(aselector export.AggregatorSelector, eselector export.ExportKindSelector, opts ...Option) export.CheckpointerFactory {
+	var config config
+	for _, opt := range opts {
+		opt.applyProcessor(&config)
+	}
+	return factory{
+		aselector: aselector,
+		eselector: eselector,
+		config:    config,
+	}
+}
+
+var _ export.CheckpointerFactory = factory{}
+
+func (f factory) NewCheckpointer() export.Checkpointer {
 	now := time.Now()
 	p := &Processor{
-		AggregatorSelector: aselector,
-		ExportKindSelector: eselector,
+		AggregatorSelector: f.aselector,
+		ExportKindSelector: f.eselector,
 		state: state{
 			values:        map[stateKey]*stateValue{},
 			processStart:  now,
 			intervalStart: now,
+			config:        f.config,
 		},
 	}
-	for _, opt := range opts {
-		opt.applyProcessor(&p.config)
-	}
 	return p
+
 }
 
 // Process implements export.Processor.
@@ -241,11 +264,11 @@ func (b *Processor) Process(accum export.Accumulation) error {
 	return value.current.Merge(agg, desc)
 }
 
-// CheckpointSet returns the associated CheckpointSet.  Use the
-// CheckpointSet Locker interface to synchronize access to this
-// object.  The CheckpointSet.ForEach() method cannot be called
+// MetricReader returns the associated MetricReader.  Use the
+// MetricReader Locker interface to synchronize access to this
+// object.  The MetricReader.ForEach() method cannot be called
 // concurrently with Process().
-func (b *Processor) CheckpointSet() export.CheckpointSet {
+func (b *Processor) MetricReader() export.MetricReader {
 	return &b.state
 }
 
@@ -260,7 +283,7 @@ func (b *Processor) StartCollection() {
 
 // FinishCollection signals to the Processor that a complete
 // collection has finished and that ForEach will be called to access
-// the CheckpointSet.
+// the MetricReader.
 func (b *Processor) FinishCollection() error {
 	b.intervalEnd = time.Now()
 	if b.startedCollection != b.finishedCollection+1 {
@@ -314,7 +337,7 @@ func (b *Processor) FinishCollection() error {
 	return nil
 }
 
-// ForEach iterates through the CheckpointSet, passing an
+// ForEach iterates through the MetricReader, passing an
 // export.Record with the appropriate Cumulative or Delta aggregation
 // to an exporter.
 func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record) error) error {

@@ -26,10 +26,12 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
@@ -136,8 +138,8 @@ func testProcessor(
 
 		instSuffix := fmt.Sprint(".", strings.ToLower(akind.String()))
 
-		desc1 := metric.NewDescriptor(fmt.Sprint("inst1", instSuffix), mkind, nkind)
-		desc2 := metric.NewDescriptor(fmt.Sprint("inst2", instSuffix), mkind, nkind)
+		desc1 := metrictest.NewDescriptor(fmt.Sprint("inst1", instSuffix), mkind, nkind)
+		desc2 := metrictest.NewDescriptor(fmt.Sprint("inst2", instSuffix), mkind, nkind)
 
 		for nc := 0; nc < nCheckpoint; nc++ {
 
@@ -174,7 +176,7 @@ func testProcessor(
 				continue
 			}
 
-			checkpointSet := processor.CheckpointSet()
+			metricReader := processor.MetricReader()
 
 			for _, repetitionAfterEmptyInterval := range []bool{false, true} {
 				if repetitionAfterEmptyInterval {
@@ -188,7 +190,7 @@ func testProcessor(
 
 				// Test the final checkpoint state.
 				records1 := processorTest.NewOutput(attribute.DefaultEncoder())
-				err = checkpointSet.ForEach(export.ConstantExportKindSelector(ekind), records1.AddRecord)
+				err = metricReader.ForEach(export.ConstantExportKindSelector(ekind), records1.AddRecord)
 
 				// Test for an allowed error:
 				if err != nil && err != aggregation.ErrNoSubtraction {
@@ -267,7 +269,7 @@ func (bogusExporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.
 	return 1000000
 }
 
-func (bogusExporter) Export(context.Context, export.CheckpointSet) error {
+func (bogusExporter) Export(context.Context, export.MetricReader) error {
 	panic("Not called")
 }
 
@@ -300,7 +302,7 @@ func TestBasicInconsistent(t *testing.T) {
 	// Test no start
 	b = basic.New(processorTest.AggregatorSelector(), export.StatelessExportKindSelector())
 
-	desc := metric.NewDescriptor("inst", sdkapi.CounterInstrumentKind, number.Int64Kind)
+	desc := metrictest.NewDescriptor("inst", sdkapi.CounterInstrumentKind, number.Int64Kind)
 	accum := export.NewAccumulation(&desc, attribute.EmptySet(), aggregatortest.NoopAggregator{})
 	require.Equal(t, basic.ErrInconsistentState, b.Process(accum))
 
@@ -325,7 +327,7 @@ func TestBasicTimestamps(t *testing.T) {
 	time.Sleep(time.Nanosecond)
 	afterNew := time.Now()
 
-	desc := metric.NewDescriptor("inst", sdkapi.CounterInstrumentKind, number.Int64Kind)
+	desc := metrictest.NewDescriptor("inst", sdkapi.CounterInstrumentKind, number.Int64Kind)
 	accum := export.NewAccumulation(&desc, attribute.EmptySet(), aggregatortest.NoopAggregator{})
 
 	b.StartCollection()
@@ -370,11 +372,11 @@ func TestBasicTimestamps(t *testing.T) {
 func TestStatefulNoMemoryCumulative(t *testing.T) {
 	ekindSel := export.CumulativeExportKindSelector()
 
-	desc := metric.NewDescriptor("inst.sum", sdkapi.CounterInstrumentKind, number.Int64Kind)
+	desc := metrictest.NewDescriptor("inst.sum", sdkapi.CounterInstrumentKind, number.Int64Kind)
 	selector := processorTest.AggregatorSelector()
 
 	processor := basic.New(selector, ekindSel, basic.WithMemory(false))
-	checkpointSet := processor.CheckpointSet()
+	metricReader := processor.MetricReader()
 
 	for i := 1; i < 3; i++ {
 		// Empty interval
@@ -383,7 +385,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 
 		// Verify zero elements
 		records := processorTest.NewOutput(attribute.DefaultEncoder())
-		require.NoError(t, checkpointSet.ForEach(ekindSel, records.AddRecord))
+		require.NoError(t, metricReader.ForEach(ekindSel, records.AddRecord))
 		require.EqualValues(t, map[string]float64{}, records.Map())
 
 		// Add 10
@@ -393,7 +395,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 
 		// Verify one element
 		records = processorTest.NewOutput(attribute.DefaultEncoder())
-		require.NoError(t, checkpointSet.ForEach(ekindSel, records.AddRecord))
+		require.NoError(t, metricReader.ForEach(ekindSel, records.AddRecord))
 		require.EqualValues(t, map[string]float64{
 			"inst.sum/A=B/": float64(i * 10),
 		}, records.Map())
@@ -403,11 +405,11 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 func TestStatefulNoMemoryDelta(t *testing.T) {
 	ekindSel := export.DeltaExportKindSelector()
 
-	desc := metric.NewDescriptor("inst.sum", sdkapi.SumObserverInstrumentKind, number.Int64Kind)
+	desc := metrictest.NewDescriptor("inst.sum", sdkapi.SumObserverInstrumentKind, number.Int64Kind)
 	selector := processorTest.AggregatorSelector()
 
 	processor := basic.New(selector, ekindSel, basic.WithMemory(false))
-	checkpointSet := processor.CheckpointSet()
+	metricReader := processor.MetricReader()
 
 	for i := 1; i < 3; i++ {
 		// Empty interval
@@ -416,7 +418,7 @@ func TestStatefulNoMemoryDelta(t *testing.T) {
 
 		// Verify zero elements
 		records := processorTest.NewOutput(attribute.DefaultEncoder())
-		require.NoError(t, checkpointSet.ForEach(ekindSel, records.AddRecord))
+		require.NoError(t, metricReader.ForEach(ekindSel, records.AddRecord))
 		require.EqualValues(t, map[string]float64{}, records.Map())
 
 		// Add 10
@@ -426,7 +428,7 @@ func TestStatefulNoMemoryDelta(t *testing.T) {
 
 		// Verify one element
 		records = processorTest.NewOutput(attribute.DefaultEncoder())
-		require.NoError(t, checkpointSet.ForEach(ekindSel, records.AddRecord))
+		require.NoError(t, metricReader.ForEach(ekindSel, records.AddRecord))
 		require.EqualValues(t, map[string]float64{
 			"inst.sum/A=B/": 10,
 		}, records.Map())
@@ -439,11 +441,11 @@ func TestMultiObserverSum(t *testing.T) {
 		export.DeltaExportKindSelector(),
 	} {
 
-		desc := metric.NewDescriptor("observe.sum", sdkapi.SumObserverInstrumentKind, number.Int64Kind)
+		desc := metrictest.NewDescriptor("observe.sum", sdkapi.SumObserverInstrumentKind, number.Int64Kind)
 		selector := processorTest.AggregatorSelector()
 
 		processor := basic.New(selector, ekindSel, basic.WithMemory(false))
-		checkpointSet := processor.CheckpointSet()
+		metricReader := processor.MetricReader()
 
 		for i := 1; i < 3; i++ {
 			// Add i*10*3 times
@@ -461,7 +463,7 @@ func TestMultiObserverSum(t *testing.T) {
 
 			// Verify one element
 			records := processorTest.NewOutput(attribute.DefaultEncoder())
-			require.NoError(t, checkpointSet.ForEach(ekindSel, records.AddRecord))
+			require.NoError(t, metricReader.ForEach(ekindSel, records.AddRecord))
 			require.EqualValues(t, map[string]float64{
 				"observe.sum/A=B/": float64(3 * 10 * multiplier),
 			}, records.Map())
@@ -477,7 +479,7 @@ func TestSumObserverEndToEnd(t *testing.T) {
 		eselector,
 	)
 	accum := sdk.NewAccumulator(proc)
-	meter := metric.WrapMeterImpl(accum, "testing")
+	meter := metric.WrapMeterImpl(accum)
 
 	var calls int64
 	metric.Must(meter).NewInt64SumObserver("observer.sum",
@@ -486,7 +488,7 @@ func TestSumObserverEndToEnd(t *testing.T) {
 			result.Observe(calls)
 		},
 	)
-	data := proc.CheckpointSet()
+	data := proc.MetricReader()
 
 	var startTime [3]time.Time
 	var endTime [3]time.Time
@@ -498,7 +500,10 @@ func TestSumObserverEndToEnd(t *testing.T) {
 		require.NoError(t, proc.FinishCollection())
 
 		exporter := processortest.New(eselector, attribute.DefaultEncoder())
-		require.NoError(t, exporter.Export(ctx, resource.Empty(), data))
+		require.NoError(t, exporter.Export(ctx, resource.Empty(), processortest.TestLibraryReader(
+			instrumentation.Library{
+				Name: "test",
+			}, data)))
 
 		require.EqualValues(t, map[string]float64{
 			"observer.sum//": float64(i + 1),

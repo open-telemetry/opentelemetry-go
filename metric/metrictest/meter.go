@@ -23,6 +23,7 @@ import (
 	internalmetric "go.opentelemetry.io/otel/internal/metric"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 )
 
 type (
@@ -88,6 +89,11 @@ var (
 	_ metric.MeterImpl     = &MeterImpl{}
 	_ metric.AsyncImpl     = &Async{}
 )
+
+func NewDescriptor(name string, ikind sdkapi.InstrumentKind, nkind number.Kind, opts ...metric.InstrumentOption) metric.Descriptor {
+	cfg := metric.NewInstrumentConfig(opts...)
+	return metric.NewDescriptor(name, ikind, nkind, cfg.Description(), cfg.Unit())
+}
 
 func (i Instrument) Descriptor() metric.Descriptor {
 	return i.descriptor

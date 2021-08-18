@@ -26,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -111,19 +112,25 @@ type Checkpointer interface {
 	// any time.
 	Processor
 
-	// CheckpointSet returns the current data set.  This may be
+	// MetricReader returns the current data set.  This may be
 	// called before and after collection.  The
 	// implementation is required to return the same value
-	// throughout its lifetime, since CheckpointSet exposes a
+	// throughout its lifetime, since MetricReader exposes a
 	// sync.Locker interface.  The caller is responsible for
-	// locking the CheckpointSet before initiating collection.
-	CheckpointSet() CheckpointSet
+	// locking the MetricReader before initiating collection.
+	MetricReader() MetricReader
 
 	// StartCollection begins a collection interval.
 	StartCollection()
 
 	// FinishCollection ends a collection interval.
 	FinishCollection() error
+}
+
+// CheckpointerFactory is an interface for producing configured
+// Checkpointer instances.
+type CheckpointerFactory interface {
+	NewCheckpointer() Checkpointer
 }
 
 // Aggregator implements a specific aggregation behavior, e.g., a
@@ -211,12 +218,16 @@ type Exporter interface {
 	//
 	// The CheckpointSet interface refers to the Processor that just
 	// completed collection.
-	Export(ctx context.Context, resource *resource.Resource, checkpointSet CheckpointSet) error
+	Export(ctx context.Context, resource *resource.Resource, reader InstrumentationLibraryMetricReader) error
 
 	// ExportKindSelector is an interface used by the Processor
 	// in deciding whether to compute Delta or Cumulative
 	// Aggregations when passing Records to this Exporter.
 	ExportKindSelector
+}
+
+type InstrumentationLibraryMetricReader interface {
+	ForEach(readerFunc func(instrumentation.Library, MetricReader) error) error
 }
 
 // ExportKindSelector is a sub-interface of Exporter used to indicate
@@ -229,11 +240,11 @@ type ExportKindSelector interface {
 	ExportKindFor(descriptor *metric.Descriptor, aggregatorKind aggregation.Kind) ExportKind
 }
 
-// CheckpointSet allows a controller to access a complete checkpoint of
+// MetricReader allows a controller to access a complete checkpoint of
 // aggregated metrics from the Processor.  This is passed to the
 // Exporter which may then use ForEach to iterate over the collection
 // of aggregated metrics.
-type CheckpointSet interface {
+type MetricReader interface {
 	// ForEach iterates over aggregated checkpoints for all
 	// metrics that were updated during the last collection
 	// period. Each aggregated checkpoint returned by the

@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -32,12 +33,12 @@ import (
 )
 
 var (
-	testCounterDesc           = metric.NewDescriptor("counter", sdkapi.CounterInstrumentKind, number.Int64Kind)
-	testUpDownCounterDesc     = metric.NewDescriptor("updowncounter", sdkapi.UpDownCounterInstrumentKind, number.Int64Kind)
-	testSumObserverDesc       = metric.NewDescriptor("sumobserver", sdkapi.SumObserverInstrumentKind, number.Int64Kind)
-	testUpDownSumObserverDesc = metric.NewDescriptor("updownsumobserver", sdkapi.UpDownSumObserverInstrumentKind, number.Int64Kind)
-	testValueRecorderDesc     = metric.NewDescriptor("valuerecorder", sdkapi.ValueRecorderInstrumentKind, number.Int64Kind)
-	testValueObserverDesc     = metric.NewDescriptor("valueobserver", sdkapi.ValueObserverInstrumentKind, number.Int64Kind)
+	testCounterDesc           = metrictest.NewDescriptor("counter", sdkapi.CounterInstrumentKind, number.Int64Kind)
+	testUpDownCounterDesc     = metrictest.NewDescriptor("updowncounter", sdkapi.UpDownCounterInstrumentKind, number.Int64Kind)
+	testSumObserverDesc       = metrictest.NewDescriptor("sumobserver", sdkapi.SumObserverInstrumentKind, number.Int64Kind)
+	testUpDownSumObserverDesc = metrictest.NewDescriptor("updownsumobserver", sdkapi.UpDownSumObserverInstrumentKind, number.Int64Kind)
+	testValueRecorderDesc     = metrictest.NewDescriptor("valuerecorder", sdkapi.ValueRecorderInstrumentKind, number.Int64Kind)
+	testValueObserverDesc     = metrictest.NewDescriptor("valueobserver", sdkapi.ValueObserverInstrumentKind, number.Int64Kind)
 )
 
 func oneAgg(sel export.AggregatorSelector, desc *metric.Descriptor) export.Aggregator {

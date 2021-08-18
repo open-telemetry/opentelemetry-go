@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
@@ -40,12 +41,15 @@ const envVar = "OTEL_RESOURCE_ATTRIBUTES"
 func getMap(t *testing.T, cont *controller.Controller) map[string]float64 {
 	out := processortest.NewOutput(attribute.DefaultEncoder())
 
-	require.NoError(t, cont.ForEach(
-		export.CumulativeExportKindSelector(),
-		func(record export.Record) error {
-			return out.AddRecord(record)
-		},
-	))
+	require.NoError(t, cont.Reader().ForEach(
+		func(_ instrumentation.Library, reader export.MetricReader) error {
+			return reader.ForEach(
+				export.CumulativeExportKindSelector(),
+				func(record export.Record) error {
+					return out.AddRecord(record)
+				},
+			)
+		}))
 	return out.Map()
 }
 
@@ -113,7 +117,7 @@ func TestControllerUsesResource(t *testing.T) {
 			sel := export.CumulativeExportKindSelector()
 			exp := processortest.New(sel, attribute.DefaultEncoder())
 			cont := controller.New(
-				processor.New(
+				processor.NewFactory(
 					processortest.AggregatorSelector(),
 					exp,
 				),
@@ -139,7 +143,7 @@ func TestControllerUsesResource(t *testing.T) {
 
 func TestStartNoExporter(t *testing.T) {
 	cont := controller.New(
-		processor.New(
+		processor.NewFactory(
 			processortest.AggregatorSelector(),
 			export.CumulativeExportKindSelector(),
 		),
@@ -209,7 +213,7 @@ func TestStartNoExporter(t *testing.T) {
 
 func TestObserverCanceled(t *testing.T) {
 	cont := controller.New(
-		processor.New(
+		processor.NewFactory(
 			processortest.AggregatorSelector(),
 			export.CumulativeExportKindSelector(),
 		),
@@ -242,7 +246,7 @@ func TestObserverCanceled(t *testing.T) {
 
 func TestObserverContext(t *testing.T) {
 	cont := controller.New(
-		processor.New(
+		processor.NewFactory(
 			processortest.AggregatorSelector(),
 			export.CumulativeExportKindSelector(),
 		),
@@ -284,7 +288,7 @@ func newBlockingExporter() *blockingExporter {
 	}
 }
 
-func (b *blockingExporter) Export(ctx context.Context, res *resource.Resource, output export.CheckpointSet) error {
+func (b *blockingExporter) Export(ctx context.Context, res *resource.Resource, output export.InstrumentationLibraryMetricReader) error {
 	var err error
 	_ = b.exporter.Export(ctx, res, output)
 	if b.calls == 0 {
@@ -306,7 +310,7 @@ func (*blockingExporter) ExportKindFor(
 func TestExportTimeout(t *testing.T) {
 	exporter := newBlockingExporter()
 	cont := controller.New(
-		processor.New(
+		processor.NewFactory(
 			processortest.AggregatorSelector(),
 			export.CumulativeExportKindSelector(),
 		),
@@ -363,7 +367,7 @@ func TestCollectAfterStopThenStartAgain(t *testing.T) {
 		attribute.DefaultEncoder(),
 	)
 	cont := controller.New(
-		processor.New(
+		processor.NewFactory(
 			processortest.AggregatorSelector(),
 			exp,
 		),
