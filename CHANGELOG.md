@@ -29,6 +29,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Use the typed `*Slice` functions and types added to the package instead. (#2162)
 - The `"go.opentelemetry.io/otel/attribute".Any` function is deprecated.
   Use the typed functions instead. (#2181)
+- The `go.opentelemetry.io/otel/oteltest` package is deprecated.
+  The `"go.opentelemetry.io/otel/sdk/trace/tracetest".SpanRecorder` can be registered with the default SDK (`go.opentelemetry.io/otel/sdk/trace`) as a `SpanProcessor` and used as a replacement for this deprecated package. (#2188)
 
 ### Removed
 
