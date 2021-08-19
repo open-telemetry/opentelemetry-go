@@ -110,7 +110,7 @@ func (t *MockTracer) addSpareContextValue(ctx context.Context) context.Context {
 	return ctx
 }
 
-func (t *MockTracer) getTraceID(ctx context.Context, config *trace.SpanConfig) trace.TraceID {
+func (t *MockTracer) getTraceID(ctx context.Context, config trace.SpanConfig) trace.TraceID {
 	if parent := t.getParentSpanContext(ctx, config); parent.IsValid() {
 		return parent.TraceID()
 	}
@@ -125,14 +125,14 @@ func (t *MockTracer) getTraceID(ctx context.Context, config *trace.SpanConfig) t
 	return t.getRandTraceID()
 }
 
-func (t *MockTracer) getParentSpanID(ctx context.Context, config *trace.SpanConfig) trace.SpanID {
+func (t *MockTracer) getParentSpanID(ctx context.Context, config trace.SpanConfig) trace.SpanID {
 	if parent := t.getParentSpanContext(ctx, config); parent.IsValid() {
 		return parent.SpanID()
 	}
 	return trace.SpanID{}
 }
 
-func (t *MockTracer) getParentSpanContext(ctx context.Context, config *trace.SpanConfig) trace.SpanContext {
+func (t *MockTracer) getParentSpanContext(ctx context.Context, config trace.SpanConfig) trace.SpanContext {
 	if !config.NewRoot() {
 		return trace.SpanContextFromContext(ctx)
 	}

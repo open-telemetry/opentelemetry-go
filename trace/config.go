@@ -28,20 +28,20 @@ type TracerConfig struct {
 }
 
 // InstrumentationVersion returns the version of the library providing instrumentation.
-func (t *TracerConfig) InstrumentationVersion() string {
+func (t TracerConfig) InstrumentationVersion() string {
 	return t.instrumentationVersion
 }
 
 // SchemaURL returns the Schema URL of the telemetry emitted by the Tracer.
-func (t *TracerConfig) SchemaURL() string {
+func (t TracerConfig) SchemaURL() string {
 	return t.schemaURL
 }
 
 // NewTracerConfig applies all the options to a returned TracerConfig.
-func NewTracerConfig(options ...TracerOption) *TracerConfig {
-	config := new(TracerConfig)
+func NewTracerConfig(options ...TracerOption) TracerConfig {
+	var config TracerConfig
 	for _, option := range options {
-		option.apply(config)
+		option.apply(&config)
 	}
 	return config
 }
@@ -68,34 +68,34 @@ type SpanConfig struct {
 }
 
 // Attributes describe the associated qualities of a Span.
-func (cfg *SpanConfig) Attributes() []attribute.KeyValue {
+func (cfg SpanConfig) Attributes() []attribute.KeyValue {
 	return cfg.attributes
 }
 
 // Timestamp is a time in a Span life-cycle.
-func (cfg *SpanConfig) Timestamp() time.Time {
+func (cfg SpanConfig) Timestamp() time.Time {
 	return cfg.timestamp
 }
 
 // StackTrace checks whether stack trace capturing is enabled.
-func (cfg *SpanConfig) StackTrace() bool {
+func (cfg SpanConfig) StackTrace() bool {
 	return cfg.stackTrace
 }
 
 // Links are the associations a Span has with other Spans.
-func (cfg *SpanConfig) Links() []Link {
+func (cfg SpanConfig) Links() []Link {
 	return cfg.links
 }
 
 // NewRoot identifies a Span as the root Span for a new trace. This is
 // commonly used when an existing trace crosses trust boundaries and the
 // remote parent span context should be ignored for security.
-func (cfg *SpanConfig) NewRoot() bool {
+func (cfg SpanConfig) NewRoot() bool {
 	return cfg.newRoot
 }
 
 // SpanKind is the role a Span has in a trace.
-func (cfg *SpanConfig) SpanKind() SpanKind {
+func (cfg SpanConfig) SpanKind() SpanKind {
 	return cfg.spanKind
 }
 
@@ -103,10 +103,10 @@ func (cfg *SpanConfig) SpanKind() SpanKind {
 // No validation is performed on the returned SpanConfig (e.g. no uniqueness
 // checking or bounding of data), it is left to the SDK to perform this
 // action.
-func NewSpanStartConfig(options ...SpanStartOption) *SpanConfig {
-	c := new(SpanConfig)
+func NewSpanStartConfig(options ...SpanStartOption) SpanConfig {
+	var c SpanConfig
 	for _, option := range options {
-		option.applySpanStart(c)
+		option.applySpanStart(&c)
 	}
 	return c
 }
@@ -115,10 +115,10 @@ func NewSpanStartConfig(options ...SpanStartOption) *SpanConfig {
 // No validation is performed on the returned SpanConfig (e.g. no uniqueness
 // checking or bounding of data), it is left to the SDK to perform this
 // action.
-func NewSpanEndConfig(options ...SpanEndOption) *SpanConfig {
-	c := new(SpanConfig)
+func NewSpanEndConfig(options ...SpanEndOption) SpanConfig {
+	var c SpanConfig
 	for _, option := range options {
-		option.applySpanEnd(c)
+		option.applySpanEnd(&c)
 	}
 	return c
 }
@@ -149,17 +149,17 @@ type EventConfig struct {
 }
 
 // Attributes describe the associated qualities of an Event.
-func (cfg *EventConfig) Attributes() []attribute.KeyValue {
+func (cfg EventConfig) Attributes() []attribute.KeyValue {
 	return cfg.attributes
 }
 
 // Timestamp is a time in an Event life-cycle.
-func (cfg *EventConfig) Timestamp() time.Time {
+func (cfg EventConfig) Timestamp() time.Time {
 	return cfg.timestamp
 }
 
 // StackTrace checks whether stack trace capturing is enabled.
-func (cfg *EventConfig) StackTrace() bool {
+func (cfg EventConfig) StackTrace() bool {
 	return cfg.stackTrace
 }
 
@@ -167,10 +167,10 @@ func (cfg *EventConfig) StackTrace() bool {
 // timestamp option is passed, the returned EventConfig will have a Timestamp
 // set to the call time, otherwise no validation is performed on the returned
 // EventConfig.
-func NewEventConfig(options ...EventOption) *EventConfig {
-	c := new(EventConfig)
+func NewEventConfig(options ...EventOption) EventConfig {
+	var c EventConfig
 	for _, option := range options {
-		option.applyEvent(c)
+		option.applyEvent(&c)
 	}
 	if c.timestamp.IsZero() {
 		c.timestamp = time.Now()

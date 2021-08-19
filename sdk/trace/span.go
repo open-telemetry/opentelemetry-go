@@ -577,7 +577,7 @@ func (s *span) addChild() {
 
 func (*span) private() {}
 
-func startSpanInternal(ctx context.Context, tr *tracer, name string, o *trace.SpanConfig) *span {
+func startSpanInternal(ctx context.Context, tr *tracer, name string, o trace.SpanConfig) *span {
 	span := &span{}
 
 	provider := tr.provider
