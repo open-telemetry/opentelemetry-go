@@ -13,7 +13,7 @@ go get -u go.opentelemetry.io/otel/exporters/otlp/otlptrace
 ## Examples
 
 - [example_test.go](example_test.go)
-- [../../../example/otel-collector](../../../example/otel-collector)
+- [Full example sending telemetry to a local collector](../../../example/otel-collector)
 
 
 ## [`otlptrace`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace)
