@@ -10,7 +10,7 @@
 go get -u go.opentelemetry.io/otel/exporters/otlp/otlptrace
 ```
 
-## Example
+## Examples
 
 - [example_test.go](example_test.go)
 - [../../../example/otel-collector](../../../example/otel-collector)
