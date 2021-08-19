@@ -21,35 +21,41 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	exportmetric "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 )
-
-// Used to avoid implementing locking functions for test
-// checkpointsets.
-type noopLocker struct{}
-
-// Lock implements sync.Locker, which is needed for
-// exportmetric.CheckpointSet.
-func (noopLocker) Lock() {}
-
-// Unlock implements sync.Locker, which is needed for
-// exportmetric.CheckpointSet.
-func (noopLocker) Unlock() {}
-
-// RLock implements exportmetric.CheckpointSet.
-func (noopLocker) RLock() {}
-
-// RUnlock implements exportmetric.CheckpointSet.
-func (noopLocker) RUnlock() {}
 
 // OneRecordCheckpointSet is a CheckpointSet that returns just one
 // filled record. It may be useful for testing driver's metrics
 // export.
-type OneRecordCheckpointSet struct {
-	noopLocker
+func OneRecordCheckpointSet() exportmetric.InstrumentationLibraryMetricReader {
+	desc := metrictest.NewDescriptor(
+		"foo",
+		sdkapi.CounterInstrumentKind,
+		number.Int64Kind,
+	)
+	agg := sum.New(1)
+	if err := agg[0].Update(context.Background(), number.NewInt64Number(42), &desc); err != nil {
+		panic(err)
+	}
+	start := time.Date(2020, time.December, 8, 19, 15, 0, 0, time.UTC)
+	end := time.Date(2020, time.December, 8, 19, 16, 0, 0, time.UTC)
+	labels := attribute.NewSet(attribute.String("abc", "def"), attribute.Int64("one", 1))
+	rec := exportmetric.NewRecord(&desc, &labels, agg[0].Aggregation(), start, end)
+
+	return processortest.MultiInstrumentationLibraryMetricReader(
+		map[instrumentation.Library][]exportmetric.Record{
+			instrumentation.Library{
+				Name: "onelib",
+			}: []exportmetric.Record{
+				exportmetric.NewRecord(&desc, ),
+			},
+		})
 }
 
 var _ exportmetric.CheckpointSet = OneRecordCheckpointSet{}

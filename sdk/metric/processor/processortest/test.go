@@ -394,15 +394,50 @@ func (e *Exporter) Reset() {
 	e.exportCount = 0
 }
 
-func TestLibraryReader(l instrumentation.Library, r export.MetricReader) export.InstrumentationLibraryMetricReader {
-	return ilReader{l, r}
+func OneInstrumentationLibraryMetricReader(l instrumentation.Library, r export.MetricReader) export.InstrumentationLibraryMetricReader {
+	return oneLibraryMetricReader{l, r}
 }
 
-type ilReader struct {
+type oneLibraryMetricReader struct {
 	library instrumentation.Library
 	reader  export.MetricReader
 }
 
-func (ilr ilReader) ForEach(readerFunc func(instrumentation.Library, export.MetricReader) error) error {
-	return readerFunc(ilr.library, ilr.reader)
+func (o oneLibraryMetricReader) ForEach(readerFunc func(instrumentation.Library, export.MetricReader) error) error {
+	return readerFunc(o.library, o.reader)
+}
+
+func MultiInstrumentationLibraryMetricReader(records map[instrumentation.Library][]export.Record) export.InstrumentationLibraryMetricReader {
+	return instrumentationLibraryMetricReader{records: records}
+}
+
+type instrumentationLibraryMetricReader struct {
+	records map[instrumentation.Library][]export.Record
+}
+
+var _ export.InstrumentationLibraryMetricReader = instrumentationLibraryMetricReader{}
+
+func (m instrumentationLibraryMetricReader) ForEach(fn func(instrumentation.Library, export.MetricReader) error) error {
+	for library, records := range m.records {
+		if err := fn(library, &metricReader{records: records}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type metricReader struct {
+	sync.RWMutex
+	records []export.Record
+}
+
+var _ export.MetricReader = &metricReader{}
+
+func (m *metricReader) ForEach(_ export.ExportKindSelector, fn func(export.Record) error) error {
+	for _, record := range m.records {
+		if err := fn(record); err != nil && err != aggregation.ErrNoData {
+			return err
+		}
+	}
+	return nil
 }
