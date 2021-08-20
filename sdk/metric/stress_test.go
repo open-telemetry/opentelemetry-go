@@ -246,7 +246,7 @@ func (f *testFixture) preCollect() {
 	f.dupCheck = map[testKey]int{}
 }
 
-func (*testFixture) MetricReader() export.MetricReader {
+func (*testFixture) Reader() export.Reader {
 	return nil
 }
 

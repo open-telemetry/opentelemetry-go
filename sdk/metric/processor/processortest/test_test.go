@@ -75,11 +75,11 @@ func TestProcessorTesting(t *testing.T) {
 		attribute.DefaultEncoder(),
 	)
 
-	err := exporter.Export(context.Background(), res, processortest.OneInstrumentationLibraryMetricReader(
+	err := exporter.Export(context.Background(), res, processortest.OneInstrumentationLibraryReader(
 		instrumentation.Library{
 			Name: "test",
 		},
-		checkpointer.MetricReader(),
+		checkpointer.Reader(),
 	))
 	require.NoError(t, err)
 	require.EqualValues(t, expect, exporter.Values())

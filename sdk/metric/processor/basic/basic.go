@@ -113,7 +113,7 @@ type (
 
 var _ export.Processor = &Processor{}
 var _ export.Checkpointer = &Processor{}
-var _ export.MetricReader = &state{}
+var _ export.Reader = &state{}
 
 // ErrInconsistentState is returned when the sequence of collection's starts and finishes are incorrectly balanced.
 var ErrInconsistentState = fmt.Errorf("inconsistent processor state")
@@ -264,11 +264,11 @@ func (b *Processor) Process(accum export.Accumulation) error {
 	return value.current.Merge(agg, desc)
 }
 
-// MetricReader returns the associated MetricReader.  Use the
-// MetricReader Locker interface to synchronize access to this
-// object.  The MetricReader.ForEach() method cannot be called
+// Reader returns the associated Reader.  Use the
+// Reader Locker interface to synchronize access to this
+// object.  The Reader.ForEach() method cannot be called
 // concurrently with Process().
-func (b *Processor) MetricReader() export.MetricReader {
+func (b *Processor) Reader() export.Reader {
 	return &b.state
 }
 
@@ -283,7 +283,7 @@ func (b *Processor) StartCollection() {
 
 // FinishCollection signals to the Processor that a complete
 // collection has finished and that ForEach will be called to access
-// the MetricReader.
+// the Reader.
 func (b *Processor) FinishCollection() error {
 	b.intervalEnd = time.Now()
 	if b.startedCollection != b.finishedCollection+1 {
@@ -337,7 +337,7 @@ func (b *Processor) FinishCollection() error {
 	return nil
 }
 
-// ForEach iterates through the MetricReader, passing an
+// ForEach iterates through the Reader, passing an
 // export.Record with the appropriate Cumulative or Delta aggregation
 // to an exporter.
 func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record) error) error {

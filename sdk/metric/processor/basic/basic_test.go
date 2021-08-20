@@ -176,7 +176,7 @@ func testProcessor(
 				continue
 			}
 
-			metricReader := processor.MetricReader()
+			metricReader := processor.Reader()
 
 			for _, repetitionAfterEmptyInterval := range []bool{false, true} {
 				if repetitionAfterEmptyInterval {
@@ -269,7 +269,7 @@ func (bogusExporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.
 	return 1000000
 }
 
-func (bogusExporter) Export(context.Context, export.MetricReader) error {
+func (bogusExporter) Export(context.Context, export.Reader) error {
 	panic("Not called")
 }
 
@@ -376,7 +376,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 	selector := processorTest.AggregatorSelector()
 
 	processor := basic.New(selector, ekindSel, basic.WithMemory(false))
-	metricReader := processor.MetricReader()
+	metricReader := processor.Reader()
 
 	for i := 1; i < 3; i++ {
 		// Empty interval
@@ -409,7 +409,7 @@ func TestStatefulNoMemoryDelta(t *testing.T) {
 	selector := processorTest.AggregatorSelector()
 
 	processor := basic.New(selector, ekindSel, basic.WithMemory(false))
-	metricReader := processor.MetricReader()
+	metricReader := processor.Reader()
 
 	for i := 1; i < 3; i++ {
 		// Empty interval
@@ -445,7 +445,7 @@ func TestMultiObserverSum(t *testing.T) {
 		selector := processorTest.AggregatorSelector()
 
 		processor := basic.New(selector, ekindSel, basic.WithMemory(false))
-		metricReader := processor.MetricReader()
+		metricReader := processor.Reader()
 
 		for i := 1; i < 3; i++ {
 			// Add i*10*3 times
@@ -488,7 +488,7 @@ func TestSumObserverEndToEnd(t *testing.T) {
 			result.Observe(calls)
 		},
 	)
-	data := proc.MetricReader()
+	data := proc.Reader()
 
 	var startTime [3]time.Time
 	var endTime [3]time.Time
@@ -500,7 +500,7 @@ func TestSumObserverEndToEnd(t *testing.T) {
 		require.NoError(t, proc.FinishCollection())
 
 		exporter := processortest.New(eselector, attribute.DefaultEncoder())
-		require.NoError(t, exporter.Export(ctx, resource.Empty(), processortest.OneInstrumentationLibraryMetricReader(
+		require.NoError(t, exporter.Export(ctx, resource.Empty(), processortest.OneInstrumentationLibraryReader(
 			instrumentation.Library{
 				Name: "test",
 			}, data)))

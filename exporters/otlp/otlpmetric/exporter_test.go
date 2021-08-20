@@ -724,7 +724,7 @@ func runMetricExportTests(t *testing.T, opts []otlpmetric.Option, res *resource.
 		}
 		libraryRecs[lib] = append(libraryRecs[lib], metricsdk.NewRecord(&desc, &labs, ckpt.Aggregation(), intervalStart, intervalEnd))
 	}
-	assert.NoError(t, exp.Export(context.Background(), res, processortest.MultiInstrumentationLibraryMetricReader(libraryRecs)))
+	assert.NoError(t, exp.Export(context.Background(), res, processortest.MultiInstrumentationLibraryReader(libraryRecs)))
 
 	// assert.ElementsMatch does not equate nested slices of different order,
 	// therefore this requires the top level slice to be broken down.
@@ -784,7 +784,7 @@ func TestEmptyMetricExport(t *testing.T) {
 		},
 	} {
 		driver.Reset()
-		require.NoError(t, exp.Export(context.Background(), resource.Empty(), processortest.MultiInstrumentationLibraryMetricReader(map[instrumentation.Library][]metricsdk.Record{
+		require.NoError(t, exp.Export(context.Background(), resource.Empty(), processortest.MultiInstrumentationLibraryReader(map[instrumentation.Library][]metricsdk.Record{
 			{
 				Name: testLibName,
 			}: test.records,

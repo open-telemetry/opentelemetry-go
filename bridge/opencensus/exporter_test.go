@@ -47,7 +47,7 @@ type fakeExporter struct {
 	err      error
 }
 
-func (f *fakeExporter) Export(ctx context.Context, res *resource.Resource, ilmr exportmetric.InstrumentationLibraryMetricReader) error {
+func (f *fakeExporter) Export(ctx context.Context, res *resource.Resource, ilmr exportmetric.InstrumentationLibraryReader) error {
 	return controllertest.ReadAll(ilmr, export.StatelessExportKindSelector(),
 		func(_ instrumentation.Library, record exportmetric.Record) error {
 			f.resource = res

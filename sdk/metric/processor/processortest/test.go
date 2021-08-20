@@ -46,14 +46,14 @@ type (
 	}
 
 	// mapValue is value stored in a processor used to produce a
-	// MetricReader.
+	// Reader.
 	mapValue struct {
 		labels     *attribute.Set
 		resource   *resource.Resource
 		aggregator export.Aggregator
 	}
 
-	// Output implements export.MetricReader.
+	// Output implements export.Reader.
 	Output struct {
 		m            map[mapKey]mapValue
 		labelEncoder attribute.Encoder
@@ -168,8 +168,8 @@ func (c *testCheckpointer) FinishCollection() error {
 	return nil
 }
 
-// MetricReader implements export.Checkpointer.
-func (c *testCheckpointer) MetricReader() export.MetricReader {
+// Reader implements export.Checkpointer.
+func (c *testCheckpointer) Reader() export.Reader {
 	return c.Processor.output
 }
 
@@ -229,7 +229,7 @@ func NewOutput(labelEncoder attribute.Encoder) *Output {
 	}
 }
 
-// ForEach implements export.MetricReader.
+// ForEach implements export.Reader.
 func (o *Output) ForEach(_ export.ExportKindSelector, ff func(export.Record) error) error {
 	for key, value := range o.m {
 		if err := ff(export.NewRecord(
@@ -351,11 +351,11 @@ func New(selector export.ExportKindSelector, encoder attribute.Encoder) *Exporte
 	}
 }
 
-func (e *Exporter) Export(_ context.Context, res *resource.Resource, ckpt export.InstrumentationLibraryMetricReader) error {
+func (e *Exporter) Export(_ context.Context, res *resource.Resource, ckpt export.InstrumentationLibraryReader) error {
 	e.output.Lock()
 	defer e.output.Unlock()
 	e.exportCount++
-	return ckpt.ForEach(func(library instrumentation.Library, mr export.MetricReader) error {
+	return ckpt.ForEach(func(library instrumentation.Library, mr export.Reader) error {
 		return mr.ForEach(e.ExportKindSelector, func(r export.Record) error {
 			if e.InjectErr != nil {
 				if err := e.InjectErr(r); err != nil {
@@ -394,30 +394,30 @@ func (e *Exporter) Reset() {
 	e.exportCount = 0
 }
 
-func OneInstrumentationLibraryMetricReader(l instrumentation.Library, r export.MetricReader) export.InstrumentationLibraryMetricReader {
-	return oneLibraryMetricReader{l, r}
+func OneInstrumentationLibraryReader(l instrumentation.Library, r export.Reader) export.InstrumentationLibraryReader {
+	return oneLibraryReader{l, r}
 }
 
-type oneLibraryMetricReader struct {
+type oneLibraryReader struct {
 	library instrumentation.Library
-	reader  export.MetricReader
+	reader  export.Reader
 }
 
-func (o oneLibraryMetricReader) ForEach(readerFunc func(instrumentation.Library, export.MetricReader) error) error {
+func (o oneLibraryReader) ForEach(readerFunc func(instrumentation.Library, export.Reader) error) error {
 	return readerFunc(o.library, o.reader)
 }
 
-func MultiInstrumentationLibraryMetricReader(records map[instrumentation.Library][]export.Record) export.InstrumentationLibraryMetricReader {
-	return instrumentationLibraryMetricReader{records: records}
+func MultiInstrumentationLibraryReader(records map[instrumentation.Library][]export.Record) export.InstrumentationLibraryReader {
+	return instrumentationLibraryReader{records: records}
 }
 
-type instrumentationLibraryMetricReader struct {
+type instrumentationLibraryReader struct {
 	records map[instrumentation.Library][]export.Record
 }
 
-var _ export.InstrumentationLibraryMetricReader = instrumentationLibraryMetricReader{}
+var _ export.InstrumentationLibraryReader = instrumentationLibraryReader{}
 
-func (m instrumentationLibraryMetricReader) ForEach(fn func(instrumentation.Library, export.MetricReader) error) error {
+func (m instrumentationLibraryReader) ForEach(fn func(instrumentation.Library, export.Reader) error) error {
 	for library, records := range m.records {
 		if err := fn(library, &metricReader{records: records}); err != nil {
 			return err
@@ -431,7 +431,7 @@ type metricReader struct {
 	records []export.Record
 }
 
-var _ export.MetricReader = &metricReader{}
+var _ export.Reader = &metricReader{}
 
 func (m *metricReader) ForEach(_ export.ExportKindSelector, fn func(export.Record) error) error {
 	for _, record := range m.records {

@@ -42,7 +42,7 @@ func getMap(t *testing.T, cont *controller.Controller) map[string]float64 {
 	out := processortest.NewOutput(attribute.DefaultEncoder())
 
 	require.NoError(t, cont.Reader().ForEach(
-		func(_ instrumentation.Library, reader export.MetricReader) error {
+		func(_ instrumentation.Library, reader export.Reader) error {
 			return reader.ForEach(
 				export.CumulativeExportKindSelector(),
 				func(record export.Record) error {
@@ -288,7 +288,7 @@ func newBlockingExporter() *blockingExporter {
 	}
 }
 
-func (b *blockingExporter) Export(ctx context.Context, res *resource.Resource, output export.InstrumentationLibraryMetricReader) error {
+func (b *blockingExporter) Export(ctx context.Context, res *resource.Resource, output export.InstrumentationLibraryReader) error {
 	var err error
 	_ = b.exporter.Export(ctx, res, output)
 	if b.calls == 0 {

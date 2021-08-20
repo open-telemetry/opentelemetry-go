@@ -29,10 +29,10 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 )
 
-// OneRecordMetricReader is a MetricReader that returns just one
+// OneRecordReader is a Reader that returns just one
 // filled record. It may be useful for testing driver's metrics
 // export.
-func OneRecordMetricReader() exportmetric.InstrumentationLibraryMetricReader {
+func OneRecordReader() exportmetric.InstrumentationLibraryReader {
 	desc := metrictest.NewDescriptor(
 		"foo",
 		sdkapi.CounterInstrumentKind,
@@ -47,7 +47,7 @@ func OneRecordMetricReader() exportmetric.InstrumentationLibraryMetricReader {
 	labels := attribute.NewSet(attribute.String("abc", "def"), attribute.Int64("one", 1))
 	rec := exportmetric.NewRecord(&desc, &labels, agg[0].Aggregation(), start, end)
 
-	return processortest.MultiInstrumentationLibraryMetricReader(
+	return processortest.MultiInstrumentationLibraryReader(
 		map[instrumentation.Library][]exportmetric.Record{
 			{
 				Name: "onelib",
@@ -55,17 +55,17 @@ func OneRecordMetricReader() exportmetric.InstrumentationLibraryMetricReader {
 		})
 }
 
-func EmptyMetricReader() exportmetric.InstrumentationLibraryMetricReader {
-	return processortest.MultiInstrumentationLibraryMetricReader(nil)
+func EmptyReader() exportmetric.InstrumentationLibraryReader {
+	return processortest.MultiInstrumentationLibraryReader(nil)
 }
 
-// FailMetricReader is a checkpointer that returns an error during
+// FailReader is a checkpointer that returns an error during
 // ForEach.
-type FailMetricReader struct{}
+type FailReader struct{}
 
-var _ exportmetric.InstrumentationLibraryMetricReader = FailMetricReader{}
+var _ exportmetric.InstrumentationLibraryReader = FailReader{}
 
-// ForEach implements exportmetric.MetricReader. It always fails.
-func (FailMetricReader) ForEach(readerFunc func(instrumentation.Library, exportmetric.MetricReader) error) error {
+// ForEach implements exportmetric.Reader. It always fails.
+func (FailReader) ForEach(readerFunc func(instrumentation.Library, exportmetric.Reader) error) error {
 	return fmt.Errorf("fail")
 }

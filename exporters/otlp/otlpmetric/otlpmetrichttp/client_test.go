@@ -38,7 +38,7 @@ const (
 )
 
 var (
-	oneRecord = otlpmetrictest.OneRecordMetricReader()
+	oneRecord = otlpmetrictest.OneRecordReader()
 
 	testResource = resource.Empty()
 )

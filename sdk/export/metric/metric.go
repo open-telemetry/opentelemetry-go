@@ -112,13 +112,13 @@ type Checkpointer interface {
 	// any time.
 	Processor
 
-	// MetricReader returns the current data set.  This may be
+	// Reader returns the current data set.  This may be
 	// called before and after collection.  The
 	// implementation is required to return the same value
-	// throughout its lifetime, since MetricReader exposes a
+	// throughout its lifetime, since Reader exposes a
 	// sync.Locker interface.  The caller is responsible for
-	// locking the MetricReader before initiating collection.
-	MetricReader() MetricReader
+	// locking the Reader before initiating collection.
+	Reader() Reader
 
 	// StartCollection begins a collection interval.
 	StartCollection()
@@ -218,7 +218,7 @@ type Exporter interface {
 	//
 	// The CheckpointSet interface refers to the Processor that just
 	// completed collection.
-	Export(ctx context.Context, resource *resource.Resource, reader InstrumentationLibraryMetricReader) error
+	Export(ctx context.Context, resource *resource.Resource, reader InstrumentationLibraryReader) error
 
 	// ExportKindSelector is an interface used by the Processor
 	// in deciding whether to compute Delta or Cumulative
@@ -226,8 +226,8 @@ type Exporter interface {
 	ExportKindSelector
 }
 
-type InstrumentationLibraryMetricReader interface {
-	ForEach(readerFunc func(instrumentation.Library, MetricReader) error) error
+type InstrumentationLibraryReader interface {
+	ForEach(readerFunc func(instrumentation.Library, Reader) error) error
 }
 
 // ExportKindSelector is a sub-interface of Exporter used to indicate
@@ -240,11 +240,11 @@ type ExportKindSelector interface {
 	ExportKindFor(descriptor *metric.Descriptor, aggregatorKind aggregation.Kind) ExportKind
 }
 
-// MetricReader allows a controller to access a complete checkpoint of
+// Reader allows a controller to access a complete checkpoint of
 // aggregated metrics from the Processor.  This is passed to the
 // Exporter which may then use ForEach to iterate over the collection
 // of aggregated metrics.
-type MetricReader interface {
+type Reader interface {
 	// ForEach iterates over aggregated checkpoints for all
 	// metrics that were updated during the last collection
 	// period. Each aggregated checkpoint returned by the

@@ -105,9 +105,9 @@ func TestFilterBasicProcessor(t *testing.T) {
 	}
 
 	res := resource.NewSchemaless(attribute.String("R", "V"))
-	require.NoError(t, exporter.Export(context.Background(), res, processortest.OneInstrumentationLibraryMetricReader(instrumentation.Library{
+	require.NoError(t, exporter.Export(context.Background(), res, processortest.OneInstrumentationLibraryReader(instrumentation.Library{
 		Name: "test",
-	}, basicProc.MetricReader())))
+	}, basicProc.Reader())))
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=1,C=3/R=V":  200,

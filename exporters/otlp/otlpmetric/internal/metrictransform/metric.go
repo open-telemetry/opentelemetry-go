@@ -70,12 +70,12 @@ func toNanos(t time.Time) uint64 {
 	return uint64(t.UnixNano())
 }
 
-// InstrumentationLibraryMetricReader transforms all records contained in a checkpoint into
+// InstrumentationLibraryReader transforms all records contained in a checkpoint into
 // batched OTLP ResourceMetrics.
-func InstrumentationLibraryMetricReader(ctx context.Context, exportSelector export.ExportKindSelector, res *resource.Resource, ilmr export.InstrumentationLibraryMetricReader, numWorkers uint) (*metricpb.ResourceMetrics, error) {
+func InstrumentationLibraryReader(ctx context.Context, exportSelector export.ExportKindSelector, res *resource.Resource, ilmr export.InstrumentationLibraryReader, numWorkers uint) (*metricpb.ResourceMetrics, error) {
 	var ilms []*metricpb.InstrumentationLibraryMetrics
 
-	err := ilmr.ForEach(func(lib instrumentation.Library, mr export.MetricReader) error {
+	err := ilmr.ForEach(func(lib instrumentation.Library, mr export.Reader) error {
 
 		records, errc := source(ctx, exportSelector, mr)
 
@@ -132,9 +132,9 @@ func InstrumentationLibraryMetricReader(ctx context.Context, exportSelector expo
 }
 
 // source starts a goroutine that sends each one of the Records yielded by
-// the MetricReader on the returned chan. Any error encoutered will be sent
+// the Reader on the returned chan. Any error encoutered will be sent
 // on the returned error chan after seeding is complete.
-func source(ctx context.Context, exportSelector export.ExportKindSelector, mr export.MetricReader) (<-chan export.Record, <-chan error) {
+func source(ctx context.Context, exportSelector export.ExportKindSelector, mr export.Reader) (<-chan export.Record, <-chan error) {
 	errc := make(chan error, 1)
 	out := make(chan export.Record)
 	// Seed records into process.

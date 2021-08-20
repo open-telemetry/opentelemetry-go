@@ -51,10 +51,10 @@ func (e *metricExporter) ExportKindFor(desc *metric.Descriptor, kind aggregation
 	return exportmetric.StatelessExportKindSelector().ExportKindFor(desc, kind)
 }
 
-func (e *metricExporter) Export(_ context.Context, res *resource.Resource, reader exportmetric.InstrumentationLibraryMetricReader) error {
+func (e *metricExporter) Export(_ context.Context, res *resource.Resource, reader exportmetric.InstrumentationLibraryReader) error {
 	var aggError error
 	var batch []line
-	aggError = reader.ForEach(func(lib instrumentation.Library, mr exportmetric.MetricReader) error {
+	aggError = reader.ForEach(func(lib instrumentation.Library, mr exportmetric.Reader) error {
 
 		var instLabels []attribute.KeyValue
 		if name := lib.Name; name != "" {

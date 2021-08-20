@@ -56,26 +56,26 @@ func (e *exporter) ExportMetrics(ctx context.Context, metrics []*metricdata.Metr
 	if len(metrics) != 0 {
 		res = convertResource(metrics[0].Resource)
 	}
-	return e.base.Export(ctx, res, &censusLibraryMetricReader{metrics: metrics})
+	return e.base.Export(ctx, res, &censusLibraryReader{metrics: metrics})
 }
 
-type censusLibraryMetricReader struct {
+type censusLibraryReader struct {
 	metrics []*metricdata.Metric
 }
 
-func (r censusLibraryMetricReader) ForEach(readerFunc func(instrumentation.Library, export.MetricReader) error) error {
+func (r censusLibraryReader) ForEach(readerFunc func(instrumentation.Library, export.Reader) error) error {
 	return readerFunc(instrumentation.Library{
 		Name: "OpenCensus Bridge",
 	}, &metricReader{metrics: r.metrics})
 }
 
 type metricReader struct {
-	// RWMutex implements locking for the `MetricReader` interface.
+	// RWMutex implements locking for the `Reader` interface.
 	sync.RWMutex
 	metrics []*metricdata.Metric
 }
 
-var _ export.MetricReader = &metricReader{}
+var _ export.Reader = &metricReader{}
 
 // ForEach iterates through the CheckpointSet, passing an
 // export.Record with the appropriate aggregation to an exporter.

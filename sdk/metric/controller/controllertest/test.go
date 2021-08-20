@@ -63,11 +63,11 @@ func (t MockTicker) C() <-chan time.Time {
 // metrics instead of a two-level iterator (instrumentation library,
 // metric).
 func ReadAll(
-	reader export.InstrumentationLibraryMetricReader,
+	reader export.InstrumentationLibraryReader,
 	kind export.ExportKindSelector,
 	apply func(instrumentation.Library, export.Record) error,
 ) error {
-	return reader.ForEach(func(library instrumentation.Library, ckpt export.MetricReader) error {
+	return reader.ForEach(func(library instrumentation.Library, ckpt export.Reader) error {
 		return ckpt.ForEach(kind, func(record export.Record) error {
 			return apply(library, record)
 		})

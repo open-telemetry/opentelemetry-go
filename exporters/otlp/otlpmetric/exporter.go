@@ -44,8 +44,8 @@ type Exporter struct {
 }
 
 // Export exports a batch of metrics.
-func (e *Exporter) Export(ctx context.Context, res *resource.Resource, ilmr metricsdk.InstrumentationLibraryMetricReader) error {
-	rm, err := metrictransform.InstrumentationLibraryMetricReader(ctx, e, res, ilmr, 1)
+func (e *Exporter) Export(ctx context.Context, res *resource.Resource, ilmr metricsdk.InstrumentationLibraryReader) error {
+	rm, err := metrictransform.InstrumentationLibraryReader(ctx, e, res, ilmr, 1)
 	if err != nil {
 		return err
 	}

@@ -160,9 +160,9 @@ func (c *Controller) Resource() *resource.Resource {
 	return c.resource
 }
 
-// Reader returns an InstrumentationLibraryMetricReader for iterating
+// Reader returns an InstrumentationLibraryReader for iterating
 // through the metrics of each registered library, one at a time.
-func (c *Controller) Reader() export.InstrumentationLibraryMetricReader {
+func (c *Controller) Reader() export.InstrumentationLibraryReader {
 	return libraryReader{c}
 }
 
@@ -259,7 +259,7 @@ func (c *Controller) checkpoint(ctx context.Context) error {
 }
 
 func (c *Controller) checkpoint1(ctx context.Context, ac *accumulatorCheckpointer) error {
-	ckpt := ac.checkpointer.MetricReader()
+	ckpt := ac.checkpointer.Reader()
 	ckpt.Lock()
 	defer ckpt.Unlock()
 
@@ -293,7 +293,7 @@ func (c *Controller) checkpoint1(ctx context.Context, ac *accumulatorCheckpointe
 	return err
 }
 
-// export calls the exporter with a read lock on the MetricReader,
+// export calls the exporter with a read lock on the Reader,
 // applying the configured export timeout.
 func (c *Controller) export(ctx context.Context) error {
 	if c.pushTimeout > 0 {
@@ -309,12 +309,12 @@ type libraryReader struct {
 	*Controller
 }
 
-var _ export.InstrumentationLibraryMetricReader = libraryReader{}
+var _ export.InstrumentationLibraryReader = libraryReader{}
 
-func (l libraryReader) ForEach(readerFunc func(l instrumentation.Library, r export.MetricReader) error) error {
+func (l libraryReader) ForEach(readerFunc func(l instrumentation.Library, r export.Reader) error) error {
 	for _, impl := range l.Controller.provider.List() {
 		pair := impl.(*accumulatorCheckpointer)
-		reader := pair.checkpointer.MetricReader()
+		reader := pair.checkpointer.Reader()
 		if err := func() error {
 			reader.RLock()
 			defer reader.RUnlock()
@@ -327,7 +327,7 @@ func (l libraryReader) ForEach(readerFunc func(l instrumentation.Library, r expo
 }
 
 // IsRunning returns true if the controller was started via Start(),
-// indicating that the current export.MetricReader is being kept
+// indicating that the current export.Reader is being kept
 // up-to-date.
 func (c *Controller) IsRunning() bool {
 	c.lock.Lock()
