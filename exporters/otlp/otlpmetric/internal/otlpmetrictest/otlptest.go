@@ -40,7 +40,7 @@ import (
 // themselves.
 func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter, mcMetrics Collector) {
 	selector := simple.NewWithInexpensiveDistribution()
-	proc := processor.New(selector, exportmetric.StatelessExportKindSelector())
+	proc := processor.NewFactory(selector, exportmetric.StatelessExportKindSelector())
 	cont := controller.New(proc, controller.WithExporter(exp))
 	require.NoError(t, cont.Start(ctx))
 
