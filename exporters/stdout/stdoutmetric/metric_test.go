@@ -61,7 +61,7 @@ func newFixtureWithResource(t *testing.T, res *resource.Resource, opts ...stdout
 		t.Fatal("Error building fixture: ", err)
 	}
 	aggSel := processortest.AggregatorSelector()
-	proc := processor.New(aggSel, export.StatelessExportKindSelector())
+	proc := processor.NewFactory(aggSel, export.StatelessExportKindSelector())
 	cont := controller.New(proc,
 		controller.WithExporter(exp),
 		controller.WithResource(res),
@@ -87,7 +87,7 @@ func (fix testFixture) Output() string {
 func TestStdoutTimestamp(t *testing.T) {
 	var buf bytes.Buffer
 	aggSel := processortest.AggregatorSelector()
-	proc := processor.New(aggSel, export.CumulativeExportKindSelector())
+	proc := processor.NewFactory(aggSel, export.CumulativeExportKindSelector())
 	exporter, err := stdoutmetric.New(
 		stdoutmetric.WithWriter(&buf),
 	)

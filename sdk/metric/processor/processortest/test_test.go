@@ -75,7 +75,7 @@ func TestProcessorTesting(t *testing.T) {
 		attribute.DefaultEncoder(),
 	)
 
-	err := exporter.Export(context.Background(), res, processortest.TestLibraryReader(
+	err := exporter.Export(context.Background(), res, processortest.OneInstrumentationLibraryMetricReader(
 		instrumentation.Library{
 			Name: "test",
 		},

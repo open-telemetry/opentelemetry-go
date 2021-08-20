@@ -500,7 +500,7 @@ func TestSumObserverEndToEnd(t *testing.T) {
 		require.NoError(t, proc.FinishCollection())
 
 		exporter := processortest.New(eselector, attribute.DefaultEncoder())
-		require.NoError(t, exporter.Export(ctx, resource.Empty(), processortest.TestLibraryReader(
+		require.NoError(t, exporter.Export(ctx, resource.Empty(), processortest.OneInstrumentationLibraryMetricReader(
 			instrumentation.Library{
 				Name: "test",
 			}, data)))

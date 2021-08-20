@@ -72,7 +72,7 @@ func InstallExportPipeline(ctx context.Context) func() {
 	}
 
 	pusher := controller.New(
-		processor.New(
+		processor.NewFactory(
 			simple.NewWithInexpensiveDistribution(),
 			exporter,
 		),

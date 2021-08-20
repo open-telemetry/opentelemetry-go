@@ -785,7 +785,7 @@ func TestEmptyMetricExport(t *testing.T) {
 	} {
 		driver.Reset()
 		require.NoError(t, exp.Export(context.Background(), resource.Empty(), processortest.MultiInstrumentationLibraryMetricReader(map[instrumentation.Library][]metricsdk.Record{
-			instrumentation.Library{
+			{
 				Name: testLibName,
 			}: test.records,
 		})))

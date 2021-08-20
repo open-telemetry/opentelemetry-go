@@ -49,9 +49,9 @@ func OneRecordMetricReader() exportmetric.InstrumentationLibraryMetricReader {
 
 	return processortest.MultiInstrumentationLibraryMetricReader(
 		map[instrumentation.Library][]exportmetric.Record{
-			instrumentation.Library{
+			{
 				Name: "onelib",
-			}: []exportmetric.Record{rec},
+			}: {rec},
 		})
 }
 
