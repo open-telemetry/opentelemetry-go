@@ -216,18 +216,14 @@ type Exporter interface {
 	// The Context comes from the controller that initiated
 	// collection.
 	//
-	// The CheckpointSet interface refers to the Processor that just
-	// completed collection.
+	// The InstrumentationLibraryReader interface refers to the
+	// Processor that just completed collection.
 	Export(ctx context.Context, resource *resource.Resource, reader InstrumentationLibraryReader) error
 
 	// ExportKindSelector is an interface used by the Processor
 	// in deciding whether to compute Delta or Cumulative
 	// Aggregations when passing Records to this Exporter.
 	ExportKindSelector
-}
-
-type InstrumentationLibraryReader interface {
-	ForEach(readerFunc func(instrumentation.Library, Reader) error) error
 }
 
 // ExportKindSelector is a sub-interface of Exporter used to indicate
@@ -240,10 +236,19 @@ type ExportKindSelector interface {
 	ExportKindFor(descriptor *metric.Descriptor, aggregatorKind aggregation.Kind) ExportKind
 }
 
+// InstrumentationLibraryReader is an interface for exporters to iterate
+// over one instrumentation library of metric data at a time.
+type InstrumentationLibraryReader interface {
+	// ForEach calls the passed function once per instrumentation library,
+	// allowing the caller to emit metrics grouped by the library that
+	// produced them.
+	ForEach(readerFunc func(instrumentation.Library, Reader) error) error
+}
+
 // Reader allows a controller to access a complete checkpoint of
-// aggregated metrics from the Processor.  This is passed to the
-// Exporter which may then use ForEach to iterate over the collection
-// of aggregated metrics.
+// aggregated metrics from the Processor for a single library of
+// metric data.  This is passed to the Exporter which may then use
+// ForEach to iterate over the collection of aggregated metrics.
 type Reader interface {
 	// ForEach iterates over aggregated checkpoints for all
 	// metrics that were updated during the last collection
