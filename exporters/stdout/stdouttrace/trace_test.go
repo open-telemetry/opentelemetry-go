@@ -18,11 +18,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -34,13 +34,6 @@ import (
 )
 
 func TestExporter_ExportSpan(t *testing.T) {
-	// write to buffer for testing
-	var b bytes.Buffer
-	ex, err := stdouttrace.New(stdouttrace.WithWriter(&b), stdouttrace.WithPrettyPrint())
-	if err != nil {
-		t.Errorf("Error constructing stdout exporter %s", err)
-	}
-
 	// setup test span
 	now := time.Now()
 	traceID, _ := trace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
@@ -76,14 +69,39 @@ func TestExporter_ExportSpan(t *testing.T) {
 			Resource: resource,
 		},
 	}.Snapshots()
-	if err := ex.ExportSpans(context.Background(), ro); err != nil {
-		t.Fatal(err)
+
+	tests := []struct {
+		opts      []stdouttrace.Option
+		expectNow time.Time
+	}{
+		{
+			opts:      []stdouttrace.Option{stdouttrace.WithPrettyPrint()},
+			expectNow: now,
+		},
+		{
+			opts: []stdouttrace.Option{stdouttrace.WithPrettyPrint(), stdouttrace.WithoutTimestamps()},
+			// expectNow is an empty time.Time
+		},
 	}
 
-	expectedSerializedNow, _ := json.Marshal(now)
+	ctx := context.Background()
+	for _, tt := range tests {
+		// write to buffer for testing
+		var b bytes.Buffer
+		ex, err := stdouttrace.New(append(tt.opts, stdouttrace.WithWriter(&b))...)
+		require.Nil(t, err)
 
-	got := b.String()
-	expectedOutput := `[
+		err = ex.ExportSpans(ctx, ro)
+		require.Nil(t, err)
+
+		got := b.String()
+		assert.Equal(t, expectedJSON(tt.expectNow), got)
+	}
+}
+
+func expectedJSON(now time.Time) string {
+	serializedNow, _ := json.Marshal(now)
+	return `[
 	{
 		"Name": "/foo",
 		"SpanContext": {
@@ -101,8 +119,8 @@ func TestExporter_ExportSpan(t *testing.T) {
 			"Remote": false
 		},
 		"SpanKind": 1,
-		"StartTime": ` + string(expectedSerializedNow) + `,
-		"EndTime": ` + string(expectedSerializedNow) + `,
+		"StartTime": ` + string(serializedNow) + `,
+		"EndTime": ` + string(serializedNow) + `,
 		"Attributes": [
 			{
 				"Key": "key",
@@ -132,7 +150,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 					}
 				],
 				"DroppedAttributeCount": 0,
-				"Time": ` + string(expectedSerializedNow) + `
+				"Time": ` + string(serializedNow) + `
 			},
 			{
 				"Name": "bar",
@@ -146,7 +164,7 @@ func TestExporter_ExportSpan(t *testing.T) {
 					}
 				],
 				"DroppedAttributeCount": 0,
-				"Time": ` + string(expectedSerializedNow) + `
+				"Time": ` + string(serializedNow) + `
 			}
 		],
 		"Links": null,
@@ -175,7 +193,6 @@ func TestExporter_ExportSpan(t *testing.T) {
 	}
 ]
 `
-	assert.Equal(t, expectedOutput, got)
 }
 
 func TestExporterShutdownHonorsTimeout(t *testing.T) {
@@ -190,11 +207,8 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 	innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
 	defer innerCancel()
 	<-innerCtx.Done()
-	if err := e.Shutdown(innerCtx); err == nil {
-		t.Error("expected context DeadlineExceeded error, got nil")
-	} else if !errors.Is(err, context.DeadlineExceeded) {
-		t.Errorf("expected context DeadlineExceeded error, got %v", err)
-	}
+	err = e.Shutdown(innerCtx)
+	assert.ErrorIs(t, err, context.DeadlineExceeded)
 }
 
 func TestExporterShutdownHonorsCancel(t *testing.T) {
@@ -208,11 +222,8 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 
 	innerCtx, innerCancel := context.WithCancel(ctx)
 	innerCancel()
-	if err := e.Shutdown(innerCtx); err == nil {
-		t.Error("expected context canceled error, got nil")
-	} else if !errors.Is(err, context.Canceled) {
-		t.Errorf("expected context canceled error, got %v", err)
-	}
+	err = e.Shutdown(innerCtx)
+	assert.ErrorIs(t, err, context.Canceled)
 }
 
 func TestExporterShutdownNoError(t *testing.T) {
