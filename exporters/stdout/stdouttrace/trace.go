@@ -19,10 +19,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
+
+var zeroTime time.Time
 
 // Exporter is an implementation of trace.SpanSyncer that writes spans to stdout.
 type traceExporter struct {
@@ -44,7 +47,20 @@ func (e *traceExporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlyS
 	if len(spans) == 0 {
 		return nil
 	}
-	out, err := e.marshal(tracetest.SpanStubsFromReadOnlySpans(spans))
+	stubs := tracetest.SpanStubsFromReadOnlySpans(spans)
+	if !e.config.Timestamps {
+		for i := range stubs {
+			stub := &stubs[i]
+			stub.StartTime = zeroTime
+			stub.EndTime = zeroTime
+			for j := range stub.Events {
+				ev := &stub.Events[j]
+				ev.Time = zeroTime
+			}
+		}
+	}
+
+	out, err := e.marshal(stubs)
 	if err != nil {
 		return err
 	}
