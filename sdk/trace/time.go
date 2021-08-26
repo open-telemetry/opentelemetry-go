@@ -27,6 +27,7 @@ type Clock interface {
 	Stopwatch() Stopwatch
 }
 
+// Stopwatch measures a time interval.
 type Stopwatch interface {
 	// Started returns the time the Stopwatch was started.
 	Started() time.Time
