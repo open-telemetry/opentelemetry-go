@@ -18,7 +18,7 @@ func _() {
 
 const _InstrumentKind_name = "HistogramInstrumentKindGaugeObserverInstrumentKindCounterInstrumentKindUpDownCounterInstrumentKindCounterObserverInstrumentKindUpDownCounterObserverInstrumentKind"
 
-var _InstrumentKind_index = [...]uint8{0, 27, 54, 75, 102, 127, 158}
+var _InstrumentKind_index = [...]uint8{0, 23, 50, 71, 98, 127, 162}
 
 func (i InstrumentKind) String() string {
 	if i < 0 || i >= InstrumentKind(len(_InstrumentKind_index)-1) {
