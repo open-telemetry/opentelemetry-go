@@ -47,7 +47,7 @@ and the asynchronous instruments are:
 
   SumObserver:       additive, monotonic
   UpDownSumObserver: additive
-  ValueObserver:     grouping
+  GaugeObserver:     grouping
 
 All instruments are provided with support for either float64 or int64 input
 values.

@@ -275,13 +275,13 @@ func TestObserverCollection(t *testing.T) {
 	meter, sdk, _, processor := newSDK(t)
 	mult := 1
 
-	_ = Must(meter).NewFloat64ValueObserver("float.valueobserver.lastvalue", func(_ context.Context, result metric.Float64ObserverResult) {
+	_ = Must(meter).NewFloat64GaugeObserver("float.valueobserver.lastvalue", func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(float64(mult), attribute.String("A", "B"))
 		// last value wins
 		result.Observe(float64(-mult), attribute.String("A", "B"))
 		result.Observe(float64(-mult), attribute.String("C", "D"))
 	})
-	_ = Must(meter).NewInt64ValueObserver("int.valueobserver.lastvalue", func(_ context.Context, result metric.Int64ObserverResult) {
+	_ = Must(meter).NewInt64GaugeObserver("int.valueobserver.lastvalue", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(int64(-mult), attribute.String("A", "B"))
 		result.Observe(int64(mult))
 		// last value wins
@@ -315,7 +315,7 @@ func TestObserverCollection(t *testing.T) {
 		result.Observe(int64(-mult))
 	})
 
-	_ = Must(meter).NewInt64ValueObserver("empty.valueobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
+	_ = Must(meter).NewInt64GaugeObserver("empty.valueobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
 	})
 
 	for mult = 0; mult < 3; mult++ {
@@ -375,8 +375,8 @@ func TestObserverBatch(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, _, processor := newSDK(t)
 
-	var floatValueObs metric.Float64ValueObserver
-	var intValueObs metric.Int64ValueObserver
+	var floatValueObs metric.Float64GaugeObserver
+	var intValueObs metric.Int64GaugeObserver
 	var floatSumObs metric.Float64SumObserver
 	var intSumObs metric.Int64SumObserver
 	var floatUpDownSumObs metric.Float64UpDownSumObserver
@@ -414,8 +414,8 @@ func TestObserverBatch(t *testing.T) {
 				intUpDownSumObs.Observation(10),
 			)
 		})
-	floatValueObs = batch.NewFloat64ValueObserver("float.valueobserver.lastvalue")
-	intValueObs = batch.NewInt64ValueObserver("int.valueobserver.lastvalue")
+	floatValueObs = batch.NewFloat64GaugeObserver("float.valueobserver.lastvalue")
+	intValueObs = batch.NewInt64GaugeObserver("int.valueobserver.lastvalue")
 	floatSumObs = batch.NewFloat64SumObserver("float.sumobserver.sum")
 	intSumObs = batch.NewInt64SumObserver("int.sumobserver.sum")
 	floatUpDownSumObs = batch.NewFloat64UpDownSumObserver("float.updownsumobserver.sum")
@@ -498,7 +498,7 @@ func TestIncorrectInstruments(t *testing.T) {
 	// The Batch observe/record APIs are susceptible to
 	// uninitialized instruments.
 	var counter metric.Int64Counter
-	var observer metric.Int64ValueObserver
+	var observer metric.Int64GaugeObserver
 
 	ctx := context.Background()
 	meter, sdk, _, processor := newSDK(t)
@@ -518,7 +518,7 @@ func TestIncorrectInstruments(t *testing.T) {
 	counter = metric.Must(noopMeter).NewInt64Counter("name.sum")
 	observer = metric.Must(noopMeter).NewBatchObserver(
 		func(context.Context, metric.BatchObserverResult) {},
-	).NewInt64ValueObserver("observer")
+	).NewInt64GaugeObserver("observer")
 
 	meter.RecordBatch(ctx, nil, counter.Measurement(1))
 	meter.NewBatchObserver(func(_ context.Context, result metric.BatchObserverResult) {
@@ -536,7 +536,7 @@ func TestSyncInAsync(t *testing.T) {
 	meter, sdk, _, processor := newSDK(t)
 
 	counter := Must(meter).NewFloat64Counter("counter.sum")
-	_ = Must(meter).NewInt64ValueObserver("observer.lastvalue",
+	_ = Must(meter).NewInt64GaugeObserver("observer.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			result.Observe(10)
 			counter.Add(ctx, 100)

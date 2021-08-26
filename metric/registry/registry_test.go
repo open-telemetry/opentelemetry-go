@@ -45,10 +45,10 @@ var (
 			return unwrap(m.NewFloat64Histogram(name))
 		},
 		"valueobserver.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
-			return unwrap(m.NewInt64ValueObserver(name, func(context.Context, metric.Int64ObserverResult) {}))
+			return unwrap(m.NewInt64GaugeObserver(name, func(context.Context, metric.Int64ObserverResult) {}))
 		},
 		"valueobserver.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
-			return unwrap(m.NewFloat64ValueObserver(name, func(context.Context, metric.Float64ObserverResult) {}))
+			return unwrap(m.NewFloat64GaugeObserver(name, func(context.Context, metric.Float64ObserverResult) {}))
 		},
 	}
 )

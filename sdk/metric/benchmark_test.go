@@ -406,15 +406,15 @@ func BenchmarkObserverRegistration(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		fix.meterMust().NewInt64ValueObserver(names[i], cb)
+		fix.meterMust().NewInt64GaugeObserver(names[i], cb)
 	}
 }
 
-func BenchmarkValueObserverObservationInt64(b *testing.B) {
+func BenchmarkGaugeObserverObservationInt64(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	_ = fix.meterMust().NewInt64ValueObserver("test.lastvalue", func(_ context.Context, result metric.Int64ObserverResult) {
+	_ = fix.meterMust().NewInt64GaugeObserver("test.lastvalue", func(_ context.Context, result metric.Int64ObserverResult) {
 		for i := 0; i < b.N; i++ {
 			result.Observe((int64)(i), labs...)
 		}
@@ -425,11 +425,11 @@ func BenchmarkValueObserverObservationInt64(b *testing.B) {
 	fix.accumulator.Collect(ctx)
 }
 
-func BenchmarkValueObserverObservationFloat64(b *testing.B) {
+func BenchmarkGaugeObserverObservationFloat64(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	_ = fix.meterMust().NewFloat64ValueObserver("test.lastvalue", func(_ context.Context, result metric.Float64ObserverResult) {
+	_ = fix.meterMust().NewFloat64GaugeObserver("test.lastvalue", func(_ context.Context, result metric.Float64ObserverResult) {
 		for i := 0; i < b.N; i++ {
 			result.Observe((float64)(i), labs...)
 		}

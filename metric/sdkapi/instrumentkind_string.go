@@ -9,14 +9,14 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[HistogramInstrumentKind-0]
-	_ = x[ValueObserverInstrumentKind-1]
+	_ = x[GaugeObserverInstrumentKind-1]
 	_ = x[CounterInstrumentKind-2]
 	_ = x[UpDownCounterInstrumentKind-3]
 	_ = x[SumObserverInstrumentKind-4]
 	_ = x[UpDownSumObserverInstrumentKind-5]
 }
 
-const _InstrumentKind_name = "HistogramInstrumentKindValueObserverInstrumentKindCounterInstrumentKindUpDownCounterInstrumentKindSumObserverInstrumentKindUpDownSumObserverInstrumentKind"
+const _InstrumentKind_name = "HistogramInstrumentKindGaugeObserverInstrumentKindCounterInstrumentKindUpDownCounterInstrumentKindSumObserverInstrumentKindUpDownSumObserverInstrumentKind"
 
 var _InstrumentKind_index = [...]uint8{0, 27, 54, 75, 102, 127, 158}
 

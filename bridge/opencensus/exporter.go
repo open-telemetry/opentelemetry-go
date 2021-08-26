@@ -142,10 +142,10 @@ func convertDescriptor(ocDescriptor metricdata.Descriptor) (metric.Descriptor, e
 	switch ocDescriptor.Type {
 	case metricdata.TypeGaugeInt64:
 		nkind = number.Int64Kind
-		ikind = sdkapi.ValueObserverInstrumentKind
+		ikind = sdkapi.GaugeObserverInstrumentKind
 	case metricdata.TypeGaugeFloat64:
 		nkind = number.Float64Kind
-		ikind = sdkapi.ValueObserverInstrumentKind
+		ikind = sdkapi.GaugeObserverInstrumentKind
 	case metricdata.TypeCumulativeInt64:
 		nkind = number.Int64Kind
 		ikind = sdkapi.SumObserverInstrumentKind

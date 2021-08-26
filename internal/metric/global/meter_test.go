@@ -52,12 +52,12 @@ func TestDirect(t *testing.T) {
 	valuerecorder.Record(ctx, 1, labels1...)
 	valuerecorder.Record(ctx, 2, labels1...)
 
-	_ = Must(meter1).NewFloat64ValueObserver("test.valueobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
+	_ = Must(meter1).NewFloat64GaugeObserver("test.valueobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(1., labels1...)
 		result.Observe(2., labels2...)
 	})
 
-	_ = Must(meter1).NewInt64ValueObserver("test.valueobserver.int", func(_ context.Context, result metric.Int64ObserverResult) {
+	_ = Must(meter1).NewInt64GaugeObserver("test.valueobserver.int", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(1, labels1...)
 		result.Observe(2, labels2...)
 	})
@@ -268,7 +268,7 @@ func TestImplementationIndirection(t *testing.T) {
 	require.False(t, ok)
 
 	// Async: no SDK yet
-	valueobserver := Must(meter1).NewFloat64ValueObserver(
+	valueobserver := Must(meter1).NewFloat64GaugeObserver(
 		"interface.valueobserver",
 		func(_ context.Context, result metric.Float64ObserverResult) {},
 	)

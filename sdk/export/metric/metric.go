@@ -129,7 +129,7 @@ type Checkpointer interface {
 // Aggregator implements a specific aggregation behavior, e.g., a
 // behavior to track a sequence of updates to an instrument.  Sum-only
 // instruments commonly use a simple Sum aggregator, but for the
-// distribution instruments (Histogram, ValueObserver) there are a
+// distribution instruments (Histogram, GaugeObserver) there are a
 // number of possible aggregators with different cost and accuracy
 // tradeoffs.
 //
@@ -374,7 +374,7 @@ func (kind ExportKind) Includes(has ExportKind) bool {
 // memory to export correctly.
 func (kind ExportKind) MemoryRequired(mkind sdkapi.InstrumentKind) bool {
 	switch mkind {
-	case sdkapi.HistogramInstrumentKind, sdkapi.ValueObserverInstrumentKind,
+	case sdkapi.HistogramInstrumentKind, sdkapi.GaugeObserverInstrumentKind,
 		sdkapi.CounterInstrumentKind, sdkapi.UpDownCounterInstrumentKind:
 		// Delta-oriented instruments:
 		return kind.Includes(CumulativeExportKind)

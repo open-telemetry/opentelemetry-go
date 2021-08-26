@@ -27,7 +27,7 @@ var ErrSDKReturnedNilImpl = errors.New("SDK returned a nil implementation")
 
 // Observation is used for reporting an asynchronous  batch of metric
 // values. Instances of this type should be created by asynchronous
-// instruments (e.g., Int64ValueObserver.Observation()).
+// instruments (e.g., Int64GaugeObserver.Observation()).
 type Observation struct {
 	// number needs to be aligned for 64-bit atomic operations.
 	number     number.Number
@@ -174,16 +174,16 @@ func (b *BatchObserverFunc) Run(ctx context.Context, function func([]attribute.K
 	})
 }
 
-// wrapInt64ValueObserverInstrument converts an AsyncImpl into Int64ValueObserver.
-func wrapInt64ValueObserverInstrument(asyncInst AsyncImpl, err error) (Int64ValueObserver, error) {
+// wrapInt64GaugeObserverInstrument converts an AsyncImpl into Int64GaugeObserver.
+func wrapInt64GaugeObserverInstrument(asyncInst AsyncImpl, err error) (Int64GaugeObserver, error) {
 	common, err := checkNewAsync(asyncInst, err)
-	return Int64ValueObserver{asyncInstrument: common}, err
+	return Int64GaugeObserver{asyncInstrument: common}, err
 }
 
-// wrapFloat64ValueObserverInstrument converts an AsyncImpl into Float64ValueObserver.
-func wrapFloat64ValueObserverInstrument(asyncInst AsyncImpl, err error) (Float64ValueObserver, error) {
+// wrapFloat64GaugeObserverInstrument converts an AsyncImpl into Float64GaugeObserver.
+func wrapFloat64GaugeObserverInstrument(asyncInst AsyncImpl, err error) (Float64GaugeObserver, error) {
 	common, err := checkNewAsync(asyncInst, err)
-	return Float64ValueObserver{asyncInstrument: common}, err
+	return Float64GaugeObserver{asyncInstrument: common}, err
 }
 
 // wrapInt64SumObserverInstrument converts an AsyncImpl into Int64SumObserver.
@@ -217,15 +217,15 @@ type BatchObserver struct {
 	runner AsyncBatchRunner
 }
 
-// Int64ValueObserver is a metric that captures a set of int64 values at a
+// Int64GaugeObserver is a metric that captures a set of int64 values at a
 // point in time.
-type Int64ValueObserver struct {
+type Int64GaugeObserver struct {
 	asyncInstrument
 }
 
-// Float64ValueObserver is a metric that captures a set of float64 values
+// Float64GaugeObserver is a metric that captures a set of float64 values
 // at a point in time.
-type Float64ValueObserver struct {
+type Float64GaugeObserver struct {
 	asyncInstrument
 }
 
@@ -257,7 +257,7 @@ type Float64UpDownSumObserver struct {
 // argument, for an asynchronous integer instrument.
 // This returns an implementation-level object for use by the SDK,
 // users should not refer to this.
-func (i Int64ValueObserver) Observation(v int64) Observation {
+func (i Int64GaugeObserver) Observation(v int64) Observation {
 	return Observation{
 		number:     number.NewInt64Number(v),
 		instrument: i.instrument,
@@ -268,7 +268,7 @@ func (i Int64ValueObserver) Observation(v int64) Observation {
 // argument, for an asynchronous integer instrument.
 // This returns an implementation-level object for use by the SDK,
 // users should not refer to this.
-func (f Float64ValueObserver) Observation(v float64) Observation {
+func (f Float64GaugeObserver) Observation(v float64) Observation {
 	return Observation{
 		number:     number.NewFloat64Number(v),
 		instrument: f.instrument,

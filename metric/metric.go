@@ -113,29 +113,29 @@ func (m Meter) NewFloat64Histogram(name string, opts ...InstrumentOption) (Float
 		m.newSync(name, sdkapi.HistogramInstrumentKind, number.Float64Kind, opts))
 }
 
-// NewInt64ValueObserver creates a new integer ValueObserver instrument
+// NewInt64GaugeObserver creates a new integer GaugeObserver instrument
 // with the given name, running a given callback, and customized with
 // options.  May return an error if the name is invalid (e.g., empty)
 // or improperly registered (e.g., duplicate registration).
-func (m Meter) NewInt64ValueObserver(name string, callback Int64ObserverFunc, opts ...InstrumentOption) (Int64ValueObserver, error) {
+func (m Meter) NewInt64GaugeObserver(name string, callback Int64ObserverFunc, opts ...InstrumentOption) (Int64GaugeObserver, error) {
 	if callback == nil {
-		return wrapInt64ValueObserverInstrument(NoopAsync{}, nil)
+		return wrapInt64GaugeObserverInstrument(NoopAsync{}, nil)
 	}
-	return wrapInt64ValueObserverInstrument(
-		m.newAsync(name, sdkapi.ValueObserverInstrumentKind, number.Int64Kind, opts,
+	return wrapInt64GaugeObserverInstrument(
+		m.newAsync(name, sdkapi.GaugeObserverInstrumentKind, number.Int64Kind, opts,
 			newInt64AsyncRunner(callback)))
 }
 
-// NewFloat64ValueObserver creates a new floating point ValueObserver with
+// NewFloat64GaugeObserver creates a new floating point GaugeObserver with
 // the given name, running a given callback, and customized with
 // options.  May return an error if the name is invalid (e.g., empty)
 // or improperly registered (e.g., duplicate registration).
-func (m Meter) NewFloat64ValueObserver(name string, callback Float64ObserverFunc, opts ...InstrumentOption) (Float64ValueObserver, error) {
+func (m Meter) NewFloat64GaugeObserver(name string, callback Float64ObserverFunc, opts ...InstrumentOption) (Float64GaugeObserver, error) {
 	if callback == nil {
-		return wrapFloat64ValueObserverInstrument(NoopAsync{}, nil)
+		return wrapFloat64GaugeObserverInstrument(NoopAsync{}, nil)
 	}
-	return wrapFloat64ValueObserverInstrument(
-		m.newAsync(name, sdkapi.ValueObserverInstrumentKind, number.Float64Kind, opts,
+	return wrapFloat64GaugeObserverInstrument(
+		m.newAsync(name, sdkapi.GaugeObserverInstrumentKind, number.Float64Kind, opts,
 			newFloat64AsyncRunner(callback)))
 }
 
@@ -191,28 +191,28 @@ func (m Meter) NewFloat64UpDownSumObserver(name string, callback Float64Observer
 			newFloat64AsyncRunner(callback)))
 }
 
-// NewInt64ValueObserver creates a new integer ValueObserver instrument
+// NewInt64GaugeObserver creates a new integer GaugeObserver instrument
 // with the given name, running in a batch callback, and customized with
 // options.  May return an error if the name is invalid (e.g., empty)
 // or improperly registered (e.g., duplicate registration).
-func (b BatchObserver) NewInt64ValueObserver(name string, opts ...InstrumentOption) (Int64ValueObserver, error) {
+func (b BatchObserver) NewInt64GaugeObserver(name string, opts ...InstrumentOption) (Int64GaugeObserver, error) {
 	if b.runner == nil {
-		return wrapInt64ValueObserverInstrument(NoopAsync{}, nil)
+		return wrapInt64GaugeObserverInstrument(NoopAsync{}, nil)
 	}
-	return wrapInt64ValueObserverInstrument(
-		b.meter.newAsync(name, sdkapi.ValueObserverInstrumentKind, number.Int64Kind, opts, b.runner))
+	return wrapInt64GaugeObserverInstrument(
+		b.meter.newAsync(name, sdkapi.GaugeObserverInstrumentKind, number.Int64Kind, opts, b.runner))
 }
 
-// NewFloat64ValueObserver creates a new floating point ValueObserver with
+// NewFloat64GaugeObserver creates a new floating point GaugeObserver with
 // the given name, running in a batch callback, and customized with
 // options.  May return an error if the name is invalid (e.g., empty)
 // or improperly registered (e.g., duplicate registration).
-func (b BatchObserver) NewFloat64ValueObserver(name string, opts ...InstrumentOption) (Float64ValueObserver, error) {
+func (b BatchObserver) NewFloat64GaugeObserver(name string, opts ...InstrumentOption) (Float64GaugeObserver, error) {
 	if b.runner == nil {
-		return wrapFloat64ValueObserverInstrument(NoopAsync{}, nil)
+		return wrapFloat64GaugeObserverInstrument(NoopAsync{}, nil)
 	}
-	return wrapFloat64ValueObserverInstrument(
-		b.meter.newAsync(name, sdkapi.ValueObserverInstrumentKind, number.Float64Kind, opts,
+	return wrapFloat64GaugeObserverInstrument(
+		b.meter.newAsync(name, sdkapi.GaugeObserverInstrumentKind, number.Float64Kind, opts,
 			b.runner))
 }
 
@@ -389,20 +389,20 @@ func (mm MeterMust) NewFloat64Histogram(name string, mos ...InstrumentOption) Fl
 	}
 }
 
-// NewInt64ValueObserver calls `Meter.NewInt64ValueObserver` and
+// NewInt64GaugeObserver calls `Meter.NewInt64GaugeObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (mm MeterMust) NewInt64ValueObserver(name string, callback Int64ObserverFunc, oos ...InstrumentOption) Int64ValueObserver {
-	if inst, err := mm.meter.NewInt64ValueObserver(name, callback, oos...); err != nil {
+func (mm MeterMust) NewInt64GaugeObserver(name string, callback Int64ObserverFunc, oos ...InstrumentOption) Int64GaugeObserver {
+	if inst, err := mm.meter.NewInt64GaugeObserver(name, callback, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst
 	}
 }
 
-// NewFloat64ValueObserver calls `Meter.NewFloat64ValueObserver` and
+// NewFloat64GaugeObserver calls `Meter.NewFloat64GaugeObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (mm MeterMust) NewFloat64ValueObserver(name string, callback Float64ObserverFunc, oos ...InstrumentOption) Float64ValueObserver {
-	if inst, err := mm.meter.NewFloat64ValueObserver(name, callback, oos...); err != nil {
+func (mm MeterMust) NewFloat64GaugeObserver(name string, callback Float64ObserverFunc, oos ...InstrumentOption) Float64GaugeObserver {
+	if inst, err := mm.meter.NewFloat64GaugeObserver(name, callback, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst
@@ -457,20 +457,20 @@ func (mm MeterMust) NewBatchObserver(callback BatchObserverFunc) BatchObserverMu
 	}
 }
 
-// NewInt64ValueObserver calls `BatchObserver.NewInt64ValueObserver` and
+// NewInt64GaugeObserver calls `BatchObserver.NewInt64GaugeObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (bm BatchObserverMust) NewInt64ValueObserver(name string, oos ...InstrumentOption) Int64ValueObserver {
-	if inst, err := bm.batch.NewInt64ValueObserver(name, oos...); err != nil {
+func (bm BatchObserverMust) NewInt64GaugeObserver(name string, oos ...InstrumentOption) Int64GaugeObserver {
+	if inst, err := bm.batch.NewInt64GaugeObserver(name, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst
 	}
 }
 
-// NewFloat64ValueObserver calls `BatchObserver.NewFloat64ValueObserver` and
+// NewFloat64GaugeObserver calls `BatchObserver.NewFloat64GaugeObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (bm BatchObserverMust) NewFloat64ValueObserver(name string, oos ...InstrumentOption) Float64ValueObserver {
-	if inst, err := bm.batch.NewFloat64ValueObserver(name, oos...); err != nil {
+func (bm BatchObserverMust) NewFloat64GaugeObserver(name string, oos ...InstrumentOption) Float64GaugeObserver {
+	if inst, err := bm.batch.NewFloat64GaugeObserver(name, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst

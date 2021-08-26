@@ -37,7 +37,7 @@ var (
 	testSumObserverDesc       = metric.NewDescriptor("sumobserver", sdkapi.SumObserverInstrumentKind, number.Int64Kind)
 	testUpDownSumObserverDesc = metric.NewDescriptor("updownsumobserver", sdkapi.UpDownSumObserverInstrumentKind, number.Int64Kind)
 	testHistogramDesc     = metric.NewDescriptor("valuerecorder", sdkapi.HistogramInstrumentKind, number.Int64Kind)
-	testValueObserverDesc     = metric.NewDescriptor("valueobserver", sdkapi.ValueObserverInstrumentKind, number.Int64Kind)
+	testGaugeObserverDesc     = metric.NewDescriptor("valueobserver", sdkapi.GaugeObserverInstrumentKind, number.Int64Kind)
 )
 
 func oneAgg(sel export.AggregatorSelector, desc *metric.Descriptor) export.Aggregator {
@@ -47,7 +47,7 @@ func oneAgg(sel export.AggregatorSelector, desc *metric.Descriptor) export.Aggre
 }
 
 func testFixedSelectors(t *testing.T, sel export.AggregatorSelector) {
-	require.IsType(t, (*lastvalue.Aggregator)(nil), oneAgg(sel, &testValueObserverDesc))
+	require.IsType(t, (*lastvalue.Aggregator)(nil), oneAgg(sel, &testGaugeObserverDesc))
 	require.IsType(t, (*sum.Aggregator)(nil), oneAgg(sel, &testCounterDesc))
 	require.IsType(t, (*sum.Aggregator)(nil), oneAgg(sel, &testUpDownCounterDesc))
 	require.IsType(t, (*sum.Aggregator)(nil), oneAgg(sel, &testSumObserverDesc))

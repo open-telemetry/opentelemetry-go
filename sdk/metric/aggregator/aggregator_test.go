@@ -90,7 +90,7 @@ func TestNaNTest(t *testing.T) {
 			for _, mkind := range []sdkapi.InstrumentKind{
 				sdkapi.CounterInstrumentKind,
 				sdkapi.HistogramInstrumentKind,
-				sdkapi.ValueObserverInstrumentKind,
+				sdkapi.GaugeObserverInstrumentKind,
 			} {
 				desc := metric.NewDescriptor(
 					"name",

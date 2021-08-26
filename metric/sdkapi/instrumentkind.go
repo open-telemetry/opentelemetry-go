@@ -22,8 +22,8 @@ type InstrumentKind int8
 const (
 	// HistogramInstrumentKind indicates a Histogram instrument.
 	HistogramInstrumentKind InstrumentKind = iota
-	// ValueObserverInstrumentKind indicates an ValueObserver instrument.
-	ValueObserverInstrumentKind
+	// GaugeObserverInstrumentKind indicates an GaugeObserver instrument.
+	GaugeObserverInstrumentKind
 
 	// CounterInstrumentKind indicates a Counter instrument.
 	CounterInstrumentKind

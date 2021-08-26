@@ -124,7 +124,7 @@ func TestPrometheusExporter(t *testing.T) {
 
 	expected = append(expected, expectCounter("counter", `counter{A="B",C="D",R="V"} 15.3`))
 
-	_ = metric.Must(meter).NewInt64ValueObserver("intobserver", func(_ context.Context, result metric.Int64ObserverResult) {
+	_ = metric.Must(meter).NewInt64GaugeObserver("intobserver", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(1, labels...)
 	})
 

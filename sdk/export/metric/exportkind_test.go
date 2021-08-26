@@ -37,7 +37,7 @@ var deltaMemoryKinds = []sdkapi.InstrumentKind{
 
 var cumulativeMemoryKinds = []sdkapi.InstrumentKind{
 	sdkapi.HistogramInstrumentKind,
-	sdkapi.ValueObserverInstrumentKind,
+	sdkapi.GaugeObserverInstrumentKind,
 	sdkapi.CounterInstrumentKind,
 	sdkapi.UpDownCounterInstrumentKind,
 }

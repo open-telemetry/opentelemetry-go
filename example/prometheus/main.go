@@ -76,8 +76,8 @@ func main() {
 		(*observerLock).RUnlock()
 		result.Observe(value, labels...)
 	}
-	_ = metric.Must(meter).NewFloat64ValueObserver("ex.com.one", cb,
-		metric.WithDescription("A ValueObserver set to 1.0"),
+	_ = metric.Must(meter).NewFloat64GaugeObserver("ex.com.one", cb,
+		metric.WithDescription("A GaugeObserver set to 1.0"),
 	)
 
 	valuerecorder := metric.Must(meter).NewFloat64Histogram("ex.com.two")

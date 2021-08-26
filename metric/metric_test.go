@@ -40,7 +40,7 @@ var (
 		sdkapi.UpDownCounterInstrumentKind,
 	}
 	asyncKinds = []sdkapi.InstrumentKind{
-		sdkapi.ValueObserverInstrumentKind,
+		sdkapi.GaugeObserverInstrumentKind,
 		sdkapi.SumObserverInstrumentKind,
 		sdkapi.UpDownSumObserverInstrumentKind,
 	}
@@ -52,7 +52,7 @@ var (
 	}
 	groupingKinds = []sdkapi.InstrumentKind{
 		sdkapi.HistogramInstrumentKind,
-		sdkapi.ValueObserverInstrumentKind,
+		sdkapi.GaugeObserverInstrumentKind,
 	}
 
 	monotonicKinds = []sdkapi.InstrumentKind{
@@ -64,7 +64,7 @@ var (
 		sdkapi.UpDownCounterInstrumentKind,
 		sdkapi.UpDownSumObserverInstrumentKind,
 		sdkapi.HistogramInstrumentKind,
-		sdkapi.ValueObserverInstrumentKind,
+		sdkapi.GaugeObserverInstrumentKind,
 	}
 
 	precomputedSumKinds = []sdkapi.InstrumentKind{
@@ -76,7 +76,7 @@ var (
 		sdkapi.CounterInstrumentKind,
 		sdkapi.UpDownCounterInstrumentKind,
 		sdkapi.HistogramInstrumentKind,
-		sdkapi.ValueObserverInstrumentKind,
+		sdkapi.GaugeObserverInstrumentKind,
 	}
 )
 
@@ -396,22 +396,22 @@ func TestObserverInstruments(t *testing.T) {
 	t.Run("float valueobserver", func(t *testing.T) {
 		labels := []attribute.KeyValue{attribute.String("O", "P")}
 		mockSDK, meter := metrictest.NewMeter()
-		o := Must(meter).NewFloat64ValueObserver("test.valueobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
+		o := Must(meter).NewFloat64GaugeObserver("test.valueobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
 			result.Observe(42.1, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, sdkapi.ValueObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, sdkapi.GaugeObserverInstrumentKind, o.AsyncImpl(),
 			42.1,
 		)
 	})
 	t.Run("int valueobserver", func(t *testing.T) {
 		labels := []attribute.KeyValue{}
 		mockSDK, meter := metrictest.NewMeter()
-		o := Must(meter).NewInt64ValueObserver("test.observer.int", func(_ context.Context, result metric.Int64ObserverResult) {
+		o := Must(meter).NewInt64GaugeObserver("test.observer.int", func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(-142, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, sdkapi.ValueObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, sdkapi.GaugeObserverInstrumentKind, o.AsyncImpl(),
 			-142,
 		)
 	})
@@ -464,8 +464,8 @@ func TestObserverInstruments(t *testing.T) {
 func TestBatchObserverInstruments(t *testing.T) {
 	mockSDK, meter := metrictest.NewMeter()
 
-	var obs1 metric.Int64ValueObserver
-	var obs2 metric.Float64ValueObserver
+	var obs1 metric.Int64GaugeObserver
+	var obs2 metric.Float64GaugeObserver
 
 	labels := []attribute.KeyValue{
 		attribute.String("A", "B"),
@@ -480,8 +480,8 @@ func TestBatchObserverInstruments(t *testing.T) {
 			)
 		},
 	)
-	obs1 = cb.NewInt64ValueObserver("test.observer.int")
-	obs2 = cb.NewFloat64ValueObserver("test.observer.float")
+	obs1 = cb.NewInt64GaugeObserver("test.observer.int")
+	obs2 = cb.NewFloat64GaugeObserver("test.observer.float")
 
 	mockSDK.RunAsyncInstruments()
 
@@ -554,7 +554,7 @@ func TestWrappedInstrumentError(t *testing.T) {
 	require.Equal(t, err, metric.ErrSDKReturnedNilImpl)
 	require.NotNil(t, valuerecorder.SyncImpl())
 
-	observer, err := meter.NewInt64ValueObserver("test.observer", func(_ context.Context, result metric.Int64ObserverResult) {})
+	observer, err := meter.NewInt64GaugeObserver("test.observer", func(_ context.Context, result metric.Int64ObserverResult) {})
 
 	require.NotNil(t, err)
 	require.NotNil(t, observer.AsyncImpl())
@@ -564,7 +564,7 @@ func TestNilCallbackObserverNoop(t *testing.T) {
 	// Tests that a nil callback yields a no-op observer without error.
 	_, meter := metrictest.NewMeter()
 
-	observer := Must(meter).NewInt64ValueObserver("test.observer", nil)
+	observer := Must(meter).NewInt64GaugeObserver("test.observer", nil)
 
 	_, ok := observer.AsyncImpl().(metric.NoopAsync)
 	require.True(t, ok)

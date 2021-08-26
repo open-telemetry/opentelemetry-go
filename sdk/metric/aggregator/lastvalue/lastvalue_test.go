@@ -73,7 +73,7 @@ func TestLastValueUpdate(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg, ckpt := new2()
 
-		record := aggregatortest.NewAggregatorTest(sdkapi.ValueObserverInstrumentKind, profile.NumberKind)
+		record := aggregatortest.NewAggregatorTest(sdkapi.GaugeObserverInstrumentKind, profile.NumberKind)
 
 		var last number.Number
 		for i := 0; i < count; i++ {
@@ -95,7 +95,7 @@ func TestLastValueMerge(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg1, agg2, ckpt1, ckpt2 := new4()
 
-		descriptor := aggregatortest.NewAggregatorTest(sdkapi.ValueObserverInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(sdkapi.GaugeObserverInstrumentKind, profile.NumberKind)
 
 		first1 := profile.Random(+1)
 		first2 := profile.Random(+1)
@@ -128,7 +128,7 @@ func TestLastValueMerge(t *testing.T) {
 }
 
 func TestLastValueNotSet(t *testing.T) {
-	descriptor := aggregatortest.NewAggregatorTest(sdkapi.ValueObserverInstrumentKind, number.Int64Kind)
+	descriptor := aggregatortest.NewAggregatorTest(sdkapi.GaugeObserverInstrumentKind, number.Int64Kind)
 
 	g, ckpt := new2()
 	require.NoError(t, g.SynchronizedMove(ckpt, descriptor))
@@ -139,7 +139,7 @@ func TestLastValueNotSet(t *testing.T) {
 func TestSynchronizedMoveReset(t *testing.T) {
 	aggregatortest.SynchronizedMoveResetTest(
 		t,
-		sdkapi.ValueObserverInstrumentKind,
+		sdkapi.GaugeObserverInstrumentKind,
 		func(desc *metric.Descriptor) export.Aggregator {
 			return &New(1)[0]
 		},
