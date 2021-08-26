@@ -41,7 +41,7 @@ The synchronous instrument names are:
 
   Counter:           additive, monotonic
   UpDownCounter:     additive
-  ValueRecorder:     grouping
+  Histogram:     grouping
 
 and the asynchronous instruments are:
 

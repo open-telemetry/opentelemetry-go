@@ -474,16 +474,16 @@ func wrapFloat64UpDownCounterInstrument(syncInst SyncImpl, err error) (Float64Up
 	return Float64UpDownCounter{syncInstrument: common}, err
 }
 
-// wrapInt64ValueRecorderInstrument converts a SyncImpl into Int64ValueRecorder.
-func wrapInt64ValueRecorderInstrument(syncInst SyncImpl, err error) (Int64ValueRecorder, error) {
+// wrapInt64HistogramInstrument converts a SyncImpl into Int64Histogram.
+func wrapInt64HistogramInstrument(syncInst SyncImpl, err error) (Int64Histogram, error) {
 	common, err := checkNewSync(syncInst, err)
-	return Int64ValueRecorder{syncInstrument: common}, err
+	return Int64Histogram{syncInstrument: common}, err
 }
 
-// wrapFloat64ValueRecorderInstrument converts a SyncImpl into Float64ValueRecorder.
-func wrapFloat64ValueRecorderInstrument(syncInst SyncImpl, err error) (Float64ValueRecorder, error) {
+// wrapFloat64HistogramInstrument converts a SyncImpl into Float64Histogram.
+func wrapFloat64HistogramInstrument(syncInst SyncImpl, err error) (Float64Histogram, error) {
 	common, err := checkNewSync(syncInst, err)
-	return Float64ValueRecorder{syncInstrument: common}, err
+	return Float64Histogram{syncInstrument: common}, err
 }
 
 // Float64Counter is a metric that accumulates float64 values.
@@ -635,78 +635,78 @@ func (b BoundInt64UpDownCounter) Add(ctx context.Context, value int64) {
 	b.directRecord(ctx, number.NewInt64Number(value))
 }
 
-// Float64ValueRecorder is a metric that records float64 values.
-type Float64ValueRecorder struct {
+// Float64Histogram is a metric that records float64 values.
+type Float64Histogram struct {
 	syncInstrument
 }
 
-// Int64ValueRecorder is a metric that records int64 values.
-type Int64ValueRecorder struct {
+// Int64Histogram is a metric that records int64 values.
+type Int64Histogram struct {
 	syncInstrument
 }
 
-// BoundFloat64ValueRecorder is a bound instrument for Float64ValueRecorder.
+// BoundFloat64Histogram is a bound instrument for Float64Histogram.
 //
 // It inherits the Unbind function from syncBoundInstrument.
-type BoundFloat64ValueRecorder struct {
+type BoundFloat64Histogram struct {
 	syncBoundInstrument
 }
 
-// BoundInt64ValueRecorder is a bound instrument for Int64ValueRecorder.
+// BoundInt64Histogram is a bound instrument for Int64Histogram.
 //
 // It inherits the Unbind function from syncBoundInstrument.
-type BoundInt64ValueRecorder struct {
+type BoundInt64Histogram struct {
 	syncBoundInstrument
 }
 
-// Bind creates a bound instrument for this ValueRecorder. The labels are
+// Bind creates a bound instrument for this Histogram. The labels are
 // associated with values recorded via subsequent calls to Record.
-func (c Float64ValueRecorder) Bind(labels ...attribute.KeyValue) (h BoundFloat64ValueRecorder) {
+func (c Float64Histogram) Bind(labels ...attribute.KeyValue) (h BoundFloat64Histogram) {
 	h.syncBoundInstrument = c.bind(labels)
 	return
 }
 
-// Bind creates a bound instrument for this ValueRecorder. The labels are
+// Bind creates a bound instrument for this Histogram. The labels are
 // associated with values recorded via subsequent calls to Record.
-func (c Int64ValueRecorder) Bind(labels ...attribute.KeyValue) (h BoundInt64ValueRecorder) {
+func (c Int64Histogram) Bind(labels ...attribute.KeyValue) (h BoundInt64Histogram) {
 	h.syncBoundInstrument = c.bind(labels)
 	return
 }
 
 // Measurement creates a Measurement object to use with batch
 // recording.
-func (c Float64ValueRecorder) Measurement(value float64) Measurement {
+func (c Float64Histogram) Measurement(value float64) Measurement {
 	return c.float64Measurement(value)
 }
 
 // Measurement creates a Measurement object to use with batch
 // recording.
-func (c Int64ValueRecorder) Measurement(value int64) Measurement {
+func (c Int64Histogram) Measurement(value int64) Measurement {
 	return c.int64Measurement(value)
 }
 
-// Record adds a new value to the list of ValueRecorder's records. The
+// Record adds a new value to the list of Histogram's records. The
 // labels should contain the keys and values to be associated with
 // this value.
-func (c Float64ValueRecorder) Record(ctx context.Context, value float64, labels ...attribute.KeyValue) {
+func (c Float64Histogram) Record(ctx context.Context, value float64, labels ...attribute.KeyValue) {
 	c.directRecord(ctx, number.NewFloat64Number(value), labels)
 }
 
-// Record adds a new value to the ValueRecorder's distribution. The
+// Record adds a new value to the Histogram's distribution. The
 // labels should contain the keys and values to be associated with
 // this value.
-func (c Int64ValueRecorder) Record(ctx context.Context, value int64, labels ...attribute.KeyValue) {
+func (c Int64Histogram) Record(ctx context.Context, value int64, labels ...attribute.KeyValue) {
 	c.directRecord(ctx, number.NewInt64Number(value), labels)
 }
 
-// Record adds a new value to the ValueRecorder's distribution using the labels
-// previously bound to the ValueRecorder via Bind().
-func (b BoundFloat64ValueRecorder) Record(ctx context.Context, value float64) {
+// Record adds a new value to the Histogram's distribution using the labels
+// previously bound to the Histogram via Bind().
+func (b BoundFloat64Histogram) Record(ctx context.Context, value float64) {
 	b.directRecord(ctx, number.NewFloat64Number(value))
 }
 
-// Record adds a new value to the ValueRecorder's distribution using the labels
-// previously bound to the ValueRecorder via Bind().
-func (b BoundInt64ValueRecorder) Record(ctx context.Context, value int64) {
+// Record adds a new value to the Histogram's distribution using the labels
+// previously bound to the Histogram via Bind().
+func (b BoundInt64Histogram) Record(ctx context.Context, value int64) {
 	b.directRecord(ctx, number.NewInt64Number(value))
 }

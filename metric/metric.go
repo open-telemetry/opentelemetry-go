@@ -95,22 +95,22 @@ func (m Meter) NewFloat64UpDownCounter(name string, options ...InstrumentOption)
 		m.newSync(name, sdkapi.UpDownCounterInstrumentKind, number.Float64Kind, options))
 }
 
-// NewInt64ValueRecorder creates a new integer ValueRecorder instrument with the
+// NewInt64Histogram creates a new integer Histogram instrument with the
 // given name, customized with options.  May return an error if the
 // name is invalid (e.g., empty) or improperly registered (e.g.,
 // duplicate registration).
-func (m Meter) NewInt64ValueRecorder(name string, opts ...InstrumentOption) (Int64ValueRecorder, error) {
-	return wrapInt64ValueRecorderInstrument(
-		m.newSync(name, sdkapi.ValueRecorderInstrumentKind, number.Int64Kind, opts))
+func (m Meter) NewInt64Histogram(name string, opts ...InstrumentOption) (Int64Histogram, error) {
+	return wrapInt64HistogramInstrument(
+		m.newSync(name, sdkapi.HistogramInstrumentKind, number.Int64Kind, opts))
 }
 
-// NewFloat64ValueRecorder creates a new floating point ValueRecorder with the
+// NewFloat64Histogram creates a new floating point Histogram with the
 // given name, customized with options.  May return an error if the
 // name is invalid (e.g., empty) or improperly registered (e.g.,
 // duplicate registration).
-func (m Meter) NewFloat64ValueRecorder(name string, opts ...InstrumentOption) (Float64ValueRecorder, error) {
-	return wrapFloat64ValueRecorderInstrument(
-		m.newSync(name, sdkapi.ValueRecorderInstrumentKind, number.Float64Kind, opts))
+func (m Meter) NewFloat64Histogram(name string, opts ...InstrumentOption) (Float64Histogram, error) {
+	return wrapFloat64HistogramInstrument(
+		m.newSync(name, sdkapi.HistogramInstrumentKind, number.Float64Kind, opts))
 }
 
 // NewInt64ValueObserver creates a new integer ValueObserver instrument
@@ -369,20 +369,20 @@ func (mm MeterMust) NewFloat64UpDownCounter(name string, cos ...InstrumentOption
 	}
 }
 
-// NewInt64ValueRecorder calls `Meter.NewInt64ValueRecorder` and returns the
+// NewInt64Histogram calls `Meter.NewInt64Histogram` and returns the
 // instrument, panicking if it encounters an error.
-func (mm MeterMust) NewInt64ValueRecorder(name string, mos ...InstrumentOption) Int64ValueRecorder {
-	if inst, err := mm.meter.NewInt64ValueRecorder(name, mos...); err != nil {
+func (mm MeterMust) NewInt64Histogram(name string, mos ...InstrumentOption) Int64Histogram {
+	if inst, err := mm.meter.NewInt64Histogram(name, mos...); err != nil {
 		panic(err)
 	} else {
 		return inst
 	}
 }
 
-// NewFloat64ValueRecorder calls `Meter.NewFloat64ValueRecorder` and returns the
+// NewFloat64Histogram calls `Meter.NewFloat64Histogram` and returns the
 // instrument, panicking if it encounters an error.
-func (mm MeterMust) NewFloat64ValueRecorder(name string, mos ...InstrumentOption) Float64ValueRecorder {
-	if inst, err := mm.meter.NewFloat64ValueRecorder(name, mos...); err != nil {
+func (mm MeterMust) NewFloat64Histogram(name string, mos ...InstrumentOption) Float64Histogram {
+	if inst, err := mm.meter.NewFloat64Histogram(name, mos...); err != nil {
 		panic(err)
 	} else {
 		return inst

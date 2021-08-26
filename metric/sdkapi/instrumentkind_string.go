@@ -8,7 +8,7 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
-	_ = x[ValueRecorderInstrumentKind-0]
+	_ = x[HistogramInstrumentKind-0]
 	_ = x[ValueObserverInstrumentKind-1]
 	_ = x[CounterInstrumentKind-2]
 	_ = x[UpDownCounterInstrumentKind-3]
@@ -16,7 +16,7 @@ func _() {
 	_ = x[UpDownSumObserverInstrumentKind-5]
 }
 
-const _InstrumentKind_name = "ValueRecorderInstrumentKindValueObserverInstrumentKindCounterInstrumentKindUpDownCounterInstrumentKindSumObserverInstrumentKindUpDownSumObserverInstrumentKind"
+const _InstrumentKind_name = "HistogramInstrumentKindValueObserverInstrumentKindCounterInstrumentKindUpDownCounterInstrumentKindSumObserverInstrumentKindUpDownSumObserverInstrumentKind"
 
 var _InstrumentKind_index = [...]uint8{0, 27, 54, 75, 102, 127, 158}
 

@@ -20,8 +20,8 @@ package sdkapi // import "go.opentelemetry.io/otel/metric/sdkapi"
 type InstrumentKind int8
 
 const (
-	// ValueRecorderInstrumentKind indicates a ValueRecorder instrument.
-	ValueRecorderInstrumentKind InstrumentKind = iota
+	// HistogramInstrumentKind indicates a Histogram instrument.
+	HistogramInstrumentKind InstrumentKind = iota
 	// ValueObserverInstrumentKind indicates an ValueObserver instrument.
 	ValueObserverInstrumentKind
 
@@ -40,7 +40,7 @@ const (
 // Synchronous returns whether this is a synchronous kind of instrument.
 func (k InstrumentKind) Synchronous() bool {
 	switch k {
-	case CounterInstrumentKind, UpDownCounterInstrumentKind, ValueRecorderInstrumentKind:
+	case CounterInstrumentKind, UpDownCounterInstrumentKind, HistogramInstrumentKind:
 		return true
 	}
 	return false

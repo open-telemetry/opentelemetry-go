@@ -39,10 +39,10 @@ var (
 			return unwrap(m.NewFloat64Counter(name))
 		},
 		"valuerecorder.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
-			return unwrap(m.NewInt64ValueRecorder(name))
+			return unwrap(m.NewInt64Histogram(name))
 		},
 		"valuerecorder.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
-			return unwrap(m.NewFloat64ValueRecorder(name))
+			return unwrap(m.NewFloat64Histogram(name))
 		},
 		"valueobserver.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
 			return unwrap(m.NewInt64ValueObserver(name, func(context.Context, metric.Int64ObserverResult) {}))

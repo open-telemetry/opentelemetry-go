@@ -36,7 +36,7 @@ var deltaMemoryKinds = []sdkapi.InstrumentKind{
 }
 
 var cumulativeMemoryKinds = []sdkapi.InstrumentKind{
-	sdkapi.ValueRecorderInstrumentKind,
+	sdkapi.HistogramInstrumentKind,
 	sdkapi.ValueObserverInstrumentKind,
 	sdkapi.CounterInstrumentKind,
 	sdkapi.UpDownCounterInstrumentKind,

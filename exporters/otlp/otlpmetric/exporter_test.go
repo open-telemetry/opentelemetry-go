@@ -215,7 +215,7 @@ func TestNoGroupingExport(t *testing.T) {
 func TestValuerecorderMetricGroupingExport(t *testing.T) {
 	r := record{
 		"valuerecorder",
-		sdkapi.ValueRecorderInstrumentKind,
+		sdkapi.HistogramInstrumentKind,
 		number.Int64Kind,
 		nil,
 		append(baseKeyValues, cpuKey.Int(1)),

@@ -129,13 +129,13 @@ type Checkpointer interface {
 // Aggregator implements a specific aggregation behavior, e.g., a
 // behavior to track a sequence of updates to an instrument.  Sum-only
 // instruments commonly use a simple Sum aggregator, but for the
-// distribution instruments (ValueRecorder, ValueObserver) there are a
+// distribution instruments (Histogram, ValueObserver) there are a
 // number of possible aggregators with different cost and accuracy
 // tradeoffs.
 //
 // Note that any Aggregator may be attached to any instrument--this is
 // the result of the OpenTelemetry API/SDK separation.  It is possible
-// to attach a Sum aggregator to a ValueRecorder instrument or a
+// to attach a Sum aggregator to a Histogram instrument or a
 // MinMaxSumCount aggregator to a Counter instrument.
 type Aggregator interface {
 	// Aggregation returns an Aggregation interface to access the
@@ -374,7 +374,7 @@ func (kind ExportKind) Includes(has ExportKind) bool {
 // memory to export correctly.
 func (kind ExportKind) MemoryRequired(mkind sdkapi.InstrumentKind) bool {
 	switch mkind {
-	case sdkapi.ValueRecorderInstrumentKind, sdkapi.ValueObserverInstrumentKind,
+	case sdkapi.HistogramInstrumentKind, sdkapi.ValueObserverInstrumentKind,
 		sdkapi.CounterInstrumentKind, sdkapi.UpDownCounterInstrumentKind:
 		// Delta-oriented instruments:
 		return kind.Includes(CumulativeExportKind)

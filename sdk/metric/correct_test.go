@@ -131,11 +131,11 @@ func TestInputRangeUpDownCounter(t *testing.T) {
 	require.Nil(t, testHandler.Flush())
 }
 
-func TestInputRangeValueRecorder(t *testing.T) {
+func TestInputRangeHistogram(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, _, processor := newSDK(t)
 
-	valuerecorder := Must(meter).NewFloat64ValueRecorder("name.exact")
+	valuerecorder := Must(meter).NewFloat64Histogram("name.exact")
 
 	valuerecorder.Record(ctx, math.NaN())
 	require.Equal(t, aggregation.ErrNaNInput, testHandler.Flush())
@@ -160,7 +160,7 @@ func TestDisabledInstrument(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, _, processor := newSDK(t)
 
-	valuerecorder := Must(meter).NewFloat64ValueRecorder("name.disabled")
+	valuerecorder := Must(meter).NewFloat64Histogram("name.disabled")
 
 	valuerecorder.Record(ctx, -1)
 	checkpointed := sdk.Collect(ctx)
@@ -449,8 +449,8 @@ func TestRecordBatch(t *testing.T) {
 
 	counter1 := Must(meter).NewInt64Counter("int64.sum")
 	counter2 := Must(meter).NewFloat64Counter("float64.sum")
-	valuerecorder1 := Must(meter).NewInt64ValueRecorder("int64.exact")
-	valuerecorder2 := Must(meter).NewFloat64ValueRecorder("float64.exact")
+	valuerecorder1 := Must(meter).NewInt64Histogram("int64.exact")
+	valuerecorder2 := Must(meter).NewFloat64Histogram("float64.exact")
 
 	sdk.RecordBatch(
 		ctx,

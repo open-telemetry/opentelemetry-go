@@ -65,7 +65,7 @@ func TestProcessor(t *testing.T) {
 			for _, ic := range []instrumentCase{
 				{kind: sdkapi.CounterInstrumentKind},
 				{kind: sdkapi.UpDownCounterInstrumentKind},
-				{kind: sdkapi.ValueRecorderInstrumentKind},
+				{kind: sdkapi.HistogramInstrumentKind},
 				{kind: sdkapi.SumObserverInstrumentKind},
 				{kind: sdkapi.UpDownSumObserverInstrumentKind},
 				{kind: sdkapi.ValueObserverInstrumentKind},

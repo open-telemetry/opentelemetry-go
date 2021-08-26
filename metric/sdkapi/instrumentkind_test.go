@@ -23,7 +23,7 @@ import (
 )
 
 func TestInstrumentKinds(t *testing.T) {
-	require.Equal(t, sdkapi.ValueRecorderInstrumentKind.String(), "ValueRecorderInstrumentKind")
+	require.Equal(t, sdkapi.HistogramInstrumentKind.String(), "HistogramInstrumentKind")
 	require.Equal(t, sdkapi.ValueObserverInstrumentKind.String(), "ValueObserverInstrumentKind")
 	require.Equal(t, sdkapi.CounterInstrumentKind.String(), "CounterInstrumentKind")
 	require.Equal(t, sdkapi.UpDownCounterInstrumentKind.String(), "UpDownCounterInstrumentKind")

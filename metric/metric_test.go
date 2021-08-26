@@ -35,7 +35,7 @@ var Must = metric.Must
 
 var (
 	syncKinds = []sdkapi.InstrumentKind{
-		sdkapi.ValueRecorderInstrumentKind,
+		sdkapi.HistogramInstrumentKind,
 		sdkapi.CounterInstrumentKind,
 		sdkapi.UpDownCounterInstrumentKind,
 	}
@@ -51,7 +51,7 @@ var (
 		sdkapi.UpDownSumObserverInstrumentKind,
 	}
 	groupingKinds = []sdkapi.InstrumentKind{
-		sdkapi.ValueRecorderInstrumentKind,
+		sdkapi.HistogramInstrumentKind,
 		sdkapi.ValueObserverInstrumentKind,
 	}
 
@@ -63,7 +63,7 @@ var (
 	nonMonotonicKinds = []sdkapi.InstrumentKind{
 		sdkapi.UpDownCounterInstrumentKind,
 		sdkapi.UpDownSumObserverInstrumentKind,
-		sdkapi.ValueRecorderInstrumentKind,
+		sdkapi.HistogramInstrumentKind,
 		sdkapi.ValueObserverInstrumentKind,
 	}
 
@@ -75,7 +75,7 @@ var (
 	nonPrecomputedSumKinds = []sdkapi.InstrumentKind{
 		sdkapi.CounterInstrumentKind,
 		sdkapi.UpDownCounterInstrumentKind,
-		sdkapi.ValueRecorderInstrumentKind,
+		sdkapi.HistogramInstrumentKind,
 		sdkapi.ValueObserverInstrumentKind,
 	}
 )
@@ -363,30 +363,30 @@ func TestCounter(t *testing.T) {
 	})
 }
 
-func TestValueRecorder(t *testing.T) {
+func TestHistogram(t *testing.T) {
 	t.Run("float64 valuerecorder", func(t *testing.T) {
 		mockSDK, meter := metrictest.NewMeter()
-		m := Must(meter).NewFloat64ValueRecorder("test.valuerecorder.float")
+		m := Must(meter).NewFloat64Histogram("test.valuerecorder.float")
 		ctx := context.Background()
 		labels := []attribute.KeyValue{}
 		m.Record(ctx, 42, labels...)
 		boundInstrument := m.Bind(labels...)
 		boundInstrument.Record(ctx, 0)
 		meter.RecordBatch(ctx, labels, m.Measurement(-100.5))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Float64Kind, sdkapi.ValueRecorderInstrumentKind, m.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, number.Float64Kind, sdkapi.HistogramInstrumentKind, m.SyncImpl(),
 			42, 0, -100.5,
 		)
 	})
 	t.Run("int64 valuerecorder", func(t *testing.T) {
 		mockSDK, meter := metrictest.NewMeter()
-		m := Must(meter).NewInt64ValueRecorder("test.valuerecorder.int")
+		m := Must(meter).NewInt64Histogram("test.valuerecorder.int")
 		ctx := context.Background()
 		labels := []attribute.KeyValue{attribute.Int("I", 1)}
 		m.Record(ctx, 173, labels...)
 		boundInstrument := m.Bind(labels...)
 		boundInstrument.Record(ctx, 80)
 		meter.RecordBatch(ctx, labels, m.Measurement(0))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Int64Kind, sdkapi.ValueRecorderInstrumentKind, m.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, mockSDK, number.Int64Kind, sdkapi.HistogramInstrumentKind, m.SyncImpl(),
 			173, 80, 0,
 		)
 	})
@@ -549,7 +549,7 @@ func TestWrappedInstrumentError(t *testing.T) {
 	impl := &testWrappedMeter{}
 	meter := metric.WrapMeterImpl(impl, "test")
 
-	valuerecorder, err := meter.NewInt64ValueRecorder("test.valuerecorder")
+	valuerecorder, err := meter.NewInt64Histogram("test.valuerecorder")
 
 	require.Equal(t, err, metric.ErrSDKReturnedNilImpl)
 	require.NotNil(t, valuerecorder.SyncImpl())

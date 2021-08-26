@@ -80,7 +80,7 @@ func main() {
 		metric.WithDescription("A ValueObserver set to 1.0"),
 	)
 
-	valuerecorder := metric.Must(meter).NewFloat64ValueRecorder("ex.com.two")
+	valuerecorder := metric.Must(meter).NewFloat64Histogram("ex.com.two")
 	counter := metric.Must(meter).NewFloat64Counter("ex.com.three")
 
 	commonLabels := []attribute.KeyValue{lemonsKey.Int(10), attribute.String("A", "1"), attribute.String("B", "2"), attribute.String("C", "3")}

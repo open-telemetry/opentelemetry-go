@@ -36,7 +36,7 @@ var (
 	testUpDownCounterDesc     = metric.NewDescriptor("updowncounter", sdkapi.UpDownCounterInstrumentKind, number.Int64Kind)
 	testSumObserverDesc       = metric.NewDescriptor("sumobserver", sdkapi.SumObserverInstrumentKind, number.Int64Kind)
 	testUpDownSumObserverDesc = metric.NewDescriptor("updownsumobserver", sdkapi.UpDownSumObserverInstrumentKind, number.Int64Kind)
-	testValueRecorderDesc     = metric.NewDescriptor("valuerecorder", sdkapi.ValueRecorderInstrumentKind, number.Int64Kind)
+	testHistogramDesc     = metric.NewDescriptor("valuerecorder", sdkapi.HistogramInstrumentKind, number.Int64Kind)
 	testValueObserverDesc     = metric.NewDescriptor("valueobserver", sdkapi.ValueObserverInstrumentKind, number.Int64Kind)
 )
 
@@ -56,18 +56,18 @@ func testFixedSelectors(t *testing.T, sel export.AggregatorSelector) {
 
 func TestInexpensiveDistribution(t *testing.T) {
 	inex := simple.NewWithInexpensiveDistribution()
-	require.IsType(t, (*minmaxsumcount.Aggregator)(nil), oneAgg(inex, &testValueRecorderDesc))
+	require.IsType(t, (*minmaxsumcount.Aggregator)(nil), oneAgg(inex, &testHistogramDesc))
 	testFixedSelectors(t, inex)
 }
 
 func TestExactDistribution(t *testing.T) {
 	ex := simple.NewWithExactDistribution()
-	require.IsType(t, (*exact.Aggregator)(nil), oneAgg(ex, &testValueRecorderDesc))
+	require.IsType(t, (*exact.Aggregator)(nil), oneAgg(ex, &testHistogramDesc))
 	testFixedSelectors(t, ex)
 }
 
 func TestHistogramDistribution(t *testing.T) {
 	hist := simple.NewWithHistogramDistribution()
-	require.IsType(t, (*histogram.Aggregator)(nil), oneAgg(hist, &testValueRecorderDesc))
+	require.IsType(t, (*histogram.Aggregator)(nil), oneAgg(hist, &testHistogramDesc))
 	testFixedSelectors(t, hist)
 }

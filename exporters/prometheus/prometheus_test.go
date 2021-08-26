@@ -109,7 +109,7 @@ func TestPrometheusExporter(t *testing.T) {
 	meter := exporter.MeterProvider().Meter("test")
 	upDownCounter := metric.Must(meter).NewFloat64UpDownCounter("updowncounter")
 	counter := metric.Must(meter).NewFloat64Counter("counter")
-	valuerecorder := metric.Must(meter).NewFloat64ValueRecorder("valuerecorder")
+	valuerecorder := metric.Must(meter).NewFloat64Histogram("valuerecorder")
 
 	labels := []attribute.KeyValue{
 		attribute.Key("A").String("B"),

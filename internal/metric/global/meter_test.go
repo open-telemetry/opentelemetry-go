@@ -48,7 +48,7 @@ func TestDirect(t *testing.T) {
 	counter.Add(ctx, 1, labels1...)
 	counter.Add(ctx, 1, labels1...)
 
-	valuerecorder := Must(meter1).NewFloat64ValueRecorder("test.valuerecorder")
+	valuerecorder := Must(meter1).NewFloat64Histogram("test.valuerecorder")
 	valuerecorder.Record(ctx, 1, labels1...)
 	valuerecorder.Record(ctx, 2, labels1...)
 
@@ -62,7 +62,7 @@ func TestDirect(t *testing.T) {
 		result.Observe(2, labels2...)
 	})
 
-	second := Must(meter2).NewFloat64ValueRecorder("test.second")
+	second := Must(meter2).NewFloat64Histogram("test.second")
 	second.Record(ctx, 1, labels3...)
 	second.Record(ctx, 2, labels3...)
 
@@ -146,7 +146,7 @@ func TestBound(t *testing.T) {
 	boundC.Add(ctx, 1)
 	boundC.Add(ctx, 1)
 
-	valuerecorder := Must(glob).NewInt64ValueRecorder("test.valuerecorder")
+	valuerecorder := Must(glob).NewInt64Histogram("test.valuerecorder")
 	boundM := valuerecorder.Bind(labels1...)
 	boundM.Record(ctx, 1)
 	boundM.Record(ctx, 2)
@@ -188,7 +188,7 @@ func TestUnbind(t *testing.T) {
 	counter := Must(glob).NewFloat64Counter("test.counter")
 	boundC := counter.Bind(labels1...)
 
-	valuerecorder := Must(glob).NewInt64ValueRecorder("test.valuerecorder")
+	valuerecorder := Must(glob).NewInt64Histogram("test.valuerecorder")
 	boundM := valuerecorder.Bind(labels1...)
 
 	boundC.Unbind()
