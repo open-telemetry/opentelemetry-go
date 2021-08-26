@@ -444,7 +444,7 @@ func TestConvertDescriptor(t *testing.T) {
 			},
 			expected: metric.NewDescriptor(
 				"foo",
-				sdkapi.SumObserverInstrumentKind,
+				sdkapi.CounterObserverInstrumentKind,
 				number.Int64Kind,
 				metric.WithInstrumentationName("OpenCensus Bridge"),
 				metric.WithDescription("bar"),
@@ -461,7 +461,7 @@ func TestConvertDescriptor(t *testing.T) {
 			},
 			expected: metric.NewDescriptor(
 				"foo",
-				sdkapi.SumObserverInstrumentKind,
+				sdkapi.CounterObserverInstrumentKind,
 				number.Float64Kind,
 				metric.WithInstrumentationName("OpenCensus Bridge"),
 				metric.WithDescription("bar"),

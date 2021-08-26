@@ -289,12 +289,12 @@ func TestObserverCollection(t *testing.T) {
 		result.Observe(int64(mult))
 	})
 
-	_ = Must(meter).NewFloat64SumObserver("float.sumobserver.sum", func(_ context.Context, result metric.Float64ObserverResult) {
+	_ = Must(meter).NewFloat64CounterObserver("float.sumobserver.sum", func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(float64(mult), attribute.String("A", "B"))
 		result.Observe(float64(2*mult), attribute.String("A", "B"))
 		result.Observe(float64(mult), attribute.String("C", "D"))
 	})
-	_ = Must(meter).NewInt64SumObserver("int.sumobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
+	_ = Must(meter).NewInt64CounterObserver("int.sumobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(int64(2*mult), attribute.String("A", "B"))
 		result.Observe(int64(mult))
 		// last value wins
@@ -344,18 +344,18 @@ func TestObserverCollection(t *testing.T) {
 	}
 }
 
-func TestSumObserverInputRange(t *testing.T) {
+func TestCounterObserverInputRange(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, _, processor := newSDK(t)
 
 	// TODO: these tests are testing for negative values, not for _descending values_. Fix.
-	_ = Must(meter).NewFloat64SumObserver("float.sumobserver.sum", func(_ context.Context, result metric.Float64ObserverResult) {
+	_ = Must(meter).NewFloat64CounterObserver("float.sumobserver.sum", func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(-2, attribute.String("A", "B"))
 		require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
 		result.Observe(-1, attribute.String("C", "D"))
 		require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
 	})
-	_ = Must(meter).NewInt64SumObserver("int.sumobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
+	_ = Must(meter).NewInt64CounterObserver("int.sumobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(-1, attribute.String("A", "B"))
 		require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
 		result.Observe(-1)
@@ -377,8 +377,8 @@ func TestObserverBatch(t *testing.T) {
 
 	var floatValueObs metric.Float64GaugeObserver
 	var intValueObs metric.Int64GaugeObserver
-	var floatSumObs metric.Float64SumObserver
-	var intSumObs metric.Int64SumObserver
+	var floatSumObs metric.Float64CounterObserver
+	var intSumObs metric.Int64CounterObserver
 	var floatUpDownSumObs metric.Float64UpDownCounterObserver
 	var intUpDownSumObs metric.Int64UpDownCounterObserver
 
@@ -416,8 +416,8 @@ func TestObserverBatch(t *testing.T) {
 		})
 	floatValueObs = batch.NewFloat64GaugeObserver("float.valueobserver.lastvalue")
 	intValueObs = batch.NewInt64GaugeObserver("int.valueobserver.lastvalue")
-	floatSumObs = batch.NewFloat64SumObserver("float.sumobserver.sum")
-	intSumObs = batch.NewInt64SumObserver("int.sumobserver.sum")
+	floatSumObs = batch.NewFloat64CounterObserver("float.sumobserver.sum")
+	intSumObs = batch.NewInt64CounterObserver("int.sumobserver.sum")
 	floatUpDownSumObs = batch.NewFloat64UpDownCounterObserver("float.updownsumobserver.sum")
 	intUpDownSumObs = batch.NewInt64UpDownCounterObserver("int.updownsumobserver.sum")
 

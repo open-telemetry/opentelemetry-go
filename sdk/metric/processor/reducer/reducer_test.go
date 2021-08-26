@@ -57,7 +57,7 @@ func generateData(impl metric.MeterImpl) {
 
 	counter := metric.Must(meter).NewFloat64Counter("counter.sum")
 
-	_ = metric.Must(meter).NewInt64SumObserver("observer.sum",
+	_ = metric.Must(meter).NewInt64CounterObserver("observer.sum",
 		func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(10, kvs1...)
 			result.Observe(10, kvs2...)

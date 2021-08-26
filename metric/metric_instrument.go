@@ -186,16 +186,16 @@ func wrapFloat64GaugeObserverInstrument(asyncInst AsyncImpl, err error) (Float64
 	return Float64GaugeObserver{asyncInstrument: common}, err
 }
 
-// wrapInt64SumObserverInstrument converts an AsyncImpl into Int64SumObserver.
-func wrapInt64SumObserverInstrument(asyncInst AsyncImpl, err error) (Int64SumObserver, error) {
+// wrapInt64CounterObserverInstrument converts an AsyncImpl into Int64CounterObserver.
+func wrapInt64CounterObserverInstrument(asyncInst AsyncImpl, err error) (Int64CounterObserver, error) {
 	common, err := checkNewAsync(asyncInst, err)
-	return Int64SumObserver{asyncInstrument: common}, err
+	return Int64CounterObserver{asyncInstrument: common}, err
 }
 
-// wrapFloat64SumObserverInstrument converts an AsyncImpl into Float64SumObserver.
-func wrapFloat64SumObserverInstrument(asyncInst AsyncImpl, err error) (Float64SumObserver, error) {
+// wrapFloat64CounterObserverInstrument converts an AsyncImpl into Float64CounterObserver.
+func wrapFloat64CounterObserverInstrument(asyncInst AsyncImpl, err error) (Float64CounterObserver, error) {
 	common, err := checkNewAsync(asyncInst, err)
-	return Float64SumObserver{asyncInstrument: common}, err
+	return Float64CounterObserver{asyncInstrument: common}, err
 }
 
 // wrapInt64UpDownCounterObserverInstrument converts an AsyncImpl into Int64UpDownCounterObserver.
@@ -229,15 +229,15 @@ type Float64GaugeObserver struct {
 	asyncInstrument
 }
 
-// Int64SumObserver is a metric that captures a precomputed sum of
+// Int64CounterObserver is a metric that captures a precomputed sum of
 // int64 values at a point in time.
-type Int64SumObserver struct {
+type Int64CounterObserver struct {
 	asyncInstrument
 }
 
-// Float64SumObserver is a metric that captures a precomputed sum of
+// Float64CounterObserver is a metric that captures a precomputed sum of
 // float64 values at a point in time.
-type Float64SumObserver struct {
+type Float64CounterObserver struct {
 	asyncInstrument
 }
 
@@ -279,7 +279,7 @@ func (f Float64GaugeObserver) Observation(v float64) Observation {
 // argument, for an asynchronous integer instrument.
 // This returns an implementation-level object for use by the SDK,
 // users should not refer to this.
-func (i Int64SumObserver) Observation(v int64) Observation {
+func (i Int64CounterObserver) Observation(v int64) Observation {
 	return Observation{
 		number:     number.NewInt64Number(v),
 		instrument: i.instrument,
@@ -290,7 +290,7 @@ func (i Int64SumObserver) Observation(v int64) Observation {
 // argument, for an asynchronous integer instrument.
 // This returns an implementation-level object for use by the SDK,
 // users should not refer to this.
-func (f Float64SumObserver) Observation(v float64) Observation {
+func (f Float64CounterObserver) Observation(v float64) Observation {
 	return Observation{
 		number:     number.NewFloat64Number(v),
 		instrument: f.instrument,

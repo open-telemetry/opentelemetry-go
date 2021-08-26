@@ -147,7 +147,7 @@ func TestCounterMerge(t *testing.T) {
 func TestSynchronizedMoveReset(t *testing.T) {
 	aggregatortest.SynchronizedMoveResetTest(
 		t,
-		sdkapi.SumObserverInstrumentKind,
+		sdkapi.CounterObserverInstrumentKind,
 		func(desc *metric.Descriptor) export.Aggregator {
 			return &New(1)[0]
 		},

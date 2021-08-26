@@ -41,13 +41,13 @@ var (
 	}
 	asyncKinds = []sdkapi.InstrumentKind{
 		sdkapi.GaugeObserverInstrumentKind,
-		sdkapi.SumObserverInstrumentKind,
+		sdkapi.CounterObserverInstrumentKind,
 		sdkapi.UpDownCounterObserverInstrumentKind,
 	}
 	addingKinds = []sdkapi.InstrumentKind{
 		sdkapi.CounterInstrumentKind,
 		sdkapi.UpDownCounterInstrumentKind,
-		sdkapi.SumObserverInstrumentKind,
+		sdkapi.CounterObserverInstrumentKind,
 		sdkapi.UpDownCounterObserverInstrumentKind,
 	}
 	groupingKinds = []sdkapi.InstrumentKind{
@@ -57,7 +57,7 @@ var (
 
 	monotonicKinds = []sdkapi.InstrumentKind{
 		sdkapi.CounterInstrumentKind,
-		sdkapi.SumObserverInstrumentKind,
+		sdkapi.CounterObserverInstrumentKind,
 	}
 
 	nonMonotonicKinds = []sdkapi.InstrumentKind{
@@ -68,7 +68,7 @@ var (
 	}
 
 	precomputedSumKinds = []sdkapi.InstrumentKind{
-		sdkapi.SumObserverInstrumentKind,
+		sdkapi.CounterObserverInstrumentKind,
 		sdkapi.UpDownCounterObserverInstrumentKind,
 	}
 
@@ -418,22 +418,22 @@ func TestObserverInstruments(t *testing.T) {
 	t.Run("float sumobserver", func(t *testing.T) {
 		labels := []attribute.KeyValue{attribute.String("O", "P")}
 		mockSDK, meter := metrictest.NewMeter()
-		o := Must(meter).NewFloat64SumObserver("test.sumobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
+		o := Must(meter).NewFloat64CounterObserver("test.sumobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
 			result.Observe(42.1, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, sdkapi.SumObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, sdkapi.CounterObserverInstrumentKind, o.AsyncImpl(),
 			42.1,
 		)
 	})
 	t.Run("int sumobserver", func(t *testing.T) {
 		labels := []attribute.KeyValue{}
 		mockSDK, meter := metrictest.NewMeter()
-		o := Must(meter).NewInt64SumObserver("test.observer.int", func(_ context.Context, result metric.Int64ObserverResult) {
+		o := Must(meter).NewInt64CounterObserver("test.observer.int", func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(-142, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, sdkapi.SumObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, sdkapi.CounterObserverInstrumentKind, o.AsyncImpl(),
 			-142,
 		)
 	})

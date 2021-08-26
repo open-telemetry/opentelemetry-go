@@ -44,7 +44,7 @@ func RangeTest(num number.Number, descriptor *metric.Descriptor) error {
 	}
 
 	switch descriptor.InstrumentKind() {
-	case sdkapi.CounterInstrumentKind, sdkapi.SumObserverInstrumentKind:
+	case sdkapi.CounterInstrumentKind, sdkapi.CounterObserverInstrumentKind:
 		if num.IsNegative(numberKind) {
 			return aggregation.ErrNegativeInput
 		}

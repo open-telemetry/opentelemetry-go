@@ -31,7 +31,7 @@ func TestExportKindIncludes(t *testing.T) {
 }
 
 var deltaMemoryKinds = []sdkapi.InstrumentKind{
-	sdkapi.SumObserverInstrumentKind,
+	sdkapi.CounterObserverInstrumentKind,
 	sdkapi.UpDownCounterObserverInstrumentKind,
 }
 
