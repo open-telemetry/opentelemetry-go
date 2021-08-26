@@ -148,27 +148,28 @@ Each measurement can be associated with attributes that can later be used by vis
 To set up some metric instruments, add the following code to your `main.go` file -
 
 ```go
-	lemonsKey := attribute.Key("ex.com/lemons")
-	anotherKey := attribute.Key("ex.com/another")
+import (
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
+)
 
-	commonAttributes := []attribute.KeyValue{lemonsKey.Int(10), attribute.String("A", "1"), attribute.String("B", "2"), attribute.String("C", "3")}
+var (
+	meter = global.Meter("example.com/library")
+	
+	myCounter = metric.Must(meter).NewCounter("my_counter")
+)
 
-	meter := global.Meter("ex.com/basic")
+func doSomething(ctx context.Context, property string) {
+  // ... count operations done associated with "property"
 
-	observerCallback := func(_ context.Context, result metric.Float64ObserverResult) {
-		result.Observe(1, commonAttributes...)
-	}
-	_ = metric.Must(meter).NewFloat64ValueObserver("ex.com.one", observerCallback,
-		metric.WithDescription("A ValueObserver set to 1.0"),
-	)
-
-	valueRecorder := metric.Must(meter).NewFloat64ValueRecorder("ex.com.two")
-
-	boundRecorder := valueRecorder.Bind(commonAttributes...)
-	defer boundRecorder.Unbind()
+  myCounter.Add(ctx, 1, attribute.String("property", property))
+}
 ```
 
-In this block we first create some keys and attributes that we will later use when capturing the measurements. Then we ask a global meter provider to give us a named meter instance ("ex.com/basic"). This acts as a way to namespace our instruments and make them distinct from other instruments in this process or another. Then we use the meter to create two instruments - an asynchronous value observer and a synchronous value recorder.
+In this block we declare a named Meter using the global OpenTelemetry
+SDK, then register a synchronous Counter instrument.  Inside a request
+handler (`doSomething`), the counter is incremented and the count
+associated with an additional key/value pair.
 
 # Quick Start
 
