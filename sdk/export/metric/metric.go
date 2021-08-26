@@ -192,7 +192,7 @@ type Aggregator interface {
 // Subtractor is an optional interface implemented by some
 // Aggregators.  An Aggregator must support `Subtract()` in order to
 // be configured for a Precomputed-Sum instrument (SumObserver,
-// UpDownSumObserver) using a DeltaExporter.
+// UpDownCounterObserver) using a DeltaExporter.
 type Subtractor interface {
 	// Subtract subtracts the `operand` from this Aggregator and
 	// outputs the value in `result`.
@@ -379,7 +379,7 @@ func (kind ExportKind) MemoryRequired(mkind sdkapi.InstrumentKind) bool {
 		// Delta-oriented instruments:
 		return kind.Includes(CumulativeExportKind)
 
-	case sdkapi.SumObserverInstrumentKind, sdkapi.UpDownSumObserverInstrumentKind:
+	case sdkapi.SumObserverInstrumentKind, sdkapi.UpDownCounterObserverInstrumentKind:
 		// Cumulative-oriented instruments:
 		return kind.Includes(DeltaExportKind)
 	}

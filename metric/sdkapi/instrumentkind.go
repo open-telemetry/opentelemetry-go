@@ -32,9 +32,9 @@ const (
 
 	// SumObserverInstrumentKind indicates a SumObserver instrument.
 	SumObserverInstrumentKind
-	// UpDownSumObserverInstrumentKind indicates a UpDownSumObserver
+	// UpDownCounterObserverInstrumentKind indicates a UpDownCounterObserver
 	// instrument.
-	UpDownSumObserverInstrumentKind
+	UpDownCounterObserverInstrumentKind
 )
 
 // Synchronous returns whether this is a synchronous kind of instrument.
@@ -54,7 +54,7 @@ func (k InstrumentKind) Asynchronous() bool {
 // Adding returns whether this kind of instrument adds its inputs (as opposed to Grouping).
 func (k InstrumentKind) Adding() bool {
 	switch k {
-	case CounterInstrumentKind, UpDownCounterInstrumentKind, SumObserverInstrumentKind, UpDownSumObserverInstrumentKind:
+	case CounterInstrumentKind, UpDownCounterInstrumentKind, SumObserverInstrumentKind, UpDownCounterObserverInstrumentKind:
 		return true
 	}
 	return false

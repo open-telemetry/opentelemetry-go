@@ -13,10 +13,10 @@ func _() {
 	_ = x[CounterInstrumentKind-2]
 	_ = x[UpDownCounterInstrumentKind-3]
 	_ = x[SumObserverInstrumentKind-4]
-	_ = x[UpDownSumObserverInstrumentKind-5]
+	_ = x[UpDownCounterObserverInstrumentKind-5]
 }
 
-const _InstrumentKind_name = "HistogramInstrumentKindGaugeObserverInstrumentKindCounterInstrumentKindUpDownCounterInstrumentKindSumObserverInstrumentKindUpDownSumObserverInstrumentKind"
+const _InstrumentKind_name = "HistogramInstrumentKindGaugeObserverInstrumentKindCounterInstrumentKindUpDownCounterInstrumentKindSumObserverInstrumentKindUpDownCounterObserverInstrumentKind"
 
 var _InstrumentKind_index = [...]uint8{0, 27, 54, 75, 102, 127, 158}
 

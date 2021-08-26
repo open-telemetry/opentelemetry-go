@@ -302,12 +302,12 @@ func TestObserverCollection(t *testing.T) {
 		result.Observe(int64(mult))
 	})
 
-	_ = Must(meter).NewFloat64UpDownSumObserver("float.updownsumobserver.sum", func(_ context.Context, result metric.Float64ObserverResult) {
+	_ = Must(meter).NewFloat64UpDownCounterObserver("float.updownsumobserver.sum", func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(float64(mult), attribute.String("A", "B"))
 		result.Observe(float64(-2*mult), attribute.String("A", "B"))
 		result.Observe(float64(mult), attribute.String("C", "D"))
 	})
-	_ = Must(meter).NewInt64UpDownSumObserver("int.updownsumobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
+	_ = Must(meter).NewInt64UpDownCounterObserver("int.updownsumobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(int64(2*mult), attribute.String("A", "B"))
 		result.Observe(int64(mult))
 		// last value wins
@@ -379,8 +379,8 @@ func TestObserverBatch(t *testing.T) {
 	var intValueObs metric.Int64GaugeObserver
 	var floatSumObs metric.Float64SumObserver
 	var intSumObs metric.Int64SumObserver
-	var floatUpDownSumObs metric.Float64UpDownSumObserver
-	var intUpDownSumObs metric.Int64UpDownSumObserver
+	var floatUpDownSumObs metric.Float64UpDownCounterObserver
+	var intUpDownSumObs metric.Int64UpDownCounterObserver
 
 	var batch = Must(meter).NewBatchObserver(
 		func(_ context.Context, result metric.BatchObserverResult) {
@@ -418,8 +418,8 @@ func TestObserverBatch(t *testing.T) {
 	intValueObs = batch.NewInt64GaugeObserver("int.valueobserver.lastvalue")
 	floatSumObs = batch.NewFloat64SumObserver("float.sumobserver.sum")
 	intSumObs = batch.NewInt64SumObserver("int.sumobserver.sum")
-	floatUpDownSumObs = batch.NewFloat64UpDownSumObserver("float.updownsumobserver.sum")
-	intUpDownSumObs = batch.NewInt64UpDownSumObserver("int.updownsumobserver.sum")
+	floatUpDownSumObs = batch.NewFloat64UpDownCounterObserver("float.updownsumobserver.sum")
+	intUpDownSumObs = batch.NewInt64UpDownCounterObserver("int.updownsumobserver.sum")
 
 	collected := sdk.Collect(ctx)
 

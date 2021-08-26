@@ -165,29 +165,29 @@ func (m Meter) NewFloat64SumObserver(name string, callback Float64ObserverFunc, 
 			newFloat64AsyncRunner(callback)))
 }
 
-// NewInt64UpDownSumObserver creates a new integer UpDownSumObserver instrument
+// NewInt64UpDownCounterObserver creates a new integer UpDownCounterObserver instrument
 // with the given name, running a given callback, and customized with
 // options.  May return an error if the name is invalid (e.g., empty)
 // or improperly registered (e.g., duplicate registration).
-func (m Meter) NewInt64UpDownSumObserver(name string, callback Int64ObserverFunc, opts ...InstrumentOption) (Int64UpDownSumObserver, error) {
+func (m Meter) NewInt64UpDownCounterObserver(name string, callback Int64ObserverFunc, opts ...InstrumentOption) (Int64UpDownCounterObserver, error) {
 	if callback == nil {
-		return wrapInt64UpDownSumObserverInstrument(NoopAsync{}, nil)
+		return wrapInt64UpDownCounterObserverInstrument(NoopAsync{}, nil)
 	}
-	return wrapInt64UpDownSumObserverInstrument(
-		m.newAsync(name, sdkapi.UpDownSumObserverInstrumentKind, number.Int64Kind, opts,
+	return wrapInt64UpDownCounterObserverInstrument(
+		m.newAsync(name, sdkapi.UpDownCounterObserverInstrumentKind, number.Int64Kind, opts,
 			newInt64AsyncRunner(callback)))
 }
 
-// NewFloat64UpDownSumObserver creates a new floating point UpDownSumObserver with
+// NewFloat64UpDownCounterObserver creates a new floating point UpDownCounterObserver with
 // the given name, running a given callback, and customized with
 // options.  May return an error if the name is invalid (e.g., empty)
 // or improperly registered (e.g., duplicate registration).
-func (m Meter) NewFloat64UpDownSumObserver(name string, callback Float64ObserverFunc, opts ...InstrumentOption) (Float64UpDownSumObserver, error) {
+func (m Meter) NewFloat64UpDownCounterObserver(name string, callback Float64ObserverFunc, opts ...InstrumentOption) (Float64UpDownCounterObserver, error) {
 	if callback == nil {
-		return wrapFloat64UpDownSumObserverInstrument(NoopAsync{}, nil)
+		return wrapFloat64UpDownCounterObserverInstrument(NoopAsync{}, nil)
 	}
-	return wrapFloat64UpDownSumObserverInstrument(
-		m.newAsync(name, sdkapi.UpDownSumObserverInstrumentKind, number.Float64Kind, opts,
+	return wrapFloat64UpDownCounterObserverInstrument(
+		m.newAsync(name, sdkapi.UpDownCounterObserverInstrumentKind, number.Float64Kind, opts,
 			newFloat64AsyncRunner(callback)))
 }
 
@@ -241,28 +241,28 @@ func (b BatchObserver) NewFloat64SumObserver(name string, opts ...InstrumentOpti
 			b.runner))
 }
 
-// NewInt64UpDownSumObserver creates a new integer UpDownSumObserver instrument
+// NewInt64UpDownCounterObserver creates a new integer UpDownCounterObserver instrument
 // with the given name, running in a batch callback, and customized with
 // options.  May return an error if the name is invalid (e.g., empty)
 // or improperly registered (e.g., duplicate registration).
-func (b BatchObserver) NewInt64UpDownSumObserver(name string, opts ...InstrumentOption) (Int64UpDownSumObserver, error) {
+func (b BatchObserver) NewInt64UpDownCounterObserver(name string, opts ...InstrumentOption) (Int64UpDownCounterObserver, error) {
 	if b.runner == nil {
-		return wrapInt64UpDownSumObserverInstrument(NoopAsync{}, nil)
+		return wrapInt64UpDownCounterObserverInstrument(NoopAsync{}, nil)
 	}
-	return wrapInt64UpDownSumObserverInstrument(
-		b.meter.newAsync(name, sdkapi.UpDownSumObserverInstrumentKind, number.Int64Kind, opts, b.runner))
+	return wrapInt64UpDownCounterObserverInstrument(
+		b.meter.newAsync(name, sdkapi.UpDownCounterObserverInstrumentKind, number.Int64Kind, opts, b.runner))
 }
 
-// NewFloat64UpDownSumObserver creates a new floating point UpDownSumObserver with
+// NewFloat64UpDownCounterObserver creates a new floating point UpDownCounterObserver with
 // the given name, running in a batch callback, and customized with
 // options.  May return an error if the name is invalid (e.g., empty)
 // or improperly registered (e.g., duplicate registration).
-func (b BatchObserver) NewFloat64UpDownSumObserver(name string, opts ...InstrumentOption) (Float64UpDownSumObserver, error) {
+func (b BatchObserver) NewFloat64UpDownCounterObserver(name string, opts ...InstrumentOption) (Float64UpDownCounterObserver, error) {
 	if b.runner == nil {
-		return wrapFloat64UpDownSumObserverInstrument(NoopAsync{}, nil)
+		return wrapFloat64UpDownCounterObserverInstrument(NoopAsync{}, nil)
 	}
-	return wrapFloat64UpDownSumObserverInstrument(
-		b.meter.newAsync(name, sdkapi.UpDownSumObserverInstrumentKind, number.Float64Kind, opts,
+	return wrapFloat64UpDownCounterObserverInstrument(
+		b.meter.newAsync(name, sdkapi.UpDownCounterObserverInstrumentKind, number.Float64Kind, opts,
 			b.runner))
 }
 
@@ -429,20 +429,20 @@ func (mm MeterMust) NewFloat64SumObserver(name string, callback Float64ObserverF
 	}
 }
 
-// NewInt64UpDownSumObserver calls `Meter.NewInt64UpDownSumObserver` and
+// NewInt64UpDownCounterObserver calls `Meter.NewInt64UpDownCounterObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (mm MeterMust) NewInt64UpDownSumObserver(name string, callback Int64ObserverFunc, oos ...InstrumentOption) Int64UpDownSumObserver {
-	if inst, err := mm.meter.NewInt64UpDownSumObserver(name, callback, oos...); err != nil {
+func (mm MeterMust) NewInt64UpDownCounterObserver(name string, callback Int64ObserverFunc, oos ...InstrumentOption) Int64UpDownCounterObserver {
+	if inst, err := mm.meter.NewInt64UpDownCounterObserver(name, callback, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst
 	}
 }
 
-// NewFloat64UpDownSumObserver calls `Meter.NewFloat64UpDownSumObserver` and
+// NewFloat64UpDownCounterObserver calls `Meter.NewFloat64UpDownCounterObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (mm MeterMust) NewFloat64UpDownSumObserver(name string, callback Float64ObserverFunc, oos ...InstrumentOption) Float64UpDownSumObserver {
-	if inst, err := mm.meter.NewFloat64UpDownSumObserver(name, callback, oos...); err != nil {
+func (mm MeterMust) NewFloat64UpDownCounterObserver(name string, callback Float64ObserverFunc, oos ...InstrumentOption) Float64UpDownCounterObserver {
+	if inst, err := mm.meter.NewFloat64UpDownCounterObserver(name, callback, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst
@@ -497,20 +497,20 @@ func (bm BatchObserverMust) NewFloat64SumObserver(name string, oos ...Instrument
 	}
 }
 
-// NewInt64UpDownSumObserver calls `BatchObserver.NewInt64UpDownSumObserver` and
+// NewInt64UpDownCounterObserver calls `BatchObserver.NewInt64UpDownCounterObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (bm BatchObserverMust) NewInt64UpDownSumObserver(name string, oos ...InstrumentOption) Int64UpDownSumObserver {
-	if inst, err := bm.batch.NewInt64UpDownSumObserver(name, oos...); err != nil {
+func (bm BatchObserverMust) NewInt64UpDownCounterObserver(name string, oos ...InstrumentOption) Int64UpDownCounterObserver {
+	if inst, err := bm.batch.NewInt64UpDownCounterObserver(name, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst
 	}
 }
 
-// NewFloat64UpDownSumObserver calls `BatchObserver.NewFloat64UpDownSumObserver` and
+// NewFloat64UpDownCounterObserver calls `BatchObserver.NewFloat64UpDownCounterObserver` and
 // returns the instrument, panicking if it encounters an error.
-func (bm BatchObserverMust) NewFloat64UpDownSumObserver(name string, oos ...InstrumentOption) Float64UpDownSumObserver {
-	if inst, err := bm.batch.NewFloat64UpDownSumObserver(name, oos...); err != nil {
+func (bm BatchObserverMust) NewFloat64UpDownCounterObserver(name string, oos ...InstrumentOption) Float64UpDownCounterObserver {
+	if inst, err := bm.batch.NewFloat64UpDownCounterObserver(name, oos...); err != nil {
 		panic(err)
 	} else {
 		return inst

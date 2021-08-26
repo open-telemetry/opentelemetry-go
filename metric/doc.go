@@ -46,7 +46,7 @@ The synchronous instrument names are:
 and the asynchronous instruments are:
 
   SumObserver:       additive, monotonic
-  UpDownSumObserver: additive
+  UpDownCounterObserver: additive
   GaugeObserver:     grouping
 
 All instruments are provided with support for either float64 or int64 input

@@ -67,7 +67,7 @@ func TestProcessor(t *testing.T) {
 				{kind: sdkapi.UpDownCounterInstrumentKind},
 				{kind: sdkapi.HistogramInstrumentKind},
 				{kind: sdkapi.SumObserverInstrumentKind},
-				{kind: sdkapi.UpDownSumObserverInstrumentKind},
+				{kind: sdkapi.UpDownCounterObserverInstrumentKind},
 				{kind: sdkapi.GaugeObserverInstrumentKind},
 			} {
 				t.Run(ic.kind.String(), func(t *testing.T) {
