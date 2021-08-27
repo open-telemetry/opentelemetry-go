@@ -5,7 +5,9 @@ weight: 2
 
 Welcome to the OpenTelemetry for Go getting started guide! This guide will walk you through the basic steps in installing, instrumenting with, configuring, and exporting data from OpenTelemetry. Before you get started, be sure to have Go 1.15 or newer installed.
 
-This guide will walk you the common situation where you already have an application that uses a library and want to add observability. The application will use asks users what Fibonacci number they would like generated and returns to them the computed value. To start, make a new directory named `fib` and add the following to a new file named `fibonacci.go` in that directory.
+Having observability into an application is often critical to successfully identifying failures and issues, and hopefully improving the application with this information. This guide shows how this is possible to do using the OpenTelemetry Go project. You will start with an application that computes Fibonacci numbers for users, and from there you will add instrumentation to produce tracing telemetry for the application with OpenTelemetry Go.
+
+To start building the application, make a new directory named `fib` to house our Fibonacci project. Next, add the following to a new file named `fib.go` in that directory.
 
 ```go
 package main
@@ -25,7 +27,7 @@ func Fibonacci(n uint) (uint64, error) {
 }
 ```
 
-Now that you have your core logic added, you can build your application around it. Add a new `app.go` file with the following application logic.
+With your core logic added, you can now build your application around it. Add a new `app.go` file with the following application logic.
 
 ```go
 package main
@@ -115,7 +117,7 @@ func main() {
 }
 ```
 
-With the code complete it is time to run the application. Before you can do that you need to initialize this directory as a Go module. In your terminal, run the command `go mod init fib` in the `fib` directory. This will create a `go.mod` file, which is used by Go to manage imports. Now you should be able to run the application!
+With the code complete it is almost time to run the application. Before you can do that you need to initialize this directory as a Go module. From your terminal, run the command `go mod init fib` in the `fib` directory. This will create a `go.mod` file, which is used by Go to manage imports. Now you should be able to run the application!
 
 ```sh
 $ go run .
@@ -127,18 +129,20 @@ What Fibonacci number would you like to know:
 goodbye
 ```
 
+The application can be exited with CTRL+C. You should see a similar output as above, if not make sure to go back and fix any errors.
+
 # Trace Instrumentation
 
-OpenTelemetry is split into two parts: an API to instrument code with, and SDKs that implement the API. To start integrating OpenTelemetry into any project, the API is used to define how telemetry is generated. To generate tracing telemetry you will use the OpenTelemetry Trace API from the `go.opentelemetry.io/otel/trace` package.
+OpenTelemetry is split into two parts: an API to instrument code with, and SDKs that implement the API. To start integrating OpenTelemetry into any project, the API is used to define how telemetry is generated. To generate tracing telemetry in your application you will use the OpenTelemetry Trace API from the `go.opentelemetry.io/otel/trace` package.
 
-First, to install the necessary prerequisites for the Trace API, install the appropriate packages. Run the following command in your working directory.
+First, you need to install the necessary packages for the Trace API. Run the following command in your working directory.
 
 ```sh
 go get go.opentelemetry.io/otel@v1.0.0-RC1 \
        go.opentelemetry.io/otel/trace@v1.0.0-RC1
 ```
 
-Now you can instrument the application! First add the needed imports to your `app.go` file.
+Now that the packages installed you can start updating your application with imports you will use in the `app.go` file.
 
 ```go
 import (
@@ -154,18 +158,22 @@ import (
 )
 ```
 
-With the imports handled you are almost ready to add tracing instrumentation to the application! First you need to consider how you will identify the telemetry you create as coming from the instrumentation library you will build. OpenTelemetry does this by naming `Tracer`s with the instrumentation library name. The first thing to add to `app.go` is a constant with the package name.
+With the imports added, you can start instrumenting.
+
+The OpenTelemetry Tracing API provides a `Tracer` to create traces. These `Tracer`s are designed to be associated with one instrumentation library. That way telemetry they produce can be understood to come from that part of a code base. To uniquely identify your application to the `Tracer` you will use create a constant with the package name in `app.go`.
 
 ```go
 // name is the Tracer name used to identify this instrumentation library.
 const name = "fib"
 ```
 
-Now that you have that out of the way, you can create traces from the appropriately named `Tracer` in the application. But first, what is a trace? And, how exactly should you build them for you application?
+Using the full-qualified package name, something that should be unique for Go packages, is the standard way to identify a `Tracer`. If your example package name differs, be sure to update the name you use here to match.
+
+Everything should be in place now to start tracing your application. But first, what is a trace? And, how exactly should you build them for you application?
 
 To back up a bit, a trace is a type of telemetry that represents work being done by a service. In a distributed system, a trace can be thought of as a 'stack trace', showing the work being done by each service as well as the upstream and downstream calls that its making to other services.
 
-Each part of the work that a service performs is represented in the trace with a span. Those spans are not just an unordered collection, but are defined in a hierarchical relationship with each other. If that doesn't make sense now, don't worry. You will have a better understanding after we instrument the code, so let's get started.
+Each part of the work that a service performs is represented in the trace with a span. Those spans are not just an unordered collection. Like the call stack of our application, those spans are defined with relationships to one another. If that last part about span relationships doesn't make to much sense now, don't worry. The important thing to take away is each part of your code that does work should to be represented as a span. You will have a better understanding of these span relationships after you instrument your code, so let's get started.
 
 Start by instrumenting the `Run` method.
 
@@ -188,7 +196,7 @@ func (a *App) Run(ctx context.Context) error {
 }
 ```
 
-The above code creates a trace every iteration of the for loop using a `Tracer` from the global `TracerProvider`. You will learn more about `TracerProvider`s and handle the other side of setting up a global `TracerProvider` when you install an SDK in a later section. For now, as an instrumentation author, all you need to worry about is that you are using an appropriately named `Tracer` from a `TracerProvider`.
+The above code creates a span for every iteration of the for loop. The span is created using a `Tracer` from the global `TracerProvider`. You will learn more about `TracerProvider`s and handle the other side of setting up a global `TracerProvider` when you install an SDK in a later section. For now, as an instrumentation author, all you need to worry about is that you are using an appropriately named `Tracer` from a `TracerProvider` when you write `otel.Tracer(name)`.
 
 Next, instrument the `Poll` method.
 
@@ -214,7 +222,7 @@ func (a *App) Poll(ctx context.Context) (uint, error) {
 }
 ```
 
-Similar to the `Run` method instrumentation, this adds a span to the method to track the computation done there. However, it also adds an attribute to annotate the span. This annotation is something you can add when you think a user of your application will want to see the state or details about the run environment when looking at telemetry.
+Similar to the `Run` method instrumentation, this adds a span to the method to track the computation performed. However, it also adds an attribute to annotate the span. This annotation is something you can add when you think a user of your application will want to see the state or details about the run environment when looking at telemetry.
 
 Finally, instrument the `Write` method.
 
@@ -238,9 +246,9 @@ func (a *App) Write(ctx context.Context, n uint) {
 }
 ```
 
-This method is instrumented with two spans. One to track the `Write` method itself, and another to track the call to the core logic with the `Fibonacci` function.
+This method is instrumented with two spans. One to track the `Write` method itself, and another to track the call to the core logic with the `Fibonacci` function. Do you see how context is passed through the spans?
 
-Now that you have instrumented code it should be clearer how spans are related with a hierarchy. In OpenTelemetry Go the span hierarchy is defined explicitly with a `context.Context`. These contexts can contain references to spans. When a span is created a context is passed and reference to the created span is stored in a new context also returned with the span. If that returned context is used when creating another span, the original span will become that span's parent. This hierarchy gives traces structure and can help identify how a system works. Based on what you instrumented above and this understanding of span hierarchy you should expect a trace for each execution of the run loop to look like this.
+In OpenTelemetry Go the span relationships are defined explicitly with a `context.Context`. When a span is created a context is returned alongside the span. That context will contain a reference to the created span. If that context is used when creating another span the two spans will be related. The original span will become the new span's parent, and as a corollary, the new span is said to be a child of the original. This hierarchy gives traces structure, structure that helps show a computation path through a system. Based on what you instrumented above and this understanding of span relationships you should expect a trace for each execution of the run loop to look like this.
 
 ```
 Run
@@ -255,7 +263,7 @@ Now how do you actually see the produced spans? To do this you will need to conf
 
 # SDK Installation
 
-OpenTelemetry is designed to be modular in its implementation of the OpenTelemetry API. The OpenTelemetry Go project offers an SDK package, `go.opentelemetry.io/otel/sdk`, that implements this API and adheres to the OpenTelemetry specification. To start using this SDK you will first need to create an exporter, but before anything can happen we need to install some things. Run the following in the `fib` directory to install the trace STDOUT exporter and the SDK.
+OpenTelemetry is designed to be modular in its implementation of the OpenTelemetry API. The OpenTelemetry Go project offers an SDK package, `go.opentelemetry.io/otel/sdk`, that implements this API and adheres to the OpenTelemetry specification. To start using this SDK you will first need to create an exporter, but before anything can happen we need to install some packages. Run the following in the `fib` directory to install the trace STDOUT exporter and the SDK.
 
 ```sh
 $ go get go.opentelemetry.io/otel/sdk@v1.0.0-RC1 \
@@ -305,12 +313,16 @@ Telemetry data can be crucial to solving issues with a service. The catch is, yo
 ```go
 // newResource returns a resource describing this application.
 func newResource() *resource.Resource {
-	return resource.NewWithAttributes(
-		semconv.SchemaURL,
-		semconv.ServiceNameKey.String("fib"),
-		semconv.ServiceVersionKey.String("v0.1.0"),
-		attribute.String("environment", "demo"),
+	r, _ := resource.Merge(
+		resource.Default(),
+		resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceNameKey.String("fib"),
+			semconv.ServiceVersionKey.String("v0.1.0"),
+			attribute.String("environment", "demo"),
+		),
 	)
+	return r
 }
 ```
 
@@ -318,9 +330,9 @@ Any information you would like to associate with all telemetry data the SDK hand
 
 ## Installing a Tracer Provider
 
-You have your application instrumented to produce telemetry data and you have an exporter to send that data to the console, but how are they connected? This is where the `TracerProvider` is used. It is a centralized point where instrumentation will get a `Tracer` from and configures these delegated `Tracer`s where and how to send the data they produce.
+You have your application instrumented to produce telemetry data and you have an exporter to send that data to the console, but how are they connected? This is where the `TracerProvider` is used. It is a centralized point where instrumentation will get a `Tracer` from and funnels the telemetry data from these `Tracer`s to export pipelines.
 
-The pipelines that receive and ultimately transmit data to exporters are called `SpanProcessor`s. A `TracerProvider` can be configured to have multiple span processors, but for this example you will configure one that sends to data to your exporter in batches. Update your `main` function in `main.go` with the following.
+The pipelines that receive and ultimately transmit data to exporters are called `SpanProcessor`s. A `TracerProvider` can be configured to have multiple span processors, but for this example you will only need to configure only one. Update your `main` function in `main.go` with the following.
 
 ```go
 func main() {
@@ -353,13 +365,13 @@ func main() {
 }
 ```
 
-There's a fair amount going on here. First you are creating an console exporter that will export to a file. With the exporter ready, it can be registered in a new `TracerProvider`. This is done with a `BatchSpanProcessor` when it is passed to the `trace.WithBatcher` option. Batching data is a good practice and will help not overload systems downstream. Finally, with the `TracerProvider` created, you are deferring a function to flush and stop it, and registering it as the global OpenTelemetry `TracerProvider`.
+There's a fair amount going on here. First you are creating a console exporter that will export to a file. You are then registering the exporter with a new `TracerProvider`. This is done with a `BatchSpanProcessor` when it is passed to the `trace.WithBatcher` option. Batching data is a good practice and will help not overload systems downstream. Finally, with the `TracerProvider` created, you are deferring a function to flush and stop it, and registering it as the global OpenTelemetry `TracerProvider`.
 
 Do you remember in the previous instrumentation section when we used the global `TracerProvider` to get a `Tracer`? This last step, registering the `TracerProvider` globally, is what will connect that instrumentation's `Tracer` with this `TracerProvider`. This pattern, using a global `TracerProvider`, is convenient, but not always appropriate. `TracerProvider`s can be explicitly passed to instrumentation or inferred from a context that contains a span. For this simple example using a global provider makes sense, but for more complex or distributed codebases these other ways of passing `TracerProvider`s may make more sense.
 
 # Putting It All Together
 
-You should have a working application that produces trace telemetry data! Give it a try.
+You should now have a working application that produces trace telemetry data! Give it a try.
 
 ```sh
 $ go run .
@@ -375,7 +387,7 @@ A new file named `traces.txt` should be created in your working directory. All t
 
 # (Bonus) Errors
 
-At this point you have a working application that is producing tracing telemetry data. Unfortunately, it was discovered there is an error in the core functionality of the `fib` module.
+At this point you have a working application and it is producing tracing telemetry data. Unfortunately, it was discovered that there is an error in the core functionality of the `fib` module.
 
 ```sh
 $ go run .
@@ -431,7 +443,9 @@ func (a *App) Write(ctx context.Context, n uint) {
 }
 ```
 
-The `Poll` method can be updated as well with a similar fix. If the user gave bad data before the application would fail but the telemetry data did not reflect this failure. Now you can add the following updates to the `Poll` method and this error will be captured in the data.
+With this change any error returned from the `Fibonacci` function will mark that span as an error and record an event describing the error.
+
+This is a great start, but it is not the only error returned in from the application. If a user makes a request for a non unsigned integer value the application will fail. Update the `Poll` method with a similar fix to capture this error in the telemetry data.
 
 ```go
 // Poll asks a user for input and returns the request.
