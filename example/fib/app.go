@@ -74,9 +74,6 @@ func (a *App) Poll(ctx context.Context) (uint, error) {
 
 	// Store n as a string to not overflow an int64.
 	nStr := strconv.FormatUint(uint64(n), 10)
-	// This is going to be a high cardinality attribute because the user can
-	// pass an unbounded number of different values. This type of attribute
-	// should be avoided in instrumentation for high performance systems.
 	span.SetAttributes(attribute.String("request.n", nStr))
 
 	return n, err
@@ -89,7 +86,7 @@ func (a *App) Write(ctx context.Context, n uint) {
 	defer span.End()
 
 	f, err := func(ctx context.Context) (uint64, error) {
-		_, span = otel.Tracer(name).Start(ctx, "Fibonacci")
+		_, span := otel.Tracer(name).Start(ctx, "Fibonacci")
 		defer span.End()
 		f, err := Fibonacci(n)
 		if err != nil {
