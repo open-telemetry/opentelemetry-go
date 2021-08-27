@@ -1,4 +1,4 @@
-module main
+module go.opentelemetry.io/otel/example/fib
 
 go 1.15
 
@@ -16,8 +16,6 @@ replace go.opentelemetry.io/otel/bridge/opencensus => ../../bridge/opencensus
 replace go.opentelemetry.io/otel/bridge/opencensus/test => ../../bridge/opencensus/test
 
 replace go.opentelemetry.io/otel/bridge/opentracing => ../../bridge/opentracing
-
-replace main => ./
 
 replace go.opentelemetry.io/otel/example/jaeger => ../jaeger
 
@@ -70,3 +68,5 @@ replace go.opentelemetry.io/otel/sdk/export/metric => ../../sdk/export/metric
 replace go.opentelemetry.io/otel/sdk/metric => ../../sdk/metric
 
 replace go.opentelemetry.io/otel/trace => ../../trace
+
+replace go.opentelemetry.io/otel/example/fib => ./

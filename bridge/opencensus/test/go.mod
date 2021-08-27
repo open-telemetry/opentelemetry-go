@@ -70,4 +70,4 @@ replace go.opentelemetry.io/otel/sdk/metric => ../../../sdk/metric
 
 replace go.opentelemetry.io/otel/trace => ../../../trace
 
-replace main => ../../../example/fib
+replace go.opentelemetry.io/otel/example/fib => ../../../example/fib
