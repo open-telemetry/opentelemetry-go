@@ -5,7 +5,7 @@ weight: 2
 
 Welcome to the OpenTelemetry for Go getting started guide! This guide will walk you through the basic steps in installing, instrumenting with, configuring, and exporting data from OpenTelemetry. Before you get started, be sure to have Go 1.15 or newer installed.
 
-Having observability into an application is often critical to successfully identifying failures and issues, and hopefully improving the application with this information. This guide shows how this is possible to do using the OpenTelemetry Go project. You will start with an application that computes Fibonacci numbers for users, and from there you will add instrumentation to produce tracing telemetry for the application with OpenTelemetry Go.
+Understand how a system is functioning when it is failing or having issues is critical to resolving those issues. One strategy to understand this is with tracing. This guide shows how the OpenTelemetry Go project can be used to trace an example application. You will start with an application that computes Fibonacci numbers for users, and from there you will add instrumentation to produce tracing telemetry with OpenTelemetry Go.
 
 To start building the application, make a new directory named `fib` to house our Fibonacci project. Next, add the following to a new file named `fib.go` in that directory.
 
