@@ -16,7 +16,6 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
 	"context"
-	rt "runtime/trace"
 	"time"
 
 	"go.opentelemetry.io/otel/trace"
@@ -41,26 +40,33 @@ func (tr *tracer) Start(ctx context.Context, name string, options ...trace.SpanS
 
 	// For local spans created by this SDK, track child span count.
 	if p := trace.SpanFromContext(ctx); p != nil {
-		if sdkSpan, ok := p.(*span); ok {
+		if sdkSpan, ok := p.(*recordingSpan); ok {
 			sdkSpan.addChild()
 		}
 	}
 
 	s := tr.newSpan(ctx, name, config)
-	if s.IsRecording() {
+	if rw, ok := s.(ReadWriteSpan); ok && s.IsRecording() {
 		sps, _ := tr.provider.spanProcessors.Load().(spanProcessorStates)
 		for _, sp := range sps {
-			sp.sp.OnStart(ctx, s)
+			sp.sp.OnStart(ctx, rw)
 		}
 	}
-
-	ctx, s.executionTracerTaskEnd = newRuntimeTask(ctx, name)
+	if rtt, ok := s.(runtimeTracer); ok {
+		rtt.runtimeTrace(ctx)
+	}
 
 	return trace.ContextWithSpan(ctx, s), s
 }
 
+type runtimeTracer interface {
+	// runtimeTrace starts a "runtime/trace".Task for the span and
+	// returns a context containing the task.
+	runtimeTrace(ctx context.Context) context.Context
+}
+
 // newSpan returns a new configured span.
-func (tr *tracer) newSpan(ctx context.Context, name string, config *trace.SpanConfig) *span {
+func (tr *tracer) newSpan(ctx context.Context, name string, config *trace.SpanConfig) trace.Span {
 	// If told explicitly to make this a new root use a zero value SpanContext
 	// as a parent which contains an invalid trace ID and is not remote.
 	var psc trace.SpanContext
@@ -82,12 +88,6 @@ func (tr *tracer) newSpan(ctx context.Context, name string, config *trace.SpanCo
 		sid = tr.provider.idGenerator.NewSpanID(ctx, tid)
 	}
 
-	s := new(span)
-	s.attributes = newAttributesMap(tr.provider.spanLimits.AttributeCountLimit)
-	s.events = newEvictedQueue(tr.provider.spanLimits.EventCountLimit)
-	s.links = newEvictedQueue(tr.provider.spanLimits.LinkCountLimit)
-	s.spanLimits = tr.provider.spanLimits
-
 	samplingResult := tr.provider.sampler.ShouldSample(SamplingParameters{
 		ParentContext: ctx,
 		TraceID:       tid,
@@ -107,47 +107,47 @@ func (tr *tracer) newSpan(ctx context.Context, name string, config *trace.SpanCo
 	} else {
 		scc.TraceFlags = psc.TraceFlags() &^ trace.FlagsSampled
 	}
-	s.spanContext = trace.NewSpanContext(scc)
+	sc := trace.NewSpanContext(scc)
 
 	if !isRecording(samplingResult) {
-		return s
+		return tr.newNonRecordingSpan(sc)
 	}
+	return tr.newRecordingSpan(psc, sc, name, samplingResult, config)
+}
 
+// newRecordingSpan returns a new configured recordingSpan.
+func (tr *tracer) newRecordingSpan(psc, sc trace.SpanContext, name string, sr SamplingResult, config *trace.SpanConfig) *recordingSpan {
 	startTime := config.Timestamp()
 	if startTime.IsZero() {
 		startTime = time.Now()
 	}
-	s.startTime = startTime
 
-	s.spanKind = trace.ValidateSpanKind(config.SpanKind())
-	s.name = name
-	s.parent = psc
-	s.resource = tr.provider.resource
-	s.instrumentationLibrary = tr.instrumentationLibrary
-	s.tracer = tr
-
-	s.SetAttributes(samplingResult.Attributes...)
-	s.SetAttributes(config.Attributes()...)
+	s := &recordingSpan{
+		parent:                 psc,
+		spanContext:            sc,
+		spanKind:               trace.ValidateSpanKind(config.SpanKind()),
+		name:                   name,
+		startTime:              startTime,
+		attributes:             newAttributesMap(tr.provider.spanLimits.AttributeCountLimit),
+		events:                 newEvictedQueue(tr.provider.spanLimits.EventCountLimit),
+		links:                  newEvictedQueue(tr.provider.spanLimits.LinkCountLimit),
+		tracer:                 tr,
+		spanLimits:             tr.provider.spanLimits,
+		resource:               tr.provider.resource,
+		instrumentationLibrary: tr.instrumentationLibrary,
+	}
 
 	for _, l := range config.Links() {
 		s.addLink(l)
 	}
 
+	s.SetAttributes(sr.Attributes...)
+	s.SetAttributes(config.Attributes()...)
+
 	return s
 }
 
-// newRuntimeTask starts a runtime.Task with the passed name and returns both
-// a context containing the task and an end function for the task.
-//
-// If the runtime tracing is not enabled the original context is returned with
-// an empty function to call for end.
-func newRuntimeTask(ctx context.Context, name string) (context.Context, func()) {
-	if !rt.IsEnabled() {
-		// Avoid additional overhead if
-		// runtime/trace is not enabled.
-		return ctx, func() {}
-	}
-	nctx, task := rt.NewTask(ctx, name)
-	return nctx, task.End
-
+// newNonRecordingSpan returns a new configured nonRecordingSpan.
+func (tr *tracer) newNonRecordingSpan(sc trace.SpanContext) nonRecordingSpan {
+	return nonRecordingSpan{tracer: tr, sc: sc}
 }
