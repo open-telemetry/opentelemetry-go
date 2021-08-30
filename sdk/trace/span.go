@@ -15,7 +15,6 @@
 package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"runtime"
@@ -576,80 +575,6 @@ func (s *span) addChild() {
 }
 
 func (*span) private() {}
-
-func startSpanInternal(ctx context.Context, tr *tracer, name string, o *trace.SpanConfig) *span {
-	span := &span{}
-
-	provider := tr.provider
-
-	// If told explicitly to make this a new root use a zero value SpanContext
-	// as a parent which contains an invalid trace ID and is not remote.
-	var psc trace.SpanContext
-	if o.NewRoot() {
-		ctx = trace.ContextWithSpanContext(ctx, psc)
-	} else {
-		psc = trace.SpanContextFromContext(ctx)
-	}
-
-	// If there is a valid parent trace ID, use it to ensure the continuity of
-	// the trace. Always generate a new span ID so other components can rely
-	// on a unique span ID, even if the Span is non-recording.
-	var tid trace.TraceID
-	var sid trace.SpanID
-	if !psc.TraceID().IsValid() {
-		tid, sid = provider.idGenerator.NewIDs(ctx)
-	} else {
-		tid = psc.TraceID()
-		sid = provider.idGenerator.NewSpanID(ctx, tid)
-	}
-
-	spanLimits := provider.spanLimits
-	span.attributes = newAttributesMap(spanLimits.AttributeCountLimit)
-	span.events = newEvictedQueue(spanLimits.EventCountLimit)
-	span.links = newEvictedQueue(spanLimits.LinkCountLimit)
-	span.spanLimits = spanLimits
-
-	samplingResult := provider.sampler.ShouldSample(SamplingParameters{
-		ParentContext: ctx,
-		TraceID:       tid,
-		Name:          name,
-		Kind:          o.SpanKind(),
-		Attributes:    o.Attributes(),
-		Links:         o.Links(),
-	})
-
-	scc := trace.SpanContextConfig{
-		TraceID:    tid,
-		SpanID:     sid,
-		TraceState: samplingResult.Tracestate,
-	}
-	if isSampled(samplingResult) {
-		scc.TraceFlags = psc.TraceFlags() | trace.FlagsSampled
-	} else {
-		scc.TraceFlags = psc.TraceFlags() &^ trace.FlagsSampled
-	}
-	span.spanContext = trace.NewSpanContext(scc)
-
-	if !isRecording(samplingResult) {
-		return span
-	}
-
-	startTime := o.Timestamp()
-	if startTime.IsZero() {
-		startTime = time.Now()
-	}
-	span.startTime = startTime
-
-	span.spanKind = trace.ValidateSpanKind(o.SpanKind())
-	span.name = name
-	span.parent = psc
-	span.resource = provider.resource
-	span.instrumentationLibrary = tr.instrumentationLibrary
-
-	span.SetAttributes(samplingResult.Attributes...)
-
-	return span
-}
 
 func isRecording(s SamplingResult) bool {
 	return s.Decision == RecordOnly || s.Decision == RecordAndSample
