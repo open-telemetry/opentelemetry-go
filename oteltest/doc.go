@@ -46,5 +46,18 @@ testing structures.
 
 	sr := new(oteltest.SpanRecorder)
 	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+
+Deprecated: This package contains an alternate implementation of the
+OpenTelemetry SDK. This means it will diverge from the one commonly used in
+real world operations and therefore will not provide adequate testing
+guarantees for users. Because of this, this package should not be used to test
+performance or behavior of code running OpenTelemetry. Instead, the
+SpanRecorder from the go.opentelemetry.io/otel/sdk/trace/tracetest package can
+be registered with the default SDK (go.opentelemetry.io/otel/sdk/trace) as a
+SpanProcessor and used to test. This will ensure code will work with the
+default SDK. If users do not want to include a dependency on the default SDK
+it is recommended to run integration tests in their own module to isolate the
+dependency (see go.opentelemetry.io/otel/bridge/opencensus/test as an
+example).
 */
 package oteltest // import "go.opentelemetry.io/otel/oteltest"
