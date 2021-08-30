@@ -132,7 +132,7 @@ need to create the Jaeger and Prometheus exporters:
 ```yml
 ...
     exporters:
-      jaeger_grpc:
+      jaeger:
         endpoint: "jaeger-collector.observability.svc.cluster.local:14250"
 
       prometheus:

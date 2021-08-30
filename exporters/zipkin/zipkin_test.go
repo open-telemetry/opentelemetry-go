@@ -71,7 +71,7 @@ func TestNewRawExporterShouldFailInvalidCollectorURL(t *testing.T) {
 	)
 
 	assert.Error(t, err)
-	assert.EqualError(t, err, "invalid collector URL")
+	assert.EqualError(t, err, "invalid collector URL \"localhost\": no scheme or host")
 	assert.Nil(t, exp)
 }
 
