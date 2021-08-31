@@ -135,16 +135,16 @@ func TestInputRangeHistogram(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, _, processor := newSDK(t)
 
-	valuerecorder := Must(meter).NewFloat64Histogram("name.exact")
+	histogram := Must(meter).NewFloat64Histogram("name.exact")
 
-	valuerecorder.Record(ctx, math.NaN())
+	histogram.Record(ctx, math.NaN())
 	require.Equal(t, aggregation.ErrNaNInput, testHandler.Flush())
 
 	checkpointed := sdk.Collect(ctx)
 	require.Equal(t, 0, checkpointed)
 
-	valuerecorder.Record(ctx, 1)
-	valuerecorder.Record(ctx, 2)
+	histogram.Record(ctx, 1)
+	histogram.Record(ctx, 2)
 
 	processor.Reset()
 	checkpointed = sdk.Collect(ctx)
@@ -160,9 +160,9 @@ func TestDisabledInstrument(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, _, processor := newSDK(t)
 
-	valuerecorder := Must(meter).NewFloat64Histogram("name.disabled")
+	histogram := Must(meter).NewFloat64Histogram("name.disabled")
 
-	valuerecorder.Record(ctx, -1)
+	histogram.Record(ctx, -1)
 	checkpointed := sdk.Collect(ctx)
 
 	require.Equal(t, 0, checkpointed)
@@ -326,10 +326,10 @@ func TestObserverCollection(t *testing.T) {
 
 		mult := float64(mult)
 		require.EqualValues(t, map[string]float64{
-			"float.valueobserver.lastvalue/A=B/": -mult,
-			"float.valueobserver.lastvalue/C=D/": -mult,
-			"int.valueobserver.lastvalue//":      mult,
-			"int.valueobserver.lastvalue/A=B/":   mult,
+			"float.gauge.lastvalue/A=B/": -mult,
+			"float.gauge.lastvalue/C=D/": -mult,
+			"int.gauge.lastvalue//":      mult,
+			"int.gauge.lastvalue/A=B/":   mult,
 
 			"float.sumobserver.sum/A=B/": 2 * mult,
 			"float.sumobserver.sum/C=D/": mult,
@@ -436,10 +436,10 @@ func TestObserverBatch(t *testing.T) {
 		"int.updownsumobserver.sum//":      10,
 		"float.updownsumobserver.sum/C=D/": -1,
 
-		"float.valueobserver.lastvalue/A=B/": -1,
-		"float.valueobserver.lastvalue/C=D/": -1,
-		"int.valueobserver.lastvalue//":      1,
-		"int.valueobserver.lastvalue/A=B/":   1,
+		"float.gauge.lastvalue/A=B/": -1,
+		"float.gauge.lastvalue/C=D/": -1,
+		"int.gauge.lastvalue//":      1,
+		"int.gauge.lastvalue/A=B/":   1,
 	}, processor.Values())
 }
 
@@ -460,8 +460,8 @@ func TestRecordBatch(t *testing.T) {
 		},
 		counter1.Measurement(1),
 		counter2.Measurement(2),
-		valuerecorder1.Measurement(3),
-		valuerecorder2.Measurement(4),
+		histogram1.Measurement(3),
+		histogram2.Measurement(4),
 	)
 
 	sdk.Collect(ctx)
