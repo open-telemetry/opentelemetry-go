@@ -43,32 +43,30 @@ func TestExporter_ExportSpan(t *testing.T) {
 	doubleValue := 123.456
 	resource := resource.NewSchemaless(attribute.String("rk1", "rv11"))
 
-	ro := tracetest.SpanStubs{
-		{
-			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
-				TraceID:    traceID,
-				SpanID:     spanID,
-				TraceState: traceState,
-			}),
-			Name:      "/foo",
-			StartTime: now,
-			EndTime:   now,
-			Attributes: []attribute.KeyValue{
-				attribute.String("key", keyValue),
-				attribute.Float64("double", doubleValue),
-			},
-			Events: []tracesdk.Event{
-				{Name: "foo", Attributes: []attribute.KeyValue{attribute.String("key", keyValue)}, Time: now},
-				{Name: "bar", Attributes: []attribute.KeyValue{attribute.Float64("double", doubleValue)}, Time: now},
-			},
-			SpanKind: trace.SpanKindInternal,
-			Status: tracesdk.Status{
-				Code:        codes.Error,
-				Description: "interesting",
-			},
-			Resource: resource,
+	ss := tracetest.SpanStub{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceState: traceState,
+		}),
+		Name:      "/foo",
+		StartTime: now,
+		EndTime:   now,
+		Attributes: []attribute.KeyValue{
+			attribute.String("key", keyValue),
+			attribute.Float64("double", doubleValue),
 		},
-	}.Snapshots()
+		Events: []tracesdk.Event{
+			{Name: "foo", Attributes: []attribute.KeyValue{attribute.String("key", keyValue)}, Time: now},
+			{Name: "bar", Attributes: []attribute.KeyValue{attribute.Float64("double", doubleValue)}, Time: now},
+		},
+		SpanKind: trace.SpanKindInternal,
+		Status: tracesdk.Status{
+			Code:        codes.Error,
+			Description: "interesting",
+		},
+		Resource: resource,
+	}
 
 	tests := []struct {
 		opts      []stdouttrace.Option
@@ -91,107 +89,106 @@ func TestExporter_ExportSpan(t *testing.T) {
 		ex, err := stdouttrace.New(append(tt.opts, stdouttrace.WithWriter(&b))...)
 		require.Nil(t, err)
 
-		err = ex.ExportSpans(ctx, ro)
+		err = ex.ExportSpans(ctx, tracetest.SpanStubs{ss, ss}.Snapshots())
 		require.Nil(t, err)
 
 		got := b.String()
-		assert.Equal(t, expectedJSON(tt.expectNow), got)
+		wantone := expectedJSON(tt.expectNow)
+		assert.Equal(t, wantone+wantone, got)
 	}
 }
 
 func expectedJSON(now time.Time) string {
 	serializedNow, _ := json.Marshal(now)
-	return `[
-	{
-		"Name": "/foo",
-		"SpanContext": {
-			"TraceID": "0102030405060708090a0b0c0d0e0f10",
-			"SpanID": "0102030405060708",
-			"TraceFlags": "00",
-			"TraceState": "key=val",
-			"Remote": false
-		},
-		"Parent": {
-			"TraceID": "00000000000000000000000000000000",
-			"SpanID": "0000000000000000",
-			"TraceFlags": "00",
-			"TraceState": "",
-			"Remote": false
-		},
-		"SpanKind": 1,
-		"StartTime": ` + string(serializedNow) + `,
-		"EndTime": ` + string(serializedNow) + `,
-		"Attributes": [
-			{
-				"Key": "key",
-				"Value": {
-					"Type": "STRING",
-					"Value": "value"
-				}
-			},
-			{
-				"Key": "double",
-				"Value": {
-					"Type": "FLOAT64",
-					"Value": 123.456
-				}
+	return `{
+	"Name": "/foo",
+	"SpanContext": {
+		"TraceID": "0102030405060708090a0b0c0d0e0f10",
+		"SpanID": "0102030405060708",
+		"TraceFlags": "00",
+		"TraceState": "key=val",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "00000000000000000000000000000000",
+		"SpanID": "0000000000000000",
+		"TraceFlags": "00",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 1,
+	"StartTime": ` + string(serializedNow) + `,
+	"EndTime": ` + string(serializedNow) + `,
+	"Attributes": [
+		{
+			"Key": "key",
+			"Value": {
+				"Type": "STRING",
+				"Value": "value"
 			}
-		],
-		"Events": [
-			{
-				"Name": "foo",
-				"Attributes": [
-					{
-						"Key": "key",
-						"Value": {
-							"Type": "STRING",
-							"Value": "value"
-						}
-					}
-				],
-				"DroppedAttributeCount": 0,
-				"Time": ` + string(serializedNow) + `
-			},
-			{
-				"Name": "bar",
-				"Attributes": [
-					{
-						"Key": "double",
-						"Value": {
-							"Type": "FLOAT64",
-							"Value": 123.456
-						}
-					}
-				],
-				"DroppedAttributeCount": 0,
-				"Time": ` + string(serializedNow) + `
-			}
-		],
-		"Links": null,
-		"Status": {
-			"Code": "Error",
-			"Description": "interesting"
 		},
-		"DroppedAttributes": 0,
-		"DroppedEvents": 0,
-		"DroppedLinks": 0,
-		"ChildSpanCount": 0,
-		"Resource": [
-			{
-				"Key": "rk1",
-				"Value": {
-					"Type": "STRING",
-					"Value": "rv11"
-				}
+		{
+			"Key": "double",
+			"Value": {
+				"Type": "FLOAT64",
+				"Value": 123.456
 			}
-		],
-		"InstrumentationLibrary": {
-			"Name": "",
-			"Version": "",
-			"SchemaURL": ""
 		}
+	],
+	"Events": [
+		{
+			"Name": "foo",
+			"Attributes": [
+				{
+					"Key": "key",
+					"Value": {
+						"Type": "STRING",
+						"Value": "value"
+					}
+				}
+			],
+			"DroppedAttributeCount": 0,
+			"Time": ` + string(serializedNow) + `
+		},
+		{
+			"Name": "bar",
+			"Attributes": [
+				{
+					"Key": "double",
+					"Value": {
+						"Type": "FLOAT64",
+						"Value": 123.456
+					}
+				}
+			],
+			"DroppedAttributeCount": 0,
+			"Time": ` + string(serializedNow) + `
+		}
+	],
+	"Links": null,
+	"Status": {
+		"Code": "Error",
+		"Description": "interesting"
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 0,
+	"Resource": [
+		{
+			"Key": "rk1",
+			"Value": {
+				"Type": "STRING",
+				"Value": "rv11"
+			}
+		}
+	],
+	"InstrumentationLibrary": {
+		"Name": "",
+		"Version": "",
+		"SchemaURL": ""
 	}
-]
+}
 `
 }
 
