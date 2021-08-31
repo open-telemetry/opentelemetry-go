@@ -127,7 +127,7 @@ type Checkpointer interface {
 }
 
 // Aggregator implements a specific aggregation behavior, e.g., a
-// behavior to track a sequence of updates to an instrument.  Sum-only
+// behavior to track a sequence of updates to an instrument.  Counter
 // instruments commonly use a simple Sum aggregator, but for the
 // distribution instruments (Histogram, GaugeObserver) there are a
 // number of possible aggregators with different cost and accuracy
