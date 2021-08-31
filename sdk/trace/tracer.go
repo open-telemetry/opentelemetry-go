@@ -53,7 +53,7 @@ func (tr *tracer) Start(ctx context.Context, name string, options ...trace.SpanS
 		}
 	}
 	if rtt, ok := s.(runtimeTracer); ok {
-		rtt.runtimeTrace(ctx)
+		ctx = rtt.runtimeTrace(ctx)
 	}
 
 	return trace.ContextWithSpan(ctx, s), s
