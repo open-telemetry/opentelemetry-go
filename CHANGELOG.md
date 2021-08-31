@@ -17,7 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Metric instruments have been renamed to match the (feature-frozen) metric API speciication:
+- Metric instruments have been renamed to match the (feature-frozen) metric API specification:
   - ValueRecorder becomes Histogram
   - ValueObserver becomes Gauge
   - SumObserver becomes CounterObserver
