@@ -34,10 +34,10 @@ import (
 var (
 	testCounterDesc               = metric.NewDescriptor("counter", sdkapi.CounterInstrumentKind, number.Int64Kind)
 	testUpDownCounterDesc         = metric.NewDescriptor("updowncounter", sdkapi.UpDownCounterInstrumentKind, number.Int64Kind)
-	testCounterObserverDesc       = metric.NewDescriptor("sumobserver", sdkapi.CounterObserverInstrumentKind, number.Int64Kind)
-	testUpDownCounterObserverDesc = metric.NewDescriptor("updownsumobserver", sdkapi.UpDownCounterObserverInstrumentKind, number.Int64Kind)
-	testHistogramDesc             = metric.NewDescriptor("valuerecorder", sdkapi.HistogramInstrumentKind, number.Int64Kind)
-	testGaugeObserverDesc         = metric.NewDescriptor("valueobserver", sdkapi.GaugeObserverInstrumentKind, number.Int64Kind)
+	testCounterObserverDesc       = metric.NewDescriptor("counterobserver", sdkapi.CounterObserverInstrumentKind, number.Int64Kind)
+	testUpDownCounterObserverDesc = metric.NewDescriptor("updowncounterobserver", sdkapi.UpDownCounterObserverInstrumentKind, number.Int64Kind)
+	testHistogramDesc             = metric.NewDescriptor("histogram", sdkapi.HistogramInstrumentKind, number.Int64Kind)
+	testGaugeObserverDesc         = metric.NewDescriptor("gauge", sdkapi.GaugeObserverInstrumentKind, number.Int64Kind)
 )
 
 func oneAgg(sel export.AggregatorSelector, desc *metric.Descriptor) export.Aggregator {
