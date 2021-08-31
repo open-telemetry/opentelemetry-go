@@ -37,16 +37,16 @@ var (
 		"counter.float64": func(name, libraryName string) (metric.InstrumentImpl, error) {
 			return unwrap(MeterProvider().Meter(libraryName).NewFloat64Counter(name))
 		},
-		"valuerecorder.int64": func(name, libraryName string) (metric.InstrumentImpl, error) {
+		"histogram.int64": func(name, libraryName string) (metric.InstrumentImpl, error) {
 			return unwrap(MeterProvider().Meter(libraryName).NewInt64Histogram(name))
 		},
-		"valuerecorder.float64": func(name, libraryName string) (metric.InstrumentImpl, error) {
+		"histogram.float64": func(name, libraryName string) (metric.InstrumentImpl, error) {
 			return unwrap(MeterProvider().Meter(libraryName).NewFloat64Histogram(name))
 		},
-		"valueobserver.int64": func(name, libraryName string) (metric.InstrumentImpl, error) {
+		"gauge.int64": func(name, libraryName string) (metric.InstrumentImpl, error) {
 			return unwrap(MeterProvider().Meter(libraryName).NewInt64GaugeObserver(name, func(context.Context, metric.Int64ObserverResult) {}))
 		},
-		"valueobserver.float64": func(name, libraryName string) (metric.InstrumentImpl, error) {
+		"gauge.float64": func(name, libraryName string) (metric.InstrumentImpl, error) {
 			return unwrap(MeterProvider().Meter(libraryName).NewFloat64GaugeObserver(name, func(context.Context, metric.Float64ObserverResult) {}))
 		},
 	}

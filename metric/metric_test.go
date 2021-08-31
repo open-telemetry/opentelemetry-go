@@ -364,9 +364,9 @@ func TestCounter(t *testing.T) {
 }
 
 func TestHistogram(t *testing.T) {
-	t.Run("float64 valuerecorder", func(t *testing.T) {
+	t.Run("float64 histogram", func(t *testing.T) {
 		mockSDK, meter := metrictest.NewMeter()
-		m := Must(meter).NewFloat64Histogram("test.valuerecorder.float")
+		m := Must(meter).NewFloat64Histogram("test.histogram.float")
 		ctx := context.Background()
 		labels := []attribute.KeyValue{}
 		m.Record(ctx, 42, labels...)
@@ -377,9 +377,9 @@ func TestHistogram(t *testing.T) {
 			42, 0, -100.5,
 		)
 	})
-	t.Run("int64 valuerecorder", func(t *testing.T) {
+	t.Run("int64 histogram", func(t *testing.T) {
 		mockSDK, meter := metrictest.NewMeter()
-		m := Must(meter).NewInt64Histogram("test.valuerecorder.int")
+		m := Must(meter).NewInt64Histogram("test.histogram.int")
 		ctx := context.Background()
 		labels := []attribute.KeyValue{attribute.Int("I", 1)}
 		m.Record(ctx, 173, labels...)
@@ -393,10 +393,10 @@ func TestHistogram(t *testing.T) {
 }
 
 func TestObserverInstruments(t *testing.T) {
-	t.Run("float valueobserver", func(t *testing.T) {
+	t.Run("float gauge", func(t *testing.T) {
 		labels := []attribute.KeyValue{attribute.String("O", "P")}
 		mockSDK, meter := metrictest.NewMeter()
-		o := Must(meter).NewFloat64GaugeObserver("test.valueobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
+		o := Must(meter).NewFloat64GaugeObserver("test.gauge.float", func(_ context.Context, result metric.Float64ObserverResult) {
 			result.Observe(42.1, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
@@ -404,7 +404,7 @@ func TestObserverInstruments(t *testing.T) {
 			42.1,
 		)
 	})
-	t.Run("int valueobserver", func(t *testing.T) {
+	t.Run("int gauge", func(t *testing.T) {
 		labels := []attribute.KeyValue{}
 		mockSDK, meter := metrictest.NewMeter()
 		o := Must(meter).NewInt64GaugeObserver("test.observer.int", func(_ context.Context, result metric.Int64ObserverResult) {
@@ -415,10 +415,10 @@ func TestObserverInstruments(t *testing.T) {
 			-142,
 		)
 	})
-	t.Run("float sumobserver", func(t *testing.T) {
+	t.Run("float counterobserver", func(t *testing.T) {
 		labels := []attribute.KeyValue{attribute.String("O", "P")}
 		mockSDK, meter := metrictest.NewMeter()
-		o := Must(meter).NewFloat64CounterObserver("test.sumobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
+		o := Must(meter).NewFloat64CounterObserver("test.counterobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
 			result.Observe(42.1, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
@@ -426,7 +426,7 @@ func TestObserverInstruments(t *testing.T) {
 			42.1,
 		)
 	})
-	t.Run("int sumobserver", func(t *testing.T) {
+	t.Run("int counterobserver", func(t *testing.T) {
 		labels := []attribute.KeyValue{}
 		mockSDK, meter := metrictest.NewMeter()
 		o := Must(meter).NewInt64CounterObserver("test.observer.int", func(_ context.Context, result metric.Int64ObserverResult) {
@@ -437,10 +437,10 @@ func TestObserverInstruments(t *testing.T) {
 			-142,
 		)
 	})
-	t.Run("float updownsumobserver", func(t *testing.T) {
+	t.Run("float updowncounterobserver", func(t *testing.T) {
 		labels := []attribute.KeyValue{attribute.String("O", "P")}
 		mockSDK, meter := metrictest.NewMeter()
-		o := Must(meter).NewFloat64UpDownCounterObserver("test.updownsumobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
+		o := Must(meter).NewFloat64UpDownCounterObserver("test.updowncounterobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
 			result.Observe(42.1, labels...)
 		})
 		mockSDK.RunAsyncInstruments()
@@ -448,7 +448,7 @@ func TestObserverInstruments(t *testing.T) {
 			42.1,
 		)
 	})
-	t.Run("int updownsumobserver", func(t *testing.T) {
+	t.Run("int updowncounterobserver", func(t *testing.T) {
 		labels := []attribute.KeyValue{}
 		mockSDK, meter := metrictest.NewMeter()
 		o := Must(meter).NewInt64UpDownCounterObserver("test.observer.int", func(_ context.Context, result metric.Int64ObserverResult) {
@@ -549,10 +549,10 @@ func TestWrappedInstrumentError(t *testing.T) {
 	impl := &testWrappedMeter{}
 	meter := metric.WrapMeterImpl(impl, "test")
 
-	valuerecorder, err := meter.NewInt64Histogram("test.valuerecorder")
+	histogram, err := meter.NewInt64Histogram("test.histogram")
 
 	require.Equal(t, err, metric.ErrSDKReturnedNilImpl)
-	require.NotNil(t, valuerecorder.SyncImpl())
+	require.NotNil(t, histogram.SyncImpl())
 
 	observer, err := meter.NewInt64GaugeObserver("test.observer", func(_ context.Context, result metric.Int64ObserverResult) {})
 

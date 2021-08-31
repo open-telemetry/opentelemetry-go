@@ -109,7 +109,7 @@ func TestPrometheusExporter(t *testing.T) {
 	meter := exporter.MeterProvider().Meter("test")
 	upDownCounter := metric.Must(meter).NewFloat64UpDownCounter("updowncounter")
 	counter := metric.Must(meter).NewFloat64Counter("counter")
-	valuerecorder := metric.Must(meter).NewFloat64Histogram("valuerecorder")
+	histogram := metric.Must(meter).NewFloat64Histogram("histogram")
 
 	labels := []attribute.KeyValue{
 		attribute.Key("A").String("B"),
@@ -130,17 +130,17 @@ func TestPrometheusExporter(t *testing.T) {
 
 	expected = append(expected, expectGauge("intobserver", `intobserver{A="B",C="D",R="V"} 1`))
 
-	valuerecorder.Record(ctx, -0.6, labels...)
-	valuerecorder.Record(ctx, -0.4, labels...)
-	valuerecorder.Record(ctx, 0.6, labels...)
-	valuerecorder.Record(ctx, 20, labels...)
+	histogram.Record(ctx, -0.6, labels...)
+	histogram.Record(ctx, -0.4, labels...)
+	histogram.Record(ctx, 0.6, labels...)
+	histogram.Record(ctx, 20, labels...)
 
-	expected = append(expected, expectHistogram("valuerecorder",
-		`valuerecorder_bucket{A="B",C="D",R="V",le="-0.5"} 1`,
-		`valuerecorder_bucket{A="B",C="D",R="V",le="1"} 3`,
-		`valuerecorder_bucket{A="B",C="D",R="V",le="+Inf"} 4`,
-		`valuerecorder_sum{A="B",C="D",R="V"} 19.6`,
-		`valuerecorder_count{A="B",C="D",R="V"} 4`,
+	expected = append(expected, expectHistogram("histogram",
+		`histogram_bucket{A="B",C="D",R="V",le="-0.5"} 1`,
+		`histogram_bucket{A="B",C="D",R="V",le="1"} 3`,
+		`histogram_bucket{A="B",C="D",R="V",le="+Inf"} 4`,
+		`histogram_sum{A="B",C="D",R="V"} 19.6`,
+		`histogram_count{A="B",C="D",R="V"} 4`,
 	))
 
 	upDownCounter.Add(ctx, 10, labels...)
