@@ -73,7 +73,7 @@ func TestExportMetrics(t *testing.T) {
 	now := time.Now()
 	basicDesc := metric.NewDescriptor(
 		"",
-		sdkapi.ValueObserverInstrumentKind,
+		sdkapi.GaugeObserverInstrumentKind,
 		number.Int64Kind,
 		metric.WithInstrumentationName("OpenCensus Bridge"),
 	)
@@ -395,7 +395,7 @@ func TestConvertDescriptor(t *testing.T) {
 			desc: "empty descriptor",
 			expected: metric.NewDescriptor(
 				"",
-				sdkapi.ValueObserverInstrumentKind,
+				sdkapi.GaugeObserverInstrumentKind,
 				number.Int64Kind,
 				metric.WithInstrumentationName("OpenCensus Bridge"),
 			),
@@ -410,7 +410,7 @@ func TestConvertDescriptor(t *testing.T) {
 			},
 			expected: metric.NewDescriptor(
 				"foo",
-				sdkapi.ValueObserverInstrumentKind,
+				sdkapi.GaugeObserverInstrumentKind,
 				number.Int64Kind,
 				metric.WithInstrumentationName("OpenCensus Bridge"),
 				metric.WithDescription("bar"),
@@ -427,7 +427,7 @@ func TestConvertDescriptor(t *testing.T) {
 			},
 			expected: metric.NewDescriptor(
 				"foo",
-				sdkapi.ValueObserverInstrumentKind,
+				sdkapi.GaugeObserverInstrumentKind,
 				number.Float64Kind,
 				metric.WithInstrumentationName("OpenCensus Bridge"),
 				metric.WithDescription("bar"),
@@ -444,7 +444,7 @@ func TestConvertDescriptor(t *testing.T) {
 			},
 			expected: metric.NewDescriptor(
 				"foo",
-				sdkapi.SumObserverInstrumentKind,
+				sdkapi.CounterObserverInstrumentKind,
 				number.Int64Kind,
 				metric.WithInstrumentationName("OpenCensus Bridge"),
 				metric.WithDescription("bar"),
@@ -461,7 +461,7 @@ func TestConvertDescriptor(t *testing.T) {
 			},
 			expected: metric.NewDescriptor(
 				"foo",
-				sdkapi.SumObserverInstrumentKind,
+				sdkapi.CounterObserverInstrumentKind,
 				number.Float64Kind,
 				metric.WithInstrumentationName("OpenCensus Bridge"),
 				metric.WithDescription("bar"),

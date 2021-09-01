@@ -35,7 +35,7 @@ func NewInconsistentAggregatorError(a1, a2 export.Aggregator) error {
 // RangeTest is a common routine for testing for valid input values.
 // This rejects NaN values.  This rejects negative values when the
 // metric instrument does not support negative values, including
-// monotonic counter metrics and absolute ValueRecorder metrics.
+// monotonic counter metrics and absolute Histogram metrics.
 func RangeTest(num number.Number, descriptor *metric.Descriptor) error {
 	numberKind := descriptor.NumberKind()
 
@@ -44,7 +44,7 @@ func RangeTest(num number.Number, descriptor *metric.Descriptor) error {
 	}
 
 	switch descriptor.InstrumentKind() {
-	case sdkapi.CounterInstrumentKind, sdkapi.SumObserverInstrumentKind:
+	case sdkapi.CounterInstrumentKind, sdkapi.CounterObserverInstrumentKind:
 		if num.IsNegative(numberKind) {
 			return aggregation.ErrNegativeInput
 		}

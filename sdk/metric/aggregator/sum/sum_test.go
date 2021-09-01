@@ -88,11 +88,11 @@ func TestCounterSum(t *testing.T) {
 	})
 }
 
-func TestValueRecorderSum(t *testing.T) {
+func TestHistogramSum(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg, ckpt := new2()
 
-		descriptor := aggregatortest.NewAggregatorTest(sdkapi.ValueRecorderInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(sdkapi.HistogramInstrumentKind, profile.NumberKind)
 
 		sum := number.Number(0)
 
@@ -147,7 +147,7 @@ func TestCounterMerge(t *testing.T) {
 func TestSynchronizedMoveReset(t *testing.T) {
 	aggregatortest.SynchronizedMoveResetTest(
 		t,
-		sdkapi.SumObserverInstrumentKind,
+		sdkapi.CounterObserverInstrumentKind,
 		func(desc *metric.Descriptor) export.Aggregator {
 			return &New(1)[0]
 		},

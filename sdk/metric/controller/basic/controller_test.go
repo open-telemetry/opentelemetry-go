@@ -152,7 +152,7 @@ func TestStartNoExporter(t *testing.T) {
 	prov := cont.MeterProvider()
 	calls := int64(0)
 
-	_ = metric.Must(prov.Meter("named")).NewInt64SumObserver("calls.lastvalue",
+	_ = metric.Must(prov.Meter("named")).NewInt64CounterObserver("calls.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			calls++
 			checkTestContext(t, ctx)
@@ -221,7 +221,7 @@ func TestObserverCanceled(t *testing.T) {
 	prov := cont.MeterProvider()
 	calls := int64(0)
 
-	_ = metric.Must(prov.Meter("named")).NewInt64SumObserver("done.lastvalue",
+	_ = metric.Must(prov.Meter("named")).NewInt64CounterObserver("done.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			<-ctx.Done()
 			calls++
@@ -252,7 +252,7 @@ func TestObserverContext(t *testing.T) {
 
 	prov := cont.MeterProvider()
 
-	_ = metric.Must(prov.Meter("named")).NewInt64SumObserver("done.lastvalue",
+	_ = metric.Must(prov.Meter("named")).NewInt64CounterObserver("done.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			time.Sleep(10 * time.Millisecond)
 			checkTestContext(t, ctx)
@@ -321,7 +321,7 @@ func TestExportTimeout(t *testing.T) {
 	prov := cont.MeterProvider()
 
 	calls := int64(0)
-	_ = metric.Must(prov.Meter("named")).NewInt64SumObserver("one.lastvalue",
+	_ = metric.Must(prov.Meter("named")).NewInt64CounterObserver("one.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			calls++
 			result.Observe(calls)
@@ -377,7 +377,7 @@ func TestCollectAfterStopThenStartAgain(t *testing.T) {
 	prov := cont.MeterProvider()
 
 	calls := 0
-	_ = metric.Must(prov.Meter("named")).NewInt64SumObserver("one.lastvalue",
+	_ = metric.Must(prov.Meter("named")).NewInt64CounterObserver("one.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			calls++
 			result.Observe(int64(calls))
