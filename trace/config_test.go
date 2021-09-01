@@ -42,18 +42,18 @@ func TestNewSpanConfig(t *testing.T) {
 
 	tests := []struct {
 		options  []SpanStartOption
-		expected *SpanConfig
+		expected SpanConfig
 	}{
 		{
 			// No non-zero-values should be set.
 			[]SpanStartOption{},
-			new(SpanConfig),
+			SpanConfig{},
 		},
 		{
 			[]SpanStartOption{
 				WithAttributes(k1v1),
 			},
-			&SpanConfig{
+			SpanConfig{
 				attributes: []attribute.KeyValue{k1v1},
 			},
 		},
@@ -64,7 +64,7 @@ func TestNewSpanConfig(t *testing.T) {
 				WithAttributes(k1v2),
 				WithAttributes(k2v2),
 			},
-			&SpanConfig{
+			SpanConfig{
 				// No uniqueness is guaranteed by the API.
 				attributes: []attribute.KeyValue{k1v1, k1v2, k2v2},
 			},
@@ -73,7 +73,7 @@ func TestNewSpanConfig(t *testing.T) {
 			[]SpanStartOption{
 				WithAttributes(k1v1, k1v2, k2v2),
 			},
-			&SpanConfig{
+			SpanConfig{
 				// No uniqueness is guaranteed by the API.
 				attributes: []attribute.KeyValue{k1v1, k1v2, k2v2},
 			},
@@ -82,7 +82,7 @@ func TestNewSpanConfig(t *testing.T) {
 			[]SpanStartOption{
 				WithTimestamp(timestamp0),
 			},
-			&SpanConfig{
+			SpanConfig{
 				timestamp: timestamp0,
 			},
 		},
@@ -92,7 +92,7 @@ func TestNewSpanConfig(t *testing.T) {
 				WithTimestamp(timestamp0),
 				WithTimestamp(timestamp1),
 			},
-			&SpanConfig{
+			SpanConfig{
 				timestamp: timestamp1,
 			},
 		},
@@ -100,7 +100,7 @@ func TestNewSpanConfig(t *testing.T) {
 			[]SpanStartOption{
 				WithLinks(link1),
 			},
-			&SpanConfig{
+			SpanConfig{
 				links: []Link{link1},
 			},
 		},
@@ -110,7 +110,7 @@ func TestNewSpanConfig(t *testing.T) {
 				WithLinks(link1),
 				WithLinks(link1, link2),
 			},
-			&SpanConfig{
+			SpanConfig{
 				// No uniqueness is guaranteed by the API.
 				links: []Link{link1, link1, link2},
 			},
@@ -119,7 +119,7 @@ func TestNewSpanConfig(t *testing.T) {
 			[]SpanStartOption{
 				WithNewRoot(),
 			},
-			&SpanConfig{
+			SpanConfig{
 				newRoot: true,
 			},
 		},
@@ -129,7 +129,7 @@ func TestNewSpanConfig(t *testing.T) {
 				WithNewRoot(),
 				WithNewRoot(),
 			},
-			&SpanConfig{
+			SpanConfig{
 				newRoot: true,
 			},
 		},
@@ -137,7 +137,7 @@ func TestNewSpanConfig(t *testing.T) {
 			[]SpanStartOption{
 				WithSpanKind(SpanKindConsumer),
 			},
-			&SpanConfig{
+			SpanConfig{
 				spanKind: SpanKindConsumer,
 			},
 		},
@@ -147,7 +147,7 @@ func TestNewSpanConfig(t *testing.T) {
 				WithSpanKind(SpanKindClient),
 				WithSpanKind(SpanKindConsumer),
 			},
-			&SpanConfig{
+			SpanConfig{
 				spanKind: SpanKindConsumer,
 			},
 		},
@@ -160,7 +160,7 @@ func TestNewSpanConfig(t *testing.T) {
 				WithNewRoot(),
 				WithSpanKind(SpanKindConsumer),
 			},
-			&SpanConfig{
+			SpanConfig{
 				attributes: []attribute.KeyValue{k1v1},
 				timestamp:  timestamp0,
 				links:      []Link{link1, link2},
@@ -179,17 +179,17 @@ func TestEndSpanConfig(t *testing.T) {
 
 	tests := []struct {
 		options  []SpanEndOption
-		expected *SpanConfig
+		expected SpanConfig
 	}{
 		{
 			[]SpanEndOption{},
-			new(SpanConfig),
+			SpanConfig{},
 		},
 		{
 			[]SpanEndOption{
 				WithStackTrace(true),
 			},
-			&SpanConfig{
+			SpanConfig{
 				stackTrace: true,
 			},
 		},
@@ -197,7 +197,7 @@ func TestEndSpanConfig(t *testing.T) {
 			[]SpanEndOption{
 				WithTimestamp(timestamp),
 			},
-			&SpanConfig{
+			SpanConfig{
 				timestamp: timestamp,
 			},
 		},
@@ -213,18 +213,18 @@ func TestTracerConfig(t *testing.T) {
 	schemaURL := "https://opentelemetry.io/schemas/1.2.0"
 	tests := []struct {
 		options  []TracerOption
-		expected *TracerConfig
+		expected TracerConfig
 	}{
 		{
 			// No non-zero-values should be set.
 			[]TracerOption{},
-			new(TracerConfig),
+			TracerConfig{},
 		},
 		{
 			[]TracerOption{
 				WithInstrumentationVersion(v1),
 			},
-			&TracerConfig{
+			TracerConfig{
 				instrumentationVersion: v1,
 			},
 		},
@@ -234,7 +234,7 @@ func TestTracerConfig(t *testing.T) {
 				WithInstrumentationVersion(v1),
 				WithInstrumentationVersion(v2),
 			},
-			&TracerConfig{
+			TracerConfig{
 				instrumentationVersion: v2,
 			},
 		},
@@ -242,7 +242,7 @@ func TestTracerConfig(t *testing.T) {
 			[]TracerOption{
 				WithSchemaURL(schemaURL),
 			},
-			&TracerConfig{
+			TracerConfig{
 				schemaURL: schemaURL,
 			},
 		},

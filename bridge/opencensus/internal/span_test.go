@@ -151,7 +151,8 @@ func TestSpanAnnotate(t *testing.T) {
 		t.Error("span.Annotate did not set event name")
 	}
 
-	got := trace.NewEventConfig(s.eOpts...).Attributes()
+	config := trace.NewEventConfig(s.eOpts...)
+	got := config.Attributes()
 	if len(want) != len(got) || want[0] != got[0] {
 		t.Error("span.Annotate did not set event options")
 	}
@@ -174,7 +175,8 @@ func TestSpanAnnotatef(t *testing.T) {
 		t.Error("span.Annotatef did not set event name")
 	}
 
-	got := trace.NewEventConfig(s.eOpts...).Attributes()
+	config := trace.NewEventConfig(s.eOpts...)
+	got := config.Attributes()
 	if len(want) != len(got) || want[0] != got[0] {
 		t.Error("span.Annotatef did not set event options")
 	}
@@ -192,7 +194,8 @@ func TestSpanAddMessageSendEvent(t *testing.T) {
 		t.Error("span.AddMessageSendEvent did not set event name")
 	}
 
-	got := trace.NewEventConfig(s.eOpts...).Attributes()
+	config := trace.NewEventConfig(s.eOpts...)
+	got := config.Attributes()
 	if len(got) != 2 {
 		t.Fatalf("span.AddMessageSendEvent set %d attributes, want 2", len(got))
 	}
@@ -220,7 +223,8 @@ func TestSpanAddMessageReceiveEvent(t *testing.T) {
 		t.Error("span.AddMessageReceiveEvent did not set event name")
 	}
 
-	got := trace.NewEventConfig(s.eOpts...).Attributes()
+	config := trace.NewEventConfig(s.eOpts...)
+	got := config.Attributes()
 	if len(got) != 2 {
 		t.Fatalf("span.AddMessageReceiveEvent set %d attributes, want 2", len(got))
 	}
