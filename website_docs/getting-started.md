@@ -173,7 +173,9 @@ Everything should be in place now to start tracing your application. But first, 
 
 To back up a bit, a trace is a type of telemetry that represents work being done by a service. A trace is a record of the connection(s) between participants processing a transaction, often through client/server requests processing and other forms of communication.
 
-Each part of the work that a service performs is represented in the trace with a span. Those spans are not just an unordered collection. Like the call stack of our application, those spans are defined with relationships to one another. If that last part about span relationships doesn't make to much sense now, don't worry. The important thing to take away is each part of your code that does work should to be represented as a span. You will have a better understanding of these span relationships after you instrument your code, so let's get started.
+Each part of the work that a service performs is represented in the trace by a span. Those spans are not just an unordered collection. Like the call stack of our application, those spans are defined with relationships to one another. The "root" span is the only span without a parent, it represents how a service request is started. All other spans have a parent relationship to another span in the same trace.
+
+If this last part about span relationships doesn't make to much sense now, don't worry. The important thing to take away is each part of your code that does work should to be represented as a span. You will have a better understanding of these span relationships after you instrument your code, so let's get started.
 
 Start by instrumenting the `Run` method.
 
@@ -243,7 +245,7 @@ func (a *App) Write(ctx context.Context, n uint) {
 }
 ```
 
-This method is instrumented with two spans. One to track the `Write` method itself, and another to track the call to the core logic with the `Fibonacci` function. Do you see how context is passed through the spans?
+This method is instrumented with two spans. One to track the `Write` method itself, and another to track the call to the core logic with the `Fibonacci` function. Do you see how context is passed through the spans? Do you see how this also defines the relationship between spans?
 
 In OpenTelemetry Go the span relationships are defined explicitly with a `context.Context`. When a span is created a context is returned alongside the span. That context will contain a reference to the created span. If that context is used when creating another span the two spans will be related. The original span will become the new span's parent, and as a corollary, the new span is said to be a child of the original. This hierarchy gives traces structure, structure that helps show a computation path through a system. Based on what you instrumented above and this understanding of span relationships you should expect a trace for each execution of the run loop to look like this.
 
