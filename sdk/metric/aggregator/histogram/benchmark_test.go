@@ -38,7 +38,7 @@ func benchmarkHistogramSearchFloat64(b *testing.B, size int) {
 	for i := range values {
 		values[i] = rand.Float64() * inputRange
 	}
-	desc := aggregatortest.NewAggregatorTest(sdkapi.ValueRecorderInstrumentKind, number.Float64Kind)
+	desc := aggregatortest.NewAggregatorTest(sdkapi.HistogramInstrumentKind, number.Float64Kind)
 	agg := &histogram.New(1, desc, histogram.WithExplicitBoundaries(boundaries))[0]
 	ctx := context.Background()
 
@@ -89,7 +89,7 @@ func benchmarkHistogramSearchInt64(b *testing.B, size int) {
 	for i := range values {
 		values[i] = int64(rand.Float64() * inputRange)
 	}
-	desc := aggregatortest.NewAggregatorTest(sdkapi.ValueRecorderInstrumentKind, number.Int64Kind)
+	desc := aggregatortest.NewAggregatorTest(sdkapi.HistogramInstrumentKind, number.Int64Kind)
 	agg := &histogram.New(1, desc, histogram.WithExplicitBoundaries(boundaries))[0]
 	ctx := context.Background()
 

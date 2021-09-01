@@ -75,7 +75,7 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...trace.SpanS
 		startTime = time.Now()
 	}
 	spanContext := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    t.getTraceID(ctx, config),
+		TraceID:    t.getTraceID(ctx, &config),
 		SpanID:     t.getSpanID(),
 		TraceFlags: 0,
 	})
@@ -86,7 +86,7 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...trace.SpanS
 		Attributes:     config.Attributes(),
 		StartTime:      startTime,
 		EndTime:        time.Time{},
-		ParentSpanID:   t.getParentSpanID(ctx, config),
+		ParentSpanID:   t.getParentSpanID(ctx, &config),
 		Events:         nil,
 		SpanKind:       trace.ValidateSpanKind(config.SpanKind()),
 	}

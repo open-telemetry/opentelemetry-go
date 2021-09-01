@@ -112,7 +112,7 @@ func TestHistogramPositiveAndNegative(t *testing.T) {
 
 // Validates count, sum and buckets for a given profile and policy
 func testHistogram(t *testing.T, profile aggregatortest.Profile, policy policy) {
-	descriptor := aggregatortest.NewAggregatorTest(sdkapi.ValueRecorderInstrumentKind, profile.NumberKind)
+	descriptor := aggregatortest.NewAggregatorTest(sdkapi.HistogramInstrumentKind, profile.NumberKind)
 
 	agg, ckpt := new2(descriptor, histogram.WithExplicitBoundaries(testBoundaries))
 
@@ -138,7 +138,7 @@ func testHistogram(t *testing.T, profile aggregatortest.Profile, policy policy) 
 
 func TestHistogramInitial(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
-		descriptor := aggregatortest.NewAggregatorTest(sdkapi.ValueRecorderInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(sdkapi.HistogramInstrumentKind, profile.NumberKind)
 
 		agg := &histogram.New(1, descriptor, histogram.WithExplicitBoundaries(testBoundaries))[0]
 		buckets, err := agg.Histogram()
@@ -151,7 +151,7 @@ func TestHistogramInitial(t *testing.T) {
 
 func TestHistogramMerge(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
-		descriptor := aggregatortest.NewAggregatorTest(sdkapi.ValueRecorderInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(sdkapi.HistogramInstrumentKind, profile.NumberKind)
 
 		agg1, agg2, ckpt1, ckpt2 := new4(descriptor, histogram.WithExplicitBoundaries(testBoundaries))
 
@@ -179,7 +179,7 @@ func TestHistogramMerge(t *testing.T) {
 
 func TestHistogramNotSet(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
-		descriptor := aggregatortest.NewAggregatorTest(sdkapi.ValueRecorderInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(sdkapi.HistogramInstrumentKind, profile.NumberKind)
 
 		agg, ckpt := new2(descriptor, histogram.WithExplicitBoundaries(testBoundaries))
 
@@ -240,7 +240,7 @@ func checkHistogram(t *testing.T, all aggregatortest.Numbers, profile aggregator
 func TestSynchronizedMoveReset(t *testing.T) {
 	aggregatortest.SynchronizedMoveResetTest(
 		t,
-		sdkapi.ValueRecorderInstrumentKind,
+		sdkapi.HistogramInstrumentKind,
 		func(desc *metric.Descriptor) export.Aggregator {
 			return &histogram.New(1, desc, histogram.WithExplicitBoundaries(testBoundaries))[0]
 		},
@@ -250,7 +250,7 @@ func TestSynchronizedMoveReset(t *testing.T) {
 func TestHistogramDefaultBoundaries(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		ctx := context.Background()
-		descriptor := aggregatortest.NewAggregatorTest(sdkapi.ValueRecorderInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(sdkapi.HistogramInstrumentKind, profile.NumberKind)
 
 		agg, ckpt := new2(descriptor)
 

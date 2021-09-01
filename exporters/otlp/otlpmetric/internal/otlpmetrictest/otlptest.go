@@ -55,10 +55,10 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 	instruments := map[string]data{
 		"test-int64-counter":         {sdkapi.CounterInstrumentKind, number.Int64Kind, 1},
 		"test-float64-counter":       {sdkapi.CounterInstrumentKind, number.Float64Kind, 1},
-		"test-int64-valuerecorder":   {sdkapi.ValueRecorderInstrumentKind, number.Int64Kind, 2},
-		"test-float64-valuerecorder": {sdkapi.ValueRecorderInstrumentKind, number.Float64Kind, 2},
-		"test-int64-valueobserver":   {sdkapi.ValueObserverInstrumentKind, number.Int64Kind, 3},
-		"test-float64-valueobserver": {sdkapi.ValueObserverInstrumentKind, number.Float64Kind, 3},
+		"test-int64-histogram":       {sdkapi.HistogramInstrumentKind, number.Int64Kind, 2},
+		"test-float64-histogram":     {sdkapi.HistogramInstrumentKind, number.Float64Kind, 2},
+		"test-int64-gaugeobserver":   {sdkapi.GaugeObserverInstrumentKind, number.Int64Kind, 3},
+		"test-float64-gaugeobserver": {sdkapi.GaugeObserverInstrumentKind, number.Float64Kind, 3},
 	}
 	for name, data := range instruments {
 		data := data
@@ -72,19 +72,19 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
-		case sdkapi.ValueRecorderInstrumentKind:
+		case sdkapi.HistogramInstrumentKind:
 			switch data.nKind {
 			case number.Int64Kind:
-				metric.Must(meter).NewInt64ValueRecorder(name).Record(ctx, data.val, labels...)
+				metric.Must(meter).NewInt64Histogram(name).Record(ctx, data.val, labels...)
 			case number.Float64Kind:
-				metric.Must(meter).NewFloat64ValueRecorder(name).Record(ctx, float64(data.val), labels...)
+				metric.Must(meter).NewFloat64Histogram(name).Record(ctx, float64(data.val), labels...)
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
-		case sdkapi.ValueObserverInstrumentKind:
+		case sdkapi.GaugeObserverInstrumentKind:
 			switch data.nKind {
 			case number.Int64Kind:
-				metric.Must(meter).NewInt64ValueObserver(name,
+				metric.Must(meter).NewInt64GaugeObserver(name,
 					func(_ context.Context, result metric.Int64ObserverResult) {
 						result.Observe(data.val, labels...)
 					},
@@ -93,7 +93,7 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 				callback := func(v float64) metric.Float64ObserverFunc {
 					return metric.Float64ObserverFunc(func(_ context.Context, result metric.Float64ObserverResult) { result.Observe(v, labels...) })
 				}(float64(data.val))
-				metric.Must(meter).NewFloat64ValueObserver(name, callback)
+				metric.Must(meter).NewFloat64GaugeObserver(name, callback)
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
@@ -131,13 +131,13 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 		seen[m.Name] = struct{}{}
 
 		switch data.iKind {
-		case sdkapi.CounterInstrumentKind, sdkapi.ValueObserverInstrumentKind:
+		case sdkapi.CounterInstrumentKind, sdkapi.GaugeObserverInstrumentKind:
 			var dp []*metricpb.NumberDataPoint
 			switch data.iKind {
 			case sdkapi.CounterInstrumentKind:
 				require.NotNil(t, m.GetSum())
 				dp = m.GetSum().GetDataPoints()
-			case sdkapi.ValueObserverInstrumentKind:
+			case sdkapi.GaugeObserverInstrumentKind:
 				require.NotNil(t, m.GetGauge())
 				dp = m.GetGauge().GetDataPoints()
 			}
@@ -151,7 +151,7 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 					assert.Equal(t, v, dp[0].Value, "invalid value for %q", m.Name)
 				}
 			}
-		case sdkapi.ValueRecorderInstrumentKind:
+		case sdkapi.HistogramInstrumentKind:
 			require.NotNil(t, m.GetSummary())
 			if dp := m.GetSummary().DataPoints; assert.Len(t, dp, 1) {
 				count := dp[0].Count

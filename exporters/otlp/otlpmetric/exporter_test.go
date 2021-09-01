@@ -212,10 +212,10 @@ func TestNoGroupingExport(t *testing.T) {
 	)
 }
 
-func TestValuerecorderMetricGroupingExport(t *testing.T) {
+func TestHistogramMetricGroupingExport(t *testing.T) {
 	r := record{
-		"valuerecorder",
-		sdkapi.ValueRecorderInstrumentKind,
+		"histogram",
+		sdkapi.HistogramInstrumentKind,
 		number.Int64Kind,
 		nil,
 		append(baseKeyValues, cpuKey.Int(1)),
@@ -227,7 +227,7 @@ func TestValuerecorderMetricGroupingExport(t *testing.T) {
 				{
 					Metrics: []*metricpb.Metric{
 						{
-							Name: "valuerecorder",
+							Name: "histogram",
 							Data: &metricpb.Metric_Histogram{
 								Histogram: &metricpb.Histogram{
 									AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
@@ -606,8 +606,8 @@ func TestStatelessExportKind(t *testing.T) {
 	for _, k := range []testcase{
 		{"counter", sdkapi.CounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA, true},
 		{"updowncounter", sdkapi.UpDownCounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA, false},
-		{"sumobserver", sdkapi.SumObserverInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, true},
-		{"updownsumobserver", sdkapi.UpDownSumObserverInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, false},
+		{"counterobserver", sdkapi.CounterObserverInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, true},
+		{"updowncounterobserver", sdkapi.UpDownCounterObserverInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, false},
 	} {
 		t.Run(k.name, func(t *testing.T) {
 			runMetricExportTests(
