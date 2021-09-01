@@ -457,8 +457,14 @@ func (a *App) Poll(ctx context.Context) (uint, error) {
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
+		return 0, err
 	}
-    /* … */
+
+	// Store n as a string to not overflow an int64.
+	nStr := strconv.FormatUint(uint64(n), 10)
+	span.SetAttributes(attribute.String("request.n", nStr))
+
+	return n, nil
 }
 ```
 
