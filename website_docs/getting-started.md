@@ -171,7 +171,7 @@ Using the full-qualified package name, something that should be unique for Go pa
 
 Everything should be in place now to start tracing your application. But first, what is a trace? And, how exactly should you build them for you application?
 
-To back up a bit, a trace is a type of telemetry that represents work being done by a service. In a distributed system, a trace can be thought of as a 'stack trace', showing the work being done by each service as well as the upstream and downstream calls that its making to other services.
+To back up a bit, a trace is a type of telemetry that represents work being done by a service. A trace is a record of the connection(s) between participants processing a transaction, often through client/server requests processing and other forms of communication.
 
 Each part of the work that a service performs is represented in the trace with a span. Those spans are not just an unordered collection. Like the call stack of our application, those spans are defined with relationships to one another. If that last part about span relationships doesn't make to much sense now, don't worry. The important thing to take away is each part of your code that does work should to be represented as a span. You will have a better understanding of these span relationships after you instrument your code, so let's get started.
 
