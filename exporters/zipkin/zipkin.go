@@ -91,10 +91,10 @@ func New(collectorURL string, opts ...Option) (*Exporter, error) {
 	}
 	u, err := url.Parse(collectorURL)
 	if err != nil {
-		return nil, fmt.Errorf("invalid collector URL: %v", err)
+		return nil, fmt.Errorf("invalid collector URL %q: %v", collectorURL, err)
 	}
 	if u.Scheme == "" || u.Host == "" {
-		return nil, errors.New("invalid collector URL")
+		return nil, fmt.Errorf("invalid collector URL %q: no scheme or host", collectorURL)
 	}
 
 	cfg := config{}
