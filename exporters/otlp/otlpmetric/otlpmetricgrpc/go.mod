@@ -78,3 +78,5 @@ replace go.opentelemetry.io/otel/exporters/stdout/stdouttrace => ../../../stdout
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp => ../otlpmetrichttp
 
 replace go.opentelemetry.io/otel/bridge/opencensus/test => ../../../../bridge/opencensus/test
+
+replace go.opentelemetry.io/otel/example/fib => ../../../../example/fib
