@@ -5,7 +5,7 @@ go 1.15
 require (
 	go.opencensus.io v0.23.0
 	go.opentelemetry.io/otel v1.0.0-RC2
-	go.opentelemetry.io/otel/bridge/opencensus v0.21.0
+	go.opentelemetry.io/otel/bridge/opencensus v0.23.0
 	go.opentelemetry.io/otel/sdk v1.0.0-RC2
 	go.opentelemetry.io/otel/trace v1.0.0-RC2
 )
