@@ -35,48 +35,48 @@ var Must = metric.Must
 
 var (
 	syncKinds = []sdkapi.InstrumentKind{
-		sdkapi.ValueRecorderInstrumentKind,
+		sdkapi.HistogramInstrumentKind,
 		sdkapi.CounterInstrumentKind,
 		sdkapi.UpDownCounterInstrumentKind,
 	}
 	asyncKinds = []sdkapi.InstrumentKind{
-		sdkapi.ValueObserverInstrumentKind,
-		sdkapi.SumObserverInstrumentKind,
-		sdkapi.UpDownSumObserverInstrumentKind,
+		sdkapi.GaugeObserverInstrumentKind,
+		sdkapi.CounterObserverInstrumentKind,
+		sdkapi.UpDownCounterObserverInstrumentKind,
 	}
 	addingKinds = []sdkapi.InstrumentKind{
 		sdkapi.CounterInstrumentKind,
 		sdkapi.UpDownCounterInstrumentKind,
-		sdkapi.SumObserverInstrumentKind,
-		sdkapi.UpDownSumObserverInstrumentKind,
+		sdkapi.CounterObserverInstrumentKind,
+		sdkapi.UpDownCounterObserverInstrumentKind,
 	}
 	groupingKinds = []sdkapi.InstrumentKind{
-		sdkapi.ValueRecorderInstrumentKind,
-		sdkapi.ValueObserverInstrumentKind,
+		sdkapi.HistogramInstrumentKind,
+		sdkapi.GaugeObserverInstrumentKind,
 	}
 
 	monotonicKinds = []sdkapi.InstrumentKind{
 		sdkapi.CounterInstrumentKind,
-		sdkapi.SumObserverInstrumentKind,
+		sdkapi.CounterObserverInstrumentKind,
 	}
 
 	nonMonotonicKinds = []sdkapi.InstrumentKind{
 		sdkapi.UpDownCounterInstrumentKind,
-		sdkapi.UpDownSumObserverInstrumentKind,
-		sdkapi.ValueRecorderInstrumentKind,
-		sdkapi.ValueObserverInstrumentKind,
+		sdkapi.UpDownCounterObserverInstrumentKind,
+		sdkapi.HistogramInstrumentKind,
+		sdkapi.GaugeObserverInstrumentKind,
 	}
 
 	precomputedSumKinds = []sdkapi.InstrumentKind{
-		sdkapi.SumObserverInstrumentKind,
-		sdkapi.UpDownSumObserverInstrumentKind,
+		sdkapi.CounterObserverInstrumentKind,
+		sdkapi.UpDownCounterObserverInstrumentKind,
 	}
 
 	nonPrecomputedSumKinds = []sdkapi.InstrumentKind{
 		sdkapi.CounterInstrumentKind,
 		sdkapi.UpDownCounterInstrumentKind,
-		sdkapi.ValueRecorderInstrumentKind,
-		sdkapi.ValueObserverInstrumentKind,
+		sdkapi.HistogramInstrumentKind,
+		sdkapi.GaugeObserverInstrumentKind,
 	}
 )
 
@@ -299,99 +299,99 @@ func TestCounter(t *testing.T) {
 	})
 }
 
-func TestValueRecorder(t *testing.T) {
-	t.Run("float64 valuerecorder", func(t *testing.T) {
+func TestHistogram(t *testing.T) {
+	t.Run("float64 histogram", func(t *testing.T) {
 		provider, meter := testPair()
-		m := Must(meter).NewFloat64ValueRecorder("test.valuerecorder.float")
+		m := Must(meter).NewFloat64Histogram("test.histogram.float")
 		ctx := context.Background()
 		labels := []attribute.KeyValue{}
 		m.Record(ctx, 42, labels...)
 		boundInstrument := m.Bind(labels...)
 		boundInstrument.Record(ctx, 0)
 		meter.RecordBatch(ctx, labels, m.Measurement(-100.5))
-		checkSyncBatches(ctx, t, labels, provider, number.Float64Kind, sdkapi.ValueRecorderInstrumentKind, m.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, provider, number.Float64Kind, sdkapi.HistogramInstrumentKind, m.SyncImpl(),
 			42, 0, -100.5,
 		)
 	})
-	t.Run("int64 valuerecorder", func(t *testing.T) {
+	t.Run("int64 histogram", func(t *testing.T) {
 		provider, meter := testPair()
-		m := Must(meter).NewInt64ValueRecorder("test.valuerecorder.int")
+		m := Must(meter).NewInt64Histogram("test.histogram.int")
 		ctx := context.Background()
 		labels := []attribute.KeyValue{attribute.Int("I", 1)}
 		m.Record(ctx, 173, labels...)
 		boundInstrument := m.Bind(labels...)
 		boundInstrument.Record(ctx, 80)
 		meter.RecordBatch(ctx, labels, m.Measurement(0))
-		checkSyncBatches(ctx, t, labels, provider, number.Int64Kind, sdkapi.ValueRecorderInstrumentKind, m.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, provider, number.Int64Kind, sdkapi.HistogramInstrumentKind, m.SyncImpl(),
 			173, 80, 0,
 		)
 	})
 }
 
 func TestObserverInstruments(t *testing.T) {
-	t.Run("float valueobserver", func(t *testing.T) {
+	t.Run("float gauge", func(t *testing.T) {
 		labels := []attribute.KeyValue{attribute.String("O", "P")}
 		provider, meter := testPair()
-		o := Must(meter).NewFloat64ValueObserver("test.valueobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
+		o := Must(meter).NewFloat64GaugeObserver("test.gauge.float", func(_ context.Context, result metric.Float64ObserverResult) {
 			result.Observe(42.1, labels...)
 		})
 		provider.RunAsyncInstruments()
-		checkObserverBatch(t, labels, provider, number.Float64Kind, sdkapi.ValueObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, provider, number.Float64Kind, sdkapi.GaugeObserverInstrumentKind, o.AsyncImpl(),
 			42.1,
 		)
 	})
-	t.Run("int valueobserver", func(t *testing.T) {
+	t.Run("int gauge", func(t *testing.T) {
 		labels := []attribute.KeyValue{}
 		provider, meter := testPair()
-		o := Must(meter).NewInt64ValueObserver("test.observer.int", func(_ context.Context, result metric.Int64ObserverResult) {
+		o := Must(meter).NewInt64GaugeObserver("test.gauge.int", func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(-142, labels...)
 		})
 		provider.RunAsyncInstruments()
-		checkObserverBatch(t, labels, provider, number.Int64Kind, sdkapi.ValueObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, provider, number.Int64Kind, sdkapi.GaugeObserverInstrumentKind, o.AsyncImpl(),
 			-142,
 		)
 	})
-	t.Run("float sumobserver", func(t *testing.T) {
+	t.Run("float counterobserver", func(t *testing.T) {
 		labels := []attribute.KeyValue{attribute.String("O", "P")}
 		provider, meter := testPair()
-		o := Must(meter).NewFloat64SumObserver("test.sumobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
+		o := Must(meter).NewFloat64CounterObserver("test.counter.float", func(_ context.Context, result metric.Float64ObserverResult) {
 			result.Observe(42.1, labels...)
 		})
 		provider.RunAsyncInstruments()
-		checkObserverBatch(t, labels, provider, number.Float64Kind, sdkapi.SumObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, provider, number.Float64Kind, sdkapi.CounterObserverInstrumentKind, o.AsyncImpl(),
 			42.1,
 		)
 	})
-	t.Run("int sumobserver", func(t *testing.T) {
+	t.Run("int counterobserver", func(t *testing.T) {
 		labels := []attribute.KeyValue{}
 		provider, meter := testPair()
-		o := Must(meter).NewInt64SumObserver("test.observer.int", func(_ context.Context, result metric.Int64ObserverResult) {
+		o := Must(meter).NewInt64CounterObserver("test.counter.int", func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(-142, labels...)
 		})
 		provider.RunAsyncInstruments()
-		checkObserverBatch(t, labels, provider, number.Int64Kind, sdkapi.SumObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, provider, number.Int64Kind, sdkapi.CounterObserverInstrumentKind, o.AsyncImpl(),
 			-142,
 		)
 	})
-	t.Run("float updownsumobserver", func(t *testing.T) {
+	t.Run("float updowncounterobserver", func(t *testing.T) {
 		labels := []attribute.KeyValue{attribute.String("O", "P")}
 		provider, meter := testPair()
-		o := Must(meter).NewFloat64UpDownSumObserver("test.updownsumobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
+		o := Must(meter).NewFloat64UpDownCounterObserver("test.updowncounter.float", func(_ context.Context, result metric.Float64ObserverResult) {
 			result.Observe(42.1, labels...)
 		})
 		provider.RunAsyncInstruments()
-		checkObserverBatch(t, labels, provider, number.Float64Kind, sdkapi.UpDownSumObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, provider, number.Float64Kind, sdkapi.UpDownCounterObserverInstrumentKind, o.AsyncImpl(),
 			42.1,
 		)
 	})
-	t.Run("int updownsumobserver", func(t *testing.T) {
+	t.Run("int updowncounterobserver", func(t *testing.T) {
 		labels := []attribute.KeyValue{}
 		provider, meter := testPair()
-		o := Must(meter).NewInt64UpDownSumObserver("test.observer.int", func(_ context.Context, result metric.Int64ObserverResult) {
+		o := Must(meter).NewInt64UpDownCounterObserver("test..int", func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(-142, labels...)
 		})
 		provider.RunAsyncInstruments()
-		checkObserverBatch(t, labels, provider, number.Int64Kind, sdkapi.UpDownSumObserverInstrumentKind, o.AsyncImpl(),
+		checkObserverBatch(t, labels, provider, number.Int64Kind, sdkapi.UpDownCounterObserverInstrumentKind, o.AsyncImpl(),
 			-142,
 		)
 	})
@@ -400,8 +400,8 @@ func TestObserverInstruments(t *testing.T) {
 func TestBatchObserverInstruments(t *testing.T) {
 	provider, meter := testPair()
 
-	var obs1 metric.Int64ValueObserver
-	var obs2 metric.Float64ValueObserver
+	var obs1 metric.Int64GaugeObserver
+	var obs2 metric.Float64GaugeObserver
 
 	labels := []attribute.KeyValue{
 		attribute.String("A", "B"),
@@ -416,8 +416,8 @@ func TestBatchObserverInstruments(t *testing.T) {
 			)
 		},
 	)
-	obs1 = cb.NewInt64ValueObserver("test.observer.int")
-	obs2 = cb.NewFloat64ValueObserver("test.observer.float")
+	obs1 = cb.NewInt64GaugeObserver("test.gauge.int")
+	obs2 = cb.NewFloat64GaugeObserver("test.gauge.float")
 
 	provider.RunAsyncInstruments()
 
@@ -485,12 +485,12 @@ func TestWrappedInstrumentError(t *testing.T) {
 	impl := &testWrappedMeter{}
 	meter := metric.WrapMeterImpl(impl)
 
-	valuerecorder, err := meter.NewInt64ValueRecorder("test.valuerecorder")
+	histogram, err := meter.NewInt64Histogram("test.histogram")
 
 	require.Equal(t, err, metric.ErrSDKReturnedNilImpl)
-	require.NotNil(t, valuerecorder.SyncImpl())
+	require.NotNil(t, histogram.SyncImpl())
 
-	observer, err := meter.NewInt64ValueObserver("test.observer", func(_ context.Context, result metric.Int64ObserverResult) {})
+	observer, err := meter.NewInt64GaugeObserver("test.observer", func(_ context.Context, result metric.Int64ObserverResult) {})
 
 	require.NotNil(t, err)
 	require.NotNil(t, observer.AsyncImpl())
@@ -500,7 +500,7 @@ func TestNilCallbackObserverNoop(t *testing.T) {
 	// Tests that a nil callback yields a no-op observer without error.
 	_, meter := testPair()
 
-	observer := Must(meter).NewInt64ValueObserver("test.observer", nil)
+	observer := Must(meter).NewInt64GaugeObserver("test.observer", nil)
 
 	_, ok := observer.AsyncImpl().(metric.NoopAsync)
 	require.True(t, ok)

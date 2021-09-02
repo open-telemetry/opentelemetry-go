@@ -8,7 +8,7 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.0.0-RC2
 	go.opentelemetry.io/otel/sdk v1.0.0-RC2
 	go.opentelemetry.io/proto/otlp v0.9.0
-	google.golang.org/grpc v1.39.1
+	google.golang.org/grpc v1.40.0
 )
 
 replace go.opentelemetry.io/otel => ../../../..

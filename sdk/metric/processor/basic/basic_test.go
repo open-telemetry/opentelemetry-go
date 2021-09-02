@@ -67,10 +67,10 @@ func TestProcessor(t *testing.T) {
 			for _, ic := range []instrumentCase{
 				{kind: sdkapi.CounterInstrumentKind},
 				{kind: sdkapi.UpDownCounterInstrumentKind},
-				{kind: sdkapi.ValueRecorderInstrumentKind},
-				{kind: sdkapi.SumObserverInstrumentKind},
-				{kind: sdkapi.UpDownSumObserverInstrumentKind},
-				{kind: sdkapi.ValueObserverInstrumentKind},
+				{kind: sdkapi.HistogramInstrumentKind},
+				{kind: sdkapi.CounterObserverInstrumentKind},
+				{kind: sdkapi.UpDownCounterObserverInstrumentKind},
+				{kind: sdkapi.GaugeObserverInstrumentKind},
 			} {
 				t.Run(ic.kind.String(), func(t *testing.T) {
 					for _, nc := range []numberCase{
@@ -405,7 +405,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 func TestStatefulNoMemoryDelta(t *testing.T) {
 	ekindSel := export.DeltaExportKindSelector()
 
-	desc := metrictest.NewDescriptor("inst.sum", sdkapi.SumObserverInstrumentKind, number.Int64Kind)
+	desc := metrictest.NewDescriptor("inst.sum", sdkapi.CounterObserverInstrumentKind, number.Int64Kind)
 	selector := processorTest.AggregatorSelector()
 
 	processor := basic.New(selector, ekindSel, basic.WithMemory(false))
@@ -441,7 +441,7 @@ func TestMultiObserverSum(t *testing.T) {
 		export.DeltaExportKindSelector(),
 	} {
 
-		desc := metrictest.NewDescriptor("observe.sum", sdkapi.SumObserverInstrumentKind, number.Int64Kind)
+		desc := metrictest.NewDescriptor("observe.sum", sdkapi.CounterObserverInstrumentKind, number.Int64Kind)
 		selector := processorTest.AggregatorSelector()
 
 		processor := basic.New(selector, ekindSel, basic.WithMemory(false))
@@ -471,7 +471,7 @@ func TestMultiObserverSum(t *testing.T) {
 	}
 }
 
-func TestSumObserverEndToEnd(t *testing.T) {
+func TestCounterObserverEndToEnd(t *testing.T) {
 	ctx := context.Background()
 	eselector := export.CumulativeExportKindSelector()
 	proc := basic.New(
@@ -482,7 +482,7 @@ func TestSumObserverEndToEnd(t *testing.T) {
 	meter := metric.WrapMeterImpl(accum)
 
 	var calls int64
-	metric.Must(meter).NewInt64SumObserver("observer.sum",
+	metric.Must(meter).NewInt64CounterObserver("observer.sum",
 		func(_ context.Context, result metric.Int64ObserverResult) {
 			calls++
 			result.Observe(calls)

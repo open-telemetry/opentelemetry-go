@@ -17,8 +17,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Metric instruments have been renamed to match the (feature-frozen) metric API specification:
+  - ValueRecorder becomes Histogram
+  - ValueObserver becomes Gauge
+  - SumObserver becomes CounterObserver
+  - UpDownSumObserver becomes UpDownCounterObserver
+  The API exported from this project is still considered experimental. (#2202)
 - Metric SDK/API implementation type `InstrumentKind` moves into `sdkapi` sub-package. (#2091)
 - The Metrics SDK export record no longer contains a Resource pointer, the SDK `"go.opentelemetry.io/otel/sdk/trace/export/metric".Exporter.Export()` function for push-based exporters now takes a single Resource argument, pull-based exporters use `"go.opentelemetry.io/otel/sdk/metric/controller/basic".Controller.Resource()`. (#2120)
+- The JSON output of the `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` is harmonized now such that the output is "plain" JSON objects after each other of the form `{ ... } { ... } { ... }`. Earlier the JSON objects describing a span were wrapped in a slice for each `Exporter.ExportSpans` call, like `[ { ... } ][ { ... } { ... } ]`. Outputting JSON object directly after each other is consistent with JSON loggers, and a bit easier to parse and read. (#2196)
+- Update the `NewTracerConfig`, `NewSpanStartConfig`, `NewSpanEndConfig`, and `NewEventConfig` function in the `go.opentelemetry.io/otel/trace` package to return their respective configurations as structs instead of pointers to the struct. (#2212)
 - The Metric SDK `Export()` function takes a new two-level reader interface for iterating over results one instrumentation library at a time.
   - The former `"go.opentelemetry.io/otel/sdk/export/metric".CheckpointSet` is renamed `Reader`.
   - The new interface is named `"go.opentelemetry.io/otel/sdk/export/metric".InstrumentationLibraryReader`. (#2197)
@@ -32,6 +40,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Use the typed `*Slice` functions and types added to the package instead. (#2162)
 - The `"go.opentelemetry.io/otel/attribute".Any` function is deprecated.
   Use the typed functions instead. (#2181)
+- The `go.opentelemetry.io/otel/oteltest` package is deprecated.
+  The `"go.opentelemetry.io/otel/sdk/trace/tracetest".SpanRecorder` can be registered with the default SDK (`go.opentelemetry.io/otel/sdk/trace`) as a `SpanProcessor` and used as a replacement for this deprecated package. (#2188)
 
 ### Removed
 
@@ -43,10 +53,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Setting the global `ErrorHandler` with `"go.opentelemetry.io/otel".SetErrorHandler` multiple times is now supported. (#2160, #2140)
 - The `"go.opentelemetry.io/otel/attribute".Any` function now supports `int32` values. (#2169)
 - Multiple calls to `"go.opentelemetry.io/otel/sdk/metric/controller/basic".WithResource()` are handled correctly, and when no resources are provided `"go.opentelemetry.io/otel/sdk/resource".Default()` is used. (#2120)
+- The `WithoutTimestamps` option for the `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` exporter causes the exporter to correctly ommit timestamps. (#2195)
+- Fixed typos in resources.go. (#2201)
 
 ### Security
 
-## [v1.0.0-RC2] - 2021-07-26
+## [1.0.0-RC2] - 2021-07-26
 
 ### Added
 

@@ -31,13 +31,13 @@ func TestExportKindIncludes(t *testing.T) {
 }
 
 var deltaMemoryKinds = []sdkapi.InstrumentKind{
-	sdkapi.SumObserverInstrumentKind,
-	sdkapi.UpDownSumObserverInstrumentKind,
+	sdkapi.CounterObserverInstrumentKind,
+	sdkapi.UpDownCounterObserverInstrumentKind,
 }
 
 var cumulativeMemoryKinds = []sdkapi.InstrumentKind{
-	sdkapi.ValueRecorderInstrumentKind,
-	sdkapi.ValueObserverInstrumentKind,
+	sdkapi.HistogramInstrumentKind,
+	sdkapi.GaugeObserverInstrumentKind,
 	sdkapi.CounterInstrumentKind,
 	sdkapi.UpDownCounterInstrumentKind,
 }

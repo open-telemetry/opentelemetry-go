@@ -18,11 +18,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -34,13 +34,6 @@ import (
 )
 
 func TestExporter_ExportSpan(t *testing.T) {
-	// write to buffer for testing
-	var b bytes.Buffer
-	ex, err := stdouttrace.New(stdouttrace.WithWriter(&b), stdouttrace.WithPrettyPrint())
-	if err != nil {
-		t.Errorf("Error constructing stdout exporter %s", err)
-	}
-
 	// setup test span
 	now := time.Now()
 	traceID, _ := trace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
@@ -50,132 +43,153 @@ func TestExporter_ExportSpan(t *testing.T) {
 	doubleValue := 123.456
 	resource := resource.NewSchemaless(attribute.String("rk1", "rv11"))
 
-	ro := tracetest.SpanStubs{
+	ss := tracetest.SpanStub{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceState: traceState,
+		}),
+		Name:      "/foo",
+		StartTime: now,
+		EndTime:   now,
+		Attributes: []attribute.KeyValue{
+			attribute.String("key", keyValue),
+			attribute.Float64("double", doubleValue),
+		},
+		Events: []tracesdk.Event{
+			{Name: "foo", Attributes: []attribute.KeyValue{attribute.String("key", keyValue)}, Time: now},
+			{Name: "bar", Attributes: []attribute.KeyValue{attribute.Float64("double", doubleValue)}, Time: now},
+		},
+		SpanKind: trace.SpanKindInternal,
+		Status: tracesdk.Status{
+			Code:        codes.Error,
+			Description: "interesting",
+		},
+		Resource: resource,
+	}
+
+	tests := []struct {
+		opts      []stdouttrace.Option
+		expectNow time.Time
+	}{
 		{
-			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
-				TraceID:    traceID,
-				SpanID:     spanID,
-				TraceState: traceState,
-			}),
-			Name:      "/foo",
-			StartTime: now,
-			EndTime:   now,
-			Attributes: []attribute.KeyValue{
-				attribute.String("key", keyValue),
-				attribute.Float64("double", doubleValue),
-			},
-			Events: []tracesdk.Event{
-				{Name: "foo", Attributes: []attribute.KeyValue{attribute.String("key", keyValue)}, Time: now},
-				{Name: "bar", Attributes: []attribute.KeyValue{attribute.Float64("double", doubleValue)}, Time: now},
-			},
-			SpanKind: trace.SpanKindInternal,
-			Status: tracesdk.Status{
-				Code:        codes.Error,
-				Description: "interesting",
-			},
-			Resource: resource,
+			opts:      []stdouttrace.Option{stdouttrace.WithPrettyPrint()},
+			expectNow: now,
 		},
-	}.Snapshots()
-	if err := ex.ExportSpans(context.Background(), ro); err != nil {
-		t.Fatal(err)
+		{
+			opts: []stdouttrace.Option{stdouttrace.WithPrettyPrint(), stdouttrace.WithoutTimestamps()},
+			// expectNow is an empty time.Time
+		},
 	}
 
-	expectedSerializedNow, _ := json.Marshal(now)
+	ctx := context.Background()
+	for _, tt := range tests {
+		// write to buffer for testing
+		var b bytes.Buffer
+		ex, err := stdouttrace.New(append(tt.opts, stdouttrace.WithWriter(&b))...)
+		require.Nil(t, err)
 
-	got := b.String()
-	expectedOutput := `[
-	{
-		"Name": "/foo",
-		"SpanContext": {
-			"TraceID": "0102030405060708090a0b0c0d0e0f10",
-			"SpanID": "0102030405060708",
-			"TraceFlags": "00",
-			"TraceState": "key=val",
-			"Remote": false
-		},
-		"Parent": {
-			"TraceID": "00000000000000000000000000000000",
-			"SpanID": "0000000000000000",
-			"TraceFlags": "00",
-			"TraceState": "",
-			"Remote": false
-		},
-		"SpanKind": 1,
-		"StartTime": ` + string(expectedSerializedNow) + `,
-		"EndTime": ` + string(expectedSerializedNow) + `,
-		"Attributes": [
-			{
-				"Key": "key",
-				"Value": {
-					"Type": "STRING",
-					"Value": "value"
-				}
-			},
-			{
-				"Key": "double",
-				"Value": {
-					"Type": "FLOAT64",
-					"Value": 123.456
-				}
+		err = ex.ExportSpans(ctx, tracetest.SpanStubs{ss, ss}.Snapshots())
+		require.Nil(t, err)
+
+		got := b.String()
+		wantone := expectedJSON(tt.expectNow)
+		assert.Equal(t, wantone+wantone, got)
+	}
+}
+
+func expectedJSON(now time.Time) string {
+	serializedNow, _ := json.Marshal(now)
+	return `{
+	"Name": "/foo",
+	"SpanContext": {
+		"TraceID": "0102030405060708090a0b0c0d0e0f10",
+		"SpanID": "0102030405060708",
+		"TraceFlags": "00",
+		"TraceState": "key=val",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "00000000000000000000000000000000",
+		"SpanID": "0000000000000000",
+		"TraceFlags": "00",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 1,
+	"StartTime": ` + string(serializedNow) + `,
+	"EndTime": ` + string(serializedNow) + `,
+	"Attributes": [
+		{
+			"Key": "key",
+			"Value": {
+				"Type": "STRING",
+				"Value": "value"
 			}
-		],
-		"Events": [
-			{
-				"Name": "foo",
-				"Attributes": [
-					{
-						"Key": "key",
-						"Value": {
-							"Type": "STRING",
-							"Value": "value"
-						}
-					}
-				],
-				"DroppedAttributeCount": 0,
-				"Time": ` + string(expectedSerializedNow) + `
-			},
-			{
-				"Name": "bar",
-				"Attributes": [
-					{
-						"Key": "double",
-						"Value": {
-							"Type": "FLOAT64",
-							"Value": 123.456
-						}
-					}
-				],
-				"DroppedAttributeCount": 0,
-				"Time": ` + string(expectedSerializedNow) + `
-			}
-		],
-		"Links": null,
-		"Status": {
-			"Code": "Error",
-			"Description": "interesting"
 		},
-		"DroppedAttributes": 0,
-		"DroppedEvents": 0,
-		"DroppedLinks": 0,
-		"ChildSpanCount": 0,
-		"Resource": [
-			{
-				"Key": "rk1",
-				"Value": {
-					"Type": "STRING",
-					"Value": "rv11"
-				}
+		{
+			"Key": "double",
+			"Value": {
+				"Type": "FLOAT64",
+				"Value": 123.456
 			}
-		],
-		"InstrumentationLibrary": {
-			"Name": "",
-			"Version": "",
-			"SchemaURL": ""
 		}
+	],
+	"Events": [
+		{
+			"Name": "foo",
+			"Attributes": [
+				{
+					"Key": "key",
+					"Value": {
+						"Type": "STRING",
+						"Value": "value"
+					}
+				}
+			],
+			"DroppedAttributeCount": 0,
+			"Time": ` + string(serializedNow) + `
+		},
+		{
+			"Name": "bar",
+			"Attributes": [
+				{
+					"Key": "double",
+					"Value": {
+						"Type": "FLOAT64",
+						"Value": 123.456
+					}
+				}
+			],
+			"DroppedAttributeCount": 0,
+			"Time": ` + string(serializedNow) + `
+		}
+	],
+	"Links": null,
+	"Status": {
+		"Code": "Error",
+		"Description": "interesting"
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 0,
+	"Resource": [
+		{
+			"Key": "rk1",
+			"Value": {
+				"Type": "STRING",
+				"Value": "rv11"
+			}
+		}
+	],
+	"InstrumentationLibrary": {
+		"Name": "",
+		"Version": "",
+		"SchemaURL": ""
 	}
-]
+}
 `
-	assert.Equal(t, expectedOutput, got)
 }
 
 func TestExporterShutdownHonorsTimeout(t *testing.T) {
@@ -190,11 +204,8 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 	innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
 	defer innerCancel()
 	<-innerCtx.Done()
-	if err := e.Shutdown(innerCtx); err == nil {
-		t.Error("expected context DeadlineExceeded error, got nil")
-	} else if !errors.Is(err, context.DeadlineExceeded) {
-		t.Errorf("expected context DeadlineExceeded error, got %v", err)
-	}
+	err = e.Shutdown(innerCtx)
+	assert.ErrorIs(t, err, context.DeadlineExceeded)
 }
 
 func TestExporterShutdownHonorsCancel(t *testing.T) {
@@ -208,11 +219,8 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 
 	innerCtx, innerCancel := context.WithCancel(ctx)
 	innerCancel()
-	if err := e.Shutdown(innerCtx); err == nil {
-		t.Error("expected context canceled error, got nil")
-	} else if !errors.Is(err, context.Canceled) {
-		t.Errorf("expected context canceled error, got %v", err)
-	}
+	err = e.Shutdown(innerCtx)
+	assert.ErrorIs(t, err, context.Canceled)
 }
 
 func TestExporterShutdownNoError(t *testing.T) {

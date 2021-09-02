@@ -169,10 +169,10 @@ func TestStdoutMinMaxSumCount(t *testing.T) {
 	require.Equal(t, `[{"Name":"name.minmaxsumcount{R=V,instrumentation.name=test,A=B,C=D}","Min":123.456,"Max":876.543,"Sum":999.999,"Count":2}]`, fix.Output())
 }
 
-func TestStdoutValueRecorderFormat(t *testing.T) {
+func TestStdoutHistogramFormat(t *testing.T) {
 	fix := newFixture(t, stdoutmetric.WithPrettyPrint())
 
-	inst := metric.Must(fix.meter).NewFloat64ValueRecorder("name.histogram")
+	inst := metric.Must(fix.meter).NewFloat64Histogram("name.histogram")
 
 	for i := 0; i < 1000; i++ {
 		inst.Record(fix.ctx, float64(i)+0.5, attribute.String("A", "B"), attribute.String("C", "D"))

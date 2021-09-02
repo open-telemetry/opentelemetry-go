@@ -40,7 +40,7 @@ var (
 	)
 
 	loopCounter = metric.Must(meter).NewInt64Counter("function.loops")
-	paramValue  = metric.Must(meter).NewInt64ValueRecorder("function.param")
+	paramValue  = metric.Must(meter).NewInt64Histogram("function.param")
 
 	nameKey = attribute.Key("function.name")
 )

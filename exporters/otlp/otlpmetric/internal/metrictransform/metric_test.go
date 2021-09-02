@@ -123,7 +123,7 @@ func TestMinMaxSumCountValue(t *testing.T) {
 }
 
 func TestMinMaxSumCountDatapoints(t *testing.T) {
-	desc := metrictest.NewDescriptor("", sdkapi.ValueRecorderInstrumentKind, number.Int64Kind)
+	desc := metrictest.NewDescriptor("", sdkapi.HistogramInstrumentKind, number.Int64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
 	mmscs := minmaxsumcount.New(2, &metric.Descriptor{})
 	mmsc, ckpt := &mmscs[0], &mmscs[1]
@@ -179,7 +179,7 @@ func TestMinMaxSumCountPropagatesErrors(t *testing.T) {
 }
 
 func TestSumIntDataPoints(t *testing.T) {
-	desc := metrictest.NewDescriptor("", sdkapi.ValueRecorderInstrumentKind, number.Int64Kind)
+	desc := metrictest.NewDescriptor("", sdkapi.HistogramInstrumentKind, number.Int64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
 	sums := sumAgg.New(2)
 	s, ckpt := &sums[0], &sums[1]
@@ -219,7 +219,7 @@ func TestSumIntDataPoints(t *testing.T) {
 }
 
 func TestSumFloatDataPoints(t *testing.T) {
-	desc := metrictest.NewDescriptor("", sdkapi.ValueRecorderInstrumentKind, number.Float64Kind)
+	desc := metrictest.NewDescriptor("", sdkapi.HistogramInstrumentKind, number.Float64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
 	sums := sumAgg.New(2)
 	s, ckpt := &sums[0], &sums[1]
@@ -257,7 +257,7 @@ func TestSumFloatDataPoints(t *testing.T) {
 }
 
 func TestLastValueIntDataPoints(t *testing.T) {
-	desc := metrictest.NewDescriptor("", sdkapi.ValueRecorderInstrumentKind, number.Int64Kind)
+	desc := metrictest.NewDescriptor("", sdkapi.HistogramInstrumentKind, number.Int64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
 	lvs := lvAgg.New(2)
 	lv, ckpt := &lvs[0], &lvs[1]
@@ -292,7 +292,7 @@ func TestLastValueIntDataPoints(t *testing.T) {
 }
 
 func TestExactIntDataPoints(t *testing.T) {
-	desc := metrictest.NewDescriptor("", sdkapi.ValueRecorderInstrumentKind, number.Int64Kind)
+	desc := metrictest.NewDescriptor("", sdkapi.HistogramInstrumentKind, number.Int64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
 	arrs := arrAgg.New(2)
 	e, ckpt := &arrs[0], &arrs[1]
@@ -327,7 +327,7 @@ func TestExactIntDataPoints(t *testing.T) {
 }
 
 func TestExactFloatDataPoints(t *testing.T) {
-	desc := metrictest.NewDescriptor("", sdkapi.ValueRecorderInstrumentKind, number.Float64Kind)
+	desc := metrictest.NewDescriptor("", sdkapi.HistogramInstrumentKind, number.Float64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
 	arrs := arrAgg.New(2)
 	e, ckpt := &arrs[0], &arrs[1]
@@ -361,7 +361,7 @@ func TestExactFloatDataPoints(t *testing.T) {
 }
 
 func TestSumErrUnknownValueType(t *testing.T) {
-	desc := metrictest.NewDescriptor("", sdkapi.ValueRecorderInstrumentKind, number.Kind(-1))
+	desc := metrictest.NewDescriptor("", sdkapi.HistogramInstrumentKind, number.Kind(-1))
 	labels := attribute.NewSet()
 	s := &sumAgg.New(1)[0]
 	record := export.NewRecord(&desc, &labels, s, intervalStart, intervalEnd)

@@ -33,12 +33,12 @@ import (
 )
 
 var (
-	testCounterDesc           = metrictest.NewDescriptor("counter", sdkapi.CounterInstrumentKind, number.Int64Kind)
-	testUpDownCounterDesc     = metrictest.NewDescriptor("updowncounter", sdkapi.UpDownCounterInstrumentKind, number.Int64Kind)
-	testSumObserverDesc       = metrictest.NewDescriptor("sumobserver", sdkapi.SumObserverInstrumentKind, number.Int64Kind)
-	testUpDownSumObserverDesc = metrictest.NewDescriptor("updownsumobserver", sdkapi.UpDownSumObserverInstrumentKind, number.Int64Kind)
-	testValueRecorderDesc     = metrictest.NewDescriptor("valuerecorder", sdkapi.ValueRecorderInstrumentKind, number.Int64Kind)
-	testValueObserverDesc     = metrictest.NewDescriptor("valueobserver", sdkapi.ValueObserverInstrumentKind, number.Int64Kind)
+	testCounterDesc               = metrictest.NewDescriptor("counter", sdkapi.CounterInstrumentKind, number.Int64Kind)
+	testUpDownCounterDesc         = metrictest.NewDescriptor("updowncounter", sdkapi.UpDownCounterInstrumentKind, number.Int64Kind)
+	testCounterObserverDesc       = metrictest.NewDescriptor("counterobserver", sdkapi.CounterObserverInstrumentKind, number.Int64Kind)
+	testUpDownCounterObserverDesc = metrictest.NewDescriptor("updowncounterobserver", sdkapi.UpDownCounterObserverInstrumentKind, number.Int64Kind)
+	testHistogramDesc             = metrictest.NewDescriptor("histogram", sdkapi.HistogramInstrumentKind, number.Int64Kind)
+	testGaugeObserverDesc         = metrictest.NewDescriptor("gauge", sdkapi.GaugeObserverInstrumentKind, number.Int64Kind)
 )
 
 func oneAgg(sel export.AggregatorSelector, desc *metric.Descriptor) export.Aggregator {
@@ -48,27 +48,27 @@ func oneAgg(sel export.AggregatorSelector, desc *metric.Descriptor) export.Aggre
 }
 
 func testFixedSelectors(t *testing.T, sel export.AggregatorSelector) {
-	require.IsType(t, (*lastvalue.Aggregator)(nil), oneAgg(sel, &testValueObserverDesc))
+	require.IsType(t, (*lastvalue.Aggregator)(nil), oneAgg(sel, &testGaugeObserverDesc))
 	require.IsType(t, (*sum.Aggregator)(nil), oneAgg(sel, &testCounterDesc))
 	require.IsType(t, (*sum.Aggregator)(nil), oneAgg(sel, &testUpDownCounterDesc))
-	require.IsType(t, (*sum.Aggregator)(nil), oneAgg(sel, &testSumObserverDesc))
-	require.IsType(t, (*sum.Aggregator)(nil), oneAgg(sel, &testUpDownSumObserverDesc))
+	require.IsType(t, (*sum.Aggregator)(nil), oneAgg(sel, &testCounterObserverDesc))
+	require.IsType(t, (*sum.Aggregator)(nil), oneAgg(sel, &testUpDownCounterObserverDesc))
 }
 
 func TestInexpensiveDistribution(t *testing.T) {
 	inex := simple.NewWithInexpensiveDistribution()
-	require.IsType(t, (*minmaxsumcount.Aggregator)(nil), oneAgg(inex, &testValueRecorderDesc))
+	require.IsType(t, (*minmaxsumcount.Aggregator)(nil), oneAgg(inex, &testHistogramDesc))
 	testFixedSelectors(t, inex)
 }
 
 func TestExactDistribution(t *testing.T) {
 	ex := simple.NewWithExactDistribution()
-	require.IsType(t, (*exact.Aggregator)(nil), oneAgg(ex, &testValueRecorderDesc))
+	require.IsType(t, (*exact.Aggregator)(nil), oneAgg(ex, &testHistogramDesc))
 	testFixedSelectors(t, ex)
 }
 
 func TestHistogramDistribution(t *testing.T) {
 	hist := simple.NewWithHistogramDistribution()
-	require.IsType(t, (*histogram.Aggregator)(nil), oneAgg(hist, &testValueRecorderDesc))
+	require.IsType(t, (*histogram.Aggregator)(nil), oneAgg(hist, &testHistogramDesc))
 	testFixedSelectors(t, hist)
 }

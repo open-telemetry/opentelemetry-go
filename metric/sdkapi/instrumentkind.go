@@ -20,27 +20,27 @@ package sdkapi // import "go.opentelemetry.io/otel/metric/sdkapi"
 type InstrumentKind int8
 
 const (
-	// ValueRecorderInstrumentKind indicates a ValueRecorder instrument.
-	ValueRecorderInstrumentKind InstrumentKind = iota
-	// ValueObserverInstrumentKind indicates an ValueObserver instrument.
-	ValueObserverInstrumentKind
+	// HistogramInstrumentKind indicates a Histogram instrument.
+	HistogramInstrumentKind InstrumentKind = iota
+	// GaugeObserverInstrumentKind indicates an GaugeObserver instrument.
+	GaugeObserverInstrumentKind
 
 	// CounterInstrumentKind indicates a Counter instrument.
 	CounterInstrumentKind
 	// UpDownCounterInstrumentKind indicates a UpDownCounter instrument.
 	UpDownCounterInstrumentKind
 
-	// SumObserverInstrumentKind indicates a SumObserver instrument.
-	SumObserverInstrumentKind
-	// UpDownSumObserverInstrumentKind indicates a UpDownSumObserver
+	// CounterObserverInstrumentKind indicates a CounterObserver instrument.
+	CounterObserverInstrumentKind
+	// UpDownCounterObserverInstrumentKind indicates a UpDownCounterObserver
 	// instrument.
-	UpDownSumObserverInstrumentKind
+	UpDownCounterObserverInstrumentKind
 )
 
 // Synchronous returns whether this is a synchronous kind of instrument.
 func (k InstrumentKind) Synchronous() bool {
 	switch k {
-	case CounterInstrumentKind, UpDownCounterInstrumentKind, ValueRecorderInstrumentKind:
+	case CounterInstrumentKind, UpDownCounterInstrumentKind, HistogramInstrumentKind:
 		return true
 	}
 	return false
@@ -54,7 +54,7 @@ func (k InstrumentKind) Asynchronous() bool {
 // Adding returns whether this kind of instrument adds its inputs (as opposed to Grouping).
 func (k InstrumentKind) Adding() bool {
 	switch k {
-	case CounterInstrumentKind, UpDownCounterInstrumentKind, SumObserverInstrumentKind, UpDownSumObserverInstrumentKind:
+	case CounterInstrumentKind, UpDownCounterInstrumentKind, CounterObserverInstrumentKind, UpDownCounterObserverInstrumentKind:
 		return true
 	}
 	return false
@@ -68,7 +68,7 @@ func (k InstrumentKind) Grouping() bool {
 // Monotonic returns whether this kind of instrument exposes a non-decreasing sum.
 func (k InstrumentKind) Monotonic() bool {
 	switch k {
-	case CounterInstrumentKind, SumObserverInstrumentKind:
+	case CounterInstrumentKind, CounterObserverInstrumentKind:
 		return true
 	}
 	return false

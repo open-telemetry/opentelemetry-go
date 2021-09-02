@@ -17,23 +17,46 @@ package stdouttrace // import "go.opentelemetry.io/otel/exporters/stdout/stdoutt
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
+var zeroTime time.Time
+
+var _ trace.SpanExporter = &Exporter{}
+
+// New creates an Exporter with the passed options.
+func New(options ...Option) (*Exporter, error) {
+	cfg, err := newConfig(options...)
+	if err != nil {
+		return nil, err
+	}
+
+	enc := json.NewEncoder(cfg.Writer)
+	if cfg.PrettyPrint {
+		enc.SetIndent("", "\t")
+	}
+
+	return &Exporter{
+		encoder:    enc,
+		timestamps: cfg.Timestamps,
+	}, nil
+}
+
 // Exporter is an implementation of trace.SpanSyncer that writes spans to stdout.
-type traceExporter struct {
-	config config
+type Exporter struct {
+	encoder    *json.Encoder
+	timestamps bool
 
 	stoppedMu sync.RWMutex
 	stopped   bool
 }
 
 // ExportSpans writes spans in json format to stdout.
-func (e *traceExporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) error {
+func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) error {
 	e.stoppedMu.RLock()
 	stopped := e.stopped
 	e.stoppedMu.RUnlock()
@@ -44,16 +67,31 @@ func (e *traceExporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlyS
 	if len(spans) == 0 {
 		return nil
 	}
-	out, err := e.marshal(tracetest.SpanStubsFromReadOnlySpans(spans))
-	if err != nil {
-		return err
+
+	stubs := tracetest.SpanStubsFromReadOnlySpans(spans)
+
+	for i := range stubs {
+		stub := &stubs[i]
+		// Remove timestamps
+		if !e.timestamps {
+			stub.StartTime = zeroTime
+			stub.EndTime = zeroTime
+			for j := range stub.Events {
+				ev := &stub.Events[j]
+				ev.Time = zeroTime
+			}
+		}
+
+		// Encode span stubs, one by one
+		if err := e.encoder.Encode(stub); err != nil {
+			return err
+		}
 	}
-	_, err = fmt.Fprintln(e.config.Writer, string(out))
-	return err
+	return nil
 }
 
 // Shutdown is called to stop the exporter, it preforms no action.
-func (e *traceExporter) Shutdown(ctx context.Context) error {
+func (e *Exporter) Shutdown(ctx context.Context) error {
 	e.stoppedMu.Lock()
 	e.stopped = true
 	e.stoppedMu.Unlock()
@@ -64,12 +102,4 @@ func (e *traceExporter) Shutdown(ctx context.Context) error {
 	default:
 	}
 	return nil
-}
-
-// marshal v with approriate indentation.
-func (e *traceExporter) marshal(v interface{}) ([]byte, error) {
-	if e.config.PrettyPrint {
-		return json.MarshalIndent(v, "", "\t")
-	}
-	return json.Marshal(v)
 }

@@ -54,7 +54,7 @@ type InstrumentImpl interface {
 }
 
 // SyncImpl is the implementation-level interface to a generic
-// synchronous instrument (e.g., ValueRecorder and Counter instruments).
+// synchronous instrument (e.g., Histogram and Counter instruments).
 type SyncImpl interface {
 	InstrumentImpl
 

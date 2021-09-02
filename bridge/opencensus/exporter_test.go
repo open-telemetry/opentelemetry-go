@@ -77,7 +77,7 @@ func TestExportMetrics(t *testing.T) {
 	now := time.Now()
 	basicDesc := metrictest.NewDescriptor(
 		"",
-		sdkapi.ValueObserverInstrumentKind,
+		sdkapi.GaugeObserverInstrumentKind,
 		number.Int64Kind,
 	)
 	fakeErrorHandler := &fakeErrorHandler{}
@@ -398,7 +398,7 @@ func TestConvertDescriptor(t *testing.T) {
 			desc: "empty descriptor",
 			expected: metrictest.NewDescriptor(
 				"",
-				sdkapi.ValueObserverInstrumentKind,
+				sdkapi.GaugeObserverInstrumentKind,
 				number.Int64Kind,
 			),
 		},
@@ -412,7 +412,7 @@ func TestConvertDescriptor(t *testing.T) {
 			},
 			expected: metrictest.NewDescriptor(
 				"foo",
-				sdkapi.ValueObserverInstrumentKind,
+				sdkapi.GaugeObserverInstrumentKind,
 				number.Int64Kind,
 				metric.WithDescription("bar"),
 				metric.WithUnit(unit.Bytes),
@@ -428,7 +428,7 @@ func TestConvertDescriptor(t *testing.T) {
 			},
 			expected: metrictest.NewDescriptor(
 				"foo",
-				sdkapi.ValueObserverInstrumentKind,
+				sdkapi.GaugeObserverInstrumentKind,
 				number.Float64Kind,
 				metric.WithDescription("bar"),
 				metric.WithUnit(unit.Milliseconds),
@@ -444,7 +444,7 @@ func TestConvertDescriptor(t *testing.T) {
 			},
 			expected: metrictest.NewDescriptor(
 				"foo",
-				sdkapi.SumObserverInstrumentKind,
+				sdkapi.CounterObserverInstrumentKind,
 				number.Int64Kind,
 				metric.WithDescription("bar"),
 				metric.WithUnit(unit.Dimensionless),
@@ -460,7 +460,7 @@ func TestConvertDescriptor(t *testing.T) {
 			},
 			expected: metrictest.NewDescriptor(
 				"foo",
-				sdkapi.SumObserverInstrumentKind,
+				sdkapi.CounterObserverInstrumentKind,
 				number.Float64Kind,
 				metric.WithDescription("bar"),
 				metric.WithUnit(unit.Dimensionless),

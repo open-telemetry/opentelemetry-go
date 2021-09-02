@@ -38,10 +38,10 @@ func (t *TracerConfig) SchemaURL() string {
 }
 
 // NewTracerConfig applies all the options to a returned TracerConfig.
-func NewTracerConfig(options ...TracerOption) *TracerConfig {
-	config := new(TracerConfig)
+func NewTracerConfig(options ...TracerOption) TracerConfig {
+	var config TracerConfig
 	for _, option := range options {
-		option.apply(config)
+		option.apply(&config)
 	}
 	return config
 }
@@ -103,10 +103,10 @@ func (cfg *SpanConfig) SpanKind() SpanKind {
 // No validation is performed on the returned SpanConfig (e.g. no uniqueness
 // checking or bounding of data), it is left to the SDK to perform this
 // action.
-func NewSpanStartConfig(options ...SpanStartOption) *SpanConfig {
-	c := new(SpanConfig)
+func NewSpanStartConfig(options ...SpanStartOption) SpanConfig {
+	var c SpanConfig
 	for _, option := range options {
-		option.applySpanStart(c)
+		option.applySpanStart(&c)
 	}
 	return c
 }
@@ -115,10 +115,10 @@ func NewSpanStartConfig(options ...SpanStartOption) *SpanConfig {
 // No validation is performed on the returned SpanConfig (e.g. no uniqueness
 // checking or bounding of data), it is left to the SDK to perform this
 // action.
-func NewSpanEndConfig(options ...SpanEndOption) *SpanConfig {
-	c := new(SpanConfig)
+func NewSpanEndConfig(options ...SpanEndOption) SpanConfig {
+	var c SpanConfig
 	for _, option := range options {
-		option.applySpanEnd(c)
+		option.applySpanEnd(&c)
 	}
 	return c
 }
@@ -167,10 +167,10 @@ func (cfg *EventConfig) StackTrace() bool {
 // timestamp option is passed, the returned EventConfig will have a Timestamp
 // set to the call time, otherwise no validation is performed on the returned
 // EventConfig.
-func NewEventConfig(options ...EventOption) *EventConfig {
-	c := new(EventConfig)
+func NewEventConfig(options ...EventOption) EventConfig {
+	var c EventConfig
 	for _, option := range options {
-		option.applyEvent(c)
+		option.applyEvent(&c)
 	}
 	if c.timestamp.IsZero() {
 		c.timestamp = time.Now()
