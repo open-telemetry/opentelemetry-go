@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -126,15 +127,15 @@ type Checkpointer interface {
 }
 
 // Aggregator implements a specific aggregation behavior, e.g., a
-// behavior to track a sequence of updates to an instrument.  Sum-only
+// behavior to track a sequence of updates to an instrument.  Counter
 // instruments commonly use a simple Sum aggregator, but for the
-// distribution instruments (ValueRecorder, ValueObserver) there are a
+// distribution instruments (Histogram, GaugeObserver) there are a
 // number of possible aggregators with different cost and accuracy
 // tradeoffs.
 //
 // Note that any Aggregator may be attached to any instrument--this is
 // the result of the OpenTelemetry API/SDK separation.  It is possible
-// to attach a Sum aggregator to a ValueRecorder instrument or a
+// to attach a Sum aggregator to a Histogram instrument or a
 // MinMaxSumCount aggregator to a Counter instrument.
 type Aggregator interface {
 	// Aggregation returns an Aggregation interface to access the
@@ -190,8 +191,8 @@ type Aggregator interface {
 
 // Subtractor is an optional interface implemented by some
 // Aggregators.  An Aggregator must support `Subtract()` in order to
-// be configured for a Precomputed-Sum instrument (SumObserver,
-// UpDownSumObserver) using a DeltaExporter.
+// be configured for a Precomputed-Sum instrument (CounterObserver,
+// UpDownCounterObserver) using a DeltaExporter.
 type Subtractor interface {
 	// Subtract subtracts the `operand` from this Aggregator and
 	// outputs the value in `result`.
@@ -210,7 +211,7 @@ type Exporter interface {
 	//
 	// The CheckpointSet interface refers to the Processor that just
 	// completed collection.
-	Export(ctx context.Context, checkpointSet CheckpointSet) error
+	Export(ctx context.Context, resource *resource.Resource, checkpointSet CheckpointSet) error
 
 	// ExportKindSelector is an interface used by the Processor
 	// in deciding whether to compute Delta or Cumulative
@@ -268,7 +269,6 @@ type CheckpointSet interface {
 type Metadata struct {
 	descriptor *metric.Descriptor
 	labels     *attribute.Set
-	resource   *resource.Resource
 }
 
 // Accumulation contains the exported data for a single metric instrument
@@ -299,21 +299,15 @@ func (m Metadata) Labels() *attribute.Set {
 	return m.labels
 }
 
-// Resource contains common attributes that apply to this metric event.
-func (m Metadata) Resource() *resource.Resource {
-	return m.resource
-}
-
 // NewAccumulation allows Accumulator implementations to construct new
-// Accumulations to send to Processors. The Descriptor, Labels, Resource,
+// Accumulations to send to Processors. The Descriptor, Labels,
 // and Aggregator represent aggregate metric events received over a single
 // collection period.
-func NewAccumulation(descriptor *metric.Descriptor, labels *attribute.Set, resource *resource.Resource, aggregator Aggregator) Accumulation {
+func NewAccumulation(descriptor *metric.Descriptor, labels *attribute.Set, aggregator Aggregator) Accumulation {
 	return Accumulation{
 		Metadata: Metadata{
 			descriptor: descriptor,
 			labels:     labels,
-			resource:   resource,
 		},
 		aggregator: aggregator,
 	}
@@ -328,12 +322,11 @@ func (r Accumulation) Aggregator() Aggregator {
 // NewRecord allows Processor implementations to construct export
 // records.  The Descriptor, Labels, and Aggregator represent
 // aggregate metric events received over a single collection period.
-func NewRecord(descriptor *metric.Descriptor, labels *attribute.Set, resource *resource.Resource, aggregation aggregation.Aggregation, start, end time.Time) Record {
+func NewRecord(descriptor *metric.Descriptor, labels *attribute.Set, aggregation aggregation.Aggregation, start, end time.Time) Record {
 	return Record{
 		Metadata: Metadata{
 			descriptor: descriptor,
 			labels:     labels,
-			resource:   resource,
 		},
 		aggregation: aggregation,
 		start:       start,
@@ -379,14 +372,14 @@ func (kind ExportKind) Includes(has ExportKind) bool {
 
 // MemoryRequired returns whether an exporter of this kind requires
 // memory to export correctly.
-func (kind ExportKind) MemoryRequired(mkind metric.InstrumentKind) bool {
+func (kind ExportKind) MemoryRequired(mkind sdkapi.InstrumentKind) bool {
 	switch mkind {
-	case metric.ValueRecorderInstrumentKind, metric.ValueObserverInstrumentKind,
-		metric.CounterInstrumentKind, metric.UpDownCounterInstrumentKind:
+	case sdkapi.HistogramInstrumentKind, sdkapi.GaugeObserverInstrumentKind,
+		sdkapi.CounterInstrumentKind, sdkapi.UpDownCounterInstrumentKind:
 		// Delta-oriented instruments:
 		return kind.Includes(CumulativeExportKind)
 
-	case metric.SumObserverInstrumentKind, metric.UpDownSumObserverInstrumentKind:
+	case sdkapi.CounterObserverInstrumentKind, sdkapi.UpDownCounterObserverInstrumentKind:
 		// Cumulative-oriented instruments:
 		return kind.Includes(DeltaExportKind)
 	}

@@ -12,27 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stdouttrace // import "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+package internal
 
-import (
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-)
+import "go.opentelemetry.io/otel"
 
-type Exporter struct {
-	traceExporter
-}
-
-var (
-	_ sdktrace.SpanExporter = &Exporter{}
-)
-
-// New creates an Exporter with the passed options.
-func New(options ...Option) (*Exporter, error) {
-	cfg, err := newConfig(options...)
-	if err != nil {
-		return nil, err
-	}
-	return &Exporter{
-		traceExporter: traceExporter{config: cfg},
-	}, nil
-}
+// Handle is the package level function to handle errors. It can be
+// overwritten for testing.
+var Handle = otel.Handle

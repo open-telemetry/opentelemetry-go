@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/metric/unit"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -50,7 +51,11 @@ type exporter struct {
 
 // ExportMetrics implements the OpenCensus metric Exporter interface
 func (e *exporter) ExportMetrics(ctx context.Context, metrics []*metricdata.Metric) error {
-	return e.base.Export(ctx, &checkpointSet{metrics: metrics})
+	res := resource.Empty()
+	if len(metrics) != 0 {
+		res = convertResource(metrics[0].Resource)
+	}
+	return e.base.Export(ctx, res, &checkpointSet{metrics: metrics})
 }
 
 type checkpointSet struct {
@@ -68,7 +73,6 @@ func (d *checkpointSet) ForEach(exporter export.ExportKindSelector, f func(expor
 			otel.Handle(err)
 			continue
 		}
-		res := convertResource(m.Resource)
 		for _, ts := range m.TimeSeries {
 			if len(ts.Points) == 0 {
 				continue
@@ -86,7 +90,6 @@ func (d *checkpointSet) ForEach(exporter export.ExportKindSelector, f func(expor
 			if err := f(export.NewRecord(
 				&descriptor,
 				&ls,
-				res,
 				agg,
 				ts.StartTime,
 				agg.end(),
@@ -118,6 +121,7 @@ func convertLabels(keys []metricdata.LabelKey, values []metricdata.LabelValue) (
 }
 
 // convertResource converts an OpenCensus Resource to an OpenTelemetry Resource
+// Note: the ocresource.Resource Type field is not used.
 func convertResource(res *ocresource.Resource) *resource.Resource {
 	labels := []attribute.KeyValue{}
 	if res == nil {
@@ -133,21 +137,21 @@ func convertResource(res *ocresource.Resource) *resource.Resource {
 func convertDescriptor(ocDescriptor metricdata.Descriptor) (metric.Descriptor, error) {
 	var (
 		nkind number.Kind
-		ikind metric.InstrumentKind
+		ikind sdkapi.InstrumentKind
 	)
 	switch ocDescriptor.Type {
 	case metricdata.TypeGaugeInt64:
 		nkind = number.Int64Kind
-		ikind = metric.ValueObserverInstrumentKind
+		ikind = sdkapi.GaugeObserverInstrumentKind
 	case metricdata.TypeGaugeFloat64:
 		nkind = number.Float64Kind
-		ikind = metric.ValueObserverInstrumentKind
+		ikind = sdkapi.GaugeObserverInstrumentKind
 	case metricdata.TypeCumulativeInt64:
 		nkind = number.Int64Kind
-		ikind = metric.SumObserverInstrumentKind
+		ikind = sdkapi.CounterObserverInstrumentKind
 	case metricdata.TypeCumulativeFloat64:
 		nkind = number.Float64Kind
-		ikind = metric.SumObserverInstrumentKind
+		ikind = sdkapi.CounterObserverInstrumentKind
 	default:
 		// Includes TypeGaugeDistribution, TypeCumulativeDistribution, TypeSummary
 		return metric.Descriptor{}, fmt.Errorf("%w; descriptor type: %v", errConversion, ocDescriptor.Type)

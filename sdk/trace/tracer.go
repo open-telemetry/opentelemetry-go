@@ -46,7 +46,7 @@ func (tr *tracer) Start(ctx context.Context, name string, options ...trace.SpanS
 		}
 	}
 
-	span := startSpanInternal(ctx, tr, name, config)
+	span := startSpanInternal(ctx, tr, name, &config)
 	for _, l := range config.Links() {
 		span.addLink(l)
 	}

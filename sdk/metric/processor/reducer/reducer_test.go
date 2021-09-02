@@ -57,7 +57,7 @@ func generateData(impl metric.MeterImpl) {
 
 	counter := metric.Must(meter).NewFloat64Counter("counter.sum")
 
-	_ = metric.Must(meter).NewInt64SumObserver("observer.sum",
+	_ = metric.Must(meter).NewInt64CounterObserver("observer.sum",
 		func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(10, kvs1...)
 			result.Observe(10, kvs2...)
@@ -75,15 +75,14 @@ func TestFilterProcessor(t *testing.T) {
 	)
 	accum := metricsdk.NewAccumulator(
 		reducer.New(testFilter{}, processorTest.Checkpointer(testProc)),
-		resource.NewSchemaless(attribute.String("R", "V")),
 	)
 	generateData(accum)
 
 	accum.Collect(context.Background())
 
 	require.EqualValues(t, map[string]float64{
-		"counter.sum/A=1,C=3/R=V":  200,
-		"observer.sum/A=1,C=3/R=V": 20,
+		"counter.sum/A=1,C=3/":  200,
+		"observer.sum/A=1,C=3/": 20,
 	}, testProc.Values())
 }
 
@@ -92,7 +91,6 @@ func TestFilterBasicProcessor(t *testing.T) {
 	basicProc := basic.New(processorTest.AggregatorSelector(), export.CumulativeExportKindSelector())
 	accum := metricsdk.NewAccumulator(
 		reducer.New(testFilter{}, basicProc),
-		resource.NewSchemaless(attribute.String("R", "V")),
 	)
 	exporter := processorTest.New(basicProc, attribute.DefaultEncoder())
 
@@ -104,7 +102,8 @@ func TestFilterBasicProcessor(t *testing.T) {
 		t.Error(err)
 	}
 
-	require.NoError(t, exporter.Export(context.Background(), basicProc.CheckpointSet()))
+	res := resource.NewSchemaless(attribute.String("R", "V"))
+	require.NoError(t, exporter.Export(context.Background(), res, basicProc.CheckpointSet()))
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=1,C=3/R=V":  200,

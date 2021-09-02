@@ -31,28 +31,54 @@ func (kv KeyValue) Valid() bool {
 	return kv.Key != "" && kv.Value.Type() != INVALID
 }
 
-// Bool creates a new key-value pair with a passed name and a bool
-// value.
+// Bool creates a KeyValue with a BOOL Value type.
 func Bool(k string, v bool) KeyValue {
 	return Key(k).Bool(v)
 }
 
-// Int64 creates a new key-value pair with a passed name and an int64
-// value.
+// BoolSlice creates a KeyValue with a BOOLSLICE Value type.
+func BoolSlice(k string, v []bool) KeyValue {
+	return Key(k).BoolSlice(v)
+}
+
+// Int creates a KeyValue with an INT64 Value type.
+func Int(k string, v int) KeyValue {
+	return Key(k).Int(v)
+}
+
+// IntSlice creates a KeyValue with an INT64SLICE Value type.
+func IntSlice(k string, v []int) KeyValue {
+	return Key(k).IntSlice(v)
+}
+
+// Int64 creates a KeyValue with an INT64 Value type.
 func Int64(k string, v int64) KeyValue {
 	return Key(k).Int64(v)
 }
 
-// Float64 creates a new key-value pair with a passed name and a float64
-// value.
+// Int64Slice creates a KeyValue with an INT64SLICE Value type.
+func Int64Slice(k string, v []int64) KeyValue {
+	return Key(k).Int64Slice(v)
+}
+
+// Float64 creates a KeyValue with a FLOAT64 Value type.
 func Float64(k string, v float64) KeyValue {
 	return Key(k).Float64(v)
 }
 
-// String creates a new key-value pair with a passed name and a string
-// value.
+// Float64Slice creates a KeyValue with a FLOAT64SLICE Value type.
+func Float64Slice(k string, v []float64) KeyValue {
+	return Key(k).Float64Slice(v)
+}
+
+// String creates a KeyValue with a STRING Value type.
 func String(k, v string) KeyValue {
 	return Key(k).String(v)
+}
+
+// StringSlice creates a KeyValue with a STRINGSLICE Value type.
+func StringSlice(k string, v []string) KeyValue {
+	return Key(k).StringSlice(v)
 }
 
 // Stringer creates a new key-value pair with a passed name and a string
@@ -61,21 +87,18 @@ func Stringer(k string, v fmt.Stringer) KeyValue {
 	return Key(k).String(v.String())
 }
 
-// Int creates a new key-value pair instance with a passed name and
-// either an int32 or an int64 value, depending on whether the int
-// type is 32 or 64 bits wide.
-func Int(k string, v int) KeyValue {
-	return Key(k).Int(v)
-}
-
 // Array creates a new key-value pair with a passed name and a array.
 // Only arrays of primitive type are supported.
+//
+// Deprecated: Use the typed *Slice functions instead.
 func Array(k string, v interface{}) KeyValue {
 	return Key(k).Array(v)
 }
 
 // Any creates a new key-value pair instance with a passed name and
 // automatic type inference. This is slower, and not type-safe.
+//
+// Deprecated: Use the typed functions instead.
 func Any(k string, value interface{}) KeyValue {
 	if value == nil {
 		return String(k, "<nil>")
@@ -88,13 +111,27 @@ func Any(k string, value interface{}) KeyValue {
 	rv := reflect.ValueOf(value)
 
 	switch rv.Kind() {
-	case reflect.Array, reflect.Slice:
-		return Array(k, value)
+	case reflect.Array:
+		rv = rv.Slice(0, rv.Len())
+		fallthrough
+	case reflect.Slice:
+		switch reflect.TypeOf(value).Elem().Kind() {
+		case reflect.Bool:
+			return BoolSlice(k, rv.Interface().([]bool))
+		case reflect.Int:
+			return IntSlice(k, rv.Interface().([]int))
+		case reflect.Int64:
+			return Int64Slice(k, rv.Interface().([]int64))
+		case reflect.Float64:
+			return Float64Slice(k, rv.Interface().([]float64))
+		case reflect.String:
+			return StringSlice(k, rv.Interface().([]string))
+		default:
+			return KeyValue{Key: Key(k), Value: Value{vtype: INVALID}}
+		}
 	case reflect.Bool:
 		return Bool(k, rv.Bool())
-	case reflect.Int, reflect.Int8, reflect.Int16:
-		return Int(k, int(rv.Int()))
-	case reflect.Int64:
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return Int64(k, rv.Int())
 	case reflect.Float64:
 		return Float64(k, rv.Float())
