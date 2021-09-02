@@ -131,20 +131,20 @@ func TestInputRangeUpDownCounter(t *testing.T) {
 	require.Nil(t, testHandler.Flush())
 }
 
-func TestInputRangeValueRecorder(t *testing.T) {
+func TestInputRangeHistogram(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, _, processor := newSDK(t)
 
-	valuerecorder := Must(meter).NewFloat64ValueRecorder("name.exact")
+	histogram := Must(meter).NewFloat64Histogram("name.exact")
 
-	valuerecorder.Record(ctx, math.NaN())
+	histogram.Record(ctx, math.NaN())
 	require.Equal(t, aggregation.ErrNaNInput, testHandler.Flush())
 
 	checkpointed := sdk.Collect(ctx)
 	require.Equal(t, 0, checkpointed)
 
-	valuerecorder.Record(ctx, 1)
-	valuerecorder.Record(ctx, 2)
+	histogram.Record(ctx, 1)
+	histogram.Record(ctx, 2)
 
 	processor.Reset()
 	checkpointed = sdk.Collect(ctx)
@@ -160,9 +160,9 @@ func TestDisabledInstrument(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, _, processor := newSDK(t)
 
-	valuerecorder := Must(meter).NewFloat64ValueRecorder("name.disabled")
+	histogram := Must(meter).NewFloat64Histogram("name.disabled")
 
-	valuerecorder.Record(ctx, -1)
+	histogram.Record(ctx, -1)
 	checkpointed := sdk.Collect(ctx)
 
 	require.Equal(t, 0, checkpointed)
@@ -275,13 +275,13 @@ func TestObserverCollection(t *testing.T) {
 	meter, sdk, _, processor := newSDK(t)
 	mult := 1
 
-	_ = Must(meter).NewFloat64ValueObserver("float.valueobserver.lastvalue", func(_ context.Context, result metric.Float64ObserverResult) {
+	_ = Must(meter).NewFloat64GaugeObserver("float.gauge.lastvalue", func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(float64(mult), attribute.String("A", "B"))
 		// last value wins
 		result.Observe(float64(-mult), attribute.String("A", "B"))
 		result.Observe(float64(-mult), attribute.String("C", "D"))
 	})
-	_ = Must(meter).NewInt64ValueObserver("int.valueobserver.lastvalue", func(_ context.Context, result metric.Int64ObserverResult) {
+	_ = Must(meter).NewInt64GaugeObserver("int.gauge.lastvalue", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(int64(-mult), attribute.String("A", "B"))
 		result.Observe(int64(mult))
 		// last value wins
@@ -289,12 +289,12 @@ func TestObserverCollection(t *testing.T) {
 		result.Observe(int64(mult))
 	})
 
-	_ = Must(meter).NewFloat64SumObserver("float.sumobserver.sum", func(_ context.Context, result metric.Float64ObserverResult) {
+	_ = Must(meter).NewFloat64CounterObserver("float.counterobserver.sum", func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(float64(mult), attribute.String("A", "B"))
 		result.Observe(float64(2*mult), attribute.String("A", "B"))
 		result.Observe(float64(mult), attribute.String("C", "D"))
 	})
-	_ = Must(meter).NewInt64SumObserver("int.sumobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
+	_ = Must(meter).NewInt64CounterObserver("int.counterobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(int64(2*mult), attribute.String("A", "B"))
 		result.Observe(int64(mult))
 		// last value wins
@@ -302,12 +302,12 @@ func TestObserverCollection(t *testing.T) {
 		result.Observe(int64(mult))
 	})
 
-	_ = Must(meter).NewFloat64UpDownSumObserver("float.updownsumobserver.sum", func(_ context.Context, result metric.Float64ObserverResult) {
+	_ = Must(meter).NewFloat64UpDownCounterObserver("float.updowncounterobserver.sum", func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(float64(mult), attribute.String("A", "B"))
 		result.Observe(float64(-2*mult), attribute.String("A", "B"))
 		result.Observe(float64(mult), attribute.String("C", "D"))
 	})
-	_ = Must(meter).NewInt64UpDownSumObserver("int.updownsumobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
+	_ = Must(meter).NewInt64UpDownCounterObserver("int.updowncounterobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(int64(2*mult), attribute.String("A", "B"))
 		result.Observe(int64(mult))
 		// last value wins
@@ -315,7 +315,7 @@ func TestObserverCollection(t *testing.T) {
 		result.Observe(int64(-mult))
 	})
 
-	_ = Must(meter).NewInt64ValueObserver("empty.valueobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
+	_ = Must(meter).NewInt64GaugeObserver("empty.gauge.sum", func(_ context.Context, result metric.Int64ObserverResult) {
 	})
 
 	for mult = 0; mult < 3; mult++ {
@@ -326,36 +326,36 @@ func TestObserverCollection(t *testing.T) {
 
 		mult := float64(mult)
 		require.EqualValues(t, map[string]float64{
-			"float.valueobserver.lastvalue/A=B/": -mult,
-			"float.valueobserver.lastvalue/C=D/": -mult,
-			"int.valueobserver.lastvalue//":      mult,
-			"int.valueobserver.lastvalue/A=B/":   mult,
+			"float.gauge.lastvalue/A=B/": -mult,
+			"float.gauge.lastvalue/C=D/": -mult,
+			"int.gauge.lastvalue//":      mult,
+			"int.gauge.lastvalue/A=B/":   mult,
 
-			"float.sumobserver.sum/A=B/": 2 * mult,
-			"float.sumobserver.sum/C=D/": mult,
-			"int.sumobserver.sum//":      mult,
-			"int.sumobserver.sum/A=B/":   mult,
+			"float.counterobserver.sum/A=B/": 2 * mult,
+			"float.counterobserver.sum/C=D/": mult,
+			"int.counterobserver.sum//":      mult,
+			"int.counterobserver.sum/A=B/":   mult,
 
-			"float.updownsumobserver.sum/A=B/": -2 * mult,
-			"float.updownsumobserver.sum/C=D/": mult,
-			"int.updownsumobserver.sum//":      -mult,
-			"int.updownsumobserver.sum/A=B/":   mult,
+			"float.updowncounterobserver.sum/A=B/": -2 * mult,
+			"float.updowncounterobserver.sum/C=D/": mult,
+			"int.updowncounterobserver.sum//":      -mult,
+			"int.updowncounterobserver.sum/A=B/":   mult,
 		}, processor.Values())
 	}
 }
 
-func TestSumObserverInputRange(t *testing.T) {
+func TestCounterObserverInputRange(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, _, processor := newSDK(t)
 
 	// TODO: these tests are testing for negative values, not for _descending values_. Fix.
-	_ = Must(meter).NewFloat64SumObserver("float.sumobserver.sum", func(_ context.Context, result metric.Float64ObserverResult) {
+	_ = Must(meter).NewFloat64CounterObserver("float.counterobserver.sum", func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(-2, attribute.String("A", "B"))
 		require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
 		result.Observe(-1, attribute.String("C", "D"))
 		require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
 	})
-	_ = Must(meter).NewInt64SumObserver("int.sumobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
+	_ = Must(meter).NewInt64CounterObserver("int.counterobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(-1, attribute.String("A", "B"))
 		require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
 		result.Observe(-1)
@@ -375,12 +375,12 @@ func TestObserverBatch(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, _, processor := newSDK(t)
 
-	var floatValueObs metric.Float64ValueObserver
-	var intValueObs metric.Int64ValueObserver
-	var floatSumObs metric.Float64SumObserver
-	var intSumObs metric.Int64SumObserver
-	var floatUpDownSumObs metric.Float64UpDownSumObserver
-	var intUpDownSumObs metric.Int64UpDownSumObserver
+	var floatGaugeObs metric.Float64GaugeObserver
+	var intGaugeObs metric.Int64GaugeObserver
+	var floatCounterObs metric.Float64CounterObserver
+	var intCounterObs metric.Int64CounterObserver
+	var floatUpDownCounterObs metric.Float64UpDownCounterObserver
+	var intUpDownCounterObs metric.Int64UpDownCounterObserver
 
 	var batch = Must(meter).NewBatchObserver(
 		func(_ context.Context, result metric.BatchObserverResult) {
@@ -388,58 +388,58 @@ func TestObserverBatch(t *testing.T) {
 				[]attribute.KeyValue{
 					attribute.String("A", "B"),
 				},
-				floatValueObs.Observation(1),
-				floatValueObs.Observation(-1),
-				intValueObs.Observation(-1),
-				intValueObs.Observation(1),
-				floatSumObs.Observation(1000),
-				intSumObs.Observation(100),
-				floatUpDownSumObs.Observation(-1000),
-				intUpDownSumObs.Observation(-100),
+				floatGaugeObs.Observation(1),
+				floatGaugeObs.Observation(-1),
+				intGaugeObs.Observation(-1),
+				intGaugeObs.Observation(1),
+				floatCounterObs.Observation(1000),
+				intCounterObs.Observation(100),
+				floatUpDownCounterObs.Observation(-1000),
+				intUpDownCounterObs.Observation(-100),
 			)
 			result.Observe(
 				[]attribute.KeyValue{
 					attribute.String("C", "D"),
 				},
-				floatValueObs.Observation(-1),
-				floatSumObs.Observation(-1),
-				floatUpDownSumObs.Observation(-1),
+				floatGaugeObs.Observation(-1),
+				floatCounterObs.Observation(-1),
+				floatUpDownCounterObs.Observation(-1),
 			)
 			result.Observe(
 				nil,
-				intValueObs.Observation(1),
-				intValueObs.Observation(1),
-				intSumObs.Observation(10),
-				floatSumObs.Observation(1.1),
-				intUpDownSumObs.Observation(10),
+				intGaugeObs.Observation(1),
+				intGaugeObs.Observation(1),
+				intCounterObs.Observation(10),
+				floatCounterObs.Observation(1.1),
+				intUpDownCounterObs.Observation(10),
 			)
 		})
-	floatValueObs = batch.NewFloat64ValueObserver("float.valueobserver.lastvalue")
-	intValueObs = batch.NewInt64ValueObserver("int.valueobserver.lastvalue")
-	floatSumObs = batch.NewFloat64SumObserver("float.sumobserver.sum")
-	intSumObs = batch.NewInt64SumObserver("int.sumobserver.sum")
-	floatUpDownSumObs = batch.NewFloat64UpDownSumObserver("float.updownsumobserver.sum")
-	intUpDownSumObs = batch.NewInt64UpDownSumObserver("int.updownsumobserver.sum")
+	floatGaugeObs = batch.NewFloat64GaugeObserver("float.gauge.lastvalue")
+	intGaugeObs = batch.NewInt64GaugeObserver("int.gauge.lastvalue")
+	floatCounterObs = batch.NewFloat64CounterObserver("float.counterobserver.sum")
+	intCounterObs = batch.NewInt64CounterObserver("int.counterobserver.sum")
+	floatUpDownCounterObs = batch.NewFloat64UpDownCounterObserver("float.updowncounterobserver.sum")
+	intUpDownCounterObs = batch.NewInt64UpDownCounterObserver("int.updowncounterobserver.sum")
 
 	collected := sdk.Collect(ctx)
 
 	require.Equal(t, collected, len(processor.Values()))
 
 	require.EqualValues(t, map[string]float64{
-		"float.sumobserver.sum//":    1.1,
-		"float.sumobserver.sum/A=B/": 1000,
-		"int.sumobserver.sum//":      10,
-		"int.sumobserver.sum/A=B/":   100,
+		"float.counterobserver.sum//":    1.1,
+		"float.counterobserver.sum/A=B/": 1000,
+		"int.counterobserver.sum//":      10,
+		"int.counterobserver.sum/A=B/":   100,
 
-		"int.updownsumobserver.sum/A=B/":   -100,
-		"float.updownsumobserver.sum/A=B/": -1000,
-		"int.updownsumobserver.sum//":      10,
-		"float.updownsumobserver.sum/C=D/": -1,
+		"int.updowncounterobserver.sum/A=B/":   -100,
+		"float.updowncounterobserver.sum/A=B/": -1000,
+		"int.updowncounterobserver.sum//":      10,
+		"float.updowncounterobserver.sum/C=D/": -1,
 
-		"float.valueobserver.lastvalue/A=B/": -1,
-		"float.valueobserver.lastvalue/C=D/": -1,
-		"int.valueobserver.lastvalue//":      1,
-		"int.valueobserver.lastvalue/A=B/":   1,
+		"float.gauge.lastvalue/A=B/": -1,
+		"float.gauge.lastvalue/C=D/": -1,
+		"int.gauge.lastvalue//":      1,
+		"int.gauge.lastvalue/A=B/":   1,
 	}, processor.Values())
 }
 
@@ -449,8 +449,8 @@ func TestRecordBatch(t *testing.T) {
 
 	counter1 := Must(meter).NewInt64Counter("int64.sum")
 	counter2 := Must(meter).NewFloat64Counter("float64.sum")
-	valuerecorder1 := Must(meter).NewInt64ValueRecorder("int64.exact")
-	valuerecorder2 := Must(meter).NewFloat64ValueRecorder("float64.exact")
+	histogram1 := Must(meter).NewInt64Histogram("int64.exact")
+	histogram2 := Must(meter).NewFloat64Histogram("float64.exact")
 
 	sdk.RecordBatch(
 		ctx,
@@ -460,8 +460,8 @@ func TestRecordBatch(t *testing.T) {
 		},
 		counter1.Measurement(1),
 		counter2.Measurement(2),
-		valuerecorder1.Measurement(3),
-		valuerecorder2.Measurement(4),
+		histogram1.Measurement(3),
+		histogram2.Measurement(4),
 	)
 
 	sdk.Collect(ctx)
@@ -498,7 +498,7 @@ func TestIncorrectInstruments(t *testing.T) {
 	// The Batch observe/record APIs are susceptible to
 	// uninitialized instruments.
 	var counter metric.Int64Counter
-	var observer metric.Int64ValueObserver
+	var observer metric.Int64GaugeObserver
 
 	ctx := context.Background()
 	meter, sdk, _, processor := newSDK(t)
@@ -518,7 +518,7 @@ func TestIncorrectInstruments(t *testing.T) {
 	counter = metric.Must(noopMeter).NewInt64Counter("name.sum")
 	observer = metric.Must(noopMeter).NewBatchObserver(
 		func(context.Context, metric.BatchObserverResult) {},
-	).NewInt64ValueObserver("observer")
+	).NewInt64GaugeObserver("observer")
 
 	meter.RecordBatch(ctx, nil, counter.Measurement(1))
 	meter.NewBatchObserver(func(_ context.Context, result metric.BatchObserverResult) {
@@ -536,7 +536,7 @@ func TestSyncInAsync(t *testing.T) {
 	meter, sdk, _, processor := newSDK(t)
 
 	counter := Must(meter).NewFloat64Counter("counter.sum")
-	_ = Must(meter).NewInt64ValueObserver("observer.lastvalue",
+	_ = Must(meter).NewInt64GaugeObserver("observer.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			result.Observe(10)
 			counter.Add(ctx, 100)

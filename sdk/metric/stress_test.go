@@ -272,7 +272,7 @@ func (f *testFixture) Process(accumulation export.Accumulation) error {
 			f.T.Fatal("Sum error: ", err)
 		}
 		f.impl.storeCollect(actual, sum, time.Time{})
-	case sdkapi.ValueRecorderInstrumentKind:
+	case sdkapi.HistogramInstrumentKind:
 		lv, ts, err := agg.(aggregation.LastValue).LastValue()
 		if err != nil && err != aggregation.ErrNoData {
 			f.T.Fatal("Last value error: ", err)
@@ -420,15 +420,15 @@ func TestStressFloat64Counter(t *testing.T) {
 func intLastValueTestImpl() testImpl {
 	return testImpl{
 		newInstrument: func(meter metric.Meter, name string) SyncImpler {
-			return Must(meter).NewInt64ValueRecorder(name + ".lastvalue")
+			return Must(meter).NewInt64Histogram(name + ".lastvalue")
 		},
 		getUpdateValue: func() number.Number {
 			r1 := rand.Int63()
 			return number.NewInt64Number(rand.Int63() - r1)
 		},
 		operate: func(inst interface{}, ctx context.Context, value number.Number, labels []attribute.KeyValue) {
-			valuerecorder := inst.(metric.Int64ValueRecorder)
-			valuerecorder.Record(ctx, value.AsInt64(), labels...)
+			histogram := inst.(metric.Int64Histogram)
+			histogram.Record(ctx, value.AsInt64(), labels...)
 		},
 		newStore: func() interface{} {
 			return &lastValueState{
@@ -462,14 +462,14 @@ func TestStressInt64LastValue(t *testing.T) {
 func floatLastValueTestImpl() testImpl {
 	return testImpl{
 		newInstrument: func(meter metric.Meter, name string) SyncImpler {
-			return Must(meter).NewFloat64ValueRecorder(name + ".lastvalue")
+			return Must(meter).NewFloat64Histogram(name + ".lastvalue")
 		},
 		getUpdateValue: func() number.Number {
 			return number.NewFloat64Number((-0.5 + rand.Float64()) * 100000)
 		},
 		operate: func(inst interface{}, ctx context.Context, value number.Number, labels []attribute.KeyValue) {
-			valuerecorder := inst.(metric.Float64ValueRecorder)
-			valuerecorder.Record(ctx, value.AsFloat64(), labels...)
+			histogram := inst.(metric.Float64Histogram)
+			histogram.Record(ctx, value.AsFloat64(), labels...)
 		},
 		newStore: func() interface{} {
 			return &lastValueState{
