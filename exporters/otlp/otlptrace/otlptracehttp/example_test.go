@@ -56,7 +56,7 @@ func multiply(ctx context.Context, x, y int64) int64 {
 	return x * y
 }
 
-func Resource() *resource.Resource {
+func newResource() *resource.Resource {
 	return resource.NewWithAttributes(
 		semconv.SchemaURL,
 		semconv.ServiceNameKey.String("otlptrace-example"),
@@ -64,7 +64,7 @@ func Resource() *resource.Resource {
 	)
 }
 
-func InstallExportPipeline(ctx context.Context) func() {
+func installExportPipeline(ctx context.Context) func() {
 	client := otlptracehttp.NewClient()
 	exporter, err := otlptrace.New(ctx, client)
 	if err != nil {
@@ -73,7 +73,7 @@ func InstallExportPipeline(ctx context.Context) func() {
 
 	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exporter),
-		sdktrace.WithResource(Resource()),
+		sdktrace.WithResource(newResource()),
 	)
 	otel.SetTracerProvider(tracerProvider)
 
@@ -87,7 +87,7 @@ func InstallExportPipeline(ctx context.Context) func() {
 func Example() {
 	ctx := context.Background()
 	// Registers a tracer Provider globally.
-	cleanup := InstallExportPipeline(ctx)
+	cleanup := installExportPipeline(ctx)
 	defer cleanup()
 
 	log.Println("the answer is", add(ctx, multiply(ctx, multiply(ctx, 2, 2), 10), 2))
