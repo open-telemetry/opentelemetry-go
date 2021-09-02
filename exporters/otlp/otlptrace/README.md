@@ -23,8 +23,8 @@ This client handles the transformation of data into wire format and the transmis
 
 ## [`otlptracegrpc`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc)
 
-The `otlptracegrpc` package implements a gRPC client to be used in the span exporter.
+The `otlptracegrpc` package implements a client for the span exporter that sends trace telemetry data to the collector using gRPC with protobuf-encoded payloads.
 
 ## [`otlptracehttp`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp)
 
-The `otlptracehttp` package implements a HTTP client to be used in the span exporter.
+The `otlptracehttp` package implements a client for the span exporter that sends trace telemetry data to the collector using HTTP with protobuf-encoded payloads.
