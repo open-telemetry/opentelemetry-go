@@ -4,11 +4,11 @@ go 1.15
 
 require (
 	github.com/stretchr/testify v1.7.0
-	go.opentelemetry.io/otel v1.0.0-RC2
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.22.0
-	go.opentelemetry.io/otel/metric v0.22.0
-	go.opentelemetry.io/otel/sdk v1.0.0-RC2
-	go.opentelemetry.io/otel/sdk/metric v0.22.0
+	go.opentelemetry.io/otel v1.0.0-RC3
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.23.0
+	go.opentelemetry.io/otel/metric v0.23.0
+	go.opentelemetry.io/otel/sdk v1.0.0-RC3
+	go.opentelemetry.io/otel/sdk/metric v0.23.0
 	go.opentelemetry.io/proto/otlp v0.9.0
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
 	google.golang.org/grpc v1.40.0
