@@ -28,3 +28,20 @@ The `otlptracegrpc` package implements a client for the span exporter that sends
 ## [`otlptracehttp`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp)
 
 The `otlptracehttp` package implements a client for the span exporter that sends trace telemetry data to the collector using HTTP with protobuf-encoded payloads.
+
+## Configuration
+
+### Environment Variables
+
+The following environment variables can be used
+(instead of options objects) to override the default configuration.
+
+| Environment variable                                                     | Option                        | Default value                       |
+| ------------------------------------------------------------------------ |------------------------------ | ----------------------------------- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`       | `WithEndpoint` `WithInsecure` | `https://localhost:4317`            |
+| `OTEL_EXPORTER_OTLP_CERTIFICATE` `OTEL_EXPORTER_OTLP_TRACES_CERTIFICATE` | `WithTLSClientConfig`         |                                     |
+| `OTEL_EXPORTER_OTLP_HEADERS` `OTEL_EXPORTER_OTLP_TRACES_HEADERS`         | `WithHeaders`                 |                                     |
+| `OTEL_EXPORTER_OTLP_COMPRESSION` `OTEL_EXPORTER_OTLP_TRACES_COMPRESSION` | `WithCompression`             |                                     |
+| `OTEL_EXPORTER_OTLP_TIMEOUT` `OTEL_EXPORTER_OTLP_TRACES_TIMEOUT`         | `WithTimeout`                 | `10s`                               |
+
+Configuration using options have precedence over the environment variables.
