@@ -40,7 +40,7 @@ var (
 )
 
 // NewWithInexpensiveDistribution returns a simple aggregator selector
-// that uses minmaxsumcount aggregators for `ValueRecorder`
+// that uses minmaxsumcount aggregators for `Histogram`
 // instruments.  This selector is faster and uses less memory than the
 // others in this package because minmaxsumcount aggregators maintain
 // the least information about the distribution among these choices.
@@ -49,7 +49,7 @@ func NewWithInexpensiveDistribution() export.AggregatorSelector {
 }
 
 // NewWithExactDistribution returns a simple aggregator selector that
-// uses exact aggregators for `ValueRecorder` instruments.  This
+// uses exact aggregators for `Histogram` instruments.  This
 // selector uses more memory than the others in this package because
 // exact aggregators maintain the most information about the
 // distribution among these choices.
@@ -58,7 +58,7 @@ func NewWithExactDistribution() export.AggregatorSelector {
 }
 
 // NewWithHistogramDistribution returns a simple aggregator selector
-// that uses histogram aggregators for `ValueRecorder` instruments.
+// that uses histogram aggregators for `Histogram` instruments.
 // This selector is a good default choice for most metric exporters.
 func NewWithHistogramDistribution(options ...histogram.Option) export.AggregatorSelector {
 	return selectorHistogram{options: options}
@@ -80,9 +80,9 @@ func lastValueAggs(aggPtrs []*export.Aggregator) {
 
 func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch descriptor.InstrumentKind() {
-	case sdkapi.ValueObserverInstrumentKind:
+	case sdkapi.GaugeObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
-	case sdkapi.ValueRecorderInstrumentKind:
+	case sdkapi.HistogramInstrumentKind:
 		aggs := minmaxsumcount.New(len(aggPtrs), descriptor)
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
@@ -94,9 +94,9 @@ func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor, aggPtrs 
 
 func (selectorExact) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch descriptor.InstrumentKind() {
-	case sdkapi.ValueObserverInstrumentKind:
+	case sdkapi.GaugeObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
-	case sdkapi.ValueRecorderInstrumentKind:
+	case sdkapi.HistogramInstrumentKind:
 		aggs := exact.New(len(aggPtrs))
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
@@ -108,9 +108,9 @@ func (selectorExact) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*ex
 
 func (s selectorHistogram) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch descriptor.InstrumentKind() {
-	case sdkapi.ValueObserverInstrumentKind:
+	case sdkapi.GaugeObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
-	case sdkapi.ValueRecorderInstrumentKind:
+	case sdkapi.HistogramInstrumentKind:
 		aggs := histogram.New(len(aggPtrs), descriptor, s.options...)
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]

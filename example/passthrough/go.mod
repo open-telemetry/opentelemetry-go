@@ -3,10 +3,10 @@ module go.opentelemetry.io/otel/example/passthrough
 go 1.15
 
 require (
-	go.opentelemetry.io/otel v1.0.0-RC2
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.0.0-RC2
-	go.opentelemetry.io/otel/sdk v1.0.0-RC2
-	go.opentelemetry.io/otel/trace v1.0.0-RC2
+	go.opentelemetry.io/otel v1.0.0-RC3
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.0.0-RC3
+	go.opentelemetry.io/otel/sdk v1.0.0-RC3
+	go.opentelemetry.io/otel/trace v1.0.0-RC3
 )
 
 replace (
@@ -72,3 +72,5 @@ replace go.opentelemetry.io/otel/exporters/stdout/stdouttrace => ../../exporters
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp => ../../exporters/otlp/otlpmetric/otlpmetrichttp
 
 replace go.opentelemetry.io/otel/bridge/opencensus/test => ../../bridge/opencensus/test
+
+replace go.opentelemetry.io/otel/example/fib => ../fib

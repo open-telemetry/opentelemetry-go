@@ -12,27 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stdouttrace // import "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+package main
 
-import (
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-)
+import "fmt"
 
-type Exporter struct {
-	traceExporter
-}
-
-var (
-	_ sdktrace.SpanExporter = &Exporter{}
-)
-
-// New creates an Exporter with the passed options.
-func New(options ...Option) (*Exporter, error) {
-	cfg, err := newConfig(options...)
-	if err != nil {
-		return nil, err
+// Fibonacci returns the n-th fibonacci number.
+func Fibonacci(n uint) (uint64, error) {
+	if n <= 1 {
+		return uint64(n), nil
 	}
-	return &Exporter{
-		traceExporter: traceExporter{config: cfg},
-	}, nil
+
+	if n > 93 {
+		return 0, fmt.Errorf("unsupported fibonacci number %d: too large", n)
+	}
+
+	var n2, n1 uint64 = 0, 1
+	for i := uint(2); i < n; i++ {
+		n2, n1 = n1, n1+n2
+	}
+
+	return n2 + n1, nil
 }

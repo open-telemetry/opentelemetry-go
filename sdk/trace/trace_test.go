@@ -195,7 +195,7 @@ func TestSetName(t *testing.T) {
 		},
 	} {
 		sp := startNamedSpan(tp, "SetName", tt.name)
-		if sdkspan, ok := sp.(*span); ok {
+		if sdkspan, ok := sp.(*recordingSpan); ok {
 			if sdkspan.Name() != tt.name {
 				t.Errorf("%d: invalid name at span creation, expected %v, got %v", idx, tt.name, sdkspan.Name())
 			}
@@ -203,7 +203,7 @@ func TestSetName(t *testing.T) {
 			t.Errorf("%d: unable to coerce span to SDK span, is type %T", idx, sp)
 		}
 		sp.SetName(tt.newName)
-		if sdkspan, ok := sp.(*span); ok {
+		if sdkspan, ok := sp.(*recordingSpan); ok {
 			if sdkspan.Name() != tt.newName {
 				t.Errorf("%d: span name not changed, expected %v, got %v", idx, tt.newName, sdkspan.Name())
 			}
@@ -806,7 +806,7 @@ func cmpDiff(x, y interface{}) string {
 // checkChild is test utility function that tests that c has fields set appropriately,
 // given that it is a child span of p.
 func checkChild(t *testing.T, p trace.SpanContext, apiSpan trace.Span) error {
-	s := apiSpan.(*span)
+	s := apiSpan.(*recordingSpan)
 	if s == nil {
 		return fmt.Errorf("got nil child span, want non-nil")
 	}
@@ -1016,58 +1016,39 @@ func TestChildSpanCount(t *testing.T) {
 }
 
 func TestNilSpanEnd(t *testing.T) {
-	var span *span
+	var span *recordingSpan
 	span.End()
 }
 
-func TestExecutionTracerTaskEnd(t *testing.T) {
-	var n uint64
+func TestNonRecordingSpanDoesNotTrackRuntimeTracerTask(t *testing.T) {
 	tp := NewTracerProvider(WithSampler(NeverSample()))
-	tr := tp.Tracer("Execution Tracer Task End")
+	tr := tp.Tracer("TestNonRecordingSpanDoesNotTrackRuntimeTracerTask")
 
+	_, apiSpan := tr.Start(context.Background(), "foo")
+	if _, ok := apiSpan.(runtimeTracer); ok {
+		t.Fatalf("non recording span implements runtime trace task tracking")
+	}
+}
+
+func TestRecordingSpanRuntimeTracerTaskEnd(t *testing.T) {
+	tp := NewTracerProvider(WithSampler(AlwaysSample()))
+	tr := tp.Tracer("TestRecordingSpanRuntimeTracerTaskEnd")
+
+	var n uint64
 	executionTracerTaskEnd := func() {
 		atomic.AddUint64(&n, 1)
 	}
-
-	var spans []*span
 	_, apiSpan := tr.Start(context.Background(), "foo")
-	s := apiSpan.(*span)
-
-	s.executionTracerTaskEnd = executionTracerTaskEnd
-	spans = append(spans, s) // never sample
-
-	tID, _ := trace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f")
-	sID, _ := trace.SpanIDFromHex("0001020304050607")
-	ctx := context.Background()
-
-	ctx = trace.ContextWithRemoteSpanContext(ctx,
-		trace.NewSpanContext(trace.SpanContextConfig{
-			TraceID:    tID,
-			SpanID:     sID,
-			TraceFlags: 0,
-		}),
-	)
-	_, apiSpan = tr.Start(
-		ctx,
-		"foo",
-	)
-	s = apiSpan.(*span)
-	s.executionTracerTaskEnd = executionTracerTaskEnd
-	spans = append(spans, s) // parent not sampled
-
-	tp.sampler = AlwaysSample()
-	_, apiSpan = tr.Start(context.Background(), "foo")
-	s = apiSpan.(*span)
-	s.executionTracerTaskEnd = executionTracerTaskEnd
-	spans = append(spans, s) // always sample
-
-	for _, span := range spans {
-		span.End()
+	s, ok := apiSpan.(*recordingSpan)
+	if !ok {
+		t.Fatal("recording span not returned from always sampled Tracer")
 	}
-	// Only one span should be sampled meaning only one execution of
-	// executionTracerTaskEnd.
-	if got, want := n, uint64(1); got != want {
-		t.Fatalf("Execution tracer task ended for %v spans; want %v", got, want)
+
+	s.executionTracerTaskEnd = executionTracerTaskEnd
+	s.End()
+
+	if n != 1 {
+		t.Error("recording span did not end runtime trace task")
 	}
 }
 
@@ -1202,8 +1183,8 @@ func TestRecordErrorWithStackTrace(t *testing.T) {
 	assert.Equal(t, got.events[0].Attributes[1].Value.AsString(), want.events[0].Attributes[1].Value.AsString())
 	gotStackTraceFunctionName := strings.Split(got.events[0].Attributes[2].Value.AsString(), "\n")
 
-	assert.True(t, strings.HasPrefix(gotStackTraceFunctionName[1], "go.opentelemetry.io/otel/sdk/trace.recordStackTrace"))
-	assert.True(t, strings.HasPrefix(gotStackTraceFunctionName[3], "go.opentelemetry.io/otel/sdk/trace.(*span).RecordError"))
+	assert.Truef(t, strings.HasPrefix(gotStackTraceFunctionName[1], "go.opentelemetry.io/otel/sdk/trace.recordStackTrace"), "%q not prefixed with go.opentelemetry.io/otel/sdk/trace.recordStackTrace", gotStackTraceFunctionName[1])
+	assert.Truef(t, strings.HasPrefix(gotStackTraceFunctionName[3], "go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).RecordError"), "%q not prefixed with go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).RecordError", gotStackTraceFunctionName[3])
 }
 
 func TestRecordErrorNil(t *testing.T) {
@@ -1434,9 +1415,8 @@ func TestSpanCapturesPanicWithStackTrace(t *testing.T) {
 	assert.Equal(t, spans[0].Events()[0].Attributes[1].Value.AsString(), "error message")
 
 	gotStackTraceFunctionName := strings.Split(spans[0].Events()[0].Attributes[2].Value.AsString(), "\n")
-	fmt.Println(strings.Split(gotStackTraceFunctionName[1], "(0x")[0])
-	assert.True(t, strings.HasPrefix(gotStackTraceFunctionName[1], "go.opentelemetry.io/otel/sdk/trace.recordStackTrace"))
-	assert.True(t, strings.HasPrefix(gotStackTraceFunctionName[3], "go.opentelemetry.io/otel/sdk/trace.(*span).End"))
+	assert.Truef(t, strings.HasPrefix(gotStackTraceFunctionName[1], "go.opentelemetry.io/otel/sdk/trace.recordStackTrace"), "%q not prefixed with go.opentelemetry.io/otel/sdk/trace.recordStackTrace", gotStackTraceFunctionName[1])
+	assert.Truef(t, strings.HasPrefix(gotStackTraceFunctionName[3], "go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).End"), "%q not prefixed with go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).End", gotStackTraceFunctionName[3])
 }
 
 func TestReadOnlySpan(t *testing.T) {
@@ -1498,9 +1478,9 @@ func TestReadOnlySpan(t *testing.T) {
 
 	// Verify snapshot() returns snapshots that are independent from the
 	// original span and from one another.
-	d1 := s.(*span).snapshot()
+	d1 := s.(*recordingSpan).snapshot()
 	s.AddEvent("baz")
-	d2 := s.(*span).snapshot()
+	d2 := s.(*recordingSpan).snapshot()
 	for _, e := range d1.Events() {
 		if e.Name == "baz" {
 			t.Errorf("Didn't expect to find 'baz' event")

@@ -127,15 +127,15 @@ type Checkpointer interface {
 }
 
 // Aggregator implements a specific aggregation behavior, e.g., a
-// behavior to track a sequence of updates to an instrument.  Sum-only
+// behavior to track a sequence of updates to an instrument.  Counter
 // instruments commonly use a simple Sum aggregator, but for the
-// distribution instruments (ValueRecorder, ValueObserver) there are a
+// distribution instruments (Histogram, GaugeObserver) there are a
 // number of possible aggregators with different cost and accuracy
 // tradeoffs.
 //
 // Note that any Aggregator may be attached to any instrument--this is
 // the result of the OpenTelemetry API/SDK separation.  It is possible
-// to attach a Sum aggregator to a ValueRecorder instrument or a
+// to attach a Sum aggregator to a Histogram instrument or a
 // MinMaxSumCount aggregator to a Counter instrument.
 type Aggregator interface {
 	// Aggregation returns an Aggregation interface to access the
@@ -191,8 +191,8 @@ type Aggregator interface {
 
 // Subtractor is an optional interface implemented by some
 // Aggregators.  An Aggregator must support `Subtract()` in order to
-// be configured for a Precomputed-Sum instrument (SumObserver,
-// UpDownSumObserver) using a DeltaExporter.
+// be configured for a Precomputed-Sum instrument (CounterObserver,
+// UpDownCounterObserver) using a DeltaExporter.
 type Subtractor interface {
 	// Subtract subtracts the `operand` from this Aggregator and
 	// outputs the value in `result`.
@@ -374,12 +374,12 @@ func (kind ExportKind) Includes(has ExportKind) bool {
 // memory to export correctly.
 func (kind ExportKind) MemoryRequired(mkind sdkapi.InstrumentKind) bool {
 	switch mkind {
-	case sdkapi.ValueRecorderInstrumentKind, sdkapi.ValueObserverInstrumentKind,
+	case sdkapi.HistogramInstrumentKind, sdkapi.GaugeObserverInstrumentKind,
 		sdkapi.CounterInstrumentKind, sdkapi.UpDownCounterInstrumentKind:
 		// Delta-oriented instruments:
 		return kind.Includes(CumulativeExportKind)
 
-	case sdkapi.SumObserverInstrumentKind, sdkapi.UpDownSumObserverInstrumentKind:
+	case sdkapi.CounterObserverInstrumentKind, sdkapi.UpDownCounterObserverInstrumentKind:
 		// Cumulative-oriented instruments:
 		return kind.Includes(DeltaExportKind)
 	}
