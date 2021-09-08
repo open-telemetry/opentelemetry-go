@@ -169,7 +169,7 @@ func TestNoGroupingExport(t *testing.T) {
 	runMetricExportTests(
 		t,
 		nil,
-		nil,
+		resource.Empty(),
 		[]testRecord{
 			record(
 				"int64-count",
@@ -270,7 +270,7 @@ func TestHistogramMetricGroupingExport(t *testing.T) {
 			},
 		},
 	}
-	runMetricExportTests(t, nil, nil, []testRecord{r, r}, expected)
+	runMetricExportTests(t, nil, resource.Empty(), []testRecord{r, r}, expected)
 }
 
 func TestCountInt64MetricGroupingExport(t *testing.T) {
@@ -284,7 +284,7 @@ func TestCountInt64MetricGroupingExport(t *testing.T) {
 	runMetricExportTests(
 		t,
 		nil,
-		nil,
+		resource.Empty(),
 		[]testRecord{r, r},
 		[]*metricpb.ResourceMetrics{
 			{
@@ -334,7 +334,7 @@ func TestCountFloat64MetricGroupingExport(t *testing.T) {
 	runMetricExportTests(
 		t,
 		nil,
-		nil,
+		resource.Empty(),
 		[]testRecord{r, r},
 		[]*metricpb.ResourceMetrics{
 			{
