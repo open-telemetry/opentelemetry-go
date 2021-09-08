@@ -6,8 +6,8 @@ replace go.opentelemetry.io/otel => ../..
 
 require (
 	github.com/opentracing/opentracing-go v1.2.0
-	go.opentelemetry.io/otel v1.0.0-RC2
-	go.opentelemetry.io/otel/trace v1.0.0-RC2
+	go.opentelemetry.io/otel v1.0.0-RC3
+	go.opentelemetry.io/otel/trace v1.0.0-RC3
 )
 
 replace go.opentelemetry.io/otel/bridge/opencensus => ../opencensus
@@ -69,3 +69,5 @@ replace go.opentelemetry.io/otel/exporters/stdout/stdouttrace => ../../exporters
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp => ../../exporters/otlp/otlpmetric/otlpmetrichttp
 
 replace go.opentelemetry.io/otel/bridge/opencensus/test => ../opencensus/test
+
+replace go.opentelemetry.io/otel/example/fib => ../../example/fib

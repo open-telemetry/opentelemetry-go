@@ -58,6 +58,16 @@ updates:
       interval: weekly
   -
     package-ecosystem: gomod
+    directory: /example/fib
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
     directory: /example/prom-collector
     labels:
       - dependencies
