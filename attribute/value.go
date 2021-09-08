@@ -73,7 +73,12 @@ func BoolValue(v bool) Value {
 
 // BoolSliceValue creates a BOOLSLICE Value.
 func BoolSliceValue(v []bool) Value {
-	return sliceValue(v, BOOLSLICE)
+	cp := make([]bool, len(v))
+	copy(cp, v)
+	return Value{
+		vtype: BOOLSLICE,
+		slice: &cp,
+	}
 }
 
 // IntValue creates an INT64 Value.
@@ -83,7 +88,14 @@ func IntValue(v int) Value {
 
 // IntSliceValue creates an INTSLICE Value.
 func IntSliceValue(v []int) Value {
-	return sliceValue(v, INT64SLICE)
+	cp := make([]int64, 0, len(v))
+	for _, i := range v {
+		cp = append(cp, int64(i))
+	}
+	return Value{
+		vtype: INT64SLICE,
+		slice: &cp,
+	}
 }
 
 // Int64Value creates an INT64 Value.
@@ -96,7 +108,12 @@ func Int64Value(v int64) Value {
 
 // Int64SliceValue creates an INT64SLICE Value.
 func Int64SliceValue(v []int64) Value {
-	return sliceValue(v, INT64SLICE)
+	cp := make([]int64, len(v))
+	copy(cp, v)
+	return Value{
+		vtype: INT64SLICE,
+		slice: &cp,
+	}
 }
 
 // Float64Value creates a FLOAT64 Value.
@@ -109,7 +126,12 @@ func Float64Value(v float64) Value {
 
 // Float64SliceValue creates a FLOAT64SLICE Value.
 func Float64SliceValue(v []float64) Value {
-	return sliceValue(v, FLOAT64SLICE)
+	cp := make([]float64, len(v))
+	copy(cp, v)
+	return Value{
+		vtype: FLOAT64SLICE,
+		slice: &cp,
+	}
 }
 
 // StringValue creates a STRING Value.
@@ -122,26 +144,11 @@ func StringValue(v string) Value {
 
 // StringSliceValue creates a STRINGSLICE Value.
 func StringSliceValue(v []string) Value {
-	return sliceValue(v, STRINGSLICE)
-}
-
-func sliceValue(v interface{}, vtype Type) Value {
-	// get array type regardless of dimensions
-	typ := reflect.TypeOf(v).Elem()
-	kind := typ.Kind()
-	switch kind {
-	case reflect.Bool, reflect.Int, reflect.Int64,
-		reflect.Float64, reflect.String:
-		val := reflect.ValueOf(v)
-		length := val.Len()
-		frozen := reflect.Indirect(reflect.New(reflect.ArrayOf(length, typ)))
-		reflect.Copy(frozen, val)
-		return Value{
-			vtype: vtype,
-			slice: frozen.Interface(),
-		}
-	default:
-		return Value{vtype: INVALID}
+	cp := make([]string, len(v))
+	copy(cp, v)
+	return Value{
+		vtype: STRINGSLICE,
+		slice: &cp,
 	}
 }
 
@@ -155,7 +162,23 @@ func sliceValue(v interface{}, vtype Type) Value {
 func ArrayValue(v interface{}) Value {
 	switch reflect.TypeOf(v).Kind() {
 	case reflect.Array, reflect.Slice:
-		return sliceValue(v, ARRAY)
+		// get array type regardless of dimensions
+		typ := reflect.TypeOf(v).Elem()
+		kind := typ.Kind()
+		switch kind {
+		case reflect.Bool, reflect.Int, reflect.Int64,
+			reflect.Float64, reflect.String:
+			val := reflect.ValueOf(v)
+			length := val.Len()
+			frozen := reflect.Indirect(reflect.New(reflect.ArrayOf(length, typ)))
+			reflect.Copy(frozen, val)
+			return Value{
+				vtype: ARRAY,
+				slice: frozen.Interface(),
+			}
+		default:
+			return Value{vtype: INVALID}
+		}
 	}
 	return Value{vtype: INVALID}
 }
@@ -174,15 +197,10 @@ func (v Value) AsBool() bool {
 // AsBoolSlice returns the []bool value. Make sure that the Value's type is
 // BOOLSLICE.
 func (v Value) AsBoolSlice() []bool {
-	if v.vtype != BOOLSLICE {
-		return nil
+	if s, ok := v.slice.(*[]bool); ok {
+		return *s
 	}
-	r := []bool{}
-	s := reflect.ValueOf(v.slice)
-	for i := 0; i < s.Len(); i++ {
-		r = append(r, s.Index(i).Bool())
-	}
-	return r
+	return nil
 }
 
 // AsInt64 returns the int64 value. Make sure that the Value's type is
@@ -194,15 +212,10 @@ func (v Value) AsInt64() int64 {
 // AsInt64Slice returns the []int64 value. Make sure that the Value's type is
 // INT64SLICE.
 func (v Value) AsInt64Slice() []int64 {
-	if v.vtype != INT64SLICE {
-		return nil
+	if s, ok := v.slice.(*[]int64); ok {
+		return *s
 	}
-	r := []int64{}
-	s := reflect.ValueOf(v.slice)
-	for i := 0; i < s.Len(); i++ {
-		r = append(r, s.Index(i).Int())
-	}
-	return r
+	return nil
 }
 
 // AsFloat64 returns the float64 value. Make sure that the Value's
@@ -214,15 +227,10 @@ func (v Value) AsFloat64() float64 {
 // AsFloat64Slice returns the []float64 value. Make sure that the Value's type is
 // INT64SLICE.
 func (v Value) AsFloat64Slice() []float64 {
-	if v.vtype != FLOAT64SLICE {
-		return nil
+	if s, ok := v.slice.(*[]float64); ok {
+		return *s
 	}
-	r := []float64{}
-	s := reflect.ValueOf(v.slice)
-	for i := 0; i < s.Len(); i++ {
-		r = append(r, s.Index(i).Float())
-	}
-	return r
+	return nil
 }
 
 // AsString returns the string value. Make sure that the Value's type
@@ -234,15 +242,10 @@ func (v Value) AsString() string {
 // AsStringSlice returns the []string value. Make sure that the Value's type is
 // INT64SLICE.
 func (v Value) AsStringSlice() []string {
-	if v.vtype != STRINGSLICE {
-		return nil
+	if s, ok := v.slice.(*[]string); ok {
+		return *s
 	}
-	r := []string{}
-	s := reflect.ValueOf(v.slice)
-	for i := 0; i < s.Len(); i++ {
-		r = append(r, s.Index(i).String())
-	}
-	return r
+	return nil
 }
 
 // AsArray returns the array Value as an interface{}.
