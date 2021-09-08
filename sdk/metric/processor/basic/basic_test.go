@@ -494,6 +494,7 @@ func TestCounterObserverEndToEnd(t *testing.T) {
 	var endTime [3]time.Time
 
 	for i := range startTime {
+		data := proc.Reader()
 		data.Lock()
 		proc.StartCollection()
 		accum.Collect(ctx)
