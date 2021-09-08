@@ -285,14 +285,22 @@ func (v Value) AsInterface() interface{} {
 // Emit returns a string representation of Value's data.
 func (v Value) Emit() string {
 	switch v.Type() {
-	case ARRAY, BOOLSLICE, INT64SLICE, FLOAT64SLICE, STRINGSLICE:
+	case ARRAY:
 		return fmt.Sprint(v.slice)
+	case BOOLSLICE:
+		return fmt.Sprint(*(v.slice.(*[]bool)))
 	case BOOL:
 		return strconv.FormatBool(v.AsBool())
+	case INT64SLICE:
+		return fmt.Sprint(*(v.slice.(*[]int64)))
 	case INT64:
 		return strconv.FormatInt(v.AsInt64(), 10)
+	case FLOAT64SLICE:
+		return fmt.Sprint(*(v.slice.(*[]float64)))
 	case FLOAT64:
 		return fmt.Sprint(v.AsFloat64())
+	case STRINGSLICE:
+		return fmt.Sprint(*(v.slice.(*[]string)))
 	case STRING:
 		return v.stringly
 	default:
