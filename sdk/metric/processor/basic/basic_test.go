@@ -176,7 +176,7 @@ func testProcessor(
 				continue
 			}
 
-			metricReader := processor.Reader()
+			reader := processor.Reader()
 
 			for _, repetitionAfterEmptyInterval := range []bool{false, true} {
 				if repetitionAfterEmptyInterval {
@@ -190,7 +190,7 @@ func testProcessor(
 
 				// Test the final checkpoint state.
 				records1 := processorTest.NewOutput(attribute.DefaultEncoder())
-				err = metricReader.ForEach(export.ConstantExportKindSelector(ekind), records1.AddRecord)
+				err = reader.ForEach(export.ConstantExportKindSelector(ekind), records1.AddRecord)
 
 				// Test for an allowed error:
 				if err != nil && err != aggregation.ErrNoSubtraction {
@@ -376,7 +376,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 	selector := processorTest.AggregatorSelector()
 
 	processor := basic.New(selector, ekindSel, basic.WithMemory(false))
-	metricReader := processor.Reader()
+	reader := processor.Reader()
 
 	for i := 1; i < 3; i++ {
 		// Empty interval
@@ -385,7 +385,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 
 		// Verify zero elements
 		records := processorTest.NewOutput(attribute.DefaultEncoder())
-		require.NoError(t, metricReader.ForEach(ekindSel, records.AddRecord))
+		require.NoError(t, reader.ForEach(ekindSel, records.AddRecord))
 		require.EqualValues(t, map[string]float64{}, records.Map())
 
 		// Add 10
@@ -395,7 +395,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 
 		// Verify one element
 		records = processorTest.NewOutput(attribute.DefaultEncoder())
-		require.NoError(t, metricReader.ForEach(ekindSel, records.AddRecord))
+		require.NoError(t, reader.ForEach(ekindSel, records.AddRecord))
 		require.EqualValues(t, map[string]float64{
 			"inst.sum/A=B/": float64(i * 10),
 		}, records.Map())
@@ -409,7 +409,7 @@ func TestStatefulNoMemoryDelta(t *testing.T) {
 	selector := processorTest.AggregatorSelector()
 
 	processor := basic.New(selector, ekindSel, basic.WithMemory(false))
-	metricReader := processor.Reader()
+	reader := processor.Reader()
 
 	for i := 1; i < 3; i++ {
 		// Empty interval
@@ -418,7 +418,7 @@ func TestStatefulNoMemoryDelta(t *testing.T) {
 
 		// Verify zero elements
 		records := processorTest.NewOutput(attribute.DefaultEncoder())
-		require.NoError(t, metricReader.ForEach(ekindSel, records.AddRecord))
+		require.NoError(t, reader.ForEach(ekindSel, records.AddRecord))
 		require.EqualValues(t, map[string]float64{}, records.Map())
 
 		// Add 10
@@ -428,7 +428,7 @@ func TestStatefulNoMemoryDelta(t *testing.T) {
 
 		// Verify one element
 		records = processorTest.NewOutput(attribute.DefaultEncoder())
-		require.NoError(t, metricReader.ForEach(ekindSel, records.AddRecord))
+		require.NoError(t, reader.ForEach(ekindSel, records.AddRecord))
 		require.EqualValues(t, map[string]float64{
 			"inst.sum/A=B/": 10,
 		}, records.Map())
@@ -445,7 +445,7 @@ func TestMultiObserverSum(t *testing.T) {
 		selector := processorTest.AggregatorSelector()
 
 		processor := basic.New(selector, ekindSel, basic.WithMemory(false))
-		metricReader := processor.Reader()
+		reader := processor.Reader()
 
 		for i := 1; i < 3; i++ {
 			// Add i*10*3 times
@@ -463,7 +463,7 @@ func TestMultiObserverSum(t *testing.T) {
 
 			// Verify one element
 			records := processorTest.NewOutput(attribute.DefaultEncoder())
-			require.NoError(t, metricReader.ForEach(ekindSel, records.AddRecord))
+			require.NoError(t, reader.ForEach(ekindSel, records.AddRecord))
 			require.EqualValues(t, map[string]float64{
 				"observe.sum/A=B/": float64(3 * 10 * multiplier),
 			}, records.Map())
@@ -488,7 +488,7 @@ func TestCounterObserverEndToEnd(t *testing.T) {
 			result.Observe(calls)
 		},
 	)
-	data := proc.Reader()
+	reader := proc.Reader()
 
 	var startTime [3]time.Time
 	var endTime [3]time.Time
@@ -503,7 +503,7 @@ func TestCounterObserverEndToEnd(t *testing.T) {
 		require.NoError(t, exporter.Export(ctx, resource.Empty(), processortest.OneInstrumentationLibraryReader(
 			instrumentation.Library{
 				Name: "test",
-			}, data)))
+			}, reader)))
 
 		require.EqualValues(t, map[string]float64{
 			"observer.sum//": float64(i + 1),
