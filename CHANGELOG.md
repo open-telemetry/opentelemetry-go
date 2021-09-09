@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Slice-valued attributes can correctly be used as map keys. (#2223)
+
 ## [1.0.0-RC3] - 2021-09-02
 
 ### Added
