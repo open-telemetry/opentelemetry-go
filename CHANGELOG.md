@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
+- Removed the deprecated package `go.opentelemetry.io/otel/bridge/opencensus/utils`. (#2233)
 - Removed deprecated functions, types, and methods from `go.opentelemetry.io/otel/attribute` package.
   Use the typed functions and methods added to the package instead. (#2235)
   - The `Key.Array` method is removed.
