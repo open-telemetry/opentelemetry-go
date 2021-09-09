@@ -258,16 +258,6 @@ updates:
       interval: weekly
   -
     package-ecosystem: gomod
-    directory: /oteltest
-    labels:
-      - dependencies
-      - go
-      - "Skip Changelog"
-    schedule:
-      day: sunday
-      interval: weekly
-  -
-    package-ecosystem: gomod
     directory: /internal/tools/semconv-gen
     labels:
       - dependencies
