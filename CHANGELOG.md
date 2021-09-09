@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Removed
+
+- Removed the deprecated package `go.opentelemetry.io/otel/bridge/opencensus/utils`. (TBD)
+
 ## [1.0.0-RC3] - 2021-09-02
 
 ### Added
