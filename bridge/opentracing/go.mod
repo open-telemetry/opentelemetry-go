@@ -40,8 +40,6 @@ replace go.opentelemetry.io/otel/sdk => ../../sdk
 
 replace go.opentelemetry.io/otel/metric => ../../metric
 
-replace go.opentelemetry.io/otel/oteltest => ../../oteltest
-
 replace go.opentelemetry.io/otel/sdk/export/metric => ../../sdk/export/metric
 
 replace go.opentelemetry.io/otel/sdk/metric => ../../sdk/metric
