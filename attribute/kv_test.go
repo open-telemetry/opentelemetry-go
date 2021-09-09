@@ -15,7 +15,6 @@
 package attribute_test
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -80,87 +79,6 @@ func TestKeyValueConstructors(t *testing.T) {
 	}
 }
 
-func TestAny(t *testing.T) {
-	builder := &strings.Builder{}
-	builder.WriteString("foo")
-	jsonifyStruct := struct {
-		Public    string
-		private   string
-		Tagged    string `json:"tagName"`
-		Empty     string
-		OmitEmpty string `json:",omitempty"`
-		Omit      string `json:"-"`
-	}{"foo", "bar", "baz", "", "", "omitted"}
-	invalidStruct := struct {
-		N complex64
-	}{complex(0, 0)}
-	for _, testcase := range []struct {
-		key       string
-		value     interface{}
-		wantType  attribute.Type
-		wantValue interface{}
-	}{
-		{
-			key:       "bool type inferred",
-			value:     true,
-			wantType:  attribute.BOOL,
-			wantValue: true,
-		},
-		{
-			key:       "int64 type inferred",
-			value:     int64(42),
-			wantType:  attribute.INT64,
-			wantValue: int64(42),
-		},
-		{
-			key:       "float64 type inferred",
-			value:     float64(42.1),
-			wantType:  attribute.FLOAT64,
-			wantValue: 42.1,
-		},
-		{
-			key:       "string type inferred",
-			value:     "foo",
-			wantType:  attribute.STRING,
-			wantValue: "foo",
-		},
-		{
-			key:       "stringer type inferred",
-			value:     builder,
-			wantType:  attribute.STRING,
-			wantValue: "foo",
-		},
-		{
-			key:       "unknown value serialized as %v",
-			value:     nil,
-			wantType:  attribute.STRING,
-			wantValue: "<nil>",
-		},
-		{
-			key:       "JSON struct serialized correctly",
-			value:     &jsonifyStruct,
-			wantType:  attribute.STRING,
-			wantValue: `{"Public":"foo","tagName":"baz","Empty":""}`,
-		},
-		{
-			key:       "Invalid JSON struct falls back to string",
-			value:     &invalidStruct,
-			wantType:  attribute.STRING,
-			wantValue: "&{(0+0i)}",
-		},
-	} {
-		t.Logf("Running test case %s", testcase.key)
-		keyValue := attribute.Any(testcase.key, testcase.value)
-		if keyValue.Value.Type() != testcase.wantType {
-			t.Errorf("wrong value type, got %#v, expected %#v", keyValue.Value.Type(), testcase.wantType)
-		}
-		got := keyValue.Value.AsInterface()
-		if diff := cmp.Diff(testcase.wantValue, got); diff != "" {
-			t.Errorf("+got, -want: %s", diff)
-		}
-	}
-}
-
 func TestKeyValueValid(t *testing.T) {
 	tests := []struct {
 		desc  string
@@ -205,11 +123,6 @@ func TestKeyValueValid(t *testing.T) {
 			desc:  "non-empty key with STRING type Value should be valid",
 			valid: true,
 			kv:    attribute.String("string", ""),
-		},
-		{
-			desc:  "non-empty key with ARRAY type Value should be valid",
-			valid: true,
-			kv:    attribute.Array("array", []int{}),
 		},
 	}
 
