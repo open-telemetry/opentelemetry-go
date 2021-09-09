@@ -77,7 +77,7 @@ func BoolSliceValue(v []bool) Value {
 	copy(cp, v)
 	return Value{
 		vtype: BOOLSLICE,
-		slice: cp,
+		slice: &cp,
 	}
 }
 
@@ -94,7 +94,7 @@ func IntSliceValue(v []int) Value {
 	}
 	return Value{
 		vtype: INT64SLICE,
-		slice: cp,
+		slice: &cp,
 	}
 }
 
@@ -112,7 +112,7 @@ func Int64SliceValue(v []int64) Value {
 	copy(cp, v)
 	return Value{
 		vtype: INT64SLICE,
-		slice: cp,
+		slice: &cp,
 	}
 }
 
@@ -130,7 +130,7 @@ func Float64SliceValue(v []float64) Value {
 	copy(cp, v)
 	return Value{
 		vtype: FLOAT64SLICE,
-		slice: cp,
+		slice: &cp,
 	}
 }
 
@@ -148,7 +148,7 @@ func StringSliceValue(v []string) Value {
 	copy(cp, v)
 	return Value{
 		vtype: STRINGSLICE,
-		slice: cp,
+		slice: &cp,
 	}
 }
 
@@ -197,8 +197,8 @@ func (v Value) AsBool() bool {
 // AsBoolSlice returns the []bool value. Make sure that the Value's type is
 // BOOLSLICE.
 func (v Value) AsBoolSlice() []bool {
-	if s, ok := v.slice.([]bool); ok {
-		return s
+	if s, ok := v.slice.(*[]bool); ok {
+		return *s
 	}
 	return nil
 }
@@ -212,8 +212,8 @@ func (v Value) AsInt64() int64 {
 // AsInt64Slice returns the []int64 value. Make sure that the Value's type is
 // INT64SLICE.
 func (v Value) AsInt64Slice() []int64 {
-	if s, ok := v.slice.([]int64); ok {
-		return s
+	if s, ok := v.slice.(*[]int64); ok {
+		return *s
 	}
 	return nil
 }
@@ -227,8 +227,8 @@ func (v Value) AsFloat64() float64 {
 // AsFloat64Slice returns the []float64 value. Make sure that the Value's type is
 // INT64SLICE.
 func (v Value) AsFloat64Slice() []float64 {
-	if s, ok := v.slice.([]float64); ok {
-		return s
+	if s, ok := v.slice.(*[]float64); ok {
+		return *s
 	}
 	return nil
 }
@@ -242,8 +242,8 @@ func (v Value) AsString() string {
 // AsStringSlice returns the []string value. Make sure that the Value's type is
 // INT64SLICE.
 func (v Value) AsStringSlice() []string {
-	if s, ok := v.slice.([]string); ok {
-		return s
+	if s, ok := v.slice.(*[]string); ok {
+		return *s
 	}
 	return nil
 }
@@ -285,14 +285,22 @@ func (v Value) AsInterface() interface{} {
 // Emit returns a string representation of Value's data.
 func (v Value) Emit() string {
 	switch v.Type() {
-	case ARRAY, BOOLSLICE, INT64SLICE, FLOAT64SLICE, STRINGSLICE:
+	case ARRAY:
 		return fmt.Sprint(v.slice)
+	case BOOLSLICE:
+		return fmt.Sprint(*(v.slice.(*[]bool)))
 	case BOOL:
 		return strconv.FormatBool(v.AsBool())
+	case INT64SLICE:
+		return fmt.Sprint(*(v.slice.(*[]int64)))
 	case INT64:
 		return strconv.FormatInt(v.AsInt64(), 10)
+	case FLOAT64SLICE:
+		return fmt.Sprint(*(v.slice.(*[]float64)))
 	case FLOAT64:
 		return fmt.Sprint(v.AsFloat64())
+	case STRINGSLICE:
+		return fmt.Sprint(*(v.slice.(*[]string)))
 	case STRING:
 		return v.stringly
 	default:
