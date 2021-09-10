@@ -12,31 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global
+package metric
 
 import (
 	"testing"
-
-	"go.opentelemetry.io/otel/metric"
 )
 
-type testMeterProvider struct{}
-
-var _ metric.MeterProvider = &testMeterProvider{}
-
-func (*testMeterProvider) Meter(_ string, _ ...metric.MeterOption) metric.Meter {
-	return metric.Meter{}
+func TestNewNoopMeterProvider(t *testing.T) {
+	got, want := NewNoopMeterProvider(), noopMeterProvider{}
+	if got != want {
+		t.Errorf("NewNoopMeterProvider() returned %#v, want %#v", got, want)
+	}
 }
 
-func TestMultipleGlobalMeterProvider(t *testing.T) {
-	p1 := testMeterProvider{}
-	p2 := metric.NewNoopMeterProvider()
-	SetMeterProvider(&p1)
-	SetMeterProvider(p2)
-
-	got := GetMeterProvider()
-	want := p2
+func TestNoopMeterProviderMeter(t *testing.T) {
+	mp := NewNoopMeterProvider()
+	got, want := mp.Meter(""), Meter{}
 	if got != want {
-		t.Fatalf("MeterProvider: got %p, want %p\n", got, want)
+		t.Errorf("noopMeterProvider.Meter() returned %#v, want %#v", got, want)
 	}
 }
