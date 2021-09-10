@@ -713,7 +713,7 @@ with major version 0.
 - OTLP Metric exporter supports LastValue aggregation. (#1165)
 - Move the `go.opentelemetry.io/otel/api/unit` package to `go.opentelemetry.io/otel/unit`. (#1185)
 - Rename `Provider` to `MeterProvider` in the `go.opentelemetry.io/otel/api/metric` package. (#1190)
-- Rename `NoopProvider` to `noopMeterProvider` in the `go.opentelemetry.io/otel/api/metric` package. (#1190)
+- Rename `NoopProvider` to `NoopMeterProvider` in the `go.opentelemetry.io/otel/api/metric` package. (#1190)
 - Rename `NewProvider` to `NewMeterProvider` in the `go.opentelemetry.io/otel/api/metric/metrictest` package. (#1190)
 - Rename `Provider` to `MeterProvider` in the `go.opentelemetry.io/otel/api/metric/registry` package. (#1190)
 - Rename `NewProvider` to `NewMeterProvider` in the `go.opentelemetry.io/otel/api/metri/registryc` package. (#1190)
