@@ -205,6 +205,17 @@ func TestMerge(t *testing.T) {
 	}
 }
 
+func TestEmpty(t *testing.T) {
+	var res *resource.Resource
+	assert.Equal(t, "", res.SchemaURL())
+	assert.Equal(t, "", res.String())
+	assert.Equal(t, []attribute.KeyValue(nil), res.Attributes())
+
+	it := res.Iter()
+	assert.Equal(t, 0, it.Len())
+	assert.True(t, res.Equal(res))
+}
+
 func TestDefault(t *testing.T) {
 	res := resource.Default()
 	require.False(t, res.Equal(resource.Empty()))
