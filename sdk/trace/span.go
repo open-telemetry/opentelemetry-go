@@ -153,7 +153,7 @@ type recordingSpan struct {
 	// spanLimits holds the limits to this span.
 	spanLimits SpanLimits
 
-	// stopwatch holds the Stopwatch returned by Clock.Start method
+	// stopwatch holds the Stopwatch returned by Clock.Stopwatch method
 	stopwatch Stopwatch
 }
 
@@ -177,7 +177,6 @@ func (s *recordingSpan) IsRecording() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	//return !s.startTime().IsZero() && s.endTime.IsZero()
 	return s.endTime.IsZero()
 }
 
@@ -579,14 +578,9 @@ func (s *recordingSpan) addChild() {
 
 func (*recordingSpan) private() {}
 
-//func (s *span) startTime() time.Time {
-//	return s.stopwatch.Started()
-//}
-//
-//func startSpanInternal(ctx context.Context, tr *tracer, name string, o *trace.SpanConfig) *span {
-//	span := &span{
-//		stopwatch: standardStopwatch{},
-//	}
+func (s *recordingSpan) startTime() time.Time {
+	return s.stopwatch.Started()
+}
 
 // runtimeTrace starts a "runtime/trace".Task for the span and returns a
 // context containing the task.
@@ -596,7 +590,6 @@ func (s *recordingSpan) runtimeTrace(ctx context.Context) context.Context {
 		return ctx
 	}
 	nctx, task := rt.NewTask(ctx, s.name)
-
 
 	s.mu.Lock()
 	s.executionTracerTaskEnd = task.End
@@ -622,8 +615,6 @@ func (s nonRecordingSpan) SpanContext() trace.SpanContext { return s.sc }
 // IsRecording always returns false.
 func (nonRecordingSpan) IsRecording() bool { return false }
 
-	//startTime := o.Timestamp()
-	//span.stopwatch = tr.provider.clock.Stopwatch(startTime)
 // SetStatus does nothing.
 func (nonRecordingSpan) SetStatus(codes.Code, string) {}
 

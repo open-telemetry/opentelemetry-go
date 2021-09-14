@@ -16,8 +16,6 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
 	"context"
-	"time"
-
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -118,16 +116,12 @@ func (tr *tracer) newSpan(ctx context.Context, name string, config *trace.SpanCo
 // newRecordingSpan returns a new configured recordingSpan.
 func (tr *tracer) newRecordingSpan(psc, sc trace.SpanContext, name string, sr SamplingResult, config *trace.SpanConfig) *recordingSpan {
 	startTime := config.Timestamp()
-	if startTime.IsZero() {
-		startTime = time.Now()
-	}
 
 	s := &recordingSpan{
 		parent:                 psc,
 		spanContext:            sc,
 		spanKind:               trace.ValidateSpanKind(config.SpanKind()),
 		name:                   name,
-		startTime:              startTime,
 		attributes:             newAttributesMap(tr.provider.spanLimits.AttributeCountLimit),
 		events:                 newEvictedQueue(tr.provider.spanLimits.EventCountLimit),
 		links:                  newEvictedQueue(tr.provider.spanLimits.LinkCountLimit),
@@ -135,6 +129,7 @@ func (tr *tracer) newRecordingSpan(psc, sc trace.SpanContext, name string, sr Sa
 		spanLimits:             tr.provider.spanLimits,
 		resource:               tr.provider.resource,
 		instrumentationLibrary: tr.instrumentationLibrary,
+		stopwatch: 				tr.provider.clock.Stopwatch(startTime),
 	}
 
 	for _, l := range config.Links() {
