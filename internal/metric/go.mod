@@ -48,8 +48,6 @@ replace go.opentelemetry.io/otel/exporters/zipkin => ../../exporters/zipkin
 
 replace go.opentelemetry.io/otel/internal/tools => ../tools
 
-replace go.opentelemetry.io/otel/oteltest => ../../oteltest
-
 replace go.opentelemetry.io/otel/sdk => ../../sdk
 
 replace go.opentelemetry.io/otel/sdk/export/metric => ../../sdk/export/metric

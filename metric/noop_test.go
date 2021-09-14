@@ -12,17 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package oteltest // import "go.opentelemetry.io/otel/oteltest"
+package metric
 
 import (
-	"time"
-
-	"go.opentelemetry.io/otel/attribute"
+	"testing"
 )
 
-// Event encapsulates the properties of calls to AddEvent.
-type Event struct {
-	Timestamp  time.Time
-	Name       string
-	Attributes map[attribute.Key]attribute.Value
+func TestNewNoopMeterProvider(t *testing.T) {
+	got, want := NewNoopMeterProvider(), noopMeterProvider{}
+	if got != want {
+		t.Errorf("NewNoopMeterProvider() returned %#v, want %#v", got, want)
+	}
+}
+
+func TestNoopMeterProviderMeter(t *testing.T) {
+	mp := NewNoopMeterProvider()
+	got, want := mp.Meter(""), Meter{}
+	if got != want {
+		t.Errorf("noopMeterProvider.Meter() returned %#v, want %#v", got, want)
+	}
 }
