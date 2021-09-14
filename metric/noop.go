@@ -21,19 +21,26 @@ import (
 	"go.opentelemetry.io/otel/metric/number"
 )
 
-type NoopMeterProvider struct{}
+// NewNoopMeterProvider returns an implementation of MeterProvider that
+// performs no operations. The Meter and Instrument created from the returned
+// MeterProvider also perform no operations.
+func NewNoopMeterProvider() MeterProvider {
+	return noopMeterProvider{}
+}
+
+type noopMeterProvider struct{}
 
 type noopInstrument struct{}
 type noopBoundInstrument struct{}
 type NoopSync struct{ noopInstrument }
 type NoopAsync struct{ noopInstrument }
 
-var _ MeterProvider = NoopMeterProvider{}
+var _ MeterProvider = noopMeterProvider{}
 var _ SyncImpl = NoopSync{}
 var _ BoundSyncImpl = noopBoundInstrument{}
 var _ AsyncImpl = NoopAsync{}
 
-func (NoopMeterProvider) Meter(_ string, _ ...MeterOption) Meter {
+func (noopMeterProvider) Meter(instrumentationName string, opts ...MeterOption) Meter {
 	return Meter{}
 }
 
