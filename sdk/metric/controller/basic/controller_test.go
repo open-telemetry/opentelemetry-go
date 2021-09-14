@@ -61,9 +61,11 @@ func checkTestContext(t *testing.T, ctx context.Context) {
 }
 
 func TestControllerUsesResource(t *testing.T) {
+	const envVal = "T=U,key=value"
 	store, err := ottest.SetEnvVariables(map[string]string{
-		envVar: "key=value,T=U",
+		envVar: envVal,
 	})
+
 	require.NoError(t, err)
 	defer func() { require.NoError(t, store.Restore()) }()
 
@@ -75,48 +77,62 @@ func TestControllerUsesResource(t *testing.T) {
 		{
 			name:    "explicitly empty resource",
 			options: []controller.Option{controller.WithResource(resource.Empty())},
-			wanted:  resource.Environment().Encoded(attribute.DefaultEncoder())},
+			wanted:  envVal,
+		},
 		{
 			name:    "uses default if no resource option",
 			options: nil,
-			wanted:  resource.Default().Encoded(attribute.DefaultEncoder())},
+			wanted:  resource.Default().Encoded(attribute.DefaultEncoder()),
+		},
 		{
 			name:    "explicit resource",
 			options: []controller.Option{controller.WithResource(resource.NewSchemaless(attribute.String("R", "S")))},
-			wanted:  "R=S,T=U,key=value"},
+			wanted:  "R=S," + envVal,
+		},
 		{
-			name: "last resource wins",
+			name: "multi resource",
 			options: []controller.Option{
-				controller.WithResource(resource.Default()),
+				controller.WithResource(resource.NewSchemaless(attribute.String("R", "WRONG"))),
 				controller.WithResource(resource.NewSchemaless(attribute.String("R", "S"))),
+				controller.WithResource(resource.NewSchemaless(attribute.String("W", "X"))),
+				controller.WithResource(resource.NewSchemaless(attribute.String("T", "V"))),
 			},
-			wanted: "R=S,T=U,key=value"},
+			wanted: "R=S,T=V,W=X,key=value",
+		},
 		{
-			name:    "overlapping attributes with environment resource",
-			options: []controller.Option{controller.WithResource(resource.NewSchemaless(attribute.String("T", "V")))},
-			wanted:  "T=V,key=value"},
+			name: "user override environment",
+			options: []controller.Option{
+				controller.WithResource(resource.NewSchemaless(attribute.String("T", "V"))),
+				controller.WithResource(resource.NewSchemaless(attribute.String("key", "I win"))),
+			},
+			wanted: "T=V,key=I win",
+		},
 	}
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
+			sel := export.CumulativeExportKindSelector()
+			exp := processortest.New(sel, attribute.DefaultEncoder())
 			cont := controller.New(
 				processor.New(
 					processortest.AggregatorSelector(),
-					export.CumulativeExportKindSelector(),
+					exp,
 				),
-				c.options...,
+				append(c.options, controller.WithExporter(exp))...,
 			)
+			ctx := context.Background()
+			require.NoError(t, cont.Start(ctx))
 			prov := cont.MeterProvider()
 
 			ctr := metric.Must(prov.Meter("named")).NewFloat64Counter("calls.sum")
 			ctr.Add(context.Background(), 1.)
 
 			// Collect once
-			require.NoError(t, cont.Collect(context.Background()))
+			require.NoError(t, cont.Stop(ctx))
 
 			expect := map[string]float64{
 				"calls.sum//" + c.wanted: 1.,
 			}
-			require.EqualValues(t, expect, getMap(t, cont))
+			require.EqualValues(t, expect, exp.Values())
 		})
 	}
 }
@@ -136,7 +152,7 @@ func TestStartNoExporter(t *testing.T) {
 	prov := cont.MeterProvider()
 	calls := int64(0)
 
-	_ = metric.Must(prov.Meter("named")).NewInt64SumObserver("calls.lastvalue",
+	_ = metric.Must(prov.Meter("named")).NewInt64CounterObserver("calls.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			calls++
 			checkTestContext(t, ctx)
@@ -205,7 +221,7 @@ func TestObserverCanceled(t *testing.T) {
 	prov := cont.MeterProvider()
 	calls := int64(0)
 
-	_ = metric.Must(prov.Meter("named")).NewInt64SumObserver("done.lastvalue",
+	_ = metric.Must(prov.Meter("named")).NewInt64CounterObserver("done.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			<-ctx.Done()
 			calls++
@@ -236,7 +252,7 @@ func TestObserverContext(t *testing.T) {
 
 	prov := cont.MeterProvider()
 
-	_ = metric.Must(prov.Meter("named")).NewInt64SumObserver("done.lastvalue",
+	_ = metric.Must(prov.Meter("named")).NewInt64CounterObserver("done.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			time.Sleep(10 * time.Millisecond)
 			checkTestContext(t, ctx)
@@ -268,9 +284,9 @@ func newBlockingExporter() *blockingExporter {
 	}
 }
 
-func (b *blockingExporter) Export(ctx context.Context, output export.CheckpointSet) error {
+func (b *blockingExporter) Export(ctx context.Context, res *resource.Resource, output export.CheckpointSet) error {
 	var err error
-	_ = b.exporter.Export(ctx, output)
+	_ = b.exporter.Export(ctx, res, output)
 	if b.calls == 0 {
 		// timeout once
 		<-ctx.Done()
@@ -305,7 +321,7 @@ func TestExportTimeout(t *testing.T) {
 	prov := cont.MeterProvider()
 
 	calls := int64(0)
-	_ = metric.Must(prov.Meter("named")).NewInt64SumObserver("one.lastvalue",
+	_ = metric.Must(prov.Meter("named")).NewInt64CounterObserver("one.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			calls++
 			result.Observe(calls)
@@ -361,7 +377,7 @@ func TestCollectAfterStopThenStartAgain(t *testing.T) {
 	prov := cont.MeterProvider()
 
 	calls := 0
-	_ = metric.Must(prov.Meter("named")).NewInt64SumObserver("one.lastvalue",
+	_ = metric.Must(prov.Meter("named")).NewInt64CounterObserver("one.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			calls++
 			result.Observe(int64(calls))

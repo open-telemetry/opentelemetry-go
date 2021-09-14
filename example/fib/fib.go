@@ -12,23 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package oteltest // import "go.opentelemetry.io/otel/oteltest"
+package main
 
-import (
-	"testing"
+import "fmt"
 
-	"go.opentelemetry.io/otel/internal/internaltest"
-)
+// Fibonacci returns the n-th fibonacci number.
+func Fibonacci(n uint) (uint64, error) {
+	if n <= 1 {
+		return uint64(n), nil
+	}
 
-// Harness is a testing harness used to test implementations of the
-// OpenTelemetry API.
-//
-// Deprecated: this will be removed in the next major release.
-type Harness = internaltest.Harness
+	if n > 93 {
+		return 0, fmt.Errorf("unsupported fibonacci number %d: too large", n)
+	}
 
-// NewHarness returns an instantiated *Harness using t.
-//
-// Deprecated: this will be removed in the next major release.
-func NewHarness(t *testing.T) *Harness {
-	return internaltest.NewHarness(t)
+	var n2, n1 uint64 = 0, 1
+	for i := uint(2); i < n; i++ {
+		n2, n1 = n1, n1+n2
+	}
+
+	return n2 + n1, nil
 }

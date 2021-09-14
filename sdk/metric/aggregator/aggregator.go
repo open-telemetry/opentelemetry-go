@@ -20,6 +20,7 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
@@ -34,7 +35,7 @@ func NewInconsistentAggregatorError(a1, a2 export.Aggregator) error {
 // RangeTest is a common routine for testing for valid input values.
 // This rejects NaN values.  This rejects negative values when the
 // metric instrument does not support negative values, including
-// monotonic counter metrics and absolute ValueRecorder metrics.
+// monotonic counter metrics and absolute Histogram metrics.
 func RangeTest(num number.Number, descriptor *metric.Descriptor) error {
 	numberKind := descriptor.NumberKind()
 
@@ -43,7 +44,7 @@ func RangeTest(num number.Number, descriptor *metric.Descriptor) error {
 	}
 
 	switch descriptor.InstrumentKind() {
-	case metric.CounterInstrumentKind, metric.SumObserverInstrumentKind:
+	case sdkapi.CounterInstrumentKind, sdkapi.CounterObserverInstrumentKind:
 		if num.IsNegative(numberKind) {
 			return aggregation.ErrNegativeInput
 		}

@@ -48,6 +48,26 @@ updates:
       interval: weekly
   -
     package-ecosystem: gomod
+    directory: /bridge/opencensus/test
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
+    directory: /example/fib
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      day: sunday
+      interval: weekly
+  -
+    package-ecosystem: gomod
     directory: /example/prom-collector
     labels:
       - dependencies
@@ -229,16 +249,6 @@ updates:
   -
     package-ecosystem: gomod
     directory: /sdk/metric
-    labels:
-      - dependencies
-      - go
-      - "Skip Changelog"
-    schedule:
-      day: sunday
-      interval: weekly
-  -
-    package-ecosystem: gomod
-    directory: /oteltest
     labels:
       - dependencies
       - go

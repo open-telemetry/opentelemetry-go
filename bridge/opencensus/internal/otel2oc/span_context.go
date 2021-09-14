@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils // import "go.opentelemetry.io/otel/bridge/opencensus/utils"
+package otel2oc
 
 import (
 	octrace "go.opencensus.io/trace"
@@ -20,10 +20,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// OTelSpanContextToOC converts from an OpenTelemetry SpanContext to an
-// OpenCensus SpanContext, and handles any incompatibilities with the global
-// error handler.
-func OTelSpanContextToOC(sc trace.SpanContext) octrace.SpanContext {
+func SpanContext(sc trace.SpanContext) octrace.SpanContext {
 	var to octrace.TraceOptions
 	if sc.IsSampled() {
 		// OpenCensus doesn't expose functions to directly set sampled
@@ -34,18 +31,4 @@ func OTelSpanContextToOC(sc trace.SpanContext) octrace.SpanContext {
 		SpanID:       octrace.SpanID(sc.SpanID()),
 		TraceOptions: to,
 	}
-}
-
-// OCSpanContextToOTel converts from an OpenCensus SpanContext to an
-// OpenTelemetry SpanContext.
-func OCSpanContextToOTel(sc octrace.SpanContext) trace.SpanContext {
-	var traceFlags trace.TraceFlags
-	if sc.IsSampled() {
-		traceFlags = trace.FlagsSampled
-	}
-	return trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    trace.TraceID(sc.TraceID),
-		SpanID:     trace.SpanID(sc.SpanID),
-		TraceFlags: traceFlags,
-	})
 }

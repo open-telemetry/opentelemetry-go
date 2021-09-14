@@ -8,6 +8,28 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- NoopMeterProvider is now private and NewNoopMeterProvider must be used to obtain a noopMeterProvider. (#2237)
+
+### Fixed
+
+- Slice-valued attributes can correctly be used as map keys. (#2223)
+
+### Removed
+
+- Removed the deprecated package `go.opentelemetry.io/otel/oteltest`. (#2234)
+- Removed the deprecated package `go.opentelemetry.io/otel/bridge/opencensus/utils`. (#2233)
+- Removed deprecated functions, types, and methods from `go.opentelemetry.io/otel/attribute` package.
+  Use the typed functions and methods added to the package instead. (#2235)
+  - The `Key.Array` method is removed.
+  - The `Array` function is removed.
+  - The `Any` function is removed.
+  - The `ArrayValue` function is removed.
+  - The `AsArray` function is removed.
+
+## [1.0.0-RC3] - 2021-09-02
+
 ### Added
 
 - The `"go.opentelemetry.io/otel/sdk/trace".TraceProvider` can now be configured with a newly added `Clock` interface.
@@ -15,10 +37,36 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Additionally, a `WithClock` is also added to the package enabling users to set custom implementations of the `Clock` interface.
   The standard library `time` package is still used for this functionality by default if no option is set. (#2052)
 - Added `ErrorHandlerFunc` to use a function as an `"go.opentelemetry.io/otel".ErrorHandler`. (#2149)
+- Added `"go.opentelemetry.io/otel/trace".WithStackTrace` option to add a stack trace when using `span.RecordError` or when panic is handled in `span.End`. (#2163)
+- Added typed slice attribute types and functionality to the `go.opentelemetry.io/otel/attribute` package to replace the existing array type and functions. (#2162)
+  - `BoolSlice`, `IntSlice`, `Int64Slice`, `Float64Slice`, and `StringSlice` replace the use of the `Array` function in the package.
+- Added the `go.opentelemetry.io/otel/example/fib` example package.
+  Included is an example application that computes Fibonacci numbers. (#2203)
 
 ### Changed
 
+- Metric instruments have been renamed to match the (feature-frozen) metric API specification:
+  - ValueRecorder becomes Histogram
+  - ValueObserver becomes Gauge
+  - SumObserver becomes CounterObserver
+  - UpDownSumObserver becomes UpDownCounterObserver
+  The API exported from this project is still considered experimental. (#2202)
+- Metric SDK/API implementation type `InstrumentKind` moves into `sdkapi` sub-package. (#2091)
+- The Metrics SDK export record no longer contains a Resource pointer, the SDK `"go.opentelemetry.io/otel/sdk/trace/export/metric".Exporter.Export()` function for push-based exporters now takes a single Resource argument, pull-based exporters use `"go.opentelemetry.io/otel/sdk/metric/controller/basic".Controller.Resource()`. (#2120)
+- The JSON output of the `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` is harmonized now such that the output is "plain" JSON objects after each other of the form `{ ... } { ... } { ... }`. Earlier the JSON objects describing a span were wrapped in a slice for each `Exporter.ExportSpans` call, like `[ { ... } ][ { ... } { ... } ]`. Outputting JSON object directly after each other is consistent with JSON loggers, and a bit easier to parse and read. (#2196)
+- Update the `NewTracerConfig`, `NewSpanStartConfig`, `NewSpanEndConfig`, and `NewEventConfig` function in the `go.opentelemetry.io/otel/trace` package to return their respective configurations as structs instead of pointers to the struct. (#2212)
+
 ### Deprecated
+
+- The `go.opentelemetry.io/otel/bridge/opencensus/utils` package is deprecated.
+  All functionality from this package now exists in the `go.opentelemetry.io/otel/bridge/opencensus` package.
+  The functions from that package should be used instead. (#2166)
+- The `"go.opentelemetry.io/otel/attribute".Array` function and the related `ARRAY` value type is deprecated.
+  Use the typed `*Slice` functions and types added to the package instead. (#2162)
+- The `"go.opentelemetry.io/otel/attribute".Any` function is deprecated.
+  Use the typed functions instead. (#2181)
+- The `go.opentelemetry.io/otel/oteltest` package is deprecated.
+  The `"go.opentelemetry.io/otel/sdk/trace/tracetest".SpanRecorder` can be registered with the default SDK (`go.opentelemetry.io/otel/sdk/trace`) as a `SpanProcessor` and used as a replacement for this deprecated package. (#2188)
 
 ### Removed
 
@@ -26,11 +74,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-The `fromEnv` detector no longer throws an error when `OTEL_RESOURCE_ATTRIBUTES` environment variable is not set or empty. (#2138)
+- The `fromEnv` detector no longer throws an error when `OTEL_RESOURCE_ATTRIBUTES` environment variable is not set or empty. (#2138)
+- Setting the global `ErrorHandler` with `"go.opentelemetry.io/otel".SetErrorHandler` multiple times is now supported. (#2160, #2140)
+- The `"go.opentelemetry.io/otel/attribute".Any` function now supports `int32` values. (#2169)
+- Multiple calls to `"go.opentelemetry.io/otel/sdk/metric/controller/basic".WithResource()` are handled correctly, and when no resources are provided `"go.opentelemetry.io/otel/sdk/resource".Default()` is used. (#2120)
+- The `WithoutTimestamps` option for the `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` exporter causes the exporter to correctly ommit timestamps. (#2195)
+- Fixed typos in resources.go. (#2201)
 
-### Security
-
-## [v1.0.0-RC2] - 2021-07-26
+## [1.0.0-RC2] - 2021-07-26
 
 ### Added
 
@@ -49,7 +100,6 @@ The `fromEnv` detector no longer throws an error when `OTEL_RESOURCE_ATTRIBUTES`
 
 - The `SpanModels` function is now exported from the `go.opentelemetry.io/otel/exporters/zipkin` package to convert OpenTelemetry spans into Zipkin model spans. (#2027)
 - Rename the `"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc".RetrySettings` to `RetryConfig`. (#2095)
-- Rename the `"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp".RetrySettings` to `RetryConfig`. (#2095)
 
 ### Deprecated
 
@@ -1483,7 +1533,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.0.0-RC2...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.0.0-RC3...HEAD
+[1.0.0-RC3]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.0-RC3
 [1.0.0-RC2]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.0-RC2
 [Experimental Metrics v0.22.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/metric/v0.22.0
 [1.0.0-RC1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.0-RC1

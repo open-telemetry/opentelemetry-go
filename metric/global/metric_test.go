@@ -30,12 +30,12 @@ func (*testMeterProvider) Meter(_ string, _ ...metric.MeterOption) metric.Meter 
 
 func TestMultipleGlobalMeterProvider(t *testing.T) {
 	p1 := testMeterProvider{}
-	p2 := metric.NoopMeterProvider{}
+	p2 := metric.NewNoopMeterProvider()
 	SetMeterProvider(&p1)
-	SetMeterProvider(&p2)
+	SetMeterProvider(p2)
 
 	got := GetMeterProvider()
-	want := &p2
+	want := p2
 	if got != want {
 		t.Fatalf("MeterProvider: got %p, want %p\n", got, want)
 	}
