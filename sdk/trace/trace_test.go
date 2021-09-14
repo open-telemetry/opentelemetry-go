@@ -1615,9 +1615,14 @@ func newFrozenClock(t time.Time) frozenClock {
 	}
 }
 
-func (c frozenClock) Stopwatch() Stopwatch {
+func (c frozenClock) Stopwatch(t time.Time) Stopwatch {
+	if t.IsZero() {
+		return frozenStopwatch{
+			started: c.now,
+		}
+	}
 	return frozenStopwatch{
-		started: c.now,
+		started: t,
 	}
 }
 
@@ -1635,6 +1640,19 @@ func TestCustomClock(t *testing.T) {
 	got := te.Spans()[0]
 	assert.Equal(t, now, got.StartTime(), "StartTime should return the frozen time")
 	assert.Equal(t, now, got.EndTime(), "EndTime should return the frozen time")
+
+	// test user provided span start time
+	te.Reset()
+	now = time.Now()
+	_, span = tracer.Start(context.Background(), "test-frozen-clock-with-start-time",
+		trace.WithTimestamp(now))
+	time.Sleep(time.Microsecond * 2)
+	span.End()
+	require.Equal(t, te.Len(), 1, "should only have one span")
+	got = te.Spans()[0]
+	assert.Equal(t, now, got.StartTime(), "StartTime should returns the user provided time")
+	assert.Equal(t, now, got.EndTime(), "StartTime should returns the user provided time")
+
 }
 
 type stateSampler struct {

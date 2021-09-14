@@ -560,7 +560,7 @@ func (s *span) startTime() time.Time {
 
 func startSpanInternal(ctx context.Context, tr *tracer, name string, o *trace.SpanConfig) *span {
 	span := &span{
-		stopwatch: nilStopwatch{},
+		stopwatch: standardStopwatch{},
 	}
 
 	provider := tr.provider
@@ -618,11 +618,8 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, o *trace.Sp
 	}
 
 	startTime := o.Timestamp()
-	if startTime.IsZero() {
-		span.stopwatch = tr.provider.clock.Stopwatch()
-	} else {
-		span.stopwatch = standardStopwatch(startTime)
-	}
+	span.stopwatch = tr.provider.clock.Stopwatch(startTime)
+
 	span.spanKind = trace.ValidateSpanKind(o.SpanKind())
 	span.name = name
 	span.parent = psc

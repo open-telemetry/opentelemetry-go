@@ -21,10 +21,12 @@ import (
 // Clock is the entrypoint for providing time to span's start/end timestamp.
 // By default the standard "time" package will be used. User can replace
 // it with customized clock implementation (e.g. with additional clock
-// synchronization logic) by using the `WithClock` option.
+// synchronization logic) by using the `WithClock` option. Also users may
+// still be able to change the span start time even using a custom clock by
+// providing a timestamp with the WithTimestamp option.
 type Clock interface {
 	// Stopwatch returns a started Stopwatch measuring a time interval.
-	Stopwatch() Stopwatch
+	Stopwatch(t time.Time) Stopwatch
 }
 
 // Stopwatch measures a time interval.
@@ -39,14 +41,16 @@ type Stopwatch interface {
 
 type standardClock struct{}
 type standardStopwatch time.Time
-type nilStopwatch struct{}
 
 func defaultClock() Clock {
 	return standardClock{}
 }
 
-func (standardClock) Stopwatch() Stopwatch {
-	return standardStopwatch(time.Now())
+func (standardClock) Stopwatch(t time.Time) Stopwatch {
+	if t.IsZero() {
+		return standardStopwatch(time.Now())
+	}
+	return standardStopwatch(t)
 }
 
 func (w standardStopwatch) Started() time.Time {
@@ -55,12 +59,4 @@ func (w standardStopwatch) Started() time.Time {
 
 func (w standardStopwatch) Stop() time.Duration {
 	return time.Since(time.Time(w))
-}
-
-func (w nilStopwatch) Started() time.Time {
-	return time.Time{}
-}
-
-func (w nilStopwatch) Stop() time.Duration {
-	return 0
 }
