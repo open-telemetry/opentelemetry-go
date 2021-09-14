@@ -137,8 +137,9 @@ func transformer(ctx context.Context, exportSelector export.ExportKindSelector, 
 		}
 		res := result{
 			InstrumentationLibrary: instrumentation.Library{
-				Name:    r.Descriptor().InstrumentationName(),
-				Version: r.Descriptor().InstrumentationVersion(),
+				Name:      r.Descriptor().InstrumentationName(),
+				Version:   r.Descriptor().InstrumentationVersion(),
+				SchemaURL: r.Descriptor().SchemaURL(),
 			},
 			Metric: m,
 			Err:    err,
@@ -213,6 +214,7 @@ func sink(ctx context.Context, res *resource.Resource, in <-chan result) ([]*met
 				Name:    il.Name,
 				Version: il.Version,
 			},
+			SchemaUrl: il.SchemaURL,
 		}
 		for _, m := range mb {
 			ilm.Metrics = append(ilm.Metrics, m)

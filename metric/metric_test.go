@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/metric/unit"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
@@ -149,12 +150,13 @@ func checkSyncBatches(ctx context.Context, t *testing.T, labels []attribute.KeyV
 
 func TestOptions(t *testing.T) {
 	type testcase struct {
-		name  string
-		opts  []metric.InstrumentOption
-		desc  string
-		unit  unit.Unit
-		iName string
-		iVer  string
+		name      string
+		opts      []metric.InstrumentOption
+		desc      string
+		unit      unit.Unit
+		iName     string
+		iVer      string
+		schemaURL string
 	}
 	testcases := []testcase{
 		{
@@ -280,11 +282,13 @@ func TestOptions(t *testing.T) {
 				metric.WithUnit("s"),
 				metric.WithInstrumentationName("n"),
 				metric.WithInstrumentationVersion("v"),
+				metric.WithSchemaURL(semconv.SchemaURL),
 			},
-			desc:  "stuff",
-			unit:  "s",
-			iName: "n",
-			iVer:  "v",
+			desc:      "stuff",
+			unit:      "s",
+			iName:     "n",
+			iVer:      "v",
+			schemaURL: semconv.SchemaURL,
 		},
 	}
 	for idx, tt := range testcases {
@@ -301,6 +305,9 @@ func TestOptions(t *testing.T) {
 		}
 		if diff := cmp.Diff(cfg.InstrumentationVersion(), tt.iVer); diff != "" {
 			t.Errorf("Compare InstrumentationVersion: -got +want %s", diff)
+		}
+		if diff := cmp.Diff(cfg.SchemaURL(), tt.schemaURL); diff != "" {
+			t.Errorf("Compare SchemaURL: -got +want %s", diff)
 		}
 	}
 }

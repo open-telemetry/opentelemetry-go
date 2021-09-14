@@ -37,6 +37,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -450,10 +451,12 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 	countingLib1 := []metric.InstrumentOption{
 		metric.WithInstrumentationName("counting-lib"),
 		metric.WithInstrumentationVersion("v1"),
+		metric.WithSchemaURL(semconv.SchemaURL),
 	}
 	countingLib2 := []metric.InstrumentOption{
 		metric.WithInstrumentationName("counting-lib"),
 		metric.WithInstrumentationVersion("v2"),
+		metric.WithSchemaURL("http://example.com/custom-schema-url"),
 	}
 	summingLib := []metric.InstrumentOption{
 		metric.WithInstrumentationName("summing-lib"),
@@ -539,6 +542,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 								},
 							},
 						},
+						SchemaUrl: semconv.SchemaURL,
 					},
 					{
 						InstrumentationLibrary: &commonpb.InstrumentationLibrary{
@@ -564,6 +568,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 								},
 							},
 						},
+						SchemaUrl: "http://example.com/custom-schema-url",
 					},
 					{
 						InstrumentationLibrary: &commonpb.InstrumentationLibrary{
@@ -717,11 +722,24 @@ func runMetricExportTests(t *testing.T, opts []otlpmetric.Option, res *resource.
 	keyFor := func(ilm *metricpb.InstrumentationLibraryMetrics) string {
 		return fmt.Sprintf("%s/%s", ilm.GetInstrumentationLibrary().GetName(), ilm.GetInstrumentationLibrary().GetVersion())
 	}
-	got := map[string][]*metricpb.Metric{}
+	type gotMetrics struct {
+		metrics   []*metricpb.Metric
+		schemaURL string
+	}
+	got := map[string]*gotMetrics{}
 	for _, rm := range driver.rm {
 		for _, ilm := range rm.InstrumentationLibraryMetrics {
 			k := keyFor(ilm)
-			got[k] = append(got[k], ilm.GetMetrics()...)
+			v, ok := got[k]
+			if !ok {
+				v = &gotMetrics{}
+			}
+			v.metrics = append(v.metrics, ilm.GetMetrics()...)
+
+			// Note: we assume all ilms that have the same key also use the same SchemaUrl (they must).
+			v.schemaURL = ilm.SchemaUrl
+
+			got[k] = v
 		}
 	}
 
@@ -735,12 +753,13 @@ func runMetricExportTests(t *testing.T, opts []otlpmetric.Option, res *resource.
 				t.Errorf("missing metrics for:\n\tInstrumentationLibrary: %q\n", k)
 				continue
 			}
-			if !assert.Len(t, g, len(ilm.GetMetrics())) {
+			if !assert.Len(t, g.metrics, len(ilm.GetMetrics())) {
 				continue
 			}
 			for i, expected := range ilm.GetMetrics() {
-				assert.Equal(t, "", cmp.Diff(expected, g[i], protocmp.Transform()))
+				assert.Equal(t, "", cmp.Diff(expected, g.metrics[i], protocmp.Transform()))
 			}
+			assert.Equal(t, ilm.SchemaUrl, g.schemaURL)
 		}
 	}
 	for k := range got {

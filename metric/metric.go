@@ -576,3 +576,9 @@ func (d Descriptor) InstrumentationName() string {
 func (d Descriptor) InstrumentationVersion() string {
 	return d.config.InstrumentationVersion()
 }
+
+// SchemaURL returns the Schema URL of the library that provided
+// instrumentation for this instrument.
+func (d Descriptor) SchemaURL() string {
+	return d.config.SchemaURL()
+}

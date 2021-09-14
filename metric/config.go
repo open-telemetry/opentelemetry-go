@@ -24,6 +24,7 @@ type InstrumentConfig struct {
 	unit                   unit.Unit
 	instrumentationName    string
 	instrumentationVersion string
+	schemaURL              string
 }
 
 // Description describes the instrument in human-readable terms.
@@ -46,6 +47,12 @@ func (cfg InstrumentConfig) InstrumentationName() string {
 // instrumentation.
 func (cfg InstrumentConfig) InstrumentationVersion() string {
 	return cfg.instrumentationVersion
+}
+
+// SchemaURL is the schema URL of the library providing
+// instrumentation.
+func (cfg InstrumentConfig) SchemaURL() string {
+	return cfg.schemaURL
 }
 
 // InstrumentOption is an interface for applying metric instrument options.
@@ -95,6 +102,7 @@ func WithInstrumentationName(name string) InstrumentOption {
 // MeterConfig contains options for Meters.
 type MeterConfig struct {
 	instrumentationVersion string
+	schemaURL              string
 }
 
 // InstrumentationVersion is the version of the library providing instrumentation.
@@ -138,4 +146,19 @@ func (i instrumentationVersionOption) applyMeter(config *MeterConfig) {
 
 func (i instrumentationVersionOption) applyInstrument(config *InstrumentConfig) {
 	config.instrumentationVersion = string(i)
+}
+
+// WithSchemaURL sets the instrumentation version.
+func WithSchemaURL(version string) InstrumentMeterOption {
+	return instrumentationSchemaURL(version)
+}
+
+type instrumentationSchemaURL string
+
+func (i instrumentationSchemaURL) applyMeter(config *MeterConfig) {
+	config.schemaURL = string(i)
+}
+
+func (i instrumentationSchemaURL) applyInstrument(config *InstrumentConfig) {
+	config.schemaURL = string(i)
 }
