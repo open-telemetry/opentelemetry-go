@@ -16,6 +16,7 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
 	"context"
+
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -129,7 +130,7 @@ func (tr *tracer) newRecordingSpan(psc, sc trace.SpanContext, name string, sr Sa
 		spanLimits:             tr.provider.spanLimits,
 		resource:               tr.provider.resource,
 		instrumentationLibrary: tr.instrumentationLibrary,
-		stopwatch: 				tr.provider.clock.Stopwatch(startTime),
+		stopwatch:              tr.provider.clock.Stopwatch(startTime),
 	}
 
 	for _, l := range config.Links() {

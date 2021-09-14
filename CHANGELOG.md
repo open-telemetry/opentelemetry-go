@@ -28,14 +28,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - The `ArrayValue` function is removed.
   - The `AsArray` function is removed.
 
-## [1.0.0-RC3] - 2021-09-02
-
 ### Added
 
 - The `"go.opentelemetry.io/otel/sdk/trace".TraceProvider` can now be configured with a newly added `Clock` interface.
   This interface is called when determining the start and end times for a span.
   Additionally, a `WithClock` is also added to the package enabling users to set custom implementations of the `Clock` interface.
   The standard library `time` package is still used for this functionality by default if no option is set. (#2052)
+
+## [1.0.0-RC3] - 2021-09-02
+
+### Added
+
 - Added `ErrorHandlerFunc` to use a function as an `"go.opentelemetry.io/otel".ErrorHandler`. (#2149)
 - Added `"go.opentelemetry.io/otel/trace".WithStackTrace` option to add a stack trace when using `span.RecordError` or when panic is handled in `span.End`. (#2163)
 - Added typed slice attribute types and functionality to the `go.opentelemetry.io/otel/attribute` package to replace the existing array type and functions. (#2162)
