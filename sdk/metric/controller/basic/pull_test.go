@@ -51,11 +51,7 @@ func TestPullNoCollect(t *testing.T) {
 
 	require.NoError(t, puller.Collect(ctx))
 	records := processortest.NewOutput(attribute.DefaultEncoder())
-	require.NoError(t, controllertest.ReadAll(
-		puller.Reader(),
-		export.CumulativeExportKindSelector(),
-		records.AddInstrumentationLibraryRecord,
-	))
+	require.NoError(t, controllertest.ReadAll(puller.Reader(), export.CumulativeExportKindSelector(), records.AddInstrumentationLibraryRecord))
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=B/": 10,
