@@ -25,14 +25,14 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
-	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
-
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	"go.opentelemetry.io/otel/trace"
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
 func TestSpanKind(t *testing.T) {
@@ -266,10 +266,16 @@ func TestSpanData(t *testing.T) {
 		DroppedAttributes: 1,
 		DroppedEvents:     2,
 		DroppedLinks:      3,
-		Resource:          resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5), attribute.StringSlice("rk3", []string{"sv1", "sv2"})),
+		Resource: resource.NewWithAttributes(
+			"http://example.com/custom-resource-schema",
+			attribute.String("rk1", "rv1"),
+			attribute.Int64("rk2", 5),
+			attribute.StringSlice("rk3", []string{"sv1", "sv2"}),
+		),
 		InstrumentationLibrary: instrumentation.Library{
-			Name:    "go.opentelemetry.io/test/otel",
-			Version: "v0.0.1",
+			Name:      "go.opentelemetry.io/test/otel",
+			Version:   "v0.0.1",
+			SchemaURL: semconv.SchemaURL,
 		},
 	}
 
@@ -298,8 +304,10 @@ func TestSpanData(t *testing.T) {
 	require.Len(t, got, 1)
 
 	assert.Equal(t, got[0].GetResource(), Resource(spanData.Resource))
+	assert.Equal(t, got[0].SchemaUrl, spanData.Resource.SchemaURL())
 	ilSpans := got[0].GetInstrumentationLibrarySpans()
 	require.Len(t, ilSpans, 1)
+	assert.Equal(t, ilSpans[0].SchemaUrl, spanData.InstrumentationLibrary.SchemaURL)
 	assert.Equal(t, ilSpans[0].GetInstrumentationLibrary(), InstrumentationLibrary(spanData.InstrumentationLibrary))
 	require.Len(t, ilSpans[0].Spans, 1)
 	actualSpan := ilSpans[0].Spans[0]
