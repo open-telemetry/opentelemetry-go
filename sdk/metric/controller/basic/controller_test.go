@@ -41,7 +41,7 @@ const envVar = "OTEL_RESOURCE_ATTRIBUTES"
 func getMap(t *testing.T, cont *controller.Controller) map[string]float64 {
 	out := processortest.NewOutput(attribute.DefaultEncoder())
 
-	require.NoError(t, cont.Reader().ForEach(
+	require.NoError(t, cont.InstrumentationLibraryReader().ForEach(
 		func(_ instrumentation.Library, reader export.Reader) error {
 			return reader.ForEach(
 				export.CumulativeExportKindSelector(),

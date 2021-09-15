@@ -310,7 +310,7 @@ func (c *Controller) export(ctx context.Context) error {
 		defer cancel()
 	}
 
-	return c.exporter.Export(ctx, c.resource, c.Reader())
+	return c.exporter.Export(ctx, c.resource, c.InstrumentationLibraryReader())
 }
 
 type libraryReader struct {

@@ -153,7 +153,7 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 	c.exp.lock.RLock()
 	defer c.exp.lock.RUnlock()
 
-	_ = c.exp.Controller().Reader().ForEach(func(_ instrumentation.Library, reader export.Reader) error {
+	_ = c.exp.Controller().InstrumentationLibraryReader().ForEach(func(_ instrumentation.Library, reader export.Reader) error {
 		return reader.ForEach(c.exp, func(record export.Record) error {
 			var labelKeys []string
 			mergeLabels(record, c.exp.controller.Resource(), &labelKeys, nil)
@@ -176,7 +176,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		otel.Handle(err)
 	}
 
-	err := ctrl.Reader().ForEach(func(_ instrumentation.Library, reader export.Reader) error {
+	err := ctrl.InstrumentationLibraryReader().ForEach(func(_ instrumentation.Library, reader export.Reader) error {
 		return reader.ForEach(c.exp, func(record export.Record) error {
 
 			agg := record.Aggregation()
