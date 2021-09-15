@@ -160,9 +160,9 @@ func (c *Controller) Resource() *resource.Resource {
 	return c.resource
 }
 
-// Reader returns an InstrumentationLibraryReader for iterating
+// InstrumentationLibraryReader returns an InstrumentationLibraryReader for iterating
 // through the metrics of each registered library, one at a time.
-func (c *Controller) Reader() export.InstrumentationLibraryReader {
+func (c *Controller) InstrumentationLibraryReader() export.InstrumentationLibraryReader {
 	return libraryReader{c}
 }
 

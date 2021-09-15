@@ -63,9 +63,9 @@ func (p *MeterProvider) Meter(instrumentationName string, opts ...metric.MeterOp
 	defer p.lock.Unlock()
 	m, ok := p.meters[k]
 	if !ok {
-		m = metric.WrapMeterImpl(
-			NewMeterImpl(
-				p.impl.Meter(instrumentationName, opts...).MeterImpl()))
+		m = metric.WrapMeterImpl(NewMeterImpl(
+			p.impl.Meter(instrumentationName, opts...).MeterImpl(),
+		))
 		p.meters[k] = m
 	}
 	return m
