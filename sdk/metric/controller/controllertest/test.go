@@ -67,8 +67,8 @@ func ReadAll(
 	kind export.ExportKindSelector,
 	apply func(instrumentation.Library, export.Record) error,
 ) error {
-	return reader.ForEach(func(library instrumentation.Library, ckpt export.Reader) error {
-		return ckpt.ForEach(kind, func(record export.Record) error {
+	return reader.ForEach(func(library instrumentation.Library, reader export.Reader) error {
+		return reader.ForEach(kind, func(record export.Record) error {
 			return apply(library, record)
 		})
 	})
