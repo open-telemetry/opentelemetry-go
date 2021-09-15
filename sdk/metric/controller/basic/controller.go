@@ -251,14 +251,22 @@ func (c *Controller) collect(ctx context.Context) error {
 // when Stop() is called.
 func (c *Controller) checkpoint(ctx context.Context) error {
 	for _, impl := range c.provider.List() {
-		if err := c.checkpoint1(ctx, impl.(*accumulatorCheckpointer)); err != nil {
+		acPair, ok := impl.(*accumulatorCheckpointer)
+		if !ok {
+			return fmt.Errorf("impossible type assertion failed: %T", impl)
+		}
+		if err := c.checkpointSingleAccmulator(ctx, acPair); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (c *Controller) checkpoint1(ctx context.Context, ac *accumulatorCheckpointer) error {
+// checkpointSingleAccmulator checkpoints a single instrumentation
+// library's accumulator, which involves calling
+// checkpointer.StartCollection, accumulator.Collect, and
+// checkpointer.FinishCollection in sequence.
+func (c *Controller) checkpointSingleAccmulator(ctx context.Context, ac *accumulatorCheckpointer) error {
 	ckpt := ac.checkpointer.Reader()
 	ckpt.Lock()
 	defer ckpt.Unlock()
@@ -313,12 +321,19 @@ var _ export.InstrumentationLibraryReader = libraryReader{}
 
 func (l libraryReader) ForEach(readerFunc func(l instrumentation.Library, r export.Reader) error) error {
 	for _, impl := range l.Controller.provider.List() {
-		pair := impl.(*accumulatorCheckpointer)
-		reader := pair.checkpointer.Reader()
+		// Note: the Controller owns the provider, which is a registry
+		// that calls (accumulatorProvider).Meter() to obtain this value,
+		// so the following type assertion will succeed or else there is a
+		// bug in the registry.
+		acPair, ok := impl.(*accumulatorCheckpointer)
+		if !ok {
+			return fmt.Errorf("impossible type assertion failed: %T", impl)
+		}
+		reader := acPair.checkpointer.Reader()
 		if err := func() error {
 			reader.RLock()
 			defer reader.RUnlock()
-			return readerFunc(pair.library, reader)
+			return readerFunc(acPair.library, reader)
 		}(); err != nil {
 			return err
 		}
