@@ -53,6 +53,16 @@ func mustSpanIDFromHex(s string) (t trace.SpanID) {
 	return
 }
 
+func TestBytesMapCarrier(t *testing.T) {
+	carrier := make(propagation.BytesMapCarrier)
+	carrier.Set("foo", "bar")
+	carrier.Set("baz", "qux")
+
+	assert.Equal(t, carrier.Get("foo"), "bar")
+	assert.Equal(t, carrier.Get("baz"), "qux")
+	assert.Equal(t, carrier.Keys(), []string{"foo", "baz"})
+}
+
 type outOfThinAirPropagator struct {
 	t *testing.T
 }

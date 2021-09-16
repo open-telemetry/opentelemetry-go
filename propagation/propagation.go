@@ -40,6 +40,29 @@ type TextMapCarrier interface {
 	// must never be done outside of a new major release.
 }
 
+// BytesMapCarrier is a Carrier that stores propagated
+// values in a map of bytes.
+type BytesMapCarrier map[string][]byte
+
+// Get returns the value associated with the passed key.
+func (c BytesMapCarrier) Get(key string) string {
+	return string(c[key])
+}
+
+// Set stores the key-value pair.
+func (c BytesMapCarrier) Set(key string, value string) {
+	c[key] = []byte(value)
+}
+
+// Keys lists the keys stored in this carrier.
+func (c BytesMapCarrier) Keys() []string {
+	keys := make([]string, 0, len(c))
+	for k := range c {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
 // HeaderCarrier adapts http.Header to satisfy the TextMapCarrier interface.
 type HeaderCarrier http.Header
 
