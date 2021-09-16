@@ -86,7 +86,7 @@ func (p *MeterProvider) List() []metric.MeterImpl {
 }
 
 // uniqueInstrumentMeterImpl implements the metric.MeterImpl interface, adding
-// uniqueness checking for instrument descriptors.  Use NewMeter
+// uniqueness checking for instrument descriptors.  Use NewMeterImpl
 // to wrap an implementation with uniqueness checking.
 type uniqueInstrumentMeterImpl struct {
 	lock  sync.Mutex
