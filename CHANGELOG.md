@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- OTLP trace exporter now sets the SchemaURL field in the exported telemetry if the Tracer has WithSchemaURL option. (#2242)
+
 ### Changed
 
 - NoopMeterProvider is now private and NewNoopMeterProvider must be used to obtain a noopMeterProvider. (#2237)
