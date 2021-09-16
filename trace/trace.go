@@ -54,7 +54,7 @@ var _ json.Marshaler = nilTraceID
 // IsValid checks whether the trace TraceID is valid. A valid trace ID does
 // not consist of zeros only.
 func (t TraceID) IsValid() bool {
-	return !bytes.Equal(t[:], nilTraceID[:])
+	return !bytes.Equal(t[:], nilTraceID[:]) && len(t) == len(nilTraceID)
 }
 
 // MarshalJSON implements a custom marshal function to encode TraceID
@@ -77,7 +77,7 @@ var _ json.Marshaler = nilSpanID
 // IsValid checks whether the SpanID is valid. A valid SpanID does not consist
 // of zeros only.
 func (s SpanID) IsValid() bool {
-	return !bytes.Equal(s[:], nilSpanID[:])
+	return !bytes.Equal(s[:], nilSpanID[:]) && len(s) == len(nilSpanID)
 }
 
 // MarshalJSON implements a custom marshal function to encode SpanID
