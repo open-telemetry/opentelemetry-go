@@ -32,6 +32,8 @@ type (
 		Labels     []attribute.KeyValue
 	}
 
+	// Library is the same as "sdk/instrumentation".Library but there is
+	// a package cycle to use it.
 	Library struct {
 		InstrumentationName    string
 		InstrumentationVersion string

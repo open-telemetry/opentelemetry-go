@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/internal/metric/registry"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/registry"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
@@ -57,9 +57,8 @@ var ErrControllerStarted = fmt.Errorf("controller already started")
 // be blocked by a pull request in the basic controller.
 type Controller struct {
 	lock                sync.Mutex
-	provider            *registry.MeterProvider
+	libraries           map[instrumentation.Library]*registry.UniqueInstrumentMeterImpl
 	checkpointerFactory export.CheckpointerFactory
-	accumulatorProvider accumulatorProvider
 
 	resource *resource.Resource
 	exporter export.Exporter
@@ -78,26 +77,31 @@ type Controller struct {
 }
 
 var _ export.InstrumentationLibraryReader = &Controller{}
+var _ metric.MeterProvider = &Controller{}
 
-type accumulatorProvider struct {
-	controller *Controller
-}
-
-var _ metric.MeterProvider = &accumulatorProvider{}
-
-func (a *accumulatorProvider) Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter {
-	checkpointer := a.controller.checkpointerFactory.NewCheckpointer()
-	accumulator := sdk.NewAccumulator(checkpointer)
+func (c *Controller) Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter {
 	cfg := metric.NewMeterConfig(opts...)
-	return metric.WrapMeterImpl(&accumulatorCheckpointer{
-		Accumulator:  accumulator,
-		checkpointer: checkpointer,
-		library: instrumentation.Library{
-			Name:      instrumentationName,
-			Version:   cfg.InstrumentationVersion(),
-			SchemaURL: cfg.SchemaURL(),
-		},
-	})
+	library := instrumentation.Library{
+		Name:      instrumentationName,
+		Version:   cfg.InstrumentationVersion(),
+		SchemaURL: cfg.SchemaURL(),
+	}
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	m, ok := c.libraries[library]
+	if !ok {
+		checkpointer := c.checkpointerFactory.NewCheckpointer()
+		accumulator := sdk.NewAccumulator(checkpointer)
+		m = registry.NewUniqueInstrumentMeterImpl(&accumulatorCheckpointer{
+			Accumulator:  accumulator,
+			checkpointer: checkpointer,
+			library:      library,
+		})
+
+		c.libraries[library] = m
+	}
+	return metric.WrapMeterImpl(m)
 }
 
 type accumulatorCheckpointer struct {
@@ -127,7 +131,8 @@ func New(checkpointerFactory export.CheckpointerFactory, opts ...Option) *Contro
 			otel.Handle(err)
 		}
 	}
-	cont := &Controller{
+	return &Controller{
+		libraries:           map[instrumentation.Library]*registry.UniqueInstrumentMeterImpl{},
 		checkpointerFactory: checkpointerFactory,
 		exporter:            c.Exporter,
 		resource:            c.Resource,
@@ -138,9 +143,6 @@ func New(checkpointerFactory export.CheckpointerFactory, opts ...Option) *Contro
 		collectTimeout: c.CollectTimeout,
 		pushTimeout:    c.PushTimeout,
 	}
-	cont.accumulatorProvider.controller = cont
-	cont.provider = registry.NewMeterProvider(&cont.accumulatorProvider)
-	return cont
 }
 
 // SetClock supports setting a mock clock for testing.  This must be
@@ -153,7 +155,7 @@ func (c *Controller) SetClock(clock controllerTime.Clock) {
 
 // MeterProvider returns a MeterProvider instance for this controller.
 func (c *Controller) MeterProvider() metric.MeterProvider {
-	return c.provider
+	return c
 }
 
 // Resource returns the *resource.Resource associated with this
@@ -202,19 +204,23 @@ func (c *Controller) Start(ctx context.Context) error {
 //
 // Note that Stop() will not cancel an ongoing collection or export.
 func (c *Controller) Stop(ctx context.Context) error {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	if lastCollection := func() bool {
+		c.lock.Lock()
+		defer c.lock.Unlock()
 
-	if c.stopCh == nil {
+		if c.stopCh == nil {
+			return false
+		}
+
+		close(c.stopCh)
+		c.stopCh = nil
+		c.wg.Wait()
+		c.ticker.Stop()
+		c.ticker = nil
+		return true
+	}(); !lastCollection {
 		return nil
 	}
-
-	close(c.stopCh)
-	c.stopCh = nil
-	c.wg.Wait()
-	c.ticker.Stop()
-	c.ticker = nil
-
 	return c.collect(ctx)
 }
 
@@ -247,17 +253,29 @@ func (c *Controller) collect(ctx context.Context) error {
 	return c.export(ctx)
 }
 
+// accumulatorList returns a snapshot of current accumulators
+// registered to this controller.  This briefly locks the controller.
+func (c *Controller) accumulatorList() []*accumulatorCheckpointer {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	var r []*accumulatorCheckpointer
+	for _, entry := range c.libraries {
+		acc, ok := entry.MeterImpl().(*accumulatorCheckpointer)
+		if ok {
+			r = append(r, acc)
+		}
+	}
+	return r
+}
+
 // checkpoint calls the Accumulator and Checkpointer interfaces to
 // compute the CheckpointSet.  This applies the configured collection
 // timeout.  Note that this does not try to cancel a Collect or Export
 // when Stop() is called.
 func (c *Controller) checkpoint(ctx context.Context) error {
-	for _, impl := range c.provider.List() {
-		acPair, ok := impl.(*accumulatorCheckpointer)
-		if !ok {
-			return fmt.Errorf("impossible type assertion failed: %T", impl)
-		}
-		if err := c.checkpointSingleAccmulator(ctx, acPair); err != nil {
+	for _, impl := range c.accumulatorList() {
+		if err := c.checkpointSingleAccmulator(ctx, impl); err != nil {
 			return err
 		}
 	}
@@ -317,16 +335,9 @@ func (c *Controller) export(ctx context.Context) error {
 
 // ForEach implements export.InstrumentationLibraryReader.
 func (c *Controller) ForEach(readerFunc func(l instrumentation.Library, r export.Reader) error) error {
-	for _, impl := range c.provider.List() {
-		// Note: the Controller owns the provider, which is a registry
-		// that calls (accumulatorProvider).Meter() to obtain this value,
-		// so the following type assertion will succeed or else there is a
-		// bug in the registry.
-		acPair, ok := impl.(*accumulatorCheckpointer)
-		if !ok {
-			return fmt.Errorf("impossible type assertion failed: %T", impl)
-		}
+	for _, acPair := range c.accumulatorList() {
 		reader := acPair.checkpointer.Reader()
+		// TODO: We should not fail fast; instead accumulate errors.
 		if err := func() error {
 			reader.RLock()
 			defer reader.RUnlock()

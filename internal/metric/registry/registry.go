@@ -23,107 +23,38 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-// MeterProvider is a standard MeterProvider that adds uniqueness
-// checking of Meters (by InstrumentationLibrary Name/Version/Schema)
-type MeterProvider struct {
-	// Note: This is a convenience for SDKs which are required to
-	// implemented the functionality provided here,
-
-	provider metric.MeterProvider
-
-	lock   sync.Mutex
-	meters map[uniqueMeterKey]*uniqueInstrumentMeterImpl
-}
-
-type uniqueMeterKey struct {
-	name      string
-	version   string
-	schemaURL string
-}
-
-func keyOf(name string, opts ...metric.MeterOption) uniqueMeterKey {
-	cfg := metric.NewMeterConfig(opts...)
-	return uniqueMeterKey{
-		name:      name,
-		version:   cfg.InstrumentationVersion(),
-		schemaURL: cfg.SchemaURL(),
-	}
-}
-
-var _ metric.MeterProvider = (*MeterProvider)(nil)
-
-// NewMeterProvider returns a new provider that implements meter
-// name-uniqueness checking.
-func NewMeterProvider(provider metric.MeterProvider) *MeterProvider {
-	return &MeterProvider{
-		provider: provider,
-		meters:   map[uniqueMeterKey]*uniqueInstrumentMeterImpl{},
-	}
-}
-
-// Meter implements MeterProvider.
-func (p *MeterProvider) Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter {
-	k := keyOf(instrumentationName, opts...)
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	m, ok := p.meters[k]
-	if !ok {
-		m = newMeterImpl(
-			p.provider.Meter(instrumentationName, opts...).MeterImpl(),
-		)
-		p.meters[k] = m
-	}
-	return metric.WrapMeterImpl(m)
-}
-
-// List provides a list of MeterImpl objects created through this
-// provider.
-func (p *MeterProvider) List() []metric.MeterImpl {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
-	var r []metric.MeterImpl
-	for _, meter := range p.meters {
-		r = append(r, meter.impl)
-	}
-	return r
-}
-
-// uniqueInstrumentMeterImpl implements the metric.MeterImpl interface, adding
-// uniqueness checking for instrument descriptors.  Use NewMeterProvider
-// to gain access to a Meter implementation with uniqueness checking.
-type uniqueInstrumentMeterImpl struct {
+// UniqueInstrumentMeterImpl implements the metric.MeterImpl interface, adding
+// uniqueness checking for instrument descriptors.
+type UniqueInstrumentMeterImpl struct {
 	lock  sync.Mutex
 	impl  metric.MeterImpl
 	state map[string]metric.InstrumentImpl
 }
 
-var _ metric.MeterImpl = (*uniqueInstrumentMeterImpl)(nil)
+var _ metric.MeterImpl = (*UniqueInstrumentMeterImpl)(nil)
 
 // ErrMetricKindMismatch is the standard error for mismatched metric
 // instrument definitions.
 var ErrMetricKindMismatch = fmt.Errorf(
 	"a metric was already registered by this name with another kind or number type")
 
-// NewMeterImpl returns a wrapped metric.MeterImpl with
-// the addition of instrument name uniqueness checking.
-func NewMeterImpl(impl metric.MeterImpl) metric.MeterImpl {
-	// Note: the internal/metric/global package uses a NewMeterImpl
-	// directly, instead of relying on the *registry.MeterProvider.
-	// This allows it to synchronize its calls to set the delegates
-	// at the moment the SDK is registered.
-	return newMeterImpl(impl)
-}
-
-func newMeterImpl(impl metric.MeterImpl) *uniqueInstrumentMeterImpl {
-	return &uniqueInstrumentMeterImpl{
+// NewUniqueInstrumentMeterImpl returns a wrapped metric.MeterImpl
+// with the addition of instrument name uniqueness checking.
+func NewUniqueInstrumentMeterImpl(impl metric.MeterImpl) *UniqueInstrumentMeterImpl {
+	return &UniqueInstrumentMeterImpl{
 		impl:  impl,
 		state: map[string]metric.InstrumentImpl{},
 	}
 }
 
+// MeterImpl gives the caller access to the underlying MeterImpl
+// used by this UniqueInstrumentMeterImpl.
+func (u *UniqueInstrumentMeterImpl) MeterImpl() metric.MeterImpl {
+	return u.impl
+}
+
 // RecordBatch implements metric.MeterImpl.
-func (u *uniqueInstrumentMeterImpl) RecordBatch(ctx context.Context, labels []attribute.KeyValue, ms ...metric.Measurement) {
+func (u *UniqueInstrumentMeterImpl) RecordBatch(ctx context.Context, labels []attribute.KeyValue, ms ...metric.Measurement) {
 	u.impl.RecordBatch(ctx, labels, ms...)
 }
 
@@ -149,7 +80,7 @@ func Compatible(candidate, existing metric.Descriptor) bool {
 // `descriptor` argument.  If there is an existing compatible
 // registration, this returns the already-registered instrument.  If
 // there is no conflict and no prior registration, returns (nil, nil).
-func (u *uniqueInstrumentMeterImpl) checkUniqueness(descriptor metric.Descriptor) (metric.InstrumentImpl, error) {
+func (u *UniqueInstrumentMeterImpl) checkUniqueness(descriptor metric.Descriptor) (metric.InstrumentImpl, error) {
 	impl, ok := u.state[descriptor.Name()]
 	if !ok {
 		return nil, nil
@@ -163,7 +94,7 @@ func (u *uniqueInstrumentMeterImpl) checkUniqueness(descriptor metric.Descriptor
 }
 
 // NewSyncInstrument implements metric.MeterImpl.
-func (u *uniqueInstrumentMeterImpl) NewSyncInstrument(descriptor metric.Descriptor) (metric.SyncImpl, error) {
+func (u *UniqueInstrumentMeterImpl) NewSyncInstrument(descriptor metric.Descriptor) (metric.SyncImpl, error) {
 	u.lock.Lock()
 	defer u.lock.Unlock()
 
@@ -184,7 +115,7 @@ func (u *uniqueInstrumentMeterImpl) NewSyncInstrument(descriptor metric.Descript
 }
 
 // NewAsyncInstrument implements metric.MeterImpl.
-func (u *uniqueInstrumentMeterImpl) NewAsyncInstrument(
+func (u *UniqueInstrumentMeterImpl) NewAsyncInstrument(
 	descriptor metric.Descriptor,
 	runner metric.AsyncRunner,
 ) (metric.AsyncImpl, error) {

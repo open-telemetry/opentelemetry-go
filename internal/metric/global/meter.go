@@ -21,9 +21,9 @@ import (
 	"unsafe"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/internal/metric/registry"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
-	"go.opentelemetry.io/otel/metric/registry"
 )
 
 // This file contains the forwarding implementation of MeterProvider used as
@@ -162,7 +162,12 @@ func (p *meterProvider) Meter(instrumentationName string, opts ...metric.MeterOp
 	entry, ok := p.meters[key]
 	if !ok {
 		entry = &meterEntry{}
-		entry.unique = registry.NewMeterImpl(&entry.impl)
+		// Note: This code implements its own MeterProvider
+		// name-uniqueness logic because there is
+		// synchronization required at the moment of
+		// delegation.  We use the same instrument-uniqueness
+		// checking the real SDK uses here:
+		entry.unique = registry.NewUniqueInstrumentMeterImpl(&entry.impl)
 		p.meters[key] = entry
 	}
 	return metric.WrapMeterImpl(entry.unique)
