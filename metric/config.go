@@ -103,24 +103,22 @@ func NewMeterConfig(opts ...MeterOption) MeterConfig {
 	return config
 }
 
-// WithInstrumentationVersion sets the instrumentation version.
-func WithInstrumentationVersion(version string) MeterOption {
-	return instrumentationVersionOption(version)
+type meterOptionFunc func(*MeterConfig)
+
+func (fn meterOptionFunc) applyMeter(cfg *MeterConfig) {
+	fn(cfg)
 }
 
-type instrumentationVersionOption string
-
-func (i instrumentationVersionOption) applyMeter(config *MeterConfig) {
-	config.instrumentationVersion = string(i)
+// WithInstrumentationVersion sets the instrumentation version.
+func WithInstrumentationVersion(version string) MeterOption {
+	return meterOptionFunc(func(config *MeterConfig) {
+		config.instrumentationVersion = version
+	})
 }
 
 // WithSchemaURL sets the schema URL.
-func WithSchemaURL(version string) MeterOption {
-	return schemaURLOption(version)
-}
-
-type schemaURLOption string
-
-func (s schemaURLOption) applyMeter(config *MeterConfig) {
-	config.schemaURL = string(s)
+func WithSchemaURL(schemaURL string) MeterOption {
+	return meterOptionFunc(func(config *MeterConfig) {
+		config.schemaURL = schemaURL
+	})
 }
