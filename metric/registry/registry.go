@@ -23,10 +23,12 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-// MeterProvider is a standard MeterProvider for wrapping `MeterImpl`
+// MeterProvider is a standard MeterProvider that adds uniqueness
+// checking of Meters (by InstrumentationLibrary Name/Version/Schema)
 type MeterProvider struct {
+	provider metric.MeterProvider
+
 	lock   sync.Mutex
-	impl   metric.MeterProvider
 	meters map[uniqueMeterKey]metric.Meter
 }
 
@@ -49,10 +51,10 @@ var _ metric.MeterProvider = (*MeterProvider)(nil)
 
 // NewMeterProvider returns a new provider that implements meter
 // name-uniqueness checking.
-func NewMeterProvider(impl metric.MeterProvider) *MeterProvider {
+func NewMeterProvider(provider metric.MeterProvider) *MeterProvider {
 	return &MeterProvider{
-		impl:   impl,
-		meters: map[uniqueMeterKey]metric.Meter{},
+		provider: provider,
+		meters:   map[uniqueMeterKey]metric.Meter{},
 	}
 }
 
@@ -64,7 +66,7 @@ func (p *MeterProvider) Meter(instrumentationName string, opts ...metric.MeterOp
 	m, ok := p.meters[k]
 	if !ok {
 		m = metric.WrapMeterImpl(NewMeterImpl(
-			p.impl.Meter(instrumentationName, opts...).MeterImpl(),
+			p.provider.Meter(instrumentationName, opts...).MeterImpl(),
 		))
 		p.meters[k] = m
 	}
