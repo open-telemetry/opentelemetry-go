@@ -77,6 +77,8 @@ type Controller struct {
 	collectedTime time.Time
 }
 
+var _ export.InstrumentationLibraryReader = &Controller{}
+
 type accumulatorProvider struct {
 	controller *Controller
 }
@@ -163,7 +165,7 @@ func (c *Controller) Resource() *resource.Resource {
 // InstrumentationLibraryReader returns an InstrumentationLibraryReader for iterating
 // through the metrics of each registered library, one at a time.
 func (c *Controller) InstrumentationLibraryReader() export.InstrumentationLibraryReader {
-	return libraryReader{c}
+	return c
 }
 
 // Start begins a ticker that periodically collects and exports
@@ -313,14 +315,9 @@ func (c *Controller) export(ctx context.Context) error {
 	return c.exporter.Export(ctx, c.resource, c.InstrumentationLibraryReader())
 }
 
-type libraryReader struct {
-	*Controller
-}
-
-var _ export.InstrumentationLibraryReader = libraryReader{}
-
-func (l libraryReader) ForEach(readerFunc func(l instrumentation.Library, r export.Reader) error) error {
-	for _, impl := range l.Controller.provider.List() {
+// ForEach implements export.InstrumentationLibraryReader.
+func (c *Controller) ForEach(readerFunc func(l instrumentation.Library, r export.Reader) error) error {
+	for _, impl := range c.provider.List() {
 		// Note: the Controller owns the provider, which is a registry
 		// that calls (accumulatorProvider).Meter() to obtain this value,
 		// so the following type assertion will succeed or else there is a
