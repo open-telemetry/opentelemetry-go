@@ -53,7 +53,7 @@ var ErrControllerStarted = fmt.Errorf("controller already started")
 //   collection
 //
 // The controller supports mixing push and pull access to metric data
-// using the export.CheckpointSet RWLock interface.  Collection will
+// using the export.Reader RWLock interface.  Collection will
 // be blocked by a pull request in the basic controller.
 type Controller struct {
 	lock                sync.Mutex
@@ -110,8 +110,8 @@ type accumulatorCheckpointer struct {
 	library      instrumentation.Library
 }
 
-// New constructs a Controller using the provided checkpointer and
-// options (including optional exporter) to configure a metric
+// New constructs a Controller using the provided checkpointer factory
+// and options (including optional exporter) to configure a metric
 // export pipeline.
 func New(checkpointerFactory export.CheckpointerFactory, opts ...Option) *Controller {
 	c := &config{
@@ -270,23 +270,23 @@ func (c *Controller) accumulatorList() []*accumulatorCheckpointer {
 }
 
 // checkpoint calls the Accumulator and Checkpointer interfaces to
-// compute the CheckpointSet.  This applies the configured collection
+// compute the Reader.  This applies the configured collection
 // timeout.  Note that this does not try to cancel a Collect or Export
 // when Stop() is called.
 func (c *Controller) checkpoint(ctx context.Context) error {
 	for _, impl := range c.accumulatorList() {
-		if err := c.checkpointSingleAccmulator(ctx, impl); err != nil {
+		if err := c.checkpointSingleAccumulator(ctx, impl); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// checkpointSingleAccmulator checkpoints a single instrumentation
+// checkpointSingleAccumulator checkpoints a single instrumentation
 // library's accumulator, which involves calling
 // checkpointer.StartCollection, accumulator.Collect, and
 // checkpointer.FinishCollection in sequence.
-func (c *Controller) checkpointSingleAccmulator(ctx context.Context, ac *accumulatorCheckpointer) error {
+func (c *Controller) checkpointSingleAccumulator(ctx context.Context, ac *accumulatorCheckpointer) error {
 	ckpt := ac.checkpointer.Reader()
 	ckpt.Lock()
 	defer ckpt.Unlock()

@@ -52,7 +52,7 @@ var (
 	// transformation.
 	ErrContextCanceled = errors.New("context canceled")
 
-	// ErrTransforming is returned when an unexected error is encoutered transforming.
+	// ErrTransforming is returned when an unexected error is encountered transforming.
 	ErrTransforming = errors.New("transforming failed")
 )
 
@@ -132,7 +132,7 @@ func InstrumentationLibraryReader(ctx context.Context, exportSelector export.Exp
 }
 
 // source starts a goroutine that sends each one of the Records yielded by
-// the Reader on the returned chan. Any error encoutered will be sent
+// the Reader on the returned chan. Any error encountered will be sent
 // on the returned error chan after seeding is complete.
 func source(ctx context.Context, exportSelector export.ExportKindSelector, mr export.Reader) (<-chan export.Record, <-chan error) {
 	errc := make(chan error, 1)
@@ -176,7 +176,7 @@ func transformer(ctx context.Context, exportSelector export.ExportKindSelector, 
 
 // sink collects transformed Records and batches them.
 //
-// Any errors encoutered transforming input will be reported with an
+// Any errors encountered transforming input will be reported with an
 // ErrTransforming as well as the completed ResourceMetrics. It is up to the
 // caller to handle any incorrect data in these ResourceMetric.
 func sink(ctx context.Context, in <-chan result) ([]*metricpb.Metric, error) {

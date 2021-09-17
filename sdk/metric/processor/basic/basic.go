@@ -90,7 +90,7 @@ type (
 	state struct {
 		config config
 
-		// RWMutex implements locking for the `CheckpointSet` interface.
+		// RWMutex implements locking for the `Reader` interface.
 		sync.RWMutex
 		values map[stateKey]*stateValue
 
