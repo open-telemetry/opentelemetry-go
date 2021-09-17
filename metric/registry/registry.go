@@ -26,10 +26,13 @@ import (
 // MeterProvider is a standard MeterProvider that adds uniqueness
 // checking of Meters (by InstrumentationLibrary Name/Version/Schema)
 type MeterProvider struct {
+	// Note: This is a convenience for SDKs which are required to
+	// implemented the functionality provided here,
+
 	provider metric.MeterProvider
 
 	lock   sync.Mutex
-	meters map[uniqueMeterKey]metric.Meter
+	meters map[uniqueMeterKey]*uniqueInstrumentMeterImpl
 }
 
 type uniqueMeterKey struct {
@@ -54,7 +57,7 @@ var _ metric.MeterProvider = (*MeterProvider)(nil)
 func NewMeterProvider(provider metric.MeterProvider) *MeterProvider {
 	return &MeterProvider{
 		provider: provider,
-		meters:   map[uniqueMeterKey]metric.Meter{},
+		meters:   map[uniqueMeterKey]*uniqueInstrumentMeterImpl{},
 	}
 }
 
@@ -65,13 +68,12 @@ func (p *MeterProvider) Meter(instrumentationName string, opts ...metric.MeterOp
 	defer p.lock.Unlock()
 	m, ok := p.meters[k]
 	if !ok {
-		m = metric.WrapMeterImpl(NewMeterImpl(
+		m = newMeterImpl(
 			p.provider.Meter(instrumentationName, opts...).MeterImpl(),
-		))
+		)
 		p.meters[k] = m
 	}
-	return m
-
+	return metric.WrapMeterImpl(m)
 }
 
 // List provides a list of MeterImpl objects created through this
@@ -82,14 +84,14 @@ func (p *MeterProvider) List() []metric.MeterImpl {
 
 	var r []metric.MeterImpl
 	for _, meter := range p.meters {
-		r = append(r, meter.MeterImpl().(*uniqueInstrumentMeterImpl).impl)
+		r = append(r, meter.impl)
 	}
 	return r
 }
 
 // uniqueInstrumentMeterImpl implements the metric.MeterImpl interface, adding
-// uniqueness checking for instrument descriptors.  Use NewMeterImpl
-// to wrap an implementation with uniqueness checking.
+// uniqueness checking for instrument descriptors.  Use NewMeterProvider
+// to gain access to a Meter implementation with uniqueness checking.
 type uniqueInstrumentMeterImpl struct {
 	lock  sync.Mutex
 	impl  metric.MeterImpl
@@ -104,8 +106,16 @@ var ErrMetricKindMismatch = fmt.Errorf(
 	"a metric was already registered by this name with another kind or number type")
 
 // NewMeterImpl returns a wrapped metric.MeterImpl with
-// the addition of uniqueness checking.
+// the addition of instrument name uniqueness checking.
 func NewMeterImpl(impl metric.MeterImpl) metric.MeterImpl {
+	// Note: the internal/metric/global package uses a NewMeterImpl
+	// directly, instead of relying on the *registry.MeterProvider.
+	// This allows it to synchronize its calls to set the delegates
+	// at the moment the SDK is registered.
+	return newMeterImpl(impl)
+}
+
+func newMeterImpl(impl metric.MeterImpl) *uniqueInstrumentMeterImpl {
 	return &uniqueInstrumentMeterImpl{
 		impl:  impl,
 		state: map[string]metric.InstrumentImpl{},
