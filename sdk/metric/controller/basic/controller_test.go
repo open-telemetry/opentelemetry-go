@@ -441,3 +441,46 @@ func TestCollectAfterStopThenStartAgain(t *testing.T) {
 		"one.lastvalue//": 6,
 	}, exp.Values())
 }
+
+func TestRegistryFunction(t *testing.T) {
+	exp := processortest.New(
+		export.CumulativeExportKindSelector(),
+		attribute.DefaultEncoder(),
+	)
+	cont := controller.New(
+		processor.NewFactory(
+			processortest.AggregatorSelector(),
+			exp,
+		),
+		controller.WithCollectPeriod(time.Second),
+		controller.WithExporter(exp),
+		controller.WithResource(resource.Empty()),
+	)
+
+	m1 := cont.MeterProvider().Meter("test")
+	m2 := cont.MeterProvider().Meter("test")
+
+	require.NotNil(t, m1)
+	require.Equal(t, m1, m2)
+
+	c1, err := m1.NewInt64Counter("counter.sum")
+	require.NoError(t, err)
+
+	c2, err := m1.NewInt64Counter("counter.sum")
+	require.NoError(t, err)
+
+	require.Equal(t, c1, c2)
+
+	ctx := context.Background()
+
+	require.NoError(t, cont.Start(ctx))
+
+	c1.Add(ctx, 10)
+	c2.Add(ctx, 10)
+
+	require.NoError(t, cont.Stop(ctx))
+
+	require.EqualValues(t, map[string]float64{
+		"counter.sum//": 20,
+	}, exp.Values())
+}
