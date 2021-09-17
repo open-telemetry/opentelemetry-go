@@ -16,6 +16,7 @@ package propagation_test
 
 import (
 	"context"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -60,7 +61,10 @@ func TestBytesMapCarrier(t *testing.T) {
 
 	assert.Equal(t, carrier.Get("foo"), "bar")
 	assert.Equal(t, carrier.Get("baz"), "qux")
-	assert.Equal(t, carrier.Keys(), []string{"foo", "baz"})
+
+	keys := carrier.Keys()
+	sort.Strings(keys)
+	assert.Equal(t, carrier.Keys(), []string{"baz", "foo"})
 }
 
 type outOfThinAirPropagator struct {
