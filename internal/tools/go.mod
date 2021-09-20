@@ -9,7 +9,7 @@ require (
 	github.com/itchyny/gojq v0.12.5
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad
 	go.opentelemetry.io/build-tools/semconvgen v0.0.0-20210730171444-520d53fe242d
-	golang.org/x/tools v0.1.5
+	golang.org/x/tools v0.1.6
 )
 
 replace go.opentelemetry.io/otel => ../..
