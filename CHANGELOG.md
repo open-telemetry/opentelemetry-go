@@ -8,13 +8,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-### Added
-
-- OTLP trace exporter now sets the SchemaURL field in the exported telemetry if the Tracer has WithSchemaURL option. (#2242)
-
 ### Changed
 
 - NoopMeterProvider is now private and NewNoopMeterProvider must be used to obtain a noopMeterProvider. (#2237)
+
+## [1.0.0] - 2021-09-20
+
+This is the first stable release for the project.
+This release includes an API and SDK for the tracing signal that will comply with the stability guarantees defined by the projects [versioning policy](./VERSIONING.md).
+
+### Added
+
+- OTLP trace exporter now sets the `SchemaURL` field in the exported telemetry if the Tracer has `WithSchemaURL` option. (#2242)
 
 ### Fixed
 
@@ -22,7 +27,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
-- Removed the zipkin.WithSDKOptions function. It already didn't have any effect (#2248).
+- Removed the `"go.opentelemetry.io/otel/exporters/zipkin".WithSDKOptions` function. (#2248)
 - Removed the deprecated package `go.opentelemetry.io/otel/oteltest`. (#2234)
 - Removed the deprecated package `go.opentelemetry.io/otel/bridge/opencensus/utils`. (#2233)
 - Removed deprecated functions, types, and methods from `go.opentelemetry.io/otel/attribute` package.
@@ -1534,7 +1539,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.0.0-RC3...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.0
 [1.0.0-RC3]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.0-RC3
 [1.0.0-RC2]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.0-RC2
 [Experimental Metrics v0.22.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/metric/v0.22.0
