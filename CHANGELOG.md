@@ -19,7 +19,7 @@ This release includes an API and SDK for the tracing signal that will comply wit
 
 ### Added
 
-- OTLP trace exporter now sets the SchemaURL field in the exported telemetry if the Tracer has WithSchemaURL option. (#2242)
+- OTLP trace exporter now sets the `SchemaURL` field in the exported telemetry if the Tracer has `WithSchemaURL` option. (#2242)
 
 ### Fixed
 
