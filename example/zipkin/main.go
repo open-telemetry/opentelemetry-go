@@ -43,7 +43,6 @@ func initTracer(url string) func() {
 	exporter, err := zipkin.New(
 		url,
 		zipkin.WithLogger(logger),
-		zipkin.WithSDKOptions(sdktrace.WithSampler(sdktrace.AlwaysSample())),
 	)
 	if err != nil {
 		log.Fatal(err)

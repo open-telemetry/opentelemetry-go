@@ -49,7 +49,6 @@ var (
 type config struct {
 	client *http.Client
 	logger *log.Logger
-	tpOpts []sdktrace.TracerProviderOption
 }
 
 // Option defines a function that configures the exporter.
@@ -74,13 +73,6 @@ func WithLogger(logger *log.Logger) Option {
 func WithClient(client *http.Client) Option {
 	return optionFunc(func(cfg *config) {
 		cfg.client = client
-	})
-}
-
-// WithSDKOptions configures options passed to the created TracerProvider.
-func WithSDKOptions(tpOpts ...sdktrace.TracerProviderOption) Option {
-	return optionFunc(func(cfg *config) {
-		cfg.tpOpts = tpOpts
 	})
 }
 
