@@ -44,7 +44,7 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 	cont := controller.New(proc, controller.WithExporter(exp))
 	require.NoError(t, cont.Start(ctx))
 
-	meter := cont.MeterProvider().Meter("test-meter")
+	meter := cont.Meter("test-meter")
 	labels := []attribute.KeyValue{attribute.Bool("test", true)}
 
 	type data struct {

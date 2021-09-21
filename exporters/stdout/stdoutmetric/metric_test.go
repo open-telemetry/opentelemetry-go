@@ -68,7 +68,7 @@ func newFixtureWithResource(t *testing.T, res *resource.Resource, opts ...stdout
 	)
 	ctx := context.Background()
 	require.NoError(t, cont.Start(ctx))
-	meter := cont.MeterProvider().Meter("test")
+	meter := cont.Meter("test")
 
 	return testFixture{
 		t:        t,
@@ -101,7 +101,7 @@ func TestStdoutTimestamp(t *testing.T) {
 	ctx := context.Background()
 
 	require.NoError(t, cont.Start(ctx))
-	meter := cont.MeterProvider().Meter("test")
+	meter := cont.Meter("test")
 	counter := metric.Must(meter).NewInt64Counter("name.lastvalue")
 
 	before := time.Now()

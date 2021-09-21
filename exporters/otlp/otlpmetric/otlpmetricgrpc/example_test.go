@@ -55,7 +55,7 @@ func Example_insecure() {
 		controller.WithExporter(exp),
 		controller.WithCollectPeriod(2*time.Second),
 	)
-	global.SetMeterProvider(pusher.MeterProvider())
+	global.SetMeterProvider(pusher)
 
 	if err := pusher.Start(ctx); err != nil {
 		log.Fatalf("could not start metric controoler: %v", err)
@@ -114,7 +114,7 @@ func Example_withTLS() {
 		controller.WithExporter(exp),
 		controller.WithCollectPeriod(2*time.Second),
 	)
-	global.SetMeterProvider(pusher.MeterProvider())
+	global.SetMeterProvider(pusher)
 
 	if err := pusher.Start(ctx); err != nil {
 		log.Fatalf("could not start metric controoler: %v", err)
@@ -171,7 +171,7 @@ func Example_withDifferentSignalCollectors() {
 		controller.WithExporter(exp),
 		controller.WithCollectPeriod(2*time.Second),
 	)
-	global.SetMeterProvider(pusher.MeterProvider())
+	global.SetMeterProvider(pusher)
 
 	if err := pusher.Start(ctx); err != nil {
 		log.Fatalf("could not start metric controoler: %v", err)

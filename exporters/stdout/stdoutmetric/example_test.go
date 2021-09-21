@@ -81,7 +81,7 @@ func InstallExportPipeline(ctx context.Context) func() {
 	if err = pusher.Start(ctx); err != nil {
 		log.Fatalf("starting push controller: %v", err)
 	}
-	global.SetMeterProvider(pusher.MeterProvider())
+	global.SetMeterProvider(pusher)
 
 	return func() {
 		if err := pusher.Stop(ctx); err != nil {

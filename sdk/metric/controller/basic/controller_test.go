@@ -41,7 +41,7 @@ const envVar = "OTEL_RESOURCE_ATTRIBUTES"
 func getMap(t *testing.T, cont *controller.Controller) map[string]float64 {
 	out := processortest.NewOutput(attribute.DefaultEncoder())
 
-	require.NoError(t, cont.InstrumentationLibraryReader().ForEach(
+	require.NoError(t, cont.ForEach(
 		func(_ instrumentation.Library, reader export.Reader) error {
 			return reader.ForEach(
 				export.CumulativeExportKindSelector(),
@@ -125,9 +125,8 @@ func TestControllerUsesResource(t *testing.T) {
 			)
 			ctx := context.Background()
 			require.NoError(t, cont.Start(ctx))
-			prov := cont.MeterProvider()
 
-			ctr := metric.Must(prov.Meter("named")).NewFloat64Counter("calls.sum")
+			ctr := metric.Must(cont.Meter("named")).NewFloat64Counter("calls.sum")
 			ctr.Add(context.Background(), 1.)
 
 			// Collect once
@@ -153,10 +152,9 @@ func TestStartNoExporter(t *testing.T) {
 	mock := controllertest.NewMockClock()
 	cont.SetClock(mock)
 
-	prov := cont.MeterProvider()
 	calls := int64(0)
 
-	_ = metric.Must(prov.Meter("named")).NewInt64CounterObserver("calls.lastvalue",
+	_ = metric.Must(cont.Meter("named")).NewInt64CounterObserver("calls.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			calls++
 			checkTestContext(t, ctx)
@@ -222,10 +220,9 @@ func TestObserverCanceled(t *testing.T) {
 		controller.WithResource(resource.Empty()),
 	)
 
-	prov := cont.MeterProvider()
 	calls := int64(0)
 
-	_ = metric.Must(prov.Meter("named")).NewInt64CounterObserver("done.lastvalue",
+	_ = metric.Must(cont.Meter("named")).NewInt64CounterObserver("done.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			<-ctx.Done()
 			calls++
@@ -254,9 +251,7 @@ func TestObserverContext(t *testing.T) {
 		controller.WithResource(resource.Empty()),
 	)
 
-	prov := cont.MeterProvider()
-
-	_ = metric.Must(prov.Meter("named")).NewInt64CounterObserver("done.lastvalue",
+	_ = metric.Must(cont.Meter("named")).NewInt64CounterObserver("done.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			time.Sleep(10 * time.Millisecond)
 			checkTestContext(t, ctx)
@@ -322,10 +317,8 @@ func TestExportTimeout(t *testing.T) {
 	mock := controllertest.NewMockClock()
 	cont.SetClock(mock)
 
-	prov := cont.MeterProvider()
-
 	calls := int64(0)
-	_ = metric.Must(prov.Meter("named")).NewInt64CounterObserver("one.lastvalue",
+	_ = metric.Must(cont.Meter("named")).NewInt64CounterObserver("one.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			calls++
 			result.Observe(calls)
@@ -378,10 +371,8 @@ func TestCollectAfterStopThenStartAgain(t *testing.T) {
 	mock := controllertest.NewMockClock()
 	cont.SetClock(mock)
 
-	prov := cont.MeterProvider()
-
 	calls := 0
-	_ = metric.Must(prov.Meter("named")).NewInt64CounterObserver("one.lastvalue",
+	_ = metric.Must(cont.Meter("named")).NewInt64CounterObserver("one.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			calls++
 			result.Observe(int64(calls))
@@ -457,8 +448,8 @@ func TestRegistryFunction(t *testing.T) {
 		controller.WithResource(resource.Empty()),
 	)
 
-	m1 := cont.MeterProvider().Meter("test")
-	m2 := cont.MeterProvider().Meter("test")
+	m1 := cont.Meter("test")
+	m2 := cont.Meter("test")
 
 	require.NotNil(t, m1)
 	require.Equal(t, m1, m2)

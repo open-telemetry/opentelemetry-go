@@ -153,21 +153,10 @@ func (c *Controller) SetClock(clock controllerTime.Clock) {
 	c.clock = clock
 }
 
-// MeterProvider returns a MeterProvider instance for this controller.
-func (c *Controller) MeterProvider() metric.MeterProvider {
-	return c
-}
-
 // Resource returns the *resource.Resource associated with this
 // controller.
 func (c *Controller) Resource() *resource.Resource {
 	return c.resource
-}
-
-// InstrumentationLibraryReader returns an InstrumentationLibraryReader for iterating
-// through the metrics of each registered library, one at a time.
-func (c *Controller) InstrumentationLibraryReader() export.InstrumentationLibraryReader {
-	return c
 }
 
 // Start begins a ticker that periodically collects and exports
@@ -330,7 +319,7 @@ func (c *Controller) export(ctx context.Context) error {
 		defer cancel()
 	}
 
-	return c.exporter.Export(ctx, c.resource, c.InstrumentationLibraryReader())
+	return c.exporter.Export(ctx, c.resource, c)
 }
 
 // ForEach implements export.InstrumentationLibraryReader.
