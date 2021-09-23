@@ -92,6 +92,8 @@ var (
 	_ metric.AsyncImpl     = &Async{}
 )
 
+// NewDescriptor is a test helper for constructing test metric
+// descriptors using standard options.
 func NewDescriptor(name string, ikind sdkapi.InstrumentKind, nkind number.Kind, opts ...metric.InstrumentOption) metric.Descriptor {
 	cfg := metric.NewInstrumentConfig(opts...)
 	return metric.NewDescriptor(name, ikind, nkind, cfg.Description(), cfg.Unit())
@@ -134,10 +136,13 @@ func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []attribute.KeyVa
 	}})
 }
 
+// NewMeterProvider returns a MeterProvider suitable for testing.
+// When the test is complete, consult MeterProvider.MeasurementBatches.
 func NewMeterProvider() *MeterProvider {
 	return &MeterProvider{}
 }
 
+// Meter implements metric.MeterProvider.
 func (p *MeterProvider) Meter(name string, opts ...metric.MeterOption) metric.Meter {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -155,10 +160,8 @@ func (p *MeterProvider) Meter(name string, opts ...metric.MeterOption) metric.Me
 	return metric.WrapMeterImpl(impl)
 }
 
+// NewSyncInstrument implements metric.MeterImpl.
 func (m *MeterImpl) NewSyncInstrument(descriptor metric.Descriptor) (metric.SyncImpl, error) {
-	m.provider.lock.Lock()
-	defer m.provider.lock.Unlock()
-
 	return &Sync{
 		Instrument{
 			descriptor: descriptor,
@@ -167,10 +170,8 @@ func (m *MeterImpl) NewSyncInstrument(descriptor metric.Descriptor) (metric.Sync
 	}, nil
 }
 
+// NewAsyncInstrument implements metric.MeterImpl.
 func (m *MeterImpl) NewAsyncInstrument(descriptor metric.Descriptor, runner metric.AsyncRunner) (metric.AsyncImpl, error) {
-	m.provider.lock.Lock()
-	defer m.provider.lock.Unlock()
-
 	a := &Async{
 		Instrument: Instrument{
 			descriptor: descriptor,
@@ -178,10 +179,11 @@ func (m *MeterImpl) NewAsyncInstrument(descriptor metric.Descriptor, runner metr
 		},
 		runner: runner,
 	}
-	m.asyncInstruments.Register(a, runner)
+	m.provider.registerAsyncInstrument(a, m, runner)
 	return a, nil
 }
 
+// RecordBatch implements metric.MeterImpl.
 func (m *MeterImpl) RecordBatch(ctx context.Context, labels []attribute.KeyValue, measurements ...metric.Measurement) {
 	mm := make([]Measurement, len(measurements))
 	for i := 0; i < len(measurements); i++ {
@@ -194,6 +196,7 @@ func (m *MeterImpl) RecordBatch(ctx context.Context, labels []attribute.KeyValue
 	m.collect(ctx, labels, mm)
 }
 
+// CollectAsync is called from asyncInstruments.Run() with the lock held.
 func (m *MeterImpl) CollectAsync(labels []attribute.KeyValue, obs ...metric.Observation) {
 	mm := make([]Measurement, len(obs))
 	for i := 0; i < len(obs); i++ {
@@ -206,8 +209,9 @@ func (m *MeterImpl) CollectAsync(labels []attribute.KeyValue, obs ...metric.Obse
 	m.collect(context.Background(), labels, mm)
 }
 
+// collect is called from CollectAsync() or RecordBatch() with the lock held.
 func (m *MeterImpl) collect(ctx context.Context, labels []attribute.KeyValue, measurements []Measurement) {
-	m.provider.MeasurementBatches = append(m.provider.MeasurementBatches, Batch{
+	m.provider.addMeasurement(Batch{
 		Ctx:          ctx,
 		Labels:       labels,
 		Measurements: measurements,
@@ -215,10 +219,34 @@ func (m *MeterImpl) collect(ctx context.Context, labels []attribute.KeyValue, me
 	})
 }
 
-func (p *MeterProvider) RunAsyncInstruments() {
+// registerAsyncInstrument locks the provider and registers the new Async instrument.
+func (p *MeterProvider) registerAsyncInstrument(a *Async, m *MeterImpl, runner metric.AsyncRunner) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	for _, impl := range p.impls {
+
+	m.asyncInstruments.Register(a, runner)
+}
+
+// addMeasurement locks the provider and adds the new measurement batch.
+func (p *MeterProvider) addMeasurement(b Batch) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	p.MeasurementBatches = append(p.MeasurementBatches, b)
+}
+
+// copyImpls locks the provider and copies the current list of *MeterImpls.
+func (p *MeterProvider) copyImpls() []*MeterImpl {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	cpy := make([]*MeterImpl, len(p.impls))
+	copy(cpy, p.impls)
+	return cpy
+}
+
+// RunAsyncInstruments is used in tests to trigger collection from
+// asynchronous instruments.
+func (p *MeterProvider) RunAsyncInstruments() {
+	for _, impl := range p.copyImpls() {
 		impl.asyncInstruments.Run(context.Background(), impl)
 	}
 }
