@@ -182,7 +182,7 @@ func transformer(ctx context.Context, exportSelector export.ExportKindSelector, 
 func sink(ctx context.Context, in <-chan result) ([]*metricpb.Metric, error) {
 	var errStrings []string
 
-	// Group by instrumentation library name and then the MetricDescriptor.
+	// Group by the MetricDescriptor.
 	grouped := map[string]*metricpb.Metric{}
 	for res := range in {
 		if res.Err != nil {
