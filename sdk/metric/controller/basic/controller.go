@@ -57,7 +57,7 @@ var ErrControllerStarted = fmt.Errorf("controller already started")
 // be blocked by a pull request in the basic controller.
 type Controller struct {
 	lock                sync.Mutex
-	libraries           sync.Map // a map[instrumentation.Library]*initMeterOnce
+	libraries           map[instrumentation.Library]*registry.UniqueInstrumentMeterImpl
 	checkpointerFactory export.CheckpointerFactory
 
 	resource *resource.Resource
@@ -76,11 +76,6 @@ type Controller struct {
 	collectedTime time.Time
 }
 
-type initMeterOnce struct {
-	unique   *registry.UniqueInstrumentMeterImpl
-	initOnce sync.Once
-}
-
 var _ export.InstrumentationLibraryReader = &Controller{}
 var _ metric.MeterProvider = &Controller{}
 
@@ -92,20 +87,21 @@ func (c *Controller) Meter(instrumentationName string, opts ...metric.MeterOptio
 		SchemaURL: cfg.SchemaURL(),
 	}
 
-	newTmp := &initMeterOnce{}
-	m, _ := c.libraries.LoadOrStore(library, newTmp)
-	mo := m.(*initMeterOnce)
-	mo.initOnce.Do(func() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	m, ok := c.libraries[library]
+	if !ok {
 		checkpointer := c.checkpointerFactory.NewCheckpointer()
 		accumulator := sdk.NewAccumulator(checkpointer)
-		mo.unique = registry.NewUniqueInstrumentMeterImpl(&accumulatorCheckpointer{
+		m = registry.NewUniqueInstrumentMeterImpl(&accumulatorCheckpointer{
 			Accumulator:  accumulator,
 			checkpointer: checkpointer,
 			library:      library,
 		})
-	})
 
-	return metric.WrapMeterImpl(mo.unique)
+		c.libraries[library] = m
+	}
+	return metric.WrapMeterImpl(m)
 }
 
 type accumulatorCheckpointer struct {
@@ -136,6 +132,7 @@ func New(checkpointerFactory export.CheckpointerFactory, opts ...Option) *Contro
 		}
 	}
 	return &Controller{
+		libraries:           map[instrumentation.Library]*registry.UniqueInstrumentMeterImpl{},
 		checkpointerFactory: checkpointerFactory,
 		exporter:            c.Exporter,
 		resource:            c.Resource,
@@ -252,14 +249,12 @@ func (c *Controller) accumulatorList() []*accumulatorCheckpointer {
 	defer c.lock.Unlock()
 
 	var r []*accumulatorCheckpointer
-	c.libraries.Range(func(_, value interface{}) bool {
-		mo := value.(*initMeterOnce)
-		acc, ok := mo.unique.MeterImpl().(*accumulatorCheckpointer)
+	for _, entry := range c.libraries {
+		acc, ok := entry.MeterImpl().(*accumulatorCheckpointer)
 		if ok {
 			r = append(r, acc)
 		}
-		return true
-	})
+	}
 	return r
 }
 
