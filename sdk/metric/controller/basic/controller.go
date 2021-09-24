@@ -56,7 +56,13 @@ var ErrControllerStarted = fmt.Errorf("controller already started")
 // using the export.Reader RWLock interface.  Collection will
 // be blocked by a pull request in the basic controller.
 type Controller struct {
-	lock                sync.Mutex
+	// lock protects libraries and synchronizes Start() and Stop().
+	lock sync.Mutex
+	// TODO: libraries is synchronized by lock, but could be
+	// accomplished using a sync.Map.  The SDK specification will
+	// probably require this, as the draft already states that
+	// Stop() and MeterProvider.Meter() should not block each
+	// other.
 	libraries           map[instrumentation.Library]*registry.UniqueInstrumentMeterImpl
 	checkpointerFactory export.CheckpointerFactory
 
