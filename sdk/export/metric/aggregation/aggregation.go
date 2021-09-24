@@ -101,6 +101,22 @@ type (
 		Histogram() (Buckets, error)
 	}
 
+	ExponentialHistogram interface {
+		Aggregation
+		Count() (uint64, error)
+		Sum() (number.Number, error)
+		Scale() int32
+		ZeroCount() uint64
+		Positive() ExponentialBuckets
+		Negative() ExponentialBuckets
+	}
+
+	ExponentialBuckets interface {
+		Offset() int32
+		Len() uint32
+		At(uint32) uint64
+	}
+
 	// MinMaxSumCount supports the Min, Max, Sum, and Count interfaces.
 	MinMaxSumCount interface {
 		Aggregation
@@ -130,11 +146,12 @@ type (
 
 // Kind description constants.
 const (
-	SumKind            Kind = "Sum"
-	MinMaxSumCountKind Kind = "MinMaxSumCount"
-	HistogramKind      Kind = "Histogram"
-	LastValueKind      Kind = "Lastvalue"
-	ExactKind          Kind = "Exact"
+	SumKind                  Kind = "Sum"
+	MinMaxSumCountKind       Kind = "MinMaxSumCount"
+	HistogramKind            Kind = "Histogram"
+	LastValueKind            Kind = "Lastvalue"
+	ExactKind                Kind = "Exact"
+	ExponentialHistogramKind Kind = "ExponentialHistogram"
 )
 
 // Sentinel errors for Aggregation interface.
