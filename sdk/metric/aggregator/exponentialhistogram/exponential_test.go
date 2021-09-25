@@ -10,6 +10,15 @@ import (
 	"go.opentelemetry.io/otel/metric/sdkapi"
 )
 
+var (
+	normalMapping = NewLogarithmMapping(30)
+	oneAndAHalf   = centerVal(normalMapping, int32(normalMapping.MapToIndex(1.5)))
+)
+
+func centerVal(mapper LogarithmMapping, x int32) float64 {
+	return (mapper.LowerBoundary(int64(x)) + mapper.LowerBoundary(int64(x)+1)) / 2
+}
+
 func TestInitialCondition(t *testing.T) {
 	// Test with a 4-bucket-max exponential histogram
 	ctx := context.Background()
@@ -25,17 +34,17 @@ func TestInitialCondition(t *testing.T) {
 	require.Equal(t, uint32(0), pos.Len())
 	require.Equal(t, uint32(0), neg.Len())
 
-	// Add a 1.5, which is in the normal range => DefaultNormalScale.
-	agg.Update(ctx, number.NewFloat64Number(1.5), &desc)
+	// Add a oneAndAHalf, which is in the normal range => DefaultNormalScale.
+	agg.Update(ctx, number.NewFloat64Number(oneAndAHalf), &desc)
 
 	// Test count=2
 	cnt, err := agg.Count()
 	require.Equal(t, uint64(2), cnt)
 	require.NoError(t, err)
 
-	// Test sum=1.5
+	// Test sum=oneAndAHalf
 	sum, err := agg.Sum()
-	require.Equal(t, number.NewFloat64Number(1.5), sum)
+	require.Equal(t, number.NewFloat64Number(oneAndAHalf), sum)
 	require.NoError(t, err)
 
 	// Test a single positive bucket with count 1 at DefaultNormalScale.
@@ -47,11 +56,24 @@ func TestInitialCondition(t *testing.T) {
 	mapper := NewLogarithmMapping(agg.Scale())
 
 	// Check that the initial count maps to Offset().
-	offset := mapper.MapToIndex(1.5)
+	offset := mapper.MapToIndex(oneAndAHalf)
 	require.Equal(t, int32(offset), pos.Offset())
 
 	// Add 3 more values in each of the subsequent buckets.
-	for i := int64(1); i < 4; i++ {
-		agg.Update(ctx, number.NewFloat64Number(mapper.LowerBoundary(offset+i)), &desc)
+	for i := int32(1); i < 4; i++ {
+		value := centerVal(mapper, int32(offset)+i)
+		agg.Update(ctx, number.NewFloat64Number(value), &desc)
+	}
+
+	require.Equal(t, uint32(4), pos.Len())
+
+	for i := uint32(0); i < 4; i++ {
+		require.Equal(t, uint64(1), pos.At(i))
+	}
+
+	// Test the transition to 16bit and 32bit widths.
+	for i := 1; i < 100000; i++ {
+		require.Equal(t, uint64(i), pos.At(0))
+		agg.Update(ctx, number.NewFloat64Number(oneAndAHalf), &desc)
 	}
 }

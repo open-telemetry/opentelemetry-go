@@ -17,6 +17,7 @@ package exponential // import "go.opentelemetry.io/otel/sdk/metric/aggregator/ex
 import (
 	"context"
 	"math"
+	"math/bits"
 	"sync"
 
 	"go.opentelemetry.io/otel/metric"
@@ -42,13 +43,13 @@ type (
 	Aggregator struct {
 		lock    sync.Mutex
 		kind    number.Kind
-		maxSize int32
+		maxSize uint32
 		state   *state
 	}
 
 	// config describes how the histogram is aggregated.
 	config struct {
-		maxSize int32
+		maxSize uint32
 	}
 
 	// Option configures a histogram config.
@@ -90,7 +91,7 @@ func WithMaxSize(size int32) Option {
 type maxSizeOption int
 
 func (o maxSizeOption) apply(config *config) {
-	config.maxSize = int32(o)
+	config.maxSize = uint32(o)
 }
 
 func New(cnt int, desc *metric.Descriptor, opts ...Option) []Aggregator {
@@ -291,16 +292,32 @@ func (b *buckets) Offset() int32 {
 }
 
 func (b *buckets) Len() uint32 {
-	return uint32(b.indexEnd - b.indexStart)
+	if b.wrapped == nil {
+		return 0
+	}
+	return uint32(b.indexEnd - b.indexStart + 1)
+}
+
+func (b *buckets) size() uint32 {
+	switch counts := b.wrapped.(type) {
+	case []uint8:
+		return uint32(cap(counts))
+	case []uint16:
+		return uint32(cap(counts))
+	case []uint32:
+		return uint32(cap(counts))
+	case []uint64:
+		return uint32(cap(counts))
+	}
+	return 0
 }
 
 // At returns the count of the bucket at a position in the logical
 // array of counts.
 func (b *buckets) At(pos uint32) uint64 {
-	l := b.Len()
-
+	area := b.Len()
 	bias := uint32(b.indexBase - b.indexStart)
-	diff := l - bias
+	diff := area - bias
 
 	if pos < bias {
 		pos += diff
@@ -325,77 +342,111 @@ func (b *buckets) At(pos uint32) uint64 {
 // grow resizes the wrapped array by doubling in size up to maxSize.
 // this extends the array with a bunch of zeros and copies the
 // existing counts to the same position.
-func (a *Aggregator) grow(b *buckets, l int32, newStart int32) {
-	growTo := 2 * l
+func (a *Aggregator) grow(b *buckets, needed uint32) {
+	size := b.size()
+	bias := uint32(b.indexBase - b.indexStart)
+	diff := size - bias
+	growTo := uint32(1) << (32 - bits.LeadingZeros32(uint32(needed)))
 	if growTo > a.maxSize {
 		growTo = a.maxSize
 	}
+	part := growTo - bias
 	switch counts := b.wrapped.(type) {
 	case []uint8:
 		tmp := make([]uint8, growTo)
-		copy(tmp[0:l], counts)
+		copy(tmp[part:], counts[diff:])
+		copy(tmp[0:diff], counts[0:diff])
 		b.wrapped = tmp
 	case []uint16:
 		tmp := make([]uint16, growTo)
-		copy(tmp[0:l], counts)
+		copy(tmp[part:], counts[diff:])
+		copy(tmp[0:diff], counts[0:diff])
 		b.wrapped = tmp
 	case []uint32:
 		tmp := make([]uint32, growTo)
-		copy(tmp[0:l], counts)
+		copy(tmp[part:], counts[diff:])
+		copy(tmp[0:diff], counts[0:diff])
 		b.wrapped = tmp
 	case []uint64:
 		tmp := make([]uint64, growTo)
-		copy(tmp[0:l], counts)
+		copy(tmp[part:], counts[diff:])
+		copy(tmp[0:diff], counts[0:diff])
 		b.wrapped = tmp
 	default:
 		panic("impossible case")
 	}
-
 }
 
 // increment determines if the index lies inside the current range
 // [indexStart, indexEnd] and if not whether growing the array up to
 // maxSize will satisfy the new value.
 func (a *Aggregator) increment(b *buckets, index int32) bool {
-	l := int32(b.Len())
+	space := b.size()
 
-	low := b.indexStart
-	high := b.indexStart + l
-
-	indexLow := index < b.indexStart
-	indexHigh := index >= high
-
-	// First, see whether we can expand the wrapped slice
-	// up to maxSize to accept the new index.
-	if indexLow && high-index <= a.maxSize {
-		a.grow(b, l, index)
-	} else if indexHigh && index-low <= a.maxSize {
-		a.grow(b, l, b.indexStart)
-	} else {
-		// Rescale needed
-		return false
+	if index < b.indexStart {
+		if span := uint32(b.indexEnd - index); span >= a.maxSize {
+			return false // rescale needed
+		} else if span >= space {
+			a.grow(b, span+1)
+		}
+		b.indexStart = index
+	} else if index > b.indexEnd {
+		if span := uint32(index - b.indexStart); span >= a.maxSize {
+			return false // rescale needed
+		} else if span >= space {
+			a.grow(b, span+1)
+		}
+		b.indexEnd = index
 	}
 
-	// @@@ HERE YOU ARE this may require an update to indexStart
-	// or indexEnd.
-
-	i := int32(index) - int32(b.indexBase)
-	if i >= l {
-		i -= l
+	l := b.size()
+	i := index - b.indexBase
+	if i >= int32(l) {
+		i -= int32(l)
 	} else if i < 0 {
-		i += l
+		i += int32(l)
 	}
-	switch counts := b.wrapped.(type) {
-	case []uint8:
-		counts[i]++
-	case []uint16:
-		counts[i]++
-	case []uint32:
-		counts[i]++
-	case []uint64:
-		counts[i]++
-	default:
-		panic("impossible case")
+
+	for {
+		switch counts := b.wrapped.(type) {
+		case []uint8:
+			if counts[i] < 0xff {
+				counts[i]++
+				return true
+			}
+			tmp := make([]uint16, len(counts))
+			for i := range counts {
+				tmp[i] = uint16(counts[i])
+			}
+			b.wrapped = tmp
+			continue
+		case []uint16:
+			if counts[i] < 0xffff {
+				counts[i]++
+				return true
+			}
+			tmp := make([]uint32, len(counts))
+			for i := range counts {
+				tmp[i] = uint32(counts[i])
+			}
+			b.wrapped = tmp
+			continue
+		case []uint32:
+			if counts[i] < 0xffffffff {
+				counts[i]++
+				return true
+			}
+			tmp := make([]uint64, len(counts))
+			for i := range counts {
+				tmp[i] = uint64(counts[i])
+			}
+			b.wrapped = tmp
+			continue
+		case []uint64:
+			counts[i]++
+			return true
+		default:
+			panic("impossible case")
+		}
 	}
-	return true
 }
