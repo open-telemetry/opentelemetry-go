@@ -50,18 +50,21 @@ GOLANGCI_LINT = $(TOOLS)/golangci-lint
 $(TOOLS)/golangci-lint: PACKAGE=github.com/golangci/golangci-lint/cmd/golangci-lint
 
 MISSPELL = $(TOOLS)/misspell
-$(TOOLS)/misspell: PACKAGE= github.com/client9/misspell/cmd/misspell
+$(TOOLS)/misspell: PACKAGE=github.com/client9/misspell/cmd/misspell
 
 GOCOVMERGE = $(TOOLS)/gocovmerge
-$(TOOLS)/gocovmerge: PACKAGE= github.com/wadey/gocovmerge
+$(TOOLS)/gocovmerge: PACKAGE=github.com/wadey/gocovmerge
 
 STRINGER = $(TOOLS)/stringer
 $(TOOLS)/stringer: PACKAGE=golang.org/x/tools/cmd/stringer
 
+PORTO = $(TOOLS)/porto
+$(TOOLS)/porto: PACKAGE=github.com/jcchavezs/porto/cmd/porto
+
 $(TOOLS)/gojq: PACKAGE=github.com/itchyny/gojq/cmd/gojq
 
 .PHONY: tools
-tools: $(CROSSLINK) $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(TOOLS)/gojq $(SEMCONVGEN)
+tools: $(CROSSLINK) $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(TOOLS)/gojq $(SEMCONVGEN) $(PORTO)
 
 
 # Build
@@ -137,8 +140,8 @@ lint: misspell lint-modules | $(GOLANGCI_LINT)
 	done
 
 .PHONY: vanity-import-check
-vanity-import-check: 
-	porto -l .
+vanity-import-check: | $(MISSPELL)
+	$(PORTO) -l .
 
 .PHONY: misspell
 misspell: | $(MISSPELL)
