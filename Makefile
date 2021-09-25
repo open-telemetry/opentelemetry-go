@@ -64,7 +64,7 @@ $(TOOLS)/porto: PACKAGE=github.com/jcchavezs/porto/cmd/porto
 $(TOOLS)/gojq: PACKAGE=github.com/itchyny/gojq/cmd/gojq
 
 .PHONY: tools
-tools: $(CROSSLINK) $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(TOOLS)/gojq $(SEMCONVGEN) $(PORTO)
+tools: $(CROSSLINK) $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(TOOLS)/gojq $(SEMCONVGEN)
 
 
 # Build
