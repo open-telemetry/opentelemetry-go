@@ -38,7 +38,7 @@ jobs:
           path: ~/.tools
           key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('./internal/tools/**') }}
       - name: Run linters
-        run: make dependabot-check license-check lint check-vanity-import
+        run: make dependabot-check license-check lint vanity-import-check
       - name: Build
         run: make examples build
       - name: Check clean repository
