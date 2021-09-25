@@ -136,6 +136,10 @@ lint: misspell lint-modules | $(GOLANGCI_LINT)
 	    $(GOLANGCI_LINT) run); \
 	done
 
+.PHONY: vanity-import-check
+vanity-import-check: 
+	porto -l .
+
 .PHONY: misspell
 misspell: | $(MISSPELL)
 	$(MISSPELL) -w $(ALL_DOCS)
