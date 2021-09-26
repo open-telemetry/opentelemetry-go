@@ -76,4 +76,15 @@ func TestInitialCondition(t *testing.T) {
 		require.Equal(t, uint64(i), pos.At(0))
 		agg.Update(ctx, number.NewFloat64Number(oneAndAHalf), &desc)
 	}
+
+	// Add the next value!
+	for i := int32(4); i < 8; i++ {
+		value := centerVal(mapper, int32(offset)+i)
+		agg.Update(ctx, number.NewFloat64Number(value), &desc)
+	}
+
+	// Expect 2 in each bucket.
+	for i := uint32(0); i < 4; i++ {
+		require.Equal(t, uint64(2), pos.At(i))
+	}
 }
