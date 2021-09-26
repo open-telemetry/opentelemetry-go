@@ -16,7 +16,6 @@ package exponential // import "go.opentelemetry.io/otel/sdk/metric/aggregator/ex
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"math/bits"
 	"sync"
@@ -330,8 +329,6 @@ func (a *Aggregator) update(b *buckets, value float64) {
 
 	change := a.state.mapping.scale - newScale
 
-	panic(fmt.Sprintf("change scale %d", change))
-
 	a.state.positive.downscale(change)
 	a.state.negative.downscale(change)
 	a.state.mapping = NewLogarithmMapping(newScale)
@@ -496,14 +493,41 @@ func (a *Aggregator) increment(b *buckets, index int32) (uint32, bool) {
 }
 
 func (b *buckets) downscale(by int32) {
-	// b.indexBase >>= by
-	// b.indexStart >>= by
-	// b.indexEnd >>= by
+	bias := uint32(b.indexBase - b.indexStart)
+	post := b.Len() - bias
 
+	// Rotate the array so that indexBase == indexStart
+	b.indexBase = b.indexStart
 	switch counts := b.wrapped.(type) {
 	case []uint8:
+		for off := uint32(0); off < post; {
+			copy(counts[off:off+bias], counts[post:])
+			off += bias
+		}
 	case []uint16:
 	case []uint32:
 	case []uint64:
+		// TODO same as above
 	}
+
+	// @@@
+
+	// Collapse into power-of-two size groups.
+	// each := int32(1) << by
+	// off := b.indexStart % each
+	// if off < 0 {
+	// 	off += each
+	// }
+
+	switch counts := b.wrapped.(type) {
+	case []uint8:
+		// For each position that we are copying into
+		//   For 1 .. each
+		//     Add.  Check for overflow?
+		_ = counts
+	}
+
+	b.indexStart >>= by
+	b.indexEnd >>= by
+	b.indexBase = b.indexStart
 }

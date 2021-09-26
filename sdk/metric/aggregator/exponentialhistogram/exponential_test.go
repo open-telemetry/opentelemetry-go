@@ -71,12 +71,6 @@ func TestInitialCondition(t *testing.T) {
 		require.Equal(t, uint64(1), pos.At(i))
 	}
 
-	// Test the transition to 16bit and 32bit widths.
-	for i := 1; i < 100000; i++ {
-		require.Equal(t, uint64(i), pos.At(0))
-		agg.Update(ctx, number.NewFloat64Number(oneAndAHalf), &desc)
-	}
-
 	// Add the next value!
 	for i := int32(4); i < 8; i++ {
 		value := centerVal(mapper, int32(offset)+i)
