@@ -20,81 +20,52 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	exportmetric "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 )
 
-// Used to avoid implementing locking functions for test
-// checkpointsets.
-type noopLocker struct{}
-
-// Lock implements sync.Locker, which is needed for
-// exportmetric.CheckpointSet.
-func (noopLocker) Lock() {}
-
-// Unlock implements sync.Locker, which is needed for
-// exportmetric.CheckpointSet.
-func (noopLocker) Unlock() {}
-
-// RLock implements exportmetric.CheckpointSet.
-func (noopLocker) RLock() {}
-
-// RUnlock implements exportmetric.CheckpointSet.
-func (noopLocker) RUnlock() {}
-
-// OneRecordCheckpointSet is a CheckpointSet that returns just one
+// OneRecordReader is a Reader that returns just one
 // filled record. It may be useful for testing driver's metrics
 // export.
-type OneRecordCheckpointSet struct {
-	noopLocker
-}
-
-var _ exportmetric.CheckpointSet = OneRecordCheckpointSet{}
-
-// ForEach implements exportmetric.CheckpointSet. It always invokes
-// the callback once with always the same record.
-func (OneRecordCheckpointSet) ForEach(kindSelector exportmetric.ExportKindSelector, recordFunc func(exportmetric.Record) error) error {
-	desc := metric.NewDescriptor(
+func OneRecordReader() exportmetric.InstrumentationLibraryReader {
+	desc := metrictest.NewDescriptor(
 		"foo",
 		sdkapi.CounterInstrumentKind,
 		number.Int64Kind,
 	)
 	agg := sum.New(1)
 	if err := agg[0].Update(context.Background(), number.NewInt64Number(42), &desc); err != nil {
-		return err
+		panic(err)
 	}
 	start := time.Date(2020, time.December, 8, 19, 15, 0, 0, time.UTC)
 	end := time.Date(2020, time.December, 8, 19, 16, 0, 0, time.UTC)
 	labels := attribute.NewSet(attribute.String("abc", "def"), attribute.Int64("one", 1))
 	rec := exportmetric.NewRecord(&desc, &labels, agg[0].Aggregation(), start, end)
-	return recordFunc(rec)
+
+	return processortest.MultiInstrumentationLibraryReader(
+		map[instrumentation.Library][]exportmetric.Record{
+			{
+				Name: "onelib",
+			}: {rec},
+		})
 }
 
-// EmptyCheckpointSet is a checkpointer that has no records at all.
-type EmptyCheckpointSet struct {
-	noopLocker
+func EmptyReader() exportmetric.InstrumentationLibraryReader {
+	return processortest.MultiInstrumentationLibraryReader(nil)
 }
 
-var _ exportmetric.CheckpointSet = EmptyCheckpointSet{}
-
-// ForEach implements exportmetric.CheckpointSet. It never invokes the
-// callback.
-func (EmptyCheckpointSet) ForEach(kindSelector exportmetric.ExportKindSelector, recordFunc func(exportmetric.Record) error) error {
-	return nil
-}
-
-// FailCheckpointSet is a checkpointer that returns an error during
+// FailReader is a checkpointer that returns an error during
 // ForEach.
-type FailCheckpointSet struct {
-	noopLocker
-}
+type FailReader struct{}
 
-var _ exportmetric.CheckpointSet = FailCheckpointSet{}
+var _ exportmetric.InstrumentationLibraryReader = FailReader{}
 
-// ForEach implements exportmetric.CheckpointSet. It always fails.
-func (FailCheckpointSet) ForEach(kindSelector exportmetric.ExportKindSelector, recordFunc func(exportmetric.Record) error) error {
+// ForEach implements exportmetric.Reader. It always fails.
+func (FailReader) ForEach(readerFunc func(instrumentation.Library, exportmetric.Reader) error) error {
 	return fmt.Errorf("fail")
 }

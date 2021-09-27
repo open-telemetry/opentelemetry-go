@@ -18,7 +18,7 @@ package basic // import "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 type config struct {
 	// Memory controls whether the processor remembers metric
 	// instruments and label sets that were previously reported.
-	// When Memory is true, CheckpointSet.ForEach() will visit
+	// When Memory is true, Reader.ForEach() will visit
 	// metrics that were not updated in the most recent interval.
 	Memory bool
 }

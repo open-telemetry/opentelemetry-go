@@ -26,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
@@ -45,14 +46,14 @@ type (
 	}
 
 	// mapValue is value stored in a processor used to produce a
-	// CheckpointSet.
+	// Reader.
 	mapValue struct {
 		labels     *attribute.Set
 		resource   *resource.Resource
 		aggregator export.Aggregator
 	}
 
-	// Output implements export.CheckpointSet.
+	// Output implements export.Reader.
 	Output struct {
 		m            map[mapKey]mapValue
 		labelEncoder attribute.Encoder
@@ -92,6 +93,28 @@ type (
 	}
 )
 
+type testFactory struct {
+	selector export.AggregatorSelector
+	encoder  attribute.Encoder
+}
+
+func NewCheckpointerFactory(selector export.AggregatorSelector, encoder attribute.Encoder) export.CheckpointerFactory {
+	return testFactory{
+		selector: selector,
+		encoder:  encoder,
+	}
+}
+
+func NewCheckpointer(p *Processor) export.Checkpointer {
+	return &testCheckpointer{
+		Processor: p,
+	}
+}
+
+func (f testFactory) NewCheckpointer() export.Checkpointer {
+	return NewCheckpointer(NewProcessor(f.selector, f.encoder))
+}
+
 // NewProcessor returns a new testing Processor implementation.
 // Verify expected outputs using Values(), e.g.:
 //
@@ -126,14 +149,6 @@ func (p *Processor) Reset() {
 	p.output.Reset()
 }
 
-// Checkpointer returns a checkpointer that computes a single
-// interval.
-func Checkpointer(p *Processor) export.Checkpointer {
-	return &testCheckpointer{
-		Processor: p,
-	}
-}
-
 // StartCollection implements export.Checkpointer.
 func (c *testCheckpointer) StartCollection() {
 	if c.started != c.finished {
@@ -153,8 +168,8 @@ func (c *testCheckpointer) FinishCollection() error {
 	return nil
 }
 
-// CheckpointSet implements export.Checkpointer.
-func (c *testCheckpointer) CheckpointSet() export.CheckpointSet {
+// Reader implements export.Checkpointer.
+func (c *testCheckpointer) Reader() export.Reader {
 	return c.Processor.output
 }
 
@@ -214,7 +229,7 @@ func NewOutput(labelEncoder attribute.Encoder) *Output {
 	}
 }
 
-// ForEach implements export.CheckpointSet.
+// ForEach implements export.Reader.
 func (o *Output) ForEach(_ export.ExportKindSelector, ff func(export.Record) error) error {
 	for key, value := range o.m {
 		if err := ff(export.NewRecord(
@@ -235,6 +250,10 @@ func (o *Output) ForEach(_ export.ExportKindSelector, ff func(export.Record) err
 // either the Sum() or the LastValue() of its Aggregation(), whichever
 // is defined.  Record timestamps are ignored.
 func (o *Output) AddRecord(rec export.Record) error {
+	return o.AddRecordWithResource(rec, resource.Empty())
+}
+
+func (o *Output) AddInstrumentationLibraryRecord(_ instrumentation.Library, rec export.Record) error {
 	return o.AddRecordWithResource(rec, resource.Empty())
 }
 
@@ -332,17 +351,19 @@ func New(selector export.ExportKindSelector, encoder attribute.Encoder) *Exporte
 	}
 }
 
-func (e *Exporter) Export(_ context.Context, res *resource.Resource, ckpt export.CheckpointSet) error {
+func (e *Exporter) Export(_ context.Context, res *resource.Resource, ckpt export.InstrumentationLibraryReader) error {
 	e.output.Lock()
 	defer e.output.Unlock()
 	e.exportCount++
-	return ckpt.ForEach(e.ExportKindSelector, func(r export.Record) error {
-		if e.InjectErr != nil {
-			if err := e.InjectErr(r); err != nil {
-				return err
+	return ckpt.ForEach(func(library instrumentation.Library, mr export.Reader) error {
+		return mr.ForEach(e.ExportKindSelector, func(r export.Record) error {
+			if e.InjectErr != nil {
+				if err := e.InjectErr(r); err != nil {
+					return err
+				}
 			}
-		}
-		return e.output.AddRecordWithResource(r, res)
+			return e.output.AddRecordWithResource(r, res)
+		})
 	})
 }
 
@@ -371,4 +392,52 @@ func (e *Exporter) Reset() {
 	defer e.output.Unlock()
 	e.output.Reset()
 	e.exportCount = 0
+}
+
+func OneInstrumentationLibraryReader(l instrumentation.Library, r export.Reader) export.InstrumentationLibraryReader {
+	return oneLibraryReader{l, r}
+}
+
+type oneLibraryReader struct {
+	library instrumentation.Library
+	reader  export.Reader
+}
+
+func (o oneLibraryReader) ForEach(readerFunc func(instrumentation.Library, export.Reader) error) error {
+	return readerFunc(o.library, o.reader)
+}
+
+func MultiInstrumentationLibraryReader(records map[instrumentation.Library][]export.Record) export.InstrumentationLibraryReader {
+	return instrumentationLibraryReader{records: records}
+}
+
+type instrumentationLibraryReader struct {
+	records map[instrumentation.Library][]export.Record
+}
+
+var _ export.InstrumentationLibraryReader = instrumentationLibraryReader{}
+
+func (m instrumentationLibraryReader) ForEach(fn func(instrumentation.Library, export.Reader) error) error {
+	for library, records := range m.records {
+		if err := fn(library, &metricReader{records: records}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type metricReader struct {
+	sync.RWMutex
+	records []export.Record
+}
+
+var _ export.Reader = &metricReader{}
+
+func (m *metricReader) ForEach(_ export.ExportKindSelector, fn func(export.Record) error) error {
+	for _, record := range m.records {
+		if err := fn(record); err != nil && err != aggregation.ErrNoData {
+			return err
+		}
+	}
+	return nil
 }

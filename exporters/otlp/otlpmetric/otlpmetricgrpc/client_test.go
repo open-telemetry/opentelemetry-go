@@ -40,7 +40,7 @@ import (
 )
 
 var (
-	oneRecord = otlpmetrictest.OneRecordCheckpointSet{}
+	oneRecord = otlpmetrictest.OneRecordReader()
 
 	testResource = resource.Empty()
 )
@@ -719,7 +719,7 @@ func TestEmptyData(t *testing.T) {
 		assert.NoError(t, exp.Shutdown(ctx))
 	}()
 
-	assert.NoError(t, exp.Export(ctx, testResource, otlpmetrictest.EmptyCheckpointSet{}))
+	assert.NoError(t, exp.Export(ctx, testResource, otlpmetrictest.EmptyReader()))
 }
 
 func TestFailedMetricTransform(t *testing.T) {
@@ -737,5 +737,5 @@ func TestFailedMetricTransform(t *testing.T) {
 		assert.NoError(t, exp.Shutdown(ctx))
 	}()
 
-	assert.Error(t, exp.Export(ctx, testResource, otlpmetrictest.FailCheckpointSet{}))
+	assert.Error(t, exp.Export(ctx, testResource, otlpmetrictest.FailReader{}))
 }

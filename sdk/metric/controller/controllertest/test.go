@@ -19,6 +19,8 @@ import (
 
 	"github.com/benbjohnson/clock"
 
+	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
 )
 
@@ -55,4 +57,19 @@ func (t MockTicker) Stop() {
 
 func (t MockTicker) C() <-chan time.Time {
 	return t.ticker.C
+}
+
+// ReadAll is a helper for tests that want a flat iterator over all
+// metrics instead of a two-level iterator (instrumentation library,
+// metric).
+func ReadAll(
+	reader export.InstrumentationLibraryReader,
+	kind export.ExportKindSelector,
+	apply func(instrumentation.Library, export.Record) error,
+) error {
+	return reader.ForEach(func(library instrumentation.Library, reader export.Reader) error {
+		return reader.ForEach(kind, func(record export.Record) error {
+			return apply(library, record)
+		})
+	})
 }
