@@ -38,7 +38,7 @@ import (
 //
 // The OpenHistogram representation of the Prometheus default explicit
 // histogram boundaries (spanning 0.005 to 10) yields 320 base-10
-// log-linear buckets.
+// 90-per-decade log-linear buckets.
 //
 // NrSketch uses this default.
 const DefaultMaxSize = 320
@@ -50,7 +50,10 @@ const DefaultNormalScale int32 = 30
 
 type (
 	// Aggregator observes events and counts them in
-	// exponentially-spaced buckets.
+	// exponentially-spaced buckets.  It is configured with a
+	// maximum scale factor which determines resolution.  Scale is
+	// automatically adjusted to accomodate the range of input
+	// data.
 	Aggregator struct {
 		lock    sync.Mutex
 		kind    number.Kind
@@ -105,6 +108,7 @@ func (o maxSizeOption) apply(config *config) {
 	config.maxSize = uint32(o)
 }
 
+// New returns `cnt` number of configured histogram aggregators for `desc`.
 func New(cnt int, desc *metric.Descriptor, opts ...Option) []Aggregator {
 	cfg := config{
 		maxSize: DefaultMaxSize,
@@ -120,8 +124,8 @@ func New(cnt int, desc *metric.Descriptor, opts ...Option) []Aggregator {
 		aggs[i] = Aggregator{
 			kind:    desc.NumberKind(),
 			maxSize: cfg.maxSize,
+			state:   &state{},
 		}
-		aggs[i].state = aggs[i].newState()
 	}
 	return aggs
 }
@@ -136,6 +140,7 @@ func (c *Aggregator) Kind() aggregation.Kind {
 	return aggregation.ExponentialHistogramKind
 }
 
+// SynchronizedMove implements export.Aggregator.
 func (a *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 
@@ -165,39 +170,6 @@ func (a *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descrip
 	a.lock.Unlock()
 
 	return nil
-}
-
-func (a *Aggregator) newState() *state {
-	return &state{}
-}
-
-func (a *Aggregator) clearState() {
-	a.state.positive.clearState()
-	a.state.negative.clearState()
-	a.state.sum = 0
-	a.state.count = 0
-	a.state.zeroCount = 0
-}
-
-func (b *buckets) clearState() {
-	switch counts := b.backing.(type) {
-	case []uint8:
-		for i := range counts {
-			counts[i] = 0
-		}
-	case []uint16:
-		for i := range counts {
-			counts[i] = 0
-		}
-	case []uint32:
-		for i := range counts {
-			counts[i] = 0
-		}
-	case []uint64:
-		for i := range counts {
-			counts[i] = 0
-		}
-	}
 }
 
 // Update adds the recorded measurement to the current data set.
@@ -237,10 +209,12 @@ func (a *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 	return nil
 }
 
+// Count implements aggregation.Sum.
 func (a *Aggregator) Count() (uint64, error) {
 	return a.state.count, nil
 }
 
+// Sum implements aggregation.Sum.
 func (a *Aggregator) Sum() (number.Number, error) {
 	if a.kind == number.Int64Kind {
 		return number.NewInt64Number(int64(a.state.sum)), nil
@@ -248,26 +222,32 @@ func (a *Aggregator) Sum() (number.Number, error) {
 	return number.NewFloat64Number(a.state.sum), nil
 }
 
+// Scale implements aggregation.ExponentialHistogram.
 func (a *Aggregator) Scale() int32 {
 	return a.state.mapping.scale
 }
 
+// ZeroCount implements aggregation.ExponentialHistogram.
 func (a *Aggregator) ZeroCount() uint64 {
 	return a.state.zeroCount
 }
 
+// Positive implements aggregation.ExponentialHistogram.
 func (a *Aggregator) Positive() aggregation.ExponentialBuckets {
 	return &a.state.positive
 }
 
+// Negatiev implements aggregation.ExponentialHistogram.
 func (a *Aggregator) Negative() aggregation.ExponentialBuckets {
 	return &a.state.negative
 }
 
+// Offset implements aggregation.ExponentialBucket.
 func (b *buckets) Offset() int32 {
 	return b.indexStart
 }
 
+// Len implements aggregation.ExponentialBucket.
 func (b *buckets) Len() uint32 {
 	if b.backing == nil {
 		return 0
@@ -297,6 +277,88 @@ func (b *buckets) At(pos uint32) uint64 {
 	default:
 		panic("At() with size() == 0")
 	}
+}
+
+// clearState resets a histogram to the empty state without changing
+// its scale or backing array.
+func (a *Aggregator) clearState() {
+	a.state.positive.clearState()
+	a.state.negative.clearState()
+	a.state.sum = 0
+	a.state.count = 0
+	a.state.zeroCount = 0
+}
+
+// clearState zeros the backing array.
+func (b *buckets) clearState() {
+	switch counts := b.backing.(type) {
+	case []uint8:
+		for i := range counts {
+			counts[i] = 0
+		}
+	case []uint16:
+		for i := range counts {
+			counts[i] = 0
+		}
+	case []uint32:
+		for i := range counts {
+			counts[i] = 0
+		}
+	case []uint64:
+		for i := range counts {
+			counts[i] = 0
+		}
+	}
+}
+
+// initialize enters the first value into a histogram and sets its
+// ideal scale.
+func (a *Aggregator) initialize(b *buckets, value float64) {
+	firstScale := idealScale(value)
+
+	a.state.mapping = NewLogarithmMapping(firstScale)
+
+	index := a.state.mapping.MapToIndex(value)
+
+	if b.backing == nil {
+		b.backing = []uint8{1}
+	} else {
+		b.incrementBucket(0, 1)
+	}
+	b.indexStart = int32(index)
+	b.indexEnd = int32(index)
+	b.indexBase = b.indexStart
+}
+
+// idealScale computes the best scale that results in a valid index.
+// the default scale is ideal for normalized range [1,2) and a
+// non-zero exponent degrades scale in either direction from zero.
+func idealScale(value float64) int32 {
+	exponent := getExponent(value)
+
+	scale := DefaultNormalScale
+	if exponent > 0 {
+		scale -= exponent
+	} else {
+		scale += exponent
+	}
+	return scale
+}
+
+// size() reflects the allocated size of the array, not to be confused
+// with Len() which is the range of non-zero values.
+func (b *buckets) size() uint32 {
+	switch counts := b.backing.(type) {
+	case []uint8:
+		return uint32(cap(counts))
+	case []uint16:
+		return uint32(cap(counts))
+	case []uint32:
+		return uint32(cap(counts))
+	case []uint64:
+		return uint32(cap(counts))
+	}
+	return 0
 }
 
 func (a *Aggregator) update(b *buckets, value float64) {
@@ -332,52 +394,46 @@ func (a *Aggregator) update(b *buckets, value float64) {
 	a.state.positive.downscale(change)
 	a.state.negative.downscale(change)
 	a.state.mapping = NewLogarithmMapping(newScale)
-}
 
-// idealScale computes the best scale that results in a valid index.
-// the default scale is ideal for normalized range [1,2) and a
-// non-zero exponent degrades scale in either direction from zero.
-func idealScale(value float64) int32 {
-	exponent := getExponent(value)
+	index = a.state.mapping.MapToIndex(value)
+	span, success := a.incrementIndex(b, int32(index))
 
-	scale := DefaultNormalScale
-	if exponent > 0 {
-		scale -= exponent
-	} else {
-		scale += exponent
+	if !success {
+		panic("downscale logic error")
 	}
-	return scale
 }
 
-// initialize enters the first value into a histogram and sets its
-// initial scale.
-func (a *Aggregator) initialize(b *buckets, value float64) {
-	firstScale := idealScale(value)
+// increment determines if the index lies inside the current range
+// [indexStart, indexEnd] and if not whether growing the array up to
+// maxSize will satisfy the new value.
+func (a *Aggregator) incrementIndex(b *buckets, index int32) (uint32, bool) {
+	space := b.size()
 
-	a.state.mapping = NewLogarithmMapping(firstScale)
-
-	index := a.state.mapping.MapToIndex(value)
-
-	b.backing = []uint8{1}
-	b.indexStart = int32(index)
-	b.indexEnd = int32(index)
-	b.indexBase = b.indexStart
-}
-
-// size() reflects the allocated size of the array, not to be confused
-// with Len() which is the range of non-zero values.
-func (b *buckets) size() uint32 {
-	switch counts := b.backing.(type) {
-	case []uint8:
-		return uint32(cap(counts))
-	case []uint16:
-		return uint32(cap(counts))
-	case []uint32:
-		return uint32(cap(counts))
-	case []uint64:
-		return uint32(cap(counts))
+	if index < b.indexStart {
+		if span := uint32(b.indexEnd - index); span >= a.maxSize {
+			return span + 1, false // rescale needed
+		} else if span >= space {
+			a.grow(b, span+1)
+		}
+		b.indexStart = index
+	} else if index > b.indexEnd {
+		if span := uint32(index - b.indexStart); span >= a.maxSize {
+			return span + 1, false // rescale needed
+		} else if span >= space {
+			a.grow(b, span+1)
+		}
+		b.indexEnd = index
 	}
-	return 0
+
+	size := int32(b.size())
+	bucketIndex := index - b.indexBase
+	if bucketIndex >= size {
+		bucketIndex -= size
+	} else if bucketIndex < 0 {
+		bucketIndex += size
+	}
+	b.incrementBucket(bucketIndex, 1)
+	return 0, true
 }
 
 // grow resizes the backing array by doubling in size up to maxSize.
@@ -418,37 +474,91 @@ func (a *Aggregator) grow(b *buckets, needed uint32) {
 	}
 }
 
-// increment determines if the index lies inside the current range
-// [indexStart, indexEnd] and if not whether growing the array up to
-// maxSize will satisfy the new value.
-func (a *Aggregator) incrementIndex(b *buckets, index int32) (uint32, bool) {
-	space := b.size()
+func (b *buckets) downscale(by int32) {
+	b.rotate()
 
-	if index < b.indexStart {
-		if span := uint32(b.indexEnd - index); span >= a.maxSize {
-			return span + 1, false // rescale needed
-		} else if span >= space {
-			a.grow(b, span+1)
+	size := 1 + b.indexEnd - b.indexStart
+	each := int32(1) << by
+	inpos := int32(0)
+	outpos := int32(0)
+	for pos := b.indexStart; pos <= b.indexEnd; {
+		base := pos
+		mod := base % each
+		if mod < 0 {
+			mod += each
 		}
-		b.indexStart = index
-	} else if index > b.indexEnd {
-		if span := uint32(index - b.indexStart); span >= a.maxSize {
-			return span + 1, false // rescale needed
-		} else if span >= space {
-			a.grow(b, span+1)
+		for i := mod; i < each && inpos < size; i++ {
+			b.relocateBucket(outpos, inpos)
+			inpos++
+			pos++
 		}
-		b.indexEnd = index
+		outpos++
 	}
 
-	size := int32(b.size())
-	bucketIndex := index - b.indexBase
-	if bucketIndex >= size {
-		bucketIndex -= size
-	} else if bucketIndex < 0 {
-		bucketIndex += size
+	b.indexStart >>= by
+	b.indexEnd >>= by
+	b.indexBase = b.indexStart
+}
+
+func (b *buckets) rotate() {
+	bias := uint32(b.indexBase - b.indexStart)
+
+	if bias == 0 {
+		return
 	}
-	b.incrementBucket(bucketIndex, 1)
-	return 0, true
+
+	post := b.Len() - bias
+
+	// Rotate the array so that indexBase == indexStart
+	b.indexBase = b.indexStart
+	switch counts := b.backing.(type) {
+	case []uint8:
+		for off := uint32(0); off < post; {
+			copy(counts[off:off+bias], counts[post:])
+			off += bias
+		}
+	case []uint16:
+		for off := uint32(0); off < post; {
+			copy(counts[off:off+bias], counts[post:])
+			off += bias
+		}
+	case []uint32:
+		for off := uint32(0); off < post; {
+			copy(counts[off:off+bias], counts[post:])
+			off += bias
+		}
+	case []uint64:
+		for off := uint32(0); off < post; {
+			copy(counts[off:off+bias], counts[post:])
+			off += bias
+		}
+	}
+}
+
+// relocateBucket adds the count in counts[src] to counts[dest] and
+// resets count[src] to zero.
+func (b *buckets) relocateBucket(dest, src int32) {
+	if dest == src {
+		return
+	}
+	switch counts := b.backing.(type) {
+	case []uint8:
+		tmp := counts[src]
+		counts[src] = 0
+		b.incrementBucket(dest, uint64(tmp))
+	case []uint16:
+		tmp := counts[src]
+		counts[src] = 0
+		b.incrementBucket(dest, uint64(tmp))
+	case []uint32:
+		tmp := counts[src]
+		counts[src] = 0
+		b.incrementBucket(dest, uint64(tmp))
+	case []uint64:
+		tmp := counts[src]
+		counts[src] = 0
+		b.incrementBucket(dest, uint64(tmp))
+	}
 }
 
 // incrementBucket increments the backing array index by `incr`.
@@ -494,87 +604,5 @@ func (b *buckets) incrementBucket(bucketIndex int32, incr uint64) {
 		default:
 			panic("increment with nil slice")
 		}
-	}
-}
-
-func (b *buckets) rotate() {
-	bias := uint32(b.indexBase - b.indexStart)
-
-	if bias == 0 {
-		return
-	}
-
-	post := b.Len() - bias
-
-	// Rotate the array so that indexBase == indexStart
-	b.indexBase = b.indexStart
-	switch counts := b.backing.(type) {
-	case []uint8:
-		for off := uint32(0); off < post; {
-			copy(counts[off:off+bias], counts[post:])
-			off += bias
-		}
-	case []uint16:
-		for off := uint32(0); off < post; {
-			copy(counts[off:off+bias], counts[post:])
-			off += bias
-		}
-	case []uint32:
-		for off := uint32(0); off < post; {
-			copy(counts[off:off+bias], counts[post:])
-			off += bias
-		}
-	case []uint64:
-		for off := uint32(0); off < post; {
-			copy(counts[off:off+bias], counts[post:])
-			off += bias
-		}
-	}
-}
-
-func (b *buckets) downscale(by int32) {
-	b.rotate()
-
-	size := 1 + b.indexEnd - b.indexStart
-	each := int32(1) << by
-	inpos := int32(0)
-	outpos := int32(0)
-	for pos := b.indexStart; pos <= b.indexEnd; {
-		base := pos
-		mod := base % each
-		if mod < 0 {
-			mod += each
-		}
-		for i := mod; i < each && inpos < size; i++ {
-			b.moveBucket(outpos, inpos)
-			inpos++
-			pos++
-		}
-		outpos++
-	}
-
-	b.indexStart >>= by
-	b.indexEnd >>= by
-	b.indexBase = b.indexStart
-}
-
-func (b *buckets) moveBucket(dest, src int32) {
-	switch counts := b.backing.(type) {
-	case []uint8:
-		tmp := counts[src]
-		counts[src] = 0
-		b.incrementBucket(dest, uint64(tmp))
-	case []uint16:
-		tmp := counts[src]
-		counts[src] = 0
-		b.incrementBucket(dest, uint64(tmp))
-	case []uint32:
-		tmp := counts[src]
-		counts[src] = 0
-		b.incrementBucket(dest, uint64(tmp))
-	case []uint64:
-		tmp := counts[src]
-		counts[src] = 0
-		b.incrementBucket(dest, uint64(tmp))
 	}
 }

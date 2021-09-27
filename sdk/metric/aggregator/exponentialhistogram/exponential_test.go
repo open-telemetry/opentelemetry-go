@@ -19,7 +19,9 @@ func centerVal(mapper LogarithmMapping, x int32) float64 {
 	return (mapper.LowerBoundary(int64(x)) + mapper.LowerBoundary(int64(x)+1)) / 2
 }
 
-func TestInitialCondition(t *testing.T) {
+// tests a simple case of 8 counts entered into a maxSize=4 histogram,
+// causing a single downscale and no rotation.
+func TestSimpleSize4(t *testing.T) {
 	// Test with a 4-bucket-max exponential histogram
 	ctx := context.Background()
 	desc := metric.NewDescriptor("name", sdkapi.HistogramInstrumentKind, number.Float64Kind)
@@ -77,8 +79,19 @@ func TestInitialCondition(t *testing.T) {
 		agg.Update(ctx, number.NewFloat64Number(value), &desc)
 	}
 
-	// Expect 2 in each bucket.
+	// Expect 2 in each bucket
 	for i := uint32(0); i < 4; i++ {
 		require.Equal(t, uint64(2), pos.At(i))
+	}
+}
+
+func TestExhaustiveSmall(t *testing.T) {
+	//ctx := context.Background()
+	desc := metric.NewDescriptor("name", sdkapi.HistogramInstrumentKind, number.Float64Kind)
+
+	for _, maxSize := range []int32{3, 4, 5, 6, 7, 8, 9} {
+		agg := New(1, &desc, WithMaxSize(maxSize))[0]
+
+		_ = agg
 	}
 }
