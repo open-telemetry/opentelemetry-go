@@ -72,19 +72,17 @@ func newExporter() *processortest.Exporter {
 	)
 }
 
-func newCheckpointer() export.Checkpointer {
-	return processortest.Checkpointer(
-		processortest.NewProcessor(
-			processortest.AggregatorSelector(),
-			attribute.DefaultEncoder(),
-		),
+func newCheckpointerFactory() export.CheckpointerFactory {
+	return processortest.NewCheckpointerFactory(
+		processortest.AggregatorSelector(),
+		attribute.DefaultEncoder(),
 	)
 }
 
 func TestPushDoubleStop(t *testing.T) {
 	ctx := context.Background()
 	exporter := newExporter()
-	checkpointer := newCheckpointer()
+	checkpointer := newCheckpointerFactory()
 	p := controller.New(checkpointer, controller.WithExporter(exporter))
 	require.NoError(t, p.Start(ctx))
 	require.NoError(t, p.Stop(ctx))
@@ -94,7 +92,7 @@ func TestPushDoubleStop(t *testing.T) {
 func TestPushDoubleStart(t *testing.T) {
 	ctx := context.Background()
 	exporter := newExporter()
-	checkpointer := newCheckpointer()
+	checkpointer := newCheckpointerFactory()
 	p := controller.New(checkpointer, controller.WithExporter(exporter))
 	require.NoError(t, p.Start(ctx))
 	err := p.Start(ctx)
@@ -105,14 +103,14 @@ func TestPushDoubleStart(t *testing.T) {
 
 func TestPushTicker(t *testing.T) {
 	exporter := newExporter()
-	checkpointer := newCheckpointer()
+	checkpointer := newCheckpointerFactory()
 	p := controller.New(
 		checkpointer,
 		controller.WithExporter(exporter),
 		controller.WithCollectPeriod(time.Second),
 		controller.WithResource(testResource),
 	)
-	meter := p.MeterProvider().Meter("name")
+	meter := p.Meter("name")
 
 	mock := controllertest.NewMockClock()
 	p.SetClock(mock)
@@ -185,7 +183,7 @@ func TestPushExportError(t *testing.T) {
 			// This test validates the error handling
 			// behavior of the basic Processor is honored
 			// by the push processor.
-			checkpointer := processor.New(processortest.AggregatorSelector(), exporter)
+			checkpointer := processor.NewFactory(processortest.AggregatorSelector(), exporter)
 			p := controller.New(
 				checkpointer,
 				controller.WithExporter(exporter),
@@ -198,7 +196,7 @@ func TestPushExportError(t *testing.T) {
 
 			ctx := context.Background()
 
-			meter := p.MeterProvider().Meter("name")
+			meter := p.Meter("name")
 			counter1 := metric.Must(meter).NewInt64Counter("counter1.sum")
 			counter2 := metric.Must(meter).NewInt64Counter("counter2.sum")
 

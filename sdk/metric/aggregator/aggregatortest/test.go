@@ -27,6 +27,7 @@ import (
 
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -66,7 +67,7 @@ func newProfiles() []Profile {
 }
 
 func NewAggregatorTest(mkind sdkapi.InstrumentKind, nkind number.Kind) *metric.Descriptor {
-	desc := metric.NewDescriptor("test.name", mkind, nkind)
+	desc := metrictest.NewDescriptor("test.name", mkind, nkind)
 	return &desc
 }
 

@@ -24,6 +24,7 @@ import (
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
 var (
@@ -43,16 +44,20 @@ type Exporter struct {
 }
 
 // Export exports a batch of metrics.
-func (e *Exporter) Export(ctx context.Context, res *resource.Resource, checkpointSet metricsdk.CheckpointSet) error {
-	rms, err := metrictransform.CheckpointSet(ctx, e, res, checkpointSet, 1)
+func (e *Exporter) Export(ctx context.Context, res *resource.Resource, ilr metricsdk.InstrumentationLibraryReader) error {
+	rm, err := metrictransform.InstrumentationLibraryReader(ctx, e, res, ilr, 1)
 	if err != nil {
 		return err
 	}
-	if len(rms) == 0 {
+	if rm == nil {
 		return nil
 	}
 
-	return e.client.UploadMetrics(ctx, rms)
+	// TODO: There is never more than one resource emitted by this
+	// call, as per the specification.  We can change the
+	// signature of UploadMetrics correspondingly. Here create a
+	// singleton list to reduce the size of the current PR:
+	return e.client.UploadMetrics(ctx, []*metricpb.ResourceMetrics{rm})
 }
 
 // Start establishes a connection to the receiving endpoint.

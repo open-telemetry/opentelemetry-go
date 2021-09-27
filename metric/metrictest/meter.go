@@ -23,7 +23,7 @@ import (
 	internalmetric "go.opentelemetry.io/otel/internal/metric"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
-	"go.opentelemetry.io/otel/metric/registry"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 )
 
 type (
@@ -32,21 +32,35 @@ type (
 		Labels     []attribute.KeyValue
 	}
 
+	// Library is the same as "sdk/instrumentation".Library but there is
+	// a package cycle to use it.
+	Library struct {
+		InstrumentationName    string
+		InstrumentationVersion string
+		SchemaURL              string
+	}
+
 	Batch struct {
 		// Measurement needs to be aligned for 64-bit atomic operations.
 		Measurements []Measurement
 		Ctx          context.Context
 		Labels       []attribute.KeyValue
-		LibraryName  string
+		Library      Library
 	}
 
 	// MeterImpl is an OpenTelemetry Meter implementation used for testing.
 	MeterImpl struct {
+		library          Library
+		provider         *MeterProvider
+		asyncInstruments *internalmetric.AsyncInstrumentState
+	}
+
+	// MeterProvider is a collection of named MeterImpls used for testing.
+	MeterProvider struct {
 		lock sync.Mutex
 
 		MeasurementBatches []Batch
-
-		asyncInstruments *internalmetric.AsyncInstrumentState
+		impls              []*MeterImpl
 	}
 
 	Measurement struct {
@@ -77,6 +91,13 @@ var (
 	_ metric.MeterImpl     = &MeterImpl{}
 	_ metric.AsyncImpl     = &Async{}
 )
+
+// NewDescriptor is a test helper for constructing test metric
+// descriptors using standard options.
+func NewDescriptor(name string, ikind sdkapi.InstrumentKind, nkind number.Kind, opts ...metric.InstrumentOption) metric.Descriptor {
+	cfg := metric.NewInstrumentConfig(opts...)
+	return metric.NewDescriptor(name, ikind, nkind, cfg.Description(), cfg.Unit())
+}
 
 func (i Instrument) Descriptor() metric.Descriptor {
 	return i.descriptor
@@ -115,22 +136,32 @@ func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []attribute.KeyVa
 	}})
 }
 
-func NewMeterProvider() (*MeterImpl, metric.MeterProvider) {
+// NewMeterProvider returns a MeterProvider suitable for testing.
+// When the test is complete, consult MeterProvider.MeasurementBatches.
+func NewMeterProvider() *MeterProvider {
+	return &MeterProvider{}
+}
+
+// Meter implements metric.MeterProvider.
+func (p *MeterProvider) Meter(name string, opts ...metric.MeterOption) metric.Meter {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	cfg := metric.NewMeterConfig(opts...)
 	impl := &MeterImpl{
+		library: Library{
+			InstrumentationName:    name,
+			InstrumentationVersion: cfg.InstrumentationVersion(),
+			SchemaURL:              cfg.SchemaURL(),
+		},
+		provider:         p,
 		asyncInstruments: internalmetric.NewAsyncInstrumentState(),
 	}
-	return impl, registry.NewMeterProvider(impl)
+	p.impls = append(p.impls, impl)
+	return metric.WrapMeterImpl(impl)
 }
 
-func NewMeter() (*MeterImpl, metric.Meter) {
-	impl, p := NewMeterProvider()
-	return impl, p.Meter("mock")
-}
-
+// NewSyncInstrument implements metric.MeterImpl.
 func (m *MeterImpl) NewSyncInstrument(descriptor metric.Descriptor) (metric.SyncImpl, error) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
 	return &Sync{
 		Instrument{
 			descriptor: descriptor,
@@ -139,10 +170,8 @@ func (m *MeterImpl) NewSyncInstrument(descriptor metric.Descriptor) (metric.Sync
 	}, nil
 }
 
+// NewAsyncInstrument implements metric.MeterImpl.
 func (m *MeterImpl) NewAsyncInstrument(descriptor metric.Descriptor, runner metric.AsyncRunner) (metric.AsyncImpl, error) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
 	a := &Async{
 		Instrument: Instrument{
 			descriptor: descriptor,
@@ -150,10 +179,11 @@ func (m *MeterImpl) NewAsyncInstrument(descriptor metric.Descriptor, runner metr
 		},
 		runner: runner,
 	}
-	m.asyncInstruments.Register(a, runner)
+	m.provider.registerAsyncInstrument(a, m, runner)
 	return a, nil
 }
 
+// RecordBatch implements metric.MeterImpl.
 func (m *MeterImpl) RecordBatch(ctx context.Context, labels []attribute.KeyValue, measurements ...metric.Measurement) {
 	mm := make([]Measurement, len(measurements))
 	for i := 0; i < len(measurements); i++ {
@@ -166,6 +196,7 @@ func (m *MeterImpl) RecordBatch(ctx context.Context, labels []attribute.KeyValue
 	m.collect(ctx, labels, mm)
 }
 
+// CollectAsync is called from asyncInstruments.Run() with the lock held.
 func (m *MeterImpl) CollectAsync(labels []attribute.KeyValue, obs ...metric.Observation) {
 	mm := make([]Measurement, len(obs))
 	for i := 0; i < len(obs); i++ {
@@ -178,29 +209,55 @@ func (m *MeterImpl) CollectAsync(labels []attribute.KeyValue, obs ...metric.Obse
 	m.collect(context.Background(), labels, mm)
 }
 
+// collect is called from CollectAsync() or RecordBatch() with the lock held.
 func (m *MeterImpl) collect(ctx context.Context, labels []attribute.KeyValue, measurements []Measurement) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
-	m.MeasurementBatches = append(m.MeasurementBatches, Batch{
+	m.provider.addMeasurement(Batch{
 		Ctx:          ctx,
 		Labels:       labels,
 		Measurements: measurements,
+		Library:      m.library,
 	})
 }
 
-func (m *MeterImpl) RunAsyncInstruments() {
-	m.asyncInstruments.Run(context.Background(), m)
+// registerAsyncInstrument locks the provider and registers the new Async instrument.
+func (p *MeterProvider) registerAsyncInstrument(a *Async, m *MeterImpl, runner metric.AsyncRunner) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	m.asyncInstruments.Register(a, runner)
+}
+
+// addMeasurement locks the provider and adds the new measurement batch.
+func (p *MeterProvider) addMeasurement(b Batch) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	p.MeasurementBatches = append(p.MeasurementBatches, b)
+}
+
+// copyImpls locks the provider and copies the current list of *MeterImpls.
+func (p *MeterProvider) copyImpls() []*MeterImpl {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	cpy := make([]*MeterImpl, len(p.impls))
+	copy(cpy, p.impls)
+	return cpy
+}
+
+// RunAsyncInstruments is used in tests to trigger collection from
+// asynchronous instruments.
+func (p *MeterProvider) RunAsyncInstruments() {
+	for _, impl := range p.copyImpls() {
+		impl.asyncInstruments.Run(context.Background(), impl)
+	}
 }
 
 // Measured is the helper struct which provides flat representation of recorded measurements
 // to simplify testing
 type Measured struct {
-	Name                   string
-	InstrumentationName    string
-	InstrumentationVersion string
-	Labels                 map[attribute.Key]attribute.Value
-	Number                 number.Number
+	Name    string
+	Labels  map[attribute.Key]attribute.Value
+	Number  number.Number
+	Library Library
 }
 
 // LabelsToMap converts label set to keyValue map, to be easily used in tests
@@ -218,11 +275,10 @@ func AsStructs(batches []Batch) []Measured {
 	for _, batch := range batches {
 		for _, m := range batch.Measurements {
 			r = append(r, Measured{
-				Name:                   m.Instrument.Descriptor().Name(),
-				InstrumentationName:    m.Instrument.Descriptor().InstrumentationName(),
-				InstrumentationVersion: m.Instrument.Descriptor().InstrumentationVersion(),
-				Labels:                 LabelsToMap(batch.Labels...),
-				Number:                 m.Number,
+				Name:    m.Instrument.Descriptor().Name(),
+				Labels:  LabelsToMap(batch.Labels...),
+				Number:  m.Number,
+				Library: batch.Library,
 			})
 		}
 	}
