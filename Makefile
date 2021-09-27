@@ -65,7 +65,7 @@ $(TOOLS)/gojq: PACKAGE=github.com/itchyny/gojq/cmd/gojq
 
 .PHONY: tools
 tools: $(CROSSLINK) $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(TOOLS)/gojq $(SEMCONVGEN)
-
+	@ls -la $(TOOLS)
 
 # Build
 
