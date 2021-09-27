@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 )
@@ -24,7 +24,7 @@ func centerVal(mapper LogarithmMapping, x int32) float64 {
 func TestSimpleSize4(t *testing.T) {
 	// Test with a 4-bucket-max exponential histogram
 	ctx := context.Background()
-	desc := metric.NewDescriptor("name", sdkapi.HistogramInstrumentKind, number.Float64Kind)
+	desc := metrictest.NewDescriptor("name", sdkapi.HistogramInstrumentKind, number.Float64Kind)
 	agg := New(1, &desc, WithMaxSize(4))[0]
 	pos := agg.Positive()
 	neg := agg.Negative()
@@ -87,7 +87,7 @@ func TestSimpleSize4(t *testing.T) {
 
 func TestExhaustiveSmall(t *testing.T) {
 	//ctx := context.Background()
-	desc := metric.NewDescriptor("name", sdkapi.HistogramInstrumentKind, number.Float64Kind)
+	desc := metrictest.NewDescriptor("name", sdkapi.HistogramInstrumentKind, number.Float64Kind)
 
 	for _, maxSize := range []int32{3, 4, 5, 6, 7, 8, 9} {
 		agg := New(1, &desc, WithMaxSize(maxSize))[0]
