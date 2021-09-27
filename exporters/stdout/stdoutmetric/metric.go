@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	exportmetric "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -50,93 +51,99 @@ func (e *metricExporter) ExportKindFor(desc *metric.Descriptor, kind aggregation
 	return exportmetric.StatelessExportKindSelector().ExportKindFor(desc, kind)
 }
 
-func (e *metricExporter) Export(_ context.Context, res *resource.Resource, checkpointSet exportmetric.CheckpointSet) error {
+func (e *metricExporter) Export(_ context.Context, res *resource.Resource, reader exportmetric.InstrumentationLibraryReader) error {
 	var aggError error
 	var batch []line
-	aggError = checkpointSet.ForEach(e, func(record exportmetric.Record) error {
-		desc := record.Descriptor()
-		agg := record.Aggregation()
-		kind := desc.NumberKind()
-		encodedResource := res.Encoded(e.config.LabelEncoder)
+	aggError = reader.ForEach(func(lib instrumentation.Library, mr exportmetric.Reader) error {
 
 		var instLabels []attribute.KeyValue
-		if name := desc.InstrumentationName(); name != "" {
+		if name := lib.Name; name != "" {
 			instLabels = append(instLabels, attribute.String("instrumentation.name", name))
-			if version := desc.InstrumentationVersion(); version != "" {
+			if version := lib.Version; version != "" {
 				instLabels = append(instLabels, attribute.String("instrumentation.version", version))
+			}
+			if schema := lib.SchemaURL; schema != "" {
+				instLabels = append(instLabels, attribute.String("instrumentation.schema_url", schema))
 			}
 		}
 		instSet := attribute.NewSet(instLabels...)
 		encodedInstLabels := instSet.Encoded(e.config.LabelEncoder)
 
-		var expose line
+		return mr.ForEach(e, func(record exportmetric.Record) error {
+			desc := record.Descriptor()
+			agg := record.Aggregation()
+			kind := desc.NumberKind()
+			encodedResource := res.Encoded(e.config.LabelEncoder)
 
-		if sum, ok := agg.(aggregation.Sum); ok {
-			value, err := sum.Sum()
-			if err != nil {
-				return err
+			var expose line
+
+			if sum, ok := agg.(aggregation.Sum); ok {
+				value, err := sum.Sum()
+				if err != nil {
+					return err
+				}
+				expose.Sum = value.AsInterface(kind)
 			}
-			expose.Sum = value.AsInterface(kind)
-		}
 
-		if mmsc, ok := agg.(aggregation.MinMaxSumCount); ok {
-			count, err := mmsc.Count()
-			if err != nil {
-				return err
+			if mmsc, ok := agg.(aggregation.MinMaxSumCount); ok {
+				count, err := mmsc.Count()
+				if err != nil {
+					return err
+				}
+				expose.Count = count
+
+				max, err := mmsc.Max()
+				if err != nil {
+					return err
+				}
+				expose.Max = max.AsInterface(kind)
+
+				min, err := mmsc.Min()
+				if err != nil {
+					return err
+				}
+				expose.Min = min.AsInterface(kind)
+			} else if lv, ok := agg.(aggregation.LastValue); ok {
+				value, timestamp, err := lv.LastValue()
+				if err != nil {
+					return err
+				}
+				expose.LastValue = value.AsInterface(kind)
+
+				if e.config.Timestamps {
+					expose.Timestamp = &timestamp
+				}
 			}
-			expose.Count = count
 
-			max, err := mmsc.Max()
-			if err != nil {
-				return err
+			var encodedLabels string
+			iter := record.Labels().Iter()
+			if iter.Len() > 0 {
+				encodedLabels = record.Labels().Encoded(e.config.LabelEncoder)
 			}
-			expose.Max = max.AsInterface(kind)
 
-			min, err := mmsc.Min()
-			if err != nil {
-				return err
+			var sb strings.Builder
+
+			sb.WriteString(desc.Name())
+
+			if len(encodedLabels) > 0 || len(encodedResource) > 0 || len(encodedInstLabels) > 0 {
+				sb.WriteRune('{')
+				sb.WriteString(encodedResource)
+				if len(encodedInstLabels) > 0 && len(encodedResource) > 0 {
+					sb.WriteRune(',')
+				}
+				sb.WriteString(encodedInstLabels)
+				if len(encodedLabels) > 0 && (len(encodedInstLabels) > 0 || len(encodedResource) > 0) {
+					sb.WriteRune(',')
+				}
+				sb.WriteString(encodedLabels)
+				sb.WriteRune('}')
 			}
-			expose.Min = min.AsInterface(kind)
-		} else if lv, ok := agg.(aggregation.LastValue); ok {
-			value, timestamp, err := lv.LastValue()
-			if err != nil {
-				return err
-			}
-			expose.LastValue = value.AsInterface(kind)
 
-			if e.config.Timestamps {
-				expose.Timestamp = &timestamp
-			}
-		}
+			expose.Name = sb.String()
 
-		var encodedLabels string
-		iter := record.Labels().Iter()
-		if iter.Len() > 0 {
-			encodedLabels = record.Labels().Encoded(e.config.LabelEncoder)
-		}
-
-		var sb strings.Builder
-
-		sb.WriteString(desc.Name())
-
-		if len(encodedLabels) > 0 || len(encodedResource) > 0 || len(encodedInstLabels) > 0 {
-			sb.WriteRune('{')
-			sb.WriteString(encodedResource)
-			if len(encodedInstLabels) > 0 && len(encodedResource) > 0 {
-				sb.WriteRune(',')
-			}
-			sb.WriteString(encodedInstLabels)
-			if len(encodedLabels) > 0 && (len(encodedInstLabels) > 0 || len(encodedResource) > 0) {
-				sb.WriteRune(',')
-			}
-			sb.WriteString(encodedLabels)
-			sb.WriteRune('}')
-		}
-
-		expose.Name = sb.String()
-
-		batch = append(batch, expose)
-		return nil
+			batch = append(batch, expose)
+			return nil
+		})
 	})
 	if len(batch) == 0 {
 		return aggError

@@ -61,14 +61,14 @@ func newFixtureWithResource(t *testing.T, res *resource.Resource, opts ...stdout
 		t.Fatal("Error building fixture: ", err)
 	}
 	aggSel := processortest.AggregatorSelector()
-	proc := processor.New(aggSel, export.StatelessExportKindSelector())
+	proc := processor.NewFactory(aggSel, export.StatelessExportKindSelector())
 	cont := controller.New(proc,
 		controller.WithExporter(exp),
 		controller.WithResource(res),
 	)
 	ctx := context.Background()
 	require.NoError(t, cont.Start(ctx))
-	meter := cont.MeterProvider().Meter("test")
+	meter := cont.Meter("test")
 
 	return testFixture{
 		t:        t,
@@ -87,7 +87,7 @@ func (fix testFixture) Output() string {
 func TestStdoutTimestamp(t *testing.T) {
 	var buf bytes.Buffer
 	aggSel := processortest.AggregatorSelector()
-	proc := processor.New(aggSel, export.CumulativeExportKindSelector())
+	proc := processor.NewFactory(aggSel, export.CumulativeExportKindSelector())
 	exporter, err := stdoutmetric.New(
 		stdoutmetric.WithWriter(&buf),
 	)
@@ -101,7 +101,7 @@ func TestStdoutTimestamp(t *testing.T) {
 	ctx := context.Background()
 
 	require.NoError(t, cont.Start(ctx))
-	meter := cont.MeterProvider().Meter("test")
+	meter := cont.Meter("test")
 	counter := metric.Must(meter).NewInt64Counter("name.lastvalue")
 
 	before := time.Now()
