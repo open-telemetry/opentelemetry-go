@@ -82,8 +82,8 @@ type (
 	}
 
 	buckets struct {
-		wrapped    interface{} // nil, []uint8, []uint16, []uint32, or []uint64
-		indexBase  int32       // value of wrapped[0] in [indexStart, indexEnd]
+		backing    interface{} // nil, []uint8, []uint16, []uint32, or []uint64
+		indexBase  int32       // value of backing[0] in [indexStart, indexEnd]
 		indexStart int32
 		indexEnd   int32
 	}
@@ -180,7 +180,7 @@ func (a *Aggregator) clearState() {
 }
 
 func (b *buckets) clearState() {
-	switch counts := b.wrapped.(type) {
+	switch counts := b.backing.(type) {
 	case []uint8:
 		for i := range counts {
 			counts[i] = 0
@@ -269,7 +269,7 @@ func (b *buckets) Offset() int32 {
 }
 
 func (b *buckets) Len() uint32 {
-	if b.wrapped == nil {
+	if b.backing == nil {
 		return 0
 	}
 	return uint32(b.indexEnd - b.indexStart + 1)
@@ -285,7 +285,7 @@ func (b *buckets) At(pos uint32) uint64 {
 	}
 	pos -= bias
 
-	switch counts := b.wrapped.(type) {
+	switch counts := b.backing.(type) {
 	case []uint8:
 		return uint64(counts[pos])
 	case []uint16:
@@ -311,7 +311,7 @@ func (a *Aggregator) update(b *buckets, value float64) {
 	var span uint32
 	if index >= math.MinInt32 && index <= math.MaxInt32 {
 		var success bool
-		if span, success = a.increment(b, int32(index)); success {
+		if span, success = a.incrementIndex(b, int32(index)); success {
 			return
 		}
 	}
@@ -358,7 +358,7 @@ func (a *Aggregator) initialize(b *buckets, value float64) {
 
 	index := a.state.mapping.MapToIndex(value)
 
-	b.wrapped = []uint8{1}
+	b.backing = []uint8{1}
 	b.indexStart = int32(index)
 	b.indexEnd = int32(index)
 	b.indexBase = b.indexStart
@@ -367,7 +367,7 @@ func (a *Aggregator) initialize(b *buckets, value float64) {
 // size() reflects the allocated size of the array, not to be confused
 // with Len() which is the range of non-zero values.
 func (b *buckets) size() uint32 {
-	switch counts := b.wrapped.(type) {
+	switch counts := b.backing.(type) {
 	case []uint8:
 		return uint32(cap(counts))
 	case []uint16:
@@ -380,7 +380,7 @@ func (b *buckets) size() uint32 {
 	return 0
 }
 
-// grow resizes the wrapped array by doubling in size up to maxSize.
+// grow resizes the backing array by doubling in size up to maxSize.
 // this extends the array with a bunch of zeros and copies the
 // existing counts to the same position.
 func (a *Aggregator) grow(b *buckets, needed uint32) {
@@ -392,27 +392,27 @@ func (a *Aggregator) grow(b *buckets, needed uint32) {
 		growTo = a.maxSize
 	}
 	part := growTo - bias
-	switch counts := b.wrapped.(type) {
+	switch counts := b.backing.(type) {
 	case []uint8:
 		tmp := make([]uint8, growTo)
 		copy(tmp[part:], counts[diff:])
 		copy(tmp[0:diff], counts[0:diff])
-		b.wrapped = tmp
+		b.backing = tmp
 	case []uint16:
 		tmp := make([]uint16, growTo)
 		copy(tmp[part:], counts[diff:])
 		copy(tmp[0:diff], counts[0:diff])
-		b.wrapped = tmp
+		b.backing = tmp
 	case []uint32:
 		tmp := make([]uint32, growTo)
 		copy(tmp[part:], counts[diff:])
 		copy(tmp[0:diff], counts[0:diff])
-		b.wrapped = tmp
+		b.backing = tmp
 	case []uint64:
 		tmp := make([]uint64, growTo)
 		copy(tmp[part:], counts[diff:])
 		copy(tmp[0:diff], counts[0:diff])
-		b.wrapped = tmp
+		b.backing = tmp
 	default:
 		panic("grow() with size() == 0")
 	}
@@ -421,7 +421,7 @@ func (a *Aggregator) grow(b *buckets, needed uint32) {
 // increment determines if the index lies inside the current range
 // [indexStart, indexEnd] and if not whether growing the array up to
 // maxSize will satisfy the new value.
-func (a *Aggregator) increment(b *buckets, index int32) (uint32, bool) {
+func (a *Aggregator) incrementIndex(b *buckets, index int32) (uint32, bool) {
 	space := b.size()
 
 	if index < b.indexStart {
@@ -440,94 +440,141 @@ func (a *Aggregator) increment(b *buckets, index int32) (uint32, bool) {
 		b.indexEnd = index
 	}
 
-	l := b.size()
-	i := index - b.indexBase
-	if i >= int32(l) {
-		i -= int32(l)
-	} else if i < 0 {
-		i += int32(l)
+	size := int32(b.size())
+	bucketIndex := index - b.indexBase
+	if bucketIndex >= size {
+		bucketIndex -= size
+	} else if bucketIndex < 0 {
+		bucketIndex += size
 	}
+	b.incrementBucket(bucketIndex, 1)
+	return 0, true
+}
 
+// incrementBucket increments the backing array index by `incr`.
+func (b *buckets) incrementBucket(bucketIndex int32, incr uint64) {
 	for {
-		switch counts := b.wrapped.(type) {
+		switch counts := b.backing.(type) {
 		case []uint8:
-			if counts[i] < 0xff {
-				counts[i]++
-				return 0, true
+			if uint64(counts[bucketIndex])+incr < 0x100 {
+				counts[bucketIndex] += uint8(incr)
+				return
 			}
 			tmp := make([]uint16, len(counts))
 			for i := range counts {
 				tmp[i] = uint16(counts[i])
 			}
-			b.wrapped = tmp
+			b.backing = tmp
 			continue
 		case []uint16:
-			if counts[i] < 0xffff {
-				counts[i]++
-				return 0, true
+			if uint64(counts[bucketIndex])+incr < 0x10000 {
+				counts[bucketIndex] += uint16(incr)
+				return
 			}
 			tmp := make([]uint32, len(counts))
 			for i := range counts {
 				tmp[i] = uint32(counts[i])
 			}
-			b.wrapped = tmp
+			b.backing = tmp
 			continue
 		case []uint32:
-			if counts[i] < 0xffffffff {
-				counts[i]++
-				return 0, true
+			if uint64(counts[bucketIndex])+incr < 0x100000000 {
+				counts[bucketIndex] += uint32(incr)
+				return
 			}
 			tmp := make([]uint64, len(counts))
 			for i := range counts {
 				tmp[i] = uint64(counts[i])
 			}
-			b.wrapped = tmp
+			b.backing = tmp
 			continue
 		case []uint64:
-			counts[i]++
-			return 0, true
+			counts[bucketIndex] += incr
+			return
 		default:
-			panic("increment() with nil slice")
+			panic("increment with nil slice")
 		}
 	}
 }
 
-func (b *buckets) downscale(by int32) {
+func (b *buckets) rotate() {
 	bias := uint32(b.indexBase - b.indexStart)
+
+	if bias == 0 {
+		return
+	}
+
 	post := b.Len() - bias
 
 	// Rotate the array so that indexBase == indexStart
 	b.indexBase = b.indexStart
-	switch counts := b.wrapped.(type) {
+	switch counts := b.backing.(type) {
 	case []uint8:
 		for off := uint32(0); off < post; {
 			copy(counts[off:off+bias], counts[post:])
 			off += bias
 		}
 	case []uint16:
+		for off := uint32(0); off < post; {
+			copy(counts[off:off+bias], counts[post:])
+			off += bias
+		}
 	case []uint32:
+		for off := uint32(0); off < post; {
+			copy(counts[off:off+bias], counts[post:])
+			off += bias
+		}
 	case []uint64:
-		// TODO same as above
+		for off := uint32(0); off < post; {
+			copy(counts[off:off+bias], counts[post:])
+			off += bias
+		}
 	}
+}
 
-	// @@@
+func (b *buckets) downscale(by int32) {
+	b.rotate()
 
-	// Collapse into power-of-two size groups.
-	// each := int32(1) << by
-	// off := b.indexStart % each
-	// if off < 0 {
-	// 	off += each
-	// }
-
-	switch counts := b.wrapped.(type) {
-	case []uint8:
-		// For each position that we are copying into
-		//   For 1 .. each
-		//     Add.  Check for overflow?
-		_ = counts
+	size := 1 + b.indexEnd - b.indexStart
+	each := int32(1) << by
+	inpos := int32(0)
+	outpos := int32(0)
+	for pos := b.indexStart; pos <= b.indexEnd; {
+		base := pos
+		mod := base % each
+		if mod < 0 {
+			mod += each
+		}
+		for i := mod; i < each && inpos < size; i++ {
+			b.moveBucket(outpos, inpos)
+			inpos++
+			pos++
+		}
+		outpos++
 	}
 
 	b.indexStart >>= by
 	b.indexEnd >>= by
 	b.indexBase = b.indexStart
+}
+
+func (b *buckets) moveBucket(dest, src int32) {
+	switch counts := b.backing.(type) {
+	case []uint8:
+		tmp := counts[src]
+		counts[src] = 0
+		b.incrementBucket(dest, uint64(tmp))
+	case []uint16:
+		tmp := counts[src]
+		counts[src] = 0
+		b.incrementBucket(dest, uint64(tmp))
+	case []uint32:
+		tmp := counts[src]
+		counts[src] = 0
+		b.incrementBucket(dest, uint64(tmp))
+	case []uint64:
+		tmp := counts[src]
+		counts[src] = 0
+		b.incrementBucket(dest, uint64(tmp))
+	}
 }
