@@ -65,7 +65,6 @@ $(TOOLS)/gojq: PACKAGE=github.com/itchyny/gojq/cmd/gojq
 
 .PHONY: tools
 tools: $(CROSSLINK) $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(TOOLS)/gojq $(SEMCONVGEN)
-	@ls -la $(TOOLS)
 
 # Build
 
@@ -81,7 +80,8 @@ generate: $(STRINGER)
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "$(GO) generate $${dir}/..."; \
 	  (cd "$${dir}" && \
-	    PATH="$(TOOLS):$${PATH}" $(GO) generate ./...); \
+	    PATH="$(TOOLS):$${PATH}" $(GO) generate ./... && \
+		$(PORTO) -w .); \
 	done
 
 build: generate
