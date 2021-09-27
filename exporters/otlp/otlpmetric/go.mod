@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	github.com/cenkalti/backoff/v4 v4.1.1
+	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/google/go-cmp v0.5.6
 	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/otel v1.0.0
@@ -13,7 +14,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v0.23.0
 	go.opentelemetry.io/proto/otlp v0.9.0
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
-	google.golang.org/grpc v1.40.0
+	google.golang.org/grpc v1.41.0
 	google.golang.org/protobuf v1.27.1
 )
 
