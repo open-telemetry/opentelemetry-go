@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -32,12 +33,12 @@ import (
 )
 
 var (
-	testCounterDesc               = metric.NewDescriptor("counter", sdkapi.CounterInstrumentKind, number.Int64Kind)
-	testUpDownCounterDesc         = metric.NewDescriptor("updowncounter", sdkapi.UpDownCounterInstrumentKind, number.Int64Kind)
-	testCounterObserverDesc       = metric.NewDescriptor("counterobserver", sdkapi.CounterObserverInstrumentKind, number.Int64Kind)
-	testUpDownCounterObserverDesc = metric.NewDescriptor("updowncounterobserver", sdkapi.UpDownCounterObserverInstrumentKind, number.Int64Kind)
-	testHistogramDesc             = metric.NewDescriptor("histogram", sdkapi.HistogramInstrumentKind, number.Int64Kind)
-	testGaugeObserverDesc         = metric.NewDescriptor("gauge", sdkapi.GaugeObserverInstrumentKind, number.Int64Kind)
+	testCounterDesc               = metrictest.NewDescriptor("counter", sdkapi.CounterInstrumentKind, number.Int64Kind)
+	testUpDownCounterDesc         = metrictest.NewDescriptor("updowncounter", sdkapi.UpDownCounterInstrumentKind, number.Int64Kind)
+	testCounterObserverDesc       = metrictest.NewDescriptor("counterobserver", sdkapi.CounterObserverInstrumentKind, number.Int64Kind)
+	testUpDownCounterObserverDesc = metrictest.NewDescriptor("updowncounterobserver", sdkapi.UpDownCounterObserverInstrumentKind, number.Int64Kind)
+	testHistogramDesc             = metrictest.NewDescriptor("histogram", sdkapi.HistogramInstrumentKind, number.Int64Kind)
+	testGaugeObserverDesc         = metrictest.NewDescriptor("gauge", sdkapi.GaugeObserverInstrumentKind, number.Int64Kind)
 )
 
 func oneAgg(sel export.AggregatorSelector, desc *metric.Descriptor) export.Aggregator {

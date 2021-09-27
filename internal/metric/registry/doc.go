@@ -21,4 +21,4 @@ This package is currently in a pre-GA phase. Backwards incompatible changes
 may be introduced in subsequent minor version releases as we work to track the
 evolving OpenTelemetry specification and user feedback.
 */
-package registry // import "go.opentelemetry.io/otel/metric/registry"
+package registry // import "go.opentelemetry.io/otel/internal/metric/registry"

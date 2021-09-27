@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
@@ -41,11 +42,14 @@ func getMap(t *testing.T, cont *controller.Controller) map[string]float64 {
 	out := processortest.NewOutput(attribute.DefaultEncoder())
 
 	require.NoError(t, cont.ForEach(
-		export.CumulativeExportKindSelector(),
-		func(record export.Record) error {
-			return out.AddRecord(record)
-		},
-	))
+		func(_ instrumentation.Library, reader export.Reader) error {
+			return reader.ForEach(
+				export.CumulativeExportKindSelector(),
+				func(record export.Record) error {
+					return out.AddRecord(record)
+				},
+			)
+		}))
 	return out.Map()
 }
 
@@ -113,7 +117,7 @@ func TestControllerUsesResource(t *testing.T) {
 			sel := export.CumulativeExportKindSelector()
 			exp := processortest.New(sel, attribute.DefaultEncoder())
 			cont := controller.New(
-				processor.New(
+				processor.NewFactory(
 					processortest.AggregatorSelector(),
 					exp,
 				),
@@ -121,9 +125,8 @@ func TestControllerUsesResource(t *testing.T) {
 			)
 			ctx := context.Background()
 			require.NoError(t, cont.Start(ctx))
-			prov := cont.MeterProvider()
 
-			ctr := metric.Must(prov.Meter("named")).NewFloat64Counter("calls.sum")
+			ctr := metric.Must(cont.Meter("named")).NewFloat64Counter("calls.sum")
 			ctr.Add(context.Background(), 1.)
 
 			// Collect once
@@ -139,7 +142,7 @@ func TestControllerUsesResource(t *testing.T) {
 
 func TestStartNoExporter(t *testing.T) {
 	cont := controller.New(
-		processor.New(
+		processor.NewFactory(
 			processortest.AggregatorSelector(),
 			export.CumulativeExportKindSelector(),
 		),
@@ -149,10 +152,9 @@ func TestStartNoExporter(t *testing.T) {
 	mock := controllertest.NewMockClock()
 	cont.SetClock(mock)
 
-	prov := cont.MeterProvider()
 	calls := int64(0)
 
-	_ = metric.Must(prov.Meter("named")).NewInt64CounterObserver("calls.lastvalue",
+	_ = metric.Must(cont.Meter("named")).NewInt64CounterObserver("calls.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			calls++
 			checkTestContext(t, ctx)
@@ -209,7 +211,7 @@ func TestStartNoExporter(t *testing.T) {
 
 func TestObserverCanceled(t *testing.T) {
 	cont := controller.New(
-		processor.New(
+		processor.NewFactory(
 			processortest.AggregatorSelector(),
 			export.CumulativeExportKindSelector(),
 		),
@@ -218,10 +220,9 @@ func TestObserverCanceled(t *testing.T) {
 		controller.WithResource(resource.Empty()),
 	)
 
-	prov := cont.MeterProvider()
 	calls := int64(0)
 
-	_ = metric.Must(prov.Meter("named")).NewInt64CounterObserver("done.lastvalue",
+	_ = metric.Must(cont.Meter("named")).NewInt64CounterObserver("done.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			<-ctx.Done()
 			calls++
@@ -242,7 +243,7 @@ func TestObserverCanceled(t *testing.T) {
 
 func TestObserverContext(t *testing.T) {
 	cont := controller.New(
-		processor.New(
+		processor.NewFactory(
 			processortest.AggregatorSelector(),
 			export.CumulativeExportKindSelector(),
 		),
@@ -250,9 +251,7 @@ func TestObserverContext(t *testing.T) {
 		controller.WithResource(resource.Empty()),
 	)
 
-	prov := cont.MeterProvider()
-
-	_ = metric.Must(prov.Meter("named")).NewInt64CounterObserver("done.lastvalue",
+	_ = metric.Must(cont.Meter("named")).NewInt64CounterObserver("done.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			time.Sleep(10 * time.Millisecond)
 			checkTestContext(t, ctx)
@@ -284,7 +283,7 @@ func newBlockingExporter() *blockingExporter {
 	}
 }
 
-func (b *blockingExporter) Export(ctx context.Context, res *resource.Resource, output export.CheckpointSet) error {
+func (b *blockingExporter) Export(ctx context.Context, res *resource.Resource, output export.InstrumentationLibraryReader) error {
 	var err error
 	_ = b.exporter.Export(ctx, res, output)
 	if b.calls == 0 {
@@ -306,7 +305,7 @@ func (*blockingExporter) ExportKindFor(
 func TestExportTimeout(t *testing.T) {
 	exporter := newBlockingExporter()
 	cont := controller.New(
-		processor.New(
+		processor.NewFactory(
 			processortest.AggregatorSelector(),
 			export.CumulativeExportKindSelector(),
 		),
@@ -318,10 +317,8 @@ func TestExportTimeout(t *testing.T) {
 	mock := controllertest.NewMockClock()
 	cont.SetClock(mock)
 
-	prov := cont.MeterProvider()
-
 	calls := int64(0)
-	_ = metric.Must(prov.Meter("named")).NewInt64CounterObserver("one.lastvalue",
+	_ = metric.Must(cont.Meter("named")).NewInt64CounterObserver("one.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			calls++
 			result.Observe(calls)
@@ -363,7 +360,7 @@ func TestCollectAfterStopThenStartAgain(t *testing.T) {
 		attribute.DefaultEncoder(),
 	)
 	cont := controller.New(
-		processor.New(
+		processor.NewFactory(
 			processortest.AggregatorSelector(),
 			exp,
 		),
@@ -374,10 +371,8 @@ func TestCollectAfterStopThenStartAgain(t *testing.T) {
 	mock := controllertest.NewMockClock()
 	cont.SetClock(mock)
 
-	prov := cont.MeterProvider()
-
 	calls := 0
-	_ = metric.Must(prov.Meter("named")).NewInt64CounterObserver("one.lastvalue",
+	_ = metric.Must(cont.Meter("named")).NewInt64CounterObserver("one.lastvalue",
 		func(ctx context.Context, result metric.Int64ObserverResult) {
 			calls++
 			result.Observe(int64(calls))
@@ -435,5 +430,48 @@ func TestCollectAfterStopThenStartAgain(t *testing.T) {
 	require.NoError(t, cont.Stop(context.Background()))
 	require.EqualValues(t, map[string]float64{
 		"one.lastvalue//": 6,
+	}, exp.Values())
+}
+
+func TestRegistryFunction(t *testing.T) {
+	exp := processortest.New(
+		export.CumulativeExportKindSelector(),
+		attribute.DefaultEncoder(),
+	)
+	cont := controller.New(
+		processor.NewFactory(
+			processortest.AggregatorSelector(),
+			exp,
+		),
+		controller.WithCollectPeriod(time.Second),
+		controller.WithExporter(exp),
+		controller.WithResource(resource.Empty()),
+	)
+
+	m1 := cont.Meter("test")
+	m2 := cont.Meter("test")
+
+	require.NotNil(t, m1)
+	require.Equal(t, m1, m2)
+
+	c1, err := m1.NewInt64Counter("counter.sum")
+	require.NoError(t, err)
+
+	c2, err := m1.NewInt64Counter("counter.sum")
+	require.NoError(t, err)
+
+	require.Equal(t, c1, c2)
+
+	ctx := context.Background()
+
+	require.NoError(t, cont.Start(ctx))
+
+	c1.Add(ctx, 10)
+	c2.Add(ctx, 10)
+
+	require.NoError(t, cont.Stop(ctx))
+
+	require.EqualValues(t, map[string]float64{
+		"counter.sum//": 20,
 	}, exp.Values())
 }

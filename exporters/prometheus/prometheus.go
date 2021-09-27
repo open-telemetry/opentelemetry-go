@@ -32,6 +32,7 @@ import (
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -120,7 +121,7 @@ func New(config Config, controller *controller.Controller) (*Exporter, error) {
 
 // MeterProvider returns the MeterProvider of this exporter.
 func (e *Exporter) MeterProvider() metric.MeterProvider {
-	return e.controller.MeterProvider()
+	return e.controller
 }
 
 // Controller returns the controller object that coordinates collection for the SDK.
@@ -152,15 +153,17 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 	c.exp.lock.RLock()
 	defer c.exp.lock.RUnlock()
 
-	_ = c.exp.Controller().ForEach(c.exp, func(record export.Record) error {
-		var labelKeys []string
-		mergeLabels(record, c.exp.controller.Resource(), &labelKeys, nil)
-		ch <- c.toDesc(record, labelKeys)
-		return nil
+	_ = c.exp.Controller().ForEach(func(_ instrumentation.Library, reader export.Reader) error {
+		return reader.ForEach(c.exp, func(record export.Record) error {
+			var labelKeys []string
+			mergeLabels(record, c.exp.controller.Resource(), &labelKeys, nil)
+			ch <- c.toDesc(record, labelKeys)
+			return nil
+		})
 	})
 }
 
-// Collect exports the last calculated CheckpointSet.
+// Collect exports the last calculated Reader state.
 //
 // Collect is invoked whenever prometheus.Gatherer is also invoked.
 // For example, when the HTTP endpoint is invoked by Prometheus.
@@ -173,36 +176,39 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		otel.Handle(err)
 	}
 
-	err := ctrl.ForEach(c.exp, func(record export.Record) error {
-		agg := record.Aggregation()
-		numberKind := record.Descriptor().NumberKind()
-		instrumentKind := record.Descriptor().InstrumentKind()
+	err := ctrl.ForEach(func(_ instrumentation.Library, reader export.Reader) error {
+		return reader.ForEach(c.exp, func(record export.Record) error {
 
-		var labelKeys, labels []string
-		mergeLabels(record, c.exp.controller.Resource(), &labelKeys, &labels)
+			agg := record.Aggregation()
+			numberKind := record.Descriptor().NumberKind()
+			instrumentKind := record.Descriptor().InstrumentKind()
 
-		desc := c.toDesc(record, labelKeys)
+			var labelKeys, labels []string
+			mergeLabels(record, c.exp.controller.Resource(), &labelKeys, &labels)
 
-		if hist, ok := agg.(aggregation.Histogram); ok {
-			if err := c.exportHistogram(ch, hist, numberKind, desc, labels); err != nil {
-				return fmt.Errorf("exporting histogram: %w", err)
+			desc := c.toDesc(record, labelKeys)
+
+			if hist, ok := agg.(aggregation.Histogram); ok {
+				if err := c.exportHistogram(ch, hist, numberKind, desc, labels); err != nil {
+					return fmt.Errorf("exporting histogram: %w", err)
+				}
+			} else if sum, ok := agg.(aggregation.Sum); ok && instrumentKind.Monotonic() {
+				if err := c.exportMonotonicCounter(ch, sum, numberKind, desc, labels); err != nil {
+					return fmt.Errorf("exporting monotonic counter: %w", err)
+				}
+			} else if sum, ok := agg.(aggregation.Sum); ok && !instrumentKind.Monotonic() {
+				if err := c.exportNonMonotonicCounter(ch, sum, numberKind, desc, labels); err != nil {
+					return fmt.Errorf("exporting non monotonic counter: %w", err)
+				}
+			} else if lastValue, ok := agg.(aggregation.LastValue); ok {
+				if err := c.exportLastValue(ch, lastValue, numberKind, desc, labels); err != nil {
+					return fmt.Errorf("exporting last value: %w", err)
+				}
+			} else {
+				return fmt.Errorf("%w: %s", ErrUnsupportedAggregator, agg.Kind())
 			}
-		} else if sum, ok := agg.(aggregation.Sum); ok && instrumentKind.Monotonic() {
-			if err := c.exportMonotonicCounter(ch, sum, numberKind, desc, labels); err != nil {
-				return fmt.Errorf("exporting monotonic counter: %w", err)
-			}
-		} else if sum, ok := agg.(aggregation.Sum); ok && !instrumentKind.Monotonic() {
-			if err := c.exportNonMonotonicCounter(ch, sum, numberKind, desc, labels); err != nil {
-				return fmt.Errorf("exporting non monotonic counter: %w", err)
-			}
-		} else if lastValue, ok := agg.(aggregation.LastValue); ok {
-			if err := c.exportLastValue(ch, lastValue, numberKind, desc, labels); err != nil {
-				return fmt.Errorf("exporting last value: %w", err)
-			}
-		} else {
-			return fmt.Errorf("%w: %s", ErrUnsupportedAggregator, agg.Kind())
-		}
-		return nil
+			return nil
+		})
 	})
 	if err != nil {
 		otel.Handle(err)
