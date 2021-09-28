@@ -32,6 +32,7 @@ import (
 	"go.opentelemetry.io/otel/metric/unit"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -55,18 +56,30 @@ func (e *exporter) ExportMetrics(ctx context.Context, metrics []*metricdata.Metr
 	if len(metrics) != 0 {
 		res = convertResource(metrics[0].Resource)
 	}
-	return e.base.Export(ctx, res, &checkpointSet{metrics: metrics})
+	return e.base.Export(ctx, res, &censusLibraryReader{metrics: metrics})
 }
 
-type checkpointSet struct {
-	// RWMutex implements locking for the `CheckpointSet` interface.
+type censusLibraryReader struct {
+	metrics []*metricdata.Metric
+}
+
+func (r censusLibraryReader) ForEach(readerFunc func(instrumentation.Library, export.Reader) error) error {
+	return readerFunc(instrumentation.Library{
+		Name: "OpenCensus Bridge",
+	}, &metricReader{metrics: r.metrics})
+}
+
+type metricReader struct {
+	// RWMutex implements locking for the `Reader` interface.
 	sync.RWMutex
 	metrics []*metricdata.Metric
 }
 
-// ForEach iterates through the CheckpointSet, passing an
-// export.Record with the appropriate aggregation to an exporter.
-func (d *checkpointSet) ForEach(exporter export.ExportKindSelector, f func(export.Record) error) error {
+var _ export.Reader = &metricReader{}
+
+// ForEach iterates through the metrics data, synthesizing an
+// export.Record with the appropriate aggregation for the exporter.
+func (d *metricReader) ForEach(exporter export.ExportKindSelector, f func(export.Record) error) error {
 	for _, m := range d.metrics {
 		descriptor, err := convertDescriptor(m.Descriptor)
 		if err != nil {
@@ -158,7 +171,6 @@ func convertDescriptor(ocDescriptor metricdata.Descriptor) (metric.Descriptor, e
 	}
 	opts := []metric.InstrumentOption{
 		metric.WithDescription(ocDescriptor.Description),
-		metric.WithInstrumentationName("OpenCensus Bridge"),
 	}
 	switch ocDescriptor.Unit {
 	case metricdata.UnitDimensionless:
@@ -168,5 +180,6 @@ func convertDescriptor(ocDescriptor metricdata.Descriptor) (metric.Descriptor, e
 	case metricdata.UnitMilliseconds:
 		opts = append(opts, metric.WithUnit(unit.Milliseconds))
 	}
-	return metric.NewDescriptor(ocDescriptor.Name, ikind, nkind, opts...), nil
+	cfg := metric.NewInstrumentConfig(opts...)
+	return metric.NewDescriptor(ocDescriptor.Name, ikind, nkind, cfg.Description(), cfg.Unit()), nil
 }

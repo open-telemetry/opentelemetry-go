@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -74,7 +75,7 @@ func TestRangeTest(t *testing.T) {
 	// Only Counters implement a range test.
 	for _, nkind := range []number.Kind{number.Float64Kind, number.Int64Kind} {
 		t.Run(nkind.String(), func(t *testing.T) {
-			desc := metric.NewDescriptor(
+			desc := metrictest.NewDescriptor(
 				"name",
 				sdkapi.CounterInstrumentKind,
 				nkind,
@@ -92,7 +93,7 @@ func TestNaNTest(t *testing.T) {
 				sdkapi.HistogramInstrumentKind,
 				sdkapi.GaugeObserverInstrumentKind,
 			} {
-				desc := metric.NewDescriptor(
+				desc := metrictest.NewDescriptor(
 					"name",
 					mkind,
 					nkind,

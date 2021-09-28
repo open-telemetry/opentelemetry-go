@@ -84,7 +84,7 @@ func expectHistogram(name string, values ...string) expectedMetric {
 
 func newPipeline(config prometheus.Config, options ...controller.Option) (*prometheus.Exporter, error) {
 	c := controller.New(
-		processor.New(
+		processor.NewFactory(
 			selector.NewWithHistogramDistribution(
 				histogram.WithExplicitBoundaries(config.DefaultHistogramBoundaries),
 			),
