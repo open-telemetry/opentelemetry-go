@@ -2,6 +2,7 @@ package exponential
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -11,11 +12,11 @@ import (
 )
 
 var (
-	normalMapping = NewLogarithmMapping(30)
+	normalMapping = newLogarithmMapping(30)
 	oneAndAHalf   = centerVal(normalMapping, int32(normalMapping.MapToIndex(1.5)))
 )
 
-func centerVal(mapper LogarithmMapping, x int32) float64 {
+func centerVal(mapper logarithmMapping, x int32) float64 {
 	return (mapper.LowerBoundary(int64(x)) + mapper.LowerBoundary(int64(x)+1)) / 2
 }
 
@@ -55,7 +56,7 @@ func TestSimpleSize4(t *testing.T) {
 	require.Equal(t, uint64(1), pos.At(0))
 	require.Equal(t, int32(DefaultNormalScale), agg.Scale())
 
-	mapper := NewLogarithmMapping(agg.Scale())
+	mapper := newLogarithmMapping(agg.Scale())
 
 	// Check that the initial count maps to Offset().
 	offset := mapper.MapToIndex(oneAndAHalf)
@@ -85,13 +86,95 @@ func TestSimpleSize4(t *testing.T) {
 	}
 }
 
-func TestExhaustiveSmall(t *testing.T) {
-	//ctx := context.Background()
-	desc := metrictest.NewDescriptor("name", sdkapi.HistogramInstrumentKind, number.Float64Kind)
+// tests that every permutation of {1/2, 1, 2} with maxSize=2 results
+// in the same scale=-1 histogram.
+func TestScaleNegOneCentered(t *testing.T) {
+	for j, order := range [][]float64{
+		{1, 0.5, 2},
+		{1, 2, 0.5},
+		{2, 0.5, 1},
+		{2, 1, 0.5},
+		{0.5, 1, 2},
+		{0.5, 2, 1},
+	} {
+		t.Run(fmt.Sprint(j), func(t *testing.T) {
+			ctx := context.Background()
+			desc := metrictest.NewDescriptor("name", sdkapi.HistogramInstrumentKind, number.Float64Kind)
+			agg := New(1, &desc, WithMaxSize(2))[0]
 
-	for _, maxSize := range []int32{3, 4, 5, 6, 7, 8, 9} {
-		agg := New(1, &desc, WithMaxSize(maxSize))[0]
+			agg.Update(ctx, number.NewFloat64Number(order[0]), &desc)
+			agg.Update(ctx, number.NewFloat64Number(order[1]), &desc)
 
-		_ = agg
+			// Enter order[2]: scale set to -1, expect counts[0] == 1 (the
+			// (1/2), counts[1] == 2 (the 1 and 2).
+			agg.Update(ctx, number.NewFloat64Number(order[2]), &desc)
+			require.Equal(t, int32(-1), agg.Scale())
+			require.Equal(t, int32(-1), agg.Positive().Offset())
+			require.Equal(t, uint32(2), agg.Positive().Len())
+			require.Equal(t, uint64(1), agg.Positive().At(0))
+			require.Equal(t, uint64(2), agg.Positive().At(1))
+		})
+	}
+}
+
+// tests that every permutation of {1, 2, 4} with maxSize=2 results
+// in the same scale=-1 histogram.
+func TestScaleNegOnePositive(t *testing.T) {
+	for j, order := range [][]float64{
+		{1, 2, 4},
+		{1, 4, 2},
+		{2, 4, 1},
+		{2, 1, 4},
+		{4, 1, 2},
+		{4, 2, 1},
+	} {
+		t.Run(fmt.Sprint(j), func(t *testing.T) {
+			ctx := context.Background()
+			desc := metrictest.NewDescriptor("name", sdkapi.HistogramInstrumentKind, number.Float64Kind)
+			agg := New(1, &desc, WithMaxSize(2))[0]
+
+			agg.Update(ctx, number.NewFloat64Number(order[0]), &desc)
+			agg.Update(ctx, number.NewFloat64Number(order[1]), &desc)
+
+			// Enter order[2]: scale set to -1, expect counts[0] == 1 (the
+			// 1 and 2), counts[1] == 2 (the 4).
+			agg.Update(ctx, number.NewFloat64Number(order[2]), &desc)
+			require.Equal(t, int32(-1), agg.Scale())
+			require.Equal(t, int32(0), agg.Positive().Offset())
+			require.Equal(t, uint32(2), agg.Positive().Len())
+			require.Equal(t, uint64(2), agg.Positive().At(0))
+			require.Equal(t, uint64(1), agg.Positive().At(1))
+		})
+	}
+}
+
+// tests that every permutation of {1, 1/2, 1/4} with maxSize=2 results
+// in the same scale=-1 histogram.
+func TestScaleNegOneNegative(t *testing.T) {
+	for j, order := range [][]float64{
+		{1, 0.5, 0.25},
+		{1, 0.25, 0.5},
+		{0.5, 0.25, 1},
+		{0.5, 1, 0.25},
+		{0.25, 1, 0.5},
+		{0.25, 0.5, 1},
+	} {
+		t.Run(fmt.Sprint(j), func(t *testing.T) {
+			ctx := context.Background()
+			desc := metrictest.NewDescriptor("name", sdkapi.HistogramInstrumentKind, number.Float64Kind)
+			agg := New(1, &desc, WithMaxSize(2))[0]
+
+			agg.Update(ctx, number.NewFloat64Number(order[0]), &desc)
+			agg.Update(ctx, number.NewFloat64Number(order[1]), &desc)
+
+			// Enter order[2]: scale set to -1, expect counts[0] == 2 (the
+			// 1/4 and 1/2, counts[1] == 2 (the 1).
+			agg.Update(ctx, number.NewFloat64Number(order[2]), &desc)
+			require.Equal(t, int32(-1), agg.Scale())
+			require.Equal(t, int32(-1), agg.Positive().Offset())
+			require.Equal(t, uint32(2), agg.Positive().Len())
+			require.Equal(t, uint64(2), agg.Positive().At(0))
+			require.Equal(t, uint64(1), agg.Positive().At(1))
+		})
 	}
 }

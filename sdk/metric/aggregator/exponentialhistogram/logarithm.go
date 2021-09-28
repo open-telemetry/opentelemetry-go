@@ -18,13 +18,13 @@ import (
 	"math"
 )
 
-// LogarithmMapping is a prototype for OTEP 149.  The Go
+// logarithmMapping is a prototype for OTEP 149.  The Go
 // implementation was copied from a Java prototypes during following
 // https://github.com/open-telemetry/opentelemetry-proto/pull/322.
 // See
 // https://github.com/newrelic-experimental/newrelic-sketch-java/blob/1ce245713603d61ba3a4510f6df930a5479cd3f6/src/main/java/com/newrelic/nrsketch/indexer/LogIndexer.java
 // for the equations used here.
-type LogarithmMapping struct {
+type logarithmMapping struct {
 	scale int32
 
 	// scaleFactor is used and computed as follows:
@@ -41,22 +41,26 @@ type LogarithmMapping struct {
 	scaleFactor float64
 }
 
-func NewLogarithmMapping(scale int32) LogarithmMapping {
-	return LogarithmMapping{
+func newLogarithmMapping(scale int32) logarithmMapping {
+	return logarithmMapping{
 		scale:       scale,
 		scaleFactor: scalb(math.Log2E, scale),
 	}
 }
 
-func (l LogarithmMapping) MapToIndex(value float64) int64 {
+func (l logarithmMapping) MapToIndex(value float64) int64 {
 	// Use Floor() to round toward -Inf.
 	return int64(math.Floor(math.Log(value) * l.scaleFactor))
 }
 
-func (l LogarithmMapping) LowerBoundary(index int64) float64 {
+func (l logarithmMapping) LowerBoundary(index int64) float64 {
 	// result = base ^ index
 	// = (2^(2^-scale))^index
 	// = 2^(2^-scale * index)
 	// = 2^(index * 2^-scale))
 	return math.Exp2(scalb(float64(index), -l.scale))
+}
+
+func (l logarithmMapping) Scale() int32 {
+	return l.scale
 }

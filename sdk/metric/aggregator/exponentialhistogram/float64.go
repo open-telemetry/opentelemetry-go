@@ -15,6 +15,7 @@
 package exponential
 
 import (
+	"fmt"
 	"math"
 )
 
@@ -43,6 +44,43 @@ const (
 	// number.
 	SignMask = (1 << 63)
 )
+
+type (
+	// Mapping is the interface of a mapper.
+	Mapping interface {
+		MapToIndex(value float64) int64
+		LowerBoundary(index int64) float64
+		Scale() int32
+	}
+
+	// exponentMapping is used for negative scales, effectively a
+	// mapping of the base-2 logarithm of the exponent.
+	exponentMapping struct {
+		scale int32
+	}
+)
+
+func newMapping(scale int32) Mapping {
+	fmt.Println("new scale", scale)
+	if scale < 0 {
+		return exponentMapping{scale}
+	}
+	return newLogarithmMapping(scale)
+}
+
+func (e exponentMapping) MapToIndex(value float64) int64 {
+	return int64(getExponent(value) >> -e.scale)
+}
+
+func (e exponentMapping) LowerBoundary(index int64) float64 {
+	exponent := int64(index<<-e.scale) + ExponentBias
+
+	return math.Float64frombits(uint64(exponent << MantissaWidth))
+}
+
+func (e exponentMapping) Scale() int32 {
+	return e.scale
+}
 
 // java.lang.Math.scalb(float f, int scaleFactor) returns f x
 // 2**scaleFactor, rounded as if performed by a single correctly

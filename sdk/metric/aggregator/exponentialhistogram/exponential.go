@@ -16,7 +16,6 @@ package exponential // import "go.opentelemetry.io/otel/sdk/metric/aggregator/ex
 
 import (
 	"context"
-	"math"
 	"math/bits"
 	"sync"
 
@@ -57,13 +56,13 @@ type (
 	Aggregator struct {
 		lock    sync.Mutex
 		kind    number.Kind
-		maxSize uint32
+		maxSize int32
 		state   *state
 	}
 
 	// config describes how the histogram is aggregated.
 	config struct {
-		maxSize uint32
+		maxSize int32
 	}
 
 	// Option configures a histogram config.
@@ -81,7 +80,7 @@ type (
 		zeroCount uint64
 		positive  buckets
 		negative  buckets
-		mapping   LogarithmMapping
+		mapping   Mapping
 	}
 
 	buckets struct {
@@ -102,10 +101,10 @@ func WithMaxSize(size int32) Option {
 	return maxSizeOption(size)
 }
 
-type maxSizeOption int
+type maxSizeOption int32
 
 func (o maxSizeOption) apply(config *config) {
-	config.maxSize = uint32(o)
+	config.maxSize = int32(o)
 }
 
 // New returns `cnt` number of configured histogram aggregators for `desc`.
@@ -182,9 +181,9 @@ func (a *Aggregator) Update(_ context.Context, number number.Number, desc *metri
 	if value == 0 {
 		a.state.zeroCount++
 	} else if value > 0 {
-		a.update(&a.state.positive, value)
+		a.update(&a.state.positive, value, 1)
 	} else {
-		a.update(&a.state.negative, -value)
+		a.update(&a.state.negative, -value, 1)
 	}
 
 	a.state.count++
@@ -200,8 +199,14 @@ func (a *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 		return aggregator.NewInconsistentAggregatorError(a, oa)
 	}
 
-	// a.state.sum.AddNumber(desc.NumberKind(), o.state.sum)
-	// a.state.count += o.state.count
+	a.state.sum += o.state.sum
+	a.state.count += o.state.count
+	a.state.zeroCount += o.state.zeroCount
+
+	// it's not enough to choose the minimum scale, because the
+	// combined range could
+	a.mergeBuckets(&a.state.positive, o, &o.state.positive)
+	a.mergeBuckets(&a.state.negative, o, &o.state.negative)
 
 	// for i := 0; i < len(a.state.bucketCounts); i++ {
 	// 	a.state.bucketCounts[i] += o.state.bucketCounts[i]
@@ -224,7 +229,7 @@ func (a *Aggregator) Sum() (number.Number, error) {
 
 // Scale implements aggregation.ExponentialHistogram.
 func (a *Aggregator) Scale() int32 {
-	return a.state.mapping.scale
+	return a.state.mapping.Scale()
 }
 
 // ZeroCount implements aggregation.ExponentialHistogram.
@@ -316,7 +321,7 @@ func (b *buckets) clearState() {
 func (a *Aggregator) initialize(b *buckets, value float64) {
 	firstScale := idealScale(value)
 
-	a.state.mapping = NewLogarithmMapping(firstScale)
+	a.state.mapping = newMapping(firstScale)
 
 	index := a.state.mapping.MapToIndex(value)
 
@@ -347,56 +352,59 @@ func idealScale(value float64) int32 {
 
 // size() reflects the allocated size of the array, not to be confused
 // with Len() which is the range of non-zero values.
-func (b *buckets) size() uint32 {
+func (b *buckets) size() int32 {
 	switch counts := b.backing.(type) {
 	case []uint8:
-		return uint32(cap(counts))
+		return int32(cap(counts))
 	case []uint16:
-		return uint32(cap(counts))
+		return int32(cap(counts))
 	case []uint32:
-		return uint32(cap(counts))
+		return int32(cap(counts))
 	case []uint64:
-		return uint32(cap(counts))
+		return int32(cap(counts))
 	}
 	return 0
 }
 
-func (a *Aggregator) update(b *buckets, value float64) {
-	// Are there any non-zero buckets yet?
+// update increments the appropriate buckets for a given absolute
+// value by the provided increment.
+func (a *Aggregator) update(b *buckets, value float64, incr uint64) {
+	// if there are zeros, we have not fixed the scale yet.
 	if a.state.count == a.state.zeroCount {
 		a.initialize(b, value)
 		return
 	}
 
 	index := a.state.mapping.MapToIndex(value)
-
-	var span uint32
-	if index >= math.MinInt32 && index <= math.MaxInt32 {
-		var success bool
-		if span, success = a.incrementIndex(b, int32(index)); success {
-			return
-		}
+	span, success := a.incrementIndexBy(b, index, incr)
+	if success {
+		return
 	}
 
 	// two reasons for this, both call for change of scale:
 	// (1) index does not fit a 32-bit value
 	// (2) index is outside the maxSize range relative to current extrema.
-	down := (span + a.maxSize - 1) / a.maxSize
-	shift := int32(31 - bits.LeadingZeros32(down))
-	newScale := a.state.mapping.scale - shift
+	factor := span
+	shift := int32(0)
+	// TODO: This loop.
+	for factor >= uint64(a.maxSize) {
+		shift++
+		factor = factor >> 1
+	}
+	newScale := a.state.mapping.Scale() - shift
 
 	if ideal := idealScale(value); ideal < newScale {
 		newScale = ideal
 	}
 
-	change := a.state.mapping.scale - newScale
+	change := a.state.mapping.Scale() - newScale
 
 	a.state.positive.downscale(change)
 	a.state.negative.downscale(change)
-	a.state.mapping = NewLogarithmMapping(newScale)
+	a.state.mapping = newMapping(newScale)
 
 	index = a.state.mapping.MapToIndex(value)
-	span, success := a.incrementIndex(b, int32(index))
+	span, success = a.incrementIndexBy(b, index, incr)
 
 	if !success {
 		panic("downscale logic error")
@@ -406,33 +414,31 @@ func (a *Aggregator) update(b *buckets, value float64) {
 // increment determines if the index lies inside the current range
 // [indexStart, indexEnd] and if not whether growing the array up to
 // maxSize will satisfy the new value.
-func (a *Aggregator) incrementIndex(b *buckets, index int32) (uint32, bool) {
-	space := b.size()
-
-	if index < b.indexStart {
-		if span := uint32(b.indexEnd - index); span >= a.maxSize {
+func (a *Aggregator) incrementIndexBy(b *buckets, index int64, incr uint64) (uint64, bool) {
+	if index < int64(b.indexStart) {
+		if span := uint64(int64(b.indexEnd) - index); span >= uint64(a.maxSize) {
 			return span + 1, false // rescale needed
-		} else if span >= space {
-			a.grow(b, span+1)
+		} else if span >= uint64(b.size()) {
+			a.grow(b, uint32(span+1))
 		}
-		b.indexStart = index
-	} else if index > b.indexEnd {
-		if span := uint32(index - b.indexStart); span >= a.maxSize {
+		b.indexStart = int32(index)
+	} else if index > int64(b.indexEnd) {
+		if span := uint64(index - int64(b.indexStart)); span >= uint64(a.maxSize) {
 			return span + 1, false // rescale needed
-		} else if span >= space {
-			a.grow(b, span+1)
+		} else if span >= uint64(b.size()) {
+			a.grow(b, uint32(span+1))
 		}
-		b.indexEnd = index
+		b.indexEnd = int32(index)
 	}
 
 	size := int32(b.size())
-	bucketIndex := index - b.indexBase
+	bucketIndex := int32(index - int64(b.indexBase))
 	if bucketIndex >= size {
 		bucketIndex -= size
 	} else if bucketIndex < 0 {
 		bucketIndex += size
 	}
-	b.incrementBucket(bucketIndex, 1)
+	b.incrementBucket(bucketIndex, incr)
 	return 0, true
 }
 
@@ -441,9 +447,9 @@ func (a *Aggregator) incrementIndex(b *buckets, index int32) (uint32, bool) {
 // existing counts to the same position.
 func (a *Aggregator) grow(b *buckets, needed uint32) {
 	size := b.size()
-	bias := uint32(b.indexBase - b.indexStart)
+	bias := b.indexBase - b.indexStart
 	diff := size - bias
-	growTo := uint32(1) << (32 - bits.LeadingZeros32(uint32(needed)))
+	growTo := int32(1) << (32 - bits.LeadingZeros32(uint32(needed)))
 	if growTo > a.maxSize {
 		growTo = a.maxSize
 	}
@@ -474,16 +480,16 @@ func (a *Aggregator) grow(b *buckets, needed uint32) {
 	}
 }
 
+// downscale first rotates, then collapses 2**`by`-to-1 buckets
 func (b *buckets) downscale(by int32) {
 	b.rotate()
 
 	size := 1 + b.indexEnd - b.indexStart
-	each := int32(1) << by
+	each := int64(1) << by
 	inpos := int32(0)
 	outpos := int32(0)
 	for pos := b.indexStart; pos <= b.indexEnd; {
-		base := pos
-		mod := base % each
+		mod := int64(pos) % each
 		if mod < 0 {
 			mod += each
 		}
@@ -500,35 +506,37 @@ func (b *buckets) downscale(by int32) {
 	b.indexBase = b.indexStart
 }
 
+// rotate shifts the backing array contents so that indexStart ==
+// indexBase to simplify the downscale logic.
 func (b *buckets) rotate() {
-	bias := uint32(b.indexBase - b.indexStart)
+	bias := b.indexBase - b.indexStart
 
 	if bias == 0 {
 		return
 	}
 
-	post := b.Len() - bias
+	post := int32(b.Len()) - bias
 
 	// Rotate the array so that indexBase == indexStart
 	b.indexBase = b.indexStart
 	switch counts := b.backing.(type) {
 	case []uint8:
-		for off := uint32(0); off < post; {
+		for off := int32(0); off < post; {
 			copy(counts[off:off+bias], counts[post:])
 			off += bias
 		}
 	case []uint16:
-		for off := uint32(0); off < post; {
+		for off := int32(0); off < post; {
 			copy(counts[off:off+bias], counts[post:])
 			off += bias
 		}
 	case []uint32:
-		for off := uint32(0); off < post; {
+		for off := int32(0); off < post; {
 			copy(counts[off:off+bias], counts[post:])
 			off += bias
 		}
 	case []uint64:
-		for off := uint32(0); off < post; {
+		for off := int32(0); off < post; {
 			copy(counts[off:off+bias], counts[post:])
 			off += bias
 		}
@@ -604,5 +612,17 @@ func (b *buckets) incrementBucket(bucketIndex int32, incr uint64) {
 		default:
 			panic("increment with nil slice")
 		}
+	}
+}
+
+// mergeBuckets translates index values from another histogram into
+// the coresponding buckets of this histogram.
+func (a *Aggregator) mergeBuckets(mine *buckets, other *Aggregator, theirs *buckets) {
+	scaleDiff := a.state.mapping.Scale() - other.state.mapping.Scale()
+
+	theirOffset := theirs.Offset()
+	for i := uint32(0); i < theirs.Len(); i++ {
+		a.incrementIndexBy(mine, int64(theirOffset)<<scaleDiff, theirs.At(i))
+		theirOffset++
 	}
 }
