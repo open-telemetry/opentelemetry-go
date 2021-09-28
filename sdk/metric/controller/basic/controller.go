@@ -126,7 +126,7 @@ func New(checkpointerFactory export.CheckpointerFactory, opts ...Option) *Contro
 		PushTimeout:    DefaultPeriod,
 	}
 	for _, opt := range opts {
-		opt.apply(c)
+		opt(c)
 	}
 	if c.Resource == nil {
 		c.Resource = resource.Default()

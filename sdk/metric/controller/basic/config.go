@@ -60,67 +60,44 @@ type config struct {
 }
 
 // Option is the interface that applies the value to a configuration option.
-type Option interface {
-	// apply sets the Option value of a Config.
-	apply(*config)
-}
+type Option func(*config)
 
 // WithResource sets the Resource configuration option of a Config by merging it
 // with the Resource configuration in the environment.
 func WithResource(r *resource.Resource) Option {
-	return resourceOption{r}
-}
-
-type resourceOption struct{ *resource.Resource }
-
-func (o resourceOption) apply(cfg *config) {
-	res, err := resource.Merge(cfg.Resource, o.Resource)
-	if err != nil {
-		otel.Handle(err)
+	return func(c *config) {
+		res, err := resource.Merge(c.Resource, r)
+		if err != nil {
+			otel.Handle(err)
+		}
+		c.Resource = res
 	}
-	cfg.Resource = res
 }
 
 // WithCollectPeriod sets the CollectPeriod configuration option of a Config.
 func WithCollectPeriod(period time.Duration) Option {
-	return collectPeriodOption(period)
-}
-
-type collectPeriodOption time.Duration
-
-func (o collectPeriodOption) apply(cfg *config) {
-	cfg.CollectPeriod = time.Duration(o)
+	return func(c *config) {
+		c.CollectPeriod = period
+	}
 }
 
 // WithCollectTimeout sets the CollectTimeout configuration option of a Config.
 func WithCollectTimeout(timeout time.Duration) Option {
-	return collectTimeoutOption(timeout)
-}
-
-type collectTimeoutOption time.Duration
-
-func (o collectTimeoutOption) apply(cfg *config) {
-	cfg.CollectTimeout = time.Duration(o)
+	return func(c *config) {
+		c.CollectTimeout = timeout
+	}
 }
 
 // WithExporter sets the exporter configuration option of a Config.
 func WithExporter(exporter export.Exporter) Option {
-	return exporterOption{exporter}
-}
-
-type exporterOption struct{ exporter export.Exporter }
-
-func (o exporterOption) apply(cfg *config) {
-	cfg.Exporter = o.exporter
+	return func(c *config) {
+		c.Exporter = exporter
+	}
 }
 
 // WithPushTimeout sets the PushTimeout configuration option of a Config.
 func WithPushTimeout(timeout time.Duration) Option {
-	return pushTimeoutOption(timeout)
-}
-
-type pushTimeoutOption time.Duration
-
-func (o pushTimeoutOption) apply(cfg *config) {
-	cfg.PushTimeout = time.Duration(o)
+	return func(c *config) {
+		c.PushTimeout = timeout
+	}
 }

@@ -16,6 +16,7 @@ package basic
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -27,11 +28,23 @@ func TestWithResource(t *testing.T) {
 	r := resource.NewSchemaless(attribute.String("A", "a"))
 
 	c := &config{}
-	WithResource(r).apply(c)
+	WithResource(r)(c)
 	assert.Equal(t, r.Equivalent(), c.Resource.Equivalent())
 
 	// Ensure overwriting works.
 	c = &config{Resource: &resource.Resource{}}
-	WithResource(r).apply(c)
+	WithResource(r)(c)
 	assert.Equal(t, r.Equivalent(), c.Resource.Equivalent())
+}
+
+func TestWithCollectPeriod(t *testing.T) {
+	period := time.Second * 3
+
+	c := &config{CollectPeriod: DefaultPeriod}
+	assert.Equal(t, c.CollectPeriod, DefaultPeriod)
+
+	// Ensure overwriting works.
+	c = &config{}
+	WithCollectPeriod(period)(c)
+	assert.Equal(t, period, c.CollectPeriod)
 }
