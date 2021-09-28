@@ -49,6 +49,7 @@ func New(options ...Option) (*Exporter, error) {
 // Exporter is an implementation of trace.SpanSyncer that writes spans to stdout.
 type Exporter struct {
 	encoder    *json.Encoder
+	encoderMu  sync.Mutex
 	timestamps bool
 
 	stoppedMu sync.RWMutex
@@ -83,6 +84,8 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 		}
 
 		// Encode span stubs, one by one
+		e.encoderMu.Lock()
+		defer e.encoderMu.Unlock()
 		if err := e.encoder.Encode(stub); err != nil {
 			return err
 		}
