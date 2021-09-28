@@ -71,6 +71,8 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 
 	stubs := tracetest.SpanStubsFromReadOnlySpans(spans)
 
+	e.encoderMu.Lock()
+	defer e.encoderMu.Unlock()
 	for i := range stubs {
 		stub := &stubs[i]
 		// Remove timestamps
@@ -84,8 +86,6 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 		}
 
 		// Encode span stubs, one by one
-		e.encoderMu.Lock()
-		defer e.encoderMu.Unlock()
 		if err := e.encoder.Encode(stub); err != nil {
 			return err
 		}
