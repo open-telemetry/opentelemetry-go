@@ -13,96 +13,96 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-    - name: Install Go
-      uses: actions/setup-go@v2.1.4
-      with:
-        go-version: ${{ env.DEFAULT_GO_VERSION }}
-    - name: Checkout Repo
-      uses: actions/checkout@v2
-    - name: Setup Environment
-      run: |
-        echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
-        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-    - name: Module cache
-      uses: actions/cache@v2.1.6
-      env:
-        cache-name: go-mod-cache
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/go.sum') }}
-    - name: Tools cache
-      uses: actions/cache@v2.1.6
-      env:
-        cache-name: go-tools-cache
-      with:
-        path: ~/.tools
-        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('./internal/tools/**') }}
-    - name: Run linters
-      run: make dependabot-check license-check lint
-    - name: Build
-      run: make examples build
-    - name: Check clean repository
-      run: make check-clean-work-tree
+      - name: Install Go
+        uses: actions/setup-go@v2.1.4
+        with:
+          go-version: ${{ env.DEFAULT_GO_VERSION }}
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+      - name: Setup Environment
+        run: |
+          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: Module cache
+        uses: actions/cache@v2.1.6
+        env:
+          cache-name: go-mod-cache
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/go.sum') }}
+      - name: Tools cache
+        uses: actions/cache@v2.1.6
+        env:
+          cache-name: go-tools-cache
+        with:
+          path: ~/.tools
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('./internal/tools/**') }}
+      - name: Run linters
+        run: make dependabot-check license-check lint vanity-import-check
+      - name: Build
+        run: make examples build
+      - name: Check clean repository
+        run: make check-clean-work-tree
 
   test-race:
     runs-on: ubuntu-latest
     steps:
-    - name: Install Go
-      uses: actions/setup-go@v2.1.4
-      with:
-        go-version: ${{ env.DEFAULT_GO_VERSION }}
-    - name: Checkout Repo
-      uses: actions/checkout@v2
-    - name: Setup Environment
-      run: |
-        echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
-        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-    - name: Module cache
-      uses: actions/cache@v2.1.6
-      env:
-        cache-name: go-mod-cache
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/go.sum') }}
-    - name: Run tests with race detector
-      run: make test-race
+      - name: Install Go
+        uses: actions/setup-go@v2.1.4
+        with:
+          go-version: ${{ env.DEFAULT_GO_VERSION }}
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+      - name: Setup Environment
+        run: |
+          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: Module cache
+        uses: actions/cache@v2.1.6
+        env:
+          cache-name: go-mod-cache
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/go.sum') }}
+      - name: Run tests with race detector
+        run: make test-race
 
   test-coverage:
     runs-on: ubuntu-latest
     steps:
-    - name: Install Go
-      uses: actions/setup-go@v2.1.4
-      with:
-        go-version: ${{ env.DEFAULT_GO_VERSION }}
-    - name: Checkout Repo
-      uses: actions/checkout@v2
-    - name: Setup Environment
-      run: |
-        echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
-        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-    - name: Module cache
-      uses: actions/cache@v2.1.6
-      env:
-        cache-name: go-mod-cache
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/go.sum') }}
-    - name: Run coverage tests
-      run: |
-        make test-coverage
-        mkdir $TEST_RESULTS
-        cp coverage.out $TEST_RESULTS
-        cp coverage.txt $TEST_RESULTS
-        cp coverage.html $TEST_RESULTS
-    - name: Upload coverage report
-      uses: codecov/codecov-action@v2.0.3
-      with:
-        file: ./coverage.txt
-        fail_ci_if_error: true
-        verbose: true
-    - name: Store coverage test output
-      uses: actions/upload-artifact@v2
-      with:
+      - name: Install Go
+        uses: actions/setup-go@v2.1.4
+        with:
+          go-version: ${{ env.DEFAULT_GO_VERSION }}
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+      - name: Setup Environment
+        run: |
+          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: Module cache
+        uses: actions/cache@v2.1.6
+        env:
+          cache-name: go-mod-cache
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/go.sum') }}
+      - name: Run coverage tests
+        run: |
+          make test-coverage
+          mkdir $TEST_RESULTS
+          cp coverage.out $TEST_RESULTS
+          cp coverage.txt $TEST_RESULTS
+          cp coverage.html $TEST_RESULTS
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v2.0.3
+        with:
+          file: ./coverage.txt
+          fail_ci_if_error: true
+          verbose: true
+      - name: Store coverage test output
+        uses: actions/upload-artifact@v2
+        with:
           name: opentelemetry-go-test-output
           path: ${{ env.TEST_RESULTS }}
 
@@ -117,30 +117,30 @@ jobs:
         # https://docs.github.com/en/actions/hosting-your-own-runners/using-self-hosted-runners-in-a-workflow
         arch: ["386", amd64]
         exclude:
-        # Not a supported Go OS/architecture.
-        - os: macos-latest
-          arch: "386"
+          # Not a supported Go OS/architecture.
+          - os: macos-latest
+            arch: "386"
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Install Go
-      uses: actions/setup-go@v2.1.4
-      with:
-        go-version: ${{ matrix.go-version }}
-    - name: Checkout code
-      uses: actions/checkout@v2
-    - name: Setup Environment
-      run: |
-        echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
-        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-      shell: bash
-    - name: Module cache
-      uses: actions/cache@v2.1.6
-      env:
-        cache-name: go-mod-cache
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/go.sum') }}
-    - name: Run tests
-      env:
-        GOARCH: ${{ matrix.arch }}
-      run: make test-short
+      - name: Install Go
+        uses: actions/setup-go@v2.1.4
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Setup Environment
+        run: |
+          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+        shell: bash
+      - name: Module cache
+        uses: actions/cache@v2.1.6
+        env:
+          cache-name: go-mod-cache
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/go.sum') }}
+      - name: Run tests
+        env:
+          GOARCH: ${{ matrix.arch }}
+        run: make test-short

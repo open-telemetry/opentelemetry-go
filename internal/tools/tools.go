@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build tools
 // +build tools
 
 package tools
@@ -21,6 +22,7 @@ import (
 	_ "github.com/gogo/protobuf/protoc-gen-gogofast"
 	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
 	_ "github.com/itchyny/gojq"
+	_ "github.com/jcchavezs/porto/cmd/porto"
 	_ "github.com/wadey/gocovmerge"
 	_ "go.opentelemetry.io/build-tools/semconvgen"
 	_ "golang.org/x/tools/cmd/stringer"
