@@ -50,19 +50,21 @@ GOLANGCI_LINT = $(TOOLS)/golangci-lint
 $(TOOLS)/golangci-lint: PACKAGE=github.com/golangci/golangci-lint/cmd/golangci-lint
 
 MISSPELL = $(TOOLS)/misspell
-$(TOOLS)/misspell: PACKAGE= github.com/client9/misspell/cmd/misspell
+$(TOOLS)/misspell: PACKAGE=github.com/client9/misspell/cmd/misspell
 
 GOCOVMERGE = $(TOOLS)/gocovmerge
-$(TOOLS)/gocovmerge: PACKAGE= github.com/wadey/gocovmerge
+$(TOOLS)/gocovmerge: PACKAGE=github.com/wadey/gocovmerge
 
 STRINGER = $(TOOLS)/stringer
 $(TOOLS)/stringer: PACKAGE=golang.org/x/tools/cmd/stringer
 
+PORTO = $(TOOLS)/porto
+$(TOOLS)/porto: PACKAGE=github.com/jcchavezs/porto/cmd/porto
+
 $(TOOLS)/gojq: PACKAGE=github.com/itchyny/gojq/cmd/gojq
 
 .PHONY: tools
-tools: $(CROSSLINK) $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(TOOLS)/gojq $(SEMCONVGEN)
-
+tools: $(CROSSLINK) $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(TOOLS)/gojq $(SEMCONVGEN)
 
 # Build
 
@@ -78,7 +80,8 @@ generate: $(STRINGER)
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "$(GO) generate $${dir}/..."; \
 	  (cd "$${dir}" && \
-	    PATH="$(TOOLS):$${PATH}" $(GO) generate ./...); \
+	    PATH="$(TOOLS):$${PATH}" $(GO) generate ./... && \
+		$(PORTO) -w .); \
 	done
 
 build: generate
@@ -135,6 +138,10 @@ lint: misspell lint-modules | $(GOLANGCI_LINT)
 	    $(GOLANGCI_LINT) run --fix && \
 	    $(GOLANGCI_LINT) run); \
 	done
+
+.PHONY: vanity-import-check
+vanity-import-check: | $(PORTO)
+	$(PORTO) -l .
 
 .PHONY: misspell
 misspell: | $(MISSPELL)
