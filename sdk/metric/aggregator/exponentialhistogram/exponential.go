@@ -203,14 +203,9 @@ func (a *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 	a.state.count += o.state.count
 	a.state.zeroCount += o.state.zeroCount
 
-	// it's not enough to choose the minimum scale, because the
-	// combined range could
 	a.mergeBuckets(&a.state.positive, o, &o.state.positive)
 	a.mergeBuckets(&a.state.negative, o, &o.state.negative)
 
-	// for i := 0; i < len(a.state.bucketCounts); i++ {
-	// 	a.state.bucketCounts[i] += o.state.bucketCounts[i]
-	// }
 	return nil
 }
 
@@ -376,27 +371,37 @@ func (a *Aggregator) update(b *buckets, value float64, incr uint64) {
 	}
 
 	index := a.state.mapping.MapToIndex(value)
-	span, success := a.incrementIndexBy(b, index, incr)
+
+	low, high, success := a.incrementIndexBy(b, index, incr)
 	if success {
 		return
 	}
 
-	// two reasons for this, both call for change of scale:
-	// (1) index does not fit a 32-bit value
-	// (2) index is outside the maxSize range relative to current extrema.
-	factor := span
+	// sizeReq = (high-low+1) is the minimum size needed to fit
+	// the new index at the current scale, i.e., the distance to
+	// the more-distant extreme inclusive bucket.  We have that:
+	//
+	//   sizeReq >= maxSize
+	//
+	// Now compute the shift equal to the number of times sizeReq
+	// must be divided by two before sizeReq < maxSize.
+
+	// Note: this can be computed in a conservative way w/o use of
+	// a loop, e.g.,
+	//
+	//   shift := 64-bits.LeadingZeros64((high-low+1)/int64(a.maxSize))
+	//
+	// however this under-counts by 1 some of the time depending
+	// on alignment.
+
 	shift := int32(0)
-	// TODO: This loop.
-	for factor >= uint64(a.maxSize) {
+	for high-low >= int64(a.maxSize) {
+		high >>= 1
+		low >>= 1
 		shift++
-		factor = factor >> 1
 	}
+
 	newScale := a.state.mapping.Scale() - shift
-
-	if ideal := idealScale(value); ideal < newScale {
-		newScale = ideal
-	}
-
 	change := a.state.mapping.Scale() - newScale
 
 	a.state.positive.downscale(change)
@@ -404,7 +409,7 @@ func (a *Aggregator) update(b *buckets, value float64, incr uint64) {
 	a.state.mapping = newMapping(newScale)
 
 	index = a.state.mapping.MapToIndex(value)
-	span, success = a.incrementIndexBy(b, index, incr)
+	_, _, success = a.incrementIndexBy(b, index, incr)
 
 	if !success {
 		panic("downscale logic error")
@@ -412,19 +417,19 @@ func (a *Aggregator) update(b *buckets, value float64, incr uint64) {
 }
 
 // increment determines if the index lies inside the current range
-// [indexStart, indexEnd] and if not whether growing the array up to
-// maxSize will satisfy the new value.
-func (a *Aggregator) incrementIndexBy(b *buckets, index int64, incr uint64) (uint64, bool) {
+// [indexStart, indexEnd] and, if not, returns the minimum size (up to
+// maxSize) will satisfy the new value.
+func (a *Aggregator) incrementIndexBy(b *buckets, index int64, incr uint64) (low, high int64, success bool) {
 	if index < int64(b.indexStart) {
 		if span := uint64(int64(b.indexEnd) - index); span >= uint64(a.maxSize) {
-			return span + 1, false // rescale needed
+			return index, int64(b.indexEnd), false // rescale needed
 		} else if span >= uint64(b.size()) {
 			a.grow(b, uint32(span+1))
 		}
 		b.indexStart = int32(index)
 	} else if index > int64(b.indexEnd) {
 		if span := uint64(index - int64(b.indexStart)); span >= uint64(a.maxSize) {
-			return span + 1, false // rescale needed
+			return int64(b.indexStart), index, false // rescale needed
 		} else if span >= uint64(b.size()) {
 			a.grow(b, uint32(span+1))
 		}
@@ -439,7 +444,7 @@ func (a *Aggregator) incrementIndexBy(b *buckets, index int64, incr uint64) (uin
 		bucketIndex += size
 	}
 	b.incrementBucket(bucketIndex, incr)
-	return 0, true
+	return 0, 0, true
 }
 
 // grow resizes the backing array by doubling in size up to maxSize.
@@ -622,6 +627,7 @@ func (a *Aggregator) mergeBuckets(mine *buckets, other *Aggregator, theirs *buck
 
 	theirOffset := theirs.Offset()
 	for i := uint32(0); i < theirs.Len(); i++ {
+		// @@@
 		a.incrementIndexBy(mine, int64(theirOffset)<<scaleDiff, theirs.At(i))
 		theirOffset++
 	}

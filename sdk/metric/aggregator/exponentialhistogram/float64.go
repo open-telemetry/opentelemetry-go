@@ -15,7 +15,6 @@
 package exponential
 
 import (
-	"fmt"
 	"math"
 )
 
@@ -61,7 +60,6 @@ type (
 )
 
 func newMapping(scale int32) Mapping {
-	fmt.Println("new scale", scale)
 	if scale < 0 {
 		return exponentMapping{scale}
 	}

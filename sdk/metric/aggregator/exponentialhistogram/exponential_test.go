@@ -12,11 +12,12 @@ import (
 )
 
 var (
-	normalMapping = newLogarithmMapping(30)
-	oneAndAHalf   = centerVal(normalMapping, int32(normalMapping.MapToIndex(1.5)))
+	normalMapping  = newLogarithmMapping(30)
+	oneAndAHalf    = centerVal(normalMapping, int32(normalMapping.MapToIndex(1.5)))
+	testDescriptor = metrictest.NewDescriptor("name", sdkapi.HistogramInstrumentKind, number.Float64Kind)
 )
 
-func centerVal(mapper logarithmMapping, x int32) float64 {
+func centerVal(mapper Mapping, x int32) float64 {
 	return (mapper.LowerBoundary(int64(x)) + mapper.LowerBoundary(int64(x)+1)) / 2
 }
 
@@ -25,20 +26,19 @@ func centerVal(mapper logarithmMapping, x int32) float64 {
 func TestSimpleSize4(t *testing.T) {
 	// Test with a 4-bucket-max exponential histogram
 	ctx := context.Background()
-	desc := metrictest.NewDescriptor("name", sdkapi.HistogramInstrumentKind, number.Float64Kind)
-	agg := New(1, &desc, WithMaxSize(4))[0]
+	agg := New(1, &testDescriptor, WithMaxSize(4))[0]
 	pos := agg.Positive()
 	neg := agg.Negative()
 
 	// Add a zero
-	agg.Update(ctx, 0, &desc)
+	agg.Update(ctx, 0, &testDescriptor)
 
 	require.Equal(t, uint64(1), agg.ZeroCount())
 	require.Equal(t, uint32(0), pos.Len())
 	require.Equal(t, uint32(0), neg.Len())
 
 	// Add a oneAndAHalf, which is in the normal range => DefaultNormalScale.
-	agg.Update(ctx, number.NewFloat64Number(oneAndAHalf), &desc)
+	agg.Update(ctx, number.NewFloat64Number(oneAndAHalf), &testDescriptor)
 
 	// Test count=2
 	cnt, err := agg.Count()
@@ -65,7 +65,7 @@ func TestSimpleSize4(t *testing.T) {
 	// Add 3 more values in each of the subsequent buckets.
 	for i := int32(1); i < 4; i++ {
 		value := centerVal(mapper, int32(offset)+i)
-		agg.Update(ctx, number.NewFloat64Number(value), &desc)
+		agg.Update(ctx, number.NewFloat64Number(value), &testDescriptor)
 	}
 
 	require.Equal(t, uint32(4), pos.Len())
@@ -77,7 +77,7 @@ func TestSimpleSize4(t *testing.T) {
 	// Add the next value!
 	for i := int32(4); i < 8; i++ {
 		value := centerVal(mapper, int32(offset)+i)
-		agg.Update(ctx, number.NewFloat64Number(value), &desc)
+		agg.Update(ctx, number.NewFloat64Number(value), &testDescriptor)
 	}
 
 	// Expect 2 in each bucket
@@ -99,15 +99,14 @@ func TestScaleNegOneCentered(t *testing.T) {
 	} {
 		t.Run(fmt.Sprint(j), func(t *testing.T) {
 			ctx := context.Background()
-			desc := metrictest.NewDescriptor("name", sdkapi.HistogramInstrumentKind, number.Float64Kind)
-			agg := New(1, &desc, WithMaxSize(2))[0]
+			agg := New(1, &testDescriptor, WithMaxSize(2))[0]
 
-			agg.Update(ctx, number.NewFloat64Number(order[0]), &desc)
-			agg.Update(ctx, number.NewFloat64Number(order[1]), &desc)
+			agg.Update(ctx, number.NewFloat64Number(order[0]), &testDescriptor)
+			agg.Update(ctx, number.NewFloat64Number(order[1]), &testDescriptor)
 
 			// Enter order[2]: scale set to -1, expect counts[0] == 1 (the
 			// (1/2), counts[1] == 2 (the 1 and 2).
-			agg.Update(ctx, number.NewFloat64Number(order[2]), &desc)
+			agg.Update(ctx, number.NewFloat64Number(order[2]), &testDescriptor)
 			require.Equal(t, int32(-1), agg.Scale())
 			require.Equal(t, int32(-1), agg.Positive().Offset())
 			require.Equal(t, uint32(2), agg.Positive().Len())
@@ -130,15 +129,14 @@ func TestScaleNegOnePositive(t *testing.T) {
 	} {
 		t.Run(fmt.Sprint(j), func(t *testing.T) {
 			ctx := context.Background()
-			desc := metrictest.NewDescriptor("name", sdkapi.HistogramInstrumentKind, number.Float64Kind)
-			agg := New(1, &desc, WithMaxSize(2))[0]
+			agg := New(1, &testDescriptor, WithMaxSize(2))[0]
 
-			agg.Update(ctx, number.NewFloat64Number(order[0]), &desc)
-			agg.Update(ctx, number.NewFloat64Number(order[1]), &desc)
+			agg.Update(ctx, number.NewFloat64Number(order[0]), &testDescriptor)
+			agg.Update(ctx, number.NewFloat64Number(order[1]), &testDescriptor)
 
 			// Enter order[2]: scale set to -1, expect counts[0] == 1 (the
 			// 1 and 2), counts[1] == 2 (the 4).
-			agg.Update(ctx, number.NewFloat64Number(order[2]), &desc)
+			agg.Update(ctx, number.NewFloat64Number(order[2]), &testDescriptor)
 			require.Equal(t, int32(-1), agg.Scale())
 			require.Equal(t, int32(0), agg.Positive().Offset())
 			require.Equal(t, uint32(2), agg.Positive().Len())
@@ -161,20 +159,95 @@ func TestScaleNegOneNegative(t *testing.T) {
 	} {
 		t.Run(fmt.Sprint(j), func(t *testing.T) {
 			ctx := context.Background()
-			desc := metrictest.NewDescriptor("name", sdkapi.HistogramInstrumentKind, number.Float64Kind)
-			agg := New(1, &desc, WithMaxSize(2))[0]
+			agg := New(1, &testDescriptor, WithMaxSize(2))[0]
 
-			agg.Update(ctx, number.NewFloat64Number(order[0]), &desc)
-			agg.Update(ctx, number.NewFloat64Number(order[1]), &desc)
+			agg.Update(ctx, number.NewFloat64Number(order[0]), &testDescriptor)
+			agg.Update(ctx, number.NewFloat64Number(order[1]), &testDescriptor)
 
 			// Enter order[2]: scale set to -1, expect counts[0] == 2 (the
 			// 1/4 and 1/2, counts[1] == 2 (the 1).
-			agg.Update(ctx, number.NewFloat64Number(order[2]), &desc)
+			agg.Update(ctx, number.NewFloat64Number(order[2]), &testDescriptor)
 			require.Equal(t, int32(-1), agg.Scale())
 			require.Equal(t, int32(-1), agg.Positive().Offset())
 			require.Equal(t, uint32(2), agg.Positive().Len())
 			require.Equal(t, uint64(2), agg.Positive().At(0))
 			require.Equal(t, uint64(1), agg.Positive().At(1))
+		})
+	}
+}
+
+func TestExhaustiveSmall(t *testing.T) {
+	for _, maxSize := range []int32{3, 4, 5, 6, 7, 8, 9} {
+		t.Run(fmt.Sprintf("maxSize=%d", maxSize), func(t *testing.T) {
+			for offset := int32(-5); offset <= 5; offset++ {
+				t.Run(fmt.Sprintf("offset=%d", offset), func(t *testing.T) {
+					for _, initScale := range []int32{
+						0, 1, 2, 3, 4,
+					} {
+						t.Run(fmt.Sprintf("initScale=%d", initScale), func(t *testing.T) {
+							testExhaustive(t, maxSize, offset, initScale)
+						})
+					}
+				})
+			}
+		})
+	}
+}
+
+func testExhaustive(t *testing.T, maxSize, offset, initScale int32) {
+	for step := maxSize; step < 4*maxSize; step++ {
+		t.Run(fmt.Sprintf("step=%d", step), func(t *testing.T) {
+			ctx := context.Background()
+			agg := New(1, &testDescriptor, WithMaxSize(maxSize))[0]
+			mapper := newMapping(initScale)
+
+			minVal := centerVal(mapper, offset)
+			maxVal := centerVal(mapper, offset+step)
+			sum := 0.0
+
+			for i := int32(0); i < maxSize; i++ {
+				value := centerVal(mapper, offset+i)
+				agg.Update(ctx, number.NewFloat64Number(value), &testDescriptor)
+				sum += value
+			}
+
+			require.Equal(t, initScale, agg.Scale())
+			require.Equal(t, offset, agg.Positive().Offset())
+
+			agg.Update(ctx, number.NewFloat64Number(maxVal), &testDescriptor)
+			sum += maxVal
+
+			// The zeroth bucket is not empty.
+			require.NotEqual(t, uint64(0), agg.Positive().At(0))
+
+			// The maximum-index filled bucket is at or
+			// above the mid-point, (otherwise we
+			// downscaled too much).
+			maxFill := uint32(0)
+			totalCount := uint64(0)
+
+			for i := uint32(0); i < agg.Positive().Len(); i++ {
+				totalCount += agg.Positive().At(i)
+				if agg.Positive().At(i) != 0 {
+					maxFill = i
+				}
+			}
+			require.GreaterOrEqual(t, maxFill, uint32(maxSize)/2)
+
+			// Count is correct
+			require.GreaterOrEqual(t, uint64(maxSize+1), totalCount)
+			hcount, _ := agg.Count()
+			require.GreaterOrEqual(t, uint64(maxSize+1), hcount)
+			// Sum is correct
+			hsum, _ := agg.Sum()
+			require.GreaterOrEqual(t, sum, hsum.CoerceToFloat64(number.Float64Kind))
+
+			// The offset is correct at the computed scale.
+			mapper = newMapping(agg.Scale())
+			require.Equal(t, int32(mapper.MapToIndex(minVal)), agg.Positive().Offset())
+
+			// The maximum range is correct at the computed scale.
+			require.Equal(t, int32(mapper.MapToIndex(maxVal)), agg.Positive().Offset()+int32(agg.Positive().Len())-1)
 		})
 	}
 }
