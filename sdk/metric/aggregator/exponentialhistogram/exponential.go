@@ -621,14 +621,14 @@ func (b *buckets) incrementBucket(bucketIndex int32, incr uint64) {
 }
 
 // mergeBuckets translates index values from another histogram into
-// the coresponding buckets of this histogram.
+// the corresponding buckets of this histogram.
 func (a *Aggregator) mergeBuckets(mine *buckets, other *Aggregator, theirs *buckets) {
 	scaleDiff := a.state.mapping.Scale() - other.state.mapping.Scale()
 
 	theirOffset := theirs.Offset()
 	for i := uint32(0); i < theirs.Len(); i++ {
 		// @@@
-		a.incrementIndexBy(mine, int64(theirOffset)<<scaleDiff, theirs.At(i))
+		low, high, success := a.incrementIndexBy(mine, int64(theirOffset)<<scaleDiff, theirs.At(i))
 		theirOffset++
 	}
 }
