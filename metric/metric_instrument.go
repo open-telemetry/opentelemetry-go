@@ -43,20 +43,20 @@ type BatchObserverFunc func(context.Context, BatchObserverResult)
 // observations for one asynchronous integer metric instrument.
 type Int64ObserverResult struct {
 	instrument sdkapi.AsyncImpl
-	function   func([]attribute.KeyValue, ...sdkapi.Observation)
+	function   func([]attribute.KeyValue, ...Observation)
 }
 
 // Float64ObserverResult is passed to an observer callback to capture
 // observations for one asynchronous floating point metric instrument.
 type Float64ObserverResult struct {
 	instrument sdkapi.AsyncImpl
-	function   func([]attribute.KeyValue, ...sdkapi.Observation)
+	function   func([]attribute.KeyValue, ...Observation)
 }
 
 // BatchObserverResult is passed to a batch observer callback to
 // capture observations for multiple asynchronous instruments.
 type BatchObserverResult struct {
-	function func([]attribute.KeyValue, ...sdkapi.Observation)
+	function func([]attribute.KeyValue, ...Observation)
 }
 
 // Observe captures a single integer value from the associated
@@ -73,7 +73,7 @@ func (fr Float64ObserverResult) Observe(value float64, labels ...attribute.KeyVa
 
 // Observe captures a multiple observations from the associated batch
 // instrument callback, with the given labels.
-func (br BatchObserverResult) Observe(labels []attribute.KeyValue, obs ...sdkapi.Observation) {
+func (br BatchObserverResult) Observe(labels []attribute.KeyValue, obs ...Observation) {
 	br.function(labels, obs...)
 }
 
@@ -106,7 +106,7 @@ func (*Float64ObserverFunc) AnyRunner() {}
 func (*BatchObserverFunc) AnyRunner() {}
 
 // Run implements AsyncSingleRunner.
-func (i *Int64ObserverFunc) Run(ctx context.Context, impl sdkapi.AsyncImpl, function func([]attribute.KeyValue, ...sdkapi.Observation)) {
+func (i *Int64ObserverFunc) Run(ctx context.Context, impl sdkapi.AsyncImpl, function func([]attribute.KeyValue, ...Observation)) {
 	(*i)(ctx, Int64ObserverResult{
 		instrument: impl,
 		function:   function,
@@ -114,7 +114,7 @@ func (i *Int64ObserverFunc) Run(ctx context.Context, impl sdkapi.AsyncImpl, func
 }
 
 // Run implements AsyncSingleRunner.
-func (f *Float64ObserverFunc) Run(ctx context.Context, impl sdkapi.AsyncImpl, function func([]attribute.KeyValue, ...sdkapi.Observation)) {
+func (f *Float64ObserverFunc) Run(ctx context.Context, impl sdkapi.AsyncImpl, function func([]attribute.KeyValue, ...Observation)) {
 	(*f)(ctx, Float64ObserverResult{
 		instrument: impl,
 		function:   function,
@@ -122,7 +122,7 @@ func (f *Float64ObserverFunc) Run(ctx context.Context, impl sdkapi.AsyncImpl, fu
 }
 
 // Run implements AsyncBatchRunner.
-func (b *BatchObserverFunc) Run(ctx context.Context, function func([]attribute.KeyValue, ...sdkapi.Observation)) {
+func (b *BatchObserverFunc) Run(ctx context.Context, function func([]attribute.KeyValue, ...Observation)) {
 	(*b)(ctx, BatchObserverResult{
 		function: function,
 	})
@@ -211,7 +211,7 @@ type Float64UpDownCounterObserver struct {
 // argument, for an asynchronous integer instrument.
 // This returns an implementation-level object for use by the SDK,
 // users should not refer to this.
-func (i Int64GaugeObserver) Observation(v int64) sdkapi.Observation {
+func (i Int64GaugeObserver) Observation(v int64) Observation {
 	return sdkapi.NewObservation(i.instrument, number.NewInt64Number(v))
 }
 
@@ -219,7 +219,7 @@ func (i Int64GaugeObserver) Observation(v int64) sdkapi.Observation {
 // argument, for an asynchronous integer instrument.
 // This returns an implementation-level object for use by the SDK,
 // users should not refer to this.
-func (f Float64GaugeObserver) Observation(v float64) sdkapi.Observation {
+func (f Float64GaugeObserver) Observation(v float64) Observation {
 	return sdkapi.NewObservation(f.instrument, number.NewFloat64Number(v))
 }
 
@@ -227,7 +227,7 @@ func (f Float64GaugeObserver) Observation(v float64) sdkapi.Observation {
 // argument, for an asynchronous integer instrument.
 // This returns an implementation-level object for use by the SDK,
 // users should not refer to this.
-func (i Int64CounterObserver) Observation(v int64) sdkapi.Observation {
+func (i Int64CounterObserver) Observation(v int64) Observation {
 	return sdkapi.NewObservation(i.instrument, number.NewInt64Number(v))
 }
 
@@ -235,7 +235,7 @@ func (i Int64CounterObserver) Observation(v int64) sdkapi.Observation {
 // argument, for an asynchronous integer instrument.
 // This returns an implementation-level object for use by the SDK,
 // users should not refer to this.
-func (f Float64CounterObserver) Observation(v float64) sdkapi.Observation {
+func (f Float64CounterObserver) Observation(v float64) Observation {
 	return sdkapi.NewObservation(f.instrument, number.NewFloat64Number(v))
 }
 
@@ -243,7 +243,7 @@ func (f Float64CounterObserver) Observation(v float64) sdkapi.Observation {
 // argument, for an asynchronous integer instrument.
 // This returns an implementation-level object for use by the SDK,
 // users should not refer to this.
-func (i Int64UpDownCounterObserver) Observation(v int64) sdkapi.Observation {
+func (i Int64UpDownCounterObserver) Observation(v int64) Observation {
 	return sdkapi.NewObservation(i.instrument, number.NewInt64Number(v))
 }
 
@@ -251,7 +251,7 @@ func (i Int64UpDownCounterObserver) Observation(v int64) sdkapi.Observation {
 // argument, for an asynchronous integer instrument.
 // This returns an implementation-level object for use by the SDK,
 // users should not refer to this.
-func (f Float64UpDownCounterObserver) Observation(v float64) sdkapi.Observation {
+func (f Float64UpDownCounterObserver) Observation(v float64) Observation {
 	return sdkapi.NewObservation(f.instrument, number.NewFloat64Number(v))
 }
 
@@ -284,11 +284,11 @@ func (s syncInstrument) bind(labels []attribute.KeyValue) syncBoundInstrument {
 	return newSyncBoundInstrument(s.instrument.Bind(labels))
 }
 
-func (s syncInstrument) float64Measurement(value float64) sdkapi.Measurement {
+func (s syncInstrument) float64Measurement(value float64) Measurement {
 	return sdkapi.NewMeasurement(s.instrument, number.NewFloat64Number(value))
 }
 
-func (s syncInstrument) int64Measurement(value int64) sdkapi.Measurement {
+func (s syncInstrument) int64Measurement(value int64) Measurement {
 	return sdkapi.NewMeasurement(s.instrument, number.NewInt64Number(value))
 }
 
@@ -422,13 +422,13 @@ func (c Int64Counter) Bind(labels ...attribute.KeyValue) (h BoundInt64Counter) {
 
 // Measurement creates a Measurement object to use with batch
 // recording.
-func (c Float64Counter) Measurement(value float64) sdkapi.Measurement {
+func (c Float64Counter) Measurement(value float64) Measurement {
 	return c.float64Measurement(value)
 }
 
 // Measurement creates a Measurement object to use with batch
 // recording.
-func (c Int64Counter) Measurement(value int64) sdkapi.Measurement {
+func (c Int64Counter) Measurement(value int64) Measurement {
 	return c.int64Measurement(value)
 }
 
@@ -497,13 +497,13 @@ func (c Int64UpDownCounter) Bind(labels ...attribute.KeyValue) (h BoundInt64UpDo
 
 // Measurement creates a Measurement object to use with batch
 // recording.
-func (c Float64UpDownCounter) Measurement(value float64) sdkapi.Measurement {
+func (c Float64UpDownCounter) Measurement(value float64) Measurement {
 	return c.float64Measurement(value)
 }
 
 // Measurement creates a Measurement object to use with batch
 // recording.
-func (c Int64UpDownCounter) Measurement(value int64) sdkapi.Measurement {
+func (c Int64UpDownCounter) Measurement(value int64) Measurement {
 	return c.int64Measurement(value)
 }
 
@@ -571,13 +571,13 @@ func (c Int64Histogram) Bind(labels ...attribute.KeyValue) (h BoundInt64Histogra
 
 // Measurement creates a Measurement object to use with batch
 // recording.
-func (c Float64Histogram) Measurement(value float64) sdkapi.Measurement {
+func (c Float64Histogram) Measurement(value float64) Measurement {
 	return c.float64Measurement(value)
 }
 
 // Measurement creates a Measurement object to use with batch
 // recording.
-func (c Int64Histogram) Measurement(value int64) sdkapi.Measurement {
+func (c Int64Histogram) Measurement(value int64) Measurement {
 	return c.int64Measurement(value)
 }
 

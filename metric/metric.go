@@ -48,8 +48,11 @@ func WrapMeterImpl(impl sdkapi.MeterImpl) Meter {
 	}
 }
 
+type Measurement = sdkapi.Measurement
+type Observation = sdkapi.Observation
+
 // RecordBatch atomically records a batch of measurements.
-func (m Meter) RecordBatch(ctx context.Context, ls []attribute.KeyValue, ms ...sdkapi.Measurement) {
+func (m Meter) RecordBatch(ctx context.Context, ls []attribute.KeyValue, ms ...Measurement) {
 	if m.impl == nil {
 		return
 	}
