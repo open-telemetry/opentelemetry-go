@@ -48,7 +48,12 @@ func WrapMeterImpl(impl sdkapi.MeterImpl) Meter {
 	}
 }
 
+// Measurement is a low-level type used with synchronous instruments
+// as a direct interface to the SDK via `RecordBatch`.
 type Measurement = sdkapi.Measurement
+
+// Observation is a low-level type used with asynchronous instruments
+// as a direct interface to the SDK via `BatchObserver`.
 type Observation = sdkapi.Observation
 
 // RecordBatch atomically records a batch of measurements.
