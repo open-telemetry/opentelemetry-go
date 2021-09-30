@@ -125,9 +125,8 @@ func NewMeasurement(instrument SyncImpl, number number.Number) Measurement {
 	}
 }
 
-// Measurement is used for reporting a synchronous batch of metric
-// values. Instances of this type should be created by synchronous
-// instruments (e.g., Int64Counter.Measurement()).
+// Measurement is a low-level type used with synchronous instruments
+// as a direct interface to the SDK via `RecordBatch`.
 type Measurement struct {
 	// number needs to be aligned for 64-bit atomic operations.
 	number     number.Number
@@ -155,9 +154,8 @@ func NewObservation(instrument AsyncImpl, number number.Number) Observation {
 	}
 }
 
-// Observation is used for reporting an asynchronous  batch of metric
-// values. Instances of this type should be created by asynchronous
-// instruments (e.g., Int64GaugeObserver.Observation()).
+// Observation is a low-level type used with asynchronous instruments
+// as a direct interface to the SDK via `BatchObserver`.
 type Observation struct {
 	// number needs to be aligned for 64-bit atomic operations.
 	number     number.Number
