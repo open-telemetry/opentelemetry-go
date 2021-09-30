@@ -15,6 +15,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - NoopMeterProvider is now private and NewNoopMeterProvider must be used to obtain a noopMeterProvider. (#2237)
+- Metrics API cleanup. The `metric/sdkapi` package has been created to relocate the API-to-SDK interface:
+  - The following interface types simply move from `metric` to `metric/sdkapi`: `MeterImpl`, `InstrumentImpl`, `SyncImpl`, `BoundSyncImpl`, `AsyncImpl`, `AsyncRunner`, `AsyncSingleRunner`, and `AsyncBatchRunner`
+  - The following struct types move and are replaced with type aliases, since they are exposed to the user: `Observation`, `Measurement`.
+  - The No-op implementations of sync and async instruments are no longer exported, new functions `sdkapi.NewNoopAsyncInstrument()` and `sdkapi.NewNoopSyncInstrument()` are provided instead. (#2xxx)
 
 ## [1.0.0] - 2021-09-20
 
