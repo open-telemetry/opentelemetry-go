@@ -37,11 +37,19 @@ type MeterProvider interface {
 //
 // An uninitialized Meter is a no-op implementation.
 type Meter struct {
-	impl MeterImpl
+	impl sdkapi.MeterImpl
+}
+
+// WrapMeterImpl constructs a `Meter` implementation from a
+// `MeterImpl` implementation.
+func WrapMeterImpl(impl sdkapi.MeterImpl) Meter {
+	return Meter{
+		impl: impl,
+	}
 }
 
 // RecordBatch atomically records a batch of measurements.
-func (m Meter) RecordBatch(ctx context.Context, ls []attribute.KeyValue, ms ...Measurement) {
+func (m Meter) RecordBatch(ctx context.Context, ls []attribute.KeyValue, ms ...sdkapi.Measurement) {
 	if m.impl == nil {
 		return
 	}
@@ -117,7 +125,7 @@ func (m Meter) NewFloat64Histogram(name string, opts ...InstrumentOption) (Float
 // or improperly registered (e.g., duplicate registration).
 func (m Meter) NewInt64GaugeObserver(name string, callback Int64ObserverFunc, opts ...InstrumentOption) (Int64GaugeObserver, error) {
 	if callback == nil {
-		return wrapInt64GaugeObserverInstrument(NoopAsync{}, nil)
+		return wrapInt64GaugeObserverInstrument(sdkapi.NewNoopAsyncInstrument(), nil)
 	}
 	return wrapInt64GaugeObserverInstrument(
 		m.newAsync(name, sdkapi.GaugeObserverInstrumentKind, number.Int64Kind, opts,
@@ -130,7 +138,7 @@ func (m Meter) NewInt64GaugeObserver(name string, callback Int64ObserverFunc, op
 // or improperly registered (e.g., duplicate registration).
 func (m Meter) NewFloat64GaugeObserver(name string, callback Float64ObserverFunc, opts ...InstrumentOption) (Float64GaugeObserver, error) {
 	if callback == nil {
-		return wrapFloat64GaugeObserverInstrument(NoopAsync{}, nil)
+		return wrapFloat64GaugeObserverInstrument(sdkapi.NewNoopAsyncInstrument(), nil)
 	}
 	return wrapFloat64GaugeObserverInstrument(
 		m.newAsync(name, sdkapi.GaugeObserverInstrumentKind, number.Float64Kind, opts,
@@ -143,7 +151,7 @@ func (m Meter) NewFloat64GaugeObserver(name string, callback Float64ObserverFunc
 // or improperly registered (e.g., duplicate registration).
 func (m Meter) NewInt64CounterObserver(name string, callback Int64ObserverFunc, opts ...InstrumentOption) (Int64CounterObserver, error) {
 	if callback == nil {
-		return wrapInt64CounterObserverInstrument(NoopAsync{}, nil)
+		return wrapInt64CounterObserverInstrument(sdkapi.NewNoopAsyncInstrument(), nil)
 	}
 	return wrapInt64CounterObserverInstrument(
 		m.newAsync(name, sdkapi.CounterObserverInstrumentKind, number.Int64Kind, opts,
@@ -156,7 +164,7 @@ func (m Meter) NewInt64CounterObserver(name string, callback Int64ObserverFunc, 
 // or improperly registered (e.g., duplicate registration).
 func (m Meter) NewFloat64CounterObserver(name string, callback Float64ObserverFunc, opts ...InstrumentOption) (Float64CounterObserver, error) {
 	if callback == nil {
-		return wrapFloat64CounterObserverInstrument(NoopAsync{}, nil)
+		return wrapFloat64CounterObserverInstrument(sdkapi.NewNoopAsyncInstrument(), nil)
 	}
 	return wrapFloat64CounterObserverInstrument(
 		m.newAsync(name, sdkapi.CounterObserverInstrumentKind, number.Float64Kind, opts,
@@ -169,7 +177,7 @@ func (m Meter) NewFloat64CounterObserver(name string, callback Float64ObserverFu
 // or improperly registered (e.g., duplicate registration).
 func (m Meter) NewInt64UpDownCounterObserver(name string, callback Int64ObserverFunc, opts ...InstrumentOption) (Int64UpDownCounterObserver, error) {
 	if callback == nil {
-		return wrapInt64UpDownCounterObserverInstrument(NoopAsync{}, nil)
+		return wrapInt64UpDownCounterObserverInstrument(sdkapi.NewNoopAsyncInstrument(), nil)
 	}
 	return wrapInt64UpDownCounterObserverInstrument(
 		m.newAsync(name, sdkapi.UpDownCounterObserverInstrumentKind, number.Int64Kind, opts,
@@ -182,7 +190,7 @@ func (m Meter) NewInt64UpDownCounterObserver(name string, callback Int64Observer
 // or improperly registered (e.g., duplicate registration).
 func (m Meter) NewFloat64UpDownCounterObserver(name string, callback Float64ObserverFunc, opts ...InstrumentOption) (Float64UpDownCounterObserver, error) {
 	if callback == nil {
-		return wrapFloat64UpDownCounterObserverInstrument(NoopAsync{}, nil)
+		return wrapFloat64UpDownCounterObserverInstrument(sdkapi.NewNoopAsyncInstrument(), nil)
 	}
 	return wrapFloat64UpDownCounterObserverInstrument(
 		m.newAsync(name, sdkapi.UpDownCounterObserverInstrumentKind, number.Float64Kind, opts,
@@ -195,7 +203,7 @@ func (m Meter) NewFloat64UpDownCounterObserver(name string, callback Float64Obse
 // or improperly registered (e.g., duplicate registration).
 func (b BatchObserver) NewInt64GaugeObserver(name string, opts ...InstrumentOption) (Int64GaugeObserver, error) {
 	if b.runner == nil {
-		return wrapInt64GaugeObserverInstrument(NoopAsync{}, nil)
+		return wrapInt64GaugeObserverInstrument(sdkapi.NewNoopAsyncInstrument(), nil)
 	}
 	return wrapInt64GaugeObserverInstrument(
 		b.meter.newAsync(name, sdkapi.GaugeObserverInstrumentKind, number.Int64Kind, opts, b.runner))
@@ -207,7 +215,7 @@ func (b BatchObserver) NewInt64GaugeObserver(name string, opts ...InstrumentOpti
 // or improperly registered (e.g., duplicate registration).
 func (b BatchObserver) NewFloat64GaugeObserver(name string, opts ...InstrumentOption) (Float64GaugeObserver, error) {
 	if b.runner == nil {
-		return wrapFloat64GaugeObserverInstrument(NoopAsync{}, nil)
+		return wrapFloat64GaugeObserverInstrument(sdkapi.NewNoopAsyncInstrument(), nil)
 	}
 	return wrapFloat64GaugeObserverInstrument(
 		b.meter.newAsync(name, sdkapi.GaugeObserverInstrumentKind, number.Float64Kind, opts,
@@ -220,7 +228,7 @@ func (b BatchObserver) NewFloat64GaugeObserver(name string, opts ...InstrumentOp
 // or improperly registered (e.g., duplicate registration).
 func (b BatchObserver) NewInt64CounterObserver(name string, opts ...InstrumentOption) (Int64CounterObserver, error) {
 	if b.runner == nil {
-		return wrapInt64CounterObserverInstrument(NoopAsync{}, nil)
+		return wrapInt64CounterObserverInstrument(sdkapi.NewNoopAsyncInstrument(), nil)
 	}
 	return wrapInt64CounterObserverInstrument(
 		b.meter.newAsync(name, sdkapi.CounterObserverInstrumentKind, number.Int64Kind, opts, b.runner))
@@ -232,7 +240,7 @@ func (b BatchObserver) NewInt64CounterObserver(name string, opts ...InstrumentOp
 // or improperly registered (e.g., duplicate registration).
 func (b BatchObserver) NewFloat64CounterObserver(name string, opts ...InstrumentOption) (Float64CounterObserver, error) {
 	if b.runner == nil {
-		return wrapFloat64CounterObserverInstrument(NoopAsync{}, nil)
+		return wrapFloat64CounterObserverInstrument(sdkapi.NewNoopAsyncInstrument(), nil)
 	}
 	return wrapFloat64CounterObserverInstrument(
 		b.meter.newAsync(name, sdkapi.CounterObserverInstrumentKind, number.Float64Kind, opts,
@@ -245,7 +253,7 @@ func (b BatchObserver) NewFloat64CounterObserver(name string, opts ...Instrument
 // or improperly registered (e.g., duplicate registration).
 func (b BatchObserver) NewInt64UpDownCounterObserver(name string, opts ...InstrumentOption) (Int64UpDownCounterObserver, error) {
 	if b.runner == nil {
-		return wrapInt64UpDownCounterObserverInstrument(NoopAsync{}, nil)
+		return wrapInt64UpDownCounterObserverInstrument(sdkapi.NewNoopAsyncInstrument(), nil)
 	}
 	return wrapInt64UpDownCounterObserverInstrument(
 		b.meter.newAsync(name, sdkapi.UpDownCounterObserverInstrumentKind, number.Int64Kind, opts, b.runner))
@@ -257,7 +265,7 @@ func (b BatchObserver) NewInt64UpDownCounterObserver(name string, opts ...Instru
 // or improperly registered (e.g., duplicate registration).
 func (b BatchObserver) NewFloat64UpDownCounterObserver(name string, opts ...InstrumentOption) (Float64UpDownCounterObserver, error) {
 	if b.runner == nil {
-		return wrapFloat64UpDownCounterObserverInstrument(NoopAsync{}, nil)
+		return wrapFloat64UpDownCounterObserverInstrument(sdkapi.NewNoopAsyncInstrument(), nil)
 	}
 	return wrapFloat64UpDownCounterObserverInstrument(
 		b.meter.newAsync(name, sdkapi.UpDownCounterObserverInstrumentKind, number.Float64Kind, opts,
@@ -265,7 +273,7 @@ func (b BatchObserver) NewFloat64UpDownCounterObserver(name string, opts ...Inst
 }
 
 // MeterImpl returns the underlying MeterImpl of this Meter.
-func (m Meter) MeterImpl() MeterImpl {
+func (m Meter) MeterImpl() sdkapi.MeterImpl {
 	return m.impl
 }
 
@@ -275,13 +283,13 @@ func (m Meter) newAsync(
 	mkind sdkapi.InstrumentKind,
 	nkind number.Kind,
 	opts []InstrumentOption,
-	runner AsyncRunner,
+	runner sdkapi.AsyncRunner,
 ) (
-	AsyncImpl,
+	sdkapi.AsyncImpl,
 	error,
 ) {
 	if m.impl == nil {
-		return NoopAsync{}, nil
+		return sdkapi.NewNoopAsyncInstrument(), nil
 	}
 	cfg := NewInstrumentConfig(opts...)
 	desc := sdkapi.NewDescriptor(name, mkind, nkind, cfg.description, cfg.unit)
@@ -295,11 +303,11 @@ func (m Meter) newSync(
 	numberKind number.Kind,
 	opts []InstrumentOption,
 ) (
-	SyncImpl,
+	sdkapi.SyncImpl,
 	error,
 ) {
 	if m.impl == nil {
-		return NoopSync{}, nil
+		return sdkapi.NewNoopSyncInstrument(), nil
 	}
 	cfg := NewInstrumentConfig(opts...)
 	desc := sdkapi.NewDescriptor(name, metricKind, numberKind, cfg.description, cfg.unit)

@@ -90,7 +90,7 @@ type (
 	}
 
 	SyncImpler interface {
-		SyncImpl() metric.SyncImpl
+		SyncImpl() sdkapi.SyncImpl
 	}
 
 	// lastValueState supports merging lastValue values, for the case

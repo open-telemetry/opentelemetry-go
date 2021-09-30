@@ -54,7 +54,7 @@ func (testFilter) LabelFilterFor(_ *sdkapi.Descriptor) attribute.Filter {
 	}
 }
 
-func generateData(impl metric.MeterImpl) {
+func generateData(impl sdkapi.MeterImpl) {
 	ctx := context.Background()
 	meter := metric.WrapMeterImpl(impl)
 
