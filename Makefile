@@ -199,3 +199,9 @@ check-clean-work-tree:
 prerelease: | $(MULTIMOD)
 	@[ "${MODSET}" ] || ( echo ">> env var MODSET is not set"; exit 1 )
 	multimod verify && multimod prerelease -m ${MODSET}
+
+COMMIT ?= "HEAD"
+.PHONY: add-tags
+add-tags: | $(MULTIMOD)
+	@[ "${MODSET}" ] || ( echo ">> env var MODSET is not set"; exit 1 )
+	multimod verify && multimod tag -m ${MODSET} -c ${COMMIT}
