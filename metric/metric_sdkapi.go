@@ -19,6 +19,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 )
 
 // MeterImpl is the interface an SDK must implement to supply a Meter
@@ -30,13 +31,13 @@ type MeterImpl interface {
 	// NewSyncInstrument returns a newly constructed
 	// synchronous instrument implementation or an error, should
 	// one occur.
-	NewSyncInstrument(descriptor Descriptor) (SyncImpl, error)
+	NewSyncInstrument(descriptor sdkapi.Descriptor) (SyncImpl, error)
 
 	// NewAsyncInstrument returns a newly constructed
 	// asynchronous instrument implementation or an error, should
 	// one occur.
 	NewAsyncInstrument(
-		descriptor Descriptor,
+		descriptor sdkapi.Descriptor,
 		runner AsyncRunner,
 	) (AsyncImpl, error)
 }
@@ -50,7 +51,7 @@ type InstrumentImpl interface {
 	Implementation() interface{}
 
 	// Descriptor returns a copy of the instrument's Descriptor.
-	Descriptor() Descriptor
+	Descriptor() sdkapi.Descriptor
 }
 
 // SyncImpl is the implementation-level interface to a generic

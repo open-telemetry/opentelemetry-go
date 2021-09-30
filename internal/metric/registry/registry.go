@@ -21,6 +21,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 )
 
 // UniqueInstrumentMeterImpl implements the metric.MeterImpl interface, adding
@@ -60,7 +61,7 @@ func (u *UniqueInstrumentMeterImpl) RecordBatch(ctx context.Context, labels []at
 
 // NewMetricKindMismatchError formats an error that describes a
 // mismatched metric instrument definition.
-func NewMetricKindMismatchError(desc metric.Descriptor) error {
+func NewMetricKindMismatchError(desc sdkapi.Descriptor) error {
 	return fmt.Errorf("metric %s registered as %s %s: %w",
 		desc.Name(),
 		desc.NumberKind(),
@@ -68,9 +69,9 @@ func NewMetricKindMismatchError(desc metric.Descriptor) error {
 		ErrMetricKindMismatch)
 }
 
-// Compatible determines whether two metric.Descriptors are considered
+// Compatible determines whether two sdkapi.Descriptors are considered
 // the same for the purpose of uniqueness checking.
-func Compatible(candidate, existing metric.Descriptor) bool {
+func Compatible(candidate, existing sdkapi.Descriptor) bool {
 	return candidate.InstrumentKind() == existing.InstrumentKind() &&
 		candidate.NumberKind() == existing.NumberKind()
 }
@@ -80,7 +81,7 @@ func Compatible(candidate, existing metric.Descriptor) bool {
 // `descriptor` argument.  If there is an existing compatible
 // registration, this returns the already-registered instrument.  If
 // there is no conflict and no prior registration, returns (nil, nil).
-func (u *UniqueInstrumentMeterImpl) checkUniqueness(descriptor metric.Descriptor) (metric.InstrumentImpl, error) {
+func (u *UniqueInstrumentMeterImpl) checkUniqueness(descriptor sdkapi.Descriptor) (metric.InstrumentImpl, error) {
 	impl, ok := u.state[descriptor.Name()]
 	if !ok {
 		return nil, nil
@@ -94,7 +95,7 @@ func (u *UniqueInstrumentMeterImpl) checkUniqueness(descriptor metric.Descriptor
 }
 
 // NewSyncInstrument implements metric.MeterImpl.
-func (u *UniqueInstrumentMeterImpl) NewSyncInstrument(descriptor metric.Descriptor) (metric.SyncImpl, error) {
+func (u *UniqueInstrumentMeterImpl) NewSyncInstrument(descriptor sdkapi.Descriptor) (metric.SyncImpl, error) {
 	u.lock.Lock()
 	defer u.lock.Unlock()
 
@@ -116,7 +117,7 @@ func (u *UniqueInstrumentMeterImpl) NewSyncInstrument(descriptor metric.Descript
 
 // NewAsyncInstrument implements metric.MeterImpl.
 func (u *UniqueInstrumentMeterImpl) NewAsyncInstrument(
-	descriptor metric.Descriptor,
+	descriptor sdkapi.Descriptor,
 	runner metric.AsyncRunner,
 ) (metric.AsyncImpl, error) {
 	u.lock.Lock()

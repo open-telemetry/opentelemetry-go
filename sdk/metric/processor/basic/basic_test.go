@@ -110,7 +110,7 @@ func asNumber(nkind number.Kind, value int64) number.Number {
 	return number.NewFloat64Number(float64(value))
 }
 
-func updateFor(t *testing.T, desc *metric.Descriptor, selector export.AggregatorSelector, value int64, labs ...attribute.KeyValue) export.Accumulation {
+func updateFor(t *testing.T, desc *sdkapi.Descriptor, selector export.AggregatorSelector, value int64, labs ...attribute.KeyValue) export.Accumulation {
 	ls := attribute.NewSet(labs...)
 	var agg export.Aggregator
 	selector.AggregatorFor(desc, &agg)
@@ -265,7 +265,7 @@ func testProcessor(
 
 type bogusExporter struct{}
 
-func (bogusExporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
+func (bogusExporter) ExportKindFor(*sdkapi.Descriptor, aggregation.Kind) export.ExportKind {
 	return 1000000
 }
 

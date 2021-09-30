@@ -20,8 +20,8 @@ import (
 	"time"
 	"unsafe"
 
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
@@ -92,7 +92,7 @@ func (g *Aggregator) LastValue() (number.Number, time.Time, error) {
 }
 
 // SynchronizedMove atomically saves the current value.
-func (g *Aggregator) SynchronizedMove(oa export.Aggregator, _ *metric.Descriptor) error {
+func (g *Aggregator) SynchronizedMove(oa export.Aggregator, _ *sdkapi.Descriptor) error {
 	if oa == nil {
 		atomic.StorePointer(&g.value, unsafe.Pointer(unsetLastValue))
 		return nil
@@ -106,7 +106,7 @@ func (g *Aggregator) SynchronizedMove(oa export.Aggregator, _ *metric.Descriptor
 }
 
 // Update atomically sets the current "last" value.
-func (g *Aggregator) Update(_ context.Context, number number.Number, desc *metric.Descriptor) error {
+func (g *Aggregator) Update(_ context.Context, number number.Number, desc *sdkapi.Descriptor) error {
 	ngd := &lastValueData{
 		value:     number,
 		timestamp: time.Now(),
@@ -117,7 +117,7 @@ func (g *Aggregator) Update(_ context.Context, number number.Number, desc *metri
 
 // Merge combines state from two aggregators.  The most-recently set
 // value is chosen.
-func (g *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
+func (g *Aggregator) Merge(oa export.Aggregator, desc *sdkapi.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(g, oa)

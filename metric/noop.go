@@ -19,6 +19,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 )
 
 // NewNoopMeterProvider returns an implementation of MeterProvider that
@@ -48,8 +49,8 @@ func (noopInstrument) Implementation() interface{} {
 	return nil
 }
 
-func (noopInstrument) Descriptor() Descriptor {
-	return Descriptor{}
+func (noopInstrument) Descriptor() sdkapi.Descriptor {
+	return sdkapi.Descriptor{}
 }
 
 func (noopBoundInstrument) RecordOne(context.Context, number.Number) {

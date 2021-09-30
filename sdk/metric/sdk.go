@@ -26,6 +26,7 @@ import (
 	internal "go.opentelemetry.io/otel/internal/metric"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
@@ -72,7 +73,7 @@ type (
 	// mapkey uniquely describes a metric instrument in terms of
 	// its InstrumentID and the encoded form of its labels.
 	mapkey struct {
-		descriptor *metric.Descriptor
+		descriptor *sdkapi.Descriptor
 		ordered    attribute.Distinct
 	}
 
@@ -120,7 +121,7 @@ type (
 
 	instrument struct {
 		meter      *Accumulator
-		descriptor metric.Descriptor
+		descriptor sdkapi.Descriptor
 	}
 
 	asyncInstrument struct {
@@ -147,7 +148,7 @@ var (
 	ErrUninitializedInstrument = fmt.Errorf("use of an uninitialized instrument")
 )
 
-func (inst *instrument) Descriptor() metric.Descriptor {
+func (inst *instrument) Descriptor() sdkapi.Descriptor {
 	return inst.descriptor
 }
 
@@ -308,7 +309,7 @@ func NewAccumulator(processor export.Processor) *Accumulator {
 }
 
 // NewSyncInstrument implements metric.MetricImpl.
-func (m *Accumulator) NewSyncInstrument(descriptor metric.Descriptor) (metric.SyncImpl, error) {
+func (m *Accumulator) NewSyncInstrument(descriptor sdkapi.Descriptor) (metric.SyncImpl, error) {
 	return &syncInstrument{
 		instrument: instrument{
 			descriptor: descriptor,
@@ -318,7 +319,7 @@ func (m *Accumulator) NewSyncInstrument(descriptor metric.Descriptor) (metric.Sy
 }
 
 // NewAsyncInstrument implements metric.MetricImpl.
-func (m *Accumulator) NewAsyncInstrument(descriptor metric.Descriptor, runner metric.AsyncRunner) (metric.AsyncImpl, error) {
+func (m *Accumulator) NewAsyncInstrument(descriptor sdkapi.Descriptor, runner metric.AsyncRunner) (metric.AsyncImpl, error) {
 	a := &asyncInstrument{
 		instrument: instrument{
 			descriptor: descriptor,

@@ -22,7 +22,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -38,7 +37,7 @@ func requireNotAfter(t *testing.T, t1, t2 time.Time) {
 	require.False(t, t1.After(t2), "expected %v ≤ %v", t1, t2)
 }
 
-func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
+func checkZero(t *testing.T, agg *Aggregator, desc *sdkapi.Descriptor) {
 	count, err := agg.Count()
 	require.NoError(t, err)
 	require.Equal(t, uint64(0), count)
@@ -312,7 +311,7 @@ func TestSynchronizedMoveReset(t *testing.T) {
 	aggregatortest.SynchronizedMoveResetTest(
 		t,
 		sdkapi.HistogramInstrumentKind,
-		func(desc *metric.Descriptor) export.Aggregator {
+		func(desc *sdkapi.Descriptor) export.Aggregator {
 			return &New(1)[0]
 		},
 	)

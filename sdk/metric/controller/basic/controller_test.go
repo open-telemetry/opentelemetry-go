@@ -26,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -296,7 +297,7 @@ func (b *blockingExporter) Export(ctx context.Context, res *resource.Resource, o
 }
 
 func (*blockingExporter) ExportKindFor(
-	*metric.Descriptor,
+	*sdkapi.Descriptor,
 	aggregation.Kind,
 ) export.ExportKind {
 	return export.CumulativeExportKind

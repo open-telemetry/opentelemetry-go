@@ -473,11 +473,11 @@ var _ metric.MeterImpl = testWrappedMeter{}
 func (testWrappedMeter) RecordBatch(context.Context, []attribute.KeyValue, ...metric.Measurement) {
 }
 
-func (testWrappedMeter) NewSyncInstrument(_ metric.Descriptor) (metric.SyncImpl, error) {
+func (testWrappedMeter) NewSyncInstrument(_ sdkapi.Descriptor) (metric.SyncImpl, error) {
 	return nil, nil
 }
 
-func (testWrappedMeter) NewAsyncInstrument(_ metric.Descriptor, _ metric.AsyncRunner) (metric.AsyncImpl, error) {
+func (testWrappedMeter) NewAsyncInstrument(_ sdkapi.Descriptor, _ metric.AsyncRunner) (metric.AsyncImpl, error) {
 	return nil, errors.New("Test wrap error")
 }
 

@@ -23,7 +23,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -64,17 +63,17 @@ var (
 	testBoundaries = []float64{500, 250, 750}
 )
 
-func new2(desc *metric.Descriptor, options ...histogram.Option) (_, _ *histogram.Aggregator) {
+func new2(desc *sdkapi.Descriptor, options ...histogram.Option) (_, _ *histogram.Aggregator) {
 	alloc := histogram.New(2, desc, options...)
 	return &alloc[0], &alloc[1]
 }
 
-func new4(desc *metric.Descriptor, options ...histogram.Option) (_, _, _, _ *histogram.Aggregator) {
+func new4(desc *sdkapi.Descriptor, options ...histogram.Option) (_, _, _, _ *histogram.Aggregator) {
 	alloc := histogram.New(4, desc, options...)
 	return &alloc[0], &alloc[1], &alloc[2], &alloc[3]
 }
 
-func checkZero(t *testing.T, agg *histogram.Aggregator, desc *metric.Descriptor) {
+func checkZero(t *testing.T, agg *histogram.Aggregator, desc *sdkapi.Descriptor) {
 	asum, err := agg.Sum()
 	require.Equal(t, number.Number(0), asum, "Empty checkpoint sum = 0")
 	require.NoError(t, err)
@@ -241,7 +240,7 @@ func TestSynchronizedMoveReset(t *testing.T) {
 	aggregatortest.SynchronizedMoveResetTest(
 		t,
 		sdkapi.HistogramInstrumentKind,
-		func(desc *metric.Descriptor) export.Aggregator {
+		func(desc *sdkapi.Descriptor) export.Aggregator {
 			return &histogram.New(1, desc, histogram.WithExplicitBoundaries(testBoundaries))[0]
 		},
 	)

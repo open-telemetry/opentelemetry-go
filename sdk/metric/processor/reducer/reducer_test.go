@@ -22,6 +22,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
@@ -47,7 +48,7 @@ var (
 
 type testFilter struct{}
 
-func (testFilter) LabelFilterFor(_ *metric.Descriptor) attribute.Filter {
+func (testFilter) LabelFilterFor(_ *sdkapi.Descriptor) attribute.Filter {
 	return func(label attribute.KeyValue) bool {
 		return label.Key == "A" || label.Key == "C"
 	}

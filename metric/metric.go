@@ -20,7 +20,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
-	"go.opentelemetry.io/otel/metric/unit"
 )
 
 // MeterProvider supports named Meter instances.
@@ -285,7 +284,7 @@ func (m Meter) newAsync(
 		return NoopAsync{}, nil
 	}
 	cfg := NewInstrumentConfig(opts...)
-	desc := NewDescriptor(name, mkind, nkind, cfg.description, cfg.unit)
+	desc := sdkapi.NewDescriptor(name, mkind, nkind, cfg.description, cfg.unit)
 	return m.impl.NewAsyncInstrument(desc, runner)
 }
 
@@ -303,7 +302,7 @@ func (m Meter) newSync(
 		return NoopSync{}, nil
 	}
 	cfg := NewInstrumentConfig(opts...)
-	desc := NewDescriptor(name, metricKind, numberKind, cfg.description, cfg.unit)
+	desc := sdkapi.NewDescriptor(name, metricKind, numberKind, cfg.description, cfg.unit)
 	return m.impl.NewSyncInstrument(desc)
 }
 
@@ -512,54 +511,4 @@ func (bm BatchObserverMust) NewFloat64UpDownCounterObserver(name string, oos ...
 	} else {
 		return inst
 	}
-}
-
-// Descriptor contains all the settings that describe an instrument,
-// including its name, metric kind, number kind, and the configurable
-// options.
-type Descriptor struct {
-	name           string
-	instrumentKind sdkapi.InstrumentKind
-	numberKind     number.Kind
-	description    string
-	unit           unit.Unit
-}
-
-// NewDescriptor returns a Descriptor with the given contents.
-func NewDescriptor(name string, ikind sdkapi.InstrumentKind, nkind number.Kind, description string, unit unit.Unit) Descriptor {
-	return Descriptor{
-		name:           name,
-		instrumentKind: ikind,
-		numberKind:     nkind,
-		description:    description,
-		unit:           unit,
-	}
-}
-
-// Name returns the metric instrument's name.
-func (d Descriptor) Name() string {
-	return d.name
-}
-
-// InstrumentKind returns the specific kind of instrument.
-func (d Descriptor) InstrumentKind() sdkapi.InstrumentKind {
-	return d.instrumentKind
-}
-
-// Description provides a human-readable description of the metric
-// instrument.
-func (d Descriptor) Description() string {
-	return d.description
-}
-
-// Unit describes the units of the metric instrument.  Unitless
-// metrics return the empty string.
-func (d Descriptor) Unit() unit.Unit {
-	return d.unit
-}
-
-// NumberKind returns whether this instrument is declared over int64,
-// float64, or uint64 values.
-func (d Descriptor) NumberKind() number.Kind {
-	return d.numberKind
 }

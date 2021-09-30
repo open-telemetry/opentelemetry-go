@@ -71,7 +71,7 @@ type (
 
 	Instrument struct {
 		meter      *MeterImpl
-		descriptor metric.Descriptor
+		descriptor sdkapi.Descriptor
 	}
 
 	Async struct {
@@ -94,12 +94,12 @@ var (
 
 // NewDescriptor is a test helper for constructing test metric
 // descriptors using standard options.
-func NewDescriptor(name string, ikind sdkapi.InstrumentKind, nkind number.Kind, opts ...metric.InstrumentOption) metric.Descriptor {
+func NewDescriptor(name string, ikind sdkapi.InstrumentKind, nkind number.Kind, opts ...metric.InstrumentOption) sdkapi.Descriptor {
 	cfg := metric.NewInstrumentConfig(opts...)
-	return metric.NewDescriptor(name, ikind, nkind, cfg.Description(), cfg.Unit())
+	return sdkapi.NewDescriptor(name, ikind, nkind, cfg.Description(), cfg.Unit())
 }
 
-func (i Instrument) Descriptor() metric.Descriptor {
+func (i Instrument) Descriptor() sdkapi.Descriptor {
 	return i.descriptor
 }
 
@@ -161,7 +161,7 @@ func (p *MeterProvider) Meter(name string, opts ...metric.MeterOption) metric.Me
 }
 
 // NewSyncInstrument implements metric.MeterImpl.
-func (m *MeterImpl) NewSyncInstrument(descriptor metric.Descriptor) (metric.SyncImpl, error) {
+func (m *MeterImpl) NewSyncInstrument(descriptor sdkapi.Descriptor) (metric.SyncImpl, error) {
 	return &Sync{
 		Instrument{
 			descriptor: descriptor,
@@ -171,7 +171,7 @@ func (m *MeterImpl) NewSyncInstrument(descriptor metric.Descriptor) (metric.Sync
 }
 
 // NewAsyncInstrument implements metric.MeterImpl.
-func (m *MeterImpl) NewAsyncInstrument(descriptor metric.Descriptor, runner metric.AsyncRunner) (metric.AsyncImpl, error) {
+func (m *MeterImpl) NewAsyncInstrument(descriptor sdkapi.Descriptor, runner metric.AsyncRunner) (metric.AsyncImpl, error) {
 	a := &Async{
 		Instrument: Instrument{
 			descriptor: descriptor,

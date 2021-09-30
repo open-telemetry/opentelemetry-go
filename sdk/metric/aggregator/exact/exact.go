@@ -19,8 +19,8 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
@@ -68,7 +68,7 @@ func (c *Aggregator) Points() ([]aggregation.Point, error) {
 
 // SynchronizedMove saves the current state to oa and resets the current state to
 // the empty set, taking a lock to prevent concurrent Update() calls.
-func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descriptor) error {
+func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *sdkapi.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 
 	if oa != nil && o == nil {
@@ -89,7 +89,7 @@ func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descrip
 // Update adds the recorded measurement to the current data set.
 // Update takes a lock to prevent concurrent Update() and SynchronizedMove()
 // calls.
-func (c *Aggregator) Update(_ context.Context, number number.Number, desc *metric.Descriptor) error {
+func (c *Aggregator) Update(_ context.Context, number number.Number, desc *sdkapi.Descriptor) error {
 	now := time.Now()
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -102,7 +102,7 @@ func (c *Aggregator) Update(_ context.Context, number number.Number, desc *metri
 }
 
 // Merge combines two data sets into one.
-func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
+func (c *Aggregator) Merge(oa export.Aggregator, desc *sdkapi.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)

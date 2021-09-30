@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/internal/metric/registry"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 )
 
 // This file contains the forwarding implementation of MeterProvider used as
@@ -78,7 +79,7 @@ type meterEntry struct {
 }
 
 type instrument struct {
-	descriptor metric.Descriptor
+	descriptor sdkapi.Descriptor
 }
 
 type syncImpl struct {
@@ -122,7 +123,7 @@ var _ metric.InstrumentImpl = &syncImpl{}
 var _ metric.BoundSyncImpl = &syncHandle{}
 var _ metric.AsyncImpl = &asyncImpl{}
 
-func (inst *instrument) Descriptor() metric.Descriptor {
+func (inst *instrument) Descriptor() sdkapi.Descriptor {
 	return inst.descriptor
 }
 
@@ -197,7 +198,7 @@ func (m *meterImpl) setDelegate(key meterKey, provider metric.MeterProvider) {
 	m.asyncInsts = nil
 }
 
-func (m *meterImpl) NewSyncInstrument(desc metric.Descriptor) (metric.SyncImpl, error) {
+func (m *meterImpl) NewSyncInstrument(desc sdkapi.Descriptor) (metric.SyncImpl, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -265,7 +266,7 @@ func (bound *syncHandle) Unbind() {
 // Async delegation
 
 func (m *meterImpl) NewAsyncInstrument(
-	desc metric.Descriptor,
+	desc sdkapi.Descriptor,
 	runner metric.AsyncRunner,
 ) (metric.AsyncImpl, error) {
 

@@ -391,7 +391,7 @@ func TestConvertDescriptor(t *testing.T) {
 	for _, tc := range []struct {
 		desc        string
 		input       metricdata.Descriptor
-		expected    metric.Descriptor
+		expected    sdkapi.Descriptor
 		expectedErr error
 	}{
 		{
