@@ -606,7 +606,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 	)
 }
 
-func TestStatelessExportKind(t *testing.T) {
+func TestStatelessTemporality(t *testing.T) {
 	type testcase struct {
 		name           string
 		instrumentKind sdkapi.InstrumentKind
@@ -624,8 +624,8 @@ func TestStatelessExportKind(t *testing.T) {
 			runMetricExportTests(
 				t,
 				[]otlpmetric.Option{
-					otlpmetric.WithMetricExportKindSelector(
-						metricsdk.StatelessExportKindSelector(),
+					otlpmetric.WithMetricTemporalitySelector(
+						metricsdk.StatelessTemporalitySelector(),
 					),
 				},
 				testerAResource,

@@ -44,7 +44,7 @@ func initMeter() {
 			selector.NewWithHistogramDistribution(
 				histogram.WithExplicitBoundaries(config.DefaultHistogramBoundaries),
 			),
-			export.CumulativeExportKindSelector(),
+			export.CumulativeTemporalitySelector(),
 			processor.WithMemory(true),
 		),
 	)

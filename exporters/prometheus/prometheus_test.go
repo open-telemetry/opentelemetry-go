@@ -88,7 +88,7 @@ func newPipeline(config prometheus.Config, options ...controller.Option) (*prome
 			selector.NewWithHistogramDistribution(
 				histogram.WithExplicitBoundaries(config.DefaultHistogramBoundaries),
 			),
-			export.CumulativeExportKindSelector(),
+			export.CumulativeTemporalitySelector(),
 			processor.WithMemory(true),
 		),
 		options...,

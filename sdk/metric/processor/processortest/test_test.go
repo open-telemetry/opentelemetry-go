@@ -71,7 +71,7 @@ func TestProcessorTesting(t *testing.T) {
 
 	// Export the data and validate it again.
 	exporter := processorTest.New(
-		export.StatelessExportKindSelector(),
+		export.StatelessTemporalitySelector(),
 		attribute.DefaultEncoder(),
 	)
 

@@ -28,15 +28,15 @@ func (fn exporterOptionFunc) apply(cfg *config) {
 }
 
 type config struct {
-	exportKindSelector metricsdk.ExportKindSelector
+	temporalitySelector metricsdk.TemporalitySelector
 }
 
-// WithMetricExportKindSelector defines the ExportKindSelector used
+// WithMetricTemporalitySelector defines the TemporalitySelector used
 // for selecting AggregationTemporality (i.e., Cumulative vs. Delta
 // aggregation). If not specified otherwise, exporter will use a
 // cumulative export kind selector.
-func WithMetricExportKindSelector(selector metricsdk.ExportKindSelector) Option {
+func WithMetricTemporalitySelector(selector metricsdk.TemporalitySelector) Option {
 	return exporterOptionFunc(func(cfg *config) {
-		cfg.exportKindSelector = selector
+		cfg.temporalitySelector = selector
 	})
 }
