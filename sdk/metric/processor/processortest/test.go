@@ -82,7 +82,7 @@ type (
 	// Exporter is a testing implementation of export.Exporter that
 	// assembles its results as a map[string]float64.
 	Exporter struct {
-		export.ExportKindSelector
+		aggregation.TemporalitySelector
 		output      *Output
 		exportCount int
 
@@ -230,7 +230,7 @@ func NewOutput(labelEncoder attribute.Encoder) *Output {
 }
 
 // ForEach implements export.Reader.
-func (o *Output) ForEach(_ export.ExportKindSelector, ff func(export.Record) error) error {
+func (o *Output) ForEach(_ aggregation.TemporalitySelector, ff func(export.Record) error) error {
 	for key, value := range o.m {
 		if err := ff(export.NewRecord(
 			key.desc,
@@ -281,7 +281,7 @@ func (o *Output) AddRecordWithResource(rec export.Record, res *resource.Resource
 // is chosen, whichever is implemented by the underlying Aggregator.
 func (o *Output) Map() map[string]float64 {
 	r := make(map[string]float64)
-	err := o.ForEach(export.StatelessExportKindSelector(), func(record export.Record) error {
+	err := o.ForEach(aggregation.StatelessTemporalitySelector(), func(record export.Record) error {
 		for key, entry := range o.m {
 			encoded := entry.labels.Encoded(o.labelEncoder)
 			rencoded := entry.resource.Encoded(o.labelEncoder)
@@ -344,10 +344,10 @@ func (o *Output) AddAccumulation(acc export.Accumulation) error {
 //
 // Where in the example A=1,B=2 is the encoded labels and R=V is the
 // encoded resource value.
-func New(selector export.ExportKindSelector, encoder attribute.Encoder) *Exporter {
+func New(selector aggregation.TemporalitySelector, encoder attribute.Encoder) *Exporter {
 	return &Exporter{
-		ExportKindSelector: selector,
-		output:             NewOutput(encoder),
+		TemporalitySelector: selector,
+		output:              NewOutput(encoder),
 	}
 }
 
@@ -356,7 +356,7 @@ func (e *Exporter) Export(_ context.Context, res *resource.Resource, ckpt export
 	defer e.output.Unlock()
 	e.exportCount++
 	return ckpt.ForEach(func(library instrumentation.Library, mr export.Reader) error {
-		return mr.ForEach(e.ExportKindSelector, func(r export.Record) error {
+		return mr.ForEach(e.TemporalitySelector, func(r export.Record) error {
 			if e.InjectErr != nil {
 				if err := e.InjectErr(r); err != nil {
 					return err
@@ -433,7 +433,7 @@ type metricReader struct {
 
 var _ export.Reader = &metricReader{}
 
-func (m *metricReader) ForEach(_ export.ExportKindSelector, fn func(export.Record) error) error {
+func (m *metricReader) ForEach(_ aggregation.TemporalitySelector, fn func(export.Record) error) error {
 	for _, record := range m.records {
 		if err := fn(record); err != nil && err != aggregation.ErrNoData {
 			return err

@@ -79,7 +79,7 @@ var _ export.Reader = &metricReader{}
 
 // ForEach iterates through the metrics data, synthesizing an
 // export.Record with the appropriate aggregation for the exporter.
-func (d *metricReader) ForEach(exporter export.ExportKindSelector, f func(export.Record) error) error {
+func (d *metricReader) ForEach(_ aggregation.TemporalitySelector, f func(export.Record) error) error {
 	for _, m := range d.metrics {
 		descriptor, err := convertDescriptor(m.Descriptor)
 		if err != nil {

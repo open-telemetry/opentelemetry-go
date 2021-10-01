@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
@@ -71,7 +72,7 @@ func TestProcessorTesting(t *testing.T) {
 
 	// Export the data and validate it again.
 	exporter := processorTest.New(
-		export.StatelessExportKindSelector(),
+		aggregation.StatelessTemporalitySelector(),
 		attribute.DefaultEncoder(),
 	)
 

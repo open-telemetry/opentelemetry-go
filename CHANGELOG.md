@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - NoopMeterProvider is now private and NewNoopMeterProvider must be used to obtain a noopMeterProvider. (#2237)
+- Metric SDK `export.ExportKind`, `export.ExportKindSelector` types have been renamed `aggregation.Temporality` and `aggregation.TemporalitySelector` in line with current specification and protocol along with built-in selectors (e.g., `aggregation.CumulativeTemporalitySelector`, ...). (#xxxx)
 
 ## [1.0.0] - 2021-09-20
 

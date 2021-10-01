@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
+package aggregation
 
 import (
 	"testing"
@@ -22,12 +22,11 @@ import (
 	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
 
-func TestExportKindIncludes(t *testing.T) {
-	require.True(t, CumulativeExportKind.Includes(CumulativeExportKind))
-	require.True(t, DeltaExportKind.Includes(CumulativeExportKind|DeltaExportKind))
+func TestTemporalityIncludes(t *testing.T) {
+	require.True(t, CumulativeTemporality.Includes(CumulativeTemporality))
+	require.True(t, DeltaTemporality.Includes(CumulativeTemporality|DeltaTemporality))
 }
 
 var deltaMemoryKinds = []sdkapi.InstrumentKind{
@@ -42,34 +41,34 @@ var cumulativeMemoryKinds = []sdkapi.InstrumentKind{
 	sdkapi.UpDownCounterInstrumentKind,
 }
 
-func TestExportKindMemoryRequired(t *testing.T) {
+func TestTemporalityMemoryRequired(t *testing.T) {
 	for _, kind := range deltaMemoryKinds {
-		require.True(t, DeltaExportKind.MemoryRequired(kind))
-		require.False(t, CumulativeExportKind.MemoryRequired(kind))
+		require.True(t, DeltaTemporality.MemoryRequired(kind))
+		require.False(t, CumulativeTemporality.MemoryRequired(kind))
 	}
 
 	for _, kind := range cumulativeMemoryKinds {
-		require.True(t, CumulativeExportKind.MemoryRequired(kind))
-		require.False(t, DeltaExportKind.MemoryRequired(kind))
+		require.True(t, CumulativeTemporality.MemoryRequired(kind))
+		require.False(t, DeltaTemporality.MemoryRequired(kind))
 	}
 }
 
-func TestExportKindSelectors(t *testing.T) {
-	ceks := CumulativeExportKindSelector()
-	deks := DeltaExportKindSelector()
-	seks := StatelessExportKindSelector()
+func TestTemporalitySelectors(t *testing.T) {
+	ceks := CumulativeTemporalitySelector()
+	deks := DeltaTemporalitySelector()
+	seks := StatelessTemporalitySelector()
 
 	for _, ikind := range append(deltaMemoryKinds, cumulativeMemoryKinds...) {
 		desc := metrictest.NewDescriptor("instrument", ikind, number.Int64Kind)
 
-		var akind aggregation.Kind
+		var akind Kind
 		if ikind.Adding() {
-			akind = aggregation.SumKind
+			akind = SumKind
 		} else {
-			akind = aggregation.HistogramKind
+			akind = HistogramKind
 		}
-		require.Equal(t, CumulativeExportKind, ceks.ExportKindFor(&desc, akind))
-		require.Equal(t, DeltaExportKind, deks.ExportKindFor(&desc, akind))
-		require.False(t, seks.ExportKindFor(&desc, akind).MemoryRequired(ikind))
+		require.Equal(t, CumulativeTemporality, ceks.TemporalityFor(&desc, akind))
+		require.Equal(t, DeltaTemporality, deks.TemporalityFor(&desc, akind))
+		require.False(t, seks.TemporalityFor(&desc, akind).MemoryRequired(ikind))
 	}
 }
