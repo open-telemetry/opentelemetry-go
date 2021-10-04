@@ -39,6 +39,7 @@ This release includes an API and SDK for the tracing signal that will comply wit
 ### Added
 
 - OTLP trace exporter now sets the `SchemaURL` field in the exported telemetry if the Tracer has `WithSchemaURL` option. (#2242)
+- Added a new `schema` module to help parse Schema Files in OTEP 0152 format. (#2267)
 
 ### Fixed
 
