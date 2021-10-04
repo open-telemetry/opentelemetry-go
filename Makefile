@@ -40,6 +40,9 @@ $(TOOLS)/%: | $(TOOLS)
 	cd $(TOOLS_MOD_DIR) && \
 	$(GO) build -o $@ $(PACKAGE)
 
+MULTIMOD = $(TOOLS)/multimod
+$(TOOLS)/multimod: PACKAGE=go.opentelemetry.io/build-tools/multimod
+
 SEMCONVGEN = $(TOOLS)/semconvgen
 $(TOOLS)/semconvgen: PACKAGE=go.opentelemetry.io/build-tools/semconvgen
 
@@ -61,10 +64,11 @@ $(TOOLS)/stringer: PACKAGE=golang.org/x/tools/cmd/stringer
 PORTO = $(TOOLS)/porto
 $(TOOLS)/porto: PACKAGE=github.com/jcchavezs/porto/cmd/porto
 
+GOJQ = $(TOOLS)/gojq
 $(TOOLS)/gojq: PACKAGE=github.com/itchyny/gojq/cmd/gojq
 
 .PHONY: tools
-tools: $(CROSSLINK) $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(TOOLS)/gojq $(SEMCONVGEN)
+tools: $(CROSSLINK) $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(GOJQ) $(SEMCONVGEN) $(MULTIMOD)
 
 # Build
 
@@ -190,3 +194,14 @@ check-clean-work-tree:
 	  git status; \
 	  exit 1; \
 	fi
+
+.PHONY: prerelease
+prerelease: | $(MULTIMOD)
+	@[ "${MODSET}" ] || ( echo ">> env var MODSET is not set"; exit 1 )
+	$(MULTIMOD) verify && $(MULTIMOD) prerelease -m ${MODSET}
+
+COMMIT ?= "HEAD"
+.PHONY: add-tags
+add-tags: | $(MULTIMOD)
+	@[ "${MODSET}" ] || ( echo ">> env var MODSET is not set"; exit 1 )
+	$(MULTIMOD) verify && $(MULTIMOD) tag -m ${MODSET} -c ${COMMIT}
