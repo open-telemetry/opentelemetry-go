@@ -23,7 +23,9 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -31,7 +33,7 @@ import (
 func generateTestData(proc export.Processor) {
 	ctx := context.Background()
 	accum := metricsdk.NewAccumulator(proc)
-	meter := metric.WrapMeterImpl(accum, "testing")
+	meter := metric.WrapMeterImpl(accum)
 
 	counter := metric.Must(meter).NewFloat64Counter("counter.sum")
 
@@ -51,12 +53,12 @@ func generateTestData(proc export.Processor) {
 func TestProcessorTesting(t *testing.T) {
 	// Test the Processor test helper using a real Accumulator to
 	// generate Accumulations.
-	testProc := processorTest.NewProcessor(
-		processorTest.AggregatorSelector(),
-		attribute.DefaultEncoder(),
+	checkpointer := processorTest.NewCheckpointer(
+		processorTest.NewProcessor(
+			processorTest.AggregatorSelector(),
+			attribute.DefaultEncoder(),
+		),
 	)
-	checkpointer := processorTest.Checkpointer(testProc)
-
 	generateTestData(checkpointer)
 
 	res := resource.NewSchemaless(attribute.String("R", "V"))
@@ -73,7 +75,12 @@ func TestProcessorTesting(t *testing.T) {
 		attribute.DefaultEncoder(),
 	)
 
-	err := exporter.Export(context.Background(), res, checkpointer.CheckpointSet())
+	err := exporter.Export(context.Background(), res, processortest.OneInstrumentationLibraryReader(
+		instrumentation.Library{
+			Name: "test",
+		},
+		checkpointer.Reader(),
+	))
 	require.NoError(t, err)
 	require.EqualValues(t, expect, exporter.Values())
 }

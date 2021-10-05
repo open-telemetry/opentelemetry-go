@@ -14,6 +14,7 @@
 
 // This test is too large for the race detector.  This SDK uses no locks
 // that the race detector would help with, anyway.
+//go:build !race
 // +build !race
 
 package metric
@@ -246,7 +247,7 @@ func (f *testFixture) preCollect() {
 	f.dupCheck = map[testKey]int{}
 }
 
-func (*testFixture) CheckpointSet() export.CheckpointSet {
+func (*testFixture) Reader() export.Reader {
 	return nil
 }
 
@@ -296,7 +297,7 @@ func stressTest(t *testing.T, impl testImpl) {
 	cc := concurrency()
 
 	sdk := NewAccumulator(fixture)
-	meter := metric.WrapMeterImpl(sdk, "stress_test")
+	meter := metric.WrapMeterImpl(sdk)
 	fixture.wg.Add(cc + 1)
 
 	for i := 0; i < cc; i++ {

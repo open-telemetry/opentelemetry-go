@@ -8,13 +8,29 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-### Added
+## [1.0.1] - 2021-10-01
 
-- OTLP trace exporter now sets the SchemaURL field in the exported telemetry if the Tracer has WithSchemaURL option. (#2242)
+### Fixed
+
+- json stdout exporter no longer crashes due to concurrency bug. (#2265)
+
+## [Metrics 0.24.0] - 2021-10-01
 
 ### Changed
 
 - NoopMeterProvider is now private and NewNoopMeterProvider must be used to obtain a noopMeterProvider. (#2237)
+- The Metric SDK `Export()` function takes a new two-level reader interface for iterating over results one instrumentation library at a time. (#2197)
+  - The former `"go.opentelemetry.io/otel/sdk/export/metric".CheckpointSet` is renamed `Reader`.
+  - The new interface is named `"go.opentelemetry.io/otel/sdk/export/metric".InstrumentationLibraryReader`.
+
+## [1.0.0] - 2021-09-20
+
+This is the first stable release for the project.
+This release includes an API and SDK for the tracing signal that will comply with the stability guarantees defined by the projects [versioning policy](./VERSIONING.md).
+
+### Added
+
+- OTLP trace exporter now sets the `SchemaURL` field in the exported telemetry if the Tracer has `WithSchemaURL` option. (#2242)
 
 ### Fixed
 
@@ -22,7 +38,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
-- Removed the zipkin.WithSDKOptions function. It already didn't have any effect (#2248).
+- Removed the `"go.opentelemetry.io/otel/exporters/zipkin".WithSDKOptions` function. (#2248)
 - Removed the deprecated package `go.opentelemetry.io/otel/oteltest`. (#2234)
 - Removed the deprecated package `go.opentelemetry.io/otel/bridge/opencensus/utils`. (#2233)
 - Removed deprecated functions, types, and methods from `go.opentelemetry.io/otel/attribute` package.
@@ -1534,7 +1550,10 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.0.0-RC3...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.1
+[Metrics 0.24.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/metric/v0.24.0
+[1.0.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.0
 [1.0.0-RC3]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.0-RC3
 [1.0.0-RC2]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.0-RC2
 [Experimental Metrics v0.22.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/metric/v0.22.0

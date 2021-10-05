@@ -21,8 +21,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/internal/metric/registry"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/registry"
+	"go.opentelemetry.io/otel/metric/metrictest"
 )
 
 type (
@@ -78,6 +79,10 @@ func TestRegistrySameInstruments(t *testing.T) {
 		require.NoError(t, err1)
 		require.NoError(t, err2)
 		require.Equal(t, inst1, inst2)
+
+		SetMeterProvider(metrictest.NewMeterProvider())
+
+		require.Equal(t, inst1, inst2)
 	}
 }
 
@@ -89,6 +94,16 @@ func TestRegistryDifferentNamespace(t *testing.T) {
 
 		require.NoError(t, err1)
 		require.NoError(t, err2)
+
+		if inst1.Descriptor().InstrumentKind().Synchronous() {
+			// They're equal because of a `nil` pointer at this point.
+			// (Only for synchronous instruments, which lack callacks.)
+			require.EqualValues(t, inst1, inst2)
+		}
+
+		SetMeterProvider(metrictest.NewMeterProvider())
+
+		// They're different after the deferred setup.
 		require.NotEqual(t, inst1, inst2)
 	}
 }
@@ -109,7 +124,7 @@ func TestRegistryDiffInstruments(t *testing.T) {
 			require.Error(t, err)
 			require.NotNil(t, other)
 			require.True(t, errors.Is(err, registry.ErrMetricKindMismatch))
-			require.Contains(t, err.Error(), "super")
+			require.Contains(t, err.Error(), "by this name with another kind or number type")
 		}
 	}
 }
