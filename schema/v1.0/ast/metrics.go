@@ -25,10 +25,10 @@ type Metrics struct {
 // MetricsChange corresponds to a section representing metrics change.
 type MetricsChange struct {
 	RenameMetrics    map[types.MetricName]types.MetricName `yaml:"rename_metrics"`
-	RenameAttributes *AttributeMapForMetrics               `yaml:"rename_labels"`
+	RenameAttributes *AttributeMapForMetrics               `yaml:"rename_attributes"`
 }
 
 type AttributeMapForMetrics struct {
 	ApplyToMetrics []types.MetricName `yaml:"apply_to_metrics"`
-	AttributeMap   AttributeMap       `yaml:"label_map"`
+	AttributeMap   AttributeMap       `yaml:"attribute_map"`
 }

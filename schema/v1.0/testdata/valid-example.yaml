@@ -94,11 +94,11 @@ versions:
         # to this version. The order in this sequence is important. Translations are
         # applied from top to bottom in the listed order.
 
-        - rename_labels:
-            # Rename labels of all metrics, regardless of metric name.
-            # The keys are the old label name used prior to this version, the values are
-            # the new label name starting from this version.
-            label_map:
+        - rename_attributes:
+            # Rename attributes of all metrics, regardless of metric name.
+            # The keys are the old attribute name used prior to this version, the values are
+            # the new attribute name starting from this version.
+            attribute_map:
               http.status_code: http.response_status_code
 
         - rename_metrics:
@@ -106,16 +106,16 @@ versions:
             container.cpu.usage.total: cpu.usage.total
             container.memory.usage.max: memory.usage.max
 
-        - rename_labels:
+        - rename_attributes:
             apply_to_metrics:
               # Name of the metric to apply this rule to. If empty the rule applies to all metrics.
               - system.cpu.utilization
               - system.memory.usage
               - system.memory.utilization
               - system.paging.usage
-            label_map:
-              # The keys are the old label name used prior to this version, the values are
-              # the new label name starting from this version.
+            attribute_map:
+              # The keys are the old attribute name used prior to this version, the values are
+              # the new attribute name starting from this version.
               status: state
 
     logs:
