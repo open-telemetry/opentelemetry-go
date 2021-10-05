@@ -120,19 +120,8 @@ versions:
 
     logs:
       changes:
-        - rename_logs:
-            # map of key/values. The keys are the old log name used
-            # the previous version, the values are the new log name
-            # starting from this version.
-            ProcessStarted: otel.process.started
         - rename_attributes:
             attribute_map:
               process.executable_name: process.executable.name
-            apply_to_logs:
-              # Optional. If it is missing the transformation is applied
-              # to all logs. If it is present the transformation is applied
-              # only to the logs with the name that is found in the sequence
-              # specified below.
-              - otel.process.started
 
   1.0.0:

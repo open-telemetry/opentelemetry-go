@@ -14,17 +14,13 @@
 
 package ast // import "go.opentelemetry.io/otel/schema/v1.0/ast"
 
-// VersionOfLogs corresponds to a section representing a list of changes that happened
+// Logs corresponds to a section representing a list of changes that happened
 // to logs schema in a particular version.
-type VersionOfLogs struct {
+type Logs struct {
 	Changes []LogsChange
 }
 
 // LogsChange corresponds to a section representing logs change.
 type LogsChange struct {
-	RenameAttributes *RenameLogAttributes `yaml:"rename_attributes"`
-}
-
-type RenameLogAttributes struct {
-	AttributeMap map[string]string `yaml:"attribute_map"`
+	RenameAttributes *RenameAttributes `yaml:"rename_attributes"`
 }

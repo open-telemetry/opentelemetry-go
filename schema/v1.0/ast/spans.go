@@ -16,31 +16,27 @@ package ast // import "go.opentelemetry.io/otel/schema/v1.0/ast"
 
 import "go.opentelemetry.io/otel/schema/v1.0/types"
 
-// VersionOfSpans corresponds to a section representing a list of changes that happened
+// Spans corresponds to a section representing a list of changes that happened
 // to spans schema in a particular version.
-type VersionOfSpans struct {
+type Spans struct {
 	Changes []SpansChange
 }
 
-// VersionOfSpanEvents corresponds to a section representing a list of changes that happened
+// SpanEvents corresponds to a section representing a list of changes that happened
 // to span events schema in a particular version.
-type VersionOfSpanEvents struct {
+type SpanEvents struct {
 	Changes []SpanEventsChange
 }
 
 // SpansChange corresponds to a section representing spans change.
 type SpansChange struct {
-	RenameAttributes *RenameSpanAttributes `yaml:"rename_attributes"`
+	RenameAttributes *RenameAttributes `yaml:"rename_attributes"`
 }
 
 // SpanEventsChange corresponds to a section representing span events change.
 type SpanEventsChange struct {
 	RenameEvents     *RenameSpanEvents          `yaml:"rename_events"`
 	RenameAttributes *RenameSpanEventAttributes `yaml:"rename_attributes"`
-}
-
-type RenameSpanAttributes struct {
-	AttributeMap map[string]string `yaml:"attribute_map"`
 }
 
 type RenameSpanEvents struct {

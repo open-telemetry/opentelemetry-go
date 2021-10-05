@@ -45,6 +45,10 @@ module-sets:
       - go.opentelemetry.io/otel/metric
       - go.opentelemetry.io/otel/sdk/export/metric
       - go.opentelemetry.io/otel/sdk/metric
+  experimental-schema:
+    version: v0.0.1
+    modules:
+      - go.opentelemetry.io/otel/schema
   bridge:
     version: v0.24.0
     modules:

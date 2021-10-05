@@ -36,26 +36,21 @@ type Schema struct {
 // VersionDef corresponds to a section representing one version under the "versions"
 // top-level key.
 type VersionDef struct {
-	All        VersionOfAttributes
-	Resources  VersionOfAttributes
-	Spans      VersionOfSpans
-	SpanEvents VersionOfSpanEvents `yaml:"span_events"`
-	Logs       VersionOfLogs
-	Metrics    VersionOfMetrics
+	All        Attributes
+	Resources  Attributes
+	Spans      Spans
+	SpanEvents SpanEvents `yaml:"span_events"`
+	Logs       Logs
+	Metrics    Metrics
 }
 
-// VersionOfAttributes corresponds to a section representing a list of changes that
+// Attributes corresponds to a section representing a list of changes that
 // happened in a particular version.
-type VersionOfAttributes struct {
+type Attributes struct {
 	Changes []AttributeChanges
 }
 
 // AttributeChanges corresponds to a section representing attribute changes.
 type AttributeChanges struct {
-	RenameAttributes *MappingOfAttributes `yaml:"rename_attributes"`
+	RenameAttributes *AttributeMap `yaml:"rename_attributes"`
 }
-
-// MappingOfAttributes corresponds to a section representing a mapping of attribute names.
-// The keys are the old attribute name used the previous version, the values are the
-// new attribute name starting from this version.
-type MappingOfAttributes map[string]string
