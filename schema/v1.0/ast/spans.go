@@ -46,5 +46,5 @@ type RenameSpanEvents struct {
 type RenameSpanEventAttributes struct {
 	ApplyToSpans  []types.SpanName  `yaml:"apply_to_spans"`
 	ApplyToEvents []types.EventName `yaml:"apply_to_events"`
-	AttributeMap  map[string]string `yaml:"attribute_map"`
+	AttributeMap  AttributeMap      `yaml:"attribute_map"`
 }

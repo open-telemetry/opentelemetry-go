@@ -47,10 +47,10 @@ type VersionDef struct {
 // Attributes corresponds to a section representing a list of changes that
 // happened in a particular version.
 type Attributes struct {
-	Changes []AttributeChanges
+	Changes []AttributeChange
 }
 
-// AttributeChanges corresponds to a section representing attribute changes.
-type AttributeChanges struct {
+// AttributeChange corresponds to a section representing attribute changes.
+type AttributeChange struct {
 	RenameAttributes *AttributeMap `yaml:"rename_attributes"`
 }
