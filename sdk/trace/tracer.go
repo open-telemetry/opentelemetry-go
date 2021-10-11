@@ -138,9 +138,7 @@ func (tr *tracer) newRecordingSpan(psc, sc trace.SpanContext, name string, sr Sa
 	}
 
 	for _, l := range config.Links() {
-		if l.SpanContext.IsValid() {
-			s.addLink(l)
-		}
+		s.addLink(l)
 	}
 
 	s.SetAttributes(sr.Attributes...)
