@@ -120,16 +120,16 @@ func TestPrecomputedSum(t *testing.T) {
 	}
 }
 
-func checkSyncBatches(ctx context.Context, t *testing.T, labels []attribute.KeyValue, mock *metrictest.MeterImpl, nkind number.Kind, mkind sdkapi.InstrumentKind, instrument metric.InstrumentImpl, expected ...float64) {
+func checkSyncBatches(ctx context.Context, t *testing.T, labels []attribute.KeyValue, provider *metrictest.MeterProvider, nkind number.Kind, mkind sdkapi.InstrumentKind, instrument metric.InstrumentImpl, expected ...float64) {
 	t.Helper()
 
-	batchesCount := len(mock.MeasurementBatches)
-	if len(mock.MeasurementBatches) != len(expected) {
-		t.Errorf("Expected %d recorded measurement batches, got %d", batchesCount, len(mock.MeasurementBatches))
+	batchesCount := len(provider.MeasurementBatches)
+	if len(provider.MeasurementBatches) != len(expected) {
+		t.Errorf("Expected %d recorded measurement batches, got %d", batchesCount, len(provider.MeasurementBatches))
 	}
-	recorded := metrictest.AsStructs(mock.MeasurementBatches)
+	recorded := metrictest.AsStructs(provider.MeasurementBatches)
 
-	for i, batch := range mock.MeasurementBatches {
+	for i, batch := range provider.MeasurementBatches {
 		if len(batch.Measurements) != 1 {
 			t.Errorf("Expected 1 measurement in batch %d, got %d", i, len(batch.Measurements))
 		}
@@ -138,10 +138,12 @@ func checkSyncBatches(ctx context.Context, t *testing.T, labels []attribute.KeyV
 		descriptor := measurement.Instrument.Descriptor()
 
 		expected := metrictest.Measured{
-			Name:                descriptor.Name(),
-			InstrumentationName: descriptor.InstrumentationName(),
-			Labels:              metrictest.LabelsToMap(labels...),
-			Number:              metrictest.ResolveNumberByKind(t, nkind, expected[i]),
+			Name: descriptor.Name(),
+			Library: metrictest.Library{
+				InstrumentationName: "apitest",
+			},
+			Labels: metrictest.LabelsToMap(labels...),
+			Number: metrictest.ResolveNumberByKind(t, nkind, expected[i]),
 		}
 		require.Equal(t, expected, recorded[i])
 	}
@@ -149,31 +151,25 @@ func checkSyncBatches(ctx context.Context, t *testing.T, labels []attribute.KeyV
 
 func TestOptions(t *testing.T) {
 	type testcase struct {
-		name  string
-		opts  []metric.InstrumentOption
-		desc  string
-		unit  unit.Unit
-		iName string
-		iVer  string
+		name string
+		opts []metric.InstrumentOption
+		desc string
+		unit unit.Unit
 	}
 	testcases := []testcase{
 		{
-			name:  "no opts",
-			opts:  nil,
-			desc:  "",
-			unit:  "",
-			iName: "",
-			iVer:  "",
+			name: "no opts",
+			opts: nil,
+			desc: "",
+			unit: "",
 		},
 		{
 			name: "description",
 			opts: []metric.InstrumentOption{
 				metric.WithDescription("stuff"),
 			},
-			desc:  "stuff",
-			unit:  "",
-			iName: "",
-			iVer:  "",
+			desc: "stuff",
+			unit: "",
 		},
 		{
 			name: "description override",
@@ -181,20 +177,16 @@ func TestOptions(t *testing.T) {
 				metric.WithDescription("stuff"),
 				metric.WithDescription("things"),
 			},
-			desc:  "things",
-			unit:  "",
-			iName: "",
-			iVer:  "",
+			desc: "things",
+			unit: "",
 		},
 		{
 			name: "unit",
 			opts: []metric.InstrumentOption{
 				metric.WithUnit("s"),
 			},
-			desc:  "",
-			unit:  "s",
-			iName: "",
-			iVer:  "",
+			desc: "",
+			unit: "s",
 		},
 		{
 			name: "description override",
@@ -202,20 +194,16 @@ func TestOptions(t *testing.T) {
 				metric.WithDescription("stuff"),
 				metric.WithDescription("things"),
 			},
-			desc:  "things",
-			unit:  "",
-			iName: "",
-			iVer:  "",
+			desc: "things",
+			unit: "",
 		},
 		{
 			name: "unit",
 			opts: []metric.InstrumentOption{
 				metric.WithUnit("s"),
 			},
-			desc:  "",
-			unit:  "s",
-			iName: "",
-			iVer:  "",
+			desc: "",
+			unit: "s",
 		},
 
 		{
@@ -224,67 +212,17 @@ func TestOptions(t *testing.T) {
 				metric.WithUnit("s"),
 				metric.WithUnit("h"),
 			},
-			desc:  "",
-			unit:  "h",
-			iName: "",
-			iVer:  "",
-		},
-		{
-			name: "name",
-			opts: []metric.InstrumentOption{
-				metric.WithInstrumentationName("n"),
-			},
-			desc:  "",
-			unit:  "",
-			iName: "n",
-			iVer:  "",
-		},
-
-		{
-			name: "name override",
-			opts: []metric.InstrumentOption{
-				metric.WithInstrumentationName("n"),
-				metric.WithInstrumentationName("o"),
-			},
-			desc:  "",
-			unit:  "",
-			iName: "o",
-			iVer:  "",
-		},
-		{
-			name: "version",
-			opts: []metric.InstrumentOption{
-				metric.WithInstrumentationVersion("v"),
-			},
-			desc:  "",
-			unit:  "",
-			iName: "",
-			iVer:  "v",
-		},
-
-		{
-			name: "version override",
-			opts: []metric.InstrumentOption{
-				metric.WithInstrumentationVersion("v"),
-				metric.WithInstrumentationVersion("q"),
-			},
-			desc:  "",
-			unit:  "",
-			iName: "",
-			iVer:  "q",
+			desc: "",
+			unit: "h",
 		},
 		{
 			name: "all",
 			opts: []metric.InstrumentOption{
 				metric.WithDescription("stuff"),
 				metric.WithUnit("s"),
-				metric.WithInstrumentationName("n"),
-				metric.WithInstrumentationVersion("v"),
 			},
-			desc:  "stuff",
-			unit:  "s",
-			iName: "n",
-			iVer:  "v",
+			desc: "stuff",
+			unit: "s",
 		},
 	}
 	for idx, tt := range testcases {
@@ -296,20 +234,18 @@ func TestOptions(t *testing.T) {
 		if diff := cmp.Diff(cfg.Unit(), tt.unit); diff != "" {
 			t.Errorf("Compare Unit: -got +want %s", diff)
 		}
-		if diff := cmp.Diff(cfg.InstrumentationName(), tt.iName); diff != "" {
-			t.Errorf("Compare InstrumentationNam: -got +want %s", diff)
-		}
-		if diff := cmp.Diff(cfg.InstrumentationVersion(), tt.iVer); diff != "" {
-			t.Errorf("Compare InstrumentationVersion: -got +want %s", diff)
-		}
 	}
+}
+func testPair() (*metrictest.MeterProvider, metric.Meter) {
+	provider := metrictest.NewMeterProvider()
+	return provider, provider.Meter("apitest")
 }
 
 func TestCounter(t *testing.T) {
 	// N.B. the API does not check for negative
 	// values, that's the SDK's responsibility.
 	t.Run("float64 counter", func(t *testing.T) {
-		mockSDK, meter := metrictest.NewMeter()
+		provider, meter := testPair()
 		c := Must(meter).NewFloat64Counter("test.counter.float")
 		ctx := context.Background()
 		labels := []attribute.KeyValue{attribute.String("A", "B")}
@@ -317,12 +253,12 @@ func TestCounter(t *testing.T) {
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, -742)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Float64Kind, sdkapi.CounterInstrumentKind, c.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, provider, number.Float64Kind, sdkapi.CounterInstrumentKind, c.SyncImpl(),
 			1994.1, -742, 42,
 		)
 	})
 	t.Run("int64 counter", func(t *testing.T) {
-		mockSDK, meter := metrictest.NewMeter()
+		provider, meter := testPair()
 		c := Must(meter).NewInt64Counter("test.counter.int")
 		ctx := context.Background()
 		labels := []attribute.KeyValue{attribute.String("A", "B"), attribute.String("C", "D")}
@@ -330,13 +266,13 @@ func TestCounter(t *testing.T) {
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, 4200)
 		meter.RecordBatch(ctx, labels, c.Measurement(420000))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Int64Kind, sdkapi.CounterInstrumentKind, c.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, provider, number.Int64Kind, sdkapi.CounterInstrumentKind, c.SyncImpl(),
 			42, 4200, 420000,
 		)
 
 	})
 	t.Run("int64 updowncounter", func(t *testing.T) {
-		mockSDK, meter := metrictest.NewMeter()
+		provider, meter := testPair()
 		c := Must(meter).NewInt64UpDownCounter("test.updowncounter.int")
 		ctx := context.Background()
 		labels := []attribute.KeyValue{attribute.String("A", "B"), attribute.String("C", "D")}
@@ -344,12 +280,12 @@ func TestCounter(t *testing.T) {
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, -100)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Int64Kind, sdkapi.UpDownCounterInstrumentKind, c.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, provider, number.Int64Kind, sdkapi.UpDownCounterInstrumentKind, c.SyncImpl(),
 			100, -100, 42,
 		)
 	})
 	t.Run("float64 updowncounter", func(t *testing.T) {
-		mockSDK, meter := metrictest.NewMeter()
+		provider, meter := testPair()
 		c := Must(meter).NewFloat64UpDownCounter("test.updowncounter.float")
 		ctx := context.Background()
 		labels := []attribute.KeyValue{attribute.String("A", "B"), attribute.String("C", "D")}
@@ -357,7 +293,7 @@ func TestCounter(t *testing.T) {
 		boundInstrument := c.Bind(labels...)
 		boundInstrument.Add(ctx, -76)
 		meter.RecordBatch(ctx, labels, c.Measurement(-100.1))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Float64Kind, sdkapi.UpDownCounterInstrumentKind, c.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, provider, number.Float64Kind, sdkapi.UpDownCounterInstrumentKind, c.SyncImpl(),
 			100.1, -76, -100.1,
 		)
 	})
@@ -365,7 +301,7 @@ func TestCounter(t *testing.T) {
 
 func TestHistogram(t *testing.T) {
 	t.Run("float64 histogram", func(t *testing.T) {
-		mockSDK, meter := metrictest.NewMeter()
+		provider, meter := testPair()
 		m := Must(meter).NewFloat64Histogram("test.histogram.float")
 		ctx := context.Background()
 		labels := []attribute.KeyValue{}
@@ -373,12 +309,12 @@ func TestHistogram(t *testing.T) {
 		boundInstrument := m.Bind(labels...)
 		boundInstrument.Record(ctx, 0)
 		meter.RecordBatch(ctx, labels, m.Measurement(-100.5))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Float64Kind, sdkapi.HistogramInstrumentKind, m.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, provider, number.Float64Kind, sdkapi.HistogramInstrumentKind, m.SyncImpl(),
 			42, 0, -100.5,
 		)
 	})
 	t.Run("int64 histogram", func(t *testing.T) {
-		mockSDK, meter := metrictest.NewMeter()
+		provider, meter := testPair()
 		m := Must(meter).NewInt64Histogram("test.histogram.int")
 		ctx := context.Background()
 		labels := []attribute.KeyValue{attribute.Int("I", 1)}
@@ -386,7 +322,7 @@ func TestHistogram(t *testing.T) {
 		boundInstrument := m.Bind(labels...)
 		boundInstrument.Record(ctx, 80)
 		meter.RecordBatch(ctx, labels, m.Measurement(0))
-		checkSyncBatches(ctx, t, labels, mockSDK, number.Int64Kind, sdkapi.HistogramInstrumentKind, m.SyncImpl(),
+		checkSyncBatches(ctx, t, labels, provider, number.Int64Kind, sdkapi.HistogramInstrumentKind, m.SyncImpl(),
 			173, 80, 0,
 		)
 	})
@@ -395,74 +331,74 @@ func TestHistogram(t *testing.T) {
 func TestObserverInstruments(t *testing.T) {
 	t.Run("float gauge", func(t *testing.T) {
 		labels := []attribute.KeyValue{attribute.String("O", "P")}
-		mockSDK, meter := metrictest.NewMeter()
+		provider, meter := testPair()
 		o := Must(meter).NewFloat64GaugeObserver("test.gauge.float", func(_ context.Context, result metric.Float64ObserverResult) {
 			result.Observe(42.1, labels...)
 		})
-		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, sdkapi.GaugeObserverInstrumentKind, o.AsyncImpl(),
+		provider.RunAsyncInstruments()
+		checkObserverBatch(t, labels, provider, number.Float64Kind, sdkapi.GaugeObserverInstrumentKind, o.AsyncImpl(),
 			42.1,
 		)
 	})
 	t.Run("int gauge", func(t *testing.T) {
 		labels := []attribute.KeyValue{}
-		mockSDK, meter := metrictest.NewMeter()
-		o := Must(meter).NewInt64GaugeObserver("test.observer.int", func(_ context.Context, result metric.Int64ObserverResult) {
+		provider, meter := testPair()
+		o := Must(meter).NewInt64GaugeObserver("test.gauge.int", func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(-142, labels...)
 		})
-		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, sdkapi.GaugeObserverInstrumentKind, o.AsyncImpl(),
+		provider.RunAsyncInstruments()
+		checkObserverBatch(t, labels, provider, number.Int64Kind, sdkapi.GaugeObserverInstrumentKind, o.AsyncImpl(),
 			-142,
 		)
 	})
 	t.Run("float counterobserver", func(t *testing.T) {
 		labels := []attribute.KeyValue{attribute.String("O", "P")}
-		mockSDK, meter := metrictest.NewMeter()
-		o := Must(meter).NewFloat64CounterObserver("test.counterobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
+		provider, meter := testPair()
+		o := Must(meter).NewFloat64CounterObserver("test.counter.float", func(_ context.Context, result metric.Float64ObserverResult) {
 			result.Observe(42.1, labels...)
 		})
-		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, sdkapi.CounterObserverInstrumentKind, o.AsyncImpl(),
+		provider.RunAsyncInstruments()
+		checkObserverBatch(t, labels, provider, number.Float64Kind, sdkapi.CounterObserverInstrumentKind, o.AsyncImpl(),
 			42.1,
 		)
 	})
 	t.Run("int counterobserver", func(t *testing.T) {
 		labels := []attribute.KeyValue{}
-		mockSDK, meter := metrictest.NewMeter()
-		o := Must(meter).NewInt64CounterObserver("test.observer.int", func(_ context.Context, result metric.Int64ObserverResult) {
+		provider, meter := testPair()
+		o := Must(meter).NewInt64CounterObserver("test.counter.int", func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(-142, labels...)
 		})
-		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, sdkapi.CounterObserverInstrumentKind, o.AsyncImpl(),
+		provider.RunAsyncInstruments()
+		checkObserverBatch(t, labels, provider, number.Int64Kind, sdkapi.CounterObserverInstrumentKind, o.AsyncImpl(),
 			-142,
 		)
 	})
 	t.Run("float updowncounterobserver", func(t *testing.T) {
 		labels := []attribute.KeyValue{attribute.String("O", "P")}
-		mockSDK, meter := metrictest.NewMeter()
-		o := Must(meter).NewFloat64UpDownCounterObserver("test.updowncounterobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
+		provider, meter := testPair()
+		o := Must(meter).NewFloat64UpDownCounterObserver("test.updowncounter.float", func(_ context.Context, result metric.Float64ObserverResult) {
 			result.Observe(42.1, labels...)
 		})
-		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Float64Kind, sdkapi.UpDownCounterObserverInstrumentKind, o.AsyncImpl(),
+		provider.RunAsyncInstruments()
+		checkObserverBatch(t, labels, provider, number.Float64Kind, sdkapi.UpDownCounterObserverInstrumentKind, o.AsyncImpl(),
 			42.1,
 		)
 	})
 	t.Run("int updowncounterobserver", func(t *testing.T) {
 		labels := []attribute.KeyValue{}
-		mockSDK, meter := metrictest.NewMeter()
-		o := Must(meter).NewInt64UpDownCounterObserver("test.observer.int", func(_ context.Context, result metric.Int64ObserverResult) {
+		provider, meter := testPair()
+		o := Must(meter).NewInt64UpDownCounterObserver("test..int", func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(-142, labels...)
 		})
-		mockSDK.RunAsyncInstruments()
-		checkObserverBatch(t, labels, mockSDK, number.Int64Kind, sdkapi.UpDownCounterObserverInstrumentKind, o.AsyncImpl(),
+		provider.RunAsyncInstruments()
+		checkObserverBatch(t, labels, provider, number.Int64Kind, sdkapi.UpDownCounterObserverInstrumentKind, o.AsyncImpl(),
 			-142,
 		)
 	})
 }
 
 func TestBatchObserverInstruments(t *testing.T) {
-	mockSDK, meter := metrictest.NewMeter()
+	provider, meter := testPair()
 
 	var obs1 metric.Int64GaugeObserver
 	var obs2 metric.Float64GaugeObserver
@@ -480,12 +416,12 @@ func TestBatchObserverInstruments(t *testing.T) {
 			)
 		},
 	)
-	obs1 = cb.NewInt64GaugeObserver("test.observer.int")
-	obs2 = cb.NewFloat64GaugeObserver("test.observer.float")
+	obs1 = cb.NewInt64GaugeObserver("test.gauge.int")
+	obs2 = cb.NewFloat64GaugeObserver("test.gauge.float")
 
-	mockSDK.RunAsyncInstruments()
+	provider.RunAsyncInstruments()
 
-	require.Len(t, mockSDK.MeasurementBatches, 1)
+	require.Len(t, provider.MeasurementBatches, 1)
 
 	impl1 := obs1.AsyncImpl().Implementation().(*metrictest.Async)
 	impl2 := obs2.AsyncImpl().Implementation().(*metrictest.Async)
@@ -493,7 +429,7 @@ func TestBatchObserverInstruments(t *testing.T) {
 	require.NotNil(t, impl1)
 	require.NotNil(t, impl2)
 
-	got := mockSDK.MeasurementBatches[0]
+	got := provider.MeasurementBatches[0]
 	require.Equal(t, labels, got.Labels)
 	require.Len(t, got.Measurements, 2)
 
@@ -506,17 +442,17 @@ func TestBatchObserverInstruments(t *testing.T) {
 	require.Equal(t, 0, m2.Number.CompareNumber(number.Float64Kind, metrictest.ResolveNumberByKind(t, number.Float64Kind, 42)))
 }
 
-func checkObserverBatch(t *testing.T, labels []attribute.KeyValue, mock *metrictest.MeterImpl, nkind number.Kind, mkind sdkapi.InstrumentKind, observer metric.AsyncImpl, expected float64) {
+func checkObserverBatch(t *testing.T, labels []attribute.KeyValue, provider *metrictest.MeterProvider, nkind number.Kind, mkind sdkapi.InstrumentKind, observer metric.AsyncImpl, expected float64) {
 	t.Helper()
-	assert.Len(t, mock.MeasurementBatches, 1)
-	if len(mock.MeasurementBatches) < 1 {
+	assert.Len(t, provider.MeasurementBatches, 1)
+	if len(provider.MeasurementBatches) < 1 {
 		return
 	}
 	o := observer.Implementation().(*metrictest.Async)
 	if !assert.NotNil(t, o) {
 		return
 	}
-	got := mock.MeasurementBatches[0]
+	got := provider.MeasurementBatches[0]
 	assert.Equal(t, labels, got.Labels)
 	assert.Len(t, got.Measurements, 1)
 	if len(got.Measurements) < 1 {
@@ -547,7 +483,7 @@ func (testWrappedMeter) NewAsyncInstrument(_ metric.Descriptor, _ metric.AsyncRu
 
 func TestWrappedInstrumentError(t *testing.T) {
 	impl := &testWrappedMeter{}
-	meter := metric.WrapMeterImpl(impl, "test")
+	meter := metric.WrapMeterImpl(impl)
 
 	histogram, err := meter.NewInt64Histogram("test.histogram")
 
@@ -562,7 +498,7 @@ func TestWrappedInstrumentError(t *testing.T) {
 
 func TestNilCallbackObserverNoop(t *testing.T) {
 	// Tests that a nil callback yields a no-op observer without error.
-	_, meter := metrictest.NewMeter()
+	_, meter := testPair()
 
 	observer := Must(meter).NewInt64GaugeObserver("test.observer", nil)
 

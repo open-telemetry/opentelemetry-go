@@ -102,7 +102,7 @@ record has an associated aggregator.
 Processor is an interface which sits between the SDK and an exporter.
 The Processor embeds an AggregatorSelector, used by the SDK to assign
 new Aggregators.  The Processor supports a Process() API for submitting
-checkpointed aggregators to the processor, and a CheckpointSet() API
+checkpointed aggregators to the processor, and a Reader() API
 for producing a complete checkpoint for the exporter.  Two default
 Processor implementations are provided, the "defaultkeys" Processor groups
 aggregate metrics by their recommended Descriptor.Keys(), the
@@ -113,9 +113,9 @@ provide the serialization logic for labels.  This allows avoiding
 duplicate serialization of labels, once as a unique key in the SDK (or
 Processor) and once in the exporter.
 
-CheckpointSet is an interface between the Processor and the Exporter.
-After completing a collection pass, the Processor.CheckpointSet() method
-returns a CheckpointSet, which the Exporter uses to iterate over all
+Reader is an interface between the Processor and the Exporter.
+After completing a collection pass, the Processor.Reader() method
+returns a Reader, which the Exporter uses to iterate over all
 the updated metrics.
 
 Record is a struct containing the state of an individual exported
@@ -126,7 +126,7 @@ Labels is a struct containing an ordered set of labels, the
 corresponding unique encoding, and the encoder that produced it.
 
 Exporter is the final stage of an export pipeline.  It is called with
-a CheckpointSet capable of enumerating all the updated metrics.
+a Reader capable of enumerating all the updated metrics.
 
 Controller is not an export interface per se, but it orchestrates the
 export pipeline.  For example, a "push" controller will establish a

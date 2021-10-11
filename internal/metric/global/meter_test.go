@@ -39,7 +39,17 @@ func TestDirect(t *testing.T) {
 
 	ctx := context.Background()
 	meter1 := metricglobal.Meter("test1", metric.WithInstrumentationVersion("semver:v1.0.0"))
-	meter2 := metricglobal.Meter("test2")
+	meter2 := metricglobal.Meter("test2", metric.WithSchemaURL("hello"))
+
+	library1 := metrictest.Library{
+		InstrumentationName:    "test1",
+		InstrumentationVersion: "semver:v1.0.0",
+	}
+	library2 := metrictest.Library{
+		InstrumentationName: "test2",
+		SchemaURL:           "hello",
+	}
+
 	labels1 := []attribute.KeyValue{attribute.String("A", "B")}
 	labels2 := []attribute.KeyValue{attribute.String("C", "D")}
 	labels3 := []attribute.KeyValue{attribute.String("E", "F")}
@@ -66,66 +76,60 @@ func TestDirect(t *testing.T) {
 	second.Record(ctx, 1, labels3...)
 	second.Record(ctx, 2, labels3...)
 
-	mock, provider := metrictest.NewMeterProvider()
+	provider := metrictest.NewMeterProvider()
 	metricglobal.SetMeterProvider(provider)
 
 	counter.Add(ctx, 1, labels1...)
 	histogram.Record(ctx, 3, labels1...)
 	second.Record(ctx, 3, labels3...)
 
-	mock.RunAsyncInstruments()
+	provider.RunAsyncInstruments()
 
-	measurements := metrictest.AsStructs(mock.MeasurementBatches)
+	measurements := metrictest.AsStructs(provider.MeasurementBatches)
 
 	require.EqualValues(t,
 		[]metrictest.Measured{
 			{
-				Name:                   "test.counter",
-				InstrumentationName:    "test1",
-				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 metrictest.LabelsToMap(labels1...),
-				Number:                 asInt(1),
+				Name:    "test.counter",
+				Library: library1,
+				Labels:  metrictest.LabelsToMap(labels1...),
+				Number:  asInt(1),
 			},
 			{
-				Name:                   "test.histogram",
-				InstrumentationName:    "test1",
-				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 metrictest.LabelsToMap(labels1...),
-				Number:                 asFloat(3),
+				Name:    "test.histogram",
+				Library: library1,
+				Labels:  metrictest.LabelsToMap(labels1...),
+				Number:  asFloat(3),
 			},
 			{
-				Name:                "test.second",
-				InstrumentationName: "test2",
-				Labels:              metrictest.LabelsToMap(labels3...),
-				Number:              asFloat(3),
+				Name:    "test.second",
+				Library: library2,
+				Labels:  metrictest.LabelsToMap(labels3...),
+				Number:  asFloat(3),
 			},
 			{
-				Name:                   "test.gauge.float",
-				InstrumentationName:    "test1",
-				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 metrictest.LabelsToMap(labels1...),
-				Number:                 asFloat(1),
+				Name:    "test.gauge.float",
+				Library: library1,
+				Labels:  metrictest.LabelsToMap(labels1...),
+				Number:  asFloat(1),
 			},
 			{
-				Name:                   "test.gauge.float",
-				InstrumentationName:    "test1",
-				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 metrictest.LabelsToMap(labels2...),
-				Number:                 asFloat(2),
+				Name:    "test.gauge.float",
+				Library: library1,
+				Labels:  metrictest.LabelsToMap(labels2...),
+				Number:  asFloat(2),
 			},
 			{
-				Name:                   "test.gauge.int",
-				InstrumentationName:    "test1",
-				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 metrictest.LabelsToMap(labels1...),
-				Number:                 asInt(1),
+				Name:    "test.gauge.int",
+				Library: library1,
+				Labels:  metrictest.LabelsToMap(labels1...),
+				Number:  asInt(1),
 			},
 			{
-				Name:                   "test.gauge.int",
-				InstrumentationName:    "test1",
-				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 metrictest.LabelsToMap(labels2...),
-				Number:                 asInt(2),
+				Name:    "test.gauge.int",
+				Library: library1,
+				Labels:  metrictest.LabelsToMap(labels2...),
+				Number:  asInt(2),
 			},
 		},
 		measurements,
@@ -138,7 +142,11 @@ func TestBound(t *testing.T) {
 	// Note: this test uses opposite Float64/Int64 number kinds
 	// vs. the above, to cover all the instruments.
 	ctx := context.Background()
-	glob := metricglobal.Meter("test")
+	glob := metricglobal.Meter(
+		"test",
+		metric.WithInstrumentationVersion("semver:test-1.0"),
+		metric.WithSchemaURL("schema://url"),
+	)
 	labels1 := []attribute.KeyValue{attribute.String("A", "B")}
 
 	counter := Must(glob).NewFloat64Counter("test.counter")
@@ -151,28 +159,34 @@ func TestBound(t *testing.T) {
 	boundM.Record(ctx, 1)
 	boundM.Record(ctx, 2)
 
-	mock, provider := metrictest.NewMeterProvider()
+	provider := metrictest.NewMeterProvider()
 	metricglobal.SetMeterProvider(provider)
 
 	boundC.Add(ctx, 1)
 	boundM.Record(ctx, 3)
 
+	library := metrictest.Library{
+		InstrumentationName:    "test",
+		InstrumentationVersion: "semver:test-1.0",
+		SchemaURL:              "schema://url",
+	}
+
 	require.EqualValues(t,
 		[]metrictest.Measured{
 			{
-				Name:                "test.counter",
-				InstrumentationName: "test",
-				Labels:              metrictest.LabelsToMap(labels1...),
-				Number:              asFloat(1),
+				Name:    "test.counter",
+				Library: library,
+				Labels:  metrictest.LabelsToMap(labels1...),
+				Number:  asFloat(1),
 			},
 			{
-				Name:                "test.histogram",
-				InstrumentationName: "test",
-				Labels:              metrictest.LabelsToMap(labels1...),
-				Number:              asInt(3),
+				Name:    "test.histogram",
+				Library: library,
+				Labels:  metrictest.LabelsToMap(labels1...),
+				Number:  asInt(3),
 			},
 		},
-		metrictest.AsStructs(mock.MeasurementBatches))
+		metrictest.AsStructs(provider.MeasurementBatches))
 
 	boundC.Unbind()
 	boundM.Unbind()
@@ -199,7 +213,7 @@ func TestUnbindThenRecordOne(t *testing.T) {
 	global.ResetForTest()
 
 	ctx := context.Background()
-	mock, provider := metrictest.NewMeterProvider()
+	provider := metrictest.NewMeterProvider()
 
 	meter := metricglobal.Meter("test")
 	counter := Must(meter).NewInt64Counter("test.counter")
@@ -210,7 +224,7 @@ func TestUnbindThenRecordOne(t *testing.T) {
 	require.NotPanics(t, func() {
 		boundC.Add(ctx, 1)
 	})
-	require.Equal(t, 0, len(mock.MeasurementBatches))
+	require.Equal(t, 0, len(provider.MeasurementBatches))
 }
 
 type meterProviderWithConstructorError struct {
@@ -222,7 +236,7 @@ type meterWithConstructorError struct {
 }
 
 func (m *meterProviderWithConstructorError) Meter(iName string, opts ...metric.MeterOption) metric.Meter {
-	return metric.WrapMeterImpl(&meterWithConstructorError{m.MeterProvider.Meter(iName, opts...).MeterImpl()}, iName, opts...)
+	return metric.WrapMeterImpl(&meterWithConstructorError{m.MeterProvider.Meter(iName, opts...).MeterImpl()})
 }
 
 func (m *meterWithConstructorError) NewSyncInstrument(_ metric.Descriptor) (metric.SyncImpl, error) {
@@ -238,7 +252,7 @@ func TestErrorInDeferredConstructor(t *testing.T) {
 	c1 := Must(meter).NewInt64Counter("test")
 	c2 := Must(meter).NewInt64Counter("test")
 
-	_, provider := metrictest.NewMeterProvider()
+	provider := metrictest.NewMeterProvider()
 	sdk := &meterProviderWithConstructorError{provider}
 
 	require.Panics(t, func() {
@@ -280,7 +294,7 @@ func TestImplementationIndirection(t *testing.T) {
 	require.False(t, ok)
 
 	// Register the SDK
-	_, provider := metrictest.NewMeterProvider()
+	provider := metrictest.NewMeterProvider()
 	metricglobal.SetMeterProvider(provider)
 
 	// Repeat the above tests
@@ -309,7 +323,7 @@ func TestRecordBatchMock(t *testing.T) {
 
 	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
 
-	mock, provider := metrictest.NewMeterProvider()
+	provider := metrictest.NewMeterProvider()
 	metricglobal.SetMeterProvider(provider)
 
 	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
@@ -317,11 +331,13 @@ func TestRecordBatchMock(t *testing.T) {
 	require.EqualValues(t,
 		[]metrictest.Measured{
 			{
-				Name:                "test.counter",
-				InstrumentationName: "builtin",
-				Labels:              metrictest.LabelsToMap(),
-				Number:              asInt(1),
+				Name: "test.counter",
+				Library: metrictest.Library{
+					InstrumentationName: "builtin",
+				},
+				Labels: metrictest.LabelsToMap(),
+				Number: asInt(1),
 			},
 		},
-		metrictest.AsStructs(mock.MeasurementBatches))
+		metrictest.AsStructs(provider.MeasurementBatches))
 }
