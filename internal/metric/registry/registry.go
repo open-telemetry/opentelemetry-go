@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package registry // import "go.opentelemetry.io/otel/metric/registry"
+package registry // import "go.opentelemetry.io/otel/internal/metric/registry"
 
 import (
 	"context"
