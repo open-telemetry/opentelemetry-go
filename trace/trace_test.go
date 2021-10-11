@@ -189,7 +189,7 @@ func TestSpanContextMarshalJSON(t *testing.T) {
 			}
 			have, err := sc.MarshalJSON()
 			if err != nil {
-				t.Errorf("Marshaling failed: %w", err)
+				t.Errorf("Marshaling failed: %v", err)
 			}
 
 			if !bytes.Equal(have, testcase.want) {
