@@ -70,7 +70,7 @@ func Parse(schemaFileContent io.Reader) (*ast.Schema, error) {
 	}
 
 	if _, err := url.Parse(ts.SchemaURL); err != nil {
-		return nil, fmt.Errorf("invalid URL specified in schema_url field: %v", err)
+		return nil, fmt.Errorf("invalid URL specified in schema_url field: %w", err)
 	}
 
 	return &ts, nil
