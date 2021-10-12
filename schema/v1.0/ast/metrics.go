@@ -28,6 +28,8 @@ type MetricsChange struct {
 	RenameAttributes *AttributeMapForMetrics               `yaml:"rename_attributes"`
 }
 
+// AttributeMapForMetrics corresponds to a section representing a translation of
+// attributes for specific metrics.
 type AttributeMapForMetrics struct {
 	ApplyToMetrics []types.MetricName `yaml:"apply_to_metrics"`
 	AttributeMap   AttributeMap       `yaml:"attribute_map"`

@@ -39,10 +39,13 @@ type SpanEventsChange struct {
 	RenameAttributes *RenameSpanEventAttributes `yaml:"rename_attributes"`
 }
 
+// RenameSpanEvents corresponds to section representing a renaming of span events.
 type RenameSpanEvents struct {
 	EventNameMap map[string]string `yaml:"name_map"`
 }
 
+// RenameSpanEventAttributes corresponds to section representing a renaming of
+// attributes of span events.
 type RenameSpanEventAttributes struct {
 	ApplyToSpans  []types.SpanName  `yaml:"apply_to_spans"`
 	ApplyToEvents []types.EventName `yaml:"apply_to_events"`
