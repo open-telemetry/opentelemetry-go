@@ -13,7 +13,7 @@ import schema "go.opentelemetry.io/otel/schema/v1.0"
 
 // Load the schema from a file in v1.0.x file format.
 func loadSchemaFromFile() error {
-telSchema, err := schema.ParseFile("schema-file.yaml")
+    telSchema, err := schema.ParseFile("schema-file.yaml")
     if err != nil {
        return err	
     }
@@ -22,7 +22,7 @@ telSchema, err := schema.ParseFile("schema-file.yaml")
 
 // Alternatively use schema.Parse to read the schema file from io.Reader.
 func loadSchemaFromReader(r io.Reader) error {
-telSchema, err := schema.Parse(r)
+    telSchema, err := schema.Parse(r)
     if err != nil {
         return err
     }
