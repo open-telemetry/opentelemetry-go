@@ -1,3 +1,5 @@
+# Telemetry Schema Files
+
 The `schema` module contains packages that help to parse and validate
 [schema files](https://github.com/open-telemetry/oteps/blob/main/text/0152-telemetry-schemas.md).
 
