@@ -453,7 +453,7 @@ func (s *recordingSpan) Resource() *resource.Resource {
 }
 
 func (s *recordingSpan) addLink(link trace.Link) {
-	if !s.IsRecording() {
+	if !s.IsRecording() || !link.SpanContext.IsValid() {
 		return
 	}
 	s.mu.Lock()
