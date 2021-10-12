@@ -17,7 +17,6 @@ package schema // import "go.opentelemetry.io/otel/schema/v1.0"
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"strconv"
@@ -51,12 +50,8 @@ func ParseFile(schemaFilePath string) (*ast.Schema, error) {
 // Parse a schema file. schemaFileContent is the readable content of the schema file.
 func Parse(schemaFileContent io.Reader) (*ast.Schema, error) {
 	var ts ast.Schema
-	schemaContent, err := ioutil.ReadAll(schemaFileContent)
-	if err != nil {
-		return nil, err
-	}
-
-	err = yaml.Unmarshal(schemaContent, &ts)
+	d := yaml.NewDecoder(schemaFileContent)
+	err := d.Decode(&ts)
 	if err != nil {
 		return nil, err
 	}
