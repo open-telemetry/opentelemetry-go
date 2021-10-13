@@ -16,6 +16,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Adds `otlptracegrpc.WithGRPCConn` and `otlpmetricgrpc.WithGRPCConn` for reusing existing gRPC connection. (#2002)
 
+### Fixed
+
+- `semconv.NetAttributesFromHTTPRequest()` correctly handles IPv6 addresses. (#)
+
 ## [1.0.1] - 2021-10-01
 
 ### Fixed

@@ -52,30 +52,7 @@ func NetAttributesFromHTTPRequest(network string, request *http.Request) []attri
 	}
 
 	peerName, peerIP, peerPort := "", "", 0
-	{
-		hostPart := request.RemoteAddr
-		portPart := ""
-		if idx := strings.LastIndex(hostPart, ":"); idx >= 0 {
-			hostPart = request.RemoteAddr[:idx]
-			portPart = request.RemoteAddr[idx+1:]
-		}
-		if hostPart != "" {
-			if ip := net.ParseIP(hostPart); ip != nil {
-				peerIP = ip.String()
-			} else {
-				peerName = hostPart
-			}
-
-			if portPart != "" {
-				numPort, err := strconv.ParseUint(portPart, 10, 16)
-				if err == nil {
-					peerPort = (int)(numPort)
-				} else {
-					peerName, peerIP = "", ""
-				}
-			}
-		}
-	}
+	peerIP, peerName, peerPort = hostIPNamePort(request.RemoteAddr)
 	if peerName != "" {
 		attrs = append(attrs, NetPeerNameKey.String(peerName))
 	}
@@ -88,27 +65,9 @@ func NetAttributesFromHTTPRequest(network string, request *http.Request) []attri
 
 	hostIP, hostName, hostPort := "", "", 0
 	for _, someHost := range []string{request.Host, request.Header.Get("Host"), request.URL.Host} {
-		hostPart := ""
-		if idx := strings.LastIndex(someHost, ":"); idx >= 0 {
-			strPort := someHost[idx+1:]
-			numPort, err := strconv.ParseUint(strPort, 10, 16)
-			if err == nil {
-				hostPort = (int)(numPort)
-			}
-			hostPart = someHost[:idx]
-		} else {
-			hostPart = someHost
-		}
-		if hostPart != "" {
-			ip := net.ParseIP(hostPart)
-			if ip != nil {
-				hostIP = ip.String()
-			} else {
-				hostName = hostPart
-			}
+		hostIP, hostName, hostPort = hostIPNamePort(someHost)
+		if hostIP != "" || hostName != "" || hostPort != 0 {
 			break
-		} else {
-			hostPort = 0
 		}
 	}
 	if hostIP != "" {
@@ -122,6 +81,39 @@ func NetAttributesFromHTTPRequest(network string, request *http.Request) []attri
 	}
 
 	return attrs
+}
+
+// hostIPNamePort extracts the IP address, name and (optional) port from hostWithPort.
+// It handles both IPv4 and IPv6 addresses. If the host portion is not recognized
+// as a valid IPv4 or IPv6 address, the `ip` result will be empty and the
+// host portion will instead be returned in `name`.
+func hostIPNamePort(hostWithPort string) (ip string, name string, port int) {
+	hostPart, portPart := hostWithPort, ""
+	if idx := strings.LastIndexByte(hostWithPort, ':'); idx >= 0 {
+		ipv6WithPort := idx > 0 && hostWithPort[0] == '[' && hostWithPort[idx-1] == ']'
+		ipv4WithPort := idx > 0 && strings.IndexByte(hostWithPort[0:idx-1], ':') < 0
+		if ipv6WithPort || ipv4WithPort {
+			hostPart, portPart, _ = net.SplitHostPort(hostWithPort)
+		} else if idx == 0 {
+			hostPart, portPart = "", hostWithPort[idx+1:]
+		}
+	}
+	if hostPart != "" {
+		if parsedIP := net.ParseIP(hostPart); parsedIP != nil {
+			ip = parsedIP.String()
+		} else {
+			name = hostPart
+		}
+	}
+	if portPart != "" {
+		numPort, err := strconv.ParseUint(portPart, 10, 16)
+		if err == nil {
+			port = (int)(numPort)
+		} else {
+			port = 0
+		}
+	}
+	return
 }
 
 // EndUserAttributesFromHTTPRequest generates attributes of the
