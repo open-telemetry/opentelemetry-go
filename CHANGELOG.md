@@ -18,7 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- `semconv.NetAttributesFromHTTPRequest()` correctly handles IPv6 addresses. (#)
+- `semconv.NetAttributesFromHTTPRequest()` correctly handles IPv6 addresses. (#2285)
 
 ## [1.0.1] - 2021-10-01
 
