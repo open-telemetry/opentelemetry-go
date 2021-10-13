@@ -51,13 +51,12 @@ func NetAttributesFromHTTPRequest(network string, request *http.Request) []attri
 		attrs = append(attrs, NetTransportOther)
 	}
 
-	peerName, peerIP, peerPort := "", "", 0
-	peerIP, peerName, peerPort = hostIPNamePort(request.RemoteAddr)
-	if peerName != "" {
-		attrs = append(attrs, NetPeerNameKey.String(peerName))
-	}
+	peerIP, peerName, peerPort := hostIPNamePort(request.RemoteAddr)
 	if peerIP != "" {
 		attrs = append(attrs, NetPeerIPKey.String(peerIP))
+	}
+	if peerName != "" {
+		attrs = append(attrs, NetPeerNameKey.String(peerName))
 	}
 	if peerPort != 0 {
 		attrs = append(attrs, NetPeerPortKey.Int(peerPort))
