@@ -19,7 +19,6 @@ import (
 	"net"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -59,10 +58,10 @@ func NetAttributesFromHTTPRequest(network string, request *http.Request) []attri
 		attrs = append(attrs, NetPeerNameKey.String(peerName))
 	}
 	if peerPort != 0 {
-		attrs = append(attrs, NetPeerPortKey.Int(peerPort))
+		attrs = append(attrs, NetPeerPortKey.Int64(int64(peerPort)))
 	}
 
-	hostIP, hostName, hostPort := "", "", 0
+	hostIP, hostName, hostPort := "", "", uint64(0)
 	for _, someHost := range []string{request.Host, request.Header.Get("Host"), request.URL.Host} {
 		hostIP, hostName, hostPort = hostIPNamePort(someHost)
 		if hostIP != "" || hostName != "" || hostPort != 0 {
@@ -76,7 +75,7 @@ func NetAttributesFromHTTPRequest(network string, request *http.Request) []attri
 		attrs = append(attrs, NetHostNameKey.String(hostName))
 	}
 	if hostPort != 0 {
-		attrs = append(attrs, NetHostPortKey.Int(hostPort))
+		attrs = append(attrs, NetHostPortKey.Int64(int64(hostPort)))
 	}
 
 	return attrs
@@ -86,31 +85,21 @@ func NetAttributesFromHTTPRequest(network string, request *http.Request) []attri
 // It handles both IPv4 and IPv6 addresses. If the host portion is not recognized
 // as a valid IPv4 or IPv6 address, the `ip` result will be empty and the
 // host portion will instead be returned in `name`.
-func hostIPNamePort(hostWithPort string) (ip string, name string, port int) {
-	hostPart, portPart := hostWithPort, ""
-	if idx := strings.LastIndexByte(hostWithPort, ':'); idx >= 0 {
-		ipv6WithPort := idx > 0 && hostWithPort[0] == '[' && hostWithPort[idx-1] == ']'
-		ipv4WithPort := idx > 0 && strings.IndexByte(hostWithPort[0:idx-1], ':') < 0
-		if ipv6WithPort || ipv4WithPort {
-			hostPart, portPart, _ = net.SplitHostPort(hostWithPort)
-		} else if idx == 0 {
-			hostPart, portPart = "", hostWithPort[idx+1:]
-		}
+func hostIPNamePort(hostWithPort string) (ip string, name string, port uint64) {
+	var (
+		hostPart, portPart string
+		err                error
+	)
+	if hostPart, portPart, err = net.SplitHostPort(hostWithPort); err != nil {
+		hostPart, portPart = hostWithPort, ""
 	}
-	if hostPart != "" {
-		if parsedIP := net.ParseIP(hostPart); parsedIP != nil {
-			ip = parsedIP.String()
-		} else {
-			name = hostPart
-		}
+	if parsedIP := net.ParseIP(hostPart); parsedIP != nil {
+		ip = parsedIP.String()
+	} else {
+		name = hostPart
 	}
-	if portPart != "" {
-		numPort, err := strconv.ParseUint(portPart, 10, 16)
-		if err == nil {
-			port = (int)(numPort)
-		} else {
-			port = 0
-		}
+	if port, err = strconv.ParseUint(portPart, 10, 16); err != nil {
+		port = 0
 	}
 	return
 }
