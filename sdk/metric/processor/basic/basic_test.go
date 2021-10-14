@@ -266,7 +266,7 @@ func testProcessor(
 type bogusExporter struct{}
 
 func (bogusExporter) TemporalityFor(*metric.Descriptor, aggregation.Kind) aggregation.Temporality {
-	return 1000000
+	return 100
 }
 
 func (bogusExporter) Export(context.Context, export.Reader) error {

@@ -23,7 +23,7 @@ import (
 
 // Temporality indicates the temporal aggregation exported by an exporter.
 // These bits may be OR-d together when multiple exporters are in use.
-type Temporality int
+type Temporality uint8
 
 const (
 	// CumulativeTemporality indicates that an Exporter expects a
@@ -42,16 +42,16 @@ func (t Temporality) Includes(other Temporality) bool {
 
 // MemoryRequired returns whether an exporter of this temporality requires
 // memory to export correctly.
-func (kind Temporality) MemoryRequired(mkind sdkapi.InstrumentKind) bool {
+func (t Temporality) MemoryRequired(mkind sdkapi.InstrumentKind) bool {
 	switch mkind {
 	case sdkapi.HistogramInstrumentKind, sdkapi.GaugeObserverInstrumentKind,
 		sdkapi.CounterInstrumentKind, sdkapi.UpDownCounterInstrumentKind:
 		// Delta-oriented instruments:
-		return kind.Includes(CumulativeTemporality)
+		return t.Includes(CumulativeTemporality)
 
 	case sdkapi.CounterObserverInstrumentKind, sdkapi.UpDownCounterObserverInstrumentKind:
 		// Cumulative-oriented instruments:
-		return kind.Includes(DeltaTemporality)
+		return t.Includes(DeltaTemporality)
 	}
 	// Something unexpected is happening--we could panic.  This
 	// will become an error when the exporter tries to access a
