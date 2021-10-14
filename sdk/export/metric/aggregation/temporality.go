@@ -21,7 +21,7 @@ import (
 	"go.opentelemetry.io/otel/metric/sdkapi"
 )
 
-// Temporality indicates the kind of data exported by an exporter.
+// Temporality indicates the temporal aggregation exported by an exporter.
 // These bits may be OR-d together when multiple exporters are in use.
 type Temporality int
 
@@ -35,13 +35,12 @@ const (
 	DeltaTemporality Temporality = 2
 )
 
-// Includes tests whether `kind` includes a specific kind of
-// exporter.
-func (kind Temporality) Includes(has Temporality) bool {
-	return kind&has != 0
+// Includes returns if t includes support for other temporality.
+func (t Temporality) Includes(other Temporality) bool {
+	return t&other != 0
 }
 
-// MemoryRequired returns whether an exporter of this kind requires
+// MemoryRequired returns whether an exporter of this temporality requires
 // memory to export correctly.
 func (kind Temporality) MemoryRequired(mkind sdkapi.InstrumentKind) bool {
 	switch mkind {
@@ -71,9 +70,9 @@ var (
 )
 
 // ConstantTemporalitySelector returns an TemporalitySelector that returns
-// a constant Temporality, one that is either always cumulative or always delta.
-func ConstantTemporalitySelector(kind Temporality) TemporalitySelector {
-	return constantTemporalitySelector(kind)
+// a constant Temporality.
+func ConstantTemporalitySelector(t Temporality) TemporalitySelector {
+	return constantTemporalitySelector(t)
 }
 
 // CumulativeTemporalitySelector returns an TemporalitySelector that
