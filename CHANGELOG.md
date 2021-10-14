@@ -8,14 +8,29 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## Changed
+
+- Skip links with invalid span context. (#2275)
+- Metric SDK `export.ExportKind`, `export.ExportKindSelector` types have been renamed `aggregation.Temporality` and `aggregation.TemporalitySelector` in line with current specification and protocol along with built-in selectors (e.g., `aggregation.CumulativeTemporalitySelector`, ...). (#xxxx)
+
+### Added
+
+- Adds `otlptracegrpc.WithGRPCConn` and `otlpmetricgrpc.WithGRPCConn` for reusing existing gRPC connection. (#2002)
+
+## [1.0.1] - 2021-10-01
+
 ### Fixed
 
 - json stdout exporter no longer crashes due to concurrency bug. (#2265)
 
+## [Metrics 0.24.0] - 2021-10-01
+
 ### Changed
 
 - NoopMeterProvider is now private and NewNoopMeterProvider must be used to obtain a noopMeterProvider. (#2237)
-- Metric SDK `export.ExportKind`, `export.ExportKindSelector` types have been renamed `aggregation.Temporality` and `aggregation.TemporalitySelector` in line with current specification and protocol along with built-in selectors (e.g., `aggregation.CumulativeTemporalitySelector`, ...). (#xxxx)
+- The Metric SDK `Export()` function takes a new two-level reader interface for iterating over results one instrumentation library at a time. (#2197)
+  - The former `"go.opentelemetry.io/otel/sdk/export/metric".CheckpointSet` is renamed `Reader`.
+  - The new interface is named `"go.opentelemetry.io/otel/sdk/export/metric".InstrumentationLibraryReader`.
 
 ## [1.0.0] - 2021-09-20
 
@@ -66,9 +81,6 @@ This release includes an API and SDK for the tracing signal that will comply wit
 - The Metrics SDK export record no longer contains a Resource pointer, the SDK `"go.opentelemetry.io/otel/sdk/trace/export/metric".Exporter.Export()` function for push-based exporters now takes a single Resource argument, pull-based exporters use `"go.opentelemetry.io/otel/sdk/metric/controller/basic".Controller.Resource()`. (#2120)
 - The JSON output of the `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` is harmonized now such that the output is "plain" JSON objects after each other of the form `{ ... } { ... } { ... }`. Earlier the JSON objects describing a span were wrapped in a slice for each `Exporter.ExportSpans` call, like `[ { ... } ][ { ... } { ... } ]`. Outputting JSON object directly after each other is consistent with JSON loggers, and a bit easier to parse and read. (#2196)
 - Update the `NewTracerConfig`, `NewSpanStartConfig`, `NewSpanEndConfig`, and `NewEventConfig` function in the `go.opentelemetry.io/otel/trace` package to return their respective configurations as structs instead of pointers to the struct. (#2212)
-- The Metric SDK `Export()` function takes a new two-level reader interface for iterating over results one instrumentation library at a time. (#2197)
-  - The former `"go.opentelemetry.io/otel/sdk/export/metric".CheckpointSet` is renamed `Reader`.
-  - The new interface is named `"go.opentelemetry.io/otel/sdk/export/metric".InstrumentationLibraryReader`.
 
 ### Deprecated
 
@@ -1547,7 +1559,9 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.1
+[Metrics 0.24.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/metric/v0.24.0
 [1.0.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.0
 [1.0.0-RC3]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.0-RC3
 [1.0.0-RC2]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.0-RC2
