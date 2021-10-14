@@ -120,7 +120,7 @@ func TestPrecomputedSum(t *testing.T) {
 	}
 }
 
-func checkSyncBatches(ctx context.Context, t *testing.T, labels []attribute.KeyValue, provider *metrictest.MeterProvider, nkind number.Kind, mkind sdkapi.InstrumentKind, instrument metric.InstrumentImpl, expected ...float64) {
+func checkSyncBatches(ctx context.Context, t *testing.T, labels []attribute.KeyValue, provider *metrictest.MeterProvider, nkind number.Kind, mkind sdkapi.InstrumentKind, instrument sdkapi.InstrumentImpl, expected ...float64) {
 	t.Helper()
 
 	batchesCount := len(provider.MeasurementBatches)
@@ -442,7 +442,7 @@ func TestBatchObserverInstruments(t *testing.T) {
 	require.Equal(t, 0, m2.Number.CompareNumber(number.Float64Kind, metrictest.ResolveNumberByKind(t, number.Float64Kind, 42)))
 }
 
-func checkObserverBatch(t *testing.T, labels []attribute.KeyValue, provider *metrictest.MeterProvider, nkind number.Kind, mkind sdkapi.InstrumentKind, observer metric.AsyncImpl, expected float64) {
+func checkObserverBatch(t *testing.T, labels []attribute.KeyValue, provider *metrictest.MeterProvider, nkind number.Kind, mkind sdkapi.InstrumentKind, observer sdkapi.AsyncImpl, expected float64) {
 	t.Helper()
 	assert.Len(t, provider.MeasurementBatches, 1)
 	if len(provider.MeasurementBatches) < 1 {
@@ -468,16 +468,16 @@ func checkObserverBatch(t *testing.T, labels []attribute.KeyValue, provider *met
 type testWrappedMeter struct {
 }
 
-var _ metric.MeterImpl = testWrappedMeter{}
+var _ sdkapi.MeterImpl = testWrappedMeter{}
 
-func (testWrappedMeter) RecordBatch(context.Context, []attribute.KeyValue, ...metric.Measurement) {
+func (testWrappedMeter) RecordBatch(context.Context, []attribute.KeyValue, ...sdkapi.Measurement) {
 }
 
-func (testWrappedMeter) NewSyncInstrument(_ metric.Descriptor) (metric.SyncImpl, error) {
+func (testWrappedMeter) NewSyncInstrument(_ sdkapi.Descriptor) (sdkapi.SyncImpl, error) {
 	return nil, nil
 }
 
-func (testWrappedMeter) NewAsyncInstrument(_ metric.Descriptor, _ metric.AsyncRunner) (metric.AsyncImpl, error) {
+func (testWrappedMeter) NewAsyncInstrument(_ sdkapi.Descriptor, _ sdkapi.AsyncRunner) (sdkapi.AsyncImpl, error) {
 	return nil, errors.New("Test wrap error")
 }
 
@@ -502,6 +502,8 @@ func TestNilCallbackObserverNoop(t *testing.T) {
 
 	observer := Must(meter).NewInt64GaugeObserver("test.observer", nil)
 
-	_, ok := observer.AsyncImpl().(metric.NoopAsync)
-	require.True(t, ok)
+	impl := observer.AsyncImpl().Implementation()
+	desc := observer.AsyncImpl().Descriptor()
+	require.Equal(t, nil, impl)
+	require.Equal(t, "", desc.Name())
 }

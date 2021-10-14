@@ -24,46 +24,47 @@ import (
 	"go.opentelemetry.io/otel/internal/metric/registry"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/metrictest"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 )
 
 type (
-	newFunc func(m metric.Meter, name string) (metric.InstrumentImpl, error)
+	newFunc func(m metric.Meter, name string) (sdkapi.InstrumentImpl, error)
 )
 
 var (
 	allNew = map[string]newFunc{
-		"counter.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+		"counter.int64": func(m metric.Meter, name string) (sdkapi.InstrumentImpl, error) {
 			return unwrap(m.NewInt64Counter(name))
 		},
-		"counter.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+		"counter.float64": func(m metric.Meter, name string) (sdkapi.InstrumentImpl, error) {
 			return unwrap(m.NewFloat64Counter(name))
 		},
-		"histogram.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+		"histogram.int64": func(m metric.Meter, name string) (sdkapi.InstrumentImpl, error) {
 			return unwrap(m.NewInt64Histogram(name))
 		},
-		"histogram.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+		"histogram.float64": func(m metric.Meter, name string) (sdkapi.InstrumentImpl, error) {
 			return unwrap(m.NewFloat64Histogram(name))
 		},
-		"gaugeobserver.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+		"gaugeobserver.int64": func(m metric.Meter, name string) (sdkapi.InstrumentImpl, error) {
 			return unwrap(m.NewInt64GaugeObserver(name, func(context.Context, metric.Int64ObserverResult) {}))
 		},
-		"gaugeobserver.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+		"gaugeobserver.float64": func(m metric.Meter, name string) (sdkapi.InstrumentImpl, error) {
 			return unwrap(m.NewFloat64GaugeObserver(name, func(context.Context, metric.Float64ObserverResult) {}))
 		},
 	}
 )
 
-func unwrap(impl interface{}, err error) (metric.InstrumentImpl, error) {
+func unwrap(impl interface{}, err error) (sdkapi.InstrumentImpl, error) {
 	if impl == nil {
 		return nil, err
 	}
 	if s, ok := impl.(interface {
-		SyncImpl() metric.SyncImpl
+		SyncImpl() sdkapi.SyncImpl
 	}); ok {
 		return s.SyncImpl(), err
 	}
 	if a, ok := impl.(interface {
-		AsyncImpl() metric.AsyncImpl
+		AsyncImpl() sdkapi.AsyncImpl
 	}); ok {
 		return a.AsyncImpl(), err
 	}

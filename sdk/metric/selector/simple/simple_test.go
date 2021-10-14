@@ -19,7 +19,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
@@ -41,7 +40,7 @@ var (
 	testGaugeObserverDesc         = metrictest.NewDescriptor("gauge", sdkapi.GaugeObserverInstrumentKind, number.Int64Kind)
 )
 
-func oneAgg(sel export.AggregatorSelector, desc *metric.Descriptor) export.Aggregator {
+func oneAgg(sel export.AggregatorSelector, desc *sdkapi.Descriptor) export.Aggregator {
 	var agg export.Aggregator
 	sel.AggregatorFor(desc, &agg)
 	return agg

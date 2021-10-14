@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -97,7 +96,7 @@ type AggregatorSelector interface {
 	// Note: This is context-free because the aggregator should
 	// not relate to the incoming context.  This call should not
 	// block.
-	AggregatorFor(descriptor *metric.Descriptor, aggregator ...*Aggregator)
+	AggregatorFor(descriptor *sdkapi.Descriptor, aggregator ...*Aggregator)
 }
 
 // Checkpointer is the interface used by a Controller to coordinate
@@ -161,7 +160,7 @@ type Aggregator interface {
 	//
 	// The Context argument comes from user-level code and could be
 	// inspected for a `correlation.Map` or `trace.SpanContext`.
-	Update(ctx context.Context, number number.Number, descriptor *metric.Descriptor) error
+	Update(ctx context.Context, number number.Number, descriptor *sdkapi.Descriptor) error
 
 	// SynchronizedMove is called during collection to finish one
 	// period of aggregation by atomically saving the
@@ -185,7 +184,7 @@ type Aggregator interface {
 	//
 	// When called with a nil `destination`, this Aggregator is reset
 	// and the current value is discarded.
-	SynchronizedMove(destination Aggregator, descriptor *metric.Descriptor) error
+	SynchronizedMove(destination Aggregator, descriptor *sdkapi.Descriptor) error
 
 	// Merge combines the checkpointed state from the argument
 	// Aggregator into this Aggregator.  Merge is not synchronized
@@ -193,7 +192,7 @@ type Aggregator interface {
 	//
 	// The owner of an Aggregator being merged is responsible for
 	// synchronization of both Aggregator states.
-	Merge(aggregator Aggregator, descriptor *metric.Descriptor) error
+	Merge(aggregator Aggregator, descriptor *sdkapi.Descriptor) error
 }
 
 // Subtractor is an optional interface implemented by some
@@ -203,7 +202,7 @@ type Aggregator interface {
 type Subtractor interface {
 	// Subtract subtracts the `operand` from this Aggregator and
 	// outputs the value in `result`.
-	Subtract(operand, result Aggregator, descriptor *metric.Descriptor) error
+	Subtract(operand, result Aggregator, descriptor *sdkapi.Descriptor) error
 }
 
 // Exporter handles presentation of the checkpoint of aggregate
@@ -233,7 +232,7 @@ type ExportKindSelector interface {
 	// ExportKindFor should return the correct ExportKind that
 	// should be used when exporting data for the given metric
 	// instrument and Aggregator kind.
-	ExportKindFor(descriptor *metric.Descriptor, aggregatorKind aggregation.Kind) ExportKind
+	ExportKindFor(descriptor *sdkapi.Descriptor, aggregatorKind aggregation.Kind) ExportKind
 }
 
 // InstrumentationLibraryReader is an interface for exporters to iterate
@@ -283,7 +282,7 @@ type Reader interface {
 // are shared by the Accumulator->Processor and Processor->Exporter
 // steps.
 type Metadata struct {
-	descriptor *metric.Descriptor
+	descriptor *sdkapi.Descriptor
 	labels     *attribute.Set
 }
 
@@ -305,7 +304,7 @@ type Record struct {
 }
 
 // Descriptor describes the metric instrument being exported.
-func (m Metadata) Descriptor() *metric.Descriptor {
+func (m Metadata) Descriptor() *sdkapi.Descriptor {
 	return m.descriptor
 }
 
@@ -319,7 +318,7 @@ func (m Metadata) Labels() *attribute.Set {
 // Accumulations to send to Processors. The Descriptor, Labels,
 // and Aggregator represent aggregate metric events received over a single
 // collection period.
-func NewAccumulation(descriptor *metric.Descriptor, labels *attribute.Set, aggregator Aggregator) Accumulation {
+func NewAccumulation(descriptor *sdkapi.Descriptor, labels *attribute.Set, aggregator Aggregator) Accumulation {
 	return Accumulation{
 		Metadata: Metadata{
 			descriptor: descriptor,
@@ -338,7 +337,7 @@ func (r Accumulation) Aggregator() Aggregator {
 // NewRecord allows Processor implementations to construct export
 // records.  The Descriptor, Labels, and Aggregator represent
 // aggregate metric events received over a single collection period.
-func NewRecord(descriptor *metric.Descriptor, labels *attribute.Set, aggregation aggregation.Aggregation, start, end time.Time) Record {
+func NewRecord(descriptor *sdkapi.Descriptor, labels *attribute.Set, aggregation aggregation.Aggregation, start, end time.Time) Record {
 	return Record{
 		Metadata: Metadata{
 			descriptor: descriptor,
@@ -441,12 +440,12 @@ func StatelessExportKindSelector() ExportKindSelector {
 }
 
 // ExportKindFor implements ExportKindSelector.
-func (c constantExportKindSelector) ExportKindFor(_ *metric.Descriptor, _ aggregation.Kind) ExportKind {
+func (c constantExportKindSelector) ExportKindFor(_ *sdkapi.Descriptor, _ aggregation.Kind) ExportKind {
 	return ExportKind(c)
 }
 
 // ExportKindFor implements ExportKindSelector.
-func (s statelessExportKindSelector) ExportKindFor(desc *metric.Descriptor, kind aggregation.Kind) ExportKind {
+func (s statelessExportKindSelector) ExportKindFor(desc *sdkapi.Descriptor, kind aggregation.Kind) ExportKind {
 	if kind == aggregation.SumKind && desc.InstrumentKind().PrecomputedSum() {
 		return CumulativeExportKind
 	}

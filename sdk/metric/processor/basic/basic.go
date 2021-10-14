@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
@@ -40,13 +40,13 @@ type (
 		// data for the same instrument, and this code has
 		// logic to combine data properly from multiple
 		// accumulators.  However, the use of
-		// *metric.Descriptor in the stateKey makes such
+		// *sdkapi.Descriptor in the stateKey makes such
 		// combination impossible, because each accumulator
 		// allocates its own instruments.  This can be fixed
 		// by using the instrument name and kind instead of
 		// the descriptor pointer.  See
 		// https://github.com/open-telemetry/opentelemetry-go/issues/862.
-		descriptor *metric.Descriptor
+		descriptor *sdkapi.Descriptor
 		distinct   attribute.Distinct
 	}
 

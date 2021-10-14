@@ -71,7 +71,7 @@ type (
 
 	testKey struct {
 		labels     string
-		descriptor *metric.Descriptor
+		descriptor *sdkapi.Descriptor
 	}
 
 	testImpl struct {
@@ -90,7 +90,7 @@ type (
 	}
 
 	SyncImpler interface {
-		SyncImpl() metric.SyncImpl
+		SyncImpl() sdkapi.SyncImpl
 	}
 
 	// lastValueState supports merging lastValue values, for the case
@@ -163,7 +163,7 @@ func (f *testFixture) startWorker(impl *Accumulator, meter metric.Meter, wg *syn
 	ctx := context.Background()
 	name := fmt.Sprint("test_", i)
 	instrument := f.impl.newInstrument(meter, name)
-	var descriptor *metric.Descriptor
+	var descriptor *sdkapi.Descriptor
 	if ii, ok := instrument.SyncImpl().(*syncInstrument); ok {
 		descriptor = &ii.descriptor
 	}
