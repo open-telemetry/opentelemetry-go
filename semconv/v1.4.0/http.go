@@ -58,10 +58,10 @@ func NetAttributesFromHTTPRequest(network string, request *http.Request) []attri
 		attrs = append(attrs, NetPeerNameKey.String(peerName))
 	}
 	if peerPort != 0 {
-		attrs = append(attrs, NetPeerPortKey.Int64(int64(peerPort)))
+		attrs = append(attrs, NetPeerPortKey.Int(peerPort))
 	}
 
-	hostIP, hostName, hostPort := "", "", uint64(0)
+	hostIP, hostName, hostPort := "", "", 0
 	for _, someHost := range []string{request.Host, request.Header.Get("Host"), request.URL.Host} {
 		hostIP, hostName, hostPort = hostIPNamePort(someHost)
 		if hostIP != "" || hostName != "" || hostPort != 0 {
@@ -75,7 +75,7 @@ func NetAttributesFromHTTPRequest(network string, request *http.Request) []attri
 		attrs = append(attrs, NetHostNameKey.String(hostName))
 	}
 	if hostPort != 0 {
-		attrs = append(attrs, NetHostPortKey.Int64(int64(hostPort)))
+		attrs = append(attrs, NetHostPortKey.Int(hostPort))
 	}
 
 	return attrs
@@ -85,9 +85,10 @@ func NetAttributesFromHTTPRequest(network string, request *http.Request) []attri
 // It handles both IPv4 and IPv6 addresses. If the host portion is not recognized
 // as a valid IPv4 or IPv6 address, the `ip` result will be empty and the
 // host portion will instead be returned in `name`.
-func hostIPNamePort(hostWithPort string) (ip string, name string, port uint64) {
+func hostIPNamePort(hostWithPort string) (ip string, name string, port int) {
 	var (
 		hostPart, portPart string
+		parsedPort         uint64
 		err                error
 	)
 	if hostPart, portPart, err = net.SplitHostPort(hostWithPort); err != nil {
@@ -98,8 +99,8 @@ func hostIPNamePort(hostWithPort string) (ip string, name string, port uint64) {
 	} else {
 		name = hostPart
 	}
-	if port, err = strconv.ParseUint(portPart, 10, 16); err != nil {
-		port = 0
+	if parsedPort, err = strconv.ParseUint(portPart, 10, 16); err == nil {
+		port = int(parsedPort)
 	}
 	return
 }
