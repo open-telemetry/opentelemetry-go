@@ -26,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -295,10 +296,7 @@ func (b *blockingExporter) Export(ctx context.Context, res *resource.Resource, o
 	return err
 }
 
-func (*blockingExporter) TemporalityFor(
-	*metric.Descriptor,
-	aggregation.Kind,
-) aggregation.Temporality {
+func (*blockingExporter) TemporalityFor(*sdkapi.Descriptor, aggregation.Kind) aggregation.Temporality {
 	return aggregation.CumulativeTemporality
 }
 

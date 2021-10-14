@@ -110,7 +110,7 @@ func asNumber(nkind number.Kind, value int64) number.Number {
 	return number.NewFloat64Number(float64(value))
 }
 
-func updateFor(t *testing.T, desc *metric.Descriptor, selector export.AggregatorSelector, value int64, labs ...attribute.KeyValue) export.Accumulation {
+func updateFor(t *testing.T, desc *sdkapi.Descriptor, selector export.AggregatorSelector, value int64, labs ...attribute.KeyValue) export.Accumulation {
 	ls := attribute.NewSet(labs...)
 	var agg export.Aggregator
 	selector.AggregatorFor(desc, &agg)
@@ -121,7 +121,7 @@ func updateFor(t *testing.T, desc *metric.Descriptor, selector export.Aggregator
 
 func testProcessor(
 	t *testing.T,
-	ekind aggregation.Temporality,
+	aggTemp aggregation.Temporality,
 	mkind sdkapi.InstrumentKind,
 	nkind number.Kind,
 	akind aggregation.Kind,
@@ -134,7 +134,7 @@ func testProcessor(
 	labs2 := []attribute.KeyValue{attribute.String("L2", "V")}
 
 	testBody := func(t *testing.T, hasMemory bool, nAccum, nCheckpoint int) {
-		processor := basic.New(selector, aggregation.ConstantTemporalitySelector(ekind), basic.WithMemory(hasMemory))
+		processor := basic.New(selector, aggregation.ConstantTemporalitySelector(aggTemp), basic.WithMemory(hasMemory))
 
 		instSuffix := fmt.Sprint(".", strings.ToLower(akind.String()))
 
@@ -166,7 +166,7 @@ func testProcessor(
 				_, canSub := subr.(export.Subtractor)
 
 				// Allow unsupported subraction case only when it is called for.
-				require.True(t, mkind.PrecomputedSum() && ekind == aggregation.DeltaTemporality && !canSub)
+				require.True(t, mkind.PrecomputedSum() && aggTemp == aggregation.DeltaTemporality && !canSub)
 				return
 			} else if err != nil {
 				t.Fatal("unexpected FinishCollection error: ", err)
@@ -190,7 +190,7 @@ func testProcessor(
 
 				// Test the final checkpoint state.
 				records1 := processorTest.NewOutput(attribute.DefaultEncoder())
-				err = reader.ForEach(aggregation.ConstantTemporalitySelector(ekind), records1.AddRecord)
+				err = reader.ForEach(aggregation.ConstantTemporalitySelector(aggTemp), records1.AddRecord)
 
 				// Test for an allowed error:
 				if err != nil && err != aggregation.ErrNoSubtraction {
@@ -203,7 +203,7 @@ func testProcessor(
 					// number of Accumulators, unless LastValue aggregation.
 					// If a precomputed sum, we expect cumulative inputs.
 					if mkind.PrecomputedSum() {
-						if ekind == aggregation.DeltaTemporality && akind != aggregation.LastValueKind {
+						if aggTemp == aggregation.DeltaTemporality && akind != aggregation.LastValueKind {
 							multiplier = int64(nAccum)
 						} else if akind == aggregation.LastValueKind {
 							multiplier = cumulativeMultiplier
@@ -211,7 +211,7 @@ func testProcessor(
 							multiplier = cumulativeMultiplier * int64(nAccum)
 						}
 					} else {
-						if ekind == aggregation.CumulativeTemporality && akind != aggregation.LastValueKind {
+						if aggTemp == aggregation.CumulativeTemporality && akind != aggregation.LastValueKind {
 							multiplier = cumulativeMultiplier * int64(nAccum)
 						} else if akind == aggregation.LastValueKind {
 							multiplier = 1
@@ -223,7 +223,7 @@ func testProcessor(
 					// Synchronous accumulate results from multiple accumulators,
 					// use that number as the baseline multiplier.
 					multiplier = int64(nAccum)
-					if ekind == aggregation.CumulativeTemporality {
+					if aggTemp == aggregation.CumulativeTemporality {
 						// If a cumulative exporter, include prior checkpoints.
 						multiplier *= cumulativeMultiplier
 					}
@@ -265,7 +265,7 @@ func testProcessor(
 
 type bogusExporter struct{}
 
-func (bogusExporter) TemporalityFor(*metric.Descriptor, aggregation.Kind) aggregation.Temporality {
+func (bogusExporter) TemporalityFor(*sdkapi.Descriptor, aggregation.Kind) aggregation.Temporality {
 	return 100
 }
 
@@ -370,12 +370,12 @@ func TestBasicTimestamps(t *testing.T) {
 }
 
 func TestStatefulNoMemoryCumulative(t *testing.T) {
-	ekindSel := aggregation.CumulativeTemporalitySelector()
+	aggTempSel := aggregation.CumulativeTemporalitySelector()
 
 	desc := metrictest.NewDescriptor("inst.sum", sdkapi.CounterInstrumentKind, number.Int64Kind)
 	selector := processorTest.AggregatorSelector()
 
-	processor := basic.New(selector, ekindSel, basic.WithMemory(false))
+	processor := basic.New(selector, aggTempSel, basic.WithMemory(false))
 	reader := processor.Reader()
 
 	for i := 1; i < 3; i++ {
@@ -385,7 +385,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 
 		// Verify zero elements
 		records := processorTest.NewOutput(attribute.DefaultEncoder())
-		require.NoError(t, reader.ForEach(ekindSel, records.AddRecord))
+		require.NoError(t, reader.ForEach(aggTempSel, records.AddRecord))
 		require.EqualValues(t, map[string]float64{}, records.Map())
 
 		// Add 10
@@ -395,7 +395,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 
 		// Verify one element
 		records = processorTest.NewOutput(attribute.DefaultEncoder())
-		require.NoError(t, reader.ForEach(ekindSel, records.AddRecord))
+		require.NoError(t, reader.ForEach(aggTempSel, records.AddRecord))
 		require.EqualValues(t, map[string]float64{
 			"inst.sum/A=B/": float64(i * 10),
 		}, records.Map())
@@ -403,12 +403,12 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 }
 
 func TestStatefulNoMemoryDelta(t *testing.T) {
-	ekindSel := aggregation.DeltaTemporalitySelector()
+	aggTempSel := aggregation.DeltaTemporalitySelector()
 
 	desc := metrictest.NewDescriptor("inst.sum", sdkapi.CounterObserverInstrumentKind, number.Int64Kind)
 	selector := processorTest.AggregatorSelector()
 
-	processor := basic.New(selector, ekindSel, basic.WithMemory(false))
+	processor := basic.New(selector, aggTempSel, basic.WithMemory(false))
 	reader := processor.Reader()
 
 	for i := 1; i < 3; i++ {
@@ -418,7 +418,7 @@ func TestStatefulNoMemoryDelta(t *testing.T) {
 
 		// Verify zero elements
 		records := processorTest.NewOutput(attribute.DefaultEncoder())
-		require.NoError(t, reader.ForEach(ekindSel, records.AddRecord))
+		require.NoError(t, reader.ForEach(aggTempSel, records.AddRecord))
 		require.EqualValues(t, map[string]float64{}, records.Map())
 
 		// Add 10
@@ -428,7 +428,7 @@ func TestStatefulNoMemoryDelta(t *testing.T) {
 
 		// Verify one element
 		records = processorTest.NewOutput(attribute.DefaultEncoder())
-		require.NoError(t, reader.ForEach(ekindSel, records.AddRecord))
+		require.NoError(t, reader.ForEach(aggTempSel, records.AddRecord))
 		require.EqualValues(t, map[string]float64{
 			"inst.sum/A=B/": 10,
 		}, records.Map())
@@ -436,7 +436,7 @@ func TestStatefulNoMemoryDelta(t *testing.T) {
 }
 
 func TestMultiObserverSum(t *testing.T) {
-	for _, ekindSel := range []aggregation.TemporalitySelector{
+	for _, aggTempSel := range []aggregation.TemporalitySelector{
 		aggregation.CumulativeTemporalitySelector(),
 		aggregation.DeltaTemporalitySelector(),
 	} {
@@ -444,7 +444,7 @@ func TestMultiObserverSum(t *testing.T) {
 		desc := metrictest.NewDescriptor("observe.sum", sdkapi.CounterObserverInstrumentKind, number.Int64Kind)
 		selector := processorTest.AggregatorSelector()
 
-		processor := basic.New(selector, ekindSel, basic.WithMemory(false))
+		processor := basic.New(selector, aggTempSel, basic.WithMemory(false))
 		reader := processor.Reader()
 
 		for i := 1; i < 3; i++ {
@@ -457,13 +457,13 @@ func TestMultiObserverSum(t *testing.T) {
 
 			// Multiplier is 1 for deltas, otherwise i.
 			multiplier := i
-			if ekindSel.TemporalityFor(&desc, aggregation.SumKind) == aggregation.DeltaTemporality {
+			if aggTempSel.TemporalityFor(&desc, aggregation.SumKind) == aggregation.DeltaTemporality {
 				multiplier = 1
 			}
 
 			// Verify one element
 			records := processorTest.NewOutput(attribute.DefaultEncoder())
-			require.NoError(t, reader.ForEach(ekindSel, records.AddRecord))
+			require.NoError(t, reader.ForEach(aggTempSel, records.AddRecord))
 			require.EqualValues(t, map[string]float64{
 				"observe.sum/A=B/": float64(3 * 10 * multiplier),
 			}, records.Map())

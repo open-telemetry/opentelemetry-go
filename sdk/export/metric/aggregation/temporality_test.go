@@ -29,12 +29,12 @@ func TestTemporalityIncludes(t *testing.T) {
 	require.True(t, DeltaTemporality.Includes(CumulativeTemporality|DeltaTemporality))
 }
 
-var deltaMemoryKinds = []sdkapi.InstrumentKind{
+var deltaMemoryTemporalties = []sdkapi.InstrumentKind{
 	sdkapi.CounterObserverInstrumentKind,
 	sdkapi.UpDownCounterObserverInstrumentKind,
 }
 
-var cumulativeMemoryKinds = []sdkapi.InstrumentKind{
+var cumulativeMemoryTemporalties = []sdkapi.InstrumentKind{
 	sdkapi.HistogramInstrumentKind,
 	sdkapi.GaugeObserverInstrumentKind,
 	sdkapi.CounterInstrumentKind,
@@ -42,23 +42,23 @@ var cumulativeMemoryKinds = []sdkapi.InstrumentKind{
 }
 
 func TestTemporalityMemoryRequired(t *testing.T) {
-	for _, kind := range deltaMemoryKinds {
+	for _, kind := range deltaMemoryTemporalties {
 		require.True(t, DeltaTemporality.MemoryRequired(kind))
 		require.False(t, CumulativeTemporality.MemoryRequired(kind))
 	}
 
-	for _, kind := range cumulativeMemoryKinds {
+	for _, kind := range cumulativeMemoryTemporalties {
 		require.True(t, CumulativeTemporality.MemoryRequired(kind))
 		require.False(t, DeltaTemporality.MemoryRequired(kind))
 	}
 }
 
 func TestTemporalitySelectors(t *testing.T) {
-	ceks := CumulativeTemporalitySelector()
-	deks := DeltaTemporalitySelector()
-	seks := StatelessTemporalitySelector()
+	cAggTemp := CumulativeTemporalitySelector()
+	dAggTemp := DeltaTemporalitySelector()
+	sAggTemp := StatelessTemporalitySelector()
 
-	for _, ikind := range append(deltaMemoryKinds, cumulativeMemoryKinds...) {
+	for _, ikind := range append(deltaMemoryTemporalties, cumulativeMemoryTemporalties...) {
 		desc := metrictest.NewDescriptor("instrument", ikind, number.Int64Kind)
 
 		var akind Kind
@@ -67,8 +67,8 @@ func TestTemporalitySelectors(t *testing.T) {
 		} else {
 			akind = HistogramKind
 		}
-		require.Equal(t, CumulativeTemporality, ceks.TemporalityFor(&desc, akind))
-		require.Equal(t, DeltaTemporality, deks.TemporalityFor(&desc, akind))
-		require.False(t, seks.TemporalityFor(&desc, akind).MemoryRequired(ikind))
+		require.Equal(t, CumulativeTemporality, cAggTemp.TemporalityFor(&desc, akind))
+		require.Equal(t, DeltaTemporality, dAggTemp.TemporalityFor(&desc, akind))
+		require.False(t, sAggTemp.TemporalityFor(&desc, akind).MemoryRequired(ikind))
 	}
 }

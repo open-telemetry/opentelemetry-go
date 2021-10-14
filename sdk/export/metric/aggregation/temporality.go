@@ -17,7 +17,6 @@
 package aggregation // import "go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 
 import (
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 )
 
@@ -95,12 +94,12 @@ func StatelessTemporalitySelector() TemporalitySelector {
 }
 
 // TemporalityFor implements TemporalitySelector.
-func (c constantTemporalitySelector) TemporalityFor(_ *metric.Descriptor, _ Kind) Temporality {
+func (c constantTemporalitySelector) TemporalityFor(_ *sdkapi.Descriptor, _ Kind) Temporality {
 	return Temporality(c)
 }
 
 // TemporalityFor implements TemporalitySelector.
-func (s statelessTemporalitySelector) TemporalityFor(desc *metric.Descriptor, kind Kind) Temporality {
+func (s statelessTemporalitySelector) TemporalityFor(desc *sdkapi.Descriptor, kind Kind) Temporality {
 	if kind == SumKind && desc.InstrumentKind().PrecomputedSum() {
 		return CumulativeTemporality
 	}
@@ -114,5 +113,5 @@ type TemporalitySelector interface {
 	// TemporalityFor should return the correct Temporality that
 	// should be used when exporting data for the given metric
 	// instrument and Aggregator kind.
-	TemporalityFor(descriptor *metric.Descriptor, aggregationKind Kind) Temporality
+	TemporalityFor(descriptor *sdkapi.Descriptor, aggregationKind Kind) Temporality
 }

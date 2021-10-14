@@ -12,27 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
+package sdkapi
 
 import (
-	"os"
 	"testing"
-	"unsafe"
 
-	"go.opentelemetry.io/otel/internal/internaltest"
+	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/unit"
 )
 
-// Ensure struct alignment prior to running tests.
-func TestMain(m *testing.M) {
-	fields := []internaltest.FieldOffset{
-		{
-			Name:   "Measurement.number",
-			Offset: unsafe.Offsetof(Measurement{}.number),
-		},
-	}
-	if !internaltest.Aligned8Byte(fields, os.Stderr) {
-		os.Exit(1)
-	}
-
-	os.Exit(m.Run())
+func TestDescriptorGetters(t *testing.T) {
+	d := NewDescriptor("name", HistogramInstrumentKind, number.Int64Kind, "my description", "my unit")
+	require.Equal(t, "name", d.Name())
+	require.Equal(t, HistogramInstrumentKind, d.InstrumentKind())
+	require.Equal(t, number.Int64Kind, d.NumberKind())
+	require.Equal(t, "my description", d.Description())
+	require.Equal(t, unit.Unit("my unit"), d.Unit())
 }

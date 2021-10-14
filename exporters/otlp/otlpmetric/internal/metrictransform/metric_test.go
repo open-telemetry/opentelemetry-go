@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
@@ -101,18 +100,18 @@ func TestStringKeyValues(t *testing.T) {
 }
 
 func TestMinMaxSumCountValue(t *testing.T) {
-	mmscs := minmaxsumcount.New(2, &metric.Descriptor{})
+	mmscs := minmaxsumcount.New(2, &sdkapi.Descriptor{})
 	mmsc, ckpt := &mmscs[0], &mmscs[1]
 
-	assert.NoError(t, mmsc.Update(context.Background(), 1, &metric.Descriptor{}))
-	assert.NoError(t, mmsc.Update(context.Background(), 10, &metric.Descriptor{}))
+	assert.NoError(t, mmsc.Update(context.Background(), 1, &sdkapi.Descriptor{}))
+	assert.NoError(t, mmsc.Update(context.Background(), 10, &sdkapi.Descriptor{}))
 
 	// Prior to checkpointing ErrNoData should be returned.
 	_, _, _, _, err := minMaxSumCountValues(ckpt)
 	assert.EqualError(t, err, aggregation.ErrNoData.Error())
 
 	// Checkpoint to set non-zero values
-	require.NoError(t, mmsc.SynchronizedMove(ckpt, &metric.Descriptor{}))
+	require.NoError(t, mmsc.SynchronizedMove(ckpt, &sdkapi.Descriptor{}))
 	min, max, sum, count, err := minMaxSumCountValues(ckpt)
 	if assert.NoError(t, err) {
 		assert.Equal(t, min, number.NewInt64Number(1))
@@ -125,7 +124,7 @@ func TestMinMaxSumCountValue(t *testing.T) {
 func TestMinMaxSumCountDatapoints(t *testing.T) {
 	desc := metrictest.NewDescriptor("", sdkapi.HistogramInstrumentKind, number.Int64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
-	mmscs := minmaxsumcount.New(2, &metric.Descriptor{})
+	mmscs := minmaxsumcount.New(2, &sdkapi.Descriptor{})
 	mmsc, ckpt := &mmscs[0], &mmscs[1]
 
 	assert.NoError(t, mmsc.Update(context.Background(), 1, &desc))
@@ -172,7 +171,7 @@ func TestMinMaxSumCountPropagatesErrors(t *testing.T) {
 	// ErrNoData should be returned by both the Min and Max values of
 	// a MinMaxSumCount Aggregator. Use this fact to check the error is
 	// correctly returned.
-	mmsc := &minmaxsumcount.New(1, &metric.Descriptor{})[0]
+	mmsc := &minmaxsumcount.New(1, &sdkapi.Descriptor{})[0]
 	_, _, _, _, err := minMaxSumCountValues(mmsc)
 	assert.Error(t, err)
 	assert.Equal(t, aggregation.ErrNoData, err)
@@ -390,13 +389,13 @@ func (t *testAgg) Aggregation() aggregation.Aggregation {
 
 // None of these three are used:
 
-func (t *testAgg) Update(ctx context.Context, number number.Number, descriptor *metric.Descriptor) error {
+func (t *testAgg) Update(ctx context.Context, number number.Number, descriptor *sdkapi.Descriptor) error {
 	return nil
 }
-func (t *testAgg) SynchronizedMove(destination export.Aggregator, descriptor *metric.Descriptor) error {
+func (t *testAgg) SynchronizedMove(destination export.Aggregator, descriptor *sdkapi.Descriptor) error {
 	return nil
 }
-func (t *testAgg) Merge(aggregator export.Aggregator, descriptor *metric.Descriptor) error {
+func (t *testAgg) Merge(aggregator export.Aggregator, descriptor *sdkapi.Descriptor) error {
 	return nil
 }
 

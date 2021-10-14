@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -140,7 +139,7 @@ func TestSynchronizedMoveReset(t *testing.T) {
 	aggregatortest.SynchronizedMoveResetTest(
 		t,
 		sdkapi.GaugeObserverInstrumentKind,
-		func(desc *metric.Descriptor) export.Aggregator {
+		func(desc *sdkapi.Descriptor) export.Aggregator {
 			return &New(1)[0]
 		},
 	)

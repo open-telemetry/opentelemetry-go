@@ -20,7 +20,7 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/metrictransform"
-	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -96,8 +96,8 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	return err
 }
 
-func (e *Exporter) TemporalityFor(descriptor *metric.Descriptor, aggregatorKind aggregation.Kind) aggregation.Temporality {
-	return e.temporalitySelector.TemporalityFor(descriptor, aggregatorKind)
+func (e *Exporter) TemporalityFor(descriptor *sdkapi.Descriptor, kind aggregation.Kind) aggregation.Temporality {
+	return e.temporalitySelector.TemporalityFor(descriptor, kind)
 }
 
 var _ metricsdk.Exporter = (*Exporter)(nil)

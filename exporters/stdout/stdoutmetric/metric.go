@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	exportmetric "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -47,7 +47,7 @@ type line struct {
 	Timestamp *time.Time `json:"Timestamp,omitempty"`
 }
 
-func (e *metricExporter) TemporalityFor(desc *metric.Descriptor, kind aggregation.Kind) aggregation.Temporality {
+func (e *metricExporter) TemporalityFor(desc *sdkapi.Descriptor, kind aggregation.Kind) aggregation.Temporality {
 	return aggregation.StatelessTemporalitySelector().TemporalityFor(desc, kind)
 }
 

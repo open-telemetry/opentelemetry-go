@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -40,7 +40,7 @@ type (
 	// unique descriptor, distinct labels, and distinct resource
 	// attributes.
 	mapKey struct {
-		desc     *metric.Descriptor
+		desc     *sdkapi.Descriptor
 		labels   attribute.Distinct
 		resource attribute.Distinct
 	}
@@ -181,7 +181,7 @@ func AggregatorSelector() export.AggregatorSelector {
 }
 
 // AggregatorFor implements export.AggregatorSelector.
-func (testAggregatorSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+func (testAggregatorSelector) AggregatorFor(desc *sdkapi.Descriptor, aggPtrs ...*export.Aggregator) {
 
 	switch {
 	case strings.HasSuffix(desc.Name(), ".disabled"):

@@ -21,7 +21,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
@@ -41,7 +40,7 @@ func TestInconsistentAggregatorErr(t *testing.T) {
 	require.True(t, errors.Is(err, aggregation.ErrInconsistentType))
 }
 
-func testRangeNaN(t *testing.T, desc *metric.Descriptor) {
+func testRangeNaN(t *testing.T, desc *sdkapi.Descriptor) {
 	// If the descriptor uses int64 numbers, this won't register as NaN
 	nan := number.NewFloat64Number(math.NaN())
 	err := aggregator.RangeTest(nan, desc)
@@ -53,7 +52,7 @@ func testRangeNaN(t *testing.T, desc *metric.Descriptor) {
 	}
 }
 
-func testRangeNegative(t *testing.T, desc *metric.Descriptor) {
+func testRangeNegative(t *testing.T, desc *sdkapi.Descriptor) {
 	var neg, pos number.Number
 
 	if desc.NumberKind() == number.Float64Kind {
