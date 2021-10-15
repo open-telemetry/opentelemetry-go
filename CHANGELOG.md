@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Adds `otlptracegrpc.WithGRPCConn` and `otlpmetricgrpc.WithGRPCConn` for reusing existing gRPC connection. (#2002)
+- Added a new `schema` module to help parse Schema Files in OTEP 0152 format. (#2267)
 
 ## [1.0.1] - 2021-10-01
 
