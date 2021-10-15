@@ -190,7 +190,7 @@ func TestSumIntDataPoints(t *testing.T) {
 	value, err := ckpt.Sum()
 	require.NoError(t, err)
 
-	if m, err := sumPoint(record, value, record.StartTime(), record.EndTime(), export.CumulativeExportKind, true); assert.NoError(t, err) {
+	if m, err := sumPoint(record, value, record.StartTime(), record.EndTime(), aggregation.CumulativeTemporality, true); assert.NoError(t, err) {
 		assert.Nil(t, m.GetGauge())
 		assert.Equal(t, &metricpb.Sum{
 			AggregationTemporality: otelCumulative,
@@ -229,7 +229,7 @@ func TestSumFloatDataPoints(t *testing.T) {
 	value, err := ckpt.Sum()
 	require.NoError(t, err)
 
-	if m, err := sumPoint(record, value, record.StartTime(), record.EndTime(), export.DeltaExportKind, false); assert.NoError(t, err) {
+	if m, err := sumPoint(record, value, record.StartTime(), record.EndTime(), aggregation.DeltaTemporality, false); assert.NoError(t, err) {
 		assert.Nil(t, m.GetGauge())
 		assert.Equal(t, &metricpb.Sum{
 			IsMonotonic:            false,
@@ -367,7 +367,7 @@ func TestSumErrUnknownValueType(t *testing.T) {
 	value, err := s.Sum()
 	require.NoError(t, err)
 
-	_, err = sumPoint(record, value, record.StartTime(), record.EndTime(), export.CumulativeExportKind, true)
+	_, err = sumPoint(record, value, record.StartTime(), record.EndTime(), aggregation.CumulativeTemporality, true)
 	assert.Error(t, err)
 	if !errors.Is(err, ErrUnknownValueType) {
 		t.Errorf("expected ErrUnknownValueType, got %v", err)
@@ -451,7 +451,7 @@ func TestRecordAggregatorIncompatibleErrors(t *testing.T) {
 			kind: kind,
 			agg:  agg,
 		}
-		return Record(export.CumulativeExportKindSelector(), export.NewRecord(&desc, &labels, test, intervalStart, intervalEnd))
+		return Record(aggregation.CumulativeTemporalitySelector(), export.NewRecord(&desc, &labels, test, intervalStart, intervalEnd))
 	}
 
 	mpb, err := makeMpb(aggregation.SumKind, &lastvalue.New(1)[0])
@@ -483,7 +483,7 @@ func TestRecordAggregatorUnexpectedErrors(t *testing.T) {
 	makeMpb := func(kind aggregation.Kind, agg aggregation.Aggregation) (*metricpb.Metric, error) {
 		desc := metrictest.NewDescriptor("things", sdkapi.CounterInstrumentKind, number.Int64Kind)
 		labels := attribute.NewSet()
-		return Record(export.CumulativeExportKindSelector(), export.NewRecord(&desc, &labels, agg, intervalStart, intervalEnd))
+		return Record(aggregation.CumulativeTemporalitySelector(), export.NewRecord(&desc, &labels, agg, intervalStart, intervalEnd))
 	}
 
 	errEx := fmt.Errorf("timeout")

@@ -47,8 +47,8 @@ type line struct {
 	Timestamp *time.Time `json:"Timestamp,omitempty"`
 }
 
-func (e *metricExporter) ExportKindFor(desc *sdkapi.Descriptor, kind aggregation.Kind) exportmetric.ExportKind {
-	return exportmetric.StatelessExportKindSelector().ExportKindFor(desc, kind)
+func (e *metricExporter) TemporalityFor(desc *sdkapi.Descriptor, kind aggregation.Kind) aggregation.Temporality {
+	return aggregation.StatelessTemporalitySelector().TemporalityFor(desc, kind)
 }
 
 func (e *metricExporter) Export(_ context.Context, res *resource.Resource, reader exportmetric.InstrumentationLibraryReader) error {

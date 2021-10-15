@@ -45,7 +45,7 @@ func getMap(t *testing.T, cont *controller.Controller) map[string]float64 {
 	require.NoError(t, cont.ForEach(
 		func(_ instrumentation.Library, reader export.Reader) error {
 			return reader.ForEach(
-				export.CumulativeExportKindSelector(),
+				aggregation.CumulativeTemporalitySelector(),
 				func(record export.Record) error {
 					return out.AddRecord(record)
 				},
@@ -115,7 +115,7 @@ func TestControllerUsesResource(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
-			sel := export.CumulativeExportKindSelector()
+			sel := aggregation.CumulativeTemporalitySelector()
 			exp := processortest.New(sel, attribute.DefaultEncoder())
 			cont := controller.New(
 				processor.NewFactory(
@@ -145,7 +145,7 @@ func TestStartNoExporter(t *testing.T) {
 	cont := controller.New(
 		processor.NewFactory(
 			processortest.AggregatorSelector(),
-			export.CumulativeExportKindSelector(),
+			aggregation.CumulativeTemporalitySelector(),
 		),
 		controller.WithCollectPeriod(time.Second),
 		controller.WithResource(resource.Empty()),
@@ -214,7 +214,7 @@ func TestObserverCanceled(t *testing.T) {
 	cont := controller.New(
 		processor.NewFactory(
 			processortest.AggregatorSelector(),
-			export.CumulativeExportKindSelector(),
+			aggregation.CumulativeTemporalitySelector(),
 		),
 		controller.WithCollectPeriod(0),
 		controller.WithCollectTimeout(time.Millisecond),
@@ -246,7 +246,7 @@ func TestObserverContext(t *testing.T) {
 	cont := controller.New(
 		processor.NewFactory(
 			processortest.AggregatorSelector(),
-			export.CumulativeExportKindSelector(),
+			aggregation.CumulativeTemporalitySelector(),
 		),
 		controller.WithCollectTimeout(0),
 		controller.WithResource(resource.Empty()),
@@ -278,7 +278,7 @@ type blockingExporter struct {
 func newBlockingExporter() *blockingExporter {
 	return &blockingExporter{
 		exporter: processortest.New(
-			export.CumulativeExportKindSelector(),
+			aggregation.CumulativeTemporalitySelector(),
 			attribute.DefaultEncoder(),
 		),
 	}
@@ -296,11 +296,8 @@ func (b *blockingExporter) Export(ctx context.Context, res *resource.Resource, o
 	return err
 }
 
-func (*blockingExporter) ExportKindFor(
-	*sdkapi.Descriptor,
-	aggregation.Kind,
-) export.ExportKind {
-	return export.CumulativeExportKind
+func (*blockingExporter) TemporalityFor(*sdkapi.Descriptor, aggregation.Kind) aggregation.Temporality {
+	return aggregation.CumulativeTemporality
 }
 
 func TestExportTimeout(t *testing.T) {
@@ -308,7 +305,7 @@ func TestExportTimeout(t *testing.T) {
 	cont := controller.New(
 		processor.NewFactory(
 			processortest.AggregatorSelector(),
-			export.CumulativeExportKindSelector(),
+			aggregation.CumulativeTemporalitySelector(),
 		),
 		controller.WithCollectPeriod(time.Second),
 		controller.WithPushTimeout(time.Millisecond),
@@ -357,7 +354,7 @@ func TestExportTimeout(t *testing.T) {
 
 func TestCollectAfterStopThenStartAgain(t *testing.T) {
 	exp := processortest.New(
-		export.CumulativeExportKindSelector(),
+		aggregation.CumulativeTemporalitySelector(),
 		attribute.DefaultEncoder(),
 	)
 	cont := controller.New(
@@ -436,7 +433,7 @@ func TestCollectAfterStopThenStartAgain(t *testing.T) {
 
 func TestRegistryFunction(t *testing.T) {
 	exp := processortest.New(
-		export.CumulativeExportKindSelector(),
+		aggregation.CumulativeTemporalitySelector(),
 		attribute.DefaultEncoder(),
 	)
 	cont := controller.New(

@@ -28,7 +28,7 @@ import (
 
 type (
 	Processor struct {
-		export.ExportKindSelector
+		aggregation.TemporalitySelector
 		export.AggregatorSelector
 
 		state
@@ -118,32 +118,32 @@ var _ export.Reader = &state{}
 // ErrInconsistentState is returned when the sequence of collection's starts and finishes are incorrectly balanced.
 var ErrInconsistentState = fmt.Errorf("inconsistent processor state")
 
-// ErrInvalidExportKind is returned for unknown metric.ExportKind.
-var ErrInvalidExportKind = fmt.Errorf("invalid export kind")
+// ErrInvalidTemporality is returned for unknown metric.Temporality.
+var ErrInvalidTemporality = fmt.Errorf("invalid aggregation temporality")
 
 // New returns a basic Processor that is also a Checkpointer using the provided
-// AggregatorSelector to select Aggregators.  The ExportKindSelector
+// AggregatorSelector to select Aggregators.  The TemporalitySelector
 // is consulted to determine the kind(s) of exporter that will consume
 // data, so that this Processor can prepare to compute Delta or
 // Cumulative Aggregations as needed.
-func New(aselector export.AggregatorSelector, eselector export.ExportKindSelector, opts ...Option) *Processor {
-	return NewFactory(aselector, eselector, opts...).NewCheckpointer().(*Processor)
+func New(aselector export.AggregatorSelector, tselector aggregation.TemporalitySelector, opts ...Option) *Processor {
+	return NewFactory(aselector, tselector, opts...).NewCheckpointer().(*Processor)
 }
 
 type factory struct {
 	aselector export.AggregatorSelector
-	eselector export.ExportKindSelector
+	tselector aggregation.TemporalitySelector
 	config    config
 }
 
-func NewFactory(aselector export.AggregatorSelector, eselector export.ExportKindSelector, opts ...Option) export.CheckpointerFactory {
+func NewFactory(aselector export.AggregatorSelector, tselector aggregation.TemporalitySelector, opts ...Option) export.CheckpointerFactory {
 	var config config
 	for _, opt := range opts {
 		opt.applyProcessor(&config)
 	}
 	return factory{
 		aselector: aselector,
-		eselector: eselector,
+		tselector: tselector,
 		config:    config,
 	}
 }
@@ -153,8 +153,8 @@ var _ export.CheckpointerFactory = factory{}
 func (f factory) NewCheckpointer() export.Checkpointer {
 	now := time.Now()
 	p := &Processor{
-		AggregatorSelector: f.aselector,
-		ExportKindSelector: f.eselector,
+		AggregatorSelector:  f.aselector,
+		TemporalitySelector: f.tselector,
 		state: state{
 			values:        map[stateKey]*stateValue{},
 			processStart:  now,
@@ -181,7 +181,7 @@ func (b *Processor) Process(accum export.Accumulation) error {
 	// Check if there is an existing value.
 	value, ok := b.state.values[key]
 	if !ok {
-		stateful := b.ExportKindFor(desc, agg.Aggregation().Kind()).MemoryRequired(desc.InstrumentKind())
+		stateful := b.TemporalityFor(desc, agg.Aggregation().Kind()).MemoryRequired(desc.InstrumentKind())
 
 		newValue := &stateValue{
 			labels:   accum.Labels(),
@@ -227,7 +227,7 @@ func (b *Processor) Process(accum export.Accumulation) error {
 	// instrument reports a PrecomputedSum to a DeltaExporter or
 	// the reverse, a non-PrecomputedSum instrument with a
 	// CumulativeExporter.  This logic is encapsulated in
-	// ExportKind.MemoryRequired(InstrumentKind).
+	// Temporality.MemoryRequired(InstrumentKind).
 	//
 	// Case (b) occurs when the variable `sameCollection` is true,
 	// indicating that the stateKey for Accumulation has already
@@ -340,7 +340,7 @@ func (b *Processor) FinishCollection() error {
 // ForEach iterates through the Reader, passing an
 // export.Record with the appropriate Cumulative or Delta aggregation
 // to an exporter.
-func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record) error) error {
+func (b *state) ForEach(exporter aggregation.TemporalitySelector, f func(export.Record) error) error {
 	if b.startedCollection != b.finishedCollection {
 		return ErrInconsistentState
 	}
@@ -356,9 +356,9 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 			continue
 		}
 
-		ekind := exporter.ExportKindFor(key.descriptor, value.current.Aggregation().Kind())
-		switch ekind {
-		case export.CumulativeExportKind:
+		aggTemp := exporter.TemporalityFor(key.descriptor, value.current.Aggregation().Kind())
+		switch aggTemp {
+		case aggregation.CumulativeTemporality:
 			// If stateful, the sum has been computed.  If stateless, the
 			// input was already cumulative.  Either way, use the checkpointed
 			// value:
@@ -369,7 +369,7 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 			}
 			start = b.processStart
 
-		case export.DeltaExportKind:
+		case aggregation.DeltaTemporality:
 			// Precomputed sums are a special case.
 			if mkind.PrecomputedSum() {
 				agg = value.delta.Aggregation()
@@ -379,7 +379,7 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 			start = b.intervalStart
 
 		default:
-			return fmt.Errorf("%v: %w", ekind, ErrInvalidExportKind)
+			return fmt.Errorf("%v: %w", aggTemp, ErrInvalidTemporality)
 		}
 
 		if err := f(export.NewRecord(
