@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate stringer -type=ExportKind
-
 package metric // import "go.opentelemetry.io/otel/sdk/export/metric"
 
 import (
@@ -219,20 +217,10 @@ type Exporter interface {
 	// Processor that just completed collection.
 	Export(ctx context.Context, resource *resource.Resource, reader InstrumentationLibraryReader) error
 
-	// ExportKindSelector is an interface used by the Processor
+	// TemporalitySelector is an interface used by the Processor
 	// in deciding whether to compute Delta or Cumulative
 	// Aggregations when passing Records to this Exporter.
-	ExportKindSelector
-}
-
-// ExportKindSelector is a sub-interface of Exporter used to indicate
-// whether the Processor should compute Delta or Cumulative
-// Aggregations.
-type ExportKindSelector interface {
-	// ExportKindFor should return the correct ExportKind that
-	// should be used when exporting data for the given metric
-	// instrument and Aggregator kind.
-	ExportKindFor(descriptor *sdkapi.Descriptor, aggregatorKind aggregation.Kind) ExportKind
+	aggregation.TemporalitySelector
 }
 
 // InstrumentationLibraryReader is an interface for exporters to iterate
@@ -254,7 +242,7 @@ type Reader interface {
 	// period. Each aggregated checkpoint returned by the
 	// function parameter may return an error.
 	//
-	// The ExportKindSelector argument is used to determine
+	// The TemporalitySelector argument is used to determine
 	// whether the Record is computed using Delta or Cumulative
 	// aggregation.
 	//
@@ -262,7 +250,7 @@ type Reader interface {
 	// expected from the Meter implementation. Any other kind
 	// of error will immediately halt ForEach and return
 	// the error to the caller.
-	ForEach(kindSelector ExportKindSelector, recordFunc func(Record) error) error
+	ForEach(tempSelector aggregation.TemporalitySelector, recordFunc func(Record) error) error
 
 	// Locker supports locking the checkpoint set.  Collection
 	// into the checkpoint set cannot take place (in case of a
@@ -363,91 +351,4 @@ func (r Record) StartTime() time.Time {
 // EndTime is the end time of the interval covered by this aggregation.
 func (r Record) EndTime() time.Time {
 	return r.end
-}
-
-// ExportKind indicates the kind of data exported by an exporter.
-// These bits may be OR-d together when multiple exporters are in use.
-type ExportKind int
-
-const (
-	// CumulativeExportKind indicates that an Exporter expects a
-	// Cumulative Aggregation.
-	CumulativeExportKind ExportKind = 1
-
-	// DeltaExportKind indicates that an Exporter expects a
-	// Delta Aggregation.
-	DeltaExportKind ExportKind = 2
-)
-
-// Includes tests whether `kind` includes a specific kind of
-// exporter.
-func (kind ExportKind) Includes(has ExportKind) bool {
-	return kind&has != 0
-}
-
-// MemoryRequired returns whether an exporter of this kind requires
-// memory to export correctly.
-func (kind ExportKind) MemoryRequired(mkind sdkapi.InstrumentKind) bool {
-	switch mkind {
-	case sdkapi.HistogramInstrumentKind, sdkapi.GaugeObserverInstrumentKind,
-		sdkapi.CounterInstrumentKind, sdkapi.UpDownCounterInstrumentKind:
-		// Delta-oriented instruments:
-		return kind.Includes(CumulativeExportKind)
-
-	case sdkapi.CounterObserverInstrumentKind, sdkapi.UpDownCounterObserverInstrumentKind:
-		// Cumulative-oriented instruments:
-		return kind.Includes(DeltaExportKind)
-	}
-	// Something unexpected is happening--we could panic.  This
-	// will become an error when the exporter tries to access a
-	// checkpoint, presumably, so let it be.
-	return false
-}
-
-type (
-	constantExportKindSelector  ExportKind
-	statelessExportKindSelector struct{}
-)
-
-var (
-	_ ExportKindSelector = constantExportKindSelector(0)
-	_ ExportKindSelector = statelessExportKindSelector{}
-)
-
-// ConstantExportKindSelector returns an ExportKindSelector that returns
-// a constant ExportKind, one that is either always cumulative or always delta.
-func ConstantExportKindSelector(kind ExportKind) ExportKindSelector {
-	return constantExportKindSelector(kind)
-}
-
-// CumulativeExportKindSelector returns an ExportKindSelector that
-// always returns CumulativeExportKind.
-func CumulativeExportKindSelector() ExportKindSelector {
-	return ConstantExportKindSelector(CumulativeExportKind)
-}
-
-// DeltaExportKindSelector returns an ExportKindSelector that
-// always returns DeltaExportKind.
-func DeltaExportKindSelector() ExportKindSelector {
-	return ConstantExportKindSelector(DeltaExportKind)
-}
-
-// StatelessExportKindSelector returns an ExportKindSelector that
-// always returns the ExportKind that avoids long-term memory
-// requirements.
-func StatelessExportKindSelector() ExportKindSelector {
-	return statelessExportKindSelector{}
-}
-
-// ExportKindFor implements ExportKindSelector.
-func (c constantExportKindSelector) ExportKindFor(_ *sdkapi.Descriptor, _ aggregation.Kind) ExportKind {
-	return ExportKind(c)
-}
-
-// ExportKindFor implements ExportKindSelector.
-func (s statelessExportKindSelector) ExportKindFor(desc *sdkapi.Descriptor, kind aggregation.Kind) ExportKind {
-	if kind == aggregation.SumKind && desc.InstrumentKind().PrecomputedSum() {
-		return CumulativeExportKind
-	}
-	return DeltaExportKind
 }
