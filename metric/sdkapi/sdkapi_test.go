@@ -12,19 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric // import "go.opentelemetry.io/otel/metric"
+package sdkapi
 
-type noopMeterProvider struct{}
+import (
+	"testing"
 
-// NewNoopMeterProvider returns an implementation of MeterProvider that
-// performs no operations. The Meter and Instrument created from the returned
-// MeterProvider also perform no operations.
-func NewNoopMeterProvider() MeterProvider {
-	return noopMeterProvider{}
+	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel/metric/number"
+)
+
+func TestMeasurementGetters(t *testing.T) {
+	num := number.NewFloat64Number(1.5)
+	si := NewNoopSyncInstrument()
+	meas := NewMeasurement(si, num)
+
+	require.Equal(t, si, meas.SyncImpl())
+	require.Equal(t, num, meas.Number())
 }
 
-var _ MeterProvider = noopMeterProvider{}
+func TestObservationGetters(t *testing.T) {
+	num := number.NewFloat64Number(1.5)
+	ai := NewNoopAsyncInstrument()
+	obs := NewObservation(ai, num)
 
-func (noopMeterProvider) Meter(instrumentationName string, opts ...MeterOption) Meter {
-	return Meter{}
+	require.Equal(t, ai, obs.AsyncImpl())
+	require.Equal(t, num, obs.Number())
 }

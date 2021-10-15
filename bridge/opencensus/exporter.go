@@ -147,7 +147,7 @@ func convertResource(res *ocresource.Resource) *resource.Resource {
 }
 
 // convertDescriptor converts an OpenCensus Descriptor to an OpenTelemetry Descriptor
-func convertDescriptor(ocDescriptor metricdata.Descriptor) (metric.Descriptor, error) {
+func convertDescriptor(ocDescriptor metricdata.Descriptor) (sdkapi.Descriptor, error) {
 	var (
 		nkind number.Kind
 		ikind sdkapi.InstrumentKind
@@ -167,7 +167,7 @@ func convertDescriptor(ocDescriptor metricdata.Descriptor) (metric.Descriptor, e
 		ikind = sdkapi.CounterObserverInstrumentKind
 	default:
 		// Includes TypeGaugeDistribution, TypeCumulativeDistribution, TypeSummary
-		return metric.Descriptor{}, fmt.Errorf("%w; descriptor type: %v", errConversion, ocDescriptor.Type)
+		return sdkapi.Descriptor{}, fmt.Errorf("%w; descriptor type: %v", errConversion, ocDescriptor.Type)
 	}
 	opts := []metric.InstrumentOption{
 		metric.WithDescription(ocDescriptor.Description),
@@ -181,5 +181,5 @@ func convertDescriptor(ocDescriptor metricdata.Descriptor) (metric.Descriptor, e
 		opts = append(opts, metric.WithUnit(unit.Milliseconds))
 	}
 	cfg := metric.NewInstrumentConfig(opts...)
-	return metric.NewDescriptor(ocDescriptor.Name, ikind, nkind, cfg.Description(), cfg.Unit()), nil
+	return sdkapi.NewDescriptor(ocDescriptor.Name, ikind, nkind, cfg.Description(), cfg.Unit()), nil
 }
