@@ -20,6 +20,7 @@ import (
 	"github.com/benbjohnson/clock"
 
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
 )
@@ -64,7 +65,7 @@ func (t MockTicker) C() <-chan time.Time {
 // metric).
 func ReadAll(
 	reader export.InstrumentationLibraryReader,
-	kind export.ExportKindSelector,
+	kind aggregation.TemporalitySelector,
 	apply func(instrumentation.Library, export.Record) error,
 ) error {
 	return reader.ForEach(func(library instrumentation.Library, reader export.Reader) error {
