@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
@@ -483,7 +484,7 @@ func benchmarkBatchRecord8Labels(b *testing.B, numInst int) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(numLabels)
-	var meas []metric.Measurement
+	var meas []sdkapi.Measurement
 
 	for i := 0; i < numInst; i++ {
 		inst := fix.meterMust().NewInt64Counter(fmt.Sprintf("int64.%d.sum", i))

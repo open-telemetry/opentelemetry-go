@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"math"
 
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -36,7 +35,7 @@ func NewInconsistentAggregatorError(a1, a2 export.Aggregator) error {
 // This rejects NaN values.  This rejects negative values when the
 // metric instrument does not support negative values, including
 // monotonic counter metrics and absolute Histogram metrics.
-func RangeTest(num number.Number, descriptor *metric.Descriptor) error {
+func RangeTest(num number.Number, descriptor *sdkapi.Descriptor) error {
 	numberKind := descriptor.NumberKind()
 
 	if numberKind == number.Float64Kind && math.IsNaN(num.AsFloat64()) {

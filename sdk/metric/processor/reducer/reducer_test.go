@@ -22,7 +22,8 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
@@ -47,13 +48,13 @@ var (
 
 type testFilter struct{}
 
-func (testFilter) LabelFilterFor(_ *metric.Descriptor) attribute.Filter {
+func (testFilter) LabelFilterFor(_ *sdkapi.Descriptor) attribute.Filter {
 	return func(label attribute.KeyValue) bool {
 		return label.Key == "A" || label.Key == "C"
 	}
 }
 
-func generateData(impl metric.MeterImpl) {
+func generateData(impl sdkapi.MeterImpl) {
 	ctx := context.Background()
 	meter := metric.WrapMeterImpl(impl)
 
@@ -90,7 +91,7 @@ func TestFilterProcessor(t *testing.T) {
 
 // Test a filter with the ../basic Processor.
 func TestFilterBasicProcessor(t *testing.T) {
-	basicProc := basic.New(processorTest.AggregatorSelector(), export.CumulativeExportKindSelector())
+	basicProc := basic.New(processorTest.AggregatorSelector(), aggregation.CumulativeTemporalitySelector())
 	accum := metricsdk.NewAccumulator(
 		reducer.New(testFilter{}, basicProc),
 	)

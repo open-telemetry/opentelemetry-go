@@ -27,6 +27,7 @@ import (
 	metricglobal "go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 )
 
 var Must = metric.Must
@@ -232,15 +233,15 @@ type meterProviderWithConstructorError struct {
 }
 
 type meterWithConstructorError struct {
-	metric.MeterImpl
+	sdkapi.MeterImpl
 }
 
 func (m *meterProviderWithConstructorError) Meter(iName string, opts ...metric.MeterOption) metric.Meter {
 	return metric.WrapMeterImpl(&meterWithConstructorError{m.MeterProvider.Meter(iName, opts...).MeterImpl()})
 }
 
-func (m *meterWithConstructorError) NewSyncInstrument(_ metric.Descriptor) (metric.SyncImpl, error) {
-	return metric.NoopSync{}, errors.New("constructor error")
+func (m *meterWithConstructorError) NewSyncInstrument(_ sdkapi.Descriptor) (sdkapi.SyncImpl, error) {
+	return sdkapi.NewNoopSyncInstrument(), errors.New("constructor error")
 }
 
 func TestErrorInDeferredConstructor(t *testing.T) {

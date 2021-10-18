@@ -24,8 +24,8 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	internal "go.opentelemetry.io/otel/internal/metric"
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 )
@@ -72,7 +72,7 @@ type (
 	// mapkey uniquely describes a metric instrument in terms of
 	// its InstrumentID and the encoded form of its labels.
 	mapkey struct {
-		descriptor *metric.Descriptor
+		descriptor *sdkapi.Descriptor
 		ordered    attribute.Distinct
 	}
 
@@ -120,7 +120,7 @@ type (
 
 	instrument struct {
 		meter      *Accumulator
-		descriptor metric.Descriptor
+		descriptor sdkapi.Descriptor
 	}
 
 	asyncInstrument struct {
@@ -138,16 +138,16 @@ type (
 )
 
 var (
-	_ metric.MeterImpl     = &Accumulator{}
-	_ metric.AsyncImpl     = &asyncInstrument{}
-	_ metric.SyncImpl      = &syncInstrument{}
-	_ metric.BoundSyncImpl = &record{}
+	_ sdkapi.MeterImpl     = &Accumulator{}
+	_ sdkapi.AsyncImpl     = &asyncInstrument{}
+	_ sdkapi.SyncImpl      = &syncInstrument{}
+	_ sdkapi.BoundSyncImpl = &record{}
 
 	// ErrUninitializedInstrument is returned when an instrument is used when uninitialized.
 	ErrUninitializedInstrument = fmt.Errorf("use of an uninitialized instrument")
 )
 
-func (inst *instrument) Descriptor() metric.Descriptor {
+func (inst *instrument) Descriptor() sdkapi.Descriptor {
 	return inst.descriptor
 }
 
@@ -280,7 +280,7 @@ func (s *syncInstrument) acquireHandle(kvs []attribute.KeyValue, labelPtr *attri
 }
 
 // The order of the input array `kvs` may be sorted after the function is called.
-func (s *syncInstrument) Bind(kvs []attribute.KeyValue) metric.BoundSyncImpl {
+func (s *syncInstrument) Bind(kvs []attribute.KeyValue) sdkapi.BoundSyncImpl {
 	return s.acquireHandle(kvs, nil)
 }
 
@@ -307,8 +307,8 @@ func NewAccumulator(processor export.Processor) *Accumulator {
 	}
 }
 
-// NewSyncInstrument implements metric.MetricImpl.
-func (m *Accumulator) NewSyncInstrument(descriptor metric.Descriptor) (metric.SyncImpl, error) {
+// NewSyncInstrument implements sdkapi.MetricImpl.
+func (m *Accumulator) NewSyncInstrument(descriptor sdkapi.Descriptor) (sdkapi.SyncImpl, error) {
 	return &syncInstrument{
 		instrument: instrument{
 			descriptor: descriptor,
@@ -317,8 +317,8 @@ func (m *Accumulator) NewSyncInstrument(descriptor metric.Descriptor) (metric.Sy
 	}, nil
 }
 
-// NewAsyncInstrument implements metric.MetricImpl.
-func (m *Accumulator) NewAsyncInstrument(descriptor metric.Descriptor, runner metric.AsyncRunner) (metric.AsyncImpl, error) {
+// NewAsyncInstrument implements sdkapi.MetricImpl.
+func (m *Accumulator) NewAsyncInstrument(descriptor sdkapi.Descriptor, runner sdkapi.AsyncRunner) (sdkapi.AsyncImpl, error) {
 	a := &asyncInstrument{
 		instrument: instrument{
 			descriptor: descriptor,
@@ -395,7 +395,7 @@ func (m *Accumulator) collectSyncInstruments() int {
 
 // CollectAsync implements internal.AsyncCollector.
 // The order of the input array `kvs` may be sorted after the function is called.
-func (m *Accumulator) CollectAsync(kv []attribute.KeyValue, obs ...metric.Observation) {
+func (m *Accumulator) CollectAsync(kv []attribute.KeyValue, obs ...sdkapi.Observation) {
 	labels := attribute.NewSetWithSortable(kv, &m.asyncSortSlice)
 
 	for _, ob := range obs {
@@ -472,7 +472,7 @@ func (m *Accumulator) checkpointAsync(a *asyncInstrument) int {
 
 // RecordBatch enters a batch of metric events.
 // The order of the input array `kvs` may be sorted after the function is called.
-func (m *Accumulator) RecordBatch(ctx context.Context, kvs []attribute.KeyValue, measurements ...metric.Measurement) {
+func (m *Accumulator) RecordBatch(ctx context.Context, kvs []attribute.KeyValue, measurements ...sdkapi.Measurement) {
 	// Labels will be computed the first time acquireHandle is
 	// called.  Subsequent calls to acquireHandle will re-use the
 	// previously computed value instead of recomputing the
@@ -495,7 +495,7 @@ func (m *Accumulator) RecordBatch(ctx context.Context, kvs []attribute.KeyValue,
 	}
 }
 
-// RecordOne implements metric.SyncImpl.
+// RecordOne implements sdkapi.SyncImpl.
 func (r *record) RecordOne(ctx context.Context, num number.Number) {
 	if r.current == nil {
 		// The instrument is disabled according to the AggregatorSelector.
@@ -514,7 +514,7 @@ func (r *record) RecordOne(ctx context.Context, num number.Number) {
 	atomic.AddInt64(&r.updateCount, 1)
 }
 
-// Unbind implements metric.SyncImpl.
+// Unbind implements sdkapi.SyncImpl.
 func (r *record) Unbind() {
 	r.refMapped.unref()
 }
@@ -528,7 +528,7 @@ func (r *record) mapkey() mapkey {
 
 // fromSync gets a sync implementation object, checking for
 // uninitialized instruments and instruments created by another SDK.
-func (m *Accumulator) fromSync(sync metric.SyncImpl) *syncInstrument {
+func (m *Accumulator) fromSync(sync sdkapi.SyncImpl) *syncInstrument {
 	if sync != nil {
 		if inst, ok := sync.Implementation().(*syncInstrument); ok {
 			return inst
@@ -540,7 +540,7 @@ func (m *Accumulator) fromSync(sync metric.SyncImpl) *syncInstrument {
 
 // fromSync gets an async implementation object, checking for
 // uninitialized instruments and instruments created by another SDK.
-func (m *Accumulator) fromAsync(async metric.AsyncImpl) *asyncInstrument {
+func (m *Accumulator) fromAsync(async sdkapi.AsyncImpl) *asyncInstrument {
 	if async != nil {
 		if inst, ok := async.Implementation().(*asyncInstrument); ok {
 			return inst

@@ -33,7 +33,7 @@ type someFilter struct{
         // ...
 }
 
-func (someFilter) LabelFilterFor(_ *metric.Descriptor) attribute.Filter {
+func (someFilter) LabelFilterFor(_ *sdkapi.Descriptor) attribute.Filter {
         return func(label kv.KeyValue) bool {
                 // return true to keep this label, false to drop this label
                 // ...

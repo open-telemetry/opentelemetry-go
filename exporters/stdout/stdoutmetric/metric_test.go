@@ -30,7 +30,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
@@ -61,7 +61,7 @@ func newFixtureWithResource(t *testing.T, res *resource.Resource, opts ...stdout
 		t.Fatal("Error building fixture: ", err)
 	}
 	aggSel := processortest.AggregatorSelector()
-	proc := processor.NewFactory(aggSel, export.StatelessExportKindSelector())
+	proc := processor.NewFactory(aggSel, aggregation.StatelessTemporalitySelector())
 	cont := controller.New(proc,
 		controller.WithExporter(exp),
 		controller.WithResource(res),
@@ -87,7 +87,7 @@ func (fix testFixture) Output() string {
 func TestStdoutTimestamp(t *testing.T) {
 	var buf bytes.Buffer
 	aggSel := processortest.AggregatorSelector()
-	proc := processor.NewFactory(aggSel, export.CumulativeExportKindSelector())
+	proc := processor.NewFactory(aggSel, aggregation.CumulativeTemporalitySelector())
 	exporter, err := stdoutmetric.New(
 		stdoutmetric.WithWriter(&buf),
 	)
