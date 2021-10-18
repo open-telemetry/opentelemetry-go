@@ -25,7 +25,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- The simple span processor shutdown method returns any context error if there is one and the exporter successfully shuts down. (#2290, #2289)
+- The simple span processor shutdown method deterministically returns the exporter error status if it simultaneously finishes when the deadline is reached. (#2290, #2289)
 
 ## [1.0.1] - 2021-10-01
 
