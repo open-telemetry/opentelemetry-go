@@ -122,7 +122,14 @@ func wait(ctx context.Context, delay time.Duration) error {
 
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		// Handle the case where the timer and context deadline end
+		// simultaneously by prioritizing the timer expiration nil value
+		// response.
+		select {
+		case <-timer.C:
+		default:
+			return ctx.Err()
+		}
 	case <-timer.C:
 	}
 
