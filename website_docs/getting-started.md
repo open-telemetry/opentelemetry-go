@@ -138,8 +138,8 @@ OpenTelemetry is split into two parts: an API to instrument code with, and SDKs 
 First, you need to install the necessary packages for the Trace API. Run the following command in your working directory.
 
 ```sh
-go get go.opentelemetry.io/otel@v1.0.0-RC2 \
-       go.opentelemetry.io/otel/trace@v1.0.0-RC2
+go get go.opentelemetry.io/otel \
+       go.opentelemetry.io/otel/trace
 ```
 
 Now that the packages installed you can start updating your application with imports you will use in the `app.go` file.
@@ -265,8 +265,8 @@ Now how do you actually see the produced spans? To do this you will need to conf
 OpenTelemetry is designed to be modular in its implementation of the OpenTelemetry API. The OpenTelemetry Go project offers an SDK package, `go.opentelemetry.io/otel/sdk`, that implements this API and adheres to the OpenTelemetry specification. To start using this SDK you will first need to create an exporter, but before anything can happen we need to install some packages. Run the following in the `fib` directory to install the trace STDOUT exporter and the SDK.
 
 ```sh
-$ go get go.opentelemetry.io/otel/sdk@v1.0.0-RC2 \
-         go.opentelemetry.io/otel/exporters/stdout/stdouttrace@v1.0.0-RC2
+$ go get go.opentelemetry.io/otel/sdk \
+         go.opentelemetry.io/otel/exporters/stdout/stdouttrace
 ```
 
 Now add the needed imports to `main.go`.

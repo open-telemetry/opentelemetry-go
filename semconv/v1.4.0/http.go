@@ -225,7 +225,9 @@ func HTTPServerAttributesFromHTTPRequest(serverName, route string, request *http
 		attrs = append(attrs, HTTPRouteKey.String(route))
 	}
 	if values, ok := request.Header["X-Forwarded-For"]; ok && len(values) > 0 {
-		attrs = append(attrs, HTTPClientIPKey.String(values[0]))
+		if addresses := strings.SplitN(values[0], ",", 2); len(addresses) > 0 {
+			attrs = append(attrs, HTTPClientIPKey.String(addresses[0]))
+		}
 	}
 
 	return append(attrs, httpCommonAttributesFromHTTPRequest(request)...)
