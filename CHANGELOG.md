@@ -28,6 +28,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - json stdout exporter no longer crashes due to concurrency bug. (#2265)
+- `http.client_ip` no longer inhales multiple addresses from the `X-Forwarded-For` header. (#2282)
 
 ## [Metrics 0.24.0] - 2021-10-01
 
