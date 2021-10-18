@@ -90,18 +90,18 @@ func (ssp *simpleSpanProcessor) Shutdown(ctx context.Context) error {
 
 		select {
 		case err = <-done:
-			// It is possible for the exporter to have immediately shut down and
-			// the context to already be done. In that case this select statement
-			// will randomly choose a case. This could result in a different
-			// response for similar scenarios. Instead, double check if the
-			// context is done here and return that error if the exporter shut
-			// down did not return one.
-			if err == nil {
-				// If ctx is not done yet, ctx.Err returns nil.
+		case <-ctx.Done():
+			// It is possible for the exporter to have immediately shut down
+			// and the context to already be done. In that case this select
+			// statement will randomly choose a case. This could result in a
+			// different response for similar scenarios. Instead, double check
+			// if the exporter shut down at the same time and return that
+			// error if so.
+			if expErr, ok := <-done; ok {
+				err = expErr
+			} else {
 				err = ctx.Err()
 			}
-		case <-ctx.Done():
-			err = ctx.Err()
 		}
 	})
 	return err
