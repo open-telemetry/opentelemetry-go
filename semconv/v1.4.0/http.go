@@ -19,6 +19,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
