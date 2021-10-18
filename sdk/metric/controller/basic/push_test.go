@@ -67,7 +67,7 @@ func init() {
 
 func newExporter() *processortest.Exporter {
 	return processortest.New(
-		export.StatelessExportKindSelector(),
+		aggregation.StatelessTemporalitySelector(),
 		attribute.DefaultEncoder(),
 	)
 }

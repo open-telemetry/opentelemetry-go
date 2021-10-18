@@ -744,7 +744,7 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: http.Header{
 				"User-Agent":      []string{"foodownloader"},
-				"X-Forwarded-For": []string{"1.2.3.4"},
+				"X-Forwarded-For": []string{"203.0.113.195, 70.41.3.18, 150.172.238.178"},
 			},
 			tls: withTLS,
 			expected: []attribute.KeyValue{
@@ -756,7 +756,7 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 				attribute.String("http.route", "/user/:id"),
 				attribute.String("http.host", "example.com"),
 				attribute.String("http.user_agent", "foodownloader"),
-				attribute.String("http.client_ip", "1.2.3.4"),
+				attribute.String("http.client_ip", "203.0.113.195"),
 			},
 		},
 		{

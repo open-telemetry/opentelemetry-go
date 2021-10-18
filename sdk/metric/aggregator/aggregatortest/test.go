@@ -26,7 +26,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
@@ -66,7 +65,7 @@ func newProfiles() []Profile {
 	}
 }
 
-func NewAggregatorTest(mkind sdkapi.InstrumentKind, nkind number.Kind) *metric.Descriptor {
+func NewAggregatorTest(mkind sdkapi.InstrumentKind, nkind number.Kind) *sdkapi.Descriptor {
 	desc := metrictest.NewDescriptor("test.name", mkind, nkind)
 	return &desc
 }
@@ -151,7 +150,7 @@ func (n *Numbers) Points() []number.Number {
 }
 
 // CheckedUpdate performs the same range test the SDK does on behalf of the aggregator.
-func CheckedUpdate(t *testing.T, agg export.Aggregator, number number.Number, descriptor *metric.Descriptor) {
+func CheckedUpdate(t *testing.T, agg export.Aggregator, number number.Number, descriptor *sdkapi.Descriptor) {
 	ctx := context.Background()
 
 	// Note: Aggregator tests are written assuming that the SDK
@@ -167,7 +166,7 @@ func CheckedUpdate(t *testing.T, agg export.Aggregator, number number.Number, de
 	}
 }
 
-func CheckedMerge(t *testing.T, aggInto, aggFrom export.Aggregator, descriptor *metric.Descriptor) {
+func CheckedMerge(t *testing.T, aggInto, aggFrom export.Aggregator, descriptor *sdkapi.Descriptor) {
 	if err := aggInto.Merge(aggFrom, descriptor); err != nil {
 		t.Error("Unexpected Merge failure", err)
 	}
@@ -181,19 +180,19 @@ func (NoopAggregator) Aggregation() aggregation.Aggregation {
 	return NoopAggregation{}
 }
 
-func (NoopAggregator) Update(context.Context, number.Number, *metric.Descriptor) error {
+func (NoopAggregator) Update(context.Context, number.Number, *sdkapi.Descriptor) error {
 	return nil
 }
 
-func (NoopAggregator) SynchronizedMove(export.Aggregator, *metric.Descriptor) error {
+func (NoopAggregator) SynchronizedMove(export.Aggregator, *sdkapi.Descriptor) error {
 	return nil
 }
 
-func (NoopAggregator) Merge(export.Aggregator, *metric.Descriptor) error {
+func (NoopAggregator) Merge(export.Aggregator, *sdkapi.Descriptor) error {
 	return nil
 }
 
-func SynchronizedMoveResetTest(t *testing.T, mkind sdkapi.InstrumentKind, nf func(*metric.Descriptor) export.Aggregator) {
+func SynchronizedMoveResetTest(t *testing.T, mkind sdkapi.InstrumentKind, nf func(*sdkapi.Descriptor) export.Aggregator) {
 	t.Run("reset on nil", func(t *testing.T) {
 		// Ensures that SynchronizedMove(nil, descriptor) discards and
 		// resets the aggregator.

@@ -22,7 +22,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 )
 
 //nolint:revive // ignoring missing comments for exported error in an internal package
@@ -33,7 +33,7 @@ var ErrInvalidAsyncRunner = errors.New("unknown async runner type")
 // the SDK to provide support for running observer callbacks.
 type AsyncCollector interface {
 	// CollectAsync passes a batch of observations to the MeterImpl.
-	CollectAsync(labels []attribute.KeyValue, observation ...metric.Observation)
+	CollectAsync(labels []attribute.KeyValue, observation ...sdkapi.Observation)
 }
 
 // AsyncInstrumentState manages an ordered set of asynchronous
@@ -61,18 +61,18 @@ type AsyncInstrumentState struct {
 
 	// instruments maintains the set of instruments in the order
 	// they were registered.
-	instruments []metric.AsyncImpl
+	instruments []sdkapi.AsyncImpl
 }
 
 // asyncRunnerPair is a map entry for Observer callback runners.
 type asyncRunnerPair struct {
 	// runner is used as a map key here.  The API ensures
 	// that all callbacks are pointers for this reason.
-	runner metric.AsyncRunner
+	runner sdkapi.AsyncRunner
 
 	// inst refers to a non-nil instrument when `runner` is a
 	// AsyncSingleRunner.
-	inst metric.AsyncImpl
+	inst sdkapi.AsyncImpl
 }
 
 // NewAsyncInstrumentState returns a new *AsyncInstrumentState, for
@@ -87,7 +87,7 @@ func NewAsyncInstrumentState() *AsyncInstrumentState {
 // Instruments returns the asynchronous instruments managed by this
 // object, the set that should be checkpointed after observers are
 // run.
-func (a *AsyncInstrumentState) Instruments() []metric.AsyncImpl {
+func (a *AsyncInstrumentState) Instruments() []sdkapi.AsyncImpl {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 	return a.instruments
@@ -97,7 +97,7 @@ func (a *AsyncInstrumentState) Instruments() []metric.AsyncImpl {
 // object.  This should be called during NewAsyncInstrument() and
 // assumes that errors (e.g., duplicate registration) have already
 // been checked.
-func (a *AsyncInstrumentState) Register(inst metric.AsyncImpl, runner metric.AsyncRunner) {
+func (a *AsyncInstrumentState) Register(inst sdkapi.AsyncImpl, runner sdkapi.AsyncRunner) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -111,7 +111,7 @@ func (a *AsyncInstrumentState) Register(inst metric.AsyncImpl, runner metric.Asy
 	rp := asyncRunnerPair{
 		runner: runner,
 	}
-	if _, ok := runner.(metric.AsyncSingleRunner); ok {
+	if _, ok := runner.(sdkapi.AsyncSingleRunner); ok {
 		rp.inst = inst
 	}
 
@@ -132,12 +132,12 @@ func (a *AsyncInstrumentState) Run(ctx context.Context, collector AsyncCollector
 		// other implementations are possible because the
 		// interface has un-exported methods.
 
-		if singleRunner, ok := rp.runner.(metric.AsyncSingleRunner); ok {
+		if singleRunner, ok := rp.runner.(sdkapi.AsyncSingleRunner); ok {
 			singleRunner.Run(ctx, rp.inst, collector.CollectAsync)
 			continue
 		}
 
-		if multiRunner, ok := rp.runner.(metric.AsyncBatchRunner); ok {
+		if multiRunner, ok := rp.runner.(sdkapi.AsyncBatchRunner); ok {
 			multiRunner.Run(ctx, collector.CollectAsync)
 			continue
 		}

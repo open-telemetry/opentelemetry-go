@@ -20,7 +20,7 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/metrictransform"
-	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -33,8 +33,8 @@ var (
 
 // Exporter exports metrics data in the OTLP wire format.
 type Exporter struct {
-	client             Client
-	exportKindSelector metricsdk.ExportKindSelector
+	client              Client
+	temporalitySelector aggregation.TemporalitySelector
 
 	mu      sync.RWMutex
 	started bool
@@ -96,8 +96,8 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	return err
 }
 
-func (e *Exporter) ExportKindFor(descriptor *metric.Descriptor, aggregatorKind aggregation.Kind) metricsdk.ExportKind {
-	return e.exportKindSelector.ExportKindFor(descriptor, aggregatorKind)
+func (e *Exporter) TemporalityFor(descriptor *sdkapi.Descriptor, kind aggregation.Kind) aggregation.Temporality {
+	return e.temporalitySelector.TemporalityFor(descriptor, kind)
 }
 
 var _ metricsdk.Exporter = (*Exporter)(nil)
@@ -114,10 +114,10 @@ func New(ctx context.Context, client Client, opts ...Option) (*Exporter, error) 
 // NewUnstarted constructs a new Exporter and does not start it.
 func NewUnstarted(client Client, opts ...Option) *Exporter {
 	cfg := config{
-		// Note: the default ExportKindSelector is specified
+		// Note: the default TemporalitySelector is specified
 		// as Cumulative:
 		// https://github.com/open-telemetry/opentelemetry-specification/issues/731
-		exportKindSelector: metricsdk.CumulativeExportKindSelector(),
+		temporalitySelector: aggregation.CumulativeTemporalitySelector(),
 	}
 
 	for _, opt := range opts {
@@ -125,8 +125,8 @@ func NewUnstarted(client Client, opts ...Option) *Exporter {
 	}
 
 	e := &Exporter{
-		client:             client,
-		exportKindSelector: cfg.exportKindSelector,
+		client:              client,
+		temporalitySelector: cfg.temporalitySelector,
 	}
 
 	return e

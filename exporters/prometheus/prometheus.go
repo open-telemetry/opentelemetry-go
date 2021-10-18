@@ -30,6 +30,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -131,9 +132,9 @@ func (e *Exporter) Controller() *controller.Controller {
 	return e.controller
 }
 
-// ExportKindFor implements ExportKindSelector.
-func (e *Exporter) ExportKindFor(desc *metric.Descriptor, kind aggregation.Kind) export.ExportKind {
-	return export.CumulativeExportKindSelector().ExportKindFor(desc, kind)
+// TemporalityFor implements TemporalitySelector.
+func (e *Exporter) TemporalityFor(desc *sdkapi.Descriptor, kind aggregation.Kind) aggregation.Temporality {
+	return aggregation.CumulativeTemporalitySelector().TemporalityFor(desc, kind)
 }
 
 // ServeHTTP implements http.Handler.
