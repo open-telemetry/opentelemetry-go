@@ -65,7 +65,9 @@ versions:
             # the new attribute name starting from this version.
             attribute_map:
               peer.service: peer.service.name
-
+            apply_to_spans:
+              # apply only to spans named "HTTP GET"
+              - "HTTP GET"
     span_events:
       changes:
         # Sequence of translations to apply to convert the schema from a prior version

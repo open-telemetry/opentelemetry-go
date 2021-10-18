@@ -75,10 +75,11 @@ func TestParseSchemaFile(t *testing.T) {
 				Spans: ast.Spans{
 					Changes: []ast.SpansChange{
 						{
-							RenameAttributes: &ast.RenameAttributes{
+							RenameAttributes: &ast.AttributeMapForSpans{
 								AttributeMap: ast.AttributeMap{
 									"peer.service": "peer.service.name",
 								},
+								ApplyToSpans: []types.SpanName{"HTTP GET"},
 							},
 						},
 					},

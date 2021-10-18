@@ -30,7 +30,14 @@ type SpanEvents struct {
 
 // SpansChange corresponds to a section representing spans change.
 type SpansChange struct {
-	RenameAttributes *RenameAttributes `yaml:"rename_attributes"`
+	RenameAttributes *AttributeMapForSpans `yaml:"rename_attributes"`
+}
+
+// AttributeMapForSpans corresponds to a section representing a translation of
+// attributes for specific spans.
+type AttributeMapForSpans struct {
+	ApplyToSpans []types.SpanName `yaml:"apply_to_spans"`
+	AttributeMap AttributeMap     `yaml:"attribute_map"`
 }
 
 // SpanEventsChange corresponds to a section representing span events change.
