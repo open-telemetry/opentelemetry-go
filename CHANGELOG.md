@@ -27,6 +27,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - `semconv.NetAttributesFromHTTPRequest()` correctly handles IPv6 addresses. (#2285)
 - The simple span processor shutdown method deterministically returns the exporter error status if it simultaneously finishes when the deadline is reached. (#2290, #2289)
+- Fixed documentation link on HTTP baggage specification. (#2312)
 
 ## [1.0.1] - 2021-10-01
 
