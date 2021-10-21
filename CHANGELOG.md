@@ -22,6 +22,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Adds `otlptracegrpc.WithGRPCConn` and `otlpmetricgrpc.WithGRPCConn` for reusing existing gRPC connection. (#2002)
 - Added a new `schema` module to help parse Schema Files in OTEP 0152 format. (#2267)
+- Add the `go.opentelemetry.io/otel/semconv/v1.5.0` package.
+  The package contains semantic conventions from the `v1.5.0` version of the OpenTelemetry specification. (#2322)
+  - When upgrading from the `semconv/v1.4.0` package note the following name changes:
+    - `K8SReplicasetUIDKey` -> `K8SReplicaSetUIDKey`
+    - `K8SReplicasetNameKey` -> `K8SReplicaSetNameKey`
+    - `K8SStatefulsetUIDKey` -> `K8SStatefulSetUIDKey`
+    - `K8SStatefulsetNameKey` -> `K8SStatefulSetNameKey`
+    - `K8SDaemonsetUIDKey` -> `K8SDaemonSetUIDKey`
+    - `K8SDaemonsetNameKey` -> `K8SDaemonSetNameKey`
 
 ### Fixed
 
