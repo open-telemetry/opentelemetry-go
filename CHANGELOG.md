@@ -24,6 +24,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Added a new `schema` module to help parse Schema Files in OTEP 0152 format. (#2267)
 - Add the `go.opentelemetry.io/otel/semconv/v1.7.0` package.
   The package contains semantic conventions from the `v1.7.0` version of the OpenTelemetry specification. (#2320)
+- Add the `go.opentelemetry.io/otel/semconv/v1.6.1` package.
+  The package contains semantic conventions from the `v1.6.1` version of the OpenTelemetry specification. (#2321)
 
 ### Fixed
 
