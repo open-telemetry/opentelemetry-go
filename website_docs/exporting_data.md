@@ -42,7 +42,7 @@ resources := resource.NewWithAttributes(
 
 provider := sdktrace.NewTracerProvider(
 	...
-	sdktrace.WithResources(resources),
+	sdktrace.WithResource(resources),
 )
 ```
 
