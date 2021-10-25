@@ -53,12 +53,12 @@ func NewApp(r io.Reader, l *log.Logger) *App {
 // Run starts polling users for Fibonacci number requests and writes results.
 func (a *App) Run(ctx context.Context) error {
 	for {
-		n, err := a.Poll()
+		n, err := a.Poll(ctx)
 		if err != nil {
 			return err
 		}
 
-		a.Write(n)
+		a.Write(ctx, n)
 	}
 }
 
