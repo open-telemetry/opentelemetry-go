@@ -482,21 +482,19 @@ func TestNew_withMultipleAttributeTypes(t *testing.T) {
 	}
 }
 
-func TestDisconnected(t *testing.T) {
-	ctx := context.Background()
-	// The endpoint is whatever, we want to be disconnected. But we
-	// setting a blocking connection, so dialing to the invalid
-	// endpoint actually fails.
-	exp := newGRPCExporter(t, ctx, "invalid",
-		otlptracegrpc.WithReconnectionPeriod(time.Hour),
+func TestStartErrorInvalidAddress(t *testing.T) {
+	client := otlptracegrpc.NewClient(
+		otlptracegrpc.WithInsecure(),
+		// Validate the connection in Start (which should return the error).
 		otlptracegrpc.WithDialOption(
 			grpc.WithBlock(),
 			grpc.FailOnNonTempDialError(true),
 		),
+		otlptracegrpc.WithEndpoint("invalid"),
+		otlptracegrpc.WithReconnectionPeriod(time.Hour),
 	)
-	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-
-	assert.Error(t, exp.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan()))
+	err := client.Start(context.Background())
+	assert.EqualError(t, err, `connection error: desc = "transport: error while dialing: dial tcp: address invalid: missing port in address"`)
 }
 
 func TestEmptyData(t *testing.T) {
