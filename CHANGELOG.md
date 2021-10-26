@@ -22,7 +22,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add the `"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc".WithGRPCConn` option so the exporter can reusing an existing gRPC connection. (#2002)
 - Added a new `schema` module to help parse Schema Files in OTEP 0152 format. (#2267)
 
-## [1.0.2] - 2021-10-26
+## [1.1.0] - 2021-10-26
 
 ### Added
 
@@ -37,7 +37,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     - `K8SReplicasetUIDKey` -> `K8SReplicaSetUIDKey`
     - `K8SReplicasetNameKey` -> `K8SReplicaSetNameKey`
     - `K8SStatefulsetUIDKey` -> `K8SStatefulSetUIDKey`
-    - `K8SStatefulsetNameKey` -> `K8SStatefulSetNameKey`
+    - `k8SStatefulsetNameKey` -> `K8SStatefulSetNameKey`
     - `K8SDaemonsetUIDKey` -> `K8SDaemonSetUIDKey`
     - `K8SDaemonsetNameKey` -> `K8SDaemonSetNameKey`
 
@@ -1593,8 +1593,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.0.2...HEAD
-[1.0.2]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.2
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.1.0
 [1.0.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.1
 [Metrics 0.24.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/metric/v0.24.0
 [1.0.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.0
