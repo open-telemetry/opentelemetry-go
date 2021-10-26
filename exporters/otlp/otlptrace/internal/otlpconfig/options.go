@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/encoding/gzip"
 
@@ -99,6 +100,13 @@ func NewGRPCConfig(opts ...GRPCOption) Config {
 	}
 	if len(cfg.DialOptions) != 0 {
 		cfg.DialOptions = append(cfg.DialOptions, cfg.DialOptions...)
+	}
+	if cfg.ReconnectionPeriod != 0 {
+		p := grpc.ConnectParams{
+			Backoff:           backoff.DefaultConfig,
+			MinConnectTimeout: cfg.ReconnectionPeriod,
+		}
+		cfg.DialOptions = append(cfg.DialOptions, grpc.WithConnectParams(p))
 	}
 
 	return cfg
