@@ -40,8 +40,8 @@ type client struct {
 	exportTimeout time.Duration
 	requestFunc   retry.RequestFunc
 
-	// stopCtx is used as a parent context for all exports therefore ensuring
-	// that when it is canceled with the stopFunc, all exports are canceled.
+	// stopCtx is used as a parent context for all exports. Therefore, when it
+	// is canceled with the stopFunc all exports are canceled.
 	stopCtx context.Context
 	// stopFunc cancels stopCtx, stopping any active exports.
 	stopFunc context.CancelFunc
@@ -80,7 +80,7 @@ func NewClient(opts ...Option) otlptrace.Client {
 // Start establishes a gRPC connection to the collector.
 func (c *client) Start(ctx context.Context) error {
 	if c.conn == nil {
-		// If the caller did not provide a ClientConn when the clinet was
+		// If the caller did not provide a ClientConn when the client was
 		// created, create one using the configuration they did provide.
 		conn, err := grpc.DialContext(ctx, c.endpoint, c.dialOpts...)
 		if err != nil {
@@ -101,6 +101,8 @@ func (c *client) Start(ctx context.Context) error {
 var errNotStarted = errors.New("client not started")
 
 // Stop shuts down the gRPC connection to the collector.
+//
+// If the client was crated using WithGRPCConn, the passed conn is closed.
 func (c *client) Stop(ctx context.Context) error {
 	// Acquire the c.tscMu lock within the ctx lifetime.
 	acquired := make(chan struct{})
@@ -147,7 +149,10 @@ func (c *client) Stop(ctx context.Context) error {
 
 var errShutdown = errors.New("exporter is shutdown")
 
-// UploadTraces sends a batch of spans to the collector.
+// UploadTraces sends a batch of spans.
+//
+// Retryable errors from the server will be handled according to any
+// RetryConfig the client was created with.
 func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) error {
 	// Hold a read lock to ensure a shut down initiated after this starts does
 	// not abandon the export. This read lock acquire has less priority than a
@@ -176,6 +181,12 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 	})
 }
 
+// exportContext returns a copy of parent with an appropriate deadline and
+// cancellation function.
+//
+// It is the callers responsibility to cancel the returned context once its
+// use is complete, via the parent of directly with the returned CancelFunc,to
+// ensure all resources are correctly released.
 func (c *client) exportContext(parent context.Context) (context.Context, context.CancelFunc) {
 	var (
 		ctx    context.Context
