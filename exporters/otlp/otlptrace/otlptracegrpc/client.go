@@ -60,6 +60,7 @@ func NewClient(opts ...Option) otlptrace.Client {
 		dialOpts:      cfg.DialOptions,
 		stopCtx:       ctx,
 		stopFunc:      cancel,
+		conn:          cfg.GRPCConn,
 	}
 
 	if len(cfg.Traces.Headers) > 0 {
@@ -71,16 +72,20 @@ func NewClient(opts ...Option) otlptrace.Client {
 
 // Start establishes a gRPC connection to the collector.
 func (c *client) Start(ctx context.Context) error {
+	if c.conn == nil {
+		// If the caller did not provide a ClientConn when the clinet was
+		// created, create one using the configuration they did provide.
+		conn, err := grpc.DialContext(ctx, c.endpoint, c.dialOpts...)
+		if err != nil {
+			return err
+		}
+		c.conn = conn
+	}
+
 	// The otlptrace.Client interface states this method is called just once,
 	// so no need to check if already started.
-	conn, err := grpc.DialContext(ctx, c.endpoint, c.dialOpts...)
-	if err != nil {
-		return err
-	}
-	c.conn = conn
-
 	c.tscMu.Lock()
-	c.tsc = coltracepb.NewTraceServiceClient(conn)
+	c.tsc = coltracepb.NewTraceServiceClient(c.conn)
 	c.tscMu.Unlock()
 
 	return nil
