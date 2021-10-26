@@ -206,7 +206,8 @@ type Subtractor interface {
 // Exporter handles presentation of the checkpoint of aggregate
 // metrics.  This is the final stage of a metrics export pipeline,
 // where metric data are formatted for a specific system.
-// Deprecated: migrate to the interface defined in `sdk/metric/exporter`
+//
+// Deprecated: Exporters should implement go.opentelemetry.io/otel/sdk/metric/exporter.Exporter instead.
 type Exporter interface {
 	// Export is called immediately after completing a collection
 	// pass in the SDK.
