@@ -31,6 +31,14 @@ type Option interface {
 	applyGRPCOption(*otlpconfig.Config)
 }
 
+func asGRPCOptions(opts []Option) []otlpconfig.GRPCOption {
+	converted := make([]otlpconfig.GRPCOption, len(opts))
+	for i, o := range opts {
+		converted[i] = otlpconfig.NewGRPCOption(o.applyGRPCOption)
+	}
+	return converted
+}
+
 // RetryConfig defines configuration for retrying batches in case of export
 // failure using an exponential backoff.
 type RetryConfig retry.Config

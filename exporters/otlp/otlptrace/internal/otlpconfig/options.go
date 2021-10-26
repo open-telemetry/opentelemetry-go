@@ -21,6 +21,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/encoding/gzip"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/retry"
 )
@@ -74,6 +75,33 @@ func NewDefaultConfig() Config {
 	}
 
 	return c
+}
+
+// NewConfig returns a new Config with all settings applied from opts and any
+// unset setting using the default gRPC config values.
+func NewGRPCConfig(opts ...GRPCOption) Config {
+	cfg := NewDefaultConfig()
+	ApplyGRPCEnvConfigs(&cfg)
+	for _, opt := range opts {
+		opt.ApplyGRPCOption(&cfg)
+	}
+
+	if cfg.ServiceConfig != "" {
+		cfg.DialOptions = append(cfg.DialOptions, grpc.WithDefaultServiceConfig(cfg.ServiceConfig))
+	}
+	if cfg.Traces.GRPCCredentials != nil {
+		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(cfg.Traces.GRPCCredentials))
+	} else if cfg.Traces.Insecure {
+		cfg.DialOptions = append(cfg.DialOptions, grpc.WithInsecure())
+	}
+	if cfg.Traces.Compression == GzipCompression {
+		cfg.DialOptions = append(cfg.DialOptions, grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
+	}
+	if len(cfg.DialOptions) != 0 {
+		cfg.DialOptions = append(cfg.DialOptions, cfg.DialOptions...)
+	}
+
+	return cfg
 }
 
 type (
