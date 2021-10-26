@@ -352,24 +352,14 @@ func TestExportSpansTimeoutHonored(t *testing.T) {
 	require.Equal(t, codes.DeadlineExceeded, status.Convert(err).Code())
 }
 
-func TestNew_withInvalidSecurityConfiguration(t *testing.T) {
+func TestStartErrorInvalidSecurityConfiguration(t *testing.T) {
 	mc := runMockCollector(t)
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	ctx := context.Background()
-	driver := otlptracegrpc.NewClient(otlptracegrpc.WithEndpoint(mc.endpoint))
-	exp, err := otlptrace.New(ctx, driver)
-	if err != nil {
-		t.Fatalf("failed to create a new collector exporter: %v", err)
-	}
-	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-
-	err = exp.ExportSpans(ctx, roSpans)
-
-	expectedErr := fmt.Sprintf("traces exporter is disconnected from the server %s: grpc: no transport security set (use grpc.WithInsecure() explicitly or set credentials)", mc.endpoint)
-
-	require.Error(t, err)
-	require.Equal(t, expectedErr, err.Error())
+	client := otlptracegrpc.NewClient(otlptracegrpc.WithEndpoint(mc.endpoint))
+	err := client.Start(context.Background())
+	// https://github.com/grpc/grpc-go/blob/a671967dfbaab779d37fd7e597d9248f13806087/clientconn.go#L82
+	assert.EqualError(t, err, "grpc: no transport security set (use grpc.WithInsecure() explicitly or set credentials)")
 }
 
 func TestNew_withMultipleAttributeTypes(t *testing.T) {
