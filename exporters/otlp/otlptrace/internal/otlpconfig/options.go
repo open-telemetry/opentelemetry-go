@@ -78,8 +78,8 @@ func NewDefaultConfig() Config {
 	return c
 }
 
-// NewConfig returns a new Config with all settings applied from opts and any
-// unset setting using the default gRPC config values.
+// NewGRPCConfig returns a new Config with all settings applied from opts and
+// any unset setting using the default gRPC config values.
 func NewGRPCConfig(opts ...GRPCOption) Config {
 	cfg := NewDefaultConfig()
 	ApplyGRPCEnvConfigs(&cfg)
