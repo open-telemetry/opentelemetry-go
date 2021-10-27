@@ -19,14 +19,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add the `"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc".WithGRPCConn` option so the exporter can reusing an existing gRPC connection. (#2002)
+- Add the `"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc".WithGRPCConn` option so the exporter can reuse an existing gRPC connection. (#2002)
 - Added a new `schema` module to help parse Schema Files in OTEP 0152 format. (#2267)
 
-## [1.1.0] - 2021-10-26
+## [1.1.0] - 2021-10-27
 
 ### Added
 
-- Add the `"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc".WithGRPCConn` option so the exporter can reusing an existing gRPC connection. (#2002)
+- Add the `"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc".WithGRPCConn` option so the exporter can reuse an existing gRPC connection. (#2002)
 - Add the `go.opentelemetry.io/otel/semconv/v1.7.0` package.
   The package contains semantic conventions from the `v1.7.0` version of the OpenTelemetry specification. (#2320)
 - Add the `go.opentelemetry.io/otel/semconv/v1.6.1` package.
