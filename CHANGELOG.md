@@ -41,6 +41,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `semconv.NetAttributesFromHTTPRequest()` correctly handles IPv6 addresses. (#2285)
 - The simple span processor shutdown method deterministically returns the exporter error status if it simultaneously finishes when the deadline is reached. (#2290, #2289)
 
+### Deprecated
+
+- The `Exporter` defined in `"go.opentelemetry.io/otel/sdk/export/metric"` is now deprecated and moved to `"go.opentelemetry.io/otel/sdk/metric/processor"` (#2273)
+
 ## [1.0.1] - 2021-10-01
 
 ### Fixed
