@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package retry
+package retry // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/retry"
 
 import (
 	"context"

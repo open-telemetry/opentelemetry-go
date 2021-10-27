@@ -15,7 +15,7 @@
 // Package tools provides helper functions used in scripts within the
 // internal/tools module, as well as imports needed for a build with the
 // "tools" build tag.
-package tools
+package tools // import "go.opentelemetry.io/otel/internal/tools"
 
 import (
 	"errors"

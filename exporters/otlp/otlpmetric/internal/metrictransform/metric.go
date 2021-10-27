@@ -14,7 +14,7 @@
 
 // Package transform provides translations for opentelemetry-go concepts and
 // structures to otlp structures.
-package metrictransform
+package metrictransform // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/metrictransform"
 
 import (
 	"context"
