@@ -10,7 +10,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## Changed
 
-- Skip links with invalid span context. (#2275)
 - Metric SDK `export.ExportKind`, `export.ExportKindSelector` types have been renamed to `aggregation.Temporality` and `aggregation.TemporalitySelector` respectively to keep in line with current specification and protocol along with built-in selectors (e.g., `aggregation.CumulativeTemporalitySelector`, ...). (#2274)
 - The Metric `Exporter` interface now requires a `TemporalitySelector` method instead of an `ExportKindSelector`. (#2274)
 - Metrics API cleanup. The `metric/sdkapi` package has been created to relocate the API-to-SDK interface:
@@ -20,8 +19,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Adds `otlptracegrpc.WithGRPCConn` and `otlpmetricgrpc.WithGRPCConn` for reusing existing gRPC connection. (#2002)
+- Add the `"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc".WithGRPCConn` option so the exporter can reuse an existing gRPC connection. (#2002)
 - Added a new `schema` module to help parse Schema Files in OTEP 0152 format. (#2267)
+
+## [1.1.0] - 2021-10-27
+
+### Added
+
+- Add the `"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc".WithGRPCConn` option so the exporter can reuse an existing gRPC connection. (#2002)
 - Add the `go.opentelemetry.io/otel/semconv/v1.7.0` package.
   The package contains semantic conventions from the `v1.7.0` version of the OpenTelemetry specification. (#2320)
 - Add the `go.opentelemetry.io/otel/semconv/v1.6.1` package.
@@ -32,13 +37,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     - `K8SReplicasetUIDKey` -> `K8SReplicaSetUIDKey`
     - `K8SReplicasetNameKey` -> `K8SReplicaSetNameKey`
     - `K8SStatefulsetUIDKey` -> `K8SStatefulSetUIDKey`
-    - `K8SStatefulsetNameKey` -> `K8SStatefulSetNameKey`
+    - `k8SStatefulsetNameKey` -> `K8SStatefulSetNameKey`
     - `K8SDaemonsetUIDKey` -> `K8SDaemonSetUIDKey`
     - `K8SDaemonsetNameKey` -> `K8SDaemonSetNameKey`
 
+### Changed
+
+- Links added to a span will be dropped by the SDK if they contain an invalid span context (#2275).
+
 ### Fixed
 
-- `semconv.NetAttributesFromHTTPRequest()` correctly handles IPv6 addresses. (#2285)
+- The `"go.opentelemetry.io/otel/semconv/v1.4.0".HTTPServerAttributesFromHTTPRequest` now correctly only sets the HTTP client IP attribute even if the connection was routed with proxies and there are multiple addresses in the `X-Forwarded-For` header. (#2282, #2284)
+- The `"go.opentelemetry.io/otel/semconv/v1.4.0".NetAttributesFromHTTPRequest` function correctly handles IPv6 addresses as IP addresses and sets the correct net peer IP instead of the net peer hostname attribute. (#2283, #2285)
 - The simple span processor shutdown method deterministically returns the exporter error status if it simultaneously finishes when the deadline is reached. (#2290, #2289)
 
 ## [1.0.1] - 2021-10-01
@@ -46,7 +56,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - json stdout exporter no longer crashes due to concurrency bug. (#2265)
-- `http.client_ip` no longer inhales multiple addresses from the `X-Forwarded-For` header. (#2282)
 
 ## [Metrics 0.24.0] - 2021-10-01
 
@@ -1584,7 +1593,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.1.0
 [1.0.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.1
 [Metrics 0.24.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/metric/v0.24.0
 [1.0.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.0
