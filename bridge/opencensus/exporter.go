@@ -30,9 +30,9 @@ import (
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/metric/unit"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	export "go.opentelemetry.io/otel/sdk/metric/exporter"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
