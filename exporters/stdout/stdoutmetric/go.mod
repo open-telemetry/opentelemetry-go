@@ -9,11 +9,11 @@ replace (
 
 require (
 	github.com/stretchr/testify v1.7.0
-	go.opentelemetry.io/otel v1.0.0-RC3
-	go.opentelemetry.io/otel/metric v0.23.0
-	go.opentelemetry.io/otel/sdk v1.0.0-RC3
-	go.opentelemetry.io/otel/sdk/export/metric v0.23.0
-	go.opentelemetry.io/otel/sdk/metric v0.23.0
+	go.opentelemetry.io/otel v1.1.0
+	go.opentelemetry.io/otel/metric v0.24.0
+	go.opentelemetry.io/otel/sdk v1.1.0
+	go.opentelemetry.io/otel/sdk/export/metric v0.24.0
+	go.opentelemetry.io/otel/sdk/metric v0.24.0
 )
 
 replace go.opentelemetry.io/otel/bridge/opencensus => ../../../bridge/opencensus
@@ -73,3 +73,5 @@ replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp => ../
 replace go.opentelemetry.io/otel/bridge/opencensus/test => ../../../bridge/opencensus/test
 
 replace go.opentelemetry.io/otel/example/fib => ../../../example/fib
+
+replace go.opentelemetry.io/otel/schema => ../../../schema

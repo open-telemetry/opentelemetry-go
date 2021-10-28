@@ -21,60 +21,67 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/internal/metric/registry"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/metrictest"
-	"go.opentelemetry.io/otel/metric/registry"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 )
 
 type (
-	newFunc func(m metric.Meter, name string) (metric.InstrumentImpl, error)
+	newFunc func(m metric.Meter, name string) (sdkapi.InstrumentImpl, error)
 )
 
 var (
 	allNew = map[string]newFunc{
-		"counter.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+		"counter.int64": func(m metric.Meter, name string) (sdkapi.InstrumentImpl, error) {
 			return unwrap(m.NewInt64Counter(name))
 		},
-		"counter.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+		"counter.float64": func(m metric.Meter, name string) (sdkapi.InstrumentImpl, error) {
 			return unwrap(m.NewFloat64Counter(name))
 		},
-		"histogram.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+		"histogram.int64": func(m metric.Meter, name string) (sdkapi.InstrumentImpl, error) {
 			return unwrap(m.NewInt64Histogram(name))
 		},
-		"histogram.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+		"histogram.float64": func(m metric.Meter, name string) (sdkapi.InstrumentImpl, error) {
 			return unwrap(m.NewFloat64Histogram(name))
 		},
-		"gaugeobserver.int64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+		"gaugeobserver.int64": func(m metric.Meter, name string) (sdkapi.InstrumentImpl, error) {
 			return unwrap(m.NewInt64GaugeObserver(name, func(context.Context, metric.Int64ObserverResult) {}))
 		},
-		"gaugeobserver.float64": func(m metric.Meter, name string) (metric.InstrumentImpl, error) {
+		"gaugeobserver.float64": func(m metric.Meter, name string) (sdkapi.InstrumentImpl, error) {
 			return unwrap(m.NewFloat64GaugeObserver(name, func(context.Context, metric.Float64ObserverResult) {}))
 		},
 	}
 )
 
-func unwrap(impl interface{}, err error) (metric.InstrumentImpl, error) {
+func unwrap(impl interface{}, err error) (sdkapi.InstrumentImpl, error) {
 	if impl == nil {
 		return nil, err
 	}
 	if s, ok := impl.(interface {
-		SyncImpl() metric.SyncImpl
+		SyncImpl() sdkapi.SyncImpl
 	}); ok {
 		return s.SyncImpl(), err
 	}
 	if a, ok := impl.(interface {
-		AsyncImpl() metric.AsyncImpl
+		AsyncImpl() sdkapi.AsyncImpl
 	}); ok {
 		return a.AsyncImpl(), err
 	}
 	return nil, err
 }
 
+func testMeterWithRegistry(name string) metric.Meter {
+	return metric.WrapMeterImpl(
+		registry.NewUniqueInstrumentMeterImpl(
+			metrictest.NewMeterProvider().Meter(name).MeterImpl(),
+		),
+	)
+}
+
 func TestRegistrySameInstruments(t *testing.T) {
 	for _, nf := range allNew {
-		_, provider := metrictest.NewMeterProvider()
-
-		meter := provider.Meter("meter")
+		meter := testMeterWithRegistry("meter")
 		inst1, err1 := nf(meter, "this")
 		inst2, err2 := nf(meter, "this")
 
@@ -86,7 +93,7 @@ func TestRegistrySameInstruments(t *testing.T) {
 
 func TestRegistryDifferentNamespace(t *testing.T) {
 	for _, nf := range allNew {
-		_, provider := metrictest.NewMeterProvider()
+		provider := metrictest.NewMeterProvider()
 
 		meter1 := provider.Meter("meter1")
 		meter2 := provider.Meter("meter2")
@@ -101,8 +108,7 @@ func TestRegistryDifferentNamespace(t *testing.T) {
 
 func TestRegistryDiffInstruments(t *testing.T) {
 	for origName, origf := range allNew {
-		_, provider := metrictest.NewMeterProvider()
-		meter := provider.Meter("meter")
+		meter := testMeterWithRegistry("meter")
 
 		_, err := origf(meter, "this")
 		require.NoError(t, err)
@@ -118,15 +124,4 @@ func TestRegistryDiffInstruments(t *testing.T) {
 			require.True(t, errors.Is(err, registry.ErrMetricKindMismatch))
 		}
 	}
-}
-
-func TestMeterProvider(t *testing.T) {
-	impl, _ := metrictest.NewMeter()
-	p := registry.NewMeterProvider(impl)
-	m1 := p.Meter("m1")
-	m1p := p.Meter("m1")
-	m2 := p.Meter("m2")
-
-	require.Equal(t, m1, m1p)
-	require.NotEqual(t, m1, m2)
 }

@@ -8,13 +8,72 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## Changed
+
+- Metric SDK `export.ExportKind`, `export.ExportKindSelector` types have been renamed to `aggregation.Temporality` and `aggregation.TemporalitySelector` respectively to keep in line with current specification and protocol along with built-in selectors (e.g., `aggregation.CumulativeTemporalitySelector`, ...). (#2274)
+- The Metric `Exporter` interface now requires a `TemporalitySelector` method instead of an `ExportKindSelector`. (#2274)
+- Metrics API cleanup. The `metric/sdkapi` package has been created to relocate the API-to-SDK interface:
+  - The following interface types simply moved from `metric` to `metric/sdkapi`: `Descriptor`, `MeterImpl`, `InstrumentImpl`, `SyncImpl`, `BoundSyncImpl`, `AsyncImpl`, `AsyncRunner`, `AsyncSingleRunner`, and `AsyncBatchRunner`
+  - The following struct types moved and are replaced with type aliases, since they are exposed to the user: `Observation`, `Measurement`.
+  - The No-op implementations of sync and async instruments are no longer exported, new functions `sdkapi.NewNoopAsyncInstrument()` and `sdkapi.NewNoopSyncInstrument()` are provided instead. (#2271)
+
 ### Added
 
-- OTLP trace exporter now sets the SchemaURL field in the exported telemetry if the Tracer has WithSchemaURL option. (#2242)
+- Add the `"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc".WithGRPCConn` option so the exporter can reuse an existing gRPC connection. (#2002)
+- Added a new `schema` module to help parse Schema Files in OTEP 0152 format. (#2267)
+
+## [1.1.0] - 2021-10-27
+
+### Added
+
+- Add the `"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc".WithGRPCConn` option so the exporter can reuse an existing gRPC connection. (#2002)
+- Add the `go.opentelemetry.io/otel/semconv/v1.7.0` package.
+  The package contains semantic conventions from the `v1.7.0` version of the OpenTelemetry specification. (#2320)
+- Add the `go.opentelemetry.io/otel/semconv/v1.6.1` package.
+  The package contains semantic conventions from the `v1.6.1` version of the OpenTelemetry specification. (#2321)
+- Add the `go.opentelemetry.io/otel/semconv/v1.5.0` package.
+  The package contains semantic conventions from the `v1.5.0` version of the OpenTelemetry specification. (#2322)
+  - When upgrading from the `semconv/v1.4.0` package note the following name changes:
+    - `K8SReplicasetUIDKey` -> `K8SReplicaSetUIDKey`
+    - `K8SReplicasetNameKey` -> `K8SReplicaSetNameKey`
+    - `K8SStatefulsetUIDKey` -> `K8SStatefulSetUIDKey`
+    - `k8SStatefulsetNameKey` -> `K8SStatefulSetNameKey`
+    - `K8SDaemonsetUIDKey` -> `K8SDaemonSetUIDKey`
+    - `K8SDaemonsetNameKey` -> `K8SDaemonSetNameKey`
+
+### Changed
+
+- Links added to a span will be dropped by the SDK if they contain an invalid span context (#2275).
+
+### Fixed
+
+- The `"go.opentelemetry.io/otel/semconv/v1.4.0".HTTPServerAttributesFromHTTPRequest` now correctly only sets the HTTP client IP attribute even if the connection was routed with proxies and there are multiple addresses in the `X-Forwarded-For` header. (#2282, #2284)
+- The `"go.opentelemetry.io/otel/semconv/v1.4.0".NetAttributesFromHTTPRequest` function correctly handles IPv6 addresses as IP addresses and sets the correct net peer IP instead of the net peer hostname attribute. (#2283, #2285)
+- The simple span processor shutdown method deterministically returns the exporter error status if it simultaneously finishes when the deadline is reached. (#2290, #2289)
+
+## [1.0.1] - 2021-10-01
+
+### Fixed
+
+- json stdout exporter no longer crashes due to concurrency bug. (#2265)
+
+## [Metrics 0.24.0] - 2021-10-01
 
 ### Changed
 
 - NoopMeterProvider is now private and NewNoopMeterProvider must be used to obtain a noopMeterProvider. (#2237)
+- The Metric SDK `Export()` function takes a new two-level reader interface for iterating over results one instrumentation library at a time. (#2197)
+  - The former `"go.opentelemetry.io/otel/sdk/export/metric".CheckpointSet` is renamed `Reader`.
+  - The new interface is named `"go.opentelemetry.io/otel/sdk/export/metric".InstrumentationLibraryReader`.
+
+## [1.0.0] - 2021-09-20
+
+This is the first stable release for the project.
+This release includes an API and SDK for the tracing signal that will comply with the stability guarantees defined by the projects [versioning policy](./VERSIONING.md).
+
+### Added
+
+- OTLP trace exporter now sets the `SchemaURL` field in the exported telemetry if the Tracer has `WithSchemaURL` option. (#2242)
 
 ### Fixed
 
@@ -22,6 +81,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
+- Removed the `"go.opentelemetry.io/otel/exporters/zipkin".WithSDKOptions` function. (#2248)
 - Removed the deprecated package `go.opentelemetry.io/otel/oteltest`. (#2234)
 - Removed the deprecated package `go.opentelemetry.io/otel/bridge/opencensus/utils`. (#2233)
 - Removed deprecated functions, types, and methods from `go.opentelemetry.io/otel/attribute` package.
@@ -1533,7 +1593,11 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.0.0-RC3...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.1.0
+[1.0.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.1
+[Metrics 0.24.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/metric/v0.24.0
+[1.0.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.0
 [1.0.0-RC3]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.0-RC3
 [1.0.0-RC2]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.0-RC2
 [Experimental Metrics v0.22.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/metric/v0.22.0

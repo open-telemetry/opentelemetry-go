@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 )
 
 func TestDetectOnePair(t *testing.T) {

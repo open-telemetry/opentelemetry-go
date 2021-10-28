@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlpmetricgrpc
+package otlpmetricgrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 
 import (
 	"fmt"
@@ -113,6 +113,14 @@ func WithServiceConfig(serviceConfig string) Option {
 func WithDialOption(opts ...grpc.DialOption) Option {
 	return wrappedOption{otlpconfig.NewGRPCOption(func(cfg *otlpconfig.Config) {
 		cfg.DialOptions = opts
+	})}
+}
+
+// WithGRPCConn allows reusing existing gRPC connection when it has already been
+// established for other services. When set, other dial options will be ignored.
+func WithGRPCConn(conn *grpc.ClientConn) Option {
+	return wrappedOption{otlpconfig.NewGRPCOption(func(cfg *otlpconfig.Config) {
+		cfg.GRPCConn = conn
 	})}
 }
 

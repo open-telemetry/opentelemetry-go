@@ -336,3 +336,14 @@ updates:
     schedule:
       day: sunday
       interval: weekly
+
+  -
+    package-ecosystem: gomod
+    directory: /schema
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      day: sunday
+      interval: weekly

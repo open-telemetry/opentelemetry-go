@@ -27,7 +27,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/metric"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
@@ -84,11 +84,11 @@ func expectHistogram(name string, values ...string) expectedMetric {
 
 func newPipeline(config prometheus.Config, options ...controller.Option) (*prometheus.Exporter, error) {
 	c := controller.New(
-		processor.New(
+		processor.NewFactory(
 			selector.NewWithHistogramDistribution(
 				histogram.WithExplicitBoundaries(config.DefaultHistogramBoundaries),
 			),
-			export.CumulativeExportKindSelector(),
+			aggregation.CumulativeTemporalitySelector(),
 			processor.WithMemory(true),
 		),
 		options...,

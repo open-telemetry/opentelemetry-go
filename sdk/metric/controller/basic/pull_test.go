@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
@@ -34,9 +34,9 @@ import (
 
 func TestPullNoCollect(t *testing.T) {
 	puller := controller.New(
-		processor.New(
+		processor.NewFactory(
 			processortest.AggregatorSelector(),
-			export.CumulativeExportKindSelector(),
+			aggregation.CumulativeTemporalitySelector(),
 			processor.WithMemory(true),
 		),
 		controller.WithCollectPeriod(0),
@@ -44,14 +44,14 @@ func TestPullNoCollect(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	meter := puller.MeterProvider().Meter("nocache")
+	meter := puller.Meter("nocache")
 	counter := metric.Must(meter).NewInt64Counter("counter.sum")
 
 	counter.Add(ctx, 10, attribute.String("A", "B"))
 
 	require.NoError(t, puller.Collect(ctx))
 	records := processortest.NewOutput(attribute.DefaultEncoder())
-	require.NoError(t, puller.ForEach(export.CumulativeExportKindSelector(), records.AddRecord))
+	require.NoError(t, controllertest.ReadAll(puller, aggregation.CumulativeTemporalitySelector(), records.AddInstrumentationLibraryRecord))
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=B/": 10,
@@ -61,7 +61,7 @@ func TestPullNoCollect(t *testing.T) {
 
 	require.NoError(t, puller.Collect(ctx))
 	records = processortest.NewOutput(attribute.DefaultEncoder())
-	require.NoError(t, puller.ForEach(export.CumulativeExportKindSelector(), records.AddRecord))
+	require.NoError(t, controllertest.ReadAll(puller, aggregation.CumulativeTemporalitySelector(), records.AddInstrumentationLibraryRecord))
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=B/": 20,
@@ -70,9 +70,9 @@ func TestPullNoCollect(t *testing.T) {
 
 func TestPullWithCollect(t *testing.T) {
 	puller := controller.New(
-		processor.New(
+		processor.NewFactory(
 			processortest.AggregatorSelector(),
-			export.CumulativeExportKindSelector(),
+			aggregation.CumulativeTemporalitySelector(),
 			processor.WithMemory(true),
 		),
 		controller.WithCollectPeriod(time.Second),
@@ -82,14 +82,14 @@ func TestPullWithCollect(t *testing.T) {
 	puller.SetClock(mock)
 
 	ctx := context.Background()
-	meter := puller.MeterProvider().Meter("nocache")
+	meter := puller.Meter("nocache")
 	counter := metric.Must(meter).NewInt64Counter("counter.sum")
 
 	counter.Add(ctx, 10, attribute.String("A", "B"))
 
 	require.NoError(t, puller.Collect(ctx))
 	records := processortest.NewOutput(attribute.DefaultEncoder())
-	require.NoError(t, puller.ForEach(export.CumulativeExportKindSelector(), records.AddRecord))
+	require.NoError(t, controllertest.ReadAll(puller, aggregation.CumulativeTemporalitySelector(), records.AddInstrumentationLibraryRecord))
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=B/": 10,
@@ -100,7 +100,7 @@ func TestPullWithCollect(t *testing.T) {
 	// Cached value!
 	require.NoError(t, puller.Collect(ctx))
 	records = processortest.NewOutput(attribute.DefaultEncoder())
-	require.NoError(t, puller.ForEach(export.CumulativeExportKindSelector(), records.AddRecord))
+	require.NoError(t, controllertest.ReadAll(puller, aggregation.CumulativeTemporalitySelector(), records.AddInstrumentationLibraryRecord))
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=B/": 10,
@@ -112,7 +112,7 @@ func TestPullWithCollect(t *testing.T) {
 	// Re-computed value!
 	require.NoError(t, puller.Collect(ctx))
 	records = processortest.NewOutput(attribute.DefaultEncoder())
-	require.NoError(t, puller.ForEach(export.CumulativeExportKindSelector(), records.AddRecord))
+	require.NoError(t, controllertest.ReadAll(puller, aggregation.CumulativeTemporalitySelector(), records.AddInstrumentationLibraryRecord))
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=B/": 20,

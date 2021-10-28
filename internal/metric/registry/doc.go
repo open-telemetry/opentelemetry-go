@@ -12,27 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
+/*
+Package registry provides a non-standalone implementation of
+MeterProvider that adds uniqueness checking for instrument descriptors
+on top of other MeterProvider it wraps.
 
-import (
-	"os"
-	"testing"
-	"unsafe"
-
-	"go.opentelemetry.io/otel/internal/internaltest"
-)
-
-// Ensure struct alignment prior to running tests.
-func TestMain(m *testing.M) {
-	fields := []internaltest.FieldOffset{
-		{
-			Name:   "Measurement.number",
-			Offset: unsafe.Offsetof(Measurement{}.number),
-		},
-	}
-	if !internaltest.Aligned8Byte(fields, os.Stderr) {
-		os.Exit(1)
-	}
-
-	os.Exit(m.Run())
-}
+This package is currently in a pre-GA phase. Backwards incompatible changes
+may be introduced in subsequent minor version releases as we work to track the
+evolving OpenTelemetry specification and user feedback.
+*/
+package registry // import "go.opentelemetry.io/otel/internal/metric/registry"

@@ -22,9 +22,12 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/metric/processor/reducer"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -45,15 +48,15 @@ var (
 
 type testFilter struct{}
 
-func (testFilter) LabelFilterFor(_ *metric.Descriptor) attribute.Filter {
+func (testFilter) LabelFilterFor(_ *sdkapi.Descriptor) attribute.Filter {
 	return func(label attribute.KeyValue) bool {
 		return label.Key == "A" || label.Key == "C"
 	}
 }
 
-func generateData(impl metric.MeterImpl) {
+func generateData(impl sdkapi.MeterImpl) {
 	ctx := context.Background()
-	meter := metric.WrapMeterImpl(impl, "testing")
+	meter := metric.WrapMeterImpl(impl)
 
 	counter := metric.Must(meter).NewFloat64Counter("counter.sum")
 
@@ -74,7 +77,7 @@ func TestFilterProcessor(t *testing.T) {
 		attribute.DefaultEncoder(),
 	)
 	accum := metricsdk.NewAccumulator(
-		reducer.New(testFilter{}, processorTest.Checkpointer(testProc)),
+		reducer.New(testFilter{}, processorTest.NewCheckpointer(testProc)),
 	)
 	generateData(accum)
 
@@ -88,7 +91,7 @@ func TestFilterProcessor(t *testing.T) {
 
 // Test a filter with the ../basic Processor.
 func TestFilterBasicProcessor(t *testing.T) {
-	basicProc := basic.New(processorTest.AggregatorSelector(), export.CumulativeExportKindSelector())
+	basicProc := basic.New(processorTest.AggregatorSelector(), aggregation.CumulativeTemporalitySelector())
 	accum := metricsdk.NewAccumulator(
 		reducer.New(testFilter{}, basicProc),
 	)
@@ -103,7 +106,9 @@ func TestFilterBasicProcessor(t *testing.T) {
 	}
 
 	res := resource.NewSchemaless(attribute.String("R", "V"))
-	require.NoError(t, exporter.Export(context.Background(), res, basicProc.CheckpointSet()))
+	require.NoError(t, exporter.Export(context.Background(), res, processortest.OneInstrumentationLibraryReader(instrumentation.Library{
+		Name: "test",
+	}, basicProc.Reader())))
 
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=1,C=3/R=V":  200,
