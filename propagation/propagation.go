@@ -44,6 +44,9 @@ type TextMapCarrier interface {
 // values in a map of bytes.
 type BytesMapCarrier map[string][]byte
 
+// Compile time check the BytesMapCarrier implements the TextMapCarrier.
+var _ TextMapCarrier = BytesMapCarrier{}
+
 // Get returns the value associated with the passed key.
 func (c BytesMapCarrier) Get(key string) string {
 	return string(c[key])
