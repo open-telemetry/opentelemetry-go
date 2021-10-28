@@ -64,7 +64,7 @@ func TestBytesMapCarrier(t *testing.T) {
 
 	keys := carrier.Keys()
 	sort.Strings(keys)
-	assert.Equal(t, carrier.Keys(), []string{"baz", "foo"})
+	assert.Equal(t, []string{"foo", "baz"}, carrier.Keys())
 }
 
 type outOfThinAirPropagator struct {
