@@ -153,10 +153,29 @@ func (bsp *batchSpanProcessor) Shutdown(ctx context.Context) error {
 	return err
 }
 
+type forceFlushSpan struct {
+	ReadOnlySpan
+	flushed chan struct{}
+}
+
 // ForceFlush exports all ended spans that have not yet been exported.
 func (bsp *batchSpanProcessor) ForceFlush(ctx context.Context) error {
 	var err error
 	if bsp.e != nil {
+		flushCh := make(chan struct{})
+		select {
+		case bsp.queue <- forceFlushSpan{flushed: flushCh}:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+
+		select {
+		case <-flushCh:
+			// Processed any items in queue prior to ForceFlush being called
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+
 		wait := make(chan error)
 		go func() {
 			wait <- bsp.exportSpans(ctx)
@@ -248,6 +267,10 @@ func (bsp *batchSpanProcessor) processQueue() {
 				otel.Handle(err)
 			}
 		case sd := <-bsp.queue:
+			if ffs, ok := sd.(forceFlushSpan); ok {
+				close(ffs.flushed)
+				return
+			}
 			bsp.batchMutex.Lock()
 			bsp.batch = append(bsp.batch, sd)
 			shouldExport := len(bsp.batch) >= bsp.o.MaxExportBatchSize
