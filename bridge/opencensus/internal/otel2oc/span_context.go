@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otel2oc
+package otel2oc // import "go.opentelemetry.io/otel/bridge/opencensus/internal/otel2oc"
 
 import (
 	octrace "go.opencensus.io/trace"
