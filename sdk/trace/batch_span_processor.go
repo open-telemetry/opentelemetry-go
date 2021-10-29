@@ -269,7 +269,7 @@ func (bsp *batchSpanProcessor) processQueue() {
 		case sd := <-bsp.queue:
 			if ffs, ok := sd.(forceFlushSpan); ok {
 				close(ffs.flushed)
-				return
+				continue
 			}
 			bsp.batchMutex.Lock()
 			bsp.batch = append(bsp.batch, sd)
