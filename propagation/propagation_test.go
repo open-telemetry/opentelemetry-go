@@ -16,8 +16,11 @@ package propagation_test
 
 import (
 	"context"
+	"sort"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/propagation"
 )
@@ -101,4 +104,34 @@ func TestCompositeTextMapPropagatorExtract(t *testing.T) {
 	if got := strings.Join(v.([]string), ","); got != "a,b" {
 		t.Errorf("invalid extract order: %s", got)
 	}
+}
+
+func TestMapCarrierGet(t *testing.T) {
+	carrier := propagation.MapCarrier{
+		"foo": "bar",
+		"baz": "qux",
+	}
+
+	assert.Equal(t, carrier.Get("foo"), "bar")
+	assert.Equal(t, carrier.Get("baz"), "qux")
+}
+
+func TestMapCarrierSet(t *testing.T) {
+	carrier := make(propagation.MapCarrier)
+	carrier.Set("foo", "bar")
+	carrier.Set("baz", "qux")
+
+	assert.Equal(t, carrier["foo"], "bar")
+	assert.Equal(t, carrier["baz"], "qux")
+}
+
+func TestMapCarrierKeys(t *testing.T) {
+	carrier := propagation.MapCarrier{
+		"foo": "bar",
+		"baz": "qux",
+	}
+
+	keys := carrier.Keys()
+	sort.Strings(keys)
+	assert.Equal(t, []string{"baz", "foo"}, keys)
 }
