@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -470,12 +471,13 @@ func TestBatchSpanProcessorForceFlushQueuedSpans(t *testing.T) {
 
 	tracer := tp.Tracer("tracer")
 
-	_, span := tracer.Start(ctx, "span")
-	span.End()
+	for i := 0; i < 10; i++ {
+		_, span := tracer.Start(ctx, fmt.Sprintf("span%d", i))
+		span.End()
 
-	err := tp.ForceFlush(ctx)
-	assert.NoError(t, err)
+		err := tp.ForceFlush(ctx)
+		assert.NoError(t, err)
 
-	// Expect well defined behavior due to calling ForceFlush
-	assert.Len(t, exp.GetSpans(), 1)
+		assert.Len(t, exp.GetSpans(), i+1)
+	}
 }
