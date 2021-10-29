@@ -328,6 +328,14 @@ func (s *recordingSpan) AddEvent(name string, o ...trace.EventOption) {
 	if !s.IsRecording() {
 		return
 	}
+
+	c := trace.NewEventConfig(o...)
+	if c.StackTrace() {
+		o = append(o, trace.WithAttributes(
+			semconv.ExceptionStacktraceKey.String(recordStackTrace()),
+		))
+	}
+
 	s.addEvent(name, o...)
 }
 

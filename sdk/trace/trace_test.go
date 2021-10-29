@@ -1608,6 +1608,50 @@ func TestAddEventsWithMoreAttributesThanLimit(t *testing.T) {
 	}
 }
 
+func TestAddEventWithStackTrace(t *testing.T) {
+	te := NewTestExporter()
+	tp := NewTracerProvider(
+		WithSyncer(te),
+		WithResource(resource.Empty()),
+	)
+	span := startSpan(tp, "AddEventWithStackTrace")
+
+	span.AddEvent("eventA", trace.WithStackTrace(true))
+
+	got, err := endSpan(te, span)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &snapshot{
+		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    tid,
+			TraceFlags: 0x1,
+		}),
+		parent:     sc.WithRemote(true),
+		name:       "span0",
+		attributes: nil,
+		events: []Event{
+			{
+				Name:       "eventA",
+				Attributes: []attribute.KeyValue{},
+			},
+		},
+		spanKind:               trace.SpanKindInternal,
+		instrumentationLibrary: instrumentation.Library{Name: "AddEventWithStackTrace"},
+	}
+
+	assert.Equal(t, got.spanContext, want.spanContext)
+	assert.Equal(t, got.parent, want.parent)
+	assert.Equal(t, got.name, want.name)
+	assert.Equal(t, got.status, want.status)
+	assert.Equal(t, got.spanKind, want.spanKind)
+
+	gotStackTraceFunctionName := strings.Split(got.events[0].Attributes[0].Value.AsString(), "\n")
+	assert.Truef(t, strings.HasPrefix(gotStackTraceFunctionName[1], "go.opentelemetry.io/otel/sdk/trace.recordStackTrace"), "%q not prefixed with go.opentelemetry.io/otel/sdk/trace.recordStackTrace", gotStackTraceFunctionName[1])
+	assert.Truef(t, strings.HasPrefix(gotStackTraceFunctionName[3], "go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).AddEvent"), "%q not prefixed with go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).AddEvent", gotStackTraceFunctionName[3])
+}
+
 func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(
