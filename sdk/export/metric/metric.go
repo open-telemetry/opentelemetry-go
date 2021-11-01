@@ -44,7 +44,9 @@ import (
 // single-threaded context from the SDK, after the aggregator is
 // checkpointed, allowing the processor to build the set of metrics
 // currently being exported.
-// Deprecated please use the definition defined in `sdk/metric/processor`
+//
+// Deprecated: The Processor declared in go.opentelemetry.io/otel/sdk/metric/processor
+// should be used instead.
 type Processor interface {
 	// AggregatorSelector is responsible for selecting the
 	// concrete type of Aggregator used for a metric in the SDK.
