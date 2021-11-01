@@ -115,7 +115,7 @@ func (c *client) Stop(ctx context.Context) error {
 	case <-ctx.Done():
 		// The Stop timeout is reached. Kill any remaining exports to force
 		// the clear of the lock and save the timeout error to return and
-		// signal the shutdown timed out before cleaning stopping.
+		// signal the shutdown timed out before cleanly stopping.
 		c.stopFunc()
 		ctxErr = ctx.Err()
 
