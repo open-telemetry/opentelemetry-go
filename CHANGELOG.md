@@ -43,7 +43,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Deprecated
 
-- The `Processor` defined in `"go.opentelemetry.io/otel/sdk/export/metric"` has be deprecated and moved to `"go.opentelemetry.io/otel/sdk/metric/processor"` (#2273)
+- The `Processor` defined in `"go.opentelemetry.io/otel/sdk/export/metric"` has be deprecated and moved to `"go.opentelemetry.io/otel/sdk/metric/processor"` (#2273, #2326)
 
 ## [1.0.1] - 2021-10-01
 
