@@ -16,11 +16,12 @@ package semconv // import "go.opentelemetry.io/otel/semconv/v1.7.0"
 
 import (
 	"fmt"
-	"go.opentelemetry.io/otel/trace"
 	"net"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"

@@ -295,7 +295,6 @@ func validateHTTPStatusCode(code int) (codes.Code, bool) {
 	return codes.Error, true
 }
 
-
 // SpanStatusFromHTTPStatusCode generates a status code and a message
 // as specified by the OpenTelemetry specification for a span.
 // Exclude 4xx for SERVER to set the appropriate status.
