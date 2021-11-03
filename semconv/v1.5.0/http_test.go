@@ -860,14 +860,14 @@ func TestSpanStatusFromHTTPStatusCode(t *testing.T) {
 		got, msg := SpanStatusFromHTTPStatusCode(code, trace.SpanKindClient)
 		assert.Equalf(t, expected, got, "%s vs %s", expected, got)
 
-		_, valid := validateHTTPStatusCode(code, trace.SpanKindClient)
+		_, valid := validateHTTPStatusCode(code)
 		if !valid {
 			assert.NotEmpty(t, msg, "message should be set if error cannot be inferred from code")
 		} else {
 			assert.Empty(t, msg, "message should not be set if error can be inferred from code")
 		}
 	}
-	code, valid := validateHTTPStatusCode(400, trace.SpanKindServer)
+	code, valid := validateHTTPStatusCode(400)
 	if !valid {
 		assert.Equalf(t, codes.Unset, code, "message should be set if error cannot be inferred from code")
 	}
