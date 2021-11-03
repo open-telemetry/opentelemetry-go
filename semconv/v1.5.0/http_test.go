@@ -868,7 +868,7 @@ func TestSpanStatusFromHTTPStatusCode(t *testing.T) {
 		}
 	}
 	code, valid := validateHTTPStatusCode(400, trace.SpanKindServer)
-	if !valid{
+	if !valid {
 		assert.Equalf(t, codes.Unset, code, "message should be set if error cannot be inferred from code")
 	}
 }
