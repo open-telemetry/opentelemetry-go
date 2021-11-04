@@ -145,7 +145,7 @@ lint: misspell lint-modules | $(GOLANGCI_LINT)
 
 .PHONY: vanity-import-check
 vanity-import-check: | $(PORTO)
-	$(PORTO) -l .
+	$(PORTO) --include-internal -l .
 
 .PHONY: misspell
 misspell: | $(MISSPELL)

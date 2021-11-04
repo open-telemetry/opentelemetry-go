@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlpmetrictest
+package otlpmetrictest // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpmetrictest"
 
 import (
 	collectormetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
