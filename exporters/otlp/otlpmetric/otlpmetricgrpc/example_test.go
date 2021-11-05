@@ -49,7 +49,7 @@ func Example_insecure() {
 
 	pusher := controller.New(
 		processor.NewFactory(
-			simple.NewWithExactDistribution(),
+			simple.NewWithHistogramDistribution(),
 			exp,
 		),
 		controller.WithExporter(exp),
@@ -108,7 +108,7 @@ func Example_withTLS() {
 
 	pusher := controller.New(
 		processor.NewFactory(
-			simple.NewWithExactDistribution(),
+			simple.NewWithHistogramDistribution(),
 			exp,
 		),
 		controller.WithExporter(exp),
@@ -165,7 +165,7 @@ func Example_withDifferentSignalCollectors() {
 
 	pusher := controller.New(
 		processor.NewFactory(
-			simple.NewWithExactDistribution(),
+			simple.NewWithHistogramDistribution(),
 			exp,
 		),
 		controller.WithExporter(exp),
