@@ -39,7 +39,7 @@ import (
 	"log"
 )
 
-// App is an Fibonacci computation application.
+// App is a Fibonacci computation application.
 type App struct {
 	r io.Reader
 	l *log.Logger
