@@ -23,6 +23,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Added a new `schema` module to help parse Schema Files in OTEP 0152 format. (#2267)
 - Added a new `MapCarrier` to the `go.opentelemetry.io/otel/propagation` package to hold propagated coss-cutting concerns as a `map[string]string` held in memory. (#2334)
 
+### Removed
+
+- Remove the metric Processor's ability to convert cumulative to delta aggregation temporality.
+
 ## [1.1.0] - 2021-10-27
 
 ### Added
