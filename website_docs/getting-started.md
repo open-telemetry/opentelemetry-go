@@ -296,7 +296,7 @@ To initialize the console exporter, add the following function to the `main.go` 
 func newExporter(w io.Writer) (trace.SpanExporter, error) {
 	return stdouttrace.New(
 		stdouttrace.WithWriter(w),
-		// Use human readable output.
+		// Use human-readable output.
 		stdouttrace.WithPrettyPrint(),
 		// Do not print timestamps for the demo.
 		stdouttrace.WithoutTimestamps(),
