@@ -401,12 +401,6 @@ func TestRecordAggregatorIncompatibleErrors(t *testing.T) {
 	require.Error(t, err)
 	require.Nil(t, mpb)
 	require.True(t, errors.Is(err, ErrIncompatibleAgg))
-
-	mpb, err = makeMpb(aggregation.ExactKind, &lastvalue.New(1)[0])
-
-	require.Error(t, err)
-	require.Nil(t, mpb)
-	require.True(t, errors.Is(err, ErrIncompatibleAgg))
 }
 
 func TestRecordAggregatorUnexpectedErrors(t *testing.T) {

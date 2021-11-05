@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -286,13 +285,6 @@ func (o *Output) Map() map[string]float64 {
 			} else if l, ok := entry.aggregator.(aggregation.LastValue); ok {
 				last, _, _ := l.LastValue()
 				value = last.CoerceToFloat64(key.desc.NumberKind())
-			} else if l, ok := entry.aggregator.(aggregation.Points); ok {
-				pts, _ := l.Points()
-				var sum number.Number
-				for _, s := range pts {
-					sum.AddNumber(key.desc.NumberKind(), s.Number)
-				}
-				value = sum.CoerceToFloat64(key.desc.NumberKind())
 			} else {
 				panic(fmt.Sprintf("Unhandled aggregator type: %T", entry.aggregator))
 			}

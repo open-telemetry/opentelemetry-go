@@ -64,22 +64,6 @@ type (
 		LastValue() (number.Number, time.Time, error)
 	}
 
-	// Points returns the raw values that were aggregated.
-	Points interface {
-		Aggregation
-
-		// Points returns points in the order they were
-		// recorded.  Points are approximately ordered by
-		// timestamp, but this is not guaranteed.
-		Points() ([]Point, error)
-	}
-
-	// Point is a raw data point, consisting of a number and value.
-	Point struct {
-		number.Number
-		time.Time
-	}
-
 	// Buckets represents histogram buckets boundaries and counts.
 	//
 	// For a Histogram with N defined boundaries, e.g, [x, y, z].
@@ -134,7 +118,6 @@ const (
 	MinMaxSumCountKind Kind = "MinMaxSumCount"
 	HistogramKind      Kind = "Histogram"
 	LastValueKind      Kind = "Lastvalue"
-	ExactKind          Kind = "Exact"
 )
 
 // Sentinel errors for Aggregation interface.

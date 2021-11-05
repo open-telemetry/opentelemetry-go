@@ -83,7 +83,6 @@ func TestProcessor(t *testing.T) {
 								{kind: aggregation.MinMaxSumCountKind},
 								{kind: aggregation.HistogramKind},
 								{kind: aggregation.LastValueKind},
-								{kind: aggregation.ExactKind},
 							} {
 								t.Run(ac.kind.String(), func(t *testing.T) {
 									testProcessor(
