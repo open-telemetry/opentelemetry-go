@@ -18,8 +18,8 @@ import (
 	"context"
 	"sync"
 
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
@@ -49,7 +49,7 @@ var _ aggregation.MinMaxSumCount = &Aggregator{}
 // count.
 //
 // This type uses a mutex for Update() and SynchronizedMove() concurrency.
-func New(cnt int, desc *metric.Descriptor) []Aggregator {
+func New(cnt int, desc *sdkapi.Descriptor) []Aggregator {
 	kind := desc.NumberKind()
 	aggs := make([]Aggregator, cnt)
 	for i := range aggs {
@@ -103,7 +103,7 @@ func (c *Aggregator) Max() (number.Number, error) {
 
 // SynchronizedMove saves the current state into oa and resets the current state to
 // the empty set.
-func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *metric.Descriptor) error {
+func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *sdkapi.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 
 	if oa != nil && o == nil {
@@ -129,7 +129,7 @@ func emptyState(kind number.Kind) state {
 }
 
 // Update adds the recorded measurement to the current data set.
-func (c *Aggregator) Update(_ context.Context, number number.Number, desc *metric.Descriptor) error {
+func (c *Aggregator) Update(_ context.Context, number number.Number, desc *sdkapi.Descriptor) error {
 	kind := desc.NumberKind()
 
 	c.lock.Lock()
@@ -146,7 +146,7 @@ func (c *Aggregator) Update(_ context.Context, number number.Number, desc *metri
 }
 
 // Merge combines two data sets into one.
-func (c *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
+func (c *Aggregator) Merge(oa export.Aggregator, desc *sdkapi.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)

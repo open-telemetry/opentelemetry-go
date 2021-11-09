@@ -12,27 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
-
-import (
-	"os"
-	"testing"
-	"unsafe"
-
-	"go.opentelemetry.io/otel/internal/internaltest"
-)
-
-// Ensure struct alignment prior to running tests.
-func TestMain(m *testing.M) {
-	fields := []internaltest.FieldOffset{
-		{
-			Name:   "Measurement.number",
-			Offset: unsafe.Offsetof(Measurement{}.number),
-		},
-	}
-	if !internaltest.Aligned8Byte(fields, os.Stderr) {
-		os.Exit(1)
-	}
-
-	os.Exit(m.Run())
-}
+// Package semconv implements OpenTelemetry semantic conventions.
+//
+// OpenTelemetry semantic conventions are agreed standardized naming
+// patterns for OpenTelemetry things. This package represents the conventions
+// as of the v1.5.0 version of the OpenTelemetry specification.
+package semconv // import "go.opentelemetry.io/otel/semconv/v1.5.0"

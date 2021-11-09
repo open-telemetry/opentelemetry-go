@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlpconfig // import "go.opentelemetry.io/otel/exporters/otlp/internal/otlpconfig"
+package otlpconfig // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpconfig"
 
 import (
 	"crypto/tls"
@@ -75,6 +75,7 @@ type (
 		ReconnectionPeriod time.Duration
 		ServiceConfig      string
 		DialOptions        []grpc.DialOption
+		GRPCConn           *grpc.ClientConn
 		RetrySettings      RetrySettings
 	}
 )

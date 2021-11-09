@@ -33,6 +33,7 @@ import (
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
@@ -606,7 +607,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 	)
 }
 
-func TestStatelessExportKind(t *testing.T) {
+func TestStatelessAggregationTemporality(t *testing.T) {
 	type testcase struct {
 		name           string
 		instrumentKind sdkapi.InstrumentKind
@@ -624,8 +625,8 @@ func TestStatelessExportKind(t *testing.T) {
 			runMetricExportTests(
 				t,
 				[]otlpmetric.Option{
-					otlpmetric.WithMetricExportKindSelector(
-						metricsdk.StatelessExportKindSelector(),
+					otlpmetric.WithMetricAggregationTemporalitySelector(
+						aggregation.StatelessTemporalitySelector(),
 					),
 				},
 				testerAResource,

@@ -29,7 +29,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/google/go-cmp/cmp"
@@ -670,6 +670,15 @@ func TestLinks(t *testing.T) {
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Link: -got +want %s", diff)
 	}
+	sc1 = trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}})
+
+	span1 := startSpan(tp, "name", trace.WithLinks([]trace.Link{
+		{SpanContext: trace.SpanContext{}},
+		{SpanContext: sc1},
+	}...))
+
+	sdkspan, _ := span1.(*recordingSpan)
+	require.Len(t, sdkspan.Links(), 1)
 }
 
 func TestLinksOverLimit(t *testing.T) {

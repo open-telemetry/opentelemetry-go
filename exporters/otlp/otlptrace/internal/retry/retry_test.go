@@ -50,6 +50,8 @@ func TestWait(t *testing.T) {
 				cancel()
 				return ctx
 			}(),
+			// Ensure the timer and context do not end simultaneously.
+			delay:    1 * time.Hour,
 			expected: context.Canceled,
 		},
 	}

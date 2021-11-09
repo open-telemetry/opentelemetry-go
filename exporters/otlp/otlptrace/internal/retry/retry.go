@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package retry
+package retry // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/retry"
 
 import (
 	"context"
@@ -122,7 +122,14 @@ func wait(ctx context.Context, delay time.Duration) error {
 
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		// Handle the case where the timer and context deadline end
+		// simultaneously by prioritizing the timer expiration nil value
+		// response.
+		select {
+		case <-timer.C:
+		default:
+			return ctx.Err()
+		}
 	case <-timer.C:
 	}
 

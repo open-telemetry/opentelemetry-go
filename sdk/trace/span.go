@@ -25,7 +25,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -453,7 +453,7 @@ func (s *recordingSpan) Resource() *resource.Resource {
 }
 
 func (s *recordingSpan) addLink(link trace.Link) {
-	if !s.IsRecording() {
+	if !s.IsRecording() || !link.SpanContext.IsValid() {
 		return
 	}
 	s.mu.Lock()

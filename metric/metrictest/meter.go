@@ -66,18 +66,18 @@ type (
 	Measurement struct {
 		// Number needs to be aligned for 64-bit atomic operations.
 		Number     number.Number
-		Instrument metric.InstrumentImpl
+		Instrument sdkapi.InstrumentImpl
 	}
 
 	Instrument struct {
 		meter      *MeterImpl
-		descriptor metric.Descriptor
+		descriptor sdkapi.Descriptor
 	}
 
 	Async struct {
 		Instrument
 
-		runner metric.AsyncRunner
+		runner sdkapi.AsyncRunner
 	}
 
 	Sync struct {
@@ -86,20 +86,20 @@ type (
 )
 
 var (
-	_ metric.SyncImpl      = &Sync{}
-	_ metric.BoundSyncImpl = &Handle{}
-	_ metric.MeterImpl     = &MeterImpl{}
-	_ metric.AsyncImpl     = &Async{}
+	_ sdkapi.SyncImpl      = &Sync{}
+	_ sdkapi.BoundSyncImpl = &Handle{}
+	_ sdkapi.MeterImpl     = &MeterImpl{}
+	_ sdkapi.AsyncImpl     = &Async{}
 )
 
 // NewDescriptor is a test helper for constructing test metric
 // descriptors using standard options.
-func NewDescriptor(name string, ikind sdkapi.InstrumentKind, nkind number.Kind, opts ...metric.InstrumentOption) metric.Descriptor {
+func NewDescriptor(name string, ikind sdkapi.InstrumentKind, nkind number.Kind, opts ...metric.InstrumentOption) sdkapi.Descriptor {
 	cfg := metric.NewInstrumentConfig(opts...)
-	return metric.NewDescriptor(name, ikind, nkind, cfg.Description(), cfg.Unit())
+	return sdkapi.NewDescriptor(name, ikind, nkind, cfg.Description(), cfg.Unit())
 }
 
-func (i Instrument) Descriptor() metric.Descriptor {
+func (i Instrument) Descriptor() sdkapi.Descriptor {
 	return i.descriptor
 }
 
@@ -111,7 +111,7 @@ func (s *Sync) Implementation() interface{} {
 	return s
 }
 
-func (s *Sync) Bind(labels []attribute.KeyValue) metric.BoundSyncImpl {
+func (s *Sync) Bind(labels []attribute.KeyValue) sdkapi.BoundSyncImpl {
 	return &Handle{
 		Instrument: s,
 		Labels:     labels,
@@ -129,7 +129,7 @@ func (h *Handle) RecordOne(ctx context.Context, number number.Number) {
 func (h *Handle) Unbind() {
 }
 
-func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []attribute.KeyValue, instrument metric.InstrumentImpl, number number.Number) {
+func (m *MeterImpl) doRecordSingle(ctx context.Context, labels []attribute.KeyValue, instrument sdkapi.InstrumentImpl, number number.Number) {
 	m.collect(ctx, labels, []Measurement{{
 		Instrument: instrument,
 		Number:     number,
@@ -160,8 +160,8 @@ func (p *MeterProvider) Meter(name string, opts ...metric.MeterOption) metric.Me
 	return metric.WrapMeterImpl(impl)
 }
 
-// NewSyncInstrument implements metric.MeterImpl.
-func (m *MeterImpl) NewSyncInstrument(descriptor metric.Descriptor) (metric.SyncImpl, error) {
+// NewSyncInstrument implements sdkapi.MeterImpl.
+func (m *MeterImpl) NewSyncInstrument(descriptor sdkapi.Descriptor) (sdkapi.SyncImpl, error) {
 	return &Sync{
 		Instrument{
 			descriptor: descriptor,
@@ -170,8 +170,8 @@ func (m *MeterImpl) NewSyncInstrument(descriptor metric.Descriptor) (metric.Sync
 	}, nil
 }
 
-// NewAsyncInstrument implements metric.MeterImpl.
-func (m *MeterImpl) NewAsyncInstrument(descriptor metric.Descriptor, runner metric.AsyncRunner) (metric.AsyncImpl, error) {
+// NewAsyncInstrument implements sdkapi.MeterImpl.
+func (m *MeterImpl) NewAsyncInstrument(descriptor sdkapi.Descriptor, runner sdkapi.AsyncRunner) (sdkapi.AsyncImpl, error) {
 	a := &Async{
 		Instrument: Instrument{
 			descriptor: descriptor,
@@ -183,8 +183,8 @@ func (m *MeterImpl) NewAsyncInstrument(descriptor metric.Descriptor, runner metr
 	return a, nil
 }
 
-// RecordBatch implements metric.MeterImpl.
-func (m *MeterImpl) RecordBatch(ctx context.Context, labels []attribute.KeyValue, measurements ...metric.Measurement) {
+// RecordBatch implements sdkapi.MeterImpl.
+func (m *MeterImpl) RecordBatch(ctx context.Context, labels []attribute.KeyValue, measurements ...sdkapi.Measurement) {
 	mm := make([]Measurement, len(measurements))
 	for i := 0; i < len(measurements); i++ {
 		m := measurements[i]
@@ -197,7 +197,7 @@ func (m *MeterImpl) RecordBatch(ctx context.Context, labels []attribute.KeyValue
 }
 
 // CollectAsync is called from asyncInstruments.Run() with the lock held.
-func (m *MeterImpl) CollectAsync(labels []attribute.KeyValue, obs ...metric.Observation) {
+func (m *MeterImpl) CollectAsync(labels []attribute.KeyValue, obs ...sdkapi.Observation) {
 	mm := make([]Measurement, len(obs))
 	for i := 0; i < len(obs); i++ {
 		o := obs[i]
@@ -220,7 +220,7 @@ func (m *MeterImpl) collect(ctx context.Context, labels []attribute.KeyValue, me
 }
 
 // registerAsyncInstrument locks the provider and registers the new Async instrument.
-func (p *MeterProvider) registerAsyncInstrument(a *Async, m *MeterImpl, runner metric.AsyncRunner) {
+func (p *MeterProvider) registerAsyncInstrument(a *Async, m *MeterImpl, runner sdkapi.AsyncRunner) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 

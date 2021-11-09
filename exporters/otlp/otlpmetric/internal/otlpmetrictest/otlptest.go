@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlpmetrictest
+package otlpmetrictest // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpmetrictest"
 
 import (
 	"context"
@@ -30,7 +30,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
-	exportmetric "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -40,7 +40,7 @@ import (
 // themselves.
 func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter, mcMetrics Collector) {
 	selector := simple.NewWithInexpensiveDistribution()
-	proc := processor.NewFactory(selector, exportmetric.StatelessExportKindSelector())
+	proc := processor.NewFactory(selector, aggregation.StatelessTemporalitySelector())
 	cont := controller.New(proc, controller.WithExporter(exp))
 	require.NoError(t, cont.Start(ctx))
 
