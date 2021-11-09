@@ -101,6 +101,11 @@ type (
 		Histogram() (Buckets, error)
 	}
 
+	// ExponentialHistogram returns the count of events in
+	// exponential-scale buckets defined as a function of a
+	// scale parameter.  See a detailed explanation in the
+	// OpenTelemetry metrics data model:
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/datamodel.md#exponentialhistogram
 	ExponentialHistogram interface {
 		Aggregation
 		Count() (uint64, error)
@@ -111,6 +116,9 @@ type (
 		Negative() ExponentialBuckets
 	}
 
+	// ExponentialBuckets describes a range of consecutive
+	// buckets, starting at Offset().  This type is used to encode
+	// either the positive or negative ranges of an ExponentialHistogram.
 	ExponentialBuckets interface {
 		Offset() int32
 		Len() uint32
