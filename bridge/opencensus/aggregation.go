@@ -58,7 +58,7 @@ func recordAggregationsFromPoints(
 var _ aggregation.Aggregation = &ocRawAggregator{}
 var _ aggregation.LastValue = &ocRawAggregator{}
 
-// recordGaugePoints creates an OpenTelemetry aggreation from OpenCensus points.
+// recordGaugePoints creates an OpenTelemetry aggregation from OpenCensus points.
 // Points may not be empty, and must only contain integers or floats.
 func recordGaugePoints(pts []metricdata.Point, recorder recordFunc) error {
 	for _, pt := range pts {
@@ -102,7 +102,7 @@ func (o *ocRawAggregator) LastValue() (number.Number, time.Time, error) {
 var _ aggregation.Aggregation = &ocDistAggregator{}
 var _ aggregation.Histogram = &ocDistAggregator{}
 
-// recordDistributionPoint creates an OpenTelemetry aggreation from
+// recordDistributionPoint creates an OpenTelemetry aggregation from
 // OpenCensus points. Points may not be empty, and must only contain
 // Distributions.  The most recent disribution will be used in the aggregation.
 func recordDistributionPoint(pts []metricdata.Point, recorder recordFunc) error {
