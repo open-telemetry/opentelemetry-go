@@ -10,7 +10,6 @@ import (
 	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping/logarithm"
 )
@@ -44,7 +43,7 @@ type show struct {
 	count uint64
 }
 
-func shows(b aggregation.ExponentialBuckets) (r []show) {
+func shows(b *buckets) (r []show) {
 	for i := uint32(0); i < b.Len(); i++ {
 		r = append(r, show{
 			index: b.Offset() + int32(i),
@@ -54,7 +53,7 @@ func shows(b aggregation.ExponentialBuckets) (r []show) {
 	return r
 }
 
-func counts(b aggregation.ExponentialBuckets) (r []uint64) {
+func counts(b *buckets) (r []uint64) {
 	for i := uint32(0); i < b.Len(); i++ {
 		r = append(r, b.At(i))
 	}
@@ -80,14 +79,13 @@ func TestSimpleSize4(t *testing.T) {
 	// Test with a 4-bucket-max exponential histogram
 	ctx := context.Background()
 	agg := New(1, &testDescriptor, WithMaxSize(4))[0]
-	pos, _ := agg.Positive()
-	neg, _ := agg.Negative()
+	pos := agg.positive()
+	neg := agg.negative()
 
 	// Add a zero
 	agg.Update(ctx, 0, &testDescriptor)
 
-	zeros, _ := agg.ZeroCount()
-	require.Equal(t, uint64(1), zeros)
+	require.Equal(t, uint64(1), agg.zeroCount())
 	require.Equal(t, uint32(0), pos.Len())
 	require.Equal(t, uint32(0), neg.Len())
 
@@ -108,10 +106,9 @@ func TestSimpleSize4(t *testing.T) {
 	require.Equal(t, uint32(1), pos.Len())
 	require.Equal(t, uint32(0), neg.Len())
 	require.Equal(t, uint64(1), pos.At(0))
-	aggScale, _ := agg.Scale()
-	require.Equal(t, int32(DefaultNormalScale), aggScale)
+	require.Equal(t, int32(DefaultNormalScale), agg.scale())
 
-	mapper := logarithm.NewMapping(aggScale)
+	mapper := logarithm.NewMapping(agg.scale())
 
 	// Check that the initial count maps to Offset().
 	offset := mapper.MapToIndex(oneAndAHalf)
@@ -148,11 +145,9 @@ func TestAlternatingGrowth1(t *testing.T) {
 	agg.Update(ctx, number.NewFloat64Number(2), &testDescriptor)
 	agg.Update(ctx, number.NewFloat64Number(0.5), &testDescriptor)
 
-	positive, _ := agg.Positive()
-	require.Equal(t, int32(-1), positive.Offset())
-	aggScale, _ := agg.Scale()
-	require.Equal(t, int32(0), aggScale)
-	require.Equal(t, []uint64{1, 1, 1}, counts(positive))
+	require.Equal(t, int32(-1), agg.positive().Offset())
+	require.Equal(t, int32(0), agg.scale())
+	require.Equal(t, []uint64{1, 1, 1}, counts(agg.positive()))
 }
 
 func TestAlternatingGrowth2(t *testing.T) {
@@ -165,11 +160,9 @@ func TestAlternatingGrowth2(t *testing.T) {
 	agg.Update(ctx, number.NewFloat64Number(4), &testDescriptor)
 	agg.Update(ctx, number.NewFloat64Number(0.25), &testDescriptor)
 
-	positive, _ := agg.Positive()
-	require.Equal(t, int32(-1), positive.Offset())
-	aggScale, _ := agg.Scale()
-	require.Equal(t, int32(-1), aggScale)
-	require.Equal(t, []uint64{2, 3, 1}, counts(positive))
+	require.Equal(t, int32(-1), agg.positive().Offset())
+	require.Equal(t, int32(-1), agg.scale())
+	require.Equal(t, []uint64{2, 3, 1}, counts(agg.positive()))
 }
 
 // tests that every permutation of {1/2, 1, 2} with maxSize=2 results
@@ -193,13 +186,11 @@ func TestScaleNegOneCentered(t *testing.T) {
 			// Enter order[2]: scale set to -1, expect counts[0] == 1 (the
 			// (1/2), counts[1] == 2 (the 1 and 2).
 			agg.Update(ctx, number.NewFloat64Number(order[2]), &testDescriptor)
-			aggScale, _ := agg.Scale()
-			positive, _ := agg.Positive()
-			require.Equal(t, int32(-1), aggScale)
-			require.Equal(t, int32(-1), positive.Offset())
-			require.Equal(t, uint32(2), positive.Len())
-			require.Equal(t, uint64(1), positive.At(0))
-			require.Equal(t, uint64(2), positive.At(1))
+			require.Equal(t, int32(-1), agg.scale())
+			require.Equal(t, int32(-1), agg.positive().Offset())
+			require.Equal(t, uint32(2), agg.positive().Len())
+			require.Equal(t, uint64(1), agg.positive().At(0))
+			require.Equal(t, uint64(2), agg.positive().At(1))
 		})
 	}
 }
@@ -225,13 +216,11 @@ func TestScaleNegOnePositive(t *testing.T) {
 			// Enter order[2]: scale set to -1, expect counts[0] == 1 (the
 			// 1 and 2), counts[1] == 2 (the 4).
 			agg.Update(ctx, number.NewFloat64Number(order[2]), &testDescriptor)
-			aggScale, _ := agg.Scale()
-			positive, _ := agg.Positive()
-			require.Equal(t, int32(-1), aggScale)
-			require.Equal(t, int32(0), positive.Offset())
-			require.Equal(t, uint32(2), positive.Len())
-			require.Equal(t, uint64(2), positive.At(0))
-			require.Equal(t, uint64(1), positive.At(1))
+			require.Equal(t, int32(-1), agg.scale())
+			require.Equal(t, int32(0), agg.positive().Offset())
+			require.Equal(t, uint32(2), agg.positive().Len())
+			require.Equal(t, uint64(2), agg.positive().At(0))
+			require.Equal(t, uint64(1), agg.positive().At(1))
 		})
 	}
 }
@@ -257,13 +246,11 @@ func TestScaleNegOneNegative(t *testing.T) {
 			// Enter order[2]: scale set to -1, expect counts[0] == 2 (the
 			// 1/4 and 1/2, counts[1] == 2 (the 1).
 			agg.Update(ctx, number.NewFloat64Number(order[2]), &testDescriptor)
-			aggScale, _ := agg.Scale()
-			positive, _ := agg.Positive()
-			require.Equal(t, int32(-1), aggScale)
-			require.Equal(t, int32(-1), positive.Offset())
-			require.Equal(t, uint32(2), positive.Len())
-			require.Equal(t, uint64(2), positive.At(0))
-			require.Equal(t, uint64(1), positive.At(1))
+			require.Equal(t, int32(-1), agg.scale())
+			require.Equal(t, int32(-1), agg.positive().Offset())
+			require.Equal(t, uint32(2), agg.positive().Len())
+			require.Equal(t, uint64(2), agg.positive().At(0))
+			require.Equal(t, uint64(1), agg.positive().At(1))
 		})
 	}
 }
@@ -303,16 +290,14 @@ func testExhaustive(t *testing.T, maxSize, offset, initScale int32) {
 				sum += value
 			}
 
-			aggScale, _ := agg.Scale()
-			positive, _ := agg.Positive()
-			require.Equal(t, initScale, aggScale)
-			require.Equal(t, offset, positive.Offset())
+			require.Equal(t, initScale, agg.scale())
+			require.Equal(t, offset, agg.positive().Offset())
 
 			agg.Update(ctx, number.NewFloat64Number(maxVal), &testDescriptor)
 			sum += maxVal
 
 			// The zeroth bucket is not empty.
-			require.NotEqual(t, uint64(0), positive.At(0))
+			require.NotEqual(t, uint64(0), agg.positive().At(0))
 
 			// The maximum-index filled bucket is at or
 			// above the mid-point, (otherwise we
@@ -320,9 +305,9 @@ func testExhaustive(t *testing.T, maxSize, offset, initScale int32) {
 			maxFill := uint32(0)
 			totalCount := uint64(0)
 
-			for i := uint32(0); i < positive.Len(); i++ {
-				totalCount += positive.At(i)
-				if positive.At(i) != 0 {
+			for i := uint32(0); i < agg.positive().Len(); i++ {
+				totalCount += agg.positive().At(i)
+				if agg.positive().At(i) != 0 {
 					maxFill = i
 				}
 			}
@@ -337,11 +322,11 @@ func testExhaustive(t *testing.T, maxSize, offset, initScale int32) {
 			require.GreaterOrEqual(t, sum, hsum.CoerceToFloat64(number.Float64Kind))
 
 			// The offset is correct at the computed scale.
-			mapper = newMapping(aggScale)
-			require.Equal(t, int32(mapper.MapToIndex(minVal)), positive.Offset())
+			mapper = newMapping(agg.scale())
+			require.Equal(t, int32(mapper.MapToIndex(minVal)), agg.positive().Offset())
 
 			// The maximum range is correct at the computed scale.
-			require.Equal(t, int32(mapper.MapToIndex(maxVal)), positive.Offset()+int32(positive.Len())-1)
+			require.Equal(t, int32(mapper.MapToIndex(maxVal)), agg.positive().Offset()+int32(agg.positive().Len())-1)
 		})
 	}
 }
@@ -360,30 +345,22 @@ func TestMergeSimpleEven(t *testing.T) {
 		aggs[2].Update(ctx, n1, &testDescriptor)
 		aggs[2].Update(ctx, n2, &testDescriptor)
 	}
-	scale := func(i int) int32 {
-		scale, _ := aggs[i].Scale()
-		return scale
-	}
-	positive := func(i int) aggregation.ExponentialBuckets {
-		positive, _ := aggs[i].Positive()
-		return positive
-	}
-	require.Equal(t, int32(0), scale(0))
-	require.Equal(t, int32(0), scale(1))
-	require.Equal(t, int32(-1), scale(2))
+	require.Equal(t, int32(0), aggs[0].scale())
+	require.Equal(t, int32(0), aggs[1].scale())
+	require.Equal(t, int32(-1), aggs[2].scale())
 
-	require.Equal(t, int32(0), positive(0).Offset())
-	require.Equal(t, int32(-4), positive(1).Offset())
-	require.Equal(t, int32(-2), positive(2).Offset())
+	require.Equal(t, int32(0), aggs[0].positive().Offset())
+	require.Equal(t, int32(-4), aggs[1].positive().Offset())
+	require.Equal(t, int32(-2), aggs[2].positive().Offset())
 
-	require.Equal(t, []uint64{1, 1, 1, 1}, counts(positive(0)))
-	require.Equal(t, []uint64{1, 1, 1, 1}, counts(positive(1)))
-	require.Equal(t, []uint64{2, 2, 2, 2}, counts(positive(2)))
+	require.Equal(t, []uint64{1, 1, 1, 1}, counts(aggs[0].positive()))
+	require.Equal(t, []uint64{1, 1, 1, 1}, counts(aggs[1].positive()))
+	require.Equal(t, []uint64{2, 2, 2, 2}, counts(aggs[2].positive()))
 
 	require.NoError(t, aggs[0].Merge(&aggs[1], &testDescriptor))
 
-	require.Equal(t, int32(-1), scale(0))
-	require.Equal(t, int32(-1), scale(2))
+	require.Equal(t, int32(-1), aggs[0].scale())
+	require.Equal(t, int32(-1), aggs[2].scale())
 
 	require.Equal(t, stateString(aggs[0]), stateString(aggs[2]))
 }
@@ -403,35 +380,30 @@ func TestMergeSimpleOdd(t *testing.T) {
 		aggs[2].Update(ctx, n2, &testDescriptor)
 	}
 
-	scale := func(i int) int32 {
-		scale, _ := aggs[i].Scale()
-		return scale
-	}
-	positive := func(i int) aggregation.ExponentialBuckets {
-		positive, _ := aggs[i].Positive()
-		return positive
-	}
-
 	require.Equal(t, uint64(4), aggs[0].state.count)
 	require.Equal(t, uint64(4), aggs[1].state.count)
 	require.Equal(t, uint64(8), aggs[2].state.count)
 
-	require.Equal(t, int32(0), scale(0))
-	require.Equal(t, int32(0), scale(1))
-	require.Equal(t, int32(-1), scale(2))
+	require.Equal(t, int32(0), aggs[0].scale())
+	require.Equal(t, int32(0), aggs[1].scale())
+	require.Equal(t, int32(-1), aggs[2].scale())
 
-	require.Equal(t, int32(0), positive(0).Offset())
-	require.Equal(t, int32(-3), positive(1).Offset())
-	require.Equal(t, int32(-2), positive(2).Offset())
+	require.Equal(t, int32(0), aggs[0].positive().Offset())
+	require.Equal(t, int32(-3), aggs[1].positive().Offset())
+	require.Equal(t, int32(-2), aggs[2].positive().Offset())
 
-	require.Equal(t, []uint64{1, 1, 1, 1}, counts(positive(0)))
-	require.Equal(t, []uint64{1, 1, 1, 1}, counts(positive(1)))
-	require.Equal(t, []uint64{1, 2, 3, 2}, counts(positive(2)))
+	require.Equal(t, []uint64{1, 1, 1, 1}, counts(aggs[0].positive()))
+	require.Equal(t, []uint64{1, 1, 1, 1}, counts(aggs[1].positive()))
+	require.Equal(t, []uint64{1, 2, 3, 2}, counts(aggs[2].positive()))
 
 	require.NoError(t, aggs[0].Merge(&aggs[1], &testDescriptor))
 
-	require.Equal(t, int32(-1), scale(0))
-	require.Equal(t, int32(-1), scale(2))
+	require.Equal(t, int32(-1), aggs[0].scale())
+	require.Equal(t, int32(-1), aggs[2].scale())
 
 	require.Equal(t, stateString(aggs[0]), stateString(aggs[2]))
+}
+
+func TestMergeExhaustive(t *testing.T) {
+
 }

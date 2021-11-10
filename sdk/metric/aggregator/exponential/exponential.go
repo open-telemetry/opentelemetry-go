@@ -239,22 +239,38 @@ func (a *Aggregator) Sum() (number.Number, error) {
 
 // Scale implements aggregation.ExponentialHistogram.
 func (a *Aggregator) Scale() (int32, error) {
-	return a.state.mapping.Scale(), nil
+	return a.scale(), nil
+}
+
+func (a *Aggregator) scale() int32 {
+	return a.state.mapping.Scale()
 }
 
 // ZeroCount implements aggregation.ExponentialHistogram.
 func (a *Aggregator) ZeroCount() (uint64, error) {
-	return a.state.zeroCount, nil
+	return a.zeroCount(), nil
+}
+
+func (a *Aggregator) zeroCount() uint64 {
+	return a.state.zeroCount
 }
 
 // Positive implements aggregation.ExponentialHistogram.
 func (a *Aggregator) Positive() (aggregation.ExponentialBuckets, error) {
-	return &a.state.positive, nil
+	return a.positive(), nil
+}
+
+func (a *Aggregator) positive() *buckets {
+	return &a.state.positive
 }
 
 // Negative implements aggregation.ExponentialHistogram.
 func (a *Aggregator) Negative() (aggregation.ExponentialBuckets, error) {
-	return &a.state.negative, nil
+	return a.negative(), nil
+}
+
+func (a *Aggregator) negative() *buckets {
+	return &a.state.negative
 }
 
 // Offset implements aggregation.ExponentialBucket.
