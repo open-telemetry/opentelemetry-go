@@ -107,9 +107,7 @@ func (d *metricReader) ForEach(_ aggregation.TemporalitySelector, f func(export.
 						end,
 					))
 				})
-			fmt.Println("LOOK", err)
 			if err != nil && !errors.Is(err, aggregation.ErrNoData) {
-				fmt.Println("WOMP WOMP")
 				return err
 			}
 		}
