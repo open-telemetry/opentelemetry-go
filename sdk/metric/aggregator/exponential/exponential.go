@@ -16,6 +16,7 @@ package exponential // import "go.opentelemetry.io/otel/sdk/metric/aggregator/ex
 
 import (
 	"context"
+	"fmt"
 	"math/bits"
 	"sync"
 
@@ -440,7 +441,8 @@ func (b *buckets) size() int32 {
 // value by the provided increment.
 func (a *Aggregator) update(b *buckets, value float64, incr uint64) {
 	// if there are zeros, we have not fixed the scale yet.
-	if a.state.count == a.state.zeroCount {
+	fmt.Printf("update %v %p @ %v\n", value, b, b.Len())
+	if b.Len() == 0 {
 		a.initialize(b, value)
 		return
 	}
@@ -724,6 +726,11 @@ func (a *Aggregator) mergeBuckets(mine *buckets, other *Aggregator, theirs *buck
 	otherScale, _ := other.Scale()
 	theirOffset := theirs.Offset()
 	theirChange := otherScale - scale
+
+	if mine.Len() == 0 {
+		// mine is empty, theirs is not @@@
+		mine.buckets = make([]uint8{0})
+	}
 
 	for i := uint32(0); i < theirs.Len(); i++ {
 		_, success := a.incrementIndexBy(mine,

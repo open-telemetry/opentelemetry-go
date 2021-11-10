@@ -3,6 +3,7 @@ package exponential
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"strings"
 	"testing"
 
@@ -405,5 +406,78 @@ func TestMergeSimpleOdd(t *testing.T) {
 }
 
 func TestMergeExhaustive(t *testing.T) {
+	const (
+		factor = 1024.0
+		repeat = 4
+		count  = 16
+	)
 
+	magnitudes := []float64{
+		0,
+		1,
+		factor - 1,
+		factor,
+		factor + 1,
+		factor*factor - factor,
+		factor * factor,
+		factor*factor + factor,
+	}
+
+	src := rand.NewSource(77777677777)
+	rnd := rand.New(src)
+
+	for _, mean := range magnitudes {
+		t.Run(fmt.Sprint("mean=", mean), func(t *testing.T) {
+			for _, stddev := range magnitudes {
+				t.Run(fmt.Sprint("stddev=", stddev), func(t *testing.T) {
+					values := make([]float64, count)
+					for i := range values {
+						values[i] = mean + rnd.NormFloat64()*stddev
+					}
+
+					for part := 1; part < count; part++ {
+						t.Run(fmt.Sprint("part=", part), func(t *testing.T) {
+							for _, size := range []int32{
+								2,
+								count / 4,
+								count / 2,
+								count,
+							} {
+								t.Run(fmt.Sprint("size=", size), func(t *testing.T) {
+									for r := 0; r < repeat; r++ {
+										t.Run(fmt.Sprint("repeat=", r), func(t *testing.T) {
+
+											testMergeExhaustive(t, values[0:part], values[part:count], size)
+										})
+									}
+								})
+							}
+						})
+					}
+				})
+			}
+		})
+	}
+}
+
+func testMergeExhaustive(t *testing.T, a, b []float64, size int32) {
+	ctx := context.Background()
+	aggs := New(3, &testDescriptor, WithMaxSize(size))
+
+	aHist := &aggs[0]
+	bHist := &aggs[1]
+	cHist := &aggs[2]
+
+	fmt.Println("Part A")
+	for _, av := range a {
+		aHist.Update(ctx, number.NewFloat64Number(av), &testDescriptor)
+		cHist.Update(ctx, number.NewFloat64Number(av), &testDescriptor)
+	}
+	fmt.Println("Part B")
+	for _, bv := range b {
+		bHist.Update(ctx, number.NewFloat64Number(bv), &testDescriptor)
+		cHist.Update(ctx, number.NewFloat64Number(bv), &testDescriptor)
+	}
+	fmt.Println("Merge")
+	aHist.Merge(bHist, &testDescriptor)
 }
