@@ -18,12 +18,15 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 
 	"go.opentelemetry.io/otel/trace"
 
@@ -455,5 +458,27 @@ func TestBatchSpanProcessorForceFlushCancellation(t *testing.T) {
 	bsp := sdktrace.NewBatchSpanProcessor(indefiniteExporter{})
 	if got, want := bsp.ForceFlush(ctx), context.Canceled; !errors.Is(got, want) {
 		t.Errorf("expected %q error, got %v", want, got)
+	}
+}
+
+func TestBatchSpanProcessorForceFlushQueuedSpans(t *testing.T) {
+	ctx := context.Background()
+
+	exp := tracetest.NewInMemoryExporter()
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exp),
+	)
+
+	tracer := tp.Tracer("tracer")
+
+	for i := 0; i < 10; i++ {
+		_, span := tracer.Start(ctx, fmt.Sprintf("span%d", i))
+		span.End()
+
+		err := tp.ForceFlush(ctx)
+		assert.NoError(t, err)
+
+		assert.Len(t, exp.GetSpans(), i+1)
 	}
 }
