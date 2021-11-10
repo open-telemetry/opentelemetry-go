@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//       http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,18 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package aggregation
+package mapping
 
-import (
-	"testing"
-
-	"github.com/stretchr/testify/require"
-)
-
-func TestAggregationKind(t *testing.T) {
-	require.Equal(t, "Sum", SumKind.String())
-	require.Equal(t, "MinMaxSumCount", MinMaxSumCountKind.String())
-	require.Equal(t, "Histogram", HistogramKind.String())
-	require.Equal(t, "Lastvalue", LastValueKind.String())
-	require.Equal(t, "ExponentialHistogram", ExponentialHistogramKind.String())
+// Mapping is the interface of a mapper.
+type Mapping interface {
+	// MapToIndex maps positive floating point values to indexes
+	// corresponding to Scale().  Implementations are not expected
+	// to handle zeros, +Inf, NaN, or negative values.
+	MapToIndex(value float64) int64
+	LowerBoundary(index int64) (float64, error)
+	Scale() int32
 }

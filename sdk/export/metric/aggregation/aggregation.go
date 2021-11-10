@@ -110,10 +110,10 @@ type (
 		Aggregation
 		Count() (uint64, error)
 		Sum() (number.Number, error)
-		Scale() int32
-		ZeroCount() uint64
-		Positive() ExponentialBuckets
-		Negative() ExponentialBuckets
+		Scale() (int32, error)
+		ZeroCount() (uint64, error)
+		Positive() (ExponentialBuckets, error)
+		Negative() (ExponentialBuckets, error)
 	}
 
 	// ExponentialBuckets describes a range of consecutive

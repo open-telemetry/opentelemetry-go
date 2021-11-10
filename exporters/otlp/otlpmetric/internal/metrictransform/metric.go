@@ -254,6 +254,13 @@ func Record(temporalitySelector aggregation.TemporalitySelector, r export.Record
 		}
 		return histogramPoint(r, temporalitySelector.TemporalityFor(r.Descriptor(), aggregation.HistogramKind), h)
 
+	case aggregation.ExponentialHistogramKind:
+		h, ok := agg.(aggregation.ExponentialHistogram)
+		if !ok {
+			return nil, fmt.Errorf("%w: %T", ErrIncompatibleAgg, agg)
+		}
+		return exponentialHistogramPoint(r, temporalitySelector.TemporalityFor(r.Descriptor(), aggregation.ExponentialHistogramKind), h)
+
 	case aggregation.SumKind:
 		s, ok := agg.(aggregation.Sum)
 		if !ok {
@@ -562,4 +569,76 @@ func histogramPoint(record export.Record, temporality aggregation.Temporality, a
 		},
 	}
 	return m, nil
+}
+
+// exponentialHistogramPoint transforms an ExponentialHistogram Aggregator into an OTLP Metric.
+func exponentialHistogramPoint(record export.Record, temporality aggregation.Temporality, a aggregation.ExponentialHistogram) (*metricpb.Metric, error) {
+	desc := record.Descriptor()
+	labels := record.Labels()
+
+	count, err := a.Count()
+	if err != nil {
+		return nil, err
+	}
+
+	sum, err := a.Sum()
+	if err != nil {
+		return nil, err
+	}
+
+	zeros, err := a.ZeroCount()
+	if err != nil {
+		return nil, err
+	}
+
+	scale, err := a.Scale()
+	if err != nil {
+		return nil, err
+	}
+
+	point := &metricpb.ExponentialHistogramDataPoint{
+		Sum:               sum.CoerceToFloat64(desc.NumberKind()),
+		Attributes:        Iterator(labels.Iter()),
+		StartTimeUnixNano: toNanos(record.StartTime()),
+		TimeUnixNano:      toNanos(record.EndTime()),
+		Count:             count,
+		ZeroCount:         zeros,
+		Scale:             scale,
+	}
+
+	if pos, err := a.Positive(); pos != nil && err == nil {
+		point.Positive = exponentialHistogramBucket(pos)
+	} else if err != nil {
+		return nil, err
+	}
+
+	if neg, err := a.Negative(); neg != nil && err == nil {
+		point.Negative = exponentialHistogramBucket(neg)
+	} else if err != nil {
+		return nil, err
+	}
+
+	m := &metricpb.Metric{
+		Name:        desc.Name(),
+		Description: desc.Description(),
+		Unit:        string(desc.Unit()),
+		Data: &metricpb.Metric_ExponentialHistogram{
+			ExponentialHistogram: &metricpb.ExponentialHistogram{
+				AggregationTemporality: sdkTemporalityToTemporality(temporality),
+				DataPoints:             []*metricpb.ExponentialHistogramDataPoint{point},
+			},
+		},
+	}
+	return m, nil
+}
+
+func exponentialHistogramBucket(b aggregation.ExponentialBuckets) *metricpb.ExponentialHistogramDataPoint_Buckets {
+	cnts := make([]uint64, b.Len())
+	for i := range cnts {
+		cnts[i] = b.At(uint32(i))
+	}
+	return &metricpb.ExponentialHistogramDataPoint_Buckets{
+		Offset:       b.Offset(),
+		BucketCounts: cnts,
+	}
 }
