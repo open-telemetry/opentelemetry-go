@@ -38,8 +38,8 @@ func NewNoopSyncInstrument() SyncImpl {
 
 // NewNoopAsyncInstrument returns a No-op implementation of the
 // asynchronous instrument interface.
-func NewNoopAsyncInstrument() SyncImpl {
-	return noopSyncInstrument{}
+func NewNoopAsyncInstrument() AsyncImpl {
+	return noopAsyncInstrument{}
 }
 
 func (noopInstrument) Implementation() interface{} {
