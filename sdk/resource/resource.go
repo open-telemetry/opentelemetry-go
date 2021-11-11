@@ -36,26 +36,11 @@ type Resource struct {
 }
 
 var (
-	emptyResource Resource
-
-	defaultResource = func(r *Resource, err error) *Resource {
-		if err != nil {
-			otel.Handle(err)
-		}
-		return r
-	}(
-		Detect(
-			context.Background(),
-			defaultServiceNameDetector{},
-			fromEnv{},
-			telemetrySDK{},
-		),
-	)
+	emptyResource   Resource
+	defaultResource *Resource
 )
 
-var (
-	errMergeConflictSchemaURL = errors.New("cannot merge resource due to conflicting Schema URL")
-)
+var errMergeConflictSchemaURL = errors.New("cannot merge resource due to conflicting Schema URL")
 
 // New returns a Resource combined from the user-provided detectors.
 func New(ctx context.Context, opts ...Option) (*Resource, error) {
@@ -211,6 +196,18 @@ func Empty() *Resource {
 // Default returns an instance of Resource with a default
 // "service.name" and OpenTelemetrySDK attributes.
 func Default() *Resource {
+	if defaultResource == nil {
+		var err error
+		defaultResource, err = Detect(
+			context.Background(),
+			defaultServiceNameDetector{},
+			fromEnv{},
+			telemetrySDK{},
+		)
+		if err != nil {
+			otel.Handle(err)
+		}
+	}
 	return defaultResource
 }
 
