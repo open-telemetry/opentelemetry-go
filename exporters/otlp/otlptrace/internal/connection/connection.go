@@ -23,16 +23,14 @@ import (
 	"unsafe"
 
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"google.golang.org/grpc/encoding/gzip"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/retry"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
 )
 
 type Connection struct {

@@ -21,13 +21,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/retry"
-
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/retry"
 )
 
 func TestThrottleDuration(t *testing.T) {
