@@ -56,7 +56,7 @@ var ErrControllerStarted = fmt.Errorf("controller already started")
 // using the export.Reader RWLock interface.  Collection will
 // be blocked by a pull request in the basic controller.
 type Controller struct {
-	// lock protects libraries and synchronizes Start() and Stop().
+	// lock synchronizes Start() and Stop().
 	lock                sync.Mutex
 	libraries           sync.Map
 	checkpointerFactory export.CheckpointerFactory
