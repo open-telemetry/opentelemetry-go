@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.2.0] - 2021-11-12
+
 ## Changed
 
 - Metric SDK `export.ExportKind`, `export.ExportKindSelector` types have been renamed to `aggregation.Temporality` and `aggregation.TemporalitySelector` respectively to keep in line with current specification and protocol along with built-in selectors (e.g., `aggregation.CumulativeTemporalitySelector`, ...). (#2274)
@@ -1595,7 +1597,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.2.0
 [1.1.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.1.0
 [1.0.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.0.1
 [Metrics 0.24.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/metric/v0.24.0

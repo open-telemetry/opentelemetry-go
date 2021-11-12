@@ -168,6 +168,8 @@ func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
 }
 
 func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *testing.T) {
+	// TODO: Fix this test #1527
+	t.Skip("This test is flaky and needs to be rewritten")
 	mc := runMockCollector(t)
 
 	reconnectionPeriod := 20 * time.Millisecond
@@ -491,6 +493,8 @@ func newThrottlingError(code codes.Code, duration time.Duration) error {
 }
 
 func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
+	// TODO: Fix this test #1527
+	t.Skip("This test is flaky and needs to be rewritten")
 	mc := runMockCollector(t)
 
 	reconnectionPeriod := 50 * time.Millisecond
