@@ -164,6 +164,8 @@ func TestNew_invokeStartThenStopManyTimes(t *testing.T) {
 }
 
 func TestNew_collectorConnectionDiesThenReconnectsWhenInRestMode(t *testing.T) {
+	// TODO: Fix this test #1527
+	t.Skip("This test is flaky and needs to be rewritten")
 	mc := runMockCollector(t)
 
 	reconnectionPeriod := 20 * time.Millisecond
@@ -221,6 +223,8 @@ func TestNew_collectorConnectionDiesThenReconnectsWhenInRestMode(t *testing.T) {
 }
 
 func TestNew_collectorConnectionDiesThenReconnects(t *testing.T) {
+	// TODO: Fix this test #1527
+	t.Skip("This test is flaky and needs to be rewritten")
 	mc := runMockCollector(t)
 
 	reconnectionPeriod := 50 * time.Millisecond
