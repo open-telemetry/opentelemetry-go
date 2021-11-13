@@ -28,15 +28,13 @@ import (
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
-	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
-
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpconfig"
-
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpconfig"
 	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
 const contentTypeProto = "application/x-protobuf"

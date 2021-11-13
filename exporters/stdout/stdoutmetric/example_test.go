@@ -18,9 +18,8 @@ import (
 	"context"
 	"log"
 
-	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
-
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
