@@ -201,6 +201,7 @@ func TestUnregisterSpanProcessorWhileSpanIsActive(t *testing.T) {
 	}
 }
 
+//nolint:staticcheck
 func TestSpanProcessorShutdown(t *testing.T) {
 	name := "Increment shutdown counter of a span processor"
 	tp := basicTracerProvider(t)
@@ -222,6 +223,7 @@ func TestSpanProcessorShutdown(t *testing.T) {
 	}
 }
 
+//nolint:staticcheck
 func TestMultipleUnregisterSpanProcessorCalls(t *testing.T) {
 	name := "Increment shutdown counter after first UnregisterSpanProcessor call"
 	tp := basicTracerProvider(t)
