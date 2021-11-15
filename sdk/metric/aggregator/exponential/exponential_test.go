@@ -23,46 +23,23 @@ var (
 
 // TEST SUPPORT
 
-func stateString(a Aggregator) string {
-	s := a.state
-	b := func(b buckets) string {
+func requireEqual(t *testing.T, a, b *Aggregator) {
+	require.InEpsilon(t, a.state.sum, b.state.sum, 1e-10)
+	require.Equal(t, a.state.count, b.state.count)
+	require.Equal(t, a.state.zeroCount, b.state.zeroCount)
+	require.Equal(t, a.state.mapping.Scale(), b.state.mapping.Scale())
+
+	bstr := func(data *buckets) string {
 		var sb strings.Builder
-		sb.WriteString(fmt.Sprintln("[@", b.Offset()))
-		for i := uint32(0); i < b.Len(); i++ {
-			sb.WriteString(fmt.Sprintln(b.At(i)))
+		sb.WriteString(fmt.Sprintln("[@", data.Offset()))
+		for i := uint32(0); i < data.Len(); i++ {
+			sb.WriteString(fmt.Sprintln(data.At(i)))
 		}
 		sb.WriteString("]\n")
 		return sb.String()
 	}
-	return fmt.Sprintf("sum %v\ncount %v\nzero %v\npos %s\nneg %s\n",
-		s.sum, s.count, s.zeroCount, b(s.positive), b(s.negative),
-	)
-}
-
-type show struct {
-	index int32
-	count uint64
-}
-
-func shows(b *buckets) (r []show) {
-	for i := uint32(0); i < b.Len(); i++ {
-		r = append(r, show{
-			index: b.Offset() + int32(i),
-			count: b.At(i),
-		})
-	}
-	return r
-}
-
-func counts(b *buckets) (r []uint64) {
-	for i := uint32(0); i < b.Len(); i++ {
-		r = append(r, b.At(i))
-	}
-	return r
-}
-
-func (s show) String() string {
-	return fmt.Sprint(s.index, "=", s.count)
+	require.Equal(t, bstr(&a.state.positive), bstr(&b.state.positive), "positive %v %v", a.shows(&a.state.positive), a.shows(&b.state.positive))
+	require.Equal(t, bstr(&a.state.negative), bstr(&b.state.negative), "negative %v %v", a.shows(&a.state.negative), a.shows(&b.state.negative))
 }
 
 func centerVal(mapper mapping.Mapping, x int32) float64 {
@@ -363,7 +340,7 @@ func TestMergeSimpleEven(t *testing.T) {
 	require.Equal(t, int32(-1), aggs[0].scale())
 	require.Equal(t, int32(-1), aggs[2].scale())
 
-	require.Equal(t, stateString(aggs[0]), stateString(aggs[2]))
+	requireEqual(t, &aggs[0], &aggs[2])
 }
 
 func TestMergeSimpleOdd(t *testing.T) {
@@ -402,17 +379,17 @@ func TestMergeSimpleOdd(t *testing.T) {
 	require.Equal(t, int32(-1), aggs[0].scale())
 	require.Equal(t, int32(-1), aggs[2].scale())
 
-	require.Equal(t, stateString(aggs[0]), stateString(aggs[2]))
+	requireEqual(t, &aggs[0], &aggs[2])
 }
 
 func TestMergeExhaustive(t *testing.T) {
 	const (
 		factor = 1024.0
-		repeat = 4
-		count  = 16
+		repeat = 64
+		count  = 64
 	)
 
-	magnitudes := []float64{
+	means := []float64{
 		0,
 		1,
 		factor - 1,
@@ -423,30 +400,35 @@ func TestMergeExhaustive(t *testing.T) {
 		factor*factor + factor,
 	}
 
-	src := rand.NewSource(77777677777)
-	rnd := rand.New(src)
+	stddevs := []float64{
+		1,
+		factor,
+		factor * factor,
+	}
 
-	for _, mean := range magnitudes {
+	for _, mean := range means {
 		t.Run(fmt.Sprint("mean=", mean), func(t *testing.T) {
-			for _, stddev := range magnitudes {
+			for _, stddev := range stddevs {
 				t.Run(fmt.Sprint("stddev=", stddev), func(t *testing.T) {
-					values := make([]float64, count)
-					for i := range values {
-						values[i] = mean + rnd.NormFloat64()*stddev
-					}
+					for r := 0; r < repeat; r++ {
+						src := rand.NewSource(77777677777)
+						rnd := rand.New(src)
 
-					for part := 1; part < count; part++ {
-						t.Run(fmt.Sprint("part=", part), func(t *testing.T) {
-							for _, size := range []int32{
-								2,
-								count / 4,
-								count / 2,
-								count,
-							} {
-								t.Run(fmt.Sprint("size=", size), func(t *testing.T) {
-									for r := 0; r < repeat; r++ {
-										t.Run(fmt.Sprint("repeat=", r), func(t *testing.T) {
+						t.Run(fmt.Sprint("repeat=", r), func(t *testing.T) {
+							values := make([]float64, count)
+							for i := range values {
+								values[i] = mean + rnd.NormFloat64()*stddev
+							}
 
+							for part := 1; part < count; part++ {
+								t.Run(fmt.Sprint("part=", part), func(t *testing.T) {
+									for _, size := range []int32{
+										2,
+										count / 4,
+										count / 2,
+										count,
+									} {
+										t.Run(fmt.Sprint("size=", size), func(t *testing.T) {
 											testMergeExhaustive(t, values[0:part], values[part:count], size)
 										})
 									}
@@ -468,16 +450,16 @@ func testMergeExhaustive(t *testing.T, a, b []float64, size int32) {
 	bHist := &aggs[1]
 	cHist := &aggs[2]
 
-	fmt.Println("Part A")
 	for _, av := range a {
 		aHist.Update(ctx, number.NewFloat64Number(av), &testDescriptor)
 		cHist.Update(ctx, number.NewFloat64Number(av), &testDescriptor)
 	}
-	fmt.Println("Part B")
 	for _, bv := range b {
 		bHist.Update(ctx, number.NewFloat64Number(bv), &testDescriptor)
 		cHist.Update(ctx, number.NewFloat64Number(bv), &testDescriptor)
 	}
-	fmt.Println("Merge")
 	aHist.Merge(bHist, &testDescriptor)
+
+	// aHist and cHist should be equivalent
+	requireEqual(t, cHist, aHist)
 }

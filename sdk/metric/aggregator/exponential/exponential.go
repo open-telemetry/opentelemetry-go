@@ -17,6 +17,7 @@ package exponential // import "go.opentelemetry.io/otel/sdk/metric/aggregator/ex
 import (
 	"context"
 	"fmt"
+	"math"
 	"math/bits"
 	"sync"
 
@@ -351,41 +352,10 @@ func newMapping(scale int32) mapping.Mapping {
 	return logarithm.NewMapping(scale)
 }
 
-// initialize enters the first value into a histogram and sets its
-// ideal scale.
-func (a *Aggregator) initialize(b *buckets, value float64) {
-	firstScale := idealScale(value)
-
-	a.state.mapping = newMapping(firstScale)
-
-	index := a.state.mapping.MapToIndex(value)
-
-	if b.backing == nil {
-		b.backing = []uint8{1}
-	} else {
-		b.incrementBucket(0, 1)
-	}
-	b.indexStart = int32(index)
-	b.indexEnd = int32(index)
-	b.indexBase = b.indexStart
-}
-
-// idealScale computes the best scale that results in a valid index.
-// the default scale is ideal for normalized range [1,2) and a
-// non-zero exponent degrades scale in either direction from zero.
-func idealScale(value float64) int32 {
-	exponent := mapping.GetExponent(value)
-
-	scale := DefaultNormalScale
-	if exponent > 0 {
-		scale -= exponent
-	} else {
-		scale += exponent
-	}
-	return scale
-}
-
 func (a *Aggregator) downscale(change int32) {
+	if change < 0 {
+		panic("impossible")
+	}
 	newScale := a.state.mapping.Scale() - change
 
 	a.state.positive.downscale(change)
@@ -413,7 +383,7 @@ func (a *Aggregator) downscale(change int32) {
 // alignment.
 func (a *Aggregator) changeScale(hl highLow) int32 {
 	var change int32
-	for hl.high-hl.low >= int64(a.maxSize) {
+	for hl.high-hl.low >= int64(a.maxSize) || hl.high > math.MaxInt32 || hl.low < math.MinInt32 {
 		hl.high >>= 1
 		hl.low >>= 1
 		change++
@@ -440,13 +410,6 @@ func (b *buckets) size() int32 {
 // update increments the appropriate buckets for a given absolute
 // value by the provided increment.
 func (a *Aggregator) update(b *buckets, value float64, incr uint64) {
-	// if there are zeros, we have not fixed the scale yet.
-	fmt.Printf("update %v %p @ %v\n", value, b, b.Len())
-	if b.Len() == 0 {
-		a.initialize(b, value)
-		return
-	}
-
 	index := a.state.mapping.MapToIndex(value)
 
 	hl, success := a.incrementIndexBy(b, index, incr)
@@ -464,11 +427,29 @@ func (a *Aggregator) update(b *buckets, value float64, incr uint64) {
 	}
 }
 
+func (b *buckets) empty() bool {
+	l := b.Len()
+	return l == 0 || l == 1 && b.At(0) == 0
+}
+
 // increment determines if the index lies inside the current range
 // [indexStart, indexEnd] and, if not, returns the minimum size (up to
 // maxSize) will satisfy the new value.
 func (a *Aggregator) incrementIndexBy(b *buckets, index int64, incr uint64) (highLow, bool) {
-	if index < int64(b.indexStart) {
+	if b.empty() {
+		if index != int64(int32(index)) {
+			return highLow{
+				low:  index,
+				high: index,
+			}, false // rescale needed
+		}
+		if b.backing == nil {
+			b.backing = []uint8{0}
+		}
+		b.indexStart = int32(index) // @@@
+		b.indexEnd = b.indexStart
+		b.indexBase = b.indexStart
+	} else if index < int64(b.indexStart) {
 		if span := uint64(int64(b.indexEnd) - index); span >= uint64(a.maxSize) {
 			return highLow{
 				low:  index,
@@ -568,47 +549,38 @@ func (b *buckets) downscale(by int32) {
 // rotate shifts the backing array contents so that indexStart ==
 // indexBase to simplify the downscale logic.
 func (b *buckets) rotate() {
-	bias := uint32(b.indexBase - b.indexStart)
+	bias := b.indexBase - b.indexStart
 
 	if bias == 0 {
 		return
 	}
 
-	move := b.Len()
-	size := uint32(b.size())
-	endpoint := size - bias
-
 	// Rotate the array so that indexBase == indexStart
 	b.indexBase = b.indexStart
 
+	b.reverse(0, b.size())
+	b.reverse(0, bias)
+	b.reverse(bias, b.size())
+}
+
+func (b *buckets) reverse(from, limit int32) {
+	num := ((from + limit) / 2) - from
 	switch counts := b.backing.(type) {
 	case []uint8:
-		for start := uint32(0); start < move; {
-			for pos := endpoint; pos < size && start < move; pos++ {
-				counts[start], counts[pos] = counts[pos], counts[start]
-				start++
-			}
+		for i := int32(0); i < num; i++ {
+			counts[from+i], counts[limit-i-1] = counts[limit-i-1], counts[from+i]
 		}
 	case []uint16:
-		for start := uint32(0); start < move; {
-			for pos := endpoint; pos < size && start < move; pos++ {
-				counts[start], counts[pos] = counts[pos], counts[start]
-				start++
-			}
+		for i := int32(0); i < num; i++ {
+			counts[from+num], counts[limit-num-1] = counts[limit-num-1], counts[from+num]
 		}
 	case []uint32:
-		for start := uint32(0); start < move; {
-			for pos := endpoint; pos < size && start < move; pos++ {
-				counts[start], counts[pos] = counts[pos], counts[start]
-				start++
-			}
+		for i := int32(0); i < num; i++ {
+			counts[from+num], counts[limit-num-1] = counts[limit-num-1], counts[from+num]
 		}
 	case []uint64:
-		for start := uint32(0); start < move; {
-			for pos := endpoint; pos < size && start < move; pos++ {
-				counts[start], counts[pos] = counts[pos], counts[start]
-				start++
-			}
+		for i := int32(0); i < num; i++ {
+			counts[from+num], counts[limit-num-1] = counts[limit-num-1], counts[from+num]
 		}
 	}
 }
@@ -727,11 +699,6 @@ func (a *Aggregator) mergeBuckets(mine *buckets, other *Aggregator, theirs *buck
 	theirOffset := theirs.Offset()
 	theirChange := otherScale - scale
 
-	if mine.Len() == 0 {
-		// mine is empty, theirs is not @@@
-		mine.buckets = make([]uint8{0})
-	}
-
 	for i := uint32(0); i < theirs.Len(); i++ {
 		_, success := a.incrementIndexBy(mine,
 			int64(theirOffset+int32(i))>>theirChange, theirs.At(i))
@@ -770,5 +737,35 @@ func (h *highLow) with(o highLow) highLow {
 }
 
 func (h *highLow) empty() bool {
-	return h.low >= h.high
+	return h.low > h.high
+}
+
+// TEST
+type show struct {
+	index int32
+	count uint64
+	lower float64
+}
+
+func (a *Aggregator) shows(b *buckets) (r []show) {
+	for i := uint32(0); i < b.Len(); i++ {
+		lower, _ := a.state.mapping.LowerBoundary(int64(b.Offset()) + int64(i))
+		r = append(r, show{
+			index: b.Offset() + int32(i),
+			count: b.At(i),
+			lower: lower,
+		})
+	}
+	return r
+}
+
+func counts(b *buckets) (r []uint64) {
+	for i := uint32(0); i < b.Len(); i++ {
+		r = append(r, b.At(i))
+	}
+	return r
+}
+
+func (s show) String() string {
+	return fmt.Sprintf("%v=%v(%.2g)", s.index, s.count, s.lower)
 }
