@@ -22,21 +22,19 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/encoding/gzip"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/durationpb"
+
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpmetrictest"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/sdk/resource"
-
-	"google.golang.org/genproto/googleapis/rpc/errdetails"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/durationpb"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/encoding/gzip"
 )
 
 var (
@@ -168,6 +166,8 @@ func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
 }
 
 func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *testing.T) {
+	// TODO: Fix this test #1527
+	t.Skip("This test is flaky and needs to be rewritten")
 	mc := runMockCollector(t)
 
 	reconnectionPeriod := 20 * time.Millisecond
@@ -491,6 +491,8 @@ func newThrottlingError(code codes.Code, duration time.Duration) error {
 }
 
 func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
+	// TODO: Fix this test #1527
+	t.Skip("This test is flaky and needs to be rewritten")
 	mc := runMockCollector(t)
 
 	reconnectionPeriod := 50 * time.Millisecond
