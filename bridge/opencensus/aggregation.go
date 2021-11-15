@@ -36,9 +36,7 @@ type recordFunc func(agg aggregation.Aggregation, end time.Time) error
 // recordAggregationsFromPoints records one OpenTelemetry aggregation for
 // each OpenCensus point.  Points may not be empty and must be either
 // all (int|float)64 or all *metricdata.Distribution.
-func recordAggregationsFromPoints(
-	points []metricdata.Point,
-	recorder recordFunc) error {
+func recordAggregationsFromPoints(points []metricdata.Point, recorder recordFunc) error {
 	if len(points) == 0 {
 		return errEmpty
 	}
