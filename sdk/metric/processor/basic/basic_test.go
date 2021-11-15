@@ -204,9 +204,8 @@ func testProcessor(
 					// number of Accumulators, unless LastValue aggregation.
 					// If a precomputed sum, we expect cumulative inputs.
 					if mkind.PrecomputedSum() {
-						if aggTemp == aggregation.DeltaTemporality {
-							panic("Impossible")
-						} else if akind == aggregation.LastValueKind {
+						require.NotEqual(t, aggTemp, aggregation.DeltaTemporality)
+						if akind == aggregation.LastValueKind {
 							multiplier = cumulativeMultiplier
 						} else {
 							multiplier = cumulativeMultiplier * int64(nAccum)

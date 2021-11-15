@@ -351,7 +351,7 @@ func (b *state) ForEach(exporter aggregation.TemporalitySelector, f func(export.
 			// Precomputed sums are a special case.
 			if mkind.PrecomputedSum() {
 				// This functionality was removed from
-				// the basic processor in PR #xxxx.
+				// the basic processor in PR #2350.
 				return aggregation.ErrNoCumulativeToDelta
 			}
 			agg = value.current.Aggregation()
