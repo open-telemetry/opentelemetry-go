@@ -19,9 +19,9 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpconfig"
-
 	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpconfig"
 )
 
 const (

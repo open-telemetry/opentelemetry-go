@@ -18,12 +18,12 @@ import (
 	"fmt"
 	"time"
 
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/retry"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 )
 
 // Option applies an option to the gRPC driver.
