@@ -1,5 +1,5 @@
 ---
-title: "Instrumentation"
+title: Instrumentation
 weight: 3
 ---
 
@@ -60,9 +60,9 @@ span.SetAttributes(myKey.String("a value"))
 
 ### Semantic Attributes
 
-Semantic Attributes are attributes that are defined by the OpenTelemetry Specification in order to provide a shared set of attribute keys across multiple languages, frameworks, and runtimes for common concepts like HTTP methods, status codes, user agents, and more. These attributes are available in the `go.opentelemetry.io/otel/semconv/v1.7.0` package.
+Semantic Attributes are attributes that are defined by the [OpenTelemetry Specification][] in order to provide a shared set of attribute keys across multiple languages, frameworks, and runtimes for common concepts like HTTP methods, status codes, user agents, and more. These attributes are available in the `go.opentelemetry.io/otel/semconv/v1.7.0` package.
 
-Tracing semantic conventions can be found [in this document](https://github.com/open-telemetry/opentelemetry-specification/tree/main/specification/trace/semantic_conventions)
+For details, see [Trace semantic conventions][].
 
 ## Events
 
@@ -111,3 +111,6 @@ After configuring context propagation, you'll most likely want to use automatic 
 # Automatic Instrumentation
 
 Automatic instrumentation, broadly, refers to instrumentation code that you didn't write. OpenTelemetry for Go supports this process through wrappers and helper functions around many popular frameworks and libraries. You can find a current list [here](https://github.com/open-telemetry/opentelemetry-go-contrib/tree/main/instrumentation), as well as at the [registry](/registry).
+
+[OpenTelemetry Specification]: {{< relref "/docs/reference/specification" >}}
+[Trace semantic conventions]: {{< relref "/docs/reference/specification/trace/semantic_conventions" >}}

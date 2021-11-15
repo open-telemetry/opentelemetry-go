@@ -29,15 +29,13 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
-	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
-
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/retry"
-
 	"google.golang.org/protobuf/proto"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/retry"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
 const contentTypeProto = "application/x-protobuf"

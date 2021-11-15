@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"go.opencensus.io/metric/metricdata"
 	"go.opencensus.io/metric/metricexport"
@@ -95,18 +96,18 @@ func (d *metricReader) ForEach(_ aggregation.TemporalitySelector, f func(export.
 				otel.Handle(err)
 				continue
 			}
-			agg, err := newAggregationFromPoints(ts.Points)
-			if err != nil {
-				otel.Handle(err)
-				continue
-			}
-			if err := f(export.NewRecord(
-				&descriptor,
-				&ls,
-				agg,
-				ts.StartTime,
-				agg.end(),
-			)); err != nil && !errors.Is(err, aggregation.ErrNoData) {
+			err = recordAggregationsFromPoints(
+				ts.Points,
+				func(agg aggregation.Aggregation, end time.Time) error {
+					return f(export.NewRecord(
+						&descriptor,
+						&ls,
+						agg,
+						ts.StartTime,
+						end,
+					))
+				})
+			if err != nil && !errors.Is(err, aggregation.ErrNoData) {
 				return err
 			}
 		}
