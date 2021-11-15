@@ -24,14 +24,13 @@ import (
 	"sync"
 	"time"
 
-	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
-	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
-
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
+	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
 var (

@@ -18,12 +18,11 @@ import (
 	"fmt"
 	"time"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpconfig"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpconfig"
 )
 
 // Option applies an option to the gRPC client.

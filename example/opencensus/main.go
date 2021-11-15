@@ -20,9 +20,8 @@ import (
 	"log"
 	"time"
 
-	"go.opencensus.io/metric/metricdata"
-
 	"go.opencensus.io/metric"
+	"go.opencensus.io/metric/metricdata"
 	"go.opencensus.io/metric/metricexport"
 	"go.opencensus.io/metric/metricproducer"
 	"go.opencensus.io/stats"

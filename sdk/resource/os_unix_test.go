@@ -23,10 +23,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 
 	"go.opentelemetry.io/otel/sdk/resource"
-
-	"golang.org/x/sys/unix"
 )
 
 func fakeUnameProvider(buf *unix.Utsname) error {

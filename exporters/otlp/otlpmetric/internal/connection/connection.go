@@ -23,17 +23,15 @@ import (
 	"time"
 	"unsafe"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpconfig"
-
 	"github.com/cenkalti/backoff/v4"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/encoding/gzip"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	"google.golang.org/grpc/encoding/gzip"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpconfig"
 )
 
 type Connection struct {
