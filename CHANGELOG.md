@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Removed
+
+- Remove the metric Processor's ability to convert cumulative to delta aggregation temporality. (#2350)
+
 ## [1.2.0] - 2021-11-12
 
 ### Changed
