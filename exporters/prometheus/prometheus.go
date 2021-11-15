@@ -58,7 +58,7 @@ type Exporter struct {
 }
 
 // ErrUnsupportedAggregator is returned for unrepresentable aggregator
-// types (e.g., exact).
+// types.
 var ErrUnsupportedAggregator = fmt.Errorf("unsupported aggregator type")
 
 var _ http.Handler = &Exporter{}
