@@ -46,11 +46,11 @@ type logarithmMapping struct {
 
 var _ mapping.Mapping = &logarithmMapping{}
 
-func NewMapping(scale int32) mapping.Mapping {
+func NewMapping(scale int32) (mapping.Mapping, error) {
 	return &logarithmMapping{
 		scale:       scale,
 		scaleFactor: mapping.Scalb(math.Log2E, scale),
-	}
+	}, nil
 }
 
 func (l *logarithmMapping) MapToIndex(value float64) int64 {

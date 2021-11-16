@@ -38,7 +38,10 @@ const (
 )
 
 func TestExponentMappingZero(t *testing.T) {
-	m := NewMapping(0)
+	m, err := NewMapping(0)
+	require.NoError(t, err)
+
+	require.Equal(t, int32(0), m.Scale())
 
 	for _, pair := range []expectMapping{
 		{4, 2},
@@ -54,8 +57,14 @@ func TestExponentMappingZero(t *testing.T) {
 	}
 }
 
+func TestExponentMappingPositive(t *testing.T) {
+	m, err := NewMapping(1)
+	require.Error(t, err)
+	require.Nil(t, m)
+}
+
 func TestExponentMappingNegOne(t *testing.T) {
-	m := NewMapping(-1)
+	m, _ := NewMapping(-1)
 
 	for _, pair := range []expectMapping{
 		{16, 2},
@@ -83,7 +92,9 @@ func TestExponentMappingNegOne(t *testing.T) {
 }
 
 func TestExponentMappingNegFour(t *testing.T) {
-	m := NewMapping(-4)
+	m, err := NewMapping(-4)
+	require.NoError(t, err)
+	require.Equal(t, int32(-4), m.Scale())
 
 	for _, pair := range []expectMapping{
 		{float64(0x1), 0},
@@ -227,8 +238,9 @@ func TestExponentMappingInvalid(t *testing.T) {
 		{-1, -1e6},
 	} {
 		t.Run(fmt.Sprintf("%v_%d", pair.scale, pair.index), func(t *testing.T) {
-			m := NewMapping(pair.scale)
-			_, err := m.LowerBoundary(pair.index)
+			m, err := NewMapping(pair.scale)
+			require.NoError(t, err)
+			_, err = m.LowerBoundary(pair.index)
 			require.Error(t, err)
 		})
 	}

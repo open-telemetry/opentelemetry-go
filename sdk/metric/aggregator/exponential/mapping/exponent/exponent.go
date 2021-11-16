@@ -29,15 +29,15 @@ type exponentMapping struct {
 	overflowIndex  int32
 }
 
-func NewMapping(scale int32) mapping.Mapping {
+func NewMapping(scale int32) (mapping.Mapping, error) {
 	if scale > 0 {
-		panic("requires scale <= 0")
+		return nil, fmt.Errorf("exponent mapping requires scale <= 0")
 	}
 	return exponentMapping{
 		scale:          scale,
 		underflowIndex: (mapping.MinSubnormalExponent - 1) >> -scale,
 		overflowIndex:  (mapping.MaxNormalExponent + 1) >> -scale,
-	}
+	}, nil
 }
 
 func (e exponentMapping) MapToIndex(value float64) int64 {
