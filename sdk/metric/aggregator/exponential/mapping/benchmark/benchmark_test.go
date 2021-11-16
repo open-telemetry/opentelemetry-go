@@ -44,14 +44,24 @@ func benchmarkBoundary(b *testing.B, name string, mapper mapping.Mapping) {
 	})
 }
 
+// An earlier draft of this benchmark included a lookup-table based
+// implementation:
+// https://github.com/open-telemetry/opentelemetry-go-contrib/pull/1353
+// That mapping function uses O(2^scale) extra space and falls
+// somewhere between the exponent and logarithm methods compared here.
+// In the test, lookuptable was 40% faster than logarithm, which did
+// not justify the significant extra complexity.
+
 func BenchmarkMapping(b *testing.B) {
-	// None of these have time complexity dependent on scale.
-	benchmarkMapping(b, "exponent", exponent.NewMapping(-1))
-	benchmarkMapping(b, "logarithm", logarithm.NewMapping(3))
+	em, _ := exponent.NewMapping(-1)
+	lm, _ := logarithm.NewMapping(-1)
+	benchmarkMapping(b, "exponent", em)
+	benchmarkMapping(b, "logarithm", lm)
 }
 
 func BenchmarkBoundary(b *testing.B) {
-	// None of these have time complexity dependent on scale.
-	benchmarkBoundary(b, "exponent", exponent.NewMapping(-1))
-	benchmarkBoundary(b, "logarithm", logarithm.NewMapping(3))
+	em, _ := exponent.NewMapping(-1)
+	lm, _ := logarithm.NewMapping(-1)
+	benchmarkBoundary(b, "exponent", em)
+	benchmarkBoundary(b, "logarithm", lm)
 }

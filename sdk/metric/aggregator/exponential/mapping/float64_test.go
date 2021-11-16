@@ -30,8 +30,8 @@ func TestScalb(t *testing.T) {
 	assert.Equal(t, 0x1p-1000, Scalb(1, -1000))
 	assert.Equal(t, 0x1p+1000, Scalb(1, +1000))
 
-	assert.Equal(t, 0, Scalb(0, 0))
-	assert.Equal(t, 0, Scalb(0, 1))
+	assert.Equal(t, 0.0, Scalb(0, 0))
+	assert.Equal(t, 0.0, Scalb(0, 1))
 }
 
 func TestFloat64Bits(t *testing.T) {
