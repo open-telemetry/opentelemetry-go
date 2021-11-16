@@ -60,16 +60,6 @@ func (f *benchFixture) meterMust() metric.MeterMust {
 	return metric.Must(f.meter)
 }
 
-func makeManyLabels(n int) [][]attribute.KeyValue {
-	r := make([][]attribute.KeyValue, n)
-
-	for i := 0; i < n; i++ {
-		r[i] = makeLabels(1)
-	}
-
-	return r
-}
-
 func makeLabels(n int) []attribute.KeyValue {
 	used := map[string]bool{}
 	l := make([]attribute.KeyValue, n)
