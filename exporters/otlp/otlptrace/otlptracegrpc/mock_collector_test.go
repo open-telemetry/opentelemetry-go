@@ -228,11 +228,13 @@ func (l *listener) Accept() (net.Conn, error) {
 
 // WaitForConn will wait indefintely for a connection to be estabilished with
 // the listener before returning.
-func (l *listener) WaitForConn() {
+func (l *listener) WaitForConn(ctx context.Context) error {
 	for {
 		select {
 		case <-l.C:
-			return
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
 		default:
 			runtime.Gosched()
 		}
