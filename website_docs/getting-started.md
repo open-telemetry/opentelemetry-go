@@ -39,7 +39,7 @@ import (
 	"log"
 )
 
-// App is an Fibonacci computation application.
+// App is a Fibonacci computation application.
 type App struct {
 	r io.Reader
 	l *log.Logger
@@ -176,7 +176,7 @@ To back up a bit, a trace is a type of telemetry that represents work being done
 
 Each part of the work that a service performs is represented in the trace by a span. Those spans are not just an unordered collection. Like the call stack of our application, those spans are defined with relationships to one another. The "root" span is the only span without a parent, it represents how a service request is started. All other spans have a parent relationship to another span in the same trace.
 
-If this last part about span relationships doesn't make complete sense now, don't worry. The important thing to take away is each part of your code that does work should to be represented as a span. You will have a better understanding of these span relationships after you instrument your code, so let's get started.
+If this last part about span relationships doesn't make complete sense now, don't worry. The most important takeaway is that each part of your code, which does some work, should be represented as a span. You will have a better understanding of these span relationships after you instrument your code, so let's get started.
 
 Start by instrumenting the `Run` method.
 
@@ -296,7 +296,7 @@ To initialize the console exporter, add the following function to the `main.go` 
 func newExporter(w io.Writer) (trace.SpanExporter, error) {
 	return stdouttrace.New(
 		stdouttrace.WithWriter(w),
-		// Use human readable output.
+		// Use human-readable output.
 		stdouttrace.WithPrettyPrint(),
 		// Do not print timestamps for the demo.
 		stdouttrace.WithoutTimestamps(),

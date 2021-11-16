@@ -76,11 +76,6 @@ type (
 		// values in a single collection round.
 		current export.Aggregator
 
-		// delta, if non-nil, refers to an Aggregator owned by
-		// the processor used to compute deltas between
-		// precomputed sums.
-		delta export.Aggregator
-
 		// cumulative, if non-nil, refers to an Aggregator owned
 		// by the processor used to store the last cumulative
 		// value.
@@ -93,9 +88,6 @@ type (
 		// RWMutex implements locking for the `Reader` interface.
 		sync.RWMutex
 		values map[stateKey]*stateValue
-
-		// Note: the timestamp logic currently assumes all
-		// exports are deltas.
 
 		processStart  time.Time
 		intervalStart time.Time
@@ -124,8 +116,8 @@ var ErrInvalidTemporality = fmt.Errorf("invalid aggregation temporality")
 // New returns a basic Processor that is also a Checkpointer using the provided
 // AggregatorSelector to select Aggregators.  The TemporalitySelector
 // is consulted to determine the kind(s) of exporter that will consume
-// data, so that this Processor can prepare to compute Delta or
-// Cumulative Aggregations as needed.
+// data, so that this Processor can prepare to compute Cumulative Aggregations
+// as needed.
 func New(aselector export.AggregatorSelector, tselector aggregation.TemporalitySelector, opts ...Option) *Processor {
 	return NewFactory(aselector, tselector, opts...).NewCheckpointer().(*Processor)
 }
@@ -191,13 +183,17 @@ func (b *Processor) Process(accum export.Accumulation) error {
 		}
 		if stateful {
 			if desc.InstrumentKind().PrecomputedSum() {
-				// If we know we need to compute deltas, allocate two aggregators.
-				b.AggregatorFor(desc, &newValue.cumulative, &newValue.delta)
-			} else {
-				// In this case we are certain not to need a delta, only allocate
-				// a cumulative aggregator.
-				b.AggregatorFor(desc, &newValue.cumulative)
+				// To convert precomputed sums to
+				// deltas requires two aggregators to
+				// be allocated, one for the prior
+				// value and one for the output delta.
+				// This functionality was removed from
+				// the basic processor in PR #2350.
+				return aggregation.ErrNoCumulativeToDelta
 			}
+			// In this case allocate one aggregator to
+			// save the current state.
+			b.AggregatorFor(desc, &newValue.cumulative)
 		}
 		b.state.values[key] = newValue
 		return nil
@@ -310,28 +306,15 @@ func (b *Processor) FinishCollection() error {
 			continue
 		}
 
-		// Update Aggregator state to support exporting either a
-		// delta or a cumulative aggregation.
-		var err error
-		if mkind.PrecomputedSum() {
-			if currentSubtractor, ok := value.current.(export.Subtractor); ok {
-				// This line is equivalent to:
-				// value.delta = currentSubtractor - value.cumulative
-				err = currentSubtractor.Subtract(value.cumulative, value.delta, key.descriptor)
-
-				if err == nil {
-					err = value.current.SynchronizedMove(value.cumulative, key.descriptor)
-				}
-			} else {
-				err = aggregation.ErrNoSubtraction
-			}
-		} else {
+		// The only kind of aggregators that are not stateless
+		// are the ones needing delta to cumulative
+		// conversion.  Merge aggregator state in this case.
+		if !mkind.PrecomputedSum() {
 			// This line is equivalent to:
-			// value.cumulative = value.cumulative + value.delta
-			err = value.cumulative.Merge(value.current, key.descriptor)
-		}
-		if err != nil {
-			return err
+			// value.cumulative = value.cumulative + value.current
+			if err := value.cumulative.Merge(value.current, key.descriptor); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -350,13 +333,8 @@ func (b *state) ForEach(exporter aggregation.TemporalitySelector, f func(export.
 		var agg aggregation.Aggregation
 		var start time.Time
 
-		// If the processor does not have Config.Memory and it was not updated
-		// in the prior round, do not visit this value.
-		if !b.config.Memory && value.updated != (b.finishedCollection-1) {
-			continue
-		}
-
 		aggTemp := exporter.TemporalityFor(key.descriptor, value.current.Aggregation().Kind())
+
 		switch aggTemp {
 		case aggregation.CumulativeTemporality:
 			// If stateful, the sum has been computed.  If stateless, the
@@ -372,14 +350,21 @@ func (b *state) ForEach(exporter aggregation.TemporalitySelector, f func(export.
 		case aggregation.DeltaTemporality:
 			// Precomputed sums are a special case.
 			if mkind.PrecomputedSum() {
-				agg = value.delta.Aggregation()
-			} else {
-				agg = value.current.Aggregation()
+				// This functionality was removed from
+				// the basic processor in PR #2350.
+				return aggregation.ErrNoCumulativeToDelta
 			}
+			agg = value.current.Aggregation()
 			start = b.intervalStart
 
 		default:
 			return fmt.Errorf("%v: %w", aggTemp, ErrInvalidTemporality)
+		}
+
+		// If the processor does not have Config.Memory and it was not updated
+		// in the prior round, do not visit this value.
+		if !b.config.Memory && value.updated != (b.finishedCollection-1) {
+			continue
 		}
 
 		if err := f(export.NewRecord(

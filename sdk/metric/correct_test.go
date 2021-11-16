@@ -136,7 +136,7 @@ func TestInputRangeHistogram(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, _, processor := newSDK(t)
 
-	histogram := Must(meter).NewFloat64Histogram("name.exact")
+	histogram := Must(meter).NewFloat64Histogram("name.histogram")
 
 	histogram.Record(ctx, math.NaN())
 	require.Equal(t, aggregation.ErrNaNInput, testHandler.Flush())
@@ -151,7 +151,7 @@ func TestInputRangeHistogram(t *testing.T) {
 	checkpointed = sdk.Collect(ctx)
 
 	require.Equal(t, map[string]float64{
-		"name.exact//": 3,
+		"name.histogram//": 3,
 	}, processor.Values())
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, testHandler.Flush())
@@ -450,8 +450,8 @@ func TestRecordBatch(t *testing.T) {
 
 	counter1 := Must(meter).NewInt64Counter("int64.sum")
 	counter2 := Must(meter).NewFloat64Counter("float64.sum")
-	histogram1 := Must(meter).NewInt64Histogram("int64.exact")
-	histogram2 := Must(meter).NewFloat64Histogram("float64.exact")
+	histogram1 := Must(meter).NewInt64Histogram("int64.histogram")
+	histogram2 := Must(meter).NewFloat64Histogram("float64.histogram")
 
 	sdk.RecordBatch(
 		ctx,
@@ -468,10 +468,10 @@ func TestRecordBatch(t *testing.T) {
 	sdk.Collect(ctx)
 
 	require.EqualValues(t, map[string]float64{
-		"int64.sum/A=B,C=D/":     1,
-		"float64.sum/A=B,C=D/":   2,
-		"int64.exact/A=B,C=D/":   3,
-		"float64.exact/A=B,C=D/": 4,
+		"int64.sum/A=B,C=D/":         1,
+		"float64.sum/A=B,C=D/":       2,
+		"int64.histogram/A=B,C=D/":   3,
+		"float64.histogram/A=B,C=D/": 4,
 	}, processor.Values())
 }
 
