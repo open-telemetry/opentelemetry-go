@@ -139,6 +139,7 @@ func (c *client) Stop(ctx context.Context) error {
 	// Clear c.tsc to signal the client is stopped.
 	c.tsc = nil
 
+	// FIXME: do not do this if the conn was passed by the user.
 	connErr := c.conn.Close()
 	if ctxErr != nil {
 		return ctxErr
