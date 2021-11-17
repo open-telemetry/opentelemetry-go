@@ -86,10 +86,9 @@ type (
 )
 
 var (
-	_ sdkapi.SyncImpl      = &Sync{}
-	_ sdkapi.BoundSyncImpl = &Handle{}
-	_ sdkapi.MeterImpl     = &MeterImpl{}
-	_ sdkapi.AsyncImpl     = &Async{}
+	_ sdkapi.SyncImpl  = &Sync{}
+	_ sdkapi.MeterImpl = &MeterImpl{}
+	_ sdkapi.AsyncImpl = &Async{}
 )
 
 // NewDescriptor is a test helper for constructing test metric
@@ -109,13 +108,6 @@ func (a *Async) Implementation() interface{} {
 
 func (s *Sync) Implementation() interface{} {
 	return s
-}
-
-func (s *Sync) Bind(labels []attribute.KeyValue) sdkapi.BoundSyncImpl {
-	return &Handle{
-		Instrument: s,
-		Labels:     labels,
-	}
 }
 
 func (s *Sync) RecordOne(ctx context.Context, number number.Number, labels []attribute.KeyValue) {
