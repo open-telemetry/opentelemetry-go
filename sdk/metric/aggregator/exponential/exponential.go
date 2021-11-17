@@ -148,8 +148,7 @@ func (a *Aggregator) Aggregation() aggregation.Aggregation {
 
 // Kind returns aggregation.ExponentialHistogramKind.
 func (c *Aggregator) Kind() aggregation.Kind {
-	// return aggregation.ExponentialHistogramKind
-	return aggregation.HistogramKind
+	return aggregation.ExponentialHistogramKind
 }
 
 // SynchronizedMove implements export.Aggregator.
@@ -185,7 +184,13 @@ func (a *Aggregator) SynchronizedMove(oa export.Aggregator, desc *sdkapi.Descrip
 }
 
 // Update adds the recorded measurement to the current data set.
-func (a *Aggregator) Update(_ context.Context, number number.Number, desc *sdkapi.Descriptor) error {
+func (a *Aggregator) Update(ctx context.Context, number number.Number, desc *sdkapi.Descriptor) error {
+	return a.UpdateByIncr(ctx, number, 1, desc)
+}
+
+// UpdateByIncr supports updating a histogram with a non-negative
+// increment.
+func (a *Aggregator) UpdateByIncr(_ context.Context, number number.Number, incr uint64, desc *sdkapi.Descriptor) error {
 	value := number.CoerceToFloat64(desc.NumberKind())
 
 	a.lock.Lock()
@@ -194,13 +199,13 @@ func (a *Aggregator) Update(_ context.Context, number number.Number, desc *sdkap
 	if value == 0 {
 		a.state.zeroCount++
 	} else if value > 0 {
-		a.update(&a.state.positive, value, 1)
+		a.update(&a.state.positive, value, incr)
 	} else {
-		a.update(&a.state.negative, -value, 1)
+		a.update(&a.state.negative, -value, incr)
 	}
 
-	a.state.count++
-	a.state.sum += value
+	a.state.count += incr
+	a.state.sum += value * float64(incr)
 
 	return nil
 }
@@ -347,9 +352,11 @@ func (b *buckets) clearState() {
 
 func newMapping(scale int32) mapping.Mapping {
 	if scale <= 0 {
-		return exponent.NewMapping(scale)
+		m, _ := exponent.NewMapping(scale)
+		return m
 	}
-	return logarithm.NewMapping(scale)
+	m, _ := logarithm.NewMapping(scale)
+	return m
 }
 
 func (a *Aggregator) downscale(change int32) {
@@ -438,44 +445,44 @@ func (b *buckets) empty() bool {
 func (a *Aggregator) incrementIndexBy(b *buckets, index int64, incr uint64) (highLow, bool) {
 	if b.empty() {
 		if index != int64(int32(index)) {
+			// rescale needed: index out-of-range for 32 bits
 			return highLow{
 				low:  index,
 				high: index,
-			}, false // rescale needed
+			}, false
 		}
 		if b.backing == nil {
 			b.backing = []uint8{0}
 		}
-		b.indexStart = int32(index) // @@@
+		b.indexStart = int32(index)
 		b.indexEnd = b.indexStart
 		b.indexBase = b.indexStart
 	} else if index < int64(b.indexStart) {
 		if span := uint64(int64(b.indexEnd) - index); span >= uint64(a.maxSize) {
+			// rescale needed: mapped value to the right
 			return highLow{
 				low:  index,
 				high: int64(b.indexEnd),
-			}, false // rescale needed
+			}, false
 		} else if span >= uint64(b.size()) {
 			a.grow(b, uint32(span+1))
 		}
 		b.indexStart = int32(index)
 	} else if index > int64(b.indexEnd) {
 		if span := uint64(index - int64(b.indexStart)); span >= uint64(a.maxSize) {
+			// rescale needed: mapped value to the left
 			return highLow{
 				low:  int64(b.indexStart),
 				high: index,
-			}, false // rescale needed
+			}, false
 		} else if span >= uint64(b.size()) {
 			a.grow(b, uint32(span+1))
 		}
 		b.indexEnd = int32(index)
 	}
 
-	size := int32(b.size())
 	bucketIndex := int32(index - int64(b.indexBase))
-	if bucketIndex >= size {
-		bucketIndex -= int32(b.size())
-	} else if bucketIndex < 0 {
+	if bucketIndex < 0 {
 		bucketIndex += int32(b.size())
 	}
 	b.incrementBucket(bucketIndex, incr)
@@ -528,6 +535,7 @@ func (b *buckets) downscale(by int32) {
 	each := int64(1) << by
 	inpos := int32(0)
 	outpos := int32(0)
+
 	for pos := b.indexStart; pos <= b.indexEnd; {
 		mod := int64(pos) % each
 		if mod < 0 {
@@ -572,15 +580,15 @@ func (b *buckets) reverse(from, limit int32) {
 		}
 	case []uint16:
 		for i := int32(0); i < num; i++ {
-			counts[from+num], counts[limit-num-1] = counts[limit-num-1], counts[from+num]
+			counts[from+i], counts[limit-i-1] = counts[limit-i-1], counts[from+i]
 		}
 	case []uint32:
 		for i := int32(0); i < num; i++ {
-			counts[from+num], counts[limit-num-1] = counts[limit-num-1], counts[from+num]
+			counts[from+i], counts[limit-i-1] = counts[limit-i-1], counts[from+i]
 		}
 	case []uint64:
 		for i := int32(0); i < num; i++ {
-			counts[from+num], counts[limit-num-1] = counts[limit-num-1], counts[from+num]
+			counts[from+i], counts[limit-i-1] = counts[limit-i-1], counts[from+i]
 		}
 	}
 }
@@ -740,7 +748,8 @@ func (h *highLow) empty() bool {
 	return h.low > h.high
 }
 
-// TEST
+// TEST SUPPORT: @@@
+
 type show struct {
 	index int32
 	count uint64
@@ -768,4 +777,8 @@ func counts(b *buckets) (r []uint64) {
 
 func (s show) String() string {
 	return fmt.Sprintf("%v=%v(%.2g)", s.index, s.count, s.lower)
+}
+
+func (a *Aggregator) String() string {
+	return fmt.Sprintf("%v %v\n%v\n%v", a.state.count, a.state.sum, a.shows(&a.state.positive), a.shows(&a.state.negative))
 }

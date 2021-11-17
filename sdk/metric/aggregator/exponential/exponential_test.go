@@ -11,20 +11,25 @@ import (
 	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping/logarithm"
 )
 
 var (
-	normalMapping  = logarithm.NewMapping(30)
+	normalMapping  = newMapping(DefaultNormalScale)
 	oneAndAHalf    = centerVal(normalMapping, int32(normalMapping.MapToIndex(1.5)))
 	testDescriptor = metrictest.NewDescriptor("name", sdkapi.HistogramInstrumentKind, number.Float64Kind)
+
+	plusOne  = number.NewFloat64Number(1)
+	minusOne = number.NewFloat64Number(-1)
 )
 
-// TEST SUPPORT
-
 func requireEqual(t *testing.T, a, b *Aggregator) {
-	require.InEpsilon(t, a.state.sum, b.state.sum, 1e-10)
+	if a.state.sum == 0 || b.state.sum == 0 {
+		require.InDelta(t, a.state.sum, b.state.sum, 1e-6)
+	} else {
+		require.InEpsilon(t, a.state.sum, b.state.sum, 1e-6)
+	}
 	require.Equal(t, a.state.count, b.state.count)
 	require.Equal(t, a.state.zeroCount, b.state.zeroCount)
 	require.Equal(t, a.state.mapping.Scale(), b.state.mapping.Scale())
@@ -60,6 +65,9 @@ func TestSimpleSize4(t *testing.T) {
 	pos := agg.positive()
 	neg := agg.negative()
 
+	require.NotNil(t, agg.Aggregation())
+	require.Equal(t, aggregation.ExponentialHistogramKind, agg.Kind())
+
 	// Add a zero
 	agg.Update(ctx, 0, &testDescriptor)
 
@@ -86,7 +94,7 @@ func TestSimpleSize4(t *testing.T) {
 	require.Equal(t, uint64(1), pos.At(0))
 	require.Equal(t, int32(DefaultNormalScale), agg.scale())
 
-	mapper := logarithm.NewMapping(agg.scale())
+	mapper := newMapping(agg.scale())
 
 	// Check that the initial count maps to Offset().
 	offset := mapper.MapToIndex(oneAndAHalf)
@@ -119,7 +127,7 @@ func TestSimpleSize4(t *testing.T) {
 func TestAlternatingGrowth1(t *testing.T) {
 	ctx := context.Background()
 	agg := &New(1, &testDescriptor, WithMaxSize(4))[0]
-	agg.Update(ctx, number.NewFloat64Number(1), &testDescriptor)
+	agg.Update(ctx, plusOne, &testDescriptor)
 	agg.Update(ctx, number.NewFloat64Number(2), &testDescriptor)
 	agg.Update(ctx, number.NewFloat64Number(0.5), &testDescriptor)
 
@@ -131,8 +139,8 @@ func TestAlternatingGrowth1(t *testing.T) {
 func TestAlternatingGrowth2(t *testing.T) {
 	ctx := context.Background()
 	agg := &New(1, &testDescriptor, WithMaxSize(4))[0]
-	agg.Update(ctx, number.NewFloat64Number(1), &testDescriptor)
-	agg.Update(ctx, number.NewFloat64Number(1), &testDescriptor)
+	agg.Update(ctx, plusOne, &testDescriptor)
+	agg.Update(ctx, plusOne, &testDescriptor)
 	agg.Update(ctx, number.NewFloat64Number(2), &testDescriptor)
 	agg.Update(ctx, number.NewFloat64Number(0.5), &testDescriptor)
 	agg.Update(ctx, number.NewFloat64Number(4), &testDescriptor)
@@ -385,8 +393,8 @@ func TestMergeSimpleOdd(t *testing.T) {
 func TestMergeExhaustive(t *testing.T) {
 	const (
 		factor = 1024.0
-		repeat = 64
-		count  = 64
+		repeat = 16
+		count  = 16
 	)
 
 	means := []float64{
@@ -429,7 +437,17 @@ func TestMergeExhaustive(t *testing.T) {
 										count,
 									} {
 										t.Run(fmt.Sprint("size=", size), func(t *testing.T) {
-											testMergeExhaustive(t, values[0:part], values[part:count], size)
+											for _, incr := range []uint64{
+												1,
+												17,
+												0x100,
+												0x10000,
+												0x100000000,
+											} {
+												t.Run(fmt.Sprintf("incr=%x", incr), func(t *testing.T) {
+													testMergeExhaustive(t, values[0:part], values[part:count], size, incr)
+												})
+											}
 										})
 									}
 								})
@@ -442,7 +460,7 @@ func TestMergeExhaustive(t *testing.T) {
 	}
 }
 
-func testMergeExhaustive(t *testing.T, a, b []float64, size int32) {
+func testMergeExhaustive(t *testing.T, a, b []float64, size int32, incr uint64) {
 	ctx := context.Background()
 	aggs := New(3, &testDescriptor, WithMaxSize(size))
 
@@ -451,15 +469,90 @@ func testMergeExhaustive(t *testing.T, a, b []float64, size int32) {
 	cHist := &aggs[2]
 
 	for _, av := range a {
-		aHist.Update(ctx, number.NewFloat64Number(av), &testDescriptor)
-		cHist.Update(ctx, number.NewFloat64Number(av), &testDescriptor)
+		aHist.UpdateByIncr(ctx, number.NewFloat64Number(av), incr, &testDescriptor)
+		cHist.UpdateByIncr(ctx, number.NewFloat64Number(av), incr, &testDescriptor)
 	}
 	for _, bv := range b {
-		bHist.Update(ctx, number.NewFloat64Number(bv), &testDescriptor)
-		cHist.Update(ctx, number.NewFloat64Number(bv), &testDescriptor)
+		bHist.UpdateByIncr(ctx, number.NewFloat64Number(bv), incr, &testDescriptor)
+		cHist.UpdateByIncr(ctx, number.NewFloat64Number(bv), incr, &testDescriptor)
 	}
+
 	aHist.Merge(bHist, &testDescriptor)
 
 	// aHist and cHist should be equivalent
 	requireEqual(t, cHist, aHist)
+}
+
+func TestOverflow8bits(t *testing.T) {
+	ctx := context.Background()
+	aggs := New(3, &testDescriptor)
+
+	aHist := &aggs[0]
+	bHist := &aggs[1]
+	cHist := &aggs[2]
+
+	for i := 0; i < 256; i++ {
+		aHist.Update(ctx, plusOne, &testDescriptor)
+	}
+	bHist.UpdateByIncr(ctx, plusOne, 255, &testDescriptor)
+	bHist.Update(ctx, plusOne, &testDescriptor)
+	cHist.UpdateByIncr(ctx, plusOne, 256, &testDescriptor)
+
+	requireEqual(t, cHist, aHist)
+	requireEqual(t, bHist, aHist)
+}
+
+func TestOverflowBits(t *testing.T) {
+	ctx := context.Background()
+
+	for _, limit := range []uint64{
+		0x100,
+		0x10000,
+		0x100000000,
+	} {
+		t.Run(fmt.Sprint(limit), func(t *testing.T) {
+			aggs := New(3, &testDescriptor)
+
+			aHist := &aggs[0]
+			bHist := &aggs[1]
+			cHist := &aggs[2]
+
+			if limit <= 0x10000 {
+				for i := uint64(0); i < limit; i++ {
+					aHist.Update(ctx, plusOne, &testDescriptor)
+					aHist.Update(ctx, minusOne, &testDescriptor)
+
+					cnt, _ := aHist.Count()
+					require.Equal(t, 2*(i+1), cnt)
+				}
+			} else {
+				aHist.UpdateByIncr(ctx, plusOne, limit/2, &testDescriptor)
+				aHist.UpdateByIncr(ctx, plusOne, limit/2, &testDescriptor)
+				aHist.UpdateByIncr(ctx, minusOne, limit/2, &testDescriptor)
+				aHist.UpdateByIncr(ctx, minusOne, limit/2, &testDescriptor)
+			}
+			bHist.UpdateByIncr(ctx, plusOne, limit-1, &testDescriptor)
+			bHist.Update(ctx, plusOne, &testDescriptor)
+			bHist.UpdateByIncr(ctx, minusOne, limit-1, &testDescriptor)
+			bHist.Update(ctx, minusOne, &testDescriptor)
+			cHist.UpdateByIncr(ctx, plusOne, limit, &testDescriptor)
+			cHist.UpdateByIncr(ctx, minusOne, limit, &testDescriptor)
+
+			aCnt, _ := aHist.Count()
+			require.Equal(t, 2*limit, aCnt)
+			sum, _ := aHist.Sum()
+			require.Equal(t, float64(0), sum.CoerceToFloat64(number.Float64Kind))
+
+			aPos, _ := aHist.Positive()
+			require.Equal(t, uint32(1), aPos.Len())
+			require.Equal(t, limit, aPos.At(0))
+
+			aNeg, _ := aHist.Negative()
+			require.Equal(t, uint32(1), aNeg.Len())
+			require.Equal(t, limit, aNeg.At(0))
+
+			requireEqual(t, cHist, aHist)
+			requireEqual(t, bHist, aHist)
+		})
+	}
 }
