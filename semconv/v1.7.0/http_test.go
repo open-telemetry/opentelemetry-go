@@ -905,6 +905,9 @@ func getExpectedCodeForHTTPCode(code int, spanKind trace.SpanKind) codes.Code {
 	if category > 0 && category < 4 {
 		return codes.Unset
 	}
+	if spanKind == trace.SpanKindServer && category == 4 {
+		return codes.Unset
+	}
 	return codes.Error
 }
 
