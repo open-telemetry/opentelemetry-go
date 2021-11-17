@@ -30,12 +30,9 @@ import (
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	arrAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
-	lvAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
-	sumAgg "go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -180,7 +177,7 @@ func TestMinMaxSumCountPropagatesErrors(t *testing.T) {
 func TestSumIntDataPoints(t *testing.T) {
 	desc := metrictest.NewDescriptor("", sdkapi.HistogramInstrumentKind, number.Int64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
-	sums := sumAgg.New(2)
+	sums := sum.New(2)
 	s, ckpt := &sums[0], &sums[1]
 
 	assert.NoError(t, s.Update(context.Background(), number.Number(1), &desc))
@@ -220,7 +217,7 @@ func TestSumIntDataPoints(t *testing.T) {
 func TestSumFloatDataPoints(t *testing.T) {
 	desc := metrictest.NewDescriptor("", sdkapi.HistogramInstrumentKind, number.Float64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
-	sums := sumAgg.New(2)
+	sums := sum.New(2)
 	s, ckpt := &sums[0], &sums[1]
 
 	assert.NoError(t, s.Update(context.Background(), number.NewFloat64Number(1), &desc))
@@ -258,7 +255,7 @@ func TestSumFloatDataPoints(t *testing.T) {
 func TestLastValueIntDataPoints(t *testing.T) {
 	desc := metrictest.NewDescriptor("", sdkapi.HistogramInstrumentKind, number.Int64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
-	lvs := lvAgg.New(2)
+	lvs := lastvalue.New(2)
 	lv, ckpt := &lvs[0], &lvs[1]
 
 	assert.NoError(t, lv.Update(context.Background(), number.Number(100), &desc))
@@ -290,79 +287,10 @@ func TestLastValueIntDataPoints(t *testing.T) {
 	}
 }
 
-func TestExactIntDataPoints(t *testing.T) {
-	desc := metrictest.NewDescriptor("", sdkapi.HistogramInstrumentKind, number.Int64Kind)
-	labels := attribute.NewSet(attribute.String("one", "1"))
-	arrs := arrAgg.New(2)
-	e, ckpt := &arrs[0], &arrs[1]
-
-	assert.NoError(t, e.Update(context.Background(), number.Number(100), &desc))
-	require.NoError(t, e.SynchronizedMove(ckpt, &desc))
-	record := export.NewRecord(&desc, &labels, ckpt.Aggregation(), intervalStart, intervalEnd)
-	pts, err := ckpt.Points()
-	require.NoError(t, err)
-
-	if m, err := gaugeArray(record, pts); assert.NoError(t, err) {
-		assert.Equal(t, []*metricpb.NumberDataPoint{{
-			StartTimeUnixNano: toNanos(intervalStart),
-			TimeUnixNano:      toNanos(intervalEnd),
-			Attributes: []*commonpb.KeyValue{
-				{
-					Key:   "one",
-					Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: "1"}},
-				},
-			},
-			Value: &metricpb.NumberDataPoint_AsInt{
-				AsInt: 100,
-			},
-		}}, m.GetGauge().DataPoints)
-		assert.Nil(t, m.GetSum())
-		assert.Nil(t, m.GetHistogram())
-		assert.Nil(t, m.GetSummary())
-		assert.Nil(t, m.GetIntGauge())     // nolint
-		assert.Nil(t, m.GetIntSum())       // nolint
-		assert.Nil(t, m.GetIntHistogram()) // nolint
-	}
-}
-
-func TestExactFloatDataPoints(t *testing.T) {
-	desc := metrictest.NewDescriptor("", sdkapi.HistogramInstrumentKind, number.Float64Kind)
-	labels := attribute.NewSet(attribute.String("one", "1"))
-	arrs := arrAgg.New(2)
-	e, ckpt := &arrs[0], &arrs[1]
-	assert.NoError(t, e.Update(context.Background(), number.NewFloat64Number(100), &desc))
-	require.NoError(t, e.SynchronizedMove(ckpt, &desc))
-	record := export.NewRecord(&desc, &labels, ckpt.Aggregation(), intervalStart, intervalEnd)
-	pts, err := ckpt.Points()
-	require.NoError(t, err)
-
-	if m, err := gaugeArray(record, pts); assert.NoError(t, err) {
-		assert.Equal(t, []*metricpb.NumberDataPoint{{
-			Value: &metricpb.NumberDataPoint_AsDouble{
-				AsDouble: 100,
-			},
-			StartTimeUnixNano: toNanos(intervalStart),
-			TimeUnixNano:      toNanos(intervalEnd),
-			Attributes: []*commonpb.KeyValue{
-				{
-					Key:   "one",
-					Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: "1"}},
-				},
-			},
-		}}, m.GetGauge().DataPoints)
-		assert.Nil(t, m.GetSum())
-		assert.Nil(t, m.GetHistogram())
-		assert.Nil(t, m.GetSummary())
-		assert.Nil(t, m.GetIntGauge())     // nolint
-		assert.Nil(t, m.GetIntSum())       // nolint
-		assert.Nil(t, m.GetIntHistogram()) // nolint
-	}
-}
-
 func TestSumErrUnknownValueType(t *testing.T) {
 	desc := metrictest.NewDescriptor("", sdkapi.HistogramInstrumentKind, number.Kind(-1))
 	labels := attribute.NewSet()
-	s := &sumAgg.New(1)[0]
+	s := &sum.New(1)[0]
 	record := export.NewRecord(&desc, &labels, s, intervalStart, intervalEnd)
 	value, err := s.Sum()
 	require.NoError(t, err)
@@ -467,12 +395,6 @@ func TestRecordAggregatorIncompatibleErrors(t *testing.T) {
 	require.True(t, errors.Is(err, ErrIncompatibleAgg))
 
 	mpb, err = makeMpb(aggregation.MinMaxSumCountKind, &lastvalue.New(1)[0])
-
-	require.Error(t, err)
-	require.Nil(t, mpb)
-	require.True(t, errors.Is(err, ErrIncompatibleAgg))
-
-	mpb, err = makeMpb(aggregation.ExactKind, &lastvalue.New(1)[0])
 
 	require.Error(t, err)
 	require.Nil(t, mpb)

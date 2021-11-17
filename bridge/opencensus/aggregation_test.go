@@ -44,7 +44,7 @@ func TestNewAggregationFromPoints(t *testing.T) {
 					Value: int64(23),
 				},
 			},
-			expectedKind: aggregation.ExactKind,
+			expectedKind: aggregation.LastValueKind,
 		},
 		{
 			desc: "float point",
@@ -54,7 +54,7 @@ func TestNewAggregationFromPoints(t *testing.T) {
 					Value: float64(23),
 				},
 			},
-			expectedKind: aggregation.ExactKind,
+			expectedKind: aggregation.LastValueKind,
 		},
 		{
 			desc: "distribution point",
@@ -129,7 +129,7 @@ func TestNewAggregationFromPoints(t *testing.T) {
 			expectedErr: errIncompatibleType,
 		},
 		{
-			desc: "dist is incompatible with exact",
+			desc: "dist is incompatible with raw points",
 			input: []metricdata.Point{
 				{
 					Time:  now,
@@ -178,82 +178,57 @@ func TestNewAggregationFromPoints(t *testing.T) {
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
-			output, err := newAggregationFromPoints(tc.input)
+			var output []aggregation.Aggregation
+			err := recordAggregationsFromPoints(tc.input, func(agg aggregation.Aggregation, ts time.Time) error {
+				last := tc.input[len(tc.input)-1]
+				if ts != last.Time {
+					t.Errorf("incorrect timestamp %v != %v", ts, last.Time)
+				}
+				output = append(output, agg)
+				return nil
+			})
 			if !errors.Is(err, tc.expectedErr) {
 				t.Errorf("newAggregationFromPoints(%v) = err(%v), want err(%v)", tc.input, err, tc.expectedErr)
 			}
-			if tc.expectedErr == nil && output.Kind() != tc.expectedKind {
-				t.Errorf("newAggregationFromPoints(%v) = %v, want %v", tc.input, output.Kind(), tc.expectedKind)
+			for _, out := range output {
+				if tc.expectedErr == nil && out.Kind() != tc.expectedKind {
+					t.Errorf("newAggregationFromPoints(%v) = %v, want %v", tc.input, out.Kind(), tc.expectedKind)
+				}
 			}
 		})
-	}
-}
-
-func TestPointsAggregation(t *testing.T) {
-	now := time.Now()
-	input := []metricdata.Point{
-		{Value: int64(15)},
-		{Value: int64(-23), Time: now},
-	}
-	output, err := newAggregationFromPoints(input)
-	if err != nil {
-		t.Fatalf("newAggregationFromPoints(%v) = err(%v), want <nil>", input, err)
-	}
-	if output.Kind() != aggregation.ExactKind {
-		t.Errorf("newAggregationFromPoints(%v) = %v, want %v", input, output.Kind(), aggregation.ExactKind)
-	}
-	if output.end() != now {
-		t.Errorf("newAggregationFromPoints(%v).end() = %v, want %v", input, output.end(), now)
-	}
-	pointsAgg, ok := output.(aggregation.Points)
-	if !ok {
-		t.Errorf("newAggregationFromPoints(%v) = %v does not implement the aggregation.Points interface", input, output)
-	}
-	points, err := pointsAgg.Points()
-	if err != nil {
-		t.Fatalf("Unexpected err: %v", err)
-	}
-	if len(points) != len(input) {
-		t.Fatalf("newAggregationFromPoints(%v) resulted in %d points, want %d points", input, len(points), len(input))
-	}
-	for i := range points {
-		inputPoint := input[i]
-		outputPoint := points[i]
-		if inputPoint.Value != outputPoint.AsInt64() {
-			t.Errorf("newAggregationFromPoints(%v)[%d] = %v, want %v", input, i, outputPoint.AsInt64(), inputPoint.Value)
-		}
 	}
 }
 
 func TestLastValueAggregation(t *testing.T) {
 	now := time.Now()
 	input := []metricdata.Point{
-		{Value: int64(15)},
+		{Value: int64(15), Time: now.Add(-time.Minute)},
 		{Value: int64(-23), Time: now},
 	}
-	output, err := newAggregationFromPoints(input)
+	idx := 0
+	err := recordAggregationsFromPoints(input, func(agg aggregation.Aggregation, end time.Time) error {
+		if agg.Kind() != aggregation.LastValueKind {
+			t.Errorf("recordAggregationsFromPoints(%v) = %v, want %v", input, agg.Kind(), aggregation.LastValueKind)
+		}
+		if end != input[idx].Time {
+			t.Errorf("recordAggregationsFromPoints(%v).end() = %v, want %v", input, end, input[idx].Time)
+		}
+		pointsLV, ok := agg.(aggregation.LastValue)
+		if !ok {
+			t.Errorf("recordAggregationsFromPoints(%v) = %v does not implement the aggregation.LastValue interface", input, agg)
+		}
+		lv, ts, _ := pointsLV.LastValue()
+		if lv.AsInt64() != input[idx].Value {
+			t.Errorf("recordAggregationsFromPoints(%v) = %v, want %v", input, lv.AsInt64(), input[idx].Value)
+		}
+		if ts != input[idx].Time {
+			t.Errorf("recordAggregationsFromPoints(%v) = %v, want %v", input, ts, input[idx].Time)
+		}
+		idx++
+		return nil
+	})
 	if err != nil {
-		t.Fatalf("newAggregationFromPoints(%v) = err(%v), want <nil>", input, err)
-	}
-	if output.Kind() != aggregation.ExactKind {
-		t.Errorf("newAggregationFromPoints(%v) = %v, want %v", input, output.Kind(), aggregation.ExactKind)
-	}
-	if output.end() != now {
-		t.Errorf("newAggregationFromPoints(%v).end() = %v, want %v", input, output.end(), now)
-	}
-	lvAgg, ok := output.(aggregation.LastValue)
-	if !ok {
-		t.Errorf("newAggregationFromPoints(%v) = %v does not implement the aggregation.Points interface", input, output)
-	}
-	num, endTime, err := lvAgg.LastValue()
-	if err != nil {
-		t.Fatalf("Unexpected err: %v", err)
-	}
-	if endTime != now {
-		t.Errorf("newAggregationFromPoints(%v).LastValue() = endTime: %v, want %v", input, endTime, now)
-	}
-	if num.AsInt64() != int64(-23) {
-		t.Errorf("newAggregationFromPoints(%v).LastValue() = number: %v, want %v", input, num.AsInt64(), int64(-23))
+		t.Errorf("recordAggregationsFromPoints(%v) = unexpected error %v", input, err)
 	}
 }
 
@@ -288,33 +263,39 @@ func TestHistogramAggregation(t *testing.T) {
 			},
 		},
 	}
-	output, err := newAggregationFromPoints(input)
+	var output aggregation.Aggregation
+	var end time.Time
+	err := recordAggregationsFromPoints(input, func(argAgg aggregation.Aggregation, argEnd time.Time) error {
+		output = argAgg
+		end = argEnd
+		return nil
+	})
 	if err != nil {
-		t.Fatalf("newAggregationFromPoints(%v) = err(%v), want <nil>", input, err)
+		t.Fatalf("recordAggregationsFromPoints(%v) = err(%v), want <nil>", input, err)
 	}
 	if output.Kind() != aggregation.HistogramKind {
-		t.Errorf("newAggregationFromPoints(%v) = %v, want %v", input, output.Kind(), aggregation.HistogramKind)
+		t.Errorf("recordAggregationsFromPoints(%v) = %v, want %v", input, output.Kind(), aggregation.HistogramKind)
 	}
-	if output.end() != now {
-		t.Errorf("newAggregationFromPoints(%v).end() = %v, want %v", input, output.end(), now)
+	if end != now {
+		t.Errorf("recordAggregationsFromPoints(%v).end() = %v, want %v", input, end, now)
 	}
 	distAgg, ok := output.(aggregation.Histogram)
 	if !ok {
-		t.Errorf("newAggregationFromPoints(%v) = %v does not implement the aggregation.Points interface", input, output)
+		t.Errorf("recordAggregationsFromPoints(%v) = %v does not implement the aggregation.Points interface", input, output)
 	}
 	sum, err := distAgg.Sum()
 	if err != nil {
 		t.Fatalf("Unexpected err: %v", err)
 	}
 	if sum.AsFloat64() != float64(55) {
-		t.Errorf("newAggregationFromPoints(%v).Sum() = %v, want %v", input, sum.AsFloat64(), float64(55))
+		t.Errorf("recordAggregationsFromPoints(%v).Sum() = %v, want %v", input, sum.AsFloat64(), float64(55))
 	}
 	count, err := distAgg.Count()
 	if err != nil {
 		t.Fatalf("Unexpected err: %v", err)
 	}
 	if count != 2 {
-		t.Errorf("newAggregationFromPoints(%v).Count() = %v, want %v", input, count, 2)
+		t.Errorf("recordAggregationsFromPoints(%v).Count() = %v, want %v", input, count, 2)
 	}
 	hist, err := distAgg.Histogram()
 	if err != nil {
@@ -322,20 +303,20 @@ func TestHistogramAggregation(t *testing.T) {
 	}
 	inputBucketBoundaries := []float64{20, 30}
 	if len(hist.Boundaries) != len(inputBucketBoundaries) {
-		t.Fatalf("newAggregationFromPoints(%v).Histogram() produced %d boundaries, want %d boundaries", input, len(hist.Boundaries), len(inputBucketBoundaries))
+		t.Fatalf("recordAggregationsFromPoints(%v).Histogram() produced %d boundaries, want %d boundaries", input, len(hist.Boundaries), len(inputBucketBoundaries))
 	}
 	for i, b := range hist.Boundaries {
 		if b != inputBucketBoundaries[i] {
-			t.Errorf("newAggregationFromPoints(%v).Histogram().Boundaries[%d] = %v, want %v", input, i, b, inputBucketBoundaries[i])
+			t.Errorf("recordAggregationsFromPoints(%v).Histogram().Boundaries[%d] = %v, want %v", input, i, b, inputBucketBoundaries[i])
 		}
 	}
 	inputBucketCounts := []uint64{1, 1}
 	if len(hist.Counts) != len(inputBucketCounts) {
-		t.Fatalf("newAggregationFromPoints(%v).Histogram() produced %d buckets, want %d buckets", input, len(hist.Counts), len(inputBucketCounts))
+		t.Fatalf("recordAggregationsFromPoints(%v).Histogram() produced %d buckets, want %d buckets", input, len(hist.Counts), len(inputBucketCounts))
 	}
 	for i, c := range hist.Counts {
 		if c != inputBucketCounts[i] {
-			t.Errorf("newAggregationFromPoints(%v).Histogram().Counts[%d] = %d, want %d", input, i, c, inputBucketCounts[i])
+			t.Errorf("recordAggregationsFromPoints(%v).Histogram().Counts[%d] = %d, want %d", input, i, c, inputBucketCounts[i])
 		}
 	}
 }

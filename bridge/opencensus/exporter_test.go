@@ -21,11 +21,10 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel"
-
 	"go.opencensus.io/metric/metricdata"
 	ocresource "go.opencensus.io/resource"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/metrictest"
@@ -142,7 +141,7 @@ func TestExportMetrics(t *testing.T) {
 					},
 				},
 			},
-			expectedHandledError: errIncompatibleType,
+			exportErr: errIncompatibleType,
 		},
 		{
 			desc: "success",
@@ -172,13 +171,9 @@ func TestExportMetrics(t *testing.T) {
 				export.NewRecord(
 					&basicDesc,
 					attribute.EmptySet(),
-					&ocExactAggregator{
-						points: []aggregation.Point{
-							{
-								Number: number.NewInt64Number(123),
-								Time:   now,
-							},
-						},
+					&ocRawAggregator{
+						value: number.NewInt64Number(123),
+						time:  now,
 					},
 					now,
 					now,
@@ -203,13 +198,9 @@ func TestExportMetrics(t *testing.T) {
 				export.NewRecord(
 					&basicDesc,
 					attribute.EmptySet(),
-					&ocExactAggregator{
-						points: []aggregation.Point{
-							{
-								Number: number.NewInt64Number(123),
-								Time:   now,
-							},
-						},
+					&ocRawAggregator{
+						value: number.NewInt64Number(123),
+						time:  now,
 					},
 					now,
 					now,
@@ -237,13 +228,9 @@ func TestExportMetrics(t *testing.T) {
 				export.NewRecord(
 					&basicDesc,
 					attribute.EmptySet(),
-					&ocExactAggregator{
-						points: []aggregation.Point{
-							{
-								Number: number.NewInt64Number(123),
-								Time:   now,
-							},
-						},
+					&ocRawAggregator{
+						value: number.NewInt64Number(123),
+						time:  now,
 					},
 					now,
 					now,

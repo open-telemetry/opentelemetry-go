@@ -80,7 +80,7 @@ examples:
 	   $(GO) build .); \
 	done
 
-generate: $(STRINGER)
+generate: $(STRINGER) $(PORTO)
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "$(GO) generate $${dir}/..."; \
 	  (cd "$${dir}" && \
