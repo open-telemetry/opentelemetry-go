@@ -483,16 +483,14 @@ func TestRecordPersistence(t *testing.T) {
 	meter, sdk, selector, _ := newSDK(t)
 
 	c := Must(meter).NewFloat64Counter("name.sum")
-	b := c.Bind(attribute.String("bound", "true"))
 	uk := attribute.String("bound", "false")
 
 	for i := 0; i < 100; i++ {
 		c.Add(ctx, 1, uk)
-		b.Add(ctx, 1)
 		sdk.Collect(ctx)
 	}
 
-	require.Equal(t, 4, selector.newAggCount)
+	require.Equal(t, 2, selector.newAggCount)
 }
 
 func TestIncorrectInstruments(t *testing.T) {

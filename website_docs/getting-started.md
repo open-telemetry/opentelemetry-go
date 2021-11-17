@@ -529,6 +529,14 @@ Excellent! The application no longer returns wrong values, and looking at the te
 
 # What's Next
 
-This guide has walked you through adding tracing instrumentation to an application and using a console exporter to send telemetry data to a file. There are many other topics to cover in OpenTelemetry, but you should be ready to start adding OpenTelemetry Go to your projects at this point. Go instrument your code!
+This guide has walked you through adding tracing instrumentation to an
+application and using a console exporter to send telemetry data to a file. There
+are many other topics to cover in OpenTelemetry, but you should be ready to
+start adding OpenTelemetry Go to your projects at this point. Go instrument your
+code!
 
-For more information about instrumenting your code and things you can do with spans, refer to the [Instrumenting](https://opentelemetry.io/docs/go/instrumentation/) documentation. Likewise, advanced topics about processing and exporting telemetry data can be found in the [Processing and Exporting Data](https://opentelemetry.io/docs/go/exporting_data/) documentation.
+For more information about instrumenting your code and things you can do with
+spans, refer to the [Instrumenting]({{< relref "instrumentation" >}})
+documentation. Likewise, advanced topics about processing and exporting
+telemetry data can be found in the [Processing and Exporting Data]({{< relref
+"exporting_data" >}}) documentation.
