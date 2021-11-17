@@ -45,9 +45,14 @@ type client struct {
 	// stopFunc cancels stopCtx, stopping any active exports.
 	stopFunc context.CancelFunc
 
-	conn  *grpc.ClientConn
-	tscMu sync.RWMutex
-	tsc   coltracepb.TraceServiceClient
+	// ourConn keeps track of where conn was created: true if created here on
+	// Start, or false if passed with an option. This is important on Shutdown
+	// as the conn should only be closed if created here on start. Otherwise,
+	// it is up to the processes that passed the conn to close it.
+	ourConn bool
+	conn    *grpc.ClientConn
+	tscMu   sync.RWMutex
+	tsc     coltracepb.TraceServiceClient
 }
 
 // Compile time check *client implements otlptrace.Client.
@@ -85,6 +90,9 @@ func (c *client) Start(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		// Keep track that we own the lifecycle of this conn and need to close
+		// it on Shutdown.
+		c.ourConn = true
 		c.conn = conn
 	}
 
@@ -109,14 +117,14 @@ func (c *client) Stop(ctx context.Context) error {
 		c.tscMu.Lock()
 		close(acquired)
 	}()
-	var ctxErr error
+	var err error
 	select {
 	case <-ctx.Done():
 		// The Stop timeout is reached. Kill any remaining exports to force
 		// the clear of the lock and save the timeout error to return and
 		// signal the shutdown timed out before cleanly stopping.
 		c.stopFunc()
-		ctxErr = ctx.Err()
+		err = ctx.Err()
 
 		// To ensure the client is not left in a dirty state c.tsc needs to be
 		// set to nil. To avoid the race condition when doing this, ensure
@@ -139,12 +147,14 @@ func (c *client) Stop(ctx context.Context) error {
 	// Clear c.tsc to signal the client is stopped.
 	c.tsc = nil
 
-	// FIXME: do not do this if the conn was passed by the user.
-	connErr := c.conn.Close()
-	if ctxErr != nil {
-		return ctxErr
+	if c.ourConn {
+		closeErr := c.conn.Close()
+		// A context timeout error takes precedence over this error.
+		if err == nil && closeErr != nil {
+			err = closeErr
+		}
 	}
-	return connErr
+	return err
 }
 
 var errShutdown = errors.New("exporter is shutdown")
