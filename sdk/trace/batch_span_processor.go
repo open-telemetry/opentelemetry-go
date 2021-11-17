@@ -238,7 +238,7 @@ func (bsp *batchSpanProcessor) exportSpans(ctx context.Context) error {
 	}
 
 	if l := len(bsp.batch); l > 0 {
-		debug.Log.V(5).Info("exporting spans", "count", len(bsp.batch))
+		debug.Info("exporting spans", "count", len(bsp.batch))
 		err := bsp.e.ExportSpans(ctx, bsp.batch)
 
 		// A new batch is always created after exporting, even if the batch failed to be exported.

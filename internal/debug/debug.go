@@ -15,15 +15,27 @@
 package debug // import "go.opentelemetry.io/otel/internal/debug"
 
 import (
+	"log"
+	"os"
+
 	"github.com/go-logr/logr"
+	"github.com/go-logr/stdr"
 )
 
-var Log logr.Logger = logr.Discard()
+var globalLoggger logr.Logger = stdr.New(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile))
+
+func SetLogger(l logr.Logger) {
+	globalLoggger = l
+}
 
 func Info(msg string, keysAndValues ...interface{}) {
-	Log.Info(msg, keysAndValues...)
+	globalLoggger.V(1).Info(msg, keysAndValues...)
 }
 
 func Error(err error, msg string, keysAndValues ...interface{}) {
-	Log.Error(err, msg, keysAndValues...)
+	globalLoggger.Error(err, msg, keysAndValues...)
+}
+
+func Debug(msg string, keysAndValues ...interface{}) {
+	globalLoggger.V(5).Info(msg, keysAndValues...)
 }
