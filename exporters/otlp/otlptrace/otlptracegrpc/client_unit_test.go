@@ -15,11 +15,13 @@
 package otlptracegrpc
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/goleak"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -120,4 +122,43 @@ func TestRetryable(t *testing.T) {
 		got, _ := retryable(status.Error(c, ""))
 		assert.Equalf(t, want, got, "evaluate(%s)", c)
 	}
+}
+
+func TestUnstartedStop(t *testing.T) {
+	client := NewClient()
+	assert.ErrorIs(t, client.Stop(context.Background()), errNotStarted)
+}
+
+func TestUnstartedUploadTrace(t *testing.T) {
+	client := NewClient()
+	assert.ErrorIs(t, client.UploadTraces(context.Background(), nil), errShutdown)
+}
+
+func TestExportContextHonorsParentDeadline(t *testing.T) {
+	t.Cleanup(func() { goleak.VerifyNone(t) })
+
+	now := time.Now()
+	ctx, cancel := context.WithDeadline(context.Background(), now)
+	t.Cleanup(cancel)
+
+	// Without a client timeout, the parent deadline should be used.
+	client := newClient(WithTimeout(0))
+	eCtx, eCancel := client.exportContext(ctx)
+	t.Cleanup(eCancel)
+
+	deadline, ok := eCtx.Deadline()
+	assert.True(t, ok, "deadline not propagated to child context")
+	assert.Equal(t, now, deadline)
+}
+
+func TestExportContextHonorsClientTimeout(t *testing.T) {
+	t.Cleanup(func() { goleak.VerifyNone(t) })
+
+	// Setting a timeout should ensure a deadline is set on the context.
+	client := newClient(WithTimeout(1 * time.Second))
+	ctx, cancel := client.exportContext(context.Background())
+	t.Cleanup(cancel)
+
+	_, ok := ctx.Deadline()
+	assert.True(t, ok, "timeout not set as deadline for child context")
 }

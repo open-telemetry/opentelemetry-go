@@ -60,6 +60,10 @@ var _ otlptrace.Client = (*client)(nil)
 
 // NewClient creates a new gRPC trace client.
 func NewClient(opts ...Option) otlptrace.Client {
+	return newClient(opts...)
+}
+
+func newClient(opts ...Option) *client {
 	cfg := otlpconfig.NewGRPCConfig(asGRPCOptions(opts)...)
 
 	ctx, cancel := context.WithCancel(context.Background())
