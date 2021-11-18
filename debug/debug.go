@@ -15,11 +15,7 @@
 package debug // import "go.opentelemetry.io/otel/debug"
 
 import (
-	"log"
-	"os"
-
 	"github.com/go-logr/logr"
-	"github.com/go-logr/stdr"
 
 	"go.opentelemetry.io/otel/internal/debug"
 )
@@ -27,10 +23,4 @@ import (
 // SetLogger configures the logger used internally to opentelemetry.
 func SetLogger(logger logr.Logger) {
 	debug.Log = logger
-}
-
-// SetDefaultLogger configures the internal logger to use stderr and show verbose logging messages.
-func SetDefaultLogger() {
-	SetLogger(stdr.New(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile)))
-	stdr.SetVerbosity(5)
 }
