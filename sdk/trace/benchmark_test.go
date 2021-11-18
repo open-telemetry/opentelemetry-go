@@ -119,7 +119,7 @@ func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
 }
 
 func BenchmarkSpanWithEvents_4(b *testing.B) {
-	traceBenchmark(b, "Benchmark Start With 4 Attributes", func(b *testing.B, t trace.Tracer) {
+	traceBenchmark(b, "Benchmark Start With 4 Events", func(b *testing.B, t trace.Tracer) {
 		ctx := context.Background()
 		b.ResetTimer()
 
@@ -135,7 +135,7 @@ func BenchmarkSpanWithEvents_4(b *testing.B) {
 }
 
 func BenchmarkSpanWithEvents_8(b *testing.B) {
-	traceBenchmark(b, "Benchmark Start With 4 Attributes", func(b *testing.B, t trace.Tracer) {
+	traceBenchmark(b, "Benchmark Start With 4 Events", func(b *testing.B, t trace.Tracer) {
 		ctx := context.Background()
 		b.ResetTimer()
 
@@ -173,7 +173,7 @@ func BenchmarkSpanWithEvents_WithTimestamp(b *testing.B) {
 
 		for i := 0; i < b.N; i++ {
 			_, span := t.Start(ctx, "/foo")
-			span.AddEvent("event1", trace.WithTimestamp(time.UnixMilli(0)))
+			span.AddEvent("event1", trace.WithTimestamp(time.Unix(0, 0)))
 			span.End()
 		}
 	})
