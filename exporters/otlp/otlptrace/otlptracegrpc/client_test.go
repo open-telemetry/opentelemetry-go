@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/goleak"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/encoding/gzip"
@@ -36,6 +37,10 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 )
+
+func TestMain(m *testing.M) {
+	goleak.VerifyTestMain(m)
+}
 
 var roSpans = tracetest.SpanStubs{{Name: "Span 0"}}.Snapshots()
 
