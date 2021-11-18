@@ -21,7 +21,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/goleak"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -135,8 +134,6 @@ func TestUnstartedUploadTrace(t *testing.T) {
 }
 
 func TestExportContextHonorsParentDeadline(t *testing.T) {
-	t.Cleanup(func() { goleak.VerifyNone(t) })
-
 	now := time.Now()
 	ctx, cancel := context.WithDeadline(context.Background(), now)
 	t.Cleanup(cancel)
@@ -152,8 +149,6 @@ func TestExportContextHonorsParentDeadline(t *testing.T) {
 }
 
 func TestExportContextHonorsClientTimeout(t *testing.T) {
-	t.Cleanup(func() { goleak.VerifyNone(t) })
-
 	// Setting a timeout should ensure a deadline is set on the context.
 	client := newClient(WithTimeout(1 * time.Second))
 	ctx, cancel := client.exportContext(context.Background())
@@ -161,4 +156,32 @@ func TestExportContextHonorsClientTimeout(t *testing.T) {
 
 	_, ok := ctx.Deadline()
 	assert.True(t, ok, "timeout not set as deadline for child context")
+}
+
+func TestExportContextLinksStopSignal(t *testing.T) {
+	client := newClient(WithInsecure())
+	require.NoError(t, client.Start(context.Background()))
+
+	ctx, cancel := client.exportContext(context.Background())
+	t.Cleanup(cancel)
+
+	// Create and validate a done context.
+	expired, eCancel := context.WithCancel(context.Background())
+	eCancel()
+	<-expired.Done()
+
+	// The stopFunc is only called when Stop needs to abandon all active
+	// exports and cancel their context. Pass an expired context to stop to
+	// ensure this behavior.
+	require.ErrorIs(t, client.Stop(expired), context.Canceled)
+
+	// Assert this with Eventually to account for goroutine scheduler timing.
+	assert.Eventually(t, func() bool {
+		select {
+		case <-ctx.Done():
+			return true
+		default:
+		}
+		return false
+	}, 10*time.Second, time.Microsecond)
 }
