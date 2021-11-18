@@ -16,7 +16,6 @@ package exponential // import "go.opentelemetry.io/otel/sdk/metric/aggregator/ex
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"math/bits"
 	"sync"
@@ -290,6 +289,9 @@ func (b *buckets) Len() uint32 {
 	if b.backing == nil {
 		return 0
 	}
+	if b.indexEnd == b.indexStart && b.At(0) == 0 {
+		return 0
+	}
 	return uint32(b.indexEnd - b.indexStart + 1)
 }
 
@@ -330,6 +332,9 @@ func (a *Aggregator) clearState() {
 
 // clearState zeros the backing array.
 func (b *buckets) clearState() {
+	b.indexStart = 0
+	b.indexEnd = 0
+	b.indexBase = 0
 	switch counts := b.backing.(type) {
 	case []uint8:
 		for i := range counts {
@@ -403,13 +408,13 @@ func (a *Aggregator) changeScale(hl highLow) int32 {
 func (b *buckets) size() int32 {
 	switch counts := b.backing.(type) {
 	case []uint8:
-		return int32(cap(counts))
+		return int32(len(counts))
 	case []uint16:
-		return int32(cap(counts))
+		return int32(len(counts))
 	case []uint32:
-		return int32(cap(counts))
+		return int32(len(counts))
 	case []uint64:
-		return int32(cap(counts))
+		return int32(len(counts))
 	}
 	return 0
 }
@@ -434,16 +439,11 @@ func (a *Aggregator) update(b *buckets, value float64, incr uint64) {
 	}
 }
 
-func (b *buckets) empty() bool {
-	l := b.Len()
-	return l == 0 || l == 1 && b.At(0) == 0
-}
-
 // increment determines if the index lies inside the current range
 // [indexStart, indexEnd] and, if not, returns the minimum size (up to
 // maxSize) will satisfy the new value.
 func (a *Aggregator) incrementIndexBy(b *buckets, index int64, incr uint64) (highLow, bool) {
-	if b.empty() {
+	if b.Len() == 0 {
 		if index != int64(int32(index)) {
 			// rescale needed: index out-of-range for 32 bits
 			return highLow{
@@ -746,39 +746,4 @@ func (h *highLow) with(o highLow) highLow {
 
 func (h *highLow) empty() bool {
 	return h.low > h.high
-}
-
-// TEST SUPPORT: @@@
-
-type show struct {
-	index int32
-	count uint64
-	lower float64
-}
-
-func (a *Aggregator) shows(b *buckets) (r []show) {
-	for i := uint32(0); i < b.Len(); i++ {
-		lower, _ := a.state.mapping.LowerBoundary(int64(b.Offset()) + int64(i))
-		r = append(r, show{
-			index: b.Offset() + int32(i),
-			count: b.At(i),
-			lower: lower,
-		})
-	}
-	return r
-}
-
-func counts(b *buckets) (r []uint64) {
-	for i := uint32(0); i < b.Len(); i++ {
-		r = append(r, b.At(i))
-	}
-	return r
-}
-
-func (s show) String() string {
-	return fmt.Sprintf("%v=%v(%.2g)", s.index, s.count, s.lower)
-}
-
-func (a *Aggregator) String() string {
-	return fmt.Sprintf("%v %v\n%v\n%v", a.state.count, a.state.sum, a.shows(&a.state.positive), a.shows(&a.state.negative))
 }

@@ -16,23 +16,89 @@ import (
 )
 
 var (
-	normalMapping  = newMapping(DefaultNormalScale)
-	oneAndAHalf    = centerVal(normalMapping, int32(normalMapping.MapToIndex(1.5)))
-	testDescriptor = metrictest.NewDescriptor("name", sdkapi.HistogramInstrumentKind, number.Float64Kind)
+	normalMapping     = newMapping(DefaultNormalScale)
+	oneAndAHalf       = centerVal(normalMapping, int32(normalMapping.MapToIndex(1.5)))
+	testDescriptor    = metrictest.NewDescriptor("name", sdkapi.HistogramInstrumentKind, number.Float64Kind)
+	integerDescriptor = metrictest.NewDescriptor("integer", sdkapi.HistogramInstrumentKind, number.Int64Kind)
 
 	plusOne  = number.NewFloat64Number(1)
 	minusOne = number.NewFloat64Number(-1)
 )
 
-func requireEqual(t *testing.T, a, b *Aggregator) {
-	if a.state.sum == 0 || b.state.sum == 0 {
-		require.InDelta(t, a.state.sum, b.state.sum, 1e-6)
-	} else {
-		require.InEpsilon(t, a.state.sum, b.state.sum, 1e-6)
+type show struct {
+	index int32
+	count uint64
+	lower float64
+}
+
+func (a *Aggregator) shows(b *buckets) (r []show) {
+	for i := uint32(0); i < b.Len(); i++ {
+		lower, _ := a.state.mapping.LowerBoundary(int64(b.Offset()) + int64(i))
+		r = append(r, show{
+			index: b.Offset() + int32(i),
+			count: b.At(i),
+			lower: lower,
+		})
 	}
-	require.Equal(t, a.state.count, b.state.count)
-	require.Equal(t, a.state.zeroCount, b.state.zeroCount)
-	require.Equal(t, a.state.mapping.Scale(), b.state.mapping.Scale())
+	return r
+}
+
+func counts(b *buckets) (r []uint64) {
+	for i := uint32(0); i < b.Len(); i++ {
+		r = append(r, b.At(i))
+	}
+	return r
+}
+
+func (s show) String() string {
+	return fmt.Sprintf("%v=%v(%.2g)", s.index, s.count, s.lower)
+}
+
+func (a *Aggregator) String() string {
+	return fmt.Sprintf("%v %v\n%v\n%v", a.state.count, a.state.sum, a.shows(&a.state.positive), a.shows(&a.state.negative))
+}
+
+func countNoError(t *testing.T, a *Aggregator) uint64 {
+	cnt, err := a.Count()
+	require.NoError(t, err)
+	return cnt
+}
+
+func zeroCountNoError(t *testing.T, a *Aggregator) uint64 {
+	cnt, err := a.ZeroCount()
+	require.NoError(t, err)
+	return cnt
+}
+
+func scaleNoError(t *testing.T, a *Aggregator) int32 {
+	scale, err := a.Scale()
+	require.NoError(t, err)
+	return scale
+}
+
+func floatSumNoError(t *testing.T, a *Aggregator) float64 {
+	sum, err := a.Sum()
+	require.NoError(t, err)
+	return sum.AsFloat64()
+}
+
+func intSumNoError(t *testing.T, a *Aggregator) int64 {
+	sum, err := a.Sum()
+	require.NoError(t, err)
+	return sum.AsInt64()
+}
+
+func requireEqual(t *testing.T, a, b *Aggregator) {
+	aSum := floatSumNoError(t, a)
+	bSum := floatSumNoError(t, b)
+	if aSum == 0 || bSum == 0 {
+		require.InDelta(t, aSum, bSum, 1e-6)
+	} else {
+		require.InEpsilon(t, aSum, bSum, 1e-6)
+	}
+	require.Equal(t, countNoError(t, a), countNoError(t, b))
+	require.Equal(t, zeroCountNoError(t, a), zeroCountNoError(t, b))
+	require.Equal(t, scaleNoError(t, a), scaleNoError(t, b))
 
 	bstr := func(data *buckets) string {
 		var sb strings.Builder
@@ -394,7 +460,7 @@ func TestMergeExhaustive(t *testing.T) {
 	const (
 		factor = 1024.0
 		repeat = 16
-		count  = 16
+		count  = 32
 	)
 
 	means := []float64{
@@ -432,9 +498,12 @@ func TestMergeExhaustive(t *testing.T) {
 								t.Run(fmt.Sprint("part=", part), func(t *testing.T) {
 									for _, size := range []int32{
 										2,
-										count / 4,
-										count / 2,
-										count,
+										3,
+										4,
+										6,
+										9,
+										12,
+										16,
 									} {
 										t.Run(fmt.Sprint("size=", size), func(t *testing.T) {
 											for _, incr := range []uint64{
@@ -554,5 +623,157 @@ func TestOverflowBits(t *testing.T) {
 			requireEqual(t, cHist, aHist)
 			requireEqual(t, bHist, aHist)
 		})
+	}
+}
+
+func TestIntegerAggregation(t *testing.T) {
+	ctx := context.Background()
+	agg := &New(1, &integerDescriptor, WithMaxSize(256))[0]
+
+	expect := int64(0)
+	for i := int64(1); i < 256; i++ {
+		expect += i
+		agg.Update(ctx, number.NewInt64Number(i), &integerDescriptor)
+	}
+
+	require.Equal(t, expect, intSumNoError(t, agg))
+	require.Equal(t, uint64(255), countNoError(t, agg))
+
+	// Scale should be 5.  Here's why.  The upper power-of-two is
+	// 256 == 2**8.  We expect the exponential base = 2**(2**-5)
+	// raised to the 256th power to equal 256:
+	//
+	//   2**((2**-5)*256)
+	// = 2**((2**-5)*(2**8))
+	// = 2**(2**3)
+	// = 2**8
+	require.Equal(t, int32(5), scaleNoError(t, agg))
+
+	expect0 := func(b aggregation.ExponentialBuckets) {
+		require.Equal(t, uint32(0), b.Len())
+	}
+	expect256 := func(b aggregation.ExponentialBuckets) {
+		require.Equal(t, uint32(256), b.Len())
+		require.Equal(t, int32(0), b.Offset())
+		// Bucket 254 has 6 elements, bucket 255 has 5
+		// bucket 253 has 5, ...
+		for i := uint32(0); i < 256; i++ {
+			require.LessOrEqual(t, b.At(i), uint64(6))
+		}
+	}
+
+	pos, err := agg.Positive()
+	require.NoError(t, err)
+	expect256(pos)
+
+	neg, err := agg.Negative()
+	require.NoError(t, err)
+	expect0(neg)
+
+	// Reset!
+	agg.SynchronizedMove(nil, &integerDescriptor)
+
+	expect = int64(0)
+	for i := int64(1); i < 256; i++ {
+		expect -= i
+		agg.Update(ctx, number.NewInt64Number(-i), &integerDescriptor)
+	}
+
+	require.Equal(t, expect, intSumNoError(t, agg))
+	require.Equal(t, uint64(255), countNoError(t, agg))
+
+	neg, err = agg.Negative()
+	require.NoError(t, err)
+	expect256(neg)
+
+	pos, err = agg.Positive()
+	require.NoError(t, err)
+	expect0(pos)
+
+	// Scale should not change after filling in the negative range.
+	require.Equal(t, int32(5), scaleNoError(t, agg))
+}
+
+func TestReset(t *testing.T) {
+	ctx := context.Background()
+	agg := &New(1, &testDescriptor, WithMaxSize(256))[0]
+
+	for _, incr := range []uint64{
+		1,
+		0x100,
+		0x10000,
+		0x100000000,
+
+		// Another 32-bit increment tests the 64-bit reset path.
+		0x200000000,
+	} {
+		t.Run(fmt.Sprint(incr), func(t *testing.T) {
+			agg.SynchronizedMove(nil, &testDescriptor)
+
+			expect := 0.0
+			for i := int64(1); i < 256; i++ {
+				expect += float64(i) * float64(incr)
+				err := agg.UpdateByIncr(ctx, number.NewFloat64Number(float64(i)), incr, &testDescriptor)
+				require.NoError(t, err)
+			}
+
+			require.Equal(t, expect, floatSumNoError(t, agg))
+			require.Equal(t, uint64(255)*incr, countNoError(t, agg))
+
+			// See TestIntegerAggregation about why scale is 5.
+			require.Equal(t, int32(5), scaleNoError(t, agg))
+
+			pos, err := agg.Positive()
+			require.NoError(t, err)
+
+			require.Equal(t, uint32(256), pos.Len())
+			require.Equal(t, int32(0), pos.Offset())
+			// Bucket 254 has 6 elements, bucket 255 has 5
+			// bucket 253 has 5, ...
+			for i := uint32(0); i < 256; i++ {
+				require.LessOrEqual(t, pos.At(i), uint64(6)*incr)
+			}
+		})
+	}
+
+}
+
+func TestMove(t *testing.T) {
+	ctx := context.Background()
+	aggs := New(2, &testDescriptor, WithMaxSize(256))
+	agg := &aggs[0]
+	cpy := &aggs[1]
+
+	expect := 0.0
+	for i := int64(1); i < 256; i++ {
+		expect += float64(i)
+		require.NoError(t, agg.Update(ctx, number.NewFloat64Number(float64(i)), &testDescriptor))
+		require.NoError(t, agg.Update(ctx, number.NewFloat64Number(0), &testDescriptor))
+	}
+
+	require.NoError(t, agg.SynchronizedMove(cpy, &testDescriptor))
+
+	// agg was reset
+	require.Equal(t, 0.0, floatSumNoError(t, agg))
+	require.Equal(t, uint64(0), countNoError(t, agg))
+	require.Equal(t, uint64(0), zeroCountNoError(t, agg))
+	require.Equal(t, DefaultNormalScale, scaleNoError(t, agg))
+
+	// cpy is as expected
+	require.Equal(t, expect, floatSumNoError(t, cpy))
+	require.Equal(t, uint64(255*2), countNoError(t, cpy))
+	require.Equal(t, uint64(255), zeroCountNoError(t, cpy))
+
+	// See TestIntegerAggregation about why scale is 5,
+	// max bucket count is 6, and so on.
+	require.Equal(t, int32(5), scaleNoError(t, cpy))
+
+	pos, err := cpy.Positive()
+	require.NoError(t, err)
+
+	require.Equal(t, uint32(256), pos.Len())
+	require.Equal(t, int32(0), pos.Offset())
+	for i := uint32(0); i < 256; i++ {
+		require.LessOrEqual(t, pos.At(i), uint64(6))
 	}
 }
