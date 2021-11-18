@@ -199,7 +199,7 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 // cancellation function.
 //
 // It is the callers responsibility to cancel the returned context once its
-// use is complete, via the parent of directly with the returned CancelFunc,to
+// use is complete, via the parent or directly with the returned CancelFunc, to
 // ensure all resources are correctly released.
 func (c *client) exportContext(parent context.Context) (context.Context, context.CancelFunc) {
 	var (
