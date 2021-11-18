@@ -25,9 +25,9 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping/exponent"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping/logarithm"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/internal/mapping"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/internal/mapping/exponent"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/internal/mapping/logarithm"
 )
 
 // Note: This code uses a Mutex to govern access to the exclusive

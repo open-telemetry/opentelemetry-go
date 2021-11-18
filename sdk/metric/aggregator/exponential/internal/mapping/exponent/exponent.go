@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"math"
 
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/internal/mapping"
 )
 
 // exponentMapping is used for negative scales, effectively a
