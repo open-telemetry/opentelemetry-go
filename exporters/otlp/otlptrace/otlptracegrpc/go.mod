@@ -3,18 +3,14 @@ module go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc
 go 1.15
 
 require (
-	github.com/kr/pretty v0.1.0 // indirect
 	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/otel v1.2.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.2.0
 	go.opentelemetry.io/otel/sdk v1.2.0
 	go.opentelemetry.io/proto/otlp v0.11.0
-	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4 // indirect
-	golang.org/x/sys v0.0.0-20210510120138-977fb7262007 // indirect
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
 	google.golang.org/grpc v1.42.0
 	google.golang.org/protobuf v1.27.1
-	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 )
 
 replace go.opentelemetry.io/otel => ../../../..
