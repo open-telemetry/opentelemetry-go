@@ -16,7 +16,6 @@ package logarithm
 
 import (
 	"fmt"
-	"math"
 	"math/big"
 	"testing"
 
@@ -107,7 +106,7 @@ func TestLogarithmOverflow(t *testing.T) {
 		m, err := NewMapping(i)
 		require.NoError(t, err)
 
-		limit, err := m.MapToIndex(math.MaxFloat64)
+		limit, err := m.MapToIndex(MaxValue)
 		require.NoError(t, err)
 
 		for {
@@ -125,10 +124,9 @@ func TestLogarithmOverflow(t *testing.T) {
 		// MaxFloat64, then the ratio between MaxFloat64 and
 		// the boundary should be less than the exponential
 		// base.
-		require.InEpsilon(t, math.MaxFloat64, bound, 0.5)
+		require.InEpsilon(t, MaxValue, bound, 0.5)
 
-		// Same for minimum
-		limit, err = m.MapToIndex(math.SmallestNonzeroFloat64)
+		limit, err = m.MapToIndex(MinValue)
 		require.NoError(t, err)
 
 		for {

@@ -63,13 +63,13 @@ const (
 	MinSubnormalExponent int32 = MinNormalExponent - SignificandWidth
 )
 
-// GetExponent extracts the normalized base-2 fractional exponent.
+// GetBase2 extracts the normalized base-2 fractional exponent.
 // Let the value be represented as `1.significand x 2**exponent`,
 // this returns `exponent`.  Not defined for 0, Inf, or NaN values.
 //
 // Note! THIS RETURNS A DIFFERENT RESULT THAN math.Frexp(), which
 // does not handle subnormal values.
-func GetExponent(value float64) int32 {
+func GetBase2(value float64) int32 {
 	rawBits := math.Float64bits(value)
 	rawExponent := (int64(rawBits) & ExponentMask) >> SignificandWidth
 	rawSignificand := rawBits & SignificandMask

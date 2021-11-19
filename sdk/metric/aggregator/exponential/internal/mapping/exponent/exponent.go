@@ -46,8 +46,8 @@ func (e exponentMapping) MapToIndex(value float64) (int32, error) {
 	// scale implies indexes have smaller magnitide than the
 	// corresponding values, thus all values are mapped.
 
-	// GetExponent compensates for subnormal values.
-	exp := GetExponent(value)
+	// GetBase2 compensates for subnormal values.
+	exp := GetBase2(value)
 
 	// Note: bit-shifting does the right thing for negative
 	// exponents, e.g., -1 >> 1 == -1.

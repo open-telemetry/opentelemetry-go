@@ -46,10 +46,7 @@ import (
 // NrSketch uses this default.
 const DefaultMaxSize = 320
 
-// DefaultNormalScale is the default scale used for a number in the
-// range [1, 2).  This is chosen to ensure that indices are
-// approximately in the range [-2**30, 2**30].
-const DefaultNormalScale int32 = 30
+const MinimumSize = 2
 
 type (
 	// Aggregator observes events and counts them in
@@ -66,7 +63,9 @@ type (
 
 	// config describes how the histogram is aggregated.
 	config struct {
-		maxSize int32
+		maxSize  int32
+		minLimit float64
+		maxLimit float64
 	}
 
 	// Option configures a histogram config.
@@ -95,8 +94,8 @@ type (
 	}
 
 	highLow struct {
-		low  int64
-		high int64
+		low  int32
+		high int32
 	}
 )
 
@@ -116,6 +115,21 @@ func (o maxSizeOption) apply(config *config) {
 	config.maxSize = int32(o)
 }
 
+// WithFixedLimits sets the minimum and maximum absolute values
+// recognized by this histogram and fixes the scale accordingly.
+func WithFixedLimits(min, max float64) Option {
+	return fixedLimitsOption{min: min, max: max}
+}
+
+type fixedLimitsOption struct {
+	min, max float64
+}
+
+func (o fixedLimitsOption) apply(config *config) {
+	config.minLimit = o.min
+	config.maxLimit = o.max
+}
+
 // New returns `cnt` number of configured histogram aggregators for `desc`.
 func New(cnt int, desc *sdkapi.Descriptor, opts ...Option) []Aggregator {
 	cfg := config{
@@ -126,6 +140,26 @@ func New(cnt int, desc *sdkapi.Descriptor, opts ...Option) []Aggregator {
 		opt.apply(&cfg)
 	}
 
+	if cfg.maxSize < MinimumSize {
+		cfg.maxSize = MinimumSize
+	}
+
+	realNonNeg := func(x float64) float64 {
+		if !math.IsNaN(x) && !math.IsInf(x, 1) && x > 0 {
+			return x
+		}
+		return 0
+	}
+
+	scale := logarithm.MaxScale
+	minLimit := realNonNeg(cfg.minLimit)
+	maxLimit := realNonNeg(cfg.maxLimit)
+
+	if minLimit > 0 && maxLimit > 0 {
+		// minIndex :=
+		// @@@ use idealScale() on each, ...
+	}
+
 	aggs := make([]Aggregator, cnt)
 
 	for i := range aggs {
@@ -133,7 +167,7 @@ func New(cnt int, desc *sdkapi.Descriptor, opts ...Option) []Aggregator {
 			kind:    desc.NumberKind(),
 			maxSize: cfg.maxSize,
 			state: &state{
-				mapping: newMapping(DefaultNormalScale),
+				mapping: newMapping(scale),
 			},
 		}
 	}
@@ -195,6 +229,8 @@ func (a *Aggregator) UpdateByIncr(_ context.Context, number number.Number, incr 
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
+	// @@@ Here optionally test the min/max range
+
 	if value == 0 {
 		a.state.zeroCount++
 	} else if value > 0 {
@@ -216,14 +252,7 @@ func int32min(a, b int32) int32 {
 	return b
 }
 
-func int64min(a, b int64) int64 {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func int64max(a, b int64) int64 {
+func int32max(a, b int32) int32 {
 	if a > b {
 		return a
 	}
@@ -364,6 +393,21 @@ func newMapping(scale int32) mapping.Mapping {
 	return m
 }
 
+// idealScale computes the best scale that results in a valid index.
+// the default scale is ideal for normalized range [1,2) and a
+// non-zero exponent degrades scale in either direction from zero.
+func idealScale(value float64) int32 {
+	exponent := exponent.GetBase2(value)
+
+	scale := logarithm.MaxScale
+	if exponent > 0 {
+		scale -= exponent
+	} else {
+		scale += exponent
+	}
+	return scale
+}
+
 func (a *Aggregator) downscale(change int32) {
 	if change < 0 {
 		panic("impossible")
@@ -395,7 +439,7 @@ func (a *Aggregator) downscale(change int32) {
 // alignment.
 func (a *Aggregator) changeScale(hl highLow) int32 {
 	var change int32
-	for hl.high-hl.low >= int64(a.maxSize) || hl.high > math.MaxInt32 || hl.low < math.MinInt32 {
+	for hl.high-hl.low >= a.maxSize {
 		hl.high >>= 1
 		hl.low >>= 1
 		change++
@@ -422,19 +466,28 @@ func (b *buckets) size() int32 {
 // update increments the appropriate buckets for a given absolute
 // value by the provided increment.
 func (a *Aggregator) update(b *buckets, value float64, incr uint64) {
-	index := a.state.mapping.MapToIndex(value)
+	index, err := a.state.mapping.MapToIndex(value)
 
-	hl, success := a.incrementIndexBy(b, index, incr)
-	if success {
-		return
+	var hl highLow
+	if err == nil {
+		var success bool
+		hl, success = a.incrementIndexBy(b, index, incr)
+		if success {
+			return
+		}
+		// rescale because the span exceeded maxSize
+	} else {
+		// rescale because index was out-of-bounds at current scale
+		// @@@
+		panic("not yet")
 	}
 
 	a.downscale(a.changeScale(hl))
 
-	index = a.state.mapping.MapToIndex(value)
-	_, success = a.incrementIndexBy(b, index, incr)
-
-	if !success {
+	if index, err = a.state.mapping.MapToIndex(value); err != nil {
+		panic("update logic error")
+	}
+	if _, success := a.incrementIndexBy(b, index, incr); !success {
 		panic("downscale logic error")
 	}
 }
@@ -442,48 +495,48 @@ func (a *Aggregator) update(b *buckets, value float64, incr uint64) {
 // increment determines if the index lies inside the current range
 // [indexStart, indexEnd] and, if not, returns the minimum size (up to
 // maxSize) will satisfy the new value.
-func (a *Aggregator) incrementIndexBy(b *buckets, index int64, incr uint64) (highLow, bool) {
+func (a *Aggregator) incrementIndexBy(b *buckets, index int32, incr uint64) (highLow, bool) {
 	if b.Len() == 0 {
-		if index != int64(int32(index)) {
-			// rescale needed: index out-of-range for 32 bits
-			return highLow{
-				low:  index,
-				high: index,
-			}, false
-		}
+		// if index != int64(int32(index)) {
+		// 	// rescale needed: index out-of-range for 32 bits
+		// 	return highLow{
+		// 		low:  index,
+		// 		high: index,
+		// 	}, false
+		// }
 		if b.backing == nil {
 			b.backing = []uint8{0}
 		}
-		b.indexStart = int32(index)
+		b.indexStart = index
 		b.indexEnd = b.indexStart
 		b.indexBase = b.indexStart
-	} else if index < int64(b.indexStart) {
-		if span := uint64(int64(b.indexEnd) - index); span >= uint64(a.maxSize) {
+	} else if index < b.indexStart {
+		if span := b.indexEnd - index; span >= a.maxSize {
 			// rescale needed: mapped value to the right
 			return highLow{
 				low:  index,
-				high: int64(b.indexEnd),
+				high: b.indexEnd,
 			}, false
-		} else if span >= uint64(b.size()) {
-			a.grow(b, uint32(span+1))
+		} else if span >= b.size() {
+			a.grow(b, span+1)
 		}
-		b.indexStart = int32(index)
-	} else if index > int64(b.indexEnd) {
-		if span := uint64(index - int64(b.indexStart)); span >= uint64(a.maxSize) {
+		b.indexStart = index
+	} else if index > b.indexEnd {
+		if span := index - b.indexStart; span >= a.maxSize {
 			// rescale needed: mapped value to the left
 			return highLow{
-				low:  int64(b.indexStart),
+				low:  b.indexStart,
 				high: index,
 			}, false
-		} else if span >= uint64(b.size()) {
-			a.grow(b, uint32(span+1))
+		} else if span >= b.size() {
+			a.grow(b, span+1)
 		}
-		b.indexEnd = int32(index)
+		b.indexEnd = index
 	}
 
-	bucketIndex := int32(index - int64(b.indexBase))
+	bucketIndex := index - b.indexBase
 	if bucketIndex < 0 {
-		bucketIndex += int32(b.size())
+		bucketIndex += b.size()
 	}
 	b.incrementBucket(bucketIndex, incr)
 	return highLow{}, true
@@ -492,7 +545,7 @@ func (a *Aggregator) incrementIndexBy(b *buckets, index int64, incr uint64) (hig
 // grow resizes the backing array by doubling in size up to maxSize.
 // this extends the array with a bunch of zeros and copies the
 // existing counts to the same position.
-func (a *Aggregator) grow(b *buckets, needed uint32) {
+func (a *Aggregator) grow(b *buckets, needed int32) {
 	size := b.size()
 	bias := b.indexBase - b.indexStart
 	diff := size - bias
@@ -708,8 +761,11 @@ func (a *Aggregator) mergeBuckets(mine *buckets, other *Aggregator, theirs *buck
 	theirChange := otherScale - scale
 
 	for i := uint32(0); i < theirs.Len(); i++ {
-		_, success := a.incrementIndexBy(mine,
-			int64(theirOffset+int32(i))>>theirChange, theirs.At(i))
+		_, success := a.incrementIndexBy(
+			mine,
+			(theirOffset+int32(i))>>theirChange,
+			theirs.At(i),
+		)
 		if !success {
 			panic("incorrect merge scale")
 		}
@@ -726,8 +782,8 @@ func (a *Aggregator) highLowAtScale(b *buckets, scale int32) highLow {
 	aScale, _ := a.Scale()
 	shift := aScale - scale
 	return highLow{
-		low:  int64(b.indexStart >> shift),
-		high: int64(b.indexEnd >> shift),
+		low:  b.indexStart >> shift,
+		high: b.indexEnd >> shift,
 	}
 }
 
@@ -739,8 +795,8 @@ func (h *highLow) with(o highLow) highLow {
 		return o
 	}
 	return highLow{
-		low:  int64min(h.low, o.low),
-		high: int64max(h.high, o.high),
+		low:  int32min(h.low, o.low),
+		high: int32max(h.high, o.high),
 	}
 }
 

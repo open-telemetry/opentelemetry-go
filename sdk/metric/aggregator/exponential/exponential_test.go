@@ -13,13 +13,12 @@ import (
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/internal/mapping"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/internal/mapping/logarithm"
 )
 
 var (
-	normalMapping     = newMapping(DefaultNormalScale)
-	oneAndAHalf       = centerVal(normalMapping, int32(normalMapping.MapToIndex(1.5)))
-	testDescriptor    = metrictest.NewDescriptor("name", sdkapi.HistogramInstrumentKind, number.Float64Kind)
-	integerDescriptor = metrictest.NewDescriptor("integer", sdkapi.HistogramInstrumentKind, number.Int64Kind)
+	testDescriptor = metrictest.NewDescriptor("name", sdkapi.HistogramInstrumentKind, number.Float64Kind)
+	intDescriptor  = metrictest.NewDescriptor("integer", sdkapi.HistogramInstrumentKind, number.Int64Kind)
 
 	plusOne  = number.NewFloat64Number(1)
 	minusOne = number.NewFloat64Number(-1)
@@ -33,7 +32,7 @@ type show struct {
 
 func (a *Aggregator) shows(b *buckets) (r []show) {
 	for i := uint32(0); i < b.Len(); i++ {
-		lower, _ := a.state.mapping.LowerBoundary(int64(b.Offset()) + int64(i))
+		lower, _ := a.state.mapping.LowerBoundary(b.Offset() + int32(i))
 		r = append(r, show{
 			index: b.Offset() + int32(i),
 			count: b.At(i),
@@ -114,80 +113,12 @@ func requireEqual(t *testing.T, a, b *Aggregator) {
 }
 
 func centerVal(mapper mapping.Mapping, x int32) float64 {
-	lb, err1 := mapper.LowerBoundary(int64(x))
-	ub, err2 := mapper.LowerBoundary(int64(x) + 1)
+	lb, err1 := mapper.LowerBoundary(x)
+	ub, err2 := mapper.LowerBoundary(x + 1)
 	if err1 != nil || err2 != nil {
 		panic(fmt.Sprintf("unexpected errors: %v %v", err1, err2))
 	}
 	return (lb + ub) / 2
-}
-
-// tests a simple case of 8 counts entered into a maxSize=4 histogram,
-// causing a single downscale and no rotation.
-func TestSimpleSize4(t *testing.T) {
-	// Test with a 4-bucket-max exponential histogram
-	ctx := context.Background()
-	agg := New(1, &testDescriptor, WithMaxSize(4))[0]
-	pos := agg.positive()
-	neg := agg.negative()
-
-	require.NotNil(t, agg.Aggregation())
-	require.Equal(t, aggregation.ExponentialHistogramKind, agg.Kind())
-
-	// Add a zero
-	agg.Update(ctx, 0, &testDescriptor)
-
-	require.Equal(t, uint64(1), agg.zeroCount())
-	require.Equal(t, uint32(0), pos.Len())
-	require.Equal(t, uint32(0), neg.Len())
-
-	// Add a oneAndAHalf, which is in the normal range => DefaultNormalScale.
-	agg.Update(ctx, number.NewFloat64Number(oneAndAHalf), &testDescriptor)
-
-	// Test count=2
-	cnt, err := agg.Count()
-	require.Equal(t, uint64(2), cnt)
-	require.NoError(t, err)
-
-	// Test sum=oneAndAHalf
-	sum, err := agg.Sum()
-	require.Equal(t, number.NewFloat64Number(oneAndAHalf), sum)
-	require.NoError(t, err)
-
-	// Test a single positive bucket with count 1 at DefaultNormalScale.
-	require.Equal(t, uint32(1), pos.Len())
-	require.Equal(t, uint32(0), neg.Len())
-	require.Equal(t, uint64(1), pos.At(0))
-	require.Equal(t, int32(DefaultNormalScale), agg.scale())
-
-	mapper := newMapping(agg.scale())
-
-	// Check that the initial count maps to Offset().
-	offset := mapper.MapToIndex(oneAndAHalf)
-	require.Equal(t, int32(offset), pos.Offset())
-
-	// Add 3 more values in each of the subsequent buckets.
-	for i := int32(1); i < 4; i++ {
-		value := centerVal(mapper, int32(offset)+i)
-		agg.Update(ctx, number.NewFloat64Number(value), &testDescriptor)
-	}
-
-	require.Equal(t, uint32(4), pos.Len())
-
-	for i := uint32(0); i < 4; i++ {
-		require.Equal(t, uint64(1), pos.At(i))
-	}
-
-	// Add the next value!
-	for i := int32(4); i < 8; i++ {
-		value := centerVal(mapper, int32(offset)+i)
-		agg.Update(ctx, number.NewFloat64Number(value), &testDescriptor)
-	}
-
-	// Expect 2 in each bucket
-	for i := uint32(0); i < 4; i++ {
-		require.Equal(t, uint64(2), pos.At(i))
-	}
 }
 
 func TestAlternatingGrowth1(t *testing.T) {
@@ -375,10 +306,14 @@ func testExhaustive(t *testing.T, maxSize, offset, initScale int32) {
 
 			// The offset is correct at the computed scale.
 			mapper = newMapping(agg.scale())
-			require.Equal(t, int32(mapper.MapToIndex(minVal)), agg.positive().Offset())
+			idx, err := mapper.MapToIndex(minVal)
+			require.NoError(t, err)
+			require.Equal(t, int32(idx), agg.positive().Offset())
 
 			// The maximum range is correct at the computed scale.
-			require.Equal(t, int32(mapper.MapToIndex(maxVal)), agg.positive().Offset()+int32(agg.positive().Len())-1)
+			idx, err = mapper.MapToIndex(maxVal)
+			require.NoError(t, err)
+			require.Equal(t, int32(idx), agg.positive().Offset()+int32(agg.positive().Len())-1)
 		})
 	}
 }
@@ -628,12 +563,12 @@ func TestOverflowBits(t *testing.T) {
 
 func TestIntegerAggregation(t *testing.T) {
 	ctx := context.Background()
-	agg := &New(1, &integerDescriptor, WithMaxSize(256))[0]
+	agg := &New(1, &intDescriptor, WithMaxSize(256))[0]
 
 	expect := int64(0)
 	for i := int64(1); i < 256; i++ {
 		expect += i
-		agg.Update(ctx, number.NewInt64Number(i), &integerDescriptor)
+		agg.Update(ctx, number.NewInt64Number(i), &intDescriptor)
 	}
 
 	require.Equal(t, expect, intSumNoError(t, agg))
@@ -671,12 +606,12 @@ func TestIntegerAggregation(t *testing.T) {
 	expect0(neg)
 
 	// Reset!
-	agg.SynchronizedMove(nil, &integerDescriptor)
+	agg.SynchronizedMove(nil, &intDescriptor)
 
 	expect = int64(0)
 	for i := int64(1); i < 256; i++ {
 		expect -= i
-		agg.Update(ctx, number.NewInt64Number(-i), &integerDescriptor)
+		agg.Update(ctx, number.NewInt64Number(-i), &intDescriptor)
 	}
 
 	require.Equal(t, expect, intSumNoError(t, agg))
@@ -757,7 +692,7 @@ func TestMove(t *testing.T) {
 	require.Equal(t, 0.0, floatSumNoError(t, agg))
 	require.Equal(t, uint64(0), countNoError(t, agg))
 	require.Equal(t, uint64(0), zeroCountNoError(t, agg))
-	require.Equal(t, DefaultNormalScale, scaleNoError(t, agg))
+	require.Equal(t, logarithm.MaxScale, scaleNoError(t, agg))
 
 	// cpy is as expected
 	require.Equal(t, expect, floatSumNoError(t, cpy))
@@ -777,3 +712,12 @@ func TestMove(t *testing.T) {
 		require.LessOrEqual(t, pos.At(i), uint64(6))
 	}
 }
+
+// func TestFixedLimits(t *testing.T) {
+// 	const min = 0.001
+// 	const max = 60000
+// 	for scale := int32(0); scale < 10; scale++ {
+// 		m := newMapping(scale)
+// 		fmt.Println("required size at scale", scale, "is", m.MapToIndex(max)-m.MapToIndex(min))
+// 	}
+// }

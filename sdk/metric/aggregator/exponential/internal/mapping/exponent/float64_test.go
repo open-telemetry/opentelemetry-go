@@ -29,36 +29,36 @@ func TestFloat64Bits(t *testing.T) {
 	assert.Equal(t, int32(-1022), MinNormalExponent)
 	assert.Equal(t, int32(+1023), MaxNormalExponent)
 
-	assert.Equal(t, int32(1022), GetExponent(0x1p+1022))
+	assert.Equal(t, int32(1022), GetBase2(0x1p+1022))
 
-	assert.Equal(t, int32(-1022), GetExponent(0x1p-1022))
+	assert.Equal(t, int32(-1022), GetBase2(0x1p-1022))
 
 	// Subnormals below this point
-	assert.Equal(t, int32(-1023), GetExponent(0x1p-1023))
-	assert.Equal(t, int32(-1024), GetExponent(0x1p-1024))
-	assert.Equal(t, int32(-1025), GetExponent(0x1p-1025))
+	assert.Equal(t, int32(-1023), GetBase2(0x1p-1023))
+	assert.Equal(t, int32(-1024), GetBase2(0x1p-1024))
+	assert.Equal(t, int32(-1025), GetBase2(0x1p-1025))
 
 	for i := 0; i <= SignificandWidth; i++ {
-		assert.Equal(t, int32(-1022-i), GetExponent(0x1p-1022/float64(uint64(1)<<i)))
+		assert.Equal(t, int32(-1022-i), GetBase2(0x1p-1022/float64(uint64(1)<<i)))
 	}
 
 	// This works b/c the raw significand is zero, so 64 leading zeros - 12 = 52
 	zero := 0x1p-1022 / float64(uint64(1)<<53)
-	assert.Equal(t, int32(-1022-53), GetExponent(zero))
-	assert.NotEqual(t, int32(-1022-54), GetExponent(0x1p-1022/float64(uint64(1)<<54)))
+	assert.Equal(t, int32(-1022-53), GetBase2(zero))
+	assert.NotEqual(t, int32(-1022-54), GetBase2(0x1p-1022/float64(uint64(1)<<54)))
 }
 
-func TestGetExponent(t *testing.T) {
+func TestGetBase2(t *testing.T) {
 	for x := int32(MinNormalExponent); x <= MaxNormalExponent; x++ {
-		assert.Equal(t, x, GetExponent(ldexp32(1, x)))
-		assert.Equal(t, x, GetExponent(ldexp32(-1, x)))
+		assert.Equal(t, x, GetBase2(ldexp32(1, x)))
+		assert.Equal(t, x, GetBase2(ldexp32(-1, x)))
 	}
 
 	// Smallest exponent
-	assert.Equal(t, MinSubnormalExponent, GetExponent(math.Float64frombits(1)))
+	assert.Equal(t, MinSubnormalExponent, GetBase2(math.Float64frombits(1)))
 
-	assert.Equal(t, MinNormalExponent, GetExponent(0x1p-1022))
-	assert.Equal(t, SignedZeroSubnormalExponent, GetExponent(0x1p-1023))
-	assert.Equal(t, SignedZeroSubnormalExponent-1, GetExponent(0x1p-1024))
-	assert.Equal(t, SignedZeroSubnormalExponent-51, GetExponent(0x1p-1074))
+	assert.Equal(t, MinNormalExponent, GetBase2(0x1p-1022))
+	assert.Equal(t, SignedZeroSubnormalExponent, GetBase2(0x1p-1023))
+	assert.Equal(t, SignedZeroSubnormalExponent-1, GetBase2(0x1p-1024))
+	assert.Equal(t, SignedZeroSubnormalExponent-51, GetBase2(0x1p-1074))
 }

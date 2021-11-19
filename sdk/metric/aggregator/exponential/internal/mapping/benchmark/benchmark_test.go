@@ -29,7 +29,7 @@ func benchmarkMapping(b *testing.B, name string, mapper mapping.Mapping) {
 		src := rand.New(rand.NewSource(54979))
 
 		for i := 0; i < b.N; i++ {
-			_ = mapper.MapToIndex(1 + src.Float64())
+			_, _ = mapper.MapToIndex(1 + src.Float64())
 		}
 	})
 }
@@ -39,7 +39,7 @@ func benchmarkBoundary(b *testing.B, name string, mapper mapping.Mapping) {
 		src := rand.New(rand.NewSource(54979))
 
 		for i := 0; i < b.N; i++ {
-			_, _ = mapper.LowerBoundary(src.Int63())
+			_, _ = mapper.LowerBoundary(int32(src.Int63()))
 		}
 	})
 }
@@ -54,14 +54,14 @@ func benchmarkBoundary(b *testing.B, name string, mapper mapping.Mapping) {
 
 func BenchmarkMapping(b *testing.B) {
 	em, _ := exponent.NewMapping(-1)
-	lm, _ := logarithm.NewMapping(-1)
+	lm, _ := logarithm.NewMapping(1)
 	benchmarkMapping(b, "exponent", em)
 	benchmarkMapping(b, "logarithm", lm)
 }
 
 func BenchmarkBoundary(b *testing.B) {
 	em, _ := exponent.NewMapping(-1)
-	lm, _ := logarithm.NewMapping(-1)
+	lm, _ := logarithm.NewMapping(1)
 	benchmarkBoundary(b, "exponent", em)
 	benchmarkBoundary(b, "logarithm", lm)
 }

@@ -22,14 +22,25 @@ import (
 )
 
 const (
+	// MinScale ensures that the ../exponent mapper is used for
+	// negative scale values.  Do not use the logarithm mapper for
+	// scales <= 0.
 	MinScale int32 = 1
+
+	// MaxScale is selected to ensure that the MapToIndex
+	// sub-expression math.Log(value) * l.scaleFactor does not
+	// overflow.  This also ensures that math.MaxFloat64 can be
+	// represented in a 30 bit index value.
 	MaxScale int32 = 20
 
 	// MinValue is the smallest normal floating point value.  This
-	// limit is necessary because these mapping functions do not
-	// perform correctly for subnormal values.  Subnormal values are
-	// supported by the exponent mapper.
+	// implementation cannot be reliably used for subnormal
+	// values, and the lowerBoundary() method does not accurately
+	// report these.  Subnormal values are supported by the
+	// exponent mapper.
 	MinValue = 0x1p-1022
+
+	MaxValue = math.MaxFloat64
 )
 
 // This implementation was copied from a Java prototype. See:
@@ -69,11 +80,11 @@ var _ mapping.Mapping = &logarithmMapping{}
 func NewMapping(scale int32) (mapping.Mapping, error) {
 	// An assumption used in this code is that scale is > 0.  If
 	// scale is <= 0 it's better to use the exponent mapping.
-	if scale <= 0 || scale > 20 {
+	if scale < MinScale || scale > MaxScale {
 		// scale 20 can represent the entire float64 range
 		// with a 31 bit index, and we don't handle larger
 		// scales to simplify range tests in this package.
-		return nil, fmt.Errorf("expect 0 < scale <= 20")
+		return nil, fmt.Errorf("scale out of bounds")
 	}
 
 	l := &logarithmMapping{
@@ -82,14 +93,14 @@ func NewMapping(scale int32) (mapping.Mapping, error) {
 		inverseFactor: math.Ldexp(math.Ln2, int(-scale)),
 	}
 
-	maxIdx, _ := l.MapToIndex(math.MaxFloat64)
+	maxIdx, _ := l.MapToIndex(MaxValue)
 	minIdx, _ := l.MapToIndex(MinValue)
 
-	for l.lowerBoundary(maxIdx) == math.Inf(+1) {
+	for l.lowerBoundary(maxIdx) > MaxValue {
 		maxIdx--
 	}
 
-	for l.lowerBoundary(minIdx) == 0 {
+	for l.lowerBoundary(minIdx) < MinValue {
 		minIdx++
 	}
 	l.overflowIndex = maxIdx + 1
