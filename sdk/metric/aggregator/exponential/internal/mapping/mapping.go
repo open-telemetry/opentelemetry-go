@@ -14,12 +14,19 @@
 
 package mapping
 
+import "fmt"
+
 // Mapping is the interface of a mapper.
 type Mapping interface {
 	// MapToIndex maps positive floating point values to indexes
 	// corresponding to Scale().  Implementations are not expected
 	// to handle zeros, +Inf, NaN, or negative values.
-	MapToIndex(value float64) int64
-	LowerBoundary(index int64) (float64, error)
+	MapToIndex(value float64) (int32, error)
+	LowerBoundary(index int32) (float64, error)
 	Scale() int32
 }
+
+var (
+	ErrUnderflow = fmt.Errorf("underflow")
+	ErrOverflow  = fmt.Errorf("overflow")
+)

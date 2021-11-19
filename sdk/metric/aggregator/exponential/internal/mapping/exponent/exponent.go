@@ -35,44 +35,44 @@ func NewMapping(scale int32) (mapping.Mapping, error) {
 	}
 	return exponentMapping{
 		scale:          scale,
-		underflowIndex: (mapping.MinSubnormalExponent - 1) >> -scale,
-		overflowIndex:  (mapping.MaxNormalExponent + 1) >> -scale,
+		underflowIndex: (MinSubnormalExponent - 1) >> -scale,
+		overflowIndex:  (MaxNormalExponent + 1) >> -scale,
 	}, nil
 }
 
-func (e exponentMapping) MapToIndex(value float64) int64 {
+func (e exponentMapping) MapToIndex(value float64) (int32, error) {
 	// Note: we can assume not a 0, Inf, or NaN, ignore sign bit.
+	// Errors are impossible in this code path because negative
+	// scale implies indexes have smaller magnitide than the
+	// corresponding values, thus all values are mapped.
 
 	// GetExponent compensates for subnormal values.
-	exp := mapping.GetExponent(value)
+	exp := GetExponent(value)
 
 	// Note: bit-shifting does the right thing for negative
 	// exponents, e.g., -1 >> 1 == -1.
-	return int64(exp >> -e.scale)
+	return exp >> -e.scale, nil
 }
 
-var ErrUnderflow = fmt.Errorf("underflow")
-var ErrOverflow = fmt.Errorf("overflow")
-
-func (e exponentMapping) LowerBoundary(index int64) (float64, error) {
-	if index <= int64(e.underflowIndex) {
-		return 0, ErrUnderflow
+func (e exponentMapping) LowerBoundary(index int32) (float64, error) {
+	if index <= e.underflowIndex {
+		return 0, mapping.ErrUnderflow
 	}
-	if index >= int64(e.overflowIndex) {
-		return 0, ErrOverflow
+	if index >= e.overflowIndex {
+		return 0, mapping.ErrOverflow
 	}
 
 	unbiased := int64(index << -e.scale)
 
 	var bits uint64
 
-	if unbiased < int64(mapping.MinNormalExponent) {
-		diff := mapping.MinNormalExponent - int32(unbiased)
-		shift := mapping.SignificandWidth - diff
+	if unbiased < int64(MinNormalExponent) {
+		diff := MinNormalExponent - int32(unbiased)
+		shift := SignificandWidth - diff
 		bits = uint64(1) << shift
 	} else {
-		exponent := unbiased + mapping.ExponentBias
-		bits = uint64(exponent << mapping.SignificandWidth)
+		exponent := unbiased + ExponentBias
+		bits = uint64(exponent << SignificandWidth)
 	}
 
 	return math.Float64frombits(bits), nil

@@ -16,15 +16,22 @@ package logarithm
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/internal/mapping"
 )
 
 type expectMapping struct {
 	value float64
-	index int64
+	index int32
+}
+
+type expectRangeError struct {
+	scale int32
+	value float64
 }
 
 func TestLogarithmMapping(t *testing.T) {
@@ -52,21 +59,22 @@ func TestLogarithmMapping(t *testing.T) {
 		{0.55, -2},
 		{0.45, -3},
 	} {
-		require.Equal(t, pair.index, m.MapToIndex(pair.value), "value: %v", pair.value)
+		idx, err := m.MapToIndex(pair.value)
+		require.NoError(t, err)
+		require.Equal(t, pair.index, idx, "value: %v", pair.value)
 	}
 }
 
-func TestLogarithmError(t *testing.T) {
-	// Note: avoid large-magnitude negative scales so the indices
-	// used in the loop below are viable.
-	for _, scale := range []int32{-1, 0, 1, 2, 3, 4, 10, 15} {
+func TestLogarithmBoundary(t *testing.T) {
+	for _, scale := range []int32{1, 2, 3, 4, 10, 15} {
 		t.Run(fmt.Sprint(scale), func(t *testing.T) {
 			m, _ := NewMapping(scale)
-			for _, index := range []int64{-100, -10, -1, 0, 1, 10, 100} {
+			for _, index := range []int32{-100, -10, -1, 0, 1, 10, 100} {
 				t.Run(fmt.Sprint(index), func(t *testing.T) {
 					lowBoundary, err := m.LowerBoundary(index)
 					require.NoError(t, err)
-					mapped := m.MapToIndex(lowBoundary)
+					mapped, err := m.MapToIndex(lowBoundary)
+					require.NoError(t, err)
 
 					// At or near the boundary should be off-by-one.
 					require.LessOrEqual(t, index-1, mapped)
@@ -80,7 +88,7 @@ func TestLogarithmError(t *testing.T) {
 	}
 }
 
-func roundedBoundary(scale int32, index int64) float64 {
+func roundedBoundary(scale, index int32) float64 {
 	one := big.NewFloat(1)
 	f := (&big.Float{}).SetMantExp(one, int(index))
 	for i := scale; i > 0; i-- {
@@ -92,4 +100,51 @@ func roundedBoundary(scale int32, index int64) float64 {
 
 	result, _ := f.Float64()
 	return result
+}
+
+func TestLogarithmOverflow(t *testing.T) {
+	for i := MaxScale; i >= MinScale; i-- {
+		m, err := NewMapping(i)
+		require.NoError(t, err)
+
+		limit, err := m.MapToIndex(math.MaxFloat64)
+		require.NoError(t, err)
+
+		for {
+			_, err := m.LowerBoundary(limit)
+			if err == mapping.ErrOverflow {
+				limit--
+				continue
+			}
+			break
+		}
+		bound, err := m.LowerBoundary(limit)
+		require.NoError(t, err)
+
+		// Assuming the overflow index maps to greater than
+		// MaxFloat64, then the ratio between MaxFloat64 and
+		// the boundary should be less than the exponential
+		// base.
+		require.InEpsilon(t, math.MaxFloat64, bound, 0.5)
+
+		// Same for minimum
+		limit, err = m.MapToIndex(math.SmallestNonzeroFloat64)
+		require.NoError(t, err)
+
+		for {
+			_, err := m.LowerBoundary(limit)
+			if err == mapping.ErrUnderflow {
+				limit++
+				continue
+			}
+			break
+		}
+		bound, err = m.LowerBoundary(limit)
+		require.NoError(t, err)
+
+		// Error for the lower boundary does not behave as we
+		// would expect because the math.Log() function does
+		// not work for subnormals.
+		require.InEpsilon(t, MinValue, bound, 1e-10)
+	}
 }

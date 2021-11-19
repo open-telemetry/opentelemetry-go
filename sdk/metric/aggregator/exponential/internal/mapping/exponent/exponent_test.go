@@ -20,21 +20,22 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/internal/mapping"
 )
 
 type expectMapping struct {
 	value float64
-	index int64
+	index int32
 }
 
 type invalidMapping struct {
 	scale int32
-	index int64
+	index int32
 }
 
 const (
-	testUnderflowIndex = math.MinInt64
-	testOverflowIndex  = math.MaxInt64
+	testUnderflowIndex = math.MinInt32
+	testOverflowIndex  = math.MaxInt32
 )
 
 func TestExponentMappingZero(t *testing.T) {
@@ -44,6 +45,8 @@ func TestExponentMappingZero(t *testing.T) {
 	require.Equal(t, int32(0), m.Scale())
 
 	for _, pair := range []expectMapping{
+		{math.MaxFloat64, 1023},
+		{math.SmallestNonzeroFloat64, -1074},
 		{4, 2},
 		{3, 1},
 		{2, 1},
@@ -53,7 +56,10 @@ func TestExponentMappingZero(t *testing.T) {
 		{0.5, -1},
 		{0.25, -2},
 	} {
-		require.Equal(t, pair.index, m.MapToIndex(pair.value))
+		idx, err := m.MapToIndex(pair.value)
+		require.NoError(t, err)
+
+		require.Equal(t, pair.index, idx)
 	}
 }
 
@@ -87,7 +93,9 @@ func TestExponentMappingNegOne(t *testing.T) {
 		{0.0625, -2},
 		{0.06, -3},
 	} {
-		require.Equal(t, pair.index, m.MapToIndex(pair.value), "value: %v", pair.value)
+		idx, err := m.MapToIndex(pair.value)
+		require.NoError(t, err)
+		require.Equal(t, pair.index, idx, "value: %v", pair.value)
 	}
 }
 
@@ -152,7 +160,7 @@ func TestExponentMappingNegFour(t *testing.T) {
 		{0x1p-1074, testUnderflowIndex},
 		{0x1p-1073, testUnderflowIndex},
 
-		{0x1p-1072, -67},
+		{0x1p-1072, -67}, // n.b. 67 * 2**4 == 1072
 		{0x1p-1057, -67},
 		{0x1p-1056, -66},
 		{0x1p-1041, -66},
@@ -167,7 +175,8 @@ func TestExponentMappingNegFour(t *testing.T) {
 		{0x1p-0976, -61},
 	} {
 		t.Run(fmt.Sprintf("%x", pair.value), func(t *testing.T) {
-			index := m.MapToIndex(pair.value)
+			index, err := m.MapToIndex(pair.value)
+			require.NoError(t, err)
 
 			if pair.index != testUnderflowIndex && pair.index != testOverflowIndex {
 				require.Equal(t, pair.index, index, "value: %#x", pair.value)
@@ -189,9 +198,9 @@ func TestExponentMappingNegFour(t *testing.T) {
 				require.True(t, err1 != nil || err2 != nil)
 				var expectErr error
 				if pair.index == testUnderflowIndex {
-					expectErr = ErrUnderflow
+					expectErr = mapping.ErrUnderflow
 				} else {
-					expectErr = ErrOverflow
+					expectErr = mapping.ErrOverflow
 				}
 
 				if err1 != nil {
