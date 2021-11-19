@@ -346,11 +346,11 @@ func TestExportSpansTimeoutHonored(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
 	err := exp.ExportSpans(ctx, roSpans)
-	require.Equal(t, codes.DeadlineExceeded, status.Convert(err).Code())
-	require.Len(t, mc.getSpans(), 0)
-
 	// Release the export so everything is cleaned up on shutdown.
 	close(exportBlock)
+
+	require.Equal(t, codes.DeadlineExceeded, status.Convert(err).Code())
+	require.Len(t, mc.getSpans(), 0)
 }
 
 func TestNew_withInvalidSecurityConfiguration(t *testing.T) {
