@@ -22,5 +22,5 @@ import (
 
 // SetLogger configures the logger used internally to opentelemetry.
 func SetLogger(logger logr.Logger) {
-	debug.Log = logger
+	debug.SetLogger(logger)
 }

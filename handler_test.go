@@ -16,8 +16,6 @@ package otel
 
 import (
 	"errors"
-	"strings"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -51,7 +49,6 @@ func (s *HandlerTestSuite) SetupSuite() {
 
 func (s *HandlerTestSuite) TearDownSuite() {
 	globalErrorHandler.delegate = s.origHandler
-	delegateErrorHandlerOnce = sync.Once{}
 }
 
 func (s *HandlerTestSuite) SetupTest() {
@@ -60,17 +57,6 @@ func (s *HandlerTestSuite) SetupTest() {
 }
 
 func (s *HandlerTestSuite) TearDownTest() {}
-
-type bufferedErrorHandler struct {
-	buf *strings.Builder
-}
-
-func (h *bufferedErrorHandler) Handle(err error) {
-	if h.buf != nil {
-		h.buf = &strings.Builder{}
-	}
-	h.buf.WriteString(err.Error())
-}
 
 func (s *HandlerTestSuite) TestGlobalHandler() {
 	errs := []string{"one", "two"}

@@ -18,10 +18,11 @@ import (
 	"context"
 	"log"
 
+	"github.com/go-logr/stdr"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
-	"go.opentelemetry.io/otel/debug"
 	"go.opentelemetry.io/otel/example/namedtracer/foo"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -35,10 +36,6 @@ var (
 )
 
 var tp *sdktrace.TracerProvider
-
-func initDebug() {
-	debug.SetDefaultLogger()
-}
 
 // initTracer creates and registers trace provider instance.
 func initTracer() {
@@ -57,8 +54,9 @@ func initTracer() {
 }
 
 func main() {
-	// initialize local debug.
-	initDebug()
+	// Set logging level to info to see SDK status messages
+	stdr.SetVerbosity(1)
+
 	// initialize trace provider.
 	initTracer()
 

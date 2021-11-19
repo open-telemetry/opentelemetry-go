@@ -15,8 +15,6 @@
 package otel // import "go.opentelemetry.io/otel"
 
 import (
-	"sync"
-
 	"go.opentelemetry.io/otel/internal/debug"
 )
 
@@ -28,9 +26,6 @@ var (
 	globalErrorHandler = &errorHandlerDelegate{
 		delegate: &defaultErrorHandler{},
 	}
-	// delegateErrorHandlerOnce ensures that a user provided ErrorHandler is
-	// only ever registered once.
-	delegateErrorHandlerOnce sync.Once
 
 	// Compile-time check that delegator implements ErrorHandler.
 	_ ErrorHandler = (*errorHandlerDelegate)(nil)
