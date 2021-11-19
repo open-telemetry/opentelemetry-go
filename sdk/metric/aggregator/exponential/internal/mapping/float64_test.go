@@ -21,17 +21,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestScalb(t *testing.T) {
-	assert.Equal(t, 2.0, Scalb(1, 1))
-	assert.Equal(t, 0.5, Scalb(1, -1))
-	assert.Equal(t, -2.0, Scalb(-1, 1))
-	assert.Equal(t, -0.5, Scalb(-1, -1))
-
-	assert.Equal(t, 0x1p-1000, Scalb(1, -1000))
-	assert.Equal(t, 0x1p+1000, Scalb(1, +1000))
-
-	assert.Equal(t, 0.0, Scalb(0, 0))
-	assert.Equal(t, 0.0, Scalb(0, 1))
+func ldexp32(x float64, i int32) float64 {
+	return math.Ldexp(x, int(i))
 }
 
 func TestFloat64Bits(t *testing.T) {
@@ -59,17 +50,9 @@ func TestFloat64Bits(t *testing.T) {
 
 func TestGetExponent(t *testing.T) {
 	for x := int32(MinNormalExponent); x <= MaxNormalExponent; x++ {
-		assert.Equal(t, x, GetExponent(Scalb(1, x)))
-		assert.Equal(t, x, GetExponent(Scalb(-1, x)))
+		assert.Equal(t, x, GetExponent(ldexp32(1, x)))
+		assert.Equal(t, x, GetExponent(ldexp32(-1, x)))
 	}
-
-	// GetExponent and Scalb work for the special exponents (good or bad)
-	assert.Equal(t, InfAndNaNExponent, GetExponent(Scalb(1, InfAndNaNExponent)))
-	assert.Equal(t, InfAndNaNExponent, GetExponent(Scalb(-1, InfAndNaNExponent)))
-
-	// Check that scalb overflows
-	assert.NotEqual(t, InfAndNaNExponent+1, GetExponent(Scalb(1, InfAndNaNExponent+1)))
-	assert.NotEqual(t, SignedZeroSubnormalExponent-1, GetExponent(Scalb(1, SignedZeroSubnormalExponent-1)))
 
 	// Smallest exponent
 	assert.Equal(t, MinSubnormalExponent, GetExponent(math.Float64frombits(1)))

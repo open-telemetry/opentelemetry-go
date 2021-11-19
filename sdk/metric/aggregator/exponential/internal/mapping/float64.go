@@ -63,27 +63,12 @@ const (
 	MinSubnormalExponent int32 = MinNormalExponent - SignificandWidth
 )
 
-// java.lang.Math.scalb(float f, int scaleFactor) returns f x
-// 2**scaleFactor, rounded as if performed by a single correctly
-// rounded floating-point multiply to a member of the double value set.
-func Scalb(f float64, sf int32) float64 {
-	if f == 0 {
-		return 0
-	}
-	valueBits := math.Float64bits(f)
-
-	signBit := valueBits & SignMask
-	significand := SignificandMask & valueBits
-
-	exponent := (int64(valueBits) & ExponentMask) >> SignificandWidth
-	exponent += int64(sf)
-
-	return math.Float64frombits(signBit | uint64(exponent<<SignificandWidth) | significand)
-}
-
 // GetExponent extracts the normalized base-2 fractional exponent.
 // Let the value be represented as `1.significand x 2**exponent`,
 // this returns `exponent`.  Not defined for 0, Inf, or NaN values.
+//
+// Note! THIS RETURNS A DIFFERENT RESULT THAN math.Frexp(), which
+// does not handle subnormal values.
 func GetExponent(value float64) int32 {
 	rawBits := math.Float64bits(value)
 	rawExponent := (int64(rawBits) & ExponentMask) >> SignificandWidth
