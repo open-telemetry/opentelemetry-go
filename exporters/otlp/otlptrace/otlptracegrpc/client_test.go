@@ -327,63 +327,30 @@ func TestNew_withHeaders(t *testing.T) {
 	assert.Equal(t, "value1", headers.Get("header1")[0])
 }
 
-func TestNew_WithTimeout(t *testing.T) {
-	tts := []struct {
-		name    string
-		fn      func(exp *otlptrace.Exporter) error
-		timeout time.Duration
-		spans   int
-		code    codes.Code
-		delay   bool
-	}{
-		{
-			name: "Timeout Spans",
-			fn: func(exp *otlptrace.Exporter) error {
-				return exp.ExportSpans(context.Background(), roSpans)
-			},
-			timeout: time.Millisecond * 100,
-			code:    codes.DeadlineExceeded,
-			delay:   true,
-		},
+func TestExportSpansTimeoutHonored(t *testing.T) {
+	ctx, cancel := contextWithTimeout(context.Background(), t, 1*time.Minute)
+	t.Cleanup(cancel)
 
-		{
-			name: "No Timeout Spans",
-			fn: func(exp *otlptrace.Exporter) error {
-				return exp.ExportSpans(context.Background(), roSpans)
-			},
-			timeout: time.Minute,
-			spans:   1,
-			code:    codes.OK,
-		},
-	}
+	mc := runMockCollector(t)
+	exportBlock := make(chan struct{})
+	mc.traceSvc.exportBlock = exportBlock
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	for _, tt := range tts {
-		t.Run(tt.name, func(t *testing.T) {
+	exp := newGRPCExporter(
+		t,
+		ctx,
+		mc.endpoint,
+		otlptracegrpc.WithTimeout(1*time.Nanosecond),
+		otlptracegrpc.WithRetry(otlptracegrpc.RetryConfig{Enabled: false}),
+	)
+	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
-			mc := runMockCollector(t)
-			if tt.delay {
-				mc.traceSvc.delay = time.Second * 10
-			}
-			t.Cleanup(func() { require.NoError(t, mc.stop()) })
+	err := exp.ExportSpans(ctx, roSpans)
+	require.Equal(t, codes.DeadlineExceeded, status.Convert(err).Code())
+	require.Len(t, mc.getSpans(), 0)
 
-			ctx := context.Background()
-			exp := newGRPCExporter(t, ctx, mc.endpoint, otlptracegrpc.WithTimeout(tt.timeout), otlptracegrpc.WithRetry(otlptracegrpc.RetryConfig{Enabled: false}))
-			t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-
-			err := tt.fn(exp)
-
-			if tt.code == codes.OK {
-				require.NoError(t, err)
-			} else {
-				require.Error(t, err)
-			}
-
-			s := status.Convert(err)
-			require.Equal(t, tt.code, s.Code())
-
-			require.Len(t, mc.getSpans(), tt.spans)
-		})
-	}
+	// Release the export so everything is cleaned up on shutdown.
+	close(exportBlock)
 }
 
 func TestNew_withInvalidSecurityConfiguration(t *testing.T) {
