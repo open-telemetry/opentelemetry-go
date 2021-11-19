@@ -128,17 +128,17 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlptracegrpc.Option
 }
 
 func TestExporterShutdown(t *testing.T) {
-	mc := runMockCollectorAtEndpoint(t, "localhost:56561")
+	mc := runMockCollectorAtEndpoint(t, "localhost:0")
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	<-time.After(5 * time.Millisecond)
-
-	otlptracetest.RunExporterShutdownTest(t, func() otlptrace.Client {
+	factory := func() otlptrace.Client {
 		return otlptracegrpc.NewClient(
-			otlptracegrpc.WithInsecure(),
 			otlptracegrpc.WithEndpoint(mc.endpoint),
-			otlptracegrpc.WithReconnectionPeriod(50*time.Millisecond))
-	})
+			otlptracegrpc.WithInsecure(),
+			otlptracegrpc.WithDialOption(grpc.WithBlock()),
+		)
+	}
+	otlptracetest.RunExporterShutdownTest(t, factory)
 }
 
 func TestNew_invokeStartThenStopManyTimes(t *testing.T) {
