@@ -138,10 +138,9 @@ type (
 )
 
 var (
-	_ sdkapi.MeterImpl     = &Accumulator{}
-	_ sdkapi.AsyncImpl     = &asyncInstrument{}
-	_ sdkapi.SyncImpl      = &syncInstrument{}
-	_ sdkapi.BoundSyncImpl = &record{}
+	_ sdkapi.MeterImpl = &Accumulator{}
+	_ sdkapi.AsyncImpl = &asyncInstrument{}
+	_ sdkapi.SyncImpl  = &syncInstrument{}
 
 	// ErrUninitializedInstrument is returned when an instrument is used when uninitialized.
 	ErrUninitializedInstrument = fmt.Errorf("use of an uninitialized instrument")
@@ -280,14 +279,9 @@ func (s *syncInstrument) acquireHandle(kvs []attribute.KeyValue, labelPtr *attri
 }
 
 // The order of the input array `kvs` may be sorted after the function is called.
-func (s *syncInstrument) Bind(kvs []attribute.KeyValue) sdkapi.BoundSyncImpl {
-	return s.acquireHandle(kvs, nil)
-}
-
-// The order of the input array `kvs` may be sorted after the function is called.
 func (s *syncInstrument) RecordOne(ctx context.Context, num number.Number, kvs []attribute.KeyValue) {
 	h := s.acquireHandle(kvs, nil)
-	defer h.Unbind()
+	defer h.unbind()
 	h.RecordOne(ctx, num)
 }
 
@@ -490,7 +484,7 @@ func (m *Accumulator) RecordBatch(ctx context.Context, kvs []attribute.KeyValue,
 			labelsPtr = h.labels
 		}
 
-		defer h.Unbind()
+		defer h.unbind()
 		h.RecordOne(ctx, meas.Number())
 	}
 }
@@ -514,8 +508,7 @@ func (r *record) RecordOne(ctx context.Context, num number.Number) {
 	atomic.AddInt64(&r.updateCount, 1)
 }
 
-// Unbind implements sdkapi.SyncImpl.
-func (r *record) Unbind() {
+func (r *record) unbind() {
 	r.refMapped.unref()
 }
 

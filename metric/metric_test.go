@@ -19,16 +19,16 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/metric/unit"
-
-	"github.com/google/go-cmp/cmp"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 var Must = metric.Must
@@ -250,11 +250,9 @@ func TestCounter(t *testing.T) {
 		ctx := context.Background()
 		labels := []attribute.KeyValue{attribute.String("A", "B")}
 		c.Add(ctx, 1994.1, labels...)
-		boundInstrument := c.Bind(labels...)
-		boundInstrument.Add(ctx, -742)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
 		checkSyncBatches(ctx, t, labels, provider, number.Float64Kind, sdkapi.CounterInstrumentKind, c.SyncImpl(),
-			1994.1, -742, 42,
+			1994.1, 42,
 		)
 	})
 	t.Run("int64 counter", func(t *testing.T) {
@@ -263,11 +261,9 @@ func TestCounter(t *testing.T) {
 		ctx := context.Background()
 		labels := []attribute.KeyValue{attribute.String("A", "B"), attribute.String("C", "D")}
 		c.Add(ctx, 42, labels...)
-		boundInstrument := c.Bind(labels...)
-		boundInstrument.Add(ctx, 4200)
 		meter.RecordBatch(ctx, labels, c.Measurement(420000))
 		checkSyncBatches(ctx, t, labels, provider, number.Int64Kind, sdkapi.CounterInstrumentKind, c.SyncImpl(),
-			42, 4200, 420000,
+			42, 420000,
 		)
 
 	})
@@ -277,11 +273,9 @@ func TestCounter(t *testing.T) {
 		ctx := context.Background()
 		labels := []attribute.KeyValue{attribute.String("A", "B"), attribute.String("C", "D")}
 		c.Add(ctx, 100, labels...)
-		boundInstrument := c.Bind(labels...)
-		boundInstrument.Add(ctx, -100)
 		meter.RecordBatch(ctx, labels, c.Measurement(42))
 		checkSyncBatches(ctx, t, labels, provider, number.Int64Kind, sdkapi.UpDownCounterInstrumentKind, c.SyncImpl(),
-			100, -100, 42,
+			100, 42,
 		)
 	})
 	t.Run("float64 updowncounter", func(t *testing.T) {
@@ -290,11 +284,9 @@ func TestCounter(t *testing.T) {
 		ctx := context.Background()
 		labels := []attribute.KeyValue{attribute.String("A", "B"), attribute.String("C", "D")}
 		c.Add(ctx, 100.1, labels...)
-		boundInstrument := c.Bind(labels...)
-		boundInstrument.Add(ctx, -76)
 		meter.RecordBatch(ctx, labels, c.Measurement(-100.1))
 		checkSyncBatches(ctx, t, labels, provider, number.Float64Kind, sdkapi.UpDownCounterInstrumentKind, c.SyncImpl(),
-			100.1, -76, -100.1,
+			100.1, -100.1,
 		)
 	})
 }
@@ -306,11 +298,9 @@ func TestHistogram(t *testing.T) {
 		ctx := context.Background()
 		labels := []attribute.KeyValue{}
 		m.Record(ctx, 42, labels...)
-		boundInstrument := m.Bind(labels...)
-		boundInstrument.Record(ctx, 0)
 		meter.RecordBatch(ctx, labels, m.Measurement(-100.5))
 		checkSyncBatches(ctx, t, labels, provider, number.Float64Kind, sdkapi.HistogramInstrumentKind, m.SyncImpl(),
-			42, 0, -100.5,
+			42, -100.5,
 		)
 	})
 	t.Run("int64 histogram", func(t *testing.T) {
@@ -319,11 +309,9 @@ func TestHistogram(t *testing.T) {
 		ctx := context.Background()
 		labels := []attribute.KeyValue{attribute.Int("I", 1)}
 		m.Record(ctx, 173, labels...)
-		boundInstrument := m.Bind(labels...)
-		boundInstrument.Record(ctx, 80)
 		meter.RecordBatch(ctx, labels, m.Measurement(0))
 		checkSyncBatches(ctx, t, labels, provider, number.Int64Kind, sdkapi.HistogramInstrumentKind, m.SyncImpl(),
-			173, 80, 0,
+			173, 0,
 		)
 	})
 }

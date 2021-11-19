@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package transform provides translations for opentelemetry-go concepts and
+// Package metrictransform provides translations for opentelemetry-go concepts and
 // structures to otlp structures.
 package metrictransform // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/metrictransform"
 
@@ -24,14 +24,13 @@ import (
 	"sync"
 	"time"
 
-	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
-	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
-
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
+	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
 var (
@@ -276,68 +275,9 @@ func Record(temporalitySelector aggregation.TemporalitySelector, r export.Record
 		}
 		return gaugePoint(r, value, time.Time{}, tm)
 
-	case aggregation.ExactKind:
-		e, ok := agg.(aggregation.Points)
-		if !ok {
-			return nil, fmt.Errorf("%w: %T", ErrIncompatibleAgg, agg)
-		}
-		pts, err := e.Points()
-		if err != nil {
-			return nil, err
-		}
-
-		return gaugeArray(r, pts)
-
 	default:
 		return nil, fmt.Errorf("%w: %T", ErrUnimplementedAgg, agg)
 	}
-}
-
-func gaugeArray(record export.Record, points []aggregation.Point) (*metricpb.Metric, error) {
-	desc := record.Descriptor()
-	labels := record.Labels()
-	m := &metricpb.Metric{
-		Name:        desc.Name(),
-		Description: desc.Description(),
-		Unit:        string(desc.Unit()),
-	}
-
-	pbAttrs := Iterator(labels.Iter())
-
-	ndp := make([]*metricpb.NumberDataPoint, 0, len(points))
-	switch nk := desc.NumberKind(); nk {
-	case number.Int64Kind:
-		for _, p := range points {
-			ndp = append(ndp, &metricpb.NumberDataPoint{
-				Attributes:        pbAttrs,
-				StartTimeUnixNano: toNanos(record.StartTime()),
-				TimeUnixNano:      toNanos(record.EndTime()),
-				Value: &metricpb.NumberDataPoint_AsInt{
-					AsInt: p.Number.CoerceToInt64(nk),
-				},
-			})
-		}
-	case number.Float64Kind:
-		for _, p := range points {
-			ndp = append(ndp, &metricpb.NumberDataPoint{
-				Attributes:        pbAttrs,
-				StartTimeUnixNano: toNanos(record.StartTime()),
-				TimeUnixNano:      toNanos(record.EndTime()),
-				Value: &metricpb.NumberDataPoint_AsDouble{
-					AsDouble: p.Number.CoerceToFloat64(nk),
-				},
-			})
-		}
-	default:
-		return nil, fmt.Errorf("%w: %v", ErrUnknownValueType, nk)
-	}
-
-	m.Data = &metricpb.Metric_Gauge{
-		Gauge: &metricpb.Gauge{
-			DataPoints: ndp,
-		},
-	}
-	return m, nil
 }
 
 func gaugePoint(record export.Record, num number.Number, start, end time.Time) (*metricpb.Metric, error) {

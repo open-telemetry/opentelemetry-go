@@ -22,12 +22,10 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
@@ -208,11 +206,6 @@ func (testAggregatorSelector) AggregatorFor(desc *sdkapi.Descriptor, aggPtrs ...
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
 		}
-	case strings.HasSuffix(desc.Name(), ".exact"):
-		aggs := exact.New(len(aggPtrs))
-		for i := range aggPtrs {
-			*aggPtrs[i] = &aggs[i]
-		}
 	default:
 		panic(fmt.Sprint("Invalid instrument name for test AggregatorSelector: ", desc.Name()))
 	}
@@ -292,13 +285,6 @@ func (o *Output) Map() map[string]float64 {
 			} else if l, ok := entry.aggregator.(aggregation.LastValue); ok {
 				last, _, _ := l.LastValue()
 				value = last.CoerceToFloat64(key.desc.NumberKind())
-			} else if l, ok := entry.aggregator.(aggregation.Points); ok {
-				pts, _ := l.Points()
-				var sum number.Number
-				for _, s := range pts {
-					sum.AddNumber(key.desc.NumberKind(), s.Number)
-				}
-				value = sum.CoerceToFloat64(key.desc.NumberKind())
 			} else {
 				panic(fmt.Sprintf("Unhandled aggregator type: %T", entry.aggregator))
 			}

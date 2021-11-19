@@ -41,20 +41,20 @@ func (someFilter) LabelFilterFor(_ *sdkapi.Descriptor) attribute.Filter {
 }
 
 func setupMetrics(exporter export.Exporter) (stop func()) {
-        basicProcessor := basic.New(
-                simple.NewWithExactDistribution(),
+        basicProcessorFactory := basic.NewFactory(
+                simple.NewWithHistogramDistribution(),
                 exporter,
         )
 
-        reducerProcessor := reducer.New(someFilter{...}, basicProcessor)
+        reducerProcessor := reducer.NewFactory(someFilter{...}, basicProcessorFactory)
 
-        pusher := push.New(
+        controller := controller.New(
                 reducerProcessor,
                 exporter,
-                pushOpts...,
+                opts...,
         )
-        pusher.Start()
-        global.SetMeterProvider(pusher.Provider())
-        return pusher.Stop
+        controller.Start()
+        global.SetMeterProvider(controller.Provider())
+        return controller.Stop
 */
 package reducer // import "go.opentelemetry.io/otel/sdk/metric/processor/reducer"

@@ -9,6 +9,7 @@ cascade:
   github_subdir: website_docs
   path_base_for_github_subdir: content/en/docs/go/
   github_project_repo: *repo
+spelling: cSpell:ignore godoc
 weight: 16
 ---
 
@@ -22,7 +23,7 @@ The current status of the major functional components for OpenTelemetry Go is as
 | ------- | ------- | ------- |
 | Stable  | Alpha   | Not Yet Implemented |
 
-The current release can be found [here](https://github.com/open-telemetry/opentelemetry-go/releases)
+{{% latest_release "go" /%}}
 
 ## Further Reading
 
