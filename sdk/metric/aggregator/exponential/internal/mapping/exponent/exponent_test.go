@@ -56,8 +56,7 @@ func TestExponentMappingZero(t *testing.T) {
 		{0.5, -1},
 		{0.25, -2},
 	} {
-		idx, err := m.MapToIndex(pair.value)
-		require.NoError(t, err)
+		idx := m.MapToIndex(pair.value)
 
 		require.Equal(t, pair.index, idx)
 	}
@@ -93,8 +92,7 @@ func TestExponentMappingNegOne(t *testing.T) {
 		{0.0625, -2},
 		{0.06, -3},
 	} {
-		idx, err := m.MapToIndex(pair.value)
-		require.NoError(t, err)
+		idx := m.MapToIndex(pair.value)
 		require.Equal(t, pair.index, idx, "value: %v", pair.value)
 	}
 }
@@ -175,8 +173,7 @@ func TestExponentMappingNegFour(t *testing.T) {
 		{0x1p-0976, -61},
 	} {
 		t.Run(fmt.Sprintf("%x", pair.value), func(t *testing.T) {
-			index, err := m.MapToIndex(pair.value)
-			require.NoError(t, err)
+			index := m.MapToIndex(pair.value)
 
 			if pair.index != testUnderflowIndex && pair.index != testOverflowIndex {
 				require.Equal(t, pair.index, index, "value: %#x", pair.value)

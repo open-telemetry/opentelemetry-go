@@ -32,11 +32,11 @@ const (
 	SignificandMask = 1<<SignificandWidth - 1
 
 	// ExponentBias is the exponent bias specified for encoding
-	// the IEEE 754 double-precision floating point exponent: 1023.
+	// the IEEE 754 double-precision floating point exponent: 1023
 	ExponentBias = 1<<(ExponentWidth-1) - 1
 
 	// ExponentMask are set to 1 for the bits of an IEEE 754
-	// floating point exponent: 0x7FF0000000000000.
+	// floating point exponent: 0x7FF0000000000000
 	ExponentMask = ((1 << ExponentWidth) - 1) << SignificandWidth
 
 	// SignMask selects the sign bit of an IEEE 754 floating point
@@ -44,11 +44,11 @@ const (
 	SignMask = (1 << 63)
 
 	// MinNormalExponent is the minimum exponent of a normalized
-	// floating point.
+	// floating point: -1022
 	MinNormalExponent int32 = -ExponentBias + 1
 
 	// MaxNormalExponent is the maximum exponent of a normalized
-	// floating point.
+	// floating point: 1023
 	MaxNormalExponent int32 = ExponentBias
 
 	// SignedZeroSubnormalExponent is the exponent value after
@@ -59,7 +59,7 @@ const (
 	// for Inf and NaN values.
 	InfAndNaNExponent int32 = ExponentBias + 1
 
-	// Smallest positive subnormal exponent:
+	// Smallest positive subnormal exponent.
 	MinSubnormalExponent int32 = MinNormalExponent - SignificandWidth
 )
 

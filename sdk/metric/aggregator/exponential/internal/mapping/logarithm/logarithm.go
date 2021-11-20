@@ -93,8 +93,8 @@ func NewMapping(scale int32) (mapping.Mapping, error) {
 		inverseFactor: math.Ldexp(math.Ln2, int(-scale)),
 	}
 
-	maxIdx, _ := l.MapToIndex(MaxValue)
-	minIdx, _ := l.MapToIndex(MinValue)
+	maxIdx := l.MapToIndex(MaxValue)
+	minIdx := l.MapToIndex(MinValue)
 
 	for l.lowerBoundary(maxIdx) > MaxValue {
 		maxIdx--
@@ -109,12 +109,10 @@ func NewMapping(scale int32) (mapping.Mapping, error) {
 	return l, nil
 }
 
-func (l *logarithmMapping) MapToIndex(value float64) (int32, error) {
-	// Use Floor() to round toward -Inf.
-	index := math.Floor(math.Log(value) * l.scaleFactor)
-	// The restriction on scale <= 20 ensures that index
-	// fits an int32 for all float64 values.
-	return int32(index), nil
+func (l *logarithmMapping) MapToIndex(value float64) int32 {
+	// Use Floor() to round toward -Inf.  This intentionally
+	// mishandles subnormal values.
+	return int32(math.Floor(math.Log(value) * l.scaleFactor))
 }
 
 func (l *logarithmMapping) LowerBoundary(index int32) (float64, error) {

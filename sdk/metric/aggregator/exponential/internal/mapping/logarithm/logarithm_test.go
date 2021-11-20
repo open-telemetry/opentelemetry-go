@@ -58,8 +58,7 @@ func TestLogarithmMapping(t *testing.T) {
 		{0.55, -2},
 		{0.45, -3},
 	} {
-		idx, err := m.MapToIndex(pair.value)
-		require.NoError(t, err)
+		idx := m.MapToIndex(pair.value)
 		require.Equal(t, pair.index, idx, "value: %v", pair.value)
 	}
 }
@@ -72,8 +71,7 @@ func TestLogarithmBoundary(t *testing.T) {
 				t.Run(fmt.Sprint(index), func(t *testing.T) {
 					lowBoundary, err := m.LowerBoundary(index)
 					require.NoError(t, err)
-					mapped, err := m.MapToIndex(lowBoundary)
-					require.NoError(t, err)
+					mapped := m.MapToIndex(lowBoundary)
 
 					// At or near the boundary should be off-by-one.
 					require.LessOrEqual(t, index-1, mapped)
@@ -102,12 +100,21 @@ func roundedBoundary(scale, index int32) float64 {
 }
 
 func TestLogarithmOverflow(t *testing.T) {
+	// (Is this architecture dependent?)
+	m, _ := NewMapping(MinScale)
+	require.Equal(t, int32(-2044), m.MapToIndex(MinValue))
+	require.Equal(t, int32(-2045), m.MapToIndex(MinValue/2))
+	require.Equal(t, int32(-2046), m.MapToIndex(MinValue/4))
+	require.Equal(t, int32(-2046), m.MapToIndex(MinValue/8))
+	require.Equal(t, int32(-2046), m.MapToIndex(MinValue/16))
+}
+
+func TestLogarithmIndexOverflow(t *testing.T) {
 	for i := MaxScale; i >= MinScale; i-- {
 		m, err := NewMapping(i)
 		require.NoError(t, err)
 
-		limit, err := m.MapToIndex(MaxValue)
-		require.NoError(t, err)
+		limit := m.MapToIndex(MaxValue)
 
 		for {
 			_, err := m.LowerBoundary(limit)
@@ -126,8 +133,7 @@ func TestLogarithmOverflow(t *testing.T) {
 		// base.
 		require.InEpsilon(t, MaxValue, bound, 0.5)
 
-		limit, err = m.MapToIndex(MinValue)
-		require.NoError(t, err)
+		limit = m.MapToIndex(MinValue)
 
 		for {
 			_, err := m.LowerBoundary(limit)

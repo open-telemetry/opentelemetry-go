@@ -21,7 +21,7 @@ type Mapping interface {
 	// MapToIndex maps positive floating point values to indexes
 	// corresponding to Scale().  Implementations are not expected
 	// to handle zeros, +Inf, NaN, or negative values.
-	MapToIndex(value float64) (int32, error)
+	MapToIndex(value float64) int32
 	LowerBoundary(index int32) (float64, error)
 	Scale() int32
 }

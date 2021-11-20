@@ -29,7 +29,7 @@ func benchmarkMapping(b *testing.B, name string, mapper mapping.Mapping) {
 		src := rand.New(rand.NewSource(54979))
 
 		for i := 0; i < b.N; i++ {
-			_, _ = mapper.MapToIndex(1 + src.Float64())
+			_ = mapper.MapToIndex(1 + src.Float64())
 		}
 	})
 }

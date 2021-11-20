@@ -40,7 +40,7 @@ func NewMapping(scale int32) (mapping.Mapping, error) {
 	}, nil
 }
 
-func (e exponentMapping) MapToIndex(value float64) (int32, error) {
+func (e exponentMapping) MapToIndex(value float64) int32 {
 	// Note: we can assume not a 0, Inf, or NaN, ignore sign bit.
 	// Errors are impossible in this code path because negative
 	// scale implies indexes have smaller magnitide than the
@@ -51,7 +51,7 @@ func (e exponentMapping) MapToIndex(value float64) (int32, error) {
 
 	// Note: bit-shifting does the right thing for negative
 	// exponents, e.g., -1 >> 1 == -1.
-	return exp >> -e.scale, nil
+	return exp >> -e.scale
 }
 
 func (e exponentMapping) LowerBoundary(index int32) (float64, error) {

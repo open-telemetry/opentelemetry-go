@@ -55,10 +55,13 @@ type (
 	// automatically adjusted to accomodate the range of input
 	// data.
 	Aggregator struct {
-		lock    sync.Mutex
-		kind    number.Kind
-		maxSize int32
-		state   *state
+		lock sync.Mutex
+		// TODO: the three fields here could be shared by
+		// multiple aggregators.
+		maxSize  int32
+		minValue float64
+		maxValue float64
+		state    *state
 	}
 
 	// config describes how the histogram is aggregated.
@@ -78,7 +81,7 @@ type (
 	// the sum and counts for all observed values and
 	// the less than equal bucket count for the pre-determined boundaries.
 	state struct {
-		sum       float64
+		sum       number.Number
 		count     uint64
 		zeroCount uint64
 		positive  buckets
@@ -151,23 +154,28 @@ func New(cnt int, desc *sdkapi.Descriptor, opts ...Option) []Aggregator {
 		return 0
 	}
 
-	scale := logarithm.MaxScale
+	mapping := newMapping(logarithm.MaxScale)
 	minLimit := realNonNeg(cfg.minLimit)
 	maxLimit := realNonNeg(cfg.maxLimit)
 
-	if minLimit > 0 && maxLimit > 0 {
-		// minIndex :=
-		// @@@ use idealScale() on each, ...
+	if minLimit > 0 && maxLimit > 0 && maxLimit > minLimit {
+		change := changeScale(highLow{
+			high: mapping.MapToIndex(maxLimit) + 1,
+			low:  mapping.MapToIndex(minLimit),
+		}, cfg.maxSize)
+		scale := mapping.Scale() - change
+		mapping = newMapping(scale)
 	}
 
 	aggs := make([]Aggregator, cnt)
 
 	for i := range aggs {
 		aggs[i] = Aggregator{
-			kind:    desc.NumberKind(),
-			maxSize: cfg.maxSize,
+			maxSize:  cfg.maxSize,
+			minValue: minLimit,
+			maxValue: maxLimit,
 			state: &state{
-				mapping: newMapping(scale),
+				mapping: mapping,
 			},
 		}
 	}
@@ -223,8 +231,8 @@ func (a *Aggregator) Update(ctx context.Context, number number.Number, desc *sdk
 
 // UpdateByIncr supports updating a histogram with a non-negative
 // increment.
-func (a *Aggregator) UpdateByIncr(_ context.Context, number number.Number, incr uint64, desc *sdkapi.Descriptor) error {
-	value := number.CoerceToFloat64(desc.NumberKind())
+func (a *Aggregator) UpdateByIncr(_ context.Context, num number.Number, incr uint64, desc *sdkapi.Descriptor) error {
+	value := num.CoerceToFloat64(desc.NumberKind())
 
 	a.lock.Lock()
 	defer a.lock.Unlock()
@@ -240,7 +248,15 @@ func (a *Aggregator) UpdateByIncr(_ context.Context, number number.Number, incr 
 	}
 
 	a.state.count += incr
-	a.state.sum += value * float64(incr)
+	if desc.NumberKind() == number.Float64Kind {
+		a.state.sum = number.NewFloat64Number(
+			a.state.sum.AsFloat64() + value*float64(incr),
+		)
+	} else {
+		a.state.sum = number.NewInt64Number(
+			a.state.sum.AsInt64() + int64(value)*int64(incr),
+		)
+	}
 
 	return nil
 }
@@ -266,10 +282,7 @@ func (a *Aggregator) Count() (uint64, error) {
 
 // Sum implements aggregation.Sum.
 func (a *Aggregator) Sum() (number.Number, error) {
-	if a.kind == number.Int64Kind {
-		return number.NewInt64Number(int64(a.state.sum)), nil
-	}
-	return number.NewFloat64Number(a.state.sum), nil
+	return a.state.sum, nil
 }
 
 // Scale implements aggregation.ExponentialHistogram.
@@ -393,21 +406,6 @@ func newMapping(scale int32) mapping.Mapping {
 	return m
 }
 
-// idealScale computes the best scale that results in a valid index.
-// the default scale is ideal for normalized range [1,2) and a
-// non-zero exponent degrades scale in either direction from zero.
-func idealScale(value float64) int32 {
-	exponent := exponent.GetBase2(value)
-
-	scale := logarithm.MaxScale
-	if exponent > 0 {
-		scale -= exponent
-	} else {
-		scale += exponent
-	}
-	return scale
-}
-
 func (a *Aggregator) downscale(change int32) {
 	if change < 0 {
 		panic("impossible")
@@ -437,9 +435,9 @@ func (a *Aggregator) downscale(change int32) {
 //
 // however this under-counts by 1 some of the time depending on
 // alignment.
-func (a *Aggregator) changeScale(hl highLow) int32 {
+func changeScale(hl highLow, size int32) int32 {
 	var change int32
-	for hl.high-hl.low >= a.maxSize {
+	for hl.high-hl.low >= size {
 		hl.high >>= 1
 		hl.low >>= 1
 		change++
@@ -466,27 +464,16 @@ func (b *buckets) size() int32 {
 // update increments the appropriate buckets for a given absolute
 // value by the provided increment.
 func (a *Aggregator) update(b *buckets, value float64, incr uint64) {
-	index, err := a.state.mapping.MapToIndex(value)
+	index := a.state.mapping.MapToIndex(value)
 
-	var hl highLow
-	if err == nil {
-		var success bool
-		hl, success = a.incrementIndexBy(b, index, incr)
-		if success {
-			return
-		}
-		// rescale because the span exceeded maxSize
-	} else {
-		// rescale because index was out-of-bounds at current scale
-		// @@@
-		panic("not yet")
+	hl, success := a.incrementIndexBy(b, index, incr)
+	if success {
+		return
 	}
 
-	a.downscale(a.changeScale(hl))
+	a.downscale(changeScale(hl, a.maxSize))
 
-	if index, err = a.state.mapping.MapToIndex(value); err != nil {
-		panic("update logic error")
-	}
+	index = a.state.mapping.MapToIndex(value)
 	if _, success := a.incrementIndexBy(b, index, incr); !success {
 		panic("downscale logic error")
 	}
@@ -497,13 +484,6 @@ func (a *Aggregator) update(b *buckets, value float64, incr uint64) {
 // maxSize) will satisfy the new value.
 func (a *Aggregator) incrementIndexBy(b *buckets, index int32, incr uint64) (highLow, bool) {
 	if b.Len() == 0 {
-		// if index != int64(int32(index)) {
-		// 	// rescale needed: index out-of-range for 32 bits
-		// 	return highLow{
-		// 		low:  index,
-		// 		high: index,
-		// 	}, false
-		// }
 		if b.backing == nil {
 			b.backing = []uint8{0}
 		}
@@ -740,8 +720,8 @@ func (a *Aggregator) Merge(oa export.Aggregator, desc *sdkapi.Descriptor) error 
 	hln = hln.with(o.highLowAtScale(&o.state.negative, minScale))
 
 	minScale = int32min(
-		minScale-a.changeScale(hlp),
-		minScale-a.changeScale(hln),
+		minScale-changeScale(hlp, a.maxSize),
+		minScale-changeScale(hln, a.maxSize),
 	)
 
 	aScale, _ = a.Scale()
