@@ -53,6 +53,7 @@ type Connection struct {
 	disconnectedCh             chan bool
 	backgroundConnectionDoneCh chan struct{}
 	stopCh                     chan struct{}
+	stopOnce                   sync.Once
 
 	// this is for tests, so they can replace the closing
 	// routine without a worry of modifying some global variable
@@ -253,7 +254,9 @@ func (c *Connection) ContextWithMetadata(ctx context.Context) context.Context {
 }
 
 func (c *Connection) Shutdown(ctx context.Context) error {
-	close(c.stopCh)
+	c.stopOnce.Do(func() {
+		close(c.stopCh)
+	})
 	// Ensure that the backgroundConnector returns
 	select {
 	case <-c.backgroundConnectionDoneCh:
