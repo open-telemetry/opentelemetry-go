@@ -20,12 +20,17 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
+
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/retry"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
 )
 
 type client struct {
@@ -33,6 +38,7 @@ type client struct {
 	dialOpts      []grpc.DialOption
 	metadata      metadata.MD
 	exportTimeout time.Duration
+	requestFunc   retry.RequestFunc
 
 	// stopCtx is used as a parent context for all exports therefore ensuring
 	// that when it is canceled with the stopFunc, all exports are canceled.
@@ -57,6 +63,7 @@ func NewClient(opts ...Option) otlptrace.Client {
 	c := &client{
 		endpoint:      cfg.Traces.Endpoint,
 		exportTimeout: cfg.Traces.Timeout,
+		requestFunc:   cfg.RetryConfig.RequestFunc(evaluate),
 		dialOpts:      cfg.DialOptions,
 		stopCtx:       ctx,
 		stopFunc:      cancel,
@@ -156,10 +163,17 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 	ctx, cancel := c.exportContext(ctx)
 	defer cancel()
 
-	_, err := c.tsc.Export(ctx, &coltracepb.ExportTraceServiceRequest{
-		ResourceSpans: protoSpans,
+	return c.requestFunc(ctx, func(iCtx context.Context) error {
+		_, err := c.tsc.Export(iCtx, &coltracepb.ExportTraceServiceRequest{
+			ResourceSpans: protoSpans,
+		})
+		// nil is converted to OK.
+		if status.Code(err) == codes.OK {
+			// Success.
+			return nil
+		}
+		return err
 	})
-	return err
 }
 
 func (c *client) exportContext(parent context.Context) (context.Context, context.CancelFunc) {
@@ -189,4 +203,34 @@ func (c *client) exportContext(parent context.Context) (context.Context, context
 	}()
 
 	return ctx, cancel
+}
+
+// evaluate returns if err is retry-able and a duration to wait for if an
+// explicit throttle time is included in err.
+func evaluate(err error) (bool, time.Duration) {
+	s := status.Convert(err)
+	switch s.Code() {
+	case codes.Canceled,
+		codes.DeadlineExceeded,
+		codes.ResourceExhausted,
+		codes.Aborted,
+		codes.OutOfRange,
+		codes.Unavailable,
+		codes.DataLoss:
+		return true, throttleDelay(s)
+	}
+
+	// Not a retry-able error.
+	return false, 0
+}
+
+// throttleDelay returns a duration to wait for if an explicit throttle time
+// is included in the response status.
+func throttleDelay(status *status.Status) time.Duration {
+	for _, detail := range status.Details() {
+		if t, ok := detail.(*errdetails.RetryInfo); ok {
+			return t.RetryDelay.AsDuration()
+		}
+	}
+	return 0
 }
