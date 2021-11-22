@@ -159,21 +159,27 @@ func TestExportContextHonorsClientTimeout(t *testing.T) {
 }
 
 func TestExportContextLinksStopSignal(t *testing.T) {
-	client := newClient(WithInsecure())
-	require.NoError(t, client.Start(context.Background()))
+	rootCtx := context.Background()
 
-	ctx, cancel := client.exportContext(context.Background())
+	client := newClient(WithInsecure())
+	t.Cleanup(func() { require.NoError(t, client.Stop(rootCtx)) })
+	require.NoError(t, client.Start(rootCtx))
+
+	ctx, cancel := client.exportContext(rootCtx)
 	t.Cleanup(cancel)
 
-	// Create and validate a done context.
-	expired, eCancel := context.WithCancel(context.Background())
-	eCancel()
-	<-expired.Done()
+	require.False(t, func() bool {
+		select {
+		case <-ctx.Done():
+			return true
+		default:
+		}
+		return false
+	}(), "context should not be done prior to canceling it")
 
-	// The stopFunc is only called when Stop needs to abandon all active
-	// exports and cancel their context. Pass an expired context to stop to
-	// ensure this behavior.
-	require.ErrorIs(t, client.Stop(expired), context.Canceled)
+	// The client.stopFunc cancels the client.stopCtx. This should have been
+	// setup as a parent of ctx. Therefore, it should cancel ctx as well.
+	client.stopFunc()
 
 	// Assert this with Eventually to account for goroutine scheduler timing.
 	assert.Eventually(t, func() bool {
