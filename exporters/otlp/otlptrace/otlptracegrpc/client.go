@@ -112,8 +112,6 @@ func (c *client) Start(ctx context.Context) error {
 var errNotStarted = errors.New("client not started")
 
 // Stop shuts down the gRPC connection to the collector.
-//
-// If the client was crated using WithGRPCConn, the passed conn is closed.
 func (c *client) Stop(ctx context.Context) error {
 	// Acquire the c.tscMu lock within the ctx lifetime.
 	acquired := make(chan struct{})
