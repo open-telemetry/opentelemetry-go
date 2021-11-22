@@ -350,7 +350,6 @@ func TestExportSpansTimeoutHonored(t *testing.T) {
 	close(exportBlock)
 
 	require.Equal(t, codes.DeadlineExceeded, status.Convert(err).Code())
-	require.Len(t, mc.getSpans(), 0)
 }
 
 func TestNew_withInvalidSecurityConfiguration(t *testing.T) {
