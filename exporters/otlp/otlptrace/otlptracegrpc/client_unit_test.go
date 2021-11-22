@@ -125,7 +125,7 @@ func TestRetryable(t *testing.T) {
 
 func TestUnstartedStop(t *testing.T) {
 	client := NewClient()
-	assert.ErrorIs(t, client.Stop(context.Background()), errNotStarted)
+	assert.ErrorIs(t, client.Stop(context.Background()), errAlreadyStopped)
 }
 
 func TestUnstartedUploadTrace(t *testing.T) {

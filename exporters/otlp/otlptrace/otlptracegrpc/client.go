@@ -109,9 +109,23 @@ func (c *client) Start(ctx context.Context) error {
 	return nil
 }
 
-var errNotStarted = errors.New("client not started")
+var errAlreadyStopped = errors.New("the client is already stopped")
 
-// Stop shuts down the gRPC connection to the collector.
+// Stop shuts down the client.
+//
+// Any active connections to a remote endpoint are closed if they were created
+// by the client. Any gRPC connection passed during creation using
+// WithGRPCConn will not be closed. It is the caller's responsibility to
+// handle cleanup of that resource.
+//
+// This method synchronizes with the UploadTraces method of the client. It
+// will wait for any active calls to that method to complete unimpeded, or it
+// will cancel any active calls if ctx expires. If ctx expires, the context
+// error will be forwarded as the returned error. All client held resources
+// will still be released still in this situation.
+//
+// If the client has already stopped, an error will be returned describing
+// this.
 func (c *client) Stop(ctx context.Context) error {
 	// Acquire the c.tscMu lock within the ctx lifetime.
 	acquired := make(chan struct{})
@@ -143,7 +157,7 @@ func (c *client) Stop(ctx context.Context) error {
 	// client is started before doing anything and let the called know if they
 	// made a mistake.
 	if c.tsc == nil {
-		return errNotStarted
+		return errAlreadyStopped
 	}
 
 	// Clear c.tsc to signal the client is stopped.
@@ -159,7 +173,7 @@ func (c *client) Stop(ctx context.Context) error {
 	return err
 }
 
-var errShutdown = errors.New("exporter is shutdown")
+var errShutdown = errors.New("the client is shutdown")
 
 // UploadTraces sends a batch of spans.
 //
