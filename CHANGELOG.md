@@ -12,17 +12,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The `"go.opentelemetry.io/otel/exporter/otel/otlptrace/otlptracegrpc".Client` now uses the underlying gRPC `ClientConn` to handle name resolution, TCP connection establishment (with retries and backoff) and TLS handshakes, and handling errors on established connections by re-resolving the name and reconnecting. (#2329)
 
-### Deprecated
-
-- The following options in the `go.opentelemetry.io/otel/exporter/otel/otlptrace/otlptracegrpc` package are deprecated. (#2329)
-  - `WithInsecure`, use the `grpc.WithInsecure` option to configure a `grpc.ClientConn` that is passed with `WithGRPCConn` instead.
-  - `WithEndpoint`, specify the target to `grpc.DialContext` and use the returned `grpc.ClientConn` with `WithGRPCConn` instead.
-  - `WithReconnectionPeriod`, specify a `MinConnectTimeout` for a `grpc.ConnectParams` that is used to create a `grpc.ClientConn` and passed with `WithGRPCConn` instead.
-  - `WithCompressor`, use the `grpc.UseCompressor` to define a compressor for a `grpc.ClientConn` that is passed with `WithGRPCConn` instead.
-  - `WithTLSCredentials`, use the `grpc.WithTransportCredentials` option to configure a `grpc.ClientConn` that is passed with `WithGRPCConn` instead.
-  - `WithServiceConfig`, use the `grpc.WithDefaultServiceConfig` option to configure a `grpc.ClientConn` that is passed with `WithGRPCConn` instead.
-  - `WithDialOption`, directly pass these options to `grpc.DialContext` instead and use the returned `grpc.ClientConn` with `WithGRPCConn` instead.
-
 ### Removed
 
 - Remove the metric Processor's ability to convert cumulative to delta aggregation temporality. (#2350)

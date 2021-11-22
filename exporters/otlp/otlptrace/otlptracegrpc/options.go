@@ -60,9 +60,6 @@ func (w wrappedOption) applyGRPCOption(cfg *otlpconfig.Config) {
 // default, client security is required unless WithInsecure is used.
 //
 // This option has no effect if WithGRPCConn is used.
-//
-// Deprecated: Use WithGRPCConn with an appropriately configured
-// grpc.ClientConn instead of this option.
 func WithInsecure() Option {
 	return wrappedOption{otlpconfig.WithInsecure()}
 }
@@ -71,9 +68,6 @@ func WithInsecure() Option {
 // unset, localhost:4317 will be used as a default.
 //
 // This option has no effect if WithGRPCConn is used.
-//
-// Deprecated: Use WithGRPCConn with an appropriately configured
-// grpc.ClientConn instead of this option.
 func WithEndpoint(endpoint string) Option {
 	return wrappedOption{otlpconfig.WithEndpoint(endpoint)}
 }
@@ -82,9 +76,6 @@ func WithEndpoint(endpoint string) Option {
 // attempts to the target endpoint.
 //
 // This option has no effect if WithGRPCConn is used.
-//
-// Deprecated: Use WithGRPCConn with an appropriately configured
-// grpc.ClientConn instead of this option.
 func WithReconnectionPeriod(rp time.Duration) Option {
 	return wrappedOption{otlpconfig.NewGRPCOption(func(cfg *otlpconfig.Config) {
 		cfg.ReconnectionPeriod = rp
@@ -109,9 +100,6 @@ func compressorToCompression(compressor string) otlpconfig.Compression {
 // `import _ "google.golang.org/grpc/encoding/gzip"`.
 //
 // This option has no effect if WithGRPCConn is used.
-//
-// Deprecated: Use WithGRPCConn with an appropriately configured
-// grpc.ClientConn instead of this option.
 func WithCompressor(compressor string) Option {
 	return wrappedOption{otlpconfig.WithCompression(compressorToCompression(compressor))}
 }
@@ -128,9 +116,6 @@ func WithHeaders(headers map[string]string) Option {
 // by certificate rotation, so it is up to the caller to decide what to use.
 //
 // This option has no effect if WithGRPCConn is used.
-//
-// Deprecated: Use WithGRPCConn with an appropriately configured
-// grpc.ClientConn instead of this option.
 func WithTLSCredentials(creds credentials.TransportCredentials) Option {
 	return wrappedOption{otlpconfig.NewGRPCOption(func(cfg *otlpconfig.Config) {
 		cfg.Traces.GRPCCredentials = creds
@@ -140,9 +125,6 @@ func WithTLSCredentials(creds credentials.TransportCredentials) Option {
 // WithServiceConfig defines the default gRPC service config used.
 //
 // This option has no effect if WithGRPCConn is used.
-//
-// Deprecated: Use WithGRPCConn with an appropriately configured
-// grpc.ClientConn instead of this option.
 func WithServiceConfig(serviceConfig string) Option {
 	return wrappedOption{otlpconfig.NewGRPCOption(func(cfg *otlpconfig.Config) {
 		cfg.ServiceConfig = serviceConfig
@@ -155,9 +137,6 @@ func WithServiceConfig(serviceConfig string) Option {
 // they might conflict with.
 //
 // This option has no effect if WithGRPCConn is used.
-//
-// Deprecated: Use WithGRPCConn with an appropriately configured
-// grpc.ClientConn instead of this option.
 func WithDialOption(opts ...grpc.DialOption) Option {
 	return wrappedOption{otlpconfig.NewGRPCOption(func(cfg *otlpconfig.Config) {
 		cfg.DialOptions = opts
