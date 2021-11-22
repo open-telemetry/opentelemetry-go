@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Changed the project minimum supported Go version from 1.15 to 1.16. (#2412)
+
 ### Removed
 
 - Remove the metric Processor's ability to convert cumulative to delta aggregation temporality. (#2350)
