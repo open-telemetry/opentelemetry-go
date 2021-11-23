@@ -20,6 +20,8 @@ import (
 	"strings"
 	"testing"
 
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 
@@ -854,7 +856,7 @@ func TestHTTPAttributesFromHTTPStatusCode(t *testing.T) {
 
 func TestSpanStatusFromHTTPStatusCode(t *testing.T) {
 	for code := 0; code < 1000; code++ {
-		expected := getExpectedCodeForHTTPCode(code)
+		expected := getExpectedCodeForHTTPCode(code, trace.SpanKindClient)
 		got, msg := SpanStatusFromHTTPStatusCode(code)
 		assert.Equalf(t, expected, got, "%s vs %s", expected, got)
 
@@ -867,7 +869,24 @@ func TestSpanStatusFromHTTPStatusCode(t *testing.T) {
 	}
 }
 
-func getExpectedCodeForHTTPCode(code int) codes.Code {
+func TestSpanStatusFromHTTPStatusCodeAndSpanKind(t *testing.T) {
+	for code := 0; code < 1000; code++ {
+		expected := getExpectedCodeForHTTPCode(code, trace.SpanKindClient)
+		got, msg := SpanStatusFromHTTPStatusCodeAndSpanKind(code, trace.SpanKindClient)
+		assert.Equalf(t, expected, got, "%s vs %s", expected, got)
+
+		_, valid := validateHTTPStatusCode(code)
+		if !valid {
+			assert.NotEmpty(t, msg, "message should be set if error cannot be inferred from code")
+		} else {
+			assert.Empty(t, msg, "message should not be set if error can be inferred from code")
+		}
+	}
+	code, _ := SpanStatusFromHTTPStatusCodeAndSpanKind(400, trace.SpanKindServer)
+	assert.Equalf(t, codes.Unset, code, "message should be set if error cannot be inferred from code")
+}
+
+func getExpectedCodeForHTTPCode(code int, spanKind trace.SpanKind) codes.Code {
 	if http.StatusText(code) == "" {
 		return codes.Error
 	}
@@ -884,6 +903,9 @@ func getExpectedCodeForHTTPCode(code int) codes.Code {
 	}
 	category := code / 100
 	if category > 0 && category < 4 {
+		return codes.Unset
+	}
+	if spanKind == trace.SpanKindServer && category == 4 {
 		return codes.Unset
 	}
 	return codes.Error
