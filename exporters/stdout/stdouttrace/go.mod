@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/exporters/stdout/stdouttrace
 
-go 1.15
+go 1.16
 
 replace (
 	go.opentelemetry.io/otel => ../../..

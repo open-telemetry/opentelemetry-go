@@ -43,19 +43,14 @@ This project is tested on the following systems.
 | ------- | ---------- | ------------ |
 | Ubuntu  | 1.17       | amd64        |
 | Ubuntu  | 1.16       | amd64        |
-| Ubuntu  | 1.15       | amd64        |
 | Ubuntu  | 1.17       | 386          |
 | Ubuntu  | 1.16       | 386          |
-| Ubuntu  | 1.15       | 386          |
 | MacOS   | 1.17       | amd64        |
 | MacOS   | 1.16       | amd64        |
-| MacOS   | 1.15       | amd64        |
 | Windows | 1.17       | amd64        |
 | Windows | 1.16       | amd64        |
-| Windows | 1.15       | amd64        |
 | Windows | 1.17       | 386          |
 | Windows | 1.16       | 386          |
-| Windows | 1.15       | 386          |
 
 While this project should work for other systems, no compatibility guarantees
 are made for those systems currently.
