@@ -123,7 +123,7 @@ var errAlreadyStopped = errors.New("the client is already stopped")
 // will wait for any active calls to that method to complete unimpeded, or it
 // will cancel any active calls if ctx expires. If ctx expires, the context
 // error will be forwarded as the returned error. All client held resources
-// will still be released still in this situation.
+// will still be released in this situation.
 //
 // If the client has already stopped, an error will be returned describing
 // this.
