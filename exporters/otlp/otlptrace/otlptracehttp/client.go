@@ -71,6 +71,7 @@ type client struct {
 	requestFunc retry.RequestFunc
 	client      *http.Client
 	stopCh      chan struct{}
+	stopOnce    sync.Once
 }
 
 var _ otlptrace.Client = (*client)(nil)
@@ -132,7 +133,9 @@ func (d *client) Start(ctx context.Context) error {
 
 // Stop shuts down the client and interrupt any in-flight request.
 func (d *client) Stop(ctx context.Context) error {
-	close(d.stopCh)
+	d.stopOnce.Do(func() {
+		close(d.stopCh)
+	})
 	select {
 	case <-ctx.Done():
 		return ctx.Err()

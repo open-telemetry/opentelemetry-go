@@ -45,12 +45,12 @@ func makeMockCollector(t *testing.T, mockConfig *mockConfig) *mockCollector {
 type mockTraceService struct {
 	collectortracepb.UnimplementedTraceServiceServer
 
-	errors   []error
-	requests int
-	mu       sync.RWMutex
-	storage  otlptracetest.SpansStorage
-	headers  metadata.MD
-	delay    time.Duration
+	errors      []error
+	requests    int
+	mu          sync.RWMutex
+	storage     otlptracetest.SpansStorage
+	headers     metadata.MD
+	exportBlock chan struct{}
 }
 
 func (mts *mockTraceService) getHeaders() metadata.MD {
@@ -72,15 +72,17 @@ func (mts *mockTraceService) getResourceSpans() []*tracepb.ResourceSpans {
 }
 
 func (mts *mockTraceService) Export(ctx context.Context, exp *collectortracepb.ExportTraceServiceRequest) (*collectortracepb.ExportTraceServiceResponse, error) {
-	if mts.delay > 0 {
-		time.Sleep(mts.delay)
-	}
-
 	mts.mu.Lock()
 	defer func() {
 		mts.requests++
 		mts.mu.Unlock()
 	}()
+
+	if mts.exportBlock != nil {
+		// Do this with the lock held so the mockCollector.Stop does not
+		// abandon cleaning up resources.
+		<-mts.exportBlock
+	}
 
 	reply := &collectortracepb.ExportTraceServiceResponse{}
 	if mts.requests < len(mts.errors) {
