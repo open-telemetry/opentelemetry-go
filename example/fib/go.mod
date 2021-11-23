@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/example/fib
 
-go 1.15
+go 1.16
 
 require (
 	go.opentelemetry.io/otel v1.2.0

@@ -109,7 +109,7 @@ jobs:
   compatibility-test:
     strategy:
       matrix:
-        go-version: [1.17, 1.16, 1.15]
+        go-version: [1.17, 1.16]
         os: [ubuntu-latest, macos-latest, windows-latest]
         # GitHub Actions does not support arm* architectures on default
         # runners. It is possible to acomplish this with a self-hosted runner
