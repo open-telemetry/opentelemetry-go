@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package debug // import "go.opentelemetry.io/otel/debug"
+package otel // import "go.opentelemetry.io/otel"
 
 import (
 	"github.com/go-logr/logr"
