@@ -12,7 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/*
-Package debug provides access to enable internal debugging of opentelemetry.
-*/
-package debug // import "go.opentelemetry.io/otel/internal/debug"
+package otel_test
+
+import (
+	"log"
+	"os"
+
+	"github.com/go-logr/stdr"
+
+	"go.opentelemetry.io/otel"
+)
+
+func ExampleSetLogger() {
+	logger := stdr.New(log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile))
+	otel.SetLogger(logger)
+}

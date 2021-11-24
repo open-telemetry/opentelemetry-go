@@ -12,15 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otel // import "go.opentelemetry.io/otel"
+package global
 
 import (
-	"github.com/go-logr/logr"
+	"log"
+	"os"
+	"testing"
 
-	"go.opentelemetry.io/otel/internal/global"
+	"github.com/go-logr/stdr"
 )
 
-// SetLogger configures the logger used internally to opentelemetry.
-func SetLogger(logger logr.Logger) {
-	global.SetLogger(logger)
+func TestRace(t *testing.T) {
+	go SetLogger(stdr.New(log.New(os.Stderr, "", 0)))
+	go Info("")
 }
