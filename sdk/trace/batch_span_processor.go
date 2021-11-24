@@ -22,15 +22,17 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
 // Defaults for BatchSpanProcessorOptions.
 const (
-	DefaultMaxQueueSize       = 2048
-	DefaultBatchTimeout       = 5000 * time.Millisecond
-	DefaultExportTimeout      = 30000 * time.Millisecond
-	DefaultMaxExportBatchSize = 512
+	DefaultMaxQueueSize        = 2048
+	DefaultBatchTimeout        = 5000 * time.Millisecond
+	DefaultExportTimeout       = 30000 * time.Millisecond
+	DefaultMaxExportBatchSize  = 512
+	DefaultMaxExportPacketSize = 2097152
 )
 
 type BatchSpanProcessorOption func(o *BatchSpanProcessorOptions)
@@ -57,6 +59,10 @@ type BatchSpanProcessorOptions struct {
 	// The default value of MaxExportBatchSize is 512.
 	MaxExportBatchSize int
 
+	// MaxExportPacketSize is the maximum number of packet size to process in a single batch.
+	// The default value of MaxExportPacketSize is 2M (in bytes) .
+	MaxExportPacketSize int
+
 	// BlockOnQueueFull blocks onEnd() and onStart() method if the queue is full
 	// AND if BlockOnQueueFull is set to true.
 	// Blocking option should be used carefully as it can severely affect the performance of an
@@ -70,8 +76,9 @@ type batchSpanProcessor struct {
 	e SpanExporter
 	o BatchSpanProcessorOptions
 
-	queue   chan ReadOnlySpan
-	dropped uint32
+	queue       chan ReadOnlySpan
+	dropped     uint32
+	batchedSize int
 
 	batch      []ReadOnlySpan
 	batchMutex sync.Mutex
@@ -89,10 +96,11 @@ var _ SpanProcessor = (*batchSpanProcessor)(nil)
 // If the exporter is nil, the span processor will preform no action.
 func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorOption) SpanProcessor {
 	o := BatchSpanProcessorOptions{
-		BatchTimeout:       DefaultBatchTimeout,
-		ExportTimeout:      DefaultExportTimeout,
-		MaxQueueSize:       DefaultMaxQueueSize,
-		MaxExportBatchSize: DefaultMaxExportBatchSize,
+		BatchTimeout:        DefaultBatchTimeout,
+		ExportTimeout:       DefaultExportTimeout,
+		MaxQueueSize:        DefaultMaxQueueSize,
+		MaxExportBatchSize:  DefaultMaxExportBatchSize,
+		MaxExportPacketSize: DefaultMaxExportPacketSize,
 	}
 	for _, opt := range options {
 		opt(&o)
@@ -204,6 +212,13 @@ func WithMaxExportBatchSize(size int) BatchSpanProcessorOption {
 	}
 }
 
+// WithMaxExportPacketSize set MaxExportPacketSize option.
+func WithMaxExportPacketSize(size int) BatchSpanProcessorOption {
+	return func(o *BatchSpanProcessorOptions) {
+		o.MaxExportPacketSize = size
+	}
+}
+
 func WithBatchTimeout(delay time.Duration) BatchSpanProcessorOption {
 	return func(o *BatchSpanProcessorOptions) {
 		o.BatchTimeout = delay
@@ -243,6 +258,7 @@ func (bsp *batchSpanProcessor) exportSpans(ctx context.Context) error {
 		// It is up to the exporter to implement any type of retry logic if a batch is failing
 		// to be exported, since it is specific to the protocol and backend being sent to.
 		bsp.batch = bsp.batch[:0]
+		bsp.batchedSize = 0
 
 		if err != nil {
 			return err
@@ -274,7 +290,8 @@ func (bsp *batchSpanProcessor) processQueue() {
 			}
 			bsp.batchMutex.Lock()
 			bsp.batch = append(bsp.batch, sd)
-			shouldExport := len(bsp.batch) >= bsp.o.MaxExportBatchSize
+			bsp.batchedSize += calcSpanSize(sd)
+			shouldExport := bsp.shouldExportInBatch()
 			bsp.batchMutex.Unlock()
 			if shouldExport {
 				if !bsp.timer.Stop() {
@@ -305,7 +322,8 @@ func (bsp *batchSpanProcessor) drainQueue() {
 
 			bsp.batchMutex.Lock()
 			bsp.batch = append(bsp.batch, sd)
-			shouldExport := len(bsp.batch) == bsp.o.MaxExportBatchSize
+			bsp.batchedSize += calcSpanSize(sd)
+			shouldExport := bsp.shouldExportInBatch()
 			bsp.batchMutex.Unlock()
 
 			if shouldExport {
@@ -365,4 +383,43 @@ func (bsp *batchSpanProcessor) enqueueBlockOnQueueFull(ctx context.Context, sd R
 		atomic.AddUint32(&bsp.dropped, 1)
 	}
 	return false
+}
+
+// shouldExportInBatch determines whether to export in batch.
+func (bsp *batchSpanProcessor) shouldExportInBatch() bool {
+	if len(bsp.batch) == bsp.o.MaxExportBatchSize {
+		return true
+	}
+
+	if bsp.batchedSize >= bsp.o.MaxExportPacketSize {
+		return true
+	}
+
+	return false
+}
+
+// calcSpanSize calculates the packet size of a span.
+func calcSpanSize(sd ReadOnlySpan) int {
+	if sd == nil {
+		return 0
+	}
+
+	size := 0
+	// just calculate events and attributes size for now.
+	for _, event := range sd.Events() {
+		size += calcKeyValuesSize(event.Attributes)
+	}
+
+	size += calcKeyValuesSize(sd.Attributes())
+	return size
+}
+
+// calcKeyValuesSize calculate KeyValue size.
+func calcKeyValuesSize(attrs []attribute.KeyValue) int {
+	size := 0
+	for _, attr := range attrs {
+		size += len(attr.Key)
+		size += len(attr.Value.AsString())
+	}
+	return size
 }

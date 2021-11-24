@@ -26,8 +26,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -187,6 +189,29 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 			genNumSpans:    2000,
 			parallel:       true,
 		},
+		{
+			name: "non-default MaxExportPacketSize and BatchTimeout",
+			o: []sdktrace.BatchSpanProcessorOption{
+				sdktrace.WithBatchTimeout(schDelay),
+				sdktrace.WithMaxExportPacketSize(200),
+				sdktrace.WithMaxExportBatchSize(500),
+			},
+			wantNumSpans:   100,
+			wantBatchCount: 25,
+			genNumSpans:    100,
+			parallel:       true,
+		},
+		{
+			name: "non-default MaxExportPacketSize and default MaxExportBatchSize",
+			o: []sdktrace.BatchSpanProcessorOption{
+				sdktrace.WithBatchTimeout(schDelay),
+				sdktrace.WithMaxExportPacketSize(200),
+			},
+			wantNumSpans:   600,
+			wantBatchCount: 150,
+			genNumSpans:    600,
+			parallel:       true,
+		},
 	}
 	for _, option := range options {
 		t.Run(option.name, func(t *testing.T) {
@@ -269,6 +294,12 @@ func generateSpan(t *testing.T, parallel bool, tr trace.Tracer, option testOptio
 		f := func(sc trace.SpanContext) {
 			ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
 			_, span := tr.Start(ctx, option.name)
+			span.AddEvent(semconv.MessageTypeSent.Value.AsString(),
+				trace.WithAttributes(attribute.Key("msg").String("{\"req\":\"hello\"}")))
+			span.AddEvent(semconv.MessageTypeReceived.Value.AsString(),
+				trace.WithAttributes(attribute.Key("msg").String("{\"rsp\":\"hi\"}")))
+			span.SetAttributes(semconv.HTTPHostKey.String("1.2.3.4"))
+			span.SetAttributes(attribute.Key("Region").String("us"))
 			span.End()
 			wg.Done()
 		}
