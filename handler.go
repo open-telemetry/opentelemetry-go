@@ -15,7 +15,6 @@
 package otel // import "go.opentelemetry.io/otel"
 
 import (
-	"log"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -42,15 +41,13 @@ type holder struct {
 
 func defaultErrorHandler() *atomic.Value {
 	v := &atomic.Value{}
-	v.Store(holder{eh: &delegator{l: log.New(os.Stderr, "", log.LstdFlags)}})
+	v.Store(holder{eh: &delegator{}})
 	return v
 }
 
 // delegator logs errors if no delegate is set, otherwise they are delegated.
 type delegator struct {
 	delegate atomic.Value
-
-	l *log.Logger
 }
 
 // setDelegate sets the ErrorHandler delegate.
@@ -64,9 +61,7 @@ func (h *delegator) setDelegate(d ErrorHandler) {
 func (h *delegator) Handle(err error) {
 	if d := h.delegate.Load(); d != nil {
 		d.(ErrorHandler).Handle(err)
-		return
 	}
-	h.l.Print(err)
 }
 
 // GetErrorHandler returns the global ErrorHandler instance.
