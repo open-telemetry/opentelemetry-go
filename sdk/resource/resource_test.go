@@ -703,3 +703,21 @@ func TestWithContainerID(t *testing.T) {
 		})
 	}
 }
+
+func TestWithContainer(t *testing.T) {
+	t.Cleanup(restoreAttributesProviders)
+
+	fakeContainerID := "fake-container-id"
+	resource.SetContainerProviders(func() (string, error) {
+		return fakeContainerID, nil
+	})
+
+	res, err := resource.New(context.Background(),
+		resource.WithContainer(),
+	)
+
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]string{
+		string(semconv.ContainerIDKey): fakeContainerID,
+	}, toMap(res))
+}
