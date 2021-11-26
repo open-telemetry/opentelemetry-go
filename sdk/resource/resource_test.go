@@ -649,3 +649,57 @@ func hostname() string {
 	}
 	return hn
 }
+
+func TestWithContainerID(t *testing.T) {
+	t.Cleanup(restoreAttributesProviders)
+
+	fakeContainerID := "fake-container-id"
+
+	testCases := []struct {
+		name                string
+		containerIDProvider func() (string, error)
+
+		expectedResource map[string]string
+		expectedErr      bool
+	}{
+		{
+			name: "get container id",
+			containerIDProvider: func() (string, error) {
+				return fakeContainerID, nil
+			},
+			expectedResource: map[string]string{
+				string(semconv.ContainerIDKey): fakeContainerID,
+			},
+		},
+		{
+			name: "no container id found",
+			containerIDProvider: func() (string, error) {
+				return "", nil
+			},
+			expectedResource: map[string]string{},
+		},
+		{
+			name: "error",
+			containerIDProvider: func() (string, error) {
+				return "", fmt.Errorf("unable to get container id")
+			},
+			expectedResource: map[string]string{},
+			expectedErr:      true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			resource.SetContainerProviders(tc.containerIDProvider)
+
+			res, err := resource.New(context.Background(),
+				resource.WithContainerID(),
+			)
+
+			if tc.expectedErr {
+				assert.Error(t, err)
+			}
+			assert.Equal(t, tc.expectedResource, toMap(res))
+		})
+	}
+}

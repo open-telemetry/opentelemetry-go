@@ -102,6 +102,7 @@ func restoreAttributesProviders() {
 	resource.SetDefaultRuntimeProviders()
 	resource.SetDefaultUserProviders()
 	resource.SetDefaultOSDescriptionProvider()
+	resource.SetDefaultContainerProviders()
 }
 
 func TestWithProcessFuncsErrors(t *testing.T) {
