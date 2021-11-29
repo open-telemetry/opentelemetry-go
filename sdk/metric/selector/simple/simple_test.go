@@ -25,7 +25,6 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
@@ -55,7 +54,7 @@ func testFixedSelectors(t *testing.T, sel export.AggregatorSelector) {
 
 func TestInexpensiveDistribution(t *testing.T) {
 	inex := simple.NewWithInexpensiveDistribution()
-	require.IsType(t, (*minmaxsumcount.Aggregator)(nil), oneAgg(inex, &testHistogramDesc))
+	require.IsType(t, (*sum.Aggregator)(nil), oneAgg(inex, &testHistogramDesc))
 	testFixedSelectors(t, inex)
 }
 

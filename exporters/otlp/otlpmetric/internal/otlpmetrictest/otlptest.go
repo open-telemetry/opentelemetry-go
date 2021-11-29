@@ -54,8 +54,6 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 	instruments := map[string]data{
 		"test-int64-counter":         {sdkapi.CounterInstrumentKind, number.Int64Kind, 1},
 		"test-float64-counter":       {sdkapi.CounterInstrumentKind, number.Float64Kind, 1},
-		"test-int64-histogram":       {sdkapi.HistogramInstrumentKind, number.Int64Kind, 2},
-		"test-float64-histogram":     {sdkapi.HistogramInstrumentKind, number.Float64Kind, 2},
 		"test-int64-gaugeobserver":   {sdkapi.GaugeObserverInstrumentKind, number.Int64Kind, 3},
 		"test-float64-gaugeobserver": {sdkapi.GaugeObserverInstrumentKind, number.Float64Kind, 3},
 	}
