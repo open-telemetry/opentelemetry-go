@@ -84,15 +84,6 @@ type (
 		Sum() (number.Number, error)
 		Histogram() (Buckets, error)
 	}
-
-	// MinMaxSumCount supports the Min, Max, Sum, and Count interfaces.
-	MinMaxSumCount interface {
-		Aggregation
-		Min() (number.Number, error)
-		Max() (number.Number, error)
-		Sum() (number.Number, error)
-		Count() (uint64, error)
-	}
 )
 
 type (
@@ -114,10 +105,9 @@ type (
 
 // Kind description constants.
 const (
-	SumKind            Kind = "Sum"
-	MinMaxSumCountKind Kind = "MinMaxSumCount"
-	HistogramKind      Kind = "Histogram"
-	LastValueKind      Kind = "Lastvalue"
+	SumKind       Kind = "Sum"
+	HistogramKind Kind = "Histogram"
+	LastValueKind Kind = "Lastvalue"
 )
 
 // Sentinel errors for Aggregation interface.

@@ -43,7 +43,7 @@ type (
 )
 
 var _ export.Aggregator = &Aggregator{}
-var _ aggregation.MinMaxSumCount = &Aggregator{}
+var _ aggregation.Sum = &Aggregator{}
 
 // New returns a new aggregator for computing the min, max, sum, and
 // count.
@@ -66,9 +66,9 @@ func (c *Aggregator) Aggregation() aggregation.Aggregation {
 	return c
 }
 
-// Kind returns aggregation.MinMaxSumCountKind.
+// Kind returns aggregation.SumKind.
 func (c *Aggregator) Kind() aggregation.Kind {
-	return aggregation.MinMaxSumCountKind
+	return aggregation.SumKind
 }
 
 // Sum returns the sum of values in the checkpoint.
