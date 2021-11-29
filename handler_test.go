@@ -183,7 +183,6 @@ func BenchmarkGetDelegatedErrorHandler(b *testing.B) {
 		eh = GetErrorHandler()
 	}
 
-	b.StopTimer()
 	reset()
 }
 
@@ -201,7 +200,6 @@ func BenchmarkDefaultErrorHandlerHandle(b *testing.B) {
 		eh.Handle(err)
 	}
 
-	b.StopTimer()
 	reset()
 }
 
@@ -216,7 +214,6 @@ func BenchmarkDelegatedErrorHandlerHandle(b *testing.B) {
 		eh.Handle(err)
 	}
 
-	b.StopTimer()
 	reset()
 }
 
@@ -230,25 +227,6 @@ func BenchmarkSetErrorHandlerDelegation(b *testing.B) {
 
 		reset()
 	}
-}
-
-func BenchmarkSetErrorHandlerNoDelegation(b *testing.B) {
-	eh := []ErrorHandler{
-		&errLogger{l: log.New(ioutil.Discard, "", 0)},
-		&errLogger{l: log.New(ioutil.Discard, "", 0)},
-	}
-	mod := len(eh)
-	// Do not measure delegation.
-	SetErrorHandler(eh[1])
-
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		SetErrorHandler(eh[i%mod])
-	}
-
-	b.StopTimer()
-	reset()
 }
 
 func reset() {
