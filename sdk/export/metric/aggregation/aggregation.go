@@ -97,8 +97,7 @@ type (
 	// deciding how to expose metric data.  This enables
 	// user-supplied Aggregators to replace builtin Aggregators.
 	//
-	// For example, test for a Distribution before testing for a
-	// MinMaxSumCount, test for a Histogram before testing for a
+	// For example, test for a Histogram before testing for a
 	// Sum, and so on.
 	Kind string
 )
