@@ -517,12 +517,15 @@ func TestOverflowBits(t *testing.T) {
 
 func TestIntegerAggregation(t *testing.T) {
 	ctx := context.Background()
-	agg := &New(1, &intDescriptor, WithMaxSize(256))[0]
+	aggs := New(2, &intDescriptor, WithMaxSize(256))
+	agg := &aggs[0]
+	alt := &aggs[1]
 
 	expect := int64(0)
 	for i := int64(1); i < 256; i++ {
 		expect += i
-		agg.Update(ctx, number.NewInt64Number(i), &intDescriptor)
+		require.NoError(t, agg.Update(ctx, number.NewInt64Number(i), &intDescriptor))
+		require.NoError(t, alt.Update(ctx, number.NewInt64Number(i), &intDescriptor))
 	}
 
 	require.Equal(t, expect, intSumNoError(t, agg))
@@ -541,31 +544,42 @@ func TestIntegerAggregation(t *testing.T) {
 	expect0 := func(b aggregation.ExponentialBuckets) {
 		require.Equal(t, uint32(0), b.Len())
 	}
-	expect256 := func(b aggregation.ExponentialBuckets) {
+	expect256 := func(b aggregation.ExponentialBuckets, factor int) {
 		require.Equal(t, uint32(256), b.Len())
 		require.Equal(t, int32(0), b.Offset())
 		// Bucket 254 has 6 elements, bucket 255 has 5
 		// bucket 253 has 5, ...
 		for i := uint32(0); i < 256; i++ {
-			require.LessOrEqual(t, b.At(i), uint64(6))
+			require.LessOrEqual(t, b.At(i), uint64(6*factor))
 		}
 	}
 
 	pos, err := agg.Positive()
 	require.NoError(t, err)
-	expect256(pos)
+	expect256(pos, 1)
 
 	neg, err := agg.Negative()
 	require.NoError(t, err)
 	expect0(neg)
 
-	// Reset!
+	// Merge!
+	require.NoError(t, agg.Merge(alt, &intDescriptor))
+
+	pos, err = agg.Positive()
+	require.NoError(t, err)
+	expect256(pos, 2)
+
+	require.Equal(t, 2*expect, intSumNoError(t, agg))
+
+	// Reset!  Repeat with negative.
 	agg.SynchronizedMove(nil, &intDescriptor)
+	alt.SynchronizedMove(nil, &intDescriptor)
 
 	expect = int64(0)
 	for i := int64(1); i < 256; i++ {
 		expect -= i
 		agg.Update(ctx, number.NewInt64Number(-i), &intDescriptor)
+		alt.Update(ctx, number.NewInt64Number(-i), &intDescriptor)
 	}
 
 	require.Equal(t, expect, intSumNoError(t, agg))
@@ -573,11 +587,20 @@ func TestIntegerAggregation(t *testing.T) {
 
 	neg, err = agg.Negative()
 	require.NoError(t, err)
-	expect256(neg)
+	expect256(neg, 1)
 
 	pos, err = agg.Positive()
 	require.NoError(t, err)
 	expect0(pos)
+
+	// Merge!
+	require.NoError(t, agg.Merge(alt, &intDescriptor))
+
+	neg, err = agg.Negative()
+	require.NoError(t, err)
+	expect256(neg, 2)
+
+	require.Equal(t, 2*expect, intSumNoError(t, agg))
 
 	// Scale should not change after filling in the negative range.
 	require.Equal(t, int32(5), scaleNoError(t, agg))
