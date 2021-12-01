@@ -41,14 +41,6 @@ func (l *testErrCatcher) Got() []string {
 	return []string(*l)
 }
 
-type logger struct {
-	l *log.Logger
-}
-
-func (l *logger) Handle(err error) {
-	l.l.Print(err)
-}
-
 func causeErr(text string) {
 	Handle(errors.New(text))
 }
