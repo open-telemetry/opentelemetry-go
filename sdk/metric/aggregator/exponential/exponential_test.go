@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/internal/mapping"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/internal/mapping/exponent"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/internal/mapping/logarithm"
 )
 
@@ -729,11 +730,82 @@ func TestExpansionOverflow(t *testing.T) {
 	expectBalanced(3)
 }
 
-// func TestFixedLimits(t *testing.T) {
-// 	const min = 0.001
-// 	const max = 60000
-// 	for scale := int32(0); scale < 10; scale++ {
-// 		m := newMapping(scale)
-// 		fmt.Println("required size at scale", scale, "is", m.MapToIndex(max)-m.MapToIndex(min))
-// 	}
-// }
+func TestFixedLimits(t *testing.T) {
+	ctx := context.Background()
+
+	for _, test := range []struct {
+		min, max float64
+		maxSize  int32
+	}{
+		{0.25, 4, 8},
+		{0.25, 4, 7},
+		{0.5, 8, 8},
+		{0.5, 8, 7},
+
+		{0.001, 60000, 256},
+		{1e200, 1e300, 256},
+
+		{0.1, 1, 256},
+		{0.1, 1, 5},
+		{1, 10, 5},
+		{1, 1e300, 5},
+		{1e-300, 1e300, 5},
+	} {
+		t.Run(fmt.Sprint(test), func(t *testing.T) {
+			var expectScale int32
+			sizeAtScale := func(s int32) int32 {
+				m := newMapping(s)
+				return m.MapToIndex(test.max) - m.MapToIndex(test.min) + 1
+			}
+
+			// Find the ideal scale exhaustively: choose the largest scale
+			// value for which the size test below holds.
+			for s := exponent.MinScale; s <= logarithm.MaxScale; s++ {
+				sz := sizeAtScale(s)
+				if sz <= test.maxSize && sz > test.maxSize/2 {
+					// Note that we do not break the loop here because
+					// in case of odd maximum size, it's possible for
+					// the next larger scale to work.
+					expectScale = s
+				}
+			}
+
+			agg := &New(1, &testDescriptor, WithRangeLimit(test.min, test.max), WithMaxSize(test.maxSize))[0]
+
+			// Scale should be set correctly before any updates
+			scale, _ := agg.Scale()
+			require.Equal(t, expectScale, scale)
+
+			// Update: average value
+			agg.Update(ctx, number.NewFloat64Number((test.min+test.max)/2), &testDescriptor)
+
+			scale, _ = agg.Scale()
+			require.Equal(t, int32(expectScale), scale)
+
+			// Update: min and max values
+			agg.Update(ctx, number.NewFloat64Number(test.min), &testDescriptor)
+			agg.Update(ctx, number.NewFloat64Number(test.max), &testDescriptor)
+
+			scale, _ = agg.Scale()
+			require.Equal(t, int32(expectScale), scale)
+
+			// No negatives
+			neg, _ := agg.Negative()
+			require.Equal(t, uint32(0), neg.Len())
+
+			// Positive count 3, expected size
+			pos, _ := agg.Positive()
+			require.Equal(t, uint32(sizeAtScale(expectScale)), pos.Len())
+			cnt, _ := agg.Count()
+			require.Equal(t, uint64(3), cnt)
+
+			// Error case
+			require.Equal(t, mapping.ErrUnderflow, agg.Update(ctx, number.NewFloat64Number(test.min*0.99), &testDescriptor))
+			require.Equal(t, mapping.ErrOverflow, agg.Update(ctx, number.NewFloat64Number(test.max*1.01), &testDescriptor))
+
+			// Make sure count didn't change
+			cnt, _ = agg.Count()
+			require.Equal(t, uint64(3), cnt)
+		})
+	}
+}

@@ -67,8 +67,8 @@ type (
 	// config describes how the histogram is aggregated.
 	config struct {
 		maxSize  int32
-		minLimit float64
-		maxLimit float64
+		minValue float64
+		maxValue float64
 	}
 
 	// Option configures a histogram config.
@@ -118,9 +118,9 @@ func (o maxSizeOption) apply(config *config) {
 	config.maxSize = int32(o)
 }
 
-// WithFixedLimits sets the minimum and maximum absolute values
+// WithRangeLimit sets the minimum and maximum absolute values
 // recognized by this histogram and fixes the scale accordingly.
-func WithFixedLimits(min, max float64) Option {
+func WithRangeLimit(min, max float64) Option {
 	return fixedLimitsOption{min: min, max: max}
 }
 
@@ -129,8 +129,8 @@ type fixedLimitsOption struct {
 }
 
 func (o fixedLimitsOption) apply(config *config) {
-	config.minLimit = o.min
-	config.maxLimit = o.max
+	config.minValue = o.min
+	config.maxValue = o.max
 }
 
 // New returns `cnt` number of configured histogram aggregators for `desc`.
@@ -155,16 +155,22 @@ func New(cnt int, desc *sdkapi.Descriptor, opts ...Option) []Aggregator {
 	}
 
 	mapping := newMapping(logarithm.MaxScale)
-	minLimit := realNonNeg(cfg.minLimit)
-	maxLimit := realNonNeg(cfg.maxLimit)
+	minValue := realNonNeg(cfg.minValue)
+	maxValue := realNonNeg(cfg.maxValue)
 
-	if minLimit > 0 && maxLimit > 0 && maxLimit > minLimit {
+	if minValue > 0 && maxValue > 0 && maxValue > minValue {
 		change := changeScale(highLow{
-			high: mapping.MapToIndex(maxLimit) + 1,
-			low:  mapping.MapToIndex(minLimit),
+			high: mapping.MapToIndex(maxValue),
+			low:  mapping.MapToIndex(minValue),
 		}, cfg.maxSize)
 		scale := mapping.Scale() - change
 		mapping = newMapping(scale)
+
+		// use the exact size limit based on the calculated scale.
+		cfg.maxSize = mapping.MapToIndex(maxValue) + 1 - mapping.MapToIndex(minValue)
+	} else {
+		minValue = 0
+		maxValue = 0
 	}
 
 	aggs := make([]Aggregator, cnt)
@@ -172,8 +178,8 @@ func New(cnt int, desc *sdkapi.Descriptor, opts ...Option) []Aggregator {
 	for i := range aggs {
 		aggs[i] = Aggregator{
 			maxSize:  cfg.maxSize,
-			minValue: minLimit,
-			maxValue: maxLimit,
+			minValue: minValue,
+			maxValue: maxValue,
 			state: &state{
 				mapping: mapping,
 			},
@@ -237,17 +243,31 @@ func (a *Aggregator) UpdateByIncr(_ context.Context, num number.Number, incr uin
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
-	// @@@ Here optionally test the min/max range
-
 	if value == 0 {
+		a.state.count += incr
 		a.state.zeroCount++
-	} else if value > 0 {
-		a.update(&a.state.positive, value, incr)
+		return nil
+	}
+
+	var b *buckets
+	if value > 0 {
+		b = &a.state.positive
 	} else {
-		a.update(&a.state.negative, -value, incr)
+		value = -value
+		b = &a.state.negative
+	}
+
+	if a.minValue != 0 && value < a.minValue {
+		return mapping.ErrUnderflow
+	}
+	if a.maxValue != 0 && value > a.maxValue {
+		return mapping.ErrOverflow
 	}
 
 	a.state.count += incr
+
+	a.update(b, value, incr)
+
 	if desc.NumberKind() == number.Float64Kind {
 		a.state.sum = number.NewFloat64Number(
 			a.state.sum.AsFloat64() + value*float64(incr),
