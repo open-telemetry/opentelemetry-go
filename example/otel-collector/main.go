@@ -53,13 +53,11 @@ func initProvider() func() {
 	// `localhost:30080` endpoint. Otherwise, replace `localhost` with the
 	// endpoint of your cluster. If you run the app inside k8s, then you can
 	// probably connect directly to the service through dns
+	conn, err := grpc.DialContext(ctx, "localhost:30080", grpc.WithInsecure(), grpc.WithBlock())
+	handleErr(err, "failed to create gRPC connection to collector")
 
 	// Set up a trace exporter
-	traceExporter, err := otlptracegrpc.New(ctx,
-		otlptracegrpc.WithInsecure(),
-		otlptracegrpc.WithEndpoint("localhost:30080"),
-		otlptracegrpc.WithDialOption(grpc.WithBlock()),
-	)
+	traceExporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithGRPCConn(conn))
 	handleErr(err, "failed to create trace exporter")
 
 	// Register the trace exporter with a TracerProvider, using a batch

@@ -17,6 +17,7 @@ package trace_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -44,6 +45,7 @@ func BenchmarkSpanWithAttributes_4(b *testing.B) {
 			span.SetAttributes(
 				attribute.Bool("key1", false),
 				attribute.String("key2", "hello"),
+				attribute.Int64("key3", 123),
 				attribute.Float64("key4", 123.456),
 			)
 			span.End()
@@ -61,9 +63,11 @@ func BenchmarkSpanWithAttributes_8(b *testing.B) {
 			span.SetAttributes(
 				attribute.Bool("key1", false),
 				attribute.String("key2", "hello"),
+				attribute.Int64("key3", 123),
 				attribute.Float64("key4", 123.456),
 				attribute.Bool("key21", false),
 				attribute.String("key22", "hello"),
+				attribute.Int64("key23", 123),
 				attribute.Float64("key24", 123.456),
 			)
 			span.End()
@@ -109,6 +113,67 @@ func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
 				attribute.Float64("key27", 123.456),
 				attribute.Int("key210", 123),
 			)
+			span.End()
+		}
+	})
+}
+
+func BenchmarkSpanWithEvents_4(b *testing.B) {
+	traceBenchmark(b, "Benchmark Start With 4 Events", func(b *testing.B, t trace.Tracer) {
+		ctx := context.Background()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			_, span := t.Start(ctx, "/foo")
+			span.AddEvent("event1")
+			span.AddEvent("event2")
+			span.AddEvent("event3")
+			span.AddEvent("event4")
+			span.End()
+		}
+	})
+}
+
+func BenchmarkSpanWithEvents_8(b *testing.B) {
+	traceBenchmark(b, "Benchmark Start With 4 Events", func(b *testing.B, t trace.Tracer) {
+		ctx := context.Background()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			_, span := t.Start(ctx, "/foo")
+			span.AddEvent("event1")
+			span.AddEvent("event2")
+			span.AddEvent("event3")
+			span.AddEvent("event4")
+			span.AddEvent("event5")
+			span.AddEvent("event6")
+			span.AddEvent("event7")
+			span.AddEvent("event8")
+			span.End()
+		}
+	})
+}
+
+func BenchmarkSpanWithEvents_WithStackTrace(b *testing.B) {
+	traceBenchmark(b, "Benchmark Start With 4 Attributes", func(b *testing.B, t trace.Tracer) {
+		ctx := context.Background()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			_, span := t.Start(ctx, "/foo")
+			span.AddEvent("event1", trace.WithStackTrace(true))
+			span.End()
+		}
+	})
+}
+func BenchmarkSpanWithEvents_WithTimestamp(b *testing.B) {
+	traceBenchmark(b, "Benchmark Start With 4 Attributes", func(b *testing.B, t trace.Tracer) {
+		ctx := context.Background()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			_, span := t.Start(ctx, "/foo")
+			span.AddEvent("event1", trace.WithTimestamp(time.Unix(0, 0)))
 			span.End()
 		}
 	})

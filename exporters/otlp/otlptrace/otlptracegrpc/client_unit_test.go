@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package connection
+package otlptracegrpc
 
 import (
 	"context"
@@ -25,8 +25,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
-
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/retry"
 )
 
 func TestThrottleDuration(t *testing.T) {
@@ -98,8 +96,8 @@ func TestThrottleDuration(t *testing.T) {
 	}
 }
 
-func TestEvaluate(t *testing.T) {
-	retryable := map[codes.Code]bool{
+func TestRetryable(t *testing.T) {
+	retryableCodes := map[codes.Code]bool{
 		codes.OK:                 false,
 		codes.Canceled:           true,
 		codes.Unknown:            false,
@@ -119,27 +117,77 @@ func TestEvaluate(t *testing.T) {
 		codes.Unauthenticated:    false,
 	}
 
-	for c, want := range retryable {
-		got, _ := evaluate(status.Error(c, ""))
+	for c, want := range retryableCodes {
+		got, _ := retryable(status.Error(c, ""))
 		assert.Equalf(t, want, got, "evaluate(%s)", c)
 	}
 }
 
-func TestDoRequest(t *testing.T) {
-	ev := func(error) (bool, time.Duration) { return false, 0 }
+func TestUnstartedStop(t *testing.T) {
+	client := NewClient()
+	assert.ErrorIs(t, client.Stop(context.Background()), errAlreadyStopped)
+}
 
-	c := new(Connection)
-	c.requestFunc = retry.Config{}.RequestFunc(ev)
-	c.stopCh = make(chan struct{})
+func TestUnstartedUploadTrace(t *testing.T) {
+	client := NewClient()
+	assert.ErrorIs(t, client.UploadTraces(context.Background(), nil), errShutdown)
+}
 
-	ctx := context.Background()
-	assert.NoError(t, c.DoRequest(ctx, func(ctx context.Context) error {
-		return nil
-	}))
-	assert.NoError(t, c.DoRequest(ctx, func(ctx context.Context) error {
-		return status.Error(codes.OK, "")
-	}))
-	assert.ErrorIs(t, c.DoRequest(ctx, func(ctx context.Context) error {
-		return assert.AnError
-	}), assert.AnError)
+func TestExportContextHonorsParentDeadline(t *testing.T) {
+	now := time.Now()
+	ctx, cancel := context.WithDeadline(context.Background(), now)
+	t.Cleanup(cancel)
+
+	// Without a client timeout, the parent deadline should be used.
+	client := newClient(WithTimeout(0))
+	eCtx, eCancel := client.exportContext(ctx)
+	t.Cleanup(eCancel)
+
+	deadline, ok := eCtx.Deadline()
+	assert.True(t, ok, "deadline not propagated to child context")
+	assert.Equal(t, now, deadline)
+}
+
+func TestExportContextHonorsClientTimeout(t *testing.T) {
+	// Setting a timeout should ensure a deadline is set on the context.
+	client := newClient(WithTimeout(1 * time.Second))
+	ctx, cancel := client.exportContext(context.Background())
+	t.Cleanup(cancel)
+
+	_, ok := ctx.Deadline()
+	assert.True(t, ok, "timeout not set as deadline for child context")
+}
+
+func TestExportContextLinksStopSignal(t *testing.T) {
+	rootCtx := context.Background()
+
+	client := newClient(WithInsecure())
+	t.Cleanup(func() { require.NoError(t, client.Stop(rootCtx)) })
+	require.NoError(t, client.Start(rootCtx))
+
+	ctx, cancel := client.exportContext(rootCtx)
+	t.Cleanup(cancel)
+
+	require.False(t, func() bool {
+		select {
+		case <-ctx.Done():
+			return true
+		default:
+		}
+		return false
+	}(), "context should not be done prior to canceling it")
+
+	// The client.stopFunc cancels the client.stopCtx. This should have been
+	// setup as a parent of ctx. Therefore, it should cancel ctx as well.
+	client.stopFunc()
+
+	// Assert this with Eventually to account for goroutine scheduler timing.
+	assert.Eventually(t, func() bool {
+		select {
+		case <-ctx.Done():
+			return true
+		default:
+		}
+		return false
+	}, 10*time.Second, time.Microsecond)
 }

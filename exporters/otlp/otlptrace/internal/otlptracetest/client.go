@@ -55,44 +55,60 @@ func initializeExporter(t *testing.T, client otlptrace.Client) *otlptrace.Export
 }
 
 func testClientStopHonorsTimeout(t *testing.T, client otlptrace.Client) {
+	t.Cleanup(func() {
+		// The test is looking for a failed shut down. Call Stop a second time
+		// with an un-expired context to give the client a second chance at
+		// cleaning up. There is not guarantee from the Client interface this
+		// will succeed, therefore, no need to check the error (just give it a
+		// best try).
+		_ = client.Stop(context.Background())
+	})
 	e := initializeExporter(t, client)
 
-	innerCtx, innerCancel := context.WithTimeout(context.Background(), time.Microsecond)
-	<-innerCtx.Done()
-	if err := e.Shutdown(innerCtx); err == nil {
-		t.Error("expected context DeadlineExceeded error, got nil")
-	} else if !errors.Is(err, context.DeadlineExceeded) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
+	defer cancel()
+	<-ctx.Done()
+
+	if err := e.Shutdown(ctx); !errors.Is(err, context.DeadlineExceeded) {
 		t.Errorf("expected context DeadlineExceeded error, got %v", err)
 	}
-	innerCancel()
 }
 
 func testClientStopHonorsCancel(t *testing.T, client otlptrace.Client) {
+	t.Cleanup(func() {
+		// The test is looking for a failed shut down. Call Stop a second time
+		// with an un-expired context to give the client a second chance at
+		// cleaning up. There is not guarantee from the Client interface this
+		// will succeed, therefore, no need to check the error (just give it a
+		// best try).
+		_ = client.Stop(context.Background())
+	})
 	e := initializeExporter(t, client)
 
-	ctx, innerCancel := context.WithCancel(context.Background())
-	innerCancel()
-	if err := e.Shutdown(ctx); err == nil {
-		t.Error("expected context canceled error, got nil")
-	} else if !errors.Is(err, context.Canceled) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	if err := e.Shutdown(ctx); !errors.Is(err, context.Canceled) {
 		t.Errorf("expected context canceled error, got %v", err)
 	}
 }
 
 func testClientStopNoError(t *testing.T, client otlptrace.Client) {
+	e := initializeExporter(t, client)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	e := initializeExporter(t, client)
 	if err := e.Shutdown(ctx); err != nil {
 		t.Errorf("shutdown errored: expected nil, got %v", err)
 	}
 }
 
 func testClientStopManyTimes(t *testing.T, client otlptrace.Client) {
+	e := initializeExporter(t, client)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
-	e := initializeExporter(t, client)
 
 	ch := make(chan struct{})
 	wg := sync.WaitGroup{}
@@ -110,7 +126,8 @@ func testClientStopManyTimes(t *testing.T, client otlptrace.Client) {
 	wg.Wait()
 	for _, err := range errs {
 		if err != nil {
-			t.Fatalf("failed to shutdown exporter: %v", err)
+			t.Errorf("failed to shutdown exporter: %v", err)
+			return
 		}
 	}
 }

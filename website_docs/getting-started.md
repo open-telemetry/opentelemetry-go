@@ -3,7 +3,7 @@ title: "Getting Started"
 weight: 2
 ---
 
-Welcome to the OpenTelemetry for Go getting started guide! This guide will walk you through the basic steps in installing, instrumenting with, configuring, and exporting data from OpenTelemetry. Before you get started, be sure to have Go 1.15 or newer installed.
+Welcome to the OpenTelemetry for Go getting started guide! This guide will walk you through the basic steps in installing, instrumenting with, configuring, and exporting data from OpenTelemetry. Before you get started, be sure to have Go 1.16 or newer installed.
 
 Understand how a system is functioning when it is failing or having issues is critical to resolving those issues. One strategy to understand this is with tracing. This guide shows how the OpenTelemetry Go project can be used to trace an example application. You will start with an application that computes Fibonacci numbers for users, and from there you will add instrumentation to produce tracing telemetry with OpenTelemetry Go.
 
@@ -529,6 +529,14 @@ Excellent! The application no longer returns wrong values, and looking at the te
 
 # What's Next
 
-This guide has walked you through adding tracing instrumentation to an application and using a console exporter to send telemetry data to a file. There are many other topics to cover in OpenTelemetry, but you should be ready to start adding OpenTelemetry Go to your projects at this point. Go instrument your code!
+This guide has walked you through adding tracing instrumentation to an
+application and using a console exporter to send telemetry data to a file. There
+are many other topics to cover in OpenTelemetry, but you should be ready to
+start adding OpenTelemetry Go to your projects at this point. Go instrument your
+code!
 
-For more information about instrumenting your code and things you can do with spans, refer to the [Instrumenting](https://opentelemetry.io/docs/go/instrumentation/) documentation. Likewise, advanced topics about processing and exporting telemetry data can be found in the [Processing and Exporting Data](https://opentelemetry.io/docs/go/exporting_data/) documentation.
+For more information about instrumenting your code and things you can do with
+spans, refer to the [Instrumenting]({{< relref "instrumentation" >}})
+documentation. Likewise, advanced topics about processing and exporting
+telemetry data can be found in the [Processing and Exporting Data]({{< relref
+"exporting_data" >}}) documentation.

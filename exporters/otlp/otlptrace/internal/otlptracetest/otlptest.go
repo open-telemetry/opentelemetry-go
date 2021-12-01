@@ -87,7 +87,9 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlptrace.Exporter,
 
 	// Shutdown the collector too so that we can begin
 	// verification checks of expected data back.
-	_ = tracesCollector.Stop()
+	if err := tracesCollector.Stop(); err != nil {
+		t.Fatalf("failed to stop the mock collector: %v", err)
+	}
 
 	// Now verify that we only got two resources
 	rss := tracesCollector.GetResourceSpans()
