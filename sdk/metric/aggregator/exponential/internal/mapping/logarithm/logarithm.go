@@ -96,13 +96,14 @@ func NewMapping(scale int32) (mapping.Mapping, error) {
 	maxIdx := l.MapToIndex(MaxValue)
 	minIdx := l.MapToIndex(MinValue)
 
+	// It's possible we get +Inf from the lowerBoundary.
 	for l.lowerBoundary(maxIdx) > MaxValue {
 		maxIdx--
 	}
 
-	for l.lowerBoundary(minIdx) < MinValue {
-		minIdx++
-	}
+	// Upper and lower cases are asymmetric because of gradual
+	// underflow lowerBoundary(minIdx) has to be defined, unlike
+	// the +Inf case above.
 	l.overflowIndex = maxIdx + 1
 	l.underflowIndex = minIdx - 1
 

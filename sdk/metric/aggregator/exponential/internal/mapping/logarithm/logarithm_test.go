@@ -33,6 +33,11 @@ type expectRangeError struct {
 	value float64
 }
 
+func TestInvalidScale(t *testing.T) {
+	_, err := NewMapping(-1)
+	require.Error(t, err)
+}
+
 func TestLogarithmMapping(t *testing.T) {
 	// Scale 1 means 1 division between every power of two, having
 	// a factor sqrt(2) times the lower boundary.
@@ -73,7 +78,7 @@ func TestLogarithmBoundary(t *testing.T) {
 					require.NoError(t, err)
 					mapped := m.MapToIndex(lowBoundary)
 
-					// At or near the boundary should be off-by-one.
+					// At or near the boundary expected to be off-by-one sometimes.
 					require.LessOrEqual(t, index-1, mapped)
 					require.GreaterOrEqual(t, index, mapped)
 
@@ -99,7 +104,7 @@ func roundedBoundary(scale, index int32) float64 {
 	return result
 }
 
-func TestLogarithmOverflow(t *testing.T) {
+func TestLogarithmUnderflow(t *testing.T) {
 	// (Is this architecture dependent?)
 	m, _ := NewMapping(MinScale)
 	require.Equal(t, int32(-2044), m.MapToIndex(MinValue))
@@ -107,6 +112,9 @@ func TestLogarithmOverflow(t *testing.T) {
 	require.Equal(t, int32(-2046), m.MapToIndex(MinValue/4))
 	require.Equal(t, int32(-2046), m.MapToIndex(MinValue/8))
 	require.Equal(t, int32(-2046), m.MapToIndex(MinValue/16))
+
+	_, err := m.LowerBoundary(-2046)
+	require.Error(t, err)
 }
 
 func TestLogarithmIndexOverflow(t *testing.T) {
