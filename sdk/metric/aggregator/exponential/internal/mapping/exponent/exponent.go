@@ -21,6 +21,11 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/internal/mapping"
 )
 
+// MinScale defines the point at which the exponential mapping
+// function becomes useless for float64.  With scale -10, ignoring
+// subnormal values, bucket indices range from -1 to 1.
+const MinScale int32 = -10
+
 // exponentMapping is used for negative scales, effectively a
 // mapping of the base-2 logarithm of the exponent.
 type exponentMapping struct {
@@ -32,6 +37,9 @@ type exponentMapping struct {
 func NewMapping(scale int32) (mapping.Mapping, error) {
 	if scale > 0 {
 		return nil, fmt.Errorf("exponent mapping requires scale <= 0")
+	}
+	if scale < MinScale {
+		return nil, fmt.Errorf("scale too low")
 	}
 	return exponentMapping{
 		scale:          scale,

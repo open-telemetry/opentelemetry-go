@@ -62,8 +62,12 @@ func TestExponentMappingZero(t *testing.T) {
 	}
 }
 
-func TestExponentMappingPositive(t *testing.T) {
+func TestInvalidScale(t *testing.T) {
 	m, err := NewMapping(1)
+	require.Error(t, err)
+	require.Nil(t, m)
+
+	m, err = NewMapping(MinScale - 1)
 	require.Error(t, err)
 	require.Nil(t, m)
 }
