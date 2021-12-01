@@ -27,8 +27,8 @@ import (
 //
 // The default logger uses stdr which is backed by the standard `log.Logger`
 // interface. This logger will only show messages at the Error Level.
-var globalLoggerLock = &sync.RWMutex{}
 var globalLogger logr.Logger = stdr.New(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile))
+var globalLoggerLock = &sync.RWMutex{}
 
 // SetLogger overrides the globalLogger with l.
 //
