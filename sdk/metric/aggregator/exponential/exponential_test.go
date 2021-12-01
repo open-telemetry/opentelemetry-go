@@ -240,18 +240,14 @@ func TestScaleNegOneNegative(t *testing.T) {
 }
 
 func TestExhaustiveSmall(t *testing.T) {
-	for _, maxSize := range []int32{3, 4, 5, 6, 7, 8, 9} {
+	for _, maxSize := range []int32{3, 4, 6, 9} {
 		t.Run(fmt.Sprintf("maxSize=%d", maxSize), func(t *testing.T) {
 			for offset := int32(-5); offset <= 5; offset++ {
-				//t.Run(fmt.Sprintf("offset=%d", offset), func(t *testing.T) {
 				for _, initScale := range []int32{
-					0, 1, 2, 3, 4,
+					0, 4,
 				} {
-					//t.Run(fmt.Sprintf("initScale=%d", initScale), func(t *testing.T) {
 					testExhaustive(t, maxSize, offset, initScale)
-					//})
 				}
-				//})
 			}
 		})
 	}
@@ -259,7 +255,6 @@ func TestExhaustiveSmall(t *testing.T) {
 
 func testExhaustive(t *testing.T, maxSize, offset, initScale int32) {
 	for step := maxSize; step < 4*maxSize; step++ {
-		//t.Run(fmt.Sprintf("step=%d", step), func(t *testing.T) {
 		ctx := context.Background()
 		agg := New(1, &testDescriptor, WithMaxSize(maxSize))[0]
 		mapper := newMapping(initScale)
@@ -313,7 +308,6 @@ func testExhaustive(t *testing.T, maxSize, offset, initScale int32) {
 		// The maximum range is correct at the computed scale.
 		idx = mapper.MapToIndex(maxVal)
 		require.Equal(t, int32(idx), agg.positive().Offset()+int32(agg.positive().Len())-1)
-		//})
 	}
 }
 
@@ -326,10 +320,10 @@ func TestMergeSimpleEven(t *testing.T) {
 		n1 := number.NewFloat64Number(f1)
 		n2 := number.NewFloat64Number(f2)
 
-		aggs[0].Update(ctx, n1, &testDescriptor)
-		aggs[1].Update(ctx, n2, &testDescriptor)
-		aggs[2].Update(ctx, n1, &testDescriptor)
-		aggs[2].Update(ctx, n2, &testDescriptor)
+		require.NoError(t, aggs[0].Update(ctx, n1, &testDescriptor))
+		require.NoError(t, aggs[1].Update(ctx, n2, &testDescriptor))
+		require.NoError(t, aggs[2].Update(ctx, n1, &testDescriptor))
+		require.NoError(t, aggs[2].Update(ctx, n2, &testDescriptor))
 	}
 	require.Equal(t, int32(0), aggs[0].scale())
 	require.Equal(t, int32(0), aggs[1].scale())
@@ -393,66 +387,49 @@ func TestMergeSimpleOdd(t *testing.T) {
 func TestMergeExhaustive(t *testing.T) {
 	const (
 		factor = 1024.0
-		repeat = 16
+		repeat = 1
 		count  = 16
 	)
 
 	means := []float64{
 		0,
-		1,
-		factor - 1,
 		factor,
-		factor + 1,
 	}
 
 	stddevs := []float64{
 		1,
 		factor,
-		factor * factor,
 	}
 
 	for _, mean := range means {
 		t.Run(fmt.Sprint("mean=", mean), func(t *testing.T) {
 			for _, stddev := range stddevs {
 				t.Run(fmt.Sprint("stddev=", stddev), func(t *testing.T) {
-					for r := 0; r < repeat; r++ {
-						src := rand.NewSource(77777677777)
-						rnd := rand.New(src)
+					src := rand.NewSource(77777677777)
+					rnd := rand.New(src)
 
-						t.Run(fmt.Sprint("repeat=", r), func(t *testing.T) {
-							values := make([]float64, count)
-							for i := range values {
-								values[i] = mean + rnd.NormFloat64()*stddev
-							}
+					values := make([]float64, count)
+					for i := range values {
+						values[i] = mean + rnd.NormFloat64()*stddev
+					}
 
-							for part := 1; part < count; part++ {
-								//t.Run(fmt.Sprint("part=", part), func(t *testing.T) {
-								for _, size := range []int32{
-									2,
-									3,
-									4,
-									6,
-									9,
-									12,
-									16,
-								} {
-									//t.Run(fmt.Sprint("size=", size), func(t *testing.T) {
-									for _, incr := range []uint64{
-										1,
-										17,
-										0x100,
-										0x10000,
-										0x100000000,
-									} {
-										//t.Run(fmt.Sprintf("incr=%x", incr), func(t *testing.T) {
-										testMergeExhaustive(t, values[0:part], values[part:count], size, incr)
-										//})
-									}
-									//})
-								}
-								//})
+					for part := 1; part < count; part++ {
+						for _, size := range []int32{
+							2,
+							6,
+							8,
+							9,
+							16,
+						} {
+							for _, incr := range []uint64{
+								1,
+								0x100,
+								0x10000,
+								0x100000000,
+							} {
+								testMergeExhaustive(t, values[0:part], values[part:count], size, incr)
 							}
-						})
+						}
 					}
 				})
 			}
@@ -500,29 +477,29 @@ func TestOverflowBits(t *testing.T) {
 
 			if limit <= 0x10000 {
 				for i := uint64(0); i < limit; i++ {
-					aHist.Update(ctx, plusOne, &testDescriptor)
-					aHist.Update(ctx, minusOne, &testDescriptor)
+					require.NoError(t, aHist.Update(ctx, plusOne, &testDescriptor))
+					require.NoError(t, aHist.Update(ctx, minusOne, &testDescriptor))
 
 					cnt, _ := aHist.Count()
 					require.Equal(t, 2*(i+1), cnt)
 				}
 			} else {
-				aHist.UpdateByIncr(ctx, plusOne, limit/2, &testDescriptor)
-				aHist.UpdateByIncr(ctx, plusOne, limit/2, &testDescriptor)
-				aHist.UpdateByIncr(ctx, minusOne, limit/2, &testDescriptor)
-				aHist.UpdateByIncr(ctx, minusOne, limit/2, &testDescriptor)
+				require.NoError(t, aHist.UpdateByIncr(ctx, plusOne, limit/2, &testDescriptor))
+				require.NoError(t, aHist.UpdateByIncr(ctx, plusOne, limit/2, &testDescriptor))
+				require.NoError(t, aHist.UpdateByIncr(ctx, minusOne, limit/2, &testDescriptor))
+				require.NoError(t, aHist.UpdateByIncr(ctx, minusOne, limit/2, &testDescriptor))
 			}
-			bHist.UpdateByIncr(ctx, plusOne, limit-1, &testDescriptor)
-			bHist.Update(ctx, plusOne, &testDescriptor)
-			bHist.UpdateByIncr(ctx, minusOne, limit-1, &testDescriptor)
-			bHist.Update(ctx, minusOne, &testDescriptor)
-			cHist.UpdateByIncr(ctx, plusOne, limit, &testDescriptor)
-			cHist.UpdateByIncr(ctx, minusOne, limit, &testDescriptor)
+			require.NoError(t, bHist.UpdateByIncr(ctx, plusOne, limit-1, &testDescriptor))
+			require.NoError(t, bHist.Update(ctx, plusOne, &testDescriptor))
+			require.NoError(t, bHist.UpdateByIncr(ctx, minusOne, limit-1, &testDescriptor))
+			require.NoError(t, bHist.Update(ctx, minusOne, &testDescriptor))
+			require.NoError(t, cHist.UpdateByIncr(ctx, plusOne, limit, &testDescriptor))
+			require.NoError(t, cHist.UpdateByIncr(ctx, minusOne, limit, &testDescriptor))
 
 			aCnt, _ := aHist.Count()
 			require.Equal(t, 2*limit, aCnt)
 			sum, _ := aHist.Sum()
-			require.Equal(t, float64(0), sum.CoerceToFloat64(number.Float64Kind))
+			require.Equal(t, float64(0), sum.AsFloat64())
 
 			aPos, _ := aHist.Positive()
 			require.Equal(t, uint32(1), aPos.Len())
@@ -751,61 +728,60 @@ func TestFixedLimits(t *testing.T) {
 		{1, 1e300, 5},
 		{1e-300, 1e300, 5},
 	} {
-		t.Run(fmt.Sprint(test), func(t *testing.T) {
-			var expectScale int32
-			sizeAtScale := func(s int32) int32 {
-				m := newMapping(s)
-				return m.MapToIndex(test.max) - m.MapToIndex(test.min) + 1
+		var expectScale int32
+		sizeAtScale := func(s int32) int32 {
+			m := newMapping(s)
+			return m.MapToIndex(test.max) - m.MapToIndex(test.min) + 1
+		}
+
+		// Find the ideal scale exhaustively: choose the largest scale
+		// value for which the size test below holds.
+		for s := exponent.MinScale; s <= logarithm.MaxScale; s++ {
+			sz := sizeAtScale(s)
+			if sz <= test.maxSize && sz > test.maxSize/2 {
+				// Note that we do not break the loop here because
+				// in case of odd maximum size, it's possible for
+				// the next larger scale to work.  See the comment
+				// about the same issue in changeScale().
+				expectScale = s
 			}
+		}
 
-			// Find the ideal scale exhaustively: choose the largest scale
-			// value for which the size test below holds.
-			for s := exponent.MinScale; s <= logarithm.MaxScale; s++ {
-				sz := sizeAtScale(s)
-				if sz <= test.maxSize && sz > test.maxSize/2 {
-					// Note that we do not break the loop here because
-					// in case of odd maximum size, it's possible for
-					// the next larger scale to work.
-					expectScale = s
-				}
-			}
+		agg := &New(1, &testDescriptor, WithRangeLimit(test.min, test.max), WithMaxSize(test.maxSize))[0]
 
-			agg := &New(1, &testDescriptor, WithRangeLimit(test.min, test.max), WithMaxSize(test.maxSize))[0]
+		// Scale should be set correctly before any updates
+		scale, _ := agg.Scale()
+		require.Equal(t, expectScale, scale)
 
-			// Scale should be set correctly before any updates
-			scale, _ := agg.Scale()
-			require.Equal(t, expectScale, scale)
+		// Update: average value
+		agg.Update(ctx, number.NewFloat64Number((test.min+test.max)/2), &testDescriptor)
 
-			// Update: average value
-			agg.Update(ctx, number.NewFloat64Number((test.min+test.max)/2), &testDescriptor)
+		scale, _ = agg.Scale()
+		require.Equal(t, int32(expectScale), scale)
 
-			scale, _ = agg.Scale()
-			require.Equal(t, int32(expectScale), scale)
+		// Update: min and max values
+		agg.Update(ctx, number.NewFloat64Number(test.min), &testDescriptor)
+		agg.Update(ctx, number.NewFloat64Number(test.max), &testDescriptor)
 
-			// Update: min and max values
-			agg.Update(ctx, number.NewFloat64Number(test.min), &testDescriptor)
-			agg.Update(ctx, number.NewFloat64Number(test.max), &testDescriptor)
+		scale, _ = agg.Scale()
+		require.Equal(t, int32(expectScale), scale)
 
-			scale, _ = agg.Scale()
-			require.Equal(t, int32(expectScale), scale)
+		// No negatives
+		neg, _ := agg.Negative()
+		require.Equal(t, uint32(0), neg.Len())
 
-			// No negatives
-			neg, _ := agg.Negative()
-			require.Equal(t, uint32(0), neg.Len())
+		// Positive count 3, expected size
+		pos, _ := agg.Positive()
+		require.Equal(t, uint32(sizeAtScale(expectScale)), pos.Len())
+		cnt, _ := agg.Count()
+		require.Equal(t, uint64(3), cnt)
 
-			// Positive count 3, expected size
-			pos, _ := agg.Positive()
-			require.Equal(t, uint32(sizeAtScale(expectScale)), pos.Len())
-			cnt, _ := agg.Count()
-			require.Equal(t, uint64(3), cnt)
+		// Error case
+		require.Equal(t, mapping.ErrUnderflow, agg.Update(ctx, number.NewFloat64Number(test.min*0.99), &testDescriptor))
+		require.Equal(t, mapping.ErrOverflow, agg.Update(ctx, number.NewFloat64Number(test.max*1.01), &testDescriptor))
 
-			// Error case
-			require.Equal(t, mapping.ErrUnderflow, agg.Update(ctx, number.NewFloat64Number(test.min*0.99), &testDescriptor))
-			require.Equal(t, mapping.ErrOverflow, agg.Update(ctx, number.NewFloat64Number(test.max*1.01), &testDescriptor))
-
-			// Make sure count didn't change
-			cnt, _ = agg.Count()
-			require.Equal(t, uint64(3), cnt)
-		})
+		// Make sure count didn't change
+		cnt, _ = agg.Count()
+		require.Equal(t, uint64(3), cnt)
 	}
 }

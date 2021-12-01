@@ -249,6 +249,16 @@ func (a *Aggregator) UpdateByIncr(_ context.Context, num number.Number, incr uin
 		return nil
 	}
 
+	if desc.NumberKind() == number.Float64Kind {
+		a.state.sum = number.NewFloat64Number(
+			a.state.sum.AsFloat64() + value*float64(incr),
+		)
+	} else {
+		a.state.sum = number.NewInt64Number(
+			a.state.sum.AsInt64() + int64(value)*int64(incr),
+		)
+	}
+
 	var b *buckets
 	if value > 0 {
 		b = &a.state.positive
@@ -267,16 +277,6 @@ func (a *Aggregator) UpdateByIncr(_ context.Context, num number.Number, incr uin
 	a.state.count += incr
 
 	a.update(b, value, incr)
-
-	if desc.NumberKind() == number.Float64Kind {
-		a.state.sum = number.NewFloat64Number(
-			a.state.sum.AsFloat64() + value*float64(incr),
-		)
-	} else {
-		a.state.sum = number.NewInt64Number(
-			a.state.sum.AsInt64() + int64(value)*int64(incr),
-		)
-	}
 
 	return nil
 }
@@ -725,7 +725,15 @@ func (a *Aggregator) Merge(oa export.Aggregator, desc *sdkapi.Descriptor) error 
 		return aggregator.NewInconsistentAggregatorError(a, oa)
 	}
 
-	a.state.sum += o.state.sum
+	if desc.NumberKind() == number.Float64Kind {
+		a.state.sum = number.NewFloat64Number(
+			a.state.sum.AsFloat64() + o.state.sum.AsFloat64(),
+		)
+	} else {
+		a.state.sum = number.NewInt64Number(
+			a.state.sum.AsInt64() + o.state.sum.AsInt64(),
+		)
+	}
 	a.state.count += o.state.count
 	a.state.zeroCount += o.state.zeroCount
 
