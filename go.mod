@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel
 
-go 1.15
+go 1.16
 
 require (
 	github.com/go-logr/logr v1.2.0

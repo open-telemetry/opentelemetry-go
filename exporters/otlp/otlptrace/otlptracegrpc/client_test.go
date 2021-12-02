@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/goleak"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/encoding/gzip"
@@ -37,7 +38,25 @@ import (
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 )
 
+func TestMain(m *testing.M) {
+	goleak.VerifyTestMain(m)
+}
+
 var roSpans = tracetest.SpanStubs{{Name: "Span 0"}}.Snapshots()
+
+func contextWithTimeout(parent context.Context, t *testing.T, timeout time.Duration) (context.Context, context.CancelFunc) {
+	d, ok := t.Deadline()
+	if !ok {
+		d = time.Now().Add(timeout)
+	} else {
+		d = d.Add(-1 * time.Millisecond)
+		now := time.Now()
+		if d.Sub(now) > timeout {
+			d = now.Add(timeout)
+		}
+	}
+	return context.WithDeadline(parent, d)
+}
 
 func TestNew_endToEnd(t *testing.T) {
 	tests := []struct {
@@ -91,56 +110,44 @@ func newGRPCExporter(t *testing.T, ctx context.Context, endpoint string, additio
 }
 
 func newExporterEndToEndTest(t *testing.T, additionalOpts []otlptracegrpc.Option) {
-	mc := runMockCollectorAtEndpoint(t, "localhost:56561")
-
-	defer func() {
-		_ = mc.stop()
-	}()
+	mc := runMockCollector(t)
 
 	<-time.After(5 * time.Millisecond)
 
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint, additionalOpts...)
-	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	t.Cleanup(func() {
+		ctx, cancel := contextWithTimeout(ctx, t, 10*time.Second)
 		defer cancel()
-		if err := exp.Shutdown(ctx); err != nil {
-			panic(err)
-		}
-	}()
 
+		require.NoError(t, exp.Shutdown(ctx))
+	})
+
+	// RunEndToEndTest closes mc.
 	otlptracetest.RunEndToEndTest(ctx, t, exp, mc)
 }
 
 func TestExporterShutdown(t *testing.T) {
-	mc := runMockCollectorAtEndpoint(t, "localhost:56561")
-	defer func() {
-		_ = mc.stop()
-	}()
+	mc := runMockCollectorAtEndpoint(t, "localhost:0")
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	<-time.After(5 * time.Millisecond)
-
-	otlptracetest.RunExporterShutdownTest(t, func() otlptrace.Client {
+	factory := func() otlptrace.Client {
 		return otlptracegrpc.NewClient(
-			otlptracegrpc.WithInsecure(),
 			otlptracegrpc.WithEndpoint(mc.endpoint),
-			otlptracegrpc.WithReconnectionPeriod(50*time.Millisecond))
-	})
+			otlptracegrpc.WithInsecure(),
+			otlptracegrpc.WithDialOption(grpc.WithBlock()),
+		)
+	}
+	otlptracetest.RunExporterShutdownTest(t, factory)
 }
 
 func TestNew_invokeStartThenStopManyTimes(t *testing.T) {
 	mc := runMockCollector(t)
-	defer func() {
-		_ = mc.stop()
-	}()
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint)
-	defer func() {
-		if err := exp.Shutdown(ctx); err != nil {
-			panic(err)
-		}
-	}()
+	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
 	// Invoke Start numerous times, should return errAlreadyStarted
 	for i := 0; i < 10; i++ {
@@ -157,120 +164,6 @@ func TestNew_invokeStartThenStopManyTimes(t *testing.T) {
 		if err := exp.Shutdown(ctx); err != nil {
 			t.Fatalf(`#%d got error (%v) expected none`, i, err)
 		}
-	}
-}
-
-func TestNew_collectorConnectionDiesThenReconnectsWhenInRestMode(t *testing.T) {
-	// TODO: Fix this test #1527
-	t.Skip("This test is flaky and needs to be rewritten")
-	mc := runMockCollector(t)
-
-	reconnectionPeriod := 20 * time.Millisecond
-	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, mc.endpoint,
-		otlptracegrpc.WithRetry(otlptracegrpc.RetryConfig{Enabled: false}),
-		otlptracegrpc.WithReconnectionPeriod(reconnectionPeriod))
-	defer func() { require.NoError(t, exp.Shutdown(ctx)) }()
-
-	// Wait for a connection.
-	mc.ln.WaitForConn()
-
-	// We'll now stop the collector right away to simulate a connection
-	// dying in the midst of communication or even not existing before.
-	require.NoError(t, mc.stop())
-
-	// first export, it will send disconnected message to the channel on export failure,
-	// trigger almost immediate reconnection
-	require.Error(t, exp.ExportSpans(ctx, roSpans))
-
-	// second export, it will detect connection issue, change state of exporter to disconnected and
-	// send message to disconnected channel but this time reconnection gouroutine will be in (rest mode, not listening to the disconnected channel)
-	require.Error(t, exp.ExportSpans(ctx, roSpans))
-
-	// as a result we have exporter in disconnected state waiting for disconnection message to reconnect
-
-	// resurrect collector
-	nmc := runMockCollectorAtEndpoint(t, mc.endpoint)
-
-	// make sure reconnection loop hits beginning and goes back to waiting mode
-	// after hitting beginning of the loop it should reconnect
-	nmc.ln.WaitForConn()
-
-	n := 10
-	for i := 0; i < n; i++ {
-		// when disconnected exp.ExportSpans doesnt send disconnected messages again
-		// it just quits and return last connection error
-		require.NoError(t, exp.ExportSpans(ctx, roSpans))
-	}
-
-	nmaSpans := nmc.getSpans()
-
-	// Expecting 10 spans that were sampled, given that
-	if g, w := len(nmaSpans), n; g != w {
-		t.Fatalf("Connected collector: spans: got %d want %d", g, w)
-	}
-
-	dSpans := mc.getSpans()
-	// Expecting 0 spans to have been received by the original but now dead collector
-	if g, w := len(dSpans), 0; g != w {
-		t.Fatalf("Disconnected collector: spans: got %d want %d", g, w)
-	}
-
-	require.NoError(t, nmc.Stop())
-}
-
-func TestNew_collectorConnectionDiesThenReconnects(t *testing.T) {
-	// TODO: Fix this test #1527
-	t.Skip("This test is flaky and needs to be rewritten")
-	mc := runMockCollector(t)
-
-	reconnectionPeriod := 50 * time.Millisecond
-	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, mc.endpoint,
-		otlptracegrpc.WithRetry(otlptracegrpc.RetryConfig{Enabled: false}),
-		otlptracegrpc.WithReconnectionPeriod(reconnectionPeriod))
-	defer func() { require.NoError(t, exp.Shutdown(ctx)) }()
-
-	mc.ln.WaitForConn()
-
-	// We'll now stop the collector right away to simulate a connection
-	// dying in the midst of communication or even not existing before.
-	require.NoError(t, mc.stop())
-
-	// In the test below, we'll stop the collector many times,
-	// while exporting traces and test to ensure that we can
-	// reconnect.
-	for j := 0; j < 3; j++ {
-
-		// No endpoint up.
-		require.Error(t, exp.ExportSpans(ctx, roSpans))
-
-		// Now resurrect the collector by making a new one but reusing the
-		// old endpoint, and the collector should reconnect automatically.
-		nmc := runMockCollectorAtEndpoint(t, mc.endpoint)
-
-		// Give the exporter sometime to reconnect
-		nmc.ln.WaitForConn()
-
-		n := 10
-		for i := 0; i < n; i++ {
-			require.NoError(t, exp.ExportSpans(ctx, roSpans))
-		}
-
-		nmaSpans := nmc.getSpans()
-		// Expecting 10 spans that were sampled, given that
-		if g, w := len(nmaSpans), n; g != w {
-			t.Fatalf("Round #%d: Connected collector: spans: got %d want %d", j, g, w)
-		}
-
-		dSpans := mc.getSpans()
-		// Expecting 0 spans to have been received by the original but now dead collector
-		if g, w := len(dSpans), 0; g != w {
-			t.Fatalf("Round #%d: Disconnected collector: spans: got %d want %d", j, g, w)
-		}
-
-		// Disconnect for the next try.
-		require.NoError(t, nmc.stop())
 	}
 }
 
@@ -298,9 +191,7 @@ func TestNew_collectorOnBadConnection(t *testing.T) {
 
 func TestNew_withEndpoint(t *testing.T) {
 	mc := runMockCollector(t)
-	defer func() {
-		_ = mc.stop()
-	}()
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint)
@@ -309,127 +200,64 @@ func TestNew_withEndpoint(t *testing.T) {
 
 func TestNew_withHeaders(t *testing.T) {
 	mc := runMockCollector(t)
-	defer func() {
-		_ = mc.stop()
-	}()
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint,
 		otlptracegrpc.WithHeaders(map[string]string{"header1": "value1"}))
+	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 	require.NoError(t, exp.ExportSpans(ctx, roSpans))
-
-	defer func() {
-		_ = exp.Shutdown(ctx)
-	}()
 
 	headers := mc.getHeaders()
 	require.Len(t, headers.Get("header1"), 1)
 	assert.Equal(t, "value1", headers.Get("header1")[0])
 }
 
-func TestNew_WithTimeout(t *testing.T) {
-	tts := []struct {
-		name    string
-		fn      func(exp *otlptrace.Exporter) error
-		timeout time.Duration
-		spans   int
-		code    codes.Code
-		delay   bool
-	}{
-		{
-			name: "Timeout Spans",
-			fn: func(exp *otlptrace.Exporter) error {
-				return exp.ExportSpans(context.Background(), roSpans)
-			},
-			timeout: time.Millisecond * 100,
-			code:    codes.DeadlineExceeded,
-			delay:   true,
-		},
+func TestExportSpansTimeoutHonored(t *testing.T) {
+	ctx, cancel := contextWithTimeout(context.Background(), t, 1*time.Minute)
+	t.Cleanup(cancel)
 
-		{
-			name: "No Timeout Spans",
-			fn: func(exp *otlptrace.Exporter) error {
-				return exp.ExportSpans(context.Background(), roSpans)
-			},
-			timeout: time.Minute,
-			spans:   1,
-			code:    codes.OK,
-		},
-	}
+	mc := runMockCollector(t)
+	exportBlock := make(chan struct{})
+	mc.traceSvc.exportBlock = exportBlock
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	for _, tt := range tts {
-		t.Run(tt.name, func(t *testing.T) {
+	exp := newGRPCExporter(
+		t,
+		ctx,
+		mc.endpoint,
+		otlptracegrpc.WithTimeout(1*time.Nanosecond),
+		otlptracegrpc.WithRetry(otlptracegrpc.RetryConfig{Enabled: false}),
+	)
+	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
-			mc := runMockCollector(t)
-			if tt.delay {
-				mc.traceSvc.delay = time.Second * 10
-			}
-			defer func() {
-				_ = mc.stop()
-			}()
+	err := exp.ExportSpans(ctx, roSpans)
+	// Release the export so everything is cleaned up on shutdown.
+	close(exportBlock)
 
-			ctx := context.Background()
-			exp := newGRPCExporter(t, ctx, mc.endpoint, otlptracegrpc.WithTimeout(tt.timeout), otlptracegrpc.WithRetry(otlptracegrpc.RetryConfig{Enabled: false}))
-			defer func() {
-				_ = exp.Shutdown(ctx)
-			}()
-
-			err := tt.fn(exp)
-
-			if tt.code == codes.OK {
-				require.NoError(t, err)
-			} else {
-				require.Error(t, err)
-			}
-
-			s := status.Convert(err)
-			require.Equal(t, tt.code, s.Code())
-
-			require.Len(t, mc.getSpans(), tt.spans)
-		})
-	}
+	require.Equal(t, codes.DeadlineExceeded, status.Convert(err).Code())
 }
 
-func TestNew_withInvalidSecurityConfiguration(t *testing.T) {
+func TestStartErrorInvalidSecurityConfiguration(t *testing.T) {
 	mc := runMockCollector(t)
-	defer func() {
-		_ = mc.stop()
-	}()
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	ctx := context.Background()
-	driver := otlptracegrpc.NewClient(otlptracegrpc.WithEndpoint(mc.endpoint))
-	exp, err := otlptrace.New(ctx, driver)
-	if err != nil {
-		t.Fatalf("failed to create a new collector exporter: %v", err)
-	}
-
-	err = exp.ExportSpans(ctx, roSpans)
-
-	expectedErr := fmt.Sprintf("traces exporter is disconnected from the server %s: grpc: no transport security set (use grpc.WithInsecure() explicitly or set credentials)", mc.endpoint)
-
-	require.Error(t, err)
-	require.Equal(t, expectedErr, err.Error())
-
-	defer func() {
-		_ = exp.Shutdown(ctx)
-	}()
+	client := otlptracegrpc.NewClient(otlptracegrpc.WithEndpoint(mc.endpoint))
+	err := client.Start(context.Background())
+	// https://github.com/grpc/grpc-go/blob/a671967dfbaab779d37fd7e597d9248f13806087/clientconn.go#L82
+	assert.EqualError(t, err, "grpc: no transport security set (use grpc.WithInsecure() explicitly or set credentials)")
 }
 
 func TestNew_withMultipleAttributeTypes(t *testing.T) {
 	mc := runMockCollector(t)
 
-	defer func() {
-		_ = mc.stop()
-	}()
-
 	<-time.After(5 * time.Millisecond)
 
-	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, mc.endpoint)
+	ctx, cancel := contextWithTimeout(context.Background(), t, 10*time.Second)
+	t.Cleanup(cancel)
 
-	defer func() {
-		_ = exp.Shutdown(ctx)
-	}()
+	exp := newGRPCExporter(t, ctx, mc.endpoint)
+	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
@@ -440,7 +268,7 @@ func TestNew_withMultipleAttributeTypes(t *testing.T) {
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	)
-	defer func() { _ = tp.Shutdown(ctx) }()
+	t.Cleanup(func() { require.NoError(t, tp.Shutdown(ctx)) })
 
 	tr := tp.Tracer("test-tracer")
 	testKvs := []attribute.KeyValue{
@@ -456,26 +284,20 @@ func TestNew_withMultipleAttributeTypes(t *testing.T) {
 
 	// Flush and close.
 	func() {
-		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		ctx, cancel := contextWithTimeout(ctx, t, 10*time.Second)
 		defer cancel()
-		if err := tp.Shutdown(ctx); err != nil {
-			t.Fatalf("failed to shut down a tracer provider: %v", err)
-		}
+		require.NoError(t, tp.Shutdown(ctx))
 	}()
 
 	// Wait >2 cycles.
 	<-time.After(40 * time.Millisecond)
 
 	// Now shutdown the exporter
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	if err := exp.Shutdown(ctx); err != nil {
-		t.Fatalf("failed to stop the exporter: %v", err)
-	}
+	require.NoError(t, exp.Shutdown(ctx))
 
 	// Shutdown the collector too so that we can begin
 	// verification checks of expected data back.
-	_ = mc.stop()
+	require.NoError(t, mc.stop())
 
 	// Now verify that we only got one span
 	rss := mc.getSpans()
@@ -546,39 +368,30 @@ func TestNew_withMultipleAttributeTypes(t *testing.T) {
 	}
 }
 
-func TestDisconnected(t *testing.T) {
-	ctx := context.Background()
-	// The endpoint is whatever, we want to be disconnected. But we
-	// setting a blocking connection, so dialing to the invalid
-	// endpoint actually fails.
-	exp := newGRPCExporter(t, ctx, "invalid",
-		otlptracegrpc.WithReconnectionPeriod(time.Hour),
+func TestStartErrorInvalidAddress(t *testing.T) {
+	client := otlptracegrpc.NewClient(
+		otlptracegrpc.WithInsecure(),
+		// Validate the connection in Start (which should return the error).
 		otlptracegrpc.WithDialOption(
 			grpc.WithBlock(),
 			grpc.FailOnNonTempDialError(true),
 		),
+		otlptracegrpc.WithEndpoint("invalid"),
+		otlptracegrpc.WithReconnectionPeriod(time.Hour),
 	)
-	defer func() {
-		assert.NoError(t, exp.Shutdown(ctx))
-	}()
-
-	assert.Error(t, exp.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan()))
+	err := client.Start(context.Background())
+	assert.EqualError(t, err, `connection error: desc = "transport: error while dialing: dial tcp: address invalid: missing port in address"`)
 }
 
 func TestEmptyData(t *testing.T) {
 	mc := runMockCollectorAtEndpoint(t, "localhost:56561")
-
-	defer func() {
-		_ = mc.stop()
-	}()
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
 	<-time.After(5 * time.Millisecond)
 
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint)
-	defer func() {
-		assert.NoError(t, exp.Shutdown(ctx))
-	}()
+	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
 	assert.NoError(t, exp.ExportSpans(ctx, nil))
 }
