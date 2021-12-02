@@ -52,7 +52,7 @@ type (
 	// Aggregator observes events and counts them in
 	// exponentially-spaced buckets.  It is configured with a
 	// maximum scale factor which determines resolution.  Scale is
-	// automatically adjusted to accomodate the range of input
+	// automatically adjusted to accommodate the range of input
 	// data.
 	Aggregator struct {
 		lock sync.Mutex

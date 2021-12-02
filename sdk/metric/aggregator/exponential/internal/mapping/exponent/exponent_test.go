@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/internal/mapping"
 )
 
