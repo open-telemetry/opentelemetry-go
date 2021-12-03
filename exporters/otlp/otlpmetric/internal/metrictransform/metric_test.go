@@ -436,7 +436,6 @@ func TestExponentialHistogramDataPoints(t *testing.T) {
 		values      []float64
 		temporality aggregation.Temporality
 		numberKind  number.Kind
-		expectSum   number.Number
 		expect      *metricpb.ExponentialHistogram
 	}
 	useAttrs := []attribute.KeyValue{
@@ -452,7 +451,6 @@ func TestExponentialHistogramDataPoints(t *testing.T) {
 			[]float64{},
 			aggregation.DeltaTemporality,
 			number.Float64Kind,
-			0,
 			&metricpb.ExponentialHistogram{
 				AggregationTemporality: otelDelta,
 				DataPoints: []*metricpb.ExponentialHistogramDataPoint{{
@@ -470,7 +468,6 @@ func TestExponentialHistogramDataPoints(t *testing.T) {
 			[]float64{1, 2, 4, 8},
 			aggregation.DeltaTemporality,
 			number.Float64Kind,
-			0,
 			&metricpb.ExponentialHistogram{
 				AggregationTemporality: otelDelta,
 				DataPoints: []*metricpb.ExponentialHistogramDataPoint{{
@@ -495,7 +492,6 @@ func TestExponentialHistogramDataPoints(t *testing.T) {
 			[]float64{2, 3, -100},
 			aggregation.DeltaTemporality,
 			number.Float64Kind,
-			0,
 			&metricpb.ExponentialHistogram{
 				AggregationTemporality: otelDelta,
 				DataPoints: []*metricpb.ExponentialHistogramDataPoint{{
@@ -529,7 +525,6 @@ func TestExponentialHistogramDataPoints(t *testing.T) {
 			[]float64{-0.9343, -0.9342, -0.9341, -0.9338, -0.9337, -0.9336, 0, 0, 0, 0},
 			aggregation.DeltaTemporality,
 			number.Float64Kind,
-			0,
 			&metricpb.ExponentialHistogram{
 				AggregationTemporality: otelDelta,
 				DataPoints: []*metricpb.ExponentialHistogramDataPoint{{
@@ -557,7 +552,6 @@ func TestExponentialHistogramDataPoints(t *testing.T) {
 			[]float64{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
 			aggregation.CumulativeTemporality,
 			number.Float64Kind,
-			0,
 			&metricpb.ExponentialHistogram{
 				AggregationTemporality: otelCumulative,
 				DataPoints: []*metricpb.ExponentialHistogramDataPoint{{
