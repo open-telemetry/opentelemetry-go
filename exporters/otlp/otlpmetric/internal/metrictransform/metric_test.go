@@ -549,6 +549,32 @@ func TestExponentialHistogramDataPoints(t *testing.T) {
 				}},
 			},
 		},
+		{
+			"integers cumulative",
+			// Scale=-1 has base 4,
+			// index 0 holds values [1, 4), has count 2
+			// index 1 holds values [4, 15), has count 12
+			[]float64{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
+			aggregation.CumulativeTemporality,
+			number.Float64Kind,
+			0,
+			&metricpb.ExponentialHistogram{
+				AggregationTemporality: otelCumulative,
+				DataPoints: []*metricpb.ExponentialHistogramDataPoint{{
+					Attributes:        expectAttrs,
+					StartTimeUnixNano: uint64(intervalStart.UnixNano()),
+					TimeUnixNano:      uint64(intervalEnd.UnixNano()),
+					Count:             14,
+					ZeroCount:         0,
+					Sum:               119,
+					Scale:             -1,
+					Positive: &metricpb.ExponentialHistogramDataPoint_Buckets{
+						Offset:       0,
+						BucketCounts: []uint64{2, 12},
+					},
+				}},
+			},
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			desc := metrictest.NewDescriptor("ignore", sdkapi.HistogramInstrumentKind, test.numberKind)
