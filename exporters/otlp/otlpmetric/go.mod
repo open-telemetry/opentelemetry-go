@@ -7,6 +7,7 @@ require (
 	github.com/google/go-cmp v0.5.6
 	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/otel v1.2.0
+	go.opentelemetry.io/otel/exporters/otlp/internal/retry v0.0.0-00010101000000-000000000000
 	go.opentelemetry.io/otel/metric v0.25.0
 	go.opentelemetry.io/otel/sdk v1.2.0
 	go.opentelemetry.io/otel/sdk/export/metric v0.25.0
@@ -19,8 +20,6 @@ require (
 replace go.opentelemetry.io/otel => ../../..
 
 replace go.opentelemetry.io/otel/sdk => ../../../sdk
-
-replace go.opentelemetry.io/otel/exporters/otlp => ../
 
 replace go.opentelemetry.io/otel/metric => ../../../metric
 
@@ -49,6 +48,8 @@ replace go.opentelemetry.io/otel/example/prom-collector => ../../../example/prom
 replace go.opentelemetry.io/otel/example/prometheus => ../../../example/prometheus
 
 replace go.opentelemetry.io/otel/example/zipkin => ../../../example/zipkin
+
+replace go.opentelemetry.io/otel/exporters/otlp/internal/retry => ../internal/retry
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric => ./
 
