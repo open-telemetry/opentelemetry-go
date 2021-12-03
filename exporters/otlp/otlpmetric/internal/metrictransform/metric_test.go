@@ -30,6 +30,7 @@ import (
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
@@ -427,4 +428,148 @@ func TestRecordAggregatorUnexpectedErrors(t *testing.T) {
 	require.Error(t, err)
 	require.Nil(t, mpb)
 	require.True(t, errors.Is(err, errEx))
+}
+
+func TestExponentialHistogramDataPoints(t *testing.T) {
+	type testCase struct {
+		name        string
+		values      []float64
+		temporality aggregation.Temporality
+		numberKind  number.Kind
+		expectSum   number.Number
+		expect      *metricpb.ExponentialHistogram
+	}
+	useAttrs := []attribute.KeyValue{
+		attribute.String("one", "1"),
+	}
+	expectAttrs := []*commonpb.KeyValue{
+		{Key: "one", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: "1"}}},
+	}
+
+	for _, test := range []testCase{
+		{
+			"empty",
+			[]float64{},
+			aggregation.DeltaTemporality,
+			number.Float64Kind,
+			0,
+			&metricpb.ExponentialHistogram{
+				AggregationTemporality: otelDelta,
+				DataPoints: []*metricpb.ExponentialHistogramDataPoint{{
+					Attributes:        expectAttrs,
+					StartTimeUnixNano: uint64(intervalStart.UnixNano()),
+					TimeUnixNano:      uint64(intervalEnd.UnixNano()),
+					Count:             0,
+					ZeroCount:         0,
+					Sum:               0,
+				}},
+			},
+		},
+		{
+			"positive",
+			[]float64{1, 2, 4, 8},
+			aggregation.DeltaTemporality,
+			number.Float64Kind,
+			0,
+			&metricpb.ExponentialHistogram{
+				AggregationTemporality: otelDelta,
+				DataPoints: []*metricpb.ExponentialHistogramDataPoint{{
+					Attributes:        expectAttrs,
+					StartTimeUnixNano: uint64(intervalStart.UnixNano()),
+					TimeUnixNano:      uint64(intervalEnd.UnixNano()),
+
+					// 1..8 spans 3 orders of magnitide, max-size 2, thus scale=-1
+					Scale:     -1,
+					Count:     4,
+					ZeroCount: 0,
+					Sum:       15,
+					Positive: &metricpb.ExponentialHistogramDataPoint_Buckets{
+						Offset:       0,
+						BucketCounts: []uint64{2, 2},
+					},
+				}},
+			},
+		},
+		{
+			"positive_and_negative",
+			[]float64{2, 3, -100},
+			aggregation.DeltaTemporality,
+			number.Float64Kind,
+			0,
+			&metricpb.ExponentialHistogram{
+				AggregationTemporality: otelDelta,
+				DataPoints: []*metricpb.ExponentialHistogramDataPoint{{
+					Attributes:        expectAttrs,
+					StartTimeUnixNano: uint64(intervalStart.UnixNano()),
+					TimeUnixNano:      uint64(intervalEnd.UnixNano()),
+
+					// Scale 1 has boundaries at 1, sqrt(2), 2, 2*sqrt(2), ...
+					Scale:     1,
+					Count:     3,
+					ZeroCount: 0,
+					Sum:       -95,
+					Positive: &metricpb.ExponentialHistogramDataPoint_Buckets{
+						// Index 2 => 2, Index 3 => 2*sqrt(2)
+						Offset:       2,
+						BucketCounts: []uint64{1, 1},
+					},
+					Negative: &metricpb.ExponentialHistogramDataPoint_Buckets{
+						// Index 13 = 2^floor(13/2) * sqrt(2) ~= 90
+						Offset:       13,
+						BucketCounts: []uint64{1},
+					},
+				}},
+			},
+		},
+		{
+			// Note: (2**(2**-10))**-100 = 0.9345
+			// Note: (2**(2**-10))**-101 = 0.9339
+			// Note: (2**(2**-10))**-102 = 0.9333
+			"negative and zero",
+			[]float64{-0.9343, -0.9342, -0.9341, -0.9338, -0.9337, -0.9336, 0, 0, 0, 0},
+			aggregation.DeltaTemporality,
+			number.Float64Kind,
+			0,
+			&metricpb.ExponentialHistogram{
+				AggregationTemporality: otelDelta,
+				DataPoints: []*metricpb.ExponentialHistogramDataPoint{{
+					Attributes:        expectAttrs,
+					StartTimeUnixNano: uint64(intervalStart.UnixNano()),
+					TimeUnixNano:      uint64(intervalEnd.UnixNano()),
+
+					// Scale 1 has boundaries at 1, sqrt(2), 2, 2*sqrt(2), ...
+					Scale:     10,
+					Count:     10,
+					ZeroCount: 4,
+					Sum:       -0.9343 + -0.9342 + -0.9341 + -0.9338 + -0.9337 + -0.9336,
+					Negative: &metricpb.ExponentialHistogramDataPoint_Buckets{
+						Offset:       -102,
+						BucketCounts: []uint64{3, 3},
+					},
+				}},
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			desc := metrictest.NewDescriptor("ignore", sdkapi.HistogramInstrumentKind, test.numberKind)
+			labels := attribute.NewSet(useAttrs...)
+			agg := &exponential.New(1, &desc, exponential.WithMaxSize(2))[0]
+
+			for _, value := range test.values {
+				var num number.Number
+				if test.numberKind == number.Float64Kind {
+					num = number.NewFloat64Number(value)
+				} else {
+					num = number.NewInt64Number(int64(value))
+				}
+				assert.NoError(t, agg.Update(context.Background(), num, &desc))
+			}
+
+			record := export.NewRecord(&desc, &labels, agg, intervalStart, intervalEnd)
+
+			if m, err := exponentialHistogramPoint(record, test.temporality, agg); assert.NoError(t, err) {
+				assert.Equal(t, test.expect, m.GetExponentialHistogram())
+			}
+		})
+	}
 }
