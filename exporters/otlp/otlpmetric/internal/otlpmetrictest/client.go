@@ -55,6 +55,14 @@ func initializeExporter(t *testing.T, client otlpmetric.Client) *otlpmetric.Expo
 }
 
 func testClientStopHonorsTimeout(t *testing.T, client otlpmetric.Client) {
+	t.Cleanup(func() {
+		// The test is looking for a failed shut down. Call Stop a second time
+		// with an un-expired context to give the client a second chance at
+		// cleaning up. There is not guarantee from the Client interface this
+		// will succeed, therefore, no need to check the error (just give it a
+		// best try).
+		_ = client.Stop(context.Background())
+	})
 	e := initializeExporter(t, client)
 
 	innerCtx, innerCancel := context.WithTimeout(context.Background(), time.Microsecond)
@@ -68,6 +76,14 @@ func testClientStopHonorsTimeout(t *testing.T, client otlpmetric.Client) {
 }
 
 func testClientStopHonorsCancel(t *testing.T, client otlpmetric.Client) {
+	t.Cleanup(func() {
+		// The test is looking for a failed shut down. Call Stop a second time
+		// with an un-expired context to give the client a second chance at
+		// cleaning up. There is not guarantee from the Client interface this
+		// will succeed, therefore, no need to check the error (just give it a
+		// best try).
+		_ = client.Stop(context.Background())
+	})
 	e := initializeExporter(t, client)
 
 	ctx, innerCancel := context.WithCancel(context.Background())
