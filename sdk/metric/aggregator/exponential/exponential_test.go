@@ -140,9 +140,9 @@ func centerVal(mapper mapping.Mapping, x int32) float64 {
 func TestAlternatingGrowth1(t *testing.T) {
 	ctx := context.Background()
 	agg := &New(1, &testDescriptor, WithMaxSize(4))[0]
-	agg.Update(ctx, plusOne, &testDescriptor)
-	agg.Update(ctx, number.NewFloat64Number(2), &testDescriptor)
-	agg.Update(ctx, number.NewFloat64Number(0.5), &testDescriptor)
+	require.NoError(t, agg.Update(ctx, plusOne, &testDescriptor))
+	require.NoError(t, agg.Update(ctx, number.NewFloat64Number(2), &testDescriptor))
+	require.NoError(t, agg.Update(ctx, number.NewFloat64Number(0.5), &testDescriptor))
 
 	require.Equal(t, int32(-1), agg.positive().Offset())
 	require.Equal(t, int32(0), agg.scale())
@@ -152,12 +152,12 @@ func TestAlternatingGrowth1(t *testing.T) {
 func TestAlternatingGrowth2(t *testing.T) {
 	ctx := context.Background()
 	agg := &New(1, &testDescriptor, WithMaxSize(4))[0]
-	agg.Update(ctx, plusOne, &testDescriptor)
-	agg.Update(ctx, plusOne, &testDescriptor)
-	agg.Update(ctx, number.NewFloat64Number(2), &testDescriptor)
-	agg.Update(ctx, number.NewFloat64Number(0.5), &testDescriptor)
-	agg.Update(ctx, number.NewFloat64Number(4), &testDescriptor)
-	agg.Update(ctx, number.NewFloat64Number(0.25), &testDescriptor)
+	require.NoError(t, agg.Update(ctx, plusOne, &testDescriptor))
+	require.NoError(t, agg.Update(ctx, plusOne, &testDescriptor))
+	require.NoError(t, agg.Update(ctx, number.NewFloat64Number(2), &testDescriptor))
+	require.NoError(t, agg.Update(ctx, number.NewFloat64Number(0.5), &testDescriptor))
+	require.NoError(t, agg.Update(ctx, number.NewFloat64Number(4), &testDescriptor))
+	require.NoError(t, agg.Update(ctx, number.NewFloat64Number(0.25), &testDescriptor))
 
 	require.Equal(t, int32(-1), agg.positive().Offset())
 	require.Equal(t, int32(-1), agg.scale())
@@ -177,14 +177,14 @@ func TestScaleNegOneCentered(t *testing.T) {
 	} {
 		t.Run(fmt.Sprint(j), func(t *testing.T) {
 			ctx := context.Background()
-			agg := New(1, &testDescriptor, WithMaxSize(2))[0]
+			agg := &New(1, &testDescriptor, WithMaxSize(2))[0]
 
-			agg.Update(ctx, number.NewFloat64Number(order[0]), &testDescriptor)
-			agg.Update(ctx, number.NewFloat64Number(order[1]), &testDescriptor)
+			require.NoError(t, agg.Update(ctx, number.NewFloat64Number(order[0]), &testDescriptor))
+			require.NoError(t, agg.Update(ctx, number.NewFloat64Number(order[1]), &testDescriptor))
 
 			// Enter order[2]: scale set to -1, expect counts[0] == 1 (the
 			// (1/2), counts[1] == 2 (the 1 and 2).
-			agg.Update(ctx, number.NewFloat64Number(order[2]), &testDescriptor)
+			require.NoError(t, agg.Update(ctx, number.NewFloat64Number(order[2]), &testDescriptor))
 			require.Equal(t, int32(-1), agg.scale())
 			require.Equal(t, int32(-1), agg.positive().Offset())
 			require.Equal(t, uint32(2), agg.positive().Len())
@@ -207,14 +207,14 @@ func TestScaleNegOnePositive(t *testing.T) {
 	} {
 		t.Run(fmt.Sprint(j), func(t *testing.T) {
 			ctx := context.Background()
-			agg := New(1, &testDescriptor, WithMaxSize(2))[0]
+			agg := &New(1, &testDescriptor, WithMaxSize(2))[0]
 
-			agg.Update(ctx, number.NewFloat64Number(order[0]), &testDescriptor)
-			agg.Update(ctx, number.NewFloat64Number(order[1]), &testDescriptor)
+			require.NoError(t, agg.Update(ctx, number.NewFloat64Number(order[0]), &testDescriptor))
+			require.NoError(t, agg.Update(ctx, number.NewFloat64Number(order[1]), &testDescriptor))
 
 			// Enter order[2]: scale set to -1, expect counts[0] == 1 (the
 			// 1 and 2), counts[1] == 2 (the 4).
-			agg.Update(ctx, number.NewFloat64Number(order[2]), &testDescriptor)
+			require.NoError(t, agg.Update(ctx, number.NewFloat64Number(order[2]), &testDescriptor))
 			require.Equal(t, int32(-1), agg.scale())
 			require.Equal(t, int32(0), agg.positive().Offset())
 			require.Equal(t, uint32(2), agg.positive().Len())
@@ -237,14 +237,14 @@ func TestScaleNegOneNegative(t *testing.T) {
 	} {
 		t.Run(fmt.Sprint(j), func(t *testing.T) {
 			ctx := context.Background()
-			agg := New(1, &testDescriptor, WithMaxSize(2))[0]
+			agg := &New(1, &testDescriptor, WithMaxSize(2))[0]
 
-			agg.Update(ctx, number.NewFloat64Number(order[0]), &testDescriptor)
-			agg.Update(ctx, number.NewFloat64Number(order[1]), &testDescriptor)
+			require.NoError(t, agg.Update(ctx, number.NewFloat64Number(order[0]), &testDescriptor))
+			require.NoError(t, agg.Update(ctx, number.NewFloat64Number(order[1]), &testDescriptor))
 
 			// Enter order[2]: scale set to -1, expect counts[0] == 2 (the
 			// 1/4 and 1/2, counts[1] == 2 (the 1).
-			agg.Update(ctx, number.NewFloat64Number(order[2]), &testDescriptor)
+			require.NoError(t, agg.Update(ctx, number.NewFloat64Number(order[2]), &testDescriptor))
 			require.Equal(t, int32(-1), agg.scale())
 			require.Equal(t, int32(-1), agg.positive().Offset())
 			require.Equal(t, uint32(2), agg.positive().Len())
@@ -271,7 +271,7 @@ func TestExhaustiveSmall(t *testing.T) {
 func testExhaustive(t *testing.T, maxSize, offset, initScale int32) {
 	for step := maxSize; step < 4*maxSize; step++ {
 		ctx := context.Background()
-		agg := New(1, &testDescriptor, WithMaxSize(maxSize))[0]
+		agg := &New(1, &testDescriptor, WithMaxSize(maxSize))[0]
 		mapper := newMapping(initScale)
 
 		minVal := centerVal(mapper, offset)
@@ -280,14 +280,14 @@ func testExhaustive(t *testing.T, maxSize, offset, initScale int32) {
 
 		for i := int32(0); i < maxSize; i++ {
 			value := centerVal(mapper, offset+i)
-			agg.Update(ctx, number.NewFloat64Number(value), &testDescriptor)
+			require.NoError(t, agg.Update(ctx, number.NewFloat64Number(value), &testDescriptor))
 			sum += value
 		}
 
 		require.Equal(t, initScale, agg.scale())
 		require.Equal(t, offset, agg.positive().Offset())
 
-		agg.Update(ctx, number.NewFloat64Number(maxVal), &testDescriptor)
+		require.NoError(t, agg.Update(ctx, number.NewFloat64Number(maxVal), &testDescriptor))
 		sum += maxVal
 
 		// The zeroth bucket is not empty.
@@ -369,10 +369,10 @@ func TestMergeSimpleOdd(t *testing.T) {
 		n1 := number.NewFloat64Number(f1)
 		n2 := number.NewFloat64Number(f2)
 
-		aggs[0].Update(ctx, n1, &testDescriptor)
-		aggs[1].Update(ctx, n2, &testDescriptor)
-		aggs[2].Update(ctx, n1, &testDescriptor)
-		aggs[2].Update(ctx, n2, &testDescriptor)
+		require.NoError(t, aggs[0].Update(ctx, n1, &testDescriptor))
+		require.NoError(t, aggs[1].Update(ctx, n2, &testDescriptor))
+		require.NoError(t, aggs[2].Update(ctx, n1, &testDescriptor))
+		require.NoError(t, aggs[2].Update(ctx, n2, &testDescriptor))
 	}
 
 	require.Equal(t, uint64(4), aggs[0].state.count)
@@ -461,15 +461,15 @@ func testMergeExhaustive(t *testing.T, a, b []float64, size int32, incr uint64) 
 	cHist := &aggs[2]
 
 	for _, av := range a {
-		aHist.UpdateByIncr(ctx, number.NewFloat64Number(av), incr, &testDescriptor)
-		cHist.UpdateByIncr(ctx, number.NewFloat64Number(av), incr, &testDescriptor)
+		require.NoError(t, aHist.UpdateByIncr(ctx, number.NewFloat64Number(av), incr, &testDescriptor))
+		require.NoError(t, cHist.UpdateByIncr(ctx, number.NewFloat64Number(av), incr, &testDescriptor))
 	}
 	for _, bv := range b {
-		bHist.UpdateByIncr(ctx, number.NewFloat64Number(bv), incr, &testDescriptor)
-		cHist.UpdateByIncr(ctx, number.NewFloat64Number(bv), incr, &testDescriptor)
+		require.NoError(t, bHist.UpdateByIncr(ctx, number.NewFloat64Number(bv), incr, &testDescriptor))
+		require.NoError(t, cHist.UpdateByIncr(ctx, number.NewFloat64Number(bv), incr, &testDescriptor))
 	}
 
-	aHist.Merge(bHist, &testDescriptor)
+	require.NoError(t, aHist.Merge(bHist, &testDescriptor))
 
 	// aHist and cHist should be equivalent
 	requireEqual(t, cHist, aHist)
@@ -587,14 +587,14 @@ func TestIntegerAggregation(t *testing.T) {
 	require.Equal(t, 2*expect, intSumNoError(t, agg))
 
 	// Reset!  Repeat with negative.
-	agg.SynchronizedMove(nil, &intDescriptor)
-	alt.SynchronizedMove(nil, &intDescriptor)
+	require.NoError(t, agg.SynchronizedMove(nil, &intDescriptor))
+	require.NoError(t, alt.SynchronizedMove(nil, &intDescriptor))
 
 	expect = int64(0)
 	for i := int64(1); i < 256; i++ {
 		expect -= i
-		agg.Update(ctx, number.NewInt64Number(-i), &intDescriptor)
-		alt.Update(ctx, number.NewInt64Number(-i), &intDescriptor)
+		require.NoError(t, agg.Update(ctx, number.NewInt64Number(-i), &intDescriptor))
+		require.NoError(t, alt.Update(ctx, number.NewInt64Number(-i), &intDescriptor))
 	}
 
 	require.Equal(t, expect, intSumNoError(t, agg))
@@ -635,7 +635,7 @@ func TestReset(t *testing.T) {
 		0x200000000,
 	} {
 		t.Run(fmt.Sprint(incr), func(t *testing.T) {
-			agg.SynchronizedMove(nil, &testDescriptor)
+			require.NoError(t, agg.SynchronizedMove(nil, &testDescriptor))
 
 			expect := 0.0
 			for i := int64(1); i < 256; i++ {
@@ -792,14 +792,14 @@ func TestFixedLimits(t *testing.T) {
 		require.Equal(t, expectScale, scale)
 
 		// Update: average value
-		agg.Update(ctx, number.NewFloat64Number((test.min+test.max)/2), &testDescriptor)
+		require.NoError(t, agg.Update(ctx, number.NewFloat64Number((test.min+test.max)/2), &testDescriptor))
 
 		scale, _ = agg.Scale()
 		require.Equal(t, int32(expectScale), scale)
 
 		// Update: min and max values
-		agg.Update(ctx, number.NewFloat64Number(test.min), &testDescriptor)
-		agg.Update(ctx, number.NewFloat64Number(test.max), &testDescriptor)
+		require.NoError(t, agg.Update(ctx, number.NewFloat64Number(test.min), &testDescriptor))
+		require.NoError(t, agg.Update(ctx, number.NewFloat64Number(test.max), &testDescriptor))
 
 		scale, _ = agg.Scale()
 		require.Equal(t, int32(expectScale), scale)

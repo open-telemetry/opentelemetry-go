@@ -29,11 +29,6 @@ type expectMapping struct {
 	index int32
 }
 
-type expectRangeError struct {
-	scale int32
-	value float64
-}
-
 func TestInvalidScale(t *testing.T) {
 	_, err := NewMapping(-1)
 	require.Error(t, err)

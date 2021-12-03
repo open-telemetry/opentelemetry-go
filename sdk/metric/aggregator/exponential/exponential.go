@@ -194,7 +194,7 @@ func (a *Aggregator) Aggregation() aggregation.Aggregation {
 }
 
 // Kind returns aggregation.ExponentialHistogramKind.
-func (c *Aggregator) Kind() aggregation.Kind {
+func (a *Aggregator) Kind() aggregation.Kind {
 	return aggregation.ExponentialHistogramKind
 }
 
