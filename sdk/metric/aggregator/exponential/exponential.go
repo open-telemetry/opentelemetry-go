@@ -267,11 +267,13 @@ func (a *Aggregator) UpdateByIncr(_ context.Context, num number.Number, incr uin
 		b = &a.state.negative
 	}
 
-	if a.minValue != 0 && value < a.minValue {
-		return mapping.ErrUnderflow
-	}
-	if a.maxValue != 0 && value > a.maxValue {
-		return mapping.ErrOverflow
+	if a.hasLimits() {
+		if value < a.minValue {
+			return mapping.ErrUnderflow
+		}
+		if value > a.maxValue {
+			return mapping.ErrOverflow
+		}
 	}
 
 	a.state.count += incr
@@ -307,7 +309,15 @@ func (a *Aggregator) Sum() (number.Number, error) {
 
 // Scale implements aggregation.ExponentialHistogram.
 func (a *Aggregator) Scale() (int32, error) {
+	if a.hasAllZeros() && !a.hasLimits() {
+		// all zeros!  scale doesn't matter if no limits, use zero.
+		return 0, nil
+	}
 	return a.scale(), nil
+}
+
+func (a *Aggregator) hasAllZeros() bool {
+	return a.state.count == a.state.zeroCount
 }
 
 func (a *Aggregator) scale() int32 {
@@ -383,13 +393,21 @@ func (b *buckets) At(pos0 uint32) uint64 {
 }
 
 // clearState resets a histogram to the empty state without changing
-// its scale or backing array.
+// backing array.  Scale is reset if there are no range limits.
 func (a *Aggregator) clearState() {
 	a.state.positive.clearState()
 	a.state.negative.clearState()
 	a.state.sum = 0
 	a.state.count = 0
 	a.state.zeroCount = 0
+
+	if !a.hasLimits() {
+		a.state.mapping = newMapping(logarithm.MaxScale)
+	}
+}
+
+func (a *Aggregator) hasLimits() bool {
+	return a.minValue != 0
 }
 
 // clearState zeros the backing array.

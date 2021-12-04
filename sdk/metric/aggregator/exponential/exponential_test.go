@@ -637,6 +637,9 @@ func TestReset(t *testing.T) {
 		t.Run(fmt.Sprint(incr), func(t *testing.T) {
 			require.NoError(t, agg.SynchronizedMove(nil, &testDescriptor))
 
+			// Note that scale is zero b/c no values
+			require.Equal(t, int32(0), scaleNoError(t, agg))
+
 			expect := 0.0
 			for i := int64(1); i < 256; i++ {
 				expect += float64(i) * float64(incr)
@@ -684,7 +687,7 @@ func TestMove(t *testing.T) {
 	require.Equal(t, 0.0, floatSumNoError(t, agg))
 	require.Equal(t, uint64(0), countNoError(t, agg))
 	require.Equal(t, uint64(0), zeroCountNoError(t, agg))
-	require.Equal(t, logarithm.MaxScale, scaleNoError(t, agg))
+	require.Equal(t, int32(0), scaleNoError(t, agg))
 
 	// cpy is as expected
 	require.Equal(t, expect, floatSumNoError(t, cpy))

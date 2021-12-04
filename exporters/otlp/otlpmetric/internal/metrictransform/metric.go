@@ -531,6 +531,11 @@ func exponentialHistogramPoint(record export.Record, temporality aggregation.Tem
 		return nil, err
 	}
 
+	scale, err := a.Scale()
+	if err != nil {
+		return nil, err
+	}
+
 	point := &metricpb.ExponentialHistogramDataPoint{
 		Attributes:        Iterator(labels.Iter()),
 		StartTimeUnixNano: toNanos(record.StartTime()),
@@ -538,15 +543,7 @@ func exponentialHistogramPoint(record export.Record, temporality aggregation.Tem
 		Count:             count,
 		Sum:               sum.CoerceToFloat64(desc.NumberKind()),
 		ZeroCount:         zeros,
-	}
-
-	// Avoid setting Scale if there are no non-zero values.
-	if count != zeros {
-		scale, err := a.Scale()
-		if err != nil {
-			return nil, err
-		}
-		point.Scale = scale
+		Scale:             scale, // Note: will be zero if all zeros.
 	}
 
 	if pos, err := a.Positive(); pos != nil && err == nil && pos.Len() != 0 {
