@@ -20,7 +20,11 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/encoding/gzip"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/retry"
 )
 
 const (
@@ -37,16 +41,6 @@ const (
 	// DefaultTimeout is a default max waiting time for the backend to process
 	// each span or metrics batch.
 	DefaultTimeout time.Duration = 10 * time.Second
-)
-
-var (
-	// defaultRetrySettings is a default settings for the retry policy.
-	defaultRetrySettings = RetrySettings{
-		Enabled:         true,
-		InitialInterval: 5 * time.Second,
-		MaxInterval:     30 * time.Second,
-		MaxElapsedTime:  time.Minute,
-	}
 )
 
 type (
@@ -67,16 +61,13 @@ type (
 		// Signal specific configurations
 		Metrics SignalConfig
 
-		// HTTP configurations
-		MaxAttempts int
-		Backoff     time.Duration
+		RetryConfig retry.Config
 
 		// gRPC configurations
 		ReconnectionPeriod time.Duration
 		ServiceConfig      string
 		DialOptions        []grpc.DialOption
 		GRPCConn           *grpc.ClientConn
-		RetrySettings      RetrySettings
 	}
 )
 
@@ -88,10 +79,44 @@ func NewDefaultConfig() Config {
 			Compression: NoCompression,
 			Timeout:     DefaultTimeout,
 		},
-		RetrySettings: defaultRetrySettings,
+		RetryConfig: retry.DefaultConfig,
 	}
 
 	return c
+}
+
+// NewGRPCConfig returns a new Config with all settings applied from opts and
+// any unset setting using the default gRPC config values.
+func NewGRPCConfig(opts ...GRPCOption) Config {
+	cfg := NewDefaultConfig()
+	ApplyGRPCEnvConfigs(&cfg)
+	for _, opt := range opts {
+		opt.ApplyGRPCOption(&cfg)
+	}
+
+	if cfg.ServiceConfig != "" {
+		cfg.DialOptions = append(cfg.DialOptions, grpc.WithDefaultServiceConfig(cfg.ServiceConfig))
+	}
+	if cfg.Metrics.GRPCCredentials != nil {
+		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(cfg.Metrics.GRPCCredentials))
+	} else if cfg.Metrics.Insecure {
+		cfg.DialOptions = append(cfg.DialOptions, grpc.WithInsecure())
+	}
+	if cfg.Metrics.Compression == GzipCompression {
+		cfg.DialOptions = append(cfg.DialOptions, grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
+	}
+	if len(cfg.DialOptions) != 0 {
+		cfg.DialOptions = append(cfg.DialOptions, cfg.DialOptions...)
+	}
+	if cfg.ReconnectionPeriod != 0 {
+		p := grpc.ConnectParams{
+			Backoff:           backoff.DefaultConfig,
+			MinConnectTimeout: cfg.ReconnectionPeriod,
+		}
+		cfg.DialOptions = append(cfg.DialOptions, grpc.WithConnectParams(p))
+	}
+
+	return cfg
 }
 
 type (
@@ -218,9 +243,9 @@ func WithURLPath(urlPath string) GenericOption {
 	})
 }
 
-func WithRetry(settings RetrySettings) GenericOption {
+func WithRetry(rc retry.Config) GenericOption {
 	return newGenericOption(func(cfg *Config) {
-		cfg.RetrySettings = settings
+		cfg.RetryConfig = rc
 	})
 }
 
@@ -253,17 +278,5 @@ func WithHeaders(headers map[string]string) GenericOption {
 func WithTimeout(duration time.Duration) GenericOption {
 	return newGenericOption(func(cfg *Config) {
 		cfg.Metrics.Timeout = duration
-	})
-}
-
-func WithMaxAttempts(maxAttempts int) GenericOption {
-	return newGenericOption(func(cfg *Config) {
-		cfg.MaxAttempts = maxAttempts
-	})
-}
-
-func WithBackoff(duration time.Duration) GenericOption {
-	return newGenericOption(func(cfg *Config) {
-		cfg.Backoff = duration
 	})
 }
