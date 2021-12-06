@@ -156,18 +156,6 @@ func TestStdoutLastValueFormat(t *testing.T) {
 	require.Equal(t, `[{"Name":"name.lastvalue{R=V,instrumentation.name=test,A=B,C=D}","Last":123.456}]`, fix.Output())
 }
 
-func TestStdoutMinMaxSumCount(t *testing.T) {
-	fix := newFixture(t)
-
-	counter := metric.Must(fix.meter).NewFloat64Counter("name.minmaxsumcount")
-	counter.Add(fix.ctx, 123.456, attribute.String("A", "B"), attribute.String("C", "D"))
-	counter.Add(fix.ctx, 876.543, attribute.String("A", "B"), attribute.String("C", "D"))
-
-	require.NoError(t, fix.cont.Stop(fix.ctx))
-
-	require.Equal(t, `[{"Name":"name.minmaxsumcount{R=V,instrumentation.name=test,A=B,C=D}","Min":123.456,"Max":876.543,"Sum":999.999,"Count":2}]`, fix.Output())
-}
-
 func TestStdoutHistogramFormat(t *testing.T) {
 	fix := newFixture(t, stdoutmetric.WithPrettyPrint())
 
@@ -201,7 +189,6 @@ func TestStdoutNoData(t *testing.T) {
 	}
 
 	runTwoAggs("lastvalue")
-	runTwoAggs("minmaxsumcount")
 }
 
 func TestStdoutResource(t *testing.T) {

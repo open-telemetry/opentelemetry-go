@@ -37,8 +37,6 @@ var _ exportmetric.Exporter = &metricExporter{}
 
 type line struct {
 	Name      string      `json:"Name"`
-	Min       interface{} `json:"Min,omitempty"`
-	Max       interface{} `json:"Max,omitempty"`
 	Sum       interface{} `json:"Sum,omitempty"`
 	Count     interface{} `json:"Count,omitempty"`
 	LastValue interface{} `json:"Last,omitempty"`
@@ -83,26 +81,6 @@ func (e *metricExporter) Export(_ context.Context, res *resource.Resource, reade
 					return err
 				}
 				expose.Sum = value.AsInterface(kind)
-			}
-
-			if mmsc, ok := agg.(aggregation.MinMaxSumCount); ok {
-				count, err := mmsc.Count()
-				if err != nil {
-					return err
-				}
-				expose.Count = count
-
-				max, err := mmsc.Max()
-				if err != nil {
-					return err
-				}
-				expose.Max = max.AsInterface(kind)
-
-				min, err := mmsc.Min()
-				if err != nil {
-					return err
-				}
-				expose.Min = min.AsInterface(kind)
 			} else if lv, ok := agg.(aggregation.LastValue); ok {
 				value, timestamp, err := lv.LastValue()
 				if err != nil {

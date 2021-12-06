@@ -31,6 +31,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Remove the metric Processor's ability to convert cumulative to delta aggregation temporality. (#2350)
 - Remove the metric Bound Instruments interface and implementations. (#2399)
+- Remove the metric MinMaxSumCount kind aggregation and the corresponding OTLP export path. (#2423)
 
 ## [1.2.0] - 2021-11-12
 
