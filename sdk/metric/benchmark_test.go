@@ -303,16 +303,6 @@ func BenchmarkGaugeObserverObservationFloat64(b *testing.B) {
 	fix.accumulator.Collect(ctx)
 }
 
-// MaxSumCount
-
-func BenchmarkInt64MaxSumCountAdd(b *testing.B) {
-	benchmarkInt64HistogramAdd(b, "int64.minmaxsumcount")
-}
-
-func BenchmarkFloat64MaxSumCountAdd(b *testing.B) {
-	benchmarkFloat64HistogramAdd(b, "float64.minmaxsumcount")
-}
-
 // Exact
 
 func BenchmarkInt64ExactAdd(b *testing.B) {

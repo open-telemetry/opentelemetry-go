@@ -239,13 +239,6 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.Metric, error) {
 func Record(temporalitySelector aggregation.TemporalitySelector, r export.Record) (*metricpb.Metric, error) {
 	agg := r.Aggregation()
 	switch agg.Kind() {
-	case aggregation.MinMaxSumCountKind:
-		mmsc, ok := agg.(aggregation.MinMaxSumCount)
-		if !ok {
-			return nil, fmt.Errorf("%w: %T", ErrIncompatibleAgg, agg)
-		}
-		return minMaxSumCount(r, mmsc)
-
 	case aggregation.HistogramKind:
 		h, ok := agg.(aggregation.Histogram)
 		if !ok {
@@ -387,64 +380,6 @@ func sumPoint(record export.Record, num number.Number, start, end time.Time, tem
 		return nil, fmt.Errorf("%w: %v", ErrUnknownValueType, n)
 	}
 
-	return m, nil
-}
-
-// minMaxSumCountValue returns the values of the MinMaxSumCount Aggregator
-// as discrete values.
-func minMaxSumCountValues(a aggregation.MinMaxSumCount) (min, max, sum number.Number, count uint64, err error) {
-	if min, err = a.Min(); err != nil {
-		return
-	}
-	if max, err = a.Max(); err != nil {
-		return
-	}
-	if sum, err = a.Sum(); err != nil {
-		return
-	}
-	if count, err = a.Count(); err != nil {
-		return
-	}
-	return
-}
-
-// minMaxSumCount transforms a MinMaxSumCount Aggregator into an OTLP Metric.
-func minMaxSumCount(record export.Record, a aggregation.MinMaxSumCount) (*metricpb.Metric, error) {
-	desc := record.Descriptor()
-	labels := record.Labels()
-	min, max, sum, count, err := minMaxSumCountValues(a)
-	if err != nil {
-		return nil, err
-	}
-
-	m := &metricpb.Metric{
-		Name:        desc.Name(),
-		Description: desc.Description(),
-		Unit:        string(desc.Unit()),
-		Data: &metricpb.Metric_Summary{
-			Summary: &metricpb.Summary{
-				DataPoints: []*metricpb.SummaryDataPoint{
-					{
-						Sum:               sum.CoerceToFloat64(desc.NumberKind()),
-						Attributes:        Iterator(labels.Iter()),
-						StartTimeUnixNano: toNanos(record.StartTime()),
-						TimeUnixNano:      toNanos(record.EndTime()),
-						Count:             uint64(count),
-						QuantileValues: []*metricpb.SummaryDataPoint_ValueAtQuantile{
-							{
-								Quantile: 0.0,
-								Value:    min.CoerceToFloat64(desc.NumberKind()),
-							},
-							{
-								Quantile: 1.0,
-								Value:    max.CoerceToFloat64(desc.NumberKind()),
-							},
-						},
-					},
-				},
-			},
-		},
-	}
 	return m, nil
 }
 

@@ -19,7 +19,6 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
@@ -70,7 +69,7 @@ func (selectorInexpensive) AggregatorFor(descriptor *sdkapi.Descriptor, aggPtrs 
 	case sdkapi.GaugeObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
 	case sdkapi.HistogramInstrumentKind:
-		aggs := minmaxsumcount.New(len(aggPtrs), descriptor)
+		aggs := sum.New(len(aggPtrs))
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
 		}

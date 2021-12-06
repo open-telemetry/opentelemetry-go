@@ -34,8 +34,6 @@ replace go.opentelemetry.io/otel/example/prometheus => ../../example/prometheus
 
 replace go.opentelemetry.io/otel/example/zipkin => ../../example/zipkin
 
-replace go.opentelemetry.io/otel/exporters/otlp => ../otlp
-
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace => ../otlp/otlptrace
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc => ../otlp/otlptrace/otlptracegrpc
@@ -77,3 +75,5 @@ replace go.opentelemetry.io/otel/bridge/opencensus/test => ../../bridge/opencens
 replace go.opentelemetry.io/otel/example/fib => ../../example/fib
 
 replace go.opentelemetry.io/otel/schema => ../../schema
+
+replace go.opentelemetry.io/otel/exporters/otlp/internal/retry => ../otlp/internal/retry

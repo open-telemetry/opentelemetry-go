@@ -80,7 +80,6 @@ func TestProcessor(t *testing.T) {
 						t.Run(nc.kind.String(), func(t *testing.T) {
 							for _, ac := range []aggregatorCase{
 								{kind: aggregation.SumKind},
-								{kind: aggregation.MinMaxSumCountKind},
 								{kind: aggregation.HistogramKind},
 								{kind: aggregation.LastValueKind},
 							} {

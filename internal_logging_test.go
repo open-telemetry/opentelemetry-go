@@ -12,27 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package connection
+package otel_test
 
 import (
+	"log"
 	"os"
-	"testing"
-	"unsafe"
 
-	ottest "go.opentelemetry.io/otel/internal/internaltest"
+	"github.com/go-logr/stdr"
+
+	"go.opentelemetry.io/otel"
 )
 
-// Ensure struct alignment prior to running tests.
-func TestMain(m *testing.M) {
-	fields := []ottest.FieldOffset{
-		{
-			Name:   "Connection.lastConnectErrPtr",
-			Offset: unsafe.Offsetof(Connection{}.lastConnectErrPtr),
-		},
-	}
-	if !ottest.Aligned8Byte(fields, os.Stderr) {
-		os.Exit(1)
-	}
-
-	os.Exit(m.Run())
+func ExampleSetLogger() {
+	logger := stdr.New(log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile))
+	otel.SetLogger(logger)
 }

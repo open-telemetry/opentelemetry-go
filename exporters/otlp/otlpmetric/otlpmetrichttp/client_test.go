@@ -16,7 +16,6 @@ package otlpmetrichttp_test
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 	"testing"
@@ -144,32 +143,6 @@ func TestExporterShutdown(t *testing.T) {
 	})
 }
 
-func TestRetry(t *testing.T) {
-	statuses := []int{
-		http.StatusTooManyRequests,
-		http.StatusServiceUnavailable,
-	}
-	mcCfg := mockCollectorConfig{
-		InjectHTTPStatus: statuses,
-	}
-	mc := runMockCollector(t, mcCfg)
-	defer mc.MustStop(t)
-	client := otlpmetrichttp.NewClient(
-		otlpmetrichttp.WithEndpoint(mc.Endpoint()),
-		otlpmetrichttp.WithInsecure(),
-		otlpmetrichttp.WithMaxAttempts(len(statuses)+1),
-	)
-	ctx := context.Background()
-	exporter, err := otlpmetric.New(ctx, client)
-	require.NoError(t, err)
-	defer func() {
-		assert.NoError(t, exporter.Shutdown(ctx))
-	}()
-	err = exporter.Export(ctx, testResource, oneRecord)
-	assert.NoError(t, err)
-	assert.Len(t, mc.GetMetrics(), 1)
-}
-
 func TestTimeout(t *testing.T) {
 	mcCfg := mockCollectorConfig{
 		InjectDelay: 100 * time.Millisecond,
@@ -191,58 +164,6 @@ func TestTimeout(t *testing.T) {
 	assert.Equal(t, true, os.IsTimeout(err))
 }
 
-func TestRetryFailed(t *testing.T) {
-	statuses := []int{
-		http.StatusTooManyRequests,
-		http.StatusServiceUnavailable,
-	}
-	mcCfg := mockCollectorConfig{
-		InjectHTTPStatus: statuses,
-	}
-	mc := runMockCollector(t, mcCfg)
-	defer mc.MustStop(t)
-	driver := otlpmetrichttp.NewClient(
-		otlpmetrichttp.WithEndpoint(mc.Endpoint()),
-		otlpmetrichttp.WithInsecure(),
-		otlpmetrichttp.WithMaxAttempts(1),
-	)
-	ctx := context.Background()
-	exporter, err := otlpmetric.New(ctx, driver)
-	require.NoError(t, err)
-	defer func() {
-		assert.NoError(t, exporter.Shutdown(ctx))
-	}()
-	err = exporter.Export(ctx, testResource, oneRecord)
-	assert.Error(t, err)
-	assert.Empty(t, mc.GetMetrics())
-}
-
-func TestNoRetry(t *testing.T) {
-	statuses := []int{
-		http.StatusBadRequest,
-	}
-	mcCfg := mockCollectorConfig{
-		InjectHTTPStatus: statuses,
-	}
-	mc := runMockCollector(t, mcCfg)
-	defer mc.MustStop(t)
-	driver := otlpmetrichttp.NewClient(
-		otlpmetrichttp.WithEndpoint(mc.Endpoint()),
-		otlpmetrichttp.WithInsecure(),
-		otlpmetrichttp.WithMaxAttempts(len(statuses)+1),
-	)
-	ctx := context.Background()
-	exporter, err := otlpmetric.New(ctx, driver)
-	require.NoError(t, err)
-	defer func() {
-		assert.NoError(t, exporter.Shutdown(ctx))
-	}()
-	err = exporter.Export(ctx, testResource, oneRecord)
-	assert.Error(t, err)
-	assert.Equal(t, fmt.Sprintf("failed to send metrics to http://%s/v1/metrics with HTTP status 400 Bad Request", mc.endpoint), err.Error())
-	assert.Empty(t, mc.GetMetrics())
-}
-
 func TestEmptyData(t *testing.T) {
 	mcCfg := mockCollectorConfig{}
 	mc := runMockCollector(t, mcCfg)
@@ -261,88 +182,6 @@ func TestEmptyData(t *testing.T) {
 	err = exporter.Export(ctx, testResource, oneRecord)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, mc.GetMetrics())
-}
-
-func TestUnreasonableMaxAttempts(t *testing.T) {
-	// Max attempts is 5, we set collector to fail 7 times and try
-	// to configure max attempts to be either negative or too
-	// large. Since we set max attempts to 5 in such cases,
-	// exporting to the collector should fail.
-	type testcase struct {
-		name        string
-		maxAttempts int
-	}
-	for _, tc := range []testcase{
-		{
-			name:        "negative max attempts",
-			maxAttempts: -3,
-		},
-		{
-			name:        "too large max attempts",
-			maxAttempts: 10,
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			statuses := make([]int, 0, 7)
-			for i := 0; i < cap(statuses); i++ {
-				statuses = append(statuses, http.StatusTooManyRequests)
-			}
-			mcCfg := mockCollectorConfig{
-				InjectHTTPStatus: statuses,
-			}
-			mc := runMockCollector(t, mcCfg)
-			defer mc.MustStop(t)
-			driver := otlpmetrichttp.NewClient(
-				otlpmetrichttp.WithEndpoint(mc.Endpoint()),
-				otlpmetrichttp.WithInsecure(),
-				otlpmetrichttp.WithMaxAttempts(tc.maxAttempts),
-				otlpmetrichttp.WithBackoff(time.Millisecond),
-			)
-			ctx := context.Background()
-			exporter, err := otlpmetric.New(ctx, driver)
-			require.NoError(t, err)
-			defer func() {
-				assert.NoError(t, exporter.Shutdown(ctx))
-			}()
-			err = exporter.Export(ctx, testResource, oneRecord)
-			assert.Error(t, err)
-			assert.Empty(t, mc.GetMetrics())
-		})
-	}
-}
-
-func TestUnreasonableBackoff(t *testing.T) {
-	// This sets backoff to negative value, which gets corrected
-	// to default backoff instead of being used. Default max
-	// attempts is 5, so we set the collector to fail 4 times, but
-	// we set the deadline to 3 times of the default backoff, so
-	// this should show that deadline is not met, meaning that the
-	// retries weren't immediate (as negative backoff could
-	// imply).
-	statuses := make([]int, 0, 4)
-	for i := 0; i < cap(statuses); i++ {
-		statuses = append(statuses, http.StatusTooManyRequests)
-	}
-	mcCfg := mockCollectorConfig{
-		InjectHTTPStatus: statuses,
-	}
-	mc := runMockCollector(t, mcCfg)
-	defer mc.MustStop(t)
-	driver := otlpmetrichttp.NewClient(
-		otlpmetrichttp.WithEndpoint(mc.Endpoint()),
-		otlpmetrichttp.WithInsecure(),
-		otlpmetrichttp.WithBackoff(-time.Millisecond),
-	)
-	ctx, cancel := context.WithTimeout(context.Background(), 3*(300*time.Millisecond))
-	defer cancel()
-	exporter, err := otlpmetric.New(ctx, driver)
-	require.NoError(t, err)
-	defer func() {
-		assert.NoError(t, exporter.Shutdown(context.Background()))
-	}()
-	err = exporter.Export(ctx, testResource, oneRecord)
-	assert.Error(t, err)
-	assert.Empty(t, mc.GetMetrics())
 }
 
 func TestCancelledContext(t *testing.T) {
