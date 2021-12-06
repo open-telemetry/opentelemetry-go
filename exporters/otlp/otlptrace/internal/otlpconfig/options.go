@@ -24,7 +24,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/encoding/gzip"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/retry"
+	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 )
 
 const (

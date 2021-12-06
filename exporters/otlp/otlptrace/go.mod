@@ -3,10 +3,10 @@ module go.opentelemetry.io/otel/exporters/otlp/otlptrace
 go 1.16
 
 require (
-	github.com/cenkalti/backoff/v4 v4.1.2
 	github.com/google/go-cmp v0.5.6
 	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/otel v1.2.0
+	go.opentelemetry.io/otel/exporters/otlp/internal/retry v0.0.0-00010101000000-000000000000
 	go.opentelemetry.io/otel/sdk v1.2.0
 	go.opentelemetry.io/otel/trace v1.2.0
 	go.opentelemetry.io/proto/otlp v0.11.0
@@ -77,3 +77,5 @@ replace go.opentelemetry.io/otel/bridge/opencensus/test => ../../../bridge/openc
 replace go.opentelemetry.io/otel/example/fib => ../../../example/fib
 
 replace go.opentelemetry.io/otel/schema => ../../../schema
+
+replace go.opentelemetry.io/otel/exporters/otlp/internal/retry => ../internal/retry
