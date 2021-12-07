@@ -190,6 +190,16 @@ func TestConfigs(t *testing.T) {
 
 		// Certificate tests
 		{
+			name: "Test Default Certificate",
+			asserts: func(t *testing.T, c *otlpconfig.Config, grpcOption bool) {
+				if grpcOption {
+					assert.NotNil(t, c.Metrics.GRPCCredentials)
+				} else {
+					assert.Nil(t, c.Metrics.TLSCfg)
+				}
+			},
+		},
+		{
 			name: "Test With Certificate",
 			opts: []otlpconfig.GenericOption{
 				otlpconfig.WithTLSClientConfig(tlsCert),
@@ -380,27 +390,32 @@ func TestConfigs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
-			e := otlpconfig.EnvOptionsReader{
+			origEOR := otlpconfig.DefaultEnvOptionsReader
+			otlpconfig.DefaultEnvOptionsReader = otlpconfig.EnvOptionsReader{
 				GetEnv:   tt.env.getEnv,
 				ReadFile: tt.fileReader.readFile,
 			}
+			t.Cleanup(func() { otlpconfig.DefaultEnvOptionsReader = origEOR })
 
 			// Tests Generic options as HTTP Options
 			cfg := otlpconfig.NewDefaultConfig()
-			e.ApplyHTTPEnvConfigs(&cfg)
+			otlpconfig.ApplyHTTPEnvConfigs(&cfg)
 			for _, opt := range tt.opts {
 				opt.ApplyHTTPOption(&cfg)
 			}
 			tt.asserts(t, &cfg, false)
 
 			// Tests Generic options as gRPC Options
-			cfg = otlpconfig.NewDefaultConfig()
-			e.ApplyGRPCEnvConfigs(&cfg)
-			for _, opt := range tt.opts {
-				opt.ApplyGRPCOption(&cfg)
-			}
+			cfg = otlpconfig.NewGRPCConfig(asGRPCOptions(tt.opts)...)
 			tt.asserts(t, &cfg, true)
 		})
 	}
+}
+
+func asGRPCOptions(opts []otlpconfig.GenericOption) []otlpconfig.GRPCOption {
+	converted := make([]otlpconfig.GRPCOption, len(opts))
+	for i, o := range opts {
+		converted[i] = otlpconfig.NewGRPCOption(o.ApplyGRPCOption)
+	}
+	return converted
 }
