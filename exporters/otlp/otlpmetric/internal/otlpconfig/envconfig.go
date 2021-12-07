@@ -69,29 +69,6 @@ func (e *EnvOptionsReader) GetOptionsFromEnv() []GenericOption {
 	var opts []GenericOption
 
 	// Endpoint
-	if v, ok := e.getEnvValue("ENDPOINT"); ok {
-		u, err := url.Parse(v)
-		// Ignore invalid values.
-		if err == nil {
-			// This is used to set the scheme for OTLP/HTTP.
-			if insecureSchema(u.Scheme) {
-				opts = append(opts, WithInsecure())
-			} else {
-				opts = append(opts, WithSecure())
-			}
-			opts = append(opts, newSplitOption(func(cfg *Config) {
-				cfg.Metrics.Endpoint = u.Host
-				// For OTLP/HTTP endpoint URLs without a per-signal
-				// configuration, the passed endpoint is used as a base URL
-				// and the signals are sent to these paths relative to that.
-				cfg.Metrics.URLPath = path.Join(u.Path, DefaultMetricsPath)
-			}, func(cfg *Config) {
-				// For OTLP/gRPC endpoints, this is the target to which the
-				// exporter is going to send telemetry.
-				cfg.Metrics.Endpoint = path.Join(u.Host, u.Path)
-			}))
-		}
-	}
 	if v, ok := e.getEnvValue("METRICS_ENDPOINT"); ok {
 		u, err := url.Parse(v)
 		// Ignore invalid values.
@@ -113,6 +90,28 @@ func (e *EnvOptionsReader) GetOptionsFromEnv() []GenericOption {
 					path = "/"
 				}
 				cfg.Metrics.URLPath = path
+			}, func(cfg *Config) {
+				// For OTLP/gRPC endpoints, this is the target to which the
+				// exporter is going to send telemetry.
+				cfg.Metrics.Endpoint = path.Join(u.Host, u.Path)
+			}))
+		}
+	} else if v, ok = e.getEnvValue("ENDPOINT"); ok {
+		u, err := url.Parse(v)
+		// Ignore invalid values.
+		if err == nil {
+			// This is used to set the scheme for OTLP/HTTP.
+			if insecureSchema(u.Scheme) {
+				opts = append(opts, WithInsecure())
+			} else {
+				opts = append(opts, WithSecure())
+			}
+			opts = append(opts, newSplitOption(func(cfg *Config) {
+				cfg.Metrics.Endpoint = u.Host
+				// For OTLP/HTTP endpoint URLs without a per-signal
+				// configuration, the passed endpoint is used as a base URL
+				// and the signals are sent to these paths relative to that.
+				cfg.Metrics.URLPath = path.Join(u.Path, DefaultMetricsPath)
 			}, func(cfg *Config) {
 				// For OTLP/gRPC endpoints, this is the target to which the
 				// exporter is going to send telemetry.
