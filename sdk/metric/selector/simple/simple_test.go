@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
@@ -62,5 +63,11 @@ func TestInexpensiveDistribution(t *testing.T) {
 func TestHistogramDistribution(t *testing.T) {
 	hist := simple.NewWithHistogramDistribution()
 	require.IsType(t, (*histogram.Aggregator)(nil), oneAgg(hist, &testHistogramDesc))
+	testFixedSelectors(t, hist)
+}
+
+func TestExponentialHistogramDistribution(t *testing.T) {
+	hist := simple.NewWithExponentialHistogramDistribution()
+	require.IsType(t, (*exponential.Aggregator)(nil), oneAgg(hist, &testHistogramDesc))
 	testFixedSelectors(t, hist)
 }

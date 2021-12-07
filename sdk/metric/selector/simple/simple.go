@@ -17,6 +17,7 @@ package simple // import "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 import (
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
@@ -28,11 +29,15 @@ type (
 	selectorHistogram   struct {
 		options []histogram.Option
 	}
+	selectorExponentialHistogram struct {
+		options []exponential.Option
+	}
 )
 
 var (
 	_ export.AggregatorSelector = selectorInexpensive{}
 	_ export.AggregatorSelector = selectorHistogram{}
+	_ export.AggregatorSelector = selectorExponentialHistogram{}
 )
 
 // NewWithInexpensiveDistribution returns a simple aggregator selector
@@ -49,6 +54,10 @@ func NewWithInexpensiveDistribution() export.AggregatorSelector {
 // This selector is a good default choice for most metric exporters.
 func NewWithHistogramDistribution(options ...histogram.Option) export.AggregatorSelector {
 	return selectorHistogram{options: options}
+}
+
+func NewWithExponentialHistogramDistribution(options ...exponential.Option) export.AggregatorSelector {
+	return selectorExponentialHistogram{options: options}
 }
 
 func sumAggs(aggPtrs []*export.Aggregator) {
@@ -85,6 +94,20 @@ func (s selectorHistogram) AggregatorFor(descriptor *sdkapi.Descriptor, aggPtrs 
 		lastValueAggs(aggPtrs)
 	case sdkapi.HistogramInstrumentKind:
 		aggs := histogram.New(len(aggPtrs), descriptor, s.options...)
+		for i := range aggPtrs {
+			*aggPtrs[i] = &aggs[i]
+		}
+	default:
+		sumAggs(aggPtrs)
+	}
+}
+
+func (s selectorExponentialHistogram) AggregatorFor(descriptor *sdkapi.Descriptor, aggPtrs ...*export.Aggregator) {
+	switch descriptor.InstrumentKind() {
+	case sdkapi.GaugeObserverInstrumentKind:
+		lastValueAggs(aggPtrs)
+	case sdkapi.HistogramInstrumentKind:
+		aggs := exponential.New(len(aggPtrs), descriptor, s.options...)
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
 		}
