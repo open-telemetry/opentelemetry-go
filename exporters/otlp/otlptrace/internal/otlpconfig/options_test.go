@@ -167,7 +167,7 @@ func TestConfigs(t *testing.T) {
 		{
 			name: "Test Environment Signal Specific Endpoint with uppercase scheme",
 			env: map[string]string{
-				"OTEL_EXPORTER_OTLP_ENDPOINT":        "HTTP://overrode_by_signal_specific",
+				"OTEL_EXPORTER_OTLP_ENDPOINT":        "HTTPS://overrode_by_signal_specific",
 				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "HtTp://env_traces_endpoint",
 			},
 			asserts: func(t *testing.T, c *otlpconfig.Config, grpcOption bool) {
