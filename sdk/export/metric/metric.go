@@ -139,8 +139,7 @@ type CheckpointerFactory interface {
 //
 // Note that any Aggregator may be attached to any instrument--this is
 // the result of the OpenTelemetry API/SDK separation.  It is possible
-// to attach a Sum aggregator to a Histogram instrument or a
-// MinMaxSumCount aggregator to a Counter instrument.
+// to attach a Sum aggregator to a Histogram instrument.
 type Aggregator interface {
 	// Aggregation returns an Aggregation interface to access the
 	// current state of this Aggregator.  The caller is
