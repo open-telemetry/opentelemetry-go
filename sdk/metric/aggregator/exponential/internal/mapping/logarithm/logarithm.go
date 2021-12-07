@@ -23,31 +23,41 @@ import (
 
 const (
 	// MinScale ensures that the ../exponent mapper is used for
-	// negative scale values.  Do not use the logarithm mapper for
-	// scales <= 0.
+	// zero and negative scale values.  Do not use the logarithm
+	// mapper for scales <= 0.
 	MinScale int32 = 1
 
-	// MaxScale is selected to ensure that the MapToIndex
-	// sub-expression math.Log(value) * l.scaleFactor does not
-	// overflow.  This also ensures that math.MaxFloat64 can be
-	// represented in a 30 bit index value.
+	// MaxScale is selected as the largest scale that is possible
+	// in current code, considering there are 10 bits of base-2
+	// exponent combined with scale-bits of range.  Scales larger
+	// than 20 complicate the logic in cmd/prebuild, because
+	// math/big overflows when exponent is math.MaxInt32 (== the
+	// index of math.MaxFloat64 at scale=21),
+	//
+	// At scale=20, index values are in the interval [-0x3fe00000,
+	// 0x3fffffff], having 31 bits of information.  This is
+	// sensible given that the OTLP exponential histogram data
+	// point uses a signed 32 bit integer for indices.
 	MaxScale int32 = 20
 
-	// MinValue is the smallest normal floating point value.  This
-	// implementation cannot be reliably used for subnormal
-	// values, and the lowerBoundary() method does not accurately
-	// report these.  Subnormal values are supported by the
-	// exponent mapper.
-	MinValue = 0x1p-1022
-
+	// MaxValue is the largest normal number.
 	MaxValue = math.MaxFloat64
+
+	// MinValue is the smallest normal number.
+	MinValue = 0x1p-1022
 )
 
-// This implementation was copied from a Java prototype. See:
-// https://github.com/newrelic-experimental/newrelic-sketch-java/blob/1ce245713603d61ba3a4510f6df930a5479cd3f6/src/main/java/com/newrelic/nrsketch/indexer/LogIndexer.java
-// for the equations used here.
 type logarithmMapping struct {
+	// scale is between MinScale and MaxScale
 	scale int32
+
+	// minIndex is the index of MinValue
+	minIndex int32
+	// maxIndex is the index of MaxValue
+	maxIndex int32
+
+	// maxBoundary is the correct LowerBoundary() of maxIndex
+	maxBoundary float64
 
 	// scaleFactor is used and computed as follows:
 	// index = log(value) / log(base)
@@ -60,6 +70,9 @@ type logarithmMapping struct {
 	// = math.Log2E * math.Exp2(scale)
 	// = math.Ldexp(math.Log2E, scale)
 	// Because multiplication is faster than division, we define scaleFactor as a multiplier.
+	// This implementation was copied from a Java prototype. See:
+	// https://github.com/newrelic-experimental/newrelic-sketch-java/blob/1ce245713603d61ba3a4510f6df930a5479cd3f6/src/main/java/com/newrelic/nrsketch/indexer/LogIndexer.java
+	// for the equations used here.
 	scaleFactor float64
 
 	// log(boundary) = index * log(base)
@@ -70,9 +83,6 @@ type logarithmMapping struct {
 	// inverseFactor = 2^-scale * log(2)
 	// = math.Ldexp(math.Ln2, -scale)
 	inverseFactor float64
-
-	overflowIndex  int32
-	underflowIndex int32
 }
 
 var _ mapping.Mapping = &logarithmMapping{}
@@ -82,52 +92,43 @@ func NewMapping(scale int32) (mapping.Mapping, error) {
 	// scale is <= 0 it's better to use the exponent mapping.
 	if scale < MinScale || scale > MaxScale {
 		// scale 20 can represent the entire float64 range
-		// with a 31 bit index, and we don't handle larger
+		// with a 30 bit index, and we don't handle larger
 		// scales to simplify range tests in this package.
 		return nil, fmt.Errorf("scale out of bounds")
 	}
-
-	l := &logarithmMapping{
-		scale:         scale,
-		scaleFactor:   math.Ldexp(math.Log2E, int(scale)),
-		inverseFactor: math.Ldexp(math.Ln2, int(-scale)),
-	}
-
-	maxIdx := l.MapToIndex(MaxValue)
-	minIdx := l.MapToIndex(MinValue)
-
-	// It's possible we get +Inf from the lowerBoundary.
-	for l.lowerBoundary(maxIdx) > MaxValue {
-		maxIdx--
-	}
-
-	// Upper and lower cases are asymmetric because of gradual
-	// underflow lowerBoundary(minIdx) has to be defined, unlike
-	// the +Inf case above.
-	l.overflowIndex = maxIdx + 1
-	l.underflowIndex = minIdx - 1
-
-	return l, nil
+	return &prebuiltMappings[scale-MinScale], nil
 }
 
 func (l *logarithmMapping) MapToIndex(value float64) int32 {
-	// Use Floor() to round toward -Inf.  This intentionally
-	// mishandles subnormal values.
+	if value >= l.maxBoundary {
+		return l.maxIndex
+	}
+	if value <= MinValue {
+		return l.minIndex
+	}
+	// Use Floor() to round toward 0.
 	return int32(math.Floor(math.Log(value) * l.scaleFactor))
 }
 
 func (l *logarithmMapping) LowerBoundary(index int32) (float64, error) {
-	if index <= l.underflowIndex {
-		return 0, mapping.ErrUnderflow
-	}
-	if index >= l.overflowIndex {
+	if index >= l.maxIndex {
+		if index == l.maxIndex {
+			// Note: the formula below behaves poorly
+			// near the boundary, will return +Inf instead
+			// of the correct last bucket lower boundary.
+			// This implementation hard-codes the maximum
+			// boundary for this reason.
+			return l.maxBoundary, nil
+		}
 		return 0, mapping.ErrOverflow
 	}
-	return l.lowerBoundary(index), nil
-}
-
-func (l *logarithmMapping) lowerBoundary(index int32) float64 {
-	return math.Exp(float64(index) * l.inverseFactor)
+	if index <= l.minIndex {
+		if index == l.minIndex {
+			return MinValue, nil
+		}
+		return 0, mapping.ErrUnderflow
+	}
+	return math.Exp(float64(index) * l.inverseFactor), nil
 }
 
 func (l *logarithmMapping) Scale() int32 {
