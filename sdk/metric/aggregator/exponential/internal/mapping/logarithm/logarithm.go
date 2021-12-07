@@ -100,6 +100,7 @@ func NewMapping(scale int32) (mapping.Mapping, error) {
 }
 
 func (l *logarithmMapping) MapToIndex(value float64) int32 {
+	// Note: we can assume not a 0, Inf, or NaN; positive sign bit.
 	if value >= l.maxBoundary {
 		return l.maxIndex
 	}

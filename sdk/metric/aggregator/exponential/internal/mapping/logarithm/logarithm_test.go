@@ -172,3 +172,73 @@ func TestLogarithmIndexMin(t *testing.T) {
 		require.Equal(t, err, mapping.ErrUnderflow)
 	}
 }
+
+// TestExponentIndexMax ensures that for every valid scale, MaxFloat
+// maps into the correct maximum index.  Also tests that the reverse
+// lookup does not produce infinity and the following index produces
+// an overflow error.
+func TestExponentIndexMax(t *testing.T) {
+	for scale := MinScale; scale <= MaxScale; scale++ {
+		m, err := NewMapping(scale)
+		require.NoError(t, err)
+
+		index := m.MapToIndex(MaxValue)
+
+		// Correct max index is one less than the first index
+		// that overflows math.MaxFloat64, i.e., one less than
+		// the index of +Inf.
+		maxIndex64 := (int64(exponent.MaxNormalExponent+1) << scale) - 1
+		require.Less(t, maxIndex64, int64(math.MaxInt32))
+		require.Equal(t, index, int32(maxIndex64))
+
+		// The index maps to a finite boundary near MaxFloat.
+		bound, err := m.LowerBoundary(index)
+		require.NoError(t, err)
+
+		base, _ := m.LowerBoundary(1)
+
+		require.Less(t, bound, MaxValue)
+
+		// The expected ratio equals the base factor.
+		require.InEpsilon(t, (MaxValue-bound)/bound, base-1, 1e-6)
+
+		// One larger index will overflow.
+		_, err = m.LowerBoundary(index + 1)
+		require.Equal(t, err, mapping.ErrOverflow)
+	}
+}
+
+// TestExponentIndexMin ensures that for every valid scale, Non-zero numbers
+func TestExponentIndexMin(t *testing.T) {
+	for scale := MinScale; scale <= MaxScale; scale++ {
+		m, err := NewMapping(scale)
+		require.NoError(t, err)
+
+		minIndex := m.MapToIndex(MinValue)
+
+		mapped, err := m.LowerBoundary(minIndex)
+		require.NoError(t, err)
+
+		correctMinIndex := int64(exponent.MinNormalExponent) << scale
+		require.Greater(t, correctMinIndex, int64(math.MinInt32))
+
+		correctMapped := roundedBoundary(scale, int32(correctMinIndex))
+		require.Equal(t, correctMapped, MinValue)
+		require.InEpsilon(t, mapped, MinValue, 1e-6)
+
+		require.Equal(t, minIndex, int32(correctMinIndex))
+
+		// Subnormal values map to the min index:
+		require.Equal(t, m.MapToIndex(MinValue/2), int32(correctMinIndex))
+		require.Equal(t, m.MapToIndex(MinValue/3), int32(correctMinIndex))
+		require.Equal(t, m.MapToIndex(MinValue/100), int32(correctMinIndex))
+		require.Equal(t, m.MapToIndex(0x1p-1050), int32(correctMinIndex))
+		require.Equal(t, m.MapToIndex(0x1p-1073), int32(correctMinIndex))
+		require.Equal(t, m.MapToIndex(0x1.1p-1073), int32(correctMinIndex))
+		require.Equal(t, m.MapToIndex(0x1p-1074), int32(correctMinIndex))
+
+		// One smaller index will underflow.
+		_, err = m.LowerBoundary(minIndex - 1)
+		require.Equal(t, err, mapping.ErrUnderflow)
+	}
+}

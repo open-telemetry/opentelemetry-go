@@ -17,10 +17,10 @@ package exponent
 import (
 	"fmt"
 	"math"
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/internal/mapping"
 )
 
@@ -34,10 +34,24 @@ type invalidMapping struct {
 	index int32
 }
 
-const (
-	testUnderflowIndex = math.MinInt32
-	testOverflowIndex  = math.MaxInt32
-)
+func TestFloat64Bits(t *testing.T) {
+	require.Equal(t, int32(-1022), MinNormalExponent)
+	require.Equal(t, int32(+1023), MaxNormalExponent)
+
+	require.Equal(t, MaxNormalExponent, GetBase2(0x1p+1023))
+	require.Equal(t, int32(1022), GetBase2(0x1p+1022))
+
+	require.Equal(t, int32(0), GetBase2(1))
+
+	require.Equal(t, int32(-1021), GetBase2(0x1p-1021))
+	require.Equal(t, int32(-1022), GetBase2(0x1p-1022))
+
+	// Subnormals below this point
+	require.Equal(t, int32(-1022), GetBase2(0x1p-1023))
+	require.Equal(t, int32(-1022), GetBase2(0x1p-1024))
+	require.Equal(t, int32(-1022), GetBase2(0x1p-1025))
+	require.Equal(t, int32(-1022), GetBase2(0x1p-1074))
+}
 
 func TestExponentMappingZero(t *testing.T) {
 	m, err := NewMapping(0)
@@ -46,8 +60,10 @@ func TestExponentMappingZero(t *testing.T) {
 	require.Equal(t, int32(0), m.Scale())
 
 	for _, pair := range []expectMapping{
-		{math.MaxFloat64, 1023},
-		{math.SmallestNonzeroFloat64, -1074},
+		{math.MaxFloat64, MaxNormalExponent},
+		{0x1p+1023, MaxNormalExponent},
+		{0x1p-1022, MinNormalExponent},
+		{math.SmallestNonzeroFloat64, MinNormalExponent},
 		{4, 2},
 		{3, 1},
 		{2, 1},
@@ -60,6 +76,27 @@ func TestExponentMappingZero(t *testing.T) {
 		idx := m.MapToIndex(pair.value)
 
 		require.Equal(t, pair.index, idx)
+	}
+}
+
+func TestExponentMappingMinScale(t *testing.T) {
+	m, err := NewMapping(MinScale)
+	require.NoError(t, err)
+
+	require.Equal(t, MinScale, m.Scale())
+
+	for _, pair := range []expectMapping{
+		{1, 0},
+		{math.MaxFloat64 / 2, 0},
+		{math.MaxFloat64, 0},
+		{math.SmallestNonzeroFloat64, -1},
+		{0.5, -1},
+	} {
+		t.Run(fmt.Sprint(pair.value), func(t *testing.T) {
+			idx := m.MapToIndex(pair.value)
+
+			require.Equal(t, pair.index, idx)
+		})
 	}
 }
 
@@ -150,26 +187,27 @@ func TestExponentMappingNegFour(t *testing.T) {
 		{1 / float64(0x100000000000000000), -5},
 
 		// Max values
-		{0x1.FFFFFFFFFFFFFp1023, testOverflowIndex},
-		{0x1p1023, testOverflowIndex},
-		{0x1p1019, testOverflowIndex},
-		{0x1p1008, testOverflowIndex},
+		{0x1.FFFFFFFFFFFFFp1023, 63},
+		{0x1p1023, 63},
+		{0x1p1019, 63},
+		{0x1p1008, 63},
 		{0x1p1007, 62},
 		{0x1p1000, 62},
 		{0x1p0992, 62},
 		{0x1p0991, 61},
 
 		// Min and subnormal values
-		{0x1p-1074, testUnderflowIndex},
-		{0x1p-1073, testUnderflowIndex},
-
-		{0x1p-1072, -67}, // n.b. 67 * 2**4 == 1072
-		{0x1p-1057, -67},
-		{0x1p-1056, -66},
-		{0x1p-1041, -66},
-		{0x1p-1040, -65},
-		{0x1p-1025, -65},
+		{0x1p-1074, -64},
+		{0x1p-1073, -64},
+		{0x1p-1072, -64},
+		{0x1p-1057, -64},
+		{0x1p-1056, -64},
+		{0x1p-1041, -64},
+		{0x1p-1040, -64},
+		{0x1p-1025, -64},
 		{0x1p-1024, -64},
+		{0x1p-1023, -64},
+		{0x1p-1022, -64},
 		{0x1p-1009, -64},
 		{0x1p-1008, -63},
 		{0x1p-0993, -63},
@@ -180,79 +218,85 @@ func TestExponentMappingNegFour(t *testing.T) {
 		t.Run(fmt.Sprintf("%x", pair.value), func(t *testing.T) {
 			index := m.MapToIndex(pair.value)
 
-			if pair.index != testUnderflowIndex && pair.index != testOverflowIndex {
-				require.Equal(t, pair.index, index, "value: %#x", pair.value)
-			}
-
-			lb, err1 := m.LowerBoundary(index)
-			ub, err2 := m.LowerBoundary(index + 1)
-
-			if pair.index != testUnderflowIndex && pair.index != testOverflowIndex {
-				require.NoError(t, err1)
-				require.NoError(t, err2)
-
-				require.NotEqual(t, 0., lb)
-				require.NotEqual(t, 0., ub)
-				require.LessOrEqual(t, lb, pair.value, fmt.Sprintf("value: %x index %v", pair.value, index))
-				require.Greater(t, ub, pair.value, fmt.Sprintf("value: %x index %v", pair.value, index))
-			} else {
-				// The upper or lower boundary must see an error.
-				require.True(t, err1 != nil || err2 != nil)
-				var expectErr error
-				if pair.index == testUnderflowIndex {
-					expectErr = mapping.ErrUnderflow
-				} else {
-					expectErr = mapping.ErrOverflow
-				}
-
-				if err1 != nil {
-					require.Equal(t, err1, expectErr)
-				}
-				if err2 != nil {
-					require.Equal(t, err2, expectErr)
-				}
-			}
+			require.Equal(t, pair.index, index, "value: %#x", pair.value)
 		})
 	}
 }
 
-func TestExponentMappingInvalid(t *testing.T) {
-	for _, pair := range []invalidMapping{
-		{-4, 64},
-		{-4, 65},
-		{-4, 66},
-		{-4, 1e6},
+// roundedBoundary computes
+func roundedBoundary(scale, index int32) float64 {
+	one := big.NewFloat(1)
+	f := (&big.Float{}).SetMantExp(one, int(index))
+	for i := scale; i < 0; i++ {
+		f = (&big.Float{}).Mul(f, f)
+	}
 
-		{-4, -68},
-		{-4, -69},
-		{-4, -70},
-		{-4, -1e6},
+	result, _ := f.Float64()
+	return result
+}
 
-		{0, 1024},
-		{0, 1025},
-		{0, 1026},
-		{0, 1e6},
+// TestExponentIndexMax ensures that for every valid scale, MaxFloat
+// maps into the correct maximum index.  Also tests that the reverse
+// lookup does not produce infinity and the following index produces
+// an overflow error.
+func TestExponentIndexMax(t *testing.T) {
+	for scale := MinScale; scale <= MaxScale; scale++ {
+		fmt.Println("Scale is", scale)
+		m, err := NewMapping(scale)
+		require.NoError(t, err)
 
-		{0, -1075},
-		{0, -1076},
-		{0, -1077},
-		{0, -1e6},
+		index := m.MapToIndex(MaxValue)
 
-		{-1, 513},
-		{-1, 514},
-		{-1, 515},
-		{-1, 1e6},
+		// Correct max index is one less than the first index
+		// that overflows math.MaxFloat64, i.e., one less than
+		// the index of +Inf.
+		maxIndex := (int32(MaxNormalExponent+1) >> -scale) - 1
+		require.Equal(t, index, int32(maxIndex))
 
-		{-1, -538},
-		{-1, -539},
-		{-1, -540},
-		{-1, -1e6},
-	} {
-		t.Run(fmt.Sprintf("%v_%d", pair.scale, pair.index), func(t *testing.T) {
-			m, err := NewMapping(pair.scale)
-			require.NoError(t, err)
-			_, err = m.LowerBoundary(pair.index)
-			require.Error(t, err)
-		})
+		// The index maps to a finite boundary.
+		bound, err := m.LowerBoundary(index)
+		require.NoError(t, err)
+
+		require.Equal(t, bound, roundedBoundary(scale, maxIndex))
+
+		// One larger index will overflow.
+		_, err = m.LowerBoundary(index + 1)
+		require.Equal(t, err, mapping.ErrOverflow)
+	}
+}
+
+// TestExponentIndexMin ensures that for every valid scale, Non-zero numbers
+func TestExponentIndexMin(t *testing.T) {
+	for scale := MinScale; scale <= MaxScale; scale++ {
+		fmt.Println("scale", scale)
+		m, err := NewMapping(scale)
+		require.NoError(t, err)
+
+		minIndex := m.MapToIndex(MinValue)
+
+		boundary, err := m.LowerBoundary(minIndex)
+		require.NoError(t, err)
+
+		correctMinIndex := int64(MinNormalExponent) >> -scale
+		require.Greater(t, correctMinIndex, int64(math.MinInt32))
+		require.Equal(t, int32(correctMinIndex), minIndex)
+
+		correctBoundary := roundedBoundary(scale, int32(correctMinIndex))
+
+		require.Equal(t, correctBoundary, boundary)
+		require.Greater(t, roundedBoundary(scale, int32(correctMinIndex+1)), boundary)
+
+		// Subnormal values map to the min index:
+		require.Equal(t, m.MapToIndex(MinValue/2), int32(correctMinIndex))
+		require.Equal(t, m.MapToIndex(MinValue/3), int32(correctMinIndex))
+		require.Equal(t, m.MapToIndex(MinValue/100), int32(correctMinIndex))
+		require.Equal(t, m.MapToIndex(0x1p-1050), int32(correctMinIndex))
+		require.Equal(t, m.MapToIndex(0x1p-1073), int32(correctMinIndex))
+		require.Equal(t, m.MapToIndex(0x1.1p-1073), int32(correctMinIndex))
+		require.Equal(t, m.MapToIndex(0x1p-1074), int32(correctMinIndex))
+
+		// One smaller index will underflow.
+		_, err = m.LowerBoundary(minIndex - 1)
+		require.Equal(t, err, mapping.ErrUnderflow)
 	}
 }

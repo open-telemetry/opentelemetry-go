@@ -21,17 +21,35 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/internal/mapping"
 )
 
-// MinScale defines the point at which the exponential mapping
-// function becomes useless for float64.  With scale -10, ignoring
-// subnormal values, bucket indices range from -1 to 1.
-const MinScale int32 = -10
+const (
+	// MinScale defines the point at which the exponential mapping
+	// function becomes useless for float64.  With scale -10, ignoring
+	// subnormal values, bucket indices range from -1 to 1.
+	MinScale int32 = -10
+
+	// MaxScale is the largest scale supported in this code.  Use
+	// ../logarithm for larger scales.
+	MaxScale int32 = 0
+)
+
+type exponentMapping struct {
+	shift uint8 // equals negative scale
+}
 
 // exponentMapping is used for negative scales, effectively a
 // mapping of the base-2 logarithm of the exponent.
-type exponentMapping struct {
-	scale          int32
-	underflowIndex int32
-	overflowIndex  int32
+var prebuiltMappings = [-MinScale + 1]exponentMapping{
+	{10},
+	{9},
+	{8},
+	{7},
+	{6},
+	{5},
+	{4},
+	{3},
+	{2},
+	{1},
+	{0},
 }
 
 func NewMapping(scale int32) (mapping.Mapping, error) {
@@ -41,51 +59,52 @@ func NewMapping(scale int32) (mapping.Mapping, error) {
 	if scale < MinScale {
 		return nil, fmt.Errorf("scale too low")
 	}
-	return exponentMapping{
-		scale:          scale,
-		underflowIndex: (MinSubnormalExponent - 1) >> -scale,
-		overflowIndex:  (MaxNormalExponent + 1) >> -scale,
-	}, nil
+	return &prebuiltMappings[scale-MinScale], nil
 }
 
-func (e exponentMapping) MapToIndex(value float64) int32 {
-	// Note: we can assume not a 0, Inf, or NaN, ignore sign bit.
-	// Errors are impossible in this code path because negative
-	// scale implies indexes have smaller magnitide than the
-	// corresponding values, thus all values are mapped.
-
-	// GetBase2 compensates for subnormal values.
-	exp := GetBase2(value)
+func (e *exponentMapping) MapToIndex(value float64) int32 {
+	// Note: we can assume not a 0, Inf, or NaN; positive sign bit.
 
 	// Note: bit-shifting does the right thing for negative
 	// exponents, e.g., -1 >> 1 == -1.
-	return exp >> -e.scale
+	return GetBase2(value) >> e.shift
 }
 
-func (e exponentMapping) LowerBoundary(index int32) (float64, error) {
-	if index <= e.underflowIndex {
+func (e *exponentMapping) minIndex() int32 {
+	return int32(MinNormalExponent) >> e.shift
+}
+
+func (e *exponentMapping) maxIndex() int32 {
+	return int32(MaxNormalExponent) >> e.shift
+}
+
+func (e *exponentMapping) LowerBoundary(index int32) (float64, error) {
+	min := e.minIndex()
+
+	if index < min {
 		return 0, mapping.ErrUnderflow
 	}
-	if index >= e.overflowIndex {
+
+	if max := e.maxIndex(); index > max {
 		return 0, mapping.ErrOverflow
 	}
 
-	unbiased := int64(index << -e.scale)
-
-	var bits uint64
+	unbiased := int64(index << e.shift)
 
 	if unbiased < int64(MinNormalExponent) {
-		diff := MinNormalExponent - int32(unbiased)
-		shift := SignificandWidth - diff
-		bits = uint64(1) << shift
-	} else {
-		exponent := unbiased + ExponentBias
-		bits = uint64(exponent << SignificandWidth)
+		subnormal := uint64(1 << SignificandWidth)
+		for unbiased < int64(MinNormalExponent) {
+			unbiased++
+			subnormal >>= 1
+		}
+		return math.Float64frombits(subnormal), nil
 	}
+	exponent := unbiased + ExponentBias
 
+	bits := uint64(exponent << SignificandWidth)
 	return math.Float64frombits(bits), nil
 }
 
-func (e exponentMapping) Scale() int32 {
-	return e.scale
+func (e *exponentMapping) Scale() int32 {
+	return -int32(e.shift)
 }

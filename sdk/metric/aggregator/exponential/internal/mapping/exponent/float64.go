@@ -14,10 +14,7 @@
 
 package exponent
 
-import (
-	"math"
-	"math/bits"
-)
+import "math"
 
 const (
 	// SignificandWidth is the size of an IEEE 754 double-precision
@@ -51,32 +48,22 @@ const (
 	// floating point: 1023
 	MaxNormalExponent int32 = ExponentBias
 
-	// SignedZeroSubnormalExponent is the exponent value after
-	// removing bias for signed zero and subnormal values.
-	SignedZeroSubnormalExponent int32 = -ExponentBias
+	// MinValue is the smallest normal number.
+	MinValue = 0x1p-1022
 
-	// InfAndNaNExponent is the exponent value after removing bias
-	// for Inf and NaN values.
-	InfAndNaNExponent int32 = ExponentBias + 1
-
-	// Smallest positive subnormal exponent.
-	MinSubnormalExponent int32 = MinNormalExponent - SignificandWidth
+	// MaxValue is the largest normal number.
+	MaxValue = math.MaxFloat64
 )
 
-// GetBase2 extracts the normalized base-2 fractional exponent.
-// Let the value be represented as `1.significand x 2**exponent`,
-// this returns `exponent`.  Not defined for 0, Inf, or NaN values.
-//
-// Note! THIS RETURNS A DIFFERENT RESULT THAN math.Frexp(), which
-// does not handle subnormal values.
+// GetBase2 extracts the normalized base-2 fractional exponent.  This
+// like math.Frexp(), rounds subnormal values up to the minimum normal
+// value.  Unlike Frexp(), this returns k for the equation f x 2**k
+// where f is in the range [1, 2).
 func GetBase2(value float64) int32 {
+	if value <= MinValue {
+		return MinNormalExponent
+	}
 	rawBits := math.Float64bits(value)
 	rawExponent := (int64(rawBits) & ExponentMask) >> SignificandWidth
-	rawSignificand := rawBits & SignificandMask
-	if rawExponent == 0 {
-		// Handle subnormal values: rawSignificand cannot be zero
-		// unless value is zero.
-		rawExponent -= int64(bits.LeadingZeros64(rawSignificand) - 12)
-	}
 	return int32(rawExponent - ExponentBias)
 }

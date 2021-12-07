@@ -18,10 +18,6 @@ func roundedBoundary(scale int32, index int64) float64 {
 	for i := scale; i > 0; i-- {
 		f = newBig().Sqrt(f)
 	}
-	for i := scale; i < 0; i++ {
-		f = newBig().Mul(f, f)
-	}
-
 	result, _ := f.Float64()
 	return result
 }
