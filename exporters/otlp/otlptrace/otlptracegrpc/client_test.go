@@ -238,16 +238,6 @@ func TestExportSpansTimeoutHonored(t *testing.T) {
 	require.Equal(t, codes.DeadlineExceeded, status.Convert(err).Code())
 }
 
-func TestStartErrorInvalidSecurityConfiguration(t *testing.T) {
-	mc := runMockCollector(t)
-	t.Cleanup(func() { require.NoError(t, mc.stop()) })
-
-	client := otlptracegrpc.NewClient(otlptracegrpc.WithEndpoint(mc.endpoint))
-	err := client.Start(context.Background())
-	// https://github.com/grpc/grpc-go/blob/a671967dfbaab779d37fd7e597d9248f13806087/clientconn.go#L82
-	assert.EqualError(t, err, "grpc: no transport security set (use grpc.WithInsecure() explicitly or set credentials)")
-}
-
 func TestNew_withMultipleAttributeTypes(t *testing.T) {
 	mc := runMockCollector(t)
 
