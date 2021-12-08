@@ -52,6 +52,7 @@ func benchmarkBoundary(b *testing.B, name string, mapper mapping.Mapping) {
 // In the test, lookuptable was 40% faster than logarithm, which did
 // not justify the significant extra complexity.
 
+// Benchmarks the MapToIndex function.
 func BenchmarkMapping(b *testing.B) {
 	em, _ := exponent.NewMapping(-1)
 	lm, _ := logarithm.NewMapping(1)
@@ -59,6 +60,7 @@ func BenchmarkMapping(b *testing.B) {
 	benchmarkMapping(b, "logarithm", lm)
 }
 
+// Benchmarks the LowerBoundary function.
 func BenchmarkBoundary(b *testing.B) {
 	em, _ := exponent.NewMapping(-1)
 	lm, _ := logarithm.NewMapping(1)

@@ -30,25 +30,28 @@ type expectMapping struct {
 	index int32
 }
 
-func TestFloat64Bits(t *testing.T) {
+// Tests that getBase2 returns the base-2 exponent as documented, unlike
+// math.Frexp.
+func TestgetBase2(t *testing.T) {
 	require.Equal(t, int32(-1022), MinNormalExponent)
 	require.Equal(t, int32(+1023), MaxNormalExponent)
 
-	require.Equal(t, MaxNormalExponent, GetBase2(0x1p+1023))
-	require.Equal(t, int32(1022), GetBase2(0x1p+1022))
+	require.Equal(t, MaxNormalExponent, getBase2(0x1p+1023))
+	require.Equal(t, int32(1022), getBase2(0x1p+1022))
 
-	require.Equal(t, int32(0), GetBase2(1))
+	require.Equal(t, int32(0), getBase2(1))
 
-	require.Equal(t, int32(-1021), GetBase2(0x1p-1021))
-	require.Equal(t, int32(-1022), GetBase2(0x1p-1022))
+	require.Equal(t, int32(-1021), getBase2(0x1p-1021))
+	require.Equal(t, int32(-1022), getBase2(0x1p-1022))
 
 	// Subnormals below this point
-	require.Equal(t, int32(-1022), GetBase2(0x1p-1023))
-	require.Equal(t, int32(-1022), GetBase2(0x1p-1024))
-	require.Equal(t, int32(-1022), GetBase2(0x1p-1025))
-	require.Equal(t, int32(-1022), GetBase2(0x1p-1074))
+	require.Equal(t, int32(-1022), getBase2(0x1p-1023))
+	require.Equal(t, int32(-1022), getBase2(0x1p-1024))
+	require.Equal(t, int32(-1022), getBase2(0x1p-1025))
+	require.Equal(t, int32(-1022), getBase2(0x1p-1074))
 }
 
+// Tests a few cases with scale=0.
 func TestExponentMappingZero(t *testing.T) {
 	m, err := NewMapping(0)
 	require.NoError(t, err)
@@ -75,6 +78,7 @@ func TestExponentMappingZero(t *testing.T) {
 	}
 }
 
+// Tests a few cases with scale=MinScale.
 func TestExponentMappingMinScale(t *testing.T) {
 	m, err := NewMapping(MinScale)
 	require.NoError(t, err)
@@ -96,6 +100,7 @@ func TestExponentMappingMinScale(t *testing.T) {
 	}
 }
 
+// Tests invalid scales.
 func TestInvalidScale(t *testing.T) {
 	m, err := NewMapping(1)
 	require.Error(t, err)
@@ -106,6 +111,7 @@ func TestInvalidScale(t *testing.T) {
 	require.Nil(t, m)
 }
 
+// Tests a few cases with scale=-1.
 func TestExponentMappingNegOne(t *testing.T) {
 	m, _ := NewMapping(-1)
 
@@ -135,6 +141,7 @@ func TestExponentMappingNegOne(t *testing.T) {
 	}
 }
 
+// Tests a few cases with scale=-4.
 func TestExponentMappingNegFour(t *testing.T) {
 	m, err := NewMapping(-4)
 	require.NoError(t, err)
@@ -219,7 +226,9 @@ func TestExponentMappingNegFour(t *testing.T) {
 	}
 }
 
-// roundedBoundary computes
+// roundedBoundary computes the correct boundary rounded to a float64
+// using math/big.  Note that this function uses a Square() where the
+// one in ../logarithm uses a SquareRoot().
 func roundedBoundary(scale, index int32) float64 {
 	one := big.NewFloat(1)
 	f := (&big.Float{}).SetMantExp(one, int(index))
@@ -260,7 +269,12 @@ func TestExponentIndexMax(t *testing.T) {
 	}
 }
 
-// TestExponentIndexMin ensures that for every valid scale, Non-zero numbers
+// TestExponentIndexMin ensures that for every valid scale, the
+// smallest normal number and all smaller numbers map to the correct
+// index, which is that of the smallest normal number.
+//
+// Tests that the lower boundary of the smallest bucket is correct,
+// even when that number is subnormal.
 func TestExponentIndexMin(t *testing.T) {
 	for scale := MinScale; scale <= MaxScale; scale++ {
 		m, err := NewMapping(scale)

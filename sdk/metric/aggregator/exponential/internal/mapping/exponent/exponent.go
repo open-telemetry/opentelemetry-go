@@ -52,6 +52,7 @@ var prebuiltMappings = [-MinScale + 1]exponentMapping{
 	{0},
 }
 
+// NewMapping constructs an exponential mapping function, used for scales <= 0.
 func NewMapping(scale int32) (mapping.Mapping, error) {
 	if scale > 0 {
 		return nil, fmt.Errorf("exponent mapping requires scale <= 0")
@@ -62,12 +63,13 @@ func NewMapping(scale int32) (mapping.Mapping, error) {
 	return &prebuiltMappings[scale-MinScale], nil
 }
 
+// MapToIndex implements mapping.Mapping.
 func (e *exponentMapping) MapToIndex(value float64) int32 {
 	// Note: we can assume not a 0, Inf, or NaN; positive sign bit.
 
 	// Note: bit-shifting does the right thing for negative
 	// exponents, e.g., -1 >> 1 == -1.
-	return GetBase2(value) >> e.shift
+	return getBase2(value) >> e.shift
 }
 
 func (e *exponentMapping) minIndex() int32 {
@@ -78,6 +80,7 @@ func (e *exponentMapping) maxIndex() int32 {
 	return int32(MaxNormalExponent) >> e.shift
 }
 
+// LowerBoundary implements mapping.Mapping.
 func (e *exponentMapping) LowerBoundary(index int32) (float64, error) {
 	min := e.minIndex()
 
@@ -105,6 +108,7 @@ func (e *exponentMapping) LowerBoundary(index int32) (float64, error) {
 	return math.Float64frombits(bits), nil
 }
 
+// Scale implements mapping.Mapping.
 func (e *exponentMapping) Scale() int32 {
 	return -int32(e.shift)
 }

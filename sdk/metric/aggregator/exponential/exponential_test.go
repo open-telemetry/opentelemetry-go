@@ -563,7 +563,7 @@ func TestOverflowBits(t *testing.T) {
 	}
 }
 
-// Tests the use of number.Int64Kind as opposed to floating point. The
+ // Tests the use of number.Int64Kind as opposed to floating point. The
 // aggregator internal state is identical except for the Sum, which is
 // maintained as a `number.Number`.
 func TestIntegerAggregation(t *testing.T) {
@@ -907,4 +907,40 @@ func TestInconsistentAggregator(t *testing.T) {
 	err = agg.Merge(wrong, &testDescriptor)
 	require.Error(t, err)
 	require.True(t, errors.Is(err, aggregation.ErrInconsistentType))
+}
+
+// Benchmarks the Update() function for values in the range [1,2)
+func BenchmarkLinear(b *testing.B) {
+	ctx := context.Background()
+	src := rand.NewSource(77777677777)
+	rnd := rand.New(src)
+	agg := &New(1, &testDescriptor, WithMaxSize(1024))[0]
+	for i := 0; i < b.N; i++ {
+		x := 2 - rnd.Float64()
+		_ = agg.Update(ctx, number.NewFloat64Number(x), &testDescriptor)
+	}
+}
+
+// Benchmarks the Update() function for values in the range [1,2) with fixed scale
+func BenchmarkLinearFixed(b *testing.B) {
+	ctx := context.Background()
+	src := rand.NewSource(77777677777)
+	rnd := rand.New(src)
+	agg := &New(1, &testDescriptor, WithMaxSize(1024), WithRangeLimit(1, 1.999999))[0]
+	for i := 0; i < b.N; i++ {
+		x := 2 - rnd.Float64()
+		_ = agg.Update(ctx, number.NewFloat64Number(x), &testDescriptor)
+	}
+}
+
+// Benchmarks the Update() function for values in the range (0, MaxValue]
+func BenchmarkExponential(b *testing.B) {
+	ctx := context.Background()
+	src := rand.NewSource(77777677777)
+	rnd := rand.New(src)
+	agg := &New(1, &testDescriptor, WithMaxSize(1024))[0]
+	for i := 0; i < b.N; i++ {
+		x := rnd.ExpFloat64()
+		_ = agg.Update(ctx, number.NewFloat64Number(x), &testDescriptor)
+	}
 }

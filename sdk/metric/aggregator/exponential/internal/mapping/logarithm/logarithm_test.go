@@ -31,11 +31,14 @@ type expectMapping struct {
 	index int32
 }
 
+// Tests an invalid scale.
 func TestInvalidScale(t *testing.T) {
 	_, err := NewMapping(-1)
 	require.Error(t, err)
 }
 
+// Tests a few values are mapped correctly at scale 1, where the
+// exponentiation factor is SquareRoot(2).
 func TestLogarithmMapping(t *testing.T) {
 	// Scale 1 means 1 division between every power of two, having
 	// a factor sqrt(2) times the lower boundary.
@@ -66,6 +69,8 @@ func TestLogarithmMapping(t *testing.T) {
 	}
 }
 
+// Tests the mapping function for correctness-within-epsilon for a few
+// scales and index values.
 func TestLogarithmBoundary(t *testing.T) {
 	for _, scale := range []int32{1, 2, 3, 4, 10, 15} {
 		t.Run(fmt.Sprint(scale), func(t *testing.T) {
@@ -88,15 +93,14 @@ func TestLogarithmBoundary(t *testing.T) {
 	}
 }
 
-// roundedBoundary computes
+// roundedBoundary computes the correct boundary rounded to a float64
+// using math/big.  Note that this function uses a SquareRoot() where the
+// one in ../exponent uses a Square().
 func roundedBoundary(scale, index int32) float64 {
 	one := big.NewFloat(1)
 	f := (&big.Float{}).SetMantExp(one, int(index))
 	for i := scale; i > 0; i-- {
 		f = (&big.Float{}).Sqrt(f)
-	}
-	for i := scale; i < 0; i++ {
-		f = (&big.Float{}).Mul(f, f)
 	}
 
 	result, _ := f.Float64()
@@ -208,7 +212,9 @@ func TestExponentIndexMax(t *testing.T) {
 	}
 }
 
-// TestExponentIndexMin ensures that for every valid scale, Non-zero numbers
+// TestExponentIndexMin ensures that for every valid scale, the
+// smallest normal number and all smaller numbers map to the correct
+// index, which is that of the smallest normal number.
 func TestExponentIndexMin(t *testing.T) {
 	for scale := MinScale; scale <= MaxScale; scale++ {
 		m, err := NewMapping(scale)
