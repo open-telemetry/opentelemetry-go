@@ -21,16 +21,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/internal/mapping"
 )
 
 type expectMapping struct {
 	value float64
-	index int32
-}
-
-type invalidMapping struct {
-	scale int32
 	index int32
 }
 

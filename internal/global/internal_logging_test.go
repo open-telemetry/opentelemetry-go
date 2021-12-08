@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package aggregation
+package global
 
 import (
+	"log"
+	"os"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/go-logr/stdr"
 )
 
-func TestAggregationKind(t *testing.T) {
-	require.Equal(t, "Sum", SumKind.String())
-	require.Equal(t, "Lastvalue", LastValueKind.String())
-	require.Equal(t, "Histogram", HistogramKind.String())
-	require.Equal(t, "ExponentialHistogram", ExponentialHistogramKind.String())
+func TestRace(t *testing.T) {
+	go SetLogger(stdr.New(log.New(os.Stderr, "", 0)))
+	go Info("")
 }

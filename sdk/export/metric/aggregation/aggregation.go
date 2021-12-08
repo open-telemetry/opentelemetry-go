@@ -108,15 +108,6 @@ type (
 		Len() uint32
 		At(uint32) uint64
 	}
-
-	// MinMaxSumCount supports the Min, Max, Sum, and Count interfaces.
-	MinMaxSumCount interface {
-		Aggregation
-		Min() (number.Number, error)
-		Max() (number.Number, error)
-		Sum() (number.Number, error)
-		Count() (uint64, error)
-	}
 )
 
 type (
@@ -130,8 +121,7 @@ type (
 	// deciding how to expose metric data.  This enables
 	// user-supplied Aggregators to replace builtin Aggregators.
 	//
-	// For example, test for a Distribution before testing for a
-	// MinMaxSumCount, test for a Histogram before testing for a
+	// For example, test for a Histogram before testing for a
 	// Sum, and so on.
 	Kind string
 )
@@ -139,9 +129,8 @@ type (
 // Kind description constants.
 const (
 	SumKind                  Kind = "Sum"
-	MinMaxSumCountKind       Kind = "MinMaxSumCount"
-	HistogramKind            Kind = "Histogram"
 	LastValueKind            Kind = "Lastvalue"
+	HistogramKind            Kind = "Histogram"
 	ExponentialHistogramKind Kind = "ExponentialHistogram"
 )
 

@@ -12,17 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package aggregation
+package otel // import "go.opentelemetry.io/otel"
 
 import (
-	"testing"
+	"github.com/go-logr/logr"
 
-	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/internal/global"
 )
 
-func TestAggregationKind(t *testing.T) {
-	require.Equal(t, "Sum", SumKind.String())
-	require.Equal(t, "Lastvalue", LastValueKind.String())
-	require.Equal(t, "Histogram", HistogramKind.String())
-	require.Equal(t, "ExponentialHistogram", ExponentialHistogramKind.String())
+// SetLogger configures the logger used internally to opentelemetry.
+func SetLogger(logger logr.Logger) {
+	global.SetLogger(logger)
 }

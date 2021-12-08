@@ -24,12 +24,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/durationpb"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpmetrictest"
@@ -165,386 +163,6 @@ func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
 	}
 }
 
-func TestNewExporter_collectorConnectionDiesThenReconnectsWhenInRestMode(t *testing.T) {
-	// TODO: Fix this test #1527
-	t.Skip("This test is flaky and needs to be rewritten")
-	mc := runMockCollector(t)
-
-	reconnectionPeriod := 20 * time.Millisecond
-	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, mc.endpoint,
-		otlpmetricgrpc.WithRetry(otlpmetricgrpc.RetrySettings{Enabled: false}),
-		otlpmetricgrpc.WithReconnectionPeriod(reconnectionPeriod))
-	defer func() { require.NoError(t, exp.Shutdown(ctx)) }()
-
-	// Wait for a connection.
-	mc.ln.WaitForConn()
-
-	// We'll now stop the collector right away to simulate a connection
-	// dying in the midst of communication or even not existing before.
-	require.NoError(t, mc.stop())
-
-	// first export, it will send disconnected message to the channel on export failure,
-	// trigger almost immediate reconnection
-	require.Error(t, exp.Export(ctx, testResource, oneRecord))
-
-	// second export, it will detect connection issue, change state of exporter to disconnected and
-	// send message to disconnected channel but this time reconnection gouroutine will be in (rest mode, not listening to the disconnected channel)
-	require.Error(t, exp.Export(ctx, testResource, oneRecord))
-
-	// as a result we have exporter in disconnected state waiting for disconnection message to reconnect
-
-	// resurrect collector
-	nmc := runMockCollectorAtEndpoint(t, mc.endpoint)
-
-	// make sure reconnection loop hits beginning and goes back to waiting mode
-	// after hitting beginning of the loop it should reconnect
-	nmc.ln.WaitForConn()
-
-	n := 10
-	for i := 0; i < n; i++ {
-		// when disconnected exp.Export doesnt send disconnected messages again
-		// it just quits and return last connection error
-		require.NoError(t, exp.Export(ctx, testResource, oneRecord))
-	}
-
-	nmaMetrics := nmc.getMetrics()
-
-	if g, w := len(nmaMetrics), n; g != w {
-		t.Fatalf("Connected collector: metrics: got %d want %d", g, w)
-	}
-
-	dMetrics := mc.getMetrics()
-	// Expecting 0 metrics to have been received by the original but now dead collector
-	if g, w := len(dMetrics), 0; g != w {
-		t.Fatalf("Disconnected collector: spans: got %d want %d", g, w)
-	}
-
-	require.NoError(t, nmc.Stop())
-}
-
-func TestExporterExportFailureAndRecoveryModes(t *testing.T) {
-	tts := []struct {
-		name   string
-		errors []error
-		rs     otlpmetricgrpc.RetrySettings
-		fn     func(t *testing.T, ctx context.Context, exp *otlpmetric.Exporter, mc *mockCollector)
-		opts   []otlpmetricgrpc.Option
-	}{
-		{
-			name: "Do not retry if succeeded",
-			fn: func(t *testing.T, ctx context.Context, exp *otlpmetric.Exporter, mc *mockCollector) {
-				require.NoError(t, exp.Export(ctx, testResource, oneRecord))
-
-				metrics := mc.getMetrics()
-
-				require.Len(t, metrics, 1)
-				require.Equal(t, 1, mc.metricSvc.requests, "metric service must receive 1 success request.")
-			},
-		},
-		{
-			name: "Do not retry if 'error' is ok",
-			errors: []error{
-				status.Error(codes.OK, ""),
-			},
-			fn: func(t *testing.T, ctx context.Context, exp *otlpmetric.Exporter, mc *mockCollector) {
-				require.NoError(t, exp.Export(ctx, testResource, oneRecord))
-
-				metrics := mc.getMetrics()
-
-				require.Len(t, metrics, 0)
-				require.Equal(t, 1, mc.metricSvc.requests, "metric service must receive 1 error OK request.")
-			},
-		},
-		{
-			name: "Fail three times and succeed",
-			rs: otlpmetricgrpc.RetrySettings{
-				Enabled:         true,
-				MaxElapsedTime:  300 * time.Millisecond,
-				InitialInterval: 2 * time.Millisecond,
-				MaxInterval:     10 * time.Millisecond,
-			},
-			errors: []error{
-				status.Error(codes.Unavailable, "backend under pressure"),
-				status.Error(codes.Unavailable, "backend under pressure"),
-				status.Error(codes.Unavailable, "backend under pressure"),
-			},
-			fn: func(t *testing.T, ctx context.Context, exp *otlpmetric.Exporter, mc *mockCollector) {
-				require.NoError(t, exp.Export(ctx, testResource, oneRecord))
-
-				metrics := mc.getMetrics()
-
-				require.Len(t, metrics, 1)
-				require.Equal(t, 4, mc.metricSvc.requests, "metric service must receive 3 failure requests and 1 success request.")
-			},
-		},
-		{
-			name: "Permanent error should not be retried",
-			rs: otlpmetricgrpc.RetrySettings{
-				Enabled:         true,
-				MaxElapsedTime:  300 * time.Millisecond,
-				InitialInterval: 2 * time.Millisecond,
-				MaxInterval:     10 * time.Millisecond,
-			},
-			errors: []error{
-				status.Error(codes.InvalidArgument, "invalid arguments"),
-			},
-			fn: func(t *testing.T, ctx context.Context, exp *otlpmetric.Exporter, mc *mockCollector) {
-				require.Error(t, exp.Export(ctx, testResource, oneRecord))
-
-				metric := mc.getMetrics()
-
-				require.Len(t, metric, 0)
-				require.Equal(t, 1, mc.metricSvc.requests, "metric service must receive 1 error requests.")
-			},
-		},
-		{
-			name: "Test all transient errors and succeed",
-			rs: otlpmetricgrpc.RetrySettings{
-				Enabled:         true,
-				MaxElapsedTime:  500 * time.Millisecond,
-				InitialInterval: 1 * time.Millisecond,
-				MaxInterval:     2 * time.Millisecond,
-			},
-			errors: []error{
-				status.Error(codes.Canceled, ""),
-				status.Error(codes.DeadlineExceeded, ""),
-				status.Error(codes.ResourceExhausted, ""),
-				status.Error(codes.Aborted, ""),
-				status.Error(codes.OutOfRange, ""),
-				status.Error(codes.Unavailable, ""),
-				status.Error(codes.DataLoss, ""),
-			},
-			fn: func(t *testing.T, ctx context.Context, exp *otlpmetric.Exporter, mc *mockCollector) {
-				require.NoError(t, exp.Export(ctx, testResource, oneRecord))
-
-				metrics := mc.getMetrics()
-
-				require.Len(t, metrics, 1)
-				require.Equal(t, 8, mc.metricSvc.requests, "metric service must receive 9 failure requests and 1 success request.")
-			},
-		},
-		{
-			name: "Retry should honor server throttling",
-			rs: otlpmetricgrpc.RetrySettings{
-				Enabled:         true,
-				MaxElapsedTime:  time.Minute,
-				InitialInterval: time.Nanosecond,
-				MaxInterval:     time.Nanosecond,
-			},
-			opts: []otlpmetricgrpc.Option{
-				otlpmetricgrpc.WithTimeout(time.Millisecond * 100),
-			},
-			errors: []error{
-				newThrottlingError(codes.ResourceExhausted, time.Second*30),
-			},
-			fn: func(t *testing.T, ctx context.Context, exp *otlpmetric.Exporter, mc *mockCollector) {
-				err := exp.Export(ctx, testResource, oneRecord)
-				require.Error(t, err)
-				require.Equal(t, "context deadline exceeded", err.Error())
-
-				metrics := mc.getMetrics()
-
-				require.Len(t, metrics, 0)
-				require.Equal(t, 1, mc.metricSvc.requests, "metric service must receive 1 failure requests and 1 success request.")
-			},
-		},
-		{
-			name: "Retry should fail if server throttling is higher than the MaxElapsedTime",
-			rs: otlpmetricgrpc.RetrySettings{
-				Enabled:         true,
-				MaxElapsedTime:  time.Millisecond * 100,
-				InitialInterval: time.Nanosecond,
-				MaxInterval:     time.Nanosecond,
-			},
-			errors: []error{
-				newThrottlingError(codes.ResourceExhausted, time.Minute),
-			},
-			fn: func(t *testing.T, ctx context.Context, exp *otlpmetric.Exporter, mc *mockCollector) {
-				err := exp.Export(ctx, testResource, oneRecord)
-				require.Error(t, err)
-				require.Equal(t, "max elapsed time expired when respecting server throttle: rpc error: code = ResourceExhausted desc = ", err.Error())
-
-				metrics := mc.getMetrics()
-
-				require.Len(t, metrics, 0)
-				require.Equal(t, 1, mc.metricSvc.requests, "metric service must receive 1 failure requests and 1 success request.")
-			},
-		},
-		{
-			name: "Retry stops if takes too long",
-			rs: otlpmetricgrpc.RetrySettings{
-				Enabled:         true,
-				MaxElapsedTime:  time.Millisecond * 100,
-				InitialInterval: time.Millisecond * 50,
-				MaxInterval:     time.Millisecond * 50,
-			},
-			errors: []error{
-				status.Error(codes.Unavailable, "unavailable"),
-				status.Error(codes.Unavailable, "unavailable"),
-				status.Error(codes.Unavailable, "unavailable"),
-				status.Error(codes.Unavailable, "unavailable"),
-				status.Error(codes.Unavailable, "unavailable"),
-				status.Error(codes.Unavailable, "unavailable"),
-			},
-			fn: func(t *testing.T, ctx context.Context, exp *otlpmetric.Exporter, mc *mockCollector) {
-				err := exp.Export(ctx, testResource, oneRecord)
-				require.Error(t, err)
-
-				require.Equal(t, "max elapsed time expired: rpc error: code = Unavailable desc = unavailable", err.Error())
-
-				metrics := mc.getMetrics()
-
-				require.Len(t, metrics, 0)
-				require.LessOrEqual(t, 1, mc.metricSvc.requests, "metric service must receive at least 1 failure requests.")
-			},
-		},
-		{
-			name: "Disabled retry",
-			rs: otlpmetricgrpc.RetrySettings{
-				Enabled: false,
-			},
-			errors: []error{
-				status.Error(codes.Unavailable, "unavailable"),
-			},
-			fn: func(t *testing.T, ctx context.Context, exp *otlpmetric.Exporter, mc *mockCollector) {
-				err := exp.Export(ctx, testResource, oneRecord)
-				require.Error(t, err)
-
-				require.Equal(t, "rpc error: code = Unavailable desc = unavailable", err.Error())
-
-				metrics := mc.getMetrics()
-
-				require.Len(t, metrics, 0)
-				require.Equal(t, 1, mc.metricSvc.requests, "metric service must receive 1 failure requests.")
-			},
-		},
-	}
-
-	for _, tt := range tts {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
-
-			mc := runMockCollectorWithConfig(t, &mockConfig{
-				errors: tt.errors,
-			})
-
-			opts := []otlpmetricgrpc.Option{
-				otlpmetricgrpc.WithRetry(tt.rs),
-			}
-
-			if len(tt.opts) != 0 {
-				opts = append(opts, tt.opts...)
-			}
-
-			exp := newGRPCExporter(t, ctx, mc.endpoint, opts...)
-
-			tt.fn(t, ctx, exp, mc)
-
-			require.NoError(t, mc.Stop())
-			require.NoError(t, exp.Shutdown(ctx))
-		})
-	}
-
-}
-
-func TestPermanentErrorsShouldNotBeRetried(t *testing.T) {
-	permanentErrors := []*status.Status{
-		status.New(codes.Unknown, "Unknown"),
-		status.New(codes.InvalidArgument, "InvalidArgument"),
-		status.New(codes.NotFound, "NotFound"),
-		status.New(codes.AlreadyExists, "AlreadyExists"),
-		status.New(codes.FailedPrecondition, "FailedPrecondition"),
-		status.New(codes.Unimplemented, "Unimplemented"),
-		status.New(codes.Internal, "Internal"),
-		status.New(codes.PermissionDenied, ""),
-		status.New(codes.Unauthenticated, ""),
-	}
-
-	for _, sts := range permanentErrors {
-		t.Run(sts.Code().String(), func(t *testing.T) {
-			ctx := context.Background()
-
-			mc := runMockCollectorWithConfig(t, &mockConfig{
-				errors: []error{sts.Err()},
-			})
-
-			exp := newGRPCExporter(t, ctx, mc.endpoint)
-
-			err := exp.Export(ctx, testResource, oneRecord)
-			require.Error(t, err)
-			require.Len(t, mc.getMetrics(), 0)
-			require.Equal(t, 1, mc.metricSvc.requests, "metric service must receive 1 permanent error requests.")
-
-			require.NoError(t, mc.Stop())
-			require.NoError(t, exp.Shutdown(ctx))
-		})
-	}
-}
-
-func newThrottlingError(code codes.Code, duration time.Duration) error {
-	s := status.New(code, "")
-
-	s, _ = s.WithDetails(&errdetails.RetryInfo{RetryDelay: durationpb.New(duration)})
-
-	return s.Err()
-}
-
-func TestNewExporter_collectorConnectionDiesThenReconnects(t *testing.T) {
-	// TODO: Fix this test #1527
-	t.Skip("This test is flaky and needs to be rewritten")
-	mc := runMockCollector(t)
-
-	reconnectionPeriod := 50 * time.Millisecond
-	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, mc.endpoint,
-		otlpmetricgrpc.WithRetry(otlpmetricgrpc.RetrySettings{Enabled: false}),
-		otlpmetricgrpc.WithReconnectionPeriod(reconnectionPeriod))
-	defer func() { require.NoError(t, exp.Shutdown(ctx)) }()
-
-	mc.ln.WaitForConn()
-
-	// We'll now stop the collector right away to simulate a connection
-	// dying in the midst of communication or even not existing before.
-	require.NoError(t, mc.stop())
-
-	// In the test below, we'll stop the collector many times,
-	// while exporting metrics and test to ensure that we can
-	// reconnect.
-	for j := 0; j < 3; j++ {
-
-		// No endpoint up.
-		require.Error(t, exp.Export(ctx, testResource, oneRecord))
-
-		// Now resurrect the collector by making a new one but reusing the
-		// old endpoint, and the collector should reconnect automatically.
-		nmc := runMockCollectorAtEndpoint(t, mc.endpoint)
-
-		// Give the exporter sometime to reconnect
-		nmc.ln.WaitForConn()
-
-		n := 10
-		for i := 0; i < n; i++ {
-			require.NoError(t, exp.Export(ctx, testResource, oneRecord))
-		}
-
-		nmaMetrics := nmc.getMetrics()
-		// Expecting 10 metrics that were sampled, given that
-		if g, w := len(nmaMetrics), n; g != w {
-			t.Fatalf("Round #%d: Connected collector: spans: got %d want %d", j, g, w)
-		}
-
-		dMetrics := mc.getMetrics()
-		// Expecting 0 metrics to have been received by the original but now dead collector
-		if g, w := len(dMetrics), 0; g != w {
-			t.Fatalf("Round #%d: Disconnected collector: spans: got %d want %d", j, g, w)
-		}
-
-		// Disconnect for the next try.
-		require.NoError(t, nmc.stop())
-	}
-}
-
 // This test takes a long time to run: to skip it, run tests using: -short
 func TestNewExporter_collectorOnBadConnection(t *testing.T) {
 	if testing.Short() {
@@ -641,7 +259,7 @@ func TestNewExporter_WithTimeout(t *testing.T) {
 			}()
 
 			ctx := context.Background()
-			exp := newGRPCExporter(t, ctx, mc.endpoint, otlpmetricgrpc.WithTimeout(tt.timeout), otlpmetricgrpc.WithRetry(otlpmetricgrpc.RetrySettings{Enabled: false}))
+			exp := newGRPCExporter(t, ctx, mc.endpoint, otlpmetricgrpc.WithTimeout(tt.timeout), otlpmetricgrpc.WithRetry(otlpmetricgrpc.RetryConfig{Enabled: false}))
 			defer func() {
 				_ = exp.Shutdown(ctx)
 			}()
@@ -662,48 +280,31 @@ func TestNewExporter_WithTimeout(t *testing.T) {
 	}
 }
 
-func TestNewExporter_withInvalidSecurityConfiguration(t *testing.T) {
+func TestStartErrorInvalidSecurityConfiguration(t *testing.T) {
 	mc := runMockCollector(t)
 	defer func() {
 		_ = mc.stop()
 	}()
 
-	ctx := context.Background()
 	client := otlpmetricgrpc.NewClient(otlpmetricgrpc.WithEndpoint(mc.endpoint))
-	exp, err := otlpmetric.New(ctx, client)
-	if err != nil {
-		t.Fatalf("failed to create a new collector exporter: %v", err)
-	}
-
-	err = exp.Export(ctx, testResource, oneRecord)
-
-	expectedErr := fmt.Sprintf("metrics exporter is disconnected from the server %s: grpc: no transport security set (use grpc.WithInsecure() explicitly or set credentials)", mc.endpoint)
-
-	require.Error(t, err)
-	require.Equal(t, expectedErr, err.Error())
-
-	defer func() {
-		_ = exp.Shutdown(ctx)
-	}()
+	err := client.Start(context.Background())
+	// https://github.com/grpc/grpc-go/blob/a671967dfbaab779d37fd7e597d9248f13806087/clientconn.go#L82
+	assert.EqualError(t, err, "grpc: no transport security set (use grpc.WithInsecure() explicitly or set credentials)")
 }
 
-func TestDisconnected(t *testing.T) {
-	ctx := context.Background()
-	// The endpoint is whatever, we want to be disconnected. But we
-	// setting a blocking connection, so dialing to the invalid
-	// endpoint actually fails.
-	exp := newGRPCExporter(t, ctx, "invalid",
-		otlpmetricgrpc.WithReconnectionPeriod(time.Hour),
+func TestStartErrorInvalidAddress(t *testing.T) {
+	client := otlpmetricgrpc.NewClient(
+		otlpmetricgrpc.WithInsecure(),
+		// Validate the connection in Start (which should return the error).
 		otlpmetricgrpc.WithDialOption(
 			grpc.WithBlock(),
 			grpc.FailOnNonTempDialError(true),
 		),
+		otlpmetricgrpc.WithEndpoint("invalid"),
+		otlpmetricgrpc.WithReconnectionPeriod(time.Hour),
 	)
-	defer func() {
-		assert.NoError(t, exp.Shutdown(ctx))
-	}()
-
-	assert.Error(t, exp.Export(ctx, testResource, oneRecord))
+	err := client.Start(context.Background())
+	assert.EqualError(t, err, `connection error: desc = "transport: error while dialing: dial tcp: address invalid: missing port in address"`)
 }
 
 func TestEmptyData(t *testing.T) {

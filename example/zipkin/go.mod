@@ -72,3 +72,5 @@ replace go.opentelemetry.io/otel/bridge/opencensus/test => ../../bridge/opencens
 replace go.opentelemetry.io/otel/example/fib => ../fib
 
 replace go.opentelemetry.io/otel/schema => ../../schema
+
+replace go.opentelemetry.io/otel/exporters/otlp/internal/retry => ../../exporters/otlp/internal/retry

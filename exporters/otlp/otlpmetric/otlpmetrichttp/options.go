@@ -18,20 +18,8 @@ import (
 	"crypto/tls"
 	"time"
 
+	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpconfig"
-)
-
-const (
-	// defaultMaxAttempts describes how many times the driver
-	// should retry the sending of the payload in case of a
-	// retryable error.
-	defaultMaxAttempts int = 5
-	// defaultMetricsPath is a default URL path for endpoint that
-	// receives metrics.
-	defaultMetricsPath string = "/v1/metrics"
-	// defaultBackoff is a default base backoff time used in the
-	// exponential backoff strategy.
-	defaultBackoff time.Duration = 300 * time.Millisecond
 )
 
 // Compression describes the compression used for payloads sent to the
@@ -51,6 +39,10 @@ const (
 type Option interface {
 	applyHTTPOption(*otlpconfig.Config)
 }
+
+// RetryConfig defines configuration for retrying batches in case of export
+// failure using an exponential backoff.
+type RetryConfig retry.Config
 
 type wrappedOption struct {
 	otlpconfig.HTTPOption
@@ -84,15 +76,67 @@ func WithURLPath(urlPath string) Option {
 // will try to send the payload in case of retryable errors.
 // The max attempts is limited to at most 5 retries. If unset,
 // default (5) will be used.
+//
+// Deprecated: Use WithRetry instead.
 func WithMaxAttempts(maxAttempts int) Option {
-	return wrappedOption{otlpconfig.WithMaxAttempts(maxAttempts)}
+	if maxAttempts > 5 || maxAttempts < 0 {
+		maxAttempts = 5
+	}
+	return wrappedOption{
+		otlpconfig.NewHTTPOption(func(cfg *otlpconfig.Config) {
+			cfg.RetryConfig.Enabled = true
+
+			var (
+				init = cfg.RetryConfig.InitialInterval
+				maxI = cfg.RetryConfig.MaxInterval
+				maxE = cfg.RetryConfig.MaxElapsedTime
+			)
+
+			if init == 0 {
+				init = retry.DefaultConfig.InitialInterval
+			}
+			if maxI == 0 {
+				maxI = retry.DefaultConfig.MaxInterval
+			}
+			if maxE == 0 {
+				maxE = retry.DefaultConfig.MaxElapsedTime
+			}
+			attempts := int64(maxE+init) / int64(maxI)
+
+			if int64(maxAttempts) == attempts {
+				return
+			}
+
+			maxE = time.Duration(int64(maxAttempts)*int64(maxI)) - init
+
+			cfg.RetryConfig.InitialInterval = init
+			cfg.RetryConfig.MaxInterval = maxI
+			cfg.RetryConfig.MaxElapsedTime = maxE
+		}),
+	}
 }
 
 // WithBackoff tells the driver to use the duration as a base of the
 // exponential backoff strategy. If unset, default (300ms) will be
 // used.
+//
+// Deprecated: Use WithRetry instead.
 func WithBackoff(duration time.Duration) Option {
-	return wrappedOption{otlpconfig.WithBackoff(duration)}
+	if duration < 0 {
+		duration = 300 * time.Millisecond
+	}
+	return wrappedOption{
+		otlpconfig.NewHTTPOption(func(cfg *otlpconfig.Config) {
+			cfg.RetryConfig.Enabled = true
+			cfg.RetryConfig.MaxInterval = duration
+			if cfg.RetryConfig.InitialInterval == 0 {
+				cfg.RetryConfig.InitialInterval = retry.DefaultConfig.InitialInterval
+			}
+			if cfg.RetryConfig.MaxElapsedTime == 0 {
+				cfg.RetryConfig.MaxElapsedTime = retry.DefaultConfig.MaxElapsedTime
+			}
+		}),
+	}
 }
 
 // WithTLSClientConfig can be used to set up a custom TLS
@@ -119,4 +163,13 @@ func WithHeaders(headers map[string]string) Option {
 // each metrics batch.  If unset, the default will be 10 seconds.
 func WithTimeout(duration time.Duration) Option {
 	return wrappedOption{otlpconfig.WithTimeout(duration)}
+}
+
+// WithRetry configures the retry policy for transient errors that may occurs
+// when exporting traces. An exponential back-off algorithm is used to ensure
+// endpoints are not overwhelmed with retries. If unset, the default retry
+// policy will retry after 5 seconds and increase exponentially after each
+// error for a total of 1 minute.
+func WithRetry(rc RetryConfig) Option {
+	return wrappedOption{otlpconfig.WithRetry(retry.Config(rc))}
 }
