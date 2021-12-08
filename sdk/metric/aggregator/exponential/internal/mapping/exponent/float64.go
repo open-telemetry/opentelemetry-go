@@ -55,8 +55,8 @@ const (
 	MaxValue = math.MaxFloat64
 )
 
-// GetBase2 extracts the normalized base-2 fractional exponent.  This
-// like math.Frexp(), rounds subnormal values up to the minimum normal
+// GetBase2 extracts the normalized base-2 fractional exponent.  Like
+// math.Frexp(), rounds subnormal values up to the minimum normal
 // value.  Unlike Frexp(), this returns k for the equation f x 2**k
 // where f is in the range [1, 2).
 func GetBase2(value float64) int32 {

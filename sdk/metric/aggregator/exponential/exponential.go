@@ -16,6 +16,7 @@ package exponential // import "go.opentelemetry.io/otel/sdk/metric/aggregator/ex
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"math/bits"
 	"sync"
@@ -154,7 +155,8 @@ func New(cnt int, desc *sdkapi.Descriptor, opts ...Option) []Aggregator {
 		return 0
 	}
 
-	mapping := newMapping(logarithm.MaxScale)
+	mapping, _ := newMapping(logarithm.MaxScale)
+
 	minValue := realNonNeg(cfg.minValue)
 	maxValue := realNonNeg(cfg.maxValue)
 
@@ -164,7 +166,11 @@ func New(cnt int, desc *sdkapi.Descriptor, opts ...Option) []Aggregator {
 			low:  mapping.MapToIndex(minValue),
 		}, cfg.maxSize)
 		scale := mapping.Scale() - change
-		mapping = newMapping(scale)
+		var err error
+		mapping, err = newMapping(scale)
+		if err != nil {
+			panic("impossible initial scale")
+		}
 
 		// use the exact size limit based on the calculated scale.
 		cfg.maxSize = mapping.MapToIndex(maxValue) + 1 - mapping.MapToIndex(minValue)
@@ -402,7 +408,7 @@ func (a *Aggregator) clearState() {
 	a.state.zeroCount = 0
 
 	if !a.hasLimits() {
-		a.state.mapping = newMapping(logarithm.MaxScale)
+		a.state.mapping, _ = newMapping(logarithm.MaxScale)
 	}
 }
 
@@ -435,24 +441,26 @@ func (b *buckets) clearState() {
 	}
 }
 
-func newMapping(scale int32) mapping.Mapping {
+func newMapping(scale int32) (mapping.Mapping, error) {
 	if scale <= 0 {
-		m, _ := exponent.NewMapping(scale)
-		return m
+		return exponent.NewMapping(scale)
 	}
-	m, _ := logarithm.NewMapping(scale)
-	return m
+	return logarithm.NewMapping(scale)
 }
 
 func (a *Aggregator) downscale(change int32) {
 	if change < 0 {
-		panic("impossible")
+		panic(fmt.Sprint("impossible change of scale", change))
 	}
 	newScale := a.state.mapping.Scale() - change
 
 	a.state.positive.downscale(change)
 	a.state.negative.downscale(change)
-	a.state.mapping = newMapping(newScale)
+	var err error
+	a.state.mapping, err = newMapping(newScale)
+	if err != nil {
+		panic(fmt.Sprint("impossible scale", newScale))
+	}
 }
 
 // changeScale computes the required change of scale.

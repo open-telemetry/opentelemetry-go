@@ -59,7 +59,7 @@ following [probability sampling in OpenTelemetry tracing
 ## Implementation
 
 The implementation maintains a slice of buckets and grows the array in
-size only as neccessary given the actual range of values, up to the
+size only as necessary given the actual range of values, up to the
 maximum size.  The structure of a single range of buckets is:
 
 ```golang

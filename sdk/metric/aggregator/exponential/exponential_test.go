@@ -17,6 +17,7 @@ package exponential
 import (
 	"context"
 	"fmt"
+	"math"
 	"math/rand"
 	"strings"
 	"testing"
@@ -272,7 +273,8 @@ func testExhaustive(t *testing.T, maxSize, offset, initScale int32) {
 	for step := maxSize; step < 4*maxSize; step++ {
 		ctx := context.Background()
 		agg := &New(1, &testDescriptor, WithMaxSize(maxSize))[0]
-		mapper := newMapping(initScale)
+		mapper, err := newMapping(initScale)
+		require.NoError(t, err)
 
 		minVal := centerVal(mapper, offset)
 		maxVal := centerVal(mapper, offset+step)
@@ -316,7 +318,8 @@ func testExhaustive(t *testing.T, maxSize, offset, initScale int32) {
 		require.GreaterOrEqual(t, sum, hsum.CoerceToFloat64(number.Float64Kind))
 
 		// The offset is correct at the computed scale.
-		mapper = newMapping(agg.scale())
+		mapper, err = newMapping(agg.scale())
+		require.NoError(t, err)
 		idx := mapper.MapToIndex(minVal)
 		require.Equal(t, int32(idx), agg.positive().Offset())
 
@@ -771,7 +774,8 @@ func TestFixedLimits(t *testing.T) {
 	} {
 		var expectScale int32
 		sizeAtScale := func(s int32) int32 {
-			m := newMapping(s)
+			m, err := newMapping(s)
+			require.NoError(t, err)
 			return m.MapToIndex(test.max) - m.MapToIndex(test.min) + 1
 		}
 
@@ -825,4 +829,27 @@ func TestFixedLimits(t *testing.T) {
 		cnt, _ = agg.Count()
 		require.Equal(t, uint64(3), cnt)
 	}
+}
+
+func TestFullRange(t *testing.T) {
+	ctx := context.Background()
+	aggs := New(1, &testDescriptor, WithMaxSize(2))
+	agg := &aggs[0]
+
+	require.NoError(t, agg.Update(ctx, number.NewFloat64Number(math.MaxFloat64), &testDescriptor))
+	require.NoError(t, agg.Update(ctx, number.NewFloat64Number(1), &testDescriptor))
+	require.NoError(t, agg.Update(ctx, number.NewFloat64Number(math.SmallestNonzeroFloat64), &testDescriptor))
+
+	require.Equal(t, logarithm.MaxValue, floatSumNoError(t, agg))
+	require.Equal(t, uint64(3), countNoError(t, agg))
+
+	require.Equal(t, exponent.MinScale, scaleNoError(t, agg))
+
+	pos, err := agg.Positive()
+	require.NoError(t, err)
+
+	require.Equal(t, uint32(2), pos.Len())
+	require.Equal(t, int32(-1), pos.Offset())
+	require.Equal(t, pos.At(0), uint64(1))
+	require.Equal(t, pos.At(1), uint64(2))
 }

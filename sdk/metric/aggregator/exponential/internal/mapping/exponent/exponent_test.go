@@ -241,7 +241,6 @@ func roundedBoundary(scale, index int32) float64 {
 // an overflow error.
 func TestExponentIndexMax(t *testing.T) {
 	for scale := MinScale; scale <= MaxScale; scale++ {
-		fmt.Println("Scale is", scale)
 		m, err := NewMapping(scale)
 		require.NoError(t, err)
 
@@ -268,7 +267,6 @@ func TestExponentIndexMax(t *testing.T) {
 // TestExponentIndexMin ensures that for every valid scale, Non-zero numbers
 func TestExponentIndexMin(t *testing.T) {
 	for scale := MinScale; scale <= MaxScale; scale++ {
-		fmt.Println("scale", scale)
 		m, err := NewMapping(scale)
 		require.NoError(t, err)
 
