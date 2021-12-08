@@ -563,7 +563,7 @@ func TestOverflowBits(t *testing.T) {
 	}
 }
 
- // Tests the use of number.Int64Kind as opposed to floating point. The
+// Tests the use of number.Int64Kind as opposed to floating point. The
 // aggregator internal state is identical except for the Sum, which is
 // maintained as a `number.Number`.
 func TestIntegerAggregation(t *testing.T) {

@@ -32,7 +32,7 @@ type expectMapping struct {
 
 // Tests that getBase2 returns the base-2 exponent as documented, unlike
 // math.Frexp.
-func TestgetBase2(t *testing.T) {
+func TestGetBase2(t *testing.T) {
 	require.Equal(t, int32(-1022), MinNormalExponent)
 	require.Equal(t, int32(+1023), MaxNormalExponent)
 
