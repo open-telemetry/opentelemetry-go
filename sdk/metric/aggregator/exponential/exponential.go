@@ -47,7 +47,7 @@ import (
 // NrSketch uses this default.
 const DefaultMaxSize = 320
 
-const MinimumSize = 2
+const MinSize = 2
 
 type (
 	// Aggregator observes events and counts them in
@@ -144,8 +144,8 @@ func New(cnt int, desc *sdkapi.Descriptor, opts ...Option) []Aggregator {
 		opt.apply(&cfg)
 	}
 
-	if cfg.maxSize < MinimumSize {
-		cfg.maxSize = MinimumSize
+	if cfg.maxSize < MinSize {
+		cfg.maxSize = MinSize
 	}
 
 	realNonNeg := func(x float64) float64 {

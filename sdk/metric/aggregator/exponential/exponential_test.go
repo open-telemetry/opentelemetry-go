@@ -16,6 +16,7 @@ package exponential
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -31,6 +32,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/internal/mapping"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/internal/mapping/exponent"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/internal/mapping/logarithm"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
 var (
@@ -41,16 +43,16 @@ var (
 	minusOne = number.NewFloat64Number(-1)
 )
 
-type show struct {
+type printableBucket struct {
 	index int32
 	count uint64
 	lower float64
 }
 
-func (a *Aggregator) shows(b *buckets) (r []show) {
+func (a *Aggregator) printBuckets(b *buckets) (r []printableBucket) {
 	for i := uint32(0); i < b.Len(); i++ {
 		lower, _ := a.state.mapping.LowerBoundary(b.Offset() + int32(i))
-		r = append(r, show{
+		r = append(r, printableBucket{
 			index: b.Offset() + int32(i),
 			count: b.At(i),
 			lower: lower,
@@ -59,19 +61,15 @@ func (a *Aggregator) shows(b *buckets) (r []show) {
 	return r
 }
 
-func counts(b *buckets) (r []uint64) {
+func getCounts(b *buckets) (r []uint64) {
 	for i := uint32(0); i < b.Len(); i++ {
 		r = append(r, b.At(i))
 	}
 	return r
 }
 
-func (s show) String() string {
+func (s printableBucket) String() string {
 	return fmt.Sprintf("%v=%v(%.2g)", s.index, s.count, s.lower)
-}
-
-func (a *Aggregator) String() string {
-	return fmt.Sprintf("%v %v\n%v\n%v", a.state.count, a.state.sum, a.shows(&a.state.positive), a.shows(&a.state.negative))
 }
 
 func countNoError(t *testing.T, a *Aggregator) uint64 {
@@ -104,6 +102,10 @@ func intSumNoError(t *testing.T, a *Aggregator) int64 {
 	return sum.AsInt64()
 }
 
+// requireEqual is a helper used to require that two aggregators
+// should have equal contents.  Because the backing array is cyclic,
+// the two may are expected to have different underlying
+// representations.
 func requireEqual(t *testing.T, a, b *Aggregator) {
 	aSum := floatSumNoError(t, a)
 	bSum := floatSumNoError(t, b)
@@ -125,10 +127,13 @@ func requireEqual(t *testing.T, a, b *Aggregator) {
 		sb.WriteString("]\n")
 		return sb.String()
 	}
-	require.Equal(t, bstr(&a.state.positive), bstr(&b.state.positive), "positive %v %v", a.shows(&a.state.positive), a.shows(&b.state.positive))
-	require.Equal(t, bstr(&a.state.negative), bstr(&b.state.negative), "negative %v %v", a.shows(&a.state.negative), a.shows(&b.state.negative))
+	require.Equal(t, bstr(&a.state.positive), bstr(&b.state.positive), "positive %v %v", a.printBuckets(&a.state.positive), a.printBuckets(&b.state.positive))
+	require.Equal(t, bstr(&a.state.negative), bstr(&b.state.negative), "negative %v %v", a.printBuckets(&a.state.negative), a.printBuckets(&b.state.negative))
 }
 
+// centerVal returns the midpoint of the histogram bucket with index
+// `x`, used in tests to avoid rounding errors that happen near the
+// bucket boundaries.
 func centerVal(mapper mapping.Mapping, x int32) float64 {
 	lb, err1 := mapper.LowerBoundary(x)
 	ub, err2 := mapper.LowerBoundary(x + 1)
@@ -138,6 +143,16 @@ func centerVal(mapper mapping.Mapping, x int32) float64 {
 	return (lb + ub) / 2
 }
 
+// Tests that the aggregation kind is correct.
+func TestAggregationKind(t *testing.T) {
+	agg := &New(1, &testDescriptor)[0]
+	require.Equal(t, aggregation.ExponentialHistogramKind, agg.Aggregation().Kind())
+}
+
+// Tests insertion of [1, 2, 0.5].  The index of 1 (i.e., 0) becomes
+// `indexBase`, the "2" goes to its right and the "0.5" goes in the
+// last position of the backing array.  With 3 binary orders of
+// magnitude and MaxSize=4, this must finish with scale=0 and offset=-1.
 func TestAlternatingGrowth1(t *testing.T) {
 	ctx := context.Background()
 	agg := &New(1, &testDescriptor, WithMaxSize(4))[0]
@@ -147,9 +162,13 @@ func TestAlternatingGrowth1(t *testing.T) {
 
 	require.Equal(t, int32(-1), agg.positive().Offset())
 	require.Equal(t, int32(0), agg.scale())
-	require.Equal(t, []uint64{1, 1, 1}, counts(agg.positive()))
+	require.Equal(t, []uint64{1, 1, 1}, getCounts(agg.positive()))
 }
 
+// Tests insertion of [1, 1, 2, 0.5, 5, 0.25].  The test proceeds as
+// above but then downscales once further to scale=-1, thus index -1
+// holds range [0.25, 1.0), index 0 holds range [1.0, 4), index 1
+// holds range [4, 16).
 func TestAlternatingGrowth2(t *testing.T) {
 	ctx := context.Background()
 	agg := &New(1, &testDescriptor, WithMaxSize(4))[0]
@@ -162,10 +181,10 @@ func TestAlternatingGrowth2(t *testing.T) {
 
 	require.Equal(t, int32(-1), agg.positive().Offset())
 	require.Equal(t, int32(-1), agg.scale())
-	require.Equal(t, []uint64{2, 3, 1}, counts(agg.positive()))
+	require.Equal(t, []uint64{2, 3, 1}, getCounts(agg.positive()))
 }
 
-// tests that every permutation of {1/2, 1, 2} with maxSize=2 results
+// Tests that every permutation of {1/2, 1, 2} with maxSize=2 results
 // in the same scale=-1 histogram.
 func TestScaleNegOneCentered(t *testing.T) {
 	for j, order := range [][]float64{
@@ -195,8 +214,8 @@ func TestScaleNegOneCentered(t *testing.T) {
 	}
 }
 
-// tests that every permutation of {1, 2, 4} with maxSize=2 results
-// in the same scale=-1 histogram.
+// Tests that every permutation of {1, 2, 4} with maxSize=2 results in
+// the same scale=-1 histogram.
 func TestScaleNegOnePositive(t *testing.T) {
 	for j, order := range [][]float64{
 		{1, 2, 4},
@@ -225,8 +244,8 @@ func TestScaleNegOnePositive(t *testing.T) {
 	}
 }
 
-// tests that every permutation of {1, 1/2, 1/4} with maxSize=2 results
-// in the same scale=-1 histogram.
+// Tests that every permutation of {1, 1/2, 1/4} with maxSize=2
+// results in the same scale=-1 histogram.
 func TestScaleNegOneNegative(t *testing.T) {
 	for j, order := range [][]float64{
 		{1, 0.5, 0.25},
@@ -255,21 +274,25 @@ func TestScaleNegOneNegative(t *testing.T) {
 	}
 }
 
-func TestExhaustiveSmall(t *testing.T) {
+// Tests a variety of ascending sequences, calculated using known
+// index ranges.  For example, with maxSize=3, using scale=0 and
+// offset -5, add a sequence of numbers. Because the numbers have
+// known range, we know the expected scale.
+func TestAscendingSequence(t *testing.T) {
 	for _, maxSize := range []int32{3, 4, 6, 9} {
 		t.Run(fmt.Sprintf("maxSize=%d", maxSize), func(t *testing.T) {
 			for offset := int32(-5); offset <= 5; offset++ {
 				for _, initScale := range []int32{
 					0, 4,
 				} {
-					testExhaustive(t, maxSize, offset, initScale)
+					testAscendingSequence(t, maxSize, offset, initScale)
 				}
 			}
 		})
 	}
 }
 
-func testExhaustive(t *testing.T, maxSize, offset, initScale int32) {
+func testAscendingSequence(t *testing.T, maxSize, offset, initScale int32) {
 	for step := maxSize; step < 4*maxSize; step++ {
 		ctx := context.Background()
 		agg := &New(1, &testDescriptor, WithMaxSize(maxSize))[0]
@@ -329,6 +352,7 @@ func testExhaustive(t *testing.T, maxSize, offset, initScale int32) {
 	}
 }
 
+// Tests a simple case of merging [1, 2, 4, 8] with [1/2, 1/4, 1/8, 1/16].
 func TestMergeSimpleEven(t *testing.T) {
 	ctx := context.Background()
 	aggs := New(3, &testDescriptor, WithMaxSize(4))
@@ -351,9 +375,9 @@ func TestMergeSimpleEven(t *testing.T) {
 	require.Equal(t, int32(-4), aggs[1].positive().Offset())
 	require.Equal(t, int32(-2), aggs[2].positive().Offset())
 
-	require.Equal(t, []uint64{1, 1, 1, 1}, counts(aggs[0].positive()))
-	require.Equal(t, []uint64{1, 1, 1, 1}, counts(aggs[1].positive()))
-	require.Equal(t, []uint64{2, 2, 2, 2}, counts(aggs[2].positive()))
+	require.Equal(t, []uint64{1, 1, 1, 1}, getCounts(aggs[0].positive()))
+	require.Equal(t, []uint64{1, 1, 1, 1}, getCounts(aggs[1].positive()))
+	require.Equal(t, []uint64{2, 2, 2, 2}, getCounts(aggs[2].positive()))
 
 	require.NoError(t, aggs[0].Merge(&aggs[1], &testDescriptor))
 
@@ -363,6 +387,7 @@ func TestMergeSimpleEven(t *testing.T) {
 	requireEqual(t, &aggs[0], &aggs[2])
 }
 
+// Tests a simple case of merging [1, 2, 4, 8] with [1, 1/2, 1/4, 1/8].
 func TestMergeSimpleOdd(t *testing.T) {
 	ctx := context.Background()
 	aggs := New(3, &testDescriptor, WithMaxSize(4))
@@ -390,9 +415,9 @@ func TestMergeSimpleOdd(t *testing.T) {
 	require.Equal(t, int32(-3), aggs[1].positive().Offset())
 	require.Equal(t, int32(-2), aggs[2].positive().Offset())
 
-	require.Equal(t, []uint64{1, 1, 1, 1}, counts(aggs[0].positive()))
-	require.Equal(t, []uint64{1, 1, 1, 1}, counts(aggs[1].positive()))
-	require.Equal(t, []uint64{1, 2, 3, 2}, counts(aggs[2].positive()))
+	require.Equal(t, []uint64{1, 1, 1, 1}, getCounts(aggs[0].positive()))
+	require.Equal(t, []uint64{1, 1, 1, 1}, getCounts(aggs[1].positive()))
+	require.Equal(t, []uint64{1, 2, 3, 2}, getCounts(aggs[2].positive()))
 
 	require.NoError(t, aggs[0].Merge(&aggs[1], &testDescriptor))
 
@@ -402,6 +427,9 @@ func TestMergeSimpleOdd(t *testing.T) {
 	requireEqual(t, &aggs[0], &aggs[2])
 }
 
+// Tests a random data set, exhaustively partitioned in every way, ensuring that
+// computing the aggregations and merging them produces the same result as computing
+// a single aggregation.
 func TestMergeExhaustive(t *testing.T) {
 	const (
 		factor = 1024.0
@@ -478,6 +506,8 @@ func testMergeExhaustive(t *testing.T, a, b []float64, size int32, incr uint64) 
 	requireEqual(t, cHist, aHist)
 }
 
+// Tests the logic to switch between uint8, uint16, uint32, and
+// uint64.  Test is based on the UpdateByIncr code path.
 func TestOverflowBits(t *testing.T) {
 	ctx := context.Background()
 
@@ -533,6 +563,9 @@ func TestOverflowBits(t *testing.T) {
 	}
 }
 
+// Tests the use of number.Int64Kind as opposed to floating point. The
+// aggregator internal state is identical except for the Sum, which is
+// maintained as a `number.Number`.
 func TestIntegerAggregation(t *testing.T) {
 	ctx := context.Background()
 	aggs := New(2, &intDescriptor, WithMaxSize(256))
@@ -624,6 +657,7 @@ func TestIntegerAggregation(t *testing.T) {
 	require.Equal(t, int32(5), scaleNoError(t, agg))
 }
 
+// Tests the reset code path via SynchronizedMove.
 func TestReset(t *testing.T) {
 	ctx := context.Background()
 	agg := &New(1, &testDescriptor, WithMaxSize(256))[0]
@@ -671,6 +705,7 @@ func TestReset(t *testing.T) {
 
 }
 
+// Tests the move aspect of SynchronizedMove.
 func TestMove(t *testing.T) {
 	ctx := context.Background()
 	aggs := New(2, &testDescriptor, WithMaxSize(256))
@@ -711,7 +746,9 @@ func TestMove(t *testing.T) {
 	}
 }
 
-func TestExpansionOverflow(t *testing.T) {
+// Tests with maxSize=2 that very large numbers (but not the full
+// range) yield scales -7 and -8.
+func TestVeryLargeNumbers(t *testing.T) {
 	ctx := context.Background()
 	agg := &New(1, &testDescriptor, WithMaxSize(2))[0]
 
@@ -751,6 +788,8 @@ func TestExpansionOverflow(t *testing.T) {
 	expectBalanced(3)
 }
 
+// Tests that WithRangeLimit() performs as specified, restricting the
+// histogram scale to best cover the specified range.
 func TestFixedLimits(t *testing.T) {
 	ctx := context.Background()
 
@@ -831,9 +870,11 @@ func TestFixedLimits(t *testing.T) {
 	}
 }
 
+// Tests the largest and smallest finite numbers with below-minimum
+// size.  Expect a size=MinSize histogram with MinScale.
 func TestFullRange(t *testing.T) {
 	ctx := context.Background()
-	aggs := New(1, &testDescriptor, WithMaxSize(2))
+	aggs := New(1, &testDescriptor, WithMaxSize(1))
 	agg := &aggs[0]
 
 	require.NoError(t, agg.Update(ctx, number.NewFloat64Number(math.MaxFloat64), &testDescriptor))
@@ -848,8 +889,22 @@ func TestFullRange(t *testing.T) {
 	pos, err := agg.Positive()
 	require.NoError(t, err)
 
-	require.Equal(t, uint32(2), pos.Len())
+	require.Equal(t, uint32(MinSize), pos.Len())
 	require.Equal(t, int32(-1), pos.Offset())
 	require.Equal(t, pos.At(0), uint64(1))
 	require.Equal(t, pos.At(1), uint64(2))
+}
+
+// Tests the inconsistent aggregator checks.
+func TestInconsistentAggregator(t *testing.T) {
+	agg := &New(1, &testDescriptor)[0]
+	wrong := &sum.New(1)[0]
+
+	err := agg.SynchronizedMove(wrong, &testDescriptor)
+	require.Error(t, err)
+	require.True(t, errors.Is(err, aggregation.ErrInconsistentType))
+
+	err = agg.Merge(wrong, &testDescriptor)
+	require.Error(t, err)
+	require.True(t, errors.Is(err, aggregation.ErrInconsistentType))
 }
