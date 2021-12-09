@@ -102,9 +102,11 @@ considered useful.
 
 The `internal/mapping/logarithm` mapping function uses
 `math.Log(value)` times the scaling factor `math.Ldexp(math.Log2E,
-scale)`.  This mapping function is used with `0 < scale <= 20`.
-Scales larger than 20 exceed the resolution achievable using this
-calculation method.
+scale)`.  This mapping function is used with `0 < scale <= 20`.  The
+maximum scale is selected because at scale 21, simply, it becomes
+difficult to test correctness--at this point `math.MaxFloat64` maps to
+index `math.MaxInt32` and the `math/big` logic used in testing
+breaks down.
 
 ### Determining change of scale
 
