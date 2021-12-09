@@ -145,6 +145,29 @@ histogram, the scale is zero by definition.  If the scale is fixed
 because of range limits, the fixed scale will be returned even for the
 empty histogram.
 
+### Handling subnormal values
+
+Subnormal values are those which are smaller than 0x1p-1022, this
+being numbers that "gradually underflow" and use less than 52 bits of
+precision in the significand.  Subnormal numbers present special
+challenges for both the exponent- and logarithm-based mapping
+function, and to avoid additional complexity induced by corner cases,
+subnormal numbers are rounded up to 0x1p-1022 in this implementation.
+
+Handling subnormal numbers is difficult for the logarithm mapping
+function because Golang's `math.Log()` function rounds subnormal
+numbers up to 0x1p-1022.  Handling subnormal numbers is difficult for
+the exponent mapping function because Golang's `math.Frexp()`, the
+natural API for extracting a value's base-2 exponent, also rounds
+subnormal numbers up to 0x1p-1022.
+
+While the additional complexity needed to correctly map subnormal
+numbers is small, there are few real benefits in doing so because of
+the inherent loss of resolution.  As secondary motivation, clamping
+values to the range [0x1p-1022, math.MaxFloat64] offers symmetry. This
+limit means that minimum bucket index and the maximum bucket index
+have similar magnitudes, which helps support greater maximum scale.
+
 ## Acknowledgements
 
 This implementation is based on work by [Yuke
