@@ -28,22 +28,17 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
-func ApplyGRPCEnvConfigs(cfg *Config) {
-	e := EnvOptionsReader{
-		GetEnv:   os.Getenv,
-		ReadFile: ioutil.ReadFile,
-	}
+var DefaultEnvOptionsReader = EnvOptionsReader{
+	GetEnv:   os.Getenv,
+	ReadFile: ioutil.ReadFile,
+}
 
-	e.ApplyGRPCEnvConfigs(cfg)
+func ApplyGRPCEnvConfigs(cfg *Config) {
+	DefaultEnvOptionsReader.ApplyGRPCEnvConfigs(cfg)
 }
 
 func ApplyHTTPEnvConfigs(cfg *Config) {
-	e := EnvOptionsReader{
-		GetEnv:   os.Getenv,
-		ReadFile: ioutil.ReadFile,
-	}
-
-	e.ApplyHTTPEnvConfigs(cfg)
+	DefaultEnvOptionsReader.ApplyHTTPEnvConfigs(cfg)
 }
 
 type EnvOptionsReader struct {
