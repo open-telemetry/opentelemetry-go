@@ -3,7 +3,7 @@ title: Automatic Instrumentation
 weight: 3
 ---
 
-Automatic instrumentation in Go is done by pulling in dependencies for the component you'd like to have automatically instrumented. For example, you can use the automatic instrumentation package for `net/http` to automatically create spans that track inbound and output requests from your app or service.
+Automatic instrumentation in Go is done by pulling in dependencies for the component you'd like to have automatically instrumented. For example, you can use the automatic instrumentation package for `net/http` to automatically create spans that track inbound and outbound requests from your app or service.
 
 ## Setup
 
