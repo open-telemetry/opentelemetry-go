@@ -5,7 +5,7 @@
 This is a fixed-size data structure for aggregating the OpenTelemetry
 base-2 exponential histogram introduced in [OTEP
 149](https://github.com/open-telemetry/oteps/blob/main/text/0149-exponential-histogram.md)
-[described in the metrics data
+and [described in the metrics data
 model](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/datamodel.md#exponentialhistogram).
 The exponential histogram data point is characterized by a `scale`
 factor that determines resolution.  Positive scales correspond with
@@ -39,8 +39,9 @@ func bucketIndex(value float64, scale int32) int32 {
 ```
 
 The best scale is uniquely determined when `maxSize/2 <
-bucketsNeeded(minValue, maxValue, scale) <= maxSize`.  This maintains
-the best scale by rescaling as needed to stay within the maximum size.
+bucketsNeeded(minValue, maxValue, scale) <= maxSize`.  This
+implementation maintains the best scale by rescaling as needed to stay
+within the maximum size.
 
 ### UpdateByIncr interface
 
@@ -74,7 +75,7 @@ type buckets struct {
 The `backing` field is a slice of variable width unsigned integer
 (i.e., `[]uint8`, `[]uint16`, `[]uint32`, or `[]uint64`.  The
 `indexStart` and `indexEnd` fields store the current minimum and
-maximum bucket indices for the current scale.  
+maximum bucket indices for the current scale.
 
 The backing array is circular.  When the first observation is added to
 a set of (positive or negative) buckets, the initial conditition is
@@ -147,12 +148,13 @@ empty histogram.
 
 ### Handling subnormal values
 
-Subnormal values are those which are smaller than 0x1p-1022, this
+Subnormal values are those in the range [0x1p-1074, 0x1p-1022), these
 being numbers that "gradually underflow" and use less than 52 bits of
-precision in the significand.  Subnormal numbers present special
-challenges for both the exponent- and logarithm-based mapping
-function, and to avoid additional complexity induced by corner cases,
-subnormal numbers are rounded up to 0x1p-1022 in this implementation.
+precision in the significand at the smallest representable exponent
+(i.e., -1022).  Subnormal numbers present special challenges for both
+the exponent- and logarithm-based mapping function, and to avoid
+additional complexity induced by corner cases, subnormal numbers are
+rounded up to 0x1p-1022 in this implementation.
 
 Handling subnormal numbers is difficult for the logarithm mapping
 function because Golang's `math.Log()` function rounds subnormal
@@ -162,11 +164,14 @@ natural API for extracting a value's base-2 exponent, also rounds
 subnormal numbers up to 0x1p-1022.
 
 While the additional complexity needed to correctly map subnormal
-numbers is small, there are few real benefits in doing so because of
-the inherent loss of resolution.  As secondary motivation, clamping
-values to the range [0x1p-1022, math.MaxFloat64] offers symmetry. This
-limit means that minimum bucket index and the maximum bucket index
-have similar magnitudes, which helps support greater maximum scale.
+numbers is small in both cases, there are few real benefits in doing
+so because of the inherent loss of precision.  As secondary
+motivation, clamping values to the range [0x1p-1022, math.MaxFloat64]
+increases symmetry. This limit means that minimum bucket index and the
+maximum bucket index have similar magnitude, which helps support
+greater maximum scale.  Supporting numbers smaller than 0x1p-1022
+would mean changing the valid scale interval to [-11,19] compared with
+[-10,20].
 
 ## Acknowledgements
 
