@@ -96,20 +96,30 @@ func TestConfigs(t *testing.T) {
 		{
 			name: "Test Environment Endpoint",
 			env: map[string]string{
-				"OTEL_EXPORTER_OTLP_ENDPOINT": "env_endpoint",
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "https://env.endpoint/prefix",
 			},
 			asserts: func(t *testing.T, c *otlpconfig.Config, grpcOption bool) {
-				assert.Equal(t, "env_endpoint", c.Traces.Endpoint)
+				assert.False(t, c.Traces.Insecure)
+				if grpcOption {
+					assert.Equal(t, "env.endpoint/prefix", c.Traces.Endpoint)
+				} else {
+					assert.Equal(t, "env.endpoint", c.Traces.Endpoint)
+					assert.Equal(t, "/prefix/v1/traces", c.Traces.URLPath)
+				}
 			},
 		},
 		{
 			name: "Test Environment Signal Specific Endpoint",
 			env: map[string]string{
-				"OTEL_EXPORTER_OTLP_ENDPOINT":        "overrode_by_signal_specific",
-				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "env_traces_endpoint",
+				"OTEL_EXPORTER_OTLP_ENDPOINT":        "https://overrode.by.signal.specific/env/var",
+				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://env.traces.endpoint",
 			},
 			asserts: func(t *testing.T, c *otlpconfig.Config, grpcOption bool) {
-				assert.Equal(t, "env_traces_endpoint", c.Traces.Endpoint)
+				assert.True(t, c.Traces.Insecure)
+				assert.Equal(t, "env.traces.endpoint", c.Traces.Endpoint)
+				if !grpcOption {
+					assert.Equal(t, "/", c.Traces.URLPath)
+				}
 			},
 		},
 		{
@@ -155,31 +165,9 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		{
-			name: "Test Environment Signal Specific Endpoint",
-			env: map[string]string{
-				"OTEL_EXPORTER_OTLP_ENDPOINT":        "http://overrode_by_signal_specific",
-				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://env_traces_endpoint",
-			},
-			asserts: func(t *testing.T, c *otlpconfig.Config, grpcOption bool) {
-				assert.Equal(t, "env_traces_endpoint", c.Traces.Endpoint)
-				assert.Equal(t, true, c.Traces.Insecure)
-			},
-		},
-		{
-			name: "Test Environment Signal Specific Endpoint #2",
-			env: map[string]string{
-				"OTEL_EXPORTER_OTLP_ENDPOINT":        "http://overrode_by_signal_specific",
-				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://env_traces_endpoint",
-			},
-			asserts: func(t *testing.T, c *otlpconfig.Config, grpcOption bool) {
-				assert.Equal(t, "env_traces_endpoint", c.Traces.Endpoint)
-				assert.Equal(t, true, c.Traces.Insecure)
-			},
-		},
-		{
 			name: "Test Environment Signal Specific Endpoint with uppercase scheme",
 			env: map[string]string{
-				"OTEL_EXPORTER_OTLP_ENDPOINT":        "HTTP://overrode_by_signal_specific",
+				"OTEL_EXPORTER_OTLP_ENDPOINT":        "HTTPS://overrode_by_signal_specific",
 				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "HtTp://env_traces_endpoint",
 			},
 			asserts: func(t *testing.T, c *otlpconfig.Config, grpcOption bool) {
