@@ -3,7 +3,7 @@ title: Using instrumentation libraries
 weight: 3
 ---
 
-Go does not support truly automatic instrumentation like other languages today. Instead, you'll need to depend on [instrumentation libraries](https://opentelemetry.io/docs/reference/specification/glossary/#instrumentation-library) that generate telemetry data for a particular instrumented library. For example, the instrumentation library for `net/hhtp` will automatically create spans that track inbound and outbound requests once you configure it in your code
+Go does not support truly automatic instrumentation like other languages today. Instead, you'll need to depend on [instrumentation libraries](https://opentelemetry.io/docs/reference/specification/glossary/#instrumentation-library) that generate telemetry data for a particular instrumented library. For example, the instrumentation library for `net/hhtp` will automatically create spans that track inbound and outbound requests once you configure it in your code.
 
 ## Setup
 
@@ -28,53 +28,50 @@ go get go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
 Next, use the library to wrap an HTTP handler in your code:
 
 ```go
-module MyApp
+package mypkg
 
-// Import the package
 import (
-  // ...
-  "time"
-  "net/http"
-  "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-  // ...
+	"context"
+	"fmt"
+	"log"
+	"net/http"
+	"time"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 )
 
-// module-level tracer, configured in your code somewherex
-const tracer
+// Package-level tracer.
+// This should be configured in your code setup instead of here.
+var tracer = otel.Tracer("github.com/full/path/to/mypkg")
 
-// ...
-
-// Have a function that does some work,
-// which will connect with automatic instruemtnation later in the code
+// sleepy mocks work that your application does.
 func sleepy(ctx context.Context) {
-    _, span := tracer.Start(ctx, "sleep")
-    defer span.End()
+	_, span := tracer.Start(ctx, "sleep")
+	defer span.End()
 
-    sleepTime := 1 * time.Second
-    time.Sleep(sleepTime)
-
-    span.SetAttributes(attribute.Int("sleep.duration", sleepTime))
+	sleepTime := 1 * time.Second
+	time.Sleep(sleepTime)
+	span.SetAttributes(attribute.Int("sleep.duration", int(sleepTime)))
 }
 
-// Have some http handler function to instrument
+// httpHandler is an HTTP handler function that is going to be instrumented.
 func httpHandler(w http.ResponseWriter, r *http.Request) {
-    fmt.Fprintf(w, "Hello, World! I am instrumented autoamtically!")
-
-    ctx := r.Context()
-
-    // Do some work
-    sleepy(ctx)
+	fmt.Fprintf(w, "Hello, World! I am instrumented autoamtically!")
+	ctx := r.Context()
+	sleepy(ctx)
 }
 
-//...
+func main() {
+	// Wrap your httpHandler function.
+	handler := http.HandlerFunc(httpHandler)
+	wrappedHandler := otelhttp.NewHandler(handler, "hello-instrumented")
+	http.Handle("/hello-instrumented", wrappedHandler)
 
-// Instantiate and wrap the httpHandler function that you just defined
-handler := http.HandlerFunc(httpHandler)
-wrappedHandler := otelhttp.NewHandler(handler, "hello-instrumented")
-http.Handle("/hello-instrumented", wrappedHandler)
-
-// And start the HTTP server
-log.Fatal(http.ListenAndServe(":3030", nil))
+	// And start the HTTP serve.
+	log.Fatal(http.ListenAndServe(":3030", nil))
+}
 ```
 
 Assuming that you have a `Tracer` and [exporter](exporting_data.md) configured, this code will:
