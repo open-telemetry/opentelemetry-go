@@ -28,6 +28,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/otel/exporter/otel/*` exporters are updated to handle per-signal and universal endpoints according to the OpenTelemetry specification.
   Any per-signal endpoint set via an `OTEL_EXPORTER_OTLP_<signal>_ENDPOINT` environment variable is now used without modification of the path.
   When `OTEL_EXPORTER_OTLP_ENDPOINT` is set, if it contains a path, that path is used as a base path which per-signal paths are appended to. (#2338 #2433)
+- The `go.opentelemetry.io/otel/exporter/jaeger` correctly sets the `otel.status_code` value to be a string of `ERROR` or `OK` instead of an integer code. (#2439, #2440)
 
 ### Deprecated
 
