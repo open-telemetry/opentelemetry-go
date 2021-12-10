@@ -133,20 +133,29 @@ The `changeScale` function is also used to determine how many bits to
 shift during `Merge` and to fix the initial scale when range limits
 are configured.
 
+### Downscale function
+
+The downscale function rotates the circular backing array so that
+`indexStart == indexBase`, using the "3 reversals" method, before
+combining the buckets in place.
+
 ### Merge function
 
-The merge function rotates the circular backing array so that
-`indexStart == indexBase`, using the "3 reversals" method, which
-simplifies internal logic.  `Merge` uses the `UpdateByIncr` code path
-to combine one `buckets` into another.
+`Merge` first calculates the correct final scale by comparing the
+combined positive and negative ranges.  The destination aggregator is
+then downscaled, if necessary, and the `UpdateByIncr` code path to add
+the source buckets to the destination buckets.
 
 ### Scale function
 
-The `Scale` function returns the current scale of the histogram.  If
-the scale is variable and there are no non-zero values in the
-histogram, the scale is zero by definition.  If the scale is fixed
-because of range limits, the fixed scale will be returned even for the
-empty histogram.
+The `Scale` function returns the current scale of the histogram.
+
+If the scale is variable and there are no non-zero values in the
+histogram, the scale is zero by definition; when there is only a
+single value in this case, it's scale is MinScale (20) by definition.
+
+If the scale is fixed because of range limits, the fixed scale will be
+returned even for any size histogram.
 
 ### Handling subnormal values
 

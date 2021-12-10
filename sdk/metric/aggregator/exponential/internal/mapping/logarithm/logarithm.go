@@ -29,10 +29,12 @@ const (
 
 	// MaxScale is selected as the largest scale that is possible
 	// in current code, considering there are 10 bits of base-2
-	// exponent combined with scale-bits of range.  Scales larger
-	// than 20 complicate the logic in cmd/prebuild, because
-	// math/big overflows when exponent is math.MaxInt32 (== the
-	// index of math.MaxFloat64 at scale=21),
+	// exponent combined with scale-bits of range.  At this scale,
+	// the growth factor is 0.0000661%.
+	//
+	// Scales larger than 20 complicate the logic in cmd/prebuild,
+	// because math/big overflows when exponent is math.MaxInt32
+	// (== the index of math.MaxFloat64 at scale=21),
 	//
 	// At scale=20, index values are in the interval [-0x3fe00000,
 	// 0x3fffffff], having 31 bits of information.  This is

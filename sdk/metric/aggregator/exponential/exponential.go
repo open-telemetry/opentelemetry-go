@@ -44,9 +44,12 @@ import (
 // histogram boundaries (spanning 0.005 to 10) yields 320 base-10
 // 90-per-decade log-linear buckets.
 //
-// NrSketch uses this default.
+// NrSketch also uses this default.
 const DefaultMaxSize = 320
 
+// MinSize is the smallest reasonable configuration, which is small
+// enough to contains the entire normal flowing point range at
+// MinScale.
 const MinSize = 2
 
 type (
