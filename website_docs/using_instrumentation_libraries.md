@@ -28,7 +28,7 @@ go get go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
 Next, use the library to wrap an HTTP handler in your code:
 
 ```go
-package mypkg
+package main
 
 import (
 	"context"
