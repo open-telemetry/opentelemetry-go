@@ -114,8 +114,8 @@ type (
 		// current implements the actual RecordOne() API,
 		// depending on the type of aggregation.  If nil, the
 		// metric was disabled by the exporter.
-		current    export.Aggregator
-		checkpoint export.Aggregator
+		current    aggregator.Aggregator
+		checkpoint aggregator.Aggregator
 	}
 
 	instrument struct {
@@ -133,7 +133,7 @@ type (
 	labeledRecorder struct {
 		observedEpoch int64
 		labels        *attribute.Set
-		observed      export.Aggregator
+		observed      aggregator.Aggregator
 	}
 )
 
@@ -175,7 +175,7 @@ func (a *asyncInstrument) observe(num number.Number, labels *attribute.Set) {
 	}
 }
 
-func (a *asyncInstrument) getRecorder(labels *attribute.Set) export.Aggregator {
+func (a *asyncInstrument) getRecorder(labels *attribute.Set) aggregator.Aggregator {
 	lrec, ok := a.recorders[labels.Equivalent()]
 	if ok {
 		// Note: SynchronizedMove(nil) can't return an error
@@ -184,7 +184,7 @@ func (a *asyncInstrument) getRecorder(labels *attribute.Set) export.Aggregator {
 		a.recorders[labels.Equivalent()] = lrec
 		return lrec.observed
 	}
-	var rec export.Aggregator
+	var rec aggregator.Aggregator
 	a.meter.processor.AggregatorFor(&a.descriptor, &rec)
 	if a.recorders == nil {
 		a.recorders = make(map[attribute.Distinct]*labeledRecorder)

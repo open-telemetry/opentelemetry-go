@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
@@ -72,7 +73,7 @@ type testSelector struct {
 	newAggCount int
 }
 
-func (ts *testSelector) AggregatorFor(desc *sdkapi.Descriptor, aggPtrs ...*export.Aggregator) {
+func (ts *testSelector) AggregatorFor(desc *sdkapi.Descriptor, aggPtrs ...*aggregator.Aggregator) {
 	ts.newAggCount += len(aggPtrs)
 	processortest.AggregatorSelector().AggregatorFor(desc, aggPtrs...)
 }
