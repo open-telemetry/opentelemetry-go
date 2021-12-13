@@ -513,7 +513,7 @@ func TestIncorrectInstruments(t *testing.T) {
 	require.Equal(t, 0, collected)
 
 	// Now try with instruments from another SDK.
-	var noopMeter metric.Meter
+	noopMeter := metric.NewNoopMeterProvider().Meter("")
 	counter = metric.Must(noopMeter).NewInt64Counter("name.sum")
 	observer = metric.Must(noopMeter).NewBatchObserver(
 		func(context.Context, metric.BatchObserverResult) {},

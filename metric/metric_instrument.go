@@ -164,13 +164,6 @@ func wrapFloat64UpDownCounterObserverInstrument(asyncInst sdkapi.AsyncImpl, err 
 	return Float64UpDownCounterObserver{asyncInstrument: common}, err
 }
 
-// BatchObserver represents an Observer callback that can report
-// observations for multiple instruments.
-type BatchObserver struct {
-	meter  Meter
-	runner sdkapi.AsyncBatchRunner
-}
-
 // Int64GaugeObserver is a metric that captures a set of int64 values at a
 // point in time.
 type Int64GaugeObserver struct {

@@ -17,6 +17,8 @@ package global
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/metric"
 )
 
@@ -25,7 +27,7 @@ type testMeterProvider struct{}
 var _ metric.MeterProvider = &testMeterProvider{}
 
 func (*testMeterProvider) Meter(_ string, _ ...metric.MeterOption) metric.Meter {
-	return metric.Meter{}
+	return metric.WrapMeterImpl(nil)
 }
 
 func TestMultipleGlobalMeterProvider(t *testing.T) {
@@ -35,8 +37,5 @@ func TestMultipleGlobalMeterProvider(t *testing.T) {
 	SetMeterProvider(p2)
 
 	got := GetMeterProvider()
-	want := p2
-	if got != want {
-		t.Fatalf("MeterProvider: got %p, want %p\n", got, want)
-	}
+	assert.Equal(t, p2, got)
 }
