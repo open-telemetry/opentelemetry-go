@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Change metrics API to use interfaces for Meter and BatchObserver (#2450)
+
 ### Deprecated
 
 - Deprecate module `"go.opentelemetry.io/otel/sdk/export/metric"`, new functionality available in "go.opentelemetry.io/otel/sdk/metric" module:

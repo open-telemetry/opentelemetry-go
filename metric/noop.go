@@ -26,5 +26,5 @@ func NewNoopMeterProvider() MeterProvider {
 var _ MeterProvider = noopMeterProvider{}
 
 func (noopMeterProvider) Meter(instrumentationName string, opts ...MeterOption) Meter {
-	return Meter{}
+	return meterImpl{}
 }

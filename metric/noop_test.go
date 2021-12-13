@@ -16,19 +16,15 @@ package metric
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewNoopMeterProvider(t *testing.T) {
-	got, want := NewNoopMeterProvider(), noopMeterProvider{}
-	if got != want {
-		t.Errorf("NewNoopMeterProvider() returned %#v, want %#v", got, want)
-	}
+	assert.Equal(t, noopMeterProvider{}, NewNoopMeterProvider())
 }
 
 func TestNoopMeterProviderMeter(t *testing.T) {
 	mp := NewNoopMeterProvider()
-	got, want := mp.Meter(""), Meter{}
-	if got != want {
-		t.Errorf("noopMeterProvider.Meter() returned %#v, want %#v", got, want)
-	}
+	assert.Equal(t, meterImpl{}, mp.Meter(""))
 }
