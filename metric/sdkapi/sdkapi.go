@@ -24,9 +24,6 @@ import (
 // MeterImpl is the interface an SDK must implement to supply a Meter
 // implementation.
 type MeterImpl interface {
-	// RecordBatch atomically records a batch of measurements.
-	RecordBatch(ctx context.Context, labels []attribute.KeyValue, measurement ...Measurement)
-
 	// NewSyncInstrument returns a newly constructed
 	// synchronous instrument implementation or an error, should
 	// one occur.
@@ -98,35 +95,6 @@ type AsyncBatchRunner interface {
 	Run(ctx context.Context, capture func([]attribute.KeyValue, ...Observation))
 
 	AsyncRunner
-}
-
-// NewMeasurement constructs a single observation, a binding between
-// an asynchronous instrument and a number.
-func NewMeasurement(instrument SyncImpl, number number.Number) Measurement {
-	return Measurement{
-		instrument: instrument,
-		number:     number,
-	}
-}
-
-// Measurement is a low-level type used with synchronous instruments
-// as a direct interface to the SDK via `RecordBatch`.
-type Measurement struct {
-	// number needs to be aligned for 64-bit atomic operations.
-	number     number.Number
-	instrument SyncImpl
-}
-
-// SyncImpl returns the instrument that created this measurement.
-// This returns an implementation-level object for use by the SDK,
-// users should not refer to this.
-func (m Measurement) SyncImpl() SyncImpl {
-	return m.instrument
-}
-
-// Number returns a number recorded in this measurement.
-func (m Measurement) Number() number.Number {
-	return m.number
 }
 
 // NewObservation constructs a single observation, a binding between

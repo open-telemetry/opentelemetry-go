@@ -185,7 +185,7 @@ func TestImplementationIndirection(t *testing.T) {
 	// Sync: no SDK yet
 	counter := Must(meter1).NewInt64Counter("interface.counter")
 
-	ival := counter.Measurement(1).SyncImpl().Implementation()
+	ival := counter.SyncImpl().Implementation()
 	require.NotNil(t, ival)
 
 	_, ok := ival.(*metrictest.Sync)
@@ -210,7 +210,7 @@ func TestImplementationIndirection(t *testing.T) {
 	// Repeat the above tests
 
 	// Sync
-	ival = counter.Measurement(1).SyncImpl().Implementation()
+	ival = counter.SyncImpl().Implementation()
 	require.NotNil(t, ival)
 
 	_, ok = ival.(*metrictest.Sync)
@@ -222,32 +222,4 @@ func TestImplementationIndirection(t *testing.T) {
 
 	_, ok = ival.(*metrictest.Async)
 	require.True(t, ok)
-}
-
-func TestRecordBatchMock(t *testing.T) {
-	global.ResetForTest()
-
-	meter := metricglobal.GetMeterProvider().Meter("builtin")
-
-	counter := Must(meter).NewInt64Counter("test.counter")
-
-	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
-
-	provider := metrictest.NewMeterProvider()
-	metricglobal.SetMeterProvider(provider)
-
-	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
-
-	require.EqualValues(t,
-		[]metrictest.Measured{
-			{
-				Name: "test.counter",
-				Library: metrictest.Library{
-					InstrumentationName: "builtin",
-				},
-				Labels: metrictest.LabelsToMap(),
-				Number: asInt(1),
-			},
-		},
-		metrictest.AsStructs(provider.MeasurementBatches))
 }

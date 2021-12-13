@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Removed
+
+- Remove Meter.RecordBatch functionality, not specified in the OpenTelemetry Specification (#2449)
+
 ### Deprecated
 
 - Deprecate module `"go.opentelemetry.io/otel/sdk/export/metric"`, new functionality available in "go.opentelemetry.io/otel/sdk/metric" module:

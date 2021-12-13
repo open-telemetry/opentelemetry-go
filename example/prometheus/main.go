@@ -92,12 +92,8 @@ func main() {
 	*observerValueToReport = 1.0
 	*observerLabelsToReport = commonLabels
 	(*observerLock).Unlock()
-	meter.RecordBatch(
-		ctx,
-		commonLabels,
-		histogram.Measurement(2.0),
-		counter.Measurement(12.0),
-	)
+	histogram.Record(ctx, 2.0, commonLabels...)
+	counter.Add(ctx, 12.0, commonLabels...)
 
 	time.Sleep(5 * time.Second)
 
@@ -105,12 +101,8 @@ func main() {
 	*observerValueToReport = 1.0
 	*observerLabelsToReport = notSoCommonLabels
 	(*observerLock).Unlock()
-	meter.RecordBatch(
-		ctx,
-		notSoCommonLabels,
-		histogram.Measurement(2.0),
-		counter.Measurement(22.0),
-	)
+	histogram.Record(ctx, 2.0, notSoCommonLabels...)
+	counter.Add(ctx, 22.0, notSoCommonLabels...)
 
 	time.Sleep(5 * time.Second)
 
@@ -118,12 +110,8 @@ func main() {
 	*observerValueToReport = 13.0
 	*observerLabelsToReport = commonLabels
 	(*observerLock).Unlock()
-	meter.RecordBatch(
-		ctx,
-		commonLabels,
-		histogram.Measurement(12.0),
-		counter.Measurement(13.0),
-	)
+	histogram.Record(ctx, 12.0, commonLabels...)
+	counter.Add(ctx, 13.0, commonLabels...)
 
 	fmt.Println("Example finished updating, please visit :2222")
 

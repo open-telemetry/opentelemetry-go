@@ -277,12 +277,6 @@ func (obs *asyncImpl) setDelegate(d sdkapi.MeterImpl) {
 
 // Metric updates
 
-func (m *meterImpl) RecordBatch(ctx context.Context, labels []attribute.KeyValue, measurements ...sdkapi.Measurement) {
-	if delegatePtr := (*sdkapi.MeterImpl)(atomic.LoadPointer(&m.delegate)); delegatePtr != nil {
-		(*delegatePtr).RecordBatch(ctx, labels, measurements...)
-	}
-}
-
 func (inst *syncImpl) RecordOne(ctx context.Context, number number.Number, labels []attribute.KeyValue) {
 	if instPtr := (*sdkapi.SyncImpl)(atomic.LoadPointer(&inst.delegate)); instPtr != nil {
 		(*instPtr).RecordOne(ctx, number, labels)

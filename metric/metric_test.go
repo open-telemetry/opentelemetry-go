@@ -250,7 +250,7 @@ func TestCounter(t *testing.T) {
 		ctx := context.Background()
 		labels := []attribute.KeyValue{attribute.String("A", "B")}
 		c.Add(ctx, 1994.1, labels...)
-		meter.RecordBatch(ctx, labels, c.Measurement(42))
+		c.Add(ctx, 42, labels...)
 		checkSyncBatches(ctx, t, labels, provider, number.Float64Kind, sdkapi.CounterInstrumentKind, c.SyncImpl(),
 			1994.1, 42,
 		)
@@ -261,7 +261,7 @@ func TestCounter(t *testing.T) {
 		ctx := context.Background()
 		labels := []attribute.KeyValue{attribute.String("A", "B"), attribute.String("C", "D")}
 		c.Add(ctx, 42, labels...)
-		meter.RecordBatch(ctx, labels, c.Measurement(420000))
+		c.Add(ctx, 420000, labels...)
 		checkSyncBatches(ctx, t, labels, provider, number.Int64Kind, sdkapi.CounterInstrumentKind, c.SyncImpl(),
 			42, 420000,
 		)
@@ -273,7 +273,7 @@ func TestCounter(t *testing.T) {
 		ctx := context.Background()
 		labels := []attribute.KeyValue{attribute.String("A", "B"), attribute.String("C", "D")}
 		c.Add(ctx, 100, labels...)
-		meter.RecordBatch(ctx, labels, c.Measurement(42))
+		c.Add(ctx, 42, labels...)
 		checkSyncBatches(ctx, t, labels, provider, number.Int64Kind, sdkapi.UpDownCounterInstrumentKind, c.SyncImpl(),
 			100, 42,
 		)
@@ -284,7 +284,7 @@ func TestCounter(t *testing.T) {
 		ctx := context.Background()
 		labels := []attribute.KeyValue{attribute.String("A", "B"), attribute.String("C", "D")}
 		c.Add(ctx, 100.1, labels...)
-		meter.RecordBatch(ctx, labels, c.Measurement(-100.1))
+		c.Add(ctx, -100.1, labels...)
 		checkSyncBatches(ctx, t, labels, provider, number.Float64Kind, sdkapi.UpDownCounterInstrumentKind, c.SyncImpl(),
 			100.1, -100.1,
 		)
@@ -298,7 +298,7 @@ func TestHistogram(t *testing.T) {
 		ctx := context.Background()
 		labels := []attribute.KeyValue{}
 		m.Record(ctx, 42, labels...)
-		meter.RecordBatch(ctx, labels, m.Measurement(-100.5))
+		m.Record(ctx, -100.5, labels...)
 		checkSyncBatches(ctx, t, labels, provider, number.Float64Kind, sdkapi.HistogramInstrumentKind, m.SyncImpl(),
 			42, -100.5,
 		)
@@ -309,7 +309,7 @@ func TestHistogram(t *testing.T) {
 		ctx := context.Background()
 		labels := []attribute.KeyValue{attribute.Int("I", 1)}
 		m.Record(ctx, 173, labels...)
-		meter.RecordBatch(ctx, labels, m.Measurement(0))
+		m.Record(ctx, 0, labels...)
 		checkSyncBatches(ctx, t, labels, provider, number.Int64Kind, sdkapi.HistogramInstrumentKind, m.SyncImpl(),
 			173, 0,
 		)
@@ -457,9 +457,6 @@ type testWrappedMeter struct {
 }
 
 var _ sdkapi.MeterImpl = testWrappedMeter{}
-
-func (testWrappedMeter) RecordBatch(context.Context, []attribute.KeyValue, ...sdkapi.Measurement) {
-}
 
 func (testWrappedMeter) NewSyncInstrument(_ sdkapi.Descriptor) (sdkapi.SyncImpl, error) {
 	return nil, nil

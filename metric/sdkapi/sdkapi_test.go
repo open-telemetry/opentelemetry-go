@@ -22,15 +22,6 @@ import (
 	"go.opentelemetry.io/otel/metric/number"
 )
 
-func TestMeasurementGetters(t *testing.T) {
-	num := number.NewFloat64Number(1.5)
-	si := NewNoopSyncInstrument()
-	meas := NewMeasurement(si, num)
-
-	require.Equal(t, si, meas.SyncImpl())
-	require.Equal(t, num, meas.Number())
-}
-
 func TestObservationGetters(t *testing.T) {
 	num := number.NewFloat64Number(1.5)
 	ai := NewNoopAsyncInstrument()

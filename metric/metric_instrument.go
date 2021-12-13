@@ -275,14 +275,6 @@ func (s syncInstrument) SyncImpl() sdkapi.SyncImpl {
 	return s.instrument
 }
 
-func (s syncInstrument) float64Measurement(value float64) Measurement {
-	return sdkapi.NewMeasurement(s.instrument, number.NewFloat64Number(value))
-}
-
-func (s syncInstrument) int64Measurement(value int64) Measurement {
-	return sdkapi.NewMeasurement(s.instrument, number.NewInt64Number(value))
-}
-
 func (s syncInstrument) directRecord(ctx context.Context, number number.Number, labels []attribute.KeyValue) {
 	s.instrument.RecordOne(ctx, number, labels)
 }
@@ -368,18 +360,6 @@ type Int64Counter struct {
 	syncInstrument
 }
 
-// Measurement creates a Measurement object to use with batch
-// recording.
-func (c Float64Counter) Measurement(value float64) Measurement {
-	return c.float64Measurement(value)
-}
-
-// Measurement creates a Measurement object to use with batch
-// recording.
-func (c Int64Counter) Measurement(value int64) Measurement {
-	return c.int64Measurement(value)
-}
-
 // Add adds the value to the counter's sum. The labels should contain
 // the keys and values to be associated with this value.
 func (c Float64Counter) Add(ctx context.Context, value float64, labels ...attribute.KeyValue) {
@@ -403,18 +383,6 @@ type Int64UpDownCounter struct {
 	syncInstrument
 }
 
-// Measurement creates a Measurement object to use with batch
-// recording.
-func (c Float64UpDownCounter) Measurement(value float64) Measurement {
-	return c.float64Measurement(value)
-}
-
-// Measurement creates a Measurement object to use with batch
-// recording.
-func (c Int64UpDownCounter) Measurement(value int64) Measurement {
-	return c.int64Measurement(value)
-}
-
 // Add adds the value to the counter's sum. The labels should contain
 // the keys and values to be associated with this value.
 func (c Float64UpDownCounter) Add(ctx context.Context, value float64, labels ...attribute.KeyValue) {
@@ -435,18 +403,6 @@ type Float64Histogram struct {
 // Int64Histogram is a metric that records int64 values.
 type Int64Histogram struct {
 	syncInstrument
-}
-
-// Measurement creates a Measurement object to use with batch
-// recording.
-func (c Float64Histogram) Measurement(value float64) Measurement {
-	return c.float64Measurement(value)
-}
-
-// Measurement creates a Measurement object to use with batch
-// recording.
-func (c Int64Histogram) Measurement(value int64) Measurement {
-	return c.int64Measurement(value)
 }
 
 // Record adds a new value to the list of Histogram's records. The

@@ -15,9 +15,6 @@
 package metric // import "go.opentelemetry.io/otel/metric"
 
 import (
-	"context"
-
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 )
@@ -48,14 +45,6 @@ func WrapMeterImpl(impl sdkapi.MeterImpl) Meter {
 	}
 }
 
-// Measurement is used for reporting a synchronous batch of metric
-// values. Instances of this type should be created by synchronous
-// instruments (e.g., Int64Counter.Measurement()).
-//
-// Note: This is an alias because it is a first-class member of the
-// API but is also part of the lower-level sdkapi interface.
-type Measurement = sdkapi.Measurement
-
 // Observation is used for reporting an asynchronous  batch of metric
 // values. Instances of this type should be created by asynchronous
 // instruments (e.g., Int64GaugeObserver.Observation()).
@@ -63,14 +52,6 @@ type Measurement = sdkapi.Measurement
 // Note: This is an alias because it is a first-class member of the
 // API but is also part of the lower-level sdkapi interface.
 type Observation = sdkapi.Observation
-
-// RecordBatch atomically records a batch of measurements.
-func (m Meter) RecordBatch(ctx context.Context, ls []attribute.KeyValue, ms ...Measurement) {
-	if m.impl == nil {
-		return
-	}
-	m.impl.RecordBatch(ctx, ls, ms...)
-}
 
 // NewBatchObserver creates a new BatchObserver that supports
 // making batches of observations for multiple instruments.

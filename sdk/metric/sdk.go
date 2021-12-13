@@ -464,31 +464,6 @@ func (m *Accumulator) checkpointAsync(a *asyncInstrument) int {
 	return checkpointed
 }
 
-// RecordBatch enters a batch of metric events.
-// The order of the input array `kvs` may be sorted after the function is called.
-func (m *Accumulator) RecordBatch(ctx context.Context, kvs []attribute.KeyValue, measurements ...sdkapi.Measurement) {
-	// Labels will be computed the first time acquireHandle is
-	// called.  Subsequent calls to acquireHandle will re-use the
-	// previously computed value instead of recomputing the
-	// ordered labels.
-	var labelsPtr *attribute.Set
-	for i, meas := range measurements {
-		s := m.fromSync(meas.SyncImpl())
-		if s == nil {
-			continue
-		}
-		h := s.acquireHandle(kvs, labelsPtr)
-
-		// Re-use labels for the next measurement.
-		if i == 0 {
-			labelsPtr = h.labels
-		}
-
-		defer h.unbind()
-		h.RecordOne(ctx, meas.Number())
-	}
-}
-
 // RecordOne implements sdkapi.SyncImpl.
 func (r *record) RecordOne(ctx context.Context, num number.Number) {
 	if r.current == nil {
@@ -519,19 +494,7 @@ func (r *record) mapkey() mapkey {
 	}
 }
 
-// fromSync gets a sync implementation object, checking for
-// uninitialized instruments and instruments created by another SDK.
-func (m *Accumulator) fromSync(sync sdkapi.SyncImpl) *syncInstrument {
-	if sync != nil {
-		if inst, ok := sync.Implementation().(*syncInstrument); ok {
-			return inst
-		}
-	}
-	otel.Handle(ErrUninitializedInstrument)
-	return nil
-}
-
-// fromSync gets an async implementation object, checking for
+// fromAsync gets an async implementation object, checking for
 // uninitialized instruments and instruments created by another SDK.
 func (m *Accumulator) fromAsync(async sdkapi.AsyncImpl) *asyncInstrument {
 	if async != nil {

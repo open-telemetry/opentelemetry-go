@@ -23,7 +23,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
-	"go.opentelemetry.io/otel/metric/sdkapi"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
@@ -311,43 +310,6 @@ func BenchmarkInt64ExactAdd(b *testing.B) {
 
 func BenchmarkFloat64ExactAdd(b *testing.B) {
 	benchmarkFloat64HistogramAdd(b, "float64.exact")
-}
-
-// BatchRecord
-
-func benchmarkBatchRecord8Labels(b *testing.B, numInst int) {
-	const numLabels = 8
-	ctx := context.Background()
-	fix := newFixture(b)
-	labs := makeLabels(numLabels)
-	var meas []sdkapi.Measurement
-
-	for i := 0; i < numInst; i++ {
-		inst := fix.meterMust().NewInt64Counter(fmt.Sprintf("int64.%d.sum", i))
-		meas = append(meas, inst.Measurement(1))
-	}
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		fix.accumulator.RecordBatch(ctx, labs, meas...)
-	}
-}
-
-func BenchmarkBatchRecord8Labels_1Instrument(b *testing.B) {
-	benchmarkBatchRecord8Labels(b, 1)
-}
-
-func BenchmarkBatchRecord_8Labels_2Instruments(b *testing.B) {
-	benchmarkBatchRecord8Labels(b, 2)
-}
-
-func BenchmarkBatchRecord_8Labels_4Instruments(b *testing.B) {
-	benchmarkBatchRecord8Labels(b, 4)
-}
-
-func BenchmarkBatchRecord_8Labels_8Instruments(b *testing.B) {
-	benchmarkBatchRecord8Labels(b, 8)
 }
 
 // Record creation

@@ -175,19 +175,6 @@ func (m *MeterImpl) NewAsyncInstrument(descriptor sdkapi.Descriptor, runner sdka
 	return a, nil
 }
 
-// RecordBatch implements sdkapi.MeterImpl.
-func (m *MeterImpl) RecordBatch(ctx context.Context, labels []attribute.KeyValue, measurements ...sdkapi.Measurement) {
-	mm := make([]Measurement, len(measurements))
-	for i := 0; i < len(measurements); i++ {
-		m := measurements[i]
-		mm[i] = Measurement{
-			Instrument: m.SyncImpl().Implementation().(*Sync),
-			Number:     m.Number(),
-		}
-	}
-	m.collect(ctx, labels, mm)
-}
-
 // CollectAsync is called from asyncInstruments.Run() with the lock held.
 func (m *MeterImpl) CollectAsync(labels []attribute.KeyValue, obs ...sdkapi.Observation) {
 	mm := make([]Measurement, len(obs))

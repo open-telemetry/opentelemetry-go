@@ -15,11 +15,9 @@
 package registry // import "go.opentelemetry.io/otel/internal/metric/registry"
 
 import (
-	"context"
 	"fmt"
 	"sync"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 )
 
@@ -51,11 +49,6 @@ func NewUniqueInstrumentMeterImpl(impl sdkapi.MeterImpl) *UniqueInstrumentMeterI
 // used by this UniqueInstrumentMeterImpl.
 func (u *UniqueInstrumentMeterImpl) MeterImpl() sdkapi.MeterImpl {
 	return u.impl
-}
-
-// RecordBatch implements sdkapi.MeterImpl.
-func (u *UniqueInstrumentMeterImpl) RecordBatch(ctx context.Context, labels []attribute.KeyValue, ms ...sdkapi.Measurement) {
-	u.impl.RecordBatch(ctx, labels, ms...)
 }
 
 // NewMetricKindMismatchError formats an error that describes a
