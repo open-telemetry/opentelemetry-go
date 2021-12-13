@@ -65,7 +65,7 @@ Export Pipeline
 While the SDK serves to maintain a current set of records and
 coordinate collection, the behavior of a metrics export pipeline is
 configured through the export types in
-go.opentelemetry.io/otel/sdk/export/metric.  It is important to keep
+go.opentelemetry.io/otel/sdk/metric/export.  It is important to keep
 in mind the context these interfaces are called from.  There are two
 contexts, instrumentation context, where a user-level goroutine that
 enters the SDK resulting in a new record, and collection context,

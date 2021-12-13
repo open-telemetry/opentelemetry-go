@@ -32,11 +32,11 @@ import (
 	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
-	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/resource"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
@@ -675,14 +675,14 @@ func TestStatelessAggregationTemporality(t *testing.T) {
 func runMetricExportTests(t *testing.T, opts []otlpmetric.Option, res *resource.Resource, records []testRecord, expected []*metricpb.ResourceMetrics) {
 	exp, driver := newExporter(t, opts...)
 
-	libraryRecs := map[instrumentation.Library][]metricsdk.Record{}
+	libraryRecs := map[instrumentation.Library][]export.Record{}
 	for _, r := range records {
 		lcopy := make([]attribute.KeyValue, len(r.labels))
 		copy(lcopy, r.labels)
 		desc := metrictest.NewDescriptor(r.name, r.iKind, r.nKind)
 		labs := attribute.NewSet(lcopy...)
 
-		var agg, ckpt metricsdk.Aggregator
+		var agg, ckpt export.Aggregator
 		if r.iKind.Adding() {
 			sums := sum.New(2)
 			agg, ckpt = &sums[0], &sums[1]
@@ -723,7 +723,7 @@ func runMetricExportTests(t *testing.T, opts []otlpmetric.Option, res *resource.
 			Version:   meterCfg.InstrumentationVersion(),
 			SchemaURL: meterCfg.SchemaURL(),
 		}
-		libraryRecs[lib] = append(libraryRecs[lib], metricsdk.NewRecord(&desc, &labs, ckpt.Aggregation(), intervalStart, intervalEnd))
+		libraryRecs[lib] = append(libraryRecs[lib], export.NewRecord(&desc, &labs, ckpt.Aggregation(), intervalStart, intervalEnd))
 	}
 	assert.NoError(t, exp.Export(context.Background(), res, processortest.MultiInstrumentationLibraryReader(libraryRecs)))
 
@@ -772,20 +772,20 @@ func TestEmptyMetricExport(t *testing.T) {
 	exp, driver := newExporter(t)
 
 	for _, test := range []struct {
-		records []metricsdk.Record
+		records []export.Record
 		want    []*metricpb.ResourceMetrics
 	}{
 		{
-			[]metricsdk.Record(nil),
+			[]export.Record(nil),
 			[]*metricpb.ResourceMetrics(nil),
 		},
 		{
-			[]metricsdk.Record{},
+			[]export.Record{},
 			[]*metricpb.ResourceMetrics(nil),
 		},
 	} {
 		driver.Reset()
-		require.NoError(t, exp.Export(context.Background(), resource.Empty(), processortest.MultiInstrumentationLibraryReader(map[instrumentation.Library][]metricsdk.Record{
+		require.NoError(t, exp.Export(context.Background(), resource.Empty(), processortest.MultiInstrumentationLibraryReader(map[instrumentation.Library][]export.Record{
 			{
 				Name: testLibName,
 			}: test.records,
