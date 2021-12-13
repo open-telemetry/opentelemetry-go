@@ -31,11 +31,10 @@ import (
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/metric/unit"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	exportmetric "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -46,9 +45,9 @@ type fakeExporter struct {
 	err      error
 }
 
-func (f *fakeExporter) Export(ctx context.Context, res *resource.Resource, ilr exportmetric.InstrumentationLibraryReader) error {
+func (f *fakeExporter) Export(ctx context.Context, res *resource.Resource, ilr export.InstrumentationLibraryReader) error {
 	return controllertest.ReadAll(ilr, aggregation.StatelessTemporalitySelector(),
-		func(_ instrumentation.Library, record exportmetric.Record) error {
+		func(_ instrumentation.Library, record export.Record) error {
 			f.resource = res
 			f.records = append(f.records, record)
 			return f.err

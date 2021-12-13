@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Deprecated
+
+- Deprecate module `"go.opentelemetry.io/otel/sdk/export/metric"`, new functionality available in "go.opentelemetry.io/otel/sdk/metric" module:
+  - Import path changed `import "go.opentelemetry.io/otel/sdk/export/metric"` to `import go.opentelemetry.io/otel/sdk/metric/export` (#2382).
+
 ## [1.3.0] - 2021-12-10
 
 ### ⚠️ Notice ⚠️

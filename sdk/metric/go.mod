@@ -47,7 +47,6 @@ require (
 	go.opentelemetry.io/otel/internal/metric v0.26.0
 	go.opentelemetry.io/otel/metric v0.26.0
 	go.opentelemetry.io/otel/sdk v1.3.0
-	go.opentelemetry.io/otel/sdk/export/metric v0.26.0
 )
 
 replace go.opentelemetry.io/otel/example/passthrough => ../../example/passthrough

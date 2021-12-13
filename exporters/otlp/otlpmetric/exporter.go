@@ -21,8 +21,8 @@ import (
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/metrictransform"
 	"go.opentelemetry.io/otel/metric/sdkapi"
-	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -44,7 +44,7 @@ type Exporter struct {
 }
 
 // Export exports a batch of metrics.
-func (e *Exporter) Export(ctx context.Context, res *resource.Resource, ilr metricsdk.InstrumentationLibraryReader) error {
+func (e *Exporter) Export(ctx context.Context, res *resource.Resource, ilr export.InstrumentationLibraryReader) error {
 	rm, err := metrictransform.InstrumentationLibraryReader(ctx, e, res, ilr, 1)
 	if err != nil {
 		return err
@@ -100,7 +100,7 @@ func (e *Exporter) TemporalityFor(descriptor *sdkapi.Descriptor, kind aggregatio
 	return e.temporalitySelector.TemporalityFor(descriptor, kind)
 }
 
-var _ metricsdk.Exporter = (*Exporter)(nil)
+var _ export.Exporter = (*Exporter)(nil)
 
 // New constructs a new Exporter and starts it.
 func New(ctx context.Context, client Client, opts ...Option) (*Exporter, error) {
