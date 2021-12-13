@@ -17,6 +17,8 @@ package otel
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/internal/trace/noop"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -36,8 +38,5 @@ func TestMultipleGlobalTracerProvider(t *testing.T) {
 	SetTracerProvider(p2)
 
 	got := GetTracerProvider()
-	want := p2
-	if got != want {
-		t.Fatalf("TracerProvider: got %p, want %p\n", got, want)
-	}
+	assert.Equal(t, p2, got)
 }
