@@ -21,7 +21,7 @@ import (
 
 	"go.opencensus.io/metric/metricdata"
 
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 )
 
 func TestNewAggregationFromPoints(t *testing.T) {

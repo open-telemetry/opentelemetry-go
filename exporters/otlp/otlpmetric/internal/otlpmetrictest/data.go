@@ -23,16 +23,16 @@ import (
 	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
-	exportmetric "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 )
 
 // OneRecordReader is a Reader that returns just one
 // filled record. It may be useful for testing driver's metrics
 // export.
-func OneRecordReader() exportmetric.InstrumentationLibraryReader {
+func OneRecordReader() export.InstrumentationLibraryReader {
 	desc := metrictest.NewDescriptor(
 		"foo",
 		sdkapi.CounterInstrumentKind,
@@ -45,17 +45,17 @@ func OneRecordReader() exportmetric.InstrumentationLibraryReader {
 	start := time.Date(2020, time.December, 8, 19, 15, 0, 0, time.UTC)
 	end := time.Date(2020, time.December, 8, 19, 16, 0, 0, time.UTC)
 	labels := attribute.NewSet(attribute.String("abc", "def"), attribute.Int64("one", 1))
-	rec := exportmetric.NewRecord(&desc, &labels, agg[0].Aggregation(), start, end)
+	rec := export.NewRecord(&desc, &labels, agg[0].Aggregation(), start, end)
 
 	return processortest.MultiInstrumentationLibraryReader(
-		map[instrumentation.Library][]exportmetric.Record{
+		map[instrumentation.Library][]export.Record{
 			{
 				Name: "onelib",
 			}: {rec},
 		})
 }
 
-func EmptyReader() exportmetric.InstrumentationLibraryReader {
+func EmptyReader() export.InstrumentationLibraryReader {
 	return processortest.MultiInstrumentationLibraryReader(nil)
 }
 
@@ -63,9 +63,9 @@ func EmptyReader() exportmetric.InstrumentationLibraryReader {
 // ForEach.
 type FailReader struct{}
 
-var _ exportmetric.InstrumentationLibraryReader = FailReader{}
+var _ export.InstrumentationLibraryReader = FailReader{}
 
-// ForEach implements exportmetric.Reader. It always fails.
-func (FailReader) ForEach(readerFunc func(instrumentation.Library, exportmetric.Reader) error) error {
+// ForEach implements export.Reader. It always fails.
+func (FailReader) ForEach(readerFunc func(instrumentation.Library, export.Reader) error) error {
 	return fmt.Errorf("fail")
 }

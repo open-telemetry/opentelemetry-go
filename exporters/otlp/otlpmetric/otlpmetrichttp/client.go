@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"path"
 	"strconv"
 	"strings"
@@ -199,8 +200,8 @@ func (d *client) UploadMetrics(ctx context.Context, protoMetrics []*metricpb.Res
 }
 
 func (d *client) newRequest(body []byte) (request, error) {
-	address := fmt.Sprintf("%s://%s%s", d.getScheme(), d.cfg.Endpoint, d.cfg.URLPath)
-	r, err := http.NewRequest(http.MethodPost, address, nil)
+	u := url.URL{Scheme: d.getScheme(), Host: d.cfg.Endpoint, Path: d.cfg.URLPath}
+	r, err := http.NewRequest(http.MethodPost, u.String(), nil)
 	if err != nil {
 		return request{Request: r}, err
 	}

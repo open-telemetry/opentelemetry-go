@@ -14,7 +14,7 @@
 
 package otlpmetric // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 
-import "go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+import "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 
 // Option are setting options passed to an Exporter on creation.
 type Option interface {

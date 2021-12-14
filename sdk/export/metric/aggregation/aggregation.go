@@ -15,117 +15,56 @@
 package aggregation // import "go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 
 import (
-	"fmt"
-	"time"
-
-	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 )
 
-// These interfaces describe the various ways to access state from an
-// Aggregation.
+// Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+type Aggregation = aggregation.Aggregation
 
-type (
-	// Aggregation is an interface returned by the Aggregator
-	// containing an interval of metric data.
-	Aggregation interface {
-		// Kind returns a short identifying string to identify
-		// the Aggregator that was used to produce the
-		// Aggregation (e.g., "Sum").
-		Kind() Kind
-	}
+// Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+type Sum = aggregation.Sum
 
-	// Sum returns an aggregated sum.
-	Sum interface {
-		Aggregation
-		Sum() (number.Number, error)
-	}
+// Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+type Count = aggregation.Count
 
-	// Count returns the number of values that were aggregated.
-	Count interface {
-		Aggregation
-		Count() (uint64, error)
-	}
+// Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+type Min = aggregation.Min
 
-	// Min returns the minimum value over the set of values that were aggregated.
-	Min interface {
-		Aggregation
-		Min() (number.Number, error)
-	}
+// Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+type Max = aggregation.Max
 
-	// Max returns the maximum value over the set of values that were aggregated.
-	Max interface {
-		Aggregation
-		Max() (number.Number, error)
-	}
+// Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+type LastValue = aggregation.LastValue
 
-	// LastValue returns the latest value that was aggregated.
-	LastValue interface {
-		Aggregation
-		LastValue() (number.Number, time.Time, error)
-	}
+// Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+type Buckets = aggregation.Buckets
 
-	// Buckets represents histogram buckets boundaries and counts.
-	//
-	// For a Histogram with N defined boundaries, e.g, [x, y, z].
-	// There are N+1 counts: [-inf, x), [x, y), [y, z), [z, +inf]
-	Buckets struct {
-		// Boundaries are floating point numbers, even when
-		// aggregating integers.
-		Boundaries []float64
+// Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+type Histogram = aggregation.Histogram
 
-		// Counts holds the count in each bucket.
-		Counts []uint64
-	}
+// Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+type Kind = aggregation.Kind
 
-	// Histogram returns the count of events in pre-determined buckets.
-	Histogram interface {
-		Aggregation
-		Count() (uint64, error)
-		Sum() (number.Number, error)
-		Histogram() (Buckets, error)
-	}
-)
-
-type (
-	// Kind is a short name for the Aggregator that produces an
-	// Aggregation, used for descriptive purpose only.  Kind is a
-	// string to allow user-defined Aggregators.
-	//
-	// When deciding how to handle an Aggregation, Exporters are
-	// encouraged to decide based on conversion to the above
-	// interfaces based on strength, not on Kind value, when
-	// deciding how to expose metric data.  This enables
-	// user-supplied Aggregators to replace builtin Aggregators.
-	//
-	// For example, test for a Histogram before testing for a
-	// Sum, and so on.
-	Kind string
-)
-
-// Kind description constants.
 const (
-	SumKind       Kind = "Sum"
-	HistogramKind Kind = "Histogram"
-	LastValueKind Kind = "Lastvalue"
+	// Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	SumKind = aggregation.SumKind
+	// Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	HistogramKind = aggregation.HistogramKind
+	// Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	LastValueKind = aggregation.LastValueKind
 )
 
-// Sentinel errors for Aggregation interface.
 var (
-	ErrNegativeInput    = fmt.Errorf("negative value is out of range for this instrument")
-	ErrNaNInput         = fmt.Errorf("NaN value is an invalid input")
-	ErrInconsistentType = fmt.Errorf("inconsistent aggregator types")
+	// Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	ErrNegativeInput = aggregation.ErrNegativeInput
+	// Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	ErrNaNInput = aggregation.ErrNaNInput
+	// Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	ErrInconsistentType = aggregation.ErrInconsistentType
 
-	// ErrNoCumulativeToDelta is returned when requesting delta
-	// export kind for a precomputed sum instrument.
-	ErrNoCumulativeToDelta = fmt.Errorf("cumulative to delta not implemented")
+	// Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	ErrNoCumulativeToDelta = aggregation.ErrNoCumulativeToDelta
 
-	// ErrNoData is returned when (due to a race with collection)
-	// the Aggregator is check-pointed before the first value is set.
-	// The aggregator should simply be skipped in this case.
-	ErrNoData = fmt.Errorf("no data collected by this aggregator")
+	// Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	ErrNoData = aggregation.ErrNoData
 )
-
-// String returns the string value of Kind.
-func (k Kind) String() string {
-	return string(k)
-}

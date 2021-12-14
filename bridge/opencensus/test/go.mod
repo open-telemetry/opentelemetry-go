@@ -4,10 +4,10 @@ go 1.16
 
 require (
 	go.opencensus.io v0.23.0
-	go.opentelemetry.io/otel v1.2.0
-	go.opentelemetry.io/otel/bridge/opencensus v0.25.0
-	go.opentelemetry.io/otel/sdk v1.2.0
-	go.opentelemetry.io/otel/trace v1.2.0
+	go.opentelemetry.io/otel v1.3.0
+	go.opentelemetry.io/otel/bridge/opencensus v0.26.0
+	go.opentelemetry.io/otel/sdk v1.3.0
+	go.opentelemetry.io/otel/trace v1.3.0
 )
 
 replace go.opentelemetry.io/otel => ../../..

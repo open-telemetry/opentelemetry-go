@@ -97,10 +97,16 @@ func NewGRPCConfig(opts ...GRPCOption) Config {
 	if cfg.ServiceConfig != "" {
 		cfg.DialOptions = append(cfg.DialOptions, grpc.WithDefaultServiceConfig(cfg.ServiceConfig))
 	}
+	// Priroritize GRPCCredentials over Insecure (passing both is an error).
 	if cfg.Metrics.GRPCCredentials != nil {
 		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(cfg.Metrics.GRPCCredentials))
 	} else if cfg.Metrics.Insecure {
 		cfg.DialOptions = append(cfg.DialOptions, grpc.WithInsecure())
+	} else {
+		// Default to using the host's root CA.
+		creds := credentials.NewTLS(nil)
+		cfg.Metrics.GRPCCredentials = creds
+		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(creds))
 	}
 	if cfg.Metrics.Compression == GzipCompression {
 		cfg.DialOptions = append(cfg.DialOptions, grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
