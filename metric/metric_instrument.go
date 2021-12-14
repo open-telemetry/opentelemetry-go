@@ -128,330 +128,188 @@ func (b *BatchObserverFunc) Run(ctx context.Context, function func([]attribute.K
 	})
 }
 
-// wrapInt64GaugeObserverInstrument converts an AsyncImpl into Int64GaugeObserver.
-func wrapInt64GaugeObserverInstrument(asyncInst sdkapi.AsyncImpl, err error) (Int64GaugeObserver, error) {
-	common, err := checkNewAsync(asyncInst, err)
-	return Int64GaugeObserver{asyncInstrument: common}, err
+// syncInstrument contains a SyncImpl.
+type syncInstrument interface {
+	// SyncImpl returns the implementation object for synchronous instruments.
+	SyncImpl() sdkapi.SyncImpl
 }
 
-// wrapFloat64GaugeObserverInstrument converts an AsyncImpl into Float64GaugeObserver.
-func wrapFloat64GaugeObserverInstrument(asyncInst sdkapi.AsyncImpl, err error) (Float64GaugeObserver, error) {
-	common, err := checkNewAsync(asyncInst, err)
-	return Float64GaugeObserver{asyncInstrument: common}, err
-}
-
-// wrapInt64CounterObserverInstrument converts an AsyncImpl into Int64CounterObserver.
-func wrapInt64CounterObserverInstrument(asyncInst sdkapi.AsyncImpl, err error) (Int64CounterObserver, error) {
-	common, err := checkNewAsync(asyncInst, err)
-	return Int64CounterObserver{asyncInstrument: common}, err
-}
-
-// wrapFloat64CounterObserverInstrument converts an AsyncImpl into Float64CounterObserver.
-func wrapFloat64CounterObserverInstrument(asyncInst sdkapi.AsyncImpl, err error) (Float64CounterObserver, error) {
-	common, err := checkNewAsync(asyncInst, err)
-	return Float64CounterObserver{asyncInstrument: common}, err
-}
-
-// wrapInt64UpDownCounterObserverInstrument converts an AsyncImpl into Int64UpDownCounterObserver.
-func wrapInt64UpDownCounterObserverInstrument(asyncInst sdkapi.AsyncImpl, err error) (Int64UpDownCounterObserver, error) {
-	common, err := checkNewAsync(asyncInst, err)
-	return Int64UpDownCounterObserver{asyncInstrument: common}, err
-}
-
-// wrapFloat64UpDownCounterObserverInstrument converts an AsyncImpl into Float64UpDownCounterObserver.
-func wrapFloat64UpDownCounterObserverInstrument(asyncInst sdkapi.AsyncImpl, err error) (Float64UpDownCounterObserver, error) {
-	common, err := checkNewAsync(asyncInst, err)
-	return Float64UpDownCounterObserver{asyncInstrument: common}, err
+// asyncInstrument contains a AsyncImpl.
+type asyncInstrument interface {
+	// AsyncImpl returns the implementation object for asynchronous instruments.
+	AsyncImpl() sdkapi.AsyncImpl
 }
 
 // Int64GaugeObserver is a metric that captures a set of int64 values at a
 // point in time.
-type Int64GaugeObserver struct {
+//
+// Warning: methods may be added to this interface in minor releases.
+type Int64GaugeObserver interface {
 	asyncInstrument
+
+	// Observation returns an Observation, a BatchObserverFunc
+	// argument, for an asynchronous integer instrument.
+	// This returns an implementation-level object for use by the SDK,
+	// users should not refer to this.
+	Observation(v int64) Observation
 }
 
 // Float64GaugeObserver is a metric that captures a set of float64 values
 // at a point in time.
-type Float64GaugeObserver struct {
+//
+// Warning: methods may be added to this interface in minor releases.
+type Float64GaugeObserver interface {
 	asyncInstrument
+
+	// Observation returns an Observation, a BatchObserverFunc
+	// argument, for an asynchronous integer instrument.
+	// This returns an implementation-level object for use by the SDK,
+	// users should not refer to this.
+	Observation(v float64) Observation
 }
 
 // Int64CounterObserver is a metric that captures a precomputed sum of
 // int64 values at a point in time.
-type Int64CounterObserver struct {
+//
+// Warning: methods may be added to this interface in minor releases.
+type Int64CounterObserver interface {
 	asyncInstrument
+
+	// Observation returns an Observation, a BatchObserverFunc
+	// argument, for an asynchronous integer instrument.
+	// This returns an implementation-level object for use by the SDK,
+	// users should not refer to this.
+	Observation(v int64) Observation
 }
 
 // Float64CounterObserver is a metric that captures a precomputed sum of
 // float64 values at a point in time.
-type Float64CounterObserver struct {
+//
+// Warning: methods may be added to this interface in minor releases.
+type Float64CounterObserver interface {
 	asyncInstrument
+
+	// Observation returns an Observation, a BatchObserverFunc
+	// argument, for an asynchronous integer instrument.
+	// This returns an implementation-level object for use by the SDK,
+	// users should not refer to this.
+	Observation(v float64) Observation
 }
 
 // Int64UpDownCounterObserver is a metric that captures a precomputed sum of
 // int64 values at a point in time.
-type Int64UpDownCounterObserver struct {
+type Int64UpDownCounterObserver interface {
 	asyncInstrument
+
+	// Observation returns an Observation, a BatchObserverFunc
+	// argument, for an asynchronous integer instrument.
+	// This returns an implementation-level object for use by the SDK,
+	// users should not refer to this.
+	Observation(v int64) Observation
 }
 
 // Float64UpDownCounterObserver is a metric that captures a precomputed sum of
 // float64 values at a point in time.
-type Float64UpDownCounterObserver struct {
+//
+// Warning: methods may be added to this interface in minor releases.
+type Float64UpDownCounterObserver interface {
 	asyncInstrument
-}
 
-// Observation returns an Observation, a BatchObserverFunc
-// argument, for an asynchronous integer instrument.
-// This returns an implementation-level object for use by the SDK,
-// users should not refer to this.
-func (i Int64GaugeObserver) Observation(v int64) Observation {
-	return sdkapi.NewObservation(i.instrument, number.NewInt64Number(v))
-}
-
-// Observation returns an Observation, a BatchObserverFunc
-// argument, for an asynchronous integer instrument.
-// This returns an implementation-level object for use by the SDK,
-// users should not refer to this.
-func (f Float64GaugeObserver) Observation(v float64) Observation {
-	return sdkapi.NewObservation(f.instrument, number.NewFloat64Number(v))
-}
-
-// Observation returns an Observation, a BatchObserverFunc
-// argument, for an asynchronous integer instrument.
-// This returns an implementation-level object for use by the SDK,
-// users should not refer to this.
-func (i Int64CounterObserver) Observation(v int64) Observation {
-	return sdkapi.NewObservation(i.instrument, number.NewInt64Number(v))
-}
-
-// Observation returns an Observation, a BatchObserverFunc
-// argument, for an asynchronous integer instrument.
-// This returns an implementation-level object for use by the SDK,
-// users should not refer to this.
-func (f Float64CounterObserver) Observation(v float64) Observation {
-	return sdkapi.NewObservation(f.instrument, number.NewFloat64Number(v))
-}
-
-// Observation returns an Observation, a BatchObserverFunc
-// argument, for an asynchronous integer instrument.
-// This returns an implementation-level object for use by the SDK,
-// users should not refer to this.
-func (i Int64UpDownCounterObserver) Observation(v int64) Observation {
-	return sdkapi.NewObservation(i.instrument, number.NewInt64Number(v))
-}
-
-// Observation returns an Observation, a BatchObserverFunc
-// argument, for an asynchronous integer instrument.
-// This returns an implementation-level object for use by the SDK,
-// users should not refer to this.
-func (f Float64UpDownCounterObserver) Observation(v float64) Observation {
-	return sdkapi.NewObservation(f.instrument, number.NewFloat64Number(v))
-}
-
-// syncInstrument contains a SyncImpl.
-type syncInstrument struct {
-	instrument sdkapi.SyncImpl
-}
-
-// asyncInstrument contains a AsyncImpl.
-type asyncInstrument struct {
-	instrument sdkapi.AsyncImpl
-}
-
-// AsyncImpl implements AsyncImpl.
-func (a asyncInstrument) AsyncImpl() sdkapi.AsyncImpl {
-	return a.instrument
-}
-
-// SyncImpl returns the implementation object for synchronous instruments.
-func (s syncInstrument) SyncImpl() sdkapi.SyncImpl {
-	return s.instrument
-}
-
-func (s syncInstrument) float64Measurement(value float64) Measurement {
-	return sdkapi.NewMeasurement(s.instrument, number.NewFloat64Number(value))
-}
-
-func (s syncInstrument) int64Measurement(value int64) Measurement {
-	return sdkapi.NewMeasurement(s.instrument, number.NewInt64Number(value))
-}
-
-func (s syncInstrument) directRecord(ctx context.Context, number number.Number, labels []attribute.KeyValue) {
-	s.instrument.RecordOne(ctx, number, labels)
-}
-
-// checkNewAsync receives an AsyncImpl and potential
-// error, and returns the same types, checking for and ensuring that
-// the returned interface is not nil.
-func checkNewAsync(instrument sdkapi.AsyncImpl, err error) (asyncInstrument, error) {
-	if instrument == nil {
-		if err == nil {
-			err = ErrSDKReturnedNilImpl
-		}
-		instrument = sdkapi.NewNoopAsyncInstrument()
-	}
-	return asyncInstrument{
-		instrument: instrument,
-	}, err
-}
-
-// checkNewSync receives an SyncImpl and potential
-// error, and returns the same types, checking for and ensuring that
-// the returned interface is not nil.
-func checkNewSync(instrument sdkapi.SyncImpl, err error) (syncInstrument, error) {
-	if instrument == nil {
-		if err == nil {
-			err = ErrSDKReturnedNilImpl
-		}
-		// Note: an alternate behavior would be to synthesize a new name
-		// or group all duplicately-named instruments of a certain type
-		// together and use a tag for the original name, e.g.,
-		//   name = 'invalid.counter.int64'
-		//   label = 'original-name=duplicate-counter-name'
-		instrument = sdkapi.NewNoopSyncInstrument()
-	}
-	return syncInstrument{
-		instrument: instrument,
-	}, err
-}
-
-// wrapInt64CounterInstrument converts a SyncImpl into Int64Counter.
-func wrapInt64CounterInstrument(syncInst sdkapi.SyncImpl, err error) (Int64Counter, error) {
-	common, err := checkNewSync(syncInst, err)
-	return Int64Counter{syncInstrument: common}, err
-}
-
-// wrapFloat64CounterInstrument converts a SyncImpl into Float64Counter.
-func wrapFloat64CounterInstrument(syncInst sdkapi.SyncImpl, err error) (Float64Counter, error) {
-	common, err := checkNewSync(syncInst, err)
-	return Float64Counter{syncInstrument: common}, err
-}
-
-// wrapInt64UpDownCounterInstrument converts a SyncImpl into Int64UpDownCounter.
-func wrapInt64UpDownCounterInstrument(syncInst sdkapi.SyncImpl, err error) (Int64UpDownCounter, error) {
-	common, err := checkNewSync(syncInst, err)
-	return Int64UpDownCounter{syncInstrument: common}, err
-}
-
-// wrapFloat64UpDownCounterInstrument converts a SyncImpl into Float64UpDownCounter.
-func wrapFloat64UpDownCounterInstrument(syncInst sdkapi.SyncImpl, err error) (Float64UpDownCounter, error) {
-	common, err := checkNewSync(syncInst, err)
-	return Float64UpDownCounter{syncInstrument: common}, err
-}
-
-// wrapInt64HistogramInstrument converts a SyncImpl into Int64Histogram.
-func wrapInt64HistogramInstrument(syncInst sdkapi.SyncImpl, err error) (Int64Histogram, error) {
-	common, err := checkNewSync(syncInst, err)
-	return Int64Histogram{syncInstrument: common}, err
-}
-
-// wrapFloat64HistogramInstrument converts a SyncImpl into Float64Histogram.
-func wrapFloat64HistogramInstrument(syncInst sdkapi.SyncImpl, err error) (Float64Histogram, error) {
-	common, err := checkNewSync(syncInst, err)
-	return Float64Histogram{syncInstrument: common}, err
+	// Observation returns an Observation, a BatchObserverFunc
+	// argument, for an asynchronous integer instrument.
+	// This returns an implementation-level object for use by the SDK,
+	// users should not refer to this.
+	Observation(v float64) Observation
 }
 
 // Float64Counter is a metric that accumulates float64 values.
-type Float64Counter struct {
+//
+// Warning: methods may be added to this interface in minor releases.
+type Float64Counter interface {
 	syncInstrument
+
+	// Measurement creates a Measurement object to use with batch
+	// recording.
+	Measurement(value float64) Measurement
+
+	// Add adds the value to the counter's sum. The labels should contain
+	// the keys and values to be associated with this value.
+	Add(ctx context.Context, value float64, labels ...attribute.KeyValue)
 }
 
 // Int64Counter is a metric that accumulates int64 values.
-type Int64Counter struct {
+//
+// Warning: methods may be added to this interface in minor releases.
+type Int64Counter interface {
 	syncInstrument
-}
 
-// Measurement creates a Measurement object to use with batch
-// recording.
-func (c Float64Counter) Measurement(value float64) Measurement {
-	return c.float64Measurement(value)
-}
+	// Measurement creates a Measurement object to use with batch
+	// recording.
+	Measurement(value int64) Measurement
 
-// Measurement creates a Measurement object to use with batch
-// recording.
-func (c Int64Counter) Measurement(value int64) Measurement {
-	return c.int64Measurement(value)
-}
-
-// Add adds the value to the counter's sum. The labels should contain
-// the keys and values to be associated with this value.
-func (c Float64Counter) Add(ctx context.Context, value float64, labels ...attribute.KeyValue) {
-	c.directRecord(ctx, number.NewFloat64Number(value), labels)
-}
-
-// Add adds the value to the counter's sum. The labels should contain
-// the keys and values to be associated with this value.
-func (c Int64Counter) Add(ctx context.Context, value int64, labels ...attribute.KeyValue) {
-	c.directRecord(ctx, number.NewInt64Number(value), labels)
+	// Add adds the value to the counter's sum. The labels should contain
+	// the keys and values to be associated with this value.
+	Add(ctx context.Context, value int64, labels ...attribute.KeyValue)
 }
 
 // Float64UpDownCounter is a metric instrument that sums floating
 // point values.
-type Float64UpDownCounter struct {
+//
+// Warning: methods may be added to this interface in minor releases.
+type Float64UpDownCounter interface {
 	syncInstrument
+
+	// Measurement creates a Measurement object to use with batch recording.
+	Measurement(value float64) Measurement
+
+	// Add adds the value to the counter's sum. The labels should contain
+	// the keys and values to be associated with this value.
+	Add(ctx context.Context, value float64, labels ...attribute.KeyValue)
 }
 
 // Int64UpDownCounter is a metric instrument that sums integer values.
-type Int64UpDownCounter struct {
+//
+// Warning: methods may be added to this interface in minor releases.
+type Int64UpDownCounter interface {
 	syncInstrument
-}
 
-// Measurement creates a Measurement object to use with batch
-// recording.
-func (c Float64UpDownCounter) Measurement(value float64) Measurement {
-	return c.float64Measurement(value)
-}
+	// Measurement creates a Measurement object to use with batch
+	// recording.
+	Measurement(value int64) Measurement
 
-// Measurement creates a Measurement object to use with batch
-// recording.
-func (c Int64UpDownCounter) Measurement(value int64) Measurement {
-	return c.int64Measurement(value)
-}
-
-// Add adds the value to the counter's sum. The labels should contain
-// the keys and values to be associated with this value.
-func (c Float64UpDownCounter) Add(ctx context.Context, value float64, labels ...attribute.KeyValue) {
-	c.directRecord(ctx, number.NewFloat64Number(value), labels)
-}
-
-// Add adds the value to the counter's sum. The labels should contain
-// the keys and values to be associated with this value.
-func (c Int64UpDownCounter) Add(ctx context.Context, value int64, labels ...attribute.KeyValue) {
-	c.directRecord(ctx, number.NewInt64Number(value), labels)
+	// Add adds the value to the counter's sum. The labels should contain
+	// the keys and values to be associated with this value.
+	Add(ctx context.Context, value int64, labels ...attribute.KeyValue)
 }
 
 // Float64Histogram is a metric that records float64 values.
-type Float64Histogram struct {
+//
+// Warning: methods may be added to this interface in minor releases.
+type Float64Histogram interface {
 	syncInstrument
+
+	// Measurement creates a Measurement object to use with batch
+	// recording.
+	Measurement(value float64) Measurement
+
+	// Record adds a new value to the list of Histogram's records. The
+	// labels should contain the keys and values to be associated with
+	// this value.
+	Record(ctx context.Context, value float64, labels ...attribute.KeyValue)
 }
 
 // Int64Histogram is a metric that records int64 values.
-type Int64Histogram struct {
+//
+// Warning: methods may be added to this interface in minor releases.
+type Int64Histogram interface {
 	syncInstrument
-}
 
-// Measurement creates a Measurement object to use with batch
-// recording.
-func (c Float64Histogram) Measurement(value float64) Measurement {
-	return c.float64Measurement(value)
-}
+	// Measurement creates a Measurement object to use with batch
+	// recording.
+	Measurement(value int64) Measurement
 
-// Measurement creates a Measurement object to use with batch
-// recording.
-func (c Int64Histogram) Measurement(value int64) Measurement {
-	return c.int64Measurement(value)
-}
-
-// Record adds a new value to the list of Histogram's records. The
-// labels should contain the keys and values to be associated with
-// this value.
-func (c Float64Histogram) Record(ctx context.Context, value float64, labels ...attribute.KeyValue) {
-	c.directRecord(ctx, number.NewFloat64Number(value), labels)
-}
-
-// Record adds a new value to the Histogram's distribution. The
-// labels should contain the keys and values to be associated with
-// this value.
-func (c Int64Histogram) Record(ctx context.Context, value int64, labels ...attribute.KeyValue) {
-	c.directRecord(ctx, number.NewInt64Number(value), labels)
+	// Record adds a new value to the Histogram's distribution. The
+	// labels should contain the keys and values to be associated with
+	// this value.
+	Record(ctx context.Context, value int64, labels ...attribute.KeyValue)
 }
