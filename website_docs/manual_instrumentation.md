@@ -7,14 +7,19 @@ Instrumentation is the process of adding observability code to your application.
 
 ## Creating Spans
 
-Spans are created by tracers, which can be acquired from a Tracer Provider.
+Spans are created by tracers, which can be acquired from a Tracer Provider. Typically a tracer is instantiated at the module level.
+
+To create a span with a tracer, you'll also need a handle on a `context.Context` instance. These will typically come from things like a request object and may already contain a parent span from an [instrumentation library][].
 
 ```go
-ctx := context.Background()
-tracer := otel.Tracer("example/main")
-var span trace.Span
-ctx, span = tracer.Start(ctx, "helloWorld")
-defer span.End()
+func httpHandler(w http.ResponseWriter, r *http.Request) {
+	ctx = r.Context()
+
+	ctx, span := tracer.Start(ctx, "hello-span")
+	defer span.End()
+
+	// do some work to track with hello-span
+}
 ```
 
 In Go, the `context` package is used to store the active span. When you start a span, you'll get a handle on not only the span that's created, but the modified context that contains it.
@@ -38,12 +43,10 @@ This can helpful if you'd like to add information to the current span at a point
 
 You can create a nested span to track work in a nested operation.
 
-If the current `Context` you have a handle on already contains a span inside of it, creating a new span makes it a nested span. For example:
+If the current `context.Context` you have a handle on already contains a span inside of it, creating a new span makes it a nested span. For example:
 
 ```go
-func parentFunction() {
-	// Create a span that tracks the work for `parentFunction()`
-	ctx := context.Background()
+func parentFunction(ctx context.Context) {
 	ctx, parentSpan = tracer.Start(ctx, "parent")
 	defer parentSpan.End()
 
@@ -61,6 +64,8 @@ func childFunction(ctx context.Context) {
 	// do work here, when this function returns, childSpan will complete.
 }
 ```
+
+Once a span has completed, it is immutable and can no longer be modified.
 
 ### Span Attributes
 
@@ -129,3 +134,7 @@ otel.SetTextMapPropagator(propagation.TraceContext{})
 > OpenTelemetry also supports the B3 header format, for compatibility with existing tracing systems (`go.opentelemetry.io/contrib/propagators/b3`) that do not support the W3C TraceContext standard.
 
 After configuring context propagation, you'll most likely want to use automatic instrumentation to handle the behind-the-scenes work of actually managing serializing the context.
+
+[OpenTelemetry Specification]: {{< relref "/docs/reference/specification" >}}
+[Trace semantic conventions]: {{< relref "/docs/reference/specification/trace/semantic_conventions" >}}
+[instrumentation library]: using_instrumentation_libraries
