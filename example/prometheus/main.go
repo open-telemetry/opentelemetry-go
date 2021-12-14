@@ -26,9 +26,9 @@ import (
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	selector "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
@@ -40,11 +40,11 @@ var (
 func initMeter() {
 	config := prometheus.Config{}
 	c := controller.New(
-		processor.New(
+		processor.NewFactory(
 			selector.NewWithHistogramDistribution(
 				histogram.WithExplicitBoundaries(config.DefaultHistogramBoundaries),
 			),
-			export.CumulativeExportKindSelector(),
+			aggregation.CumulativeTemporalitySelector(),
 			processor.WithMemory(true),
 		),
 	)
@@ -76,11 +76,11 @@ func main() {
 		(*observerLock).RUnlock()
 		result.Observe(value, labels...)
 	}
-	_ = metric.Must(meter).NewFloat64ValueObserver("ex.com.one", cb,
-		metric.WithDescription("A ValueObserver set to 1.0"),
+	_ = metric.Must(meter).NewFloat64GaugeObserver("ex.com.one", cb,
+		metric.WithDescription("A GaugeObserver set to 1.0"),
 	)
 
-	valuerecorder := metric.Must(meter).NewFloat64ValueRecorder("ex.com.two")
+	histogram := metric.Must(meter).NewFloat64Histogram("ex.com.two")
 	counter := metric.Must(meter).NewFloat64Counter("ex.com.three")
 
 	commonLabels := []attribute.KeyValue{lemonsKey.Int(10), attribute.String("A", "1"), attribute.String("B", "2"), attribute.String("C", "3")}
@@ -95,7 +95,7 @@ func main() {
 	meter.RecordBatch(
 		ctx,
 		commonLabels,
-		valuerecorder.Measurement(2.0),
+		histogram.Measurement(2.0),
 		counter.Measurement(12.0),
 	)
 
@@ -108,7 +108,7 @@ func main() {
 	meter.RecordBatch(
 		ctx,
 		notSoCommonLabels,
-		valuerecorder.Measurement(2.0),
+		histogram.Measurement(2.0),
 		counter.Measurement(22.0),
 	)
 
@@ -121,7 +121,7 @@ func main() {
 	meter.RecordBatch(
 		ctx,
 		commonLabels,
-		valuerecorder.Measurement(12.0),
+		histogram.Measurement(12.0),
 		counter.Measurement(13.0),
 	)
 

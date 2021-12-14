@@ -25,11 +25,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 )
 
 const count = 100
@@ -72,7 +72,7 @@ func TestLastValueUpdate(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg, ckpt := new2()
 
-		record := aggregatortest.NewAggregatorTest(metric.ValueObserverInstrumentKind, profile.NumberKind)
+		record := aggregatortest.NewAggregatorTest(sdkapi.GaugeObserverInstrumentKind, profile.NumberKind)
 
 		var last number.Number
 		for i := 0; i < count; i++ {
@@ -94,7 +94,7 @@ func TestLastValueMerge(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg1, agg2, ckpt1, ckpt2 := new4()
 
-		descriptor := aggregatortest.NewAggregatorTest(metric.ValueObserverInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(sdkapi.GaugeObserverInstrumentKind, profile.NumberKind)
 
 		first1 := profile.Random(+1)
 		first2 := profile.Random(+1)
@@ -127,7 +127,7 @@ func TestLastValueMerge(t *testing.T) {
 }
 
 func TestLastValueNotSet(t *testing.T) {
-	descriptor := aggregatortest.NewAggregatorTest(metric.ValueObserverInstrumentKind, number.Int64Kind)
+	descriptor := aggregatortest.NewAggregatorTest(sdkapi.GaugeObserverInstrumentKind, number.Int64Kind)
 
 	g, ckpt := new2()
 	require.NoError(t, g.SynchronizedMove(ckpt, descriptor))
@@ -138,8 +138,8 @@ func TestLastValueNotSet(t *testing.T) {
 func TestSynchronizedMoveReset(t *testing.T) {
 	aggregatortest.SynchronizedMoveResetTest(
 		t,
-		metric.ValueObserverInstrumentKind,
-		func(desc *metric.Descriptor) export.Aggregator {
+		sdkapi.GaugeObserverInstrumentKind,
+		func(desc *sdkapi.Descriptor) export.Aggregator {
 			return &New(1)[0]
 		},
 	)

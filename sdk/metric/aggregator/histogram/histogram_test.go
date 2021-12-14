@@ -23,11 +23,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
+	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
 const count = 100
@@ -63,17 +63,17 @@ var (
 	testBoundaries = []float64{500, 250, 750}
 )
 
-func new2(desc *metric.Descriptor, options ...histogram.Option) (_, _ *histogram.Aggregator) {
+func new2(desc *sdkapi.Descriptor, options ...histogram.Option) (_, _ *histogram.Aggregator) {
 	alloc := histogram.New(2, desc, options...)
 	return &alloc[0], &alloc[1]
 }
 
-func new4(desc *metric.Descriptor, options ...histogram.Option) (_, _, _, _ *histogram.Aggregator) {
+func new4(desc *sdkapi.Descriptor, options ...histogram.Option) (_, _, _, _ *histogram.Aggregator) {
 	alloc := histogram.New(4, desc, options...)
 	return &alloc[0], &alloc[1], &alloc[2], &alloc[3]
 }
 
-func checkZero(t *testing.T, agg *histogram.Aggregator, desc *metric.Descriptor) {
+func checkZero(t *testing.T, agg *histogram.Aggregator, desc *sdkapi.Descriptor) {
 	asum, err := agg.Sum()
 	require.Equal(t, number.Number(0), asum, "Empty checkpoint sum = 0")
 	require.NoError(t, err)
@@ -111,7 +111,7 @@ func TestHistogramPositiveAndNegative(t *testing.T) {
 
 // Validates count, sum and buckets for a given profile and policy
 func testHistogram(t *testing.T, profile aggregatortest.Profile, policy policy) {
-	descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
+	descriptor := aggregatortest.NewAggregatorTest(sdkapi.HistogramInstrumentKind, profile.NumberKind)
 
 	agg, ckpt := new2(descriptor, histogram.WithExplicitBoundaries(testBoundaries))
 
@@ -137,7 +137,7 @@ func testHistogram(t *testing.T, profile aggregatortest.Profile, policy policy) 
 
 func TestHistogramInitial(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
-		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(sdkapi.HistogramInstrumentKind, profile.NumberKind)
 
 		agg := &histogram.New(1, descriptor, histogram.WithExplicitBoundaries(testBoundaries))[0]
 		buckets, err := agg.Histogram()
@@ -150,7 +150,7 @@ func TestHistogramInitial(t *testing.T) {
 
 func TestHistogramMerge(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
-		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(sdkapi.HistogramInstrumentKind, profile.NumberKind)
 
 		agg1, agg2, ckpt1, ckpt2 := new4(descriptor, histogram.WithExplicitBoundaries(testBoundaries))
 
@@ -178,7 +178,7 @@ func TestHistogramMerge(t *testing.T) {
 
 func TestHistogramNotSet(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
-		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(sdkapi.HistogramInstrumentKind, profile.NumberKind)
 
 		agg, ckpt := new2(descriptor, histogram.WithExplicitBoundaries(testBoundaries))
 
@@ -239,8 +239,8 @@ func checkHistogram(t *testing.T, all aggregatortest.Numbers, profile aggregator
 func TestSynchronizedMoveReset(t *testing.T) {
 	aggregatortest.SynchronizedMoveResetTest(
 		t,
-		metric.ValueRecorderInstrumentKind,
-		func(desc *metric.Descriptor) export.Aggregator {
+		sdkapi.HistogramInstrumentKind,
+		func(desc *sdkapi.Descriptor) export.Aggregator {
 			return &histogram.New(1, desc, histogram.WithExplicitBoundaries(testBoundaries))[0]
 		},
 	)
@@ -249,7 +249,7 @@ func TestSynchronizedMoveReset(t *testing.T) {
 func TestHistogramDefaultBoundaries(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		ctx := context.Background()
-		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(sdkapi.HistogramInstrumentKind, profile.NumberKind)
 
 		agg, ckpt := new2(descriptor)
 

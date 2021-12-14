@@ -22,15 +22,13 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/number"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
+	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -39,20 +37,20 @@ type (
 	// unique descriptor, distinct labels, and distinct resource
 	// attributes.
 	mapKey struct {
-		desc     *metric.Descriptor
+		desc     *sdkapi.Descriptor
 		labels   attribute.Distinct
 		resource attribute.Distinct
 	}
 
 	// mapValue is value stored in a processor used to produce a
-	// CheckpointSet.
+	// Reader.
 	mapValue struct {
 		labels     *attribute.Set
 		resource   *resource.Resource
 		aggregator export.Aggregator
 	}
 
-	// Output implements export.CheckpointSet.
+	// Output implements export.Reader.
 	Output struct {
 		m            map[mapKey]mapValue
 		labelEncoder attribute.Encoder
@@ -81,7 +79,7 @@ type (
 	// Exporter is a testing implementation of export.Exporter that
 	// assembles its results as a map[string]float64.
 	Exporter struct {
-		export.ExportKindSelector
+		aggregation.TemporalitySelector
 		output      *Output
 		exportCount int
 
@@ -91,6 +89,28 @@ type (
 		InjectErr func(export.Record) error
 	}
 )
+
+type testFactory struct {
+	selector export.AggregatorSelector
+	encoder  attribute.Encoder
+}
+
+func NewCheckpointerFactory(selector export.AggregatorSelector, encoder attribute.Encoder) export.CheckpointerFactory {
+	return testFactory{
+		selector: selector,
+		encoder:  encoder,
+	}
+}
+
+func NewCheckpointer(p *Processor) export.Checkpointer {
+	return &testCheckpointer{
+		Processor: p,
+	}
+}
+
+func (f testFactory) NewCheckpointer() export.Checkpointer {
+	return NewCheckpointer(NewProcessor(f.selector, f.encoder))
+}
 
 // NewProcessor returns a new testing Processor implementation.
 // Verify expected outputs using Values(), e.g.:
@@ -121,12 +141,9 @@ func (p *Processor) Values() map[string]float64 {
 	return p.output.Map()
 }
 
-// Checkpointer returns a checkpointer that computes a single
-// interval.
-func Checkpointer(p *Processor) export.Checkpointer {
-	return &testCheckpointer{
-		Processor: p,
-	}
+// Reset clears the state of this test processor.
+func (p *Processor) Reset() {
+	p.output.Reset()
 }
 
 // StartCollection implements export.Checkpointer.
@@ -148,8 +165,8 @@ func (c *testCheckpointer) FinishCollection() error {
 	return nil
 }
 
-// CheckpointSet implements export.Checkpointer.
-func (c *testCheckpointer) CheckpointSet() export.CheckpointSet {
+// Reader implements export.Checkpointer.
+func (c *testCheckpointer) Reader() export.Reader {
 	return c.Processor.output
 }
 
@@ -161,7 +178,7 @@ func AggregatorSelector() export.AggregatorSelector {
 }
 
 // AggregatorFor implements export.AggregatorSelector.
-func (testAggregatorSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+func (testAggregatorSelector) AggregatorFor(desc *sdkapi.Descriptor, aggPtrs ...*export.Aggregator) {
 
 	switch {
 	case strings.HasSuffix(desc.Name(), ".disabled"):
@@ -173,11 +190,6 @@ func (testAggregatorSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
 		}
-	case strings.HasSuffix(desc.Name(), ".minmaxsumcount"):
-		aggs := minmaxsumcount.New(len(aggPtrs), desc)
-		for i := range aggPtrs {
-			*aggPtrs[i] = &aggs[i]
-		}
 	case strings.HasSuffix(desc.Name(), ".lastvalue"):
 		aggs := lastvalue.New(len(aggPtrs))
 		for i := range aggPtrs {
@@ -185,11 +197,6 @@ func (testAggregatorSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...
 		}
 	case strings.HasSuffix(desc.Name(), ".histogram"):
 		aggs := histogram.New(len(aggPtrs), desc)
-		for i := range aggPtrs {
-			*aggPtrs[i] = &aggs[i]
-		}
-	case strings.HasSuffix(desc.Name(), ".exact"):
-		aggs := exact.New(len(aggPtrs))
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
 		}
@@ -209,13 +216,12 @@ func NewOutput(labelEncoder attribute.Encoder) *Output {
 	}
 }
 
-// ForEach implements export.CheckpointSet.
-func (o *Output) ForEach(_ export.ExportKindSelector, ff func(export.Record) error) error {
+// ForEach implements export.Reader.
+func (o *Output) ForEach(_ aggregation.TemporalitySelector, ff func(export.Record) error) error {
 	for key, value := range o.m {
 		if err := ff(export.NewRecord(
 			key.desc,
 			value.labels,
-			value.resource,
 			value.aggregator.Aggregation(),
 			time.Time{},
 			time.Time{},
@@ -231,10 +237,18 @@ func (o *Output) ForEach(_ export.ExportKindSelector, ff func(export.Record) err
 // either the Sum() or the LastValue() of its Aggregation(), whichever
 // is defined.  Record timestamps are ignored.
 func (o *Output) AddRecord(rec export.Record) error {
+	return o.AddRecordWithResource(rec, resource.Empty())
+}
+
+func (o *Output) AddInstrumentationLibraryRecord(_ instrumentation.Library, rec export.Record) error {
+	return o.AddRecordWithResource(rec, resource.Empty())
+}
+
+func (o *Output) AddRecordWithResource(rec export.Record, res *resource.Resource) error {
 	key := mapKey{
 		desc:     rec.Descriptor(),
 		labels:   rec.Labels().Equivalent(),
-		resource: rec.Resource().Equivalent(),
+		resource: res.Equivalent(),
 	}
 	if _, ok := o.m[key]; !ok {
 		var agg export.Aggregator
@@ -242,7 +256,7 @@ func (o *Output) AddRecord(rec export.Record) error {
 		o.m[key] = mapValue{
 			aggregator: agg,
 			labels:     rec.Labels(),
-			resource:   rec.Resource(),
+			resource:   res,
 		}
 	}
 	return o.m[key].aggregator.Merge(rec.Aggregation().(export.Aggregator), rec.Descriptor())
@@ -254,7 +268,7 @@ func (o *Output) AddRecord(rec export.Record) error {
 // is chosen, whichever is implemented by the underlying Aggregator.
 func (o *Output) Map() map[string]float64 {
 	r := make(map[string]float64)
-	err := o.ForEach(export.StatelessExportKindSelector(), func(record export.Record) error {
+	err := o.ForEach(aggregation.StatelessTemporalitySelector(), func(record export.Record) error {
 		for key, entry := range o.m {
 			encoded := entry.labels.Encoded(o.labelEncoder)
 			rencoded := entry.resource.Encoded(o.labelEncoder)
@@ -265,13 +279,6 @@ func (o *Output) Map() map[string]float64 {
 			} else if l, ok := entry.aggregator.(aggregation.LastValue); ok {
 				last, _, _ := l.LastValue()
 				value = last.CoerceToFloat64(key.desc.NumberKind())
-			} else if l, ok := entry.aggregator.(aggregation.Points); ok {
-				pts, _ := l.Points()
-				var sum number.Number
-				for _, s := range pts {
-					sum.AddNumber(key.desc.NumberKind(), s.Number)
-				}
-				value = sum.CoerceToFloat64(key.desc.NumberKind())
 			} else {
 				panic(fmt.Sprintf("Unhandled aggregator type: %T", entry.aggregator))
 			}
@@ -301,7 +308,6 @@ func (o *Output) AddAccumulation(acc export.Accumulation) error {
 		export.NewRecord(
 			acc.Descriptor(),
 			acc.Labels(),
-			acc.Resource(),
 			acc.Aggregator().Aggregation(),
 			time.Time{},
 			time.Time{},
@@ -318,24 +324,26 @@ func (o *Output) AddAccumulation(acc export.Accumulation) error {
 //
 // Where in the example A=1,B=2 is the encoded labels and R=V is the
 // encoded resource value.
-func New(selector export.ExportKindSelector, encoder attribute.Encoder) *Exporter {
+func New(selector aggregation.TemporalitySelector, encoder attribute.Encoder) *Exporter {
 	return &Exporter{
-		ExportKindSelector: selector,
-		output:             NewOutput(encoder),
+		TemporalitySelector: selector,
+		output:              NewOutput(encoder),
 	}
 }
 
-func (e *Exporter) Export(_ context.Context, ckpt export.CheckpointSet) error {
+func (e *Exporter) Export(_ context.Context, res *resource.Resource, ckpt export.InstrumentationLibraryReader) error {
 	e.output.Lock()
 	defer e.output.Unlock()
 	e.exportCount++
-	return ckpt.ForEach(e.ExportKindSelector, func(r export.Record) error {
-		if e.InjectErr != nil {
-			if err := e.InjectErr(r); err != nil {
-				return err
+	return ckpt.ForEach(func(library instrumentation.Library, mr export.Reader) error {
+		return mr.ForEach(e.TemporalitySelector, func(r export.Record) error {
+			if e.InjectErr != nil {
+				if err := e.InjectErr(r); err != nil {
+					return err
+				}
 			}
-		}
-		return e.output.AddRecord(r)
+			return e.output.AddRecordWithResource(r, res)
+		})
 	})
 }
 
@@ -364,4 +372,52 @@ func (e *Exporter) Reset() {
 	defer e.output.Unlock()
 	e.output.Reset()
 	e.exportCount = 0
+}
+
+func OneInstrumentationLibraryReader(l instrumentation.Library, r export.Reader) export.InstrumentationLibraryReader {
+	return oneLibraryReader{l, r}
+}
+
+type oneLibraryReader struct {
+	library instrumentation.Library
+	reader  export.Reader
+}
+
+func (o oneLibraryReader) ForEach(readerFunc func(instrumentation.Library, export.Reader) error) error {
+	return readerFunc(o.library, o.reader)
+}
+
+func MultiInstrumentationLibraryReader(records map[instrumentation.Library][]export.Record) export.InstrumentationLibraryReader {
+	return instrumentationLibraryReader{records: records}
+}
+
+type instrumentationLibraryReader struct {
+	records map[instrumentation.Library][]export.Record
+}
+
+var _ export.InstrumentationLibraryReader = instrumentationLibraryReader{}
+
+func (m instrumentationLibraryReader) ForEach(fn func(instrumentation.Library, export.Reader) error) error {
+	for library, records := range m.records {
+		if err := fn(library, &metricReader{records: records}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type metricReader struct {
+	sync.RWMutex
+	records []export.Record
+}
+
+var _ export.Reader = &metricReader{}
+
+func (m *metricReader) ForEach(_ aggregation.TemporalitySelector, fn func(export.Record) error) error {
+	for _, record := range m.records {
+		if err := fn(record); err != nil && err != aggregation.ErrNoData {
+			return err
+		}
+	}
+	return nil
 }

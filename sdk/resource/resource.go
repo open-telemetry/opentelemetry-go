@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -36,19 +37,12 @@ type Resource struct {
 }
 
 var (
-	emptyResource Resource
-
-	defaultResource = func(r *Resource, err error) *Resource {
-		if err != nil {
-			otel.Handle(err)
-		}
-		return r
-	}(Detect(context.Background(), defaultServiceNameDetector{}, fromEnv{}, telemetrySDK{}))
+	emptyResource       Resource
+	defaultResource     *Resource
+	defaultResourceOnce sync.Once
 )
 
-var (
-	errMergeConflictSchemaURL = errors.New("cannot merge resource due to conflicting Schema URL")
-)
+var errMergeConflictSchemaURL = errors.New("cannot merge resource due to conflicting Schema URL")
 
 // New returns a Resource combined from the user-provided detectors.
 func New(ctx context.Context, opts ...Option) (*Resource, error) {
@@ -125,10 +119,13 @@ func (r *Resource) Attributes() []attribute.KeyValue {
 }
 
 func (r *Resource) SchemaURL() string {
+	if r == nil {
+		return ""
+	}
 	return r.schemaURL
 }
 
-// Iter returns an interator of the Resource attributes.
+// Iter returns an iterator of the Resource attributes.
 // This is ideal to use if you do not want a copy of the attributes.
 func (r *Resource) Iter() attribute.Iterator {
 	if r == nil {
@@ -192,15 +189,31 @@ func Merge(a, b *Resource) (*Resource, error) {
 	return merged, nil
 }
 
-// Empty returns an instance of Resource with no attributes.  It is
+// Empty returns an instance of Resource with no attributes. It is
 // equivalent to a `nil` Resource.
 func Empty() *Resource {
 	return &emptyResource
 }
 
 // Default returns an instance of Resource with a default
-// "service.name" and OpenTelemetrySDK attributes
+// "service.name" and OpenTelemetrySDK attributes.
 func Default() *Resource {
+	defaultResourceOnce.Do(func() {
+		var err error
+		defaultResource, err = Detect(
+			context.Background(),
+			defaultServiceNameDetector{},
+			fromEnv{},
+			telemetrySDK{},
+		)
+		if err != nil {
+			otel.Handle(err)
+		}
+		// If Detect did not return a valid resource, fall back to emptyResource.
+		if defaultResource == nil {
+			defaultResource = &emptyResource
+		}
+	})
 	return defaultResource
 }
 
@@ -216,13 +229,13 @@ func Environment() *Resource {
 }
 
 // Equivalent returns an object that can be compared for equality
-// between two resources.  This value is suitable for use as a key in
+// between two resources. This value is suitable for use as a key in
 // a map.
 func (r *Resource) Equivalent() attribute.Distinct {
 	return r.Set().Equivalent()
 }
 
-// Set returns the equivalent *attribute.Set of this resources attributes.
+// Set returns the equivalent *attribute.Set of this resource's attributes.
 func (r *Resource) Set() *attribute.Set {
 	if r == nil {
 		r = Empty()

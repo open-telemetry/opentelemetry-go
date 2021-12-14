@@ -49,7 +49,6 @@ var (
 type config struct {
 	client *http.Client
 	logger *log.Logger
-	tpOpts []sdktrace.TracerProviderOption
 }
 
 // Option defines a function that configures the exporter.
@@ -77,13 +76,6 @@ func WithClient(client *http.Client) Option {
 	})
 }
 
-// WithSDKOptions configures options passed to the created TracerProvider.
-func WithSDKOptions(tpOpts ...sdktrace.TracerProviderOption) Option {
-	return optionFunc(func(cfg *config) {
-		cfg.tpOpts = tpOpts
-	})
-}
-
 // New creates a new Zipkin exporter.
 func New(collectorURL string, opts ...Option) (*Exporter, error) {
 	if collectorURL == "" {
@@ -91,10 +83,10 @@ func New(collectorURL string, opts ...Option) (*Exporter, error) {
 	}
 	u, err := url.Parse(collectorURL)
 	if err != nil {
-		return nil, fmt.Errorf("invalid collector URL: %v", err)
+		return nil, fmt.Errorf("invalid collector URL %q: %v", collectorURL, err)
 	}
 	if u.Scheme == "" || u.Host == "" {
-		return nil, errors.New("invalid collector URL")
+		return nil, fmt.Errorf("invalid collector URL %q: no scheme or host", collectorURL)
 	}
 
 	cfg := config{}

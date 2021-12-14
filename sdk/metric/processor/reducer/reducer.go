@@ -16,8 +16,8 @@ package reducer // import "go.opentelemetry.io/otel/sdk/metric/processor/reducer
 
 import (
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
 type (
@@ -31,7 +31,7 @@ type (
 	// LabelFilterSelector is the interface used to configure a
 	// specific Filter to an instrument.
 	LabelFilterSelector interface {
-		LabelFilterFor(descriptor *metric.Descriptor) attribute.Filter
+		LabelFilterFor(descriptor *sdkapi.Descriptor) attribute.Filter
 	}
 )
 
@@ -60,7 +60,6 @@ func (p *Processor) Process(accum export.Accumulation) error {
 		export.NewAccumulation(
 			accum.Descriptor(),
 			&reduced,
-			accum.Resource(),
 			accum.Aggregator(),
 		),
 	)

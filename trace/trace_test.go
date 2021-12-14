@@ -16,9 +16,13 @@ package trace
 
 import (
 	"bytes"
+	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 func TestSpanContextIsValid(t *testing.T) {
@@ -184,7 +188,7 @@ func TestSpanContextMarshalJSON(t *testing.T) {
 			}
 			have, err := sc.MarshalJSON()
 			if err != nil {
-				t.Errorf("Marshaling failed: %w", err)
+				t.Errorf("Marshaling failed: %v", err)
 			}
 
 			if !bytes.Equal(have, testcase.want) {
@@ -642,4 +646,17 @@ func TestSpanContextDerivation(t *testing.T) {
 	if !assertSpanContextEqual(modified, to) {
 		t.Fatalf("WithTraceState: Unexpected context created: %s", cmp.Diff(modified, to))
 	}
+}
+
+func TestLinkFromContext(t *testing.T) {
+	k1v1 := attribute.String("key1", "value1")
+	spanCtx := SpanContext{traceID: TraceID([16]byte{1}), remote: true}
+
+	receiverCtx := ContextWithRemoteSpanContext(context.Background(), spanCtx)
+	link := LinkFromContext(receiverCtx, k1v1)
+
+	if !assertSpanContextEqual(link.SpanContext, spanCtx) {
+		t.Fatalf("LinkFromContext: Unexpected context created: %s", cmp.Diff(link.SpanContext, spanCtx))
+	}
+	assert.Equal(t, link.Attributes[0], k1v1)
 }

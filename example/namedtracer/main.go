@@ -18,6 +18,8 @@ import (
 	"context"
 	"log"
 
+	"github.com/go-logr/stdr"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
@@ -52,6 +54,9 @@ func initTracer() {
 }
 
 func main() {
+	// Set logging level to info to see SDK status messages
+	stdr.SetVerbosity(1)
+
 	// initialize trace provider.
 	initTracer()
 

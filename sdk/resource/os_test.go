@@ -15,12 +15,13 @@
 package resource_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 )
 
 func mockRuntimeProviders() {
@@ -36,51 +37,30 @@ func mockRuntimeProviders() {
 	)
 }
 
-func TestWithOSType(t *testing.T) {
-	mockRuntimeProviders()
-	t.Cleanup(restoreAttributesProviders)
+func TestMapRuntimeOSToSemconvOSType(t *testing.T) {
+	tt := []struct {
+		Name   string
+		Goos   string
+		OSType attribute.KeyValue
+	}{
+		{"Apple Darwin", "darwin", semconv.OSTypeDarwin},
+		{"DragonFly BSD", "dragonfly", semconv.OSTypeDragonflyBSD},
+		{"FreeBSD", "freebsd", semconv.OSTypeFreeBSD},
+		{"Linux", "linux", semconv.OSTypeLinux},
+		{"NetBSD", "netbsd", semconv.OSTypeNetBSD},
+		{"OpenBSD", "openbsd", semconv.OSTypeOpenBSD},
+		{"Oracle Solaris", "solaris", semconv.OSTypeSolaris},
+		{"Microsoft Windows", "windows", semconv.OSTypeWindows},
+		{"Unknown", "unknown", semconv.OSTypeKey.String("unknown")},
+		{"UNKNOWN", "UNKNOWN", semconv.OSTypeKey.String("unknown")},
+	}
 
-	ctx := context.Background()
+	for _, tc := range tt {
+		tc := tc
 
-	res, err := resource.New(ctx,
-		resource.WithOSType(),
-	)
-
-	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"os.type": "linux",
-	}, toMap(res))
-}
-
-func TestWithOSDescription(t *testing.T) {
-	mockRuntimeProviders()
-	t.Cleanup(restoreAttributesProviders)
-
-	ctx := context.Background()
-
-	res, err := resource.New(ctx,
-		resource.WithOSDescription(),
-	)
-
-	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"os.description": "Test",
-	}, toMap(res))
-}
-
-func TestWithOS(t *testing.T) {
-	mockRuntimeProviders()
-	t.Cleanup(restoreAttributesProviders)
-
-	ctx := context.Background()
-
-	res, err := resource.New(ctx,
-		resource.WithOS(),
-	)
-
-	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"os.type":        "linux",
-		"os.description": "Test",
-	}, toMap(res))
+		t.Run(tc.Name, func(t *testing.T) {
+			osTypeAttribute := resource.MapRuntimeOSToSemconvOSType(tc.Goos)
+			require.EqualValues(t, osTypeAttribute, tc.OSType)
+		})
+	}
 }

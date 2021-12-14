@@ -20,201 +20,265 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-type test struct{}
-
+// Store results in a file scope var to ensure compiler does not optimize the
+// test away.
 var (
-	arrayVal    = []string{"one", "two"}
-	arrayKeyVal = attribute.Array("array", arrayVal)
+	outV  attribute.Value
+	outKV attribute.KeyValue
 
-	boolVal    = true
-	boolKeyVal = attribute.Bool("bool", boolVal)
-
-	intVal    = int(1)
-	intKeyVal = attribute.Int("int", intVal)
-
-	int8Val    = int8(1)
-	int8KeyVal = attribute.Int("int8", int(int8Val))
-
-	int16Val    = int16(1)
-	int16KeyVal = attribute.Int("int16", int(int16Val))
-
-	int64Val    = int64(1)
-	int64KeyVal = attribute.Int64("int64", int64Val)
-
-	float64Val    = float64(1.0)
-	float64KeyVal = attribute.Float64("float64", float64Val)
-
-	stringVal    = "string"
-	stringKeyVal = attribute.String("string", stringVal)
-
-	bytesVal  = []byte("bytes")
-	structVal = test{}
+	outBool         bool
+	outBoolSlice    []bool
+	outInt64        int64
+	outInt64Slice   []int64
+	outFloat64      float64
+	outFloat64Slice []float64
+	outStr          string
+	outStrSlice     []string
 )
 
-func BenchmarkArrayKey(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = attribute.Array("array", arrayVal)
+func benchmarkEmit(kv attribute.KeyValue) func(*testing.B) {
+	return func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outStr = kv.Value.Emit()
+		}
 	}
 }
 
-func BenchmarkArrayKeyAny(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = attribute.Any("array", arrayVal)
-	}
+func BenchmarkBool(b *testing.B) {
+	k, v := "bool", true
+	kv := attribute.Bool(k, v)
+
+	b.Run("Value", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outV = attribute.BoolValue(v)
+		}
+	})
+	b.Run("KeyValue", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outKV = attribute.Bool(k, v)
+		}
+	})
+	b.Run("AsBool", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outBool = kv.Value.AsBool()
+		}
+	})
+	b.Run("Emit", benchmarkEmit(kv))
 }
 
-func BenchmarkBoolKey(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = attribute.Bool("bool", boolVal)
-	}
+func BenchmarkBoolSlice(b *testing.B) {
+	k, v := "bool slice", []bool{true, false, true}
+	kv := attribute.BoolSlice(k, v)
+
+	b.Run("Value", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outV = attribute.BoolSliceValue(v)
+		}
+	})
+	b.Run("KeyValue", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outKV = attribute.BoolSlice(k, v)
+		}
+	})
+	b.Run("AsBoolSlice", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outBoolSlice = kv.Value.AsBoolSlice()
+		}
+	})
+	b.Run("Emit", benchmarkEmit(kv))
 }
 
-func BenchmarkBoolKeyAny(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = attribute.Any("bool", boolVal)
-	}
+func BenchmarkInt(b *testing.B) {
+	k, v := "int", int(42)
+	kv := attribute.Int(k, v)
+
+	b.Run("Value", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outV = attribute.IntValue(v)
+		}
+	})
+	b.Run("KeyValue", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outKV = attribute.Int(k, v)
+		}
+	})
+	b.Run("Emit", benchmarkEmit(kv))
 }
 
-func BenchmarkIntKey(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = attribute.Int("int", intVal)
-	}
+func BenchmarkIntSlice(b *testing.B) {
+	k, v := "int slice", []int{42, -3, 12}
+	kv := attribute.IntSlice(k, v)
+
+	b.Run("Value", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outV = attribute.IntSliceValue(v)
+		}
+	})
+	b.Run("KeyValue", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outKV = attribute.IntSlice(k, v)
+		}
+	})
+	b.Run("Emit", benchmarkEmit(kv))
 }
 
-func BenchmarkIntKeyAny(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = attribute.Any("int", intVal)
-	}
+func BenchmarkInt64(b *testing.B) {
+	k, v := "int64", int64(42)
+	kv := attribute.Int64(k, v)
+
+	b.Run("Value", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outV = attribute.Int64Value(v)
+		}
+	})
+	b.Run("KeyValue", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outKV = attribute.Int64(k, v)
+		}
+	})
+	b.Run("AsInt64", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outInt64 = kv.Value.AsInt64()
+		}
+	})
+	b.Run("Emit", benchmarkEmit(kv))
 }
 
-func BenchmarkInt8KeyAny(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = attribute.Any("int8", int8Val)
-	}
+func BenchmarkInt64Slice(b *testing.B) {
+	k, v := "int64 slice", []int64{42, -3, 12}
+	kv := attribute.Int64Slice(k, v)
+
+	b.Run("Value", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outV = attribute.Int64SliceValue(v)
+		}
+	})
+	b.Run("KeyValue", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outKV = attribute.Int64Slice(k, v)
+		}
+	})
+	b.Run("AsInt64Slice", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outInt64Slice = kv.Value.AsInt64Slice()
+		}
+	})
+	b.Run("Emit", benchmarkEmit(kv))
 }
 
-func BenchmarkInt16KeyAny(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = attribute.Any("int16", int16Val)
-	}
+func BenchmarkFloat64(b *testing.B) {
+	k, v := "float64", float64(42)
+	kv := attribute.Float64(k, v)
+
+	b.Run("Value", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outV = attribute.Float64Value(v)
+		}
+	})
+	b.Run("KeyValue", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outKV = attribute.Float64(k, v)
+		}
+	})
+	b.Run("AsFloat64", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outFloat64 = kv.Value.AsFloat64()
+		}
+	})
+	b.Run("Emit", benchmarkEmit(kv))
 }
 
-func BenchmarkInt64Key(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = attribute.Int64("int64", int64Val)
-	}
+func BenchmarkFloat64Slice(b *testing.B) {
+	k, v := "float64 slice", []float64{42, -3, 12}
+	kv := attribute.Float64Slice(k, v)
+
+	b.Run("Value", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outV = attribute.Float64SliceValue(v)
+		}
+	})
+	b.Run("KeyValue", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outKV = attribute.Float64Slice(k, v)
+		}
+	})
+	b.Run("AsFloat64Slice", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outFloat64Slice = kv.Value.AsFloat64Slice()
+		}
+	})
+	b.Run("Emit", benchmarkEmit(kv))
 }
 
-func BenchmarkInt64KeyAny(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = attribute.Any("int64", int64Val)
-	}
+func BenchmarkString(b *testing.B) {
+	k, v := "string", "42"
+	kv := attribute.String(k, v)
+
+	b.Run("Value", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outV = attribute.StringValue(v)
+		}
+	})
+	b.Run("KeyValue", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outKV = attribute.String(k, v)
+		}
+	})
+	b.Run("AsString", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outStr = kv.Value.AsString()
+		}
+	})
+	b.Run("Emit", benchmarkEmit(kv))
 }
 
-func BenchmarkFloat64Key(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = attribute.Float64("float64", float64Val)
-	}
-}
+func BenchmarkStringSlice(b *testing.B) {
+	k, v := "float64 slice", []string{"forty-two", "negative three", "twelve"}
+	kv := attribute.StringSlice(k, v)
 
-func BenchmarkFloat64KeyAny(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = attribute.Any("float64", float64Val)
-	}
-}
-
-func BenchmarkStringKey(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = attribute.String("string", stringVal)
-	}
-}
-
-func BenchmarkStringKeyAny(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = attribute.Any("string", stringVal)
-	}
-}
-
-func BenchmarkBytesKeyAny(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = attribute.Any("bytes", bytesVal)
-	}
-}
-
-func BenchmarkStructKeyAny(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = attribute.Any("struct", structVal)
-	}
-}
-
-func BenchmarkEmitArray(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = arrayKeyVal.Value.Emit()
-	}
-}
-
-func BenchmarkEmitBool(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = boolKeyVal.Value.Emit()
-	}
-}
-
-func BenchmarkEmitInt(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = intKeyVal.Value.Emit()
-	}
-}
-
-func BenchmarkEmitInt8(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = int8KeyVal.Value.Emit()
-	}
-}
-
-func BenchmarkEmitInt16(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = int16KeyVal.Value.Emit()
-	}
-}
-
-func BenchmarkEmitInt64(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = int64KeyVal.Value.Emit()
-	}
-}
-
-func BenchmarkEmitFloat64(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = float64KeyVal.Value.Emit()
-	}
-}
-
-func BenchmarkEmitString(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = stringKeyVal.Value.Emit()
-	}
+	b.Run("Value", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outV = attribute.StringSliceValue(v)
+		}
+	})
+	b.Run("KeyValue", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outKV = attribute.StringSlice(k, v)
+		}
+	})
+	b.Run("AsStringSlice", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outStrSlice = kv.Value.AsStringSlice()
+		}
+	})
+	b.Run("Emit", benchmarkEmit(kv))
 }

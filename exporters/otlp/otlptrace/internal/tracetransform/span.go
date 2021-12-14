@@ -12,16 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tracetransform
+package tracetransform // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/tracetransform"
 
 import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
-
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
 const (
@@ -60,6 +59,7 @@ func Spans(sdl []tracesdk.ReadOnlySpan) []*tracepb.ResourceSpans {
 			ils = &tracepb.InstrumentationLibrarySpans{
 				InstrumentationLibrary: InstrumentationLibrary(sd.InstrumentationLibrary()),
 				Spans:                  []*tracepb.Span{},
+				SchemaUrl:              sd.InstrumentationLibrary().SchemaURL,
 			}
 		}
 		ils.Spans = append(ils.Spans, span(sd))
@@ -72,6 +72,7 @@ func Spans(sdl []tracesdk.ReadOnlySpan) []*tracepb.ResourceSpans {
 			rs = &tracepb.ResourceSpans{
 				Resource:                    Resource(sd.Resource()),
 				InstrumentationLibrarySpans: []*tracepb.InstrumentationLibrarySpans{ils},
+				SchemaUrl:                   sd.Resource().SchemaURL(),
 			}
 			rsm[rKey] = rs
 			continue
@@ -114,7 +115,7 @@ func span(sd tracesdk.ReadOnlySpan) *tracepb.Span {
 		Links:                  links(sd.Links()),
 		Kind:                   spanKind(sd.SpanKind()),
 		Name:                   sd.Name(),
-		Attributes:             Attributes(sd.Attributes()),
+		Attributes:             KeyValues(sd.Attributes()),
 		Events:                 spanEvents(sd.Events()),
 		DroppedAttributesCount: uint32(sd.DroppedAttributes()),
 		DroppedEventsCount:     uint32(sd.DroppedEvents()),
@@ -132,10 +133,12 @@ func span(sd tracesdk.ReadOnlySpan) *tracepb.Span {
 func status(status codes.Code, message string) *tracepb.Status {
 	var c tracepb.Status_StatusCode
 	switch status {
+	case codes.Ok:
+		c = tracepb.Status_STATUS_CODE_OK
 	case codes.Error:
 		c = tracepb.Status_STATUS_CODE_ERROR
 	default:
-		c = tracepb.Status_STATUS_CODE_OK
+		c = tracepb.Status_STATUS_CODE_UNSET
 	}
 	return &tracepb.Status{
 		Code:    c,
@@ -144,7 +147,7 @@ func status(status codes.Code, message string) *tracepb.Status {
 }
 
 // links transforms span Links to OTLP span links.
-func links(links []trace.Link) []*tracepb.Span_Link {
+func links(links []tracesdk.Link) []*tracepb.Span_Link {
 	if len(links) == 0 {
 		return nil
 	}
@@ -161,7 +164,7 @@ func links(links []trace.Link) []*tracepb.Span_Link {
 		sl = append(sl, &tracepb.Span_Link{
 			TraceId:    tid[:],
 			SpanId:     sid[:],
-			Attributes: Attributes(otLink.Attributes),
+			Attributes: KeyValues(otLink.Attributes),
 		})
 	}
 	return sl
@@ -190,7 +193,7 @@ func spanEvents(es []tracesdk.Event) []*tracepb.Span_Event {
 			&tracepb.Span_Event{
 				Name:         e.Name,
 				TimeUnixNano: uint64(e.Time.UnixNano()),
-				Attributes:   Attributes(e.Attributes),
+				Attributes:   KeyValues(e.Attributes),
 				// TODO (rghetia) : Add Drop Counts when supported.
 			},
 		)

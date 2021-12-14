@@ -27,6 +27,7 @@ import (
 	metricglobal "go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 )
 
 var Must = metric.Must
@@ -39,7 +40,17 @@ func TestDirect(t *testing.T) {
 
 	ctx := context.Background()
 	meter1 := metricglobal.Meter("test1", metric.WithInstrumentationVersion("semver:v1.0.0"))
-	meter2 := metricglobal.Meter("test2")
+	meter2 := metricglobal.Meter("test2", metric.WithSchemaURL("hello"))
+
+	library1 := metrictest.Library{
+		InstrumentationName:    "test1",
+		InstrumentationVersion: "semver:v1.0.0",
+	}
+	library2 := metrictest.Library{
+		InstrumentationName: "test2",
+		SchemaURL:           "hello",
+	}
+
 	labels1 := []attribute.KeyValue{attribute.String("A", "B")}
 	labels2 := []attribute.KeyValue{attribute.String("C", "D")}
 	labels3 := []attribute.KeyValue{attribute.String("E", "F")}
@@ -48,169 +59,82 @@ func TestDirect(t *testing.T) {
 	counter.Add(ctx, 1, labels1...)
 	counter.Add(ctx, 1, labels1...)
 
-	valuerecorder := Must(meter1).NewFloat64ValueRecorder("test.valuerecorder")
-	valuerecorder.Record(ctx, 1, labels1...)
-	valuerecorder.Record(ctx, 2, labels1...)
+	histogram := Must(meter1).NewFloat64Histogram("test.histogram")
+	histogram.Record(ctx, 1, labels1...)
+	histogram.Record(ctx, 2, labels1...)
 
-	_ = Must(meter1).NewFloat64ValueObserver("test.valueobserver.float", func(_ context.Context, result metric.Float64ObserverResult) {
+	_ = Must(meter1).NewFloat64GaugeObserver("test.gauge.float", func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(1., labels1...)
 		result.Observe(2., labels2...)
 	})
 
-	_ = Must(meter1).NewInt64ValueObserver("test.valueobserver.int", func(_ context.Context, result metric.Int64ObserverResult) {
+	_ = Must(meter1).NewInt64GaugeObserver("test.gauge.int", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(1, labels1...)
 		result.Observe(2, labels2...)
 	})
 
-	second := Must(meter2).NewFloat64ValueRecorder("test.second")
+	second := Must(meter2).NewFloat64Histogram("test.second")
 	second.Record(ctx, 1, labels3...)
 	second.Record(ctx, 2, labels3...)
 
-	mock, provider := metrictest.NewMeterProvider()
+	provider := metrictest.NewMeterProvider()
 	metricglobal.SetMeterProvider(provider)
 
 	counter.Add(ctx, 1, labels1...)
-	valuerecorder.Record(ctx, 3, labels1...)
+	histogram.Record(ctx, 3, labels1...)
 	second.Record(ctx, 3, labels3...)
 
-	mock.RunAsyncInstruments()
+	provider.RunAsyncInstruments()
 
-	measurements := metrictest.AsStructs(mock.MeasurementBatches)
+	measurements := metrictest.AsStructs(provider.MeasurementBatches)
 
 	require.EqualValues(t,
 		[]metrictest.Measured{
 			{
-				Name:                   "test.counter",
-				InstrumentationName:    "test1",
-				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 metrictest.LabelsToMap(labels1...),
-				Number:                 asInt(1),
+				Name:    "test.counter",
+				Library: library1,
+				Labels:  metrictest.LabelsToMap(labels1...),
+				Number:  asInt(1),
 			},
 			{
-				Name:                   "test.valuerecorder",
-				InstrumentationName:    "test1",
-				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 metrictest.LabelsToMap(labels1...),
-				Number:                 asFloat(3),
+				Name:    "test.histogram",
+				Library: library1,
+				Labels:  metrictest.LabelsToMap(labels1...),
+				Number:  asFloat(3),
 			},
 			{
-				Name:                "test.second",
-				InstrumentationName: "test2",
-				Labels:              metrictest.LabelsToMap(labels3...),
-				Number:              asFloat(3),
+				Name:    "test.second",
+				Library: library2,
+				Labels:  metrictest.LabelsToMap(labels3...),
+				Number:  asFloat(3),
 			},
 			{
-				Name:                   "test.valueobserver.float",
-				InstrumentationName:    "test1",
-				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 metrictest.LabelsToMap(labels1...),
-				Number:                 asFloat(1),
+				Name:    "test.gauge.float",
+				Library: library1,
+				Labels:  metrictest.LabelsToMap(labels1...),
+				Number:  asFloat(1),
 			},
 			{
-				Name:                   "test.valueobserver.float",
-				InstrumentationName:    "test1",
-				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 metrictest.LabelsToMap(labels2...),
-				Number:                 asFloat(2),
+				Name:    "test.gauge.float",
+				Library: library1,
+				Labels:  metrictest.LabelsToMap(labels2...),
+				Number:  asFloat(2),
 			},
 			{
-				Name:                   "test.valueobserver.int",
-				InstrumentationName:    "test1",
-				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 metrictest.LabelsToMap(labels1...),
-				Number:                 asInt(1),
+				Name:    "test.gauge.int",
+				Library: library1,
+				Labels:  metrictest.LabelsToMap(labels1...),
+				Number:  asInt(1),
 			},
 			{
-				Name:                   "test.valueobserver.int",
-				InstrumentationName:    "test1",
-				InstrumentationVersion: "semver:v1.0.0",
-				Labels:                 metrictest.LabelsToMap(labels2...),
-				Number:                 asInt(2),
+				Name:    "test.gauge.int",
+				Library: library1,
+				Labels:  metrictest.LabelsToMap(labels2...),
+				Number:  asInt(2),
 			},
 		},
 		measurements,
 	)
-}
-
-func TestBound(t *testing.T) {
-	global.ResetForTest()
-
-	// Note: this test uses opposite Float64/Int64 number kinds
-	// vs. the above, to cover all the instruments.
-	ctx := context.Background()
-	glob := metricglobal.Meter("test")
-	labels1 := []attribute.KeyValue{attribute.String("A", "B")}
-
-	counter := Must(glob).NewFloat64Counter("test.counter")
-	boundC := counter.Bind(labels1...)
-	boundC.Add(ctx, 1)
-	boundC.Add(ctx, 1)
-
-	valuerecorder := Must(glob).NewInt64ValueRecorder("test.valuerecorder")
-	boundM := valuerecorder.Bind(labels1...)
-	boundM.Record(ctx, 1)
-	boundM.Record(ctx, 2)
-
-	mock, provider := metrictest.NewMeterProvider()
-	metricglobal.SetMeterProvider(provider)
-
-	boundC.Add(ctx, 1)
-	boundM.Record(ctx, 3)
-
-	require.EqualValues(t,
-		[]metrictest.Measured{
-			{
-				Name:                "test.counter",
-				InstrumentationName: "test",
-				Labels:              metrictest.LabelsToMap(labels1...),
-				Number:              asFloat(1),
-			},
-			{
-				Name:                "test.valuerecorder",
-				InstrumentationName: "test",
-				Labels:              metrictest.LabelsToMap(labels1...),
-				Number:              asInt(3),
-			},
-		},
-		metrictest.AsStructs(mock.MeasurementBatches))
-
-	boundC.Unbind()
-	boundM.Unbind()
-}
-
-func TestUnbind(t *testing.T) {
-	// Tests Unbind with SDK never installed.
-	global.ResetForTest()
-
-	glob := metricglobal.Meter("test")
-	labels1 := []attribute.KeyValue{attribute.String("A", "B")}
-
-	counter := Must(glob).NewFloat64Counter("test.counter")
-	boundC := counter.Bind(labels1...)
-
-	valuerecorder := Must(glob).NewInt64ValueRecorder("test.valuerecorder")
-	boundM := valuerecorder.Bind(labels1...)
-
-	boundC.Unbind()
-	boundM.Unbind()
-}
-
-func TestUnbindThenRecordOne(t *testing.T) {
-	global.ResetForTest()
-
-	ctx := context.Background()
-	mock, provider := metrictest.NewMeterProvider()
-
-	meter := metricglobal.Meter("test")
-	counter := Must(meter).NewInt64Counter("test.counter")
-	boundC := counter.Bind()
-	metricglobal.SetMeterProvider(provider)
-	boundC.Unbind()
-
-	require.NotPanics(t, func() {
-		boundC.Add(ctx, 1)
-	})
-	require.Equal(t, 0, len(mock.MeasurementBatches))
 }
 
 type meterProviderWithConstructorError struct {
@@ -218,15 +142,15 @@ type meterProviderWithConstructorError struct {
 }
 
 type meterWithConstructorError struct {
-	metric.MeterImpl
+	sdkapi.MeterImpl
 }
 
 func (m *meterProviderWithConstructorError) Meter(iName string, opts ...metric.MeterOption) metric.Meter {
-	return metric.WrapMeterImpl(&meterWithConstructorError{m.MeterProvider.Meter(iName, opts...).MeterImpl()}, iName, opts...)
+	return metric.WrapMeterImpl(&meterWithConstructorError{m.MeterProvider.Meter(iName, opts...).MeterImpl()})
 }
 
-func (m *meterWithConstructorError) NewSyncInstrument(_ metric.Descriptor) (metric.SyncImpl, error) {
-	return metric.NoopSync{}, errors.New("constructor error")
+func (m *meterWithConstructorError) NewSyncInstrument(_ sdkapi.Descriptor) (sdkapi.SyncImpl, error) {
+	return sdkapi.NewNoopSyncInstrument(), errors.New("constructor error")
 }
 
 func TestErrorInDeferredConstructor(t *testing.T) {
@@ -238,7 +162,7 @@ func TestErrorInDeferredConstructor(t *testing.T) {
 	c1 := Must(meter).NewInt64Counter("test")
 	c2 := Must(meter).NewInt64Counter("test")
 
-	_, provider := metrictest.NewMeterProvider()
+	provider := metrictest.NewMeterProvider()
 	sdk := &meterProviderWithConstructorError{provider}
 
 	require.Panics(t, func() {
@@ -268,19 +192,19 @@ func TestImplementationIndirection(t *testing.T) {
 	require.False(t, ok)
 
 	// Async: no SDK yet
-	valueobserver := Must(meter1).NewFloat64ValueObserver(
-		"interface.valueobserver",
+	gauge := Must(meter1).NewFloat64GaugeObserver(
+		"interface.gauge",
 		func(_ context.Context, result metric.Float64ObserverResult) {},
 	)
 
-	ival = valueobserver.AsyncImpl().Implementation()
+	ival = gauge.AsyncImpl().Implementation()
 	require.NotNil(t, ival)
 
 	_, ok = ival.(*metrictest.Async)
 	require.False(t, ok)
 
 	// Register the SDK
-	_, provider := metrictest.NewMeterProvider()
+	provider := metrictest.NewMeterProvider()
 	metricglobal.SetMeterProvider(provider)
 
 	// Repeat the above tests
@@ -293,7 +217,7 @@ func TestImplementationIndirection(t *testing.T) {
 	require.True(t, ok)
 
 	// Async
-	ival = valueobserver.AsyncImpl().Implementation()
+	ival = gauge.AsyncImpl().Implementation()
 	require.NotNil(t, ival)
 
 	_, ok = ival.(*metrictest.Async)
@@ -309,7 +233,7 @@ func TestRecordBatchMock(t *testing.T) {
 
 	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
 
-	mock, provider := metrictest.NewMeterProvider()
+	provider := metrictest.NewMeterProvider()
 	metricglobal.SetMeterProvider(provider)
 
 	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
@@ -317,11 +241,13 @@ func TestRecordBatchMock(t *testing.T) {
 	require.EqualValues(t,
 		[]metrictest.Measured{
 			{
-				Name:                "test.counter",
-				InstrumentationName: "builtin",
-				Labels:              metrictest.LabelsToMap(),
-				Number:              asInt(1),
+				Name: "test.counter",
+				Library: metrictest.Library{
+					InstrumentationName: "builtin",
+				},
+				Labels: metrictest.LabelsToMap(),
+				Number: asInt(1),
 			},
 		},
-		metrictest.AsStructs(mock.MeasurementBatches))
+		metrictest.AsStructs(provider.MeasurementBatches))
 }

@@ -1,12 +1,13 @@
 module go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp
 
-go 1.15
+go 1.16
 
 require (
 	github.com/stretchr/testify v1.7.0
-	go.opentelemetry.io/otel v1.0.0-RC1
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.21.0
-	go.opentelemetry.io/proto/otlp v0.9.0
+	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.3.0
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.26.0
+	go.opentelemetry.io/otel/sdk v1.3.0
+	go.opentelemetry.io/proto/otlp v0.11.0
 	google.golang.org/protobuf v1.27.1
 )
 
@@ -16,13 +17,9 @@ replace go.opentelemetry.io/otel/sdk => ../../../../sdk
 
 replace go.opentelemetry.io/otel/sdk/metric => ../../../../sdk/metric
 
-replace go.opentelemetry.io/otel/exporters/otlp => ../..
-
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric => ../
 
 replace go.opentelemetry.io/otel/metric => ../../../../metric
-
-replace go.opentelemetry.io/otel/oteltest => ../../../../oteltest
 
 replace go.opentelemetry.io/otel/trace => ../../../../trace
 
@@ -77,3 +74,11 @@ replace go.opentelemetry.io/otel/exporters/stdout/stdoutmetric => ../../../stdou
 replace go.opentelemetry.io/otel/exporters/stdout/stdouttrace => ../../../stdout/stdouttrace
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc => ../otlpmetricgrpc
+
+replace go.opentelemetry.io/otel/bridge/opencensus/test => ../../../../bridge/opencensus/test
+
+replace go.opentelemetry.io/otel/example/fib => ../../../../example/fib
+
+replace go.opentelemetry.io/otel/schema => ../../../../schema
+
+replace go.opentelemetry.io/otel/exporters/otlp/internal/retry => ../../internal/retry

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlpmetric
+package otlpmetric // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 
 import (
 	"context"
@@ -20,9 +20,11 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/metrictransform"
-	"go.opentelemetry.io/otel/metric"
-	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
 var (
@@ -31,8 +33,8 @@ var (
 
 // Exporter exports metrics data in the OTLP wire format.
 type Exporter struct {
-	client             Client
-	exportKindSelector metricsdk.ExportKindSelector
+	client              Client
+	temporalitySelector aggregation.TemporalitySelector
 
 	mu      sync.RWMutex
 	started bool
@@ -42,16 +44,20 @@ type Exporter struct {
 }
 
 // Export exports a batch of metrics.
-func (e *Exporter) Export(ctx context.Context, checkpointSet metricsdk.CheckpointSet) error {
-	rms, err := metrictransform.CheckpointSet(ctx, e, checkpointSet, 1)
+func (e *Exporter) Export(ctx context.Context, res *resource.Resource, ilr export.InstrumentationLibraryReader) error {
+	rm, err := metrictransform.InstrumentationLibraryReader(ctx, e, res, ilr, 1)
 	if err != nil {
 		return err
 	}
-	if len(rms) == 0 {
+	if rm == nil {
 		return nil
 	}
 
-	return e.client.UploadMetrics(ctx, rms)
+	// TODO: There is never more than one resource emitted by this
+	// call, as per the specification.  We can change the
+	// signature of UploadMetrics correspondingly. Here create a
+	// singleton list to reduce the size of the current PR:
+	return e.client.UploadMetrics(ctx, []*metricpb.ResourceMetrics{rm})
 }
 
 // Start establishes a connection to the receiving endpoint.
@@ -90,11 +96,11 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	return err
 }
 
-func (e *Exporter) ExportKindFor(descriptor *metric.Descriptor, aggregatorKind aggregation.Kind) metricsdk.ExportKind {
-	return e.exportKindSelector.ExportKindFor(descriptor, aggregatorKind)
+func (e *Exporter) TemporalityFor(descriptor *sdkapi.Descriptor, kind aggregation.Kind) aggregation.Temporality {
+	return e.temporalitySelector.TemporalityFor(descriptor, kind)
 }
 
-var _ metricsdk.Exporter = (*Exporter)(nil)
+var _ export.Exporter = (*Exporter)(nil)
 
 // New constructs a new Exporter and starts it.
 func New(ctx context.Context, client Client, opts ...Option) (*Exporter, error) {
@@ -108,10 +114,10 @@ func New(ctx context.Context, client Client, opts ...Option) (*Exporter, error) 
 // NewUnstarted constructs a new Exporter and does not start it.
 func NewUnstarted(client Client, opts ...Option) *Exporter {
 	cfg := config{
-		// Note: the default ExportKindSelector is specified
+		// Note: the default TemporalitySelector is specified
 		// as Cumulative:
 		// https://github.com/open-telemetry/opentelemetry-specification/issues/731
-		exportKindSelector: metricsdk.CumulativeExportKindSelector(),
+		temporalitySelector: aggregation.CumulativeTemporalitySelector(),
 	}
 
 	for _, opt := range opts {
@@ -119,8 +125,8 @@ func NewUnstarted(client Client, opts ...Option) *Exporter {
 	}
 
 	e := &Exporter{
-		client:             client,
-		exportKindSelector: cfg.exportKindSelector,
+		client:              client,
+		temporalitySelector: cfg.temporalitySelector,
 	}
 
 	return e

@@ -18,7 +18,8 @@ import (
 	"context"
 	"strings"
 
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 )
 
 type osDescriptionProvider func() (string, error)
@@ -43,9 +44,11 @@ type osDescriptionDetector struct{}
 func (osTypeDetector) Detect(ctx context.Context) (*Resource, error) {
 	osType := runtimeOS()
 
+	osTypeAttribute := mapRuntimeOSToSemconvOSType(osType)
+
 	return NewWithAttributes(
 		semconv.SchemaURL,
-		semconv.OSTypeKey.String(strings.ToLower(osType)),
+		osTypeAttribute,
 	), nil
 }
 
@@ -64,23 +67,31 @@ func (osDescriptionDetector) Detect(ctx context.Context) (*Resource, error) {
 	), nil
 }
 
-// WithOSType adds an attribute with the operating system type to the configured Resource.
-func WithOSType() Option {
-	return WithDetectors(osTypeDetector{})
-}
+// mapRuntimeOSToSemconvOSType translates the OS name as provided by the Go runtime
+// into an OS type attribute with the corresponding value defined by the semantic
+// conventions. In case the provided OS name isn't mapped, it's transformed to lowercase
+// and used as the value for the returned OS type attribute.
+func mapRuntimeOSToSemconvOSType(osType string) attribute.KeyValue {
+	// the elements in this map are the intersection between
+	// available GOOS values and defined semconv OS types
+	osTypeAttributeMap := map[string]attribute.KeyValue{
+		"darwin":    semconv.OSTypeDarwin,
+		"dragonfly": semconv.OSTypeDragonflyBSD,
+		"freebsd":   semconv.OSTypeFreeBSD,
+		"linux":     semconv.OSTypeLinux,
+		"netbsd":    semconv.OSTypeNetBSD,
+		"openbsd":   semconv.OSTypeOpenBSD,
+		"solaris":   semconv.OSTypeSolaris,
+		"windows":   semconv.OSTypeWindows,
+	}
 
-// WithOSDescription adds an attribute with the operating system description to the
-// configured Resource. The formatted string is equivalent to the output of the
-// `uname -snrvm` command.
-func WithOSDescription() Option {
-	return WithDetectors(osDescriptionDetector{})
-}
+	var osTypeAttribute attribute.KeyValue
 
-// WithOS adds all the OS attributes to the configured Resource.
-// See individual WithOS* functions to configure specific attributes.
-func WithOS() Option {
-	return WithDetectors(
-		osTypeDetector{},
-		osDescriptionDetector{},
-	)
+	if attr, ok := osTypeAttributeMap[osType]; ok {
+		osTypeAttribute = attr
+	} else {
+		osTypeAttribute = semconv.OSTypeKey.String(strings.ToLower(osType))
+	}
+
+	return osTypeAttribute
 }

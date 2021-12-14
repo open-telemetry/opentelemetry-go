@@ -22,10 +22,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
+	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
 const count = 100
@@ -55,7 +55,7 @@ func new4() (_, _, _, _ *Aggregator) {
 	return &alloc[0], &alloc[1], &alloc[2], &alloc[3]
 }
 
-func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
+func checkZero(t *testing.T, agg *Aggregator, desc *sdkapi.Descriptor) {
 	kind := desc.NumberKind()
 
 	sum, err := agg.Sum()
@@ -67,7 +67,7 @@ func TestCounterSum(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg, ckpt := new2()
 
-		descriptor := aggregatortest.NewAggregatorTest(metric.CounterInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(sdkapi.CounterInstrumentKind, profile.NumberKind)
 
 		sum := number.Number(0)
 		for i := 0; i < count; i++ {
@@ -87,11 +87,11 @@ func TestCounterSum(t *testing.T) {
 	})
 }
 
-func TestValueRecorderSum(t *testing.T) {
+func TestHistogramSum(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg, ckpt := new2()
 
-		descriptor := aggregatortest.NewAggregatorTest(metric.ValueRecorderInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(sdkapi.HistogramInstrumentKind, profile.NumberKind)
 
 		sum := number.Number(0)
 
@@ -117,7 +117,7 @@ func TestCounterMerge(t *testing.T) {
 	aggregatortest.RunProfiles(t, func(t *testing.T, profile aggregatortest.Profile) {
 		agg1, agg2, ckpt1, ckpt2 := new4()
 
-		descriptor := aggregatortest.NewAggregatorTest(metric.CounterInstrumentKind, profile.NumberKind)
+		descriptor := aggregatortest.NewAggregatorTest(sdkapi.CounterInstrumentKind, profile.NumberKind)
 
 		sum := number.Number(0)
 		for i := 0; i < count; i++ {
@@ -146,8 +146,8 @@ func TestCounterMerge(t *testing.T) {
 func TestSynchronizedMoveReset(t *testing.T) {
 	aggregatortest.SynchronizedMoveResetTest(
 		t,
-		metric.SumObserverInstrumentKind,
-		func(desc *metric.Descriptor) export.Aggregator {
+		sdkapi.CounterObserverInstrumentKind,
+		func(desc *sdkapi.Descriptor) export.Aggregator {
 			return &New(1)[0]
 		},
 	)

@@ -18,9 +18,8 @@ import (
 	"context"
 	"log"
 
-	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
-
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
@@ -40,7 +39,7 @@ var (
 	)
 
 	loopCounter = metric.Must(meter).NewInt64Counter("function.loops")
-	paramValue  = metric.Must(meter).NewInt64ValueRecorder("function.param")
+	paramValue  = metric.Must(meter).NewInt64Histogram("function.param")
 
 	nameKey = attribute.Key("function.name")
 )
@@ -72,7 +71,7 @@ func InstallExportPipeline(ctx context.Context) func() {
 	}
 
 	pusher := controller.New(
-		processor.New(
+		processor.NewFactory(
 			simple.NewWithInexpensiveDistribution(),
 			exporter,
 		),
@@ -81,7 +80,7 @@ func InstallExportPipeline(ctx context.Context) func() {
 	if err = pusher.Start(ctx); err != nil {
 		log.Fatalf("starting push controller: %v", err)
 	}
-	global.SetMeterProvider(pusher.MeterProvider())
+	global.SetMeterProvider(pusher)
 
 	return func() {
 		if err := pusher.Stop(ctx); err != nil {

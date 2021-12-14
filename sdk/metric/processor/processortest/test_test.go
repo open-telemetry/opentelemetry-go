@@ -22,23 +22,23 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 func generateTestData(proc export.Processor) {
 	ctx := context.Background()
-	accum := metricsdk.NewAccumulator(
-		proc,
-		resource.NewSchemaless(attribute.String("R", "V")),
-	)
-	meter := metric.WrapMeterImpl(accum, "testing")
+	accum := metricsdk.NewAccumulator(proc)
+	meter := metric.WrapMeterImpl(accum)
 
 	counter := metric.Must(meter).NewFloat64Counter("counter.sum")
 
-	_ = metric.Must(meter).NewInt64SumObserver("observer.sum",
+	_ = metric.Must(meter).NewInt64CounterObserver("observer.sum",
 		func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(10, attribute.String("K1", "V1"))
 			result.Observe(11, attribute.String("K1", "V2"))
@@ -54,14 +54,15 @@ func generateTestData(proc export.Processor) {
 func TestProcessorTesting(t *testing.T) {
 	// Test the Processor test helper using a real Accumulator to
 	// generate Accumulations.
-	testProc := processorTest.NewProcessor(
-		processorTest.AggregatorSelector(),
-		attribute.DefaultEncoder(),
+	checkpointer := processorTest.NewCheckpointer(
+		processorTest.NewProcessor(
+			processorTest.AggregatorSelector(),
+			attribute.DefaultEncoder(),
+		),
 	)
-	checkpointer := processorTest.Checkpointer(testProc)
-
 	generateTestData(checkpointer)
 
+	res := resource.NewSchemaless(attribute.String("R", "V"))
 	expect := map[string]float64{
 		"counter.sum/K1=V1/R=V":  100,
 		"counter.sum/K1=V2/R=V":  101,
@@ -69,16 +70,18 @@ func TestProcessorTesting(t *testing.T) {
 		"observer.sum/K1=V2/R=V": 11,
 	}
 
-	// Validate the processor's checkpoint directly.
-	require.EqualValues(t, expect, testProc.Values())
-
 	// Export the data and validate it again.
 	exporter := processorTest.New(
-		export.StatelessExportKindSelector(),
+		aggregation.StatelessTemporalitySelector(),
 		attribute.DefaultEncoder(),
 	)
 
-	err := exporter.Export(context.Background(), checkpointer.CheckpointSet())
+	err := exporter.Export(context.Background(), res, processortest.OneInstrumentationLibraryReader(
+		instrumentation.Library{
+			Name: "test",
+		},
+		checkpointer.Reader(),
+	))
 	require.NoError(t, err)
 	require.EqualValues(t, expect, exporter.Values())
 }

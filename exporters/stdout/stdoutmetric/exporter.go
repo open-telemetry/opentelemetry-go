@@ -14,16 +14,14 @@
 
 package stdoutmetric // import "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 
-import (
-	"go.opentelemetry.io/otel/sdk/export/metric"
-)
+import "go.opentelemetry.io/otel/sdk/metric/export"
 
 type Exporter struct {
 	metricExporter
 }
 
 var (
-	_ metric.Exporter = &Exporter{}
+	_ export.Exporter = &Exporter{}
 )
 
 // New creates an Exporter with the passed options.

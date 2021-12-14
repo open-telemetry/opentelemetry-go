@@ -1,13 +1,13 @@
 module go.opentelemetry.io/otel
 
-go 1.15
+go 1.16
 
 require (
+	github.com/go-logr/logr v1.2.1
+	github.com/go-logr/stdr v1.2.0
 	github.com/google/go-cmp v0.5.6
 	github.com/stretchr/testify v1.7.0
-	go.opentelemetry.io/otel/metric v0.21.0
-	go.opentelemetry.io/otel/oteltest v1.0.0-RC1
-	go.opentelemetry.io/otel/trace v1.0.0-RC1
+	go.opentelemetry.io/otel/trace v1.3.0
 )
 
 replace go.opentelemetry.io/otel => ./
@@ -44,8 +44,6 @@ replace go.opentelemetry.io/otel/internal/metric => ./internal/metric
 
 replace go.opentelemetry.io/otel/metric => ./metric
 
-replace go.opentelemetry.io/otel/oteltest => ./oteltest
-
 replace go.opentelemetry.io/otel/sdk/export/metric => ./sdk/export/metric
 
 replace go.opentelemetry.io/otel/sdk/metric => ./sdk/metric
@@ -69,3 +67,11 @@ replace go.opentelemetry.io/otel/exporters/stdout/stdoutmetric => ./exporters/st
 replace go.opentelemetry.io/otel/exporters/stdout/stdouttrace => ./exporters/stdout/stdouttrace
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp => ./exporters/otlp/otlpmetric/otlpmetrichttp
+
+replace go.opentelemetry.io/otel/bridge/opencensus/test => ./bridge/opencensus/test
+
+replace go.opentelemetry.io/otel/example/fib => ./example/fib
+
+replace go.opentelemetry.io/otel/schema => ./schema
+
+replace go.opentelemetry.io/otel/exporters/otlp/internal/retry => ./exporters/otlp/internal/retry

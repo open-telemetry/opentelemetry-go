@@ -26,21 +26,18 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/oteltest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
-	"go.opentelemetry.io/otel/trace"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
-
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const envVar = "OTEL_RESOURCE_ATTRIBUTES"
@@ -63,9 +60,6 @@ var (
 	sc  trace.SpanContext
 
 	handler = &storingHandler{}
-
-	k1, k2, k3    attribute.Key
-	kv1, kv2, kv3 attribute.KeyValue
 )
 
 func init() {
@@ -77,18 +71,11 @@ func init() {
 		TraceFlags: 0x1,
 	})
 
-	k1 = attribute.Key("k1")
-	kv1 = k1.String("v1")
-	k2 = attribute.Key("k2")
-	kv2 = k2.String("v2")
-	k3 = attribute.Key("k3")
-	kv3 = k3.String("v3")
-
 	otel.SetErrorHandler(handler)
 }
 
 func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
-	harness := oteltest.NewHarness(t)
+	harness := ottest.NewHarness(t)
 
 	harness.TestTracerProvider(func() trace.TracerProvider {
 		return NewTracerProvider(WithSampler(TraceIDRatioBased(0)))
@@ -206,7 +193,7 @@ func TestSetName(t *testing.T) {
 		},
 	} {
 		sp := startNamedSpan(tp, "SetName", tt.name)
-		if sdkspan, ok := sp.(*span); ok {
+		if sdkspan, ok := sp.(*recordingSpan); ok {
 			if sdkspan.Name() != tt.name {
 				t.Errorf("%d: invalid name at span creation, expected %v, got %v", idx, tt.name, sdkspan.Name())
 			}
@@ -214,7 +201,7 @@ func TestSetName(t *testing.T) {
 			t.Errorf("%d: unable to coerce span to SDK span, is type %T", idx, sp)
 		}
 		sp.SetName(tt.newName)
-		if sdkspan, ok := sp.(*span); ok {
+		if sdkspan, ok := sp.(*recordingSpan); ok {
 			if sdkspan.Name() != tt.newName {
 				t.Errorf("%d: span name not changed, expected %v, got %v", idx, tt.newName, sdkspan.Name())
 			}
@@ -354,7 +341,7 @@ func TestStartSpanWithParent(t *testing.T) {
 		t.Error(err)
 	}
 
-	ts, err := oteltest.TraceStateFromKeyValues(attribute.String("k", "v"))
+	ts, err := trace.ParseTraceState("k=v")
 	if err != nil {
 		t.Error(err)
 	}
@@ -656,10 +643,10 @@ func TestLinks(t *testing.T) {
 	sc1 := trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}})
 	sc2 := trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}})
 
-	links := []trace.Link{
-		{SpanContext: sc1, Attributes: []attribute.KeyValue{k1v1}},
-		{SpanContext: sc2, Attributes: []attribute.KeyValue{k2v2, k3v3}},
-	}
+	l1 := trace.Link{SpanContext: sc1, Attributes: []attribute.KeyValue{k1v1}}
+	l2 := trace.Link{SpanContext: sc2, Attributes: []attribute.KeyValue{k2v2, k3v3}}
+
+	links := []trace.Link{l1, l2}
 	span := startSpan(tp, "Links", trace.WithLinks(links...))
 
 	got, err := endSpan(te, span)
@@ -674,13 +661,22 @@ func TestLinks(t *testing.T) {
 		}),
 		parent:                 sc.WithRemote(true),
 		name:                   "span0",
-		links:                  links,
+		links:                  []Link{{l1.SpanContext, l1.Attributes, 0}, {l2.SpanContext, l2.Attributes, 0}},
 		spanKind:               trace.SpanKindInternal,
 		instrumentationLibrary: instrumentation.Library{Name: "Links"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Link: -got +want %s", diff)
 	}
+	sc1 = trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}})
+
+	span1 := startSpan(tp, "name", trace.WithLinks([]trace.Link{
+		{SpanContext: trace.SpanContext{}},
+		{SpanContext: sc1},
+	}...))
+
+	sdkspan, _ := span1.(*recordingSpan)
+	require.Len(t, sdkspan.Links(), 1)
 }
 
 func TestLinksOverLimit(t *testing.T) {
@@ -715,9 +711,9 @@ func TestLinksOverLimit(t *testing.T) {
 		}),
 		parent: sc.WithRemote(true),
 		name:   "span0",
-		links: []trace.Link{
-			{SpanContext: sc2, Attributes: []attribute.KeyValue{k2v2}},
-			{SpanContext: sc3, Attributes: []attribute.KeyValue{k3v3}},
+		links: []Link{
+			{SpanContext: sc2, Attributes: []attribute.KeyValue{k2v2}, DroppedAttributeCount: 0},
+			{SpanContext: sc3, Attributes: []attribute.KeyValue{k3v3}, DroppedAttributeCount: 0},
 		},
 		droppedLinkCount:       1,
 		spanKind:               trace.SpanKindInternal,
@@ -817,7 +813,7 @@ func cmpDiff(x, y interface{}) string {
 // checkChild is test utility function that tests that c has fields set appropriately,
 // given that it is a child span of p.
 func checkChild(t *testing.T, p trace.SpanContext, apiSpan trace.Span) error {
-	s := apiSpan.(*span)
+	s := apiSpan.(*recordingSpan)
 	if s == nil {
 		return fmt.Errorf("got nil child span, want non-nil")
 	}
@@ -1027,58 +1023,39 @@ func TestChildSpanCount(t *testing.T) {
 }
 
 func TestNilSpanEnd(t *testing.T) {
-	var span *span
+	var span *recordingSpan
 	span.End()
 }
 
-func TestExecutionTracerTaskEnd(t *testing.T) {
-	var n uint64
+func TestNonRecordingSpanDoesNotTrackRuntimeTracerTask(t *testing.T) {
 	tp := NewTracerProvider(WithSampler(NeverSample()))
-	tr := tp.Tracer("Execution Tracer Task End")
+	tr := tp.Tracer("TestNonRecordingSpanDoesNotTrackRuntimeTracerTask")
 
+	_, apiSpan := tr.Start(context.Background(), "foo")
+	if _, ok := apiSpan.(runtimeTracer); ok {
+		t.Fatalf("non recording span implements runtime trace task tracking")
+	}
+}
+
+func TestRecordingSpanRuntimeTracerTaskEnd(t *testing.T) {
+	tp := NewTracerProvider(WithSampler(AlwaysSample()))
+	tr := tp.Tracer("TestRecordingSpanRuntimeTracerTaskEnd")
+
+	var n uint64
 	executionTracerTaskEnd := func() {
 		atomic.AddUint64(&n, 1)
 	}
-
-	var spans []*span
 	_, apiSpan := tr.Start(context.Background(), "foo")
-	s := apiSpan.(*span)
-
-	s.executionTracerTaskEnd = executionTracerTaskEnd
-	spans = append(spans, s) // never sample
-
-	tID, _ := trace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f")
-	sID, _ := trace.SpanIDFromHex("0001020304050607")
-	ctx := context.Background()
-
-	ctx = trace.ContextWithRemoteSpanContext(ctx,
-		trace.NewSpanContext(trace.SpanContextConfig{
-			TraceID:    tID,
-			SpanID:     sID,
-			TraceFlags: 0,
-		}),
-	)
-	_, apiSpan = tr.Start(
-		ctx,
-		"foo",
-	)
-	s = apiSpan.(*span)
-	s.executionTracerTaskEnd = executionTracerTaskEnd
-	spans = append(spans, s) // parent not sampled
-
-	tp.sampler = AlwaysSample()
-	_, apiSpan = tr.Start(context.Background(), "foo")
-	s = apiSpan.(*span)
-	s.executionTracerTaskEnd = executionTracerTaskEnd
-	spans = append(spans, s) // always sample
-
-	for _, span := range spans {
-		span.End()
+	s, ok := apiSpan.(*recordingSpan)
+	if !ok {
+		t.Fatal("recording span not returned from always sampled Tracer")
 	}
-	// Only one span should be sampled meaning only one execution of
-	// executionTracerTaskEnd.
-	if got, want := n, uint64(1); got != want {
-		t.Fatalf("Execution tracer task ended for %v spans; want %v", got, want)
+
+	s.executionTracerTaskEnd = executionTracerTaskEnd
+	s.End()
+
+	if n != 1 {
+		t.Error("recording span did not end runtime trace task")
 	}
 }
 
@@ -1163,6 +1140,58 @@ func TestRecordError(t *testing.T) {
 			t.Errorf("SpanErrorOptions: -got +want %s", diff)
 		}
 	}
+}
+
+func TestRecordErrorWithStackTrace(t *testing.T) {
+	err := ottest.NewTestError("test error")
+	typ := "go.opentelemetry.io/otel/internal/internaltest.TestError"
+	msg := "test error"
+
+	te := NewTestExporter()
+	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
+	span := startSpan(tp, "RecordError")
+
+	errTime := time.Now()
+	span.RecordError(err, trace.WithTimestamp(errTime), trace.WithStackTrace(true))
+
+	got, err := endSpan(te, span)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &snapshot{
+		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    tid,
+			TraceFlags: 0x1,
+		}),
+		parent:   sc.WithRemote(true),
+		name:     "span0",
+		status:   Status{Code: codes.Unset},
+		spanKind: trace.SpanKindInternal,
+		events: []Event{
+			{
+				Name: semconv.ExceptionEventName,
+				Time: errTime,
+				Attributes: []attribute.KeyValue{
+					semconv.ExceptionTypeKey.String(typ),
+					semconv.ExceptionMessageKey.String(msg),
+				},
+			},
+		},
+		instrumentationLibrary: instrumentation.Library{Name: "RecordError"},
+	}
+
+	assert.Equal(t, got.spanContext, want.spanContext)
+	assert.Equal(t, got.parent, want.parent)
+	assert.Equal(t, got.name, want.name)
+	assert.Equal(t, got.status, want.status)
+	assert.Equal(t, got.spanKind, want.spanKind)
+	assert.Equal(t, got.events[0].Attributes[0].Value.AsString(), want.events[0].Attributes[0].Value.AsString())
+	assert.Equal(t, got.events[0].Attributes[1].Value.AsString(), want.events[0].Attributes[1].Value.AsString())
+	gotStackTraceFunctionName := strings.Split(got.events[0].Attributes[2].Value.AsString(), "\n")
+
+	assert.Truef(t, strings.HasPrefix(gotStackTraceFunctionName[1], "go.opentelemetry.io/otel/sdk/trace.recordStackTrace"), "%q not prefixed with go.opentelemetry.io/otel/sdk/trace.recordStackTrace", gotStackTraceFunctionName[1])
+	assert.Truef(t, strings.HasPrefix(gotStackTraceFunctionName[3], "go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).RecordError"), "%q not prefixed with go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).RecordError", gotStackTraceFunctionName[3])
 }
 
 func TestRecordErrorNil(t *testing.T) {
@@ -1372,6 +1401,31 @@ func TestSpanCapturesPanic(t *testing.T) {
 	})
 }
 
+func TestSpanCapturesPanicWithStackTrace(t *testing.T) {
+	te := NewTestExporter()
+	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
+	_, span := tp.Tracer("CatchPanic").Start(
+		context.Background(),
+		"span",
+	)
+
+	f := func() {
+		defer span.End(trace.WithStackTrace(true))
+		panic(errors.New("error message"))
+	}
+	require.PanicsWithError(t, "error message", f)
+	spans := te.Spans()
+	require.Len(t, spans, 1)
+	require.Len(t, spans[0].Events(), 1)
+	assert.Equal(t, spans[0].Events()[0].Name, semconv.ExceptionEventName)
+	assert.Equal(t, spans[0].Events()[0].Attributes[0].Value.AsString(), "*errors.errorString")
+	assert.Equal(t, spans[0].Events()[0].Attributes[1].Value.AsString(), "error message")
+
+	gotStackTraceFunctionName := strings.Split(spans[0].Events()[0].Attributes[2].Value.AsString(), "\n")
+	assert.Truef(t, strings.HasPrefix(gotStackTraceFunctionName[1], "go.opentelemetry.io/otel/sdk/trace.recordStackTrace"), "%q not prefixed with go.opentelemetry.io/otel/sdk/trace.recordStackTrace", gotStackTraceFunctionName[1])
+	assert.Truef(t, strings.HasPrefix(gotStackTraceFunctionName[3], "go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).End"), "%q not prefixed with go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).End", gotStackTraceFunctionName[3])
+}
+
 func TestReadOnlySpan(t *testing.T) {
 	kv := attribute.String("foo", "bar")
 
@@ -1431,9 +1485,9 @@ func TestReadOnlySpan(t *testing.T) {
 
 	// Verify snapshot() returns snapshots that are independent from the
 	// original span and from one another.
-	d1 := s.(*span).snapshot()
+	d1 := s.(*recordingSpan).snapshot()
 	s.AddEvent("baz")
-	d2 := s.(*span).snapshot()
+	d2 := s.(*recordingSpan).snapshot()
 	for _, e := range d1.Events() {
 		if e.Name == "baz" {
 			t.Errorf("Didn't expect to find 'baz' event")
@@ -1585,7 +1639,7 @@ func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 		}),
 		parent: sc.WithRemote(true),
 		name:   "span0",
-		links: []trace.Link{
+		links: []Link{
 			{
 				SpanContext:           sc1,
 				Attributes:            []attribute.KeyValue{k1v1},
@@ -1625,17 +1679,20 @@ func (s stateSampler) Description() string {
 
 // Check that a new span propagates the SamplerResult.TraceState
 func TestSamplerTraceState(t *testing.T) {
-	mustTS := func(t trace.TraceState, err error) trace.TraceState { return t }
-	makeInserter := func(k attribute.KeyValue, prefix string) Sampler {
+	mustTS := func(ts trace.TraceState, err error) trace.TraceState {
+		require.NoError(t, err)
+		return ts
+	}
+	makeInserter := func(k, v, prefix string) Sampler {
 		return &stateSampler{
 			prefix: prefix,
-			f:      func(t trace.TraceState) trace.TraceState { return mustTS(t.Insert(string(k.Key), k.Value.Emit())) },
+			f:      func(t trace.TraceState) trace.TraceState { return mustTS(t.Insert(k, v)) },
 		}
 	}
-	makeDeleter := func(k attribute.Key, prefix string) Sampler {
+	makeDeleter := func(k, prefix string) Sampler {
 		return &stateSampler{
 			prefix: prefix,
-			f:      func(t trace.TraceState) trace.TraceState { return t.Delete(string(k)) },
+			f:      func(t trace.TraceState) trace.TraceState { return t.Delete(k) },
 		}
 	}
 	clearer := func(prefix string) Sampler {
@@ -1656,55 +1713,55 @@ func TestSamplerTraceState(t *testing.T) {
 		{
 			name:       "alwaysOn",
 			sampler:    AlwaysSample(),
-			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1)),
-			want:       mustTS(oteltest.TraceStateFromKeyValues(kv1)),
+			input:      mustTS(trace.ParseTraceState("k1=v1")),
+			want:       mustTS(trace.ParseTraceState("k1=v1")),
 			exportSpan: true,
 		},
 		{
 			name:       "alwaysOff",
 			sampler:    NeverSample(),
-			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1)),
-			want:       mustTS(oteltest.TraceStateFromKeyValues(kv1)),
+			input:      mustTS(trace.ParseTraceState("k1=v1")),
+			want:       mustTS(trace.ParseTraceState("k1=v1")),
 			exportSpan: false,
 		},
 		{
 			name:       "insertKeySampled",
-			sampler:    makeInserter(kv2, "span"),
+			sampler:    makeInserter("k2", "v2", "span"),
 			spanName:   "span0",
-			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1)),
-			want:       mustTS(oteltest.TraceStateFromKeyValues(kv2, kv1)),
+			input:      mustTS(trace.ParseTraceState("k1=v1")),
+			want:       mustTS(trace.ParseTraceState("k2=v2,k1=v1")),
 			exportSpan: true,
 		},
 		{
 			name:       "insertKeyDropped",
-			sampler:    makeInserter(kv2, "span"),
+			sampler:    makeInserter("k2", "v2", "span"),
 			spanName:   "nospan0",
-			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1)),
-			want:       mustTS(oteltest.TraceStateFromKeyValues(kv2, kv1)),
+			input:      mustTS(trace.ParseTraceState("k1=v1")),
+			want:       mustTS(trace.ParseTraceState("k2=v2,k1=v1")),
 			exportSpan: false,
 		},
 		{
 			name:       "deleteKeySampled",
-			sampler:    makeDeleter(k1, "span"),
+			sampler:    makeDeleter("k1", "span"),
 			spanName:   "span0",
-			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1, kv2)),
-			want:       mustTS(oteltest.TraceStateFromKeyValues(kv2)),
+			input:      mustTS(trace.ParseTraceState("k1=v1,k2=v2")),
+			want:       mustTS(trace.ParseTraceState("k2=v2")),
 			exportSpan: true,
 		},
 		{
 			name:       "deleteKeyDropped",
-			sampler:    makeDeleter(k1, "span"),
+			sampler:    makeDeleter("k1", "span"),
 			spanName:   "nospan0",
-			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1, kv2, kv3)),
-			want:       mustTS(oteltest.TraceStateFromKeyValues(kv2, kv3)),
+			input:      mustTS(trace.ParseTraceState("k1=v1,k2=v2,k3=v3")),
+			want:       mustTS(trace.ParseTraceState("k2=v2,k3=v3")),
 			exportSpan: false,
 		},
 		{
 			name:       "clearer",
 			sampler:    clearer("span"),
 			spanName:   "span0",
-			input:      mustTS(oteltest.TraceStateFromKeyValues(kv1, kv3)),
-			want:       mustTS(oteltest.TraceStateFromKeyValues()),
+			input:      mustTS(trace.ParseTraceState("k1=v1,k3=v3")),
+			want:       mustTS(trace.ParseTraceState("")),
 			exportSpan: true,
 		},
 	}

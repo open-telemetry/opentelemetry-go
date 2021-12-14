@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal
+package internal // import "go.opentelemetry.io/otel/bridge/opentracing/internal"
 
 import (
 	"context"
@@ -22,11 +22,10 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
-	"go.opentelemetry.io/otel/trace"
-
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
+	"go.opentelemetry.io/otel/codes"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
+	"go.opentelemetry.io/otel/trace"
 )
 
 //nolint:revive // ignoring missing comments for unexported global variables in an internal package.
@@ -75,7 +74,7 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...trace.SpanS
 		startTime = time.Now()
 	}
 	spanContext := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    t.getTraceID(ctx, config),
+		TraceID:    t.getTraceID(ctx, &config),
 		SpanID:     t.getSpanID(),
 		TraceFlags: 0,
 	})
@@ -86,7 +85,7 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...trace.SpanS
 		Attributes:     config.Attributes(),
 		StartTime:      startTime,
 		EndTime:        time.Time{},
-		ParentSpanID:   t.getParentSpanID(ctx, config),
+		ParentSpanID:   t.getParentSpanID(ctx, &config),
 		Events:         nil,
 		SpanKind:       trace.ValidateSpanKind(config.SpanKind()),
 	}

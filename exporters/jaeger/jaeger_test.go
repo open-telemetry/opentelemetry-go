@@ -35,7 +35,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -158,7 +158,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 	eventNameValue := "event-test"
 	eventDropped := int64(10)
 	keyValue := "value"
-	statusCodeValue := int64(1)
+	statusCodeValue := "ERROR"
 	doubleValue := 123.456
 	intValue := int64(123)
 	boolTrue := true
@@ -203,7 +203,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 					{Key: keyError, VType: gen.TagType_BOOL, VBool: &boolTrue},
 					{Key: keyInstrumentationLibraryName, VType: gen.TagType_STRING, VStr: &instrLibName},
 					{Key: keyInstrumentationLibraryVersion, VType: gen.TagType_STRING, VStr: &instrLibVersion},
-					{Key: keyStatusCode, VType: gen.TagType_LONG, VLong: &statusCodeValue},
+					{Key: keyStatusCode, VType: gen.TagType_STRING, VStr: &statusCodeValue},
 					// Should not have a status message because it was unset
 					{Key: keySpanKind, VType: gen.TagType_STRING, VStr: &spanKind},
 				},
@@ -219,7 +219,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 				Name:      "/foo",
 				StartTime: now,
 				EndTime:   now,
-				Links: []trace.Link{
+				Links: []sdktrace.Link{
 					{
 						SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 							TraceID: linkTraceID,
@@ -264,7 +264,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 					{Key: keyError, VType: gen.TagType_BOOL, VBool: &boolTrue},
 					{Key: keyInstrumentationLibraryName, VType: gen.TagType_STRING, VStr: &instrLibName},
 					{Key: keyInstrumentationLibraryVersion, VType: gen.TagType_STRING, VStr: &instrLibVersion},
-					{Key: keyStatusCode, VType: gen.TagType_LONG, VLong: &statusCodeValue},
+					{Key: keyStatusCode, VType: gen.TagType_STRING, VStr: &statusCodeValue},
 					{Key: keyStatusMessage, VType: gen.TagType_STRING, VStr: &statusMessage},
 					{Key: keySpanKind, VType: gen.TagType_STRING, VStr: &spanKind},
 				},
@@ -311,7 +311,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 					TraceID: traceID,
 					SpanID:  parentSpanID,
 				}),
-				Links: []trace.Link{
+				Links: []sdktrace.Link{
 					{
 						SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 							TraceID: linkTraceID,
@@ -323,7 +323,7 @@ func Test_spanSnapshotToThrift(t *testing.T) {
 				StartTime: now,
 				EndTime:   now,
 				Attributes: []attribute.KeyValue{
-					attribute.Array("arr", []int{0, 1, 2, 3}),
+					attribute.IntSlice("arr", []int{0, 1, 2, 3}),
 				},
 				Status: sdktrace.Status{
 					Code:        codes.Unset,

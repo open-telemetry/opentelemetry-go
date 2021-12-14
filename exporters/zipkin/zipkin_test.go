@@ -34,7 +34,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -71,7 +71,7 @@ func TestNewRawExporterShouldFailInvalidCollectorURL(t *testing.T) {
 	)
 
 	assert.Error(t, err)
-	assert.EqualError(t, err, "invalid collector URL")
+	assert.EqualError(t, err, "invalid collector URL \"localhost\": no scheme or host")
 	assert.Nil(t, exp)
 }
 

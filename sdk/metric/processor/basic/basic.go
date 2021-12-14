@@ -21,15 +21,14 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 )
 
 type (
 	Processor struct {
-		export.ExportKindSelector
+		aggregation.TemporalitySelector
 		export.AggregatorSelector
 
 		state
@@ -38,26 +37,22 @@ type (
 	stateKey struct {
 		// TODO: This code is organized to support multiple
 		// accumulators which could theoretically produce the
-		// data for the same instrument with the same
-		// resources, and this code has logic to combine data
-		// properly from multiple accumulators.  However, the
-		// use of *metric.Descriptor in the stateKey makes
-		// such combination impossible, because each
-		// accumulator allocates its own instruments.  This
-		// can be fixed by using the instrument name and kind
-		// instead of the descriptor pointer.  See
+		// data for the same instrument, and this code has
+		// logic to combine data properly from multiple
+		// accumulators.  However, the use of
+		// *sdkapi.Descriptor in the stateKey makes such
+		// combination impossible, because each accumulator
+		// allocates its own instruments.  This can be fixed
+		// by using the instrument name and kind instead of
+		// the descriptor pointer.  See
 		// https://github.com/open-telemetry/opentelemetry-go/issues/862.
-		descriptor *metric.Descriptor
+		descriptor *sdkapi.Descriptor
 		distinct   attribute.Distinct
-		resource   attribute.Distinct
 	}
 
 	stateValue struct {
 		// labels corresponds to the stateKey.distinct field.
 		labels *attribute.Set
-
-		// resource corresponds to the stateKey.resource field.
-		resource *resource.Resource
 
 		// updated indicates the last sequence number when this value had
 		// Process() called by an accumulator.
@@ -81,11 +76,6 @@ type (
 		// values in a single collection round.
 		current export.Aggregator
 
-		// delta, if non-nil, refers to an Aggregator owned by
-		// the processor used to compute deltas between
-		// precomputed sums.
-		delta export.Aggregator
-
 		// cumulative, if non-nil, refers to an Aggregator owned
 		// by the processor used to store the last cumulative
 		// value.
@@ -95,12 +85,9 @@ type (
 	state struct {
 		config config
 
-		// RWMutex implements locking for the `CheckpointSet` interface.
+		// RWMutex implements locking for the `Reader` interface.
 		sync.RWMutex
 		values map[stateKey]*stateValue
-
-		// Note: the timestamp logic currently assumes all
-		// exports are deltas.
 
 		processStart  time.Time
 		intervalStart time.Time
@@ -118,34 +105,57 @@ type (
 
 var _ export.Processor = &Processor{}
 var _ export.Checkpointer = &Processor{}
-var _ export.CheckpointSet = &state{}
+var _ export.Reader = &state{}
 
 // ErrInconsistentState is returned when the sequence of collection's starts and finishes are incorrectly balanced.
 var ErrInconsistentState = fmt.Errorf("inconsistent processor state")
 
-// ErrInvalidExportKind is returned for unknown metric.ExportKind.
-var ErrInvalidExportKind = fmt.Errorf("invalid export kind")
+// ErrInvalidTemporality is returned for unknown metric.Temporality.
+var ErrInvalidTemporality = fmt.Errorf("invalid aggregation temporality")
 
 // New returns a basic Processor that is also a Checkpointer using the provided
-// AggregatorSelector to select Aggregators.  The ExportKindSelector
+// AggregatorSelector to select Aggregators.  The TemporalitySelector
 // is consulted to determine the kind(s) of exporter that will consume
-// data, so that this Processor can prepare to compute Delta or
-// Cumulative Aggregations as needed.
-func New(aselector export.AggregatorSelector, eselector export.ExportKindSelector, opts ...Option) *Processor {
+// data, so that this Processor can prepare to compute Cumulative Aggregations
+// as needed.
+func New(aselector export.AggregatorSelector, tselector aggregation.TemporalitySelector, opts ...Option) *Processor {
+	return NewFactory(aselector, tselector, opts...).NewCheckpointer().(*Processor)
+}
+
+type factory struct {
+	aselector export.AggregatorSelector
+	tselector aggregation.TemporalitySelector
+	config    config
+}
+
+func NewFactory(aselector export.AggregatorSelector, tselector aggregation.TemporalitySelector, opts ...Option) export.CheckpointerFactory {
+	var config config
+	for _, opt := range opts {
+		opt.applyProcessor(&config)
+	}
+	return factory{
+		aselector: aselector,
+		tselector: tselector,
+		config:    config,
+	}
+}
+
+var _ export.CheckpointerFactory = factory{}
+
+func (f factory) NewCheckpointer() export.Checkpointer {
 	now := time.Now()
 	p := &Processor{
-		AggregatorSelector: aselector,
-		ExportKindSelector: eselector,
+		AggregatorSelector:  f.aselector,
+		TemporalitySelector: f.tselector,
 		state: state{
 			values:        map[stateKey]*stateValue{},
 			processStart:  now,
 			intervalStart: now,
+			config:        f.config,
 		},
 	}
-	for _, opt := range opts {
-		opt.applyProcessor(&p.config)
-	}
 	return p
+
 }
 
 // Process implements export.Processor.
@@ -157,31 +167,33 @@ func (b *Processor) Process(accum export.Accumulation) error {
 	key := stateKey{
 		descriptor: desc,
 		distinct:   accum.Labels().Equivalent(),
-		resource:   accum.Resource().Equivalent(),
 	}
 	agg := accum.Aggregator()
 
 	// Check if there is an existing value.
 	value, ok := b.state.values[key]
 	if !ok {
-		stateful := b.ExportKindFor(desc, agg.Aggregation().Kind()).MemoryRequired(desc.InstrumentKind())
+		stateful := b.TemporalityFor(desc, agg.Aggregation().Kind()).MemoryRequired(desc.InstrumentKind())
 
 		newValue := &stateValue{
 			labels:   accum.Labels(),
-			resource: accum.Resource(),
 			updated:  b.state.finishedCollection,
 			stateful: stateful,
 			current:  agg,
 		}
 		if stateful {
 			if desc.InstrumentKind().PrecomputedSum() {
-				// If we know we need to compute deltas, allocate two aggregators.
-				b.AggregatorFor(desc, &newValue.cumulative, &newValue.delta)
-			} else {
-				// In this case we are certain not to need a delta, only allocate
-				// a cumulative aggregator.
-				b.AggregatorFor(desc, &newValue.cumulative)
+				// To convert precomputed sums to
+				// deltas requires two aggregators to
+				// be allocated, one for the prior
+				// value and one for the output delta.
+				// This functionality was removed from
+				// the basic processor in PR #2350.
+				return aggregation.ErrNoCumulativeToDelta
 			}
+			// In this case allocate one aggregator to
+			// save the current state.
+			b.AggregatorFor(desc, &newValue.cumulative)
 		}
 		b.state.values[key] = newValue
 		return nil
@@ -211,7 +223,7 @@ func (b *Processor) Process(accum export.Accumulation) error {
 	// instrument reports a PrecomputedSum to a DeltaExporter or
 	// the reverse, a non-PrecomputedSum instrument with a
 	// CumulativeExporter.  This logic is encapsulated in
-	// ExportKind.MemoryRequired(InstrumentKind).
+	// Temporality.MemoryRequired(InstrumentKind).
 	//
 	// Case (b) occurs when the variable `sameCollection` is true,
 	// indicating that the stateKey for Accumulation has already
@@ -248,11 +260,11 @@ func (b *Processor) Process(accum export.Accumulation) error {
 	return value.current.Merge(agg, desc)
 }
 
-// CheckpointSet returns the associated CheckpointSet.  Use the
-// CheckpointSet Locker interface to synchronize access to this
-// object.  The CheckpointSet.ForEach() method cannot be called
+// Reader returns the associated Reader.  Use the
+// Reader Locker interface to synchronize access to this
+// object.  The Reader.ForEach() method cannot be called
 // concurrently with Process().
-func (b *Processor) CheckpointSet() export.CheckpointSet {
+func (b *Processor) Reader() export.Reader {
 	return &b.state
 }
 
@@ -267,7 +279,7 @@ func (b *Processor) StartCollection() {
 
 // FinishCollection signals to the Processor that a complete
 // collection has finished and that ForEach will be called to access
-// the CheckpointSet.
+// the Reader.
 func (b *Processor) FinishCollection() error {
 	b.intervalEnd = time.Now()
 	if b.startedCollection != b.finishedCollection+1 {
@@ -294,37 +306,24 @@ func (b *Processor) FinishCollection() error {
 			continue
 		}
 
-		// Update Aggregator state to support exporting either a
-		// delta or a cumulative aggregation.
-		var err error
-		if mkind.PrecomputedSum() {
-			if currentSubtractor, ok := value.current.(export.Subtractor); ok {
-				// This line is equivalent to:
-				// value.delta = currentSubtractor - value.cumulative
-				err = currentSubtractor.Subtract(value.cumulative, value.delta, key.descriptor)
-
-				if err == nil {
-					err = value.current.SynchronizedMove(value.cumulative, key.descriptor)
-				}
-			} else {
-				err = aggregation.ErrNoSubtraction
-			}
-		} else {
+		// The only kind of aggregators that are not stateless
+		// are the ones needing delta to cumulative
+		// conversion.  Merge aggregator state in this case.
+		if !mkind.PrecomputedSum() {
 			// This line is equivalent to:
-			// value.cumulative = value.cumulative + value.delta
-			err = value.cumulative.Merge(value.current, key.descriptor)
-		}
-		if err != nil {
-			return err
+			// value.cumulative = value.cumulative + value.current
+			if err := value.cumulative.Merge(value.current, key.descriptor); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
-// ForEach iterates through the CheckpointSet, passing an
+// ForEach iterates through the Reader, passing an
 // export.Record with the appropriate Cumulative or Delta aggregation
 // to an exporter.
-func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record) error) error {
+func (b *state) ForEach(exporter aggregation.TemporalitySelector, f func(export.Record) error) error {
 	if b.startedCollection != b.finishedCollection {
 		return ErrInconsistentState
 	}
@@ -334,15 +333,10 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 		var agg aggregation.Aggregation
 		var start time.Time
 
-		// If the processor does not have Config.Memory and it was not updated
-		// in the prior round, do not visit this value.
-		if !b.config.Memory && value.updated != (b.finishedCollection-1) {
-			continue
-		}
+		aggTemp := exporter.TemporalityFor(key.descriptor, value.current.Aggregation().Kind())
 
-		ekind := exporter.ExportKindFor(key.descriptor, value.current.Aggregation().Kind())
-		switch ekind {
-		case export.CumulativeExportKind:
+		switch aggTemp {
+		case aggregation.CumulativeTemporality:
 			// If stateful, the sum has been computed.  If stateless, the
 			// input was already cumulative.  Either way, use the checkpointed
 			// value:
@@ -353,23 +347,29 @@ func (b *state) ForEach(exporter export.ExportKindSelector, f func(export.Record
 			}
 			start = b.processStart
 
-		case export.DeltaExportKind:
+		case aggregation.DeltaTemporality:
 			// Precomputed sums are a special case.
 			if mkind.PrecomputedSum() {
-				agg = value.delta.Aggregation()
-			} else {
-				agg = value.current.Aggregation()
+				// This functionality was removed from
+				// the basic processor in PR #2350.
+				return aggregation.ErrNoCumulativeToDelta
 			}
+			agg = value.current.Aggregation()
 			start = b.intervalStart
 
 		default:
-			return fmt.Errorf("%v: %w", ekind, ErrInvalidExportKind)
+			return fmt.Errorf("%v: %w", aggTemp, ErrInvalidTemporality)
+		}
+
+		// If the processor does not have Config.Memory and it was not updated
+		// in the prior round, do not visit this value.
+		if !b.config.Memory && value.updated != (b.finishedCollection-1) {
+			continue
 		}
 
 		if err := f(export.NewRecord(
 			key.descriptor,
 			value.labels,
-			value.resource,
 			agg,
 			start,
 			b.intervalEnd,

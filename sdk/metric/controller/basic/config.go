@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -68,17 +68,17 @@ type Option interface {
 // WithResource sets the Resource configuration option of a Config by merging it
 // with the Resource configuration in the environment.
 func WithResource(r *resource.Resource) Option {
-	res, err := resource.Merge(resource.Environment(), r)
-	if err != nil {
-		otel.Handle(err)
-	}
-	return resourceOption{res}
+	return resourceOption{r}
 }
 
 type resourceOption struct{ *resource.Resource }
 
 func (o resourceOption) apply(cfg *config) {
-	cfg.Resource = o.Resource
+	res, err := resource.Merge(cfg.Resource, o.Resource)
+	if err != nil {
+		otel.Handle(err)
+	}
+	cfg.Resource = res
 }
 
 // WithCollectPeriod sets the CollectPeriod configuration option of a Config.

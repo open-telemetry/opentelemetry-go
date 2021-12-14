@@ -21,12 +21,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 )
 
 func TestInconsistentAggregatorErr(t *testing.T) {
@@ -39,7 +40,7 @@ func TestInconsistentAggregatorErr(t *testing.T) {
 	require.True(t, errors.Is(err, aggregation.ErrInconsistentType))
 }
 
-func testRangeNaN(t *testing.T, desc *metric.Descriptor) {
+func testRangeNaN(t *testing.T, desc *sdkapi.Descriptor) {
 	// If the descriptor uses int64 numbers, this won't register as NaN
 	nan := number.NewFloat64Number(math.NaN())
 	err := aggregator.RangeTest(nan, desc)
@@ -51,7 +52,7 @@ func testRangeNaN(t *testing.T, desc *metric.Descriptor) {
 	}
 }
 
-func testRangeNegative(t *testing.T, desc *metric.Descriptor) {
+func testRangeNegative(t *testing.T, desc *sdkapi.Descriptor) {
 	var neg, pos number.Number
 
 	if desc.NumberKind() == number.Float64Kind {
@@ -73,9 +74,9 @@ func TestRangeTest(t *testing.T) {
 	// Only Counters implement a range test.
 	for _, nkind := range []number.Kind{number.Float64Kind, number.Int64Kind} {
 		t.Run(nkind.String(), func(t *testing.T) {
-			desc := metric.NewDescriptor(
+			desc := metrictest.NewDescriptor(
 				"name",
-				metric.CounterInstrumentKind,
+				sdkapi.CounterInstrumentKind,
 				nkind,
 			)
 			testRangeNegative(t, &desc)
@@ -86,12 +87,12 @@ func TestRangeTest(t *testing.T) {
 func TestNaNTest(t *testing.T) {
 	for _, nkind := range []number.Kind{number.Float64Kind, number.Int64Kind} {
 		t.Run(nkind.String(), func(t *testing.T) {
-			for _, mkind := range []metric.InstrumentKind{
-				metric.CounterInstrumentKind,
-				metric.ValueRecorderInstrumentKind,
-				metric.ValueObserverInstrumentKind,
+			for _, mkind := range []sdkapi.InstrumentKind{
+				sdkapi.CounterInstrumentKind,
+				sdkapi.HistogramInstrumentKind,
+				sdkapi.GaugeObserverInstrumentKind,
 			} {
-				desc := metric.NewDescriptor(
+				desc := metrictest.NewDescriptor(
 					"name",
 					mkind,
 					nkind,
