@@ -494,37 +494,20 @@ func TestRecordPersistence(t *testing.T) {
 }
 
 func TestIncorrectInstruments(t *testing.T) {
-	// The Batch observe/record APIs are susceptible to
-	// uninitialized instruments.
-	var counter metric.Int64Counter
-	var observer metric.Int64GaugeObserver
-
-	ctx := context.Background()
 	meter, sdk, _, processor := newSDK(t)
-
-	// Now try with uninitialized instruments.
-	meter.RecordBatch(ctx, nil, counter.Measurement(1))
-	meter.NewBatchObserver(func(_ context.Context, result metric.BatchObserverResult) {
-		result.Observe(nil, observer.Observation(1))
-	})
-
-	collected := sdk.Collect(ctx)
-	require.Equal(t, metricsdk.ErrUninitializedInstrument, testHandler.Flush())
-	require.Equal(t, 0, collected)
-
-	// Now try with instruments from another SDK.
+	// Try with instruments from another SDK.
 	noopMeter := metric.NewNoopMeterProvider().Meter("")
-	counter = metric.Must(noopMeter).NewInt64Counter("name.sum")
-	observer = metric.Must(noopMeter).NewBatchObserver(
+	counter := metric.Must(noopMeter).NewInt64Counter("name.sum")
+	observer := metric.Must(noopMeter).NewBatchObserver(
 		func(context.Context, metric.BatchObserverResult) {},
 	).NewInt64GaugeObserver("observer")
 
-	meter.RecordBatch(ctx, nil, counter.Measurement(1))
+	meter.RecordBatch(context.Background(), nil, counter.Measurement(1))
 	meter.NewBatchObserver(func(_ context.Context, result metric.BatchObserverResult) {
 		result.Observe(nil, observer.Observation(1))
 	})
 
-	collected = sdk.Collect(ctx)
+	collected := sdk.Collect(context.Background())
 	require.Equal(t, 0, collected)
 	require.EqualValues(t, map[string]float64{}, processor.Values())
 	require.Equal(t, metricsdk.ErrUninitializedInstrument, testHandler.Flush())

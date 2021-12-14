@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Change metrics API to use interfaces for Meter and BatchObserver (#2450)
+- Change metrics API to use interfaces for instruments (#2453)
 
 ### Deprecated
 
