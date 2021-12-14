@@ -5,7 +5,7 @@ weight: 3
 
 Instrumentation is the process of adding observability code to your application. There are two general types of instrumentation - automatic, and manual - and you should be familiar with both in order to effectively instrument your software.
 
-# Creating Spans
+## Creating Spans
 
 Spans are created by tracers, which can be acquired from a Tracer Provider.
 
@@ -17,30 +17,52 @@ ctx, span = tracer.Start(ctx, "helloWorld")
 defer span.End()
 ```
 
-In Go, the `context` package is used to store the active span. When you start a span, you'll get a handle on not only the span that's created, but the modified context that contains it. When starting a new span using this context, a parent-child relationship will automatically be created between the two spans, as seen here:
+In Go, the `context` package is used to store the active span. When you start a span, you'll get a handle on not only the span that's created, but the modified context that contains it.
+
+Once a span has completed, it is immutable and can no longer be modified.
+
+### Get the current span
+
+To get the current span, you'll need to pull it out of the `Context` you have a handle on:
+
+```go
+ctx := context.Background()
+span := trace.SpanFromContext(ctx)
+
+// Do something with the current span, optionally calling `span.End()` if you want it to end
+```
+
+This can helpful if you'd like to add information to the current span at a point in time.
+
+### Create nested spans
+
+You can create a nested span to track work in a nested operation.
+
+If the current `Context` you have a handle on already contains a span inside of it, creating a new span makes it a nested span. For example:
 
 ```go
 func parentFunction() {
+	// Create a span that tracks the work for `parentFunction()`
 	ctx := context.Background()
-	var parentSpan trace.Span
 	ctx, parentSpan = tracer.Start(ctx, "parent")
 	defer parentSpan.End()
-	// call our child function
+
+	// call the child function and start a nested span in there
 	childFunction(ctx)
-	// do more work, when this function ends, parentSpan will complete.
+
+	// do more work - when this function ends, parentSpan will complete.
 }
 
 func childFunction(ctx context.Context) {
-	var childSpan trace.Span
+	// Create a span to track `childFunction()` - this is a nested span whose parent is `parentSpan`
 	ctx, childSpan = tracer.Start(ctx, "child")
 	defer childSpan.End()
+
 	// do work here, when this function returns, childSpan will complete.
 }
 ```
 
-Once a span has completed, it is immutable and can no longer be modified.
-
-## Attributes
+### Span Attributes
 
 Attributes are keys and values that are applied as metadata to your spans and are useful for aggregating, filtering, and grouping traces. Attributes can be added at span creation, or at any other time during the lifecycle of a span before it has completed.
 
@@ -51,20 +73,20 @@ ctx, span = tracer.Start(ctx, "attributesAtCreation", trace.WithAttributes(attri
 span.SetAttributes(attribute.Bool("isTrue", true), attribute.String("stringAttr", "hi!"))
 ```
 
-Attribute keys can be precomputed, as well -
+Attribute keys can be precomputed, as well:
 
 ```go
 var myKey = attribute.Key("myCoolAttribute")
 span.SetAttributes(myKey.String("a value"))
 ```
 
-### Semantic Attributes
+#### Semantic Attributes
 
 Semantic Attributes are attributes that are defined by the [OpenTelemetry Specification][] in order to provide a shared set of attribute keys across multiple languages, frameworks, and runtimes for common concepts like HTTP methods, status codes, user agents, and more. These attributes are available in the `go.opentelemetry.io/otel/semconv/v1.7.0` package.
 
 For details, see [Trace semantic conventions][].
 
-## Events
+### Events
 
 An event is a human-readable message on a span that represents "something happening" during it's lifetime. For example, imagine a function that requires exclusive access to a resource that is under a mutex. An event could be created at two points - once, when we try to gain access to the resource, and another when we acquire the mutex.
 
@@ -85,11 +107,11 @@ Events can also have attributes of their own -
 span.AddEvent("Cancelled wait due to external signal", trace.WithAttributes(attribute.Int("pid", 4328), attribute.String("signal", "SIGHUP")))
 ```
 
-# Creating Metrics
+## Creating Metrics
 
 The metrics API is currently unstable, documentation TBA.
 
-# Propagators and Context
+## Propagators and Context
 
 Traces can extend beyond a single process. This requires _context propagation_, a mechanism where identifiers for a trace are sent to remote processes.
 
