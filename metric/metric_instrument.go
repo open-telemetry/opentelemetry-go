@@ -81,49 +81,34 @@ var _ sdkapi.AsyncSingleRunner = (*Int64ObserverFunc)(nil)
 var _ sdkapi.AsyncSingleRunner = (*Float64ObserverFunc)(nil)
 var _ sdkapi.AsyncBatchRunner = (*BatchObserverFunc)(nil)
 
-// newInt64AsyncRunner returns a single-observer callback for integer Observer instruments.
-func newInt64AsyncRunner(c Int64ObserverFunc) sdkapi.AsyncSingleRunner {
-	return &c
-}
+// AnyRunner implements sdkapi.AsyncRunner.
+func (Int64ObserverFunc) AnyRunner() {}
 
-// newFloat64AsyncRunner returns a single-observer callback for floating point Observer instruments.
-func newFloat64AsyncRunner(c Float64ObserverFunc) sdkapi.AsyncSingleRunner {
-	return &c
-}
+// AnyRunner implements sdkapi.AsyncRunner.
+func (Float64ObserverFunc) AnyRunner() {}
 
-// newBatchAsyncRunner returns a batch-observer callback use with multiple Observer instruments.
-func newBatchAsyncRunner(c BatchObserverFunc) sdkapi.AsyncBatchRunner {
-	return &c
-}
-
-// AnyRunner implements AsyncRunner.
-func (*Int64ObserverFunc) AnyRunner() {}
-
-// AnyRunner implements AsyncRunner.
-func (*Float64ObserverFunc) AnyRunner() {}
-
-// AnyRunner implements AsyncRunner.
-func (*BatchObserverFunc) AnyRunner() {}
+// AnyRunner implements sdkapi.AsyncRunner.
+func (BatchObserverFunc) AnyRunner() {}
 
 // Run implements AsyncSingleRunner.
-func (i *Int64ObserverFunc) Run(ctx context.Context, impl sdkapi.AsyncImpl, function func([]attribute.KeyValue, ...Observation)) {
-	(*i)(ctx, Int64ObserverResult{
+func (i Int64ObserverFunc) Run(ctx context.Context, impl sdkapi.AsyncImpl, function func([]attribute.KeyValue, ...Observation)) {
+	i(ctx, Int64ObserverResult{
 		instrument: impl,
 		function:   function,
 	})
 }
 
 // Run implements AsyncSingleRunner.
-func (f *Float64ObserverFunc) Run(ctx context.Context, impl sdkapi.AsyncImpl, function func([]attribute.KeyValue, ...Observation)) {
-	(*f)(ctx, Float64ObserverResult{
+func (f Float64ObserverFunc) Run(ctx context.Context, impl sdkapi.AsyncImpl, function func([]attribute.KeyValue, ...Observation)) {
+	f(ctx, Float64ObserverResult{
 		instrument: impl,
 		function:   function,
 	})
 }
 
 // Run implements AsyncBatchRunner.
-func (b *BatchObserverFunc) Run(ctx context.Context, function func([]attribute.KeyValue, ...Observation)) {
-	(*b)(ctx, BatchObserverResult{
+func (b BatchObserverFunc) Run(ctx context.Context, function func([]attribute.KeyValue, ...Observation)) {
+	b(ctx, BatchObserverResult{
 		function: function,
 	})
 }

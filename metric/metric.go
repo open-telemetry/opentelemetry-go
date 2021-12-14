@@ -77,7 +77,7 @@ func (m Meter) RecordBatch(ctx context.Context, ls []attribute.KeyValue, ms ...M
 func (m Meter) NewBatchObserver(callback BatchObserverFunc) BatchObserver {
 	return BatchObserver{
 		meter:  m,
-		runner: newBatchAsyncRunner(callback),
+		runner: sdkapi.AsyncBatchRunner(callback),
 	}
 }
 
@@ -144,8 +144,7 @@ func (m Meter) NewInt64GaugeObserver(name string, callback Int64ObserverFunc, op
 		return wrapInt64GaugeObserverInstrument(sdkapi.NewNoopAsyncInstrument(), nil)
 	}
 	return wrapInt64GaugeObserverInstrument(
-		m.newAsync(name, sdkapi.GaugeObserverInstrumentKind, number.Int64Kind, opts,
-			newInt64AsyncRunner(callback)))
+		m.newAsync(name, sdkapi.GaugeObserverInstrumentKind, number.Int64Kind, opts, sdkapi.AsyncSingleRunner(callback)))
 }
 
 // NewFloat64GaugeObserver creates a new floating point GaugeObserver with
@@ -157,8 +156,7 @@ func (m Meter) NewFloat64GaugeObserver(name string, callback Float64ObserverFunc
 		return wrapFloat64GaugeObserverInstrument(sdkapi.NewNoopAsyncInstrument(), nil)
 	}
 	return wrapFloat64GaugeObserverInstrument(
-		m.newAsync(name, sdkapi.GaugeObserverInstrumentKind, number.Float64Kind, opts,
-			newFloat64AsyncRunner(callback)))
+		m.newAsync(name, sdkapi.GaugeObserverInstrumentKind, number.Float64Kind, opts, sdkapi.AsyncSingleRunner(callback)))
 }
 
 // NewInt64CounterObserver creates a new integer CounterObserver instrument
@@ -170,8 +168,7 @@ func (m Meter) NewInt64CounterObserver(name string, callback Int64ObserverFunc, 
 		return wrapInt64CounterObserverInstrument(sdkapi.NewNoopAsyncInstrument(), nil)
 	}
 	return wrapInt64CounterObserverInstrument(
-		m.newAsync(name, sdkapi.CounterObserverInstrumentKind, number.Int64Kind, opts,
-			newInt64AsyncRunner(callback)))
+		m.newAsync(name, sdkapi.CounterObserverInstrumentKind, number.Int64Kind, opts, sdkapi.AsyncSingleRunner(callback)))
 }
 
 // NewFloat64CounterObserver creates a new floating point CounterObserver with
@@ -183,8 +180,7 @@ func (m Meter) NewFloat64CounterObserver(name string, callback Float64ObserverFu
 		return wrapFloat64CounterObserverInstrument(sdkapi.NewNoopAsyncInstrument(), nil)
 	}
 	return wrapFloat64CounterObserverInstrument(
-		m.newAsync(name, sdkapi.CounterObserverInstrumentKind, number.Float64Kind, opts,
-			newFloat64AsyncRunner(callback)))
+		m.newAsync(name, sdkapi.CounterObserverInstrumentKind, number.Float64Kind, opts, sdkapi.AsyncSingleRunner(callback)))
 }
 
 // NewInt64UpDownCounterObserver creates a new integer UpDownCounterObserver instrument
@@ -196,8 +192,7 @@ func (m Meter) NewInt64UpDownCounterObserver(name string, callback Int64Observer
 		return wrapInt64UpDownCounterObserverInstrument(sdkapi.NewNoopAsyncInstrument(), nil)
 	}
 	return wrapInt64UpDownCounterObserverInstrument(
-		m.newAsync(name, sdkapi.UpDownCounterObserverInstrumentKind, number.Int64Kind, opts,
-			newInt64AsyncRunner(callback)))
+		m.newAsync(name, sdkapi.UpDownCounterObserverInstrumentKind, number.Int64Kind, opts, sdkapi.AsyncSingleRunner(callback)))
 }
 
 // NewFloat64UpDownCounterObserver creates a new floating point UpDownCounterObserver with
@@ -209,8 +204,7 @@ func (m Meter) NewFloat64UpDownCounterObserver(name string, callback Float64Obse
 		return wrapFloat64UpDownCounterObserverInstrument(sdkapi.NewNoopAsyncInstrument(), nil)
 	}
 	return wrapFloat64UpDownCounterObserverInstrument(
-		m.newAsync(name, sdkapi.UpDownCounterObserverInstrumentKind, number.Float64Kind, opts,
-			newFloat64AsyncRunner(callback)))
+		m.newAsync(name, sdkapi.UpDownCounterObserverInstrumentKind, number.Float64Kind, opts, sdkapi.AsyncSingleRunner(callback)))
 }
 
 // NewInt64GaugeObserver creates a new integer GaugeObserver instrument
