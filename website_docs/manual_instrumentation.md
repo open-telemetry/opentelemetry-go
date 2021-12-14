@@ -23,7 +23,7 @@ Once a span has completed, it is immutable and can no longer be modified.
 
 ### Get the current span
 
-To get the current span, you'll need to pull it out of the `Context` you have a handle on:
+To get the current span, you'll need to pull it out of a `context.Context` you have a handle on:
 
 ```go
 ctx := context.Background()
