@@ -68,50 +68,28 @@ func NewMetricKindMismatchError(desc sdkapi.Descriptor) error {
 		ErrMetricKindMismatch)
 }
 
-// Compatible determines whether two sdkapi.Descriptors are considered
-// the same for the purpose of uniqueness checking.
-func Compatible(candidate, existing sdkapi.Descriptor) bool {
-	return candidate.InstrumentKind() == existing.InstrumentKind() &&
-		candidate.NumberKind() == existing.NumberKind()
-}
-
-// checkUniqueness returns an ErrMetricKindMismatch error if there is
-// a conflict between a descriptor that was already registered and the
-// `descriptor` argument.  If there is an existing compatible
-// registration, this returns the already-registered instrument.  If
-// there is no conflict and no prior registration, returns (nil, nil).
-func (u *UniqueInstrumentMeterImpl) checkUniqueness(descriptor sdkapi.Descriptor) (sdkapi.InstrumentImpl, error) {
-	impl, ok := u.state[descriptor.Name()]
-	if !ok {
-		return nil, nil
-	}
-
-	if !Compatible(descriptor, impl.Descriptor()) {
-		return nil, NewMetricKindMismatchError(impl.Descriptor())
-	}
-
-	return impl, nil
-}
-
 // NewSyncInstrument implements sdkapi.MeterImpl.
 func (u *UniqueInstrumentMeterImpl) NewSyncInstrument(descriptor sdkapi.Descriptor) (sdkapi.SyncImpl, error) {
 	u.lock.Lock()
 	defer u.lock.Unlock()
 
-	impl, err := u.checkUniqueness(descriptor)
-
-	if err != nil {
-		return nil, err
-	} else if impl != nil {
-		return impl.(sdkapi.SyncImpl), nil
+	impl, ok := u.state[descriptor.Name()]
+	if !ok {
+		syncInst, err := u.impl.NewSyncInstrument(descriptor)
+		if err != nil {
+			return nil, err
+		}
+		u.state[descriptor.Name()] = syncInst
+		return syncInst, nil
 	}
 
-	syncInst, err := u.impl.NewSyncInstrument(descriptor)
-	if err != nil {
-		return nil, err
+	// Return an ErrMetricKindMismatch error if there is a conflict between
+	// a descriptor that was already registered and the `descriptor` argument
+	if !compatible(descriptor, impl.Descriptor()) {
+		return nil, NewMetricKindMismatchError(impl.Descriptor())
 	}
-	u.state[descriptor.Name()] = syncInst
-	return syncInst, nil
+
+	return impl.(sdkapi.SyncImpl), nil
 }
 
 // NewAsyncInstrument implements sdkapi.MeterImpl.
@@ -122,18 +100,28 @@ func (u *UniqueInstrumentMeterImpl) NewAsyncInstrument(
 	u.lock.Lock()
 	defer u.lock.Unlock()
 
-	impl, err := u.checkUniqueness(descriptor)
-
-	if err != nil {
-		return nil, err
-	} else if impl != nil {
-		return impl.(sdkapi.AsyncImpl), nil
+	impl, ok := u.state[descriptor.Name()]
+	if !ok {
+		asyncInst, err := u.impl.NewAsyncInstrument(descriptor, runner)
+		if err != nil {
+			return nil, err
+		}
+		u.state[descriptor.Name()] = asyncInst
+		return asyncInst, nil
 	}
 
-	asyncInst, err := u.impl.NewAsyncInstrument(descriptor, runner)
-	if err != nil {
-		return nil, err
+	// Return an ErrMetricKindMismatch error if there is a conflict between
+	// a descriptor that was already registered and the `descriptor` argument
+	if !compatible(descriptor, impl.Descriptor()) {
+		return nil, NewMetricKindMismatchError(impl.Descriptor())
 	}
-	u.state[descriptor.Name()] = asyncInst
-	return asyncInst, nil
+
+	return impl.(sdkapi.AsyncImpl), nil
+}
+
+// compatible determines whether two sdkapi.Descriptors are considered
+// the same for the purpose of uniqueness checking.
+func compatible(candidate, existing sdkapi.Descriptor) bool {
+	return candidate.InstrumentKind() == existing.InstrumentKind() &&
+		candidate.NumberKind() == existing.NumberKind()
 }
