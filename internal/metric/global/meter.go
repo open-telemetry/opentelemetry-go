@@ -64,8 +64,9 @@ type meterProvider struct {
 type meterImpl struct {
 	delegate unsafe.Pointer // (*metric.MeterImpl)
 
-	lock  sync.Mutex
-	insts []*instrument
+	lock      sync.Mutex
+	insts     []*instrument
+	callbacks []*callback
 }
 
 type meterEntry struct {
@@ -74,15 +75,22 @@ type meterEntry struct {
 }
 
 type instrument struct {
-	delegate unsafe.Pointer // (*sdkapi.AsyncImpl)
+	delegate unsafe.Pointer // (*sdkapi.Instrument)
 
 	descriptor sdkapi.Descriptor
 }
 
+type callback struct {
+	delegate unsafe.Pointer // (*sdkapi.Callback)
+
+	insts    []sdkapi.Instrument
+	function func(context.Context) error
+}
+
 var _ metric.MeterProvider = &meterProvider{}
 var _ sdkapi.MeterImpl = &meterImpl{}
-var _ sdkapi.InstrumentImpl = &syncImpl{}
-var _ sdkapi.AsyncImpl = &asyncImpl{}
+var _ sdkapi.Instrument = &instrument{}
+var _ sdkapi.Callback = &callback{}
 
 func (inst *instrument) Descriptor() sdkapi.Descriptor {
 	return inst.descriptor
@@ -149,40 +157,38 @@ func (m *meterImpl) setDelegate(key meterKey, provider metric.MeterProvider) {
 	).MeterImpl
 	m.delegate = unsafe.Pointer(d)
 
-	for _, inst := range m.syncInsts {
+	for _, inst := range m.insts {
 		inst.setDelegate(*d)
 	}
-	m.syncInsts = nil
-	for _, obs := range m.asyncInsts {
-		obs.setDelegate(*d)
+	m.insts = nil
+	for _, cb := range m.callbacks {
+		cb.setDelegate(*d)
 	}
-	m.asyncInsts = nil
+	m.callbacks = nil
 }
 
-func (m *meterImpl) NewSyncInstrument(desc sdkapi.Descriptor) (sdkapi.SyncImpl, error) {
+func (m *meterImpl) NewInstrument(desc sdkapi.Descriptor) (sdkapi.Instrument, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	if meterPtr := (*sdkapi.MeterImpl)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
-		return (*meterPtr).NewSyncInstrument(desc)
+		return (*meterPtr).NewInstrument(desc)
 	}
 
-	inst := &syncImpl{
-		instrument: instrument{
-			descriptor: desc,
-		},
+	inst := &instrument{
+		descriptor: desc,
 	}
-	m.syncInsts = append(m.syncInsts, inst)
+	m.insts = append(m.insts, inst)
 	return inst, nil
 }
 
 // Synchronous delegation
 
-func (inst *syncImpl) setDelegate(d sdkapi.MeterImpl) {
-	implPtr := new(sdkapi.SyncImpl)
+func (inst *instrument) setDelegate(d sdkapi.MeterImpl) {
+	implPtr := new(sdkapi.Instrument)
 
 	var err error
-	*implPtr, err = d.NewSyncInstrument(inst.descriptor)
+	*implPtr, err = d.NewInstrument(inst.descriptor)
 
 	if err != nil {
 		// TODO: There is no standard way to deliver this error to the user.
@@ -195,8 +201,8 @@ func (inst *syncImpl) setDelegate(d sdkapi.MeterImpl) {
 	atomic.StorePointer(&inst.delegate, unsafe.Pointer(implPtr))
 }
 
-func (inst *syncImpl) Implementation() interface{} {
-	if implPtr := (*sdkapi.SyncImpl)(atomic.LoadPointer(&inst.delegate)); implPtr != nil {
+func (inst *instrument) Implementation() interface{} {
+	if implPtr := (*sdkapi.Instrument)(atomic.LoadPointer(&inst.delegate)); implPtr != nil {
 		return (*implPtr).Implementation()
 	}
 	return inst
@@ -204,62 +210,46 @@ func (inst *syncImpl) Implementation() interface{} {
 
 // Async delegation
 
-func (m *meterImpl) NewAsyncInstrument(
-	desc sdkapi.Descriptor,
-	runner sdkapi.AsyncRunner,
-) (sdkapi.AsyncImpl, error) {
-
+func (m *meterImpl) NewCallback(insts []sdkapi.Instrument, f func(context.Context) error) (sdkapi.Callback, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	if meterPtr := (*sdkapi.MeterImpl)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
-		return (*meterPtr).NewAsyncInstrument(desc, runner)
+		return (*meterPtr).NewCallback(insts, f)
 	}
 
-	inst := &asyncImpl{
-		instrument: instrument{
-			descriptor: desc,
-		},
-		runner: runner,
+	cb := &callback{
+		insts:    insts,
+		function: f,
 	}
-	m.asyncInsts = append(m.asyncInsts, inst)
-	return inst, nil
+	m.callbacks = append(m.callbacks, cb)
+	return cb, nil
 }
 
-func (obs *asyncImpl) Implementation() interface{} {
-	if implPtr := (*sdkapi.AsyncImpl)(atomic.LoadPointer(&obs.delegate)); implPtr != nil {
-		return (*implPtr).Implementation()
+func (cb *callback) Instruments() []sdkapi.Instrument {
+	if implPtr := (*sdkapi.Callback)(atomic.LoadPointer(&cb.delegate)); implPtr != nil {
+		return (*implPtr).Instruments()
 	}
-	return obs
+	return cb.insts
 }
 
-func (obs *asyncImpl) setDelegate(d sdkapi.MeterImpl) {
-	implPtr := new(sdkapi.AsyncImpl)
+func (cb *callback) setDelegate(d sdkapi.MeterImpl) {
+	implPtr := new(sdkapi.Callback)
 
 	var err error
-	*implPtr, err = d.NewAsyncInstrument(obs.descriptor, obs.runner)
+	*implPtr, err = d.NewCallback(cb.insts, cb.function)
 
 	if err != nil {
-		// TODO: There is no standard way to deliver this error to the user.
-		// See https://github.com/open-telemetry/opentelemetry-go/issues/514
-		// Note that the default SDK will not generate any errors yet, this is
-		// only for added safety.
 		panic(err)
 	}
 
-	atomic.StorePointer(&obs.delegate, unsafe.Pointer(implPtr))
+	atomic.StorePointer(&cb.delegate, unsafe.Pointer(implPtr))
 }
 
 // Metric updates
 
-func (m *meterImpl) RecordBatch(ctx context.Context, labels []attribute.KeyValue, measurements ...sdkapi.Measurement) {
-	if delegatePtr := (*sdkapi.MeterImpl)(atomic.LoadPointer(&m.delegate)); delegatePtr != nil {
-		(*delegatePtr).RecordBatch(ctx, labels, measurements...)
-	}
-}
-
-func (inst *syncImpl) RecordOne(ctx context.Context, number number.Number, labels []attribute.KeyValue) {
-	if instPtr := (*sdkapi.SyncImpl)(atomic.LoadPointer(&inst.delegate)); instPtr != nil {
+func (inst *instrument) RecordOne(ctx context.Context, number number.Number, labels []attribute.KeyValue) {
+	if instPtr := (*sdkapi.Instrument)(atomic.LoadPointer(&inst.delegate)); instPtr != nil {
 		(*instPtr).RecordOne(ctx, number, labels)
 	}
 }
@@ -268,7 +258,7 @@ func AtomicFieldOffsets() map[string]uintptr {
 	return map[string]uintptr{
 		"meterProvider.delegate": unsafe.Offsetof(meterProvider{}.delegate),
 		"meterImpl.delegate":     unsafe.Offsetof(meterImpl{}.delegate),
-		"syncImpl.delegate":      unsafe.Offsetof(syncImpl{}.delegate),
-		"asyncImpl.delegate":     unsafe.Offsetof(asyncImpl{}.delegate),
+		"instrument.delegate":    unsafe.Offsetof(instrument{}.delegate),
+		"callback.delegate":      unsafe.Offsetof(instrument{}.delegate),
 	}
 }

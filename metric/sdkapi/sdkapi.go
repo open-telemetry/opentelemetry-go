@@ -24,14 +24,11 @@ import (
 // MeterImpl is the interface an SDK must implement to supply a Meter
 // implementation.
 type MeterImpl interface {
-	// RecordBatch atomically records a batch of measurements.
-	RecordBatch(ctx context.Context, labels []attribute.KeyValue, measurement ...Measurement)
-
 	// NewInstrument returns a newly constructed instrument
 	// implementation or an error, should one occur.
 	NewInstrument(descriptor Descriptor) (Instrument, error)
 
-	NewCallback(insts []Instrument, callback func(context.Context)) (Callback, error)
+	NewCallback(insts []Instrument, callback func(context.Context) error) (Callback, error)
 }
 
 type Callback interface {

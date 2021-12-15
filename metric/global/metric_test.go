@@ -12,28 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric
+package global
 
 import (
-	"os"
 	"testing"
 
-	ottest "go.opentelemetry.io/otel/internal/internaltest"
+	"go.opentelemetry.io/otel/metric"
 )
 
-// Ensure struct alignment prior to running tests.
-func TestMain(m *testing.M) {
-	offsets := AtomicFieldOffsets()
-	var r []ottest.FieldOffset
-	for name, offset := range offsets {
-		r = append(r, ottest.FieldOffset{
-			Name:   name,
-			Offset: offset,
-		})
-	}
-	if !ottest.Aligned8Byte(r, os.Stderr) {
-		os.Exit(1)
-	}
+type testMeterProvider struct{}
 
-	os.Exit(m.Run())
+var _ metric.MeterProvider = &testMeterProvider{}
+
+func (*testMeterProvider) Meter(_ string, _ ...metric.MeterOption) metric.Meter {
+	return metric.Meter{}
+}
+
+func TestMultipleGlobalMeterProvider(t *testing.T) {
+	p1 := testMeterProvider{}
+	p2 := metric.NewNoopMeterProvider()
+	SetMeterProvider(&p1)
+	SetMeterProvider(p2)
+
+	got := GetMeterProvider()
+	want := p2
+	if got != want {
+		t.Fatalf("MeterProvider: got %p, want %p\n", got, want)
+	}
 }

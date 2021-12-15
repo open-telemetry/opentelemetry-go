@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"sync"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 )
 
@@ -47,19 +46,8 @@ func NewUniqueInstrumentMeterImpl(impl sdkapi.MeterImpl) *UniqueInstrumentMeterI
 	}
 }
 
-// // MeterImpl gives the caller access to the underlying MeterImpl
-// // used by this UniqueInstrumentMeterImpl.
-// func (u *UniqueInstrumentMeterImpl) MeterImpl() sdkapi.MeterImpl {
-// 	return u.impl
-// }
-
-// RecordBatch implements sdkapi.MeterImpl.
-func (u *UniqueInstrumentMeterImpl) RecordBatch(ctx context.Context, labels []attribute.KeyValue, ms ...sdkapi.Measurement) {
-	u.impl.RecordBatch(ctx, labels, ms...)
-}
-
-func (u *UniqueInstrumentMeterImpl) NewCallback(insts []sdkapi.Instrument, callback func(context.Context)) (sdkapi.Callback, error) {
-	return u.impl.NewCallback(insts, callback)
+func (u *UniqueInstrumentMeterImpl) NewCallback(insts []sdkapi.Instrument, function func(context.Context) error) (sdkapi.Callback, error) {
+	return u.impl.NewCallback(insts, function)
 }
 
 // NewMetricKindMismatchError formats an error that describes a

@@ -3,6 +3,7 @@ module go.opentelemetry.io/otel/internal/metric
 go 1.16
 
 require (
+	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
 	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/otel v1.3.0
 	go.opentelemetry.io/otel/metric v0.26.0

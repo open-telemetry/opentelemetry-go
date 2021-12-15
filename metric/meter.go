@@ -15,9 +15,6 @@
 package metric
 
 import (
-	"context"
-
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/asyncfloat64"
 	"go.opentelemetry.io/otel/metric/asyncint64"
 	"go.opentelemetry.io/otel/metric/number"
@@ -71,15 +68,6 @@ func (m Meter) SyncFloat64() SyncFloat64Instruments {
 	return SyncFloat64Instruments{m.MeterImpl}
 }
 
-// Process processes a batch of measurements as a single logical
-// event.
-func (m Meter) Process(
-	ctx context.Context,
-	attrs []attribute.KeyValue,
-	batch ...sdkapi.Measurement) {
-	m.RecordBatch(ctx, attrs, batch...)
-}
-
 func (m AsyncFloat64Instruments) Counter(name string, opts ...InstrumentOption) (asyncfloat64.Counter, error) {
 	icfg := NewInstrumentConfig(opts...)
 	desc := sdkapi.NewDescriptor(
@@ -90,9 +78,7 @@ func (m AsyncFloat64Instruments) Counter(name string, opts ...InstrumentOption) 
 		icfg.Unit(),
 	)
 	inst, err := m.NewInstrument(desc)
-	return asyncfloat64.Counter{
-		Instrument: inst,
-	}, err
+	return asyncfloat64.Counter{Instrument: inst}, err
 }
 
 func (m AsyncFloat64Instruments) UpDownCounter(name string, opts ...InstrumentOption) (asyncfloat64.UpDownCounter, error) {
@@ -105,9 +91,7 @@ func (m AsyncFloat64Instruments) UpDownCounter(name string, opts ...InstrumentOp
 		icfg.Unit(),
 	)
 	inst, err := m.NewInstrument(desc)
-	return asyncfloat64.UpDownCounter{
-		Instrument: inst,
-	}, err
+	return asyncfloat64.UpDownCounter{Instrument: inst}, err
 }
 
 func (m AsyncFloat64Instruments) Gauge(name string, opts ...InstrumentOption) (asyncfloat64.Gauge, error) {
@@ -120,9 +104,7 @@ func (m AsyncFloat64Instruments) Gauge(name string, opts ...InstrumentOption) (a
 		icfg.Unit(),
 	)
 	inst, err := m.NewInstrument(desc)
-	return asyncfloat64.Gauge{
-		Instrument: inst,
-	}, err
+	return asyncfloat64.Gauge{Instrument: inst}, err
 }
 
 func (m AsyncInt64Instruments) Counter(name string, opts ...InstrumentOption) (asyncint64.Counter, error) {
@@ -135,9 +117,7 @@ func (m AsyncInt64Instruments) Counter(name string, opts ...InstrumentOption) (a
 		icfg.Unit(),
 	)
 	inst, err := m.NewInstrument(desc)
-	return asyncint64.Counter{
-		Instrument: inst,
-	}, err
+	return asyncint64.Counter{Instrument: inst}, err
 }
 
 func (m AsyncInt64Instruments) UpDownCounter(name string, opts ...InstrumentOption) (asyncint64.UpDownCounter, error) {
@@ -150,9 +130,7 @@ func (m AsyncInt64Instruments) UpDownCounter(name string, opts ...InstrumentOpti
 		icfg.Unit(),
 	)
 	inst, err := m.NewInstrument(desc)
-	return asyncint64.UpDownCounter{
-		Instrument: inst,
-	}, err
+	return asyncint64.UpDownCounter{Instrument: inst}, err
 }
 
 func (m AsyncInt64Instruments) Gauge(name string, opts ...InstrumentOption) (asyncint64.Gauge, error) {
@@ -165,9 +143,7 @@ func (m AsyncInt64Instruments) Gauge(name string, opts ...InstrumentOption) (asy
 		icfg.Unit(),
 	)
 	inst, err := m.NewInstrument(desc)
-	return asyncint64.Gauge{
-		Instrument: inst,
-	}, err
+	return asyncint64.Gauge{Instrument: inst}, err
 }
 
 func (m SyncFloat64Instruments) Counter(name string, opts ...InstrumentOption) (syncfloat64.Counter, error) {
@@ -180,9 +156,7 @@ func (m SyncFloat64Instruments) Counter(name string, opts ...InstrumentOption) (
 		icfg.Unit(),
 	)
 	inst, err := m.NewInstrument(desc)
-	return syncfloat64.Counter{
-		Instrument: inst,
-	}, err
+	return syncfloat64.Counter{Instrument: inst}, err
 }
 
 func (m SyncFloat64Instruments) UpDownCounter(name string, opts ...InstrumentOption) (syncfloat64.UpDownCounter, error) {
@@ -195,9 +169,7 @@ func (m SyncFloat64Instruments) UpDownCounter(name string, opts ...InstrumentOpt
 		icfg.Unit(),
 	)
 	inst, err := m.NewInstrument(desc)
-	return syncfloat64.UpDownCounter{
-		Instrument: inst,
-	}, err
+	return syncfloat64.UpDownCounter{Instrument: inst}, err
 }
 
 func (m SyncFloat64Instruments) Histogram(name string, opts ...InstrumentOption) (syncfloat64.Histogram, error) {
@@ -210,9 +182,7 @@ func (m SyncFloat64Instruments) Histogram(name string, opts ...InstrumentOption)
 		icfg.Unit(),
 	)
 	inst, err := m.NewInstrument(desc)
-	return syncfloat64.Histogram{
-		Instrument: inst,
-	}, err
+	return syncfloat64.Histogram{Instrument: inst}, err
 }
 
 func (m SyncInt64Instruments) Counter(name string, opts ...InstrumentOption) (syncint64.Counter, error) {
@@ -225,9 +195,7 @@ func (m SyncInt64Instruments) Counter(name string, opts ...InstrumentOption) (sy
 		icfg.Unit(),
 	)
 	inst, err := m.NewInstrument(desc)
-	return syncint64.Counter{
-		Instrument: inst,
-	}, err
+	return syncint64.Counter{Instrument: inst}, err
 }
 
 func (m SyncInt64Instruments) UpDownCounter(name string, opts ...InstrumentOption) (syncint64.UpDownCounter, error) {
@@ -240,9 +208,7 @@ func (m SyncInt64Instruments) UpDownCounter(name string, opts ...InstrumentOptio
 		icfg.Unit(),
 	)
 	inst, err := m.NewInstrument(desc)
-	return syncint64.UpDownCounter{
-		Instrument: inst,
-	}, err
+	return syncint64.UpDownCounter{Instrument: inst}, err
 }
 
 func (m SyncInt64Instruments) Histogram(name string, opts ...InstrumentOption) (syncint64.Histogram, error) {
@@ -255,7 +221,5 @@ func (m SyncInt64Instruments) Histogram(name string, opts ...InstrumentOption) (
 		icfg.Unit(),
 	)
 	inst, err := m.NewInstrument(desc)
-	return syncint64.Histogram{
-		Instrument: inst,
-	}, err
+	return syncint64.Histogram{Instrument: inst}, err
 }

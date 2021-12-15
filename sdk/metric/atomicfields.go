@@ -18,7 +18,8 @@ import "unsafe"
 
 func AtomicFieldOffsets() map[string]uintptr {
 	return map[string]uintptr{
-		"record.refMapped.value": unsafe.Offsetof(record{}.refMapped.value),
-		"record.updateCount":     unsafe.Offsetof(record{}.updateCount),
+		"group.refMapped.value": unsafe.Offsetof(group{}.refMapped.value),
+		"record.next":           unsafe.Offsetof(record{}.next),
+		"record.updateCount":    unsafe.Offsetof(record{}.updateCount),
 	}
 }
