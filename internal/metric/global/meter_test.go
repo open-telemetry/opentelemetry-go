@@ -137,6 +137,43 @@ func TestDirect(t *testing.T) {
 	)
 }
 
+func TestDifferentMeterSameName(t *testing.T) {
+	global.ResetForTest()
+	inst1, err1 := metricglobal.Meter("meter1").NewFloat64Counter("inst1")
+	require.NoError(t, err1)
+	inst2, err2 := metricglobal.Meter("meter2").NewFloat64Counter("inst1")
+	require.NoError(t, err2)
+
+	inst1.Add(context.Background(), 11)
+	inst2.Add(context.Background(), 13)
+
+	provider := metrictest.NewMeterProvider()
+	metricglobal.SetMeterProvider(provider)
+
+	inst1.Add(context.Background(), 21)
+	inst2.Add(context.Background(), 23)
+
+	measurements := metrictest.AsStructs(provider.MeasurementBatches)
+
+	require.EqualValues(t,
+		[]metrictest.Measured{
+			{
+				Name:    "inst1",
+				Library: metrictest.Library{InstrumentationName: "meter1"},
+				Labels:  metrictest.LabelsToMap(),
+				Number:  asFloat(21),
+			},
+			{
+				Name:    "inst1",
+				Library: metrictest.Library{InstrumentationName: "meter2"},
+				Labels:  metrictest.LabelsToMap(),
+				Number:  asFloat(23),
+			},
+		},
+		measurements,
+	)
+}
+
 type meterProviderWithConstructorError struct {
 	metric.MeterProvider
 }
@@ -185,11 +222,8 @@ func TestImplementationIndirection(t *testing.T) {
 	// Sync: no SDK yet
 	counter := Must(meter1).NewInt64Counter("interface.counter")
 
-	ival := counter.Measurement(1).SyncImpl().Implementation()
-	require.NotNil(t, ival)
-
-	_, ok := ival.(*metrictest.Sync)
-	require.False(t, ok)
+	ival := counter.SyncImpl().Implementation()
+	require.Nil(t, ival)
 
 	// Async: no SDK yet
 	gauge := Must(meter1).NewFloat64GaugeObserver(
@@ -198,10 +232,7 @@ func TestImplementationIndirection(t *testing.T) {
 	)
 
 	ival = gauge.AsyncImpl().Implementation()
-	require.NotNil(t, ival)
-
-	_, ok = ival.(*metrictest.Async)
-	require.False(t, ok)
+	require.Nil(t, ival)
 
 	// Register the SDK
 	provider := metrictest.NewMeterProvider()
@@ -210,10 +241,10 @@ func TestImplementationIndirection(t *testing.T) {
 	// Repeat the above tests
 
 	// Sync
-	ival = counter.Measurement(1).SyncImpl().Implementation()
+	ival = counter.SyncImpl().Implementation()
 	require.NotNil(t, ival)
 
-	_, ok = ival.(*metrictest.Sync)
+	_, ok := ival.(*metrictest.Sync)
 	require.True(t, ok)
 
 	// Async

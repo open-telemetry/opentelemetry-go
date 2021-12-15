@@ -24,52 +24,52 @@ import (
 	"go.opentelemetry.io/otel/internal/metric/registry"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/metrictest"
-	"go.opentelemetry.io/otel/metric/sdkapi"
 )
 
 type (
-	newFunc func(name, libraryName string) (sdkapi.InstrumentImpl, error)
+	newFunc func(name, libraryName string) (interface{}, error)
 )
 
 var (
 	allNew = map[string]newFunc{
-		"counter.int64": func(name, libraryName string) (sdkapi.InstrumentImpl, error) {
-			return unwrap(MeterProvider().Meter(libraryName).NewInt64Counter(name))
+		"counter.int64": func(name, libraryName string) (interface{}, error) {
+			return MeterProvider().Meter(libraryName).NewInt64Counter(name)
 		},
-		"counter.float64": func(name, libraryName string) (sdkapi.InstrumentImpl, error) {
-			return unwrap(MeterProvider().Meter(libraryName).NewFloat64Counter(name))
+		"counter.float64": func(name, libraryName string) (interface{}, error) {
+			return MeterProvider().Meter(libraryName).NewFloat64Counter(name)
 		},
-		"histogram.int64": func(name, libraryName string) (sdkapi.InstrumentImpl, error) {
-			return unwrap(MeterProvider().Meter(libraryName).NewInt64Histogram(name))
+		"up_down_counter.int64": func(name, libraryName string) (interface{}, error) {
+			return MeterProvider().Meter(libraryName).NewInt64UpDownCounter(name)
 		},
-		"histogram.float64": func(name, libraryName string) (sdkapi.InstrumentImpl, error) {
-			return unwrap(MeterProvider().Meter(libraryName).NewFloat64Histogram(name))
+		"up_down_counter.float64": func(name, libraryName string) (interface{}, error) {
+			return MeterProvider().Meter(libraryName).NewFloat64UpDownCounter(name)
 		},
-		"gauge.int64": func(name, libraryName string) (sdkapi.InstrumentImpl, error) {
-			return unwrap(MeterProvider().Meter(libraryName).NewInt64GaugeObserver(name, func(context.Context, metric.Int64ObserverResult) {}))
+		"histogram.int64": func(name, libraryName string) (interface{}, error) {
+			return MeterProvider().Meter(libraryName).NewInt64Histogram(name)
 		},
-		"gauge.float64": func(name, libraryName string) (sdkapi.InstrumentImpl, error) {
-			return unwrap(MeterProvider().Meter(libraryName).NewFloat64GaugeObserver(name, func(context.Context, metric.Float64ObserverResult) {}))
+		"histogram.float64": func(name, libraryName string) (interface{}, error) {
+			return MeterProvider().Meter(libraryName).NewFloat64Histogram(name)
+		},
+		"gauge_observer.int64": func(name, libraryName string) (interface{}, error) {
+			return MeterProvider().Meter(libraryName).NewInt64GaugeObserver(name, func(context.Context, metric.Int64ObserverResult) {})
+		},
+		"gauge_observer.float64": func(name, libraryName string) (interface{}, error) {
+			return MeterProvider().Meter(libraryName).NewFloat64GaugeObserver(name, func(context.Context, metric.Float64ObserverResult) {})
+		},
+		"counter_observer.int64": func(name, libraryName string) (interface{}, error) {
+			return MeterProvider().Meter(libraryName).NewInt64CounterObserver(name, func(context.Context, metric.Int64ObserverResult) {})
+		},
+		"counter_observer.float64": func(name, libraryName string) (interface{}, error) {
+			return MeterProvider().Meter(libraryName).NewFloat64CounterObserver(name, func(context.Context, metric.Float64ObserverResult) {})
+		},
+		"up_down_counter_observer.int64": func(name, libraryName string) (interface{}, error) {
+			return MeterProvider().Meter(libraryName).NewInt64UpDownCounterObserver(name, func(context.Context, metric.Int64ObserverResult) {})
+		},
+		"up_down_counter_observer.float64": func(name, libraryName string) (interface{}, error) {
+			return MeterProvider().Meter(libraryName).NewFloat64UpDownCounterObserver(name, func(context.Context, metric.Float64ObserverResult) {})
 		},
 	}
 )
-
-func unwrap(impl interface{}, err error) (sdkapi.InstrumentImpl, error) {
-	if impl == nil {
-		return nil, err
-	}
-	if s, ok := impl.(interface {
-		SyncImpl() sdkapi.SyncImpl
-	}); ok {
-		return s.SyncImpl(), err
-	}
-	if a, ok := impl.(interface {
-		AsyncImpl() sdkapi.AsyncImpl
-	}); ok {
-		return a.AsyncImpl(), err
-	}
-	return nil, err
-}
 
 func TestRegistrySameInstruments(t *testing.T) {
 	for _, nf := range allNew {
@@ -87,28 +87,6 @@ func TestRegistrySameInstruments(t *testing.T) {
 	}
 }
 
-func TestRegistryDifferentNamespace(t *testing.T) {
-	for _, nf := range allNew {
-		ResetForTest()
-		inst1, err1 := nf("this", "meter1")
-		inst2, err2 := nf("this", "meter2")
-
-		require.NoError(t, err1)
-		require.NoError(t, err2)
-
-		if inst1.Descriptor().InstrumentKind().Synchronous() {
-			// They're equal because of a `nil` pointer at this point.
-			// (Only for synchronous instruments, which lack callacks.)
-			require.EqualValues(t, inst1, inst2)
-		}
-
-		SetMeterProvider(metrictest.NewMeterProvider())
-
-		// They're different after the deferred setup.
-		require.NotEqual(t, inst1, inst2)
-	}
-}
-
 func TestRegistryDiffInstruments(t *testing.T) {
 	for origName, origf := range allNew {
 		ResetForTest()
@@ -123,7 +101,7 @@ func TestRegistryDiffInstruments(t *testing.T) {
 
 			other, err := nf("this", "super")
 			require.Error(t, err)
-			require.NotNil(t, other)
+			require.Nil(t, other)
 			require.True(t, errors.Is(err, registry.ErrMetricKindMismatch))
 			require.Contains(t, err.Error(), "by this name with another kind or number type")
 		}
