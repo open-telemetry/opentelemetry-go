@@ -25,12 +25,12 @@ type InstrumentConfig struct {
 }
 
 // Description describes the instrument in human-readable terms.
-func (cfg InstrumentConfig) Description() string {
+func (cfg *InstrumentConfig) Description() string {
 	return cfg.description
 }
 
 // Unit describes the measurement unit for a instrument.
-func (cfg InstrumentConfig) Unit() unit.Unit {
+func (cfg *InstrumentConfig) Unit() unit.Unit {
 	return cfg.unit
 }
 
@@ -78,12 +78,12 @@ type MeterConfig struct {
 }
 
 // InstrumentationVersion is the version of the library providing instrumentation.
-func (cfg MeterConfig) InstrumentationVersion() string {
+func (cfg *MeterConfig) InstrumentationVersion() string {
 	return cfg.instrumentationVersion
 }
 
 // SchemaURL is the schema_url of the library providing instrumentation.
-func (cfg MeterConfig) SchemaURL() string {
+func (cfg *MeterConfig) SchemaURL() string {
 	return cfg.schemaURL
 }
 
