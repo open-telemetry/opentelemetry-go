@@ -16,6 +16,7 @@ package simple // import "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 
 import (
 	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
@@ -50,21 +51,21 @@ func NewWithHistogramDistribution(options ...histogram.Option) export.Aggregator
 	return selectorHistogram{options: options}
 }
 
-func sumAggs(aggPtrs []*export.Aggregator) {
+func sumAggs(aggPtrs []*aggregator.Aggregator) {
 	aggs := sum.New(len(aggPtrs))
 	for i := range aggPtrs {
 		*aggPtrs[i] = &aggs[i]
 	}
 }
 
-func lastValueAggs(aggPtrs []*export.Aggregator) {
+func lastValueAggs(aggPtrs []*aggregator.Aggregator) {
 	aggs := lastvalue.New(len(aggPtrs))
 	for i := range aggPtrs {
 		*aggPtrs[i] = &aggs[i]
 	}
 }
 
-func (selectorInexpensive) AggregatorFor(descriptor *sdkapi.Descriptor, aggPtrs ...*export.Aggregator) {
+func (selectorInexpensive) AggregatorFor(descriptor *sdkapi.Descriptor, aggPtrs ...*aggregator.Aggregator) {
 	switch descriptor.InstrumentKind() {
 	case sdkapi.GaugeObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
@@ -78,7 +79,7 @@ func (selectorInexpensive) AggregatorFor(descriptor *sdkapi.Descriptor, aggPtrs 
 	}
 }
 
-func (s selectorHistogram) AggregatorFor(descriptor *sdkapi.Descriptor, aggPtrs ...*export.Aggregator) {
+func (s selectorHistogram) AggregatorFor(descriptor *sdkapi.Descriptor, aggPtrs ...*aggregator.Aggregator) {
 	switch descriptor.InstrumentKind() {
 	case sdkapi.GaugeObserverInstrumentKind:
 		lastValueAggs(aggPtrs)

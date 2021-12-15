@@ -33,6 +33,7 @@ import (
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/metric/export"
@@ -682,7 +683,7 @@ func runMetricExportTests(t *testing.T, opts []otlpmetric.Option, res *resource.
 		desc := metrictest.NewDescriptor(r.name, r.iKind, r.nKind)
 		labs := attribute.NewSet(lcopy...)
 
-		var agg, ckpt export.Aggregator
+		var agg, ckpt aggregator.Aggregator
 		if r.iKind.Adding() {
 			sums := sum.New(2)
 			agg, ckpt = &sums[0], &sums[1]
