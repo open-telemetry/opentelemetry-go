@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sdkapi // import "go.opentelemetry.io/otel/sdk/metric/internal/sdkapi"
+package sdkapi
 
 import (
+	"go.opentelemetry.io/otel/metric/sdkapi/number"
 	"go.opentelemetry.io/otel/metric/unit"
-	"go.opentelemetry.io/otel/sdk/metric/internal/number"
 )
 
 // Descriptor contains all the settings that describe an instrument,

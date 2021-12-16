@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package number // import "go.opentelemetry.io/otel/metric/number"
+package number
 
 //go:generate stringer -type=Kind
 
@@ -38,9 +38,9 @@ const (
 func (k Kind) Zero() Number {
 	switch k {
 	case Int64Kind:
-		return NewInt64Number(0)
+		return NewInt64(0)
 	case Float64Kind:
-		return NewFloat64Number(0.)
+		return NewFloat64(0.)
 	default:
 		return Number(0)
 	}
@@ -51,9 +51,9 @@ func (k Kind) Zero() Number {
 func (k Kind) Minimum() Number {
 	switch k {
 	case Int64Kind:
-		return NewInt64Number(math.MinInt64)
+		return NewInt64(math.MinInt64)
 	case Float64Kind:
-		return NewFloat64Number(-1. * math.MaxFloat64)
+		return NewFloat64(-1. * math.MaxFloat64)
 	default:
 		return Number(0)
 	}
@@ -64,9 +64,9 @@ func (k Kind) Minimum() Number {
 func (k Kind) Maximum() Number {
 	switch k {
 	case Int64Kind:
-		return NewInt64Number(math.MaxInt64)
+		return NewInt64(math.MaxInt64)
 	case Float64Kind:
-		return NewFloat64Number(math.MaxFloat64)
+		return NewFloat64(math.MaxFloat64)
 	default:
 		return Number(0)
 	}
@@ -79,29 +79,29 @@ type Number uint64
 
 // - constructors
 
-// NewNumberFromRaw creates a new Number from a raw value.
-func NewNumberFromRaw(r uint64) Number {
+// NewFromRaw creates a new Number from a raw value.
+func NewFromRaw(r uint64) Number {
 	return Number(r)
 }
 
-// NewInt64Number creates an integral Number.
-func NewInt64Number(i int64) Number {
-	return NewNumberFromRaw(internal.Int64ToRaw(i))
+// NewInt64 creates an integral Number.
+func NewInt64(i int64) Number {
+	return NewFromRaw(internal.Int64ToRaw(i))
 }
 
-// NewFloat64Number creates a floating point Number.
-func NewFloat64Number(f float64) Number {
-	return NewNumberFromRaw(internal.Float64ToRaw(f))
+// NewFloat64 creates a floating point Number.
+func NewFloat64(f float64) Number {
+	return NewFromRaw(internal.Float64ToRaw(f))
 }
 
-// NewNumberSignChange returns a number with the same magnitude and
+// NewSignChange returns a number with the same magnitude and
 // the opposite sign.  `kind` must describe the kind of number in `nn`.
-func NewNumberSignChange(kind Kind, nn Number) Number {
+func NewSignChange(kind Kind, nn Number) Number {
 	switch kind {
 	case Int64Kind:
-		return NewInt64Number(-nn.AsInt64())
+		return NewInt64(-nn.AsInt64())
 	case Float64Kind:
-		return NewFloat64Number(-nn.AsFloat64())
+		return NewFloat64(-nn.AsFloat64())
 	}
 	return nn
 }
@@ -135,7 +135,7 @@ func (n *Number) AsFloat64() float64 {
 
 // AsNumberAtomic gets the Number atomically.
 func (n *Number) AsNumberAtomic() Number {
-	return NewNumberFromRaw(n.AsRawAtomic())
+	return NewFromRaw(n.AsRawAtomic())
 }
 
 // AsRawAtomic gets the uninterpreted raw value atomically. Might be
@@ -261,10 +261,10 @@ func (n *Number) SetFloat64Atomic(f float64) {
 
 // - swap
 
-// SwapNumber sets the number to the passed number and returns the old
+// Swap sets the number to the passed number and returns the old
 // number. Both this number and the passed number should be of the
 // same kind.
-func (n *Number) SwapNumber(nn Number) Number {
+func (n *Number) Swap(nn Number) Number {
 	old := *n
 	n.SetNumber(nn)
 	return old
@@ -300,8 +300,8 @@ func (n *Number) SwapFloat64(f float64) float64 {
 // SwapNumberAtomic sets the number to the passed number and returns
 // the old number atomically. Both this number and the passed number
 // should be of the same kind.
-func (n *Number) SwapNumberAtomic(nn Number) Number {
-	return NewNumberFromRaw(atomic.SwapUint64(n.AsRawPtr(), nn.AsRaw()))
+func (n *Number) SwapAtomic(nn Number) Number {
+	return NewFromRaw(atomic.SwapUint64(n.AsRawPtr(), nn.AsRaw()))
 }
 
 // SwapRawAtomic sets the number to the passed raw value and returns
@@ -326,9 +326,9 @@ func (n *Number) SwapFloat64Atomic(f float64) float64 {
 
 // - add
 
-// AddNumber assumes that this and the passed number are of the passed
+// Add assumes that this and the passed number are of the passed
 // kind and adds the passed number to this number.
-func (n *Number) AddNumber(kind Kind, nn Number) {
+func (n *Number) Add(kind Kind, nn Number) {
 	switch kind {
 	case Int64Kind:
 		n.AddInt64(nn.AsInt64())
@@ -340,7 +340,7 @@ func (n *Number) AddNumber(kind Kind, nn Number) {
 // AddRaw assumes that this number and the passed raw value are of the
 // passed kind and adds the passed raw value to this number.
 func (n *Number) AddRaw(kind Kind, r uint64) {
-	n.AddNumber(kind, NewNumberFromRaw(r))
+	n.Add(kind, NewFromRaw(r))
 }
 
 // AddInt64 assumes that the number contains an int64 and adds the
@@ -372,7 +372,7 @@ func (n *Number) AddNumberAtomic(kind Kind, nn Number) {
 // of the passed kind and adds the passed raw value to this number
 // atomically.
 func (n *Number) AddRawAtomic(kind Kind, r uint64) {
-	n.AddNumberAtomic(kind, NewNumberFromRaw(r))
+	n.AddNumberAtomic(kind, NewFromRaw(r))
 }
 
 // AddInt64Atomic assumes that the number contains an int64 and adds
@@ -422,12 +422,12 @@ func (n *Number) CompareAndSwapFloat64(of, nf float64) bool {
 
 // - compare
 
-// CompareNumber compares two Numbers given their kind.  Both numbers
+// Compare compares two Numbers given their kind.  Both numbers
 // should have the same kind.  This returns:
 //    0 if the numbers are equal
 //    -1 if the subject `n` is less than the argument `nn`
 //    +1 if the subject `n` is greater than the argument `nn`
-func (n *Number) CompareNumber(kind Kind, nn Number) int {
+func (n *Number) Compare(kind Kind, nn Number) int {
 	switch kind {
 	case Int64Kind:
 		return n.CompareInt64(nn.AsInt64())
@@ -442,7 +442,7 @@ func (n *Number) CompareNumber(kind Kind, nn Number) int {
 // CompareRaw compares two numbers, where one is input as a raw
 // uint64, interpreting both values as a `kind` of number.
 func (n *Number) CompareRaw(kind Kind, r uint64) int {
-	return n.CompareNumber(kind, NewNumberFromRaw(r))
+	return n.Compare(kind, NewFromRaw(r))
 }
 
 // CompareInt64 assumes that the Number contains an int64 and performs

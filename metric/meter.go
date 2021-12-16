@@ -17,6 +17,7 @@ package metric
 import (
 	"go.opentelemetry.io/otel/metric/asyncfloat64"
 	"go.opentelemetry.io/otel/metric/asyncint64"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/metric/syncfloat64"
 	"go.opentelemetry.io/otel/metric/syncint64"
 )
@@ -30,14 +31,32 @@ type MeterProvider interface {
 // Meter is an instance of an OpenTelemetry metrics interface for an
 // individual named library of code.  This is the top-level entry
 // point for creating instruments.
-type Meter interface {
-	AsyncInt64() AsyncInt64Instruments
-	AsyncFloat64() AsyncFloat64Instruments
-	SyncInt64() SyncInt64Instruments
-	SyncFloat64() SyncFloat64Instruments
+type Meter struct {
+	sdkapi.MeterImpl
 }
 
-type AsyncFloat64Instruments interface {
+type syncInts Meter
+type syncFloats Meter
+type asyncInts Meter
+type asyncFloats Meter
+
+func (m Meter) AsyncInt64() AsyncInt64Instruments {
+	return asyncInts(m)
+}
+
+func (m Meter) AsyncFloat64() AsyncFloat64Instruments {
+	return asyncFloats(m)
+}
+
+func (m Meter) SyncInt64() SyncInt64Instruments {
+	return syncInts(m)
+}
+
+func (m Meter) SyncFloat64() SyncFloat64Instruments {
+	return syncFloats(m)
+}
+
+
 	Counter(name string, opts ...InstrumentOption) (asyncfloat64.Counter, error)
 	UpDownCounter(name string, opts ...InstrumentOption) (asyncfloat64.UpDownCounter, error)
 	Gauge(name string, opts ...InstrumentOption) (asyncfloat64.Gauge, error)
