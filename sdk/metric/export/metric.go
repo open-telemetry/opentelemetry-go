@@ -16,7 +16,6 @@ package export // import "go.opentelemetry.io/otel/sdk/metric/export"
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -45,25 +44,6 @@ import (
 // checkpointed, allowing the processor to build the set of metrics
 // currently being exported.
 type Processor interface {
-	// AggregatorSelector is responsible for selecting the
-	// concrete type of Aggregator used for a metric in the SDK.
-	//
-	// This may be a static decision based on fields of the
-	// Descriptor, or it could use an external configuration
-	// source to customize the treatment of each metric
-	// instrument.
-	//
-	// The result from AggregatorSelector.AggregatorFor should be
-	// the same type for a given Descriptor or else nil.  The same
-	// type should be returned for a given descriptor, because
-	// Aggregators only know how to Merge with their own type.  If
-	// the result is nil, the metric instrument will be disabled.
-	//
-	// Note that the SDK only calls AggregatorFor when new records
-	// require an Aggregator. This does not provide a way to
-	// disable metrics with active records.
-	AggregatorSelector
-
 	// Process is called by the SDK once per internal record,
 	// passing the export Accumulation (a Descriptor, the corresponding
 	// Labels, and the checkpointed Aggregator). This call has no
@@ -74,60 +54,16 @@ type Processor interface {
 	Process(accum Accumulation) error
 }
 
-// AggregatorSelector supports selecting the kind of Aggregator to
+// CollectorSelector supports selecting the kind of Collector to
 // use at runtime for a specific metric instrument.
-type AggregatorSelector interface {
-	// AggregatorFor allocates a variable number of aggregators of
-	// a kind suitable for the requested export.  This method
-	// initializes a `...*Aggregator`, to support making a single
-	// allocation.
-	//
-	// When the call returns without initializing the *Aggregator
-	// to a non-nil value, the metric instrument is explicitly
-	// disabled.
-	//
-	// This must return a consistent type to avoid confusion in
-	// later stages of the metrics export process, i.e., when
-	// Merging or Checkpointing aggregators for a specific
-	// instrument.
-	//
-	// Note: This is context-free because the aggregator should
-	// not relate to the incoming context.  This call should not
-	// block.
-	AggregatorFor(descriptor *sdkapi.Descriptor, aggregator ...*Aggregator)
+type CollectorSelector interface {
+	CollectorFor(descriptor *sdkapi.Descriptor) Collector
 }
 
-// Checkpointer is the interface used by a Controller to coordinate
-// the Processor with Accumulator(s) and Exporter(s).  The
-// StartCollection() and FinishCollection() methods start and finish a
-// collection interval.  Controllers call the Accumulator(s) during
-// collection to process Accumulations.
-type Checkpointer interface {
-	// Processor processes metric data for export.  The Process
-	// method is bracketed by StartCollection and FinishCollection
-	// calls.  The embedded AggregatorSelector can be called at
-	// any time.
-	Processor
+type Collector interface {
+	Update(ctx context.Context, number number.Number, descriptor *sdkapi.Descriptor) error
 
-	// Reader returns the current data set.  This may be
-	// called before and after collection.  The
-	// implementation is required to return the same value
-	// throughout its lifetime, since Reader exposes a
-	// sync.Locker interface.  The caller is responsible for
-	// locking the Reader before initiating collection.
-	Reader() Reader
-
-	// StartCollection begins a collection interval.
-	StartCollection()
-
-	// FinishCollection ends a collection interval.
-	FinishCollection() error
-}
-
-// CheckpointerFactory is an interface for producing configured
-// Checkpointer instances.
-type CheckpointerFactory interface {
-	NewCheckpointer() Checkpointer
+	Send() error
 }
 
 // Aggregator implements a specific aggregation behavior, e.g., a
@@ -205,11 +141,6 @@ type Exporter interface {
 	// The InstrumentationLibraryReader interface refers to the
 	// Processor that just completed collection.
 	Export(ctx context.Context, resource *resource.Resource, reader InstrumentationLibraryReader) error
-
-	// TemporalitySelector is an interface used by the Processor
-	// in deciding whether to compute Delta or Cumulative
-	// Aggregations when passing Records to this Exporter.
-	aggregation.TemporalitySelector
 }
 
 // InstrumentationLibraryReader is an interface for exporters to iterate
@@ -239,20 +170,7 @@ type Reader interface {
 	// expected from the Meter implementation. Any other kind
 	// of error will immediately halt ForEach and return
 	// the error to the caller.
-	ForEach(tempSelector aggregation.TemporalitySelector, recordFunc func(Record) error) error
-
-	// Locker supports locking the checkpoint set.  Collection
-	// into the checkpoint set cannot take place (in case of a
-	// stateful processor) while it is locked.
-	//
-	// The Processor attached to the Accumulator MUST be called
-	// with the lock held.
-	sync.Locker
-
-	// RLock acquires a read lock corresponding to this Locker.
-	RLock()
-	// RUnlock releases a read lock corresponding to this Locker.
-	RUnlock()
+	ForEach(recordFunc func(Record) error) error
 }
 
 // Metadata contains the common elements for exported metric data that
@@ -260,7 +178,7 @@ type Reader interface {
 // steps.
 type Metadata struct {
 	descriptor *sdkapi.Descriptor
-	labels     *attribute.Set
+	attributes attribute.Attributes
 }
 
 // Accumulation contains the exported data for a single metric instrument
@@ -285,21 +203,21 @@ func (m Metadata) Descriptor() *sdkapi.Descriptor {
 	return m.descriptor
 }
 
-// Labels describes the labels associated with the instrument and the
-// aggregated data.
-func (m Metadata) Labels() *attribute.Set {
-	return m.labels
+// Attributes describes the attribtes associated with the instrument
+// and the aggregated data.
+func (m Metadata) Attributes() attribute.Attributes {
+	return m.attributes
 }
 
 // NewAccumulation allows Accumulator implementations to construct new
 // Accumulations to send to Processors. The Descriptor, Labels,
 // and Aggregator represent aggregate metric events received over a single
 // collection period.
-func NewAccumulation(descriptor *sdkapi.Descriptor, labels *attribute.Set, aggregator Aggregator) Accumulation {
+func NewAccumulation(descriptor *sdkapi.Descriptor, attrs attribute.Attributes, aggregator Aggregator) Accumulation {
 	return Accumulation{
 		Metadata: Metadata{
 			descriptor: descriptor,
-			labels:     labels,
+			attributes: attrs,
 		},
 		aggregator: aggregator,
 	}
@@ -314,11 +232,11 @@ func (r Accumulation) Aggregator() Aggregator {
 // NewRecord allows Processor implementations to construct export
 // records.  The Descriptor, Labels, and Aggregator represent
 // aggregate metric events received over a single collection period.
-func NewRecord(descriptor *sdkapi.Descriptor, labels *attribute.Set, aggregation aggregation.Aggregation, start, end time.Time) Record {
+func NewRecord(descriptor *sdkapi.Descriptor, attrs attribute.Attributes, aggregation aggregation.Aggregation, start, end time.Time) Record {
 	return Record{
 		Metadata: Metadata{
 			descriptor: descriptor,
-			labels:     labels,
+			attributes: attrs,
 		},
 		aggregation: aggregation,
 		start:       start,

@@ -47,34 +47,5 @@ type Instrument interface {
 	Descriptor() Descriptor
 
 	// RecordOne captures a single metric event.
-	RecordOne(ctx context.Context, number number.Number, labels []attribute.KeyValue)
-}
-
-// NewMeasurement constructs a single observation, a binding between
-// an asynchronous instrument and a number.
-func NewMeasurement(instrument Instrument, number number.Number) Measurement {
-	return Measurement{
-		instrument: instrument,
-		number:     number,
-	}
-}
-
-// Measurement is a low-level type used with synchronous instruments
-// as a direct interface to the SDK via `RecordBatch`.
-type Measurement struct {
-	// number needs to be aligned for 64-bit atomic operations.
-	number     number.Number
-	instrument Instrument
-}
-
-// SyncImpl returns the instrument that created this measurement.
-// This returns an implementation-level object for use by the SDK,
-// users should not refer to this.
-func (m Measurement) Impl() Instrument {
-	return m.instrument
-}
-
-// Number returns a number recorded in this measurement.
-func (m Measurement) Number() number.Number {
-	return m.number
+	RecordOne(ctx context.Context, number number.Number, attrs attribute.Attributes)
 }

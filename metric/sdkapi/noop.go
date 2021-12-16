@@ -39,5 +39,5 @@ func (noopInstrument) Descriptor() Descriptor {
 	return Descriptor{}
 }
 
-func (noopInstrument) RecordOne(context.Context, number.Number, []attribute.KeyValue) {
+func (noopInstrument) RecordOne(context.Context, number.Number, attribute.Attributes) {
 }

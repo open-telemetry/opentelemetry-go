@@ -248,9 +248,9 @@ func (cb *callback) setDelegate(d sdkapi.MeterImpl) {
 
 // Metric updates
 
-func (inst *instrument) RecordOne(ctx context.Context, number number.Number, labels []attribute.KeyValue) {
+func (inst *instrument) RecordOne(ctx context.Context, number number.Number, attrs attribute.Attributes) {
 	if instPtr := (*sdkapi.Instrument)(atomic.LoadPointer(&inst.delegate)); instPtr != nil {
-		(*instPtr).RecordOne(ctx, number, labels)
+		(*instPtr).RecordOne(ctx, number, attrs)
 	}
 }
 

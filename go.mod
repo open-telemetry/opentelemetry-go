@@ -3,6 +3,7 @@ module go.opentelemetry.io/otel
 go 1.16
 
 require (
+	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13
 	github.com/go-logr/logr v1.2.1
 	github.com/go-logr/stdr v1.2.0
 	github.com/google/go-cmp v0.5.6

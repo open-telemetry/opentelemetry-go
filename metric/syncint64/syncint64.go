@@ -21,25 +21,13 @@ type Histogram struct {
 }
 
 func (c Counter) Add(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
-	c.RecordOne(ctx, number.NewInt64Number(x), attrs)
+	c.RecordOne(ctx, number.NewInt64Number(x), attribute.Fingerprint(attrs...))
 }
 
 func (u UpDownCounter) Add(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
-	u.RecordOne(ctx, number.NewInt64Number(x), attrs)
+	u.RecordOne(ctx, number.NewInt64Number(x), attribute.Fingerprint(attrs...))
 }
 
 func (h Histogram) Record(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
-	h.RecordOne(ctx, number.NewInt64Number(x), attrs)
-}
-
-func (c Counter) Measure(x int64) sdkapi.Measurement {
-	return sdkapi.NewMeasurement(c.Instrument, number.NewInt64Number(x))
-}
-
-func (u UpDownCounter) Measure(x int64) sdkapi.Measurement {
-	return sdkapi.NewMeasurement(u.Instrument, number.NewInt64Number(x))
-}
-
-func (h Histogram) Measure(x int64) sdkapi.Measurement {
-	return sdkapi.NewMeasurement(h.Instrument, number.NewInt64Number(x))
+	h.RecordOne(ctx, number.NewInt64Number(x), attribute.Fingerprint(attrs...))
 }

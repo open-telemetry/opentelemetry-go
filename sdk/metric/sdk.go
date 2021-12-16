@@ -35,12 +35,9 @@ type (
 		instrumentsLock sync.Mutex
 		instruments     []*instrument
 
-		callbacksLock sync.Mutex
-		callbacks     []*callback
-
 		// collectLock prevents simultaneous calls to Collect().
-		collectLock sync.Mutex
-		aggSelector export.AggregatorSelector
+		collectLock       sync.Mutex
+		collectorSelector export.CollectorSelector
 	}
 
 	instrument struct {
@@ -51,7 +48,7 @@ type (
 
 	group struct {
 		refMapped   refcountMapped
-		fingerprint interface{} // attribute.Fingerprint, current key
+		fingerprint uint64
 		instrument  *instrument
 		first       record
 	}
@@ -66,18 +63,12 @@ type (
 
 		group      *group
 		attributes []attribute.KeyValue
-		live       export.Aggregator
-		snapshot   export.Aggregator
+		collector  export.Collector
 		next       unsafe.Pointer
-	}
-
-	callback struct {
-		function func(context.Context) error
 	}
 )
 
 var (
-	_ sdkapi.MeterImpl  = &Accumulator{}
 	_ sdkapi.Instrument = &instrument{}
 
 	// ErrUninitializedInstrument is returned when an instrument is used when uninitialized.
@@ -158,7 +149,13 @@ func attributesAreEqual(a, b []attribute.KeyValue) bool {
 	return true
 }
 
-func (inst *instrument) findOrCreate(grp *group, kvs []attribute.KeyValue) *record {
+func (accum *Accumulator) initRecord(inst *instrument, grp *group, rec *record, attrs attribute.Attributes) {
+	rec.group = grp
+	rec.attributes = attrs.KeyValues
+	rec.collector = accum.collectorSelector.CollectorFor(&inst.descriptor)
+}
+
+func (inst *instrument) findOrCreate(grp *group, attrs attribute.Attributes) *record {
 	var newRec *record
 
 	for {
@@ -168,7 +165,7 @@ func (inst *instrument) findOrCreate(grp *group, kvs []attribute.KeyValue) *reco
 			// TODO: Fast path: disregard the following and return the
 			// first match, HERE.
 
-			if attributesAreEqual(kvs, rec.attributes) {
+			if attributesAreEqual(attrs.KeyValues, rec.attributes) {
 				return rec
 			}
 			last = rec
@@ -176,12 +173,7 @@ func (inst *instrument) findOrCreate(grp *group, kvs []attribute.KeyValue) *reco
 
 		if newRec == nil {
 			newRec = &record{}
-			newRec.group = grp
-			newRec.attributes = kvs
-
-			inst.accum.aggSelector.AggregatorFor(
-				&inst.descriptor, &newRec.live, &newRec.snapshot,
-			)
+			inst.accum.initRecord(inst, grp, newRec, attrs)
 		}
 
 		if !atomic.CompareAndSwapPointer(&last.next, nil, unsafe.Pointer(newRec)) {
@@ -197,7 +189,8 @@ func (inst *instrument) findOrCreate(grp *group, kvs []attribute.KeyValue) *reco
 // support re-use of the orderedLabels computed by a previous
 // measurement in the same batch.   This performs two allocations
 // in the common case.
-func (inst *instrument) acquireHandle(mk interface{}, kvs []attribute.KeyValue) *record {
+func (inst *instrument) acquireHandle(attrs attribute.Attributes) *record {
+	var mk interface{} = attrs.Fingerprint
 	if lookup, ok := inst.current.Load(mk); ok {
 		// Existing record case.
 		grp := lookup.(*group)
@@ -205,21 +198,23 @@ func (inst *instrument) acquireHandle(mk interface{}, kvs []attribute.KeyValue) 
 		if grp.refMapped.ref() {
 			// At this moment it is guaranteed that the
 			// group is in the map and will not be removed.
-			return inst.findOrCreate(grp, kvs)
+			return inst.findOrCreate(grp, attrs)
 		}
 		// This group is no longer mapped, try
 		// to add a new group below.
 	}
 
 	newGrp := &group{
-		refMapped: refcountMapped{value: 2},
+		refMapped:   refcountMapped{value: 2},
+		instrument:  inst,
+		fingerprint: attrs.Fingerprint,
 	}
 
 	for {
 		if found, loaded := inst.current.LoadOrStore(mk, newGrp); loaded {
 			oldGrp := found.(*group)
 			if oldGrp.refMapped.ref() {
-				return inst.findOrCreate(oldGrp, kvs)
+				return inst.findOrCreate(oldGrp, attrs)
 			}
 			runtime.Gosched()
 			continue
@@ -228,34 +223,20 @@ func (inst *instrument) acquireHandle(mk interface{}, kvs []attribute.KeyValue) 
 	}
 
 	rec := &newGrp.first
-	rec.group = newGrp
-	rec.attributes = kvs
-
-	inst.accum.aggSelector.AggregatorFor(
-		&inst.descriptor, &rec.live, &rec.snapshot,
-	)
+	inst.accum.initRecord(inst, newGrp, rec, attrs)
 	return rec
 }
 
 //
-func (s *instrument) RecordOne(ctx context.Context, num number.Number, kvs []attribute.KeyValue) {
-	h := s.acquireHandle(attribute.Hash(kvs...), kvs)
+func (s *instrument) RecordOne(ctx context.Context, num number.Number, attrs attribute.Attributes) {
+	h := s.acquireHandle(attrs)
 	defer h.unbind()
 	h.RecordOne(ctx, num)
 }
 
-// NewAccumulator constructs a new Accumulator for the given
-// processor.  This Accumulator supports only a single processor.
-//
-// The Accumulator does not start any background process to collect itself
-// periodically, this responsibility lies with the processor, typically,
-// depending on the type of export.  For example, a pull-based
-// processor will call Collect() when it receives a request to scrape
-// current metric values.  A push-based processor should configure its
-// own periodic collection.
-func NewAccumulator(processor export.Processor) *Accumulator {
+func NewAccumulator(cs export.CollectorSelector) *Accumulator {
 	return &Accumulator{
-		aggSelector: processor,
+		collectorSelector: cs,
 	}
 }
 
@@ -272,33 +253,11 @@ func (m *Accumulator) NewInstrument(descriptor sdkapi.Descriptor) (sdkapi.Instru
 	return inst, nil
 }
 
-func (m *Accumulator) NewCallback(insts []sdkapi.Instrument, function func(context.Context) error) (sdkapi.Callback, error) {
-	cb := &callback{}
-
-	m.callbacksLock.Lock()
-	defer m.callbacksLock.Unlock()
-	m.callbacks = append(m.callbacsk, cb)
-	return cb, nil
-}
-
-func (cb *callback) Instruments() []sdkapi.Instrument {
-}
-
-// Collect traverses the list of active records and observers and
-// exports data for each active instrument.  Collect() may not be
-// called concurrently.
-//
-// During the collection pass, the export.Processor will receive
-// one Export() call per current aggregation.
-//
-// Returns the number of records that were checkpointed.
-func (m *Accumulator) Collect(ctx context.Context) int {
+func (m *Accumulator) Collect() int {
 	m.collectLock.Lock()
 	defer m.collectLock.Unlock()
 
-	m.observeAsyncInstruments(ctx)
-
-	return m.collectSyncInstruments()
+	return m.collectInstruments()
 }
 
 func (m *Accumulator) checkpointGroup(grp *group) int {
@@ -318,7 +277,7 @@ func (m *Accumulator) checkpointGroup(grp *group) int {
 	return checkpointed
 }
 
-func (m *Accumulator) collectSyncInstruments() int {
+func (m *Accumulator) collectInstruments() int {
 	checkpointed := 0
 
 	m.instrumentsLock.Lock()
@@ -353,46 +312,29 @@ func (m *Accumulator) collectSyncInstruments() int {
 	return checkpointed
 }
 
-func (m *Accumulator) observeAsyncInstruments(ctx context.Context) {
-	m.callbacksLock.Lock()
-	callbacks := m.callbacks
-	m.callbacksLock.Unlock()
-
-	for _, cb := range callbacks {
-		cb.function(ctx)
-	}
-}
-
 func (m *Accumulator) checkpointRecord(r *record) int {
-	if r.live == nil {
+	if r.collector == nil {
 		return 0
 	}
-	err := r.live.SynchronizedMove(r.snapshot, &r.group.instrument.descriptor)
-	if err != nil {
+	if err := r.collector.Send(); err != nil {
 		otel.Handle(err)
 		return 0
 	}
 
-	// @@@
-	// a := export.NewAccumulation(&r.group.instrument.descriptor, r.attributes, r.snapshot)
-	// err = m.processor.Process(a)
-	// if err != nil {
-	// 	otel.Handle(err)
-	// }
 	return 1
 }
 
-// RecordOne implements sdkapi.SyncImpl.
+// RecordOne implements sdkapi.Instrument.
 func (r *record) RecordOne(ctx context.Context, num number.Number) {
-	if r.live == nil {
-		// The instrument is disabled according to the AggregatorSelector.
+	if r.collector == nil {
+		// The instrument is disabled.
 		return
 	}
 	if err := aggregator.RangeTest(num, &r.group.instrument.descriptor); err != nil {
 		otel.Handle(err)
 		return
 	}
-	if err := r.live.Update(ctx, num, &r.group.instrument.descriptor); err != nil {
+	if err := r.collector.Update(ctx, num, &r.group.instrument.descriptor); err != nil {
 		otel.Handle(err)
 		return
 	}
@@ -403,14 +345,4 @@ func (r *record) RecordOne(ctx context.Context, num number.Number) {
 
 func (r *record) unbind() {
 	r.group.refMapped.unref()
-}
-
-func (m *Accumulator) fromSDK(inst sdkapi.Instrument) *instrument {
-	if inst != nil {
-		if ii, ok := inst.Implementation().(*instrument); ok {
-			return ii
-		}
-	}
-	otel.Handle(ErrUninitializedInstrument)
-	return nil
 }
