@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric // import "go.opentelemetry.io/otel/sdk/metric"
+package sync // import "go.opentelemetry.io/otel/sdk/metric/internal/sync"
 
 import (
 	"context"
@@ -23,32 +23,32 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/number"
-	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/internal/number"
+	"go.opentelemetry.io/otel/sdk/metric/internal/sdkapi"
 )
 
 type (
-	syncAccumulator struct {
+	Accumulator struct {
 		instrumentsLock sync.Mutex
-		instruments     []*syncInstrument
+		instruments     []*instrument
 
 		// collectLock prevents simultaneous calls to Collect().
 		collectLock       sync.Mutex
 		collectorSelector export.CollectorSelector
 	}
 
-	syncInstrument struct {
+	instrument struct {
 		descriptor sdkapi.Descriptor
-		accum      *syncAccumulator
+		accum      *Accumulator
 		current    sync.Map // map[attribute.Fingerprint]*group
 	}
 
 	group struct {
 		refMapped   refcountMapped
 		fingerprint uint64
-		instrument  *syncInstrument
+		instrument  *instrument
 		first       record
 	}
 
@@ -68,90 +68,20 @@ type (
 )
 
 var (
-	_ sdkapi.Instrument = &syncInstrument{}
+	_ sdkapi.Instrument = &instrument{}
 )
 
-func (inst *syncInstrument) Descriptor() sdkapi.Descriptor {
+func (inst *instrument) Descriptor() sdkapi.Descriptor {
 	return inst.descriptor
 }
 
-func (s *syncInstrument) Implementation() interface{} {
-	return s
-}
-
-func attributesAreEqual(a, b []attribute.KeyValue) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := 0; i < len(a); i++ {
-		if a[i].Key != b[i].Key {
-			return false
-		}
-		if a[i].Value.Type() != b[i].Value.Type() {
-			return false
-		}
-		switch a[i].Value.Type() {
-		case attribute.INVALID, attribute.BOOL, attribute.INT64,
-			attribute.FLOAT64, attribute.STRING:
-			if a[i].Value != b[i].Value {
-				return false
-			}
-		case attribute.BOOLSLICE:
-			as := a[i].Value.AsBoolSlice()
-			bs := b[i].Value.AsBoolSlice()
-			if len(as) != len(bs) {
-				return false
-			}
-			for j := 0; j < len(as); j++ {
-				if as[j] != bs[j] {
-					return false
-				}
-			}
-		case attribute.INT64SLICE:
-			as := a[i].Value.AsInt64Slice()
-			bs := b[i].Value.AsInt64Slice()
-			if len(as) != len(bs) {
-				return false
-			}
-			for j := 0; j < len(as); j++ {
-				if as[j] != bs[j] {
-					return false
-				}
-			}
-		case attribute.FLOAT64SLICE:
-			as := a[i].Value.AsFloat64Slice()
-			bs := b[i].Value.AsFloat64Slice()
-			if len(as) != len(bs) {
-				return false
-			}
-			for j := 0; j < len(as); j++ {
-				if as[j] != bs[j] {
-					return false
-				}
-			}
-		case attribute.STRINGSLICE:
-			as := a[i].Value.AsStringSlice()
-			bs := b[i].Value.AsStringSlice()
-			if len(as) != len(bs) {
-				return false
-			}
-			for j := 0; j < len(as); j++ {
-				if as[j] != bs[j] {
-					return false
-				}
-			}
-		}
-	}
-	return true
-}
-
-func (accum *syncAccumulator) initRecord(inst *syncInstrument, grp *group, rec *record, attrs attribute.Attributes) {
+func (accum *Accumulator) initRecord(inst *instrument, grp *group, rec *record, attrs attribute.Attributes) {
 	rec.group = grp
 	rec.attributes = attrs.KeyValues
 	rec.collector = accum.collectorSelector.CollectorFor(&inst.descriptor)
 }
 
-func (inst *syncInstrument) findOrCreate(grp *group, attrs attribute.Attributes) *record {
+func (inst *instrument) findOrCreate(grp *group, attrs attribute.Attributes) *record {
 	var newRec *record
 
 	for {
@@ -161,7 +91,10 @@ func (inst *syncInstrument) findOrCreate(grp *group, attrs attribute.Attributes)
 			// TODO: Fast path: disregard the following and return the
 			// first match, HERE.
 
-			if attributesAreEqual(attrs.KeyValues, rec.attributes) {
+			if attrs.Equals(attribute.Attributes{
+				Fingerprint: grp.fingerprint,
+				KeyValues:   rec.attributes,
+			}) {
 				return rec
 			}
 			last = rec
@@ -185,7 +118,7 @@ func (inst *syncInstrument) findOrCreate(grp *group, attrs attribute.Attributes)
 // support re-use of the orderedLabels computed by a previous
 // measurement in the same batch.   This performs two allocations
 // in the common case.
-func (inst *syncInstrument) acquireHandle(attrs attribute.Attributes) *record {
+func (inst *instrument) acquireHandle(attrs attribute.Attributes) *record {
 	var mk interface{} = attrs.Fingerprint
 	if lookup, ok := inst.current.Load(mk); ok {
 		// Existing record case.
@@ -224,21 +157,21 @@ func (inst *syncInstrument) acquireHandle(attrs attribute.Attributes) *record {
 }
 
 //
-func (s *syncInstrument) RecordOne(ctx context.Context, num number.Number, attrs attribute.Attributes) {
-	h := s.acquireHandle(attrs)
+func (s *instrument) Capture(ctx context.Context, num number.Number, attrs []attribute.KeyValue) {
+	h := s.acquireHandle(attribute.Fingerprint(attrs...))
 	defer h.unbind()
-	h.RecordOne(ctx, num)
+	h.record(ctx, num)
 }
 
-func newSyncAccumulator(cs export.CollectorSelector) *syncAccumulator {
-	return &syncAccumulator{
+func newSyncAccumulator(cs export.CollectorSelector) *Accumulator {
+	return &Accumulator{
 		collectorSelector: cs,
 	}
 }
 
 // NewInstrument implements sdkapi.MetricImpl.
-func (m *syncAccumulator) NewInstrument(descriptor sdkapi.Descriptor) (sdkapi.Instrument, error) {
-	inst := &syncInstrument{
+func (m *Accumulator) NewInstrument(descriptor sdkapi.Descriptor) (sdkapi.Instrument, error) {
+	inst := &instrument{
 		descriptor: descriptor,
 		accum:      m,
 	}
@@ -249,14 +182,14 @@ func (m *syncAccumulator) NewInstrument(descriptor sdkapi.Descriptor) (sdkapi.In
 	return inst, nil
 }
 
-func (m *syncAccumulator) Collect() int {
+func (m *Accumulator) Collect() {
 	m.collectLock.Lock()
 	defer m.collectLock.Unlock()
 
-	return m.collectInstruments()
+	m.collectInstruments()
 }
 
-func (m *syncAccumulator) checkpointGroup(grp *group) int {
+func (m *Accumulator) checkpointGroup(grp *group) int {
 	var checkpointed int
 	for rec := &grp.first; rec != nil; rec = (*record)(atomic.LoadPointer(&rec.next)) {
 
@@ -273,18 +206,15 @@ func (m *syncAccumulator) checkpointGroup(grp *group) int {
 	return checkpointed
 }
 
-func (m *syncAccumulator) collectInstruments() int {
-	checkpointed := 0
-
+func (m *Accumulator) collectInstruments() {
 	m.instrumentsLock.Lock()
 	instruments := m.instruments
 	m.instrumentsLock.Unlock()
 
 	for _, inst := range instruments {
-		inst.current.Range(func(key interface{}, value interface{}) bool {
+		inst.current.Range(func(_ interface{}, value interface{}) bool {
 			grp := value.(*group)
 			any := m.checkpointGroup(grp)
-			checkpointed += any
 
 			if any != 0 {
 				return true
@@ -300,15 +230,12 @@ func (m *syncAccumulator) collectInstruments() int {
 			// this deletion:
 			inst.current.Delete(grp.fingerprint)
 
-			checkpointed += m.checkpointGroup(grp)
 			return true
 		})
 	}
-
-	return checkpointed
 }
 
-func (m *syncAccumulator) checkpointRecord(r *record) int {
+func (m *Accumulator) checkpointRecord(r *record) int {
 	if r.collector == nil {
 		return 0
 	}
@@ -320,8 +247,7 @@ func (m *syncAccumulator) checkpointRecord(r *record) int {
 	return 1
 }
 
-// RecordOne implements sdkapi.Instrument.
-func (r *record) RecordOne(ctx context.Context, num number.Number) {
+func (r *record) record(ctx context.Context, num number.Number) {
 	if r.collector == nil {
 		// The instrument is disabled.
 		return

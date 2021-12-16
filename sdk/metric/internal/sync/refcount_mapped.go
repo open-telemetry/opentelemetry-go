@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric // import "go.opentelemetry.io/otel/sdk/metric"
+package sync // import "go.opentelemetry.io/otel/sdk/metric/internal/sync"
 
 import (
 	"sync/atomic"

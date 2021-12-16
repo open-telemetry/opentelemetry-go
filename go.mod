@@ -41,8 +41,6 @@ replace go.opentelemetry.io/otel/internal/tools => ./internal/tools
 
 replace go.opentelemetry.io/otel/sdk => ./sdk
 
-replace go.opentelemetry.io/otel/internal/metric => ./internal/metric
-
 replace go.opentelemetry.io/otel/metric => ./metric
 
 replace go.opentelemetry.io/otel/sdk/export/metric => ./sdk/export/metric

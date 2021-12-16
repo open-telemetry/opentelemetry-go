@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sdkapi // import "go.opentelemetry.io/otel/metric/sdkapi"
+package sdkapi // import "go.opentelemetry.io/otel/sdk/metric/internal/sdkapi"
 
 import (
 	"context"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/sdk/metric/internal/number"
 )
 
 // MeterImpl is the interface an SDK must implement to supply a Meter
@@ -38,14 +38,9 @@ type Callback interface {
 // Instrument is a common interface for synchronous and
 // asynchronous instruments.
 type Instrument interface {
-	// Implementation returns the underlying implementation of the
-	// instrument, which allows the implementation to gain access
-	// to its own representation especially from a `Measurement`.
-	Implementation() interface{}
-
 	// Descriptor returns a copy of the instrument's Descriptor.
 	Descriptor() Descriptor
 
-	// RecordOne captures a single metric event.
-	RecordOne(ctx context.Context, number number.Number, attrs attribute.Attributes)
+	// Capture captures a single metric event.
+	Capture(ctx context.Context, number number.Number, attrs []attribute.KeyValue)
 }

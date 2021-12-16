@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"time"
 
-	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/sdk/metric/internal/number"
 )
 
 // These interfaces describe the various ways to access state from an

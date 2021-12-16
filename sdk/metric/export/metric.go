@@ -19,10 +19,10 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/number"
-	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/internal/number"
+	"go.opentelemetry.io/otel/sdk/metric/internal/sdkapi"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
