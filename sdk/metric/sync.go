@@ -16,7 +16,6 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
-	"fmt"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -33,14 +32,14 @@ import (
 type (
 	syncAccumulator struct {
 		instrumentsLock sync.Mutex
-		instruments     []*instrument
+		instruments     []*syncInstrument
 
 		// collectLock prevents simultaneous calls to Collect().
 		collectLock       sync.Mutex
 		collectorSelector export.CollectorSelector
 	}
 
-	instrument struct {
+	syncInstrument struct {
 		descriptor sdkapi.Descriptor
 		accum      *syncAccumulator
 		current    sync.Map // map[attribute.Fingerprint]*group
@@ -49,7 +48,7 @@ type (
 	group struct {
 		refMapped   refcountMapped
 		fingerprint uint64
-		instrument  *instrument
+		instrument  *syncInstrument
 		first       record
 	}
 
@@ -69,17 +68,14 @@ type (
 )
 
 var (
-	_ sdkapi.Instrument = &instrument{}
-
-	// ErrUninitializedInstrument is returned when an instrument is used when uninitialized.
-	ErrUninitializedInstrument = fmt.Errorf("use of an uninitialized instrument")
+	_ sdkapi.Instrument = &syncInstrument{}
 )
 
-func (inst *instrument) Descriptor() sdkapi.Descriptor {
+func (inst *syncInstrument) Descriptor() sdkapi.Descriptor {
 	return inst.descriptor
 }
 
-func (s *instrument) Implementation() interface{} {
+func (s *syncInstrument) Implementation() interface{} {
 	return s
 }
 
@@ -149,13 +145,13 @@ func attributesAreEqual(a, b []attribute.KeyValue) bool {
 	return true
 }
 
-func (accum *syncAccumulator) initRecord(inst *instrument, grp *group, rec *record, attrs attribute.Attributes) {
+func (accum *syncAccumulator) initRecord(inst *syncInstrument, grp *group, rec *record, attrs attribute.Attributes) {
 	rec.group = grp
 	rec.attributes = attrs.KeyValues
 	rec.collector = accum.collectorSelector.CollectorFor(&inst.descriptor)
 }
 
-func (inst *instrument) findOrCreate(grp *group, attrs attribute.Attributes) *record {
+func (inst *syncInstrument) findOrCreate(grp *group, attrs attribute.Attributes) *record {
 	var newRec *record
 
 	for {
@@ -189,7 +185,7 @@ func (inst *instrument) findOrCreate(grp *group, attrs attribute.Attributes) *re
 // support re-use of the orderedLabels computed by a previous
 // measurement in the same batch.   This performs two allocations
 // in the common case.
-func (inst *instrument) acquireHandle(attrs attribute.Attributes) *record {
+func (inst *syncInstrument) acquireHandle(attrs attribute.Attributes) *record {
 	var mk interface{} = attrs.Fingerprint
 	if lookup, ok := inst.current.Load(mk); ok {
 		// Existing record case.
@@ -228,7 +224,7 @@ func (inst *instrument) acquireHandle(attrs attribute.Attributes) *record {
 }
 
 //
-func (s *instrument) RecordOne(ctx context.Context, num number.Number, attrs attribute.Attributes) {
+func (s *syncInstrument) RecordOne(ctx context.Context, num number.Number, attrs attribute.Attributes) {
 	h := s.acquireHandle(attrs)
 	defer h.unbind()
 	h.RecordOne(ctx, num)
@@ -242,7 +238,7 @@ func newSyncAccumulator(cs export.CollectorSelector) *syncAccumulator {
 
 // NewInstrument implements sdkapi.MetricImpl.
 func (m *syncAccumulator) NewInstrument(descriptor sdkapi.Descriptor) (sdkapi.Instrument, error) {
-	inst := &instrument{
+	inst := &syncInstrument{
 		descriptor: descriptor,
 		accum:      m,
 	}
