@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sync // import "go.opentelemetry.io/otel/sdk/metric/internal/sync"
+package syncstate
 
 import (
 	"context"
@@ -23,10 +23,10 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/metric/sdkapi/number"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/export"
-	"go.opentelemetry.io/otel/sdk/metric/internal/number"
-	"go.opentelemetry.io/otel/sdk/metric/internal/sdkapi"
 )
 
 type (
@@ -163,7 +163,7 @@ func (s *instrument) Capture(ctx context.Context, num number.Number, attrs []att
 	h.record(ctx, num)
 }
 
-func newSyncAccumulator(cs export.CollectorSelector) *Accumulator {
+func New(cs export.CollectorSelector) *Accumulator {
 	return &Accumulator{
 		collectorSelector: cs,
 	}

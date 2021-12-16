@@ -18,10 +18,10 @@ import (
 	"fmt"
 	"math"
 
+	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/metric/sdkapi/number"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/internal/number"
-	"go.opentelemetry.io/otel/sdk/metric/internal/sdkapi"
 )
 
 // NewInconsistentAggregatorError formats an error describing an attempt to

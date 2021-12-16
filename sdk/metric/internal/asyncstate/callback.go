@@ -1,4 +1,4 @@
-package async
+package asyncstate
 
 import (
 	"context"
@@ -7,8 +7,8 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/internal/number"
-	"go.opentelemetry.io/otel/sdk/metric/internal/sdkapi"
+	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/metric/sdkapi/number"
 )
 
 type (
@@ -47,7 +47,7 @@ var (
 	_ sdkapi.Instrument = &instrument{}
 )
 
-func NewAccumulator() *Accumulator {
+func New() *Accumulator {
 	return &Accumulator{}
 }
 

@@ -17,11 +17,11 @@ package sum // import "go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/metric/sdkapi/number"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/internal/number"
-	"go.opentelemetry.io/otel/sdk/metric/internal/sdkapi"
 )
 
 // Aggregator aggregates counter events.
@@ -68,7 +68,7 @@ func (c *Aggregator) SynchronizedMove(oa export.Aggregator, _ *sdkapi.Descriptor
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)
 	}
-	o.value = c.value.SwapNumberAtomic(number.Number(0))
+	o.value = c.value.SwapAtomic(number.Number(0))
 	return nil
 }
 
@@ -84,6 +84,6 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *sdkapi.Descriptor) error 
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)
 	}
-	c.value.AddNumber(desc.NumberKind(), o.value)
+	c.value.Add(desc.NumberKind(), o.value)
 	return nil
 }

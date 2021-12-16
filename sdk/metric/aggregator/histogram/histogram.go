@@ -19,11 +19,11 @@ import (
 	"sort"
 	"sync"
 
+	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/metric/sdkapi/number"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/internal/number"
-	"go.opentelemetry.io/otel/sdk/metric/internal/sdkapi"
 )
 
 // Note: This code uses a Mutex to govern access to the exclusive
@@ -247,7 +247,7 @@ func (c *Aggregator) Update(_ context.Context, number number.Number, desc *sdkap
 	defer c.lock.Unlock()
 
 	c.state.count++
-	c.state.sum.AddNumber(kind, number)
+	c.state.sum.Add(kind, number)
 	c.state.bucketCounts[bucketID]++
 
 	return nil
@@ -260,7 +260,7 @@ func (c *Aggregator) Merge(oa export.Aggregator, desc *sdkapi.Descriptor) error 
 		return aggregator.NewInconsistentAggregatorError(c, oa)
 	}
 
-	c.state.sum.AddNumber(desc.NumberKind(), o.state.sum)
+	c.state.sum.Add(desc.NumberKind(), o.state.sum)
 	c.state.count += o.state.count
 
 	for i := 0; i < len(c.state.bucketCounts); i++ {
