@@ -31,7 +31,7 @@ import (
 )
 
 type (
-	Accumulator struct {
+	syncAccumulator struct {
 		instrumentsLock sync.Mutex
 		instruments     []*instrument
 
@@ -42,7 +42,7 @@ type (
 
 	instrument struct {
 		descriptor sdkapi.Descriptor
-		accum      *Accumulator
+		accum      *syncAccumulator
 		current    sync.Map // map[attribute.Fingerprint]*group
 	}
 
@@ -149,7 +149,7 @@ func attributesAreEqual(a, b []attribute.KeyValue) bool {
 	return true
 }
 
-func (accum *Accumulator) initRecord(inst *instrument, grp *group, rec *record, attrs attribute.Attributes) {
+func (accum *syncAccumulator) initRecord(inst *instrument, grp *group, rec *record, attrs attribute.Attributes) {
 	rec.group = grp
 	rec.attributes = attrs.KeyValues
 	rec.collector = accum.collectorSelector.CollectorFor(&inst.descriptor)
@@ -234,14 +234,14 @@ func (s *instrument) RecordOne(ctx context.Context, num number.Number, attrs att
 	h.RecordOne(ctx, num)
 }
 
-func NewAccumulator(cs export.CollectorSelector) *Accumulator {
-	return &Accumulator{
+func newSyncAccumulator(cs export.CollectorSelector) *syncAccumulator {
+	return &syncAccumulator{
 		collectorSelector: cs,
 	}
 }
 
 // NewInstrument implements sdkapi.MetricImpl.
-func (m *Accumulator) NewInstrument(descriptor sdkapi.Descriptor) (sdkapi.Instrument, error) {
+func (m *syncAccumulator) NewInstrument(descriptor sdkapi.Descriptor) (sdkapi.Instrument, error) {
 	inst := &instrument{
 		descriptor: descriptor,
 		accum:      m,
@@ -253,14 +253,14 @@ func (m *Accumulator) NewInstrument(descriptor sdkapi.Descriptor) (sdkapi.Instru
 	return inst, nil
 }
 
-func (m *Accumulator) Collect() int {
+func (m *syncAccumulator) Collect() int {
 	m.collectLock.Lock()
 	defer m.collectLock.Unlock()
 
 	return m.collectInstruments()
 }
 
-func (m *Accumulator) checkpointGroup(grp *group) int {
+func (m *syncAccumulator) checkpointGroup(grp *group) int {
 	var checkpointed int
 	for rec := &grp.first; rec != nil; rec = (*record)(atomic.LoadPointer(&rec.next)) {
 
@@ -277,7 +277,7 @@ func (m *Accumulator) checkpointGroup(grp *group) int {
 	return checkpointed
 }
 
-func (m *Accumulator) collectInstruments() int {
+func (m *syncAccumulator) collectInstruments() int {
 	checkpointed := 0
 
 	m.instrumentsLock.Lock()
@@ -312,7 +312,7 @@ func (m *Accumulator) collectInstruments() int {
 	return checkpointed
 }
 
-func (m *Accumulator) checkpointRecord(r *record) int {
+func (m *syncAccumulator) checkpointRecord(r *record) int {
 	if r.collector == nil {
 		return 0
 	}
