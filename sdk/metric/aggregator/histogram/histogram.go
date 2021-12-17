@@ -15,7 +15,6 @@
 package histogram // import "go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 
 import (
-	"context"
 	"sort"
 	"sync"
 
@@ -98,9 +97,6 @@ var defaultInt64ExplicitBoundaries = func(bounds []float64) (asint []float64) {
 }(defaultFloat64ExplicitBoundaries)
 
 var _ export.Aggregator = &Aggregator{}
-var _ aggregation.Sum = &Aggregator{}
-var _ aggregation.Count = &Aggregator{}
-var _ aggregation.Histogram = &Aggregator{}
 
 // New returns a new aggregator for computing Histograms.
 //
@@ -140,16 +136,6 @@ func New(cnt int, desc *sdkapi.Descriptor, opts ...Option) []Aggregator {
 		aggs[i].state = aggs[i].newState()
 	}
 	return aggs
-}
-
-// Aggregation returns an interface for reading the state of this aggregator.
-func (c *Aggregator) Aggregation() aggregation.Aggregation {
-	return c
-}
-
-// Kind returns aggregation.HistogramKind.
-func (c *Aggregator) Kind() aggregation.Kind {
-	return aggregation.HistogramKind
 }
 
 // Sum returns the sum of all values in the checkpoint.
@@ -220,7 +206,7 @@ func (c *Aggregator) clearState() {
 }
 
 // Update adds the recorded measurement to the current data set.
-func (c *Aggregator) Update(_ context.Context, number number.Number, desc *sdkapi.Descriptor) error {
+func (c *Aggregator) Update(number number.Number, desc *sdkapi.Descriptor) {
 	kind := desc.NumberKind()
 	asFloat := number.CoerceToFloat64(kind)
 
@@ -249,8 +235,6 @@ func (c *Aggregator) Update(_ context.Context, number number.Number, desc *sdkap
 	c.state.count++
 	c.state.sum.Add(kind, number)
 	c.state.bucketCounts[bucketID]++
-
-	return nil
 }
 
 // Merge combines two histograms that have the same buckets into a single one.

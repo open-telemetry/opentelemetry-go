@@ -26,46 +26,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// Processor is responsible for deciding which kind of aggregation to
-// use (via AggregatorSelector), gathering exported results from the
-// SDK during collection, and deciding over which dimensions to group
-// the exported data.
-//
-// The SDK supports binding only one of these interfaces, as it has
-// the sole responsibility of determining which Aggregator to use for
-// each record.
-//
-// The embedded AggregatorSelector interface is called (concurrently)
-// in instrumentation context to select the appropriate Aggregator for
-// an instrument.
-//
-// The `Process` method is called during collection in a
-// single-threaded context from the SDK, after the aggregator is
-// checkpointed, allowing the processor to build the set of metrics
-// currently being exported.
-type Processor interface {
-	// Process is called by the SDK once per internal record,
-	// passing the export Accumulation (a Descriptor, the corresponding
-	// Labels, and the checkpointed Aggregator). This call has no
-	// Context argument because it is expected to perform only
-	// computation. An SDK is not expected to call exporters from
-	// with Process, use a controller for that (see
-	// ./controllers/{pull,push}.
-	Process(accum Accumulation) error
-}
-
-// CollectorSelector supports selecting the kind of Collector to
-// use at runtime for a specific metric instrument.
-type CollectorSelector interface {
-	CollectorFor(descriptor *sdkapi.Descriptor) Collector
-}
-
-type Collector interface {
-	Update(ctx context.Context, number number.Number, descriptor *sdkapi.Descriptor) error
-
-	Send() error
-}
-
 // Aggregator implements a specific aggregation behavior, e.g., a
 // behavior to track a sequence of updates to an instrument.  Counter
 // instruments commonly use a simple Sum aggregator, but for the
@@ -77,23 +37,7 @@ type Collector interface {
 // the result of the OpenTelemetry API/SDK separation.  It is possible
 // to attach a Sum aggregator to a Histogram instrument.
 type Aggregator interface {
-	// Aggregation returns an Aggregation interface to access the
-	// current state of this Aggregator.  The caller is
-	// responsible for synchronization and must not call any the
-	// other methods in this interface concurrently while using
-	// the Aggregation.
-	Aggregation() aggregation.Aggregation
-
-	// Update receives a new measured value and incorporates it
-	// into the aggregation.  Update() calls may be called
-	// concurrently.
-	//
-	// Descriptor.NumberKind() should be consulted to determine
-	// whether the provided number is an int64 or float64.
-	//
-	// The Context argument comes from user-level code and could be
-	// inspected for a `correlation.Map` or `trace.SpanContext`.
-	Update(ctx context.Context, number number.Number, descriptor *sdkapi.Descriptor) error
+	Update(number number.Number, descriptor *sdkapi.Descriptor)
 
 	// SynchronizedMove is called during collection to finish one
 	// period of aggregation by atomically saving the

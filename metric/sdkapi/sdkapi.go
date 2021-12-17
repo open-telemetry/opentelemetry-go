@@ -43,4 +43,6 @@ type Instrument interface {
 
 	// Capture captures a single metric event.
 	Capture(ctx context.Context, number number.Number, attrs []attribute.KeyValue)
+
+	Implementation() interface{}
 }

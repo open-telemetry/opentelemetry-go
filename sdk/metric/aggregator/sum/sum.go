@@ -15,13 +15,10 @@
 package sum // import "go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 
 import (
-	"context"
-
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/metric/sdkapi/number"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/export"
-	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 )
 
 // Aggregator aggregates counter events.
@@ -31,24 +28,11 @@ type Aggregator struct {
 	value number.Number
 }
 
-var _ export.Aggregator = &Aggregator{}
-var _ aggregation.Sum = &Aggregator{}
-
 // New returns a new counter aggregator implemented by atomic
 // operations.  This aggregator implements the aggregation.Sum
 // export interface.
 func New(cnt int) []Aggregator {
 	return make([]Aggregator, cnt)
-}
-
-// Aggregation returns an interface for reading the state of this aggregator.
-func (c *Aggregator) Aggregation() aggregation.Aggregation {
-	return c
-}
-
-// Kind returns aggregation.SumKind.
-func (c *Aggregator) Kind() aggregation.Kind {
-	return aggregation.SumKind
 }
 
 // Sum returns the last-checkpointed sum.  This will never return an
@@ -73,9 +57,8 @@ func (c *Aggregator) SynchronizedMove(oa export.Aggregator, _ *sdkapi.Descriptor
 }
 
 // Update atomically adds to the current value.
-func (c *Aggregator) Update(_ context.Context, num number.Number, desc *sdkapi.Descriptor) error {
+func (c *Aggregator) Update(num number.Number, desc *sdkapi.Descriptor) {
 	c.value.AddNumberAtomic(desc.NumberKind(), num)
-	return nil
 }
 
 // Merge combines two counters by adding their sums.

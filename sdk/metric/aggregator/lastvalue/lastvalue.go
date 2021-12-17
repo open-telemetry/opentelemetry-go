@@ -15,7 +15,6 @@
 package lastvalue // import "go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 
 import (
-	"context"
 	"sync/atomic"
 	"time"
 	"unsafe"
@@ -52,7 +51,6 @@ type (
 )
 
 var _ export.Aggregator = &Aggregator{}
-var _ aggregation.LastValue = &Aggregator{}
 
 // An unset lastValue has zero timestamp and zero value.
 var unsetLastValue = &lastValueData{}
@@ -67,16 +65,6 @@ func New(cnt int) []Aggregator {
 		}
 	}
 	return aggs
-}
-
-// Aggregation returns an interface for reading the state of this aggregator.
-func (g *Aggregator) Aggregation() aggregation.Aggregation {
-	return g
-}
-
-// Kind returns aggregation.LastValueKind.
-func (g *Aggregator) Kind() aggregation.Kind {
-	return aggregation.LastValueKind
 }
 
 // LastValue returns the last-recorded lastValue value and the
@@ -106,13 +94,12 @@ func (g *Aggregator) SynchronizedMove(oa export.Aggregator, _ *sdkapi.Descriptor
 }
 
 // Update atomically sets the current "last" value.
-func (g *Aggregator) Update(_ context.Context, number number.Number, desc *sdkapi.Descriptor) error {
+func (g *Aggregator) Update(number number.Number, desc *sdkapi.Descriptor) {
 	ngd := &lastValueData{
 		value:     number,
 		timestamp: time.Now(),
 	}
 	atomic.StorePointer(&g.value, unsafe.Pointer(ngd))
-	return nil
 }
 
 // Merge combines state from two aggregators.  The most-recently set

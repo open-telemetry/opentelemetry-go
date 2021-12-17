@@ -9,6 +9,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/metric/sdkapi/number"
+	"go.opentelemetry.io/otel/sdk/metric/internal/viewstate"
 )
 
 type (
@@ -32,6 +33,7 @@ type (
 
 	instrument struct {
 		descriptor sdkapi.Descriptor
+		cfactory   viewstate.CollectorFactory
 		callback   *callback
 	}
 
@@ -62,10 +64,25 @@ func (m *Accumulator) NewCallback(instruments []sdkapi.Instrument, function func
 		function:    function,
 		instruments: instruments,
 	}
-	// TODO assign instruments, check errors
 
 	m.callbacksLock.Lock()
 	defer m.callbacksLock.Unlock()
+
+	for _, inst := range instruments {
+		if inst.Descriptor().InstrumentKind().Synchronous() {
+			return nil, fmt.Errorf("synchronous instrument with asynchronous callback")
+		}
+		ai, ok := inst.Implementation().(*instrument)
+		if !ok {
+			return nil, fmt.Errorf("asynchronous instrument does not belong to this provider")
+		}
+		if ai.callback != nil {
+			return nil, fmt.Errorf("asynchronous instrument already has a callback")
+		}
+		ai.callback = cb
+
+	}
+
 	m.callbacks = append(m.callbacks, cb)
 	return cb, nil
 }
@@ -74,9 +91,9 @@ func (cb *callback) Instruments() []sdkapi.Instrument {
 	return cb.instruments
 }
 
-// NewInstrument implements sdkapi.MetricImpl.
-func (m *Accumulator) NewInstrument(descriptor sdkapi.Descriptor) (sdkapi.Instrument, error) {
+func (m *Accumulator) NewInstrument(descriptor sdkapi.Descriptor, cfactory viewstate.CollectorFactory) (sdkapi.Instrument, error) {
 	return &instrument{
+		cfactory:   cfactory,
 		descriptor: descriptor,
 	}, nil
 }
@@ -122,8 +139,12 @@ func (a *Accumulator) Collect(state *State) error {
 	return nil
 }
 
-func (i *instrument) Descriptor() sdkapi.Descriptor {
-	return i.descriptor
+func (inst *instrument) Implementation() interface{} {
+	return inst
+}
+
+func (inst *instrument) Descriptor() sdkapi.Descriptor {
+	return inst.descriptor
 }
 
 func (inst *instrument) Capture(ctx context.Context, value number.Number, attrs []attribute.KeyValue) {

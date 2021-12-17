@@ -7,33 +7,34 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/metric/internal/asyncstate"
 	"go.opentelemetry.io/otel/sdk/metric/internal/registry"
 	"go.opentelemetry.io/otel/sdk/metric/internal/syncstate"
-	"go.opentelemetry.io/otel/sdk/metric/internal/views"
+	"go.opentelemetry.io/otel/sdk/metric/internal/viewstate"
+	"go.opentelemetry.io/otel/sdk/metric/views"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type (
 	Config struct {
-		res   *resource.Resource
-		views []views.View
+		res            *resource.Resource
+		views          []views.View
+		hasDefaultView bool
 	}
 
 	Option func(cfg *Config)
 
 	provider struct {
-		cfg Config
-
+		cfg    Config
 		lock   sync.Mutex
 		meters map[instrumentation.Library]*meter
 	}
 
 	meter struct {
-		lock       sync.Mutex
+		library    instrumentation.Library
 		uniqueImpl *registry.UniqueInstrumentMeterImpl
 		provider   *provider
+		views      *viewstate.State
 		syncAccum  *syncstate.Accumulator
 		asyncAccum *asyncstate.Accumulator
 	}
@@ -53,9 +54,16 @@ func WithView(view views.View) Option {
 	}
 }
 
+func WithDefaultView(hasDefaultView bool) Option {
+	return func(cfg *Config) {
+		cfg.hasDefaultView = hasDefaultView
+	}
+}
+
 func New(opts ...Option) metric.MeterProvider {
 	cfg := Config{
-		res: resource.Default(),
+		res:            resource.Default(),
+		hasDefaultView: true,
 	}
 	for _, opt := range opts {
 		opt(&cfg)
@@ -80,33 +88,33 @@ func (p *provider) Meter(name string, opts ...metric.MeterOption) metric.Meter {
 
 	m := p.meters[lib]
 	if m == nil {
-		m = &meter{provider: p}
-		m.syncAccum = syncstate.New(m)
-		m.asyncAccum = asyncstate.New()
+		m = &meter{
+			provider:   p,
+			library:    lib,
+			views:      viewstate.New(lib, p.cfg.views, p.cfg.hasDefaultView),
+			syncAccum:  syncstate.New(),
+			asyncAccum: asyncstate.New(),
+		}
 		m.uniqueImpl = registry.NewUniqueInstrumentMeterImpl(m)
 		p.meters[lib] = m
 	}
-	return metric.Meter{m.uniqueImpl}
+	return metric.Meter{
+		MeterImpl: m.uniqueImpl,
+	}
 }
 
 func (m *meter) NewInstrument(descriptor sdkapi.Descriptor) (sdkapi.Instrument, error) {
-	if descriptor.InstrumentKind().Synchronous() {
-		return m.syncAccum.NewInstrument(descriptor)
+	cfactory, err := m.views.NewFor(descriptor)
+	if err != nil {
+		return nil, err
 	}
-	return m.asyncAccum.NewInstrument(descriptor)
+
+	if descriptor.InstrumentKind().Synchronous() {
+		return m.syncAccum.NewInstrument(descriptor, cfactory)
+	}
+	return m.asyncAccum.NewInstrument(descriptor, cfactory)
 }
 
 func (m *meter) NewCallback(insts []sdkapi.Instrument, callback func(context.Context) error) (sdkapi.Callback, error) {
 	return m.asyncAccum.NewCallback(insts, callback)
-}
-
-func (m *meter) CollectorFor(descriptor *sdkapi.Descriptor) export.Collector {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
-	if builder, has := m.viewCache[descriptor]; has {
-		return builder.newInstance()
-	}
-
-	// @@@ Magic.
 }
