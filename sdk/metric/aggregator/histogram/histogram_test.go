@@ -25,9 +25,9 @@ import (
 
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
-	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
 const count = 100
@@ -240,7 +240,7 @@ func TestSynchronizedMoveReset(t *testing.T) {
 	aggregatortest.SynchronizedMoveResetTest(
 		t,
 		sdkapi.HistogramInstrumentKind,
-		func(desc *sdkapi.Descriptor) export.Aggregator {
+		func(desc *sdkapi.Descriptor) aggregator.Aggregator {
 			return &histogram.New(1, desc, histogram.WithExplicitBoundaries(testBoundaries))[0]
 		},
 	)

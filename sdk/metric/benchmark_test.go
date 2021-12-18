@@ -230,11 +230,11 @@ func BenchmarkFloat64LastValueAdd(b *testing.B) {
 
 // Histograms
 
-func benchmarkInt64HistogramAdd(b *testing.B, name string) {
+func BenchmarkInt64HistogramAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	mea := fix.meterMust().NewInt64Histogram(name)
+	mea := fix.meterMust().NewInt64Histogram("int64.histogram")
 
 	b.ResetTimer()
 
@@ -243,11 +243,11 @@ func benchmarkInt64HistogramAdd(b *testing.B, name string) {
 	}
 }
 
-func benchmarkFloat64HistogramAdd(b *testing.B, name string) {
+func BenchmarkFloat64HistogramAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	mea := fix.meterMust().NewFloat64Histogram(name)
+	mea := fix.meterMust().NewFloat64Histogram("float64.histogram")
 
 	b.ResetTimer()
 
@@ -301,16 +301,6 @@ func BenchmarkGaugeObserverObservationFloat64(b *testing.B) {
 	b.ResetTimer()
 
 	fix.accumulator.Collect(ctx)
-}
-
-// Exact
-
-func BenchmarkInt64ExactAdd(b *testing.B) {
-	benchmarkInt64HistogramAdd(b, "int64.exact")
-}
-
-func BenchmarkFloat64ExactAdd(b *testing.B) {
-	benchmarkFloat64HistogramAdd(b, "float64.exact")
 }
 
 // BatchRecord

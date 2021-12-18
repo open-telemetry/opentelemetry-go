@@ -19,6 +19,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 )
@@ -26,8 +27,8 @@ import (
 // Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export"
 type Accumulation = export.Accumulation
 
-// Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export"
-type Aggregator = export.Aggregator
+// Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/aggregator"
+type Aggregator = aggregator.Aggregator
 
 // Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export"
 type AggregatorSelector = export.AggregatorSelector
