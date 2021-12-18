@@ -116,12 +116,12 @@ func (inst *instrument) findOrCreate(grp *group, attrs attribute.Attributes) *re
 	}
 }
 
-// acquireHandle gets or creates a `*record` corresponding to `kvs`,
+// acquireRecord gets or creates a `*record` corresponding to `kvs`,
 // the input labels.  The second argument `labels` is passed in to
 // support re-use of the orderedLabels computed by a previous
 // measurement in the same batch.   This performs two allocations
 // in the common case.
-func (inst *instrument) acquireHandle(attrs attribute.Attributes) *record {
+func (inst *instrument) acquireRecord(attrs attribute.Attributes) *record {
 	var mk interface{} = attrs.Fingerprint
 	if lookup, ok := inst.current.Load(mk); ok {
 		// Existing record case.
@@ -159,36 +159,50 @@ func (inst *instrument) acquireHandle(attrs attribute.Attributes) *record {
 	return rec
 }
 
-func (s *instrument) Capture(ctx context.Context, num number.Number, attrs []attribute.KeyValue) {
-	h := s.acquireHandle(attribute.Fingerprint(attrs...))
-	defer h.unbind()
-	h.record(ctx, num)
+func (inst *instrument) Capture(_ context.Context, num number.Number, attrs []attribute.KeyValue) {
+	// TODO This is the place to use context, extract baggage.
+
+	r := inst.acquireRecord(attribute.Fingerprint(attrs...))
+	defer r.group.refMapped.unref()
+
+	if r.collector == nil {
+		// The instrument is disabled.
+		return
+	}
+	if err := aggregator.RangeTest(num, &r.group.instrument.descriptor); err != nil {
+		otel.Handle(err)
+		return
+	}
+	r.collector.Update(num, &r.group.instrument.descriptor)
+	// Record was modified, inform the Collect() that things need
+	// to be collected while the record is still mapped.
+	atomic.AddInt64(&r.updateCount, 1)
 }
 
 func New() *Accumulator {
 	return &Accumulator{}
 }
 
-func (m *Accumulator) NewInstrument(descriptor sdkapi.Descriptor, cfactory viewstate.CollectorFactory) (sdkapi.Instrument, error) {
+func (a *Accumulator) NewInstrument(descriptor sdkapi.Descriptor, cfactory viewstate.CollectorFactory) (sdkapi.Instrument, error) {
 	inst := &instrument{
 		descriptor: descriptor,
 		cfactory:   cfactory,
 	}
 
-	m.instrumentsLock.Lock()
-	defer m.instrumentsLock.Unlock()
-	m.instruments = append(m.instruments, inst)
+	a.instrumentsLock.Lock()
+	defer a.instrumentsLock.Unlock()
+	a.instruments = append(a.instruments, inst)
 	return inst, nil
 }
 
-func (m *Accumulator) Collect() {
-	m.collectLock.Lock()
-	defer m.collectLock.Unlock()
+func (a *Accumulator) Collect() {
+	a.collectLock.Lock()
+	defer a.collectLock.Unlock()
 
-	m.collectInstruments()
+	a.collectInstruments()
 }
 
-func (m *Accumulator) checkpointGroup(grp *group, final bool) int {
+func (a *Accumulator) checkpointGroup(grp *group, final bool) int {
 	var checkpointed int
 	for rec := &grp.first; rec != nil; rec = (*record)(atomic.LoadPointer(&rec.next)) {
 
@@ -198,22 +212,22 @@ func (m *Accumulator) checkpointGroup(grp *group, final bool) int {
 		if mods != coll {
 			// Updates happened in this interval,
 			// checkpoint and continue.
-			checkpointed += m.checkpointRecord(rec, final)
+			checkpointed += a.checkpointRecord(rec, final)
 			rec.collectedCount = mods
 		}
 	}
 	return checkpointed
 }
 
-func (m *Accumulator) collectInstruments() {
-	m.instrumentsLock.Lock()
-	instruments := m.instruments
-	m.instrumentsLock.Unlock()
+func (a *Accumulator) collectInstruments() {
+	a.instrumentsLock.Lock()
+	instruments := a.instruments
+	a.instrumentsLock.Unlock()
 
 	for _, inst := range instruments {
 		inst.current.Range(func(_ interface{}, value interface{}) bool {
 			grp := value.(*group)
-			any := m.checkpointGroup(grp, false)
+			any := a.checkpointGroup(grp, false)
 
 			if any != 0 {
 				return true
@@ -230,13 +244,13 @@ func (m *Accumulator) collectInstruments() {
 			inst.current.Delete(grp.fingerprint)
 
 			// Last we'll see of this.
-			_ = m.checkpointGroup(grp, true)
+			_ = a.checkpointGroup(grp, true)
 			return true
 		})
 	}
 }
 
-func (m *Accumulator) checkpointRecord(r *record, final bool) int {
+func (a *Accumulator) checkpointRecord(r *record, final bool) int {
 	if r.collector == nil {
 		return 0
 	}
@@ -246,23 +260,4 @@ func (m *Accumulator) checkpointRecord(r *record, final bool) int {
 	}
 
 	return 1
-}
-
-func (r *record) record(ctx context.Context, num number.Number) {
-	if r.collector == nil {
-		// The instrument is disabled.
-		return
-	}
-	if err := aggregator.RangeTest(num, &r.group.instrument.descriptor); err != nil {
-		otel.Handle(err)
-		return
-	}
-	r.collector.Update(ctx, num, &r.group.instrument.descriptor)
-	// Record was modified, inform the Collect() that things need
-	// to be collected while the record is still mapped.
-	atomic.AddInt64(&r.updateCount, 1)
-}
-
-func (r *record) unbind() {
-	r.group.refMapped.unref()
 }

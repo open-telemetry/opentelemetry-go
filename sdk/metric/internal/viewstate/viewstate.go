@@ -1,7 +1,6 @@
 package viewstate
 
 import (
-	"context"
 	"fmt"
 	"sync"
 
@@ -16,7 +15,7 @@ import (
 
 type (
 	Collector interface {
-		Update(ctx context.Context, number number.Number, descriptor *sdkapi.Descriptor)
+		Update(number number.Number, descriptor *sdkapi.Descriptor)
 		Send(final bool) error
 	}
 
@@ -147,12 +146,20 @@ func (v *State) NewFor(desc sdkapi.Descriptor) (CollectorFactory, error) {
 }
 
 func (v *viewCollectorFactory) New(kvs []attribute.KeyValue) Collector {
+	var aggs []export.Aggregator
+	for _, ak := range v.akinds {
+		var agg export.Aggregator
+		switch ak {
+		case aggregation.HistogramKind:
+		case aggregation.SumKind:
+		case aggregation.LastValueKind:
+		}
+		aggs = append(aggs, agg)
+	}
 	return &viewCollector{}
 }
 
-func (v *viewCollector) Update(_ context.Context, number number.Number, descriptor *sdkapi.Descriptor) {
-	// TODO: baggage from context here
-
+func (v *viewCollector) Update(number number.Number, descriptor *sdkapi.Descriptor) {
 	for _, input := range v.inputs {
 		input.Update(number, descriptor)
 	}
