@@ -13,9 +13,7 @@ To create a span with a tracer, you'll also need a handle on a `context.Context`
 
 ```go
 func httpHandler(w http.ResponseWriter, r *http.Request) {
-	ctx = r.Context()
-
-	ctx, span := tracer.Start(ctx, "hello-span")
+	ctx, span := tracer.Start(r.Context(), "hello-span")
 	defer span.End()
 
 	// do some work to track with hello-span
@@ -31,7 +29,8 @@ Once a span has completed, it is immutable and can no longer be modified.
 To get the current span, you'll need to pull it out of a `context.Context` you have a handle on:
 
 ```go
-ctx := context.Background()
+// This context needs contain the active span you plan to extract.
+ctx := context.TODO()
 span := trace.SpanFromContext(ctx)
 
 // Do something with the current span, optionally calling `span.End()` if you want it to end
@@ -47,7 +46,7 @@ If the current `context.Context` you have a handle on already contains a span in
 
 ```go
 func parentFunction(ctx context.Context) {
-	ctx, parentSpan = tracer.Start(ctx, "parent")
+	ctx, parentSpan := tracer.Start(ctx, "parent")
 	defer parentSpan.End()
 
 	// call the child function and start a nested span in there
@@ -58,7 +57,7 @@ func parentFunction(ctx context.Context) {
 
 func childFunction(ctx context.Context) {
 	// Create a span to track `childFunction()` - this is a nested span whose parent is `parentSpan`
-	ctx, childSpan = tracer.Start(ctx, "child")
+	ctx, childSpan := tracer.Start(ctx, "child")
 	defer childSpan.End()
 
 	// do work here, when this function returns, childSpan will complete.
