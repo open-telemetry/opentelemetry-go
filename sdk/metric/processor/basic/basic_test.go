@@ -31,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
@@ -110,7 +111,7 @@ func asNumber(nkind number.Kind, value int64) number.Number {
 
 func updateFor(t *testing.T, desc *sdkapi.Descriptor, selector export.AggregatorSelector, value int64, labs ...attribute.KeyValue) export.Accumulation {
 	ls := attribute.NewSet(labs...)
-	var agg export.Aggregator
+	var agg aggregator.Aggregator
 	selector.AggregatorFor(desc, &agg)
 	require.NoError(t, agg.Update(context.Background(), asNumber(desc.NumberKind(), value), desc))
 

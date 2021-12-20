@@ -17,13 +17,17 @@ package metric
 import (
 	"os"
 	"testing"
+	"unsafe"
 
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 )
 
 // Ensure struct alignment prior to running tests.
 func TestMain(m *testing.M) {
-	offsets := AtomicFieldOffsets()
+	offsets := map[string]uintptr{
+		"record.refMapped.value": unsafe.Offsetof(record{}.refMapped.value),
+		"record.updateCount":     unsafe.Offsetof(record{}.updateCount),
+	}
 	var r []ottest.FieldOffset
 	for name, offset := range offsets {
 		r = append(r, ottest.FieldOffset{
