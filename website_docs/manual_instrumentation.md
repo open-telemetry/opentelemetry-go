@@ -136,4 +136,4 @@ After configuring context propagation, you'll most likely want to use automatic 
 
 [OpenTelemetry Specification]: {{< relref "/docs/reference/specification" >}}
 [Trace semantic conventions]: {{< relref "/docs/reference/specification/trace/semantic_conventions" >}}
-[instrumentation library]: using_instrumentation_libraries
+[instrumentation library]: {{< relref "using_instrumentation_libraries" >}}
