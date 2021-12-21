@@ -1,7 +1,7 @@
 ---
-title: "Processing and Exporting Data"
+title: Processing and Exporting Data
 weight: 4
-linkTitle: Exporting data
+linkTitle: Processing and Exporting data
 ---
 
 Once you've instrumented your code, you need to get the data out in order to do anything useful with it. This page will cover the basics of the process and export pipeline.

@@ -1,6 +1,7 @@
 ---
-title: Instrumentation
+title: Manual Instrumentation
 weight: 3
+linkTitle: Manual
 aliases: [/docs/instrumentation/go/instrumentation, /docs/instrumentation/go/manual_instrumentation]
 ---
 
