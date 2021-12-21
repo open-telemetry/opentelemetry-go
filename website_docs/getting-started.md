@@ -536,7 +536,7 @@ start adding OpenTelemetry Go to your projects at this point. Go instrument your
 code!
 
 For more information about instrumenting your code and things you can do with
-spans, refer to the [Instrumenting]({{< relref "manual_instrumentation" >}})
+spans, refer to the [Instrumenting]({{< relref "manual" >}})
 documentation. Likewise, advanced topics about processing and exporting
 telemetry data can be found in the [Processing and Exporting Data]({{< relref
 "exporting_data" >}}) documentation.
