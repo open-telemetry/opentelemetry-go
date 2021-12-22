@@ -11,10 +11,10 @@ Instrumentation is the process of adding observability code to your application.
 
 To create spans, you'll need to initialize a tracer first. Some important things to consider:
 
-* Tracers should live at the module level and have a lifecycle congruent to an app's lifecycle
-* There should only be one tracer per package
+* Tracers should generally live at the package level and have a lifecycle congruent to an app's lifecycle
+* There should generally only be one tracer per package
 * `TracerProvider`s need to be shut down no later than when a program ends
-* You'll need an [exporter]({{< relref "exporting_data" >}}) to create a `TracerProvider`
+* You'll generally need an [exporter]({{< relref "exporting_data" >}}) to create a `TracerProvider`
 * You'll want to create Resources at `TracerProvider` initialization time as they cannot be changed later
 
 First, ensure you have the right packages installed:
@@ -83,7 +83,7 @@ func main() {
 
 	otel.SetTracerProvider(tp)
 
-	// Finally, set the tracer that can be used throughout the app
+	// Finally, set the tracer that can be used for this package
 	tracer = tp.Tracer("ExampleService")
 }
 ```
