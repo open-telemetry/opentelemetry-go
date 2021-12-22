@@ -25,9 +25,13 @@ go get go.opentelemetry.io/otel \
   go.opentelemetry.io/otel/sdk \
 ```
 
-Ensure you have an [exporter]({{< relref "exporting_data" >}}) configured, then
+### Initiallize a new tracer
+
+Then initialize an exporter, resources, tracer provider, and finally a tracer.
 
 ```go
+package app
+
 import (
 	"context"
 	"fmt"
