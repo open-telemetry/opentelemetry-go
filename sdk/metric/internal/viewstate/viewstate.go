@@ -44,8 +44,13 @@ type (
 
 	viewCollectorFactory struct {
 		state   *State
-		akinds  []aggregation.Kind
+		aggSet  map[aggregation.Kind]viewMatchState
 		matches []views.View
+	}
+
+	viewMatchState struct {
+		// @@@ something to encode the number of distinct pipelines
+		// that receive aggregations of a particular kind.
 	}
 )
 
@@ -60,17 +65,10 @@ func aggregationKindFor(ik sdkapi.InstrumentKind) aggregation.Kind {
 	}
 }
 
-// func aggregatorFor(ak aggregation.Kind) export.Aggregator {
-// 	switch ak {
-// 	case aggregation.SumKind:
-// 	case aggregation.LastValueKind:
-// 	case aggregation.HistogramKind:
-// 	}
-// }
-
 func New(lib instrumentation.Library, defs []views.View, hasDefault bool) *State {
 
 	// TODO: error checking here, such as:
+	// - empty (?)
 	// - duplicate name
 	// - invalid inst/number/aggregation kind
 	// - both instrument name and regexp
@@ -86,26 +84,32 @@ func New(lib instrumentation.Library, defs []views.View, hasDefault bool) *State
 	}
 }
 
-func (v *State) NewFor(desc sdkapi.Descriptor) (CollectorFactory, error) {
+// NewFactory is called during NewInstrument by the Meter
+// implementation, the result saved in the instrument and used to
+// construct new Collectors throughout its lifetime.
+func (v *State) NewFactory(desc sdkapi.Descriptor) (CollectorFactory, error) {
+	// TODO: This should be conditioned on the configuration of
+	// the aggregator/exporter too, but we're not configuring them yet.
+
+	// Compute the set of matching views.
 	var matches []views.View
-
-	// TODO: This should be conditioned on the configuraiton of
-	// the aggregator too, but we're not configuring them yet.
-	aggSet := map[aggregation.Kind]struct{}{}
-
 	for _, def := range v.definitions {
 		if def.Matches(v.library, desc) {
 			matches = append(matches, def)
 		}
 	}
+
+	// Compute the set of requested aggregations.
+	aggSet := map[aggregation.Kind]int{}
 	for _, match := range matches {
 		va := match.Aggregation()
 		if va == "" {
-			aggSet[aggregationKindFor(desc.InstrumentKind())] = struct{}{}
+			aggSet[aggregationKindFor(desc.InstrumentKind())]++
 		} else {
-			aggSet[va] = struct{}{}
+			aggSet[va]++
 		}
 	}
+	// If there were no matching views, set the default aggregation.
 	if matches == nil {
 		if !v.hasDefault {
 			return nil, nil
@@ -113,14 +117,10 @@ func (v *State) NewFor(desc sdkapi.Descriptor) (CollectorFactory, error) {
 		aggSet[aggregationKindFor(desc.InstrumentKind())] = struct{}{}
 	}
 
-	// Develop an output plan
-	var aks []aggregation.Kind
-	for ak := range aggSet {
-		aks = append(aks, ak)
-	}
+	// Develop the list of basic aggregations.
 	vcf := &viewCollectorFactory{
 		state:   v,
-		akinds:  aks,
+		aggSet:  aggSet,
 		matches: matches,
 	}
 
@@ -148,11 +148,19 @@ func (v *State) NewFor(desc sdkapi.Descriptor) (CollectorFactory, error) {
 func (v *viewCollectorFactory) New(kvs []attribute.KeyValue) Collector {
 	var aggs []export.Aggregator
 	for _, ak := range v.akinds {
+		// Notes:
+		//
+		// Need to know how many aggregators are needed to construct
+		// the output pipeline.
+		//
+		// 1 is the base case, for the collector itself
+		// 1 for each matching view
+
 		var agg export.Aggregator
 		switch ak {
-		case aggregation.HistogramKind:
 		case aggregation.SumKind:
 		case aggregation.LastValueKind:
+		case aggregation.HistogramKind:
 		}
 		aggs = append(aggs, agg)
 	}
@@ -166,6 +174,7 @@ func (v *viewCollector) Update(number number.Number, descriptor *sdkapi.Descript
 }
 
 func (v *viewCollector) Send(final bool) error {
-	// @@@
+	// @@@ Call SynchronizedMove on each input
+
 	return nil
 }

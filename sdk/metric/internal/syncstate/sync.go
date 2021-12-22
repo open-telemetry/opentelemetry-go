@@ -29,6 +29,12 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/internal/viewstate"
 )
 
+// Performance note: there is still 1 obligatory allocation in the
+// fast path of this code due to the sync.Map key.  Assuming Go will
+// give us a generic form of sync.Map some time soon, the allocation
+// cost of instrument.Current will be reduced to zero allocs in the
+// fast path.  See also https://github.com/a8m/syncmap.
+
 type (
 	Accumulator struct {
 		instrumentsLock sync.Mutex
@@ -70,6 +76,89 @@ var (
 	_ sdkapi.Instrument = &instrument{}
 )
 
+func New() *Accumulator {
+	return &Accumulator{}
+}
+
+func (a *Accumulator) NewInstrument(descriptor sdkapi.Descriptor, cfactory viewstate.CollectorFactory) (sdkapi.Instrument, error) {
+	inst := &instrument{
+		descriptor: descriptor,
+		cfactory:   cfactory,
+	}
+
+	a.instrumentsLock.Lock()
+	defer a.instrumentsLock.Unlock()
+	a.instruments = append(a.instruments, inst)
+	return inst, nil
+}
+
+func (a *Accumulator) Collect() {
+	a.collectLock.Lock()
+	defer a.collectLock.Unlock()
+
+	a.collectInstruments()
+}
+
+func (a *Accumulator) collectInstruments() {
+	a.instrumentsLock.Lock()
+	instruments := a.instruments
+	a.instrumentsLock.Unlock()
+
+	for _, inst := range instruments {
+		inst.current.Range(func(_ interface{}, value interface{}) bool {
+			grp := value.(*group)
+			any := a.checkpointGroup(grp, false)
+
+			if any != 0 {
+				return true
+			}
+			// Having no updates since last collection, try to unmap:
+			if unmapped := grp.refMapped.tryUnmap(); !unmapped {
+				// The record is referenced by a binding, continue.
+				return true
+			}
+
+			// If any other goroutines are now trying to re-insert this
+			// entry in the map, they are busy calling Gosched() awaiting
+			// this deletion:
+			inst.current.Delete(grp.fingerprint)
+
+			// Last we'll see of this.
+			_ = a.checkpointGroup(grp, true)
+			return true
+		})
+	}
+}
+
+func (a *Accumulator) checkpointGroup(grp *group, final bool) int {
+	var checkpointed int
+	for rec := &grp.first; rec != nil; rec = (*record)(atomic.LoadPointer(&rec.next)) {
+
+		mods := atomic.LoadInt64(&rec.updateCount)
+		coll := rec.collectedCount
+
+		if mods != coll {
+			// Updates happened in this interval,
+			// checkpoint and continue.
+			checkpointed += a.checkpointRecord(rec, final)
+			rec.collectedCount = mods
+		}
+	}
+	return checkpointed
+}
+
+func (a *Accumulator) checkpointRecord(r *record, final bool) int {
+	if r.collector == nil {
+		return 0
+	}
+	if err := r.collector.Send(final); err != nil {
+		otel.Handle(err)
+		return 0
+	}
+
+	return 1
+}
+
 func (inst *instrument) Implementation() interface{} {
 	return inst
 }
@@ -78,42 +167,24 @@ func (inst *instrument) Descriptor() sdkapi.Descriptor {
 	return inst.descriptor
 }
 
-func (inst *instrument) initRecord(grp *group, rec *record, attrs attribute.Attributes) {
-	rec.group = grp
-	rec.attributes = attrs.KeyValues
-	rec.collector = inst.cfactory.New(attrs.KeyValues)
-}
+func (inst *instrument) Capture(_ context.Context, num number.Number, attrs []attribute.KeyValue) {
+	// TODO: Here, this is the place to use context, extract baggage.
 
-func (inst *instrument) findOrCreate(grp *group, attrs attribute.Attributes) *record {
-	var newRec *record
+	r := inst.acquireRecord(attribute.Fingerprint(attrs...))
+	defer r.group.refMapped.unref()
 
-	for {
-		var last *record
-
-		for rec := &grp.first; rec != nil; rec = (*record)(atomic.LoadPointer(&rec.next)) {
-			// TODO: Fast path: disregard the following and return the
-			// first match, HERE.
-
-			if attrs.Equals(attribute.Attributes{
-				Fingerprint: grp.fingerprint,
-				KeyValues:   rec.attributes,
-			}) {
-				return rec
-			}
-			last = rec
-		}
-
-		if newRec == nil {
-			newRec = &record{}
-			inst.initRecord(grp, newRec, attrs)
-		}
-
-		if !atomic.CompareAndSwapPointer(&last.next, nil, unsafe.Pointer(newRec)) {
-			continue
-		}
-
-		return newRec
+	if r.collector == nil {
+		// The instrument is disabled.
+		return
 	}
+	if err := aggregator.RangeTest(num, &r.group.instrument.descriptor); err != nil {
+		otel.Handle(err)
+		return
+	}
+	r.collector.Update(num, &r.group.instrument.descriptor)
+	// Record was modified, inform the Collect() that things need
+	// to be collected while the record is still mapped.
+	atomic.AddInt64(&r.updateCount, 1)
 }
 
 // acquireRecord gets or creates a `*record` corresponding to `kvs`,
@@ -159,105 +230,40 @@ func (inst *instrument) acquireRecord(attrs attribute.Attributes) *record {
 	return rec
 }
 
-func (inst *instrument) Capture(_ context.Context, num number.Number, attrs []attribute.KeyValue) {
-	// TODO This is the place to use context, extract baggage.
-
-	r := inst.acquireRecord(attribute.Fingerprint(attrs...))
-	defer r.group.refMapped.unref()
-
-	if r.collector == nil {
-		// The instrument is disabled.
-		return
-	}
-	if err := aggregator.RangeTest(num, &r.group.instrument.descriptor); err != nil {
-		otel.Handle(err)
-		return
-	}
-	r.collector.Update(num, &r.group.instrument.descriptor)
-	// Record was modified, inform the Collect() that things need
-	// to be collected while the record is still mapped.
-	atomic.AddInt64(&r.updateCount, 1)
+func (inst *instrument) initRecord(grp *group, rec *record, attrs attribute.Attributes) {
+	rec.group = grp
+	rec.attributes = attrs.KeyValues
+	rec.collector = inst.cfactory.New(attrs.KeyValues)
 }
 
-func New() *Accumulator {
-	return &Accumulator{}
-}
+func (inst *instrument) findOrCreate(grp *group, attrs attribute.Attributes) *record {
+	var newRec *record
 
-func (a *Accumulator) NewInstrument(descriptor sdkapi.Descriptor, cfactory viewstate.CollectorFactory) (sdkapi.Instrument, error) {
-	inst := &instrument{
-		descriptor: descriptor,
-		cfactory:   cfactory,
-	}
+	for {
+		var last *record
 
-	a.instrumentsLock.Lock()
-	defer a.instrumentsLock.Unlock()
-	a.instruments = append(a.instruments, inst)
-	return inst, nil
-}
-
-func (a *Accumulator) Collect() {
-	a.collectLock.Lock()
-	defer a.collectLock.Unlock()
-
-	a.collectInstruments()
-}
-
-func (a *Accumulator) checkpointGroup(grp *group, final bool) int {
-	var checkpointed int
-	for rec := &grp.first; rec != nil; rec = (*record)(atomic.LoadPointer(&rec.next)) {
-
-		mods := atomic.LoadInt64(&rec.updateCount)
-		coll := rec.collectedCount
-
-		if mods != coll {
-			// Updates happened in this interval,
-			// checkpoint and continue.
-			checkpointed += a.checkpointRecord(rec, final)
-			rec.collectedCount = mods
+		for rec := &grp.first; rec != nil; rec = (*record)(atomic.LoadPointer(&rec.next)) {
+			// TODO: Here an even-faster path option:
+			// disregard the equality test and return the
+			// first match.
+			if attrs.Equals(attribute.Attributes{
+				Fingerprint: grp.fingerprint,
+				KeyValues:   rec.attributes,
+			}) {
+				return rec
+			}
+			last = rec
 		}
+
+		if newRec == nil {
+			newRec = &record{}
+			inst.initRecord(grp, newRec, attrs)
+		}
+
+		if !atomic.CompareAndSwapPointer(&last.next, nil, unsafe.Pointer(newRec)) {
+			continue
+		}
+
+		return newRec
 	}
-	return checkpointed
-}
-
-func (a *Accumulator) collectInstruments() {
-	a.instrumentsLock.Lock()
-	instruments := a.instruments
-	a.instrumentsLock.Unlock()
-
-	for _, inst := range instruments {
-		inst.current.Range(func(_ interface{}, value interface{}) bool {
-			grp := value.(*group)
-			any := a.checkpointGroup(grp, false)
-
-			if any != 0 {
-				return true
-			}
-			// Having no updates since last collection, try to unmap:
-			if unmapped := grp.refMapped.tryUnmap(); !unmapped {
-				// The record is referenced by a binding, continue.
-				return true
-			}
-
-			// If any other goroutines are now trying to re-insert this
-			// entry in the map, they are busy calling Gosched() awaiting
-			// this deletion:
-			inst.current.Delete(grp.fingerprint)
-
-			// Last we'll see of this.
-			_ = a.checkpointGroup(grp, true)
-			return true
-		})
-	}
-}
-
-func (a *Accumulator) checkpointRecord(r *record, final bool) int {
-	if r.collector == nil {
-		return 0
-	}
-	if err := r.collector.Send(final); err != nil {
-		otel.Handle(err)
-		return 0
-	}
-
-	return 1
 }

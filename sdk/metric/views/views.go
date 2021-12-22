@@ -8,6 +8,7 @@ import (
 	"go.opentelemetry.io/otel/metric/sdkapi/number"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/receiver"
 )
 
 type (
@@ -28,6 +29,7 @@ type (
 		name        string
 		description string
 		aggregation aggregation.Kind
+		output      receiver.Receiver
 	}
 
 	Option func(cfg *Config)
@@ -96,6 +98,14 @@ func WithAggregation(kind aggregation.Kind) Option {
 	}
 }
 
+// Output
+
+func WithReceiver(output receiver.Receiver) Option {
+	return func(cfg *Config) {
+		cfg.output = output
+	}
+}
+
 func New(opts ...Option) View {
 	cfg := Config{
 		instrumentKind: unsetInstrumentKind,
@@ -133,6 +143,10 @@ func (v View) Description() string {
 
 func (v View) Aggregation() aggregation.Kind {
 	return v.cfg.aggregation
+}
+
+func (v View) Receiver() receiver.Receiver {
+	return v.cfg.output
 }
 
 func stringMismatch(test, value string) bool {

@@ -104,7 +104,7 @@ func (p *provider) Meter(name string, opts ...metric.MeterOption) metric.Meter {
 }
 
 func (m *meter) NewInstrument(descriptor sdkapi.Descriptor) (sdkapi.Instrument, error) {
-	cfactory, err := m.views.NewFor(descriptor)
+	cfactory, err := m.views.NewFactory(descriptor)
 	if err != nil {
 		return nil, err
 	}
