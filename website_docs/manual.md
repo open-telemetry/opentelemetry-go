@@ -1,6 +1,8 @@
 ---
-title: Instrumentation
+title: Manual Instrumentation
 weight: 3
+linkTitle: Manual
+aliases: [/docs/instrumentation/go/instrumentation, /docs/instrumentation/go/manual_instrumentation]
 ---
 
 Instrumentation is the process of adding observability code to your application. There are two general types of instrumentation - automatic, and manual - and you should be familiar with both in order to effectively instrument your software.
