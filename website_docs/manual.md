@@ -7,7 +7,7 @@ aliases: [/docs/instrumentation/go/instrumentation, /docs/instrumentation/go/man
 
 Instrumentation is the process of adding observability code to your application. There are two general types of instrumentation - automatic, and manual - and you should be familiar with both in order to effectively instrument your software.
 
-## Initializing a Tracer
+## Getting a Tracer
 
 To create spans, you'll need to initialize a tracer first. Some important things to consider:
 
@@ -17,7 +17,9 @@ To create spans, you'll need to initialize a tracer first. Some important things
 * You'll generally need an [exporter]({{< relref "exporting_data" >}}) to create a `TracerProvider`
 * You'll want to create Resources at `TracerProvider` initialization time as they cannot be changed later
 
-First, ensure you have the right packages installed:
+### Required packages
+
+Ensure you have the right packages installed:
 
 ```
 go get go.opentelemetry.io/otel \
@@ -25,7 +27,7 @@ go get go.opentelemetry.io/otel \
   go.opentelemetry.io/otel/sdk \
 ```
 
-### Initiallize a new tracer
+### Initiallizing a new tracer
 
 Then initialize an exporter, resources, tracer provider, and finally a tracer.
 
