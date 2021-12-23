@@ -46,18 +46,6 @@ type (
 		Count() (uint64, error)
 	}
 
-	// Min returns the minimum value over the set of values that were aggregated.
-	Min interface {
-		Aggregation
-		Min() (number.Number, error)
-	}
-
-	// Max returns the maximum value over the set of values that were aggregated.
-	Max interface {
-		Aggregation
-		Max() (number.Number, error)
-	}
-
 	// LastValue returns the latest value that was aggregated.
 	LastValue interface {
 		Aggregation
