@@ -39,21 +39,18 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-var (
-	tracer trace.Tracer
-)
+var tracer trace.Tracer
 
 func newExporter(ctx context.Context)  /* (someExporter.Exporter, error) */ {
 	// Your preferred exporter: console, jaeger, zipkin, OTLP, etc.
 }
 
-func newTraceProvider(exp *otlptrace.Exporter) *sdktrace.TracerProvider {
+func newTraceProvider(exp sdktrace.SpanExporter) *sdktrace.TracerProvider {
     // The service.name attribute is required.
-	resource :=
-		resource.NewWithAttributes(
-			semconv.SchemaURL,
-			semconv.ServiceNameKey.String("ExampleService"),
-		)
+	resource := resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceNameKey.String("ExampleService"),
+	)
 
 	return sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exp),
@@ -72,12 +69,12 @@ func main() {
 	// Create a new tracer provider with a batch span processor and the given exporter.
 	tp := newTraceProvider(exp)
 
-	// Handle shutdown properly so nothing leaks
+	// Handle shutdown properly so nothing leaks.
 	defer func() { _ = tp.Shutdown(ctx) }()
 
 	otel.SetTracerProvider(tp)
 
-	// Finally, set the tracer that can be used for this package
+	// Finally, set the tracer that can be used for this package.
 	tracer = tp.Tracer("ExampleService")
 }
 ```
