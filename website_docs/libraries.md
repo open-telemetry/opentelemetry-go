@@ -1,6 +1,8 @@
 ---
 title: Using instrumentation libraries
 weight: 3
+linkTitle: Libraries
+aliases: [/docs/instrumentation/go/using_instrumentation_libraries, /docs/instrumentation/go/automatic_instrumentation]
 ---
 
 Go does not support truly automatic instrumentation like other languages today. Instead, you'll need to depend on [instrumentation libraries](https://opentelemetry.io/docs/reference/specification/glossary/#instrumentation-library) that generate telemetry data for a particular instrumented library. For example, the instrumentation library for `net/hhtp` will automatically create spans that track inbound and outbound requests once you configure it in your code.
@@ -74,7 +76,7 @@ func main() {
 }
 ```
 
-Assuming that you have a `Tracer` and [exporter](exporting_data.md) configured, this code will:
+Assuming that you have a `Tracer` and [exporter]({{< relref "exporting_data" >}}) configured, this code will:
 
 * Start an HTTP server on port `3030`
 * Automatically generate a span for each inbound HTTP request to `/hello-instrumented`
@@ -90,4 +92,4 @@ A full list of instrumentation libraries available can be found in the [OpenTele
 
 Instrumentation libraries can do things like generate telemtry data for inbound and outbound HTTP requests, but they don't instrument your actual application.
 
-To get richer telemetry data, use [manual instrumentatiion](manual_instrumentation.md) to enrich your telemetry data from instrumentation libraries with instrumentation from your running application.
+To get richer telemetry data, use [manual instrumentatiion]({{< relref "manual" >}}) to enrich your telemetry data from instrumentation libraries with instrumentation from your running application.

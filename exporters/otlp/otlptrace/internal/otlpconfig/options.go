@@ -22,6 +22,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/encoding/gzip"
 
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
@@ -94,7 +95,7 @@ func NewGRPCConfig(opts ...GRPCOption) Config {
 	if cfg.Traces.GRPCCredentials != nil {
 		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(cfg.Traces.GRPCCredentials))
 	} else if cfg.Traces.Insecure {
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithInsecure())
+		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	} else {
 		// Default to using the host's root CA.
 		creds := credentials.NewTLS(nil)
