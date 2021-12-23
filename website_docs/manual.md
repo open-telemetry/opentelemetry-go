@@ -7,9 +7,83 @@ aliases: [/docs/instrumentation/go/instrumentation, /docs/instrumentation/go/man
 
 Instrumentation is the process of adding observability code to your application. There are two general types of instrumentation - automatic, and manual - and you should be familiar with both in order to effectively instrument your software.
 
+## Getting a Tracer
+
+To create spans, you'll need to acquire or initialize a tracer first.
+
+### Initiallizing a new tracer
+
+Ensure you have the right packages installed:
+
+```
+go get go.opentelemetry.io/otel \
+  go.opentelemetry.io/otel/trace \
+  go.opentelemetry.io/otel/sdk \
+```
+
+Then initialize an exporter, resources, tracer provider, and finally a tracer.
+
+```go
+package app
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
+	"go.opentelemetry.io/otel/trace"
+)
+
+var tracer trace.Tracer
+
+func newExporter(ctx context.Context)  /* (someExporter.Exporter, error) */ {
+	// Your preferred exporter: console, jaeger, zipkin, OTLP, etc.
+}
+
+func newTraceProvider(exp sdktrace.SpanExporter) *sdktrace.TracerProvider {
+    // The service.name attribute is required.
+	resource := resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceNameKey.String("ExampleService"),
+	)
+
+	return sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exp),
+		sdktrace.WithResource(resource),
+	)
+}
+
+func main() {
+	ctx := context.Background()
+
+	exp, err := newExporter(ctx)
+	if err != nil {
+		log.Fatalf("failed to initialize exporter: %v", err)
+	}
+
+	// Create a new tracer provider with a batch span processor and the given exporter.
+	tp := newTraceProvider(exp)
+
+	// Handle shutdown properly so nothing leaks.
+	defer func() { _ = tp.Shutdown(ctx) }()
+
+	otel.SetTracerProvider(tp)
+
+	// Finally, set the tracer that can be used for this package.
+	tracer = tp.Tracer("ExampleService")
+}
+```
+
+You can now access `tracer` to manually instrument your code.
+
 ## Creating Spans
 
-Spans are created by tracers, which can be acquired from a Tracer Provider. Typically a tracer is instantiated at the module level.
+Spans are created by tracers. If you don't have one initialized, you'll need to do that.
 
 To create a span with a tracer, you'll also need a handle on a `context.Context` instance. These will typically come from things like a request object and may already contain a parent span from an [instrumentation library][].
 
