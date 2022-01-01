@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -30,12 +29,15 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
+const (
+	defaultCollectorURL = "http://localhost:9411/api/v2/spans"
+)
+
 // Exporter exports spans to the zipkin collector.
 type Exporter struct {
 	url    string
 	client *http.Client
 	logger *log.Logger
-	config config
 
 	stoppedMu sync.RWMutex
 	stopped   bool
@@ -49,6 +51,7 @@ var (
 type config struct {
 	client *http.Client
 	logger *log.Logger
+	url    string
 }
 
 // Option defines a function that configures the exporter.
@@ -60,6 +63,13 @@ type optionFunc func(*config)
 
 func (fn optionFunc) apply(cfg *config) {
 	fn(cfg)
+}
+
+// WithEndpoint configures the exporter to use the passed collector endpoint.
+func WithEndpoint(endpoint string) Option {
+	return optionFunc(func(cfg *config) {
+		cfg.url = endpoint
+	})
 }
 
 // WithLogger configures the exporter to use the passed logger.
@@ -77,30 +87,36 @@ func WithClient(client *http.Client) Option {
 }
 
 // New creates a new Zipkin exporter.
-func New(collectorURL string, opts ...Option) (*Exporter, error) {
-	if collectorURL == "" {
-		return nil, errors.New("collector URL cannot be empty")
-	}
-	u, err := url.Parse(collectorURL)
-	if err != nil {
-		return nil, fmt.Errorf("invalid collector URL %q: %v", collectorURL, err)
-	}
-	if u.Scheme == "" || u.Host == "" {
-		return nil, fmt.Errorf("invalid collector URL %q: no scheme or host", collectorURL)
-	}
+func New(opts ...Option) (*Exporter, error) {
+	var (
+		err error
+		u   *url.URL
+	)
 
 	cfg := config{}
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
+
+	if cfg.url == "" {
+		// Use endpoint from env var or default collector URL.
+		cfg.url = envOr(envEndpoint, defaultCollectorURL)
+	}
+	u, err = url.Parse(cfg.url)
+	if err != nil {
+		return nil, fmt.Errorf("invalid collector URL %q: %v", cfg.url, err)
+	}
+	if u.Scheme == "" || u.Host == "" {
+		return nil, fmt.Errorf("invalid collector URL %q: no scheme or host", cfg.url)
+	}
+
 	if cfg.client == nil {
 		cfg.client = http.DefaultClient
 	}
 	return &Exporter{
-		url:    collectorURL,
+		url:    cfg.url,
 		client: cfg.client,
 		logger: cfg.logger,
-		config: cfg,
 	}, nil
 }
 
