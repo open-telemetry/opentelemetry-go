@@ -180,7 +180,7 @@ var errShutdown = errors.New("the client is shutdown")
 //
 // Retryable errors from the server will be handled according to any
 // RetryConfig the client was created with.
-func (c *client) UploadMetrics(ctx context.Context, protoMetrics []*metricpb.ResourceMetrics) error {
+func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.ResourceMetrics) error {
 	// Hold a read lock to ensure a shut down initiated after this starts does
 	// not abandon the export. This read lock acquire has less priority than a
 	// write lock acquire (i.e. Stop), meaning if the client is shutting down
@@ -197,7 +197,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics []*metricpb.Res
 
 	return c.requestFunc(ctx, func(iCtx context.Context) error {
 		_, err := c.msc.Export(iCtx, &colmetricpb.ExportMetricsServiceRequest{
-			ResourceMetrics: protoMetrics,
+			ResourceMetrics: []*metricpb.ResourceMetrics{protoMetrics},
 		})
 		// nil is converted to OK.
 		if status.Code(err) == codes.OK {
