@@ -41,7 +41,7 @@ func initTracer(url string) func() {
 	// configure the sampler to a trace.ParentBased(trace.TraceIDRatioBased) set at the desired
 	// ratio.
 	exporter, err := zipkin.New(
-		zipkin.WithEndpoint(url),
+		url,
 		zipkin.WithLogger(logger),
 	)
 	if err != nil {

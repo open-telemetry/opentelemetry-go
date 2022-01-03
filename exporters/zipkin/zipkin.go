@@ -51,7 +51,6 @@ var (
 type config struct {
 	client *http.Client
 	logger *log.Logger
-	url    string
 }
 
 // Option defines a function that configures the exporter.
@@ -63,13 +62,6 @@ type optionFunc func(*config)
 
 func (fn optionFunc) apply(cfg *config) {
 	fn(cfg)
-}
-
-// WithEndpoint configures the exporter to use the passed collector endpoint.
-func WithEndpoint(endpoint string) Option {
-	return optionFunc(func(cfg *config) {
-		cfg.url = endpoint
-	})
 }
 
 // WithLogger configures the exporter to use the passed logger.
@@ -87,34 +79,29 @@ func WithClient(client *http.Client) Option {
 }
 
 // New creates a new Zipkin exporter.
-func New(opts ...Option) (*Exporter, error) {
-	var (
-		err error
-		u   *url.URL
-	)
+func New(collectorURL string, opts ...Option) (*Exporter, error) {
+	if collectorURL == "" {
+		// Use endpoint from env var or default collector URL.
+		collectorURL = envOr(envEndpoint, defaultCollectorURL)
+	}
+	u, err := url.Parse(collectorURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid collector URL %q: %v", collectorURL, err)
+	}
+	if u.Scheme == "" || u.Host == "" {
+		return nil, fmt.Errorf("invalid collector URL %q: no scheme or host", collectorURL)
+	}
 
 	cfg := config{}
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
 
-	if cfg.url == "" {
-		// Use endpoint from env var or default collector URL.
-		cfg.url = envOr(envEndpoint, defaultCollectorURL)
-	}
-	u, err = url.Parse(cfg.url)
-	if err != nil {
-		return nil, fmt.Errorf("invalid collector URL %q: %v", cfg.url, err)
-	}
-	if u.Scheme == "" || u.Host == "" {
-		return nil, fmt.Errorf("invalid collector URL %q: no scheme or host", cfg.url)
-	}
-
 	if cfg.client == nil {
 		cfg.client = http.DefaultClient
 	}
 	return &Exporter{
-		url:    cfg.url,
+		url:    collectorURL,
 		client: cfg.client,
 		logger: cfg.logger,
 	}, nil

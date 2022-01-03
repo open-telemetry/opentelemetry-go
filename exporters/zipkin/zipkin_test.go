@@ -41,7 +41,7 @@ import (
 
 func TestNewRawExporter(t *testing.T) {
 	_, err := New(
-		WithEndpoint(defaultCollectorURL),
+		defaultCollectorURL,
 	)
 
 	assert.NoError(t, err)
@@ -55,7 +55,7 @@ func TestNewRawExporterShouldFailInvalidCollectorURL(t *testing.T) {
 
 	// invalid URL
 	exp, err = New(
-		WithEndpoint("localhost"),
+		"localhost",
 	)
 
 	assert.Error(t, err)
@@ -70,7 +70,7 @@ func TestNewRawExporterEmptyDefaultCollectorURL(t *testing.T) {
 	)
 
 	// use default collector URL if not specified
-	exp, err = New()
+	exp, err = New("")
 
 	assert.NoError(t, err)
 	assert.Equal(t, defaultCollectorURL, exp.url)
@@ -91,7 +91,7 @@ func TestNewRawExporterCollectorURLFromEnv(t *testing.T) {
 		require.NoError(t, envStore.Restore())
 	}()
 
-	exp, err = New()
+	exp, err = New("")
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedEndpoint, exp.url)
@@ -306,7 +306,7 @@ func TestExportSpans(t *testing.T) {
 	defer collector.Close()
 	ls := &logStore{T: t}
 	logger := logStoreLogger(ls)
-	exporter, err := New(WithEndpoint(collector.url), WithLogger(logger))
+	exporter, err := New(collector.url, WithLogger(logger))
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.Len(t, ls.Messages, 0)
@@ -331,7 +331,7 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	exp, err := New()
+	exp, err := New("")
 	require.NoError(t, err)
 
 	innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
@@ -344,7 +344,7 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	exp, err := New()
+	exp, err := New("")
 	require.NoError(t, err)
 
 	innerCtx, innerCancel := context.WithCancel(ctx)
@@ -353,7 +353,7 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 }
 
 func TestErrorOnExportShutdownExporter(t *testing.T) {
-	exp, err := New()
+	exp, err := New("")
 	require.NoError(t, err)
 	assert.NoError(t, exp.Shutdown(context.Background()))
 	assert.NoError(t, exp.ExportSpans(context.Background(), nil))
