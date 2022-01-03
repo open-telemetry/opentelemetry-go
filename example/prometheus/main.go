@@ -38,7 +38,9 @@ var (
 )
 
 func initMeter() {
-	config := prometheus.Config{}
+	config := prometheus.Config{
+		DefaultHistogramBoundaries: []float64{1, 2, 5, 10, 20, 50},
+	}
 	c := controller.New(
 		processor.NewFactory(
 			selector.NewWithHistogramDistribution(
