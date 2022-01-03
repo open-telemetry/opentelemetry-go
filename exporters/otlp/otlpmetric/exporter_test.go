@@ -64,7 +64,7 @@ func (m *stubClient) Stop(ctx context.Context) error {
 }
 
 func (m *stubClient) UploadMetrics(ctx context.Context, protoMetrics *metricpb.ResourceMetrics) error {
-	m.rm = append(m.rm, []*metricpb.ResourceMetrics{protoMetrics}...)
+	m.rm = append(m.rm, protoMetrics)
 	return nil
 }
 
