@@ -17,7 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Fixes the instrument kind for noop async instruments. (#2461)
-- Fix specify explicit buckets in example(#2493)
+- Specify explicit buckets in Prometheus example. (#2493)
 
 ## [1.3.0] - 2021-12-10
 
