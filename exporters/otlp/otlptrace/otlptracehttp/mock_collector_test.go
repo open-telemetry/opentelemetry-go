@@ -26,7 +26,6 @@ import (
 	"net/http"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -48,7 +47,7 @@ type mockCollector struct {
 	injectHTTPStatus     []int
 	injectResponseHeader []map[string]string
 	injectContentType    string
-	injectDelay          time.Duration
+	delay                <-chan struct{}
 
 	clientTLSConfig *tls.Config
 	expectedHeaders map[string]string
@@ -83,8 +82,12 @@ func (c *mockCollector) ClientTLSConfig() *tls.Config {
 }
 
 func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
-	if c.injectDelay != 0 {
-		time.Sleep(c.injectDelay)
+	if c.delay != nil {
+		select {
+		case <-c.delay:
+		case <-r.Context().Done():
+			return
+		}
 	}
 
 	if !c.checkHeaders(r) {
@@ -205,7 +208,7 @@ type mockCollectorConfig struct {
 	InjectHTTPStatus     []int
 	InjectContentType    string
 	InjectResponseHeader []map[string]string
-	InjectDelay          time.Duration
+	Delay                <-chan struct{}
 	WithTLS              bool
 	ExpectedHeaders      map[string]string
 }
@@ -228,7 +231,7 @@ func runMockCollector(t *testing.T, cfg mockCollectorConfig) *mockCollector {
 		injectHTTPStatus:     cfg.InjectHTTPStatus,
 		injectResponseHeader: cfg.InjectResponseHeader,
 		injectContentType:    cfg.InjectContentType,
-		injectDelay:          cfg.InjectDelay,
+		delay:                cfg.Delay,
 		expectedHeaders:      cfg.ExpectedHeaders,
 	}
 	mux := http.NewServeMux()
