@@ -39,5 +39,5 @@ type Client interface {
 	// UploadMetrics should transform the passed metrics to the
 	// wire format and send it to the collector. May be called
 	// concurrently.
-	UploadMetrics(ctx context.Context, protoMetrics []*metricpb.ResourceMetrics) error
+	UploadMetrics(ctx context.Context, protoMetrics *metricpb.ResourceMetrics) error
 }

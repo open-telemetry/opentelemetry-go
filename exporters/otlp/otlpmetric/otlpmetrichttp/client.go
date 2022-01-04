@@ -144,9 +144,9 @@ func (d *client) Stop(ctx context.Context) error {
 }
 
 // UploadMetrics sends a batch of metrics to the collector.
-func (d *client) UploadMetrics(ctx context.Context, protoMetrics []*metricpb.ResourceMetrics) error {
+func (d *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.ResourceMetrics) error {
 	pbRequest := &colmetricpb.ExportMetricsServiceRequest{
-		ResourceMetrics: protoMetrics,
+		ResourceMetrics: []*metricpb.ResourceMetrics{protoMetrics},
 	}
 	rawRequest, err := proto.Marshal(pbRequest)
 	if err != nil {
