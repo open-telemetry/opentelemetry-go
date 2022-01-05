@@ -57,14 +57,8 @@ var unsetLastValue = &lastValueData{}
 
 // New returns a new lastValue aggregator.  This aggregator retains the
 // last value and timestamp that were recorded.
-func New(cnt int) []Aggregator {
-	aggs := make([]Aggregator, cnt)
-	for i := range aggs {
-		aggs[i] = Aggregator{
-			value: unsafe.Pointer(unsetLastValue),
-		}
-	}
-	return aggs
+func (a *Aggregator) Init() {
+	a.value = unsafe.Pointer(unsetLastValue)
 }
 
 // LastValue returns the last-recorded lastValue value and the

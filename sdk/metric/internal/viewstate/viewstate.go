@@ -62,18 +62,26 @@ type (
 	// has one of these allocated with state for each matching view.
 	viewCollector struct {
 		states []viewConfigState
-		// inputs []export.Aggregator
-		// outputs []viewMatchState
+	}
+
+	viewSender interface {
+		send(*sdkapi.Descriptor)
+	}
+	viewUpdater interface {
+		update(number.Number, *sdkapi.Descriptor)
 	}
 
 	viewConfigState interface {
-		update()
-		send()
+		update(number.Number, *sdkapi.Descriptor)
 	}
 
 	aggregatorSettings struct {
 		aggregation.Kind
 	}
+
+	sumAggregators       []sum.Aggregator
+	lastValueAggregators []lastvalue.Aggregator
+	histogramAggregators []histogram.Aggregator
 )
 
 func aggregatorSettingsFor(desc sdkapi.Descriptor) aggregatorSettings {
@@ -228,28 +236,33 @@ func (factory *viewCollectorFactory) New(kvs []attribute.KeyValue, desc *sdkapi.
 			// handle this Send() or we need some other kind of
 			// reflection.  It will be much simpler if we allocate
 			// aggregators independently.
-			aggs := sum.New(cnt)
-
-			states = append(states, &aggs[0])
-			//outputs = append(outputs, viewMatchState{aggs})
+			aggs := make(sumAggregators, cnt)
+			for i := range aggs {
+				aggs[i].Init()
+			}
+			states = append(states, aggs)
 		case aggregation.LastValueKind:
-			aggs := lastvalue.New(cnt)
-			inputs = append(inputs, &aggs[0])
-			//outputs = append(outputs, viewMatchState{aggs})
+			aggs := make(lastValueAggregators, cnt)
+			for i := range aggs {
+				aggs[i].Init()
+			}
+			states = append(states, aggs)
 		case aggregation.HistogramKind:
-			aggs := histogram.New(cnt, desc)
-			inputs = append(inputs, &aggs[0])
-			//outputs = append(outputs, viewMatchState{aggs})
+			aggs := make(histogramAggregators, cnt)
+			for i := range aggs {
+				aggs[i].Init(desc)
+			}
+			states = append(states, aggs)
 		}
 	}
 	return &viewCollector{
-		inputs: inputs,
+		states: states,
 	}
 }
 
 func (v *viewCollector) Update(number number.Number, desc *sdkapi.Descriptor) {
-	for _, input := range v.inputs {
-		input.Update(number, desc)
+	for _, state := range v.states {
+		state.update(number, desc)
 	}
 }
 
@@ -260,4 +273,28 @@ func (v *viewCollector) Send(desc *sdkapi.Descriptor) error {
 	}
 
 	return nil
+}
+
+// func (sa sumAggregators) update() {
+// }
+func (sa sumAggregators) send(desc *sdkapi.Descriptor) {
+	for i := range sa[1:] {
+		sa[i].Merge(&sa[0], desc)
+	}
+}
+
+// func (lva lastValueAggregators) update() {
+// }
+func (lva lastValueAggregators) send() {
+	for i := range lva[1:] {
+		lva[i].Merge(&lva[0], desc)
+	}
+}
+
+// func (ha histogramAggregators) update() {
+// }
+func (ha histogramAggregators) send() {
+	for i := range ha[1:] {
+		ha[i].Merge(&ha[0], desc)
+	}
 }

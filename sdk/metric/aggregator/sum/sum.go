@@ -28,11 +28,8 @@ type Aggregator struct {
 	value number.Number
 }
 
-// New returns a new counter aggregator implemented by atomic
-// operations.  This aggregator implements the aggregation.Sum
-// export interface.
-func New(cnt int) []Aggregator {
-	return make([]Aggregator, cnt)
+func (c *Aggregator) Init() {
+	c.value = 0
 }
 
 // Sum returns the last-checkpointed sum.  This will never return an

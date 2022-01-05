@@ -106,7 +106,7 @@ var _ export.Aggregator = &Aggregator{}
 // Note that this aggregator maintains each value using independent
 // atomic operations, which introduces the possibility that
 // checkpoints are inconsistent.
-func New(cnt int, desc *sdkapi.Descriptor, opts ...Option) []Aggregator {
+func (a *Aggregator) Init(desc *sdkapi.Descriptor, opts ...Option) {
 	var cfg config
 
 	if desc.NumberKind() == number.Int64Kind {
@@ -119,8 +119,6 @@ func New(cnt int, desc *sdkapi.Descriptor, opts ...Option) []Aggregator {
 		opt.apply(&cfg)
 	}
 
-	aggs := make([]Aggregator, cnt)
-
 	// Boundaries MUST be ordered otherwise the histogram could not
 	// be properly computed.
 	sortedBoundaries := make([]float64, len(cfg.explicitBoundaries))
@@ -128,14 +126,9 @@ func New(cnt int, desc *sdkapi.Descriptor, opts ...Option) []Aggregator {
 	copy(sortedBoundaries, cfg.explicitBoundaries)
 	sort.Float64s(sortedBoundaries)
 
-	for i := range aggs {
-		aggs[i] = Aggregator{
-			kind:       desc.NumberKind(),
-			boundaries: sortedBoundaries,
-		}
-		aggs[i].state = aggs[i].newState()
-	}
-	return aggs
+	a.kind = desc.NumberKind()
+	a.boundaries = sortedBoundaries
+	a.state = a.newState()
 }
 
 // Sum returns the sum of all values in the checkpoint.
