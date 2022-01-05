@@ -22,8 +22,9 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/sdkapi"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 )
 
 type (
@@ -74,12 +75,12 @@ type (
 		// (if !currentOwned) or it refers to an Aggregator
 		// owned by the processor used to accumulate multiple
 		// values in a single collection round.
-		current export.Aggregator
+		current aggregator.Aggregator
 
 		// cumulative, if non-nil, refers to an Aggregator owned
 		// by the processor used to store the last cumulative
 		// value.
-		cumulative export.Aggregator
+		cumulative aggregator.Aggregator
 	}
 
 	state struct {

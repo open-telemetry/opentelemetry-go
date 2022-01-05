@@ -19,9 +19,8 @@ import (
 
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 )
 
 // Aggregator aggregates counter events.
@@ -31,7 +30,7 @@ type Aggregator struct {
 	value number.Number
 }
 
-var _ export.Aggregator = &Aggregator{}
+var _ aggregator.Aggregator = &Aggregator{}
 var _ aggregation.Sum = &Aggregator{}
 
 // New returns a new counter aggregator implemented by atomic
@@ -59,7 +58,7 @@ func (c *Aggregator) Sum() (number.Number, error) {
 
 // SynchronizedMove atomically saves the current value into oa and resets the
 // current sum to zero.
-func (c *Aggregator) SynchronizedMove(oa export.Aggregator, _ *sdkapi.Descriptor) error {
+func (c *Aggregator) SynchronizedMove(oa aggregator.Aggregator, _ *sdkapi.Descriptor) error {
 	if oa == nil {
 		c.value.SetRawAtomic(0)
 		return nil
@@ -79,7 +78,7 @@ func (c *Aggregator) Update(_ context.Context, num number.Number, desc *sdkapi.D
 }
 
 // Merge combines two counters by adding their sums.
-func (c *Aggregator) Merge(oa export.Aggregator, desc *sdkapi.Descriptor) error {
+func (c *Aggregator) Merge(oa aggregator.Aggregator, desc *sdkapi.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(c, oa)

@@ -24,7 +24,7 @@ import (
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 )
 
@@ -147,7 +147,7 @@ func TestSynchronizedMoveReset(t *testing.T) {
 	aggregatortest.SynchronizedMoveResetTest(
 		t,
 		sdkapi.CounterObserverInstrumentKind,
-		func(desc *sdkapi.Descriptor) export.Aggregator {
+		func(desc *sdkapi.Descriptor) aggregator.Aggregator {
 			return &New(1)[0]
 		},
 	)

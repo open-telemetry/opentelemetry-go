@@ -23,12 +23,11 @@ import (
 
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/internal/mapping"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/internal/mapping/exponent"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/internal/mapping/logarithm"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 )
 
 // Note: This code uses a Mutex to govern access to the exclusive
@@ -106,7 +105,7 @@ type (
 	}
 )
 
-var _ export.Aggregator = &Aggregator{}
+var _ aggregator.Aggregator = &Aggregator{}
 var _ aggregation.Sum = &Aggregator{}
 var _ aggregation.Count = &Aggregator{}
 var _ aggregation.ExponentialHistogram = &Aggregator{}
@@ -208,7 +207,7 @@ func (a *Aggregator) Kind() aggregation.Kind {
 }
 
 // SynchronizedMove implements export.Aggregator.
-func (a *Aggregator) SynchronizedMove(oa export.Aggregator, desc *sdkapi.Descriptor) error {
+func (a *Aggregator) SynchronizedMove(oa aggregator.Aggregator, desc *sdkapi.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 
 	if oa != nil && o == nil {
@@ -748,7 +747,7 @@ func (b *buckets) incrementBucket(bucketIndex int32, incr uint64) {
 }
 
 // Merge combines two histograms that have the same buckets into a single one.
-func (a *Aggregator) Merge(oa export.Aggregator, desc *sdkapi.Descriptor) error {
+func (a *Aggregator) Merge(oa aggregator.Aggregator, desc *sdkapi.Descriptor) error {
 	o, _ := oa.(*Aggregator)
 	if o == nil {
 		return aggregator.NewInconsistentAggregatorError(a, oa)

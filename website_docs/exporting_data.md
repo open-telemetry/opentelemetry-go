@@ -1,6 +1,7 @@
 ---
-title: "Processing and Exporting Data"
+title: Processing and Exporting Data
 weight: 4
+linkTitle: Exporting data
 ---
 
 Once you've instrumented your code, you need to get the data out in order to do anything useful with it. This page will cover the basics of the process and export pipeline.
@@ -54,9 +55,7 @@ system it is running on, the cloud provider hosting that operating system instan
 
 ```go
 resources := resource.New(context.Background(),
-	// Builtin detectors provide default values and support
-	// OTEL_RESOURCE_ATTRIBUTES and OTEL_SERVICE_NAME environment variables
-	resource.WithBuiltinDetectors(),
+	resource.WithFromEnv(), // pull attributes from OTEL_RESOURCE_ATTRIBUTES and OTEL_SERVICE_NAME environment variables
 	resource.WithProcess(), // This option configures a set of Detectors that discover process information
 	resource.WithDetectors(thirdparty.Detector{}), // Bring your own external Detector implementation
 	resource.WithAttributes(attribute.String("foo", "bar")), // Or specify resource attributes directly
