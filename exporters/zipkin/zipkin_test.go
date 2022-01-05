@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"io/ioutil"
 	"log"
 	"net"
@@ -26,6 +25,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	ottest "go.opentelemetry.io/otel/internal/internaltest"
 
 	zkmodel "github.com/openzipkin/zipkin-go/model"
 	"github.com/stretchr/testify/assert"
