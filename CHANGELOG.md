@@ -11,14 +11,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Support `OTEL_EXPORTER_ZIPKIN_ENDPOINT` env to specify zipkin collector endpoint (#2490)
+- Add an exponential histogram aggregator, a corresponding aggregation.Kind, and OTLP exporter support. (TODO)
 
 ### Changed
 
 - Jaeger exporter takes into additional 70 bytes overhead into consideration when sending UDP packets (#2489)
-
-### Added 
-
-- Add an exponential histogram aggregator, a corresponding aggregation.Kind, and OTLP exporter support. (TODO)
 
 ### Deprecated
 

@@ -19,7 +19,7 @@ the `WithMaxSize()` option, which defaults to 320.
 An optional configuration supports fixing the scale in advance, which
 ensures that repeated collection periods will generate consistent
 histogram bucket boundaries, across multiple processes.  This option,
-set by `WithRangeLimit(min, max)`, fixes the scale parameter and is 
+set by `WithRangeLimit(min, max)`, fixes the scale parameter and is
 recommended in configurations that write through to Prometheus.
 
 When range limits are not fixed, the implementation here maintains the
