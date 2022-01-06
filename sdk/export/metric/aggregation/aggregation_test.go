@@ -24,5 +24,4 @@ func TestAggregationKind(t *testing.T) {
 	require.Equal(t, "Sum", SumKind.String())
 	require.Equal(t, "Lastvalue", LastValueKind.String())
 	require.Equal(t, "Histogram", HistogramKind.String())
-	require.Equal(t, "ExponentialHistogram", ExponentialHistogramKind.String())
 }
