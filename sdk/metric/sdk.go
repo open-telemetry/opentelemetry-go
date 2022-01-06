@@ -201,9 +201,9 @@ func (a *asyncInstrument) getRecorder(labels *attribute.Set) aggregator.Aggregat
 }
 
 // acquireHandle gets or creates a `*record` corresponding to `kvs`,
-// the input labels.  The second argument `labels` is passed in to
+// the input labels.  The second parameter `labelsPtr` is passed in to
 // support re-use of the orderedLabels computed by a previous
-// measurement in the same batch.   This performs two allocations
+// measurement in the same batch. This performs two allocations
 // in the common case.
 func (s *syncInstrument) acquireHandle(kvs []attribute.KeyValue, labelPtr *attribute.Set) *record {
 	var rec *record
