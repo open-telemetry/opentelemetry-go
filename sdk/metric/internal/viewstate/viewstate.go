@@ -67,12 +67,14 @@ type (
 	viewSender interface {
 		send(*sdkapi.Descriptor)
 	}
+
 	viewUpdater interface {
-		update(number.Number, *sdkapi.Descriptor)
+		Update(number.Number, *sdkapi.Descriptor)
 	}
 
 	viewConfigState interface {
-		update(number.Number, *sdkapi.Descriptor)
+		viewSender
+		viewUpdater
 	}
 
 	aggregatorSettings struct {
@@ -205,14 +207,15 @@ func (v *State) NewFactory(desc sdkapi.Descriptor) (CollectorFactory, error) {
 }
 
 func (factory *viewCollectorFactory) New(kvs []attribute.KeyValue, desc *sdkapi.Descriptor) Collector {
-	var states []viewConfigState
+	var updaters []viewUpdater
 	for _, config := range factory.configuration {
 		// 1 is the input aggregator
 		// 1 for each matching view
 		cnt := 1 + len(config.behaviors)
+		synchronous := desc.InstrumentKind().Synchronous()
 
 		// 1 for each synchronous aggregator, as these need a temporary.
-		if desc.InstrumentKind().Synchronous() {
+		if synchronous {
 			cnt++
 		}
 
@@ -240,19 +243,20 @@ func (factory *viewCollectorFactory) New(kvs []attribute.KeyValue, desc *sdkapi.
 			for i := range aggs {
 				aggs[i].Init()
 			}
-			states = append(states, aggs)
+			updaters = append(updaters, &aggs[0])
+
 		case aggregation.LastValueKind:
 			aggs := make(lastValueAggregators, cnt)
 			for i := range aggs {
 				aggs[i].Init()
 			}
-			states = append(states, aggs)
+			updaters = append(updaters, &aggs[0])
 		case aggregation.HistogramKind:
 			aggs := make(histogramAggregators, cnt)
 			for i := range aggs {
 				aggs[i].Init(desc)
 			}
-			states = append(states, aggs)
+			updaters = append(updaters, &aggs[0])
 		}
 	}
 	return &viewCollector{
@@ -268,33 +272,27 @@ func (v *viewCollector) Update(number number.Number, desc *sdkapi.Descriptor) {
 
 func (v *viewCollector) Send(desc *sdkapi.Descriptor) error {
 
-	for _, output := range v.outputs {
-		output(desc)
-	}
+	// for _, output := range v.outputs {
+	// 	output(desc)
+	// }
 
 	return nil
 }
 
-// func (sa sumAggregators) update() {
+// func (sa sumAggregators) send(desc *sdkapi.Descriptor) {
+// 	for i := range sa[1:] {
+// 		sa[i].Merge(&sa[0], desc)
+// 	}
 // }
-func (sa sumAggregators) send(desc *sdkapi.Descriptor) {
-	for i := range sa[1:] {
-		sa[i].Merge(&sa[0], desc)
-	}
-}
 
-// func (lva lastValueAggregators) update() {
+// func (lva lastValueAggregators) send() {
+// 	for i := range lva[1:] {
+// 		lva[i].Merge(&lva[0], desc)
+// 	}
 // }
-func (lva lastValueAggregators) send() {
-	for i := range lva[1:] {
-		lva[i].Merge(&lva[0], desc)
-	}
-}
 
-// func (ha histogramAggregators) update() {
+// func (ha histogramAggregators) send() {
+// 	for i := range ha[1:] {
+// 		ha[i].Merge(&ha[0], desc)
+// 	}
 // }
-func (ha histogramAggregators) send() {
-	for i := range ha[1:] {
-		ha[i].Merge(&ha[0], desc)
-	}
-}
