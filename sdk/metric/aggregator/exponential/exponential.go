@@ -58,9 +58,7 @@ type (
 	// automatically adjusted to accommodate the range of input
 	// data.
 	Aggregator struct {
-		lock sync.Mutex
-		// TODO: the three fields here could be shared by
-		// multiple aggregators.
+		lock     sync.Mutex
 		maxSize  int32
 		minValue float64
 		maxValue float64
@@ -80,25 +78,50 @@ type (
 		apply(*config)
 	}
 
-	// state represents the state of a histogram, consisting of
-	// the sum and counts for all observed values and
-	// the less than equal bucket count for the pre-determined boundaries.
+	// state represents the state of a histogram.
 	state struct {
-		sum       number.Number
-		count     uint64
+		// sum is the sum of all Updates reflected in the
+		// aggregator.  It has the same type number as the
+		// corresponding sdkapi.Descriptor.
+		sum number.Number
+		// count is incremented by 1 per Update.
+		count uint64
+		// zeroCount is incremented by 1 when the measured
+		// value is exactly 0.
 		zeroCount uint64
-		positive  buckets
-		negative  buckets
-		mapping   mapping.Mapping
+		// positive holds the positive values
+		positive buckets
+		// positive holds the negative values in these buckets
+		// by their absolute value.
+		negative buckets
+		// mapping corresponds to the current scale, is shared
+		// by both positive and negative ranges.
+		mapping mapping.Mapping
 	}
 
+	// buckets stores counts for measurement values in the range
+	// (0, +Inf).
 	buckets struct {
-		backing    interface{} // nil, []uint8, []uint16, []uint32, or []uint64
-		indexBase  int32       // value of backing[0] in [indexStart, indexEnd]
+		// backing is a slice of nil, []uint8, []uint16, []uint32, or []uint64
+		backing interface{}
+
+		// indexBase is index of the 0th position in the
+		// backing array, i.e., backing[0] is the count associated with
+		// indexBase which is in [indexStart, indexEnd]
+		indexBase int32
+
+		// indexStart is the smallest index value represented
+		// in the backing array.
 		indexStart int32
-		indexEnd   int32
+
+		// indexEnd is the largest index value represented in
+		// the backing array.
+		indexEnd int32
 	}
 
+	// highLow is used to establish the maximum range of bucket
+	// indices needed, in order to establish the best value of the
+	// scale parameter.
 	highLow struct {
 		low  int32
 		high int32
@@ -305,7 +328,7 @@ func int32max(a, b int32) int32 {
 	return b
 }
 
-// Count implements aggregation.Sum.
+// Count implements aggregation.Count.
 func (a *Aggregator) Count() (uint64, error) {
 	return a.state.count, nil
 }
