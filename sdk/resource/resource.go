@@ -109,6 +109,16 @@ func (r *Resource) String() string {
 	return r.attrs.Encoded(attribute.DefaultEncoder())
 }
 
+func (r *Resource) MarshalLog() interface{} {
+	return struct {
+		Attributes []attribute.KeyValue
+		SchemaURL  string
+	}{
+		Attributes: r.attrs.ToSlice(),
+		SchemaURL:  r.schemaURL,
+	}
+}
+
 // Attributes returns a copy of attributes from the resource in a sorted order.
 // To avoid allocating a new slice, use an iterator.
 func (r *Resource) Attributes() []attribute.KeyValue {

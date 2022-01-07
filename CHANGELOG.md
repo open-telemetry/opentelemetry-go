@@ -8,6 +8,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+- Log the configuration of TracerProviders, and Tracers for debugging. To enable use a logger with Verbosity (V level) >=1 (#TODO)
+
 ### Changed
 
 - Jaeger exporter takes into additional 70 bytes overhead into consideration when sending UDP packets (#2489)
