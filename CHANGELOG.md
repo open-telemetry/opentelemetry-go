@@ -13,7 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Support `OTEL_EXPORTER_ZIPKIN_ENDPOINT` env to specify zipkin collector endpoint (#2490)
 - Metrics Exponential Histogram support: Mapping functions have been made available
   in `sdk/metric/aggregator/exponential/mapping` for other OpenTelemetry projects to take
-  dependencies on. (#X)
+  dependencies on. (#2502)
 
 ### Changed
 

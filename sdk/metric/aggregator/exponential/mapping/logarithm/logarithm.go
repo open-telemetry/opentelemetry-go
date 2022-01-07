@@ -150,6 +150,8 @@ func (l *logarithmMapping) MapToIndex(value float64) int32 {
 func (l *logarithmMapping) LowerBoundary(index int32) (float64, error) {
 	if index >= l.maxIndex {
 		if index == l.maxIndex {
+			// Note that the equation on the last line of this
+			// function returns +Inf.  Use the alternate equation.
 			return 2 * math.Exp(float64(index-(int32(1)<<l.scale))*l.inverseFactor), nil
 		}
 		return 0, mapping.ErrOverflow
