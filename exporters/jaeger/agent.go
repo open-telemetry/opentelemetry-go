@@ -72,14 +72,14 @@ func newAgentClientUDP(params agentClientUDPParams) (*agentClientUDP, error) {
 	}
 
 	if params.MaxPacketSize <= 0 {
-		params.MaxPacketSize = udpPacketMaxLength - emitBatchOverhead
+		params.MaxPacketSize = udpPacketMaxLength
 	}
 
 	if params.AttemptReconnecting && params.AttemptReconnectInterval <= 0 {
 		params.AttemptReconnectInterval = time.Second * 30
 	}
 
-	thriftBuffer := thrift.NewTMemoryBufferLen(params.MaxPacketSize)
+	thriftBuffer := thrift.NewTMemoryBufferLen(params.MaxPacketSize - emitBatchOverhead)
 	protocolFactory := thrift.NewTCompactProtocolFactoryConf(&thrift.TConfiguration{})
 	thriftProtocol := protocolFactory.GetProtocol(thriftBuffer)
 	client := genAgent.NewAgentClientFactory(thriftBuffer, protocolFactory)
@@ -89,7 +89,7 @@ func newAgentClientUDP(params agentClientUDPParams) (*agentClientUDP, error) {
 
 	if params.AttemptReconnecting {
 		// host is hostname, setup resolver loop in case host record changes during operation
-		connUDP, err = newReconnectingUDPConn(hostPort, params.MaxPacketSize, params.AttemptReconnectInterval, net.ResolveUDPAddr, net.DialUDP, params.Logger)
+		connUDP, err = newReconnectingUDPConn(hostPort, params.MaxPacketSize - emitBatchOverhead, params.AttemptReconnectInterval, net.ResolveUDPAddr, net.DialUDP, params.Logger)
 		if err != nil {
 			return nil, err
 		}

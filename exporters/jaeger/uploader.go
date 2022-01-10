@@ -133,7 +133,7 @@ func WithAttemptReconnectingInterval(interval time.Duration) AgentEndpointOption
 // WithMaxPacketSize sets the maximum UDP packet size for transport to the Jaeger agent.
 func WithMaxPacketSize(size int) AgentEndpointOption {
 	return agentEndpointOptionFunc(func(o *agentEndpointConfig) {
-		o.MaxPacketSize = size
+		o.MaxPacketSize = size + emitBatchOverhead
 	})
 }
 
