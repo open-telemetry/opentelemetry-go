@@ -109,12 +109,13 @@ func (r *Resource) String() string {
 	return r.attrs.Encoded(attribute.DefaultEncoder())
 }
 
+// MarshalLog is the marshaling function used by the logging system to represent this exporter.
 func (r *Resource) MarshalLog() interface{} {
 	return struct {
-		Attributes []attribute.KeyValue
+		Attributes attribute.Set
 		SchemaURL  string
 	}{
-		Attributes: r.attrs.ToSlice(),
+		Attributes: r.attrs,
 		SchemaURL:  r.schemaURL,
 	}
 }

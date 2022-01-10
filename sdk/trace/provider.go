@@ -66,7 +66,7 @@ func (cfg tracerProviderConfig) MarshalLog() interface{} {
 		SamplerType:     fmt.Sprintf("%T", cfg.sampler),
 		IDGeneratorType: fmt.Sprintf("%T", cfg.idGenerator),
 		SpanLimits:      cfg.spanLimits,
-		Resource:        cfg.resource, //TODO: Resource marshals to a string currently
+		Resource:        cfg.resource,
 	}
 }
 

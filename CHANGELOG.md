@@ -9,7 +9,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Added
-- Log the configuration of TracerProviders, and Tracers for debugging. To enable use a logger with Verbosity (V level) >=1 (#TODO)
+- Log the configuration of TracerProviders, and Tracers for debugging. To enable use a logger with Verbosity (V level) >=1 (#2500)
 
 ### Changed
 

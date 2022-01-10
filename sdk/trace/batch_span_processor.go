@@ -373,12 +373,12 @@ func (bsp *batchSpanProcessor) enqueueBlockOnQueueFull(ctx context.Context, sd R
 // MarshalLog is the marshaling function used by the logging system to represent this exporter.
 func (bsp *batchSpanProcessor) MarshalLog() interface{} {
 	return struct {
-		Type        string
-		SpanExpoter SpanExporter
-		Config      BatchSpanProcessorOptions
+		Type         string
+		SpanExporter SpanExporter
+		Config       BatchSpanProcessorOptions
 	}{
-		Type:        "BatchSpanProcessor",
-		SpanExpoter: bsp.e,
-		Config:      bsp.o,
+		Type:         "BatchSpanProcessor",
+		SpanExporter: bsp.e,
+		Config:       bsp.o,
 	}
 }
