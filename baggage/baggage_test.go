@@ -669,7 +669,7 @@ func TestMemberValidation(t *testing.T) {
 
 func TestNewMember(t *testing.T) {
 	m, err := NewMember("", "")
-	assert.ErrorIs(t, err, errInvalidKey)
+	assert.NoError(t, err)
 	assert.Equal(t, Member{}, m)
 
 	key, val := "k", "v"

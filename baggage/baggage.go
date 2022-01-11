@@ -222,15 +222,11 @@ type Member struct {
 	properties properties
 }
 
-// NewMember returns a new Member from the passed arguments. An error is
-// returned if the created Member would be invalid according to the W3C
-// Baggage specification.
+// NewMember returns a new Member from the passed arguments. To avoid double
+// validation, the created member is not validated yet. It will be when it's
+// added to the baggage.
 func NewMember(key, value string, props ...Property) (Member, error) {
 	m := Member{key: key, value: value, properties: properties(props).Copy()}
-	if err := m.validate(); err != nil {
-		return Member{}, err
-	}
-
 	return m, nil
 }
 
