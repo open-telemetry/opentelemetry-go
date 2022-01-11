@@ -15,8 +15,8 @@
 package sdkapi
 
 import (
-	"go.opentelemetry.io/otel/metric/sdkapi/number"
 	"go.opentelemetry.io/otel/metric/unit"
+	"go.opentelemetry.io/otel/sdk/metric/number"
 )
 
 // Descriptor contains all the settings that describe an instrument,

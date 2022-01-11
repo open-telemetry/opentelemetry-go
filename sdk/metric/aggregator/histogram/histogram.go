@@ -18,11 +18,10 @@ import (
 	"sort"
 	"sync"
 
-	"go.opentelemetry.io/otel/metric/sdkapi"
-	"go.opentelemetry.io/otel/metric/sdkapi/number"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/number"
+	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 )
 
 // Note: This code uses a Mutex to govern access to the exclusive
@@ -31,13 +30,19 @@ import (
 // https://github.com/open-telemetry/opentelemetry-go/pull/669
 
 type (
+	Defaults interface {
+		Boundaries() []float64
+	}
+
+	Int64Defaults struct{}
+	Float64Defaults struct{}
+	
 	// Aggregator observe events and counts them in pre-determined buckets.
 	// It also calculates the sum and count of all events.
-	Aggregator struct {
+	Aggregator[N number.Any, Traits traits.Any[N], Def Defaults] struct {
 		lock       sync.Mutex
 		boundaries []float64
-		kind       number.Kind
-		state      *state
+		state      *state[N, Traits]
 	}
 
 	// config describes how the histogram is aggregated.
@@ -56,10 +61,11 @@ type (
 	// state represents the state of a histogram, consisting of
 	// the sum and counts for all observed values and
 	// the less than equal bucket count for the pre-determined boundaries.
-	state struct {
+	state[N number.Any, Traits traits.Any[N]] struct {
 		bucketCounts []uint64
-		sum          number.Number
+		sum          N
 		count        uint64
+		traits       Traits
 	}
 )
 
@@ -96,7 +102,19 @@ var defaultInt64ExplicitBoundaries = func(bounds []float64) (asint []float64) {
 	return
 }(defaultFloat64ExplicitBoundaries)
 
-var _ export.Aggregator = &Aggregator{}
+func (Int64Defaults) Boundaries() []float64 {
+	return defaultInt64ExplicitBoundaries
+}
+
+func (Float64Defaults) Boundaries() []float64 {
+	return defaultFloat64ExplicitBoundaries
+}
+
+type Int64Histogram = Aggregator[int64, traits.Int64, Int64Defaults]
+type Float64Histogram = Aggregator[float64, traits.Float64, Float64Defaults]
+
+var _ export.Aggregator[int64, Int64Histogram, Option] = &Int64Histogram{}
+var _ export.Aggregator[float64, Float64Histogram, Option] = &Float64Histogram{}
 
 // New returns a new aggregator for computing Histograms.
 //
@@ -106,14 +124,11 @@ var _ export.Aggregator = &Aggregator{}
 // Note that this aggregator maintains each value using independent
 // atomic operations, which introduces the possibility that
 // checkpoints are inconsistent.
-func (a *Aggregator) Init(desc sdkapi.Descriptor, opts ...Option) {
+func (a *Aggregator[N, Traits, Def]) Init(opts ...Option) {
 	var cfg config
+	var def Def
 
-	if desc.NumberKind() == number.Int64Kind {
-		cfg.explicitBoundaries = defaultInt64ExplicitBoundaries
-	} else {
-		cfg.explicitBoundaries = defaultFloat64ExplicitBoundaries
-	}
+	cfg.explicitBoundaries = def.Boundaries()
 
 	for _, opt := range opts {
 		opt.apply(&cfg)
@@ -126,23 +141,23 @@ func (a *Aggregator) Init(desc sdkapi.Descriptor, opts ...Option) {
 	copy(sortedBoundaries, cfg.explicitBoundaries)
 	sort.Float64s(sortedBoundaries)
 
-	a.kind = desc.NumberKind()
 	a.boundaries = sortedBoundaries
 	a.state = a.newState()
 }
 
 // Sum returns the sum of all values in the checkpoint.
-func (c *Aggregator) Sum() (number.Number, error) {
-	return c.state.sum, nil
+func (c *Aggregator[N, Traits, Def]) Sum() (number.Number, error) {
+	var traits Traits
+	return traits.ToNumber(c.state.sum), nil
 }
 
 // Count returns the number of values in the checkpoint.
-func (c *Aggregator) Count() (uint64, error) {
+func (c *Aggregator[N, Traits, Def]) Count() (uint64, error) {
 	return c.state.count, nil
 }
 
 // Histogram returns the count of events in pre-determined buckets.
-func (c *Aggregator) Histogram() (aggregation.Buckets, error) {
+func (c *Aggregator[N, Traits, Def]) Histogram() (aggregation.Buckets, error) {
 	return aggregation.Buckets{
 		Boundaries: c.boundaries,
 		Counts:     c.state.bucketCounts,
@@ -153,13 +168,7 @@ func (c *Aggregator) Histogram() (aggregation.Buckets, error) {
 // the empty set.  Since no locks are taken, there is a chance that
 // the independent Sum, Count and Bucket Count are not consistent with each
 // other.
-func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *sdkapi.Descriptor) error {
-	o, _ := oa.(*Aggregator)
-
-	if oa != nil && o == nil {
-		return aggregator.NewInconsistentAggregatorError(c, oa)
-	}
-
+func (c *Aggregator[N, Traits, Def]) SynchronizedMove(o *Aggregator[N, Traits, Def]) {
 	if o != nil {
 		// Swap case: This is the ordinary case for a
 		// synchronous instrument, where the SDK allocates two
@@ -180,17 +189,15 @@ func (c *Aggregator) SynchronizedMove(oa export.Aggregator, desc *sdkapi.Descrip
 		c.clearState()
 	}
 	c.lock.Unlock()
-
-	return nil
 }
 
-func (c *Aggregator) newState() *state {
-	return &state{
+func (c *Aggregator[N, Traits, Def]) newState() *state[N, Traits] {
+	return &state[N, Traits]{
 		bucketCounts: make([]uint64, len(c.boundaries)+1),
 	}
 }
 
-func (c *Aggregator) clearState() {
+func (c *Aggregator[N, Traits, Def]) clearState() {
 	for i := range c.state.bucketCounts {
 		c.state.bucketCounts[i] = 0
 	}
@@ -199,9 +206,8 @@ func (c *Aggregator) clearState() {
 }
 
 // Update adds the recorded measurement to the current data set.
-func (c *Aggregator) Update(number number.Number, desc *sdkapi.Descriptor) {
-	kind := desc.NumberKind()
-	asFloat := number.CoerceToFloat64(kind)
+func (c *Aggregator[N, Traits, Def]) Update(number N) {
+	asFloat := float64(number)
 
 	bucketID := len(c.boundaries)
 	for i, boundary := range c.boundaries {
@@ -226,22 +232,16 @@ func (c *Aggregator) Update(number number.Number, desc *sdkapi.Descriptor) {
 	defer c.lock.Unlock()
 
 	c.state.count++
-	c.state.sum.Add(kind, number)
+	c.state.sum += number
 	c.state.bucketCounts[bucketID]++
 }
 
 // Merge combines two histograms that have the same buckets into a single one.
-func (c *Aggregator) Merge(oa export.Aggregator, desc *sdkapi.Descriptor) error {
-	o, _ := oa.(*Aggregator)
-	if o == nil {
-		return aggregator.NewInconsistentAggregatorError(c, oa)
-	}
-
-	c.state.sum.Add(desc.NumberKind(), o.state.sum)
+func (c *Aggregator[N, Traits, Def]) Merge(o *Aggregator[N, Traits, Def]) {
+	c.state.sum += o.state.sum
 	c.state.count += o.state.count
 
 	for i := 0; i < len(c.state.bucketCounts); i++ {
 		c.state.bucketCounts[i] += o.state.bucketCounts[i]
 	}
-	return nil
 }

@@ -4,30 +4,29 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/sdkapi"
-	"go.opentelemetry.io/otel/metric/sdkapi/number"
+	"go.opentelemetry.io/otel/metric/instrument"
 )
 
-type Counter struct {
-	sdkapi.Instrument
+type Instruments interface {
+	Counter(name string, opts ...instrument.Option) Counter
+	UpDownCounter(name string, opts ...instrument.Option) UpDownCounter
+	Histogram(name string, opts ...instrument.Option) Histogram
 }
 
-type UpDownCounter struct {
-	sdkapi.Instrument
+type Counter interface {
+	Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
+
+	instrument.Synchronous
 }
 
-type Histogram struct {
-	sdkapi.Instrument
+type UpDownCounter interface {
+	Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
+
+	instrument.Synchronous
 }
 
-func (c Counter) Add(ctx context.Context, x float64, attrs ...attribute.KeyValue) {
-	c.Capture(ctx, number.NewFloat64(x), attrs)
-}
+type Histogram interface {
+	Record(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
 
-func (u UpDownCounter) Add(ctx context.Context, x float64, attrs ...attribute.KeyValue) {
-	u.Capture(ctx, number.NewFloat64(x), attrs)
-}
-
-func (h Histogram) Record(ctx context.Context, x float64, attrs ...attribute.KeyValue) {
-	h.Capture(ctx, number.NewFloat64(x), attrs)
+	instrument.Synchronous
 }

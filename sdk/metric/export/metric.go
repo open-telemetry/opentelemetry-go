@@ -19,8 +19,8 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/sdkapi"
-	"go.opentelemetry.io/otel/metric/sdkapi/number"
+	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -36,10 +36,10 @@ import (
 // Note that any Aggregator may be attached to any instrument--this is
 // the result of the OpenTelemetry API/SDK separation.  It is possible
 // to attach a Sum aggregator to a Histogram instrument.
-type Aggregator[T any, Opt any] interface {
-	Init(desc *sdkapi.Descriptor, opts ...Opt)
+type Aggregator[N number.Any, Agg, Opt any] interface {
+	Init(opts ...Opt)
 
-	Update(number number.Number, descriptor *sdkapi.Descriptor)
+	Update(number N)
 
 	// SynchronizedMove is called during collection to finish one
 	// period of aggregation by atomically saving the
@@ -63,7 +63,7 @@ type Aggregator[T any, Opt any] interface {
 	//
 	// When called with a nil `destination`, this Aggregator is reset
 	// and the current value is discarded.
-	SynchronizedMove(destination *T, descriptor *sdkapi.Descriptor) error
+	SynchronizedMove(destination *Agg)
 
 	// Merge combines the checkpointed state from the argument
 	// Aggregator into this Aggregator.  Merge is not synchronized
@@ -71,7 +71,7 @@ type Aggregator[T any, Opt any] interface {
 	//
 	// The owner of an Aggregator being merged is responsible for
 	// synchronization of both Aggregator states.
-	Merge(aggregator *T, descriptor *sdkapi.Descriptor) error
+	Merge(aggregator *Agg)
 }
 
 // Exporter handles presentation of the checkpoint of aggregate
@@ -127,13 +127,6 @@ type Metadata struct {
 	attributes attribute.Attributes
 }
 
-// Accumulation contains the exported data for a single metric instrument
-// and label set, as prepared by an Accumulator for the Processor.
-type Accumulation [T any, Opt any] struct {
-	Metadata
-	aggregator Aggregator[T, Opt]
-}
-
 // Record contains the exported data for a single metric instrument
 // and label set, as prepared by the Processor for the Exporter.
 // This includes the effective start and end time for the aggregation.
@@ -153,26 +146,6 @@ func (m Metadata) Descriptor() *sdkapi.Descriptor {
 // and the aggregated data.
 func (m Metadata) Attributes() attribute.Attributes {
 	return m.attributes
-}
-
-// NewAccumulation allows Accumulator implementations to construct new
-// Accumulations to send to Processors. The Descriptor, Labels,
-// and Aggregator represent aggregate metric events received over a single
-// collection period.
-func NewAccumulation(descriptor *sdkapi.Descriptor, attrs attribute.Attributes, aggregator Aggregator) Accumulation {
-	return Accumulation{
-		Metadata: Metadata{
-			descriptor: descriptor,
-			attributes: attrs,
-		},
-		aggregator: aggregator,
-	}
-}
-
-// Aggregator returns the checkpointed aggregator. It is safe to
-// access the checkpointed state without locking.
-func (r Accumulation) Aggregator() Aggregator {
-	return r.aggregator
 }
 
 // NewRecord allows Processor implementations to construct export

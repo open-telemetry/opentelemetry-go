@@ -15,102 +15,83 @@
 package lastvalue // import "go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 
 import (
-	"sync/atomic"
+	"sync"
 	"time"
-	"unsafe"
 
-	"go.opentelemetry.io/otel/metric/sdkapi"
-	"go.opentelemetry.io/otel/metric/sdkapi/number"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/number"
+	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 )
 
 type (
-
-	// Aggregator aggregates lastValue events.
-	Aggregator struct {
-		// value is an atomic pointer to *lastValueData.  It is never nil.
-		value unsafe.Pointer
+	Option interface {
+		unused()
 	}
 
-	// lastValueData stores the current value of a lastValue along with
-	// a sequence number to determine the winner of a race.
-	lastValueData struct {
-		// value is the int64- or float64-encoded Set() data
-		//
-		// value needs to be aligned for 64-bit atomic operations.
-		value number.Number
-
-		// timestamp indicates when this record was submitted.
-		// this can be used to pick a winner when multiple
-		// records contain lastValue data for the same labels due
-		// to races.
+	// Aggregator aggregates lastValue events.
+	Aggregator[N number.Any, Traits traits.Any[N]] struct {
+		lock      sync.Mutex
+		value     N
 		timestamp time.Time
+		traits    Traits
 	}
 )
 
-var _ export.Aggregator = &Aggregator{}
-
-// An unset lastValue has zero timestamp and zero value.
-var unsetLastValue = &lastValueData{}
+var _ export.Aggregator[int64, Aggregator[int64, traits.Int64], Option] = &Aggregator[int64, traits.Int64]{}
+var _ export.Aggregator[float64, Aggregator[float64, traits.Float64], Option] = &Aggregator[float64, traits.Float64]{}
 
 // New returns a new lastValue aggregator.  This aggregator retains the
 // last value and timestamp that were recorded.
-func (a *Aggregator) Init() {
-	a.value = unsafe.Pointer(unsetLastValue)
+func (a *Aggregator[N, Traits]) Init(_ ...Option) {
+	a.value = 0
+	a.timestamp = time.Time{}
 }
 
 // LastValue returns the last-recorded lastValue value and the
 // corresponding timestamp.  The error value aggregation.ErrNoData
 // will be returned if (due to a race condition) the checkpoint was
 // computed before the first value was set.
-func (g *Aggregator) LastValue() (number.Number, time.Time, error) {
-	gd := (*lastValueData)(g.value)
-	if gd == unsetLastValue {
+func (g *Aggregator[N, Traits]) LastValue() (number.Number, time.Time, error) {
+	g.lock.Lock()
+	defer g.lock.Unlock()
+	if g.timestamp.IsZero() {
 		return 0, time.Time{}, aggregation.ErrNoData
 	}
-	return gd.value.AsNumber(), gd.timestamp, nil
+	return g.traits.ToNumber(g.value), g.timestamp, nil
 }
 
 // SynchronizedMove atomically saves the current value.
-func (g *Aggregator) SynchronizedMove(oa export.Aggregator, _ *sdkapi.Descriptor) error {
-	if oa == nil {
-		atomic.StorePointer(&g.value, unsafe.Pointer(unsetLastValue))
-		return nil
+func (g *Aggregator[N, Traits]) SynchronizedMove(o *Aggregator[N, Traits]) {
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	if o != nil {
+		o.value = g.value
+		o.timestamp = g.timestamp
 	}
-	o, _ := oa.(*Aggregator)
-	if o == nil {
-		return aggregator.NewInconsistentAggregatorError(g, oa)
-	}
-	o.value = atomic.SwapPointer(&g.value, unsafe.Pointer(unsetLastValue))
-	return nil
+	g.value = 0
+	g.timestamp = time.Time{}
 }
 
 // Update atomically sets the current "last" value.
-func (g *Aggregator) Update(number number.Number, desc *sdkapi.Descriptor) {
-	ngd := &lastValueData{
-		value:     number,
-		timestamp: time.Now(),
-	}
-	atomic.StorePointer(&g.value, unsafe.Pointer(ngd))
+func (g *Aggregator[N, Traits]) Update(number N) {
+	now := time.Now()
+
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	g.value = number
+	g.timestamp = now
 }
 
 // Merge combines state from two aggregators.  The most-recently set
 // value is chosen.
-func (g *Aggregator) Merge(oa export.Aggregator, desc *sdkapi.Descriptor) error {
-	o, _ := oa.(*Aggregator)
-	if o == nil {
-		return aggregator.NewInconsistentAggregatorError(g, oa)
+func (g *Aggregator[N, Traits]) Merge(o *Aggregator[N, Traits]) {
+	if g.timestamp.After(o.timestamp) {
+		return
 	}
 
-	ggd := (*lastValueData)(atomic.LoadPointer(&g.value))
-	ogd := (*lastValueData)(atomic.LoadPointer(&o.value))
-
-	if ggd.timestamp.After(ogd.timestamp) {
-		return nil
-	}
-
-	g.value = unsafe.Pointer(ogd)
-	return nil
+	g.value = o.value
+	g.timestamp = o.timestamp
 }

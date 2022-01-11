@@ -15,55 +15,52 @@
 package sum // import "go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 
 import (
-	"go.opentelemetry.io/otel/metric/sdkapi"
-	"go.opentelemetry.io/otel/metric/sdkapi/number"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/number"
+	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 )
 
-// Aggregator aggregates counter events.
-type Aggregator struct {
-	// current holds current increments to this counter record
-	// current needs to be aligned for 64-bit atomic operations.
-	value number.Number
+type Option interface {
+	unused()
 }
 
-func (c *Aggregator) Init() {
+var _ export.Aggregator[int64, Aggregator[int64, traits.Int64], Option] = &Aggregator[int64, traits.Int64]{}
+var _ export.Aggregator[float64, Aggregator[float64, traits.Float64], Option] = &Aggregator[float64, traits.Float64]{}
+
+// Aggregator aggregates counter events.
+type Aggregator[N number.Any, Traits traits.Any[N]] struct {
+	// current holds current increments to this counter record
+	// current needs to be aligned for 64-bit atomic operations.
+	value  N
+	traits Traits
+}
+
+func (c *Aggregator[N, Traits]) Init(_ ...Option) {
 	c.value = 0
 }
 
 // Sum returns the last-checkpointed sum.  This will never return an
 // error.
-func (c *Aggregator) Sum() (number.Number, error) {
-	return c.value, nil
+func (c *Aggregator[N, Traits]) Sum() (number.Number, error) {
+	return c.traits.ToNumber(c.value), nil
 }
 
 // SynchronizedMove atomically saves the current value into oa and resets the
 // current sum to zero.
-func (c *Aggregator) SynchronizedMove(oa export.Aggregator, _ *sdkapi.Descriptor) error {
-	if oa == nil {
-		c.value.SetRawAtomic(0)
-		return nil
-	}
-	o, _ := oa.(*Aggregator)
+func (c *Aggregator[N, Traits]) SynchronizedMove(o *Aggregator[N, Traits]) {
 	if o == nil {
-		return aggregator.NewInconsistentAggregatorError(c, oa)
-	}
-	o.value = c.value.SwapAtomic(number.Number(0))
-	return nil
+		c.traits.SetAtomic(&c.value, 0)
+		return
+	} 
+	o.value = c.traits.SwapAtomic(&c.value, 0)
 }
 
 // Update atomically adds to the current value.
-func (c *Aggregator) Update(num number.Number, desc *sdkapi.Descriptor) {
-	c.value.AddNumberAtomic(desc.NumberKind(), num)
+func (c *Aggregator[N, Traits]) Update(num N) {
+	c.traits.AddAtomic(&c.value, num)
 }
 
 // Merge combines two counters by adding their sums.
-func (c *Aggregator) Merge(oa export.Aggregator, desc *sdkapi.Descriptor) error {
-	o, _ := oa.(*Aggregator)
-	if o == nil {
-		return aggregator.NewInconsistentAggregatorError(c, oa)
-	}
-	c.value.Add(desc.NumberKind(), o.value)
-	return nil
+func (c *Aggregator[N, Traits]) Merge(o *Aggregator[N, Traits]) {
+	c.value += o.value
 }

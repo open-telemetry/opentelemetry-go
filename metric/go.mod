@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/metric
 
-go 1.16
+go 1.18
 
 replace go.opentelemetry.io/otel => ../
 
@@ -40,11 +40,9 @@ replace go.opentelemetry.io/otel/sdk/metric => ../sdk/metric
 
 replace go.opentelemetry.io/otel/trace => ../trace
 
-require (
-	github.com/google/go-cmp v0.5.6
-	github.com/stretchr/testify v1.7.0
-	go.opentelemetry.io/otel v1.3.0
-)
+require go.opentelemetry.io/otel v1.3.0
+
+require github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
 
 replace go.opentelemetry.io/otel/example/passthrough => ../example/passthrough
 

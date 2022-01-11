@@ -5,10 +5,8 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/internal/asyncstate"
-	"go.opentelemetry.io/otel/sdk/metric/internal/registry"
 	"go.opentelemetry.io/otel/sdk/metric/internal/syncstate"
 	"go.opentelemetry.io/otel/sdk/metric/internal/viewstate"
 	"go.opentelemetry.io/otel/sdk/metric/views"
@@ -40,7 +38,7 @@ type (
 	}
 )
 
-var _ sdkapi.MeterImpl = &meter{}
+var _ metric.Meter = &meter{}
 
 func WithResource(res *resource.Resource) Option {
 	return func(cfg *Config) {

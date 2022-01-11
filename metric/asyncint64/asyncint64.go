@@ -4,31 +4,29 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/sdkapi"
-	"go.opentelemetry.io/otel/metric/sdkapi/number"
+	"go.opentelemetry.io/otel/metric/instrument"
 )
 
-type Counter struct {
-	sdkapi.Instrument
+type Instruments interface {
+	Counter(name string, opts ...instrument.Option) Counter
+	UpDownCounter(name string, opts ...instrument.Option) UpDownCounter
+	Gauge(name string, opts ...instrument.Option) Gauge
 }
 
-type UpDownCounter struct {
-	sdkapi.Instrument
+type Counter interface {
+	Observe(ctx context.Context, x int64, attrs ...attribute.KeyValue)
+
+	instrument.Asynchronous
 }
 
-type Gauge struct {
-	sdkapi.Instrument
+type UpDownCounter interface {
+	Observe(ctx context.Context, x int64, attrs ...attribute.KeyValue)
+
+	instrument.Asynchronous
 }
 
-func (c Counter) Observe(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
-	c.Capture(ctx, number.NewInt64(x), attrs)
-}
+type Gauge interface {
+	Observe(ctx context.Context, x int64, attrs ...attribute.KeyValue)
 
-func (u UpDownCounter) Observe(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
-	u.Capture(ctx, number.NewInt64(x), attrs)
-}
-
-func (g Gauge) Observe(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
-	g.Capture(ctx, number.NewInt64(x), attrs)
-
+	instrument.Asynchronous
 }

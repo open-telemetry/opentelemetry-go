@@ -14,63 +14,6 @@
 
 package metric // import "go.opentelemetry.io/otel/metric"
 
-import (
-	"go.opentelemetry.io/otel/metric/unit"
-)
-
-// InstrumentConfig contains options for metric instrument descriptors.
-type InstrumentConfig struct {
-	description string
-	unit        unit.Unit
-}
-
-// Description describes the instrument in human-readable terms.
-func (cfg InstrumentConfig) Description() string {
-	return cfg.description
-}
-
-// Unit describes the measurement unit for a instrument.
-func (cfg InstrumentConfig) Unit() unit.Unit {
-	return cfg.unit
-}
-
-// InstrumentOption is an interface for applying metric instrument options.
-type InstrumentOption interface {
-	// ApplyMeter is used to set a InstrumentOption value of a
-	// InstrumentConfig.
-	applyInstrument(*InstrumentConfig)
-}
-
-// NewInstrumentConfig creates a new InstrumentConfig
-// and applies all the given options.
-func NewInstrumentConfig(opts ...InstrumentOption) InstrumentConfig {
-	var config InstrumentConfig
-	for _, o := range opts {
-		o.applyInstrument(&config)
-	}
-	return config
-}
-
-type instrumentOptionFunc func(*InstrumentConfig)
-
-func (fn instrumentOptionFunc) applyInstrument(cfg *InstrumentConfig) {
-	fn(cfg)
-}
-
-// WithDescription applies provided description.
-func WithDescription(desc string) InstrumentOption {
-	return instrumentOptionFunc(func(cfg *InstrumentConfig) {
-		cfg.description = desc
-	})
-}
-
-// WithUnit applies provided unit.
-func WithUnit(unit unit.Unit) InstrumentOption {
-	return instrumentOptionFunc(func(cfg *InstrumentConfig) {
-		cfg.unit = unit
-	})
-}
-
 // MeterConfig contains options for Meters.
 type MeterConfig struct {
 	instrumentationVersion string

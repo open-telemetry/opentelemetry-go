@@ -15,36 +15,30 @@
 package aggregator // import "go.opentelemetry.io/otel/sdk/metric/aggregator"
 
 import (
-	"fmt"
-	"math"
-
-	"go.opentelemetry.io/otel/metric/sdkapi"
-	"go.opentelemetry.io/otel/metric/sdkapi/number"
-	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/number"
+	"go.opentelemetry.io/otel/sdk/metric/number/traits"
+	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 )
-
-// NewInconsistentAggregatorError formats an error describing an attempt to
-// Checkpoint or Merge different-type aggregators.  The result can be unwrapped as
-// an ErrInconsistentType.
-func NewInconsistentAggregatorError(a1, a2 export.Aggregator) error {
-	return fmt.Errorf("%w: %T and %T", aggregation.ErrInconsistentType, a1, a2)
-}
 
 // RangeTest is a common routine for testing for valid input values.
 // This rejects NaN values.  This rejects negative values when the
 // metric instrument does not support negative values, including
 // monotonic counter metrics and absolute Histogram metrics.
-func RangeTest(num number.Number, descriptor *sdkapi.Descriptor) error {
-	numberKind := descriptor.NumberKind()
+func RangeTest[N number.Any, Traits traits.Any[N]](num N, desc sdkapi.Descriptor) error {
+	var traits Traits
 
-	if numberKind == number.Float64Kind && math.IsNaN(num.AsFloat64()) {
+	// @@@ Should we have an Inf check?
+
+	if traits.IsNaN(num) {
 		return aggregation.ErrNaNInput
 	}
 
-	switch descriptor.InstrumentKind() {
-	case sdkapi.CounterInstrumentKind, sdkapi.CounterObserverInstrumentKind:
-		if num.IsNegative(numberKind) {
+	switch desc.InstrumentKind() {
+	case sdkapi.CounterInstrumentKind,
+		sdkapi.CounterObserverInstrumentKind,
+		sdkapi.HistogramInstrumentKind: // @@@ right?
+		if num < 0 {
 			return aggregation.ErrNegativeInput
 		}
 	}
