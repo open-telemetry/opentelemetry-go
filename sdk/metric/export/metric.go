@@ -36,7 +36,9 @@ import (
 // Note that any Aggregator may be attached to any instrument--this is
 // the result of the OpenTelemetry API/SDK separation.  It is possible
 // to attach a Sum aggregator to a Histogram instrument.
-type Aggregator interface {
+type Aggregator[T any, Opt any] interface {
+	Init(desc *sdkapi.Descriptor, opts ...Opt)
+
 	Update(number number.Number, descriptor *sdkapi.Descriptor)
 
 	// SynchronizedMove is called during collection to finish one
@@ -61,7 +63,7 @@ type Aggregator interface {
 	//
 	// When called with a nil `destination`, this Aggregator is reset
 	// and the current value is discarded.
-	SynchronizedMove(destination Aggregator, descriptor *sdkapi.Descriptor) error
+	SynchronizedMove(destination *T, descriptor *sdkapi.Descriptor) error
 
 	// Merge combines the checkpointed state from the argument
 	// Aggregator into this Aggregator.  Merge is not synchronized
@@ -69,7 +71,7 @@ type Aggregator interface {
 	//
 	// The owner of an Aggregator being merged is responsible for
 	// synchronization of both Aggregator states.
-	Merge(aggregator Aggregator, descriptor *sdkapi.Descriptor) error
+	Merge(aggregator *T, descriptor *sdkapi.Descriptor) error
 }
 
 // Exporter handles presentation of the checkpoint of aggregate
@@ -127,9 +129,9 @@ type Metadata struct {
 
 // Accumulation contains the exported data for a single metric instrument
 // and label set, as prepared by an Accumulator for the Processor.
-type Accumulation struct {
+type Accumulation [T any, Opt any] struct {
 	Metadata
-	aggregator Aggregator
+	aggregator Aggregator[T, Opt]
 }
 
 // Record contains the exported data for a single metric instrument

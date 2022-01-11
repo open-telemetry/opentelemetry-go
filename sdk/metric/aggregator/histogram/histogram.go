@@ -106,7 +106,7 @@ var _ export.Aggregator = &Aggregator{}
 // Note that this aggregator maintains each value using independent
 // atomic operations, which introduces the possibility that
 // checkpoints are inconsistent.
-func (a *Aggregator) Init(desc *sdkapi.Descriptor, opts ...Option) {
+func (a *Aggregator) Init(desc sdkapi.Descriptor, opts ...Option) {
 	var cfg config
 
 	if desc.NumberKind() == number.Int64Kind {

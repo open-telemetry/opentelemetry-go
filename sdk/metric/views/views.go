@@ -29,6 +29,7 @@ type (
 		name        string
 		description string
 		aggregation aggregation.Kind
+		temporality aggregation.Temporality
 		output      receiver.Receiver
 	}
 
@@ -98,6 +99,12 @@ func WithAggregation(kind aggregation.Kind) Option {
 	}
 }
 
+func WithTemporality(tempo aggregation.Temporality) Option {
+	return func(cfg *Config) {
+		cfg.temporality = tempo
+	}
+}
+
 // Output
 
 func WithReceiver(output receiver.Receiver) Option {
@@ -143,6 +150,10 @@ func (v View) Description() string {
 
 func (v View) Aggregation() aggregation.Kind {
 	return v.cfg.aggregation
+}
+
+func (v View) Temporality() aggregation.Temporality {
+	return v.cfg.temporality
 }
 
 func (v View) Receiver() receiver.Receiver {
