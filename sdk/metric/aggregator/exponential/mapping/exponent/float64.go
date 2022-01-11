@@ -38,7 +38,7 @@ const (
 
 	// SignMask selects the sign bit of an IEEE 754 floating point
 	// number.
-	SignMask = (1 << 63)
+	SignMask = (1 << (SignificandWidth + ExponentWidth))
 
 	// MinNormalExponent is the minimum exponent of a normalized
 	// floating point: -1022
