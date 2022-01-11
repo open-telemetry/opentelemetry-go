@@ -106,3 +106,14 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	}
 	return nil
 }
+
+// MarshalLog is the marshaling function used by the logging system to represent this exporter.
+func (e *Exporter) MarshalLog() interface{} {
+	return struct {
+		Type           string
+		WithTimestamps bool
+	}{
+		Type:           "stdout",
+		WithTimestamps: e.timestamps,
+	}
+}

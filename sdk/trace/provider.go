@@ -21,6 +21,7 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
@@ -50,6 +51,23 @@ type tracerProviderConfig struct {
 
 	// resource contains attributes representing an entity that produces telemetry.
 	resource *resource.Resource
+}
+
+// MarshalLog is the marshaling function used by the logging system to represent this exporter.
+func (cfg tracerProviderConfig) MarshalLog() interface{} {
+	return struct {
+		SpanProcessors  []SpanProcessor
+		SamplerType     string
+		IDGeneratorType string
+		SpanLimits      SpanLimits
+		Resource        *resource.Resource
+	}{
+		SpanProcessors:  cfg.processors,
+		SamplerType:     fmt.Sprintf("%T", cfg.sampler),
+		IDGeneratorType: fmt.Sprintf("%T", cfg.idGenerator),
+		SpanLimits:      cfg.spanLimits,
+		Resource:        cfg.resource,
+	}
 }
 
 type TracerProvider struct {
@@ -91,6 +109,8 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 		resource:    o.resource,
 	}
 
+	global.Info("TracerProvider created", "config", o)
+
 	for _, sp := range o.processors {
 		tp.RegisterSpanProcessor(sp)
 	}
@@ -125,6 +145,7 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 			instrumentationLibrary: il,
 		}
 		p.namedTracer[il] = t
+		global.Info("Tracer created", "name", name, "version", c.InstrumentationVersion(), "schemaURL", c.SchemaURL())
 	}
 	return t
 }

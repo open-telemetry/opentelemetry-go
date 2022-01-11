@@ -238,7 +238,7 @@ func (bsp *batchSpanProcessor) exportSpans(ctx context.Context) error {
 	}
 
 	if l := len(bsp.batch); l > 0 {
-		global.Debug("exporting spans", "count", len(bsp.batch))
+		global.Debug("exporting spans", "count", len(bsp.batch), "dropped", bsp.dropped)
 		err := bsp.e.ExportSpans(ctx, bsp.batch)
 
 		// A new batch is always created after exporting, even if the batch failed to be exported.
@@ -368,4 +368,17 @@ func (bsp *batchSpanProcessor) enqueueBlockOnQueueFull(ctx context.Context, sd R
 		atomic.AddUint32(&bsp.dropped, 1)
 	}
 	return false
+}
+
+// MarshalLog is the marshaling function used by the logging system to represent this exporter.
+func (bsp *batchSpanProcessor) MarshalLog() interface{} {
+	return struct {
+		Type         string
+		SpanExporter SpanExporter
+		Config       BatchSpanProcessorOptions
+	}{
+		Type:         "BatchSpanProcessor",
+		SpanExporter: bsp.e,
+		Config:       bsp.o,
+	}
 }
