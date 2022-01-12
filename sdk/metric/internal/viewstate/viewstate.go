@@ -5,15 +5,16 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
-	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/export"
-	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/views"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/number"
+	"go.opentelemetry.io/otel/sdk/metric/number/traits"
+	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/metric/views"
 )
 
 type (
@@ -82,17 +83,19 @@ type (
 	}
 
 	aggregatorSettings struct {
-		aggregation.Kind
+		kind aggregation.Kind
+		hcfg histogram.Config
+
+	}
+	
+	syncCollector[N number.Any, Agg aggregator.Any[N]] struct {
+		current  Agg
+		snapshot Agg
 	}
 
-	syncCollector[T export.Aggregator] struct {
-		current  T
-		snapshot T
-	}
-
-	asyncCollector[T export.Aggregator] struct {
-		current  number.Number
-		snapshot T
+	asyncCollector[N number.Any, Agg aggregator.Any[N]] struct {
+		current  N
+		snapshot Agg
 	}
 )
 
@@ -100,15 +103,15 @@ func aggregatorSettingsFor(desc sdkapi.Descriptor) aggregatorSettings {
 	switch desc.InstrumentKind() {
 	case sdkapi.HistogramInstrumentKind:
 		return aggregatorSettings{
-			Kind: aggregation.HistogramKind,
+			kind: aggregation.HistogramKind,
 		}
 	case sdkapi.GaugeObserverInstrumentKind:
 		return aggregatorSettings{
-			Kind: aggregation.LastValueKind,
+			kind: aggregation.LastValueKind,
 		}
 	default:
 		return aggregatorSettings{
-			Kind: aggregation.SumKind,
+			kind: aggregation.SumKind,
 		}
 	}
 }
@@ -154,33 +157,48 @@ func (vb viewBehavior) Name() string {
 // construct new Collectors throughout its lifetime.
 func (v *State) NewFactory(desc sdkapi.Descriptor) (CollectorFactory, error) {
 	// Compute the set of matching views.
-	settingBehaviors := map[aggregatorSettings][]viewBehavior{}
+	type settingsBehaviors struct {
+		settings  aggregatorSettings
+		behaviors []viewBehavior
+	}
+	allBehaviors := map[string]settingsBehaviors{}
 	for _, def := range v.definitions {
 		if !def.Matches(v.library, desc) {
 			continue
 		}
 
-		// Note: aggregatorSettings is a stand-in for a
-		// complete aggregator configuration, which currently
-		// only includes the aggregation Kind.
 		var as aggregatorSettings
-		switch as.Kind {
-		case aggregation.SumKind, aggregation.HistogramKind, aggregation.LastValueKind:
-			as.Kind = def.Aggregation()
+		switch def.Aggregation() {
+		case aggregation.SumKind, aggregation.LastValueKind:
+			// These have no options
+			as.kind = def.Aggregation()
+		case aggregation.HistogramKind:
+			as.kind = def.Aggregation()
+			as.hcfg = histogram.NewConfig(
+				histogramDefaultsFor(desc.NumberKind()),
+				def.HistogramOptions()...,
+			)
 		default:
 			as = aggregatorSettingsFor(desc)
 		}
 
-		settingBehaviors[as] = append(settingBehaviors[as], configViewBehavior(def))
+		ss := fmt.Sprint(as)
+		allBehaviors[ss] = settingsBehaviors{
+			settings: as,
+			behaviors: append(allBehaviors[ss].behaviors, configViewBehavior(def)),
+		}
 	}
 	// If there were no matching views, set the default aggregation.
-	if len(settingBehaviors) == 0 {
+	if len(allBehaviors) == 0 {
 		if !v.hasDefault {
 			return nil, nil
 		}
 
 		as := aggregatorSettingsFor(desc)
-		settingBehaviors[as] = append(settingBehaviors[as], defaultViewBehavior(desc))
+		allBehaviors[fmt.Sprint(as)] = settingsBehaviors{
+			settings: as,
+			behaviors: []viewBehavior{defaultViewBehavior(desc)},
+		}
 	}
 
 	v.lock.Lock()
@@ -188,8 +206,8 @@ func (v *State) NewFactory(desc sdkapi.Descriptor) (CollectorFactory, error) {
 
 	addedHere := map[string]struct{}{}
 
-	for _, behaviors := range settingBehaviors {
-		for _, behavior := range behaviors {
+	for _, sbs := range allBehaviors {
+		for _, behavior := range sbs.behaviors {
 			outputName := behavior.Name()
 			_, has1 := v.outputNames[outputName]
 			_, has2 := addedHere[outputName]
@@ -202,8 +220,14 @@ func (v *State) NewFactory(desc sdkapi.Descriptor) (CollectorFactory, error) {
 
 	vcf := &viewCollectorFactory{state: v}
 
-	for settings, behaviors := range settingBehaviors {
-		cfg := v.buildViewConfiguration(desc, settings, behaviors)
+	for settings, behaviors := range allBehaviors {
+		var cfg viewConfiguration
+		switch desc.NumberKind() {
+		case number.Int64Kind:
+			cfg = buildViewConfiguration[int64, traits.Int64](desc, settings, behaviors)
+		case number.Float64Kind:
+			cfg = buildViewConfiguration[float64, traits.Float64](desc, settings, behaviors)
+		}
 		vcf.configuration = append(vcf.configuration, cfg)
 		for _, behavior := range behaviors {
 			v.outputNames[behavior.Name()] = struct{}{}
@@ -213,31 +237,42 @@ func (v *State) NewFactory(desc sdkapi.Descriptor) (CollectorFactory, error) {
 	return vcf, nil
 }
 
-func (v *State) buildViewConfiguration(desc sdkapi.Descriptor, settings aggregatorSettings, behaviors []viewBehavior) viewConfiguration {
+func buildViewConfiguration[N number.Any, Traits traits.Any[N]](desc sdkapi.Descriptor, settings aggregatorSettings, behaviors []viewBehavior) viewConfiguration {
 	if desc.InstrumentKind().Synchronous() {
-		return v.buildSyncViewConfiguration(desc, settings, behaviors)
+		return buildSyncViewConfiguration[N, Traits](settings, behaviors)
 	}
-	return v.buildAsyncViewConfiguration(desc, settings, behaviors)
+	return buildAsyncViewConfiguration[N, Traits](settings, behaviors)
 }
 
-func (v *State) buildSyncViewConfiguration(desc sdkapi.Descriptor, settings aggregatorSettings, behaviors []viewBehavior) viewConfiguration {
+func histogramDefaultsFor(kind number.Kind) histogram.Defaults {
+	if kind == number.Int64Kind {
+		return histogram.Int64Defaults{}
+	}
+	return histogram.Float64Defaults{}
+}
+
+func buildSyncViewConfiguration[N number.Any, Traits traits.Any[N]](settings aggregatorSettings, behaviors []viewBehavior) viewConfiguration {
 	switch settings.Kind {
 	case aggregation.LastValueKind:
-		aa := syncCollector[lastvalue.Aggregator]{}
-		aa.current.Init(desc)
-		aa.snapshot.Init(desc)
+		aa := syncCollector[N, *lastvalue.Aggregator[N, Traits]]{}
+		aa.current.Init(lastvalue.Config{})
+		aa.snapshot.Init(lastvalue.Config{})
 		return aa
 	case aggregation.HistogramKind:
-		aa := syncCollector[histogram.Aggregator]{}
-		aa.current.Init(desc) // ... options @@@
-		aa.snapshot.Init(desc) // ... options @@@
+		aa := syncCollector[N, *histogram.Aggregator[N, Traits, histogram.Option]]{}
+		aa.current.Init()  // ... options @@@
+		aa.snapshot.Init() // ... options @@@
 		return aa
 	default:
-		return syncCollector[sum.Aggregator]{}
+		break
 	}
+	aa := syncCollector[N, sum.Aggregator[N, Traits]]{}
+	aa.current.Init()
+	aa.snapshot.Init()
+	return aa
 }
 
-func (v *State) buildAsyncViewConfiguration(desc sdkapi.Descriptor, settings aggregatorSettings, behaviors []viewBehavior) viewConfiguration {
+func buildAsyncViewConfiguration[N number.Any, Traits traits.Any[N]](settings aggregatorSettings, behaviors []viewBehavior) viewConfiguration {
 	switch settings.Kind {
 	case aggregation.SumKind:
 	case aggregation.LastValueKind:

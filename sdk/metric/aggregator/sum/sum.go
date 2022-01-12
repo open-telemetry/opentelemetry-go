@@ -15,17 +15,15 @@
 package sum // import "go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 
 import (
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 )
 
-type Option interface {
-	unused()
-}
+type Config struct {}
 
-var _ export.Aggregator[int64, Aggregator[int64, traits.Int64], Option] = &Aggregator[int64, traits.Int64]{}
-var _ export.Aggregator[float64, Aggregator[float64, traits.Float64], Option] = &Aggregator[float64, traits.Float64]{}
+var _ aggregator.Aggregator[int64, Aggregator[int64, traits.Int64], Config] = &Aggregator[int64, traits.Int64]{}
+var _ aggregator.Aggregator[float64, Aggregator[float64, traits.Float64], Config] = &Aggregator[float64, traits.Float64]{}
 
 // Aggregator aggregates counter events.
 type Aggregator[N number.Any, Traits traits.Any[N]] struct {
@@ -35,7 +33,7 @@ type Aggregator[N number.Any, Traits traits.Any[N]] struct {
 	traits Traits
 }
 
-func (c *Aggregator[N, Traits]) Init(_ ...Option) {
+func (c *Aggregator[N, Traits]) Init(_ Config) {
 	c.value = 0
 }
 

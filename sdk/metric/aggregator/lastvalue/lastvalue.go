@@ -18,16 +18,14 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 )
 
 type (
-	Option interface {
-		unused()
-	}
+	Config struct {}
 
 	// Aggregator aggregates lastValue events.
 	Aggregator[N number.Any, Traits traits.Any[N]] struct {
@@ -38,12 +36,12 @@ type (
 	}
 )
 
-var _ export.Aggregator[int64, Aggregator[int64, traits.Int64], Option] = &Aggregator[int64, traits.Int64]{}
-var _ export.Aggregator[float64, Aggregator[float64, traits.Float64], Option] = &Aggregator[float64, traits.Float64]{}
+var _ aggregator.Aggregator[int64, Aggregator[int64, traits.Int64], Config] = &Aggregator[int64, traits.Int64]{}
+var _ aggregator.Aggregator[float64, Aggregator[float64, traits.Float64], Config] = &Aggregator[float64, traits.Float64]{}
 
 // New returns a new lastValue aggregator.  This aggregator retains the
 // last value and timestamp that were recorded.
-func (a *Aggregator[N, Traits]) Init(_ ...Option) {
+func (a *Aggregator[N, Traits]) Init(_ Config) {
 	a.value = 0
 	a.timestamp = time.Time{}
 }

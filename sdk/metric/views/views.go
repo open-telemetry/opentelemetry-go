@@ -5,6 +5,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/receiver"
@@ -25,12 +26,13 @@ type (
 		library              instrumentation.Library
 
 		// Properties of the view
-		attributes  []attribute.Key
-		name        string
-		description string
-		aggregation aggregation.Kind
-		temporality aggregation.Temporality
-		output      receiver.Receiver
+		attributes   []attribute.Key
+		name         string
+		description  string
+		aggregation  aggregation.Kind
+		temporality  aggregation.Temporality
+		histoOptions []histogram.Option
+		output       receiver.Receiver
 	}
 
 	Option func(cfg *Config)
@@ -154,6 +156,10 @@ func (v View) Aggregation() aggregation.Kind {
 
 func (v View) Temporality() aggregation.Temporality {
 	return v.cfg.temporality
+}
+
+func (v View) HistogramOptions() []histogram.Option {
+	return v.cfg.histoOptions
 }
 
 func (v View) Receiver() receiver.Receiver {
