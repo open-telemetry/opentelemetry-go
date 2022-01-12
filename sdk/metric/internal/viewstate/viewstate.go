@@ -19,6 +19,7 @@ import (
 
 type (
 	Collector interface {
+		// @@@
 		Update(number number.Number, desc *sdkapi.Descriptor)
 		Send(desc *sdkapi.Descriptor) error
 	}
@@ -50,36 +51,15 @@ type (
 		configuration []viewConfiguration
 	}
 
-	viewConfiguration interface {
-	}
-
-	// viewConfigurationX struct {
-	// 	settings  aggregatorSettings
-	// 	behaviors []viewBehavior
-	// }
+	viewConfiguration func() viewCollector
 
 	viewBehavior struct {
 		// copied out of the configuration struct
 		// @@@ name, aggregation kind, temporality choice, etc.
 	}
 
-	// vC is returned by the factory New() method.  each label set
-	// has one of these allocated with state for each matching view.
-	viewCollector struct {
-		states []viewConfigState
-	}
-
-	viewSender interface {
-		send(*sdkapi.Descriptor)
-	}
-
-	viewUpdater interface {
-		Update(number.Number, *sdkapi.Descriptor)
-	}
-
-	viewConfigState interface {
-		viewSender
-		viewUpdater
+	viewCollector interface {
+		// @@@ [N number.Any, Traits traits.Any[N]]
 	}
 
 	aggregatorSettings struct {
@@ -245,40 +225,53 @@ func buildView[N number.Any, Traits traits.Any[N]](desc sdkapi.Descriptor, setti
 func buildSyncView[N number.Any, Traits traits.Any[N]](settings aggregatorSettings, behaviors []viewBehavior) viewConfiguration {
 	switch settings.kind {
 	case aggregation.LastValueKind:
-		aa := syncCollector[N, *lastvalue.Aggregator[N, Traits], lastvalue.Config]{}
-		aa.Init(settings.lvcfg)
-		return aa
+		return func() viewCollector {
+			aa := syncCollector[N, *lastvalue.Aggregator[N, Traits], lastvalue.Config]{}
+			aa.Init(settings.lvcfg)
+			return aa
+		}
 	case aggregation.HistogramKind:
-		aa := syncCollector[N, *histogram.Aggregator[N, Traits], histogram.Config]{}
-		aa.Init(settings.hcfg)
-		return aa
+		return func() viewCollector {
+			aa := syncCollector[N, *histogram.Aggregator[N, Traits], histogram.Config]{}
+			aa.Init(settings.hcfg)
+			return aa
+		}
 	default:
-		aa := syncCollector[N, *sum.Aggregator[N, Traits], sum.Config]{}
-		aa.Init(settings.scfg)
-		return aa
+		return func() viewCollector {
+			aa := syncCollector[N, *sum.Aggregator[N, Traits], sum.Config]{}
+			aa.Init(settings.scfg)
+			return aa
+		}
 	}
 }
 
 func buildAsyncView[N number.Any, Traits traits.Any[N]](settings aggregatorSettings, behaviors []viewBehavior) viewConfiguration {
 	switch settings.kind {
 	case aggregation.LastValueKind:
-		aa := asyncCollector[N, *lastvalue.Aggregator[N, Traits], lastvalue.Config]{}
-		aa.Init(settings.lvcfg)
-		return aa
+		return func() viewCollector {
+			aa := asyncCollector[N, *lastvalue.Aggregator[N, Traits], lastvalue.Config]{}
+			aa.Init(settings.lvcfg)
+			return aa
+		}
 	case aggregation.HistogramKind:
-		aa := asyncCollector[N, *lastvalue.Aggregator[N, Traits], histogram.Config]{}
-		aa.Init(settings.hcfg)
-		return aa
+		return func() viewCollector {
+			aa := asyncCollector[N, *lastvalue.Aggregator[N, Traits], histogram.Config]{}
+			aa.Init(settings.hcfg)
+			return aa
+		}
 	default:
-		aa := asyncCollector[N, *sum.Aggregator[N, Traits], sum.Config]{}
-		aa.Init(settings.scfg)
-		return aa
+		return func() viewCollector {
+			aa := asyncCollector[N, *sum.Aggregator[N, Traits], sum.Config]{}
+			aa.Init(settings.scfg)
+			return aa
+		}
 	}
 }
 
 func (factory *viewCollectorFactory) New(kvs []attribute.KeyValue, desc *sdkapi.Descriptor) Collector {
-	var updaters []viewUpdater
-	for _, config := range factory.configuration {
+	states := make([]viewCollector, 0, len(factory.configuration))
+	for _, vc := range factory.configuration {
+		states = append(states, vc())
 	}
 	return &viewCollector{
 		states: states,
@@ -319,4 +312,3 @@ func (ac *asyncCollector[N, Agg, Config]) Init(cfg Config) {
 	ac.current = 0
 	ac.snapshot.Init(cfg)
 }
-
