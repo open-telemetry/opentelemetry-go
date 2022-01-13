@@ -8,11 +8,26 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Support `OTEL_EXPORTER_ZIPKIN_ENDPOINT` env to specify zipkin collector endpoint (#2490)
+- Log the configuration of TracerProviders, and Tracers for debugging. To enable use a logger with Verbosity (V level) >=1
+
+### Changed
+
+- Jaeger exporter takes into additional 70 bytes overhead into consideration when sending UDP packets (#2489)
+
 ### Deprecated
 
 - Deprecate module `"go.opentelemetry.io/otel/sdk/export/metric"`, new functionality available in "go.opentelemetry.io/otel/sdk/metric" module:
   - Import path changed `import "go.opentelemetry.io/otel/sdk/export/metric"` to `import go.opentelemetry.io/otel/sdk/metric/export` (#2382).
 - Deprecate `AtomicFieldOffsets`, unnecessary public func (#2445)
+
+### Fixed
+
+- Fixes the instrument kind for noop async instruments. (#2461)
+- Change the `otlpmetric.Client` interface's `UploadMetrics` method to accept a single `ResourceMetrics` instead of a slice of them. (#2491)
+- Specify explicit buckets in Prometheus example. (#2493)
 
 ## [1.3.0] - 2021-12-10
 

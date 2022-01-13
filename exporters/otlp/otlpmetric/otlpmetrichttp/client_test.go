@@ -144,15 +144,15 @@ func TestExporterShutdown(t *testing.T) {
 }
 
 func TestTimeout(t *testing.T) {
-	mcCfg := mockCollectorConfig{
-		InjectDelay: 100 * time.Millisecond,
-	}
+	delay := make(chan struct{})
+	mcCfg := mockCollectorConfig{Delay: delay}
 	mc := runMockCollector(t, mcCfg)
 	defer mc.MustStop(t)
+	defer func() { close(delay) }()
 	client := otlpmetrichttp.NewClient(
 		otlpmetrichttp.WithEndpoint(mc.Endpoint()),
 		otlpmetrichttp.WithInsecure(),
-		otlpmetrichttp.WithTimeout(50*time.Millisecond),
+		otlpmetrichttp.WithTimeout(time.Nanosecond),
 	)
 	ctx := context.Background()
 	exporter, err := otlpmetric.New(ctx, client)
@@ -161,7 +161,7 @@ func TestTimeout(t *testing.T) {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
 	err = exporter.Export(ctx, testResource, oneRecord)
-	assert.Equal(t, true, os.IsTimeout(err))
+	assert.Equalf(t, true, os.IsTimeout(err), "expected timeout error, got: %v", err)
 }
 
 func TestEmptyData(t *testing.T) {

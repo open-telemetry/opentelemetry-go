@@ -23,9 +23,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/internal/global"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
@@ -478,5 +480,46 @@ func TestBatchSpanProcessorForceFlushQueuedSpans(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Len(t, exp.GetSpans(), i+1)
+	}
+}
+
+func BenchmarkSpanProcessor(b *testing.B) {
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(
+			tracetest.NewNoopExporter(),
+			sdktrace.WithMaxExportBatchSize(10),
+		))
+	tracer := tp.Tracer("bench")
+	ctx := context.Background()
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 10; j++ {
+			_, span := tracer.Start(ctx, "bench")
+			span.End()
+		}
+	}
+}
+
+func BenchmarkSpanProcessorVerboseLogging(b *testing.B) {
+	global.SetLogger(funcr.New(func(prefix, args string) {}, funcr.Options{Verbosity: 5}))
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(
+			tracetest.NewNoopExporter(),
+			sdktrace.WithMaxExportBatchSize(10),
+		))
+	tracer := tp.Tracer("bench")
+	ctx := context.Background()
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 10; j++ {
+			_, span := tracer.Start(ctx, "bench")
+			span.End()
+		}
 	}
 }

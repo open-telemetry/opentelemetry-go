@@ -15,6 +15,7 @@
 package aggregation // import "go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 
 import (
+	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 )
 
@@ -27,11 +28,17 @@ type Sum = aggregation.Sum
 // Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 type Count = aggregation.Count
 
-// Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
-type Min = aggregation.Min
+// Deprecated: Will be removed soon.
+type Min interface {
+	Aggregation
+	Min() (number.Number, error)
+}
 
-// Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
-type Max = aggregation.Max
+// Deprecated: Will be removed soon.
+type Max interface {
+	Aggregation
+	Max() (number.Number, error)
+}
 
 // Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 type LastValue = aggregation.LastValue

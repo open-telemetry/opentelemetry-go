@@ -55,7 +55,7 @@ func initTracer() {
 
 func main() {
 	// Set logging level to info to see SDK status messages
-	stdr.SetVerbosity(1)
+	stdr.SetVerbosity(5)
 
 	// initialize trace provider.
 	initTracer()

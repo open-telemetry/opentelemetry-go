@@ -24,7 +24,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
-	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
 var (
@@ -57,7 +56,7 @@ func (e *Exporter) Export(ctx context.Context, res *resource.Resource, ilr expor
 	// call, as per the specification.  We can change the
 	// signature of UploadMetrics correspondingly. Here create a
 	// singleton list to reduce the size of the current PR:
-	return e.client.UploadMetrics(ctx, []*metricpb.ResourceMetrics{rm})
+	return e.client.UploadMetrics(ctx, rm)
 }
 
 // Start establishes a connection to the receiving endpoint.
