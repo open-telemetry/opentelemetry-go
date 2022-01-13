@@ -20,7 +20,6 @@ import (
 type (
 	Collector interface {
 		// @@@
-		Update(number number.Number, desc *sdkapi.Descriptor)
 		Send(desc *sdkapi.Descriptor) error
 	}
 
@@ -60,7 +59,10 @@ type (
 
 	viewCollector interface {
 		// @@@ [N number.Any, Traits traits.Any[N]]
+		Collector
 	}
+
+	viewCollectors []viewCollector
 
 	aggregatorSettings struct {
 		kind  aggregation.Kind
@@ -226,19 +228,19 @@ func buildSyncView[N number.Any, Traits traits.Any[N]](settings aggregatorSettin
 	switch settings.kind {
 	case aggregation.LastValueKind:
 		return func() viewCollector {
-			aa := syncCollector[N, *lastvalue.Aggregator[N, Traits], lastvalue.Config]{}
+			aa := &syncCollector[N, *lastvalue.Aggregator[N, Traits], lastvalue.Config]{}
 			aa.Init(settings.lvcfg)
 			return aa
 		}
 	case aggregation.HistogramKind:
 		return func() viewCollector {
-			aa := syncCollector[N, *histogram.Aggregator[N, Traits], histogram.Config]{}
+			aa := &syncCollector[N, *histogram.Aggregator[N, Traits], histogram.Config]{}
 			aa.Init(settings.hcfg)
 			return aa
 		}
 	default:
 		return func() viewCollector {
-			aa := syncCollector[N, *sum.Aggregator[N, Traits], sum.Config]{}
+			aa := &syncCollector[N, *sum.Aggregator[N, Traits], sum.Config]{}
 			aa.Init(settings.scfg)
 			return aa
 		}
@@ -249,19 +251,19 @@ func buildAsyncView[N number.Any, Traits traits.Any[N]](settings aggregatorSetti
 	switch settings.kind {
 	case aggregation.LastValueKind:
 		return func() viewCollector {
-			aa := asyncCollector[N, *lastvalue.Aggregator[N, Traits], lastvalue.Config]{}
+			aa := &asyncCollector[N, *lastvalue.Aggregator[N, Traits], lastvalue.Config]{}
 			aa.Init(settings.lvcfg)
 			return aa
 		}
 	case aggregation.HistogramKind:
 		return func() viewCollector {
-			aa := asyncCollector[N, *lastvalue.Aggregator[N, Traits], histogram.Config]{}
+			aa := &asyncCollector[N, *histogram.Aggregator[N, Traits], histogram.Config]{}
 			aa.Init(settings.hcfg)
 			return aa
 		}
 	default:
 		return func() viewCollector {
-			aa := asyncCollector[N, *sum.Aggregator[N, Traits], sum.Config]{}
+			aa := &asyncCollector[N, *sum.Aggregator[N, Traits], sum.Config]{}
 			aa.Init(settings.scfg)
 			return aa
 		}
@@ -269,31 +271,22 @@ func buildAsyncView[N number.Any, Traits traits.Any[N]](settings aggregatorSetti
 }
 
 func (factory *viewCollectorFactory) New(kvs []attribute.KeyValue, desc *sdkapi.Descriptor) Collector {
-	states := make([]viewCollector, 0, len(factory.configuration))
-	for _, vc := range factory.configuration {
-		states = append(states, vc())
+	collectors := make(viewCollectors, 0, len(factory.configuration))
+	for idx, vc := range factory.configuration {
+		collectors[idx] = vc()
 	}
-	return &viewCollector{
-		states: states,
-	}
+	return collectors
 }
 
-func (v *viewCollector) Update(number number.Number, desc *sdkapi.Descriptor) {
-	for _, state := range v.states {
-		state.update(number, desc)
+func (v viewCollectors) Send(desc *sdkapi.Descriptor) error {
+	for _, collector := range v {
+		collector.Send(desc)
 	}
-}
-
-func (v *viewCollector) Send(desc *sdkapi.Descriptor) error {
-
-	// for _, output := range v.outputs {
-	// 	output(desc)
-	// }
 
 	return nil
 }
 
-type syncCollector[N number.Any, Agg aggregator.Any[N], Config any] struct {
+type syncCollector[N number.Any, Agg aggregator.Any[N, Config], Config any] struct {
 	current  Agg
 	snapshot Agg
 }
@@ -303,7 +296,15 @@ func (sc *syncCollector[N, Agg, Config]) Init(cfg Config) {
 	sc.snapshot.Init(cfg)
 }
 
-type asyncCollector[N number.Any, Agg aggregator.Any[N], Config any] struct {
+func (sc *syncCollector[N, Agg, Config]) Update(number N) {
+	sc.current.Update(number)
+}
+
+func (sc *syncCollector[N, Agg, Config]) Send(desc *sdkapi.Descriptor) error {
+	return nil
+}
+
+type asyncCollector[N number.Any, Agg aggregator.Any[N, Config], Config any] struct {
 	current  N
 	snapshot Agg
 }
@@ -311,4 +312,12 @@ type asyncCollector[N number.Any, Agg aggregator.Any[N], Config any] struct {
 func (ac *asyncCollector[N, Agg, Config]) Init(cfg Config) {
 	ac.current = 0
 	ac.snapshot.Init(cfg)
+}
+
+func (ac *asyncCollector[N, Agg, Config]) Update(number N) {
+	ac.current = number
+}
+
+func (ac *asyncCollector[N, Agg, Config]) Send(desc *sdkapi.Descriptor) error {
+	return nil
 }

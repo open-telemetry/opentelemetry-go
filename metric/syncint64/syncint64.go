@@ -8,9 +8,9 @@ import (
 )
 
 type Instruments interface {
-	Counter(name string, opts ...instrument.Option) Counter
-	UpDownCounter(name string, opts ...instrument.Option) UpDownCounter
-	Histogram(name string, opts ...instrument.Option) Histogram
+	Counter(name string, opts ...instrument.Option) (Counter, error)
+	UpDownCounter(name string, opts ...instrument.Option) (UpDownCounter, error)
+	Histogram(name string, opts ...instrument.Option) (Histogram, error)
 }
 
 type Counter interface {

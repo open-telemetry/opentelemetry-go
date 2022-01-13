@@ -93,6 +93,7 @@ type Aggregator[N number.Any, Agg, Config any] interface {
 	Merge(aggregator *Agg)
 }
 
-type Any[N number.Any] interface {
+type Any[N number.Any, Config any] interface {
+	Init(cfg Config)
 	Update(number N)
 }
