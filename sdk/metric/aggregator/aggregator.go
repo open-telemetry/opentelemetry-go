@@ -25,7 +25,7 @@ import (
 // This rejects NaN values.  This rejects negative values when the
 // metric instrument does not support negative values, including
 // monotonic counter metrics and absolute Histogram metrics.
-func RangeTest[N number.Any, Traits traits.Any[N]](num N, desc sdkapi.Descriptor) error {
+func RangeTest[N number.Any, Traits traits.Any[N]](num N, desc *sdkapi.Descriptor) error {
 	var traits Traits
 
 	// @@@ Should we have an Inf check?

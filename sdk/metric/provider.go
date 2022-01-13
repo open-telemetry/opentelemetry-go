@@ -5,6 +5,11 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/asyncfloat64"
+	"go.opentelemetry.io/otel/metric/asyncint64"
+	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/syncfloat64"
+	"go.opentelemetry.io/otel/metric/syncint64"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/internal/asyncstate"
 	"go.opentelemetry.io/otel/sdk/metric/internal/syncstate"
@@ -30,15 +35,19 @@ type (
 
 	meter struct {
 		library    instrumentation.Library
-		uniqueImpl *registry.UniqueInstrumentMeterImpl
 		provider   *provider
+		registry   *registry.Registry
 		views      *viewstate.State
 		syncAccum  *syncstate.Accumulator
 		asyncAccum *asyncstate.Accumulator
 	}
 )
 
-var _ metric.Meter = &meter{}
+var (
+	_ metric.Meter            = &meter{}
+	_ syncint64.Instruments   = syncint64Instruments{}
+	_ syncfloat64.Instruments = syncfloat64Instruments{}
+)
 
 func WithResource(res *resource.Resource) Option {
 	return func(cfg *Config) {
@@ -85,33 +94,65 @@ func (p *provider) Meter(name string, opts ...metric.MeterOption) metric.Meter {
 	defer p.lock.Unlock()
 
 	m := p.meters[lib]
-	if m == nil {
-		m = &meter{
-			provider:   p,
-			library:    lib,
-			views:      viewstate.New(lib, p.cfg.views, p.cfg.hasDefaultView),
-			syncAccum:  syncstate.New(),
-			asyncAccum: asyncstate.New(),
-		}
-		m.uniqueImpl = registry.NewUniqueInstrumentMeterImpl(m)
-		p.meters[lib] = m
+	if m != nil {
+		return m
 	}
-	return metric.Meter{
-		MeterImpl: m.uniqueImpl,
+	m = &meter{
+		provider:   p,
+		library:    lib,
+		registry:   registry.New(),
+		views:      viewstate.New(lib, p.cfg.views, p.cfg.hasDefaultView),
+		syncAccum:  syncstate.New(),
+		asyncAccum: asyncstate.New(),
 	}
+	p.meters[lib] = m
+	return m
 }
 
-func (m *meter) NewInstrument(descriptor sdkapi.Descriptor) (sdkapi.Instrument, error) {
-	cfactory, err := m.views.NewFactory(descriptor)
-	if err != nil {
-		return nil, err
-	}
-
-	if descriptor.InstrumentKind().Synchronous() {
-		return m.syncAccum.NewInstrument(descriptor, cfactory)
-	}
-	return m.asyncAccum.NewInstrument(descriptor, cfactory)
+func (m *meter) SyncInt64() syncint64.Instruments {
+	return m.syncstate.Int64Instruments(m)
 }
+
+func (m *meter) SyncFloat64() syncfloat64.Instruments {
+	return m.syncstate.Float64Instruments(m)
+}
+
+func (m *meter) AsyncInt64() asyncint64.Instruments {
+	// return asyncint64Instruments{meter: m}
+	return nil
+}
+
+func (m *meter) AsyncFloat64() asyncfloat64.Instruments {
+	// return asyncfloat64Instruments{meter: m}
+	return nil
+}
+
+func (m *meter) newInstrument(name string, opts []apiInstrument.Option, nk number.Kind, ik sdkapi.InstrumentKind) {
+
+// cfg := apiInstrument.NewConfig(opts...)
+// descriptor := sdkapi.NewDescriptor(name, ik, nk, cfg.Description(), cfg.Unit())
+// name string, opts []apiInstrument.Option, nk number.Kind, ik sdkapi.InstrumentKind)
+// inst := a.instruments[name]
+// if inst != nil {
+// 	if inst.descriptor.NumberKind() == nk && inst.descriptor.InstrumentKind() == ik && inst.descriptor.Unit() == cfg.Unit() {
+// 		return inst, nil
+// 	}
+// 	return nil, ErrIncompatibleInstruments
+// }
+
+// ErrIncompatibleInstruments = fmt.Errorf("incompatible instrument registration")
+
+// func (m *meter) NewInstrument(descriptor sdkapi.Descriptor) (sdkapi.Instrument, error) {
+// 	cfactory, err := m.views.NewFactory(descriptor)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	if descriptor.InstrumentKind().Synchronous() {
+// 		return m.syncAccum.NewInstrument(descriptor, cfactory)
+// 	}
+// 	return m.asyncAccum.NewInstrument(descriptor, cfactory)
+// }
 
 func (m *meter) NewCallback(insts []sdkapi.Instrument, callback func(context.Context) error) (sdkapi.Callback, error) {
 	return m.asyncAccum.NewCallback(insts, callback)

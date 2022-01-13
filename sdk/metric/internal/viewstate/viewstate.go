@@ -20,13 +20,16 @@ import (
 type (
 	Collector interface {
 		// @@@
-		Send(desc *sdkapi.Descriptor) error
+		Send() error
 	}
 
+	Updater[N number.Any] interface {
+		// @@@
+		Update(number N)
+	}
+	
 	CollectorFactory interface {
-		// New constructs a new collector.  This is not
-		// allowed to modify input, beacuse the sync codepath
-		// has fingerprinted them as-is.
+		// New returns a Collector that also implements Updater[N]
 		New(kvs []attribute.KeyValue, desc *sdkapi.Descriptor) Collector
 	}
 
@@ -207,6 +210,8 @@ func (v *State) NewFactory(desc sdkapi.Descriptor) (CollectorFactory, error) {
 		}
 	}
 
+	// Make vcf == nil when no views to disable @@@
+
 	return vcf, nil
 }
 
@@ -278,9 +283,9 @@ func (factory *viewCollectorFactory) New(kvs []attribute.KeyValue, desc *sdkapi.
 	return collectors
 }
 
-func (v viewCollectors) Send(desc *sdkapi.Descriptor) error {
+func (v viewCollectors) Send() error {
 	for _, collector := range v {
-		collector.Send(desc)
+		collector.Send()
 	}
 
 	return nil
@@ -300,7 +305,7 @@ func (sc *syncCollector[N, Agg, Config]) Update(number N) {
 	sc.current.Update(number)
 }
 
-func (sc *syncCollector[N, Agg, Config]) Send(desc *sdkapi.Descriptor) error {
+func (sc *syncCollector[N, Agg, Config]) Send() error {
 	return nil
 }
 
@@ -318,6 +323,6 @@ func (ac *asyncCollector[N, Agg, Config]) Update(number N) {
 	ac.current = number
 }
 
-func (ac *asyncCollector[N, Agg, Config]) Send(desc *sdkapi.Descriptor) error {
+func (ac *asyncCollector[N, Agg, Config]) Send() error {
 	return nil
 }
