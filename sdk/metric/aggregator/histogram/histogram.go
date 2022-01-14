@@ -34,39 +34,38 @@ type (
 		Boundaries() []float64
 	}
 
-	Int64Defaults struct{}
+	Int64Defaults   struct{}
 	Float64Defaults struct{}
-	
-	// Aggregator observe events and counts them in pre-determined buckets.
-	// It also calculates the sum and count of all events.
-	Aggregator[N number.Any, Traits traits.Any[N]] struct {
-		lock       sync.Mutex
-		boundaries []float64
-		state      *state[N, Traits]
+
+	State[N number.Any, Traits traits.Any[N]] struct {
+		boundaries   []float64
+
+		lock         sync.Mutex
+		bucketCounts []uint64
+		sum          N
+		count        uint64
 	}
 
-	// config describes how the histogram is aggregated.
 	Config struct {
 		// explicitBoundaries support arbitrary bucketing schemes.  This
 		// is the general case.
 		explicitBoundaries []float64
 	}
 
-	// Option configures a histogram config.
 	Option interface {
 		// apply sets one or more config fields.
 		apply(*Config)
 	}
 
-	// state represents the state of a histogram, consisting of
-	// the sum and counts for all observed values and
-	// the less than equal bucket count for the pre-determined boundaries.
-	state[N number.Any, Traits traits.Any[N]] struct {
-		bucketCounts []uint64
-		sum          N
-		count        uint64
-		traits       Traits
-	}
+	Methods[N number.Any, Traits traits.Any[N], Storage State[N, Traits]] struct{}
+)
+
+var (
+	_ aggregator.Methods[int64, State[int64, traits.Int64], Config] = Methods[int64, traits.Int64]{}
+	_ aggregator.Methods[float64, State[float64, traits.Float64], Config] = Methods[float64, traits.Float64]{}
+
+	_ aggregation.Sum = &State[int64, traits.Int64]{}
+	_ aggregation.Sum = &State[float64, traits.Float64]{}
 )
 
 // WithExplicitBoundaries sets the ExplicitBoundaries configuration option of a config.
@@ -110,12 +109,6 @@ func (Float64Defaults) Boundaries() []float64 {
 	return defaultFloat64ExplicitBoundaries
 }
 
-type Int64Histogram = Aggregator[int64, traits.Int64]
-type Float64Histogram = Aggregator[float64, traits.Float64]
-
-var _ aggregator.Aggregator[int64, Int64Histogram, Config] = &Int64Histogram{}
-var _ aggregator.Aggregator[float64, Float64Histogram, Config] = &Float64Histogram{}
-
 func NewConfig(def Defaults, opts ...Option) Config {
 	cfg := Config{
 		explicitBoundaries: def.Boundaries(),
@@ -135,85 +128,77 @@ func NewConfig(def Defaults, opts ...Option) Config {
 	return cfg
 }
 
-// New returns a new aggregator for computing Histograms.
-//
-// A Histogram observe events and counts them in pre-defined buckets.
-// And also provides the total sum and count of all observations.
-//
-// Note that this aggregator maintains each value using independent
-// atomic operations, which introduces the possibility that
-// checkpoints are inconsistent.
-func (a *Aggregator[N, Traits]) Init(cfg Config) {
-	a.boundaries = cfg.explicitBoundaries
-	a.state = a.newState()
-}
-
-// Sum returns the sum of all values in the checkpoint.
-func (c *Aggregator[N, Traits]) Sum() (number.Number, error) {
+func (h *State[N, Traits]) Sum() (number.Number, error) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
 	var traits Traits
-	return traits.ToNumber(c.state.sum), nil
+	return traits.ToNumber(h.sum), nil
 }
 
-// Count returns the number of values in the checkpoint.
-func (c *Aggregator[N, Traits]) Count() (uint64, error) {
-	return c.state.count, nil
+func (h *State[N, Traits]) Count() (uint64, error) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+	return h.count, nil
 }
 
-// Histogram returns the count of events in pre-determined buckets.
-func (c *Aggregator[N, Traits]) Histogram() (aggregation.Buckets, error) {
+func (h *State[N, Traits]) Histogram() (aggregation.Buckets, error) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
 	return aggregation.Buckets{
-		Boundaries: c.boundaries,
-		Counts:     c.state.bucketCounts,
+		Boundaries: h.boundaries,
+		Counts:     h.bucketCounts,
 	}, nil
 }
 
-// SynchronizedMove saves the current state into oa and resets the current state to
-// the empty set.  Since no locks are taken, there is a chance that
-// the independent Sum, Count and Bucket Count are not consistent with each
-// other.
-func (c *Aggregator[N, Traits]) SynchronizedMove(o *Aggregator[N, Traits]) {
-	if o != nil {
+func (h *State[N, Traits]) Kind() aggregation.Kind {
+	return aggregation.LastValueKind
+}
+
+
+func (h *State[N, Traits]) clearState() {
+	for i := range h.bucketCounts {
+		h.bucketCounts[i] = 0
+	}
+	h.sum = 0
+	h.count = 0
+}
+
+func (Methods[N, Traits, Storage]) Init(state *State[N, Traits], cfg Config) {
+	state.boundaries = cfg.explicitBoundaries
+	state.bucketCounts = make([]uint64, len(state.boundaries)+1)
+}
+
+func (Methods[N, Traits, Storage]) SynchronizedMove(resetSrc, dest *State[N, Traits]) {
+	if dest != nil {
 		// Swap case: This is the ordinary case for a
 		// synchronous instrument, where the SDK allocates two
 		// Aggregators and lock contention is anticipated.
 		// Reset the target state before swapping it under the
 		// lock below.
-		o.clearState()
+		dest.clearState()
 	}
-
-	c.lock.Lock()
-	if o != nil {
-		c.state, o.state = o.state, c.state
+	
+	resetSrc.lock.Lock()
+	defer resetSrc.lock.Unlock()
+	if dest != nil {
+		dest.sum, resetSrc.sum = resetSrc.sum, dest.sum
+		dest.count, resetSrc.count = resetSrc.count, dest.count
+		dest.bucketCounts, resetSrc.bucketCounts = resetSrc.bucketCounts, dest.bucketCounts
 	} else {
 		// No swap case: This is the ordinary case for an
 		// asynchronous instrument, where the SDK allocates a
 		// single Aggregator and there is no anticipated lock
 		// contention.
-		c.clearState()
+		resetSrc.clearState()
 	}
-	c.lock.Unlock()
-}
-
-func (c *Aggregator[N, Traits]) newState() *state[N, Traits] {
-	return &state[N, Traits]{
-		bucketCounts: make([]uint64, len(c.boundaries)+1),
-	}
-}
-
-func (c *Aggregator[N, Traits]) clearState() {
-	for i := range c.state.bucketCounts {
-		c.state.bucketCounts[i] = 0
-	}
-	c.state.sum = 0
-	c.state.count = 0
 }
 
 // Update adds the recorded measurement to the current data set.
-func (c *Aggregator[N, Traits]) Update(number N) {
+func (Methods[N, Traits, Storage]) Update(state *State[N, Traits], number N) {
 	asFloat := float64(number)
 
-	bucketID := len(c.boundaries)
-	for i, boundary := range c.boundaries {
+	bucketID := len(state.boundaries)
+	for i, boundary := range state.boundaries {
 		if asFloat < boundary {
 			bucketID = i
 			break
@@ -231,20 +216,20 @@ func (c *Aggregator[N, Traits]) Update(number N) {
 	// 256 and 512 elements, which is a relatively large histogram, so we
 	// continue to prefer linear search.
 
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	state.lock.Lock()
+	defer state.lock.Unlock()
 
-	c.state.count++
-	c.state.sum += number
-	c.state.bucketCounts[bucketID]++
+	state.count++
+	state.sum += number
+	state.bucketCounts[bucketID]++
 }
 
 // Merge combines two histograms that have the same buckets into a single one.
-func (c *Aggregator[N, Traits]) Merge(o *Aggregator[N, Traits]) {
-	c.state.sum += o.state.sum
-	c.state.count += o.state.count
+func (Methods[N, Traits, Storage]) Merge(to, from *State[N, Traits]) {
+	to.sum += from.sum
+	to.count += from.count
 
-	for i := 0; i < len(c.state.bucketCounts); i++ {
-		c.state.bucketCounts[i] += o.state.bucketCounts[i]
+	for i := 0; i < len(to.bucketCounts); i++ {
+		to.bucketCounts[i] += from.bucketCounts[i]
 	}
 }

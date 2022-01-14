@@ -19,15 +19,13 @@ import (
 
 type (
 	Collector interface {
-		// @@@
 		Send() error
 	}
 
 	Updater[N number.Any] interface {
-		// @@@
 		Update(number N)
 	}
-	
+
 	CollectorFactory interface {
 		// New returns a Collector that also implements Updater[N]
 		New(kvs []attribute.KeyValue, desc *sdkapi.Descriptor) Collector
@@ -56,12 +54,13 @@ type (
 	viewConfiguration func() viewCollector
 
 	viewBehavior struct {
-		// copied out of the configuration struct
-		// @@@ name, aggregation kind, temporality choice, etc.
+		// TODO: this is not an efficient way to represent the
+		// calculated behavior, as this struct contains every
+		// option.
+		view views.View
 	}
 
 	viewCollector interface {
-		// @@@ [N number.Any, Traits traits.Any[N]]
 		Collector
 	}
 
@@ -72,6 +71,16 @@ type (
 		hcfg  histogram.Config
 		scfg  sum.Config
 		lvcfg lastvalue.Config
+	}
+
+	syncCollector[N number.Any, Methods aggregator.Methods[N, Storage, Config], Storage, Config any] struct {
+		current  Storage
+		snapshot Storage
+	}
+
+	asyncCollector[N number.Any, Methods aggregator.Methods[N, Storage, Config], Storage, Config any] struct {
+		current  N
+		snapshot Storage
 	}
 )
 
@@ -112,20 +121,18 @@ func New(lib instrumentation.Library, defs []views.View, hasDefault bool) *State
 }
 
 func configViewBehavior(v views.View) viewBehavior {
-	return viewBehavior{
-		// @@@
-	}
+	return viewBehavior{view: v}
 }
 
 func defaultViewBehavior(desc sdkapi.Descriptor) viewBehavior {
+	as := aggregatorSettingsFor(desc)
 	return viewBehavior{
-		// @@@
+		view: views.New(views.WithAggregation(as.kind)),
 	}
 }
 
 func (vb viewBehavior) Name() string {
-	// @@@
-	return ""
+	return vb.view.Name()
 }
 
 // NewFactory is called during NewInstrument by the Meter
@@ -179,7 +186,6 @@ func (v *State) NewFactory(desc sdkapi.Descriptor) (CollectorFactory, error) {
 
 	v.lock.Lock()
 	defer v.lock.Unlock()
-
 	addedHere := map[string]struct{}{}
 
 	for _, sbs := range allBehaviors {
@@ -188,7 +194,7 @@ func (v *State) NewFactory(desc sdkapi.Descriptor) (CollectorFactory, error) {
 			_, has1 := v.outputNames[outputName]
 			_, has2 := addedHere[outputName]
 			if has1 || has2 {
-				return nil, fmt.Errorf("duplicate view name configured: ", outputName)
+				return nil, fmt.Errorf("duplicate view name configured: %v", outputName)
 			}
 			addedHere[outputName] = struct{}{}
 		}
@@ -210,7 +216,9 @@ func (v *State) NewFactory(desc sdkapi.Descriptor) (CollectorFactory, error) {
 		}
 	}
 
-	// Make vcf == nil when no views to disable @@@
+	if len(vcf.configuration) == 0 {
+		return nil, nil
+	}
 
 	return vcf, nil
 }
@@ -233,19 +241,19 @@ func buildSyncView[N number.Any, Traits traits.Any[N]](settings aggregatorSettin
 	switch settings.kind {
 	case aggregation.LastValueKind:
 		return func() viewCollector {
-			aa := &syncCollector[N, *lastvalue.Aggregator[N, Traits], lastvalue.Config]{}
+			aa := &syncCollector[N, lastvalue.Methods[N, Traits, lastvalue.State[N, Traits]], lastvalue.State[N, Traits], lastvalue.Config]{}
 			aa.Init(settings.lvcfg)
 			return aa
 		}
 	case aggregation.HistogramKind:
 		return func() viewCollector {
-			aa := &syncCollector[N, *histogram.Aggregator[N, Traits], histogram.Config]{}
+			aa := &syncCollector[N, histogram.Methods[N, Traits, histogram.State[N, Traits]], histogram.State[N, Traits], histogram.Config]{}
 			aa.Init(settings.hcfg)
 			return aa
 		}
 	default:
 		return func() viewCollector {
-			aa := &syncCollector[N, *sum.Aggregator[N, Traits], sum.Config]{}
+			aa := &syncCollector[N, sum.Methods[N, Traits, sum.State[N, Traits]], sum.State[N, Traits], sum.Config]{}
 			aa.Init(settings.scfg)
 			return aa
 		}
@@ -256,19 +264,19 @@ func buildAsyncView[N number.Any, Traits traits.Any[N]](settings aggregatorSetti
 	switch settings.kind {
 	case aggregation.LastValueKind:
 		return func() viewCollector {
-			aa := &asyncCollector[N, *lastvalue.Aggregator[N, Traits], lastvalue.Config]{}
+			aa := &asyncCollector[N, lastvalue.Methods[N, Traits, lastvalue.State[N, Traits]], lastvalue.State[N, Traits], lastvalue.Config]{}
 			aa.Init(settings.lvcfg)
 			return aa
 		}
 	case aggregation.HistogramKind:
 		return func() viewCollector {
-			aa := &asyncCollector[N, *histogram.Aggregator[N, Traits], histogram.Config]{}
+			aa := &asyncCollector[N, histogram.Methods[N, Traits, histogram.State[N, Traits]], histogram.State[N, Traits], histogram.Config]{}
 			aa.Init(settings.hcfg)
 			return aa
 		}
 	default:
 		return func() viewCollector {
-			aa := &asyncCollector[N, *sum.Aggregator[N, Traits], sum.Config]{}
+			aa := &asyncCollector[N, sum.Methods[N, Traits, sum.State[N, Traits]], sum.State[N, Traits], sum.Config]{}
 			aa.Init(settings.scfg)
 			return aa
 		}
@@ -291,38 +299,39 @@ func (v viewCollectors) Send() error {
 	return nil
 }
 
-type syncCollector[N number.Any, Agg aggregator.Any[N, Config], Config any] struct {
-	current  Agg
-	snapshot Agg
+func (sc *syncCollector[N, Methods, Storage, Config]) Init(cfg Config) {
+	var methods Methods
+	methods.Init(&sc.current, cfg)
+	methods.Init(&sc.snapshot, cfg)
 }
 
-func (sc *syncCollector[N, Agg, Config]) Init(cfg Config) {
-	sc.current.Init(cfg)
-	sc.snapshot.Init(cfg)
+func (sc *syncCollector[N, Methods, Storage, Config]) Update(number N) {
+	var methods Methods
+	methods.Update(&sc.current, number)
 }
 
-func (sc *syncCollector[N, Agg, Config]) Update(number N) {
-	sc.current.Update(number)
-}
-
-func (sc *syncCollector[N, Agg, Config]) Send() error {
+func (sc *syncCollector[N, Methods, Storage, Config]) Send() error {
+	var methods Methods
+	methods.SynchronizedMove(&sc.current, &sc.snapshot)
+	// @@@ do something
 	return nil
 }
 
-type asyncCollector[N number.Any, Agg aggregator.Any[N, Config], Config any] struct {
-	current  N
-	snapshot Agg
-}
-
-func (ac *asyncCollector[N, Agg, Config]) Init(cfg Config) {
+func (ac *asyncCollector[N, Methods, Storage, Config]) Init(cfg Config) {
+	var methods Methods
 	ac.current = 0
-	ac.snapshot.Init(cfg)
+	methods.Init(&ac.snapshot, cfg)
 }
 
-func (ac *asyncCollector[N, Agg, Config]) Update(number N) {
+func (ac *asyncCollector[N, Methods, Storage, Config]) Update(number N) {
 	ac.current = number
 }
 
-func (ac *asyncCollector[N, Agg, Config]) Send() error {
+func (ac *asyncCollector[N, Methods, Storage, Config]) Send() error {
+	var methods Methods
+	methods.SynchronizedMove(&ac.snapshot, nil)
+	methods.Update(&ac.snapshot, ac.current)
+	ac.current = 0
+	// @@@ do something
 	return nil
 }

@@ -45,7 +45,7 @@ func RangeTest[N number.Any, Traits traits.Any[N]](num N, desc *sdkapi.Descripto
 	return nil
 }
 
-// Aggregator implements a specific aggregation behavior, e.g., a
+// Methods implements a specific aggregation behavior, e.g., a
 // behavior to track a sequence of updates to an instrument.  Counter
 // instruments commonly use a simple Sum aggregator, but for the
 // distribution instruments (Histogram, GaugeObserver) there are a
@@ -55,45 +55,9 @@ func RangeTest[N number.Any, Traits traits.Any[N]](num N, desc *sdkapi.Descripto
 // Note that any Aggregator may be attached to any instrument--this is
 // the result of the OpenTelemetry API/SDK separation.  It is possible
 // to attach a Sum aggregator to a Histogram instrument.
-type Aggregator[N number.Any, Agg, Config any] interface {
-	Init(config Config)
-
-	Update(number N)
-
-	// SynchronizedMove is called during collection to finish one
-	// period of aggregation by atomically saving the
-	// currently-updating state into the argument Aggregator AND
-	// resetting the current value to the zero state.
-	//
-	// SynchronizedMove() is called concurrently with Update().  These
-	// two methods must be synchronized with respect to each
-	// other, for correctness.
-	//
-	// After saving a synchronized copy, the Aggregator can be converted
-	// into one or more of the interfaces in the `aggregation` sub-package,
-	// according to kind of Aggregator that was selected.
-	//
-	// This method will return an InconsistentAggregatorError if
-	// this Aggregator cannot be copied into the destination due
-	// to an incompatible type.
-	//
-	// This call has no Context argument because it is expected to
-	// perform only computation.
-	//
-	// When called with a nil `destination`, this Aggregator is reset
-	// and the current value is discarded.
-	SynchronizedMove(destination *Agg)
-
-	// Merge combines the checkpointed state from the argument
-	// Aggregator into this Aggregator.  Merge is not synchronized
-	// with respect to Update or SynchronizedMove.
-	//
-	// The owner of an Aggregator being merged is responsible for
-	// synchronization of both Aggregator states.
-	Merge(aggregator *Agg)
-}
-
-type Any[N number.Any, Config any] interface {
-	Init(cfg Config)
-	Update(number N)
+type Methods[N number.Any, Storage, Config any] interface {
+	Init(ptr *Storage, cfg Config)
+	Update(ptr *Storage, number N)
+	SynchronizedMove(inputIsReset, output *Storage)
+	Merge(output, input *Storage)
 }

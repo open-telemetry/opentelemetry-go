@@ -84,8 +84,8 @@ type (
 	}
 
 
-	int64Instruments struct { common }
-	float64Instruments struct { common }
+	Int64Instruments struct { common }
+	Float64Instruments struct { common }
 
 	counter[N number.Any, Traits traits.Any[N]] struct {
 		*instrument
@@ -111,7 +111,7 @@ func New() *Accumulator {
 }
 
 func (a *Accumulator) Int64Instruments(reg *registry.State, views *viewstate.State) syncint64.Instruments {
-	return int64Instruments{
+	return Int64Instruments{
 		common: common{
 			accumulator: a,
 			registry:    reg,
@@ -121,7 +121,7 @@ func (a *Accumulator) Int64Instruments(reg *registry.State, views *viewstate.Sta
 }
 
 func (a *Accumulator) Float64Instruments(reg *registry.State, views *viewstate.State) syncfloat64.Instruments {
-	return float64Instruments{
+	return Float64Instruments{
 		common: common{
 			accumulator: a,
 			registry:    reg,
@@ -130,38 +130,39 @@ func (a *Accumulator) Float64Instruments(reg *registry.State, views *viewstate.S
 	}
 }
 
-func (i int64Instruments) Counter(name string, opts ...apiInstrument.Option) (syncint64.Counter, error) {
+func (i Int64Instruments) Counter(name string, opts ...apiInstrument.Option) (syncint64.Counter, error) {
 	inst, err := i.newInstrument(name, opts, number.Int64Kind, sdkapi.CounterInstrumentKind)
 	return counter[int64, traits.Int64]{instrument: inst}, err
 }
 
-func (i int64Instruments) UpDownCounter(name string, opts ...apiInstrument.Option) (syncint64.UpDownCounter, error) {
+func (i Int64Instruments) UpDownCounter(name string, opts ...apiInstrument.Option) (syncint64.UpDownCounter, error) {
 	inst, err := i.newInstrument(name, opts, number.Int64Kind, sdkapi.UpDownCounterInstrumentKind)
 	return counter[int64, traits.Int64]{instrument: inst}, err
 }
 
-func (i int64Instruments) Histogram(name string, opts ...apiInstrument.Option) (syncint64.Histogram, error) {
+func (i Int64Instruments) Histogram(name string, opts ...apiInstrument.Option) (syncint64.Histogram, error) {
 	inst, err := i.newInstrument(name, opts, number.Int64Kind, sdkapi.HistogramInstrumentKind)
 	return histogram[int64, traits.Int64]{instrument: inst}, err
 }
 
-func (f float64Instruments) Counter(name string, opts ...apiInstrument.Option) (syncfloat64.Counter, error) {
+func (f Float64Instruments) Counter(name string, opts ...apiInstrument.Option) (syncfloat64.Counter, error) {
 	inst, err := f.newInstrument(name, opts, number.Float64Kind, sdkapi.CounterInstrumentKind)
 	return counter[float64, traits.Float64]{instrument: inst}, err
 }
 
-func (f float64Instruments) UpDownCounter(name string, opts ...apiInstrument.Option) (syncfloat64.UpDownCounter, error) {
+func (f Float64Instruments) UpDownCounter(name string, opts ...apiInstrument.Option) (syncfloat64.UpDownCounter, error) {
 	inst, err := f.newInstrument(name, opts, number.Float64Kind, sdkapi.UpDownCounterInstrumentKind)
 	return counter[float64, traits.Float64]{instrument: inst}, err
 }
 
-func (f float64Instruments) Histogram(name string, opts ...apiInstrument.Option) (syncfloat64.Histogram, error) {
+func (f Float64Instruments) Histogram(name string, opts ...apiInstrument.Option) (syncfloat64.Histogram, error) {
 	inst, err := f.newInstrument(name, opts, number.Float64Kind, sdkapi.HistogramInstrumentKind)
 	return histogram[float64, traits.Float64]{instrument: inst}, err
 }
 
 func (inst *instrument) Synchronous() {}
 
+// implements registry.hasDescriptor
 func (inst *instrument) Descriptor() sdkapi.Descriptor {
 	return inst.descriptor
 }

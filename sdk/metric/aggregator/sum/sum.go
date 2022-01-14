@@ -16,49 +16,56 @@ package sum // import "go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 
 import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 )
 
-type Config struct {}
+type (
+	Config struct{}
 
-var _ aggregator.Aggregator[int64, Aggregator[int64, traits.Int64], Config] = &Aggregator[int64, traits.Int64]{}
-var _ aggregator.Aggregator[float64, Aggregator[float64, traits.Float64], Config] = &Aggregator[float64, traits.Float64]{}
+	Methods[N number.Any, Traits traits.Any[N], Storage State[N, Traits]] struct{}
 
-// Aggregator aggregates counter events.
-type Aggregator[N number.Any, Traits traits.Any[N]] struct {
-	// current holds current increments to this counter record
-	// current needs to be aligned for 64-bit atomic operations.
-	value  N
-	traits Traits
+	State[N number.Any, Traits traits.Any[N]] struct {
+		value N
+	}
+)
+
+var (
+	_ aggregator.Methods[int64, State[int64, traits.Int64], Config] = Methods[int64, traits.Int64]{}
+	_ aggregator.Methods[float64, State[float64, traits.Float64], Config] = Methods[float64, traits.Float64]{}
+
+	_ aggregation.Sum = &State[int64, traits.Int64]{}
+	_ aggregation.Sum = &State[float64, traits.Float64]{}
+)
+
+func (s *State[N, Traits]) Sum() (number.Number, error) {
+	var traits Traits
+	return traits.ToNumber(s.value), nil
 }
 
-func (c *Aggregator[N, Traits]) Init(_ Config) {
-	c.value = 0
+func (s *State[N, Traits]) Kind() aggregation.Kind {
+	return aggregation.SumKind
 }
 
-// Sum returns the last-checkpointed sum.  This will never return an
-// error.
-func (c *Aggregator[N, Traits]) Sum() (number.Number, error) {
-	return c.traits.ToNumber(c.value), nil
+func (Methods[N, Traits, Storage]) Init(state *State[N, Traits], _ Config) {
+	state.value = 0
 }
 
-// SynchronizedMove atomically saves the current value into oa and resets the
-// current sum to zero.
-func (c *Aggregator[N, Traits]) SynchronizedMove(o *Aggregator[N, Traits]) {
-	if o == nil {
-		c.traits.SetAtomic(&c.value, 0)
+func (Methods[N, Traits, Storage]) SynchronizedMove(resetSrc, dest *State[N, Traits]) {
+	var traits Traits
+	if dest == nil {
+		traits.SetAtomic(&resetSrc.value, 0)
 		return
-	} 
-	o.value = c.traits.SwapAtomic(&c.value, 0)
+	}
+	dest.value = traits.SwapAtomic(&resetSrc.value, 0)
 }
 
-// Update atomically adds to the current value.
-func (c *Aggregator[N, Traits]) Update(num N) {
-	c.traits.AddAtomic(&c.value, num)
+func (Methods[N, Traits, Storage]) Update(state *State[N, Traits], value N) {
+	var traits Traits
+	traits.AddAtomic(&state.value, value)
 }
 
-// Merge combines two counters by adding their sums.
-func (c *Aggregator[N, Traits]) Merge(o *Aggregator[N, Traits]) {
-	c.value += o.value
+func (Methods[N, Traits, Storage]) Merge(to, from *State[N, Traits]) {
+	to.value += from.value
 }

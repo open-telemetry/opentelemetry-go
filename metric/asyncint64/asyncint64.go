@@ -8,9 +8,9 @@ import (
 )
 
 type Instruments interface {
-	Counter(name string, opts ...instrument.Option) Counter
-	UpDownCounter(name string, opts ...instrument.Option) UpDownCounter
-	Gauge(name string, opts ...instrument.Option) Gauge
+	Counter(name string, opts ...instrument.Option) (Counter, error)
+	UpDownCounter(name string, opts ...instrument.Option) (UpDownCounter, error)
+	Gauge(name string, opts ...instrument.Option) (Gauge, error)
 }
 
 type Counter interface {

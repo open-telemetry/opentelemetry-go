@@ -27,69 +27,75 @@ import (
 type (
 	Config struct {}
 
-	// Aggregator aggregates lastValue events.
-	Aggregator[N number.Any, Traits traits.Any[N]] struct {
+	Methods[N number.Any, Traits traits.Any[N], Storage State[N, Traits]] struct {}
+
+	State[N number.Any, Traits traits.Any[N]] struct {
 		lock      sync.Mutex
 		value     N
 		timestamp time.Time
-		traits    Traits
 	}
 )
 
-var _ aggregator.Aggregator[int64, Aggregator[int64, traits.Int64], Config] = &Aggregator[int64, traits.Int64]{}
-var _ aggregator.Aggregator[float64, Aggregator[float64, traits.Float64], Config] = &Aggregator[float64, traits.Float64]{}
+var (
+	_ aggregator.Methods[int64, State[int64, traits.Int64], Config] = Methods[int64, traits.Int64]{}
+	_ aggregator.Methods[float64, State[float64, traits.Float64], Config] = Methods[float64, traits.Float64]{}
 
-// New returns a new lastValue aggregator.  This aggregator retains the
-// last value and timestamp that were recorded.
-func (a *Aggregator[N, Traits]) Init(_ Config) {
-	a.value = 0
-	a.timestamp = time.Time{}
-}
+	_ aggregation.LastValue = &State[int64, traits.Int64]{}
+	_ aggregation.LastValue = &State[float64, traits.Float64]{}
+)
+
+// var _ aggregator.Methods[int64, Aggregator[int64, traits.Int64], Config] = Methods[int64, traits.Int64]{}
+// var _ aggregator.Methods[float64, Aggregator[float64, traits.Float64], Config] = &Aggregator[float64, traits.Float64]{}
 
 // LastValue returns the last-recorded lastValue value and the
 // corresponding timestamp.  The error value aggregation.ErrNoData
 // will be returned if (due to a race condition) the checkpoint was
 // computed before the first value was set.
-func (g *Aggregator[N, Traits]) LastValue() (number.Number, time.Time, error) {
-	g.lock.Lock()
-	defer g.lock.Unlock()
-	if g.timestamp.IsZero() {
+func (lv *State[N, Traits]) LastValue() (number.Number, time.Time, error) {
+	var traits Traits
+	lv.lock.Lock()
+	defer lv.lock.Unlock()
+	if lv.timestamp.IsZero() {
 		return 0, time.Time{}, aggregation.ErrNoData
 	}
-	return g.traits.ToNumber(g.value), g.timestamp, nil
+	return traits.ToNumber(lv.value), lv.timestamp, nil
 }
 
-// SynchronizedMove atomically saves the current value.
-func (g *Aggregator[N, Traits]) SynchronizedMove(o *Aggregator[N, Traits]) {
-	g.lock.Lock()
-	defer g.lock.Unlock()
+func (lv *State[N, Traits]) Kind() aggregation.Kind {
+	return aggregation.LastValueKind
+}
 
-	if o != nil {
-		o.value = g.value
-		o.timestamp = g.timestamp
+func (Methods[N, Traits, Storage]) Init(state *State[N, Traits], _ Config) {
+	// Note: storage is zero to start
+}
+
+func (Methods[N, Traits, Storage]) SynchronizedMove(resetSrc, dest *State[N, Traits]) {
+	resetSrc.lock.Lock()
+	defer resetSrc.lock.Unlock()
+
+	if dest != nil {
+		dest.value = resetSrc.value
+		dest.timestamp = resetSrc.timestamp
 	}
-	g.value = 0
-	g.timestamp = time.Time{}
+	resetSrc.value = 0
+	resetSrc.timestamp = time.Time{}
 }
 
-// Update atomically sets the current "last" value.
-func (g *Aggregator[N, Traits]) Update(number N) {
+func (Methods[N, Traits, Storage]) Update(state *State[N, Traits], number N) {
 	now := time.Now()
 
-	g.lock.Lock()
-	defer g.lock.Unlock()
+	state.lock.Lock()
+	defer state.lock.Unlock()
 
-	g.value = number
-	g.timestamp = now
+	state.value = number
+	state.timestamp = now
 }
 
-// Merge combines state from two aggregators.  The most-recently set
-// value is chosen.
-func (g *Aggregator[N, Traits]) Merge(o *Aggregator[N, Traits]) {
-	if g.timestamp.After(o.timestamp) {
+func (Methods[N, Traits, Storage]) Merge(to, from *State[N, Traits]) {
+	if to.timestamp.After(from.timestamp) {
 		return
 	}
 
-	g.value = o.value
-	g.timestamp = o.timestamp
+	to.value = from.value
+	to.timestamp = from.timestamp
 }
