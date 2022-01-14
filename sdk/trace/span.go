@@ -102,7 +102,7 @@ type ReadWriteSpan interface {
 // representing the individual component of a trace that is sampled.
 type recordingSpan struct {
 	// mu protects the contents of this span.
-	mu sync.Mutex
+	mu sync.RWMutex
 
 	// parent holds the parent span of this span as a trace.SpanContext.
 	parent trace.SpanContext
@@ -174,8 +174,8 @@ func (s *recordingSpan) IsRecording() bool {
 	if s == nil {
 		return false
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	return s.endTime.IsZero()
 }
@@ -362,77 +362,81 @@ func (s *recordingSpan) SetName(name string) {
 
 // Name returns the name of this span.
 func (s *recordingSpan) Name() string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.name
 }
 
 // Name returns the SpanContext of this span's parent span.
 func (s *recordingSpan) Parent() trace.SpanContext {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.parent
 }
 
 // SpanKind returns the SpanKind of this span.
 func (s *recordingSpan) SpanKind() trace.SpanKind {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.spanKind
 }
 
 // StartTime returns the time this span started.
 func (s *recordingSpan) StartTime() time.Time {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.startTime
 }
 
 // EndTime returns the time this span ended. For spans that have not yet
 // ended, the returned value will be the zero value of time.Time.
 func (s *recordingSpan) EndTime() time.Time {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.endTime
 }
 
 // Attributes returns the attributes of this span.
 func (s *recordingSpan) Attributes() []attribute.KeyValue {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.attributes.ToKeyValue()
 }
 
 // Links returns the links of this span.
 func (s *recordingSpan) Links() []Link {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.interfaceArrayToLinksArray()
 }
 
 // Events returns the events of this span.
 func (s *recordingSpan) Events() []Event {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.interfaceArrayToEventArray()
 }
 
 // Status returns the status of this span.
 func (s *recordingSpan) Status() Status {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.status
 }
 
 // InstrumentationLibrary returns the instrumentation.Library associated with
 // the Tracer that created this span.
 func (s *recordingSpan) InstrumentationLibrary() instrumentation.Library {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.instrumentationLibrary
 }
 
 // Resource returns the Resource associated with the Tracer that created this
 // span.
 func (s *recordingSpan) Resource() *resource.Resource {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.resource
 }
 
@@ -440,8 +444,8 @@ func (s *recordingSpan) addLink(link trace.Link) {
 	if !s.IsRecording() || !link.SpanContext.IsValid() {
 		return
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	var droppedAttributeCount int
 
@@ -457,14 +461,16 @@ func (s *recordingSpan) addLink(link trace.Link) {
 // DroppedAttributes returns the number of attributes dropped by the span
 // due to limits being reached.
 func (s *recordingSpan) DroppedAttributes() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.attributes.DroppedCount()
 }
 
 // DroppedLinks returns the number of links dropped by the span due to limits
 // being reached.
 func (s *recordingSpan) DroppedLinks() int {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.links.DroppedCount()
 }
 
@@ -477,8 +483,8 @@ func (s *recordingSpan) DroppedEvents() int {
 // ChildSpanCount returns the count of spans that consider the span a
 // direct parent.
 func (s *recordingSpan) ChildSpanCount() int {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.childSpanCount
 }
 
@@ -491,8 +497,8 @@ func (s *recordingSpan) TracerProvider() trace.TracerProvider {
 // snapshot creates a read-only copy of the current state of the span.
 func (s *recordingSpan) snapshot() ReadOnlySpan {
 	var sd snapshot
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	sd.endTime = s.endTime
 	sd.instrumentationLibrary = s.instrumentationLibrary
