@@ -71,7 +71,7 @@ func newAgentClientUDP(params agentClientUDPParams) (*agentClientUDP, error) {
 		return nil, err
 	}
 
-	if params.MaxPacketSize <= 0 {
+	if params.MaxPacketSize <= 0 || params.MaxPacketSize > udpPacketMaxLength {
 		params.MaxPacketSize = udpPacketMaxLength
 	}
 
