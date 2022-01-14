@@ -28,14 +28,14 @@ func TestAttributesMap(t *testing.T) {
 	attrMap := newAttributesMap(wantCapacity)
 
 	for i := 0; i < 256; i++ {
-		attrMap.add(attribute.Int(fmt.Sprintf(testKeyFmt, i), i))
+		attrMap.Add(attribute.Int(fmt.Sprintf(testKeyFmt, i), i))
 	}
 	if attrMap.capacity != wantCapacity {
 		t.Errorf("attrMap.capacity: got '%d'; want '%d'", attrMap.capacity, wantCapacity)
 	}
 
-	if attrMap.droppedCount != wantCapacity {
-		t.Errorf("attrMap.droppedCount: got '%d'; want '%d'", attrMap.droppedCount, wantCapacity)
+	if attrMap.DroppedCount() != wantCapacity {
+		t.Errorf("attrMap.droppedCount: got '%d'; want '%d'", attrMap.DroppedCount(), wantCapacity)
 	}
 
 	for i := 0; i < wantCapacity; i++ {
@@ -52,13 +52,19 @@ func TestAttributesMap(t *testing.T) {
 			t.Errorf("key %q should not be dropped", key)
 		}
 	}
+
+	wantLen := 128
+	if attrMap.Len() != wantLen {
+		t.Errorf("attrMap.Len: got '%d'; want '%d'", attrMap.Len(), wantLen)
+	}
+
 }
 
 func TestAttributesMapGetOldestRemoveOldest(t *testing.T) {
 	attrMap := newAttributesMap(128)
 
 	for i := 0; i < 128; i++ {
-		attrMap.add(attribute.Int(fmt.Sprintf(testKeyFmt, i), i))
+		attrMap.Add(attribute.Int(fmt.Sprintf(testKeyFmt, i), i))
 	}
 
 	attrMap.removeOldest()
@@ -78,10 +84,10 @@ func TestAttributesMapToKeyValue(t *testing.T) {
 	attrMap := newAttributesMap(128)
 
 	for i := 0; i < 128; i++ {
-		attrMap.add(attribute.Int(fmt.Sprintf(testKeyFmt, i), i))
+		attrMap.Add(attribute.Int(fmt.Sprintf(testKeyFmt, i), i))
 	}
 
-	kv := attrMap.toKeyValue()
+	kv := attrMap.ToKeyValue()
 
 	gotAttrLen := len(kv)
 	wantAttrLen := 128
@@ -94,10 +100,10 @@ func BenchmarkAttributesMapToKeyValue(b *testing.B) {
 	attrMap := newAttributesMap(128)
 
 	for i := 0; i < 128; i++ {
-		attrMap.add(attribute.Int(fmt.Sprintf(testKeyFmt, i), i))
+		attrMap.Add(attribute.Int(fmt.Sprintf(testKeyFmt, i), i))
 	}
 
 	for n := 0; n < b.N; n++ {
-		attrMap.toKeyValue()
+		attrMap.ToKeyValue()
 	}
 }

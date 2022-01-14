@@ -398,12 +398,7 @@ func (s *recordingSpan) EndTime() time.Time {
 
 // Attributes returns the attributes of this span.
 func (s *recordingSpan) Attributes() []attribute.KeyValue {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.attributes.evictList.Len() == 0 {
-		return []attribute.KeyValue{}
-	}
-	return s.attributes.toKeyValue()
+	return s.attributes.ToKeyValue()
 }
 
 // Links returns the links of this span.
@@ -462,9 +457,7 @@ func (s *recordingSpan) addLink(link trace.Link) {
 // DroppedAttributes returns the number of attributes dropped by the span
 // due to limits being reached.
 func (s *recordingSpan) DroppedAttributes() int {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.attributes.droppedCount
+	return s.attributes.DroppedCount()
 }
 
 // DroppedLinks returns the number of links dropped by the span due to limits
@@ -512,9 +505,9 @@ func (s *recordingSpan) snapshot() ReadOnlySpan {
 	sd.status = s.status
 	sd.childSpanCount = s.childSpanCount
 
-	if s.attributes.evictList.Len() > 0 {
-		sd.attributes = s.attributes.toKeyValue()
-		sd.droppedAttributeCount = s.attributes.droppedCount
+	if s.attributes.Len() > 0 {
+		sd.attributes = s.attributes.ToKeyValue()
+		sd.droppedAttributeCount = s.attributes.DroppedCount()
 	}
 
 	if len(s.events.Queue()) > 0 {
@@ -556,13 +549,11 @@ func (s *recordingSpan) interfaceArrayToEventArray() []Event {
 }
 
 func (s *recordingSpan) copyToCappedAttributes(attributes ...attribute.KeyValue) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	for _, a := range attributes {
 		// Ensure attributes conform to the specification:
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.0.1/specification/common/common.md#attributes
 		if a.Valid() {
-			s.attributes.add(a)
+			s.attributes.Add(a)
 		}
 	}
 }

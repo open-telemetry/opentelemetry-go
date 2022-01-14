@@ -16,6 +16,7 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
 	"container/list"
+	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -31,6 +32,8 @@ type attributesMap struct {
 	evictList    *list.List
 	droppedCount int
 	capacity     int
+
+	mu sync.RWMutex
 }
 
 func newAttributesMap(capacity int) *attributesMap {
@@ -42,7 +45,22 @@ func newAttributesMap(capacity int) *attributesMap {
 	return lm
 }
 
-func (am *attributesMap) add(kv attribute.KeyValue) {
+func (am *attributesMap) Len() int {
+	am.mu.RLock()
+	defer am.mu.RUnlock()
+	return am.evictList.Len()
+}
+
+func (am *attributesMap) DroppedCount() int {
+	am.mu.RLock()
+	defer am.mu.RUnlock()
+	return am.droppedCount
+}
+
+func (am *attributesMap) Add(kv attribute.KeyValue) {
+	am.mu.Lock()
+	defer am.mu.Unlock()
+
 	// Check for existing item
 	if ent, ok := am.attributes[kv.Key]; ok {
 		am.evictList.MoveToFront(ent)
@@ -61,13 +79,16 @@ func (am *attributesMap) add(kv attribute.KeyValue) {
 	}
 }
 
-// toKeyValue copies the attributesMap into a slice of attribute.KeyValue and
+// ToKeyValue copies the attributesMap into a slice of attribute.KeyValue and
 // returns it. If the map is empty, a nil is returned.
 // TODO: Is it more efficient to return a pointer to the slice?
-func (am *attributesMap) toKeyValue() []attribute.KeyValue {
+func (am *attributesMap) ToKeyValue() []attribute.KeyValue {
+	am.mu.RLock()
+	defer am.mu.RUnlock()
+
 	len := am.evictList.Len()
 	if len == 0 {
-		return nil
+		return []attribute.KeyValue{}
 	}
 
 	attributes := make([]attribute.KeyValue, 0, len)
