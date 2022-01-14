@@ -340,9 +340,7 @@ func (s *recordingSpan) addEvent(name string, o ...trace.EventOption) {
 		discarded = len(attributes) - s.spanLimits.AttributePerEventCountLimit
 		attributes = attributes[:s.spanLimits.AttributePerEventCountLimit]
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.events.add(Event{
+	s.events.Add(Event{
 		Name:                  name,
 		Attributes:            attributes,
 		DroppedAttributeCount: discarded,
@@ -412,19 +410,11 @@ func (s *recordingSpan) Attributes() []attribute.KeyValue {
 func (s *recordingSpan) Links() []Link {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if len(s.links.queue) == 0 {
-		return []Link{}
-	}
 	return s.interfaceArrayToLinksArray()
 }
 
 // Events returns the events of this span.
 func (s *recordingSpan) Events() []Event {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if len(s.events.queue) == 0 {
-		return []Event{}
-	}
 	return s.interfaceArrayToEventArray()
 }
 
@@ -466,7 +456,7 @@ func (s *recordingSpan) addLink(link trace.Link) {
 		link.Attributes = link.Attributes[:s.spanLimits.AttributePerLinkCountLimit]
 	}
 
-	s.links.add(Link{link.SpanContext, link.Attributes, droppedAttributeCount})
+	s.links.Add(Link{link.SpanContext, link.Attributes, droppedAttributeCount})
 }
 
 // DroppedAttributes returns the number of attributes dropped by the span
@@ -482,15 +472,13 @@ func (s *recordingSpan) DroppedAttributes() int {
 func (s *recordingSpan) DroppedLinks() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.links.droppedCount
+	return s.links.DroppedCount()
 }
 
 // DroppedEvents returns the number of events dropped by the span due to
 // limits being reached.
 func (s *recordingSpan) DroppedEvents() int {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.events.droppedCount
+	return s.events.DroppedCount()
 }
 
 // ChildSpanCount returns the count of spans that consider the span a
@@ -528,28 +516,40 @@ func (s *recordingSpan) snapshot() ReadOnlySpan {
 		sd.attributes = s.attributes.toKeyValue()
 		sd.droppedAttributeCount = s.attributes.droppedCount
 	}
-	if len(s.events.queue) > 0 {
+
+	if len(s.events.Queue()) > 0 {
 		sd.events = s.interfaceArrayToEventArray()
-		sd.droppedEventCount = s.events.droppedCount
+		sd.droppedEventCount = s.events.DroppedCount()
 	}
-	if len(s.links.queue) > 0 {
+	if len(s.links.Queue()) > 0 {
 		sd.links = s.interfaceArrayToLinksArray()
-		sd.droppedLinkCount = s.links.droppedCount
+		sd.droppedLinkCount = s.links.DroppedCount()
 	}
+
 	return &sd
 }
 
 func (s *recordingSpan) interfaceArrayToLinksArray() []Link {
+	queue := s.links.Queue()
+	if len(queue) == 0 {
+		return []Link{}
+	}
+
 	linkArr := make([]Link, 0)
-	for _, value := range s.links.queue {
+	for _, value := range queue {
 		linkArr = append(linkArr, value.(Link))
 	}
 	return linkArr
 }
 
 func (s *recordingSpan) interfaceArrayToEventArray() []Event {
+	queue := s.events.Queue()
+	if len(queue) == 0 {
+		return []Event{}
+	}
+
 	eventArr := make([]Event, 0)
-	for _, value := range s.events.queue {
+	for _, value := range queue {
 		eventArr = append(eventArr, value.(Event))
 	}
 	return eventArr

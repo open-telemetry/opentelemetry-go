@@ -14,10 +14,14 @@
 
 package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
+import "sync"
+
 type evictedQueue struct {
 	queue        []interface{}
 	capacity     int
 	droppedCount int
+
+	mu sync.RWMutex
 }
 
 func newEvictedQueue(capacity int) *evictedQueue {
@@ -29,7 +33,22 @@ func newEvictedQueue(capacity int) *evictedQueue {
 	return eq
 }
 
-func (eq *evictedQueue) add(value interface{}) {
+func (eq *evictedQueue) DroppedCount() int {
+	eq.mu.RLock()
+	defer eq.mu.RUnlock()
+	return eq.droppedCount
+}
+
+func (eq *evictedQueue) Queue() []interface{} {
+	eq.mu.RLock()
+	defer eq.mu.RUnlock()
+	return eq.queue
+}
+
+func (eq *evictedQueue) Add(value interface{}) {
+	eq.mu.Lock()
+	defer eq.mu.Unlock()
+
 	if len(eq.queue) == eq.capacity {
 		eq.queue = eq.queue[1:]
 		eq.droppedCount++

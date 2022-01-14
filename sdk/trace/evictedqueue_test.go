@@ -24,16 +24,16 @@ func init() {
 
 func TestAdd(t *testing.T) {
 	q := newEvictedQueue(3)
-	q.add("value1")
-	q.add("value2")
-	if wantLen, gotLen := 2, len(q.queue); wantLen != gotLen {
+	q.Add("value1")
+	q.Add("value2")
+	if wantLen, gotLen := 2, len(q.Queue()); wantLen != gotLen {
 		t.Errorf("got queue length %d want %d", gotLen, wantLen)
 	}
 }
 
 func (eq *evictedQueue) queueToArray() []string {
 	arr := make([]string, 0)
-	for _, value := range eq.queue {
+	for _, value := range eq.Queue() {
 		arr = append(arr, value.(string))
 	}
 	return arr
@@ -41,15 +41,15 @@ func (eq *evictedQueue) queueToArray() []string {
 
 func TestDropCount(t *testing.T) {
 	q := newEvictedQueue(3)
-	q.add("value1")
-	q.add("value2")
-	q.add("value3")
-	q.add("value1")
-	q.add("value4")
-	if wantLen, gotLen := 3, len(q.queue); wantLen != gotLen {
+	q.Add("value1")
+	q.Add("value2")
+	q.Add("value3")
+	q.Add("value1")
+	q.Add("value4")
+	if wantLen, gotLen := 3, len(q.Queue()); wantLen != gotLen {
 		t.Errorf("got queue length %d want %d", gotLen, wantLen)
 	}
-	if wantDropCount, gotDropCount := 2, q.droppedCount; wantDropCount != gotDropCount {
+	if wantDropCount, gotDropCount := 2, q.DroppedCount(); wantDropCount != gotDropCount {
 		t.Errorf("got drop count %d want %d", gotDropCount, wantDropCount)
 	}
 	wantArr := []string{"value3", "value1", "value4"}
