@@ -8,7 +8,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/number"
-	"go.opentelemetry.io/otel/sdk/metric/receiver"
 	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 )
 
@@ -32,7 +31,6 @@ type (
 		aggregation  aggregation.Kind
 		temporality  aggregation.Temporality
 		histoOptions []histogram.Option
-		output       receiver.Receiver
 	}
 
 	Option func(cfg *Config)
@@ -107,14 +105,6 @@ func WithTemporality(tempo aggregation.Temporality) Option {
 	}
 }
 
-// Output
-
-func WithReceiver(output receiver.Receiver) Option {
-	return func(cfg *Config) {
-		cfg.output = output
-	}
-}
-
 func New(opts ...Option) View {
 	cfg := Config{
 		instrumentKind: unsetInstrumentKind,
@@ -160,10 +150,6 @@ func (v View) Temporality() aggregation.Temporality {
 
 func (v View) HistogramOptions() []histogram.Option {
 	return v.cfg.histoOptions
-}
-
-func (v View) Receiver() receiver.Receiver {
-	return v.cfg.output
 }
 
 func stringMismatch(test, value string) bool {

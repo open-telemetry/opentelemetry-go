@@ -49,7 +49,7 @@ func (s *State[N, Traits]) Kind() aggregation.Kind {
 }
 
 func (Methods[N, Traits, Storage]) Init(state *State[N, Traits], _ Config) {
-	state.value = 0
+	// Note: storage is zero to start
 }
 
 func (Methods[N, Traits, Storage]) SynchronizedMove(resetSrc, dest *State[N, Traits]) {

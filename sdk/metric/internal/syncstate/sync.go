@@ -267,7 +267,7 @@ func (a *Accumulator) checkpointRecord(r *record, final bool) int {
 	if r.collector == nil {
 		return 0
 	}
-	if err := r.collector.Send(); err != nil {
+	if err := r.collector.Send(r.group.instrument.cfactory); err != nil {
 		otel.Handle(err)
 		return 0
 	}

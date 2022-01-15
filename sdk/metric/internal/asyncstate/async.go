@@ -139,7 +139,7 @@ func (a *Accumulator) Collect(state *State) error {
 		}
 	}
 
-	for _, states := range state.store {
+	for inst, states := range state.store {
 		for _, entry := range states {
 			// Note: not deleting anything is a safe approach for
 			// async view calculation.  This can be improved with
@@ -147,7 +147,7 @@ func (a *Accumulator) Collect(state *State) error {
 			// markers, but is complicated by views correctness
 			// considerations, see text in the supplemental
 			// guidelines.
-			if err := entry.Send(); err != nil {
+			if err := entry.Send(inst.cfactory); err != nil {
 				// TODO handle errors
 			}
 		}

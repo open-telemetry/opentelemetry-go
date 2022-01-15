@@ -14,15 +14,14 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/internal/registry"
 	"go.opentelemetry.io/otel/sdk/metric/internal/syncstate"
 	"go.opentelemetry.io/otel/sdk/metric/internal/viewstate"
-	"go.opentelemetry.io/otel/sdk/metric/views"
+	"go.opentelemetry.io/otel/sdk/metric/reader"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type (
 	Config struct {
-		res            *resource.Resource
-		views          []views.View
-		hasDefaultView bool
+		res     *resource.Resource
+		readers []reader.Reader
 	}
 
 	Option func(cfg *Config)
@@ -37,16 +36,14 @@ type (
 		library    instrumentation.Library
 		provider   *provider
 		registry   *registry.State
-		views      *viewstate.State
 		syncAccum  *syncstate.Accumulator
 		asyncAccum *asyncstate.Accumulator
+		views      *viewstate.State
 	}
 )
 
 var (
-	_ metric.Meter            = &meter{}
-	_ syncint64.Instruments   = syncstate.Int64Instruments{}
-	_ syncfloat64.Instruments = syncstate.Float64Instruments{}
+	_ metric.Meter = &meter{}
 )
 
 func WithResource(res *resource.Resource) Option {
@@ -55,27 +52,19 @@ func WithResource(res *resource.Resource) Option {
 	}
 }
 
-func WithView(view views.View) Option {
+func WithReader(r reader.Reader) Option {
 	return func(cfg *Config) {
-		cfg.views = append(cfg.views, view)
-	}
-}
-
-func WithDefaultView(hasDefaultView bool) Option {
-	return func(cfg *Config) {
-		cfg.hasDefaultView = hasDefaultView
+		cfg.readers = append(cfg.readers, r)
 	}
 }
 
 func New(opts ...Option) metric.MeterProvider {
 	cfg := Config{
-		res:            resource.Default(),
-		hasDefaultView: true,
+		res: resource.Default(),
 	}
 	for _, opt := range opts {
 		opt(&cfg)
 	}
-
 	return &provider{
 		cfg:    cfg,
 		meters: map[instrumentation.Library]*meter{},
@@ -101,9 +90,9 @@ func (p *provider) Meter(name string, opts ...metric.MeterOption) metric.Meter {
 		provider:   p,
 		library:    lib,
 		registry:   registry.New(),
-		views:      viewstate.New(lib, p.cfg.views, p.cfg.hasDefaultView),
 		syncAccum:  syncstate.New(),
 		asyncAccum: asyncstate.New(),
+		views:      viewstate.New(lib, p.cfg.readers),
 	}
 	p.meters[lib] = m
 	return m
