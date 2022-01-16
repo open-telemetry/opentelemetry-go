@@ -58,7 +58,7 @@ type (
 		// TODO: this is not an efficient way to represent the
 		// calculated behavior, as this struct contains every
 		// option.  Replace with pointer? Small struct?
-		view views.View
+		view *views.View
 
 		reader *viewReader
 	}
@@ -88,6 +88,15 @@ type (
 		snapshot Storage
 	}
 )
+
+var defaultViews = []views.View{
+	views.New(views.WithAggregation(aggregation.HistogramKind)), // HistogramInstrumentKind
+	views.New(views.WithAggregation(aggregation.LastValueKind)), // GaugeInstrumentKind
+	views.New(views.WithAggregation(aggregation.SumKind)),       // 	CounterInstrumentKind
+	views.New(views.WithAggregation(aggregation.SumKind)),       //	UpDownCounterInstrumentKind
+	views.New(views.WithAggregation(aggregation.SumKind)),       //	CounterObserverInstrumentKind
+	views.New(views.WithAggregation(aggregation.SumKind)),       //	UpDownCounterObserverInstrumentKind
+}
 
 func aggregatorSettingsFor(desc sdkapi.Descriptor) aggregatorSettings {
 	switch desc.InstrumentKind() {
@@ -128,7 +137,7 @@ func New(lib instrumentation.Library, readerConfig []reader.Reader) *State {
 	}
 }
 
-func configViewBehavior(v views.View, r *viewReader) viewBehavior {
+func configViewBehavior(v *views.View, r *viewReader) viewBehavior {
 	return viewBehavior{
 		reader: r,
 		view:   v,
@@ -136,9 +145,8 @@ func configViewBehavior(v views.View, r *viewReader) viewBehavior {
 }
 
 func defaultViewBehavior(desc sdkapi.Descriptor, r *viewReader) viewBehavior {
-	as := aggregatorSettingsFor(desc)
 	return viewBehavior{
-		view:   views.New(views.WithAggregation(as.kind)),
+		view:   &defaultViews[desc.InstrumentKind()],
 		reader: r,
 	}
 }
@@ -170,7 +178,8 @@ func (v *State) NewFactory(desc sdkapi.Descriptor) (CollectorFactory, error) {
 	for readerIdx := range v.readers {
 		matchCount := 0
 		reader := &v.readers[readerIdx]
-		for _, def := range v.readers[readerIdx].config.Views() {
+		for viewIdx := range v.readers[readerIdx].config.Views() {
+			def := &v.readers[readerIdx].config.Views()[viewIdx]
 			if !def.Matches(v.library, desc) {
 				continue
 			}
@@ -253,16 +262,18 @@ func histogramDefaultsFor(kind number.Kind) histogram.Defaults {
 }
 
 func buildView[N number.Any, Traits traits.Any[N]](desc sdkapi.Descriptor, settings aggregatorSettings, behaviors []viewBehavior) viewConfiguration {
-	// @@@ TODO in both code paths, we are dropping `behaviors`. Seems to re-enter via Send()
-	// so now the CollectorFactory is there. The behaviors aren't worth storing in every record,
-	// so we don't.
 	if desc.InstrumentKind().Synchronous() {
 		return buildSyncView[N, Traits](settings, behaviors)
 	}
 	return buildAsyncView[N, Traits](settings, behaviors)
 }
 
-func newSyncConfig[N number.Any, Traits traits.Any[N], Methods aggregator.Methods[N, Storage, Config], Storage, Config any](behaviors []viewBehavior, cfg *Config) viewConfiguration {
+func newSyncConfig[
+	N number.Any,
+	Traits traits.Any[N],
+	Methods aggregator.Methods[N, Storage, Config],
+	Storage, Config any,
+](behaviors []viewBehavior, cfg *Config) viewConfiguration {
 	return viewConfiguration{
 		behaviors: behaviors,
 		newFunc: func() viewCollector {
@@ -273,7 +284,12 @@ func newSyncConfig[N number.Any, Traits traits.Any[N], Methods aggregator.Method
 	}
 }
 
-func newAsyncConfig[N number.Any, Traits traits.Any[N], Methods aggregator.Methods[N, Storage, Config], Storage, Config any](behaviors []viewBehavior, cfg *Config) viewConfiguration {
+func newAsyncConfig[
+	N number.Any,
+	Traits traits.Any[N],
+	Methods aggregator.Methods[N, Storage, Config],
+	Storage, Config any,
+](behaviors []viewBehavior, cfg *Config) viewConfiguration {
 	return viewConfiguration{
 		behaviors: behaviors,
 		newFunc: func() viewCollector {
@@ -287,22 +303,58 @@ func newAsyncConfig[N number.Any, Traits traits.Any[N], Methods aggregator.Metho
 func buildSyncView[N number.Any, Traits traits.Any[N]](settings aggregatorSettings, behaviors []viewBehavior) viewConfiguration {
 	switch settings.kind {
 	case aggregation.LastValueKind:
-		return newSyncConfig[N, Traits, lastvalue.Methods[N, Traits, lastvalue.State[N, Traits]], lastvalue.State[N, Traits], lastvalue.Config](behaviors, &settings.lvcfg)
+		return newSyncConfig[
+			N,
+			Traits,
+			lastvalue.Methods[N, Traits, lastvalue.State[N, Traits]],
+			lastvalue.State[N, Traits],
+			lastvalue.Config,
+		](behaviors, &settings.lvcfg)
 	case aggregation.HistogramKind:
-		return newSyncConfig[N, Traits, histogram.Methods[N, Traits, histogram.State[N, Traits]], histogram.State[N, Traits], histogram.Config](behaviors, &settings.hcfg)
+		return newSyncConfig[
+			N,
+			Traits,
+			histogram.Methods[N, Traits, histogram.State[N, Traits]],
+			histogram.State[N, Traits],
+			histogram.Config,
+		](behaviors, &settings.hcfg)
 	default:
-		return newSyncConfig[N, Traits, sum.Methods[N, Traits, sum.State[N, Traits]], sum.State[N, Traits], sum.Config](behaviors, &settings.scfg)
+		return newSyncConfig[
+			N,
+			Traits,
+			sum.Methods[N, Traits, sum.State[N, Traits]],
+			sum.State[N, Traits],
+			sum.Config,
+		](behaviors, &settings.scfg)
 	}
 }
 
 func buildAsyncView[N number.Any, Traits traits.Any[N]](settings aggregatorSettings, behaviors []viewBehavior) viewConfiguration {
 	switch settings.kind {
 	case aggregation.LastValueKind:
-		return newAsyncConfig[N, Traits, lastvalue.Methods[N, Traits, lastvalue.State[N, Traits]], lastvalue.State[N, Traits], lastvalue.Config](behaviors, &settings.lvcfg)
+		return newAsyncConfig[
+			N,
+			Traits,
+			lastvalue.Methods[N, Traits, lastvalue.State[N, Traits]],
+			lastvalue.State[N, Traits],
+			lastvalue.Config,
+		](behaviors, &settings.lvcfg)
 	case aggregation.HistogramKind:
-		return newAsyncConfig[N, Traits, histogram.Methods[N, Traits, histogram.State[N, Traits]], histogram.State[N, Traits], histogram.Config](behaviors, &settings.hcfg)
+		return newAsyncConfig[
+			N,
+			Traits,
+			histogram.Methods[N, Traits, histogram.State[N, Traits]],
+			histogram.State[N, Traits],
+			histogram.Config,
+		](behaviors, &settings.hcfg)
 	default:
-		return newAsyncConfig[N, Traits, sum.Methods[N, Traits, sum.State[N, Traits]], sum.State[N, Traits], sum.Config](behaviors, &settings.scfg)
+		return newAsyncConfig[
+			N,
+			Traits,
+			sum.Methods[N, Traits, sum.State[N, Traits]],
+			sum.State[N, Traits],
+			sum.Config,
+		](behaviors, &settings.scfg)
 	}
 }
 
