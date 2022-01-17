@@ -17,6 +17,8 @@ package trace
 import (
 	"context"
 	"errors"
+	"fmt"
+	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -93,4 +95,98 @@ func TestSchemaURL(t *testing.T) {
 	// Verify that the SchemaURL of the constructed Tracer is correctly populated.
 	tracerStruct := tracerIface.(*tracer)
 	assert.EqualValues(t, schemaURL, tracerStruct.instrumentationLibrary.SchemaURL)
+}
+
+func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
+	type testCase struct {
+		sampler     string
+		samplerArg  string
+		argOptional bool
+		description string
+	}
+
+	randFloat := rand.Float64()
+
+	tests := []testCase{
+		{
+			sampler:     "always_on",
+			argOptional: true,
+			description: AlwaysSample().Description(),
+		},
+		{
+			sampler:     "always_off",
+			argOptional: true,
+			description: NeverSample().Description(),
+		},
+		{
+			sampler:     "traceidratio",
+			samplerArg:  fmt.Sprintf("%g", randFloat),
+			description: TraceIDRatioBased(randFloat).Description(),
+		},
+		{
+			sampler:     "traceidratio",
+			samplerArg:  fmt.Sprintf("%g", -randFloat),
+			description: TraceIDRatioBased(1.0).Description(),
+		},
+		{
+			sampler:     "traceidratio",
+			samplerArg:  fmt.Sprintf("%g", 1+randFloat),
+			description: TraceIDRatioBased(1.0).Description(),
+		},
+		{
+			sampler:     "traceidratio",
+			argOptional: true,
+			description: TraceIDRatioBased(1.0).Description(),
+		},
+		{
+			sampler:     "parentbased_always_on",
+			argOptional: true,
+			description: ParentBased(AlwaysSample()).Description(),
+		},
+		{
+			sampler:     "parentbased_always_off",
+			argOptional: true,
+			description: ParentBased(NeverSample()).Description(),
+		},
+		{
+			sampler:     "parentbased_traceidratio",
+			samplerArg:  fmt.Sprintf("%g", randFloat),
+			description: ParentBased(TraceIDRatioBased(randFloat)).Description(),
+		},
+		{
+			sampler:     "parentbased_traceidratio",
+			samplerArg:  fmt.Sprintf("%g", -randFloat),
+			description: ParentBased(TraceIDRatioBased(1.0)).Description(),
+		},
+		{
+			sampler:     "parentbased_traceidratio",
+			samplerArg:  fmt.Sprintf("%g", 1+randFloat),
+			description: ParentBased(TraceIDRatioBased(1.0)).Description(),
+		},
+		{
+			sampler:     "parentbased_traceidratio",
+			argOptional: false,
+			description: ParentBased(TraceIDRatioBased(1.0)).Description(),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.sampler, func(t *testing.T) {
+			t.Setenv("OTEL_TRACES_SAMPLER", test.sampler)
+			if !test.argOptional {
+				t.Setenv("OTEL_TRACES_SAMPLER_ARG", test.samplerArg)
+			}
+
+			stp := NewTracerProvider()
+			assert.Equal(t, stp.sampler.Description(), test.description)
+
+			if test.argOptional {
+				t.Run("invalid sampler arg", func(t *testing.T) {
+					t.Setenv("OTEL_TRACES_SAMPLER_ARG", "invalid-ignored-string")
+					stp := NewTracerProvider()
+					assert.Equal(t, stp.sampler.Description(), test.description)
+				})
+			}
+		})
+	}
 }

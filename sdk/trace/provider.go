@@ -94,6 +94,7 @@ var _ trace.TracerProvider = &TracerProvider{}
 // returned TracerProvider appropriately.
 func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	o := &tracerProviderConfig{}
+	applyTracerProviderEnvConfigs(o)
 
 	for _, opt := range opts {
 		opt.apply(o)
@@ -327,7 +328,10 @@ func WithIDGenerator(g IDGenerator) TracerProviderOption {
 // Tracers the TracerProvider creates to make their sampling decisions for the
 // Spans they create.
 //
-// If this option is not used, the TracerProvider will use a
+// This option overrides any value set for the OTEL_TRACES_SAMPLER environment
+// variable. Additionally, OTEL_TRACES_SAMPLER_ARG can be set as an optional
+// argument to the sampler. If this option is not used and the env var is not set
+// or has an invalid/unsupported value, the TracerProvider will use a
 // ParentBased(AlwaysSample) Sampler by default.
 func WithSampler(s Sampler) TracerProviderOption {
 	return traceProviderOptionFunc(func(cfg *tracerProviderConfig) {
@@ -348,6 +352,25 @@ func WithSpanLimits(sl SpanLimits) TracerProviderOption {
 	return traceProviderOptionFunc(func(cfg *tracerProviderConfig) {
 		cfg.spanLimits = sl
 	})
+}
+
+func applyTracerProviderEnvConfigs(cfg *tracerProviderConfig) {
+	for _, opt := range tracerProviderOptionsFromEnv() {
+		opt.apply(cfg)
+	}
+}
+
+func tracerProviderOptionsFromEnv() []TracerProviderOption {
+	var opts []TracerProviderOption
+
+	sampler, err := samplerFromEnv()
+	if err != nil {
+		otel.Handle(err)
+	} else if sampler != nil {
+		opts = append(opts, WithSampler(sampler))
+	}
+
+	return opts
 }
 
 // ensureValidTracerProviderConfig ensures that given TracerProviderConfig is valid.
