@@ -19,11 +19,12 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"os"
 	"sync"
 	"testing"
 	"time"
+
+	ottest "go.opentelemetry.io/otel/internal/internaltest"
 
 	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"

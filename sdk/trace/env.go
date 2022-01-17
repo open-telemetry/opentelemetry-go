@@ -15,9 +15,10 @@
 package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
-	"go.opentelemetry.io/otel/internal/global"
 	"os"
 	"strconv"
+
+	"go.opentelemetry.io/otel/internal/global"
 )
 
 // Environment variable names
@@ -43,15 +44,16 @@ const (
 
 // intEnvOr returns an env variable's numeric value if it is exists (and valid) or the default if not
 func intEnvOr(key string, defaultValue int) int {
-	v, ok := os.LookupEnv(key)
+	value, ok := os.LookupEnv(key)
 	if !ok {
 		return defaultValue
 	}
 
-	if value, err := strconv.Atoi(v); err != nil {
+	intValue, err := strconv.Atoi(value)
+	if err != nil {
 		global.Info("Got invalid value, number value expected.", key, value)
 		return defaultValue
-	} else {
-		return value
 	}
+
+	return intValue
 }
