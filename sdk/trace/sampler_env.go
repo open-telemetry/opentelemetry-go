@@ -36,12 +36,14 @@ const (
 )
 
 func samplerFromEnv() (Sampler, error) {
-	sampler := strings.ToLower(strings.TrimSpace(os.Getenv(tracesSamplerKey)))
-	samplerArg := strings.TrimSpace(os.Getenv(tracesSamplerArgKey))
-
-	if sampler == "" {
+	sampler, ok := os.LookupEnv(tracesSamplerKey)
+	if !ok {
 		return nil, nil
 	}
+
+	sampler = strings.ToLower(strings.TrimSpace(sampler))
+	samplerArg, hasSamplerArg := os.LookupEnv(tracesSamplerArgKey)
+	samplerArg = strings.TrimSpace(samplerArg)
 
 	switch sampler {
 	case samplerAlwaysOn:
@@ -49,10 +51,13 @@ func samplerFromEnv() (Sampler, error) {
 	case samplerAlwaysOff:
 		return NeverSample(), nil
 	case samplerTraceIDRatio:
-		arg, err := parseTraceIDRatio(samplerArg)
-		if err != nil {
-			otel.Handle(err)
-			arg = 1.0
+		arg := 1.0
+		if hasSamplerArg {
+			var err error
+			arg, err = parseTraceIDRatio(samplerArg)
+			if err != nil {
+				otel.Handle(err)
+			}
 		}
 
 		return TraceIDRatioBased(arg), nil
@@ -61,10 +66,13 @@ func samplerFromEnv() (Sampler, error) {
 	case samplerParsedBasedAlwaysOff:
 		return ParentBased(NeverSample()), nil
 	case samplerParentBasedTraceIDRatio:
-		arg, err := parseTraceIDRatio(samplerArg)
-		if err != nil {
-			otel.Handle(err)
-			arg = 1.0
+		arg := 1.0
+		if hasSamplerArg {
+			var err error
+			arg, err = parseTraceIDRatio(samplerArg)
+			if err != nil {
+				otel.Handle(err)
+			}
 		}
 
 		return ParentBased(TraceIDRatioBased(arg)), nil
@@ -77,10 +85,10 @@ func samplerFromEnv() (Sampler, error) {
 func parseTraceIDRatio(arg string) (float64, error) {
 	v, err := strconv.ParseFloat(arg, 64)
 	if err != nil {
-		return 0, fmt.Errorf("parsing sampler argument: %w", err)
+		return 1.0, fmt.Errorf("parsing sampler argument: %w", err)
 	}
 	if v < 0.0 {
-		return 0, fmt.Errorf("trace ID ratio cannot be negative")
+		return 1.0, fmt.Errorf("trace ID ratio cannot be negative")
 	}
 
 	return v, nil
