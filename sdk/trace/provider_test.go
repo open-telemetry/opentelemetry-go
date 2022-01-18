@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -101,15 +102,24 @@ func TestSchemaURL(t *testing.T) {
 
 func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 	type testCase struct {
-		sampler     string
-		samplerArg  string
-		argOptional bool
-		description string
+		sampler            string
+		samplerArg         string
+		argOptional        bool
+		description        string
+		errorStr           string
+		invalidArgErrorStr string
 	}
 
 	randFloat := rand.Float64()
 
 	tests := []testCase{
+		{
+			sampler:            "invalid-sampler",
+			argOptional:        true,
+			description:        ParentBased(AlwaysSample()).Description(),
+			errorStr:           "unsupported sampler: invalid-sampler",
+			invalidArgErrorStr: "unsupported sampler: invalid-sampler",
+		},
 		{
 			sampler:     "always_on",
 			argOptional: true,
@@ -129,6 +139,7 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 			sampler:     "traceidratio",
 			samplerArg:  fmt.Sprintf("%g", -randFloat),
 			description: TraceIDRatioBased(1.0).Description(),
+			errorStr:    "trace ID ratio cannot be negative",
 		},
 		{
 			sampler:     "traceidratio",
@@ -136,9 +147,10 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 			description: TraceIDRatioBased(1.0).Description(),
 		},
 		{
-			sampler:     "traceidratio",
-			argOptional: true,
-			description: TraceIDRatioBased(1.0).Description(),
+			sampler:            "traceidratio",
+			argOptional:        true,
+			description:        TraceIDRatioBased(1.0).Description(),
+			invalidArgErrorStr: "parsing sampler argument: ",
 		},
 		{
 			sampler:     "parentbased_always_on",
@@ -159,6 +171,7 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 			sampler:     "parentbased_traceidratio",
 			samplerArg:  fmt.Sprintf("%g", -randFloat),
 			description: ParentBased(TraceIDRatioBased(1.0)).Description(),
+			errorStr:    "trace ID ratio cannot be negative",
 		},
 		{
 			sampler:     "parentbased_traceidratio",
@@ -166,24 +179,43 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 			description: ParentBased(TraceIDRatioBased(1.0)).Description(),
 		},
 		{
-			sampler:     "parentbased_traceidratio",
-			argOptional: false,
-			description: ParentBased(TraceIDRatioBased(1.0)).Description(),
+			sampler:            "parentbased_traceidratio",
+			argOptional:        true,
+			description:        ParentBased(TraceIDRatioBased(1.0)).Description(),
+			invalidArgErrorStr: "parsing sampler argument: ",
 		},
 	}
+
+	handler.Reset()
 
 	for _, test := range tests {
 		t.Run(test.sampler, func(t *testing.T) {
 			envVars := map[string]string{
-				"OTEL_TRACES_SAMPLER":     test.sampler,
-				"OTEL_TRACES_SAMPLER_ARG": test.samplerArg,
+				"OTEL_TRACES_SAMPLER": test.sampler,
+			}
+
+			if test.samplerArg != "" {
+				envVars["OTEL_TRACES_SAMPLER_ARG"] = test.samplerArg
 			}
 			envStore, err := ottest.SetEnvVariables(envVars)
 			require.NoError(t, err)
-			t.Cleanup(func() { require.NoError(t, envStore.Restore()) })
+			t.Cleanup(func() {
+				handler.Reset()
+				require.NoError(t, envStore.Restore())
+			})
 
 			stp := NewTracerProvider()
-			assert.Equal(t, stp.sampler.Description(), test.description)
+			assert.Equal(t, test.description, stp.sampler.Description())
+			if test.errorStr != "" {
+				if assert.Len(t, handler.errs, 1) && assert.Error(t, handler.errs[0]) {
+					assert.Regexp(t, regexp.MustCompile(test.errorStr), handler.errs[0].Error())
+					handler.Reset()
+				}
+			} else {
+				if !assert.Empty(t, handler.errs, 0) {
+					assert.NoError(t, handler.errs[0])
+				}
+			}
 
 			if test.argOptional {
 				t.Run("invalid sampler arg", func(t *testing.T) {
@@ -192,10 +224,24 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 						"OTEL_TRACES_SAMPLER_ARG": "invalid-ignored-string",
 					})
 					require.NoError(t, err)
-					t.Cleanup(func() { require.NoError(t, envStore.Restore()) })
+					t.Cleanup(func() {
+						handler.Reset()
+						require.NoError(t, envStore.Restore())
+					})
 
 					stp := NewTracerProvider()
-					assert.Equal(t, stp.sampler.Description(), test.description)
+					assert.Equal(t, test.description, stp.sampler.Description())
+
+					if test.invalidArgErrorStr != "" {
+						if assert.Len(t, handler.errs, 1) && assert.Error(t, handler.errs[0]) {
+							assert.Regexp(t, regexp.MustCompile(test.invalidArgErrorStr), handler.errs[0].Error())
+							handler.Reset()
+						}
+					} else {
+						if !assert.Empty(t, handler.errs, 0) {
+							assert.NoError(t, handler.errs[0])
+						}
+					}
 				})
 			}
 		})
