@@ -73,7 +73,7 @@ func TestNewAgentClientUDPWithParamsDefaults(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, agentClient)
-	assert.Equal(t, udpPacketMaxLength-emitBatchOverhead, agentClient.maxPacketSize)
+	assert.Equal(t, udpPacketMaxLength, agentClient.maxPacketSize)
 
 	if assert.IsType(t, &reconnectingUDPConn{}, agentClient.connUDP) {
 		assert.Equal(t, (*log.Logger)(nil), agentClient.connUDP.(*reconnectingUDPConn).logger)
@@ -97,7 +97,7 @@ func TestNewAgentClientUDPWithParamsReconnectingDisabled(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, agentClient)
-	assert.Equal(t, udpPacketMaxLength-emitBatchOverhead, agentClient.maxPacketSize)
+	assert.Equal(t, udpPacketMaxLength, agentClient.maxPacketSize)
 
 	assert.IsType(t, &net.UDPConn{}, agentClient.connUDP)
 
