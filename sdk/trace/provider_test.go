@@ -22,7 +22,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -172,17 +174,26 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.sampler, func(t *testing.T) {
-			t.Setenv("OTEL_TRACES_SAMPLER", test.sampler)
-			if !test.argOptional {
-				t.Setenv("OTEL_TRACES_SAMPLER_ARG", test.samplerArg)
+			envVars := map[string]string{
+				"OTEL_TRACES_SAMPLER":     test.sampler,
+				"OTEL_TRACES_SAMPLER_ARG": test.samplerArg,
 			}
+			envStore, err := ottest.SetEnvVariables(envVars)
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, envStore.Restore()) })
 
 			stp := NewTracerProvider()
 			assert.Equal(t, stp.sampler.Description(), test.description)
 
 			if test.argOptional {
 				t.Run("invalid sampler arg", func(t *testing.T) {
-					t.Setenv("OTEL_TRACES_SAMPLER_ARG", "invalid-ignored-string")
+					envStore, err := ottest.SetEnvVariables(map[string]string{
+						"OTEL_TRACES_SAMPLER":     test.sampler,
+						"OTEL_TRACES_SAMPLER_ARG": "invalid-ignored-string",
+					})
+					require.NoError(t, err)
+					t.Cleanup(func() { require.NoError(t, envStore.Restore()) })
+
 					stp := NewTracerProvider()
 					assert.Equal(t, stp.sampler.Description(), test.description)
 				})
