@@ -5,7 +5,7 @@ linkTitle: Libraries
 aliases: [/docs/instrumentation/go/using_instrumentation_libraries, /docs/instrumentation/go/automatic_instrumentation]
 ---
 
-Go does not support truly automatic instrumentation like other languages today. Instead, you'll need to depend on [instrumentation libraries](https://opentelemetry.io/docs/reference/specification/glossary/#instrumentation-library) that generate telemetry data for a particular instrumented library. For example, the instrumentation library for `net/hhtp` will automatically create spans that track inbound and outbound requests once you configure it in your code.
+Go does not support truly automatic instrumentation like other languages today. Instead, you'll need to depend on [instrumentation libraries](https://opentelemetry.io/docs/reference/specification/glossary/#instrumentation-library) that generate telemetry data for a particular instrumented library. For example, the instrumentation library for `net/http` will automatically create spans that track inbound and outbound requests once you configure it in your code.
 
 ## Setup
 
@@ -86,10 +86,10 @@ Connecting manual instrumentation you write in your app with instrumentation gen
 
 ## Available packages
 
-A full list of instrumentation libraries available can be found in the [OpenTelementry registry](https://opentelemetry.io/registry/?language=go&component=instrumentation).
+A full list of instrumentation libraries available can be found in the [OpenTelemetry registry](https://opentelemetry.io/registry/?language=go&component=instrumentation).
 
 ## Next steps
 
-Instrumentation libraries can do things like generate telemtry data for inbound and outbound HTTP requests, but they don't instrument your actual application.
+Instrumentation libraries can do things like generate telemetry data for inbound and outbound HTTP requests, but they don't instrument your actual application.
 
 To get richer telemetry data, use [manual instrumentatiion]({{< relref "manual" >}}) to enrich your telemetry data from instrumentation libraries with instrumentation from your running application.
