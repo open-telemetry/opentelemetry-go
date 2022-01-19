@@ -99,3 +99,7 @@ func (Methods[N, Traits, Storage]) Merge(to, from *State[N, Traits]) {
 	to.value = from.value
 	to.timestamp = from.timestamp
 }
+
+func (Methods[N, Traits, Storage]) Aggregation(state *State[N, Traits]) aggregation.Aggregation {
+	return state
+}

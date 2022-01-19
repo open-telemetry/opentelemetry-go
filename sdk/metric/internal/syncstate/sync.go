@@ -53,7 +53,7 @@ type (
 	instrument struct {
 		descriptor sdkapi.Descriptor
 		current    sync.Map // map[attribute.Fingerprint]*group
-		cfactory   viewstate.CollectorFactory
+		cfactory   *viewstate.Factory
 	}
 
 	group struct {

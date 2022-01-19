@@ -21,7 +21,7 @@ import (
 type (
 	Config struct {
 		res     *resource.Resource
-		readers []reader.Reader
+		readers []*reader.Reader
 	}
 
 	Option func(cfg *Config)
@@ -52,7 +52,7 @@ func WithResource(res *resource.Resource) Option {
 	}
 }
 
-func WithReader(r reader.Reader) Option {
+func WithReader(r *reader.Reader) Option {
 	return func(cfg *Config) {
 		cfg.readers = append(cfg.readers, r)
 	}

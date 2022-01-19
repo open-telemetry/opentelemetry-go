@@ -69,3 +69,7 @@ func (Methods[N, Traits, Storage]) Update(state *State[N, Traits], value N) {
 func (Methods[N, Traits, Storage]) Merge(to, from *State[N, Traits]) {
 	to.value += from.value
 }
+
+func (Methods[N, Traits, Storage]) Aggregation(state *State[N, Traits]) aggregation.Aggregation {
+	return state
+}

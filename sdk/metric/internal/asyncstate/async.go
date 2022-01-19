@@ -37,7 +37,7 @@ type (
 
 	instrument struct {
 		descriptor sdkapi.Descriptor
-		cfactory   viewstate.CollectorFactory
+		cfactory   *viewstate.Factory
 		callback   *callback
 	}
 

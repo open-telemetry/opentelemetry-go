@@ -233,3 +233,7 @@ func (Methods[N, Traits, Storage]) Merge(to, from *State[N, Traits]) {
 		to.bucketCounts[i] += from.bucketCounts[i]
 	}
 }
+
+func (Methods[N, Traits, Storage]) Aggregation(state *State[N, Traits]) aggregation.Aggregation {
+	return state
+}
