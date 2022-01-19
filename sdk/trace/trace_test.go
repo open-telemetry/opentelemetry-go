@@ -1717,7 +1717,6 @@ func TestCustomClock(t *testing.T) {
 	got = te.Spans()[0]
 	assert.Equal(t, now, got.StartTime(), "StartTime should returns the user provided time")
 	assert.Equal(t, now, got.EndTime(), "StartTime should returns the user provided time")
-
 }
 
 type stateSampler struct {

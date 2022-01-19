@@ -12,6 +12,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Support `OTEL_EXPORTER_ZIPKIN_ENDPOINT` env to specify zipkin collector endpoint (#2490)
 - Log the configuration of TracerProviders, and Tracers for debugging. To enable use a logger with Verbosity (V level) >=1
+- The `"go.opentelemetry.io/otel/sdk/trace".TraceProvider` can now be configured
+  with a newly added `Clock` interface. This interface is called when determining
+  the start and end times for a span. Additionally, a `WithClock` is also added
+  to the package enabling users to set custom implementations of the `Clock` interface.
+  The standard library `time` package is still used for this functionality by default
+  if no option is set. (#2052)
 
 ### Changed
 
@@ -158,13 +164,6 @@ This release includes an API and SDK for the tracing signal that will comply wit
   - The `Any` function is removed.
   - The `ArrayValue` function is removed.
   - The `AsArray` function is removed.
-
-### Added
-
-- The `"go.opentelemetry.io/otel/sdk/trace".TraceProvider` can now be configured with a newly added `Clock` interface.
-  This interface is called when determining the start and end times for a span.
-  Additionally, a `WithClock` is also added to the package enabling users to set custom implementations of the `Clock` interface.
-  The standard library `time` package is still used for this functionality by default if no option is set. (#2052)
 
 ## [1.0.0-RC3] - 2021-09-02
 
