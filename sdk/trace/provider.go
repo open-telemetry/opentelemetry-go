@@ -328,10 +328,10 @@ func WithIDGenerator(g IDGenerator) TracerProviderOption {
 // Tracers the TracerProvider creates to make their sampling decisions for the
 // Spans they create.
 //
-// This option overrides any value set for the OTEL_TRACES_SAMPLER environment
-// variable. Additionally, OTEL_TRACES_SAMPLER_ARG can be set as an optional
-// argument to the sampler. If this option is not used and the env var is not set
-// or has an invalid/unsupported value, the TracerProvider will use a
+// This option overrides the Sampler configured through the OTEL_TRACES_SAMPLER
+// and OTEL_TRACES_SAMPLER_ARG environment variables. If this option is not used
+// and the sampler is not configured through environment variables or the environment
+// contains invalid/unsupported configuration, the TracerProvider will use a
 // ParentBased(AlwaysSample) Sampler by default.
 func WithSampler(s Sampler) TracerProviderOption {
 	return traceProviderOptionFunc(func(cfg *tracerProviderConfig) {
