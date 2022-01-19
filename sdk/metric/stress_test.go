@@ -14,6 +14,7 @@
 
 // This test is too large for the race detector.  This SDK uses no locks
 // that the race detector would help with, anyway.
+//go:build !race
 // +build !race
 
 package metric
@@ -35,8 +36,8 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 )
 
@@ -70,7 +71,7 @@ type (
 
 	testKey struct {
 		labels     string
-		descriptor *metric.Descriptor
+		descriptor *sdkapi.Descriptor
 	}
 
 	testImpl struct {
@@ -89,7 +90,7 @@ type (
 	}
 
 	SyncImpler interface {
-		SyncImpl() metric.SyncImpl
+		SyncImpl() sdkapi.SyncImpl
 	}
 
 	// lastValueState supports merging lastValue values, for the case
@@ -162,7 +163,7 @@ func (f *testFixture) startWorker(impl *Accumulator, meter metric.Meter, wg *syn
 	ctx := context.Background()
 	name := fmt.Sprint("test_", i)
 	instrument := f.impl.newInstrument(meter, name)
-	var descriptor *metric.Descriptor
+	var descriptor *sdkapi.Descriptor
 	if ii, ok := instrument.SyncImpl().(*syncInstrument); ok {
 		descriptor = &ii.descriptor
 	}
@@ -246,7 +247,7 @@ func (f *testFixture) preCollect() {
 	f.dupCheck = map[testKey]int{}
 }
 
-func (*testFixture) CheckpointSet() export.CheckpointSet {
+func (*testFixture) Reader() export.Reader {
 	return nil
 }
 
@@ -296,7 +297,7 @@ func stressTest(t *testing.T, impl testImpl) {
 	cc := concurrency()
 
 	sdk := NewAccumulator(fixture)
-	meter := metric.WrapMeterImpl(sdk, "stress_test")
+	meter := metric.WrapMeterImpl(sdk)
 	fixture.wg.Add(cc + 1)
 
 	for i := 0; i < cc; i++ {

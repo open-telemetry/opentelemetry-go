@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/example/opencensus
 
-go 1.15
+go 1.16
 
 replace (
 	go.opentelemetry.io/otel => ../..
@@ -10,12 +10,12 @@ replace (
 
 require (
 	go.opencensus.io v0.22.6-0.20201102222123-380f4078db9f
-	go.opentelemetry.io/otel v1.0.0-RC3
-	go.opentelemetry.io/otel/bridge/opencensus v0.23.0
-	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v0.23.0
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.0.0-RC3
-	go.opentelemetry.io/otel/sdk v1.0.0-RC3
-	go.opentelemetry.io/otel/sdk/export/metric v0.23.0
+	go.opentelemetry.io/otel v1.3.0
+	go.opentelemetry.io/otel/bridge/opencensus v0.26.0
+	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v0.26.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.3.0
+	go.opentelemetry.io/otel/sdk v1.3.0
+	go.opentelemetry.io/otel/sdk/metric v0.26.0
 )
 
 replace go.opentelemetry.io/otel/bridge/opentracing => ../../bridge/opentracing
@@ -73,3 +73,7 @@ replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp => ../
 replace go.opentelemetry.io/otel/bridge/opencensus/test => ../../bridge/opencensus/test
 
 replace go.opentelemetry.io/otel/example/fib => ../fib
+
+replace go.opentelemetry.io/otel/schema => ../../schema
+
+replace go.opentelemetry.io/otel/exporters/otlp/internal/retry => ../../exporters/otlp/internal/retry

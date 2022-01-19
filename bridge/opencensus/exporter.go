@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package opencensus
+package opencensus // import "go.opentelemetry.io/otel/bridge/opencensus"
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"go.opencensus.io/metric/metricdata"
 	"go.opencensus.io/metric/metricexport"
@@ -30,8 +31,9 @@ import (
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/metric/unit"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -55,18 +57,30 @@ func (e *exporter) ExportMetrics(ctx context.Context, metrics []*metricdata.Metr
 	if len(metrics) != 0 {
 		res = convertResource(metrics[0].Resource)
 	}
-	return e.base.Export(ctx, res, &checkpointSet{metrics: metrics})
+	return e.base.Export(ctx, res, &censusLibraryReader{metrics: metrics})
 }
 
-type checkpointSet struct {
-	// RWMutex implements locking for the `CheckpointSet` interface.
+type censusLibraryReader struct {
+	metrics []*metricdata.Metric
+}
+
+func (r censusLibraryReader) ForEach(readerFunc func(instrumentation.Library, export.Reader) error) error {
+	return readerFunc(instrumentation.Library{
+		Name: "OpenCensus Bridge",
+	}, &metricReader{metrics: r.metrics})
+}
+
+type metricReader struct {
+	// RWMutex implements locking for the `Reader` interface.
 	sync.RWMutex
 	metrics []*metricdata.Metric
 }
 
-// ForEach iterates through the CheckpointSet, passing an
-// export.Record with the appropriate aggregation to an exporter.
-func (d *checkpointSet) ForEach(exporter export.ExportKindSelector, f func(export.Record) error) error {
+var _ export.Reader = &metricReader{}
+
+// ForEach iterates through the metrics data, synthesizing an
+// export.Record with the appropriate aggregation for the exporter.
+func (d *metricReader) ForEach(_ aggregation.TemporalitySelector, f func(export.Record) error) error {
 	for _, m := range d.metrics {
 		descriptor, err := convertDescriptor(m.Descriptor)
 		if err != nil {
@@ -82,18 +96,18 @@ func (d *checkpointSet) ForEach(exporter export.ExportKindSelector, f func(expor
 				otel.Handle(err)
 				continue
 			}
-			agg, err := newAggregationFromPoints(ts.Points)
-			if err != nil {
-				otel.Handle(err)
-				continue
-			}
-			if err := f(export.NewRecord(
-				&descriptor,
-				&ls,
-				agg,
-				ts.StartTime,
-				agg.end(),
-			)); err != nil && !errors.Is(err, aggregation.ErrNoData) {
+			err = recordAggregationsFromPoints(
+				ts.Points,
+				func(agg aggregation.Aggregation, end time.Time) error {
+					return f(export.NewRecord(
+						&descriptor,
+						&ls,
+						agg,
+						ts.StartTime,
+						end,
+					))
+				})
+			if err != nil && !errors.Is(err, aggregation.ErrNoData) {
 				return err
 			}
 		}
@@ -134,7 +148,7 @@ func convertResource(res *ocresource.Resource) *resource.Resource {
 }
 
 // convertDescriptor converts an OpenCensus Descriptor to an OpenTelemetry Descriptor
-func convertDescriptor(ocDescriptor metricdata.Descriptor) (metric.Descriptor, error) {
+func convertDescriptor(ocDescriptor metricdata.Descriptor) (sdkapi.Descriptor, error) {
 	var (
 		nkind number.Kind
 		ikind sdkapi.InstrumentKind
@@ -154,11 +168,10 @@ func convertDescriptor(ocDescriptor metricdata.Descriptor) (metric.Descriptor, e
 		ikind = sdkapi.CounterObserverInstrumentKind
 	default:
 		// Includes TypeGaugeDistribution, TypeCumulativeDistribution, TypeSummary
-		return metric.Descriptor{}, fmt.Errorf("%w; descriptor type: %v", errConversion, ocDescriptor.Type)
+		return sdkapi.Descriptor{}, fmt.Errorf("%w; descriptor type: %v", errConversion, ocDescriptor.Type)
 	}
 	opts := []metric.InstrumentOption{
 		metric.WithDescription(ocDescriptor.Description),
-		metric.WithInstrumentationName("OpenCensus Bridge"),
 	}
 	switch ocDescriptor.Unit {
 	case metricdata.UnitDimensionless:
@@ -168,5 +181,6 @@ func convertDescriptor(ocDescriptor metricdata.Descriptor) (metric.Descriptor, e
 	case metricdata.UnitMilliseconds:
 		opts = append(opts, metric.WithUnit(unit.Milliseconds))
 	}
-	return metric.NewDescriptor(ocDescriptor.Name, ikind, nkind, opts...), nil
+	cfg := metric.NewInstrumentConfig(opts...)
+	return sdkapi.NewDescriptor(ocDescriptor.Name, ikind, nkind, cfg.Description(), cfg.Unit()), nil
 }

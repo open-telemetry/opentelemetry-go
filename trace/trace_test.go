@@ -19,11 +19,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/attribute"
-
-	"github.com/google/go-cmp/cmp"
 )
 
 func TestSpanContextIsValid(t *testing.T) {
@@ -189,7 +188,7 @@ func TestSpanContextMarshalJSON(t *testing.T) {
 			}
 			have, err := sc.MarshalJSON()
 			if err != nil {
-				t.Errorf("Marshaling failed: %w", err)
+				t.Errorf("Marshaling failed: %v", err)
 			}
 
 			if !bytes.Equal(have, testcase.want) {

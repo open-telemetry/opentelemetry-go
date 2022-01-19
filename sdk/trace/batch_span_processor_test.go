@@ -18,16 +18,19 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/trace"
-
+	"go.opentelemetry.io/otel/internal/global"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type testBatchExporter struct {
@@ -455,5 +458,68 @@ func TestBatchSpanProcessorForceFlushCancellation(t *testing.T) {
 	bsp := sdktrace.NewBatchSpanProcessor(indefiniteExporter{})
 	if got, want := bsp.ForceFlush(ctx), context.Canceled; !errors.Is(got, want) {
 		t.Errorf("expected %q error, got %v", want, got)
+	}
+}
+
+func TestBatchSpanProcessorForceFlushQueuedSpans(t *testing.T) {
+	ctx := context.Background()
+
+	exp := tracetest.NewInMemoryExporter()
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exp),
+	)
+
+	tracer := tp.Tracer("tracer")
+
+	for i := 0; i < 10; i++ {
+		_, span := tracer.Start(ctx, fmt.Sprintf("span%d", i))
+		span.End()
+
+		err := tp.ForceFlush(ctx)
+		assert.NoError(t, err)
+
+		assert.Len(t, exp.GetSpans(), i+1)
+	}
+}
+
+func BenchmarkSpanProcessor(b *testing.B) {
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(
+			tracetest.NewNoopExporter(),
+			sdktrace.WithMaxExportBatchSize(10),
+		))
+	tracer := tp.Tracer("bench")
+	ctx := context.Background()
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 10; j++ {
+			_, span := tracer.Start(ctx, "bench")
+			span.End()
+		}
+	}
+}
+
+func BenchmarkSpanProcessorVerboseLogging(b *testing.B) {
+	global.SetLogger(funcr.New(func(prefix, args string) {}, funcr.Options{Verbosity: 5}))
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(
+			tracetest.NewNoopExporter(),
+			sdktrace.WithMaxExportBatchSize(10),
+		))
+	tracer := tp.Tracer("bench")
+	ctx := context.Background()
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 10; j++ {
+			_, span := tracer.Start(ctx, "bench")
+			span.End()
+		}
 	}
 }

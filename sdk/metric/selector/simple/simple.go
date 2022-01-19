@@ -15,19 +15,16 @@
 package simple // import "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 
 import (
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/sdkapi"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
 type (
 	selectorInexpensive struct{}
-	selectorExact       struct{}
 	selectorHistogram   struct {
 		options []histogram.Option
 	}
@@ -35,7 +32,6 @@ type (
 
 var (
 	_ export.AggregatorSelector = selectorInexpensive{}
-	_ export.AggregatorSelector = selectorExact{}
 	_ export.AggregatorSelector = selectorHistogram{}
 )
 
@@ -48,15 +44,6 @@ func NewWithInexpensiveDistribution() export.AggregatorSelector {
 	return selectorInexpensive{}
 }
 
-// NewWithExactDistribution returns a simple aggregator selector that
-// uses exact aggregators for `Histogram` instruments.  This
-// selector uses more memory than the others in this package because
-// exact aggregators maintain the most information about the
-// distribution among these choices.
-func NewWithExactDistribution() export.AggregatorSelector {
-	return selectorExact{}
-}
-
 // NewWithHistogramDistribution returns a simple aggregator selector
 // that uses histogram aggregators for `Histogram` instruments.
 // This selector is a good default choice for most metric exporters.
@@ -64,26 +51,26 @@ func NewWithHistogramDistribution(options ...histogram.Option) export.Aggregator
 	return selectorHistogram{options: options}
 }
 
-func sumAggs(aggPtrs []*export.Aggregator) {
+func sumAggs(aggPtrs []*aggregator.Aggregator) {
 	aggs := sum.New(len(aggPtrs))
 	for i := range aggPtrs {
 		*aggPtrs[i] = &aggs[i]
 	}
 }
 
-func lastValueAggs(aggPtrs []*export.Aggregator) {
+func lastValueAggs(aggPtrs []*aggregator.Aggregator) {
 	aggs := lastvalue.New(len(aggPtrs))
 	for i := range aggPtrs {
 		*aggPtrs[i] = &aggs[i]
 	}
 }
 
-func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+func (selectorInexpensive) AggregatorFor(descriptor *sdkapi.Descriptor, aggPtrs ...*aggregator.Aggregator) {
 	switch descriptor.InstrumentKind() {
 	case sdkapi.GaugeObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
 	case sdkapi.HistogramInstrumentKind:
-		aggs := minmaxsumcount.New(len(aggPtrs), descriptor)
+		aggs := sum.New(len(aggPtrs))
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
 		}
@@ -92,21 +79,7 @@ func (selectorInexpensive) AggregatorFor(descriptor *metric.Descriptor, aggPtrs 
 	}
 }
 
-func (selectorExact) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
-	switch descriptor.InstrumentKind() {
-	case sdkapi.GaugeObserverInstrumentKind:
-		lastValueAggs(aggPtrs)
-	case sdkapi.HistogramInstrumentKind:
-		aggs := exact.New(len(aggPtrs))
-		for i := range aggPtrs {
-			*aggPtrs[i] = &aggs[i]
-		}
-	default:
-		sumAggs(aggPtrs)
-	}
-}
-
-func (s selectorHistogram) AggregatorFor(descriptor *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+func (s selectorHistogram) AggregatorFor(descriptor *sdkapi.Descriptor, aggPtrs ...*aggregator.Aggregator) {
 	switch descriptor.InstrumentKind() {
 	case sdkapi.GaugeObserverInstrumentKind:
 		lastValueAggs(aggPtrs)

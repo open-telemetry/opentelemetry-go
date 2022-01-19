@@ -23,8 +23,9 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 )
 
@@ -43,7 +44,7 @@ func newFixture(b *testing.B) *benchFixture {
 	}
 
 	bf.accumulator = sdk.NewAccumulator(bf)
-	bf.meter = metric.WrapMeterImpl(bf.accumulator, "benchmarks")
+	bf.meter = metric.WrapMeterImpl(bf.accumulator)
 	return bf
 }
 
@@ -57,16 +58,6 @@ func (f *benchFixture) Meter(_ string, _ ...metric.MeterOption) metric.Meter {
 
 func (f *benchFixture) meterMust() metric.MeterMust {
 	return metric.Must(f.meter)
-}
-
-func makeManyLabels(n int) [][]attribute.KeyValue {
-	r := make([][]attribute.KeyValue, n)
-
-	for i := 0; i < n; i++ {
-		r[i] = makeLabels(1)
-	}
-
-	return r
 }
 
 func makeLabels(n int) []attribute.KeyValue {
@@ -121,50 +112,6 @@ func BenchmarkInt64CounterAddWithLabels_16(b *testing.B) {
 
 // Note: performance does not depend on label set size for the
 // benchmarks below--all are benchmarked for a single attribute.
-
-func BenchmarkAcquireNewHandle(b *testing.B) {
-	fix := newFixture(b)
-	labelSets := makeManyLabels(b.N)
-	cnt := fix.meterMust().NewInt64Counter("int64.sum")
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		cnt.Bind(labelSets[i]...)
-	}
-}
-
-func BenchmarkAcquireExistingHandle(b *testing.B) {
-	fix := newFixture(b)
-	labelSets := makeManyLabels(b.N)
-	cnt := fix.meterMust().NewInt64Counter("int64.sum")
-
-	for i := 0; i < b.N; i++ {
-		cnt.Bind(labelSets[i]...).Unbind()
-	}
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		cnt.Bind(labelSets[i]...)
-	}
-}
-
-func BenchmarkAcquireReleaseExistingHandle(b *testing.B) {
-	fix := newFixture(b)
-	labelSets := makeManyLabels(b.N)
-	cnt := fix.meterMust().NewInt64Counter("int64.sum")
-
-	for i := 0; i < b.N; i++ {
-		cnt.Bind(labelSets[i]...).Unbind()
-	}
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		cnt.Bind(labelSets[i]...).Unbind()
-	}
-}
 
 // Iterators
 
@@ -240,20 +187,6 @@ func BenchmarkInt64CounterAdd(b *testing.B) {
 	}
 }
 
-func BenchmarkInt64CounterHandleAdd(b *testing.B) {
-	ctx := context.Background()
-	fix := newFixture(b)
-	labs := makeLabels(1)
-	cnt := fix.meterMust().NewInt64Counter("int64.sum")
-	handle := cnt.Bind(labs...)
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		handle.Add(ctx, 1)
-	}
-}
-
 func BenchmarkFloat64CounterAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
@@ -264,20 +197,6 @@ func BenchmarkFloat64CounterAdd(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		cnt.Add(ctx, 1.1, labs...)
-	}
-}
-
-func BenchmarkFloat64CounterHandleAdd(b *testing.B) {
-	ctx := context.Background()
-	fix := newFixture(b)
-	labs := makeLabels(1)
-	cnt := fix.meterMust().NewFloat64Counter("float64.sum")
-	handle := cnt.Bind(labs...)
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		handle.Add(ctx, 1.1)
 	}
 }
 
@@ -296,20 +215,6 @@ func BenchmarkInt64LastValueAdd(b *testing.B) {
 	}
 }
 
-func BenchmarkInt64LastValueHandleAdd(b *testing.B) {
-	ctx := context.Background()
-	fix := newFixture(b)
-	labs := makeLabels(1)
-	mea := fix.meterMust().NewInt64Histogram("int64.lastvalue")
-	handle := mea.Bind(labs...)
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		handle.Record(ctx, int64(i))
-	}
-}
-
 func BenchmarkFloat64LastValueAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
@@ -323,27 +228,13 @@ func BenchmarkFloat64LastValueAdd(b *testing.B) {
 	}
 }
 
-func BenchmarkFloat64LastValueHandleAdd(b *testing.B) {
-	ctx := context.Background()
-	fix := newFixture(b)
-	labs := makeLabels(1)
-	mea := fix.meterMust().NewFloat64Histogram("float64.lastvalue")
-	handle := mea.Bind(labs...)
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		handle.Record(ctx, float64(i))
-	}
-}
-
 // Histograms
 
-func benchmarkInt64HistogramAdd(b *testing.B, name string) {
+func BenchmarkInt64HistogramAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	mea := fix.meterMust().NewInt64Histogram(name)
+	mea := fix.meterMust().NewInt64Histogram("int64.histogram")
 
 	b.ResetTimer()
 
@@ -352,44 +243,16 @@ func benchmarkInt64HistogramAdd(b *testing.B, name string) {
 	}
 }
 
-func benchmarkInt64HistogramHandleAdd(b *testing.B, name string) {
+func BenchmarkFloat64HistogramAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	mea := fix.meterMust().NewInt64Histogram(name)
-	handle := mea.Bind(labs...)
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		handle.Record(ctx, int64(i))
-	}
-}
-
-func benchmarkFloat64HistogramAdd(b *testing.B, name string) {
-	ctx := context.Background()
-	fix := newFixture(b)
-	labs := makeLabels(1)
-	mea := fix.meterMust().NewFloat64Histogram(name)
+	mea := fix.meterMust().NewFloat64Histogram("float64.histogram")
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
 		mea.Record(ctx, float64(i), labs...)
-	}
-}
-
-func benchmarkFloat64HistogramHandleAdd(b *testing.B, name string) {
-	ctx := context.Background()
-	fix := newFixture(b)
-	labs := makeLabels(1)
-	mea := fix.meterMust().NewFloat64Histogram(name)
-	handle := mea.Bind(labs...)
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		handle.Record(ctx, float64(i))
 	}
 }
 
@@ -440,42 +303,6 @@ func BenchmarkGaugeObserverObservationFloat64(b *testing.B) {
 	fix.accumulator.Collect(ctx)
 }
 
-// MaxSumCount
-
-func BenchmarkInt64MaxSumCountAdd(b *testing.B) {
-	benchmarkInt64HistogramAdd(b, "int64.minmaxsumcount")
-}
-
-func BenchmarkInt64MaxSumCountHandleAdd(b *testing.B) {
-	benchmarkInt64HistogramHandleAdd(b, "int64.minmaxsumcount")
-}
-
-func BenchmarkFloat64MaxSumCountAdd(b *testing.B) {
-	benchmarkFloat64HistogramAdd(b, "float64.minmaxsumcount")
-}
-
-func BenchmarkFloat64MaxSumCountHandleAdd(b *testing.B) {
-	benchmarkFloat64HistogramHandleAdd(b, "float64.minmaxsumcount")
-}
-
-// Exact
-
-func BenchmarkInt64ExactAdd(b *testing.B) {
-	benchmarkInt64HistogramAdd(b, "int64.exact")
-}
-
-func BenchmarkInt64ExactHandleAdd(b *testing.B) {
-	benchmarkInt64HistogramHandleAdd(b, "int64.exact")
-}
-
-func BenchmarkFloat64ExactAdd(b *testing.B) {
-	benchmarkFloat64HistogramAdd(b, "float64.exact")
-}
-
-func BenchmarkFloat64ExactHandleAdd(b *testing.B) {
-	benchmarkFloat64HistogramHandleAdd(b, "float64.exact")
-}
-
 // BatchRecord
 
 func benchmarkBatchRecord8Labels(b *testing.B, numInst int) {
@@ -483,7 +310,7 @@ func benchmarkBatchRecord8Labels(b *testing.B, numInst int) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(numLabels)
-	var meas []metric.Measurement
+	var meas []sdkapi.Measurement
 
 	for i := 0; i < numInst; i++ {
 		inst := fix.meterMust().NewInt64Counter(fmt.Sprintf("int64.%d.sum", i))

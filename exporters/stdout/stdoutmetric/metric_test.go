@@ -23,15 +23,14 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/metric"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -61,14 +60,14 @@ func newFixtureWithResource(t *testing.T, res *resource.Resource, opts ...stdout
 		t.Fatal("Error building fixture: ", err)
 	}
 	aggSel := processortest.AggregatorSelector()
-	proc := processor.New(aggSel, export.StatelessExportKindSelector())
+	proc := processor.NewFactory(aggSel, aggregation.StatelessTemporalitySelector())
 	cont := controller.New(proc,
 		controller.WithExporter(exp),
 		controller.WithResource(res),
 	)
 	ctx := context.Background()
 	require.NoError(t, cont.Start(ctx))
-	meter := cont.MeterProvider().Meter("test")
+	meter := cont.Meter("test")
 
 	return testFixture{
 		t:        t,
@@ -87,7 +86,7 @@ func (fix testFixture) Output() string {
 func TestStdoutTimestamp(t *testing.T) {
 	var buf bytes.Buffer
 	aggSel := processortest.AggregatorSelector()
-	proc := processor.New(aggSel, export.CumulativeExportKindSelector())
+	proc := processor.NewFactory(aggSel, aggregation.CumulativeTemporalitySelector())
 	exporter, err := stdoutmetric.New(
 		stdoutmetric.WithWriter(&buf),
 	)
@@ -101,7 +100,7 @@ func TestStdoutTimestamp(t *testing.T) {
 	ctx := context.Background()
 
 	require.NoError(t, cont.Start(ctx))
-	meter := cont.MeterProvider().Meter("test")
+	meter := cont.Meter("test")
 	counter := metric.Must(meter).NewInt64Counter("name.lastvalue")
 
 	before := time.Now()
@@ -157,18 +156,6 @@ func TestStdoutLastValueFormat(t *testing.T) {
 	require.Equal(t, `[{"Name":"name.lastvalue{R=V,instrumentation.name=test,A=B,C=D}","Last":123.456}]`, fix.Output())
 }
 
-func TestStdoutMinMaxSumCount(t *testing.T) {
-	fix := newFixture(t)
-
-	counter := metric.Must(fix.meter).NewFloat64Counter("name.minmaxsumcount")
-	counter.Add(fix.ctx, 123.456, attribute.String("A", "B"), attribute.String("C", "D"))
-	counter.Add(fix.ctx, 876.543, attribute.String("A", "B"), attribute.String("C", "D"))
-
-	require.NoError(t, fix.cont.Stop(fix.ctx))
-
-	require.Equal(t, `[{"Name":"name.minmaxsumcount{R=V,instrumentation.name=test,A=B,C=D}","Min":123.456,"Max":876.543,"Sum":999.999,"Count":2}]`, fix.Output())
-}
-
 func TestStdoutHistogramFormat(t *testing.T) {
 	fix := newFixture(t, stdoutmetric.WithPrettyPrint())
 
@@ -202,7 +189,6 @@ func TestStdoutNoData(t *testing.T) {
 	}
 
 	runTwoAggs("lastvalue")
-	runTwoAggs("minmaxsumcount")
 }
 
 func TestStdoutResource(t *testing.T) {

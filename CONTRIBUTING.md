@@ -478,14 +478,14 @@ Approvers:
 
 - [Evan Torrie](https://github.com/evantorrie), Verizon Media
 - [Josh MacDonald](https://github.com/jmacd), LightStep
-- [Sam Xie](https://github.com/XSAM)
+- [Sam Xie](https://github.com/XSAM), Cisco/AppDynamics
 - [David Ashpole](https://github.com/dashpole), Google
 - [Gustavo Silva Paiva](https://github.com/paivagustavo), LightStep
-- [Aaron Clawson](https://github.com/MadVikingGod)
 - [Robert Pająk](https://github.com/pellared), Splunk
 
 Maintainers:
 
+- [Aaron Clawson](https://github.com/MadVikingGod), LightStep
 - [Anthony Mirabella](https://github.com/Aneurysm9), AWS
 - [Tyler Yahn](https://github.com/MrAlias), Splunk
 

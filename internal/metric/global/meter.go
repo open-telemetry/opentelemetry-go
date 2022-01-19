@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global
+package global // import "go.opentelemetry.io/otel/internal/metric/global"
 
 import (
 	"context"
@@ -21,9 +21,10 @@ import (
 	"unsafe"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/internal/metric/registry"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
-	"go.opentelemetry.io/otel/metric/registry"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 )
 
 // This file contains the forwarding implementation of MeterProvider used as
@@ -40,15 +41,13 @@ import (
 // in the MeterProvider and Meters ensure that each instrument has a delegate
 // before the global provider is set.
 //
-// Bound instrument operations are implemented by delegating to the
-// instrument after it is registered, with a sync.Once initializer to
-// protect against races with Release().
-//
 // Metric uniqueness checking is implemented by calling the exported
 // methods of the api/metric/registry package.
 
 type meterKey struct {
-	Name, Version string
+	InstrumentationName    string
+	InstrumentationVersion string
+	SchemaURL              string
 }
 
 type meterProvider struct {
@@ -71,56 +70,34 @@ type meterImpl struct {
 }
 
 type meterEntry struct {
-	unique metric.MeterImpl
+	unique sdkapi.MeterImpl
 	impl   meterImpl
 }
 
 type instrument struct {
-	descriptor metric.Descriptor
+	descriptor sdkapi.Descriptor
 }
 
 type syncImpl struct {
-	delegate unsafe.Pointer // (*metric.SyncImpl)
+	delegate unsafe.Pointer // (*sdkapi.SyncImpl)
 
 	instrument
 }
 
 type asyncImpl struct {
-	delegate unsafe.Pointer // (*metric.AsyncImpl)
+	delegate unsafe.Pointer // (*sdkapi.AsyncImpl)
 
 	instrument
 
-	runner metric.AsyncRunner
-}
-
-// SyncImpler is implemented by all of the sync metric
-// instruments.
-type SyncImpler interface {
-	SyncImpl() metric.SyncImpl
-}
-
-// AsyncImpler is implemented by all of the async
-// metric instruments.
-type AsyncImpler interface {
-	AsyncImpl() metric.AsyncImpl
-}
-
-type syncHandle struct {
-	delegate unsafe.Pointer // (*metric.BoundInstrumentImpl)
-
-	inst   *syncImpl
-	labels []attribute.KeyValue
-
-	initialize sync.Once
+	runner sdkapi.AsyncRunner
 }
 
 var _ metric.MeterProvider = &meterProvider{}
-var _ metric.MeterImpl = &meterImpl{}
-var _ metric.InstrumentImpl = &syncImpl{}
-var _ metric.BoundSyncImpl = &syncHandle{}
-var _ metric.AsyncImpl = &asyncImpl{}
+var _ sdkapi.MeterImpl = &meterImpl{}
+var _ sdkapi.InstrumentImpl = &syncImpl{}
+var _ sdkapi.AsyncImpl = &asyncImpl{}
 
-func (inst *instrument) Descriptor() metric.Descriptor {
+func (inst *instrument) Descriptor() sdkapi.Descriptor {
 	return inst.descriptor
 }
 
@@ -138,7 +115,7 @@ func (p *meterProvider) setDelegate(provider metric.MeterProvider) {
 
 	p.delegate = provider
 	for key, entry := range p.meters {
-		entry.impl.setDelegate(key.Name, key.Version, provider)
+		entry.impl.setDelegate(key, provider)
 	}
 	p.meters = nil
 }
@@ -151,28 +128,38 @@ func (p *meterProvider) Meter(instrumentationName string, opts ...metric.MeterOp
 		return p.delegate.Meter(instrumentationName, opts...)
 	}
 
+	cfg := metric.NewMeterConfig(opts...)
 	key := meterKey{
-		Name:    instrumentationName,
-		Version: metric.NewMeterConfig(opts...).InstrumentationVersion(),
+		InstrumentationName:    instrumentationName,
+		InstrumentationVersion: cfg.InstrumentationVersion(),
+		SchemaURL:              cfg.SchemaURL(),
 	}
 	entry, ok := p.meters[key]
 	if !ok {
 		entry = &meterEntry{}
+		// Note: This code implements its own MeterProvider
+		// name-uniqueness logic because there is
+		// synchronization required at the moment of
+		// delegation.  We use the same instrument-uniqueness
+		// checking the real SDK uses here:
 		entry.unique = registry.NewUniqueInstrumentMeterImpl(&entry.impl)
 		p.meters[key] = entry
-
 	}
-	return metric.WrapMeterImpl(entry.unique, key.Name, metric.WithInstrumentationVersion(key.Version))
+	return metric.WrapMeterImpl(entry.unique)
 }
 
 // Meter interface and delegation
 
-func (m *meterImpl) setDelegate(name, version string, provider metric.MeterProvider) {
+func (m *meterImpl) setDelegate(key meterKey, provider metric.MeterProvider) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	d := new(metric.MeterImpl)
-	*d = provider.Meter(name, metric.WithInstrumentationVersion(version)).MeterImpl()
+	d := new(sdkapi.MeterImpl)
+	*d = provider.Meter(
+		key.InstrumentationName,
+		metric.WithInstrumentationVersion(key.InstrumentationVersion),
+		metric.WithSchemaURL(key.SchemaURL),
+	).MeterImpl()
 	m.delegate = unsafe.Pointer(d)
 
 	for _, inst := range m.syncInsts {
@@ -185,11 +172,11 @@ func (m *meterImpl) setDelegate(name, version string, provider metric.MeterProvi
 	m.asyncInsts = nil
 }
 
-func (m *meterImpl) NewSyncInstrument(desc metric.Descriptor) (metric.SyncImpl, error) {
+func (m *meterImpl) NewSyncInstrument(desc sdkapi.Descriptor) (sdkapi.SyncImpl, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	if meterPtr := (*metric.MeterImpl)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
+	if meterPtr := (*sdkapi.MeterImpl)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
 		return (*meterPtr).NewSyncInstrument(desc)
 	}
 
@@ -204,8 +191,8 @@ func (m *meterImpl) NewSyncInstrument(desc metric.Descriptor) (metric.SyncImpl, 
 
 // Synchronous delegation
 
-func (inst *syncImpl) setDelegate(d metric.MeterImpl) {
-	implPtr := new(metric.SyncImpl)
+func (inst *syncImpl) setDelegate(d sdkapi.MeterImpl) {
+	implPtr := new(sdkapi.SyncImpl)
 
 	var err error
 	*implPtr, err = d.NewSyncInstrument(inst.descriptor)
@@ -222,45 +209,23 @@ func (inst *syncImpl) setDelegate(d metric.MeterImpl) {
 }
 
 func (inst *syncImpl) Implementation() interface{} {
-	if implPtr := (*metric.SyncImpl)(atomic.LoadPointer(&inst.delegate)); implPtr != nil {
+	if implPtr := (*sdkapi.SyncImpl)(atomic.LoadPointer(&inst.delegate)); implPtr != nil {
 		return (*implPtr).Implementation()
 	}
 	return inst
 }
 
-func (inst *syncImpl) Bind(labels []attribute.KeyValue) metric.BoundSyncImpl {
-	if implPtr := (*metric.SyncImpl)(atomic.LoadPointer(&inst.delegate)); implPtr != nil {
-		return (*implPtr).Bind(labels)
-	}
-	return &syncHandle{
-		inst:   inst,
-		labels: labels,
-	}
-}
-
-func (bound *syncHandle) Unbind() {
-	bound.initialize.Do(func() {})
-
-	implPtr := (*metric.BoundSyncImpl)(atomic.LoadPointer(&bound.delegate))
-
-	if implPtr == nil {
-		return
-	}
-
-	(*implPtr).Unbind()
-}
-
 // Async delegation
 
 func (m *meterImpl) NewAsyncInstrument(
-	desc metric.Descriptor,
-	runner metric.AsyncRunner,
-) (metric.AsyncImpl, error) {
+	desc sdkapi.Descriptor,
+	runner sdkapi.AsyncRunner,
+) (sdkapi.AsyncImpl, error) {
 
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	if meterPtr := (*metric.MeterImpl)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
+	if meterPtr := (*sdkapi.MeterImpl)(atomic.LoadPointer(&m.delegate)); meterPtr != nil {
 		return (*meterPtr).NewAsyncInstrument(desc, runner)
 	}
 
@@ -275,14 +240,14 @@ func (m *meterImpl) NewAsyncInstrument(
 }
 
 func (obs *asyncImpl) Implementation() interface{} {
-	if implPtr := (*metric.AsyncImpl)(atomic.LoadPointer(&obs.delegate)); implPtr != nil {
+	if implPtr := (*sdkapi.AsyncImpl)(atomic.LoadPointer(&obs.delegate)); implPtr != nil {
 		return (*implPtr).Implementation()
 	}
 	return obs
 }
 
-func (obs *asyncImpl) setDelegate(d metric.MeterImpl) {
-	implPtr := new(metric.AsyncImpl)
+func (obs *asyncImpl) setDelegate(d sdkapi.MeterImpl) {
+	implPtr := new(sdkapi.AsyncImpl)
 
 	var err error
 	*implPtr, err = d.NewAsyncInstrument(obs.descriptor, obs.runner)
@@ -300,41 +265,16 @@ func (obs *asyncImpl) setDelegate(d metric.MeterImpl) {
 
 // Metric updates
 
-func (m *meterImpl) RecordBatch(ctx context.Context, labels []attribute.KeyValue, measurements ...metric.Measurement) {
-	if delegatePtr := (*metric.MeterImpl)(atomic.LoadPointer(&m.delegate)); delegatePtr != nil {
+func (m *meterImpl) RecordBatch(ctx context.Context, labels []attribute.KeyValue, measurements ...sdkapi.Measurement) {
+	if delegatePtr := (*sdkapi.MeterImpl)(atomic.LoadPointer(&m.delegate)); delegatePtr != nil {
 		(*delegatePtr).RecordBatch(ctx, labels, measurements...)
 	}
 }
 
 func (inst *syncImpl) RecordOne(ctx context.Context, number number.Number, labels []attribute.KeyValue) {
-	if instPtr := (*metric.SyncImpl)(atomic.LoadPointer(&inst.delegate)); instPtr != nil {
+	if instPtr := (*sdkapi.SyncImpl)(atomic.LoadPointer(&inst.delegate)); instPtr != nil {
 		(*instPtr).RecordOne(ctx, number, labels)
 	}
-}
-
-// Bound instrument initialization
-
-func (bound *syncHandle) RecordOne(ctx context.Context, number number.Number) {
-	instPtr := (*metric.SyncImpl)(atomic.LoadPointer(&bound.inst.delegate))
-	if instPtr == nil {
-		return
-	}
-	var implPtr *metric.BoundSyncImpl
-	bound.initialize.Do(func() {
-		implPtr = new(metric.BoundSyncImpl)
-		*implPtr = (*instPtr).Bind(bound.labels)
-		atomic.StorePointer(&bound.delegate, unsafe.Pointer(implPtr))
-	})
-	if implPtr == nil {
-		implPtr = (*metric.BoundSyncImpl)(atomic.LoadPointer(&bound.delegate))
-	}
-	// This may still be nil if instrument was created and bound
-	// without a delegate, then the instrument was set to have a
-	// delegate and unbound.
-	if implPtr == nil {
-		return
-	}
-	(*implPtr).RecordOne(ctx, number)
 }
 
 func AtomicFieldOffsets() map[string]uintptr {
@@ -343,6 +283,5 @@ func AtomicFieldOffsets() map[string]uintptr {
 		"meterImpl.delegate":     unsafe.Offsetof(meterImpl{}.delegate),
 		"syncImpl.delegate":      unsafe.Offsetof(syncImpl{}.delegate),
 		"asyncImpl.delegate":     unsafe.Offsetof(asyncImpl{}.delegate),
-		"syncHandle.delegate":    unsafe.Offsetof(syncHandle{}.delegate),
 	}
 }

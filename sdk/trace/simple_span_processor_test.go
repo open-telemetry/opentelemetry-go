@@ -20,9 +20,8 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/trace"
-
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
@@ -40,9 +39,15 @@ func (t *testExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnl
 	return nil
 }
 
-func (t *testExporter) Shutdown(context.Context) error {
+func (t *testExporter) Shutdown(ctx context.Context) error {
 	t.shutdown = true
-	return nil
+	select {
+	case <-ctx.Done():
+		// Ensure context deadline tests receive the expected error.
+		return ctx.Err()
+	default:
+		return nil
+	}
 }
 
 var _ sdktrace.SpanExporter = (*testExporter)(nil)

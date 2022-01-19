@@ -21,19 +21,20 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel"
-
 	"go.opencensus.io/metric/metricdata"
 	ocresource "go.opencensus.io/resource"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/metric/unit"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	exportmetric "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -44,12 +45,13 @@ type fakeExporter struct {
 	err      error
 }
 
-func (f *fakeExporter) Export(ctx context.Context, res *resource.Resource, cps exportmetric.CheckpointSet) error {
-	return cps.ForEach(f, func(record exportmetric.Record) error {
-		f.resource = res
-		f.records = append(f.records, record)
-		return f.err
-	})
+func (f *fakeExporter) Export(ctx context.Context, res *resource.Resource, ilr export.InstrumentationLibraryReader) error {
+	return controllertest.ReadAll(ilr, aggregation.StatelessTemporalitySelector(),
+		func(_ instrumentation.Library, record export.Record) error {
+			f.resource = res
+			f.records = append(f.records, record)
+			return f.err
+		})
 }
 
 type fakeErrorHandler struct {
@@ -71,11 +73,10 @@ func (f *fakeErrorHandler) matches(err error) error {
 
 func TestExportMetrics(t *testing.T) {
 	now := time.Now()
-	basicDesc := metric.NewDescriptor(
+	basicDesc := metrictest.NewDescriptor(
 		"",
 		sdkapi.GaugeObserverInstrumentKind,
 		number.Int64Kind,
-		metric.WithInstrumentationName("OpenCensus Bridge"),
 	)
 	fakeErrorHandler := &fakeErrorHandler{}
 	otel.SetErrorHandler(fakeErrorHandler)
@@ -139,7 +140,7 @@ func TestExportMetrics(t *testing.T) {
 					},
 				},
 			},
-			expectedHandledError: errIncompatibleType,
+			exportErr: errIncompatibleType,
 		},
 		{
 			desc: "success",
@@ -169,13 +170,9 @@ func TestExportMetrics(t *testing.T) {
 				export.NewRecord(
 					&basicDesc,
 					attribute.EmptySet(),
-					&ocExactAggregator{
-						points: []aggregation.Point{
-							{
-								Number: number.NewInt64Number(123),
-								Time:   now,
-							},
-						},
+					&ocRawAggregator{
+						value: number.NewInt64Number(123),
+						time:  now,
 					},
 					now,
 					now,
@@ -200,13 +197,9 @@ func TestExportMetrics(t *testing.T) {
 				export.NewRecord(
 					&basicDesc,
 					attribute.EmptySet(),
-					&ocExactAggregator{
-						points: []aggregation.Point{
-							{
-								Number: number.NewInt64Number(123),
-								Time:   now,
-							},
-						},
+					&ocRawAggregator{
+						value: number.NewInt64Number(123),
+						time:  now,
 					},
 					now,
 					now,
@@ -234,13 +227,9 @@ func TestExportMetrics(t *testing.T) {
 				export.NewRecord(
 					&basicDesc,
 					attribute.EmptySet(),
-					&ocExactAggregator{
-						points: []aggregation.Point{
-							{
-								Number: number.NewInt64Number(123),
-								Time:   now,
-							},
-						},
+					&ocRawAggregator{
+						value: number.NewInt64Number(123),
+						time:  now,
 					},
 					now,
 					now,
@@ -388,16 +377,15 @@ func TestConvertDescriptor(t *testing.T) {
 	for _, tc := range []struct {
 		desc        string
 		input       metricdata.Descriptor
-		expected    metric.Descriptor
+		expected    sdkapi.Descriptor
 		expectedErr error
 	}{
 		{
 			desc: "empty descriptor",
-			expected: metric.NewDescriptor(
+			expected: metrictest.NewDescriptor(
 				"",
 				sdkapi.GaugeObserverInstrumentKind,
 				number.Int64Kind,
-				metric.WithInstrumentationName("OpenCensus Bridge"),
 			),
 		},
 		{
@@ -408,11 +396,10 @@ func TestConvertDescriptor(t *testing.T) {
 				Unit:        metricdata.UnitBytes,
 				Type:        metricdata.TypeGaugeInt64,
 			},
-			expected: metric.NewDescriptor(
+			expected: metrictest.NewDescriptor(
 				"foo",
 				sdkapi.GaugeObserverInstrumentKind,
 				number.Int64Kind,
-				metric.WithInstrumentationName("OpenCensus Bridge"),
 				metric.WithDescription("bar"),
 				metric.WithUnit(unit.Bytes),
 			),
@@ -425,11 +412,10 @@ func TestConvertDescriptor(t *testing.T) {
 				Unit:        metricdata.UnitMilliseconds,
 				Type:        metricdata.TypeGaugeFloat64,
 			},
-			expected: metric.NewDescriptor(
+			expected: metrictest.NewDescriptor(
 				"foo",
 				sdkapi.GaugeObserverInstrumentKind,
 				number.Float64Kind,
-				metric.WithInstrumentationName("OpenCensus Bridge"),
 				metric.WithDescription("bar"),
 				metric.WithUnit(unit.Milliseconds),
 			),
@@ -442,11 +428,10 @@ func TestConvertDescriptor(t *testing.T) {
 				Unit:        metricdata.UnitDimensionless,
 				Type:        metricdata.TypeCumulativeInt64,
 			},
-			expected: metric.NewDescriptor(
+			expected: metrictest.NewDescriptor(
 				"foo",
 				sdkapi.CounterObserverInstrumentKind,
 				number.Int64Kind,
-				metric.WithInstrumentationName("OpenCensus Bridge"),
 				metric.WithDescription("bar"),
 				metric.WithUnit(unit.Dimensionless),
 			),
@@ -459,11 +444,10 @@ func TestConvertDescriptor(t *testing.T) {
 				Unit:        metricdata.UnitDimensionless,
 				Type:        metricdata.TypeCumulativeFloat64,
 			},
-			expected: metric.NewDescriptor(
+			expected: metrictest.NewDescriptor(
 				"foo",
 				sdkapi.CounterObserverInstrumentKind,
 				number.Float64Kind,
-				metric.WithInstrumentationName("OpenCensus Bridge"),
 				metric.WithDescription("bar"),
 				metric.WithUnit(unit.Dimensionless),
 			),

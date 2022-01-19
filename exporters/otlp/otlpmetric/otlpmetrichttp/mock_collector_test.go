@@ -26,15 +26,13 @@ import (
 	"net/http"
 	"sync"
 	"testing"
-	"time"
-
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpconfig"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpmetrictest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpconfig"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpmetrictest"
 	collectormetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -48,7 +46,7 @@ type mockCollector struct {
 
 	injectHTTPStatus  []int
 	injectContentType string
-	injectDelay       time.Duration
+	delay             <-chan struct{}
 
 	clientTLSConfig *tls.Config
 	expectedHeaders map[string]string
@@ -77,8 +75,12 @@ func (c *mockCollector) ClientTLSConfig() *tls.Config {
 }
 
 func (c *mockCollector) serveMetrics(w http.ResponseWriter, r *http.Request) {
-	if c.injectDelay != 0 {
-		time.Sleep(c.injectDelay)
+	if c.delay != nil {
+		select {
+		case <-c.delay:
+		case <-r.Context().Done():
+			return
+		}
 	}
 
 	if !c.checkHeaders(r) {
@@ -183,7 +185,7 @@ type mockCollectorConfig struct {
 	Port              int
 	InjectHTTPStatus  []int
 	InjectContentType string
-	InjectDelay       time.Duration
+	Delay             <-chan struct{}
 	WithTLS           bool
 	ExpectedHeaders   map[string]string
 }
@@ -205,7 +207,7 @@ func runMockCollector(t *testing.T, cfg mockCollectorConfig) *mockCollector {
 		metricsStorage:    otlpmetrictest.NewMetricsStorage(),
 		injectHTTPStatus:  cfg.InjectHTTPStatus,
 		injectContentType: cfg.InjectContentType,
-		injectDelay:       cfg.InjectDelay,
+		delay:             cfg.Delay,
 		expectedHeaders:   cfg.ExpectedHeaders,
 	}
 	mux := http.NewServeMux()

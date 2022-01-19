@@ -26,9 +26,11 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 )
 
@@ -71,7 +73,7 @@ type testSelector struct {
 	newAggCount int
 }
 
-func (ts *testSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+func (ts *testSelector) AggregatorFor(desc *sdkapi.Descriptor, aggPtrs ...*aggregator.Aggregator) {
 	ts.newAggCount += len(aggPtrs)
 	processortest.AggregatorSelector().AggregatorFor(desc, aggPtrs...)
 }
@@ -86,7 +88,7 @@ func newSDK(t *testing.T) (metric.Meter, *metricsdk.Accumulator, *testSelector, 
 	accum := metricsdk.NewAccumulator(
 		processor,
 	)
-	meter := metric.WrapMeterImpl(accum, "test")
+	meter := metric.WrapMeterImpl(accum)
 	return meter, accum, testSelector, processor
 }
 
@@ -135,7 +137,7 @@ func TestInputRangeHistogram(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, _, processor := newSDK(t)
 
-	histogram := Must(meter).NewFloat64Histogram("name.exact")
+	histogram := Must(meter).NewFloat64Histogram("name.histogram")
 
 	histogram.Record(ctx, math.NaN())
 	require.Equal(t, aggregation.ErrNaNInput, testHandler.Flush())
@@ -150,7 +152,7 @@ func TestInputRangeHistogram(t *testing.T) {
 	checkpointed = sdk.Collect(ctx)
 
 	require.Equal(t, map[string]float64{
-		"name.exact//": 3,
+		"name.histogram//": 3,
 	}, processor.Values())
 	require.Equal(t, 1, checkpointed)
 	require.Nil(t, testHandler.Flush())
@@ -449,8 +451,8 @@ func TestRecordBatch(t *testing.T) {
 
 	counter1 := Must(meter).NewInt64Counter("int64.sum")
 	counter2 := Must(meter).NewFloat64Counter("float64.sum")
-	histogram1 := Must(meter).NewInt64Histogram("int64.exact")
-	histogram2 := Must(meter).NewFloat64Histogram("float64.exact")
+	histogram1 := Must(meter).NewInt64Histogram("int64.histogram")
+	histogram2 := Must(meter).NewFloat64Histogram("float64.histogram")
 
 	sdk.RecordBatch(
 		ctx,
@@ -467,10 +469,10 @@ func TestRecordBatch(t *testing.T) {
 	sdk.Collect(ctx)
 
 	require.EqualValues(t, map[string]float64{
-		"int64.sum/A=B,C=D/":     1,
-		"float64.sum/A=B,C=D/":   2,
-		"int64.exact/A=B,C=D/":   3,
-		"float64.exact/A=B,C=D/": 4,
+		"int64.sum/A=B,C=D/":         1,
+		"float64.sum/A=B,C=D/":       2,
+		"int64.histogram/A=B,C=D/":   3,
+		"float64.histogram/A=B,C=D/": 4,
 	}, processor.Values())
 }
 
@@ -482,16 +484,14 @@ func TestRecordPersistence(t *testing.T) {
 	meter, sdk, selector, _ := newSDK(t)
 
 	c := Must(meter).NewFloat64Counter("name.sum")
-	b := c.Bind(attribute.String("bound", "true"))
 	uk := attribute.String("bound", "false")
 
 	for i := 0; i < 100; i++ {
 		c.Add(ctx, 1, uk)
-		b.Add(ctx, 1)
 		sdk.Collect(ctx)
 	}
 
-	require.Equal(t, 4, selector.newAggCount)
+	require.Equal(t, 2, selector.newAggCount)
 }
 
 func TestIncorrectInstruments(t *testing.T) {

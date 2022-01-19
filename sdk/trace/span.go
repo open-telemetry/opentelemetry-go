@@ -25,11 +25,10 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
-	"go.opentelemetry.io/otel/trace"
-
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // ReadOnlySpan allows reading information from the data structure underlying a
@@ -452,7 +451,7 @@ func (s *recordingSpan) Resource() *resource.Resource {
 }
 
 func (s *recordingSpan) addLink(link trace.Link) {
-	if !s.IsRecording() {
+	if !s.IsRecording() || !link.SpanContext.IsValid() {
 		return
 	}
 	s.mu.Lock()

@@ -49,6 +49,7 @@ func New(options ...Option) (*Exporter, error) {
 // Exporter is an implementation of trace.SpanSyncer that writes spans to stdout.
 type Exporter struct {
 	encoder    *json.Encoder
+	encoderMu  sync.Mutex
 	timestamps bool
 
 	stoppedMu sync.RWMutex
@@ -70,6 +71,8 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 
 	stubs := tracetest.SpanStubsFromReadOnlySpans(spans)
 
+	e.encoderMu.Lock()
+	defer e.encoderMu.Unlock()
 	for i := range stubs {
 		stub := &stubs[i]
 		// Remove timestamps
@@ -102,4 +105,15 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	default:
 	}
 	return nil
+}
+
+// MarshalLog is the marshaling function used by the logging system to represent this exporter.
+func (e *Exporter) MarshalLog() interface{} {
+	return struct {
+		Type           string
+		WithTimestamps bool
+	}{
+		Type:           "stdout",
+		WithTimestamps: e.timestamps,
+	}
 }

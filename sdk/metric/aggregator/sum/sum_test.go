@@ -22,10 +22,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 )
 
@@ -56,7 +55,7 @@ func new4() (_, _, _, _ *Aggregator) {
 	return &alloc[0], &alloc[1], &alloc[2], &alloc[3]
 }
 
-func checkZero(t *testing.T, agg *Aggregator, desc *metric.Descriptor) {
+func checkZero(t *testing.T, agg *Aggregator, desc *sdkapi.Descriptor) {
 	kind := desc.NumberKind()
 
 	sum, err := agg.Sum()
@@ -148,7 +147,7 @@ func TestSynchronizedMoveReset(t *testing.T) {
 	aggregatortest.SynchronizedMoveResetTest(
 		t,
 		sdkapi.CounterObserverInstrumentKind,
-		func(desc *metric.Descriptor) export.Aggregator {
+		func(desc *sdkapi.Descriptor) aggregator.Aggregator {
 			return &New(1)[0]
 		},
 	)

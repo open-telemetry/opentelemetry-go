@@ -19,29 +19,28 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
 var (
-	testCounterDesc               = metric.NewDescriptor("counter", sdkapi.CounterInstrumentKind, number.Int64Kind)
-	testUpDownCounterDesc         = metric.NewDescriptor("updowncounter", sdkapi.UpDownCounterInstrumentKind, number.Int64Kind)
-	testCounterObserverDesc       = metric.NewDescriptor("counterobserver", sdkapi.CounterObserverInstrumentKind, number.Int64Kind)
-	testUpDownCounterObserverDesc = metric.NewDescriptor("updowncounterobserver", sdkapi.UpDownCounterObserverInstrumentKind, number.Int64Kind)
-	testHistogramDesc             = metric.NewDescriptor("histogram", sdkapi.HistogramInstrumentKind, number.Int64Kind)
-	testGaugeObserverDesc         = metric.NewDescriptor("gauge", sdkapi.GaugeObserverInstrumentKind, number.Int64Kind)
+	testCounterDesc               = metrictest.NewDescriptor("counter", sdkapi.CounterInstrumentKind, number.Int64Kind)
+	testUpDownCounterDesc         = metrictest.NewDescriptor("updowncounter", sdkapi.UpDownCounterInstrumentKind, number.Int64Kind)
+	testCounterObserverDesc       = metrictest.NewDescriptor("counterobserver", sdkapi.CounterObserverInstrumentKind, number.Int64Kind)
+	testUpDownCounterObserverDesc = metrictest.NewDescriptor("updowncounterobserver", sdkapi.UpDownCounterObserverInstrumentKind, number.Int64Kind)
+	testHistogramDesc             = metrictest.NewDescriptor("histogram", sdkapi.HistogramInstrumentKind, number.Int64Kind)
+	testGaugeObserverDesc         = metrictest.NewDescriptor("gauge", sdkapi.GaugeObserverInstrumentKind, number.Int64Kind)
 )
 
-func oneAgg(sel export.AggregatorSelector, desc *metric.Descriptor) export.Aggregator {
-	var agg export.Aggregator
+func oneAgg(sel export.AggregatorSelector, desc *sdkapi.Descriptor) aggregator.Aggregator {
+	var agg aggregator.Aggregator
 	sel.AggregatorFor(desc, &agg)
 	return agg
 }
@@ -56,14 +55,8 @@ func testFixedSelectors(t *testing.T, sel export.AggregatorSelector) {
 
 func TestInexpensiveDistribution(t *testing.T) {
 	inex := simple.NewWithInexpensiveDistribution()
-	require.IsType(t, (*minmaxsumcount.Aggregator)(nil), oneAgg(inex, &testHistogramDesc))
+	require.IsType(t, (*sum.Aggregator)(nil), oneAgg(inex, &testHistogramDesc))
 	testFixedSelectors(t, inex)
-}
-
-func TestExactDistribution(t *testing.T) {
-	ex := simple.NewWithExactDistribution()
-	require.IsType(t, (*exact.Aggregator)(nil), oneAgg(ex, &testHistogramDesc))
-	testFixedSelectors(t, ex)
 }
 
 func TestHistogramDistribution(t *testing.T) {
