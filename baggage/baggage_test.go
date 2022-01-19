@@ -207,7 +207,7 @@ func TestNewBaggageWithDuplicates(t *testing.T) {
 
 func TestNewBaggageErrorInvalidMember(t *testing.T) {
 	_, err := New(Member{key: ""})
-	assert.ErrorIs(t, err, errInvalidKey)
+	assert.NoError(t, err)
 }
 
 func key(n int) string {

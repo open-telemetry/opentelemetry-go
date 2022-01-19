@@ -329,9 +329,10 @@ type Baggage struct { //nolint:golint
 	list baggage.List
 }
 
-// New returns a new valid Baggage. It returns an error if the passed members
-// are invalid according to the W3C Baggage specification or if it results in
-// a Baggage exceeding limits set in that specification.
+// New returns a new valid Baggage. It returns an error if it results in a
+// Baggage exceeding limits set in that specification.
+//
+// It expects all the provided members to have already been validated.
 func New(members ...Member) (Baggage, error) {
 	if len(members) == 0 {
 		return Baggage{}, nil
@@ -339,9 +340,6 @@ func New(members ...Member) (Baggage, error) {
 
 	b := make(baggage.List)
 	for _, m := range members {
-		if err := m.validate(); err != nil {
-			return Baggage{}, err
-		}
 		// OpenTelemetry resolves duplicates by last-one-wins.
 		b[m.key] = baggage.Item{
 			Value:      m.value,
