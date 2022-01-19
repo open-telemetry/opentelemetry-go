@@ -285,7 +285,7 @@ func capture[N number.Any, Traits traits.Any[N]](_ context.Context, inst *instru
 		otel.Handle(err)
 		return
 	}
-	updater.Update(num)
+	updater.(viewstate.CollectorUpdater[N]).Update(num)
 
 	// Record was modified, inform the Collect() that things need
 	// to be collected while the record is still mapped.
@@ -339,7 +339,6 @@ func initRecord[N number.Any](inst *instrument, grp *group, rec *record, attrs a
 	rec.attributes = attrs.KeyValues
 	rec.collector = inst.cfactory.New(attrs.KeyValues, &inst.descriptor)
 
-	// This conversion must be safe or else there is a bug.
 	return rec.collector.(viewstate.Updater[N])
 }
 

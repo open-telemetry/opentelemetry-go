@@ -21,11 +21,16 @@ import (
 
 type (
 	Collector interface {
-		Send(factory *Factory) error
+		Send(*Factory) error
 	}
 
 	Updater[N number.Any] interface {
-		Update(number N)
+		Update(value N)
+	}
+
+	CollectorUpdater[N number.Any] interface {
+		Collector
+		Updater[N]
 	}
 
 	State struct {
@@ -39,12 +44,8 @@ type (
 	}
 
 	compiledView struct {
-		newIntermediate func() viewIntermediate
 		behaviors       []viewBehavior
-	}
-
-	viewIntermediate interface {
-		Send(*compiledView) error
+		newIntermediate func() viewIntermediate
 	}
 
 	viewBehavior struct {
@@ -53,7 +54,18 @@ type (
 		terminal    *viewTerminal
 	}
 
-	intermediateSet []viewIntermediate
+	viewIntermediate interface {
+		Send(*compiledView) error
+	}
+
+	viewIntermediateUpdater[N number.Any] interface {
+		viewIntermediate
+		Updater[N]
+	}
+	
+	viewCollector[N number.Any] struct {
+		intermediates []viewIntermediateUpdater[N]
+	}
 
 	viewTerminal struct {
 		reader      *reader.Reader
@@ -266,9 +278,11 @@ func newSyncConfig[
 	Methods aggregator.Methods[N, Storage, Config],
 	Storage, Config any,
 ](behaviors []viewBehavior, cfg *Config) compiledView {
+
+	// behavior is only partly specified. 
 	// for i := range behaviors {
-	// 	behaviors[i]. @@@
-	// }
+	// 	behaviors[i]. 
+	// }@ @@@
 	return compiledView{
 		behaviors: behaviors,
 		newIntermediate: func() viewIntermediate {
@@ -355,18 +369,33 @@ func buildAsyncView[N number.Any, Traits traits.Any[N]](settings aggregatorSetti
 
 // New returns a Collector that also implements Updater[N]
 func (factory *Factory) New(kvs []attribute.KeyValue, desc *sdkapi.Descriptor) Collector {
-	collectors := make(intermediateSet, 0, len(factory.configuration))
-	for idx, vc := range factory.configuration {
-		collectors[idx] = vc.newIntermediate()
+	if desc.NumberKind() == number.Float64Kind {
+		return newCollector[float64](factory, kvs, desc)
 	}
-	return collectors
+	return newCollector[int64](factory, kvs, desc)
 }
 
-func (v intermediateSet) Send(factory *Factory) error {
-	for i, collector := range v {
-		collector.Send(&factory.configuration[i])
+func newCollector[N number.Any](factory *Factory, kvs []attribute.KeyValue, desc *sdkapi.Descriptor) CollectorUpdater[N] {
+	intermediates := make([]viewIntermediateUpdater[N], 0, len(factory.configuration))
+	for idx, vc := range factory.configuration {
+		intermediates[idx] = vc.newIntermediate().(viewIntermediateUpdater[N])
+	}
+	return &viewCollector[N]{
+		intermediates: intermediates,
+	}
+}
+
+func (c *viewCollector[N]) Send(factory *Factory) error {
+	for i, intermediate := range c.intermediates {
+		intermediate.Send(&factory.configuration[i])
 	}
 	return nil
+}
+
+func (c *viewCollector[N]) Update(value N) {
+	for _, intermediate := range c.intermediates {
+		intermediate.Update(value)
+	}
 }
 
 func (sc *syncCollector[N, Methods, Storage, Config]) Init(cfg Config) {

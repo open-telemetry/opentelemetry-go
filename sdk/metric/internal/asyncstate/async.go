@@ -179,7 +179,7 @@ func capture[N number.Any, Traits traits.Any[N]](ctx context.Context, inst *inst
 		se = inst.cfactory.New(attrs, &inst.descriptor)
 		idata[aset] = se
 	}
-	se.(viewstate.Updater[N]).Update(value)
+	se.(viewstate.CollectorUpdater[N]).Update(value)
 }
 
 func (a *Accumulator) Int64Instruments(reg *registry.State, views *viewstate.State) asyncint64.Instruments {
