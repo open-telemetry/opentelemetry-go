@@ -288,7 +288,7 @@ func parseMember(member string) (Member, error) {
 		panic("failed to parse baggage member")
 	}
 
-	return Member{key: key, value: value, properties: props}, nil
+	return NewMember(key, value, props...)
 }
 
 // validate ensures m conforms to the W3C Baggage specification, returning an
@@ -406,6 +406,8 @@ func Parse(bStr string) (Baggage, error) {
 //
 // If there is no list-member matching the passed key the returned Member will
 // be a zero-value Member.
+// The returned member is not validated, as we assume the validation happened
+// when it was added to the Baggage.
 func (b Baggage) Member(key string) Member {
 	v, ok := b.list[key]
 	if !ok {
@@ -425,6 +427,9 @@ func (b Baggage) Member(key string) Member {
 
 // Members returns all the baggage list-members.
 // The order of the returned list-members does not have significance.
+//
+// The returned members are not validated, as we assume the validation happened
+// when they were added to the Baggage.
 func (b Baggage) Members() []Member {
 	if len(b.list) == 0 {
 		return nil
