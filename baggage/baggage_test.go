@@ -134,7 +134,7 @@ func TestParsePropertyError(t *testing.T) {
 func TestNewKeyProperty(t *testing.T) {
 	p, err := NewKeyProperty(" ")
 	assert.ErrorIs(t, err, errInvalidKey)
-	assert.Equal(t, Property{}, p)
+	assert.Equal(t, Property{isEmpty: true}, p)
 
 	p, err = NewKeyProperty("key")
 	assert.NoError(t, err)
@@ -144,11 +144,11 @@ func TestNewKeyProperty(t *testing.T) {
 func TestNewKeyValueProperty(t *testing.T) {
 	p, err := NewKeyValueProperty(" ", "")
 	assert.ErrorIs(t, err, errInvalidKey)
-	assert.Equal(t, Property{}, p)
+	assert.Equal(t, Property{isEmpty: true}, p)
 
 	p, err = NewKeyValueProperty("key", ";")
 	assert.ErrorIs(t, err, errInvalidValue)
-	assert.Equal(t, Property{}, p)
+	assert.Equal(t, Property{isEmpty: true}, p)
 
 	p, err = NewKeyValueProperty("key", "value")
 	assert.NoError(t, err)
@@ -156,7 +156,10 @@ func TestNewKeyValueProperty(t *testing.T) {
 }
 
 func TestPropertyValidate(t *testing.T) {
-	p := Property{}
+	p := Property{isEmpty: true}
+	assert.ErrorIs(t, p.validate(), errInvalidProperty)
+
+	p.isEmpty = false
 	assert.ErrorIs(t, p.validate(), errInvalidKey)
 
 	p.key = "k"
@@ -205,9 +208,9 @@ func TestNewBaggageWithDuplicates(t *testing.T) {
 	assert.Equal(t, want, b)
 }
 
-func TestNewBaggageErrorInvalidMember(t *testing.T) {
-	_, err := New(Member{key: ""})
-	assert.NoError(t, err)
+func TestNewBaggageErrorEmptyMember(t *testing.T) {
+	_, err := New(Member{isEmpty: true})
+	assert.ErrorIs(t, err, errInvalidMember)
 }
 
 func key(n int) string {
@@ -533,8 +536,8 @@ func TestBaggageDeleteMember(t *testing.T) {
 	assert.NotContains(t, b1.list, key)
 }
 
-func TestBaggageSetMemberError(t *testing.T) {
-	_, err := Baggage{}.SetMember(Member{})
+func TestBaggageSetMemberEmpty(t *testing.T) {
+	_, err := Baggage{}.SetMember(Member{isEmpty: true})
 	assert.ErrorIs(t, err, errInvalidMember)
 }
 
@@ -628,7 +631,7 @@ func TestBaggageMembers(t *testing.T) {
 func TestBaggageMember(t *testing.T) {
 	baggage := Baggage{list: baggage.List{"foo": {Value: "1"}}}
 	assert.Equal(t, Member{key: "foo", value: "1"}, baggage.Member("foo"))
-	assert.Equal(t, Member{}, baggage.Member("bar"))
+	assert.Equal(t, Member{isEmpty: true}, baggage.Member("bar"))
 }
 
 func TestMemberKey(t *testing.T) {
@@ -664,7 +667,10 @@ func TestMemberProperties(t *testing.T) {
 }
 
 func TestMemberValidation(t *testing.T) {
-	m := Member{}
+	m := Member{isEmpty: true}
+	assert.ErrorIs(t, m.validate(), errInvalidMember)
+
+	m.isEmpty = false
 	assert.ErrorIs(t, m.validate(), errInvalidKey)
 
 	m.key, m.value = "k", "\\"
@@ -677,7 +683,7 @@ func TestMemberValidation(t *testing.T) {
 func TestNewMember(t *testing.T) {
 	m, err := NewMember("", "")
 	assert.ErrorIs(t, err, errInvalidKey)
-	assert.Equal(t, Member{}, m)
+	assert.Equal(t, Member{isEmpty: true}, m)
 
 	key, val := "k", "v"
 	p := Property{key: "foo"}

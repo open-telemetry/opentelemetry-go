@@ -61,45 +61,56 @@ type Property struct {
 	// hasValue indicates if a zero-value value means the property does not
 	// have a value or if it was the zero-value.
 	hasValue bool
+
+	// isEmpty indicates whether the created property is empty or not. Empty
+	// properties are invalid with no other check required.
+	isEmpty bool
 }
 
 func NewKeyProperty(key string) (Property, error) {
-	p := Property{}
 	if !keyRe.MatchString(key) {
-		return p, fmt.Errorf("%w: %q", errInvalidKey, key)
+		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
-	p.key = key
+
+	p := Property{key: key, isEmpty: false}
 	return p, nil
 }
 
 func NewKeyValueProperty(key, value string) (Property, error) {
-	p := Property{}
 	if !keyRe.MatchString(key) {
-		return p, fmt.Errorf("%w: %q", errInvalidKey, key)
+		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
 	if !valueRe.MatchString(value) {
-		return p, fmt.Errorf("%w: %q", errInvalidValue, value)
+		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidValue, value)
 	}
-	p.key = key
-	p.value = value
-	p.hasValue = true
+
+	p := Property{
+		key:      key,
+		value:    value,
+		hasValue: true,
+		isEmpty:  false,
+	}
 	return p, nil
+}
+
+func newInvalidProperty() Property {
+	return Property{isEmpty: true}
 }
 
 // parseProperty attempts to decode a Property from the passed string. It
 // returns an error if the input is invalid according to the W3C Baggage
 // specification.
 func parseProperty(property string) (Property, error) {
-	p := Property{}
 	if property == "" {
-		return p, nil
+		return newInvalidProperty(), nil
 	}
 
 	match := propertyRe.FindStringSubmatch(property)
 	if len(match) != 4 {
-		return p, fmt.Errorf("%w: %q", errInvalidProperty, property)
+		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidProperty, property)
 	}
 
+	p := Property{isEmpty: false}
 	if match[1] != "" {
 		p.key = match[1]
 	} else {
@@ -107,12 +118,17 @@ func parseProperty(property string) (Property, error) {
 		p.value = match[3]
 		p.hasValue = true
 	}
+
 	return p, nil
 }
 
 // validate ensures p conforms to the W3C Baggage specification, returning an
 // error otherwise.
 func (p Property) validate() error {
+	if p.isEmpty {
+		return errInvalidProperty
+	}
+
 	errFunc := func(err error) error {
 		return fmt.Errorf("invalid property: %w", err)
 	}
@@ -220,18 +236,31 @@ func (p properties) String() string {
 type Member struct {
 	key, value string
 	properties properties
+
+	// isEmpty indicates whether the created member is empty or not. Empty
+	// properties are invalid with no other check required.
+	isEmpty bool
 }
 
 // NewMember returns a new Member from the passed arguments. An error is
 // returned if the created Member would be invalid according to the W3C
 // Baggage specification.
 func NewMember(key, value string, props ...Property) (Member, error) {
-	m := Member{key: key, value: value, properties: properties(props).Copy()}
+	m := Member{
+		key:        key,
+		value:      value,
+		properties: properties(props).Copy(),
+		isEmpty:    false,
+	}
 	if err := m.validate(); err != nil {
-		return Member{}, err
+		return newInvalidMember(), err
 	}
 
 	return m, nil
+}
+
+func newInvalidMember() Member {
+	return Member{isEmpty: true}
 }
 
 // parseMember attempts to decode a Member from the passed string. It returns
@@ -239,7 +268,7 @@ func NewMember(key, value string, props ...Property) (Member, error) {
 // specification.
 func parseMember(member string) (Member, error) {
 	if n := len(member); n > maxBytesPerMembers {
-		return Member{}, fmt.Errorf("%w: %d", errMemberBytes, n)
+		return newInvalidMember(), fmt.Errorf("%w: %d", errMemberBytes, n)
 	}
 
 	var (
@@ -254,7 +283,7 @@ func parseMember(member string) (Member, error) {
 		for _, pStr := range strings.Split(parts[1], propertyDelimiter) {
 			p, err := parseProperty(pStr)
 			if err != nil {
-				return Member{}, err
+				return newInvalidMember(), err
 			}
 			props = append(props, p)
 		}
@@ -265,7 +294,7 @@ func parseMember(member string) (Member, error) {
 		// Take into account a value can contain equal signs (=).
 		kv := strings.SplitN(parts[0], keyValueDelimiter, 2)
 		if len(kv) != 2 {
-			return Member{}, fmt.Errorf("%w: %q", errInvalidMember, member)
+			return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidMember, member)
 		}
 		// "Leading and trailing whitespaces are allowed but MUST be trimmed
 		// when converting the header into a data structure."
@@ -276,10 +305,10 @@ func parseMember(member string) (Member, error) {
 			return Member{}, fmt.Errorf("%w: %q", err, value)
 		}
 		if !keyRe.MatchString(key) {
-			return Member{}, fmt.Errorf("%w: %q", errInvalidKey, key)
+			return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidKey, key)
 		}
 		if !valueRe.MatchString(value) {
-			return Member{}, fmt.Errorf("%w: %q", errInvalidValue, value)
+			return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidValue, value)
 		}
 	default:
 		// This should never happen unless a developer has changed the string
@@ -294,6 +323,10 @@ func parseMember(member string) (Member, error) {
 // validate ensures m conforms to the W3C Baggage specification, returning an
 // error otherwise.
 func (m Member) validate() error {
+	if m.isEmpty {
+		return errInvalidMember
+	}
+
 	if !keyRe.MatchString(m.key) {
 		return fmt.Errorf("%w: %q", errInvalidKey, m.key)
 	}
@@ -340,6 +373,10 @@ func New(members ...Member) (Baggage, error) {
 
 	b := make(baggage.List)
 	for _, m := range members {
+		if m.isEmpty {
+			return Baggage{}, errInvalidMember
+		}
+
 		// OpenTelemetry resolves duplicates by last-one-wins.
 		b[m.key] = baggage.Item{
 			Value:      m.value,
@@ -413,7 +450,7 @@ func (b Baggage) Member(key string) Member {
 		// where a zero-valued Member is included in the Baggage because a
 		// zero-valued Member is invalid according to the W3C Baggage
 		// specification (it has an empty key).
-		return Member{}
+		return newInvalidMember()
 	}
 
 	return Member{
@@ -451,8 +488,8 @@ func (b Baggage) Members() []Member {
 // If member is invalid according to the W3C Baggage specification, an error
 // is returned with the original Baggage.
 func (b Baggage) SetMember(member Member) (Baggage, error) {
-	if err := member.validate(); err != nil {
-		return b, fmt.Errorf("%w: %s", errInvalidMember, err)
+	if member.isEmpty {
+		return b, errInvalidMember
 	}
 
 	n := len(b.list)
