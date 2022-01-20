@@ -25,7 +25,7 @@ func New() *State {
 }
 
 func Lookup[T hasDescriptor](reg *State, name string, opts []instrument.Option, nk number.Kind, ik sdkapi.InstrumentKind,
-	f func(desc sdkapi.Descriptor) (T, error)) (T, error) {
+	f func(desc sdkapi.Descriptor) T) (T, error) {
 	cfg := instrument.NewConfig(opts...)
 	desc := sdkapi.NewDescriptor(name, ik, nk, cfg.Description(), cfg.Unit())
 
@@ -45,9 +45,7 @@ func Lookup[T hasDescriptor](reg *State, name string, opts []instrument.Option, 
 		var t T
 		return t, ErrIncompatibleInstruments
 	}
-	value, err := f(desc)
-	if err == nil {
-		reg.names[name] = value
-	}
-	return value, err
+	value := f(desc)
+	reg.names[name] = value
+	return value, nil
 }

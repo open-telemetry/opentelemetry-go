@@ -183,11 +183,8 @@ func (c common) newInstrument(name string, opts []apiInstrument.Option, nk numbe
 	return registry.Lookup(
 		c.registry,
 		name, opts, nk, ik,
-		func(desc sdkapi.Descriptor) (*instrument, error) {
-			cfactory, err := c.views.NewFactory(desc)
-			if err != nil {
-				return nil, err
-			}
+		func(desc sdkapi.Descriptor) *instrument{
+			cfactory := c.views.NewFactory(desc)
 			inst := &instrument{
 				descriptor: desc,
 				cfactory:   cfactory,
@@ -197,7 +194,7 @@ func (c common) newInstrument(name string, opts []apiInstrument.Option, nk numbe
 			defer c.accumulator.instrumentsLock.Unlock()
 
 			c.accumulator.instruments = append(c.accumulator.instruments, inst)
-			return inst, nil
+			return inst
 		})
 }
 
@@ -216,7 +213,7 @@ func (a *Accumulator) collectInstruments() {
 	for _, inst := range instruments {
 		inst.current.Range(func(_ interface{}, value interface{}) bool {
 			grp := value.(*group)
-			any := a.checkpointGroup(grp, false)
+			any := a.collectGroup(grp, false)
 
 			if any != 0 {
 				return true
@@ -233,14 +230,14 @@ func (a *Accumulator) collectInstruments() {
 			inst.current.Delete(grp.fingerprint)
 
 			// Last we'll see of this.
-			_ = a.checkpointGroup(grp, true)
+			_ = a.collectGroup(grp, true)
 			return true
 		})
 	}
 }
 
-func (a *Accumulator) checkpointGroup(grp *group, final bool) int {
-	var checkpointed int
+func (a *Accumulator) collectGroup(grp *group, final bool) int {
+	var collected int
 	for rec := &grp.first; rec != nil; rec = (*record)(atomic.LoadPointer(&rec.next)) {
 
 		mods := atomic.LoadInt64(&rec.updateCount)
@@ -248,15 +245,15 @@ func (a *Accumulator) checkpointGroup(grp *group, final bool) int {
 
 		if mods != coll {
 			// Updates happened in this interval,
-			// checkpoint and continue.
-			checkpointed += a.checkpointRecord(rec, final)
+			// collect and continue.
+			collected += a.collectRecord(rec, final)
 			rec.collectedCount = mods
 		}
 	}
-	return checkpointed
+	return collected
 }
 
-func (a *Accumulator) checkpointRecord(r *record, final bool) int {
+func (a *Accumulator) collectRecord(r *record, final bool) int {
 	// Note: We could use the `final` bit here to signal to the
 	// receiver of this aggregation that it is the last in a
 	// sequence and it should feel encouraged to forget its state
@@ -267,11 +264,7 @@ func (a *Accumulator) checkpointRecord(r *record, final bool) int {
 	if r.collector == nil {
 		return 0
 	}
-	if err := r.collector.Send(r.group.instrument.cfactory); err != nil {
-		otel.Handle(err)
-		return 0
-	}
-
+	r.collector.Collect()
 	return 1
 }
 

@@ -140,16 +140,10 @@ func (a *Accumulator) Collect(state *State) error {
 	}
 
 	for inst, states := range state.store {
+		// Pass in the current the instrument somehow
+		_ = inst
 		for _, entry := range states {
-			// Note: not deleting anything is a safe approach for
-			// async view calculation.  This can be improved with
-			// optional per-stream start timestamps and staleness
-			// markers, but is complicated by views correctness
-			// considerations, see text in the supplemental
-			// guidelines.
-			if err := entry.Send(inst.cfactory); err != nil {
-				// TODO handle errors
-			}
+			entry.Collect()
 		}
 	}
 
@@ -212,11 +206,8 @@ func (c common) newInstrument(name string, opts []apiInstrument.Option, nk numbe
 	return registry.Lookup(
 		c.registry,
 		name, opts, nk, ik,
-		func(desc sdkapi.Descriptor) (*instrument, error) {
-			cfactory, err := c.views.NewFactory(desc)
-			if err != nil {
-				return nil, err
-			}
+		func(desc sdkapi.Descriptor) *instrument {
+			cfactory := c.views.NewFactory(desc)
 			inst := &instrument{
 				descriptor: desc,
 				cfactory:   cfactory,
@@ -226,7 +217,7 @@ func (c common) newInstrument(name string, opts []apiInstrument.Option, nk numbe
 			defer c.accumulator.instrumentsLock.Unlock()
 
 			c.accumulator.instruments = append(c.accumulator.instruments, inst)
-			return inst, nil
+			return inst
 		})
 }
 
