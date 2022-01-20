@@ -59,7 +59,7 @@ type (
 
 	viewIntermediateUpdater[N number.Any] interface {
 		viewIntermediate
-		Updater[N]
+		update(value N)
 	}
 
 	viewCollector[N number.Any] struct {
@@ -82,14 +82,32 @@ type (
 	syncCollector[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
 		current  Storage
 		snapshot Storage
-		outputs []*Storage
+		outputs  deferredStorage[N, Storage, Config, Methods]
 	}
 
 	asyncCollector[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
 		lock     sync.Mutex
 		current  N
 		snapshot Storage
-		outputs []*Storage
+		outputs  deferredStorage[N, Storage, Config, Methods]
+	}
+
+	deferredStorage[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] interface {
+		deferUpdate(*deferredStorage[N, Storage, Config, Methods], *Storage)
+	}
+
+	setupStorage[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
+		viewConfigs []configuredBehavior
+		aggConfig *Config
+		kvs []attribute.KeyValue
+	}
+	
+	singleStorage[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
+		single *Storage
+	}
+
+	multiStorage[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
+		multi []*Storage
 	}
 )
 
@@ -279,20 +297,12 @@ func buildView[N number.Any, Traits traits.Any[N]](instrument sdkapi.Descriptor,
 	return buildAsyncView[N, Traits](settings, configs)
 }
 
-func compileOutputs[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]](configs []configuredBehavior, aggConfig *Config, kvs []attribute.KeyValue) []*Storage {
-	output := make([]*Storage, len(configs))
-	for i, config := range configs {
-		// Note: this call makes allocations and we're ignoring the return
-		// value: the return value is meant for exemplar support. Hmm?
-		set, _ := attribute.NewSetWithFiltered(kvs, config.view.Keys())
-		output[i] = reader.FindOrCreate[N, Storage, Config, Methods](
-			config.term.reader,
-			&config.desc,
-			set,
-			aggConfig,
-		)
+func compileOutputs[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]](viewConfigs []configuredBehavior, aggConfig *Config, kvs []attribute.KeyValue) deferredStorage[N, Storage, Config, Methods] {
+	return &setupStorage[N, Storage, Config, Methods] {
+		viewConfigs: viewConfigs,
+		aggConfig: aggConfig,
+		kvs: kvs,
 	}
-	return output
 }
 
 func newSyncConfig[
@@ -305,7 +315,7 @@ func newSyncConfig[
 			aa := &syncCollector[N, Storage, Config, Methods]{
 				outputs: compileOutputs[N, Storage, Config, Methods](viewConfigs, aggConfig, kvs),
 			}
-			aa.Init(*aggConfig)
+			aa.init(*aggConfig)
 			return aa
 		},
 	}
@@ -321,7 +331,7 @@ func newAsyncConfig[
 			aa := &asyncCollector[N, Storage, Config, Methods]{
 				outputs: compileOutputs[N, Storage, Config, Methods](viewConfigs, aggConfig, kvs),
 			}
-			aa.Init(*aggConfig)
+			aa.init(*aggConfig)
 			return aa
 		},
 	}
@@ -405,17 +415,17 @@ func (c *viewCollector[N]) Collect() {
 
 func (c *viewCollector[N]) Update(value N) {
 	for _, intermediate := range c.intermediates {
-		intermediate.Update(value)
+		intermediate.update(value)
 	}
 }
 
-func (sc *syncCollector[N, Storage, Config, Methods]) Init(cfg Config) {
+func (sc *syncCollector[N, Storage, Config, Methods]) init(cfg Config) {
 	var methods Methods
 	methods.Init(&sc.current, cfg)
 	methods.Init(&sc.snapshot, cfg)
 }
 
-func (sc *syncCollector[N, Storage, Config, Methods]) Update(number N) {
+func (sc *syncCollector[N, Storage, Config, Methods]) update(number N) {
 	var methods Methods
 	methods.Update(&sc.current, number)
 }
@@ -424,18 +434,16 @@ func (sc *syncCollector[N, Storage, Config, Methods]) collect() {
 	var methods Methods
 	methods.SynchronizedMove(&sc.current, &sc.snapshot)
 
-	for _, output := range sc.outputs {
-		methods.Merge(output, &sc.snapshot)
-	}
+	sc.outputs.deferUpdate(&sc.outputs, &sc.snapshot)
 }
 
-func (ac *asyncCollector[N, Storage, Config, Methods]) Init(cfg Config) {
+func (ac *asyncCollector[N, Storage, Config, Methods]) init(cfg Config) {
 	var methods Methods
 	ac.current = 0
 	methods.Init(&ac.snapshot, cfg)
 }
 
-func (ac *asyncCollector[N, Storage, Config, Methods]) Update(number N) {
+func (ac *asyncCollector[N, Storage, Config, Methods]) update(number N) {
 	ac.lock.Lock()
 	defer ac.lock.Unlock()
 	ac.current = number
@@ -447,7 +455,55 @@ func (ac *asyncCollector[N, Storage, Config, Methods]) collect() {
 	methods.Update(&ac.snapshot, ac.current)
 	ac.current = 0
 
-	for _, output := range ac.outputs {
-		methods.Merge(output, &ac.snapshot)
+	ac.outputs.deferUpdate(&ac.outputs, &ac.snapshot)
+}
+
+func (s *setupStorage[N, Storage, Config, Methods]) deferUpdate(ptr *deferredStorage[N, Storage, Config, Methods], input *Storage) {
+	// Special case for size==1 avoids allocating a unnecessary singleton slice.
+	if len(s.viewConfigs) == 1 {
+		config := s.viewConfigs[0]
+		set, _ := attribute.NewSetWithFiltered(s.kvs, config.view.Keys())
+		ss := singleStorage[N, Storage, Config, Methods]{
+			single: reader.FindOrCreate[N, Storage, Config, Methods](
+				config.term.reader,
+				&config.desc,
+				set,
+				s.aggConfig,
+			),
+		}
+		*ptr = ss
+		ss.deferUpdate(nil, input)
+		return
+	}
+	
+		
+	output := make([]*Storage, len(s.viewConfigs))
+	for i, config := range s.viewConfigs {
+		set, _ := attribute.NewSetWithFiltered(s.kvs, config.view.Keys())
+		output[i] = reader.FindOrCreate[N, Storage, Config, Methods](
+			config.term.reader,
+			&config.desc,
+			set,
+			s.aggConfig,
+		)
+	}
+	ms := multiStorage[N, Storage, Config, Methods]{
+		multi: output,
+	}
+	*ptr = ms
+	ms.deferUpdate(nil, input)
+}
+
+func (s singleStorage[N, Storage, Config, Methods]) deferUpdate(_ *deferredStorage[N, Storage, Config, Methods], input *Storage) {
+	var methods Methods
+
+	methods.Merge(s.single, input)
+}
+
+func (s multiStorage[N, Storage, Config, Methods]) deferUpdate(_ *deferredStorage[N, Storage, Config, Methods], input *Storage) {
+	var methods Methods
+
+	for _, sp := range s.multi {
+		methods.Merge(sp, input)
 	}
 }
