@@ -54,7 +54,7 @@ var prebuiltMappings = [-MinScale + 1]exponentMapping{
 
 // NewMapping constructs an exponential mapping function, used for scales <= 0.
 func NewMapping(scale int32) (mapping.Mapping, error) {
-	if scale > 0 {
+	if scale > MaxScale {
 		return nil, fmt.Errorf("exponent mapping requires scale <= 0")
 	}
 	if scale < MinScale {
