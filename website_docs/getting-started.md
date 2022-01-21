@@ -184,6 +184,7 @@ Start by instrumenting the `Run` method.
 // Run starts polling users for Fibonacci number requests and writes results.
 func (a *App) Run(ctx context.Context) error {
 	for {
+		// Each execution of the run loop, we should get a new "root" span and context.
 		newCtx, span := otel.Tracer(name).Start(ctx, "Run")
 
 		n, err := a.Poll(newCtx)
