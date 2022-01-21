@@ -62,9 +62,10 @@ type Property struct {
 	// have a value or if it was the zero-value.
 	hasValue bool
 
-	// isEmpty indicates whether the created property is empty or not. Empty
-	// properties are invalid with no other check required.
-	isEmpty bool
+	// hasData indicates whether the created property contains data or not.
+	// Properties that do not contain data are invalid with no other check
+	// required.
+	hasData bool
 }
 
 func NewKeyProperty(key string) (Property, error) {
@@ -72,7 +73,7 @@ func NewKeyProperty(key string) (Property, error) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
 
-	p := Property{key: key, isEmpty: false}
+	p := Property{key: key, hasData: true}
 	return p, nil
 }
 
@@ -88,13 +89,13 @@ func NewKeyValueProperty(key, value string) (Property, error) {
 		key:      key,
 		value:    value,
 		hasValue: true,
-		isEmpty:  false,
+		hasData:  true,
 	}
 	return p, nil
 }
 
 func newInvalidProperty() Property {
-	return Property{isEmpty: true}
+	return Property{}
 }
 
 // parseProperty attempts to decode a Property from the passed string. It
@@ -110,7 +111,7 @@ func parseProperty(property string) (Property, error) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidProperty, property)
 	}
 
-	p := Property{isEmpty: false}
+	p := Property{hasData: true}
 	if match[1] != "" {
 		p.key = match[1]
 	} else {
@@ -125,7 +126,7 @@ func parseProperty(property string) (Property, error) {
 // validate ensures p conforms to the W3C Baggage specification, returning an
 // error otherwise.
 func (p Property) validate() error {
-	if p.isEmpty {
+	if !p.hasData {
 		return errInvalidProperty
 	}
 
@@ -237,9 +238,10 @@ type Member struct {
 	key, value string
 	properties properties
 
-	// isEmpty indicates whether the created member is empty or not. Empty
-	// properties are invalid with no other check required.
-	isEmpty bool
+	// hasData indicates whether the created property contains data or not.
+	// Properties that do not contain data are invalid with no other check
+	// required.
+	hasData bool
 }
 
 // NewMember returns a new Member from the passed arguments. An error is
@@ -250,7 +252,7 @@ func NewMember(key, value string, props ...Property) (Member, error) {
 		key:        key,
 		value:      value,
 		properties: properties(props).Copy(),
-		isEmpty:    false,
+		hasData:    true,
 	}
 	if err := m.validate(); err != nil {
 		return newInvalidMember(), err
@@ -260,7 +262,7 @@ func NewMember(key, value string, props ...Property) (Member, error) {
 }
 
 func newInvalidMember() Member {
-	return Member{isEmpty: true}
+	return Member{}
 }
 
 // parseMember attempts to decode a Member from the passed string. It returns
@@ -323,7 +325,7 @@ func parseMember(member string) (Member, error) {
 // validate ensures m conforms to the W3C Baggage specification, returning an
 // error otherwise.
 func (m Member) validate() error {
-	if m.isEmpty {
+	if !m.hasData {
 		return errInvalidMember
 	}
 
@@ -373,7 +375,7 @@ func New(members ...Member) (Baggage, error) {
 
 	b := make(baggage.List)
 	for _, m := range members {
-		if m.isEmpty {
+		if !m.hasData {
 			return Baggage{}, errInvalidMember
 		}
 
@@ -488,7 +490,7 @@ func (b Baggage) Members() []Member {
 // If member is invalid according to the W3C Baggage specification, an error
 // is returned with the original Baggage.
 func (b Baggage) SetMember(member Member) (Baggage, error) {
-	if member.isEmpty {
+	if !member.hasData {
 		return b, errInvalidMember
 	}
 
