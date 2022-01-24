@@ -269,7 +269,12 @@ func parseMember(member string) (Member, error) {
 		}
 		// "Leading and trailing whitespaces are allowed but MUST be trimmed
 		// when converting the header into a data structure."
-		key, value = strings.TrimSpace(kv[0]), strings.TrimSpace(kv[1])
+		key = strings.TrimSpace(kv[0])
+		var err error
+		value, err = url.QueryUnescape(strings.TrimSpace(kv[1]))
+		if err != nil {
+			return Member{}, fmt.Errorf("%w: %q", err, value)
+		}
 		if !keyRe.MatchString(key) {
 			return Member{}, fmt.Errorf("%w: %q", errInvalidKey, key)
 		}
