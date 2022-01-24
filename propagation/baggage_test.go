@@ -118,6 +118,13 @@ func TestExtractValidBaggageFromHTTPReq(t *testing.T) {
 				{Key: "key2", Value: "val2"},
 			},
 		},
+		{
+			name:   "valid header with url encoded string",
+			header: "key1=val%252",
+			want: members{
+				{Key: "key1", Value: "val%2"},
+			},
+		},
 	}
 
 	for _, tt := range tests {
