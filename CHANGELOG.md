@@ -30,6 +30,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Specify explicit buckets in Prometheus example. (#2493)
 - W3C baggage will now decode urlescaped values. (#2529)
 
+### Removed
+
+- Updated `go.opentelemetry.io/proto/otlp` from `v0.11.0` to `v0.12.0`. This version removes a number of deprecated methods. (#2546)
+  - [`Metric.GetIntGauge()`](https://pkg.go.dev/go.opentelemetry.io/proto/otlp@v0.11.0/metrics/v1#Metric.GetIntGauge)
+  - [`Metric.GetIntHistogram()`](https://pkg.go.dev/go.opentelemetry.io/proto/otlp@v0.11.0/metrics/v1#Metric.GetIntHistogram)
+  - [`Metric.GetIntSum()`](https://pkg.go.dev/go.opentelemetry.io/proto/otlp@v0.11.0/metrics/v1#Metric.GetIntSum)
+
 ## [1.3.0] - 2021-12-10
 
 ### ⚠️ Notice ⚠️
