@@ -135,7 +135,7 @@ test-coverage: | $(GOCOVMERGE)
 	$(GOCOVMERGE) $$(find . -name coverage.out) > coverage.txt
 
 .PHONY: lint
-lint: misspell lint-modules | $(GOLANGCI_LINT)
+lint: misspell crosslink | $(GOLANGCI_LINT)
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "golangci-lint in $${dir}"; \
 	  (cd "$${dir}" && \
@@ -151,13 +151,16 @@ vanity-import-check: | $(PORTO)
 misspell: | $(MISSPELL)
 	$(MISSPELL) -w $(ALL_DOCS)
 
-.PHONY: lint-modules
-lint-modules: | $(CROSSLINK)
+.PHONY: tidy
+tidy:
 	set -e; for dir in $(ALL_GO_MOD_DIRS) $(TOOLS_MOD_DIR); do \
 	  echo "$(GO) mod tidy in $${dir}"; \
 	  (cd "$${dir}" && \
 	    $(GO) mod tidy); \
 	done
+
+.PHONY: crosslink
+crosslink: $(CROSSLINK)
 	echo "cross-linking all go modules"
 	$(CROSSLINK)
 

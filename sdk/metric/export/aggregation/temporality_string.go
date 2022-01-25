@@ -3,7 +3,7 @@
 //go:build go1.17
 // +build go1.17
 
-package aggregation
+package aggregation // import "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 
 import "strconv"
 
