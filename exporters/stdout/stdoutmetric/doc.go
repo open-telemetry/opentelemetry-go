@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build go1.17
+// +build go1.17
+
 // Package stdout contains an OpenTelemetry exporter for metric telemetry
 // to be written to an output destination as JSON.
 //

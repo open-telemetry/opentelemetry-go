@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build go1.17
+// +build go1.17
+
 package prometheus // import "go.opentelemetry.io/otel/exporters/prometheus"
 
 // Note that this package does not support a way to export Prometheus

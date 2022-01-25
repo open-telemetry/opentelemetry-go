@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build go1.17
+// +build go1.17
+
 package stdoutmetric // import "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 
 import (

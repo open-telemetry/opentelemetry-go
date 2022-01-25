@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build go1.17
+// +build go1.17
+
 // Package opencensus provides a migration bridge from OpenCensus to
 // OpenTelemetry. The NewTracer function should be used to create an
 // OpenCensus Tracer from an OpenTelemetry Tracer. This Tracer can be use in
