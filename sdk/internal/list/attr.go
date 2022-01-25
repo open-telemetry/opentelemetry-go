@@ -94,8 +94,8 @@ func (a *Attributes) Init() *Attributes {
 	return a
 }
 
-// New returns an initialized list.
-func New() *Attributes { return new(Attributes).Init() }
+// NewAttributes returns an initialized list.
+func NewAttributes() *Attributes { return new(Attributes).Init() }
 
 // Len returns the number of elements of Attributes a.
 // The complexity is O(1).

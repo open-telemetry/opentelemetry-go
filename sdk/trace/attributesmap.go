@@ -35,7 +35,7 @@ type attributesMap struct {
 func newAttributesMap(capacity int) *attributesMap {
 	lm := &attributesMap{
 		attributes: make(map[attribute.Key]*list.Attribute),
-		evictList:  list.New(),
+		evictList:  list.NewAttributes(),
 		capacity:   capacity,
 	}
 	return lm

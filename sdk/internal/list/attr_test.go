@@ -114,7 +114,7 @@ var testAttrs = []attribute.KeyValue{
 }
 
 func TestAttributes(t *testing.T) {
-	l := New()
+	l := NewAttributes()
 	checkAttributesPointers(t, l, []*Attribute{})
 
 	// Single element list
@@ -210,8 +210,8 @@ func checkAttributes(t *testing.T, l *Attributes, attrs []attribute.KeyValue) {
 }
 
 func TestExtending(t *testing.T) {
-	l1 := New()
-	l2 := New()
+	l1 := NewAttributes()
+	l2 := NewAttributes()
 
 	l1.PushBack(testAttrs[0])
 	l1.PushBack(testAttrs[1])
@@ -220,13 +220,13 @@ func TestExtending(t *testing.T) {
 	l2.PushBack(testAttrs[3])
 	l2.PushBack(testAttrs[4])
 
-	l3 := New()
+	l3 := NewAttributes()
 	l3.PushBackList(l1)
 	checkAttributes(t, l3, testAttrs[:3])
 	l3.PushBackList(l2)
 	checkAttributes(t, l3, testAttrs[:5])
 
-	l3 = New()
+	l3 = NewAttributes()
 	l3.PushFrontList(l2)
 	checkAttributes(t, l3, testAttrs[3:])
 	l3.PushFrontList(l1)
@@ -235,7 +235,7 @@ func TestExtending(t *testing.T) {
 	checkAttributes(t, l1, testAttrs[:3])
 	checkAttributes(t, l2, testAttrs[3:5])
 
-	l3 = New()
+	l3 = NewAttributes()
 	l3.PushBackList(l1)
 	checkAttributes(t, l3, testAttrs[:3])
 	l3.PushBackList(l3)
@@ -245,13 +245,13 @@ func TestExtending(t *testing.T) {
 	}
 	checkAttributes(t, l3, want)
 
-	l3 = New()
+	l3 = NewAttributes()
 	l3.PushFrontList(l1)
 	checkAttributes(t, l3, testAttrs[:3])
 	l3.PushFrontList(l3)
 	checkAttributes(t, l3, want)
 
-	l3 = New()
+	l3 = NewAttributes()
 	l1.PushBackList(l3)
 	checkAttributes(t, l1, testAttrs[:3])
 	l1.PushFrontList(l3)
@@ -259,7 +259,7 @@ func TestExtending(t *testing.T) {
 }
 
 func TestRemove(t *testing.T) {
-	l := New()
+	l := NewAttributes()
 	e1 := l.PushBack(testAttrs[0])
 	e2 := l.PushBack(testAttrs[1])
 	checkAttributesPointers(t, l, []*Attribute{e1, e2})
@@ -271,11 +271,11 @@ func TestRemove(t *testing.T) {
 }
 
 func TestIssue4103(t *testing.T) {
-	l1 := New()
+	l1 := NewAttributes()
 	l1.PushBack(testAttrs[0])
 	l1.PushBack(testAttrs[1])
 
-	l2 := New()
+	l2 := NewAttributes()
 	l2.PushBack(testAttrs[2])
 	l2.PushBack(testAttrs[3])
 
@@ -292,7 +292,7 @@ func TestIssue4103(t *testing.T) {
 }
 
 func TestIssue6349(t *testing.T) {
-	l := New()
+	l := NewAttributes()
 	l.PushBack(testAttrs[0])
 	l.PushBack(testAttrs[1])
 
@@ -310,7 +310,7 @@ func TestIssue6349(t *testing.T) {
 }
 
 func TestMove(t *testing.T) {
-	l := New()
+	l := NewAttributes()
 	e1 := l.PushBack(testAttrs[0])
 	e2 := l.PushBack(testAttrs[1])
 	e3 := l.PushBack(testAttrs[2])
