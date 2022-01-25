@@ -15,9 +15,8 @@
 package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
-	"container/list"
-
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/internal/list"
 )
 
 // attributesMap is a capped map of attributes, holding the most recent attributes.
@@ -27,15 +26,15 @@ import (
 // This is based from https://github.com/hashicorp/golang-lru/blob/master/simplelru/lru.go
 // With a subset of the its operations and specific for holding attribute.KeyValue
 type attributesMap struct {
-	attributes   map[attribute.Key]*list.Element
-	evictList    *list.List
+	attributes   map[attribute.Key]*list.Attribute
+	evictList    *list.Attributes
 	droppedCount int
 	capacity     int
 }
 
 func newAttributesMap(capacity int) *attributesMap {
 	lm := &attributesMap{
-		attributes: make(map[attribute.Key]*list.Element),
+		attributes: make(map[attribute.Key]*list.Attribute),
 		evictList:  list.New(),
 		capacity:   capacity,
 	}
@@ -46,12 +45,12 @@ func (am *attributesMap) add(kv attribute.KeyValue) {
 	// Check for existing item
 	if ent, ok := am.attributes[kv.Key]; ok {
 		am.evictList.MoveToFront(ent)
-		ent.Value = &kv
+		ent.Value = kv
 		return
 	}
 
 	// Add new item
-	entry := am.evictList.PushFront(&kv)
+	entry := am.evictList.PushFront(kv)
 	am.attributes[kv.Key] = entry
 
 	// Verify size not exceeded
@@ -71,10 +70,8 @@ func (am *attributesMap) toKeyValue() []attribute.KeyValue {
 	}
 
 	attributes := make([]attribute.KeyValue, 0, len)
-	for ent := am.evictList.Back(); ent != nil; ent = ent.Prev() {
-		if value, ok := ent.Value.(*attribute.KeyValue); ok {
-			attributes = append(attributes, *value)
-		}
+	for attr := am.evictList.Back(); attr != nil; attr = attr.Prev() {
+		attributes = append(attributes, attr.Value)
 	}
 
 	return attributes
@@ -82,10 +79,9 @@ func (am *attributesMap) toKeyValue() []attribute.KeyValue {
 
 // removeOldest removes the oldest item from the cache.
 func (am *attributesMap) removeOldest() {
-	ent := am.evictList.Back()
-	if ent != nil {
-		am.evictList.Remove(ent)
-		kv := ent.Value.(*attribute.KeyValue)
-		delete(am.attributes, kv.Key)
+	attr := am.evictList.Back()
+	if attr != nil {
+		am.evictList.Remove(attr)
+		delete(am.attributes, attr.Value.Key)
 	}
 }
