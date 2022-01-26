@@ -15,4 +15,4 @@
 //go:build !go1.17
 // +build !go1.17
 
-package test
+package test // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
