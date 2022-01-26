@@ -120,7 +120,7 @@ func NewUnstarted(client Client, opts ...Option) *Exporter {
 	}
 
 	for _, opt := range opts {
-		opt.apply(&cfg)
+		cfg = opt.apply(cfg)
 	}
 
 	e := &Exporter{
