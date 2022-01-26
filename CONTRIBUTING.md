@@ -262,7 +262,7 @@ Moreover, the interface becomes sealed so the user cannot easily implement
 the interface on its own.
 
 The `apply` method should return a modified version of the passed config.
-This approach, instead of passing a pointer, is used to reduce the over all heap allocations.
+This approach, instead of passing a pointer, is used to prevent the config from being allocated to the heap.
 
 The name of the interface should be prefixed in the same way the
 corresponding `config` is (if at all).
