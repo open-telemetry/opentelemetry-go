@@ -137,9 +137,14 @@ type recordingSpan struct {
 	// spanContext holds the SpanContext of this span.
 	spanContext trace.SpanContext
 
-	// attributes are capped at configured limit. When the capacity is reached
-	// an oldest entry is removed to create room for a new entry.
-	attributes *attributesMap
+	// attributes is a collection of user provided key/values. The collection
+	// is constrained by a configurable maximum. When additional attributes
+	// are added after this maximum is reached these attributes the user is
+	// attempting to add are dropped. This dropped number of attributes is
+	// tracked and reported in the ReadOnlySpan exported when the span ends.
+	attributes        map[attribute.Key]attribute.Value
+	maxAttributes     int
+	droppedAttributes int
 
 	// events are stored in FIFO queue capped by configured limit.
 	events *evictedQueue
@@ -209,7 +214,32 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 	if !s.IsRecording() {
 		return
 	}
-	s.copyToCappedAttributes(attributes...)
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, a := range attributes {
+		// Ensure attributes conform to the specification:
+		// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.0.1/specification/common/common.md#attributes
+		if !a.Valid() {
+			continue
+		}
+
+		if _, exists := s.attributes[a.Key]; exists {
+			// Setting an attribute with the same key as an existing attribute
+			// SHOULD overwrite the existing attribute's value.
+			s.attributes[a.Key] = a.Value
+		} else {
+			if len(s.attributes) >= s.maxAttributes {
+				// For each unique attribute key, addition of which would
+				// result in exceeding the limit, the SDK MUST discard that
+				// key/value pair.
+				s.droppedAttributes++
+			} else {
+				s.attributes[a.Key] = a.Value
+			}
+		}
+	}
 }
 
 // End ends the span. This method does nothing if the span is already ended or
@@ -398,14 +428,22 @@ func (s *recordingSpan) EndTime() time.Time {
 	return s.endTime
 }
 
+// attributesLocked returns the attributes s has assuming s.mu.Lock is held by
+// the caller. The order of the returned slice is not guaranteed to be
+// the same for multiple calls.
+func (s *recordingSpan) attributesLocked() []attribute.KeyValue {
+	a := make([]attribute.KeyValue, 0, len(s.attributes))
+	for k, v := range s.attributes {
+		a = append(a, attribute.KeyValue{Key: k, Value: v})
+	}
+	return a
+}
+
 // Attributes returns the attributes of this span.
 func (s *recordingSpan) Attributes() []attribute.KeyValue {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.attributes.evictList.Len() == 0 {
-		return []attribute.KeyValue{}
-	}
-	return s.attributes.toKeyValue()
+	return s.attributesLocked()
 }
 
 // Links returns the links of this span.
@@ -474,7 +512,7 @@ func (s *recordingSpan) addLink(link trace.Link) {
 func (s *recordingSpan) DroppedAttributes() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.attributes.droppedCount
+	return s.droppedAttributes
 }
 
 // DroppedLinks returns the number of links dropped by the span due to limits
@@ -524,9 +562,9 @@ func (s *recordingSpan) snapshot() ReadOnlySpan {
 	sd.status = s.status
 	sd.childSpanCount = s.childSpanCount
 
-	if s.attributes.evictList.Len() > 0 {
-		sd.attributes = s.attributes.toKeyValue()
-		sd.droppedAttributeCount = s.attributes.droppedCount
+	if len(s.attributes) > 0 {
+		sd.attributes = s.attributesLocked()
+		sd.droppedAttributeCount = s.droppedAttributes
 	}
 	if len(s.events.queue) > 0 {
 		sd.events = s.interfaceArrayToEventArray()
@@ -553,18 +591,6 @@ func (s *recordingSpan) interfaceArrayToEventArray() []Event {
 		eventArr = append(eventArr, value.(Event))
 	}
 	return eventArr
-}
-
-func (s *recordingSpan) copyToCappedAttributes(attributes ...attribute.KeyValue) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for _, a := range attributes {
-		// Ensure attributes conform to the specification:
-		// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.0.1/specification/common/common.md#attributes
-		if a.Valid() {
-			s.attributes.add(a)
-		}
-	}
 }
 
 func (s *recordingSpan) addChild() {
