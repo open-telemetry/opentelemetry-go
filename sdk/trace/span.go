@@ -26,7 +26,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/internal"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
@@ -113,9 +112,6 @@ type recordingSpan struct {
 	// name is the name of this span.
 	name string
 
-	// startTime is the time at which this span was started.
-	startTime time.Time
-
 	// endTime is the time at which this span was ended. It contains the zero
 	// value of time.Time until the span is ended.
 	endTime time.Time
@@ -155,6 +151,9 @@ type recordingSpan struct {
 
 	// spanLimits holds the limits to this span.
 	spanLimits SpanLimits
+
+	// stopwatch holds the Stopwatch returned by Clock.Stopwatch method
+	stopwatch Stopwatch
 }
 
 var _ ReadWriteSpan = (*recordingSpan)(nil)
@@ -229,7 +228,7 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 
 	// Store the end time as soon as possible to avoid artificially increasing
 	// the span's duration in case some operation below takes a while.
-	et := internal.MonotonicEndTime(s.startTime)
+	et := s.stopwatch.Started().Add(s.stopwatch.Stop())
 
 	// Do relative expensive check now that we have an end time and see if we
 	// need to do any more processing.
@@ -387,7 +386,7 @@ func (s *recordingSpan) SpanKind() trace.SpanKind {
 func (s *recordingSpan) StartTime() time.Time {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.startTime
+	return s.startTime()
 }
 
 // EndTime returns the time this span ended. For spans that have not yet
@@ -520,7 +519,7 @@ func (s *recordingSpan) snapshot() ReadOnlySpan {
 	sd.resource = s.resource
 	sd.spanContext = s.spanContext
 	sd.spanKind = s.spanKind
-	sd.startTime = s.startTime
+	sd.startTime = s.startTime()
 	sd.status = s.status
 	sd.childSpanCount = s.childSpanCount
 
@@ -577,6 +576,10 @@ func (s *recordingSpan) addChild() {
 }
 
 func (*recordingSpan) private() {}
+
+func (s *recordingSpan) startTime() time.Time {
+	return s.stopwatch.Started()
+}
 
 // runtimeTrace starts a "runtime/trace".Task for the span and returns a
 // context containing the task.

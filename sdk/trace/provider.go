@@ -51,6 +51,9 @@ type tracerProviderConfig struct {
 
 	// resource contains attributes representing an entity that produces telemetry.
 	resource *resource.Resource
+
+	// clock is used to provide start/end time for spans
+	clock Clock
 }
 
 // MarshalLog is the marshaling function used by the logging system to represent this exporter.
@@ -78,6 +81,7 @@ type TracerProvider struct {
 	idGenerator    IDGenerator
 	spanLimits     SpanLimits
 	resource       *resource.Resource
+	clock          Clock
 }
 
 var _ trace.TracerProvider = &TracerProvider{}
@@ -107,6 +111,7 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 		idGenerator: o.idGenerator,
 		spanLimits:  o.spanLimits,
 		resource:    o.resource,
+		clock:       o.clock,
 	}
 
 	global.Info("TracerProvider created", "config", o)
@@ -350,6 +355,18 @@ func WithSpanLimits(sl SpanLimits) TracerProviderOption {
 	})
 }
 
+// WithClock returns a TracerProviderOption that will configure the
+// TracerProvider's clock. The configured clock is used by Tracers
+// to generate span start/end time.
+//
+// If this option is not used, the TracerProvider will provide the default
+// clock which just calls the time package under the hood.
+func WithClock(clk Clock) TracerProviderOption {
+	return traceProviderOptionFunc(func(cfg *tracerProviderConfig) {
+		cfg.clock = clk
+	})
+}
+
 // ensureValidTracerProviderConfig ensures that given TracerProviderConfig is valid.
 func ensureValidTracerProviderConfig(cfg *tracerProviderConfig) {
 	if cfg.sampler == nil {
@@ -361,5 +378,8 @@ func ensureValidTracerProviderConfig(cfg *tracerProviderConfig) {
 	cfg.spanLimits.ensureDefault()
 	if cfg.resource == nil {
 		cfg.resource = resource.Default()
+	}
+	if cfg.clock == nil {
+		cfg.clock = defaultClock()
 	}
 }
