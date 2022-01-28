@@ -54,7 +54,7 @@ type ReadOnlySpan interface {
 	// the span has not ended.
 	EndTime() time.Time
 	// Attributes returns the defining attributes of the span.
-	// The order of the returned attribute is not guaranteed to be stable.
+	// The order of the returned attributes is not guaranteed to be stable across invocations.
 	Attributes() []attribute.KeyValue
 	// Links returns all the links the span has to other spans.
 	Links() []Link
