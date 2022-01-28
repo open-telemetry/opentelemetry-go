@@ -54,6 +54,7 @@ type ReadOnlySpan interface {
 	// the span has not ended.
 	EndTime() time.Time
 	// Attributes returns the defining attributes of the span.
+	// The order of the returned attribute is not guaranteed to be stable.
 	Attributes() []attribute.KeyValue
 	// Links returns all the links the span has to other spans.
 	Links() []Link
@@ -210,6 +211,10 @@ func (s *recordingSpan) SetStatus(code codes.Code, description string) {
 // will be overwritten with the value contained in attributes.
 //
 // If this span is not being recorded than this method does nothing.
+//
+// If adding attributes to the span would exceed the maximum amount of
+// attributes the span is configured to have, the last added attributes will
+// be dropped.
 func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 	if !s.IsRecording() {
 		return
@@ -429,8 +434,7 @@ func (s *recordingSpan) EndTime() time.Time {
 }
 
 // attributesLocked returns the attributes s has assuming s.mu.Lock is held by
-// the caller. The order of the returned slice is not guaranteed to be
-// the same for multiple calls.
+// the caller. The order of the returned slice is not guaranteed to be stable.
 func (s *recordingSpan) attributesLocked() []attribute.KeyValue {
 	a := make([]attribute.KeyValue, 0, len(s.attributes))
 	for k, v := range s.attributes {
@@ -440,6 +444,8 @@ func (s *recordingSpan) attributesLocked() []attribute.KeyValue {
 }
 
 // Attributes returns the attributes of this span.
+//
+// The order of the returned attributes is not guaranteed to be stable.
 func (s *recordingSpan) Attributes() []attribute.KeyValue {
 	s.mu.Lock()
 	defer s.mu.Unlock()
