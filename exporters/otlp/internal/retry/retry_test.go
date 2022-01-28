@@ -17,6 +17,7 @@ package retry
 import (
 	"context"
 	"errors"
+	"math"
 	"testing"
 	"time"
 
@@ -132,8 +133,8 @@ func TestBackoffRetry(t *testing.T) {
 	origWait := waitFunc
 	var done bool
 	waitFunc = func(_ context.Context, d time.Duration) error {
-		// Account for rounding to nearest whole number for the delta value.
-		assert.InDelta(t, delay, d, 0.5+backoff.DefaultRandomizationFactor, "retry not backoffed")
+		delta := math.Ceil(float64(delay)*backoff.DefaultRandomizationFactor) - float64(delay)
+		assert.InDelta(t, delay, d, delta, "retry not backoffed")
 		// Try twice to ensure call is attempted again after delay.
 		if done {
 			return assert.AnError
