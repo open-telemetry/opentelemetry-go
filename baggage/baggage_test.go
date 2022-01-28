@@ -340,6 +340,13 @@ func TestBaggageParse(t *testing.T) {
 			},
 		},
 		{
+			name: "url encoded value",
+			in:   "key1=val%252",
+			want: baggage.List{
+				"key1": {Value: "val%2"},
+			},
+		},
+		{
 			name: "invalid member: empty",
 			in:   "foo=,,bar=",
 			err:  errInvalidMember,

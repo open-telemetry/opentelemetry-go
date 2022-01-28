@@ -16,7 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Jaeger exporter takes into additional 70 bytes overhead into consideration when sending UDP packets (#2489)
+- Jaeger exporter takes into additional 70 bytes overhead into consideration when sending UDP packets (#2489, #2512)
 
 ### Deprecated
 
@@ -29,6 +29,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fixes the instrument kind for noop async instruments. (#2461)
 - Change the `otlpmetric.Client` interface's `UploadMetrics` method to accept a single `ResourceMetrics` instead of a slice of them. (#2491)
 - Specify explicit buckets in Prometheus example. (#2493)
+- W3C baggage will now decode urlescaped values. (#2529)
+
+### Removed
+
+- Updated `go.opentelemetry.io/proto/otlp` from `v0.11.0` to `v0.12.0`. This version removes a number of deprecated methods. (#2546)
+  - [`Metric.GetIntGauge()`](https://pkg.go.dev/go.opentelemetry.io/proto/otlp@v0.11.0/metrics/v1#Metric.GetIntGauge)
+  - [`Metric.GetIntHistogram()`](https://pkg.go.dev/go.opentelemetry.io/proto/otlp@v0.11.0/metrics/v1#Metric.GetIntHistogram)
+  - [`Metric.GetIntSum()`](https://pkg.go.dev/go.opentelemetry.io/proto/otlp@v0.11.0/metrics/v1#Metric.GetIntSum)
 
 ## [1.3.0] - 2021-12-10
 
