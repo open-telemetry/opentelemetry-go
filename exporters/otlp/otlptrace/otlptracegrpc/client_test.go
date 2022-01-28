@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -297,6 +298,22 @@ func TestNew_withMultipleAttributeTypes(t *testing.T) {
 
 	expected := []*commonpb.KeyValue{
 		{
+			Key: "Bool",
+			Value: &commonpb.AnyValue{
+				Value: &commonpb.AnyValue_BoolValue{
+					BoolValue: true,
+				},
+			},
+		},
+		{
+			Key: "Float64",
+			Value: &commonpb.AnyValue{
+				Value: &commonpb.AnyValue_DoubleValue{
+					DoubleValue: 2.22,
+				},
+			},
+		},
+		{
 			Key: "Int",
 			Value: &commonpb.AnyValue{
 				Value: &commonpb.AnyValue_IntValue{
@@ -313,22 +330,6 @@ func TestNew_withMultipleAttributeTypes(t *testing.T) {
 			},
 		},
 		{
-			Key: "Float64",
-			Value: &commonpb.AnyValue{
-				Value: &commonpb.AnyValue_DoubleValue{
-					DoubleValue: 2.22,
-				},
-			},
-		},
-		{
-			Key: "Bool",
-			Value: &commonpb.AnyValue{
-				Value: &commonpb.AnyValue_BoolValue{
-					BoolValue: true,
-				},
-			},
-		},
-		{
 			Key: "String",
 			Value: &commonpb.AnyValue{
 				Value: &commonpb.AnyValue_StringValue{
@@ -339,10 +340,10 @@ func TestNew_withMultipleAttributeTypes(t *testing.T) {
 	}
 
 	// Verify attributes
-	if !assert.Len(t, rss[0].Attributes, len(expected)) {
-		t.Fatalf("attributes count: got %d, want %d\n", len(rss[0].Attributes), len(expected))
-	}
-	for i, actual := range rss[0].Attributes {
+	attr := rss[0].Attributes
+	require.Len(t, attr, len(expected))
+	sort.Slice(attr, func(i, j int) bool { return attr[i].Key < attr[j].Key })
+	for i, actual := range attr {
 		if a, ok := actual.Value.Value.(*commonpb.AnyValue_DoubleValue); ok {
 			e, ok := expected[i].Value.Value.(*commonpb.AnyValue_DoubleValue)
 			if !ok {
