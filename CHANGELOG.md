@@ -17,6 +17,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Jaeger exporter takes into additional 70 bytes overhead into consideration when sending UDP packets (#2489, #2512)
+- The attributes returned from the `ReadOnlySpan` and `ReadWriteSpan` in `go.opentelemetry.io/otel/sdk/trace` are unordered.
+  Multiple calls to retrieve these attributes will return a slice of them that is not guaranteed to be in the same order.
+  If these attributes need to be consistently ordered, the `sort` package can be used.
+  Given these attributes will have unique keys `sort.Slice(attr, func(i, j int) bool { return attr[i].Key < attr[j].Key })` can be used to sort `attr` stably. (#2555)
 
 ### Deprecated
 
@@ -30,6 +34,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Change the `otlpmetric.Client` interface's `UploadMetrics` method to accept a single `ResourceMetrics` instead of a slice of them. (#2491)
 - Specify explicit buckets in Prometheus example. (#2493)
 - W3C baggage will now decode urlescaped values. (#2529)
+- The order attributes are dropped from spans in the `go.opentelemetry.io/otel/sdk/trace` package when capacity is reached is fixed to be in compliance with the OpenTelemetry specification.
+  Instead of dropping the least-recently-used attribute, the last added attribute is dropped.
+  This drop order still only applies to attributes with unique keys not already contained in the span.
+  If an attribute is added with a key already contained in the span, that attribute is updated to the new value being added. (#2555)
 
 ### Removed
 
