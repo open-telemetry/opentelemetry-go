@@ -147,10 +147,10 @@ type recordingSpan struct {
 	droppedAttributes int
 
 	// events are stored in FIFO queue capped by configured limit.
-	events *evictedQueue
+	events evictedQueue
 
 	// links are stored in FIFO queue capped by configured limit.
-	links *evictedQueue
+	links evictedQueue
 
 	// executionTracerTaskEnd ends the execution tracer span.
 	executionTracerTaskEnd func()

@@ -29,8 +29,8 @@ import (
 // Defaults for BatchSpanProcessorOptions.
 const (
 	DefaultMaxQueueSize       = 2048
-	DefaultBatchTimeout       = 5000 * time.Millisecond
-	DefaultExportTimeout      = 30000 * time.Millisecond
+	DefaultScheduleDelay      = 5000
+	DefaultExportTimeout      = 30000
 	DefaultMaxExportBatchSize = 512
 )
 
@@ -89,11 +89,22 @@ var _ SpanProcessor = (*batchSpanProcessor)(nil)
 //
 // If the exporter is nil, the span processor will preform no action.
 func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorOption) SpanProcessor {
+	maxQueueSize := intEnvOr(EnvBatchSpanProcessorMaxQueueSize, DefaultMaxQueueSize)
+	maxExportBatchSize := intEnvOr(EnvBatchSpanProcessorMaxExportBatchSize, DefaultMaxExportBatchSize)
+
+	if maxExportBatchSize > maxQueueSize {
+		if DefaultMaxExportBatchSize > maxQueueSize {
+			maxExportBatchSize = maxQueueSize
+		} else {
+			maxExportBatchSize = DefaultMaxExportBatchSize
+		}
+	}
+
 	o := BatchSpanProcessorOptions{
-		BatchTimeout:       DefaultBatchTimeout,
-		ExportTimeout:      DefaultExportTimeout,
-		MaxQueueSize:       DefaultMaxQueueSize,
-		MaxExportBatchSize: DefaultMaxExportBatchSize,
+		BatchTimeout:       time.Duration(intEnvOr(EnvBatchSpanProcessorScheduleDelay, DefaultScheduleDelay)) * time.Millisecond,
+		ExportTimeout:      time.Duration(intEnvOr(EnvBatchSpanProcessorExportTimeout, DefaultExportTimeout)) * time.Millisecond,
+		MaxQueueSize:       maxQueueSize,
+		MaxExportBatchSize: maxExportBatchSize,
 	}
 	for _, opt := range options {
 		opt(&o)
