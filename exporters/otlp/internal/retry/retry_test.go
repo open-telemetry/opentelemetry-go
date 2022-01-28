@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -131,7 +132,7 @@ func TestBackoffRetry(t *testing.T) {
 	origWait := waitFunc
 	var done bool
 	waitFunc = func(_ context.Context, d time.Duration) error {
-		assert.Equal(t, delay, d, "retry not backoffed")
+		assert.InDelta(t, delay, d, 2*backoff.DefaultRandomizationFactor, "retry not backoffed")
 		// Try twice to ensure call is attempted again after delay.
 		if done {
 			return assert.AnError
@@ -139,7 +140,7 @@ func TestBackoffRetry(t *testing.T) {
 		done = true
 		return nil
 	}
-	defer func() { waitFunc = origWait }()
+	t.Cleanup(func() { waitFunc = origWait })
 
 	ctx := context.Background()
 	assert.ErrorIs(t, reqFunc(ctx, func(context.Context) error {
