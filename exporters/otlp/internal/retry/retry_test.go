@@ -132,7 +132,8 @@ func TestBackoffRetry(t *testing.T) {
 	origWait := waitFunc
 	var done bool
 	waitFunc = func(_ context.Context, d time.Duration) error {
-		assert.InDelta(t, delay, d, 2*backoff.DefaultRandomizationFactor, "retry not backoffed")
+		// Account for rounding to nearest whole number for the delta value.
+		assert.InDelta(t, delay, d, 0.5+backoff.DefaultRandomizationFactor, "retry not backoffed")
 		// Try twice to ensure call is attempted again after delay.
 		if done {
 			return assert.AnError
