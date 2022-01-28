@@ -19,9 +19,12 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"os"
 	"sync"
 	"testing"
 	"time"
+
+	ottest "go.opentelemetry.io/otel/internal/internaltest"
 
 	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"
@@ -115,6 +118,7 @@ type testOption struct {
 	wantBatchCount int
 	genNumSpans    int
 	parallel       bool
+	envs           map[string]string
 }
 
 func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
@@ -192,6 +196,85 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 	}
 	for _, option := range options {
 		t.Run(option.name, func(t *testing.T) {
+			te := testBatchExporter{}
+			tp := basicTracerProvider(t)
+			ssp := createAndRegisterBatchSP(option, &te)
+			if ssp == nil {
+				t.Fatalf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)
+			}
+			tp.RegisterSpanProcessor(ssp)
+			tr := tp.Tracer("BatchSpanProcessorWithOptions")
+
+			generateSpan(t, option.parallel, tr, option)
+
+			tp.UnregisterSpanProcessor(ssp)
+
+			gotNumOfSpans := te.len()
+			if option.wantNumSpans > 0 && option.wantNumSpans != gotNumOfSpans {
+				t.Errorf("number of exported span: got %+v, want %+v\n",
+					gotNumOfSpans, option.wantNumSpans)
+			}
+
+			gotBatchCount := te.getBatchCount()
+			if option.wantBatchCount > 0 && gotBatchCount < option.wantBatchCount {
+				t.Errorf("number batches: got %+v, want >= %+v\n",
+					gotBatchCount, option.wantBatchCount)
+				t.Errorf("Batches %v\n", te.sizes)
+			}
+		})
+	}
+}
+
+func TestNewBatchSpanProcessorWithEnvOptions(t *testing.T) {
+	options := []testOption{
+		{
+			name:           "BatchSpanProcessorEnvOptions - Basic",
+			wantNumSpans:   2053,
+			wantBatchCount: 1,
+			genNumSpans:    2053,
+			envs: map[string]string{
+				sdktrace.EnvBatchSpanProcessorMaxQueueSize:       "5000",
+				sdktrace.EnvBatchSpanProcessorMaxExportBatchSize: "5000",
+			},
+		},
+		{
+			name:           "BatchSpanProcessorEnvOptions - A lager max export batch size than queue size",
+			wantNumSpans:   2053,
+			wantBatchCount: 4,
+			genNumSpans:    2053,
+			envs: map[string]string{
+				sdktrace.EnvBatchSpanProcessorMaxQueueSize:       "5000",
+				sdktrace.EnvBatchSpanProcessorMaxExportBatchSize: "10000",
+			},
+		},
+		{
+			name:           "BatchSpanProcessorEnvOptions - A lage max export batch size with a small queue size",
+			wantNumSpans:   2053,
+			wantBatchCount: 42,
+			genNumSpans:    2053,
+			envs: map[string]string{
+				sdktrace.EnvBatchSpanProcessorMaxQueueSize:       "50",
+				sdktrace.EnvBatchSpanProcessorMaxExportBatchSize: "10000",
+			},
+		},
+	}
+
+	envStore := ottest.NewEnvStore()
+	envStore.Record(sdktrace.EnvBatchSpanProcessorScheduleDelay)
+	envStore.Record(sdktrace.EnvBatchSpanProcessorExportTimeout)
+	envStore.Record(sdktrace.EnvBatchSpanProcessorMaxQueueSize)
+	envStore.Record(sdktrace.EnvBatchSpanProcessorMaxExportBatchSize)
+
+	defer func() {
+		require.NoError(t, envStore.Restore())
+	}()
+
+	for _, option := range options {
+		t.Run(option.name, func(t *testing.T) {
+			for k, v := range option.envs {
+				require.NoError(t, os.Setenv(k, v))
+			}
+
 			te := testBatchExporter{}
 			tp := basicTracerProvider(t)
 			ssp := createAndRegisterBatchSP(option, &te)
