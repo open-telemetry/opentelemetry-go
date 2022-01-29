@@ -254,7 +254,7 @@ func TestNew_withMultipleAttributeTypes(t *testing.T) {
 		sdktrace.WithBatcher(
 			exp,
 			// add following two options to ensure flush
-			sdktrace.WithBatchTimeout(5*time.Second),
+			sdktrace.WithScheduleDelay(5*time.Second),
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	)

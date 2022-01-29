@@ -42,10 +42,10 @@ type BatchSpanProcessorOptions struct {
 	// The default value of MaxQueueSize is 2048.
 	MaxQueueSize int
 
-	// BatchTimeout is the maximum duration for constructing a batch. Processor
+	// ScheduleDelay is the maximum duration for constructing a batch. Processor
 	// forcefully sends available spans when timeout is reached.
-	// The default value of BatchTimeout is 5000 msec.
-	BatchTimeout time.Duration
+	// The default value of ScheduleDelay is 5000 msec.
+	ScheduleDelay time.Duration
 
 	// ExportTimeout specifies the maximum duration for exporting spans. If the timeout
 	// is reached, the export will be cancelled.
@@ -101,7 +101,7 @@ func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorO
 	}
 
 	o := BatchSpanProcessorOptions{
-		BatchTimeout:       time.Duration(intEnvOr(EnvBatchSpanProcessorScheduleDelay, DefaultScheduleDelay)) * time.Millisecond,
+		ScheduleDelay:      time.Duration(intEnvOr(EnvBatchSpanProcessorScheduleDelay, DefaultScheduleDelay)) * time.Millisecond,
 		ExportTimeout:      time.Duration(intEnvOr(EnvBatchSpanProcessorExportTimeout, DefaultExportTimeout)) * time.Millisecond,
 		MaxQueueSize:       maxQueueSize,
 		MaxExportBatchSize: maxExportBatchSize,
@@ -113,7 +113,7 @@ func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorO
 		e:      exporter,
 		o:      o,
 		batch:  make([]ReadOnlySpan, 0, o.MaxExportBatchSize),
-		timer:  time.NewTimer(o.BatchTimeout),
+		timer:  time.NewTimer(o.ScheduleDelay),
 		queue:  make(chan ReadOnlySpan, o.MaxQueueSize),
 		stopCh: make(chan struct{}),
 	}
@@ -216,9 +216,9 @@ func WithMaxExportBatchSize(size int) BatchSpanProcessorOption {
 	}
 }
 
-func WithBatchTimeout(delay time.Duration) BatchSpanProcessorOption {
+func WithScheduleDelay(delay time.Duration) BatchSpanProcessorOption {
 	return func(o *BatchSpanProcessorOptions) {
-		o.BatchTimeout = delay
+		o.ScheduleDelay = delay
 	}
 }
 
@@ -237,7 +237,7 @@ func WithBlocking() BatchSpanProcessorOption {
 // exportSpans is a subroutine of processing and draining the queue.
 func (bsp *batchSpanProcessor) exportSpans(ctx context.Context) error {
 
-	bsp.timer.Reset(bsp.o.BatchTimeout)
+	bsp.timer.Reset(bsp.o.ScheduleDelay)
 
 	bsp.batchMutex.Lock()
 	defer bsp.batchMutex.Unlock()
@@ -267,7 +267,7 @@ func (bsp *batchSpanProcessor) exportSpans(ctx context.Context) error {
 
 // processQueue removes spans from the `queue` channel until processor
 // is shut down. It calls the exporter in batches of up to MaxExportBatchSize
-// waiting up to BatchTimeout to form a batch.
+// waiting up to ScheduleDelay to form a batch.
 func (bsp *batchSpanProcessor) processQueue() {
 	defer bsp.timer.Stop()
 

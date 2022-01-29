@@ -34,7 +34,7 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlptrace.Exporter,
 		sdktrace.WithBatcher(
 			exp,
 			// add following two options to ensure flush
-			sdktrace.WithBatchTimeout(5*time.Second),
+			sdktrace.WithScheduleDelay(5*time.Second),
 			sdktrace.WithMaxExportBatchSize(10),
 		),
 	}

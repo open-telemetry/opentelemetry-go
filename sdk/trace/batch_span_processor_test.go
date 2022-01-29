@@ -131,18 +131,18 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 			genNumSpans:    2053,
 		},
 		{
-			name: "non-default BatchTimeout",
+			name: "non-default ScheduleDelay",
 			o: []sdktrace.BatchSpanProcessorOption{
-				sdktrace.WithBatchTimeout(schDelay),
+				sdktrace.WithScheduleDelay(schDelay),
 			},
 			wantNumSpans:   2053,
 			wantBatchCount: 4,
 			genNumSpans:    2053,
 		},
 		{
-			name: "non-default MaxQueueSize and BatchTimeout",
+			name: "non-default MaxQueueSize and ScheduleDelay",
 			o: []sdktrace.BatchSpanProcessorOption{
-				sdktrace.WithBatchTimeout(schDelay),
+				sdktrace.WithScheduleDelay(schDelay),
 				sdktrace.WithMaxQueueSize(200),
 			},
 			wantNumSpans:   205,
@@ -150,9 +150,9 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 			genNumSpans:    205,
 		},
 		{
-			name: "non-default MaxQueueSize, BatchTimeout and MaxExportBatchSize",
+			name: "non-default MaxQueueSize, ScheduleDelay and MaxExportBatchSize",
 			o: []sdktrace.BatchSpanProcessorOption{
-				sdktrace.WithBatchTimeout(schDelay),
+				sdktrace.WithScheduleDelay(schDelay),
 				sdktrace.WithMaxQueueSize(205),
 				sdktrace.WithMaxExportBatchSize(20),
 			},
@@ -163,7 +163,7 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 		{
 			name: "blocking option",
 			o: []sdktrace.BatchSpanProcessorOption{
-				sdktrace.WithBatchTimeout(schDelay),
+				sdktrace.WithScheduleDelay(schDelay),
 				sdktrace.WithMaxQueueSize(200),
 				sdktrace.WithMaxExportBatchSize(20),
 			},
@@ -174,7 +174,7 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 		{
 			name: "parallel span generation",
 			o: []sdktrace.BatchSpanProcessorOption{
-				sdktrace.WithBatchTimeout(schDelay),
+				sdktrace.WithScheduleDelay(schDelay),
 				sdktrace.WithMaxQueueSize(200),
 			},
 			wantNumSpans:   205,
@@ -185,7 +185,7 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 		{
 			name: "parallel span blocking",
 			o: []sdktrace.BatchSpanProcessorOption{
-				sdktrace.WithBatchTimeout(schDelay),
+				sdktrace.WithScheduleDelay(schDelay),
 				sdktrace.WithMaxExportBatchSize(200),
 			},
 			wantNumSpans:   2000,
