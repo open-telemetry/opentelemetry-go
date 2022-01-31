@@ -227,6 +227,7 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 		// Ensure attributes conform to the specification:
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.0.1/specification/common/common.md#attributes
 		if !a.Valid() {
+			s.droppedAttributes++
 			continue
 		}
 
