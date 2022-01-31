@@ -145,6 +145,10 @@ func (bsp *batchSpanProcessor) OnEnd(s ReadOnlySpan) {
 func (bsp *batchSpanProcessor) Shutdown(ctx context.Context) error {
 	var err error
 	bsp.stopOnce.Do(func() {
+		err = bsp.ForceFlush(ctx)
+		if err != nil {
+			return
+		}
 		wait := make(chan struct{})
 		go func() {
 			close(bsp.stopCh)
