@@ -126,10 +126,6 @@ type recordingSpan struct {
 	// childSpanCount holds the number of child spans created for this span.
 	childSpanCount int
 
-	// instrumentationLibrary defines the instrumentation library used to
-	// provide instrumentation.
-	instrumentationLibrary instrumentation.Library
-
 	// spanContext holds the SpanContext of this span.
 	spanContext trace.SpanContext
 
@@ -433,7 +429,7 @@ func (s *recordingSpan) Status() Status {
 func (s *recordingSpan) InstrumentationLibrary() instrumentation.Library {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.instrumentationLibrary
+	return s.tracer.instrumentationLibrary
 }
 
 // Resource returns the Resource associated with the Tracer that created this
@@ -507,7 +503,7 @@ func (s *recordingSpan) snapshot() ReadOnlySpan {
 	defer s.mu.Unlock()
 
 	sd.endTime = s.endTime
-	sd.instrumentationLibrary = s.instrumentationLibrary
+	sd.instrumentationLibrary = s.tracer.instrumentationLibrary
 	sd.name = s.name
 	sd.parent = s.parent
 	sd.resource = s.tracer.provider.resource
