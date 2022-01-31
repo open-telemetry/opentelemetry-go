@@ -495,6 +495,7 @@ func TestSetSpanAttributesOverLimit(t *testing.T) {
 	}
 	assert.Contains(t, got.attributes, attrs[1])
 	assert.Contains(t, got.attributes, attrs[2])
+	assert.Equal(t, got.droppedAttributeCount, 1)
 }
 
 func TestSpanAttributeCapacityDropOrder(t *testing.T) {
@@ -560,7 +561,7 @@ func TestSetSpanAttributesWithInvalidKey(t *testing.T) {
 			attribute.Bool("key1", false),
 		},
 		spanKind:               trace.SpanKindInternal,
-		droppedAttributeCount:  0,
+		droppedAttributeCount:  1,
 		instrumentationLibrary: instrumentation.Library{Name: "SpanToSetInvalidKeyOrValue"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
