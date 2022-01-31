@@ -126,10 +126,6 @@ type recordingSpan struct {
 	// childSpanCount holds the number of child spans created for this span.
 	childSpanCount int
 
-	// resource contains attributes representing an entity that produced this
-	// span.
-	resource *resource.Resource
-
 	// instrumentationLibrary defines the instrumentation library used to
 	// provide instrumentation.
 	instrumentationLibrary instrumentation.Library
@@ -152,9 +148,6 @@ type recordingSpan struct {
 
 	// tracer is the SDK tracer that created this span.
 	tracer *tracer
-
-	// spanLimits holds the limits to this span.
-	spanLimits SpanLimits
 }
 
 var _ ReadWriteSpan = (*recordingSpan)(nil)
@@ -336,9 +329,9 @@ func (s *recordingSpan) addEvent(name string, o ...trace.EventOption) {
 	// Discard over limited attributes
 	attributes := c.Attributes()
 	var discarded int
-	if len(attributes) > s.spanLimits.AttributePerEventCountLimit {
-		discarded = len(attributes) - s.spanLimits.AttributePerEventCountLimit
-		attributes = attributes[:s.spanLimits.AttributePerEventCountLimit]
+	if len(attributes) > s.tracer.provider.spanLimits.AttributePerEventCountLimit {
+		discarded = len(attributes) - s.tracer.provider.spanLimits.AttributePerEventCountLimit
+		attributes = attributes[:s.tracer.provider.spanLimits.AttributePerEventCountLimit]
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -448,7 +441,7 @@ func (s *recordingSpan) InstrumentationLibrary() instrumentation.Library {
 func (s *recordingSpan) Resource() *resource.Resource {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.resource
+	return s.tracer.provider.resource
 }
 
 func (s *recordingSpan) addLink(link trace.Link) {
@@ -461,9 +454,9 @@ func (s *recordingSpan) addLink(link trace.Link) {
 	var droppedAttributeCount int
 
 	// Discard over limited attributes
-	if len(link.Attributes) > s.spanLimits.AttributePerLinkCountLimit {
-		droppedAttributeCount = len(link.Attributes) - s.spanLimits.AttributePerLinkCountLimit
-		link.Attributes = link.Attributes[:s.spanLimits.AttributePerLinkCountLimit]
+	if len(link.Attributes) > s.tracer.provider.spanLimits.AttributePerLinkCountLimit {
+		droppedAttributeCount = len(link.Attributes) - s.tracer.provider.spanLimits.AttributePerLinkCountLimit
+		link.Attributes = link.Attributes[:s.tracer.provider.spanLimits.AttributePerLinkCountLimit]
 	}
 
 	s.links.add(Link{link.SpanContext, link.Attributes, droppedAttributeCount})
@@ -517,7 +510,7 @@ func (s *recordingSpan) snapshot() ReadOnlySpan {
 	sd.instrumentationLibrary = s.instrumentationLibrary
 	sd.name = s.name
 	sd.parent = s.parent
-	sd.resource = s.resource
+	sd.resource = s.tracer.provider.resource
 	sd.spanContext = s.spanContext
 	sd.spanKind = s.spanKind
 	sd.startTime = s.startTime

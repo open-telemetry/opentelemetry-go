@@ -131,8 +131,6 @@ func (tr *tracer) newRecordingSpan(psc, sc trace.SpanContext, name string, sr Sa
 		events:                 newEvictedQueue(tr.provider.spanLimits.EventCountLimit),
 		links:                  newEvictedQueue(tr.provider.spanLimits.LinkCountLimit),
 		tracer:                 tr,
-		spanLimits:             tr.provider.spanLimits,
-		resource:               tr.provider.resource,
 		instrumentationLibrary: tr.instrumentationLibrary,
 	}
 
