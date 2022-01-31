@@ -129,7 +129,6 @@ func (tr *tracer) newRecordingSpan(psc, sc trace.SpanContext, name string, sr Sa
 		name:                   name,
 		startTime:              startTime,
 		attributes:             make(map[attribute.Key]attribute.Value),
-		maxAttributes:          tr.provider.spanLimits.AttributeCountLimit,
 		events:                 newEvictedQueue(tr.provider.spanLimits.EventCountLimit),
 		links:                  newEvictedQueue(tr.provider.spanLimits.LinkCountLimit),
 		tracer:                 tr,

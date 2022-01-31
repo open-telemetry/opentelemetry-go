@@ -139,12 +139,12 @@ type recordingSpan struct {
 	spanContext trace.SpanContext
 
 	// attributes is a collection of user provided key/values. The collection
-	// is constrained by a configurable maximum. When additional attributes
-	// are added after this maximum is reached these attributes the user is
-	// attempting to add are dropped. This dropped number of attributes is
-	// tracked and reported in the ReadOnlySpan exported when the span ends.
+	// is constrained by a configurable maximum held by the parent
+	// TracerProvider. When additional attributes are added after this maximum
+	// is reached these attributes the user is attempting to add are dropped.
+	// This dropped number of attributes is tracked and reported in the
+	// ReadOnlySpan exported when the span ends.
 	attributes        map[attribute.Key]attribute.Value
-	maxAttributes     int
 	droppedAttributes int
 
 	// events are stored in FIFO queue capped by configured limit.
@@ -236,7 +236,7 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 			// SHOULD overwrite the existing attribute's value.
 			s.attributes[a.Key] = a.Value
 		} else {
-			if len(s.attributes) >= s.maxAttributes {
+			if len(s.attributes) >= s.tracer.provider.spanLimits.AttributeCountLimit {
 				// For each unique attribute key, addition of which would
 				// result in exceeding the limit, the SDK MUST discard that
 				// key/value pair.
