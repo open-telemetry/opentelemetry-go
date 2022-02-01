@@ -33,7 +33,7 @@ func (cfg MeterConfig) SchemaURL() string {
 // MeterOption is an interface for applying Meter options.
 type MeterOption interface {
 	// ApplyMeter is used to set a MeterOption value of a MeterConfig.
-	applyMeter(*MeterConfig)
+	applyMeter(MeterConfig) MeterConfig
 }
 
 // NewMeterConfig creates a new MeterConfig and applies
@@ -41,27 +41,29 @@ type MeterOption interface {
 func NewMeterConfig(opts ...MeterOption) MeterConfig {
 	var config MeterConfig
 	for _, o := range opts {
-		o.applyMeter(&config)
+		config = o.applyMeter(config)
 	}
 	return config
 }
 
-type meterOptionFunc func(*MeterConfig)
+type meterOptionFunc func(MeterConfig) MeterConfig
 
-func (fn meterOptionFunc) applyMeter(cfg *MeterConfig) {
-	fn(cfg)
+func (fn meterOptionFunc) applyMeter(cfg MeterConfig) MeterConfig {
+	return fn(cfg)
 }
 
 // WithInstrumentationVersion sets the instrumentation version.
 func WithInstrumentationVersion(version string) MeterOption {
-	return meterOptionFunc(func(config *MeterConfig) {
+	return meterOptionFunc(func(config MeterConfig) MeterConfig {
 		config.instrumentationVersion = version
+		return config
 	})
 }
 
 // WithSchemaURL sets the schema URL.
 func WithSchemaURL(schemaURL string) MeterOption {
-	return meterOptionFunc(func(config *MeterConfig) {
+	return meterOptionFunc(func(config MeterConfig) MeterConfig {
 		config.schemaURL = schemaURL
+		return config
 	})
 }

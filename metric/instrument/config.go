@@ -36,7 +36,7 @@ func (cfg Config) Unit() unit.Unit {
 type Option interface {
 	// ApplyMeter is used to set a Option value of a
 	// Config.
-	applyInstrument(*Config)
+	applyInstrument(Config) Config
 }
 
 // NewConfig creates a new Config
@@ -44,27 +44,29 @@ type Option interface {
 func NewConfig(opts ...Option) Config {
 	var config Config
 	for _, o := range opts {
-		o.applyInstrument(&config)
+		config = o.applyInstrument(config)
 	}
 	return config
 }
 
-type optionFunc func(*Config)
+type optionFunc func(Config) Config
 
-func (fn optionFunc) applyInstrument(cfg *Config) {
-	fn(cfg)
+func (fn optionFunc) applyInstrument(cfg Config) Config {
+	return fn(cfg)
 }
 
 // WithDescription applies provided description.
 func WithDescription(desc string) Option {
-	return optionFunc(func(cfg *Config) {
+	return optionFunc(func(cfg Config) Config {
 		cfg.description = desc
+		return cfg
 	})
 }
 
 // WithUnit applies provided unit.
 func WithUnit(unit unit.Unit) Option {
-	return optionFunc(func(cfg *Config) {
+	return optionFunc(func(cfg Config) Config {
 		cfg.unit = unit
+		return cfg
 	})
 }
