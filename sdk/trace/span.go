@@ -54,6 +54,7 @@ type ReadOnlySpan interface {
 	// the span has not ended.
 	EndTime() time.Time
 	// Attributes returns the defining attributes of the span.
+	// The order of the returned attributes is not guaranteed to be stable across invocations.
 	Attributes() []attribute.KeyValue
 	// Links returns all the links the span has to other spans.
 	Links() []Link
@@ -137,9 +138,14 @@ type recordingSpan struct {
 	// spanContext holds the SpanContext of this span.
 	spanContext trace.SpanContext
 
-	// attributes are capped at configured limit. When the capacity is reached
-	// an oldest entry is removed to create room for a new entry.
-	attributes *attributesMap
+	// attributes is a collection of user provided key/values. The collection
+	// is constrained by a configurable maximum held by the parent
+	// TracerProvider. When additional attributes are added after this maximum
+	// is reached these attributes the user is attempting to add are dropped.
+	// This dropped number of attributes is tracked and reported in the
+	// ReadOnlySpan exported when the span ends.
+	attributes        []attribute.KeyValue
+	droppedAttributes int
 
 	// events are stored in FIFO queue capped by configured limit.
 	events evictedQueue
@@ -205,11 +211,91 @@ func (s *recordingSpan) SetStatus(code codes.Code, description string) {
 // will be overwritten with the value contained in attributes.
 //
 // If this span is not being recorded than this method does nothing.
+//
+// If adding attributes to the span would exceed the maximum amount of
+// attributes the span is configured to have, the last added attributes will
+// be dropped.
 func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 	if !s.IsRecording() {
 		return
 	}
-	s.copyToCappedAttributes(attributes...)
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	max := s.tracer.provider.spanLimits.AttributeCountLimit
+	if len(s.attributes)+len(attributes) > max {
+		exists := make(map[attribute.Key]int, len(s.attributes))
+		for i, a := range s.attributes {
+			if idx, ok := exists[a.Key]; ok {
+				s.attributes[idx] = a
+
+				copy(s.attributes[i:], s.attributes[i+1:])
+				s.attributes[len(s.attributes)-1] = attribute.KeyValue{}
+				s.attributes = s.attributes[:len(s.attributes)-1]
+			} else {
+				exists[a.Key] = i
+			}
+		}
+
+		// Perform all updates before dropping.
+		for _, a := range attributes {
+			if idx, ok := exists[a.Key]; ok {
+				s.attributes[idx] = a
+				continue
+			}
+
+			if !a.Valid() {
+				s.droppedAttributes++
+				continue
+			}
+
+			if len(s.attributes) >= max {
+				s.droppedAttributes++
+			} else {
+				s.attributes = append(s.attributes, a)
+				exists[a.Key] = len(s.attributes) - 1
+			}
+		}
+		return
+	}
+
+	for _, a := range attributes {
+		// Ensure attributes conform to the specification:
+		// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.0.1/specification/common/common.md#attributes
+		if !a.Valid() {
+			s.droppedAttributes++
+			continue
+		}
+		s.attributes = append(s.attributes, a)
+	}
+
+	if len(s.attributes) > max {
+		s.pruneAttrsLocked()
+	}
+}
+
+func (s *recordingSpan) pruneAttrsLocked() {
+	exists := make(map[attribute.Key]int, len(s.attributes))
+	for i, a := range s.attributes {
+		if idx, ok := exists[a.Key]; ok {
+			// Setting an attribute with the same key as an existing attribute
+			// SHOULD overwrite the existing attribute's value.
+			s.attributes[idx] = a
+
+			copy(s.attributes[i:], s.attributes[i+1:])
+			s.attributes[len(s.attributes)-1] = attribute.KeyValue{}
+			s.attributes = s.attributes[:len(s.attributes)-1]
+		} else {
+			exists[a.Key] = i
+		}
+	}
+
+	max := s.tracer.provider.spanLimits.AttributeCountLimit
+	if len(s.attributes) > max {
+		s.droppedAttributes += len(s.attributes) - max
+		s.attributes = s.attributes[:max]
+	}
 }
 
 // End ends the span. This method does nothing if the span is already ended or
@@ -399,13 +485,13 @@ func (s *recordingSpan) EndTime() time.Time {
 }
 
 // Attributes returns the attributes of this span.
+//
+// The order of the returned attributes is not guaranteed to be stable.
 func (s *recordingSpan) Attributes() []attribute.KeyValue {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.attributes.evictList.Len() == 0 {
-		return []attribute.KeyValue{}
-	}
-	return s.attributes.toKeyValue()
+	s.pruneAttrsLocked()
+	return s.attributes
 }
 
 // Links returns the links of this span.
@@ -474,7 +560,7 @@ func (s *recordingSpan) addLink(link trace.Link) {
 func (s *recordingSpan) DroppedAttributes() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.attributes.droppedCount
+	return s.droppedAttributes
 }
 
 // DroppedLinks returns the number of links dropped by the span due to limits
@@ -524,9 +610,10 @@ func (s *recordingSpan) snapshot() ReadOnlySpan {
 	sd.status = s.status
 	sd.childSpanCount = s.childSpanCount
 
-	if s.attributes.evictList.Len() > 0 {
-		sd.attributes = s.attributes.toKeyValue()
-		sd.droppedAttributeCount = s.attributes.droppedCount
+	if len(s.attributes) > 0 {
+		s.pruneAttrsLocked()
+		sd.attributes = s.attributes
+		sd.droppedAttributeCount = s.droppedAttributes
 	}
 	if len(s.events.queue) > 0 {
 		sd.events = s.interfaceArrayToEventArray()
@@ -553,18 +640,6 @@ func (s *recordingSpan) interfaceArrayToEventArray() []Event {
 		eventArr = append(eventArr, value.(Event))
 	}
 	return eventArr
-}
-
-func (s *recordingSpan) copyToCappedAttributes(attributes ...attribute.KeyValue) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for _, a := range attributes {
-		// Ensure attributes conform to the specification:
-		// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.0.1/specification/common/common.md#attributes
-		if a.Valid() {
-			s.attributes.add(a)
-		}
-	}
 }
 
 func (s *recordingSpan) addChild() {

@@ -127,7 +127,6 @@ func (tr *tracer) newRecordingSpan(psc, sc trace.SpanContext, name string, sr Sa
 		spanKind:               trace.ValidateSpanKind(config.SpanKind()),
 		name:                   name,
 		startTime:              startTime,
-		attributes:             newAttributesMap(tr.provider.spanLimits.AttributeCountLimit),
 		events:                 newEvictedQueue(tr.provider.spanLimits.EventCountLimit),
 		links:                  newEvictedQueue(tr.provider.spanLimits.LinkCountLimit),
 		tracer:                 tr,

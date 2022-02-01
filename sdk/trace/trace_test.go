@@ -470,39 +470,71 @@ func TestSamplerAttributesLocalChildSpan(t *testing.T) {
 }
 
 func TestSetSpanAttributesOverLimit(t *testing.T) {
-	te := NewTestExporter()
-	tp := NewTracerProvider(WithSpanLimits(SpanLimits{AttributeCountLimit: 2}), WithSyncer(te), WithResource(resource.Empty()))
+	// The tracing specification states:
+	//
+	//   Setting an attribute with the same key as an existing attribute
+	//   SHOULD overwrite the existing attribute's value.
 
-	span := startSpan(tp, "SpanAttributesOverLimit")
-	span.SetAttributes(
+	te := NewTestExporter()
+	tp := NewTracerProvider(
+		WithSpanLimits(SpanLimits{AttributeCountLimit: 2}),
+		WithSyncer(te),
+		WithResource(resource.Empty()),
+	)
+	attrs := []attribute.KeyValue{
 		attribute.Bool("key1", true),
 		attribute.String("key2", "value2"),
 		attribute.Bool("key1", false), // Replace key1.
-		attribute.Int64("key4", 4),    // Remove key2 and add key4
-	)
+		attribute.Int64("key4", 4),    // Dropped
+	}
+
+	span := startSpan(tp, "SpanAttributesOverLimit")
+	span.SetAttributes(attrs...)
 	got, err := endSpan(te, span)
 	if err != nil {
 		t.Fatal(err)
 	}
+	assert.Contains(t, got.attributes, attrs[1])
+	assert.Contains(t, got.attributes, attrs[2])
+	assert.Equal(t, 1, got.droppedAttributeCount)
+}
 
-	want := &snapshot{
-		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
-			TraceID:    tid,
-			TraceFlags: 0x1,
-		}),
-		parent: sc.WithRemote(true),
-		name:   "span0",
-		attributes: []attribute.KeyValue{
-			attribute.Bool("key1", false),
-			attribute.Int64("key4", 4),
-		},
-		spanKind:               trace.SpanKindInternal,
-		droppedAttributeCount:  1,
-		instrumentationLibrary: instrumentation.Library{Name: "SpanAttributesOverLimit"},
+func TestSpanAttributeCapacityDropOrder(t *testing.T) {
+	// The tracing specification states:
+	//
+	//   For each unique attribute key, addition of which would result in
+	//   exceeding the limit, SDK MUST discard that key/value pair
+	//
+	// Therefore, adding attributes after the capacity is reached should
+	// result in those attributes being dropped.
+
+	const (
+		instName = "TestSpanAttributeCapacityDropOrder"
+		spanName = "test span"
+	)
+
+	te := NewTestExporter()
+	tp := NewTracerProvider(
+		WithSyncer(te),
+		WithSpanLimits(SpanLimits{AttributeCountLimit: 1}),
+	)
+	attrs := []attribute.KeyValue{
+		attribute.String("key1", "value1"),
+		attribute.String("key2", "value2"),
 	}
-	if diff := cmpDiff(got, want); diff != "" {
-		t.Errorf("SetSpanAttributesOverLimit: -got +want %s", diff)
-	}
+
+	_, span := tp.Tracer(instName).Start(context.Background(), spanName)
+	span.SetAttributes(attrs[0])
+	// Should be dropped based on limits.
+	span.SetAttributes(attrs[1])
+	// Should "update" the first attribute, and drop the second.
+	span.SetAttributes(attrs...)
+	span.End()
+
+	got, ok := te.GetSpan(spanName)
+	require.Truef(t, ok, "span %s not exported", spanName)
+	assert.Equal(t, attrs[:1], got.attributes)
+	assert.Equal(t, 2, got.droppedAttributeCount)
 }
 
 func TestSetSpanAttributesWithInvalidKey(t *testing.T) {
@@ -530,7 +562,7 @@ func TestSetSpanAttributesWithInvalidKey(t *testing.T) {
 			attribute.Bool("key1", false),
 		},
 		spanKind:               trace.SpanKindInternal,
-		droppedAttributeCount:  0,
+		droppedAttributeCount:  1,
 		instrumentationLibrary: instrumentation.Library{Name: "SpanToSetInvalidKeyOrValue"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
