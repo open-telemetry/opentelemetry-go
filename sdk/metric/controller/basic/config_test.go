@@ -26,12 +26,12 @@ import (
 func TestWithResource(t *testing.T) {
 	r := resource.NewSchemaless(attribute.String("A", "a"))
 
-	c := &config{}
-	WithResource(r).apply(c)
+	c := config{}
+	c = WithResource(r).apply(c)
 	assert.Equal(t, r.Equivalent(), c.Resource.Equivalent())
 
 	// Ensure overwriting works.
-	c = &config{Resource: &resource.Resource{}}
-	WithResource(r).apply(c)
+	c = config{Resource: &resource.Resource{}}
+	c = WithResource(r).apply(c)
 	assert.Equal(t, r.Equivalent(), c.Resource.Equivalent())
 }

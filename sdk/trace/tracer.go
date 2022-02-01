@@ -122,17 +122,14 @@ func (tr *tracer) newRecordingSpan(psc, sc trace.SpanContext, name string, sr Sa
 	}
 
 	s := &recordingSpan{
-		parent:                 psc,
-		spanContext:            sc,
-		spanKind:               trace.ValidateSpanKind(config.SpanKind()),
-		name:                   name,
-		startTime:              startTime,
-		events:                 newEvictedQueue(tr.provider.spanLimits.EventCountLimit),
-		links:                  newEvictedQueue(tr.provider.spanLimits.LinkCountLimit),
-		tracer:                 tr,
-		spanLimits:             tr.provider.spanLimits,
-		resource:               tr.provider.resource,
-		instrumentationLibrary: tr.instrumentationLibrary,
+		parent:      psc,
+		spanContext: sc,
+		spanKind:    trace.ValidateSpanKind(config.SpanKind()),
+		name:        name,
+		startTime:   startTime,
+		events:      newEvictedQueue(tr.provider.spanLimits.EventCountLimit),
+		links:       newEvictedQueue(tr.provider.spanLimits.LinkCountLimit),
+		tracer:      tr,
 	}
 
 	for _, l := range config.Links() {

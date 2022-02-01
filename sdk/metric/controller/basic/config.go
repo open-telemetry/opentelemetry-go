@@ -62,7 +62,7 @@ type config struct {
 // Option is the interface that applies the value to a configuration option.
 type Option interface {
 	// apply sets the Option value of a Config.
-	apply(*config)
+	apply(config) config
 }
 
 // WithResource sets the Resource configuration option of a Config by merging it
@@ -73,12 +73,13 @@ func WithResource(r *resource.Resource) Option {
 
 type resourceOption struct{ *resource.Resource }
 
-func (o resourceOption) apply(cfg *config) {
+func (o resourceOption) apply(cfg config) config {
 	res, err := resource.Merge(cfg.Resource, o.Resource)
 	if err != nil {
 		otel.Handle(err)
 	}
 	cfg.Resource = res
+	return cfg
 }
 
 // WithCollectPeriod sets the CollectPeriod configuration option of a Config.
@@ -88,8 +89,9 @@ func WithCollectPeriod(period time.Duration) Option {
 
 type collectPeriodOption time.Duration
 
-func (o collectPeriodOption) apply(cfg *config) {
+func (o collectPeriodOption) apply(cfg config) config {
 	cfg.CollectPeriod = time.Duration(o)
+	return cfg
 }
 
 // WithCollectTimeout sets the CollectTimeout configuration option of a Config.
@@ -99,8 +101,9 @@ func WithCollectTimeout(timeout time.Duration) Option {
 
 type collectTimeoutOption time.Duration
 
-func (o collectTimeoutOption) apply(cfg *config) {
+func (o collectTimeoutOption) apply(cfg config) config {
 	cfg.CollectTimeout = time.Duration(o)
+	return cfg
 }
 
 // WithExporter sets the exporter configuration option of a Config.
@@ -110,8 +113,9 @@ func WithExporter(exporter export.Exporter) Option {
 
 type exporterOption struct{ exporter export.Exporter }
 
-func (o exporterOption) apply(cfg *config) {
+func (o exporterOption) apply(cfg config) config {
 	cfg.Exporter = o.exporter
+	return cfg
 }
 
 // WithPushTimeout sets the PushTimeout configuration option of a Config.
@@ -121,6 +125,7 @@ func WithPushTimeout(timeout time.Duration) Option {
 
 type pushTimeoutOption time.Duration
 
-func (o pushTimeoutOption) apply(cfg *config) {
+func (o pushTimeoutOption) apply(cfg config) config {
 	cfg.PushTimeout = time.Duration(o)
+	return cfg
 }

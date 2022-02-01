@@ -55,26 +55,28 @@ type config struct {
 
 // Option defines a function that configures the exporter.
 type Option interface {
-	apply(*config)
+	apply(config) config
 }
 
-type optionFunc func(*config)
+type optionFunc func(config) config
 
-func (fn optionFunc) apply(cfg *config) {
-	fn(cfg)
+func (fn optionFunc) apply(cfg config) config {
+	return fn(cfg)
 }
 
 // WithLogger configures the exporter to use the passed logger.
 func WithLogger(logger *log.Logger) Option {
-	return optionFunc(func(cfg *config) {
+	return optionFunc(func(cfg config) config {
 		cfg.logger = logger
+		return cfg
 	})
 }
 
 // WithClient configures the exporter to use the passed HTTP client.
 func WithClient(client *http.Client) Option {
-	return optionFunc(func(cfg *config) {
+	return optionFunc(func(cfg config) config {
 		cfg.client = client
+		return cfg
 	})
 }
 
@@ -94,7 +96,7 @@ func New(collectorURL string, opts ...Option) (*Exporter, error) {
 
 	cfg := config{}
 	for _, opt := range opts {
-		opt.apply(&cfg)
+		cfg = opt.apply(cfg)
 	}
 
 	if cfg.client == nil {
