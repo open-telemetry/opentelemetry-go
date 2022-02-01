@@ -385,9 +385,9 @@ func TestConfigs(t *testing.T) {
 
 			// Tests Generic options as HTTP Options
 			cfg := otlpconfig.NewDefaultConfig()
-			otlpconfig.ApplyHTTPEnvConfigs(&cfg)
+			cfg = otlpconfig.ApplyHTTPEnvConfigs(cfg)
 			for _, opt := range tt.opts {
-				opt.ApplyHTTPOption(&cfg)
+				cfg = opt.ApplyHTTPOption(cfg)
 			}
 			tt.asserts(t, &cfg, false)
 

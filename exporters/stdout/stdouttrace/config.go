@@ -47,7 +47,7 @@ func newConfig(options ...Option) (config, error) {
 		Timestamps:  defaultTimestamps,
 	}
 	for _, opt := range options {
-		opt.apply(&cfg)
+		cfg = opt.apply(cfg)
 
 	}
 	return cfg, nil
@@ -55,7 +55,7 @@ func newConfig(options ...Option) (config, error) {
 
 // Option sets the value of an option for a Config.
 type Option interface {
-	apply(*config)
+	apply(config) config
 }
 
 // WithWriter sets the export stream destination.
@@ -67,8 +67,9 @@ type writerOption struct {
 	W io.Writer
 }
 
-func (o writerOption) apply(cfg *config) {
+func (o writerOption) apply(cfg config) config {
 	cfg.Writer = o.W
+	return cfg
 }
 
 // WithPrettyPrint sets the export stream format to use JSON.
@@ -78,8 +79,9 @@ func WithPrettyPrint() Option {
 
 type prettyPrintOption bool
 
-func (o prettyPrintOption) apply(cfg *config) {
+func (o prettyPrintOption) apply(cfg config) config {
 	cfg.PrettyPrint = bool(o)
+	return cfg
 }
 
 // WithoutTimestamps sets the export stream to not include timestamps.
@@ -89,6 +91,7 @@ func WithoutTimestamps() Option {
 
 type timestampsOption bool
 
-func (o timestampsOption) apply(cfg *config) {
+func (o timestampsOption) apply(cfg config) config {
 	cfg.Timestamps = bool(o)
+	return cfg
 }
