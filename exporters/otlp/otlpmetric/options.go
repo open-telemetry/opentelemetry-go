@@ -18,13 +18,13 @@ import "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 
 // Option are setting options passed to an Exporter on creation.
 type Option interface {
-	apply(*config)
+	apply(config) config
 }
 
-type exporterOptionFunc func(*config)
+type exporterOptionFunc func(config) config
 
-func (fn exporterOptionFunc) apply(cfg *config) {
-	fn(cfg)
+func (fn exporterOptionFunc) apply(cfg config) config {
+	return fn(cfg)
 }
 
 type config struct {
@@ -36,7 +36,8 @@ type config struct {
 // aggregation). If not specified otherwise, exporter will use a
 // cumulative temporality selector.
 func WithMetricAggregationTemporalitySelector(selector aggregation.TemporalitySelector) Option {
-	return exporterOptionFunc(func(cfg *config) {
+	return exporterOptionFunc(func(cfg config) config {
 		cfg.temporalitySelector = selector
+		return cfg
 	})
 }
