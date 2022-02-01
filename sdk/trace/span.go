@@ -223,6 +223,10 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	if s.attributes == nil {
+		s.attributes = make(map[attribute.Key]attribute.Value)
+	}
+
 	for _, a := range attributes {
 		// Ensure attributes conform to the specification:
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.0.1/specification/common/common.md#attributes
@@ -437,6 +441,10 @@ func (s *recordingSpan) EndTime() time.Time {
 // attributesLocked returns the attributes s has assuming s.mu.Lock is held by
 // the caller. The order of the returned slice is not guaranteed to be stable.
 func (s *recordingSpan) attributesLocked() []attribute.KeyValue {
+	if s.attributes == nil {
+		return nil
+	}
+
 	a := make([]attribute.KeyValue, 0, len(s.attributes))
 	for k, v := range s.attributes {
 		a = append(a, attribute.KeyValue{Key: k, Value: v})
