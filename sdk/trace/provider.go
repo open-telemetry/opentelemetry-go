@@ -74,10 +74,13 @@ type TracerProvider struct {
 	mu             sync.Mutex
 	namedTracer    map[instrumentation.Library]*tracer
 	spanProcessors atomic.Value
-	sampler        Sampler
-	idGenerator    IDGenerator
-	spanLimits     SpanLimits
-	resource       *resource.Resource
+
+	// These fields are not protected by the lock mu. They are assumed to be
+	// immutable after creation of the TracerProvider.
+	sampler     Sampler
+	idGenerator IDGenerator
+	spanLimits  SpanLimits
+	resource    *resource.Resource
 }
 
 var _ trace.TracerProvider = &TracerProvider{}
