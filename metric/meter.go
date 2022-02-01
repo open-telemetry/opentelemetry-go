@@ -49,7 +49,7 @@ type Meter interface {
 
 	// RegisterCallback captures the function that will be called during Collect.
 	//
-	// It is only valid to call Observe within the soce of the passed function,
+	// It is only valid to call Observe within the scope of the passed function,
 	// and only on the instruments that were registered with this call.
 	RegisterCallback(insts []instrument.Asynchronous, function func(context.Context)) error
 

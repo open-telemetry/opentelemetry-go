@@ -39,7 +39,7 @@ type Counter interface {
 	//
 	// It is only valid to call this within a callback. If called outside of the
 	// registered callback it should have no effect on the instrument, and an
-	// error will be reported via the error handeling
+	// error will be reported via the error handler.
 	Observe(ctx context.Context, x float64, attrs ...attribute.KeyValue)
 
 	instrument.Asynchronous
@@ -51,7 +51,7 @@ type UpDownCounter interface {
 	//
 	// It is only valid to call this within a callback. If called outside of the
 	// registered callback it should have no effect on the instrument, and an
-	// error will be reported via the error handeling
+	// error will be reported via the error handler.
 	Observe(ctx context.Context, x float64, attrs ...attribute.KeyValue)
 
 	instrument.Asynchronous
@@ -63,7 +63,7 @@ type Gauge interface {
 	//
 	// It is only valid to call this within a callback. If called outside of the
 	// registered callback it should have no effect on the instrument, and an
-	// error will be reported via the error handeling
+	// error will be reported via the error handler.
 	Observe(ctx context.Context, x float64, attrs ...attribute.KeyValue)
 
 	instrument.Asynchronous
