@@ -48,7 +48,7 @@ var errMergeConflictSchemaURL = errors.New("cannot merge resource due to conflic
 func New(ctx context.Context, opts ...Option) (*Resource, error) {
 	cfg := config{}
 	for _, opt := range opts {
-		opt.apply(&cfg)
+		cfg = opt.apply(cfg)
 	}
 
 	resource, err := Detect(ctx, cfg.detectors...)

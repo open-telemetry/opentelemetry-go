@@ -112,13 +112,13 @@ type accumulatorCheckpointer struct {
 // and options (including optional exporter) to configure a metric
 // export pipeline.
 func New(checkpointerFactory export.CheckpointerFactory, opts ...Option) *Controller {
-	c := &config{
+	c := config{
 		CollectPeriod:  DefaultPeriod,
 		CollectTimeout: DefaultPeriod,
 		PushTimeout:    DefaultPeriod,
 	}
 	for _, opt := range opts {
-		opt.apply(c)
+		c = opt.apply(c)
 	}
 	if c.Resource == nil {
 		c.Resource = resource.Default()

@@ -7,6 +7,8 @@ Welcome to the OpenTelemetry for Go getting started guide! This guide will walk 
 
 Understand how a system is functioning when it is failing or having issues is critical to resolving those issues. One strategy to understand this is with tracing. This guide shows how the OpenTelemetry Go project can be used to trace an example application. You will start with an application that computes Fibonacci numbers for users, and from there you will add instrumentation to produce tracing telemetry with OpenTelemetry Go.
 
+For reference, a complete example of the code you will build can be found [here](https://github.com/open-telemetry/opentelemetry-go/tree/main/example/fib).
+
 To start building the application, make a new directory named `fib` to house our Fibonacci project. Next, add the following to a new file named `fib.go` in that directory.
 
 ```go
@@ -134,7 +136,7 @@ The application can be exited with CTRL+C. You should see a similar output as ab
 
 # Trace Instrumentation
 
-OpenTelemetry is split into two parts: an API to instrument code with, and SDKs that implement the API. To start integrating OpenTelemetry into any project, the API is used to define how telemetry is generated. To generate tracing telemetry in your application you will use the OpenTelemetry Trace API from the `go.opentelemetry.io/otel/trace` package.
+OpenTelemetry is split into two parts: an API to instrument code with, and SDKs that implement the API. To start integrating OpenTelemetry into any project, the API is used to define how telemetry is generated. To generate tracing telemetry in your application you will use the OpenTelemetry Trace API from the [`go.opentelemetry.io/otel/trace`] package.
 
 First, you need to install the necessary packages for the Trace API. Run the following command in your working directory.
 
@@ -161,14 +163,14 @@ import (
 
 With the imports added, you can start instrumenting.
 
-The OpenTelemetry Tracing API provides a `Tracer` to create traces. These `Tracer`s are designed to be associated with one instrumentation library. That way telemetry they produce can be understood to come from that part of a code base. To uniquely identify your application to the `Tracer` you will use create a constant with the package name in `app.go`.
+The OpenTelemetry Tracing API provides a [`Tracer`] to create traces. These [`Tracer`]s are designed to be associated with one instrumentation library. That way telemetry they produce can be understood to come from that part of a code base. To uniquely identify your application to the [`Tracer`] you will use create a constant with the package name in `app.go`.
 
 ```go
 // name is the Tracer name used to identify this instrumentation library.
 const name = "fib"
 ```
 
-Using the full-qualified package name, something that should be unique for Go packages, is the standard way to identify a `Tracer`. If your example package name differs, be sure to update the name you use here to match.
+Using the full-qualified package name, something that should be unique for Go packages, is the standard way to identify a [`Tracer`]. If your example package name differs, be sure to update the name you use here to match.
 
 Everything should be in place now to start tracing your application. But first, what is a trace? And, how exactly should you build them for you application?
 
@@ -199,7 +201,7 @@ func (a *App) Run(ctx context.Context) error {
 }
 ```
 
-The above code creates a span for every iteration of the for loop. The span is created using a `Tracer` from the global `TracerProvider`. You will learn more about `TracerProvider`s and handle the other side of setting up a global `TracerProvider` when you install an SDK in a later section. For now, as an instrumentation author, all you need to worry about is that you are using an appropriately named `Tracer` from a `TracerProvider` when you write `otel.Tracer(name)`.
+The above code creates a span for every iteration of the for loop. The span is created using a [`Tracer`] from the [global `TracerProvider`](https://pkg.go.dev/go.opentelemetry.io/otel#GetTracerProvider). You will learn more about [`TracerProvider`]s and handle the other side of setting up a global [`TracerProvider`] when you install an SDK in a later section. For now, as an instrumentation author, all you need to worry about is that you are using an appropriately named [`Tracer`] from a [`TracerProvider`] when you write `otel.Tracer(name)`.
 
 Next, instrument the `Poll` method.
 
@@ -263,7 +265,7 @@ Now how do you actually see the produced spans? To do this you will need to conf
 
 # SDK Installation
 
-OpenTelemetry is designed to be modular in its implementation of the OpenTelemetry API. The OpenTelemetry Go project offers an SDK package, `go.opentelemetry.io/otel/sdk`, that implements this API and adheres to the OpenTelemetry specification. To start using this SDK you will first need to create an exporter, but before anything can happen we need to install some packages. Run the following in the `fib` directory to install the trace STDOUT exporter and the SDK.
+OpenTelemetry is designed to be modular in its implementation of the OpenTelemetry API. The OpenTelemetry Go project offers an SDK package, [`go.opentelemetry.io/otel/sdk`], that implements this API and adheres to the OpenTelemetry specification. To start using this SDK you will first need to create an exporter, but before anything can happen we need to install some packages. Run the following in the `fib` directory to install the trace STDOUT exporter and the SDK.
 
 ```sh
 $ go get go.opentelemetry.io/otel/sdk \
@@ -287,7 +289,7 @@ import (
 
 ## Creating a Console Exporter
 
-The SDK connects telemetry from the OpenTelemetry API to exporters. Exporters are packages that allow telemetry data to be emitted somewhere - either to the console (which is what we're doing here), or to a remote system or collector for further analysis and/or enrichment. OpenTelemetry supports a variety of exporters through its ecosystem including popular open source tools like Jaeger, Zipkin, and Prometheus.
+The SDK connects telemetry from the OpenTelemetry API to exporters. Exporters are packages that allow telemetry data to be emitted somewhere - either to the console (which is what we're doing here), or to a remote system or collector for further analysis and/or enrichment. OpenTelemetry supports a variety of exporters through its ecosystem including popular open source tools like [Jaeger](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/jaeger), [Zipkin](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/trace/zipkin), and [Prometheus](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/prometheus).
 
 To initialize the console exporter, add the following function to the `main.go` file:
 
@@ -308,7 +310,7 @@ This creates a new console exporter with basic options. You will use this functi
 
 ## Creating a Resource
 
-Telemetry data can be crucial to solving issues with a service. The catch is, you need a way to identify what service, or even what service instance, that data is coming from. OpenTelemetry uses a `Resource` to represent the entity producing telemetry. Add the following function to the `main.go` file to create an appropriate `Resource` for the application.
+Telemetry data can be crucial to solving issues with a service. The catch is, you need a way to identify what service, or even what service instance, that data is coming from. OpenTelemetry uses a [`Resource`] to represent the entity producing telemetry. Add the following function to the `main.go` file to create an appropriate [`Resource`] for the application.
 
 ```go
 // newResource returns a resource describing this application.
@@ -326,13 +328,13 @@ func newResource() *resource.Resource {
 }
 ```
 
-Any information you would like to associate with all telemetry data the SDK handles can be added to the returned `Resource`. This is done by registering the `Resource` with the `TracerProvider`. Something you can now create!
+Any information you would like to associate with all telemetry data the SDK handles can be added to the returned [`Resource`]. This is done by registering the [`Resource`] with the [`TracerProvider`]. Something you can now create!
 
 ## Installing a Tracer Provider
 
-You have your application instrumented to produce telemetry data and you have an exporter to send that data to the console, but how are they connected? This is where the `TracerProvider` is used. It is a centralized point where instrumentation will get a `Tracer` from and funnels the telemetry data from these `Tracer`s to export pipelines.
+You have your application instrumented to produce telemetry data and you have an exporter to send that data to the console, but how are they connected? This is where the [`TracerProvider`] is used. It is a centralized point where instrumentation will get a [`Tracer`] from and funnels the telemetry data from these [`Tracer`]s to export pipelines.
 
-The pipelines that receive and ultimately transmit data to exporters are called `SpanProcessor`s. A `TracerProvider` can be configured to have multiple span processors, but for this example you will only need to configure only one. Update your `main` function in `main.go` with the following.
+The pipelines that receive and ultimately transmit data to exporters are called [`SpanProcessor`]s. A [`TracerProvider`] can be configured to have multiple span processors, but for this example you will only need to configure only one. Update your `main` function in `main.go` with the following.
 
 ```go
 func main() {
@@ -365,9 +367,9 @@ func main() {
 }
 ```
 
-There's a fair amount going on here. First you are creating a console exporter that will export to a file. You are then registering the exporter with a new `TracerProvider`. This is done with a `BatchSpanProcessor` when it is passed to the `trace.WithBatcher` option. Batching data is a good practice and will help not overload systems downstream. Finally, with the `TracerProvider` created, you are deferring a function to flush and stop it, and registering it as the global OpenTelemetry `TracerProvider`.
+There's a fair amount going on here. First you are creating a console exporter that will export to a file. You are then registering the exporter with a new [`TracerProvider`]. This is done with a [`BatchSpanProcessor`] when it is passed to the [`trace.WithBatcher`] option. Batching data is a good practice and will help not overload systems downstream. Finally, with the [`TracerProvider`] created, you are deferring a function to flush and stop it, and registering it as the global OpenTelemetry [`TracerProvider`].
 
-Do you remember in the previous instrumentation section when we used the global `TracerProvider` to get a `Tracer`? This last step, registering the `TracerProvider` globally, is what will connect that instrumentation's `Tracer` with this `TracerProvider`. This pattern, using a global `TracerProvider`, is convenient, but not always appropriate. `TracerProvider`s can be explicitly passed to instrumentation or inferred from a context that contains a span. For this simple example using a global provider makes sense, but for more complex or distributed codebases these other ways of passing `TracerProvider`s may make more sense.
+Do you remember in the previous instrumentation section when we used the global [`TracerProvider`] to get a [`Tracer`]? This last step, registering the [`TracerProvider`] globally, is what will connect that instrumentation's [`Tracer`] with this [`TracerProvider`]. This pattern, using a global [`TracerProvider`], is convenient, but not always appropriate. [`TracerProvider`]s can be explicitly passed to instrumentation or inferred from a context that contains a span. For this simple example using a global provider makes sense, but for more complex or distributed codebases these other ways of passing [`TracerProvider`]s may make more sense.
 
 # Putting It All Together
 
@@ -471,7 +473,7 @@ func (a *App) Poll(ctx context.Context) (uint, error) {
 }
 ```
 
-All that is left is updating imports for the `app.go` file to include the `go.opentelemetry.io/otel/codes` package.
+All that is left is updating imports for the `app.go` file to include the [`go.opentelemetry.io/otel/codes`] package.
 
 ```go
 import (
@@ -540,3 +542,13 @@ spans, refer to the [Instrumenting]({{< relref "manual" >}})
 documentation. Likewise, advanced topics about processing and exporting
 telemetry data can be found in the [Processing and Exporting Data]({{< relref
 "exporting_data" >}}) documentation.
+
+[`go.opentelemetry.io/otel/trace`]: https://pkg.go.dev/go.opentelemetry.io/otel/trace
+[`go.opentelemetry.io/otel/sdk`]: https://pkg.go.dev/go.opentelemetry.io/otel/sdk
+[`go.opentelemetry.io/otel/codes`]: https://pkg.go.dev/go.opentelemetry.io/otel/codes
+[`Tracer`]: https://pkg.go.dev/go.opentelemetry.io/otel/trace#Tracer
+[`TracerProvider`]: https://pkg.go.dev/go.opentelemetry.io/otel/trace#TracerProvider
+[`Resource`]: https://pkg.go.dev/go.opentelemetry.io/otel/sdk/resource#Resource
+[`SpanProcessor`]: https://pkg.go.dev/go.opentelemetry.io/otel/sdk/trace#SpanProcessor
+[`BatchSpanProcessor`]: https://pkg.go.dev/go.opentelemetry.io/otel/sdk/trace#NewBatchSpanProcessor
+[`trace.WithBatcher`]: https://pkg.go.dev/go.opentelemetry.io/otel/sdk/trace#WithBatcher
