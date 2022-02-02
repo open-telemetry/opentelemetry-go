@@ -713,3 +713,38 @@ func TestPropertiesValidate(t *testing.T) {
 	p = append(p, Property{key: "bar", hasData: true})
 	assert.NoError(t, p.validate())
 }
+
+var benchBaggage Baggage
+
+func BenchmarkNew(b *testing.B) {
+	mem1, _ := NewMember("key1", "val1")
+	mem2, _ := NewMember("key2", "val2")
+	mem3, _ := NewMember("key3", "val3")
+	mem4, _ := NewMember("key4", "val4")
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		benchBaggage, _ = New(mem1, mem2, mem3, mem4)
+	}
+}
+
+var benchMember Member
+
+func BenchmarkNewMember(b *testing.B) {
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		benchMember, _ = NewMember("key", "value")
+	}
+}
+
+func BenchmarkParse(b *testing.B) {
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		benchBaggage, _ = Parse(`userId=alice,serverNode = DF28 , isProduction = false,hasProp=stuff;propKey;propWValue=value`)
+	}
+}
+
