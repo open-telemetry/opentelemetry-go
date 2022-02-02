@@ -1883,3 +1883,11 @@ func TestWithIDGenerator(t *testing.T) {
 		require.NoError(t, err)
 	}
 }
+
+func TestEmptyRecordingSpanAttributes(t *testing.T) {
+	assert.Nil(t, (&recordingSpan{}).Attributes())
+}
+
+func TestEmptyRecordingSpanDroppedAttributes(t *testing.T) {
+	assert.Equal(t, 0, (&recordingSpan{}).DroppedAttributes())
+}
