@@ -747,4 +747,3 @@ func BenchmarkParse(b *testing.B) {
 		benchBaggage, _ = Parse(`userId=alice,serverNode = DF28 , isProduction = false,hasProp=stuff;propKey;propWValue=value`)
 	}
 }
-

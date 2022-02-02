@@ -304,7 +304,7 @@ func parseMember(member string) (Member, error) {
 		var err error
 		value, err = url.QueryUnescape(strings.TrimSpace(kv[1]))
 		if err != nil {
-			return Member{}, fmt.Errorf("%w: %q", err, value)
+			return newInvalidMember(), fmt.Errorf("%w: %q", err, value)
 		}
 		if !keyRe.MatchString(key) {
 			return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidKey, key)
@@ -319,7 +319,7 @@ func parseMember(member string) (Member, error) {
 		panic("failed to parse baggage member")
 	}
 
-	return NewMember(key, value, props...)
+	return Member{key: key, value: value, properties: props, hasData: true}, nil
 }
 
 // validate ensures m conforms to the W3C Baggage specification, returning an
