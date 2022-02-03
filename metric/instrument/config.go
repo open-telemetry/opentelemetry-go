@@ -34,13 +34,10 @@ func (cfg Config) Unit() unit.Unit {
 
 // Option is an interface for applying metric instrument options.
 type Option interface {
-	// ApplyMeter is used to set a Option value of a
-	// Config.
 	applyInstrument(Config) Config
 }
 
-// NewConfig creates a new Config
-// and applies all the given options.
+// NewConfig creates a new Config and applies all the given options.
 func NewConfig(opts ...Option) Config {
 	var config Config
 	for _, o := range opts {

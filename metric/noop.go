@@ -55,9 +55,3 @@ func (noopMeter) SyncFloat64() syncfloat64.Instruments {
 func (noopMeter) RegisterCallback([]instrument.Asynchronous, func(context.Context)) error {
 	return nil
 }
-
-type noopCallback struct{}
-
-func (noopCallback) Instruments() []instrument.Asynchronous {
-	return nil
-}
