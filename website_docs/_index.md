@@ -7,7 +7,7 @@ aliases: [/golang, /golang/metrics, /golang/tracing]
 cascade:
   github_repo: &repo https://github.com/open-telemetry/opentelemetry-go
   github_subdir: website_docs
-  path_base_for_github_subdir: content/en/docs/go/
+  path_base_for_github_subdir: content/en/docs/instrumentation/go/
   github_project_repo: *repo
 spelling: cSpell:ignore godoc
 weight: 16
