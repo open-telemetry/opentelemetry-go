@@ -122,12 +122,13 @@ func (tr *tracer) newRecordingSpan(psc, sc trace.SpanContext, name string, sr Sa
 	}
 
 	s := &recordingSpan{
-		// Do not pre-allocate the span slice here to be the max capacity.
-		// Doing so will allocate memory that is not going to be use if the
-		// user never adds attributes or does not add attributes to up to the
-		// capacity. The default Go compiler has been tested to handle
-		// dynamically allocating needed space when attributes are added in a
-		// more performant way than we can predetermine here.
+		// Do not pre-allocate the attributes slice here! Doing so will
+		// allocate memory that is likely never going to be used, or if used,
+		// will be over-sized. The default Go compiler has been tested to
+		// dynamically allocate needed space very well. Benchmarking has shown
+		// it to be more performant than what we can predetermine here,
+		// especially for the common use case of little to now added
+		// attributes.
 
 		parent:      psc,
 		spanContext: sc,
