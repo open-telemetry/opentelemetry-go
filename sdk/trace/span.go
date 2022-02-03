@@ -244,6 +244,9 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 func (s *recordingSpan) addOverCapAttrs(attrs []attribute.KeyValue) {
 	// In order to not allocate more capacity to s.attributes than needed,
 	// prune and truncate this addition of attributes while adding.
+
+	// Do not set a capacity when creating this map. Benchmark testing has
+	// showed this to only add unused memory allocations in general use.
 	exists := make(map[attribute.Key]int)
 	s.dedupeAttrsFromRecord(&exists)
 
@@ -473,6 +476,8 @@ func (s *recordingSpan) Attributes() []attribute.KeyValue {
 //
 // This method assumes s.mu.Lock is held by the caller.
 func (s *recordingSpan) dedupeAttrs() {
+	// Do not set a capacity when creating this map. Benchmark testing has
+	// showed this to only add unused memory allocations in general use.
 	exists := make(map[attribute.Key]int)
 	s.dedupeAttrsFromRecord(&exists)
 }
