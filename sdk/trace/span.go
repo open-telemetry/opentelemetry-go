@@ -212,78 +212,64 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	max := s.tracer.provider.spanLimits.AttributeCountLimit
-	if len(s.attributes)+len(attributes) > max {
-		exists := make(map[attribute.Key]int, len(s.attributes))
-		for i, a := range s.attributes {
-			if idx, ok := exists[a.Key]; ok {
-				s.attributes[idx] = a
-
-				copy(s.attributes[i:], s.attributes[i+1:])
-				s.attributes[len(s.attributes)-1] = attribute.KeyValue{}
-				s.attributes = s.attributes[:len(s.attributes)-1]
-			} else {
-				exists[a.Key] = i
-			}
-		}
-
-		// Perform all updates before dropping.
-		for _, a := range attributes {
-			if idx, ok := exists[a.Key]; ok {
-				s.attributes[idx] = a
-				continue
-			}
-
-			if !a.Valid() {
-				s.droppedAttributes++
-				continue
-			}
-
-			if len(s.attributes) >= max {
-				s.droppedAttributes++
-			} else {
-				s.attributes = append(s.attributes, a)
-				exists[a.Key] = len(s.attributes) - 1
-			}
-		}
+	// If adding these attributes could exceed the capacity of s perform a
+	// de-duplication and truncation while adding to avoid over allocation.
+	if len(s.attributes)+len(attributes) > s.tracer.provider.spanLimits.AttributeCountLimit {
+		s.addOverCapAttrs(attributes)
 		return
 	}
 
+	// Otherwise, add without deduplication. When attributes are read they
+	// will be deduplicated, optimizing the operation.
 	for _, a := range attributes {
-		// Ensure attributes conform to the specification:
-		// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.0.1/specification/common/common.md#attributes
 		if !a.Valid() {
+			// Drop all invalid attributes.
 			s.droppedAttributes++
 			continue
 		}
 		s.attributes = append(s.attributes, a)
 	}
-
-	if len(s.attributes) > max {
-		s.pruneAttrsLocked()
-	}
 }
 
-func (s *recordingSpan) pruneAttrsLocked() {
-	exists := make(map[attribute.Key]int, len(s.attributes))
-	for i, a := range s.attributes {
-		if idx, ok := exists[a.Key]; ok {
-			// Setting an attribute with the same key as an existing attribute
-			// SHOULD overwrite the existing attribute's value.
-			s.attributes[idx] = a
+// addOverCapAttrs adds the attributes attrs to the span s while
+// de-duplicating the attributes of s and attrs and dropping attributes that
+// exceed the capacity of s.
+//
+// This method assumes s.mu.Lock is held by the caller.
+//
+// This method should only be called when there is a possibility that adding
+// attrs to s will exceed the capacity of s. Otherwise, attrs should be added
+// to s without checking for duplicates and all retrieval methods of the
+// attributes for s will de-duplicate as needed.
+func (s *recordingSpan) addOverCapAttrs(attrs []attribute.KeyValue) {
+	// In order to not allocate more capacity to s.attributes than needed,
+	// prune and truncate this addition of attributes while adding.
+	exists := make(map[attribute.Key]int)
+	s.dedupeAttrsFromRecord(&exists)
 
-			copy(s.attributes[i:], s.attributes[i+1:])
-			s.attributes[len(s.attributes)-1] = attribute.KeyValue{}
-			s.attributes = s.attributes[:len(s.attributes)-1]
-		} else {
-			exists[a.Key] = i
+	// Now that s.attributes is deduplicated, adding unique attributes up to
+	// the capacity of s will not over allocate s.attributes.
+	for _, a := range attrs {
+		if !a.Valid() {
+			// Drop all invalid attributes.
+			s.droppedAttributes++
+			continue
 		}
-	}
 
-	max := s.tracer.provider.spanLimits.AttributeCountLimit
-	if len(s.attributes) > max {
-		s.droppedAttributes += len(s.attributes) - max
-		s.attributes = s.attributes[:max]
+		if idx, ok := exists[a.Key]; ok {
+			// Perform all updates before dropping, even when at capacity.
+			s.attributes[idx] = a
+			continue
+		}
+
+		if len(s.attributes) >= s.tracer.provider.spanLimits.AttributeCountLimit {
+			// Do not just drop all of the remaining attributes, make sure
+			// updates are checked and performed.
+			s.droppedAttributes++
+		} else {
+			s.attributes = append(s.attributes, a)
+			exists[a.Key] = len(s.attributes) - 1
+		}
 	}
 }
 
@@ -479,8 +465,38 @@ func (s *recordingSpan) EndTime() time.Time {
 func (s *recordingSpan) Attributes() []attribute.KeyValue {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.pruneAttrsLocked()
+	s.dedupeAttrs()
 	return s.attributes
+}
+
+// dedupeAttrs deduplicates the attributes of s to fit capacity.
+//
+// This method assumes s.mu.Lock is held by the caller.
+func (s *recordingSpan) dedupeAttrs() {
+	exists := make(map[attribute.Key]int)
+	s.dedupeAttrsFromRecord(&exists)
+}
+
+// dedupeAttrsFromRecord deduplicates the attributes of s to fit capacity
+// using record as the record of unique attribute keys to their index.
+//
+// This method assumes s.mu.Lock is held by the caller.
+func (s *recordingSpan) dedupeAttrsFromRecord(record *map[attribute.Key]int) {
+	// Use the fact that slices share the same backing array.
+	unique := s.attributes[:0]
+	for _, a := range s.attributes {
+		if idx, ok := (*record)[a.Key]; ok {
+			unique[idx] = a
+		} else {
+			unique = append(unique, a)
+			(*record)[a.Key] = len(unique) - 1
+		}
+	}
+	// s.attributes have element types of attribute.KeyValue. These types are
+	// not pointers and they themselves do not contain pointer fields,
+	// therefore the duplicate values do not need to be zeroed for them to be
+	// garbage collected.
+	s.attributes = unique
 }
 
 // Links returns the links of this span.
@@ -600,10 +616,10 @@ func (s *recordingSpan) snapshot() ReadOnlySpan {
 	sd.childSpanCount = s.childSpanCount
 
 	if len(s.attributes) > 0 {
-		s.pruneAttrsLocked()
+		s.dedupeAttrs()
 		sd.attributes = s.attributes
-		sd.droppedAttributeCount = s.droppedAttributes
 	}
+	sd.droppedAttributeCount = s.droppedAttributes
 	if len(s.events.queue) > 0 {
 		sd.events = s.interfaceArrayToEventArray()
 		sd.droppedEventCount = s.events.droppedCount
