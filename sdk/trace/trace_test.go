@@ -531,7 +531,7 @@ func TestSpanSetAttributes(t *testing.T) {
 			name: "deduplicate/added",
 			input: [][]attribute.KeyValue{
 				attrs[:2],
-				[]attribute.KeyValue{attrs[2], attrs[2], attrs[2]},
+				{attrs[2], attrs[2], attrs[2]},
 			},
 			wantAttrs: attrs[:3],
 		},
@@ -539,21 +539,21 @@ func TestSpanSetAttributes(t *testing.T) {
 			name: "deduplicate/added_at_cappacity",
 			input: [][]attribute.KeyValue{
 				attrs[:3],
-				[]attribute.KeyValue{attrs[2], attrs[2], attrs[2]},
+				{attrs[2], attrs[2], attrs[2]},
 			},
 			wantAttrs: attrs[:3],
 		},
 		{
 			name: "invalid",
 			input: [][]attribute.KeyValue{
-				[]attribute.KeyValue{invalid},
+				{invalid},
 			},
 			wantDropped: 1,
 		},
 		{
 			name: "invalid_with_valid",
 			input: [][]attribute.KeyValue{
-				[]attribute.KeyValue{invalid, attrs[0]},
+				{invalid, attrs[0]},
 			},
 			wantAttrs:   attrs[:1],
 			wantDropped: 1,
@@ -561,7 +561,7 @@ func TestSpanSetAttributes(t *testing.T) {
 		{
 			name: "invalid_over_capacity",
 			input: [][]attribute.KeyValue{
-				[]attribute.KeyValue{invalid, invalid, invalid, invalid, attrs[0]},
+				{invalid, invalid, invalid, invalid, attrs[0]},
 			},
 			wantAttrs:   attrs[:1],
 			wantDropped: 4,
@@ -570,7 +570,7 @@ func TestSpanSetAttributes(t *testing.T) {
 			name: "valid:invalid/under_capacity",
 			input: [][]attribute.KeyValue{
 				attrs[:1],
-				[]attribute.KeyValue{invalid},
+				{invalid},
 			},
 			wantAttrs:   attrs[:1],
 			wantDropped: 1,
@@ -579,7 +579,7 @@ func TestSpanSetAttributes(t *testing.T) {
 			name: "valid:invalid/over_capacity",
 			input: [][]attribute.KeyValue{
 				attrs[:1],
-				[]attribute.KeyValue{invalid, invalid, invalid, invalid},
+				{invalid, invalid, invalid, invalid},
 			},
 			wantAttrs:   attrs[:1],
 			wantDropped: 4,
@@ -588,7 +588,7 @@ func TestSpanSetAttributes(t *testing.T) {
 			name: "valid_at_capacity:invalid",
 			input: [][]attribute.KeyValue{
 				attrs[:3],
-				[]attribute.KeyValue{invalid, invalid, invalid, invalid},
+				{invalid, invalid, invalid, invalid},
 			},
 			wantAttrs:   attrs[:3],
 			wantDropped: 4,
