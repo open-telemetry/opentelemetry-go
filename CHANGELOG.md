@@ -30,6 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Change the `otlpmetric.Client` interface's `UploadMetrics` method to accept a single `ResourceMetrics` instead of a slice of them. (#2491)
 - Specify explicit buckets in Prometheus example. (#2493)
 - W3C baggage will now decode urlescaped values. (#2529)
+- Baggage members are now only validated once, when calling `NewMember` and not also when adding it to the baggage itself. (#2522)
 
 ### Removed
 

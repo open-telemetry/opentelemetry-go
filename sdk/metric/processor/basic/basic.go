@@ -132,7 +132,7 @@ type factory struct {
 func NewFactory(aselector export.AggregatorSelector, tselector aggregation.TemporalitySelector, opts ...Option) export.CheckpointerFactory {
 	var config config
 	for _, opt := range opts {
-		opt.applyProcessor(&config)
+		config = opt.applyProcessor(config)
 	}
 	return factory{
 		aselector: aselector,

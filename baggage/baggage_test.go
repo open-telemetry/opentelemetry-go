@@ -138,7 +138,7 @@ func TestNewKeyProperty(t *testing.T) {
 
 	p, err = NewKeyProperty("key")
 	assert.NoError(t, err)
-	assert.Equal(t, Property{key: "key"}, p)
+	assert.Equal(t, Property{key: "key", hasData: true}, p)
 }
 
 func TestNewKeyValueProperty(t *testing.T) {
@@ -152,11 +152,14 @@ func TestNewKeyValueProperty(t *testing.T) {
 
 	p, err = NewKeyValueProperty("key", "value")
 	assert.NoError(t, err)
-	assert.Equal(t, Property{key: "key", value: "value", hasValue: true}, p)
+	assert.Equal(t, Property{key: "key", value: "value", hasValue: true, hasData: true}, p)
 }
 
 func TestPropertyValidate(t *testing.T) {
 	p := Property{}
+	assert.ErrorIs(t, p.validate(), errInvalidProperty)
+
+	p.hasData = true
 	assert.ErrorIs(t, p.validate(), errInvalidKey)
 
 	p.key = "k"
@@ -179,7 +182,7 @@ func TestNewEmptyBaggage(t *testing.T) {
 }
 
 func TestNewBaggage(t *testing.T) {
-	b, err := New(Member{key: "k"})
+	b, err := New(Member{key: "k", hasData: true})
 	assert.NoError(t, err)
 	assert.Equal(t, Baggage{list: baggage.List{"k": {}}}, b)
 }
@@ -192,8 +195,9 @@ func TestNewBaggageWithDuplicates(t *testing.T) {
 	for i := range m {
 		// Duplicates are collapsed.
 		m[i] = Member{
-			key:   "a",
-			value: fmt.Sprintf("%d", i),
+			key:     "a",
+			value:   fmt.Sprintf("%d", i),
+			hasData: true,
 		}
 	}
 	b, err := New(m...)
@@ -205,9 +209,9 @@ func TestNewBaggageWithDuplicates(t *testing.T) {
 	assert.Equal(t, want, b)
 }
 
-func TestNewBaggageErrorInvalidMember(t *testing.T) {
-	_, err := New(Member{key: ""})
-	assert.ErrorIs(t, err, errInvalidKey)
+func TestNewBaggageErrorEmptyMember(t *testing.T) {
+	_, err := New(Member{})
+	assert.ErrorIs(t, err, errInvalidMember)
 }
 
 func key(n int) string {
@@ -223,7 +227,7 @@ func key(n int) string {
 func TestNewBaggageErrorTooManyBytes(t *testing.T) {
 	m := make([]Member, (maxBytesPerBaggageString/maxBytesPerMembers)+1)
 	for i := range m {
-		m[i] = Member{key: key(maxBytesPerMembers)}
+		m[i] = Member{key: key(maxBytesPerMembers), hasData: true}
 	}
 	_, err := New(m...)
 	assert.ErrorIs(t, err, errBaggageBytes)
@@ -232,7 +236,7 @@ func TestNewBaggageErrorTooManyBytes(t *testing.T) {
 func TestNewBaggageErrorTooManyMembers(t *testing.T) {
 	m := make([]Member, maxMembers+1)
 	for i := range m {
-		m[i] = Member{key: fmt.Sprintf("%d", i)}
+		m[i] = Member{key: fmt.Sprintf("%d", i), hasData: true}
 	}
 	_, err := New(m...)
 	assert.ErrorIs(t, err, errMemberNumber)
@@ -533,7 +537,7 @@ func TestBaggageDeleteMember(t *testing.T) {
 	assert.NotContains(t, b1.list, key)
 }
 
-func TestBaggageSetMemberError(t *testing.T) {
+func TestBaggageSetMemberEmpty(t *testing.T) {
 	_, err := Baggage{}.SetMember(Member{})
 	assert.ErrorIs(t, err, errInvalidMember)
 }
@@ -542,7 +546,7 @@ func TestBaggageSetMember(t *testing.T) {
 	b0 := Baggage{}
 
 	key := "k"
-	m := Member{key: key}
+	m := Member{key: key, hasData: true}
 	b1, err := b0.SetMember(m)
 	assert.NoError(t, err)
 	assert.NotContains(t, b0.list, key)
@@ -558,7 +562,7 @@ func TestBaggageSetMember(t *testing.T) {
 	assert.Equal(t, 1, len(b1.list))
 	assert.Equal(t, 1, len(b2.list))
 
-	p := properties{{key: "p"}}
+	p := properties{{key: "p", hasData: true}}
 	m.properties = p
 	b3, err := b2.SetMember(m)
 	assert.NoError(t, err)
@@ -569,12 +573,12 @@ func TestBaggageSetMember(t *testing.T) {
 
 	// The returned baggage needs to be immutable and should use a copy of the
 	// properties slice.
-	p[0] = Property{key: "different"}
+	p[0] = Property{key: "different", hasData: true}
 	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b3.list[key])
 	// Reset for below.
-	p[0] = Property{key: "p"}
+	p[0] = Property{key: "p", hasData: true}
 
-	m = Member{key: "another"}
+	m = Member{key: "another", hasData: true}
 	b4, err := b3.SetMember(m)
 	assert.NoError(t, err)
 	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b3.list[key])
@@ -664,7 +668,10 @@ func TestMemberProperties(t *testing.T) {
 }
 
 func TestMemberValidation(t *testing.T) {
-	m := Member{}
+	m := Member{hasData: false}
+	assert.ErrorIs(t, m.validate(), errInvalidMember)
+
+	m.hasData = true
 	assert.ErrorIs(t, m.validate(), errInvalidKey)
 
 	m.key, m.value = "k", "\\"
@@ -677,13 +684,18 @@ func TestMemberValidation(t *testing.T) {
 func TestNewMember(t *testing.T) {
 	m, err := NewMember("", "")
 	assert.ErrorIs(t, err, errInvalidKey)
-	assert.Equal(t, Member{}, m)
+	assert.Equal(t, Member{hasData: false}, m)
 
 	key, val := "k", "v"
-	p := Property{key: "foo"}
+	p := Property{key: "foo", hasData: true}
 	m, err = NewMember(key, val, p)
 	assert.NoError(t, err)
-	expected := Member{key: key, value: val, properties: properties{{key: "foo"}}}
+	expected := Member{
+		key:        key,
+		value:      val,
+		properties: properties{{key: "foo", hasData: true}},
+		hasData:    true,
+	}
 	assert.Equal(t, expected, m)
 
 	// Ensure new member is immutable.
@@ -692,12 +704,46 @@ func TestNewMember(t *testing.T) {
 }
 
 func TestPropertiesValidate(t *testing.T) {
-	p := properties{{}}
+	p := properties{{hasData: true}}
 	assert.ErrorIs(t, p.validate(), errInvalidKey)
 
 	p[0].key = "foo"
 	assert.NoError(t, p.validate())
 
-	p = append(p, Property{key: "bar"})
+	p = append(p, Property{key: "bar", hasData: true})
 	assert.NoError(t, p.validate())
+}
+
+var benchBaggage Baggage
+
+func BenchmarkNew(b *testing.B) {
+	mem1, _ := NewMember("key1", "val1")
+	mem2, _ := NewMember("key2", "val2")
+	mem3, _ := NewMember("key3", "val3")
+	mem4, _ := NewMember("key4", "val4")
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		benchBaggage, _ = New(mem1, mem2, mem3, mem4)
+	}
+}
+
+var benchMember Member
+
+func BenchmarkNewMember(b *testing.B) {
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		benchMember, _ = NewMember("key", "value")
+	}
+}
+
+func BenchmarkParse(b *testing.B) {
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		benchBaggage, _ = Parse(`userId=alice,serverNode = DF28 , isProduction = false,hasProp=stuff;propKey;propWValue=value`)
+	}
 }
