@@ -13,7 +13,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Support `OTEL_EXPORTER_ZIPKIN_ENDPOINT` env to specify zipkin collector endpoint (#2490)
 - Log the configuration of TracerProviders, and Tracers for debugging. To enable use a logger with Verbosity (V level) >=1
 - Added environment variables for: `OTEL_BSP_SCHEDULE_DELAY`, `OTEL_BSP_EXPORT_TIMEOUT`, `OTEL_BSP_MAX_QUEUE_SIZE` and `OTEL_BSP_MAX_EXPORT_BATCH_SIZE` (#2515)
-- Baggage members are now only validated once, when calling `NewMember` and not also when adding it to the baggage itself. (#2522)
 
 ### Changed
 
@@ -31,6 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Change the `otlpmetric.Client` interface's `UploadMetrics` method to accept a single `ResourceMetrics` instead of a slice of them. (#2491)
 - Specify explicit buckets in Prometheus example. (#2493)
 - W3C baggage will now decode urlescaped values. (#2529)
+- Baggage members are now only validated once, when calling `NewMember` and not also when adding it to the baggage itself. (#2522)
 
 ### Removed
 
