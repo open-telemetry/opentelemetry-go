@@ -126,12 +126,12 @@ func parseProperty(property string) (Property, error) {
 // validate ensures p conforms to the W3C Baggage specification, returning an
 // error otherwise.
 func (p Property) validate() error {
-	if !p.hasData {
-		return errInvalidProperty
-	}
-
 	errFunc := func(err error) error {
 		return fmt.Errorf("invalid property: %w", err)
+	}
+
+	if !p.hasData {
+		return errFunc(fmt.Errorf("%w: %q", errInvalidProperty, p))
 	}
 
 	if !keyRe.MatchString(p.key) {
@@ -326,7 +326,7 @@ func parseMember(member string) (Member, error) {
 // error otherwise.
 func (m Member) validate() error {
 	if !m.hasData {
-		return errInvalidMember
+		return fmt.Errorf("%w: %q", errInvalidMember, m)
 	}
 
 	if !keyRe.MatchString(m.key) {
