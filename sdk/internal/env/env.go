@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace // import "go.opentelemetry.io/otel/sdk/trace"
+package env // import "go.opentelemetry.io/otel/sdk/internal/env"
 
 import (
 	"os"
@@ -23,27 +23,28 @@ import (
 
 // Environment variable names
 const (
-	// EnvBatchSpanProcessorScheduleDelay
+	// BatchSpanProcessorScheduleDelayKey
 	// Delay interval between two consecutive exports.
 	// i.e. 5000
-	EnvBatchSpanProcessorScheduleDelay = "OTEL_BSP_SCHEDULE_DELAY"
-	// EnvBatchSpanProcessorExportTimeout
+	BatchSpanProcessorScheduleDelayKey = "OTEL_BSP_SCHEDULE_DELAY"
+	// BatchSpanProcessorExportTimeoutKey
 	// Maximum allowed time to export data.
 	// i.e. 3000
-	EnvBatchSpanProcessorExportTimeout = "OTEL_BSP_EXPORT_TIMEOUT"
-	// EnvBatchSpanProcessorMaxQueueSize
+	BatchSpanProcessorExportTimeoutKey = "OTEL_BSP_EXPORT_TIMEOUT"
+	// BatchSpanProcessorMaxQueueSizeKey
 	// Maximum queue size
 	// i.e. 2048
-	EnvBatchSpanProcessorMaxQueueSize = "OTEL_BSP_MAX_QUEUE_SIZE"
-	// EnvBatchSpanProcessorMaxExportBatchSize
+	BatchSpanProcessorMaxQueueSizeKey = "OTEL_BSP_MAX_QUEUE_SIZE"
+	// BatchSpanProcessorMaxExportBatchSizeKey
 	// Maximum batch size
 	// Note: Must be less than or equal to EnvBatchSpanProcessorMaxQueueSize
 	// i.e. 512
-	EnvBatchSpanProcessorMaxExportBatchSize = "OTEL_BSP_MAX_EXPORT_BATCH_SIZE"
+	BatchSpanProcessorMaxExportBatchSizeKey = "OTEL_BSP_MAX_EXPORT_BATCH_SIZE"
 )
 
-// intEnvOr returns an env variable's numeric value if it is exists (and valid) or the default if not
-func intEnvOr(key string, defaultValue int) int {
+// IntEnvOr returns the int value of the environment variable with name key if
+// it exists and the value is an int. Otherwise, defaultValue is returned.
+func IntEnvOr(key string, defaultValue int) int {
 	value, ok := os.LookupEnv(key)
 	if !ok {
 		return defaultValue
@@ -56,4 +57,32 @@ func intEnvOr(key string, defaultValue int) int {
 	}
 
 	return intValue
+}
+
+// BatchSpanProcessorScheduleDelay returns the environment variable value for
+// the OTEL_BSP_SCHEDULE_DELAY key if it exists, otherwise defaultValue is
+// returned.
+func BatchSpanProcessorScheduleDelay(defaultValue int) int {
+	return IntEnvOr(BatchSpanProcessorScheduleDelayKey, defaultValue)
+}
+
+// BatchSpanProcessorExportTimeout returns the environment variable value for
+// the OTEL_BSP_EXPORT_TIMEOUT key if it exists, otherwise defaultValue is
+// returned.
+func BatchSpanProcessorExportTimeout(defaultValue int) int {
+	return IntEnvOr(BatchSpanProcessorExportTimeoutKey, defaultValue)
+}
+
+// BatchSpanProcessorMaxQueueSize returns the environment variable value for
+// the OTEL_BSP_MAX_QUEUE_SIZE key if it exists, otherwise defaultValue is
+// returned.
+func BatchSpanProcessorMaxQueueSize(defaultValue int) int {
+	return IntEnvOr(BatchSpanProcessorMaxQueueSizeKey, defaultValue)
+}
+
+// BatchSpanProcessorMaxExportBatchSize returns the environment variable value for
+// the OTEL_BSP_MAX_EXPORT_BATCH_SIZE key if it exists, otherwise defaultValue
+// is returned.
+func BatchSpanProcessorMaxExportBatchSize(defaultValue int) int {
+	return IntEnvOr(BatchSpanProcessorMaxExportBatchSizeKey, defaultValue)
 }
