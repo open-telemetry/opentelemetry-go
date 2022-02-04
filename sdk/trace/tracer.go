@@ -127,7 +127,7 @@ func (tr *tracer) newRecordingSpan(psc, sc trace.SpanContext, name string, sr Sa
 		// will be over-sized. The default Go compiler has been tested to
 		// dynamically allocate needed space very well. Benchmarking has shown
 		// it to be more performant than what we can predetermine here,
-		// especially for the common use case of little to now added
+		// especially for the common use case of few to no added
 		// attributes.
 
 		parent:      psc,
