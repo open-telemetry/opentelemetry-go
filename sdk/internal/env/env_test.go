@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
+package env
 
 import (
 	"os"
@@ -46,14 +46,14 @@ func TestIntEnvOr(t *testing.T) {
 	}
 
 	envStore := ottest.NewEnvStore()
-	envStore.Record(EnvBatchSpanProcessorMaxQueueSize)
+	envStore.Record(BatchSpanProcessorMaxQueueSizeKey)
 	defer func() {
 		require.NoError(t, envStore.Restore())
 	}()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			require.NoError(t, os.Setenv(EnvBatchSpanProcessorMaxQueueSize, tc.envValue))
-			actualValue := intEnvOr(EnvBatchSpanProcessorMaxQueueSize, tc.defaultValue)
+			require.NoError(t, os.Setenv(BatchSpanProcessorMaxQueueSizeKey, tc.envValue))
+			actualValue := BatchSpanProcessorMaxQueueSize(tc.defaultValue)
 			assert.Equal(t, tc.expectedValue, actualValue)
 		})
 	}
