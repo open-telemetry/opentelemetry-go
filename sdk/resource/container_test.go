@@ -31,7 +31,7 @@ func setDefaultContainerProviders() {
 func setContainerProviders(
 	idProvider containerIDProvider,
 ) {
-	defaultContainerIDProvider = idProvider
+	containerID = idProvider
 }
 
 func TestGetContainerIDFromLine(t *testing.T) {

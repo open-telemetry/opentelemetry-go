@@ -174,11 +174,11 @@ func WithProcessRuntimeDescription() Option {
 // See individual WithContainer* functions to configure specific attributes.
 func WithContainer() Option {
 	return WithDetectors(
-		containerIDDetector{},
+		cgroupContainerIDDetector{},
 	)
 }
 
 // WithContainerID adds an attribute with the id of the container to the configured Resource.
 func WithContainerID() Option {
-	return WithDetectors(containerIDDetector{})
+	return WithDetectors(cgroupContainerIDDetector{})
 }

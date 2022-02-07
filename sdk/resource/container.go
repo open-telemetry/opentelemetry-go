@@ -28,17 +28,17 @@ import (
 type containerIDProvider func() (string, error)
 
 var (
-	defaultContainerIDProvider containerIDProvider = getContainerIDFromCGroup
+	containerID containerIDProvider = getContainerIDFromCGroup
 )
 
-type containerIDDetector struct{}
+type cgroupContainerIDDetector struct{}
 
 const cgroupPath = "/proc/self/cgroup"
 
 // Detect returns a *Resource that describes the id of the container.
 // If no container id found, an empty resource will be returned.
-func (containerIDDetector) Detect(ctx context.Context) (*Resource, error) {
-	containerID, err := defaultContainerIDProvider()
+func (cgroupContainerIDDetector) Detect(ctx context.Context) (*Resource, error) {
+	containerID, err := containerID()
 	if err != nil {
 		return nil, err
 	}
