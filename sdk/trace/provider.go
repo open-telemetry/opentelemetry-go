@@ -366,7 +366,9 @@ func tracerProviderOptionsFromEnv() []TracerProviderOption {
 	sampler, err := samplerFromEnv()
 	if err != nil {
 		otel.Handle(err)
-	} else if sampler != nil {
+	}
+
+	if sampler != nil {
 		opts = append(opts, WithSampler(sampler))
 	}
 

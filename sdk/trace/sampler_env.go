@@ -15,12 +15,11 @@
 package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
-
-	"go.opentelemetry.io/otel"
 )
 
 const (
@@ -34,6 +33,26 @@ const (
 	samplerParsedBasedAlwaysOff    = "parentbased_always_off"
 	samplerParentBasedTraceIDRatio = "parentbased_traceidratio"
 )
+
+type errUnsupportedSampler string
+
+func (e errUnsupportedSampler) Error() string {
+	return fmt.Sprintf("unsupported sampler: %s", string(e))
+}
+
+var errNegativeTraceIDRatio = errors.New("trace ID ratio cannot be negative")
+
+type samplerArgParseError struct {
+	parseErr error
+}
+
+func (e samplerArgParseError) Error() string {
+	return fmt.Sprintf("parsing sampler argument: %s", e.parseErr.Error())
+}
+
+func (e samplerArgParseError) Unwrap() error {
+	return e.parseErr
+}
 
 func samplerFromEnv() (Sampler, error) {
 	sampler, ok := os.LookupEnv(tracesSamplerKey)
@@ -51,45 +70,32 @@ func samplerFromEnv() (Sampler, error) {
 	case samplerAlwaysOff:
 		return NeverSample(), nil
 	case samplerTraceIDRatio:
-		arg := 1.0
-		if hasSamplerArg {
-			var err error
-			arg, err = parseTraceIDRatio(samplerArg)
-			if err != nil {
-				otel.Handle(err)
-			}
-		}
-
-		return TraceIDRatioBased(arg), nil
+		ratio, err := parseTraceIDRatio(samplerArg, hasSamplerArg)
+		return ratio, err
 	case samplerParentBasedAlwaysOn:
 		return ParentBased(AlwaysSample()), nil
 	case samplerParsedBasedAlwaysOff:
 		return ParentBased(NeverSample()), nil
 	case samplerParentBasedTraceIDRatio:
-		arg := 1.0
-		if hasSamplerArg {
-			var err error
-			arg, err = parseTraceIDRatio(samplerArg)
-			if err != nil {
-				otel.Handle(err)
-			}
-		}
-
-		return ParentBased(TraceIDRatioBased(arg)), nil
+		ratio, err := parseTraceIDRatio(samplerArg, hasSamplerArg)
+		return ParentBased(ratio), err
 	default:
-		return nil, fmt.Errorf("unsupported sampler: %s", sampler)
+		return nil, errUnsupportedSampler(sampler)
 	}
 
 }
 
-func parseTraceIDRatio(arg string) (float64, error) {
+func parseTraceIDRatio(arg string, hasSamplerArg bool) (Sampler, error) {
+	if !hasSamplerArg {
+		return TraceIDRatioBased(1.0), nil
+	}
 	v, err := strconv.ParseFloat(arg, 64)
 	if err != nil {
-		return 1.0, fmt.Errorf("parsing sampler argument: %w", err)
+		return TraceIDRatioBased(1.0), samplerArgParseError{err}
 	}
 	if v < 0.0 {
-		return 1.0, fmt.Errorf("trace ID ratio cannot be negative")
+		return TraceIDRatioBased(1.0), errNegativeTraceIDRatio
 	}
 
-	return v, nil
+	return TraceIDRatioBased(v), nil
 }
