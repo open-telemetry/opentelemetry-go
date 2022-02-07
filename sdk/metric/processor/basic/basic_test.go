@@ -29,11 +29,12 @@ import (
 	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/processortest"
@@ -80,7 +81,6 @@ func TestProcessor(t *testing.T) {
 						t.Run(nc.kind.String(), func(t *testing.T) {
 							for _, ac := range []aggregatorCase{
 								{kind: aggregation.SumKind},
-								{kind: aggregation.MinMaxSumCountKind},
 								{kind: aggregation.HistogramKind},
 								{kind: aggregation.LastValueKind},
 							} {
@@ -111,7 +111,7 @@ func asNumber(nkind number.Kind, value int64) number.Number {
 
 func updateFor(t *testing.T, desc *sdkapi.Descriptor, selector export.AggregatorSelector, value int64, labs ...attribute.KeyValue) export.Accumulation {
 	ls := attribute.NewSet(labs...)
-	var agg export.Aggregator
+	var agg aggregator.Aggregator
 	selector.AggregatorFor(desc, &agg)
 	require.NoError(t, agg.Update(context.Background(), asNumber(desc.NumberKind(), value), desc))
 

@@ -3,13 +3,12 @@ module go.opentelemetry.io/otel/exporters/prometheus
 go 1.16
 
 require (
-	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/client_golang v1.12.1
 	github.com/stretchr/testify v1.7.0
-	go.opentelemetry.io/otel v1.2.0
-	go.opentelemetry.io/otel/metric v0.25.0
-	go.opentelemetry.io/otel/sdk v1.2.0
-	go.opentelemetry.io/otel/sdk/export/metric v0.25.0
-	go.opentelemetry.io/otel/sdk/metric v0.25.0
+	go.opentelemetry.io/otel v1.3.0
+	go.opentelemetry.io/otel/metric v0.26.0
+	go.opentelemetry.io/otel/sdk v1.3.0
+	go.opentelemetry.io/otel/sdk/metric v0.26.0
 )
 
 replace go.opentelemetry.io/otel => ../..
@@ -33,8 +32,6 @@ replace go.opentelemetry.io/otel/example/prom-collector => ../../example/prom-co
 replace go.opentelemetry.io/otel/example/prometheus => ../../example/prometheus
 
 replace go.opentelemetry.io/otel/example/zipkin => ../../example/zipkin
-
-replace go.opentelemetry.io/otel/exporters/otlp => ../otlp
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace => ../otlp/otlptrace
 
@@ -77,3 +74,5 @@ replace go.opentelemetry.io/otel/bridge/opencensus/test => ../../bridge/opencens
 replace go.opentelemetry.io/otel/example/fib => ../../example/fib
 
 replace go.opentelemetry.io/otel/schema => ../../schema
+
+replace go.opentelemetry.io/otel/exporters/otlp/internal/retry => ../otlp/internal/retry

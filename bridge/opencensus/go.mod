@@ -4,12 +4,11 @@ go 1.16
 
 require (
 	go.opencensus.io v0.22.6-0.20201102222123-380f4078db9f
-	go.opentelemetry.io/otel v1.2.0
-	go.opentelemetry.io/otel/metric v0.25.0
-	go.opentelemetry.io/otel/sdk v1.2.0
-	go.opentelemetry.io/otel/sdk/export/metric v0.25.0
-	go.opentelemetry.io/otel/sdk/metric v0.25.0
-	go.opentelemetry.io/otel/trace v1.2.0
+	go.opentelemetry.io/otel v1.3.0
+	go.opentelemetry.io/otel/metric v0.26.0
+	go.opentelemetry.io/otel/sdk v1.3.0
+	go.opentelemetry.io/otel/sdk/metric v0.26.0
+	go.opentelemetry.io/otel/trace v1.3.0
 )
 
 replace go.opentelemetry.io/otel => ../..
@@ -75,3 +74,5 @@ replace go.opentelemetry.io/otel/bridge/opencensus/test => ./test
 replace go.opentelemetry.io/otel/example/fib => ../../example/fib
 
 replace go.opentelemetry.io/otel/schema => ../../schema
+
+replace go.opentelemetry.io/otel/exporters/otlp/internal/retry => ../../exporters/otlp/internal/retry

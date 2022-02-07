@@ -20,7 +20,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
-	"regexp"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -28,24 +28,17 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
-var httpSchemeRegexp = regexp.MustCompile(`(?i)^(http://|https://)`)
-
-func ApplyGRPCEnvConfigs(cfg *Config) {
-	e := EnvOptionsReader{
-		GetEnv:   os.Getenv,
-		ReadFile: ioutil.ReadFile,
-	}
-
-	e.ApplyGRPCEnvConfigs(cfg)
+var DefaultEnvOptionsReader = EnvOptionsReader{
+	GetEnv:   os.Getenv,
+	ReadFile: ioutil.ReadFile,
 }
 
-func ApplyHTTPEnvConfigs(cfg *Config) {
-	e := EnvOptionsReader{
-		GetEnv:   os.Getenv,
-		ReadFile: ioutil.ReadFile,
-	}
+func ApplyGRPCEnvConfigs(cfg Config) Config {
+	return DefaultEnvOptionsReader.ApplyGRPCEnvConfigs(cfg)
+}
 
-	e.ApplyHTTPEnvConfigs(cfg)
+func ApplyHTTPEnvConfigs(cfg Config) Config {
+	return DefaultEnvOptionsReader.ApplyHTTPEnvConfigs(cfg)
 }
 
 type EnvOptionsReader struct {
@@ -53,41 +46,79 @@ type EnvOptionsReader struct {
 	ReadFile func(filename string) ([]byte, error)
 }
 
-func (e *EnvOptionsReader) ApplyHTTPEnvConfigs(cfg *Config) {
+func (e *EnvOptionsReader) ApplyHTTPEnvConfigs(cfg Config) Config {
 	opts := e.GetOptionsFromEnv()
 	for _, opt := range opts {
-		opt.ApplyHTTPOption(cfg)
+		cfg = opt.ApplyHTTPOption(cfg)
 	}
+	return cfg
 }
 
-func (e *EnvOptionsReader) ApplyGRPCEnvConfigs(cfg *Config) {
+func (e *EnvOptionsReader) ApplyGRPCEnvConfigs(cfg Config) Config {
 	opts := e.GetOptionsFromEnv()
 	for _, opt := range opts {
-		opt.ApplyGRPCOption(cfg)
+		cfg = opt.ApplyGRPCOption(cfg)
 	}
+	return cfg
 }
 
 func (e *EnvOptionsReader) GetOptionsFromEnv() []GenericOption {
 	var opts []GenericOption
 
 	// Endpoint
-	if v, ok := e.getEnvValue("ENDPOINT"); ok {
-		if isInsecureEndpoint(v) {
-			opts = append(opts, WithInsecure())
-		} else {
-			opts = append(opts, WithSecure())
-		}
-
-		opts = append(opts, WithEndpoint(trimSchema(v)))
-	}
 	if v, ok := e.getEnvValue("TRACES_ENDPOINT"); ok {
-		if isInsecureEndpoint(v) {
-			opts = append(opts, WithInsecure())
-		} else {
-			opts = append(opts, WithSecure())
+		u, err := url.Parse(v)
+		// Ignore invalid values.
+		if err == nil {
+			// This is used to set the scheme for OTLP/HTTP.
+			if insecureSchema(u.Scheme) {
+				opts = append(opts, WithInsecure())
+			} else {
+				opts = append(opts, WithSecure())
+			}
+			opts = append(opts, newSplitOption(func(cfg Config) Config {
+				cfg.Traces.Endpoint = u.Host
+				// For endpoint URLs for OTLP/HTTP per-signal variables, the
+				// URL MUST be used as-is without any modification. The only
+				// exception is that if an URL contains no path part, the root
+				// path / MUST be used.
+				path := u.Path
+				if path == "" {
+					path = "/"
+				}
+				cfg.Traces.URLPath = path
+				return cfg
+			}, func(cfg Config) Config {
+				// For OTLP/gRPC endpoints, this is the target to which the
+				// exporter is going to send telemetry.
+				cfg.Traces.Endpoint = path.Join(u.Host, u.Path)
+				return cfg
+			}))
 		}
-
-		opts = append(opts, WithEndpoint(trimSchema(v)))
+	} else if v, ok = e.getEnvValue("ENDPOINT"); ok {
+		u, err := url.Parse(v)
+		// Ignore invalid values.
+		if err == nil {
+			// This is used to set the scheme for OTLP/HTTP.
+			if insecureSchema(u.Scheme) {
+				opts = append(opts, WithInsecure())
+			} else {
+				opts = append(opts, WithSecure())
+			}
+			opts = append(opts, newSplitOption(func(cfg Config) Config {
+				cfg.Traces.Endpoint = u.Host
+				// For OTLP/HTTP endpoint URLs without a per-signal
+				// configuration, the passed endpoint is used as a base URL
+				// and the signals are sent to these paths relative to that.
+				cfg.Traces.URLPath = path.Join(u.Path, DefaultTracesPath)
+				return cfg
+			}, func(cfg Config) Config {
+				// For OTLP/gRPC endpoints, this is the target to which the
+				// exporter is going to send telemetry.
+				cfg.Traces.Endpoint = path.Join(u.Host, u.Path)
+				return cfg
+			}))
+		}
 	}
 
 	// Certificate File
@@ -136,12 +167,13 @@ func (e *EnvOptionsReader) GetOptionsFromEnv() []GenericOption {
 	return opts
 }
 
-func isInsecureEndpoint(endpoint string) bool {
-	return strings.HasPrefix(strings.ToLower(endpoint), "http://") || strings.HasPrefix(strings.ToLower(endpoint), "unix://")
-}
-
-func trimSchema(endpoint string) string {
-	return httpSchemeRegexp.ReplaceAllString(endpoint, "")
+func insecureSchema(schema string) bool {
+	switch strings.ToLower(schema) {
+	case "http", "unix":
+		return true
+	default:
+		return false
+	}
 }
 
 // getEnvValue gets an OTLP environment variable value of the specified key using the GetEnv function.

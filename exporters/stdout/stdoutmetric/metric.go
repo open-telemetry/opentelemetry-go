@@ -23,9 +23,9 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/sdkapi"
-	exportmetric "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -33,12 +33,10 @@ type metricExporter struct {
 	config config
 }
 
-var _ exportmetric.Exporter = &metricExporter{}
+var _ export.Exporter = &metricExporter{}
 
 type line struct {
 	Name      string      `json:"Name"`
-	Min       interface{} `json:"Min,omitempty"`
-	Max       interface{} `json:"Max,omitempty"`
 	Sum       interface{} `json:"Sum,omitempty"`
 	Count     interface{} `json:"Count,omitempty"`
 	LastValue interface{} `json:"Last,omitempty"`
@@ -51,10 +49,10 @@ func (e *metricExporter) TemporalityFor(desc *sdkapi.Descriptor, kind aggregatio
 	return aggregation.StatelessTemporalitySelector().TemporalityFor(desc, kind)
 }
 
-func (e *metricExporter) Export(_ context.Context, res *resource.Resource, reader exportmetric.InstrumentationLibraryReader) error {
+func (e *metricExporter) Export(_ context.Context, res *resource.Resource, reader export.InstrumentationLibraryReader) error {
 	var aggError error
 	var batch []line
-	aggError = reader.ForEach(func(lib instrumentation.Library, mr exportmetric.Reader) error {
+	aggError = reader.ForEach(func(lib instrumentation.Library, mr export.Reader) error {
 
 		var instLabels []attribute.KeyValue
 		if name := lib.Name; name != "" {
@@ -69,7 +67,7 @@ func (e *metricExporter) Export(_ context.Context, res *resource.Resource, reade
 		instSet := attribute.NewSet(instLabels...)
 		encodedInstLabels := instSet.Encoded(e.config.LabelEncoder)
 
-		return mr.ForEach(e, func(record exportmetric.Record) error {
+		return mr.ForEach(e, func(record export.Record) error {
 			desc := record.Descriptor()
 			agg := record.Aggregation()
 			kind := desc.NumberKind()
@@ -83,26 +81,6 @@ func (e *metricExporter) Export(_ context.Context, res *resource.Resource, reade
 					return err
 				}
 				expose.Sum = value.AsInterface(kind)
-			}
-
-			if mmsc, ok := agg.(aggregation.MinMaxSumCount); ok {
-				count, err := mmsc.Count()
-				if err != nil {
-					return err
-				}
-				expose.Count = count
-
-				max, err := mmsc.Max()
-				if err != nil {
-					return err
-				}
-				expose.Max = max.AsInterface(kind)
-
-				min, err := mmsc.Min()
-				if err != nil {
-					return err
-				}
-				expose.Min = min.AsInterface(kind)
 			} else if lv, ok := agg.(aggregation.LastValue); ok {
 				value, timestamp, err := lv.LastValue()
 				if err != nil {

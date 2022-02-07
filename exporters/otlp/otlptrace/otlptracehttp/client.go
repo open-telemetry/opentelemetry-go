@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"path"
 	"strconv"
 	"strings"
@@ -31,9 +32,9 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/retry"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
@@ -79,9 +80,9 @@ var _ otlptrace.Client = (*client)(nil)
 // NewClient creates a new HTTP trace client.
 func NewClient(opts ...Option) otlptrace.Client {
 	cfg := otlpconfig.NewDefaultConfig()
-	otlpconfig.ApplyHTTPEnvConfigs(&cfg)
+	cfg = otlpconfig.ApplyHTTPEnvConfigs(cfg)
 	for _, opt := range opts {
-		opt.applyHTTPOption(&cfg)
+		cfg = opt.applyHTTPOption(cfg)
 	}
 
 	for pathPtr, defaultPath := range map[*string]string{
@@ -201,8 +202,8 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 }
 
 func (d *client) newRequest(body []byte) (request, error) {
-	address := fmt.Sprintf("%s://%s%s", d.getScheme(), d.cfg.Endpoint, d.cfg.URLPath)
-	r, err := http.NewRequest(http.MethodPost, address, nil)
+	u := url.URL{Scheme: d.getScheme(), Host: d.cfg.Endpoint, Path: d.cfg.URLPath}
+	r, err := http.NewRequest(http.MethodPost, u.String(), nil)
 	if err != nil {
 		return request{Request: r}, err
 	}

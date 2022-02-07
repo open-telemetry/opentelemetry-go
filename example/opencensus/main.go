@@ -33,7 +33,7 @@ import (
 	"go.opentelemetry.io/otel/bridge/opencensus"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
-	otmetricexport "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/export"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -100,7 +100,7 @@ func tracing(otExporter sdktrace.SpanExporter) {
 // monitoring demonstrates creating an IntervalReader using the OpenTelemetry
 // exporter to send metrics to the exporter by using either an OpenCensus
 // registry or an OpenCensus view.
-func monitoring(otExporter otmetricexport.Exporter) {
+func monitoring(otExporter export.Exporter) {
 	log.Println("Using the OpenTelemetry stdoutmetric exporter to export OpenCensus metrics.  This allows routing telemetry from both OpenTelemetry and OpenCensus to a single exporter.")
 	ocExporter := opencensus.NewMetricExporter(otExporter)
 	intervalReader, err := metricexport.NewIntervalReader(&metricexport.Reader{}, ocExporter)

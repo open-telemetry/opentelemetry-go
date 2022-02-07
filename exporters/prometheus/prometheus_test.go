@@ -27,9 +27,9 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	selector "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -124,11 +124,11 @@ func TestPrometheusExporter(t *testing.T) {
 
 	expected = append(expected, expectCounter("counter", `counter{A="B",C="D",R="V"} 15.3`))
 
-	_ = metric.Must(meter).NewInt64GaugeObserver("intobserver", func(_ context.Context, result metric.Int64ObserverResult) {
+	_ = metric.Must(meter).NewInt64GaugeObserver("intgaugeobserver", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(1, labels...)
 	})
 
-	expected = append(expected, expectGauge("intobserver", `intobserver{A="B",C="D",R="V"} 1`))
+	expected = append(expected, expectGauge("intgaugeobserver", `intgaugeobserver{A="B",C="D",R="V"} 1`))
 
 	histogram.Record(ctx, -0.6, labels...)
 	histogram.Record(ctx, -0.4, labels...)
@@ -147,6 +147,18 @@ func TestPrometheusExporter(t *testing.T) {
 	upDownCounter.Add(ctx, -3.2, labels...)
 
 	expected = append(expected, expectGauge("updowncounter", `updowncounter{A="B",C="D",R="V"} 6.8`))
+
+	_ = metric.Must(meter).NewFloat64CounterObserver("floatcounterobserver", func(_ context.Context, result metric.Float64ObserverResult) {
+		result.Observe(7.7, labels...)
+	})
+
+	expected = append(expected, expectCounter("floatcounterobserver", `floatcounterobserver{A="B",C="D",R="V"} 7.7`))
+
+	_ = metric.Must(meter).NewFloat64UpDownCounterObserver("floatupdowncounterobserver", func(_ context.Context, result metric.Float64ObserverResult) {
+		result.Observe(-7.7, labels...)
+	})
+
+	expected = append(expected, expectGauge("floatupdowncounterobserver", `floatupdowncounterobserver{A="B",C="D",R="V"} -7.7`))
 
 	compareExport(t, exporter, expected)
 	compareExport(t, exporter, expected)

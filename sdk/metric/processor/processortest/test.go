@@ -23,13 +23,13 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/sdkapi"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -48,7 +48,7 @@ type (
 	mapValue struct {
 		labels     *attribute.Set
 		resource   *resource.Resource
-		aggregator export.Aggregator
+		aggregator aggregator.Aggregator
 	}
 
 	// Output implements export.Reader.
@@ -179,7 +179,7 @@ func AggregatorSelector() export.AggregatorSelector {
 }
 
 // AggregatorFor implements export.AggregatorSelector.
-func (testAggregatorSelector) AggregatorFor(desc *sdkapi.Descriptor, aggPtrs ...*export.Aggregator) {
+func (testAggregatorSelector) AggregatorFor(desc *sdkapi.Descriptor, aggPtrs ...*aggregator.Aggregator) {
 
 	switch {
 	case strings.HasSuffix(desc.Name(), ".disabled"):
@@ -188,11 +188,6 @@ func (testAggregatorSelector) AggregatorFor(desc *sdkapi.Descriptor, aggPtrs ...
 		}
 	case strings.HasSuffix(desc.Name(), ".sum"):
 		aggs := sum.New(len(aggPtrs))
-		for i := range aggPtrs {
-			*aggPtrs[i] = &aggs[i]
-		}
-	case strings.HasSuffix(desc.Name(), ".minmaxsumcount"):
-		aggs := minmaxsumcount.New(len(aggPtrs), desc)
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
 		}
@@ -257,7 +252,7 @@ func (o *Output) AddRecordWithResource(rec export.Record, res *resource.Resource
 		resource: res.Equivalent(),
 	}
 	if _, ok := o.m[key]; !ok {
-		var agg export.Aggregator
+		var agg aggregator.Aggregator
 		testAggregatorSelector{}.AggregatorFor(rec.Descriptor(), &agg)
 		o.m[key] = mapValue{
 			aggregator: agg,
@@ -265,7 +260,7 @@ func (o *Output) AddRecordWithResource(rec export.Record, res *resource.Resource
 			resource:   res,
 		}
 	}
-	return o.m[key].aggregator.Merge(rec.Aggregation().(export.Aggregator), rec.Descriptor())
+	return o.m[key].aggregator.Merge(rec.Aggregation().(aggregator.Aggregator), rec.Descriptor())
 }
 
 // Map returns the calculated values for test validation from a set of

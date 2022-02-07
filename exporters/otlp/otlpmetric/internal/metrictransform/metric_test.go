@@ -28,11 +28,11 @@ import (
 	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -96,84 +96,6 @@ func TestStringKeyValues(t *testing.T) {
 	}
 }
 
-func TestMinMaxSumCountValue(t *testing.T) {
-	mmscs := minmaxsumcount.New(2, &sdkapi.Descriptor{})
-	mmsc, ckpt := &mmscs[0], &mmscs[1]
-
-	assert.NoError(t, mmsc.Update(context.Background(), 1, &sdkapi.Descriptor{}))
-	assert.NoError(t, mmsc.Update(context.Background(), 10, &sdkapi.Descriptor{}))
-
-	// Prior to checkpointing ErrNoData should be returned.
-	_, _, _, _, err := minMaxSumCountValues(ckpt)
-	assert.EqualError(t, err, aggregation.ErrNoData.Error())
-
-	// Checkpoint to set non-zero values
-	require.NoError(t, mmsc.SynchronizedMove(ckpt, &sdkapi.Descriptor{}))
-	min, max, sum, count, err := minMaxSumCountValues(ckpt)
-	if assert.NoError(t, err) {
-		assert.Equal(t, min, number.NewInt64Number(1))
-		assert.Equal(t, max, number.NewInt64Number(10))
-		assert.Equal(t, sum, number.NewInt64Number(11))
-		assert.Equal(t, count, uint64(2))
-	}
-}
-
-func TestMinMaxSumCountDatapoints(t *testing.T) {
-	desc := metrictest.NewDescriptor("", sdkapi.HistogramInstrumentKind, number.Int64Kind)
-	labels := attribute.NewSet(attribute.String("one", "1"))
-	mmscs := minmaxsumcount.New(2, &sdkapi.Descriptor{})
-	mmsc, ckpt := &mmscs[0], &mmscs[1]
-
-	assert.NoError(t, mmsc.Update(context.Background(), 1, &desc))
-	assert.NoError(t, mmsc.Update(context.Background(), 10, &desc))
-	require.NoError(t, mmsc.SynchronizedMove(ckpt, &desc))
-	expected := []*metricpb.SummaryDataPoint{
-		{
-			Count:             2,
-			Sum:               11,
-			StartTimeUnixNano: uint64(intervalStart.UnixNano()),
-			TimeUnixNano:      uint64(intervalEnd.UnixNano()),
-			Attributes: []*commonpb.KeyValue{
-				{
-					Key:   "one",
-					Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: "1"}},
-				},
-			},
-			QuantileValues: []*metricpb.SummaryDataPoint_ValueAtQuantile{
-				{
-					Quantile: 0.0,
-					Value:    1.0,
-				},
-				{
-					Quantile: 1.0,
-					Value:    10.0,
-				},
-			},
-		},
-	}
-	record := export.NewRecord(&desc, &labels, ckpt.Aggregation(), intervalStart, intervalEnd)
-	m, err := minMaxSumCount(record, ckpt)
-	if assert.NoError(t, err) {
-		assert.Nil(t, m.GetGauge())
-		assert.Nil(t, m.GetSum())
-		assert.Nil(t, m.GetHistogram())
-		assert.Equal(t, expected, m.GetSummary().DataPoints)
-		assert.Nil(t, m.GetIntGauge())     // nolint
-		assert.Nil(t, m.GetIntSum())       // nolint
-		assert.Nil(t, m.GetIntHistogram()) // nolint
-	}
-}
-
-func TestMinMaxSumCountPropagatesErrors(t *testing.T) {
-	// ErrNoData should be returned by both the Min and Max values of
-	// a MinMaxSumCount Aggregator. Use this fact to check the error is
-	// correctly returned.
-	mmsc := &minmaxsumcount.New(1, &sdkapi.Descriptor{})[0]
-	_, _, _, _, err := minMaxSumCountValues(mmsc)
-	assert.Error(t, err)
-	assert.Equal(t, aggregation.ErrNoData, err)
-}
-
 func TestSumIntDataPoints(t *testing.T) {
 	desc := metrictest.NewDescriptor("", sdkapi.HistogramInstrumentKind, number.Int64Kind)
 	labels := attribute.NewSet(attribute.String("one", "1"))
@@ -208,9 +130,6 @@ func TestSumIntDataPoints(t *testing.T) {
 		}, m.GetSum())
 		assert.Nil(t, m.GetHistogram())
 		assert.Nil(t, m.GetSummary())
-		assert.Nil(t, m.GetIntGauge())     // nolint
-		assert.Nil(t, m.GetIntSum())       // nolint
-		assert.Nil(t, m.GetIntHistogram()) // nolint
 	}
 }
 
@@ -246,9 +165,7 @@ func TestSumFloatDataPoints(t *testing.T) {
 			}}}, m.GetSum())
 		assert.Nil(t, m.GetHistogram())
 		assert.Nil(t, m.GetSummary())
-		assert.Nil(t, m.GetIntGauge())     // nolint
-		assert.Nil(t, m.GetIntSum())       // nolint
-		assert.Nil(t, m.GetIntHistogram()) // nolint
+
 	}
 }
 
@@ -281,9 +198,6 @@ func TestLastValueIntDataPoints(t *testing.T) {
 		assert.Nil(t, m.GetSum())
 		assert.Nil(t, m.GetHistogram())
 		assert.Nil(t, m.GetSummary())
-		assert.Nil(t, m.GetIntGauge())     // nolint
-		assert.Nil(t, m.GetIntSum())       // nolint
-		assert.Nil(t, m.GetIntHistogram()) // nolint
 	}
 }
 
@@ -320,10 +234,10 @@ func (t *testAgg) Aggregation() aggregation.Aggregation {
 func (t *testAgg) Update(ctx context.Context, number number.Number, descriptor *sdkapi.Descriptor) error {
 	return nil
 }
-func (t *testAgg) SynchronizedMove(destination export.Aggregator, descriptor *sdkapi.Descriptor) error {
+func (t *testAgg) SynchronizedMove(destination aggregator.Aggregator, descriptor *sdkapi.Descriptor) error {
 	return nil
 }
-func (t *testAgg) Merge(aggregator export.Aggregator, descriptor *sdkapi.Descriptor) error {
+func (t *testAgg) Merge(aggregator aggregator.Aggregator, descriptor *sdkapi.Descriptor) error {
 	return nil
 }
 
@@ -333,10 +247,6 @@ type testErrSum struct {
 
 type testErrLastValue struct {
 	err error
-}
-
-type testErrMinMaxSumCount struct {
-	testErrSum
 }
 
 func (te *testErrLastValue) LastValue() (number.Number, time.Time, error) {
@@ -353,23 +263,10 @@ func (te *testErrSum) Kind() aggregation.Kind {
 	return aggregation.SumKind
 }
 
-func (te *testErrMinMaxSumCount) Min() (number.Number, error) {
-	return 0, te.err
-}
-
-func (te *testErrMinMaxSumCount) Max() (number.Number, error) {
-	return 0, te.err
-}
-
-func (te *testErrMinMaxSumCount) Count() (uint64, error) {
-	return 0, te.err
-}
-
-var _ export.Aggregator = &testAgg{}
+var _ aggregator.Aggregator = &testAgg{}
 var _ aggregation.Aggregation = &testAgg{}
 var _ aggregation.Sum = &testErrSum{}
 var _ aggregation.LastValue = &testErrLastValue{}
-var _ aggregation.MinMaxSumCount = &testErrMinMaxSumCount{}
 
 func TestRecordAggregatorIncompatibleErrors(t *testing.T) {
 	makeMpb := func(kind aggregation.Kind, agg aggregation.Aggregation) (*metricpb.Metric, error) {
@@ -393,12 +290,6 @@ func TestRecordAggregatorIncompatibleErrors(t *testing.T) {
 	require.Error(t, err)
 	require.Nil(t, mpb)
 	require.True(t, errors.Is(err, ErrIncompatibleAgg))
-
-	mpb, err = makeMpb(aggregation.MinMaxSumCountKind, &lastvalue.New(1)[0])
-
-	require.Error(t, err)
-	require.Nil(t, mpb)
-	require.True(t, errors.Is(err, ErrIncompatibleAgg))
 }
 
 func TestRecordAggregatorUnexpectedErrors(t *testing.T) {
@@ -417,12 +308,6 @@ func TestRecordAggregatorUnexpectedErrors(t *testing.T) {
 	require.True(t, errors.Is(err, errEx))
 
 	mpb, err = makeMpb(aggregation.LastValueKind, &testErrLastValue{errEx})
-
-	require.Error(t, err)
-	require.Nil(t, mpb)
-	require.True(t, errors.Is(err, errEx))
-
-	mpb, err = makeMpb(aggregation.MinMaxSumCountKind, &testErrMinMaxSumCount{testErrSum{errEx}})
 
 	require.Error(t, err)
 	require.Nil(t, mpb)

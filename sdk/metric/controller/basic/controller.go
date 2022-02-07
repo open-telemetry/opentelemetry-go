@@ -23,10 +23,10 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/metric/registry"
 	"go.opentelemetry.io/otel/metric"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
+	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -112,13 +112,13 @@ type accumulatorCheckpointer struct {
 // and options (including optional exporter) to configure a metric
 // export pipeline.
 func New(checkpointerFactory export.CheckpointerFactory, opts ...Option) *Controller {
-	c := &config{
+	c := config{
 		CollectPeriod:  DefaultPeriod,
 		CollectTimeout: DefaultPeriod,
 		PushTimeout:    DefaultPeriod,
 	}
 	for _, opt := range opts {
-		opt.apply(c)
+		c = opt.apply(c)
 	}
 	if c.Resource == nil {
 		c.Resource = resource.Default()

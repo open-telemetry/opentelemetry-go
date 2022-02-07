@@ -19,10 +19,10 @@ import (
 
 	"github.com/benbjohnson/clock"
 
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 )
 
 type MockClock struct {

@@ -26,6 +26,8 @@ import (
 	"testing"
 	"time"
 
+	ottest "go.opentelemetry.io/otel/internal/internaltest"
+
 	zkmodel "github.com/openzipkin/zipkin-go/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,13 +40,9 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const (
-	collectorURL = "http://localhost:9411/api/v2/spans"
-)
-
 func TestNewRawExporter(t *testing.T) {
 	_, err := New(
-		collectorURL,
+		defaultCollectorURL,
 	)
 
 	assert.NoError(t, err)
@@ -56,15 +54,6 @@ func TestNewRawExporterShouldFailInvalidCollectorURL(t *testing.T) {
 		err error
 	)
 
-	// cannot be empty
-	exp, err = New(
-		"",
-	)
-
-	assert.Error(t, err)
-	assert.EqualError(t, err, "collector URL cannot be empty")
-	assert.Nil(t, exp)
-
 	// invalid URL
 	exp, err = New(
 		"localhost",
@@ -73,6 +62,40 @@ func TestNewRawExporterShouldFailInvalidCollectorURL(t *testing.T) {
 	assert.Error(t, err)
 	assert.EqualError(t, err, "invalid collector URL \"localhost\": no scheme or host")
 	assert.Nil(t, exp)
+}
+
+func TestNewRawExporterEmptyDefaultCollectorURL(t *testing.T) {
+	var (
+		exp *Exporter
+		err error
+	)
+
+	// use default collector URL if not specified
+	exp, err = New("")
+
+	assert.NoError(t, err)
+	assert.Equal(t, defaultCollectorURL, exp.url)
+}
+
+func TestNewRawExporterCollectorURLFromEnv(t *testing.T) {
+	var (
+		exp *Exporter
+		err error
+	)
+
+	expectedEndpoint := "http://localhost:19411/api/v2/spans"
+	envStore, err := ottest.SetEnvVariables(map[string]string{
+		envEndpoint: expectedEndpoint,
+	})
+	assert.NoError(t, err)
+	defer func() {
+		require.NoError(t, envStore.Restore())
+	}()
+
+	exp, err = New("")
+
+	assert.NoError(t, err)
+	assert.Equal(t, expectedEndpoint, exp.url)
 }
 
 type mockZipkinCollector struct {
@@ -309,7 +332,7 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	exp, err := New(collectorURL)
+	exp, err := New("")
 	require.NoError(t, err)
 
 	innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
@@ -322,7 +345,7 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	exp, err := New(collectorURL)
+	exp, err := New("")
 	require.NoError(t, err)
 
 	innerCtx, innerCancel := context.WithCancel(ctx)
@@ -331,7 +354,7 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 }
 
 func TestErrorOnExportShutdownExporter(t *testing.T) {
-	exp, err := New(collectorURL)
+	exp, err := New("")
 	require.NoError(t, err)
 	assert.NoError(t, exp.Shutdown(context.Background()))
 	assert.NoError(t, exp.ExportSpans(context.Background(), nil))

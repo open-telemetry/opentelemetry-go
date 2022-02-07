@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -30,12 +29,15 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
+const (
+	defaultCollectorURL = "http://localhost:9411/api/v2/spans"
+)
+
 // Exporter exports spans to the zipkin collector.
 type Exporter struct {
 	url    string
 	client *http.Client
 	logger *log.Logger
-	config config
 
 	stoppedMu sync.RWMutex
 	stopped   bool
@@ -53,33 +55,36 @@ type config struct {
 
 // Option defines a function that configures the exporter.
 type Option interface {
-	apply(*config)
+	apply(config) config
 }
 
-type optionFunc func(*config)
+type optionFunc func(config) config
 
-func (fn optionFunc) apply(cfg *config) {
-	fn(cfg)
+func (fn optionFunc) apply(cfg config) config {
+	return fn(cfg)
 }
 
 // WithLogger configures the exporter to use the passed logger.
 func WithLogger(logger *log.Logger) Option {
-	return optionFunc(func(cfg *config) {
+	return optionFunc(func(cfg config) config {
 		cfg.logger = logger
+		return cfg
 	})
 }
 
 // WithClient configures the exporter to use the passed HTTP client.
 func WithClient(client *http.Client) Option {
-	return optionFunc(func(cfg *config) {
+	return optionFunc(func(cfg config) config {
 		cfg.client = client
+		return cfg
 	})
 }
 
 // New creates a new Zipkin exporter.
 func New(collectorURL string, opts ...Option) (*Exporter, error) {
 	if collectorURL == "" {
-		return nil, errors.New("collector URL cannot be empty")
+		// Use endpoint from env var or default collector URL.
+		collectorURL = envOr(envEndpoint, defaultCollectorURL)
 	}
 	u, err := url.Parse(collectorURL)
 	if err != nil {
@@ -91,8 +96,9 @@ func New(collectorURL string, opts ...Option) (*Exporter, error) {
 
 	cfg := config{}
 	for _, opt := range opts {
-		opt.apply(&cfg)
+		cfg = opt.apply(cfg)
 	}
+
 	if cfg.client == nil {
 		cfg.client = http.DefaultClient
 	}
@@ -100,7 +106,6 @@ func New(collectorURL string, opts ...Option) (*Exporter, error) {
 		url:    collectorURL,
 		client: cfg.client,
 		logger: cfg.logger,
-		config: cfg,
 	}, nil
 }
 

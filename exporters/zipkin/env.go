@@ -12,27 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package connection
+package zipkin // import "go.opentelemetry.io/otel/exporters/zipkin"
 
-import (
-	"os"
-	"testing"
-	"unsafe"
+import "os"
 
-	ottest "go.opentelemetry.io/otel/internal/internaltest"
+// Environment variable names
+const (
+	// Endpoint for Zipkin collector
+	envEndpoint = "OTEL_EXPORTER_ZIPKIN_ENDPOINT"
 )
 
-// Ensure struct alignment prior to running tests.
-func TestMain(m *testing.M) {
-	fields := []ottest.FieldOffset{
-		{
-			Name:   "Connection.lastConnectErrPtr",
-			Offset: unsafe.Offsetof(Connection{}.lastConnectErrPtr),
-		},
+// envOr returns an env variable's value if it is exists or the default if not
+func envOr(key, defaultValue string) string {
+	if v, ok := os.LookupEnv(key); ok && v != "" {
+		return v
 	}
-	if !ottest.Aligned8Byte(fields, os.Stderr) {
-		os.Exit(1)
-	}
-
-	os.Exit(m.Run())
+	return defaultValue
 }
