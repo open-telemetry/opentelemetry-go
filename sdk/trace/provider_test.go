@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -102,23 +101,23 @@ func TestSchemaURL(t *testing.T) {
 
 func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 	type testCase struct {
-		sampler            string
-		samplerArg         string
-		argOptional        bool
-		description        string
-		errorStr           string
-		invalidArgErrorStr string
+		sampler             string
+		samplerArg          string
+		argOptional         bool
+		description         string
+		errorType           error
+		invalidArgErrorType interface{}
 	}
 
 	randFloat := rand.Float64()
 
 	tests := []testCase{
 		{
-			sampler:            "invalid-sampler",
-			argOptional:        true,
-			description:        ParentBased(AlwaysSample()).Description(),
-			errorStr:           "unsupported sampler: invalid-sampler",
-			invalidArgErrorStr: "unsupported sampler: invalid-sampler",
+			sampler:             "invalid-sampler",
+			argOptional:         true,
+			description:         ParentBased(AlwaysSample()).Description(),
+			errorType:           errUnsupportedSampler("invalid-sampler"),
+			invalidArgErrorType: func() *errUnsupportedSampler { e := errUnsupportedSampler("invalid-sampler"); return &e }(),
 		},
 		{
 			sampler:     "always_on",
@@ -139,7 +138,7 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 			sampler:     "traceidratio",
 			samplerArg:  fmt.Sprintf("%g", -randFloat),
 			description: TraceIDRatioBased(1.0).Description(),
-			errorStr:    "trace ID ratio cannot be negative",
+			errorType:   errNegativeTraceIDRatio,
 		},
 		{
 			sampler:     "traceidratio",
@@ -147,10 +146,10 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 			description: TraceIDRatioBased(1.0).Description(),
 		},
 		{
-			sampler:            "traceidratio",
-			argOptional:        true,
-			description:        TraceIDRatioBased(1.0).Description(),
-			invalidArgErrorStr: "parsing sampler argument: ",
+			sampler:             "traceidratio",
+			argOptional:         true,
+			description:         TraceIDRatioBased(1.0).Description(),
+			invalidArgErrorType: new(samplerArgParseError),
 		},
 		{
 			sampler:     "parentbased_always_on",
@@ -171,7 +170,7 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 			sampler:     "parentbased_traceidratio",
 			samplerArg:  fmt.Sprintf("%g", -randFloat),
 			description: ParentBased(TraceIDRatioBased(1.0)).Description(),
-			errorStr:    "trace ID ratio cannot be negative",
+			errorType:   errNegativeTraceIDRatio,
 		},
 		{
 			sampler:     "parentbased_traceidratio",
@@ -179,10 +178,10 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 			description: ParentBased(TraceIDRatioBased(1.0)).Description(),
 		},
 		{
-			sampler:            "parentbased_traceidratio",
-			argOptional:        true,
-			description:        ParentBased(TraceIDRatioBased(1.0)).Description(),
-			invalidArgErrorStr: "parsing sampler argument: ",
+			sampler:             "parentbased_traceidratio",
+			argOptional:         true,
+			description:         ParentBased(TraceIDRatioBased(1.0)).Description(),
+			invalidArgErrorType: new(samplerArgParseError),
 		},
 	}
 
@@ -206,15 +205,10 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 
 			stp := NewTracerProvider()
 			assert.Equal(t, test.description, stp.sampler.Description())
-			if test.errorStr != "" {
-				if assert.Len(t, handler.errs, 1) && assert.Error(t, handler.errs[0]) {
-					assert.Regexp(t, regexp.MustCompile(test.errorStr), handler.errs[0].Error())
-					handler.Reset()
-				}
+			if test.errorType != nil {
+				testStoredError(t, test.errorType)
 			} else {
-				if !assert.Empty(t, handler.errs, 0) {
-					assert.NoError(t, handler.errs[0])
-				}
+				assert.Empty(t, handler.errs)
 			}
 
 			if test.argOptional {
@@ -230,20 +224,34 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 					})
 
 					stp := NewTracerProvider()
+					t.Cleanup(func() { stp.Shutdown(context.Background()) })
 					assert.Equal(t, test.description, stp.sampler.Description())
 
-					if test.invalidArgErrorStr != "" {
-						if assert.Len(t, handler.errs, 1) && assert.Error(t, handler.errs[0]) {
-							assert.Regexp(t, regexp.MustCompile(test.invalidArgErrorStr), handler.errs[0].Error())
-							handler.Reset()
-						}
+					if test.invalidArgErrorType != nil {
+						testStoredError(t, test.invalidArgErrorType)
 					} else {
-						if !assert.Empty(t, handler.errs, 0) {
-							assert.NoError(t, handler.errs[0])
-						}
+						assert.Empty(t, handler.errs)
 					}
 				})
 			}
 		})
+	}
+}
+
+func testStoredError(t *testing.T, target interface{}) {
+	t.Helper()
+
+	if assert.Len(t, handler.errs, 1) && assert.Error(t, handler.errs[0]) {
+		err := handler.errs[0]
+
+		require.Implements(t, (*error)(nil), target)
+		require.NotNil(t, target.(error))
+
+		defer handler.Reset()
+		if errors.Is(err, target.(error)) {
+			return
+		}
+
+		assert.ErrorAs(t, err, target)
 	}
 }
