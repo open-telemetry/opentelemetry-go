@@ -13,6 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Support `OTEL_EXPORTER_ZIPKIN_ENDPOINT` env to specify zipkin collector endpoint (#2490)
 - Log the configuration of TracerProviders, and Tracers for debugging. To enable use a logger with Verbosity (V level) >=1
 - Added environment variables for: `OTEL_BSP_SCHEDULE_DELAY`, `OTEL_BSP_EXPORT_TIMEOUT`, `OTEL_BSP_MAX_QUEUE_SIZE` and `OTEL_BSP_MAX_EXPORT_BATCH_SIZE` (#2515)
+- Add container id support to Resource. (#2418)
 
 ### Changed
 
@@ -80,10 +81,6 @@ We have updated the project minimum supported Go version to 1.16
 - Remove the metric Bound Instruments interface and implementations. (#2399)
 - Remove the metric MinMaxSumCount kind aggregation and the corresponding OTLP export path. (#2423)
 - Metric SDK removes the "exact" aggregator for histogram instruments, as it performed a non-standard aggregation for OTLP export (creating repeated Gauge points) and worked its way into a number of confusing examples. (#2348)
-
-### Added
-
-- Add container id support to Resource. (#2418)
 
 ## [1.2.0] - 2021-11-12
 
