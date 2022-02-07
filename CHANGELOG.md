@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### ⚠️ Notice ⚠️
+
+This update is a breaking change of the unstable Metrics API. Code instrumented with the `go.opentelemetry.io/otel/metric` <= v0.26.0 will need to be modified.
+
 ### Added
 
 - Support `OTEL_EXPORTER_ZIPKIN_ENDPOINT` env to specify zipkin collector endpoint (#2490)
@@ -17,6 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Jaeger exporter takes into additional 70 bytes overhead into consideration when sending UDP packets (#2489, #2512)
+- The metrics API has be changed. (#????)
 
 ### Deprecated
 
