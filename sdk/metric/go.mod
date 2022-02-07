@@ -44,7 +44,6 @@ require (
 	github.com/benbjohnson/clock v1.3.0
 	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/otel v1.3.0
-	go.opentelemetry.io/otel/internal/metric v0.26.0
 	go.opentelemetry.io/otel/metric v0.26.0
 	go.opentelemetry.io/otel/sdk v1.3.0
 )
@@ -56,8 +55,6 @@ replace go.opentelemetry.io/otel/exporters/otlp/otlptrace => ../../exporters/otl
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc => ../../exporters/otlp/otlptrace/otlptracegrpc
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp => ../../exporters/otlp/otlptrace/otlptracehttp
-
-replace go.opentelemetry.io/otel/internal/metric => ../../internal/metric
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric => ../../exporters/otlp/otlpmetric
 

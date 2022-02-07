@@ -25,7 +25,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
@@ -35,6 +35,9 @@ import (
 
 var (
 	lemonsKey = attribute.Key("ex.com/lemons")
+
+	// TODO Bring back Global package
+	meterProvider metric.MeterProvider
 )
 
 func initMeter() {
@@ -54,7 +57,9 @@ func initMeter() {
 	if err != nil {
 		log.Panicf("failed to initialize prometheus exporter %v", err)
 	}
-	global.SetMeterProvider(exporter.MeterProvider())
+	// TODO Bring back Global package
+	// global.SetMeterProvider(exporter.MeterProvider())
+	meterProvider = exporter.MeterProvider()
 
 	http.HandleFunc("/", exporter.ServeHTTP)
 	go func() {
@@ -67,23 +72,33 @@ func initMeter() {
 func main() {
 	initMeter()
 
-	meter := global.Meter("ex.com/basic")
+	// TODO Bring back Global package
+	// meter := global.Meter("ex.com/basic")
+	meter := meterProvider.Meter("ex.com/basic")
 	observerLock := new(sync.RWMutex)
 	observerValueToReport := new(float64)
 	observerLabelsToReport := new([]attribute.KeyValue)
-	cb := func(_ context.Context, result metric.Float64ObserverResult) {
+
+	gaugeObserver, err := meter.AsyncFloat64().Gauge("ex.com.one")
+	if err != nil {
+		log.Panicf("failed to initialize instrument: %v", err)
+	}
+	_ = meter.RegisterCallback([]instrument.Asynchronous{gaugeObserver}, func(ctx context.Context) {
 		(*observerLock).RLock()
 		value := *observerValueToReport
 		labels := *observerLabelsToReport
 		(*observerLock).RUnlock()
-		result.Observe(value, labels...)
-	}
-	_ = metric.Must(meter).NewFloat64GaugeObserver("ex.com.one", cb,
-		metric.WithDescription("A GaugeObserver set to 1.0"),
-	)
+		gaugeObserver.Observe(ctx, value, labels...)
+	})
 
-	histogram := metric.Must(meter).NewFloat64Histogram("ex.com.two")
-	counter := metric.Must(meter).NewFloat64Counter("ex.com.three")
+	histogram, err := meter.SyncFloat64().Histogram("ex.com.two")
+	if err != nil {
+		log.Panicf("failed to initialize instrument: %v", err)
+	}
+	counter, err := meter.SyncFloat64().Counter("ex.com.three")
+	if err != nil {
+		log.Panicf("failed to initialize instrument: %v", err)
+	}
 
 	commonLabels := []attribute.KeyValue{lemonsKey.Int(10), attribute.String("A", "1"), attribute.String("B", "2"), attribute.String("C", "3")}
 	notSoCommonLabels := []attribute.KeyValue{lemonsKey.Int(13)}
@@ -94,12 +109,9 @@ func main() {
 	*observerValueToReport = 1.0
 	*observerLabelsToReport = commonLabels
 	(*observerLock).Unlock()
-	meter.RecordBatch(
-		ctx,
-		commonLabels,
-		histogram.Measurement(2.0),
-		counter.Measurement(12.0),
-	)
+
+	histogram.Record(ctx, 2.0, commonLabels...)
+	counter.Add(ctx, 12.0, commonLabels...)
 
 	time.Sleep(5 * time.Second)
 
@@ -107,12 +119,8 @@ func main() {
 	*observerValueToReport = 1.0
 	*observerLabelsToReport = notSoCommonLabels
 	(*observerLock).Unlock()
-	meter.RecordBatch(
-		ctx,
-		notSoCommonLabels,
-		histogram.Measurement(2.0),
-		counter.Measurement(22.0),
-	)
+	histogram.Record(ctx, 2.0, notSoCommonLabels...)
+	counter.Add(ctx, 22.0, notSoCommonLabels...)
 
 	time.Sleep(5 * time.Second)
 
@@ -120,12 +128,8 @@ func main() {
 	*observerValueToReport = 13.0
 	*observerLabelsToReport = commonLabels
 	(*observerLock).Unlock()
-	meter.RecordBatch(
-		ctx,
-		commonLabels,
-		histogram.Measurement(12.0),
-		counter.Measurement(13.0),
-	)
+	histogram.Record(ctx, 12.0, commonLabels...)
+	counter.Add(ctx, 13.0, commonLabels...)
 
 	fmt.Println("Example finished updating, please visit :2222")
 

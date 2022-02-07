@@ -36,6 +36,10 @@ func (noopMeterProvider) Meter(instrumentationName string, opts ...MeterOption) 
 	return noopMeter{}
 }
 
+func NewNoopMeter() Meter {
+	return noopMeter{}
+}
+
 type noopMeter struct{}
 
 var _ Meter = noopMeter{}

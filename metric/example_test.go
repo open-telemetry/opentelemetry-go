@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/metric/unit"
 )
 
-func ExampleSyncInstrument() {
+func ExampleMeter() {
 	// In a library or program this would be provided by otel.GetMeterProvider().
 	meterProvider := metric.NewNoopMeterProvider()
 
@@ -42,11 +42,11 @@ func ExampleSyncInstrument() {
 	ctx := context.Background()
 	// Do work
 	// ...
-	workDuration.Record(ctx, time.Now().Sub(startTime).Milliseconds())
+	workDuration.Record(ctx, time.Since(startTime).Milliseconds())
 
 }
 
-func ExampleAsyncInstrument() {
+func ExampleMeter_RegisterCallback() {
 	// In a library or program this would be provided by otel.GetMeterProvider().
 	meterProvider := metric.NewNoopMeterProvider()
 	meter := meterProvider.Meter("go.opentelemetry.io/otel/metric#AsyncExample")
@@ -75,7 +75,7 @@ func ExampleAsyncInstrument() {
 	}
 }
 
-func ExampleMultipleAsyncInstrument() {
+func ExampleMeter_RegisterCallback_multiple() {
 	meterProvider := metric.NewNoopMeterProvider()
 	meter := meterProvider.Meter("go.opentelemetry.io/otel/metric#MultiAsyncExample")
 

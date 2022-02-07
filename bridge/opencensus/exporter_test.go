@@ -26,7 +26,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
@@ -400,8 +400,8 @@ func TestConvertDescriptor(t *testing.T) {
 				"foo",
 				sdkapi.GaugeObserverInstrumentKind,
 				number.Int64Kind,
-				metric.WithDescription("bar"),
-				metric.WithUnit(unit.Bytes),
+				instrument.WithDescription("bar"),
+				instrument.WithUnit(unit.Bytes),
 			),
 		},
 		{
@@ -416,8 +416,8 @@ func TestConvertDescriptor(t *testing.T) {
 				"foo",
 				sdkapi.GaugeObserverInstrumentKind,
 				number.Float64Kind,
-				metric.WithDescription("bar"),
-				metric.WithUnit(unit.Milliseconds),
+				instrument.WithDescription("bar"),
+				instrument.WithUnit(unit.Milliseconds),
 			),
 		},
 		{
@@ -432,8 +432,8 @@ func TestConvertDescriptor(t *testing.T) {
 				"foo",
 				sdkapi.CounterObserverInstrumentKind,
 				number.Int64Kind,
-				metric.WithDescription("bar"),
-				metric.WithUnit(unit.Dimensionless),
+				instrument.WithDescription("bar"),
+				instrument.WithUnit(unit.Dimensionless),
 			),
 		},
 		{
@@ -448,8 +448,8 @@ func TestConvertDescriptor(t *testing.T) {
 				"foo",
 				sdkapi.CounterObserverInstrumentKind,
 				number.Float64Kind,
-				metric.WithDescription("bar"),
-				metric.WithUnit(unit.Dimensionless),
+				instrument.WithDescription("bar"),
+				instrument.WithUnit(unit.Dimensionless),
 			),
 		},
 		{
