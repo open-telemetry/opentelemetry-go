@@ -168,6 +168,27 @@ func attributesToJSONMapString(attributes []attribute.KeyValue) string {
 	return (string)(jsonBytes)
 }
 
+// attributeToStringPair serializes each attribute to a string pair
+func attributeToStringPair(kv attribute.KeyValue) (string, string) {
+	switch kv.Value.Type() {
+	// For slice attributes, serialize as JSON list string.
+	case attribute.BOOLSLICE:
+		json, _ := json.Marshal(kv.Value.AsBoolSlice())
+		return (string)(kv.Key), (string)(json)
+	case attribute.INT64SLICE:
+		json, _ := json.Marshal(kv.Value.AsInt64Slice())
+		return (string)(kv.Key), (string)(json)
+	case attribute.FLOAT64SLICE:
+		json, _ := json.Marshal(kv.Value.AsFloat64Slice())
+		return (string)(kv.Key), (string)(json)
+	case attribute.STRINGSLICE:
+		json, _ := json.Marshal(kv.Value.AsStringSlice())
+		return (string)(kv.Key), (string)(json)
+	default:
+		return (string)(kv.Key), kv.Value.Emit()
+	}
+}
+
 // extraZipkinTags are those that may be added to every outgoing span
 var extraZipkinTags = []string{
 	"otel.status_code",
@@ -179,8 +200,14 @@ func toZipkinTags(data tracesdk.ReadOnlySpan) map[string]string {
 	attr := data.Attributes()
 	resourceAttr := data.Resource().Attributes()
 	m := make(map[string]string, len(attr)+len(resourceAttr)+len(extraZipkinTags))
-	insertAttributes(m, attr)
-	insertAttributes(m, resourceAttr)
+	for _, kv := range attr {
+		k, v := attributeToStringPair(kv)
+		m[k] = v
+	}
+	for _, kv := range resourceAttr {
+		k, v := attributeToStringPair(kv)
+		m[k] = v
+	}
 
 	if data.Status().Code != codes.Unset {
 		m["otel.status_code"] = data.Status().Code.String()
@@ -204,29 +231,6 @@ func toZipkinTags(data tracesdk.ReadOnlySpan) map[string]string {
 	}
 
 	return m
-}
-
-// insertAttributes serializes each attribute to string, and inserts to the given map.
-func insertAttributes(m map[string]string, attributes []attribute.KeyValue) {
-	for _, kv := range attributes {
-		switch kv.Value.Type() {
-		// For slice attributes, serialize as JSON list string.
-		case attribute.BOOLSLICE:
-			json, _ := json.Marshal(kv.Value.AsBoolSlice())
-			m[(string)(kv.Key)] = (string)(json)
-		case attribute.INT64SLICE:
-			json, _ := json.Marshal(kv.Value.AsInt64Slice())
-			m[(string)(kv.Key)] = (string)(json)
-		case attribute.FLOAT64SLICE:
-			json, _ := json.Marshal(kv.Value.AsFloat64Slice())
-			m[(string)(kv.Key)] = (string)(json)
-		case attribute.STRINGSLICE:
-			json, _ := json.Marshal(kv.Value.AsStringSlice())
-			m[(string)(kv.Key)] = (string)(json)
-		default:
-			m[(string)(kv.Key)] = kv.Value.Emit()
-		}
-	}
 }
 
 // Rank determines selection order for remote endpoint. See the specification
