@@ -177,8 +177,28 @@ var extraZipkinTags = []string{
 
 func toZipkinTags(data tracesdk.ReadOnlySpan) map[string]string {
 	attr := data.Attributes()
-	m := make(map[string]string, len(attr)+len(extraZipkinTags))
+	resourceAttr := data.Resource().Attributes()
+	m := make(map[string]string, len(attr)+len(resourceAttr)+len(extraZipkinTags))
 	for _, kv := range attr {
+		switch kv.Value.Type() {
+		// For slice attributes, serialize as JSON list string.
+		case attribute.BOOLSLICE:
+			json, _ := json.Marshal(kv.Value.AsBoolSlice())
+			m[(string)(kv.Key)] = (string)(json)
+		case attribute.INT64SLICE:
+			json, _ := json.Marshal(kv.Value.AsInt64Slice())
+			m[(string)(kv.Key)] = (string)(json)
+		case attribute.FLOAT64SLICE:
+			json, _ := json.Marshal(kv.Value.AsFloat64Slice())
+			m[(string)(kv.Key)] = (string)(json)
+		case attribute.STRINGSLICE:
+			json, _ := json.Marshal(kv.Value.AsStringSlice())
+			m[(string)(kv.Key)] = (string)(json)
+		default:
+			m[(string)(kv.Key)] = kv.Value.Emit()
+		}
+	}
+	for _, kv := range resourceAttr {
 		switch kv.Value.Type() {
 		// For slice attributes, serialize as JSON list string.
 		case attribute.BOOLSLICE:
