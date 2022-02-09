@@ -52,9 +52,6 @@ $(TOOLS)/crosslink: PACKAGE=go.opentelemetry.io/otel/$(TOOLS_MOD_DIR)/crosslink
 GOLANGCI_LINT = $(TOOLS)/golangci-lint
 $(TOOLS)/golangci-lint: PACKAGE=github.com/golangci/golangci-lint/cmd/golangci-lint
 
-MISSPELL = $(TOOLS)/misspell
-$(TOOLS)/misspell: PACKAGE=github.com/client9/misspell/cmd/misspell
-
 GOCOVMERGE = $(TOOLS)/gocovmerge
 $(TOOLS)/gocovmerge: PACKAGE=github.com/wadey/gocovmerge
 
@@ -68,7 +65,7 @@ GOJQ = $(TOOLS)/gojq
 $(TOOLS)/gojq: PACKAGE=github.com/itchyny/gojq/cmd/gojq
 
 .PHONY: tools
-tools: $(CROSSLINK) $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(GOJQ) $(SEMCONVGEN) $(MULTIMOD)
+tools: $(CROSSLINK) $(GOLANGCI_LINT) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(GOJQ) $(SEMCONVGEN) $(MULTIMOD)
 
 # Build
 
@@ -135,7 +132,7 @@ test-coverage: | $(GOCOVMERGE)
 	$(GOCOVMERGE) $$(find . -name coverage.out) > coverage.txt
 
 .PHONY: lint
-lint: misspell lint-modules | $(GOLANGCI_LINT)
+lint: lint-modules | $(GOLANGCI_LINT)
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "golangci-lint in $${dir}"; \
 	  (cd "$${dir}" && \
@@ -148,8 +145,8 @@ vanity-import-check: | $(PORTO)
 	$(PORTO) --include-internal -l .
 
 .PHONY: misspell
-misspell: | $(MISSPELL)
-	$(MISSPELL) -w $(ALL_DOCS)
+misspell: | $(GOLANGCI_LINT)
+	@$(GOLANGCI_LINT) run --disable-all --enable misspell
 
 .PHONY: lint-modules
 lint-modules: | $(CROSSLINK)
