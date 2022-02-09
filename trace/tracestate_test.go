@@ -443,14 +443,21 @@ func TestTraceStateInsert(t *testing.T) {
 			err:        errInvalidKey,
 		},
 		{
-			name:       "too many entries",
+			name:       "drop the right-most member(oldest) in queue",
 			tracestate: maxMembers,
 			key:        "keyx",
 			value:      "valx",
-			expected:   maxMembers,
-			err:        errMemberNumber,
-		},
-	}
+			expected: func() TraceState {
+				var traceState TraceState
+				traceState.list = make([]member, 0, len(maxMembers.list))
+				traceState.list = append(traceState.list, member{
+					Key:   "keyx",
+					Value: "valx",
+				})
+				traceState.list = append(traceState.list, maxMembers.list[:len(maxMembers.list)-1]...)
+				return traceState
+			}(),
+		}}
 
 	for _, tc := range testCases {
 		actual, err := tc.tracestate.Insert(tc.key, tc.value)

@@ -179,17 +179,14 @@ func (ts TraceState) Insert(key, value string) (TraceState, error) {
 	}
 
 	cTS := ts.Delete(key)
-	if cTS.Len()+1 > maxListMembers {
-		// TODO (MrAlias): When the second version of the Trace Context
-		// specification is published this needs to not return an error.
-		// Instead it should drop the "right-most" member and insert the new
-		// member at the front.
-		//
-		// https://github.com/w3c/trace-context/pull/448
-		return ts, fmt.Errorf("failed to insert: %w", errMemberNumber)
+	if cTS.Len()+1 <= maxListMembers {
+		cTS.list = append(cTS.list, member{})
 	}
-
-	cTS.list = append(cTS.list, member{})
+	// if tracestate's members > maxListMembers, defaultly
+	// it should drop the "right-most" member and insert the new
+	// member at the front.
+	//
+	// https://github.com/w3c/trace-context/pull/448
 	copy(cTS.list[1:], cTS.list)
 	cTS.list[0] = m
 
