@@ -448,14 +448,13 @@ func TestTraceStateInsert(t *testing.T) {
 			key:        "keyx",
 			value:      "valx",
 			expected: func() TraceState {
-				var traceState TraceState
-				traceState.list = make([]member, 0, len(maxMembers.list))
-				traceState.list = append(traceState.list, member{
-					Key:   "keyx",
-					Value: "valx",
-				})
-				traceState.list = append(traceState.list, maxMembers.list[:len(maxMembers.list)-1]...)
-				return traceState
+				// Prepend the new element and remove the oldest one, which is over capacity.
+				return TraceState{
+					list: append(
+						[]member{{Key: "keyx", Value: "valx"}},
+						maxMembers.list[:len(maxMembers.list)-1]...,
+					),
+				}
 			}(),
 		}}
 
