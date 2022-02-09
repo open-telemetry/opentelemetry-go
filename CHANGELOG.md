@@ -17,6 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Jaeger exporter takes into additional 70 bytes overhead into consideration when sending UDP packets (#2489, #2512)
+- Zipkin exporter exports `Resource` attributes as the `Tags` field. (#2589)
 
 ### Deprecated
 
