@@ -182,11 +182,7 @@ func (ts TraceState) Insert(key, value string) (TraceState, error) {
 	if cTS.Len()+1 <= maxListMembers {
 		cTS.list = append(cTS.list, member{})
 	}
-	// if tracestate's members > maxListMembers, defaultly
-	// it should drop the "right-most" member and insert the new
-	// member at the front.
-	//
-	// https://github.com/w3c/trace-context/pull/448
+	// When the number of members exceeds capacity, drop the "right-most".
 	copy(cTS.list[1:], cTS.list)
 	cTS.list[0] = m
 
