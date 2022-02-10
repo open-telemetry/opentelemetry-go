@@ -18,6 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Jaeger exporter takes into additional 70 bytes overhead into consideration when sending UDP packets (#2489, #2512)
 - For tracestate's members, prepend the new element and remove the oldest one, which is over capacity (#2592)
+- Zipkin exporter exports `Resource` attributes as the `Tags` field. (#2589)
 
 ### Deprecated
 
