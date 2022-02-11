@@ -191,10 +191,10 @@ func spanEvents(es []tracesdk.Event) []*tracepb.Span_Event {
 		nEvents++
 		events = append(events,
 			&tracepb.Span_Event{
-				Name:         e.Name,
-				TimeUnixNano: uint64(e.Time.UnixNano()),
-				Attributes:   KeyValues(e.Attributes),
-				// TODO (rghetia) : Add Drop Counts when supported.
+				Name:                   e.Name,
+				TimeUnixNano:           uint64(e.Time.UnixNano()),
+				Attributes:             KeyValues(e.Attributes),
+				DroppedAttributesCount: uint32(e.DroppedAttributeCount),
 			},
 		)
 	}
