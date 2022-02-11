@@ -162,9 +162,10 @@ func links(links []tracesdk.Link) []*tracepb.Span_Link {
 		sid := otLink.SpanContext.SpanID()
 
 		sl = append(sl, &tracepb.Span_Link{
-			TraceId:    tid[:],
-			SpanId:     sid[:],
-			Attributes: KeyValues(otLink.Attributes),
+			TraceId:                tid[:],
+			SpanId:                 sid[:],
+			Attributes:             KeyValues(otLink.Attributes),
+			DroppedAttributesCount: uint32(otLink.DroppedAttributeCount),
 		})
 	}
 	return sl
