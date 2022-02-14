@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
 - Metrics Exponential Histogram support: Mapping functions have been made available
   in `sdk/metric/aggregator/exponential/mapping` for other OpenTelemetry projects to take
   dependencies on. (#2502)
