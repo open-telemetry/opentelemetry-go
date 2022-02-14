@@ -5,7 +5,7 @@ on:
       - main
   pull_request:
 env:
-  DEFAULT_GO_VERSION: 1.17
+  DEFAULT_GO_VERSION: 1.16
 jobs:
   benchmark:
     name: Benchmarks
