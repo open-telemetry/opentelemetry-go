@@ -13,6 +13,7 @@
 // limitations under the License.
 
 package trace // import "go.opentelemetry.io/otel/sdk/trace"
+import "go.opentelemetry.io/otel/sdk/internal/env"
 
 // SpanLimits represents the limits of a span.
 type SpanLimits struct {
@@ -48,6 +49,12 @@ func (sl *SpanLimits) ensureDefault() {
 	if sl.AttributePerLinkCountLimit <= 0 {
 		sl.AttributePerLinkCountLimit = DefaultAttributePerLinkCountLimit
 	}
+}
+
+func (sl *SpanLimits) parsePotentialEnvConfigs() {
+	sl.AttributeCountLimit = env.IntEnvOr(env.SpanAttributesCountKey, sl.AttributeCountLimit)
+	sl.LinkCountLimit = env.IntEnvOr(env.SpanLinkCountKey, sl.LinkCountLimit)
+	sl.EventCountLimit = env.IntEnvOr(env.SpanEventCountKey, sl.EventCountLimit)
 }
 
 const (
