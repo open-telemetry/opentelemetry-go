@@ -252,3 +252,71 @@ func TestTracerConfig(t *testing.T) {
 		assert.Equal(t, test.expected, config)
 	}
 }
+
+// Save benchmark results to a file level var to avoid the compiler optimizing
+// away the actual work.
+var (
+	tracerConfig TracerConfig
+	spanConfig   SpanConfig
+	eventConfig  EventConfig
+)
+
+func BenchmarkNewTracerConfig(b *testing.B) {
+	opts := []TracerOption{
+		WithInstrumentationVersion("testing verion"),
+		WithSchemaURL("testing URL"),
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		tracerConfig = NewTracerConfig(opts...)
+	}
+}
+
+func BenchmarkNewSpanStartConfig(b *testing.B) {
+	opts := []SpanStartOption{
+		WithAttributes(attribute.Bool("key", true)),
+		WithTimestamp(time.Now()),
+		WithLinks(Link{}),
+		WithNewRoot(),
+		WithSpanKind(SpanKindClient),
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		spanConfig = NewSpanStartConfig(opts...)
+	}
+}
+
+func BenchmarkNewSpanEndConfig(b *testing.B) {
+	opts := []SpanEndOption{
+		WithTimestamp(time.Now()),
+		WithStackTrace(true),
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		spanConfig = NewSpanEndConfig(opts...)
+	}
+}
+
+func BenchmarkNewEventConfig(b *testing.B) {
+	opts := []EventOption{
+		WithAttributes(attribute.Bool("key", true)),
+		WithTimestamp(time.Now()),
+		WithStackTrace(true),
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		eventConfig = NewEventConfig(opts...)
+	}
+}
