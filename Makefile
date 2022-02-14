@@ -26,7 +26,7 @@ TIMEOUT = 60
 
 .PHONY: precommit ci
 precommit: dependabot-generate license-check misspell go-mod-tidy golangci-lint-fix test-default
-ci: dependabot-check license-check lint build test-default check-clean-work-tree test-coverage
+ci: dependabot-check license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
 
 # Tools
 
