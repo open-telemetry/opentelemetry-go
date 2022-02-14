@@ -72,7 +72,7 @@ func TestEnvConfig(t *testing.T) {
 				}),
 			},
 			expectedOptions: []testOption{
-				testOption{
+				{
 					TestString: "world",
 				},
 			},
@@ -111,7 +111,7 @@ func TestEnvConfig(t *testing.T) {
 				}),
 			},
 			expectedOptions: []testOption{
-				testOption{
+				{
 					TestString: "world",
 				},
 			},
@@ -150,7 +150,7 @@ func TestEnvConfig(t *testing.T) {
 				}),
 			},
 			expectedOptions: []testOption{
-				testOption{
+				{
 					TestDuration: 60_000_000, // 60 milliseconds
 				},
 			},
@@ -188,7 +188,7 @@ func TestEnvConfig(t *testing.T) {
 				}),
 			},
 			expectedOptions: []testOption{
-				testOption{
+				{
 					TestHeaders: map[string]string{
 						"userId":   "42",
 						"userName": "alice",
@@ -212,7 +212,7 @@ func TestEnvConfig(t *testing.T) {
 				}),
 			},
 			expectedOptions: []testOption{
-				testOption{
+				{
 					TestHeaders: map[string]string{},
 				},
 			},
@@ -233,7 +233,7 @@ func TestEnvConfig(t *testing.T) {
 				}),
 			},
 			expectedOptions: []testOption{
-				testOption{
+				{
 					TestURL: parsedURL,
 				},
 			},

@@ -37,7 +37,7 @@ var DefaultEnvOptionsReader = envconfig.EnvOptionsReader{
 func ApplyGRPCEnvConfigs(cfg Config) Config {
 	opts := getOptionsFromEnv()
 	for _, opt := range opts {
-		cfg = opt.(GenericOption).ApplyGRPCOption(cfg)
+		cfg = opt.ApplyGRPCOption(cfg)
 	}
 	return cfg
 }
@@ -46,7 +46,7 @@ func ApplyGRPCEnvConfigs(cfg Config) Config {
 func ApplyHTTPEnvConfigs(cfg Config) Config {
 	opts := getOptionsFromEnv()
 	for _, opt := range opts {
-		cfg = opt.(GenericOption).ApplyHTTPOption(cfg)
+		cfg = opt.ApplyHTTPOption(cfg)
 	}
 	return cfg
 }
