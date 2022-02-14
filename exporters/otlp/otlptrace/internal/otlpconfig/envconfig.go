@@ -96,10 +96,12 @@ func getOptionsFromEnv() []GenericOption {
 }
 
 func withEndpointScheme(u *url.URL) GenericOption {
-	if insecureSchema(u.Scheme) {
+	switch strings.ToLower(u.Scheme) {
+	case "http", "unix":
 		return WithInsecure()
+	default:
+		return WithSecure()
 	}
-	return WithSecure()
 }
 
 func withEndpointForGRPC(u *url.URL) func(cfg Config) Config {
@@ -123,14 +125,5 @@ func WithEnvCompression(n string, fn func(Compression)) func(e *envconfig.EnvOpt
 
 			fn(cp)
 		}
-	}
-}
-
-func insecureSchema(schema string) bool {
-	switch strings.ToLower(schema) {
-	case "http", "unix":
-		return true
-	default:
-		return false
 	}
 }
