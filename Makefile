@@ -98,11 +98,10 @@ build-tests/%:
 
 TEST_TARGETS := test-default test-bench test-short test-verbose test-race
 .PHONY: $(TEST_TARGETS) test
-test-default: ARGS=-race
+test-default test-race: ARGS=-race
 test-bench:   ARGS=-run=xxxxxMatchNothingxxxxx -test.benchtime=1ms -bench=.
 test-short:   ARGS=-short
-test-verbose: ARGS=-v
-test-race:    ARGS=-race
+test-verbose: ARGS=-v -race
 $(TEST_TARGETS): test
 test: $(OTEL_GO_MOD_DIRS:%=test/%)
 test/%: DIR=$*
