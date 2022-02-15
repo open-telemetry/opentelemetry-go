@@ -8,6 +8,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+- Added support to configure the span limits with environment variables.
+  The following environment variables are used. (#2606)
+  - `OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT`
+  - `OTEL_SPAN_EVENT_COUNT_LIMIT`
+  - `OTEL_SPAN_LINK_COUNT_LIMIT`
+  
+  If the provided environment variables are invalid (negative), the default values would be 
+  used. 
+
 ## [1.4.0] - 2022-02-11
 
 ### Added
@@ -21,11 +30,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `OTEL_BSP_EXPORT_TIMEOUT`
   - `OTEL_BSP_MAX_QUEUE_SIZE`.
   - `OTEL_BSP_MAX_EXPORT_BATCH_SIZE`
-- Added support to configure the span limits with environment variables.
-  The following environment variables are used. (#2606)
-  - `OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT`
-  - `OTEL_SPAN_EVENT_COUNT_LIMIT`
-  - `OTEL_SPAN_LINK_COUNT_LIMIT`
 
 ### Changed
 

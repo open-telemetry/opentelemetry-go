@@ -118,3 +118,21 @@ func TestEnsureValidTracerProviderConfig(t *testing.T) {
 	assert.Equal(t, 222, o.spanLimits.AttributeCountLimit)
 	assert.Equal(t, 333, o.spanLimits.LinkCountLimit)
 }
+
+func TestEnsureValidTracerProviderConfigWithInvliadValue(t *testing.T) {
+	envStore := ottest.NewEnvStore()
+	defer func() {
+		require.NoError(t, envStore.Restore())
+	}()
+	envStore.Record(env.SpanAttributesCountKey)
+	envStore.Record(env.SpanEventCountKey)
+	envStore.Record(env.SpanLinkCountKey)
+	require.NoError(t, os.Setenv(env.SpanEventCountKey, "-111"))
+	require.NoError(t, os.Setenv(env.SpanAttributesCountKey, "222"))
+	require.NoError(t, os.Setenv(env.SpanLinkCountKey, "-333"))
+	o := tracerProviderConfig{}
+	o = ensureValidTracerProviderConfig(o)
+	assert.Equal(t, 128, o.spanLimits.EventCountLimit)
+	assert.Equal(t, 222, o.spanLimits.AttributeCountLimit)
+	assert.Equal(t, 128, o.spanLimits.LinkCountLimit)
+}

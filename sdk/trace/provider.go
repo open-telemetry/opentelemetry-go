@@ -366,8 +366,8 @@ func ensureValidTracerProviderConfig(cfg tracerProviderConfig) tracerProviderCon
 	if cfg.idGenerator == nil {
 		cfg.idGenerator = defaultIDGenerator()
 	}
-	cfg.spanLimits.ensureDefault()
 	cfg.spanLimits.parsePotentialEnvConfigs()
+	cfg.spanLimits.ensureDefault()
 	if cfg.resource == nil {
 		cfg.resource = resource.Default()
 	}
