@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
 - Added support to configure the span limits with environment variables.
   The following environment variables are used. (#2606)
   - `OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT`
