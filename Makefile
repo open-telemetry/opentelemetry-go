@@ -218,7 +218,7 @@ dependabot-generate:
 		(printf "      interval: weekly\n" >> $(DEPENDABOT_PATH)); \
 		for dir in $(filter-out ., $(ALL_GO_MOD_DIRS)); do \
 			(printf "  - package-ecosystem: gomod\n" >> $(DEPENDABOT_PATH)); \
-			(printf "    directory: $${dir:1}\n" >> $(DEPENDABOT_PATH)); \
+			(printf "    directory: $$(sed 's/^.//' <<< $$dir)\n" >> $(DEPENDABOT_PATH)); \
 			(printf "    labels:\n" >> $(DEPENDABOT_PATH)); \
 			(printf "      - dependencies\n" >> $(DEPENDABOT_PATH)); \
 			(printf "      - go\n" >> $(DEPENDABOT_PATH)); \
