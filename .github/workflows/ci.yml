@@ -40,7 +40,7 @@ jobs:
       - name: Run linters
         run: make dependabot-check license-check lint vanity-import-check
       - name: Build
-        run: make examples build
+        run: make build
       - name: Check clean repository
         run: make check-clean-work-tree
 
