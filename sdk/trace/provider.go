@@ -98,6 +98,7 @@ var _ trace.TracerProvider = &TracerProvider{}
 func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	o := tracerProviderConfig{}
 
+	o.spanLimits.parsePotentialEnvConfigs()
 	for _, opt := range opts {
 		o = opt.apply(o)
 	}
@@ -366,7 +367,6 @@ func ensureValidTracerProviderConfig(cfg tracerProviderConfig) tracerProviderCon
 	if cfg.idGenerator == nil {
 		cfg.idGenerator = defaultIDGenerator()
 	}
-	cfg.spanLimits.parsePotentialEnvConfigs()
 	cfg.spanLimits.ensureDefault()
 	if cfg.resource == nil {
 		cfg.resource = resource.Default()
