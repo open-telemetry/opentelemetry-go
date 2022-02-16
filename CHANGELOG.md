@@ -18,7 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
-- Remove the limit of SpanEvents when exporting.
+- Remove the limit of SpanEvents when exporting. (#2616)
 
 ## [1.4.0] - 2022-02-11
 
