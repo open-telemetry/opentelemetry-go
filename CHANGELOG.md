@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix race condition in reading the dropped spans number. (#2615)
+
 ## [1.4.0] - 2022-02-11
 
 ### Added
