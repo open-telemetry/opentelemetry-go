@@ -174,7 +174,6 @@ func spanEvents(es []tracesdk.Event) []*tracepb.Span_Event {
 
 	evCount := len(es)
 	events := make([]*tracepb.Span_Event, 0, evCount)
-	nEvents := 0
 
 	// Transform message events
 	for _, e := range es {
