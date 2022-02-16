@@ -23,10 +23,6 @@ import (
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
-const (
-	maxEventsPerSpan = 128
-)
-
 // Spans transforms a slice of OpenTelemetry spans into a slice of OTLP
 // ResourceSpans.
 func Spans(sdl []tracesdk.ReadOnlySpan) []*tracepb.ResourceSpans {
@@ -177,17 +173,11 @@ func spanEvents(es []tracesdk.Event) []*tracepb.Span_Event {
 	}
 
 	evCount := len(es)
-	if evCount > maxEventsPerSpan {
-		evCount = maxEventsPerSpan
-	}
 	events := make([]*tracepb.Span_Event, 0, evCount)
 	nEvents := 0
 
 	// Transform message events
 	for _, e := range es {
-		if nEvents >= maxEventsPerSpan {
-			break
-		}
 		nEvents++
 		events = append(events,
 			&tracepb.Span_Event{
