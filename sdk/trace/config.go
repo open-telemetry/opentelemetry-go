@@ -59,12 +59,21 @@ func (sl *SpanLimits) parsePotentialEnvConfigs() {
 
 const (
 	// DefaultAttributeCountLimit is the default maximum allowed span attribute count.
+	// If not specified via WithSpanLimits, will try to retrieve the value from
+	// environment variable `OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT`.
+	// If Invalid value (negative or zero) is provided, the default value 128 will be used.
 	DefaultAttributeCountLimit = 128
 
 	// DefaultEventCountLimit is the default maximum allowed span event count.
+	// If not specified via WithSpanLimits, will try to retrieve the value from
+	// environment variable `OTEL_SPAN_EVENT_COUNT_LIMIT`.
+	// If Invalid value (negative or zero) is provided, the default value 128 will be used.
 	DefaultEventCountLimit = 128
 
 	// DefaultLinkCountLimit is the default maximum allowed span link count.
+	// If the value is not specified via WithSpanLimits, will try to retrieve the value from
+	// environment variable `OTEL_SPAN_LINK_COUNT_LIMIT`.
+	// If Invalid value (negative or zero) is provided, the default value 128 will be used.
 	DefaultLinkCountLimit = 128
 
 	// DefaultAttributePerEventCountLimit is the default maximum allowed attribute per span event count.
