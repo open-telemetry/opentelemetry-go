@@ -148,10 +148,10 @@ func TestNewTraceProviderWithInvalidSpanLimitConfigurationFromEnvironmentVariabl
 	envStore.Record(env.SpanEventCountKey)
 	envStore.Record(env.SpanLinkCountKey)
 	require.NoError(t, os.Setenv(env.SpanEventCountKey, "-111"))
-	require.NoError(t, os.Setenv(env.SpanAttributesCountKey, "222"))
+	require.NoError(t, os.Setenv(env.SpanAttributesCountKey, "-222"))
 	require.NoError(t, os.Setenv(env.SpanLinkCountKey, "-333"))
 	tp := NewTracerProvider()
 	assert.Equal(t, 128, tp.spanLimits.EventCountLimit)
-	assert.Equal(t, 222, tp.spanLimits.AttributeCountLimit)
+	assert.Equal(t, 128, tp.spanLimits.AttributeCountLimit)
 	assert.Equal(t, 128, tp.spanLimits.LinkCountLimit)
 }
