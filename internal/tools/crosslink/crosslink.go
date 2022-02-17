@@ -25,106 +25,42 @@
 package main
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-	"io"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
-	"text/tabwriter"
 
 	"go.opentelemetry.io/otel/internal/tools"
+	"golang.org/x/mod/modfile"
 )
 
-type repo string
-
-type mod struct {
-	filePath   string
-	importPath string
-}
-
-func (r repo) findModules() (mods, error) {
-	var results []mod
-	err := filepath.Walk(string(r), func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() {
-			return nil
-		}
-
-		_, err = os.Stat(filepath.Join(path, "go.mod"))
-		if errors.Is(err, os.ErrNotExist) {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-
-		cmd := exec.Command("go", "mod", "edit", "-json")
-		cmd.Dir = path
-		out, err := cmd.Output()
-		if err != nil {
-			return err
-		}
-
-		var result struct {
-			Module struct {
-				Path string
-			}
-		}
-		err = json.Unmarshal(out, &result)
-		if err != nil {
-			return err
-		}
-
-		results = append(results, mod{
-			filePath:   path,
-			importPath: result.Module.Path,
-		})
-		return nil
-	})
-
-	return results, err
-}
-
-type mods []mod
-
-func (m mods) print(w io.Writer) error {
-	tw := tabwriter.NewWriter(w, 0, 0, 1, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "FILE PATH\tIMPORT PATH"); err != nil {
-		return err
-	}
-	for _, m := range m {
-		if _, err := fmt.Fprintf(tw, "%s\t%s\n", m.filePath, m.importPath); err != nil {
-			return err
-		}
-	}
-	return tw.Flush()
-}
-
-func (m mods) crossLink() error {
+func crossLink(m []*modfile.File) error {
 	for _, from := range m {
-		args := []string{"mod", "edit"}
-
+		basepath := filepath.Dir(from.Syntax.Name)
 		for _, to := range m {
-			localPath, err := filepath.Rel(from.filePath, to.filePath)
+			newPath, err := filepath.Rel(basepath, filepath.Dir(to.Syntax.Name))
 			if err != nil {
 				return err
 			}
-			if localPath == "." || localPath == ".." {
-				localPath += "/"
-			} else if !strings.HasPrefix(localPath, "..") {
-				localPath = "./" + localPath
+			switch {
+			case newPath == ".", newPath == "..":
+				newPath += "/"
+			case !strings.HasPrefix(newPath, ".."):
+				newPath = "./" + newPath
 			}
-			args = append(args, "-replace", to.importPath+"="+localPath)
+			from.AddReplace(to.Module.Mod.Path, "", newPath, "")
 		}
 
-		cmd := exec.Command("go", args...)
-		cmd.Dir = from.filePath
-		out, err := cmd.CombinedOutput()
+		from.Cleanup()
+
+		f, err := os.OpenFile(from.Syntax.Name, os.O_RDWR|os.O_TRUNC, 0755)
 		if err != nil {
-			log.Println(string(out))
+			return err
+		}
+		if _, err = f.Write(modfile.Format(from.Syntax)); err != nil {
+			return err
+		}
+		if err = f.Close(); err != nil {
 			return err
 		}
 	}
@@ -132,23 +68,21 @@ func (m mods) crossLink() error {
 }
 
 func main() {
-	repoRootStr, err := tools.FindRepoRoot()
+	root, err := tools.FindRepoRoot()
 	if err != nil {
 		log.Fatalf("unable to find repo root: %v", err)
 	}
 
-	repoRoot := repo(repoRootStr)
-
-	mods, err := repoRoot.findModules()
+	mods, err := root.FindModules()
 	if err != nil {
 		log.Fatalf("unable to list modules: %v", err)
 	}
 
-	if err := mods.print(os.Stdout); err != nil {
+	if err := tools.PrintModFiles(os.Stdout, mods); err != nil {
 		log.Fatalf("unable to print modules: %v", err)
 	}
 
-	if err := mods.crossLink(); err != nil {
+	if err := crossLink(mods); err != nil {
 		log.Fatalf("unable to crosslink: %v", err)
 	}
 }
