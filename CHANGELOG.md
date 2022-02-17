@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Remove the limit of SpanEvents when exporting. (#2616)
+- Remove the OTLP trace exporter limit of SpanEvents when exporting. (#2616)
 
 ## [1.4.0] - 2022-02-11
 
