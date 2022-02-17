@@ -28,7 +28,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Fix race condition in reading the dropped spans number for the `BatchSpanProcessor`. (#2615)
 
-
 ## [1.4.0] - 2022-02-11
 
 ### Added
