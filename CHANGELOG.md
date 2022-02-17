@@ -22,6 +22,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add event and link drop counts to the exported data from the `oltptrace` exporter. (#2601)
 
+### Fixed
+
+- Remove the OTLP trace exporter limit of SpanEvents when exporting. (#2616)
+
 ## [1.4.1] - 2022-02-16
 
 ### Fixed
