@@ -8,6 +8,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Added support to configure the span limits with environment variables.
+  The following environment variables are used. (#2606)
+  - `OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT`
+  - `OTEL_SPAN_EVENT_COUNT_LIMIT`
+  - `OTEL_SPAN_LINK_COUNT_LIMIT`
+  
+  If the provided environment variables are invalid (negative), the default values would be used.
+
 ### Changed
 
 - Add event and link drop counts to the exported data from the `oltptrace` exporter. (#2601)
