@@ -87,9 +87,10 @@ func TestSpanEvent(t *testing.T) {
 			Time:       eventTime,
 		},
 		{
-			Name:       "test 2",
-			Attributes: attrs,
-			Time:       eventTime,
+			Name:                  "test 2",
+			Attributes:            attrs,
+			Time:                  eventTime,
+			DroppedAttributeCount: 2,
 		},
 	})
 	if !assert.Len(t, got, 2) {
@@ -98,7 +99,7 @@ func TestSpanEvent(t *testing.T) {
 	eventTimestamp := uint64(1589932800 * 1e9)
 	assert.Equal(t, &tracepb.Span_Event{Name: "test 1", Attributes: nil, TimeUnixNano: eventTimestamp}, got[0])
 	// Do not test Attributes directly, just that the return value goes to the correct field.
-	assert.Equal(t, &tracepb.Span_Event{Name: "test 2", Attributes: KeyValues(attrs), TimeUnixNano: eventTimestamp}, got[1])
+	assert.Equal(t, &tracepb.Span_Event{Name: "test 2", Attributes: KeyValues(attrs), TimeUnixNano: eventTimestamp, DroppedAttributesCount: 2}, got[1])
 }
 
 func TestExcessiveSpanEvents(t *testing.T) {
@@ -124,10 +125,13 @@ func TestEmptyLinks(t *testing.T) {
 func TestLinks(t *testing.T) {
 	attrs := []attribute.KeyValue{attribute.Int("one", 1), attribute.Int("two", 2)}
 	l := []tracesdk.Link{
-		{},
 		{
-			SpanContext: trace.SpanContext{},
-			Attributes:  attrs,
+			DroppedAttributeCount: 3,
+		},
+		{
+			SpanContext:           trace.SpanContext{},
+			Attributes:            attrs,
+			DroppedAttributeCount: 3,
 		},
 	}
 	got := links(l)
@@ -139,8 +143,9 @@ func TestLinks(t *testing.T) {
 
 	// Empty should be empty.
 	expected := &tracepb.Span_Link{
-		TraceId: []uint8{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
-		SpanId:  []uint8{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+		TraceId:                []uint8{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+		SpanId:                 []uint8{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+		DroppedAttributesCount: 3,
 	}
 	assert.Equal(t, expected, got[0])
 
@@ -151,6 +156,7 @@ func TestLinks(t *testing.T) {
 	// Changes to our links should not change the produced links.
 	l[1].SpanContext = l[1].SpanContext.WithTraceID(trace.TraceID{})
 	assert.Equal(t, expected, got[1])
+	assert.Equal(t, l[1].DroppedAttributeCount, int(got[1].DroppedAttributesCount))
 }
 
 func TestStatus(t *testing.T) {

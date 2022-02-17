@@ -162,9 +162,10 @@ func links(links []tracesdk.Link) []*tracepb.Span_Link {
 		sid := otLink.SpanContext.SpanID()
 
 		sl = append(sl, &tracepb.Span_Link{
-			TraceId:    tid[:],
-			SpanId:     sid[:],
-			Attributes: KeyValues(otLink.Attributes),
+			TraceId:                tid[:],
+			SpanId:                 sid[:],
+			Attributes:             KeyValues(otLink.Attributes),
+			DroppedAttributesCount: uint32(otLink.DroppedAttributeCount),
 		})
 	}
 	return sl
@@ -180,23 +181,16 @@ func spanEvents(es []tracesdk.Event) []*tracepb.Span_Event {
 	if evCount > maxEventsPerSpan {
 		evCount = maxEventsPerSpan
 	}
-	events := make([]*tracepb.Span_Event, 0, evCount)
-	nEvents := 0
+	events := make([]*tracepb.Span_Event, evCount)
 
 	// Transform message events
-	for _, e := range es {
-		if nEvents >= maxEventsPerSpan {
-			break
+	for i := 0; i < evCount; i++ {
+		events[i] = &tracepb.Span_Event{
+			Name:                   es[i].Name,
+			TimeUnixNano:           uint64(es[i].Time.UnixNano()),
+			Attributes:             KeyValues(es[i].Attributes),
+			DroppedAttributesCount: uint32(es[i].DroppedAttributeCount),
 		}
-		nEvents++
-		events = append(events,
-			&tracepb.Span_Event{
-				Name:         e.Name,
-				TimeUnixNano: uint64(e.Time.UnixNano()),
-				Attributes:   KeyValues(e.Attributes),
-				// TODO (rghetia) : Add Drop Counts when supported.
-			},
-		)
 	}
 
 	return events
