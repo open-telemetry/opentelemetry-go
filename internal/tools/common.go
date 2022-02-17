@@ -18,18 +18,28 @@
 package tools // import "go.opentelemetry.io/otel/internal/tools"
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
+	"text/tabwriter"
+
+	"golang.org/x/mod/modfile"
 )
 
-// FindRepoRoot retrieves the root of the repository containing the current working directory.
-// Beginning at the current working directory (dir), the algorithm checks if joining the ".git"
-// suffix, such as "dir.get", is a valid file. Otherwise, it will continue checking the dir's
-// parent directory until it reaches the repo root or returns an error if it cannot be found.
-func FindRepoRoot() (string, error) {
+// Repo represents a git repository.
+type Repo string
+
+// FindRepoRoot retrieves the root of the repository containing the current
+// working directory. Beginning at the current working directory (dir), the
+// algorithm checks if joining the ".git" suffix, such as "dir.get", is a
+// valid file. Otherwise, it will continue checking the dir's parent directory
+// until it reaches the repo root or returns an error if it cannot be found.
+func FindRepoRoot() (Repo, error) {
 	start, err := os.Getwd()
 	if err != nil {
 		return "", err
@@ -52,6 +62,63 @@ func FindRepoRoot() (string, error) {
 			return "", err
 		}
 
-		return dir, nil
+		return Repo(dir), nil
 	}
+}
+
+// FindModules returns all Go modules contained in Repo r.
+func (r Repo) FindModules() ([]*modfile.File, error) {
+	var results []*modfile.File
+	err := filepath.Walk(string(r), func(path string, info os.FileInfo, walkErr error) error {
+		if walkErr != nil {
+			// Walk failed to walk into this directory. Stop walking and
+			// signal this error.
+			return walkErr
+		}
+
+		if !info.IsDir() {
+			return nil
+		}
+
+		goMod := filepath.Join(path, "go.mod")
+		f, err := os.Open(goMod)
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+
+		var b bytes.Buffer
+		io.Copy(&b, f)
+		if err = f.Close(); err != nil {
+			return err
+		}
+
+		mFile, err := modfile.Parse(goMod, b.Bytes(), nil)
+		if err != nil {
+			return err
+		}
+		results = append(results, mFile)
+		return nil
+	})
+
+	sort.SliceStable(results, func(i, j int) bool {
+		return results[i].Syntax.Name < results[j].Syntax.Name
+	})
+
+	return results, err
+}
+
+func PrintModFiles(w io.Writer, mFiles []*modfile.File) error {
+	tw := tabwriter.NewWriter(w, 0, 0, 1, ' ', 0)
+	if _, err := fmt.Fprintln(tw, "FILE PATH\tIMPORT PATH"); err != nil {
+		return err
+	}
+	for _, m := range mFiles {
+		if _, err := fmt.Fprintf(tw, "%s\t%s\n", m.Syntax.Name, m.Module.Mod.Path); err != nil {
+			return err
+		}
+	}
+	return tw.Flush()
 }
