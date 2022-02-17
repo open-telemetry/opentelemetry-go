@@ -26,7 +26,7 @@ TIMEOUT = 60
 
 .PHONY: precommit ci
 precommit: license-check misspell go-mod-tidy golangci-lint-fix test-default
-ci: dependabot-check license-check lint vanity-import-check crosslink build test-default check-clean-work-tree test-coverage
+ci: dependabot-check license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
 
 # Tools
 
@@ -79,7 +79,7 @@ generate/%: | $(STRINGER) $(PORTO)
 		&& cd $(DIR) \
 		&& PATH="$(TOOLS):$${PATH}" $(GO) generate ./... && $(PORTO) -w .
 
-build: generate $(OTEL_GO_MOD_DIRS:%=build/%) $(OTEL_GO_MOD_DIRS:%=build-tests/%)
+build: crosslink generate $(OTEL_GO_MOD_DIRS:%=build/%) $(OTEL_GO_MOD_DIRS:%=build-tests/%)
 build/%: DIR=$*
 build/%:
 	@echo "$(GO) build $(DIR)/..." \
