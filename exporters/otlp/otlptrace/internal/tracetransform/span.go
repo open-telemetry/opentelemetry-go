@@ -173,7 +173,7 @@ func spanEvents(es []tracesdk.Event) []*tracepb.Span_Event {
 		return nil
 	}
 
-	events := make([]*tracepb.Span_Event, 0, len(es))
+	events := make([]*tracepb.Span_Event, len(es))
   // Transform message events
 	for i := 0; i < len(es); i++ {
 		events[i] = &tracepb.Span_Event{
