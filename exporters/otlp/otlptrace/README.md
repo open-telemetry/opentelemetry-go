@@ -46,6 +46,6 @@ specification](https://github.com/open-telemetry/opentelemetry-specification/blo
 | `OTEL_EXPORTER_OTLP_COMPRESSION` `OTEL_EXPORTER_OTLP_TRACES_COMPRESSION` | `WithCompression`             |                                                          |
 | `OTEL_EXPORTER_OTLP_TIMEOUT` `OTEL_EXPORTER_OTLP_TRACES_TIMEOUT`         | `WithTimeout`                 | `10s`                                                    |
 
-[^1]: The gRPC client defauls to `https://localhost:4317` and the HTTP client `https://localhost:4318`.
+[^1]: The gRPC client defaults to `https://localhost:4317` and the HTTP client `https://localhost:4318`.
 
 Configuration using options have precedence over the environment variables.
