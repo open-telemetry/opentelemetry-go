@@ -171,7 +171,8 @@ func (ts TraceState) Get(key string) string {
 // specification an error is returned with the original TraceState.
 //
 // If adding a new list-member means the TraceState would have more members
-// then it will drop the right-most member and return an nil error when capacity is exceeded.
+// then is allowed, the new list-member will be inserted and the right-most
+// list-member will be dropped in the returned TraceState.
 func (ts TraceState) Insert(key, value string) (TraceState, error) {
 	m, err := newMember(key, value)
 	if err != nil {
