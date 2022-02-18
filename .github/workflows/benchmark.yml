@@ -10,19 +10,19 @@ jobs:
     name: Benchmarks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/checkout@v2.4.0
+      - uses: actions/setup-go@v2.2.0
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
       - name: Run benchmarks
         run: make test-bench | tee output.txt
       - name: Download previous benchmark data
-        uses: actions/cache@v2
+        uses: actions/cache@v2.1.7
         with:
           path: ./benchmarks
           key: ${{ runner.os }}-benchmark
       - name: Store benchmarks result
-        uses: benchmark-action/github-action-benchmark@v1
+        uses: benchmark-action/github-action-benchmark@v1.13.0
         with:
           name: Benchmarks
           tool: 'go'
