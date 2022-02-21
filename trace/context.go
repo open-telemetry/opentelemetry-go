@@ -16,9 +16,15 @@ package trace // import "go.opentelemetry.io/otel/trace"
 
 import "context"
 
-type traceContextKeyType int
+type contextKey string
 
-const currentSpanKey traceContextKeyType = iota
+// String returns the context key with a prefix to make the key globally unique
+// this prevents collisions with other packages
+func (c contextKey) String() string {
+	return "otel/trace" + string(c)
+}
+
+const currentSpanKey contextKey = "currentSpan"
 
 // ContextWithSpan returns a copy of parent with span set as the current Span.
 func ContextWithSpan(parent context.Context, span Span) context.Context {
