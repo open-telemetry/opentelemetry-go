@@ -21,7 +21,7 @@ type contextKey string
 // String returns the context key with a prefix to make the key globally unique
 // this prevents collisions with other packages
 func (c contextKey) String() string {
-	return "otel/trace" + string(c)
+	return "otel/trace: " + string(c)
 }
 
 const currentSpanKey contextKey = "currentSpan"
