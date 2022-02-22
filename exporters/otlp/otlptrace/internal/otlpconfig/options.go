@@ -84,20 +84,16 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 		cfg = opt.ApplyHTTPOption(cfg)
 	}
 
-	for pathPtr, defaultPath := range map[*string]string{
-		&cfg.Traces.URLPath: DefaultTracesPath,
-	} {
-		tmp := strings.TrimSpace(*pathPtr)
-		if tmp == "" {
-			tmp = defaultPath
-		} else {
-			tmp = path.Clean(tmp)
-			if !path.IsAbs(tmp) {
-				tmp = fmt.Sprintf("/%s", tmp)
-			}
+	tmp := strings.TrimSpace(cfg.Traces.URLPath)
+	if tmp == "" {
+		tmp = DefaultTracesPath
+	} else {
+		tmp = path.Clean(tmp)
+		if !path.IsAbs(tmp) {
+			tmp = fmt.Sprintf("/%s", tmp)
 		}
-		*pathPtr = tmp
 	}
+	cfg.Traces.URLPath = tmp
 	return cfg
 }
 

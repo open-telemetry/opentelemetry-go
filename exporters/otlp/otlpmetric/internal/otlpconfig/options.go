@@ -91,20 +91,16 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 		cfg = opt.ApplyHTTPOption(cfg)
 	}
 
-	for pathPtr, defaultPath := range map[*string]string{
-		&cfg.Metrics.URLPath: DefaultMetricsPath,
-	} {
-		tmp := strings.TrimSpace(*pathPtr)
-		if tmp == "" {
-			tmp = defaultPath
-		} else {
-			tmp = path.Clean(tmp)
-			if !path.IsAbs(tmp) {
-				tmp = fmt.Sprintf("/%s", tmp)
-			}
+	tmp := strings.TrimSpace(cfg.Metrics.URLPath)
+	if tmp == "" {
+		tmp = DefaultMetricsPath
+	} else {
+		tmp = path.Clean(tmp)
+		if !path.IsAbs(tmp) {
+			tmp = fmt.Sprintf("/%s", tmp)
 		}
-		*pathPtr = tmp
 	}
+	cfg.Metrics.URLPath = tmp
 	return cfg
 }
 
