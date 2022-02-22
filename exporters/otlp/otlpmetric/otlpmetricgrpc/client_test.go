@@ -93,7 +93,7 @@ func newGRPCExporter(t *testing.T, ctx context.Context, endpoint string, additio
 }
 
 func newExporterEndToEndTest(t *testing.T, additionalOpts []otlpmetricgrpc.Option) {
-	mc := runMockCollectorAtEndpoint(t, "localhost:0")
+	mc := runMockCollector(t)
 
 	defer func() {
 		_ = mc.stop()
