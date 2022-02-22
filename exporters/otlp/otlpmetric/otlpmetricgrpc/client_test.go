@@ -314,7 +314,7 @@ func TestEmptyData(t *testing.T) {
 }
 
 func TestFailedMetricTransform(t *testing.T) {
-	mc := runMockCollectorAtEndpoint(t, "localhost:0")
+	mc := runMockCollector(t)
 
 	defer func() {
 		_ = mc.stop()
