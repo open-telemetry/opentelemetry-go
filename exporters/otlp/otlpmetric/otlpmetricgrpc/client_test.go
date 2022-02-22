@@ -296,7 +296,7 @@ func TestStartErrorInvalidAddress(t *testing.T) {
 }
 
 func TestEmptyData(t *testing.T) {
-	mc := runMockCollectorAtEndpoint(t, "localhost:0")
+	mc := runMockCollector(t)
 
 	defer func() {
 		_ = mc.stop()
