@@ -71,8 +71,8 @@ func newAgentClientUDP(params agentClientUDPParams) (*agentClientUDP, error) {
 		return nil, err
 	}
 
-	if params.MaxPacketSize <= 0 {
-		params.MaxPacketSize = udpPacketMaxLength - emitBatchOverhead
+	if params.MaxPacketSize <= 0 || params.MaxPacketSize > udpPacketMaxLength {
+		params.MaxPacketSize = udpPacketMaxLength
 	}
 
 	if params.AttemptReconnecting && params.AttemptReconnectInterval <= 0 {
@@ -126,6 +126,11 @@ func (a *agentClientUDP) EmitBatch(ctx context.Context, batch *gen.Batch) error 
 		// drop the batch if serialization of process fails.
 		return err
 	}
+
+	maxPacketSize := a.maxPacketSize
+	if maxPacketSize > udpPacketMaxLength-emitBatchOverhead {
+		maxPacketSize = udpPacketMaxLength - emitBatchOverhead
+	}
 	totalSize := processSize
 	var spans []*gen.Span
 	for _, span := range batch.Spans {
@@ -134,12 +139,12 @@ func (a *agentClientUDP) EmitBatch(ctx context.Context, batch *gen.Batch) error 
 			errs = append(errs, fmt.Errorf("thrift serialization failed: %v", span))
 			continue
 		}
-		if spanSize+processSize >= a.maxPacketSize {
+		if spanSize+processSize >= maxPacketSize {
 			// drop the span that exceeds the limit.
 			errs = append(errs, fmt.Errorf("span too large to send: %v", span))
 			continue
 		}
-		if totalSize+spanSize >= a.maxPacketSize {
+		if totalSize+spanSize >= maxPacketSize {
 			if err := a.flush(ctx, &gen.Batch{
 				Process: batch.Process,
 				Spans:   spans,

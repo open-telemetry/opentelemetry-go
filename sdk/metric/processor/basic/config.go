@@ -24,7 +24,7 @@ type config struct {
 }
 
 type Option interface {
-	applyProcessor(*config)
+	applyProcessor(config) config
 }
 
 // WithMemory sets the memory behavior of a Processor.  If this is
@@ -37,6 +37,7 @@ func WithMemory(memory bool) Option {
 
 type memoryOption bool
 
-func (m memoryOption) applyProcessor(cfg *config) {
+func (m memoryOption) applyProcessor(cfg config) config {
 	cfg.Memory = bool(m)
+	return cfg
 }

@@ -130,9 +130,6 @@ func TestSumIntDataPoints(t *testing.T) {
 		}, m.GetSum())
 		assert.Nil(t, m.GetHistogram())
 		assert.Nil(t, m.GetSummary())
-		assert.Nil(t, m.GetIntGauge())     // nolint
-		assert.Nil(t, m.GetIntSum())       // nolint
-		assert.Nil(t, m.GetIntHistogram()) // nolint
 	}
 }
 
@@ -168,9 +165,7 @@ func TestSumFloatDataPoints(t *testing.T) {
 			}}}, m.GetSum())
 		assert.Nil(t, m.GetHistogram())
 		assert.Nil(t, m.GetSummary())
-		assert.Nil(t, m.GetIntGauge())     // nolint
-		assert.Nil(t, m.GetIntSum())       // nolint
-		assert.Nil(t, m.GetIntHistogram()) // nolint
+
 	}
 }
 
@@ -203,9 +198,6 @@ func TestLastValueIntDataPoints(t *testing.T) {
 		assert.Nil(t, m.GetSum())
 		assert.Nil(t, m.GetHistogram())
 		assert.Nil(t, m.GetSummary())
-		assert.Nil(t, m.GetIntGauge())     // nolint
-		assert.Nil(t, m.GetIntSum())       // nolint
-		assert.Nil(t, m.GetIntHistogram()) // nolint
 	}
 }
 
