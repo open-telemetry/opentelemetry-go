@@ -115,7 +115,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlpmetricgrpc.Optio
 }
 
 func TestExporterShutdown(t *testing.T) {
-	mc := runMockCollectorAtEndpoint(t, "localhost:0")
+	mc := runMockCollector(t)
 	defer func() {
 		_ = mc.Stop()
 	}()
