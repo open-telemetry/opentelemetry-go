@@ -140,6 +140,15 @@ func TestEndToEnd(t *testing.T) {
 				ExpectedHeaders: testHeaders,
 			},
 		},
+		{
+			name: "with custom HTTP Client",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithHTTPClient(&http.Client{Timeout: 42 * time.Second}),
+			},
+			mcCfg: mockCollectorConfig{
+				HTTPClient: &http.Client{Timeout: 42 * time.Second},
+			},
+		},
 	}
 
 	for _, tc := range tests {

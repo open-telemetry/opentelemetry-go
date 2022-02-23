@@ -16,6 +16,7 @@ package otlptracehttp // import "go.opentelemetry.io/otel/exporters/otlp/otlptra
 
 import (
 	"crypto/tls"
+	"net/http"
 	"time"
 
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
@@ -75,6 +76,9 @@ func WithURLPath(urlPath string) Option {
 // WithTLSClientConfig can be used to set up a custom TLS
 // configuration for the client used to send payloads to the
 // collector. Use it if you want to use a custom certificate.
+//
+// This option will override the HTTP Client's Transport, even if configured
+// manually.
 func WithTLSClientConfig(tlsCfg *tls.Config) Option {
 	return wrappedOption{otlpconfig.WithTLSClientConfig(tlsCfg)}
 }
@@ -105,4 +109,13 @@ func WithTimeout(duration time.Duration) Option {
 // error for a total of 1 minute.
 func WithRetry(rc RetryConfig) Option {
 	return wrappedOption{otlpconfig.WithRetry(retry.Config(rc))}
+}
+
+// WithHTTPClient can be used to set up a custom http.Client to perform
+// the HTTP requests.
+//
+// A custom TLS Client Config will override this client's Transport, even if
+// configured manually.
+func WithHTTPClient(client *http.Client) Option {
+	return wrappedOption{otlpconfig.WithHTTPClient(client)}
 }

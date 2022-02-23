@@ -100,10 +100,14 @@ func NewClient(opts ...Option) otlptrace.Client {
 		*pathPtr = tmp
 	}
 
-	httpClient := &http.Client{
-		Transport: ourTransport,
-		Timeout:   cfg.Traces.Timeout,
+	httpClient := cfg.Traces.HTTPClient
+	if httpClient == nil {
+		httpClient = &http.Client{
+			Transport: ourTransport,
+			Timeout:   cfg.Traces.Timeout,
+		}
 	}
+
 	if cfg.Traces.TLSCfg != nil {
 		transport := ourTransport.Clone()
 		transport.TLSClientConfig = cfg.Traces.TLSCfg

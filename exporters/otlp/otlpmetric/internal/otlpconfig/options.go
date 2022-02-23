@@ -17,6 +17,7 @@ package otlpconfig // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric
 import (
 	"crypto/tls"
 	"fmt"
+	"net/http"
 	"time"
 
 	"google.golang.org/grpc"
@@ -53,6 +54,9 @@ type (
 		Compression Compression
 		Timeout     time.Duration
 		URLPath     string
+
+		// HTTP configurations
+		HTTPClient *http.Client
 
 		// gRPC configurations
 		GRPCCredentials credentials.TransportCredentials
@@ -294,6 +298,14 @@ func WithHeaders(headers map[string]string) GenericOption {
 func WithTimeout(duration time.Duration) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Metrics.Timeout = duration
+		return cfg
+	})
+}
+
+// WithHTTPClient sets a custom http.Client to be used by the HTTP exporter
+func WithHTTPClient(client *http.Client) GenericOption {
+	return newGenericOption(func(cfg Config) Config {
+		cfg.Metrics.HTTPClient = client
 		return cfg
 	})
 }

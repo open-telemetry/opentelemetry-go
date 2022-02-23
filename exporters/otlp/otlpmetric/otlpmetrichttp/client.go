@@ -98,10 +98,14 @@ func NewClient(opts ...Option) otlpmetric.Client {
 		*pathPtr = tmp
 	}
 
-	httpClient := &http.Client{
-		Transport: ourTransport,
-		Timeout:   cfg.Metrics.Timeout,
+	httpClient := cfg.Metrics.HTTPClient
+	if httpClient == nil {
+		httpClient = &http.Client{
+			Transport: ourTransport,
+			Timeout:   cfg.Metrics.Timeout,
+		}
 	}
+
 	if cfg.Metrics.TLSCfg != nil {
 		transport := ourTransport.Clone()
 		transport.TLSClientConfig = cfg.Metrics.TLSCfg

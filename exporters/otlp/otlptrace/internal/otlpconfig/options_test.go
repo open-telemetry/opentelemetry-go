@@ -16,6 +16,7 @@ package otlpconfig_test
 
 import (
 	"errors"
+	"net/http"
 	"testing"
 	"time"
 
@@ -370,6 +371,17 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *otlpconfig.Config, grpcOption bool) {
 				assert.Equal(t, c.Traces.Timeout, 5*time.Second)
+			},
+		},
+
+		// HTTP Client Tests
+		{
+			name: "Test With Custom HTTP Client",
+			opts: []otlpconfig.GenericOption{
+				otlpconfig.WithHTTPClient(&http.Client{Timeout: 42 * time.Second}),
+			},
+			asserts: func(t *testing.T, c *otlpconfig.Config, grpcOption bool) {
+				assert.Equal(t, &http.Client{Timeout: 42 * time.Second}, c.Traces.HTTPClient)
 			},
 		},
 	}

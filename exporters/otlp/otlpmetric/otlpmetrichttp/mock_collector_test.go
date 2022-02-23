@@ -188,6 +188,7 @@ type mockCollectorConfig struct {
 	Delay             <-chan struct{}
 	WithTLS           bool
 	ExpectedHeaders   map[string]string
+	HTTPClient        *http.Client
 }
 
 func (c *mockCollectorConfig) fillInDefaults() {
