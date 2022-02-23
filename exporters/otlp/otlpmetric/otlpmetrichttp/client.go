@@ -24,9 +24,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"path"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -77,26 +75,7 @@ type client struct {
 
 // NewClient creates a new HTTP metric client.
 func NewClient(opts ...Option) otlpmetric.Client {
-	cfg := otlpconfig.NewDefaultConfig()
-	cfg = otlpconfig.ApplyHTTPEnvConfigs(cfg)
-	for _, opt := range opts {
-		cfg = opt.applyHTTPOption(cfg)
-	}
-
-	for pathPtr, defaultPath := range map[*string]string{
-		&cfg.Metrics.URLPath: otlpconfig.DefaultMetricsPath,
-	} {
-		tmp := strings.TrimSpace(*pathPtr)
-		if tmp == "" {
-			tmp = defaultPath
-		} else {
-			tmp = path.Clean(tmp)
-			if !path.IsAbs(tmp) {
-				tmp = fmt.Sprintf("/%s", tmp)
-			}
-		}
-		*pathPtr = tmp
-	}
+	cfg := otlpconfig.NewHTTPConfig(asHTTPOptions(opts)...)
 
 	httpClient := &http.Client{
 		Transport: ourTransport,
