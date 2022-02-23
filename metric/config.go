@@ -32,7 +32,7 @@ func (cfg MeterConfig) SchemaURL() string {
 
 // MeterOption is an interface for applying Meter options.
 type MeterOption interface {
-	// ApplyMeter is used to set a MeterOption value of a MeterConfig.
+	// applyMeter is used to set a MeterOption value of a MeterConfig.
 	applyMeter(MeterConfig) MeterConfig
 }
 

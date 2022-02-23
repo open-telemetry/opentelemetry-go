@@ -98,7 +98,7 @@ type (
 		// supports checking for no updates during a round.
 		collectedCount int64
 
-		// storage is the stored label set for this record,
+		// labels is the stored label set for this record,
 		// except in cases where a label set is shared due to
 		// batch recording.
 		labels attribute.Set
@@ -183,7 +183,7 @@ func (b *baseInstrument) acquireHandle(kvs []attribute.KeyValue) *record {
 		// an interface here.
 		if actual, loaded := b.meter.current.LoadOrStore(mk, rec); loaded {
 			// Existing record case. Cannot change rec here because if fail
-			// will try to add rec again to avoid new allocationb.
+			// will try to add rec again to avoid new allocations.
 			oldRec := actual.(*record)
 			if oldRec.refMapped.ref() {
 				// At this moment it is guaranteed that the entry is in
@@ -208,6 +208,8 @@ func (b *baseInstrument) acquireHandle(kvs []attribute.KeyValue) *record {
 	}
 }
 
+// RecordOne captures a single synchronous metric event.
+//
 // The order of the input array `kvs` may be sorted after the function is called.
 func (s *syncInstrument) RecordOne(ctx context.Context, num number.Number, kvs []attribute.KeyValue) {
 	h := s.acquireHandle(kvs)
@@ -215,7 +217,9 @@ func (s *syncInstrument) RecordOne(ctx context.Context, num number.Number, kvs [
 	h.captureOne(ctx, num)
 }
 
-// @@@
+// ObserveOne captures a single asynchronous metric event.
+
+// The order of the input array `kvs` may be sorted after the function is called.
 func (a *asyncInstrument) ObserveOne(ctx context.Context, num number.Number, attrs []attribute.KeyValue) {
 	h := a.acquireHandle(attrs)
 	defer h.unbind()

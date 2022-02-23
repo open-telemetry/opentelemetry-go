@@ -69,8 +69,8 @@ func Example_insecure() {
 	}()
 
 	// TODO Bring Back Global package
-	// meter := global.Meter("test-meter")
-	meter := pusher.Meter("test-meter")
+	// meter := global.Meter("go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc_test")
+	meter := pusher.Meter("go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc_test")
 
 	// Recorder metric example
 
@@ -132,8 +132,8 @@ func Example_withTLS() {
 	}()
 
 	// TODO Bring back Global package
-	// meter := global.Meter("test-meter")
-	meter := pusher.Meter("test-meter")
+	// meter := global.Meter("go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc_test")
+	meter := pusher.Meter("go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc_test")
 
 	// Recorder metric example
 	counter, err := meter.SyncFloat64().Counter("an_important_metric", instrument.WithDescription("Measures the cumulative epicness of the app"))
@@ -190,8 +190,8 @@ func Example_withDifferentSignalCollectors() {
 	}()
 
 	// TODO Bring back Global package
-	// meter := global.Meter("test-meter")
-	meter := pusher.Meter("test-meter")
+	// meter := global.Meter("go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc_test")
+	meter := pusher.Meter("go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc_test")
 
 	// Recorder metric example
 	counter, err := meter.SyncFloat64().Counter("an_important_metric", instrument.WithDescription("Measures the cumulative epicness of the app"))
