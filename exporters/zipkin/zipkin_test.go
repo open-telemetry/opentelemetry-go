@@ -200,6 +200,7 @@ func logStoreLogger(s *logStore) *log.Logger {
 func TestExportSpans(t *testing.T) {
 	resource := resource.NewSchemaless(
 		semconv.ServiceNameKey.String("exporter-test"),
+		semconv.ServiceVersionKey.String("0.1.0"),
 	)
 
 	spans := tracetest.SpanStubs{
@@ -271,6 +272,8 @@ func TestExportSpans(t *testing.T) {
 			Tags: map[string]string{
 				"otel.status_code": "Error",
 				"error":            "404, file not found",
+				"service.name":     "exporter-test",
+				"service.version":  "0.1.0",
 			},
 		},
 		// model of child
@@ -299,6 +302,8 @@ func TestExportSpans(t *testing.T) {
 			Tags: map[string]string{
 				"otel.status_code": "Error",
 				"error":            "403, forbidden",
+				"service.name":     "exporter-test",
+				"service.version":  "0.1.0",
 			},
 		},
 	}

@@ -16,6 +16,7 @@ package trace_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -23,6 +24,28 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
+
+func BenchmarkSpanSetAttributesOverCapacity(b *testing.B) {
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanLimits(sdktrace.SpanLimits{AttributeCountLimit: 1}),
+	)
+	tracer := tp.Tracer("BenchmarkSpanSetAttributesOverCapacity")
+	ctx := context.Background()
+	attrs := make([]attribute.KeyValue, 128)
+	for i := range attrs {
+		key := fmt.Sprintf("key-%d", i)
+		attrs[i] = attribute.Bool(key, true)
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, span := tracer.Start(ctx, "/foo")
+		span.SetAttributes(attrs...)
+		span.End()
+	}
+}
 
 func BenchmarkStartEndSpan(b *testing.B) {
 	traceBenchmark(b, "Benchmark StartEndSpan", func(b *testing.B, t trace.Tracer) {

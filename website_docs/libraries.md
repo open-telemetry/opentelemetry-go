@@ -92,4 +92,4 @@ A full list of instrumentation libraries available can be found in the [OpenTele
 
 Instrumentation libraries can do things like generate telemetry data for inbound and outbound HTTP requests, but they don't instrument your actual application.
 
-To get richer telemetry data, use [manual instrumentatiion]({{< relref "manual" >}}) to enrich your telemetry data from instrumentation libraries with instrumentation from your running application.
+To get richer telemetry data, use [manual instrumentation]({{< relref "manual" >}}) to enrich your telemetry data from instrumentation libraries with instrumentation from your running application.
