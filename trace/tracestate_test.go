@@ -482,14 +482,20 @@ func TestTraceStateInsert(t *testing.T) {
 			err:        errInvalidKey,
 		},
 		{
-			name:       "too many entries",
+			name:       "drop the right-most member(oldest) in queue",
 			tracestate: maxMembers,
 			key:        "keyx",
 			value:      "valx",
-			expected:   maxMembers,
-			err:        errMemberNumber,
-		},
-	}
+			expected: func() TraceState {
+				// Prepend the new element and remove the oldest one, which is over capacity.
+				return TraceState{
+					list: append(
+						[]member{{Key: "keyx", Value: "valx"}},
+						maxMembers.list[:len(maxMembers.list)-1]...,
+					),
+				}
+			}(),
+		}}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
