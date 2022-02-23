@@ -13,51 +13,14 @@
 // limitations under the License.
 
 package trace // import "go.opentelemetry.io/otel/sdk/trace"
+
 import "go.opentelemetry.io/otel/sdk/internal/env"
 
-// SpanLimits represents the limits of a span.
-type SpanLimits struct {
-	// AttributeCountLimit is the maximum allowed span attribute count.
-	AttributeCountLimit int
-
-	// EventCountLimit is the maximum allowed span event count.
-	EventCountLimit int
-
-	// LinkCountLimit is the maximum allowed span link count.
-	LinkCountLimit int
-
-	// AttributePerEventCountLimit is the maximum allowed attribute per span event count.
-	AttributePerEventCountLimit int
-
-	// AttributePerLinkCountLimit is the maximum allowed attribute per span link count.
-	AttributePerLinkCountLimit int
-}
-
-func (sl *SpanLimits) ensureDefault() {
-	if sl.EventCountLimit <= 0 {
-		sl.EventCountLimit = DefaultEventCountLimit
-	}
-	if sl.AttributeCountLimit <= 0 {
-		sl.AttributeCountLimit = DefaultAttributeCountLimit
-	}
-	if sl.LinkCountLimit <= 0 {
-		sl.LinkCountLimit = DefaultLinkCountLimit
-	}
-	if sl.AttributePerEventCountLimit <= 0 {
-		sl.AttributePerEventCountLimit = DefaultAttributePerEventCountLimit
-	}
-	if sl.AttributePerLinkCountLimit <= 0 {
-		sl.AttributePerLinkCountLimit = DefaultAttributePerLinkCountLimit
-	}
-}
-
-func (sl *SpanLimits) parsePotentialEnvConfigs() {
-	sl.AttributeCountLimit = env.IntEnvOr(env.SpanAttributesCountKey, sl.AttributeCountLimit)
-	sl.LinkCountLimit = env.IntEnvOr(env.SpanLinkCountKey, sl.LinkCountLimit)
-	sl.EventCountLimit = env.IntEnvOr(env.SpanEventCountKey, sl.EventCountLimit)
-}
-
 const (
+	// DefaultAttributeValueLengthLimit is the default maximum allowed
+	// attribute value length, unlimited.
+	DefaultAttributeValueLengthLimit = -1
+
 	// DefaultAttributeCountLimit is the default maximum allowed span attribute count.
 	// If not specified via WithSpanLimits, will try to retrieve the value from
 	// environment variable `OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT`.
@@ -82,3 +45,76 @@ const (
 	// DefaultAttributePerLinkCountLimit is the default maximum allowed attribute per span link count.
 	DefaultAttributePerLinkCountLimit = 128
 )
+
+// SpanLimits represents the limits of a span.
+type SpanLimits struct {
+	// AttributeValueLengthLimit is the maximum allowed attribute value length.
+	//
+	// This limit only applies to string and string slice attribute values.
+	//
+	// Setting this to zero means no string or string slice attributes we be
+	// recorded.
+	//
+	// Setting this value a negative value means no limit is applied.
+	AttributeValueLengthLimit int
+
+	// AttributeCountLimit is the maximum allowed span attribute count.
+	//
+	// Setting this to zero means no attributes we be recorded.
+	//
+	// Setting this value a negative value means no limit is applied.
+	AttributeCountLimit int
+
+	// EventCountLimit is the maximum allowed span event count.
+	//
+	// Setting this to zero means no events we be recorded.
+	//
+	// Setting this value a negative value means no limit is applied.
+	EventCountLimit int
+
+	// LinkCountLimit is the maximum allowed span link count.
+	//
+	// Setting this to zero means no links we be recorded.
+	//
+	// Setting this value a negative value means no limit is applied.
+	LinkCountLimit int
+
+	// AttributePerEventCountLimit is the maximum allowed attribute per span event count.
+	//
+	// Setting this to zero means no attributes will be recorded for events.
+	//
+	// Setting this value a negative value means no limit is applied.
+	AttributePerEventCountLimit int
+
+	// AttributePerLinkCountLimit is the maximum allowed attribute per span link count.
+	//
+	// Setting this to zero means no attributes will be recorded for links.
+	//
+	// Setting this value a negative value means no limit is applied.
+	AttributePerLinkCountLimit int
+}
+
+// NewSpanLimits returns a SpanLimits with all limits set to defaults.
+func NewSpanLimits() SpanLimits {
+	return SpanLimits{
+		AttributeValueLengthLimit:   DefaultAttributeValueLengthLimit,
+		AttributeCountLimit:         DefaultAttributeCountLimit,
+		EventCountLimit:             DefaultEventCountLimit,
+		LinkCountLimit:              DefaultLinkCountLimit,
+		AttributePerEventCountLimit: DefaultAttributePerEventCountLimit,
+		AttributePerLinkCountLimit:  DefaultAttributePerLinkCountLimit,
+	}
+}
+
+// newEnvSpanLimits returns a SpanLimits with all limits set to the values
+// defined by related environment variables, or defaults otherwise.
+func newEnvSpanLimits() SpanLimits {
+	return SpanLimits{
+		AttributeValueLengthLimit:   env.SpanAttributeValueLength(DefaultAttributeValueLengthLimit),
+		AttributeCountLimit:         env.SpanAttributeCount(DefaultAttributeCountLimit),
+		EventCountLimit:             env.SpanEventCount(DefaultEventCountLimit),
+		LinkCountLimit:              env.SpanLinkCount(DefaultLinkCountLimit),
+		AttributePerEventCountLimit: env.SpanEventAttributeCount(DefaultAttributePerEventCountLimit),
+		AttributePerLinkCountLimit:  env.SpanLinkAttributeCount(DefaultAttributePerLinkCountLimit),
+	}
+}

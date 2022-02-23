@@ -106,16 +106,26 @@ func TestNewTraceProviderWithoutSpanLimitConfiguration(t *testing.T) {
 	defer func() {
 		require.NoError(t, envStore.Restore())
 	}()
-	envStore.Record(env.SpanAttributesCountKey)
+	envStore.Record(env.SpanAttributeValueLengthKey)
+	envStore.Record(env.SpanAttributeCountKey)
 	envStore.Record(env.SpanEventCountKey)
 	envStore.Record(env.SpanLinkCountKey)
+	envStore.Record(env.SpanEventAttributeCountKey)
+	envStore.Record(env.SpanLinkAttributeCountKey)
+	require.NoError(t, os.Setenv(env.SpanAttributeValueLengthKey, "42"))
 	require.NoError(t, os.Setenv(env.SpanEventCountKey, "111"))
-	require.NoError(t, os.Setenv(env.SpanAttributesCountKey, "222"))
+	require.NoError(t, os.Setenv(env.SpanAttributeCountKey, "222"))
 	require.NoError(t, os.Setenv(env.SpanLinkCountKey, "333"))
-	tp := NewTracerProvider()
-	assert.Equal(t, 111, tp.spanLimits.EventCountLimit)
-	assert.Equal(t, 222, tp.spanLimits.AttributeCountLimit)
-	assert.Equal(t, 333, tp.spanLimits.LinkCountLimit)
+	require.NoError(t, os.Setenv(env.SpanEventAttributeCountKey, "42"))
+	require.NoError(t, os.Setenv(env.SpanLinkAttributeCountKey, "42"))
+	assert.Equal(t, NewTracerProvider().spanLimits, SpanLimits{
+		AttributeValueLengthLimit:   42,
+		AttributeCountLimit:         222,
+		EventCountLimit:             111,
+		LinkCountLimit:              333,
+		AttributePerEventCountLimit: 42,
+		AttributePerLinkCountLimit:  42,
+	})
 }
 
 func TestNewTraceProviderWithSpanLimitConfigurationFromOptsAndEnvironmentVariable(t *testing.T) {
@@ -123,35 +133,60 @@ func TestNewTraceProviderWithSpanLimitConfigurationFromOptsAndEnvironmentVariabl
 	defer func() {
 		require.NoError(t, envStore.Restore())
 	}()
-	envStore.Record(env.SpanAttributesCountKey)
+	envStore.Record(env.SpanAttributeValueLengthKey)
+	envStore.Record(env.SpanAttributeCountKey)
 	envStore.Record(env.SpanEventCountKey)
 	envStore.Record(env.SpanLinkCountKey)
-	require.NoError(t, os.Setenv(env.SpanEventCountKey, "111"))
-	require.NoError(t, os.Setenv(env.SpanAttributesCountKey, "222"))
-	require.NoError(t, os.Setenv(env.SpanLinkCountKey, "333"))
-	tp := NewTracerProvider(WithSpanLimits(SpanLimits{
-		EventCountLimit:     1,
-		AttributeCountLimit: 2,
-		LinkCountLimit:      3,
-	}))
-	assert.Equal(t, 1, tp.spanLimits.EventCountLimit)
-	assert.Equal(t, 2, tp.spanLimits.AttributeCountLimit)
-	assert.Equal(t, 3, tp.spanLimits.LinkCountLimit)
+	envStore.Record(env.SpanEventAttributeCountKey)
+	envStore.Record(env.SpanLinkAttributeCountKey)
+	require.NoError(t, os.Setenv(env.SpanAttributeValueLengthKey, "-2"))
+	require.NoError(t, os.Setenv(env.SpanEventCountKey, "-2"))
+	require.NoError(t, os.Setenv(env.SpanAttributeCountKey, "-2"))
+	require.NoError(t, os.Setenv(env.SpanLinkCountKey, "-2"))
+	require.NoError(t, os.Setenv(env.SpanEventAttributeCountKey, "-2"))
+	require.NoError(t, os.Setenv(env.SpanLinkAttributeCountKey, "-2"))
+	sl := SpanLimits{
+		AttributeValueLengthLimit:   42,
+		AttributeCountLimit:         222,
+		EventCountLimit:             111,
+		LinkCountLimit:              333,
+		AttributePerEventCountLimit: 42,
+		AttributePerLinkCountLimit:  42,
+	}
+	assert.Equal(t, NewTracerProvider(WithSpanLimits(sl)).spanLimits, sl)
 }
 
-func TestNewTraceProviderWithInvalidSpanLimitConfigurationFromEnvironmentVariable(t *testing.T) {
+func TestNewTraceProviderSpanLimitUnlimitedFromEnv(t *testing.T) {
 	envStore := ottest.NewEnvStore()
 	defer func() {
 		require.NoError(t, envStore.Restore())
 	}()
-	envStore.Record(env.SpanAttributesCountKey)
+	envStore.Record(env.SpanAttributeValueLengthKey)
+	envStore.Record(env.SpanAttributeCountKey)
 	envStore.Record(env.SpanEventCountKey)
 	envStore.Record(env.SpanLinkCountKey)
-	require.NoError(t, os.Setenv(env.SpanEventCountKey, "-111"))
-	require.NoError(t, os.Setenv(env.SpanAttributesCountKey, "-222"))
-	require.NoError(t, os.Setenv(env.SpanLinkCountKey, "-333"))
-	tp := NewTracerProvider()
-	assert.Equal(t, 128, tp.spanLimits.EventCountLimit)
-	assert.Equal(t, 128, tp.spanLimits.AttributeCountLimit)
-	assert.Equal(t, 128, tp.spanLimits.LinkCountLimit)
+	envStore.Record(env.SpanEventAttributeCountKey)
+	envStore.Record(env.SpanLinkAttributeCountKey)
+	// OTel spec says this is invalid (negative) for
+	// SpanLinkAttributeCountKey, but since we will revert to the default
+	// (unlimited) which uses negative values to signal this than this value
+	// is expected to pass through.
+	require.NoError(t, os.Setenv(env.SpanAttributeValueLengthKey, "-1"))
+	require.NoError(t, os.Setenv(env.SpanEventCountKey, "-1"))
+	require.NoError(t, os.Setenv(env.SpanAttributeCountKey, "-1"))
+	require.NoError(t, os.Setenv(env.SpanLinkCountKey, "-1"))
+	require.NoError(t, os.Setenv(env.SpanEventAttributeCountKey, "-1"))
+	require.NoError(t, os.Setenv(env.SpanLinkAttributeCountKey, "-1"))
+	assert.Equal(t, NewTracerProvider().spanLimits, SpanLimits{
+		AttributeValueLengthLimit:   -1,
+		AttributeCountLimit:         -1,
+		EventCountLimit:             -1,
+		LinkCountLimit:              -1,
+		AttributePerEventCountLimit: -1,
+		AttributePerLinkCountLimit:  -1,
+	})
+}
+
+func TestNewTraceProviderSpanLimitDefaults(t *testing.T) {
+	assert.Equal(t, NewTracerProvider().spanLimits, NewSpanLimits())
 }

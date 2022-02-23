@@ -96,9 +96,10 @@ var _ trace.TracerProvider = &TracerProvider{}
 // The passed opts are used to override these default values and configure the
 // returned TracerProvider appropriately.
 func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
-	o := tracerProviderConfig{}
+	o := tracerProviderConfig{
+		spanLimits: newEnvSpanLimits(),
+	}
 
-	o.spanLimits.parsePotentialEnvConfigs()
 	for _, opt := range opts {
 		o = opt.apply(o)
 	}
@@ -367,7 +368,6 @@ func ensureValidTracerProviderConfig(cfg tracerProviderConfig) tracerProviderCon
 	if cfg.idGenerator == nil {
 		cfg.idGenerator = defaultIDGenerator()
 	}
-	cfg.spanLimits.ensureDefault()
 	if cfg.resource == nil {
 		cfg.resource = resource.Default()
 	}

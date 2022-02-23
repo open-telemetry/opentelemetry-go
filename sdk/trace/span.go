@@ -212,10 +212,17 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	limit := s.tracer.provider.spanLimits.AttributeCountLimit
+	if limit == 0 {
+		// No attributes allowed.
+		s.droppedAttributes += len(attributes)
+		return
+	}
+
 	// If adding these attributes could exceed the capacity of s perform a
 	// de-duplication and truncation while adding to avoid over allocation.
-	if len(s.attributes)+len(attributes) > s.tracer.provider.spanLimits.AttributeCountLimit {
-		s.addOverCapAttrs(attributes)
+	if limit > 0 && len(s.attributes)+len(attributes) > limit {
+		s.addOverCapAttrs(limit, attributes)
 		return
 	}
 
@@ -227,21 +234,25 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 			s.droppedAttributes++
 			continue
 		}
+		a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
 		s.attributes = append(s.attributes, a)
 	}
 }
 
 // addOverCapAttrs adds the attributes attrs to the span s while
 // de-duplicating the attributes of s and attrs and dropping attributes that
-// exceed the capacity of s.
+// exceed the limit.
 //
 // This method assumes s.mu.Lock is held by the caller.
 //
 // This method should only be called when there is a possibility that adding
-// attrs to s will exceed the capacity of s. Otherwise, attrs should be added
-// to s without checking for duplicates and all retrieval methods of the
-// attributes for s will de-duplicate as needed.
-func (s *recordingSpan) addOverCapAttrs(attrs []attribute.KeyValue) {
+// attrs to s will exceed the limit. Otherwise, attrs should be added to s
+// without checking for duplicates and all retrieval methods of the attributes
+// for s will de-duplicate as needed.
+//
+// This method assumes limit is a value > 0. The argument should be validated
+// by the caller.
+func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 	// In order to not allocate more capacity to s.attributes than needed,
 	// prune and truncate this addition of attributes while adding.
 
@@ -265,15 +276,33 @@ func (s *recordingSpan) addOverCapAttrs(attrs []attribute.KeyValue) {
 			continue
 		}
 
-		if len(s.attributes) >= s.tracer.provider.spanLimits.AttributeCountLimit {
+		if len(s.attributes) >= limit {
 			// Do not just drop all of the remaining attributes, make sure
 			// updates are checked and performed.
 			s.droppedAttributes++
 		} else {
+			a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
 			s.attributes = append(s.attributes, a)
 			exists[a.Key] = len(s.attributes) - 1
 		}
 	}
+}
+
+func truncateAttr(limit int, a attribute.KeyValue) attribute.KeyValue {
+	if limit < 0 {
+		return a
+	}
+	switch a.Value.Type() {
+	case attribute.STRING:
+		a.Value = attribute.StringValue(a.Value.AsString()[:limit])
+	case attribute.STRINGSLICE:
+		v := a.Value.AsStringSlice()
+		for i := range v {
+			v[i] = v[i][:limit]
+		}
+		a.Value = attribute.StringSliceValue(v)
+	}
+	return a
 }
 
 // End ends the span. This method does nothing if the span is already ended or
@@ -396,22 +425,23 @@ func (s *recordingSpan) AddEvent(name string, o ...trace.EventOption) {
 
 func (s *recordingSpan) addEvent(name string, o ...trace.EventOption) {
 	c := trace.NewEventConfig(o...)
+	e := Event{Name: name, Attributes: c.Attributes(), Time: c.Timestamp()}
 
-	// Discard over limited attributes
-	attributes := c.Attributes()
-	var discarded int
-	if len(attributes) > s.tracer.provider.spanLimits.AttributePerEventCountLimit {
-		discarded = len(attributes) - s.tracer.provider.spanLimits.AttributePerEventCountLimit
-		attributes = attributes[:s.tracer.provider.spanLimits.AttributePerEventCountLimit]
+	// Discard attributes over limit.
+	limit := s.tracer.provider.spanLimits.AttributePerEventCountLimit
+	if limit == 0 {
+		// Drop all attributes.
+		e.DroppedAttributeCount = len(e.Attributes)
+		e.Attributes = nil
+	} else if limit > 0 && len(e.Attributes) > limit {
+		// Drop over capacity.
+		e.DroppedAttributeCount = len(e.Attributes) - limit
+		e.Attributes = e.Attributes[:limit]
 	}
+
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.events.add(Event{
-		Name:                  name,
-		Attributes:            attributes,
-		DroppedAttributeCount: discarded,
-		Time:                  c.Timestamp(),
-	})
+	s.events.add(e)
+	s.mu.Unlock()
 }
 
 // SetName sets the name of this span. If this span is not being recorded than
@@ -551,18 +581,23 @@ func (s *recordingSpan) addLink(link trace.Link) {
 	if !s.IsRecording() || !link.SpanContext.IsValid() {
 		return
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
 
-	var droppedAttributeCount int
+	l := Link{SpanContext: link.SpanContext, Attributes: link.Attributes}
 
-	// Discard over limited attributes
-	if len(link.Attributes) > s.tracer.provider.spanLimits.AttributePerLinkCountLimit {
-		droppedAttributeCount = len(link.Attributes) - s.tracer.provider.spanLimits.AttributePerLinkCountLimit
-		link.Attributes = link.Attributes[:s.tracer.provider.spanLimits.AttributePerLinkCountLimit]
+	// Discard attributes over limit.
+	limit := s.tracer.provider.spanLimits.AttributePerLinkCountLimit
+	if limit == 0 {
+		// Drop all attributes.
+		l.DroppedAttributeCount = len(l.Attributes)
+		l.Attributes = nil
+	} else if limit > 0 && len(l.Attributes) > limit {
+		l.DroppedAttributeCount = len(l.Attributes) - limit
+		l.Attributes = l.Attributes[:limit]
 	}
 
-	s.links.add(Link{link.SpanContext, link.Attributes, droppedAttributeCount})
+	s.mu.Lock()
+	s.links.add(l)
+	s.mu.Unlock()
 }
 
 // DroppedAttributes returns the number of attributes dropped by the span
