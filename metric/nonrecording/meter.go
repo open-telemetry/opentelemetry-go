@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric // import "go.opentelemetry.io/otel/metric"
+package nonrecording // import "go.opentelemetry.io/otel/metric/nonrecording"
 
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
@@ -24,37 +25,39 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 )
 
-func NewNoopMeterProvider() MeterProvider {
+// NewNoopMeterProvider creates a MeterProvider that does not record any metrics.
+func NewNoopMeterProvider() metric.MeterProvider {
 	return noopMeterProvider{}
 }
 
 type noopMeterProvider struct{}
 
-var _ MeterProvider = noopMeterProvider{}
+var _ metric.MeterProvider = noopMeterProvider{}
 
-func (noopMeterProvider) Meter(instrumentationName string, opts ...MeterOption) Meter {
+func (noopMeterProvider) Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter {
 	return noopMeter{}
 }
 
-func NewNoopMeter() Meter {
+// NewNoopMeter creates a Meter that does not record any metrics.
+func NewNoopMeter() metric.Meter {
 	return noopMeter{}
 }
 
 type noopMeter struct{}
 
-var _ Meter = noopMeter{}
+var _ metric.Meter = noopMeter{}
 
 func (noopMeter) AsyncInt64() asyncint64.Instruments {
-	return asyncint64.NewNoopInstruments()
+	return nonrecordingAsyncInt64Instrument{}
 }
 func (noopMeter) AsyncFloat64() asyncfloat64.Instruments {
-	return asyncfloat64.NewNoopInstruments()
+	return nonrecordingAsyncFloat64Instrument{}
 }
 func (noopMeter) SyncInt64() syncint64.Instruments {
-	return syncint64.NewNoopInstruments()
+	return nonrecordingSyncInt64Instrument{}
 }
 func (noopMeter) SyncFloat64() syncfloat64.Instruments {
-	return syncfloat64.NewNoopInstruments()
+	return nonrecordingSyncFloat64Instrument{}
 }
 func (noopMeter) RegisterCallback([]instrument.Asynchronous, func(context.Context)) error {
 	return nil
