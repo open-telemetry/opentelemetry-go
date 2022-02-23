@@ -374,7 +374,7 @@ func TestStartErrorInvalidAddress(t *testing.T) {
 }
 
 func TestEmptyData(t *testing.T) {
-	mc := runMockCollectorAtEndpoint(t, "localhost:56561")
+	mc := runMockCollector(t)
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
 	<-time.After(5 * time.Millisecond)
