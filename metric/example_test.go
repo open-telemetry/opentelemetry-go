@@ -26,7 +26,8 @@ import (
 	"go.opentelemetry.io/otel/metric/unit"
 )
 
-func ExampleMeter() {
+//nolint:govet // Meter doesn't register for go vet
+func ExampleMeter_synchronous() {
 	// In a library or program this would be provided by otel.GetMeterProvider().
 	meterProvider := nonrecording.NewNoopMeterProvider()
 
@@ -46,7 +47,8 @@ func ExampleMeter() {
 
 }
 
-func ExampleMeter_RegisterCallback() {
+//nolint:govet // Meter doesn't register for go vet
+func ExampleMeter_asynchronous_single() {
 	// In a library or program this would be provided by otel.GetMeterProvider().
 	meterProvider := nonrecording.NewNoopMeterProvider()
 	meter := meterProvider.Meter("go.opentelemetry.io/otel/metric#AsyncExample")
@@ -75,7 +77,8 @@ func ExampleMeter_RegisterCallback() {
 	}
 }
 
-func ExampleMeter_RegisterCallback_multiple() {
+//nolint:govet // Meter doesn't register for go vet
+func ExampleMeter_asynchronous_multiple() {
 	meterProvider := nonrecording.NewNoopMeterProvider()
 	meter := meterProvider.Meter("go.opentelemetry.io/otel/metric#MultiAsyncExample")
 
