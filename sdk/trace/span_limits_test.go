@@ -181,9 +181,11 @@ func testSpanLimits(t *testing.T, limits SpanLimits) ReadOnlySpan {
 func TestSpanLimits(t *testing.T) {
 	t.Run("AttributeValueLengthLimit", func(t *testing.T) {
 		limits := NewSpanLimits()
+		// Unlimited.
+		limits.AttributeValueLengthLimit = -1
 		attrs := testSpanLimits(t, limits).Attributes()
-		require.Contains(t, attrs, attribute.String("string", "abc"))
-		require.Contains(t, attrs, attribute.StringSlice("stringSlice", []string{"abc", "def"}))
+		assert.Contains(t, attrs, attribute.String("string", "abc"))
+		assert.Contains(t, attrs, attribute.StringSlice("stringSlice", []string{"abc", "def"}))
 
 		limits.AttributeValueLengthLimit = 2
 		attrs = testSpanLimits(t, limits).Attributes()
@@ -199,7 +201,9 @@ func TestSpanLimits(t *testing.T) {
 
 	t.Run("AttributeCountLimit", func(t *testing.T) {
 		limits := NewSpanLimits()
-		require.Len(t, testSpanLimits(t, limits).Attributes(), 2)
+		// Unlimited.
+		limits.AttributeCountLimit = -1
+		assert.Len(t, testSpanLimits(t, limits).Attributes(), 2)
 
 		limits.AttributeCountLimit = 1
 		assert.Len(t, testSpanLimits(t, limits).Attributes(), 1)
@@ -211,7 +215,9 @@ func TestSpanLimits(t *testing.T) {
 
 	t.Run("EventCountLimit", func(t *testing.T) {
 		limits := NewSpanLimits()
-		require.Len(t, testSpanLimits(t, limits).Events(), 2)
+		// Unlimited.
+		limits.EventCountLimit = -1
+		assert.Len(t, testSpanLimits(t, limits).Events(), 2)
 
 		limits.EventCountLimit = 1
 		assert.Len(t, testSpanLimits(t, limits).Events(), 1)
@@ -223,25 +229,29 @@ func TestSpanLimits(t *testing.T) {
 
 	t.Run("AttributePerEventCountLimit", func(t *testing.T) {
 		limits := NewSpanLimits()
+		// Unlimited.
+		limits.AttributePerEventCountLimit = -1
 		for _, e := range testSpanLimits(t, limits).Events() {
-			require.Len(t, e.Attributes, 2)
+			assert.Len(t, e.Attributes, 2)
 		}
 
 		limits.AttributePerEventCountLimit = 1
 		for _, e := range testSpanLimits(t, limits).Events() {
-			require.Len(t, e.Attributes, 1)
+			assert.Len(t, e.Attributes, 1)
 		}
 
 		// Ensure this can be disabled.
 		limits.AttributePerEventCountLimit = 0
 		for _, e := range testSpanLimits(t, limits).Events() {
-			require.Len(t, e.Attributes, 0)
+			assert.Len(t, e.Attributes, 0)
 		}
 	})
 
 	t.Run("LinkCountLimit", func(t *testing.T) {
 		limits := NewSpanLimits()
-		require.Len(t, testSpanLimits(t, limits).Links(), 2)
+		// Unlimited.
+		limits.LinkCountLimit = -1
+		assert.Len(t, testSpanLimits(t, limits).Links(), 2)
 
 		limits.LinkCountLimit = 1
 		assert.Len(t, testSpanLimits(t, limits).Links(), 1)
@@ -253,19 +263,21 @@ func TestSpanLimits(t *testing.T) {
 
 	t.Run("AttributePerLinkCountLimit", func(t *testing.T) {
 		limits := NewSpanLimits()
+		// Unlimited.
+		limits.AttributePerLinkCountLimit = -1
 		for _, l := range testSpanLimits(t, limits).Links() {
-			require.Len(t, l.Attributes, 2)
+			assert.Len(t, l.Attributes, 2)
 		}
 
 		limits.AttributePerLinkCountLimit = 1
 		for _, l := range testSpanLimits(t, limits).Links() {
-			require.Len(t, l.Attributes, 1)
+			assert.Len(t, l.Attributes, 1)
 		}
 
 		// Ensure this can be disabled.
 		limits.AttributePerLinkCountLimit = 0
 		for _, l := range testSpanLimits(t, limits).Links() {
-			require.Len(t, l.Attributes, 0)
+			assert.Len(t, l.Attributes, 0)
 		}
 	})
 }
