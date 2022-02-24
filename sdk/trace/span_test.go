@@ -15,6 +15,7 @@
 package trace
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
 
@@ -41,6 +42,46 @@ func TestTruncateAttr(t *testing.T) {
 		},
 		{
 			limit: 0,
+			attr:  attribute.Bool(key, true),
+			want:  attribute.Bool(key, true),
+		},
+		{
+			limit: 0,
+			attr:  attribute.BoolSlice(key, []bool{true, false}),
+			want:  attribute.BoolSlice(key, []bool{true, false}),
+		},
+		{
+			limit: 0,
+			attr:  attribute.Int(key, 42),
+			want:  attribute.Int(key, 42),
+		},
+		{
+			limit: 0,
+			attr:  attribute.IntSlice(key, []int{42, -1}),
+			want:  attribute.IntSlice(key, []int{42, -1}),
+		},
+		{
+			limit: 0,
+			attr:  attribute.Int64(key, 42),
+			want:  attribute.Int64(key, 42),
+		},
+		{
+			limit: 0,
+			attr:  attribute.Int64Slice(key, []int64{42, -1}),
+			want:  attribute.Int64Slice(key, []int64{42, -1}),
+		},
+		{
+			limit: 0,
+			attr:  attribute.Float64(key, 42),
+			want:  attribute.Float64(key, 42),
+		},
+		{
+			limit: 0,
+			attr:  attribute.Float64Slice(key, []float64{42, -1}),
+			want:  attribute.Float64Slice(key, []float64{42, -1}),
+		},
+		{
+			limit: 0,
 			attr:  attribute.String(key, "value"),
 			want:  attribute.String(key, ""),
 		},
@@ -48,6 +89,11 @@ func TestTruncateAttr(t *testing.T) {
 			limit: 0,
 			attr:  attribute.StringSlice(key, []string{"value-0", "value-1"}),
 			want:  attribute.StringSlice(key, []string{"", ""}),
+		},
+		{
+			limit: 0,
+			attr:  attribute.Stringer(key, bytes.NewBufferString("value")),
+			want:  attribute.String(key, ""),
 		},
 		{
 			limit: 1,
