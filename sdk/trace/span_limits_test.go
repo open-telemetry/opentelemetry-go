@@ -52,10 +52,11 @@ func TestSettingSpanLimits(t *testing.T) {
 	}
 
 	tests := []struct {
-		name string
-		env  map[string]string
-		opt  *SpanLimits
-		want SpanLimits
+		name   string
+		env    map[string]string
+		opt    *SpanLimits
+		rawOpt *SpanLimits
+		want   SpanLimits
 	}{
 		{
 			name: "defaults",
@@ -72,11 +73,29 @@ func TestSettingSpanLimits(t *testing.T) {
 			want: *(limits(42)),
 		},
 		{
+			name:   "raw-opt",
+			rawOpt: limits(42),
+			want:   *(limits(42)),
+		},
+		{
 			name: "opt-override",
 			env:  envLimits("-2"),
 			// Option take priority.
 			opt:  limits(43),
 			want: *(limits(43)),
+		},
+		{
+			name: "raw-opt-override",
+			env:  envLimits("-2"),
+			// Option take priority.
+			rawOpt: limits(43),
+			want:   *(limits(43)),
+		},
+		{
+			name:   "last-opt-wins",
+			opt:    limits(-2),
+			rawOpt: limits(-3),
+			want:   *(limits(-3)),
 		},
 		{
 			name: "env(unlimited)",
@@ -89,8 +108,14 @@ func TestSettingSpanLimits(t *testing.T) {
 		},
 		{
 			name: "opt(unlimited)",
+			// Corrects to defaults.
 			opt:  limits(-1),
-			want: *(limits(-1)),
+			want: NewSpanLimits(),
+		},
+		{
+			name:   "raw-opt(unlimited)",
+			rawOpt: limits(-1),
+			want:   *(limits(-1)),
 		},
 	}
 
@@ -109,6 +134,9 @@ func TestSettingSpanLimits(t *testing.T) {
 			if test.opt != nil {
 				opts = append(opts, WithSpanLimits(*test.opt))
 			}
+			if test.rawOpt != nil {
+				opts = append(opts, WithRawSpanLimits(*test.rawOpt))
+			}
 
 			assert.Equal(t, test.want, NewTracerProvider(opts...).spanLimits)
 		})
@@ -124,7 +152,7 @@ func (r *recorder) Shutdown(context.Context) error         { return nil }
 
 func testSpanLimits(t *testing.T, limits SpanLimits) ReadOnlySpan {
 	rec := new(recorder)
-	tp := NewTracerProvider(WithSpanLimits(limits), WithSpanProcessor(rec))
+	tp := NewTracerProvider(WithRawSpanLimits(limits), WithSpanProcessor(rec))
 	tracer := tp.Tracer("testSpanLimits")
 
 	ctx := context.Background()
