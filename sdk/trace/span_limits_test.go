@@ -21,6 +21,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/attribute"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/sdk/internal/env"
@@ -143,7 +144,7 @@ func testSpanLimits(t *testing.T, limits SpanLimits) ReadOnlySpan {
 	span.AddEvent("event 1", trace.WithAttributes(a...))
 	span.AddEvent("event 2", trace.WithAttributes(a...))
 	span.End()
-	tp.Shutdown(ctx)
+	require.NoError(t, tp.Shutdown(ctx))
 
 	require.Len(t, *rec, 1, "exported spans")
 	return (*rec)[0]
