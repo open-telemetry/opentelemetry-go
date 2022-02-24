@@ -101,14 +101,12 @@ func TestSettingSpanLimits(t *testing.T) {
 				}
 			}
 
-			var tp *TracerProvider
+			var opts []TracerProviderOption
 			if test.opt != nil {
-				tp = NewTracerProvider(WithSpanLimits(*test.opt))
-			} else {
-				tp = NewTracerProvider()
+				opts = append(opts, WithSpanLimits(*test.opt))
 			}
 
-			assert.Equal(t, test.want, tp.spanLimits)
+			assert.Equal(t, test.want, NewTracerProvider(opts...).spanLimits)
 		})
 	}
 }
