@@ -17,15 +17,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `OTEL_SPAN_LINK_COUNT_LIMIT`
   
   If the provided environment variables are invalid (negative), the default values would be used.
+- Rename the `gc` runtime name to `go` (#2560)
 - Add container id support to Resource. (#2418)
 
 ### Changed
 
+- For tracestate's members, prepend the new element and remove the oldest one, which is over capacity (#2592)
 - Add event and link drop counts to the exported data from the `oltptrace` exporter. (#2601)
 
 ### Fixed
 
 - Remove the OTLP trace exporter limit of SpanEvents when exporting. (#2616)
+- Use port `4318` instead of `4317` for default for the `otlpmetrichttp` and `otlptracehttp` client. (#2614, #2625)
 
 ## [1.4.1] - 2022-02-16
 
