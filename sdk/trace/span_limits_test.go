@@ -127,40 +127,21 @@ func testSpanLimits(t *testing.T, limits SpanLimits) ReadOnlySpan {
 	tracer := tp.Tracer("testSpanLimits")
 
 	ctx := context.Background()
-	_, span := tracer.Start(ctx, "span-name", trace.WithLinks(
-		trace.Link{
-			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
-				TraceID: [16]byte{0x01},
-				SpanID:  [8]byte{0x01},
-			}),
-			Attributes: []attribute.KeyValue{
-				attribute.Bool("one", true),
-				attribute.Bool("two", true),
-			},
-		},
-		trace.Link{
-			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
-				TraceID: [16]byte{0x01},
-				SpanID:  [8]byte{0x01},
-			}),
-			Attributes: []attribute.KeyValue{
-				attribute.Bool("one", true),
-				attribute.Bool("two", true),
-			},
-		},
-	))
+	a := []attribute.KeyValue{attribute.Bool("one", true), attribute.Bool("two", true)}
+	l := trace.Link{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID: [16]byte{0x01},
+			SpanID:  [8]byte{0x01},
+		}),
+		Attributes: a,
+	}
+	_, span := tracer.Start(ctx, "span-name", trace.WithLinks(l, l))
 	span.SetAttributes(
 		attribute.String("string", "abc"),
 		attribute.StringSlice("stringSlice", []string{"abc", "def"}),
 	)
-	span.AddEvent("event 1", trace.WithAttributes(
-		attribute.Bool("one", true),
-		attribute.Bool("two", true),
-	))
-	span.AddEvent("event 2", trace.WithAttributes(
-		attribute.Bool("one", true),
-		attribute.Bool("two", true),
-	))
+	span.AddEvent("event 1", trace.WithAttributes(a...))
+	span.AddEvent("event 2", trace.WithAttributes(a...))
 	span.End()
 	tp.Shutdown(ctx)
 
