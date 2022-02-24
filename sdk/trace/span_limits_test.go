@@ -190,6 +190,11 @@ func TestSpanLimits(t *testing.T) {
 		// Ensure string and string slice attributes are truncated.
 		assert.Contains(t, attrs, attribute.String("string", "ab"))
 		assert.Contains(t, attrs, attribute.StringSlice("stringSlice", []string{"ab", "de"}))
+
+		limits.AttributeValueLengthLimit = 0
+		attrs = testSpanLimits(t, limits).Attributes()
+		assert.Contains(t, attrs, attribute.String("string", ""))
+		assert.Contains(t, attrs, attribute.StringSlice("stringSlice", []string{"", ""}))
 	})
 
 	t.Run("AttributeCountLimit", func(t *testing.T) {
@@ -198,6 +203,10 @@ func TestSpanLimits(t *testing.T) {
 
 		limits.AttributeCountLimit = 1
 		assert.Len(t, testSpanLimits(t, limits).Attributes(), 1)
+
+		// Ensure this can be disabled.
+		limits.AttributeCountLimit = 0
+		assert.Len(t, testSpanLimits(t, limits).Attributes(), 0)
 	})
 
 	t.Run("EventCountLimit", func(t *testing.T) {
@@ -206,6 +215,10 @@ func TestSpanLimits(t *testing.T) {
 
 		limits.EventCountLimit = 1
 		assert.Len(t, testSpanLimits(t, limits).Events(), 1)
+
+		// Ensure this can be disabled.
+		limits.EventCountLimit = 0
+		assert.Len(t, testSpanLimits(t, limits).Events(), 0)
 	})
 
 	t.Run("AttributePerEventCountLimit", func(t *testing.T) {
@@ -218,6 +231,12 @@ func TestSpanLimits(t *testing.T) {
 		for _, e := range testSpanLimits(t, limits).Events() {
 			require.Len(t, e.Attributes, 1)
 		}
+
+		// Ensure this can be disabled.
+		limits.AttributePerEventCountLimit = 0
+		for _, e := range testSpanLimits(t, limits).Events() {
+			require.Len(t, e.Attributes, 0)
+		}
 	})
 
 	t.Run("LinkCountLimit", func(t *testing.T) {
@@ -226,6 +245,10 @@ func TestSpanLimits(t *testing.T) {
 
 		limits.LinkCountLimit = 1
 		assert.Len(t, testSpanLimits(t, limits).Links(), 1)
+
+		// Ensure this can be disabled.
+		limits.LinkCountLimit = 0
+		assert.Len(t, testSpanLimits(t, limits).Links(), 0)
 	})
 
 	t.Run("AttributePerLinkCountLimit", func(t *testing.T) {
@@ -237,6 +260,12 @@ func TestSpanLimits(t *testing.T) {
 		limits.AttributePerLinkCountLimit = 1
 		for _, l := range testSpanLimits(t, limits).Links() {
 			require.Len(t, l.Attributes, 1)
+		}
+
+		// Ensure this can be disabled.
+		limits.AttributePerLinkCountLimit = 0
+		for _, l := range testSpanLimits(t, limits).Links() {
+			require.Len(t, l.Attributes, 0)
 		}
 	})
 }
