@@ -35,12 +35,20 @@ func TestCleanPath(t *testing.T) {
 			want: "DefaultPath",
 		},
 		{
-			name: "test-clean-trace-path",
+			name: "test-clean-metrics-path",
 			args: args{
 				URLPath:     "/prefix/v1/metrics",
 				defaultPath: "DefaultMetricsPath",
 			},
 			want: "/prefix/v1/metrics",
+		},
+		{
+			name: "test-clean-traces-path",
+			args: args{
+				URLPath:     "https://env_endpoint",
+				defaultPath: "DefaultTracesPath",
+			},
+			want: "/https:/env_endpoint",
 		},
 	}
 	for _, tt := range tests {
