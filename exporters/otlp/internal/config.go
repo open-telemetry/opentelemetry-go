@@ -15,7 +15,7 @@
 // Package retry provides request retry functionality that can perform
 // configurable exponential backoff for transient errors and honor any
 // explicit throttle responses received.
-package internal
+package internal // import "go.opentelemetry.io/otel/exporters/otlp/internal"
 
 import (
 	"fmt"
