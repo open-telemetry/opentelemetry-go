@@ -234,7 +234,7 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 			s.droppedAttributes++
 			continue
 		}
-		a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
+		truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, &a)
 		s.attributes = append(s.attributes, a)
 	}
 }
@@ -281,28 +281,37 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 			// updates are checked and performed.
 			s.droppedAttributes++
 		} else {
-			a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
+			truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, &a)
 			s.attributes = append(s.attributes, a)
 			exists[a.Key] = len(s.attributes) - 1
 		}
 	}
 }
 
-func truncateAttr(limit int, a attribute.KeyValue) attribute.KeyValue {
+// truncateAttr trucates the value of attr. Only string and string slice
+// attribute values are truncated. String values are truncated to at most a
+// length of limit. String slice values have each slice value truncated in
+// this fasion (the slice length itself is unaffected).
+//
+// No truncation is perfromed for a negative limit.
+func truncateAttr(limit int, attr *attribute.KeyValue) {
 	if limit < 0 {
-		return a
+		return
 	}
-	switch a.Value.Type() {
+	switch attr.Value.Type() {
 	case attribute.STRING:
-		a.Value = attribute.StringValue(a.Value.AsString()[:limit])
-	case attribute.STRINGSLICE:
-		v := a.Value.AsStringSlice()
-		for i := range v {
-			v[i] = v[i][:limit]
+		if v := attr.Value.AsString(); len(v) > limit {
+			attr.Value = attribute.StringValue(v[:limit])
 		}
-		a.Value = attribute.StringSliceValue(v)
+	case attribute.STRINGSLICE:
+		v := attr.Value.AsStringSlice()
+		for i := range v {
+			if len(v[i]) > limit {
+				v[i] = v[i][:limit]
+			}
+		}
+		// No need to update attr, underlying slice array was updated.
 	}
-	return a
 }
 
 // End ends the span. This method does nothing if the span is already ended or
