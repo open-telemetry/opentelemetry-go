@@ -15,13 +15,16 @@
 package trace
 
 import (
+	"context"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/sdk/internal/env"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestSettingSpanLimits(t *testing.T) {
@@ -109,4 +112,121 @@ func TestSettingSpanLimits(t *testing.T) {
 			assert.Equal(t, test.want, NewTracerProvider(opts...).spanLimits)
 		})
 	}
+}
+
+type recorder []ReadOnlySpan
+
+func (r *recorder) OnStart(context.Context, ReadWriteSpan) {}
+func (r *recorder) OnEnd(s ReadOnlySpan)                   { *r = append(*r, s) }
+func (r *recorder) ForceFlush(context.Context) error       { return nil }
+func (r *recorder) Shutdown(context.Context) error         { return nil }
+
+func testSpanLimits(t *testing.T, limits SpanLimits) ReadOnlySpan {
+	rec := new(recorder)
+	tp := NewTracerProvider(WithSpanLimits(limits), WithSpanProcessor(rec))
+	tracer := tp.Tracer("testSpanLimits")
+
+	ctx := context.Background()
+	_, span := tracer.Start(ctx, "span-name", trace.WithLinks(
+		trace.Link{
+			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: [16]byte{0x01},
+				SpanID:  [8]byte{0x01},
+			}),
+			Attributes: []attribute.KeyValue{
+				attribute.Bool("one", true),
+				attribute.Bool("two", true),
+			},
+		},
+		trace.Link{
+			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: [16]byte{0x01},
+				SpanID:  [8]byte{0x01},
+			}),
+			Attributes: []attribute.KeyValue{
+				attribute.Bool("one", true),
+				attribute.Bool("two", true),
+			},
+		},
+	))
+	span.SetAttributes(
+		attribute.String("string", "abc"),
+		attribute.StringSlice("stringSlice", []string{"abc", "def"}),
+	)
+	span.AddEvent("event 1", trace.WithAttributes(
+		attribute.Bool("one", true),
+		attribute.Bool("two", true),
+	))
+	span.AddEvent("event 2", trace.WithAttributes(
+		attribute.Bool("one", true),
+		attribute.Bool("two", true),
+	))
+	span.End()
+	tp.Shutdown(ctx)
+
+	require.Len(t, *rec, 1, "exported spans")
+	return (*rec)[0]
+}
+
+func TestSpanLimits(t *testing.T) {
+	t.Run("AttributeValueLengthLimit", func(t *testing.T) {
+		limits := NewSpanLimits()
+		attrs := testSpanLimits(t, limits).Attributes()
+		require.Contains(t, attrs, attribute.String("string", "abc"))
+		require.Contains(t, attrs, attribute.StringSlice("stringSlice", []string{"abc", "def"}))
+
+		limits.AttributeValueLengthLimit = 2
+		attrs = testSpanLimits(t, limits).Attributes()
+		// Ensure string and string slice attributes are truncated.
+		assert.Contains(t, attrs, attribute.String("string", "ab"))
+		assert.Contains(t, attrs, attribute.StringSlice("stringSlice", []string{"ab", "de"}))
+	})
+
+	t.Run("AttributeCountLimit", func(t *testing.T) {
+		limits := NewSpanLimits()
+		require.Len(t, testSpanLimits(t, limits).Attributes(), 2)
+
+		limits.AttributeCountLimit = 1
+		assert.Len(t, testSpanLimits(t, limits).Attributes(), 1)
+	})
+
+	t.Run("EventCountLimit", func(t *testing.T) {
+		limits := NewSpanLimits()
+		require.Len(t, testSpanLimits(t, limits).Events(), 2)
+
+		limits.EventCountLimit = 1
+		assert.Len(t, testSpanLimits(t, limits).Events(), 1)
+	})
+
+	t.Run("AttributePerEventCountLimit", func(t *testing.T) {
+		limits := NewSpanLimits()
+		for _, e := range testSpanLimits(t, limits).Events() {
+			require.Len(t, e.Attributes, 2)
+		}
+
+		limits.AttributePerEventCountLimit = 1
+		for _, e := range testSpanLimits(t, limits).Events() {
+			require.Len(t, e.Attributes, 1)
+		}
+	})
+
+	t.Run("LinkCountLimit", func(t *testing.T) {
+		limits := NewSpanLimits()
+		require.Len(t, testSpanLimits(t, limits).Links(), 2)
+
+		limits.LinkCountLimit = 1
+		assert.Len(t, testSpanLimits(t, limits).Links(), 1)
+	})
+
+	t.Run("AttributePerLinkCountLimit", func(t *testing.T) {
+		limits := NewSpanLimits()
+		for _, l := range testSpanLimits(t, limits).Links() {
+			require.Len(t, l.Attributes, 2)
+		}
+
+		limits.AttributePerLinkCountLimit = 1
+		for _, l := range testSpanLimits(t, limits).Links() {
+			require.Len(t, l.Attributes, 1)
+		}
+	})
 }
