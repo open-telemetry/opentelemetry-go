@@ -28,11 +28,10 @@ func CleanPath(URLPath string, defaultPath string) string {
 	tmp := strings.TrimSpace(URLPath)
 	if tmp == "" {
 		return defaultPath
-	} else {
-		tmp = path.Clean(tmp)
-		if !path.IsAbs(tmp) {
-			tmp = fmt.Sprintf("/%s", tmp)
-		}
+	}
+	tmp = path.Clean(tmp)
+	if !path.IsAbs(tmp) {
+		tmp = fmt.Sprintf("/%s", tmp)
 	}
 	return tmp
 }
