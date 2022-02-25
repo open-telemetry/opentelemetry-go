@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package retry provides request retry functionality that can perform
-// configurable exponential backoff for transient errors and honor any
-// explicit throttle responses received.
+// Package internal contains common functionality for all OTLP exporters.
 package internal // import "go.opentelemetry.io/otel/exporters/otlp/internal"
 
 import (
