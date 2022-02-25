@@ -27,19 +27,22 @@ import (
 func TestTruncateAttr(t *testing.T) {
 	const key = "key"
 
+	strAttr := attribute.String(key, "value")
+	strSliceAttr := attribute.StringSlice(key, []string{"value-0", "value-1"})
+
 	tests := []struct {
 		limit      int
 		attr, want attribute.KeyValue
 	}{
 		{
 			limit: -1,
-			attr:  attribute.String(key, "value"),
-			want:  attribute.String(key, "value"),
+			attr:  strAttr,
+			want:  strAttr,
 		},
 		{
 			limit: -1,
-			attr:  attribute.StringSlice(key, []string{"value-0", "value-1"}),
-			want:  attribute.StringSlice(key, []string{"value-0", "value-1"}),
+			attr:  strSliceAttr,
+			want:  strSliceAttr,
 		},
 		{
 			limit: 0,
@@ -83,12 +86,12 @@ func TestTruncateAttr(t *testing.T) {
 		},
 		{
 			limit: 0,
-			attr:  attribute.String(key, "value"),
+			attr:  strAttr,
 			want:  attribute.String(key, ""),
 		},
 		{
 			limit: 0,
-			attr:  attribute.StringSlice(key, []string{"value-0", "value-1"}),
+			attr:  strSliceAttr,
 			want:  attribute.StringSlice(key, []string{"", ""}),
 		},
 		{
@@ -98,23 +101,23 @@ func TestTruncateAttr(t *testing.T) {
 		},
 		{
 			limit: 1,
-			attr:  attribute.String(key, "value"),
+			attr:  strAttr,
 			want:  attribute.String(key, "v"),
 		},
 		{
 			limit: 1,
-			attr:  attribute.StringSlice(key, []string{"value-0", "value-1"}),
+			attr:  strSliceAttr,
 			want:  attribute.StringSlice(key, []string{"v", "v"}),
 		},
 		{
 			limit: 5,
-			attr:  attribute.String(key, "value"),
-			want:  attribute.String(key, "value"),
+			attr:  strAttr,
+			want:  strAttr,
 		},
 		{
 			limit: 7,
-			attr:  attribute.StringSlice(key, []string{"value-0", "value-1"}),
-			want:  attribute.StringSlice(key, []string{"value-0", "value-1"}),
+			attr:  strSliceAttr,
+			want:  strSliceAttr,
 		},
 		{
 			limit: 6,
@@ -123,21 +126,20 @@ func TestTruncateAttr(t *testing.T) {
 		},
 		{
 			limit: 128,
-			attr:  attribute.String(key, "value"),
-			want:  attribute.String(key, "value"),
+			attr:  strAttr,
+			want:  strAttr,
 		},
 		{
 			limit: 128,
-			attr:  attribute.StringSlice(key, []string{"value-0", "value-1"}),
-			want:  attribute.StringSlice(key, []string{"value-0", "value-1"}),
+			attr:  strSliceAttr,
+			want:  strSliceAttr,
 		},
 	}
 
 	for _, test := range tests {
 		name := fmt.Sprintf("%s->%s(limit:%d)", test.attr.Key, test.attr.Value.Emit(), test.limit)
 		t.Run(name, func(t *testing.T) {
-			truncateAttr(test.limit, &test.attr)
-			assert.Equal(t, test.want, test.attr)
+			assert.Equal(t, test.want, truncateAttr(test.limit, test.attr))
 		})
 	}
 }

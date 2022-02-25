@@ -32,6 +32,19 @@ func benchmarkSpanLimits(b *testing.B, limits sdktrace.SpanLimits) {
 
 	const count = 8
 
+	attrs := []attribute.KeyValue{
+		attribute.Bool("bool", true),
+		attribute.BoolSlice("boolSlice", []bool{true, false}),
+		attribute.Int("int", 42),
+		attribute.IntSlice("intSlice", []int{42, -1}),
+		attribute.Int64("int64", 42),
+		attribute.Int64Slice("int64Slice", []int64{42, -1}),
+		attribute.Float64("float64", 42),
+		attribute.Float64Slice("float64Slice", []float64{42, -1}),
+		attribute.String("string", "value"),
+		attribute.StringSlice("stringSlice", []string{"value", "value-1"}),
+	}
+
 	links := make([]trace.Link, count)
 	for i := range links {
 		links[i] = trace.Link{
@@ -39,18 +52,7 @@ func benchmarkSpanLimits(b *testing.B, limits sdktrace.SpanLimits) {
 				TraceID: [16]byte{0x01},
 				SpanID:  [8]byte{0x01},
 			}),
-			Attributes: []attribute.KeyValue{
-				attribute.Bool("link-bool", true),
-				attribute.BoolSlice("link-boolSlice", []bool{true, false}),
-				attribute.Int("link-int", 42),
-				attribute.IntSlice("link-intSlice", []int{42, -1}),
-				attribute.Int64("link-int64", 42),
-				attribute.Int64Slice("link-int64Slice", []int64{42, -1}),
-				attribute.Float64("link-float64", 42),
-				attribute.Float64Slice("link-float64Slice", []float64{42, -1}),
-				attribute.String("link-string", "value"),
-				attribute.StringSlice("link-stringSlice", []string{"value", "value-1"}),
-			},
+			Attributes: attrs,
 		}
 	}
 
@@ -64,18 +66,7 @@ func benchmarkSpanLimits(b *testing.B, limits sdktrace.SpanLimits) {
 			attr []attribute.KeyValue
 		}{
 			name: fmt.Sprintf("event-%d", i),
-			attr: []attribute.KeyValue{
-				attribute.Bool("event-bool", true),
-				attribute.BoolSlice("event-boolSlice", []bool{true, false}),
-				attribute.Int("event-int", 42),
-				attribute.IntSlice("event-intSlice", []int{42, -1}),
-				attribute.Int64("event-int64", 42),
-				attribute.Int64Slice("event-int64Slice", []int64{42, -1}),
-				attribute.Float64("event-float64", 42),
-				attribute.Float64Slice("event-float64Slice", []float64{42, -1}),
-				attribute.String("event-string", "value"),
-				attribute.StringSlice("event-stringSlice", []string{"value", "value-1"}),
-			},
+			attr: attrs,
 		}
 	}
 
@@ -84,18 +75,7 @@ func benchmarkSpanLimits(b *testing.B, limits sdktrace.SpanLimits) {
 
 	for i := 0; i < b.N; i++ {
 		_, span := tracer.Start(ctx, "span-name", trace.WithLinks(links...))
-		span.SetAttributes(
-			attribute.Bool("bool", true),
-			attribute.BoolSlice("boolSlice", []bool{true, false}),
-			attribute.Int("int", 42),
-			attribute.IntSlice("intSlice", []int{42, -1}),
-			attribute.Int64("int64", 42),
-			attribute.Int64Slice("int64Slice", []int64{42, -1}),
-			attribute.Float64("float64", 42),
-			attribute.Float64Slice("float64Slice", []float64{42, -1}),
-			attribute.String("string", "value"),
-			attribute.StringSlice("stringSlice", []string{"value", "value-1"}),
-		)
+		span.SetAttributes(attrs...)
 		for _, e := range events {
 			span.AddEvent(e.name, trace.WithAttributes(e.attr...))
 		}

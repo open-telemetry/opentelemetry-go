@@ -234,7 +234,7 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 			s.droppedAttributes++
 			continue
 		}
-		truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, &a)
+		a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
 		s.attributes = append(s.attributes, a)
 	}
 }
@@ -281,37 +281,44 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 			// updates are checked and performed.
 			s.droppedAttributes++
 		} else {
-			truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, &a)
+			a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
 			s.attributes = append(s.attributes, a)
 			exists[a.Key] = len(s.attributes) - 1
 		}
 	}
 }
 
-// truncateAttr trucates the value of attr. Only string and string slice
+// truncateAttr returns a truncated version attr. Only string and string slice
 // attribute values are truncated. String values are truncated to at most a
 // length of limit. String slice values have each slice value truncated in
 // this fasion (the slice length itself is unaffected).
 //
 // No truncation is perfromed for a negative limit.
-func truncateAttr(limit int, attr *attribute.KeyValue) {
+func truncateAttr(limit int, attr attribute.KeyValue) attribute.KeyValue {
 	if limit < 0 {
-		return
+		return attr
 	}
 	switch attr.Value.Type() {
 	case attribute.STRING:
 		if v := attr.Value.AsString(); len(v) > limit {
-			attr.Value = attribute.StringValue(v[:limit])
+			return attr.Key.String(v[:limit])
 		}
 	case attribute.STRINGSLICE:
-		v := attr.Value.AsStringSlice()
+		// Do no mutate the original, make a copy.
+		trucated := attr.Key.StringSlice(attr.Value.AsStringSlice())
+		// Copying the underlying []string and then passing back as a new
+		// value with attribute.StringSliceValue will copy the data twice.
+		// Instead, make the copy with attribute.StringSliceValue and update
+		// the underlying slice data.
+		v := trucated.Value.AsStringSlice()
 		for i := range v {
 			if len(v[i]) > limit {
 				v[i] = v[i][:limit]
 			}
 		}
-		// No need to update attr, underlying slice array was updated.
+		return trucated
 	}
+	return attr
 }
 
 // End ends the span. This method does nothing if the span is already ended or
