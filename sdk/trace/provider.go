@@ -351,8 +351,23 @@ func WithSampler(s Sampler) TracerProviderOption {
 // are used used by the Tracers the TracerProvider and the Spans they create
 // to limit tracing resources used.
 //
-// If this or WithRawSpanLimits are not provided, the TracerProvider will use
-// the default SpanLimits:
+// If this or WithSpanLimits are not provided, the TracerProvider will use the
+// value set for the corresponding environment variable:
+//
+// • AttributeValueLengthLimit: OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT
+//
+// • AttributeCountLimit: OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT
+//
+// • EventCountLimit: OTEL_SPAN_EVENT_COUNT_LIMIT
+//
+// • AttributePerEventCountLimit: OTEL_EVENT_ATTRIBUTE_COUNT_LIMIT
+//
+// • LinkCountLimit: OTEL_SPAN_LINK_COUNT_LIMIT
+//
+// • AttributePerLinkCountLimit: OTEL_LINK_ATTRIBUTE_COUNT_LIMIT
+//
+// If both options are not provided and no environment variable is set, the
+// TracerProvider will use the default SpanLimits:
 //
 // • AttributeValueLengthLimit: unlimited
 //
@@ -402,7 +417,22 @@ func WithSpanLimits(sl SpanLimits) TracerProviderOption {
 // Tracer from the TracerProvider.
 //
 // If this or WithSpanLimits are not provided, the TracerProvider will use the
-// default SpanLimits:
+// value set for the corresponding environment variable:
+//
+// • AttributeValueLengthLimit: OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT
+//
+// • AttributeCountLimit: OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT
+//
+// • EventCountLimit: OTEL_SPAN_EVENT_COUNT_LIMIT
+//
+// • AttributePerEventCountLimit: OTEL_EVENT_ATTRIBUTE_COUNT_LIMIT
+//
+// • LinkCountLimit: OTEL_SPAN_LINK_COUNT_LIMIT
+//
+// • AttributePerLinkCountLimit: OTEL_LINK_ATTRIBUTE_COUNT_LIMIT
+//
+// If both options are not provided and no environment variable is set, the
+// TracerProvider will use the default SpanLimits:
 //
 // • AttributeValueLengthLimit: unlimited
 //
@@ -419,8 +449,10 @@ func WithSpanLimits(sl SpanLimits) TracerProviderOption {
 // The limits will be used as-is. Zero or negative values will not be changed
 // to the default value like WithSpanLimits does. Setting a limit to zero will
 // effectively disable the related resource it limits and setting to a
-// negative value will mean that resource is unlimited. Consequentially,
-// limits should be constructed using NewSpanLimits and updated accordingly.
+// negative value will mean that resource is unlimited. Consequentially, this
+// means that the zero-value SpanLimits will disable all span resources.
+// Because of this, limits should be constructed using NewSpanLimits and
+// updated accordingly.
 func WithRawSpanLimits(limits SpanLimits) TracerProviderOption {
 	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
 		cfg.spanLimits = limits
