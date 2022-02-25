@@ -54,19 +54,19 @@ func UnwrapMeterImpl(m metric.Meter) MeterImpl {
 	return mm.MeterImpl
 }
 
-func (m meter) AsyncFloat64() asyncfloat64.Instruments {
+func (m meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
 	return afMeter{m}
 }
 
-func (m meter) AsyncInt64() asyncint64.Instruments {
+func (m meter) AsyncInt64() asyncint64.InstrumentProvider {
 	return aiMeter{m}
 }
 
-func (m meter) SyncFloat64() syncfloat64.Instruments {
+func (m meter) SyncFloat64() syncfloat64.InstrumentProvider {
 	return sfMeter{m}
 }
 
-func (m meter) SyncInt64() syncint64.Instruments {
+func (m meter) SyncInt64() syncint64.InstrumentProvider {
 	return siMeter{m}
 }
 

@@ -21,8 +21,8 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument"
 )
 
-// Instruments provides access to individual instruments.
-type Instruments interface {
+// InstrumentProvider provides access to individual instruments.
+type InstrumentProvider interface {
 	// Counter creates an instrument for recording increasing values.
 	Counter(name string, opts ...instrument.Option) (Counter, error)
 	// UpDownCounter creates an instrument for recording changes of a value.

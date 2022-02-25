@@ -30,10 +30,10 @@ type nonrecordingAsyncFloat64Instrument struct {
 }
 
 var (
-	_ asyncfloat64.Instruments   = nonrecordingAsyncFloat64Instrument{}
-	_ asyncfloat64.Counter       = nonrecordingAsyncFloat64Instrument{}
-	_ asyncfloat64.UpDownCounter = nonrecordingAsyncFloat64Instrument{}
-	_ asyncfloat64.Gauge         = nonrecordingAsyncFloat64Instrument{}
+	_ asyncfloat64.InstrumentProvider = nonrecordingAsyncFloat64Instrument{}
+	_ asyncfloat64.Counter            = nonrecordingAsyncFloat64Instrument{}
+	_ asyncfloat64.UpDownCounter      = nonrecordingAsyncFloat64Instrument{}
+	_ asyncfloat64.Gauge              = nonrecordingAsyncFloat64Instrument{}
 )
 
 func (n nonrecordingAsyncFloat64Instrument) Counter(name string, opts ...instrument.Option) (asyncfloat64.Counter, error) {
@@ -57,10 +57,10 @@ type nonrecordingAsyncInt64Instrument struct {
 }
 
 var (
-	_ asyncint64.Instruments   = nonrecordingAsyncInt64Instrument{}
-	_ asyncint64.Counter       = nonrecordingAsyncInt64Instrument{}
-	_ asyncint64.UpDownCounter = nonrecordingAsyncInt64Instrument{}
-	_ asyncint64.Gauge         = nonrecordingAsyncInt64Instrument{}
+	_ asyncint64.InstrumentProvider = nonrecordingAsyncInt64Instrument{}
+	_ asyncint64.Counter            = nonrecordingAsyncInt64Instrument{}
+	_ asyncint64.UpDownCounter      = nonrecordingAsyncInt64Instrument{}
+	_ asyncint64.Gauge              = nonrecordingAsyncInt64Instrument{}
 )
 
 func (n nonrecordingAsyncInt64Instrument) Counter(name string, opts ...instrument.Option) (asyncint64.Counter, error) {
@@ -83,10 +83,10 @@ type nonrecordingSyncFloat64Instrument struct {
 }
 
 var (
-	_ syncfloat64.Instruments   = nonrecordingSyncFloat64Instrument{}
-	_ syncfloat64.Counter       = nonrecordingSyncFloat64Instrument{}
-	_ syncfloat64.UpDownCounter = nonrecordingSyncFloat64Instrument{}
-	_ syncfloat64.Histogram     = nonrecordingSyncFloat64Instrument{}
+	_ syncfloat64.InstrumentProvider = nonrecordingSyncFloat64Instrument{}
+	_ syncfloat64.Counter            = nonrecordingSyncFloat64Instrument{}
+	_ syncfloat64.UpDownCounter      = nonrecordingSyncFloat64Instrument{}
+	_ syncfloat64.Histogram          = nonrecordingSyncFloat64Instrument{}
 )
 
 func (n nonrecordingSyncFloat64Instrument) Counter(name string, opts ...instrument.Option) (syncfloat64.Counter, error) {
@@ -114,10 +114,10 @@ type nonrecordingSyncInt64Instrument struct {
 }
 
 var (
-	_ syncint64.Instruments   = nonrecordingSyncInt64Instrument{}
-	_ syncint64.Counter       = nonrecordingSyncInt64Instrument{}
-	_ syncint64.UpDownCounter = nonrecordingSyncInt64Instrument{}
-	_ syncint64.Histogram     = nonrecordingSyncInt64Instrument{}
+	_ syncint64.InstrumentProvider = nonrecordingSyncInt64Instrument{}
+	_ syncint64.Counter            = nonrecordingSyncInt64Instrument{}
+	_ syncint64.UpDownCounter      = nonrecordingSyncInt64Instrument{}
+	_ syncint64.Histogram          = nonrecordingSyncInt64Instrument{}
 )
 
 func (n nonrecordingSyncInt64Instrument) Counter(name string, opts ...instrument.Option) (syncint64.Counter, error) {
