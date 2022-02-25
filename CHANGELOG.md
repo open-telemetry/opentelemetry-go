@@ -39,6 +39,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Remove the OTLP trace exporter limit of SpanEvents when exporting. (#2616)
 - Use port `4318` instead of `4317` for default for the `otlpmetrichttp` and `otlptracehttp` client. (#2614, #2625)
+- Unlimited span limits are now supported (negative values). (#2636, #2637)
 
 ### Deprecated
 
