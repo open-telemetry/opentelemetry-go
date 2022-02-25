@@ -53,7 +53,7 @@ func TestCleanPath(t *testing.T) {
 		{
 			name: "spaces trimmed",
 			args: args{
-				URLPath:     " /dir",
+				URLPath: " /dir",
 			},
 			want: "/dir",
 		},
@@ -68,7 +68,7 @@ func TestCleanPath(t *testing.T) {
 		{
 			name: "make absolute",
 			args: args{
-				URLPath:     "dir/a",
+				URLPath: "dir/a",
 			},
 			want: "/dir/a",
 		},
