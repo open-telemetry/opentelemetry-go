@@ -22,7 +22,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   If the provided environment variables are invalid (negative), the default values would be used.
 - Rename the `gc` runtime name to `go` (#2560)
 - Add span attribute value length limit.
-  The new `AttributeValueLengthLimit` filed is added to the `"go.opentelemetry.io/otel/sdk/trace".SpanLimits` type to configure this limit for a `TracerProvider`.
+  The new `AttributeValueLengthLimit` field is added to the `"go.opentelemetry.io/otel/sdk/trace".SpanLimits` type to configure this limit for a `TracerProvider`.
   The default limit for this resource is "unlimited". (#2637)
 - Add the `WithRawSpanLimits` option to `go.opentelemetry.io/otel/sdk/trace`.
   This option replaces the `WithSpanLimits` option.
