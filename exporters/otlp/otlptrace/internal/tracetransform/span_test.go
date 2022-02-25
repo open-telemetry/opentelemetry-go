@@ -15,7 +15,6 @@
 package tracetransform
 
 import (
-	"strconv"
 	"testing"
 	"time"
 
@@ -100,18 +99,6 @@ func TestSpanEvent(t *testing.T) {
 	assert.Equal(t, &tracepb.Span_Event{Name: "test 1", Attributes: nil, TimeUnixNano: eventTimestamp}, got[0])
 	// Do not test Attributes directly, just that the return value goes to the correct field.
 	assert.Equal(t, &tracepb.Span_Event{Name: "test 2", Attributes: KeyValues(attrs), TimeUnixNano: eventTimestamp, DroppedAttributesCount: 2}, got[1])
-}
-
-func TestExcessiveSpanEvents(t *testing.T) {
-	e := make([]tracesdk.Event, maxEventsPerSpan+1)
-	for i := 0; i < maxEventsPerSpan+1; i++ {
-		e[i] = tracesdk.Event{Name: strconv.Itoa(i)}
-	}
-	assert.Len(t, e, maxEventsPerSpan+1)
-	got := spanEvents(e)
-	assert.Len(t, got, maxEventsPerSpan)
-	// Ensure the drop order.
-	assert.Equal(t, strconv.Itoa(maxEventsPerSpan-1), got[len(got)-1].Name)
 }
 
 func TestNilLinks(t *testing.T) {
