@@ -76,7 +76,11 @@ func TestConfigs(t *testing.T) {
 		{
 			name: "Test default configs",
 			asserts: func(t *testing.T, c *otlpconfig.Config, grpcOption bool) {
-				assert.Equal(t, "localhost:4317", c.Metrics.Endpoint)
+				if grpcOption {
+					assert.Equal(t, "localhost:4317", c.Metrics.Endpoint)
+				} else {
+					assert.Equal(t, "localhost:4318", c.Metrics.Endpoint)
+				}
 				assert.Equal(t, otlpconfig.NoCompression, c.Metrics.Compression)
 				assert.Equal(t, map[string]string(nil), c.Metrics.Headers)
 				assert.Equal(t, 10*time.Second, c.Metrics.Timeout)
@@ -386,11 +390,7 @@ func TestConfigs(t *testing.T) {
 			t.Cleanup(func() { otlpconfig.DefaultEnvOptionsReader = origEOR })
 
 			// Tests Generic options as HTTP Options
-			cfg := otlpconfig.NewDefaultConfig()
-			cfg = otlpconfig.ApplyHTTPEnvConfigs(cfg)
-			for _, opt := range tt.opts {
-				cfg = opt.ApplyHTTPOption(cfg)
-			}
+			cfg := otlpconfig.NewHTTPConfig(asHTTPOptions(tt.opts)...)
 			tt.asserts(t, &cfg, false)
 
 			// Tests Generic options as gRPC Options
@@ -398,6 +398,14 @@ func TestConfigs(t *testing.T) {
 			tt.asserts(t, &cfg, true)
 		})
 	}
+}
+
+func asHTTPOptions(opts []otlpconfig.GenericOption) []otlpconfig.HTTPOption {
+	converted := make([]otlpconfig.HTTPOption, len(opts))
+	for i, o := range opts {
+		converted[i] = otlpconfig.NewHTTPOption(o.ApplyHTTPOption)
+	}
+	return converted
 }
 
 func asGRPCOptions(opts []otlpconfig.GenericOption) []otlpconfig.GRPCOption {
