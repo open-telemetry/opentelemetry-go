@@ -27,7 +27,7 @@ func TestCleanPath(t *testing.T) {
 		want string
 	}{
 		{
-			name: "test-clean-nil-path",
+			name: "test-clean-empty-path",
 			args: args{
 				URLPath:     "",
 				defaultPath: "DefaultPath",
