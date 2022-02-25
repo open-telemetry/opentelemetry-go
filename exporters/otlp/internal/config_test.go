@@ -50,6 +50,28 @@ func TestCleanPath(t *testing.T) {
 			},
 			want: "/https:/env_endpoint",
 		},
+		{
+			name: "spaces trimmed",
+			args: args{
+				URLPath:     " /dir",
+			},
+			want: "/dir",
+		},
+		{
+			name: "clean path empty",
+			args: args{
+				URLPath:     "dir/..",
+				defaultPath: "DefaultTracesPath",
+			},
+			want: "DefaultTracesPath",
+		},
+		{
+			name: "make absolute",
+			args: args{
+				URLPath:     "dir/a",
+			},
+			want: "/dir/a",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
