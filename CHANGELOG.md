@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Log the Exporters configuration in the TracerProviders message. (#2578)
 - Added support to configure the span limits with environment variables.
   The following environment variables are used. (#2606, #2637)
   - `OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT`
