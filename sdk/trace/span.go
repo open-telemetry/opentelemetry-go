@@ -288,10 +288,10 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 	}
 }
 
-// truncateAttr returns a truncated version attr. Only string and string slice
-// attribute values are truncated. String values are truncated to at most a
-// length of limit. String slice values have each slice value truncated in
-// this fasion (the slice length itself is unaffected).
+// truncateAttr returns a truncated version of attr. Only string and string
+// slice attribute values are truncated. String values are truncated to at
+// most a length of limit. Each string slice value is truncated in this fasion
+// (the slice length itself is unaffected).
 //
 // No truncation is perfromed for a negative limit.
 func truncateAttr(limit int, attr attribute.KeyValue) attribute.KeyValue {
