@@ -306,10 +306,17 @@ func truncateAttr(limit int, attr attribute.KeyValue) attribute.KeyValue {
 	case attribute.STRINGSLICE:
 		// Do no mutate the original, make a copy.
 		trucated := attr.Key.StringSlice(attr.Value.AsStringSlice())
-		// Copying the underlying []string and then passing back as a new
-		// value with attribute.StringSliceValue will copy the data twice.
-		// Instead, make the copy with attribute.StringSliceValue and update
-		// the underlying slice data.
+		// Do not do this.
+		//
+		//   v := trucated.Value.AsStringSlice()
+		//   cp := make([]string, len(v))
+		//   /* Copy and truncate values to cp ... */
+		//   trucated.Value = attribute.StringSliceValue(cp)
+		//
+		// Copying the []string and then assigning it back as a new value with
+		// attribute.StringSliceValue will copy the data twice. Instead, we
+		// already made a copy above that only this function owns, update the
+		// underlying slice data of our copy.
 		v := trucated.Value.AsStringSlice()
 		for i := range v {
 			if len(v[i]) > limit {
