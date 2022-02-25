@@ -180,3 +180,14 @@ func (e *Exporter) errf(format string, args ...interface{}) error {
 	e.logf(format, args...)
 	return fmt.Errorf(format, args...)
 }
+
+// MarshalLog is the marshaling function used by the logging system to represent this exporter.
+func (e *Exporter) MarshalLog() interface{} {
+	return struct {
+		Type string
+		URL  string
+	}{
+		Type: "zipkin",
+		URL:  e.url,
+	}
+}
