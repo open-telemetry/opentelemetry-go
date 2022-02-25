@@ -97,22 +97,24 @@ type SpanLimits struct {
 	AttributePerLinkCountLimit int
 }
 
-// NewSpanLimits returns a SpanLimits with all limits set to defaults.
+// NewSpanLimits returns a SpanLimits with all limits set to the value their
+// corresponding environment variable holds, or the default if unset.
+//
+// • AttributeValueLengthLimit: OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT
+// (default: unlimited)
+//
+// • AttributeCountLimit: OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT (default: 128)
+//
+// • EventCountLimit: OTEL_SPAN_EVENT_COUNT_LIMIT (default: 128)
+//
+// • AttributePerEventCountLimit: OTEL_EVENT_ATTRIBUTE_COUNT_LIMIT (default:
+// 128)
+//
+// • LinkCountLimit: OTEL_SPAN_LINK_COUNT_LIMIT (default: 128)
+//
+// • AttributePerLinkCountLimit: OTEL_LINK_ATTRIBUTE_COUNT_LIMIT (default:
+// 128)
 func NewSpanLimits() SpanLimits {
-	return SpanLimits{
-		AttributeValueLengthLimit:   DefaultAttributeValueLengthLimit,
-		AttributeCountLimit:         DefaultAttributeCountLimit,
-		EventCountLimit:             DefaultEventCountLimit,
-		LinkCountLimit:              DefaultLinkCountLimit,
-		AttributePerEventCountLimit: DefaultAttributePerEventCountLimit,
-		AttributePerLinkCountLimit:  DefaultAttributePerLinkCountLimit,
-	}
-}
-
-// newEnvSpanLimits returns a SpanLimits with all limits set to the value
-// defined by their related environment variable, or default if the
-// environment variable is not set.
-func newEnvSpanLimits() SpanLimits {
 	return SpanLimits{
 		AttributeValueLengthLimit:   env.SpanAttributeValueLength(DefaultAttributeValueLengthLimit),
 		AttributeCountLimit:         env.SpanAttributeCount(DefaultAttributeCountLimit),
