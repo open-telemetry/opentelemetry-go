@@ -23,11 +23,10 @@ import (
 
 // CleanPath returns URLPath with all spaces trimmed and all redundancies removed. If URLPath is empty or cleaning it results in an empty string, defaultPath is returned instead.
 func CleanPath(URLPath string, defaultPath string) string {
-	tmp := strings.TrimSpace(URLPath)
-	if tmp == "" {
+	tmp := path.Clean(strings.TrimSpace(URLPath))
+	if tmp == "." {
 		return defaultPath
 	}
-	tmp = path.Clean(tmp)
 	if !path.IsAbs(tmp) {
 		tmp = fmt.Sprintf("/%s", tmp)
 	}
