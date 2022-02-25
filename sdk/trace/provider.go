@@ -351,8 +351,8 @@ func WithSampler(s Sampler) TracerProviderOption {
 // are used used by the Tracers the TracerProvider and the Spans they create
 // to limit tracing resources used.
 //
-// If this or WithSpanLimits are not provided, the TracerProvider will use the
-// value set for the corresponding environment variable:
+// If this or WithRawSpanLimits are not provided, the TracerProvider will use
+// the value set for the corresponding environment variable:
 //
 // • AttributeValueLengthLimit: OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT
 //
@@ -367,7 +367,7 @@ func WithSampler(s Sampler) TracerProviderOption {
 // • AttributePerLinkCountLimit: OTEL_LINK_ATTRIBUTE_COUNT_LIMIT
 //
 // If both options are not provided and no environment variable is set, the
-// TracerProvider will use the default SpanLimits:
+// TracerProvider will use the default limit value:
 //
 // • AttributeValueLengthLimit: unlimited
 //
@@ -432,7 +432,7 @@ func WithSpanLimits(sl SpanLimits) TracerProviderOption {
 // • AttributePerLinkCountLimit: OTEL_LINK_ATTRIBUTE_COUNT_LIMIT
 //
 // If both options are not provided and no environment variable is set, the
-// TracerProvider will use the default SpanLimits:
+// TracerProvider will use the default limit value:
 //
 // • AttributeValueLengthLimit: unlimited
 //
