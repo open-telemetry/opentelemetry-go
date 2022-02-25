@@ -40,6 +40,14 @@ type Option interface {
 	applyHTTPOption(otlpconfig.Config) otlpconfig.Config
 }
 
+func asHTTPOptions(opts []Option) []otlpconfig.HTTPOption {
+	converted := make([]otlpconfig.HTTPOption, len(opts))
+	for i, o := range opts {
+		converted[i] = otlpconfig.NewHTTPOption(o.applyHTTPOption)
+	}
+	return converted
+}
+
 // RetryConfig defines configuration for retrying batches in case of export
 // failure using an exponential backoff.
 type RetryConfig retry.Config
@@ -52,11 +60,10 @@ func (w wrappedOption) applyHTTPOption(cfg otlpconfig.Config) otlpconfig.Config 
 	return w.ApplyHTTPOption(cfg)
 }
 
-// WithEndpoint allows one to set the address of the collector
-// endpoint that the driver will use to send metrics. If
-// unset, it will instead try to use
-// the default endpoint (localhost:4317). Note that the endpoint
-// must not contain any URL path.
+// WithEndpoint allows one to set the address of the collector endpoint that
+// the driver will use to send metrics. If unset, it will instead try to use
+// the default endpoint (localhost:4318). Note that the endpoint must not
+// contain any URL path.
 func WithEndpoint(endpoint string) Option {
 	return wrappedOption{otlpconfig.WithEndpoint(endpoint)}
 }

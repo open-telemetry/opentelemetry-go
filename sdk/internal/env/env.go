@@ -40,6 +40,21 @@ const (
 	// Note: Must be less than or equal to EnvBatchSpanProcessorMaxQueueSize
 	// i.e. 512
 	BatchSpanProcessorMaxExportBatchSizeKey = "OTEL_BSP_MAX_EXPORT_BATCH_SIZE"
+
+	// SpanAttributesCountKey
+	// Maximum allowed span attribute count
+	// Default: 128
+	SpanAttributesCountKey = "OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT"
+
+	// SpanEventCountKey
+	// Maximum allowed span event count
+	// Default: 128
+	SpanEventCountKey = "OTEL_SPAN_EVENT_COUNT_LIMIT"
+
+	// SpanLinkCountKey
+	// Maximum allowed span link count
+	// Default: 128
+	SpanLinkCountKey = "OTEL_SPAN_LINK_COUNT_LIMIT"
 )
 
 // IntEnvOr returns the int value of the environment variable with name key if

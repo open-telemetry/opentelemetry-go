@@ -39,6 +39,9 @@ import (
 func TestModelConversion(t *testing.T) {
 	resource := resource.NewSchemaless(
 		semconv.ServiceNameKey.String("model-test"),
+		semconv.ServiceVersionKey.String("0.1.0"),
+		attribute.Int64("resource-attr1", 42),
+		attribute.IntSlice("resource-attr2", []int{0, 1, 2}),
 	)
 
 	inputBatch := tracetest.SpanStubs{
@@ -408,6 +411,10 @@ func TestModelConversion(t *testing.T) {
 				"attr3":            "[0,1,2]",
 				"otel.status_code": "Error",
 				"error":            "404, file not found",
+				"service.name":     "model-test",
+				"service.version":  "0.1.0",
+				"resource-attr1":   "42",
+				"resource-attr2":   "[0,1,2]",
 			},
 		},
 		// model for span data with no parent
@@ -447,6 +454,10 @@ func TestModelConversion(t *testing.T) {
 				"attr2":            "bar",
 				"otel.status_code": "Error",
 				"error":            "404, file not found",
+				"service.name":     "model-test",
+				"service.version":  "0.1.0",
+				"resource-attr1":   "42",
+				"resource-attr2":   "[0,1,2]",
 			},
 		},
 		// model for span data of unspecified kind
@@ -486,6 +497,10 @@ func TestModelConversion(t *testing.T) {
 				"attr2":            "bar",
 				"otel.status_code": "Error",
 				"error":            "404, file not found",
+				"service.name":     "model-test",
+				"service.version":  "0.1.0",
+				"resource-attr1":   "42",
+				"resource-attr2":   "[0,1,2]",
 			},
 		},
 		// model for span data of internal kind
@@ -525,6 +540,10 @@ func TestModelConversion(t *testing.T) {
 				"attr2":            "bar",
 				"otel.status_code": "Error",
 				"error":            "404, file not found",
+				"service.name":     "model-test",
+				"service.version":  "0.1.0",
+				"resource-attr1":   "42",
+				"resource-attr2":   "[0,1,2]",
 			},
 		},
 		// model for span data of client kind
@@ -570,6 +589,10 @@ func TestModelConversion(t *testing.T) {
 				"peer.hostname":    "test-peer-hostname",
 				"otel.status_code": "Error",
 				"error":            "404, file not found",
+				"service.name":     "model-test",
+				"service.version":  "0.1.0",
+				"resource-attr1":   "42",
+				"resource-attr2":   "[0,1,2]",
 			},
 		},
 		// model for span data of producer kind
@@ -609,6 +632,10 @@ func TestModelConversion(t *testing.T) {
 				"attr2":            "bar",
 				"otel.status_code": "Error",
 				"error":            "404, file not found",
+				"service.name":     "model-test",
+				"service.version":  "0.1.0",
+				"resource-attr1":   "42",
+				"resource-attr2":   "[0,1,2]",
 			},
 		},
 		// model for span data of consumer kind
@@ -648,6 +675,10 @@ func TestModelConversion(t *testing.T) {
 				"attr2":            "bar",
 				"otel.status_code": "Error",
 				"error":            "404, file not found",
+				"service.name":     "model-test",
+				"service.version":  "0.1.0",
+				"resource-attr1":   "42",
+				"resource-attr2":   "[0,1,2]",
 			},
 		},
 		// model for span data with no events
@@ -678,6 +709,10 @@ func TestModelConversion(t *testing.T) {
 				"attr2":            "bar",
 				"otel.status_code": "Error",
 				"error":            "404, file not found",
+				"service.name":     "model-test",
+				"service.version":  "0.1.0",
+				"resource-attr1":   "42",
+				"resource-attr2":   "[0,1,2]",
 			},
 		},
 		// model for span data with an "error" attribute set to "false"
@@ -712,7 +747,12 @@ func TestModelConversion(t *testing.T) {
 					Value:     "ev2",
 				},
 			},
-			Tags: nil, // should be omitted
+			Tags: map[string]string{
+				"service.name":    "model-test",
+				"service.version": "0.1.0",
+				"resource-attr1":  "42",
+				"resource-attr2":  "[0,1,2]",
+			}, // only resource tags should be included
 		},
 	}
 	gottenOutputBatch := SpanModels(inputBatch)

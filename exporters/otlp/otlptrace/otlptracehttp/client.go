@@ -24,9 +24,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"path"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -79,26 +77,7 @@ var _ otlptrace.Client = (*client)(nil)
 
 // NewClient creates a new HTTP trace client.
 func NewClient(opts ...Option) otlptrace.Client {
-	cfg := otlpconfig.NewDefaultConfig()
-	cfg = otlpconfig.ApplyHTTPEnvConfigs(cfg)
-	for _, opt := range opts {
-		cfg = opt.applyHTTPOption(cfg)
-	}
-
-	for pathPtr, defaultPath := range map[*string]string{
-		&cfg.Traces.URLPath: otlpconfig.DefaultTracesPath,
-	} {
-		tmp := strings.TrimSpace(*pathPtr)
-		if tmp == "" {
-			tmp = defaultPath
-		} else {
-			tmp = path.Clean(tmp)
-			if !path.IsAbs(tmp) {
-				tmp = fmt.Sprintf("/%s", tmp)
-			}
-		}
-		*pathPtr = tmp
-	}
+	cfg := otlpconfig.NewHTTPConfig(asHTTPOptions(opts)...)
 
 	httpClient := &http.Client{
 		Transport: ourTransport,

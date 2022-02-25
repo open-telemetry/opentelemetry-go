@@ -118,7 +118,11 @@ func TestCommandArgs(t *testing.T) {
 }
 
 func TestRuntimeName(t *testing.T) {
-	require.EqualValues(t, runtime.Compiler, resource.RuntimeName())
+	if runtime.Compiler == "gc" {
+		require.EqualValues(t, "go", resource.RuntimeName())
+	} else {
+		require.EqualValues(t, runtime.Compiler, resource.RuntimeName())
+	}
 }
 
 func TestRuntimeOS(t *testing.T) {
