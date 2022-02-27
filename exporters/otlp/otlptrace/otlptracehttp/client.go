@@ -222,6 +222,19 @@ func (d *client) newRequest(body []byte) (request, error) {
 	return req, nil
 }
 
+// MarshalLog is the marshaling function used by the logging system to represent this Client.
+func (d *client) MarshalLog() interface{} {
+	return struct {
+		Type     string
+		Endpoint string
+		Insecure bool
+	}{
+		Type:     "otlphttphttp",
+		Endpoint: d.cfg.Endpoint,
+		Insecure: d.cfg.Insecure,
+	}
+}
+
 // bodyReader returns a closure returning a new reader for buf.
 func bodyReader(buf []byte) func() io.ReadCloser {
 	return func() io.ReadCloser {
