@@ -10,9 +10,35 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Added support to configure the span limits with environment variables.
+  The following environment variables are used. (#2606)
+  - `OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT`
+  - `OTEL_SPAN_EVENT_COUNT_LIMIT`
+  - `OTEL_SPAN_LINK_COUNT_LIMIT`
+  
+  If the provided environment variables are invalid (negative), the default values would be used.
+- Rename the `gc` runtime name to `go` (#2560)
+- Log the Exporters configuration in the TracerProviders message. (#2578)
 - Metrics Exponential Histogram support: Mapping functions have been made available
   in `sdk/metric/aggregator/exponential/mapping` for other OpenTelemetry projects to take
   dependencies on. (#2502)
+
+### Changed
+
+- For tracestate's members, prepend the new element and remove the oldest one, which is over capacity (#2592)
+- Add event and link drop counts to the exported data from the `oltptrace` exporter. (#2601)
+- Change the debug message from the `sdk/trace.BatchSpanProcessor` to reflect the count is cumulative. (#2640)
+
+### Fixed
+
+- Remove the OTLP trace exporter limit of SpanEvents when exporting. (#2616)
+- Use port `4318` instead of `4317` for default for the `otlpmetrichttp` and `otlptracehttp` client. (#2614, #2625)
+
+## [1.4.1] - 2022-02-16
+
+### Fixed
+
+- Fix race condition in reading the dropped spans number for the `BatchSpanProcessor`. (#2615)
 
 ## [1.4.0] - 2022-02-11
 
@@ -1690,7 +1716,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.4.1...HEAD
+[1.4.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.4.1
 [1.4.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.4.0
 [1.3.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.3.0
 [1.2.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.2.0
