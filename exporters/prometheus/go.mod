@@ -27,8 +27,6 @@ replace go.opentelemetry.io/otel/example/otel-collector => ../../example/otel-co
 
 replace go.opentelemetry.io/otel/example/passthrough => ../../example/passthrough
 
-replace go.opentelemetry.io/otel/example/prom-collector => ../../example/prom-collector
-
 replace go.opentelemetry.io/otel/example/prometheus => ../../example/prometheus
 
 replace go.opentelemetry.io/otel/example/zipkin => ../../example/zipkin

@@ -29,6 +29,7 @@ This update is a breaking change of the unstable Metrics API. Code instrumented 
 - For tracestate's members, prepend the new element and remove the oldest one, which is over capacity (#2592)
 - Add event and link drop counts to the exported data from the `oltptrace` exporter. (#2601)
 - The metrics API has been significantly changed. (#2587)
+- Unify path cleaning functionally in the `otlpmetric` and `otlptrace` config. (#2639)
 - Change the debug message from the `sdk/trace.BatchSpanProcessor` to reflect the count is cumulative. (#2640)
 
 ### Fixed
