@@ -19,6 +19,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
@@ -108,8 +109,7 @@ type meter struct {
 
 	mtx         sync.Mutex
 	instruments []delegatedInstrument
-
-	// callbacks []callback
+	callbacks   []delegatedCallback
 
 	delegate atomic.Value // metric.Meter
 }
@@ -160,7 +160,18 @@ func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
 // It is only valid to call Observe within the scope of the passed function,
 // and only on the instruments that were registered with this call.
 func (m *meter) RegisterCallback(insts []instrument.Asynchronous, function func(context.Context)) error {
-	panic("not implemented") // TODO: Implement
+	if del, ok := m.delegate.Load().(metric.Meter); ok {
+		return del.RegisterCallback(insts, function)
+	}
+
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+	m.callbacks = append(m.callbacks, delegatedCallback{
+		instruments: insts,
+		function:    function,
+	})
+
+	return nil
 }
 
 // SyncInt64 is the namespace for the Synchronous Integer instruments
@@ -177,6 +188,18 @@ func (m *meter) SyncFloat64() syncfloat64.InstrumentProvider {
 		return del.SyncFloat64()
 	}
 	return (*sfInstProvider)(m)
+}
+
+type delegatedCallback struct {
+	instruments []instrument.Asynchronous
+	function    func(context.Context)
+}
+
+func (c *delegatedCallback) setDelegate(m metric.Meter) {
+	err := m.RegisterCallback(c.instruments, c.function)
+	if err != nil {
+		otel.Handle(err)
+	}
 }
 
 type afInstProvider meter

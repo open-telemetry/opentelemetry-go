@@ -40,6 +40,8 @@ type test_Meter struct {
 	aiCount int
 	sfCount int
 	siCount int
+
+	callbacks []func(context.Context)
 }
 
 // AsyncInt64 is the namespace for the Asynchronous Integer instruments.
@@ -63,7 +65,8 @@ func (m *test_Meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
 // It is only valid to call Observe within the scope of the passed function,
 // and only on the instruments that were registered with this call.
 func (m *test_Meter) RegisterCallback(insts []instrument.Asynchronous, function func(context.Context)) error {
-	panic("not implemented") // TODO: Implement
+	m.callbacks = append(m.callbacks, function)
+	return nil
 }
 
 // SyncInt64 is the namespace for the Synchronous Integer instruments
@@ -76,6 +79,14 @@ func (m *test_Meter) SyncInt64() syncint64.InstrumentProvider {
 func (m *test_Meter) SyncFloat64() syncfloat64.InstrumentProvider {
 	m.sfCount++
 	return &test_sf_InstrumentProvider{}
+}
+
+// This enables async collection
+func (m *test_Meter) collect() {
+	ctx := context.Background()
+	for _, f := range m.callbacks {
+		f(ctx)
+	}
 }
 
 type test_af_InstrumentProvider struct{}
