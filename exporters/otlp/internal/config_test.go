@@ -43,7 +43,7 @@ func TestCleanPath(t *testing.T) {
 			want: "/prefix/v1/metrics",
 		},
 		{
-			name: "test-clean-traces-path",
+			name: "clean traces path",
 			args: args{
 				URLPath:     "https://env_endpoint",
 				defaultPath: "DefaultTracesPath",
