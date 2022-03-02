@@ -18,7 +18,7 @@ import "testing"
 
 func TestCleanPath(t *testing.T) {
 	type args struct {
-		URLPath     string
+		urlPath     string
 		defaultPath string
 	}
 	tests := []struct {
