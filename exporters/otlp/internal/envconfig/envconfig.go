@@ -42,7 +42,7 @@ func (e *EnvOptionsReader) Apply(opts ...ConfigFn) {
 	}
 }
 
-// GetEnvValue gets an OTLP environment variable value of the specified key 
+// GetEnvValue gets an OTLP environment variable value of the specified key
 // using the GetEnv function.
 // This function prepends the OTLP specified namespace to all key lookups.
 func (e *EnvOptionsReader) GetEnvValue(key string) (string, bool) {
