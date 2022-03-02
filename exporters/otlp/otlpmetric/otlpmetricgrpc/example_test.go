@@ -24,8 +24,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/metric/instrument"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -54,7 +53,8 @@ func Example_insecure() {
 		controller.WithExporter(exp),
 		controller.WithCollectPeriod(2*time.Second),
 	)
-	global.SetMeterProvider(pusher)
+	// TODO Bring back Global package
+	// global.SetMeterProvider(pusher)
 
 	if err := pusher.Start(ctx); err != nil {
 		log.Fatalf("could not start metric controoler: %v", err)
@@ -68,14 +68,16 @@ func Example_insecure() {
 		}
 	}()
 
-	meter := global.Meter("test-meter")
+	// TODO Bring Back Global package
+	// meter := global.Meter("go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc_test")
+	meter := pusher.Meter("go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc_test")
 
 	// Recorder metric example
-	counter := metric.Must(meter).
-		NewFloat64Counter(
-			"an_important_metric",
-			metric.WithDescription("Measures the cumulative epicness of the app"),
-		)
+
+	counter, err := meter.SyncFloat64().Counter("an_important_metric", instrument.WithDescription("Measures the cumulative epicness of the app"))
+	if err != nil {
+		log.Fatalf("Failed to create the instrument: %v", err)
+	}
 
 	for i := 0; i < 10; i++ {
 		log.Printf("Doing really hard work (%d / 10)\n", i+1)
@@ -113,7 +115,8 @@ func Example_withTLS() {
 		controller.WithExporter(exp),
 		controller.WithCollectPeriod(2*time.Second),
 	)
-	global.SetMeterProvider(pusher)
+	// TODO Bring back Global package
+	// global.SetMeterProvider(pusher)
 
 	if err := pusher.Start(ctx); err != nil {
 		log.Fatalf("could not start metric controoler: %v", err)
@@ -128,14 +131,15 @@ func Example_withTLS() {
 		}
 	}()
 
-	meter := global.Meter("test-meter")
+	// TODO Bring back Global package
+	// meter := global.Meter("go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc_test")
+	meter := pusher.Meter("go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc_test")
 
 	// Recorder metric example
-	counter := metric.Must(meter).
-		NewFloat64Counter(
-			"an_important_metric",
-			metric.WithDescription("Measures the cumulative epicness of the app"),
-		)
+	counter, err := meter.SyncFloat64().Counter("an_important_metric", instrument.WithDescription("Measures the cumulative epicness of the app"))
+	if err != nil {
+		log.Fatalf("Failed to create the instrument: %v", err)
+	}
 
 	for i := 0; i < 10; i++ {
 		log.Printf("Doing really hard work (%d / 10)\n", i+1)
@@ -170,7 +174,8 @@ func Example_withDifferentSignalCollectors() {
 		controller.WithExporter(exp),
 		controller.WithCollectPeriod(2*time.Second),
 	)
-	global.SetMeterProvider(pusher)
+	// TODO Bring back Global package
+	// global.SetMeterProvider(pusher)
 
 	if err := pusher.Start(ctx); err != nil {
 		log.Fatalf("could not start metric controoler: %v", err)
@@ -184,14 +189,15 @@ func Example_withDifferentSignalCollectors() {
 		}
 	}()
 
-	meter := global.Meter("test-meter")
+	// TODO Bring back Global package
+	// meter := global.Meter("go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc_test")
+	meter := pusher.Meter("go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc_test")
 
 	// Recorder metric example
-	counter := metric.Must(meter).
-		NewFloat64Counter(
-			"an_important_metric",
-			metric.WithDescription("Measures the cumulative epicness of the app"),
-		)
+	counter, err := meter.SyncFloat64().Counter("an_important_metric", instrument.WithDescription("Measures the cumulative epicness of the app"))
+	if err != nil {
+		log.Fatalf("Failed to create the instrument: %v", err)
+	}
 
 	for i := 0; i < 10; i++ {
 		log.Printf("Doing really hard work (%d / 10)\n", i+1)
