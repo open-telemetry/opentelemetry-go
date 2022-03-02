@@ -29,7 +29,7 @@ func TestCleanPath(t *testing.T) {
 		{
 			name: "clean empty path",
 			args: args{
-				URLPath:     "",
+				urlPath:     "",
 				defaultPath: "DefaultPath",
 			},
 			want: "DefaultPath",
@@ -37,7 +37,7 @@ func TestCleanPath(t *testing.T) {
 		{
 			name: "clean metrics path",
 			args: args{
-				URLPath:     "/prefix/v1/metrics",
+				urlPath:     "/prefix/v1/metrics",
 				defaultPath: "DefaultMetricsPath",
 			},
 			want: "/prefix/v1/metrics",
@@ -45,7 +45,7 @@ func TestCleanPath(t *testing.T) {
 		{
 			name: "clean traces path",
 			args: args{
-				URLPath:     "https://env_endpoint",
+				urlPath:     "https://env_endpoint",
 				defaultPath: "DefaultTracesPath",
 			},
 			want: "/https:/env_endpoint",
@@ -53,14 +53,14 @@ func TestCleanPath(t *testing.T) {
 		{
 			name: "spaces trimmed",
 			args: args{
-				URLPath: " /dir",
+				urlPath: " /dir",
 			},
 			want: "/dir",
 		},
 		{
 			name: "clean path empty",
 			args: args{
-				URLPath:     "dir/..",
+				urlPath:     "dir/..",
 				defaultPath: "DefaultTracesPath",
 			},
 			want: "DefaultTracesPath",
@@ -68,14 +68,14 @@ func TestCleanPath(t *testing.T) {
 		{
 			name: "make absolute",
 			args: args{
-				URLPath: "dir/a",
+				urlPath: "dir/a",
 			},
 			want: "/dir/a",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := CleanPath(tt.args.URLPath, tt.args.defaultPath); got != tt.want {
+			if got := CleanPath(tt.args.urlPath, tt.args.defaultPath); got != tt.want {
 				t.Errorf("CleanPath() = %v, want %v", got, tt.want)
 			}
 		})
