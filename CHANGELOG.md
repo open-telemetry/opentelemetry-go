@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### ⚠️ Notice ⚠️
+
+This update is a breaking change of the unstable Metrics API. Code instrumented with the `go.opentelemetry.io/otel/metric` <= v0.27.0 will need to be modified.
+
 ### Added
 
 - Added support to configure the span limits with environment variables.
@@ -24,6 +28,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - For tracestate's members, prepend the new element and remove the oldest one, which is over capacity (#2592)
 - Add event and link drop counts to the exported data from the `oltptrace` exporter. (#2601)
+- The metrics API has been significantly changed. (#2587)
 - Unify path cleaning functionally in the `otlpmetric` and `otlptrace` config. (#2639)
 - Change the debug message from the `sdk/trace.BatchSpanProcessor` to reflect the count is cumulative. (#2640)
 

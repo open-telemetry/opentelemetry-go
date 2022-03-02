@@ -25,12 +25,12 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/number"
-	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/metric/instrument"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/number"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -63,34 +63,37 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 		case sdkapi.CounterInstrumentKind:
 			switch data.nKind {
 			case number.Int64Kind:
-				metric.Must(meter).NewInt64Counter(name).Add(ctx, data.val, labels...)
+				c, _ := meter.SyncInt64().Counter(name)
+				c.Add(ctx, data.val, labels...)
 			case number.Float64Kind:
-				metric.Must(meter).NewFloat64Counter(name).Add(ctx, float64(data.val), labels...)
+				c, _ := meter.SyncFloat64().Counter(name)
+				c.Add(ctx, float64(data.val), labels...)
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
 		case sdkapi.HistogramInstrumentKind:
 			switch data.nKind {
 			case number.Int64Kind:
-				metric.Must(meter).NewInt64Histogram(name).Record(ctx, data.val, labels...)
+				c, _ := meter.SyncInt64().Histogram(name)
+				c.Record(ctx, data.val, labels...)
 			case number.Float64Kind:
-				metric.Must(meter).NewFloat64Histogram(name).Record(ctx, float64(data.val), labels...)
+				c, _ := meter.SyncFloat64().Histogram(name)
+				c.Record(ctx, float64(data.val), labels...)
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
 		case sdkapi.GaugeObserverInstrumentKind:
 			switch data.nKind {
 			case number.Int64Kind:
-				metric.Must(meter).NewInt64GaugeObserver(name,
-					func(_ context.Context, result metric.Int64ObserverResult) {
-						result.Observe(data.val, labels...)
-					},
-				)
+				g, _ := meter.AsyncInt64().Gauge(name)
+				_ = meter.RegisterCallback([]instrument.Asynchronous{g}, func(ctx context.Context) {
+					g.Observe(ctx, data.val, labels...)
+				})
 			case number.Float64Kind:
-				callback := func(v float64) metric.Float64ObserverFunc {
-					return metric.Float64ObserverFunc(func(_ context.Context, result metric.Float64ObserverResult) { result.Observe(v, labels...) })
-				}(float64(data.val))
-				metric.Must(meter).NewFloat64GaugeObserver(name, callback)
+				g, _ := meter.AsyncFloat64().Gauge(name)
+				_ = meter.RegisterCallback([]instrument.Asynchronous{g}, func(ctx context.Context) {
+					g.Observe(ctx, float64(data.val), labels...)
+				})
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
