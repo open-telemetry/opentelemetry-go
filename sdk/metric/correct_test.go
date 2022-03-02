@@ -26,15 +26,16 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
+	"go.opentelemetry.io/otel/metric/nonrecording"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
+	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 )
-
-var Must = metric.Must
 
 type handler struct {
 	sync.Mutex
@@ -88,7 +89,7 @@ func newSDK(t *testing.T) (metric.Meter, *metricsdk.Accumulator, *testSelector, 
 	accum := metricsdk.NewAccumulator(
 		processor,
 	)
-	meter := metric.WrapMeterImpl(accum)
+	meter := sdkapi.WrapMeterImpl(accum)
 	return meter, accum, testSelector, processor
 }
 
@@ -96,7 +97,8 @@ func TestInputRangeCounter(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, _, processor := newSDK(t)
 
-	counter := Must(meter).NewInt64Counter("name.sum")
+	counter, err := meter.SyncInt64().Counter("name.sum")
+	require.NoError(t, err)
 
 	counter.Add(ctx, -1)
 	require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
@@ -118,7 +120,8 @@ func TestInputRangeUpDownCounter(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, _, processor := newSDK(t)
 
-	counter := Must(meter).NewInt64UpDownCounter("name.sum")
+	counter, err := meter.SyncInt64().UpDownCounter("name.sum")
+	require.NoError(t, err)
 
 	counter.Add(ctx, -1)
 	counter.Add(ctx, -1)
@@ -137,7 +140,8 @@ func TestInputRangeHistogram(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, _, processor := newSDK(t)
 
-	histogram := Must(meter).NewFloat64Histogram("name.histogram")
+	histogram, err := meter.SyncFloat64().Histogram("name.histogram")
+	require.NoError(t, err)
 
 	histogram.Record(ctx, math.NaN())
 	require.Equal(t, aggregation.ErrNaNInput, testHandler.Flush())
@@ -162,7 +166,8 @@ func TestDisabledInstrument(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, _, processor := newSDK(t)
 
-	histogram := Must(meter).NewFloat64Histogram("name.disabled")
+	histogram, err := meter.SyncFloat64().Histogram("name.disabled")
+	require.NoError(t, err)
 
 	histogram.Record(ctx, -1)
 	checkpointed := sdk.Collect(ctx)
@@ -175,7 +180,8 @@ func TestRecordNaN(t *testing.T) {
 	ctx := context.Background()
 	meter, _, _, _ := newSDK(t)
 
-	c := Must(meter).NewFloat64Counter("name.sum")
+	c, err := meter.SyncFloat64().Counter("name.sum")
+	require.NoError(t, err)
 
 	require.Nil(t, testHandler.Flush())
 	c.Add(ctx, math.NaN())
@@ -186,7 +192,8 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, _, processor := newSDK(t)
 
-	counter := Must(meter).NewInt64Counter("name.sum")
+	counter, err := meter.SyncInt64().Counter("name.sum")
+	require.NoError(t, err)
 
 	const (
 		maxKeys = 21
@@ -277,48 +284,86 @@ func TestObserverCollection(t *testing.T) {
 	meter, sdk, _, processor := newSDK(t)
 	mult := 1
 
-	_ = Must(meter).NewFloat64GaugeObserver("float.gauge.lastvalue", func(_ context.Context, result metric.Float64ObserverResult) {
-		result.Observe(float64(mult), attribute.String("A", "B"))
+	gaugeF, err := meter.AsyncFloat64().Gauge("float.gauge.lastvalue")
+	require.NoError(t, err)
+	err = meter.RegisterCallback([]instrument.Asynchronous{
+		gaugeF,
+	}, func(ctx context.Context) {
+		gaugeF.Observe(ctx, float64(mult), attribute.String("A", "B"))
 		// last value wins
-		result.Observe(float64(-mult), attribute.String("A", "B"))
-		result.Observe(float64(-mult), attribute.String("C", "D"))
+		gaugeF.Observe(ctx, float64(-mult), attribute.String("A", "B"))
+		gaugeF.Observe(ctx, float64(-mult), attribute.String("C", "D"))
 	})
-	_ = Must(meter).NewInt64GaugeObserver("int.gauge.lastvalue", func(_ context.Context, result metric.Int64ObserverResult) {
-		result.Observe(int64(-mult), attribute.String("A", "B"))
-		result.Observe(int64(mult))
-		// last value wins
-		result.Observe(int64(mult), attribute.String("A", "B"))
-		result.Observe(int64(mult))
-	})
+	require.NoError(t, err)
 
-	_ = Must(meter).NewFloat64CounterObserver("float.counterobserver.sum", func(_ context.Context, result metric.Float64ObserverResult) {
-		result.Observe(float64(mult), attribute.String("A", "B"))
-		result.Observe(float64(2*mult), attribute.String("A", "B"))
-		result.Observe(float64(mult), attribute.String("C", "D"))
-	})
-	_ = Must(meter).NewInt64CounterObserver("int.counterobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
-		result.Observe(int64(2*mult), attribute.String("A", "B"))
-		result.Observe(int64(mult))
+	gaugeI, err := meter.AsyncInt64().Gauge("int.gauge.lastvalue")
+	require.NoError(t, err)
+	err = meter.RegisterCallback([]instrument.Asynchronous{
+		gaugeI,
+	}, func(ctx context.Context) {
+		gaugeI.Observe(ctx, int64(-mult), attribute.String("A", "B"))
+		gaugeI.Observe(ctx, int64(mult))
 		// last value wins
-		result.Observe(int64(mult), attribute.String("A", "B"))
-		result.Observe(int64(mult))
+		gaugeI.Observe(ctx, int64(mult), attribute.String("A", "B"))
+		gaugeI.Observe(ctx, int64(mult))
 	})
+	require.NoError(t, err)
 
-	_ = Must(meter).NewFloat64UpDownCounterObserver("float.updowncounterobserver.sum", func(_ context.Context, result metric.Float64ObserverResult) {
-		result.Observe(float64(mult), attribute.String("A", "B"))
-		result.Observe(float64(-2*mult), attribute.String("A", "B"))
-		result.Observe(float64(mult), attribute.String("C", "D"))
+	counterF, err := meter.AsyncFloat64().Counter("float.counterobserver.sum")
+	require.NoError(t, err)
+	err = meter.RegisterCallback([]instrument.Asynchronous{
+		counterF,
+	}, func(ctx context.Context) {
+		counterF.Observe(ctx, float64(mult), attribute.String("A", "B"))
+		counterF.Observe(ctx, float64(2*mult), attribute.String("A", "B"))
+		counterF.Observe(ctx, float64(mult), attribute.String("C", "D"))
 	})
-	_ = Must(meter).NewInt64UpDownCounterObserver("int.updowncounterobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
-		result.Observe(int64(2*mult), attribute.String("A", "B"))
-		result.Observe(int64(mult))
+	require.NoError(t, err)
+
+	counterI, err := meter.AsyncInt64().Counter("int.counterobserver.sum")
+	require.NoError(t, err)
+	err = meter.RegisterCallback([]instrument.Asynchronous{
+		counterI,
+	}, func(ctx context.Context) {
+		counterI.Observe(ctx, int64(2*mult), attribute.String("A", "B"))
+		counterI.Observe(ctx, int64(mult))
 		// last value wins
-		result.Observe(int64(mult), attribute.String("A", "B"))
-		result.Observe(int64(-mult))
+		counterI.Observe(ctx, int64(mult), attribute.String("A", "B"))
+		counterI.Observe(ctx, int64(mult))
 	})
+	require.NoError(t, err)
 
-	_ = Must(meter).NewInt64GaugeObserver("empty.gauge.sum", func(_ context.Context, result metric.Int64ObserverResult) {
+	updowncounterF, err := meter.AsyncFloat64().UpDownCounter("float.updowncounterobserver.sum")
+	require.NoError(t, err)
+	err = meter.RegisterCallback([]instrument.Asynchronous{
+		updowncounterF,
+	}, func(ctx context.Context) {
+		updowncounterF.Observe(ctx, float64(mult), attribute.String("A", "B"))
+		updowncounterF.Observe(ctx, float64(-2*mult), attribute.String("A", "B"))
+		updowncounterF.Observe(ctx, float64(mult), attribute.String("C", "D"))
 	})
+	require.NoError(t, err)
+
+	updowncounterI, err := meter.AsyncInt64().UpDownCounter("int.updowncounterobserver.sum")
+	require.NoError(t, err)
+	err = meter.RegisterCallback([]instrument.Asynchronous{
+		updowncounterI,
+	}, func(ctx context.Context) {
+		updowncounterI.Observe(ctx, int64(2*mult), attribute.String("A", "B"))
+		updowncounterI.Observe(ctx, int64(mult))
+		// last value wins
+		updowncounterI.Observe(ctx, int64(mult), attribute.String("A", "B"))
+		updowncounterI.Observe(ctx, int64(-mult))
+	})
+	require.NoError(t, err)
+
+	unused, err := meter.AsyncInt64().Gauge("empty.gauge.sum")
+	require.NoError(t, err)
+	err = meter.RegisterCallback([]instrument.Asynchronous{
+		unused,
+	}, func(ctx context.Context) {
+	})
+	require.NoError(t, err)
 
 	for mult = 0; mult < 3; mult++ {
 		processor.Reset()
@@ -333,15 +378,15 @@ func TestObserverCollection(t *testing.T) {
 			"int.gauge.lastvalue//":      mult,
 			"int.gauge.lastvalue/A=B/":   mult,
 
-			"float.counterobserver.sum/A=B/": 2 * mult,
+			"float.counterobserver.sum/A=B/": 3 * mult,
 			"float.counterobserver.sum/C=D/": mult,
-			"int.counterobserver.sum//":      mult,
-			"int.counterobserver.sum/A=B/":   mult,
+			"int.counterobserver.sum//":      2 * mult,
+			"int.counterobserver.sum/A=B/":   3 * mult,
 
-			"float.updowncounterobserver.sum/A=B/": -2 * mult,
+			"float.updowncounterobserver.sum/A=B/": -mult,
 			"float.updowncounterobserver.sum/C=D/": mult,
-			"int.updowncounterobserver.sum//":      -mult,
-			"int.updowncounterobserver.sum/A=B/":   mult,
+			"int.updowncounterobserver.sum//":      0,
+			"int.updowncounterobserver.sum/A=B/":   3 * mult,
 		}, processor.Values())
 	}
 }
@@ -351,18 +396,26 @@ func TestCounterObserverInputRange(t *testing.T) {
 	meter, sdk, _, processor := newSDK(t)
 
 	// TODO: these tests are testing for negative values, not for _descending values_. Fix.
-	_ = Must(meter).NewFloat64CounterObserver("float.counterobserver.sum", func(_ context.Context, result metric.Float64ObserverResult) {
-		result.Observe(-2, attribute.String("A", "B"))
+	counterF, _ := meter.AsyncFloat64().Counter("float.counterobserver.sum")
+	err := meter.RegisterCallback([]instrument.Asynchronous{
+		counterF,
+	}, func(ctx context.Context) {
+		counterF.Observe(ctx, -2, attribute.String("A", "B"))
 		require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
-		result.Observe(-1, attribute.String("C", "D"))
-		require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
-	})
-	_ = Must(meter).NewInt64CounterObserver("int.counterobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
-		result.Observe(-1, attribute.String("A", "B"))
-		require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
-		result.Observe(-1)
+		counterF.Observe(ctx, -1, attribute.String("C", "D"))
 		require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
 	})
+	require.NoError(t, err)
+	counterI, _ := meter.AsyncInt64().Counter("int.counterobserver.sum")
+	err = meter.RegisterCallback([]instrument.Asynchronous{
+		counterI,
+	}, func(ctx context.Context) {
+		counterI.Observe(ctx, -1, attribute.String("A", "B"))
+		require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
+		counterI.Observe(ctx, -1)
+		require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
+	})
+	require.NoError(t, err)
 
 	collected := sdk.Collect(ctx)
 
@@ -377,51 +430,43 @@ func TestObserverBatch(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, _, processor := newSDK(t)
 
-	var floatGaugeObs metric.Float64GaugeObserver
-	var intGaugeObs metric.Int64GaugeObserver
-	var floatCounterObs metric.Float64CounterObserver
-	var intCounterObs metric.Int64CounterObserver
-	var floatUpDownCounterObs metric.Float64UpDownCounterObserver
-	var intUpDownCounterObs metric.Int64UpDownCounterObserver
+	floatGaugeObs, _ := meter.AsyncFloat64().Gauge("float.gauge.lastvalue")
+	intGaugeObs, _ := meter.AsyncInt64().Gauge("int.gauge.lastvalue")
+	floatCounterObs, _ := meter.AsyncFloat64().Counter("float.counterobserver.sum")
+	intCounterObs, _ := meter.AsyncInt64().Counter("int.counterobserver.sum")
+	floatUpDownCounterObs, _ := meter.AsyncFloat64().UpDownCounter("float.updowncounterobserver.sum")
+	intUpDownCounterObs, _ := meter.AsyncInt64().UpDownCounter("int.updowncounterobserver.sum")
 
-	var batch = Must(meter).NewBatchObserver(
-		func(_ context.Context, result metric.BatchObserverResult) {
-			result.Observe(
-				[]attribute.KeyValue{
-					attribute.String("A", "B"),
-				},
-				floatGaugeObs.Observation(1),
-				floatGaugeObs.Observation(-1),
-				intGaugeObs.Observation(-1),
-				intGaugeObs.Observation(1),
-				floatCounterObs.Observation(1000),
-				intCounterObs.Observation(100),
-				floatUpDownCounterObs.Observation(-1000),
-				intUpDownCounterObs.Observation(-100),
-			)
-			result.Observe(
-				[]attribute.KeyValue{
-					attribute.String("C", "D"),
-				},
-				floatGaugeObs.Observation(-1),
-				floatCounterObs.Observation(-1),
-				floatUpDownCounterObs.Observation(-1),
-			)
-			result.Observe(
-				nil,
-				intGaugeObs.Observation(1),
-				intGaugeObs.Observation(1),
-				intCounterObs.Observation(10),
-				floatCounterObs.Observation(1.1),
-				intUpDownCounterObs.Observation(10),
-			)
-		})
-	floatGaugeObs = batch.NewFloat64GaugeObserver("float.gauge.lastvalue")
-	intGaugeObs = batch.NewInt64GaugeObserver("int.gauge.lastvalue")
-	floatCounterObs = batch.NewFloat64CounterObserver("float.counterobserver.sum")
-	intCounterObs = batch.NewInt64CounterObserver("int.counterobserver.sum")
-	floatUpDownCounterObs = batch.NewFloat64UpDownCounterObserver("float.updowncounterobserver.sum")
-	intUpDownCounterObs = batch.NewInt64UpDownCounterObserver("int.updowncounterobserver.sum")
+	err := meter.RegisterCallback([]instrument.Asynchronous{
+		floatGaugeObs,
+		intGaugeObs,
+		floatCounterObs,
+		intCounterObs,
+		floatUpDownCounterObs,
+		intUpDownCounterObs,
+	}, func(ctx context.Context) {
+		ab := attribute.String("A", "B")
+		floatGaugeObs.Observe(ctx, 1, ab)
+		floatGaugeObs.Observe(ctx, -1, ab)
+		intGaugeObs.Observe(ctx, -1, ab)
+		intGaugeObs.Observe(ctx, 1, ab)
+		floatCounterObs.Observe(ctx, 1000, ab)
+		intCounterObs.Observe(ctx, 100, ab)
+		floatUpDownCounterObs.Observe(ctx, -1000, ab)
+		intUpDownCounterObs.Observe(ctx, -100, ab)
+
+		cd := attribute.String("C", "D")
+		floatGaugeObs.Observe(ctx, -1, cd)
+		floatCounterObs.Observe(ctx, -1, cd)
+		floatUpDownCounterObs.Observe(ctx, -1, cd)
+
+		intGaugeObs.Observe(ctx, 1)
+		intGaugeObs.Observe(ctx, 1)
+		intCounterObs.Observe(ctx, 10)
+		floatCounterObs.Observe(ctx, 1.1)
+		intUpDownCounterObs.Observe(ctx, 10)
+	})
+	require.NoError(t, err)
 
 	collected := sdk.Collect(ctx)
 
@@ -445,37 +490,6 @@ func TestObserverBatch(t *testing.T) {
 	}, processor.Values())
 }
 
-func TestRecordBatch(t *testing.T) {
-	ctx := context.Background()
-	meter, sdk, _, processor := newSDK(t)
-
-	counter1 := Must(meter).NewInt64Counter("int64.sum")
-	counter2 := Must(meter).NewFloat64Counter("float64.sum")
-	histogram1 := Must(meter).NewInt64Histogram("int64.histogram")
-	histogram2 := Must(meter).NewFloat64Histogram("float64.histogram")
-
-	sdk.RecordBatch(
-		ctx,
-		[]attribute.KeyValue{
-			attribute.String("A", "B"),
-			attribute.String("C", "D"),
-		},
-		counter1.Measurement(1),
-		counter2.Measurement(2),
-		histogram1.Measurement(3),
-		histogram2.Measurement(4),
-	)
-
-	sdk.Collect(ctx)
-
-	require.EqualValues(t, map[string]float64{
-		"int64.sum/A=B,C=D/":         1,
-		"float64.sum/A=B,C=D/":       2,
-		"int64.histogram/A=B,C=D/":   3,
-		"float64.histogram/A=B,C=D/": 4,
-	}, processor.Values())
-}
-
 // TestRecordPersistence ensures that a direct-called instrument that
 // is repeatedly used each interval results in a persistent record, so
 // that its encoded labels will be cached across collection intervals.
@@ -483,7 +497,9 @@ func TestRecordPersistence(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, selector, _ := newSDK(t)
 
-	c := Must(meter).NewFloat64Counter("name.sum")
+	c, err := meter.SyncFloat64().Counter("name.sum")
+	require.NoError(t, err)
+
 	uk := attribute.String("bound", "false")
 
 	for i := 0; i < 100; i++ {
@@ -497,51 +513,58 @@ func TestRecordPersistence(t *testing.T) {
 func TestIncorrectInstruments(t *testing.T) {
 	// The Batch observe/record APIs are susceptible to
 	// uninitialized instruments.
-	var counter metric.Int64Counter
-	var observer metric.Int64GaugeObserver
+	var observer asyncint64.Gauge
 
 	ctx := context.Background()
 	meter, sdk, _, processor := newSDK(t)
 
 	// Now try with uninitialized instruments.
-	meter.RecordBatch(ctx, nil, counter.Measurement(1))
-	meter.NewBatchObserver(func(_ context.Context, result metric.BatchObserverResult) {
-		result.Observe(nil, observer.Observation(1))
+	err := meter.RegisterCallback([]instrument.Asynchronous{
+		observer,
+	}, func(ctx context.Context) {
+		observer.Observe(ctx, 1)
 	})
+	require.ErrorIs(t, err, metricsdk.ErrBadInstrument)
 
 	collected := sdk.Collect(ctx)
-	require.Equal(t, metricsdk.ErrUninitializedInstrument, testHandler.Flush())
+	err = testHandler.Flush()
+	require.NoError(t, err)
 	require.Equal(t, 0, collected)
 
 	// Now try with instruments from another SDK.
-	var noopMeter metric.Meter
-	counter = metric.Must(noopMeter).NewInt64Counter("name.sum")
-	observer = metric.Must(noopMeter).NewBatchObserver(
-		func(context.Context, metric.BatchObserverResult) {},
-	).NewInt64GaugeObserver("observer")
+	noopMeter := nonrecording.NewNoopMeter()
+	observer, _ = noopMeter.AsyncInt64().Gauge("observer")
 
-	meter.RecordBatch(ctx, nil, counter.Measurement(1))
-	meter.NewBatchObserver(func(_ context.Context, result metric.BatchObserverResult) {
-		result.Observe(nil, observer.Observation(1))
-	})
+	err = meter.RegisterCallback(
+		[]instrument.Asynchronous{observer},
+		func(ctx context.Context) {
+			observer.Observe(ctx, 1)
+		},
+	)
+	require.ErrorIs(t, err, metricsdk.ErrBadInstrument)
 
 	collected = sdk.Collect(ctx)
 	require.Equal(t, 0, collected)
 	require.EqualValues(t, map[string]float64{}, processor.Values())
-	require.Equal(t, metricsdk.ErrUninitializedInstrument, testHandler.Flush())
+
+	err = testHandler.Flush()
+	require.NoError(t, err)
 }
 
 func TestSyncInAsync(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, _, processor := newSDK(t)
 
-	counter := Must(meter).NewFloat64Counter("counter.sum")
-	_ = Must(meter).NewInt64GaugeObserver("observer.lastvalue",
-		func(ctx context.Context, result metric.Int64ObserverResult) {
-			result.Observe(10)
-			counter.Add(ctx, 100)
-		},
-	)
+	counter, _ := meter.SyncFloat64().Counter("counter.sum")
+	gauge, _ := meter.AsyncInt64().Gauge("observer.lastvalue")
+
+	err := meter.RegisterCallback([]instrument.Asynchronous{
+		gauge,
+	}, func(ctx context.Context) {
+		gauge.Observe(ctx, 10)
+		counter.Add(ctx, 100)
+	})
+	require.NoError(t, err)
 
 	sdk.Collect(ctx)
 

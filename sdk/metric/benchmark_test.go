@@ -22,11 +22,13 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/global"
-	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
+	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
+	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 )
 
 type benchFixture struct {
@@ -44,7 +46,7 @@ func newFixture(b *testing.B) *benchFixture {
 	}
 
 	bf.accumulator = sdk.NewAccumulator(bf)
-	bf.meter = metric.WrapMeterImpl(bf.accumulator)
+	bf.meter = sdkapi.WrapMeterImpl(bf.accumulator)
 	return bf
 }
 
@@ -56,8 +58,33 @@ func (f *benchFixture) Meter(_ string, _ ...metric.MeterOption) metric.Meter {
 	return f.meter
 }
 
-func (f *benchFixture) meterMust() metric.MeterMust {
-	return metric.Must(f.meter)
+func (f *benchFixture) iCounter(name string) syncint64.Counter {
+	ctr, err := f.meter.SyncInt64().Counter(name)
+	if err != nil {
+		f.B.Error(err)
+	}
+	return ctr
+}
+func (f *benchFixture) fCounter(name string) syncfloat64.Counter {
+	ctr, err := f.meter.SyncFloat64().Counter(name)
+	if err != nil {
+		f.B.Error(err)
+	}
+	return ctr
+}
+func (f *benchFixture) iHistogram(name string) syncint64.Histogram {
+	ctr, err := f.meter.SyncInt64().Histogram(name)
+	if err != nil {
+		f.B.Error(err)
+	}
+	return ctr
+}
+func (f *benchFixture) fHistogram(name string) syncfloat64.Histogram {
+	ctr, err := f.meter.SyncFloat64().Histogram(name)
+	if err != nil {
+		f.B.Error(err)
+	}
+	return ctr
 }
 
 func makeLabels(n int) []attribute.KeyValue {
@@ -81,7 +108,7 @@ func benchmarkLabels(b *testing.B, n int) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(n)
-	cnt := fix.meterMust().NewInt64Counter("int64.sum")
+	cnt := fix.iCounter("int64.sum")
 
 	b.ResetTimer()
 
@@ -154,31 +181,33 @@ func BenchmarkIterator_16(b *testing.B) {
 
 // Counters
 
-func BenchmarkGlobalInt64CounterAddWithSDK(b *testing.B) {
-	// Compare with BenchmarkInt64CounterAdd() to see overhead of global
-	// package. This is in the SDK to avoid the API from depending on the
-	// SDK.
-	ctx := context.Background()
-	fix := newFixture(b)
+// TODO readd global
 
-	sdk := global.Meter("test")
-	global.SetMeterProvider(fix)
+// func BenchmarkGlobalInt64CounterAddWithSDK(b *testing.B) {
+// 	// Compare with BenchmarkInt64CounterAdd() to see overhead of global
+// 	// package. This is in the SDK to avoid the API from depending on the
+// 	// SDK.
+// 	ctx := context.Background()
+// 	fix := newFixture(b)
 
-	labs := []attribute.KeyValue{attribute.String("A", "B")}
-	cnt := Must(sdk).NewInt64Counter("int64.sum")
+// 	sdk := global.Meter("test")
+// 	global.SetMeterProvider(fix)
 
-	b.ResetTimer()
+// 	labs := []attribute.KeyValue{attribute.String("A", "B")}
+// 	cnt := Must(sdk).NewInt64Counter("int64.sum")
 
-	for i := 0; i < b.N; i++ {
-		cnt.Add(ctx, 1, labs...)
-	}
-}
+// 	b.ResetTimer()
+
+// 	for i := 0; i < b.N; i++ {
+// 		cnt.Add(ctx, 1, labs...)
+// 	}
+// }
 
 func BenchmarkInt64CounterAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	cnt := fix.meterMust().NewInt64Counter("int64.sum")
+	cnt := fix.iCounter("int64.sum")
 
 	b.ResetTimer()
 
@@ -191,7 +220,7 @@ func BenchmarkFloat64CounterAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	cnt := fix.meterMust().NewFloat64Counter("float64.sum")
+	cnt := fix.fCounter("float64.sum")
 
 	b.ResetTimer()
 
@@ -206,7 +235,7 @@ func BenchmarkInt64LastValueAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	mea := fix.meterMust().NewInt64Histogram("int64.lastvalue")
+	mea := fix.iHistogram("int64.lastvalue")
 
 	b.ResetTimer()
 
@@ -219,7 +248,7 @@ func BenchmarkFloat64LastValueAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	mea := fix.meterMust().NewFloat64Histogram("float64.lastvalue")
+	mea := fix.fHistogram("float64.lastvalue")
 
 	b.ResetTimer()
 
@@ -234,7 +263,7 @@ func BenchmarkInt64HistogramAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	mea := fix.meterMust().NewInt64Histogram("int64.histogram")
+	mea := fix.iHistogram("int64.histogram")
 
 	b.ResetTimer()
 
@@ -247,7 +276,7 @@ func BenchmarkFloat64HistogramAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	mea := fix.meterMust().NewFloat64Histogram("float64.histogram")
+	mea := fix.fHistogram("float64.histogram")
 
 	b.ResetTimer()
 
@@ -264,12 +293,12 @@ func BenchmarkObserverRegistration(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		names = append(names, fmt.Sprintf("test.%d.lastvalue", i))
 	}
-	cb := func(_ context.Context, result metric.Int64ObserverResult) {}
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		fix.meterMust().NewInt64GaugeObserver(names[i], cb)
+		ctr, _ := fix.meter.AsyncInt64().Counter(names[i])
+		_ = fix.meter.RegisterCallback([]instrument.Asynchronous{ctr}, func(context.Context) {})
 	}
 }
 
@@ -277,11 +306,16 @@ func BenchmarkGaugeObserverObservationInt64(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	_ = fix.meterMust().NewInt64GaugeObserver("test.lastvalue", func(_ context.Context, result metric.Int64ObserverResult) {
+	ctr, _ := fix.meter.AsyncInt64().Counter("test.lastvalue")
+	err := fix.meter.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
 		for i := 0; i < b.N; i++ {
-			result.Observe((int64)(i), labs...)
+			ctr.Observe(ctx, (int64)(i), labs...)
 		}
 	})
+	if err != nil {
+		b.Errorf("could not register callback: %v", err)
+		b.FailNow()
+	}
 
 	b.ResetTimer()
 
@@ -292,11 +326,16 @@ func BenchmarkGaugeObserverObservationFloat64(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(1)
-	_ = fix.meterMust().NewFloat64GaugeObserver("test.lastvalue", func(_ context.Context, result metric.Float64ObserverResult) {
+	ctr, _ := fix.meter.AsyncFloat64().Counter("test.lastvalue")
+	err := fix.meter.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
 		for i := 0; i < b.N; i++ {
-			result.Observe((float64)(i), labs...)
+			ctr.Observe(ctx, (float64)(i), labs...)
 		}
 	})
+	if err != nil {
+		b.Errorf("could not register callback: %v", err)
+		b.FailNow()
+	}
 
 	b.ResetTimer()
 
@@ -310,17 +349,18 @@ func benchmarkBatchRecord8Labels(b *testing.B, numInst int) {
 	ctx := context.Background()
 	fix := newFixture(b)
 	labs := makeLabels(numLabels)
-	var meas []sdkapi.Measurement
+	var meas []syncint64.Counter
 
 	for i := 0; i < numInst; i++ {
-		inst := fix.meterMust().NewInt64Counter(fmt.Sprintf("int64.%d.sum", i))
-		meas = append(meas, inst.Measurement(1))
+		meas = append(meas, fix.iCounter(fmt.Sprintf("int64.%d.sum", i)))
 	}
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		fix.accumulator.RecordBatch(ctx, labs, meas...)
+		for _, ctr := range meas {
+			ctr.Add(ctx, 1, labs...)
+		}
 	}
 }
 
@@ -346,7 +386,7 @@ func BenchmarkRepeatedDirectCalls(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
 
-	c := fix.meterMust().NewInt64Counter("int64.sum")
+	c := fix.iCounter("int64.sum")
 	k := attribute.String("bench", "true")
 
 	b.ResetTimer()

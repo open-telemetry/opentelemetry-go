@@ -27,13 +27,13 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/number"
-	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/number"
+	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -170,17 +170,17 @@ func convertDescriptor(ocDescriptor metricdata.Descriptor) (sdkapi.Descriptor, e
 		// Includes TypeGaugeDistribution, TypeCumulativeDistribution, TypeSummary
 		return sdkapi.Descriptor{}, fmt.Errorf("%w; descriptor type: %v", errConversion, ocDescriptor.Type)
 	}
-	opts := []metric.InstrumentOption{
-		metric.WithDescription(ocDescriptor.Description),
+	opts := []instrument.Option{
+		instrument.WithDescription(ocDescriptor.Description),
 	}
 	switch ocDescriptor.Unit {
 	case metricdata.UnitDimensionless:
-		opts = append(opts, metric.WithUnit(unit.Dimensionless))
+		opts = append(opts, instrument.WithUnit(unit.Dimensionless))
 	case metricdata.UnitBytes:
-		opts = append(opts, metric.WithUnit(unit.Bytes))
+		opts = append(opts, instrument.WithUnit(unit.Bytes))
 	case metricdata.UnitMilliseconds:
-		opts = append(opts, metric.WithUnit(unit.Milliseconds))
+		opts = append(opts, instrument.WithUnit(unit.Milliseconds))
 	}
-	cfg := metric.NewInstrumentConfig(opts...)
+	cfg := instrument.NewConfig(opts...)
 	return sdkapi.NewDescriptor(ocDescriptor.Name, ikind, nkind, cfg.Description(), cfg.Unit()), nil
 }
