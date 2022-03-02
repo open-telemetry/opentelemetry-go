@@ -22,8 +22,8 @@ import (
 )
 
 // CleanPath returns a path with all spaces trimmed and all redundancies removed. If urlPath is empty or cleaning it results in an empty string, defaultPath is returned instead.
-func CleanPath(URLPath string, defaultPath string) string {
-	tmp := path.Clean(strings.TrimSpace(URLPath))
+func CleanPath(urlPath string, defaultPath string) string {
+	tmp := path.Clean(strings.TrimSpace(urlPath))
 	if tmp == "." {
 		return defaultPath
 	}
