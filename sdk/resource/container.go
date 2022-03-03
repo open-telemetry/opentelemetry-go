@@ -94,8 +94,8 @@ func getContainerIDFromReader(reader io.Reader) string {
 // getContainerIDFromLine returns the id of the container from one string line.
 func getContainerIDFromLine(line string) string {
 	matches := cgroupContainerIDRe.FindStringSubmatch(line)
-	if len(matches) > 1 {
-		return matches[1]
+	if len(matches) <= 1 {
+		return ""
 	}
-	return ""
+	return matches[1]
 }
