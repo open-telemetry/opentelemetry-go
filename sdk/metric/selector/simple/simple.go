@@ -65,15 +65,18 @@ func lastValueAggs(aggPtrs []*aggregator.Aggregator) {
 	}
 }
 
+func histogramAggs(aggPtrs []*aggregator.Aggregator,
+	desc *sdkapi.Descriptor, opts ...histogram.Option) {
+	aggs := histogram.New(len(aggPtrs), desc, opts...)
+	for i := range aggPtrs {
+		*aggPtrs[i] = &aggs[i]
+	}
+}
+
 func (selectorInexpensive) AggregatorFor(descriptor *sdkapi.Descriptor, aggPtrs ...*aggregator.Aggregator) {
 	switch descriptor.InstrumentKind() {
 	case sdkapi.GaugeObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
-	case sdkapi.HistogramInstrumentKind:
-		aggs := sum.New(len(aggPtrs))
-		for i := range aggPtrs {
-			*aggPtrs[i] = &aggs[i]
-		}
 	default:
 		sumAggs(aggPtrs)
 	}
@@ -84,10 +87,7 @@ func (s selectorHistogram) AggregatorFor(descriptor *sdkapi.Descriptor, aggPtrs 
 	case sdkapi.GaugeObserverInstrumentKind:
 		lastValueAggs(aggPtrs)
 	case sdkapi.HistogramInstrumentKind:
-		aggs := histogram.New(len(aggPtrs), descriptor, s.options...)
-		for i := range aggPtrs {
-			*aggPtrs[i] = &aggs[i]
-		}
+		histogramAggs(aggPtrs, descriptor, s.options...)
 	default:
 		sumAggs(aggPtrs)
 	}
