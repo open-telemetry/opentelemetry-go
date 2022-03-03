@@ -51,26 +51,31 @@ func (cgroupContainerIDDetector) Detect(ctx context.Context) (*Resource, error) 
 	return NewWithAttributes(semconv.SchemaURL, semconv.ContainerIDKey.String(containerID)), nil
 }
 
+var (
+	defaultOSStat = os.Stat
+	osStat        = defaultOSStat
+
+	defaultOSOpen = func(name string) (io.ReadCloser, error) {
+		return os.Open(name)
+	}
+	osOpen = defaultOSOpen
+)
+
 // getContainerIDFromCGroup returns the id of the container from the cgroup file.
 // If no container id found, an empty string will be returned.
 func getContainerIDFromCGroup() (string, error) {
-	if _, err := os.Stat(cgroupPath); errors.Is(err, os.ErrNotExist) {
-		// File does not exists, skip
+	if _, err := osStat(cgroupPath); errors.Is(err, os.ErrNotExist) {
+		// File does not exist, skip
 		return "", nil
 	}
 
-	file, err := os.Open(cgroupPath)
+	file, err := osOpen(cgroupPath)
 	if err != nil {
 		return "", err
 	}
 	defer file.Close()
 
-	containerID := getContainerIDFromReader(file)
-	if containerID == "" {
-		// Container ID not found
-		return "", nil
-	}
-	return containerID, nil
+	return getContainerIDFromReader(file), nil
 }
 
 // getContainerIDFromReader returns the id of the container from reader.

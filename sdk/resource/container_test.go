@@ -15,7 +15,9 @@
 package resource
 
 import (
+	"errors"
 	"io"
+	"os"
 	"strings"
 	"testing"
 
@@ -108,6 +110,59 @@ func TestGetContainerIDFromReader(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			containerID := getContainerIDFromReader(tc.reader)
+			assert.Equal(t, tc.expectedContainerID, containerID)
+		})
+	}
+}
+
+func TestGetContainerIDFromCGroup(t *testing.T) {
+	t.Cleanup(func() {
+		osStat = defaultOSStat
+		osOpen = defaultOSOpen
+	})
+
+	testCases := []struct {
+		name                string
+		cgroupFileNotExist  bool
+		openFileError       error
+		content             string
+		expectedContainerID string
+		expectedError       bool
+	}{
+		{
+			name:               "the cgroup file does not exist",
+			cgroupFileNotExist: true,
+		},
+		{
+			name:          "error when opening cgroup file",
+			openFileError: errors.New("test"),
+			expectedError: true,
+		},
+		{
+			name:                "cgroup file",
+			content:             "1:name=systemd:/podruntime/docker/kubepods/docker-dc579f8a8319c8cf7d38e1adf263bc08d23",
+			expectedContainerID: "dc579f8a8319c8cf7d38e1adf263bc08d23",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			osStat = func(name string) (os.FileInfo, error) {
+				if tc.cgroupFileNotExist {
+					return nil, os.ErrNotExist
+				}
+				return nil, nil
+			}
+
+			osOpen = func(name string) (io.ReadCloser, error) {
+				if tc.openFileError != nil {
+					return nil, tc.openFileError
+				}
+				return io.NopCloser(strings.NewReader(tc.content)), nil
+			}
+
+			containerID, err := getContainerIDFromCGroup()
+			assert.Equal(t, tc.expectedError, err != nil)
 			assert.Equal(t, tc.expectedContainerID, containerID)
 		})
 	}
