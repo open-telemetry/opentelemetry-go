@@ -20,7 +20,7 @@ import (
 	"errors"
 	"io"
 	"os"
-	"strings"
+	"regexp"
 
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 )
@@ -34,6 +34,8 @@ var (
 type cgroupContainerIDDetector struct{}
 
 const cgroupPath = "/proc/self/cgroup"
+
+var cgroupContainerIDRe = regexp.MustCompile(`^.*/(?:.*-)?([0-9a-f]+)(?:\.|\s*$)`)
 
 // Detect returns a *Resource that describes the id of the container.
 // If no container id found, an empty resource will be returned.
@@ -86,45 +88,9 @@ func getContainerIDFromReader(reader io.Reader) string {
 
 // getContainerIDFromLine returns the id of the container from one string line.
 func getContainerIDFromLine(line string) string {
-	line = strings.TrimSpace(line)
-
-	lastSlashIndexOfLine := strings.LastIndexByte(line, '/')
-	if lastSlashIndexOfLine == -1 {
-		return ""
+	matches := cgroupContainerIDRe.FindStringSubmatch(line)
+	if len(matches) > 1 {
+		return matches[1]
 	}
-
-	lastSection := line[lastSlashIndexOfLine+1:]
-	dashIndex := strings.IndexByte(lastSection, '-')
-	lastDotIndex := strings.LastIndexByte(lastSection, '.')
-
-	startIndex := 0
-	if dashIndex != -1 {
-		startIndex = dashIndex + 1
-	}
-
-	endIndex := len(lastSection)
-	if lastDotIndex != -1 {
-		endIndex = lastDotIndex
-	}
-
-	containerID := lastSection[startIndex:endIndex]
-	if !isHex(containerID) {
-		return ""
-	}
-	return containerID
-}
-
-// isHex returns true when input is a hex string.
-func isHex(h string) bool {
-	for _, r := range h {
-		switch {
-		case 'a' <= r && r <= 'f':
-			continue
-		case '0' <= r && r <= '9':
-			continue
-		default:
-			return false
-		}
-	}
-	return true
+	return ""
 }
