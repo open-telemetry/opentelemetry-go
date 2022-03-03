@@ -17,13 +17,7 @@ package trace
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
-
-	"github.com/stretchr/testify/require"
-
-	ottest "go.opentelemetry.io/otel/internal/internaltest"
-	"go.opentelemetry.io/otel/sdk/internal/env"
 
 	"github.com/stretchr/testify/assert"
 
@@ -99,59 +93,4 @@ func TestSchemaURL(t *testing.T) {
 	// Verify that the SchemaURL of the constructed Tracer is correctly populated.
 	tracerStruct := tracerIface.(*tracer)
 	assert.EqualValues(t, schemaURL, tracerStruct.instrumentationLibrary.SchemaURL)
-}
-
-func TestNewTraceProviderWithoutSpanLimitConfiguration(t *testing.T) {
-	envStore := ottest.NewEnvStore()
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
-	envStore.Record(env.SpanAttributesCountKey)
-	envStore.Record(env.SpanEventCountKey)
-	envStore.Record(env.SpanLinkCountKey)
-	require.NoError(t, os.Setenv(env.SpanEventCountKey, "111"))
-	require.NoError(t, os.Setenv(env.SpanAttributesCountKey, "222"))
-	require.NoError(t, os.Setenv(env.SpanLinkCountKey, "333"))
-	tp := NewTracerProvider()
-	assert.Equal(t, 111, tp.spanLimits.EventCountLimit)
-	assert.Equal(t, 222, tp.spanLimits.AttributeCountLimit)
-	assert.Equal(t, 333, tp.spanLimits.LinkCountLimit)
-}
-
-func TestNewTraceProviderWithSpanLimitConfigurationFromOptsAndEnvironmentVariable(t *testing.T) {
-	envStore := ottest.NewEnvStore()
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
-	envStore.Record(env.SpanAttributesCountKey)
-	envStore.Record(env.SpanEventCountKey)
-	envStore.Record(env.SpanLinkCountKey)
-	require.NoError(t, os.Setenv(env.SpanEventCountKey, "111"))
-	require.NoError(t, os.Setenv(env.SpanAttributesCountKey, "222"))
-	require.NoError(t, os.Setenv(env.SpanLinkCountKey, "333"))
-	tp := NewTracerProvider(WithSpanLimits(SpanLimits{
-		EventCountLimit:     1,
-		AttributeCountLimit: 2,
-		LinkCountLimit:      3,
-	}))
-	assert.Equal(t, 1, tp.spanLimits.EventCountLimit)
-	assert.Equal(t, 2, tp.spanLimits.AttributeCountLimit)
-	assert.Equal(t, 3, tp.spanLimits.LinkCountLimit)
-}
-
-func TestNewTraceProviderWithInvalidSpanLimitConfigurationFromEnvironmentVariable(t *testing.T) {
-	envStore := ottest.NewEnvStore()
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
-	envStore.Record(env.SpanAttributesCountKey)
-	envStore.Record(env.SpanEventCountKey)
-	envStore.Record(env.SpanLinkCountKey)
-	require.NoError(t, os.Setenv(env.SpanEventCountKey, "-111"))
-	require.NoError(t, os.Setenv(env.SpanAttributesCountKey, "-222"))
-	require.NoError(t, os.Setenv(env.SpanLinkCountKey, "-333"))
-	tp := NewTracerProvider()
-	assert.Equal(t, 128, tp.spanLimits.EventCountLimit)
-	assert.Equal(t, 128, tp.spanLimits.AttributeCountLimit)
-	assert.Equal(t, 128, tp.spanLimits.LinkCountLimit)
 }
