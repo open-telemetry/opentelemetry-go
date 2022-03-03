@@ -25,10 +25,106 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+func benchmarkSpanLimits(b *testing.B, limits sdktrace.SpanLimits) {
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanLimits(limits))
+	tracer := tp.Tracer(b.Name())
+	ctx := context.Background()
+
+	const count = 8
+
+	attrs := []attribute.KeyValue{
+		attribute.Bool("bool", true),
+		attribute.BoolSlice("boolSlice", []bool{true, false}),
+		attribute.Int("int", 42),
+		attribute.IntSlice("intSlice", []int{42, -1}),
+		attribute.Int64("int64", 42),
+		attribute.Int64Slice("int64Slice", []int64{42, -1}),
+		attribute.Float64("float64", 42),
+		attribute.Float64Slice("float64Slice", []float64{42, -1}),
+		attribute.String("string", "value"),
+		attribute.StringSlice("stringSlice", []string{"value", "value-1"}),
+	}
+
+	links := make([]trace.Link, count)
+	for i := range links {
+		links[i] = trace.Link{
+			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: [16]byte{0x01},
+				SpanID:  [8]byte{0x01},
+			}),
+			Attributes: attrs,
+		}
+	}
+
+	events := make([]struct {
+		name string
+		attr []attribute.KeyValue
+	}, count)
+	for i := range events {
+		events[i] = struct {
+			name string
+			attr []attribute.KeyValue
+		}{
+			name: fmt.Sprintf("event-%d", i),
+			attr: attrs,
+		}
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, span := tracer.Start(ctx, "span-name", trace.WithLinks(links...))
+		span.SetAttributes(attrs...)
+		for _, e := range events {
+			span.AddEvent(e.name, trace.WithAttributes(e.attr...))
+		}
+		span.End()
+	}
+}
+
+func BenchmarkSpanLimits(b *testing.B) {
+	b.Run("AttributeValueLengthLimit", func(b *testing.B) {
+		limits := sdktrace.NewSpanLimits()
+		limits.AttributeValueLengthLimit = 2
+		benchmarkSpanLimits(b, limits)
+	})
+
+	b.Run("AttributeCountLimit", func(b *testing.B) {
+		limits := sdktrace.NewSpanLimits()
+		limits.AttributeCountLimit = 1
+		benchmarkSpanLimits(b, limits)
+	})
+
+	b.Run("EventCountLimit", func(b *testing.B) {
+		limits := sdktrace.NewSpanLimits()
+		limits.EventCountLimit = 1
+		benchmarkSpanLimits(b, limits)
+	})
+
+	b.Run("LinkCountLimit", func(b *testing.B) {
+		limits := sdktrace.NewSpanLimits()
+		limits.LinkCountLimit = 1
+		benchmarkSpanLimits(b, limits)
+	})
+
+	b.Run("AttributePerEventCountLimit", func(b *testing.B) {
+		limits := sdktrace.NewSpanLimits()
+		limits.AttributePerEventCountLimit = 1
+		benchmarkSpanLimits(b, limits)
+	})
+
+	b.Run("AttributePerLinkCountLimit", func(b *testing.B) {
+		limits := sdktrace.NewSpanLimits()
+		limits.AttributePerLinkCountLimit = 1
+		benchmarkSpanLimits(b, limits)
+	})
+}
+
 func BenchmarkSpanSetAttributesOverCapacity(b *testing.B) {
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSpanLimits(sdktrace.SpanLimits{AttributeCountLimit: 1}),
-	)
+	limits := sdktrace.NewSpanLimits()
+	limits.AttributeCountLimit = 1
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanLimits(limits))
 	tracer := tp.Tracer("BenchmarkSpanSetAttributesOverCapacity")
 	ctx := context.Background()
 	attrs := make([]attribute.KeyValue, 128)
