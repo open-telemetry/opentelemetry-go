@@ -19,14 +19,14 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/metric/metrictest"
-	"go.opentelemetry.io/otel/metric/number"
-	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metrictest"
+	"go.opentelemetry.io/otel/sdk/metric/number"
+	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 

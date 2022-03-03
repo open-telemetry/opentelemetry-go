@@ -21,12 +21,13 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/internal/metric/registry"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
 	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/registry"
+	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -99,7 +100,7 @@ func (c *Controller) Meter(instrumentationName string, opts ...metric.MeterOptio
 				library:      library,
 			}))
 	}
-	return metric.WrapMeterImpl(m.(*registry.UniqueInstrumentMeterImpl))
+	return sdkapi.WrapMeterImpl(m.(*registry.UniqueInstrumentMeterImpl))
 }
 
 type accumulatorCheckpointer struct {
@@ -107,6 +108,8 @@ type accumulatorCheckpointer struct {
 	checkpointer export.Checkpointer
 	library      instrumentation.Library
 }
+
+var _ sdkapi.MeterImpl = &accumulatorCheckpointer{}
 
 // New constructs a Controller using the provided checkpointer factory
 // and options (including optional exporter) to configure a metric
