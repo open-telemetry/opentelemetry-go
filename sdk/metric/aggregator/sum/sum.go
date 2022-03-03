@@ -15,74 +15,61 @@
 package sum // import "go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 
 import (
-	"context"
-
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/number"
-	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 )
 
-// Aggregator aggregates counter events.
-type Aggregator struct {
-	// current holds current increments to this counter record
-	// current needs to be aligned for 64-bit atomic operations.
-	value number.Number
+type (
+	Config struct{}
+
+	Methods[N number.Any, Traits traits.Any[N], Storage State[N, Traits]] struct{}
+
+	State[N number.Any, Traits traits.Any[N]] struct {
+		value N
+	}
+)
+
+var (
+	_ aggregator.Methods[int64, State[int64, traits.Int64], Config] = Methods[int64, traits.Int64]{}
+	_ aggregator.Methods[float64, State[float64, traits.Float64], Config] = Methods[float64, traits.Float64]{}
+
+	_ aggregation.Sum = &State[int64, traits.Int64]{}
+	_ aggregation.Sum = &State[float64, traits.Float64]{}
+)
+
+func (s *State[N, Traits]) Sum() (number.Number, error) {
+	var traits Traits
+	return traits.ToNumber(s.value), nil
 }
 
-var _ aggregator.Aggregator = &Aggregator{}
-var _ aggregation.Sum = &Aggregator{}
-
-// New returns a new counter aggregator implemented by atomic
-// operations.  This aggregator implements the aggregation.Sum
-// export interface.
-func New(cnt int) []Aggregator {
-	return make([]Aggregator, cnt)
-}
-
-// Aggregation returns an interface for reading the state of this aggregator.
-func (c *Aggregator) Aggregation() aggregation.Aggregation {
-	return c
-}
-
-// Kind returns aggregation.SumKind.
-func (c *Aggregator) Kind() aggregation.Kind {
+func (s *State[N, Traits]) Kind() aggregation.Kind {
 	return aggregation.SumKind
 }
 
-// Sum returns the last-checkpointed sum.  This will never return an
-// error.
-func (c *Aggregator) Sum() (number.Number, error) {
-	return c.value, nil
+func (Methods[N, Traits, Storage]) Init(state *State[N, Traits], _ Config) {
+	// Note: storage is zero to start
 }
 
-// SynchronizedMove atomically saves the current value into oa and resets the
-// current sum to zero.
-func (c *Aggregator) SynchronizedMove(oa aggregator.Aggregator, _ *sdkapi.Descriptor) error {
-	if oa == nil {
-		c.value.SetRawAtomic(0)
-		return nil
+func (Methods[N, Traits, Storage]) SynchronizedMove(resetSrc, dest *State[N, Traits]) {
+	var traits Traits
+	if dest == nil {
+		traits.SetAtomic(&resetSrc.value, 0)
+		return
 	}
-	o, _ := oa.(*Aggregator)
-	if o == nil {
-		return aggregator.NewInconsistentAggregatorError(c, oa)
-	}
-	o.value = c.value.SwapNumberAtomic(number.Number(0))
-	return nil
+	dest.value = traits.SwapAtomic(&resetSrc.value, 0)
 }
 
-// Update atomically adds to the current value.
-func (c *Aggregator) Update(_ context.Context, num number.Number, desc *sdkapi.Descriptor) error {
-	c.value.AddNumberAtomic(desc.NumberKind(), num)
-	return nil
+func (Methods[N, Traits, Storage]) Update(state *State[N, Traits], value N) {
+	var traits Traits
+	traits.AddAtomic(&state.value, value)
 }
 
-// Merge combines two counters by adding their sums.
-func (c *Aggregator) Merge(oa aggregator.Aggregator, desc *sdkapi.Descriptor) error {
-	o, _ := oa.(*Aggregator)
-	if o == nil {
-		return aggregator.NewInconsistentAggregatorError(c, oa)
-	}
-	c.value.AddNumber(desc.NumberKind(), o.value)
-	return nil
+func (Methods[N, Traits, Storage]) Merge(to, from *State[N, Traits]) {
+	to.value += from.value
+}
+
+func (Methods[N, Traits, Storage]) Aggregation(state *State[N, Traits]) aggregation.Aggregation {
+	return state
 }

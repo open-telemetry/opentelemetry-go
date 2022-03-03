@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sdkapi // import "go.opentelemetry.io/otel/sdk/metric/sdkapi"
+package sdkapi
 
 import (
 	"go.opentelemetry.io/otel/metric/unit"

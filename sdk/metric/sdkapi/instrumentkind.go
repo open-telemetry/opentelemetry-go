@@ -14,7 +14,7 @@
 
 //go:generate stringer -type=InstrumentKind
 
-package sdkapi // import "go.opentelemetry.io/otel/sdk/metric/sdkapi"
+package sdkapi
 
 // InstrumentKind describes the kind of instrument.
 type InstrumentKind int8

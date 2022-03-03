@@ -15,14 +15,13 @@
 package histogram // import "go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 
 import (
-	"context"
 	"sort"
 	"sync"
 
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/number"
-	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 )
 
 // Note: This code uses a Mutex to govern access to the exclusive
@@ -31,36 +30,42 @@ import (
 // https://github.com/open-telemetry/opentelemetry-go/pull/669
 
 type (
-	// Aggregator observe events and counts them in pre-determined buckets.
-	// It also calculates the sum and count of all events.
-	Aggregator struct {
-		lock       sync.Mutex
-		boundaries []float64
-		kind       number.Kind
-		state      *state
+	Defaults interface {
+		Boundaries() []float64
 	}
 
-	// config describes how the histogram is aggregated.
-	config struct {
+	Int64Defaults   struct{}
+	Float64Defaults struct{}
+
+	State[N number.Any, Traits traits.Any[N]] struct {
+		boundaries   []float64
+
+		lock         sync.Mutex
+		bucketCounts []uint64
+		sum          N
+		count        uint64
+	}
+
+	Config struct {
 		// explicitBoundaries support arbitrary bucketing schemes.  This
 		// is the general case.
 		explicitBoundaries []float64
 	}
 
-	// Option configures a histogram config.
 	Option interface {
 		// apply sets one or more config fields.
-		apply(*config)
+		apply(*Config)
 	}
 
-	// state represents the state of a histogram, consisting of
-	// the sum and counts for all observed values and
-	// the less than equal bucket count for the pre-determined boundaries.
-	state struct {
-		bucketCounts []uint64
-		sum          number.Number
-		count        uint64
-	}
+	Methods[N number.Any, Traits traits.Any[N], Storage State[N, Traits]] struct{}
+)
+
+var (
+	_ aggregator.Methods[int64, State[int64, traits.Int64], Config] = Methods[int64, traits.Int64]{}
+	_ aggregator.Methods[float64, State[float64, traits.Float64], Config] = Methods[float64, traits.Float64]{}
+
+	_ aggregation.Sum = &State[int64, traits.Int64]{}
+	_ aggregation.Sum = &State[float64, traits.Float64]{}
 )
 
 // WithExplicitBoundaries sets the ExplicitBoundaries configuration option of a config.
@@ -72,7 +77,7 @@ type explicitBoundariesOption struct {
 	boundaries []float64
 }
 
-func (o explicitBoundariesOption) apply(config *config) {
+func (o explicitBoundariesOption) apply(config *Config) {
 	config.explicitBoundaries = o.boundaries
 }
 
@@ -96,33 +101,22 @@ var defaultInt64ExplicitBoundaries = func(bounds []float64) (asint []float64) {
 	return
 }(defaultFloat64ExplicitBoundaries)
 
-var _ aggregator.Aggregator = &Aggregator{}
-var _ aggregation.Sum = &Aggregator{}
-var _ aggregation.Count = &Aggregator{}
-var _ aggregation.Histogram = &Aggregator{}
+func (Int64Defaults) Boundaries() []float64 {
+	return defaultInt64ExplicitBoundaries
+}
 
-// New returns a new aggregator for computing Histograms.
-//
-// A Histogram observe events and counts them in pre-defined buckets.
-// And also provides the total sum and count of all observations.
-//
-// Note that this aggregator maintains each value using independent
-// atomic operations, which introduces the possibility that
-// checkpoints are inconsistent.
-func New(cnt int, desc *sdkapi.Descriptor, opts ...Option) []Aggregator {
-	var cfg config
+func (Float64Defaults) Boundaries() []float64 {
+	return defaultFloat64ExplicitBoundaries
+}
 
-	if desc.NumberKind() == number.Int64Kind {
-		cfg.explicitBoundaries = defaultInt64ExplicitBoundaries
-	} else {
-		cfg.explicitBoundaries = defaultFloat64ExplicitBoundaries
+func NewConfig(def Defaults, opts ...Option) Config {
+	cfg := Config{
+		explicitBoundaries: def.Boundaries(),
 	}
 
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
-
-	aggs := make([]Aggregator, cnt)
 
 	// Boundaries MUST be ordered otherwise the histogram could not
 	// be properly computed.
@@ -130,101 +124,81 @@ func New(cnt int, desc *sdkapi.Descriptor, opts ...Option) []Aggregator {
 
 	copy(sortedBoundaries, cfg.explicitBoundaries)
 	sort.Float64s(sortedBoundaries)
-
-	for i := range aggs {
-		aggs[i] = Aggregator{
-			kind:       desc.NumberKind(),
-			boundaries: sortedBoundaries,
-		}
-		aggs[i].state = aggs[i].newState()
-	}
-	return aggs
+	cfg.explicitBoundaries = sortedBoundaries
+	return cfg
 }
 
-// Aggregation returns an interface for reading the state of this aggregator.
-func (c *Aggregator) Aggregation() aggregation.Aggregation {
-	return c
+func (h *State[N, Traits]) Sum() (number.Number, error) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+	var traits Traits
+	return traits.ToNumber(h.sum), nil
 }
 
-// Kind returns aggregation.HistogramKind.
-func (c *Aggregator) Kind() aggregation.Kind {
-	return aggregation.HistogramKind
+func (h *State[N, Traits]) Count() (uint64, error) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+	return h.count, nil
 }
 
-// Sum returns the sum of all values in the checkpoint.
-func (c *Aggregator) Sum() (number.Number, error) {
-	return c.state.sum, nil
-}
-
-// Count returns the number of values in the checkpoint.
-func (c *Aggregator) Count() (uint64, error) {
-	return c.state.count, nil
-}
-
-// Histogram returns the count of events in pre-determined buckets.
-func (c *Aggregator) Histogram() (aggregation.Buckets, error) {
+func (h *State[N, Traits]) Histogram() (aggregation.Buckets, error) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
 	return aggregation.Buckets{
-		Boundaries: c.boundaries,
-		Counts:     c.state.bucketCounts,
+		Boundaries: h.boundaries,
+		Counts:     h.bucketCounts,
 	}, nil
 }
 
-// SynchronizedMove saves the current state into oa and resets the current state to
-// the empty set.  Since no locks are taken, there is a chance that
-// the independent Sum, Count and Bucket Count are not consistent with each
-// other.
-func (c *Aggregator) SynchronizedMove(oa aggregator.Aggregator, desc *sdkapi.Descriptor) error {
-	o, _ := oa.(*Aggregator)
+func (h *State[N, Traits]) Kind() aggregation.Kind {
+	return aggregation.LastValueKind
+}
 
-	if oa != nil && o == nil {
-		return aggregator.NewInconsistentAggregatorError(c, oa)
+
+func (h *State[N, Traits]) clearState() {
+	for i := range h.bucketCounts {
+		h.bucketCounts[i] = 0
 	}
+	h.sum = 0
+	h.count = 0
+}
 
-	if o != nil {
+func (Methods[N, Traits, Storage]) Init(state *State[N, Traits], cfg Config) {
+	state.boundaries = cfg.explicitBoundaries
+	state.bucketCounts = make([]uint64, len(state.boundaries)+1)
+}
+
+func (Methods[N, Traits, Storage]) SynchronizedMove(resetSrc, dest *State[N, Traits]) {
+	if dest != nil {
 		// Swap case: This is the ordinary case for a
 		// synchronous instrument, where the SDK allocates two
 		// Aggregators and lock contention is anticipated.
 		// Reset the target state before swapping it under the
 		// lock below.
-		o.clearState()
+		dest.clearState()
 	}
-
-	c.lock.Lock()
-	if o != nil {
-		c.state, o.state = o.state, c.state
+	
+	resetSrc.lock.Lock()
+	defer resetSrc.lock.Unlock()
+	if dest != nil {
+		dest.sum, resetSrc.sum = resetSrc.sum, dest.sum
+		dest.count, resetSrc.count = resetSrc.count, dest.count
+		dest.bucketCounts, resetSrc.bucketCounts = resetSrc.bucketCounts, dest.bucketCounts
 	} else {
 		// No swap case: This is the ordinary case for an
 		// asynchronous instrument, where the SDK allocates a
 		// single Aggregator and there is no anticipated lock
 		// contention.
-		c.clearState()
+		resetSrc.clearState()
 	}
-	c.lock.Unlock()
-
-	return nil
-}
-
-func (c *Aggregator) newState() *state {
-	return &state{
-		bucketCounts: make([]uint64, len(c.boundaries)+1),
-	}
-}
-
-func (c *Aggregator) clearState() {
-	for i := range c.state.bucketCounts {
-		c.state.bucketCounts[i] = 0
-	}
-	c.state.sum = 0
-	c.state.count = 0
 }
 
 // Update adds the recorded measurement to the current data set.
-func (c *Aggregator) Update(_ context.Context, number number.Number, desc *sdkapi.Descriptor) error {
-	kind := desc.NumberKind()
-	asFloat := number.CoerceToFloat64(kind)
+func (Methods[N, Traits, Storage]) Update(state *State[N, Traits], number N) {
+	asFloat := float64(number)
 
-	bucketID := len(c.boundaries)
-	for i, boundary := range c.boundaries {
+	bucketID := len(state.boundaries)
+	for i, boundary := range state.boundaries {
 		if asFloat < boundary {
 			bucketID = i
 			break
@@ -242,28 +216,24 @@ func (c *Aggregator) Update(_ context.Context, number number.Number, desc *sdkap
 	// 256 and 512 elements, which is a relatively large histogram, so we
 	// continue to prefer linear search.
 
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	state.lock.Lock()
+	defer state.lock.Unlock()
 
-	c.state.count++
-	c.state.sum.AddNumber(kind, number)
-	c.state.bucketCounts[bucketID]++
-
-	return nil
+	state.count++
+	state.sum += number
+	state.bucketCounts[bucketID]++
 }
 
 // Merge combines two histograms that have the same buckets into a single one.
-func (c *Aggregator) Merge(oa aggregator.Aggregator, desc *sdkapi.Descriptor) error {
-	o, _ := oa.(*Aggregator)
-	if o == nil {
-		return aggregator.NewInconsistentAggregatorError(c, oa)
-	}
+func (Methods[N, Traits, Storage]) Merge(to, from *State[N, Traits]) {
+	to.sum += from.sum
+	to.count += from.count
 
-	c.state.sum.AddNumber(desc.NumberKind(), o.state.sum)
-	c.state.count += o.state.count
-
-	for i := 0; i < len(c.state.bucketCounts); i++ {
-		c.state.bucketCounts[i] += o.state.bucketCounts[i]
+	for i := 0; i < len(to.bucketCounts); i++ {
+		to.bucketCounts[i] += from.bucketCounts[i]
 	}
-	return nil
+}
+
+func (Methods[N, Traits, Storage]) Aggregation(state *State[N, Traits]) aggregation.Aggregation {
+	return state
 }
