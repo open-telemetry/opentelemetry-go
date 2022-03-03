@@ -15,8 +15,8 @@
 package aggregation // import "go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 
 import (
-	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/number"
 )
 
 // Deprecated: use module "go.opentelemetry.io/otel/sdk/metric/export/aggregation"

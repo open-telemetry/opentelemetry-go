@@ -17,7 +17,7 @@
 package aggregation // import "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 
 import (
-	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 )
 
 // Temporality indicates the temporal aggregation exported by an exporter.

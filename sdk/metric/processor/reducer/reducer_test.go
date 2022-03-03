@@ -21,8 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
@@ -30,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/metric/processor/reducer"
+	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -54,21 +54,22 @@ func (testFilter) LabelFilterFor(_ *sdkapi.Descriptor) attribute.Filter {
 	}
 }
 
-func generateData(impl sdkapi.MeterImpl) {
+func generateData(t *testing.T, impl sdkapi.MeterImpl) {
 	ctx := context.Background()
-	meter := metric.WrapMeterImpl(impl)
+	meter := sdkapi.WrapMeterImpl(impl)
 
-	counter := metric.Must(meter).NewFloat64Counter("counter.sum")
-
-	_ = metric.Must(meter).NewInt64CounterObserver("observer.sum",
-		func(_ context.Context, result metric.Int64ObserverResult) {
-			result.Observe(10, kvs1...)
-			result.Observe(10, kvs2...)
-		},
-	)
-
+	counter, err := meter.SyncFloat64().Counter("counter.sum")
+	require.NoError(t, err)
 	counter.Add(ctx, 100, kvs1...)
 	counter.Add(ctx, 100, kvs2...)
+
+	counterObserver, err := meter.AsyncInt64().Counter("observer.sum")
+	require.NoError(t, err)
+	err = meter.RegisterCallback([]instrument.Asynchronous{counterObserver}, func(ctx context.Context) {
+		counterObserver.Observe(ctx, 10, kvs1...)
+		counterObserver.Observe(ctx, 10, kvs2...)
+	})
+	require.NoError(t, err)
 }
 
 func TestFilterProcessor(t *testing.T) {
@@ -79,7 +80,7 @@ func TestFilterProcessor(t *testing.T) {
 	accum := metricsdk.NewAccumulator(
 		reducer.New(testFilter{}, processorTest.NewCheckpointer(testProc)),
 	)
-	generateData(accum)
+	generateData(t, accum)
 
 	accum.Collect(context.Background())
 
@@ -97,7 +98,7 @@ func TestFilterBasicProcessor(t *testing.T) {
 	)
 	exporter := processorTest.New(basicProc, attribute.DefaultEncoder())
 
-	generateData(accum)
+	generateData(t, accum)
 
 	basicProc.StartCollection()
 	accum.Collect(context.Background())
