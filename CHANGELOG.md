@@ -31,6 +31,7 @@ This update is a breaking change of the unstable Metrics API. Code instrumented 
 - The metrics API has been significantly changed. (#2587)
 - Unify path cleaning functionally in the `otlpmetric` and `otlptrace` config. (#2639)
 - Change the debug message from the `sdk/trace.BatchSpanProcessor` to reflect the count is cumulative. (#2640)
+- Introduce new internal envconfig package for OTLP exporters (#2608)
 
 ### Fixed
 
