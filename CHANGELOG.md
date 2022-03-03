@@ -14,15 +14,26 @@ This update is a breaking change of the unstable Metrics API. Code instrumented 
 
 ### Added
 
+- Log the Exporters configuration in the TracerProviders message. (#2578)
 - Added support to configure the span limits with environment variables.
-  The following environment variables are used. (#2606)
+  The following environment variables are used. (#2606, #2637)
+  - `OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT`
   - `OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT`
   - `OTEL_SPAN_EVENT_COUNT_LIMIT`
+  - `OTEL_EVENT_ATTRIBUTE_COUNT_LIMIT`
   - `OTEL_SPAN_LINK_COUNT_LIMIT`
+  - `OTEL_LINK_ATTRIBUTE_COUNT_LIMIT`
   
   If the provided environment variables are invalid (negative), the default values would be used.
 - Rename the `gc` runtime name to `go` (#2560)
-- Log the Exporters configuration in the TracerProviders message. (#2578)
+- Add span attribute value length limit.
+  The new `AttributeValueLengthLimit` field is added to the `"go.opentelemetry.io/otel/sdk/trace".SpanLimits` type to configure this limit for a `TracerProvider`.
+  The default limit for this resource is "unlimited". (#2637)
+- Add the `WithRawSpanLimits` option to `go.opentelemetry.io/otel/sdk/trace`.
+  This option replaces the `WithSpanLimits` option.
+  Zero or negative values will not be changed to the default value like `WithSpanLimits` does.
+  Setting a limit to zero will effectively disable the related resource it limits and setting to a negative value will mean that resource is unlimited.
+  Consequentially, limits should be constructed using `NewSpanLimits` and updated accordingly. (#2637)
 
 ### Changed
 
@@ -37,6 +48,14 @@ This update is a breaking change of the unstable Metrics API. Code instrumented 
 
 - Remove the OTLP trace exporter limit of SpanEvents when exporting. (#2616)
 - Use port `4318` instead of `4317` for default for the `otlpmetrichttp` and `otlptracehttp` client. (#2614, #2625)
+- Unlimited span limits are now supported (negative values). (#2636, #2637)
+
+### Deprecated
+
+- Deprecated `"go.opentelemetry.io/otel/sdk/trace".WithSpanLimits`.
+  Use `WithRawSpanLimits` instead.
+  That option allows setting unlimited and zero limits, this option does not.
+  This option will be kept until the next major version incremented release. (#2637)
 
 ## [1.4.1] - 2022-02-16
 
