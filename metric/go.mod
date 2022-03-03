@@ -2,6 +2,8 @@ module go.opentelemetry.io/otel/metric
 
 go 1.16
 
+require go.opentelemetry.io/otel v1.4.1
+
 replace go.opentelemetry.io/otel => ../
 
 replace go.opentelemetry.io/otel/bridge/opencensus => ../bridge/opencensus
@@ -38,13 +40,6 @@ replace go.opentelemetry.io/otel/sdk/metric => ../sdk/metric
 
 replace go.opentelemetry.io/otel/trace => ../trace
 
-require (
-	github.com/google/go-cmp v0.5.7
-	github.com/stretchr/testify v1.7.0
-	go.opentelemetry.io/otel v1.4.1
-	go.opentelemetry.io/otel/internal/metric v0.27.0
-)
-
 replace go.opentelemetry.io/otel/example/passthrough => ../example/passthrough
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace => ../exporters/otlp/otlptrace
@@ -52,8 +47,6 @@ replace go.opentelemetry.io/otel/exporters/otlp/otlptrace => ../exporters/otlp/o
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc => ../exporters/otlp/otlptrace/otlptracegrpc
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp => ../exporters/otlp/otlptrace/otlptracehttp
-
-replace go.opentelemetry.io/otel/internal/metric => ../internal/metric
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric => ../exporters/otlp/otlpmetric
 
