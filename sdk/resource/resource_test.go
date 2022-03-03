@@ -658,9 +658,8 @@ func TestWithContainerID(t *testing.T) {
 	testCases := []struct {
 		name                string
 		containerIDProvider func() (string, error)
-
-		expectedResource map[string]string
-		expectedErr      bool
+		expectedResource    map[string]string
+		expectedErr         bool
 	}{
 		{
 			name: "get container id",

@@ -28,14 +28,13 @@ import (
 type containerIDProvider func() (string, error)
 
 var (
-	containerID containerIDProvider = getContainerIDFromCGroup
+	containerID         containerIDProvider = getContainerIDFromCGroup
+	cgroupContainerIDRe                     = regexp.MustCompile(`^.*/(?:.*-)?([0-9a-f]+)(?:\.|\s*$)`)
 )
 
 type cgroupContainerIDDetector struct{}
 
 const cgroupPath = "/proc/self/cgroup"
-
-var cgroupContainerIDRe = regexp.MustCompile(`^.*/(?:.*-)?([0-9a-f]+)(?:\.|\s*$)`)
 
 // Detect returns a *Resource that describes the id of the container.
 // If no container id found, an empty resource will be returned.
