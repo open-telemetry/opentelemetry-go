@@ -20,13 +20,13 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/metrictest"
-	"go.opentelemetry.io/otel/metric/number"
-	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metrictest"
+	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
+	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 )
 
 // OneRecordReader is a Reader that returns just one

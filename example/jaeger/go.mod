@@ -26,8 +26,6 @@ replace go.opentelemetry.io/otel/example/opencensus => ../opencensus
 
 replace go.opentelemetry.io/otel/example/otel-collector => ../otel-collector
 
-replace go.opentelemetry.io/otel/example/prom-collector => ../prom-collector
-
 replace go.opentelemetry.io/otel/example/prometheus => ../prometheus
 
 replace go.opentelemetry.io/otel/example/zipkin => ../zipkin

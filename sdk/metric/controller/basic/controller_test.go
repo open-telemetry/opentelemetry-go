@@ -25,8 +25,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
@@ -34,6 +33,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
+	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -127,7 +127,7 @@ func TestControllerUsesResource(t *testing.T) {
 			ctx := context.Background()
 			require.NoError(t, cont.Start(ctx))
 
-			ctr := metric.Must(cont.Meter("named")).NewFloat64Counter("calls.sum")
+			ctr, _ := cont.Meter("named").SyncFloat64().Counter("calls.sum")
 			ctr.Add(context.Background(), 1.)
 
 			// Collect once
@@ -152,16 +152,19 @@ func TestStartNoExporter(t *testing.T) {
 	)
 	mock := controllertest.NewMockClock()
 	cont.SetClock(mock)
+	meter := cont.Meter("go.opentelemetry.io/otel/sdk/metric/controller/basic_test#StartNoExporter")
 
 	calls := int64(0)
 
-	_ = metric.Must(cont.Meter("named")).NewInt64CounterObserver("calls.lastvalue",
-		func(ctx context.Context, result metric.Int64ObserverResult) {
-			calls++
-			checkTestContext(t, ctx)
-			result.Observe(calls, attribute.String("A", "B"))
-		},
-	)
+	counterObserver, err := meter.AsyncInt64().Counter("calls.lastvalue")
+	require.NoError(t, err)
+
+	err = meter.RegisterCallback([]instrument.Asynchronous{counterObserver}, func(ctx context.Context) {
+		calls++
+		checkTestContext(t, ctx)
+		counterObserver.Observe(ctx, calls, attribute.String("A", "B"))
+	})
+	require.NoError(t, err)
 
 	// Collect() has not been called.  The controller is unstarted.
 	expect := map[string]float64{}
@@ -220,18 +223,22 @@ func TestObserverCanceled(t *testing.T) {
 		controller.WithCollectTimeout(time.Millisecond),
 		controller.WithResource(resource.Empty()),
 	)
+	meter := cont.Meter("go.opentelemetry.io/otel/sdk/metric/controller/basic_test#ObserverCanceled")
 
 	calls := int64(0)
 
-	_ = metric.Must(cont.Meter("named")).NewInt64CounterObserver("done.lastvalue",
-		func(ctx context.Context, result metric.Int64ObserverResult) {
-			<-ctx.Done()
-			calls++
-			result.Observe(calls)
-		},
-	)
+	counterObserver, err := meter.AsyncInt64().Counter("done.lastvalue")
+	require.NoError(t, err)
+
+	err = meter.RegisterCallback([]instrument.Asynchronous{counterObserver}, func(ctx context.Context) {
+		<-ctx.Done()
+		calls++
+		counterObserver.Observe(ctx, calls)
+	})
+	require.NoError(t, err)
+
 	// This relies on the context timing out
-	err := cont.Collect(context.Background())
+	err = cont.Collect(context.Background())
 	require.Error(t, err)
 	require.True(t, errors.Is(err, context.DeadlineExceeded))
 
@@ -251,14 +258,18 @@ func TestObserverContext(t *testing.T) {
 		controller.WithCollectTimeout(0),
 		controller.WithResource(resource.Empty()),
 	)
+	meter := cont.Meter("go.opentelemetry.io/otel/sdk/metric/controller/basic_test#ObserverContext")
 
-	_ = metric.Must(cont.Meter("named")).NewInt64CounterObserver("done.lastvalue",
-		func(ctx context.Context, result metric.Int64ObserverResult) {
-			time.Sleep(10 * time.Millisecond)
-			checkTestContext(t, ctx)
-			result.Observe(1)
-		},
-	)
+	counterObserver, err := meter.AsyncInt64().Counter("done.lastvalue")
+	require.NoError(t, err)
+
+	err = meter.RegisterCallback([]instrument.Asynchronous{counterObserver}, func(ctx context.Context) {
+		time.Sleep(10 * time.Millisecond)
+		checkTestContext(t, ctx)
+		counterObserver.Observe(ctx, 1)
+	})
+	require.NoError(t, err)
+
 	ctx := testContext()
 
 	require.NoError(t, cont.Collect(ctx))
@@ -314,14 +325,17 @@ func TestExportTimeout(t *testing.T) {
 	)
 	mock := controllertest.NewMockClock()
 	cont.SetClock(mock)
+	meter := cont.Meter("go.opentelemetry.io/otel/sdk/metric/controller/basic_test#ExportTimeout")
 
 	calls := int64(0)
-	_ = metric.Must(cont.Meter("named")).NewInt64CounterObserver("one.lastvalue",
-		func(ctx context.Context, result metric.Int64ObserverResult) {
-			calls++
-			result.Observe(calls)
-		},
-	)
+	counterObserver, err := meter.AsyncInt64().Counter("one.lastvalue")
+	require.NoError(t, err)
+
+	err = meter.RegisterCallback([]instrument.Asynchronous{counterObserver}, func(ctx context.Context) {
+		calls++
+		counterObserver.Observe(ctx, calls)
+	})
+	require.NoError(t, err)
 
 	require.NoError(t, cont.Start(context.Background()))
 
@@ -332,7 +346,7 @@ func TestExportTimeout(t *testing.T) {
 	// Collect after 1s, timeout
 	mock.Add(time.Second)
 
-	err := testHandler.Flush()
+	err = testHandler.Flush()
 	require.Error(t, err)
 	require.True(t, errors.Is(err, context.DeadlineExceeded))
 
@@ -369,13 +383,17 @@ func TestCollectAfterStopThenStartAgain(t *testing.T) {
 	mock := controllertest.NewMockClock()
 	cont.SetClock(mock)
 
+	meter := cont.Meter("go.opentelemetry.io/otel/sdk/metric/controller/basic_test#CollectAfterStopThenStartAgain")
+
 	calls := 0
-	_ = metric.Must(cont.Meter("named")).NewInt64CounterObserver("one.lastvalue",
-		func(ctx context.Context, result metric.Int64ObserverResult) {
-			calls++
-			result.Observe(int64(calls))
-		},
-	)
+	counterObserver, err := meter.AsyncInt64().Counter("one.lastvalue")
+	require.NoError(t, err)
+
+	err = meter.RegisterCallback([]instrument.Asynchronous{counterObserver}, func(ctx context.Context) {
+		calls++
+		counterObserver.Observe(ctx, int64(calls))
+	})
+	require.NoError(t, err)
 
 	// No collections happen (because mock clock does not advance):
 	require.NoError(t, cont.Start(context.Background()))
@@ -403,7 +421,7 @@ func TestCollectAfterStopThenStartAgain(t *testing.T) {
 	// explicit collection should still fail.
 	require.NoError(t, cont.Start(context.Background()))
 	require.True(t, cont.IsRunning())
-	err := cont.Collect(context.Background())
+	err = cont.Collect(context.Background())
 	require.Error(t, err)
 	require.Equal(t, controller.ErrControllerStarted, err)
 
@@ -452,10 +470,10 @@ func TestRegistryFunction(t *testing.T) {
 	require.NotNil(t, m1)
 	require.Equal(t, m1, m2)
 
-	c1, err := m1.NewInt64Counter("counter.sum")
+	c1, err := m1.SyncInt64().Counter("counter.sum")
 	require.NoError(t, err)
 
-	c2, err := m1.NewInt64Counter("counter.sum")
+	c2, err := m1.SyncInt64().Counter("counter.sum")
 	require.NoError(t, err)
 
 	require.Equal(t, c1, c2)

@@ -17,8 +17,6 @@ package otlpconfig // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric
 import (
 	"crypto/tls"
 	"fmt"
-	"path"
-	"strings"
 	"time"
 
 	"google.golang.org/grpc"
@@ -27,6 +25,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/encoding/gzip"
 
+	"go.opentelemetry.io/otel/exporters/otlp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 )
 
@@ -90,17 +89,7 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 	for _, opt := range opts {
 		cfg = opt.ApplyHTTPOption(cfg)
 	}
-
-	tmp := strings.TrimSpace(cfg.Metrics.URLPath)
-	if tmp == "" {
-		tmp = DefaultMetricsPath
-	} else {
-		tmp = path.Clean(tmp)
-		if !path.IsAbs(tmp) {
-			tmp = fmt.Sprintf("/%s", tmp)
-		}
-	}
-	cfg.Metrics.URLPath = tmp
+	cfg.Metrics.URLPath = internal.CleanPath(cfg.Metrics.URLPath, DefaultMetricsPath)
 	return cfg
 }
 
