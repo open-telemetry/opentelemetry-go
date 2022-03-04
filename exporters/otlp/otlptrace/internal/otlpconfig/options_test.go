@@ -201,7 +201,7 @@ func TestConfigs(t *testing.T) {
 					//TODO: make sure gRPC's credentials actually works
 					assert.NotNil(t, c.Traces.GRPCCredentials)
 				} else {
-					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects())
+					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects()) //nolint
 				}
 			},
 		},
@@ -217,7 +217,7 @@ func TestConfigs(t *testing.T) {
 				if grpcOption {
 					assert.NotNil(t, c.Traces.GRPCCredentials)
 				} else {
-					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects())
+					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects()) //nolint
 				}
 			},
 		},
@@ -235,7 +235,7 @@ func TestConfigs(t *testing.T) {
 				if grpcOption {
 					assert.NotNil(t, c.Traces.GRPCCredentials)
 				} else {
-					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects())
+					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects()) //nolint
 				}
 			},
 		},
@@ -252,7 +252,7 @@ func TestConfigs(t *testing.T) {
 				if grpcOption {
 					assert.NotNil(t, c.Traces.GRPCCredentials)
 				} else {
-					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects())
+					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects()) //nolint
 				}
 			},
 		},

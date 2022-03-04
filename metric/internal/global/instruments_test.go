@@ -38,36 +38,36 @@ func Test_afCounter_setDelegate(t *testing.T) {
 	delegate.setDelegate(nonrecording.NewNoopMeter())
 }
 
-type test_counting_float_instrument struct {
+type testCountingFloatInstrument struct {
 	count int
 
 	instrument.Asynchronous
 	instrument.Synchronous
 }
 
-func (i *test_counting_float_instrument) Observe(context.Context, float64, ...attribute.KeyValue) {
+func (i *testCountingFloatInstrument) Observe(context.Context, float64, ...attribute.KeyValue) {
 	i.count++
 }
-func (i *test_counting_float_instrument) Add(context.Context, float64, ...attribute.KeyValue) {
+func (i *testCountingFloatInstrument) Add(context.Context, float64, ...attribute.KeyValue) {
 	i.count++
 }
-func (i *test_counting_float_instrument) Record(context.Context, float64, ...attribute.KeyValue) {
+func (i *testCountingFloatInstrument) Record(context.Context, float64, ...attribute.KeyValue) {
 	i.count++
 }
 
-type test_counting_int_instrument struct {
+type testCountingIntInstrument struct {
 	count int
 
 	instrument.Asynchronous
 	instrument.Synchronous
 }
 
-func (i *test_counting_int_instrument) Observe(context.Context, int64, ...attribute.KeyValue) {
+func (i *testCountingIntInstrument) Observe(context.Context, int64, ...attribute.KeyValue) {
 	i.count++
 }
-func (i *test_counting_int_instrument) Add(context.Context, int64, ...attribute.KeyValue) {
+func (i *testCountingIntInstrument) Add(context.Context, int64, ...attribute.KeyValue) {
 	i.count++
 }
-func (i *test_counting_int_instrument) Record(context.Context, int64, ...attribute.KeyValue) {
+func (i *testCountingIntInstrument) Record(context.Context, int64, ...attribute.KeyValue) {
 	i.count++
 }

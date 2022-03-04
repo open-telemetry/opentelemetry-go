@@ -69,12 +69,6 @@ func (p *meterProvider) setDelegate(provider metric.MeterProvider) {
 	p.meters = nil
 }
 
-func (p *meterProvider) isDelegated() bool {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-	return p.delegate != nil
-}
-
 // Meter implements MeterProvider.
 func (p *meterProvider) Meter(name string, opts ...metric.MeterOption) metric.Meter {
 	p.mtx.Lock()
