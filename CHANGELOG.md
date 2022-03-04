@@ -26,6 +26,7 @@ This update is a breaking change of the unstable Metrics API. Code instrumented 
   
   If the provided environment variables are invalid (negative), the default values would be used.
 - Rename the `gc` runtime name to `go` (#2560)
+- Add container id support to Resource. (#2418)
 - Add span attribute value length limit.
   The new `AttributeValueLengthLimit` field is added to the `"go.opentelemetry.io/otel/sdk/trace".SpanLimits` type to configure this limit for a `TracerProvider`.
   The default limit for this resource is "unlimited". (#2637)
