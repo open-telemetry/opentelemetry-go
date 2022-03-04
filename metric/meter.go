@@ -17,13 +17,11 @@ package metric // import "go.opentelemetry.io/otel/metric"
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
 	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
-	"go.opentelemetry.io/otel/metric/internal/global"
 )
 
 // MeterProvider provides access to named Meter instances, for instrumenting
@@ -59,15 +57,4 @@ type Meter interface {
 	SyncInt64() syncint64.InstrumentProvider
 	// SyncFloat64 is the namespace for the Synchronous Float instruments
 	SyncFloat64() syncfloat64.InstrumentProvider
-}
-
-// GetGlobalMeterProvider returns the registered global trace provider.
-// If none is registered then a No-op MeterProvider is returned.
-func GetGlobalMeterProvider() MeterProvider {
-	return global.MeterProvider()
-}
-
-// SetGlobalMeterProvider registers `mp` as the global meter provider.
-func SetGlobalMeterProvider(mp MeterProvider) {
-	global.SetMeterProvider(mp)
 }
