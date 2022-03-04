@@ -30,3 +30,4 @@ jobs:
           external-data-json-path: ./benchmarks/data.json
           auto-push: false
           fail-on-alert: true
+          alert-threshold: "400%"
