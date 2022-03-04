@@ -102,13 +102,14 @@ func restoreAttributesProviders() {
 	resource.SetDefaultRuntimeProviders()
 	resource.SetDefaultUserProviders()
 	resource.SetDefaultOSDescriptionProvider()
+	resource.SetDefaultContainerProviders()
 }
 
 func TestWithProcessFuncsErrors(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
 
-	t.Run("WithPID", testWithProcessExecutablePathError)
-	t.Run("WithExecutableName", testWithProcessOwnerError)
+	t.Run("WithExecutablePath", testWithProcessExecutablePathError)
+	t.Run("WithOwner", testWithProcessOwnerError)
 
 	restoreAttributesProviders()
 }
