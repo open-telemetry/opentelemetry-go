@@ -12,7 +12,7 @@ jobs:
       md: ${{ steps.changes.outputs.md }}
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Get changed files
@@ -27,7 +27,7 @@ jobs:
     if: ${{needs.changedfiles.outputs.md}}
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Run linter
       uses: docker://avtodev/markdown-lint:v1
       with:
@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - uses: gaurav-nelson/github-action-markdown-link-check@v1
