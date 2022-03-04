@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.4.0
-      - uses: actions/setup-go@v2.2.0
+      - uses: actions/setup-go@v3
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
       - name: Run benchmarks
