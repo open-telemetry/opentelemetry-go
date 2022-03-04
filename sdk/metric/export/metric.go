@@ -75,7 +75,7 @@ type Reader interface {
 // steps.
 type Metadata struct {
 	descriptor *sdkapi.Descriptor
-	attributes attribute.Attributes
+	attributes []attribute.KeyValue
 }
 
 // Record contains the exported data for a single metric instrument
@@ -95,14 +95,14 @@ func (m Metadata) Descriptor() *sdkapi.Descriptor {
 
 // Attributes describes the attribtes associated with the instrument
 // and the aggregated data.
-func (m Metadata) Attributes() attribute.Attributes {
+func (m Metadata) Attributes() []attribute.KeyValue {
 	return m.attributes
 }
 
 // NewRecord allows Processor implementations to construct export
 // records.  The Descriptor, Labels, and Aggregator represent
 // aggregate metric events received over a single collection period.
-func NewRecord(descriptor *sdkapi.Descriptor, attrs attribute.Attributes, aggregation aggregation.Aggregation, start, end time.Time) Record {
+func NewRecord(descriptor *sdkapi.Descriptor, attrs []attribute.KeyValue, aggregation aggregation.Aggregation, start, end time.Time) Record {
 	return Record{
 		Metadata: Metadata{
 			descriptor: descriptor,

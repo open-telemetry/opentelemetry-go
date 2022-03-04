@@ -43,7 +43,7 @@ type (
 	}
 
 	callback struct {
-		function    func(context.Context) error
+		function    func(context.Context) 
 		instruments []apiInstrument.Asynchronous
 	}
 
@@ -82,7 +82,7 @@ func NewState() *State {
 	}
 }
 
-func (m *Accumulator) RegisterCallback(instruments []apiInstrument.Asynchronous, function func(context.Context) error) error {
+func (m *Accumulator) RegisterCallback(instruments []apiInstrument.Asynchronous, function func(context.Context) ) error {
 	cb := &callback{
 		function:    function,
 		instruments: instruments,
@@ -129,9 +129,7 @@ func (a *Accumulator) Collect(state *State) error {
 	// TODO: Add a timeout to the context.
 
 	for _, cb := range a.getCallbacks() {
-		if err := cb.function(ctx); err != nil {
-			// TODO: handle errors.
-		}
+		cb.function(ctx)
 	}
 
 	for inst, states := range state.store {

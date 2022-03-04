@@ -58,14 +58,10 @@ type (
 		cfactory   *viewstate.Factory
 	}
 
-	group struct {
-		refMapped   refcountMapped
-		fingerprint uint64
-		instrument  *instrument
-		first       record
-	}
-
 	record struct {
+		refMapped   refcountMapped
+		instrument  *instrument
+
 		// updateCount is incremented on every Update.
 		updateCount int64
 
@@ -73,7 +69,7 @@ type (
 		// supports checking for no updates during a round.
 		collectedCount int64
 
-		group      *group
+		distinct   attribute.Set
 		attributes []attribute.KeyValue
 		collector  viewstate.Collector
 		next       unsafe.Pointer
@@ -210,15 +206,15 @@ func (a *Accumulator) collectInstruments() {
 	a.instrumentsLock.Unlock()
 
 	for _, inst := range instruments {
-		inst.current.Range(func(_ interface{}, value interface{}) bool {
-			grp := value.(*group)
-			any := a.collectGroup(grp, false)
+		inst.current.Range(func(key interface{}, value interface{}) bool {
+			rec := value.(*record)
+			any := a.collectRecord(rec, false)
 
 			if any != 0 {
 				return true
 			}
 			// Having no updates since last collection, try to unmap:
-			if unmapped := grp.refMapped.tryUnmap(); !unmapped {
+			if unmapped := rec.refMapped.tryUnmap(); !unmapped {
 				// The record is referenced by a binding, continue.
 				return true
 			}
@@ -226,33 +222,26 @@ func (a *Accumulator) collectInstruments() {
 			// If any other goroutines are now trying to re-insert this
 			// entry in the map, they are busy calling Gosched() awaiting
 			// this deletion:
-			inst.current.Delete(grp.fingerprint)
+			inst.current.Delete(key)
 
 			// Last we'll see of this.
-			_ = a.collectGroup(grp, true)
+			_ = a.collectRecord(rec, true)
 			return true
 		})
 	}
 }
 
-func (a *Accumulator) collectGroup(grp *group, final bool) int {
-	var collected int
-	for rec := &grp.first; rec != nil; rec = (*record)(atomic.LoadPointer(&rec.next)) {
+func (a *Accumulator) collectRecord(rec *record, final bool) int {
+	mods := atomic.LoadInt64(&rec.updateCount)
+	coll := rec.collectedCount
 
-		mods := atomic.LoadInt64(&rec.updateCount)
-		coll := rec.collectedCount
-
-		if mods != coll {
-			// Updates happened in this interval,
-			// collect and continue.
-			collected += a.collectRecord(rec, final)
-			rec.collectedCount = mods
-		}
+	if mods == coll {
+		return 0
 	}
-	return collected
-}
+	// Updates happened in this interval,
+	// collect and continue.
+	rec.collectedCount = mods
 
-func (a *Accumulator) collectRecord(r *record, final bool) int {
 	// Note: We could use the `final` bit here to signal to the
 	// receiver of this aggregation that it is the last in a
 	// sequence and it should feel encouraged to forget its state
@@ -260,20 +249,20 @@ func (a *Accumulator) collectRecord(r *record, final bool) int {
 	// this stream (w/ a new *record).
 	_ = final
 
-	if r.collector == nil {
+	if rec.collector == nil {
 		return 0
 	}
-	r.collector.Collect()
+	rec.collector.Collect()
 	return 1
 }
 
 func capture[N number.Any, Traits traits.Any[N]](_ context.Context, inst *instrument, num N, attrs []attribute.KeyValue) {
 	// TODO: Here, this is the place to use context, extract baggage.
 
-	rec, updater := acquireRecord[N](inst, attribute.Fingerprint(attrs...))
-	defer rec.group.refMapped.unref()
+	rec, updater := acquireRecord[N](inst, attrs)
+	defer rec.refMapped.unref()
 
-	if err := aggregator.RangeTest[N, Traits](num, &rec.group.instrument.descriptor); err != nil {
+	if err := aggregator.RangeTest[N, Traits](num, &rec.instrument.descriptor); err != nil {
 		otel.Handle(err)
 		return
 	}
@@ -289,32 +278,33 @@ func capture[N number.Any, Traits traits.Any[N]](_ context.Context, inst *instru
 // support re-use of the orderedLabels computed by a previous
 // measurement in the same batch.   This performs two allocations
 // in the common case.
-func acquireRecord[N number.Any](inst *instrument, attrs attribute.Attributes) (*record, viewstate.Updater[N]) {
-	var mk interface{} = attrs.Fingerprint
-	if lookup, ok := inst.current.Load(mk); ok {
+func acquireRecord[N number.Any](inst *instrument, attrs []attribute.KeyValue) (*record, viewstate.Updater[N]) {
+	aset := attribute.NewSet(attrs...)
+	if lookup, ok := inst.current.Load(aset); ok {
 		// Existing record case.
-		grp := lookup.(*group)
+		rec := lookup.(*record)
 
-		if grp.refMapped.ref() {
+		if rec.refMapped.ref() {
 			// At this moment it is guaranteed that the
-			// group is in the map and will not be removed.
-			return findOrCreate[N](inst, grp, attrs)
+			// record is in the map and will not be removed.
+			return rec, rec.collector.(viewstate.Updater[N])
 		}
 		// This group is no longer mapped, try
 		// to add a new group below.
 	}
 
-	newGrp := &group{
+	newRec := &record{
 		refMapped:   refcountMapped{value: 2},
 		instrument:  inst,
-		fingerprint: attrs.Fingerprint,
+		distinct: aset,
+		attributes: attrs,
 	}
 
 	for {
-		if found, loaded := inst.current.LoadOrStore(mk, newGrp); loaded {
-			oldGrp := found.(*group)
-			if oldGrp.refMapped.ref() {
-				return findOrCreate[N](inst, oldGrp, attrs)
+		if found, loaded := inst.current.LoadOrStore(aset, newRec); loaded {
+			oldRec := found.(*record)
+			if oldRec.refMapped.ref() {
+				return oldRec, oldRec.collector.(viewstate.Updater[N])
 			}
 			runtime.Gosched()
 			continue
@@ -322,46 +312,11 @@ func acquireRecord[N number.Any](inst *instrument, attrs attribute.Attributes) (
 		break
 	}
 
-	rec := &newGrp.first
-	return rec, initRecord[N](inst, newGrp, rec, attrs)
+
+	return newRec, initRecord[N](inst, newRec, attrs)
 }
 
-func initRecord[N number.Any](inst *instrument, grp *group, rec *record, attrs attribute.Attributes) viewstate.Updater[N] {
-	rec.group = grp
-	rec.attributes = attrs.KeyValues
-	rec.collector = inst.cfactory.New(attrs.KeyValues, &inst.descriptor)
-
+func initRecord[N number.Any](inst *instrument, rec *record, attrs []attribute.KeyValue) viewstate.Updater[N] {
+	rec.collector = inst.cfactory.New(attrs, &inst.descriptor)
 	return rec.collector.(viewstate.Updater[N])
-}
-
-func findOrCreate[N number.Any](inst *instrument, grp *group, attrs attribute.Attributes) (*record, viewstate.Updater[N]) {
-	var newRec *record
-
-	for {
-		var last *record
-
-		for rec := &grp.first; rec != nil; rec = (*record)(atomic.LoadPointer(&rec.next)) {
-			// TODO: Here an even-faster path option:
-			// disregard the equality test and return the
-			// first match.
-			if attrs.Equals(attribute.Attributes{
-				Fingerprint: grp.fingerprint,
-				KeyValues:   rec.attributes,
-			}) {
-				return rec, rec.collector.(viewstate.Updater[N])
-			}
-			last = rec
-		}
-
-		if newRec == nil {
-			newRec = &record{}
-			_ = initRecord[N](inst, grp, newRec, attrs)
-		}
-
-		if !atomic.CompareAndSwapPointer(&last.next, nil, unsafe.Pointer(newRec)) {
-			continue
-		}
-
-		return newRec, newRec.collector.(viewstate.Updater[N])
-	}
 }

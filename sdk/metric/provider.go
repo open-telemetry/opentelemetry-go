@@ -1,6 +1,7 @@
 package metric
 
 import (
+	"context"
 	"sync"
 
 	"go.opentelemetry.io/otel/metric"
@@ -98,22 +99,22 @@ func (p *provider) Meter(name string, opts ...metric.MeterOption) metric.Meter {
 	return m
 }
 
-func (m *meter) SyncInt64() syncint64.Instruments {
+func (m *meter) SyncInt64() syncint64.InstrumentProvider {
 	return m.syncAccum.Int64Instruments(m.registry, m.views)
 }
 
-func (m *meter) SyncFloat64() syncfloat64.Instruments {
+func (m *meter) SyncFloat64() syncfloat64.InstrumentProvider {
 	return m.syncAccum.Float64Instruments(m.registry, m.views)
 }
 
-func (m *meter) AsyncInt64() asyncint64.Instruments {
+func (m *meter) AsyncInt64() asyncint64.InstrumentProvider {
 	return m.asyncAccum.Int64Instruments(m.registry, m.views)
 }
 
-func (m *meter) AsyncFloat64() asyncfloat64.Instruments {
+func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
 	return m.asyncAccum.Float64Instruments(m.registry, m.views)
 }
 
-func (m *meter) NewCallback(insts []instrument.Asynchronous, function metric.CallbackFunc) (metric.Callback, error) {
-	return m.asyncAccum.NewCallback(insts, function)
+func (m *meter) RegisterCallback(insts []instrument.Asynchronous, function func(context.Context)) error {
+	return m.asyncAccum.RegisterCallback(insts, function)
 }
