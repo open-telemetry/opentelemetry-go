@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	globalMeter = defaultMeterValue()
+	globalMeterProvider = defaultMeterProvider()
 
 	delegateMeterOnce sync.Once
 )
@@ -33,27 +33,27 @@ type meterProviderHolder struct {
 
 // MeterProvider is the internal implementation for global.MeterProvider.
 func MeterProvider() metric.MeterProvider {
-	return globalMeter.Load().(meterProviderHolder).mp
+	return globalMeterProvider.Load().(meterProviderHolder).mp
 }
 
 // SetMeterProvider is the internal implementation for global.SetMeterProvider.
 func SetMeterProvider(mp metric.MeterProvider) {
+	// Guard against SetMeterProvider(MeterProvider())
+	current := MeterProvider()
+	if current == mp {
+		return
+	}
+
 	delegateMeterOnce.Do(func() {
-		current := MeterProvider()
-		if current == mp {
-			// Setting the provider to the prior default is nonsense, panic.
-			// Panic is acceptable because we are likely still early in the
-			// process lifetime.
-			panic("invalid MeterProvider, the global instance cannot be reinstalled")
-		} else if def, ok := current.(*meterProvider); ok {
+		if def, ok := current.(*meterProvider); ok {
 			def.setDelegate(mp)
 		}
 
 	})
-	globalMeter.Store(meterProviderHolder{mp: mp})
+	globalMeterProvider.Store(meterProviderHolder{mp: mp})
 }
 
-func defaultMeterValue() *atomic.Value {
+func defaultMeterProvider() *atomic.Value {
 	v := &atomic.Value{}
 	v.Store(meterProviderHolder{mp: &meterProvider{}})
 	return v

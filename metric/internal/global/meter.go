@@ -69,6 +69,12 @@ func (p *meterProvider) setDelegate(provider metric.MeterProvider) {
 	p.meters = nil
 }
 
+func (p *meterProvider) isDelegated() bool {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+	return p.delegate != nil
+}
+
 // Meter implements MeterProvider.
 func (p *meterProvider) Meter(name string, opts ...metric.MeterOption) metric.Meter {
 	p.mtx.Lock()
@@ -128,8 +134,15 @@ func (m *meter) setDelegate(provider metric.MeterProvider) {
 	meter := provider.Meter(m.name, m.opts...)
 	m.delegate.Store(meter)
 
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+
 	for _, inst := range m.instruments {
 		inst.setDelegate(meter)
+	}
+
+	for _, callback := range m.callbacks {
+		callback.setDelegate(meter)
 	}
 
 	m.instruments = nil

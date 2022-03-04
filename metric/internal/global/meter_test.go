@@ -16,6 +16,8 @@ package global // import "go.opentelemetry.io/otel/metric/internal/global"
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -23,53 +25,55 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
+	"go.opentelemetry.io/otel/metric/nonrecording"
 )
 
-func Test_MeterProvider_delegates_calls(t *testing.T) {
+func Test_MeterProvider_race(t *testing.T) {
+	mp := &meterProvider{}
 
-	// The global MeterProvider should directly call the underlying MeterProvider
-	// if it is set prior to Meter() being called.
+	go func() {
+		i := 0
+		for {
+			mp.Meter(fmt.Sprintf("a%d", i))
+			i++
+		}
+	}()
 
-	// globalMeterProvider := otel.GetMeterProvider
-	globalMeterProvider := &meterProvider{}
+	mp.setDelegate(nonrecording.NewNoopMeterProvider())
+}
 
-	mp := &test_MeterProvider{}
+func Test_meter_race(t *testing.T) {
+	mtr := &meter{}
 
-	// otel.SetMeterProvider(mp)
-	globalMeterProvider.setDelegate(mp)
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		i := 0
+		once := false
+		for {
+			name := fmt.Sprintf("a%d", i)
+			_, _ = mtr.AsyncFloat64().Counter(name)
+			_, _ = mtr.AsyncFloat64().UpDownCounter(name)
+			_, _ = mtr.AsyncFloat64().Gauge(name)
+			_, _ = mtr.AsyncInt64().Counter(name)
+			_, _ = mtr.AsyncInt64().UpDownCounter(name)
+			_, _ = mtr.AsyncInt64().Gauge(name)
+			_, _ = mtr.SyncFloat64().Counter(name)
+			_, _ = mtr.SyncFloat64().UpDownCounter(name)
+			_, _ = mtr.SyncFloat64().Histogram(name)
+			_, _ = mtr.SyncInt64().Counter(name)
+			_, _ = mtr.SyncInt64().UpDownCounter(name)
+			_, _ = mtr.SyncInt64().Histogram(name)
+			mtr.RegisterCallback(nil, func(ctx context.Context) {})
+			if !once {
+				wg.Done()
+				once = true
+			}
+		}
+	}()
 
-	require.Equal(t, 0, mp.count)
-
-	meter := globalMeterProvider.Meter("go.opentelemetry.io/otel/metric/internal/global/meter_test")
-
-	ctr, actr := test_setup_all_instrument_types(t, meter)
-
-	ctr.Add(context.Background(), 5)
-
-	test_collect(t, meter)
-
-	// Calls to Meter() after setDelegate() should be executed by the delegate
-	require.IsType(t, &test_Meter{}, meter)
-	if t_meter, ok := meter.(*test_Meter); ok {
-		require.Equal(t, 3, t_meter.afCount)
-		require.Equal(t, 3, t_meter.aiCount)
-		require.Equal(t, 3, t_meter.sfCount)
-		require.Equal(t, 3, t_meter.siCount)
-		require.Equal(t, 1, len(t_meter.callbacks))
-	}
-
-	// Because the Meter was provided by test_meterProvider it should also return our test instrument
-	require.IsType(t, &test_counting_float_instrument{}, ctr, "the meter did not delegate calls to the meter")
-	if test_ctr, ok := ctr.(*test_counting_float_instrument); ok {
-		require.Equal(t, 1, test_ctr.count)
-	}
-
-	require.IsType(t, &test_counting_float_instrument{}, actr, "the meter did not delegate calls to the meter")
-	if test_ctr, ok := actr.(*test_counting_float_instrument); ok {
-		require.Equal(t, 1, test_ctr.count)
-	}
-
-	require.Equal(t, 1, mp.count)
+	wg.Wait()
+	mtr.setDelegate(nonrecording.NewNoopMeterProvider())
 }
 
 func test_setup_all_instrument_types(t *testing.T, m metric.Meter) (syncfloat64.Counter, asyncfloat64.Counter) {
@@ -125,6 +129,53 @@ func test_collect(t *testing.T, m metric.Meter) {
 	t_meter.collect()
 }
 
+func Test_MeterProvider_delegates_calls(t *testing.T) {
+
+	// The global MeterProvider should directly call the underlying MeterProvider
+	// if it is set prior to Meter() being called.
+
+	// globalMeterProvider := otel.GetMeterProvider
+	globalMeterProvider := &meterProvider{}
+
+	mp := &test_MeterProvider{}
+
+	// otel.SetMeterProvider(mp)
+	globalMeterProvider.setDelegate(mp)
+
+	require.Equal(t, 0, mp.count)
+
+	meter := globalMeterProvider.Meter("go.opentelemetry.io/otel/metric/internal/global/meter_test")
+
+	ctr, actr := test_setup_all_instrument_types(t, meter)
+
+	ctr.Add(context.Background(), 5)
+
+	test_collect(t, meter) // This is a hacky way to emulate a read from an exporter
+
+	// Calls to Meter() after setDelegate() should be executed by the delegate
+	require.IsType(t, &test_Meter{}, meter)
+	if t_meter, ok := meter.(*test_Meter); ok {
+		require.Equal(t, 3, t_meter.afCount)
+		require.Equal(t, 3, t_meter.aiCount)
+		require.Equal(t, 3, t_meter.sfCount)
+		require.Equal(t, 3, t_meter.siCount)
+		require.Equal(t, 1, len(t_meter.callbacks))
+	}
+
+	// Because the Meter was provided by test_meterProvider it should also return our test instrument
+	require.IsType(t, &test_counting_float_instrument{}, ctr, "the meter did not delegate calls to the meter")
+	if test_ctr, ok := ctr.(*test_counting_float_instrument); ok {
+		require.Equal(t, 1, test_ctr.count)
+	}
+
+	require.IsType(t, &test_counting_float_instrument{}, actr, "the meter did not delegate calls to the meter")
+	if test_ctr, ok := actr.(*test_counting_float_instrument); ok {
+		require.Equal(t, 1, test_ctr.count)
+	}
+
+	require.Equal(t, 1, mp.count)
+}
+
 func Test_Meter_delegates_calls(t *testing.T) {
 
 	// The global MeterProvider should directly provide a Meter instance that
@@ -148,7 +199,7 @@ func Test_Meter_delegates_calls(t *testing.T) {
 
 	ctr.Add(context.Background(), 5)
 
-	test_collect(t, m)
+	test_collect(t, m) // This is a hacky way to emulate a read from an exporter
 
 	// Calls to Meter methods after setDelegate() should be executed by the delegate
 	require.IsType(t, &meter{}, m)
@@ -195,21 +246,25 @@ func Test_Meter_defers_delegations(t *testing.T) {
 	// otel.SetMeterProvider(mp)
 	globalMeterProvider.setDelegate(mp)
 
+	test_collect(t, m) // This is a hacky way to emulate a read from an exporter
+
 	// Calls to Meter() before setDelegate() should be the delegated type
 	require.IsType(t, &meter{}, m)
 
 	if d_meter, ok := m.(*meter); ok {
 		m := d_meter.delegate.Load().(*test_Meter)
 		require.NotNil(t, m)
-		require.Equal(t, 1, m.afCount)
-		require.Equal(t, 1, m.aiCount)
-		require.Equal(t, 1, m.sfCount)
-		require.Equal(t, 1, m.siCount)
+		require.Equal(t, 3, m.afCount)
+		require.Equal(t, 3, m.aiCount)
+		require.Equal(t, 3, m.sfCount)
+		require.Equal(t, 3, m.siCount)
 	}
 
 	// Because the Meter was a delegate it should return a delegated instrument
 
 	require.IsType(t, &sfCounter{}, ctr)
+
+	require.IsType(t, &afCounter{}, actr)
 
 	require.Equal(t, 1, mp.count)
 }
