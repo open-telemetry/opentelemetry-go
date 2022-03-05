@@ -97,7 +97,7 @@ var _ trace.TracerProvider = &TracerProvider{}
 // returned TracerProvider appropriately.
 func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	o := tracerProviderConfig{}
-	applyTracerProviderEnvConfigs(&o)
+	o = applyTracerProviderEnvConfigs(o)
 
 	for _, opt := range opts {
 		o = opt.apply(o)
@@ -362,10 +362,12 @@ func WithSpanLimits(sl SpanLimits) TracerProviderOption {
 	})
 }
 
-func applyTracerProviderEnvConfigs(cfg *tracerProviderConfig) {
+func applyTracerProviderEnvConfigs(cfg tracerProviderConfig) tracerProviderConfig {
 	for _, opt := range tracerProviderOptionsFromEnv() {
-		*cfg = opt.apply(*cfg)
+		cfg = opt.apply(cfg)
 	}
+
+	return cfg
 }
 
 func tracerProviderOptionsFromEnv() []TracerProviderOption {
