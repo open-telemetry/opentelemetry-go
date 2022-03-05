@@ -35,6 +35,7 @@ This update is a breaking change of the unstable Metrics API. Code instrumented 
   Zero or negative values will not be changed to the default value like `WithSpanLimits` does.
   Setting a limit to zero will effectively disable the related resource it limits and setting to a negative value will mean that resource is unlimited.
   Consequentially, limits should be constructed using `NewSpanLimits` and updated accordingly. (#2637)
+- Add simple metric instrument for the external use. (#2656)
 
 ### Changed
 
