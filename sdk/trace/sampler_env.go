@@ -40,7 +40,10 @@ func (e errUnsupportedSampler) Error() string {
 	return fmt.Sprintf("unsupported sampler: %s", string(e))
 }
 
-var errNegativeTraceIDRatio = errors.New("trace ID ratio cannot be negative")
+var (
+	errNegativeTraceIDRatio       = errors.New("invalid trace ID ratio: less than 0.0")
+	errGreaterThanOneTraceIDRatio = errors.New("invalid trace ID ratio: greater than 1.0")
+)
 
 type samplerArgParseError struct {
 	parseErr error
@@ -95,6 +98,9 @@ func parseTraceIDRatio(arg string, hasSamplerArg bool) (Sampler, error) {
 	}
 	if v < 0.0 {
 		return TraceIDRatioBased(1.0), errNegativeTraceIDRatio
+	}
+	if v > 1.0 {
+		return TraceIDRatioBased(1.0), errGreaterThanOneTraceIDRatio
 	}
 
 	return TraceIDRatioBased(v), nil
