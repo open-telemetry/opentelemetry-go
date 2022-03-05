@@ -276,6 +276,34 @@ func BenchmarkFloat64UpDownCounterAdd(b *testing.B) {
 	}
 }
 
+// LastValue
+
+func BenchmarkInt64LastValueAdd(b *testing.B) {
+	ctx := context.Background()
+	fix := newFixture(b)
+	labs := makeLabels(1)
+	mea := fix.iHistogram("int64.lastvalue")
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		mea.Record(ctx, int64(i), labs...)
+	}
+}
+
+func BenchmarkFloat64LastValueAdd(b *testing.B) {
+	ctx := context.Background()
+	fix := newFixture(b)
+	labs := makeLabels(1)
+	mea := fix.fHistogram("float64.lastvalue")
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		mea.Record(ctx, float64(i), labs...)
+	}
+}
+
 // Histograms
 
 func BenchmarkInt64HistogramAdd(b *testing.B) {
