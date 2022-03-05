@@ -144,6 +144,7 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 			sampler:     "traceidratio",
 			samplerArg:  fmt.Sprintf("%g", 1+randFloat),
 			description: TraceIDRatioBased(1.0).Description(),
+			errorType:   errGreaterThanOneTraceIDRatio,
 		},
 		{
 			sampler:             "traceidratio",
@@ -176,6 +177,7 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 			sampler:     "parentbased_traceidratio",
 			samplerArg:  fmt.Sprintf("%g", 1+randFloat),
 			description: ParentBased(TraceIDRatioBased(1.0)).Description(),
+			errorType:   errGreaterThanOneTraceIDRatio,
 		},
 		{
 			sampler:             "parentbased_traceidratio",
@@ -203,7 +205,7 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 				require.NoError(t, envStore.Restore())
 			})
 
-			stp := NewTracerProvider()
+			stp := NewTracerProvider(WithSyncer(NewTestExporter()))
 			assert.Equal(t, test.description, stp.sampler.Description())
 			if test.errorType != nil {
 				testStoredError(t, test.errorType)
@@ -223,8 +225,10 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 						require.NoError(t, envStore.Restore())
 					})
 
-					stp := NewTracerProvider()
-					t.Cleanup(func() { stp.Shutdown(context.Background()) })
+					stp := NewTracerProvider(WithSyncer(NewTestExporter()))
+					t.Cleanup(func() {
+						require.NoError(t, stp.Shutdown(context.Background()))
+					})
 					assert.Equal(t, test.description, stp.sampler.Description())
 
 					if test.invalidArgErrorType != nil {
