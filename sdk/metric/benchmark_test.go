@@ -65,6 +65,7 @@ func (f *benchFixture) iCounter(name string) syncint64.Counter {
 	}
 	return ctr
 }
+
 func (f *benchFixture) fCounter(name string) syncfloat64.Counter {
 	ctr, err := f.meter.SyncFloat64().Counter(name)
 	if err != nil {
@@ -72,6 +73,23 @@ func (f *benchFixture) fCounter(name string) syncfloat64.Counter {
 	}
 	return ctr
 }
+
+func (f *benchFixture) iUpDownCounter(name string) syncfloat64.UpDownCounter {
+	ctr, err := f.meter.SyncFloat64().UpDownCounter(name)
+	if err != nil {
+		f.B.Error(err)
+	}
+	return ctr
+}
+
+func (f *benchFixture) fUpDownCounter(name string) syncfloat64.UpDownCounter {
+	ctr, err := f.meter.SyncFloat64().UpDownCounter(name)
+	if err != nil {
+		f.B.Error(err)
+	}
+	return ctr
+}
+
 func (f *benchFixture) iHistogram(name string) syncint64.Histogram {
 	ctr, err := f.meter.SyncInt64().Histogram(name)
 	if err != nil {
@@ -79,6 +97,7 @@ func (f *benchFixture) iHistogram(name string) syncint64.Histogram {
 	}
 	return ctr
 }
+
 func (f *benchFixture) fHistogram(name string) syncfloat64.Histogram {
 	ctr, err := f.meter.SyncFloat64().Histogram(name)
 	if err != nil {
@@ -179,8 +198,6 @@ func BenchmarkIterator_16(b *testing.B) {
 	benchmarkIterator(b, 16)
 }
 
-// Counters
-
 // TODO readd global
 
 // func BenchmarkGlobalInt64CounterAddWithSDK(b *testing.B) {
@@ -203,6 +220,8 @@ func BenchmarkIterator_16(b *testing.B) {
 // 	}
 // }
 
+// Counters
+
 func BenchmarkInt64CounterAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
@@ -221,6 +240,34 @@ func BenchmarkFloat64CounterAdd(b *testing.B) {
 	fix := newFixture(b)
 	labs := makeLabels(1)
 	cnt := fix.fCounter("float64.sum")
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		cnt.Add(ctx, 1.1, labs...)
+	}
+}
+
+// UpDownCounter
+
+func BenchmarkInt64UpDownCounterAdd(b *testing.B) {
+	ctx := context.Background()
+	fix := newFixture(b)
+	labs := makeLabels(1)
+	cnt := fix.iUpDownCounter("int64.sum")
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		cnt.Add(ctx, 1.1, labs...)
+	}
+}
+
+func BenchmarkFloat64UpDownCounterAdd(b *testing.B) {
+	ctx := context.Background()
+	fix := newFixture(b)
+	labs := makeLabels(1)
+	cnt := fix.fUpDownCounter("float64.sum")
 
 	b.ResetTimer()
 
