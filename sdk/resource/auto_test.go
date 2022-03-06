@@ -21,9 +21,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 )
 
 func TestDetect(t *testing.T) {

@@ -16,6 +16,7 @@ package sdkapi // import "go.opentelemetry.io/otel/sdk/metric/sdkapi"
 
 import (
 	"go.opentelemetry.io/otel/metric/unit"
+
 	"go.opentelemetry.io/otel/sdk/metric/number"
 )
 

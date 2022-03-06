@@ -20,8 +20,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-
 	"go.opentelemetry.io/otel/exporters/otlp/internal/envconfig"
+
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
 )
 
@@ -199,7 +199,7 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *otlpconfig.Config, grpcOption bool) {
 				if grpcOption {
-					//TODO: make sure gRPC's credentials actually works
+					// TODO: make sure gRPC's credentials actually works
 					assert.NotNil(t, c.Traces.GRPCCredentials)
 				} else {
 					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects())

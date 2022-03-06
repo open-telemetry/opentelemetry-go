@@ -24,7 +24,6 @@ import (
 	"go.opencensus.io/metric/metricdata"
 	"go.opencensus.io/metric/metricexport"
 	ocresource "go.opencensus.io/resource"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/instrument"

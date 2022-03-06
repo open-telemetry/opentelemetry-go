@@ -22,12 +22,11 @@ import (
 	"testing"
 	"time"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
-
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpmetrictest"
 	collectormetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 func makeMockCollector(t *testing.T, mockConfig *mockConfig) *mockCollector {

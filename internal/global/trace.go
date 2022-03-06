@@ -36,9 +36,10 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel/trace"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
 )
 
 // tracerProvider is a placeholder for a configured SDK TracerProvider.

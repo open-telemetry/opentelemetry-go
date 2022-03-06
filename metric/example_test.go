@@ -65,7 +65,7 @@ func ExampleMeter_asynchronous_single() {
 	err = meter.RegisterCallback([]instrument.Asynchronous{memoryUsage},
 		func(ctx context.Context) {
 			// instrument.WithCallbackFunc(func(ctx context.Context) {
-			//Do Work to get the real memoryUsage
+			// Do Work to get the real memoryUsage
 			// mem := GatherMemory(ctx)
 			mem := 75000
 
@@ -110,7 +110,7 @@ func ExampleMeter_asynchronous_multiple() {
 	}
 }
 
-//This is just an example, see the the contrib runtime instrumentation for real implementation
+// This is just an example, see the the contrib runtime instrumentation for real implementation
 func computeGCPauses(ctx context.Context, recorder syncfloat64.Histogram, pauseBuff []uint64) {
 
 }

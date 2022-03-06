@@ -23,9 +23,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
@@ -33,6 +31,8 @@ import (
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	selector "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
+
+	"go.opentelemetry.io/otel/exporters/prometheus"
 )
 
 type expectedMetric struct {

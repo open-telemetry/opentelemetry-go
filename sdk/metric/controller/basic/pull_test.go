@@ -21,14 +21,14 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/resource"
+
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/metric/controller/controllertest"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 func TestPullNoCollect(t *testing.T) {

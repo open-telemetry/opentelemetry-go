@@ -12,16 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build !aix
-// +build !darwin
-// +build !dragonfly
-// +build !freebsd
-// +build !linux
-// +build !netbsd
-// +build !openbsd
-// +build !solaris
-// +build !windows
-// +build !zos
+//go:build !aix && !darwin && !dragonfly && !freebsd && !linux && !netbsd && !openbsd && !solaris && !windows && !zos
+// +build !aix,!darwin,!dragonfly,!freebsd,!linux,!netbsd,!openbsd,!solaris,!windows,!zos
 
 package resource // import "go.opentelemetry.io/otel/sdk/resource"
 

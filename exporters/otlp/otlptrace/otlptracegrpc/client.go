@@ -20,17 +20,16 @@ import (
 	"sync"
 	"time"
 
-	"google.golang.org/genproto/googleapis/rpc/errdetails"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
-
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 type client struct {
@@ -246,7 +245,7 @@ func (c *client) exportContext(parent context.Context) (context.Context, context
 // retryable returns if err identifies a request that can be retried and a
 // duration to wait for if an explicit throttle time is included in err.
 func retryable(err error) (bool, time.Duration) {
-	//func retryable(err error) (bool, time.Duration) {
+	// func retryable(err error) (bool, time.Duration) {
 	s := status.Convert(err)
 	switch s.Code() {
 	case codes.Canceled,

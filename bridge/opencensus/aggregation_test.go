@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"go.opencensus.io/metric/metricdata"
-
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 )
 

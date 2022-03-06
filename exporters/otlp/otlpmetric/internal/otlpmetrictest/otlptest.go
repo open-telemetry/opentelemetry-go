@@ -22,9 +22,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/metric/instrument"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
@@ -33,6 +31,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 )
 
 // RunEndToEndTest can be used by protocol driver tests to validate

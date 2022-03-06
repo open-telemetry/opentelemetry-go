@@ -16,11 +16,11 @@ package opencensus // import "go.opentelemetry.io/otel/bridge/opencensus"
 
 import (
 	octrace "go.opencensus.io/trace"
+	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/bridge/opencensus/internal"
 	"go.opentelemetry.io/otel/bridge/opencensus/internal/oc2otel"
 	"go.opentelemetry.io/otel/bridge/opencensus/internal/otel2oc"
-	"go.opentelemetry.io/otel/trace"
 )
 
 // NewTracer returns an implementation of the OpenCensus Tracer interface which

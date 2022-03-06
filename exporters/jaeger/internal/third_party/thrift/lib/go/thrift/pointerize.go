@@ -19,7 +19,7 @@
 
 package thrift
 
-///////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////
 // This file is home to helpers that convert from various base types to
 // respective pointer types. This is necessary because Go does not permit
 // references to constants, nor can a pointer type to base type be allocated
@@ -36,7 +36,7 @@ package thrift
 //
 // Since pointers to base types are commonplace as [optional] fields in
 // exported thrift structs, we factor such helpers here.
-///////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////
 
 func Float32Ptr(v float32) *float32 { return &v }
 func Float64Ptr(v float64) *float64 { return &v }

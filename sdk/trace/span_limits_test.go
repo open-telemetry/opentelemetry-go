@@ -21,11 +21,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/attribute"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
-	"go.opentelemetry.io/otel/sdk/internal/env"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/otel/sdk/internal/env"
 )
 
 func TestSettingSpanLimits(t *testing.T) {

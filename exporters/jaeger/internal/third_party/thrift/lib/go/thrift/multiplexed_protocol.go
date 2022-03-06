@@ -197,7 +197,7 @@ func (t *TMultiplexedProcessor) Process(ctx context.Context, in, out TProtocol) 
 	if typeId != CALL && typeId != ONEWAY {
 		return false, NewTProtocolException(fmt.Errorf("Unexpected message type %v", typeId))
 	}
-	//extract the service name
+	// extract the service name
 	v := strings.SplitN(name, MULTIPLEXED_SEPARATOR, 2)
 	if len(v) != 2 {
 		if t.DefaultProcessor != nil {
@@ -220,7 +220,7 @@ func (t *TMultiplexedProcessor) Process(ctx context.Context, in, out TProtocol) 
 	return actualProcessor.Process(ctx, smb, out)
 }
 
-//Protocol that use stored message for ReadMessageBegin
+// Protocol that use stored message for ReadMessageBegin
 type storedMessageProtocol struct {
 	TProtocol
 	name   string

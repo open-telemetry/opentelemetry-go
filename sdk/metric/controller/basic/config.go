@@ -18,8 +18,9 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/resource"
+
+	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
 // config contains configuration for a basic Controller.

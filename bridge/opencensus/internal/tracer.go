@@ -19,9 +19,9 @@ import (
 	"fmt"
 
 	octrace "go.opencensus.io/trace"
+	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/bridge/opencensus/internal/oc2otel"
-	"go.opentelemetry.io/otel/trace"
 )
 
 // Tracer is an OpenCensus Tracer that wraps an OpenTelemetry Tracer.

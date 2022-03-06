@@ -30,8 +30,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go.opentelemetry.io/otel/internal/tools"
 	"golang.org/x/mod/modfile"
+
+	"go.opentelemetry.io/otel/internal/tools"
 )
 
 func crossLink(m []*modfile.File) error {

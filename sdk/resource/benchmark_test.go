@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
+
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 

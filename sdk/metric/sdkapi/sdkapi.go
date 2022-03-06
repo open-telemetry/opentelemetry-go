@@ -19,6 +19,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/instrument"
+
 	"go.opentelemetry.io/otel/sdk/metric/number"
 )
 

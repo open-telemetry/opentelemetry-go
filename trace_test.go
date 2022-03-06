@@ -18,9 +18,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/internal/trace/noop"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type testTracerProvider struct{}

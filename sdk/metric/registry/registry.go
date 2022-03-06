@@ -20,6 +20,7 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/metric/instrument"
+
 	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 )
 

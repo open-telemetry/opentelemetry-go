@@ -18,8 +18,8 @@ import (
 	"time"
 
 	"github.com/benbjohnson/clock"
-
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"

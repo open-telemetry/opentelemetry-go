@@ -21,8 +21,9 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
+
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func benchmarkSpanLimits(b *testing.B, limits sdktrace.SpanLimits) {

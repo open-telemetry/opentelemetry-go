@@ -19,8 +19,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/metric"
+
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/registry"
 	"go.opentelemetry.io/otel/sdk/metric/sdkapi"

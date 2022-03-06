@@ -21,10 +21,11 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/trace"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/internal/matchers"
-	"go.opentelemetry.io/otel/trace"
 )
 
 // Harness is a testing harness used to test implementations of the

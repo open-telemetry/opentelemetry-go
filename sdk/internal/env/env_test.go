@@ -20,7 +20,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 )
 

@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	octrace "go.opencensus.io/trace"
-
 	"go.opentelemetry.io/otel/attribute"
 	ocbridge "go.opentelemetry.io/otel/bridge/opencensus"
 	"go.opentelemetry.io/otel/bridge/opencensus/internal"

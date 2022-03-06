@@ -26,8 +26,9 @@ import (
 	"strings"
 	"text/template"
 
-	"go.opentelemetry.io/otel/internal/tools"
 	"golang.org/x/mod/modfile"
+
+	"go.opentelemetry.io/otel/internal/tools"
 )
 
 var configPtr = flag.String("config", "./.github/dependabot.yml", "dependabot configuration path")

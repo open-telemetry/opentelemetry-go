@@ -21,9 +21,10 @@ import (
 	"strconv"
 	"strings"
 
+	"go.opentelemetry.io/otel/trace"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
 )
 
 // HTTP scheme attributes.

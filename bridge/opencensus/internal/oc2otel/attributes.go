@@ -16,7 +16,6 @@ package oc2otel // import "go.opentelemetry.io/otel/bridge/opencensus/internal/o
 
 import (
 	octrace "go.opencensus.io/trace"
-
 	"go.opentelemetry.io/otel/attribute"
 )
 

@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
 	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
+
 	"go.opentelemetry.io/otel/sdk/metric/number"
 )
 

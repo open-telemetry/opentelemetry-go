@@ -18,8 +18,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/metric/unit"
+
 	"go.opentelemetry.io/otel/sdk/metric/number"
 )
 
