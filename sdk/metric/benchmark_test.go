@@ -198,6 +198,8 @@ func BenchmarkIterator_16(b *testing.B) {
 	benchmarkIterator(b, 16)
 }
 
+// Counters
+
 // TODO readd global
 
 // func BenchmarkGlobalInt64CounterAddWithSDK(b *testing.B) {
@@ -219,8 +221,6 @@ func BenchmarkIterator_16(b *testing.B) {
 // 		cnt.Add(ctx, 1, labs...)
 // 	}
 // }
-
-// Counters
 
 func BenchmarkInt64CounterAdd(b *testing.B) {
 	ctx := context.Background()
