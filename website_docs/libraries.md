@@ -60,7 +60,7 @@ func sleepy(ctx context.Context) {
 
 // httpHandler is an HTTP handler function that is going to be instrumented.
 func httpHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hello, World! I am instrumented autoamtically!")
+	fmt.Fprintf(w, "Hello, World! I am instrumented automatically!")
 	ctx := r.Context()
 	sleepy(ctx)
 }

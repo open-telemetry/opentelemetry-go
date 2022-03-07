@@ -23,6 +23,8 @@ var (
 	SetUserProviders                = setUserProviders
 	SetDefaultOSDescriptionProvider = setDefaultOSDescriptionProvider
 	SetOSDescriptionProvider        = setOSDescriptionProvider
+	SetDefaultContainerProviders    = setDefaultContainerProviders
+	SetContainerProviders           = setContainerProviders
 )
 
 var (
