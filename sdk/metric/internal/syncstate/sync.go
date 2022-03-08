@@ -54,7 +54,7 @@ type (
 		apiInstrument.Synchronous
 		
 		descriptor sdkapi.Descriptor
-		current    sync.Map // map[attribute.Fingerprint]*group
+		current    sync.Map // map[attribute.Set]*record
 		cfactory   *viewstate.Factory
 	}
 

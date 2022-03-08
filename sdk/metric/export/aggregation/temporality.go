@@ -19,6 +19,10 @@ package aggregation // import "go.opentelemetry.io/otel/sdk/metric/export/aggreg
 type Temporality uint8
 
 const (
+	// UnspecifiedTemporality indicates that the Exporter has not
+	// specified the temporality.
+	UnspecifiedTemporality Temporality = 0
+
 	// CumulativeTemporality indicates that an Exporter expects a
 	// Cumulative Aggregation.
 	CumulativeTemporality Temporality = 1

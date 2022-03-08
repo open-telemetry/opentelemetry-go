@@ -92,9 +92,10 @@ type (
 
 // Kind description constants.
 const (
+	NoneKind      Kind = "None"
 	SumKind       Kind = "Sum"
 	HistogramKind Kind = "Histogram"
-	LastValueKind Kind = "Lastvalue"
+	LastValueKind Kind = "LastValue"
 )
 
 // Sentinel errors for Aggregation interface.

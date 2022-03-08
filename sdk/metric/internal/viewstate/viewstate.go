@@ -50,7 +50,7 @@ type (
 	configuredBehavior struct {
 		desc sdkapi.Descriptor
 		term *viewTerminal
-		view *views.View
+		view views.View
 	}
 
 	viewIntermediate interface {
@@ -82,22 +82,22 @@ type (
 	syncCollector[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
 		current  Storage
 		snapshot Storage
-		outputs  deferredStorage[N, Storage, Config, Methods]
+		outputs  readerStorage[N, Storage, Config, Methods]
 	}
 
 	asyncCollector[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
 		lock     sync.Mutex
 		current  N
 		snapshot Storage
-		outputs  deferredStorage[N, Storage, Config, Methods]
+		outputs  readerStorage[N, Storage, Config, Methods]
 	}
 
-	deferredStorage[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] interface {
-		deferUpdate(*deferredStorage[N, Storage, Config, Methods], *Storage)
+	readerStorage[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] interface {
+		processSingleAggregate(*readerStorage[N, Storage, Config, Methods], *Storage)
 	}
 
 	setupStorage[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
-		viewConfigs []configuredBehavior
+		readerConfigs []configuredBehavior
 		aggConfig *Config
 		kvs []attribute.KeyValue
 	}
@@ -111,33 +111,14 @@ type (
 	}
 )
 
-var defaultViews = []views.View{
-	views.New(views.WithAggregation("histogram")), // Histogram
-	views.New(views.WithAggregation("gauge")),     // Gauge
-	views.New(views.WithAggregation("sum")),       // Counter
-	views.New(views.WithAggregation("sum")),       // UpDownCounter
-	views.New(views.WithAggregation("sum")),       // AsyncCounter
-	views.New(views.WithAggregation("sum")),       // AsyncUpDownCounter
-}
-
-func aggregatorSettingsFor(desc sdkapi.Descriptor) aggregatorSettings {
-	switch desc.InstrumentKind() {
-	case sdkapi.HistogramInstrumentKind:
-		return aggregatorSettings{
-			kind: aggregation.HistogramKind,
-		}
-	case sdkapi.GaugeObserverInstrumentKind:
-		return aggregatorSettings{
-			kind: aggregation.LastValueKind,
-		}
-	default:
-		return aggregatorSettings{
-			kind: aggregation.SumKind,
-		}
+func aggregatorSettingsFor(desc sdkapi.Descriptor, defaults reader.DefaultsFunc) aggregatorSettings {
+	aggr, _ := defaults(desc.InstrumentKind())
+	return aggregatorSettings{
+		kind: aggr,
 	}
 }
 
-func viewDescriptor(instrument sdkapi.Descriptor, v *views.View) sdkapi.Descriptor {
+func viewDescriptor(instrument sdkapi.Descriptor, v views.View) sdkapi.Descriptor {
 	ikind := instrument.InstrumentKind()
 	nkind := instrument.NumberKind()
 	name := instrument.Name()
@@ -200,7 +181,7 @@ func (v *State) NewFactory(instrument sdkapi.Descriptor) *Factory {
 		matchCount := 0
 		terminal := &v.terminals[terminalIdx]
 		for viewIdx := range v.terminals[terminalIdx].reader.Views() {
-			view := &v.terminals[terminalIdx].reader.Views()[viewIdx]
+			view := v.terminals[terminalIdx].reader.Views()[viewIdx]
 			if !view.Matches(v.library, instrument) {
 				continue
 			}
@@ -217,7 +198,11 @@ func (v *State) NewFactory(instrument sdkapi.Descriptor) *Factory {
 					view.HistogramOptions()...,
 				)
 			default:
-				as = aggregatorSettingsFor(instrument)
+				as = aggregatorSettingsFor(instrument, terminal.reader.Defaults())
+			}
+
+			if as.kind == aggregation.NoneKind {
+				continue
 			}
 
 			addBehavior(terminalIdx, as, configuredBehavior{
@@ -229,13 +214,14 @@ func (v *State) NewFactory(instrument sdkapi.Descriptor) *Factory {
 
 		// If there were no matching views, set the default aggregation.
 		if matchCount == 0 {
-			if !terminal.reader.HasDefaultView() {
+			as := aggregatorSettingsFor(instrument, terminal.reader.Defaults())
+			if as.kind == aggregation.NoneKind {
 				continue
 			}
 
-			addBehavior(terminalIdx, aggregatorSettingsFor(instrument), configuredBehavior{
+			addBehavior(terminalIdx, as, configuredBehavior{
 				term: terminal,
-				view: &defaultViews[instrument.InstrumentKind()],
+				view: views.New(views.WithAggregation(as.kind)),
 				desc: instrument,
 			})
 		}
@@ -297,9 +283,9 @@ func buildView[N number.Any, Traits traits.Any[N]](instrument sdkapi.Descriptor,
 	return buildAsyncView[N, Traits](settings, configs)
 }
 
-func compileOutputs[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]](viewConfigs []configuredBehavior, aggConfig *Config, kvs []attribute.KeyValue) deferredStorage[N, Storage, Config, Methods] {
+func compileOutputs[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]](readerConfigs []configuredBehavior, aggConfig *Config, kvs []attribute.KeyValue) readerStorage[N, Storage, Config, Methods] {
 	return &setupStorage[N, Storage, Config, Methods] {
-		viewConfigs: viewConfigs,
+		readerConfigs: readerConfigs,
 		aggConfig: aggConfig,
 		kvs: kvs,
 	}
@@ -309,11 +295,11 @@ func newSyncConfig[
 	N number.Any,
 	Storage, Config any,
 	Methods aggregator.Methods[N, Storage, Config],
-](viewConfigs []configuredBehavior, aggConfig *Config) compiledView {
+](readerConfigs []configuredBehavior, aggConfig *Config) compiledView {
 	return compiledView{
 		newIntermediate: func(kvs []attribute.KeyValue) viewIntermediate {
 			aa := &syncCollector[N, Storage, Config, Methods]{
-				outputs: compileOutputs[N, Storage, Config, Methods](viewConfigs, aggConfig, kvs),
+				outputs: compileOutputs[N, Storage, Config, Methods](readerConfigs, aggConfig, kvs),
 			}
 			aa.init(*aggConfig)
 			return aa
@@ -325,11 +311,11 @@ func newAsyncConfig[
 	N number.Any,
 	Storage, Config any,
 	Methods aggregator.Methods[N, Storage, Config],
-](viewConfigs []configuredBehavior, aggConfig *Config) compiledView {
+](readerConfigs []configuredBehavior, aggConfig *Config) compiledView {
 	return compiledView{
 		newIntermediate: func(kvs []attribute.KeyValue) viewIntermediate {
 			aa := &asyncCollector[N, Storage, Config, Methods]{
-				outputs: compileOutputs[N, Storage, Config, Methods](viewConfigs, aggConfig, kvs),
+				outputs: compileOutputs[N, Storage, Config, Methods](readerConfigs, aggConfig, kvs),
 			}
 			aa.init(*aggConfig)
 			return aa
@@ -434,7 +420,7 @@ func (sc *syncCollector[N, Storage, Config, Methods]) collect() {
 	var methods Methods
 	methods.SynchronizedMove(&sc.current, &sc.snapshot)
 
-	sc.outputs.deferUpdate(&sc.outputs, &sc.snapshot)
+	sc.outputs.processSingleAggregate(&sc.outputs, &sc.snapshot)
 }
 
 func (ac *asyncCollector[N, Storage, Config, Methods]) init(cfg Config) {
@@ -455,13 +441,13 @@ func (ac *asyncCollector[N, Storage, Config, Methods]) collect() {
 	methods.Update(&ac.snapshot, ac.current)
 	ac.current = 0
 
-	ac.outputs.deferUpdate(&ac.outputs, &ac.snapshot)
+	ac.outputs.processSingleAggregate(&ac.outputs, &ac.snapshot)
 }
 
-func (s *setupStorage[N, Storage, Config, Methods]) deferUpdate(ptr *deferredStorage[N, Storage, Config, Methods], input *Storage) {
+func (s *setupStorage[N, Storage, Config, Methods]) processSingleAggregate(ptr *readerStorage[N, Storage, Config, Methods], input *Storage) {
 	// Special case for size==1 avoids allocating a unnecessary singleton slice.
-	if len(s.viewConfigs) == 1 {
-		config := s.viewConfigs[0]
+	if len(s.readerConfigs) == 1 {
+		config := s.readerConfigs[0]
 		set, _ := attribute.NewSetWithFiltered(s.kvs, config.view.Keys())
 		ss := singleStorage[N, Storage, Config, Methods]{
 			single: reader.FindOrCreate[N, Storage, Config, Methods](
@@ -472,12 +458,12 @@ func (s *setupStorage[N, Storage, Config, Methods]) deferUpdate(ptr *deferredSto
 			),
 		}
 		*ptr = ss
-		ss.deferUpdate(nil, input)
+		ss.processSingleAggregate(nil, input)
 		return
 	}
 
-	output := make([]*Storage, len(s.viewConfigs))
-	for i, config := range s.viewConfigs {
+	output := make([]*Storage, len(s.readerConfigs))
+	for i, config := range s.readerConfigs {
 		set, _ := attribute.NewSetWithFiltered(s.kvs, config.view.Keys())
 		output[i] = reader.FindOrCreate[N, Storage, Config, Methods](
 			config.term.reader,
@@ -490,19 +476,20 @@ func (s *setupStorage[N, Storage, Config, Methods]) deferUpdate(ptr *deferredSto
 		multi: output,
 	}
 	*ptr = ms
-	ms.deferUpdate(nil, input)
+	ms.processSingleAggregate(nil, input)
 }
 
-func (s singleStorage[N, Storage, Config, Methods]) deferUpdate(_ *deferredStorage[N, Storage, Config, Methods], input *Storage) {
+func (s singleStorage[N, Storage, Config, Methods]) processSingleAggregate(_ *readerStorage[N, Storage, Config, Methods], input *Storage) {
 	var methods Methods
 
 	methods.Merge(s.single, input)
 }
 
-func (s multiStorage[N, Storage, Config, Methods]) deferUpdate(_ *deferredStorage[N, Storage, Config, Methods], input *Storage) {
+func (s multiStorage[N, Storage, Config, Methods]) processSingleAggregate(_ *readerStorage[N, Storage, Config, Methods], input *Storage) {
 	var methods Methods
 
 	for _, sp := range s.multi {
 		methods.Merge(sp, input)
 	}
 }
+
