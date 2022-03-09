@@ -31,16 +31,23 @@ import (
 
 func Test_MeterProvider_race(t *testing.T) {
 	mp := &meterProvider{}
-
+	finish := make(chan struct{})
 	go func() {
 		i := 0
 		for {
 			mp.Meter(fmt.Sprintf("a%d", i))
 			i++
+			select {
+			case <-finish:
+				return
+			default:
+			}
 		}
 	}()
 
 	mp.setDelegate(nonrecording.NewNoopMeterProvider())
+	close(finish)
+
 }
 
 func Test_meter_race(t *testing.T) {
@@ -48,6 +55,7 @@ func Test_meter_race(t *testing.T) {
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
+	finish := make(chan struct{})
 	go func() {
 		i := 0
 		once := false
@@ -70,11 +78,17 @@ func Test_meter_race(t *testing.T) {
 				wg.Done()
 				once = true
 			}
+			select {
+			case <-finish:
+				return
+			default:
+			}
 		}
 	}()
 
 	wg.Wait()
 	mtr.setDelegate(nonrecording.NewNoopMeterProvider())
+	close(finish)
 }
 
 func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (syncfloat64.Counter, asyncfloat64.Counter) {

@@ -19,13 +19,13 @@ import (
 	"go.opentelemetry.io/otel/metric/internal/global"
 )
 
-// GetGlobalMeterProvider returns the registered global trace provider.
+// MeterProvider returns the registered global trace provider.
 // If none is registered then a No-op MeterProvider is returned.
-func GetGlobalMeterProvider() metric.MeterProvider {
+func MeterProvider() metric.MeterProvider {
 	return global.MeterProvider()
 }
 
 // SetGlobalMeterProvider registers `mp` as the global meter provider.
-func SetGlobalMeterProvider(mp metric.MeterProvider) {
+func SetMeterProvider(mp metric.MeterProvider) {
 	global.SetMeterProvider(mp)
 }
