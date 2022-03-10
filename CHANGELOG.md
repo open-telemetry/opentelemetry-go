@@ -44,6 +44,7 @@ This update is a breaking change of the unstable Metrics API. Code instrumented 
 - Unify path cleaning functionally in the `otlpmetric` and `otlptrace` config. (#2639)
 - Change the debug message from the `sdk/trace.BatchSpanProcessor` to reflect the count is cumulative. (#2640)
 - Introduce new internal envconfig package for OTLP exporters (#2608)
+- If `http.Request.Host` is empty, fall back to use `URL.Host` when populating `http.host` in the `semconv` packages. (#2661)
 
 ### Fixed
 
