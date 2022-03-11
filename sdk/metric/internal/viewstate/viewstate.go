@@ -3,7 +3,6 @@ package viewstate
 import (
 	"fmt"
 	"sync"
-	"unsafe"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -55,9 +54,11 @@ type (
 		metric     *viewMetric
 	}
 
-	instrument struct {
-		desc   sdkapi.Descriptor
-		values map[attribute.Set]unsafe.Pointer
+	aggregatorSettings struct {
+		kind  aggregation.Kind
+		hcfg  histogram.Config
+		scfg  sum.Config
+		lvcfg lastvalue.Config
 	}
 
 	viewMultiInstrument[N number.Any] struct {
@@ -84,13 +85,6 @@ type (
 		lock    sync.Mutex
 		desc    sdkapi.Descriptor
 		streams map[attribute.Set]aggregation.Aggregation
-	}
-
-	aggregatorSettings struct {
-		kind  aggregation.Kind
-		hcfg  histogram.Config
-		scfg  sum.Config
-		lvcfg lastvalue.Config
 	}
 
 	syncCollector[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
