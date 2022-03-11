@@ -20,6 +20,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/metric"
@@ -82,7 +83,7 @@ func TestMeterRace(t *testing.T) {
 		}
 	}()
 
-	wg.Wait()
+	// wg.Wait()
 	mtr.setDelegate(nonrecording.NewNoopMeterProvider())
 	close(finish)
 }
@@ -92,16 +93,16 @@ func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (syncfloat64.Coun
 	afcounter, err := m.AsyncFloat64().Counter("test_Async_Counter")
 	require.NoError(t, err)
 	_, err = m.AsyncFloat64().UpDownCounter("test_Async_UpDownCounter")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	_, err = m.AsyncFloat64().Gauge("test_Async_Gauge")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	_, err = m.AsyncInt64().Counter("test_Async_Counter")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	_, err = m.AsyncInt64().UpDownCounter("test_Async_UpDownCounter")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	_, err = m.AsyncInt64().Gauge("test_Async_Gauge")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	require.NoError(t, m.RegisterCallback([]instrument.Asynchronous{afcounter}, func(ctx context.Context) {
 		afcounter.Observe(ctx, 3)
@@ -110,16 +111,16 @@ func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (syncfloat64.Coun
 	sfcounter, err := m.SyncFloat64().Counter("test_Async_Counter")
 	require.NoError(t, err)
 	_, err = m.SyncFloat64().UpDownCounter("test_Async_UpDownCounter")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	_, err = m.SyncFloat64().Histogram("test_Async_Histogram")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	_, err = m.SyncInt64().Counter("test_Async_Counter")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	_, err = m.SyncInt64().UpDownCounter("test_Async_UpDownCounter")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	_, err = m.SyncInt64().Histogram("test_Async_Histogram")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	return sfcounter, afcounter
 }
@@ -154,7 +155,7 @@ func TestMeterProviderDelegatesCalls(t *testing.T) {
 	// otel.SetMeterProvider(mp)
 	globalMeterProvider.setDelegate(mp)
 
-	require.Equal(t, 0, mp.count)
+	assert.Equal(t, 0, mp.count)
 
 	meter := globalMeterProvider.Meter("go.opentelemetry.io/otel/metric/internal/global/meter_test")
 
@@ -167,20 +168,20 @@ func TestMeterProviderDelegatesCalls(t *testing.T) {
 	// Calls to Meter() after setDelegate() should be executed by the delegate
 	require.IsType(t, &testMeter{}, meter)
 	tMeter := meter.(*testMeter)
-	require.Equal(t, 3, tMeter.afCount)
-	require.Equal(t, 3, tMeter.aiCount)
-	require.Equal(t, 3, tMeter.sfCount)
-	require.Equal(t, 3, tMeter.siCount)
-	require.Equal(t, 1, len(tMeter.callbacks))
+	assert.Equal(t, 3, tMeter.afCount)
+	assert.Equal(t, 3, tMeter.aiCount)
+	assert.Equal(t, 3, tMeter.sfCount)
+	assert.Equal(t, 3, tMeter.siCount)
+	assert.Equal(t, 1, len(tMeter.callbacks))
 
 	// Because the Meter was provided by testmeterProvider it should also return our test instrument
 	require.IsType(t, &testCountingFloatInstrument{}, ctr, "the meter did not delegate calls to the meter")
-	require.Equal(t, 1, ctr.(*testCountingFloatInstrument).count)
+	assert.Equal(t, 1, ctr.(*testCountingFloatInstrument).count)
 
 	require.IsType(t, &testCountingFloatInstrument{}, actr, "the meter did not delegate calls to the meter")
-	require.Equal(t, 1, actr.(*testCountingFloatInstrument).count)
+	assert.Equal(t, 1, actr.(*testCountingFloatInstrument).count)
 
-	require.Equal(t, 1, mp.count)
+	assert.Equal(t, 1, mp.count)
 }
 
 func TestMeterDelegatesCalls(t *testing.T) {
@@ -194,7 +195,7 @@ func TestMeterDelegatesCalls(t *testing.T) {
 
 	mp := &testMeterProvider{}
 
-	require.Equal(t, 0, mp.count)
+	assert.Equal(t, 0, mp.count)
 
 	m := globalMeterProvider.Meter("go.opentelemetry.io/otel/metric/internal/global/meter_test")
 
@@ -210,20 +211,20 @@ func TestMeterDelegatesCalls(t *testing.T) {
 	require.IsType(t, &meter{}, m)
 	tMeter := m.(*meter).delegate.Load().(*testMeter)
 	require.NotNil(t, tMeter)
-	require.Equal(t, 3, tMeter.afCount)
-	require.Equal(t, 3, tMeter.aiCount)
-	require.Equal(t, 3, tMeter.sfCount)
-	require.Equal(t, 3, tMeter.siCount)
+	assert.Equal(t, 3, tMeter.afCount)
+	assert.Equal(t, 3, tMeter.aiCount)
+	assert.Equal(t, 3, tMeter.sfCount)
+	assert.Equal(t, 3, tMeter.siCount)
 
 	// Because the Meter was provided by testmeterProvider it should also return our test instrument
 	require.IsType(t, &testCountingFloatInstrument{}, ctr, "the meter did not delegate calls to the meter")
-	require.Equal(t, 1, ctr.(*testCountingFloatInstrument).count)
+	assert.Equal(t, 1, ctr.(*testCountingFloatInstrument).count)
 
 	// Because the Meter was provided by testmeterProvider it should also return our test instrument
 	require.IsType(t, &testCountingFloatInstrument{}, actr, "the meter did not delegate calls to the meter")
-	require.Equal(t, 1, actr.(*testCountingFloatInstrument).count)
+	assert.Equal(t, 1, actr.(*testCountingFloatInstrument).count)
 
-	require.Equal(t, 1, mp.count)
+	assert.Equal(t, 1, mp.count)
 }
 
 func TestMeterDefersDelegations(t *testing.T) {
@@ -251,14 +252,14 @@ func TestMeterDefersDelegations(t *testing.T) {
 	require.IsType(t, &meter{}, m)
 	tMeter := m.(*meter).delegate.Load().(*testMeter)
 	require.NotNil(t, tMeter)
-	require.Equal(t, 3, tMeter.afCount)
-	require.Equal(t, 3, tMeter.aiCount)
-	require.Equal(t, 3, tMeter.sfCount)
-	require.Equal(t, 3, tMeter.siCount)
+	assert.Equal(t, 3, tMeter.afCount)
+	assert.Equal(t, 3, tMeter.aiCount)
+	assert.Equal(t, 3, tMeter.sfCount)
+	assert.Equal(t, 3, tMeter.siCount)
 
 	// Because the Meter was a delegate it should return a delegated instrument
 
-	require.IsType(t, &sfCounter{}, ctr)
-	require.IsType(t, &afCounter{}, actr)
-	require.Equal(t, 1, mp.count)
+	assert.IsType(t, &sfCounter{}, ctr)
+	assert.IsType(t, &afCounter{}, actr)
+	assert.Equal(t, 1, mp.count)
 }
