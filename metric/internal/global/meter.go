@@ -118,7 +118,7 @@ type delegatedInstrument interface {
 	setDelegate(metric.Meter)
 }
 
-// setDelegate configures t to delegate all Meter functionality to Meters
+// setDelegate configures m to delegate all Meter functionality to Meters
 // created by provider.
 //
 // All subsequent calls to the Meter methods will be passed to the delegate.
@@ -140,6 +140,7 @@ func (m *meter) setDelegate(provider metric.MeterProvider) {
 	}
 
 	m.instruments = nil
+	m.callbacks = nil
 }
 
 // AsyncInt64 is the namespace for the Asynchronous Integer instruments.
@@ -152,7 +153,7 @@ func (m *meter) AsyncInt64() asyncint64.InstrumentProvider {
 	return (*aiInstProvider)(m)
 }
 
-// AsyncFloat64 is the namespace for the Asynchronous Float instruments
+// AsyncFloat64 is the namespace for the Asynchronous Float instruments.
 //
 // To Observe data with instruments it must be registered in a callback.
 func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {

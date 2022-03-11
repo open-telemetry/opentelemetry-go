@@ -25,7 +25,7 @@ func MeterProvider() metric.MeterProvider {
 	return global.MeterProvider()
 }
 
-// SetGlobalMeterProvider registers `mp` as the global meter provider.
+// SetMeterProvider registers `mp` as the global meter provider.
 func SetMeterProvider(mp metric.MeterProvider) {
 	global.SetMeterProvider(mp)
 }

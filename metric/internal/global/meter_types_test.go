@@ -135,7 +135,7 @@ func (ip testSFInstrumentProvider) UpDownCounter(name string, opts ...instrument
 	return &testCountingFloatInstrument{}, nil
 }
 
-// Gauge creates an instrument for recording the current value.
+// Histogram creates an instrument for recording a distribution of values.
 func (ip testSFInstrumentProvider) Histogram(name string, opts ...instrument.Option) (syncfloat64.Histogram, error) {
 	return &testCountingFloatInstrument{}, nil
 }
@@ -152,7 +152,7 @@ func (ip testSIInstrumentProvider) UpDownCounter(name string, opts ...instrument
 	return &testCountingIntInstrument{}, nil
 }
 
-// Gauge creates an instrument for recording the current value.
+// Histogram creates an instrument for recording a distribution of values.
 func (ip testSIInstrumentProvider) Histogram(name string, opts ...instrument.Option) (syncint64.Histogram, error) {
 	return &testCountingIntInstrument{}, nil
 }

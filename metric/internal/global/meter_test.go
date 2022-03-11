@@ -29,14 +29,12 @@ import (
 	"go.opentelemetry.io/otel/metric/nonrecording"
 )
 
-func Test_MeterProvider_race(t *testing.T) {
+func TestMeterProviderRace(t *testing.T) {
 	mp := &meterProvider{}
 	finish := make(chan struct{})
 	go func() {
-		i := 0
-		for {
+		for i := 0; ; i++ {
 			mp.Meter(fmt.Sprintf("a%d", i))
-			i++
 			select {
 			case <-finish:
 				return
@@ -50,16 +48,14 @@ func Test_MeterProvider_race(t *testing.T) {
 
 }
 
-func Test_meter_race(t *testing.T) {
+func TestMeterRace(t *testing.T) {
 	mtr := &meter{}
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	finish := make(chan struct{})
 	go func() {
-		i := 0
-		once := false
-		for {
+		for i, once := 0, false; ; i++{
 			name := fmt.Sprintf("a%d", i)
 			_, _ = mtr.AsyncFloat64().Counter(name)
 			_, _ = mtr.AsyncFloat64().UpDownCounter(name)
@@ -107,9 +103,9 @@ func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (syncfloat64.Coun
 	_, err = m.AsyncInt64().Gauge("test_Async_Gauge")
 	require.NoError(t, err)
 
-	_ = m.RegisterCallback([]instrument.Asynchronous{afcounter}, func(ctx context.Context) {
+	require.NoError(t, m.RegisterCallback([]instrument.Asynchronous{afcounter}, func(ctx context.Context) {
 		afcounter.Observe(ctx, 3)
-	})
+	}))
 
 	sfcounter, err := m.SyncFloat64().Counter("test_Async_Counter")
 	require.NoError(t, err)
@@ -128,7 +124,7 @@ func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (syncfloat64.Coun
 	return sfcounter, afcounter
 }
 
-// This is to emulate a read from an exporter
+// This is to emulate a read from an exporter.
 func testCollect(t *testing.T, m metric.Meter) {
 	if tMeter, ok := m.(*meter); ok {
 		m, ok = tMeter.delegate.Load().(metric.Meter)
@@ -145,7 +141,7 @@ func testCollect(t *testing.T, m metric.Meter) {
 	tMeter.collect()
 }
 
-func Test_MeterProvider_delegates_calls(t *testing.T) {
+func TestMeterProviderDelegatesCalls(t *testing.T) {
 
 	// The global MeterProvider should directly call the underlying MeterProvider
 	// if it is set prior to Meter() being called.
@@ -192,14 +188,13 @@ func Test_MeterProvider_delegates_calls(t *testing.T) {
 	require.Equal(t, 1, mp.count)
 }
 
-func Test_Meter_delegates_calls(t *testing.T) {
+func TestMeterDelegatesCalls(t *testing.T) {
 
 	// The global MeterProvider should directly provide a Meter instance that
 	// can be updated.  If the SetMeterProvider is called after a Meter was
 	// obtained, but before instruments only the instrument should be generated
 	// by the delegated type.
 
-	// globalMeterProvider := otel.GetMeterProvider
 	globalMeterProvider := &meterProvider{}
 
 	mp := &testMeterProvider{}
@@ -208,7 +203,6 @@ func Test_Meter_delegates_calls(t *testing.T) {
 
 	m := globalMeterProvider.Meter("go.opentelemetry.io/otel/metric/internal/global/meter_test")
 
-	// otel.SetMeterProvider(mp)
 	globalMeterProvider.setDelegate(mp)
 
 	ctr, actr := testSetupAllInstrumentTypes(t, m)
@@ -243,7 +237,7 @@ func Test_Meter_delegates_calls(t *testing.T) {
 	require.Equal(t, 1, mp.count)
 }
 
-func Test_Meter_defers_delegations(t *testing.T) {
+func TestMeterDefersDelegations(t *testing.T) {
 
 	// If SetMeterProvider is called after instruments are registered, the
 	// instruments should be recreated with the new meter.

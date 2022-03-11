@@ -23,10 +23,10 @@ import (
 	"go.opentelemetry.io/otel/metric/nonrecording"
 )
 
-func Test_asyncInstrument_setDelegate_race(t *testing.T) {
+func TestAsyncInstrumentSetDelegateRace(t *testing.T) {
 	// Float64 Instruments
-	t.Run("Float64 Instruments", func(t *testing.T) {
-		t.Run("Async Counter", func(t *testing.T) {
+	t.Run("Float64", func(t *testing.T) {
+		t.Run("Counter", func(t *testing.T) {
 			delegate := &afCounter{
 				name: "testName",
 				opts: []instrument.Option{},
@@ -47,7 +47,7 @@ func Test_asyncInstrument_setDelegate_race(t *testing.T) {
 			close(finish)
 		})
 
-		t.Run("Async UpDownCounter", func(t *testing.T) {
+		t.Run("UpDownCounter", func(t *testing.T) {
 			delegate := &afUpDownCounter{
 				name: "testName",
 				opts: []instrument.Option{},
@@ -68,7 +68,7 @@ func Test_asyncInstrument_setDelegate_race(t *testing.T) {
 			close(finish)
 		})
 
-		t.Run("Async Gauge", func(t *testing.T) {
+		t.Run("Gauge", func(t *testing.T) {
 			delegate := &afGauge{
 				name: "testName",
 				opts: []instrument.Option{},
@@ -92,8 +92,8 @@ func Test_asyncInstrument_setDelegate_race(t *testing.T) {
 
 	// Int64 Instruments
 
-	t.Run("int64 Instruments", func(t *testing.T) {
-		t.Run("Async Counter", func(t *testing.T) {
+	t.Run("Int64", func(t *testing.T) {
+		t.Run("Counter", func(t *testing.T) {
 			delegate := &aiCounter{
 				name: "testName",
 				opts: []instrument.Option{},
@@ -114,7 +114,7 @@ func Test_asyncInstrument_setDelegate_race(t *testing.T) {
 			close(finish)
 		})
 
-		t.Run("Async UpDownCounter", func(t *testing.T) {
+		t.Run("UpDownCounter", func(t *testing.T) {
 			delegate := &aiUpDownCounter{
 				name: "testName",
 				opts: []instrument.Option{},
@@ -135,7 +135,7 @@ func Test_asyncInstrument_setDelegate_race(t *testing.T) {
 			close(finish)
 		})
 
-		t.Run("Async Gauge", func(t *testing.T) {
+		t.Run("Gauge", func(t *testing.T) {
 			delegate := &aiGauge{
 				name: "testName",
 				opts: []instrument.Option{},
@@ -158,11 +158,10 @@ func Test_asyncInstrument_setDelegate_race(t *testing.T) {
 	})
 }
 
-func Test_syncInstrument_setDelegate_race(t *testing.T) {
+func TestSyncInstrumentSetDelegateRace(t *testing.T) {
 	// Float64 Instruments
-	// Float64 Instruments
-	t.Run("Float64 Instruments", func(t *testing.T) {
-		t.Run("Sync Counter", func(t *testing.T) {
+	t.Run("Float64", func(t *testing.T) {
+		t.Run("Counter", func(t *testing.T) {
 			delegate := &sfCounter{
 				name: "testName",
 				opts: []instrument.Option{},
@@ -183,7 +182,7 @@ func Test_syncInstrument_setDelegate_race(t *testing.T) {
 			close(finish)
 		})
 
-		t.Run("Sync UpDownCounter", func(t *testing.T) {
+		t.Run("UpDownCounter", func(t *testing.T) {
 			delegate := &sfUpDownCounter{
 				name: "testName",
 				opts: []instrument.Option{},
@@ -204,7 +203,7 @@ func Test_syncInstrument_setDelegate_race(t *testing.T) {
 			close(finish)
 		})
 
-		t.Run("Sync Histogram", func(t *testing.T) {
+		t.Run("Histogram", func(t *testing.T) {
 			delegate := &sfHistogram{
 				name: "testName",
 				opts: []instrument.Option{},
@@ -228,8 +227,8 @@ func Test_syncInstrument_setDelegate_race(t *testing.T) {
 
 	// Int64 Instruments
 
-	t.Run("Int64 Instruments", func(t *testing.T) {
-		t.Run("Sync Counter", func(t *testing.T) {
+	t.Run("Int64", func(t *testing.T) {
+		t.Run("Counter", func(t *testing.T) {
 			delegate := &siCounter{
 				name: "testName",
 				opts: []instrument.Option{},
@@ -250,7 +249,7 @@ func Test_syncInstrument_setDelegate_race(t *testing.T) {
 			close(finish)
 		})
 
-		t.Run("Sync UpDownCounter", func(t *testing.T) {
+		t.Run("UpDownCounter", func(t *testing.T) {
 			delegate := &siUpDownCounter{
 				name: "testName",
 				opts: []instrument.Option{},
@@ -271,7 +270,7 @@ func Test_syncInstrument_setDelegate_race(t *testing.T) {
 			close(finish)
 		})
 
-		t.Run("Sync Histogram", func(t *testing.T) {
+		t.Run("Histogram", func(t *testing.T) {
 			delegate := &siHistogram{
 				name: "testName",
 				opts: []instrument.Option{},

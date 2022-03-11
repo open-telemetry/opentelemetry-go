@@ -53,7 +53,7 @@ func TestSetMeterProvider(t *testing.T) {
 
 		_, ok := MeterProvider().(*meterProvider)
 		if ok {
-			t.Error("Global Meter Provider was changed")
+			t.Error("Global Meter Provider was not changed")
 			return
 		}
 	})
