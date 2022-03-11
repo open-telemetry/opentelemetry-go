@@ -30,6 +30,9 @@ Ideally you'd want to either have your application running as part of the
 kubernetes cluster, or use a secured connection (NodePort/LoadBalancer with TLS
 or an ingress extension).
 
+If not using microk8s, ensure that cert-manager is installed by following [the
+instructions here](https://cert-manager.io/docs/installation/).
+
 # Deploying to Kubernetes
 
 All the necessary Kubernetes deployment files are available in this demo, in the
@@ -51,10 +54,10 @@ microk8s enable prometheus
 and you're good to go. Move on to [Using the makefile](#using-the-makefile).
 
 Otherwise, obtain a copy of the Prometheus Operator stack from
-[coreos](https://github.com/coreos/kube-prometheus):
+[prometheus-operator](https://github.com/prometheus-operator/kube-prometheus):
 
 ```bash
-git clone https://github.com/coreos/kube-prometheus.git
+git clone https://github.com/prometheus-operator/kube-prometheus.git
 cd kube-prometheus
 kubectl create -f manifests/setup
 
