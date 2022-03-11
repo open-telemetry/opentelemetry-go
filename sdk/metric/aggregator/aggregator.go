@@ -61,4 +61,5 @@ type Methods[N number.Any, Storage, Config any] interface {
 	SynchronizedMove(inputIsReset, output *Storage)
 	Merge(output, input *Storage)
 	Aggregation(ptr *Storage) aggregation.Aggregation
+	Storage(aggr aggregation.Aggregation) *Storage
 }

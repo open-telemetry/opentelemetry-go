@@ -48,14 +48,15 @@ type (
 	}
 
 	configuredBehavior struct {
-		desc sdkapi.Descriptor
-		term *viewTerminal
-		view views.View
-		settings aggregatorSettings
+		instrument sdkapi.Descriptor
+		term       *viewTerminal
+		view       views.View
+		settings   aggregatorSettings
+		metric     *viewMetric
 	}
 
 	instrument struct {
-		desc sdkapi.Descriptor
+		desc   sdkapi.Descriptor
 		values map[attribute.Set]unsafe.Pointer
 	}
 
@@ -76,12 +77,13 @@ type (
 		reader      *reader.Reader
 		lock        sync.Mutex
 		outputNames map[string]struct{}
-		metrics     []*viewTerminalInstrument
+		metrics     []*viewMetric
 	}
 
-	viewTerminalInstrument struct {
-		desc sdkapi.Descriptor
-		values map[attribute.Set]aggregation.Aggregation
+	viewMetric struct {
+		lock    sync.Mutex
+		desc    sdkapi.Descriptor
+		streams map[attribute.Set]aggregation.Aggregation
 	}
 
 	aggregatorSettings struct {
@@ -101,15 +103,17 @@ type (
 		lock     sync.Mutex
 		current  N
 		snapshot Storage
-		output  *Storage
+		output   *Storage
 	}
 
 	compiledSyncView[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
+		metric    *viewMetric
 		aggConfig *Config
 		viewKeys  attribute.Filter
 	}
 
 	compiledAsyncView[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
+		metric    *viewMetric
 		aggConfig *Config
 		viewKeys  attribute.Filter
 	}
@@ -151,7 +155,7 @@ func New(lib instrumentation.Library, readerConfig []*reader.Reader) *State {
 	for i, r := range readerConfig {
 		terminals[i] = &viewTerminal{
 			outputNames: map[string]struct{}{},
-			reader: r,
+			reader:      r,
 		}
 	}
 
@@ -194,10 +198,10 @@ func (v *State) NewFactory(instrument sdkapi.Descriptor) *Factory {
 			}
 
 			configs = append(configs, configuredBehavior{
-				desc: viewDescriptor(instrument, view),
-				term: terminal,
-				view: view,
-				settings: as,
+				instrument: instrument,
+				term:       terminal,
+				view:       view,
+				settings:   as,
 			})
 		}
 
@@ -210,10 +214,10 @@ func (v *State) NewFactory(instrument sdkapi.Descriptor) *Factory {
 			}
 
 			configs = append(configs, configuredBehavior{
-				desc: instrument,
-				term: terminal,
-				view: views.New(views.WithAggregation(as.kind)),
-				settings: as,
+				instrument: instrument,
+				term:       terminal,
+				view:       views.New(views.WithAggregation(as.kind)),
+				settings:   as,
 			})
 		}
 	}
@@ -230,18 +234,25 @@ func (v *State) NewFactory(instrument sdkapi.Descriptor) *Factory {
 	}
 
 	for _, config := range configs {
-		if _, has := config.term.outputNames[config.desc.Name()]; has {
+		viewDesc := viewDescriptor(config.instrument, config.view)
+
+		if _, has := config.term.outputNames[viewDesc.Name()]; has {
 			otel.Handle(fmt.Errorf("duplicate view name registered"))
 			continue
 		}
-		config.term.outputNames[config.desc.Name()] = struct{}{}
+		config.metric = &viewMetric{
+			desc:   viewDesc,
+			streams: map[attribute.Set]aggregation.Aggregation{},
+		}
+		config.term.outputNames[viewDesc.Name()] = struct{}{}
+		config.term.metrics = append(config.term.metrics, config.metric)
 
 		var compiled compiledView
-		switch instrument.NumberKind() {
+		switch viewDesc.NumberKind() {
 		case number.Int64Kind:
-			compiled = buildView[int64, traits.Int64](instrument, config)
+			compiled = buildView[int64, traits.Int64](config)
 		case number.Float64Kind:
-			compiled = buildView[float64, traits.Float64](instrument, config)
+			compiled = buildView[float64, traits.Float64](config)
 		}
 		vcf.compiled = append(vcf.compiled, compiled)
 	}
@@ -260,8 +271,8 @@ func histogramDefaultsFor(kind number.Kind) histogram.Defaults {
 	return histogram.Float64Defaults{}
 }
 
-func buildView[N number.Any, Traits traits.Any[N]](instrument sdkapi.Descriptor, config configuredBehavior) compiledView {
-	if instrument.InstrumentKind().Synchronous() {
+func buildView[N number.Any, Traits traits.Any[N]](config configuredBehavior) compiledView {
+	if config.metric.desc.InstrumentKind().Synchronous() {
 		return buildSyncView[N, Traits](config)
 	}
 	return buildAsyncView[N, Traits](config)
@@ -273,14 +284,15 @@ func newSyncConfig[
 	Methods aggregator.Methods[N, Storage, Config],
 ](config configuredBehavior, aggConfig *Config) compiledView {
 	return &compiledSyncView[N, Storage, Config, Methods]{
+		metric:    config.metric,
 		aggConfig: aggConfig,
-		viewKeys: config.view.Keys(),
+		viewKeys:  config.view.Keys(),
 	}
 }
 
 func (csv *compiledSyncView[N, Storage, Config, Methods]) newInstrument(kvs []attribute.KeyValue) viewInstrument {
 	sc := &syncCollector[N, Storage, Config, Methods]{
-		output: findOutput[N, Storage, Config, Methods](csv.aggConfig, csv.viewKeys, kvs),
+		output: findOutput[N, Storage, Config, Methods](csv.metric, csv.aggConfig, csv.viewKeys, kvs),
 	}
 	sc.init(*csv.aggConfig)
 	return sc
@@ -292,19 +304,19 @@ func newAsyncConfig[
 	Methods aggregator.Methods[N, Storage, Config],
 ](config configuredBehavior, aggConfig *Config) compiledView {
 	return &compiledAsyncView[N, Storage, Config, Methods]{
+		metric:    config.metric,
 		aggConfig: aggConfig,
-		viewKeys: config.view.Keys(),
+		viewKeys:  config.view.Keys(),
 	}
 }
 
 func (cav *compiledAsyncView[N, Storage, Config, Methods]) newInstrument(kvs []attribute.KeyValue) viewInstrument {
 	sc := &asyncCollector[N, Storage, Config, Methods]{
-		output: findOutput[N, Storage, Config, Methods](cav.aggConfig, cav.viewKeys, kvs),
+		output: findOutput[N, Storage, Config, Methods](cav.metric, cav.aggConfig, cav.viewKeys, kvs),
 	}
 	sc.init(*cav.aggConfig)
 	return sc
 }
-
 
 func buildSyncView[N number.Any, Traits traits.Any[N]](config configuredBehavior) compiledView {
 	switch config.settings.kind {
@@ -429,32 +441,30 @@ func (ac *asyncCollector[N, Storage, Config, Methods]) collect() {
 	methods.Merge(&ac.snapshot, ac.output)
 }
 
-func findOutput[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]](aggConfig *Config, viewKeys attribute.Filter, kvs []attribute.KeyValue) *Storage {
+func findOutput[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]](metric *viewMetric, aggConfig *Config, viewKeys attribute.Filter, kvs []attribute.KeyValue) *Storage {
 	set, _ := attribute.NewSetWithFiltered(kvs, viewKeys)
 	return findOrCreate[N, Storage, Config, Methods](
+		metric,
 		set,
 		aggConfig,
 	)
 }
 
 func findOrCreate[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]](
+	metric *viewMetric,
 	attrs attribute.Set,
 	aggConfig *Config,
 ) *Storage {
 	var methods Methods
-	
-	// mk := mapkey{
-	// 	Descriptor: desc,
-	// 	Set: attrs,
-	// }
-	// uptr, has := reader.storage[mk]
+	metric.lock.Lock()
+	defer metric.lock.Unlock()
 
-	// if has {
-	// 	return (*Storage)(uptr)
-	// }
+	if aggr, has := metric.streams[attrs]; has {
+		return methods.Storage(aggr)
+	}
 
 	ns := new(Storage)
 	methods.Init(ns, *aggConfig)
-	// reader.storage[mk] = unsafe.Pointer(ns)
+	metric.streams[attrs] = methods.Aggregation(ns)
 	return ns
 }
