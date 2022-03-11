@@ -19,74 +19,61 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/nonrecording"
 )
+
+func testFloat64Race(interact func(context.Context, float64, ...attribute.KeyValue), setDelegate func(metric.Meter)) {
+	finish := make(chan struct{})
+	go func() {
+		for {
+			interact(context.Background(), 1)
+			select {
+			case <-finish:
+				return
+			default:
+			}
+		}
+	}()
+
+	setDelegate(nonrecording.NewNoopMeter())
+	close(finish)
+}
+
+func testInt64Race(interact func(context.Context, int64, ...attribute.KeyValue), setDelegate func(metric.Meter)) {
+	finish := make(chan struct{})
+	go func() {
+		for {
+			interact(context.Background(), 1)
+			select {
+			case <-finish:
+				return
+			default:
+			}
+		}
+	}()
+
+	setDelegate(nonrecording.NewNoopMeter())
+	close(finish)
+}
 
 func TestAsyncInstrumentSetDelegateRace(t *testing.T) {
 	// Float64 Instruments
 	t.Run("Float64", func(t *testing.T) {
 		t.Run("Counter", func(t *testing.T) {
-			delegate := &afCounter{
-				name: "testName",
-				opts: []instrument.Option{},
-			}
-			finish := make(chan struct{})
-			go func() {
-				for {
-					delegate.Observe(context.Background(), 1)
-					select {
-					case <-finish:
-						return
-					default:
-					}
-				}
-			}()
-
-			delegate.setDelegate(nonrecording.NewNoopMeter())
-			close(finish)
+			delegate := &afCounter{}
+			testFloat64Race(delegate.Observe, delegate.setDelegate)
 		})
 
 		t.Run("UpDownCounter", func(t *testing.T) {
-			delegate := &afUpDownCounter{
-				name: "testName",
-				opts: []instrument.Option{},
-			}
-			finish := make(chan struct{})
-			go func() {
-				for {
-					delegate.Observe(context.Background(), 1)
-					select {
-					case <-finish:
-						return
-					default:
-					}
-				}
-			}()
-
-			delegate.setDelegate(nonrecording.NewNoopMeter())
-			close(finish)
+			delegate := &afUpDownCounter{}
+			testFloat64Race(delegate.Observe, delegate.setDelegate)
 		})
 
 		t.Run("Gauge", func(t *testing.T) {
-			delegate := &afGauge{
-				name: "testName",
-				opts: []instrument.Option{},
-			}
-			finish := make(chan struct{})
-			go func() {
-				for {
-					delegate.Observe(context.Background(), 1)
-					select {
-					case <-finish:
-						return
-					default:
-					}
-				}
-			}()
-
-			delegate.setDelegate(nonrecording.NewNoopMeter())
-			close(finish)
+			delegate := &afGauge{}
+			testFloat64Race(delegate.Observe, delegate.setDelegate)
 		})
 	})
 
@@ -94,66 +81,18 @@ func TestAsyncInstrumentSetDelegateRace(t *testing.T) {
 
 	t.Run("Int64", func(t *testing.T) {
 		t.Run("Counter", func(t *testing.T) {
-			delegate := &aiCounter{
-				name: "testName",
-				opts: []instrument.Option{},
-			}
-			finish := make(chan struct{})
-			go func() {
-				for {
-					delegate.Observe(context.Background(), 1)
-					select {
-					case <-finish:
-						return
-					default:
-					}
-				}
-			}()
-
-			delegate.setDelegate(nonrecording.NewNoopMeter())
-			close(finish)
+			delegate := &aiCounter{}
+			testInt64Race(delegate.Observe, delegate.setDelegate)
 		})
 
 		t.Run("UpDownCounter", func(t *testing.T) {
-			delegate := &aiUpDownCounter{
-				name: "testName",
-				opts: []instrument.Option{},
-			}
-			finish := make(chan struct{})
-			go func() {
-				for {
-					delegate.Observe(context.Background(), 1)
-					select {
-					case <-finish:
-						return
-					default:
-					}
-				}
-			}()
-
-			delegate.setDelegate(nonrecording.NewNoopMeter())
-			close(finish)
+			delegate := &aiUpDownCounter{}
+			testInt64Race(delegate.Observe, delegate.setDelegate)
 		})
 
 		t.Run("Gauge", func(t *testing.T) {
-			delegate := &aiGauge{
-				name: "testName",
-				opts: []instrument.Option{},
-			}
-			finish := make(chan struct{})
-			go func() {
-				for {
-					delegate.Observe(context.Background(), 1)
-					select {
-					case <-finish:
-						return
-					default:
-					}
-				}
-			}()
-
-			delegate.setDelegate(nonrecording.NewNoopMeter())
-			close(finish)
+			delegate := &aiGauge{}
+			testInt64Race(delegate.Observe, delegate.setDelegate)
 		})
 	})
 }
@@ -162,66 +101,18 @@ func TestSyncInstrumentSetDelegateRace(t *testing.T) {
 	// Float64 Instruments
 	t.Run("Float64", func(t *testing.T) {
 		t.Run("Counter", func(t *testing.T) {
-			delegate := &sfCounter{
-				name: "testName",
-				opts: []instrument.Option{},
-			}
-			finish := make(chan struct{})
-			go func() {
-				for {
-					delegate.Add(context.Background(), 1)
-					select {
-					case <-finish:
-						return
-					default:
-					}
-				}
-			}()
-
-			delegate.setDelegate(nonrecording.NewNoopMeter())
-			close(finish)
+			delegate := &sfCounter{}
+			testFloat64Race(delegate.Add, delegate.setDelegate)
 		})
 
 		t.Run("UpDownCounter", func(t *testing.T) {
-			delegate := &sfUpDownCounter{
-				name: "testName",
-				opts: []instrument.Option{},
-			}
-			finish := make(chan struct{})
-			go func() {
-				for {
-					delegate.Add(context.Background(), 1)
-					select {
-					case <-finish:
-						return
-					default:
-					}
-				}
-			}()
-
-			delegate.setDelegate(nonrecording.NewNoopMeter())
-			close(finish)
+			delegate := &sfUpDownCounter{}
+			testFloat64Race(delegate.Add, delegate.setDelegate)
 		})
 
 		t.Run("Histogram", func(t *testing.T) {
-			delegate := &sfHistogram{
-				name: "testName",
-				opts: []instrument.Option{},
-			}
-			finish := make(chan struct{})
-			go func() {
-				for {
-					delegate.Record(context.Background(), 1)
-					select {
-					case <-finish:
-						return
-					default:
-					}
-				}
-			}()
-
-			delegate.setDelegate(nonrecording.NewNoopMeter())
-			close(finish)
+			delegate := &sfHistogram{}
+			testFloat64Race(delegate.Record, delegate.setDelegate)
 		})
 	})
 
@@ -229,66 +120,18 @@ func TestSyncInstrumentSetDelegateRace(t *testing.T) {
 
 	t.Run("Int64", func(t *testing.T) {
 		t.Run("Counter", func(t *testing.T) {
-			delegate := &siCounter{
-				name: "testName",
-				opts: []instrument.Option{},
-			}
-			finish := make(chan struct{})
-			go func() {
-				for {
-					delegate.Add(context.Background(), 1)
-					select {
-					case <-finish:
-						return
-					default:
-					}
-				}
-			}()
-
-			delegate.setDelegate(nonrecording.NewNoopMeter())
-			close(finish)
+			delegate := &siCounter{}
+			testInt64Race(delegate.Add, delegate.setDelegate)
 		})
 
 		t.Run("UpDownCounter", func(t *testing.T) {
-			delegate := &siUpDownCounter{
-				name: "testName",
-				opts: []instrument.Option{},
-			}
-			finish := make(chan struct{})
-			go func() {
-				for {
-					delegate.Add(context.Background(), 1)
-					select {
-					case <-finish:
-						return
-					default:
-					}
-				}
-			}()
-
-			delegate.setDelegate(nonrecording.NewNoopMeter())
-			close(finish)
+			delegate := &siUpDownCounter{}
+			testInt64Race(delegate.Add, delegate.setDelegate)
 		})
 
 		t.Run("Histogram", func(t *testing.T) {
-			delegate := &siHistogram{
-				name: "testName",
-				opts: []instrument.Option{},
-			}
-			finish := make(chan struct{})
-			go func() {
-				for {
-					delegate.Record(context.Background(), 1)
-					select {
-					case <-finish:
-						return
-					default:
-					}
-				}
-			}()
-
-			delegate.setDelegate(nonrecording.NewNoopMeter())
-			close(finish)
+			delegate := &siHistogram{}
+			testInt64Race(delegate.Record, delegate.setDelegate)
 		})
 	})
 }
