@@ -34,38 +34,35 @@ type (
 
 	ScopeMetrics struct {
 		Library      instrumentation.Library
-		ByDescriptor []DescriptorMetrics
+		ByInstrument []InstrumentMetrics
 	}
 
-	DescriptorMetrics struct {
-		Descriptor   *sdkapi.Descriptor
+	InstrumentMetrics struct {
+		Instrument   *sdkapi.Descriptor
 		Temporality  aggregation.Temporality
 		ByAttributes []AttributeMetrics
 	}
 
 	AttributeMetrics struct {
 		Attributes  attribute.Set
-		ByTimestamp []TimestampMetrics
-	}
-
-	TimestampMetrics struct {
 		Aggregation aggregation.Aggregation
 		Start       time.Time
 		End         time.Time
 	}
 
-	Producer interface {
-		Produce(*Metrics)
-	}
-
-	Installer interface {
-		Install(Producer)
-	}
-
 	Exporter interface {
-		Export(context.Context, Metrics) error
-		Flush(context.Context, Metrics) error
-		Shutdown(context.Context, Metrics) error
+		Registeree
+
+		Flush(context.Context) error
+		Shutdown(context.Context) error
+	}
+
+	Registeree interface {
+		Register(Producer)
+	}
+
+	Producer interface {
+		Produce(*Metrics) Metrics
 	}
 )
 
@@ -122,24 +119,6 @@ func (r *Reader) Defaults() DefaultsFunc {
 	return r.config.defaults
 }
 
-// func FindOrCreate[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]](
-// 	reader *Reader,
-// 	desc *sdkapi.Descriptor,
-// 	attrs attribute.Set,
-// 	aggConfig *Config,
-// ) *Storage {
-// 	var methods Methods
-// 	mk := mapkey{
-// 		Descriptor: desc,
-// 		Set: attrs,
-// 	}
-// 	uptr, has := reader.storage[mk]
-
-// 	if has {
-// 		return (*Storage)(uptr)
-// 	}
-// 	ns := new(Storage)
-// 	methods.Init(ns, *aggConfig)
-// 	reader.storage[mk] = unsafe.Pointer(ns)
-// 	return ns
-// }
+func (r *Reader) Exporter() Exporter {
+	return r.exporter
+}

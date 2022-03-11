@@ -92,7 +92,7 @@ type (
 
 // Kind description constants.
 const (
-	NoneKind      Kind = "None"
+	DropKind      Kind = "Drop"
 	SumKind       Kind = "Sum"
 	HistogramKind Kind = "Histogram"
 	LastValueKind Kind = "LastValue"

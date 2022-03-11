@@ -3,6 +3,7 @@ package viewstate
 import (
 	"fmt"
 	"sync"
+	"unsafe"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -35,41 +36,52 @@ type (
 
 	State struct {
 		library   instrumentation.Library
-		terminals []viewTerminal
+		terminals []*viewTerminal
 	}
 
 	Factory struct {
-		state         *State
-		configuration []compiledView
+		compiled []compiledView
 	}
 
-	compiledView struct {
-		newIntermediate func(kvs []attribute.KeyValue) viewIntermediate
+	compiledView interface {
+		newInstrument(kvs []attribute.KeyValue) viewInstrument
 	}
 
 	configuredBehavior struct {
 		desc sdkapi.Descriptor
 		term *viewTerminal
 		view views.View
+		settings aggregatorSettings
 	}
 
-	viewIntermediate interface {
+	instrument struct {
+		desc sdkapi.Descriptor
+		values map[attribute.Set]unsafe.Pointer
+	}
+
+	viewMultiInstrument[N number.Any] struct {
+		instruments []viewInstrumentUpdater[N]
+	}
+
+	viewInstrument interface {
 		collect()
 	}
 
-	viewIntermediateUpdater[N number.Any] interface {
-		viewIntermediate
+	viewInstrumentUpdater[N number.Any] interface {
+		viewInstrument
 		update(value N)
-	}
-
-	viewCollector[N number.Any] struct {
-		intermediates []viewIntermediateUpdater[N]
 	}
 
 	viewTerminal struct {
 		reader      *reader.Reader
 		lock        sync.Mutex
 		outputNames map[string]struct{}
+		metrics     []*viewTerminalInstrument
+	}
+
+	viewTerminalInstrument struct {
+		desc sdkapi.Descriptor
+		values map[attribute.Set]aggregation.Aggregation
 	}
 
 	aggregatorSettings struct {
@@ -82,32 +94,24 @@ type (
 	syncCollector[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
 		current  Storage
 		snapshot Storage
-		outputs  readerStorage[N, Storage, Config, Methods]
+		output   *Storage
 	}
 
 	asyncCollector[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
 		lock     sync.Mutex
 		current  N
 		snapshot Storage
-		outputs  readerStorage[N, Storage, Config, Methods]
+		output  *Storage
 	}
 
-	readerStorage[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] interface {
-		processSingleAggregate(*readerStorage[N, Storage, Config, Methods], *Storage)
-	}
-
-	setupStorage[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
-		readerConfigs []configuredBehavior
+	compiledSyncView[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
 		aggConfig *Config
-		kvs []attribute.KeyValue
-	}
-	
-	singleStorage[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
-		single *Storage
+		viewKeys  attribute.Filter
 	}
 
-	multiStorage[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
-		multi []*Storage
+	compiledAsyncView[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
+		aggConfig *Config
+		viewKeys  attribute.Filter
 	}
 )
 
@@ -143,10 +147,12 @@ func New(lib instrumentation.Library, readerConfig []*reader.Reader) *State {
 	// - schemaURL or Version without library name
 	// - empty attribute keys
 	// - Name w/o SingleInst
-	terminals := make([]viewTerminal, len(readerConfig))
+	terminals := make([]*viewTerminal, len(readerConfig))
 	for i, r := range readerConfig {
-		terminals[i].outputNames = map[string]struct{}{}
-		terminals[i].reader = r
+		terminals[i] = &viewTerminal{
+			outputNames: map[string]struct{}{},
+			reader: r,
+		}
 	}
 
 	return &State{
@@ -159,29 +165,11 @@ func New(lib instrumentation.Library, readerConfig []*reader.Reader) *State {
 // implementation, the result saved in the instrument and used to
 // construct new Collectors throughout its lifetime.
 func (v *State) NewFactory(instrument sdkapi.Descriptor) *Factory {
-	// Compute the set of matching views.
-	type (
-		settingsBehaviors struct {
-			settings aggregatorSettings
-			configs  []configuredBehavior
-		}
-	)
+	var configs []configuredBehavior
 
-	allBehaviors := map[string]settingsBehaviors{}
-	addBehavior := func(readerIdx int, as aggregatorSettings, config configuredBehavior) {
-		ss := fmt.Sprint(as)
-		allBehaviors[ss] = settingsBehaviors{
-			settings: as,
-			configs:  append(allBehaviors[ss].configs, config),
-		}
-
-	}
-
-	for terminalIdx := range v.terminals {
+	for _, terminal := range v.terminals {
 		matchCount := 0
-		terminal := &v.terminals[terminalIdx]
-		for viewIdx := range v.terminals[terminalIdx].reader.Views() {
-			view := v.terminals[terminalIdx].reader.Views()[viewIdx]
+		for _, view := range terminal.reader.Views() {
 			if !view.Matches(v.library, instrument) {
 				continue
 			}
@@ -201,68 +189,64 @@ func (v *State) NewFactory(instrument sdkapi.Descriptor) *Factory {
 				as = aggregatorSettingsFor(instrument, terminal.reader.Defaults())
 			}
 
-			if as.kind == aggregation.NoneKind {
+			if as.kind == aggregation.DropKind {
 				continue
 			}
 
-			addBehavior(terminalIdx, as, configuredBehavior{
+			configs = append(configs, configuredBehavior{
+				desc: viewDescriptor(instrument, view),
 				term: terminal,
 				view: view,
-				desc: viewDescriptor(instrument, view),
+				settings: as,
 			})
 		}
 
 		// If there were no matching views, set the default aggregation.
+		// TODO: If the `default_enabled` variable is disabled, continue
 		if matchCount == 0 {
 			as := aggregatorSettingsFor(instrument, terminal.reader.Defaults())
-			if as.kind == aggregation.NoneKind {
+			if as.kind == aggregation.DropKind {
 				continue
 			}
 
-			addBehavior(terminalIdx, as, configuredBehavior{
+			configs = append(configs, configuredBehavior{
+				desc: instrument,
 				term: terminal,
 				view: views.New(views.WithAggregation(as.kind)),
-				desc: instrument,
+				settings: as,
 			})
 		}
 	}
 	// When there are no matches for any terminal, return a nil factory.
-	if len(allBehaviors) == 0 {
+	if len(configs) == 0 {
 		return nil
 	}
 
-	vcf := &Factory{state: v}
+	vcf := &Factory{}
 
 	for _, terminal := range v.terminals {
 		terminal.lock.Lock()
 		defer terminal.lock.Unlock()
 	}
 
-	for _, sbs := range allBehaviors {
-		valid := 0
-		for _, config := range sbs.configs {
-			if _, has := config.term.outputNames[config.desc.Name()]; !has {
-				config.term.outputNames[config.desc.Name()] = struct{}{}
-				valid++
-			} else {
-				otel.Handle(fmt.Errorf("duplicate view name registered"))
-			}
-		}
-		if valid == 0 {
+	for _, config := range configs {
+		if _, has := config.term.outputNames[config.desc.Name()]; has {
+			otel.Handle(fmt.Errorf("duplicate view name registered"))
 			continue
 		}
+		config.term.outputNames[config.desc.Name()] = struct{}{}
 
 		var compiled compiledView
 		switch instrument.NumberKind() {
 		case number.Int64Kind:
-			compiled = buildView[int64, traits.Int64](instrument, sbs.settings, sbs.configs)
+			compiled = buildView[int64, traits.Int64](instrument, config)
 		case number.Float64Kind:
-			compiled = buildView[float64, traits.Float64](instrument, sbs.settings, sbs.configs)
+			compiled = buildView[float64, traits.Float64](instrument, config)
 		}
-		vcf.configuration = append(vcf.configuration, compiled)
+		vcf.compiled = append(vcf.compiled, compiled)
 	}
 
-	if len(vcf.configuration) == 0 {
+	if len(vcf.compiled) == 0 {
 		return nil
 	}
 
@@ -276,131 +260,130 @@ func histogramDefaultsFor(kind number.Kind) histogram.Defaults {
 	return histogram.Float64Defaults{}
 }
 
-func buildView[N number.Any, Traits traits.Any[N]](instrument sdkapi.Descriptor, settings aggregatorSettings, configs []configuredBehavior) compiledView {
+func buildView[N number.Any, Traits traits.Any[N]](instrument sdkapi.Descriptor, config configuredBehavior) compiledView {
 	if instrument.InstrumentKind().Synchronous() {
-		return buildSyncView[N, Traits](settings, configs)
+		return buildSyncView[N, Traits](config)
 	}
-	return buildAsyncView[N, Traits](settings, configs)
-}
-
-func compileOutputs[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]](readerConfigs []configuredBehavior, aggConfig *Config, kvs []attribute.KeyValue) readerStorage[N, Storage, Config, Methods] {
-	return &setupStorage[N, Storage, Config, Methods] {
-		readerConfigs: readerConfigs,
-		aggConfig: aggConfig,
-		kvs: kvs,
-	}
+	return buildAsyncView[N, Traits](config)
 }
 
 func newSyncConfig[
 	N number.Any,
 	Storage, Config any,
 	Methods aggregator.Methods[N, Storage, Config],
-](readerConfigs []configuredBehavior, aggConfig *Config) compiledView {
-	return compiledView{
-		newIntermediate: func(kvs []attribute.KeyValue) viewIntermediate {
-			aa := &syncCollector[N, Storage, Config, Methods]{
-				outputs: compileOutputs[N, Storage, Config, Methods](readerConfigs, aggConfig, kvs),
-			}
-			aa.init(*aggConfig)
-			return aa
-		},
+](config configuredBehavior, aggConfig *Config) compiledView {
+	return &compiledSyncView[N, Storage, Config, Methods]{
+		aggConfig: aggConfig,
+		viewKeys: config.view.Keys(),
 	}
+}
+
+func (csv *compiledSyncView[N, Storage, Config, Methods]) newInstrument(kvs []attribute.KeyValue) viewInstrument {
+	sc := &syncCollector[N, Storage, Config, Methods]{
+		output: findOutput[N, Storage, Config, Methods](csv.aggConfig, csv.viewKeys, kvs),
+	}
+	sc.init(*csv.aggConfig)
+	return sc
 }
 
 func newAsyncConfig[
 	N number.Any,
 	Storage, Config any,
 	Methods aggregator.Methods[N, Storage, Config],
-](readerConfigs []configuredBehavior, aggConfig *Config) compiledView {
-	return compiledView{
-		newIntermediate: func(kvs []attribute.KeyValue) viewIntermediate {
-			aa := &asyncCollector[N, Storage, Config, Methods]{
-				outputs: compileOutputs[N, Storage, Config, Methods](readerConfigs, aggConfig, kvs),
-			}
-			aa.init(*aggConfig)
-			return aa
-		},
+](config configuredBehavior, aggConfig *Config) compiledView {
+	return &compiledAsyncView[N, Storage, Config, Methods]{
+		aggConfig: aggConfig,
+		viewKeys: config.view.Keys(),
 	}
 }
 
-func buildSyncView[N number.Any, Traits traits.Any[N]](settings aggregatorSettings, behaviors []configuredBehavior) compiledView {
-	switch settings.kind {
+func (cav *compiledAsyncView[N, Storage, Config, Methods]) newInstrument(kvs []attribute.KeyValue) viewInstrument {
+	sc := &asyncCollector[N, Storage, Config, Methods]{
+		output: findOutput[N, Storage, Config, Methods](cav.aggConfig, cav.viewKeys, kvs),
+	}
+	sc.init(*cav.aggConfig)
+	return sc
+}
+
+
+func buildSyncView[N number.Any, Traits traits.Any[N]](config configuredBehavior) compiledView {
+	switch config.settings.kind {
 	case aggregation.LastValueKind:
 		return newSyncConfig[
 			N,
 			lastvalue.State[N, Traits],
 			lastvalue.Config,
 			lastvalue.Methods[N, Traits, lastvalue.State[N, Traits]],
-		](behaviors, &settings.lvcfg)
+		](config, &config.settings.lvcfg)
 	case aggregation.HistogramKind:
 		return newSyncConfig[
 			N,
 			histogram.State[N, Traits],
 			histogram.Config,
 			histogram.Methods[N, Traits, histogram.State[N, Traits]],
-		](behaviors, &settings.hcfg)
+		](config, &config.settings.hcfg)
 	default:
 		return newSyncConfig[
 			N,
 			sum.State[N, Traits],
 			sum.Config,
 			sum.Methods[N, Traits, sum.State[N, Traits]],
-		](behaviors, &settings.scfg)
+		](config, &config.settings.scfg)
 	}
 }
 
-func buildAsyncView[N number.Any, Traits traits.Any[N]](settings aggregatorSettings, behaviors []configuredBehavior) compiledView {
-	switch settings.kind {
+func buildAsyncView[N number.Any, Traits traits.Any[N]](config configuredBehavior) compiledView {
+	switch config.settings.kind {
 	case aggregation.LastValueKind:
 		return newAsyncConfig[
 			N,
 			lastvalue.State[N, Traits],
 			lastvalue.Config,
 			lastvalue.Methods[N, Traits, lastvalue.State[N, Traits]],
-		](behaviors, &settings.lvcfg)
+		](config, &config.settings.lvcfg)
 	case aggregation.HistogramKind:
 		return newAsyncConfig[
 			N,
 			histogram.State[N, Traits],
 			histogram.Config,
 			histogram.Methods[N, Traits, histogram.State[N, Traits]],
-		](behaviors, &settings.hcfg)
+		](config, &config.settings.hcfg)
 	default:
 		return newAsyncConfig[
 			N,
 			sum.State[N, Traits],
 			sum.Config,
 			sum.Methods[N, Traits, sum.State[N, Traits]],
-		](behaviors, &settings.scfg)
+		](config, &config.settings.scfg)
 	}
 }
 
 // New returns a Collector that also implements Updater[N]
 func (factory *Factory) New(kvs []attribute.KeyValue, instrument *sdkapi.Descriptor) Collector {
 	if instrument.NumberKind() == number.Float64Kind {
-		return newCollector[float64](factory, kvs, instrument)
+		return newMultiInstrument[float64](factory, kvs, instrument)
 	}
-	return newCollector[int64](factory, kvs, instrument)
+	return newMultiInstrument[int64](factory, kvs, instrument)
 }
 
-func newCollector[N number.Any](factory *Factory, kvs []attribute.KeyValue, instrument *sdkapi.Descriptor) CollectorUpdater[N] {
-	intermediates := make([]viewIntermediateUpdater[N], 0, len(factory.configuration))
-	for idx, vc := range factory.configuration {
-		intermediates[idx] = vc.newIntermediate(kvs).(viewIntermediateUpdater[N])
+func newMultiInstrument[N number.Any](factory *Factory, kvs []attribute.KeyValue, instrument *sdkapi.Descriptor) CollectorUpdater[N] {
+	instruments := make([]viewInstrumentUpdater[N], 0, len(factory.compiled))
+	for idx, vc := range factory.compiled {
+		instruments[idx] = vc.newInstrument(kvs).(viewInstrumentUpdater[N])
 	}
-	return &viewCollector[N]{
-		intermediates: intermediates,
+	return &viewMultiInstrument[N]{
+		instruments: instruments,
 	}
 }
 
-func (c *viewCollector[N]) Collect() {
-	for _, intermediate := range c.intermediates {
+func (c *viewMultiInstrument[N]) Collect() {
+	for _, intermediate := range c.instruments {
 		intermediate.collect()
 	}
 }
 
-func (c *viewCollector[N]) Update(value N) {
-	for _, intermediate := range c.intermediates {
+func (c *viewMultiInstrument[N]) Update(value N) {
+	for _, intermediate := range c.instruments {
 		intermediate.update(value)
 	}
 }
@@ -419,8 +402,7 @@ func (sc *syncCollector[N, Storage, Config, Methods]) update(number N) {
 func (sc *syncCollector[N, Storage, Config, Methods]) collect() {
 	var methods Methods
 	methods.SynchronizedMove(&sc.current, &sc.snapshot)
-
-	sc.outputs.processSingleAggregate(&sc.outputs, &sc.snapshot)
+	methods.Merge(&sc.snapshot, sc.output)
 }
 
 func (ac *asyncCollector[N, Storage, Config, Methods]) init(cfg Config) {
@@ -436,60 +418,43 @@ func (ac *asyncCollector[N, Storage, Config, Methods]) update(number N) {
 }
 
 func (ac *asyncCollector[N, Storage, Config, Methods]) collect() {
+	ac.lock.Lock()
+	defer ac.lock.Unlock()
+
 	var methods Methods
 	methods.SynchronizedMove(&ac.snapshot, nil)
 	methods.Update(&ac.snapshot, ac.current)
 	ac.current = 0
 
-	ac.outputs.processSingleAggregate(&ac.outputs, &ac.snapshot)
+	methods.Merge(&ac.snapshot, ac.output)
 }
 
-func (s *setupStorage[N, Storage, Config, Methods]) processSingleAggregate(ptr *readerStorage[N, Storage, Config, Methods], input *Storage) {
-	// Special case for size==1 avoids allocating a unnecessary singleton slice.
-	if len(s.readerConfigs) == 1 {
-		config := s.readerConfigs[0]
-		set, _ := attribute.NewSetWithFiltered(s.kvs, config.view.Keys())
-		ss := singleStorage[N, Storage, Config, Methods]{
-			single: reader.FindOrCreate[N, Storage, Config, Methods](
-				config.term.reader,
-				&config.desc,
-				set,
-				s.aggConfig,
-			),
-		}
-		*ptr = ss
-		ss.processSingleAggregate(nil, input)
-		return
-	}
-
-	output := make([]*Storage, len(s.readerConfigs))
-	for i, config := range s.readerConfigs {
-		set, _ := attribute.NewSetWithFiltered(s.kvs, config.view.Keys())
-		output[i] = reader.FindOrCreate[N, Storage, Config, Methods](
-			config.term.reader,
-			&config.desc,
-			set,
-			s.aggConfig,
-		)
-	}
-	ms := multiStorage[N, Storage, Config, Methods]{
-		multi: output,
-	}
-	*ptr = ms
-	ms.processSingleAggregate(nil, input)
+func findOutput[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]](aggConfig *Config, viewKeys attribute.Filter, kvs []attribute.KeyValue) *Storage {
+	set, _ := attribute.NewSetWithFiltered(kvs, viewKeys)
+	return findOrCreate[N, Storage, Config, Methods](
+		set,
+		aggConfig,
+	)
 }
 
-func (s singleStorage[N, Storage, Config, Methods]) processSingleAggregate(_ *readerStorage[N, Storage, Config, Methods], input *Storage) {
+func findOrCreate[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]](
+	attrs attribute.Set,
+	aggConfig *Config,
+) *Storage {
 	var methods Methods
+	
+	// mk := mapkey{
+	// 	Descriptor: desc,
+	// 	Set: attrs,
+	// }
+	// uptr, has := reader.storage[mk]
 
-	methods.Merge(s.single, input)
+	// if has {
+	// 	return (*Storage)(uptr)
+	// }
+
+	ns := new(Storage)
+	methods.Init(ns, *aggConfig)
+	// reader.storage[mk] = unsafe.Pointer(ns)
+	return ns
 }
-
-func (s multiStorage[N, Storage, Config, Methods]) processSingleAggregate(_ *readerStorage[N, Storage, Config, Methods], input *Storage) {
-	var methods Methods
-
-	for _, sp := range s.multi {
-		methods.Merge(sp, input)
-	}
-}
-

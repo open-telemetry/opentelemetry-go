@@ -28,9 +28,15 @@ type (
 	Option func(cfg *Config)
 
 	provider struct {
-		cfg    Config
-		lock   sync.Mutex
-		meters map[instrumentation.Library]*meter
+		cfg     Config
+		lock    sync.Mutex
+		ordered []*meter
+		meters  map[instrumentation.Library]*meter
+	}
+
+	providerProducer struct {
+		provider *provider
+		reader   *reader.Reader
 	}
 
 	meter struct {
@@ -66,10 +72,35 @@ func New(opts ...Option) metric.MeterProvider {
 	for _, opt := range opts {
 		opt(&cfg)
 	}
-	return &provider{
+	p := &provider{
 		cfg:    cfg,
 		meters: map[instrumentation.Library]*meter{},
 	}
+	for _, reader := range cfg.readers {
+		reader.Exporter().Register(p.producerFor(reader))
+	}
+	return p
+}
+
+func (p *provider) producerFor(reader *reader.Reader) reader.Producer {
+	return &providerProducer{
+		provider: p,
+		reader:   reader,
+	}
+}
+
+func (pp *providerProducer) Produce(in *reader.Metrics) reader.Metrics {
+	return pp.provider.produceFor(pp.reader, in)
+}
+
+func (p *provider) produceFor(reader *reader.Reader, in *reader.Metrics) reader.Metrics {
+	// Any locks needed?
+	// (During operation, how is new transitory storage allocated?  -- if not the reader?)
+	// First, collect each meter
+	// Next, enter the view state to expose the aggregations destined for the same reader.
+	// So, why not allocate those transitory storages from the reader?
+
+	/// Missing something
 }
 
 func (p *provider) Meter(name string, opts ...metric.MeterOption) metric.Meter {
@@ -95,6 +126,7 @@ func (p *provider) Meter(name string, opts ...metric.MeterOption) metric.Meter {
 		asyncAccum: asyncstate.New(),
 		views:      viewstate.New(lib, p.cfg.readers),
 	}
+	p.ordered = append(p.ordered, m)
 	p.meters[lib] = m
 	return m
 }
