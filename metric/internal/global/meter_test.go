@@ -55,7 +55,7 @@ func TestMeterRace(t *testing.T) {
 	wg.Add(1)
 	finish := make(chan struct{})
 	go func() {
-		for i, once := 0, false; ; i++{
+		for i, once := 0, false; ; i++ {
 			name := fmt.Sprintf("a%d", i)
 			_, _ = mtr.AsyncFloat64().Counter(name)
 			_, _ = mtr.AsyncFloat64().UpDownCounter(name)
@@ -166,24 +166,19 @@ func TestMeterProviderDelegatesCalls(t *testing.T) {
 
 	// Calls to Meter() after setDelegate() should be executed by the delegate
 	require.IsType(t, &testMeter{}, meter)
-	if tMeter, ok := meter.(*testMeter); ok {
-		require.Equal(t, 3, tMeter.afCount)
-		require.Equal(t, 3, tMeter.aiCount)
-		require.Equal(t, 3, tMeter.sfCount)
-		require.Equal(t, 3, tMeter.siCount)
-		require.Equal(t, 1, len(tMeter.callbacks))
-	}
+	tMeter := meter.(*testMeter)
+	require.Equal(t, 3, tMeter.afCount)
+	require.Equal(t, 3, tMeter.aiCount)
+	require.Equal(t, 3, tMeter.sfCount)
+	require.Equal(t, 3, tMeter.siCount)
+	require.Equal(t, 1, len(tMeter.callbacks))
 
 	// Because the Meter was provided by testmeterProvider it should also return our test instrument
 	require.IsType(t, &testCountingFloatInstrument{}, ctr, "the meter did not delegate calls to the meter")
-	if testCtr, ok := ctr.(*testCountingFloatInstrument); ok {
-		require.Equal(t, 1, testCtr.count)
-	}
+	require.Equal(t, 1, ctr.(*testCountingFloatInstrument).count)
 
 	require.IsType(t, &testCountingFloatInstrument{}, actr, "the meter did not delegate calls to the meter")
-	if testCtr, ok := actr.(*testCountingFloatInstrument); ok {
-		require.Equal(t, 1, testCtr.count)
-	}
+	require.Equal(t, 1, actr.(*testCountingFloatInstrument).count)
 
 	require.Equal(t, 1, mp.count)
 }
@@ -213,26 +208,20 @@ func TestMeterDelegatesCalls(t *testing.T) {
 
 	// Calls to Meter methods after setDelegate() should be executed by the delegate
 	require.IsType(t, &meter{}, m)
-	if dMeter, ok := m.(*meter); ok {
-		m := dMeter.delegate.Load().(*testMeter)
-		require.NotNil(t, m)
-		require.Equal(t, 3, m.afCount)
-		require.Equal(t, 3, m.aiCount)
-		require.Equal(t, 3, m.sfCount)
-		require.Equal(t, 3, m.siCount)
-	}
+	tMeter := m.(*meter).delegate.Load().(*testMeter)
+	require.NotNil(t, tMeter)
+	require.Equal(t, 3, tMeter.afCount)
+	require.Equal(t, 3, tMeter.aiCount)
+	require.Equal(t, 3, tMeter.sfCount)
+	require.Equal(t, 3, tMeter.siCount)
 
 	// Because the Meter was provided by testmeterProvider it should also return our test instrument
 	require.IsType(t, &testCountingFloatInstrument{}, ctr, "the meter did not delegate calls to the meter")
-	if testCtr, ok := ctr.(*testCountingFloatInstrument); ok {
-		require.Equal(t, 1, testCtr.count)
-	}
+	require.Equal(t, 1, ctr.(*testCountingFloatInstrument).count)
 
 	// Because the Meter was provided by testmeterProvider it should also return our test instrument
 	require.IsType(t, &testCountingFloatInstrument{}, actr, "the meter did not delegate calls to the meter")
-	if testCtr, ok := actr.(*testCountingFloatInstrument); ok {
-		require.Equal(t, 1, testCtr.count)
-	}
+	require.Equal(t, 1, actr.(*testCountingFloatInstrument).count)
 
 	require.Equal(t, 1, mp.count)
 }
@@ -260,21 +249,16 @@ func TestMeterDefersDelegations(t *testing.T) {
 
 	// Calls to Meter() before setDelegate() should be the delegated type
 	require.IsType(t, &meter{}, m)
-
-	if dMeter, ok := m.(*meter); ok {
-		m := dMeter.delegate.Load().(*testMeter)
-		require.NotNil(t, m)
-		require.Equal(t, 3, m.afCount)
-		require.Equal(t, 3, m.aiCount)
-		require.Equal(t, 3, m.sfCount)
-		require.Equal(t, 3, m.siCount)
-	}
+	tMeter := m.(*meter).delegate.Load().(*testMeter)
+	require.NotNil(t, tMeter)
+	require.Equal(t, 3, tMeter.afCount)
+	require.Equal(t, 3, tMeter.aiCount)
+	require.Equal(t, 3, tMeter.sfCount)
+	require.Equal(t, 3, tMeter.siCount)
 
 	// Because the Meter was a delegate it should return a delegated instrument
 
 	require.IsType(t, &sfCounter{}, ctr)
-
 	require.IsType(t, &afCounter{}, actr)
-
 	require.Equal(t, 1, mp.count)
 }
