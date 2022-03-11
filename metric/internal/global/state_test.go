@@ -41,7 +41,7 @@ func TestSetMeterProvider(t *testing.T) {
 			return
 		}
 		if mp.delegate != nil {
-			t.Error("meter provider should not delegat when setting itself")
+			t.Error("meter provider should not delegate when setting itself")
 		}
 
 	})
