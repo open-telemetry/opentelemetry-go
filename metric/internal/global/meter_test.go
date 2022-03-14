@@ -83,7 +83,7 @@ func TestMeterRace(t *testing.T) {
 		}
 	}()
 
-	// wg.Wait()
+	wg.Wait()
 	mtr.setDelegate(nonrecording.NewNoopMeterProvider())
 	close(finish)
 }
