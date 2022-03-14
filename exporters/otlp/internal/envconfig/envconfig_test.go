@@ -288,6 +288,8 @@ func TestWithTLSConfig(t *testing.T) {
 		WithTLSConfig("CERTIFICATE", func(v *tls.Config) {
 			option = testOption{TestTLS: v}
 		}))
+
+	// nolint:staticcheck // ignoring tlsCert.RootCAs.Subjects is deprecated ERR because cert does not come from SystemCertPool.
 	assert.Equal(t, tlsCert.RootCAs.Subjects(), option.TestTLS.RootCAs.Subjects())
 }
 
