@@ -45,9 +45,6 @@ type (
 	Accumulator struct {
 		instrumentsLock sync.Mutex
 		instruments     []*instrument
-
-		// collectLock prevents simultaneous calls to Collect().
-		collectLock sync.Mutex
 	}
 
 	instrument struct {
@@ -194,13 +191,6 @@ func (c common) newInstrument(name string, opts []apiInstrument.Option, nk numbe
 }
 
 func (a *Accumulator) Collect() {
-	a.collectLock.Lock()
-	defer a.collectLock.Unlock()
-
-	a.collectInstruments()
-}
-
-func (a *Accumulator) collectInstruments() {
 	a.instrumentsLock.Lock()
 	instruments := a.instruments
 	a.instrumentsLock.Unlock()
@@ -317,6 +307,8 @@ func acquireRecord[N number.Any](inst *instrument, attrs []attribute.KeyValue) (
 }
 
 func initRecord[N number.Any](inst *instrument, rec *record, attrs []attribute.KeyValue) viewstate.Updater[N] {
-	rec.collector = inst.cfactory.New(attrs, &inst.descriptor)
+	rec.collector = inst.cfactory.New(attrs, &inst.descriptor,
+		// @@@ HERE: All readers?
+	)
 	return rec.collector.(viewstate.Updater[N])
 }

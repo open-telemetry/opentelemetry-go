@@ -47,11 +47,11 @@ type (
 	}
 
 	configuredBehavior struct {
-		instrument sdkapi.Descriptor
-		term       *viewTerminal
-		view       views.View
-		settings   aggregatorSettings
-		metric     *viewMetric
+		desc     sdkapi.Descriptor
+		term     *viewTerminal
+		view     views.View
+		settings aggregatorSettings
+		metric   *viewMetric
 	}
 
 	aggregatorSettings struct {
@@ -78,13 +78,10 @@ type (
 		reader      *reader.Reader
 		lock        sync.Mutex
 		outputNames map[string]struct{}
-		metrics     []*viewMetric
 	}
 
 	viewMetric struct {
-		lock    sync.Mutex
-		desc    sdkapi.Descriptor
-		streams map[attribute.Set]aggregation.Aggregation
+		desc sdkapi.Descriptor
 	}
 
 	syncCollector[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
@@ -163,6 +160,8 @@ func New(lib instrumentation.Library, readerConfig []*reader.Reader) *State {
 // implementation, the result saved in the instrument and used to
 // construct new Collectors throughout its lifetime.
 func (v *State) NewFactory(instrument sdkapi.Descriptor) *Factory {
+	// @@@ HERE Sometimes all readers, sometimes one reader.  We know which.
+	// How to handle: a map[reader]behaviors? or, a ....
 	var configs []configuredBehavior
 
 	for _, terminal := range v.terminals {
@@ -192,10 +191,10 @@ func (v *State) NewFactory(instrument sdkapi.Descriptor) *Factory {
 			}
 
 			configs = append(configs, configuredBehavior{
-				instrument: instrument,
-				term:       terminal,
-				view:       view,
-				settings:   as,
+				desc:     instrument,
+				term:     terminal,
+				view:     view,
+				settings: as,
 			})
 		}
 
@@ -208,10 +207,10 @@ func (v *State) NewFactory(instrument sdkapi.Descriptor) *Factory {
 			}
 
 			configs = append(configs, configuredBehavior{
-				instrument: instrument,
-				term:       terminal,
-				view:       views.New(views.WithAggregation(as.kind)),
-				settings:   as,
+				desc:     instrument,
+				term:     terminal,
+				view:     views.New(views.WithAggregation(as.kind)),
+				settings: as,
 			})
 		}
 	}
@@ -228,18 +227,16 @@ func (v *State) NewFactory(instrument sdkapi.Descriptor) *Factory {
 	}
 
 	for _, config := range configs {
-		viewDesc := viewDescriptor(config.instrument, config.view)
+		viewDesc := viewDescriptor(config.desc, config.view)
 
 		if _, has := config.term.outputNames[viewDesc.Name()]; has {
 			otel.Handle(fmt.Errorf("duplicate view name registered"))
 			continue
 		}
 		config.metric = &viewMetric{
-			desc:   viewDesc,
-			streams: map[attribute.Set]aggregation.Aggregation{},
+			desc: viewDesc,
 		}
 		config.term.outputNames[viewDesc.Name()] = struct{}{}
-		config.term.metrics = append(config.term.metrics, config.metric)
 
 		var compiled compiledView
 		switch viewDesc.NumberKind() {
@@ -383,14 +380,14 @@ func newMultiInstrument[N number.Any](factory *Factory, kvs []attribute.KeyValue
 }
 
 func (c *viewMultiInstrument[N]) Collect() {
-	for _, intermediate := range c.instruments {
-		intermediate.collect()
+	for _, inst := range c.instruments {
+		inst.collect()
 	}
 }
 
 func (c *viewMultiInstrument[N]) Update(value N) {
-	for _, intermediate := range c.instruments {
-		intermediate.update(value)
+	for _, inst := range c.instruments {
+		inst.update(value)
 	}
 }
 

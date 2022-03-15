@@ -7,14 +7,15 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	apiInstrument "go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
-	apiInstrument "go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/metric/internal/registry"
 	"go.opentelemetry.io/otel/sdk/metric/internal/viewstate"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/metric/reader"
 )
 
 type (
@@ -24,11 +25,13 @@ type (
 
 		instrumentsLock sync.Mutex
 		instruments     []apiInstrument.Asynchronous
+
+		statesLock sync.Mutex
+		states map[*reader.Reader]*State
 	}
 
 	State struct {
-		collectLock sync.Mutex
-
+		reader    *reader.Reader
 		storeLock sync.Mutex
 		store     map[*instrument]map[attribute.Set]viewstate.Collector
 		tmpSort   attribute.Sortable
@@ -36,14 +39,14 @@ type (
 
 	instrument struct {
 		apiInstrument.Asynchronous
-		
+
 		descriptor sdkapi.Descriptor
 		cfactory   *viewstate.Factory
 		callback   *callback
 	}
 
 	callback struct {
-		function    func(context.Context) 
+		function    func(context.Context)
 		instruments []apiInstrument.Asynchronous
 	}
 
@@ -73,16 +76,26 @@ func (cb *callback) Instruments() []apiInstrument.Asynchronous {
 }
 
 func New() *Accumulator {
-	return &Accumulator{}
-}
-
-func NewState() *State {
-	return &State{
-		store: map[*instrument]map[attribute.Set]viewstate.Collector{},
+	return &Accumulator{
+		states: map[*reader.Reader]*State{},
 	}
 }
 
-func (m *Accumulator) RegisterCallback(instruments []apiInstrument.Asynchronous, function func(context.Context) ) error {
+func (m *Accumulator) stateFor(reader *reader.Reader) *State {
+	m.statesLock.Lock()
+	defer m.statesLock.Unlock()
+	if s, ok := m.states[reader]; ok {
+		return s
+	}
+	s := &State{
+		reader: reader,
+		store:  map[*instrument]map[attribute.Set]viewstate.Collector{},
+	}
+	m.states[reader] = s
+	return s
+}
+
+func (m *Accumulator) RegisterCallback(instruments []apiInstrument.Asynchronous, function func(context.Context)) error {
 	cb := &callback{
 		function:    function,
 		instruments: instruments,
@@ -116,10 +129,8 @@ func (a *Accumulator) getCallbacks() []*callback {
 	return a.callbacks
 }
 
-func (a *Accumulator) Collect(state *State) error {
-	state.collectLock.Lock()
-	defer state.collectLock.Unlock()
-
+func (a *Accumulator) Collect(reader *reader.Reader) error {
+	state := a.stateFor(reader)
 	ctx := context.WithValue(
 		context.Background(),
 		contextKey{},
@@ -132,10 +143,8 @@ func (a *Accumulator) Collect(state *State) error {
 		cb.function(ctx)
 	}
 
-	for inst, states := range state.store {
-		// Pass in the current the instrument somehow
-		_ = inst
-		for _, entry := range states {
+	for _, insts := range state.store {
+		for _, entry := range insts {
 			entry.Collect()
 		}
 	}
@@ -150,6 +159,12 @@ func capture[N number.Any, Traits traits.Any[N]](ctx context.Context, inst *inst
 		return
 	}
 	state := valid.(*State)
+
+	se := getStateEntry(state, inst, attrs)
+	se.(viewstate.CollectorUpdater[N]).Update(value)
+}
+
+func getStateEntry(state *State, inst *instrument, attrs []attribute.KeyValue) viewstate.Collector {
 	state.storeLock.Lock()
 	defer state.storeLock.Unlock()
 
@@ -163,10 +178,12 @@ func capture[N number.Any, Traits traits.Any[N]](ctx context.Context, inst *inst
 	aset := attribute.NewSetWithSortable(attrs, &state.tmpSort)
 	se, has := idata[aset]
 	if !has {
-		se = inst.cfactory.New(attrs, &inst.descriptor)
+		se = inst.cfactory.New(attrs, &inst.descriptor,
+			// @@@ HERE: Single reader
+		)
 		idata[aset] = se
 	}
-	se.(viewstate.CollectorUpdater[N]).Update(value)
+	return se
 }
 
 func (a *Accumulator) Int64Instruments(reg *registry.State, views *viewstate.State) asyncint64.InstrumentProvider {
