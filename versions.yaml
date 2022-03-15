@@ -42,7 +42,6 @@ module-sets:
       - go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp
       - go.opentelemetry.io/otel/exporters/prometheus
       - go.opentelemetry.io/otel/exporters/stdout/stdoutmetric
-      - go.opentelemetry.io/otel/internal/metric
       - go.opentelemetry.io/otel/metric
       - go.opentelemetry.io/otel/sdk/export/metric
       - go.opentelemetry.io/otel/sdk/metric
