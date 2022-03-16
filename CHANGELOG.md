@@ -17,7 +17,7 @@ Code instrumented with the `go.opentelemetry.io/otel/metric` will need to be mod
 
 - The metrics API has been significantly changed. (#2587)
 
-## [1.5.0] - 2022-03-15
+## [1.5.0] - 2022-03-16
 
 ### Added
 
