@@ -74,9 +74,9 @@ const (
 	SpanLinkAttributeCountKey = "OTEL_LINK_ATTRIBUTE_COUNT_LIMIT"
 )
 
-// firstInt returns the first set int value for an environment variable with
-// a name from keys if one is set and the value is an int. Otherwise,
-// defaultValue is returned
+// firstInt returns the value of the first matching environment variable from
+// keys. If the value is not an integer or no match is found, defaultValue is
+// returned.
 func firstInt(defaultValue int, keys ...string) int {
 	for _, key := range keys {
 		value, ok := os.LookupEnv(key)
