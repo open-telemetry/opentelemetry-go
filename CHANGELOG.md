@@ -57,6 +57,7 @@ Code instrumented with the `go.opentelemetry.io/otel/metric` will need to be mod
 - Remove the OTLP trace exporter limit of SpanEvents when exporting. (#2616)
 - Default to port `4318` instead of `4317` for the `otlpmetrichttp` and `otlptracehttp` client. (#2614, #2625)
 - Unlimited span limits are now supported (negative values). (#2636, #2637)
+- Fallback to general attribute limits when span specific ones are not set in the environment. (#2675, #2677)
 
 ### Deprecated
 
