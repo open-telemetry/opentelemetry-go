@@ -35,7 +35,7 @@ This update is a breaking change of the unstable Metrics API. Code instrumented 
   Zero or negative values will not be changed to the default value like `WithSpanLimits` does.
   Setting a limit to zero will effectively disable the related resource it limits and setting to a negative value will mean that resource is unlimited.
   Consequentially, limits should be constructed using `NewSpanLimits` and updated accordingly. (#2637)
-- Add go 1.18 to our compatibility tests. (#????)
+- Add go 1.18 to our compatibility tests. (#2679)
 
 ### Changed
 
