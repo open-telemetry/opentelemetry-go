@@ -13,6 +13,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 This update is a breaking change of the unstable Metrics API.
 Code instrumented with the `go.opentelemetry.io/otel/metric` will need to be modified.
 
+### Added
+
+- Add go 1.18 to our compatibility tests. (#2679)
+
 ### Changed
 
 - The metrics API has been significantly changed. (#2587)
