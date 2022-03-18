@@ -2,19 +2,18 @@ package reader
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
-	"go.opentelemetry.io/otel/sdk/metric/views"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type (
 	Config struct {
-		views    []views.View
 		defaults DefaultsFunc
 	}
 
@@ -25,6 +24,9 @@ type (
 	Reader struct {
 		config   Config
 		exporter Exporter
+
+		lock  sync.Mutex
+		names map[string]struct{}
 	}
 
 	Metrics struct {
@@ -66,12 +68,6 @@ type (
 	}
 )
 
-func WithView(view views.View) Option {
-	return func(cfg *Config) {
-		cfg.views = append(cfg.views, view)
-	}
-}
-
 func WithDefaults(defaults DefaultsFunc) Option {
 	return func(cfg *Config) {
 		cfg.defaults = defaults
@@ -108,11 +104,8 @@ func New(config Config, exporter Exporter) *Reader {
 	return &Reader{
 		config:   config,
 		exporter: exporter,
+		names:    map[string]struct{}{},
 	}
-}
-
-func (r *Reader) Views() []views.View {
-	return r.config.views
 }
 
 func (r *Reader) Defaults() DefaultsFunc {
@@ -121,4 +114,15 @@ func (r *Reader) Defaults() DefaultsFunc {
 
 func (r *Reader) Exporter() Exporter {
 	return r.exporter
+}
+
+func (r *Reader) AcquireNameCheck(name string) bool {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
+	if _, has := r.names[name]; has {
+		return false
+	}
+	r.names[name] = struct{}{}
+	return true
 }

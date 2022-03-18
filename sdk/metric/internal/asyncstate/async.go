@@ -41,7 +41,7 @@ type (
 		apiInstrument.Asynchronous
 
 		descriptor sdkapi.Descriptor
-		cfactory   *viewstate.Factory
+		compiled   viewstate.Instrument
 		callback   *callback
 	}
 
@@ -53,7 +53,7 @@ type (
 	common struct {
 		accumulator *Accumulator
 		registry    *registry.State
-		views       *viewstate.State
+		views       *viewstate.Compiler
 	}
 
 	Int64Instruments   struct{ common }
@@ -178,15 +178,13 @@ func getStateEntry(state *State, inst *instrument, attrs []attribute.KeyValue) v
 	aset := attribute.NewSetWithSortable(attrs, &state.tmpSort)
 	se, has := idata[aset]
 	if !has {
-		se = inst.cfactory.New(attrs, &inst.descriptor,
-			// @@@ HERE: Single reader
-		)
+		se = inst.compiled.NewCollector(attrs)
 		idata[aset] = se
 	}
 	return se
 }
 
-func (a *Accumulator) Int64Instruments(reg *registry.State, views *viewstate.State) asyncint64.InstrumentProvider {
+func (a *Accumulator) Int64Instruments(reg *registry.State, views *viewstate.Compiler) asyncint64.InstrumentProvider {
 	return Int64Instruments{
 		common: common{
 			accumulator: a,
@@ -196,7 +194,7 @@ func (a *Accumulator) Int64Instruments(reg *registry.State, views *viewstate.Sta
 	}
 }
 
-func (a *Accumulator) Float64Instruments(reg *registry.State, views *viewstate.State) asyncfloat64.InstrumentProvider {
+func (a *Accumulator) Float64Instruments(reg *registry.State, views *viewstate.Compiler) asyncfloat64.InstrumentProvider {
 	return Float64Instruments{
 		common: common{
 			accumulator: a,
@@ -217,10 +215,10 @@ func (c common) newInstrument(name string, opts []apiInstrument.Option, nk numbe
 		c.registry,
 		name, opts, nk, ik,
 		func(desc sdkapi.Descriptor) *instrument {
-			cfactory := c.views.NewFactory(desc)
+			compiled := c.views.Compile(desc)
 			inst := &instrument{
 				descriptor: desc,
-				cfactory:   cfactory,
+				compiled:   compiled,
 			}
 
 			c.accumulator.instrumentsLock.Lock()

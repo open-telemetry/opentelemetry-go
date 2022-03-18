@@ -52,7 +52,7 @@ type (
 		
 		descriptor sdkapi.Descriptor
 		current    sync.Map // map[attribute.Set]*record
-		cfactory   *viewstate.Factory
+		compiled   viewstate.Instrument
 	}
 
 	record struct {
@@ -75,7 +75,7 @@ type (
 	common struct {
 		accumulator *Accumulator
 		registry    *registry.State
-		views       *viewstate.State
+		views       *viewstate.Compiler
 	}
 
 
@@ -104,7 +104,7 @@ func New() *Accumulator {
 	return &Accumulator{}
 }
 
-func (a *Accumulator) Int64Instruments(reg *registry.State, views *viewstate.State) syncint64.InstrumentProvider {
+func (a *Accumulator) Int64Instruments(reg *registry.State, views *viewstate.Compiler) syncint64.InstrumentProvider {
 	return Int64Instruments{
 		common: common{
 			accumulator: a,
@@ -114,7 +114,7 @@ func (a *Accumulator) Int64Instruments(reg *registry.State, views *viewstate.Sta
 	}
 }
 
-func (a *Accumulator) Float64Instruments(reg *registry.State, views *viewstate.State) syncfloat64.InstrumentProvider {
+func (a *Accumulator) Float64Instruments(reg *registry.State, views *viewstate.Compiler) syncfloat64.InstrumentProvider {
 	return Float64Instruments{
 		common: common{
 			accumulator: a,
@@ -176,10 +176,10 @@ func (c common) newInstrument(name string, opts []apiInstrument.Option, nk numbe
 		c.registry,
 		name, opts, nk, ik,
 		func(desc sdkapi.Descriptor) *instrument{
-			cfactory := c.views.NewFactory(desc)
+			compiled := c.views.Compile(desc)
 			inst := &instrument{
 				descriptor: desc,
-				cfactory:   cfactory,
+				compiled:   compiled,
 			}
 
 			c.accumulator.instrumentsLock.Lock()
@@ -307,7 +307,7 @@ func acquireRecord[N number.Any](inst *instrument, attrs []attribute.KeyValue) (
 }
 
 func initRecord[N number.Any](inst *instrument, rec *record, attrs []attribute.KeyValue) viewstate.Updater[N] {
-	rec.collector = inst.cfactory.New(attrs, &inst.descriptor,
+	rec.collector = inst.compiled.NewCollector(attrs,
 		// @@@ HERE: All readers?
 	)
 	return rec.collector.(viewstate.Updater[N])

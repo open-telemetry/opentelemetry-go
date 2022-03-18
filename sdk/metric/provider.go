@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/internal/syncstate"
 	"go.opentelemetry.io/otel/sdk/metric/internal/viewstate"
 	"go.opentelemetry.io/otel/sdk/metric/reader"
+	"go.opentelemetry.io/otel/sdk/metric/views"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -23,6 +24,7 @@ type (
 	Config struct {
 		res     *resource.Resource
 		readers []*reader.Reader
+		views   []views.View
 	}
 
 	Option func(cfg *Config)
@@ -47,7 +49,7 @@ type (
 		registry   *registry.State
 		syncAccum  *syncstate.Accumulator
 		asyncAccum *asyncstate.Accumulator
-		views      *viewstate.State
+		views      *viewstate.Compiler
 	}
 )
 
@@ -64,6 +66,12 @@ func WithResource(res *resource.Resource) Option {
 func WithReader(r *reader.Reader) Option {
 	return func(cfg *Config) {
 		cfg.readers = append(cfg.readers, r)
+	}
+}
+
+func WithViews(vs ...views.View) Option {
+	return func(cfg *Config) {
+		cfg.views = append(cfg.views, vs...)
 	}
 }
 
@@ -155,7 +163,7 @@ func (p *provider) Meter(name string, opts ...metric.MeterOption) metric.Meter {
 		registry:   registry.New(),
 		syncAccum:  syncstate.New(),
 		asyncAccum: asyncstate.New(),
-		views:      viewstate.New(lib, p.cfg.readers),
+		views:      viewstate.New(lib, p.cfg.views, p.cfg.readers),
 	}
 	p.ordered = append(p.ordered, m)
 	p.meters[lib] = m

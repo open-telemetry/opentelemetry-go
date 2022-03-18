@@ -61,11 +61,11 @@ type (
 )
 
 var (
-	_ aggregator.Methods[int64, State[int64, traits.Int64], Config] = Methods[int64, traits.Int64]{}
-	_ aggregator.Methods[float64, State[float64, traits.Float64], Config] = Methods[float64, traits.Float64]{}
+	_ aggregator.Methods[int64, State[int64, traits.Int64], Config] = Methods[int64, traits.Int64, State[int64, traits.Int64]]{}
+	_ aggregator.Methods[float64, State[float64, traits.Float64], Config] = Methods[float64, traits.Float64, State[float64, traits.Float64]]{}
 
-	_ aggregation.Sum = &State[int64, traits.Int64]{}
-	_ aggregation.Sum = &State[float64, traits.Float64]{}
+	_ aggregation.Histogram = &State[int64, traits.Int64]{}
+	_ aggregation.Histogram = &State[float64, traits.Float64]{}
 )
 
 // WithExplicitBoundaries sets the ExplicitBoundaries configuration option of a config.
