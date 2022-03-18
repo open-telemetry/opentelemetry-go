@@ -38,17 +38,16 @@ func MeterProvider() metric.MeterProvider {
 
 // SetMeterProvider is the internal implementation for global.SetMeterProvider.
 func SetMeterProvider(mp metric.MeterProvider) {
-	// Guard against SetMeterProvider(MeterProvider())
-	current := MeterProvider()
-	if current == mp {
-		return
-	}
-
 	delegateMeterOnce.Do(func() {
-		if def, ok := current.(*meterProvider); ok {
+		current := MeterProvider()
+		if current == mp {
+			// Setting the provider to the prior default is nonsense, panic.
+			// Panic is acceptable because we are likely still early in the
+			// process lifetime.
+			panic("invalid MeterProvider, the global instance cannot be reinstalled")
+		} else if def, ok := current.(*meterProvider); ok {
 			def.setDelegate(mp)
 		}
-
 	})
 	globalMeterProvider.Store(meterProviderHolder{mp: mp})
 }
