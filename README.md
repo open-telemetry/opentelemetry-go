@@ -95,8 +95,6 @@ All officially supported exporters for the OpenTelemetry project are contained i
 | [stdout](./exporters/stdout/)         | ✓       | ✓      |
 | [Zipkin](./exporters/zipkin/)         |         | ✓      |
 
-Additionally, OpenTelemetry community supported exporters can be found in the [contrib repository](https://github.com/open-telemetry/opentelemetry-go-contrib/tree/main/exporters).
-
 ## Contributing
 
 See the [contributing documentation](CONTRIBUTING.md).
