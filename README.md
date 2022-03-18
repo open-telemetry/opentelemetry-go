@@ -60,7 +60,8 @@ This project is tested on the following systems.
 While this project should work for other systems, no compatibility guarantees
 are made for those systems currently.
 
-Go 1.18 was added in March of 2022.  Go 1.16 will be removed around June 2022
+Go 1.18 was added in March of 2022.
+Go 1.16 will be removed around June 2022.
 
 ## Getting Started
 
