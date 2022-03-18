@@ -26,6 +26,10 @@ type (
 		readers []*reader.Reader
 	}
 
+	Instrument interface {
+		NewCollector(kvs []attribute.KeyValue) Collector
+	}
+
 	Collector interface {
 		Collect()
 	}
@@ -37,10 +41,6 @@ type (
 	CollectorUpdater[N number.Any] interface {
 		Collector
 		Updater[N]
-	}
-
-	Instrument interface {
-		NewCollector(kvs []attribute.KeyValue) Collector
 	}
 
 	multiCollector[N number.Any] struct {
@@ -245,17 +245,17 @@ func histogramDefaultsFor(kind number.Kind) histogram.Defaults {
 
 func buildView[N number.Any, Traits traits.Any[N]](config configuredBehavior) Instrument {
 	if config.metric.desc.InstrumentKind().Synchronous() {
-		return buildSyncView[N, Traits](config)
+		return compileSync[N, Traits](config)
 	}
-	return buildAsyncView[N, Traits](config)
+	return compileAsync[N, Traits](config)
 }
 
-func newSyncConfig[
+func newSyncInstrument[
 	N number.Any,
 	Storage, Config any,
 	Methods aggregator.Methods[N, Storage, Config],
 ](config configuredBehavior, aggConfig *Config) Instrument {
-		return &compiledSyncView[N, Storage, Config, Methods]{
+	return &compiledSyncView[N, Storage, Config, Methods]{
 		metric:    config.metric,
 		aggConfig: aggConfig,
 		viewKeys:  config.view.Keys(),
@@ -263,10 +263,8 @@ func newSyncConfig[
 }
 
 func (csv *compiledSyncView[N, Storage, Config, Methods]) NewCollector(kvs []attribute.KeyValue) Collector {
-	sc := &syncCollector[N, Storage, Config, Methods]{
-		output: findOutput[N, Storage, Config, Methods](csv.metric, csv.aggConfig, csv.viewKeys, kvs),
-	}
-	sc.init(*csv.aggConfig)
+	sc := &syncCollector[N, Storage, Config, Methods]{}
+	sc.init(csv.metric, *csv.aggConfig, csv.viewKeys, kvs)
 	return sc
 }
 
@@ -283,31 +281,29 @@ func newAsyncConfig[
 }
 
 func (cav *compiledAsyncView[N, Storage, Config, Methods]) NewCollector(kvs []attribute.KeyValue) Collector {
-	sc := &asyncCollector[N, Storage, Config, Methods]{
-		output: findOutput[N, Storage, Config, Methods](cav.metric, cav.aggConfig, cav.viewKeys, kvs),
-	}
-	sc.init(*cav.aggConfig)
+	sc := &asyncCollector[N, Storage, Config, Methods]{}
+	sc.init(cav.metric, *cav.aggConfig, cav.viewKeys, kvs)
 	return sc
 }
 
-func buildSyncView[N number.Any, Traits traits.Any[N]](config configuredBehavior) Instrument {
+func compileSync[N number.Any, Traits traits.Any[N]](config configuredBehavior) Instrument {
 	switch config.settings.kind {
 	case aggregation.LastValueKind:
-		return newSyncConfig[
+		return newSyncInstrument[
 			N,
 			lastvalue.State[N, Traits],
 			lastvalue.Config,
 			lastvalue.Methods[N, Traits, lastvalue.State[N, Traits]],
 		](config, &config.settings.lvcfg)
 	case aggregation.HistogramKind:
-		return newSyncConfig[
+		return newSyncInstrument[
 			N,
 			histogram.State[N, Traits],
 			histogram.Config,
 			histogram.Methods[N, Traits, histogram.State[N, Traits]],
 		](config, &config.settings.hcfg)
 	default:
-		return newSyncConfig[
+		return newSyncInstrument[
 			N,
 			sum.State[N, Traits],
 			sum.Config,
@@ -316,7 +312,7 @@ func buildSyncView[N number.Any, Traits traits.Any[N]](config configuredBehavior
 	}
 }
 
-func buildAsyncView[N number.Any, Traits traits.Any[N]](config configuredBehavior) Instrument {
+func compileAsync[N number.Any, Traits traits.Any[N]](config configuredBehavior) Instrument {
 	switch config.settings.kind {
 	case aggregation.LastValueKind:
 		return newAsyncConfig[
@@ -365,10 +361,17 @@ func (c *multiCollector[N]) Update(value N) {
 	}
 }
 
-func (sc *syncCollector[N, Storage, Config, Methods]) init(cfg Config) {
+func (sc *syncCollector[N, Storage, Config, Methods]) init(metric *viewMetric, cfg Config, keys attribute.Filter, kvs []attribute.KeyValue) {
 	var methods Methods
 	methods.Init(&sc.current, cfg)
 	methods.Init(&sc.snapshot, cfg)
+
+	set, _ := attribute.NewSetWithFiltered(kvs, keys)
+
+	// @@@
+
+	ns := new(Storage)
+	methods.Init(ns, cfg)
 }
 
 func (sc *syncCollector[N, Storage, Config, Methods]) Update(number N) {
@@ -382,10 +385,14 @@ func (sc *syncCollector[N, Storage, Config, Methods]) Collect() {
 	methods.Merge(&sc.snapshot, sc.output)
 }
 
-func (ac *asyncCollector[N, Storage, Config, Methods]) init(cfg Config) {
+func (ac *asyncCollector[N, Storage, Config, Methods]) init(metric *viewMetric, cfg Config, keys attribute.Filter, kvs []attribute.KeyValue) {
 	var methods Methods
 	ac.current = 0
 	methods.Init(&ac.snapshot, cfg)
+
+	set, _ := attribute.NewSetWithFiltered(kvs, keys)
+
+	// @@@ HERE
 }
 
 func (ac *asyncCollector[N, Storage, Config, Methods]) Update(number N) {
@@ -406,32 +413,11 @@ func (ac *asyncCollector[N, Storage, Config, Methods]) Collect() {
 	methods.Merge(&ac.snapshot, ac.output)
 }
 
-func findOutput[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]](metric *viewMetric, aggConfig *Config, viewKeys attribute.Filter, kvs []attribute.KeyValue) *Storage {
-	set, _ := attribute.NewSetWithFiltered(kvs, viewKeys)
-	return findOrCreate[N, Storage, Config, Methods](
-		metric,
-		set,
-		aggConfig,
-	)
-}
-
-func findOrCreate[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]](
-	metric *viewMetric,
-	attrs attribute.Set,
-	aggConfig *Config,
-) *Storage {
-	var methods Methods
-	// metric.lock.Lock()
-	// defer metric.lock.Unlock()
-	// @@@
-	// if aggr, has := metric.streams[attrs]; has {
-	// 	return methods.Storage(aggr)
-	// }
-
-	ns := new(Storage)
-	methods.Init(ns, *aggConfig)
-
-	// @@@
-	// metric.streams[attrs] = methods.Aggregation(ns)
-	return ns
-}
+// func findOutput[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]](metric *viewMetric, aggConfig *Config, viewKeys attribute.Filter, kvs []attribute.KeyValue) *Storage {
+// 	set, _ := attribute.NewSetWithFiltered(kvs, viewKeys)
+// 	return findOrCreate[N, Storage, Config, Methods](
+// 		metric,
+// 		set,
+// 		aggConfig,
+// 	)
+// }
