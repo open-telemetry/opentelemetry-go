@@ -20,6 +20,7 @@ Code instrumented with the `go.opentelemetry.io/otel/metric` will need to be mod
 ### Changed
 
 - The metrics API has been significantly changed. (#2587)
+- Refactored the duplicated part in OTLP exporter trace and metrics config. (#2684)
 
 ### Fixed
 
