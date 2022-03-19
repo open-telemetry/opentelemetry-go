@@ -24,37 +24,98 @@ import (
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 )
 
-func TestIntEnvOr(t *testing.T) {
+func TestEnvParse(t *testing.T) {
 	testCases := []struct {
-		name          string
-		envValue      string
-		defaultValue  int
-		expectedValue int
+		name string
+		keys []string
+		f    func(int) int
 	}{
 		{
-			name:          "IntEnvOrTest - Basic",
-			envValue:      "2500",
-			defaultValue:  500,
-			expectedValue: 2500,
+			name: "BatchSpanProcessorScheduleDelay",
+			keys: []string{BatchSpanProcessorScheduleDelayKey},
+			f:    BatchSpanProcessorScheduleDelay,
 		},
+
 		{
-			name:          "IntEnvOrTest - Invalid Number",
-			envValue:      "localhost",
-			defaultValue:  500,
-			expectedValue: 500,
+			name: "BatchSpanProcessorExportTimeout",
+			keys: []string{BatchSpanProcessorExportTimeoutKey},
+			f:    BatchSpanProcessorExportTimeout,
+		},
+
+		{
+			name: "BatchSpanProcessorMaxQueueSize",
+			keys: []string{BatchSpanProcessorMaxQueueSizeKey},
+			f:    BatchSpanProcessorMaxQueueSize,
+		},
+
+		{
+			name: "BatchSpanProcessorMaxExportBatchSize",
+			keys: []string{BatchSpanProcessorMaxExportBatchSizeKey},
+			f:    BatchSpanProcessorMaxExportBatchSize,
+		},
+
+		{
+			name: "SpanAttributeValueLength",
+			keys: []string{SpanAttributeValueLengthKey, AttributeValueLengthKey},
+			f:    SpanAttributeValueLength,
+		},
+
+		{
+			name: "SpanAttributeCount",
+			keys: []string{SpanAttributeCountKey, AttributeCountKey},
+			f:    SpanAttributeCount,
+		},
+
+		{
+			name: "SpanEventCount",
+			keys: []string{SpanEventCountKey},
+			f:    SpanEventCount,
+		},
+
+		{
+			name: "SpanEventAttributeCount",
+			keys: []string{SpanEventAttributeCountKey},
+			f:    SpanEventAttributeCount,
+		},
+
+		{
+			name: "SpanLinkCount",
+			keys: []string{SpanLinkCountKey},
+			f:    SpanLinkCount,
+		},
+
+		{
+			name: "SpanLinkAttributeCount",
+			keys: []string{SpanLinkAttributeCountKey},
+			f:    SpanLinkAttributeCount,
 		},
 	}
 
-	envStore := ottest.NewEnvStore()
-	envStore.Record(BatchSpanProcessorMaxQueueSizeKey)
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
+	const (
+		defVal    = 500
+		envVal    = 2500
+		envValStr = "2500"
+		invalid   = "localhost"
+	)
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			require.NoError(t, os.Setenv(BatchSpanProcessorMaxQueueSizeKey, tc.envValue))
-			actualValue := BatchSpanProcessorMaxQueueSize(tc.defaultValue)
-			assert.Equal(t, tc.expectedValue, actualValue)
+			for _, key := range tc.keys {
+				t.Run(key, func(t *testing.T) {
+					envStore := ottest.NewEnvStore()
+					t.Cleanup(func() { require.NoError(t, envStore.Restore()) })
+					envStore.Record(key)
+
+					assert.Equal(t, defVal, tc.f(defVal), "environment variable unset")
+
+					require.NoError(t, os.Setenv(key, envValStr))
+					assert.Equal(t, envVal, tc.f(defVal), "environment variable set/valid")
+
+					require.NoError(t, os.Setenv(key, invalid))
+					assert.Equal(t, defVal, tc.f(defVal), "invalid value")
+				})
+
+			}
 		})
 	}
 }
