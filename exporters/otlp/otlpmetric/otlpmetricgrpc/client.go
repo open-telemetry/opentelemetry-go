@@ -26,9 +26,9 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
+	"go.opentelemetry.io/otel/exporters/otlp/internal/envconfig"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpconfig"
 	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -65,13 +65,13 @@ func NewClient(opts ...Option) otlpmetric.Client {
 }
 
 func newClient(opts ...Option) *client {
-	cfg := otlpconfig.NewGRPCConfig(asGRPCOptions(opts)...)
+	cfg := envconfig.NewGRPCMetricsConfig(asGRPCOptions(opts)...)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	c := &client{
-		endpoint:      cfg.Metrics.Endpoint,
-		exportTimeout: cfg.Metrics.Timeout,
+		endpoint:      cfg.Sc.Endpoint,
+		exportTimeout: cfg.Sc.Timeout,
 		requestFunc:   cfg.RetryConfig.RequestFunc(retryable),
 		dialOpts:      cfg.DialOptions,
 		stopCtx:       ctx,
@@ -79,8 +79,8 @@ func newClient(opts ...Option) *client {
 		conn:          cfg.GRPCConn,
 	}
 
-	if len(cfg.Metrics.Headers) > 0 {
-		c.metadata = metadata.New(cfg.Metrics.Headers)
+	if len(cfg.Sc.Headers) > 0 {
+		c.metadata = metadata.New(cfg.Sc.Headers)
 	}
 
 	return c

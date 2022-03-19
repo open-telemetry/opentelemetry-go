@@ -28,11 +28,12 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel/exporters/otlp/internal/envconfig"
+
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpconfig"
 	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -65,8 +66,8 @@ var ourTransport = &http.Transport{
 
 type client struct {
 	name        string
-	cfg         otlpconfig.SignalConfig
-	generalCfg  otlpconfig.Config
+	cfg         envconfig.SignalConfig
+	generalCfg  envconfig.Config
 	requestFunc retry.RequestFunc
 	client      *http.Client
 	stopCh      chan struct{}
@@ -75,22 +76,22 @@ type client struct {
 
 // NewClient creates a new HTTP metric client.
 func NewClient(opts ...Option) otlpmetric.Client {
-	cfg := otlpconfig.NewHTTPConfig(asHTTPOptions(opts)...)
+	cfg := envconfig.NewHTTPMetricsConfig(asHTTPOptions(opts)...)
 
 	httpClient := &http.Client{
 		Transport: ourTransport,
-		Timeout:   cfg.Metrics.Timeout,
+		Timeout:   cfg.Sc.Timeout,
 	}
-	if cfg.Metrics.TLSCfg != nil {
+	if cfg.Sc.TLSCfg != nil {
 		transport := ourTransport.Clone()
-		transport.TLSClientConfig = cfg.Metrics.TLSCfg
+		transport.TLSClientConfig = cfg.Sc.TLSCfg
 		httpClient.Transport = transport
 	}
 
 	stopCh := make(chan struct{})
 	return &client{
 		name:        "metrics",
-		cfg:         cfg.Metrics,
+		cfg:         cfg.Sc,
 		generalCfg:  cfg,
 		requestFunc: cfg.RetryConfig.RequestFunc(evaluate),
 		stopCh:      stopCh,

@@ -12,23 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlpconfig // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
+// Package internal contains common functionality for all OTLP exporters.
+package envconfig // import "go.opentelemetry.io/otel/exporters/otlp/internal/envconfig"
 
 import (
-	"crypto/tls"
-	"crypto/x509"
-	"errors"
+	"fmt"
+	"path"
+	"strings"
 )
 
-// CreateTLSConfig creates a tls.Config from a raw certificate bytes
-// to verify a server certificate.
-func CreateTLSConfig(certBytes []byte) (*tls.Config, error) {
-	cp := x509.NewCertPool()
-	if ok := cp.AppendCertsFromPEM(certBytes); !ok {
-		return nil, errors.New("failed to append certificate to the cert pool")
+// CleanPath returns a path with all spaces trimmed and all redundancies removed. If urlPath is empty or cleaning it results in an empty string, defaultPath is returned instead.
+func CleanPath(urlPath string, defaultPath string) string {
+	tmp := path.Clean(strings.TrimSpace(urlPath))
+	if tmp == "." {
+		return defaultPath
 	}
-
-	return &tls.Config{
-		RootCAs: cp,
-	}, nil
+	if !path.IsAbs(tmp) {
+		tmp = fmt.Sprintf("/%s", tmp)
+	}
+	return tmp
 }

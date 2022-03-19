@@ -12,4 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlpconfig
+package envconfig // import "go.opentelemetry.io/otel/exporters/otlp/internal/envconfig"
+
+import (
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
+)
+
+// CreateTLSConfig creates a tls.Config from a raw certificate bytes
+// to verify a server certificate.
+func CreateTLSConfig(certBytes []byte) (*tls.Config, error) {
+	cp := x509.NewCertPool()
+	if ok := cp.AppendCertsFromPEM(certBytes); !ok {
+		return nil, errors.New("failed to append certificate to the cert pool")
+	}
+
+	return &tls.Config{
+		RootCAs: cp,
+	}, nil
+}
