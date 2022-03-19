@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
@@ -122,7 +123,7 @@ func InstrumentationLibraryReader(ctx context.Context, temporalitySelector aggre
 	}
 
 	rms := &metricpb.ResourceMetrics{
-		Resource:                      Resource(res),
+		Resource:                      transform.Resource(res),
 		SchemaUrl:                     res.SchemaURL(),
 		InstrumentationLibraryMetrics: ilms,
 	}
@@ -292,7 +293,7 @@ func gaugePoint(record export.Record, num number.Number, start, end time.Time) (
 						Value: &metricpb.NumberDataPoint_AsInt{
 							AsInt: num.CoerceToInt64(n),
 						},
-						Attributes:        Iterator(labels.Iter()),
+						Attributes:        transform.Iterator(labels.Iter()),
 						StartTimeUnixNano: toNanos(start),
 						TimeUnixNano:      toNanos(end),
 					},
@@ -307,7 +308,7 @@ func gaugePoint(record export.Record, num number.Number, start, end time.Time) (
 						Value: &metricpb.NumberDataPoint_AsDouble{
 							AsDouble: num.CoerceToFloat64(n),
 						},
-						Attributes:        Iterator(labels.Iter()),
+						Attributes:        transform.Iterator(labels.Iter()),
 						StartTimeUnixNano: toNanos(start),
 						TimeUnixNano:      toNanos(end),
 					},
@@ -352,7 +353,7 @@ func sumPoint(record export.Record, num number.Number, start, end time.Time, tem
 						Value: &metricpb.NumberDataPoint_AsInt{
 							AsInt: num.CoerceToInt64(n),
 						},
-						Attributes:        Iterator(labels.Iter()),
+						Attributes:        transform.Iterator(labels.Iter()),
 						StartTimeUnixNano: toNanos(start),
 						TimeUnixNano:      toNanos(end),
 					},
@@ -369,7 +370,7 @@ func sumPoint(record export.Record, num number.Number, start, end time.Time, tem
 						Value: &metricpb.NumberDataPoint_AsDouble{
 							AsDouble: num.CoerceToFloat64(n),
 						},
-						Attributes:        Iterator(labels.Iter()),
+						Attributes:        transform.Iterator(labels.Iter()),
 						StartTimeUnixNano: toNanos(start),
 						TimeUnixNano:      toNanos(end),
 					},
@@ -425,7 +426,7 @@ func histogramPoint(record export.Record, temporality aggregation.Temporality, a
 				DataPoints: []*metricpb.HistogramDataPoint{
 					{
 						Sum:               sum.CoerceToFloat64(desc.NumberKind()),
-						Attributes:        Iterator(labels.Iter()),
+						Attributes:        transform.Iterator(labels.Iter()),
 						StartTimeUnixNano: toNanos(record.StartTime()),
 						TimeUnixNano:      toNanos(record.EndTime()),
 						Count:             uint64(count),

@@ -26,8 +26,8 @@ import (
 	"google.golang.org/protobuf/testing/protocmp"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/metrictransform"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
@@ -159,7 +159,7 @@ var (
 	}
 
 	testerAResource   = resource.NewSchemaless(attribute.String("instance", "tester-a"))
-	testerAResourcePb = metrictransform.Resource(testerAResource)
+	testerAResourcePb = transform.Resource(testerAResource)
 )
 
 const (

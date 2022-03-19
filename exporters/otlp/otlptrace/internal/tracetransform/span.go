@@ -17,6 +17,7 @@ package tracetransform // import "go.opentelemetry.io/otel/exporters/otlp/otlptr
 import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -66,7 +67,7 @@ func Spans(sdl []tracesdk.ReadOnlySpan) []*tracepb.ResourceSpans {
 			resources++
 			// The resource was unknown.
 			rs = &tracepb.ResourceSpans{
-				Resource:                    Resource(sd.Resource()),
+				Resource:                    transform.Resource(sd.Resource()),
 				InstrumentationLibrarySpans: []*tracepb.InstrumentationLibrarySpans{ils},
 				SchemaUrl:                   sd.Resource().SchemaURL(),
 			}
@@ -111,7 +112,7 @@ func span(sd tracesdk.ReadOnlySpan) *tracepb.Span {
 		Links:                  links(sd.Links()),
 		Kind:                   spanKind(sd.SpanKind()),
 		Name:                   sd.Name(),
-		Attributes:             KeyValues(sd.Attributes()),
+		Attributes:             transform.KeyValues(sd.Attributes()),
 		Events:                 spanEvents(sd.Events()),
 		DroppedAttributesCount: uint32(sd.DroppedAttributes()),
 		DroppedEventsCount:     uint32(sd.DroppedEvents()),
@@ -160,7 +161,7 @@ func links(links []tracesdk.Link) []*tracepb.Span_Link {
 		sl = append(sl, &tracepb.Span_Link{
 			TraceId:                tid[:],
 			SpanId:                 sid[:],
-			Attributes:             KeyValues(otLink.Attributes),
+			Attributes:             transform.KeyValues(otLink.Attributes),
 			DroppedAttributesCount: uint32(otLink.DroppedAttributeCount),
 		})
 	}
@@ -179,7 +180,7 @@ func spanEvents(es []tracesdk.Event) []*tracepb.Span_Event {
 		events[i] = &tracepb.Span_Event{
 			Name:                   es[i].Name,
 			TimeUnixNano:           uint64(es[i].Time.UnixNano()),
-			Attributes:             KeyValues(es[i].Attributes),
+			Attributes:             transform.KeyValues(es[i].Attributes),
 			DroppedAttributesCount: uint32(es[i].DroppedAttributeCount),
 		}
 	}

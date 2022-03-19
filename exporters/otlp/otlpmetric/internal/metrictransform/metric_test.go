@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
@@ -92,7 +93,7 @@ func TestStringKeyValues(t *testing.T) {
 
 	for _, test := range tests {
 		labels := attribute.NewSet(test.kvs...)
-		assert.Equal(t, test.expected, Iterator(labels.Iter()))
+		assert.Equal(t, test.expected, transform.Iterator(labels.Iter()))
 	}
 }
 
