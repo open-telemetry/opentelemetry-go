@@ -5,7 +5,7 @@ go 1.16
 replace go.opentelemetry.io/otel => ../
 
 require (
-	github.com/go-logr/logr v1.2.2
+	github.com/go-logr/logr v1.2.3
 	github.com/google/go-cmp v0.5.7
 	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/otel v1.5.0
