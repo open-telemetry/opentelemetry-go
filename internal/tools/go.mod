@@ -9,6 +9,7 @@ require (
 	github.com/itchyny/gojq v0.12.7
 	github.com/jcchavezs/porto v0.4.0
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad
+	go.opentelemetry.io/build-tools/dbotconf v0.0.0-20220321164008-b8e03aff061a
 	go.opentelemetry.io/build-tools/multimod v0.0.0-20210920164323-2ceabab23375
 	go.opentelemetry.io/build-tools/semconvgen v0.0.0-20210920164323-2ceabab23375
 	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3
