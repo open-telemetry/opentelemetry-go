@@ -19,12 +19,14 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"regexp"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 )
 
 const (
+	maxVersion = 254
 	// FlagsSampled is a bitmask with the sampled bit set. A SpanContext
 	// with the sampling bit set means the span is sampled.
 	FlagsSampled = TraceFlags(0x01)
@@ -36,6 +38,10 @@ const (
 
 	errInvalidSpanIDLength errorConst = "hex encoded span-id must have length equals to 16"
 	errNilSpanID           errorConst = "span-id can't be all zero"
+)
+
+var (
+	traceCtxRegExp = regexp.MustCompile("^(?P<version>[0-9a-f]{2})-(?P<traceID>[a-f0-9]{32})-(?P<spanID>[a-f0-9]{16})-(?P<traceFlags>[a-f0-9]{2})(?:-.*)?$")
 )
 
 type errorConst string
@@ -199,6 +205,80 @@ func NewSpanContext(config SpanContextConfig) SpanContext {
 		traceState: config.TraceState,
 		remote:     config.Remote,
 	}
+}
+
+// NewSpanContextFromTrace creates SpanContext using traceparent and tracestate.
+func NewSpanContextFromTrace(traceparent, tracestate string) SpanContext {
+	if traceparent == "" {
+		return SpanContext{}
+	}
+
+	matches := traceCtxRegExp.FindStringSubmatch(traceparent)
+	if len(matches) == 0 {
+		return SpanContext{}
+	}
+
+	if len(matches) < 5 { // four subgroups plus the overall match
+		return SpanContext{}
+	}
+
+	if len(matches[1]) != 2 {
+		return SpanContext{}
+	}
+	ver, err := hex.DecodeString(matches[1])
+	if err != nil {
+		return SpanContext{}
+	}
+	version := int(ver[0])
+	if version > maxVersion {
+		return SpanContext{}
+	}
+
+	if version == 0 && len(matches) != 5 { // four subgroups plus the overall match
+		return SpanContext{}
+	}
+
+	if len(matches[2]) != 32 {
+		return SpanContext{}
+	}
+
+	var scc SpanContextConfig
+
+	scc.TraceID, err = TraceIDFromHex(matches[2][:32])
+	if err != nil {
+		return SpanContext{}
+	}
+
+	if len(matches[3]) != 16 {
+		return SpanContext{}
+	}
+	scc.SpanID, err = SpanIDFromHex(matches[3])
+	if err != nil {
+		return SpanContext{}
+	}
+
+	if len(matches[4]) != 2 {
+		return SpanContext{}
+	}
+	opts, err := hex.DecodeString(matches[4])
+	if err != nil || len(opts) < 1 || (version == 0 && opts[0] > 2) {
+		return SpanContext{}
+	}
+	// Clear all flags other than the trace-context supported sampling bit.
+	scc.TraceFlags = TraceFlags(opts[0]) & FlagsSampled
+
+	// Ignore the error returned here. Failure to parse tracestate MUST NOT
+	// affect the parsing of traceparent according to the W3C tracecontext
+	// specification.
+	scc.Remote = true
+	scc.TraceState, _ = ParseTraceState(tracestate)
+
+	sc := NewSpanContext(scc)
+	if !sc.IsValid() {
+		return SpanContext{}
+	}
+
+	return sc
 }
 
 // SpanContext contains identifying trace information about a Span.
