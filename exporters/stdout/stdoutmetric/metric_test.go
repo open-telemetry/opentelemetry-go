@@ -101,7 +101,8 @@ func TestStdoutTimestamp(t *testing.T) {
 
 	require.NoError(t, cont.Start(ctx))
 	meter := cont.Meter("test")
-	counter := metric.Must(meter).NewInt64Counter("name.lastvalue")
+	counter, err := meter.SyncInt64().Counter("name.lastvalue")
+	require.NoError(t, err)
 
 	before := time.Now()
 	// Ensure the timestamp is after before.
@@ -137,7 +138,8 @@ func TestStdoutTimestamp(t *testing.T) {
 func TestStdoutCounterFormat(t *testing.T) {
 	fix := newFixture(t)
 
-	counter := metric.Must(fix.meter).NewInt64Counter("name.sum")
+	counter, err := fix.meter.SyncInt64().Counter("name.sum")
+	require.NoError(t, err)
 	counter.Add(fix.ctx, 123, attribute.String("A", "B"), attribute.String("C", "D"))
 
 	require.NoError(t, fix.cont.Stop(fix.ctx))
@@ -148,7 +150,8 @@ func TestStdoutCounterFormat(t *testing.T) {
 func TestStdoutLastValueFormat(t *testing.T) {
 	fix := newFixture(t)
 
-	counter := metric.Must(fix.meter).NewFloat64Counter("name.lastvalue")
+	counter, err := fix.meter.SyncFloat64().Counter("name.lastvalue")
+	require.NoError(t, err)
 	counter.Add(fix.ctx, 123.456, attribute.String("A", "B"), attribute.String("C", "D"))
 
 	require.NoError(t, fix.cont.Stop(fix.ctx))
@@ -159,7 +162,8 @@ func TestStdoutLastValueFormat(t *testing.T) {
 func TestStdoutHistogramFormat(t *testing.T) {
 	fix := newFixture(t, stdoutmetric.WithPrettyPrint())
 
-	inst := metric.Must(fix.meter).NewFloat64Histogram("name.histogram")
+	inst, err := fix.meter.SyncFloat64().Histogram("name.histogram")
+	require.NoError(t, err)
 
 	for i := 0; i < 1000; i++ {
 		inst.Record(fix.ctx, float64(i)+0.5, attribute.String("A", "B"), attribute.String("C", "D"))
@@ -181,7 +185,8 @@ func TestStdoutNoData(t *testing.T) {
 			t.Parallel()
 
 			fix := newFixture(t)
-			_ = metric.Must(fix.meter).NewFloat64Counter(fmt.Sprint("name.", aggName))
+			_, err := fix.meter.SyncFloat64().Counter(fmt.Sprint("name.", aggName))
+			require.NoError(t, err)
 			require.NoError(t, fix.cont.Stop(fix.ctx))
 
 			require.Equal(t, "", fix.Output())
@@ -243,7 +248,8 @@ func TestStdoutResource(t *testing.T) {
 			ctx := context.Background()
 			fix := newFixtureWithResource(t, tc.res)
 
-			counter := metric.Must(fix.meter).NewFloat64Counter("name.lastvalue")
+			counter, err := fix.meter.SyncFloat64().Counter("name.lastvalue")
+			require.NoError(t, err)
 			counter.Add(ctx, 123.456, tc.attrs...)
 
 			require.NoError(t, fix.cont.Stop(fix.ctx))

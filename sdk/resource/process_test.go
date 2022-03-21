@@ -102,13 +102,14 @@ func restoreAttributesProviders() {
 	resource.SetDefaultRuntimeProviders()
 	resource.SetDefaultUserProviders()
 	resource.SetDefaultOSDescriptionProvider()
+	resource.SetDefaultContainerProviders()
 }
 
 func TestWithProcessFuncsErrors(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
 
-	t.Run("WithPID", testWithProcessExecutablePathError)
-	t.Run("WithExecutableName", testWithProcessOwnerError)
+	t.Run("WithExecutablePath", testWithProcessExecutablePathError)
+	t.Run("WithOwner", testWithProcessOwnerError)
 
 	restoreAttributesProviders()
 }
@@ -118,7 +119,11 @@ func TestCommandArgs(t *testing.T) {
 }
 
 func TestRuntimeName(t *testing.T) {
-	require.EqualValues(t, runtime.Compiler, resource.RuntimeName())
+	if runtime.Compiler == "gc" {
+		require.EqualValues(t, "go", resource.RuntimeName())
+	} else {
+		require.EqualValues(t, runtime.Compiler, resource.RuntimeName())
+	}
 }
 
 func TestRuntimeOS(t *testing.T) {

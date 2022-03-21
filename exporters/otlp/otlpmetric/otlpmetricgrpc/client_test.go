@@ -93,7 +93,7 @@ func newGRPCExporter(t *testing.T, ctx context.Context, endpoint string, additio
 }
 
 func newExporterEndToEndTest(t *testing.T, additionalOpts []otlpmetricgrpc.Option) {
-	mc := runMockCollectorAtEndpoint(t, "localhost:56561")
+	mc := runMockCollector(t)
 
 	defer func() {
 		_ = mc.stop()
@@ -115,7 +115,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlpmetricgrpc.Optio
 }
 
 func TestExporterShutdown(t *testing.T) {
-	mc := runMockCollectorAtEndpoint(t, "localhost:56561")
+	mc := runMockCollector(t)
 	defer func() {
 		_ = mc.Stop()
 	}()
@@ -296,7 +296,7 @@ func TestStartErrorInvalidAddress(t *testing.T) {
 }
 
 func TestEmptyData(t *testing.T) {
-	mc := runMockCollectorAtEndpoint(t, "localhost:56561")
+	mc := runMockCollector(t)
 
 	defer func() {
 		_ = mc.stop()
@@ -314,7 +314,7 @@ func TestEmptyData(t *testing.T) {
 }
 
 func TestFailedMetricTransform(t *testing.T) {
-	mc := runMockCollectorAtEndpoint(t, "localhost:56561")
+	mc := runMockCollector(t)
 
 	defer func() {
 		_ = mc.stop()

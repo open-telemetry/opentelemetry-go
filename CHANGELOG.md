@@ -8,30 +8,114 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### ⚠️ Notice ⚠️
+
+This update is a breaking change of the unstable Metrics API.
+Code instrumented with the `go.opentelemetry.io/otel/metric` will need to be modified.
+
 ### Added
 
+- Add go 1.18 to our compatibility tests. (#2679)
 - Allow configuring the Sampler with the `OTEL_TRACES_SAMPLER` and `OTEL_TRACES_SAMPLER_ARG` environment variables. (#2305)
-- Support `OTEL_EXPORTER_ZIPKIN_ENDPOINT` env to specify zipkin collector endpoint (#2490)
-- Log the configuration of TracerProviders, and Tracers for debugging. To enable use a logger with Verbosity (V level) >=1
-- Added environment variables for: `OTEL_BSP_SCHEDULE_DELAY`, `OTEL_BSP_EXPORT_TIMEOUT`, `OTEL_BSP_MAX_QUEUE_SIZE` and `OTEL_BSP_MAX_EXPORT_BATCH_SIZE` (#2515)
 
 ### Changed
 
-- Jaeger exporter takes into additional 70 bytes overhead into consideration when sending UDP packets (#2489, #2512)
-
-### Deprecated
-
-- Deprecate module `"go.opentelemetry.io/otel/sdk/export/metric"`, new functionality available in "go.opentelemetry.io/otel/sdk/metric" module:
-  - Import path changed `import "go.opentelemetry.io/otel/sdk/export/metric"` to `import go.opentelemetry.io/otel/sdk/metric/export` (#2382).
-- Deprecate `AtomicFieldOffsets`, unnecessary public func (#2445)
+- The metrics API has been significantly changed. (#2587)
 
 ### Fixed
 
-- Fixes the instrument kind for noop async instruments. (#2461)
+- Fallback to general attribute limits when span specific ones are not set in the environment. (#2675, #2677)
+
+## [1.5.0] - 2022-03-16
+
+### Added
+
+- Log the Exporters configuration in the TracerProviders message. (#2578)
+- Added support to configure the span limits with environment variables.
+  The following environment variables are supported. (#2606, #2637)
+  - `OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT`
+  - `OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT`
+  - `OTEL_SPAN_EVENT_COUNT_LIMIT`
+  - `OTEL_EVENT_ATTRIBUTE_COUNT_LIMIT`
+  - `OTEL_SPAN_LINK_COUNT_LIMIT`
+  - `OTEL_LINK_ATTRIBUTE_COUNT_LIMIT`
+  
+  If the provided environment variables are invalid (negative), the default values would be used.
+- Rename the `gc` runtime name to `go` (#2560)
+- Add resource container ID detection. (#2418)
+- Add span attribute value length limit.
+  The new `AttributeValueLengthLimit` field is added to the `"go.opentelemetry.io/otel/sdk/trace".SpanLimits` type to configure this limit for a `TracerProvider`.
+  The default limit for this resource is "unlimited". (#2637)
+- Add the `WithRawSpanLimits` option to `go.opentelemetry.io/otel/sdk/trace`.
+  This option replaces the `WithSpanLimits` option.
+  Zero or negative values will not be changed to the default value like `WithSpanLimits` does.
+  Setting a limit to zero will effectively disable the related resource it limits and setting to a negative value will mean that resource is unlimited.
+  Consequentially, limits should be constructed using `NewSpanLimits` and updated accordingly. (#2637)
+
+### Changed
+
+- Drop oldest tracestate `Member` when capacity is reached. (#2592)
+- Add event and link drop counts to the exported data from the `oltptrace` exporter. (#2601)
+- Unify path cleaning functionally in the `otlpmetric` and `otlptrace` configuration. (#2639)
+- Change the debug message from the `sdk/trace.BatchSpanProcessor` to reflect the count is cumulative. (#2640)
+- Introduce new internal `envconfig` package for OTLP exporters. (#2608)
+- If `http.Request.Host` is empty, fall back to use `URL.Host` when populating `http.host` in the `semconv` packages. (#2661)
+
+### Fixed
+
+- Remove the OTLP trace exporter limit of SpanEvents when exporting. (#2616)
+- Default to port `4318` instead of `4317` for the `otlpmetrichttp` and `otlptracehttp` client. (#2614, #2625)
+- Unlimited span limits are now supported (negative values). (#2636, #2637)
+
+### Deprecated
+
+- Deprecated `"go.opentelemetry.io/otel/sdk/trace".WithSpanLimits`.
+  Use `WithRawSpanLimits` instead.
+  That option allows setting unlimited and zero limits, this option does not.
+  This option will be kept until the next major version incremented release. (#2637)
+
+## [1.4.1] - 2022-02-16
+
+### Fixed
+
+- Fix race condition in reading the dropped spans number for the `BatchSpanProcessor`. (#2615)
+
+## [1.4.0] - 2022-02-11
+
+### Added
+
+- Use `OTEL_EXPORTER_ZIPKIN_ENDPOINT` environment variable to specify zipkin collector endpoint. (#2490)
+- Log the configuration of `TracerProvider`s, and `Tracer`s for debugging.
+  To enable use a logger with Verbosity (V level) `>=1`. (#2500)
+- Added support to configure the batch span-processor with environment variables.
+  The following environment variables are used. (#2515)
+  - `OTEL_BSP_SCHEDULE_DELAY`
+  - `OTEL_BSP_EXPORT_TIMEOUT`
+  - `OTEL_BSP_MAX_QUEUE_SIZE`.
+  - `OTEL_BSP_MAX_EXPORT_BATCH_SIZE`
+
+### Changed
+
+- Zipkin exporter exports `Resource` attributes in the `Tags` field. (#2589)
+
+### Deprecated
+
+- Deprecate module the `go.opentelemetry.io/otel/sdk/export/metric`.
+  Use the `go.opentelemetry.io/otel/sdk/metric` module instead. (#2382)
+- Deprecate `"go.opentelemetry.io/otel/sdk/metric".AtomicFieldOffsets`. (#2445)
+
+### Fixed
+
+- Fixed the instrument kind for noop async instruments to correctly report an implementation. (#2461)
+- Fix UDP packets overflowing with Jaeger payloads. (#2489, #2512)
 - Change the `otlpmetric.Client` interface's `UploadMetrics` method to accept a single `ResourceMetrics` instead of a slice of them. (#2491)
-- Specify explicit buckets in Prometheus example. (#2493)
+- Specify explicit buckets in Prometheus example, fixing issue where example only has `+inf` bucket. (#2419, #2493)
 - W3C baggage will now decode urlescaped values. (#2529)
 - Baggage members are now only validated once, when calling `NewMember` and not also when adding it to the baggage itself. (#2522)
+- The order attributes are dropped from spans in the `go.opentelemetry.io/otel/sdk/trace` package when capacity is reached is fixed to be in compliance with the OpenTelemetry specification.
+  Instead of dropping the least-recently-used attribute, the last added attribute is dropped.
+  This drop order still only applies to attributes with unique keys not already contained in the span.
+  If an attribute is added with a key already contained in the span, that attribute is updated to the new value being added. (#2576)
 
 ### Removed
 
@@ -1671,7 +1755,10 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.5.0
+[1.4.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.4.1
+[1.4.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.4.0
 [1.3.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.3.0
 [1.2.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.2.0
 [1.1.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.1.0
