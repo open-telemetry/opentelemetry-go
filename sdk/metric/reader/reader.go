@@ -66,10 +66,6 @@ type (
 	Producer interface {
 		Produce(*Metrics) Metrics
 	}
-
-	Input interface {
-		// TODO: This is a placeholder.
-	}
 )
 
 func WithDefaults(defaults DefaultsFunc) Option {
@@ -120,6 +116,7 @@ func (r *Reader) Exporter() Exporter {
 	return r.exporter
 }
 
+// @@@ Missing library (somehow)
 func (r *Reader) AcquireOutput(desc sdkapi.Descriptor) bool {
 	name := desc.Name()
 

@@ -27,7 +27,8 @@ type (
 	}
 
 	Instrument interface {
-		NewCollector(kvs []attribute.KeyValue) Collector
+		// reader == nil for all readers, else 1 reader
+		NewCollector(kvs []attribute.KeyValue, reader *reader.Reader) Collector
 	}
 
 	Collector interface {
@@ -43,17 +44,12 @@ type (
 		Updater[N]
 	}
 
-	multiCollector[N number.Any] struct {
-		collectors []Collector
-	}
+	multiInstrument[N number.Any] map[*reader.Reader][]Instrument
 
-	multiInstrument[N number.Any] struct {
-		compiled []Instrument
-	}
+	multiCollector[N number.Any] []Collector
 
 	configuredBehavior struct {
 		desc     sdkapi.Descriptor
-		reader   *reader.Reader
 		view     views.View
 		settings aggregatorSettings
 	}
@@ -118,7 +114,7 @@ func New(lib instrumentation.Library, views []views.View, readers []*reader.Read
 // implementation, the result saved in the instrument and used to
 // construct new Collectors throughout its lifetime.
 func (v *Compiler) Compile(instrument sdkapi.Descriptor) Instrument {
-	var configs []configuredBehavior
+	configs := map[*reader.Reader][]configuredBehavior{}
 
 	for _, reader := range v.readers {
 		matchCount := 0
@@ -146,9 +142,8 @@ func (v *Compiler) Compile(instrument sdkapi.Descriptor) Instrument {
 				continue
 			}
 
-			configs = append(configs, configuredBehavior{
+			configs[reader] = append(configs[reader], configuredBehavior{
 				desc:     instrument,
-				reader:   reader,
 				view:     view,
 				settings: as,
 			})
@@ -161,50 +156,54 @@ func (v *Compiler) Compile(instrument sdkapi.Descriptor) Instrument {
 				continue
 			}
 
-			configs = append(configs, configuredBehavior{
+			configs[reader] = append(configs[reader], configuredBehavior{
 				desc:     instrument,
-				reader:   reader,
 				view:     views.New(views.WithAggregation(as.kind)),
 				settings: as,
 			})
 		}
 	}
 
-	var compiled []Instrument
-	for _, config := range configs {
-		config.desc = viewDescriptor(config.desc, config.view)
+	compiled := map[*reader.Reader][]Instrument{}
 
-		var one Instrument
-		var input reader.Input
-		switch config.desc.NumberKind() {
-		case number.Int64Kind:
-			one, input = buildView[int64, traits.Int64](config)
-		case number.Float64Kind:
-			one, input = buildView[float64, traits.Float64](config)
+	for reader, list := range configs {
+		for _, config := range list {
+			config.desc = viewDescriptor(config.desc, config.view)
+
+			var one Instrument
+			switch config.desc.NumberKind() {
+			case number.Int64Kind:
+				one = buildView[int64, traits.Int64](config)
+			case number.Float64Kind:
+				one = buildView[float64, traits.Float64](config)
+			}
+
+			if available := reader.AcquireOutput(config.desc); !available {
+				otel.Handle(fmt.Errorf("duplicate view name registered"))
+				continue
+			}
+
+			compiled[reader] = append(compiled[reader], one)
 		}
-
-		if available := config.reader.AcquireOutput(input); !available {
-			otel.Handle(fmt.Errorf("duplicate view name registered"))
-			continue
-		}
-
-		compiled = append(compiled, one)
 	}
 
 	switch len(compiled) {
 	case 0:
-		return nil // TODO does this require a Noop (and below)?
+		return nil // TODO does this require a Noop?
 	case 1:
-		return compiled[0]
-	}
-	if instrument.NumberKind() == number.Int64Kind {
-		return &multiInstrument[int64]{
-			compiled: compiled,
+		// As a special case, recognize the case where there
+		// is only one reader and only one view to bypass the
+		// map[][]Instrument wrapper.
+		for _, list := range compiled {
+			if len(list) == 1 {
+				return list[0]
+			}
 		}
 	}
-	return &multiInstrument[float64]{
-		compiled: compiled,
+	if instrument.NumberKind() == number.Int64Kind {
+		return multiInstrument[int64](compiled)
 	}
+	return multiInstrument[float64](compiled)
 }
 
 func aggregatorSettingsFor(desc sdkapi.Descriptor, defaults reader.DefaultsFunc) aggregatorSettings {
@@ -236,7 +235,7 @@ func histogramDefaultsFor(kind number.Kind) histogram.Defaults {
 	return histogram.Float64Defaults{}
 }
 
-func buildView[N number.Any, Traits traits.Any[N]](config configuredBehavior) (Instrument, reader.Input) {
+func buildView[N number.Any, Traits traits.Any[N]](config configuredBehavior) Instrument {
 	if config.desc.InstrumentKind().Synchronous() {
 		return compileSync[N, Traits](config)
 	}
@@ -247,8 +246,8 @@ func newSyncView[
 	N number.Any,
 	Storage, Config any,
 	Methods aggregator.Methods[N, Storage, Config],
-](config configuredBehavior, aggConfig *Config) (Instrument, reader.Input) {
-	v := &compiledSyncView[N, Storage, Config, Methods]{
+](config configuredBehavior, aggConfig *Config) Instrument {
+	return &compiledSyncView[N, Storage, Config, Methods]{
 		metric: &viewMetric[N, Storage, Config, Methods]{
 			desc: config.desc,
 			data: map[attribute.Set]*Storage{},
@@ -256,16 +255,14 @@ func newSyncView[
 		aggConfig: aggConfig,
 		viewKeys:  config.view.Keys(),
 	}
-	return v, v.metric
 }
 
 func newAsyncView[
 	N number.Any,
 	Storage, Config any,
 	Methods aggregator.Methods[N, Storage, Config],
-](config configuredBehavior, aggConfig *Config) (Instrument, reader.Input) {
-
-	v := &compiledAsyncView[N, Storage, Config, Methods]{
+](config configuredBehavior, aggConfig *Config) Instrument{
+	return &compiledAsyncView[N, Storage, Config, Methods]{
 		metric: &viewMetric[N, Storage, Config, Methods]{
 			desc: config.desc,
 			data: map[attribute.Set]*Storage{},
@@ -273,10 +270,9 @@ func newAsyncView[
 		aggConfig: aggConfig,
 		viewKeys:  config.view.Keys(),
 	}
-	return v, v.metric
 }
 
-func compileSync[N number.Any, Traits traits.Any[N]](config configuredBehavior) (Instrument, reader.Input) {
+func compileSync[N number.Any, Traits traits.Any[N]](config configuredBehavior) Instrument {
 	switch config.settings.kind {
 	case aggregation.LastValueKind:
 		return newSyncView[
@@ -302,7 +298,7 @@ func compileSync[N number.Any, Traits traits.Any[N]](config configuredBehavior) 
 	}
 }
 
-func compileAsync[N number.Any, Traits traits.Any[N]](config configuredBehavior) (Instrument, reader.Input) {
+func compileAsync[N number.Any, Traits traits.Any[N]](config configuredBehavior) Instrument {
 	switch config.settings.kind {
 	case aggregation.LastValueKind:
 		return newAsyncView[
@@ -329,38 +325,53 @@ func compileAsync[N number.Any, Traits traits.Any[N]](config configuredBehavior)
 }
 
 // NewCollector returns a Collector for a synchronous instrument view.
-func (csv *compiledSyncView[N, Storage, Config, Methods]) NewCollector(kvs []attribute.KeyValue) Collector {
+func (csv *compiledSyncView[N, Storage, Config, Methods]) NewCollector(kvs []attribute.KeyValue, _ *reader.Reader) Collector {
 	sc := &syncCollector[N, Storage, Config, Methods]{}
 	sc.init(csv.metric, *csv.aggConfig, csv.viewKeys, kvs)
 	return sc
 }
 
 // NewCollector returns a Collector for an asynchronous instrument view.
-func (cav *compiledAsyncView[N, Storage, Config, Methods]) NewCollector(kvs []attribute.KeyValue) Collector {
+func (cav *compiledAsyncView[N, Storage, Config, Methods]) NewCollector(kvs []attribute.KeyValue, _ *reader.Reader) Collector {
 	sc := &asyncCollector[N, Storage, Config, Methods]{}
 	sc.init(cav.metric, *cav.aggConfig, cav.viewKeys, kvs)
 	return sc
 }
 
 // NewCollector returns a Collector for multiple views of the same instrument.
-func (mi multiInstrument[N]) NewCollector(kvs []attribute.KeyValue) Collector {
-	collectors := make([]Collector, 0, len(mi.compiled))
-	for _, inst := range mi.compiled {
-		collectors = append(collectors, inst.NewCollector(kvs))
+func (mi multiInstrument[N]) NewCollector(kvs []attribute.KeyValue, reader *reader.Reader) Collector {
+	var collectors []Collector
+	// Note: This runtime switch happens because we're using the same API for
+	// both async and sync instruments, whereas the APIs are not symmetrical.
+	if reader == nil {
+		for _, list := range mi {
+			collectors = make([]Collector, 0, len(mi) * len(list))
+		}
+		for _, list := range mi {
+			for _, inst := range list {
+				collectors = append(collectors, inst.NewCollector(kvs, nil))
+			}
+		}
+	} else {
+		insts := mi[reader]
+
+		collectors = make([]Collector, 0, len(insts))
+
+		for _, inst := range insts{
+			collectors = append(collectors, inst.NewCollector(kvs, reader))
+		}
 	}
-	return &multiCollector[N]{
-		collectors: collectors,
-	}
+	return multiCollector[N](collectors)
 }
 
-func (c *multiCollector[N]) Collect() {
-	for _, coll := range c.collectors {
+func (c multiCollector[N]) Collect() {
+	for _, coll := range c {
 		coll.Collect()
 	}
 }
 
-func (c *multiCollector[N]) Update(value N) {
-	for _, coll := range c.collectors {
+func (c multiCollector[N]) Update(value N) {
+	for _, coll := range c {
 		coll.(Updater[N]).Update(value)
 	}
 }

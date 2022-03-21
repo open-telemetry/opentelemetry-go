@@ -307,8 +307,6 @@ func acquireRecord[N number.Any](inst *instrument, attrs []attribute.KeyValue) (
 }
 
 func initRecord[N number.Any](inst *instrument, rec *record, attrs []attribute.KeyValue) viewstate.Updater[N] {
-	rec.collector = inst.compiled.NewCollector(attrs,
-		// @@@ HERE: All readers?
-	)
+	rec.collector = inst.compiled.NewCollector(attrs, nil)
 	return rec.collector.(viewstate.Updater[N])
 }

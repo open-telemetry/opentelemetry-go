@@ -178,7 +178,7 @@ func getStateEntry(state *State, inst *instrument, attrs []attribute.KeyValue) v
 	aset := attribute.NewSetWithSortable(attrs, &state.tmpSort)
 	se, has := idata[aset]
 	if !has {
-		se = inst.compiled.NewCollector(attrs)
+		se = inst.compiled.NewCollector(attrs, state.reader)
 		idata[aset] = se
 	}
 	return se
