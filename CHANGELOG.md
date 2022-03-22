@@ -17,6 +17,7 @@ Code instrumented with the `go.opentelemetry.io/otel/metric` will need to be mod
 
 - Add go 1.18 to our compatibility tests. (#2679)
 - Allow configuring the Sampler with the `OTEL_TRACES_SAMPLER` and `OTEL_TRACES_SAMPLER_ARG` environment variables. (#2305, #2517)
+- Add the `metric/global` for obtaining and setting the global `MeterProvider` (#2660)
 
 ### Changed
 
