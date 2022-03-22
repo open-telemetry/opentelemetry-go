@@ -24,6 +24,7 @@ import (
 	_ "github.com/itchyny/gojq"
 	_ "github.com/jcchavezs/porto/cmd/porto"
 	_ "github.com/wadey/gocovmerge"
+	_ "go.opentelemetry.io/build-tools/dbotconf"
 	_ "go.opentelemetry.io/build-tools/multimod"
 	_ "go.opentelemetry.io/build-tools/semconvgen"
 	_ "golang.org/x/tools/cmd/stringer"
