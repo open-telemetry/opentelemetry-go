@@ -3,10 +3,10 @@ module go.opentelemetry.io/otel
 go 1.16
 
 require (
-	github.com/go-logr/logr v1.2.2
+	github.com/go-logr/logr v1.2.3
 	github.com/go-logr/stdr v1.2.2
 	github.com/google/go-cmp v0.5.7
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.7.1
 	go.opentelemetry.io/otel/sdk v0.0.0-00010101000000-000000000000
 	go.opentelemetry.io/otel/trace v1.5.0
 	go.opentelemetry.io/proto/otlp v0.12.0
