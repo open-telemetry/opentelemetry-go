@@ -3,6 +3,7 @@ package metric
 import (
 	"context"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
@@ -30,11 +31,11 @@ type (
 	Option func(cfg *Config)
 
 	provider struct {
-		cfg         Config
-		collectLock sync.Mutex
-		lock        sync.Mutex
-		ordered     []*meter
-		meters      map[instrumentation.Library]*meter
+		cfg       Config
+		startTime time.Time
+		lock      sync.Mutex
+		ordered   []*meter
+		meters    map[instrumentation.Library]*meter
 	}
 
 	providerProducer struct {
@@ -83,8 +84,9 @@ func New(opts ...Option) metric.MeterProvider {
 		opt(&cfg)
 	}
 	p := &provider{
-		cfg:    cfg,
-		meters: map[instrumentation.Library]*meter{},
+		cfg:       cfg,
+		startTime: time.Now(), // @@@
+		meters:    map[instrumentation.Library]*meter{},
 	}
 	for _, reader := range cfg.readers {
 		reader.Exporter().Register(p.producerFor(reader))
@@ -113,6 +115,11 @@ func (pp *providerProducer) Produce() reader.Metrics {
 	for idx, meter := range ordered {
 		output.Scopes[idx].Library = meter.library
 
+		// @@@ Here, pass start time, now time to the collection routines
+		// hmm, what about gauge timestamps
+		// hmmm, what about memory
+		// hmmmm where does temporality actually get configured
+		// where do the former start/finish methods go?
 		meter.asyncAccum.Collect(pp.reader, &output.Scopes[idx].Instruments)
 		meter.syncAccum.Collect(pp.reader, &output.Scopes[idx].Instruments)
 	}
