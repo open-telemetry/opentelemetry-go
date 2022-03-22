@@ -3,6 +3,7 @@ package viewstate
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -24,6 +25,11 @@ type (
 		library instrumentation.Library
 		views   []views.View
 		readers []*reader.Reader
+
+		// names is the per-reader map of output names,
+		// indexed by the reader's position in `readers`.
+		namesLock sync.Mutex
+		names     []map[string]struct{}
 	}
 
 	Instrument interface {
@@ -106,10 +112,17 @@ func New(lib instrumentation.Library, views []views.View, readers []*reader.Read
 	// - schemaURL or Version without library name
 	// - empty attribute keys
 	// - Name w/o SingleInst
+
+	names := make([]map[string]struct{}, len(readers))
+	for i := range names {
+		names[i] = map[string]struct{}{}
+	}
+	
 	return &Compiler{
 		library: lib,
 		views:   views,
 		readers: readers,
+		names:   names,
 	}
 }
 
@@ -117,15 +130,18 @@ func New(lib instrumentation.Library, views []views.View, readers []*reader.Read
 // implementation, the result saved in the instrument and used to
 // construct new Collectors throughout its lifetime.
 func (v *Compiler) Compile(instrument sdkapi.Descriptor) Instrument {
-	configs := map[*reader.Reader][]configuredBehavior{}
+	configs := make([][]configuredBehavior, len(v.readers))
+	matches := make([]views.View, 0, len(v.views))
 
-	for _, reader := range v.readers {
-		matchCount := 0
-		for _, view := range v.views {
-			if !view.Matches(v.library, instrument) {
-				continue
-			}
-			matchCount++
+	for _, view := range v.views {
+		if !view.Matches(v.library, instrument) {
+			continue
+		}
+		matches = append(matches, view)
+	}
+
+	for readerIdx, reader := range v.readers {
+		for _, view := range matches {
 			var as aggregatorSettings
 			switch view.Aggregation() {
 			case aggregation.SumKind, aggregation.LastValueKind:
@@ -134,6 +150,7 @@ func (v *Compiler) Compile(instrument sdkapi.Descriptor) Instrument {
 			case aggregation.HistogramKind:
 				as.kind = view.Aggregation()
 				as.hcfg = histogram.NewConfig(
+					// @@@ per-reader histogram defaults
 					histogramDefaultsFor(instrument.NumberKind()),
 					view.HistogramOptions()...,
 				)
@@ -145,7 +162,7 @@ func (v *Compiler) Compile(instrument sdkapi.Descriptor) Instrument {
 				continue
 			}
 
-			configs[reader] = append(configs[reader], configuredBehavior{
+			configs[readerIdx] = append(configs[readerIdx], configuredBehavior{
 				desc:     instrument,
 				view:     view,
 				settings: as,
@@ -153,13 +170,13 @@ func (v *Compiler) Compile(instrument sdkapi.Descriptor) Instrument {
 		}
 
 		// If there were no matching views, set the default aggregation.
-		if matchCount == 0 {
+		if len(matches) == 0 {
 			as := aggregatorSettingsFor(instrument, reader.Defaults())
 			if as.kind == aggregation.DropKind {
 				continue
 			}
 
-			configs[reader] = append(configs[reader], configuredBehavior{
+			configs[readerIdx] = append(configs[readerIdx], configuredBehavior{
 				desc:     instrument,
 				view:     views.New(views.WithAggregation(as.kind)),
 				settings: as,
@@ -169,9 +186,20 @@ func (v *Compiler) Compile(instrument sdkapi.Descriptor) Instrument {
 
 	compiled := map[*reader.Reader][]Instrument{}
 
-	for reader, list := range configs {
-		for _, config := range list {
+	v.namesLock.Lock()
+	defer v.namesLock.Unlock()
+
+	for readerIdx, readerList := range configs {
+		r := v.readers[readerIdx]
+
+		for _, config := range readerList {
 			config.desc = viewDescriptor(config.desc, config.view)
+
+			if _, has := v.names[readerIdx][config.desc.Name()]; has {
+				otel.Handle(fmt.Errorf("duplicate view name registered"))
+				continue
+			}
+			v.names[readerIdx][config.desc.Name()] = struct{}{}
 
 			var one Instrument
 			switch config.desc.NumberKind() {
@@ -181,12 +209,7 @@ func (v *Compiler) Compile(instrument sdkapi.Descriptor) Instrument {
 				one = buildView[float64, traits.Float64](config)
 			}
 
-			if available := reader.AcquireOutput(config.desc); !available {
-				otel.Handle(fmt.Errorf("duplicate view name registered"))
-				continue
-			}
-
-			compiled[reader] = append(compiled[reader], one)
+			compiled[r] = append(compiled[r], one)
 		}
 	}
 
@@ -455,13 +478,14 @@ func (metric *viewMetric[N, Storage, Config, Methods]) Descriptor() sdkapi.Descr
 }
 
 func (metric *viewMetric[N, Storage, Config, Methods]) Write(_ *reader.Reader, output *[]reader.Series) {
+	var methods Methods
 	metric.lock.Lock()
 	defer metric.lock.Unlock()
 
-	for set, agg := range metric.data {
+	for set, storage := range metric.data {
 		*output = append(*output, reader.Series{
 			Attributes:  set,
-			Aggregation: agg.Aggregation(),      // @@@ !! !!! TADA!
+			Aggregation: methods.Aggregation(storage),
 			Start:       time.Time{}, // @@@!
 			End:         time.Time{}, // @@@
 		})

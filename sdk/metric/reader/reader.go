@@ -2,7 +2,6 @@ package reader
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -24,9 +23,6 @@ type (
 	Reader struct {
 		config   Config
 		exporter Exporter
-
-		lock  sync.Mutex
-		names map[string]struct{}
 	}
 
 	Metrics struct {
@@ -104,7 +100,6 @@ func New(config Config, exporter Exporter) *Reader {
 	return &Reader{
 		config:   config,
 		exporter: exporter,
-		names:    map[string]struct{}{},
 	}
 }
 
@@ -114,18 +109,4 @@ func (r *Reader) Defaults() DefaultsFunc {
 
 func (r *Reader) Exporter() Exporter {
 	return r.exporter
-}
-
-// @@@ Missing library (somehow)
-func (r *Reader) AcquireOutput(desc sdkapi.Descriptor) bool {
-	name := desc.Name()
-
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
-	if _, has := r.names[name]; has {
-		return false
-	}
-	r.names[name] = struct{}{}
-	return true
 }
