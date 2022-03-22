@@ -44,7 +44,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Support `OTEL_EXPORTER_ZIPKIN_ENDPOINT` env to specify zipkin collector endpoint (#2490)
 - Use `OTEL_EXPORTER_ZIPKIN_ENDPOINT` environment variable to specify zipkin collector endpoint. (#2490)
 - Log the configuration of `TracerProvider`s, and `Tracer`s for debugging.
   To enable use a logger with Verbosity (V level) `>=1`. (#2500)
