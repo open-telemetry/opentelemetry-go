@@ -29,6 +29,7 @@ type (
 	Instrument interface {
 		// reader == nil for all readers, else 1 reader
 		NewCollector(kvs []attribute.KeyValue, reader *reader.Reader) Collector
+		Write(reader *reader.Reader, output *[]reader.Series)
 	}
 
 	Collector interface {
@@ -81,13 +82,15 @@ type (
 	}
 
 	compiledSyncView[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
-		metric    *viewMetric[N, Storage, Config, Methods]
+		*viewMetric[N, Storage, Config, Methods]
+
 		aggConfig *Config
 		viewKeys  attribute.Filter
 	}
 
 	compiledAsyncView[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
-		metric    *viewMetric[N, Storage, Config, Methods]
+		*viewMetric[N, Storage, Config, Methods]
+
 		aggConfig *Config
 		viewKeys  attribute.Filter
 	}
@@ -248,7 +251,7 @@ func newSyncView[
 	Methods aggregator.Methods[N, Storage, Config],
 ](config configuredBehavior, aggConfig *Config) Instrument {
 	return &compiledSyncView[N, Storage, Config, Methods]{
-		metric: &viewMetric[N, Storage, Config, Methods]{
+		viewMetric: &viewMetric[N, Storage, Config, Methods]{
 			desc: config.desc,
 			data: map[attribute.Set]*Storage{},
 		},
@@ -261,9 +264,9 @@ func newAsyncView[
 	N number.Any,
 	Storage, Config any,
 	Methods aggregator.Methods[N, Storage, Config],
-](config configuredBehavior, aggConfig *Config) Instrument{
+](config configuredBehavior, aggConfig *Config) Instrument {
 	return &compiledAsyncView[N, Storage, Config, Methods]{
-		metric: &viewMetric[N, Storage, Config, Methods]{
+		viewMetric: &viewMetric[N, Storage, Config, Methods]{
 			desc: config.desc,
 			data: map[attribute.Set]*Storage{},
 		},
@@ -327,14 +330,14 @@ func compileAsync[N number.Any, Traits traits.Any[N]](config configuredBehavior)
 // NewCollector returns a Collector for a synchronous instrument view.
 func (csv *compiledSyncView[N, Storage, Config, Methods]) NewCollector(kvs []attribute.KeyValue, _ *reader.Reader) Collector {
 	sc := &syncCollector[N, Storage, Config, Methods]{}
-	sc.init(csv.metric, *csv.aggConfig, csv.viewKeys, kvs)
+	sc.init(csv.viewMetric, *csv.aggConfig, csv.viewKeys, kvs)
 	return sc
 }
 
 // NewCollector returns a Collector for an asynchronous instrument view.
 func (cav *compiledAsyncView[N, Storage, Config, Methods]) NewCollector(kvs []attribute.KeyValue, _ *reader.Reader) Collector {
 	sc := &asyncCollector[N, Storage, Config, Methods]{}
-	sc.init(cav.metric, *cav.aggConfig, cav.viewKeys, kvs)
+	sc.init(cav.viewMetric, *cav.aggConfig, cav.viewKeys, kvs)
 	return sc
 }
 
@@ -345,7 +348,7 @@ func (mi multiInstrument[N]) NewCollector(kvs []attribute.KeyValue, reader *read
 	// both async and sync instruments, whereas the APIs are not symmetrical.
 	if reader == nil {
 		for _, list := range mi {
-			collectors = make([]Collector, 0, len(mi) * len(list))
+			collectors = make([]Collector, 0, len(mi)*len(list))
 		}
 		for _, list := range mi {
 			for _, inst := range list {
@@ -357,11 +360,17 @@ func (mi multiInstrument[N]) NewCollector(kvs []attribute.KeyValue, reader *read
 
 		collectors = make([]Collector, 0, len(insts))
 
-		for _, inst := range insts{
+		for _, inst := range insts {
 			collectors = append(collectors, inst.NewCollector(kvs, reader))
 		}
 	}
 	return multiCollector[N](collectors)
+}
+
+func (mi multiInstrument[N]) Write(reader *reader.Reader, output *[]reader.Series) {
+	for _, inst := range mi[reader] {
+		inst.Write(reader, output)
+	}
 }
 
 func (c multiCollector[N]) Collect() {
@@ -443,4 +452,18 @@ func (metric *viewMetric[N, Storage, Config, Methods]) findOutput(
 
 func (metric *viewMetric[N, Storage, Config, Methods]) Descriptor() sdkapi.Descriptor {
 	return metric.desc
+}
+
+func (metric *viewMetric[N, Storage, Config, Methods]) Write(_ *reader.Reader, output *[]reader.Series) {
+	metric.lock.Lock()
+	defer metric.lock.Unlock()
+
+	for set, agg := range metric.data {
+		*output = append(*output, reader.Series{
+			Attributes:  set,
+			Aggregation: agg.Aggregation(),      // @@@ !! !!! TADA!
+			Start:       time.Time{}, // @@@!
+			End:         time.Time{}, // @@@
+		})
+	}
 }

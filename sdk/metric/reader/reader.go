@@ -31,21 +31,21 @@ type (
 
 	Metrics struct {
 		Resource *resource.Resource
-		ByScope  []ScopeMetrics
+		Scopes   []Scope
 	}
 
-	ScopeMetrics struct {
-		Library      instrumentation.Library
-		ByInstrument []InstrumentMetrics
+	Scope struct {
+		Library     instrumentation.Library
+		Instruments []Instrument
 	}
 
-	InstrumentMetrics struct {
-		Instrument   *sdkapi.Descriptor
-		Temporality  aggregation.Temporality
-		ByAttributes []AttributeMetrics
+	Instrument struct {
+		Instrument  sdkapi.Descriptor
+		Temporality aggregation.Temporality
+		Series      []Series
 	}
 
-	AttributeMetrics struct {
+	Series struct {
 		Attributes  attribute.Set
 		Aggregation aggregation.Aggregation
 		Start       time.Time

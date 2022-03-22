@@ -31,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/internal/registry"
 	"go.opentelemetry.io/otel/sdk/metric/internal/viewstate"
 	"go.opentelemetry.io/otel/sdk/metric/number"
+	"go.opentelemetry.io/otel/sdk/metric/reader"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 )
@@ -190,7 +191,7 @@ func (c common) newInstrument(name string, opts []apiInstrument.Option, nk numbe
 		})
 }
 
-func (a *Accumulator) Collect() {
+func (a *Accumulator) Collect(reader *reader.Reader, instruments *[]reader.Instrument) {
 	a.instrumentsLock.Lock()
 	defer a.instrumentsLock.Unlock()
 

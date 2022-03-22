@@ -14,8 +14,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/internal/viewstate"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
-	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/metric/reader"
+	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 )
 
 type (
@@ -24,17 +24,15 @@ type (
 		callbacks     []*callback
 
 		instrumentsLock sync.Mutex
-		instruments     []apiInstrument.Asynchronous
+		instruments     []*instrument
 
 		statesLock sync.Mutex
-		states map[*reader.Reader]*State
+		states     map[*reader.Reader]*State
 	}
 
 	State struct {
-		reader    *reader.Reader
-		storeLock sync.Mutex
-		store     map[*instrument]map[attribute.Set]viewstate.Collector
-		tmpSort   attribute.Sortable
+		reader  *reader.Reader
+		tmpSort attribute.Sortable
 	}
 
 	instrument struct {
@@ -42,6 +40,8 @@ type (
 
 		descriptor sdkapi.Descriptor
 		compiled   viewstate.Instrument
+		storeLock  sync.Mutex
+		store      map[attribute.Set]viewstate.Collector
 		callback   *callback
 	}
 
@@ -89,7 +89,6 @@ func (m *Accumulator) stateFor(reader *reader.Reader) *State {
 	}
 	s := &State{
 		reader: reader,
-		store:  map[*instrument]map[attribute.Set]viewstate.Collector{},
 	}
 	m.states[reader] = s
 	return s
@@ -129,8 +128,8 @@ func (a *Accumulator) getCallbacks() []*callback {
 	return a.callbacks
 }
 
-func (a *Accumulator) Collect(reader *reader.Reader) error {
-	state := a.stateFor(reader)
+func (a *Accumulator) Collect(r *reader.Reader, output *[]reader.Instrument) error {
+	state := a.stateFor(r)
 	ctx := context.WithValue(
 		context.Background(),
 		contextKey{},
@@ -143,10 +142,27 @@ func (a *Accumulator) Collect(reader *reader.Reader) error {
 		cb.function(ctx)
 	}
 
-	for _, insts := range state.store {
-		for _, entry := range insts {
-			entry.Collect()
+	a.instrumentsLock.Lock()
+	instruments := a.instruments
+	a.instrumentsLock.Unlock()
+
+	*output = make([]reader.Instrument, len(instruments))
+
+	for instIdx, inst := range instruments {
+		iout := &(*output)[instIdx]
+
+		iout.Instrument = inst.descriptor
+		iout.Temporality = 0 // @@@ Hey!!!
+		
+		inst.storeLock.Lock()
+		// This iteration passes over each of the attribute
+		// sets the user passed in.
+		for _, coll := range inst.store {
+			coll.Collect()
 		}
+		inst.storeLock.Unlock()
+
+		inst.compiled.Write(r, &iout.Series)
 	}
 
 	return nil
@@ -165,21 +181,14 @@ func capture[N number.Any, Traits traits.Any[N]](ctx context.Context, inst *inst
 }
 
 func getStateEntry(state *State, inst *instrument, attrs []attribute.KeyValue) viewstate.Collector {
-	state.storeLock.Lock()
-	defer state.storeLock.Unlock()
-
-	idata, ok := state.store[inst]
-
-	if !ok {
-		idata = map[attribute.Set]viewstate.Collector{}
-		state.store[inst] = idata
-	}
+	inst.storeLock.Lock()
+	defer inst.storeLock.Unlock()
 
 	aset := attribute.NewSetWithSortable(attrs, &state.tmpSort)
-	se, has := idata[aset]
+	se, has := inst.store[aset]
 	if !has {
 		se = inst.compiled.NewCollector(attrs, state.reader)
-		idata[aset] = se
+		inst.store[aset] = se
 	}
 	return se
 }
@@ -219,6 +228,7 @@ func (c common) newInstrument(name string, opts []apiInstrument.Option, nk numbe
 			inst := &instrument{
 				descriptor: desc,
 				compiled:   compiled,
+				store:      map[attribute.Set]viewstate.Collector{},
 			}
 
 			c.accumulator.instrumentsLock.Lock()
