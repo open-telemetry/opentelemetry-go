@@ -99,24 +99,14 @@ func (p *provider) producerFor(reader *reader.Reader) reader.Producer {
 	}
 }
 
-func (pp *providerProducer) Produce(in *reader.Metrics) reader.Metrics {
+func (pp *providerProducer) Produce() reader.Metrics {
 	pp.lock.Lock()
 	defer pp.lock.Unlock()
 
-	var output reader.Metrics
-
-	if in != nil {
-		output = clearMetrics(*in)
-	}
-
-	ordered := pp.provider.getOrdered()
-
-	pp.provider.collectSync(ordered)
-
-	for _, meter := range ordered {
+	for _, meter := range pp.provider.getOrdered() {
 		meter.asyncAccum.Collect(pp.reader)
+		meter.syncAccum.Collect(pp.reader)
 	}
-	// @@@ HERE
 
 	return output
 }
@@ -131,15 +121,6 @@ func clearMetrics(in reader.Metrics) reader.Metrics {
 	in.Resource = nil
 	// @@@
 	return in
-}
-
-func (p *provider) collectSync(ordered []*meter) {
-	p.collectLock.Lock()
-	defer p.collectLock.Unlock()
-
-	for _, meter := range ordered {
-		meter.syncAccum.Collect()
-	}
 }
 
 func (p *provider) Meter(name string, opts ...metric.MeterOption) metric.Meter {

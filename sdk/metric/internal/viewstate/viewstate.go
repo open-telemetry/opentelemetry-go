@@ -193,7 +193,7 @@ func (v *Compiler) Compile(instrument sdkapi.Descriptor) Instrument {
 	case 1:
 		// As a special case, recognize the case where there
 		// is only one reader and only one view to bypass the
-		// map[][]Instrument wrapper.
+		// map[...][]Instrument wrapper.
 		for _, list := range compiled {
 			if len(list) == 1 {
 				return list[0]

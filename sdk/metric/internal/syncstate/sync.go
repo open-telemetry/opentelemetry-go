@@ -192,10 +192,9 @@ func (c common) newInstrument(name string, opts []apiInstrument.Option, nk numbe
 
 func (a *Accumulator) Collect() {
 	a.instrumentsLock.Lock()
-	instruments := a.instruments
-	a.instrumentsLock.Unlock()
+	defer a.instrumentsLock.Unlock()
 
-	for _, inst := range instruments {
+	for _, inst := range a.instruments {
 		inst.current.Range(func(key interface{}, value interface{}) bool {
 			rec := value.(*record)
 			any := a.collectRecord(rec, false)
