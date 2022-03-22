@@ -21,6 +21,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel/exporters/otlp/internal/envconfig"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
 )
 
@@ -201,6 +202,7 @@ func TestConfigs(t *testing.T) {
 					//TODO: make sure gRPC's credentials actually works
 					assert.NotNil(t, c.Traces.GRPCCredentials)
 				} else {
+					// nolint:staticcheck // ignoring tlsCert.RootCAs.Subjects is deprecated ERR because cert does not come from SystemCertPool.
 					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects())
 				}
 			},
@@ -217,6 +219,7 @@ func TestConfigs(t *testing.T) {
 				if grpcOption {
 					assert.NotNil(t, c.Traces.GRPCCredentials)
 				} else {
+					// nolint:staticcheck // ignoring tlsCert.RootCAs.Subjects is deprecated ERR because cert does not come from SystemCertPool.
 					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects())
 				}
 			},
@@ -235,6 +238,7 @@ func TestConfigs(t *testing.T) {
 				if grpcOption {
 					assert.NotNil(t, c.Traces.GRPCCredentials)
 				} else {
+					// nolint:staticcheck // ignoring tlsCert.RootCAs.Subjects is deprecated ERR because cert does not come from SystemCertPool.
 					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects())
 				}
 			},
@@ -252,6 +256,7 @@ func TestConfigs(t *testing.T) {
 				if grpcOption {
 					assert.NotNil(t, c.Traces.GRPCCredentials)
 				} else {
+					// nolint:staticcheck // ignoring tlsCert.RootCAs.Subjects is deprecated ERR because cert does not come from SystemCertPool.
 					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects())
 				}
 			},
@@ -381,9 +386,10 @@ func TestConfigs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			origEOR := otlpconfig.DefaultEnvOptionsReader
-			otlpconfig.DefaultEnvOptionsReader = otlpconfig.EnvOptionsReader{
-				GetEnv:   tt.env.getEnv,
-				ReadFile: tt.fileReader.readFile,
+			otlpconfig.DefaultEnvOptionsReader = envconfig.EnvOptionsReader{
+				GetEnv:    tt.env.getEnv,
+				ReadFile:  tt.fileReader.readFile,
+				Namespace: "OTEL_EXPORTER_OTLP",
 			}
 			t.Cleanup(func() { otlpconfig.DefaultEnvOptionsReader = origEOR })
 

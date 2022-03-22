@@ -17,10 +17,10 @@ package sum // import "go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/metric/number"
-	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/number"
+	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 )
 
 // Aggregator aggregates counter events.

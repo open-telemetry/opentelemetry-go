@@ -14,24 +14,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install Go
-        uses: actions/setup-go@v2.2.0
+        uses: actions/setup-go@v3
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
       - name: Checkout Repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup Environment
         run: |
           echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
       - name: Module cache
-        uses: actions/cache@v2.1.7
+        uses: actions/cache@v3
         env:
           cache-name: go-mod-cache
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/go.sum') }}
       - name: Tools cache
-        uses: actions/cache@v2.1.7
+        uses: actions/cache@v3
         env:
           cache-name: go-tools-cache
         with:
@@ -48,17 +48,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install Go
-        uses: actions/setup-go@v2.2.0
+        uses: actions/setup-go@v3
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
       - name: Checkout Repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup Environment
         run: |
           echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
       - name: Module cache
-        uses: actions/cache@v2.1.7
+        uses: actions/cache@v3
         env:
           cache-name: go-mod-cache
         with:
@@ -71,17 +71,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install Go
-        uses: actions/setup-go@v2.2.0
+        uses: actions/setup-go@v3
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
       - name: Checkout Repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup Environment
         run: |
           echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
       - name: Module cache
-        uses: actions/cache@v2.1.7
+        uses: actions/cache@v3
         env:
           cache-name: go-mod-cache
         with:
@@ -109,7 +109,7 @@ jobs:
   compatibility-test:
     strategy:
       matrix:
-        go-version: [1.17, 1.16]
+        go-version: [1.18, 1.17, 1.16]
         os: [ubuntu-latest, macos-latest, windows-latest]
         # GitHub Actions does not support arm* architectures on default
         # runners. It is possible to acomplish this with a self-hosted runner
@@ -123,18 +123,18 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Install Go
-        uses: actions/setup-go@v2.2.0
+        uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go-version }}
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup Environment
         run: |
           echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
         shell: bash
       - name: Module cache
-        uses: actions/cache@v2.1.7
+        uses: actions/cache@v3
         env:
           cache-name: go-mod-cache
         with:

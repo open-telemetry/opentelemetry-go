@@ -21,32 +21,36 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/processortest"
+	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-func generateTestData(proc export.Processor) {
+func generateTestData(t *testing.T, proc export.Processor) {
 	ctx := context.Background()
 	accum := metricsdk.NewAccumulator(proc)
-	meter := metric.WrapMeterImpl(accum)
+	meter := sdkapi.WrapMeterImpl(accum)
 
-	counter := metric.Must(meter).NewFloat64Counter("counter.sum")
-
-	_ = metric.Must(meter).NewInt64CounterObserver("observer.sum",
-		func(_ context.Context, result metric.Int64ObserverResult) {
-			result.Observe(10, attribute.String("K1", "V1"))
-			result.Observe(11, attribute.String("K1", "V2"))
-		},
-	)
+	counter, err := meter.SyncFloat64().Counter("counter.sum")
+	require.NoError(t, err)
 
 	counter.Add(ctx, 100, attribute.String("K1", "V1"))
 	counter.Add(ctx, 101, attribute.String("K1", "V2"))
+
+	counterObserver, err := meter.AsyncInt64().Counter("observer.sum")
+	require.NoError(t, err)
+
+	err = meter.RegisterCallback([]instrument.Asynchronous{counterObserver}, func(ctx context.Context) {
+		counterObserver.Observe(ctx, 10, attribute.String("K1", "V1"))
+		counterObserver.Observe(ctx, 11, attribute.String("K1", "V2"))
+	})
+	require.NoError(t, err)
 
 	accum.Collect(ctx)
 }
@@ -60,7 +64,7 @@ func TestProcessorTesting(t *testing.T) {
 			attribute.DefaultEncoder(),
 		),
 	)
-	generateTestData(checkpointer)
+	generateTestData(t, checkpointer)
 
 	res := resource.NewSchemaless(attribute.String("R", "V"))
 	expect := map[string]float64{

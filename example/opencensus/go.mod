@@ -10,11 +10,11 @@ replace (
 
 require (
 	go.opencensus.io v0.22.6-0.20201102222123-380f4078db9f
-	go.opentelemetry.io/otel v1.4.1
+	go.opentelemetry.io/otel v1.5.0
 	go.opentelemetry.io/otel/bridge/opencensus v0.27.1
 	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v0.27.0
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.4.1
-	go.opentelemetry.io/otel/sdk v1.4.1
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.5.0
+	go.opentelemetry.io/otel/sdk v1.5.0
 	go.opentelemetry.io/otel/sdk/metric v0.27.0
 )
 
@@ -27,8 +27,6 @@ replace go.opentelemetry.io/otel/example/namedtracer => ../namedtracer
 replace go.opentelemetry.io/otel/example/opencensus => ./
 
 replace go.opentelemetry.io/otel/example/otel-collector => ../otel-collector
-
-replace go.opentelemetry.io/otel/example/prom-collector => ../prom-collector
 
 replace go.opentelemetry.io/otel/example/prometheus => ../prometheus
 

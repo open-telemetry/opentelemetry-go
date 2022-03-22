@@ -604,10 +604,9 @@ func TestSpanSetAttributes(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			te := NewTestExporter()
-			tp := NewTracerProvider(
-				WithSyncer(te),
-				WithSpanLimits(SpanLimits{AttributeCountLimit: capacity}),
-			)
+			sl := NewSpanLimits()
+			sl.AttributeCountLimit = capacity
+			tp := NewTracerProvider(WithSyncer(te), WithSpanLimits(sl))
 			_, span := tp.Tracer(instName).Start(context.Background(), spanName)
 			for _, a := range test.input {
 				span.SetAttributes(a...)
@@ -677,7 +676,9 @@ func TestEvents(t *testing.T) {
 
 func TestEventsOverLimit(t *testing.T) {
 	te := NewTestExporter()
-	tp := NewTracerProvider(WithSpanLimits(SpanLimits{EventCountLimit: 2}), WithSyncer(te), WithResource(resource.Empty()))
+	sl := NewSpanLimits()
+	sl.EventCountLimit = 2
+	tp := NewTracerProvider(WithSpanLimits(sl), WithSyncer(te), WithResource(resource.Empty()))
 
 	span := startSpan(tp, "EventsOverLimit")
 	k1v1 := attribute.String("key1", "value1")
@@ -779,7 +780,9 @@ func TestLinksOverLimit(t *testing.T) {
 	sc2 := trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}})
 	sc3 := trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID([16]byte{1, 1}), SpanID: trace.SpanID{3}})
 
-	tp := NewTracerProvider(WithSpanLimits(SpanLimits{LinkCountLimit: 2}), WithSyncer(te), WithResource(resource.Empty()))
+	sl := NewSpanLimits()
+	sl.LinkCountLimit = 2
+	tp := NewTracerProvider(WithSpanLimits(sl), WithSyncer(te), WithResource(resource.Empty()))
 
 	span := startSpan(tp, "LinksOverLimit",
 		trace.WithLinks(
@@ -1637,8 +1640,10 @@ func TestReadWriteSpan(t *testing.T) {
 
 func TestAddEventsWithMoreAttributesThanLimit(t *testing.T) {
 	te := NewTestExporter()
+	sl := NewSpanLimits()
+	sl.AttributePerEventCountLimit = 2
 	tp := NewTracerProvider(
-		WithSpanLimits(SpanLimits{AttributePerEventCountLimit: 2}),
+		WithSpanLimits(sl),
 		WithSyncer(te),
 		WithResource(resource.Empty()),
 	)
@@ -1701,8 +1706,10 @@ func TestAddEventsWithMoreAttributesThanLimit(t *testing.T) {
 
 func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 	te := NewTestExporter()
+	sl := NewSpanLimits()
+	sl.AttributePerLinkCountLimit = 1
 	tp := NewTracerProvider(
-		WithSpanLimits(SpanLimits{AttributePerLinkCountLimit: 1}),
+		WithSpanLimits(sl),
 		WithSyncer(te),
 		WithResource(resource.Empty()),
 	)

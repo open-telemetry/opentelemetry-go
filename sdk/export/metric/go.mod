@@ -17,8 +17,6 @@ replace go.opentelemetry.io/otel/example/opencensus => ../../../example/opencens
 
 replace go.opentelemetry.io/otel/example/otel-collector => ../../../example/otel-collector
 
-replace go.opentelemetry.io/otel/example/prom-collector => ../../../example/prom-collector
-
 replace go.opentelemetry.io/otel/example/prometheus => ../../../example/prometheus
 
 replace go.opentelemetry.io/otel/example/zipkin => ../../../example/zipkin
@@ -42,8 +40,7 @@ replace go.opentelemetry.io/otel/sdk/metric => ../../metric
 replace go.opentelemetry.io/otel/trace => ../../../trace
 
 require (
-	go.opentelemetry.io/otel v1.4.1
-	go.opentelemetry.io/otel/metric v0.27.0
+	go.opentelemetry.io/otel v1.5.0
 	go.opentelemetry.io/otel/sdk/metric v0.27.0
 )
 

@@ -8,10 +8,10 @@ replace (
 )
 
 require (
-	github.com/stretchr/testify v1.7.0
-	go.opentelemetry.io/otel v1.4.1
-	go.opentelemetry.io/otel/sdk v1.4.1
-	go.opentelemetry.io/otel/trace v1.4.1
+	github.com/stretchr/testify v1.7.1
+	go.opentelemetry.io/otel v1.5.0
+	go.opentelemetry.io/otel/sdk v1.5.0
+	go.opentelemetry.io/otel/trace v1.5.0
 )
 
 replace go.opentelemetry.io/otel/bridge/opencensus => ../../../bridge/opencensus
@@ -25,8 +25,6 @@ replace go.opentelemetry.io/otel/example/namedtracer => ../../../example/namedtr
 replace go.opentelemetry.io/otel/example/opencensus => ../../../example/opencensus
 
 replace go.opentelemetry.io/otel/example/otel-collector => ../../../example/otel-collector
-
-replace go.opentelemetry.io/otel/example/prom-collector => ../../example/prom-collector
 
 replace go.opentelemetry.io/otel/example/prometheus => ../../../example/prometheus
 

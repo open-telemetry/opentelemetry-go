@@ -10,14 +10,14 @@ jobs:
     name: Benchmarks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2.4.0
-      - uses: actions/setup-go@v2.2.0
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
       - name: Run benchmarks
         run: make test-bench | tee output.txt
       - name: Download previous benchmark data
-        uses: actions/cache@v2.1.7
+        uses: actions/cache@v3
         with:
           path: ./benchmarks
           key: ${{ runner.os }}-benchmark
@@ -30,3 +30,4 @@ jobs:
           external-data-json-path: ./benchmarks/data.json
           auto-push: false
           fail-on-alert: true
+          alert-threshold: "400%"
