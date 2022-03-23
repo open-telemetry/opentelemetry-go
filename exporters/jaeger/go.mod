@@ -73,3 +73,5 @@ replace go.opentelemetry.io/otel/example/fib => ../../example/fib
 replace go.opentelemetry.io/otel/schema => ../../schema
 
 replace go.opentelemetry.io/otel/exporters/otlp/internal/retry => ../otlp/internal/retry
+
+replace go.opentelemetry.io/otel/exporters/otlp/internal => ../otlp/internal

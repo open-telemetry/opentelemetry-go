@@ -26,6 +26,7 @@ module-sets:
       - go.opentelemetry.io/otel/example/zipkin
       - go.opentelemetry.io/otel/exporters/jaeger
       - go.opentelemetry.io/otel/exporters/zipkin
+      - go.opentelemetry.io/otel/exporters/otlp/internal
       - go.opentelemetry.io/otel/exporters/otlp/otlptrace
       - go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc
       - go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp

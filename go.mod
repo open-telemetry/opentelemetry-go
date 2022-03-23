@@ -7,9 +7,7 @@ require (
 	github.com/go-logr/stdr v1.2.2
 	github.com/google/go-cmp v0.5.7
 	github.com/stretchr/testify v1.7.1
-	go.opentelemetry.io/otel/exporters/otlp/internal/retry v0.0.0-00010101000000-000000000000
 	go.opentelemetry.io/otel/trace v1.5.0
-	google.golang.org/grpc v1.45.0
 )
 
 replace go.opentelemetry.io/otel => ./
@@ -75,3 +73,5 @@ replace go.opentelemetry.io/otel/example/fib => ./example/fib
 replace go.opentelemetry.io/otel/schema => ./schema
 
 replace go.opentelemetry.io/otel/exporters/otlp/internal/retry => ./exporters/otlp/internal/retry
+
+replace go.opentelemetry.io/otel/exporters/otlp/internal => ./exporters/otlp/internal
