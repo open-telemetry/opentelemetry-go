@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Removed
+
+- Removed module the `go.opentelemetry.io/otel/sdk/export/metric`.
+  Use the `go.opentelemetry.io/otel/sdk/metric` module instead. (#TBD)
+
 ## [1.6.0/0.28.0] - 2022-03-23
 
 ### ⚠️ Notice ⚠️
