@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/exporters/otlp/internal
 
-go 1.17
+go 1.16
 
 require (
 	github.com/stretchr/testify v1.7.1
