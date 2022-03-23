@@ -17,17 +17,23 @@ Code instrumented with the `go.opentelemetry.io/otel/metric` will need to be mod
 
 ### Added
 
-- Log the Exporters configuration in the TracerProviders message. (#2578)
-- Metrics Exponential Histogram support: Mapping functions have been made available
-  in `sdk/metric/aggregator/exponential/mapping` for other OpenTelemetry projects to take
-  dependencies on. (#2502)
-- Add go 1.18 to our compatibility tests. (#2679)
+- Add metrics exponential histogram support.
+  New mapping functions have been made available in `sdk/metric/aggregator/exponential/mapping` for other OpenTelemetry projects to take dependencies on. (#2502)
+- Add Go 1.18 to our compatibility tests. (#2679)
 - Allow configuring the Sampler with the `OTEL_TRACES_SAMPLER` and `OTEL_TRACES_SAMPLER_ARG` environment variables. (#2305, #2517)
 - Add the `metric/global` for obtaining and setting the global `MeterProvider`. (#2660)
 
 ### Changed
 
-- The metrics API has been significantly changed. (#2587)
+- The metrics API has been significantly changed to match the revised OpenTelemetry specification.
+  High-level changes include:
+
+  - Synchronous and asynchronous instruments are now handled by independent `InstrumentProvider`s.
+    These `InstrumentProvider`s are manged a `Meter`.
+  - Synchronous and asynchronous instruments are grouped into their own packages based on value types.
+  - Asynchronous callbacks can now be registered with a `Meter`.
+
+  Be sure to check out the metric module documentation for more information on how to use the revised API. (#2587, #2660)
 
 ### Fixed
 
