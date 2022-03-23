@@ -29,7 +29,7 @@ Code instrumented with the `go.opentelemetry.io/otel/metric` will need to be mod
   High-level changes include:
 
   - Synchronous and asynchronous instruments are now handled by independent `InstrumentProvider`s.
-    These `InstrumentProvider`s are manged a `Meter`.
+    These `InstrumentProvider`s are managed with a `Meter`.
   - Synchronous and asynchronous instruments are grouped into their own packages based on value types.
   - Asynchronous callbacks can now be registered with a `Meter`.
 
