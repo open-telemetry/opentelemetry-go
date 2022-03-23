@@ -2,7 +2,10 @@ module go.opentelemetry.io/otel/metric
 
 go 1.16
 
-require go.opentelemetry.io/otel v1.5.0
+require (
+	github.com/stretchr/testify v1.7.1
+	go.opentelemetry.io/otel v1.5.0
+)
 
 replace go.opentelemetry.io/otel => ../
 
