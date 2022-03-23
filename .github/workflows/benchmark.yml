@@ -17,7 +17,7 @@ jobs:
       - name: Run benchmarks
         run: make test-bench | tee output.txt
       - name: Download previous benchmark data
-        uses: actions/cache@v2.1.7
+        uses: actions/cache@v3
         with:
           path: ./benchmarks
           key: ${{ runner.os }}-benchmark
