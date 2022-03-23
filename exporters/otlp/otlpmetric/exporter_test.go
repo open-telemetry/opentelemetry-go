@@ -225,9 +225,9 @@ func TestNoGroupingExport(t *testing.T) {
 	)
 }
 
-func TestHistogramMetricGroupingExport(t *testing.T) {
+func TestHistogramInt64MetricGroupingExport(t *testing.T) {
 	r := record(
-		"histogram",
+		"int64-histogram",
 		sdkapi.HistogramInstrumentKind,
 		number.Int64Kind,
 		append(baseKeyValues, cpuKey.Int(1)),
@@ -240,7 +240,7 @@ func TestHistogramMetricGroupingExport(t *testing.T) {
 				{
 					Metrics: []*metricpb.Metric{
 						{
-							Name: "histogram",
+							Name: "int64-histogram",
 							Data: &metricpb.Metric_Histogram{
 								Histogram: &metricpb.Histogram{
 									AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
@@ -258,6 +258,56 @@ func TestHistogramMetricGroupingExport(t *testing.T) {
 											Attributes:        cpu1Labels,
 											Count:             2,
 											Sum:               11,
+											ExplicitBounds:    testHistogramBoundaries,
+											BucketCounts:      []uint64{1, 0, 0, 1},
+											StartTimeUnixNano: startTime(),
+											TimeUnixNano:      pointTime(),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	runMetricExportTests(t, nil, resource.Empty(), []testRecord{r, r}, expected)
+}
+
+func TestHistogramFloat64MetricGroupingExport(t *testing.T) {
+	r := record(
+		"float64-histogram",
+		sdkapi.HistogramInstrumentKind,
+		number.Float64Kind,
+		append(baseKeyValues, cpuKey.Int(1)),
+		testLibName,
+	)
+	expected := []*metricpb.ResourceMetrics{
+		{
+			Resource: nil,
+			InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
+				{
+					Metrics: []*metricpb.Metric{
+						{
+							Name: "float64-histogram",
+							Data: &metricpb.Metric_Histogram{
+								Histogram: &metricpb.Histogram{
+									AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+									DataPoints: []*metricpb.HistogramDataPoint{
+										{
+											Attributes:        cpu1Labels,
+											StartTimeUnixNano: startTime(),
+											TimeUnixNano:      pointTime(),
+											Count:             2,
+											Sum:               11.0,
+											ExplicitBounds:    testHistogramBoundaries,
+											BucketCounts:      []uint64{1, 0, 0, 1},
+										},
+										{
+											Attributes:        cpu1Labels,
+											Count:             2,
+											Sum:               11.0,
 											ExplicitBounds:    testHistogramBoundaries,
 											BucketCounts:      []uint64{1, 0, 0, 1},
 											StartTimeUnixNano: startTime(),
