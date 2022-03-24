@@ -10,6 +10,7 @@ require (
 	go.opentelemetry.io/otel/sdk v0.0.0-00010101000000-000000000000
 	go.opentelemetry.io/otel/trace v1.5.0
 	go.opentelemetry.io/proto/otlp v0.12.0
+	go.opentelemetry.io/otel/trace v1.6.0
 )
 
 replace go.opentelemetry.io/otel => ./
