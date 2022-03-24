@@ -19,7 +19,6 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -190,7 +189,7 @@ func (c common) newInstrument(name string, opts []apiInstrument.Option, nk numbe
 		})
 }
 
-func (a *Provider) Collect(r *reader.Reader, sequence int64, start, now time.Time, output *[]reader.Instrument) {
+func (a *Provider) Collect(r *reader.Reader, sequence viewstate.Sequence, output *[]reader.Instrument) {
 	a.instrumentsLock.Lock()
 	instruments := a.instruments
 	a.instrumentsLock.Unlock()
@@ -225,7 +224,7 @@ func (a *Provider) Collect(r *reader.Reader, sequence int64, start, now time.Tim
 			_ = a.collectRecord(rec, true)
 			return true
 		})
-		inst.compiled.Collect(r, sequence, start, now, &iout.Series)
+		inst.compiled.Collect(r, sequence, &iout.Series)
 	}
 }
 

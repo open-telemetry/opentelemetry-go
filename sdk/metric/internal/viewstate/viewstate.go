@@ -32,6 +32,13 @@ type (
 		names     []map[string]struct{}
 	}
 
+	Sequence struct {
+		Number int64
+		Start  time.Time
+		Last   time.Time
+		Now    time.Time
+	}
+
 	Instrument interface {
 		// NewAccumulator returns a new Accumulator bound to
 		// the attributes `kvs`.  If reader == nil the
@@ -41,7 +48,7 @@ type (
 
 		// Collect transfers aggregated data from the
 		// Accumulators into the output struct.
-		Collect(reader *reader.Reader, sequence int64, startTime, nowTime time.Time, output *[]reader.Series)
+		Collect(reader *reader.Reader, sequence Sequence, output *[]reader.Series)
 	}
 
 	Accumulator interface {
@@ -123,7 +130,7 @@ func New(lib instrumentation.Library, views []views.View, readers []*reader.Read
 	for i := range names {
 		names[i] = map[string]struct{}{}
 	}
-	
+
 	return &Compiler{
 		library: lib,
 		views:   views,
@@ -396,9 +403,9 @@ func (mi multiInstrument[N]) NewAccumulator(kvs []attribute.KeyValue, reader *re
 	return multiAccumulator[N](collectors)
 }
 
-func (mi multiInstrument[N]) Collect(reader *reader.Reader, sequence int64, start, now time.Time, output *[]reader.Series) {
+func (mi multiInstrument[N]) Collect(reader *reader.Reader, sequence Sequence, output *[]reader.Series) {
 	for _, inst := range mi[reader] {
-		inst.Collect(reader, sequence, start, now, output)
+		inst.Collect(reader, sequence, output)
 	}
 }
 
@@ -483,7 +490,7 @@ func (metric *viewMetric[N, Storage, Config, Methods]) Descriptor() sdkapi.Descr
 	return metric.desc
 }
 
-func (metric *viewMetric[N, Storage, Config, Methods]) Collect(_ *reader.Reader, sequence int64, start, now time.Time, output *[]reader.Series) {
+func (metric *viewMetric[N, Storage, Config, Methods]) Collect(_ *reader.Reader, sequence Sequence, output *[]reader.Series) {
 	var methods Methods
 	metric.lock.Lock()
 	defer metric.lock.Unlock()
@@ -492,8 +499,8 @@ func (metric *viewMetric[N, Storage, Config, Methods]) Collect(_ *reader.Reader,
 		*output = append(*output, reader.Series{
 			Attributes:  set,
 			Aggregation: methods.Aggregation(storage),
-			Start:       start,
-			End:         now,
+			Start:       sequence.Start,
+			End:         sequence.Now, // @@@
 		})
 	}
 }

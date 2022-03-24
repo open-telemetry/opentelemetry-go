@@ -39,10 +39,11 @@ type (
 	}
 
 	providerProducer struct {
-		lock     sync.Mutex
-		provider *provider
-		reader   *reader.Reader
-		sequence int64
+		lock        sync.Mutex
+		provider    *provider
+		reader      *reader.Reader
+		sequence    int64
+		lastCollect time.Time
 	}
 
 	meter struct {
@@ -115,14 +116,21 @@ func (pp *providerProducer) Produce() reader.Metrics {
 		Scopes:   make([]reader.Scope, len(ordered)),
 	}
 
-	now := time.Now()
+	sequence := viewstate.Sequence{
+		Number: pp.sequence,
+		Start:  pp.provider.startTime,
+		Last:   pp.lastCollect,
+		Now:    time.Now(),
+	}
 
 	for idx, meter := range ordered {
 		output.Scopes[idx].Library = meter.library
 
-		meter.asyncState.Collect(pp.reader, pp.sequence, pp.provider.startTime, now, &output.Scopes[idx].Instruments)
-		meter.syncState.Collect(pp.reader, pp.sequence, pp.provider.startTime, now, &output.Scopes[idx].Instruments)
+		meter.asyncState.Collect(pp.reader, sequence, &output.Scopes[idx].Instruments)
+		meter.syncState.Collect(pp.reader, sequence, &output.Scopes[idx].Instruments)
 	}
+
+	pp.lastCollect = sequence.Now
 
 	return output
 }

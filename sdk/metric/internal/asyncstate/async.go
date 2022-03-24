@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -129,7 +128,7 @@ func (a *Provider) getCallbacks() []*callback {
 	return a.callbacks
 }
 
-func (a *Provider) Collect(r *reader.Reader, sequence int64, start, now time.Time, output *[]reader.Instrument) error {
+func (a *Provider) Collect(r *reader.Reader, sequence viewstate.Sequence, output *[]reader.Instrument) error {
 	state := a.stateFor(r)
 	ctx := context.WithValue(
 		context.Background(),
@@ -163,7 +162,7 @@ func (a *Provider) Collect(r *reader.Reader, sequence int64, start, now time.Tim
 		}
 		inst.storeLock.Unlock()
 
-		inst.compiled.Collect(r, sequence, start, now, &iout.Series)
+		inst.compiled.Collect(r, sequence, &iout.Series)
 	}
 
 	return nil
