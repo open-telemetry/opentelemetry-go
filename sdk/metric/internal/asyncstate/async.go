@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -19,7 +20,7 @@ import (
 )
 
 type (
-	Accumulator struct {
+	Provider struct {
 		callbacksLock sync.Mutex
 		callbacks     []*callback
 
@@ -41,7 +42,7 @@ type (
 		descriptor sdkapi.Descriptor
 		compiled   viewstate.Instrument
 		storeLock  sync.Mutex
-		store      map[attribute.Set]viewstate.Collector
+		store      map[attribute.Set]viewstate.Accumulator
 		callback   *callback
 	}
 
@@ -51,9 +52,9 @@ type (
 	}
 
 	common struct {
-		accumulator *Accumulator
-		registry    *registry.State
-		views       *viewstate.Compiler
+		provider *Provider
+		registry *registry.State
+		views    *viewstate.Compiler
 	}
 
 	Int64Instruments   struct{ common }
@@ -75,13 +76,13 @@ func (cb *callback) Instruments() []apiInstrument.Asynchronous {
 	return cb.instruments
 }
 
-func New() *Accumulator {
-	return &Accumulator{
+func New() *Provider {
+	return &Provider{
 		states: map[*reader.Reader]*State{},
 	}
 }
 
-func (m *Accumulator) stateFor(reader *reader.Reader) *State {
+func (m *Provider) stateFor(reader *reader.Reader) *State {
 	m.statesLock.Lock()
 	defer m.statesLock.Unlock()
 	if s, ok := m.states[reader]; ok {
@@ -94,7 +95,7 @@ func (m *Accumulator) stateFor(reader *reader.Reader) *State {
 	return s
 }
 
-func (m *Accumulator) RegisterCallback(instruments []apiInstrument.Asynchronous, function func(context.Context)) error {
+func (m *Provider) RegisterCallback(instruments []apiInstrument.Asynchronous, function func(context.Context)) error {
 	cb := &callback{
 		function:    function,
 		instruments: instruments,
@@ -122,13 +123,13 @@ func (m *Accumulator) RegisterCallback(instruments []apiInstrument.Asynchronous,
 	return nil
 }
 
-func (a *Accumulator) getCallbacks() []*callback {
+func (a *Provider) getCallbacks() []*callback {
 	a.callbacksLock.Lock()
 	defer a.callbacksLock.Unlock()
 	return a.callbacks
 }
 
-func (a *Accumulator) Collect(r *reader.Reader, output *[]reader.Instrument) error {
+func (a *Provider) Collect(r *reader.Reader, sequence int64, start, now time.Time, output *[]reader.Instrument) error {
 	state := a.stateFor(r)
 	ctx := context.WithValue(
 		context.Background(),
@@ -153,16 +154,16 @@ func (a *Accumulator) Collect(r *reader.Reader, output *[]reader.Instrument) err
 
 		iout.Instrument = inst.descriptor
 		iout.Temporality = 0 // @@@ Hey!!!
-		
+
 		inst.storeLock.Lock()
 		// This iteration passes over each of the attribute
 		// sets the user passed in.
-		for _, coll := range inst.store {
-			coll.Collect()
+		for _, capt := range inst.store {
+			capt.Accumulate()
 		}
 		inst.storeLock.Unlock()
 
-		inst.compiled.Write(r, &iout.Series)
+		inst.compiled.Collect(r, sequence, start, now, &iout.Series)
 	}
 
 	return nil
@@ -177,38 +178,38 @@ func capture[N number.Any, Traits traits.Any[N]](ctx context.Context, inst *inst
 	state := valid.(*State)
 
 	se := getStateEntry(state, inst, attrs)
-	se.(viewstate.CollectorUpdater[N]).Update(value)
+	se.(viewstate.AccumulatorUpdater[N]).Update(value)
 }
 
-func getStateEntry(state *State, inst *instrument, attrs []attribute.KeyValue) viewstate.Collector {
+func getStateEntry(state *State, inst *instrument, attrs []attribute.KeyValue) viewstate.Accumulator {
 	inst.storeLock.Lock()
 	defer inst.storeLock.Unlock()
 
 	aset := attribute.NewSetWithSortable(attrs, &state.tmpSort)
 	se, has := inst.store[aset]
 	if !has {
-		se = inst.compiled.NewCollector(attrs, state.reader)
+		se = inst.compiled.NewAccumulator(attrs, state.reader)
 		inst.store[aset] = se
 	}
 	return se
 }
 
-func (a *Accumulator) Int64Instruments(reg *registry.State, views *viewstate.Compiler) asyncint64.InstrumentProvider {
+func (p *Provider) Int64Instruments(reg *registry.State, views *viewstate.Compiler) asyncint64.InstrumentProvider {
 	return Int64Instruments{
 		common: common{
-			accumulator: a,
-			registry:    reg,
-			views:       views,
+			provider: p,
+			registry: reg,
+			views:    views,
 		},
 	}
 }
 
-func (a *Accumulator) Float64Instruments(reg *registry.State, views *viewstate.Compiler) asyncfloat64.InstrumentProvider {
+func (p *Provider) Float64Instruments(reg *registry.State, views *viewstate.Compiler) asyncfloat64.InstrumentProvider {
 	return Float64Instruments{
 		common: common{
-			accumulator: a,
-			registry:    reg,
-			views:       views,
+			provider: p,
+			registry: reg,
+			views:    views,
 		},
 	}
 }
@@ -228,13 +229,13 @@ func (c common) newInstrument(name string, opts []apiInstrument.Option, nk numbe
 			inst := &instrument{
 				descriptor: desc,
 				compiled:   compiled,
-				store:      map[attribute.Set]viewstate.Collector{},
+				store:      map[attribute.Set]viewstate.Accumulator{},
 			}
 
-			c.accumulator.instrumentsLock.Lock()
-			defer c.accumulator.instrumentsLock.Unlock()
+			c.provider.instrumentsLock.Lock()
+			defer c.provider.instrumentsLock.Unlock()
 
-			c.accumulator.instruments = append(c.accumulator.instruments, inst)
+			c.provider.instruments = append(c.provider.instruments, inst)
 			return inst
 		})
 }

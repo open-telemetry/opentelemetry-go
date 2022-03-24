@@ -42,14 +42,15 @@ type (
 		lock     sync.Mutex
 		provider *provider
 		reader   *reader.Reader
+		sequence int64
 	}
 
 	meter struct {
 		library    instrumentation.Library
 		provider   *provider
 		registry   *registry.State
-		syncAccum  *syncstate.Accumulator
-		asyncAccum *asyncstate.Accumulator
+		syncState  *syncstate.Provider
+		asyncState *asyncstate.Provider
 		views      *viewstate.Compiler
 	}
 )
@@ -85,7 +86,7 @@ func New(opts ...Option) metric.MeterProvider {
 	}
 	p := &provider{
 		cfg:       cfg,
-		startTime: time.Now(), // @@@
+		startTime: time.Now(),
 		meters:    map[instrumentation.Library]*meter{},
 	}
 	for _, reader := range cfg.readers {
@@ -105,6 +106,8 @@ func (pp *providerProducer) Produce() reader.Metrics {
 	pp.lock.Lock()
 	defer pp.lock.Unlock()
 
+	pp.sequence++
+
 	ordered := pp.provider.getOrdered()
 
 	output := reader.Metrics{
@@ -112,16 +115,13 @@ func (pp *providerProducer) Produce() reader.Metrics {
 		Scopes:   make([]reader.Scope, len(ordered)),
 	}
 
+	now := time.Now()
+
 	for idx, meter := range ordered {
 		output.Scopes[idx].Library = meter.library
 
-		// @@@ Here, pass start time, now time to the collection routines
-		// hmm, what about gauge timestamps
-		// hmmm, what about memory
-		// hmmmm where does temporality actually get configured
-		// where do the former start/finish methods go?
-		meter.asyncAccum.Collect(pp.reader, &output.Scopes[idx].Instruments)
-		meter.syncAccum.Collect(pp.reader, &output.Scopes[idx].Instruments)
+		meter.asyncState.Collect(pp.reader, pp.sequence, pp.provider.startTime, now, &output.Scopes[idx].Instruments)
+		meter.syncState.Collect(pp.reader, pp.sequence, pp.provider.startTime, now, &output.Scopes[idx].Instruments)
 	}
 
 	return output
@@ -152,8 +152,8 @@ func (p *provider) Meter(name string, opts ...metric.MeterOption) metric.Meter {
 		provider:   p,
 		library:    lib,
 		registry:   registry.New(),
-		syncAccum:  syncstate.New(),
-		asyncAccum: asyncstate.New(),
+		syncState:  syncstate.New(),
+		asyncState: asyncstate.New(),
 		views:      viewstate.New(lib, p.cfg.views, p.cfg.readers),
 	}
 	p.ordered = append(p.ordered, m)
@@ -162,21 +162,21 @@ func (p *provider) Meter(name string, opts ...metric.MeterOption) metric.Meter {
 }
 
 func (m *meter) SyncInt64() syncint64.InstrumentProvider {
-	return m.syncAccum.Int64Instruments(m.registry, m.views)
+	return m.syncState.Int64Instruments(m.registry, m.views)
 }
 
 func (m *meter) SyncFloat64() syncfloat64.InstrumentProvider {
-	return m.syncAccum.Float64Instruments(m.registry, m.views)
+	return m.syncState.Float64Instruments(m.registry, m.views)
 }
 
 func (m *meter) AsyncInt64() asyncint64.InstrumentProvider {
-	return m.asyncAccum.Int64Instruments(m.registry, m.views)
+	return m.asyncState.Int64Instruments(m.registry, m.views)
 }
 
 func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
-	return m.asyncAccum.Float64Instruments(m.registry, m.views)
+	return m.asyncState.Float64Instruments(m.registry, m.views)
 }
 
 func (m *meter) RegisterCallback(insts []instrument.Asynchronous, function func(context.Context)) error {
-	return m.asyncAccum.RegisterCallback(insts, function)
+	return m.asyncState.RegisterCallback(insts, function)
 }

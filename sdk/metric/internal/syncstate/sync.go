@@ -19,7 +19,7 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
-	"unsafe"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -43,7 +43,7 @@ import (
 // fast path.  See also https://github.com/a8m/syncmap.
 
 type (
-	Accumulator struct {
+	Provider struct {
 		instrumentsLock sync.Mutex
 		instruments     []*instrument
 	}
@@ -69,12 +69,11 @@ type (
 
 		distinct   attribute.Set
 		attributes []attribute.KeyValue
-		collector  viewstate.Collector
-		next       unsafe.Pointer
+		accumulator  viewstate.Accumulator
 	}
 
 	common struct {
-		accumulator *Accumulator
+		provider *Provider
 		registry    *registry.State
 		views       *viewstate.Compiler
 	}
@@ -101,24 +100,24 @@ var (
 	_ syncfloat64.Histogram     = histogram[float64, traits.Float64]{}
 )
 
-func New() *Accumulator {
-	return &Accumulator{}
+func New() *Provider {
+	return &Provider{}
 }
 
-func (a *Accumulator) Int64Instruments(reg *registry.State, views *viewstate.Compiler) syncint64.InstrumentProvider {
+func (p *Provider) Int64Instruments(reg *registry.State, views *viewstate.Compiler) syncint64.InstrumentProvider {
 	return Int64Instruments{
 		common: common{
-			accumulator: a,
+			provider: p,
 			registry:    reg,
 			views:       views,
 		},
 	}
 }
 
-func (a *Accumulator) Float64Instruments(reg *registry.State, views *viewstate.Compiler) syncfloat64.InstrumentProvider {
+func (p *Provider) Float64Instruments(reg *registry.State, views *viewstate.Compiler) syncfloat64.InstrumentProvider {
 	return Float64Instruments{
 		common: common{
-			accumulator: a,
+			provider: p,
 			registry:    reg,
 			views:       views,
 		},
@@ -183,19 +182,27 @@ func (c common) newInstrument(name string, opts []apiInstrument.Option, nk numbe
 				compiled:   compiled,
 			}
 
-			c.accumulator.instrumentsLock.Lock()
-			defer c.accumulator.instrumentsLock.Unlock()
+			c.provider.instrumentsLock.Lock()
+			defer c.provider.instrumentsLock.Unlock()
 
-			c.accumulator.instruments = append(c.accumulator.instruments, inst)
+			c.provider.instruments = append(c.provider.instruments, inst)
 			return inst
 		})
 }
 
-func (a *Accumulator) Collect(reader *reader.Reader, instruments *[]reader.Instrument) {
+func (a *Provider) Collect(r *reader.Reader, sequence int64, start, now time.Time, output *[]reader.Instrument) {
 	a.instrumentsLock.Lock()
-	defer a.instrumentsLock.Unlock()
+	instruments := a.instruments
+	a.instrumentsLock.Unlock()
 
-	for _, inst := range a.instruments {
+	*output = make([]reader.Instrument, len(instruments))
+
+	for instIdx, inst := range instruments {
+		iout := &(*output)[instIdx]
+
+		iout.Instrument = inst.descriptor
+		iout.Temporality = 0 // @@@ Hey!!!
+
 		inst.current.Range(func(key interface{}, value interface{}) bool {
 			rec := value.(*record)
 			any := a.collectRecord(rec, false)
@@ -218,10 +225,11 @@ func (a *Accumulator) Collect(reader *reader.Reader, instruments *[]reader.Instr
 			_ = a.collectRecord(rec, true)
 			return true
 		})
+		inst.compiled.Collect(r, sequence, start, now, &iout.Series)
 	}
 }
 
-func (a *Accumulator) collectRecord(rec *record, final bool) int {
+func (a *Provider) collectRecord(rec *record, final bool) int {
 	mods := atomic.LoadInt64(&rec.updateCount)
 	coll := rec.collectedCount
 
@@ -235,14 +243,14 @@ func (a *Accumulator) collectRecord(rec *record, final bool) int {
 	// Note: We could use the `final` bit here to signal to the
 	// receiver of this aggregation that it is the last in a
 	// sequence and it should feel encouraged to forget its state
-	// because a new collector factory will be built to continue
-	// this stream (w/ a new *record).
+	// because a new accumulator will be built to continue this
+	// stream (w/ a new *record).
 	_ = final
 
-	if rec.collector == nil {
+	if rec.accumulator == nil {
 		return 0
 	}
-	rec.collector.Collect()
+	rec.accumulator.Accumulate()
 	return 1
 }
 
@@ -256,10 +264,9 @@ func capture[N number.Any, Traits traits.Any[N]](_ context.Context, inst *instru
 		otel.Handle(err)
 		return
 	}
-	updater.(viewstate.CollectorUpdater[N]).Update(num)
+	updater.(viewstate.AccumulatorUpdater[N]).Update(num)
 
-	// Record was modified, inform the Collect() that things need
-	// to be collected while the record is still mapped.
+	// Record was modified.
 	atomic.AddInt64(&rec.updateCount, 1)
 }
 
@@ -277,7 +284,7 @@ func acquireRecord[N number.Any](inst *instrument, attrs []attribute.KeyValue) (
 		if rec.refMapped.ref() {
 			// At this moment it is guaranteed that the
 			// record is in the map and will not be removed.
-			return rec, rec.collector.(viewstate.Updater[N])
+			return rec, rec.accumulator.(viewstate.Updater[N])
 		}
 		// This group is no longer mapped, try
 		// to add a new group below.
@@ -294,7 +301,7 @@ func acquireRecord[N number.Any](inst *instrument, attrs []attribute.KeyValue) (
 		if found, loaded := inst.current.LoadOrStore(aset, newRec); loaded {
 			oldRec := found.(*record)
 			if oldRec.refMapped.ref() {
-				return oldRec, oldRec.collector.(viewstate.Updater[N])
+				return oldRec, oldRec.accumulator.(viewstate.Updater[N])
 			}
 			runtime.Gosched()
 			continue
@@ -307,6 +314,6 @@ func acquireRecord[N number.Any](inst *instrument, attrs []attribute.KeyValue) (
 }
 
 func initRecord[N number.Any](inst *instrument, rec *record, attrs []attribute.KeyValue) viewstate.Updater[N] {
-	rec.collector = inst.compiled.NewCollector(attrs, nil)
-	return rec.collector.(viewstate.Updater[N])
+	rec.accumulator = inst.compiled.NewAccumulator(attrs, nil)
+	return rec.accumulator.(viewstate.Updater[N])
 }

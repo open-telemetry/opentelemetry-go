@@ -33,27 +33,33 @@ type (
 	}
 
 	Instrument interface {
-		// reader == nil for all readers, else 1 reader
-		NewCollector(kvs []attribute.KeyValue, reader *reader.Reader) Collector
-		Write(reader *reader.Reader, output *[]reader.Series)
+		// NewAccumulator returns a new Accumulator bound to
+		// the attributes `kvs`.  If reader == nil the
+		// accumulator applies to all readers, otherwise it
+		// applies to the specific reader.
+		NewAccumulator(kvs []attribute.KeyValue, reader *reader.Reader) Accumulator
+
+		// Collect transfers aggregated data from the
+		// Accumulators into the output struct.
+		Collect(reader *reader.Reader, sequence int64, startTime, nowTime time.Time, output *[]reader.Series)
 	}
 
-	Collector interface {
-		Collect()
+	Accumulator interface {
+		Accumulate()
 	}
 
 	Updater[N number.Any] interface {
 		Update(value N)
 	}
 
-	CollectorUpdater[N number.Any] interface {
-		Collector
+	AccumulatorUpdater[N number.Any] interface {
+		Accumulator
 		Updater[N]
 	}
 
 	multiInstrument[N number.Any] map[*reader.Reader][]Instrument
 
-	multiCollector[N number.Any] []Collector
+	multiAccumulator[N number.Any] []Accumulator
 
 	configuredBehavior struct {
 		desc     sdkapi.Descriptor
@@ -74,13 +80,13 @@ type (
 		data map[attribute.Set]*Storage
 	}
 
-	syncCollector[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
+	syncAccumulator[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
 		current  Storage
 		snapshot Storage
 		output   *Storage
 	}
 
-	asyncCollector[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
+	asyncAccumulator[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
 		lock     sync.Mutex
 		current  N
 		snapshot Storage
@@ -128,7 +134,7 @@ func New(lib instrumentation.Library, views []views.View, readers []*reader.Read
 
 // Compile is called during NewInstrument by the Meter
 // implementation, the result saved in the instrument and used to
-// construct new Collectors throughout its lifetime.
+// construct new Accumulators throughout its lifetime.
 func (v *Compiler) Compile(instrument sdkapi.Descriptor) Instrument {
 	configs := make([][]configuredBehavior, len(v.readers))
 	matches := make([]views.View, 0, len(v.views))
@@ -350,65 +356,65 @@ func compileAsync[N number.Any, Traits traits.Any[N]](config configuredBehavior)
 	}
 }
 
-// NewCollector returns a Collector for a synchronous instrument view.
-func (csv *compiledSyncView[N, Storage, Config, Methods]) NewCollector(kvs []attribute.KeyValue, _ *reader.Reader) Collector {
-	sc := &syncCollector[N, Storage, Config, Methods]{}
+// NewAccumulator returns a Accumulator for a synchronous instrument view.
+func (csv *compiledSyncView[N, Storage, Config, Methods]) NewAccumulator(kvs []attribute.KeyValue, _ *reader.Reader) Accumulator {
+	sc := &syncAccumulator[N, Storage, Config, Methods]{}
 	sc.init(csv.viewMetric, *csv.aggConfig, csv.viewKeys, kvs)
 	return sc
 }
 
-// NewCollector returns a Collector for an asynchronous instrument view.
-func (cav *compiledAsyncView[N, Storage, Config, Methods]) NewCollector(kvs []attribute.KeyValue, _ *reader.Reader) Collector {
-	sc := &asyncCollector[N, Storage, Config, Methods]{}
+// NewAccumulator returns a Accumulator for an asynchronous instrument view.
+func (cav *compiledAsyncView[N, Storage, Config, Methods]) NewAccumulator(kvs []attribute.KeyValue, _ *reader.Reader) Accumulator {
+	sc := &asyncAccumulator[N, Storage, Config, Methods]{}
 	sc.init(cav.viewMetric, *cav.aggConfig, cav.viewKeys, kvs)
 	return sc
 }
 
-// NewCollector returns a Collector for multiple views of the same instrument.
-func (mi multiInstrument[N]) NewCollector(kvs []attribute.KeyValue, reader *reader.Reader) Collector {
-	var collectors []Collector
+// NewAccumulator returns a Accumulator for multiple views of the same instrument.
+func (mi multiInstrument[N]) NewAccumulator(kvs []attribute.KeyValue, reader *reader.Reader) Accumulator {
+	var collectors []Accumulator
 	// Note: This runtime switch happens because we're using the same API for
 	// both async and sync instruments, whereas the APIs are not symmetrical.
 	if reader == nil {
 		for _, list := range mi {
-			collectors = make([]Collector, 0, len(mi)*len(list))
+			collectors = make([]Accumulator, 0, len(mi)*len(list))
 		}
 		for _, list := range mi {
 			for _, inst := range list {
-				collectors = append(collectors, inst.NewCollector(kvs, nil))
+				collectors = append(collectors, inst.NewAccumulator(kvs, nil))
 			}
 		}
 	} else {
 		insts := mi[reader]
 
-		collectors = make([]Collector, 0, len(insts))
+		collectors = make([]Accumulator, 0, len(insts))
 
 		for _, inst := range insts {
-			collectors = append(collectors, inst.NewCollector(kvs, reader))
+			collectors = append(collectors, inst.NewAccumulator(kvs, reader))
 		}
 	}
-	return multiCollector[N](collectors)
+	return multiAccumulator[N](collectors)
 }
 
-func (mi multiInstrument[N]) Write(reader *reader.Reader, output *[]reader.Series) {
+func (mi multiInstrument[N]) Collect(reader *reader.Reader, sequence int64, start, now time.Time, output *[]reader.Series) {
 	for _, inst := range mi[reader] {
-		inst.Write(reader, output)
+		inst.Collect(reader, sequence, start, now, output)
 	}
 }
 
-func (c multiCollector[N]) Collect() {
+func (c multiAccumulator[N]) Accumulate() {
 	for _, coll := range c {
-		coll.Collect()
+		coll.Accumulate()
 	}
 }
 
-func (c multiCollector[N]) Update(value N) {
+func (c multiAccumulator[N]) Update(value N) {
 	for _, coll := range c {
 		coll.(Updater[N]).Update(value)
 	}
 }
 
-func (sc *syncCollector[N, Storage, Config, Methods]) init(metric *viewMetric[N, Storage, Config, Methods], cfg Config, keys attribute.Filter, kvs []attribute.KeyValue) {
+func (sc *syncAccumulator[N, Storage, Config, Methods]) init(metric *viewMetric[N, Storage, Config, Methods], cfg Config, keys attribute.Filter, kvs []attribute.KeyValue) {
 	var methods Methods
 	methods.Init(&sc.current, cfg)
 	methods.Init(&sc.snapshot, cfg)
@@ -416,31 +422,31 @@ func (sc *syncCollector[N, Storage, Config, Methods]) init(metric *viewMetric[N,
 	sc.output = metric.findOutput(cfg, keys, kvs)
 }
 
-func (sc *syncCollector[N, Storage, Config, Methods]) Update(number N) {
+func (sc *syncAccumulator[N, Storage, Config, Methods]) Update(number N) {
 	var methods Methods
 	methods.Update(&sc.current, number)
 }
 
-func (sc *syncCollector[N, Storage, Config, Methods]) Collect() {
+func (sc *syncAccumulator[N, Storage, Config, Methods]) Accumulate() {
 	var methods Methods
 	methods.SynchronizedMove(&sc.current, &sc.snapshot)
 	methods.Merge(&sc.snapshot, sc.output)
 }
 
-func (ac *asyncCollector[N, Storage, Config, Methods]) init(metric *viewMetric[N, Storage, Config, Methods], cfg Config, keys attribute.Filter, kvs []attribute.KeyValue) {
+func (ac *asyncAccumulator[N, Storage, Config, Methods]) init(metric *viewMetric[N, Storage, Config, Methods], cfg Config, keys attribute.Filter, kvs []attribute.KeyValue) {
 	var methods Methods
 	methods.Init(&ac.snapshot, cfg)
 	ac.current = 0
 	ac.output = metric.findOutput(cfg, keys, kvs)
 }
 
-func (ac *asyncCollector[N, Storage, Config, Methods]) Update(number N) {
+func (ac *asyncAccumulator[N, Storage, Config, Methods]) Update(number N) {
 	ac.lock.Lock()
 	defer ac.lock.Unlock()
 	ac.current = number
 }
 
-func (ac *asyncCollector[N, Storage, Config, Methods]) Collect() {
+func (ac *asyncAccumulator[N, Storage, Config, Methods]) Accumulate() {
 	ac.lock.Lock()
 	defer ac.lock.Unlock()
 
@@ -477,7 +483,7 @@ func (metric *viewMetric[N, Storage, Config, Methods]) Descriptor() sdkapi.Descr
 	return metric.desc
 }
 
-func (metric *viewMetric[N, Storage, Config, Methods]) Write(_ *reader.Reader, output *[]reader.Series) {
+func (metric *viewMetric[N, Storage, Config, Methods]) Collect(_ *reader.Reader, sequence int64, start, now time.Time, output *[]reader.Series) {
 	var methods Methods
 	metric.lock.Lock()
 	defer metric.lock.Unlock()
@@ -486,8 +492,8 @@ func (metric *viewMetric[N, Storage, Config, Methods]) Write(_ *reader.Reader, o
 		*output = append(*output, reader.Series{
 			Attributes:  set,
 			Aggregation: methods.Aggregation(storage),
-			Start:       time.Time{}, // @@@!
-			End:         time.Time{}, // @@@
+			Start:       start,
+			End:         now,
 		})
 	}
 }
