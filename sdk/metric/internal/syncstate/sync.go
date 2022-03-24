@@ -200,7 +200,12 @@ func (a *Provider) Collect(r *reader.Reader, sequence viewstate.Sequence, output
 		iout := &(*output)[instIdx]
 
 		iout.Instrument = inst.descriptor
-		iout.Temporality = 0 // @@@ Hey!!!
+
+		// Note: @@@ Feels like this should be set in a
+		// compiled class of the viewstate package, selected
+		// when the instrument is constructed, that knows its
+		// temporality.
+		_, iout.Temporality = r.Defaults()(inst.descriptor.InstrumentKind())
 
 		inst.current.Range(func(key interface{}, value interface{}) bool {
 			rec := value.(*record)

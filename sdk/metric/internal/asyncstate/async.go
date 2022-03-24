@@ -152,7 +152,12 @@ func (a *Provider) Collect(r *reader.Reader, sequence viewstate.Sequence, output
 		iout := &(*output)[instIdx]
 
 		iout.Instrument = inst.descriptor
-		iout.Temporality = 0 // @@@ Hey!!!
+		
+		// A specialized subclasses will be needed to
+		// implement subtraction, right?  (Whereas,
+		// delta->cumulative for sync does not require
+		// anything special other than not resetting.)
+		_, iout.Temporality = r.Defaults()(inst.descriptor.InstrumentKind())
 
 		inst.storeLock.Lock()
 		// This iteration passes over each of the attribute
