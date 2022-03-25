@@ -154,7 +154,7 @@ func (a *Provider) Collect(r *reader.Reader, sequence viewstate.Sequence, output
 		iout.Instrument = inst.descriptor
 		_, iout.Temporality = r.Defaults()(inst.descriptor.InstrumentKind())
 
-		inst.compiled.Prepare(r, sequence)
+		inst.compiled.PrepareCollect(r, sequence)
 		
 		inst.storeLock.Lock()
 		// This iteration passes over each of the attribute

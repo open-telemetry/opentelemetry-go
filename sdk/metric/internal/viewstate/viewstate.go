@@ -54,7 +54,7 @@ type (
 		// Accumulators into the output struct.
 		Collect(reader *reader.Reader, sequence Sequence, output *[]reader.Series)
 
-		Prepare(reader *reader.Reader, sequence Sequence)
+		PrepareCollect(reader *reader.Reader, sequence Sequence)
 	}
 
 	Accumulator interface {
@@ -88,19 +88,23 @@ type (
 		lvcfg lastvalue.Config
 	}
 
-	viewMetric[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
+	baseMetric[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
 		lock sync.Mutex
 		desc sdkapi.Descriptor
 		data map[attribute.Set]*Storage
 	}
 
 	resetMetric[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
-		*viewMetric[N, Storage, Config, Methods]
+		baseMetric[N, Storage, Config, Methods]
+	}
+
+	cumulativeMetric[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
+		baseMetric[N, Storage, Config, Methods]
 	}
 
 	subtractMetric[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
-		*viewMetric[N, Storage, Config, Methods]
-		prior map[attribute.Set]*Storage
+		baseMetric[N, Storage, Config, Methods]
+		prior  map[attribute.Set]*Storage
 	}
 
 	syncAccumulator[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
@@ -307,19 +311,19 @@ func newSyncView[
 	N number.Any,
 	Storage, Config any,
 	Methods aggregator.Methods[N, Storage, Config],
-](config configuredBehavior, aggConfig *Config) Instrument {
+	](config configuredBehavior, aggConfig *Config) Instrument {
+	var m temporalMetric[N, Storage, Config, Methods]
 
-	vm := &viewMetric[N, Storage, Config, Methods]{
+	base := baseMetric[N, Storage, Config, Methods]{
 		desc: config.desc,
 		data: map[attribute.Set]*Storage{},
 	}
-	var m temporalMetric[N, Storage, Config, Methods] = vm
-
+		
 	_, tempo := config.reader.Defaults()(config.desc.InstrumentKind())
 	if tempo == aggregation.DeltaTemporality {
-		m = &resetMetric[N, Storage, Config, Methods]{
-			viewMetric: vm,
-		}
+		m = &resetMetric[N, Storage, Config, Methods]{baseMetric: base}
+	} else {
+		m = &cumulativeMetric[N, Storage, Config, Methods]{baseMetric: base}
 	}
 
 	return &compiledSyncView[N, Storage, Config, Methods]{
@@ -334,24 +338,29 @@ func newAsyncView[
 	Storage, Config any,
 	Methods aggregator.Methods[N, Storage, Config],
 ](config configuredBehavior, aggConfig *Config) Instrument {
-	vm := &viewMetric[N, Storage, Config, Methods]{
+	var m temporalMetric[N, Storage, Config, Methods]
+
+	base := baseMetric[N, Storage, Config, Methods]{
 		desc: config.desc,
 		data: map[attribute.Set]*Storage{},
 	}
-	var m temporalMetric[N, Storage, Config, Methods] = vm
 
 	_, tempo := config.reader.Defaults()(config.desc.InstrumentKind())
 	if tempo == aggregation.DeltaTemporality {
 		m = &subtractMetric[N, Storage, Config, Methods]{
-			viewMetric: vm,
+			baseMetric: base,
 			prior:      map[attribute.Set]*Storage{},
+		}
+	} else {
+		m = &cumulativeMetric[N, Storage, Config, Methods]{
+			baseMetric: base,
 		}
 	}
 
 	return &compiledAsyncView[N, Storage, Config, Methods]{
 		temporalMetric: m,
-		aggConfig:  aggConfig,
-		viewKeys:   config.view.Keys(),
+		aggConfig:      aggConfig,
+		viewKeys:       config.view.Keys(),
 	}
 }
 
@@ -497,7 +506,7 @@ func (ac *asyncAccumulator[N, Storage, Config, Methods]) Accumulate() {
 
 // viewMetric
 
-func (metric *viewMetric[N, Storage, Config, Methods]) findOutput(
+func (metric *baseMetric[N, Storage, Config, Methods]) findOutput(
 	cfg Config,
 	viewKeys attribute.Filter,
 	kvs []attribute.KeyValue,
@@ -546,13 +555,13 @@ func (mi multiInstrument[N]) Collect(reader *reader.Reader, sequence Sequence, o
 	}
 }
 
-func (mi multiInstrument[N]) Prepare(reader *reader.Reader, sequence Sequence) {
+func (mi multiInstrument[N]) PrepareCollect(reader *reader.Reader, sequence Sequence) {
 	for _, inst := range mi[reader] {
-		inst.Prepare(reader, sequence)
+		inst.PrepareCollect(reader, sequence)
 	}
 }
 
-func (metric *viewMetric[N, Storage, Config, Methods]) Collect(_ *reader.Reader, sequence Sequence, output *[]reader.Series) {
+func (metric *cumulativeMetric[N, Storage, Config, Methods]) Collect(_ *reader.Reader, sequence Sequence, output *[]reader.Series) {
 	var methods Methods
 	metric.lock.Lock()
 	defer metric.lock.Unlock()
@@ -562,21 +571,60 @@ func (metric *viewMetric[N, Storage, Config, Methods]) Collect(_ *reader.Reader,
 			Attributes:  set,
 			Aggregation: methods.Aggregation(storage),
 			Start:       sequence.Start,
-			End:         sequence.Now, // @@@
+			End:         sequence.Now,
 		})
 	}
 }
 
-func (metric *viewMetric[N, Storage, Config, Methods]) Prepare(_ *reader.Reader, _ Sequence) {
+func (metric *cumulativeMetric[N, Storage, Config, Methods]) PrepareCollect(_ *reader.Reader, _ Sequence) {
 	// Empty
 }
 
-func (metric *resetMetric[N, Storage, Config, Methods]) Prepare(_ *reader.Reader, _ Sequence) {
+func (metric *resetMetric[N, Storage, Config, Methods]) Collect(r *reader.Reader, sequence Sequence, output *[]reader.Series) {
+	var methods Methods
+	metric.lock.Lock()
+	defer metric.lock.Unlock()
+
+	// @@@ ?Easier/Better to set temporality in this function.
+	
+	for set, storage := range metric.data {
+		// @@@ Here, check for staleness, Skip no-data? (For Histogram??)
+		
+		*output = append(*output, reader.Series{
+			Attributes:  set,
+			Aggregation: methods.Aggregation(storage),
+			Start:       sequence.Last,
+			End:         sequence.Now,
+		})
+	}
+}
+
+func (metric *resetMetric[N, Storage, Config, Methods]) PrepareCollect(_ *reader.Reader, _ Sequence) {
+	var methods Methods
+	metric.lock.Lock()
+	defer metric.lock.Unlock()
+
+	for _, storage := range metric.data {
+		methods.SynchronizedMove(storage, nil)
+	}
+}
+
+func (metric *subtractMetric[N, Storage, Config, Methods]) Collect(r *reader.Reader, sequence Sequence, output *[]reader.Series) {
 	var methods Methods
 	metric.lock.Lock()
 	defer metric.lock.Unlock()
 
 	for set, storage := range metric.data {
-		methods.SynchronizedMove(storage, nil)
+		// @@@ HERE: Copy prior value, subtract current.  Add to Methods for subtraction.
+		*output = append(*output, reader.Series{
+			Attributes:  set,
+			Aggregation: methods.Aggregation(storage),
+			Start:       sequence.Last,
+			End:         sequence.Now,
+		})
 	}
+}
+
+func (metric *subtractMetric[N, Storage, Config, Methods]) PrepareCollect(_ *reader.Reader, _ Sequence) {
+	// Empty
 }

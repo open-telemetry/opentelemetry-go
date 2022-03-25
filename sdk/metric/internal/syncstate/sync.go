@@ -207,6 +207,8 @@ func (a *Provider) Collect(r *reader.Reader, sequence viewstate.Sequence, output
 		// temporality.
 		_, iout.Temporality = r.Defaults()(inst.descriptor.InstrumentKind())
 
+		inst.compiled.PrepareCollect(r, sequence)
+
 		inst.current.Range(func(key interface{}, value interface{}) bool {
 			rec := value.(*record)
 			any := a.collectRecord(rec, false)
