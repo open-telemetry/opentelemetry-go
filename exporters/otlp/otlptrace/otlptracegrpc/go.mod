@@ -8,9 +8,9 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.6.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.6.0
 	go.opentelemetry.io/otel/sdk v1.6.0
-	go.opentelemetry.io/proto/otlp v0.12.0
+	go.opentelemetry.io/proto/otlp v0.12.1
 	go.uber.org/goleak v1.1.12
-	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
+	google.golang.org/genproto v0.0.0-20211118181313-81c1377c94b1
 	google.golang.org/grpc v1.45.0
 	google.golang.org/protobuf v1.27.1
 )
