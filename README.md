@@ -84,7 +84,7 @@ libraries](https://github.com/open-telemetry/opentelemetry-go-contrib/tree/main/
 If you need to extend the telemetry an instrumentation library provides or want
 to build your own instrumentation for your application directly you will need
 to use the
-[go.opentelemetry.io/otel/api](https://pkg.go.dev/go.opentelemetry.io/otel/api)
+[Go otel](https://pkg.go.dev/go.opentelemetry.io/otel)
 package. The included [examples](./example/) are a good way to see some
 practical uses of this process.
 
