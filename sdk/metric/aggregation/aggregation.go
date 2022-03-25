@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package aggregation // import "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+package aggregation // import "go.opentelemetry.io/otel/sdk/metric/aggregation"
 
 import (
 	"fmt"
@@ -117,4 +117,8 @@ var (
 // String returns the string value of Kind.
 func (k Kind) String() string {
 	return string(k)
+}
+
+func (k Kind) HasTemporality() bool {
+	return k != LastValueKind
 }

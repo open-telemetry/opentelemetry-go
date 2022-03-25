@@ -15,7 +15,7 @@
 package aggregator // import "go.opentelemetry.io/otel/sdk/metric/aggregator"
 
 import (
-	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 	"go.opentelemetry.io/otel/sdk/metric/sdkapi"

@@ -14,14 +14,13 @@
 
 //go:generate stringer -type=Temporality
 
-package aggregation // import "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+package aggregation // import "go.opentelemetry.io/otel/sdk/metric/aggregation"
 
 type Temporality uint8
 
 const (
-	// UnspecifiedTemporality indicates that the Exporter has not
-	// specified the temporality.
-	UnspecifiedTemporality Temporality = 0
+	// UndefinedTemporality indicates that temporality is not defined.
+	UndefinedTemporality Temporality = 0
 
 	// CumulativeTemporality indicates that an Exporter expects a
 	// Cumulative Aggregation.

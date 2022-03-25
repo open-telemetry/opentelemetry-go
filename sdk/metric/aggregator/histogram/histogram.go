@@ -19,7 +19,7 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 )

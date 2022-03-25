@@ -8,11 +8,11 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
-	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 	"go.opentelemetry.io/otel/sdk/metric/reader"
@@ -46,9 +46,15 @@ type (
 		// applies to the specific reader.
 		NewAccumulator(kvs []attribute.KeyValue, reader *reader.Reader) Accumulator
 
+		Collector
+	}
+
+	Collector interface {
 		// Collect transfers aggregated data from the
 		// Accumulators into the output struct.
 		Collect(reader *reader.Reader, sequence Sequence, output *[]reader.Series)
+
+		Prepare(reader *reader.Reader, sequence Sequence)
 	}
 
 	Accumulator interface {
@@ -72,6 +78,7 @@ type (
 		desc     sdkapi.Descriptor
 		view     views.View
 		settings aggregatorSettings
+		reader   *reader.Reader
 	}
 
 	aggregatorSettings struct {
@@ -87,6 +94,15 @@ type (
 		data map[attribute.Set]*Storage
 	}
 
+	resetMetric[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
+		*viewMetric[N, Storage, Config, Methods]
+	}
+
+	subtractMetric[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
+		*viewMetric[N, Storage, Config, Methods]
+		prior map[attribute.Set]*Storage
+	}
+
 	syncAccumulator[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
 		current  Storage
 		snapshot Storage
@@ -100,16 +116,20 @@ type (
 		output   *Storage
 	}
 
-	compiledSyncView[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
-		*viewMetric[N, Storage, Config, Methods]
+	temporalMetric[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] interface {
+		Collector
 
+		findOutput(cfg Config, viewKeys attribute.Filter, kvs []attribute.KeyValue) *Storage
+	}
+
+	compiledSyncView[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
+		temporalMetric[N, Storage, Config, Methods]
 		aggConfig *Config
 		viewKeys  attribute.Filter
 	}
 
 	compiledAsyncView[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
-		*viewMetric[N, Storage, Config, Methods]
-
+		temporalMetric[N, Storage, Config, Methods]
 		aggConfig *Config
 		viewKeys  attribute.Filter
 	}
@@ -153,7 +173,7 @@ func (v *Compiler) Compile(instrument sdkapi.Descriptor) Instrument {
 		matches = append(matches, view)
 	}
 
-	for readerIdx, reader := range v.readers {
+	for readerIdx, r := range v.readers {
 		for _, view := range matches {
 			var as aggregatorSettings
 			switch view.Aggregation() {
@@ -168,7 +188,7 @@ func (v *Compiler) Compile(instrument sdkapi.Descriptor) Instrument {
 					view.HistogramOptions()...,
 				)
 			default:
-				as = aggregatorSettingsFor(instrument, reader.Defaults())
+				as = aggregatorSettingsFor(instrument, r.Defaults())
 			}
 
 			if as.kind == aggregation.DropKind {
@@ -179,12 +199,13 @@ func (v *Compiler) Compile(instrument sdkapi.Descriptor) Instrument {
 				desc:     instrument,
 				view:     view,
 				settings: as,
+				reader:   r,
 			})
 		}
 
 		// If there were no matching views, set the default aggregation.
 		if len(matches) == 0 {
-			as := aggregatorSettingsFor(instrument, reader.Defaults())
+			as := aggregatorSettingsFor(instrument, r.Defaults())
 			if as.kind == aggregation.DropKind {
 				continue
 			}
@@ -193,6 +214,7 @@ func (v *Compiler) Compile(instrument sdkapi.Descriptor) Instrument {
 				desc:     instrument,
 				view:     views.New(views.WithAggregation(as.kind)),
 				settings: as,
+				reader:   r,
 			})
 		}
 	}
@@ -286,13 +308,24 @@ func newSyncView[
 	Storage, Config any,
 	Methods aggregator.Methods[N, Storage, Config],
 ](config configuredBehavior, aggConfig *Config) Instrument {
+
+	vm := &viewMetric[N, Storage, Config, Methods]{
+		desc: config.desc,
+		data: map[attribute.Set]*Storage{},
+	}
+	var m temporalMetric[N, Storage, Config, Methods] = vm
+
+	_, tempo := config.reader.Defaults()(config.desc.InstrumentKind())
+	if tempo == aggregation.DeltaTemporality {
+		m = &resetMetric[N, Storage, Config, Methods]{
+			viewMetric: vm,
+		}
+	}
+
 	return &compiledSyncView[N, Storage, Config, Methods]{
-		viewMetric: &viewMetric[N, Storage, Config, Methods]{
-			desc: config.desc,
-			data: map[attribute.Set]*Storage{},
-		},
-		aggConfig: aggConfig,
-		viewKeys:  config.view.Keys(),
+		temporalMetric: m,
+		aggConfig:      aggConfig,
+		viewKeys:       config.view.Keys(),
 	}
 }
 
@@ -301,13 +334,24 @@ func newAsyncView[
 	Storage, Config any,
 	Methods aggregator.Methods[N, Storage, Config],
 ](config configuredBehavior, aggConfig *Config) Instrument {
+	vm := &viewMetric[N, Storage, Config, Methods]{
+		desc: config.desc,
+		data: map[attribute.Set]*Storage{},
+	}
+	var m temporalMetric[N, Storage, Config, Methods] = vm
+
+	_, tempo := config.reader.Defaults()(config.desc.InstrumentKind())
+	if tempo == aggregation.DeltaTemporality {
+		m = &subtractMetric[N, Storage, Config, Methods]{
+			viewMetric: vm,
+			prior:      map[attribute.Set]*Storage{},
+		}
+	}
+
 	return &compiledAsyncView[N, Storage, Config, Methods]{
-		viewMetric: &viewMetric[N, Storage, Config, Methods]{
-			desc: config.desc,
-			data: map[attribute.Set]*Storage{},
-		},
-		aggConfig: aggConfig,
-		viewKeys:  config.view.Keys(),
+		temporalMetric: m,
+		aggConfig:  aggConfig,
+		viewKeys:   config.view.Keys(),
 	}
 }
 
@@ -363,20 +407,6 @@ func compileAsync[N number.Any, Traits traits.Any[N]](config configuredBehavior)
 	}
 }
 
-// NewAccumulator returns a Accumulator for a synchronous instrument view.
-func (csv *compiledSyncView[N, Storage, Config, Methods]) NewAccumulator(kvs []attribute.KeyValue, _ *reader.Reader) Accumulator {
-	sc := &syncAccumulator[N, Storage, Config, Methods]{}
-	sc.init(csv.viewMetric, *csv.aggConfig, csv.viewKeys, kvs)
-	return sc
-}
-
-// NewAccumulator returns a Accumulator for an asynchronous instrument view.
-func (cav *compiledAsyncView[N, Storage, Config, Methods]) NewAccumulator(kvs []attribute.KeyValue, _ *reader.Reader) Accumulator {
-	sc := &asyncAccumulator[N, Storage, Config, Methods]{}
-	sc.init(cav.viewMetric, *cav.aggConfig, cav.viewKeys, kvs)
-	return sc
-}
-
 // NewAccumulator returns a Accumulator for multiple views of the same instrument.
 func (mi multiInstrument[N]) NewAccumulator(kvs []attribute.KeyValue, reader *reader.Reader) Accumulator {
 	var collectors []Accumulator
@@ -403,11 +433,7 @@ func (mi multiInstrument[N]) NewAccumulator(kvs []attribute.KeyValue, reader *re
 	return multiAccumulator[N](collectors)
 }
 
-func (mi multiInstrument[N]) Collect(reader *reader.Reader, sequence Sequence, output *[]reader.Series) {
-	for _, inst := range mi[reader] {
-		inst.Collect(reader, sequence, output)
-	}
-}
+// multiAccumulator
 
 func (c multiAccumulator[N]) Accumulate() {
 	for _, coll := range c {
@@ -421,7 +447,9 @@ func (c multiAccumulator[N]) Update(value N) {
 	}
 }
 
-func (sc *syncAccumulator[N, Storage, Config, Methods]) init(metric *viewMetric[N, Storage, Config, Methods], cfg Config, keys attribute.Filter, kvs []attribute.KeyValue) {
+// syncAccumulator
+
+func (sc *syncAccumulator[N, Storage, Config, Methods]) init(metric temporalMetric[N, Storage, Config, Methods], cfg Config, keys attribute.Filter, kvs []attribute.KeyValue) {
 	var methods Methods
 	methods.Init(&sc.current, cfg)
 	methods.Init(&sc.snapshot, cfg)
@@ -440,7 +468,9 @@ func (sc *syncAccumulator[N, Storage, Config, Methods]) Accumulate() {
 	methods.Merge(&sc.snapshot, sc.output)
 }
 
-func (ac *asyncAccumulator[N, Storage, Config, Methods]) init(metric *viewMetric[N, Storage, Config, Methods], cfg Config, keys attribute.Filter, kvs []attribute.KeyValue) {
+// asyncAccumulator
+
+func (ac *asyncAccumulator[N, Storage, Config, Methods]) init(metric temporalMetric[N, Storage, Config, Methods], cfg Config, keys attribute.Filter, kvs []attribute.KeyValue) {
 	var methods Methods
 	methods.Init(&ac.snapshot, cfg)
 	ac.current = 0
@@ -464,6 +494,8 @@ func (ac *asyncAccumulator[N, Storage, Config, Methods]) Accumulate() {
 
 	methods.Merge(&ac.snapshot, ac.output)
 }
+
+// viewMetric
 
 func (metric *viewMetric[N, Storage, Config, Methods]) findOutput(
 	cfg Config,
@@ -490,6 +522,36 @@ func (metric *viewMetric[N, Storage, Config, Methods]) Descriptor() sdkapi.Descr
 	return metric.desc
 }
 
+// NewAccumulator
+
+// NewAccumulator returns a Accumulator for a synchronous instrument view.
+func (csv *compiledSyncView[N, Storage, Config, Methods]) NewAccumulator(kvs []attribute.KeyValue, _ *reader.Reader) Accumulator {
+	sc := &syncAccumulator[N, Storage, Config, Methods]{}
+	sc.init(csv.temporalMetric, *csv.aggConfig, csv.viewKeys, kvs)
+	return sc
+}
+
+// NewAccumulator returns a Accumulator for an asynchronous instrument view.
+func (cav *compiledAsyncView[N, Storage, Config, Methods]) NewAccumulator(kvs []attribute.KeyValue, _ *reader.Reader) Accumulator {
+	sc := &asyncAccumulator[N, Storage, Config, Methods]{}
+	sc.init(cav.temporalMetric, *cav.aggConfig, cav.viewKeys, kvs)
+	return sc
+}
+
+// Collect methods
+
+func (mi multiInstrument[N]) Collect(reader *reader.Reader, sequence Sequence, output *[]reader.Series) {
+	for _, inst := range mi[reader] {
+		inst.Collect(reader, sequence, output)
+	}
+}
+
+func (mi multiInstrument[N]) Prepare(reader *reader.Reader, sequence Sequence) {
+	for _, inst := range mi[reader] {
+		inst.Prepare(reader, sequence)
+	}
+}
+
 func (metric *viewMetric[N, Storage, Config, Methods]) Collect(_ *reader.Reader, sequence Sequence, output *[]reader.Series) {
 	var methods Methods
 	metric.lock.Lock()
@@ -502,5 +564,19 @@ func (metric *viewMetric[N, Storage, Config, Methods]) Collect(_ *reader.Reader,
 			Start:       sequence.Start,
 			End:         sequence.Now, // @@@
 		})
+	}
+}
+
+func (metric *viewMetric[N, Storage, Config, Methods]) Prepare(_ *reader.Reader, _ Sequence) {
+	// Empty
+}
+
+func (metric *resetMetric[N, Storage, Config, Methods]) Prepare(_ *reader.Reader, _ Sequence) {
+	var methods Methods
+	metric.lock.Lock()
+	defer metric.lock.Unlock()
+
+	for set, storage := range metric.data {
+		methods.SynchronizedMove(storage, nil)
 	}
 }
