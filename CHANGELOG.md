@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Security
+
+- Upgrade `go.opentelemetry.io/proto/otlp` from `v0.12.0` to `v0.12.1`.
+  This includes an indirect upgrade of `github.com/grpc-ecosystem/grpc-gateway` which resolves [a vulnerability](https://nvd.nist.gov/vuln/detail/CVE-2019-11254) from `gopkg.in/yaml.v2` in version `v2.2.3`. (#2724, #TBD)
+
 ## [1.6.0/0.28.0] - 2022-03-23
 
 ### ⚠️ Notice ⚠️
