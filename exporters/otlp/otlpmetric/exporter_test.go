@@ -233,6 +233,7 @@ func TestHistogramInt64MetricGroupingExport(t *testing.T) {
 		append(baseKeyValues, cpuKey.Int(1)),
 		testLibName,
 	)
+	sum := 11.0
 	expected := []*metricpb.ResourceMetrics{
 		{
 			Resource: nil,
@@ -250,14 +251,14 @@ func TestHistogramInt64MetricGroupingExport(t *testing.T) {
 											StartTimeUnixNano: startTime(),
 											TimeUnixNano:      pointTime(),
 											Count:             2,
-											Sum:               11,
+											Sum:               &sum,
 											ExplicitBounds:    testHistogramBoundaries,
 											BucketCounts:      []uint64{1, 0, 0, 1},
 										},
 										{
 											Attributes:        cpu1Labels,
 											Count:             2,
-											Sum:               11,
+											Sum:               &sum,
 											ExplicitBounds:    testHistogramBoundaries,
 											BucketCounts:      []uint64{1, 0, 0, 1},
 											StartTimeUnixNano: startTime(),
@@ -283,6 +284,7 @@ func TestHistogramFloat64MetricGroupingExport(t *testing.T) {
 		append(baseKeyValues, cpuKey.Int(1)),
 		testLibName,
 	)
+	sum := 11.0
 	expected := []*metricpb.ResourceMetrics{
 		{
 			Resource: nil,
@@ -300,14 +302,14 @@ func TestHistogramFloat64MetricGroupingExport(t *testing.T) {
 											StartTimeUnixNano: startTime(),
 											TimeUnixNano:      pointTime(),
 											Count:             2,
-											Sum:               11.0,
+											Sum:               &sum,
 											ExplicitBounds:    testHistogramBoundaries,
 											BucketCounts:      []uint64{1, 0, 0, 1},
 										},
 										{
 											Attributes:        cpu1Labels,
 											Count:             2,
-											Sum:               11.0,
+											Sum:               &sum,
 											ExplicitBounds:    testHistogramBoundaries,
 											BucketCounts:      []uint64{1, 0, 0, 1},
 											StartTimeUnixNano: startTime(),

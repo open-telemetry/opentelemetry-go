@@ -415,6 +415,7 @@ func histogramPoint(record export.Record, temporality aggregation.Temporality, a
 		return nil, err
 	}
 
+	sumFloat64 := sum.CoerceToFloat64(desc.NumberKind())
 	m := &metricpb.Metric{
 		Name:        desc.Name(),
 		Description: desc.Description(),
@@ -424,7 +425,7 @@ func histogramPoint(record export.Record, temporality aggregation.Temporality, a
 				AggregationTemporality: sdkTemporalityToTemporality(temporality),
 				DataPoints: []*metricpb.HistogramDataPoint{
 					{
-						Sum:               sum.CoerceToFloat64(desc.NumberKind()),
+						Sum:               &sumFloat64,
 						Attributes:        Iterator(labels.Iter()),
 						StartTimeUnixNano: toNanos(record.StartTime()),
 						TimeUnixNano:      toNanos(record.EndTime()),
