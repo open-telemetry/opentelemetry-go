@@ -42,7 +42,6 @@ type (
 		lock        sync.Mutex
 		provider    *provider
 		reader      *reader.Reader
-		sequence    int64
 		lastCollect time.Time
 	}
 
@@ -107,8 +106,6 @@ func (pp *providerProducer) Produce() reader.Metrics {
 	pp.lock.Lock()
 	defer pp.lock.Unlock()
 
-	pp.sequence++
-
 	ordered := pp.provider.getOrdered()
 
 	output := reader.Metrics{
@@ -117,10 +114,9 @@ func (pp *providerProducer) Produce() reader.Metrics {
 	}
 
 	sequence := viewstate.Sequence{
-		Number: pp.sequence,
-		Start:  pp.provider.startTime,
-		Last:   pp.lastCollect,
-		Now:    time.Now(),
+		Start: pp.provider.startTime,
+		Last:  pp.lastCollect,
+		Now:   time.Now(),
 	}
 
 	for idx, meter := range ordered {

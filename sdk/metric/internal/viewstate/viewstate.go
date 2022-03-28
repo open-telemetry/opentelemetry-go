@@ -33,7 +33,6 @@ type (
 	}
 
 	Sequence struct {
-		Number int64
 		Start  time.Time
 		Last   time.Time
 		Now    time.Time
@@ -527,10 +526,6 @@ func (metric *baseMetric[N, Storage, Config, Methods]) findOutput(
 	return ns
 }
 
-func (metric *viewMetric[N, Storage, Config, Methods]) Descriptor() sdkapi.Descriptor {
-	return metric.desc
-}
-
 // NewAccumulator
 
 // NewAccumulator returns a Accumulator for a synchronous instrument view.
@@ -577,19 +572,16 @@ func (metric *cumulativeMetric[N, Storage, Config, Methods]) Collect(_ *reader.R
 }
 
 func (metric *cumulativeMetric[N, Storage, Config, Methods]) PrepareCollect(_ *reader.Reader, _ Sequence) {
-	// Empty
+	// Empty: the normal behavior is to Merge() all inputs in the
+	// Aggregate(), do not reset.
 }
 
 func (metric *resetMetric[N, Storage, Config, Methods]) Collect(r *reader.Reader, sequence Sequence, output *[]reader.Series) {
 	var methods Methods
 	metric.lock.Lock()
 	defer metric.lock.Unlock()
-
-	// @@@ ?Easier/Better to set temporality in this function.
 	
 	for set, storage := range metric.data {
-		// @@@ Here, check for staleness, Skip no-data? (For Histogram??)
-		
 		*output = append(*output, reader.Series{
 			Attributes:  set,
 			Aggregation: methods.Aggregation(storage),
@@ -601,10 +593,26 @@ func (metric *resetMetric[N, Storage, Config, Methods]) Collect(r *reader.Reader
 
 func (metric *resetMetric[N, Storage, Config, Methods]) PrepareCollect(_ *reader.Reader, _ Sequence) {
 	var methods Methods
+
 	metric.lock.Lock()
 	defer metric.lock.Unlock()
 
 	for _, storage := range metric.data {
+		agg := methods.Aggregation(storage)
+		
+		if cagg, ok := agg.(aggregation.Count); ok {
+			cnt, err := cagg.Count()
+			
+			if err != nil && cnt == 0 {
+				continue
+			}
+		} else if sagg, ok := agg.(aggregation.Sum); ok {
+			sum, err := sagg.Sum()
+			if err != nil && XX {
+				// Where are my number traits?
+				continue
+			}
+		}
 		methods.SynchronizedMove(storage, nil)
 	}
 }
@@ -615,10 +623,20 @@ func (metric *subtractMetric[N, Storage, Config, Methods]) Collect(r *reader.Rea
 	defer metric.lock.Unlock()
 
 	for set, storage := range metric.data {
-		// @@@ HERE: Copy prior value, subtract current.  Add to Methods for subtraction.
+		value := methods.Aggregation(storage)
+
+		if oldvalue, ok := metric.prior[set]; ok {
+			methods.Subtract(storage, oldvalue)
+		} else {
+			// TODO: Find a way to use the findOutput code path here
+			ns := &Storage{}
+			metric.prior[set] = ns
+			methods.init(ns, nil) // @@@ here no configs
+		}
+
 		*output = append(*output, reader.Series{
 			Attributes:  set,
-			Aggregation: methods.Aggregation(storage),
+			Aggregation: value,
 			Start:       sequence.Last,
 			End:         sequence.Now,
 		})
@@ -626,5 +644,8 @@ func (metric *subtractMetric[N, Storage, Config, Methods]) Collect(r *reader.Rea
 }
 
 func (metric *subtractMetric[N, Storage, Config, Methods]) PrepareCollect(_ *reader.Reader, _ Sequence) {
-	// Empty
+	// TODO: swap prior and current, etc
+	for set, storage := range metric.prior {
+		
+	}
 }

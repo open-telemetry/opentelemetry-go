@@ -14,6 +14,10 @@ func (Int64) ToNumber(x int64) number.Number {
 	return number.Number(x)
 }
 
+func (Int64) FromNumber(n number.Number) int64 {
+	return int64(n)
+}
+
 func (Int64) SetAtomic(ptr *int64, value int64) {
 	atomic.StoreInt64(ptr, value)
 }
@@ -37,6 +41,10 @@ func (Float64) ToNumber(x float64) number.Number {
 	return number.Number(math.Float64bits(x))
 }
 
+func (Float64) FromNumber(n number.Number) float64 {
+	return math.Float64frombits(uint64(n))
+}
+
 func (Float64) SetAtomic(ptr *float64, value float64) {
 	atomic.StoreUint64((*uint64)(unsafe.Pointer(ptr)), math.Float64bits(value))
 }
@@ -55,6 +63,7 @@ func (Float64) IsNaN(value float64) bool {
 }
 
 type Any[N int64|float64] interface {
+	FromNumber(number.Number) N
 	ToNumber(value N) number.Number
 	SetAtomic(ptr *N, value N)
 	AddAtomic(ptr *N, value N)

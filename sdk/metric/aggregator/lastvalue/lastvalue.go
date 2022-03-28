@@ -15,6 +15,7 @@
 package lastvalue // import "go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -23,6 +24,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 )
+
+var ErrNoSubtract = fmt.Errorf("lastvalue subtract not implemented")
 
 type (
 	Config struct {}
@@ -43,9 +46,6 @@ var (
 	_ aggregation.LastValue = &State[int64, traits.Int64]{}
 	_ aggregation.LastValue = &State[float64, traits.Float64]{}
 )
-
-// var _ aggregator.Methods[int64, Aggregator[int64, traits.Int64], Config] = Methods[int64, traits.Int64]{}
-// var _ aggregator.Methods[float64, Aggregator[float64, traits.Float64], Config] = &Aggregator[float64, traits.Float64]{}
 
 // LastValue returns the last-recorded lastValue value and the
 // corresponding timestamp.  The error value aggregation.ErrNoData
@@ -106,4 +106,8 @@ func (Methods[N, Traits, Storage]) Aggregation(state *State[N, Traits]) aggregat
 
 func (Methods[N, Traits, Storage]) Storage(aggr aggregation.Aggregation) *State[N, Traits] {
 	return aggr.(*State[N, Traits])
+}
+
+func (Methods[N, Traits, Storage]) Subtract(valueToModify, operand *State[N, Traits]) error {
+	return ErrNoSubtract
 }

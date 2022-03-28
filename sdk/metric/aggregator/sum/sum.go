@@ -77,3 +77,8 @@ func (Methods[N, Traits, Storage]) Aggregation(state *State[N, Traits]) aggregat
 func (Methods[N, Traits, Storage]) Storage(aggr aggregation.Aggregation) *State[N, Traits] {
 	return aggr.(*State[N, Traits])
 }
+
+func (Methods[N, Traits, Storage]) Subtract(valueToModify, operand *State[N, Traits]) error {
+	valueToModify.value -= operand.value
+	return nil
+}

@@ -15,6 +15,7 @@
 package histogram // import "go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 
 import (
+	"fmt"
 	"sort"
 	"sync"
 
@@ -23,6 +24,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 )
+
+var ErrNoSubtract = fmt.Errorf("histogram subtract not implemented")
 
 // Note: This code uses a Mutex to govern access to the exclusive
 // aggregator state.  This is in contrast to a lock-free approach
@@ -240,4 +243,9 @@ func (Methods[N, Traits, Storage]) Aggregation(state *State[N, Traits]) aggregat
 
 func (Methods[N, Traits, Storage]) Storage(aggr aggregation.Aggregation) *State[N, Traits] {
 	return aggr.(*State[N, Traits])
+}
+
+func (Methods[N, Traits, Storage]) Subtract(valueToModify, operand *State[N, Traits]) error {
+	// This is because asynchronous histograms are not included in the data model.
+	return ErrNoSubtract
 }

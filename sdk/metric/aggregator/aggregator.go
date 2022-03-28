@@ -57,9 +57,16 @@ func RangeTest[N number.Any, Traits traits.Any[N]](num N, desc *sdkapi.Descripto
 // to attach a Sum aggregator to a Histogram instrument.
 type Methods[N number.Any, Storage, Config any] interface {
 	Init(ptr *Storage, cfg Config)
+
 	Update(ptr *Storage, number N)
+
 	SynchronizedMove(inputIsReset, output *Storage)
+
 	Merge(output, input *Storage)
+
+	Subtract(valueToModify, operand *Storage) error
+
 	Aggregation(ptr *Storage) aggregation.Aggregation
+
 	Storage(aggr aggregation.Aggregation) *Storage
 }
