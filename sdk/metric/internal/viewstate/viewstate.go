@@ -44,7 +44,7 @@ type (
 	Collector interface {
 		// Collect transfers aggregated data from the
 		// Accumulators into the output struct.
-		Collect(reader *reader.Reader, sequence reader.Sequence, output *[]reader.Series)
+		Collect(reader *reader.Reader, sequence reader.Sequence, output *[]reader.Instrument)
 	}
 
 	Accumulator interface {
@@ -535,7 +535,7 @@ func (cav *compiledAsyncView[N, Storage, Config, Methods]) NewAccumulator(kvs []
 
 // Collect methods
 
-func (mi multiInstrument[N]) Collect(reader *reader.Reader, sequence reader.Sequence, output *[]reader.Series) {
+func (mi multiInstrument[N]) Collect(reader *reader.Reader, sequence reader.Sequence, output *[]reader.Instrument) {
 	for _, inst := range mi[reader] {
 		inst.Collect(reader, sequence, output)
 	}
@@ -547,13 +547,19 @@ func (mi multiInstrument[N]) Collect(reader *reader.Reader, sequence reader.Sequ
 // 	}
 // }
 
-func (metric *cumulativeMetric[N, Storage, Config, Methods]) Collect(_ *reader.Reader, sequence reader.Sequence, output *[]reader.Series) {
+func (metric *cumulativeMetric[N, Storage, Config, Methods]) Collect(_ *reader.Reader, sequence reader.Sequence, output *[]reader.Instrument) {
 	var methods Methods
 	metric.lock.Lock()
 	defer metric.lock.Unlock()
 
+	*output = append(*output, reader.Instrument{
+		Instrument:  metric.desc,
+		Temporality: aggregation.CumulativeTemporality,
+	})
+	ioutput := &(*output)[len(*output)-1]
+
 	for set, storage := range metric.data {
-		*output = append(*output, reader.Series{
+		ioutput.Series = append(ioutput.Series, reader.Series{
 			Attributes:  set,
 			Aggregation: methods.Aggregation(storage),
 			Start:       sequence.Start,

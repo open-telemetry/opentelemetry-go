@@ -30,6 +30,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/internal/viewstate"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
+	"go.opentelemetry.io/otel/sdk/metric/reader"
 	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 )
 
@@ -115,76 +116,56 @@ func (h histogram[N, Traits]) Record(ctx context.Context, incr N, attrs ...attri
 	}
 }
 
-// func (a *Provider) Collect(r *reader.Reader, sequence viewstate.Sequence, output *[]reader.Instrument) {
-// 	a.instrumentsLock.Lock()
-// 	instruments := a.instruments
-// 	a.instrumentsLock.Unlock()
+func (inst *Instrument) Collect(r *reader.Reader, sequence reader.Sequence, output *[]reader.Instrument) {
+	inst.current.Range(func(key interface{}, value interface{}) bool {
+		rec := value.(*record)
+		any := inst.collectRecord(rec, false)
 
-// 	*output = make([]reader.Instrument, len(instruments))
+		if any != 0 {
+			return true
+		}
+		// Having no updates since last collection, try to unmap:
+		if unmapped := rec.refMapped.tryUnmap(); !unmapped {
+			// The record is referenced by a binding, continue.
+			return true
+		}
 
-// 	for instIdx, inst := range instruments {
-// 		iout := &(*output)[instIdx]
+		// If any other goroutines are now trying to re-insert this
+		// entry in the map, they are busy calling Gosched() awaiting
+		// this deletion:
+		inst.current.Delete(key)
 
-// 		iout.Instrument = inst.descriptor
+		// Last we'll see of this.
+		_ = inst.collectRecord(rec, true)
+		return true
+	})
+	inst.compiled.Collect(r, sequence, output)
+}
 
-// 		// Note: @@@ Feels like this should be set in a
-// 		// compiled class of the viewstate package, selected
-// 		// when the instrument is constructed, that knows its
-// 		// temporality.
-// 		_, iout.Temporality = r.Defaults()(inst.descriptor.InstrumentKind())
+func (inst *Instrument) collectRecord(rec *record, final bool) int {
+	mods := atomic.LoadInt64(&rec.updateCount)
+	coll := rec.collectedCount
 
-// 		inst.compiled.PrepareCollect(r, sequence)
+	if mods == coll {
+		return 0
+	}
+	// Updates happened in this interval,
+	// collect and continue.
+	rec.collectedCount = mods
 
-// 		inst.current.Range(func(key interface{}, value interface{}) bool {
-// 			rec := value.(*record)
-// 			any := a.collectRecord(rec, false)
+	// Note: We could use the `final` bit here to signal to the
+	// receiver of this aggregation that it is the last in a
+	// sequence and it should feel encouraged to forget its state
+	// because a new accumulator will be built to continue this
+	// stream (w/ a new *record).
+	_ = final
 
-// 			if any != 0 {
-// 				return true
-// 			}
-// 			// Having no updates since last collection, try to unmap:
-// 			if unmapped := rec.refMapped.tryUnmap(); !unmapped {
-// 				// The record is referenced by a binding, continue.
-// 				return true
-// 			}
-
-// 			// If any other goroutines are now trying to re-insert this
-// 			// entry in the map, they are busy calling Gosched() awaiting
-// 			// this deletion:
-// 			inst.current.Delete(key)
-
-// 			// Last we'll see of this.
-// 			_ = a.collectRecord(rec, true)
-// 			return true
-// 		})
-// 		inst.compiled.Collect(r, sequence, &iout.Series)
-// 	}
-// }
-
-// func (a *Provider) collectRecord(rec *record, final bool) int {
-// 	mods := atomic.LoadInt64(&rec.updateCount)
-// 	coll := rec.collectedCount
-
-// 	if mods == coll {
-// 		return 0
-// 	}
-// 	// Updates happened in this interval,
-// 	// collect and continue.
-// 	rec.collectedCount = mods
-
-// 	// Note: We could use the `final` bit here to signal to the
-// 	// receiver of this aggregation that it is the last in a
-// 	// sequence and it should feel encouraged to forget its state
-// 	// because a new accumulator will be built to continue this
-// 	// stream (w/ a new *record).
-// 	_ = final
-
-// 	if rec.accumulator == nil {
-// 		return 0
-// 	}
-// 	rec.accumulator.Accumulate()
-// 	return 1
-// }
+	if rec.accumulator == nil {
+		return 0
+	}
+	rec.accumulator.Accumulate()
+	return 1
+}
 
 func capture[N number.Any, Traits traits.Any[N]](_ context.Context, inst *Instrument, num N, attrs []attribute.KeyValue) {
 	// TODO: Here, this is the place to use context, extract baggage.

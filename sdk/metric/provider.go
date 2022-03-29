@@ -49,7 +49,7 @@ type (
 
 	instrumentIface interface {
 		Descriptor() sdkapi.Descriptor
-		Collect(r *reader.Reader, seq reader.Sequence, 
+		Collect(r *reader.Reader, seq reader.Sequence, output *[]reader.Instrument)
 	}
 
 	meter struct {
@@ -127,7 +127,7 @@ func (pp *providerProducer) Produce() reader.Metrics {
 		Scopes:   make([]reader.Scope, len(ordered)),
 	}
 
-	sequence := viewstate.Sequence{
+	sequence := reader.Sequence{
 		Start: pp.provider.startTime,
 		Last:  pp.lastCollect,
 		Now:   time.Now(),

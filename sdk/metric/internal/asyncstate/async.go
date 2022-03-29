@@ -89,14 +89,17 @@ func (c *Callback) Run(ctx context.Context, r *reader.Reader) {
 	}))
 }
 
-func (inst *Instrument) Collect(r *reader.Reader, sequence reader.Sequence, output *[]reader.Instrument) {
-	rs := inst.state[r]
+func (rs *readerState) accumulate() {
 	rs.lock.Lock()
 	defer rs.lock.Unlock()
 
 	for _, capt := range rs.store {
 		capt.Accumulate()
 	}
+}
+
+func (inst *Instrument) Collect(r *reader.Reader, sequence reader.Sequence, output *[]reader.Instrument) {
+	inst.state[r].accumulate()
 
 	inst.compiled.Collect(r, sequence, output)
 }
@@ -113,11 +116,11 @@ func (o observer[N, Traits]) Observe(ctx context.Context, value N, attrs ...attr
 	}
 
 	rc := lookup.(readerCallback)
-	if _, ok := rc.Callback.instruments[o.Instrument]; !ok {
+	if _, ok := rc.Callback.instruments[o.inst]; !ok {
 		otel.Handle(fmt.Errorf("async instrument not declared for use in callback"))
 	}
 
-	se := o.inst.get(r, attrs)
+	se := o.inst.get(rc.Reader, attrs)
 	se.(viewstate.AccumulatorUpdater[N]).Update(value)
 }
 
