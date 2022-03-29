@@ -119,7 +119,7 @@ func (h histogram[N, Traits]) Record(ctx context.Context, incr N, attrs ...attri
 func (inst *Instrument) Collect(r *reader.Reader, sequence reader.Sequence, output *[]reader.Instrument) {
 	inst.current.Range(func(key interface{}, value interface{}) bool {
 		rec := value.(*record)
-		any := inst.collectRecord(rec, false)
+		any := inst.collectRecord(rec)
 
 		if any != 0 {
 			return true
@@ -136,13 +136,13 @@ func (inst *Instrument) Collect(r *reader.Reader, sequence reader.Sequence, outp
 		inst.current.Delete(key)
 
 		// Last we'll see of this.
-		_ = inst.collectRecord(rec, true)
+		_ = inst.collectRecord(rec)
 		return true
 	})
 	inst.compiled.Collect(r, sequence, output)
 }
 
-func (inst *Instrument) collectRecord(rec *record, final bool) int {
+func (inst *Instrument) collectRecord(rec *record) int {
 	mods := atomic.LoadInt64(&rec.updateCount)
 	coll := rec.collectedCount
 
@@ -152,13 +152,6 @@ func (inst *Instrument) collectRecord(rec *record, final bool) int {
 	// Updates happened in this interval,
 	// collect and continue.
 	rec.collectedCount = mods
-
-	// Note: We could use the `final` bit here to signal to the
-	// receiver of this aggregation that it is the last in a
-	// sequence and it should feel encouraged to forget its state
-	// because a new accumulator will be built to continue this
-	// stream (w/ a new *record).
-	_ = final
 
 	if rec.accumulator == nil {
 		return 0
