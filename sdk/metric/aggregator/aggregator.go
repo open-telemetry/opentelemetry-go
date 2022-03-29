@@ -22,22 +22,25 @@ import (
 )
 
 // RangeTest is a common routine for testing for valid input values.
-// This rejects NaN values.  This rejects negative values when the
+// This rejects NaN and Inf values.  This rejects negative values when the
 // metric instrument does not support negative values, including
 // monotonic counter metrics and absolute Histogram metrics.
 func RangeTest[N number.Any, Traits traits.Any[N]](num N, desc *sdkapi.Descriptor) error {
 	var traits Traits
 
-	// @@@ Should we have an Inf check?
+	if traits.IsInf(num) {
+		return aggregation.ErrInfInput
+	}
 
 	if traits.IsNaN(num) {
 		return aggregation.ErrNaNInput
 	}
 
+	// Check for negative values
 	switch desc.InstrumentKind() {
 	case sdkapi.CounterInstrumentKind,
 		sdkapi.CounterObserverInstrumentKind,
-		sdkapi.HistogramInstrumentKind: // @@@ right?
+		sdkapi.HistogramInstrumentKind:
 		if num < 0 {
 			return aggregation.ErrNegativeInput
 		}
@@ -45,28 +48,31 @@ func RangeTest[N number.Any, Traits traits.Any[N]](num N, desc *sdkapi.Descripto
 	return nil
 }
 
-// Methods implements a specific aggregation behavior, e.g., a
-// behavior to track a sequence of updates to an instrument.  Counter
-// instruments commonly use a simple Sum aggregator, but for the
-// distribution instruments (Histogram, GaugeObserver) there are a
-// number of possible aggregators with different cost and accuracy
-// tradeoffs.
-//
-// Note that any Aggregator may be attached to any instrument--this is
-// the result of the OpenTelemetry API/SDK separation.  It is possible
-// to attach a Sum aggregator to a Histogram instrument.
+// Methods implements a specific aggregation behavior.  Methods
+// are parameterized by the type of the number (int64, flot64),
+// the Storage (generally an `Storage` struct in the same package),
+// and the Config (generally a `Config` struct in the same package).
 type Methods[N number.Any, Storage, Config any] interface {
+	// Init initializes the storage with its configuration.
 	Init(ptr *Storage, cfg Config)
 
+	// Update modifies the aggregator concurrently with respect to
+	// SynchronizedMove() for single new measurement.
 	Update(ptr *Storage, number N)
 
+	// SynchronizedMove concurrently copies and resets the
+	// `inputIsReset` aggregator.  If output is non-nil it
+	// receives the copy.  If output is nil, it is ignored, which
+	// makes `SynchronizedMove(ptr, nil)` equivalent to a Reset
+	// operation.
 	SynchronizedMove(inputIsReset, output *Storage)
 
+	// Merge adds the contents of `input` to `output`.
 	Merge(output, input *Storage)
 
+	// Subtract removes the contents of `operand` from `valueToModify`
 	Subtract(valueToModify, operand *Storage) error
 
+	// Aggregation returns an exporter-ready value.
 	Aggregation(ptr *Storage) aggregation.Aggregation
-
-	Storage(aggr aggregation.Aggregation) *Storage
 }

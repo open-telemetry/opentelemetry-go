@@ -8,6 +8,33 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/number"
 )
 
+// Any is the generic traits interface for numbers used in sdk/metric.
+// Two concrete implementations are given with this interface for
+// int64 and float64.
+type Any[N int64 | float64] interface {
+	// FromNumber turns a generic 64bits into the correct machine type.
+	FromNumber(number.Number) N
+
+	// ToNumber turns this type into a generic 64bit value.
+	ToNumber(value N) number.Number
+
+	// SetAtomic sets `ptr` to `value`.
+	SetAtomic(ptr *N, value N)
+
+	// AddAtomic sets `ptr` to `value+*ptr`.
+	AddAtomic(ptr *N, value N)
+
+	// AddAtomic sets `ptr` to `value` and returns the former value.
+	SwapAtomic(ptr *N, value N) N
+
+	// IsNaN indicates whether `math.IsNaN()` is true (impossible for int64).
+	IsNaN(value N) bool
+
+	// IsInf indicates whether `math.IsInf()` is true (impossible for int64).
+	IsInf(value N) bool
+}
+
+// Int64 implements Traits[int64].
 type Int64 struct{}
 
 func (Int64) ToNumber(x int64) number.Number {
@@ -27,14 +54,18 @@ func (Int64) SwapAtomic(ptr *int64, value int64) int64 {
 }
 
 func (Int64) AddAtomic(ptr *int64, value int64) {
-	// @@@
-	panic("here")
+	atomic.AddInt64(ptr, value)
 }
 
 func (Int64) IsNaN(_ int64) bool {
 	return false
 }
 
+func (Int64) IsInf(_ int64) bool {
+	return false
+}
+
+// Int64 implements Traits[float64].
 type Float64 struct{}
 
 func (Float64) ToNumber(x float64) number.Number {
@@ -54,19 +85,21 @@ func (Float64) SwapAtomic(ptr *float64, value float64) float64 {
 }
 
 func (Float64) AddAtomic(ptr *float64, value float64) {
-	// @@@
-	panic("here")
+	for {
+		oldBits := atomic.LoadUint64((*uint64)(unsafe.Pointer(ptr)))
+		sum := math.Float64frombits(oldBits) + value
+		newBits := math.Float64bits(sum)
+
+		if atomic.CompareAndSwapUint64((*uint64)(unsafe.Pointer(ptr)), oldBits, newBits) {
+			return
+		}
+	}
 }
 
 func (Float64) IsNaN(value float64) bool {
 	return math.IsNaN(value)
 }
 
-type Any[N int64|float64] interface {
-	FromNumber(number.Number) N
-	ToNumber(value N) number.Number
-	SetAtomic(ptr *N, value N)
-	AddAtomic(ptr *N, value N)
-	SwapAtomic(ptr *N, value N) N
-	IsNaN(value N) bool
+func (Float64) IsInf(value float64) bool {
+	return math.IsInf(value, 0)
 }

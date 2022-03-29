@@ -22,12 +22,15 @@ type Kind int8
 const (
 	// Int64Kind means that the Number stores int64.
 	Int64Kind Kind = iota
+
 	// Float64Kind means that the Number stores float64.
 	Float64Kind
 )
 
+// Number is a generic 64bit numeric value.
 type Number uint64
 
+// Any is any of the supported generic Number types.
 type Any interface {
 	int64 | float64
 }

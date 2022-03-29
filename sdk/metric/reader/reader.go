@@ -25,6 +25,12 @@ type (
 		exporter Exporter
 	}
 
+	Sequence struct {
+		Start time.Time
+		Last  time.Time
+		Now   time.Time
+	}
+
 	Metrics struct {
 		Resource *resource.Resource
 		Scopes   []Scope

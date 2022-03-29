@@ -102,6 +102,7 @@ const (
 var (
 	ErrNegativeInput    = fmt.Errorf("negative value is out of range for this instrument")
 	ErrNaNInput         = fmt.Errorf("NaN value is an invalid input")
+	ErrInfInput         = fmt.Errorf("±Inf value is an invalid input")
 	ErrInconsistentType = fmt.Errorf("inconsistent aggregator types")
 
 	// ErrNoCumulativeToDelta is returned when requesting delta

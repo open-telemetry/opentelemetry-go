@@ -3,7 +3,6 @@ package viewstate
 import (
 	"fmt"
 	"sync"
-	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -32,12 +31,6 @@ type (
 		names     []map[string]struct{}
 	}
 
-	Sequence struct {
-		Start  time.Time
-		Last   time.Time
-		Now    time.Time
-	}
-
 	Instrument interface {
 		// NewAccumulator returns a new Accumulator bound to
 		// the attributes `kvs`.  If reader == nil the
@@ -51,9 +44,7 @@ type (
 	Collector interface {
 		// Collect transfers aggregated data from the
 		// Accumulators into the output struct.
-		Collect(reader *reader.Reader, sequence Sequence, output *[]reader.Series)
-
-		PrepareCollect(reader *reader.Reader, sequence Sequence)
+		Collect(reader *reader.Reader, sequence reader.Sequence, output *[]reader.Series)
 	}
 
 	Accumulator interface {
@@ -93,18 +84,18 @@ type (
 		data map[attribute.Set]*Storage
 	}
 
-	resetMetric[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
-		baseMetric[N, Storage, Config, Methods]
-	}
+	// resetMetric[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
+	// 	baseMetric[N, Storage, Config, Methods]
+	// }
 
 	cumulativeMetric[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
 		baseMetric[N, Storage, Config, Methods]
 	}
 
-	subtractMetric[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
-		baseMetric[N, Storage, Config, Methods]
-		prior  map[attribute.Set]*Storage
-	}
+	// subtractMetric[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
+	// 	baseMetric[N, Storage, Config, Methods]
+	// 	prior map[attribute.Set]*Storage
+	// }
 
 	syncAccumulator[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
 		current  Storage
@@ -310,20 +301,20 @@ func newSyncView[
 	N number.Any,
 	Storage, Config any,
 	Methods aggregator.Methods[N, Storage, Config],
-	](config configuredBehavior, aggConfig *Config) Instrument {
+](config configuredBehavior, aggConfig *Config) Instrument {
 	var m temporalMetric[N, Storage, Config, Methods]
 
 	base := baseMetric[N, Storage, Config, Methods]{
 		desc: config.desc,
 		data: map[attribute.Set]*Storage{},
 	}
-		
-	_, tempo := config.reader.Defaults()(config.desc.InstrumentKind())
-	if tempo == aggregation.DeltaTemporality {
-		m = &resetMetric[N, Storage, Config, Methods]{baseMetric: base}
-	} else {
-		m = &cumulativeMetric[N, Storage, Config, Methods]{baseMetric: base}
-	}
+
+	// _, tempo := config.reader.Defaults()(config.desc.InstrumentKind())
+	// if tempo == aggregation.DeltaTemporality {
+	// 	m = &resetMetric[N, Storage, Config, Methods]{baseMetric: base}
+	// } else {
+	m = &cumulativeMetric[N, Storage, Config, Methods]{baseMetric: base}
+	// }
 
 	return &compiledSyncView[N, Storage, Config, Methods]{
 		temporalMetric: m,
@@ -344,17 +335,17 @@ func newAsyncView[
 		data: map[attribute.Set]*Storage{},
 	}
 
-	_, tempo := config.reader.Defaults()(config.desc.InstrumentKind())
-	if tempo == aggregation.DeltaTemporality {
-		m = &subtractMetric[N, Storage, Config, Methods]{
-			baseMetric: base,
-			prior:      map[attribute.Set]*Storage{},
-		}
-	} else {
-		m = &cumulativeMetric[N, Storage, Config, Methods]{
-			baseMetric: base,
-		}
+	// _, tempo := config.reader.Defaults()(config.desc.InstrumentKind())
+	// if tempo == aggregation.DeltaTemporality {
+	// 	m = &subtractMetric[N, Storage, Config, Methods]{
+	// 		baseMetric: base,
+	// 		prior:      map[attribute.Set]*Storage{},
+	// 	}
+	// } else {
+	m = &cumulativeMetric[N, Storage, Config, Methods]{
+		baseMetric: base,
 	}
+	// }
 
 	return &compiledAsyncView[N, Storage, Config, Methods]{
 		temporalMetric: m,
@@ -544,19 +535,19 @@ func (cav *compiledAsyncView[N, Storage, Config, Methods]) NewAccumulator(kvs []
 
 // Collect methods
 
-func (mi multiInstrument[N]) Collect(reader *reader.Reader, sequence Sequence, output *[]reader.Series) {
+func (mi multiInstrument[N]) Collect(reader *reader.Reader, sequence reader.Sequence, output *[]reader.Series) {
 	for _, inst := range mi[reader] {
 		inst.Collect(reader, sequence, output)
 	}
 }
 
-func (mi multiInstrument[N]) PrepareCollect(reader *reader.Reader, sequence Sequence) {
-	for _, inst := range mi[reader] {
-		inst.PrepareCollect(reader, sequence)
-	}
-}
+// func (mi multiInstrument[N]) PrepareCollect(reader *reader.Reader, sequence Sequence) {
+// 	for _, inst := range mi[reader] {
+// 		inst.PrepareCollect(reader, sequence)
+// 	}
+// }
 
-func (metric *cumulativeMetric[N, Storage, Config, Methods]) Collect(_ *reader.Reader, sequence Sequence, output *[]reader.Series) {
+func (metric *cumulativeMetric[N, Storage, Config, Methods]) Collect(_ *reader.Reader, sequence reader.Sequence, output *[]reader.Series) {
 	var methods Methods
 	metric.lock.Lock()
 	defer metric.lock.Unlock()
@@ -571,81 +562,85 @@ func (metric *cumulativeMetric[N, Storage, Config, Methods]) Collect(_ *reader.R
 	}
 }
 
-func (metric *cumulativeMetric[N, Storage, Config, Methods]) PrepareCollect(_ *reader.Reader, _ Sequence) {
-	// Empty: the normal behavior is to Merge() all inputs in the
-	// Aggregate(), do not reset.
-}
+// func (metric *cumulativeMetric[N, Storage, Config, Methods]) PrepareCollect(_ *reader.Reader, _ Sequence) {
+// 	// Empty: the normal behavior is to Merge() all inputs in the
+// 	// Aggregate(), do not reset.
+// }
 
-func (metric *resetMetric[N, Storage, Config, Methods]) Collect(r *reader.Reader, sequence Sequence, output *[]reader.Series) {
-	var methods Methods
-	metric.lock.Lock()
-	defer metric.lock.Unlock()
-	
-	for set, storage := range metric.data {
-		*output = append(*output, reader.Series{
-			Attributes:  set,
-			Aggregation: methods.Aggregation(storage),
-			Start:       sequence.Last,
-			End:         sequence.Now,
-		})
-	}
-}
+// func (metric *resetMetric[N, Storage, Config, Methods]) Collect(r *reader.Reader, sequence Sequence, output *[]reader.Series) {
+// 	var methods Methods
+// 	metric.lock.Lock()
+// 	defer metric.lock.Unlock()
 
-func (metric *resetMetric[N, Storage, Config, Methods]) PrepareCollect(_ *reader.Reader, _ Sequence) {
-	var methods Methods
+// 	for set, storage := range metric.data {
+// 		*output = append(*output, reader.Series{
+// 			Attributes:  set,
+// 			Aggregation: methods.Aggregation(storage),
+// 			Start:       sequence.Last,
+// 			End:         sequence.Now,
+// 		})
+// 	}
+// }
 
-	metric.lock.Lock()
-	defer metric.lock.Unlock()
+// func (metric *resetMetric[N, Storage, Config, Methods]) PrepareCollect(_ *reader.Reader, _ Sequence) {
+// 	var methods Methods
 
-	for _, storage := range metric.data {
-		agg := methods.Aggregation(storage)
-		
-		if cagg, ok := agg.(aggregation.Count); ok {
-			cnt, err := cagg.Count()
-			
-			if err != nil && cnt == 0 {
-				continue
-			}
-		} else if sagg, ok := agg.(aggregation.Sum); ok {
-			sum, err := sagg.Sum()
-			if err != nil && XX {
-				// Where are my number traits?
-				continue
-			}
-		}
-		methods.SynchronizedMove(storage, nil)
-	}
-}
+// 	metric.lock.Lock()
+// 	defer metric.lock.Unlock()
 
-func (metric *subtractMetric[N, Storage, Config, Methods]) Collect(r *reader.Reader, sequence Sequence, output *[]reader.Series) {
-	var methods Methods
-	metric.lock.Lock()
-	defer metric.lock.Unlock()
+// 	for _, storage := range metric.data {
+// 		if !methods.HasData(storage) {
+// 			continue
+// 		}
+// 		// agg := methods.Aggregation(storage)
 
-	for set, storage := range metric.data {
-		value := methods.Aggregation(storage)
+// 		// if cagg, ok := agg.(aggregation.Count); ok {
+// 		// 	cnt, err := cagg.Count()
 
-		if oldvalue, ok := metric.prior[set]; ok {
-			methods.Subtract(storage, oldvalue)
-		} else {
-			// TODO: Find a way to use the findOutput code path here
-			ns := &Storage{}
-			metric.prior[set] = ns
-			methods.init(ns, nil) // @@@ here no configs
-		}
+// 		// 	if err != nil && cnt == 0 {
+// 		// 		continue
+// 		// 	}
+// 		// } else if sagg, ok := agg.(aggregation.Sum); ok {
+// 		// 	sum, err := sagg.Sum()
+// 		// 	if err != nil && XX {
+// 		// 		// Where are my number traits?
+// 		// 		continue
+// 		// 	}
+// 		// }
+// 		methods.SynchronizedMove(storage, nil)
+// 	}
+// }
 
-		*output = append(*output, reader.Series{
-			Attributes:  set,
-			Aggregation: value,
-			Start:       sequence.Last,
-			End:         sequence.Now,
-		})
-	}
-}
+// func (metric *subtractMetric[N, Storage, Config, Methods]) Collect(r *reader.Reader, sequence Sequence, output *[]reader.Series) {
+// 	var methods Methods
+// 	metric.lock.Lock()
+// 	defer metric.lock.Unlock()
 
-func (metric *subtractMetric[N, Storage, Config, Methods]) PrepareCollect(_ *reader.Reader, _ Sequence) {
-	// TODO: swap prior and current, etc
-	for set, storage := range metric.prior {
-		
-	}
-}
+// 	for set, storage := range metric.data {
+// 		value := methods.Aggregation(storage)
+
+// 		// if oldvalue, ok := metric.prior[set]; ok {
+// 		// 	methods.Subtract(storage, oldvalue)
+// 		// } else {
+// 		// 	// TODO: Find a way to use the findOutput code path here
+// 		// 	ns := &Storage{}
+// 		// 	metric.prior[set] = ns
+// 		// 	methods.init(ns, nil) // @@@ here no configs
+// 		// }
+
+// 		*output = append(*output, reader.Series{
+// 			Attributes:  set,
+// 			Aggregation: value,
+// 			Start:       sequence.Last,
+// 			End:         sequence.Now,
+// 		})
+// 	}
+// }
+
+// func (metric *subtractMetric[N, Storage, Config, Methods]) PrepareCollect(_ *reader.Reader, _ Sequence) {
+// 	// TODO: swap prior and current, etc
+// 	for set, storage := range metric.prior {
+// 		_ = set
+// 		_ = storage
+// 	}
+// }

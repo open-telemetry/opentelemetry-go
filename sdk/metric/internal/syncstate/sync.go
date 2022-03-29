@@ -22,15 +22,13 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	apiInstrument "go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/metric/internal/registry"
 	"go.opentelemetry.io/otel/sdk/metric/internal/viewstate"
 	"go.opentelemetry.io/otel/sdk/metric/number"
-	"go.opentelemetry.io/otel/sdk/metric/reader"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 )
@@ -42,22 +40,19 @@ import (
 // fast path.  See also https://github.com/a8m/syncmap.
 
 type (
-	Provider struct {
-		instrumentsLock sync.Mutex
-		instruments     []*instrument
-	}
+	Instrument struct {
+		instrument.Synchronous
 
-	instrument struct {
-		apiInstrument.Synchronous
-		
 		descriptor sdkapi.Descriptor
-		current    sync.Map // map[attribute.Set]*record
 		compiled   viewstate.Instrument
+		current    sync.Map // map[attribute.Set]*record
 	}
 
 	record struct {
-		refMapped   refcountMapped
-		instrument  *instrument
+		instrument.Synchronous
+
+		refMapped  refcountMapped
+		instrument *Instrument
 
 		// updateCount is incremented on every Update.
 		updateCount int64
@@ -66,27 +61,17 @@ type (
 		// supports checking for no updates during a round.
 		collectedCount int64
 
-		distinct   attribute.Set
-		attributes []attribute.KeyValue
-		accumulator  viewstate.Accumulator
+		distinct    attribute.Set
+		attributes  []attribute.KeyValue
+		accumulator viewstate.Accumulator
 	}
-
-	common struct {
-		provider *Provider
-		registry    *registry.State
-		views       *viewstate.Compiler
-	}
-
-
-	Int64Instruments struct { common }
-	Float64Instruments struct { common }
 
 	counter[N number.Any, Traits traits.Any[N]] struct {
-		*instrument
+		*Instrument
 	}
 
 	histogram[N number.Any, Traits traits.Any[N]] struct {
-		*instrument
+		*Instrument
 	}
 )
 
@@ -99,168 +84,109 @@ var (
 	_ syncfloat64.Histogram     = histogram[float64, traits.Float64]{}
 )
 
-func New() *Provider {
-	return &Provider{}
-}
-
-func (p *Provider) Int64Instruments(reg *registry.State, views *viewstate.Compiler) syncint64.InstrumentProvider {
-	return Int64Instruments{
-		common: common{
-			provider: p,
-			registry:    reg,
-			views:       views,
-		},
+func NewInstrument(desc sdkapi.Descriptor, compiled viewstate.Instrument) *Instrument {
+	return &Instrument{
+		descriptor: desc,
+		compiled:   compiled,
 	}
 }
 
-func (p *Provider) Float64Instruments(reg *registry.State, views *viewstate.Compiler) syncfloat64.InstrumentProvider {
-	return Float64Instruments{
-		common: common{
-			provider: p,
-			registry:    reg,
-			views:       views,
-		},
-	}
-}
-
-func (i Int64Instruments) Counter(name string, opts ...apiInstrument.Option) (syncint64.Counter, error) {
-	inst, err := i.newInstrument(name, opts, number.Int64Kind, sdkapi.CounterInstrumentKind)
-	return counter[int64, traits.Int64]{instrument: inst}, err
-}
-
-func (i Int64Instruments) UpDownCounter(name string, opts ...apiInstrument.Option) (syncint64.UpDownCounter, error) {
-	inst, err := i.newInstrument(name, opts, number.Int64Kind, sdkapi.UpDownCounterInstrumentKind)
-	return counter[int64, traits.Int64]{instrument: inst}, err
-}
-
-func (i Int64Instruments) Histogram(name string, opts ...apiInstrument.Option) (syncint64.Histogram, error) {
-	inst, err := i.newInstrument(name, opts, number.Int64Kind, sdkapi.HistogramInstrumentKind)
-	return histogram[int64, traits.Int64]{instrument: inst}, err
-}
-
-func (f Float64Instruments) Counter(name string, opts ...apiInstrument.Option) (syncfloat64.Counter, error) {
-	inst, err := f.newInstrument(name, opts, number.Float64Kind, sdkapi.CounterInstrumentKind)
-	return counter[float64, traits.Float64]{instrument: inst}, err
-}
-
-func (f Float64Instruments) UpDownCounter(name string, opts ...apiInstrument.Option) (syncfloat64.UpDownCounter, error) {
-	inst, err := f.newInstrument(name, opts, number.Float64Kind, sdkapi.UpDownCounterInstrumentKind)
-	return counter[float64, traits.Float64]{instrument: inst}, err
-}
-
-func (f Float64Instruments) Histogram(name string, opts ...apiInstrument.Option) (syncfloat64.Histogram, error) {
-	inst, err := f.newInstrument(name, opts, number.Float64Kind, sdkapi.HistogramInstrumentKind)
-	return histogram[float64, traits.Float64]{instrument: inst}, err
-}
-
-// implements registry.hasDescriptor
-func (inst *instrument) Descriptor() sdkapi.Descriptor {
+func (inst *Instrument) Descriptor() sdkapi.Descriptor {
 	return inst.descriptor
 }
 
+func NewCounter[N number.Any, Traits traits.Any[N]](inst *Instrument) counter[N, Traits] {
+	return counter[N, Traits]{Instrument: inst}
+}
+
+func NewHistogram[N number.Any, Traits traits.Any[N]](inst *Instrument) histogram[N, Traits] {
+	return histogram[N, Traits]{Instrument: inst}
+}
+
 func (c counter[N, Traits]) Add(ctx context.Context, incr N, attrs ...attribute.KeyValue) {
-	if c.instrument != nil {
-		capture[N, Traits](ctx, c.instrument, incr, attrs)
+	if c.Instrument != nil {
+		capture[N, Traits](ctx, c.Instrument, incr, attrs)
 	}
 }
 
 func (h histogram[N, Traits]) Record(ctx context.Context, incr N, attrs ...attribute.KeyValue) {
-	if h.instrument != nil {
-		capture[N, Traits](ctx, h.instrument, incr, attrs)
+	if h.Instrument != nil {
+		capture[N, Traits](ctx, h.Instrument, incr, attrs)
 	}
 }
 
-func (c common) newInstrument(name string, opts []apiInstrument.Option, nk number.Kind, ik sdkapi.InstrumentKind) (*instrument, error) {
-	return registry.Lookup(
-		c.registry,
-		name, opts, nk, ik,
-		func(desc sdkapi.Descriptor) *instrument{
-			compiled := c.views.Compile(desc)
-			inst := &instrument{
-				descriptor: desc,
-				compiled:   compiled,
-			}
+// func (a *Provider) Collect(r *reader.Reader, sequence viewstate.Sequence, output *[]reader.Instrument) {
+// 	a.instrumentsLock.Lock()
+// 	instruments := a.instruments
+// 	a.instrumentsLock.Unlock()
 
-			c.provider.instrumentsLock.Lock()
-			defer c.provider.instrumentsLock.Unlock()
+// 	*output = make([]reader.Instrument, len(instruments))
 
-			c.provider.instruments = append(c.provider.instruments, inst)
-			return inst
-		})
-}
+// 	for instIdx, inst := range instruments {
+// 		iout := &(*output)[instIdx]
 
-func (a *Provider) Collect(r *reader.Reader, sequence viewstate.Sequence, output *[]reader.Instrument) {
-	a.instrumentsLock.Lock()
-	instruments := a.instruments
-	a.instrumentsLock.Unlock()
+// 		iout.Instrument = inst.descriptor
 
-	*output = make([]reader.Instrument, len(instruments))
+// 		// Note: @@@ Feels like this should be set in a
+// 		// compiled class of the viewstate package, selected
+// 		// when the instrument is constructed, that knows its
+// 		// temporality.
+// 		_, iout.Temporality = r.Defaults()(inst.descriptor.InstrumentKind())
 
-	for instIdx, inst := range instruments {
-		iout := &(*output)[instIdx]
+// 		inst.compiled.PrepareCollect(r, sequence)
 
-		iout.Instrument = inst.descriptor
+// 		inst.current.Range(func(key interface{}, value interface{}) bool {
+// 			rec := value.(*record)
+// 			any := a.collectRecord(rec, false)
 
-		// Note: @@@ Feels like this should be set in a
-		// compiled class of the viewstate package, selected
-		// when the instrument is constructed, that knows its
-		// temporality.
-		_, iout.Temporality = r.Defaults()(inst.descriptor.InstrumentKind())
+// 			if any != 0 {
+// 				return true
+// 			}
+// 			// Having no updates since last collection, try to unmap:
+// 			if unmapped := rec.refMapped.tryUnmap(); !unmapped {
+// 				// The record is referenced by a binding, continue.
+// 				return true
+// 			}
 
-		inst.compiled.PrepareCollect(r, sequence)
+// 			// If any other goroutines are now trying to re-insert this
+// 			// entry in the map, they are busy calling Gosched() awaiting
+// 			// this deletion:
+// 			inst.current.Delete(key)
 
-		inst.current.Range(func(key interface{}, value interface{}) bool {
-			rec := value.(*record)
-			any := a.collectRecord(rec, false)
+// 			// Last we'll see of this.
+// 			_ = a.collectRecord(rec, true)
+// 			return true
+// 		})
+// 		inst.compiled.Collect(r, sequence, &iout.Series)
+// 	}
+// }
 
-			if any != 0 {
-				return true
-			}
-			// Having no updates since last collection, try to unmap:
-			if unmapped := rec.refMapped.tryUnmap(); !unmapped {
-				// The record is referenced by a binding, continue.
-				return true
-			}
+// func (a *Provider) collectRecord(rec *record, final bool) int {
+// 	mods := atomic.LoadInt64(&rec.updateCount)
+// 	coll := rec.collectedCount
 
-			// If any other goroutines are now trying to re-insert this
-			// entry in the map, they are busy calling Gosched() awaiting
-			// this deletion:
-			inst.current.Delete(key)
+// 	if mods == coll {
+// 		return 0
+// 	}
+// 	// Updates happened in this interval,
+// 	// collect and continue.
+// 	rec.collectedCount = mods
 
-			// Last we'll see of this.
-			_ = a.collectRecord(rec, true)
-			return true
-		})
-		inst.compiled.Collect(r, sequence, &iout.Series)
-	}
-}
+// 	// Note: We could use the `final` bit here to signal to the
+// 	// receiver of this aggregation that it is the last in a
+// 	// sequence and it should feel encouraged to forget its state
+// 	// because a new accumulator will be built to continue this
+// 	// stream (w/ a new *record).
+// 	_ = final
 
-func (a *Provider) collectRecord(rec *record, final bool) int {
-	mods := atomic.LoadInt64(&rec.updateCount)
-	coll := rec.collectedCount
+// 	if rec.accumulator == nil {
+// 		return 0
+// 	}
+// 	rec.accumulator.Accumulate()
+// 	return 1
+// }
 
-	if mods == coll {
-		return 0
-	}
-	// Updates happened in this interval,
-	// collect and continue.
-	rec.collectedCount = mods
-
-	// Note: We could use the `final` bit here to signal to the
-	// receiver of this aggregation that it is the last in a
-	// sequence and it should feel encouraged to forget its state
-	// because a new accumulator will be built to continue this
-	// stream (w/ a new *record).
-	_ = final
-
-	if rec.accumulator == nil {
-		return 0
-	}
-	rec.accumulator.Accumulate()
-	return 1
-}
-
-func capture[N number.Any, Traits traits.Any[N]](_ context.Context, inst *instrument, num N, attrs []attribute.KeyValue) {
+func capture[N number.Any, Traits traits.Any[N]](_ context.Context, inst *Instrument, num N, attrs []attribute.KeyValue) {
 	// TODO: Here, this is the place to use context, extract baggage.
 
 	rec, updater := acquireRecord[N](inst, attrs)
@@ -281,7 +207,7 @@ func capture[N number.Any, Traits traits.Any[N]](_ context.Context, inst *instru
 // support re-use of the orderedLabels computed by a previous
 // measurement in the same batch.   This performs two allocations
 // in the common case.
-func acquireRecord[N number.Any](inst *instrument, attrs []attribute.KeyValue) (*record, viewstate.Updater[N]) {
+func acquireRecord[N number.Any](inst *Instrument, attrs []attribute.KeyValue) (*record, viewstate.Updater[N]) {
 	aset := attribute.NewSet(attrs...)
 	if lookup, ok := inst.current.Load(aset); ok {
 		// Existing record case.
@@ -297,9 +223,9 @@ func acquireRecord[N number.Any](inst *instrument, attrs []attribute.KeyValue) (
 	}
 
 	newRec := &record{
-		refMapped:   refcountMapped{value: 2},
-		instrument:  inst,
-		distinct: aset,
+		refMapped:  refcountMapped{value: 2},
+		instrument: inst,
+		distinct:   aset,
 		attributes: attrs,
 	}
 
@@ -315,11 +241,10 @@ func acquireRecord[N number.Any](inst *instrument, attrs []attribute.KeyValue) (
 		break
 	}
 
-
 	return newRec, initRecord[N](inst, newRec, attrs)
 }
 
-func initRecord[N number.Any](inst *instrument, rec *record, attrs []attribute.KeyValue) viewstate.Updater[N] {
+func initRecord[N number.Any](inst *Instrument, rec *record, attrs []attribute.KeyValue) viewstate.Updater[N] {
 	rec.accumulator = inst.compiled.NewAccumulator(attrs, nil)
 	return rec.accumulator.(viewstate.Updater[N])
 }
