@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- The `Meter` function is added back to the `go.opentelemetry.io/otel/metric/global` package.
+  This function is a convenience function equivalent to calling `global.MeterProvider().Meter(...)`. (#2750)
+
 ### Removed
 
 - Removed module the `go.opentelemetry.io/otel/sdk/export/metric`.
