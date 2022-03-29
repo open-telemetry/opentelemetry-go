@@ -7,16 +7,10 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/internal/asyncstate"
-	"go.opentelemetry.io/otel/sdk/metric/internal/syncstate"
 	"go.opentelemetry.io/otel/sdk/metric/internal/viewstate"
 	"go.opentelemetry.io/otel/sdk/metric/number"
-	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 	"go.opentelemetry.io/otel/sdk/metric/reader"
 	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/metric/views"
@@ -62,11 +56,6 @@ type (
 		instruments []instrumentIface
 		callbacks   []*asyncstate.Callback
 	}
-
-	asyncint64Instruments   struct{ *meter }
-	asyncfloat64Instruments struct{ *meter }
-	syncint64Instruments    struct{ *meter }
-	syncfloat64Instruments  struct{ *meter }
 )
 
 var (
@@ -149,10 +138,6 @@ func (pp *providerProducer) Produce() reader.Metrics {
 
 		output.Scopes[meterIdx].Library = meter.library
 
-		// Note: the number of output instruments is
-		// determined by the views, not the number of actual
-		// instruments.
-
 		for _, inst := range instruments {
 			inst.Collect(pp.reader, sequence, &output.Scopes[meterIdx].Instruments)
 		}
@@ -195,22 +180,6 @@ func (p *provider) Meter(name string, opts ...metric.MeterOption) metric.Meter {
 	return m
 }
 
-func (m *meter) SyncInt64() syncint64.InstrumentProvider {
-	return syncint64Instruments{m}
-}
-
-func (m *meter) SyncFloat64() syncfloat64.InstrumentProvider {
-	return syncfloat64Instruments{m}
-}
-
-func (m *meter) AsyncInt64() asyncint64.InstrumentProvider {
-	return asyncint64Instruments{m}
-}
-
-func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
-	return asyncfloat64Instruments{m}
-}
-
 func (m *meter) RegisterCallback(insts []instrument.Asynchronous, function func(context.Context)) error {
 	cb, err := asyncstate.NewCallback(insts, function)
 
@@ -220,47 +189,6 @@ func (m *meter) RegisterCallback(insts []instrument.Asynchronous, function func(
 		m.callbacks = append(m.callbacks, cb)
 	}
 	return err
-}
-
-func (m *meter) newAsyncInst(name string, opts []instrument.Option, nk number.Kind, ik sdkapi.InstrumentKind) (*asyncstate.Instrument, error) {
-	return nameLookup(
-		m, name, opts, nk, ik,
-		func(desc sdkapi.Descriptor) *asyncstate.Instrument {
-			compiled := m.views.Compile(desc)
-			inst := asyncstate.NewInstrument(desc, compiled)
-			m.instruments = append(m.instruments, inst)
-			return inst
-		})
-}
-
-func (i asyncint64Instruments) Counter(name string, opts ...instrument.Option) (asyncint64.Counter, error) {
-	inst, err := i.newAsyncInst(name, opts, number.Int64Kind, sdkapi.CounterObserverInstrumentKind)
-	return asyncstate.NewObserver[int64, traits.Int64](inst), err
-}
-
-func (i asyncint64Instruments) UpDownCounter(name string, opts ...instrument.Option) (asyncint64.UpDownCounter, error) {
-	inst, err := i.newAsyncInst(name, opts, number.Int64Kind, sdkapi.UpDownCounterObserverInstrumentKind)
-	return asyncstate.NewObserver[int64, traits.Int64](inst), err
-}
-
-func (i asyncint64Instruments) Gauge(name string, opts ...instrument.Option) (asyncint64.Gauge, error) {
-	inst, err := i.newAsyncInst(name, opts, number.Int64Kind, sdkapi.GaugeObserverInstrumentKind)
-	return asyncstate.NewObserver[int64, traits.Int64](inst), err
-}
-
-func (f asyncfloat64Instruments) Counter(name string, opts ...instrument.Option) (asyncfloat64.Counter, error) {
-	inst, err := f.newAsyncInst(name, opts, number.Float64Kind, sdkapi.CounterObserverInstrumentKind)
-	return asyncstate.NewObserver[float64, traits.Float64](inst), err
-}
-
-func (f asyncfloat64Instruments) UpDownCounter(name string, opts ...instrument.Option) (asyncfloat64.UpDownCounter, error) {
-	inst, err := f.newAsyncInst(name, opts, number.Float64Kind, sdkapi.UpDownCounterObserverInstrumentKind)
-	return asyncstate.NewObserver[float64, traits.Float64](inst), err
-}
-
-func (f asyncfloat64Instruments) Gauge(name string, opts ...instrument.Option) (asyncfloat64.Gauge, error) {
-	inst, err := f.newAsyncInst(name, opts, number.Float64Kind, sdkapi.GaugeObserverInstrumentKind)
-	return asyncstate.NewObserver[float64, traits.Float64](inst), err
 }
 
 func nameLookup[T instrumentIface](
@@ -296,46 +224,4 @@ func nameLookup[T instrumentIface](
 	value := f(desc)
 	m.names[name] = append(m.names[name], value)
 	return value, nil
-}
-
-func (m *meter) newSyncInst(name string, opts []instrument.Option, nk number.Kind, ik sdkapi.InstrumentKind) (*syncstate.Instrument, error) {
-	return nameLookup(
-		m, name, opts, nk, ik,
-		func(desc sdkapi.Descriptor) *syncstate.Instrument {
-			compiled := m.views.Compile(desc)
-			inst := syncstate.NewInstrument(desc, compiled)
-
-			m.instruments = append(m.instruments, inst)
-			return inst
-		})
-}
-
-func (i syncint64Instruments) Counter(name string, opts ...instrument.Option) (syncint64.Counter, error) {
-	inst, err := i.newSyncInst(name, opts, number.Int64Kind, sdkapi.CounterInstrumentKind)
-	return syncstate.NewCounter[int64, traits.Int64](inst), err
-}
-
-func (i syncint64Instruments) UpDownCounter(name string, opts ...instrument.Option) (syncint64.UpDownCounter, error) {
-	inst, err := i.newSyncInst(name, opts, number.Int64Kind, sdkapi.UpDownCounterInstrumentKind)
-	return syncstate.NewCounter[int64, traits.Int64](inst), err
-}
-
-func (i syncint64Instruments) Histogram(name string, opts ...instrument.Option) (syncint64.Histogram, error) {
-	inst, err := i.newSyncInst(name, opts, number.Int64Kind, sdkapi.HistogramInstrumentKind)
-	return syncstate.NewHistogram[int64, traits.Int64](inst), err
-}
-
-func (f syncfloat64Instruments) Counter(name string, opts ...instrument.Option) (syncfloat64.Counter, error) {
-	inst, err := f.newSyncInst(name, opts, number.Float64Kind, sdkapi.CounterInstrumentKind)
-	return syncstate.NewCounter[float64, traits.Float64](inst), err
-}
-
-func (f syncfloat64Instruments) UpDownCounter(name string, opts ...instrument.Option) (syncfloat64.UpDownCounter, error) {
-	inst, err := f.newSyncInst(name, opts, number.Float64Kind, sdkapi.UpDownCounterInstrumentKind)
-	return syncstate.NewCounter[float64, traits.Float64](inst), err
-}
-
-func (f syncfloat64Instruments) Histogram(name string, opts ...instrument.Option) (syncfloat64.Histogram, error) {
-	inst, err := f.newSyncInst(name, opts, number.Float64Kind, sdkapi.HistogramInstrumentKind)
-	return syncstate.NewHistogram[float64, traits.Float64](inst), err
 }

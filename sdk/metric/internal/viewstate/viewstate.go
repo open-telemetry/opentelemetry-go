@@ -541,12 +541,6 @@ func (mi multiInstrument[N]) Collect(reader *reader.Reader, sequence reader.Sequ
 	}
 }
 
-// func (mi multiInstrument[N]) PrepareCollect(reader *reader.Reader, sequence Sequence) {
-// 	for _, inst := range mi[reader] {
-// 		inst.PrepareCollect(reader, sequence)
-// 	}
-// }
-
 func (metric *cumulativeMetric[N, Storage, Config, Methods]) Collect(_ *reader.Reader, sequence reader.Sequence, output *[]reader.Instrument) {
 	var methods Methods
 	metric.lock.Lock()
@@ -567,11 +561,6 @@ func (metric *cumulativeMetric[N, Storage, Config, Methods]) Collect(_ *reader.R
 		})
 	}
 }
-
-// func (metric *cumulativeMetric[N, Storage, Config, Methods]) PrepareCollect(_ *reader.Reader, _ Sequence) {
-// 	// Empty: the normal behavior is to Merge() all inputs in the
-// 	// Aggregate(), do not reset.
-// }
 
 // func (metric *resetMetric[N, Storage, Config, Methods]) Collect(r *reader.Reader, sequence Sequence, output *[]reader.Series) {
 // 	var methods Methods
