@@ -61,9 +61,7 @@ func (s *SpansStorage) AddSpans(request *collectortracepb.ExportTraceServiceRequ
 		} else {
 			if len(rs.ScopeSpans) > 0 {
 				newSpans := rs.ScopeSpans[0].GetSpans()
-				existingRs.ScopeSpans[0].Spans =
-					append(existingRs.ScopeSpans[0].Spans,
-						newSpans...)
+				existingRs.ScopeSpans[0].Spans = append(existingRs.ScopeSpans[0].Spans, newSpans...)
 				s.spanCount += len(newSpans)
 			}
 		}
