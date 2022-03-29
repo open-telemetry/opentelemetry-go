@@ -816,7 +816,7 @@ func runMetricExportTests(t *testing.T, opts []otlpmetric.Option, res *resource.
 	}
 	for k := range got {
 		if _, ok := seen[k]; !ok {
-			t.Errorf("did not expect metrics for:\n\tInstrumentationLibrary: %s\n", k)
+			t.Errorf("did not expect metrics for:\n\tInstrumentationScope: %s\n", k)
 		}
 	}
 }
