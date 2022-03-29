@@ -13,6 +13,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Removed module the `go.opentelemetry.io/otel/sdk/export/metric`.
   Use the `go.opentelemetry.io/otel/sdk/metric` module instead. (#2720)
 
+## [1.6.1] - 2022-03-28
+
+### Fixed
+
+- The `go.opentelemetry.io/otel/schema/*` packages now use the correct schema URL for their `SchemaURL` constant.
+  Instead of using `"https://opentelemetry.io/schemas/v<version>"` they now use the correct URL without a `v` prefix, `"https://opentelemetry.io/schemas/<version>"`. (#2743, #2744)
+
+### Security
+
+- Upgrade `go.opentelemetry.io/proto/otlp` from `v0.12.0` to `v0.12.1`.
+  This includes an indirect upgrade of `github.com/grpc-ecosystem/grpc-gateway` which resolves [a vulnerability](https://nvd.nist.gov/vuln/detail/CVE-2019-11254) from `gopkg.in/yaml.v2` in version `v2.2.3`. (#2724, #2728)
+
 ## [1.6.0/0.28.0] - 2022-03-23
 
 ### ⚠️ Notice ⚠️
@@ -1773,7 +1785,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.6.1...HEAD
+[1.6.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.6.1
 [1.6.0/0.28.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.6.0
 [1.5.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.5.0
 [1.4.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.4.1
