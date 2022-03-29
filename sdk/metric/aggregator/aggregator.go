@@ -61,11 +61,11 @@ type Methods[N number.Any, Storage, Config any] interface {
 	Update(ptr *Storage, number N)
 
 	// SynchronizedMove concurrently copies and resets the
-	// `inputIsReset` aggregator.  If output is non-nil it
-	// receives the copy.  If output is nil, it is ignored, which
-	// makes `SynchronizedMove(ptr, nil)` equivalent to a Reset
-	// operation.
+	// `inputIsReset` aggregator.
 	SynchronizedMove(inputIsReset, output *Storage)
+
+	// Simply reset the storage.
+	Reset(ptr *Storage)
 
 	// Merge adds the contents of `input` to `output`.
 	Merge(output, input *Storage)
@@ -75,4 +75,7 @@ type Methods[N number.Any, Storage, Config any] interface {
 
 	// Aggregation returns an exporter-ready value.
 	Aggregation(ptr *Storage) aggregation.Aggregation
+
+	// HasData returns true if there have been any (discernible) Updates.
+	HasData(ptr *Storage) bool
 }

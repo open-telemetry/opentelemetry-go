@@ -19,8 +19,8 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 )
@@ -28,9 +28,9 @@ import (
 var ErrNoSubtract = fmt.Errorf("lastvalue subtract not implemented")
 
 type (
-	Config struct {}
+	Config struct{}
 
-	Methods[N number.Any, Traits traits.Any[N], Storage State[N, Traits]] struct {}
+	Methods[N number.Any, Traits traits.Any[N], Storage State[N, Traits]] struct{}
 
 	State[N number.Any, Traits traits.Any[N]] struct {
 		lock      sync.Mutex
@@ -40,7 +40,7 @@ type (
 )
 
 var (
-	_ aggregator.Methods[int64, State[int64, traits.Int64], Config] = Methods[int64, traits.Int64, State[int64, traits.Int64]]{}
+	_ aggregator.Methods[int64, State[int64, traits.Int64], Config]       = Methods[int64, traits.Int64, State[int64, traits.Int64]]{}
 	_ aggregator.Methods[float64, State[float64, traits.Float64], Config] = Methods[float64, traits.Float64, State[float64, traits.Float64]]{}
 
 	_ aggregation.LastValue = &State[int64, traits.Int64]{}
@@ -69,14 +69,22 @@ func (Methods[N, Traits, Storage]) Init(state *State[N, Traits], _ Config) {
 	// Note: storage is zero to start
 }
 
+func (Methods[N, Traits, Storage]) Reset(ptr *State[N, Traits]) {
+	ptr.value = 0
+	ptr.timestamp = time.Time{}
+}
+
+func (Methods[N, Traits, Storage]) HasData(ptr *State[N, Traits]) bool {
+	return ptr.timestamp.IsZero()
+}
+
 func (Methods[N, Traits, Storage]) SynchronizedMove(resetSrc, dest *State[N, Traits]) {
 	resetSrc.lock.Lock()
 	defer resetSrc.lock.Unlock()
 
-	if dest != nil {
-		dest.value = resetSrc.value
-		dest.timestamp = resetSrc.timestamp
-	}
+	dest.value = resetSrc.value
+	dest.timestamp = resetSrc.timestamp
+
 	resetSrc.value = 0
 	resetSrc.timestamp = time.Time{}
 }

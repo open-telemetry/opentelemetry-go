@@ -54,11 +54,15 @@ func (Methods[N, Traits, Storage]) Init(state *State[N, Traits], _ Config) {
 
 func (Methods[N, Traits, Storage]) SynchronizedMove(resetSrc, dest *State[N, Traits]) {
 	var traits Traits
-	if dest == nil {
-		traits.SetAtomic(&resetSrc.value, 0)
-		return
-	}
 	dest.value = traits.SwapAtomic(&resetSrc.value, 0)
+}
+
+func (Methods[N, Traits, Storage]) Reset(ptr *State[N, Traits]) {
+	ptr.value = 0
+}
+
+func (Methods[N, Traits, Storage]) HasData(ptr *State[N, Traits]) bool {
+	return ptr.value == 0
 }
 
 func (Methods[N, Traits, Storage]) Update(state *State[N, Traits], value N) {

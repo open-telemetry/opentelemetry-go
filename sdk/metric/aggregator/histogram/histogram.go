@@ -19,8 +19,8 @@ import (
 	"sort"
 	"sync"
 
-	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 )
@@ -41,7 +41,7 @@ type (
 	Float64Defaults struct{}
 
 	State[N number.Any, Traits traits.Any[N]] struct {
-		boundaries   []float64
+		boundaries []float64
 
 		lock         sync.Mutex
 		bucketCounts []uint64
@@ -64,7 +64,7 @@ type (
 )
 
 var (
-	_ aggregator.Methods[int64, State[int64, traits.Int64], Config] = Methods[int64, traits.Int64, State[int64, traits.Int64]]{}
+	_ aggregator.Methods[int64, State[int64, traits.Int64], Config]       = Methods[int64, traits.Int64, State[int64, traits.Int64]]{}
 	_ aggregator.Methods[float64, State[float64, traits.Float64], Config] = Methods[float64, traits.Float64, State[float64, traits.Float64]]{}
 
 	_ aggregation.Histogram = &State[int64, traits.Int64]{}
@@ -157,7 +157,6 @@ func (h *State[N, Traits]) Kind() aggregation.Kind {
 	return aggregation.LastValueKind
 }
 
-
 func (h *State[N, Traits]) clearState() {
 	for i := range h.bucketCounts {
 		h.bucketCounts[i] = 0
@@ -171,29 +170,28 @@ func (Methods[N, Traits, Storage]) Init(state *State[N, Traits], cfg Config) {
 	state.bucketCounts = make([]uint64, len(state.boundaries)+1)
 }
 
+func (Methods[N, Traits, Storage]) Reset(ptr *State[N, Traits]) {
+	ptr.clearState()
+}
+
+func (Methods[N, Traits, Storage]) HasData(ptr *State[N, Traits]) bool {
+	return ptr.count == 0
+}
+
 func (Methods[N, Traits, Storage]) SynchronizedMove(resetSrc, dest *State[N, Traits]) {
-	if dest != nil {
-		// Swap case: This is the ordinary case for a
-		// synchronous instrument, where the SDK allocates two
-		// Aggregators and lock contention is anticipated.
-		// Reset the target state before swapping it under the
-		// lock below.
-		dest.clearState()
-	}
-	
+	// Swap case: This is the ordinary case for a
+	// synchronous instrument, where the SDK allocates two
+	// Aggregators and lock contention is anticipated.
+	// Reset the target state before swapping it under the
+	// lock below.
+	dest.clearState()
+
 	resetSrc.lock.Lock()
 	defer resetSrc.lock.Unlock()
-	if dest != nil {
-		dest.sum, resetSrc.sum = resetSrc.sum, dest.sum
-		dest.count, resetSrc.count = resetSrc.count, dest.count
-		dest.bucketCounts, resetSrc.bucketCounts = resetSrc.bucketCounts, dest.bucketCounts
-	} else {
-		// No swap case: This is the ordinary case for an
-		// asynchronous instrument, where the SDK allocates a
-		// single Aggregator and there is no anticipated lock
-		// contention.
-		resetSrc.clearState()
-	}
+
+	dest.sum, resetSrc.sum = resetSrc.sum, dest.sum
+	dest.count, resetSrc.count = resetSrc.count, dest.count
+	dest.bucketCounts, resetSrc.bucketCounts = resetSrc.bucketCounts, dest.bucketCounts
 }
 
 // Update adds the recorded measurement to the current data set.

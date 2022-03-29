@@ -99,9 +99,14 @@ func (rs *readerState) accumulate() {
 }
 
 func (inst *Instrument) Collect(r *reader.Reader, sequence reader.Sequence, output *[]reader.Instrument) {
-	inst.state[r].accumulate()
+	rs := inst.state[r]
+
+	rs.accumulate()
 
 	inst.compiled.Collect(r, sequence, output)
+
+	// Reset the instruments used; the view state will remember what it needs.
+	rs.store = map[attribute.Set]viewstate.Accumulator{}
 }
 
 func (o observer[N, Traits]) Observe(ctx context.Context, value N, attrs ...attribute.KeyValue) {

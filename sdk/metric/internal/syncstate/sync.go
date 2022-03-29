@@ -215,10 +215,7 @@ func acquireRecord[N number.Any](inst *Instrument, attrs []attribute.KeyValue) (
 		break
 	}
 
-	return newRec, initRecord[N](inst, newRec, attrs)
-}
+	newRec.accumulator = inst.compiled.NewAccumulator(attrs, nil)
 
-func initRecord[N number.Any](inst *Instrument, rec *record, attrs []attribute.KeyValue) viewstate.Updater[N] {
-	rec.accumulator = inst.compiled.NewAccumulator(attrs, nil)
-	return rec.accumulator.(viewstate.Updater[N])
+	return newRec, newRec.accumulator.(viewstate.Updater[N])
 }
