@@ -191,7 +191,7 @@ func TestNoGroupingExport(t *testing.T) {
 		[]*metricpb.ResourceMetrics{
 			{
 				Resource: nil,
-				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
+				ScopeMetrics: []*metricpb.ScopeMetrics{
 					{
 						Metrics: []*metricpb.Metric{
 							{
@@ -237,7 +237,7 @@ func TestHistogramInt64MetricGroupingExport(t *testing.T) {
 	expected := []*metricpb.ResourceMetrics{
 		{
 			Resource: nil,
-			InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
+			ScopeMetrics: []*metricpb.ScopeMetrics{
 				{
 					Metrics: []*metricpb.Metric{
 						{
@@ -288,7 +288,7 @@ func TestHistogramFloat64MetricGroupingExport(t *testing.T) {
 	expected := []*metricpb.ResourceMetrics{
 		{
 			Resource: nil,
-			InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
+			ScopeMetrics: []*metricpb.ScopeMetrics{
 				{
 					Metrics: []*metricpb.Metric{
 						{
@@ -343,7 +343,7 @@ func TestCountInt64MetricGroupingExport(t *testing.T) {
 		[]*metricpb.ResourceMetrics{
 			{
 				Resource: nil,
-				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
+				ScopeMetrics: []*metricpb.ScopeMetrics{
 					{
 						Metrics: []*metricpb.Metric{
 							{
@@ -393,7 +393,7 @@ func TestCountFloat64MetricGroupingExport(t *testing.T) {
 		[]*metricpb.ResourceMetrics{
 			{
 				Resource: nil,
-				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
+				ScopeMetrics: []*metricpb.ScopeMetrics{
 					{
 						Metrics: []*metricpb.Metric{
 							{
@@ -465,7 +465,7 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 		[]*metricpb.ResourceMetrics{
 			{
 				Resource: testerAResourcePb,
-				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
+				ScopeMetrics: []*metricpb.ScopeMetrics{
 					{
 						Metrics: []*metricpb.Metric{
 							{
@@ -566,9 +566,9 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 		[]*metricpb.ResourceMetrics{
 			{
 				Resource: testerAResourcePb,
-				InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
+				ScopeMetrics: []*metricpb.ScopeMetrics{
 					{
-						InstrumentationLibrary: &commonpb.InstrumentationLibrary{
+						Scope: &commonpb.InstrumentationScope{
 							Name:    "counting-lib",
 							Version: "v1",
 						},
@@ -605,7 +605,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 						},
 					},
 					{
-						InstrumentationLibrary: &commonpb.InstrumentationLibrary{
+						Scope: &commonpb.InstrumentationScope{
 							Name:    "counting-lib",
 							Version: "v2",
 						},
@@ -630,7 +630,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 						},
 					},
 					{
-						InstrumentationLibrary: &commonpb.InstrumentationLibrary{
+						Scope: &commonpb.InstrumentationScope{
 							Name: "summing-lib",
 						},
 						SchemaUrl: "schurl",
@@ -695,7 +695,7 @@ func TestStatelessAggregationTemporality(t *testing.T) {
 				[]*metricpb.ResourceMetrics{
 					{
 						Resource: testerAResourcePb,
-						InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
+						ScopeMetrics: []*metricpb.ScopeMetrics{
 							{
 								Metrics: []*metricpb.Metric{
 									{
@@ -782,34 +782,34 @@ func runMetricExportTests(t *testing.T, opts []otlpmetric.Option, res *resource.
 
 	// assert.ElementsMatch does not equate nested slices of different order,
 	// therefore this requires the top level slice to be broken down.
-	// Build a map of Resource/InstrumentationLibrary pairs to Metrics, from
-	// that validate the metric elements match for all expected pairs. Finally,
-	// make we saw all expected pairs.
-	keyFor := func(ilm *metricpb.InstrumentationLibraryMetrics) string {
-		return fmt.Sprintf("%s/%s/%s", ilm.GetInstrumentationLibrary().GetName(), ilm.GetInstrumentationLibrary().GetVersion(), ilm.GetSchemaUrl())
+	// Build a map of Resource/Scope pairs to Metrics, from that validate the
+	// metric elements match for all expected pairs. Finally, make we saw all
+	// expected pairs.
+	keyFor := func(sm *metricpb.ScopeMetrics) string {
+		return fmt.Sprintf("%s/%s/%s", sm.GetScope().GetName(), sm.GetScope().GetVersion(), sm.GetSchemaUrl())
 	}
 	got := map[string][]*metricpb.Metric{}
 	for _, rm := range driver.rm {
-		for _, ilm := range rm.InstrumentationLibraryMetrics {
-			k := keyFor(ilm)
-			got[k] = append(got[k], ilm.GetMetrics()...)
+		for _, sm := range rm.ScopeMetrics {
+			k := keyFor(sm)
+			got[k] = append(got[k], sm.GetMetrics()...)
 		}
 	}
 
 	seen := map[string]struct{}{}
 	for _, rm := range expected {
-		for _, ilm := range rm.InstrumentationLibraryMetrics {
-			k := keyFor(ilm)
+		for _, sm := range rm.ScopeMetrics {
+			k := keyFor(sm)
 			seen[k] = struct{}{}
 			g, ok := got[k]
 			if !ok {
-				t.Errorf("missing metrics for:\n\tInstrumentationLibrary: %q\n", k)
+				t.Errorf("missing metrics for:\n\tInstrumentationScope: %q\n", k)
 				continue
 			}
-			if !assert.Len(t, g, len(ilm.GetMetrics())) {
+			if !assert.Len(t, g, len(sm.GetMetrics())) {
 				continue
 			}
-			for i, expected := range ilm.GetMetrics() {
+			for i, expected := range sm.GetMetrics() {
 				assert.Equal(t, "", cmp.Diff(expected, g[i], protocmp.Transform()))
 			}
 		}

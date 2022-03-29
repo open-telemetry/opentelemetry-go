@@ -72,7 +72,7 @@ func toNanos(t time.Time) uint64 {
 // InstrumentationLibraryReader transforms all records contained in a checkpoint into
 // batched OTLP ResourceMetrics.
 func InstrumentationLibraryReader(ctx context.Context, temporalitySelector aggregation.TemporalitySelector, res *resource.Resource, ilmr export.InstrumentationLibraryReader, numWorkers uint) (*metricpb.ResourceMetrics, error) {
-	var ilms []*metricpb.InstrumentationLibraryMetrics
+	var sms []*metricpb.ScopeMetrics
 
 	err := ilmr.ForEach(func(lib instrumentation.Library, mr export.Reader) error {
 
@@ -107,24 +107,24 @@ func InstrumentationLibraryReader(ctx context.Context, temporalitySelector aggre
 			return nil
 		}
 
-		ilms = append(ilms, &metricpb.InstrumentationLibraryMetrics{
+		sms = append(sms, &metricpb.ScopeMetrics{
 			Metrics:   ms,
 			SchemaUrl: lib.SchemaURL,
-			InstrumentationLibrary: &commonpb.InstrumentationLibrary{
+			Scope: &commonpb.InstrumentationScope{
 				Name:    lib.Name,
 				Version: lib.Version,
 			},
 		})
 		return nil
 	})
-	if len(ilms) == 0 {
+	if len(sms) == 0 {
 		return nil, err
 	}
 
 	rms := &metricpb.ResourceMetrics{
-		Resource:                      Resource(res),
-		SchemaUrl:                     res.SchemaURL(),
-		InstrumentationLibraryMetrics: ilms,
+		Resource:     Resource(res),
+		SchemaUrl:    res.SchemaURL(),
+		ScopeMetrics: sms,
 	}
 
 	return rms, err
