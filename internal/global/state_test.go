@@ -12,36 +12,91 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global_test
+package global
 
 import (
 	"testing"
 
-	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 )
 
-func TestResetsOfGlobalsPanic(t *testing.T) {
-	global.ResetForTest()
-	tests := map[string]func(){
-		"SetTextMapPropagator": func() {
-			global.SetTextMapPropagator(global.TextMapPropagator())
-		},
-		"SetTracerProvider": func() {
-			global.SetTracerProvider(global.TracerProvider())
-		},
-	}
+func TestSetTracerProvider(t *testing.T) {
+	t.Cleanup(ResetForTest)
 
-	for name, test := range tests {
-		shouldPanic(t, name, test)
-	}
+	t.Run("Set With default is a noop", func(t *testing.T) {
+		ResetForTest()
+		SetTracerProvider(TracerProvider())
+
+		_, ok := TracerProvider().(*tracerProvider)
+		if !ok {
+			t.Error("Global Tracer Provider should be the default tracer provider")
+			return
+		}
+	})
+
+	t.Run("First Set() should replace the delegate", func(t *testing.T) {
+		ResetForTest()
+
+		SetTracerProvider(trace.NewNoopTracerProvider())
+
+		_, ok := TracerProvider().(*tracerProvider)
+		if ok {
+			t.Error("Global Tracer Provider was not changed")
+			return
+		}
+	})
+
+	t.Run("Set() should delegate existing Tracer Providers", func(t *testing.T) {
+		ResetForTest()
+
+		tp := TracerProvider()
+		SetTracerProvider(trace.NewNoopTracerProvider())
+
+		ntp := tp.(*tracerProvider)
+
+		if ntp.delegate == nil {
+			t.Error("The delegated tracer providers should have a delegate")
+		}
+	})
 }
 
-func shouldPanic(t *testing.T, name string, f func()) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("calling %s with default global did not panic", name)
-		}
-	}()
+func TestSetTextMapPropagator(t *testing.T) {
+	t.Cleanup(ResetForTest)
 
-	f()
+	t.Run("Set With default is a noop", func(t *testing.T) {
+		ResetForTest()
+		SetTextMapPropagator(TextMapPropagator())
+
+		_, ok := TextMapPropagator().(*textMapPropagator)
+		if !ok {
+			t.Error("Global TextMap Propagator should be the default propagator")
+			return
+		}
+	})
+
+	t.Run("First Set() should replace the delegate", func(t *testing.T) {
+		ResetForTest()
+
+		SetTextMapPropagator(propagation.TraceContext{})
+
+		_, ok := TextMapPropagator().(*textMapPropagator)
+		if ok {
+			t.Error("Global TextMap Propagator was not changed")
+			return
+		}
+	})
+
+	t.Run("Set() should delegate existing propagators", func(t *testing.T) {
+		ResetForTest()
+
+		p := TextMapPropagator()
+		SetTextMapPropagator(propagation.TraceContext{})
+
+		np := p.(*textMapPropagator)
+
+		if np.delegate == nil {
+			t.Error("The delegated TextMap propagators should have a delegate")
+		}
+	})
 }

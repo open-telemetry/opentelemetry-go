@@ -41,10 +41,9 @@ func SetMeterProvider(mp metric.MeterProvider) {
 	delegateMeterOnce.Do(func() {
 		current := MeterProvider()
 		if current == mp {
-			// Setting the provider to the prior default is nonsense, panic.
-			// Panic is acceptable because we are likely still early in the
-			// process lifetime.
-			panic("invalid MeterProvider, the global instance cannot be reinstalled")
+			// Setting the provider to the prior default results in a noop. Return
+			// early.
+			return
 		} else if def, ok := current.(*meterProvider); ok {
 			def.setDelegate(mp)
 		}

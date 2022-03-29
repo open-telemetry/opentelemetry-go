@@ -50,14 +50,12 @@ func SetTracerProvider(tp trace.TracerProvider) {
 	delegateTraceOnce.Do(func() {
 		current := TracerProvider()
 		if current == tp {
-			// Setting the provider to the prior default is nonsense, panic.
-			// Panic is acceptable because we are likely still early in the
-			// process lifetime.
-			panic("invalid TracerProvider, the global instance cannot be reinstalled")
+			// Setting the provider to the prior default results in a noop. Return
+			// early.
+			return
 		} else if def, ok := current.(*tracerProvider); ok {
 			def.setDelegate(tp)
 		}
-
 	})
 	globalTracer.Store(tracerProviderHolder{tp: tp})
 }
@@ -73,10 +71,9 @@ func SetTextMapPropagator(p propagation.TextMapPropagator) {
 	// delegate to p.
 	delegateTextMapPropagatorOnce.Do(func() {
 		if current := TextMapPropagator(); current == p {
-			// Setting the provider to the prior default is nonsense, panic.
-			// Panic is acceptable because we are likely still early in the
-			// process lifetime.
-			panic("invalid TextMapPropagator, the global instance cannot be reinstalled")
+			// Setting the provider to the prior default results in a noop. Return
+			// early.
+			return
 		} else if def, ok := current.(*textMapPropagator); ok {
 			def.SetDelegate(p)
 		}

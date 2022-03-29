@@ -18,8 +18,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"go.opentelemetry.io/otel/metric/nonrecording"
 )
 
@@ -31,13 +29,15 @@ func resetGlobalMeterProvider() {
 func TestSetMeterProvider(t *testing.T) {
 	t.Cleanup(resetGlobalMeterProvider)
 
-	t.Run("Set With default panics", func(t *testing.T) {
+	t.Run("Set With default is a noop", func(t *testing.T) {
 		resetGlobalMeterProvider()
+		SetMeterProvider(MeterProvider())
 
-		assert.Panics(t, func() {
-			SetMeterProvider(MeterProvider())
-		})
-
+		_, ok := MeterProvider().(*meterProvider)
+		if !ok {
+			t.Error("Global Meter Provider should be the default meter provider")
+			return
+		}
 	})
 
 	t.Run("First Set() should replace the delegate", func(t *testing.T) {

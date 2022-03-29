@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Don't panick anymore when setting a (Tracer|Meter)Provider or TextMapPropagator to itself (#2749)
+
 ## [1.6.1] - 2022-03-28
 
 ### Fixed
