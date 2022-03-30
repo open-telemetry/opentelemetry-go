@@ -48,17 +48,19 @@ func TracerProvider() trace.TracerProvider {
 
 // SetTracerProvider is the internal implementation for global.SetTracerProvider.
 func SetTracerProvider(tp trace.TracerProvider) {
+	current := TracerProvider()
+	if current == tp {
+		// Setting the provider to the prior default results in a noop. Return
+		// early.
+		Error(
+			errors.New("no delegate configured in tracer provider"),
+			"Setting tracer provider to it's current value. No delegate will be configured",
+		)
+		return
+	}
+
 	delegateTraceOnce.Do(func() {
-		current := TracerProvider()
-		if current == tp {
-			// Setting the provider to the prior default results in a noop. Return
-			// early.
-			Error(
-				errors.New("no delegate configured in tracer provider"),
-				"Setting tracer provider to it's current value. No delegate will be configured",
-			)
-			return
-		} else if def, ok := current.(*tracerProvider); ok {
+		if def, ok := current.(*tracerProvider); ok {
 			def.setDelegate(tp)
 		}
 	})
@@ -72,18 +74,21 @@ func TextMapPropagator() propagation.TextMapPropagator {
 
 // SetTextMapPropagator is the internal implementation for global.SetTextMapPropagator.
 func SetTextMapPropagator(p propagation.TextMapPropagator) {
+	current := TextMapPropagator()
+	if current == p {
+		// Setting the provider to the prior default results in a noop. Return
+		// early.
+		Error(
+			errors.New("no delegate configured in text map propagator"),
+			"Setting text map propagator to it's current value. No delegate will be configured",
+		)
+		return
+	}
+
 	// For the textMapPropagator already returned by TextMapPropagator
 	// delegate to p.
 	delegateTextMapPropagatorOnce.Do(func() {
-		if current := TextMapPropagator(); current == p {
-			// Setting the provider to the prior default results in a noop. Return
-			// early.
-			Error(
-				errors.New("no delegate configured in text map propagator"),
-				"Setting text map propagator to it's current value. No delegate will be configured",
-			)
-			return
-		} else if def, ok := current.(*textMapPropagator); ok {
+		if def, ok := current.(*textMapPropagator); ok {
 			def.SetDelegate(p)
 		}
 	})

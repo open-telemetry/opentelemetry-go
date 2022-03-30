@@ -40,17 +40,19 @@ func MeterProvider() metric.MeterProvider {
 
 // SetMeterProvider is the internal implementation for global.SetMeterProvider.
 func SetMeterProvider(mp metric.MeterProvider) {
+	current := MeterProvider()
+	if current == mp {
+		// Setting the provider to the prior default results in a noop. Return
+		// early.
+		global.Error(
+			errors.New("no delegate configured in meter provider"),
+			"Setting meter provider to it's current value. No delegate will be configured",
+		)
+		return
+	}
+
 	delegateMeterOnce.Do(func() {
-		current := MeterProvider()
-		if current == mp {
-			// Setting the provider to the prior default results in a noop. Return
-			// early.
-			global.Error(
-				errors.New("no delegate configured in meter provider"),
-				"Setting meter provider to it's current value. No delegate will be configured",
-			)
-			return
-		} else if def, ok := current.(*meterProvider); ok {
+		if def, ok := current.(*meterProvider); ok {
 			def.setDelegate(mp)
 		}
 	})
