@@ -31,7 +31,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 	"go.opentelemetry.io/otel/sdk/metric/reader"
-	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/metric/sdkinstrument"
 )
 
 // Performance note: there is still 1 obligatory allocation in the
@@ -44,7 +44,7 @@ type (
 	Instrument struct {
 		instrument.Synchronous
 
-		descriptor sdkapi.Descriptor
+		descriptor sdkinstrument.Descriptor
 		compiled   viewstate.Instrument
 		current    sync.Map // map[attribute.Set]*record
 	}
@@ -62,8 +62,6 @@ type (
 		// supports checking for no updates during a round.
 		collectedCount int64
 
-		distinct    attribute.Set
-		attributes  []attribute.KeyValue
 		accumulator viewstate.Accumulator
 	}
 
@@ -85,14 +83,14 @@ var (
 	_ syncfloat64.Histogram     = histogram[float64, traits.Float64]{}
 )
 
-func NewInstrument(desc sdkapi.Descriptor, compiled viewstate.Instrument) *Instrument {
+func NewInstrument(desc sdkinstrument.Descriptor, compiled viewstate.Instrument) *Instrument {
 	return &Instrument{
 		descriptor: desc,
 		compiled:   compiled,
 	}
 }
 
-func (inst *Instrument) Descriptor() sdkapi.Descriptor {
+func (inst *Instrument) Descriptor() sdkinstrument.Descriptor {
 	return inst.descriptor
 }
 
@@ -199,8 +197,6 @@ func acquireRecord[N number.Any](inst *Instrument, attrs []attribute.KeyValue) (
 	newRec := &record{
 		refMapped:  refcountMapped{value: 2},
 		instrument: inst,
-		distinct:   aset,
-		attributes: attrs,
 	}
 
 	for {

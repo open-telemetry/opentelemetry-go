@@ -7,7 +7,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/metric/sdkinstrument"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -18,7 +18,7 @@ type (
 
 	Option func(*Config)
 
-	DefaultsFunc func(sdkapi.InstrumentKind) (aggregation.Kind, aggregation.Temporality)
+	DefaultsFunc func(sdkinstrument.Kind) (aggregation.Kind, aggregation.Temporality)
 
 	Reader struct {
 		config   Config
@@ -42,7 +42,7 @@ type (
 	}
 
 	Instrument struct {
-		Instrument  sdkapi.Descriptor
+		Instrument  sdkinstrument.Descriptor
 		Temporality aggregation.Temporality
 		Series      []Series
 	}
@@ -76,35 +76,31 @@ func WithDefaults(defaults DefaultsFunc) Option {
 	}
 }
 
-func standardDefaults(ik sdkapi.InstrumentKind) (aggregation.Kind, aggregation.Temporality) {
+func standardDefaults(ik sdkinstrument.Kind) (aggregation.Kind, aggregation.Temporality) {
 	var ak aggregation.Kind
 	switch ik {
-	case sdkapi.HistogramInstrumentKind:
+	case sdkinstrument.HistogramKind:
 		ak = aggregation.HistogramKind
-	case sdkapi.GaugeObserverInstrumentKind:
+	case sdkinstrument.GaugeObserverKind:
 		ak = aggregation.LastValueKind
-	case sdkapi.CounterInstrumentKind,
-		sdkapi.UpDownCounterInstrumentKind,
-		sdkapi.CounterObserverInstrumentKind,
-		sdkapi.UpDownCounterObserverInstrumentKind:
+	case sdkinstrument.CounterKind,
+		sdkinstrument.UpDownCounterKind,
+		sdkinstrument.CounterObserverKind,
+		sdkinstrument.UpDownCounterObserverKind:
 		ak = aggregation.SumKind
 	}
 	return ak, aggregation.CumulativeTemporality
 }
 
-func NewConfig(opts ...Option) Config {
+func New(exporter Exporter, opts ...Option) *Reader {
 	cfg := Config{
 		defaults: standardDefaults,
 	}
 	for _, opt := range opts {
 		opt(&cfg)
 	}
-	return cfg
-}
-
-func New(config Config, exporter Exporter) *Reader {
 	return &Reader{
-		config:   config,
+		config:   cfg,
 		exporter: exporter,
 	}
 }

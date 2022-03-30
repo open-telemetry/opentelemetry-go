@@ -18,14 +18,14 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
-	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/metric/sdkinstrument"
 )
 
 // RangeTest is a common routine for testing for valid input values.
 // This rejects NaN and Inf values.  This rejects negative values when the
 // metric instrument does not support negative values, including
 // monotonic counter metrics and absolute Histogram metrics.
-func RangeTest[N number.Any, Traits traits.Any[N]](num N, desc *sdkapi.Descriptor) error {
+func RangeTest[N number.Any, Traits traits.Any[N]](num N, desc *sdkinstrument.Descriptor) error {
 	var traits Traits
 
 	if traits.IsInf(num) {
@@ -37,10 +37,10 @@ func RangeTest[N number.Any, Traits traits.Any[N]](num N, desc *sdkapi.Descripto
 	}
 
 	// Check for negative values
-	switch desc.InstrumentKind() {
-	case sdkapi.CounterInstrumentKind,
-		sdkapi.CounterObserverInstrumentKind,
-		sdkapi.HistogramInstrumentKind:
+	switch desc.Kind {
+	case sdkinstrument.CounterKind,
+		sdkinstrument.CounterObserverKind,
+		sdkinstrument.HistogramKind:
 		if num < 0 {
 			return aggregation.ErrNegativeInput
 		}

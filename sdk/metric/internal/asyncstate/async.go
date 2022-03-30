@@ -13,7 +13,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 	"go.opentelemetry.io/otel/sdk/metric/reader"
-	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/metric/sdkinstrument"
 )
 
 type (
@@ -25,7 +25,7 @@ type (
 	Instrument struct {
 		apiInstrument.Asynchronous
 
-		descriptor sdkapi.Descriptor
+		descriptor sdkinstrument.Descriptor
 		compiled   viewstate.Instrument
 		state      map[*reader.Reader]*readerState
 	}
@@ -49,7 +49,7 @@ type (
 	contextKey struct{}
 )
 
-func NewInstrument(desc sdkapi.Descriptor, compiled viewstate.Instrument) *Instrument {
+func NewInstrument(desc sdkinstrument.Descriptor, compiled viewstate.Instrument) *Instrument {
 	return &Instrument{
 		descriptor: desc,
 		compiled:   compiled,
@@ -61,7 +61,7 @@ func NewObserver[N number.Any, Traits traits.Any[N]](inst *Instrument) observer[
 	return observer[N, Traits]{inst: inst}
 }
 
-func (inst *Instrument) Descriptor() sdkapi.Descriptor {
+func (inst *Instrument) Descriptor() sdkinstrument.Descriptor {
 	return inst.descriptor
 }
 

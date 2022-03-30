@@ -15,7 +15,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 	"go.opentelemetry.io/otel/sdk/metric/reader"
-	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/metric/sdkinstrument"
 	"go.opentelemetry.io/otel/sdk/metric/views"
 )
 
@@ -65,7 +65,7 @@ type (
 	multiAccumulator[N number.Any] []Accumulator
 
 	configuredBehavior struct {
-		desc   sdkapi.Descriptor
+		desc   sdkinstrument.Descriptor
 		kind   aggregation.Kind
 		keys   attribute.Filter
 		acfg   aggregator.Config
@@ -74,7 +74,7 @@ type (
 
 	baseMetric[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
 		lock sync.Mutex
-		desc sdkapi.Descriptor
+		desc sdkinstrument.Descriptor
 		acfg aggregator.Config
 		data map[attribute.Set]*Storage
 		keys attribute.Filter
@@ -146,7 +146,7 @@ func New(lib instrumentation.Library, views []views.View, readers []*reader.Read
 // Compile is called during NewInstrument by the Meter
 // implementation, the result saved in the instrument and used to
 // construct new Accumulators throughout its lifetime.
-func (v *Compiler) Compile(instrument sdkapi.Descriptor) Instrument {
+func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) Instrument {
 	configs := make([][]configuredBehavior, len(v.readers))
 	matches := make([]views.View, 0, len(v.views))
 
@@ -169,7 +169,7 @@ func (v *Compiler) Compile(instrument sdkapi.Descriptor) Instrument {
 				kind = view.Aggregation()
 				acfg.Histogram = histogram.NewConfig(
 					// @@@ per-reader histogram defaults
-					histogramDefaultsFor(instrument.NumberKind()),
+					histogramDefaultsFor(instrument.NumberKind),
 					view.HistogramOptions()...,
 				)
 			default:
@@ -213,14 +213,14 @@ func (v *Compiler) Compile(instrument sdkapi.Descriptor) Instrument {
 		r := v.readers[readerIdx]
 
 		for _, config := range readerList {
-			if _, has := v.names[readerIdx][config.desc.Name()]; has {
+			if _, has := v.names[readerIdx][config.desc.Name]; has {
 				otel.Handle(fmt.Errorf("duplicate view name registered"))
 				continue
 			}
-			v.names[readerIdx][config.desc.Name()] = struct{}{}
+			v.names[readerIdx][config.desc.Name] = struct{}{}
 
 			var one Instrument
-			switch config.desc.NumberKind() {
+			switch config.desc.NumberKind {
 			case number.Int64Kind:
 				one = buildView[int64, traits.Int64](config)
 			case number.Float64Kind:
@@ -244,30 +244,30 @@ func (v *Compiler) Compile(instrument sdkapi.Descriptor) Instrument {
 			}
 		}
 	}
-	if instrument.NumberKind() == number.Int64Kind {
+	if instrument.NumberKind == number.Int64Kind {
 		return multiInstrument[int64](compiled)
 	}
 	return multiInstrument[float64](compiled)
 }
 
-func aggregatorConfigFor(desc sdkapi.Descriptor, defaults reader.DefaultsFunc) aggregation.Kind {
-	aggr, _ := defaults(desc.InstrumentKind())
+func aggregatorConfigFor(desc sdkinstrument.Descriptor, defaults reader.DefaultsFunc) aggregation.Kind {
+	aggr, _ := defaults(desc.Kind)
 	return aggr
 }
 
-func viewDescriptor(instrument sdkapi.Descriptor, v views.View) sdkapi.Descriptor {
-	ikind := instrument.InstrumentKind()
-	nkind := instrument.NumberKind()
-	name := instrument.Name()
-	description := instrument.Description()
-	unit := instrument.Unit()
+func viewDescriptor(instrument sdkinstrument.Descriptor, v views.View) sdkinstrument.Descriptor {
+	ikind := instrument.Kind
+	nkind := instrument.NumberKind
+	name := instrument.Name
+	description := instrument.Description
+	unit := instrument.Unit
 	if v.HasName() {
 		name = v.Name()
 	}
 	if v.Description() != "" {
-		description = instrument.Description()
+		description = instrument.Description
 	}
-	return sdkapi.NewDescriptor(name, ikind, nkind, description, unit)
+	return sdkinstrument.NewDescriptor(name, ikind, nkind, description, unit)
 }
 
 func histogramDefaultsFor(kind number.Kind) histogram.Defaults {
@@ -278,7 +278,7 @@ func histogramDefaultsFor(kind number.Kind) histogram.Defaults {
 }
 
 func buildView[N number.Any, Traits traits.Any[N]](config configuredBehavior) Instrument {
-	if config.desc.InstrumentKind().Synchronous() {
+	if config.desc.Kind.Synchronous() {
 		return compileSync[N, Traits](config)
 	}
 	return compileAsync[N, Traits](config)
@@ -289,7 +289,7 @@ func newSyncView[
 	Storage any,
 	Methods aggregator.Methods[N, Storage],
 ](config configuredBehavior) Instrument {
-	_, tempo := config.reader.Defaults()(config.desc.InstrumentKind())
+	_, tempo := config.reader.Defaults()(config.desc.Kind)
 	metric := baseMetric[N, Storage, Methods]{
 		desc: config.desc,
 		acfg: config.acfg,
@@ -315,7 +315,7 @@ func newAsyncView[
 	Storage any,
 	Methods aggregator.Methods[N, Storage],
 ](config configuredBehavior) Instrument {
-	_, tempo := config.reader.Defaults()(config.desc.InstrumentKind())
+	_, tempo := config.reader.Defaults()(config.desc.Kind)
 	metric := baseMetric[N, Storage, Methods]{
 		desc: config.desc,
 		acfg: config.acfg,
@@ -432,7 +432,7 @@ func (sc *syncAccumulator[N, Storage, Methods]) Update(number N) {
 func (sc *syncAccumulator[N, Storage, Methods]) Accumulate() {
 	var methods Methods
 	methods.SynchronizedMove(&sc.current, &sc.snapshot)
-	methods.Merge(&sc.snapshot, sc.output)
+	methods.Merge(sc.output, &sc.snapshot)
 }
 
 // asyncAccumulator
@@ -623,7 +623,7 @@ func (p *statefulAsyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, se
 			}
 			// Output the difference except for Gauge, in
 			// which case output the new value.
-			if p.desc.InstrumentKind().HasTemporality() {
+			if p.desc.Kind.HasTemporality() {
 				storage = pval
 			}
 		}

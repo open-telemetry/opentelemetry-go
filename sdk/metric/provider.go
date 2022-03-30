@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/internal/viewstate"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/reader"
-	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/metric/sdkinstrument"
 	"go.opentelemetry.io/otel/sdk/metric/views"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -42,7 +42,7 @@ type (
 	}
 
 	instrumentIface interface {
-		Descriptor() sdkapi.Descriptor
+		Descriptor() sdkinstrument.Descriptor
 		Collect(r *reader.Reader, seq reader.Sequence, output *[]reader.Instrument)
 	}
 
@@ -196,11 +196,11 @@ func nameLookup[T instrumentIface](
 	name string,
 	opts []instrument.Option,
 	nk number.Kind,
-	ik sdkapi.InstrumentKind,
-	f func(desc sdkapi.Descriptor) T,
+	ik sdkinstrument.Kind,
+	f func(desc sdkinstrument.Descriptor) T,
 ) (T, error) {
 	cfg := instrument.NewConfig(opts...)
-	desc := sdkapi.NewDescriptor(name, ik, nk, cfg.Description(), cfg.Unit())
+	desc := sdkinstrument.NewDescriptor(name, ik, nk, cfg.Description(), cfg.Unit())
 
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -214,7 +214,7 @@ func nameLookup[T instrumentIface](
 
 		exist := found.Descriptor()
 
-		if exist.NumberKind() != nk || exist.InstrumentKind() != ik || exist.Unit() != cfg.Unit() {
+		if exist.NumberKind != nk || exist.Kind != ik || exist.Unit != cfg.Unit() {
 			continue
 		}
 

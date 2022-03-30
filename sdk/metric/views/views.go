@@ -8,7 +8,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/number"
-	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/metric/sdkinstrument"
 )
 
 type (
@@ -22,7 +22,7 @@ type (
 		// Matchers for the instrument
 		instrumentName       string
 		instrumentNameRegexp *regexp.Regexp
-		instrumentKind       sdkapi.InstrumentKind
+		instrumentKind       sdkinstrument.Kind
 		numberKind           number.Kind
 		library              instrumentation.Library
 
@@ -39,8 +39,8 @@ type (
 )
 
 const (
-	unsetInstrumentKind = sdkapi.InstrumentKind(-1)
-	unsetNumberKind     = number.Kind(-1)
+	unsetKind       = sdkinstrument.Kind(-1)
+	unsetNumberKind = number.Kind(-1)
 )
 
 // Matchers
@@ -57,7 +57,7 @@ func MatchInstrumentNameRegexp(re *regexp.Regexp) Option {
 	}
 }
 
-func MatchInstrumentKind(k sdkapi.InstrumentKind) Option {
+func MatchKind(k sdkinstrument.Kind) Option {
 	return func(cfg *Config) {
 		cfg.instrumentKind = k
 	}
@@ -118,7 +118,7 @@ func WithTemporality(tempo aggregation.Temporality) Option {
 
 func New(opts ...Option) View {
 	cfg := Config{
-		instrumentKind: unsetInstrumentKind,
+		instrumentKind: unsetKind,
 		numberKind:     unsetNumberKind,
 	}
 	for _, opt := range opts {
@@ -172,8 +172,8 @@ func stringMismatch(test, value string) bool {
 	return test != "" && test != value
 }
 
-func ikindMismatch(test, value sdkapi.InstrumentKind) bool {
-	return test != unsetInstrumentKind && test != value
+func ikindMismatch(test, value sdkinstrument.Kind) bool {
+	return test != unsetKind && test != value
 }
 
 func nkindMismatch(test, value number.Kind) bool {
@@ -184,12 +184,12 @@ func regexpMismatch(test *regexp.Regexp, value string) bool {
 	return test != nil && test.MatchString(value)
 }
 
-func (v View) Matches(lib instrumentation.Library, desc sdkapi.Descriptor) bool {
+func (v View) Matches(lib instrumentation.Library, desc sdkinstrument.Descriptor) bool {
 	return !stringMismatch(v.cfg.library.Name, lib.Name) &&
 		!stringMismatch(v.cfg.library.Version, lib.Version) &&
 		!stringMismatch(v.cfg.library.SchemaURL, lib.SchemaURL) &&
-		!stringMismatch(v.cfg.instrumentName, desc.Name()) &&
-		!ikindMismatch(v.cfg.instrumentKind, desc.InstrumentKind()) &&
-		!nkindMismatch(v.cfg.numberKind, desc.NumberKind()) &&
-		!regexpMismatch(v.cfg.instrumentNameRegexp, desc.Name())
+		!stringMismatch(v.cfg.instrumentName, desc.Name) &&
+		!ikindMismatch(v.cfg.instrumentKind, desc.Kind) &&
+		!nkindMismatch(v.cfg.numberKind, desc.NumberKind) &&
+		!regexpMismatch(v.cfg.instrumentNameRegexp, desc.Name)
 }
