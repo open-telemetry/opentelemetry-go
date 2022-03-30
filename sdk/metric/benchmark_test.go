@@ -74,8 +74,8 @@ func (f *benchFixture) fCounter(name string) syncfloat64.Counter {
 	return ctr
 }
 
-func (f *benchFixture) iUpDownCounter(name string) syncfloat64.UpDownCounter {
-	ctr, err := f.meter.SyncFloat64().UpDownCounter(name)
+func (f *benchFixture) iUpDownCounter(name string) syncint64.UpDownCounter {
+	ctr, err := f.meter.SyncInt64().UpDownCounter(name)
 	if err != nil {
 		f.B.Error(err)
 	}
