@@ -35,12 +35,12 @@ func TestSetMeterProvider(t *testing.T) {
 
 		mp, ok := MeterProvider().(*meterProvider)
 		if !ok {
-			t.Error("Global Meter Provider should be the default meter provider")
+			t.Fatal("Global Meter Provider should be the default meter provider")
 			return
 		}
 
 		if mp.delegate != nil {
-			t.Error("meter provider should not delegate when setting itself")
+			t.Fatal("meter provider should not delegate when setting itself")
 		}
 	})
 
@@ -51,7 +51,7 @@ func TestSetMeterProvider(t *testing.T) {
 
 		_, ok := MeterProvider().(*meterProvider)
 		if ok {
-			t.Error("Global Meter Provider was not changed")
+			t.Fatal("Global Meter Provider was not changed")
 			return
 		}
 	})
@@ -66,7 +66,7 @@ func TestSetMeterProvider(t *testing.T) {
 		dmp := mp.(*meterProvider)
 
 		if dmp.delegate == nil {
-			t.Error("The delegated meter providers should have a delegate")
+			t.Fatal("The delegated meter providers should have a delegate")
 		}
 	})
 }

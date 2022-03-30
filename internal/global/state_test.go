@@ -30,12 +30,12 @@ func TestSetTracerProvider(t *testing.T) {
 
 		tp, ok := TracerProvider().(*tracerProvider)
 		if !ok {
-			t.Error("Global Tracer Provider should be the default tracer provider")
+			t.Fatal("Global Tracer Provider should be the default tracer provider")
 			return
 		}
 
 		if tp.delegate != nil {
-			t.Error("tracer provider should not delegate when setting itself")
+			t.Fatal("tracer provider should not delegate when setting itself")
 		}
 	})
 
@@ -46,7 +46,7 @@ func TestSetTracerProvider(t *testing.T) {
 
 		_, ok := TracerProvider().(*tracerProvider)
 		if ok {
-			t.Error("Global Tracer Provider was not changed")
+			t.Fatal("Global Tracer Provider was not changed")
 			return
 		}
 	})
@@ -60,7 +60,7 @@ func TestSetTracerProvider(t *testing.T) {
 		ntp := tp.(*tracerProvider)
 
 		if ntp.delegate == nil {
-			t.Error("The delegated tracer providers should have a delegate")
+			t.Fatal("The delegated tracer providers should have a delegate")
 		}
 	})
 }
@@ -74,12 +74,12 @@ func TestSetTextMapPropagator(t *testing.T) {
 
 		tmp, ok := TextMapPropagator().(*textMapPropagator)
 		if !ok {
-			t.Error("Global TextMap Propagator should be the default propagator")
+			t.Fatal("Global TextMap Propagator should be the default propagator")
 			return
 		}
 
 		if tmp.delegate != nil {
-			t.Error("TextMap propagator should not delegate when setting itself")
+			t.Fatal("TextMap propagator should not delegate when setting itself")
 		}
 	})
 
@@ -90,7 +90,7 @@ func TestSetTextMapPropagator(t *testing.T) {
 
 		_, ok := TextMapPropagator().(*textMapPropagator)
 		if ok {
-			t.Error("Global TextMap Propagator was not changed")
+			t.Fatal("Global TextMap Propagator was not changed")
 			return
 		}
 	})
@@ -104,7 +104,7 @@ func TestSetTextMapPropagator(t *testing.T) {
 		np := p.(*textMapPropagator)
 
 		if np.delegate == nil {
-			t.Error("The delegated TextMap propagators should have a delegate")
+			t.Fatal("The delegated TextMap propagators should have a delegate")
 		}
 	})
 }
