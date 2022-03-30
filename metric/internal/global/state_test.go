@@ -33,10 +33,14 @@ func TestSetMeterProvider(t *testing.T) {
 		resetGlobalMeterProvider()
 		SetMeterProvider(MeterProvider())
 
-		_, ok := MeterProvider().(*meterProvider)
+		mp, ok := MeterProvider().(*meterProvider)
 		if !ok {
 			t.Error("Global Meter Provider should be the default meter provider")
 			return
+		}
+
+		if mp.delegate != nil {
+			t.Error("meter provider should not delegate when setting itself")
 		}
 	})
 

@@ -28,10 +28,14 @@ func TestSetTracerProvider(t *testing.T) {
 		ResetForTest()
 		SetTracerProvider(TracerProvider())
 
-		_, ok := TracerProvider().(*tracerProvider)
+		tp, ok := TracerProvider().(*tracerProvider)
 		if !ok {
 			t.Error("Global Tracer Provider should be the default tracer provider")
 			return
+		}
+
+		if tp.delegate != nil {
+			t.Error("tracer provider should not delegate when setting itself")
 		}
 	})
 
@@ -68,10 +72,14 @@ func TestSetTextMapPropagator(t *testing.T) {
 		ResetForTest()
 		SetTextMapPropagator(TextMapPropagator())
 
-		_, ok := TextMapPropagator().(*textMapPropagator)
+		tmp, ok := TextMapPropagator().(*textMapPropagator)
 		if !ok {
 			t.Error("Global TextMap Propagator should be the default propagator")
 			return
+		}
+
+		if tmp.delegate != nil {
+			t.Error("TextMap propagator should not delegate when setting itself")
 		}
 	})
 
