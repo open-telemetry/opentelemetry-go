@@ -17,6 +17,7 @@ package global // import "go.opentelemetry.io/otel/internal/global"
 import (
 	"sync"
 	"sync/atomic"
+	"testing"
 
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -97,10 +98,13 @@ func defaultPropagatorsValue() *atomic.Value {
 	return v
 }
 
-// ResetForTest restores the initial global state, for testing purposes.
-func ResetForTest() {
-	globalTracer = defaultTracerValue()
-	globalPropagators = defaultPropagatorsValue()
-	delegateTraceOnce = sync.Once{}
-	delegateTextMapPropagatorOnce = sync.Once{}
+// ResetForTest configures the test to restores the initial global state during
+// its Cleanup step
+func ResetForTest(t testing.TB) {
+	t.Cleanup(func() {
+		globalTracer = defaultTracerValue()
+		globalPropagators = defaultPropagatorsValue()
+		delegateTraceOnce = sync.Once{}
+		delegateTextMapPropagatorOnce = sync.Once{}
+	})
 }

@@ -23,7 +23,7 @@ import (
 )
 
 func TestTextMapPropagatorDelegation(t *testing.T) {
-	global.ResetForTest()
+	global.ResetForTest(t)
 	ctx := context.Background()
 	carrier := internaltest.NewTextMapCarrier(nil)
 
@@ -53,7 +53,7 @@ func TestTextMapPropagatorDelegation(t *testing.T) {
 }
 
 func TestTextMapPropagatorDelegationNil(t *testing.T) {
-	global.ResetForTest()
+	global.ResetForTest(t)
 	ctx := context.Background()
 	carrier := internaltest.NewTextMapCarrier(nil)
 
@@ -75,7 +75,7 @@ func TestTextMapPropagatorDelegationNil(t *testing.T) {
 }
 
 func TestTextMapPropagatorFields(t *testing.T) {
-	global.ResetForTest()
+	global.ResetForTest(t)
 	initial := global.TextMapPropagator()
 	delegate := internaltest.NewTextMapPropagator("test")
 	delegateFields := delegate.Fields()
