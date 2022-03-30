@@ -337,10 +337,6 @@ func newAsyncView[
 	if tempo == aggregation.DeltaTemporality {
 		return &statefulAsyncProcess[N, Storage, Config, Methods]{
 			compiledAsyncInstrument: instrument,
-
-			// Note: this is extra storage relative to the
-			// other three methods.
-			prior: map[attribute.Set]*Storage{},
 		}
 	}
 
@@ -503,8 +499,6 @@ func (metric *baseMetric[N, Storage, Config, Methods]) newStorage() *Storage {
 	return ns
 }
 
-// NewAccumulator
-
 // NewAccumulator returns a Accumulator for a synchronous instrument view.
 func (csv *compiledSyncInstrument[N, Storage, Config, Methods]) NewAccumulator(kvs []attribute.KeyValue, _ *reader.Reader) Accumulator {
 	sc := &syncAccumulator[N, Storage, Config, Methods]{}
@@ -534,33 +528,7 @@ func (mi multiInstrument[N]) Collect(reader *reader.Reader, sequence reader.Sequ
 	}
 }
 
-// Collect is for Cumulative, Stateless asynchronous instruments
-func (p *statelessAsyncProcess[N, Storage, Config, Methods]) Collect(_ *reader.Reader, seq reader.Sequence, output *[]reader.Instrument) {
-	var methods Methods
-
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
-	*output = append(*output, reader.Instrument{
-		Instrument:  p.desc,
-		Temporality: aggregation.CumulativeTemporality,
-	})
-	ioutput := &(*output)[len(*output)-1]
-
-	for set, storage := range p.data {
-		// Copy the underlying storage.
-		ioutput.Series = append(ioutput.Series, reader.Series{
-			Attributes:  set,
-			Aggregation: methods.Aggregation(storage),
-			Start:       seq.Start,
-			End:         seq.Now,
-		})
-	}
-	// Reset the entire map.
-	p.data = map[attribute.Set]*Storage{}
-}
-
-// Collect is for Delta, Stateful synchronous instruments
+// Collect for Synchronous Delta->Cumulative
 func (p *statefulSyncProcess[N, Storage, Config, Methods]) Collect(_ *reader.Reader, seq reader.Sequence, output *[]reader.Instrument) {
 	var methods Methods
 
@@ -584,7 +552,7 @@ func (p *statefulSyncProcess[N, Storage, Config, Methods]) Collect(_ *reader.Rea
 	}
 }
 
-// Delta (Stateless)
+// Collect for Synchronous Delta->Delta
 func (p *statelessSyncProcess[N, Storage, Config, Methods]) Collect(_ *reader.Reader, seq reader.Sequence, output *[]reader.Instrument) {
 	var methods Methods
 
@@ -618,6 +586,71 @@ func (p *statelessSyncProcess[N, Storage, Config, Methods]) Collect(_ *reader.Re
 	}
 }
 
-func (p *statefulAsyncProcess[N, Storage, Config, Methods]) Collect(_ *reader.Reader, sequence reader.Sequence, output *[]reader.Instrument) {
-	// @@@ HERE YOU ARE
+// Collect for Asychronous Cumulative->Cumulative
+func (p *statelessAsyncProcess[N, Storage, Config, Methods]) Collect(_ *reader.Reader, seq reader.Sequence, output *[]reader.Instrument) {
+	var methods Methods
+
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	*output = append(*output, reader.Instrument{
+		Instrument:  p.desc,
+		Temporality: aggregation.CumulativeTemporality,
+	})
+	ioutput := &(*output)[len(*output)-1]
+
+	for set, storage := range p.data {
+		// Copy the underlying storage.
+		ioutput.Series = append(ioutput.Series, reader.Series{
+			Attributes:  set,
+			Aggregation: methods.Aggregation(storage),
+			Start:       seq.Start,
+			End:         seq.Now,
+		})
+	}
+	// Reset the entire map.
+	p.data = map[attribute.Set]*Storage{}
+}
+
+// Collect for Asynchronous Cumulative->Delta
+func (p *statefulAsyncProcess[N, Storage, Config, Methods]) Collect(_ *reader.Reader, seq reader.Sequence, output *[]reader.Instrument) {
+	var methods Methods
+
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	*output = append(*output, reader.Instrument{
+		Instrument:  p.desc,
+		Temporality: aggregation.DeltaTemporality,
+	})
+	ioutput := &(*output)[len(*output)-1]
+
+	for set, storage := range p.data {
+		pval, has := p.prior[set]
+		if has {
+			// This does `*pval := *storage - *pval`
+			methods.SubtractSwap(storage, pval)
+
+			// Skip the series if the difference has no data.
+			// Note: common to use "deadband" here?
+			if !methods.HasData(pval) {
+				continue
+			}
+			// Output the difference except for Gauge, in
+			// which case output the new value.
+			if p.desc.InstrumentKind().HasTemporality() {
+				storage = pval
+			}
+		}
+
+		ioutput.Series = append(ioutput.Series, reader.Series{
+			Attributes:  set,
+			Aggregation: methods.Aggregation(storage),
+			Start:       seq.Start,
+			End:         seq.Now,
+		})
+	}
+	// Copy the current to the prior and reset.
+	p.prior = p.data
+	p.data = map[attribute.Set]*Storage{}
 }

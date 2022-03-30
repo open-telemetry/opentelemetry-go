@@ -116,6 +116,6 @@ func (Methods[N, Traits, Storage]) Storage(aggr aggregation.Aggregation) *State[
 	return aggr.(*State[N, Traits])
 }
 
-func (Methods[N, Traits, Storage]) Subtract(valueToModify, operand *State[N, Traits]) error {
-	return ErrNoSubtract
+func (Methods[N, Traits, Storage]) SubtractSwap(valueUnmodified, operandToModify *State[N, Traits]) {
+	operandToModify.value = valueUnmodified.value - operandToModify.value
 }

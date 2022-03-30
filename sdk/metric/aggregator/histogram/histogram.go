@@ -243,7 +243,6 @@ func (Methods[N, Traits, Storage]) Storage(aggr aggregation.Aggregation) *State[
 	return aggr.(*State[N, Traits])
 }
 
-func (Methods[N, Traits, Storage]) Subtract(valueToModify, operand *State[N, Traits]) error {
-	// This is because asynchronous histograms are not included in the data model.
-	return ErrNoSubtract
+func (Methods[N, Traits, Storage]) SubtractSwap(valueToModify, operand *State[N, Traits]) {
+	panic("@@@HERE")
 }

@@ -70,8 +70,8 @@ type Methods[N number.Any, Storage, Config any] interface {
 	// Merge adds the contents of `input` to `output`.
 	Merge(output, input *Storage)
 
-	// Subtract removes the contents of `operand` from `valueToModify`
-	Subtract(valueToModify, operand *Storage) error
+	// SubtractSwap removes the contents of `operand` from `valueToModify`
+	SubtractSwap(valueToModify, operandToModify *Storage)
 
 	// Aggregation returns an exporter-ready value.
 	Aggregation(ptr *Storage) aggregation.Aggregation

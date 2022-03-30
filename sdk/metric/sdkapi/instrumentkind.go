@@ -46,35 +46,7 @@ func (k InstrumentKind) Synchronous() bool {
 	return false
 }
 
-// Asynchronous returns whether this is an asynchronous kind of instrument.
-func (k InstrumentKind) Asynchronous() bool {
-	return !k.Synchronous()
-}
-
-// Adding returns whether this kind of instrument adds its inputs (as opposed to Grouping).
-func (k InstrumentKind) Adding() bool {
-	switch k {
-	case CounterInstrumentKind, UpDownCounterInstrumentKind, CounterObserverInstrumentKind, UpDownCounterObserverInstrumentKind:
-		return true
-	}
-	return false
-}
-
-// Grouping returns whether this kind of instrument groups its inputs (as opposed to Adding).
-func (k InstrumentKind) Grouping() bool {
-	return !k.Adding()
-}
-
-// Monotonic returns whether this kind of instrument exposes a non-decreasing sum.
-func (k InstrumentKind) Monotonic() bool {
-	switch k {
-	case CounterInstrumentKind, CounterObserverInstrumentKind:
-		return true
-	}
-	return false
-}
-
-// PrecomputedSum returns whether this kind of instrument receives precomputed sums.
-func (k InstrumentKind) PrecomputedSum() bool {
-	return k.Adding() && k.Asynchronous()
+// HasTemporality
+func (k InstrumentKind) HasTemporality() bool {
+	return k != GaugeObserverInstrumentKind
 }
