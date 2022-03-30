@@ -36,7 +36,6 @@ func TestSetMeterProvider(t *testing.T) {
 		mp, ok := MeterProvider().(*meterProvider)
 		if !ok {
 			t.Fatal("Global Meter Provider should be the default meter provider")
-			return
 		}
 
 		if mp.delegate != nil {
@@ -52,7 +51,6 @@ func TestSetMeterProvider(t *testing.T) {
 		_, ok := MeterProvider().(*meterProvider)
 		if ok {
 			t.Fatal("Global Meter Provider was not changed")
-			return
 		}
 	})
 

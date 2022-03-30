@@ -31,7 +31,6 @@ func TestSetTracerProvider(t *testing.T) {
 		tp, ok := TracerProvider().(*tracerProvider)
 		if !ok {
 			t.Fatal("Global Tracer Provider should be the default tracer provider")
-			return
 		}
 
 		if tp.delegate != nil {
@@ -47,7 +46,6 @@ func TestSetTracerProvider(t *testing.T) {
 		_, ok := TracerProvider().(*tracerProvider)
 		if ok {
 			t.Fatal("Global Tracer Provider was not changed")
-			return
 		}
 	})
 
@@ -75,7 +73,6 @@ func TestSetTextMapPropagator(t *testing.T) {
 		tmp, ok := TextMapPropagator().(*textMapPropagator)
 		if !ok {
 			t.Fatal("Global TextMap Propagator should be the default propagator")
-			return
 		}
 
 		if tmp.delegate != nil {
@@ -91,7 +88,6 @@ func TestSetTextMapPropagator(t *testing.T) {
 		_, ok := TextMapPropagator().(*textMapPropagator)
 		if ok {
 			t.Fatal("Global TextMap Propagator was not changed")
-			return
 		}
 	})
 
