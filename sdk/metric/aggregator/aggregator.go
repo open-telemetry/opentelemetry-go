@@ -48,11 +48,19 @@ func RangeTest[N number.Any, Traits traits.Any[N]](num N, desc *sdkapi.Descripto
 	return nil
 }
 
+type HistogramConfig struct {
+	ExplicitBoundaries []float64
+}
+
+type Config struct {
+	Histogram HistogramConfig
+}
+
 // Methods implements a specific aggregation behavior.  Methods
 // are parameterized by the type of the number (int64, flot64),
 // the Storage (generally an `Storage` struct in the same package),
 // and the Config (generally a `Config` struct in the same package).
-type Methods[N number.Any, Storage, Config any] interface {
+type Methods[N number.Any, Storage any] interface {
 	// Init initializes the storage with its configuration.
 	Init(ptr *Storage, cfg Config)
 

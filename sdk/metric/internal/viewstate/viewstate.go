@@ -65,59 +65,53 @@ type (
 	multiAccumulator[N number.Any] []Accumulator
 
 	configuredBehavior struct {
-		desc     sdkapi.Descriptor
-		view     views.View
-		settings aggregatorSettings
-		reader   *reader.Reader
+		desc   sdkapi.Descriptor
+		kind   aggregation.Kind
+		keys   attribute.Filter
+		acfg   aggregator.Config
+		reader *reader.Reader
 	}
 
-	aggregatorSettings struct {
-		kind  aggregation.Kind
-		hcfg  histogram.Config
-		scfg  sum.Config
-		lvcfg lastvalue.Config
+	baseMetric[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+		lock sync.Mutex
+		desc sdkapi.Descriptor
+		acfg aggregator.Config
+		data map[attribute.Set]*Storage
+		keys attribute.Filter
 	}
 
-	baseMetric[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
-		lock     sync.Mutex
-		desc     sdkapi.Descriptor
-		acfg     *Config
-		data     map[attribute.Set]*Storage
-		viewKeys attribute.Filter
+	compiledSyncInstrument[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+		baseMetric[N, Storage, Methods]
 	}
 
-	compiledSyncInstrument[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
-		baseMetric[N, Storage, Config, Methods]
+	compiledAsyncInstrument[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+		baseMetric[N, Storage, Methods]
 	}
 
-	compiledAsyncInstrument[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
-		baseMetric[N, Storage, Config, Methods]
+	statelessSyncProcess[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+		compiledSyncInstrument[N, Storage, Methods]
 	}
 
-	statelessSyncProcess[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
-		compiledSyncInstrument[N, Storage, Config, Methods]
+	statefulSyncProcess[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+		compiledSyncInstrument[N, Storage, Methods]
 	}
 
-	statefulAsyncProcess[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
-		compiledAsyncInstrument[N, Storage, Config, Methods]
+	statelessAsyncProcess[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+		compiledAsyncInstrument[N, Storage, Methods]
+	}
+
+	statefulAsyncProcess[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+		compiledAsyncInstrument[N, Storage, Methods]
 		prior map[attribute.Set]*Storage
 	}
 
-	statefulSyncProcess[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
-		compiledSyncInstrument[N, Storage, Config, Methods]
-	}
-
-	statelessAsyncProcess[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
-		compiledAsyncInstrument[N, Storage, Config, Methods]
-	}
-
-	syncAccumulator[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
+	syncAccumulator[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
 		current  Storage
 		snapshot Storage
 		output   *Storage
 	}
 
-	asyncAccumulator[N number.Any, Storage, Config any, Methods aggregator.Methods[N, Storage, Config]] struct {
+	asyncAccumulator[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
 		lock     sync.Mutex
 		current  N
 		snapshot Storage
@@ -165,46 +159,47 @@ func (v *Compiler) Compile(instrument sdkapi.Descriptor) Instrument {
 
 	for readerIdx, r := range v.readers {
 		for _, view := range matches {
-			var as aggregatorSettings
+			var acfg aggregator.Config
+			var kind aggregation.Kind
 			switch view.Aggregation() {
 			case aggregation.SumKind, aggregation.LastValueKind:
 				// These have no options
-				as.kind = view.Aggregation()
+				kind = view.Aggregation()
 			case aggregation.HistogramKind:
-				as.kind = view.Aggregation()
-				as.hcfg = histogram.NewConfig(
+				kind = view.Aggregation()
+				acfg.Histogram = histogram.NewConfig(
 					// @@@ per-reader histogram defaults
 					histogramDefaultsFor(instrument.NumberKind()),
 					view.HistogramOptions()...,
 				)
 			default:
-				as = aggregatorSettingsFor(instrument, r.Defaults())
+				kind = aggregatorConfigFor(instrument, r.Defaults())
 			}
 
-			if as.kind == aggregation.DropKind {
+			if kind == aggregation.DropKind {
 				continue
 			}
 
 			configs[readerIdx] = append(configs[readerIdx], configuredBehavior{
-				desc:     instrument,
-				view:     view,
-				settings: as,
-				reader:   r,
+				desc:   viewDescriptor(instrument, view),
+				keys:   view.Keys(),
+				kind:   kind,
+				acfg:   acfg,
+				reader: r,
 			})
 		}
 
 		// If there were no matching views, set the default aggregation.
 		if len(matches) == 0 {
-			as := aggregatorSettingsFor(instrument, r.Defaults())
-			if as.kind == aggregation.DropKind {
+			kind := aggregatorConfigFor(instrument, r.Defaults())
+			if kind == aggregation.DropKind {
 				continue
 			}
 
 			configs[readerIdx] = append(configs[readerIdx], configuredBehavior{
-				desc:     instrument,
-				view:     views.New(views.WithAggregation(as.kind)),
-				settings: as,
-				reader:   r,
+				desc:   instrument,
+				kind:   kind,
+				reader: r,
 			})
 		}
 	}
@@ -218,8 +213,6 @@ func (v *Compiler) Compile(instrument sdkapi.Descriptor) Instrument {
 		r := v.readers[readerIdx]
 
 		for _, config := range readerList {
-			config.desc = viewDescriptor(config.desc, config.view)
-
 			if _, has := v.names[readerIdx][config.desc.Name()]; has {
 				otel.Handle(fmt.Errorf("duplicate view name registered"))
 				continue
@@ -257,11 +250,9 @@ func (v *Compiler) Compile(instrument sdkapi.Descriptor) Instrument {
 	return multiInstrument[float64](compiled)
 }
 
-func aggregatorSettingsFor(desc sdkapi.Descriptor, defaults reader.DefaultsFunc) aggregatorSettings {
+func aggregatorConfigFor(desc sdkapi.Descriptor, defaults reader.DefaultsFunc) aggregation.Kind {
 	aggr, _ := defaults(desc.InstrumentKind())
-	return aggregatorSettings{
-		kind: aggr,
-	}
+	return aggr
 }
 
 func viewDescriptor(instrument sdkapi.Descriptor, v views.View) sdkapi.Descriptor {
@@ -295,105 +286,99 @@ func buildView[N number.Any, Traits traits.Any[N]](config configuredBehavior) In
 
 func newSyncView[
 	N number.Any,
-	Storage, Config any,
-	Methods aggregator.Methods[N, Storage, Config],
-](config configuredBehavior, aggConfig *Config) Instrument {
+	Storage any,
+	Methods aggregator.Methods[N, Storage],
+](config configuredBehavior) Instrument {
 	_, tempo := config.reader.Defaults()(config.desc.InstrumentKind())
-	metric := baseMetric[N, Storage, Config, Methods]{
-		desc:     config.desc,
-		acfg:     aggConfig,
-		data:     map[attribute.Set]*Storage{},
-		viewKeys: config.view.Keys(),
+	metric := baseMetric[N, Storage, Methods]{
+		desc: config.desc,
+		acfg: config.acfg,
+		data: map[attribute.Set]*Storage{},
+		keys: config.keys,
 	}
-	instrument := compiledSyncInstrument[N, Storage, Config, Methods]{
+	instrument := compiledSyncInstrument[N, Storage, Methods]{
 		baseMetric: metric,
 	}
 	if tempo == aggregation.DeltaTemporality {
-		return &statelessSyncProcess[N, Storage, Config, Methods]{
+		return &statelessSyncProcess[N, Storage, Methods]{
 			compiledSyncInstrument: instrument,
 		}
 	}
 
-	return &statefulSyncProcess[N, Storage, Config, Methods]{
+	return &statefulSyncProcess[N, Storage, Methods]{
 		compiledSyncInstrument: instrument,
 	}
 }
 
 func newAsyncView[
 	N number.Any,
-	Storage, Config any,
-	Methods aggregator.Methods[N, Storage, Config],
-](config configuredBehavior, aggConfig *Config) Instrument {
+	Storage any,
+	Methods aggregator.Methods[N, Storage],
+](config configuredBehavior) Instrument {
 	_, tempo := config.reader.Defaults()(config.desc.InstrumentKind())
-	metric := baseMetric[N, Storage, Config, Methods]{
-		desc:     config.desc,
-		acfg:     aggConfig,
-		data:     map[attribute.Set]*Storage{},
-		viewKeys: config.view.Keys(),
+	metric := baseMetric[N, Storage, Methods]{
+		desc: config.desc,
+		acfg: config.acfg,
+		data: map[attribute.Set]*Storage{},
+		keys: config.keys,
 	}
-	instrument := compiledAsyncInstrument[N, Storage, Config, Methods]{
+	instrument := compiledAsyncInstrument[N, Storage, Methods]{
 		baseMetric: metric,
 	}
 	if tempo == aggregation.DeltaTemporality {
-		return &statefulAsyncProcess[N, Storage, Config, Methods]{
+		return &statefulAsyncProcess[N, Storage, Methods]{
 			compiledAsyncInstrument: instrument,
 		}
 	}
 
-	return &statelessAsyncProcess[N, Storage, Config, Methods]{
+	return &statelessAsyncProcess[N, Storage, Methods]{
 		compiledAsyncInstrument: instrument,
 	}
 }
 
 func compileSync[N number.Any, Traits traits.Any[N]](config configuredBehavior) Instrument {
-	switch config.settings.kind {
+	switch config.kind {
 	case aggregation.LastValueKind:
 		return newSyncView[
 			N,
 			lastvalue.State[N, Traits],
-			lastvalue.Config,
 			lastvalue.Methods[N, Traits, lastvalue.State[N, Traits]],
-		](config, &config.settings.lvcfg)
+		](config)
 	case aggregation.HistogramKind:
 		return newSyncView[
 			N,
 			histogram.State[N, Traits],
-			histogram.Config,
 			histogram.Methods[N, Traits, histogram.State[N, Traits]],
-		](config, &config.settings.hcfg)
+		](config)
 	default:
 		return newSyncView[
 			N,
 			sum.State[N, Traits],
-			sum.Config,
 			sum.Methods[N, Traits, sum.State[N, Traits]],
-		](config, &config.settings.scfg)
+		](config)
 	}
 }
 
 func compileAsync[N number.Any, Traits traits.Any[N]](config configuredBehavior) Instrument {
-	switch config.settings.kind {
+	switch config.kind {
 	case aggregation.LastValueKind:
 		return newAsyncView[
 			N,
 			lastvalue.State[N, Traits],
-			lastvalue.Config,
 			lastvalue.Methods[N, Traits, lastvalue.State[N, Traits]],
-		](config, &config.settings.lvcfg)
+		](config)
 	case aggregation.HistogramKind:
 		return newAsyncView[
 			N,
 			histogram.State[N, Traits],
-			histogram.Config,
 			histogram.Methods[N, Traits, histogram.State[N, Traits]],
-		](config, &config.settings.hcfg)
+		](config)
 	default:
 		return newAsyncView[
 			N,
 			sum.State[N, Traits],
-			sum.Config,
 			sum.Methods[N, Traits, sum.State[N, Traits]],
-		](config, &config.settings.scfg)
+		](config)
 	}
 }
 
@@ -439,12 +424,12 @@ func (c multiAccumulator[N]) Update(value N) {
 
 // syncAccumulator
 
-func (sc *syncAccumulator[N, Storage, Config, Methods]) Update(number N) {
+func (sc *syncAccumulator[N, Storage, Methods]) Update(number N) {
 	var methods Methods
 	methods.Update(&sc.current, number)
 }
 
-func (sc *syncAccumulator[N, Storage, Config, Methods]) Accumulate() {
+func (sc *syncAccumulator[N, Storage, Methods]) Accumulate() {
 	var methods Methods
 	methods.SynchronizedMove(&sc.current, &sc.snapshot)
 	methods.Merge(&sc.snapshot, sc.output)
@@ -452,13 +437,13 @@ func (sc *syncAccumulator[N, Storage, Config, Methods]) Accumulate() {
 
 // asyncAccumulator
 
-func (ac *asyncAccumulator[N, Storage, Config, Methods]) Update(number N) {
+func (ac *asyncAccumulator[N, Storage, Methods]) Update(number N) {
 	ac.lock.Lock()
 	defer ac.lock.Unlock()
 	ac.current = number
 }
 
-func (ac *asyncAccumulator[N, Storage, Config, Methods]) Accumulate() {
+func (ac *asyncAccumulator[N, Storage, Methods]) Accumulate() {
 	ac.lock.Lock()
 	defer ac.lock.Unlock()
 
@@ -470,15 +455,15 @@ func (ac *asyncAccumulator[N, Storage, Config, Methods]) Accumulate() {
 
 // baseMetric
 
-func (metric *baseMetric[N, Storage, Config, Methods]) initStorage(s *Storage) {
+func (metric *baseMetric[N, Storage, Methods]) initStorage(s *Storage) {
 	var methods Methods
-	methods.Init(s, *metric.acfg)
+	methods.Init(s, metric.acfg)
 }
 
-func (metric *baseMetric[N, Storage, Config, Methods]) findOutput(
+func (metric *baseMetric[N, Storage, Methods]) findOutput(
 	kvs []attribute.KeyValue,
 ) *Storage {
-	set, _ := attribute.NewSetWithFiltered(kvs, metric.viewKeys)
+	set, _ := attribute.NewSetWithFiltered(kvs, metric.keys)
 
 	metric.lock.Lock()
 	defer metric.lock.Unlock()
@@ -493,15 +478,15 @@ func (metric *baseMetric[N, Storage, Config, Methods]) findOutput(
 	return ns
 }
 
-func (metric *baseMetric[N, Storage, Config, Methods]) newStorage() *Storage {
+func (metric *baseMetric[N, Storage, Methods]) newStorage() *Storage {
 	ns := new(Storage)
 	metric.initStorage(ns)
 	return ns
 }
 
 // NewAccumulator returns a Accumulator for a synchronous instrument view.
-func (csv *compiledSyncInstrument[N, Storage, Config, Methods]) NewAccumulator(kvs []attribute.KeyValue, _ *reader.Reader) Accumulator {
-	sc := &syncAccumulator[N, Storage, Config, Methods]{}
+func (csv *compiledSyncInstrument[N, Storage, Methods]) NewAccumulator(kvs []attribute.KeyValue, _ *reader.Reader) Accumulator {
+	sc := &syncAccumulator[N, Storage, Methods]{}
 	csv.initStorage(&sc.current)
 	csv.initStorage(&sc.snapshot)
 
@@ -511,8 +496,8 @@ func (csv *compiledSyncInstrument[N, Storage, Config, Methods]) NewAccumulator(k
 }
 
 // NewAccumulator returns a Accumulator for an asynchronous instrument view.
-func (cav *compiledAsyncInstrument[N, Storage, Config, Methods]) NewAccumulator(kvs []attribute.KeyValue, _ *reader.Reader) Accumulator {
-	ac := &asyncAccumulator[N, Storage, Config, Methods]{}
+func (cav *compiledAsyncInstrument[N, Storage, Methods]) NewAccumulator(kvs []attribute.KeyValue, _ *reader.Reader) Accumulator {
+	ac := &asyncAccumulator[N, Storage, Methods]{}
 
 	cav.initStorage(&ac.snapshot)
 	ac.current = 0
@@ -529,7 +514,7 @@ func (mi multiInstrument[N]) Collect(reader *reader.Reader, sequence reader.Sequ
 }
 
 // Collect for Synchronous Delta->Cumulative
-func (p *statefulSyncProcess[N, Storage, Config, Methods]) Collect(_ *reader.Reader, seq reader.Sequence, output *[]reader.Instrument) {
+func (p *statefulSyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, seq reader.Sequence, output *[]reader.Instrument) {
 	var methods Methods
 
 	p.lock.Lock()
@@ -553,7 +538,7 @@ func (p *statefulSyncProcess[N, Storage, Config, Methods]) Collect(_ *reader.Rea
 }
 
 // Collect for Synchronous Delta->Delta
-func (p *statelessSyncProcess[N, Storage, Config, Methods]) Collect(_ *reader.Reader, seq reader.Sequence, output *[]reader.Instrument) {
+func (p *statelessSyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, seq reader.Sequence, output *[]reader.Instrument) {
 	var methods Methods
 
 	p.lock.Lock()
@@ -587,7 +572,7 @@ func (p *statelessSyncProcess[N, Storage, Config, Methods]) Collect(_ *reader.Re
 }
 
 // Collect for Asychronous Cumulative->Cumulative
-func (p *statelessAsyncProcess[N, Storage, Config, Methods]) Collect(_ *reader.Reader, seq reader.Sequence, output *[]reader.Instrument) {
+func (p *statelessAsyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, seq reader.Sequence, output *[]reader.Instrument) {
 	var methods Methods
 
 	p.lock.Lock()
@@ -613,7 +598,7 @@ func (p *statelessAsyncProcess[N, Storage, Config, Methods]) Collect(_ *reader.R
 }
 
 // Collect for Asynchronous Cumulative->Delta
-func (p *statefulAsyncProcess[N, Storage, Config, Methods]) Collect(_ *reader.Reader, seq reader.Sequence, output *[]reader.Instrument) {
+func (p *statefulAsyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, seq reader.Sequence, output *[]reader.Instrument) {
 	var methods Methods
 
 	p.lock.Lock()

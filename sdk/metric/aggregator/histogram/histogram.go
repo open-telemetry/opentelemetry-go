@@ -49,23 +49,17 @@ type (
 		count        uint64
 	}
 
-	Config struct {
-		// explicitBoundaries support arbitrary bucketing schemes.  This
-		// is the general case.
-		explicitBoundaries []float64
-	}
-
 	Option interface {
 		// apply sets one or more config fields.
-		apply(*Config)
+		apply(*aggregator.HistogramConfig)
 	}
 
 	Methods[N number.Any, Traits traits.Any[N], Storage State[N, Traits]] struct{}
 )
 
 var (
-	_ aggregator.Methods[int64, State[int64, traits.Int64], Config]       = Methods[int64, traits.Int64, State[int64, traits.Int64]]{}
-	_ aggregator.Methods[float64, State[float64, traits.Float64], Config] = Methods[float64, traits.Float64, State[float64, traits.Float64]]{}
+	_ aggregator.Methods[int64, State[int64, traits.Int64]]       = Methods[int64, traits.Int64, State[int64, traits.Int64]]{}
+	_ aggregator.Methods[float64, State[float64, traits.Float64]] = Methods[float64, traits.Float64, State[float64, traits.Float64]]{}
 
 	_ aggregation.Histogram = &State[int64, traits.Int64]{}
 	_ aggregation.Histogram = &State[float64, traits.Float64]{}
@@ -80,8 +74,8 @@ type explicitBoundariesOption struct {
 	boundaries []float64
 }
 
-func (o explicitBoundariesOption) apply(config *Config) {
-	config.explicitBoundaries = o.boundaries
+func (o explicitBoundariesOption) apply(config *aggregator.HistogramConfig) {
+	config.ExplicitBoundaries = o.boundaries
 }
 
 // defaultExplicitBoundaries have been copied from prometheus.DefBuckets.
@@ -112,9 +106,9 @@ func (Float64Defaults) Boundaries() []float64 {
 	return defaultFloat64ExplicitBoundaries
 }
 
-func NewConfig(def Defaults, opts ...Option) Config {
-	cfg := Config{
-		explicitBoundaries: def.Boundaries(),
+func NewConfig(def Defaults, opts ...Option) aggregator.HistogramConfig {
+	cfg := aggregator.HistogramConfig{
+		ExplicitBoundaries: def.Boundaries(),
 	}
 
 	for _, opt := range opts {
@@ -123,11 +117,11 @@ func NewConfig(def Defaults, opts ...Option) Config {
 
 	// Boundaries MUST be ordered otherwise the histogram could not
 	// be properly computed.
-	sortedBoundaries := make([]float64, len(cfg.explicitBoundaries))
+	sortedBoundaries := make([]float64, len(cfg.ExplicitBoundaries))
 
-	copy(sortedBoundaries, cfg.explicitBoundaries)
+	copy(sortedBoundaries, cfg.ExplicitBoundaries)
 	sort.Float64s(sortedBoundaries)
-	cfg.explicitBoundaries = sortedBoundaries
+	cfg.ExplicitBoundaries = sortedBoundaries
 	return cfg
 }
 
@@ -165,8 +159,8 @@ func (h *State[N, Traits]) clearState() {
 	h.count = 0
 }
 
-func (Methods[N, Traits, Storage]) Init(state *State[N, Traits], cfg Config) {
-	state.boundaries = cfg.explicitBoundaries
+func (Methods[N, Traits, Storage]) Init(state *State[N, Traits], cfg aggregator.Config) {
+	state.boundaries = cfg.Histogram.ExplicitBoundaries
 	state.bucketCounts = make([]uint64, len(state.boundaries)+1)
 }
 
