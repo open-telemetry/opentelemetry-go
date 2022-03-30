@@ -259,7 +259,7 @@ func BenchmarkInt64UpDownCounterAdd(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		cnt.Add(ctx, 1.1, labs...)
+		cnt.Add(ctx, 1, labs...)
 	}
 }
 
