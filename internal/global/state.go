@@ -15,6 +15,7 @@
 package global // import "go.opentelemetry.io/otel/internal/global"
 
 import (
+	"errors"
 	"sync"
 	"sync/atomic"
 
@@ -52,6 +53,10 @@ func SetTracerProvider(tp trace.TracerProvider) {
 		if current == tp {
 			// Setting the provider to the prior default results in a noop. Return
 			// early.
+			Error(
+				errors.New("no delegate configured in tracer provider"),
+				"Setting tracer provider to it's current value. No delegate will be configured",
+			)
 			return
 		} else if def, ok := current.(*tracerProvider); ok {
 			def.setDelegate(tp)
@@ -73,6 +78,10 @@ func SetTextMapPropagator(p propagation.TextMapPropagator) {
 		if current := TextMapPropagator(); current == p {
 			// Setting the provider to the prior default results in a noop. Return
 			// early.
+			Error(
+				errors.New("no delegate configured in text map propagator"),
+				"Setting text map propagator to it's current value. No delegate will be configured",
+			)
 			return
 		} else if def, ok := current.(*textMapPropagator); ok {
 			def.SetDelegate(p)

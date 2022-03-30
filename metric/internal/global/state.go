@@ -15,9 +15,11 @@
 package global // import "go.opentelemetry.io/otel/metric/internal/global"
 
 import (
+	"errors"
 	"sync"
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 )
 
@@ -43,6 +45,10 @@ func SetMeterProvider(mp metric.MeterProvider) {
 		if current == mp {
 			// Setting the provider to the prior default results in a noop. Return
 			// early.
+			global.Error(
+				errors.New("no delegate configured in meter provider"),
+				"Setting meter provider to it's current value. No delegate will be configured",
+			)
 			return
 		} else if def, ok := current.(*meterProvider); ok {
 			def.setDelegate(mp)
