@@ -41,8 +41,8 @@ func NewMetricsStorage() MetricsStorage {
 func (s *MetricsStorage) AddMetrics(request *collectormetricpb.ExportMetricsServiceRequest) {
 	for _, rm := range request.GetResourceMetrics() {
 		// TODO (rghetia) handle multiple resource and library info.
-		if len(rm.InstrumentationLibraryMetrics) > 0 {
-			s.metrics = append(s.metrics, rm.InstrumentationLibraryMetrics[0].Metrics...)
+		if len(rm.ScopeMetrics) > 0 {
+			s.metrics = append(s.metrics, rm.ScopeMetrics[0].Metrics...)
 		}
 	}
 }
