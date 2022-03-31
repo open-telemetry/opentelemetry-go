@@ -43,7 +43,7 @@ func TestSetTracerProvider(t *testing.T) {
 
 		_, ok := TracerProvider().(*tracerProvider)
 		if ok {
-			t.Fatal("Global Tracer Provider was not changed")
+			t.Fatal("Global TracerProvider was not changed")
 		}
 	})
 
