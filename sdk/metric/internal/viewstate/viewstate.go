@@ -163,20 +163,20 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) Instrument {
 
 			kind := view.Aggregation()
 			switch kind {
-			case aggregation.SumKind, aggregation.GaugeKind:
-				// These have no options
-			case aggregation.HistogramKind:
-				acfg.Histogram = histogram.NewConfig(
-					// @@@ per-reader histogram defaults
-					histogramDefaultsFor(instrument.NumberKind),
-					view.HistogramOptions()...,
-				)
+			case aggregation.SumKind, aggregation.GaugeKind, aggregation.HistogramKind:
 			default:
-				kind = aggregationConfigFor(instrument, r.Defaults())
+				kind = aggregationConfigFor(instrument, r)
 			}
 
 			if kind == aggregation.DropKind {
 				continue
+			}
+
+			if kind == aggregation.HistogramKind {
+				acfg.Histogram = histogram.NewConfig(
+					histogramDefaultsFor(r, instrument.Kind, instrument.NumberKind),
+					view.HistogramOptions()...,
+				)
 			}
 
 			configs[readerIdx] = append(configs[readerIdx], configuredBehavior{
@@ -190,7 +190,7 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) Instrument {
 
 		// If there were no matching views, set the default aggregation.
 		if len(matches) == 0 {
-			kind := aggregationConfigFor(instrument, r.Defaults())
+			kind := aggregationConfigFor(instrument, r)
 			if kind == aggregation.DropKind {
 				continue
 			}
@@ -249,9 +249,8 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) Instrument {
 	return multiInstrument[float64](compiled)
 }
 
-func aggregationConfigFor(desc sdkinstrument.Descriptor, defaults reader.DefaultsFunc) aggregation.Kind {
-	aggr, _ := defaults(desc.Kind)
-	return aggr
+func aggregationConfigFor(desc sdkinstrument.Descriptor, r *reader.Reader) aggregation.Kind {
+	return r.DefaultAggregation(desc.Kind)
 }
 
 func viewDescriptor(instrument sdkinstrument.Descriptor, v views.View) sdkinstrument.Descriptor {
@@ -269,8 +268,12 @@ func viewDescriptor(instrument sdkinstrument.Descriptor, v views.View) sdkinstru
 	return sdkinstrument.NewDescriptor(name, ikind, nkind, description, unit)
 }
 
-func histogramDefaultsFor(kind number.Kind) histogram.Defaults {
-	if kind == number.Int64Kind {
+func histogramDefaultsFor(r *reader.Reader, k sdkinstrument.Kind, nk number.Kind) histogram.Defaults {
+	cfg := r.DefaultAggregationConfig(k, nk)
+	if cfg.Histogram.ExplicitBoundaries != nil {
+		return cfg.Histogram
+	}
+	if nk == number.Int64Kind {
 		return histogram.Int64Defaults{}
 	}
 	return histogram.Float64Defaults{}
@@ -288,7 +291,7 @@ func newSyncView[
 	Storage any,
 	Methods aggregation.Methods[N, Storage],
 ](config configuredBehavior) Instrument {
-	_, tempo := config.reader.Defaults()(config.desc.Kind)
+	tempo := config.reader.DefaultTemporality(config.desc.Kind)
 	metric := baseMetric[N, Storage, Methods]{
 		desc: config.desc,
 		acfg: config.acfg,
@@ -314,7 +317,7 @@ func newAsyncView[
 	Storage any,
 	Methods aggregation.Methods[N, Storage],
 ](config configuredBehavior) Instrument {
-	_, tempo := config.reader.Defaults()(config.desc.Kind)
+	tempo := config.reader.DefaultTemporality(config.desc.Kind)
 	metric := baseMetric[N, Storage, Methods]{
 		desc: config.desc,
 		acfg: config.acfg,

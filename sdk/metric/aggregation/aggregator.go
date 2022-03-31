@@ -55,6 +55,11 @@ type Config struct {
 	Histogram HistogramConfig
 }
 
+// Boundaries implements Histogram.Defaults.
+func (hc HistogramConfig) Boundaries() []float64 {
+	return hc.ExplicitBoundaries
+}
+
 // Methods implements a specific aggregation behavior.  Methods
 // are parameterized by the type of the number (int64, flot64),
 // the Storage (generally an `Storage` struct in the same package),

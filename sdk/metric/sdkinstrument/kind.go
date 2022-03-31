@@ -37,6 +37,8 @@ const (
 	UpDownCounterObserverKind
 )
 
+const NumKinds = 6
+
 // Synchronous returns whether this is a synchronous kind of instrument.
 func (k Kind) Synchronous() bool {
 	switch k {

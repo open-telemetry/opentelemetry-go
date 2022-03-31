@@ -78,10 +78,6 @@ func (o explicitBoundariesOption) apply(config *aggregation.HistogramConfig) {
 }
 
 // defaultExplicitBoundaries have been copied from prometheus.DefBuckets.
-//
-// Note we anticipate the use of a high-precision histogram sketch as
-// the standard histogram aggregator for OTLP export.
-// (https://github.com/open-telemetry/opentelemetry-specification/issues/982).
 var defaultFloat64ExplicitBoundaries = []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10}
 
 // defaultInt64ExplicitBoundaryMultiplier determines the default
