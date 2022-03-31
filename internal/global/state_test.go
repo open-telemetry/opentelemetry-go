@@ -96,7 +96,7 @@ func TestSetTextMapPropagator(t *testing.T) {
 		np := p.(*textMapPropagator)
 
 		if np.delegate == nil {
-			t.Fatal("The delegated TextMap propagators should have a delegate")
+			t.Fatal("The delegated TextMapPropagators should have a delegate")
 		}
 	})
 }
