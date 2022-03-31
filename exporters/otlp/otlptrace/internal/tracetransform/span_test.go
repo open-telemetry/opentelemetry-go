@@ -298,12 +298,12 @@ func TestSpanData(t *testing.T) {
 
 	assert.Equal(t, got[0].GetResource(), Resource(spanData.Resource))
 	assert.Equal(t, got[0].SchemaUrl, spanData.Resource.SchemaURL())
-	ilSpans := got[0].GetInstrumentationLibrarySpans()
-	require.Len(t, ilSpans, 1)
-	assert.Equal(t, ilSpans[0].SchemaUrl, spanData.InstrumentationLibrary.SchemaURL)
-	assert.Equal(t, ilSpans[0].GetInstrumentationLibrary(), InstrumentationLibrary(spanData.InstrumentationLibrary))
-	require.Len(t, ilSpans[0].Spans, 1)
-	actualSpan := ilSpans[0].Spans[0]
+	scopeSpans := got[0].GetScopeSpans()
+	require.Len(t, scopeSpans, 1)
+	assert.Equal(t, scopeSpans[0].SchemaUrl, spanData.InstrumentationLibrary.SchemaURL)
+	assert.Equal(t, scopeSpans[0].GetScope(), InstrumentationScope(spanData.InstrumentationLibrary))
+	require.Len(t, scopeSpans[0].Spans, 1)
+	actualSpan := scopeSpans[0].Spans[0]
 
 	if diff := cmp.Diff(expectedSpan, actualSpan, cmp.Comparer(proto.Equal)); diff != "" {
 		t.Fatalf("transformed span differs %v\n", diff)
@@ -315,7 +315,9 @@ func TestRootSpanData(t *testing.T) {
 	sd := Spans(tracetest.SpanStubs{{}}.Snapshots())
 	require.Len(t, sd, 1)
 	rs := sd[0]
-	got := rs.GetInstrumentationLibrarySpans()[0].GetSpans()[0].GetParentSpanId()
+	scopeSpans := rs.GetScopeSpans()
+	require.Len(t, scopeSpans, 1)
+	got := scopeSpans[0].GetSpans()[0].GetParentSpanId()
 
 	// Empty means root span.
 	assert.Nil(t, got, "incorrect transform of root parent span ID")
