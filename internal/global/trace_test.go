@@ -44,7 +44,7 @@ func (fn fnTracer) Start(ctx context.Context, spanName string, opts ...trace.Spa
 }
 
 func TestTraceProviderDelegation(t *testing.T) {
-	global.ResetForTest()
+	global.ResetForTest(t)
 
 	// Map of tracers to expected span names.
 	expected := map[string][]string{
@@ -98,7 +98,7 @@ func TestTraceProviderDelegation(t *testing.T) {
 }
 
 func TestTraceProviderDelegates(t *testing.T) {
-	global.ResetForTest()
+	global.ResetForTest(t)
 
 	// Retrieve the placeholder TracerProvider.
 	gtp := otel.GetTracerProvider()
@@ -118,7 +118,7 @@ func TestTraceProviderDelegates(t *testing.T) {
 }
 
 func TestTraceProviderDelegatesConcurrentSafe(t *testing.T) {
-	global.ResetForTest()
+	global.ResetForTest(t)
 
 	// Retrieve the placeholder TracerProvider.
 	gtp := otel.GetTracerProvider()
@@ -161,7 +161,7 @@ func TestTraceProviderDelegatesConcurrentSafe(t *testing.T) {
 }
 
 func TestTracerDelegatesConcurrentSafe(t *testing.T) {
-	global.ResetForTest()
+	global.ResetForTest(t)
 
 	// Retrieve the placeholder TracerProvider.
 	gtp := otel.GetTracerProvider()
@@ -210,7 +210,7 @@ func TestTracerDelegatesConcurrentSafe(t *testing.T) {
 }
 
 func TestTraceProviderDelegatesSameInstance(t *testing.T) {
-	global.ResetForTest()
+	global.ResetForTest(t)
 
 	// Retrieve the placeholder TracerProvider.
 	gtp := otel.GetTracerProvider()
@@ -228,7 +228,7 @@ func TestTraceProviderDelegatesSameInstance(t *testing.T) {
 }
 
 func TestSpanContextPropagatedWithNonRecordingSpan(t *testing.T) {
-	global.ResetForTest()
+	global.ResetForTest(t)
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    [16]byte{0x01},

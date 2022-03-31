@@ -22,10 +22,8 @@ import (
 )
 
 func TestSetTracerProvider(t *testing.T) {
-	t.Cleanup(ResetForTest)
-
 	t.Run("Set With default is a noop", func(t *testing.T) {
-		ResetForTest()
+		ResetForTest(t)
 		SetTracerProvider(TracerProvider())
 
 		tp, ok := TracerProvider().(*tracerProvider)
@@ -39,7 +37,7 @@ func TestSetTracerProvider(t *testing.T) {
 	})
 
 	t.Run("First Set() should replace the delegate", func(t *testing.T) {
-		ResetForTest()
+		ResetForTest(t)
 
 		SetTracerProvider(trace.NewNoopTracerProvider())
 
@@ -50,7 +48,7 @@ func TestSetTracerProvider(t *testing.T) {
 	})
 
 	t.Run("Set() should delegate existing Tracer Providers", func(t *testing.T) {
-		ResetForTest()
+		ResetForTest(t)
 
 		tp := TracerProvider()
 		SetTracerProvider(trace.NewNoopTracerProvider())
@@ -64,10 +62,8 @@ func TestSetTracerProvider(t *testing.T) {
 }
 
 func TestSetTextMapPropagator(t *testing.T) {
-	t.Cleanup(ResetForTest)
-
 	t.Run("Set With default is a noop", func(t *testing.T) {
-		ResetForTest()
+		ResetForTest(t)
 		SetTextMapPropagator(TextMapPropagator())
 
 		tmp, ok := TextMapPropagator().(*textMapPropagator)
@@ -81,7 +77,7 @@ func TestSetTextMapPropagator(t *testing.T) {
 	})
 
 	t.Run("First Set() should replace the delegate", func(t *testing.T) {
-		ResetForTest()
+		ResetForTest(t)
 
 		SetTextMapPropagator(propagation.TraceContext{})
 
@@ -92,7 +88,7 @@ func TestSetTextMapPropagator(t *testing.T) {
 	})
 
 	t.Run("Set() should delegate existing propagators", func(t *testing.T) {
-		ResetForTest()
+		ResetForTest(t)
 
 		p := TextMapPropagator()
 		SetTextMapPropagator(propagation.TraceContext{})

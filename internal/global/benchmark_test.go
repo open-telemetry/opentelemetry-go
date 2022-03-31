@@ -25,7 +25,7 @@ import (
 func BenchmarkStartEndSpanNoSDK(b *testing.B) {
 	// Compare with BenchmarkStartEndSpan() in
 	// ../../sdk/trace/benchmark_test.go.
-	global.ResetForTest()
+	global.ResetForTest(b)
 	t := otel.Tracer("Benchmark StartEndSpan")
 	ctx := context.Background()
 	b.ResetTimer()
