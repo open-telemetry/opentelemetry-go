@@ -466,6 +466,7 @@ func (metric *baseMetric[N, Storage, Methods]) findOutput(
 	kvs []attribute.KeyValue,
 ) *Storage {
 	set, _ := attribute.NewSetWithFiltered(kvs, metric.keys)
+	fmt.Println("BEFORE", kvs, "AFTER", set.ToSlice(), "with", metric.keys)
 
 	metric.lock.Lock()
 	defer metric.lock.Unlock()

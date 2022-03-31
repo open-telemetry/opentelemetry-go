@@ -28,6 +28,8 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/reader"
+	"go.opentelemetry.io/otel/sdk/metric/views"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 var (
@@ -43,7 +45,24 @@ func initMeter() metric.MeterProvider {
 		log.Panicf("failed to initialize prometheus exporter %v", err)
 	}
 
-	sdk := sdkmetric.New(sdkmetric.WithReader(reader.New(exporter)))
+	sdk := sdkmetric.New(
+		sdkmetric.WithReader(reader.New(exporter)),
+		sdkmetric.WithResource(resource.NewSchemaless(attribute.String("resource", "etc"))),
+		sdkmetric.WithViews(
+			views.New(
+				views.MatchInstrumentName("ex.com.one"),
+				views.WithName("example_one"),
+			),
+			views.New(
+				views.MatchInstrumentName("ex.com.two"),
+				views.WithName("example_two"),
+			),
+			views.New(
+				views.MatchInstrumentName("ex.com.three"),
+				views.WithName("example_three"),
+			),
+		),
+	)
 
 	http.HandleFunc("/", exporter.ServeHTTP)
 	go func() {

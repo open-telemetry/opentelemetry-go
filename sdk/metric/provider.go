@@ -137,10 +137,20 @@ func appendScope(scopes *[]reader.Scope) *reader.Scope {
 }
 
 func (pp *providerProducer) Produce(inout *reader.Metrics) reader.Metrics {
-	pp.lock.Lock()
-	defer pp.lock.Unlock()
-
 	ordered := pp.provider.getOrdered()
+
+	// Note: the Last time is only used in delta-temporality
+	// scenarios.  This lock protects the only stateful change in
+	// `pp` but does not prevent concurrent collection.  If a
+	// delta-temporality exporter were to call Produce
+	// concurrently, the results would be be recorded with
+	// non-overlapping timestamps but would have been collected in
+	// an overlapping way.
+	pp.lock.Lock()
+	lastTime := pp.lastCollect
+	nowTime := time.Now()
+	pp.lastCollect = nowTime
+	pp.lock.Unlock()
 
 	var output reader.Metrics
 	if inout != nil {
@@ -152,8 +162,8 @@ func (pp *providerProducer) Produce(inout *reader.Metrics) reader.Metrics {
 
 	sequence := reader.Sequence{
 		Start: pp.provider.startTime,
-		Last:  pp.lastCollect,
-		Now:   time.Now(),
+		Last:  lastTime,
+		Now:   nowTime,
 	}
 
 	// TODO: Add a timeout to the context.
@@ -177,8 +187,6 @@ func (pp *providerProducer) Produce(inout *reader.Metrics) reader.Metrics {
 			inst.Collect(pp.reader, sequence, &scope.Instruments)
 		}
 	}
-
-	pp.lastCollect = sequence.Now
 
 	return output
 }

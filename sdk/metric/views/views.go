@@ -1,6 +1,7 @@
 package views
 
 import (
+	"fmt"
 	"regexp"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -79,7 +80,7 @@ func MatchInstrumentationLibrary(lib instrumentation.Library) Option {
 
 func WithKeys(keys []attribute.Key) Option {
 	return func(cfg *Config) {
-		if keys == nil {
+		if len(keys) == 0 {
 			cfg.keys = nil
 			return
 		}
@@ -124,6 +125,7 @@ func New(opts ...Option) View {
 	for _, opt := range opts {
 		opt(&cfg)
 	}
+	fmt.Println("LOOK", cfg.keys)
 	return View{
 		cfg: cfg,
 	}

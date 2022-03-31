@@ -102,19 +102,19 @@ func (c *Callback) Run(ctx context.Context, r *reader.Reader) {
 	}))
 }
 
-func (rs *readerState) accumulate() {
+func (inst *Instrument) Collect(r *reader.Reader, sequence reader.Sequence, output *[]reader.Instrument) {
+	rs := inst.state[r]
+
+	// This limits concurrent asynchronous collection, which is
+	// only needed in stateful configurations (i.e.,
+	// cumulative-to-delta). TODO: does it matter that this blocks
+	// concurrent Prometheus scrapers concurrently? (I think not.)
 	rs.lock.Lock()
 	defer rs.lock.Unlock()
 
 	for _, capt := range rs.store {
 		capt.Accumulate()
 	}
-}
-
-func (inst *Instrument) Collect(r *reader.Reader, sequence reader.Sequence, output *[]reader.Instrument) {
-	rs := inst.state[r]
-
-	rs.accumulate()
 
 	inst.compiled.Collect(r, sequence, output)
 
