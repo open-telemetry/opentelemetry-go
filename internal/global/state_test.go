@@ -47,7 +47,7 @@ func TestSetTracerProvider(t *testing.T) {
 		}
 	})
 
-	t.Run("Set() should delegate existing Tracer Providers", func(t *testing.T) {
+	t.Run("Set() should delegate existing TracerProviders", func(t *testing.T) {
 		ResetForTest(t)
 
 		tp := TracerProvider()
