@@ -9,10 +9,9 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation/gauge"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation/histogram"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation/sum"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 	"go.opentelemetry.io/otel/sdk/metric/reader"
@@ -69,50 +68,50 @@ type (
 		desc   sdkinstrument.Descriptor
 		kind   aggregation.Kind
 		keys   attribute.Filter
-		acfg   aggregator.Config
+		acfg   aggregation.Config
 		reader *reader.Reader
 	}
 
-	baseMetric[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+	baseMetric[N number.Any, Storage any, Methods aggregation.Methods[N, Storage]] struct {
 		lock sync.Mutex
 		desc sdkinstrument.Descriptor
-		acfg aggregator.Config
+		acfg aggregation.Config
 		data map[attribute.Set]*Storage
 		keys attribute.Filter
 	}
 
-	compiledSyncInstrument[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+	compiledSyncInstrument[N number.Any, Storage any, Methods aggregation.Methods[N, Storage]] struct {
 		baseMetric[N, Storage, Methods]
 	}
 
-	compiledAsyncInstrument[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+	compiledAsyncInstrument[N number.Any, Storage any, Methods aggregation.Methods[N, Storage]] struct {
 		baseMetric[N, Storage, Methods]
 	}
 
-	statelessSyncProcess[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+	statelessSyncProcess[N number.Any, Storage any, Methods aggregation.Methods[N, Storage]] struct {
 		compiledSyncInstrument[N, Storage, Methods]
 	}
 
-	statefulSyncProcess[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+	statefulSyncProcess[N number.Any, Storage any, Methods aggregation.Methods[N, Storage]] struct {
 		compiledSyncInstrument[N, Storage, Methods]
 	}
 
-	statelessAsyncProcess[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+	statelessAsyncProcess[N number.Any, Storage any, Methods aggregation.Methods[N, Storage]] struct {
 		compiledAsyncInstrument[N, Storage, Methods]
 	}
 
-	statefulAsyncProcess[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+	statefulAsyncProcess[N number.Any, Storage any, Methods aggregation.Methods[N, Storage]] struct {
 		compiledAsyncInstrument[N, Storage, Methods]
 		prior map[attribute.Set]*Storage
 	}
 
-	syncAccumulator[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+	syncAccumulator[N number.Any, Storage any, Methods aggregation.Methods[N, Storage]] struct {
 		current  Storage
 		snapshot Storage
 		output   *Storage
 	}
 
-	asyncAccumulator[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+	asyncAccumulator[N number.Any, Storage any, Methods aggregation.Methods[N, Storage]] struct {
 		lock     sync.Mutex
 		current  N
 		snapshot Storage
@@ -160,7 +159,7 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) Instrument {
 
 	for readerIdx, r := range v.readers {
 		for _, view := range matches {
-			var acfg aggregator.Config
+			var acfg aggregation.Config
 
 			kind := view.Aggregation()
 			switch kind {
@@ -173,7 +172,7 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) Instrument {
 					view.HistogramOptions()...,
 				)
 			default:
-				kind = aggregatorConfigFor(instrument, r.Defaults())
+				kind = aggregationConfigFor(instrument, r.Defaults())
 			}
 
 			if kind == aggregation.DropKind {
@@ -191,7 +190,7 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) Instrument {
 
 		// If there were no matching views, set the default aggregation.
 		if len(matches) == 0 {
-			kind := aggregatorConfigFor(instrument, r.Defaults())
+			kind := aggregationConfigFor(instrument, r.Defaults())
 			if kind == aggregation.DropKind {
 				continue
 			}
@@ -250,7 +249,7 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) Instrument {
 	return multiInstrument[float64](compiled)
 }
 
-func aggregatorConfigFor(desc sdkinstrument.Descriptor, defaults reader.DefaultsFunc) aggregation.Kind {
+func aggregationConfigFor(desc sdkinstrument.Descriptor, defaults reader.DefaultsFunc) aggregation.Kind {
 	aggr, _ := defaults(desc.Kind)
 	return aggr
 }
@@ -287,7 +286,7 @@ func buildView[N number.Any, Traits traits.Any[N]](config configuredBehavior) In
 func newSyncView[
 	N number.Any,
 	Storage any,
-	Methods aggregator.Methods[N, Storage],
+	Methods aggregation.Methods[N, Storage],
 ](config configuredBehavior) Instrument {
 	_, tempo := config.reader.Defaults()(config.desc.Kind)
 	metric := baseMetric[N, Storage, Methods]{
@@ -313,7 +312,7 @@ func newSyncView[
 func newAsyncView[
 	N number.Any,
 	Storage any,
-	Methods aggregator.Methods[N, Storage],
+	Methods aggregation.Methods[N, Storage],
 ](config configuredBehavior) Instrument {
 	_, tempo := config.reader.Defaults()(config.desc.Kind)
 	metric := baseMetric[N, Storage, Methods]{

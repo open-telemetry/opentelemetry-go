@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sum // import "go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+package gauge // import "go.opentelemetry.io/otel/sdk/metric/aggregation/gauge"
 
 import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 )
@@ -30,24 +29,33 @@ type (
 )
 
 var (
-	_ aggregator.Methods[int64, State[int64, traits.Int64]]       = Methods[int64, traits.Int64, State[int64, traits.Int64]]{}
-	_ aggregator.Methods[float64, State[float64, traits.Float64]] = Methods[float64, traits.Float64, State[float64, traits.Float64]]{}
+	_ aggregation.Methods[int64, State[int64, traits.Int64]]       = Methods[int64, traits.Int64, State[int64, traits.Int64]]{}
+	_ aggregation.Methods[float64, State[float64, traits.Float64]] = Methods[float64, traits.Float64, State[float64, traits.Float64]]{}
 
-	_ aggregation.Sum = &State[int64, traits.Int64]{}
-	_ aggregation.Sum = &State[float64, traits.Float64]{}
+	_ aggregation.Gauge = &State[int64, traits.Int64]{}
+	_ aggregation.Gauge = &State[float64, traits.Float64]{}
 )
 
-func (s *State[N, Traits]) Sum() number.Number {
+func (lv *State[N, Traits]) Gauge() number.Number {
 	var traits Traits
-	return traits.ToNumber(s.value)
+	return traits.ToNumber(lv.value)
 }
 
-func (s *State[N, Traits]) Kind() aggregation.Kind {
-	return aggregation.SumKind
+func (lv *State[N, Traits]) Kind() aggregation.Kind {
+	return aggregation.GaugeKind
 }
 
-func (Methods[N, Traits, Storage]) Init(state *State[N, Traits], _ aggregator.Config) {
+func (Methods[N, Traits, Storage]) Init(state *State[N, Traits], _ aggregation.Config) {
 	// Note: storage is zero to start
+}
+
+func (Methods[N, Traits, Storage]) Reset(ptr *State[N, Traits]) {
+	var traits Traits
+	traits.SetAtomic(&ptr.value, 0)
+}
+
+func (Methods[N, Traits, Storage]) HasChange(ptr *State[N, Traits]) bool {
+	return ptr.value == 0
 }
 
 func (Methods[N, Traits, Storage]) SynchronizedMove(resetSrc, dest *State[N, Traits]) {
@@ -55,21 +63,13 @@ func (Methods[N, Traits, Storage]) SynchronizedMove(resetSrc, dest *State[N, Tra
 	dest.value = traits.SwapAtomic(&resetSrc.value, 0)
 }
 
-func (Methods[N, Traits, Storage]) Reset(ptr *State[N, Traits]) {
-	ptr.value = 0
-}
-
-func (Methods[N, Traits, Storage]) HasChange(ptr *State[N, Traits]) bool {
-	return ptr.value == 0
-}
-
-func (Methods[N, Traits, Storage]) Update(state *State[N, Traits], value N) {
+func (Methods[N, Traits, Storage]) Update(state *State[N, Traits], number N) {
 	var traits Traits
-	traits.AddAtomic(&state.value, value)
+	traits.SetAtomic(&state.value, number)
 }
 
 func (Methods[N, Traits, Storage]) Merge(to, from *State[N, Traits]) {
-	to.value += from.value
+	to.value = from.value
 }
 
 func (Methods[N, Traits, Storage]) Aggregation(state *State[N, Traits]) aggregation.Aggregation {
@@ -80,6 +80,6 @@ func (Methods[N, Traits, Storage]) Storage(aggr aggregation.Aggregation) *State[
 	return aggr.(*State[N, Traits])
 }
 
-func (Methods[N, Traits, Storage]) SubtractSwap(newValue, oldValueModified *State[N, Traits]) {
-	oldValueModified.value = newValue.value - oldValueModified.value
+func (Methods[N, Traits, Storage]) SubtractSwap(valueUnmodified, operandToModify *State[N, Traits]) {
+	operandToModify.value = valueUnmodified.value - operandToModify.value
 }

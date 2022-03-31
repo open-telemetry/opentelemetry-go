@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package aggregator // import "go.opentelemetry.io/otel/sdk/metric/aggregator"
+package aggregation // import "go.opentelemetry.io/otel/sdk/metric/aggregation"
 
 import (
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 	"go.opentelemetry.io/otel/sdk/metric/sdkinstrument"
@@ -29,11 +28,11 @@ func RangeTest[N number.Any, Traits traits.Any[N]](num N, desc *sdkinstrument.De
 	var traits Traits
 
 	if traits.IsInf(num) {
-		return aggregation.ErrInfInput
+		return ErrInfInput
 	}
 
 	if traits.IsNaN(num) {
-		return aggregation.ErrNaNInput
+		return ErrNaNInput
 	}
 
 	// Check for negative values
@@ -42,7 +41,7 @@ func RangeTest[N number.Any, Traits traits.Any[N]](num N, desc *sdkinstrument.De
 		sdkinstrument.CounterObserverKind,
 		sdkinstrument.HistogramKind:
 		if num < 0 {
-			return aggregation.ErrNegativeInput
+			return ErrNegativeInput
 		}
 	}
 	return nil
@@ -82,7 +81,7 @@ type Methods[N number.Any, Storage any] interface {
 	SubtractSwap(valueToModify, operandToModify *Storage)
 
 	// Aggregation returns an exporter-ready value.
-	Aggregation(ptr *Storage) aggregation.Aggregation
+	Aggregation(ptr *Storage) Aggregation
 
 	// HasChange returns true if there have been any (discernible)
 	// Updates.  This tests whether an aggregation has zero sum,
