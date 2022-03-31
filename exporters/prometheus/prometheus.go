@@ -28,13 +28,10 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
-	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
-	"go.opentelemetry.io/otel/sdk/metric/export"
-	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/number"
-	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/metric/reader"
+	"go.opentelemetry.io/otel/sdk/metric/sdkinstrument"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -42,26 +39,20 @@ import (
 // sdk/export/metric.Exporter interface--instead it creates a pull
 // controller and reads the latest checkpointed data on-scrape.
 type Exporter struct {
-	handler http.Handler
-
+	handler    http.Handler
 	registerer prometheus.Registerer
 	gatherer   prometheus.Gatherer
 
-	// lock protects access to the controller. The controller
-	// exposes its own lock, but using a dedicated lock in this
-	// struct allows the exporter to potentially support multiple
-	// controllers (e.g., with different resources).
-	lock       sync.RWMutex
-	controller *controller.Controller
-
-	defaultHistogramBoundaries []float64
+	lock     sync.Mutex
+	producer reader.Producer
 }
+
+var _ reader.Exporter = &Exporter{}
+var _ http.Handler = &Exporter{}
 
 // ErrUnsupportedAggregator is returned for unrepresentable aggregator
 // types.
 var ErrUnsupportedAggregator = fmt.Errorf("unsupported aggregator type")
-
-var _ http.Handler = &Exporter{}
 
 // Config is a set of configs for the tally reporter.
 type Config struct {
@@ -82,15 +73,11 @@ type Config struct {
 	//
 	// If not specified the Registry will be used as default.
 	Gatherer prometheus.Gatherer
-
-	// DefaultHistogramBoundaries defines the default histogram bucket
-	// boundaries.
-	DefaultHistogramBoundaries []float64
 }
 
 // New returns a new Prometheus exporter using the configured metric
 // controller.  See controller.New().
-func New(config Config, controller *controller.Controller) (*Exporter, error) {
+func New(config Config) (*Exporter, error) {
 	if config.Registry == nil {
 		config.Registry = prometheus.NewRegistry()
 	}
@@ -104,11 +91,9 @@ func New(config Config, controller *controller.Controller) (*Exporter, error) {
 	}
 
 	e := &Exporter{
-		handler:                    promhttp.HandlerFor(config.Gatherer, promhttp.HandlerOpts{}),
-		registerer:                 config.Registerer,
-		gatherer:                   config.Gatherer,
-		controller:                 controller,
-		defaultHistogramBoundaries: config.DefaultHistogramBoundaries,
+		handler:    promhttp.HandlerFor(config.Gatherer, promhttp.HandlerOpts{}),
+		registerer: config.Registerer,
+		gatherer:   config.Gatherer,
 	}
 
 	c := &collector{
@@ -120,21 +105,24 @@ func New(config Config, controller *controller.Controller) (*Exporter, error) {
 	return e, nil
 }
 
-// MeterProvider returns the MeterProvider of this exporter.
-func (e *Exporter) MeterProvider() metric.MeterProvider {
-	return e.controller
+func (e *Exporter) Register(p reader.Producer) {
+	e.lock.Lock()
+	defer e.lock.Unlock()
+	e.producer = p
 }
 
-// Controller returns the controller object that coordinates collection for the SDK.
-func (e *Exporter) Controller() *controller.Controller {
-	e.lock.RLock()
-	defer e.lock.RUnlock()
-	return e.controller
+func (e *Exporter) getProducer() reader.Producer {
+	e.lock.Lock()
+	defer e.lock.Unlock()
+	return e.producer
 }
 
-// TemporalityFor implements TemporalitySelector.
-func (e *Exporter) TemporalityFor(desc *sdkapi.Descriptor, kind aggregation.Kind) aggregation.Temporality {
-	return aggregation.CumulativeTemporalitySelector().TemporalityFor(desc, kind)
+func (e *Exporter) Flush(ctx context.Context) error {
+	return nil
+}
+
+func (e *Exporter) Shutdown(ctx context.Context) error {
+	return nil
 }
 
 // ServeHTTP implements http.Handler.
@@ -151,17 +139,22 @@ var _ prometheus.Collector = (*collector)(nil)
 
 // Describe implements prometheus.Collector.
 func (c *collector) Describe(ch chan<- *prometheus.Desc) {
-	c.exp.lock.RLock()
-	defer c.exp.lock.RUnlock()
+	// Passing nil => not reusing memory
+	producer := c.exp.getProducer()
+	if producer == nil {
+		return
+	}
+	data := producer.Produce(nil)
 
-	_ = c.exp.Controller().ForEach(func(_ instrumentation.Library, reader export.Reader) error {
-		return reader.ForEach(c.exp, func(record export.Record) error {
-			var labelKeys []string
-			mergeLabels(record, c.exp.controller.Resource(), &labelKeys, nil)
-			ch <- c.toDesc(record, labelKeys)
-			return nil
-		})
-	})
+	for _, scope := range data.Scopes {
+		for _, inst := range scope.Instruments {
+			for _, series := range inst.Series {
+				var labelKeys []string
+				mergeLabels(series.Attributes, data.Resource, &labelKeys, nil)
+				ch <- c.toDesc(inst.Descriptor, labelKeys)
+			}
+		}
+	}
 }
 
 // Collect exports the last calculated Reader state.
@@ -169,75 +162,49 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 // Collect is invoked whenever prometheus.Gatherer is also invoked.
 // For example, when the HTTP endpoint is invoked by Prometheus.
 func (c *collector) Collect(ch chan<- prometheus.Metric) {
-	c.exp.lock.RLock()
-	defer c.exp.lock.RUnlock()
+	// Passing nil => not reusing memory
+	data := c.exp.producer.Produce(nil)
 
-	ctrl := c.exp.Controller()
-	if err := ctrl.Collect(context.Background()); err != nil {
-		otel.Handle(err)
-	}
+	for _, scope := range data.Scopes {
+		for _, inst := range scope.Instruments {
+			numberKind := inst.Descriptor.NumberKind
+			instrumentKind := inst.Descriptor.Kind
 
-	err := ctrl.ForEach(func(_ instrumentation.Library, reader export.Reader) error {
-		return reader.ForEach(c.exp, func(record export.Record) error {
+			for _, series := range inst.Series {
 
-			agg := record.Aggregation()
-			numberKind := record.Descriptor().NumberKind()
-			instrumentKind := record.Descriptor().InstrumentKind()
+				agg := series.Aggregation
 
-			var labelKeys, labels []string
-			mergeLabels(record, c.exp.controller.Resource(), &labelKeys, &labels)
+				var labelKeys, labels []string
+				mergeLabels(series.Attributes, data.Resource, &labelKeys, &labels)
 
-			desc := c.toDesc(record, labelKeys)
+				desc := c.toDesc(inst.Descriptor, labelKeys)
 
-			if hist, ok := agg.(aggregation.Histogram); ok {
-				if err := c.exportHistogram(ch, hist, numberKind, desc, labels); err != nil {
-					return fmt.Errorf("exporting histogram: %w", err)
+				if hist, ok := agg.(aggregation.Histogram); ok {
+					if err := c.exportHistogram(ch, hist, numberKind, desc, labels); err != nil {
+						otel.Handle(fmt.Errorf("exporting histogram: %w", err))
+					}
+				} else if sum, ok := agg.(aggregation.Sum); ok && instrumentKind.Monotonic() {
+					if err := c.exportMonotonicCounter(ch, sum, numberKind, desc, labels); err != nil {
+						otel.Handle(fmt.Errorf("exporting monotonic counter: %w", err))
+					}
+				} else if sum, ok := agg.(aggregation.Sum); ok && !instrumentKind.Monotonic() {
+					if err := c.exportGauge(ch, sum.Sum(), numberKind, desc, labels); err != nil {
+						otel.Handle(fmt.Errorf("exporting gauge: %w", err))
+					}
+				} else if gauge, ok := agg.(aggregation.Gauge); ok {
+					if err := c.exportGauge(ch, gauge.Gauge(), numberKind, desc, labels); err != nil {
+						otel.Handle(fmt.Errorf("exporting gauge: %w", err))
+					}
+				} else {
+					otel.Handle(fmt.Errorf("%w: %s", ErrUnsupportedAggregator, agg.Kind()))
 				}
-			} else if sum, ok := agg.(aggregation.Sum); ok && instrumentKind.Monotonic() {
-				if err := c.exportMonotonicCounter(ch, sum, numberKind, desc, labels); err != nil {
-					return fmt.Errorf("exporting monotonic counter: %w", err)
-				}
-			} else if sum, ok := agg.(aggregation.Sum); ok && !instrumentKind.Monotonic() {
-				if err := c.exportNonMonotonicCounter(ch, sum, numberKind, desc, labels); err != nil {
-					return fmt.Errorf("exporting non monotonic counter: %w", err)
-				}
-			} else if lastValue, ok := agg.(aggregation.LastValue); ok {
-				if err := c.exportLastValue(ch, lastValue, numberKind, desc, labels); err != nil {
-					return fmt.Errorf("exporting last value: %w", err)
-				}
-			} else {
-				return fmt.Errorf("%w: %s", ErrUnsupportedAggregator, agg.Kind())
 			}
-			return nil
-		})
-	})
-	if err != nil {
-		otel.Handle(err)
+		}
 	}
 }
 
-func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregation.LastValue, kind number.Kind, desc *prometheus.Desc, labels []string) error {
-	lv, _, err := lvagg.LastValue()
-	if err != nil {
-		return fmt.Errorf("error retrieving last value: %w", err)
-	}
-
-	m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, lv.CoerceToFloat64(kind), labels...)
-	if err != nil {
-		return fmt.Errorf("error creating constant metric: %w", err)
-	}
-
-	ch <- m
-	return nil
-}
-
-func (c *collector) exportNonMonotonicCounter(ch chan<- prometheus.Metric, sum aggregation.Sum, kind number.Kind, desc *prometheus.Desc, labels []string) error {
-	v, err := sum.Sum()
-	if err != nil {
-		return fmt.Errorf("error retrieving counter: %w", err)
-	}
-
-	m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, v.CoerceToFloat64(kind), labels...)
+func (c *collector) exportGauge(ch chan<- prometheus.Metric, value number.Number, kind number.Kind, desc *prometheus.Desc, labels []string) error {
+	m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, value.CoerceToFloat64(kind), labels...)
 	if err != nil {
 		return fmt.Errorf("error creating constant metric: %w", err)
 	}
@@ -247,10 +214,7 @@ func (c *collector) exportNonMonotonicCounter(ch chan<- prometheus.Metric, sum a
 }
 
 func (c *collector) exportMonotonicCounter(ch chan<- prometheus.Metric, sum aggregation.Sum, kind number.Kind, desc *prometheus.Desc, labels []string) error {
-	v, err := sum.Sum()
-	if err != nil {
-		return fmt.Errorf("error retrieving counter: %w", err)
-	}
+	v := sum.Sum()
 
 	m, err := prometheus.NewConstMetric(desc, prometheus.CounterValue, v.CoerceToFloat64(kind), labels...)
 	if err != nil {
@@ -262,14 +226,8 @@ func (c *collector) exportMonotonicCounter(ch chan<- prometheus.Metric, sum aggr
 }
 
 func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregation.Histogram, kind number.Kind, desc *prometheus.Desc, labels []string) error {
-	buckets, err := hist.Histogram()
-	if err != nil {
-		return fmt.Errorf("error retrieving histogram: %w", err)
-	}
-	sum, err := hist.Sum()
-	if err != nil {
-		return fmt.Errorf("error retrieving sum: %w", err)
-	}
+	buckets := hist.Histogram()
+	sum := hist.Sum()
 
 	var totalCount uint64
 	// counts maps from the bucket upper-bound to the cumulative count.
@@ -292,9 +250,8 @@ func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregatio
 	return nil
 }
 
-func (c *collector) toDesc(record export.Record, labelKeys []string) *prometheus.Desc {
-	desc := record.Descriptor()
-	return prometheus.NewDesc(sanitize(desc.Name()), desc.Description(), labelKeys, nil)
+func (c *collector) toDesc(inst sdkinstrument.Descriptor, labelKeys []string) *prometheus.Desc {
+	return prometheus.NewDesc(sanitize(inst.Name), inst.Description, labelKeys, nil)
 }
 
 // mergeLabels merges the export.Record's labels and resources into a
@@ -302,17 +259,17 @@ func (c *collector) toDesc(record export.Record, labelKeys []string) *prometheus
 // duplicate keys.  This outputs one or both of the keys and the
 // values as a slice, and either argument may be nil to avoid
 // allocating an unnecessary slice.
-func mergeLabels(record export.Record, res *resource.Resource, keys, values *[]string) {
+func mergeLabels(attrs attribute.Set, res *resource.Resource, keys, values *[]string) {
 	if keys != nil {
-		*keys = make([]string, 0, record.Labels().Len()+res.Len())
+		*keys = make([]string, 0, attrs.Len()+res.Len())
 	}
 	if values != nil {
-		*values = make([]string, 0, record.Labels().Len()+res.Len())
+		*values = make([]string, 0, attrs.Len()+res.Len())
 	}
 
 	// Duplicate keys are resolved by taking the record label value over
 	// the resource value.
-	mi := attribute.NewMergeIterator(record.Labels(), res.Set())
+	mi := attribute.NewMergeIterator(&attrs, res.Set())
 	for mi.Next() {
 		label := mi.Label()
 		if keys != nil {

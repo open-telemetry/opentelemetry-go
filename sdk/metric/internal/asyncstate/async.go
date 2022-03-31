@@ -46,14 +46,27 @@ type (
 		inst *Instrument
 	}
 
+	memberInstrument interface {
+		instrument() *Instrument
+	}
+
 	contextKey struct{}
 )
 
-func NewInstrument(desc sdkinstrument.Descriptor, compiled viewstate.Instrument) *Instrument {
+var _ memberInstrument = observer[int64, traits.Int64]{}
+var _ memberInstrument = observer[float64, traits.Float64]{}
+
+func NewInstrument(desc sdkinstrument.Descriptor, compiled viewstate.Instrument, readers []*reader.Reader) *Instrument {
+	state := map[*reader.Reader]*readerState{}
+	for _, r := range readers {
+		state[r] = &readerState{
+			store: map[attribute.Set]viewstate.Accumulator{},
+		}
+	}
 	return &Instrument{
 		descriptor: desc,
 		compiled:   compiled,
-		state:      map[*reader.Reader]*readerState{},
+		state:      state,
 	}
 }
 
@@ -72,11 +85,11 @@ func NewCallback(instruments []apiInstrument.Asynchronous, function func(context
 	}
 
 	for _, inst := range instruments {
-		ai, ok := inst.(*Instrument)
+		ai, ok := inst.(memberInstrument)
 		if !ok {
-			return nil, fmt.Errorf("asynchronous instrument does not belong to this provider")
+			return nil, fmt.Errorf("asynchronous instrument does not belong to this provider: %T", inst)
 		}
-		cb.instruments[ai] = struct{}{}
+		cb.instruments[ai.instrument()] = struct{}{}
 	}
 
 	return cb, nil
@@ -107,6 +120,10 @@ func (inst *Instrument) Collect(r *reader.Reader, sequence reader.Sequence, outp
 
 	// Reset the instruments used; the view state will remember what it needs.
 	rs.store = map[attribute.Set]viewstate.Accumulator{}
+}
+
+func (o observer[N, Traits]) instrument() *Instrument {
+	return o.inst
 }
 
 func (o observer[N, Traits]) Observe(ctx context.Context, value N, attrs ...attribute.KeyValue) {

@@ -26,11 +26,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
-	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
-	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
-	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
-	selector "go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/reader"
 )
 
 var (
@@ -40,26 +37,13 @@ var (
 	meterProvider metric.MeterProvider
 )
 
-func initMeter() {
-	config := prometheus.Config{
-		DefaultHistogramBoundaries: []float64{1, 2, 5, 10, 20, 50},
-	}
-	c := controller.New(
-		processor.NewFactory(
-			selector.NewWithHistogramDistribution(
-				histogram.WithExplicitBoundaries(config.DefaultHistogramBoundaries),
-			),
-			aggregation.CumulativeTemporalitySelector(),
-			processor.WithMemory(true),
-		),
-	)
-	exporter, err := prometheus.New(config, c)
+func initMeter() metric.MeterProvider {
+	exporter, err := prometheus.New(prometheus.Config{})
 	if err != nil {
 		log.Panicf("failed to initialize prometheus exporter %v", err)
 	}
-	// TODO Bring back Global package
-	// global.SetMeterProvider(exporter.MeterProvider())
-	meterProvider = exporter.MeterProvider()
+
+	sdk := sdkmetric.New(sdkmetric.WithReader(reader.New(exporter)))
 
 	http.HandleFunc("/", exporter.ServeHTTP)
 	go func() {
@@ -67,14 +51,14 @@ func initMeter() {
 	}()
 
 	fmt.Println("Prometheus server running on :2222")
+
+	return sdk
 }
 
 func main() {
-	initMeter()
+	sdk := initMeter()
 
-	// TODO Bring back Global package
-	// meter := global.Meter("ex.com/basic")
-	meter := meterProvider.Meter("ex.com/basic")
+	meter := sdk.Meter("ex.com/basic")
 	observerLock := new(sync.RWMutex)
 	observerValueToReport := new(float64)
 	observerLabelsToReport := new([]attribute.KeyValue)

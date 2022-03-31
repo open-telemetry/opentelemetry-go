@@ -52,3 +52,8 @@ func (k Kind) Synchronous() bool {
 func (k Kind) HasTemporality() bool {
 	return k != GaugeObserverKind
 }
+
+// Monotonic
+func (k Kind) Monotonic() bool {
+	return k == CounterKind || k == CounterObserverKind
+}

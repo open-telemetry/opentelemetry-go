@@ -26,7 +26,7 @@ type (
 
 	Option func(cfg *Config)
 
-	provider struct {
+	Provider struct {
 		cfg       Config
 		startTime time.Time
 		lock      sync.Mutex
@@ -36,7 +36,7 @@ type (
 
 	providerProducer struct {
 		lock        sync.Mutex
-		provider    *provider
+		provider    *Provider
 		reader      *reader.Reader
 		lastCollect time.Time
 	}
@@ -48,7 +48,7 @@ type (
 
 	meter struct {
 		library  instrumentation.Library
-		provider *provider
+		provider *Provider
 		names    map[string][]instrumentIface
 		views    *viewstate.Compiler
 
@@ -59,7 +59,8 @@ type (
 )
 
 var (
-	_ metric.Meter = &meter{}
+	_ metric.Meter         = &meter{}
+	_ metric.MeterProvider = &Provider{}
 )
 
 func WithResource(res *resource.Resource) Option {
@@ -80,14 +81,14 @@ func WithViews(vs ...views.View) Option {
 	}
 }
 
-func New(opts ...Option) metric.MeterProvider {
+func New(opts ...Option) *Provider {
 	cfg := Config{
 		res: resource.Default(),
 	}
 	for _, opt := range opts {
 		opt(&cfg)
 	}
-	p := &provider{
+	p := &Provider{
 		cfg:       cfg,
 		startTime: time.Now(),
 		meters:    map[instrumentation.Library]*meter{},
@@ -98,7 +99,7 @@ func New(opts ...Option) metric.MeterProvider {
 	return p
 }
 
-func (p *provider) producerFor(r *reader.Reader) reader.Producer {
+func (p *Provider) producerFor(r *reader.Reader) reader.Producer {
 	return &providerProducer{
 		provider: p,
 		reader:   r,
@@ -179,13 +180,13 @@ func (pp *providerProducer) Produce(inout *reader.Metrics) reader.Metrics {
 	return output
 }
 
-func (p *provider) getOrdered() []*meter {
+func (p *Provider) getOrdered() []*meter {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	return p.ordered
 }
 
-func (p *provider) Meter(name string, opts ...metric.MeterOption) metric.Meter {
+func (p *Provider) Meter(name string, opts ...metric.MeterOption) metric.Meter {
 	cfg := metric.NewMeterConfig(opts...)
 	lib := instrumentation.Library{
 		Name:      name,

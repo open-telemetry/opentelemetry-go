@@ -28,7 +28,7 @@ func (m *meter) newAsyncInst(name string, opts []instrument.Option, nk number.Ki
 		m, name, opts, nk, ik,
 		func(desc sdkinstrument.Descriptor) *asyncstate.Instrument {
 			compiled := m.views.Compile(desc)
-			inst := asyncstate.NewInstrument(desc, compiled)
+			inst := asyncstate.NewInstrument(desc, compiled, m.provider.cfg.readers)
 			m.instruments = append(m.instruments, inst)
 			return inst
 		})

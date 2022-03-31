@@ -14,6 +14,8 @@
 
 package number
 
+import "math"
+
 //go:generate stringer -type=Kind
 
 // Kind describes the data type of the Number.
@@ -33,4 +35,11 @@ type Number uint64
 // Any is any of the supported generic Number types.
 type Any interface {
 	int64 | float64
+}
+
+func (n Number) CoerceToFloat64(k Kind) float64 {
+	if k == Int64Kind {
+		return float64(n)
+	}
+	return math.Float64frombits(uint64(n))
 }

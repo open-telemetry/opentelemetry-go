@@ -14,12 +14,16 @@ import (
 
 type (
 	Config struct {
-		defaults DefaultsFunc
+		DefaultAggregationKindFunc
+		DefaultAggregationTemporalityFunc
+		DefaultAggregationConfigFunc
 	}
 
 	Option func(*Config)
 
-	DefaultsFunc func(sdkinstrument.Kind) (aggKind aggregation.Kind, aggTempo aggregation.Temporality, int64Config, float64Config aggregation.Config)
+	DefaultAggregationKindFunc        func(sdkinstrument.Kind) aggregation.Kind
+	DefaultAggregationTemporalityFunc func(sdkinstrument.Kind) aggregation.Temporality
+	DefaultAggregationConfigFunc      func(sdkinstrument.Kind) (int64Config, float64Config aggregation.Config)
 
 	Reader struct {
 		defAggr   [sdkinstrument.NumKinds]aggregation.Kind
@@ -46,7 +50,7 @@ type (
 	}
 
 	Instrument struct {
-		Instrument  sdkinstrument.Descriptor
+		Descriptor  sdkinstrument.Descriptor
 		Temporality aggregation.Temporality
 		Series      []Series
 	}
@@ -74,31 +78,48 @@ type (
 	}
 )
 
-func WithDefaults(defaults DefaultsFunc) Option {
+func WithDefaultAggregationKindFunc(d DefaultAggregationKindFunc) Option {
 	return func(cfg *Config) {
-		cfg.defaults = defaults
+		cfg.DefaultAggregationKindFunc = d
 	}
 }
 
-func standardDefaults(ik sdkinstrument.Kind) (aggregation.Kind, aggregation.Temporality, aggregation.Config, aggregation.Config) {
-	var ak aggregation.Kind
+func WithDefaultAggregationTemporalityFunc(d DefaultAggregationTemporalityFunc) Option {
+	return func(cfg *Config) {
+		cfg.DefaultAggregationTemporalityFunc = d
+	}
+}
+
+func WithDefaultAggregationConfigFunc(d DefaultAggregationConfigFunc) Option {
+	return func(cfg *Config) {
+		cfg.DefaultAggregationConfigFunc = d
+	}
+}
+
+func standardAggregation(ik sdkinstrument.Kind) aggregation.Kind {
 	switch ik {
 	case sdkinstrument.HistogramKind:
-		ak = aggregation.HistogramKind
+		return aggregation.HistogramKind
 	case sdkinstrument.GaugeObserverKind:
-		ak = aggregation.GaugeKind
-	case sdkinstrument.CounterKind,
-		sdkinstrument.UpDownCounterKind,
-		sdkinstrument.CounterObserverKind,
-		sdkinstrument.UpDownCounterObserverKind:
-		ak = aggregation.SumKind
+		return aggregation.GaugeKind
+	default:
+		return aggregation.SumKind
 	}
-	return ak, aggregation.CumulativeTemporality, aggregation.Config{}, aggregation.Config{}
+}
+
+func standardTemporality(ik sdkinstrument.Kind) aggregation.Temporality {
+	return aggregation.CumulativeTemporality
+}
+
+func standardConfig(ik sdkinstrument.Kind) (ints, floats aggregation.Config) {
+	return aggregation.Config{}, aggregation.Config{}
 }
 
 func New(exporter Exporter, opts ...Option) *Reader {
 	cfg := Config{
-		defaults: standardDefaults,
+		DefaultAggregationKindFunc:        standardAggregation,
+		DefaultAggregationTemporalityFunc: standardTemporality,
+		DefaultAggregationConfigFunc:      standardConfig,
 	}
 	for _, opt := range opts {
 		opt(&cfg)
@@ -107,7 +128,9 @@ func New(exporter Exporter, opts ...Option) *Reader {
 		exporter: exporter,
 	}
 	for i := sdkinstrument.Kind(0); i < sdkinstrument.NumKinds; i++ {
-		r.defAggr[i], r.defTempo[i], r.defI64Cfg[i], r.defF64Cfg[i] = cfg.defaults(i)
+		r.defAggr[i] = cfg.DefaultAggregationKindFunc(i)
+		r.defTempo[i] = cfg.DefaultAggregationTemporalityFunc(i)
+		r.defI64Cfg[i], r.defF64Cfg[i] = cfg.DefaultAggregationConfigFunc(i)
 	}
 	return r
 }

@@ -27,11 +27,10 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
-	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
-	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
-	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
-	selector "go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/reader"
+	"go.opentelemetry.io/otel/sdk/metric/sdkinstrument"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -82,31 +81,36 @@ func expectHistogram(name string, values ...string) expectedMetric {
 	}
 }
 
-func newPipeline(config prometheus.Config, options ...controller.Option) (*prometheus.Exporter, error) {
-	c := controller.New(
-		processor.NewFactory(
-			selector.NewWithHistogramDistribution(
-				histogram.WithExplicitBoundaries(config.DefaultHistogramBoundaries),
-			),
-			aggregation.CumulativeTemporalitySelector(),
-			processor.WithMemory(true),
-		),
-		options...,
-	)
-	return prometheus.New(config, c)
+func newPipeline(config prometheus.Config, boundaries []float64, sdkopts []sdkmetric.Option) (*sdkmetric.Provider, *prometheus.Exporter, error) {
+	prom, err := prometheus.New(config)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	r := reader.New(prom, reader.WithDefaultAggregationConfigFunc(func(k sdkinstrument.Kind) (aggregation.Config, aggregation.Config) {
+		cfg := aggregation.Config{
+			aggregation.HistogramConfig{
+				ExplicitBoundaries: boundaries,
+			},
+		}
+		return cfg, cfg
+	}))
+
+	sdk := sdkmetric.New(append(sdkopts, sdkmetric.WithReader(r))...)
+	return sdk, prom, nil
 }
 
 func TestPrometheusExporter(t *testing.T) {
-	exporter, err := newPipeline(
-		prometheus.Config{
-			DefaultHistogramBoundaries: []float64{-0.5, 1},
+	sdk, exporter, err := newPipeline(
+		prometheus.Config{},
+		[]float64{-0.5, 1},
+		[]sdkmetric.Option{
+			sdkmetric.WithResource(resource.NewSchemaless(attribute.String("R", "V"))),
 		},
-		controller.WithCollectPeriod(0),
-		controller.WithResource(resource.NewSchemaless(attribute.String("R", "V"))),
 	)
 	require.NoError(t, err)
 
-	meter := exporter.MeterProvider().Meter("test")
+	meter := sdk.Meter("test")
 	upDownCounter, err := meter.SyncFloat64().UpDownCounter("updowncounter")
 	require.NoError(t, err)
 	counter, err := meter.SyncFloat64().Counter("counter")
@@ -200,14 +204,16 @@ func compareExport(t *testing.T, exporter *prometheus.Exporter, expected []expec
 
 func TestPrometheusStatefulness(t *testing.T) {
 	// Create a meter
-	exporter, err := newPipeline(
+	sdk, exporter, err := newPipeline(
 		prometheus.Config{},
-		controller.WithCollectPeriod(0),
-		controller.WithResource(resource.Empty()),
+		nil,
+		[]sdkmetric.Option{
+			sdkmetric.WithResource(resource.Empty()),
+		},
 	)
 	require.NoError(t, err)
 
-	meter := exporter.MeterProvider().Meter("test")
+	meter := sdk.Meter("test")
 
 	ctx := context.Background()
 

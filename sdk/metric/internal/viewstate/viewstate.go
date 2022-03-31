@@ -527,7 +527,7 @@ func reuseLast[T any](p *[]T) *T {
 
 func appendInstrument(insts *[]reader.Instrument, desc sdkinstrument.Descriptor, tempo aggregation.Temporality) *reader.Instrument {
 	ioutput := reuseLast(insts)
-	ioutput.Instrument = desc
+	ioutput.Descriptor = desc
 	ioutput.Temporality = tempo
 	return ioutput
 }
