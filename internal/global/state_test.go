@@ -21,7 +21,7 @@ import (
 )
 
 func TestResetsOfGlobalsPanic(t *testing.T) {
-	global.ResetForTest()
+	global.ResetForTest(t)
 	tests := map[string]func(){
 		"SetTextMapPropagator": func() {
 			global.SetTextMapPropagator(global.TextMapPropagator())
