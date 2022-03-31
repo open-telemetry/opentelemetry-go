@@ -50,7 +50,7 @@ func TestSetMeterProvider(t *testing.T) {
 
 		_, ok := MeterProvider().(*meterProvider)
 		if ok {
-			t.Fatal("Global Meter Provider was not changed")
+			t.Fatal("Global MeterProvider was not changed")
 		}
 	})
 
