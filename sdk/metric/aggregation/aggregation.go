@@ -93,25 +93,15 @@ type (
 const (
 	DropKind      Kind = "Drop"
 	SumKind       Kind = "Sum"
-	HistogramKind Kind = "Histogram"
 	GaugeKind     Kind = "Gauge"
+	HistogramKind Kind = "Histogram"
 )
 
 // Sentinel errors for Aggregation interface.
 var (
-	ErrNegativeInput    = fmt.Errorf("negative value is out of range for this instrument")
-	ErrNaNInput         = fmt.Errorf("NaN value is an invalid input")
-	ErrInfInput         = fmt.Errorf("±Inf value is an invalid input")
-	ErrInconsistentType = fmt.Errorf("inconsistent aggregator types")
-
-	// ErrNoCumulativeToDelta is returned when requesting delta
-	// export kind for a precomputed sum instrument.
-	ErrNoCumulativeToDelta = fmt.Errorf("cumulative to delta not implemented")
-
-	// ErrNoData is returned when (due to a race with collection)
-	// the Aggregator is check-pointed before the first value is set.
-	// The aggregator should simply be skipped in this case.
-	ErrNoData = fmt.Errorf("no data collected by this aggregator")
+	ErrNegativeInput = fmt.Errorf("negative value is out of range for this instrument")
+	ErrNaNInput      = fmt.Errorf("NaN value is an invalid input")
+	ErrInfInput      = fmt.Errorf("±Inf value is an invalid input")
 )
 
 // String returns the string value of Kind.

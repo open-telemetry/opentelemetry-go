@@ -121,21 +121,15 @@ func NewConfig(def Defaults, opts ...Option) aggregation.HistogramConfig {
 }
 
 func (h *State[N, Traits]) Sum() number.Number {
-	h.lock.Lock()
-	defer h.lock.Unlock()
 	var traits Traits
 	return traits.ToNumber(h.sum)
 }
 
 func (h *State[N, Traits]) Count() uint64 {
-	h.lock.Lock()
-	defer h.lock.Unlock()
 	return h.count
 }
 
 func (h *State[N, Traits]) Histogram() aggregation.Buckets {
-	h.lock.Lock()
-	defer h.lock.Unlock()
 	return aggregation.Buckets{
 		Boundaries: h.boundaries,
 		Counts:     h.bucketCounts,
@@ -232,6 +226,11 @@ func (Methods[N, Traits, Storage]) Storage(aggr aggregation.Aggregation) *State[
 	return aggr.(*State[N, Traits])
 }
 
-func (Methods[N, Traits, Storage]) SubtractSwap(valueToModify, operand *State[N, Traits]) {
-	panic("@@@HERE")
+func (Methods[N, Traits, Storage]) SubtractSwap(value, operandToModify *State[N, Traits]) {
+	operandToModify.sum = value.sum - operandToModify.sum
+	operandToModify.count = value.count - operandToModify.count
+
+	for i := range value.bucketCounts {
+		operandToModify.bucketCounts[i] = value.bucketCounts[i] - operandToModify.bucketCounts[i]
+	}
 }
