@@ -101,8 +101,9 @@ func New(opts ...Option) *Provider {
 
 func (p *Provider) producerFor(r *reader.Reader) reader.Producer {
 	return &providerProducer{
-		provider: p,
-		reader:   r,
+		provider:    p,
+		reader:      r,
+		lastCollect: p.startTime,
 	}
 }
 
@@ -125,6 +126,8 @@ func resetInstrument(inst *reader.Instrument) {
 }
 
 func appendScope(scopes *[]reader.Scope) *reader.Scope {
+	// Note: there's a generic form of this logic in internal/viewstate,
+	// should this use it?
 	if len(*scopes) < cap(*scopes) {
 		(*scopes) = (*scopes)[0 : len(*scopes)+1 : cap(*scopes)]
 	} else {
