@@ -16,7 +16,6 @@ package aggregation // import "go.opentelemetry.io/otel/sdk/metric/aggregation"
 
 import (
 	"fmt"
-	"time"
 
 	"go.opentelemetry.io/otel/sdk/metric/number"
 )
@@ -37,19 +36,19 @@ type (
 	// Sum returns an aggregated sum.
 	Sum interface {
 		Aggregation
-		Sum() (number.Number, error)
+		Sum() number.Number
 	}
 
 	// Count returns the number of values that were aggregated.
 	Count interface {
 		Aggregation
-		Count() (uint64, error)
+		Count() uint64
 	}
 
-	// LastValue returns the latest value that was aggregated.
-	LastValue interface {
+	// Gauge returns the latest value that was aggregated.
+	Gauge interface {
 		Aggregation
-		LastValue() (number.Number, time.Time, error)
+		Gauge() number.Number
 	}
 
 	// Buckets represents histogram buckets boundaries and counts.
@@ -68,9 +67,9 @@ type (
 	// Histogram returns the count of events in pre-determined buckets.
 	Histogram interface {
 		Aggregation
-		Count() (uint64, error)
-		Sum() (number.Number, error)
-		Histogram() (Buckets, error)
+		Count() uint64
+		Sum() number.Number
+		Histogram() Buckets
 	}
 )
 
@@ -95,7 +94,7 @@ const (
 	DropKind      Kind = "Drop"
 	SumKind       Kind = "Sum"
 	HistogramKind Kind = "Histogram"
-	LastValueKind Kind = "LastValue"
+	GaugeKind     Kind = "Gauge"
 )
 
 // Sentinel errors for Aggregation interface.
@@ -121,5 +120,5 @@ func (k Kind) String() string {
 }
 
 func (k Kind) HasTemporality() bool {
-	return k != LastValueKind
+	return k != GaugeKind
 }

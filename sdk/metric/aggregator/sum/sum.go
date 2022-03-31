@@ -25,7 +25,7 @@ type (
 	Methods[N number.Any, Traits traits.Any[N], Storage State[N, Traits]] struct{}
 
 	State[N number.Any, Traits traits.Any[N]] struct {
-		Value N
+		value N
 	}
 )
 
@@ -37,9 +37,9 @@ var (
 	_ aggregation.Sum = &State[float64, traits.Float64]{}
 )
 
-func (s *State[N, Traits]) Sum() (number.Number, error) {
+func (s *State[N, Traits]) Sum() number.Number {
 	var traits Traits
-	return traits.ToNumber(s.Value), nil
+	return traits.ToNumber(s.value)
 }
 
 func (s *State[N, Traits]) Kind() aggregation.Kind {
@@ -52,24 +52,24 @@ func (Methods[N, Traits, Storage]) Init(state *State[N, Traits], _ aggregator.Co
 
 func (Methods[N, Traits, Storage]) SynchronizedMove(resetSrc, dest *State[N, Traits]) {
 	var traits Traits
-	dest.Value = traits.SwapAtomic(&resetSrc.Value, 0)
+	dest.value = traits.SwapAtomic(&resetSrc.value, 0)
 }
 
 func (Methods[N, Traits, Storage]) Reset(ptr *State[N, Traits]) {
-	ptr.Value = 0
+	ptr.value = 0
 }
 
-func (Methods[N, Traits, Storage]) HasData(ptr *State[N, Traits]) bool {
-	return ptr.Value == 0
+func (Methods[N, Traits, Storage]) HasChange(ptr *State[N, Traits]) bool {
+	return ptr.value == 0
 }
 
 func (Methods[N, Traits, Storage]) Update(state *State[N, Traits], value N) {
 	var traits Traits
-	traits.AddAtomic(&state.Value, value)
+	traits.AddAtomic(&state.value, value)
 }
 
 func (Methods[N, Traits, Storage]) Merge(to, from *State[N, Traits]) {
-	to.Value += from.Value
+	to.value += from.value
 }
 
 func (Methods[N, Traits, Storage]) Aggregation(state *State[N, Traits]) aggregation.Aggregation {
@@ -81,5 +81,5 @@ func (Methods[N, Traits, Storage]) Storage(aggr aggregation.Aggregation) *State[
 }
 
 func (Methods[N, Traits, Storage]) SubtractSwap(newValue, oldValueModified *State[N, Traits]) {
-	oldValueModified.Value = newValue.Value - oldValueModified.Value
+	oldValueModified.value = newValue.value - oldValueModified.value
 }

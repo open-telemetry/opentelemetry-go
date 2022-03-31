@@ -12,28 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package lastvalue // import "go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
+package gauge // import "go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
 
 import (
-	"fmt"
-	"sync"
-	"time"
-
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 )
 
-var ErrNoSubtract = fmt.Errorf("lastvalue subtract not implemented")
-
 type (
 	Methods[N number.Any, Traits traits.Any[N], Storage State[N, Traits]] struct{}
 
 	State[N number.Any, Traits traits.Any[N]] struct {
-		lock      sync.Mutex
-		value     N
-		timestamp time.Time
+		value N
 	}
 )
 
@@ -41,26 +33,17 @@ var (
 	_ aggregator.Methods[int64, State[int64, traits.Int64]]       = Methods[int64, traits.Int64, State[int64, traits.Int64]]{}
 	_ aggregator.Methods[float64, State[float64, traits.Float64]] = Methods[float64, traits.Float64, State[float64, traits.Float64]]{}
 
-	_ aggregation.LastValue = &State[int64, traits.Int64]{}
-	_ aggregation.LastValue = &State[float64, traits.Float64]{}
+	_ aggregation.Gauge = &State[int64, traits.Int64]{}
+	_ aggregation.Gauge = &State[float64, traits.Float64]{}
 )
 
-// LastValue returns the last-recorded lastValue value and the
-// corresponding timestamp.  The error value aggregation.ErrNoData
-// will be returned if (due to a race condition) the checkpoint was
-// computed before the first value was set.
-func (lv *State[N, Traits]) LastValue() (number.Number, time.Time, error) {
+func (lv *State[N, Traits]) Gauge() number.Number {
 	var traits Traits
-	lv.lock.Lock()
-	defer lv.lock.Unlock()
-	if lv.timestamp.IsZero() {
-		return 0, time.Time{}, aggregation.ErrNoData
-	}
-	return traits.ToNumber(lv.value), lv.timestamp, nil
+	return traits.ToNumber(lv.value)
 }
 
 func (lv *State[N, Traits]) Kind() aggregation.Kind {
-	return aggregation.LastValueKind
+	return aggregation.GaugeKind
 }
 
 func (Methods[N, Traits, Storage]) Init(state *State[N, Traits], _ aggregator.Config) {
@@ -68,42 +51,26 @@ func (Methods[N, Traits, Storage]) Init(state *State[N, Traits], _ aggregator.Co
 }
 
 func (Methods[N, Traits, Storage]) Reset(ptr *State[N, Traits]) {
-	ptr.value = 0
-	ptr.timestamp = time.Time{}
+	var traits Traits
+	traits.SetAtomic(&ptr.value, 0)
 }
 
-func (Methods[N, Traits, Storage]) HasData(ptr *State[N, Traits]) bool {
-	return ptr.timestamp.IsZero()
+func (Methods[N, Traits, Storage]) HasChange(ptr *State[N, Traits]) bool {
+	return ptr.value == 0
 }
 
 func (Methods[N, Traits, Storage]) SynchronizedMove(resetSrc, dest *State[N, Traits]) {
-	resetSrc.lock.Lock()
-	defer resetSrc.lock.Unlock()
-
-	dest.value = resetSrc.value
-	dest.timestamp = resetSrc.timestamp
-
-	resetSrc.value = 0
-	resetSrc.timestamp = time.Time{}
+	var traits Traits
+	dest.value = traits.SwapAtomic(&resetSrc.value, 0)
 }
 
 func (Methods[N, Traits, Storage]) Update(state *State[N, Traits], number N) {
-	now := time.Now()
-
-	state.lock.Lock()
-	defer state.lock.Unlock()
-
-	state.value = number
-	state.timestamp = now
+	var traits Traits
+	traits.SetAtomic(&state.value, number)
 }
 
 func (Methods[N, Traits, Storage]) Merge(to, from *State[N, Traits]) {
-	if to.timestamp.After(from.timestamp) {
-		return
-	}
-
 	to.value = from.value
-	to.timestamp = from.timestamp
 }
 
 func (Methods[N, Traits, Storage]) Aggregation(state *State[N, Traits]) aggregation.Aggregation {

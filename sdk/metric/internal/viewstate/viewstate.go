@@ -10,8 +10,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
@@ -161,13 +161,12 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) Instrument {
 	for readerIdx, r := range v.readers {
 		for _, view := range matches {
 			var acfg aggregator.Config
-			var kind aggregation.Kind
-			switch view.Aggregation() {
-			case aggregation.SumKind, aggregation.LastValueKind:
+
+			kind := view.Aggregation()
+			switch kind {
+			case aggregation.SumKind, aggregation.GaugeKind:
 				// These have no options
-				kind = view.Aggregation()
 			case aggregation.HistogramKind:
-				kind = view.Aggregation()
 				acfg.Histogram = histogram.NewConfig(
 					// @@@ per-reader histogram defaults
 					histogramDefaultsFor(instrument.NumberKind),
@@ -234,7 +233,7 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) Instrument {
 
 	switch len(compiled) {
 	case 0:
-		return nil // TODO does this require a Noop?
+		return nil
 	case 1:
 		// As a special case, recognize the case where there
 		// is only one reader and only one view to bypass the
@@ -339,11 +338,11 @@ func newAsyncView[
 
 func compileSync[N number.Any, Traits traits.Any[N]](config configuredBehavior) Instrument {
 	switch config.kind {
-	case aggregation.LastValueKind:
+	case aggregation.GaugeKind:
 		return newSyncView[
 			N,
-			lastvalue.State[N, Traits],
-			lastvalue.Methods[N, Traits, lastvalue.State[N, Traits]],
+			gauge.State[N, Traits],
+			gauge.Methods[N, Traits, gauge.State[N, Traits]],
 		](config)
 	case aggregation.HistogramKind:
 		return newSyncView[
@@ -362,11 +361,11 @@ func compileSync[N number.Any, Traits traits.Any[N]](config configuredBehavior) 
 
 func compileAsync[N number.Any, Traits traits.Any[N]](config configuredBehavior) Instrument {
 	switch config.kind {
-	case aggregation.LastValueKind:
+	case aggregation.GaugeKind:
 		return newAsyncView[
 			N,
-			lastvalue.State[N, Traits],
-			lastvalue.Methods[N, Traits, lastvalue.State[N, Traits]],
+			gauge.State[N, Traits],
+			gauge.Methods[N, Traits, gauge.State[N, Traits]],
 		](config)
 	case aggregation.HistogramKind:
 		return newAsyncView[
@@ -565,7 +564,8 @@ func (p *statelessSyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, se
 	ioutput := appendInstrument(output, p.desc, aggregation.DeltaTemporality)
 
 	for set, storage := range p.data {
-		if !methods.HasData(storage) {
+		// Note: this can't be a Gauge b/c synchronous instrument.
+		if !methods.HasChange(storage) {
 			delete(p.data, set)
 			continue
 		}
@@ -612,9 +612,8 @@ func (p *statefulAsyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, se
 			// This does `*pval := *storage - *pval`
 			methods.SubtractSwap(storage, pval)
 
-			// Skip the series if the difference has no data.
-			// Note: common to use "deadband" here?
-			if !methods.HasData(pval) {
+			// Skip the series if it has not changed.
+			if !methods.HasChange(pval) {
 				continue
 			}
 			// Output the difference except for Gauge, in

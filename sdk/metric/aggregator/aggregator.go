@@ -84,6 +84,10 @@ type Methods[N number.Any, Storage any] interface {
 	// Aggregation returns an exporter-ready value.
 	Aggregation(ptr *Storage) aggregation.Aggregation
 
-	// HasData returns true if there have been any (discernible) Updates.
-	HasData(ptr *Storage) bool
+	// HasChange returns true if there have been any (discernible)
+	// Updates.  This tests whether an aggregation has zero sum,
+	// zero count, or zero difference, depending on the
+	// aggregation.  If the instrument is asynchronous, this will
+	// be used after subtraction.
+	HasChange(ptr *Storage) bool
 }

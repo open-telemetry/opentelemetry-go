@@ -82,7 +82,7 @@ func standardDefaults(ik sdkinstrument.Kind) (aggregation.Kind, aggregation.Temp
 	case sdkinstrument.HistogramKind:
 		ak = aggregation.HistogramKind
 	case sdkinstrument.GaugeObserverKind:
-		ak = aggregation.LastValueKind
+		ak = aggregation.GaugeKind
 	case sdkinstrument.CounterKind,
 		sdkinstrument.UpDownCounterKind,
 		sdkinstrument.CounterObserverKind,

@@ -125,30 +125,30 @@ func NewConfig(def Defaults, opts ...Option) aggregator.HistogramConfig {
 	return cfg
 }
 
-func (h *State[N, Traits]) Sum() (number.Number, error) {
+func (h *State[N, Traits]) Sum() number.Number {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 	var traits Traits
-	return traits.ToNumber(h.sum), nil
+	return traits.ToNumber(h.sum)
 }
 
-func (h *State[N, Traits]) Count() (uint64, error) {
+func (h *State[N, Traits]) Count() uint64 {
 	h.lock.Lock()
 	defer h.lock.Unlock()
-	return h.count, nil
+	return h.count
 }
 
-func (h *State[N, Traits]) Histogram() (aggregation.Buckets, error) {
+func (h *State[N, Traits]) Histogram() aggregation.Buckets {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 	return aggregation.Buckets{
 		Boundaries: h.boundaries,
 		Counts:     h.bucketCounts,
-	}, nil
+	}
 }
 
 func (h *State[N, Traits]) Kind() aggregation.Kind {
-	return aggregation.LastValueKind
+	return aggregation.HistogramKind
 }
 
 func (h *State[N, Traits]) clearState() {
@@ -168,7 +168,7 @@ func (Methods[N, Traits, Storage]) Reset(ptr *State[N, Traits]) {
 	ptr.clearState()
 }
 
-func (Methods[N, Traits, Storage]) HasData(ptr *State[N, Traits]) bool {
+func (Methods[N, Traits, Storage]) HasChange(ptr *State[N, Traits]) bool {
 	return ptr.count == 0
 }
 
