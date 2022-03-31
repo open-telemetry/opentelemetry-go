@@ -28,7 +28,7 @@ func TestSetTracerProvider(t *testing.T) {
 
 		tp, ok := TracerProvider().(*tracerProvider)
 		if !ok {
-			t.Fatal("Global Tracer Provider should be the default tracer provider")
+			t.Fatal("Global TracerProvider should be the default tracer provider")
 		}
 
 		if tp.delegate != nil {
