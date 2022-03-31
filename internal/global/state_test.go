@@ -72,7 +72,7 @@ func TestSetTextMapPropagator(t *testing.T) {
 		}
 
 		if tmp.delegate != nil {
-			t.Fatal("TextMap propagator should not delegate when setting itself")
+			t.Fatal("TextMapPropagator should not delegate when setting itself")
 		}
 	})
 
