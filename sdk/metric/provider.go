@@ -105,16 +105,46 @@ func (p *provider) producerFor(r *reader.Reader) reader.Producer {
 	}
 }
 
-func (pp *providerProducer) Produce() reader.Metrics {
+func resetMetrics(m *reader.Metrics) {
+	for i := range m.Scopes {
+		resetScope(&m.Scopes[i])
+	}
+	m.Scopes = m.Scopes[0:0:cap(m.Scopes)]
+}
+
+func resetScope(s *reader.Scope) {
+	for i := range s.Instruments {
+		resetInstrument(&s.Instruments[i])
+	}
+	s.Instruments = s.Instruments[0:0:cap(s.Instruments)]
+}
+
+func resetInstrument(inst *reader.Instrument) {
+	inst.Series = inst.Series[0:0:cap(inst.Series)]
+}
+
+func appendScope(scopes *[]reader.Scope) *reader.Scope {
+	if len(*scopes) < cap(*scopes) {
+		(*scopes) = (*scopes)[0 : len(*scopes)+1 : cap(*scopes)]
+	} else {
+		(*scopes) = append(*scopes, reader.Scope{})
+	}
+	return &(*scopes)[len(*scopes)-1]
+}
+
+func (pp *providerProducer) Produce(inout *reader.Metrics) reader.Metrics {
 	pp.lock.Lock()
 	defer pp.lock.Unlock()
 
 	ordered := pp.provider.getOrdered()
 
-	output := reader.Metrics{
-		Resource: pp.provider.cfg.res,
-		Scopes:   make([]reader.Scope, len(ordered)),
+	var output reader.Metrics
+	if inout != nil {
+		resetMetrics(inout)
+		output = *inout
 	}
+
+	output.Resource = pp.provider.cfg.res
 
 	sequence := reader.Sequence{
 		Start: pp.provider.startTime,
@@ -125,8 +155,7 @@ func (pp *providerProducer) Produce() reader.Metrics {
 	// TODO: Add a timeout to the context.
 	ctx := context.Background()
 
-	for meterIdx, meter := range ordered {
-		// Lock
+	for _, meter := range ordered {
 		meter.lock.Lock()
 		callbacks := meter.callbacks
 		instruments := meter.instruments
@@ -136,10 +165,12 @@ func (pp *providerProducer) Produce() reader.Metrics {
 			cb.Run(ctx, pp.reader)
 		}
 
-		output.Scopes[meterIdx].Library = meter.library
+		scope := appendScope(&output.Scopes)
+
+		scope.Library = meter.library
 
 		for _, inst := range instruments {
-			inst.Collect(pp.reader, sequence, &output.Scopes[meterIdx].Instruments)
+			inst.Collect(pp.reader, sequence, &scope.Instruments)
 		}
 	}
 

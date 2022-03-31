@@ -66,7 +66,7 @@ type (
 	}
 
 	Producer interface {
-		Produce() Metrics
+		Produce(in *Metrics) Metrics
 	}
 )
 

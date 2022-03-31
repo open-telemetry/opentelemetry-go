@@ -3,6 +3,7 @@ package viewstate
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -513,6 +514,31 @@ func (mi multiInstrument[N]) Collect(reader *reader.Reader, sequence reader.Sequ
 	}
 }
 
+func reuseLast[T any](p *[]T) *T {
+	if len(*p) < cap(*p) {
+		(*p) = (*p)[0 : len(*p)+1 : cap(*p)]
+	} else {
+		var empty T
+		(*p) = append(*p, empty)
+	}
+	return &(*p)[len(*p)-1]
+}
+
+func appendInstrument(insts *[]reader.Instrument, desc sdkinstrument.Descriptor, tempo aggregation.Temporality) *reader.Instrument {
+	ioutput := reuseLast(insts)
+	ioutput.Instrument = desc
+	ioutput.Temporality = tempo
+	return ioutput
+}
+
+func appendSeries(series *[]reader.Series, set attribute.Set, agg aggregation.Aggregation, start, end time.Time) {
+	soutput := reuseLast(series)
+	soutput.Attributes = set
+	soutput.Aggregation = agg
+	soutput.Start = start
+	soutput.End = end
+}
+
 // Collect for Synchronous Delta->Cumulative
 func (p *statefulSyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, seq reader.Sequence, output *[]reader.Instrument) {
 	var methods Methods
@@ -520,20 +546,12 @@ func (p *statefulSyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, seq
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	*output = append(*output, reader.Instrument{
-		Instrument:  p.desc,
-		Temporality: aggregation.CumulativeTemporality,
-	})
-	ioutput := &(*output)[len(*output)-1]
+	ioutput := appendInstrument(output, p.desc, aggregation.CumulativeTemporality)
 
 	for set, storage := range p.data {
 		// Note: No reset in this process.
-		ioutput.Series = append(ioutput.Series, reader.Series{
-			Attributes:  set,
-			Aggregation: methods.Aggregation(storage), // This is a direct reference to the underlying storage.
-			Start:       seq.Last,
-			End:         seq.Now,
-		})
+		// This takes a direct reference to the underlying storage.
+		appendSeries(&ioutput.Series, set, methods.Aggregation(storage), seq.Start, seq.Now)
 	}
 }
 
@@ -544,11 +562,7 @@ func (p *statelessSyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, se
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	*output = append(*output, reader.Instrument{
-		Instrument:  p.desc,
-		Temporality: aggregation.DeltaTemporality,
-	})
-	ioutput := &(*output)[len(*output)-1]
+	ioutput := appendInstrument(output, p.desc, aggregation.DeltaTemporality)
 
 	for set, storage := range p.data {
 		if !methods.HasData(storage) {
@@ -562,12 +576,7 @@ func (p *statelessSyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, se
 		methods.Merge(ns, storage)
 		methods.Reset(storage)
 
-		ioutput.Series = append(ioutput.Series, reader.Series{
-			Attributes:  set,
-			Aggregation: methods.Aggregation(ns),
-			Start:       seq.Last,
-			End:         seq.Now,
-		})
+		appendSeries(&ioutput.Series, set, methods.Aggregation(ns), seq.Last, seq.Now)
 	}
 }
 
@@ -578,20 +587,11 @@ func (p *statelessAsyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, s
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	*output = append(*output, reader.Instrument{
-		Instrument:  p.desc,
-		Temporality: aggregation.CumulativeTemporality,
-	})
-	ioutput := &(*output)[len(*output)-1]
+	ioutput := appendInstrument(output, p.desc, aggregation.CumulativeTemporality)
 
 	for set, storage := range p.data {
 		// Copy the underlying storage.
-		ioutput.Series = append(ioutput.Series, reader.Series{
-			Attributes:  set,
-			Aggregation: methods.Aggregation(storage),
-			Start:       seq.Start,
-			End:         seq.Now,
-		})
+		appendSeries(&ioutput.Series, set, methods.Aggregation(storage), seq.Start, seq.Now)
 	}
 	// Reset the entire map.
 	p.data = map[attribute.Set]*Storage{}
@@ -604,11 +604,7 @@ func (p *statefulAsyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, se
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	*output = append(*output, reader.Instrument{
-		Instrument:  p.desc,
-		Temporality: aggregation.DeltaTemporality,
-	})
-	ioutput := &(*output)[len(*output)-1]
+	ioutput := appendInstrument(output, p.desc, aggregation.DeltaTemporality)
 
 	for set, storage := range p.data {
 		pval, has := p.prior[set]
@@ -628,12 +624,7 @@ func (p *statefulAsyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, se
 			}
 		}
 
-		ioutput.Series = append(ioutput.Series, reader.Series{
-			Attributes:  set,
-			Aggregation: methods.Aggregation(storage),
-			Start:       seq.Start,
-			End:         seq.Now,
-		})
+		appendSeries(&ioutput.Series, set, methods.Aggregation(storage), seq.Last, seq.Now)
 	}
 	// Copy the current to the prior and reset.
 	p.prior = p.data

@@ -8,18 +8,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/reader"
 )
 
-type testExporter struct {
-	producer reader.Producer
-}
-
-func (t *testExporter) Register(producer reader.Producer) {
-	t.producer = producer
-}
-
-func (*testExporter) Flush(context.Context) error { return nil }
-
-func (*testExporter) Shutdown(context.Context) error { return nil }
-
 func BenchmarkCounterAddNoAttrs(b *testing.B) {
 	ctx := context.Background()
 	exp := &testExporter{}
@@ -77,7 +65,7 @@ func BenchmarkCounterAddManyAttrs(b *testing.B) {
 	}
 }
 
-func BenchmarkCounterCollectOneAttr(b *testing.B) {
+func BenchmarkCounterCollectOneAttrNoReuse(b *testing.B) {
 	ctx := context.Background()
 	exp := &testExporter{}
 	rdr := reader.New(exp)
@@ -88,7 +76,26 @@ func BenchmarkCounterCollectOneAttr(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		cntr.Add(ctx, 1, attribute.Int("K", 1))
-		_ = exp.producer.Produce()
+
+		_ = exp.producer.Produce(nil)
+	}
+}
+
+func BenchmarkCounterCollectOneAttrWithReuse(b *testing.B) {
+	ctx := context.Background()
+	exp := &testExporter{}
+	rdr := reader.New(exp)
+	provider := New(WithReader(rdr))
+	b.ReportAllocs()
+
+	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
+
+	var reuse reader.Metrics
+
+	for i := 0; i < b.N; i++ {
+		cntr.Add(ctx, 1, attribute.Int("K", 1))
+
+		reuse = exp.producer.Produce(&reuse)
 	}
 }
 
@@ -101,10 +108,33 @@ func BenchmarkCounterCollectTenAttrs(b *testing.B) {
 
 	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
 
+	var reuse reader.Metrics
+
 	for i := 0; i < b.N; i++ {
 		for j := 0; j < 10; j++ {
 			cntr.Add(ctx, 1, attribute.Int("K", j))
 		}
-		_ = exp.producer.Produce()
+		reuse = exp.producer.Produce(&reuse)
+	}
+}
+
+func BenchmarkCounterCollectTenAttrsTenTimes(b *testing.B) {
+	ctx := context.Background()
+	exp := &testExporter{}
+	rdr := reader.New(exp)
+	provider := New(WithReader(rdr))
+	b.ReportAllocs()
+
+	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
+
+	var reuse reader.Metrics
+
+	for i := 0; i < b.N; i++ {
+		for k := 0; k < 10; k++ {
+			for j := 0; j < 10; j++ {
+				cntr.Add(ctx, 1, attribute.Int("K", j))
+			}
+			reuse = exp.producer.Produce(&reuse)
+		}
 	}
 }
