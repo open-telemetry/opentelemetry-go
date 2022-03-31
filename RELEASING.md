@@ -2,12 +2,10 @@
 
 ## Semantic Convention Generation
 
-If a new version of the OpenTelemetry Specification has been released it will be necessary to generate a new
-semantic convention package from the YAML definitions in the specification repository. There is a `semconvgen` utility
-installed by `make tools` that can be used to generate the a package with the name matching the specification
-version number under the `semconv` package. This will ideally be done soon after the specification release is
-tagged. Make sure that the specification repo contains a checkout of the the latest tagged release so that the
-generated files match the released semantic conventions.
+If a new version of the OpenTelemetry Specification has been released it will be necessary to generate a new semantic convention package from the YAML definitions in the specification repository.
+There is a `semconvgen` utility installed by `make tools` that can be used to generate a package with the name matching the specification version number under the `semconv` package.
+This will ideally be done soon after the specification release is tagged.
+Make sure that the specification repo contains a checkout of the the latest tagged release so that the generated files match the released semantic conventions.
 
 There are currently two categories of semantic conventions that must be generated, `resource` and `trace`.
 
@@ -16,11 +14,9 @@ There are currently two categories of semantic conventions that must be generate
 .tools/semconvgen -i /path/to/specification/repo/semantic_conventions/trace -t semconv/template.j2
 ```
 
-Using default values for all options other than `input` will result in using the `template.j2` template to
-generate `resource.go` and `trace.go` in `/path/to/otelgo/repo/semconv/<version>`.
+Using default values for all options other than `input` will result in using the `template.j2` template to generate `resource.go` and `trace.go` in `/path/to/otelgo/repo/semconv/<version>`.
 
-There are several ancillary files that are not generated and should be copied into the new package from the
-prior package, with updates made as appropriate to canonical import path statements and constant values.
+There are several ancillary files that are not generated and should be copied into the new package from the prior package, with updates made as appropriate to canonical import path statements and constant values.
 These files include:
 
 * doc.go
@@ -29,8 +25,7 @@ These files include:
 * schema.go
 
 Uses of the previous schema version in this repository should be updated to use the newly generated version.
-No tooling for this exists at present, so use find/replace in your editor of choice or craft a `grep | sed`
-pipeline if you like living on the edge.
+No tooling for this exists at present, so use find/replace in your editor of choice or craft a `grep | sed` pipeline if you like living on the edge.
 
 ## Pre-Release
 
