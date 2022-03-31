@@ -83,7 +83,7 @@ func TestSetTextMapPropagator(t *testing.T) {
 
 		_, ok := TextMapPropagator().(*textMapPropagator)
 		if ok {
-			t.Fatal("Global TextMap Propagator was not changed")
+			t.Fatal("Global TextMapPropagator was not changed")
 		}
 	})
 
