@@ -68,7 +68,7 @@ func TestSetTextMapPropagator(t *testing.T) {
 
 		tmp, ok := TextMapPropagator().(*textMapPropagator)
 		if !ok {
-			t.Fatal("Global TextMap Propagator should be the default propagator")
+			t.Fatal("Global TextMapPropagator should be the default propagator")
 		}
 
 		if tmp.delegate != nil {
