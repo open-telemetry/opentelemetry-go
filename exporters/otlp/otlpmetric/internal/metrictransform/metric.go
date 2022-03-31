@@ -72,7 +72,7 @@ func toNanos(t time.Time) uint64 {
 // InstrumentationLibraryReader transforms all records contained in a checkpoint into
 // batched OTLP ResourceMetrics.
 func InstrumentationLibraryReader(ctx context.Context, temporalitySelector aggregation.TemporalitySelector, res *resource.Resource, ilmr export.InstrumentationLibraryReader, numWorkers uint) (*metricpb.ResourceMetrics, error) {
-	var ilms []*metricpb.InstrumentationLibraryMetrics
+	var sms []*metricpb.ScopeMetrics
 
 	err := ilmr.ForEach(func(lib instrumentation.Library, mr export.Reader) error {
 
@@ -107,24 +107,24 @@ func InstrumentationLibraryReader(ctx context.Context, temporalitySelector aggre
 			return nil
 		}
 
-		ilms = append(ilms, &metricpb.InstrumentationLibraryMetrics{
+		sms = append(sms, &metricpb.ScopeMetrics{
 			Metrics:   ms,
 			SchemaUrl: lib.SchemaURL,
-			InstrumentationLibrary: &commonpb.InstrumentationLibrary{
+			Scope: &commonpb.InstrumentationScope{
 				Name:    lib.Name,
 				Version: lib.Version,
 			},
 		})
 		return nil
 	})
-	if len(ilms) == 0 {
+	if len(sms) == 0 {
 		return nil, err
 	}
 
 	rms := &metricpb.ResourceMetrics{
-		Resource:                      Resource(res),
-		SchemaUrl:                     res.SchemaURL(),
-		InstrumentationLibraryMetrics: ilms,
+		Resource:     Resource(res),
+		SchemaUrl:    res.SchemaURL(),
+		ScopeMetrics: sms,
 	}
 
 	return rms, err
@@ -415,6 +415,7 @@ func histogramPoint(record export.Record, temporality aggregation.Temporality, a
 		return nil, err
 	}
 
+	sumFloat64 := sum.CoerceToFloat64(desc.NumberKind())
 	m := &metricpb.Metric{
 		Name:        desc.Name(),
 		Description: desc.Description(),
@@ -424,7 +425,7 @@ func histogramPoint(record export.Record, temporality aggregation.Temporality, a
 				AggregationTemporality: sdkTemporalityToTemporality(temporality),
 				DataPoints: []*metricpb.HistogramDataPoint{
 					{
-						Sum:               sum.CoerceToFloat64(desc.NumberKind()),
+						Sum:               &sumFloat64,
 						Attributes:        Iterator(labels.Iter()),
 						StartTimeUnixNano: toNanos(record.StartTime()),
 						TimeUnixNano:      toNanos(record.EndTime()),
