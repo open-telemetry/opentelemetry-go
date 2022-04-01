@@ -18,8 +18,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"go.opentelemetry.io/otel/metric/nonrecording"
 )
 
@@ -31,13 +29,18 @@ func resetGlobalMeterProvider() {
 func TestSetMeterProvider(t *testing.T) {
 	t.Cleanup(resetGlobalMeterProvider)
 
-	t.Run("Set With default panics", func(t *testing.T) {
+	t.Run("Set With default is a noop", func(t *testing.T) {
 		resetGlobalMeterProvider()
+		SetMeterProvider(MeterProvider())
 
-		assert.Panics(t, func() {
-			SetMeterProvider(MeterProvider())
-		})
+		mp, ok := MeterProvider().(*meterProvider)
+		if !ok {
+			t.Fatal("Global MeterProvider should be the default meter provider")
+		}
 
+		if mp.delegate != nil {
+			t.Fatal("meter provider should not delegate when setting itself")
+		}
 	})
 
 	t.Run("First Set() should replace the delegate", func(t *testing.T) {
@@ -47,8 +50,7 @@ func TestSetMeterProvider(t *testing.T) {
 
 		_, ok := MeterProvider().(*meterProvider)
 		if ok {
-			t.Error("Global Meter Provider was not changed")
-			return
+			t.Fatal("Global MeterProvider was not changed")
 		}
 	})
 
@@ -62,7 +64,7 @@ func TestSetMeterProvider(t *testing.T) {
 		dmp := mp.(*meterProvider)
 
 		if dmp.delegate == nil {
-			t.Error("The delegated meter providers should have a delegate")
+			t.Fatal("The delegated meter providers should have a delegate")
 		}
 	})
 }

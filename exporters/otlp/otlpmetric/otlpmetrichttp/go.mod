@@ -7,7 +7,7 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.6.1
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.28.0
 	go.opentelemetry.io/otel/sdk v1.6.1
-	go.opentelemetry.io/proto/otlp v0.12.1
+	go.opentelemetry.io/proto/otlp v0.15.0
 	google.golang.org/protobuf v1.28.0
 )
 
