@@ -15,6 +15,7 @@
 package main
 
 import (
+	"embed"
 	"flag"
 	"log"
 	"os"
@@ -27,6 +28,9 @@ import (
 var (
 	out = flag.String("output", "./", "output directory")
 	tag = flag.String("tag", "", "OpenTelemetry tagged version")
+
+	//go:embed templates/*.tmpl
+	rootFS embed.FS
 )
 
 // SemanticConventions are information about the semantic conventions being
@@ -39,28 +43,12 @@ type SemanticConventions struct {
 }
 
 func render(dest string, sc *SemanticConventions) error {
-	const templateDir = "templates/"
-
-	f, err := os.Open(templateDir)
+	tmpls, err := template.ParseFS(rootFS, "templates/*.tmpl")
 	if err != nil {
 		return err
 	}
-	files, err := f.Readdir(0)
-	if err != nil {
-		return err
-	}
-	if err = f.Close(); err != nil {
-		return err
-	}
-
-	for _, file := range files {
-		path := filepath.Join(templateDir, file.Name())
-		tmpl, err := template.ParseFiles(path)
-		if err != nil {
-			return err
-		}
-
-		target := filepath.Join(dest, strings.TrimSuffix(file.Name(), ".tmpl"))
+	for _, tmpl := range tmpls.Templates() {
+		target := filepath.Join(dest, strings.TrimSuffix(tmpl.Name(), ".tmpl"))
 		wr, err := os.Create(target)
 		if err != nil {
 			return err
