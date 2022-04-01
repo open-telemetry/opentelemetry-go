@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package semconvkit is used to generate opentelemetry-go specific semantic
+// convention code. It is expected to be used in with the semconvgen utility
+// (go.opentelemetry.io/build-tools/semconvgen) to completely generate
+// versioned sub-packages of go.opentelemetry.io/otel/semconv.
 package main
 
 import (
@@ -42,7 +46,8 @@ type SemanticConventions struct {
 	TagVer string
 }
 
-func render(dest string, sc *SemanticConventions) error {
+// render renders all templates to the dest directory using the data.
+func render(dest string, data *SemanticConventions) error {
 	tmpls, err := template.ParseFS(rootFS, "templates/*.tmpl")
 	if err != nil {
 		return err
@@ -54,7 +59,7 @@ func render(dest string, sc *SemanticConventions) error {
 			return err
 		}
 
-		tmpl.Execute(wr, sc)
+		tmpl.Execute(wr, data)
 	}
 
 	return nil
