@@ -1,7 +1,6 @@
 package views
 
 import (
-	"fmt"
 	"regexp"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -125,7 +124,6 @@ func New(opts ...Option) View {
 	for _, opt := range opts {
 		opt(&cfg)
 	}
-	fmt.Println("LOOK", cfg.keys)
 	return View{
 		cfg: cfg,
 	}
