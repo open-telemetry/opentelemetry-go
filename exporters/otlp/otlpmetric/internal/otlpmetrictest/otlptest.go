@@ -158,7 +158,8 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 			if dp := m.GetHistogram().DataPoints; assert.Len(t, dp, 1) {
 				count := dp[0].Count
 				assert.Equal(t, uint64(1), count, "invalid count for %q", m.Name)
-				assert.Equal(t, float64(data.val*int64(count)), dp[0].Sum, "invalid sum for %q (value %d)", m.Name, data.val)
+				require.NotNil(t, dp[0].Sum)
+				assert.Equal(t, float64(data.val*int64(count)), *dp[0].Sum, "invalid sum for %q (value %d)", m.Name, data.val)
 			}
 		default:
 			assert.Failf(t, "invalid metrics kind", data.iKind.String())
