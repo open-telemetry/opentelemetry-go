@@ -14,7 +14,7 @@
 
 //go:generate stringer -type=Temporality
 
-package aggregation // import "go.opentelemetry.io/otel/sdk/metric/aggregation"
+package aggregation // import "go.opentelemetry.io/otel/sdk/metric/aggregator/aggregation"
 
 type Temporality uint8
 

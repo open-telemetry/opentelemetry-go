@@ -6,7 +6,8 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/sdkinstrument"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -30,8 +31,8 @@ type (
 	// DefaultAggregationKindFunc is a per-instrument-kind aggregation.Temporality choice.
 	DefaultAggregationTemporalityFunc func(sdkinstrument.Kind) aggregation.Temporality
 
-	// DefaultAggregationKindFunc is a per-instrument-kind, per-number-kind aggregation.Config choice.
-	DefaultAggregationConfigFunc func(sdkinstrument.Kind) (int64Config, float64Config aggregation.Config)
+	// DefaultAggregationKindFunc is a per-instrument-kind, per-number-kind aggregator.Config choice.
+	DefaultAggregationConfigFunc func(sdkinstrument.Kind) (int64Config, float64Config aggregator.Config)
 
 	// Reader represents the connection between an Exporter and
 	// the MeterProvider.  Readers give the internal View compiler
@@ -46,8 +47,8 @@ type (
 
 		defAggr   [sdkinstrument.NumKinds]aggregation.Kind
 		defTempo  [sdkinstrument.NumKinds]aggregation.Temporality
-		defI64Cfg [sdkinstrument.NumKinds]aggregation.Config
-		defF64Cfg [sdkinstrument.NumKinds]aggregation.Config
+		defI64Cfg [sdkinstrument.NumKinds]aggregator.Config
+		defF64Cfg [sdkinstrument.NumKinds]aggregator.Config
 	}
 
 	// Sequence provides the three relevant timestamps to the Reader
@@ -186,7 +187,7 @@ func WithDefaultAggregationTemporalityFunc(d DefaultAggregationTemporalityFunc) 
 }
 
 // WithDefaultAggregationConfigFunc configures the default
-// aggregation.Config to use with each kind of instrument.
+// aggregator.Config to use with each kind of instrument.
 func WithDefaultAggregationConfigFunc(d DefaultAggregationConfigFunc) Option {
 	return func(cfg *Config) {
 		cfg.DefaultAggregationConfigFunc = d
@@ -208,8 +209,8 @@ func standardTemporality(ik sdkinstrument.Kind) aggregation.Temporality {
 	return aggregation.CumulativeTemporality
 }
 
-func standardConfig(ik sdkinstrument.Kind) (ints, floats aggregation.Config) {
-	return aggregation.Config{}, aggregation.Config{}
+func standardConfig(ik sdkinstrument.Kind) (ints, floats aggregator.Config) {
+	return aggregator.Config{}, aggregator.Config{}
 }
 
 // New returns a new Reader configured for `exporter` with provided
@@ -245,7 +246,7 @@ func (r *Reader) DefaultTemporality(k sdkinstrument.Kind) aggregation.Temporalit
 }
 
 // DefaultAggregationConfig returns the default aggregation.Temporality for each instrument kind.
-func (r *Reader) DefaultAggregationConfig(k sdkinstrument.Kind, nk number.Kind) aggregation.Config {
+func (r *Reader) DefaultAggregationConfig(k sdkinstrument.Kind, nk number.Kind) aggregator.Config {
 	if nk == number.Int64Kind {
 		return r.defI64Cfg[k]
 	}

@@ -12,14 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package histogram // import "go.opentelemetry.io/otel/sdk/metric/aggregation/histogram"
+package histogram // import "go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 
 import (
 	"fmt"
 	"sort"
 	"sync"
 
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 )
@@ -50,15 +51,15 @@ type (
 
 	Option interface {
 		// apply sets one or more config fields.
-		apply(*aggregation.HistogramConfig)
+		apply(*aggregator.HistogramConfig)
 	}
 
 	Methods[N number.Any, Traits traits.Any[N], Storage State[N, Traits]] struct{}
 )
 
 var (
-	_ aggregation.Methods[int64, State[int64, traits.Int64]]       = Methods[int64, traits.Int64, State[int64, traits.Int64]]{}
-	_ aggregation.Methods[float64, State[float64, traits.Float64]] = Methods[float64, traits.Float64, State[float64, traits.Float64]]{}
+	_ aggregator.Methods[int64, State[int64, traits.Int64]]       = Methods[int64, traits.Int64, State[int64, traits.Int64]]{}
+	_ aggregator.Methods[float64, State[float64, traits.Float64]] = Methods[float64, traits.Float64, State[float64, traits.Float64]]{}
 
 	_ aggregation.Histogram = &State[int64, traits.Int64]{}
 	_ aggregation.Histogram = &State[float64, traits.Float64]{}
@@ -73,7 +74,7 @@ type explicitBoundariesOption struct {
 	boundaries []float64
 }
 
-func (o explicitBoundariesOption) apply(config *aggregation.HistogramConfig) {
+func (o explicitBoundariesOption) apply(config *aggregator.HistogramConfig) {
 	config.ExplicitBoundaries = o.boundaries
 }
 
@@ -101,8 +102,8 @@ func (Float64Defaults) Boundaries() []float64 {
 	return defaultFloat64ExplicitBoundaries
 }
 
-func NewConfig(def Defaults, opts ...Option) aggregation.HistogramConfig {
-	cfg := aggregation.HistogramConfig{
+func NewConfig(def Defaults, opts ...Option) aggregator.HistogramConfig {
+	cfg := aggregator.HistogramConfig{
 		ExplicitBoundaries: def.Boundaries(),
 	}
 
@@ -148,7 +149,7 @@ func (h *State[N, Traits]) clearState() {
 	h.count = 0
 }
 
-func (Methods[N, Traits, Storage]) Init(state *State[N, Traits], cfg aggregation.Config) {
+func (Methods[N, Traits, Storage]) Init(state *State[N, Traits], cfg aggregator.Config) {
 	state.boundaries = cfg.Histogram.ExplicitBoundaries
 	state.bucketCounts = make([]uint64, len(state.boundaries)+1)
 }

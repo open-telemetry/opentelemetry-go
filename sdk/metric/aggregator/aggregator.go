@@ -12,12 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package aggregation // import "go.opentelemetry.io/otel/sdk/metric/aggregation"
+package aggregator // import "go.opentelemetry.io/otel/sdk/metric/aggregator"
 
 import (
+	"fmt"
+
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 	"go.opentelemetry.io/otel/sdk/metric/sdkinstrument"
+)
+
+// Sentinel errors for Aggregator interface.
+var (
+	ErrNegativeInput = fmt.Errorf("negative value is out of range for this instrument")
+	ErrNaNInput      = fmt.Errorf("NaN value is an invalid input")
+	ErrInfInput      = fmt.Errorf("±Inf value is an invalid input")
 )
 
 // RangeTest is a common routine for testing for valid input values.
@@ -86,7 +96,7 @@ type Methods[N number.Any, Storage any] interface {
 	SubtractSwap(valueToModify, operandToModify *Storage)
 
 	// Aggregation returns an exporter-ready value.
-	Aggregation(ptr *Storage) Aggregation
+	Aggregation(ptr *Storage) aggregation.Aggregation
 
 	// HasChange returns true if there have been any (discernible)
 	// Updates.  This tests whether an aggregation has zero sum,

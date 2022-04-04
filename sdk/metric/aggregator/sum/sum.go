@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sum // import "go.opentelemetry.io/otel/sdk/metric/aggregation/sum"
+package sum // import "go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 
 import (
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 )
@@ -29,8 +30,8 @@ type (
 )
 
 var (
-	_ aggregation.Methods[int64, State[int64, traits.Int64]]       = Methods[int64, traits.Int64, State[int64, traits.Int64]]{}
-	_ aggregation.Methods[float64, State[float64, traits.Float64]] = Methods[float64, traits.Float64, State[float64, traits.Float64]]{}
+	_ aggregator.Methods[int64, State[int64, traits.Int64]]       = Methods[int64, traits.Int64, State[int64, traits.Int64]]{}
+	_ aggregator.Methods[float64, State[float64, traits.Float64]] = Methods[float64, traits.Float64, State[float64, traits.Float64]]{}
 
 	_ aggregation.Sum = &State[int64, traits.Int64]{}
 	_ aggregation.Sum = &State[float64, traits.Float64]{}
@@ -45,7 +46,7 @@ func (s *State[N, Traits]) Kind() aggregation.Kind {
 	return aggregation.SumKind
 }
 
-func (Methods[N, Traits, Storage]) Init(state *State[N, Traits], _ aggregation.Config) {
+func (Methods[N, Traits, Storage]) Init(state *State[N, Traits], _ aggregator.Config) {
 	// Note: storage is zero to start
 }
 

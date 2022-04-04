@@ -8,10 +8,11 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation/gauge"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation/histogram"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation/sum"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 	"go.opentelemetry.io/otel/sdk/metric/reader"
@@ -68,50 +69,50 @@ type (
 		desc   sdkinstrument.Descriptor
 		kind   aggregation.Kind
 		keys   attribute.Filter
-		acfg   aggregation.Config
+		acfg   aggregator.Config
 		reader *reader.Reader
 	}
 
-	baseMetric[N number.Any, Storage any, Methods aggregation.Methods[N, Storage]] struct {
+	baseMetric[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
 		lock sync.Mutex
 		desc sdkinstrument.Descriptor
-		acfg aggregation.Config
+		acfg aggregator.Config
 		data map[attribute.Set]*Storage
 		keys attribute.Filter
 	}
 
-	compiledSyncInstrument[N number.Any, Storage any, Methods aggregation.Methods[N, Storage]] struct {
+	compiledSyncInstrument[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
 		baseMetric[N, Storage, Methods]
 	}
 
-	compiledAsyncInstrument[N number.Any, Storage any, Methods aggregation.Methods[N, Storage]] struct {
+	compiledAsyncInstrument[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
 		baseMetric[N, Storage, Methods]
 	}
 
-	statelessSyncProcess[N number.Any, Storage any, Methods aggregation.Methods[N, Storage]] struct {
+	statelessSyncProcess[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
 		compiledSyncInstrument[N, Storage, Methods]
 	}
 
-	statefulSyncProcess[N number.Any, Storage any, Methods aggregation.Methods[N, Storage]] struct {
+	statefulSyncProcess[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
 		compiledSyncInstrument[N, Storage, Methods]
 	}
 
-	statelessAsyncProcess[N number.Any, Storage any, Methods aggregation.Methods[N, Storage]] struct {
+	statelessAsyncProcess[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
 		compiledAsyncInstrument[N, Storage, Methods]
 	}
 
-	statefulAsyncProcess[N number.Any, Storage any, Methods aggregation.Methods[N, Storage]] struct {
+	statefulAsyncProcess[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
 		compiledAsyncInstrument[N, Storage, Methods]
 		prior map[attribute.Set]*Storage
 	}
 
-	syncAccumulator[N number.Any, Storage any, Methods aggregation.Methods[N, Storage]] struct {
+	syncAccumulator[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
 		current  Storage
 		snapshot Storage
 		output   *Storage
 	}
 
-	asyncAccumulator[N number.Any, Storage any, Methods aggregation.Methods[N, Storage]] struct {
+	asyncAccumulator[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
 		lock     sync.Mutex
 		current  N
 		snapshot Storage
@@ -159,7 +160,7 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) Instrument {
 
 	for readerIdx, r := range v.readers {
 		for _, view := range matches {
-			var acfg aggregation.Config
+			var acfg aggregator.Config
 
 			kind := view.Aggregation()
 			switch kind {
@@ -289,7 +290,7 @@ func buildView[N number.Any, Traits traits.Any[N]](config configuredBehavior) In
 func newSyncView[
 	N number.Any,
 	Storage any,
-	Methods aggregation.Methods[N, Storage],
+	Methods aggregator.Methods[N, Storage],
 ](config configuredBehavior) Instrument {
 	tempo := config.reader.DefaultTemporality(config.desc.Kind)
 	metric := baseMetric[N, Storage, Methods]{
@@ -315,7 +316,7 @@ func newSyncView[
 func newAsyncView[
 	N number.Any,
 	Storage any,
-	Methods aggregation.Methods[N, Storage],
+	Methods aggregator.Methods[N, Storage],
 ](config configuredBehavior) Instrument {
 	tempo := config.reader.DefaultTemporality(config.desc.Kind)
 	metric := baseMetric[N, Storage, Methods]{

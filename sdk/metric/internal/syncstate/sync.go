@@ -25,7 +25,7 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/internal/viewstate"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
@@ -163,7 +163,7 @@ func capture[N number.Any, Traits traits.Any[N]](_ context.Context, inst *Instru
 	rec, updater := acquireRecord[N](inst, attrs)
 	defer rec.refMapped.unref()
 
-	if err := aggregation.RangeTest[N, Traits](num, &rec.instrument.descriptor); err != nil {
+	if err := aggregator.RangeTest[N, Traits](num, &rec.instrument.descriptor); err != nil {
 		otel.Handle(err)
 		return
 	}

@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gauge // import "go.opentelemetry.io/otel/sdk/metric/aggregation/gauge"
+package gauge // import "go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
 
 import (
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
 )
@@ -29,8 +30,8 @@ type (
 )
 
 var (
-	_ aggregation.Methods[int64, State[int64, traits.Int64]]       = Methods[int64, traits.Int64, State[int64, traits.Int64]]{}
-	_ aggregation.Methods[float64, State[float64, traits.Float64]] = Methods[float64, traits.Float64, State[float64, traits.Float64]]{}
+	_ aggregator.Methods[int64, State[int64, traits.Int64]]       = Methods[int64, traits.Int64, State[int64, traits.Int64]]{}
+	_ aggregator.Methods[float64, State[float64, traits.Float64]] = Methods[float64, traits.Float64, State[float64, traits.Float64]]{}
 
 	_ aggregation.Gauge = &State[int64, traits.Int64]{}
 	_ aggregation.Gauge = &State[float64, traits.Float64]{}
@@ -45,7 +46,7 @@ func (lv *State[N, Traits]) Kind() aggregation.Kind {
 	return aggregation.GaugeKind
 }
 
-func (Methods[N, Traits, Storage]) Init(state *State[N, Traits], _ aggregation.Config) {
+func (Methods[N, Traits, Storage]) Init(state *State[N, Traits], _ aggregator.Config) {
 	// Note: storage is zero to start
 }
 

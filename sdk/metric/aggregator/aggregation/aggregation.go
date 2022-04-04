@@ -12,11 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package aggregation // import "go.opentelemetry.io/otel/sdk/metric/aggregation"
+package aggregation // import "go.opentelemetry.io/otel/sdk/metric/aggregator/aggregation"
 
 import (
-	"fmt"
-
 	"go.opentelemetry.io/otel/sdk/metric/number"
 )
 
@@ -95,13 +93,6 @@ const (
 	SumKind       Kind = "Sum"
 	GaugeKind     Kind = "Gauge"
 	HistogramKind Kind = "Histogram"
-)
-
-// Sentinel errors for Aggregation interface.
-var (
-	ErrNegativeInput = fmt.Errorf("negative value is out of range for this instrument")
-	ErrNaNInput      = fmt.Errorf("NaN value is an invalid input")
-	ErrInfInput      = fmt.Errorf("±Inf value is an invalid input")
 )
 
 // String returns the string value of Kind.
