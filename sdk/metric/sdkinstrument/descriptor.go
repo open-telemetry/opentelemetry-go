@@ -29,10 +29,11 @@ type Descriptor struct {
 	// Kind returns the specific kind of instrument.
 	Kind Kind
 
-	// NumberKind returns whether this instrument is declared over int64,
+	// NumberKind returns whether this instrument captures int64
+	// or float64 values.
 	NumberKind number.Kind
 
-	// Description provides a human-readable description of the metric
+	// Description provides a human-readable description of the metric.
 	Description string
 
 	// Unit describes the units of the metric instrument.  Unitless

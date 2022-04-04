@@ -189,8 +189,8 @@ func acquireRecord[N number.Any](inst *Instrument, attrs []attribute.KeyValue) (
 			// record is in the map and will not be removed.
 			return rec, rec.accumulator.(viewstate.Updater[N])
 		}
-		// This group is no longer mapped, try
-		// to add a new group below.
+		// This record is no longer mapped, try to add a new
+		// record below.
 	}
 
 	newRec := &record{

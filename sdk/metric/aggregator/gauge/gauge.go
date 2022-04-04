@@ -46,6 +46,10 @@ func (lv *State[N, Traits]) Kind() aggregation.Kind {
 	return aggregation.GaugeKind
 }
 
+func (Methods[N, Traits, Storage]) Kind() aggregation.Kind {
+	return aggregation.GaugeKind
+}
+
 func (Methods[N, Traits, Storage]) Init(state *State[N, Traits], _ aggregator.Config) {
 	// Note: storage is zero to start
 }

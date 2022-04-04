@@ -98,6 +98,9 @@ type Methods[N number.Any, Storage any] interface {
 	// Aggregation returns an exporter-ready value.
 	Aggregation(ptr *Storage) aggregation.Aggregation
 
+	// Kind returns the Kind of aggregator.
+	Kind() aggregation.Kind
+
 	// HasChange returns true if there have been any (discernible)
 	// Updates.  This tests whether an aggregation has zero sum,
 	// zero count, or zero difference, depending on the

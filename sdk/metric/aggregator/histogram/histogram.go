@@ -149,6 +149,10 @@ func (h *State[N, Traits]) clearState() {
 	h.count = 0
 }
 
+func (Methods[N, Traits, Storage]) Kind() aggregation.Kind {
+	return aggregation.HistogramKind
+}
+
 func (Methods[N, Traits, Storage]) Init(state *State[N, Traits], cfg aggregator.Config) {
 	state.boundaries = cfg.Histogram.ExplicitBoundaries
 	state.bucketCounts = make([]uint64, len(state.boundaries)+1)

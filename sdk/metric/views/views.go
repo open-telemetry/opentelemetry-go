@@ -16,8 +16,6 @@ type (
 		cfg Config
 	}
 
-	keyFilter map[attribute.Key]struct{}
-
 	Config struct {
 		// Matchers for the instrument
 		instrumentName       string
@@ -27,7 +25,7 @@ type (
 		library              instrumentation.Library
 
 		// Properties of the view
-		keys         keyFilter
+		keys         []attribute.Key // nil implies all keys, []attribute.Key{} implies none
 		name         string
 		description  string
 		aggregation  aggregation.Kind
@@ -79,15 +77,10 @@ func MatchInstrumentationLibrary(lib instrumentation.Library) Option {
 
 func WithKeys(keys []attribute.Key) Option {
 	return func(cfg *Config) {
-		if len(keys) == 0 {
+		if keys == nil {
 			cfg.keys = nil
-			return
-		}
-		if cfg.keys == nil {
-			cfg.keys = keyFilter{}
-		}
-		for _, key := range keys {
-			cfg.keys[key] = struct{}{}
+		} else {
+			cfg.keys = append(cfg.keys, keys...)
 		}
 	}
 }
@@ -143,13 +136,8 @@ func (v View) Name() string {
 	return v.cfg.name
 }
 
-func (ks keyFilter) filter(kv attribute.KeyValue) bool {
-	_, has := ks[kv.Key]
-	return has
-}
-
-func (v View) Keys() attribute.Filter {
-	return v.cfg.keys.filter
+func (v View) Keys() []attribute.Key {
+	return v.cfg.keys
 }
 
 func (v View) Description() string {

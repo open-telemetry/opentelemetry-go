@@ -26,12 +26,12 @@ func (m *meter) SyncFloat64() syncfloat64.InstrumentProvider {
 func (m *meter) newSyncInst(name string, opts []instrument.Option, nk number.Kind, ik sdkinstrument.Kind) (*syncstate.Instrument, error) {
 	return nameLookup(
 		m, name, opts, nk, ik,
-		func(desc sdkinstrument.Descriptor) *syncstate.Instrument {
-			compiled := m.views.Compile(desc)
+		func(desc sdkinstrument.Descriptor) (*syncstate.Instrument, error) {
+			compiled, err := m.views.Compile(desc)
 			inst := syncstate.NewInstrument(desc, compiled)
 
 			m.instruments = append(m.instruments, inst)
-			return inst
+			return inst, err
 		})
 }
 

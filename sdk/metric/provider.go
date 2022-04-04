@@ -49,7 +49,7 @@ type (
 	meter struct {
 		library  instrumentation.Library
 		provider *Provider
-		names    map[string][]instrumentIface
+		byDesc   map[sdkinstrument.Descriptor]instrumentIface
 		views    *viewstate.Compiler
 
 		lock        sync.Mutex
@@ -215,7 +215,7 @@ func (p *Provider) Meter(name string, opts ...metric.MeterOption) metric.Meter {
 	m = &meter{
 		provider: p,
 		library:  lib,
-		names:    map[string][]instrumentIface{},
+		byDesc:   map[sdkinstrument.Descriptor]instrumentIface{},
 		views:    viewstate.New(lib, p.cfg.views, p.cfg.readers),
 	}
 	p.ordered = append(p.ordered, m)
@@ -240,31 +240,17 @@ func nameLookup[T instrumentIface](
 	opts []instrument.Option,
 	nk number.Kind,
 	ik sdkinstrument.Kind,
-	f func(desc sdkinstrument.Descriptor) T,
+	f func(desc sdkinstrument.Descriptor) (T, error),
 ) (T, error) {
 	cfg := instrument.NewConfig(opts...)
 	desc := sdkinstrument.NewDescriptor(name, ik, nk, cfg.Description(), cfg.Unit())
 
 	m.lock.Lock()
 	defer m.lock.Unlock()
-	lookup := m.names[name]
-
-	for _, found := range lookup {
-		match, ok := found.(T)
-		if !ok {
-			continue
-		}
-
-		exist := found.Descriptor()
-
-		if exist.NumberKind != nk || exist.Kind != ik || exist.Unit != cfg.Unit() {
-			continue
-		}
-
-		// Exact match (ignores description)
-		return match, nil
+	if lookup, has := m.byDesc[desc]; has {
+		return lookup.(T), nil
 	}
-	value := f(desc)
-	m.names[name] = append(m.names[name], value)
-	return value, nil
+	value, err := f(desc)
+	m.byDesc[desc] = value
+	return value, err
 }

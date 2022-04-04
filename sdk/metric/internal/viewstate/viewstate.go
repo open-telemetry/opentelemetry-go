@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
@@ -29,7 +28,7 @@ type (
 		// names is the per-reader map of output names,
 		// indexed by the reader's position in `readers`.
 		namesLock sync.Mutex
-		names     []map[string]struct{}
+		names     []map[string][]Instrument
 	}
 
 	Instrument interface {
@@ -38,6 +37,12 @@ type (
 		// accumulator applies to all readers, otherwise it
 		// applies to the specific reader.
 		NewAccumulator(kvs []attribute.KeyValue, reader *reader.Reader) Accumulator
+
+		aggregation() aggregation.Kind
+		descriptor() sdkinstrument.Descriptor
+		keysSet() *attribute.Set
+		mergeDescription(string)
+		explainConflicts() error
 
 		Collector
 	}
@@ -68,9 +73,11 @@ type (
 	configuredBehavior struct {
 		desc   sdkinstrument.Descriptor
 		kind   aggregation.Kind
-		keys   attribute.Filter
 		acfg   aggregator.Config
 		reader *reader.Reader
+
+		keysSet    *attribute.Set // With Int(0)
+		keysFilter *attribute.Filter
 	}
 
 	baseMetric[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
@@ -78,7 +85,9 @@ type (
 		desc sdkinstrument.Descriptor
 		acfg aggregator.Config
 		data map[attribute.Set]*Storage
-		keys attribute.Filter
+
+		keysSet    attribute.Set
+		keysFilter attribute.Filter
 	}
 
 	compiledSyncInstrument[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
@@ -131,9 +140,9 @@ func New(lib instrumentation.Library, views []views.View, readers []*reader.Read
 	// - empty attribute keys
 	// - Name w/o SingleInst
 
-	names := make([]map[string]struct{}, len(readers))
+	names := make([]map[string][]Instrument, len(readers))
 	for i := range names {
-		names[i] = map[string]struct{}{}
+		names[i] = map[string][]Instrument{}
 	}
 
 	return &Compiler{
@@ -144,10 +153,45 @@ func New(lib instrumentation.Library, views []views.View, readers []*reader.Read
 	}
 }
 
+// Uses a int(0)-value attribute to identify distinct key sets.
+func keysToSet(keys []attribute.Key) *attribute.Set {
+	attrs := make([]attribute.KeyValue, len(keys))
+	for i, key := range keys {
+		attrs[i] = key.Int(0)
+	}
+	ns := attribute.NewSet(attrs...)
+	return &ns
+}
+
+// keyFilter provides an attribute.Filter implementation based on a
+// map[attribute.Key].
+type keyFilter map[attribute.Key]struct{}
+
+// filter is an attribute.Filter.
+func (ks keyFilter) filter(kv attribute.KeyValue) bool {
+	_, has := ks[kv.Key]
+	return has
+}
+
+func keysToFilter(keys []attribute.Key) *attribute.Filter {
+	kf := keyFilter{}
+	for _, k := range keys {
+		kf[k] = struct{}{}
+	}
+	var af attribute.Filter = kf.filter
+	return &af
+}
+
+type DuplicateConflicts []error
+
+func (dc DuplicateConflicts) Error() string {
+	return fmt.Sprint(dc)
+}
+
 // Compile is called during NewInstrument by the Meter
 // implementation, the result saved in the instrument and used to
 // construct new Accumulators throughout its lifetime.
-func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) Instrument {
+func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, error) {
 	configs := make([][]configuredBehavior, len(v.readers))
 	matches := make([]views.View, 0, len(v.views))
 
@@ -180,13 +224,19 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) Instrument {
 				)
 			}
 
-			configs[readerIdx] = append(configs[readerIdx], configuredBehavior{
+			cf := configuredBehavior{
 				desc:   viewDescriptor(instrument, view),
-				keys:   view.Keys(),
 				kind:   kind,
 				acfg:   acfg,
 				reader: r,
-			})
+			}
+
+			keys := view.Keys()
+			if keys != nil {
+				cf.keysSet = keysToSet(view.Keys())
+				cf.keysFilter = keysToFilter(view.Keys())
+			}
+			configs[readerIdx] = append(configs[readerIdx], cf)
 		}
 
 		// If there were no matching views, set the default aggregation.
@@ -209,45 +259,99 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) Instrument {
 	v.namesLock.Lock()
 	defer v.namesLock.Unlock()
 
-	for readerIdx, readerList := range configs {
-		r := v.readers[readerIdx]
+	var conflicts DuplicateConflicts
+	readerConflicts := 0
 
-		for _, config := range readerList {
-			if _, has := v.names[readerIdx][config.desc.Name]; has {
-				otel.Handle(fmt.Errorf("duplicate view name registered"))
-				continue
-			}
-			v.names[readerIdx][config.desc.Name] = struct{}{}
+	for readerIdx, behaviors := range configs {
+		r := v.readers[readerIdx]
+		names := v.names[readerIdx]
+		var conflictsThisReader []error
+
+		for _, config := range behaviors {
 
 			var one Instrument
-			switch config.desc.NumberKind {
-			case number.Int64Kind:
-				one = buildView[int64, traits.Int64](config)
-			case number.Float64Kind:
-				one = buildView[float64, traits.Float64](config)
-			}
 
+			// Scan the existing instruments for a match.
+			for _, inst := range names[config.desc.Name] {
+				// Test for equivalence among the fields that
+				// we cannot merge or will not convert, means
+				// the testing everything except the
+				// description for equality.
+				if inst.aggregation() != config.kind {
+					continue
+				}
+				if inst.descriptor().Unit != config.desc.Unit {
+					continue
+				}
+				if inst.descriptor().NumberKind != config.desc.NumberKind {
+					continue
+				}
+				if inst.descriptor().Kind.Synchronous() != config.desc.Kind.Synchronous() {
+					continue
+				}
+
+				// For attribute keys, test for equal nil-ness or equal value.
+				instKeys := inst.keysSet()
+				confKeys := config.keysSet
+				if (instKeys == nil) != (confKeys == nil) {
+					continue
+				}
+				if instKeys != nil && *instKeys != *confKeys {
+					continue
+				}
+				// We can return the previously-compiled
+				// instrument, we may have different
+				// descriptions and that is specified to
+				// choose the longer one.
+				inst.mergeDescription(config.desc.Description)
+				one = inst
+				break
+			}
+			existingInsts := names[config.desc.Name]
+			if one == nil {
+				switch config.desc.NumberKind {
+				case number.Int64Kind:
+					one = buildView[int64, traits.Int64](config)
+				case number.Float64Kind:
+					one = buildView[float64, traits.Float64](config)
+				}
+				names[config.desc.Name] = append(existingInsts, one)
+			}
+			if len(existingInsts) != 0 {
+				conflictsThisReader = append(conflictsThisReader,
+					fmt.Errorf("name %q conflicts with ", config.desc.Name, len(names[config.desc.Name])),
+				)
+			}
 			compiled[r] = append(compiled[r], one)
 		}
+		if len(conflictsThisReader) != 0 {
+			readerConflicts++
+		}
+		conflicts = append(conflicts, conflictsThisReader...)
+	}
+
+	var err error
+	if len(conflicts) != 0 {
+		err = fmt.Errorf("conflicts in %d reader(s): %w", readerConflicts, conflicts)
 	}
 
 	switch len(compiled) {
 	case 0:
-		return nil
+		return nil, nil
 	case 1:
 		// As a special case, recognize the case where there
 		// is only one reader and only one view to bypass the
 		// map[...][]Instrument wrapper.
 		for _, list := range compiled {
 			if len(list) == 1 {
-				return list[0]
+				return list[0], err
 			}
 		}
 	}
 	if instrument.NumberKind == number.Int64Kind {
-		return multiInstrument[int64](compiled)
+		return multiInstrument[int64](compiled), err
 	}
-	return multiInstrument[float64](compiled)
+	return multiInstrument[float64](compiled), err
 }
 
 func aggregationConfigFor(desc sdkinstrument.Descriptor, r *reader.Reader) aggregation.Kind {
