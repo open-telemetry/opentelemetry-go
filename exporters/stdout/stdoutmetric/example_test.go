@@ -34,11 +34,6 @@ const (
 )
 
 var (
-	meter = global.Meter(
-		instrumentationName,
-		metric.WithInstrumentationVersion(instrumentationVersion),
-	)
-
 	loopCounter syncint64.Counter
 	paramValue  syncint64.Histogram
 
@@ -83,7 +78,7 @@ func InstallExportPipeline(ctx context.Context) func() {
 	}
 
 	global.SetMeterProvider(pusher)
-	meter = global.Meter(instrumentationName, metric.WithInstrumentationVersion(instrumentationVersion))
+	meter := global.Meter(instrumentationName, metric.WithInstrumentationVersion(instrumentationVersion))
 
 	loopCounter, err = meter.SyncInt64().Counter("function.loops")
 	if err != nil {
