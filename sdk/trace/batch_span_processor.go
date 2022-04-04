@@ -106,11 +106,10 @@ func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorO
 	}
 
 	o := BatchSpanProcessorOptions{
-		BatchTimeout:         time.Duration(env.BatchSpanProcessorScheduleDelay(DefaultScheduleDelay)) * time.Millisecond,
-		ExportTimeout:        time.Duration(env.BatchSpanProcessorExportTimeout(DefaultExportTimeout)) * time.Millisecond,
-		MaxQueueSize:         maxQueueSize,
-		MaxExportBatchSize:   maxExportBatchSize,
-		DroppedSpansCallback: func() {},
+		BatchTimeout:       time.Duration(env.BatchSpanProcessorScheduleDelay(DefaultScheduleDelay)) * time.Millisecond,
+		ExportTimeout:      time.Duration(env.BatchSpanProcessorExportTimeout(DefaultExportTimeout)) * time.Millisecond,
+		MaxQueueSize:       maxQueueSize,
+		MaxExportBatchSize: maxExportBatchSize,
 	}
 	for _, opt := range options {
 		opt(&o)
@@ -389,7 +388,9 @@ func (bsp *batchSpanProcessor) enqueueBlockOnQueueFull(ctx context.Context, sd R
 		return true
 	default:
 		atomic.AddUint32(&bsp.dropped, 1)
-		bsp.o.DroppedSpansCallback()
+		if bsp.o.DroppedSpansCallback != nil {
+			go bsp.o.DroppedSpansCallback()
+		}
 	}
 	return false
 }
