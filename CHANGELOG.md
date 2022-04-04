@@ -9,6 +9,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Added
+
 - The metrics global package was added back into several test files. (#2752)
 
 - The `Meter` function is added back to the `go.opentelemetry.io/otel/metric/global` package.
