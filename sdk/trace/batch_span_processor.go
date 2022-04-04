@@ -64,6 +64,10 @@ type BatchSpanProcessorOptions struct {
 	// Blocking option should be used carefully as it can severely affect the performance of an
 	// application.
 	BlockOnQueueFull bool
+
+	// DroppedSpansCallback, if specified, is called whenever the processor fails to send
+	// on the queue.
+	DroppedSpansCallback func()
 }
 
 // batchSpanProcessor is a SpanProcessor that batches asynchronously-received
@@ -102,10 +106,11 @@ func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorO
 	}
 
 	o := BatchSpanProcessorOptions{
-		BatchTimeout:       time.Duration(env.BatchSpanProcessorScheduleDelay(DefaultScheduleDelay)) * time.Millisecond,
-		ExportTimeout:      time.Duration(env.BatchSpanProcessorExportTimeout(DefaultExportTimeout)) * time.Millisecond,
-		MaxQueueSize:       maxQueueSize,
-		MaxExportBatchSize: maxExportBatchSize,
+		BatchTimeout:         time.Duration(env.BatchSpanProcessorScheduleDelay(DefaultScheduleDelay)) * time.Millisecond,
+		ExportTimeout:        time.Duration(env.BatchSpanProcessorExportTimeout(DefaultExportTimeout)) * time.Millisecond,
+		MaxQueueSize:         maxQueueSize,
+		MaxExportBatchSize:   maxExportBatchSize,
+		DroppedSpansCallback: func() {},
 	}
 	for _, opt := range options {
 		opt(&o)
@@ -203,6 +208,12 @@ func (bsp *batchSpanProcessor) ForceFlush(ctx context.Context) error {
 		}
 	}
 	return err
+}
+
+func WithDroppedSpansCallback(fn func()) BatchSpanProcessorOption {
+	return func(o *BatchSpanProcessorOptions) {
+		o.DroppedSpansCallback = fn
+	}
 }
 
 func WithMaxQueueSize(size int) BatchSpanProcessorOption {
@@ -378,6 +389,7 @@ func (bsp *batchSpanProcessor) enqueueBlockOnQueueFull(ctx context.Context, sd R
 		return true
 	default:
 		atomic.AddUint32(&bsp.dropped, 1)
+		bsp.o.DroppedSpansCallback()
 	}
 	return false
 }
