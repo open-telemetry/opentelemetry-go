@@ -22,6 +22,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
@@ -181,27 +182,25 @@ func BenchmarkIterator_16(b *testing.B) {
 
 // Counters
 
-// TODO readd global
+func BenchmarkGlobalInt64CounterAddWithSDK(b *testing.B) {
+	// Compare with BenchmarkInt64CounterAdd() to see overhead of global
+	// package. This is in the SDK to avoid the API from depending on the
+	// SDK.
+	ctx := context.Background()
+	fix := newFixture(b)
 
-// func BenchmarkGlobalInt64CounterAddWithSDK(b *testing.B) {
-// 	// Compare with BenchmarkInt64CounterAdd() to see overhead of global
-// 	// package. This is in the SDK to avoid the API from depending on the
-// 	// SDK.
-// 	ctx := context.Background()
-// 	fix := newFixture(b)
+	global.SetMeterProvider(fix)
 
-// 	sdk := global.Meter("test")
-// 	global.SetMeterProvider(fix)
+	labs := []attribute.KeyValue{attribute.String("A", "B")}
 
-// 	labs := []attribute.KeyValue{attribute.String("A", "B")}
-// 	cnt := Must(sdk).NewInt64Counter("int64.sum")
+	cnt := fix.iCounter("int64.sum")
 
-// 	b.ResetTimer()
+	b.ResetTimer()
 
-// 	for i := 0; i < b.N; i++ {
-// 		cnt.Add(ctx, 1, labs...)
-// 	}
-// }
+	for i := 0; i < b.N; i++ {
+		cnt.Add(ctx, 1, labs...)
+	}
+}
 
 func BenchmarkInt64CounterAdd(b *testing.B) {
 	ctx := context.Background()

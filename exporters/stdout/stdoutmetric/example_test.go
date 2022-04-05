@@ -21,6 +21,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
@@ -33,13 +34,6 @@ const (
 )
 
 var (
-	// TODO Bring back Global package
-	// meter = global.GetMeterProvider().Meter(
-	// 	instrumentationName,
-	// 	metric.WithInstrumentationVersion(instrumentationVersion),
-	// )
-	meter metric.Meter
-
 	loopCounter syncint64.Counter
 	paramValue  syncint64.Histogram
 
@@ -82,9 +76,9 @@ func InstallExportPipeline(ctx context.Context) func() {
 	if err = pusher.Start(ctx); err != nil {
 		log.Fatalf("starting push controller: %v", err)
 	}
-	// TODO Bring back Global package
-	// global.SetMeterProvider(pusher)
-	meter = pusher.Meter(instrumentationName, metric.WithInstrumentationVersion(instrumentationVersion))
+
+	global.SetMeterProvider(pusher)
+	meter := global.Meter(instrumentationName, metric.WithInstrumentationVersion(instrumentationVersion))
 
 	loopCounter, err = meter.SyncInt64().Counter("function.loops")
 	if err != nil {
