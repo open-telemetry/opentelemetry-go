@@ -2,6 +2,8 @@ package viewstate
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -28,7 +30,7 @@ type (
 		// names is the per-reader map of output names,
 		// indexed by the reader's position in `readers`.
 		namesLock sync.Mutex
-		names     []map[string][]Instrument
+		names     []map[string][]leafInstrument
 	}
 
 	Instrument interface {
@@ -36,15 +38,20 @@ type (
 		// the attributes `kvs`.  If reader == nil the
 		// accumulator applies to all readers, otherwise it
 		// applies to the specific reader.
-		NewAccumulator(kvs []attribute.KeyValue, reader *reader.Reader) Accumulator
-
-		aggregation() aggregation.Kind
-		descriptor() sdkinstrument.Descriptor
-		keysSet() *attribute.Set
-		mergeDescription(string)
-		explainConflicts() error
+		NewAccumulator(kvs attribute.Set, reader *reader.Reader) Accumulator
 
 		Collector
+	}
+
+	leafInstrument interface {
+		Instrument
+
+		String() string
+		aggregation() aggregation.Kind
+		descriptor() sdkinstrument.Descriptor
+		keys() *attribute.Set
+		aggConfig() aggregator.Config
+		mergeDescription(string)
 	}
 
 	Collector interface {
@@ -86,8 +93,8 @@ type (
 		acfg aggregator.Config
 		data map[attribute.Set]*Storage
 
-		keysSet    attribute.Set
-		keysFilter attribute.Filter
+		keysSet    *attribute.Set
+		keysFilter *attribute.Filter
 	}
 
 	compiledSyncInstrument[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
@@ -140,9 +147,9 @@ func New(lib instrumentation.Library, views []views.View, readers []*reader.Read
 	// - empty attribute keys
 	// - Name w/o SingleInst
 
-	names := make([]map[string][]Instrument, len(readers))
+	names := make([]map[string][]leafInstrument, len(readers))
 	for i := range names {
-		names[i] = map[string][]Instrument{}
+		names[i] = map[string][]leafInstrument{}
 	}
 
 	return &Compiler{
@@ -182,10 +189,87 @@ func keysToFilter(keys []attribute.Key) *attribute.Filter {
 	return &af
 }
 
-type DuplicateConflicts []error
+type DuplicateConflicts map[*reader.Reader][]error
+
+type DuplicateConflict struct {
+	OrigName  string
+	Name      string
+	Conflicts []leafInstrument
+}
 
 func (dc DuplicateConflicts) Error() string {
-	return fmt.Sprint(dc)
+	total := 0
+	for _, l := range dc {
+		total += len(l)
+	}
+	// These are almost always duplicative, so the string form takes the first examples.
+	for _, byReader := range dc {
+		if len(dc) == 1 {
+			return fmt.Sprintf("%d conflict(s), e.g. %v", total, byReader[0])
+		}
+		return fmt.Sprintf("%d conflict(s) in %d reader(s), e.g. %v", total, len(dc), byReader[0])
+	}
+	return "no conflicts"
+}
+
+func (DuplicateConflicts) Is(err error) bool {
+	_, ok := err.(DuplicateConflicts)
+	return ok
+}
+
+func (dc DuplicateConflict) Error() string {
+	var s strings.Builder
+	s.WriteString(fmt.Sprintf("name %q", dc.Name))
+	if dc.OrigName != dc.Name {
+		s.WriteString(fmt.Sprintf(" (original %q)", dc.OrigName))
+	}
+	first := dc.Conflicts[0]
+	last := dc.Conflicts[len(dc.Conflicts)-1]
+	conf1 := first.String()
+	conf2 := last.String()
+
+	if conf1 != conf2 {
+		s.WriteString(fmt.Sprintf(" conflicts %v, %v", conf1, conf2))
+	} else if !equalConfigs(first.aggConfig(), last.aggConfig()) { // @@@
+		s.WriteString(fmt.Sprintf(" has conflicts: different aggregator configuration %v %v", first.aggConfig(), last.aggConfig()))
+	} else {
+		s.WriteString(" has conflicts: different attribute filters")
+	}
+
+	if len(dc.Conflicts) > 2 {
+		s.WriteString(fmt.Sprintf(" and %d more", len(dc.Conflicts)-2))
+	}
+	return s.String()
+}
+
+func equalConfigs(a, b aggregator.Config) bool {
+	return reflect.DeepEqual(a, b)
+}
+
+func histogramBoundariesFor(r *reader.Reader, ik sdkinstrument.Kind, nk number.Kind, acfg aggregator.Config) []float64 {
+	if len(acfg.Histogram.ExplicitBoundaries) != 0 {
+		return acfg.Histogram.ExplicitBoundaries
+	}
+
+	cfg := r.DefaultAggregationConfig(ik, nk)
+	if len(cfg.Histogram.ExplicitBoundaries) != 0 {
+		return cfg.Histogram.ExplicitBoundaries
+	}
+	if nk == number.Int64Kind {
+		return histogram.DefaultInt64Boundaries
+	}
+	return histogram.DefaultFloat64Boundaries
+}
+
+func viewAggConfig(r *reader.Reader, ak aggregation.Kind, ik sdkinstrument.Kind, nk number.Kind, vcfg aggregator.Config) aggregator.Config {
+	if ak != aggregation.HistogramKind {
+		return aggregator.Config{}
+	}
+	return aggregator.Config{
+		Histogram: histogram.NewConfig(
+			histogramBoundariesFor(r, ik, nk, vcfg),
+		),
+	}
 }
 
 // Compile is called during NewInstrument by the Meter
@@ -204,8 +288,6 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 
 	for readerIdx, r := range v.readers {
 		for _, view := range matches {
-			var acfg aggregator.Config
-
 			kind := view.Aggregation()
 			switch kind {
 			case aggregation.SumKind, aggregation.GaugeKind, aggregation.HistogramKind:
@@ -217,17 +299,10 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 				continue
 			}
 
-			if kind == aggregation.HistogramKind {
-				acfg.Histogram = histogram.NewConfig(
-					histogramDefaultsFor(r, instrument.Kind, instrument.NumberKind),
-					view.HistogramOptions()...,
-				)
-			}
-
 			cf := configuredBehavior{
 				desc:   viewDescriptor(instrument, view),
 				kind:   kind,
-				acfg:   acfg,
+				acfg:   viewAggConfig(r, kind, instrument.Kind, instrument.NumberKind, view.AggregatorConfig()),
 				reader: r,
 			}
 
@@ -249,6 +324,7 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 			configs[readerIdx] = append(configs[readerIdx], configuredBehavior{
 				desc:   instrument,
 				kind:   kind,
+				acfg:   viewAggConfig(r, kind, instrument.Kind, instrument.NumberKind, aggregator.Config{}),
 				reader: r,
 			})
 		}
@@ -269,29 +345,43 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 
 		for _, config := range behaviors {
 
-			var one Instrument
+			existingInsts := names[config.desc.Name]
+			var leaf leafInstrument
 
 			// Scan the existing instruments for a match.
-			for _, inst := range names[config.desc.Name] {
+			for _, inst := range existingInsts {
 				// Test for equivalence among the fields that
 				// we cannot merge or will not convert, means
 				// the testing everything except the
 				// description for equality.
+
+				// Note the following three statements check for
+				// semantic compatibility.
 				if inst.aggregation() != config.kind {
 					continue
 				}
-				if inst.descriptor().Unit != config.desc.Unit {
-					continue
-				}
-				if inst.descriptor().NumberKind != config.desc.NumberKind {
+				// If the aggregation is a Sum and
+				// monotonicity is different, a conflict.
+				if config.kind == aggregation.SumKind &&
+					config.desc.Kind.Monotonic() != inst.descriptor().Kind.Monotonic() {
 					continue
 				}
 				if inst.descriptor().Kind.Synchronous() != config.desc.Kind.Synchronous() {
 					continue
 				}
 
+				if inst.descriptor().Unit != config.desc.Unit {
+					continue
+				}
+				if inst.descriptor().NumberKind != config.desc.NumberKind {
+					continue
+				}
+				if !equalConfigs(inst.aggConfig(), config.acfg) {
+					continue
+				}
+
 				// For attribute keys, test for equal nil-ness or equal value.
-				instKeys := inst.keysSet()
+				instKeys := inst.keys()
 				confKeys := config.keysSet
 				if (instKeys == nil) != (confKeys == nil) {
 					continue
@@ -304,35 +394,42 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 				// descriptions and that is specified to
 				// choose the longer one.
 				inst.mergeDescription(config.desc.Description)
-				one = inst
+				leaf = inst
 				break
 			}
-			existingInsts := names[config.desc.Name]
-			if one == nil {
+			if leaf == nil {
 				switch config.desc.NumberKind {
 				case number.Int64Kind:
-					one = buildView[int64, traits.Int64](config)
+					leaf = buildView[int64, traits.Int64](config)
 				case number.Float64Kind:
-					one = buildView[float64, traits.Float64](config)
+					leaf = buildView[float64, traits.Float64](config)
 				}
-				names[config.desc.Name] = append(existingInsts, one)
+				existingInsts = append(existingInsts, leaf)
+				names[config.desc.Name] = existingInsts
 			}
-			if len(existingInsts) != 0 {
+			if len(existingInsts) > 1 {
 				conflictsThisReader = append(conflictsThisReader,
-					fmt.Errorf("name %q conflicts with ", config.desc.Name, len(names[config.desc.Name])),
+					DuplicateConflict{
+						OrigName:  instrument.Name,
+						Name:      config.desc.Name,
+						Conflicts: existingInsts,
+					},
 				)
 			}
-			compiled[r] = append(compiled[r], one)
+			compiled[r] = append(compiled[r], leaf)
 		}
 		if len(conflictsThisReader) != 0 {
 			readerConflicts++
+			if conflicts == nil {
+				conflicts = DuplicateConflicts{}
+			}
+			conflicts[r] = append(conflicts[r], conflictsThisReader...)
 		}
-		conflicts = append(conflicts, conflictsThisReader...)
 	}
 
 	var err error
 	if len(conflicts) != 0 {
-		err = fmt.Errorf("conflicts in %d reader(s): %w", readerConflicts, conflicts)
+		err = conflicts
 	}
 
 	switch len(compiled) {
@@ -373,18 +470,7 @@ func viewDescriptor(instrument sdkinstrument.Descriptor, v views.View) sdkinstru
 	return sdkinstrument.NewDescriptor(name, ikind, nkind, description, unit)
 }
 
-func histogramDefaultsFor(r *reader.Reader, k sdkinstrument.Kind, nk number.Kind) histogram.Defaults {
-	cfg := r.DefaultAggregationConfig(k, nk)
-	if cfg.Histogram.ExplicitBoundaries != nil {
-		return cfg.Histogram
-	}
-	if nk == number.Int64Kind {
-		return histogram.Int64Defaults{}
-	}
-	return histogram.Float64Defaults{}
-}
-
-func buildView[N number.Any, Traits traits.Any[N]](config configuredBehavior) Instrument {
+func buildView[N number.Any, Traits traits.Any[N]](config configuredBehavior) leafInstrument {
 	if config.desc.Kind.Synchronous() {
 		return compileSync[N, Traits](config)
 	}
@@ -395,13 +481,15 @@ func newSyncView[
 	N number.Any,
 	Storage any,
 	Methods aggregator.Methods[N, Storage],
-](config configuredBehavior) Instrument {
+](config configuredBehavior) leafInstrument {
 	tempo := config.reader.DefaultTemporality(config.desc.Kind)
 	metric := baseMetric[N, Storage, Methods]{
 		desc: config.desc,
 		acfg: config.acfg,
 		data: map[attribute.Set]*Storage{},
-		keys: config.keys,
+
+		keysSet:    config.keysSet,
+		keysFilter: config.keysFilter,
 	}
 	instrument := compiledSyncInstrument[N, Storage, Methods]{
 		baseMetric: metric,
@@ -421,13 +509,13 @@ func newAsyncView[
 	N number.Any,
 	Storage any,
 	Methods aggregator.Methods[N, Storage],
-](config configuredBehavior) Instrument {
+](config configuredBehavior) leafInstrument {
 	tempo := config.reader.DefaultTemporality(config.desc.Kind)
 	metric := baseMetric[N, Storage, Methods]{
-		desc: config.desc,
-		acfg: config.acfg,
-		data: map[attribute.Set]*Storage{},
-		keys: config.keys,
+		desc:    config.desc,
+		acfg:    config.acfg,
+		data:    map[attribute.Set]*Storage{},
+		keysSet: config.keysSet,
 	}
 	instrument := compiledAsyncInstrument[N, Storage, Methods]{
 		baseMetric: metric,
@@ -443,7 +531,7 @@ func newAsyncView[
 	}
 }
 
-func compileSync[N number.Any, Traits traits.Any[N]](config configuredBehavior) Instrument {
+func compileSync[N number.Any, Traits traits.Any[N]](config configuredBehavior) leafInstrument {
 	switch config.kind {
 	case aggregation.GaugeKind:
 		return newSyncView[
@@ -466,7 +554,7 @@ func compileSync[N number.Any, Traits traits.Any[N]](config configuredBehavior) 
 	}
 }
 
-func compileAsync[N number.Any, Traits traits.Any[N]](config configuredBehavior) Instrument {
+func compileAsync[N number.Any, Traits traits.Any[N]](config configuredBehavior) leafInstrument {
 	switch config.kind {
 	case aggregation.GaugeKind:
 		return newAsyncView[
@@ -490,7 +578,7 @@ func compileAsync[N number.Any, Traits traits.Any[N]](config configuredBehavior)
 }
 
 // NewAccumulator returns a Accumulator for multiple views of the same instrument.
-func (mi multiInstrument[N]) NewAccumulator(kvs []attribute.KeyValue, reader *reader.Reader) Accumulator {
+func (mi multiInstrument[N]) NewAccumulator(kvs attribute.Set, reader *reader.Reader) Accumulator {
 	var collectors []Accumulator
 	// Note: This runtime switch happens because we're using the same API for
 	// both async and sync instruments, whereas the APIs are not symmetrical.
@@ -562,26 +650,53 @@ func (ac *asyncAccumulator[N, Storage, Methods]) Accumulate() {
 
 // baseMetric
 
+func (metric *baseMetric[N, Storage, Methods]) aggregation() aggregation.Kind {
+	var methods Methods
+	return methods.Kind()
+}
+
+func (metric *baseMetric[N, Storage, Methods]) descriptor() sdkinstrument.Descriptor {
+	return metric.desc
+}
+
+func (metric *baseMetric[N, Storage, Methods]) keys() *attribute.Set {
+	return metric.keysSet
+}
+
+func (metric *baseMetric[N, Storage, Methods]) aggConfig() aggregator.Config {
+	return metric.acfg
+}
+
 func (metric *baseMetric[N, Storage, Methods]) initStorage(s *Storage) {
 	var methods Methods
 	methods.Init(s, metric.acfg)
 }
 
+func (metric *baseMetric[N, Storage, Methods]) mergeDescription(d string) {
+	metric.lock.Lock()
+	defer metric.lock.Unlock()
+	if len(d) > len(metric.desc.Description) {
+		metric.desc.Description = d
+	}
+}
+
 func (metric *baseMetric[N, Storage, Methods]) findOutput(
-	kvs []attribute.KeyValue,
+	kvs attribute.Set,
 ) *Storage {
-	set, _ := attribute.NewSetWithFiltered(kvs, metric.keys)
+	if metric.keysFilter != nil {
+		kvs, _ = attribute.NewSetWithFiltered(kvs.ToSlice(), *metric.keysFilter)
+	}
 
 	metric.lock.Lock()
 	defer metric.lock.Unlock()
 
-	storage, has := metric.data[set]
+	storage, has := metric.data[kvs]
 	if has {
 		return storage
 	}
 
 	ns := metric.newStorage()
-	metric.data[set] = ns
+	metric.data[kvs] = ns
 	return ns
 }
 
@@ -591,8 +706,21 @@ func (metric *baseMetric[N, Storage, Methods]) newStorage() *Storage {
 	return ns
 }
 
+func (metric *baseMetric[N, Storage, Methods]) String() string {
+	var methods Methods
+	s := fmt.Sprintf("%v-%v-%v",
+		strings.TrimSuffix(metric.desc.Kind.String(), "Kind"),
+		strings.TrimSuffix(metric.desc.NumberKind.String(), "Kind"),
+		methods.Kind(),
+	)
+	if metric.desc.Unit != "" {
+		s = fmt.Sprintf("%v-%v", s, metric.desc.Unit)
+	}
+	return s
+}
+
 // NewAccumulator returns a Accumulator for a synchronous instrument view.
-func (csv *compiledSyncInstrument[N, Storage, Methods]) NewAccumulator(kvs []attribute.KeyValue, _ *reader.Reader) Accumulator {
+func (csv *compiledSyncInstrument[N, Storage, Methods]) NewAccumulator(kvs attribute.Set, _ *reader.Reader) Accumulator {
 	sc := &syncAccumulator[N, Storage, Methods]{}
 	csv.initStorage(&sc.current)
 	csv.initStorage(&sc.snapshot)
@@ -603,7 +731,7 @@ func (csv *compiledSyncInstrument[N, Storage, Methods]) NewAccumulator(kvs []att
 }
 
 // NewAccumulator returns a Accumulator for an asynchronous instrument view.
-func (cav *compiledAsyncInstrument[N, Storage, Methods]) NewAccumulator(kvs []attribute.KeyValue, _ *reader.Reader) Accumulator {
+func (cav *compiledAsyncInstrument[N, Storage, Methods]) NewAccumulator(kvs attribute.Set, _ *reader.Reader) Accumulator {
 	ac := &asyncAccumulator[N, Storage, Methods]{}
 
 	cav.initStorage(&ac.snapshot)

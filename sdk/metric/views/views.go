@@ -5,8 +5,8 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/sdkinstrument"
 )
@@ -25,12 +25,12 @@ type (
 		library              instrumentation.Library
 
 		// Properties of the view
-		keys         []attribute.Key // nil implies all keys, []attribute.Key{} implies none
-		name         string
-		description  string
-		aggregation  aggregation.Kind
-		temporality  aggregation.Temporality
-		histoOptions []histogram.Option
+		keys        []attribute.Key // nil implies all keys, []attribute.Key{} implies none
+		name        string
+		description string
+		aggregation aggregation.Kind
+		temporality aggregation.Temporality
+		acfg        aggregator.Config
 	}
 
 	Option func(cfg *Config)
@@ -109,6 +109,12 @@ func WithTemporality(tempo aggregation.Temporality) Option {
 	}
 }
 
+func WithAggregatorConfig(acfg aggregator.Config) Option {
+	return func(cfg *Config) {
+		cfg.acfg = acfg
+	}
+}
+
 func New(opts ...Option) View {
 	cfg := Config{
 		instrumentKind: unsetKind,
@@ -152,8 +158,8 @@ func (v View) Temporality() aggregation.Temporality {
 	return v.cfg.temporality
 }
 
-func (v View) HistogramOptions() []histogram.Option {
-	return v.cfg.histoOptions
+func (v View) AggregatorConfig() aggregator.Config {
+	return v.cfg.acfg
 }
 
 func stringMismatch(test, value string) bool {

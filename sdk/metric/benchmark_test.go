@@ -5,12 +5,13 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/metric/reader"
 )
 
 func BenchmarkCounterAddNoAttrs(b *testing.B) {
 	ctx := context.Background()
-	exp := &testExporter{}
+	exp := metrictest.NewExporter()
 	rdr := reader.New(exp)
 	provider := New(WithReader(rdr))
 	b.ReportAllocs()
@@ -28,7 +29,7 @@ func BenchmarkCounterAddNoAttrs(b *testing.B) {
 //  3. an attribute array (map key)
 func BenchmarkCounterAddOneAttr(b *testing.B) {
 	ctx := context.Background()
-	exp := &testExporter{}
+	exp := metrictest.NewExporter()
 	rdr := reader.New(exp)
 	provider := New(WithReader(rdr))
 	b.ReportAllocs()
@@ -53,7 +54,7 @@ func BenchmarkCounterAddOneAttr(b *testing.B) {
 // 10. an output Aggregator
 func BenchmarkCounterAddManyAttrs(b *testing.B) {
 	ctx := context.Background()
-	exp := &testExporter{}
+	exp := metrictest.NewExporter()
 	rdr := reader.New(exp)
 	provider := New(WithReader(rdr))
 	b.ReportAllocs()
@@ -67,7 +68,7 @@ func BenchmarkCounterAddManyAttrs(b *testing.B) {
 
 func BenchmarkCounterCollectOneAttrNoReuse(b *testing.B) {
 	ctx := context.Background()
-	exp := &testExporter{}
+	exp := metrictest.NewExporter()
 	rdr := reader.New(exp)
 	provider := New(WithReader(rdr))
 	b.ReportAllocs()
@@ -77,13 +78,13 @@ func BenchmarkCounterCollectOneAttrNoReuse(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		cntr.Add(ctx, 1, attribute.Int("K", 1))
 
-		_ = exp.producer.Produce(nil)
+		_ = exp.Produce(nil)
 	}
 }
 
 func BenchmarkCounterCollectOneAttrWithReuse(b *testing.B) {
 	ctx := context.Background()
-	exp := &testExporter{}
+	exp := metrictest.NewExporter()
 	rdr := reader.New(exp)
 	provider := New(WithReader(rdr))
 	b.ReportAllocs()
@@ -95,13 +96,13 @@ func BenchmarkCounterCollectOneAttrWithReuse(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		cntr.Add(ctx, 1, attribute.Int("K", 1))
 
-		reuse = exp.producer.Produce(&reuse)
+		reuse = exp.Produce(&reuse)
 	}
 }
 
 func BenchmarkCounterCollectTenAttrs(b *testing.B) {
 	ctx := context.Background()
-	exp := &testExporter{}
+	exp := metrictest.NewExporter()
 	rdr := reader.New(exp)
 	provider := New(WithReader(rdr))
 	b.ReportAllocs()
@@ -114,13 +115,13 @@ func BenchmarkCounterCollectTenAttrs(b *testing.B) {
 		for j := 0; j < 10; j++ {
 			cntr.Add(ctx, 1, attribute.Int("K", j))
 		}
-		reuse = exp.producer.Produce(&reuse)
+		reuse = exp.Produce(&reuse)
 	}
 }
 
 func BenchmarkCounterCollectTenAttrsTenTimes(b *testing.B) {
 	ctx := context.Background()
-	exp := &testExporter{}
+	exp := metrictest.NewExporter()
 	rdr := reader.New(exp)
 	provider := New(WithReader(rdr))
 	b.ReportAllocs()
@@ -134,7 +135,7 @@ func BenchmarkCounterCollectTenAttrsTenTimes(b *testing.B) {
 			for j := 0; j < 10; j++ {
 				cntr.Add(ctx, 1, attribute.Int("K", j))
 			}
-			reuse = exp.producer.Produce(&reuse)
+			reuse = exp.Produce(&reuse)
 		}
 	}
 }

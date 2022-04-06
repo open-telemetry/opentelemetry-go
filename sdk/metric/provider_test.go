@@ -5,25 +5,14 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/metric/reader"
 )
-
-type testExporter struct {
-	producer reader.Producer
-}
-
-func (t *testExporter) Register(producer reader.Producer) {
-	t.producer = producer
-}
-
-func (*testExporter) Flush(context.Context) error { return nil }
-
-func (*testExporter) Shutdown(context.Context) error { return nil }
 
 // TODO: incomplete
 func TestOutputReuse(t *testing.T) {
 	ctx := context.Background()
-	exp := &testExporter{}
+	exp := metrictest.NewExporter()
 	rdr := reader.New(exp)
 	provider := New(WithReader(rdr))
 
@@ -33,9 +22,9 @@ func TestOutputReuse(t *testing.T) {
 
 	cntr.Add(ctx, 1, attribute.Int("K", 1))
 
-	reuse = exp.producer.Produce(&reuse)
+	reuse = exp.Produce(&reuse)
 
 	cntr.Add(ctx, 1, attribute.Int("K", 1))
 
-	reuse = exp.producer.Produce(&reuse)
+	reuse = exp.Produce(&reuse)
 }

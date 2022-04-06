@@ -154,7 +154,7 @@ func (inst *Instrument) get(r *reader.Reader, attrs []attribute.KeyValue) viewst
 	aset := attribute.NewSet(attrs...)
 	se, has := rs.store[aset]
 	if !has {
-		se = inst.compiled.NewAccumulator(attrs, r)
+		se = inst.compiled.NewAccumulator(aset, r)
 		rs.store[aset] = se
 	}
 	return se

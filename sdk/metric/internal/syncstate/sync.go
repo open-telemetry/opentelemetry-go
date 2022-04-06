@@ -210,7 +210,7 @@ func acquireRecord[N number.Any](inst *Instrument, attrs []attribute.KeyValue) (
 		break
 	}
 
-	newRec.accumulator = inst.compiled.NewAccumulator(attrs, nil)
+	newRec.accumulator = inst.compiled.NewAccumulator(aset, nil)
 
 	return newRec, newRec.accumulator.(viewstate.Updater[N])
 }

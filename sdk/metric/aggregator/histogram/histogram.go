@@ -33,13 +33,6 @@ var ErrNoSubtract = fmt.Errorf("histogram subtract not implemented")
 // https://github.com/open-telemetry/opentelemetry-go/pull/669
 
 type (
-	Defaults interface {
-		Boundaries() []float64
-	}
-
-	Int64Defaults   struct{}
-	Float64Defaults struct{}
-
 	State[N number.Any, Traits traits.Any[N]] struct {
 		boundaries []float64
 
@@ -47,11 +40,6 @@ type (
 		bucketCounts []uint64
 		sum          N
 		count        uint64
-	}
-
-	Option interface {
-		// apply sets one or more config fields.
-		apply(*aggregator.HistogramConfig)
 	}
 
 	Methods[N number.Any, Traits traits.Any[N], Storage State[N, Traits]] struct{}
@@ -65,60 +53,30 @@ var (
 	_ aggregation.Histogram = &State[float64, traits.Float64]{}
 )
 
-// WithExplicitBoundaries sets the ExplicitBoundaries configuration option of a config.
-func WithExplicitBoundaries(explicitBoundaries []float64) Option {
-	return explicitBoundariesOption{explicitBoundaries}
-}
+// DefaultBoundaries have been copied from prometheus.DefBuckets.
+var DefaultFloat64Boundaries = []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10}
 
-type explicitBoundariesOption struct {
-	boundaries []float64
-}
-
-func (o explicitBoundariesOption) apply(config *aggregator.HistogramConfig) {
-	config.ExplicitBoundaries = o.boundaries
-}
-
-// defaultExplicitBoundaries have been copied from prometheus.DefBuckets.
-var defaultFloat64ExplicitBoundaries = []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10}
-
-// defaultInt64ExplicitBoundaryMultiplier determines the default
+// defaultInt64BoundaryMultiplier determines the default
 // integer histogram boundaries.
-const defaultInt64ExplicitBoundaryMultiplier = 1e6
+const defaultInt64BoundaryMultiplier = 1e6
 
-// defaultInt64ExplicitBoundaries applies a multiplier to the default
+// DefaultInt64Boundaries applies a multiplier to the default
 // float64 boundaries: [ 5K, 10K, 25K, ..., 2.5M, 5M, 10M ]
-var defaultInt64ExplicitBoundaries = func(bounds []float64) (asint []float64) {
+var DefaultInt64Boundaries = func(bounds []float64) (asint []float64) {
 	for _, f := range bounds {
-		asint = append(asint, defaultInt64ExplicitBoundaryMultiplier*f)
+		asint = append(asint, defaultInt64BoundaryMultiplier*f)
 	}
 	return
-}(defaultFloat64ExplicitBoundaries)
+}(DefaultFloat64Boundaries)
 
-func (Int64Defaults) Boundaries() []float64 {
-	return defaultInt64ExplicitBoundaries
-}
-
-func (Float64Defaults) Boundaries() []float64 {
-	return defaultFloat64ExplicitBoundaries
-}
-
-func NewConfig(def Defaults, opts ...Option) aggregator.HistogramConfig {
-	cfg := aggregator.HistogramConfig{
-		ExplicitBoundaries: def.Boundaries(),
-	}
-
-	for _, opt := range opts {
-		opt.apply(&cfg)
-	}
-
+func NewConfig(bounds []float64) aggregator.HistogramConfig {
 	// Boundaries MUST be ordered otherwise the histogram could not
 	// be properly computed.
-	sortedBoundaries := make([]float64, len(cfg.ExplicitBoundaries))
+	sortedBoundaries := make([]float64, len(bounds))
 
-	copy(sortedBoundaries, cfg.ExplicitBoundaries)
+	copy(sortedBoundaries, bounds)
 	sort.Float64s(sortedBoundaries)
-	cfg.ExplicitBoundaries = sortedBoundaries
-	return cfg
+	return aggregator.HistogramConfig{sortedBoundaries}
 }
 
 func (h *State[N, Traits]) Sum() number.Number {
