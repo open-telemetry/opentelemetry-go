@@ -14,6 +14,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `Meter` function is added back to the `go.opentelemetry.io/otel/metric/global` package.
   This function is a convenience function equivalent to calling `global.MeterProvider().Meter(...)`. (#2750)
 
+### Removed
+
+- Removed module the `go.opentelemetry.io/otel/sdk/export/metric`.
+  Use the `go.opentelemetry.io/otel/sdk/metric` module instead. (#2720)
+
+## [1.6.2] - 2022-04-06
+
 ### Changed
 
 - Don't panic anymore when setting a global (Tracer|Meter)Provider or TextMapPropagator to itself. (#2749)
@@ -21,11 +28,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This replaces the use of the now deprecated `InstrumentationLibrary` and `InstrumentationLibraryMetrics` types and fields in the proto library with the equivalent `InstrumentationScope` and `ScopeMetrics`. (#2748)
 - Upgrade `go.opentelemetry.io/proto/otlp` in `go.opentelemetry.io/otel/exporters/otlp/otlptrace` from `v0.12.1` to `v0.15.0`.
   This replaces the use of the now deprecated `InstrumentationLibrary` and `InstrumentationLibrarySpans` types and fields in the proto library with the equivalent `InstrumentationScope` and `ScopeSpans`. (#2748)
-
-### Removed
-
-- Removed module the `go.opentelemetry.io/otel/sdk/export/metric`.
-  Use the `go.opentelemetry.io/otel/sdk/metric` module instead. (#2720)
 
 ## [1.6.1] - 2022-03-28
 
@@ -1799,7 +1801,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.6.1...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.6.2...HEAD
+[1.6.2]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.6.2
 [1.6.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.6.1
 [1.6.0/0.28.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.6.0
 [1.5.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.5.0
