@@ -19,6 +19,18 @@ import (
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 )
 
+// InstrumentationLibrary converts an `instrumentation.Library` into a proto InstrumentationLibrary
+func InstrumentationLibrary(il instrumentation.Library) *commonpb.InstrumentationLibrary { //nolint:staticcheck
+	if il == (instrumentation.Library{}) {
+		return nil
+	}
+	return &commonpb.InstrumentationLibrary{ //nolint:staticcheck
+		Name:    il.Name,
+		Version: il.Version,
+	}
+}
+
+// InstrumentationScope converts an `instrumentation.Library` into a proto InstrumentationScope
 func InstrumentationScope(il instrumentation.Library) *commonpb.InstrumentationScope {
 	if il == (instrumentation.Library{}) {
 		return nil

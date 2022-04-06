@@ -27,6 +27,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Removed module the `go.opentelemetry.io/otel/sdk/export/metric`.
   Use the `go.opentelemetry.io/otel/sdk/metric` module instead. (#2720)
 
+### Fixed
+
+- Support both deprecated `InstrumentationLibrarySpans` and new `ScopeSpans` attributes in otlp exporter (#2769).
+
 ## [1.6.1] - 2022-03-28
 
 ### Fixed

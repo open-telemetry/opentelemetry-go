@@ -36,6 +36,7 @@ func Spans(sdl []tracesdk.ReadOnlySpan) []*tracepb.ResourceSpans {
 		r  attribute.Distinct
 		il instrumentation.Library
 	}
+	ilsm := make(map[key]*tracepb.InstrumentationLibrarySpans) //nolint:staticcheck
 	ssm := make(map[key]*tracepb.ScopeSpans)
 
 	var resources int
@@ -49,6 +50,18 @@ func Spans(sdl []tracesdk.ReadOnlySpan) []*tracepb.ResourceSpans {
 			r:  rKey,
 			il: sd.InstrumentationLibrary(),
 		}
+		ilSpan, iOk := ilsm[k]
+		if !iOk {
+			// Either the resource or instrumentation library were unknown.
+			ilSpan = &tracepb.InstrumentationLibrarySpans{ //nolint:staticcheck
+				InstrumentationLibrary: InstrumentationLibrary(sd.InstrumentationLibrary()),
+				Spans:                  []*tracepb.Span{},
+				SchemaUrl:              sd.InstrumentationLibrary().SchemaURL,
+			}
+		}
+		ilSpan.Spans = append(ilSpan.Spans, span(sd))
+		ilsm[k] = ilSpan
+
 		scopeSpan, iOk := ssm[k]
 		if !iOk {
 			// Either the resource or instrumentation library were unknown.
@@ -66,9 +79,10 @@ func Spans(sdl []tracesdk.ReadOnlySpan) []*tracepb.ResourceSpans {
 			resources++
 			// The resource was unknown.
 			rs = &tracepb.ResourceSpans{
-				Resource:   Resource(sd.Resource()),
-				ScopeSpans: []*tracepb.ScopeSpans{scopeSpan},
-				SchemaUrl:  sd.Resource().SchemaURL(),
+				Resource:                    Resource(sd.Resource()),
+				ScopeSpans:                  []*tracepb.ScopeSpans{scopeSpan},
+				InstrumentationLibrarySpans: []*tracepb.InstrumentationLibrarySpans{ilSpan}, //nolint:staticcheck
+				SchemaUrl:                   sd.Resource().SchemaURL(),
 			}
 			rsm[rKey] = rs
 			continue

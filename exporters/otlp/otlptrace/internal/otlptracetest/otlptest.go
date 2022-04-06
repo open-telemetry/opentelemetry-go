@@ -99,13 +99,36 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlptrace.Exporter,
 
 	// Now verify spans and attributes for each resource span.
 	for _, rs := range rss {
+		if len(rs.InstrumentationLibrarySpans) == 0 { //nolint:staticcheck
+			t.Fatalf("zero InstrumentationLibrarySpans")
+		}
+		if got, want := len(rs.InstrumentationLibrarySpans[0].Spans), m; got != want { //nolint:staticcheck
+			t.Fatalf("span counts: got %d, want %d", got, want)
+		}
+		attrMap := map[int64]bool{}
+		for _, s := range rs.InstrumentationLibrarySpans[0].Spans { //nolint:staticcheck
+			if gotName, want := s.Name, "AlwaysSample"; gotName != want {
+				t.Fatalf("span name: got %s, want %s", gotName, want)
+			}
+			attrMap[s.Attributes[0].Value.Value.(*commonpb.AnyValue_IntValue).IntValue] = true
+		}
+		if got, want := len(attrMap), m; got != want {
+			t.Fatalf("span attribute unique values: got %d  want %d", got, want)
+		}
+		for i := 0; i < m; i++ {
+			_, ok := attrMap[int64(i)]
+			if !ok {
+				t.Fatalf("span with attribute %d missing", i)
+			}
+		}
+
 		if len(rs.ScopeSpans) == 0 {
 			t.Fatalf("zero ScopeSpans")
 		}
 		if got, want := len(rs.ScopeSpans[0].Spans), m; got != want {
 			t.Fatalf("span counts: got %d, want %d", got, want)
 		}
-		attrMap := map[int64]bool{}
+		attrMap = map[int64]bool{}
 		for _, s := range rs.ScopeSpans[0].Spans {
 			if gotName, want := s.Name, "AlwaysSample"; gotName != want {
 				t.Fatalf("span name: got %s, want %s", gotName, want)
