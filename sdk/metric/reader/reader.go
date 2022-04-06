@@ -194,7 +194,9 @@ func WithDefaultAggregationConfigFunc(d DefaultAggregationConfigFunc) Option {
 	}
 }
 
-func standardAggregation(ik sdkinstrument.Kind) aggregation.Kind {
+// StandardAggregation is the specified default aggregation Kind for
+// each instrument Kind.
+func StandardAggregationKind(ik sdkinstrument.Kind) aggregation.Kind {
 	switch ik {
 	case sdkinstrument.HistogramKind:
 		return aggregation.HistogramKind
@@ -205,11 +207,14 @@ func standardAggregation(ik sdkinstrument.Kind) aggregation.Kind {
 	}
 }
 
-func standardTemporality(ik sdkinstrument.Kind) aggregation.Temporality {
+// StandardAggregation returns the specified default Cumulative
+// temporality for all instrument kinds.
+func StandardTemporality(ik sdkinstrument.Kind) aggregation.Temporality {
 	return aggregation.CumulativeTemporality
 }
 
-func standardConfig(ik sdkinstrument.Kind) (ints, floats aggregator.Config) {
+// StandardConfig returns two default aggregator.Configs.
+func StandardConfig(ik sdkinstrument.Kind) (ints, floats aggregator.Config) {
 	return aggregator.Config{}, aggregator.Config{}
 }
 
@@ -217,9 +222,9 @@ func standardConfig(ik sdkinstrument.Kind) (ints, floats aggregator.Config) {
 // optional configuration.
 func New(exporter Exporter, opts ...Option) *Reader {
 	cfg := Config{
-		DefaultAggregationKindFunc:        standardAggregation,
-		DefaultAggregationTemporalityFunc: standardTemporality,
-		DefaultAggregationConfigFunc:      standardConfig,
+		DefaultAggregationKindFunc:        StandardAggregationKind,
+		DefaultAggregationTemporalityFunc: StandardTemporality,
+		DefaultAggregationConfigFunc:      StandardConfig,
 	}
 	for _, opt := range opts {
 		opt(&cfg)

@@ -30,6 +30,8 @@ func (m *meter) newSyncInst(name string, opts []instrument.Option, nk number.Kin
 			compiled, err := m.views.Compile(desc)
 			inst := syncstate.NewInstrument(desc, compiled)
 
+			// Hey!! Problem!!! @@@
+			// How do we avoid over-collecting duplicate-registered instruments?
 			m.instruments = append(m.instruments, inst)
 			return inst, err
 		})

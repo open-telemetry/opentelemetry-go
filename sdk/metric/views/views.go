@@ -37,8 +37,8 @@ type (
 )
 
 const (
-	unsetKind       = sdkinstrument.Kind(-1)
-	unsetNumberKind = number.Kind(-1)
+	unsetInstrumentKind = sdkinstrument.Kind(-1)
+	unsetNumberKind     = number.Kind(-1)
 )
 
 // Matchers
@@ -55,7 +55,7 @@ func MatchInstrumentNameRegexp(re *regexp.Regexp) Option {
 	}
 }
 
-func MatchKind(k sdkinstrument.Kind) Option {
+func MatchInstrumentKind(k sdkinstrument.Kind) Option {
 	return func(cfg *Config) {
 		cfg.instrumentKind = k
 	}
@@ -75,7 +75,7 @@ func MatchInstrumentationLibrary(lib instrumentation.Library) Option {
 
 // Properties
 
-func WithKeys(keys []attribute.Key) Option {
+func WithKeys(keys ...attribute.Key) Option {
 	return func(cfg *Config) {
 		if keys == nil {
 			cfg.keys = nil
@@ -117,7 +117,7 @@ func WithAggregatorConfig(acfg aggregator.Config) Option {
 
 func New(opts ...Option) View {
 	cfg := Config{
-		instrumentKind: unsetKind,
+		instrumentKind: unsetInstrumentKind,
 		numberKind:     unsetNumberKind,
 	}
 	for _, opt := range opts {
@@ -167,7 +167,7 @@ func stringMismatch(test, value string) bool {
 }
 
 func ikindMismatch(test, value sdkinstrument.Kind) bool {
-	return test != unsetKind && test != value
+	return test != unsetInstrumentKind && test != value
 }
 
 func nkindMismatch(test, value number.Kind) bool {

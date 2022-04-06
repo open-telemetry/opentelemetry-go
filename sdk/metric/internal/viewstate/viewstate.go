@@ -46,7 +46,9 @@ type (
 	leafInstrument interface {
 		Instrument
 
-		String() string
+		shortString() string
+		fullNameString() string
+		renameString() string
 		aggregation() aggregation.Kind
 		descriptor() sdkinstrument.Descriptor
 		keys() *attribute.Set
@@ -78,20 +80,22 @@ type (
 	multiAccumulator[N number.Any] []Accumulator
 
 	configuredBehavior struct {
-		desc   sdkinstrument.Descriptor
-		kind   aggregation.Kind
-		acfg   aggregator.Config
-		reader *reader.Reader
+		fromName string
+		desc     sdkinstrument.Descriptor
+		kind     aggregation.Kind
+		acfg     aggregator.Config
+		reader   *reader.Reader
 
 		keysSet    *attribute.Set // With Int(0)
 		keysFilter *attribute.Filter
 	}
 
 	baseMetric[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
-		lock sync.Mutex
-		desc sdkinstrument.Descriptor
-		acfg aggregator.Config
-		data map[attribute.Set]*Storage
+		lock     sync.Mutex
+		fromName string
+		desc     sdkinstrument.Descriptor
+		acfg     aggregator.Config
+		data     map[attribute.Set]*Storage
 
 		keysSet    *attribute.Set
 		keysFilter *attribute.Filter
@@ -189,13 +193,9 @@ func keysToFilter(keys []attribute.Key) *attribute.Filter {
 	return &af
 }
 
-type DuplicateConflicts map[*reader.Reader][]error
+type DuplicateConflicts map[*reader.Reader][]DuplicateConflict
 
-type DuplicateConflict struct {
-	OrigName  string
-	Name      string
-	Conflicts []leafInstrument
-}
+type DuplicateConflict []leafInstrument
 
 func (dc DuplicateConflicts) Error() string {
 	total := 0
@@ -218,26 +218,33 @@ func (DuplicateConflicts) Is(err error) bool {
 }
 
 func (dc DuplicateConflict) Error() string {
+	// Note: choose the first and last element of the current conflicts
+	// list because they are ordered, and if the conflict in question is
+	// new it will be the last item.
+	inst1 := dc[0]
+	inst2 := dc[len(dc)-1]
+	name1 := inst1.fullNameString()
+	name2 := inst2.renameString()
+	conf1 := inst1.shortString()
+	conf2 := inst2.shortString()
+
 	var s strings.Builder
-	s.WriteString(fmt.Sprintf("name %q", dc.Name))
-	if dc.OrigName != dc.Name {
-		s.WriteString(fmt.Sprintf(" (original %q)", dc.OrigName))
-	}
-	first := dc.Conflicts[0]
-	last := dc.Conflicts[len(dc.Conflicts)-1]
-	conf1 := first.String()
-	conf2 := last.String()
+	s.WriteString(name1)
+
+	// TODO: We don't print when the conflicting instrument was renamed
+	// from something else (we don't store this, either), this could
+	// require more clarity about how the conflict arises.
 
 	if conf1 != conf2 {
-		s.WriteString(fmt.Sprintf(" conflicts %v, %v", conf1, conf2))
-	} else if !equalConfigs(first.aggConfig(), last.aggConfig()) { // @@@
-		s.WriteString(fmt.Sprintf(" has conflicts: different aggregator configuration %v %v", first.aggConfig(), last.aggConfig()))
+		s.WriteString(fmt.Sprintf(" conflicts %v, %v%v", conf1, conf2, name2))
+	} else if !equalConfigs(inst1.aggConfig(), inst2.aggConfig()) {
+		s.WriteString(" has conflicts: different aggregator configuration")
 	} else {
 		s.WriteString(" has conflicts: different attribute filters")
 	}
 
-	if len(dc.Conflicts) > 2 {
-		s.WriteString(fmt.Sprintf(" and %d more", len(dc.Conflicts)-2))
+	if len(dc) > 2 {
+		s.WriteString(fmt.Sprintf(" and %d more", len(dc)-2))
 	}
 	return s.String()
 }
@@ -290,7 +297,7 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 		for _, view := range matches {
 			kind := view.Aggregation()
 			switch kind {
-			case aggregation.SumKind, aggregation.GaugeKind, aggregation.HistogramKind:
+			case aggregation.SumKind, aggregation.GaugeKind, aggregation.HistogramKind, aggregation.DropKind:
 			default:
 				kind = aggregationConfigFor(instrument, r)
 			}
@@ -300,10 +307,11 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 			}
 
 			cf := configuredBehavior{
-				desc:   viewDescriptor(instrument, view),
-				kind:   kind,
-				acfg:   viewAggConfig(r, kind, instrument.Kind, instrument.NumberKind, view.AggregatorConfig()),
-				reader: r,
+				fromName: instrument.Name,
+				desc:     viewDescriptor(instrument, view),
+				kind:     kind,
+				acfg:     viewAggConfig(r, kind, instrument.Kind, instrument.NumberKind, view.AggregatorConfig()),
+				reader:   r,
 			}
 
 			keys := view.Keys()
@@ -322,10 +330,11 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 			}
 
 			configs[readerIdx] = append(configs[readerIdx], configuredBehavior{
-				desc:   instrument,
-				kind:   kind,
-				acfg:   viewAggConfig(r, kind, instrument.Kind, instrument.NumberKind, aggregator.Config{}),
-				reader: r,
+				fromName: instrument.Name,
+				desc:     instrument,
+				kind:     kind,
+				acfg:     viewAggConfig(r, kind, instrument.Kind, instrument.NumberKind, aggregator.Config{}),
+				reader:   r,
 			})
 		}
 	}
@@ -341,7 +350,7 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 	for readerIdx, behaviors := range configs {
 		r := v.readers[readerIdx]
 		names := v.names[readerIdx]
-		var conflictsThisReader []error
+		var conflictsThisReader []DuplicateConflict
 
 		for _, config := range behaviors {
 
@@ -408,13 +417,7 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 				names[config.desc.Name] = existingInsts
 			}
 			if len(existingInsts) > 1 {
-				conflictsThisReader = append(conflictsThisReader,
-					DuplicateConflict{
-						OrigName:  instrument.Name,
-						Name:      config.desc.Name,
-						Conflicts: existingInsts,
-					},
-				)
+				conflictsThisReader = append(conflictsThisReader, existingInsts)
 			}
 			compiled[r] = append(compiled[r], leaf)
 		}
@@ -484,9 +487,10 @@ func newSyncView[
 ](config configuredBehavior) leafInstrument {
 	tempo := config.reader.DefaultTemporality(config.desc.Kind)
 	metric := baseMetric[N, Storage, Methods]{
-		desc: config.desc,
-		acfg: config.acfg,
-		data: map[attribute.Set]*Storage{},
+		fromName: config.fromName,
+		desc:     config.desc,
+		acfg:     config.acfg,
+		data:     map[attribute.Set]*Storage{},
 
 		keysSet:    config.keysSet,
 		keysFilter: config.keysFilter,
@@ -512,10 +516,11 @@ func newAsyncView[
 ](config configuredBehavior) leafInstrument {
 	tempo := config.reader.DefaultTemporality(config.desc.Kind)
 	metric := baseMetric[N, Storage, Methods]{
-		desc:    config.desc,
-		acfg:    config.acfg,
-		data:    map[attribute.Set]*Storage{},
-		keysSet: config.keysSet,
+		fromName: config.fromName,
+		desc:     config.desc,
+		acfg:     config.acfg,
+		data:     map[attribute.Set]*Storage{},
+		keysSet:  config.keysSet,
 	}
 	instrument := compiledAsyncInstrument[N, Storage, Methods]{
 		baseMetric: metric,
@@ -706,7 +711,18 @@ func (metric *baseMetric[N, Storage, Methods]) newStorage() *Storage {
 	return ns
 }
 
-func (metric *baseMetric[N, Storage, Methods]) String() string {
+func (metric *baseMetric[N, Storage, Methods]) fullNameString() string {
+	return fmt.Sprintf("name %q%v", metric.desc.Name, metric.renameString())
+}
+
+func (metric *baseMetric[N, Storage, Methods]) renameString() string {
+	if metric.fromName == metric.desc.Name {
+		return ""
+	}
+	return fmt.Sprintf(" (original %q)", metric.fromName)
+}
+
+func (metric *baseMetric[N, Storage, Methods]) shortString() string {
 	var methods Methods
 	s := fmt.Sprintf("%v-%v-%v",
 		strings.TrimSuffix(metric.desc.Kind.String(), "Kind"),
