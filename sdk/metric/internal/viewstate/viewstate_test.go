@@ -101,6 +101,16 @@ var (
 		number.Int64Kind,
 		number.Float64Kind,
 	}
+
+	endTime    = time.Now()
+	middleTime = endTime.Add(-time.Millisecond)
+	startTime  = endTime.Add(-2 * time.Millisecond)
+
+	testSequence = reader.Sequence{
+		Start: startTime,
+		Last:  middleTime,
+		Now:   endTime,
+	}
 )
 
 // testInst returns a test instrument descriptor similar to what Meter creates.
@@ -473,6 +483,7 @@ func TestDuplicatesMergeDescriptor(t *testing.T) {
 	require.NoError(t, err1)
 	require.NotNil(t, inst1)
 
+	// This is the winning description:
 	inst2, err2 := vc.Compile(testInst("foo", sdkinstrument.CounterKind, number.Int64Kind, instrument.WithDescription("very long")))
 	require.NoError(t, err2)
 	require.NotNil(t, inst2)
@@ -489,36 +500,71 @@ func TestDuplicatesMergeDescriptor(t *testing.T) {
 
 	accUpp.Accumulate()
 
-	end := time.Now()
-	middle := end.Add(-time.Millisecond)
-	start := end.Add(-2 * time.Millisecond)
-	var output []reader.Instrument
+	output := testCollectOne(t, vc, rds[0])
 
+	require.Equal(t, 1, len(output))
+	require.Equal(t, testCumulative(
+		testInst("bar", sdkinstrument.CounterKind, number.Int64Kind, instrument.WithDescription("very long")),
+		testSeries(startTime, endTime, int64Sum(1))), output[0],
+	)
+}
+
+func testCollectOne(t *testing.T, vc *Compiler, r *reader.Reader) []reader.Instrument {
+	var output []reader.Instrument
 	require.Equal(t, 1, len(vc.Collectors()))
-	vc.Collectors()[0].Collect(rds[0], reader.Sequence{
-		Start: start,
-		Last:  middle,
-		Now:   end,
-	}, &output)
+	vc.Collectors()[0].Collect(r, testSequence, &output)
+	return output
+}
+
+func testCumulative(desc sdkinstrument.Descriptor, series ...reader.Series) reader.Instrument {
+	return reader.Instrument{
+		Descriptor:  desc,
+		Temporality: aggregation.CumulativeTemporality,
+		Series:      series,
+	}
+}
+
+func testSeries(start, end time.Time, agg aggregation.Aggregation, kvs ...attribute.KeyValue) reader.Series {
+	attrs := attribute.NewSet(kvs...)
+	return reader.Series{
+		Start:       start,
+		End:         end,
+		Attributes:  attrs,
+		Aggregation: agg,
+	}
+}
+
+// TestViewDescription ensures that a View can override the description.
+func TestViewDescription(t *testing.T) {
+	_, rds := oneTestReader()
+
+	vc := New(testLib, []views.View{
+		views.New(
+			views.MatchInstrumentName("foo"),
+			views.WithDescription("something helpful"),
+		),
+	}, rds)
+
+	inst1, err1 := vc.Compile(testInst("foo", sdkinstrument.CounterKind, number.Int64Kind))
+	require.NoError(t, err1)
+	require.NotNil(t, inst1)
+
+	attrs := []attribute.KeyValue{
+		attribute.String("K", "V"),
+	}
+	accUpp := inst1.NewAccumulator(attribute.NewSet(attrs...), rds[0])
+	accUpp.(Updater[int64]).Update(1)
+
+	accUpp.Accumulate()
+
+	output := testCollectOne(t, vc, rds[0])
 
 	require.Equal(t, 1, len(output))
 	require.Equal(t,
-		reader.Instrument{
-			Descriptor: sdkinstrument.Descriptor{
-				Name:        "bar",
-				Kind:        sdkinstrument.CounterKind,
-				NumberKind:  number.Int64Kind,
-				Description: "very long", // Note!
-			},
-			Temporality: aggregation.CumulativeTemporality,
-			Series: []reader.Series{
-				{
-					Start:       start,
-					End:         end,
-					Attributes:  attribute.NewSet(),
-					Aggregation: int64Sum(1),
-				},
-			},
-		},
-		output[0])
+		testCumulative(
+			testInst("foo", sdkinstrument.CounterKind, number.Int64Kind, instrument.WithDescription("something helpful")),
+			testSeries(startTime, endTime, int64Sum(1), attribute.String("K", "V")),
+		),
+		output[0],
+	)
 }

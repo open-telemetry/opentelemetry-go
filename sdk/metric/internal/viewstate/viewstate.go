@@ -475,7 +475,7 @@ func viewDescriptor(instrument sdkinstrument.Descriptor, v views.View) sdkinstru
 		name = v.Name()
 	}
 	if v.Description() != "" {
-		description = instrument.Description
+		description = v.Description()
 	}
 	return sdkinstrument.NewDescriptor(name, ikind, nkind, description, unit)
 }
