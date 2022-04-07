@@ -129,6 +129,7 @@ test-coverage: | $(GOCOVMERGE)
 	  (cd "$${dir}" && \
 	    $(GO) list ./... \
 	    | grep -v third_party \
+	    | grep -v 'semconv/v.*' \
 	    | xargs $(GO) test -coverpkg=./... -covermode=$(COVERAGE_MODE) -coverprofile="$(COVERAGE_PROFILE)" && \
 	  $(GO) tool cover -html=coverage.out -o coverage.html); \
 	done; \
