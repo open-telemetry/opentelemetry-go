@@ -25,6 +25,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Upgrade `go.opentelemetry.io/proto/otlp` in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric` from `v0.12.1` to `v0.15.0`.
   This replaces the use of the now deprecated `InstrumentationLibrary` and `InstrumentationLibraryMetrics` types and fields in the proto library with the equivalent `InstrumentationScope` and `ScopeMetrics`. (#2748)
 
+## [1.6.3] - 2022-04-07
+
 ### Fixed
 
 - Allow non-comparable global `MeterProvider`, `TracerProvider`, and `TextMapPropagator` types to be set. (#2772, #2773)
@@ -1809,7 +1811,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.6.2...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.6.3...HEAD
+[1.6.3]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.6.3
 [1.6.2]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.6.2
 [1.6.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.6.1
 [1.6.0/0.28.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.6.0
