@@ -17,9 +17,17 @@ package global
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
+
+type nonComparableTracerProvider struct {
+	trace.TracerProvider
+
+	nonComparable func() //nolint:structcheck,unused  // This is not called.
+}
 
 func TestSetTracerProvider(t *testing.T) {
 	t.Run("Set With default is a noop", func(t *testing.T) {
@@ -58,6 +66,14 @@ func TestSetTracerProvider(t *testing.T) {
 		if ntp.delegate == nil {
 			t.Fatal("The delegated tracer providers should have a delegate")
 		}
+	})
+
+	t.Run("non-comparable types should not panic", func(t *testing.T) {
+		ResetForTest(t)
+
+		tp := nonComparableTracerProvider{}
+		SetTracerProvider(tp)
+		assert.NotPanics(t, func() { SetTracerProvider(tp) })
 	})
 }
 
@@ -98,5 +114,14 @@ func TestSetTextMapPropagator(t *testing.T) {
 		if np.delegate == nil {
 			t.Fatal("The delegated TextMapPropagators should have a delegate")
 		}
+	})
+
+	t.Run("non-comparable types should not panic", func(t *testing.T) {
+		ResetForTest(t)
+
+		// A composite TextMapPropagator is not comparable.
+		prop := propagation.NewCompositeTextMapPropagator(propagation.TraceContext{})
+		SetTextMapPropagator(prop)
+		assert.NotPanics(t, func() { SetTextMapPropagator(prop) })
 	})
 }
