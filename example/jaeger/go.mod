@@ -9,9 +9,9 @@ replace (
 )
 
 require (
-	go.opentelemetry.io/otel v1.6.2
-	go.opentelemetry.io/otel/exporters/jaeger v1.6.2
-	go.opentelemetry.io/otel/sdk v1.6.2
+	go.opentelemetry.io/otel v1.6.3
+	go.opentelemetry.io/otel/exporters/jaeger v1.6.3
+	go.opentelemetry.io/otel/sdk v1.6.3
 )
 
 replace go.opentelemetry.io/otel/bridge/opencensus => ../../bridge/opencensus
