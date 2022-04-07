@@ -2,6 +2,7 @@ package metric
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -41,20 +42,19 @@ type (
 		lastCollect time.Time
 	}
 
-	instrumentIface interface {
-		Descriptor() sdkinstrument.Descriptor
-		Collect(r *reader.Reader, seq reader.Sequence, output *[]reader.Instrument)
-	}
-
 	meter struct {
 		library  instrumentation.Library
 		provider *Provider
-		byDesc   map[sdkinstrument.Descriptor]instrumentIface
 		views    *viewstate.Compiler
 
 		lock        sync.Mutex
-		instruments []instrumentIface
+		byDesc      map[sdkinstrument.Descriptor]instrumentIface
 		callbacks   []*asyncstate.Callback
+		instruments []instrumentIface
+	}
+
+	instrumentIface interface {
+		AccumulateFor(*reader.Reader)
 	}
 )
 
@@ -179,12 +179,16 @@ func (pp *providerProducer) Produce(inout *reader.Metrics) reader.Metrics {
 			cb.Run(ctx, pp.reader)
 		}
 
+		for _, inst := range instruments {
+			inst.AccumulateFor(pp.reader)
+		}
+
 		scope := appendScope(&output.Scopes)
 
 		scope.Library = meter.library
 
-		for _, inst := range instruments {
-			inst.Collect(pp.reader, sequence, &scope.Instruments)
+		for _, coll := range meter.views.Collectors() {
+			coll.Collect(pp.reader, sequence, &scope.Instruments)
 		}
 	}
 
@@ -234,23 +238,27 @@ func (m *meter) RegisterCallback(insts []instrument.Asynchronous, function func(
 	return err
 }
 
-func nameLookup[T instrumentIface](
+var errLookupConflicts = fmt.Errorf("caller should lookup conflict information")
+
+func configureInstrument[T instrumentIface](
 	m *meter,
 	name string,
 	opts []instrument.Option,
 	nk number.Kind,
 	ik sdkinstrument.Kind,
-	f func(desc sdkinstrument.Descriptor) (T, error),
+	create func(desc sdkinstrument.Descriptor) (T, error),
 ) (T, error) {
 	cfg := instrument.NewConfig(opts...)
 	desc := sdkinstrument.NewDescriptor(name, ik, nk, cfg.Description(), cfg.Unit())
-
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	if lookup, has := m.byDesc[desc]; has {
-		return lookup.(T), nil
+		// Note: Recomputing conflicts
+		_, err := create(desc)
+		return lookup.(T), err
 	}
-	value, err := f(desc)
-	m.byDesc[desc] = value
-	return value, err
+	inst, err := create(desc)
+	m.byDesc[desc] = inst
+	m.instruments = append(m.instruments, inst)
+	return inst, err
 }

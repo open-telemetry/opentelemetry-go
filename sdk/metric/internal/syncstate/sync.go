@@ -89,10 +89,6 @@ func NewInstrument(desc sdkinstrument.Descriptor, compiled viewstate.Instrument)
 	}
 }
 
-func (inst *Instrument) Descriptor() sdkinstrument.Descriptor {
-	return inst.descriptor
-}
-
 func NewCounter[N number.Any, Traits traits.Any[N]](inst *Instrument) counter[N, Traits] {
 	return counter[N, Traits]{Instrument: inst}
 }
@@ -113,7 +109,7 @@ func (h histogram[N, Traits]) Record(ctx context.Context, incr N, attrs ...attri
 	}
 }
 
-func (inst *Instrument) Collect(r *reader.Reader, sequence reader.Sequence, output *[]reader.Instrument) {
+func (inst *Instrument) AccumulateFor(_ *reader.Reader) {
 	inst.current.Range(func(key interface{}, value interface{}) bool {
 		rec := value.(*record)
 		any := inst.collectRecord(rec)
@@ -136,7 +132,6 @@ func (inst *Instrument) Collect(r *reader.Reader, sequence reader.Sequence, outp
 		_ = inst.collectRecord(rec)
 		return true
 	})
-	inst.compiled.Collect(r, sequence, output)
 }
 
 func (inst *Instrument) collectRecord(rec *record) int {

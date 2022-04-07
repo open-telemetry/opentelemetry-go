@@ -27,10 +27,15 @@ type (
 		views   []views.View
 		readers []*reader.Reader
 
+		lock sync.Mutex
+
 		// names is the per-reader map of output names,
 		// indexed by the reader's position in `readers`.
-		namesLock sync.Mutex
-		names     []map[string][]leafInstrument
+		names []map[string][]leafInstrument
+
+		// collectors is the de-duplicated list of metric outputs, which may
+		// contain conflicting identities.
+		collectors []Collector
 	}
 
 	Instrument interface {
@@ -39,12 +44,11 @@ type (
 		// accumulator applies to all readers, otherwise it
 		// applies to the specific reader.
 		NewAccumulator(kvs attribute.Set, reader *reader.Reader) Accumulator
-
-		Collector
 	}
 
 	leafInstrument interface {
 		Instrument
+		Collector
 
 		shortString() string
 		fullNameString() string
@@ -164,6 +168,12 @@ func New(lib instrumentation.Library, views []views.View, readers []*reader.Read
 	}
 }
 
+func (v *Compiler) Collectors() []Collector {
+	v.lock.Lock()
+	defer v.lock.Unlock()
+	return v.collectors
+}
+
 // Uses a int(0)-value attribute to identify distinct key sets.
 func keysToSet(keys []attribute.Key) *attribute.Set {
 	attrs := make([]attribute.KeyValue, len(keys))
@@ -230,10 +240,6 @@ func (dc DuplicateConflict) Error() string {
 
 	var s strings.Builder
 	s.WriteString(name1)
-
-	// TODO: We don't print when the conflicting instrument was renamed
-	// from something else (we don't store this, either), this could
-	// require more clarity about how the conflict arises.
 
 	if conf1 != conf2 {
 		s.WriteString(fmt.Sprintf(" conflicts %v, %v%v", conf1, conf2, name2))
@@ -314,6 +320,9 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 				reader:   r,
 			}
 
+			// TODO: Add checks for semantic compatibility somehwere
+			// around here.  E.g., no Gauges applied to Counters.
+
 			keys := view.Keys()
 			if keys != nil {
 				cf.keysSet = keysToSet(view.Keys())
@@ -341,8 +350,8 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 
 	compiled := map[*reader.Reader][]Instrument{}
 
-	v.namesLock.Lock()
-	defer v.namesLock.Unlock()
+	v.lock.Lock()
+	defer v.lock.Unlock()
 
 	var conflicts DuplicateConflicts
 	readerConflicts := 0
@@ -359,18 +368,16 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 
 			// Scan the existing instruments for a match.
 			for _, inst := range existingInsts {
-				// Test for equivalence among the fields that
-				// we cannot merge or will not convert, means
-				// the testing everything except the
-				// description for equality.
+				// Test for equivalence among the fields that we
+				// cannot merge or will not convert, means the
+				// testing everything except the description for
+				// equality.
 
-				// Note the following three statements check for
-				// semantic compatibility.
 				if inst.aggregation() != config.kind {
 					continue
 				}
-				// If the aggregation is a Sum and
-				// monotonicity is different, a conflict.
+				// If the aggregation is a Sum and monotonicity is
+				// different, a conflict.
 				if config.kind == aggregation.SumKind &&
 					config.desc.Kind.Monotonic() != inst.descriptor().Kind.Monotonic() {
 					continue
@@ -398,10 +405,9 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 				if instKeys != nil && *instKeys != *confKeys {
 					continue
 				}
-				// We can return the previously-compiled
-				// instrument, we may have different
-				// descriptions and that is specified to
-				// choose the longer one.
+				// We can return the previously-compiled instrument,
+				// we may have different descriptions and that is
+				// specified to choose the longer one.
 				inst.mergeDescription(config.desc.Description)
 				leaf = inst
 				break
@@ -413,6 +419,7 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 				case number.Float64Kind:
 					leaf = buildView[float64, traits.Float64](config)
 				}
+				v.collectors = append(v.collectors, leaf)
 				existingInsts = append(existingInsts, leaf)
 				names[config.desc.Name] = existingInsts
 			}
@@ -755,13 +762,6 @@ func (cav *compiledAsyncInstrument[N, Storage, Methods]) NewAccumulator(kvs attr
 	ac.output = cav.findOutput(kvs)
 
 	return ac
-}
-
-// Collect collects for multiple instruments
-func (mi multiInstrument[N]) Collect(reader *reader.Reader, sequence reader.Sequence, output *[]reader.Instrument) {
-	for _, inst := range mi[reader] {
-		inst.Collect(reader, sequence, output)
-	}
 }
 
 func reuseLast[T any](p *[]T) *T {

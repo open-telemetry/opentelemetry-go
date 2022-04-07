@@ -493,7 +493,9 @@ func TestDuplicatesMergeDescriptor(t *testing.T) {
 	middle := end.Add(-time.Millisecond)
 	start := end.Add(-2 * time.Millisecond)
 	var output []reader.Instrument
-	inst1.Collect(rds[0], reader.Sequence{
+
+	require.Equal(t, 1, len(vc.Collectors()))
+	vc.Collectors()[0].Collect(rds[0], reader.Sequence{
 		Start: start,
 		Last:  middle,
 		Now:   end,

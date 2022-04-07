@@ -24,15 +24,11 @@ func (m *meter) SyncFloat64() syncfloat64.InstrumentProvider {
 }
 
 func (m *meter) newSyncInst(name string, opts []instrument.Option, nk number.Kind, ik sdkinstrument.Kind) (*syncstate.Instrument, error) {
-	return nameLookup(
+	return configureInstrument(
 		m, name, opts, nk, ik,
 		func(desc sdkinstrument.Descriptor) (*syncstate.Instrument, error) {
 			compiled, err := m.views.Compile(desc)
 			inst := syncstate.NewInstrument(desc, compiled)
-
-			// Hey!! Problem!!! @@@
-			// How do we avoid over-collecting duplicate-registered instruments?
-			m.instruments = append(m.instruments, inst)
 			return inst, err
 		})
 }

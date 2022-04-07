@@ -9,6 +9,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/instrument"
 	apiInstrument "go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/internal/viewstate"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/number/traits"
@@ -74,10 +75,6 @@ func NewObserver[N number.Any, Traits traits.Any[N]](inst *Instrument) observer[
 	return observer[N, Traits]{inst: inst}
 }
 
-func (inst *Instrument) Descriptor() sdkinstrument.Descriptor {
-	return inst.descriptor
-}
-
 func NewCallback(instruments []apiInstrument.Asynchronous, function func(context.Context)) (*Callback, error) {
 	cb := &Callback{
 		function:    function,
@@ -102,7 +99,7 @@ func (c *Callback) Run(ctx context.Context, r *reader.Reader) {
 	}))
 }
 
-func (inst *Instrument) Collect(r *reader.Reader, sequence reader.Sequence, output *[]reader.Instrument) {
+func (inst *Instrument) AccumulateFor(r *reader.Reader) {
 	rs := inst.state[r]
 
 	// This limits concurrent asynchronous collection, which is
@@ -116,9 +113,8 @@ func (inst *Instrument) Collect(r *reader.Reader, sequence reader.Sequence, outp
 		capt.Accumulate()
 	}
 
-	inst.compiled.Collect(r, sequence, output)
-
-	// Reset the instruments used; the view state will remember what it needs.
+	// Reset the instruments used; the view state will remember
+	// what it needs.
 	rs.store = map[attribute.Set]viewstate.Accumulator{}
 }
 
@@ -142,6 +138,10 @@ func (o observer[N, Traits]) Observe(ctx context.Context, value N, attrs ...attr
 		otel.Handle(fmt.Errorf("async instrument not declared for use in callback"))
 	}
 
+	if err := aggregator.RangeTest[N, Traits](value, &o.inst.descriptor); err != nil {
+		otel.Handle(err)
+		return
+	}
 	se := o.inst.get(rc.Reader, attrs)
 	se.(viewstate.AccumulatorUpdater[N]).Update(value)
 }

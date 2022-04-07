@@ -24,12 +24,11 @@ func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
 }
 
 func (m *meter) newAsyncInst(name string, opts []instrument.Option, nk number.Kind, ik sdkinstrument.Kind) (*asyncstate.Instrument, error) {
-	return nameLookup(
+	return configureInstrument(
 		m, name, opts, nk, ik,
 		func(desc sdkinstrument.Descriptor) (*asyncstate.Instrument, error) {
 			compiled, err := m.views.Compile(desc)
 			inst := asyncstate.NewInstrument(desc, compiled, m.provider.cfg.readers)
-			m.instruments = append(m.instruments, inst)
 			return inst, err
 		})
 }
