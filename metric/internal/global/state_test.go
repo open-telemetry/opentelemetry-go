@@ -18,12 +18,20 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/nonrecording"
 )
 
 func resetGlobalMeterProvider() {
 	globalMeterProvider = defaultMeterProvider()
 	delegateMeterOnce = sync.Once{}
+}
+
+type nonComparableMeterProvider struct {
+	metric.MeterProvider
+
+	nonComparable func()
 }
 
 func TestSetMeterProvider(t *testing.T) {
@@ -66,5 +74,13 @@ func TestSetMeterProvider(t *testing.T) {
 		if dmp.delegate == nil {
 			t.Fatal("The delegated meter providers should have a delegate")
 		}
+	})
+
+	t.Run("non-comparable types should not panic", func(t *testing.T) {
+		resetGlobalMeterProvider()
+
+		mp := nonComparableMeterProvider{}
+		SetMeterProvider(mp)
+		assert.NotPanics(t, func() { SetMeterProvider(mp) })
 	})
 }
