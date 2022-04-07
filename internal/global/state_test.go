@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -25,7 +26,7 @@ import (
 type nonComparableTracerProvider struct {
 	trace.TracerProvider
 
-	nonComparable func()
+	nonComparable func() //nolint:structcheck,unused  // This is not called.
 }
 
 func TestSetTracerProvider(t *testing.T) {

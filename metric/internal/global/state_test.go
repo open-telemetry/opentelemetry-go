@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/nonrecording"
 )
@@ -31,7 +32,7 @@ func resetGlobalMeterProvider() {
 type nonComparableMeterProvider struct {
 	metric.MeterProvider
 
-	nonComparable func()
+	nonComparable func() //nolint:structcheck,unused  // This is not called.
 }
 
 func TestSetMeterProvider(t *testing.T) {
