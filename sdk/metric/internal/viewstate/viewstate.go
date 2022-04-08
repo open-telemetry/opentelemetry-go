@@ -35,7 +35,7 @@ type (
 
 		// collectors is the de-duplicated list of metric outputs, which may
 		// contain conflicting identities.
-		collectors []Collector
+		collectors map[*reader.Reader][]Collector
 	}
 
 	Instrument interface {
@@ -49,14 +49,8 @@ type (
 	leafInstrument interface {
 		Instrument
 		Collector
+		Duplicate
 
-		shortString() string
-		fullNameString() string
-		renameString() string
-		aggregation() aggregation.Kind
-		descriptor() sdkinstrument.Descriptor
-		keys() *attribute.Set
-		aggConfig() aggregator.Config
 		mergeDescription(string)
 	}
 
@@ -144,6 +138,8 @@ type (
 	}
 )
 
+const noConflictsString = "no conflicts"
+
 func New(lib instrumentation.Library, views []views.View, readers []*reader.Reader) *Compiler {
 
 	// TODO: error checking here, such as:
@@ -161,17 +157,18 @@ func New(lib instrumentation.Library, views []views.View, readers []*reader.Read
 	}
 
 	return &Compiler{
-		library: lib,
-		views:   views,
-		readers: readers,
-		names:   names,
+		library:    lib,
+		views:      views,
+		readers:    readers,
+		names:      names,
+		collectors: map[*reader.Reader][]Collector{},
 	}
 }
 
-func (v *Compiler) Collectors() []Collector {
+func (v *Compiler) Collectors(r *reader.Reader) []Collector {
 	v.lock.Lock()
 	defer v.lock.Unlock()
-	return v.collectors
+	return v.collectors[r]
 }
 
 // Uses a int(0)-value attribute to identify distinct key sets.
@@ -205,21 +202,37 @@ func keysToFilter(keys []attribute.Key) *attribute.Filter {
 
 type DuplicateConflicts map[*reader.Reader][]DuplicateConflict
 
-type DuplicateConflict []leafInstrument
+type DuplicateConflict []Duplicate
+
+type Duplicate interface {
+	Aggregation() aggregation.Kind
+	Descriptor() sdkinstrument.Descriptor
+	Keys() *attribute.Set
+	Config() aggregator.Config
+	OriginalName() string
+}
+
+type duplicateInstrument leafInstrument
 
 func (dc DuplicateConflicts) Error() string {
 	total := 0
 	for _, l := range dc {
 		total += len(l)
 	}
-	// These are almost always duplicative, so the string form takes the first examples.
+	// These are almost always duplicative, so we print only examples for one Reader.
 	for _, byReader := range dc {
-		if len(dc) == 1 {
-			return fmt.Sprintf("%d conflict(s), e.g. %v", total, byReader[0])
+		if len(byReader) == 0 {
+			break
 		}
-		return fmt.Sprintf("%d conflict(s) in %d reader(s), e.g. %v", total, len(dc), byReader[0])
+		if len(dc) == 1 {
+			if len(byReader) == 1 {
+				return byReader[0].Error()
+			}
+			return fmt.Sprintf("%d conflicts, e.g. %v", total, byReader[0])
+		}
+		return fmt.Sprintf("%d conflicts in %d readers, e.g. %v", total, len(dc), byReader[0])
 	}
-	return "no conflicts"
+	return noConflictsString
 }
 
 func (DuplicateConflicts) Is(err error) bool {
@@ -231,19 +244,22 @@ func (dc DuplicateConflict) Error() string {
 	// Note: choose the first and last element of the current conflicts
 	// list because they are ordered, and if the conflict in question is
 	// new it will be the last item.
+	if len(dc) < 2 {
+		return noConflictsString
+	}
 	inst1 := dc[0]
 	inst2 := dc[len(dc)-1]
-	name1 := inst1.fullNameString()
-	name2 := inst2.renameString()
-	conf1 := inst1.shortString()
-	conf2 := inst2.shortString()
+	name1 := fullNameString(inst1)
+	name2 := renameString(inst2)
+	conf1 := shortString(inst1)
+	conf2 := shortString(inst2)
 
 	var s strings.Builder
 	s.WriteString(name1)
 
 	if conf1 != conf2 {
 		s.WriteString(fmt.Sprintf(" conflicts %v, %v%v", conf1, conf2, name2))
-	} else if !equalConfigs(inst1.aggConfig(), inst2.aggConfig()) {
+	} else if !equalConfigs(inst1.Config(), inst2.Config()) {
 		s.WriteString(" has conflicts: different aggregator configuration")
 	} else {
 		s.WriteString(" has conflicts: different attribute filters")
@@ -373,31 +389,31 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 				// testing everything except the description for
 				// equality.
 
-				if inst.aggregation() != config.kind {
+				if inst.Aggregation() != config.kind {
 					continue
 				}
 				// If the aggregation is a Sum and monotonicity is
 				// different, a conflict.
 				if config.kind == aggregation.SumKind &&
-					config.desc.Kind.Monotonic() != inst.descriptor().Kind.Monotonic() {
+					config.desc.Kind.Monotonic() != inst.Descriptor().Kind.Monotonic() {
 					continue
 				}
-				if inst.descriptor().Kind.Synchronous() != config.desc.Kind.Synchronous() {
+				if inst.Descriptor().Kind.Synchronous() != config.desc.Kind.Synchronous() {
 					continue
 				}
 
-				if inst.descriptor().Unit != config.desc.Unit {
+				if inst.Descriptor().Unit != config.desc.Unit {
 					continue
 				}
-				if inst.descriptor().NumberKind != config.desc.NumberKind {
+				if inst.Descriptor().NumberKind != config.desc.NumberKind {
 					continue
 				}
-				if !equalConfigs(inst.aggConfig(), config.acfg) {
+				if !equalConfigs(inst.Config(), config.acfg) {
 					continue
 				}
 
 				// For attribute keys, test for equal nil-ness or equal value.
-				instKeys := inst.keys()
+				instKeys := inst.Keys()
 				confKeys := config.keysSet
 				if (instKeys == nil) != (confKeys == nil) {
 					continue
@@ -419,12 +435,19 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 				case number.Float64Kind:
 					leaf = buildView[float64, traits.Float64](config)
 				}
-				v.collectors = append(v.collectors, leaf)
+
+				// @@@ need to check for semantic conflicts, somehow
+
+				v.collectors[r] = append(v.collectors[r], leaf)
 				existingInsts = append(existingInsts, leaf)
 				names[config.desc.Name] = existingInsts
 			}
 			if len(existingInsts) > 1 {
-				conflictsThisReader = append(conflictsThisReader, existingInsts)
+				dups := make([]Duplicate, len(existingInsts))
+				for i := range dups {
+					dups[i] = existingInsts[i]
+				}
+				conflictsThisReader = append(conflictsThisReader, dups)
 			}
 			compiled[r] = append(compiled[r], leaf)
 		}
@@ -545,12 +568,6 @@ func newAsyncView[
 
 func compileSync[N number.Any, Traits traits.Any[N]](config configuredBehavior) leafInstrument {
 	switch config.kind {
-	case aggregation.GaugeKind:
-		return newSyncView[
-			N,
-			gauge.State[N, Traits],
-			gauge.Methods[N, Traits, gauge.State[N, Traits]],
-		](config)
 	case aggregation.HistogramKind:
 		return newSyncView[
 			N,
@@ -558,6 +575,7 @@ func compileSync[N number.Any, Traits traits.Any[N]](config configuredBehavior) 
 			histogram.Methods[N, Traits, histogram.State[N, Traits]],
 		](config)
 	default:
+		// Note: this includes Drop and Gauge, which are prevented above.
 		return newSyncView[
 			N,
 			sum.State[N, Traits],
@@ -568,23 +586,18 @@ func compileSync[N number.Any, Traits traits.Any[N]](config configuredBehavior) 
 
 func compileAsync[N number.Any, Traits traits.Any[N]](config configuredBehavior) leafInstrument {
 	switch config.kind {
-	case aggregation.GaugeKind:
-		return newAsyncView[
-			N,
-			gauge.State[N, Traits],
-			gauge.Methods[N, Traits, gauge.State[N, Traits]],
-		](config)
-	case aggregation.HistogramKind:
-		return newAsyncView[
-			N,
-			histogram.State[N, Traits],
-			histogram.Methods[N, Traits, histogram.State[N, Traits]],
-		](config)
-	default:
+	case aggregation.SumKind:
 		return newAsyncView[
 			N,
 			sum.State[N, Traits],
 			sum.Methods[N, Traits, sum.State[N, Traits]],
+		](config)
+	default:
+		// Note: this includes Drop and Histogram, which are prevented above.
+		return newAsyncView[
+			N,
+			gauge.State[N, Traits],
+			gauge.Methods[N, Traits, gauge.State[N, Traits]],
 		](config)
 	}
 }
@@ -657,25 +670,29 @@ func (ac *asyncAccumulator[N, Storage, Methods]) Accumulate() {
 	var methods Methods
 	methods.Reset(&ac.snapshot)
 	methods.Update(&ac.snapshot, ac.current)
-	methods.Merge(&ac.snapshot, ac.output)
+	methods.Merge(ac.output, &ac.snapshot)
 }
 
 // baseMetric
 
-func (metric *baseMetric[N, Storage, Methods]) aggregation() aggregation.Kind {
+func (metric *baseMetric[N, Storage, Methods]) Aggregation() aggregation.Kind {
 	var methods Methods
 	return methods.Kind()
 }
 
-func (metric *baseMetric[N, Storage, Methods]) descriptor() sdkinstrument.Descriptor {
+func (metric *baseMetric[N, Storage, Methods]) OriginalName() string {
+	return metric.fromName
+}
+
+func (metric *baseMetric[N, Storage, Methods]) Descriptor() sdkinstrument.Descriptor {
 	return metric.desc
 }
 
-func (metric *baseMetric[N, Storage, Methods]) keys() *attribute.Set {
+func (metric *baseMetric[N, Storage, Methods]) Keys() *attribute.Set {
 	return metric.keysSet
 }
 
-func (metric *baseMetric[N, Storage, Methods]) aggConfig() aggregator.Config {
+func (metric *baseMetric[N, Storage, Methods]) Config() aggregator.Config {
 	return metric.acfg
 }
 
@@ -718,26 +735,25 @@ func (metric *baseMetric[N, Storage, Methods]) newStorage() *Storage {
 	return ns
 }
 
-func (metric *baseMetric[N, Storage, Methods]) fullNameString() string {
-	return fmt.Sprintf("name %q%v", metric.desc.Name, metric.renameString())
+func fullNameString(d Duplicate) string {
+	return fmt.Sprintf("name %q%v", d.Descriptor().Name, renameString(d))
 }
 
-func (metric *baseMetric[N, Storage, Methods]) renameString() string {
-	if metric.fromName == metric.desc.Name {
+func renameString(d Duplicate) string {
+	if d.OriginalName() == d.Descriptor().Name {
 		return ""
 	}
-	return fmt.Sprintf(" (original %q)", metric.fromName)
+	return fmt.Sprintf(" (original %q)", d.OriginalName())
 }
 
-func (metric *baseMetric[N, Storage, Methods]) shortString() string {
-	var methods Methods
+func shortString(d Duplicate) string {
 	s := fmt.Sprintf("%v-%v-%v",
-		strings.TrimSuffix(metric.desc.Kind.String(), "Kind"),
-		strings.TrimSuffix(metric.desc.NumberKind.String(), "Kind"),
-		methods.Kind(),
+		strings.TrimSuffix(d.Descriptor().Kind.String(), "Kind"),
+		strings.TrimSuffix(d.Descriptor().NumberKind.String(), "Kind"),
+		d.Aggregation(),
 	)
-	if metric.desc.Unit != "" {
-		s = fmt.Sprintf("%v-%v", s, metric.desc.Unit)
+	if d.Descriptor().Unit != "" {
+		s = fmt.Sprintf("%v-%v", s, d.Descriptor().Unit)
 	}
 	return s
 }
@@ -764,25 +780,15 @@ func (cav *compiledAsyncInstrument[N, Storage, Methods]) NewAccumulator(kvs attr
 	return ac
 }
 
-func reuseLast[T any](p *[]T) *T {
-	if len(*p) < cap(*p) {
-		(*p) = (*p)[0 : len(*p)+1 : cap(*p)]
-	} else {
-		var empty T
-		(*p) = append(*p, empty)
-	}
-	return &(*p)[len(*p)-1]
-}
-
 func appendInstrument(insts *[]reader.Instrument, desc sdkinstrument.Descriptor, tempo aggregation.Temporality) *reader.Instrument {
-	ioutput := reuseLast(insts)
+	ioutput := reader.Reallocate(insts)
 	ioutput.Descriptor = desc
 	ioutput.Temporality = tempo
 	return ioutput
 }
 
-func appendSeries(series *[]reader.Series, set attribute.Set, agg aggregation.Aggregation, start, end time.Time) {
-	soutput := reuseLast(series)
+func appendPoint(points *[]reader.Point, set attribute.Set, agg aggregation.Aggregation, start, end time.Time) {
+	soutput := reader.Reallocate(points)
 	soutput.Attributes = set
 	soutput.Aggregation = agg
 	soutput.Start = start
@@ -801,7 +807,7 @@ func (p *statefulSyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, seq
 	for set, storage := range p.data {
 		// Note: No reset in this process.
 		// This takes a direct reference to the underlying storage.
-		appendSeries(&ioutput.Series, set, methods.Aggregation(storage), seq.Start, seq.Now)
+		appendPoint(&ioutput.Points, set, methods.Aggregation(storage), seq.Start, seq.Now)
 	}
 }
 
@@ -827,7 +833,7 @@ func (p *statelessSyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, se
 		methods.Merge(ns, storage)
 		methods.Reset(storage)
 
-		appendSeries(&ioutput.Series, set, methods.Aggregation(ns), seq.Last, seq.Now)
+		appendPoint(&ioutput.Points, set, methods.Aggregation(ns), seq.Last, seq.Now)
 	}
 }
 
@@ -842,8 +848,9 @@ func (p *statelessAsyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, s
 
 	for set, storage := range p.data {
 		// Copy the underlying storage.
-		appendSeries(&ioutput.Series, set, methods.Aggregation(storage), seq.Start, seq.Now)
+		appendPoint(&ioutput.Points, set, methods.Aggregation(storage), seq.Start, seq.Now)
 	}
+
 	// Reset the entire map.
 	p.data = map[attribute.Set]*Storage{}
 }
@@ -874,7 +881,7 @@ func (p *statefulAsyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, se
 			}
 		}
 
-		appendSeries(&ioutput.Series, set, methods.Aggregation(storage), seq.Last, seq.Now)
+		appendPoint(&ioutput.Points, set, methods.Aggregation(storage), seq.Last, seq.Now)
 	}
 	// Copy the current to the prior and reset.
 	p.prior = p.data

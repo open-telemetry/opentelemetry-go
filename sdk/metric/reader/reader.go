@@ -109,12 +109,12 @@ type (
 		// gauge values that change (Delta).
 		Temporality aggregation.Temporality
 
-		// Series is a slice of metric data, one per attribute.Set value.
-		Series []Series
+		// Points is a slice of metric data, one per attribute.Set value.
+		Points []Point
 	}
 
-	// Series is a timeseries data point resulting from a single collection.
-	Series struct {
+	// Point is a timeseries data point resulting from a single collection.
+	Point struct {
 		// Attributes are the coordinates of this series.
 		Attributes attribute.Set
 
@@ -207,10 +207,21 @@ func StandardAggregationKind(ik sdkinstrument.Kind) aggregation.Kind {
 	}
 }
 
-// StandardAggregation returns the specified default Cumulative
+// StandardTemporality returns the specified default Cumulative
 // temporality for all instrument kinds.
 func StandardTemporality(ik sdkinstrument.Kind) aggregation.Temporality {
 	return aggregation.CumulativeTemporality
+}
+
+// DeltaPreferredTemporality returns the specified Delta temporality
+// for all instrument kinds except UpDownCounter, which remain Cumulative.
+func DeltaPreferredTemporality(ik sdkinstrument.Kind) aggregation.Temporality {
+	switch ik {
+	case sdkinstrument.UpDownCounterKind, sdkinstrument.UpDownCounterObserverKind:
+		return aggregation.CumulativeTemporality
+	default:
+		return aggregation.DeltaTemporality
+	}
 }
 
 // StandardConfig returns two default aggregator.Configs.
@@ -261,4 +272,44 @@ func (r *Reader) DefaultAggregationConfig(k sdkinstrument.Kind, nk number.Kind) 
 // Exporter returns the Reader's associated Exporter.
 func (r *Reader) Exporter() Exporter {
 	return r.exporter
+}
+
+func (m *Metrics) Reset() {
+	resetScopes(&m.Scopes)
+}
+
+func (s *Scope) Reset() {
+	resetInstruments(&s.Instruments)
+}
+
+func (in *Instrument) Reset() {
+	resetPoints(&in.Points)
+}
+
+func resetScopes(ss *[]Scope) {
+	for i := range *ss {
+		(*ss)[i].Reset()
+	}
+	(*ss) = (*ss)[0:0:cap((*ss))]
+}
+
+func resetInstruments(is *[]Instrument) {
+	for i := range *is {
+		(*is)[i].Reset()
+	}
+	(*is) = (*is)[0:0:cap((*is))]
+}
+
+func resetPoints(ps *[]Point) {
+	(*ps) = (*ps)[0:0:cap((*ps))]
+}
+
+func Reallocate[T any](p *[]T) *T {
+	if len(*p) < cap(*p) {
+		(*p) = (*p)[0 : len(*p)+1 : cap(*p)]
+	} else {
+		var empty T
+		(*p) = append(*p, empty)
+	}
+	return &(*p)[len(*p)-1]
 }

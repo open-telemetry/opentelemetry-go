@@ -119,26 +119,68 @@ func testInst(name string, ik sdkinstrument.Kind, nk number.Kind, opts ...instru
 	return sdkinstrument.NewDescriptor(name, ik, nk, cfg.Description(), cfg.Unit())
 }
 
-func twoTestReaders() (one, two *metrictest.Exporter, _ []*reader.Reader) {
-	exp1 := metrictest.NewExporter()
-	exp2 := metrictest.NewExporter()
-	rds := []*reader.Reader{
-		reader.New(exp1),
-		reader.New(exp2),
+func twoTestReaders(opts ...reader.Option) []*reader.Reader {
+	return []*reader.Reader{
+		reader.New(metrictest.NewExporter(), opts...),
+		reader.New(metrictest.NewExporter(), opts...),
 	}
-	return exp1, exp2, rds
 }
 
-func oneTestReader() (*metrictest.Exporter, []*reader.Reader) {
-	exp := metrictest.NewExporter()
-	rds := []*reader.Reader{reader.New(exp)}
-	return exp, rds
+func oneTestReader(opts ...reader.Option) []*reader.Reader {
+	return []*reader.Reader{reader.New(metrictest.NewExporter(), opts...)}
+}
+
+// TestConflictErrorDescription exercises the code paths that
+// construct example error messages from duplicate instrument
+// conditions.
+func TestConflictErrorDescription(t *testing.T) {
+	// Note: These all use "no conflicts" strings, which happens
+	// under artificial conditions such as conflicts w/ < 2 examples
+	// and allows testing the code that avoids lengthy messages
+	// when there is only one conflict or only one reader.
+	var err error
+	err = DuplicateConflicts{}
+	require.Equal(t, "no conflicts", err.Error())
+	require.True(t, errors.Is(err, DuplicateConflicts{}))
+
+	rd1 := reader.New(metrictest.NewExporter())
+	rd2 := reader.New(metrictest.NewExporter())
+
+	err = DuplicateConflicts{
+		rd1: []DuplicateConflict{
+			[]Duplicate{},
+		},
+	}
+	require.Equal(t, "no conflicts", err.Error())
+
+	err = DuplicateConflicts{
+		rd1: []DuplicateConflict{},
+	}
+	require.Equal(t, "no conflicts", err.Error())
+
+	err = DuplicateConflicts{
+		rd1: []DuplicateConflict{
+			[]Duplicate{},
+			[]Duplicate{},
+		},
+	}
+	require.Equal(t, "2 conflicts, e.g. no conflicts", err.Error())
+
+	err = DuplicateConflicts{
+		rd1: []DuplicateConflict{
+			[]Duplicate{},
+		},
+		rd2: []DuplicateConflict{
+			[]Duplicate{},
+		},
+	}
+	require.Equal(t, "2 conflicts in 2 readers, e.g. no conflicts", err.Error())
 }
 
 // TestDeduplicateNoConflict verifies that two identical instruments
 // have the same collector.
 func TestDeduplicateNoConflict(t *testing.T) {
-	_, _, rds := twoTestReaders()
+	rds := twoTestReaders()
 
 	vc := New(testLib, nil, rds)
 
@@ -156,7 +198,7 @@ func TestDeduplicateNoConflict(t *testing.T) {
 // TestDeduplicateRenameNoConflict verifies that one instrument can be renamed
 // such that it becomes identical to another, so no conflict.
 func TestDeduplicateRenameNoConflict(t *testing.T) {
-	_, _, rds := twoTestReaders()
+	rds := twoTestReaders()
 
 	vc := New(testLib, fooToBarView, rds)
 
@@ -174,7 +216,7 @@ func TestDeduplicateRenameNoConflict(t *testing.T) {
 // TestNoRenameNoConflict verifies that one instrument does not
 // conflict with another differently-named instrument.
 func TestNoRenameNoConflict(t *testing.T) {
-	_, _, rds := twoTestReaders()
+	rds := twoTestReaders()
 
 	vc := New(testLib, nil, rds)
 
@@ -192,7 +234,7 @@ func TestNoRenameNoConflict(t *testing.T) {
 // TestDuplicateNumberConflict verifies that two same instruments
 // except different number kind conflict.
 func TestDuplicateNumberConflict(t *testing.T) {
-	_, _, rds := twoTestReaders()
+	rds := twoTestReaders()
 
 	vc := New(testLib, nil, rds)
 
@@ -212,7 +254,7 @@ func TestDuplicateNumberConflict(t *testing.T) {
 // TestDuplicateSyncAsyncConflict verifies that two same instruments
 // except one synchonous, one asynchronous conflict.
 func TestDuplicateSyncAsyncConflict(t *testing.T) {
-	_, _, rds := twoTestReaders()
+	rds := twoTestReaders()
 
 	vc := New(testLib, nil, rds)
 
@@ -231,7 +273,7 @@ func TestDuplicateSyncAsyncConflict(t *testing.T) {
 // TestDuplicateUnitConflict verifies that two same instruments
 // except different units conflict.
 func TestDuplicateUnitConflict(t *testing.T) {
-	_, _, rds := twoTestReaders()
+	rds := twoTestReaders()
 
 	vc := New(testLib, nil, rds)
 
@@ -243,7 +285,7 @@ func TestDuplicateUnitConflict(t *testing.T) {
 	require.Error(t, err2)
 	require.NotNil(t, inst2)
 	require.True(t, errors.Is(err2, DuplicateConflicts{}))
-	require.Contains(t, err2.Error(), "2 conflict(s) in 2 reader(s)")
+	require.Contains(t, err2.Error(), "2 conflicts in 2 readers")
 	require.Contains(t, err2.Error(), "conflicts Counter-Float64-Sum-gal_us")
 
 	require.NotEqual(t, inst1, inst2)
@@ -252,7 +294,7 @@ func TestDuplicateUnitConflict(t *testing.T) {
 // TestDuplicateMonotonicConflict verifies that two same instruments
 // except different monotonic values.
 func TestDuplicateMonotonicConflict(t *testing.T) {
-	_, _, rds := twoTestReaders()
+	rds := twoTestReaders()
 
 	vc := New(testLib, nil, rds)
 
@@ -264,7 +306,7 @@ func TestDuplicateMonotonicConflict(t *testing.T) {
 	require.Error(t, err2)
 	require.NotNil(t, inst2)
 	require.True(t, errors.Is(err2, DuplicateConflicts{}))
-	require.Contains(t, err2.Error(), "2 conflict(s) in 2 reader(s)")
+	require.Contains(t, err2.Error(), "2 conflicts in 2 readers")
 	require.Contains(t, err2.Error(), "UpDownCounter-Float64-Sum")
 
 	require.NotEqual(t, inst1, inst2)
@@ -273,7 +315,7 @@ func TestDuplicateMonotonicConflict(t *testing.T) {
 // TestDuplicateAggregatorConfigConflict verifies that two same instruments
 // except different aggregator.Config values.
 func TestDuplicateAggregatorConfigConflict(t *testing.T) {
-	_, _, rds := twoTestReaders()
+	rds := twoTestReaders()
 
 	vc := New(testLib, fooToBarAltHistView, rds)
 
@@ -326,7 +368,7 @@ func TestDuplicateAggregatorConfigNoConflict(t *testing.T) {
 // TestDuplicateAggregationKindConflict verifies that two instruments
 // with different aggregation kinds conflict.
 func TestDuplicateAggregationKindConflict(t *testing.T) {
-	_, _, rds := twoTestReaders()
+	rds := twoTestReaders()
 
 	vc := New(testLib, fooToBarView, rds)
 
@@ -338,7 +380,7 @@ func TestDuplicateAggregationKindConflict(t *testing.T) {
 	require.Error(t, err2)
 	require.NotNil(t, inst2)
 	require.True(t, errors.Is(err2, DuplicateConflicts{}))
-	require.Contains(t, err2.Error(), "2 conflict(s) in 2 reader(s)")
+	require.Contains(t, err2.Error(), "2 conflicts in 2 readers")
 	require.Contains(t, err2.Error(), "name \"bar\" (original \"foo\") conflicts Histogram-Int64-Histogram, Counter-Int64-Sum")
 
 	require.NotEqual(t, inst1, inst2)
@@ -348,16 +390,15 @@ func TestDuplicateAggregationKindConflict(t *testing.T) {
 // instruments with different aggregation kinds do not conflict when
 // the reader drops the instrument.
 func TestDuplicateAggregationKindOneConflict(t *testing.T) {
-	exp1, exp2, _ := twoTestReaders()
 	// Let one reader drop histograms
 	rds := []*reader.Reader{
-		reader.New(exp1, reader.WithDefaultAggregationKindFunc(func(k sdkinstrument.Kind) aggregation.Kind {
+		reader.New(metrictest.NewExporter(), reader.WithDefaultAggregationKindFunc(func(k sdkinstrument.Kind) aggregation.Kind {
 			if k == sdkinstrument.HistogramKind {
 				return aggregation.DropKind
 			}
 			return reader.StandardAggregationKind(k)
 		})),
-		reader.New(exp2),
+		reader.New(metrictest.NewExporter()),
 	}
 
 	vc := New(testLib, nil, rds)
@@ -370,7 +411,6 @@ func TestDuplicateAggregationKindOneConflict(t *testing.T) {
 	require.Error(t, err2)
 	require.NotNil(t, inst2)
 	require.True(t, errors.Is(err2, DuplicateConflicts{}))
-	require.Contains(t, err2.Error(), "1 conflict(s), e.g.")
 	require.Contains(t, err2.Error(), "name \"foo\" conflicts Histogram-Int64-Histogram, Counter-Int64-Sum")
 
 	require.NotEqual(t, inst1, inst2)
@@ -380,7 +420,7 @@ func TestDuplicateAggregationKindOneConflict(t *testing.T) {
 // instruments with different aggregation kinds do not conflict when
 // the view drops one of the instruments.
 func TestDuplicateAggregationKindNoConflict(t *testing.T) {
-	_, _, rds := twoTestReaders()
+	rds := twoTestReaders()
 
 	vc := New(testLib, dropHistInstView, rds)
 
@@ -396,7 +436,7 @@ func TestDuplicateAggregationKindNoConflict(t *testing.T) {
 // TestDuplicateMultipleConflicts verifies that multiple duplicate
 // instrument conflicts include sufficient explanatory information.
 func TestDuplicateMultipleConflicts(t *testing.T) {
-	_, rds := oneTestReader()
+	rds := oneTestReader()
 
 	vc := New(testLib, nil, rds)
 
@@ -427,7 +467,7 @@ func TestDuplicateFilterConflicts(t *testing.T) {
 		fooToBarDifferentFiltersView,
 	} {
 		t.Run(fmt.Sprint(idx), func(t *testing.T) {
-			_, _, rds := twoTestReaders()
+			rds := twoTestReaders()
 
 			vc := New(testLib, vws, rds)
 
@@ -440,7 +480,7 @@ func TestDuplicateFilterConflicts(t *testing.T) {
 			require.NotNil(t, inst2)
 
 			require.True(t, errors.Is(err2, DuplicateConflicts{}))
-			require.Contains(t, err2.Error(), "2 conflict(s) in 2 reader(s), e.g.")
+			require.Contains(t, err2.Error(), "2 conflicts in 2 readers, e.g.")
 			require.Contains(t, err2.Error(), "name \"bar\" (original \"foo\") has conflicts: different attribute filters")
 		})
 	}
@@ -450,7 +490,7 @@ func TestDuplicateFilterConflicts(t *testing.T) {
 // renamed to match another exactly, including filters, they are not
 // in conflict.
 func TestDeduplicateSameFilters(t *testing.T) {
-	_, _, rds := twoTestReaders()
+	rds := twoTestReaders()
 
 	vc := New(testLib, fooToBarSameFiltersView, rds)
 
@@ -469,13 +509,21 @@ func int64Sum(x int64) aggregation.Sum {
 	var s sum.State[int64, traits.Int64]
 	var methods sum.Methods[int64, traits.Int64, sum.State[int64, traits.Int64]]
 	methods.Init(&s, aggregator.Config{})
-	methods.Update(&s, 1)
+	methods.Update(&s, x)
+	return &s
+}
+
+func float64Sum(x float64) aggregation.Sum {
+	var s sum.State[float64, traits.Float64]
+	var methods sum.Methods[float64, traits.Float64, sum.State[float64, traits.Float64]]
+	methods.Init(&s, aggregator.Config{})
+	methods.Update(&s, x)
 	return &s
 }
 
 // TestDuplicatesMergeDescriptor ensures that the longest description string is used.
 func TestDuplicatesMergeDescriptor(t *testing.T) {
-	_, rds := oneTestReader()
+	rds := oneTestReader()
 
 	vc := New(testLib, fooToBarSameFiltersView, rds)
 
@@ -500,33 +548,38 @@ func TestDuplicatesMergeDescriptor(t *testing.T) {
 
 	accUpp.Accumulate()
 
-	output := testCollectOne(t, vc, rds[0])
+	output := testCollect(t, vc, rds[0])
 
 	require.Equal(t, 1, len(output))
 	require.Equal(t, testCumulative(
 		testInst("bar", sdkinstrument.CounterKind, number.Int64Kind, instrument.WithDescription("very long")),
-		testSeries(startTime, endTime, int64Sum(1))), output[0],
+		testPoint(startTime, endTime, int64Sum(1))), output[0],
 	)
 }
 
-func testCollectOne(t *testing.T, vc *Compiler, r *reader.Reader) []reader.Instrument {
+func testCollect(t *testing.T, vc *Compiler, r *reader.Reader) []reader.Instrument {
 	var output []reader.Instrument
-	require.Equal(t, 1, len(vc.Collectors()))
-	vc.Collectors()[0].Collect(r, testSequence, &output)
+	for _, coll := range vc.Collectors(r) {
+		coll.Collect(r, testSequence, &output)
+	}
 	return output
 }
 
-func testCumulative(desc sdkinstrument.Descriptor, series ...reader.Series) reader.Instrument {
+func testInstrument(desc sdkinstrument.Descriptor, temporality aggregation.Temporality, points ...reader.Point) reader.Instrument {
 	return reader.Instrument{
 		Descriptor:  desc,
-		Temporality: aggregation.CumulativeTemporality,
-		Series:      series,
+		Temporality: temporality,
+		Points:      points,
 	}
 }
 
-func testSeries(start, end time.Time, agg aggregation.Aggregation, kvs ...attribute.KeyValue) reader.Series {
+func testCumulative(desc sdkinstrument.Descriptor, points ...reader.Point) reader.Instrument {
+	return testInstrument(desc, aggregation.CumulativeTemporality, points...)
+}
+
+func testPoint(start, end time.Time, agg aggregation.Aggregation, kvs ...attribute.KeyValue) reader.Point {
 	attrs := attribute.NewSet(kvs...)
-	return reader.Series{
+	return reader.Point{
 		Start:       start,
 		End:         end,
 		Attributes:  attrs,
@@ -536,7 +589,7 @@ func testSeries(start, end time.Time, agg aggregation.Aggregation, kvs ...attrib
 
 // TestViewDescription ensures that a View can override the description.
 func TestViewDescription(t *testing.T) {
-	_, rds := oneTestReader()
+	rds := oneTestReader()
 
 	vc := New(testLib, []views.View{
 		views.New(
@@ -545,7 +598,10 @@ func TestViewDescription(t *testing.T) {
 		),
 	}, rds)
 
-	inst1, err1 := vc.Compile(testInst("foo", sdkinstrument.CounterKind, number.Int64Kind))
+	inst1, err1 := vc.Compile(testInst(
+		"foo", sdkinstrument.CounterKind, number.Int64Kind,
+		instrument.WithDescription("other description"),
+	))
 	require.NoError(t, err1)
 	require.NotNil(t, inst1)
 
@@ -557,14 +613,146 @@ func TestViewDescription(t *testing.T) {
 
 	accUpp.Accumulate()
 
-	output := testCollectOne(t, vc, rds[0])
+	output := testCollect(t, vc, rds[0])
 
 	require.Equal(t, 1, len(output))
 	require.Equal(t,
 		testCumulative(
-			testInst("foo", sdkinstrument.CounterKind, number.Int64Kind, instrument.WithDescription("something helpful")),
-			testSeries(startTime, endTime, int64Sum(1), attribute.String("K", "V")),
+			testInst(
+				"foo", sdkinstrument.CounterKind, number.Int64Kind,
+				instrument.WithDescription("something helpful"),
+			),
+			testPoint(startTime, endTime, int64Sum(1), attribute.String("K", "V")),
 		),
 		output[0],
 	)
+}
+
+// TestKeyFilters verifies that keys are filtred and metrics are
+// correctly aggregated.
+func TestKeyFilters(t *testing.T) {
+	rds := oneTestReader()
+
+	vc := New(testLib, []views.View{
+		views.New(views.WithKeys("a", "b")),
+	}, rds)
+
+	inst, err := vc.Compile(testInst("foo", sdkinstrument.CounterKind, number.Int64Kind))
+	require.NoError(t, err)
+	require.NotNil(t, inst)
+
+	accUpp1 := inst.NewAccumulator(
+		attribute.NewSet(attribute.String("a", "1"), attribute.String("b", "2"), attribute.String("c", "3")),
+		rds[0],
+	)
+	accUpp2 := inst.NewAccumulator(
+		attribute.NewSet(attribute.String("a", "1"), attribute.String("b", "2"), attribute.String("d", "4")),
+		rds[0],
+	)
+
+	accUpp1.(Updater[int64]).Update(1)
+	accUpp2.(Updater[int64]).Update(1)
+	accUpp1.Accumulate()
+	accUpp2.Accumulate()
+
+	output := testCollect(t, vc, rds[0])
+
+	require.Equal(t, 1, len(output))
+	require.Equal(t, testCumulative(
+		testInst("foo", sdkinstrument.CounterKind, number.Int64Kind),
+		testPoint(
+			startTime, endTime, int64Sum(2),
+			attribute.String("a", "1"), attribute.String("b", "2"),
+		)), output[0],
+	)
+}
+
+// TestTwoCounterReaders performs alternating reads from two readers,
+// they see 10, 20, 30, 40.
+func TestTwoCounterReaders(t *testing.T) {
+	rds := twoTestReaders()
+
+	vc := New(testLib, nil, rds)
+
+	scntr, _ := vc.Compile(testInst("sync_counter", sdkinstrument.CounterKind, number.Int64Kind))
+
+	sup01 := scntr.NewAccumulator(attribute.NewSet(), nil)
+
+	for twice := int64(0); twice < 2; twice++ {
+
+		sup01.(Updater[int64]).Update(10)
+
+		sup01.Accumulate()
+
+		// Collect reader 0 reads 10 or 30
+		output := testCollect(t, vc, rds[0])
+
+		require.Equal(t, 1, len(output))
+		require.Equal(t,
+			testCumulative(
+				testInst("sync_counter", sdkinstrument.CounterKind, number.Int64Kind),
+				testPoint(startTime, endTime, int64Sum(10+twice*20)),
+			),
+			output[0],
+		)
+
+		sup01.(Updater[int64]).Update(10)
+
+		sup01.Accumulate()
+
+		// Collect reader 1 reads 20 or 40
+		output = testCollect(t, vc, rds[1])
+		require.Equal(t, 1, len(output))
+		require.Equal(t,
+			testCumulative(
+				testInst("sync_counter", sdkinstrument.CounterKind, number.Int64Kind),
+				testPoint(startTime, endTime, int64Sum(20+twice*20)),
+			),
+			output[0],
+		)
+	}
+}
+
+// TestTwoCounterObserverReaders performs alternating reads from two readers,
+// they see 101, 102, 103, 104.
+func TestTwoCounterObserverReaders(t *testing.T) {
+	rds := twoTestReaders()
+
+	vc := New(testLib, nil, rds)
+
+	scntr, _ := vc.Compile(testInst("async_counter", sdkinstrument.CounterObserverKind, number.Float64Kind))
+
+	for twice := 0.0; twice < 2; twice++ {
+
+		aup0 := scntr.NewAccumulator(attribute.NewSet(), rds[0])
+		aup0.(Updater[float64]).Update(101 + twice*2)
+		aup0.Accumulate()
+
+		// Collect reader 0
+		output := testCollect(t, vc, rds[0])
+
+		require.Equal(t, 1, len(output))
+		require.Equal(t,
+			testCumulative(
+				testInst("async_counter", sdkinstrument.CounterObserverKind, number.Float64Kind),
+				testPoint(startTime, endTime, float64Sum(101+twice*2)),
+			),
+			output[0],
+		)
+
+		aup1 := scntr.NewAccumulator(attribute.NewSet(), rds[1])
+		aup1.(Updater[float64]).Update(102 + twice*2)
+		aup1.Accumulate()
+
+		// Collect reader 1
+		output = testCollect(t, vc, rds[1])
+		require.Equal(t, 1, len(output))
+		require.Equal(t,
+			testCumulative(
+				testInst("async_counter", sdkinstrument.CounterObserverKind, number.Float64Kind),
+				testPoint(startTime, endTime, float64Sum(102+twice*2)),
+			),
+			output[0],
+		)
+	}
 }

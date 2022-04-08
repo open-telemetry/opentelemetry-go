@@ -107,35 +107,6 @@ func (p *Provider) producerFor(r *reader.Reader) reader.Producer {
 	}
 }
 
-func resetMetrics(m *reader.Metrics) {
-	for i := range m.Scopes {
-		resetScope(&m.Scopes[i])
-	}
-	m.Scopes = m.Scopes[0:0:cap(m.Scopes)]
-}
-
-func resetScope(s *reader.Scope) {
-	for i := range s.Instruments {
-		resetInstrument(&s.Instruments[i])
-	}
-	s.Instruments = s.Instruments[0:0:cap(s.Instruments)]
-}
-
-func resetInstrument(inst *reader.Instrument) {
-	inst.Series = inst.Series[0:0:cap(inst.Series)]
-}
-
-func appendScope(scopes *[]reader.Scope) *reader.Scope {
-	// Note: there's a generic form of this logic in internal/viewstate,
-	// should this use it?
-	if len(*scopes) < cap(*scopes) {
-		(*scopes) = (*scopes)[0 : len(*scopes)+1 : cap(*scopes)]
-	} else {
-		(*scopes) = append(*scopes, reader.Scope{})
-	}
-	return &(*scopes)[len(*scopes)-1]
-}
-
 func (pp *providerProducer) Produce(inout *reader.Metrics) reader.Metrics {
 	ordered := pp.provider.getOrdered()
 
@@ -154,7 +125,7 @@ func (pp *providerProducer) Produce(inout *reader.Metrics) reader.Metrics {
 
 	var output reader.Metrics
 	if inout != nil {
-		resetMetrics(inout)
+		inout.Reset()
 		output = *inout
 	}
 
@@ -183,11 +154,11 @@ func (pp *providerProducer) Produce(inout *reader.Metrics) reader.Metrics {
 			inst.AccumulateFor(pp.reader)
 		}
 
-		scope := appendScope(&output.Scopes)
+		scope := reader.Reallocate(&output.Scopes)
 
 		scope.Library = meter.library
 
-		for _, coll := range meter.views.Collectors() {
+		for _, coll := range meter.views.Collectors(pp.reader) {
 			coll.Collect(pp.reader, sequence, &scope.Instruments)
 		}
 	}
