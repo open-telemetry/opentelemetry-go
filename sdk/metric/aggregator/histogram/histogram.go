@@ -95,8 +95,8 @@ func (h *State[N, Traits]) Histogram() aggregation.Buckets {
 	}
 }
 
-func (h *State[N, Traits]) Kind() aggregation.Kind {
-	return aggregation.HistogramKind
+func (lv *State[N, Traits]) Category() aggregation.Category {
+	return aggregation.HistogramCategory
 }
 
 func (h *State[N, Traits]) clearState() {

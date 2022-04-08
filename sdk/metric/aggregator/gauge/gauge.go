@@ -42,8 +42,8 @@ func (lv *State[N, Traits]) Gauge() number.Number {
 	return traits.ToNumber(lv.value)
 }
 
-func (lv *State[N, Traits]) Kind() aggregation.Kind {
-	return aggregation.GaugeKind
+func (lv *State[N, Traits]) Category() aggregation.Category {
+	return aggregation.GaugeCategory
 }
 
 func (Methods[N, Traits, Storage]) Kind() aggregation.Kind {

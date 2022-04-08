@@ -147,14 +147,14 @@ func (c Conflict) duplicateError() string {
 // SemanticError occurs when an instrument is paired with an
 // incompatible aggregation.
 type SemanticError struct {
-	InstrumentKind  sdkinstrument.Kind
-	AggregationKind aggregation.Kind
+	InstrumentKind      sdkinstrument.Kind
+	AggregationCategory aggregation.Category
 }
 
 var _ error = SemanticError{}
 
 func (s SemanticError) Error() string {
-	return fmt.Sprintf("%v instrument incompatible with %v aggregation", s.InstrumentKind, s.AggregationKind)
+	return fmt.Sprintf("%v instrument incompatible with %v aggregation", s.InstrumentKind, s.AggregationCategory)
 }
 
 func (SemanticError) Is(err error) bool {

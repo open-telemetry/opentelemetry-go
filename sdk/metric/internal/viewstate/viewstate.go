@@ -79,6 +79,7 @@ type (
 	configuredBehavior struct {
 		fromName string
 		desc     sdkinstrument.Descriptor
+		category aggregation.Category
 		kind     aggregation.Kind
 		acfg     aggregator.Config
 		reader   *reader.Reader
@@ -229,29 +230,37 @@ func viewAggConfig(r *reader.Reader, ak aggregation.Kind, ik sdkinstrument.Kind,
 	}
 }
 
-func checkSemanticCompat(ik sdkinstrument.Kind, ak aggregation.Kind) error {
+func checkSemanticCompat(ik sdkinstrument.Kind, cat aggregation.Category) error {
 	switch ik {
 	case sdkinstrument.CounterKind, sdkinstrument.HistogramKind:
-		switch ak {
-		case aggregation.SumKind, aggregation.HistogramKind:
+		switch cat {
+		case aggregation.MonotonicSumCategory, aggregation.HistogramCategory:
 			return nil
 		}
-	case sdkinstrument.CounterObserverKind,
-		sdkinstrument.UpDownCounterKind,
-		sdkinstrument.UpDownCounterObserverKind:
-		switch ak {
-		case aggregation.SumKind:
+	case sdkinstrument.UpDownCounterKind:
+		switch cat {
+		case aggregation.MonotonicSumCategory:
+			return nil
+		}
+	case sdkinstrument.CounterObserverKind:
+		switch cat {
+		case aggregation.MonotonicSumCategory:
+			return nil
+		}
+	case sdkinstrument.UpDownCounterObserverKind:
+		switch cat {
+		case aggregation.NonMonotonicSumCategory:
 			return nil
 		}
 	case sdkinstrument.GaugeObserverKind:
-		switch ak {
-		case aggregation.GaugeKind:
+		switch cat {
+		case aggregation.GaugeCategory:
 			return nil
 		}
 	}
 	return SemanticError{
-		InstrumentKind:  ik,
-		AggregationKind: ak,
+		InstrumentKind:      ik,
+		AggregationCategory: cat,
 	}
 }
 
@@ -272,10 +281,9 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 	for readerIdx, r := range v.readers {
 		for _, view := range matches {
 			akind := view.Aggregation()
-			if akind == "" {
+			if akind == aggregation.UndefinedKind {
 				akind = aggregationConfigFor(instrument, r)
 			}
-
 			if akind == aggregation.DropKind {
 				continue
 			}
@@ -284,6 +292,7 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 				fromName: instrument.Name,
 				desc:     viewDescriptor(instrument, view),
 				kind:     akind,
+				category: akind.Category(instrument.Kind),
 				acfg:     viewAggConfig(r, akind, instrument.Kind, instrument.NumberKind, view.AggregatorConfig()),
 				reader:   r,
 			}
@@ -307,6 +316,7 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 				fromName: instrument.Name,
 				desc:     instrument,
 				kind:     akind,
+				category: akind.Category(instrument.Kind),
 				acfg:     viewAggConfig(r, akind, instrument.Kind, instrument.NumberKind, aggregator.Config{}),
 				reader:   r,
 			})
@@ -327,8 +337,7 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 		var conflictsThisReader []Conflict
 
 		for _, config := range behaviors {
-
-			semanticErr := checkSemanticCompat(instrument.Kind, config.kind)
+			semanticErr := checkSemanticCompat(instrument.Kind, config.category)
 			if semanticErr != nil {
 				config.kind = aggregationConfigFor(instrument, r)
 			}
@@ -523,33 +532,37 @@ func newAsyncView[
 }
 
 func compileSync[N number.Any, Traits traits.Any[N]](config configuredBehavior) leafInstrument {
-	switch config.kind {
-	case aggregation.HistogramKind:
+	switch config.category {
+	case aggregation.HistogramCategory:
 		return newSyncView[
 			N,
 			histogram.State[N, Traits],
 			histogram.Methods[N, Traits, histogram.State[N, Traits]],
 		](config)
+	case aggregation.NonMonotonicSumCategory:
+		type sstate = sum.State[N, Traits, sum.NonMonotonic]
+		return newSyncView[N, sstate, sum.Methods[N, Traits, sum.NonMonotonic, sstate],
+		](config)
 	default:
-		// Note: this includes Drop and Gauge, which are prevented above.
-		return newSyncView[
-			N,
-			sum.State[N, Traits],
-			sum.Methods[N, Traits, sum.State[N, Traits]],
+		// The semantic compatibility check ensures this is not Gauge.
+		type sstate = sum.State[N, Traits, sum.Monotonic]
+		return newSyncView[N, sstate, sum.Methods[N, Traits, sum.Monotonic, sstate],
 		](config)
 	}
 }
 
 func compileAsync[N number.Any, Traits traits.Any[N]](config configuredBehavior) leafInstrument {
-	switch config.kind {
-	case aggregation.SumKind:
-		return newAsyncView[
-			N,
-			sum.State[N, Traits],
-			sum.Methods[N, Traits, sum.State[N, Traits]],
+	switch config.category {
+	case aggregation.MonotonicSumCategory:
+		type sstate = sum.State[N, Traits, sum.Monotonic]
+		return newSyncView[N, sstate, sum.Methods[N, Traits, sum.Monotonic, sstate],
+		](config)
+	case aggregation.NonMonotonicSumCategory:
+		type sstate = sum.State[N, Traits, sum.NonMonotonic]
+		return newSyncView[N, sstate, sum.Methods[N, Traits, sum.NonMonotonic, sstate],
 		](config)
 	default:
-		// Note: this includes Drop and Histogram, which are prevented above.
+		// The semantic compatibility check ensures this is not Histogram.
 		return newAsyncView[
 			N,
 			gauge.State[N, Traits],
@@ -631,6 +644,7 @@ func (ac *asyncAccumulator[N, Storage, Methods]) Accumulate() {
 
 // baseMetric
 
+// @@@
 func (metric *baseMetric[N, Storage, Methods]) Aggregation() aggregation.Kind {
 	var methods Methods
 	return methods.Kind()

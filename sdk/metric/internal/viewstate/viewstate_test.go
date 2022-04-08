@@ -715,14 +715,50 @@ func TestSemanticIncompat(t *testing.T) {
 
 	vc := New(testLib, []views.View{
 		views.New(
-			views.MatchInstrumentName("foo"),
+			views.MatchInstrumentName("gauge"),
 			views.WithAggregation("gauge"),
+		),
+		views.New(
+			views.MatchInstrumentName("sum"),
+			views.WithAggregation("sum"),
+		),
+		views.New(
+			views.MatchInstrumentName("hist"),
+			views.WithAggregation("histogram"),
 		),
 	}, rds)
 
-	inst, err := vc.Compile(testInst("foo", sdkinstrument.CounterKind, number.Int64Kind))
-	require.Error(t, err)
-	require.NotNil(t, inst)
-	require.True(t, errors.Is(err, ViewConflicts{}))
+	type pair struct {
+		inst sdkinstrument.Kind
+		agg  aggregation.Kind
+	}
+
+	cant := []pair{
+		// Gauge observers can't become sums or histograms
+		{sdkinstrument.GaugeObserverKind, aggregation.SumKind},
+		{sdkinstrument.GaugeObserverKind, aggregation.HistogramKind},
+
+		// UpDownCounters can't become histograms or gauges
+		{sdkinstrument.UpDownCounterKind, aggregation.HistogramKind},
+		{sdkinstrument.UpDownCounterKind, aggregation.GaugeKind},
+
+		// (UpDown)CounterObservers can't become histograms
+		{sdkinstrument.UpDownCounterObserverKind, aggregation.HistogramKind},
+		{sdkinstrument.CounterObserverKind, aggregation.HistogramKind},
+	}
+
+	_, err := vc.Compile()
+	require.Equal(t, "GaugeKind instrument incompatible with sum aggregation", err.Error())
+
+	_, err = vc.Compile()
+	require.Equal(t, "GaugeKind instrument incompatible with histogram aggregation", err.Error())
+
+	// Counters and histograms can't become gauges
+	_, err = vc.Compile(testInst("gauge", sdkinstrument.CounterKind, number.Int64Kind))
 	require.Equal(t, "CounterKind instrument incompatible with gauge aggregation", err.Error())
+
+	_, err = vc.Compile(testInst("gauge", sdkinstrument.HistogramKind, number.Int64Kind))
+	require.Equal(t, "HistogramKind instrument incompatible with gauge aggregation", err.Error())
+
+	sdkinstrument.CounterObserverKind
 }

@@ -14,8 +14,8 @@ import (
 
 var oneConflict = Conflict{
 	Semantic: SemanticError{
-		InstrumentKind:  sdkinstrument.CounterKind,
-		AggregationKind: aggregation.GaugeKind,
+		InstrumentKind:      sdkinstrument.CounterKind,
+		AggregationCategory: aggregation.GaugeCategory,
 	},
 }
 

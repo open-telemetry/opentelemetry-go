@@ -12,10 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:generate stringer -type=Aggregation
+
 package aggregation // import "go.opentelemetry.io/otel/sdk/metric/aggregator/aggregation"
 
 import (
 	"go.opentelemetry.io/otel/sdk/metric/number"
+	"go.opentelemetry.io/otel/sdk/metric/sdkinstrument"
 )
 
 // These interfaces describe the various ways to access state from an
@@ -25,10 +28,8 @@ type (
 	// Aggregation is an interface returned by the Aggregator
 	// containing an interval of metric data.
 	Aggregation interface {
-		// Kind returns a short identifying string to identify
-		// the Aggregator that was used to produce the
-		// Aggregation (e.g., "Sum").
-		Kind() Kind
+		// Category describes the semantic kind of this aggregation.
+		Category() Category
 	}
 
 	// Sum returns an aggregated sum.
@@ -71,35 +72,51 @@ type (
 	}
 )
 
-type (
-	// Kind is a short name for the Aggregator that produces an
-	// Aggregation, used for descriptive purpose only.  Kind is a
-	// string to allow user-defined Aggregators.
-	//
-	// When deciding how to handle an Aggregation, Exporters are
-	// encouraged to decide based on conversion to the above
-	// interfaces based on strength, not on Kind value, when
-	// deciding how to expose metric data.  This enables
-	// user-supplied Aggregators to replace builtin Aggregators.
-	//
-	// For example, test for a Histogram before testing for a
-	// Sum, and so on.
-	Kind string
-)
+// Category constants describe semantic kind.  For the histogram
+// category there are multiple implementations, for those distinctions
+// as well as Drop, use Kind.
+type Category int
 
-// Kind description constants.
 const (
-	DropKind      Kind = "Drop"
-	SumKind       Kind = "Sum"
-	GaugeKind     Kind = "Gauge"
-	HistogramKind Kind = "Histogram"
+	UndefinedCategory Category = iota
+	MonotonicSumCategory
+	NonMonotonicSumCategory
+	GaugeCategory
+	HistogramCategory
 )
 
-// String returns the string value of Kind.
-func (k Kind) String() string {
-	return string(k)
+func (c Category) HasTemporality() bool {
+	switch c {
+	case MonotonicSumCategory, NonMonotonicSumCategory, HistogramCategory:
+		return true
+	}
+	return false
 }
 
-func (k Kind) HasTemporality() bool {
-	return k != GaugeKind
+type Kind string
+
+const (
+	UndefinedKind Kind = ""
+	DropKind      Kind = "drop"
+	SumKind       Kind = "sum"
+	GaugeKind     Kind = "gauge"
+	HistogramKind Kind = "histogram(explicit)"
+	// e.g.,
+	// ExponentialHistogramKind Kind = "histogram(exponential)
+)
+
+func (k Kind) Category(ik sdkinstrument.Kind) Category {
+	switch k {
+	case SumKind:
+		if ik.Monotonic() {
+			return MonotonicSumCategory
+		}
+		return NonMonotonicSumCategory
+	case GaugeKind:
+		return GaugeCategory
+	case HistogramKind:
+		return HistogramCategory
+	default:
+		return UndefinedCategory
+	}
 }
