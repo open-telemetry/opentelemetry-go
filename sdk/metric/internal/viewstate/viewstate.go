@@ -1,9 +1,7 @@
 package viewstate
 
 import (
-	"fmt"
 	"reflect"
-	"strings"
 	"sync"
 	"time"
 
@@ -141,8 +139,6 @@ type (
 
 const noConflictsString = "no conflicts"
 
-var ErrSemanticConflict = fmt.Errorf("semantic conflict")
-
 func New(lib instrumentation.Library, views []views.View, readers []*reader.Reader) *Compiler {
 
 	// TODO: call views.Validate() to check for:
@@ -203,80 +199,6 @@ func keysToFilter(keys []attribute.Key) *attribute.Filter {
 	return &af
 }
 
-// TODO: Here, change DuplicateConflicts->ViewConflicts
-// Change []DuplicateConflict to struct { []Duplicate; []]Conflict }
-
-type DuplicateConflicts map[*reader.Reader][]DuplicateConflict
-
-type DuplicateConflict []Duplicate
-
-type Duplicate interface {
-	Aggregation() aggregation.Kind
-	Descriptor() sdkinstrument.Descriptor
-	Keys() *attribute.Set
-	Config() aggregator.Config
-	OriginalName() string
-}
-
-type duplicateInstrument leafInstrument
-
-func (dc DuplicateConflicts) Error() string {
-	total := 0
-	for _, l := range dc {
-		total += len(l)
-	}
-	// These are almost always duplicative, so we print only examples for one Reader.
-	for _, byReader := range dc {
-		if len(byReader) == 0 {
-			break
-		}
-		if len(dc) == 1 {
-			if len(byReader) == 1 {
-				return byReader[0].Error()
-			}
-			return fmt.Sprintf("%d conflicts, e.g. %v", total, byReader[0])
-		}
-		return fmt.Sprintf("%d conflicts in %d readers, e.g. %v", total, len(dc), byReader[0])
-	}
-	return noConflictsString
-}
-
-func (DuplicateConflicts) Is(err error) bool {
-	_, ok := err.(DuplicateConflicts)
-	return ok
-}
-
-func (dc DuplicateConflict) Error() string {
-	// Note: choose the first and last element of the current conflicts
-	// list because they are ordered, and if the conflict in question is
-	// new it will be the last item.
-	if len(dc) < 2 {
-		return noConflictsString
-	}
-	inst1 := dc[0]
-	inst2 := dc[len(dc)-1]
-	name1 := fullNameString(inst1)
-	name2 := renameString(inst2)
-	conf1 := shortString(inst1)
-	conf2 := shortString(inst2)
-
-	var s strings.Builder
-	s.WriteString(name1)
-
-	if conf1 != conf2 {
-		s.WriteString(fmt.Sprintf(" conflicts %v, %v%v", conf1, conf2, name2))
-	} else if !equalConfigs(inst1.Config(), inst2.Config()) {
-		s.WriteString(" has conflicts: different aggregator configuration")
-	} else {
-		s.WriteString(" has conflicts: different attribute filters")
-	}
-
-	if len(dc) > 2 {
-		s.WriteString(fmt.Sprintf(" and %d more", len(dc)-2))
-	}
-	return s.String()
-}
-
 func equalConfigs(a, b aggregator.Config) bool {
 	return reflect.DeepEqual(a, b)
 }
@@ -326,9 +248,11 @@ func checkSemanticCompat(ik sdkinstrument.Kind, ak aggregation.Kind) error {
 		case aggregation.GaugeKind:
 			return nil
 		}
-
 	}
-	return fmt.Errorf("%v and %v: %w", ik, ak, ErrSemanticConflict)
+	return SemanticError{
+		InstrumentKind:  ik,
+		AggregationKind: ak,
+	}
 }
 
 // Compile is called during NewInstrument by the Meter
@@ -394,13 +318,13 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 	v.lock.Lock()
 	defer v.lock.Unlock()
 
-	var conflicts DuplicateConflicts
+	var conflicts ViewConflicts
 	readerConflicts := 0
 
 	for readerIdx, behaviors := range configs {
 		r := v.readers[readerIdx]
 		names := v.names[readerIdx]
-		var conflictsThisReader []DuplicateConflict
+		var conflictsThisReader []Conflict
 
 		for _, config := range behaviors {
 
@@ -470,19 +394,22 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 				existingInsts = append(existingInsts, leaf)
 				names[config.desc.Name] = existingInsts
 			}
-			if len(existingInsts) > 1 {
-				dups := make([]Duplicate, len(existingInsts))
-				for i := range dups {
-					dups[i] = existingInsts[i]
+			if len(existingInsts) > 1 || semanticErr != nil {
+				c := Conflict{
+					Semantic:   semanticErr,
+					Duplicates: make([]Duplicate, len(existingInsts)),
 				}
-				conflictsThisReader = append(conflictsThisReader, dups)
+				for i := range existingInsts {
+					c.Duplicates[i] = existingInsts[i]
+				}
+				conflictsThisReader = append(conflictsThisReader, c)
 			}
 			compiled[r] = append(compiled[r], leaf)
 		}
 		if len(conflictsThisReader) != 0 {
 			readerConflicts++
 			if conflicts == nil {
-				conflicts = DuplicateConflicts{}
+				conflicts = ViewConflicts{}
 			}
 			conflicts[r] = append(conflicts[r], conflictsThisReader...)
 		}
@@ -762,29 +689,6 @@ func (metric *baseMetric[N, Storage, Methods]) newStorage() *Storage {
 	ns := new(Storage)
 	metric.initStorage(ns)
 	return ns
-}
-
-func fullNameString(d Duplicate) string {
-	return fmt.Sprintf("name %q%v", d.Descriptor().Name, renameString(d))
-}
-
-func renameString(d Duplicate) string {
-	if d.OriginalName() == d.Descriptor().Name {
-		return ""
-	}
-	return fmt.Sprintf(" (original %q)", d.OriginalName())
-}
-
-func shortString(d Duplicate) string {
-	s := fmt.Sprintf("%v-%v-%v",
-		strings.TrimSuffix(d.Descriptor().Kind.String(), "Kind"),
-		strings.TrimSuffix(d.Descriptor().NumberKind.String(), "Kind"),
-		d.Aggregation(),
-	)
-	if d.Descriptor().Unit != "" {
-		s = fmt.Sprintf("%v-%v", s, d.Descriptor().Unit)
-	}
-	return s
 }
 
 // NewAccumulator returns a Accumulator for a synchronous instrument view.

@@ -130,53 +130,6 @@ func oneTestReader(opts ...reader.Option) []*reader.Reader {
 	return []*reader.Reader{reader.New(metrictest.NewExporter(), opts...)}
 }
 
-// TestConflictErrorDescription exercises the code paths that
-// construct example error messages from duplicate instrument
-// conditions.
-func TestConflictErrorDescription(t *testing.T) {
-	// Note: These all use "no conflicts" strings, which happens
-	// under artificial conditions such as conflicts w/ < 2 examples
-	// and allows testing the code that avoids lengthy messages
-	// when there is only one conflict or only one reader.
-	var err error
-	err = DuplicateConflicts{}
-	require.Equal(t, "no conflicts", err.Error())
-	require.True(t, errors.Is(err, DuplicateConflicts{}))
-
-	rd1 := reader.New(metrictest.NewExporter())
-	rd2 := reader.New(metrictest.NewExporter())
-
-	err = DuplicateConflicts{
-		rd1: []DuplicateConflict{
-			[]Duplicate{},
-		},
-	}
-	require.Equal(t, "no conflicts", err.Error())
-
-	err = DuplicateConflicts{
-		rd1: []DuplicateConflict{},
-	}
-	require.Equal(t, "no conflicts", err.Error())
-
-	err = DuplicateConflicts{
-		rd1: []DuplicateConflict{
-			[]Duplicate{},
-			[]Duplicate{},
-		},
-	}
-	require.Equal(t, "2 conflicts, e.g. no conflicts", err.Error())
-
-	err = DuplicateConflicts{
-		rd1: []DuplicateConflict{
-			[]Duplicate{},
-		},
-		rd2: []DuplicateConflict{
-			[]Duplicate{},
-		},
-	}
-	require.Equal(t, "2 conflicts in 2 readers, e.g. no conflicts", err.Error())
-}
-
 // TestDeduplicateNoConflict verifies that two identical instruments
 // have the same collector.
 func TestDeduplicateNoConflict(t *testing.T) {
@@ -245,8 +198,8 @@ func TestDuplicateNumberConflict(t *testing.T) {
 	inst2, err2 := vc.Compile(testInst("foo", sdkinstrument.CounterKind, number.Float64Kind))
 	require.Error(t, err2)
 	require.NotNil(t, inst2)
-	require.True(t, errors.Is(err2, DuplicateConflicts{}))
-	require.Equal(t, 2, len(err2.(DuplicateConflicts)))
+	require.True(t, errors.Is(err2, ViewConflicts{}))
+	require.Equal(t, 2, len(err2.(ViewConflicts)))
 
 	require.NotEqual(t, inst1, inst2)
 }
@@ -265,7 +218,7 @@ func TestDuplicateSyncAsyncConflict(t *testing.T) {
 	inst2, err2 := vc.Compile(testInst("foo", sdkinstrument.CounterObserverKind, number.Float64Kind))
 	require.Error(t, err2)
 	require.NotNil(t, inst2)
-	require.True(t, errors.Is(err2, DuplicateConflicts{}))
+	require.True(t, errors.Is(err2, ViewConflicts{}))
 
 	require.NotEqual(t, inst1, inst2)
 }
@@ -284,7 +237,7 @@ func TestDuplicateUnitConflict(t *testing.T) {
 	inst2, err2 := vc.Compile(testInst("foo", sdkinstrument.CounterKind, number.Float64Kind, instrument.WithUnit("cft_i")))
 	require.Error(t, err2)
 	require.NotNil(t, inst2)
-	require.True(t, errors.Is(err2, DuplicateConflicts{}))
+	require.True(t, errors.Is(err2, ViewConflicts{}))
 	require.Contains(t, err2.Error(), "2 conflicts in 2 readers")
 	require.Contains(t, err2.Error(), "conflicts Counter-Float64-Sum-gal_us")
 
@@ -305,7 +258,7 @@ func TestDuplicateMonotonicConflict(t *testing.T) {
 	inst2, err2 := vc.Compile(testInst("foo", sdkinstrument.UpDownCounterKind, number.Float64Kind))
 	require.Error(t, err2)
 	require.NotNil(t, inst2)
-	require.True(t, errors.Is(err2, DuplicateConflicts{}))
+	require.True(t, errors.Is(err2, ViewConflicts{}))
 	require.Contains(t, err2.Error(), "2 conflicts in 2 readers")
 	require.Contains(t, err2.Error(), "UpDownCounter-Float64-Sum")
 
@@ -326,7 +279,7 @@ func TestDuplicateAggregatorConfigConflict(t *testing.T) {
 	inst2, err2 := vc.Compile(testInst("bar", sdkinstrument.HistogramKind, number.Float64Kind))
 	require.Error(t, err2)
 	require.NotNil(t, inst2)
-	require.True(t, errors.Is(err2, DuplicateConflicts{}))
+	require.True(t, errors.Is(err2, ViewConflicts{}))
 	require.Contains(t, err2.Error(), "different aggregator configuration")
 
 	require.NotEqual(t, inst1, inst2)
@@ -379,7 +332,7 @@ func TestDuplicateAggregationKindConflict(t *testing.T) {
 	inst2, err2 := vc.Compile(testInst("bar", sdkinstrument.CounterKind, number.Int64Kind))
 	require.Error(t, err2)
 	require.NotNil(t, inst2)
-	require.True(t, errors.Is(err2, DuplicateConflicts{}))
+	require.True(t, errors.Is(err2, ViewConflicts{}))
 	require.Contains(t, err2.Error(), "2 conflicts in 2 readers")
 	require.Contains(t, err2.Error(), "name \"bar\" (original \"foo\") conflicts Histogram-Int64-Histogram, Counter-Int64-Sum")
 
@@ -410,7 +363,7 @@ func TestDuplicateAggregationKindOneConflict(t *testing.T) {
 	inst2, err2 := vc.Compile(testInst("foo", sdkinstrument.CounterKind, number.Int64Kind))
 	require.Error(t, err2)
 	require.NotNil(t, inst2)
-	require.True(t, errors.Is(err2, DuplicateConflicts{}))
+	require.True(t, errors.Is(err2, ViewConflicts{}))
 	require.Contains(t, err2.Error(), "name \"foo\" conflicts Histogram-Int64-Histogram, Counter-Int64-Sum")
 
 	require.NotEqual(t, inst1, inst2)
@@ -448,10 +401,10 @@ func TestDuplicateMultipleConflicts(t *testing.T) {
 		inst2, err2 := vc.Compile(testInst("foo", ik, number.Float64Kind))
 		require.Error(t, err2)
 		require.NotNil(t, inst2)
-		require.True(t, errors.Is(err2, DuplicateConflicts{}))
+		require.True(t, errors.Is(err2, ViewConflicts{}))
 		// The total number of conflicting definitions is 1 in
 		// the first place and num+1 for the iterations of this loop.
-		require.Equal(t, num+2, len(err2.(DuplicateConflicts)[rds[0]][0]))
+		require.Equal(t, num+2, len(err2.(ViewConflicts)[rds[0]][0].Duplicates))
 
 		if num > 0 {
 			require.Contains(t, err2.Error(), fmt.Sprintf("and %d more", num))
@@ -479,7 +432,7 @@ func TestDuplicateFilterConflicts(t *testing.T) {
 			require.Error(t, err2)
 			require.NotNil(t, inst2)
 
-			require.True(t, errors.Is(err2, DuplicateConflicts{}))
+			require.True(t, errors.Is(err2, ViewConflicts{}))
 			require.Contains(t, err2.Error(), "2 conflicts in 2 readers, e.g.")
 			require.Contains(t, err2.Error(), "name \"bar\" (original \"foo\") has conflicts: different attribute filters")
 		})
@@ -770,6 +723,6 @@ func TestSemanticIncompat(t *testing.T) {
 	inst, err := vc.Compile(testInst("foo", sdkinstrument.CounterKind, number.Int64Kind))
 	require.Error(t, err)
 	require.NotNil(t, inst)
-	require.True(t, errors.Is(err, ErrSemanticConflict))
-	require.Equal(t, "", err.Error())
+	require.True(t, errors.Is(err, ViewConflicts{}))
+	require.Equal(t, "CounterKind instrument incompatible with gauge aggregation", err.Error())
 }
