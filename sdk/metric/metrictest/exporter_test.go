@@ -29,7 +29,7 @@ import (
 
 func TestSyncCounter(t *testing.T) {
 	ctx := context.Background()
-	mp, exp := metrictest.NewMeterProvider()
+	mp, exp := metrictest.NewTestMeterProvider()
 	meter := mp.Meter("go.opentelemetry.io/otel/sdk/metric/metrictest/exporter_TestSyncCounter")
 
 	fcnt, err := meter.SyncFloat64().Counter("fCount")
@@ -94,8 +94,8 @@ func TestSyncCounter(t *testing.T) {
 
 func TestAsyncCounter(t *testing.T) {
 	ctx := context.Background()
-	mp, exp := metrictest.NewMeterProvider()
-	meter := mp.Meter("go.opentelemetry.io/otel/sdk/metric/metrictest/exporter_TestSyncCounter")
+	mp, exp := metrictest.NewTestMeterProvider()
+	meter := mp.Meter("go.opentelemetry.io/otel/sdk/metric/metrictest/exporter_TestAsyncCounter")
 
 	fcnt, err := meter.AsyncFloat64().Counter("fCount")
 	require.NoError(t, err)
@@ -163,7 +163,7 @@ func TestAsyncCounter(t *testing.T) {
 }
 
 func ExampleExporter_GetByName() {
-	mp, exp := metrictest.NewMeterProvider()
+	mp, exp := metrictest.NewTestMeterProvider()
 	meter := mp.Meter("go.opentelemetry.io/otel/sdk/metric/metrictest/exporter_TestSyncCounter")
 
 	cnt, err := meter.SyncFloat64().Counter("fCount")
@@ -185,7 +185,7 @@ func ExampleExporter_GetByName() {
 }
 
 func ExampleExporter_GetByNameAndLabels() {
-	mp, exp := metrictest.NewMeterProvider()
+	mp, exp := metrictest.NewTestMeterProvider()
 	meter := mp.Meter("go.opentelemetry.io/otel/sdk/metric/metrictest/exporter_TestSyncCounter")
 
 	cnt, err := meter.SyncFloat64().Counter("fCount")

@@ -29,6 +29,12 @@ import (
 	selector "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
+// Exporter is a manually collected exporter for testing the SDK.  It does not
+// satisfy the `export.Exporter` interface because it is not intended to be
+// used with the periodic collection of the SDK, instead the test should
+// manually call `Collect()`
+//
+// Exporters are not thread safe, and should only be used for testing.
 type Exporter struct {
 	exports []ExportRecord
 	// resource *resource.Resource
@@ -36,6 +42,23 @@ type Exporter struct {
 	controller *controller.Controller
 }
 
+func NewTestMeterProvider() (metric.MeterProvider, *Exporter) {
+	c := controller.New(
+		processor.NewFactory(
+			selector.NewWithHistogramDistribution(),
+			aggregation.CumulativeTemporalitySelector(),
+		),
+		controller.WithCollectPeriod(0),
+	)
+	exp := &Exporter{
+
+		controller: c,
+	}
+
+	return c, exp
+}
+
+// ExportRecord represents one collected datapoint from the Exporter.
 type ExportRecord struct {
 	InstrumentName         string
 	InstrumentationLibrary Library
@@ -47,14 +70,8 @@ type ExportRecord struct {
 	LastValue              number.Number
 }
 
-// Export is called immediately after completing a collection
-// pass in the SDK.
-//
-// The Context comes from the controller that initiated
-// collection.
-//
-// The InstrumentationLibraryReader interface refers to the
-// Processor that just completed collection.
+// Collect triggers the SDK's collect methods and then aggregates the data into
+// `ExportRecord`s.
 func (e *Exporter) Collect(ctx context.Context) error {
 	e.exports = []ExportRecord{}
 
@@ -116,12 +133,14 @@ func (e *Exporter) Collect(ctx context.Context) error {
 	return nil
 }
 
+// GetRecords returns all Records found by the SDK
 func (e *Exporter) GetRecords() []ExportRecord {
 	return e.exports
 }
 
 var ErrNotFound = fmt.Errorf("record not found")
 
+// GetByName returns the first Record with a matching name.
 func (e *Exporter) GetByName(name string) (ExportRecord, error) {
 	for _, rec := range e.exports {
 		if rec.InstrumentName == name {
@@ -131,6 +150,7 @@ func (e *Exporter) GetByName(name string) (ExportRecord, error) {
 	return ExportRecord{}, ErrNotFound
 }
 
+// GetByNameAndLabels returns the first Record with a matching name and set of labels
 func (e *Exporter) GetByNameAndLabels(name string, labels []attribute.KeyValue) (ExportRecord, error) {
 	for _, rec := range e.exports {
 		if rec.InstrumentName == name && labelsMatch(labels, rec.Labels) {
@@ -141,7 +161,7 @@ func (e *Exporter) GetByNameAndLabels(name string, labels []attribute.KeyValue) 
 }
 
 func labelsMatch(labelsA, labelsB []attribute.KeyValue) bool {
-	if len(labelsA) != len(labelsB) {
+	if len(labelsA) == len(labelsB) {
 		return false
 	}
 	for i := range labelsA {
@@ -151,20 +171,4 @@ func labelsMatch(labelsA, labelsB []attribute.KeyValue) bool {
 	}
 
 	return true
-}
-
-func NewMeterProvider() (metric.MeterProvider, *Exporter) {
-	c := controller.New(
-		processor.NewFactory(
-			selector.NewWithHistogramDistribution(),
-			aggregation.CumulativeTemporalitySelector(),
-		),
-		controller.WithCollectPeriod(0),
-	)
-	exp := &Exporter{
-
-		controller: c,
-	}
-
-	return c, exp
 }
