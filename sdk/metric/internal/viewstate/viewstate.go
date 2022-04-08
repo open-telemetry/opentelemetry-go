@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
@@ -140,9 +141,11 @@ type (
 
 const noConflictsString = "no conflicts"
 
+var ErrSemanticConflict = fmt.Errorf("semantic conflict")
+
 func New(lib instrumentation.Library, views []views.View, readers []*reader.Reader) *Compiler {
 
-	// TODO: error checking here, such as:
+	// TODO: call views.Validate() to check for:
 	// - empty (?)
 	// - duplicate name
 	// - invalid inst/number/aggregation kind
@@ -199,6 +202,9 @@ func keysToFilter(keys []attribute.Key) *attribute.Filter {
 	var af attribute.Filter = kf.filter
 	return &af
 }
+
+// TODO: Here, change DuplicateConflicts->ViewConflicts
+// Change []DuplicateConflict to struct { []Duplicate; []]Conflict }
 
 type DuplicateConflicts map[*reader.Reader][]DuplicateConflict
 
@@ -301,6 +307,30 @@ func viewAggConfig(r *reader.Reader, ak aggregation.Kind, ik sdkinstrument.Kind,
 	}
 }
 
+func checkSemanticCompat(ik sdkinstrument.Kind, ak aggregation.Kind) error {
+	switch ik {
+	case sdkinstrument.CounterKind, sdkinstrument.HistogramKind:
+		switch ak {
+		case aggregation.SumKind, aggregation.HistogramKind:
+			return nil
+		}
+	case sdkinstrument.CounterObserverKind,
+		sdkinstrument.UpDownCounterKind,
+		sdkinstrument.UpDownCounterObserverKind:
+		switch ak {
+		case aggregation.SumKind:
+			return nil
+		}
+	case sdkinstrument.GaugeObserverKind:
+		switch ak {
+		case aggregation.GaugeKind:
+			return nil
+		}
+
+	}
+	return fmt.Errorf("%v and %v: %w", ik, ak, ErrSemanticConflict)
+}
+
 // Compile is called during NewInstrument by the Meter
 // implementation, the result saved in the instrument and used to
 // construct new Accumulators throughout its lifetime.
@@ -317,27 +347,22 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 
 	for readerIdx, r := range v.readers {
 		for _, view := range matches {
-			kind := view.Aggregation()
-			switch kind {
-			case aggregation.SumKind, aggregation.GaugeKind, aggregation.HistogramKind, aggregation.DropKind:
-			default:
-				kind = aggregationConfigFor(instrument, r)
+			akind := view.Aggregation()
+			if akind == "" {
+				akind = aggregationConfigFor(instrument, r)
 			}
 
-			if kind == aggregation.DropKind {
+			if akind == aggregation.DropKind {
 				continue
 			}
 
 			cf := configuredBehavior{
 				fromName: instrument.Name,
 				desc:     viewDescriptor(instrument, view),
-				kind:     kind,
-				acfg:     viewAggConfig(r, kind, instrument.Kind, instrument.NumberKind, view.AggregatorConfig()),
+				kind:     akind,
+				acfg:     viewAggConfig(r, akind, instrument.Kind, instrument.NumberKind, view.AggregatorConfig()),
 				reader:   r,
 			}
-
-			// TODO: Add checks for semantic compatibility somehwere
-			// around here.  E.g., no Gauges applied to Counters.
 
 			keys := view.Keys()
 			if keys != nil {
@@ -349,16 +374,16 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 
 		// If there were no matching views, set the default aggregation.
 		if len(matches) == 0 {
-			kind := aggregationConfigFor(instrument, r)
-			if kind == aggregation.DropKind {
+			akind := aggregationConfigFor(instrument, r)
+			if akind == aggregation.DropKind {
 				continue
 			}
 
 			configs[readerIdx] = append(configs[readerIdx], configuredBehavior{
 				fromName: instrument.Name,
 				desc:     instrument,
-				kind:     kind,
-				acfg:     viewAggConfig(r, kind, instrument.Kind, instrument.NumberKind, aggregator.Config{}),
+				kind:     akind,
+				acfg:     viewAggConfig(r, akind, instrument.Kind, instrument.NumberKind, aggregator.Config{}),
 				reader:   r,
 			})
 		}
@@ -378,6 +403,11 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 		var conflictsThisReader []DuplicateConflict
 
 		for _, config := range behaviors {
+
+			semanticErr := checkSemanticCompat(instrument.Kind, config.kind)
+			if semanticErr != nil {
+				config.kind = aggregationConfigFor(instrument, r)
+			}
 
 			existingInsts := names[config.desc.Name]
 			var leaf leafInstrument
@@ -436,8 +466,6 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 					leaf = buildView[float64, traits.Float64](config)
 				}
 
-				// @@@ need to check for semantic conflicts, somehow
-
 				v.collectors[r] = append(v.collectors[r], leaf)
 				existingInsts = append(existingInsts, leaf)
 				names[config.desc.Name] = existingInsts
@@ -463,6 +491,7 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 	var err error
 	if len(conflicts) != 0 {
 		err = conflicts
+		otel.Handle(err)
 	}
 
 	switch len(compiled) {

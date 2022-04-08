@@ -756,3 +756,20 @@ func TestTwoCounterObserverReaders(t *testing.T) {
 		)
 	}
 }
+
+func TestSemanticIncompat(t *testing.T) {
+	rds := oneTestReader()
+
+	vc := New(testLib, []views.View{
+		views.New(
+			views.MatchInstrumentName("foo"),
+			views.WithAggregation("gauge"),
+		),
+	}, rds)
+
+	inst, err := vc.Compile(testInst("foo", sdkinstrument.CounterKind, number.Int64Kind))
+	require.Error(t, err)
+	require.NotNil(t, inst)
+	require.True(t, errors.Is(err, ErrSemanticConflict))
+	require.Equal(t, "", err.Error())
+}
