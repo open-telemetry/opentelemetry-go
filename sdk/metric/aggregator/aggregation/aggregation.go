@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate stringer -type=Aggregation
+//go:generate stringer -type=Category
 
 package aggregation // import "go.opentelemetry.io/otel/sdk/metric/aggregator/aggregation"
 
@@ -97,10 +97,10 @@ type Kind string
 
 const (
 	UndefinedKind Kind = ""
-	DropKind      Kind = "drop"
-	SumKind       Kind = "sum"
-	GaugeKind     Kind = "gauge"
-	HistogramKind Kind = "histogram(explicit)"
+	DropKind      Kind = "Drop"
+	SumKind       Kind = "Sum"
+	GaugeKind     Kind = "Gauge"
+	HistogramKind Kind = "Histogram"
 	// e.g.,
 	// ExponentialHistogramKind Kind = "histogram(exponential)
 )

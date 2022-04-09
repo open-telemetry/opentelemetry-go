@@ -88,12 +88,12 @@ func TestConflictError(t *testing.T) {
 	inst1, err1 := vc.Compile(testInst("foo", sdkinstrument.CounterObserverKind, number.Int64Kind))
 	require.Error(t, err1)
 	require.NotNil(t, inst1)
-	require.Equal(t, "CounterObserverKind instrument incompatible with Gauge aggregation", err1.Error())
+	require.Equal(t, "CounterObserverKind instrument incompatible with GaugeCategory aggregation", err1.Error())
 
 	inst2, err2 := vc.Compile(testInst("foo", sdkinstrument.CounterKind, number.Int64Kind))
 	require.Error(t, err2)
 	require.NotNil(t, inst2)
-	require.Equal(t, "CounterKind instrument incompatible with Gauge aggregation; "+
+	require.Equal(t, "CounterKind instrument incompatible with GaugeCategory aggregation; "+
 		"name \"foo\" conflicts CounterObserver-Int64-Gauge, Counter-Int64-Sum", err2.Error())
 
 	require.NotEqual(t, inst1, inst2)

@@ -540,13 +540,17 @@ func compileSync[N number.Any, Traits traits.Any[N]](config configuredBehavior) 
 			histogram.Methods[N, Traits, histogram.State[N, Traits]],
 		](config)
 	case aggregation.NonMonotonicSumCategory:
-		type sstate = sum.State[N, Traits, sum.NonMonotonic]
-		return newSyncView[N, sstate, sum.Methods[N, Traits, sum.NonMonotonic, sstate],
+		return newSyncView[
+			N,
+			sum.State[N, Traits, sum.NonMonotonic],
+			sum.Methods[N, Traits, sum.NonMonotonic, sum.State[N, Traits, sum.NonMonotonic]],
 		](config)
 	default:
 		// The semantic compatibility check ensures this is not Gauge.
-		type sstate = sum.State[N, Traits, sum.Monotonic]
-		return newSyncView[N, sstate, sum.Methods[N, Traits, sum.Monotonic, sstate],
+		return newSyncView[
+			N,
+			sum.State[N, Traits, sum.Monotonic],
+			sum.Methods[N, Traits, sum.Monotonic, sum.State[N, Traits, sum.Monotonic]],
 		](config)
 	}
 }
@@ -554,12 +558,16 @@ func compileSync[N number.Any, Traits traits.Any[N]](config configuredBehavior) 
 func compileAsync[N number.Any, Traits traits.Any[N]](config configuredBehavior) leafInstrument {
 	switch config.category {
 	case aggregation.MonotonicSumCategory:
-		type sstate = sum.State[N, Traits, sum.Monotonic]
-		return newSyncView[N, sstate, sum.Methods[N, Traits, sum.Monotonic, sstate],
+		return newSyncView[
+			N,
+			sum.State[N, Traits, sum.Monotonic],
+			sum.Methods[N, Traits, sum.Monotonic, sum.State[N, Traits, sum.Monotonic]],
 		](config)
 	case aggregation.NonMonotonicSumCategory:
-		type sstate = sum.State[N, Traits, sum.NonMonotonic]
-		return newSyncView[N, sstate, sum.Methods[N, Traits, sum.NonMonotonic, sstate],
+		return newSyncView[
+			N,
+			sum.State[N, Traits, sum.NonMonotonic],
+			sum.Methods[N, Traits, sum.NonMonotonic, sum.State[N, Traits, sum.NonMonotonic]],
 		](config)
 	default:
 		// The semantic compatibility check ensures this is not Histogram.
