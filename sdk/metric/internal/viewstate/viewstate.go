@@ -558,13 +558,13 @@ func compileSync[N number.Any, Traits traits.Any[N]](config configuredBehavior) 
 func compileAsync[N number.Any, Traits traits.Any[N]](config configuredBehavior) leafInstrument {
 	switch config.category {
 	case aggregation.MonotonicSumCategory:
-		return newSyncView[
+		return newAsyncView[
 			N,
 			sum.State[N, Traits, sum.Monotonic],
 			sum.Methods[N, Traits, sum.Monotonic, sum.State[N, Traits, sum.Monotonic]],
 		](config)
 	case aggregation.NonMonotonicSumCategory:
-		return newSyncView[
+		return newAsyncView[
 			N,
 			sum.State[N, Traits, sum.NonMonotonic],
 			sum.Methods[N, Traits, sum.NonMonotonic, sum.State[N, Traits, sum.NonMonotonic]],
@@ -652,7 +652,6 @@ func (ac *asyncAccumulator[N, Storage, Methods]) Accumulate() {
 
 // baseMetric
 
-// @@@
 func (metric *baseMetric[N, Storage, Methods]) Aggregation() aggregation.Kind {
 	var methods Methods
 	return methods.Kind()
