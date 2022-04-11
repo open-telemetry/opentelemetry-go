@@ -51,7 +51,6 @@ func NewTestMeterProvider() (metric.MeterProvider, *Exporter) {
 		controller.WithCollectPeriod(0),
 	)
 	exp := &Exporter{
-
 		controller: c,
 	}
 
@@ -75,16 +74,19 @@ type ExportRecord struct {
 func (e *Exporter) Collect(ctx context.Context) error {
 	e.exports = []ExportRecord{}
 
-	e.controller.Collect(ctx)
+	err := e.controller.Collect(ctx)
+	if err != nil {
+		return err
+	}
 
-	e.controller.ForEach(func(l instrumentation.Library, r export.Reader) error {
+	return e.controller.ForEach(func(l instrumentation.Library, r export.Reader) error {
 		lib := Library{
 			InstrumentationName:    l.Name,
 			InstrumentationVersion: l.Version,
 			SchemaURL:              l.SchemaURL,
 		}
 
-		r.ForEach(aggregation.CumulativeTemporalitySelector(), func(rec export.Record) error {
+		return r.ForEach(aggregation.CumulativeTemporalitySelector(), func(rec export.Record) error {
 			record := ExportRecord{
 				InstrumentName:         rec.Descriptor().Name(),
 				InstrumentationLibrary: lib,
@@ -128,9 +130,7 @@ func (e *Exporter) Collect(ctx context.Context) error {
 			e.exports = append(e.exports, record)
 			return nil
 		})
-		return nil
 	})
-	return nil
 }
 
 // GetRecords returns all Records found by the SDK
@@ -161,7 +161,7 @@ func (e *Exporter) GetByNameAndLabels(name string, labels []attribute.KeyValue) 
 }
 
 func labelsMatch(labelsA, labelsB []attribute.KeyValue) bool {
-	if len(labelsA) == len(labelsB) {
+	if len(labelsA) != len(labelsB) {
 		return false
 	}
 	for i := range labelsA {

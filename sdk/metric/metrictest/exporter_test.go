@@ -21,150 +21,262 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metrictest"
 )
 
-func TestSyncCounter(t *testing.T) {
+func TestSyncInstruments(t *testing.T) {
 	ctx := context.Background()
 	mp, exp := metrictest.NewTestMeterProvider()
-	meter := mp.Meter("go.opentelemetry.io/otel/sdk/metric/metrictest/exporter_TestSyncCounter")
+	meter := mp.Meter("go.opentelemetry.io/otel/sdk/metric/metrictest/exporter_TestSyncInstruments")
 
-	fcnt, err := meter.SyncFloat64().Counter("fCount")
-	require.NoError(t, err)
-	fudcnt, err := meter.SyncFloat64().UpDownCounter("fUDCount")
-	require.NoError(t, err)
-	fhis, err := meter.SyncFloat64().Histogram("fHist")
-	require.NoError(t, err)
+	t.Run("Float Counter", func(t *testing.T) {
+		fcnt, err := meter.SyncFloat64().Counter("fCount")
+		require.NoError(t, err)
 
-	icnt, err := meter.SyncInt64().Counter("iCount")
-	require.NoError(t, err)
-	iudcnt, err := meter.SyncInt64().UpDownCounter("iUDCount")
-	require.NoError(t, err)
-	ihis, err := meter.SyncInt64().Histogram("iHist")
-	require.NoError(t, err)
+		fcnt.Add(ctx, 2)
 
-	fcnt.Add(ctx, 2)
-	fudcnt.Add(ctx, 3)
-	fhis.Record(ctx, 4)
-	fhis.Record(ctx, 5)
+		err = exp.Collect(context.Background())
+		assert.NoError(t, err)
 
-	icnt.Add(ctx, 22)
-	iudcnt.Add(ctx, 23)
-	ihis.Record(ctx, 24)
-	ihis.Record(ctx, 25)
+		out, err := exp.GetByName("fCount")
+		assert.NoError(t, err)
+		assert.InDelta(t, 2.0, out.Sum.AsFloat64(), 0.0001)
+		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
+	})
 
-	err = exp.Collect(context.Background())
-	assert.NoError(t, err)
+	t.Run("Float UpDownCounter", func(t *testing.T) {
+		fudcnt, err := meter.SyncFloat64().UpDownCounter("fUDCount")
+		require.NoError(t, err)
 
-	out, err := exp.GetByName("fCount")
-	assert.NoError(t, err)
-	assert.InDelta(t, 2.0, out.Sum.AsFloat64(), 0.0001)
-	assert.Equal(t, aggregation.SumKind, out.AggregationKind)
+		fudcnt.Add(ctx, 3)
 
-	out, err = exp.GetByName("fUDCount")
-	assert.NoError(t, err)
-	assert.InDelta(t, 3.0, out.Sum.AsFloat64(), 0.0001)
-	assert.Equal(t, aggregation.SumKind, out.AggregationKind)
+		err = exp.Collect(context.Background())
+		assert.NoError(t, err)
 
-	out, err = exp.GetByName("fHist")
-	assert.NoError(t, err)
-	assert.InDelta(t, 9.0, out.Sum.AsFloat64(), 0.0001)
-	assert.EqualValues(t, 2, out.Count)
-	assert.Equal(t, aggregation.HistogramKind, out.AggregationKind)
+		out, err := exp.GetByName("fUDCount")
+		assert.NoError(t, err)
+		assert.InDelta(t, 3.0, out.Sum.AsFloat64(), 0.0001)
+		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
 
-	out, err = exp.GetByName("iCount")
-	assert.NoError(t, err)
-	assert.EqualValues(t, 22, out.Sum.AsInt64())
-	assert.Equal(t, aggregation.SumKind, out.AggregationKind)
+	})
 
-	out, err = exp.GetByName("iUDCount")
-	assert.NoError(t, err)
-	assert.EqualValues(t, 23, out.Sum.AsInt64())
-	assert.Equal(t, aggregation.SumKind, out.AggregationKind)
+	t.Run("Float Histogram", func(t *testing.T) {
+		fhis, err := meter.SyncFloat64().Histogram("fHist")
+		require.NoError(t, err)
 
-	out, err = exp.GetByName("iHist")
-	assert.NoError(t, err)
-	assert.EqualValues(t, 49, out.Sum.AsInt64())
-	assert.EqualValues(t, 2, out.Count)
-	assert.Equal(t, aggregation.HistogramKind, out.AggregationKind)
+		fhis.Record(ctx, 4)
+		fhis.Record(ctx, 5)
+
+		err = exp.Collect(context.Background())
+		assert.NoError(t, err)
+
+		out, err := exp.GetByName("fHist")
+		assert.NoError(t, err)
+		assert.InDelta(t, 9.0, out.Sum.AsFloat64(), 0.0001)
+		assert.EqualValues(t, 2, out.Count)
+		assert.Equal(t, aggregation.HistogramKind, out.AggregationKind)
+	})
+
+	t.Run("Int Counter", func(t *testing.T) {
+		icnt, err := meter.SyncInt64().Counter("iCount")
+		require.NoError(t, err)
+
+		icnt.Add(ctx, 22)
+
+		err = exp.Collect(context.Background())
+		assert.NoError(t, err)
+
+		out, err := exp.GetByName("iCount")
+		assert.NoError(t, err)
+		assert.EqualValues(t, 22, out.Sum.AsInt64())
+		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
+
+	})
+	t.Run("Int UpDownCounter", func(t *testing.T) {
+		iudcnt, err := meter.SyncInt64().UpDownCounter("iUDCount")
+		require.NoError(t, err)
+
+		iudcnt.Add(ctx, 23)
+
+		err = exp.Collect(context.Background())
+		assert.NoError(t, err)
+
+		out, err := exp.GetByName("iUDCount")
+		assert.NoError(t, err)
+		assert.EqualValues(t, 23, out.Sum.AsInt64())
+		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
+
+	})
+	t.Run("Int Histogram", func(t *testing.T) {
+
+		ihis, err := meter.SyncInt64().Histogram("iHist")
+		require.NoError(t, err)
+
+		ihis.Record(ctx, 24)
+		ihis.Record(ctx, 25)
+
+		err = exp.Collect(context.Background())
+		assert.NoError(t, err)
+
+		out, err := exp.GetByName("iHist")
+		assert.NoError(t, err)
+		assert.EqualValues(t, 49, out.Sum.AsInt64())
+		assert.EqualValues(t, 2, out.Count)
+		assert.Equal(t, aggregation.HistogramKind, out.AggregationKind)
+	})
 }
 
-func TestAsyncCounter(t *testing.T) {
+func TestAsyncInstruments(t *testing.T) {
 	ctx := context.Background()
 	mp, exp := metrictest.NewTestMeterProvider()
-	meter := mp.Meter("go.opentelemetry.io/otel/sdk/metric/metrictest/exporter_TestAsyncCounter")
 
-	fcnt, err := meter.AsyncFloat64().Counter("fCount")
-	require.NoError(t, err)
-	fudcnt, err := meter.AsyncFloat64().UpDownCounter("fUDCount")
-	require.NoError(t, err)
-	fgauge, err := meter.AsyncFloat64().Gauge("fGauge")
-	require.NoError(t, err)
+	t.Run("Float Counter", func(t *testing.T) {
+		meter := mp.Meter("go.opentelemetry.io/otel/sdk/metric/metrictest/exporter_TestAsyncCounter_FloatCounter")
 
-	icnt, err := meter.AsyncInt64().Counter("iCount")
-	require.NoError(t, err)
-	iudcnt, err := meter.AsyncInt64().UpDownCounter("iUDCount")
-	require.NoError(t, err)
-	igauge, err := meter.AsyncInt64().Gauge("iGauge")
-	require.NoError(t, err)
+		fcnt, err := meter.AsyncFloat64().Counter("fCount")
+		require.NoError(t, err)
 
-	meter.RegisterCallback(
-		[]instrument.Asynchronous{
-			fcnt,
-			fudcnt,
-			fgauge,
-			icnt,
-			iudcnt,
-			igauge,
-		}, func(context.Context) {
-			fcnt.Observe(ctx, 2)
-			fudcnt.Observe(ctx, 3)
-			fgauge.Observe(ctx, 4)
-			icnt.Observe(ctx, 22)
-			iudcnt.Observe(ctx, 23)
-			igauge.Observe(ctx, 25)
-		})
+		err = meter.RegisterCallback(
+			[]instrument.Asynchronous{
+				fcnt,
+			}, func(context.Context) {
+				fcnt.Observe(ctx, 2)
+			})
+		require.NoError(t, err)
 
-	err = exp.Collect(context.Background())
-	assert.NoError(t, err)
+		err = exp.Collect(context.Background())
+		assert.NoError(t, err)
 
-	out, err := exp.GetByName("fCount")
-	assert.NoError(t, err)
-	assert.InDelta(t, 2.0, out.Sum.AsFloat64(), 0.0001)
-	assert.Equal(t, aggregation.SumKind, out.AggregationKind)
+		out, err := exp.GetByName("fCount")
+		assert.NoError(t, err)
+		assert.InDelta(t, 2.0, out.Sum.AsFloat64(), 0.0001)
+		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
+	})
 
-	out, err = exp.GetByName("fUDCount")
-	assert.NoError(t, err)
-	assert.InDelta(t, 3.0, out.Sum.AsFloat64(), 0.0001)
-	assert.Equal(t, aggregation.SumKind, out.AggregationKind)
+	t.Run("Float UpDownCounter", func(t *testing.T) {
+		meter := mp.Meter("go.opentelemetry.io/otel/sdk/metric/metrictest/exporter_TestAsyncCounter_FloatUpDownCounter")
 
-	out, err = exp.GetByName("fGauge")
-	assert.NoError(t, err)
-	assert.InDelta(t, 4.0, out.LastValue.AsFloat64(), 0.0001)
-	assert.Equal(t, aggregation.LastValueKind, out.AggregationKind)
+		fudcnt, err := meter.AsyncFloat64().UpDownCounter("fUDCount")
+		require.NoError(t, err)
 
-	out, err = exp.GetByName("iCount")
-	assert.NoError(t, err)
-	assert.EqualValues(t, 22, out.Sum.AsInt64())
-	assert.Equal(t, aggregation.SumKind, out.AggregationKind)
+		err = meter.RegisterCallback(
+			[]instrument.Asynchronous{
+				fudcnt,
+			}, func(context.Context) {
+				fudcnt.Observe(ctx, 3)
+			})
+		require.NoError(t, err)
 
-	out, err = exp.GetByName("iUDCount")
-	assert.NoError(t, err)
-	assert.EqualValues(t, 23, out.Sum.AsInt64())
-	assert.Equal(t, aggregation.SumKind, out.AggregationKind)
+		err = exp.Collect(context.Background())
+		assert.NoError(t, err)
 
-	out, err = exp.GetByName("iGauge")
-	assert.NoError(t, err)
-	assert.EqualValues(t, 25, out.LastValue.AsInt64())
-	assert.Equal(t, aggregation.LastValueKind, out.AggregationKind)
+		out, err := exp.GetByName("fUDCount")
+		assert.NoError(t, err)
+		assert.InDelta(t, 3.0, out.Sum.AsFloat64(), 0.0001)
+		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
+	})
+
+	t.Run("Float Gauge", func(t *testing.T) {
+		meter := mp.Meter("go.opentelemetry.io/otel/sdk/metric/metrictest/exporter_TestAsyncCounter_FloatGauge")
+
+		fgauge, err := meter.AsyncFloat64().Gauge("fGauge")
+		require.NoError(t, err)
+
+		err = meter.RegisterCallback(
+			[]instrument.Asynchronous{
+				fgauge,
+			}, func(context.Context) {
+				fgauge.Observe(ctx, 4)
+			})
+		require.NoError(t, err)
+
+		err = exp.Collect(context.Background())
+		assert.NoError(t, err)
+
+		out, err := exp.GetByName("fGauge")
+		assert.NoError(t, err)
+		assert.InDelta(t, 4.0, out.LastValue.AsFloat64(), 0.0001)
+		assert.Equal(t, aggregation.LastValueKind, out.AggregationKind)
+	})
+
+	t.Run("Int Counter", func(t *testing.T) {
+		meter := mp.Meter("go.opentelemetry.io/otel/sdk/metric/metrictest/exporter_TestAsyncCounter_IntCounter")
+
+		icnt, err := meter.AsyncInt64().Counter("iCount")
+		require.NoError(t, err)
+
+		err = meter.RegisterCallback(
+			[]instrument.Asynchronous{
+				icnt,
+			}, func(context.Context) {
+				icnt.Observe(ctx, 22)
+			})
+		require.NoError(t, err)
+
+		err = exp.Collect(context.Background())
+		assert.NoError(t, err)
+
+		out, err := exp.GetByName("iCount")
+		assert.NoError(t, err)
+		assert.EqualValues(t, 22, out.Sum.AsInt64())
+		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
+	})
+
+	t.Run("Int UpDownCounter", func(t *testing.T) {
+		meter := mp.Meter("go.opentelemetry.io/otel/sdk/metric/metrictest/exporter_TestAsyncCounter_IntUpDownCounter")
+
+		iudcnt, err := meter.AsyncInt64().UpDownCounter("iUDCount")
+		require.NoError(t, err)
+
+		err = meter.RegisterCallback(
+			[]instrument.Asynchronous{
+				iudcnt,
+			}, func(context.Context) {
+				iudcnt.Observe(ctx, 23)
+			})
+		require.NoError(t, err)
+
+		err = exp.Collect(context.Background())
+		assert.NoError(t, err)
+
+		out, err := exp.GetByName("iUDCount")
+		assert.NoError(t, err)
+		assert.EqualValues(t, 23, out.Sum.AsInt64())
+		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
+
+	})
+	t.Run("Int Gauge", func(t *testing.T) {
+		meter := mp.Meter("go.opentelemetry.io/otel/sdk/metric/metrictest/exporter_TestAsyncCounter_IntGauge")
+
+		igauge, err := meter.AsyncInt64().Gauge("iGauge")
+		require.NoError(t, err)
+
+		err = meter.RegisterCallback(
+			[]instrument.Asynchronous{
+				igauge,
+			}, func(context.Context) {
+				igauge.Observe(ctx, 25)
+			})
+		require.NoError(t, err)
+
+		err = exp.Collect(context.Background())
+		assert.NoError(t, err)
+
+		out, err := exp.GetByName("iGauge")
+		assert.NoError(t, err)
+		assert.EqualValues(t, 25, out.LastValue.AsInt64())
+		assert.Equal(t, aggregation.LastValueKind, out.AggregationKind)
+	})
+
 }
 
 func ExampleExporter_GetByName() {
 	mp, exp := metrictest.NewTestMeterProvider()
-	meter := mp.Meter("go.opentelemetry.io/otel/sdk/metric/metrictest/exporter_TestSyncCounter")
+	meter := mp.Meter("go.opentelemetry.io/otel/sdk/metric/metrictest/exporter_ExampleExporter_GetByName")
 
 	cnt, err := meter.SyncFloat64().Counter("fCount")
 	if err != nil {
@@ -186,7 +298,7 @@ func ExampleExporter_GetByName() {
 
 func ExampleExporter_GetByNameAndLabels() {
 	mp, exp := metrictest.NewTestMeterProvider()
-	meter := mp.Meter("go.opentelemetry.io/otel/sdk/metric/metrictest/exporter_TestSyncCounter")
+	meter := mp.Meter("go.opentelemetry.io/otel/sdk/metric/metrictest/exporter_ExampleExporter_GetByNameAndLabels")
 
 	cnt, err := meter.SyncFloat64().Counter("fCount")
 	if err != nil {
