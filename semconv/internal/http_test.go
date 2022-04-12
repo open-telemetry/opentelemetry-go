@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package semconv
+package internal
 
 import (
 	"crypto/tls"
@@ -35,6 +35,34 @@ const (
 	noTLS tlsOption = iota
 	withTLS
 )
+
+var sc = &SemanticConventions{
+	EnduserIDKey:                attribute.Key("enduser.id"),
+	HTTPClientIPKey:             attribute.Key("http.client_ip"),
+	HTTPFlavorKey:               attribute.Key("http.flavor"),
+	HTTPHostKey:                 attribute.Key("http.host"),
+	HTTPMethodKey:               attribute.Key("http.method"),
+	HTTPRequestContentLengthKey: attribute.Key("http.request_content_length"),
+	HTTPRouteKey:                attribute.Key("http.route"),
+	HTTPSchemeHTTP:              attribute.String("http.scheme", "http"),
+	HTTPSchemeHTTPS:             attribute.String("http.scheme", "https"),
+	HTTPServerNameKey:           attribute.Key("http.server_name"),
+	HTTPStatusCodeKey:           attribute.Key("http.status_code"),
+	HTTPTargetKey:               attribute.Key("http.target"),
+	HTTPURLKey:                  attribute.Key("http.url"),
+	HTTPUserAgentKey:            attribute.Key("http.user_agent"),
+	NetHostIPKey:                attribute.Key("net.host.ip"),
+	NetHostNameKey:              attribute.Key("net.host.name"),
+	NetHostPortKey:              attribute.Key("net.host.port"),
+	NetPeerIPKey:                attribute.Key("net.peer.ip"),
+	NetPeerNameKey:              attribute.Key("net.peer.name"),
+	NetPeerPortKey:              attribute.Key("net.peer.port"),
+	NetTransportIP:              attribute.String("net.transport", "ip"),
+	NetTransportOther:           attribute.String("net.transport", "other"),
+	NetTransportTCP:             attribute.String("net.transport", "ip_tcp"),
+	NetTransportUDP:             attribute.String("net.transport", "ip_udp"),
+	NetTransportUnix:            attribute.String("net.transport", "unix"),
+}
 
 func TestNetAttributesFromHTTPRequest(t *testing.T) {
 	type testcase struct {
@@ -551,7 +579,7 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			r := testRequest(tc.method, tc.requestURI, tc.proto, tc.remoteAddr, tc.host, tc.url, tc.header, noTLS)
-			got := NetAttributesFromHTTPRequest(tc.network, r)
+			got := sc.NetAttributesFromHTTPRequest(tc.network, r)
 			if diff := cmp.Diff(
 				tc.expected,
 				got,
@@ -565,11 +593,11 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 func TestEndUserAttributesFromHTTPRequest(t *testing.T) {
 	r := testRequest("GET", "/user/123", "HTTP/1.1", "", "", nil, http.Header{}, withTLS)
 	var expected []attribute.KeyValue
-	got := EndUserAttributesFromHTTPRequest(r)
+	got := sc.EndUserAttributesFromHTTPRequest(r)
 	assert.ElementsMatch(t, expected, got)
 	r.SetBasicAuth("admin", "password")
 	expected = []attribute.KeyValue{attribute.String("enduser.id", "admin")}
-	got = EndUserAttributesFromHTTPRequest(r)
+	got = sc.EndUserAttributesFromHTTPRequest(r)
 	assert.ElementsMatch(t, expected, got)
 }
 
@@ -860,7 +888,7 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 	for idx, tc := range testcases {
 		r := testRequest(tc.method, tc.requestURI, tc.proto, tc.remoteAddr, tc.host, tc.url, tc.header, tc.tls)
 		r.ContentLength = tc.contentLength
-		got := HTTPServerAttributesFromHTTPRequest(tc.serverName, tc.route, r)
+		got := sc.HTTPServerAttributesFromHTTPRequest(tc.serverName, tc.route, r)
 		assertElementsMatch(t, tc.expected, got, "testcase %d - %s", idx, tc.name)
 	}
 }
@@ -869,13 +897,13 @@ func TestHTTPAttributesFromHTTPStatusCode(t *testing.T) {
 	expected := []attribute.KeyValue{
 		attribute.Int("http.status_code", 404),
 	}
-	got := HTTPAttributesFromHTTPStatusCode(http.StatusNotFound)
+	got := sc.HTTPAttributesFromHTTPStatusCode(http.StatusNotFound)
 	assertElementsMatch(t, expected, got, "with valid HTTP status code")
 	assert.ElementsMatch(t, expected, got)
 	expected = []attribute.KeyValue{
 		attribute.Int("http.status_code", 499),
 	}
-	got = HTTPAttributesFromHTTPStatusCode(499)
+	got = sc.HTTPAttributesFromHTTPStatusCode(499)
 	assertElementsMatch(t, expected, got, "with invalid HTTP status code")
 }
 
@@ -1203,7 +1231,7 @@ func TestHTTPClientAttributesFromHTTPRequest(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			r := testRequest(tc.method, tc.requestURI, tc.proto, tc.remoteAddr, tc.host, tc.url, tc.header, tc.tls)
 			r.ContentLength = tc.contentLength
-			got := HTTPClientAttributesFromHTTPRequest(r)
+			got := sc.HTTPClientAttributesFromHTTPRequest(r)
 			assert.ElementsMatch(t, tc.expected, got)
 		})
 	}
