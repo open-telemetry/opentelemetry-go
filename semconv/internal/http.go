@@ -311,9 +311,9 @@ func SpanStatusFromHTTPStatusCodeAndSpanKind(code int, spanKind trace.SpanKind) 
 	return spanCode, ""
 }
 
-// Validates the HTTP status code and returns corresponding span status code.
-// If the `code` is not a valid HTTP status code, returns span status Error
-// and false.
+// validateHTTPStatusCode validates the HTTP status code and returns
+// corresponding span status code. If the `code` is not a valid HTTP status
+// code, returns span status Error and false.
 func validateHTTPStatusCode(code int) (codes.Code, bool) {
 	category := code / 100
 	ranges, ok := validRangesPerCategory[category]

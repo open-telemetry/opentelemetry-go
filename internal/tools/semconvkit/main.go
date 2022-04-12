@@ -25,7 +25,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
 	"text/template"
 )
 
@@ -40,10 +39,12 @@ var (
 // SemanticConventions are information about the semantic conventions being
 // generated.
 type SemanticConventions struct {
-	// SemVer is the semantic version (i.e. 1.7.0 and not v1.7.0).
-	SemVer string
 	// TagVer is the tagged version (i.e. v1.7.0 and not 1.7.0).
 	TagVer string
+}
+
+func (sc SemanticConventions) SemVer() string {
+	return strings.TrimPrefix(*tag, "v")
 }
 
 // render renders all templates to the dest directory using the data.
@@ -59,7 +60,10 @@ func render(dest string, data *SemanticConventions) error {
 			return err
 		}
 
-		tmpl.Execute(wr, data)
+		err = tmpl.Execute(wr, data)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -72,10 +76,7 @@ func main() {
 		log.Fatalf("invalid tag: %q", *tag)
 	}
 
-	sc := &SemanticConventions{
-		SemVer: strings.TrimPrefix(*tag, "v"),
-		TagVer: *tag,
-	}
+	sc := &SemanticConventions{TagVer: *tag}
 
 	if err := render(*out, sc); err != nil {
 		log.Fatal(err)

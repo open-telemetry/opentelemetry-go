@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/prometheus"
-	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
@@ -35,9 +35,6 @@ import (
 
 var (
 	lemonsKey = attribute.Key("ex.com/lemons")
-
-	// TODO Bring back Global package
-	meterProvider metric.MeterProvider
 )
 
 func initMeter() {
@@ -57,9 +54,8 @@ func initMeter() {
 	if err != nil {
 		log.Panicf("failed to initialize prometheus exporter %v", err)
 	}
-	// TODO Bring back Global package
-	// global.SetMeterProvider(exporter.MeterProvider())
-	meterProvider = exporter.MeterProvider()
+
+	global.SetMeterProvider(exporter.MeterProvider())
 
 	http.HandleFunc("/", exporter.ServeHTTP)
 	go func() {
@@ -72,9 +68,8 @@ func initMeter() {
 func main() {
 	initMeter()
 
-	// TODO Bring back Global package
-	// meter := global.Meter("ex.com/basic")
-	meter := meterProvider.Meter("ex.com/basic")
+	meter := global.Meter("ex.com/basic")
+
 	observerLock := new(sync.RWMutex)
 	observerValueToReport := new(float64)
 	observerLabelsToReport := new([]attribute.KeyValue)
