@@ -25,7 +25,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
 	"text/template"
 )
 
@@ -61,7 +60,10 @@ func render(dest string, data *SemanticConventions) error {
 			return err
 		}
 
-		tmpl.Execute(wr, data)
+		err = tmpl.Execute(wr, data)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
