@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Delegated instruments are unwrapped before delegating Callbacks. (#2784)
+
 ### Added
 
 - The metrics global package was added back into several test files. (#2764)
