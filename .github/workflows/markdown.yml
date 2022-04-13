@@ -1,8 +1,5 @@
 name: markdown
 on:
-  push:
-    branches:
-      - main
   pull_request:
 jobs:
   changedfiles:
