@@ -1,6 +1,5 @@
 name: full-docs-check
 on:
-  pull_request:
   push:
     branches:
     - master
