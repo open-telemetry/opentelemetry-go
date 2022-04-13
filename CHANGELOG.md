@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Resolve supply-chain failure for the markdown-link-checker GitHub action by calling the CLI directly. (#2834)
+- Remove import of `testing` package in non-tests builds. (#2786)
 
 ## [0.29.0] - 2022-04-11
 
