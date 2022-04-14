@@ -36,22 +36,27 @@ import (
 //
 // Exporters are not thread safe, and should only be used for testing.
 type Exporter struct {
-	exports []ExportRecord
-	// resource *resource.Resource
+	// Records contains the last metrics collected.
+	Records []ExportRecord
 
-	controller *controller.Controller
+	controller          *controller.Controller
+	temporalitySelector aggregation.TemporalitySelector
 }
 
-func NewTestMeterProvider() (metric.MeterProvider, *Exporter) {
+// NewTestMeterProvider creates a MeterProvider and Exporter to be used in tests.
+func NewTestMeterProvider(opts ...Option) (metric.MeterProvider, *Exporter) {
+	cfg := newConfig(opts...)
+
 	c := controller.New(
 		processor.NewFactory(
 			selector.NewWithHistogramDistribution(),
-			aggregation.CumulativeTemporalitySelector(),
+			cfg.temporalitySelector,
 		),
 		controller.WithCollectPeriod(0),
 	)
 	exp := &Exporter{
-		controller: c,
+		controller:          c,
+		temporalitySelector: cfg.temporalitySelector,
 	}
 
 	return c, exp
@@ -61,7 +66,7 @@ func NewTestMeterProvider() (metric.MeterProvider, *Exporter) {
 type ExportRecord struct {
 	InstrumentName         string
 	InstrumentationLibrary Library
-	Labels                 []attribute.KeyValue
+	Attributes             []attribute.KeyValue
 	AggregationKind        aggregation.Kind
 	Sum                    number.Number
 	Count                  uint64
@@ -70,9 +75,9 @@ type ExportRecord struct {
 }
 
 // Collect triggers the SDK's collect methods and then aggregates the data into
-// `ExportRecord`s.
+// ExportRecords.  This will overwrite any previous collected metrics.
 func (e *Exporter) Collect(ctx context.Context) error {
-	e.exports = []ExportRecord{}
+	e.Records = []ExportRecord{}
 
 	err := e.controller.Collect(ctx)
 	if err != nil {
@@ -86,11 +91,11 @@ func (e *Exporter) Collect(ctx context.Context) error {
 			SchemaURL:              l.SchemaURL,
 		}
 
-		return r.ForEach(aggregation.CumulativeTemporalitySelector(), func(rec export.Record) error {
+		return r.ForEach(e.temporalitySelector, func(rec export.Record) error {
 			record := ExportRecord{
 				InstrumentName:         rec.Descriptor().Name(),
 				InstrumentationLibrary: lib,
-				Labels:                 rec.Labels().ToSlice(),
+				Attributes:             rec.Labels().ToSlice(),
 				AggregationKind:        rec.Aggregation().Kind(),
 			}
 
@@ -127,48 +132,47 @@ func (e *Exporter) Collect(ctx context.Context) error {
 				}
 			}
 
-			e.exports = append(e.exports, record)
+			e.Records = append(e.Records, record)
 			return nil
 		})
 	})
 }
 
-// GetRecords returns all Records found by the SDK
+// GetRecords returns all Records found by the SDK.
 func (e *Exporter) GetRecords() []ExportRecord {
-	return e.exports
+	return e.Records[:]
 }
 
-var ErrNotFound = fmt.Errorf("record not found")
+var errNotFound = fmt.Errorf("record not found")
 
-// GetByName returns the first Record with a matching name.
+// GetByName returns the first Record with a matching instrument name.
 func (e *Exporter) GetByName(name string) (ExportRecord, error) {
-	for _, rec := range e.exports {
+	for _, rec := range e.Records {
 		if rec.InstrumentName == name {
 			return rec, nil
 		}
 	}
-	return ExportRecord{}, ErrNotFound
+	return ExportRecord{}, errNotFound
 }
 
-// GetByNameAndLabels returns the first Record with a matching name and set of labels
-func (e *Exporter) GetByNameAndLabels(name string, labels []attribute.KeyValue) (ExportRecord, error) {
-	for _, rec := range e.exports {
-		if rec.InstrumentName == name && labelsMatch(labels, rec.Labels) {
+// GetByNameAndAttributes returns the first Record with a matching name and set of Attributes.
+func (e *Exporter) GetByNameAndAttributes(name string, attributes []attribute.KeyValue) (ExportRecord, error) {
+	for _, rec := range e.Records {
+		if rec.InstrumentName == name && subSet(attributes, rec.Attributes) {
 			return rec, nil
 		}
 	}
-	return ExportRecord{}, ErrNotFound
+	return ExportRecord{}, errNotFound
 }
 
-func labelsMatch(labelsA, labelsB []attribute.KeyValue) bool {
-	if len(labelsA) != len(labelsB) {
-		return false
-	}
-	for i := range labelsA {
-		if labelsA[i] != labelsB[i] {
+// subSet returns true if A is a subset of B
+func subSet(attributesA, attributesB []attribute.KeyValue) bool {
+	b := attribute.NewSet(attributesB...)
+
+	for _, kv := range attributesA {
+		if v, found := b.Value(kv.Key); !found || v != kv.Value {
 			return false
 		}
 	}
-
 	return true
 }
