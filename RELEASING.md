@@ -13,7 +13,7 @@ For example,
 ```sh
 export TAG="v1.7.0" # Change to the release version you are generating.
 export OTEL_SPEC_REPO="/absolute/path/to/opentelemetry-specification"
-cd "$OTEL_SPEC_REPO" && git checkout "tags/$TAG" && cd -
+git -C "$OTEL_SPEC_REPO" checkout "tags/$TAG"
 make semconv-generate # Uses the exported TAG and OTEL_SPEC_REPO.
 ```
 
