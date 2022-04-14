@@ -12,22 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global
+package semconv // import "go.opentelemetry.io/otel/semconv/{{.TagVer}}"
 
-import (
-	"context"
-	"testing"
-)
-
-func BenchmarkStartEndSpanNoSDK(b *testing.B) {
-	// Compare with BenchmarkStartEndSpan() in
-	// ../../sdk/trace/benchmark_test.go.
-	ResetForTest(b)
-	t := TracerProvider().Tracer("Benchmark StartEndSpan")
-	ctx := context.Background()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, span := t.Start(ctx, "/foo")
-		span.End()
-	}
-}
+// SchemaURL is the schema URL that matches the version of the semantic conventions
+// that this package defines. Semconv packages starting from v1.4.0 must declare
+// non-empty schema URL in the form https://opentelemetry.io/schemas/<version>
+const SchemaURL = "https://opentelemetry.io/schemas/{{.SemVer}}"
