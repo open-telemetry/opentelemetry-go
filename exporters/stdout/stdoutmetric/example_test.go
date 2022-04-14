@@ -22,9 +22,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
-	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
-	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/reader"
 )
 
 const (
@@ -66,25 +65,18 @@ func multiply(ctx context.Context, x, y int64) int64 {
 	return x * y
 }
 
-func InstallExportPipeline(ctx context.Context) func() {
-	exporter, err := stdoutmetric.New(stdoutmetric.WithPrettyPrint())
-	if err != nil {
-		log.Fatalf("creating stdoutmetric exporter: %v", err)
-	}
+func InstallExportPipeline(ctx context.Context) *reader.ManualReader {
+	exporter := stdoutmetric.New(stdoutmetric.WithPrettyPrint())
+	reader := reader.NewManualReader(exporter)
 
-	pusher := controller.New(
-		processor.NewFactory(
-			simple.NewWithInexpensiveDistribution(),
-			exporter,
-		),
-		controller.WithExporter(exporter),
+	mp := sdkmetric.New(
+		sdkmetric.WithReader(reader),
 	)
-	if err = pusher.Start(ctx); err != nil {
-		log.Fatalf("starting push controller: %v", err)
-	}
 	// TODO Bring back Global package
 	// global.SetMeterProvider(pusher)
-	meter = pusher.Meter(instrumentationName, metric.WithInstrumentationVersion(instrumentationVersion))
+	meter = mp.Meter(instrumentationName, metric.WithInstrumentationVersion(instrumentationVersion))
+
+	var err error
 
 	loopCounter, err = meter.SyncInt64().Counter("function.loops")
 	if err != nil {
@@ -95,19 +87,16 @@ func InstallExportPipeline(ctx context.Context) func() {
 		log.Fatalf("creating instrument: %v", err)
 	}
 
-	return func() {
-		if err := pusher.Stop(ctx); err != nil {
-			log.Fatalf("stopping push controller: %v", err)
-		}
-	}
+	return reader
 }
 
 func Example() {
 	ctx := context.Background()
 
 	// TODO: Registers a meter Provider globally.
-	cleanup := InstallExportPipeline(ctx)
-	defer cleanup()
+	reader := InstallExportPipeline(ctx)
 
 	log.Println("the answer is", add(ctx, multiply(ctx, multiply(ctx, 2, 2), 10), 2))
+
+	reader.Collect(ctx, nil)
 }
