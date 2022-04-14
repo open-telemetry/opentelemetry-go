@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global_test
+package global
 
 import (
 	"context"
@@ -22,8 +22,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -44,7 +42,7 @@ func (fn fnTracer) Start(ctx context.Context, spanName string, opts ...trace.Spa
 }
 
 func TestTraceProviderDelegation(t *testing.T) {
-	global.ResetForTest(t)
+	ResetForTest(t)
 
 	// Map of tracers to expected span names.
 	expected := map[string][]string{
@@ -54,12 +52,12 @@ func TestTraceProviderDelegation(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	gtp := otel.GetTracerProvider()
+	gtp := TracerProvider()
 	tracer1 := gtp.Tracer("pre")
 	// This is started before an SDK was registered and should be dropped.
 	_, span1 := tracer1.Start(ctx, "span1")
 
-	otel.SetTracerProvider(fnTracerProvider{
+	SetTracerProvider(fnTracerProvider{
 		tracer: func(name string, opts ...trace.TracerOption) trace.Tracer {
 			spans, ok := expected[name]
 			assert.Truef(t, ok, "invalid tracer: %s", name)
@@ -98,14 +96,14 @@ func TestTraceProviderDelegation(t *testing.T) {
 }
 
 func TestTraceProviderDelegates(t *testing.T) {
-	global.ResetForTest(t)
+	ResetForTest(t)
 
 	// Retrieve the placeholder TracerProvider.
-	gtp := otel.GetTracerProvider()
+	gtp := TracerProvider()
 
 	// Configure it with a spy.
 	called := false
-	otel.SetTracerProvider(fnTracerProvider{
+	SetTracerProvider(fnTracerProvider{
 		tracer: func(name string, opts ...trace.TracerOption) trace.Tracer {
 			called = true
 			assert.Equal(t, "abc", name)
@@ -118,10 +116,10 @@ func TestTraceProviderDelegates(t *testing.T) {
 }
 
 func TestTraceProviderDelegatesConcurrentSafe(t *testing.T) {
-	global.ResetForTest(t)
+	ResetForTest(t)
 
 	// Retrieve the placeholder TracerProvider.
-	gtp := otel.GetTracerProvider()
+	gtp := TracerProvider()
 
 	done := make(chan struct{})
 	quit := make(chan struct{})
@@ -142,7 +140,7 @@ func TestTraceProviderDelegatesConcurrentSafe(t *testing.T) {
 
 	// Configure it with a spy.
 	called := int32(0)
-	otel.SetTracerProvider(fnTracerProvider{
+	SetTracerProvider(fnTracerProvider{
 		tracer: func(name string, opts ...trace.TracerOption) trace.Tracer {
 			newVal := atomic.AddInt32(&called, 1)
 			assert.Equal(t, "abc", name)
@@ -161,10 +159,10 @@ func TestTraceProviderDelegatesConcurrentSafe(t *testing.T) {
 }
 
 func TestTracerDelegatesConcurrentSafe(t *testing.T) {
-	global.ResetForTest(t)
+	ResetForTest(t)
 
 	// Retrieve the placeholder TracerProvider.
-	gtp := otel.GetTracerProvider()
+	gtp := TracerProvider()
 	tracer := gtp.Tracer("abc", trace.WithInstrumentationVersion("xyz"))
 
 	done := make(chan struct{})
@@ -186,7 +184,7 @@ func TestTracerDelegatesConcurrentSafe(t *testing.T) {
 
 	// Configure it with a spy.
 	called := int32(0)
-	otel.SetTracerProvider(fnTracerProvider{
+	SetTracerProvider(fnTracerProvider{
 		tracer: func(name string, opts ...trace.TracerOption) trace.Tracer {
 			assert.Equal(t, "abc", name)
 			return fnTracer{
@@ -210,15 +208,15 @@ func TestTracerDelegatesConcurrentSafe(t *testing.T) {
 }
 
 func TestTraceProviderDelegatesSameInstance(t *testing.T) {
-	global.ResetForTest(t)
+	ResetForTest(t)
 
 	// Retrieve the placeholder TracerProvider.
-	gtp := otel.GetTracerProvider()
+	gtp := TracerProvider()
 	tracer := gtp.Tracer("abc", trace.WithInstrumentationVersion("xyz"))
 	assert.Same(t, tracer, gtp.Tracer("abc", trace.WithInstrumentationVersion("xyz")))
 	assert.Same(t, tracer, gtp.Tracer("abc", trace.WithInstrumentationVersion("xyz")))
 
-	otel.SetTracerProvider(fnTracerProvider{
+	SetTracerProvider(fnTracerProvider{
 		tracer: func(name string, opts ...trace.TracerOption) trace.Tracer {
 			return trace.NewNoopTracerProvider().Tracer("")
 		},
@@ -228,7 +226,7 @@ func TestTraceProviderDelegatesSameInstance(t *testing.T) {
 }
 
 func TestSpanContextPropagatedWithNonRecordingSpan(t *testing.T) {
-	global.ResetForTest(t)
+	ResetForTest(t)
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    [16]byte{0x01},
@@ -237,7 +235,7 @@ func TestSpanContextPropagatedWithNonRecordingSpan(t *testing.T) {
 		Remote:     true,
 	})
 	ctx := trace.ContextWithSpanContext(context.Background(), sc)
-	_, span := otel.Tracer("test").Start(ctx, "test")
+	_, span := TracerProvider().Tracer("test").Start(ctx, "test")
 
 	assert.Equal(t, sc, span.SpanContext())
 	assert.False(t, span.IsRecording())
