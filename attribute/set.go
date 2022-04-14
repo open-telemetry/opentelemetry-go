@@ -21,17 +21,12 @@ import (
 )
 
 type (
-	// Set is the representation for a distinct label set.  It
-	// manages an immutable set of labels, with an internal cache
-	// for storing label encodings.
+	// Set is the representation for a distinct attribute set. It manages an
+	// immutable set of attributes, with an internal cache for storing
+	// attribute encodings.
 	//
 	// This type supports the `Equivalent` method of comparison
 	// using values of type `Distinct`.
-	//
-	// This type is used to implement:
-	// 1. Metric labels
-	// 2. Resource sets
-	// 3. Correlation map (TODO)
 	Set struct {
 		equivalent Distinct
 	}
@@ -43,11 +38,11 @@ type (
 		iface interface{}
 	}
 
-	// Filter supports removing certain labels from label sets.
-	// When the filter returns true, the label will be kept in
-	// the filtered label set.  When the filter returns false, the
-	// label is excluded from the filtered label set, and the
-	// label instead appears in the `removed` list of excluded labels.
+	// Filter supports removing certain attributes from attribute sets. When
+	// the filter returns true, the attribute will be kept in the filtered
+	// attribute set. When the filter returns false, the attribute is excluded
+	// from the filtered attribute set, and the attribute instead appears in
+	// the `removed` list of excluded attributes.
 	Filter func(KeyValue) bool
 
 	// Sortable implements `sort.Interface`, used for sorting
@@ -63,7 +58,7 @@ var (
 	// keyValueType is used in `computeDistinctReflect`.
 	keyValueType = reflect.TypeOf(KeyValue{})
 
-	// emptySet is returned for empty label sets.
+	// emptySet is returned for empty attribute sets.
 	emptySet = &Set{
 		equivalent: Distinct{
 			iface: [0]KeyValue{},
@@ -88,7 +83,7 @@ func (d Distinct) Valid() bool {
 	return d.iface != nil
 }
 
-// Len returns the number of labels in this set.
+// Len returns the number of attributes in this set.
 func (l *Set) Len() int {
 	if l == nil || !l.equivalent.Valid() {
 		return 0
@@ -142,7 +137,7 @@ func (l *Set) HasValue(k Key) bool {
 	return ok
 }
 
-// Iter returns an iterator for visiting the labels in this set.
+// Iter returns an iterator for visiting the attributes in this set.
 func (l *Set) Iter() Iterator {
 	return Iterator{
 		storage: l,
@@ -150,18 +145,17 @@ func (l *Set) Iter() Iterator {
 	}
 }
 
-// ToSlice returns the set of labels belonging to this set, sorted,
-// where keys appear no more than once.
+// ToSlice returns the set of attributes belonging to this set, sorted, where
+// keys appear no more than once.
 func (l *Set) ToSlice() []KeyValue {
 	iter := l.Iter()
 	return iter.ToSlice()
 }
 
-// Equivalent returns a value that may be used as a map key.  The
-// Distinct type guarantees that the result will equal the equivalent
-// Distinct value of any label set with the same elements as this,
-// where sets are made unique by choosing the last value in the input
-// for any given key.
+// Equivalent returns a value that may be used as a map key. The Distinct type
+// guarantees that the result will equal the equivalent. Distinct value of any
+// attribute set with the same elements as this, where sets are made unique by
+// choosing the last value in the input for any given key.
 func (l *Set) Equivalent() Distinct {
 	if l == nil || !l.equivalent.Valid() {
 		return emptySet.equivalent
@@ -217,12 +211,11 @@ func NewSetWithSortable(kvs []KeyValue, tmp *Sortable) Set {
 	return s
 }
 
-// NewSetWithFiltered returns a new `Set`.  See the documentation for
-// `NewSetWithSortableFiltered` for more details.
+// NewSetWithFiltered returns a new `Set`. See the documentation for
+// NewSetWithSortableFiltered for more details.
 //
-// This call includes a `Filter` to include/exclude label keys from
-// the return value.  Excluded keys are returned as a slice of label
-// values.
+// This call includes a Filter to include/exclude attribute keys from the
+// return value. Excluded keys are returned as a slice of attribute values.
 func NewSetWithFiltered(kvs []KeyValue, filter Filter) (Set, []KeyValue) {
 	// Check for empty set.
 	if len(kvs) == 0 {
@@ -250,10 +243,10 @@ func NewSetWithFiltered(kvs []KeyValue, filter Filter) (Set, []KeyValue) {
 // - allocating a `Set` for storing the return value of this
 //   constructor.
 //
-// The result maintains a cache of encoded labels, by attribute.EncoderID.
+// The result maintains a cache of encoded attributes, by attribute.EncoderID.
 // This value should not be copied after its first use.
 //
-// The second `[]KeyValue` return value is a list of labels that were
+// The second `[]KeyValue` return value is a list of attributes that were
 // excluded by the Filter (if non-nil).
 func NewSetWithSortableFiltered(kvs []KeyValue, tmp *Sortable, filter Filter) (Set, []KeyValue) {
 	// Check for empty set.
@@ -298,8 +291,8 @@ func NewSetWithSortableFiltered(kvs []KeyValue, tmp *Sortable, filter Filter) (S
 func filterSet(kvs []KeyValue, filter Filter) (Set, []KeyValue) {
 	var excluded []KeyValue
 
-	// Move labels that do not match the filter so
-	// they're adjacent before calling computeDistinct().
+	// Move attributes that do not match the filter so they're adjacent before
+	// calling computeDistinct().
 	distinctPosition := len(kvs)
 
 	// Swap indistinct keys forward and distinct keys toward the

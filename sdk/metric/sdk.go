@@ -75,8 +75,8 @@ type (
 		instrument.Synchronous
 	}
 
-	// mapkey uniquely describes a metric instrument in terms of
-	// its InstrumentID and the encoded form of its labels.
+	// mapkey uniquely describes a metric instrument in terms of its
+	// InstrumentID and the encoded form of its attributes.
 	mapkey struct {
 		descriptor *sdkapi.Descriptor
 		ordered    attribute.Distinct
@@ -98,14 +98,12 @@ type (
 		// supports checking for no updates during a round.
 		collectedCount int64
 
-		// labels is the stored label set for this record,
-		// except in cases where a label set is shared due to
-		// batch recording.
-		labels attribute.Set
+		// attrs is the stored attribute set for this record, except in cases
+		// where a attribute set is shared due to batch recording.
+		attrs attribute.Set
 
-		// sortSlice has a single purpose - as a temporary
-		// place for sorting during labels creation to avoid
-		// allocation.
+		// sortSlice has a single purpose - as a temporary place for sorting
+		// during attributes creation to avoid allocation.
 		sortSlice attribute.Sortable
 
 		// inst is a pointer to the corresponding instrument.
@@ -146,20 +144,20 @@ func (s *syncInstrument) Implementation() interface{} {
 }
 
 // acquireHandle gets or creates a `*record` corresponding to `kvs`,
-// the input labels.
+// the input attributes.
 func (b *baseInstrument) acquireHandle(kvs []attribute.KeyValue) *record {
 
 	// This memory allocation may not be used, but it's
 	// needed for the `sortSlice` field, to avoid an
 	// allocation while sorting.
 	rec := &record{}
-	rec.labels = attribute.NewSetWithSortable(kvs, &rec.sortSlice)
+	rec.attrs = attribute.NewSetWithSortable(kvs, &rec.sortSlice)
 
 	// Create lookup key for sync.Map (one allocation, as this
 	// passes through an interface{})
 	mk := mapkey{
 		descriptor: &b.descriptor,
-		ordered:    rec.labels.Equivalent(),
+		ordered:    rec.attrs.Equivalent(),
 	}
 
 	if actual, ok := b.meter.current.Load(mk); ok {
@@ -372,7 +370,7 @@ func (m *Accumulator) checkpointRecord(r *record) int {
 		return 0
 	}
 
-	a := export.NewAccumulation(&r.inst.descriptor, &r.labels, r.checkpoint)
+	a := export.NewAccumulation(&r.inst.descriptor, &r.attrs, r.checkpoint)
 	err = m.processor.Process(a)
 	if err != nil {
 		otel.Handle(err)
@@ -405,7 +403,7 @@ func (r *record) unbind() {
 func (r *record) mapkey() mapkey {
 	return mapkey{
 		descriptor: &r.inst.descriptor,
-		ordered:    r.labels.Equivalent(),
+		ordered:    r.attrs.Equivalent(),
 	}
 }
 

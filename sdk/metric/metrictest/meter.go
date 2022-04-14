@@ -37,7 +37,7 @@ type (
 		// Measurement needs to be aligned for 64-bit atomic operations.
 		Measurements []Measurement
 		Ctx          context.Context
-		Labels       []attribute.KeyValue
+		Attributes   []attribute.KeyValue
 		Library      Library
 	}
 

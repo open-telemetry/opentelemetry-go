@@ -88,19 +88,19 @@ func main() {
 
 	tracer := otel.Tracer("test-tracer")
 
-	// labels represent additional key-value descriptors that can be bound to a
-	// metric observer or recorder.
-	commonLabels := []attribute.KeyValue{
-		attribute.String("labelA", "chocolate"),
-		attribute.String("labelB", "raspberry"),
-		attribute.String("labelC", "vanilla"),
+	// Attributes represent additional key-value descriptors that can be bound
+	// to a metric observer or recorder.
+	commonAttrs := []attribute.KeyValue{
+		attribute.String("attrA", "chocolate"),
+		attribute.String("attrB", "raspberry"),
+		attribute.String("attrC", "vanilla"),
 	}
 
 	// work begins
 	ctx, span := tracer.Start(
 		context.Background(),
 		"CollectorExporter-Example",
-		trace.WithAttributes(commonLabels...))
+		trace.WithAttributes(commonAttrs...))
 	defer span.End()
 	for i := 0; i < 10; i++ {
 		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))

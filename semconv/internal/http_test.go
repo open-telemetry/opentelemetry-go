@@ -1009,13 +1009,13 @@ func protoToInts(proto string) (int, int) {
 func kvStr(kvs []attribute.KeyValue) string {
 	sb := strings.Builder{}
 	sb.WriteRune('[')
-	for idx, label := range kvs {
+	for idx, attr := range kvs {
 		if idx > 0 {
 			sb.WriteString(", ")
 		}
-		sb.WriteString((string)(label.Key))
+		sb.WriteString((string)(attr.Key))
 		sb.WriteString(": ")
-		sb.WriteString(label.Value.Emit())
+		sb.WriteString(attr.Value.Emit())
 	}
 	sb.WriteRune(']')
 	return sb.String()
