@@ -38,7 +38,7 @@ import (
 // RunEndToEndTest can be used by protocol driver tests to validate
 // themselves.
 func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter, mcMetrics Collector) {
-	selector := simple.NewWithInexpensiveDistribution()
+	selector := simple.NewWithHistogramDistribution()
 	proc := processor.NewFactory(selector, aggregation.StatelessTemporalitySelector())
 	cont := controller.New(proc, controller.WithExporter(exp))
 	require.NoError(t, cont.Start(ctx))
@@ -54,6 +54,8 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 	instruments := map[string]data{
 		"test-int64-counter":         {sdkapi.CounterInstrumentKind, number.Int64Kind, 1},
 		"test-float64-counter":       {sdkapi.CounterInstrumentKind, number.Float64Kind, 1},
+		"test-int64-histogram":       {sdkapi.HistogramInstrumentKind, number.Int64Kind, 2},
+		"test-float64-histogram":     {sdkapi.HistogramInstrumentKind, number.Float64Kind, 2},
 		"test-int64-gaugeobserver":   {sdkapi.GaugeObserverInstrumentKind, number.Int64Kind, 3},
 		"test-float64-gaugeobserver": {sdkapi.GaugeObserverInstrumentKind, number.Float64Kind, 3},
 	}
@@ -152,11 +154,12 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 				}
 			}
 		case sdkapi.HistogramInstrumentKind:
-			require.NotNil(t, m.GetSummary())
-			if dp := m.GetSummary().DataPoints; assert.Len(t, dp, 1) {
+			require.NotNil(t, m.GetHistogram())
+			if dp := m.GetHistogram().DataPoints; assert.Len(t, dp, 1) {
 				count := dp[0].Count
 				assert.Equal(t, uint64(1), count, "invalid count for %q", m.Name)
-				assert.Equal(t, float64(data.val*int64(count)), dp[0].Sum, "invalid sum for %q (value %d)", m.Name, data.val)
+				require.NotNil(t, dp[0].Sum)
+				assert.Equal(t, float64(data.val*int64(count)), *dp[0].Sum, "invalid sum for %q (value %d)", m.Name, data.val)
 			}
 		default:
 			assert.Failf(t, "invalid metrics kind", data.iKind.String())
