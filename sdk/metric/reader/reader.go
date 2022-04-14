@@ -2,6 +2,7 @@ package reader
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -34,12 +35,12 @@ type (
 	// DefaultAggregationKindFunc is a per-instrument-kind, per-number-kind aggregator.Config choice.
 	DefaultAggregationConfigFunc func(sdkinstrument.Kind) (int64Config, float64Config aggregator.Config)
 
-	// Reader represents the connection between an Exporter and
+	// ReaderConfig represents the connection between an Exporter and
 	// the MeterProvider.  Readers give the internal View compiler
 	// all the necessary information to construct a metrics pipeline.
-	Reader struct {
-		// exporter is the output terminal of a metrics pipeline.
-		exporter Exporter
+	ReaderConfig struct {
+		// reader is the output terminal of a metrics pipeline.
+		reader Reader
 
 		// These four arrays are the evaluted
 		// per-instrument-kind choices described in the
@@ -132,8 +133,8 @@ type (
 		End time.Time
 	}
 
-	// Exporter is the consumer of metrics associated with a single Reader.
-	Exporter interface {
+	// Reader is the consumer of metrics associated with a single Reader.
+	Reader interface {
 		// Registeree supports connecting the MeterProvider
 		// with the Exporter.
 		Registeree
@@ -166,7 +167,7 @@ type (
 		// will write metrics into the same slices and structs.
 		//
 		// When `in` is nil, a new Metrics object is returned.
-		Produce(in *Metrics) Metrics
+		Produce(ctx context.Context, in *Metrics) Metrics
 	}
 )
 
@@ -229,9 +230,9 @@ func StandardConfig(ik sdkinstrument.Kind) (ints, floats aggregator.Config) {
 	return aggregator.Config{}, aggregator.Config{}
 }
 
-// New returns a new Reader configured for `exporter` with provided
+// NewConfig returns a new Reader configured for `exporter` with provided
 // optional configuration.
-func New(exporter Exporter, opts ...Option) *Reader {
+func NewConfig(exporter Reader, opts ...Option) *ReaderConfig {
 	cfg := Config{
 		DefaultAggregationKindFunc:        StandardAggregationKind,
 		DefaultAggregationTemporalityFunc: StandardTemporality,
@@ -240,8 +241,8 @@ func New(exporter Exporter, opts ...Option) *Reader {
 	for _, opt := range opts {
 		opt(&cfg)
 	}
-	r := &Reader{
-		exporter: exporter,
+	r := &ReaderConfig{
+		reader: exporter,
 	}
 	for i := sdkinstrument.Kind(0); i < sdkinstrument.NumKinds; i++ {
 		r.defAggr[i] = cfg.DefaultAggregationKindFunc(i)
@@ -252,26 +253,26 @@ func New(exporter Exporter, opts ...Option) *Reader {
 }
 
 // DefaultAggregation returns the default aggregation.Kind for each instrument kind.
-func (r *Reader) DefaultAggregation(k sdkinstrument.Kind) aggregation.Kind {
+func (r *ReaderConfig) DefaultAggregation(k sdkinstrument.Kind) aggregation.Kind {
 	return r.defAggr[k]
 }
 
 // DefaultTemporality returns the default aggregation.Temporality for each instrument kind.
-func (r *Reader) DefaultTemporality(k sdkinstrument.Kind) aggregation.Temporality {
+func (r *ReaderConfig) DefaultTemporality(k sdkinstrument.Kind) aggregation.Temporality {
 	return r.defTempo[k]
 }
 
 // DefaultAggregationConfig returns the default aggregation.Temporality for each instrument kind.
-func (r *Reader) DefaultAggregationConfig(k sdkinstrument.Kind, nk number.Kind) aggregator.Config {
+func (r *ReaderConfig) DefaultAggregationConfig(k sdkinstrument.Kind, nk number.Kind) aggregator.Config {
 	if nk == number.Int64Kind {
 		return r.defI64Cfg[k]
 	}
 	return r.defF64Cfg[k]
 }
 
-// Exporter returns the Reader's associated Exporter.
-func (r *Reader) Exporter() Exporter {
-	return r.exporter
+// Reader returns the Reader's associated Reader.
+func (r *ReaderConfig) Reader() Reader {
+	return r.reader
 }
 
 func (m *Metrics) Reset() {
@@ -312,4 +313,53 @@ func Reallocate[T any](p *[]T) *T {
 		(*p) = append(*p, empty)
 	}
 	return &(*p)[len(*p)-1]
+}
+
+type Exporter interface {
+	Export(context.Context, Metrics) error
+	Flush(context.Context) error
+	Shutdown(context.Context) error
+}
+
+type ManualReader struct {
+	lock     sync.Mutex
+	producer Producer
+
+	exporter Exporter
+}
+
+func NewManualReader(exp Exporter) *ManualReader {
+	return &ManualReader{
+		exporter: exp,
+	}
+}
+
+func (m *ManualReader) Collect(ctx context.Context, in *Metrics) error {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	if m.producer == nil || m.exporter == nil {
+		return nil
+	}
+
+	return m.exporter.Export(ctx, m.producer.Produce(ctx, in))
+}
+
+func (m *ManualReader) Flush(ctx context.Context) error {
+	if m.exporter == nil {
+		return nil
+	}
+	return m.exporter.Flush(ctx)
+}
+func (m *ManualReader) Shutdown(ctx context.Context) error {
+	if m.exporter == nil {
+		return nil
+	}
+	return m.exporter.Shutdown(ctx)
+}
+func (m *ManualReader) Register(prod Producer) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	m.producer = prod
 }

@@ -109,7 +109,7 @@ func (h histogram[N, Traits]) Record(ctx context.Context, incr N, attrs ...attri
 	}
 }
 
-func (inst *Instrument) AccumulateFor(_ *reader.Reader) {
+func (inst *Instrument) AccumulateFor(_ *reader.ReaderConfig) {
 	inst.current.Range(func(key interface{}, value interface{}) bool {
 		rec := value.(*record)
 		any := inst.collectRecord(rec)

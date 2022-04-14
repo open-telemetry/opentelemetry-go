@@ -28,7 +28,7 @@ type (
 
 		descriptor sdkinstrument.Descriptor
 		compiled   viewstate.Instrument
-		state      map[*reader.Reader]*readerState
+		state      map[*reader.ReaderConfig]*readerState
 	}
 
 	Callback struct {
@@ -37,7 +37,7 @@ type (
 	}
 
 	readerCallback struct {
-		*reader.Reader
+		*reader.ReaderConfig
 		*Callback
 	}
 
@@ -57,8 +57,8 @@ type (
 var _ memberInstrument = observer[int64, traits.Int64]{}
 var _ memberInstrument = observer[float64, traits.Float64]{}
 
-func NewInstrument(desc sdkinstrument.Descriptor, compiled viewstate.Instrument, readers []*reader.Reader) *Instrument {
-	state := map[*reader.Reader]*readerState{}
+func NewInstrument(desc sdkinstrument.Descriptor, compiled viewstate.Instrument, readers []*reader.ReaderConfig) *Instrument {
+	state := map[*reader.ReaderConfig]*readerState{}
 	for _, r := range readers {
 		state[r] = &readerState{
 			store: map[attribute.Set]viewstate.Accumulator{},
@@ -92,14 +92,14 @@ func NewCallback(instruments []apiInstrument.Asynchronous, function func(context
 	return cb, nil
 }
 
-func (c *Callback) Run(ctx context.Context, r *reader.Reader) {
+func (c *Callback) Run(ctx context.Context, r *reader.ReaderConfig) {
 	c.function(context.WithValue(ctx, contextKey{}, readerCallback{
-		Reader:   r,
-		Callback: c,
+		ReaderConfig: r,
+		Callback:     c,
 	}))
 }
 
-func (inst *Instrument) AccumulateFor(r *reader.Reader) {
+func (inst *Instrument) AccumulateFor(r *reader.ReaderConfig) {
 	rs := inst.state[r]
 
 	// This limits concurrent asynchronous collection, which is
@@ -142,11 +142,11 @@ func (o observer[N, Traits]) Observe(ctx context.Context, value N, attrs ...attr
 		otel.Handle(err)
 		return
 	}
-	se := o.inst.get(rc.Reader, attrs)
+	se := o.inst.get(rc.ReaderConfig, attrs)
 	se.(viewstate.AccumulatorUpdater[N]).Update(value)
 }
 
-func (inst *Instrument) get(r *reader.Reader, attrs []attribute.KeyValue) viewstate.Accumulator {
+func (inst *Instrument) get(r *reader.ReaderConfig, attrs []attribute.KeyValue) viewstate.Accumulator {
 	rs := inst.state[r]
 	rs.lock.Lock()
 	defer rs.lock.Unlock()

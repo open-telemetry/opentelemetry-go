@@ -28,7 +28,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/metric/instrument"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/reader"
 	"go.opentelemetry.io/otel/sdk/metric/sdkinstrument"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -87,16 +87,16 @@ func newPipeline(config prometheus.Config, boundaries []float64, sdkopts []sdkme
 		return nil, nil, err
 	}
 
-	r := reader.New(prom, reader.WithDefaultAggregationConfigFunc(func(k sdkinstrument.Kind) (aggregation.Config, aggregation.Config) {
-		cfg := aggregation.Config{
-			aggregation.HistogramConfig{
+	opt := reader.WithDefaultAggregationConfigFunc(func(k sdkinstrument.Kind) (aggregator.Config, aggregator.Config) {
+		cfg := aggregator.Config{
+			aggregator.HistogramConfig{
 				ExplicitBoundaries: boundaries,
 			},
 		}
 		return cfg, cfg
-	}))
+	})
 
-	sdk := sdkmetric.New(append(sdkopts, sdkmetric.WithReader(r))...)
+	sdk := sdkmetric.New(append(sdkopts, sdkmetric.WithReader(prom, opt))...)
 	return sdk, prom, nil
 }
 

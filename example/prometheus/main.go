@@ -27,7 +27,6 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/reader"
 	"go.opentelemetry.io/otel/sdk/metric/views"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -46,7 +45,7 @@ func initMeter() metric.MeterProvider {
 	}
 
 	sdk := sdkmetric.New(
-		sdkmetric.WithReader(reader.New(exporter)),
+		sdkmetric.WithReader(exporter),
 		sdkmetric.WithResource(resource.NewSchemaless(attribute.String("resource", "etc"))),
 		sdkmetric.WithViews(
 			views.New(

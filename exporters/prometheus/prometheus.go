@@ -28,7 +28,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/reader"
 	"go.opentelemetry.io/otel/sdk/metric/sdkinstrument"
@@ -47,7 +47,7 @@ type Exporter struct {
 	producer reader.Producer
 }
 
-var _ reader.Exporter = &Exporter{}
+var _ reader.Reader = &Exporter{}
 var _ http.Handler = &Exporter{}
 
 // ErrUnsupportedAggregator is returned for unrepresentable aggregator
@@ -144,11 +144,11 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 	if producer == nil {
 		return
 	}
-	data := producer.Produce(nil)
+	data := producer.Produce(context.Background(), nil)
 
 	for _, scope := range data.Scopes {
 		for _, inst := range scope.Instruments {
-			for _, series := range inst.Series {
+			for _, series := range inst.Points {
 				var labelKeys []string
 				mergeLabels(series.Attributes, data.Resource, &labelKeys, nil)
 				ch <- c.toDesc(inst.Descriptor, labelKeys)
@@ -163,14 +163,14 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 // For example, when the HTTP endpoint is invoked by Prometheus.
 func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	// Passing nil => not reusing memory
-	data := c.exp.producer.Produce(nil)
+	data := c.exp.producer.Produce(context.Background(), nil)
 
 	for _, scope := range data.Scopes {
 		for _, inst := range scope.Instruments {
 			numberKind := inst.Descriptor.NumberKind
 			instrumentKind := inst.Descriptor.Kind
 
-			for _, series := range inst.Series {
+			for _, series := range inst.Points {
 
 				agg := series.Aggregation
 
@@ -196,7 +196,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 						otel.Handle(fmt.Errorf("exporting gauge: %w", err))
 					}
 				} else {
-					otel.Handle(fmt.Errorf("%w: %s", ErrUnsupportedAggregator, agg.Kind()))
+					otel.Handle(fmt.Errorf("%w: %s", ErrUnsupportedAggregator, agg.Category().String()))
 				}
 			}
 		}

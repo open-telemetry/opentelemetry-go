@@ -48,8 +48,7 @@ func RangeTest[N number.Any, Traits traits.Any[N]](num N, desc *sdkinstrument.De
 	// Check for negative values
 	switch desc.Kind {
 	case sdkinstrument.CounterKind,
-		sdkinstrument.CounterObserverKind,
-		sdkinstrument.HistogramKind:
+		sdkinstrument.CounterObserverKind: // TODO: Add Exponential Histogram
 		if num < 0 {
 			return ErrNegativeInput
 		}
@@ -71,7 +70,7 @@ func (hc HistogramConfig) Boundaries() []float64 {
 }
 
 // Methods implements a specific aggregation behavior.  Methods
-// are parameterized by the type of the number (int64, flot64),
+// are parameterized by the type of the number (int64, float64),
 // the Storage (generally an `Storage` struct in the same package),
 // and the Config (generally a `Config` struct in the same package).
 type Methods[N number.Any, Storage any] interface {

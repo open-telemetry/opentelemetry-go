@@ -21,28 +21,12 @@ import (
 )
 
 type (
-	Compiler struct {
-		library instrumentation.Library
-		views   []views.View
-		readers []*reader.Reader
-
-		lock sync.Mutex
-
-		// names is the per-reader map of output names,
-		// indexed by the reader's position in `readers`.
-		names []map[string][]leafInstrument
-
-		// collectors is the de-duplicated list of metric outputs, which may
-		// contain conflicting identities.
-		collectors map[*reader.Reader][]Collector
-	}
-
 	Instrument interface {
 		// NewAccumulator returns a new Accumulator bound to
 		// the attributes `kvs`.  If reader == nil the
 		// accumulator applies to all readers, otherwise it
 		// applies to the specific reader.
-		NewAccumulator(kvs attribute.Set, reader *reader.Reader) Accumulator
+		NewAccumulator(kvs attribute.Set, reader *reader.ReaderConfig) Accumulator
 	}
 
 	leafInstrument interface {
@@ -56,7 +40,7 @@ type (
 	Collector interface {
 		// Collect transfers aggregated data from the
 		// Accumulators into the output struct.
-		Collect(reader *reader.Reader, sequence reader.Sequence, output *[]reader.Instrument)
+		Collect(reader *reader.ReaderConfig, sequence reader.Sequence, output *[]reader.Instrument)
 	}
 
 	Accumulator interface {
@@ -72,75 +56,38 @@ type (
 		Updater[N]
 	}
 
-	multiInstrument[N number.Any] map[*reader.Reader][]Instrument
-
-	multiAccumulator[N number.Any] []Accumulator
-
 	configuredBehavior struct {
 		fromName string
 		desc     sdkinstrument.Descriptor
 		category aggregation.Category
 		kind     aggregation.Kind
 		acfg     aggregator.Config
-		reader   *reader.Reader
+		reader   *reader.ReaderConfig
 
 		keysSet    *attribute.Set // With Int(0)
 		keysFilter *attribute.Filter
-	}
-
-	baseMetric[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
-		lock     sync.Mutex
-		fromName string
-		desc     sdkinstrument.Descriptor
-		acfg     aggregator.Config
-		data     map[attribute.Set]*Storage
-
-		keysSet    *attribute.Set
-		keysFilter *attribute.Filter
-	}
-
-	compiledSyncInstrument[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
-		baseMetric[N, Storage, Methods]
-	}
-
-	compiledAsyncInstrument[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
-		baseMetric[N, Storage, Methods]
-	}
-
-	statelessSyncProcess[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
-		compiledSyncInstrument[N, Storage, Methods]
-	}
-
-	statefulSyncProcess[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
-		compiledSyncInstrument[N, Storage, Methods]
-	}
-
-	statelessAsyncProcess[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
-		compiledAsyncInstrument[N, Storage, Methods]
-	}
-
-	statefulAsyncProcess[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
-		compiledAsyncInstrument[N, Storage, Methods]
-		prior map[attribute.Set]*Storage
-	}
-
-	syncAccumulator[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
-		current  Storage
-		snapshot Storage
-		output   *Storage
-	}
-
-	asyncAccumulator[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
-		lock     sync.Mutex
-		current  N
-		snapshot Storage
-		output   *Storage
 	}
 )
 
 const noConflictsString = "no conflicts"
 
-func New(lib instrumentation.Library, views []views.View, readers []*reader.Reader) *Compiler {
+type Compiler struct {
+	library instrumentation.Library
+	views   []views.View
+	readers []*reader.ReaderConfig
+
+	lock sync.Mutex
+
+	// names is the per-reader map of output names,
+	// indexed by the reader's position in `readers`.
+	names []map[string][]leafInstrument
+
+	// collectors is the de-duplicated list of metric outputs, which may
+	// contain conflicting identities.
+	collectors map[*reader.ReaderConfig][]Collector
+}
+
+func New(lib instrumentation.Library, views []views.View, readers []*reader.ReaderConfig) *Compiler {
 
 	// TODO: call views.Validate() to check for:
 	// - empty (?)
@@ -161,11 +108,11 @@ func New(lib instrumentation.Library, views []views.View, readers []*reader.Read
 		views:      views,
 		readers:    readers,
 		names:      names,
-		collectors: map[*reader.Reader][]Collector{},
+		collectors: map[*reader.ReaderConfig][]Collector{},
 	}
 }
 
-func (v *Compiler) Collectors(r *reader.Reader) []Collector {
+func (v *Compiler) Collectors(r *reader.ReaderConfig) []Collector {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	return v.collectors[r]
@@ -179,89 +126,6 @@ func keysToSet(keys []attribute.Key) *attribute.Set {
 	}
 	ns := attribute.NewSet(attrs...)
 	return &ns
-}
-
-// keyFilter provides an attribute.Filter implementation based on a
-// map[attribute.Key].
-type keyFilter map[attribute.Key]struct{}
-
-// filter is an attribute.Filter.
-func (ks keyFilter) filter(kv attribute.KeyValue) bool {
-	_, has := ks[kv.Key]
-	return has
-}
-
-func keysToFilter(keys []attribute.Key) *attribute.Filter {
-	kf := keyFilter{}
-	for _, k := range keys {
-		kf[k] = struct{}{}
-	}
-	var af attribute.Filter = kf.filter
-	return &af
-}
-
-func equalConfigs(a, b aggregator.Config) bool {
-	return reflect.DeepEqual(a, b)
-}
-
-func histogramBoundariesFor(r *reader.Reader, ik sdkinstrument.Kind, nk number.Kind, acfg aggregator.Config) []float64 {
-	if len(acfg.Histogram.ExplicitBoundaries) != 0 {
-		return acfg.Histogram.ExplicitBoundaries
-	}
-
-	cfg := r.DefaultAggregationConfig(ik, nk)
-	if len(cfg.Histogram.ExplicitBoundaries) != 0 {
-		return cfg.Histogram.ExplicitBoundaries
-	}
-	if nk == number.Int64Kind {
-		return histogram.DefaultInt64Boundaries
-	}
-	return histogram.DefaultFloat64Boundaries
-}
-
-func viewAggConfig(r *reader.Reader, ak aggregation.Kind, ik sdkinstrument.Kind, nk number.Kind, vcfg aggregator.Config) aggregator.Config {
-	if ak != aggregation.HistogramKind {
-		return aggregator.Config{}
-	}
-	return aggregator.Config{
-		Histogram: histogram.NewConfig(
-			histogramBoundariesFor(r, ik, nk, vcfg),
-		),
-	}
-}
-
-func checkSemanticCompat(ik sdkinstrument.Kind, cat aggregation.Category) error {
-	switch ik {
-	case sdkinstrument.CounterKind, sdkinstrument.HistogramKind:
-		switch cat {
-		case aggregation.MonotonicSumCategory, aggregation.HistogramCategory:
-			return nil
-		}
-	case sdkinstrument.UpDownCounterKind:
-		switch cat {
-		case aggregation.MonotonicSumCategory:
-			return nil
-		}
-	case sdkinstrument.CounterObserverKind:
-		switch cat {
-		case aggregation.MonotonicSumCategory:
-			return nil
-		}
-	case sdkinstrument.UpDownCounterObserverKind:
-		switch cat {
-		case aggregation.NonMonotonicSumCategory:
-			return nil
-		}
-	case sdkinstrument.GaugeObserverKind:
-		switch cat {
-		case aggregation.GaugeCategory:
-			return nil
-		}
-	}
-	return SemanticError{
-		InstrumentKind:      ik,
-		AggregationCategory: cat,
-	}
 }
 
 // Compile is called during NewInstrument by the Meter
@@ -323,7 +187,7 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 		}
 	}
 
-	compiled := map[*reader.Reader][]Instrument{}
+	compiled := map[*reader.ReaderConfig][]Instrument{}
 
 	v.lock.Lock()
 	defer v.lock.Unlock()
@@ -449,7 +313,90 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 	return multiInstrument[float64](compiled), err
 }
 
-func aggregationConfigFor(desc sdkinstrument.Descriptor, r *reader.Reader) aggregation.Kind {
+// keyFilter provides an attribute.Filter implementation based on a
+// map[attribute.Key].
+type keyFilter map[attribute.Key]struct{}
+
+// filter is an attribute.Filter.
+func (ks keyFilter) filter(kv attribute.KeyValue) bool {
+	_, has := ks[kv.Key]
+	return has
+}
+
+func keysToFilter(keys []attribute.Key) *attribute.Filter {
+	kf := keyFilter{}
+	for _, k := range keys {
+		kf[k] = struct{}{}
+	}
+	var af attribute.Filter = kf.filter
+	return &af
+}
+
+func equalConfigs(a, b aggregator.Config) bool {
+	return reflect.DeepEqual(a, b)
+}
+
+func histogramBoundariesFor(r *reader.ReaderConfig, ik sdkinstrument.Kind, nk number.Kind, acfg aggregator.Config) []float64 {
+	if len(acfg.Histogram.ExplicitBoundaries) != 0 {
+		return acfg.Histogram.ExplicitBoundaries
+	}
+
+	cfg := r.DefaultAggregationConfig(ik, nk)
+	if len(cfg.Histogram.ExplicitBoundaries) != 0 {
+		return cfg.Histogram.ExplicitBoundaries
+	}
+	if nk == number.Int64Kind {
+		return histogram.DefaultInt64Boundaries
+	}
+	return histogram.DefaultFloat64Boundaries
+}
+
+func viewAggConfig(r *reader.ReaderConfig, ak aggregation.Kind, ik sdkinstrument.Kind, nk number.Kind, vcfg aggregator.Config) aggregator.Config {
+	if ak != aggregation.HistogramKind {
+		return aggregator.Config{}
+	}
+	return aggregator.Config{
+		Histogram: histogram.NewConfig(
+			histogramBoundariesFor(r, ik, nk, vcfg),
+		),
+	}
+}
+
+func checkSemanticCompat(ik sdkinstrument.Kind, cat aggregation.Category) error {
+	switch ik {
+	case sdkinstrument.CounterKind, sdkinstrument.HistogramKind:
+		switch cat {
+		case aggregation.MonotonicSumCategory, aggregation.HistogramCategory:
+			return nil
+		}
+	case sdkinstrument.UpDownCounterKind:
+		switch cat {
+		case aggregation.MonotonicSumCategory, aggregation.NonMonotonicSumCategory:
+			return nil
+		}
+	case sdkinstrument.CounterObserverKind:
+		switch cat {
+		case aggregation.MonotonicSumCategory:
+			return nil
+		}
+	case sdkinstrument.UpDownCounterObserverKind:
+		switch cat {
+		case aggregation.NonMonotonicSumCategory:
+			return nil
+		}
+	case sdkinstrument.GaugeObserverKind:
+		switch cat {
+		case aggregation.GaugeCategory:
+			return nil
+		}
+	}
+	return SemanticError{
+		InstrumentKind:      ik,
+		AggregationCategory: cat,
+	}
+}
+
+func aggregationConfigFor(desc sdkinstrument.Descriptor, r *reader.ReaderConfig) aggregation.Kind {
 	return r.DefaultAggregation(desc.Kind)
 }
 
@@ -579,8 +526,10 @@ func compileAsync[N number.Any, Traits traits.Any[N]](config configuredBehavior)
 	}
 }
 
+type multiInstrument[N number.Any] map[*reader.ReaderConfig][]Instrument
+
 // NewAccumulator returns a Accumulator for multiple views of the same instrument.
-func (mi multiInstrument[N]) NewAccumulator(kvs attribute.Set, reader *reader.Reader) Accumulator {
+func (mi multiInstrument[N]) NewAccumulator(kvs attribute.Set, reader *reader.ReaderConfig) Accumulator {
 	var collectors []Accumulator
 	// Note: This runtime switch happens because we're using the same API for
 	// both async and sync instruments, whereas the APIs are not symmetrical.
@@ -606,6 +555,7 @@ func (mi multiInstrument[N]) NewAccumulator(kvs attribute.Set, reader *reader.Re
 }
 
 // multiAccumulator
+type multiAccumulator[N number.Any] []Accumulator
 
 func (c multiAccumulator[N]) Accumulate() {
 	for _, coll := range c {
@@ -620,6 +570,11 @@ func (c multiAccumulator[N]) Update(value N) {
 }
 
 // syncAccumulator
+type syncAccumulator[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+	current  Storage
+	snapshot Storage
+	output   *Storage
+}
 
 func (sc *syncAccumulator[N, Storage, Methods]) Update(number N) {
 	var methods Methods
@@ -633,6 +588,12 @@ func (sc *syncAccumulator[N, Storage, Methods]) Accumulate() {
 }
 
 // asyncAccumulator
+type asyncAccumulator[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+	lock     sync.Mutex
+	current  N
+	snapshot Storage
+	output   *Storage
+}
 
 func (ac *asyncAccumulator[N, Storage, Methods]) Update(number N) {
 	ac.lock.Lock()
@@ -651,6 +612,16 @@ func (ac *asyncAccumulator[N, Storage, Methods]) Accumulate() {
 }
 
 // baseMetric
+type baseMetric[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+	lock     sync.Mutex
+	fromName string
+	desc     sdkinstrument.Descriptor
+	acfg     aggregator.Config
+	data     map[attribute.Set]*Storage
+
+	keysSet    *attribute.Set
+	keysFilter *attribute.Filter
+}
 
 func (metric *baseMetric[N, Storage, Methods]) Aggregation() aggregation.Kind {
 	var methods Methods
@@ -712,8 +683,12 @@ func (metric *baseMetric[N, Storage, Methods]) newStorage() *Storage {
 	return ns
 }
 
+type compiledSyncInstrument[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+	baseMetric[N, Storage, Methods]
+}
+
 // NewAccumulator returns a Accumulator for a synchronous instrument view.
-func (csv *compiledSyncInstrument[N, Storage, Methods]) NewAccumulator(kvs attribute.Set, _ *reader.Reader) Accumulator {
+func (csv *compiledSyncInstrument[N, Storage, Methods]) NewAccumulator(kvs attribute.Set, _ *reader.ReaderConfig) Accumulator {
 	sc := &syncAccumulator[N, Storage, Methods]{}
 	csv.initStorage(&sc.current)
 	csv.initStorage(&sc.snapshot)
@@ -723,8 +698,12 @@ func (csv *compiledSyncInstrument[N, Storage, Methods]) NewAccumulator(kvs attri
 	return sc
 }
 
+type compiledAsyncInstrument[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+	baseMetric[N, Storage, Methods]
+}
+
 // NewAccumulator returns a Accumulator for an asynchronous instrument view.
-func (cav *compiledAsyncInstrument[N, Storage, Methods]) NewAccumulator(kvs attribute.Set, _ *reader.Reader) Accumulator {
+func (cav *compiledAsyncInstrument[N, Storage, Methods]) NewAccumulator(kvs attribute.Set, _ *reader.ReaderConfig) Accumulator {
 	ac := &asyncAccumulator[N, Storage, Methods]{}
 
 	cav.initStorage(&ac.snapshot)
@@ -749,8 +728,27 @@ func appendPoint(points *[]reader.Point, set attribute.Set, agg aggregation.Aggr
 	soutput.End = end
 }
 
+type (
+	statelessSyncProcess[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+		compiledSyncInstrument[N, Storage, Methods]
+	}
+
+	statefulSyncProcess[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+		compiledSyncInstrument[N, Storage, Methods]
+	}
+
+	statelessAsyncProcess[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+		compiledAsyncInstrument[N, Storage, Methods]
+	}
+
+	statefulAsyncProcess[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
+		compiledAsyncInstrument[N, Storage, Methods]
+		prior map[attribute.Set]*Storage
+	}
+)
+
 // Collect for Synchronous Delta->Cumulative
-func (p *statefulSyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, seq reader.Sequence, output *[]reader.Instrument) {
+func (p *statefulSyncProcess[N, Storage, Methods]) Collect(_ *reader.ReaderConfig, seq reader.Sequence, output *[]reader.Instrument) {
 	var methods Methods
 
 	p.lock.Lock()
@@ -766,7 +764,7 @@ func (p *statefulSyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, seq
 }
 
 // Collect for Synchronous Delta->Delta
-func (p *statelessSyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, seq reader.Sequence, output *[]reader.Instrument) {
+func (p *statelessSyncProcess[N, Storage, Methods]) Collect(_ *reader.ReaderConfig, seq reader.Sequence, output *[]reader.Instrument) {
 	var methods Methods
 
 	p.lock.Lock()
@@ -792,7 +790,7 @@ func (p *statelessSyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, se
 }
 
 // Collect for Asychronous Cumulative->Cumulative
-func (p *statelessAsyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, seq reader.Sequence, output *[]reader.Instrument) {
+func (p *statelessAsyncProcess[N, Storage, Methods]) Collect(_ *reader.ReaderConfig, seq reader.Sequence, output *[]reader.Instrument) {
 	var methods Methods
 
 	p.lock.Lock()
@@ -810,7 +808,7 @@ func (p *statelessAsyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, s
 }
 
 // Collect for Asynchronous Cumulative->Delta
-func (p *statefulAsyncProcess[N, Storage, Methods]) Collect(_ *reader.Reader, seq reader.Sequence, output *[]reader.Instrument) {
+func (p *statefulAsyncProcess[N, Storage, Methods]) Collect(_ *reader.ReaderConfig, seq reader.Sequence, output *[]reader.Instrument) {
 	var methods Methods
 
 	p.lock.Lock()

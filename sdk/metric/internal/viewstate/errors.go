@@ -22,7 +22,7 @@ import (
 // Full information about every conflict or error is always returned
 // to the caller that registered the instrument along with a valid
 // (potentially in-conflict) instrument.
-type ViewConflicts map[*reader.Reader][]Conflict
+type ViewConflicts map[*reader.ReaderConfig][]Conflict
 
 var _ error = ViewConflicts{}
 

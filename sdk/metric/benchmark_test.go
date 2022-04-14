@@ -11,8 +11,7 @@ import (
 
 func BenchmarkCounterAddNoAttrs(b *testing.B) {
 	ctx := context.Background()
-	exp := metrictest.NewExporter()
-	rdr := reader.New(exp)
+	rdr := metrictest.NewReader()
 	provider := New(WithReader(rdr))
 	b.ReportAllocs()
 
@@ -29,8 +28,7 @@ func BenchmarkCounterAddNoAttrs(b *testing.B) {
 //  3. an attribute array (map key)
 func BenchmarkCounterAddOneAttr(b *testing.B) {
 	ctx := context.Background()
-	exp := metrictest.NewExporter()
-	rdr := reader.New(exp)
+	rdr := metrictest.NewReader()
 	provider := New(WithReader(rdr))
 	b.ReportAllocs()
 
@@ -54,8 +52,7 @@ func BenchmarkCounterAddOneAttr(b *testing.B) {
 // 10. an output Aggregator
 func BenchmarkCounterAddManyAttrs(b *testing.B) {
 	ctx := context.Background()
-	exp := metrictest.NewExporter()
-	rdr := reader.New(exp)
+	rdr := metrictest.NewReader()
 	provider := New(WithReader(rdr))
 	b.ReportAllocs()
 
@@ -68,9 +65,9 @@ func BenchmarkCounterAddManyAttrs(b *testing.B) {
 
 func BenchmarkCounterCollectOneAttrNoReuse(b *testing.B) {
 	ctx := context.Background()
-	exp := metrictest.NewExporter()
-	rdr := reader.New(exp)
+	rdr := metrictest.NewReader()
 	provider := New(WithReader(rdr))
+	producer := rdr.Producer()
 	b.ReportAllocs()
 
 	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
@@ -78,15 +75,15 @@ func BenchmarkCounterCollectOneAttrNoReuse(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		cntr.Add(ctx, 1, attribute.Int("K", 1))
 
-		_ = exp.Produce(nil)
+		_ = producer.Produce(ctx, nil)
 	}
 }
 
 func BenchmarkCounterCollectOneAttrWithReuse(b *testing.B) {
 	ctx := context.Background()
-	exp := metrictest.NewExporter()
-	rdr := reader.New(exp)
+	rdr := metrictest.NewReader()
 	provider := New(WithReader(rdr))
+	producer := rdr.Producer()
 	b.ReportAllocs()
 
 	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
@@ -96,15 +93,15 @@ func BenchmarkCounterCollectOneAttrWithReuse(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		cntr.Add(ctx, 1, attribute.Int("K", 1))
 
-		reuse = exp.Produce(&reuse)
+		reuse = producer.Produce(ctx, &reuse)
 	}
 }
 
 func BenchmarkCounterCollectTenAttrs(b *testing.B) {
 	ctx := context.Background()
-	exp := metrictest.NewExporter()
-	rdr := reader.New(exp)
+	rdr := metrictest.NewReader()
 	provider := New(WithReader(rdr))
+	producer := rdr.Producer()
 	b.ReportAllocs()
 
 	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
@@ -115,15 +112,15 @@ func BenchmarkCounterCollectTenAttrs(b *testing.B) {
 		for j := 0; j < 10; j++ {
 			cntr.Add(ctx, 1, attribute.Int("K", j))
 		}
-		reuse = exp.Produce(&reuse)
+		reuse = producer.Produce(ctx, &reuse)
 	}
 }
 
 func BenchmarkCounterCollectTenAttrsTenTimes(b *testing.B) {
 	ctx := context.Background()
-	exp := metrictest.NewExporter()
-	rdr := reader.New(exp)
+	rdr := metrictest.NewReader()
 	provider := New(WithReader(rdr))
+	producer := rdr.Producer()
 	b.ReportAllocs()
 
 	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
@@ -135,7 +132,7 @@ func BenchmarkCounterCollectTenAttrsTenTimes(b *testing.B) {
 			for j := 0; j < 10; j++ {
 				cntr.Add(ctx, 1, attribute.Int("K", j))
 			}
-			reuse = exp.Produce(&reuse)
+			reuse = producer.Produce(ctx, &reuse)
 		}
 	}
 }

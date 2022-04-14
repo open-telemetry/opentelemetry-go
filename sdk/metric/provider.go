@@ -21,7 +21,7 @@ import (
 type (
 	Config struct {
 		res     *resource.Resource
-		readers []*reader.Reader
+		readers []*reader.ReaderConfig
 		views   []views.View
 	}
 
@@ -38,7 +38,7 @@ type (
 	providerProducer struct {
 		lock        sync.Mutex
 		provider    *Provider
-		reader      *reader.Reader
+		reader      *reader.ReaderConfig
 		lastCollect time.Time
 	}
 
@@ -54,7 +54,7 @@ type (
 	}
 
 	instrumentIface interface {
-		AccumulateFor(*reader.Reader)
+		AccumulateFor(*reader.ReaderConfig)
 	}
 )
 
@@ -69,9 +69,10 @@ func WithResource(res *resource.Resource) Option {
 	}
 }
 
-func WithReader(r *reader.Reader) Option {
+func WithReader(r reader.Reader, opts ...reader.Option) Option {
 	return func(cfg *Config) {
-		cfg.readers = append(cfg.readers, r)
+		rConfig := reader.NewConfig(r, opts...)
+		cfg.readers = append(cfg.readers, rConfig)
 	}
 }
 
@@ -94,12 +95,12 @@ func New(opts ...Option) *Provider {
 		meters:    map[instrumentation.Library]*meter{},
 	}
 	for _, reader := range cfg.readers {
-		reader.Exporter().Register(p.producerFor(reader))
+		reader.Reader().Register(p.producerFor(reader))
 	}
 	return p
 }
 
-func (p *Provider) producerFor(r *reader.Reader) reader.Producer {
+func (p *Provider) producerFor(r *reader.ReaderConfig) reader.Producer {
 	return &providerProducer{
 		provider:    p,
 		reader:      r,
@@ -107,7 +108,7 @@ func (p *Provider) producerFor(r *reader.Reader) reader.Producer {
 	}
 }
 
-func (pp *providerProducer) Produce(inout *reader.Metrics) reader.Metrics {
+func (pp *providerProducer) Produce(ctx context.Context, inout *reader.Metrics) reader.Metrics {
 	ordered := pp.provider.getOrdered()
 
 	// Note: the Last time is only used in delta-temporality
@@ -136,9 +137,6 @@ func (pp *providerProducer) Produce(inout *reader.Metrics) reader.Metrics {
 		Last:  lastTime,
 		Now:   nowTime,
 	}
-
-	// TODO: Add a timeout to the context.
-	ctx := context.Background()
 
 	for _, meter := range ordered {
 		meter.lock.Lock()

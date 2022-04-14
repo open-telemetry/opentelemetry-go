@@ -31,8 +31,8 @@ func TestViewConflictsError(t *testing.T) {
 	require.Equal(t, noConflictsString, err.Error())
 	require.True(t, errors.Is(err, ViewConflicts{}))
 
-	rd1 := reader.New(metrictest.NewExporter())
-	rd2 := reader.New(metrictest.NewExporter())
+	rd1 := reader.NewConfig(metrictest.NewReader())
+	rd2 := reader.NewConfig(metrictest.NewReader())
 
 	require.True(t, errors.Is(oneConflict.Semantic, SemanticError{}))
 
@@ -76,8 +76,8 @@ func TestViewConflictsError(t *testing.T) {
 // conflicts are printed.  Note this uses the real library to generate
 // the conflict, to avoid creating a relatively large test-only type.
 func TestConflictError(t *testing.T) {
-	rds := []*reader.Reader{
-		reader.New(metrictest.NewExporter(), reader.WithDefaultAggregationKindFunc(func(k sdkinstrument.Kind) aggregation.Kind {
+	rds := []*reader.ReaderConfig{
+		reader.NewConfig(metrictest.NewReader(), reader.WithDefaultAggregationKindFunc(func(k sdkinstrument.Kind) aggregation.Kind {
 			return aggregation.GaugeKind
 		})),
 	}
