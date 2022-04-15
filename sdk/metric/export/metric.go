@@ -222,14 +222,6 @@ func (m Metadata) Descriptor() *sdkapi.Descriptor {
 	return m.descriptor
 }
 
-// Labels describes the attributes associated with the instrument and the
-// aggregated data.
-//
-// Deprecated: Use Attributes instead.
-func (m Metadata) Labels() *attribute.Set {
-	return m.attrs
-}
-
 // Attributes returns the attribute set associated with the instrument and the
 // aggregated data.
 func (m Metadata) Attributes() *attribute.Set {
