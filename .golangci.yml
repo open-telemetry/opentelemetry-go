@@ -2,6 +2,7 @@
 run:
   issues-exit-code: 1 #Default
   tests: true #Default
+  go: 1.18
 
 linters:
   # Disable everything by default so upgrades to not include new "default

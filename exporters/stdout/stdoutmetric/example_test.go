@@ -98,5 +98,5 @@ func Example() {
 
 	log.Println("the answer is", add(ctx, multiply(ctx, multiply(ctx, 2, 2), 10), 2))
 
-	reader.Collect(ctx, nil)
+	_ = reader.Collect(ctx, nil)
 }

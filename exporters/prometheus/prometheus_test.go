@@ -89,7 +89,7 @@ func newPipeline(config prometheus.Config, boundaries []float64, sdkopts []sdkme
 
 	opt := reader.WithDefaultAggregationConfigFunc(func(k sdkinstrument.Kind) (aggregator.Config, aggregator.Config) {
 		cfg := aggregator.Config{
-			aggregator.HistogramConfig{
+			Histogram: aggregator.HistogramConfig{
 				ExplicitBoundaries: boundaries,
 			},
 		}

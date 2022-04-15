@@ -33,9 +33,6 @@ import (
 
 var (
 	lemonsKey = attribute.Key("ex.com/lemons")
-
-	// TODO Bring back Global package
-	meterProvider metric.MeterProvider
 )
 
 func initMeter() metric.MeterProvider {
