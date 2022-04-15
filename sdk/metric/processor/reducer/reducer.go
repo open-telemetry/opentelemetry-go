@@ -28,14 +28,6 @@ type (
 		filterSelector AttributeFilterSelector
 	}
 
-	// LabelFilterSelector is the interface used to configure a
-	// specific Filter to an instrument.
-	//
-	// Deprecated: Use AttributeFilterSelector instead.
-	LabelFilterSelector interface {
-		LabelFilterFor(descriptor *sdkapi.Descriptor) attribute.Filter
-	}
-
 	// AttributeFilterSelector selects an attribute filter based on the
 	// instrument described by the descriptor.
 	AttributeFilterSelector interface {
