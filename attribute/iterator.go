@@ -48,14 +48,14 @@ func (i *Iterator) Next() bool {
 //
 // Deprecated: Use Attribute instead.
 func (i *Iterator) Label() KeyValue {
-	kv, _ := i.storage.Get(i.idx)
-	return kv
+	return i.Attribute()
 }
 
 // Attribute returns the current KeyValue of the Iterator. It must be called
 // only after Next returns true.
 func (i *Iterator) Attribute() KeyValue {
-	return i.Attribute()
+	kv, _ := i.storage.Get(i.idx)
+	return kv
 }
 
 // IndexedLabel returns current index and attribute. Must be called only
