@@ -42,7 +42,7 @@ type (
 
 		descriptor sdkinstrument.Descriptor
 		compiled   viewstate.Instrument
-		state      map[*reader.ReaderConfig]*readerState
+		state      map[*reader.Config]*readerState
 	}
 
 	Callback struct {
@@ -51,11 +51,11 @@ type (
 	}
 
 	readerCallback struct {
-		*reader.ReaderConfig
+		*reader.Config
 		*Callback
 	}
 
-	observer[N number.Any, Traits traits.Any[N]] struct {
+	Observer[N number.Any, Traits traits.Any[N]] struct {
 		instrument.Asynchronous
 
 		inst *Instrument
@@ -68,11 +68,11 @@ type (
 	contextKey struct{}
 )
 
-var _ memberInstrument = observer[int64, traits.Int64]{}
-var _ memberInstrument = observer[float64, traits.Float64]{}
+var _ memberInstrument = Observer[int64, traits.Int64]{}
+var _ memberInstrument = Observer[float64, traits.Float64]{}
 
-func NewInstrument(desc sdkinstrument.Descriptor, compiled viewstate.Instrument, readers []*reader.ReaderConfig) *Instrument {
-	state := map[*reader.ReaderConfig]*readerState{}
+func NewInstrument(desc sdkinstrument.Descriptor, compiled viewstate.Instrument, readers []*reader.Config) *Instrument {
+	state := map[*reader.Config]*readerState{}
 	for _, r := range readers {
 		state[r] = &readerState{
 			store: map[attribute.Set]viewstate.Accumulator{},
@@ -85,8 +85,8 @@ func NewInstrument(desc sdkinstrument.Descriptor, compiled viewstate.Instrument,
 	}
 }
 
-func NewObserver[N number.Any, Traits traits.Any[N]](inst *Instrument) observer[N, Traits] {
-	return observer[N, Traits]{inst: inst}
+func NewObserver[N number.Any, Traits traits.Any[N]](inst *Instrument) Observer[N, Traits] {
+	return Observer[N, Traits]{inst: inst}
 }
 
 func NewCallback(instruments []apiInstrument.Asynchronous, function func(context.Context)) (*Callback, error) {
@@ -106,14 +106,14 @@ func NewCallback(instruments []apiInstrument.Asynchronous, function func(context
 	return cb, nil
 }
 
-func (c *Callback) Run(ctx context.Context, r *reader.ReaderConfig) {
+func (c *Callback) Run(ctx context.Context, r *reader.Config) {
 	c.function(context.WithValue(ctx, contextKey{}, readerCallback{
-		ReaderConfig: r,
-		Callback:     c,
+		Config:   r,
+		Callback: c,
 	}))
 }
 
-func (inst *Instrument) AccumulateFor(r *reader.ReaderConfig) {
+func (inst *Instrument) AccumulateFor(r *reader.Config) {
 	rs := inst.state[r]
 
 	// This limits concurrent asynchronous collection, which is
@@ -132,11 +132,11 @@ func (inst *Instrument) AccumulateFor(r *reader.ReaderConfig) {
 	rs.store = map[attribute.Set]viewstate.Accumulator{}
 }
 
-func (o observer[N, Traits]) instrument() *Instrument {
+func (o Observer[N, Traits]) instrument() *Instrument {
 	return o.inst
 }
 
-func (o observer[N, Traits]) Observe(ctx context.Context, value N, attrs ...attribute.KeyValue) {
+func (o Observer[N, Traits]) Observe(ctx context.Context, value N, attrs ...attribute.KeyValue) {
 	if o.inst == nil {
 		return
 	}
@@ -156,11 +156,11 @@ func (o observer[N, Traits]) Observe(ctx context.Context, value N, attrs ...attr
 		otel.Handle(err)
 		return
 	}
-	se := o.inst.get(rc.ReaderConfig, attrs)
+	se := o.inst.get(rc.Config, attrs)
 	se.(viewstate.AccumulatorUpdater[N]).Update(value)
 }
 
-func (inst *Instrument) get(r *reader.ReaderConfig, attrs []attribute.KeyValue) viewstate.Accumulator {
+func (inst *Instrument) get(r *reader.Config, attrs []attribute.KeyValue) viewstate.Accumulator {
 	rs := inst.state[r]
 	rs.lock.Lock()
 	defer rs.lock.Unlock()

@@ -134,15 +134,15 @@ func testInst(name string, ik sdkinstrument.Kind, nk number.Kind, opts ...instru
 	return sdkinstrument.NewDescriptor(name, ik, nk, cfg.Description(), cfg.Unit())
 }
 
-func twoTestReaders(opts ...reader.Option) []*reader.ReaderConfig {
-	return []*reader.ReaderConfig{
+func twoTestReaders(opts ...reader.Option) []*reader.Config {
+	return []*reader.Config{
 		reader.NewConfig(metrictest.NewReader(), opts...),
 		reader.NewConfig(metrictest.NewReader(), opts...),
 	}
 }
 
-func oneTestReader(opts ...reader.Option) []*reader.ReaderConfig {
-	return []*reader.ReaderConfig{reader.NewConfig(metrictest.NewReader(), opts...)}
+func oneTestReader(opts ...reader.Option) []*reader.Config {
+	return []*reader.Config{reader.NewConfig(metrictest.NewReader(), opts...)}
 }
 
 // TestDeduplicateNoConflict verifies that two identical instruments
@@ -307,7 +307,7 @@ func TestDuplicateAggregatorConfigNoConflict(t *testing.T) {
 
 	for _, nk := range numberKinds {
 		t.Run(nk.String(), func(t *testing.T) {
-			rds := []*reader.ReaderConfig{
+			rds := []*reader.Config{
 				reader.NewConfig(exp, reader.WithDefaultAggregationConfigFunc(
 					func(_ sdkinstrument.Kind) (int64Config, float64Config aggregator.Config) {
 						if nk == number.Int64Kind {
@@ -359,7 +359,7 @@ func TestDuplicateAggregationKindConflict(t *testing.T) {
 // the reader drops the instrument.
 func TestDuplicateAggregationKindOneConflict(t *testing.T) {
 	// Let one reader drop histograms
-	rds := []*reader.ReaderConfig{
+	rds := []*reader.Config{
 		reader.NewConfig(metrictest.NewReader(), reader.WithDefaultAggregationKindFunc(func(k sdkinstrument.Kind) aggregation.Kind {
 			if k == sdkinstrument.HistogramKind {
 				return aggregation.DropKind
@@ -525,7 +525,7 @@ func TestDuplicatesMergeDescriptor(t *testing.T) {
 	)
 }
 
-func testCollect(t *testing.T, vc *Compiler, r *reader.ReaderConfig) []reader.Instrument {
+func testCollect(t *testing.T, vc *Compiler, r *reader.Config) []reader.Instrument {
 	var output []reader.Instrument
 	for _, coll := range vc.Collectors(r) {
 		coll.Collect(r, testSequence, &output)

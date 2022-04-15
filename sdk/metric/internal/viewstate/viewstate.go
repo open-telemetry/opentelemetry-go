@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//nolint:revive //Generics receiver nameing is broken in revive as of 04/15/2022
 package viewstate
 
 import (
@@ -40,7 +41,7 @@ type (
 		// the attributes `kvs`.  If reader == nil the
 		// accumulator applies to all readers, otherwise it
 		// applies to the specific reader.
-		NewAccumulator(kvs attribute.Set, reader *reader.ReaderConfig) Accumulator
+		NewAccumulator(kvs attribute.Set, reader *reader.Config) Accumulator
 	}
 
 	leafInstrument interface {
@@ -54,7 +55,7 @@ type (
 	Collector interface {
 		// Collect transfers aggregated data from the
 		// Accumulators into the output struct.
-		Collect(reader *reader.ReaderConfig, sequence reader.Sequence, output *[]reader.Instrument)
+		Collect(reader *reader.Config, sequence reader.Sequence, output *[]reader.Instrument)
 	}
 
 	Accumulator interface {
@@ -76,7 +77,7 @@ type (
 		category aggregation.Category
 		kind     aggregation.Kind
 		acfg     aggregator.Config
-		reader   *reader.ReaderConfig
+		reader   *reader.Config
 
 		keysSet    *attribute.Set // With Int(0)
 		keysFilter *attribute.Filter
@@ -88,7 +89,7 @@ const noConflictsString = "no conflicts"
 type Compiler struct {
 	library instrumentation.Library
 	views   []views.View
-	readers []*reader.ReaderConfig
+	readers []*reader.Config
 
 	lock sync.Mutex
 
@@ -98,10 +99,10 @@ type Compiler struct {
 
 	// collectors is the de-duplicated list of metric outputs, which may
 	// contain conflicting identities.
-	collectors map[*reader.ReaderConfig][]Collector
+	collectors map[*reader.Config][]Collector
 }
 
-func New(lib instrumentation.Library, views []views.View, readers []*reader.ReaderConfig) *Compiler {
+func New(lib instrumentation.Library, views []views.View, readers []*reader.Config) *Compiler {
 
 	// TODO: call views.Validate() to check for:
 	// - empty (?)
@@ -122,11 +123,11 @@ func New(lib instrumentation.Library, views []views.View, readers []*reader.Read
 		views:      views,
 		readers:    readers,
 		names:      names,
-		collectors: map[*reader.ReaderConfig][]Collector{},
+		collectors: map[*reader.Config][]Collector{},
 	}
 }
 
-func (v *Compiler) Collectors(r *reader.ReaderConfig) []Collector {
+func (v *Compiler) Collectors(r *reader.Config) []Collector {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	return v.collectors[r]
@@ -201,7 +202,7 @@ func (v *Compiler) Compile(instrument sdkinstrument.Descriptor) (Instrument, err
 		}
 	}
 
-	compiled := map[*reader.ReaderConfig][]Instrument{}
+	compiled := map[*reader.Config][]Instrument{}
 
 	v.lock.Lock()
 	defer v.lock.Unlock()
@@ -350,7 +351,7 @@ func equalConfigs(a, b aggregator.Config) bool {
 	return reflect.DeepEqual(a, b)
 }
 
-func histogramBoundariesFor(r *reader.ReaderConfig, ik sdkinstrument.Kind, nk number.Kind, acfg aggregator.Config) []float64 {
+func histogramBoundariesFor(r *reader.Config, ik sdkinstrument.Kind, nk number.Kind, acfg aggregator.Config) []float64 {
 	if len(acfg.Histogram.ExplicitBoundaries) != 0 {
 		return acfg.Histogram.ExplicitBoundaries
 	}
@@ -365,7 +366,7 @@ func histogramBoundariesFor(r *reader.ReaderConfig, ik sdkinstrument.Kind, nk nu
 	return histogram.DefaultFloat64Boundaries
 }
 
-func viewAggConfig(r *reader.ReaderConfig, ak aggregation.Kind, ik sdkinstrument.Kind, nk number.Kind, vcfg aggregator.Config) aggregator.Config {
+func viewAggConfig(r *reader.Config, ak aggregation.Kind, ik sdkinstrument.Kind, nk number.Kind, vcfg aggregator.Config) aggregator.Config {
 	if ak != aggregation.HistogramKind {
 		return aggregator.Config{}
 	}
@@ -410,7 +411,7 @@ func checkSemanticCompat(ik sdkinstrument.Kind, cat aggregation.Category) error 
 	}
 }
 
-func aggregationConfigFor(desc sdkinstrument.Descriptor, r *reader.ReaderConfig) aggregation.Kind {
+func aggregationConfigFor(desc sdkinstrument.Descriptor, r *reader.Config) aggregation.Kind {
 	return r.DefaultAggregation(desc.Kind)
 }
 
@@ -442,17 +443,16 @@ func newSyncView[
 	Methods aggregator.Methods[N, Storage],
 ](config configuredBehavior) leafInstrument {
 	tempo := config.reader.DefaultTemporality(config.desc.Kind)
-	metric := baseMetric[N, Storage, Methods]{
-		fromName: config.fromName,
-		desc:     config.desc,
-		acfg:     config.acfg,
-		data:     map[attribute.Set]*Storage{},
+	instrument := &compiledSyncInstrument[N, Storage, Methods]{
+		baseMetric: baseMetric[N, Storage, Methods]{
+			fromName: config.fromName,
+			desc:     config.desc,
+			acfg:     config.acfg,
+			data:     map[attribute.Set]*Storage{},
 
-		keysSet:    config.keysSet,
-		keysFilter: config.keysFilter,
-	}
-	instrument := compiledSyncInstrument[N, Storage, Methods]{
-		baseMetric: metric,
+			keysSet:    config.keysSet,
+			keysFilter: config.keysFilter,
+		},
 	}
 	if tempo == aggregation.DeltaTemporality {
 		return &statelessSyncProcess[N, Storage, Methods]{
@@ -471,15 +471,14 @@ func newAsyncView[
 	Methods aggregator.Methods[N, Storage],
 ](config configuredBehavior) leafInstrument {
 	tempo := config.reader.DefaultTemporality(config.desc.Kind)
-	metric := baseMetric[N, Storage, Methods]{
-		fromName: config.fromName,
-		desc:     config.desc,
-		acfg:     config.acfg,
-		data:     map[attribute.Set]*Storage{},
-		keysSet:  config.keysSet,
-	}
-	instrument := compiledAsyncInstrument[N, Storage, Methods]{
-		baseMetric: metric,
+	instrument := &compiledAsyncInstrument[N, Storage, Methods]{
+		baseMetric: baseMetric[N, Storage, Methods]{
+			fromName: config.fromName,
+			desc:     config.desc,
+			acfg:     config.acfg,
+			data:     map[attribute.Set]*Storage{},
+			keysSet:  config.keysSet,
+		},
 	}
 	if tempo == aggregation.DeltaTemporality {
 		return &statefulAsyncProcess[N, Storage, Methods]{
@@ -540,10 +539,10 @@ func compileAsync[N number.Any, Traits traits.Any[N]](config configuredBehavior)
 	}
 }
 
-type multiInstrument[N number.Any] map[*reader.ReaderConfig][]Instrument
+type multiInstrument[N number.Any] map[*reader.Config][]Instrument
 
 // NewAccumulator returns a Accumulator for multiple views of the same instrument.
-func (mi multiInstrument[N]) NewAccumulator(kvs attribute.Set, reader *reader.ReaderConfig) Accumulator {
+func (mi multiInstrument[N]) NewAccumulator(kvs attribute.Set, reader *reader.Config) Accumulator {
 	var collectors []Accumulator
 	// Note: This runtime switch happens because we're using the same API for
 	// both async and sync instruments, whereas the APIs are not symmetrical.
@@ -571,14 +570,14 @@ func (mi multiInstrument[N]) NewAccumulator(kvs attribute.Set, reader *reader.Re
 // multiAccumulator
 type multiAccumulator[N number.Any] []Accumulator
 
-func (c multiAccumulator[N]) Accumulate() {
-	for _, coll := range c {
+func (ma multiAccumulator[N]) Accumulate() {
+	for _, coll := range ma {
 		coll.Accumulate()
 	}
 }
 
-func (c multiAccumulator[N]) Update(value N) {
-	for _, coll := range c {
+func (ma multiAccumulator[N]) Update(value N) {
+	for _, coll := range ma {
 		coll.(Updater[N]).Update(value)
 	}
 }
@@ -702,7 +701,7 @@ type compiledSyncInstrument[N number.Any, Storage any, Methods aggregator.Method
 }
 
 // NewAccumulator returns a Accumulator for a synchronous instrument view.
-func (csv *compiledSyncInstrument[N, Storage, Methods]) NewAccumulator(kvs attribute.Set, _ *reader.ReaderConfig) Accumulator {
+func (csv *compiledSyncInstrument[N, Storage, Methods]) NewAccumulator(kvs attribute.Set, _ *reader.Config) Accumulator {
 	sc := &syncAccumulator[N, Storage, Methods]{}
 	csv.initStorage(&sc.current)
 	csv.initStorage(&sc.snapshot)
@@ -717,7 +716,7 @@ type compiledAsyncInstrument[N number.Any, Storage any, Methods aggregator.Metho
 }
 
 // NewAccumulator returns a Accumulator for an asynchronous instrument view.
-func (cav *compiledAsyncInstrument[N, Storage, Methods]) NewAccumulator(kvs attribute.Set, _ *reader.ReaderConfig) Accumulator {
+func (cav *compiledAsyncInstrument[N, Storage, Methods]) NewAccumulator(kvs attribute.Set, _ *reader.Config) Accumulator {
 	ac := &asyncAccumulator[N, Storage, Methods]{}
 
 	cav.initStorage(&ac.snapshot)
@@ -744,25 +743,25 @@ func appendPoint(points *[]reader.Point, set attribute.Set, agg aggregation.Aggr
 
 type (
 	statelessSyncProcess[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
-		compiledSyncInstrument[N, Storage, Methods]
+		*compiledSyncInstrument[N, Storage, Methods]
 	}
 
 	statefulSyncProcess[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
-		compiledSyncInstrument[N, Storage, Methods]
+		*compiledSyncInstrument[N, Storage, Methods]
 	}
 
 	statelessAsyncProcess[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
-		compiledAsyncInstrument[N, Storage, Methods]
+		*compiledAsyncInstrument[N, Storage, Methods]
 	}
 
 	statefulAsyncProcess[N number.Any, Storage any, Methods aggregator.Methods[N, Storage]] struct {
-		compiledAsyncInstrument[N, Storage, Methods]
+		*compiledAsyncInstrument[N, Storage, Methods]
 		prior map[attribute.Set]*Storage
 	}
 )
 
 // Collect for Synchronous Delta->Cumulative
-func (p *statefulSyncProcess[N, Storage, Methods]) Collect(_ *reader.ReaderConfig, seq reader.Sequence, output *[]reader.Instrument) {
+func (p *statefulSyncProcess[N, Storage, Methods]) Collect(_ *reader.Config, seq reader.Sequence, output *[]reader.Instrument) {
 	var methods Methods
 
 	p.lock.Lock()
@@ -778,7 +777,7 @@ func (p *statefulSyncProcess[N, Storage, Methods]) Collect(_ *reader.ReaderConfi
 }
 
 // Collect for Synchronous Delta->Delta
-func (p *statelessSyncProcess[N, Storage, Methods]) Collect(_ *reader.ReaderConfig, seq reader.Sequence, output *[]reader.Instrument) {
+func (p *statelessSyncProcess[N, Storage, Methods]) Collect(_ *reader.Config, seq reader.Sequence, output *[]reader.Instrument) {
 	var methods Methods
 
 	p.lock.Lock()
@@ -804,7 +803,7 @@ func (p *statelessSyncProcess[N, Storage, Methods]) Collect(_ *reader.ReaderConf
 }
 
 // Collect for Asynchronous Cumulative->Cumulative
-func (p *statelessAsyncProcess[N, Storage, Methods]) Collect(_ *reader.ReaderConfig, seq reader.Sequence, output *[]reader.Instrument) {
+func (p *statelessAsyncProcess[N, Storage, Methods]) Collect(_ *reader.Config, seq reader.Sequence, output *[]reader.Instrument) {
 	var methods Methods
 
 	p.lock.Lock()
@@ -822,7 +821,7 @@ func (p *statelessAsyncProcess[N, Storage, Methods]) Collect(_ *reader.ReaderCon
 }
 
 // Collect for Asynchronous Cumulative->Delta
-func (p *statefulAsyncProcess[N, Storage, Methods]) Collect(_ *reader.ReaderConfig, seq reader.Sequence, output *[]reader.Instrument) {
+func (p *statefulAsyncProcess[N, Storage, Methods]) Collect(_ *reader.Config, seq reader.Sequence, output *[]reader.Instrument) {
 	var methods Methods
 
 	p.lock.Lock()

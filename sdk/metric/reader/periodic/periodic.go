@@ -114,7 +114,5 @@ func (e *exporter) Flush(ctx context.Context) error {
 
 func (e *exporter) Shutdown(ctx context.Context) error {
 	close(e.done)
-	e.reader.Shutdown(ctx)
-
-	return nil
+	return e.reader.Shutdown(ctx)
 }

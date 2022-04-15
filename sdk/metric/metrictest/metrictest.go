@@ -105,14 +105,14 @@ type ExportRecord struct {
 type Reader struct {
 	*reader.ManualReader
 
-	exporter Exporter
+	exporter *Exporter
 	producer reader.Producer
 }
 
 func NewReader() *Reader {
-	exp := Exporter{}
+	exp := &Exporter{}
 	return &Reader{
-		ManualReader: reader.NewManualReader(&exp),
+		ManualReader: reader.NewManualReader(exp),
 
 		exporter: exp,
 	}

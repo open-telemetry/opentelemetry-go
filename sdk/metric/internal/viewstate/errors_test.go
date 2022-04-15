@@ -91,7 +91,7 @@ func TestViewConflictsError(t *testing.T) {
 // conflicts are printed.  Note this uses the real library to generate
 // the conflict, to avoid creating a relatively large test-only type.
 func TestConflictError(t *testing.T) {
-	rds := []*reader.ReaderConfig{
+	rds := []*reader.Config{
 		reader.NewConfig(metrictest.NewReader(), reader.WithDefaultAggregationKindFunc(func(k sdkinstrument.Kind) aggregation.Kind {
 			return aggregation.GaugeKind
 		})),

@@ -64,22 +64,22 @@ type (
 		accumulator viewstate.Accumulator
 	}
 
-	counter[N number.Any, Traits traits.Any[N]] struct {
+	Counter[N number.Any, Traits traits.Any[N]] struct {
 		*Instrument
 	}
 
-	histogram[N number.Any, Traits traits.Any[N]] struct {
+	Histogram[N number.Any, Traits traits.Any[N]] struct {
 		*Instrument
 	}
 )
 
 var (
-	_ syncint64.Counter         = counter[int64, traits.Int64]{}
-	_ syncint64.UpDownCounter   = counter[int64, traits.Int64]{}
-	_ syncint64.Histogram       = histogram[int64, traits.Int64]{}
-	_ syncfloat64.Counter       = counter[float64, traits.Float64]{}
-	_ syncfloat64.UpDownCounter = counter[float64, traits.Float64]{}
-	_ syncfloat64.Histogram     = histogram[float64, traits.Float64]{}
+	_ syncint64.Counter         = Counter[int64, traits.Int64]{}
+	_ syncint64.UpDownCounter   = Counter[int64, traits.Int64]{}
+	_ syncint64.Histogram       = Histogram[int64, traits.Int64]{}
+	_ syncfloat64.Counter       = Counter[float64, traits.Float64]{}
+	_ syncfloat64.UpDownCounter = Counter[float64, traits.Float64]{}
+	_ syncfloat64.Histogram     = Histogram[float64, traits.Float64]{}
 )
 
 func NewInstrument(desc sdkinstrument.Descriptor, compiled viewstate.Instrument) *Instrument {
@@ -89,27 +89,29 @@ func NewInstrument(desc sdkinstrument.Descriptor, compiled viewstate.Instrument)
 	}
 }
 
-func NewCounter[N number.Any, Traits traits.Any[N]](inst *Instrument) counter[N, Traits] {
-	return counter[N, Traits]{Instrument: inst}
+func NewCounter[N number.Any, Traits traits.Any[N]](inst *Instrument) Counter[N, Traits] {
+	return Counter[N, Traits]{Instrument: inst}
 }
 
-func NewHistogram[N number.Any, Traits traits.Any[N]](inst *Instrument) histogram[N, Traits] {
-	return histogram[N, Traits]{Instrument: inst}
-}
-
-func (c counter[N, Traits]) Add(ctx context.Context, incr N, attrs ...attribute.KeyValue) {
+//nolint:revive //Generics receiver nameing is broken in revive as of 04/15/2022
+func (c Counter[N, Traits]) Add(ctx context.Context, incr N, attrs ...attribute.KeyValue) {
 	if c.Instrument != nil {
 		capture[N, Traits](ctx, c.Instrument, incr, attrs)
 	}
 }
 
-func (h histogram[N, Traits]) Record(ctx context.Context, incr N, attrs ...attribute.KeyValue) {
+func NewHistogram[N number.Any, Traits traits.Any[N]](inst *Instrument) Histogram[N, Traits] {
+	return Histogram[N, Traits]{Instrument: inst}
+}
+
+//nolint:revive //Generics receiver nameing is broken in revive as of 04/15/2022
+func (h Histogram[N, Traits]) Record(ctx context.Context, incr N, attrs ...attribute.KeyValue) {
 	if h.Instrument != nil {
 		capture[N, Traits](ctx, h.Instrument, incr, attrs)
 	}
 }
 
-func (inst *Instrument) AccumulateFor(_ *reader.ReaderConfig) {
+func (inst *Instrument) AccumulateFor(_ *reader.Config) {
 	inst.current.Range(func(key interface{}, value interface{}) bool {
 		rec := value.(*record)
 		any := inst.collectRecord(rec)

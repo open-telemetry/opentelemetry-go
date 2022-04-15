@@ -16,7 +16,6 @@ package metric
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -35,7 +34,7 @@ import (
 type (
 	Config struct {
 		res     *resource.Resource
-		readers []*reader.ReaderConfig
+		readers []*reader.Config
 		views   []views.View
 	}
 
@@ -52,7 +51,7 @@ type (
 	providerProducer struct {
 		lock        sync.Mutex
 		provider    *Provider
-		reader      *reader.ReaderConfig
+		reader      *reader.Config
 		lastCollect time.Time
 	}
 
@@ -68,7 +67,7 @@ type (
 	}
 
 	instrumentIface interface {
-		AccumulateFor(*reader.ReaderConfig)
+		AccumulateFor(*reader.Config)
 	}
 )
 
@@ -114,7 +113,7 @@ func New(opts ...Option) *Provider {
 	return p
 }
 
-func (p *Provider) producerFor(r *reader.ReaderConfig) reader.Producer {
+func (p *Provider) producerFor(r *reader.Config) reader.Producer {
 	return &providerProducer{
 		provider:    p,
 		reader:      r,
@@ -221,7 +220,7 @@ func (m *meter) RegisterCallback(insts []instrument.Asynchronous, function func(
 	return err
 }
 
-var errLookupConflicts = fmt.Errorf("caller should lookup conflict information")
+// var errLookupConflicts = fmt.Errorf("caller should lookup conflict information")
 
 func configureInstrument[T instrumentIface](
 	m *meter,

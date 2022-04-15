@@ -76,7 +76,7 @@ func NewConfig(bounds []float64) aggregator.HistogramConfig {
 
 	copy(sortedBoundaries, bounds)
 	sort.Float64s(sortedBoundaries)
-	return aggregator.HistogramConfig{sortedBoundaries}
+	return aggregator.HistogramConfig{ExplicitBoundaries: sortedBoundaries}
 }
 
 func (h *State[N, Traits]) Sum() number.Number {
@@ -95,7 +95,7 @@ func (h *State[N, Traits]) Histogram() aggregation.Buckets {
 	}
 }
 
-func (lv *State[N, Traits]) Category() aggregation.Category {
+func (h *State[N, Traits]) Category() aggregation.Category {
 	return aggregation.HistogramCategory
 }
 

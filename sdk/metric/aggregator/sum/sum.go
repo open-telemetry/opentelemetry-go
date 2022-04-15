@@ -60,7 +60,7 @@ func (s *State[N, Traits, M]) Sum() number.Number {
 	return traits.ToNumber(s.value)
 }
 
-func (lv *State[N, Traits, M]) Category() aggregation.Category {
+func (s *State[N, Traits, M]) Category() aggregation.Category {
 	var m M
 	return m.category()
 }

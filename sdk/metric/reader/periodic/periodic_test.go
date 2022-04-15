@@ -46,7 +46,7 @@ func (e *testExporter) Flush(_ context.Context) error {
 
 type testProducer struct{}
 
-func (_ testProducer) Produce(_ context.Context, _ *reader.Metrics) reader.Metrics {
+func (testProducer) Produce(_ context.Context, _ *reader.Metrics) reader.Metrics {
 	return reader.Metrics{}
 }
 
@@ -68,7 +68,8 @@ func Test_exporter_Shutdown(t *testing.T) {
 	exp := New(5*time.Millisecond, texp, WithTimeout(2*time.Millisecond)).(*exporter)
 	exp.Register(testProducer{})
 
-	exp.Shutdown(context.Background())
+	err := exp.Shutdown(context.Background())
+	assert.NoError(t, err)
 
 	assert.Equal(t, int64(1), atomic.LoadInt64(&texp.shutdownCount))
 

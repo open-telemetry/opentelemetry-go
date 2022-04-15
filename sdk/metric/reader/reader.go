@@ -29,16 +29,16 @@ import (
 )
 
 type (
-	// Config includes Reader-specific options that the user
+	// config includes Reader-specific options that the user
 	// configures, which are generally per-instrument-kind defaults.
-	Config struct {
+	config struct {
 		DefaultAggregationKindFunc
 		DefaultAggregationTemporalityFunc
 		DefaultAggregationConfigFunc
 	}
 
 	// Option is a functional option pattern for generating Configs.
-	Option func(*Config)
+	Option func(*config)
 
 	// DefaultAggregationKindFunc is a per-instrument-kind aggregation.Kind choice.
 	DefaultAggregationKindFunc func(sdkinstrument.Kind) aggregation.Kind
@@ -49,10 +49,10 @@ type (
 	// DefaultAggregationKindFunc is a per-instrument-kind, per-number-kind aggregator.Config choice.
 	DefaultAggregationConfigFunc func(sdkinstrument.Kind) (int64Config, float64Config aggregator.Config)
 
-	// ReaderConfig represents the connection between an Exporter and
+	// Config represents the connection between an Exporter and
 	// the MeterProvider.  Readers give the internal View compiler
 	// all the necessary information to construct a metrics pipeline.
-	ReaderConfig struct {
+	Config struct {
 		// reader is the output terminal of a metrics pipeline.
 		reader Reader
 
@@ -188,7 +188,7 @@ type (
 // WithDefaultAggregationKindFunc configures the default
 // aggregation.Kind to use with each kind of instrument.
 func WithDefaultAggregationKindFunc(d DefaultAggregationKindFunc) Option {
-	return func(cfg *Config) {
+	return func(cfg *config) {
 		cfg.DefaultAggregationKindFunc = d
 	}
 }
@@ -196,7 +196,7 @@ func WithDefaultAggregationKindFunc(d DefaultAggregationKindFunc) Option {
 // WithDefaultAggregationTemporalityFunc configures the default
 // aggregation.Temporality to use with each kind of instrument.
 func WithDefaultAggregationTemporalityFunc(d DefaultAggregationTemporalityFunc) Option {
-	return func(cfg *Config) {
+	return func(cfg *config) {
 		cfg.DefaultAggregationTemporalityFunc = d
 	}
 }
@@ -204,7 +204,7 @@ func WithDefaultAggregationTemporalityFunc(d DefaultAggregationTemporalityFunc) 
 // WithDefaultAggregationConfigFunc configures the default
 // aggregator.Config to use with each kind of instrument.
 func WithDefaultAggregationConfigFunc(d DefaultAggregationConfigFunc) Option {
-	return func(cfg *Config) {
+	return func(cfg *config) {
 		cfg.DefaultAggregationConfigFunc = d
 	}
 }
@@ -246,8 +246,8 @@ func StandardConfig(ik sdkinstrument.Kind) (ints, floats aggregator.Config) {
 
 // NewConfig returns a new Reader configured for `exporter` with provided
 // optional configuration.
-func NewConfig(exporter Reader, opts ...Option) *ReaderConfig {
-	cfg := Config{
+func NewConfig(exporter Reader, opts ...Option) *Config {
+	cfg := config{
 		DefaultAggregationKindFunc:        StandardAggregationKind,
 		DefaultAggregationTemporalityFunc: StandardTemporality,
 		DefaultAggregationConfigFunc:      StandardConfig,
@@ -255,7 +255,7 @@ func NewConfig(exporter Reader, opts ...Option) *ReaderConfig {
 	for _, opt := range opts {
 		opt(&cfg)
 	}
-	r := &ReaderConfig{
+	r := &Config{
 		reader: exporter,
 	}
 	for i := sdkinstrument.Kind(0); i < sdkinstrument.NumKinds; i++ {
@@ -267,17 +267,17 @@ func NewConfig(exporter Reader, opts ...Option) *ReaderConfig {
 }
 
 // DefaultAggregation returns the default aggregation.Kind for each instrument kind.
-func (r *ReaderConfig) DefaultAggregation(k sdkinstrument.Kind) aggregation.Kind {
+func (r *Config) DefaultAggregation(k sdkinstrument.Kind) aggregation.Kind {
 	return r.defAggr[k]
 }
 
 // DefaultTemporality returns the default aggregation.Temporality for each instrument kind.
-func (r *ReaderConfig) DefaultTemporality(k sdkinstrument.Kind) aggregation.Temporality {
+func (r *Config) DefaultTemporality(k sdkinstrument.Kind) aggregation.Temporality {
 	return r.defTempo[k]
 }
 
 // DefaultAggregationConfig returns the default aggregation.Temporality for each instrument kind.
-func (r *ReaderConfig) DefaultAggregationConfig(k sdkinstrument.Kind, nk number.Kind) aggregator.Config {
+func (r *Config) DefaultAggregationConfig(k sdkinstrument.Kind, nk number.Kind) aggregator.Config {
 	if nk == number.Int64Kind {
 		return r.defI64Cfg[k]
 	}
@@ -285,7 +285,7 @@ func (r *ReaderConfig) DefaultAggregationConfig(k sdkinstrument.Kind, nk number.
 }
 
 // Reader returns the Reader's associated Reader.
-func (r *ReaderConfig) Reader() Reader {
+func (r *Config) Reader() Reader {
 	return r.reader
 }
 
