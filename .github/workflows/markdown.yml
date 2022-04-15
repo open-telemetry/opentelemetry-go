@@ -35,16 +35,23 @@ jobs:
 
   check-links:
     runs-on: ubuntu-latest
+    needs: changedfiles
+    if: ${{needs.changedfiles.outputs.md}}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - uses: gaurav-nelson/github-action-markdown-link-check@v1
-        with:
-          base-branch: 'main'
-          use-quiet-mode: 'yes'
-          use-verbose-mode: 'yes'
-          config-file: '.markdown-link.json'
-          check-modified-files-only: 'yes'
-          folder-path: ''
+      # This doesn't use gaurav-nelson/github-action-markdown-link-check
+      # intentionally. As of v1.0.13 the base image was not pinned to a LTS
+      # version of node and updates upstream to the base image caused CI
+      # failures. This boils down the entrypoint script from that repository
+      # and calls markdown-link-check directly instead.
+      - name: Install markdown-link-check
+        run: npm install -g markdown-link-check
+      - name: Run markdown-link-check
+        run: |
+            markdown-link-check \
+              --verbose \
+              --config .markdown-link.json \
+              ${{needs.changedfiles.outputs.md}}
