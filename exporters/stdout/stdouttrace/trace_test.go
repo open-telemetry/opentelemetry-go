@@ -33,7 +33,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func TestExporter_ExportSpan(t *testing.T) {
+func TestExporterExportSpan(t *testing.T) {
 	// setup test span
 	now := time.Now()
 	traceID, _ := trace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
