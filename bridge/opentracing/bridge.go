@@ -620,7 +620,7 @@ func (s fakeSpan) SpanContext() trace.SpanContext {
 	return s.sc
 }
 
-// adapt OpenTracing TextMapReader or TextMapWriter to OpenTelemetry propagation.TextMapCarrier
+// textMapAdapter adapts an OpenTracing TextMapReader or TextMapWriter to an OpenTelemetry propagation.TextMapCarrier.
 type textMapAdapter struct {
 	r ot.TextMapReader
 	w ot.TextMapWriter
