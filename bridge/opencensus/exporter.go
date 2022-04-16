@@ -119,7 +119,7 @@ func (d *metricReader) ForEach(_ aggregation.TemporalitySelector, f func(export.
 // OpenTelemetry attribute Set.
 func convertAttrs(keys []metricdata.LabelKey, values []metricdata.LabelValue) (attribute.Set, error) {
 	if len(keys) != len(values) {
-		return attribute.NewSet(), fmt.Errorf("%w different number of attribute keys (%d) and values (%d)", errConversion, len(keys), len(values))
+		return attribute.NewSet(), fmt.Errorf("%w different number of label keys (%d) and values (%d)", errConversion, len(keys), len(values))
 	}
 	attrs := []attribute.KeyValue{}
 	for i, lv := range values {
