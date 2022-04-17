@@ -58,7 +58,7 @@ func contextWithTimeout(parent context.Context, t *testing.T, timeout time.Durat
 	return context.WithDeadline(parent, d)
 }
 
-func TestNew_endToEnd(t *testing.T) {
+func TestNewEndToEnd(t *testing.T) {
 	tests := []struct {
 		name           string
 		additionalOpts []otlptracegrpc.Option
@@ -141,7 +141,7 @@ func TestExporterShutdown(t *testing.T) {
 	otlptracetest.RunExporterShutdownTest(t, factory)
 }
 
-func TestNew_invokeStartThenStopManyTimes(t *testing.T) {
+func TestNewInvokeStartThenStopManyTimes(t *testing.T) {
 	mc := runMockCollector(t)
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
@@ -168,7 +168,7 @@ func TestNew_invokeStartThenStopManyTimes(t *testing.T) {
 }
 
 // This test takes a long time to run: to skip it, run tests using: -short
-func TestNew_collectorOnBadConnection(t *testing.T) {
+func TestNewCollectorOnBadConnection(t *testing.T) {
 	if testing.Short() {
 		t.Skipf("Skipping this long running test")
 	}
@@ -189,7 +189,7 @@ func TestNew_collectorOnBadConnection(t *testing.T) {
 	_ = exp.Shutdown(ctx)
 }
 
-func TestNew_withEndpoint(t *testing.T) {
+func TestNewWithEndpoint(t *testing.T) {
 	mc := runMockCollector(t)
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
@@ -198,7 +198,7 @@ func TestNew_withEndpoint(t *testing.T) {
 	_ = exp.Shutdown(ctx)
 }
 
-func TestNew_withHeaders(t *testing.T) {
+func TestNewWithHeaders(t *testing.T) {
 	mc := runMockCollector(t)
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
@@ -238,7 +238,7 @@ func TestExportSpansTimeoutHonored(t *testing.T) {
 	require.Equal(t, codes.DeadlineExceeded, status.Convert(err).Code())
 }
 
-func TestNew_withMultipleAttributeTypes(t *testing.T) {
+func TestNewWithMultipleAttributeTypes(t *testing.T) {
 	mc := runMockCollector(t)
 
 	<-time.After(5 * time.Millisecond)

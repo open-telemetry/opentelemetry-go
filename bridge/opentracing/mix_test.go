@@ -652,7 +652,7 @@ func runOTOtelOT(t *testing.T, ctx context.Context, name string, callback func(*
 	}(ctx)
 }
 
-func TestOtTagToOTelLabel_CheckTypeConversions(t *testing.T) {
+func TestOtTagToOTelLabelCheckTypeConversions(t *testing.T) {
 	tableTest := []struct {
 		key               string
 		value             interface{}
