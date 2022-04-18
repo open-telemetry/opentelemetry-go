@@ -31,15 +31,15 @@ func TestIterator(t *testing.T) {
 	require.Equal(t, 2, iter.Len())
 
 	require.True(t, iter.Next())
-	require.Equal(t, one, iter.Label())
-	idx, attr := iter.IndexedLabel()
+	require.Equal(t, one, iter.Attribute())
+	idx, attr := iter.IndexedAttribute()
 	require.Equal(t, 0, idx)
 	require.Equal(t, one, attr)
 	require.Equal(t, 2, iter.Len())
 
 	require.True(t, iter.Next())
-	require.Equal(t, two, iter.Label())
-	idx, attr = iter.IndexedLabel()
+	require.Equal(t, two, iter.Attribute())
+	idx, attr = iter.IndexedAttribute()
 	require.Equal(t, 1, idx)
 	require.Equal(t, two, attr)
 	require.Equal(t, 2, iter.Len())
@@ -64,7 +64,7 @@ func TestMergedIterator(t *testing.T) {
 		expect []string
 	}
 
-	makeLabels := func(keys []string, num int) (result []attribute.KeyValue) {
+	makeAttributes := func(keys []string, num int) (result []attribute.KeyValue) {
 		for _, k := range keys {
 			result = append(result, attribute.Int(k, num))
 		}
@@ -128,19 +128,19 @@ func TestMergedIterator(t *testing.T) {
 		},
 	} {
 		t.Run(input.name, func(t *testing.T) {
-			labels1 := makeLabels(input.keys1, 1)
-			labels2 := makeLabels(input.keys2, 2)
+			attr1 := makeAttributes(input.keys1, 1)
+			attr2 := makeAttributes(input.keys2, 2)
 
-			set1 := attribute.NewSet(labels1...)
-			set2 := attribute.NewSet(labels2...)
+			set1 := attribute.NewSet(attr1...)
+			set2 := attribute.NewSet(attr2...)
 
 			merge := attribute.NewMergeIterator(&set1, &set2)
 
 			var result []string
 
 			for merge.Next() {
-				label := merge.Label()
-				result = append(result, fmt.Sprint(label.Key, "/", label.Value.Emit()))
+				attr := merge.Attribute()
+				result = append(result, fmt.Sprint(attr.Key, "/", attr.Value.Emit()))
 			}
 
 			require.Equal(t, input.expect, result)

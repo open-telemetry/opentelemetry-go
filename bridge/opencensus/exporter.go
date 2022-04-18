@@ -91,7 +91,7 @@ func (d *metricReader) ForEach(_ aggregation.TemporalitySelector, f func(export.
 			if len(ts.Points) == 0 {
 				continue
 			}
-			ls, err := convertLabels(m.Descriptor.LabelKeys, ts.LabelValues)
+			attrs, err := convertAttrs(m.Descriptor.LabelKeys, ts.LabelValues)
 			if err != nil {
 				otel.Handle(err)
 				continue
@@ -101,7 +101,7 @@ func (d *metricReader) ForEach(_ aggregation.TemporalitySelector, f func(export.
 				func(agg aggregation.Aggregation, end time.Time) error {
 					return f(export.NewRecord(
 						&descriptor,
-						&ls,
+						&attrs,
 						agg,
 						ts.StartTime,
 						end,
@@ -115,36 +115,36 @@ func (d *metricReader) ForEach(_ aggregation.TemporalitySelector, f func(export.
 	return nil
 }
 
-// convertLabels converts from OpenCensus label keys and values to an
-// OpenTelemetry label Set.
-func convertLabels(keys []metricdata.LabelKey, values []metricdata.LabelValue) (attribute.Set, error) {
+// convertAttrs converts from OpenCensus attribute keys and values to an
+// OpenTelemetry attribute Set.
+func convertAttrs(keys []metricdata.LabelKey, values []metricdata.LabelValue) (attribute.Set, error) {
 	if len(keys) != len(values) {
 		return attribute.NewSet(), fmt.Errorf("%w different number of label keys (%d) and values (%d)", errConversion, len(keys), len(values))
 	}
-	labels := []attribute.KeyValue{}
+	attrs := []attribute.KeyValue{}
 	for i, lv := range values {
 		if !lv.Present {
 			continue
 		}
-		labels = append(labels, attribute.KeyValue{
+		attrs = append(attrs, attribute.KeyValue{
 			Key:   attribute.Key(keys[i].Key),
 			Value: attribute.StringValue(lv.Value),
 		})
 	}
-	return attribute.NewSet(labels...), nil
+	return attribute.NewSet(attrs...), nil
 }
 
 // convertResource converts an OpenCensus Resource to an OpenTelemetry Resource
 // Note: the ocresource.Resource Type field is not used.
 func convertResource(res *ocresource.Resource) *resource.Resource {
-	labels := []attribute.KeyValue{}
+	attrs := []attribute.KeyValue{}
 	if res == nil {
 		return nil
 	}
 	for k, v := range res.Labels {
-		labels = append(labels, attribute.KeyValue{Key: attribute.Key(k), Value: attribute.StringValue(v)})
+		attrs = append(attrs, attribute.KeyValue{Key: attribute.Key(k), Value: attribute.StringValue(v)})
 	}
-	return resource.NewSchemaless(labels...)
+	return resource.NewSchemaless(attrs...)
 }
 
 // convertDescriptor converts an OpenCensus Descriptor to an OpenTelemetry Descriptor

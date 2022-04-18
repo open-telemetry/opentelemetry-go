@@ -42,10 +42,9 @@ type (
 		// value needs to be aligned for 64-bit atomic operations.
 		value number.Number
 
-		// timestamp indicates when this record was submitted.
-		// this can be used to pick a winner when multiple
-		// records contain lastValue data for the same labels due
-		// to races.
+		// timestamp indicates when this record was submitted. This can be
+		// used to pick a winner when multiple records contain lastValue data
+		// for the same attributes due to races.
 		timestamp time.Time
 	}
 )

@@ -13,16 +13,16 @@
 // limitations under the License.
 
 /*
-Package reducer implements a metrics Processor component to reduce labels.
+Package reducer implements a metrics Processor component to reduce attributes.
 
 This package is currently in a pre-GA phase. Backwards incompatible changes
 may be introduced in subsequent minor version releases as we work to track the
 evolving OpenTelemetry specification and user feedback.
 
-The metrics Processor component this package implements applies a
-`attribute.Filter` to each processed `export.Accumulation` to remove labels before
-passing the result to another Processor.  This Processor can be used to reduce
-inherent dimensionality in the data, as a way to control the cost of
+The metrics Processor component this package implements applies an
+attribute.Filter to each processed export.Accumulation to remove attributes
+before passing the result to another Processor.  This Processor can be used to
+reduce inherent dimensionality in the data, as a way to control the cost of
 collecting high cardinality metric data.
 
 For example, to compose a push controller with a reducer and a basic
@@ -33,9 +33,9 @@ type someFilter struct{
         // ...
 }
 
-func (someFilter) LabelFilterFor(_ *sdkapi.Descriptor) attribute.Filter {
-        return func(label kv.KeyValue) bool {
-                // return true to keep this label, false to drop this label
+func (someFilter) AttributeFilterFor(_ *sdkapi.Descriptor) attribute.Filter {
+        return func(attr kv.KeyValue) bool {
+                // return true to keep this attr, false to drop this attr.
                 // ...
         }
 }

@@ -48,9 +48,9 @@ var (
 
 type testFilter struct{}
 
-func (testFilter) LabelFilterFor(_ *sdkapi.Descriptor) attribute.Filter {
-	return func(label attribute.KeyValue) bool {
-		return label.Key == "A" || label.Key == "C"
+func (testFilter) AttributeFilterFor(_ *sdkapi.Descriptor) attribute.Filter {
+	return func(attr attribute.KeyValue) bool {
+		return attr.Key == "A" || attr.Key == "C"
 	}
 }
 

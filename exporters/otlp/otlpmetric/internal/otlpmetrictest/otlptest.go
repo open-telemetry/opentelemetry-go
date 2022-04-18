@@ -44,7 +44,7 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 	require.NoError(t, cont.Start(ctx))
 
 	meter := cont.Meter("test-meter")
-	labels := []attribute.KeyValue{attribute.Bool("test", true)}
+	attrs := []attribute.KeyValue{attribute.Bool("test", true)}
 
 	type data struct {
 		iKind sdkapi.InstrumentKind
@@ -66,10 +66,10 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 			switch data.nKind {
 			case number.Int64Kind:
 				c, _ := meter.SyncInt64().Counter(name)
-				c.Add(ctx, data.val, labels...)
+				c.Add(ctx, data.val, attrs...)
 			case number.Float64Kind:
 				c, _ := meter.SyncFloat64().Counter(name)
-				c.Add(ctx, float64(data.val), labels...)
+				c.Add(ctx, float64(data.val), attrs...)
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
@@ -77,10 +77,10 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 			switch data.nKind {
 			case number.Int64Kind:
 				c, _ := meter.SyncInt64().Histogram(name)
-				c.Record(ctx, data.val, labels...)
+				c.Record(ctx, data.val, attrs...)
 			case number.Float64Kind:
 				c, _ := meter.SyncFloat64().Histogram(name)
-				c.Record(ctx, float64(data.val), labels...)
+				c.Record(ctx, float64(data.val), attrs...)
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
@@ -89,12 +89,12 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 			case number.Int64Kind:
 				g, _ := meter.AsyncInt64().Gauge(name)
 				_ = meter.RegisterCallback([]instrument.Asynchronous{g}, func(ctx context.Context) {
-					g.Observe(ctx, data.val, labels...)
+					g.Observe(ctx, data.val, attrs...)
 				})
 			case number.Float64Kind:
 				g, _ := meter.AsyncFloat64().Gauge(name)
 				_ = meter.RegisterCallback([]instrument.Asynchronous{g}, func(ctx context.Context) {
-					g.Observe(ctx, float64(data.val), labels...)
+					g.Observe(ctx, float64(data.val), attrs...)
 				})
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())

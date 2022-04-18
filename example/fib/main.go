@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.8.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.9.0"
 )
 
 // newExporter returns a console exporter.
