@@ -5,7 +5,7 @@ on:
   pull_request:
 
 jobs:
-  linkChecker:
+  check-links:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
