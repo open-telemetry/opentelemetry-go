@@ -196,13 +196,11 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.Metric, error) {
 			continue
 
 		}
-		// Note: There is extra work happening in this code
-		// that can be improved when the work described in
-		// #2119 is completed.  The SDK has a guarantee that
-		// no more than one point per period per label set is
-		// produced, so this fallthrough should never happen.
-		// The final step of #2119 is to remove all the
-		// grouping logic here.
+		// Note: There is extra work happening in this code that can be
+		// improved when the work described in #2119 is completed. The SDK has
+		// a guarantee that no more than one point per period per attribute
+		// set is produced, so this fallthrough should never happen. The final
+		// step of #2119 is to remove all the grouping logic here.
 		switch res.Metric.Data.(type) {
 		case *metricpb.Metric_Gauge:
 			m.GetGauge().DataPoints = append(m.GetGauge().DataPoints, res.Metric.GetGauge().DataPoints...)
@@ -275,7 +273,7 @@ func Record(temporalitySelector aggregation.TemporalitySelector, r export.Record
 
 func gaugePoint(record export.Record, num number.Number, start, end time.Time) (*metricpb.Metric, error) {
 	desc := record.Descriptor()
-	labels := record.Labels()
+	attrs := record.Attributes()
 
 	m := &metricpb.Metric{
 		Name:        desc.Name(),
@@ -292,7 +290,7 @@ func gaugePoint(record export.Record, num number.Number, start, end time.Time) (
 						Value: &metricpb.NumberDataPoint_AsInt{
 							AsInt: num.CoerceToInt64(n),
 						},
-						Attributes:        Iterator(labels.Iter()),
+						Attributes:        Iterator(attrs.Iter()),
 						StartTimeUnixNano: toNanos(start),
 						TimeUnixNano:      toNanos(end),
 					},
@@ -307,7 +305,7 @@ func gaugePoint(record export.Record, num number.Number, start, end time.Time) (
 						Value: &metricpb.NumberDataPoint_AsDouble{
 							AsDouble: num.CoerceToFloat64(n),
 						},
-						Attributes:        Iterator(labels.Iter()),
+						Attributes:        Iterator(attrs.Iter()),
 						StartTimeUnixNano: toNanos(start),
 						TimeUnixNano:      toNanos(end),
 					},
@@ -333,7 +331,7 @@ func sdkTemporalityToTemporality(temporality aggregation.Temporality) metricpb.A
 
 func sumPoint(record export.Record, num number.Number, start, end time.Time, temporality aggregation.Temporality, monotonic bool) (*metricpb.Metric, error) {
 	desc := record.Descriptor()
-	labels := record.Labels()
+	attrs := record.Attributes()
 
 	m := &metricpb.Metric{
 		Name:        desc.Name(),
@@ -352,7 +350,7 @@ func sumPoint(record export.Record, num number.Number, start, end time.Time, tem
 						Value: &metricpb.NumberDataPoint_AsInt{
 							AsInt: num.CoerceToInt64(n),
 						},
-						Attributes:        Iterator(labels.Iter()),
+						Attributes:        Iterator(attrs.Iter()),
 						StartTimeUnixNano: toNanos(start),
 						TimeUnixNano:      toNanos(end),
 					},
@@ -369,7 +367,7 @@ func sumPoint(record export.Record, num number.Number, start, end time.Time, tem
 						Value: &metricpb.NumberDataPoint_AsDouble{
 							AsDouble: num.CoerceToFloat64(n),
 						},
-						Attributes:        Iterator(labels.Iter()),
+						Attributes:        Iterator(attrs.Iter()),
 						StartTimeUnixNano: toNanos(start),
 						TimeUnixNano:      toNanos(end),
 					},
@@ -399,7 +397,7 @@ func histogramValues(a aggregation.Histogram) (boundaries []float64, counts []ui
 // histogram transforms a Histogram Aggregator into an OTLP Metric.
 func histogramPoint(record export.Record, temporality aggregation.Temporality, a aggregation.Histogram) (*metricpb.Metric, error) {
 	desc := record.Descriptor()
-	labels := record.Labels()
+	attrs := record.Attributes()
 	boundaries, counts, err := histogramValues(a)
 	if err != nil {
 		return nil, err
@@ -426,7 +424,7 @@ func histogramPoint(record export.Record, temporality aggregation.Temporality, a
 				DataPoints: []*metricpb.HistogramDataPoint{
 					{
 						Sum:               &sumFloat64,
-						Attributes:        Iterator(labels.Iter()),
+						Attributes:        Iterator(attrs.Iter()),
 						StartTimeUnixNano: toNanos(record.StartTime()),
 						TimeUnixNano:      toNanos(record.EndTime()),
 						Count:             uint64(count),

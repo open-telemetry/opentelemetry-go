@@ -188,7 +188,7 @@ func TestRecordNaN(t *testing.T) {
 	require.Error(t, testHandler.Flush())
 }
 
-func TestSDKLabelsDeduplication(t *testing.T) {
+func TestSDKAttrsDeduplication(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, _, processor := newSDK(t)
 
@@ -250,11 +250,11 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 }
 
 func newSetIter(kvs ...attribute.KeyValue) attribute.Iterator {
-	labels := attribute.NewSet(kvs...)
-	return labels.Iter()
+	attrs := attribute.NewSet(kvs...)
+	return attrs.Iter()
 }
 
-func TestDefaultLabelEncoder(t *testing.T) {
+func TestDefaultAttributeEncoder(t *testing.T) {
 	encoder := attribute.DefaultEncoder()
 
 	encoded := encoder.Encode(newSetIter(attribute.String("A", "B"), attribute.String("C", "D")))
@@ -266,8 +266,8 @@ func TestDefaultLabelEncoder(t *testing.T) {
 	encoded = encoder.Encode(newSetIter(attribute.String(`\`, `=`), attribute.String(`,`, `\`)))
 	require.Equal(t, `\,=\\,\\=\=`, encoded)
 
-	// Note: the label encoder does not sort or de-dup values,
-	// that is done in Labels(...).
+	// Note: the attr encoder does not sort or de-dup values,
+	// that is done in Attributes(...).
 	encoded = encoder.Encode(newSetIter(
 		attribute.Int("I", 1),
 		attribute.Int64("I64", 1),
@@ -490,9 +490,9 @@ func TestObserverBatch(t *testing.T) {
 	}, processor.Values())
 }
 
-// TestRecordPersistence ensures that a direct-called instrument that
-// is repeatedly used each interval results in a persistent record, so
-// that its encoded labels will be cached across collection intervals.
+// TestRecordPersistence ensures that a direct-called instrument that is
+// repeatedly used each interval results in a persistent record, so that its
+// encoded attribute will be cached across collection intervals.
 func TestRecordPersistence(t *testing.T) {
 	ctx := context.Background()
 	meter, sdk, selector, _ := newSDK(t)

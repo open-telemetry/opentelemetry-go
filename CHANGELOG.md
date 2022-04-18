@@ -14,6 +14,24 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Resolve supply-chain failure for the markdown-link-checker GitHub action by calling the CLI directly. (#2834)
 - Remove import of `testing` package in non-tests builds. (#2786)
 
+### Changed
+
+- The `WithLabelEncoder` option from the `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric` package is renamed to `WithAttributeEncoder`. (#2790)
+- The `Batch.Labels` field from the `go.opentelemetry.io/otel/sdk/metric/metrictest` package is renamed to `Batch.Attributes`. (#2790)
+- The `LabelFilterSelector` interface from `go.opentelemetry.io/otel/sdk/metric/processor/reducer` is renamed to `AttributeFilterSelector`.
+  The method included in the renamed interface also changed from `LabelFilterFor` to `AttributeFilterFor`. (#2790)
+- The `Metadata.Labels` method from the `go.opentelemetry.io/otel/sdk/metric/export` package is renamed to `Metadata.Attributes`.
+  Consequentially, the `Record` type from the same package also has had the embedded method renamed. (#2790)
+
+### Deprecated
+
+- The `Iterator.Label` method in the `go.opentelemetry.io/otel/attribute` package is deprecated.
+  Use the equivalent `Iterator.Attribute` method instead. (#2790)
+- The `Iterator.IndexedLabel` method in the `go.opentelemetry.io/otel/attribute` package is deprecated.
+  Use the equivalent `Iterator.IndexedAttribute` method instead. (#2790)
+- The `MergeIterator.Label` method in the `go.opentelemetry.io/otel/attribute` package is deprecated.
+  Use the equivalent `MergeIterator.Attribute` method instead. (#2790)
+
 ## [0.29.0] - 2022-04-11
 
 ### Added

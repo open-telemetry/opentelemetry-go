@@ -16,10 +16,10 @@ package basic // import "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 
 // config contains the options for configuring a basic metric processor.
 type config struct {
-	// Memory controls whether the processor remembers metric
-	// instruments and label sets that were previously reported.
-	// When Memory is true, Reader.ForEach() will visit
-	// metrics that were not updated in the most recent interval.
+	// Memory controls whether the processor remembers metric instruments and
+	// attribute sets that were previously reported. When Memory is true,
+	// Reader.ForEach() will visit metrics that were not updated in the most
+	// recent interval.
 	Memory bool
 }
 
@@ -27,10 +27,9 @@ type Option interface {
 	applyProcessor(config) config
 }
 
-// WithMemory sets the memory behavior of a Processor.  If this is
-// true, the processor will report metric instruments and label sets
-// that were previously reported but not updated in the most recent
-// interval.
+// WithMemory sets the memory behavior of a Processor. If this is true, the
+// processor will report metric instruments and attribute sets that were
+// previously reported but not updated in the most recent interval.
 func WithMemory(memory bool) Option {
 	return memoryOption(memory)
 }
