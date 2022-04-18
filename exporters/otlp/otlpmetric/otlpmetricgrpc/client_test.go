@@ -41,7 +41,7 @@ var (
 	testResource = resource.Empty()
 )
 
-func TestNewExporter_endToEnd(t *testing.T) {
+func TestNewExporterEndToEnd(t *testing.T) {
 	tests := []struct {
 		name           string
 		additionalOpts []otlpmetricgrpc.Option
@@ -131,7 +131,7 @@ func TestExporterShutdown(t *testing.T) {
 	})
 }
 
-func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
+func TestNewExporterInvokeStartThenStopManyTimes(t *testing.T) {
 	mc := runMockCollector(t)
 	defer func() {
 		_ = mc.stop()
@@ -164,7 +164,7 @@ func TestNewExporter_invokeStartThenStopManyTimes(t *testing.T) {
 }
 
 // This test takes a long time to run: to skip it, run tests using: -short
-func TestNewExporter_collectorOnBadConnection(t *testing.T) {
+func TestNewExporterCollectorOnBadConnection(t *testing.T) {
 	if testing.Short() {
 		t.Skipf("Skipping this long running test")
 	}
@@ -185,7 +185,7 @@ func TestNewExporter_collectorOnBadConnection(t *testing.T) {
 	_ = exp.Shutdown(ctx)
 }
 
-func TestNewExporter_withEndpoint(t *testing.T) {
+func TestNewExporterWithEndpoint(t *testing.T) {
 	mc := runMockCollector(t)
 	defer func() {
 		_ = mc.stop()
@@ -196,7 +196,7 @@ func TestNewExporter_withEndpoint(t *testing.T) {
 	_ = exp.Shutdown(ctx)
 }
 
-func TestNewExporter_withHeaders(t *testing.T) {
+func TestNewExporterWithHeaders(t *testing.T) {
 	mc := runMockCollector(t)
 	defer func() {
 		_ = mc.stop()
@@ -216,7 +216,7 @@ func TestNewExporter_withHeaders(t *testing.T) {
 	assert.Equal(t, "value1", headers.Get("header1")[0])
 }
 
-func TestNewExporter_WithTimeout(t *testing.T) {
+func TestNewExporterWithTimeout(t *testing.T) {
 	tts := []struct {
 		name    string
 		fn      func(exp *otlpmetric.Exporter) error
