@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	ot "github.com/opentracing/opentracing-go"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/bridge/opentracing/internal"
 	"go.opentelemetry.io/otel/propagation"
