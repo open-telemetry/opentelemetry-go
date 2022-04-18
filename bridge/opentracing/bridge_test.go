@@ -16,6 +16,7 @@ package opentracing
 
 import (
 	"reflect"
+	"sort"
 	"testing"
 
 	ot "github.com/opentracing/opentracing-go"
@@ -23,6 +24,25 @@ import (
 	"go.opentelemetry.io/otel/bridge/opentracing/internal"
 	"go.opentelemetry.io/otel/propagation"
 )
+
+func TestTextMapAdapterKeys(t *testing.T) {
+	carrier := ot.TextMapCarrier{
+		"foo": "bar",
+		"baz": "qux",
+	}
+
+	keys := textMapAdapter{r: carrier}.Keys()
+	sort.Strings(keys)
+	expected := []string{"baz", "foo"}
+	if !reflect.DeepEqual(expected, keys) {
+		t.Errorf("Keys do not match: %#v, %#v", expected, keys)
+	}
+	// Check what happens if we read from a write-capable adaptor.
+	keys = textMapAdapter{w: carrier}.Keys()
+	if keys != nil {
+		t.Errorf("Keys should be nil: %#v", keys)
+	}
+}
 
 func TestMapCarrier(t *testing.T) {
 	carrier := propagation.MapCarrier{}
