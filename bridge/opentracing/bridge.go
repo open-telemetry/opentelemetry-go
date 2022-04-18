@@ -701,14 +701,20 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 	if builtinFormat, ok := format.(ot.BuiltinFormat); !ok || builtinFormat != ot.HTTPHeaders {
 		return nil, ot.ErrUnsupportedFormat
 	}
-	// If carrier implements the required interface directly, use that
-	tmCarrier, ok := carrier.(propagation.TextMapCarrier)
-	if !ok {
-		tmReader, ok := carrier.(ot.TextMapReader) // otherwise see if we can wrap it
-		if !ok {
-			return nil, ot.ErrInvalidCarrier
-		}
-		tmCarrier = textMapAdapter{r: tmReader}
+	var tmCarrier propagation.TextMapCarrier
+	switch typedCarrier := carrier.(type) {
+	case propagation.TextMapCarrier:
+		// If carrier implements the required interface directly, use that.
+		tmCarrier = typedCarrier
+	case ot.HTTPHeadersCarrier:
+		// HTTPHeadersCarrier requires special wrapping, because Set() title-cases the key.
+		header := http.Header(typedCarrier)
+		tmCarrier = propagation.HeaderCarrier(header)
+	case ot.TextMapReader:
+		// We can wrap anything corresponding to TextMapReader.
+		tmCarrier = textMapAdapter{r: typedCarrier}
+	default:
+		return nil, ot.ErrInvalidCarrier
 	}
 	ctx := t.getPropagator().Extract(context.Background(), tmCarrier)
 	baggage := baggage.FromContext(ctx)
