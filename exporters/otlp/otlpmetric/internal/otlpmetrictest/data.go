@@ -44,8 +44,8 @@ func OneRecordReader() export.InstrumentationLibraryReader {
 	}
 	start := time.Date(2020, time.December, 8, 19, 15, 0, 0, time.UTC)
 	end := time.Date(2020, time.December, 8, 19, 16, 0, 0, time.UTC)
-	labels := attribute.NewSet(attribute.String("abc", "def"), attribute.Int64("one", 1))
-	rec := export.NewRecord(&desc, &labels, agg[0].Aggregation(), start, end)
+	attrs := attribute.NewSet(attribute.String("abc", "def"), attribute.Int64("one", 1))
+	rec := export.NewRecord(&desc, &attrs, agg[0].Aggregation(), start, end)
 
 	return processortest.MultiInstrumentationLibraryReader(
 		map[instrumentation.Library][]export.Record{

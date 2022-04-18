@@ -114,7 +114,7 @@ func TestPrometheusExporter(t *testing.T) {
 	histogram, err := meter.SyncFloat64().Histogram("histogram")
 	require.NoError(t, err)
 
-	labels := []attribute.KeyValue{
+	attrs := []attribute.KeyValue{
 		attribute.Key("A").String("B"),
 		attribute.Key("C").String("D"),
 	}
@@ -122,8 +122,8 @@ func TestPrometheusExporter(t *testing.T) {
 
 	var expected []expectedMetric
 
-	counter.Add(ctx, 10, labels...)
-	counter.Add(ctx, 5.3, labels...)
+	counter.Add(ctx, 10, attrs...)
+	counter.Add(ctx, 5.3, attrs...)
 
 	expected = append(expected, expectCounter("counter", `counter{A="B",C="D",R="V"} 15.3`))
 
@@ -131,16 +131,16 @@ func TestPrometheusExporter(t *testing.T) {
 	require.NoError(t, err)
 
 	err = meter.RegisterCallback([]instrument.Asynchronous{gaugeObserver}, func(ctx context.Context) {
-		gaugeObserver.Observe(ctx, 1, labels...)
+		gaugeObserver.Observe(ctx, 1, attrs...)
 	})
 	require.NoError(t, err)
 
 	expected = append(expected, expectGauge("intgaugeobserver", `intgaugeobserver{A="B",C="D",R="V"} 1`))
 
-	histogram.Record(ctx, -0.6, labels...)
-	histogram.Record(ctx, -0.4, labels...)
-	histogram.Record(ctx, 0.6, labels...)
-	histogram.Record(ctx, 20, labels...)
+	histogram.Record(ctx, -0.6, attrs...)
+	histogram.Record(ctx, -0.4, attrs...)
+	histogram.Record(ctx, 0.6, attrs...)
+	histogram.Record(ctx, 20, attrs...)
 
 	expected = append(expected, expectHistogram("histogram",
 		`histogram_bucket{A="B",C="D",R="V",le="-0.5"} 1`,
@@ -150,8 +150,8 @@ func TestPrometheusExporter(t *testing.T) {
 		`histogram_count{A="B",C="D",R="V"} 4`,
 	))
 
-	upDownCounter.Add(ctx, 10, labels...)
-	upDownCounter.Add(ctx, -3.2, labels...)
+	upDownCounter.Add(ctx, 10, attrs...)
+	upDownCounter.Add(ctx, -3.2, attrs...)
 
 	expected = append(expected, expectGauge("updowncounter", `updowncounter{A="B",C="D",R="V"} 6.8`))
 
@@ -159,7 +159,7 @@ func TestPrometheusExporter(t *testing.T) {
 	require.NoError(t, err)
 
 	err = meter.RegisterCallback([]instrument.Asynchronous{counterObserver}, func(ctx context.Context) {
-		counterObserver.Observe(ctx, 7.7, labels...)
+		counterObserver.Observe(ctx, 7.7, attrs...)
 	})
 	require.NoError(t, err)
 
@@ -169,7 +169,7 @@ func TestPrometheusExporter(t *testing.T) {
 	require.NoError(t, err)
 
 	err = meter.RegisterCallback([]instrument.Asynchronous{upDownCounterObserver}, func(ctx context.Context) {
-		upDownCounterObserver.Observe(ctx, -7.7, labels...)
+		upDownCounterObserver.Observe(ctx, -7.7, attrs...)
 	})
 	require.NoError(t, err)
 

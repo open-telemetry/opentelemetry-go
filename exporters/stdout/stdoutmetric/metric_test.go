@@ -235,7 +235,7 @@ func TestStdoutResource(t *testing.T) {
 			attribute.String("C", "D"),
 		),
 		// We explicitly do not de-duplicate between resources
-		// and metric labels in this exporter.
+		// and metric attributes in this exporter.
 		newCase("resource deduplication",
 			"R1=V1,R2=V2,instrumentation.name=test,R1=V3,R2=V4",
 			resource.NewSchemaless(attribute.String("R1", "V1"), attribute.String("R2", "V2")),
