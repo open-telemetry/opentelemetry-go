@@ -2,19 +2,6 @@ module go.opentelemetry.io/otel/exporters/otlp/otlpmetric
 
 go 1.16
 
-require (
-	github.com/google/go-cmp v0.5.7
-	github.com/stretchr/testify v1.7.1
-	go.opentelemetry.io/otel v1.6.3
-	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.6.3
-	go.opentelemetry.io/otel/metric v0.29.0
-	go.opentelemetry.io/otel/sdk v1.6.3
-	go.opentelemetry.io/otel/sdk/metric v0.29.0
-	go.opentelemetry.io/proto/otlp v0.15.0
-	google.golang.org/grpc v1.45.0
-	google.golang.org/protobuf v1.28.0
-)
-
 replace go.opentelemetry.io/otel => ../../..
 
 replace go.opentelemetry.io/otel/sdk => ../../../sdk

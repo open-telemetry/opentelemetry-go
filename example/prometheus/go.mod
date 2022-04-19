@@ -8,13 +8,6 @@ replace (
 	go.opentelemetry.io/otel/sdk => ../../sdk
 )
 
-require (
-	go.opentelemetry.io/otel v1.6.3
-	go.opentelemetry.io/otel/exporters/prometheus v0.29.0
-	go.opentelemetry.io/otel/metric v0.29.0
-	go.opentelemetry.io/otel/sdk/metric v0.29.0
-)
-
 replace go.opentelemetry.io/otel/bridge/opencensus => ../../bridge/opencensus
 
 replace go.opentelemetry.io/otel/bridge/opentracing => ../../bridge/opentracing
