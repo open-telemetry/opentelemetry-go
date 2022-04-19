@@ -20,10 +20,8 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/metrictransform"
-	"go.opentelemetry.io/otel/sdk/metric/export"
-	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
-	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/reader"
 )
 
 var (
@@ -32,8 +30,7 @@ var (
 
 // Exporter exports metrics data in the OTLP wire format.
 type Exporter struct {
-	client              Client
-	temporalitySelector aggregation.TemporalitySelector
+	client Client
 
 	mu      sync.RWMutex
 	started bool
@@ -42,15 +39,11 @@ type Exporter struct {
 	stopOnce  sync.Once
 }
 
+var _ reader.Exporter = (*Exporter)(nil)
+
 // Export exports a batch of metrics.
-func (e *Exporter) Export(ctx context.Context, res *resource.Resource, ilr export.InstrumentationLibraryReader) error {
-	rm, err := metrictransform.InstrumentationLibraryReader(ctx, e, res, ilr, 1)
-	if err != nil {
-		return err
-	}
-	if rm == nil {
-		return nil
-	}
+func (e *Exporter) Export(ctx context.Context, metrics reader.Metrics) error {
+	rm := metrictransform.TransformMetrics(metrics)
 
 	// TODO: There is never more than one resource emitted by this
 	// call, as per the specification.  We can change the
@@ -95,11 +88,10 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	return err
 }
 
-func (e *Exporter) TemporalityFor(descriptor *sdkapi.Descriptor, kind aggregation.Kind) aggregation.Temporality {
-	return e.temporalitySelector.TemporalityFor(descriptor, kind)
+func (e *Exporter) Flush(ctx context.Context) error {
+	// TODO Implement
+	return nil
 }
-
-var _ export.Exporter = (*Exporter)(nil)
 
 // New constructs a new Exporter and starts it.
 func New(ctx context.Context, client Client, opts ...Option) (*Exporter, error) {
@@ -116,7 +108,7 @@ func NewUnstarted(client Client, opts ...Option) *Exporter {
 		// Note: the default TemporalitySelector is specified
 		// as Cumulative:
 		// https://github.com/open-telemetry/opentelemetry-specification/issues/731
-		temporalitySelector: aggregation.CumulativeTemporalitySelector(),
+		temporality: aggregation.CumulativeTemporality,
 	}
 
 	for _, opt := range opts {
@@ -124,8 +116,7 @@ func NewUnstarted(client Client, opts ...Option) *Exporter {
 	}
 
 	e := &Exporter{
-		client:              client,
-		temporalitySelector: cfg.temporalitySelector,
+		client: client,
 	}
 
 	return e

@@ -14,7 +14,7 @@
 
 TOOLS_MOD_DIR := ./internal/tools
 SKIP_MODS := ./bridge/opencensus ./bridge/opencensus/test ./example/opencensus 
-SKIP_MODS += ./exporters/otlp/otlpmetric ./exporters/otlp/otlpmetric/otlpmetricgrpc ./exporters/otlp/otlpmetric/otlpmetrichttp
+# SKIP_MODS += ./exporters/otlp/otlpmetric ./exporters/otlp/otlpmetric/otlpmetricgrpc ./exporters/otlp/otlpmetric/otlpmetrichttp
 # SKIP_MODS += ./exporters/prometheus ./exporters/stdout/stdoutmetric
 
 ALL_DOCS := $(shell find . -name '*.md' -type f | sort)

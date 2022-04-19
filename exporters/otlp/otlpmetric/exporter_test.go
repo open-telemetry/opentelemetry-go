@@ -28,17 +28,14 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/metrictransform"
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
-	"go.opentelemetry.io/otel/sdk/metric/export"
-	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/metric/number"
-	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
-	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
+
+	"go.opentelemetry.io/otel/sdk/metric/reader"
+	"go.opentelemetry.io/otel/sdk/metric/sdkinstrument"
 	"go.opentelemetry.io/otel/sdk/resource"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
@@ -88,33 +85,6 @@ func pointTime() uint64 {
 	return uint64(intervalEnd.UnixNano())
 }
 
-type testRecord struct {
-	name   string
-	iKind  sdkapi.InstrumentKind
-	nKind  number.Kind
-	labels []attribute.KeyValue
-
-	meterName string
-	meterOpts []metric.MeterOption
-}
-
-func record(
-	name string,
-	iKind sdkapi.InstrumentKind,
-	nKind number.Kind,
-	labels []attribute.KeyValue,
-	meterName string,
-	meterOpts ...metric.MeterOption) testRecord {
-	return testRecord{
-		name:      name,
-		iKind:     iKind,
-		nKind:     nKind,
-		labels:    labels,
-		meterName: meterName,
-		meterOpts: meterOpts,
-	}
-}
-
 var (
 	baseKeyValues = []attribute.KeyValue{attribute.String("host", "test.com")}
 	cpuKey        = attribute.Key("CPU")
@@ -162,31 +132,37 @@ var (
 	testerAResourcePb = metrictransform.Resource(testerAResource)
 )
 
-const (
-	// Most of this test uses an empty instrumentation library name.
-	testLibName = ""
-)
-
 func TestNoGroupingExport(t *testing.T) {
 	runMetricExportTests(
 		t,
 		nil,
-		resource.Empty(),
-		[]testRecord{
-			record(
-				"int64-count",
-				sdkapi.CounterInstrumentKind,
-				number.Int64Kind,
-				append(baseKeyValues, cpuKey.Int(1)),
-				testLibName,
-			),
-			record(
-				"int64-count",
-				sdkapi.CounterInstrumentKind,
-				number.Int64Kind,
-				append(baseKeyValues, cpuKey.Int(2)),
-				testLibName,
-			),
+		reader.Metrics{
+			Resource: resource.Empty(),
+			Scopes: []reader.Scope{
+				{
+					Instruments: []reader.Instrument{
+						{
+							Descriptor:  sdkinstrument.NewDescriptor("int64-count", sdkinstrument.CounterKind, number.Int64Kind, "", ""),
+							Temporality: aggregation.CumulativeTemporality,
+
+							Points: []reader.Point{
+								{
+									Attributes:  attribute.NewSet(append(baseKeyValues, cpuKey.Int(1))...),
+									Aggregation: sum.NewInt64Monotonic(11),
+									Start:       intervalStart,
+									End:         intervalEnd,
+								},
+								{
+									Attributes:  attribute.NewSet(append(baseKeyValues, cpuKey.Int(2))...),
+									Aggregation: sum.NewInt64Monotonic(11),
+									Start:       intervalStart,
+									End:         intervalEnd,
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 		[]*metricpb.ResourceMetrics{
 			{
@@ -226,13 +202,35 @@ func TestNoGroupingExport(t *testing.T) {
 }
 
 func TestHistogramInt64MetricGroupingExport(t *testing.T) {
-	r := record(
-		"int64-histogram",
-		sdkapi.HistogramInstrumentKind,
-		number.Int64Kind,
-		append(baseKeyValues, cpuKey.Int(1)),
-		testLibName,
-	)
+	metrics := reader.Metrics{
+		Resource: resource.Empty(),
+		Scopes: []reader.Scope{
+			{
+				Instruments: []reader.Instrument{
+					{
+						Descriptor:  sdkinstrument.NewDescriptor("int64-histogram", sdkinstrument.HistogramKind, number.Int64Kind, "", ""),
+						Temporality: aggregation.CumulativeTemporality,
+
+						Points: []reader.Point{
+							{
+								Attributes:  attribute.NewSet(append(baseKeyValues, cpuKey.Int(1))...),
+								Aggregation: histogram.NewInt64(testHistogramBoundaries, int64(1), int64(10)),
+								Start:       intervalStart,
+								End:         intervalEnd,
+							},
+							{
+								Attributes:  attribute.NewSet(append(baseKeyValues, cpuKey.Int(1))...),
+								Aggregation: histogram.NewInt64(testHistogramBoundaries, int64(1), int64(10)),
+								Start:       intervalStart,
+								End:         intervalEnd,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
 	sum := 11.0
 	expected := []*metricpb.ResourceMetrics{
 		{
@@ -273,17 +271,39 @@ func TestHistogramInt64MetricGroupingExport(t *testing.T) {
 			},
 		},
 	}
-	runMetricExportTests(t, nil, resource.Empty(), []testRecord{r, r}, expected)
+	runMetricExportTests(t, nil, metrics, expected)
 }
 
 func TestHistogramFloat64MetricGroupingExport(t *testing.T) {
-	r := record(
-		"float64-histogram",
-		sdkapi.HistogramInstrumentKind,
-		number.Float64Kind,
-		append(baseKeyValues, cpuKey.Int(1)),
-		testLibName,
-	)
+
+	metrics := reader.Metrics{
+		Resource: resource.Empty(),
+		Scopes: []reader.Scope{
+			{
+				Instruments: []reader.Instrument{
+					{
+						Descriptor:  sdkinstrument.NewDescriptor("float64-histogram", sdkinstrument.HistogramKind, number.Float64Kind, "", ""),
+						Temporality: aggregation.CumulativeTemporality,
+
+						Points: []reader.Point{
+							{
+								Attributes:  attribute.NewSet(append(baseKeyValues, cpuKey.Int(1))...),
+								Aggregation: histogram.NewFloat64(testHistogramBoundaries, 1, 10),
+								Start:       intervalStart,
+								End:         intervalEnd,
+							},
+							{
+								Attributes:  attribute.NewSet(append(baseKeyValues, cpuKey.Int(1))...),
+								Aggregation: histogram.NewFloat64(testHistogramBoundaries, 1, 10),
+								Start:       intervalStart,
+								End:         intervalEnd,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 	sum := 11.0
 	expected := []*metricpb.ResourceMetrics{
 		{
@@ -324,22 +344,44 @@ func TestHistogramFloat64MetricGroupingExport(t *testing.T) {
 			},
 		},
 	}
-	runMetricExportTests(t, nil, resource.Empty(), []testRecord{r, r}, expected)
+	runMetricExportTests(t, nil, metrics, expected)
 }
 
 func TestCountInt64MetricGroupingExport(t *testing.T) {
-	r := record(
-		"int64-count",
-		sdkapi.CounterInstrumentKind,
-		number.Int64Kind,
-		append(baseKeyValues, cpuKey.Int(1)),
-		testLibName,
-	)
+
+	metrics := reader.Metrics{
+		Resource: resource.Empty(),
+		Scopes: []reader.Scope{
+			{
+				Instruments: []reader.Instrument{
+					{
+						Descriptor:  sdkinstrument.NewDescriptor("int64-count", sdkinstrument.CounterKind, number.Int64Kind, "", ""),
+						Temporality: aggregation.CumulativeTemporality,
+
+						Points: []reader.Point{
+							{
+								Attributes:  attribute.NewSet(append(baseKeyValues, cpuKey.Int(1))...),
+								Aggregation: sum.NewInt64Monotonic(11),
+								Start:       intervalStart,
+								End:         intervalEnd,
+							},
+							{
+								Attributes:  attribute.NewSet(append(baseKeyValues, cpuKey.Int(1))...),
+								Aggregation: sum.NewInt64Monotonic(11),
+								Start:       intervalStart,
+								End:         intervalEnd,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
 	runMetricExportTests(
 		t,
 		nil,
-		resource.Empty(),
-		[]testRecord{r, r},
+		metrics,
 		[]*metricpb.ResourceMetrics{
 			{
 				Resource: nil,
@@ -378,18 +420,40 @@ func TestCountInt64MetricGroupingExport(t *testing.T) {
 }
 
 func TestCountFloat64MetricGroupingExport(t *testing.T) {
-	r := record(
-		"float64-count",
-		sdkapi.CounterInstrumentKind,
-		number.Float64Kind,
-		append(baseKeyValues, cpuKey.Int(1)),
-		testLibName,
-	)
+
+	metrics := reader.Metrics{
+		Resource: resource.Empty(),
+		Scopes: []reader.Scope{
+			{
+				Instruments: []reader.Instrument{
+					{
+						Descriptor:  sdkinstrument.NewDescriptor("float64-count", sdkinstrument.CounterKind, number.Float64Kind, "", ""),
+						Temporality: aggregation.CumulativeTemporality,
+
+						Points: []reader.Point{
+							{
+								Attributes:  attribute.NewSet(append(baseKeyValues, cpuKey.Int(1))...),
+								Aggregation: sum.NewFloat64Monotonic(11),
+								Start:       intervalStart,
+								End:         intervalEnd,
+							},
+							{
+								Attributes:  attribute.NewSet(append(baseKeyValues, cpuKey.Int(1))...),
+								Aggregation: sum.NewFloat64Monotonic(11),
+								Start:       intervalStart,
+								End:         intervalEnd,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
 	runMetricExportTests(
 		t,
 		nil,
-		resource.Empty(),
-		[]testRecord{r, r},
+		metrics,
 		[]*metricpb.ResourceMetrics{
 			{
 				Resource: nil,
@@ -428,40 +492,51 @@ func TestCountFloat64MetricGroupingExport(t *testing.T) {
 }
 
 func TestResourceMetricGroupingExport(t *testing.T) {
+	metrics := reader.Metrics{
+		Resource: testerAResource,
+		Scopes: []reader.Scope{
+			{
+				Instruments: []reader.Instrument{
+					{
+						Descriptor:  sdkinstrument.NewDescriptor("int64-count", sdkinstrument.CounterKind, number.Int64Kind, "", ""),
+						Temporality: aggregation.CumulativeTemporality,
+
+						Points: []reader.Point{
+							{
+								Attributes:  attribute.NewSet(append(baseKeyValues, cpuKey.Int(1))...),
+								Aggregation: sum.NewInt64Monotonic(11),
+								Start:       intervalStart,
+								End:         intervalEnd,
+							},
+							{
+								Attributes:  attribute.NewSet(append(baseKeyValues, cpuKey.Int(1))...),
+								Aggregation: sum.NewInt64Monotonic(11),
+								Start:       intervalStart,
+								End:         intervalEnd,
+							},
+							{
+								Attributes:  attribute.NewSet(append(baseKeyValues, cpuKey.Int(2))...),
+								Aggregation: sum.NewInt64Monotonic(11),
+								Start:       intervalStart,
+								End:         intervalEnd,
+							},
+							{
+								Attributes:  attribute.NewSet(append(baseKeyValues, cpuKey.Int(1))...),
+								Aggregation: sum.NewInt64Monotonic(11),
+								Start:       intervalStart,
+								End:         intervalEnd,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
 	runMetricExportTests(
 		t,
 		nil,
-		testerAResource,
-		[]testRecord{
-			record(
-				"int64-count",
-				sdkapi.CounterInstrumentKind,
-				number.Int64Kind,
-				append(baseKeyValues, cpuKey.Int(1)),
-				testLibName,
-			),
-			record(
-				"int64-count",
-				sdkapi.CounterInstrumentKind,
-				number.Int64Kind,
-				append(baseKeyValues, cpuKey.Int(1)),
-				testLibName,
-			),
-			record(
-				"int64-count",
-				sdkapi.CounterInstrumentKind,
-				number.Int64Kind,
-				append(baseKeyValues, cpuKey.Int(2)),
-				testLibName,
-			),
-			record(
-				"int64-count",
-				sdkapi.CounterInstrumentKind,
-				number.Int64Kind,
-				append(baseKeyValues, cpuKey.Int(1)),
-				testLibName,
-			),
-		},
+		metrics,
 		[]*metricpb.ResourceMetrics{
 			{
 				Resource: testerAResourcePb,
@@ -512,57 +587,97 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 }
 
 func TestResourceInstLibMetricGroupingExport(t *testing.T) {
-	version1 := metric.WithInstrumentationVersion("v1")
-	version2 := metric.WithInstrumentationVersion("v2")
-	specialSchema := metric.WithSchemaURL("schurl")
-	summingLib := "summing-lib"
-	countingLib := "counting-lib"
+	// version1 := metric.WithInstrumentationVersion("v1")
+	// version2 := metric.WithInstrumentationVersion("v2")
+	// specialSchema := metric.WithSchemaURL("schurl")
+	// summingLib := "summing-lib"
+	// countingLib := "counting-lib"
+	//testerAResource,
+	metrics := reader.Metrics{
+		Resource: testerAResource,
+		Scopes: []reader.Scope{
+			{
+				Library: instrumentation.Library{
+					Name:    "counting-lib",
+					Version: "v1",
+				},
+				Instruments: []reader.Instrument{
+					{
+						Descriptor:  sdkinstrument.NewDescriptor("int64-count", sdkinstrument.CounterKind, number.Int64Kind, "", ""),
+						Temporality: aggregation.CumulativeTemporality,
+
+						Points: []reader.Point{
+							{
+								Attributes:  attribute.NewSet(append(baseKeyValues, cpuKey.Int(1))...),
+								Aggregation: sum.NewInt64Monotonic(11),
+								Start:       intervalStart,
+								End:         intervalEnd,
+							},
+							{
+								Attributes:  attribute.NewSet(append(baseKeyValues, cpuKey.Int(1))...),
+								Aggregation: sum.NewInt64Monotonic(11),
+								Start:       intervalStart,
+								End:         intervalEnd,
+							},
+							{
+								Attributes:  attribute.NewSet(append(baseKeyValues, cpuKey.Int(2))...),
+								Aggregation: sum.NewInt64Monotonic(11),
+								Start:       intervalStart,
+								End:         intervalEnd,
+							},
+						},
+					},
+				},
+			},
+			{
+				Library: instrumentation.Library{
+					Name:    "counting-lib",
+					Version: "v2",
+				},
+				Instruments: []reader.Instrument{
+					{
+						Descriptor:  sdkinstrument.NewDescriptor("int64-count", sdkinstrument.CounterKind, number.Int64Kind, "", ""),
+						Temporality: aggregation.CumulativeTemporality,
+
+						Points: []reader.Point{
+							{
+								Attributes:  attribute.NewSet(append(baseKeyValues, cpuKey.Int(1))...),
+								Aggregation: sum.NewInt64Monotonic(11),
+								Start:       intervalStart,
+								End:         intervalEnd,
+							},
+						},
+					},
+				},
+			},
+			{
+				Library: instrumentation.Library{
+					Name:      "summing-lib",
+					SchemaURL: "schurl",
+				},
+				Instruments: []reader.Instrument{
+					{
+						Descriptor:  sdkinstrument.NewDescriptor("int64-count", sdkinstrument.CounterKind, number.Int64Kind, "", ""),
+						Temporality: aggregation.CumulativeTemporality,
+
+						Points: []reader.Point{
+							{
+								Attributes:  attribute.NewSet(append(baseKeyValues, cpuKey.Int(1))...),
+								Aggregation: sum.NewInt64Monotonic(11),
+								Start:       intervalStart,
+								End:         intervalEnd,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
 	runMetricExportTests(
 		t,
 		nil,
-		testerAResource,
-		[]testRecord{
-			record(
-				"int64-count",
-				sdkapi.CounterInstrumentKind,
-				number.Int64Kind,
-				append(baseKeyValues, cpuKey.Int(1)),
-				countingLib,
-				version1,
-			),
-			record(
-				"int64-count",
-				sdkapi.CounterInstrumentKind,
-				number.Int64Kind,
-				append(baseKeyValues, cpuKey.Int(1)),
-				countingLib,
-				version2,
-			),
-			record(
-				"int64-count",
-				sdkapi.CounterInstrumentKind,
-				number.Int64Kind,
-				append(baseKeyValues, cpuKey.Int(1)),
-				countingLib,
-				version1,
-			),
-			record(
-				"int64-count",
-				sdkapi.CounterInstrumentKind,
-				number.Int64Kind,
-				append(baseKeyValues, cpuKey.Int(2)),
-				countingLib,
-				version1,
-			),
-			record(
-				"int64-count",
-				sdkapi.CounterInstrumentKind,
-				number.Int64Kind,
-				append(baseKeyValues, cpuKey.Int(1)),
-				summingLib,
-				specialSchema,
-			),
-		},
+		metrics,
 		[]*metricpb.ResourceMetrics{
 			{
 				Resource: testerAResourcePb,
@@ -663,35 +778,76 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 func TestStatelessAggregationTemporality(t *testing.T) {
 	type testcase struct {
 		name           string
-		instrumentKind sdkapi.InstrumentKind
+		kind           sdkinstrument.Kind
+		temporality    aggregation.Temporality
+		aggregation    aggregation.Aggregation
 		aggTemporality metricpb.AggregationTemporality
 		monotonic      bool
 	}
 
 	for _, k := range []testcase{
-		{"counter", sdkapi.CounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA, true},
-		{"updowncounter", sdkapi.UpDownCounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA, false},
-		{"counterobserver", sdkapi.CounterObserverInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, true},
-		{"updowncounterobserver", sdkapi.UpDownCounterObserverInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, false},
+		{
+			name:           "counter",
+			kind:           sdkinstrument.CounterKind,
+			temporality:    aggregation.DeltaTemporality,
+			aggregation:    sum.NewInt64Monotonic(11),
+			aggTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
+			monotonic:      true},
+		{
+			name:           "updowncounter",
+			kind:           sdkinstrument.UpDownCounterKind,
+			temporality:    aggregation.DeltaTemporality,
+			aggregation:    sum.NewInt64NonMonotonic(11),
+			aggTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
+			monotonic:      false},
+		{
+			name:           "counterobserver",
+			kind:           sdkinstrument.CounterObserverKind,
+			temporality:    aggregation.CumulativeTemporality,
+			aggregation:    sum.NewInt64Monotonic(11),
+			aggTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+			monotonic:      true},
+		{
+			name:           "updowncounterobserver",
+			kind:           sdkinstrument.UpDownCounterObserverKind,
+			temporality:    aggregation.CumulativeTemporality,
+			aggregation:    sum.NewInt64NonMonotonic(11),
+			aggTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+			monotonic:      false},
 	} {
 		t.Run(k.name, func(t *testing.T) {
+
+			metrics := reader.Metrics{
+				Resource: testerAResource,
+				Scopes: []reader.Scope{
+					{
+						Instruments: []reader.Instrument{
+							{
+								Descriptor:  sdkinstrument.NewDescriptor("instrument", k.kind, number.Int64Kind, "", ""),
+								Temporality: k.temporality,
+
+								Points: []reader.Point{
+									{
+										Attributes:  attribute.NewSet(append(baseKeyValues, cpuKey.Int(1))...),
+										Aggregation: k.aggregation,
+										Start:       intervalStart,
+										End:         intervalEnd,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
 			runMetricExportTests(
 				t,
 				[]otlpmetric.Option{
 					otlpmetric.WithMetricAggregationTemporalitySelector(
-						aggregation.StatelessTemporalitySelector(),
+						aggregation.UndefinedTemporality,
 					),
 				},
-				testerAResource,
-				[]testRecord{
-					record(
-						"instrument",
-						k.instrumentKind,
-						number.Int64Kind,
-						append(baseKeyValues, cpuKey.Int(1)),
-						testLibName,
-					),
-				},
+				metrics,
 				[]*metricpb.ResourceMetrics{
 					{
 						Resource: testerAResourcePb,
@@ -725,60 +881,12 @@ func TestStatelessAggregationTemporality(t *testing.T) {
 	}
 }
 
-func runMetricExportTests(t *testing.T, opts []otlpmetric.Option, res *resource.Resource, records []testRecord, expected []*metricpb.ResourceMetrics) {
+func runMetricExportTests(t *testing.T, opts []otlpmetric.Option, metrics reader.Metrics, expected []*metricpb.ResourceMetrics) {
+	t.Helper()
 	exp, driver := newExporter(t, opts...)
 
-	libraryRecs := map[instrumentation.Library][]export.Record{}
-	for _, r := range records {
-		lcopy := make([]attribute.KeyValue, len(r.labels))
-		copy(lcopy, r.labels)
-		desc := metrictest.NewDescriptor(r.name, r.iKind, r.nKind)
-		labs := attribute.NewSet(lcopy...)
-
-		var agg, ckpt aggregator.Aggregator
-		if r.iKind.Adding() {
-			sums := sum.New(2)
-			agg, ckpt = &sums[0], &sums[1]
-		} else {
-			histos := histogram.New(2, &desc, histogram.WithExplicitBoundaries(testHistogramBoundaries))
-			agg, ckpt = &histos[0], &histos[1]
-		}
-
-		ctx := context.Background()
-		if r.iKind.Synchronous() {
-			// For synchronous instruments, perform two updates: 1 and 10
-			switch r.nKind {
-			case number.Int64Kind:
-				require.NoError(t, agg.Update(ctx, number.NewInt64Number(1), &desc))
-				require.NoError(t, agg.Update(ctx, number.NewInt64Number(10), &desc))
-			case number.Float64Kind:
-				require.NoError(t, agg.Update(ctx, number.NewFloat64Number(1), &desc))
-				require.NoError(t, agg.Update(ctx, number.NewFloat64Number(10), &desc))
-			default:
-				t.Fatalf("invalid number kind: %v", r.nKind)
-			}
-		} else {
-			// For asynchronous instruments, perform a single update: 11
-			switch r.nKind {
-			case number.Int64Kind:
-				require.NoError(t, agg.Update(ctx, number.NewInt64Number(11), &desc))
-			case number.Float64Kind:
-				require.NoError(t, agg.Update(ctx, number.NewFloat64Number(11), &desc))
-			default:
-				t.Fatalf("invalid number kind: %v", r.nKind)
-			}
-		}
-		require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
-
-		meterCfg := metric.NewMeterConfig(r.meterOpts...)
-		lib := instrumentation.Library{
-			Name:      r.meterName,
-			Version:   meterCfg.InstrumentationVersion(),
-			SchemaURL: meterCfg.SchemaURL(),
-		}
-		libraryRecs[lib] = append(libraryRecs[lib], export.NewRecord(&desc, &labs, ckpt.Aggregation(), intervalStart, intervalEnd))
-	}
-	assert.NoError(t, exp.Export(context.Background(), res, processortest.MultiInstrumentationLibraryReader(libraryRecs)))
+	err := exp.Export(context.Background(), metrics)
+	assert.NoError(t, err)
 
 	// assert.ElementsMatch does not equate nested slices of different order,
 	// therefore this requires the top level slice to be broken down.
@@ -810,6 +918,8 @@ func runMetricExportTests(t *testing.T, opts []otlpmetric.Option, res *resource.
 				continue
 			}
 			for i, expected := range sm.GetMetrics() {
+				t.Log("Expected: ", expected)
+				t.Log("Actual:   ", g[i])
 				assert.Equal(t, "", cmp.Diff(expected, g[i], protocmp.Transform()))
 			}
 		}
@@ -824,25 +934,14 @@ func runMetricExportTests(t *testing.T, opts []otlpmetric.Option, res *resource.
 func TestEmptyMetricExport(t *testing.T) {
 	exp, driver := newExporter(t)
 
-	for _, test := range []struct {
-		records []export.Record
-		want    []*metricpb.ResourceMetrics
-	}{
-		{
-			[]export.Record(nil),
-			[]*metricpb.ResourceMetrics(nil),
-		},
-		{
-			[]export.Record{},
-			[]*metricpb.ResourceMetrics(nil),
-		},
-	} {
-		driver.Reset()
-		require.NoError(t, exp.Export(context.Background(), resource.Empty(), processortest.MultiInstrumentationLibraryReader(map[instrumentation.Library][]export.Record{
-			{
-				Name: testLibName,
-			}: test.records,
-		})))
-		assert.Equal(t, test.want, driver.rm)
+	// {
+	records := reader.Metrics{}
+	want := []*metricpb.ResourceMetrics{
+		{},
 	}
+
+	driver.Reset()
+	require.NoError(t, exp.Export(context.Background(), records))
+	assert.Equal(t, want, driver.rm)
+
 }

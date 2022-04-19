@@ -37,6 +37,13 @@ var (
 	_ aggregation.Gauge = &State[float64, traits.Float64]{}
 )
 
+func NewInt64(value int64) aggregation.Gauge {
+	return &State[int64, traits.Int64]{value: value}
+}
+func NewFloat64(value float64) aggregation.Gauge {
+	return &State[float64, traits.Float64]{value: value}
+}
+
 func (lv *State[N, Traits]) Gauge() number.Number {
 	var traits Traits
 	return traits.ToNumber(lv.value)

@@ -15,38 +15,23 @@
 package metrictransform
 
 import (
-	"context"
-	"errors"
-	"fmt"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
+
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/gauge"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
-	"go.opentelemetry.io/otel/sdk/metric/export"
-	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/metrictest"
+	"go.opentelemetry.io/otel/sdk/metric/reader"
+
+	// "go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
+
 	"go.opentelemetry.io/otel/sdk/metric/number"
-	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
-)
-
-var (
-	// Timestamps used in this test:
-
-	intervalStart = time.Now()
-	intervalEnd   = intervalStart.Add(time.Hour)
-)
-
-const (
-	otelCumulative = metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE
-	otelDelta      = metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA
 )
 
 func TestStringKeyValues(t *testing.T) {
@@ -96,220 +81,232 @@ func TestStringKeyValues(t *testing.T) {
 	}
 }
 
-func TestSumIntDataPoints(t *testing.T) {
-	desc := metrictest.NewDescriptor("", sdkapi.HistogramInstrumentKind, number.Int64Kind)
-	labels := attribute.NewSet(attribute.String("one", "1"))
-	sums := sum.New(2)
-	s, ckpt := &sums[0], &sums[1]
+func TestSumPoints(t *testing.T) {
+	// desc := sdkinstrument.NewDescriptor("", sdkinstrument.HistogramKind, number.Int64Kind)
+	// labels := attribute.NewSet(attribute.String("one", "1"))
 
-	assert.NoError(t, s.Update(context.Background(), number.Number(1), &desc))
-	require.NoError(t, s.SynchronizedMove(ckpt, &desc))
-	record := export.NewRecord(&desc, &labels, ckpt.Aggregation(), intervalStart, intervalEnd)
-
-	value, err := ckpt.Sum()
-	require.NoError(t, err)
-
-	if m, err := sumPoint(record, value, record.StartTime(), record.EndTime(), aggregation.CumulativeTemporality, true); assert.NoError(t, err) {
-		assert.Nil(t, m.GetGauge())
-		assert.Equal(t, &metricpb.Sum{
-			AggregationTemporality: otelCumulative,
-			IsMonotonic:            true,
-			DataPoints: []*metricpb.NumberDataPoint{{
-				StartTimeUnixNano: uint64(intervalStart.UnixNano()),
-				TimeUnixNano:      uint64(intervalEnd.UnixNano()),
-				Attributes: []*commonpb.KeyValue{
-					{
-						Key:   "one",
-						Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: "1"}},
-					},
-				},
-				Value: &metricpb.NumberDataPoint_AsInt{
-					AsInt: 1,
-				},
-			}},
-		}, m.GetSum())
-		assert.Nil(t, m.GetHistogram())
-		assert.Nil(t, m.GetSummary())
-	}
-}
-
-func TestSumFloatDataPoints(t *testing.T) {
-	desc := metrictest.NewDescriptor("", sdkapi.HistogramInstrumentKind, number.Float64Kind)
-	labels := attribute.NewSet(attribute.String("one", "1"))
-	sums := sum.New(2)
-	s, ckpt := &sums[0], &sums[1]
-
-	assert.NoError(t, s.Update(context.Background(), number.NewFloat64Number(1), &desc))
-	require.NoError(t, s.SynchronizedMove(ckpt, &desc))
-	record := export.NewRecord(&desc, &labels, ckpt.Aggregation(), intervalStart, intervalEnd)
-	value, err := ckpt.Sum()
-	require.NoError(t, err)
-
-	if m, err := sumPoint(record, value, record.StartTime(), record.EndTime(), aggregation.DeltaTemporality, false); assert.NoError(t, err) {
-		assert.Nil(t, m.GetGauge())
-		assert.Equal(t, &metricpb.Sum{
-			IsMonotonic:            false,
-			AggregationTemporality: otelDelta,
-			DataPoints: []*metricpb.NumberDataPoint{{
-				Value: &metricpb.NumberDataPoint_AsDouble{
-					AsDouble: 1.0,
-				},
-				StartTimeUnixNano: uint64(intervalStart.UnixNano()),
-				TimeUnixNano:      uint64(intervalEnd.UnixNano()),
-				Attributes: []*commonpb.KeyValue{
-					{
-						Key:   "one",
-						Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: "1"}},
-					},
-				},
-			}}}, m.GetSum())
-		assert.Nil(t, m.GetHistogram())
-		assert.Nil(t, m.GetSummary())
-
-	}
-}
-
-func TestLastValueIntDataPoints(t *testing.T) {
-	desc := metrictest.NewDescriptor("", sdkapi.HistogramInstrumentKind, number.Int64Kind)
-	labels := attribute.NewSet(attribute.String("one", "1"))
-	lvs := lastvalue.New(2)
-	lv, ckpt := &lvs[0], &lvs[1]
-
-	assert.NoError(t, lv.Update(context.Background(), number.Number(100), &desc))
-	require.NoError(t, lv.SynchronizedMove(ckpt, &desc))
-	record := export.NewRecord(&desc, &labels, ckpt.Aggregation(), intervalStart, intervalEnd)
-	value, timestamp, err := ckpt.LastValue()
-	require.NoError(t, err)
-
-	if m, err := gaugePoint(record, value, time.Time{}, timestamp); assert.NoError(t, err) {
-		assert.Equal(t, []*metricpb.NumberDataPoint{{
-			StartTimeUnixNano: 0,
-			TimeUnixNano:      uint64(timestamp.UnixNano()),
-			Attributes: []*commonpb.KeyValue{
+	testcases := []struct {
+		name        string
+		points      []reader.Point
+		kind        number.Kind
+		temporality aggregation.Temporality
+		want        *metricpb.Metric_Sum
+	}{
+		{
+			name:   "no points",
+			points: []reader.Point{},
+			want:   nil,
+		},
+		{
+			name: "incorrect aggregation",
+			points: []reader.Point{
 				{
-					Key:   "one",
-					Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: "1"}},
+					Aggregation: gauge.NewInt64(1),
 				},
 			},
-			Value: &metricpb.NumberDataPoint_AsInt{
-				AsInt: 100,
+			want: nil, // Error is in the error handler
+		},
+		{
+			name: "int data",
+			points: []reader.Point{
+				{
+					Aggregation: sum.NewInt64Monotonic(2),
+				},
 			},
-		}}, m.GetGauge().DataPoints)
-		assert.Nil(t, m.GetSum())
-		assert.Nil(t, m.GetHistogram())
-		assert.Nil(t, m.GetSummary())
-	}
-}
-
-func TestSumErrUnknownValueType(t *testing.T) {
-	desc := metrictest.NewDescriptor("", sdkapi.HistogramInstrumentKind, number.Kind(-1))
-	labels := attribute.NewSet()
-	s := &sum.New(1)[0]
-	record := export.NewRecord(&desc, &labels, s, intervalStart, intervalEnd)
-	value, err := s.Sum()
-	require.NoError(t, err)
-
-	_, err = sumPoint(record, value, record.StartTime(), record.EndTime(), aggregation.CumulativeTemporality, true)
-	assert.Error(t, err)
-	if !errors.Is(err, ErrUnknownValueType) {
-		t.Errorf("expected ErrUnknownValueType, got %v", err)
-	}
-}
-
-type testAgg struct {
-	kind aggregation.Kind
-	agg  aggregation.Aggregation
-}
-
-func (t *testAgg) Kind() aggregation.Kind {
-	return t.kind
-}
-
-func (t *testAgg) Aggregation() aggregation.Aggregation {
-	return t.agg
-}
-
-// None of these three are used:
-
-func (t *testAgg) Update(ctx context.Context, number number.Number, descriptor *sdkapi.Descriptor) error {
-	return nil
-}
-func (t *testAgg) SynchronizedMove(destination aggregator.Aggregator, descriptor *sdkapi.Descriptor) error {
-	return nil
-}
-func (t *testAgg) Merge(aggregator aggregator.Aggregator, descriptor *sdkapi.Descriptor) error {
-	return nil
-}
-
-type testErrSum struct {
-	err error
-}
-
-type testErrLastValue struct {
-	err error
-}
-
-func (te *testErrLastValue) LastValue() (number.Number, time.Time, error) {
-	return 0, time.Time{}, te.err
-}
-func (te *testErrLastValue) Kind() aggregation.Kind {
-	return aggregation.LastValueKind
-}
-
-func (te *testErrSum) Sum() (number.Number, error) {
-	return 0, te.err
-}
-func (te *testErrSum) Kind() aggregation.Kind {
-	return aggregation.SumKind
-}
-
-var _ aggregator.Aggregator = &testAgg{}
-var _ aggregation.Aggregation = &testAgg{}
-var _ aggregation.Sum = &testErrSum{}
-var _ aggregation.LastValue = &testErrLastValue{}
-
-func TestRecordAggregatorIncompatibleErrors(t *testing.T) {
-	makeMpb := func(kind aggregation.Kind, agg aggregation.Aggregation) (*metricpb.Metric, error) {
-		desc := metrictest.NewDescriptor("things", sdkapi.CounterInstrumentKind, number.Int64Kind)
-		labels := attribute.NewSet()
-		test := &testAgg{
-			kind: kind,
-			agg:  agg,
-		}
-		return Record(aggregation.CumulativeTemporalitySelector(), export.NewRecord(&desc, &labels, test, intervalStart, intervalEnd))
+			kind: number.Int64Kind,
+			want: &metricpb.Metric_Sum{
+				Sum: &metricpb.Sum{
+					DataPoints: []*metricpb.NumberDataPoint{
+						{
+							Value: &metricpb.NumberDataPoint_AsInt{
+								AsInt: 2,
+							},
+						},
+					},
+					IsMonotonic: true,
+				},
+			},
+		},
+		{
+			name: "float data",
+			points: []reader.Point{
+				{
+					Aggregation: sum.NewFloat64NonMonotonic(5),
+				},
+			},
+			kind: number.Float64Kind,
+			want: &metricpb.Metric_Sum{
+				Sum: &metricpb.Sum{
+					DataPoints: []*metricpb.NumberDataPoint{
+						{
+							Value: &metricpb.NumberDataPoint_AsDouble{
+								AsDouble: 5,
+							},
+						},
+					},
+					IsMonotonic: false,
+				},
+			},
+		},
 	}
 
-	mpb, err := makeMpb(aggregation.SumKind, &lastvalue.New(1)[0])
-
-	require.Error(t, err)
-	require.Nil(t, mpb)
-	require.True(t, errors.Is(err, ErrIncompatibleAgg))
-
-	mpb, err = makeMpb(aggregation.LastValueKind, &sum.New(1)[0])
-
-	require.Error(t, err)
-	require.Nil(t, mpb)
-	require.True(t, errors.Is(err, ErrIncompatibleAgg))
-}
-
-func TestRecordAggregatorUnexpectedErrors(t *testing.T) {
-	makeMpb := func(kind aggregation.Kind, agg aggregation.Aggregation) (*metricpb.Metric, error) {
-		desc := metrictest.NewDescriptor("things", sdkapi.CounterInstrumentKind, number.Int64Kind)
-		labels := attribute.NewSet()
-		return Record(aggregation.CumulativeTemporalitySelector(), export.NewRecord(&desc, &labels, agg, intervalStart, intervalEnd))
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			got := sumPoints(tt.points, tt.kind, tt.temporality)
+			assert.Equal(t, tt.want, got)
+		})
 	}
 
-	errEx := fmt.Errorf("timeout")
+}
 
-	mpb, err := makeMpb(aggregation.SumKind, &testErrSum{errEx})
+func TestGaugePoints(t *testing.T) {
+	// desc := sdkinstrument.NewDescriptor("", sdkinstrument.HistogramKind, number.Int64Kind)
+	// labels := attribute.NewSet(attribute.String("one", "1"))
 
-	require.Error(t, err)
-	require.Nil(t, mpb)
-	require.True(t, errors.Is(err, errEx))
+	testcases := []struct {
+		name        string
+		points      []reader.Point
+		kind        number.Kind
+		temporality aggregation.Temporality
+		want        *metricpb.Metric_Gauge
+	}{
+		{
+			name:   "no points",
+			points: []reader.Point{},
+			want:   nil,
+		},
+		{
+			name: "incorrect aggregation",
+			points: []reader.Point{
+				{
+					Aggregation: sum.NewInt64Monotonic(1),
+				},
+			},
+			want: nil, // Error is in the error handler
+		},
+		{
+			name: "int data",
+			points: []reader.Point{
+				{
+					Aggregation: gauge.NewInt64(2),
+				},
+			},
+			kind: number.Int64Kind,
+			want: &metricpb.Metric_Gauge{
+				Gauge: &metricpb.Gauge{
+					DataPoints: []*metricpb.NumberDataPoint{
+						{
+							Value: &metricpb.NumberDataPoint_AsInt{
+								AsInt: 2,
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "float data",
+			points: []reader.Point{
+				{
+					Aggregation: gauge.NewFloat64(5),
+				},
+			},
+			kind: number.Float64Kind,
+			want: &metricpb.Metric_Gauge{
+				Gauge: &metricpb.Gauge{
+					DataPoints: []*metricpb.NumberDataPoint{
+						{
+							Value: &metricpb.NumberDataPoint_AsDouble{
+								AsDouble: 5,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 
-	mpb, err = makeMpb(aggregation.LastValueKind, &testErrLastValue{errEx})
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			got := gaugePoints(tt.points, tt.kind)
+			assert.Equal(t, tt.want, got)
+		})
+	}
 
-	require.Error(t, err)
-	require.Nil(t, mpb)
-	require.True(t, errors.Is(err, errEx))
+}
+func TestHistogramPoints(t *testing.T) {
+	boundaries := []float64{2.0, 5.0, 8.0}
+	testSum := float64(11)
+	testcases := []struct {
+		name        string
+		points      []reader.Point
+		kind        number.Kind
+		temporality aggregation.Temporality
+		want        *metricpb.Metric_Histogram
+	}{
+		{
+			name:   "no points",
+			points: []reader.Point{},
+			want:   nil,
+		},
+		{
+			name: "incorrect aggregation",
+			points: []reader.Point{
+				{
+					Aggregation: sum.NewInt64Monotonic(1),
+				},
+			},
+			want: nil, // Error is in the error handler
+		},
+		{
+			name: "int data",
+			points: []reader.Point{
+				{
+					Aggregation: histogram.NewInt64(boundaries, 1, 10),
+				},
+			},
+			kind: number.Int64Kind,
+			want: &metricpb.Metric_Histogram{
+				Histogram: &metricpb.Histogram{
+					DataPoints: []*metricpb.HistogramDataPoint{
+						{
+							Count:          2,
+							Sum:            &testSum,
+							BucketCounts:   []uint64{1, 0, 0, 1},
+							ExplicitBounds: boundaries,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "float data",
+			points: []reader.Point{
+				{
+					Aggregation: histogram.NewFloat64(boundaries, 1, 10),
+				},
+			},
+			kind: number.Float64Kind,
+			want: &metricpb.Metric_Histogram{
+				Histogram: &metricpb.Histogram{
+					DataPoints: []*metricpb.HistogramDataPoint{
+						{
+							Count:          2,
+							Sum:            &testSum,
+							BucketCounts:   []uint64{1, 0, 0, 1},
+							ExplicitBounds: boundaries,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			got := histogramPoints(tt.points, tt.kind, tt.temporality)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+
 }

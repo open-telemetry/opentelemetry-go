@@ -53,6 +53,38 @@ var (
 	_ aggregation.Histogram = &State[float64, traits.Float64]{}
 )
 
+func NewFloat64(boundries []float64, values ...float64) aggregation.Histogram {
+	if len(boundries) < 1 {
+		boundries = DefaultFloat64Boundaries
+	}
+
+	hist := &State[float64, traits.Float64]{
+		boundaries:   boundries,
+		bucketCounts: make([]uint64, len(boundries)+1),
+	}
+	methods := Methods[float64, traits.Float64, State[float64, traits.Float64]]{}
+	for _, val := range values {
+		methods.Update(hist, val)
+	}
+	return hist
+}
+
+func NewInt64(boundries []float64, values ...int64) aggregation.Histogram {
+	if len(boundries) < 1 {
+		boundries = DefaultFloat64Boundaries
+	}
+
+	hist := &State[int64, traits.Int64]{
+		boundaries:   boundries,
+		bucketCounts: make([]uint64, len(boundries)+1),
+	}
+	methods := Methods[int64, traits.Int64, State[int64, traits.Int64]]{}
+	for _, val := range values {
+		methods.Update(hist, val)
+	}
+	return hist
+}
+
 // DefaultBoundaries have been copied from prometheus.DefBuckets.
 var DefaultFloat64Boundaries = []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10}
 

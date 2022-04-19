@@ -25,9 +25,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/metric/instrument"
-	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
-	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/reader/periodic"
 )
 
 func Example_insecure() {
@@ -45,32 +44,14 @@ func Example_insecure() {
 		}
 	}()
 
-	pusher := controller.New(
-		processor.NewFactory(
-			simple.NewWithHistogramDistribution(),
-			exp,
-		),
-		controller.WithExporter(exp),
-		controller.WithCollectPeriod(2*time.Second),
+	// This creates a reader that will collect from all instruments once a
+	// minute, and will timeout after two seconds.
+	rdr := periodic.New(time.Minute, exp, periodic.WithTimeout(2*time.Second))
+	meterProvider := metric.New(
+		metric.WithReader(rdr),
 	)
-	// TODO Bring back Global package
-	// global.SetMeterProvider(pusher)
 
-	if err := pusher.Start(ctx); err != nil {
-		log.Fatalf("could not start metric controoler: %v", err)
-	}
-	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, time.Second)
-		defer cancel()
-		// pushes any last exports to the receiver
-		if err := pusher.Stop(ctx); err != nil {
-			otel.Handle(err)
-		}
-	}()
-
-	// TODO Bring Back Global package
-	// meter := global.Meter("go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc_test")
-	meter := pusher.Meter("go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc_test")
+	meter := meterProvider.Meter("go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc_test")
 
 	// Recorder metric example
 
@@ -107,33 +88,14 @@ func Example_withTLS() {
 		}
 	}()
 
-	pusher := controller.New(
-		processor.NewFactory(
-			simple.NewWithHistogramDistribution(),
-			exp,
-		),
-		controller.WithExporter(exp),
-		controller.WithCollectPeriod(2*time.Second),
+	// This creates a reader that will collect from all instruments once a
+	// minute, and will timeout after two seconds.
+	rdr := periodic.New(time.Minute, exp, periodic.WithTimeout(2*time.Second))
+	meterProvider := metric.New(
+		metric.WithReader(rdr),
 	)
-	// TODO Bring back Global package
-	// global.SetMeterProvider(pusher)
 
-	if err := pusher.Start(ctx); err != nil {
-		log.Fatalf("could not start metric controoler: %v", err)
-	}
-
-	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, time.Second)
-		defer cancel()
-		// pushes any last exports to the receiver
-		if err := pusher.Stop(ctx); err != nil {
-			otel.Handle(err)
-		}
-	}()
-
-	// TODO Bring back Global package
-	// meter := global.Meter("go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc_test")
-	meter := pusher.Meter("go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc_test")
+	meter := meterProvider.Meter("go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc_test")
 
 	// Recorder metric example
 	counter, err := meter.SyncFloat64().Counter("an_important_metric", instrument.WithDescription("Measures the cumulative epicness of the app"))
@@ -166,32 +128,14 @@ func Example_withDifferentSignalCollectors() {
 		}
 	}()
 
-	pusher := controller.New(
-		processor.NewFactory(
-			simple.NewWithHistogramDistribution(),
-			exp,
-		),
-		controller.WithExporter(exp),
-		controller.WithCollectPeriod(2*time.Second),
+	// This creates a reader that will collect from all instruments once a
+	// minute, and will timeout after two seconds.
+	rdr := periodic.New(time.Minute, exp, periodic.WithTimeout(2*time.Second))
+	meterProvider := metric.New(
+		metric.WithReader(rdr),
 	)
-	// TODO Bring back Global package
-	// global.SetMeterProvider(pusher)
 
-	if err := pusher.Start(ctx); err != nil {
-		log.Fatalf("could not start metric controoler: %v", err)
-	}
-	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, time.Second)
-		defer cancel()
-		// pushes any last exports to the receiver
-		if err := pusher.Stop(ctx); err != nil {
-			otel.Handle(err)
-		}
-	}()
-
-	// TODO Bring back Global package
-	// meter := global.Meter("go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc_test")
-	meter := pusher.Meter("go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc_test")
+	meter := meterProvider.Meter("go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc_test")
 
 	// Recorder metric example
 	counter, err := meter.SyncFloat64().Counter("an_important_metric", instrument.WithDescription("Measures the cumulative epicness of the app"))

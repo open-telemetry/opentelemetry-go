@@ -27,18 +27,11 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpmetrictest"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 const (
 	relOtherMetricsPath = "post/metrics/here"
 	otherMetricsPath    = "/post/metrics/here"
-)
-
-var (
-	oneRecord = otlpmetrictest.OneRecordReader()
-
-	testResource = resource.Empty()
 )
 
 var (
@@ -160,7 +153,7 @@ func TestTimeout(t *testing.T) {
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
-	err = exporter.Export(ctx, testResource, oneRecord)
+	err = exporter.Export(ctx, otlpmetrictest.OneMetric)
 	assert.Equalf(t, true, os.IsTimeout(err), "expected timeout error, got: %v", err)
 }
 
@@ -179,7 +172,7 @@ func TestEmptyData(t *testing.T) {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
 	assert.NoError(t, err)
-	err = exporter.Export(ctx, testResource, oneRecord)
+	err = exporter.Export(ctx, otlpmetrictest.OneMetric)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, mc.GetMetrics())
 }
@@ -204,7 +197,7 @@ func TestCancelledContext(t *testing.T) {
 		assert.NoError(t, exporter.Shutdown(context.Background()))
 	}()
 	cancel()
-	_ = exporter.Export(ctx, testResource, oneRecord)
+	_ = exporter.Export(ctx, otlpmetrictest.OneMetric)
 	assert.Empty(t, mc.GetMetrics())
 }
 
@@ -231,7 +224,7 @@ func TestDeadlineContext(t *testing.T) {
 	}()
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
-	err = exporter.Export(ctx, testResource, oneRecord)
+	err = exporter.Export(ctx, otlpmetrictest.OneMetric)
 	assert.Error(t, err)
 	assert.Empty(t, mc.GetMetrics())
 }
@@ -259,7 +252,7 @@ func TestStopWhileExporting(t *testing.T) {
 	}()
 	doneCh := make(chan struct{})
 	go func() {
-		err := exporter.Export(ctx, testResource, oneRecord)
+		err := exporter.Export(ctx, otlpmetrictest.OneMetric)
 		assert.Error(t, err)
 		assert.Empty(t, mc.GetMetrics())
 		close(doneCh)

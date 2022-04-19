@@ -36,6 +36,20 @@ type (
 	}
 )
 
+func NewInt64Monotonic(value int64) aggregation.Sum {
+	return &State[int64, traits.Int64, Monotonic]{value: value}
+}
+func NewFloat64Monotonic(value float64) aggregation.Sum {
+	return &State[float64, traits.Float64, Monotonic]{value: value}
+}
+
+func NewInt64NonMonotonic(value int64) aggregation.Sum {
+	return &State[int64, traits.Int64, NonMonotonic]{value: value}
+}
+func NewFloat64NonMonotonic(value float64) aggregation.Sum {
+	return &State[float64, traits.Float64, NonMonotonic]{value: value}
+}
+
 func (Monotonic) category() aggregation.Category {
 	return aggregation.MonotonicSumCategory
 }

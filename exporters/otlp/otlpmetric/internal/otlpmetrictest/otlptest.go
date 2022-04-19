@@ -17,6 +17,8 @@ package otlpmetrictest // import "go.opentelemetry.io/otel/exporters/otlp/otlpme
 import (
 	"context"
 	"fmt"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -26,41 +28,67 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/metric/instrument"
-	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
-	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/number"
-	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
-	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	"go.opentelemetry.io/otel/sdk/metric/reader"
+	"go.opentelemetry.io/otel/sdk/metric/sdkinstrument"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
+
+type client struct {
+	lock            sync.Mutex
+	resourceMetrics *metricpb.ResourceMetrics
+	uploadCount     uint64
+	startCount      uint64
+	stopCount       uint64
+}
+
+var _ otlpmetric.Client = &client{}
+
+func (c *client) Start(ctx context.Context) error {
+	atomic.AddUint64(&c.startCount, 1)
+	return nil
+}
+func (c *client) Stop(ctx context.Context) error {
+	atomic.AddUint64(&c.stopCount, 1)
+	return nil
+}
+func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.ResourceMetrics) error {
+	atomic.AddUint64(&c.uploadCount, 1)
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	c.resourceMetrics = protoMetrics
+
+	return nil
+}
 
 // RunEndToEndTest can be used by protocol driver tests to validate
 // themselves.
 func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter, mcMetrics Collector) {
-	selector := simple.NewWithInexpensiveDistribution()
-	proc := processor.NewFactory(selector, aggregation.StatelessTemporalitySelector())
-	cont := controller.New(proc, controller.WithExporter(exp))
-	require.NoError(t, cont.Start(ctx))
+	rdr := reader.NewManualReader(exp)
+	mp := sdkmetric.New(
+		sdkmetric.WithReader(rdr),
+	)
 
-	meter := cont.Meter("test-meter")
+	meter := mp.Meter("test-meter")
 	labels := []attribute.KeyValue{attribute.Bool("test", true)}
 
 	type data struct {
-		iKind sdkapi.InstrumentKind
+		iKind sdkinstrument.Kind
 		nKind number.Kind
 		val   int64
 	}
 	instruments := map[string]data{
-		"test-int64-counter":         {sdkapi.CounterInstrumentKind, number.Int64Kind, 1},
-		"test-float64-counter":       {sdkapi.CounterInstrumentKind, number.Float64Kind, 1},
-		"test-int64-gaugeobserver":   {sdkapi.GaugeObserverInstrumentKind, number.Int64Kind, 3},
-		"test-float64-gaugeobserver": {sdkapi.GaugeObserverInstrumentKind, number.Float64Kind, 3},
+		"test-int64-counter":         {sdkinstrument.CounterKind, number.Int64Kind, 1},
+		"test-float64-counter":       {sdkinstrument.CounterKind, number.Float64Kind, 1},
+		"test-int64-gaugeobserver":   {sdkinstrument.GaugeObserverKind, number.Int64Kind, 3},
+		"test-float64-gaugeobserver": {sdkinstrument.GaugeObserverKind, number.Float64Kind, 3},
 	}
 	for name, data := range instruments {
 		data := data
 		switch data.iKind {
-		case sdkapi.CounterInstrumentKind:
+		case sdkinstrument.CounterKind:
 			switch data.nKind {
 			case number.Int64Kind:
 				c, _ := meter.SyncInt64().Counter(name)
@@ -71,7 +99,7 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
-		case sdkapi.HistogramInstrumentKind:
+		case sdkinstrument.HistogramKind:
 			switch data.nKind {
 			case number.Int64Kind:
 				c, _ := meter.SyncInt64().Histogram(name)
@@ -82,7 +110,7 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
-		case sdkapi.GaugeObserverInstrumentKind:
+		case sdkinstrument.GaugeObserverKind:
 			switch data.nKind {
 			case number.Int64Kind:
 				g, _ := meter.AsyncInt64().Gauge(name)
@@ -102,11 +130,9 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 		}
 	}
 
-	// Flush and close.
-	require.NoError(t, cont.Stop(ctx))
-
-	// Wait >2 cycles.
-	<-time.After(40 * time.Millisecond)
+	// Collect
+	err := rdr.Collect(ctx, nil)
+	assert.NoError(t, err)
 
 	// Now shutdown the exporter
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -131,13 +157,13 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 		seen[m.Name] = struct{}{}
 
 		switch data.iKind {
-		case sdkapi.CounterInstrumentKind, sdkapi.GaugeObserverInstrumentKind:
+		case sdkinstrument.CounterKind, sdkinstrument.GaugeObserverKind:
 			var dp []*metricpb.NumberDataPoint
 			switch data.iKind {
-			case sdkapi.CounterInstrumentKind:
+			case sdkinstrument.CounterKind:
 				require.NotNil(t, m.GetSum())
 				dp = m.GetSum().GetDataPoints()
-			case sdkapi.GaugeObserverInstrumentKind:
+			case sdkinstrument.GaugeObserverKind:
 				require.NotNil(t, m.GetGauge())
 				dp = m.GetGauge().GetDataPoints()
 			}
@@ -151,7 +177,7 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 					assert.Equal(t, v, dp[0].Value, "invalid value for %q", m.Name)
 				}
 			}
-		case sdkapi.HistogramInstrumentKind:
+		case sdkinstrument.HistogramKind:
 			require.NotNil(t, m.GetSummary())
 			if dp := m.GetSummary().DataPoints; assert.Len(t, dp, 1) {
 				count := dp[0].Count

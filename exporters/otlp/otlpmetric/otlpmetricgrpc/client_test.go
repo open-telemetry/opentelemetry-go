@@ -32,13 +32,6 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpmetrictest"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
-	"go.opentelemetry.io/otel/sdk/resource"
-)
-
-var (
-	oneRecord = otlpmetrictest.OneRecordReader()
-
-	testResource = resource.Empty()
 )
 
 func TestNewExporter_endToEnd(t *testing.T) {
@@ -205,7 +198,7 @@ func TestNewExporter_withHeaders(t *testing.T) {
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint,
 		otlpmetricgrpc.WithHeaders(map[string]string{"header1": "value1"}))
-	require.NoError(t, exp.Export(ctx, testResource, oneRecord))
+	require.NoError(t, exp.Export(ctx, otlpmetrictest.OneMetric))
 
 	defer func() {
 		_ = exp.Shutdown(ctx)
@@ -229,7 +222,7 @@ func TestNewExporter_WithTimeout(t *testing.T) {
 		{
 			name: "Timeout Metrics",
 			fn: func(exp *otlpmetric.Exporter) error {
-				return exp.Export(context.Background(), testResource, oneRecord)
+				return exp.Export(context.Background(), otlpmetrictest.OneMetric)
 			},
 			timeout: time.Millisecond * 100,
 			code:    codes.DeadlineExceeded,
@@ -239,7 +232,7 @@ func TestNewExporter_WithTimeout(t *testing.T) {
 		{
 			name: "No Timeout Metrics",
 			fn: func(exp *otlpmetric.Exporter) error {
-				return exp.Export(context.Background(), testResource, oneRecord)
+				return exp.Export(context.Background(), otlpmetrictest.OneMetric)
 			},
 			timeout: time.Minute,
 			metrics: 1,
@@ -310,23 +303,5 @@ func TestEmptyData(t *testing.T) {
 		assert.NoError(t, exp.Shutdown(ctx))
 	}()
 
-	assert.NoError(t, exp.Export(ctx, testResource, otlpmetrictest.EmptyReader()))
-}
-
-func TestFailedMetricTransform(t *testing.T) {
-	mc := runMockCollector(t)
-
-	defer func() {
-		_ = mc.stop()
-	}()
-
-	<-time.After(5 * time.Millisecond)
-
-	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, mc.endpoint)
-	defer func() {
-		assert.NoError(t, exp.Shutdown(ctx))
-	}()
-
-	assert.Error(t, exp.Export(ctx, testResource, otlpmetrictest.FailReader{}))
+	assert.NoError(t, exp.Export(ctx, otlpmetrictest.EmptyMetric))
 }
