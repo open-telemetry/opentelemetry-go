@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package view
+package view // import "go.opentelemetry.io/otel/sdk/metric/view"
 
 // Config contains configuration options for a view.
 type Config struct {
