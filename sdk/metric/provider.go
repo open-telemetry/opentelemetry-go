@@ -15,6 +15,8 @@
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
+	"context"
+
 	"go.opentelemetry.io/otel/metric"
 )
 
@@ -47,10 +49,48 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 // If name is empty, the default (go.opentelemetry.io/otel/sdk/meter) will be
 // used.
 //
+// Calls to the Meter method after Shutdown has been called will return Meters
+// that perform no operations.
+//
 // This method is safe to call concurrently.
 func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metric.Meter {
 	// TODO (#2821): ensure this is concurrent safe.
 	// TODO: test this is concurrent safe.
 	// TODO (#2821): register and track the created Meter.
 	return &meter{}
+}
+
+// Flush flushes all pending telemetry.
+//
+// This method honors the deadline or cancellation of ctx. An appropriate
+// error will be returned in these situations. There is no guaranteed that all
+// telemetry be flushed or all resources have been released in these
+// situations.
+//
+// This method is safe to call concurrently.
+func (mp *MeterProvider) Flush(ctx context.Context) error {
+	// TODO (#2820): implement.
+	// TODO: test this is concurrent safe.
+	return nil
+}
+
+// Shutdown shuts down the MeterProvider flushing all pending telemetry and
+// releasing any held computational resources.
+//
+// This call is idempotent. The first call will perform all flush and
+// releasing operations. Subsequent calls will perform no action.
+//
+// Calls to the Meter method after Shutdown has been called will return Meters
+// that perform no operations.
+//
+// This method honors the deadline or cancellation of ctx. An appropriate
+// error will be returned in these situations. There is no guaranteed that all
+// telemetry be flushed or all resources have been released in these
+// situations.
+//
+// This method is safe to call concurrently.
+func (mp *MeterProvider) Shutdown(ctx context.Context) error {
+	// TODO (#2820): implement.
+	// TODO: test this is concurrent safe.
+	return nil
 }
