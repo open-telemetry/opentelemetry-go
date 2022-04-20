@@ -28,24 +28,24 @@ var testSlice = []attribute.KeyValue{
 }
 
 func newIter(slice []attribute.KeyValue) attribute.Iterator {
-	labels := attribute.NewSet(slice...)
-	return labels.Iter()
+	attrs := attribute.NewSet(slice...)
+	return attrs.Iter()
 }
 
-func TestLabelIterator(t *testing.T) {
+func TestAttributeIterator(t *testing.T) {
 	iter := newIter(testSlice)
 	require.Equal(t, 2, iter.Len())
 
 	require.True(t, iter.Next())
-	require.Equal(t, attribute.String("bar", "baz"), iter.Label())
-	idx, kv := iter.IndexedLabel()
+	require.Equal(t, attribute.String("bar", "baz"), iter.Attribute())
+	idx, kv := iter.IndexedAttribute()
 	require.Equal(t, 0, idx)
 	require.Equal(t, attribute.String("bar", "baz"), kv)
 	require.Equal(t, 2, iter.Len())
 
 	require.True(t, iter.Next())
-	require.Equal(t, attribute.Int("foo", 42), iter.Label())
-	idx, kv = iter.IndexedLabel()
+	require.Equal(t, attribute.Int("foo", 42), iter.Attribute())
+	idx, kv = iter.IndexedAttribute()
 	require.Equal(t, 1, idx)
 	require.Equal(t, attribute.Int("foo", 42), kv)
 	require.Equal(t, 2, iter.Len())
@@ -54,7 +54,7 @@ func TestLabelIterator(t *testing.T) {
 	require.Equal(t, 2, iter.Len())
 }
 
-func TestEmptyLabelIterator(t *testing.T) {
+func TestEmptyAttributeIterator(t *testing.T) {
 	iter := newIter(nil)
 	require.Equal(t, 0, iter.Len())
 	require.False(t, iter.Next())

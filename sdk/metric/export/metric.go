@@ -64,12 +64,11 @@ type Processor interface {
 	// disable metrics with active records.
 	AggregatorSelector
 
-	// Process is called by the SDK once per internal record,
-	// passing the export Accumulation (a Descriptor, the corresponding
-	// Labels, and the checkpointed Aggregator). This call has no
-	// Context argument because it is expected to perform only
-	// computation. An SDK is not expected to call exporters from
-	// with Process, use a controller for that (see
+	// Process is called by the SDK once per internal record, passing the
+	// export Accumulation (a Descriptor, the corresponding attributes, and
+	// the checkpointed Aggregator). This call has no Context argument because
+	// it is expected to perform only computation. An SDK is not expected to
+	// call exporters from with Process, use a controller for that (see
 	// ./controllers/{pull,push}.
 	Process(accum Accumulation) error
 }
@@ -198,18 +197,18 @@ type Reader interface {
 // steps.
 type Metadata struct {
 	descriptor *sdkapi.Descriptor
-	labels     *attribute.Set
+	attrs      *attribute.Set
 }
 
 // Accumulation contains the exported data for a single metric instrument
-// and label set, as prepared by an Accumulator for the Processor.
+// and attribute set, as prepared by an Accumulator for the Processor.
 type Accumulation struct {
 	Metadata
 	aggregator aggregator.Aggregator
 }
 
 // Record contains the exported data for a single metric instrument
-// and label set, as prepared by the Processor for the Exporter.
+// and attribute set, as prepared by the Processor for the Exporter.
 // This includes the effective start and end time for the aggregation.
 type Record struct {
 	Metadata
@@ -223,21 +222,21 @@ func (m Metadata) Descriptor() *sdkapi.Descriptor {
 	return m.descriptor
 }
 
-// Labels describes the labels associated with the instrument and the
+// Attributes returns the attribute set associated with the instrument and the
 // aggregated data.
-func (m Metadata) Labels() *attribute.Set {
-	return m.labels
+func (m Metadata) Attributes() *attribute.Set {
+	return m.attrs
 }
 
 // NewAccumulation allows Accumulator implementations to construct new
-// Accumulations to send to Processors. The Descriptor, Labels,
-// and Aggregator represent aggregate metric events received over a single
+// Accumulations to send to Processors. The Descriptor, attributes, and
+// Aggregator represent aggregate metric events received over a single
 // collection period.
-func NewAccumulation(descriptor *sdkapi.Descriptor, labels *attribute.Set, aggregator aggregator.Aggregator) Accumulation {
+func NewAccumulation(descriptor *sdkapi.Descriptor, attrs *attribute.Set, aggregator aggregator.Aggregator) Accumulation {
 	return Accumulation{
 		Metadata: Metadata{
 			descriptor: descriptor,
-			labels:     labels,
+			attrs:      attrs,
 		},
 		aggregator: aggregator,
 	}
@@ -249,14 +248,14 @@ func (r Accumulation) Aggregator() aggregator.Aggregator {
 	return r.aggregator
 }
 
-// NewRecord allows Processor implementations to construct export
-// records.  The Descriptor, Labels, and Aggregator represent
-// aggregate metric events received over a single collection period.
-func NewRecord(descriptor *sdkapi.Descriptor, labels *attribute.Set, aggregation aggregation.Aggregation, start, end time.Time) Record {
+// NewRecord allows Processor implementations to construct export records.
+// The Descriptor, attributes, and Aggregator represent aggregate metric
+// events received over a single collection period.
+func NewRecord(descriptor *sdkapi.Descriptor, attrs *attribute.Set, aggregation aggregation.Aggregation, start, end time.Time) Record {
 	return Record{
 		Metadata: Metadata{
 			descriptor: descriptor,
-			labels:     labels,
+			attrs:      attrs,
 		},
 		aggregation: aggregation,
 		start:       start,

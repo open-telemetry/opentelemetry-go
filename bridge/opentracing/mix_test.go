@@ -652,7 +652,7 @@ func runOTOtelOT(t *testing.T, ctx context.Context, name string, callback func(*
 	}(ctx)
 }
 
-func TestOtTagToOTelLabelCheckTypeConversions(t *testing.T) {
+func TestOtTagToOTelAttrCheckTypeConversions(t *testing.T) {
 	tableTest := []struct {
 		key               string
 		value             interface{}
@@ -716,7 +716,7 @@ func TestOtTagToOTelLabelCheckTypeConversions(t *testing.T) {
 	}
 
 	for _, test := range tableTest {
-		got := otTagToOTelLabel(test.key, test.value)
+		got := otTagToOTelAttr(test.key, test.value)
 		if test.expectedValueType != got.Value.Type() {
 			t.Errorf("Expected type %s, but got %s after conversion '%v' value",
 				test.expectedValueType,

@@ -58,7 +58,7 @@ type SyncImpl interface {
 	instrument.Synchronous
 
 	// RecordOne captures a single synchronous metric event.
-	RecordOne(ctx context.Context, number number.Number, labels []attribute.KeyValue)
+	RecordOne(ctx context.Context, number number.Number, attrs []attribute.KeyValue)
 }
 
 // AsyncImpl is an implementation-level interface to an
@@ -68,7 +68,7 @@ type AsyncImpl interface {
 	instrument.Asynchronous
 
 	// ObserveOne captures a single synchronous metric event.
-	ObserveOne(ctx context.Context, number number.Number, labels []attribute.KeyValue)
+	ObserveOne(ctx context.Context, number number.Number, attrs []attribute.KeyValue)
 }
 
 // AsyncRunner is expected to convert into an AsyncSingleRunner or an

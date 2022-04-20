@@ -22,10 +22,10 @@ import (
 )
 
 var (
-	defaultWriter       = os.Stdout
-	defaultPrettyPrint  = false
-	defaultTimestamps   = true
-	defaultLabelEncoder = attribute.DefaultEncoder()
+	defaultWriter      = os.Stdout
+	defaultPrettyPrint = false
+	defaultTimestamps  = true
+	defaultAttrEncoder = attribute.DefaultEncoder()
 )
 
 // config contains options for the STDOUT exporter.
@@ -41,17 +41,17 @@ type config struct {
 	// true.
 	Timestamps bool
 
-	// LabelEncoder encodes the labels.
-	LabelEncoder attribute.Encoder
+	// Encoder encodes the attributes.
+	Encoder attribute.Encoder
 }
 
 // newConfig creates a validated Config configured with options.
 func newConfig(options ...Option) (config, error) {
 	cfg := config{
-		Writer:       defaultWriter,
-		PrettyPrint:  defaultPrettyPrint,
-		Timestamps:   defaultTimestamps,
-		LabelEncoder: defaultLabelEncoder,
+		Writer:      defaultWriter,
+		PrettyPrint: defaultPrettyPrint,
+		Timestamps:  defaultTimestamps,
+		Encoder:     defaultAttrEncoder,
 	}
 	for _, opt := range options {
 		cfg = opt.apply(cfg)
@@ -103,16 +103,16 @@ func (o timestampsOption) apply(cfg config) config {
 	return cfg
 }
 
-// WithLabelEncoder sets the label encoder used in export.
-func WithLabelEncoder(enc attribute.Encoder) Option {
-	return labelEncoderOption{enc}
+// WithAttributeEncoder sets the attribute encoder used in export.
+func WithAttributeEncoder(enc attribute.Encoder) Option {
+	return attrEncoderOption{enc}
 }
 
-type labelEncoderOption struct {
-	LabelEncoder attribute.Encoder
+type attrEncoderOption struct {
+	encoder attribute.Encoder
 }
 
-func (o labelEncoderOption) apply(cfg config) config {
-	cfg.LabelEncoder = o.LabelEncoder
+func (o attrEncoderOption) apply(cfg config) config {
+	cfg.Encoder = o.encoder
 	return cfg
 }

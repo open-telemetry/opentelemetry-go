@@ -159,8 +159,8 @@ func TestUniqueness(t *testing.T) {
 	for _, tc := range cases {
 		cpy := make([]attribute.KeyValue, len(tc.kvs))
 		copy(cpy, tc.kvs)
-		distinct, uniq := attribute.NewSetWithFiltered(cpy, func(label attribute.KeyValue) bool {
-			return tc.keyRe.MatchString(string(label.Key))
+		distinct, uniq := attribute.NewSetWithFiltered(cpy, func(attr attribute.KeyValue) bool {
+			return tc.keyRe.MatchString(string(attr.Key))
 		})
 
 		full := attribute.NewSet(uniq...)
