@@ -38,13 +38,13 @@ import (
 // RunEndToEndTest can be used by protocol driver tests to validate
 // themselves.
 func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter, mcMetrics Collector) {
-	selector := simple.NewWithInexpensiveDistribution()
+	selector := simple.NewWithHistogramDistribution()
 	proc := processor.NewFactory(selector, aggregation.StatelessTemporalitySelector())
 	cont := controller.New(proc, controller.WithExporter(exp))
 	require.NoError(t, cont.Start(ctx))
 
 	meter := cont.Meter("test-meter")
-	labels := []attribute.KeyValue{attribute.Bool("test", true)}
+	attrs := []attribute.KeyValue{attribute.Bool("test", true)}
 
 	type data struct {
 		iKind sdkapi.InstrumentKind
@@ -54,6 +54,8 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 	instruments := map[string]data{
 		"test-int64-counter":         {sdkapi.CounterInstrumentKind, number.Int64Kind, 1},
 		"test-float64-counter":       {sdkapi.CounterInstrumentKind, number.Float64Kind, 1},
+		"test-int64-histogram":       {sdkapi.HistogramInstrumentKind, number.Int64Kind, 2},
+		"test-float64-histogram":     {sdkapi.HistogramInstrumentKind, number.Float64Kind, 2},
 		"test-int64-gaugeobserver":   {sdkapi.GaugeObserverInstrumentKind, number.Int64Kind, 3},
 		"test-float64-gaugeobserver": {sdkapi.GaugeObserverInstrumentKind, number.Float64Kind, 3},
 	}
@@ -64,10 +66,10 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 			switch data.nKind {
 			case number.Int64Kind:
 				c, _ := meter.SyncInt64().Counter(name)
-				c.Add(ctx, data.val, labels...)
+				c.Add(ctx, data.val, attrs...)
 			case number.Float64Kind:
 				c, _ := meter.SyncFloat64().Counter(name)
-				c.Add(ctx, float64(data.val), labels...)
+				c.Add(ctx, float64(data.val), attrs...)
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
@@ -75,10 +77,10 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 			switch data.nKind {
 			case number.Int64Kind:
 				c, _ := meter.SyncInt64().Histogram(name)
-				c.Record(ctx, data.val, labels...)
+				c.Record(ctx, data.val, attrs...)
 			case number.Float64Kind:
 				c, _ := meter.SyncFloat64().Histogram(name)
-				c.Record(ctx, float64(data.val), labels...)
+				c.Record(ctx, float64(data.val), attrs...)
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
 			}
@@ -87,12 +89,12 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 			case number.Int64Kind:
 				g, _ := meter.AsyncInt64().Gauge(name)
 				_ = meter.RegisterCallback([]instrument.Asynchronous{g}, func(ctx context.Context) {
-					g.Observe(ctx, data.val, labels...)
+					g.Observe(ctx, data.val, attrs...)
 				})
 			case number.Float64Kind:
 				g, _ := meter.AsyncFloat64().Gauge(name)
 				_ = meter.RegisterCallback([]instrument.Asynchronous{g}, func(ctx context.Context) {
-					g.Observe(ctx, float64(data.val), labels...)
+					g.Observe(ctx, float64(data.val), attrs...)
 				})
 			default:
 				assert.Failf(t, "unsupported number testing kind", data.nKind.String())
@@ -152,11 +154,12 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 				}
 			}
 		case sdkapi.HistogramInstrumentKind:
-			require.NotNil(t, m.GetSummary())
-			if dp := m.GetSummary().DataPoints; assert.Len(t, dp, 1) {
+			require.NotNil(t, m.GetHistogram())
+			if dp := m.GetHistogram().DataPoints; assert.Len(t, dp, 1) {
 				count := dp[0].Count
 				assert.Equal(t, uint64(1), count, "invalid count for %q", m.Name)
-				assert.Equal(t, float64(data.val*int64(count)), dp[0].Sum, "invalid sum for %q (value %d)", m.Name, data.val)
+				require.NotNil(t, dp[0].Sum)
+				assert.Equal(t, float64(data.val*int64(count)), *dp[0].Sum, "invalid sum for %q (value %d)", m.Name, data.val)
 			}
 		default:
 			assert.Failf(t, "invalid metrics kind", data.iKind.String())

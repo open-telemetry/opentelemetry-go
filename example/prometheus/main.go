@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/prometheus"
-	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
@@ -35,9 +35,6 @@ import (
 
 var (
 	lemonsKey = attribute.Key("ex.com/lemons")
-
-	// TODO Bring back Global package
-	meterProvider metric.MeterProvider
 )
 
 func initMeter() {
@@ -57,9 +54,8 @@ func initMeter() {
 	if err != nil {
 		log.Panicf("failed to initialize prometheus exporter %v", err)
 	}
-	// TODO Bring back Global package
-	// global.SetMeterProvider(exporter.MeterProvider())
-	meterProvider = exporter.MeterProvider()
+
+	global.SetMeterProvider(exporter.MeterProvider())
 
 	http.HandleFunc("/", exporter.ServeHTTP)
 	go func() {
@@ -72,12 +68,11 @@ func initMeter() {
 func main() {
 	initMeter()
 
-	// TODO Bring back Global package
-	// meter := global.Meter("ex.com/basic")
-	meter := meterProvider.Meter("ex.com/basic")
+	meter := global.Meter("ex.com/basic")
+
 	observerLock := new(sync.RWMutex)
 	observerValueToReport := new(float64)
-	observerLabelsToReport := new([]attribute.KeyValue)
+	observerAttrsToReport := new([]attribute.KeyValue)
 
 	gaugeObserver, err := meter.AsyncFloat64().Gauge("ex.com.one")
 	if err != nil {
@@ -86,9 +81,9 @@ func main() {
 	_ = meter.RegisterCallback([]instrument.Asynchronous{gaugeObserver}, func(ctx context.Context) {
 		(*observerLock).RLock()
 		value := *observerValueToReport
-		labels := *observerLabelsToReport
+		attrs := *observerAttrsToReport
 		(*observerLock).RUnlock()
-		gaugeObserver.Observe(ctx, value, labels...)
+		gaugeObserver.Observe(ctx, value, attrs...)
 	})
 
 	histogram, err := meter.SyncFloat64().Histogram("ex.com.two")
@@ -100,36 +95,36 @@ func main() {
 		log.Panicf("failed to initialize instrument: %v", err)
 	}
 
-	commonLabels := []attribute.KeyValue{lemonsKey.Int(10), attribute.String("A", "1"), attribute.String("B", "2"), attribute.String("C", "3")}
-	notSoCommonLabels := []attribute.KeyValue{lemonsKey.Int(13)}
+	commonAttrs := []attribute.KeyValue{lemonsKey.Int(10), attribute.String("A", "1"), attribute.String("B", "2"), attribute.String("C", "3")}
+	notSoCommonAttrs := []attribute.KeyValue{lemonsKey.Int(13)}
 
 	ctx := context.Background()
 
 	(*observerLock).Lock()
 	*observerValueToReport = 1.0
-	*observerLabelsToReport = commonLabels
+	*observerAttrsToReport = commonAttrs
 	(*observerLock).Unlock()
 
-	histogram.Record(ctx, 2.0, commonLabels...)
-	counter.Add(ctx, 12.0, commonLabels...)
+	histogram.Record(ctx, 2.0, commonAttrs...)
+	counter.Add(ctx, 12.0, commonAttrs...)
 
 	time.Sleep(5 * time.Second)
 
 	(*observerLock).Lock()
 	*observerValueToReport = 1.0
-	*observerLabelsToReport = notSoCommonLabels
+	*observerAttrsToReport = notSoCommonAttrs
 	(*observerLock).Unlock()
-	histogram.Record(ctx, 2.0, notSoCommonLabels...)
-	counter.Add(ctx, 22.0, notSoCommonLabels...)
+	histogram.Record(ctx, 2.0, notSoCommonAttrs...)
+	counter.Add(ctx, 22.0, notSoCommonAttrs...)
 
 	time.Sleep(5 * time.Second)
 
 	(*observerLock).Lock()
 	*observerValueToReport = 13.0
-	*observerLabelsToReport = commonLabels
+	*observerAttrsToReport = commonAttrs
 	(*observerLock).Unlock()
-	histogram.Record(ctx, 12.0, commonLabels...)
-	counter.Add(ctx, 13.0, commonLabels...)
+	histogram.Record(ctx, 12.0, commonAttrs...)
+	counter.Add(ctx, 13.0, commonAttrs...)
 
 	fmt.Println("Example finished updating, please visit :2222")
 
