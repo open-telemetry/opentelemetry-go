@@ -38,11 +38,6 @@ replace go.opentelemetry.io/otel/sdk/metric => ./
 
 replace go.opentelemetry.io/otel/trace => ../../trace
 
-require (
-	github.com/stretchr/testify v1.7.1
-	go.opentelemetry.io/otel v1.6.3
-)
-
 replace go.opentelemetry.io/otel/example/passthrough => ../../example/passthrough
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace => ../../exporters/otlp/otlptrace
