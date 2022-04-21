@@ -1,7 +1,7 @@
 # OpenTelemetry Collector Metrics Example
 
-This example illustrates how to export metric data from 
-the OpenTelemetry-Go SDK to the OpenTelemetry Collector. 
+This example illustrates how to export metric data from
+the OpenTelemetry-Go SDK to the OpenTelemetry Collector.
 From there, we bring the the metric data to Prometheus
 The complete flow is:
 
@@ -31,7 +31,8 @@ or an ingress extension).
 
 If you use kind, you should start a local cluster with a configuration [file](./k8s/kind.yaml).
 
-In the configuration file, we use `extraPortMappings` feature to expose the port of collector to kind nodes. 
+In the configuration file, we use `extraPortMappings` feature to expose the port of collector to kind nodes.
+
 By doing this, the demo program is able to send metric data to collector in the kind cluster.
 
 ```bash
@@ -39,6 +40,7 @@ kind create cluster --config k8s/kind.yaml
 ```
 
 After a few minutes, a local k8s cluster with one node is started. You can following command to visit cluster directly.
+
 ```bash
 $ kubectl get node
 NAME                 STATUS   ROLES                  AGE   VERSION
@@ -109,4 +111,4 @@ kubectl port-forward svc/prometheus-operated 9090
 Then navigate to [http://localhost:9090](http://localhost:9090) to view
 the Prometheus dashboard.
 
-You can view the metrics in demo 'an_important_metric' through [url](http://localhost:9090/graph?g0.expr=an_important_metric&g0.tab=1&g0.stacked=0&g0.show_exemplars=0&g0.range_input=1h) 
+You can view the metrics in demo 'an_important_metric' through [url](http://localhost:9090/graph?g0.expr=an_important_metric&g0.tab=1&g0.stacked=0&g0.show_exemplars=0&g0.range_input=1h)

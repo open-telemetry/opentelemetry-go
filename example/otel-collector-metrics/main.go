@@ -35,13 +35,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
-var (
-	meterProvider metric.MeterProvider
-)
-
 // Initializes an OTLP exporter, and configures the corresponding trace and
 // metric providers.
-func initProvider() func() {
+func initProvider() (metric.MeterProvider, func()) {
 	ctx := context.Background()
 
 	// If the OpenTelemetry Collector is running on a local cluster (minikube or
@@ -68,9 +64,7 @@ func initProvider() func() {
 	err = controller.Start(ctx)
 	handleErr(err, "failed to start metric controoler")
 
-	meterProvider = controller
-
-	return func() {
+	return controller, func() {
 		// Shutdown will flush any remaining spans and shut down the exporter.
 		handleErr(controller.Stop(ctx), "failed to stop meterProvider")
 	}
@@ -80,7 +74,7 @@ func main() {
 	ctx := context.Background()
 	log.Printf("Waiting for connection...")
 
-	shutdown := initProvider()
+	meterProvider, shutdown := initProvider()
 	defer shutdown()
 
 	// TODO Bring Back Global package

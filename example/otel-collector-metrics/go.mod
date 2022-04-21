@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/example/otel-collector-metrics
 
-go 1.17
+go 1.16
 
 require (
 	go.opentelemetry.io/otel v1.6.3
