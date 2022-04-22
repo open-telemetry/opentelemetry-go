@@ -43,8 +43,8 @@ func (f functionOption) apply(cfg config) config {
 
 // WithTemporalitySelector allows for the use of either cumulative (default) or
 // delta metrics.
-
-// Warning the current SDK does not convert async instruments into delta
+//
+// Warning: the current SDK does not convert async instruments into delta
 // temporality.
 func WithTemporalitySelector(ts aggregation.TemporalitySelector) Option {
 	return functionOption(func(cfg config) config {

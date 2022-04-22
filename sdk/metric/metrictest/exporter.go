@@ -140,7 +140,7 @@ func (e *Exporter) Collect(ctx context.Context) error {
 
 // GetRecords returns all Records found by the SDK.
 func (e *Exporter) GetRecords() []ExportRecord {
-	return e.Records[:]
+	return e.Records
 }
 
 var errNotFound = fmt.Errorf("record not found")
@@ -155,7 +155,7 @@ func (e *Exporter) GetByName(name string) (ExportRecord, error) {
 	return ExportRecord{}, errNotFound
 }
 
-// GetByNameAndAttributes returns the first Record with a matching name and set of Attributes.
+// GetByNameAndAttributes returns the first Record with a matching name and the sub-set of attributes.
 func (e *Exporter) GetByNameAndAttributes(name string, attributes []attribute.KeyValue) (ExportRecord, error) {
 	for _, rec := range e.Records {
 		if rec.InstrumentName == name && subSet(attributes, rec.Attributes) {
@@ -165,7 +165,7 @@ func (e *Exporter) GetByNameAndAttributes(name string, attributes []attribute.Ke
 	return ExportRecord{}, errNotFound
 }
 
-// subSet returns true if A is a subset of B
+// subSet returns true if attributesA is a subset of attributesB.
 func subSet(attributesA, attributesB []attribute.KeyValue) bool {
 	b := attribute.NewSet(attributesB...)
 

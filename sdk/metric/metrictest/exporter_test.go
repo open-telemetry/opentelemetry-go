@@ -40,10 +40,10 @@ func TestSyncInstruments(t *testing.T) {
 		fcnt.Add(ctx, 2)
 
 		err = exp.Collect(context.Background())
-		assert.NoError(t, err)
+		requrie.NoError(t, err)
 
 		out, err := exp.GetByName("fCount")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.InDelta(t, 2.0, out.Sum.AsFloat64(), 0.0001)
 		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
 	})
@@ -421,5 +421,4 @@ func ExampleExporter_GetByNameAndAttributes() {
 
 	fmt.Println(out.Sum.AsFloat64())
 	// Output: 4
-
 }

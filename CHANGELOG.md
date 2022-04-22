@@ -16,7 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Added an in-memory exporter to metrictest to aid testing with a full SDK (#2776)
+- Added an in-memory exporter to metrictest to aid testing with a full SDK. (#2776)
 
 ## [0.29.0] - 2022-04-11
 
