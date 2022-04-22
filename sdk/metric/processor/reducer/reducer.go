@@ -22,25 +22,25 @@ import (
 
 type (
 	// Processor implements "dimensionality reduction" by
-	// filtering keys from export label sets.
+	// filtering keys from export attribute sets.
 	Processor struct {
 		export.Checkpointer
-		filterSelector LabelFilterSelector
+		filterSelector AttributeFilterSelector
 	}
 
-	// LabelFilterSelector is the interface used to configure a
-	// specific Filter to an instrument.
-	LabelFilterSelector interface {
-		LabelFilterFor(descriptor *sdkapi.Descriptor) attribute.Filter
+	// AttributeFilterSelector selects an attribute filter based on the
+	// instrument described by the descriptor.
+	AttributeFilterSelector interface {
+		AttributeFilterFor(descriptor *sdkapi.Descriptor) attribute.Filter
 	}
 )
 
 var _ export.Processor = &Processor{}
 var _ export.Checkpointer = &Processor{}
 
-// New returns a dimensionality-reducing Processor that passes data to
-// the next stage in an export pipeline.
-func New(filterSelector LabelFilterSelector, ckpter export.Checkpointer) *Processor {
+// New returns a dimensionality-reducing Processor that passes data to the
+// next stage in an export pipeline.
+func New(filterSelector AttributeFilterSelector, ckpter export.Checkpointer) *Processor {
 	return &Processor{
 		Checkpointer:   ckpter,
 		filterSelector: filterSelector,
@@ -49,10 +49,10 @@ func New(filterSelector LabelFilterSelector, ckpter export.Checkpointer) *Proces
 
 // Process implements export.Processor.
 func (p *Processor) Process(accum export.Accumulation) error {
-	// Note: the removed labels are returned and ignored here.
+	// Note: the removed attributes are returned and ignored here.
 	// Conceivably these inputs could be useful to a sampler.
-	reduced, _ := accum.Labels().Filter(
-		p.filterSelector.LabelFilterFor(
+	reduced, _ := accum.Attributes().Filter(
+		p.filterSelector.AttributeFilterFor(
 			accum.Descriptor(),
 		),
 	)

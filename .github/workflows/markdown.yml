@@ -1,57 +1,31 @@
-name: markdown
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-jobs:
-  changedfiles:
-    name: changed files
-    runs-on: ubuntu-latest
-    outputs:
-      md: ${{ steps.changes.outputs.md }}
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: Get changed files
-        id: changes
-        run: |
-          echo "::set-output name=md::$(git diff --name-only --diff-filter=ACMRTUXB origin/${{ github.event.pull_request.base.ref }} ${{ github.event.pull_request.head.sha }} | grep .md$ | xargs)"
+name: Markdown
 
-  lint:
-    name: lint markdown files
+on:
+  repository_dispatch:
+  workflow_dispatch:
+  schedule:
+  # Everyday at 9:00 AM.
+  - cron: "0 9 * * *"
+
+jobs:
+  lint-markdown:
     runs-on: ubuntu-latest
-    needs: changedfiles
-    if: ${{needs.changedfiles.outputs.md}}
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v3
+
     - name: Run linter
+      id: markdownlint
       uses: docker://avtodev/markdown-lint:v1
       with:
-        args: ${{needs.changedfiles.outputs.md}}
+        config: .markdownlint.yaml
+        args: '**/*.md'
+        output: ./markdownlint.txt
 
-  check-links:
-    runs-on: ubuntu-latest
-    needs: changedfiles
-    if: ${{needs.changedfiles.outputs.md}}
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      # This doesn't use gaurav-nelson/github-action-markdown-link-check
-      # intentionally. As of v1.0.13 the base image was not pinned to a LTS
-      # version of node and updates upstream to the base image caused CI
-      # failures. This boils down the entrypoint script from that repository
-      # and calls markdown-link-check directly instead.
-      - name: Install markdown-link-check
-        run: npm install -g markdown-link-check
-      - name: Run markdown-link-check
-        run: |
-            markdown-link-check \
-              --verbose \
-              --config .markdown-link.json \
-              ${{needs.changedfiles.outputs.md}}
+    - name: Create Issue From File
+      if: steps.markdownlint.outputs.exit_code != 0
+      uses: peter-evans/create-issue-from-file@v3
+      with:
+        title: Markdown Lint Report
+        content-filepath: ./markdownlint.txt
+        labels: report, bot-generated

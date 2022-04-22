@@ -79,5 +79,5 @@ func (n noopInstrument) Descriptor() Descriptor {
 func (noopSyncInstrument) RecordOne(context.Context, number.Number, []attribute.KeyValue) {
 }
 
-func (noopAsyncInstrument) ObserveOne(ctx context.Context, number number.Number, labels []attribute.KeyValue) {
+func (noopAsyncInstrument) ObserveOne(context.Context, number.Number, []attribute.KeyValue) {
 }
