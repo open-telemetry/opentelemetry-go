@@ -34,7 +34,7 @@ type meter struct {
 }
 
 // Compile-time check meter implements metric.Meter.
-var _ metric.Meter = &meter{}
+var _ metric.Meter = (*meter)(nil)
 
 // AsyncInt64 returns the asynchronous integer instrument provider.
 func (m *meter) AsyncInt64() asyncint64.InstrumentProvider {
