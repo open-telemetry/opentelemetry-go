@@ -40,7 +40,7 @@ func TestSyncInstruments(t *testing.T) {
 		fcnt.Add(ctx, 2)
 
 		err = exp.Collect(context.Background())
-		requrie.NoError(t, err)
+		require.NoError(t, err)
 
 		out, err := exp.GetByName("fCount")
 		require.NoError(t, err)
@@ -55,10 +55,10 @@ func TestSyncInstruments(t *testing.T) {
 		fudcnt.Add(ctx, 3)
 
 		err = exp.Collect(context.Background())
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		out, err := exp.GetByName("fUDCount")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.InDelta(t, 3.0, out.Sum.AsFloat64(), 0.0001)
 		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
 
@@ -72,10 +72,10 @@ func TestSyncInstruments(t *testing.T) {
 		fhis.Record(ctx, 5)
 
 		err = exp.Collect(context.Background())
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		out, err := exp.GetByName("fHist")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.InDelta(t, 9.0, out.Sum.AsFloat64(), 0.0001)
 		assert.EqualValues(t, 2, out.Count)
 		assert.Equal(t, aggregation.HistogramKind, out.AggregationKind)
@@ -88,10 +88,10 @@ func TestSyncInstruments(t *testing.T) {
 		icnt.Add(ctx, 22)
 
 		err = exp.Collect(context.Background())
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		out, err := exp.GetByName("iCount")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.EqualValues(t, 22, out.Sum.AsInt64())
 		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
 
@@ -103,10 +103,10 @@ func TestSyncInstruments(t *testing.T) {
 		iudcnt.Add(ctx, 23)
 
 		err = exp.Collect(context.Background())
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		out, err := exp.GetByName("iUDCount")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.EqualValues(t, 23, out.Sum.AsInt64())
 		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
 
@@ -120,10 +120,10 @@ func TestSyncInstruments(t *testing.T) {
 		ihis.Record(ctx, 25)
 
 		err = exp.Collect(context.Background())
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		out, err := exp.GetByName("iHist")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.EqualValues(t, 49, out.Sum.AsInt64())
 		assert.EqualValues(t, 2, out.Count)
 		assert.Equal(t, aggregation.HistogramKind, out.AggregationKind)
@@ -142,10 +142,10 @@ func TestSyncDeltaInstruments(t *testing.T) {
 		fcnt.Add(ctx, 2)
 
 		err = exp.Collect(context.Background())
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		out, err := exp.GetByName("fCount")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.InDelta(t, 2.0, out.Sum.AsFloat64(), 0.0001)
 		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
 	})
@@ -157,10 +157,10 @@ func TestSyncDeltaInstruments(t *testing.T) {
 		fudcnt.Add(ctx, 3)
 
 		err = exp.Collect(context.Background())
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		out, err := exp.GetByName("fUDCount")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.InDelta(t, 3.0, out.Sum.AsFloat64(), 0.0001)
 		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
 
@@ -174,10 +174,10 @@ func TestSyncDeltaInstruments(t *testing.T) {
 		fhis.Record(ctx, 5)
 
 		err = exp.Collect(context.Background())
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		out, err := exp.GetByName("fHist")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.InDelta(t, 9.0, out.Sum.AsFloat64(), 0.0001)
 		assert.EqualValues(t, 2, out.Count)
 		assert.Equal(t, aggregation.HistogramKind, out.AggregationKind)
@@ -190,10 +190,10 @@ func TestSyncDeltaInstruments(t *testing.T) {
 		icnt.Add(ctx, 22)
 
 		err = exp.Collect(context.Background())
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		out, err := exp.GetByName("iCount")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.EqualValues(t, 22, out.Sum.AsInt64())
 		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
 
@@ -205,10 +205,10 @@ func TestSyncDeltaInstruments(t *testing.T) {
 		iudcnt.Add(ctx, 23)
 
 		err = exp.Collect(context.Background())
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		out, err := exp.GetByName("iUDCount")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.EqualValues(t, 23, out.Sum.AsInt64())
 		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
 
@@ -222,10 +222,10 @@ func TestSyncDeltaInstruments(t *testing.T) {
 		ihis.Record(ctx, 25)
 
 		err = exp.Collect(context.Background())
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		out, err := exp.GetByName("iHist")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.EqualValues(t, 49, out.Sum.AsInt64())
 		assert.EqualValues(t, 2, out.Count)
 		assert.Equal(t, aggregation.HistogramKind, out.AggregationKind)
@@ -251,10 +251,10 @@ func TestAsyncInstruments(t *testing.T) {
 		require.NoError(t, err)
 
 		err = exp.Collect(context.Background())
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		out, err := exp.GetByName("fCount")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.InDelta(t, 2.0, out.Sum.AsFloat64(), 0.0001)
 		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
 	})
@@ -274,10 +274,10 @@ func TestAsyncInstruments(t *testing.T) {
 		require.NoError(t, err)
 
 		err = exp.Collect(context.Background())
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		out, err := exp.GetByName("fUDCount")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.InDelta(t, 3.0, out.Sum.AsFloat64(), 0.0001)
 		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
 	})
@@ -297,10 +297,10 @@ func TestAsyncInstruments(t *testing.T) {
 		require.NoError(t, err)
 
 		err = exp.Collect(context.Background())
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		out, err := exp.GetByName("fGauge")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.InDelta(t, 4.0, out.LastValue.AsFloat64(), 0.0001)
 		assert.Equal(t, aggregation.LastValueKind, out.AggregationKind)
 	})
@@ -320,10 +320,10 @@ func TestAsyncInstruments(t *testing.T) {
 		require.NoError(t, err)
 
 		err = exp.Collect(context.Background())
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		out, err := exp.GetByName("iCount")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.EqualValues(t, 22, out.Sum.AsInt64())
 		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
 	})
@@ -343,10 +343,10 @@ func TestAsyncInstruments(t *testing.T) {
 		require.NoError(t, err)
 
 		err = exp.Collect(context.Background())
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		out, err := exp.GetByName("iUDCount")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.EqualValues(t, 23, out.Sum.AsInt64())
 		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
 
@@ -366,10 +366,10 @@ func TestAsyncInstruments(t *testing.T) {
 		require.NoError(t, err)
 
 		err = exp.Collect(context.Background())
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		out, err := exp.GetByName("iGauge")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.EqualValues(t, 25, out.LastValue.AsInt64())
 		assert.Equal(t, aggregation.LastValueKind, out.AggregationKind)
 	})
