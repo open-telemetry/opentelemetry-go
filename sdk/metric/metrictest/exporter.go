@@ -96,7 +96,7 @@ func (e *Exporter) Collect(ctx context.Context) error {
 			record := ExportRecord{
 				InstrumentName:         rec.Descriptor().Name(),
 				InstrumentationLibrary: lib,
-				Attributes:             rec.Labels().ToSlice(),
+				Attributes:             rec.Attributes().ToSlice(),
 				AggregationKind:        rec.Aggregation().Kind(),
 				NumberKind:             rec.Descriptor().NumberKind(),
 			}
