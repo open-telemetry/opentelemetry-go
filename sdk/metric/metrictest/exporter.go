@@ -68,6 +68,7 @@ type ExportRecord struct {
 	InstrumentationLibrary Library
 	Attributes             []attribute.KeyValue
 	AggregationKind        aggregation.Kind
+	NumberKind             number.Kind
 	Sum                    number.Number
 	Count                  uint64
 	Histogram              aggregation.Buckets
@@ -97,6 +98,7 @@ func (e *Exporter) Collect(ctx context.Context) error {
 				InstrumentationLibrary: lib,
 				Attributes:             rec.Labels().ToSlice(),
 				AggregationKind:        rec.Aggregation().Kind(),
+				NumberKind:             rec.Descriptor().NumberKind(),
 			}
 
 			var err error
