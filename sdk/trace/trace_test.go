@@ -1777,7 +1777,7 @@ func (s stateSampler) Description() string {
 	return "stateSampler"
 }
 
-// Check that a new span propagates the SamplerResult.TraceState
+// Check that a new span propagates the SamplerResult.TraceState.
 func TestSamplerTraceState(t *testing.T) {
 	mustTS := func(ts trace.TraceState, err error) trace.TraceState {
 		require.NoError(t, err)

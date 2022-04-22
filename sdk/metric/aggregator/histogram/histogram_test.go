@@ -109,7 +109,7 @@ func TestHistogramPositiveAndNegative(t *testing.T) {
 	})
 }
 
-// Validates count, sum and buckets for a given profile and policy
+// Validates count, sum and buckets for a given profile and policy.
 func testHistogram(t *testing.T, profile aggregatortest.Profile, policy policy) {
 	descriptor := aggregatortest.NewAggregatorTest(sdkapi.HistogramInstrumentKind, profile.NumberKind)
 
