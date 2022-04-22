@@ -14,6 +14,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The package contains semantic conventions from the `v1.8.0` version of the OpenTelemetry specification. (#2763)
 - Add the `go.opentelemetry.io/otel/semconv/v1.9.0` package.
   The package contains semantic conventions from the `v1.9.0` version of the OpenTelemetry specification. (#2792)
+- Add the `go.opentelemetry.io/otel/semconv/v1.10.0` package.
+  The package contains semantic conventions from the `v1.10.0` version of the OpenTelemetry specification. (#2842)
 
 ### Fixed
 
