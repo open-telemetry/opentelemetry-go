@@ -153,15 +153,8 @@ func (sc *SemanticConventions) HTTPClientAttributesFromHTTPRequest(request *http
 		attrs = append(attrs, sc.HTTPMethodKey.String(http.MethodGet))
 	}
 
-	// remove any username/password info that may be in the URL
-	// before adding it to the attributes
-	userinfo := request.URL.User
-	request.URL.User = nil
-
-	attrs = append(attrs, sc.HTTPURLKey.String(request.URL.String()))
-
-	// restore any username/password info that was removed
-	request.URL.User = userinfo
+	// redact password info that may be in the URL
+	attrs = append(attrs, sc.HTTPURLKey.String(request.URL.Redacted()))
 
 	return append(attrs, sc.httpCommonAttributesFromHTTPRequest(request)...)
 }

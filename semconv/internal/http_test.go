@@ -1221,7 +1221,7 @@ func TestHTTPClientAttributesFromHTTPRequest(t *testing.T) {
 			},
 			expected: []attribute.KeyValue{
 				attribute.String("http.method", "GET"),
-				attribute.String("http.url", "/user/123"),
+				attribute.String("http.url", "//foo:xxxxx@/user/123"),
 				attribute.String("http.scheme", "http"),
 			},
 		},
