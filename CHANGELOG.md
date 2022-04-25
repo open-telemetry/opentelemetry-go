@@ -16,6 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The package contains semantic conventions from the `v1.9.0` version of the OpenTelemetry specification. (#2792)
 - Add the `go.opentelemetry.io/otel/semconv/v1.10.0` package.
   The package contains semantic conventions from the `v1.10.0` version of the OpenTelemetry specification. (#2842)
+- Added an in-memory exporter to metrictest to aid testing with a full SDK. (#2776)
 
 ### Fixed
 
@@ -42,6 +43,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Use the equivalent `MergeIterator.Attribute` method instead. (#2790)
 
 ## [0.29.0] - 2022-04-11
+
+### Added
 
 - The metrics global package was added back into several test files. (#2764)
 - The `Meter` function is added back to the `go.opentelemetry.io/otel/metric/global` package.

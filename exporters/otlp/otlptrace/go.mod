@@ -9,7 +9,7 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.6.3
 	go.opentelemetry.io/otel/sdk v1.6.3
 	go.opentelemetry.io/otel/trace v1.6.3
-	go.opentelemetry.io/proto/otlp v0.15.0
+	go.opentelemetry.io/proto/otlp v0.16.0
 	google.golang.org/grpc v1.45.0
 	google.golang.org/protobuf v1.28.0
 )
