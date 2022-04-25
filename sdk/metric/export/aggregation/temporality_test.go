@@ -19,7 +19,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/sdk/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 )
@@ -59,7 +58,7 @@ func TestTemporalitySelectors(t *testing.T) {
 	sAggTemp := StatelessTemporalitySelector()
 
 	for _, ikind := range append(deltaMemoryTemporalties, cumulativeMemoryTemporalties...) {
-		desc := metrictest.NewDescriptor("instrument", ikind, number.Int64Kind)
+		desc := sdkapi.NewDescriptor("instrument", ikind, number.Int64Kind, "", "")
 
 		var akind Kind
 		if ikind.Adding() {
