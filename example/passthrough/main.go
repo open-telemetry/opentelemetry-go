@@ -73,7 +73,7 @@ func initPassthroughGlobals() {
 }
 
 // nonGlobalTracer creates a trace provider instance for testing, but doesn't
-// set it as the global tracer provider
+// set it as the global tracer provider.
 func nonGlobalTracer() *sdktrace.TracerProvider {
 	var err error
 	exp, err := stdouttrace.New(stdouttrace.WithPrettyPrint())

@@ -42,10 +42,10 @@ var (
 // builtin.
 type fromEnv struct{}
 
-// compile time assertion that FromEnv implements Detector interface
+// compile time assertion that FromEnv implements Detector interface.
 var _ Detector = fromEnv{}
 
-// Detect collects resources from environment
+// Detect collects resources from environment.
 func (fromEnv) Detect(context.Context) (*Resource, error) {
 	attrs := strings.TrimSpace(os.Getenv(resourceAttrKey))
 	svcName := strings.TrimSpace(os.Getenv(svcNameKey))
