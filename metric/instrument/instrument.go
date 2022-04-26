@@ -22,9 +22,27 @@ type Asynchronous interface {
 	asynchronous()
 }
 
+// AsynchronousStruct allows the embedding struct to satisfy the
+// Asynchronous interface without additional space.
+type AsynchronousStruct struct {
+}
+
+var _ Asynchronous = AsynchronousStruct{}
+
+func (AsynchronousStruct) asynchronous() {}
+
 // Synchronous instruments are updated in line with application code.
 //
 // This interface is used as a grouping mechanism.
 type Synchronous interface {
 	synchronous()
 }
+
+// SynchronousStruct allows the embedding struct to satisfy the
+// Synchronous interface without additional space.
+type SynchronousStruct struct {
+}
+
+var _ Synchronous = SynchronousStruct{}
+
+func (SynchronousStruct) synchronous() {}

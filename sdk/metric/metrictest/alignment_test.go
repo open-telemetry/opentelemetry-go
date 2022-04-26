@@ -12,4 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric // import "go.opentelemetry.io/otel/sdk/metric"
+package metrictest
+
+import (
+	"os"
+	"testing"
+	"unsafe"
+
+	"go.opentelemetry.io/otel/internal/internaltest"
+)
+
+// TestMain ensures struct alignment prior to running tests.
+func TestMain(m *testing.M) {
+	fields := []internaltest.FieldOffset{
+		{
+			Name:   "Batch.Measurments",
+			Offset: unsafe.Offsetof(Batch{}.Measurements),
+		},
+		{
+			Name:   "Measurement.Number",
+			Offset: unsafe.Offsetof(Measurement{}.Number),
+		},
+	}
+	if !internaltest.Aligned8Byte(fields, os.Stderr) {
+		os.Exit(1)
+	}
+
+	os.Exit(m.Run())
+}
