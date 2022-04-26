@@ -62,6 +62,14 @@ func NewTestMeterProvider(opts ...Option) (metric.MeterProvider, *Exporter) {
 	return c, exp
 }
 
+// Library is the same as "sdk/instrumentation".Library but there is
+// a package cycle to use it so it is redeclared here.
+type Library struct {
+	InstrumentationName    string
+	InstrumentationVersion string
+	SchemaURL              string
+}
+
 // ExportRecord represents one collected datapoint from the Exporter.
 type ExportRecord struct {
 	InstrumentName         string
