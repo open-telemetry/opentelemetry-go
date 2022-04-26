@@ -80,8 +80,8 @@ func (mp *MeterProvider) Flush(ctx context.Context) error {
 // This call is idempotent. The first call will perform all flush and
 // releasing operations. Subsequent calls will perform no action.
 //
-// Calls to the Meter method after Shutdown has been called will return Meters
-// that perform no operations.
+// Measurements made by instruments from meters this MeterProvider created
+// will not be exported after Shutdown is called.
 //
 // This method honors the deadline or cancellation of ctx. An appropriate
 // error will be returned in these situations. There is no guaranteed that all
