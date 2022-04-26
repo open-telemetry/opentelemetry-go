@@ -46,7 +46,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Removed the `Batch` type from the `go.opentelemetry.io/otel/sdk/metric/metrictest` package. (#2864)
 - Removed the `Measurement` type from the `go.opentelemetry.io/otel/sdk/metric/metrictest` package. (#2864)
-- Removed the `NewDescriptor` function from the `go.opentelemetry.io/otel/sdk/metric/metrictest` package. (#2864)
 
 ## [0.29.0] - 2022-04-11
 
