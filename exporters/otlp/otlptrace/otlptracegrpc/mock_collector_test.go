@@ -150,7 +150,7 @@ func (mc *mockCollector) getHeaders() metadata.MD {
 	return mc.traceSvc.getHeaders()
 }
 
-// runMockCollector is a helper function to create a mock Collector
+// runMockCollector is a helper function to create a mock Collector.
 func runMockCollector(t *testing.T) *mockCollector {
 	return runMockCollectorAtEndpoint(t, "localhost:0")
 }

@@ -40,7 +40,7 @@ import (
 var errConversion = errors.New("Unable to convert from OpenCensus to OpenTelemetry")
 
 // NewMetricExporter returns an OpenCensus exporter that exports to an
-// OpenTelemetry exporter
+// OpenTelemetry exporter.
 func NewMetricExporter(base export.Exporter) metricexport.Exporter {
 	return &exporter{base: base}
 }
@@ -51,7 +51,7 @@ type exporter struct {
 	base export.Exporter
 }
 
-// ExportMetrics implements the OpenCensus metric Exporter interface
+// ExportMetrics implements the OpenCensus metric Exporter interface.
 func (e *exporter) ExportMetrics(ctx context.Context, metrics []*metricdata.Metric) error {
 	res := resource.Empty()
 	if len(metrics) != 0 {
@@ -147,7 +147,7 @@ func convertResource(res *ocresource.Resource) *resource.Resource {
 	return resource.NewSchemaless(attrs...)
 }
 
-// convertDescriptor converts an OpenCensus Descriptor to an OpenTelemetry Descriptor
+// convertDescriptor converts an OpenCensus Descriptor to an OpenTelemetry Descriptor.
 func convertDescriptor(ocDescriptor metricdata.Descriptor) (sdkapi.Descriptor, error) {
 	var (
 		nkind number.Kind

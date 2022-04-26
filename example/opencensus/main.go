@@ -40,7 +40,7 @@ import (
 var (
 	// instrumenttype differentiates between our gauge and view metrics.
 	keyType = tag.MustNewKey("instrumenttype")
-	// Counts the number of lines read in from standard input
+	// Counts the number of lines read in from standard input.
 	countMeasure = stats.Int64("test_count", "A count of something", stats.UnitDimensionless)
 	countView    = &view.View{
 		Name:        "test_count",
