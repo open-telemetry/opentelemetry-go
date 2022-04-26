@@ -1,6 +1,6 @@
 ---
 name: Version Release
-about: Create a report of invalid behavior to help us improve
+about: Checklist to follow when shipping a new release.
 title: 'Release <V1.x.x> Checklist'
 labels: ''
 assignees: ''
