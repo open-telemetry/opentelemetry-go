@@ -92,7 +92,7 @@ func (sd stringDetector) Detect(ctx context.Context) (*Resource, error) {
 	return NewWithAttributes(sd.schemaURL, sd.K.String(value)), nil
 }
 
-// Detect implements Detector
+// Detect implements Detector.
 func (defaultServiceNameDetector) Detect(ctx context.Context) (*Resource, error) {
 	return StringDetector(
 		semconv.SchemaURL,

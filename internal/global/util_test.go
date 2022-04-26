@@ -20,7 +20,7 @@ import (
 )
 
 // ResetForTest configures the test to restores the initial global state during
-// its Cleanup step
+// its Cleanup step.
 func ResetForTest(t testing.TB) {
 	t.Cleanup(func() {
 		globalTracer = defaultTracerValue()

@@ -55,7 +55,7 @@ type (
 	// Buckets represents histogram buckets boundaries and counts.
 	//
 	// For a Histogram with N defined boundaries, e.g, [x, y, z].
-	// There are N+1 counts: [-inf, x), [x, y), [y, z), [z, +inf]
+	// There are N+1 counts: [-inf, x), [x, y), [y, z), [z, +inf].
 	Buckets struct {
 		// Boundaries are floating point numbers, even when
 		// aggregating integers.
