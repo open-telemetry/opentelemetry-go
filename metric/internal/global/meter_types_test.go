@@ -69,19 +69,19 @@ func (m *testMeter) RegisterCallback(insts []instrument.Asynchronous, function f
 	return nil
 }
 
-// SyncInt64 is the namespace for the Synchronous Integer instruments
+// SyncInt64 is the namespace for the Synchronous Integer instruments.
 func (m *testMeter) SyncInt64() syncint64.InstrumentProvider {
 	m.siCount++
 	return &testSIInstrumentProvider{}
 }
 
-// SyncFloat64 is the namespace for the Synchronous Float instruments
+// SyncFloat64 is the namespace for the Synchronous Float instruments.
 func (m *testMeter) SyncFloat64() syncfloat64.InstrumentProvider {
 	m.sfCount++
 	return &testSFInstrumentProvider{}
 }
 
-// This enables async collection
+// This enables async collection.
 func (m *testMeter) collect() {
 	ctx := context.Background()
 	for _, f := range m.callbacks {
