@@ -42,7 +42,7 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 
 // Meter returns a Meter with the given name and configured with options.
 //
-// The name should be the name of the instrumentation library creating
+// The name should be the name of the instrumentation scope creating
 // telemetry. This name may be the same as the instrumented code only if that
 // code provides built-in instrumentation.
 //

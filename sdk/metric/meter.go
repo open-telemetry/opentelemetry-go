@@ -26,8 +26,8 @@ import (
 )
 
 // meter handles the creation and coordination of all metric instruments. A
-// meter represents a single instrumentation library; all metric telemetry
-// produced by an instrumentation library will use metric instruments from a
+// meter represents a single instrumentation scope; all metric telemetry
+// produced by an instrumentation scope will use metric instruments from a
 // single meter.
 type meter struct {
 	// TODO (#2821, #2815, 2814): implement.
