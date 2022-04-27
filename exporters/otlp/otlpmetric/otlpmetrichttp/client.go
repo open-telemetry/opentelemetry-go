@@ -98,7 +98,7 @@ func NewClient(opts ...Option) otlpmetric.Client {
 	}
 }
 
-// Start does nothing in a HTTP client
+// Start does nothing in a HTTP client.
 func (d *client) Start(ctx context.Context) error {
 	// nothing to do
 	select {

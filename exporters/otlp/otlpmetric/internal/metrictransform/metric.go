@@ -40,7 +40,7 @@ var (
 
 	// ErrIncompatibleAgg is returned when
 	// aggregation.Kind implies an interface conversion that has
-	// failed
+	// failed.
 	ErrIncompatibleAgg = errors.New("incompatible aggregation type")
 
 	// ErrUnknownValueType is returned when a transformation of an unknown value

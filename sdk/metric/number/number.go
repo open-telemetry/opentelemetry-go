@@ -34,7 +34,7 @@ const (
 	Float64Kind
 )
 
-// Zero returns a zero value for a given Kind
+// Zero returns a zero value for a given Kind.
 func (k Kind) Zero() Number {
 	switch k {
 	case Int64Kind:
@@ -47,7 +47,7 @@ func (k Kind) Zero() Number {
 }
 
 // Minimum returns the minimum representable value
-// for a given Kind
+// for a given Kind.
 func (k Kind) Minimum() Number {
 	switch k {
 	case Int64Kind:
@@ -60,7 +60,7 @@ func (k Kind) Minimum() Number {
 }
 
 // Maximum returns the maximum representable value
-// for a given Kind
+// for a given Kind.
 func (k Kind) Maximum() Number {
 	switch k {
 	case Int64Kind:

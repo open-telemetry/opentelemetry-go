@@ -163,7 +163,7 @@ func TestNewExporterInvokeStartThenStopManyTimes(t *testing.T) {
 	}
 }
 
-// This test takes a long time to run: to skip it, run tests using: -short
+// This test takes a long time to run: to skip it, run tests using: -short.
 func TestNewExporterCollectorOnBadConnection(t *testing.T) {
 	if testing.Short() {
 		t.Skipf("Skipping this long running test")

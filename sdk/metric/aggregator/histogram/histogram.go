@@ -88,7 +88,7 @@ var defaultFloat64ExplicitBoundaries = []float64{.005, .01, .025, .05, .1, .25, 
 const defaultInt64ExplicitBoundaryMultiplier = 1e6
 
 // defaultInt64ExplicitBoundaries applies a multiplier to the default
-// float64 boundaries: [ 5K, 10K, 25K, ..., 2.5M, 5M, 10M ]
+// float64 boundaries: [ 5K, 10K, 25K, ..., 2.5M, 5M, 10M ].
 var defaultInt64ExplicitBoundaries = func(bounds []float64) (asint []float64) {
 	for _, f := range bounds {
 		asint = append(asint, defaultInt64ExplicitBoundaryMultiplier*f)
