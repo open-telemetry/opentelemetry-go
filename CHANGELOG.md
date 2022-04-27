@@ -42,6 +42,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `MergeIterator.Label` method in the `go.opentelemetry.io/otel/attribute` package is deprecated.
   Use the equivalent `MergeIterator.Attribute` method instead. (#2790)
 
+### Removed
+
+- Removed the `Batch` type from the `go.opentelemetry.io/otel/sdk/metric/metrictest` package. (#2864)
+- Removed the `Measurement` type from the `go.opentelemetry.io/otel/sdk/metric/metrictest` package. (#2864)
+
 ## [0.29.0] - 2022-04-11
 
 ### Added
