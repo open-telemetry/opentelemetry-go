@@ -31,9 +31,16 @@ import (
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 	"go.opentelemetry.io/otel/codes"
 	iBaggage "go.opentelemetry.io/otel/internal/baggage"
-	"go.opentelemetry.io/otel/internal/trace/noop"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+)
+
+var (
+	noopTracer = trace.NewNoopTracerProvider().Tracer("")
+	noopSpan   = func() trace.Span {
+		_, s := noopTracer.Start(context.Background(), "")
+		return s
+	}()
 )
 
 type bridgeSpanContext struct {
@@ -321,7 +328,7 @@ var _ ot.TracerContextWithSpanExtension = &BridgeTracer{}
 func NewBridgeTracer() *BridgeTracer {
 	return &BridgeTracer{
 		setTracer: bridgeSetTracer{
-			otelTracer: noop.Tracer,
+			otelTracer: noopTracer,
 		},
 		warningHandler: func(msg string) {},
 		propagator:     nil,
@@ -641,7 +648,7 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 	}
 	header := http.Header(hhcarrier)
 	fs := fakeSpan{
-		Span: noop.Span,
+		Span: noopSpan,
 		sc:   bridgeSC.otelSpanContext,
 	}
 	ctx := trace.ContextWithSpan(context.Background(), fs)
