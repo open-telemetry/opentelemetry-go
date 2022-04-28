@@ -70,7 +70,7 @@ func unwrap(impl interface{}, err error) (sdkapi.InstrumentImpl, error) {
 	return nil, err
 }
 
-// TODO Replace with controller
+// TODO Replace with controller.
 func testMeterWithRegistry(name string) metric.Meter {
 	return sdkapi.WrapMeterImpl(
 		registry.NewUniqueInstrumentMeterImpl(

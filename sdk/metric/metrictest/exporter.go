@@ -20,12 +20,14 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 	selector "go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
@@ -60,6 +62,14 @@ func NewTestMeterProvider(opts ...Option) (metric.MeterProvider, *Exporter) {
 	}
 
 	return c, exp
+}
+
+// Library is the same as "sdk/instrumentation".Library but there is
+// a package cycle to use it so it is redeclared here.
+type Library struct {
+	InstrumentationName    string
+	InstrumentationVersion string
+	SchemaURL              string
 }
 
 // ExportRecord represents one collected datapoint from the Exporter.
@@ -177,4 +187,11 @@ func subSet(attributesA, attributesB []attribute.KeyValue) bool {
 		}
 	}
 	return true
+}
+
+// NewDescriptor is a test helper for constructing test metric
+// descriptors using standard options.
+func NewDescriptor(name string, ikind sdkapi.InstrumentKind, nkind number.Kind, opts ...instrument.Option) sdkapi.Descriptor {
+	cfg := instrument.NewConfig(opts...)
+	return sdkapi.NewDescriptor(name, ikind, nkind, cfg.Description(), cfg.Unit())
 }

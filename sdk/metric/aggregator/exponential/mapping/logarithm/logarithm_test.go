@@ -142,7 +142,7 @@ func TestLogarithmIndexMax(t *testing.T) {
 	}
 }
 
-// TestLogarithmIndexMin ensures that for every valid scale, Non-zero numbers
+// TestLogarithmIndexMin ensures that for every valid scale, Non-zero numbers.
 func TestLogarithmIndexMin(t *testing.T) {
 	for scale := MinScale; scale <= MaxScale; scale++ {
 		m, err := NewMapping(scale)
