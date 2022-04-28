@@ -34,7 +34,9 @@ var _ metric.MeterProvider = (*MeterProvider)(nil)
 // NewMeterProvider returns a new and configured MeterProvider.
 //
 // By default, the returned MeterProvider is configured with the default
-// Resource and no Readers.
+// Resource and no Readers. Readers cannot be added after a MeterProvider is
+// created. This means the returned MeterProvider, one created with no
+// Readers, will be perform no operations.
 func NewMeterProvider(options ...Option) *MeterProvider {
 	// TODO (#2820): implement.
 	return &MeterProvider{}
@@ -60,7 +62,7 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 	return &meter{}
 }
 
-// Flush flushes all pending telemetry.
+// ForceFlush flushes all pending telemetry.
 //
 // This method honors the deadline or cancellation of ctx. An appropriate
 // error will be returned in these situations. There is no guaranteed that all
@@ -68,7 +70,7 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 // situations.
 //
 // This method is safe to call concurrently.
-func (mp *MeterProvider) Flush(ctx context.Context) error {
+func (mp *MeterProvider) ForceFlush(ctx context.Context) error {
 	// TODO (#2820): implement.
 	// TODO: test this is concurrent safe.
 	return nil
