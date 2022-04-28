@@ -235,8 +235,8 @@ func testProcessor(
 				exp := map[string]float64{}
 				if hasMemory || !repetitionAfterEmptyInterval {
 					exp = map[string]float64{
-						fmt.Sprintf("inst1%s/L1=V/", instSuffix): float64(multiplier * 10), // labels1
-						fmt.Sprintf("inst2%s/L2=V/", instSuffix): float64(multiplier * 10), // labels2
+						fmt.Sprintf("inst1%s/L1=V/", instSuffix): float64(multiplier * 10), // attrs1
+						fmt.Sprintf("inst2%s/L2=V/", instSuffix): float64(multiplier * 10), // attrs2
 					}
 				}
 

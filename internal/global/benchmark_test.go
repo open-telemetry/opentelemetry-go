@@ -12,21 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global_test
+package global
 
 import (
 	"context"
 	"testing"
-
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/internal/global"
 )
 
 func BenchmarkStartEndSpanNoSDK(b *testing.B) {
 	// Compare with BenchmarkStartEndSpan() in
 	// ../../sdk/trace/benchmark_test.go.
-	global.ResetForTest(b)
-	t := otel.Tracer("Benchmark StartEndSpan")
+	ResetForTest(b)
+	t := TracerProvider().Tracer("Benchmark StartEndSpan")
 	ctx := context.Background()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

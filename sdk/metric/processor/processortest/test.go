@@ -34,27 +34,26 @@ import (
 )
 
 type (
-	// mapKey is the unique key for a metric, consisting of its
-	// unique descriptor, distinct labels, and distinct resource
-	// attributes.
+	// mapKey is the unique key for a metric, consisting of its unique
+	// descriptor, distinct attributes, and distinct resource attributes.
 	mapKey struct {
 		desc     *sdkapi.Descriptor
-		labels   attribute.Distinct
+		attrs    attribute.Distinct
 		resource attribute.Distinct
 	}
 
 	// mapValue is value stored in a processor used to produce a
 	// Reader.
 	mapValue struct {
-		labels     *attribute.Set
+		attrs      *attribute.Set
 		resource   *resource.Resource
 		aggregator aggregator.Aggregator
 	}
 
 	// Output implements export.Reader.
 	Output struct {
-		m            map[mapKey]mapValue
-		labelEncoder attribute.Encoder
+		m           map[mapKey]mapValue
+		attrEncoder attribute.Encoder
 		sync.RWMutex
 	}
 
@@ -120,7 +119,7 @@ func (f testFactory) NewCheckpointer() export.Checkpointer {
 //         "counter.sum/A=1,B=2/R=V": 100,
 //     }, processor.Values())
 //
-// Where in the example A=1,B=2 is the encoded labels and R=V is the
+// Where in the example A=1,B=2 is the encoded attributes and R=V is the
 // encoded resource value.
 func NewProcessor(selector export.AggregatorSelector, encoder attribute.Encoder) *Processor {
 	return &Processor{
@@ -134,10 +133,10 @@ func (p *Processor) Process(accum export.Accumulation) error {
 	return p.output.AddAccumulation(accum)
 }
 
-// Values returns the mapping from label set to point values for the
-// accumulations that were processed.  Point values are chosen as
-// either the Sum or the LastValue, whichever is implemented.  (All
-// the built-in Aggregators implement one of these interfaces.)
+// Values returns the mapping from attribute set to point values for the
+// accumulations that were processed. Point values are chosen as either the
+// Sum or the LastValue, whichever is implemented. (All the built-in
+// Aggregators implement one of these interfaces.)
 func (p *Processor) Values() map[string]float64 {
 	return p.output.Map()
 }
@@ -210,10 +209,10 @@ func (testAggregatorSelector) AggregatorFor(desc *sdkapi.Descriptor, aggPtrs ...
 // (from an Accumulator) or an expected set of Records (from a
 // Processor).  If testing with an Accumulator, it may be simpler to
 // use the test Processor in this package.
-func NewOutput(labelEncoder attribute.Encoder) *Output {
+func NewOutput(attrEncoder attribute.Encoder) *Output {
 	return &Output{
-		m:            make(map[mapKey]mapValue),
-		labelEncoder: labelEncoder,
+		m:           make(map[mapKey]mapValue),
+		attrEncoder: attrEncoder,
 	}
 }
 
@@ -222,7 +221,7 @@ func (o *Output) ForEach(_ aggregation.TemporalitySelector, ff func(export.Recor
 	for key, value := range o.m {
 		if err := ff(export.NewRecord(
 			key.desc,
-			value.labels,
+			value.attrs,
 			value.aggregator.Aggregation(),
 			time.Time{},
 			time.Time{},
@@ -248,7 +247,7 @@ func (o *Output) AddInstrumentationLibraryRecord(_ instrumentation.Library, rec 
 func (o *Output) AddRecordWithResource(rec export.Record, res *resource.Resource) error {
 	key := mapKey{
 		desc:     rec.Descriptor(),
-		labels:   rec.Labels().Equivalent(),
+		attrs:    rec.Attributes().Equivalent(),
 		resource: res.Equivalent(),
 	}
 	if _, ok := o.m[key]; !ok {
@@ -256,7 +255,7 @@ func (o *Output) AddRecordWithResource(rec export.Record, res *resource.Resource
 		testAggregatorSelector{}.AggregatorFor(rec.Descriptor(), &agg)
 		o.m[key] = mapValue{
 			aggregator: agg,
-			labels:     rec.Labels(),
+			attrs:      rec.Attributes(),
 			resource:   res,
 		}
 	}
@@ -271,8 +270,8 @@ func (o *Output) Map() map[string]float64 {
 	r := make(map[string]float64)
 	err := o.ForEach(aggregation.StatelessTemporalitySelector(), func(record export.Record) error {
 		for key, entry := range o.m {
-			encoded := entry.labels.Encoded(o.labelEncoder)
-			rencoded := entry.resource.Encoded(o.labelEncoder)
+			encoded := entry.attrs.Encoded(o.attrEncoder)
+			rencoded := entry.resource.Encoded(o.attrEncoder)
 			value := 0.0
 			if s, ok := entry.aggregator.(aggregation.Sum); ok {
 				sum, _ := s.Sum()
@@ -308,7 +307,7 @@ func (o *Output) AddAccumulation(acc export.Accumulation) error {
 	return o.AddRecord(
 		export.NewRecord(
 			acc.Descriptor(),
-			acc.Labels(),
+			acc.Attributes(),
 			acc.Aggregator().Aggregation(),
 			time.Time{},
 			time.Time{},
@@ -323,7 +322,7 @@ func (o *Output) AddAccumulation(acc export.Accumulation) error {
 //         "counter.sum/A=1,B=2/R=V": 100,
 //     }, exporter.Values())
 //
-// Where in the example A=1,B=2 is the encoded labels and R=V is the
+// Where in the example A=1,B=2 is the encoded attributes and R=V is the
 // encoded resource value.
 func New(selector aggregation.TemporalitySelector, encoder attribute.Encoder) *Exporter {
 	return &Exporter{
@@ -348,10 +347,10 @@ func (e *Exporter) Export(_ context.Context, res *resource.Resource, ckpt export
 	})
 }
 
-// Values returns the mapping from label set to point values for the
-// accumulations that were processed.  Point values are chosen as
-// either the Sum or the LastValue, whichever is implemented.  (All
-// the built-in Aggregators implement one of these interfaces.)
+// Values returns the mapping from attribute set to point values for the
+// accumulations that were processed. Point values are chosen as either the
+// Sum or the LastValue, whichever is implemented. (All the built-in
+// Aggregators implement one of these interfaces.)
 func (e *Exporter) Values() map[string]float64 {
 	e.output.Lock()
 	defer e.output.Unlock()

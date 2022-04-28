@@ -36,7 +36,7 @@ import (
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -1777,7 +1777,7 @@ func (s stateSampler) Description() string {
 	return "stateSampler"
 }
 
-// Check that a new span propagates the SamplerResult.TraceState
+// Check that a new span propagates the SamplerResult.TraceState.
 func TestSamplerTraceState(t *testing.T) {
 	mustTS := func(ts trace.TraceState, err error) trace.TraceState {
 		require.NoError(t, err)

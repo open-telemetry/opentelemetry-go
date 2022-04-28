@@ -153,9 +153,9 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 
 	_ = c.exp.Controller().ForEach(func(_ instrumentation.Library, reader export.Reader) error {
 		return reader.ForEach(c.exp, func(record export.Record) error {
-			var labelKeys []string
-			mergeLabels(record, c.exp.controller.Resource(), &labelKeys, nil)
-			ch <- c.toDesc(record, labelKeys)
+			var attrKeys []string
+			mergeAttrs(record, c.exp.controller.Resource(), &attrKeys, nil)
+			ch <- c.toDesc(record, attrKeys)
 			return nil
 		})
 	})
@@ -181,25 +181,25 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			numberKind := record.Descriptor().NumberKind()
 			instrumentKind := record.Descriptor().InstrumentKind()
 
-			var labelKeys, labels []string
-			mergeLabels(record, c.exp.controller.Resource(), &labelKeys, &labels)
+			var attrKeys, attrs []string
+			mergeAttrs(record, c.exp.controller.Resource(), &attrKeys, &attrs)
 
-			desc := c.toDesc(record, labelKeys)
+			desc := c.toDesc(record, attrKeys)
 
 			if hist, ok := agg.(aggregation.Histogram); ok {
-				if err := c.exportHistogram(ch, hist, numberKind, desc, labels); err != nil {
+				if err := c.exportHistogram(ch, hist, numberKind, desc, attrs); err != nil {
 					return fmt.Errorf("exporting histogram: %w", err)
 				}
 			} else if sum, ok := agg.(aggregation.Sum); ok && instrumentKind.Monotonic() {
-				if err := c.exportMonotonicCounter(ch, sum, numberKind, desc, labels); err != nil {
+				if err := c.exportMonotonicCounter(ch, sum, numberKind, desc, attrs); err != nil {
 					return fmt.Errorf("exporting monotonic counter: %w", err)
 				}
 			} else if sum, ok := agg.(aggregation.Sum); ok && !instrumentKind.Monotonic() {
-				if err := c.exportNonMonotonicCounter(ch, sum, numberKind, desc, labels); err != nil {
+				if err := c.exportNonMonotonicCounter(ch, sum, numberKind, desc, attrs); err != nil {
 					return fmt.Errorf("exporting non monotonic counter: %w", err)
 				}
 			} else if lastValue, ok := agg.(aggregation.LastValue); ok {
-				if err := c.exportLastValue(ch, lastValue, numberKind, desc, labels); err != nil {
+				if err := c.exportLastValue(ch, lastValue, numberKind, desc, attrs); err != nil {
 					return fmt.Errorf("exporting last value: %w", err)
 				}
 			} else {
@@ -213,13 +213,13 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregation.LastValue, kind number.Kind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregation.LastValue, kind number.Kind, desc *prometheus.Desc, attrs []string) error {
 	lv, _, err := lvagg.LastValue()
 	if err != nil {
 		return fmt.Errorf("error retrieving last value: %w", err)
 	}
 
-	m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, lv.CoerceToFloat64(kind), labels...)
+	m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, lv.CoerceToFloat64(kind), attrs...)
 	if err != nil {
 		return fmt.Errorf("error creating constant metric: %w", err)
 	}
@@ -228,13 +228,13 @@ func (c *collector) exportLastValue(ch chan<- prometheus.Metric, lvagg aggregati
 	return nil
 }
 
-func (c *collector) exportNonMonotonicCounter(ch chan<- prometheus.Metric, sum aggregation.Sum, kind number.Kind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportNonMonotonicCounter(ch chan<- prometheus.Metric, sum aggregation.Sum, kind number.Kind, desc *prometheus.Desc, attrs []string) error {
 	v, err := sum.Sum()
 	if err != nil {
 		return fmt.Errorf("error retrieving counter: %w", err)
 	}
 
-	m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, v.CoerceToFloat64(kind), labels...)
+	m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, v.CoerceToFloat64(kind), attrs...)
 	if err != nil {
 		return fmt.Errorf("error creating constant metric: %w", err)
 	}
@@ -243,13 +243,13 @@ func (c *collector) exportNonMonotonicCounter(ch chan<- prometheus.Metric, sum a
 	return nil
 }
 
-func (c *collector) exportMonotonicCounter(ch chan<- prometheus.Metric, sum aggregation.Sum, kind number.Kind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportMonotonicCounter(ch chan<- prometheus.Metric, sum aggregation.Sum, kind number.Kind, desc *prometheus.Desc, attrs []string) error {
 	v, err := sum.Sum()
 	if err != nil {
 		return fmt.Errorf("error retrieving counter: %w", err)
 	}
 
-	m, err := prometheus.NewConstMetric(desc, prometheus.CounterValue, v.CoerceToFloat64(kind), labels...)
+	m, err := prometheus.NewConstMetric(desc, prometheus.CounterValue, v.CoerceToFloat64(kind), attrs...)
 	if err != nil {
 		return fmt.Errorf("error creating constant metric: %w", err)
 	}
@@ -258,7 +258,7 @@ func (c *collector) exportMonotonicCounter(ch chan<- prometheus.Metric, sum aggr
 	return nil
 }
 
-func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregation.Histogram, kind number.Kind, desc *prometheus.Desc, labels []string) error {
+func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregation.Histogram, kind number.Kind, desc *prometheus.Desc, attrs []string) error {
 	buckets, err := hist.Histogram()
 	if err != nil {
 		return fmt.Errorf("error retrieving histogram: %w", err)
@@ -280,7 +280,7 @@ func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregatio
 	// Include the +inf bucket in the total count.
 	totalCount += uint64(buckets.Counts[len(buckets.Counts)-1])
 
-	m, err := prometheus.NewConstHistogram(desc, totalCount, sum.CoerceToFloat64(kind), counts, labels...)
+	m, err := prometheus.NewConstHistogram(desc, totalCount, sum.CoerceToFloat64(kind), counts, attrs...)
 	if err != nil {
 		return fmt.Errorf("error creating constant histogram: %w", err)
 	}
@@ -289,34 +289,34 @@ func (c *collector) exportHistogram(ch chan<- prometheus.Metric, hist aggregatio
 	return nil
 }
 
-func (c *collector) toDesc(record export.Record, labelKeys []string) *prometheus.Desc {
+func (c *collector) toDesc(record export.Record, attrKeys []string) *prometheus.Desc {
 	desc := record.Descriptor()
-	return prometheus.NewDesc(sanitize(desc.Name()), desc.Description(), labelKeys, nil)
+	return prometheus.NewDesc(sanitize(desc.Name()), desc.Description(), attrKeys, nil)
 }
 
-// mergeLabels merges the export.Record's labels and resources into a
-// single set, giving precedence to the record's labels in case of
-// duplicate keys.  This outputs one or both of the keys and the
-// values as a slice, and either argument may be nil to avoid
-// allocating an unnecessary slice.
-func mergeLabels(record export.Record, res *resource.Resource, keys, values *[]string) {
+// mergeAttrs merges the export.Record's attributes and resources into a
+// single set, giving precedence to the record's attributes in case of
+// duplicate keys.  This outputs one or both of the keys and the values as a
+// slice, and either argument may be nil to avoid allocating an unnecessary
+// slice.
+func mergeAttrs(record export.Record, res *resource.Resource, keys, values *[]string) {
 	if keys != nil {
-		*keys = make([]string, 0, record.Labels().Len()+res.Len())
+		*keys = make([]string, 0, record.Attributes().Len()+res.Len())
 	}
 	if values != nil {
-		*values = make([]string, 0, record.Labels().Len()+res.Len())
+		*values = make([]string, 0, record.Attributes().Len()+res.Len())
 	}
 
-	// Duplicate keys are resolved by taking the record label value over
+	// Duplicate keys are resolved by taking the record attribute value over
 	// the resource value.
-	mi := attribute.NewMergeIterator(record.Labels(), res.Set())
+	mi := attribute.NewMergeIterator(record.Attributes(), res.Set())
 	for mi.Next() {
-		label := mi.Label()
+		attr := mi.Attribute()
 		if keys != nil {
-			*keys = append(*keys, sanitize(string(label.Key)))
+			*keys = append(*keys, sanitize(string(attr.Key)))
 		}
 		if values != nil {
-			*values = append(*values, label.Value.Emit())
+			*values = append(*values, attr.Value.Emit())
 		}
 	}
 }

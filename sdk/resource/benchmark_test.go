@@ -25,7 +25,7 @@ import (
 
 const conflict = 0.5
 
-func makeLabels(n int) (_, _ *resource.Resource) {
+func makeAttrs(n int) (_, _ *resource.Resource) {
 	used := map[string]bool{}
 	l1 := make([]attribute.KeyValue, n)
 	l2 := make([]attribute.KeyValue, n)
@@ -51,7 +51,7 @@ func makeLabels(n int) (_, _ *resource.Resource) {
 }
 
 func benchmarkMergeResource(b *testing.B, size int) {
-	r1, r2 := makeLabels(size)
+	r1, r2 := makeAttrs(size)
 
 	b.ReportAllocs()
 	b.ResetTimer()

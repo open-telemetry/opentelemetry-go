@@ -52,8 +52,8 @@ type (
 	}
 
 	stateValue struct {
-		// labels corresponds to the stateKey.distinct field.
-		labels *attribute.Set
+		// attrs corresponds to the stateKey.distinct field.
+		attrs *attribute.Set
 
 		// updated indicates the last sequence number when this value had
 		// Process() called by an accumulator.
@@ -167,7 +167,7 @@ func (b *Processor) Process(accum export.Accumulation) error {
 	desc := accum.Descriptor()
 	key := stateKey{
 		descriptor: desc,
-		distinct:   accum.Labels().Equivalent(),
+		distinct:   accum.Attributes().Equivalent(),
 	}
 	agg := accum.Aggregator()
 
@@ -177,7 +177,7 @@ func (b *Processor) Process(accum export.Accumulation) error {
 		stateful := b.TemporalityFor(desc, agg.Aggregation().Kind()).MemoryRequired(desc.InstrumentKind())
 
 		newValue := &stateValue{
-			labels:   accum.Labels(),
+			attrs:    accum.Attributes(),
 			updated:  b.state.finishedCollection,
 			stateful: stateful,
 			current:  agg,
@@ -230,7 +230,7 @@ func (b *Processor) Process(accum export.Accumulation) error {
 	// indicating that the stateKey for Accumulation has already
 	// been seen in the same collection.  When this happens, it
 	// implies that multiple Accumulators are being used, or that
-	// a single Accumulator has been configured with a label key
+	// a single Accumulator has been configured with a attribute key
 	// filter.
 
 	if !sameCollection {
@@ -370,7 +370,7 @@ func (b *state) ForEach(exporter aggregation.TemporalitySelector, f func(export.
 
 		if err := f(export.NewRecord(
 			key.descriptor,
-			value.labels,
+			value.attrs,
 			agg,
 			start,
 			b.intervalEnd,

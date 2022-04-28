@@ -28,7 +28,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -168,7 +168,7 @@ func attributesToJSONMapString(attributes []attribute.KeyValue) string {
 	return (string)(jsonBytes)
 }
 
-// attributeToStringPair serializes each attribute to a string pair
+// attributeToStringPair serializes each attribute to a string pair.
 func attributeToStringPair(kv attribute.KeyValue) (string, string) {
 	switch kv.Value.Type() {
 	// For slice attributes, serialize as JSON list string.
@@ -189,7 +189,7 @@ func attributeToStringPair(kv attribute.KeyValue) (string, string) {
 	}
 }
 
-// extraZipkinTags are those that may be added to every outgoing span
+// extraZipkinTags are those that may be added to every outgoing span.
 var extraZipkinTags = []string{
 	"otel.status_code",
 	keyInstrumentationLibraryName,
