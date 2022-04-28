@@ -10,12 +10,12 @@ replace (
 
 require (
 	go.opencensus.io v0.22.6-0.20201102222123-380f4078db9f
-	go.opentelemetry.io/otel v1.6.3
-	go.opentelemetry.io/otel/bridge/opencensus v0.29.0
-	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v0.29.0
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.6.3
-	go.opentelemetry.io/otel/sdk v1.6.3
-	go.opentelemetry.io/otel/sdk/metric v0.29.0
+	go.opentelemetry.io/otel v1.7.0
+	go.opentelemetry.io/otel/bridge/opencensus v0.30.0
+	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v0.30.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.7.0
+	go.opentelemetry.io/otel/sdk v1.7.0
+	go.opentelemetry.io/otel/sdk/metric v0.30.0
 )
 
 replace go.opentelemetry.io/otel/bridge/opentracing => ../../bridge/opentracing

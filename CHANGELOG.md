@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.7.0/0.30.0] - 2022-04-28
+
 ### Added
 
 - Add the `go.opentelemetry.io/otel/semconv/v1.8.0` package.
@@ -20,14 +22,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Delegated instruments are unwrapped before delegating Callbacks. (#2784)
-- Resolve supply-chain failure for the markdown-link-checker GitHub action by calling the CLI directly. (#2834)
-- Remove import of `testing` package in non-tests builds. (#2786)
+- Globally delegated instruments are unwrapped before delegating asynchronous callbacks. (#2784)
+- Remove import of `testing` package in non-tests builds of the `go.opentelemetry.io/otel` package. (#2786)
 
 ### Changed
 
 - The `WithLabelEncoder` option from the `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric` package is renamed to `WithAttributeEncoder`. (#2790)
-- The `Batch.Labels` field from the `go.opentelemetry.io/otel/sdk/metric/metrictest` package is renamed to `Batch.Attributes`. (#2790)
 - The `LabelFilterSelector` interface from `go.opentelemetry.io/otel/sdk/metric/processor/reducer` is renamed to `AttributeFilterSelector`.
   The method included in the renamed interface also changed from `LabelFilterFor` to `AttributeFilterFor`. (#2790)
 - The `Metadata.Labels` method from the `go.opentelemetry.io/otel/sdk/metric/export` package is renamed to `Metadata.Attributes`.
@@ -1852,7 +1852,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/metric/v0.29.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.7.0...HEAD
+[1.7.0/0.30.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.7.0
 [0.29.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/metric/v0.29.0
 [1.6.3]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.6.3
 [1.6.2]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.6.2
