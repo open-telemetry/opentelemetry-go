@@ -43,18 +43,27 @@ func NewNoopMeter() Meter {
 
 type noopMeter struct{}
 
+// AsyncInt64 creates a instrument that does not record any metrics
 func (noopMeter) AsyncInt64() asyncint64.InstrumentProvider {
 	return nonrecordingAsyncInt64Instrument{}
 }
+
+// AsyncFloat64 creates a instrument that does not record any metrics
 func (noopMeter) AsyncFloat64() asyncfloat64.InstrumentProvider {
 	return nonrecordingAsyncFloat64Instrument{}
 }
+
+// SyncInt64 creates a instrument that does not record any metrics
 func (noopMeter) SyncInt64() syncint64.InstrumentProvider {
 	return nonrecordingSyncInt64Instrument{}
 }
+
+// SyncFloat64 creates a instrument that does not record any metrics
 func (noopMeter) SyncFloat64() syncfloat64.InstrumentProvider {
 	return nonrecordingSyncFloat64Instrument{}
 }
+
+// RegisterCallback creates a register callback that does not record any metrics
 func (noopMeter) RegisterCallback([]instrument.Asynchronous, func(context.Context)) error {
 	return nil
 }
