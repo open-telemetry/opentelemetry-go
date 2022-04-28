@@ -252,7 +252,7 @@ func BenchmarkFloat64CounterAdd(b *testing.B) {
 func BenchmarkInt64UpDownCounterAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := makeLabels(1)
+	labs := makeAttrs(1)
 	cnt := fix.iUpDownCounter("int64.sum")
 
 	b.ResetTimer()
@@ -265,7 +265,7 @@ func BenchmarkInt64UpDownCounterAdd(b *testing.B) {
 func BenchmarkFloat64UpDownCounterAdd(b *testing.B) {
 	ctx := context.Background()
 	fix := newFixture(b)
-	labs := makeLabels(1)
+	labs := makeAttrs(1)
 	cnt := fix.fUpDownCounter("float64.sum")
 
 	b.ResetTimer()
