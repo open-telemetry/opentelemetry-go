@@ -28,7 +28,6 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
-	"go.opentelemetry.io/otel/metric/nonrecording"
 	metricsdk "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/export"
@@ -532,7 +531,7 @@ func TestIncorrectInstruments(t *testing.T) {
 	require.Equal(t, 0, collected)
 
 	// Now try with instruments from another SDK.
-	noopMeter := nonrecording.NewNoopMeter()
+	noopMeter := metric.NewNoopMeter()
 	observer, _ = noopMeter.AsyncInt64().Gauge("observer")
 
 	err = meter.RegisterCallback(

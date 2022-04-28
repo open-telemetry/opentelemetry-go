@@ -32,6 +32,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The method included in the renamed interface also changed from `LabelFilterFor` to `AttributeFilterFor`. (#2790)
 - The `Metadata.Labels` method from the `go.opentelemetry.io/otel/sdk/metric/export` package is renamed to `Metadata.Attributes`.
   Consequentially, the `Record` type from the same package also has had the embedded method renamed. (#2790)
+- Move metric no-op implementation form `nonrecording` to `metric` package. (#2866)
 
 ### Deprecated
 
