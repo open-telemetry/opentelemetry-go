@@ -83,11 +83,11 @@ func TestSpanContextEqual(t *testing.T) {
 		spanID:  [8]byte{42},
 	}
 
-	if a.Equal(b) != true {
+	if !a.Equal(b) {
 		t.Error("Want: true, but have: false")
 	}
 
-	if a.Equal(c) != false {
+	if a.Equal(c) {
 		t.Error("Want: false, but have: true")
 	}
 }

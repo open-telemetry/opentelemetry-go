@@ -64,7 +64,7 @@ func (e *Expectation) NotToBeNil() {
 func (e *Expectation) ToBeTrue() {
 	switch a := e.actual.(type) {
 	case bool:
-		if e.actual == false {
+		if !a {
 			e.fail(fmt.Sprintf("Expected\n\t%v\nto be true", e.actual))
 		}
 	default:
@@ -75,7 +75,7 @@ func (e *Expectation) ToBeTrue() {
 func (e *Expectation) ToBeFalse() {
 	switch a := e.actual.(type) {
 	case bool:
-		if e.actual == true {
+		if a {
 			e.fail(fmt.Sprintf("Expected\n\t%v\nto be false", e.actual))
 		}
 	default:
