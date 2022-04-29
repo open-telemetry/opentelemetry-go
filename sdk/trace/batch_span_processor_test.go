@@ -112,6 +112,68 @@ func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
 	}
 }
 
+func TestNewBatchSpanProcessorWithDroppedSpanCallback(t *testing.T) {
+	// set up the batch span processor with an exporter but a zero sized queue
+	var te testBatchExporter
+	bsp := sdktrace.NewBatchSpanProcessor(
+		&te,
+		sdktrace.WithMaxQueueSize(0),
+	)
+
+	// this will be our test callback to ensure that a "full" queue causes this
+	// to be executed
+	done := make(chan struct{})
+	var once sync.Once
+	callback := func() {
+		once.Do(func() {
+			close(done)
+		})
+	}
+
+	type callbackSetter interface {
+		SetDroppedSpanCallback(func())
+	}
+
+	// register the callback
+	if cbp, ok := bsp.(callbackSetter); ok {
+		cbp.SetDroppedSpanCallback(callback)
+	} else {
+		t.Fatalf("BatchSpanProcessor does not implement callbackSetter")
+	}
+
+	// get a tracer
+	tp := basicTracerProvider(t)
+	tp.RegisterSpanProcessor(bsp)
+	tr := tp.Tracer("NilExporter")
+
+	ctx := context.Background()
+
+	// make and end a bunch of spans quickly to, hopefully, ensure that we hit a
+	// full queue at least once. the chan has a 0 size buffer due to
+	// WithMaxQueueSize, so it usually works with a single span, but there's no
+	// way for this not to race.
+	for i := 0; i < 10000; i++ {
+		// ending any span should cause it to be dropped due to the zero sized
+		// queue, as a result the callback should be executed
+		_, span := tr.Start(ctx, "foo")
+		span.End()
+	}
+
+	// wait up to 1s for the callback to be executed
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	select {
+	case <-done:
+	case <-ctx.Done():
+		t.Fatal("callback not called")
+	}
+
+	if err := bsp.Shutdown(ctx); err != nil {
+		t.Errorf("failed to Shutdown the BatchSpanProcessor: %v", err)
+	}
+}
+
 type testOption struct {
 	name           string
 	o              []sdktrace.BatchSpanProcessorOption

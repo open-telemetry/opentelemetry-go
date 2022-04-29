@@ -72,6 +72,8 @@ type batchSpanProcessor struct {
 	e SpanExporter
 	o BatchSpanProcessorOptions
 
+	droppedSpanCallback func()
+
 	queue   chan ReadOnlySpan
 	dropped uint32
 
@@ -127,6 +129,10 @@ func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorO
 	}()
 
 	return bsp
+}
+
+func (bsp *batchSpanProcessor) SetDroppedSpanCallback(f func()) {
+	bsp.droppedSpanCallback = f
 }
 
 // OnStart method does nothing.
@@ -237,7 +243,6 @@ func WithBlocking() BatchSpanProcessorOption {
 
 // exportSpans is a subroutine of processing and draining the queue.
 func (bsp *batchSpanProcessor) exportSpans(ctx context.Context) error {
-
 	bsp.timer.Reset(bsp.o.BatchTimeout)
 
 	bsp.batchMutex.Lock()
@@ -377,6 +382,9 @@ func (bsp *batchSpanProcessor) enqueueBlockOnQueueFull(ctx context.Context, sd R
 	case bsp.queue <- sd:
 		return true
 	default:
+		if bsp.droppedSpanCallback != nil {
+			bsp.droppedSpanCallback()
+		}
 		atomic.AddUint32(&bsp.dropped, 1)
 	}
 	return false
