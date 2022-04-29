@@ -1630,7 +1630,6 @@ func TestReadWriteSpan(t *testing.T) {
 	// Verify the span can be written to.
 	rw.SetName("bar")
 	assert.Equal(t, "bar", rw.Name())
-
 	// NOTE: This function tests ReadWriteSpan which is an interface which
 	// embeds trace.Span and ReadOnlySpan. Since both of these interfaces have
 	// their own tests, there is no point in testing all the possible methods
@@ -1902,7 +1901,6 @@ func TestSamplerTraceState(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 type testIDGenerator struct {

@@ -63,5 +63,4 @@ func TestEndToEnd(t *testing.T) {
 
 	h.lock.Lock()
 	require.Len(t, h.errors, 0)
-
 }

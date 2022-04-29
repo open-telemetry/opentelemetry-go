@@ -146,7 +146,6 @@ func (s *syncInstrument) Implementation() interface{} {
 // acquireHandle gets or creates a `*record` corresponding to `kvs`,
 // the input attributes.
 func (b *baseInstrument) acquireHandle(kvs []attribute.KeyValue) *record {
-
 	// This memory allocation may not be used, but it's
 	// needed for the `sortSlice` field, to avoid an
 	// allocation while sorting.
@@ -418,5 +417,4 @@ func (m *Accumulator) fromAsync(async sdkapi.AsyncImpl) (*asyncInstrument, error
 		return nil, ErrBadInstrument
 	}
 	return inst, nil
-
 }

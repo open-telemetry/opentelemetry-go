@@ -85,7 +85,6 @@ func samplerFromEnv() (Sampler, error) {
 	default:
 		return nil, errUnsupportedSampler(sampler)
 	}
-
 }
 
 func parseTraceIDRatio(arg string, hasSamplerArg bool) (Sampler, error) {

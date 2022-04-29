@@ -156,7 +156,6 @@ func (f factory) NewCheckpointer() export.Checkpointer {
 		},
 	}
 	return p
-
 }
 
 // Process implements export.Processor.

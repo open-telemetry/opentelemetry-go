@@ -176,7 +176,6 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 	err := ctrl.ForEach(func(_ instrumentation.Library, reader export.Reader) error {
 		return reader.ForEach(c.exp, func(record export.Record) error {
-
 			agg := record.Aggregation()
 			numberKind := record.Descriptor().NumberKind()
 			instrumentKind := record.Descriptor().InstrumentKind()

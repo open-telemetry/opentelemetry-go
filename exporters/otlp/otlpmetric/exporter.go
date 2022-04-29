@@ -74,7 +74,6 @@ func (e *Exporter) Start(ctx context.Context) error {
 
 // Shutdown flushes all exports and closes all connections to the receiving endpoint.
 func (e *Exporter) Shutdown(ctx context.Context) error {
-
 	e.mu.RLock()
 	started := e.started
 	e.mu.RUnlock()

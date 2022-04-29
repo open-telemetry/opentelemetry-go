@@ -74,5 +74,4 @@ func TestStringDetectorErrors(t *testing.T) {
 		}
 		require.EqualValues(t, map[string]string{"A": "B"}, m)
 	}
-
 }

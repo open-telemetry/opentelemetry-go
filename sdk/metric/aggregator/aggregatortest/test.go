@@ -274,8 +274,6 @@ func SynchronizedMoveResetTest(t *testing.T, mkind sdkapi.InstrumentKind, nf fun
 				require.Equal(t, input, v)
 				require.NoError(t, err)
 			}
-
 		})
 	})
-
 }

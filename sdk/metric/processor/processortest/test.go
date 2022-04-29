@@ -179,7 +179,6 @@ func AggregatorSelector() export.AggregatorSelector {
 
 // AggregatorFor implements export.AggregatorSelector.
 func (testAggregatorSelector) AggregatorFor(desc *sdkapi.Descriptor, aggPtrs ...*aggregator.Aggregator) {
-
 	switch {
 	case strings.HasSuffix(desc.Name(), ".disabled"):
 		for i := range aggPtrs {

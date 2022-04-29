@@ -165,7 +165,6 @@ func TestSumFloatDataPoints(t *testing.T) {
 			}}}, m.GetSum())
 		assert.Nil(t, m.GetHistogram())
 		assert.Nil(t, m.GetSummary())
-
 	}
 }
 

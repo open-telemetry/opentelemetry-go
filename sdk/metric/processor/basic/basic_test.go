@@ -151,7 +151,6 @@ func testProcessor(
 		desc2 := metrictest.NewDescriptor(fmt.Sprint("inst2", instSuffix), mkind, nkind)
 
 		for nc := 0; nc < nCheckpoint; nc++ {
-
 			// The input is 10 per update, scaled by
 			// the number of checkpoints for
 			// cumulative instruments:
@@ -315,7 +314,6 @@ func TestBasicInconsistent(t *testing.T) {
 		func(export.Record) error { return nil },
 	)
 	require.True(t, errors.Is(err, basic.ErrInvalidTemporality))
-
 }
 
 func TestBasicTimestamps(t *testing.T) {

@@ -53,7 +53,6 @@ func (e *metricExporter) Export(_ context.Context, res *resource.Resource, reade
 	var aggError error
 	var batch []line
 	aggError = reader.ForEach(func(lib instrumentation.Library, mr export.Reader) error {
-
 		var instAttrs []attribute.KeyValue
 		if name := lib.Name; name != "" {
 			instAttrs = append(instAttrs, attribute.String("instrumentation.name", name))
