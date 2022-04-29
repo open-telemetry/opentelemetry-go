@@ -970,10 +970,10 @@ func startLocalSpan(tp *TracerProvider, ctx context.Context, trName, name string
 // It also clears spanID in the to make the comparison easier.
 func endSpan(te *testExporter, span trace.Span) (*snapshot, error) {
 	if !span.IsRecording() {
-		return nil, fmt.Errorf("IsRecording: got false, want true")
+		return nil, fmt.Errorf("method IsRecording: got false, want true")
 	}
 	if !span.SpanContext().IsSampled() {
-		return nil, fmt.Errorf("IsSampled: got false, want true")
+		return nil, fmt.Errorf("method IsSampled: got false, want true")
 	}
 	span.End()
 	if te.Len() != 1 {
