@@ -40,15 +40,15 @@ issues:
         - revive
 
 linters-settings:
-  misspell:
-    locale: US
-    ignore-words:
-      - cancelled
-  goimports:
-    local-prefixes: go.opentelemetry.io
   godot:
     exclude:
       # Exclude sentence fragments for lists.
       - '^[ ]*[-•]'
       # Exclude sentences prefixing a list.
       - ':$'
+  goimports:
+    local-prefixes: go.opentelemetry.io
+  misspell:
+    locale: US
+    ignore-words:
+      - cancelled
