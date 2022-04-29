@@ -85,9 +85,11 @@ func TestMain(m *testing.M) {
 		},
 	}
 	if !ottest.Aligned8Byte(fields, os.Stderr) {
+		// nolint:revive  // this is a main func, allow Exit.
 		os.Exit(1)
 	}
 
+	// nolint:revive  // this is a main func, allow Exit.
 	os.Exit(m.Run())
 }
 

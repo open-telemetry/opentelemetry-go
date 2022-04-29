@@ -75,9 +75,9 @@ linters-settings:
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#context-keys-type
       - name: context-keys-type
         disabled: false
-          ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#deep-exit
-          #- name: deep-exit
-          #  disabled: false
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#deep-exit
+      - name: deep-exit
+        disabled: false
           ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#defer
           #- name: defer
           #  disabled: false

@@ -37,7 +37,7 @@ var (
 	lemonsKey = attribute.Key("ex.com/lemons")
 )
 
-func initMeter() {
+func initMeter() error {
 	config := prometheus.Config{
 		DefaultHistogramBoundaries: []float64{1, 2, 5, 10, 20, 50},
 	}
@@ -52,7 +52,7 @@ func initMeter() {
 	)
 	exporter, err := prometheus.New(config, c)
 	if err != nil {
-		log.Panicf("failed to initialize prometheus exporter %v", err)
+		return fmt.Errorf("failed to initialize prometheus exporter: %w", err)
 	}
 
 	global.SetMeterProvider(exporter.MeterProvider())
@@ -63,10 +63,13 @@ func initMeter() {
 	}()
 
 	fmt.Println("Prometheus server running on :2222")
+	return nil
 }
 
 func main() {
-	initMeter()
+	if err := initMeter(); err != nil {
+		log.Fatal(err)
+	}
 
 	meter := global.Meter("ex.com/basic")
 

@@ -63,7 +63,7 @@ func multiply(ctx context.Context, x, y int64) int64 {
 func InstallExportPipeline(ctx context.Context) func() {
 	exporter, err := stdoutmetric.New(stdoutmetric.WithPrettyPrint())
 	if err != nil {
-		log.Fatalf("creating stdoutmetric exporter: %v", err)
+		panic(err)
 	}
 
 	pusher := controller.New(
@@ -74,7 +74,7 @@ func InstallExportPipeline(ctx context.Context) func() {
 		controller.WithExporter(exporter),
 	)
 	if err = pusher.Start(ctx); err != nil {
-		log.Fatalf("starting push controller: %v", err)
+		panic(err)
 	}
 
 	global.SetMeterProvider(pusher)
@@ -82,16 +82,16 @@ func InstallExportPipeline(ctx context.Context) func() {
 
 	loopCounter, err = meter.SyncInt64().Counter("function.loops")
 	if err != nil {
-		log.Fatalf("creating instrument: %v", err)
+		panic(err)
 	}
 	paramValue, err = meter.SyncInt64().Histogram("function.param")
 	if err != nil {
-		log.Fatalf("creating instrument: %v", err)
+		panic(err)
 	}
 
 	return func() {
 		if err := pusher.Stop(ctx); err != nil {
-			log.Fatalf("stopping push controller: %v", err)
+			panic(err)
 		}
 	}
 }

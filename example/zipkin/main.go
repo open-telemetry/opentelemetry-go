@@ -34,7 +34,7 @@ import (
 var logger = log.New(os.Stderr, "zipkin-example", log.Ldate|log.Ltime|log.Llongfile)
 
 // initTracer creates a new trace provider instance and registers it as global trace provider.
-func initTracer(url string) func() {
+func initTracer(url string) (func() error, error) {
 	// Create Zipkin Exporter and install it as a global tracer.
 	//
 	// For demoing purposes, always sample. In a production application, you should
@@ -45,7 +45,7 @@ func initTracer(url string) func() {
 		zipkin.WithLogger(logger),
 	)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	batcher := sdktrace.NewBatchSpanProcessor(exporter)
@@ -59,17 +59,24 @@ func initTracer(url string) func() {
 	)
 	otel.SetTracerProvider(tp)
 
-	return func() {
-		_ = tp.Shutdown(context.Background())
-	}
+	return func() error {
+		return tp.Shutdown(context.Background())
+	}, nil
 }
 
 func main() {
 	url := flag.String("zipkin", "http://localhost:9411/api/v2/spans", "zipkin url")
 	flag.Parse()
 
-	shutdown := initTracer(*url)
-	defer shutdown()
+	shutdown, err := initTracer(*url)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func(f func() error) {
+		if err := f(); err != nil {
+			log.Fatal(err)
+		}
+	}(shutdown)
 
 	ctx := context.Background()
 

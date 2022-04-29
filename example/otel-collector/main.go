@@ -38,7 +38,7 @@ import (
 
 // Initializes an OTLP exporter, and configures the corresponding trace and
 // metric providers.
-func initProvider() func() {
+func initProvider() (func() error, error) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
@@ -47,7 +47,9 @@ func initProvider() func() {
 			semconv.ServiceNameKey.String("test-service"),
 		),
 	)
-	handleErr(err, "failed to create resource")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create resource: %w", err)
+	}
 
 	// If the OpenTelemetry Collector is running on a local cluster (minikube or
 	// microk8s), it should be accessible through the NodePort service at the
@@ -55,11 +57,15 @@ func initProvider() func() {
 	// endpoint of your cluster. If you run the app inside k8s, then you can
 	// probably connect directly to the service through dns
 	conn, err := grpc.DialContext(ctx, "localhost:30080", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
-	handleErr(err, "failed to create gRPC connection to collector")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create gRPC connection to collector: %w", err)
+	}
 
 	// Set up a trace exporter
 	traceExporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithGRPCConn(conn))
-	handleErr(err, "failed to create trace exporter")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create trace exporter: %w", err)
+	}
 
 	// Register the trace exporter with a TracerProvider, using a batch
 	// span processor to aggregate spans before export.
@@ -74,17 +80,24 @@ func initProvider() func() {
 	// set global propagator to tracecontext (the default is no-op).
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
-	return func() {
+	return func() error {
 		// Shutdown will flush any remaining spans and shut down the exporter.
-		handleErr(tracerProvider.Shutdown(ctx), "failed to shutdown TracerProvider")
-	}
+		return tracerProvider.Shutdown(ctx)
+	}, nil
 }
 
 func main() {
 	log.Printf("Waiting for connection...")
 
-	shutdown := initProvider()
-	defer shutdown()
+	shutdown, err := initProvider()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func(f func() error) {
+		if err := f(); err != nil {
+			log.Fatal("failed to shutdown TracerProvider: %w", err)
+		}
+	}(shutdown)
 
 	tracer := otel.Tracer("test-tracer")
 
@@ -111,10 +124,4 @@ func main() {
 	}
 
 	log.Printf("Done!")
-}
-
-func handleErr(err error, message string) {
-	if err != nil {
-		log.Fatalf("%s: %v", message, err)
-	}
 }
