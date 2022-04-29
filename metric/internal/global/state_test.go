@@ -21,7 +21,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/nonrecording"
 )
 
 func resetGlobalMeterProvider() {
@@ -55,7 +54,7 @@ func TestSetMeterProvider(t *testing.T) {
 	t.Run("First Set() should replace the delegate", func(t *testing.T) {
 		resetGlobalMeterProvider()
 
-		SetMeterProvider(nonrecording.NewNoopMeterProvider())
+		SetMeterProvider(metric.NewNoopMeterProvider())
 
 		_, ok := MeterProvider().(*meterProvider)
 		if ok {
@@ -68,7 +67,7 @@ func TestSetMeterProvider(t *testing.T) {
 
 		mp := MeterProvider()
 
-		SetMeterProvider(nonrecording.NewNoopMeterProvider())
+		SetMeterProvider(metric.NewNoopMeterProvider())
 
 		dmp := mp.(*meterProvider)
 
