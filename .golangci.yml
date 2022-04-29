@@ -57,3 +57,7 @@ linters-settings:
     # This means that linting errors with less than 0.8 confidence will be ignored.
     # Default: 0.8
     confidence: 0.1
+    rules:
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#blank-imports
+      - name: blank-imports
+        disabled: false
