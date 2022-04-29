@@ -78,11 +78,11 @@ linters-settings:
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#deep-exit
       - name: deep-exit
         disabled: false
-          ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#defer
-          #- name: defer
-          #  disabled: false
-          #  arguments:
-          #    - ["call-chain", "loop", "recover"]
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#defer
+      - name: defer
+        disabled: false
+        arguments:
+          - ["call-chain", "loop"]
           ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#dot-imports
           #- name: dot-imports
           #  disabled: false

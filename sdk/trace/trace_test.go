@@ -223,8 +223,8 @@ func TestSpanIsRecording(t *testing.T) {
 		} {
 			tp := NewTracerProvider(WithSampler(tc.sampler))
 			_, span := tp.Tracer(name).Start(context.Background(), "StartSpan")
-			defer span.End()
 			got := span.IsRecording()
+			span.End()
 			assert.Equal(t, got, tc.want, name)
 		}
 	})
