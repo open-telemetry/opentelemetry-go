@@ -27,17 +27,28 @@ linters:
 
 
 issues:
+  # Maximum issues count per one linter.
+  # Set to 0 to disable.
+  # Default: 50
+  # Setting to unlimited so the linter only is run once to debug all issues.
+  max-issues-per-linter: 0
+  # Maximum count of issues with the same text.
+  # Set to 0 to disable.
+  # Default: 3
+  # Setting to unlimited so the linter only is run once to debug all issues.
+  max-same-issues: 0
+  # Excluding configuration per-path, per-linter, per-text and per-source.
   exclude-rules:
-    # helpers in tests often (rightfully) pass a *testing.T as their first argument
-    - path: _test\.go
-      text: "context.Context should be the first parameter of a function"
-      linters:
-        - revive
-    # Yes, they are, but it's okay in a test
+    # Yes, they are, but it's okay in a test.
     - path: _test\.go
       text: "exported func.*returns unexported type.*which can be annoying to use"
       linters:
         - revive
+  #include:
+  #   revive exported should have comment or be unexported.
+  #  - EXC0012
+  #   revive package comment should be of the form ...
+  #  - EXC0013
 
 linters-settings:
   godot:

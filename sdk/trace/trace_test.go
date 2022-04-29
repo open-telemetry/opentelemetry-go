@@ -425,8 +425,8 @@ func TestSamplerAttributesLocalChildSpan(t *testing.T) {
 	tp := NewTracerProvider(WithSampler(sampler), WithSyncer(te), WithResource(resource.Empty()))
 
 	ctx := context.Background()
-	ctx, span := startLocalSpan(tp, ctx, "SpanOne", "span0")
-	_, spanTwo := startLocalSpan(tp, ctx, "SpanTwo", "span1")
+	ctx, span := startLocalSpan(ctx, tp, "SpanOne", "span0")
+	_, spanTwo := startLocalSpan(ctx, tp, "SpanTwo", "span1")
 
 	spanTwo.End()
 	span.End()
@@ -950,7 +950,7 @@ func startNamedSpan(tp *TracerProvider, trName, name string, args ...trace.SpanS
 // passed name and with the passed context. The context is returned
 // along with the span so this parent can be used to create child
 // spans.
-func startLocalSpan(tp *TracerProvider, ctx context.Context, trName, name string, args ...trace.SpanStartOption) (context.Context, trace.Span) {
+func startLocalSpan(ctx context.Context, tp *TracerProvider, trName, name string, args ...trace.SpanStartOption) (context.Context, trace.Span) {
 	ctx, span := tp.Tracer(trName).Start(
 		ctx,
 		name,
