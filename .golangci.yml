@@ -67,11 +67,11 @@ linters-settings:
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#constant-logical-expr
       - name: constant-logical-expr
         disabled: false
-          ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#context-as-argument
-          #- name: context-as-argument
-          #  disabled: false
-          #  arguments:
-          #    allowTypesBefore: "*testing.T"
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#context-as-argument
+      - name: context-as-argument
+        disabled: false
+        arguments:
+          allowTypesBefore: "*testing.T"
           ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#context-keys-type
           #- name: context-keys-type
           #  disabled: false
