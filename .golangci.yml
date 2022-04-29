@@ -92,9 +92,9 @@ linters-settings:
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#early-return
       - name: early-return
         disabled: false
-          ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#empty-block
-          #- name: empty-block
-          #  disabled: false
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#empty-block
+      - name: empty-block
+        disabled: false
           ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#empty-lines
           #- name: empty-lines
           #  disabled: false

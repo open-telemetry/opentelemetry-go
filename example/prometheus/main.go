@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"sync"
 	"time"
 
@@ -101,7 +103,8 @@ func main() {
 	commonAttrs := []attribute.KeyValue{lemonsKey.Int(10), attribute.String("A", "1"), attribute.String("B", "2"), attribute.String("C", "3")}
 	notSoCommonAttrs := []attribute.KeyValue{lemonsKey.Int(13)}
 
-	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
 
 	(*observerLock).Lock()
 	*observerValueToReport = 1.0
@@ -131,5 +134,5 @@ func main() {
 
 	fmt.Println("Example finished updating, please visit :2222")
 
-	select {}
+	<-ctx.Done()
 }
