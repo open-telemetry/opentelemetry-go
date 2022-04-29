@@ -16,27 +16,26 @@ package time // import "go.opentelemetry.io/otel/sdk/metric/controller/time"
 
 import (
 	"time"
-	lib "time"
 )
 
 // Several types below are created to match "github.com/benbjohnson/clock"
 // so that it remains a test-only dependency.
 
 type Clock interface {
-	Now() lib.Time
-	Ticker(duration lib.Duration) Ticker
+	Now() time.Time
+	Ticker(duration time.Duration) Ticker
 }
 
 type Ticker interface {
 	Stop()
-	C() <-chan lib.Time
+	C() <-chan time.Time
 }
 
 type RealClock struct {
 }
 
 type RealTicker struct {
-	ticker *lib.Ticker
+	ticker *time.Ticker
 }
 
 var _ Clock = RealClock{}

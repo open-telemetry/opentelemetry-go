@@ -27,7 +27,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
-	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/metric/processor/reducer"
 	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -73,12 +72,12 @@ func generateData(t *testing.T, impl sdkapi.MeterImpl) {
 }
 
 func TestFilterProcessor(t *testing.T) {
-	testProc := processorTest.NewProcessor(
-		processorTest.AggregatorSelector(),
+	testProc := processortest.NewProcessor(
+		processortest.AggregatorSelector(),
 		attribute.DefaultEncoder(),
 	)
 	accum := metricsdk.NewAccumulator(
-		reducer.New(testFilter{}, processorTest.NewCheckpointer(testProc)),
+		reducer.New(testFilter{}, processortest.NewCheckpointer(testProc)),
 	)
 	generateData(t, accum)
 
@@ -92,11 +91,11 @@ func TestFilterProcessor(t *testing.T) {
 
 // Test a filter with the ../basic Processor.
 func TestFilterBasicProcessor(t *testing.T) {
-	basicProc := basic.New(processorTest.AggregatorSelector(), aggregation.CumulativeTemporalitySelector())
+	basicProc := basic.New(processortest.AggregatorSelector(), aggregation.CumulativeTemporalitySelector())
 	accum := metricsdk.NewAccumulator(
 		reducer.New(testFilter{}, basicProc),
 	)
-	exporter := processorTest.New(basicProc, attribute.DefaultEncoder())
+	exporter := processortest.New(basicProc, attribute.DefaultEncoder())
 
 	generateData(t, accum)
 
