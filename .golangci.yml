@@ -83,9 +83,9 @@ linters-settings:
         disabled: false
         arguments:
           - ["call-chain", "loop"]
-          ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#dot-imports
-          #- name: dot-imports
-          #  disabled: false
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#dot-imports
+      - name: dot-imports
+        disabled: false
           ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#duplicated-imports
           #- name: duplicated-imports
           #  disabled: false
