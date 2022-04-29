@@ -101,9 +101,9 @@ linters-settings:
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#error-naming
       - name: error-naming
         disabled: false
-          ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#error-return
-          #- name: error-return
-          #  disabled: false
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#error-return
+      - name: error-return
+        disabled: false
           ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#error-strings
           #- name: error-strings
           #  disabled: false
