@@ -56,7 +56,7 @@ linters-settings:
     # Sets the default failure confidence.
     # This means that linting errors with less than 0.8 confidence will be ignored.
     # Default: 0.8
-    confidence: 0.1
+    confidence: 0.01
     rules:
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#blank-imports
       - name: blank-imports
@@ -72,9 +72,9 @@ linters-settings:
         disabled: false
         arguments:
           allowTypesBefore: "*testing.T"
-          ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#context-keys-type
-          #- name: context-keys-type
-          #  disabled: false
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#context-keys-type
+      - name: context-keys-type
+        disabled: false
           ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#deep-exit
           #- name: deep-exit
           #  disabled: false
