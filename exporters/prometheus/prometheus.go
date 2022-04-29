@@ -186,23 +186,26 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 			desc := c.toDesc(record, attrKeys)
 
-			if hist, ok := agg.(aggregation.Histogram); ok {
-				if err := c.exportHistogram(ch, hist, numberKind, desc, attrs); err != nil {
+			switch v := agg.(type) {
+			case aggregation.Histogram:
+				if err := c.exportHistogram(ch, v, numberKind, desc, attrs); err != nil {
 					return fmt.Errorf("exporting histogram: %w", err)
 				}
-			} else if sum, ok := agg.(aggregation.Sum); ok && instrumentKind.Monotonic() {
-				if err := c.exportMonotonicCounter(ch, sum, numberKind, desc, attrs); err != nil {
-					return fmt.Errorf("exporting monotonic counter: %w", err)
+			case aggregation.Sum:
+				if instrumentKind.Monotonic() {
+					if err := c.exportMonotonicCounter(ch, v, numberKind, desc, attrs); err != nil {
+						return fmt.Errorf("exporting monotonic counter: %w", err)
+					}
+				} else {
+					if err := c.exportNonMonotonicCounter(ch, v, numberKind, desc, attrs); err != nil {
+						return fmt.Errorf("exporting non monotonic counter: %w", err)
+					}
 				}
-			} else if sum, ok := agg.(aggregation.Sum); ok && !instrumentKind.Monotonic() {
-				if err := c.exportNonMonotonicCounter(ch, sum, numberKind, desc, attrs); err != nil {
-					return fmt.Errorf("exporting non monotonic counter: %w", err)
-				}
-			} else if lastValue, ok := agg.(aggregation.LastValue); ok {
-				if err := c.exportLastValue(ch, lastValue, numberKind, desc, attrs); err != nil {
+			case aggregation.LastValue:
+				if err := c.exportLastValue(ch, v, numberKind, desc, attrs); err != nil {
 					return fmt.Errorf("exporting last value: %w", err)
 				}
-			} else {
+			default:
 				return fmt.Errorf("%w: %s", ErrUnsupportedAggregator, agg.Kind())
 			}
 			return nil

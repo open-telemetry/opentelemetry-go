@@ -179,13 +179,14 @@ func Merge(a, b *Resource) (*Resource, error) {
 
 	// Merge the schema URL.
 	var schemaURL string
-	if a.schemaURL == "" {
+	switch true {
+	case a.schemaURL == "":
 		schemaURL = b.schemaURL
-	} else if b.schemaURL == "" {
+	case b.schemaURL == "":
 		schemaURL = a.schemaURL
-	} else if a.schemaURL == b.schemaURL {
+	case a.schemaURL == b.schemaURL:
 		schemaURL = a.schemaURL
-	} else {
+	default:
 		return Empty(), errMergeConflictSchemaURL
 	}
 
