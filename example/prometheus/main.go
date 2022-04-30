@@ -91,7 +91,7 @@ func main() {
 		gaugeObserver.Observe(ctx, value, attrs...)
 	})
 
-	histogram, err := meter.SyncFloat64().Histogram("ex.com.two")
+	hist, err := meter.SyncFloat64().Histogram("ex.com.two")
 	if err != nil {
 		log.Panicf("failed to initialize instrument: %v", err)
 	}
@@ -111,7 +111,7 @@ func main() {
 	*observerAttrsToReport = commonAttrs
 	(*observerLock).Unlock()
 
-	histogram.Record(ctx, 2.0, commonAttrs...)
+	hist.Record(ctx, 2.0, commonAttrs...)
 	counter.Add(ctx, 12.0, commonAttrs...)
 
 	time.Sleep(5 * time.Second)
@@ -120,7 +120,7 @@ func main() {
 	*observerValueToReport = 1.0
 	*observerAttrsToReport = notSoCommonAttrs
 	(*observerLock).Unlock()
-	histogram.Record(ctx, 2.0, notSoCommonAttrs...)
+	hist.Record(ctx, 2.0, notSoCommonAttrs...)
 	counter.Add(ctx, 22.0, notSoCommonAttrs...)
 
 	time.Sleep(5 * time.Second)
@@ -129,7 +129,7 @@ func main() {
 	*observerValueToReport = 13.0
 	*observerAttrsToReport = commonAttrs
 	(*observerLock).Unlock()
-	histogram.Record(ctx, 12.0, commonAttrs...)
+	hist.Record(ctx, 12.0, commonAttrs...)
 	counter.Add(ctx, 13.0, commonAttrs...)
 
 	fmt.Println("Example finished updating, please visit :2222")

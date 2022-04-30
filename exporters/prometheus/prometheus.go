@@ -88,7 +88,7 @@ type Config struct {
 
 // New returns a new Prometheus exporter using the configured metric
 // controller.  See controller.New().
-func New(config Config, controller *controller.Controller) (*Exporter, error) {
+func New(config Config, ctrl *controller.Controller) (*Exporter, error) {
 	if config.Registry == nil {
 		config.Registry = prometheus.NewRegistry()
 	}
@@ -105,7 +105,7 @@ func New(config Config, controller *controller.Controller) (*Exporter, error) {
 		handler:    promhttp.HandlerFor(config.Gatherer, promhttp.HandlerOpts{}),
 		registerer: config.Registerer,
 		gatherer:   config.Gatherer,
-		controller: controller,
+		controller: ctrl,
 	}
 
 	c := &collector{

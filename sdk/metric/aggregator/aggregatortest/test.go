@@ -169,18 +169,18 @@ func (n *Numbers) Points() []number.Number {
 }
 
 // CheckedUpdate performs the same range test the SDK does on behalf of the aggregator.
-func CheckedUpdate(t *testing.T, agg aggregator.Aggregator, number number.Number, descriptor *sdkapi.Descriptor) {
+func CheckedUpdate(t *testing.T, agg aggregator.Aggregator, n number.Number, descriptor *sdkapi.Descriptor) {
 	ctx := context.Background()
 
 	// Note: Aggregator tests are written assuming that the SDK
 	// has performed the RangeTest. Therefore we skip errors that
 	// would have been detected by the RangeTest.
-	err := aggregator.RangeTest(number, descriptor)
+	err := aggregator.RangeTest(n, descriptor)
 	if err != nil {
 		return
 	}
 
-	if err := agg.Update(ctx, number, descriptor); err != nil {
+	if err := agg.Update(ctx, n, descriptor); err != nil {
 		t.Error("Unexpected Update failure", err)
 	}
 }
