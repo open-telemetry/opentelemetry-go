@@ -35,8 +35,11 @@ const (
 	DefaultMaxExportBatchSize = 512
 )
 
+// BatchSpanProcessorOption configures a BatchSpanProcessor.
 type BatchSpanProcessorOption func(o *BatchSpanProcessorOptions)
 
+// BatchSpanProcessorOptions is configuration settings for a
+// BatchSpanProcessor.
 type BatchSpanProcessorOptions struct {
 	// MaxQueueSize is the maximum queue size to buffer spans for delayed processing. If the
 	// queue gets full it drops the spans. Use BlockOnQueueFull to change this behavior.
@@ -205,30 +208,43 @@ func (bsp *batchSpanProcessor) ForceFlush(ctx context.Context) error {
 	return err
 }
 
+// WithMaxQueueSize returns a BatchSpanProcessorOption that configures the
+// maximum queue size allowed for a BatchSpanProcessor.
 func WithMaxQueueSize(size int) BatchSpanProcessorOption {
 	return func(o *BatchSpanProcessorOptions) {
 		o.MaxQueueSize = size
 	}
 }
 
+// WithMaxExportBatchSize returns a BatchSpanProcessorOption that configures
+// the maximum export batch size allowed for a BatchSpanProcessor.
 func WithMaxExportBatchSize(size int) BatchSpanProcessorOption {
 	return func(o *BatchSpanProcessorOptions) {
 		o.MaxExportBatchSize = size
 	}
 }
 
+// WithBatchTimeout returns a BatchSpanProcessorOption that configures the
+// maximum delay allowed for a BatchSpanProcessor before it will export any
+// held span (whether the queue is full or not).
 func WithBatchTimeout(delay time.Duration) BatchSpanProcessorOption {
 	return func(o *BatchSpanProcessorOptions) {
 		o.BatchTimeout = delay
 	}
 }
 
+// WithExportTimeout returns a BatchSpanProcessorOption that configures the
+// amount of time a BatchSpanProcessor waits for an exporter to export before
+// abandoning the export.
 func WithExportTimeout(timeout time.Duration) BatchSpanProcessorOption {
 	return func(o *BatchSpanProcessorOptions) {
 		o.ExportTimeout = timeout
 	}
 }
 
+// WithBlocking returns a BatchSpanProcessorOption that configures a
+// BatchSpanProcessor to wait for enqueue operations to succeed instead of
+// dropping data when the queue is full.
 func WithBlocking() BatchSpanProcessorOption {
 	return func(o *BatchSpanProcessorOptions) {
 		o.BlockOnQueueFull = true

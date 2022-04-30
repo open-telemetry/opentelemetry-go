@@ -129,6 +129,7 @@ func (r *Resource) Attributes() []attribute.KeyValue {
 	return r.attrs.ToSlice()
 }
 
+// SchemaURL returns the schema URL associated with Resource r.
 func (r *Resource) SchemaURL() string {
 	if r == nil {
 		return ""

@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// SpanStubs is a slice of SpanStub use for testing an SDK.
 type SpanStubs []SpanStub
 
 // SpanStubsFromReadOnlySpans returns SpanStubs populated from ro.

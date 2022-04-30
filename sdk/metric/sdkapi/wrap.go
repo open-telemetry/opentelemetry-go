@@ -42,10 +42,12 @@ type (
 	fObserver struct{ AsyncImpl }
 )
 
+// WrapMeterImpl wraps impl to be a full implementation of a Meter.
 func WrapMeterImpl(impl MeterImpl) metric.Meter {
 	return meter{impl}
 }
 
+// UnwrapMeterImpl unwraps the Meter to its bare MeterImpl.
 func UnwrapMeterImpl(m metric.Meter) MeterImpl {
 	mm, ok := m.(meter)
 	if !ok {

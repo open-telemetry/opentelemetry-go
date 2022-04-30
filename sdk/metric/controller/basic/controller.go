@@ -81,6 +81,8 @@ type Controller struct {
 var _ export.InstrumentationLibraryReader = &Controller{}
 var _ metric.MeterProvider = &Controller{}
 
+// Meter returns a new Meter defined by instrumentationName and configured
+// with opts.
 func (c *Controller) Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter {
 	cfg := metric.NewMeterConfig(opts...)
 	library := instrumentation.Library{

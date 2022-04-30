@@ -94,6 +94,7 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	return err
 }
 
+// TemporalityFor returns the accepted temporality for a metric measurment.
 func (e *Exporter) TemporalityFor(descriptor *sdkapi.Descriptor, kind aggregation.Kind) aggregation.Temporality {
 	return e.temporalitySelector.TemporalityFor(descriptor, kind)
 }

@@ -34,6 +34,8 @@ type Handler struct {
 	next        func(r *http.Request)
 }
 
+// New returns a new Handler that will trace requests before handing them off
+// to next.
 func New(next func(r *http.Request)) *Handler {
 	// Like most instrumentation packages, this handler defaults to using the
 	// global progatators and tracer providers.

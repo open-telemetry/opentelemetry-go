@@ -39,16 +39,23 @@ issues:
   max-same-issues: 0
   # Excluding configuration per-path, per-linter, per-text and per-source.
   exclude-rules:
+    # TODO: Having appropriate comments for exported objects helps development,
+    # even for objects in internal packages. Appropriate comments for all
+    # exported objects should be added and this exclusion removed.
+    - path: '.*internal/.*'
+      text: "exported (method|function|type|const) (.+) should have comment or be unexported"
+      linters:
+        - revive
     # Yes, they are, but it's okay in a test.
     - path: _test\.go
       text: "exported func.*returns unexported type.*which can be annoying to use"
       linters:
         - revive
-  #include:
-  #   revive exported should have comment or be unexported.
-  #  - EXC0012
-  #   revive package comment should be of the form ...
-  #  - EXC0013
+  include:
+    # revive exported should have comment or be unexported.
+    - EXC0012
+    # revive package comment should be of the form ...
+    - EXC0013
 
 linters-settings:
   godot:
@@ -121,12 +128,11 @@ linters-settings:
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#errorf
       - name: errorf
         disabled: false
-          ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#exported
-          #- name: exported
-          #  disabled: false
-          #  arguments:
-          #    - "checkPrivateReceivers"
-          #    - "sayRepetitiveInsteadOfStutters"
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#exported
+      - name: exported
+        disabled: false
+        arguments:
+          - "sayRepetitiveInsteadOfStutters"
           ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#flag-parameter
           #- name: flag-parameter
           #  disabled: false

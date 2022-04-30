@@ -34,6 +34,7 @@ type batchUploader interface {
 	shutdown(context.Context) error
 }
 
+// EndpointOption configures a Jaeger endpoint.
 type EndpointOption interface {
 	newBatchUploader() (batchUploader, error)
 }
@@ -75,6 +76,7 @@ func WithAgentEndpoint(options ...AgentEndpointOption) EndpointOption {
 	})
 }
 
+// AgentEndpointOption configures a Jaeger agent endpoint.
 type AgentEndpointOption interface {
 	apply(agentEndpointConfig) agentEndpointConfig
 }
@@ -175,6 +177,7 @@ func WithCollectorEndpoint(options ...CollectorEndpointOption) EndpointOption {
 	})
 }
 
+// CollectorEndpointOption configures a Jaeger collector endpoint.
 type CollectorEndpointOption interface {
 	apply(collectorEndpointConfig) collectorEndpointConfig
 }
