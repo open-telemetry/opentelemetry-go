@@ -133,9 +133,9 @@ linters-settings:
         disabled: false
         arguments:
           - "sayRepetitiveInsteadOfStutters"
-          ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#flag-parameter
-          #- name: flag-parameter
-          #  disabled: false
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#flag-parameter
+      - name: flag-parameter
+        disabled: false
           ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#identical-branches
           #- name: identical-branches
           #  disabled: false

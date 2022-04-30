@@ -184,7 +184,7 @@ func (bsp *batchSpanProcessor) ForceFlush(ctx context.Context) error {
 	var err error
 	if bsp.e != nil {
 		flushCh := make(chan struct{})
-		if bsp.enqueueBlockOnQueueFull(ctx, forceFlushSpan{flushed: flushCh}, true) {
+		if bsp.enqueueBlockOnQueueFull(ctx, forceFlushSpan{flushed: flushCh}) {
 			select {
 			case <-flushCh:
 				// Processed any items in queue prior to ForceFlush being called
@@ -350,28 +350,35 @@ func (bsp *batchSpanProcessor) drainQueue() {
 }
 
 func (bsp *batchSpanProcessor) enqueue(sd ReadOnlySpan) {
-	bsp.enqueueBlockOnQueueFull(context.TODO(), sd, bsp.o.BlockOnQueueFull)
+	ctx := context.TODO()
+	if bsp.o.BlockOnQueueFull {
+		bsp.enqueueBlockOnQueueFull(ctx, sd)
+	} else {
+		bsp.enqueueDrop(ctx, sd)
+	}
 }
 
-func (bsp *batchSpanProcessor) enqueueBlockOnQueueFull(ctx context.Context, sd ReadOnlySpan, block bool) bool {
+func recoverSendOnClosedChan() {
+	x := recover()
+	switch err := x.(type) {
+	case nil:
+		return
+	case runtime.Error:
+		if err.Error() == "send on closed channel" {
+			return
+		}
+	}
+	panic(x)
+}
+
+func (bsp *batchSpanProcessor) enqueueBlockOnQueueFull(ctx context.Context, sd ReadOnlySpan) bool {
 	if !sd.SpanContext().IsSampled() {
 		return false
 	}
 
 	// This ensures the bsp.queue<- below does not panic as the
 	// processor shuts down.
-	defer func() {
-		x := recover()
-		switch err := x.(type) {
-		case nil:
-			return
-		case runtime.Error:
-			if err.Error() == "send on closed channel" {
-				return
-			}
-		}
-		panic(x)
-	}()
+	defer recoverSendOnClosedChan()
 
 	select {
 	case <-bsp.stopCh:
@@ -379,13 +386,27 @@ func (bsp *batchSpanProcessor) enqueueBlockOnQueueFull(ctx context.Context, sd R
 	default:
 	}
 
-	if block {
-		select {
-		case bsp.queue <- sd:
-			return true
-		case <-ctx.Done():
-			return false
-		}
+	select {
+	case bsp.queue <- sd:
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
+
+func (bsp *batchSpanProcessor) enqueueDrop(ctx context.Context, sd ReadOnlySpan) bool {
+	if !sd.SpanContext().IsSampled() {
+		return false
+	}
+
+	// This ensures the bsp.queue<- below does not panic as the
+	// processor shuts down.
+	defer recoverSendOnClosedChan()
+
+	select {
+	case <-bsp.stopCh:
+		return false
+	default:
 	}
 
 	select {

@@ -206,7 +206,11 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 			tp.RegisterSpanProcessor(ssp)
 			tr := tp.Tracer("BatchSpanProcessorWithOptions")
 
-			generateSpan(t, option.parallel, tr, option)
+			if option.parallel {
+				generateSpanParallel(t, tr, option)
+			} else {
+				generateSpan(t, tr, option)
+			}
 
 			tp.UnregisterSpanProcessor(ssp)
 
@@ -285,7 +289,11 @@ func TestNewBatchSpanProcessorWithEnvOptions(t *testing.T) {
 			tp.RegisterSpanProcessor(ssp)
 			tr := tp.Tracer("BatchSpanProcessorWithOptions")
 
-			generateSpan(t, option.parallel, tr, option)
+			if option.parallel {
+				generateSpanParallel(t, tr, option)
+			} else {
+				generateSpan(t, tr, option)
+			}
 
 			tp.UnregisterSpanProcessor(ssp)
 
@@ -328,7 +336,7 @@ func TestBatchSpanProcessorExportTimeout(t *testing.T) {
 	tp.RegisterSpanProcessor(bsp)
 
 	tr := tp.Tracer("BatchSpanProcessorExportTimeout")
-	generateSpan(t, false, tr, testOption{genNumSpans: 1})
+	generateSpan(t, tr, testOption{genNumSpans: 1})
 	tp.UnregisterSpanProcessor(bsp)
 
 	if exp.err != context.DeadlineExceeded {
@@ -342,27 +350,34 @@ func createAndRegisterBatchSP(option testOption, te *testBatchExporter) sdktrace
 	return sdktrace.NewBatchSpanProcessor(te, options...)
 }
 
-func generateSpan(t *testing.T, parallel bool, tr trace.Tracer, option testOption) {
+func generateSpan(t *testing.T, tr trace.Tracer, option testOption) {
+	sc := getSpanContext()
+
+	for i := 0; i < option.genNumSpans; i++ {
+		tid := sc.TraceID()
+		binary.BigEndian.PutUint64(tid[0:8], uint64(i+1))
+		newSc := sc.WithTraceID(tid)
+		ctx := trace.ContextWithRemoteSpanContext(context.Background(), newSc)
+		_, span := tr.Start(ctx, option.name)
+		span.End()
+	}
+}
+
+func generateSpanParallel(t *testing.T, tr trace.Tracer, option testOption) {
 	sc := getSpanContext()
 
 	wg := &sync.WaitGroup{}
 	for i := 0; i < option.genNumSpans; i++ {
 		tid := sc.TraceID()
 		binary.BigEndian.PutUint64(tid[0:8], uint64(i+1))
-		newSc := sc.WithTraceID(tid)
 
 		wg.Add(1)
-		f := func(sc trace.SpanContext) {
+		go func(sc trace.SpanContext) {
 			ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
 			_, span := tr.Start(ctx, option.name)
 			span.End()
 			wg.Done()
-		}
-		if parallel {
-			go f(newSc)
-		} else {
-			f(newSc)
-		}
+		}(sc.WithTraceID(tid))
 	}
 	wg.Wait()
 }
@@ -403,7 +418,7 @@ func TestBatchSpanProcessorPostShutdown(t *testing.T) {
 	tp.RegisterSpanProcessor(bsp)
 	tr := tp.Tracer("Normal")
 
-	generateSpan(t, true, tr, testOption{
+	generateSpanParallel(t, tr, testOption{
 		o: []sdktrace.BatchSpanProcessorOption{
 			sdktrace.WithMaxExportBatchSize(50),
 		},
@@ -439,7 +454,11 @@ func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
 	}
 	tp.RegisterSpanProcessor(ssp)
 	tr := tp.Tracer("BatchSpanProcessorWithOption")
-	generateSpan(t, option.parallel, tr, option)
+	if option.parallel {
+		generateSpanParallel(t, tr, option)
+	} else {
+		generateSpan(t, tr, option)
+	}
 
 	// Force flush any held span batches
 	err := ssp.ForceFlush(context.Background())
@@ -475,7 +494,11 @@ func TestBatchSpanProcessorDropBatchIfFailed(t *testing.T) {
 	}
 	tp.RegisterSpanProcessor(ssp)
 	tr := tp.Tracer("BatchSpanProcessorWithOption")
-	generateSpan(t, option.parallel, tr, option)
+	if option.parallel {
+		generateSpanParallel(t, tr, option)
+	} else {
+		generateSpan(t, tr, option)
+	}
 
 	// Force flush any held span batches
 	err := ssp.ForceFlush(context.Background())
@@ -488,7 +511,11 @@ func TestBatchSpanProcessorDropBatchIfFailed(t *testing.T) {
 	assert.Equal(t, 0, te.getBatchCount())
 
 	// Generate a new batch, this will succeed
-	generateSpan(t, option.parallel, tr, option)
+	if option.parallel {
+		generateSpanParallel(t, tr, option)
+	} else {
+		generateSpan(t, tr, option)
+	}
 
 	// Force flush any held span batches
 	err = ssp.ForceFlush(context.Background())
