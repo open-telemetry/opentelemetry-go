@@ -10,12 +10,13 @@ linters:
   # Specifically enable linters we want to use.
   enable:
     - deadcode
+    - depguard
     - errcheck
+    - godot
     - gofmt
     - goimports
     - gosimple
     - govet
-    - godot
     - ineffassign
     - misspell
     - revive
@@ -24,7 +25,6 @@ linters:
     - typecheck
     - unused
     - varcheck
-
 
 issues:
   # Maximum issues count per one linter.
@@ -58,6 +58,29 @@ issues:
     - EXC0013
 
 linters-settings:
+  depguard:
+    # Check the list against standard lib.
+    # Default: false
+    include-go-root: true
+    # A list of packages for the list type specified.
+    # Default: []
+    packages:
+      - "crypto/md5"
+      - "crypto/sha1"
+      - "crypto/**/pkix"
+    ignore-file-rules:
+      - "**/*_test.go"
+    additional-guards:
+      # Do not allow testing packages in non-test files.
+      - list-type: denylist
+        include-go-root: true
+        packages:
+          - testing
+          - github.com/stretchr/testify
+        ignore-file-rules:
+          - "**/*_test.go"
+          - "**/*test/*.go"
+          - "**/internal/matchers/*.go"
   godot:
     exclude:
       # Exclude sentence fragments for lists.
@@ -148,13 +171,6 @@ linters-settings:
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#indent-error-flow
       - name: indent-error-flow
         disabled: false
-          ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#imports-blacklist
-          #- name: imports-blacklist
-          #  disabled: false
-          #  arguments:
-          #    - "crypto/md5"
-          #    - "crypto/sha1"
-          #    - "crypto/**/pkix"
           ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#import-shadowing
           #- name: import-shadowing
           #  disabled: false
