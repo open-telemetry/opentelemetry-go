@@ -196,9 +196,9 @@ linters-settings:
           - - panic
             - '/^[^\n]*$/'
             - must not contain line breaks
-          ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#struct-tag
-          #- name: struct-tag
-          #  disabled: false
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#struct-tag
+      - name: struct-tag
+        disabled: false
           ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#superfluous-else
           #- name: superfluous-else
           #  disabled: false
