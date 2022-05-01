@@ -309,7 +309,9 @@ func (c *collectorUploader) upload(ctx context.Context, batch *gen.Batch) error 
 	}
 
 	_, _ = io.Copy(ioutil.Discard, resp.Body)
-	resp.Body.Close()
+	if err = resp.Body.Close(); err != nil {
+		return err
+	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("failed to upload traces; HTTP status code: %d", resp.StatusCode)
