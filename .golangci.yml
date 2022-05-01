@@ -236,6 +236,6 @@ linters-settings:
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#useless-break
       - name: useless-break
         disabled: false
-          ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#waitgroup-by-value
-          #- name: waitgroup-by-value
-          #  disabled: false
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#waitgroup-by-value
+      - name: waitgroup-by-value
+        disabled: false
