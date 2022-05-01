@@ -189,13 +189,13 @@ linters-settings:
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#redefines-builtin-id
       - name: redefines-builtin-id
         disabled: false
-          ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#string-format
-          #- name: string-format
-          #  disabled: false
-          #  arguments:
-          #    - - panic
-          #      - '/^[^\n]*$/'
-          #      - must not contain line breaks
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#string-format
+      - name: string-format
+        disabled: false
+        arguments:
+          - - panic
+            - '/^[^\n]*$/'
+            - must not contain line breaks
           ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#struct-tag
           #- name: struct-tag
           #  disabled: false
