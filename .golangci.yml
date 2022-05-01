@@ -217,12 +217,9 @@ linters-settings:
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#unconditional-recursion
       - name: unconditional-recursion
         disabled: false
-          ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#unexported-naming
-          #- name: unexported-naming
-          #  disabled: false
-          ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#unexported-return
-          #- name: unexported-return
-          #  disabled: false
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#unexported-return
+      - name: unexported-return
+        disabled: false
           ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#unhandled-error
           #- name: unhandled-error
           #  disabled: false
