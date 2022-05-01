@@ -230,9 +230,9 @@ linters-settings:
           - "fmt.Print"
           - "fmt.Printf"
           - "fmt.Println"
-          ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#unnecessary-stmt
-          #- name: unnecessary-stmt
-          #  disabled: false
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#unnecessary-stmt
+      - name: unnecessary-stmt
+        disabled: false
           ## https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#useless-break
           #- name: useless-break
           #  disabled: false
