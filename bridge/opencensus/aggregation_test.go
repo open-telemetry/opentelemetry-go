@@ -276,7 +276,7 @@ func TestHistogramAggregation(t *testing.T) {
 	if output.Kind() != aggregation.HistogramKind {
 		t.Errorf("recordAggregationsFromPoints(%v) = %v, want %v", input, output.Kind(), aggregation.HistogramKind)
 	}
-	if end != now {
+	if !end.Equal(now) {
 		t.Errorf("recordAggregationsFromPoints(%v).end() = %v, want %v", input, end, now)
 	}
 	distAgg, ok := output.(aggregation.Histogram)

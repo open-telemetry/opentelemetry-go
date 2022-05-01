@@ -1172,10 +1172,10 @@ func TestCustomStartEndTime(t *testing.T) {
 		t.Fatalf("got %d exported spans, want one span", te.Len())
 	}
 	got := te.Spans()[0]
-	if got.StartTime() != startTime {
+	if !got.StartTime().Equal(startTime) {
 		t.Errorf("expected start time to be %s, got %s", startTime, got.StartTime())
 	}
-	if got.EndTime() != endTime {
+	if !got.EndTime().Equal(endTime) {
 		t.Errorf("expected end time to be %s, got %s", endTime, got.EndTime())
 	}
 }
