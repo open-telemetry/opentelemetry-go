@@ -2,6 +2,8 @@ module go.opentelemetry.io/otel/sdk/metric
 
 go 1.16
 
+require go.opentelemetry.io/otel/metric v0.0.0-00010101000000-000000000000
+
 replace go.opentelemetry.io/otel => ../..
 
 replace go.opentelemetry.io/otel/bridge/opencensus => ../../bridge/opencensus
