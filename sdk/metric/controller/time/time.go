@@ -33,7 +33,7 @@ type Ticker interface {
 	C() <-chan time.Time
 }
 
-// RealClock wraps the time package and uses system to tell time.
+// RealClock wraps the time package and uses the system time to tell time.
 type RealClock struct {
 }
 
