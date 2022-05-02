@@ -32,7 +32,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 )
 
-// Magnitude is the upper-bound of random numbers used to profile tests.
+// Magnitude is the upper-bound of random numbers used in profile tests.
 const Magnitude = 1000
 
 // Profile is an aggregator test profile.
