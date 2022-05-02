@@ -128,7 +128,7 @@ var (
 	// ErrUninitializedInstrument is returned when an instrument is used when uninitialized.
 	ErrUninitializedInstrument = fmt.Errorf("use of an uninitialized instrument")
 
-	// ErrBadInstrument is returned with an instrument from another SDK is
+	// ErrBadInstrument is returned when an instrument from another SDK is
 	// attempted to be registered with this SDK.
 	ErrBadInstrument = fmt.Errorf("use of a instrument from another SDK")
 )
