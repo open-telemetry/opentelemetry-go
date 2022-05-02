@@ -143,6 +143,7 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 		Name:      name,
 		Version:   c.InstrumentationVersion(),
 		SchemaURL: c.SchemaURL(),
+		Attrs:     c.ScopeAttributes(),
 	}
 	t, ok := p.namedTracer[il]
 	if !ok {

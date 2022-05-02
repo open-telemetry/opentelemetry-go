@@ -26,5 +26,6 @@ func InstrumentationScope(il instrumentation.Library) *commonpb.InstrumentationS
 	return &commonpb.InstrumentationScope{
 		Name:    il.Name,
 		Version: il.Version,
+		// TODO: use Library attributes here once they are added to OTLP InstrumentationScope.
 	}
 }

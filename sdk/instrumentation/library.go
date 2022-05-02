@@ -20,6 +20,7 @@ For more information see
 [this](https://github.com/open-telemetry/oteps/blob/main/text/0083-component.md).
 */
 package instrumentation // import "go.opentelemetry.io/otel/sdk/instrumentation"
+import "go.opentelemetry.io/otel/attribute"
 
 // Library represents the instrumentation library.
 type Library struct {
@@ -30,4 +31,25 @@ type Library struct {
 	Version string
 	// SchemaURL of the telemetry emitted by the library.
 	SchemaURL string
+	// Scope attributes.
+	Attrs attribute.Set
+}
+
+type LibraryDistinct struct {
+	name      string
+	version   string
+	schemaURL string
+	attrs     attribute.Distinct
+}
+
+// Equivalent returns an object that can be compared for equality
+// between two libraries. This value is suitable for use as a key in
+// a map.
+func (l Library) Equivalent() LibraryDistinct {
+	return LibraryDistinct{
+		name:      l.Name,
+		version:   l.Version,
+		schemaURL: l.SchemaURL,
+		attrs:     l.Attrs.Equivalent(),
+	}
 }

@@ -401,6 +401,7 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 	}
 
 	want := &snapshot{
+		resource: resource.Empty(),
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -414,9 +415,7 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 		spanKind:               trace.SpanKindInternal,
 		instrumentationLibrary: instrumentation.Library{Name: "StartSpanAttribute"},
 	}
-	if diff := cmpDiff(got, want); diff != "" {
-		t.Errorf("SetSpanAttributesOnStart: -got +want %s", diff)
-	}
+	assert.EqualValues(t, want, got)
 }
 
 func TestSamplerAttributesLocalChildSpan(t *testing.T) {
@@ -1449,6 +1448,7 @@ func TestWithInstrumentationVersionAndSchema(t *testing.T) {
 		"WithInstrumentationVersion",
 		trace.WithInstrumentationVersion("v0.1.0"),
 		trace.WithSchemaURL("https://opentelemetry.io/schemas/1.2.0"),
+		trace.WithScopeAttributes(attribute.String("scope_key", "scope_val")),
 	).Start(ctx, "span0")
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -1456,6 +1456,7 @@ func TestWithInstrumentationVersionAndSchema(t *testing.T) {
 	}
 
 	want := &snapshot{
+		resource: resource.Empty(),
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
@@ -1467,11 +1468,10 @@ func TestWithInstrumentationVersionAndSchema(t *testing.T) {
 			Name:      "WithInstrumentationVersion",
 			Version:   "v0.1.0",
 			SchemaURL: "https://opentelemetry.io/schemas/1.2.0",
+			Attrs:     attribute.NewSet(attribute.String("scope_key", "scope_val")),
 		},
 	}
-	if diff := cmpDiff(got, want); diff != "" {
-		t.Errorf("WithResource:\n  -got +want %s", diff)
-	}
+	assert.EqualValues(t, want, got)
 }
 
 func TestSpanCapturesPanic(t *testing.T) {
@@ -1526,7 +1526,8 @@ func TestReadOnlySpan(t *testing.T) {
 	kv := attribute.String("foo", "bar")
 
 	tp := NewTracerProvider(WithResource(resource.NewSchemaless(kv)))
-	tr := tp.Tracer("ReadOnlySpan", trace.WithInstrumentationVersion("3"))
+	tr := tp.Tracer("ReadOnlySpan", trace.WithInstrumentationVersion("3"),
+		trace.WithScopeAttributes(attribute.String("scope_key", "scope_val")))
 
 	// Initialize parent context.
 	tID, sID := tp.idGenerator.NewIDs(context.Background())
@@ -1574,6 +1575,11 @@ func TestReadOnlySpan(t *testing.T) {
 	assert.Equal(t, "3", ro.InstrumentationLibrary().Version)
 	assert.Equal(t, kv.Key, ro.Resource().Attributes()[0].Key)
 	assert.Equal(t, kv.Value, ro.Resource().Attributes()[0].Value)
+
+	scopeAttrs := ro.InstrumentationLibrary().Attrs
+	v, ok := scopeAttrs.Value("scope_key")
+	assert.True(t, ok)
+	assert.EqualValues(t, "scope_val", v.AsString())
 
 	// Verify changes to the original span are reflected in the ReadOnlySpan.
 	s.SetName("bar")

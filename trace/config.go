@@ -25,6 +25,8 @@ type TracerConfig struct {
 	instrumentationVersion string
 	// Schema URL of the telemetry emitted by the Tracer.
 	schemaURL string
+	// Attributes of the Scope associated with the Tracer.
+	scopeAttrs attribute.Set
 }
 
 // InstrumentationVersion returns the version of the library providing instrumentation.
@@ -35,6 +37,11 @@ func (t *TracerConfig) InstrumentationVersion() string {
 // SchemaURL returns the Schema URL of the telemetry emitted by the Tracer.
 func (t *TracerConfig) SchemaURL() string {
 	return t.schemaURL
+}
+
+// ScopeAttributes returns the Schema URL of the telemetry emitted by the Tracer.
+func (t *TracerConfig) ScopeAttributes() attribute.Set {
+	return t.scopeAttrs
 }
 
 // NewTracerConfig applies all the options to a returned TracerConfig.
@@ -311,6 +318,20 @@ func WithInstrumentationVersion(version string) TracerOption {
 func WithSchemaURL(schemaURL string) TracerOption {
 	return tracerOptionFunc(func(cfg TracerConfig) TracerConfig {
 		cfg.schemaURL = schemaURL
+		return cfg
+	})
+}
+
+// WithScopeAttributes sets the attributes of the Scope associated with the Tracer.
+func WithScopeAttributes(scopeAttrs ...attribute.KeyValue) TracerOption {
+	return tracerOptionFunc(func(cfg TracerConfig) TracerConfig {
+		// Ensure attributes comply with the specification:
+		// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.0.1/specification/common/common.md#attributes
+		s, _ := attribute.NewSetWithFiltered(
+			scopeAttrs, func(kv attribute.KeyValue) bool {
+				return kv.Valid()
+			})
+		cfg.scopeAttrs = s
 		return cfg
 	})
 }
