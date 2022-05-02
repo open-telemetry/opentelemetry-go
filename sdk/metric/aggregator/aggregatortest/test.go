@@ -153,7 +153,7 @@ func (n *Numbers) Count() uint64 {
 	return uint64(len(n.numbers))
 }
 
-// Max returns the min number.
+// Min returns the min number.
 func (n *Numbers) Min() number.Number {
 	return n.numbers[0]
 }
