@@ -148,7 +148,7 @@ func (n *Numbers) Sum() number.Number {
 	return sum
 }
 
-// Max returns number of data points Numbers contains.
+// Count returns the number of data points Numbers contains.
 func (n *Numbers) Count() uint64 {
 	return uint64(len(n.numbers))
 }
