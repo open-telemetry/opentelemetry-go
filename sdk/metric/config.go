@@ -15,11 +15,26 @@
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 // config contains configuration options for a MeterProvider.
-type config struct{}
+type config struct {
+	readers []Reader
+}
 
 // Option applies a configuration option value to a MeterProvider.
 type Option interface {
 	apply(config) config
+}
+
+type optionFunc func(cfg config) config
+
+func (o optionFunc) apply(cfg config) config {
+	return o(cfg)
+}
+
+func WithReader(rdr Reader) Option {
+	return optionFunc(func(cfg config) config {
+		cfg.readers = append(cfg.readers, rdr)
+		return cfg
+	})
 }
 
 // TODO (#2819): implement provider options.
