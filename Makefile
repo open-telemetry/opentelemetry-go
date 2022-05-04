@@ -45,7 +45,7 @@ SEMCONVGEN = $(TOOLS)/semconvgen
 $(TOOLS)/semconvgen: PACKAGE=go.opentelemetry.io/build-tools/semconvgen
 
 CROSSLINK = $(TOOLS)/crosslink
-$(TOOLS)/crosslink: PACKAGE=go.opentelemetry.io/otel/$(TOOLS_MOD_DIR)/crosslink
+$(TOOLS)/crosslink: PACKAGE=go.opentelemetry.io/build-tools/crosslink
 
 SEMCONVKIT = $(TOOLS)/semconvkit
 $(TOOLS)/semconvkit: PACKAGE=go.opentelemetry.io/otel/$(TOOLS_MOD_DIR)/semconvkit
@@ -148,7 +148,7 @@ golangci-lint/%: | $(GOLANGCI_LINT)
 .PHONY: crosslink
 crosslink: | $(CROSSLINK)
 	@echo "cross-linking all go modules" \
-		&& $(CROSSLINK)
+		&& @$(CROSSLINK) --root=$(shell pwd)
 
 .PHONY: go-mod-tidy
 go-mod-tidy: $(ALL_GO_MOD_DIRS:%=go-mod-tidy/%)
