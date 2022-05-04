@@ -11,64 +11,8 @@ require (
 
 replace go.opentelemetry.io/otel => ../..
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 replace go.opentelemetry.io/otel/exporters/stdout/stdouttrace => ../../exporters/stdout/stdouttrace
-
-
-
-
-
-
-
-
 
 replace go.opentelemetry.io/otel/sdk => ../../sdk
 
-
-
-
-
 replace go.opentelemetry.io/otel/trace => ../../trace
-
-
-
-
-
-

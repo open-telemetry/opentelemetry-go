@@ -11,66 +11,8 @@ require (
 	go.opentelemetry.io/otel/trace v1.7.0
 )
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 replace go.opentelemetry.io/otel/trace => ../../trace
-
-
-
-
-
-
-
-
-
-
 
 replace go.opentelemetry.io/otel => ../..
 
 replace go.opentelemetry.io/otel/sdk => ../../sdk
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

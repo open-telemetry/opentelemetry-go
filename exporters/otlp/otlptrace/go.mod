@@ -18,62 +18,6 @@ replace go.opentelemetry.io/otel => ../../..
 
 replace go.opentelemetry.io/otel/sdk => ../../../sdk
 
-
-
 replace go.opentelemetry.io/otel/trace => ../../../trace
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 replace go.opentelemetry.io/otel/exporters/otlp/internal/retry => ../internal/retry

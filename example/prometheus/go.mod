@@ -15,60 +15,8 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v0.30.0
 )
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 replace go.opentelemetry.io/otel/metric => ../../metric
-
-
 
 replace go.opentelemetry.io/otel/sdk/metric => ../../sdk/metric
 
 replace go.opentelemetry.io/otel/trace => ../../trace
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

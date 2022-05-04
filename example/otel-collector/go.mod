@@ -15,62 +15,10 @@ require (
 	google.golang.org/grpc v1.46.0
 )
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 replace go.opentelemetry.io/otel/trace => ../../trace
-
-
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace => ../../exporters/otlp/otlptrace
 
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc => ../../exporters/otlp/otlptrace/otlptracegrpc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 replace go.opentelemetry.io/otel/exporters/otlp/internal/retry => ../../exporters/otlp/internal/retry
