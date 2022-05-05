@@ -401,7 +401,7 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 // SetStatus is required if the Status of the Span should be set to Error, this method
 // does not change the Span status. If this span is not being recorded or err is nil
 // than this method does nothing.
-func (s *recordingSpan) RecordError(err error, opts ...trace.EventOption) {
+func (s *recordingSpan) RecordError(err error, opts ...trace.ErrorOption) {
 	if s == nil || err == nil || !s.IsRecording() {
 		return
 	}
@@ -411,14 +411,24 @@ func (s *recordingSpan) RecordError(err error, opts ...trace.EventOption) {
 		semconv.ExceptionMessageKey.String(err.Error()),
 	))
 
-	c := trace.NewEventConfig(opts...)
-	if c.StackTrace() {
-		opts = append(opts, trace.WithAttributes(
+	c := trace.NewErrorConfig(opts...)
+	if c.SetErrorStatus() {
+		s.SetStatus(codes.Error, err.Error())
+	}
+
+	var eventOpts []trace.EventOption
+	for _, opt := range opts {
+		eventOpts = append(eventOpts, opt)
+	}
+
+	eventConfig := trace.NewEventConfig(eventOpts...)
+	if eventConfig.StackTrace() {
+		eventOpts = append(eventOpts, trace.WithAttributes(
 			semconv.ExceptionStacktraceKey.String(recordStackTrace()),
 		))
 	}
 
-	s.addEvent(semconv.ExceptionEventName, opts...)
+	s.addEvent(semconv.ExceptionEventName, eventOpts...)
 }
 
 func typeStr(i interface{}) string {
@@ -757,9 +767,6 @@ func (nonRecordingSpan) IsRecording() bool { return false }
 // SetStatus does nothing.
 func (nonRecordingSpan) SetStatus(codes.Code, string) {}
 
-// SetError does nothing.
-func (nonRecordingSpan) SetError(bool) {}
-
 // SetAttributes does nothing.
 func (nonRecordingSpan) SetAttributes(...attribute.KeyValue) {}
 
@@ -767,7 +774,7 @@ func (nonRecordingSpan) SetAttributes(...attribute.KeyValue) {}
 func (nonRecordingSpan) End(...trace.SpanEndOption) {}
 
 // RecordError does nothing.
-func (nonRecordingSpan) RecordError(error, ...trace.EventOption) {}
+func (nonRecordingSpan) RecordError(error, ...trace.ErrorOption) {}
 
 // AddEvent does nothing.
 func (nonRecordingSpan) AddEvent(string, ...trace.EventOption) {}

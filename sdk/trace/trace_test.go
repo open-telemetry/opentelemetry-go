@@ -1182,9 +1182,10 @@ func TestCustomStartEndTime(t *testing.T) {
 
 func TestRecordError(t *testing.T) {
 	scenarios := []struct {
-		err error
-		typ string
-		msg string
+		err        error
+		typ        string
+		msg        string
+		withStatus bool
 	}{
 		{
 			err: ottest.NewTestError("test error"),
@@ -1196,6 +1197,12 @@ func TestRecordError(t *testing.T) {
 			typ: "*errors.errorString",
 			msg: "test error 2",
 		},
+		{
+			err:        errors.New("test error 3"),
+			typ:        "*errors.errorString",
+			msg:        "test error 3",
+			withStatus: true,
+		},
 	}
 
 	for _, s := range scenarios {
@@ -1204,7 +1211,12 @@ func TestRecordError(t *testing.T) {
 		span := startSpan(tp, "RecordError")
 
 		errTime := time.Now()
-		span.RecordError(s.err, trace.WithTimestamp(errTime))
+		opts := []trace.ErrorOption{trace.WithTimestamp(errTime)}
+		if s.withStatus {
+			opts = append(opts, trace.WithStatus())
+		}
+
+		span.RecordError(s.err, opts...)
 
 		got, err := endSpan(te, span)
 		if err != nil {
@@ -1232,6 +1244,12 @@ func TestRecordError(t *testing.T) {
 			},
 			instrumentationLibrary: instrumentation.Library{Name: "RecordError"},
 		}
+
+		if s.withStatus {
+			want.status.Code = codes.Error
+			want.status.Description = s.msg
+		}
+
 		if diff := cmpDiff(got, want); diff != "" {
 			t.Errorf("SpanErrorOptions: -got +want %s", diff)
 		}
