@@ -19,7 +19,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/internal/trace/noop"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -28,7 +27,7 @@ type testTracerProvider struct{}
 var _ trace.TracerProvider = &testTracerProvider{}
 
 func (*testTracerProvider) Tracer(_ string, _ ...trace.TracerOption) trace.Tracer {
-	return noop.Tracer
+	return trace.NewNoopTracerProvider().Tracer("")
 }
 
 func TestMultipleGlobalTracerProvider(t *testing.T) {

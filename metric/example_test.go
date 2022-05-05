@@ -20,16 +20,16 @@ import (
 	"runtime"
 	"time"
 
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
-	"go.opentelemetry.io/otel/metric/nonrecording"
 	"go.opentelemetry.io/otel/metric/unit"
 )
 
 //nolint:govet // Meter doesn't register for go vet
 func ExampleMeter_synchronous() {
 	// In a library or program this would be provided by otel.GetMeterProvider().
-	meterProvider := nonrecording.NewNoopMeterProvider()
+	meterProvider := metric.NewNoopMeterProvider()
 
 	workDuration, err := meterProvider.Meter("go.opentelemetry.io/otel/metric#SyncExample").SyncInt64().Histogram(
 		"workDuration",
@@ -50,7 +50,7 @@ func ExampleMeter_synchronous() {
 //nolint:govet // Meter doesn't register for go vet
 func ExampleMeter_asynchronous_single() {
 	// In a library or program this would be provided by otel.GetMeterProvider().
-	meterProvider := nonrecording.NewNoopMeterProvider()
+	meterProvider := metric.NewNoopMeterProvider()
 	meter := meterProvider.Meter("go.opentelemetry.io/otel/metric#AsyncExample")
 
 	memoryUsage, err := meter.AsyncInt64().Gauge(
@@ -79,7 +79,7 @@ func ExampleMeter_asynchronous_single() {
 
 //nolint:govet // Meter doesn't register for go vet
 func ExampleMeter_asynchronous_multiple() {
-	meterProvider := nonrecording.NewNoopMeterProvider()
+	meterProvider := metric.NewNoopMeterProvider()
 	meter := meterProvider.Meter("go.opentelemetry.io/otel/metric#MultiAsyncExample")
 
 	// This is just a sample of memory stats to record from the Memstats
