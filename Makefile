@@ -147,8 +147,8 @@ golangci-lint/%: | $(GOLANGCI_LINT)
 
 .PHONY: crosslink
 crosslink: | $(CROSSLINK)
-	@echo "cross-linking all go modules" \
-		&& $(CROSSLINK) --root=$(shell pwd)
+	@echo "Updating intra-repository dependencies in all go modules" \
+		&& $(CROSSLINK) --root=$(shell pwd) --prune
 
 .PHONY: go-mod-tidy
 go-mod-tidy: $(ALL_GO_MOD_DIRS:%=go-mod-tidy/%)
