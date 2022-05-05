@@ -18,6 +18,87 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
+// MeterProvider handles the creation and coordination of Meters. All Meters
+// created by a MeterProvider will be associated with the same Resource, have
+// the same Views applied to them, and have their produced metric telemetry
+// passed to the configured Readers.
+type MeterProvider struct {
+	cfg       Config
+	startTime time.Time
+	lock      sync.Mutex
+	ordered   []*meter
+	meters    map[instrumentation.Library]*meter
+}
+
+// Compile-time check MeterProvider implements metric.MeterProvider.
+var _ metric.MeterProvider = (*MeterProvider)(nil)
+
+// NewMeterProvider returns a new and configured MeterProvider.
+//
+// By default, the returned MeterProvider is configured with the default
+// Resource and no Readers. Readers cannot be added after a MeterProvider is
+// created. This means the returned MeterProvider, one created with no
+// Readers, will be perform no operations.
+func NewMeterProvider(options ...Option) *MeterProvider {
+	cfg := Config{
+		res: resource.Default(),
+	}
+	for _, opt := range options {
+		opt(&cfg)
+	}
+	p := &MeterProvider{
+		cfg:       cfg,
+		startTime: time.Now(),
+		meters:    map[instrumentation.Library]*meter{},
+	}
+	for pipe := 0; pipe < len(cfg.readers); pipe++ {
+		cfg.readers[pipe].Register(p.producerFor(pipe))
+	}
+	return p
+}
+
+// Meter returns a Meter with the given name and configured with options.
+//
+// The name should be the name of the instrumentation scope creating
+// telemetry. This name may be the same as the instrumented code only if that
+// code provides built-in instrumentation.
+//
+// If name is empty, the default (go.opentelemetry.io/otel/sdk/meter) will be
+// used.
+//
+// Calls to the Meter method after Shutdown has been called will return Meters
+// that perform no operations.
+//
+// This method is safe to call concurrently.
+func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metric.Meter {
+	cfg := metric.NewMeterConfig(opts...)
+	lib := instrumentation.Library{
+		Name:      name,
+		Version:   cfg.InstrumentationVersion(),
+		SchemaURL: cfg.SchemaURL(),
+	}
+
+	mp.lock.Lock()
+	defer mp.lock.Unlock()
+
+	m := mp.meters[lib]
+	if m != nil {
+		return m
+	}
+	m = &meter{
+		provider:  p,
+		library:   lib,
+		byDesc:    map[sdkinstrument.Descriptor]interface{}{},
+		compilers: pipeline.NewRegister[*viewstate.Compiler](len(mp.cfg.readers)),
+	}
+	for pipe := range m.compilers {
+		m.compilers[pipe] = viewstate.New(lib, mp.cfg.views[pipe])
+	}
+	mp.ordered = append(mp.ordered, m)
+	mp.meters[lib] = m
+	return m
+}
+
 type (
 	Config struct {
 		res     *resource.Resource
@@ -27,24 +108,16 @@ type (
 
 	Option func(cfg *Config)
 
-	Provider struct {
-		cfg       Config
-		startTime time.Time
-		lock      sync.Mutex
-		ordered   []*meter
-		meters    map[instrumentation.Library]*meter
-	}
-
 	providerProducer struct {
 		lock        sync.Mutex
-		provider    *Provider
+		provider    *MeterProvider
 		pipe        int
 		lastCollect time.Time
 	}
 
 	meter struct {
 		library   instrumentation.Library
-		provider  *Provider
+		provider  *MeterProvider
 		compilers pipeline.Register[*viewstate.Compiler]
 
 		lock       sync.Mutex
@@ -53,11 +126,6 @@ type (
 		asyncInsts []*asyncstate.Instrument
 		callbacks  []*asyncstate.Callback
 	}
-)
-
-var (
-	_ metric.Meter         = &meter{}
-	_ metric.MeterProvider = &Provider{}
 )
 
 func WithResource(res *resource.Resource) Option {
@@ -73,29 +141,11 @@ func WithReader(r Reader, opts ...view.Option) Option {
 	}
 }
 
-func New(opts ...Option) *Provider {
-	cfg := Config{
-		res: resource.Default(),
-	}
-	for _, opt := range opts {
-		opt(&cfg)
-	}
-	p := &Provider{
-		cfg:       cfg,
-		startTime: time.Now(),
-		meters:    map[instrumentation.Library]*meter{},
-	}
-	for pipe := 0; pipe < len(cfg.readers); pipe++ {
-		cfg.readers[pipe].Register(p.producerFor(pipe))
-	}
-	return p
-}
-
-func (p *Provider) producerFor(pipe int) Producer {
+func (mp *MeterProvider) producerFor(pipe int) Producer {
 	return &providerProducer{
 		provider:    p,
 		pipe:        pipe,
-		lastCollect: p.startTime,
+		lastCollect: mp.startTime,
 	}
 }
 
@@ -174,39 +224,10 @@ func (m *meter) collectFor(ctx context.Context, pipe int, seq data.Sequence, out
 	}
 }
 
-func (p *Provider) getOrdered() []*meter {
+func (p *MeterProvider) getOrdered() []*meter {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	return p.ordered
-}
-
-func (p *Provider) Meter(name string, opts ...metric.MeterOption) metric.Meter {
-	cfg := metric.NewMeterConfig(opts...)
-	lib := instrumentation.Library{
-		Name:      name,
-		Version:   cfg.InstrumentationVersion(),
-		SchemaURL: cfg.SchemaURL(),
-	}
-
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
-	m := p.meters[lib]
-	if m != nil {
-		return m
-	}
-	m = &meter{
-		provider:  p,
-		library:   lib,
-		byDesc:    map[sdkinstrument.Descriptor]interface{}{},
-		compilers: pipeline.NewRegister[*viewstate.Compiler](len(p.cfg.readers)),
-	}
-	for pipe := range m.compilers {
-		m.compilers[pipe] = viewstate.New(lib, p.cfg.views[pipe])
-	}
-	p.ordered = append(p.ordered, m)
-	p.meters[lib] = m
-	return m
 }
 
 func (m *meter) RegisterCallback(insts []instrument.Asynchronous, function func(context.Context)) error {
