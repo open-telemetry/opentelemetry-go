@@ -357,7 +357,7 @@ type Span interface {
 	// additional call to SetStatus is required if the Status of the Span should
 	// be set to Error, as this method does not change the Span status. If this
 	// span is not being recorded or err is nil then this method does nothing.
-	RecordError(err error, options ...EventOption)
+	RecordError(err error, options ...ErrorOption)
 
 	// SpanContext returns the SpanContext of the Span. The returned SpanContext
 	// is usable even after the End method has been called for the Span.

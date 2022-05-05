@@ -171,9 +171,6 @@ func (nonRecordingSpan) IsRecording() bool { return false }
 // SetStatus does nothing.
 func (nonRecordingSpan) SetStatus(codes.Code, string) {}
 
-// SetError does nothing.
-func (nonRecordingSpan) SetError(bool) {}
-
 // SetAttributes does nothing.
 func (nonRecordingSpan) SetAttributes(...attribute.KeyValue) {}
 
@@ -181,7 +178,7 @@ func (nonRecordingSpan) SetAttributes(...attribute.KeyValue) {}
 func (nonRecordingSpan) End(...trace.SpanEndOption) {}
 
 // RecordError does nothing.
-func (nonRecordingSpan) RecordError(error, ...trace.EventOption) {}
+func (nonRecordingSpan) RecordError(error, ...trace.ErrorOption) {}
 
 // AddEvent does nothing.
 func (nonRecordingSpan) AddEvent(string, ...trace.EventOption) {}

@@ -189,15 +189,41 @@ type SpanOption interface {
 	SpanEndOption
 }
 
-// SpanStartEventOption are options that can be used at the start of a span, or with an event.
-type SpanStartEventOption interface {
+// SpanStartEventErrorOption are options that can be used at the start of a span, or with an event, or when recording
+// an error.
+type SpanStartEventErrorOption interface {
 	SpanStartOption
 	EventOption
+	ErrorOption
 }
 
-// SpanEndEventOption are options that can be used at the end of a span, or with an event.
-type SpanEndEventOption interface {
+// SpanEndEventErrorOption are options that can be used at the end of a span, or with an event, or when recording an
+// error.
+type SpanEndEventErrorOption interface {
 	SpanEndOption
+	EventOption
+	ErrorOption
+}
+
+type ErrorConfig struct {
+	setErrorStatus bool
+}
+
+func (cfg *ErrorConfig) SetErrorStatus() bool {
+	return cfg.setErrorStatus
+}
+
+func NewErrorConfig(options ...ErrorOption) ErrorConfig {
+	var c ErrorConfig
+	for _, option := range options {
+		c = option.applyError(c)
+	}
+	return c
+}
+
+// ErrorOption are options that can be used when recording an error to a span.
+type ErrorOption interface {
+	applyError(ErrorConfig) ErrorConfig
 	EventOption
 }
 
@@ -208,12 +234,13 @@ func (o attributeOption) applySpan(c SpanConfig) SpanConfig {
 	return c
 }
 func (o attributeOption) applySpanStart(c SpanConfig) SpanConfig { return o.applySpan(c) }
+func (o attributeOption) applyError(c ErrorConfig) ErrorConfig   { return c }
 func (o attributeOption) applyEvent(c EventConfig) EventConfig {
 	c.attributes = append(c.attributes, []attribute.KeyValue(o)...)
 	return c
 }
 
-var _ SpanStartEventOption = attributeOption{}
+var _ SpanStartEventErrorOption = attributeOption{}
 
 // WithAttributes adds the attributes related to a span life-cycle event.
 // These attributes are used to describe the work a Span represents when this
@@ -224,14 +251,15 @@ var _ SpanStartEventOption = attributeOption{}
 // If multiple of these options are passed the attributes of each successive
 // option will extend the attributes instead of overwriting. There is no
 // guarantee of uniqueness in the resulting attributes.
-func WithAttributes(attributes ...attribute.KeyValue) SpanStartEventOption {
+func WithAttributes(attributes ...attribute.KeyValue) SpanStartEventErrorOption {
 	return attributeOption(attributes)
 }
 
-// SpanEventOption are options that can be used with an event or a span.
-type SpanEventOption interface {
+// SpanEventErrorOption are options that can be used with an event or a span, or when recording an error.
+type SpanEventErrorOption interface {
 	SpanOption
 	EventOption
+	ErrorOption
 }
 
 type timestampOption time.Time
@@ -242,21 +270,25 @@ func (o timestampOption) applySpan(c SpanConfig) SpanConfig {
 }
 func (o timestampOption) applySpanStart(c SpanConfig) SpanConfig { return o.applySpan(c) }
 func (o timestampOption) applySpanEnd(c SpanConfig) SpanConfig   { return o.applySpan(c) }
+func (o timestampOption) applyError(c ErrorConfig) ErrorConfig {
+	return c
+}
 func (o timestampOption) applyEvent(c EventConfig) EventConfig {
 	c.timestamp = time.Time(o)
 	return c
 }
 
-var _ SpanEventOption = timestampOption{}
+var _ SpanEventErrorOption = timestampOption{}
 
 // WithTimestamp sets the time of a Span or Event life-cycle moment (e.g.
 // started, stopped, errored).
-func WithTimestamp(t time.Time) SpanEventOption {
+func WithTimestamp(t time.Time) SpanEventErrorOption {
 	return timestampOption(t)
 }
 
 type stackTraceOption bool
 
+func (o stackTraceOption) applyError(c ErrorConfig) ErrorConfig { return c }
 func (o stackTraceOption) applyEvent(c EventConfig) EventConfig {
 	c.stackTrace = bool(o)
 	return c
@@ -267,8 +299,22 @@ func (o stackTraceOption) applySpan(c SpanConfig) SpanConfig {
 }
 func (o stackTraceOption) applySpanEnd(c SpanConfig) SpanConfig { return o.applySpan(c) }
 
+// WithStatus is used when recording an error, and sets the span status to "Error" and
+// adds the error's Error string as the description.
+func WithStatus() ErrorOption {
+	return spanErrorStatus{}
+}
+
+type spanErrorStatus struct{}
+
+func (o spanErrorStatus) applyError(c ErrorConfig) ErrorConfig {
+	c.setErrorStatus = true
+	return c
+}
+func (o spanErrorStatus) applyEvent(c EventConfig) EventConfig { return c }
+
 // WithStackTrace sets the flag to capture the error with stack trace (e.g. true, false).
-func WithStackTrace(b bool) SpanEndEventOption {
+func WithStackTrace(b bool) SpanEndEventErrorOption {
 	return stackTraceOption(b)
 }
 

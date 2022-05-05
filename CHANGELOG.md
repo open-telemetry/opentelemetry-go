@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add a `WithStatus` option to `go.opentelemetry.io/otel/trace` to allow setting the span status when calling `span.RecordError`. (#1677)
+
 ## [1.7.0/0.30.0] - 2022-04-28
 
 ### Added

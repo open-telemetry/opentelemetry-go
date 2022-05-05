@@ -256,7 +256,7 @@ func (s *MockSpan) End(options ...trace.SpanEndOption) {
 	s.mockTracer.FinishedSpans = append(s.mockTracer.FinishedSpans, s)
 }
 
-func (s *MockSpan) RecordError(err error, opts ...trace.EventOption) {
+func (s *MockSpan) RecordError(err error, opts ...trace.ErrorOption) {
 	if err == nil {
 		return // no-op on nil error
 	}
@@ -265,12 +265,22 @@ func (s *MockSpan) RecordError(err error, opts ...trace.EventOption) {
 		return // already finished
 	}
 
-	s.SetStatus(codes.Error, "")
 	opts = append(opts, trace.WithAttributes(
 		semconv.ExceptionTypeKey.String(reflect.TypeOf(err).String()),
 		semconv.ExceptionMessageKey.String(err.Error()),
 	))
-	s.AddEvent(semconv.ExceptionEventName, opts...)
+
+	c := trace.NewErrorConfig(opts...)
+	if c.SetErrorStatus() {
+		s.SetStatus(codes.Error, err.Error())
+	}
+
+	var eventOpts []trace.EventOption
+	for _, opt := range opts {
+		eventOpts = append(eventOpts, opt)
+	}
+
+	s.AddEvent(semconv.ExceptionEventName, eventOpts...)
 }
 
 func (s *MockSpan) Tracer() trace.Tracer {

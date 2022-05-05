@@ -67,9 +67,6 @@ func (noopSpan) IsRecording() bool { return false }
 // SetStatus does nothing.
 func (noopSpan) SetStatus(codes.Code, string) {}
 
-// SetError does nothing.
-func (noopSpan) SetError(bool) {}
-
 // SetAttributes does nothing.
 func (noopSpan) SetAttributes(...attribute.KeyValue) {}
 
@@ -77,7 +74,7 @@ func (noopSpan) SetAttributes(...attribute.KeyValue) {}
 func (noopSpan) End(...SpanEndOption) {}
 
 // RecordError does nothing.
-func (noopSpan) RecordError(error, ...EventOption) {}
+func (noopSpan) RecordError(error, ...ErrorOption) {}
 
 // AddEvent does nothing.
 func (noopSpan) AddEvent(string, ...EventOption) {}
