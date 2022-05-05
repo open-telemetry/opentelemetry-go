@@ -21,9 +21,16 @@ import (
 
 // config contains configuration options for a MeterProvider.
 type config struct {
-	res     *resource.Resource
+	// res is the resource for this MeterProvider.
+	res *resource.Resource
+
+	// readers is a slice of Reader instances corresponding with views.
+	// the i'th reader uses the i'th entry in views.
 	readers []Reader
-	views   []*view.Views
+
+	// views is a slice of *Views instances corresponding with readers.
+	// the i'th views applies to the i'th reader.
+	views []*view.Views
 }
 
 // Option applies a configuration option value to a MeterProvider.
