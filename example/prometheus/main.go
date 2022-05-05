@@ -43,7 +43,7 @@ func initMeter() metric.MeterProvider {
 		log.Panicf("failed to initialize prometheus exporter %v", err)
 	}
 
-	sdk := sdkmetric.New(
+	sdk := sdkmetric.NewMeterProvider(
 		sdkmetric.WithResource(resource.NewSchemaless(attribute.String("resource", "etc"))),
 		sdkmetric.WithReader(
 			exporter,

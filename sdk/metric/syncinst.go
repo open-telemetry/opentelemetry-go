@@ -14,14 +14,6 @@ type (
 	syncfloat64Instruments struct{ *meter }
 )
 
-func (m *meter) SyncInt64() syncint64.InstrumentProvider {
-	return syncint64Instruments{m}
-}
-
-func (m *meter) SyncFloat64() syncfloat64.InstrumentProvider {
-	return syncfloat64Instruments{m}
-}
-
 func (i syncint64Instruments) Counter(name string, opts ...instrument.Option) (syncint64.Counter, error) {
 	inst, err := i.synchronousInstrument(name, opts, number.Int64Kind, sdkinstrument.CounterKind)
 	return syncstate.NewCounter[int64, number.Int64Traits](inst), err

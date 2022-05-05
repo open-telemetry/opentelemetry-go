@@ -1,4 +1,18 @@
-package metric
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
@@ -6,15 +20,12 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/data"
 	"go.opentelemetry.io/otel/sdk/metric/internal/asyncstate"
 	"go.opentelemetry.io/otel/sdk/metric/internal/pipeline"
-	"go.opentelemetry.io/otel/sdk/metric/internal/syncstate"
 	"go.opentelemetry.io/otel/sdk/metric/internal/viewstate"
 	"go.opentelemetry.io/otel/sdk/metric/sdkinstrument"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -23,7 +34,7 @@ import (
 // the same Views applied to them, and have their produced metric telemetry
 // passed to the configured Readers.
 type MeterProvider struct {
-	cfg       Config
+	cfg       config
 	startTime time.Time
 	lock      sync.Mutex
 	ordered   []*meter
@@ -40,11 +51,11 @@ var _ metric.MeterProvider = (*MeterProvider)(nil)
 // created. This means the returned MeterProvider, one created with no
 // Readers, will be perform no operations.
 func NewMeterProvider(options ...Option) *MeterProvider {
-	cfg := Config{
+	cfg := config{
 		res: resource.Default(),
 	}
-	for _, opt := range options {
-		opt(&cfg)
+	for _, option := range options {
+		cfg = option.apply(cfg)
 	}
 	p := &MeterProvider{
 		cfg:       cfg,
@@ -71,7 +82,7 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 //
 // This method is safe to call concurrently.
 func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metric.Meter {
-	cfg := metric.NewMeterConfig(opts...)
+	cfg := metric.NewMeterConfig(options...)
 	lib := instrumentation.Library{
 		Name:      name,
 		Version:   cfg.InstrumentationVersion(),
@@ -86,7 +97,7 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 		return m
 	}
 	m = &meter{
-		provider:  p,
+		provider:  mp,
 		library:   lib,
 		byDesc:    map[sdkinstrument.Descriptor]interface{}{},
 		compilers: pipeline.NewRegister[*viewstate.Compiler](len(mp.cfg.readers)),
@@ -99,14 +110,44 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 	return m
 }
 
-type (
-	Config struct {
-		res     *resource.Resource
-		readers []Reader
-		views   []*view.Views
-	}
+// ForceFlush flushes all pending telemetry.
+//
+// This method honors the deadline or cancellation of ctx. An appropriate
+// error will be returned in these situations. There is no guaranteed that all
+// telemetry be flushed or all resources have been released in these
+// situations.
+//
+// This method is safe to call concurrently.
+func (mp *MeterProvider) ForceFlush(ctx context.Context) error {
+	// TODO (#2820): implement.
+	// TODO: test this is concurrent safe.
+	return nil
+}
 
-	Option func(cfg *Config)
+// Shutdown shuts down the MeterProvider flushing all pending telemetry and
+// releasing any held computational resources.
+//
+// This call is idempotent. The first call will perform all flush and
+// releasing operations. Subsequent calls will perform no action.
+//
+// Measurements made by instruments from meters this MeterProvider created
+// will not be exported after Shutdown is called.
+//
+// This method honors the deadline or cancellation of ctx. An appropriate
+// error will be returned in these situations. There is no guaranteed that all
+// telemetry be flushed or all resources have been released in these
+// situations.
+//
+// This method is safe to call concurrently.
+func (mp *MeterProvider) Shutdown(ctx context.Context) error {
+	// TODO (#2820): implement.
+	// TODO: test this is concurrent safe.
+	return nil
+}
+
+type (
+	//Config struct {
+	//}
 
 	providerProducer struct {
 		lock        sync.Mutex
@@ -114,36 +155,11 @@ type (
 		pipe        int
 		lastCollect time.Time
 	}
-
-	meter struct {
-		library   instrumentation.Library
-		provider  *MeterProvider
-		compilers pipeline.Register[*viewstate.Compiler]
-
-		lock       sync.Mutex
-		byDesc     map[sdkinstrument.Descriptor]interface{}
-		syncInsts  []*syncstate.Instrument
-		asyncInsts []*asyncstate.Instrument
-		callbacks  []*asyncstate.Callback
-	}
 )
-
-func WithResource(res *resource.Resource) Option {
-	return func(cfg *Config) {
-		cfg.res = res
-	}
-}
-
-func WithReader(r Reader, opts ...view.Option) Option {
-	return func(cfg *Config) {
-		cfg.readers = append(cfg.readers, r)
-		cfg.views = append(cfg.views, view.New(r.String(), opts...))
-	}
-}
 
 func (mp *MeterProvider) producerFor(pipe int) Producer {
 	return &providerProducer{
-		provider:    p,
+		provider:    mp,
 		pipe:        pipe,
 		lastCollect: mp.startTime,
 	}
@@ -228,15 +244,4 @@ func (p *MeterProvider) getOrdered() []*meter {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	return p.ordered
-}
-
-func (m *meter) RegisterCallback(insts []instrument.Asynchronous, function func(context.Context)) error {
-	cb, err := asyncstate.NewCallback(insts, m, function)
-
-	if err == nil {
-		m.lock.Lock()
-		defer m.lock.Unlock()
-		m.callbacks = append(m.callbacks, cb)
-	}
-	return err
 }

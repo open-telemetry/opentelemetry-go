@@ -47,7 +47,7 @@ func NewTestMeterProvider(opts ...Option) (metric.MeterProvider, *Exporter) {
 		reader: sdkmetric.NewManualReader("inmemory"),
 	}
 	cfg := newConfig(opts...)
-	sdk := sdkmetric.New(
+	sdk := sdkmetric.NewMeterProvider(
 		sdkmetric.WithReader(
 			exp.reader,
 			view.WithDefaultAggregationTemporalitySelector(cfg.temporalitySelector),

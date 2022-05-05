@@ -14,14 +14,6 @@ type (
 	asyncfloat64Instruments struct{ *meter }
 )
 
-func (m *meter) AsyncInt64() asyncint64.InstrumentProvider {
-	return asyncint64Instruments{m}
-}
-
-func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
-	return asyncfloat64Instruments{m}
-}
-
 func (i asyncint64Instruments) Counter(name string, opts ...instrument.Option) (asyncint64.Counter, error) {
 	inst, err := i.asynchronousInstrument(name, opts, number.Int64Kind, sdkinstrument.CounterObserverKind)
 	return asyncstate.NewObserver[int64, number.Int64Traits](inst), err

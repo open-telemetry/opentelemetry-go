@@ -13,7 +13,7 @@ func TestOutputReuse(t *testing.T) {
 	ctx := context.Background()
 
 	rdr := NewManualReader("test")
-	provider := New(WithReader(rdr))
+	provider := NewMeterProvider(WithReader(rdr))
 
 	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
 

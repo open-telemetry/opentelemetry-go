@@ -11,75 +11,104 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/sdkinstrument"
 )
 
+const (
+	unsetInstrumentKind = sdkinstrument.Kind(-1)
+	unsetNumberKind     = number.Kind(-1)
+)
+
+// ClauseOption applies a configuration option value to a view Config.
+type ClauseOption interface {
+	apply(ClauseConfig) ClauseConfig
+}
+
+// clauseOptionFunction makes a functional ClauseOption out of a function object.
+type clauseOptionFunction func(cfg ClauseConfig) ClauseConfig
+
+// apply implements ClauseOption.
+func (of clauseOptionFunction) apply(in ClauseConfig) ClauseConfig {
+	return of(in)
+}
+
 // Matchers
 
 func MatchInstrumentName(name string) ClauseOption {
-	return func(clause *ClauseConfig) {
+	return clauseOptionFunction(func(clause ClauseConfig) ClauseConfig {
 		clause.instrumentName = name
-	}
+		return clause
+	})
 }
 
 func MatchInstrumentNameRegexp(re *regexp.Regexp) ClauseOption {
-	return func(clause *ClauseConfig) {
+	return clauseOptionFunction(func(clause ClauseConfig) ClauseConfig {
 		clause.instrumentNameRegexp = re
-	}
+		return clause
+	})
 }
 
 func MatchInstrumentKind(k sdkinstrument.Kind) ClauseOption {
-	return func(clause *ClauseConfig) {
+	return clauseOptionFunction(func(clause ClauseConfig) ClauseConfig {
 		clause.instrumentKind = k
-	}
+		return clause
+	})
 }
 
 func MatchNumberKind(k number.Kind) ClauseOption {
-	return func(clause *ClauseConfig) {
+	return clauseOptionFunction(func(clause ClauseConfig) ClauseConfig {
 		clause.numberKind = k
-	}
+		return clause
+	})
 }
 
 func MatchInstrumentationLibrary(lib instrumentation.Library) ClauseOption {
-	return func(clause *ClauseConfig) {
+	return clauseOptionFunction(func(clause ClauseConfig) ClauseConfig {
 		clause.library = lib
-	}
+		return clause
+	})
 }
 
 // Properties
 
 // WithKeys overwrites; nil is distinct from empty non-nil.
 func WithKeys(keys []attribute.Key) ClauseOption {
-	return func(clause *ClauseConfig) {
+	return clauseOptionFunction(func(clause ClauseConfig) ClauseConfig {
 		clause.keys = keys
-	}
+		return clause
+	})
 }
 
 func WithName(name string) ClauseOption {
-	return func(clause *ClauseConfig) {
+	return clauseOptionFunction(func(clause ClauseConfig) ClauseConfig {
 		clause.name = name
-	}
+		return clause
+	})
 }
 
 func WithDescription(desc string) ClauseOption {
-	return func(clause *ClauseConfig) {
+	return clauseOptionFunction(func(clause ClauseConfig) ClauseConfig {
 		clause.description = desc
-	}
+		return clause
+	})
 }
 
 func WithAggregation(kind aggregation.Kind) ClauseOption {
-	return func(clause *ClauseConfig) {
+	return clauseOptionFunction(func(clause ClauseConfig) ClauseConfig {
 		clause.aggregation = kind
-	}
+		return clause
+	})
 }
 
 func WithTemporality(tempo aggregation.Temporality) ClauseOption {
-	return func(clause *ClauseConfig) {
+	return clauseOptionFunction(func(clause ClauseConfig) ClauseConfig {
 		clause.temporality = tempo
-	}
+		return clause
+	})
 }
 
 func WithAggregatorConfig(acfg aggregator.Config) ClauseOption {
-	return func(clause *ClauseConfig) {
+	return clauseOptionFunction(func(clause ClauseConfig) ClauseConfig {
 		clause.acfg = acfg
-	}
+		return clause
+	})
 }
 
 // IsSingleInstrument is a requirement when HasName().

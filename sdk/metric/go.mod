@@ -2,6 +2,8 @@ module go.opentelemetry.io/otel/sdk/metric
 
 go 1.18
 
+require go.opentelemetry.io/otel/metric v0.28.0
+
 replace go.opentelemetry.io/otel => ../..
 
 replace go.opentelemetry.io/otel/bridge/opencensus => ../../bridge/opencensus
@@ -43,7 +45,6 @@ replace go.opentelemetry.io/otel/trace => ../../trace
 require (
 	github.com/stretchr/testify v1.7.1
 	go.opentelemetry.io/otel v1.6.3
-	go.opentelemetry.io/otel/metric v0.28.0
 	go.opentelemetry.io/otel/sdk v1.6.1
 )
 

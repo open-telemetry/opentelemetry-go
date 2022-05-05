@@ -11,7 +11,7 @@ import (
 func BenchmarkCounterAddNoAttrs(b *testing.B) {
 	ctx := context.Background()
 	rdr := NewManualReader("bench")
-	provider := New(WithReader(rdr))
+	provider := NewMeterProvider(WithReader(rdr))
 	b.ReportAllocs()
 
 	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
@@ -28,7 +28,7 @@ func BenchmarkCounterAddNoAttrs(b *testing.B) {
 func BenchmarkCounterAddOneAttr(b *testing.B) {
 	ctx := context.Background()
 	rdr := NewManualReader("bench")
-	provider := New(WithReader(rdr))
+	provider := NewMeterProvider(WithReader(rdr))
 	b.ReportAllocs()
 
 	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
@@ -52,7 +52,7 @@ func BenchmarkCounterAddOneAttr(b *testing.B) {
 func BenchmarkCounterAddManyAttrs(b *testing.B) {
 	ctx := context.Background()
 	rdr := NewManualReader("bench")
-	provider := New(WithReader(rdr))
+	provider := NewMeterProvider(WithReader(rdr))
 	b.ReportAllocs()
 
 	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
@@ -65,7 +65,7 @@ func BenchmarkCounterAddManyAttrs(b *testing.B) {
 func BenchmarkCounterCollectOneAttrNoReuse(b *testing.B) {
 	ctx := context.Background()
 	rdr := NewManualReader("bench")
-	provider := New(WithReader(rdr))
+	provider := NewMeterProvider(WithReader(rdr))
 	b.ReportAllocs()
 
 	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
@@ -80,7 +80,7 @@ func BenchmarkCounterCollectOneAttrNoReuse(b *testing.B) {
 func BenchmarkCounterCollectOneAttrWithReuse(b *testing.B) {
 	ctx := context.Background()
 	rdr := NewManualReader("bench")
-	provider := New(WithReader(rdr))
+	provider := NewMeterProvider(WithReader(rdr))
 	b.ReportAllocs()
 
 	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
@@ -97,7 +97,7 @@ func BenchmarkCounterCollectOneAttrWithReuse(b *testing.B) {
 func BenchmarkCounterCollectTenAttrs(b *testing.B) {
 	ctx := context.Background()
 	rdr := NewManualReader("bench")
-	provider := New(WithReader(rdr))
+	provider := NewMeterProvider(WithReader(rdr))
 	b.ReportAllocs()
 
 	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
@@ -115,7 +115,7 @@ func BenchmarkCounterCollectTenAttrs(b *testing.B) {
 func BenchmarkCounterCollectTenAttrsTenTimes(b *testing.B) {
 	ctx := context.Background()
 	rdr := NewManualReader("bench")
-	provider := New(WithReader(rdr))
+	provider := NewMeterProvider(WithReader(rdr))
 	b.ReportAllocs()
 
 	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
