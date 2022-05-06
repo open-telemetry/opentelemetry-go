@@ -21,7 +21,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
@@ -35,14 +34,7 @@ func TestManualReaderNotRegistered(t *testing.T) {
 type testProducer struct{}
 
 var testMetrics = export.Metrics{
-	Scopes: []export.Scope{
-		{
-			Library: instrumentation.Library{
-				Name:    "TestLibrary",
-				Version: "0.0.1-beta1",
-			},
-		},
-	},
+	// TODO: test with actual data.
 }
 
 func (p testProducer) produce(context.Context) export.Metrics {
@@ -56,4 +48,25 @@ func TestManualReaderProducer(t *testing.T) {
 	m, err := rdr.Collect(context.Background())
 	assert.NoError(t, err)
 	assert.Equal(t, testMetrics, m)
+}
+
+func TestManualReaderCollectAfterShutdown(t *testing.T) {
+	rdr := &ManualReader{}
+	rdr.register(testProducer{})
+	_ = rdr.Shutdown(context.Background())
+
+	m, err := rdr.Collect(context.Background())
+	assert.Error(t, err)
+	assert.Equal(t, export.Metrics{}, m)
+}
+func TestManualReaderShutdown(t *testing.T) {
+	rdr := &ManualReader{}
+	rdr.register(testProducer{})
+
+	err := rdr.Shutdown(context.Background())
+	assert.NoError(t, err)
+
+	err = rdr.Shutdown(context.Background())
+	assert.Error(t, err)
+
 }

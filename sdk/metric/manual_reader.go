@@ -17,6 +17,7 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric/reader"
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"go.opentelemetry.io/otel/sdk/metric/export"
 )
@@ -25,7 +26,9 @@ import (
 // read metrics on demand.  It simply stores the Producer interface
 // provided through registration.  Flush and Shutdown are no-ops.
 type ManualReader struct {
-	producer
+	lock     sync.Mutex
+	producer producer
+	shutdown bool
 }
 
 var _ Reader = &ManualReader{}
@@ -39,6 +42,8 @@ func NewManualReader() *ManualReader {
 // Register stores the Producer which enables the caller to read
 // metrics on demand.
 func (mr *ManualReader) register(p producer) {
+	mr.lock.Lock()
+	defer mr.lock.Unlock()
 	mr.producer = p
 }
 
@@ -47,16 +52,30 @@ func (mr *ManualReader) ForceFlush(context.Context) error {
 	return nil
 }
 
-// Shutdown is a no-op, always returns nil.
+// Shutdown closes any connections and frees any resources used by the reader.
 func (mr *ManualReader) Shutdown(context.Context) error {
+	mr.lock.Lock()
+	defer mr.lock.Unlock()
+	if mr.shutdown {
+		return ErrReaderShutdown
+	}
+	mr.shutdown = true
 	return nil
 }
 
+// Collect gathers all metrics from the SDK, calling any callbacks necessary.
+// Collect will return an error if called after shutdown.
 func (mr *ManualReader) Collect(ctx context.Context) (export.Metrics, error) {
+	mr.lock.Lock()
+	defer mr.lock.Unlock()
 	if mr.producer == nil {
 		return export.Metrics{}, ErrReaderNotRegistered
 	}
-	return mr.produce(ctx), nil
+	if mr.shutdown {
+		return export.Metrics{}, ErrReaderShutdown
+	}
+	return mr.producer.produce(ctx), nil
 }
 
 var ErrReaderNotRegistered = fmt.Errorf("reader is not registered")
+var ErrReaderShutdown = fmt.Errorf("reader is shutdown")
