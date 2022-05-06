@@ -66,7 +66,7 @@ type Reader interface {
 	Shutdown(context.Context) error
 }
 
-// producer is the interface used to perform collection by the reader.
+//  producer produces metrics for a Reader.
 type producer interface {
 	// produce returns aggregated metrics from a single collection.
 	//
