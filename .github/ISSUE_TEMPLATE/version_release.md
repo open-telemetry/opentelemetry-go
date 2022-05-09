@@ -7,7 +7,9 @@ assignees: ''
 
 ---
 
+<!-- markdownlint-disable MD034 -->
 - [ ] Complete [Milestone](https://github.com/open-telemetry/opentelemetry-go/milestone/<Release Milesone>)
+<!-- markdownlint-enable MD034 -->
 - [ ] Update contrib codebase to support changes about to be released (use a git sha version)
 - [ ] [Pre-release](https://github.com/open-telemetry/opentelemetry-go/blob/main/RELEASING.md#pre-release)
 - [ ] [Tag](https://github.com/open-telemetry/opentelemetry-go/blob/main/RELEASING.md#tag)
