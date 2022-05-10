@@ -68,7 +68,7 @@ func installExportPipeline(ctx context.Context) func() {
 	client := otlptracehttp.NewClient()
 	exporter, err := otlptrace.New(ctx, client)
 	if err != nil {
-		panic(err)
+		log.Fatalf("creating OTLP trace exporter: %v", err)
 	}
 
 	tracerProvider := sdktrace.NewTracerProvider(
@@ -79,7 +79,7 @@ func installExportPipeline(ctx context.Context) func() {
 
 	return func() {
 		if err := tracerProvider.Shutdown(ctx); err != nil {
-			panic(err)
+			log.Fatalf("stopping tracer provider: %v", err)
 		}
 	}
 }

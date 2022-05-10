@@ -51,6 +51,11 @@ issues:
       text: "exported func.*returns unexported type.*which can be annoying to use"
       linters:
         - revive
+    # Example test functions should be treated like main.
+    - path: example.*_test\.go
+      text: "calls to (.+) only in main[(][)] or init[(][)] functions"
+      linters:
+        - revive
   include:
     # revive exported should have comment or be unexported.
     - EXC0012

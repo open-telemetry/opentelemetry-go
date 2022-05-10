@@ -66,7 +66,7 @@ func Resource() *resource.Resource {
 func InstallExportPipeline(ctx context.Context) func() {
 	exporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
 	if err != nil {
-		panic(err)
+		log.Fatalf("creating stdout exporter: %v", err)
 	}
 
 	tracerProvider := sdktrace.NewTracerProvider(
@@ -77,7 +77,7 @@ func InstallExportPipeline(ctx context.Context) func() {
 
 	return func() {
 		if err := tracerProvider.Shutdown(ctx); err != nil {
-			panic(err)
+			log.Fatalf("stopping tracer provider: %v", err)
 		}
 	}
 }

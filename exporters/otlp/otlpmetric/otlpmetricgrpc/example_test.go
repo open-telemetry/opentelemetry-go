@@ -36,7 +36,7 @@ func Example_insecure() {
 	client := otlpmetricgrpc.NewClient(otlpmetricgrpc.WithInsecure())
 	exp, err := otlpmetric.New(ctx, client)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to create the collector exporter: %v", err)
 	}
 	defer func() {
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
@@ -58,7 +58,7 @@ func Example_insecure() {
 	global.SetMeterProvider(pusher)
 
 	if err := pusher.Start(ctx); err != nil {
-		panic(err)
+		log.Fatalf("could not start metric controller: %v", err)
 	}
 	defer func() {
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
@@ -75,7 +75,7 @@ func Example_insecure() {
 
 	counter, err := meter.SyncFloat64().Counter("an_important_metric", instrument.WithDescription("Measures the cumulative epicness of the app"))
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to create the instrument: %v", err)
 	}
 
 	for i := 0; i < 10; i++ {
@@ -89,14 +89,14 @@ func Example_withTLS() {
 	// for ways on how to initialize gRPC TransportCredentials.
 	creds, err := credentials.NewClientTLSFromFile("my-cert.pem", "")
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to create gRPC client TLS credentials: %v", err)
 	}
 
 	ctx := context.Background()
 	client := otlpmetricgrpc.NewClient(otlpmetricgrpc.WithTLSCredentials(creds))
 	exp, err := otlpmetric.New(ctx, client)
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to create the collector exporter: %v", err)
 	}
 	defer func() {
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
@@ -118,7 +118,7 @@ func Example_withTLS() {
 	global.SetMeterProvider(pusher)
 
 	if err := pusher.Start(ctx); err != nil {
-		panic(err)
+		log.Fatalf("could not start metric controller: %v", err)
 	}
 
 	defer func() {
@@ -135,7 +135,7 @@ func Example_withTLS() {
 	// Recorder metric example
 	counter, err := meter.SyncFloat64().Counter("an_important_metric", instrument.WithDescription("Measures the cumulative epicness of the app"))
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to create the instrument: %v", err)
 	}
 
 	for i := 0; i < 10; i++ {
@@ -152,7 +152,7 @@ func Example_withDifferentSignalCollectors() {
 	ctx := context.Background()
 	exp, err := otlpmetric.New(ctx, client)
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to create the collector exporter: %v", err)
 	}
 
 	defer func() {
@@ -175,7 +175,7 @@ func Example_withDifferentSignalCollectors() {
 	global.SetMeterProvider(pusher)
 
 	if err := pusher.Start(ctx); err != nil {
-		panic(err)
+		log.Fatalf("could not start metric controller: %v", err)
 	}
 	defer func() {
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
@@ -191,7 +191,7 @@ func Example_withDifferentSignalCollectors() {
 	// Recorder metric example
 	counter, err := meter.SyncFloat64().Counter("an_important_metric", instrument.WithDescription("Measures the cumulative epicness of the app"))
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to create the instrument: %v", err)
 	}
 
 	for i := 0; i < 10; i++ {
