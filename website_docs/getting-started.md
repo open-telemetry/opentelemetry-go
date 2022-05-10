@@ -37,7 +37,6 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
-        "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 )
 
 // Implement an HTTP Handler func to be instrumented later
@@ -81,21 +80,16 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
-	"go.opentelemetry.io/otel/trace"
 )
 
-var (
-	tracer      trace.Tracer
-	serviceName string = "diceroller-service"
-)
-
-func newTraceProvider() *sdktrace.TracerProvider {
+// Initialize a Tracerprovider, which is necessary to generate traces
+// and export them to the console (or somewhere else)
+func newTracerProvider() *sdktrace.TracerProvider {
 	exp, err :=
 		stdouttrace.New(
 			stdouttrace.WithPrettyPrint(),
@@ -111,9 +105,9 @@ func newTraceProvider() *sdktrace.TracerProvider {
 			resource.Default(),
 			resource.NewWithAttributes(
 				semconv.SchemaURL,
-				semconv.ServiceNameKey.String(serviceName),
+				semconv.ServiceNameKey.String("diceroller-service"),
 				semconv.ServiceVersionKey.String("v0.1.0"),
-				attribute.String("environment", "getting-started"),
+				attribute.String("environment", "demo"),
 			),
 		)
 
@@ -127,11 +121,8 @@ func newTraceProvider() *sdktrace.TracerProvider {
 	)
 }
 
+// Same handler as before
 func handleRollDice(w http.ResponseWriter, r *http.Request) {
-	// Create a child span called dice-roller that tracks only this function call
-	_, span := tracer.Start(r.Context(), "dice-roller")
-	defer span.End()
-
 	value := rand.Intn(6) + 1
 	fmt.Fprintf(w, "%d", value)
 }
@@ -147,30 +138,7 @@ func wrapHandler() {
 func main() {
 	ctx := context.Background()
 
-	res, err := resource.New(ctx,
-		resource.WithAttributes(
-			// Service name to be use by observability tool
-			semconv.ServiceNameKey.String("roll-dice")))
-	// Checking for errors
-	if err != nil {
-		fmt.Printf("Error adding %v to the tracer engine: %v", "applicationName", err)
-	}
-
-	collectorAddr := "localhost:4318"
-	traceExporter, err := otlptracehttp.New(ctx,
-		otlptracehttp.WithInsecure(),
-		otlptracehttp.WithEndpoint(collectorAddr),
-	)
-
-	// Checking for errors
-	if err != nil {
-		fmt.Printf("Error initializing the tracer exporter: %v", err)
-	}
-	bsp := sdktrace.NewBatchSpanProcessor(traceExporter)
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithResource(res),
-		sdktrace.WithSpanProcessor(bsp),
-	)
+	tp := newTracerProvider()
 	defer func() { _ = tp.Shutdown(ctx) }()
 
 	otel.SetTracerProvider(tp)
@@ -185,11 +153,9 @@ func main() {
 		),
 	)
 
-	tracer = tp.Tracer(serviceName)
-
 	wrapHandler()
 
-	err = http.ListenAndServe(":8080", nil)
+	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -197,9 +163,9 @@ func main() {
 ```
 
 This will initialize tracing and wrap the HTTP handler so that tracing data can
-be generated for it automatically.
-
-This code also initializes a `Tracer` and sets it, 
+be generated for it automatically. It may seem like quite a bit of code, but the
+good news is that very little needs to change when you add more instrumentation
+later.
 
 ## Run the instrumented HTTP Server
 
@@ -402,12 +368,15 @@ your application. For that you’ll need to write some [manual
 instrumentation]({{< relref "manual" >}}). Here’s how you can easily link up
 manual instrumentation with automatic instrumentation.
 
-Add some top-level variables, namely, a `Tracer`:
+Add a `Tracer` at the top level. Note that a `serviceName` and `serviceVersion`
+are also added, since it is generally a good ideal to centralize constants like
+this.
 
 ```go
 var (
-	tracer      trace.Tracer
-	serviceName string = "diceroller-service"
+	tracer         trace.Tracer
+	serviceName    string = "diceroller-service"
+	serviceVersion string = "0.1.0"
 )
 ```
 
@@ -459,8 +428,9 @@ import (
 )
 
 var (
-	tracer      trace.Tracer
-	serviceName string = "diceroller-service"
+	tracer         trace.Tracer
+	serviceName    string = "diceroller-service"
+	serviceVersion string = "0.1.0"
 )
 
 func newTraceProvider() *sdktrace.TracerProvider {
@@ -480,7 +450,7 @@ func newTraceProvider() *sdktrace.TracerProvider {
 			resource.NewWithAttributes(
 				semconv.SchemaURL,
 				semconv.ServiceNameKey.String(serviceName),
-				semconv.ServiceVersionKey.String("v0.1.0"),
+				semconv.ServiceVersionKey.String(serviceVersion),
 				attribute.String("environment", "getting-started"),
 			),
 		)
@@ -700,10 +670,17 @@ go get go.opentelemetry.io/otel/exporters/otlp/otlptrace \
 ```
 
 Next, change the code to create an OTLP exporter, replacing the console exporter
-from before:
+from before with an OTLP HTTP exporter that talks to the local endpoint the
+collector is listening on.
 
 ```go
-exp, err := otlptrace.New(ctx, otlptracehttp.NewClient())
+exp, err :=
+	otlptracehttp.New(ctx,
+		// WithInsecure lets us use http instead of https.
+		// This is just for local development.
+		otlptracehttp.WithInsecure(),
+		otlptracehttp.WithEndpoint(collectorAddr),
+	)
 ```
 
 The full code sample looks like this:
@@ -721,7 +698,6 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -731,12 +707,20 @@ import (
 )
 
 var (
-	tracer      trace.Tracer
-	serviceName string = "diceroller-service"
+	tracer         trace.Tracer
+	serviceName    string = "diceroller-service"
+	serviceVersion string = "0.1.0"
+	collectorAddr  string = "localhost:4318" // HTTP endpoint for collector
 )
 
 func newTraceProvider(ctx context.Context) *sdktrace.TracerProvider {
-	exp, err := otlptrace.New(ctx, otlptracehttp.NewClient())
+	exp, err :=
+		otlptracehttp.New(ctx,
+			// WithInsecure lets us use http instead of https.
+			// This is just for local development.
+			otlptracehttp.WithInsecure(),
+			otlptracehttp.WithEndpoint(collectorAddr),
+		)
 
 	if err != nil {
 		panic(err)
@@ -748,7 +732,7 @@ func newTraceProvider(ctx context.Context) *sdktrace.TracerProvider {
 			resource.NewWithAttributes(
 				semconv.SchemaURL,
 				semconv.ServiceNameKey.String(serviceName),
-				semconv.ServiceVersionKey.String("v0.1.0"),
+				semconv.ServiceVersionKey.String(serviceVersion),
 				attribute.String("environment", "getting-started"),
 			),
 		)
@@ -809,11 +793,95 @@ func main() {
 }
 ```
 
-TODO
+This will emit a log showing the same trace as before, but now from the
+collector process.
 
-you should now start to see traces from the OTel collector process. Except
-phillip can't seem to get that working because, you know, he is not good at
-computers.
+<details>
+
+```
+2022-05-10T16:20:09.715Z        INFO    loggingexporter/logging_exporter.go:41   TracesExporter  {"#spans": 2}
+2022-05-10T16:20:09.716Z        DEBUG   loggingexporter/logging_exporter.go:51   ResourceSpans #0
+Resource labels:
+     -> environment: STRING(getting-started)
+     -> service.name: STRING(diceroller-service)
+     -> service.version: STRING(v0.1.0)
+     -> telemetry.sdk.language: STRING(go)
+     -> telemetry.sdk.name: STRING(opentelemetry)
+     -> telemetry.sdk.version: STRING(1.7.0)
+InstrumentationLibrarySpans #0
+InstrumentationLibrary diceroller-service 
+Span #0
+    Trace ID       : 14f135f6f7414dc3d9272ba51dfc940a
+    Parent ID      : d8995bd024c68216
+    ID             : 0a587f78f3991936
+    Name           : dice-roller
+    Kind           : SPAN_KIND_INTERNAL
+    Start time     : 2022-05-10 16:20:05.471544872 +0000 UTC
+    End time       : 2022-05-10 16:20:05.471550922 +0000 UTC
+    Status code    : STATUS_CODE_UNSET
+    Status message : 
+InstrumentationLibrarySpans #1
+InstrumentationLibrary go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp semver:0.32.0
+Span #0
+    Trace ID       : 14f135f6f7414dc3d9272ba51dfc940a
+    Parent ID      : 
+    ID             : d8995bd024c68216
+    Name           : rolldice
+    Kind           : SPAN_KIND_SERVER
+    Start time     : 2022-05-10 16:20:05.471522982 +0000 UTC
+    End time       : 2022-05-10 16:20:05.471559732 +0000 UTC
+    Status code    : STATUS_CODE_UNSET
+    Status message : 
+Attributes:
+     -> net.transport: STRING(ip_tcp)
+     -> net.peer.ip: STRING(10.20.150.7)
+     -> net.peer.port: INT(36424)
+     -> net.host.name: STRING(8080-cartermp-otelsamples-o7vjrp16ull.ws-us44.gitpod.io)
+     -> http.method: STRING(GET)
+     -> http.target: STRING(/rolldice?vscodeBrowserReqId=1652199605336)
+     -> http.server_name: STRING(rolldice)
+     -> http.client_ip: STRING(24.22.216.124)
+     -> http.user_agent: STRING(Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36)
+     -> http.scheme: STRING(http)
+     -> http.host: STRING(8080-cartermp-otelsamples-o7vjrp16ull.ws-us44.gitpod.io)
+     -> http.flavor: STRING(1.1)
+     -> http.wrote_bytes: INT(1)
+     -> http.status_code: INT(200)
+
+2022-05-10T17:11:04.807Z        INFO    loggingexporter/logging_exporter.go:41
+TracesExporter  {"#spans": 2} 2022-05-10T17:11:04.807Z        DEBUG
+loggingexporter/logging_exporter.go:51   ResourceSpans #0 Resource labels: ->
+     environment: STRING(getting-started) -> service.name:
+     STRING(diceroller-service) -> service.version: STRING(0.1.0) ->
+     telemetry.sdk.language: STRING(go) -> telemetry.sdk.name:
+     STRING(opentelemetry) -> telemetry.sdk.version: STRING(1.7.0)
+     InstrumentationLibrarySpans #0 InstrumentationLibrary diceroller-service
+     Span #0 Trace ID       : 13d8990c0d82fb6a7fe6307bc94acc28 Parent ID      :
+2e82b9ec5b4853ff ID             : 1e2cd857b1f1f7fd Name           : dice-roller
+Kind           : SPAN_KIND_INTERNAL Start time     : 2022-05-10
+17:11:02.092278673 +0000 UTC End time       : 2022-05-10 17:11:02.092283423
+    +0000 UTC Status code    : STATUS_CODE_UNSET Status message :
+    InstrumentationLibrarySpans #1 InstrumentationLibrary
+    go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp semver:0.32.0
+    Span #0 Trace ID       : 13d8990c0d82fb6a7fe6307bc94acc28 Parent ID      :
+    ID             : 2e82b9ec5b4853ff Name           : rolldice Kind           :
+    SPAN_KIND_SERVER Start time     : 2022-05-10 17:11:02.092262193 +0000 UTC
+    End time       : 2022-05-10 17:11:02.092290013 +0000 UTC Status code    :
+    STATUS_CODE_UNSET Status message : Attributes: -> net.transport:
+    STRING(ip_tcp) -> net.peer.ip: STRING(10.20.150.7) -> net.peer.port:
+INT(36426) -> net.host.name:
+STRING(8080-cartermp-otelsamples-o7vjrp16ull.ws-us44.gitpod.io) -> http.method:
+STRING(GET) -> http.target: STRING(/rolldice) -> http.server_name:
+    STRING(rolldice) -> http.client_ip: STRING(24.22.216.124) ->
+    http.user_agent: STRING(Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)
+    AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36)
+    -> http.scheme: STRING(http) -> http.host:
+    STRING(8080-cartermp-otelsamples-o7vjrp16ull.ws-us44.gitpod.io) ->
+    http.flavor: STRING(1.1) -> http.wrote_bytes: INT(1) -> http.status_code:
+    INT(200)
+```
+
+</details>
 
 ## Next steps
 
