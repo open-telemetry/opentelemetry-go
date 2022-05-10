@@ -21,6 +21,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"os/signal"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -34,7 +35,7 @@ import (
 var logger = log.New(os.Stderr, "zipkin-example", log.Ldate|log.Ltime|log.Llongfile)
 
 // initTracer creates a new trace provider instance and registers it as global trace provider.
-func initTracer(url string) (func() error, error) {
+func initTracer(url string) (func(context.Context) error, error) {
 	// Create Zipkin Exporter and install it as a global tracer.
 	//
 	// For demoing purposes, always sample. In a production application, you should
@@ -59,26 +60,25 @@ func initTracer(url string) (func() error, error) {
 	)
 	otel.SetTracerProvider(tp)
 
-	return func() error {
-		return tp.Shutdown(context.Background())
-	}, nil
+	return tp.Shutdown, nil
 }
 
 func main() {
 	url := flag.String("zipkin", "http://localhost:9411/api/v2/spans", "zipkin url")
 	flag.Parse()
 
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
 	shutdown, err := initTracer(*url)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer func(f func() error) {
-		if err := f(); err != nil {
-			log.Fatal(err)
+	defer func() {
+		if err := shutdown(ctx); err != nil {
+			log.Fatal("failed to shutdown TracerProvider: %w", err)
 		}
-	}(shutdown)
-
-	ctx := context.Background()
+	}()
 
 	tr := otel.GetTracerProvider().Tracer("component-main")
 	ctx, span := tr.Start(ctx, "foo", trace.WithSpanKind(trace.SpanKindServer))
