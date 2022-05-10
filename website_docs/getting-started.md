@@ -21,7 +21,8 @@ go get go.opentelemetry.io/otel \
   go.opentelemetry.io/otel/sdk \
   go.opentelemetry.io/otel/exporters/otlp/otlptrace \
   go.opentelemetry.io/otel/exporters/stdout/stdouttrace \
-  go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
+  go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp \
+  go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp
 ```
 
 ## Create the sample HTTP Server
@@ -36,6 +37,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+        "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 )
 
 // Implement an HTTP Handler func to be instrumented later
@@ -79,16 +81,21 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	"go.opentelemetry.io/otel/trace"
 )
 
-// Initialize a Tracerprovider, which is necessary to generate traces
-// and export them to the console (or somewhere else)
-func newTracerProvider() *sdktrace.TracerProvider {
+var (
+	tracer      trace.Tracer
+	serviceName string = "diceroller-service"
+)
+
+func newTraceProvider() *sdktrace.TracerProvider {
 	exp, err :=
 		stdouttrace.New(
 			stdouttrace.WithPrettyPrint(),
@@ -104,9 +111,9 @@ func newTracerProvider() *sdktrace.TracerProvider {
 			resource.Default(),
 			resource.NewWithAttributes(
 				semconv.SchemaURL,
-				semconv.ServiceNameKey.String("diceroller-service"),
+				semconv.ServiceNameKey.String(serviceName),
 				semconv.ServiceVersionKey.String("v0.1.0"),
-				attribute.String("environment", "demo"),
+				attribute.String("environment", "getting-started"),
 			),
 		)
 
@@ -120,8 +127,11 @@ func newTracerProvider() *sdktrace.TracerProvider {
 	)
 }
 
-// Same handler as before
 func handleRollDice(w http.ResponseWriter, r *http.Request) {
+	// Create a child span called dice-roller that tracks only this function call
+	_, span := tracer.Start(r.Context(), "dice-roller")
+	defer span.End()
+
 	value := rand.Intn(6) + 1
 	fmt.Fprintf(w, "%d", value)
 }
@@ -137,7 +147,30 @@ func wrapHandler() {
 func main() {
 	ctx := context.Background()
 
-	tp := newTracerProvider()
+	res, err := resource.New(ctx,
+		resource.WithAttributes(
+			// Service name to be use by observability tool
+			semconv.ServiceNameKey.String("roll-dice")))
+	// Checking for errors
+	if err != nil {
+		fmt.Printf("Error adding %v to the tracer engine: %v", "applicationName", err)
+	}
+
+	collectorAddr := "localhost:4318"
+	traceExporter, err := otlptracehttp.New(ctx,
+		otlptracehttp.WithInsecure(),
+		otlptracehttp.WithEndpoint(collectorAddr),
+	)
+
+	// Checking for errors
+	if err != nil {
+		fmt.Printf("Error initializing the tracer exporter: %v", err)
+	}
+	bsp := sdktrace.NewBatchSpanProcessor(traceExporter)
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithResource(res),
+		sdktrace.WithSpanProcessor(bsp),
+	)
 	defer func() { _ = tp.Shutdown(ctx) }()
 
 	otel.SetTracerProvider(tp)
@@ -152,9 +185,11 @@ func main() {
 		),
 	)
 
+	tracer = tp.Tracer(serviceName)
+
 	wrapHandler()
 
-	err := http.ListenAndServe(":8080", nil)
+	err = http.ListenAndServe(":8080", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
