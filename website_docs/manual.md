@@ -235,7 +235,8 @@ if err != nil {
 }
 ```
 
-It is highly recommended that you also set a span's status to `Error` when using `RecordError`, unless you do not wish to consider the span tracking a failed operation as an error span. The `RecordError` function does **not** automatically set a span status when called.
+It is highly recommended that you also set a span's status to `Error` when using `RecordError`, unless you do not wish to consider the span tracking a failed operation as an error span.
+The `RecordError` function does **not** automatically set a span status when called.
 
 ## Creating Metrics
 
