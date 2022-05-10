@@ -45,7 +45,7 @@ func handleRollDice(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.HandleFunc("/rolldice", handleRollDice)
+        http.HandleFunc("/rolldice", handleRollDice)
 
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
@@ -601,6 +601,184 @@ the top:
 You'll find that the `dice-roller` span has information about a parent span, and
 the ID of that parent span matches the span created by automatic
 instrumentation.
+
+## Send traces to an OpenTelemetry Collector
+
+The [OpenTelemetry Collector](/docs/collector/getting-started/) is a critical
+component of most production deployments. Some examples of when it's beneficial
+to use a collector:
+
+* A single telemetry sink shared by multiple services, to reduce overhead of
+  switching exporters
+* Aggregating traces across multiple services, running on multiple hosts
+* A central place to process traces prior to exporting them to a backend
+
+Unless you have just a single service or are experimenting, you'll want to use a
+collector in production deployments.
+
+### Configure and run a local collector
+
+First, write the following collector configuration code into `/tmp/`:
+
+```yaml
+# /tmp/otel-collector-config.yaml
+receivers:
+    otlp:
+        protocols:
+            grpc:
+            http:
+exporters:
+    logging:
+        loglevel: debug
+processors:
+    batch:
+service:
+    pipelines:
+        traces:
+            receivers: [otlp]
+            exporters: [logging]
+            processors: [batch]
+```
+
+Then run the docker command to acquire and run the collector based on this
+configuration:
+
+```
+docker run -p 4318:4318 \
+    -v /tmp/otel-collector-config.yaml:/etc/otel-collector-config.yaml \
+    otel/opentelemetry-collector:latest \
+    --config=/etc/otel-collector-config.yaml
+```
+
+You will now have an OpenTelemetry Collector instance running locally.
+
+### Modify the code to export spans via OTLP
+
+The next step is to modify the code to send spans to the Collector via OTLP
+instead of the console.
+
+To do this, install the OTLP exporter packages:
+
+```
+go get go.opentelemetry.io/otel/exporters/otlp/otlptrace \
+  go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp \
+```
+
+Next, change the code to create an OTLP exporter, replacing the console exporter
+from before:
+
+```go
+exp, err := otlptrace.New(ctx, otlptracehttp.NewClient())
+```
+
+The full code sample looks like this:
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"math/rand"
+	"net/http"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	"go.opentelemetry.io/otel/trace"
+)
+
+var (
+	tracer      trace.Tracer
+	serviceName string = "diceroller-service"
+)
+
+func newTraceProvider(ctx context.Context) *sdktrace.TracerProvider {
+	exp, err := otlptrace.New(ctx, otlptracehttp.NewClient())
+
+	if err != nil {
+		panic(err)
+	}
+
+	r, rErr :=
+		resource.Merge(
+			resource.Default(),
+			resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.ServiceNameKey.String(serviceName),
+				semconv.ServiceVersionKey.String("v0.1.0"),
+				attribute.String("environment", "getting-started"),
+			),
+		)
+
+	if rErr != nil {
+		panic(rErr)
+	}
+
+	return sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exp),
+		sdktrace.WithResource(r),
+	)
+}
+
+func handleRollDice(w http.ResponseWriter, r *http.Request) {
+	// Create a child span called dice-roller that tracks only this function call
+	_, span := tracer.Start(r.Context(), "dice-roller")
+	defer span.End()
+
+	value := rand.Intn(6) + 1
+	fmt.Fprintf(w, "%d", value)
+}
+
+// Wrap the handleRollDice so that telemetry data
+// can be automatically generated for it
+func wrapHandler() {
+	handler := http.HandlerFunc(handleRollDice)
+	wrappedHandler := otelhttp.NewHandler(handler, "rolldice")
+	http.Handle("/rolldice", wrappedHandler)
+}
+
+func main() {
+	ctx := context.Background()
+
+	tp := newTraceProvider(ctx)
+	defer func() { _ = tp.Shutdown(ctx) }()
+
+	otel.SetTracerProvider(tp)
+
+	// Register context and baggage propagation.
+	// Although not strictly necessary, for this sample,
+	// it is required for distributed tracing.
+	otel.SetTextMapPropagator(
+		propagation.NewCompositeTextMapPropagator(
+			propagation.TraceContext{},
+			propagation.Baggage{},
+		),
+	)
+
+	tracer = tp.Tracer(serviceName)
+
+	wrapHandler()
+
+	err := http.ListenAndServe(":8080", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+TODO
+
+you should now start to see traces from the OTel collector process. Except
+phillip can't seem to get that working because, you know, he is not good at
+computers.
 
 ## Next steps
 
