@@ -196,9 +196,17 @@ span.AddEvent("Cancelled wait due to external signal", trace.WithAttributes(attr
 
 ### Set span status
 
-A status can be set on a span, typically used to specify that there was an error in the operation a span is tracking - StatusCode.ERROR.
+A status can be set on a span, typically used to specify that there was an error in the operation a span is tracking - .`Error`.
 
 ```go
+import (
+	// ...
+	"go.opentelemetry.io/otel/codes"
+	// ...
+)
+
+// ...
+
 result, err := operationThatCouldFail()
 if err != nil {
 	span.SetStatus(codes.Error, "operationThatCouldFail failed")
@@ -212,6 +220,14 @@ By default, the status for all spans is `Unset`. In rare cases, you may also wis
 If you have an operation that failed and you wish to capture the error it produced, you can record that error.
 
 ```go
+import (
+	// ...
+	"go.opentelemetry.io/otel/codes"
+	// ...
+)
+
+// ...
+
 result, err := operationThatCouldFail()
 if err != nil {
 	span.SetStatus(codes.Error, "operationThatCouldFail failed")
