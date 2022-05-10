@@ -21,6 +21,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
 	"time"
 
 	"google.golang.org/grpc"
@@ -38,7 +40,7 @@ import (
 
 // Initializes an OTLP exporter, and configures the corresponding trace and
 // metric providers.
-func initProvider() (func() error, error) {
+func initProvider() (func(context.Context) error, error) {
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
@@ -80,24 +82,25 @@ func initProvider() (func() error, error) {
 	// set global propagator to tracecontext (the default is no-op).
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
-	return func() error {
-		// Shutdown will flush any remaining spans and shut down the exporter.
-		return tracerProvider.Shutdown(ctx)
-	}, nil
+	// Shutdown will flush any remaining spans and shut down the exporter.
+	return tracerProvider.Shutdown, nil
 }
 
 func main() {
 	log.Printf("Waiting for connection...")
 
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
 	shutdown, err := initProvider()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer func(f func() error) {
-		if err := f(); err != nil {
+	defer func() {
+		if err := shutdown(ctx); err != nil {
 			log.Fatal("failed to shutdown TracerProvider: %w", err)
 		}
-	}(shutdown)
+	}()
 
 	tracer := otel.Tracer("test-tracer")
 
@@ -111,7 +114,7 @@ func main() {
 
 	// work begins
 	ctx, span := tracer.Start(
-		context.Background(),
+		ctx,
 		"CollectorExporter-Example",
 		trace.WithAttributes(commonAttrs...))
 	defer span.End()
