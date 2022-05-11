@@ -1,6 +1,6 @@
 # OpenTelemetry/OpenTracing Bridge
 
-### Getting started
+## Getting started
 
 `go get go.opentelemetry.io/otel/bridge/opentracing`
 
@@ -20,7 +20,7 @@ Assuming you have configured an OpenTelemetry TracerProvider, these will be the 
   otel.SetTracerProvider(wrapperTracerProvider)
 ```
 
-### Interop from ot -> otel
+## Interop from ot -> otel
 
 In order to get ot spans properly into the otel context, so they can be propagated (both internally, and externally), you will need to explicitly use the `BridgeTracer` for creating your ot spans, rather than a bare ot `Tracer` instance.
 
