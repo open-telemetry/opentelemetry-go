@@ -34,10 +34,10 @@ import (
 // Pull-based exporters will typically implement Register
 // themselves, since they read on demand.
 type Reader interface {
-	// Register is called when the SDK is fully
-	// configured.  The Producer passed allows the
-	// Reader to begin collecting metrics using its
-	// Produce() method.
+	// register registers a Reader with a MeterProvider.
+	// The producer argument allows the Reader to signal
+	// back to the MeterProvider it is registered with to collect
+	// and send aggregated metric measurements.
 	register(producer)
 
 	// Collect gathers all metrics from the SDK, calling any callbacks necessary.
@@ -71,5 +71,5 @@ type producer interface {
 	// produce returns aggregated metrics from a single collection.
 	//
 	// This method is safe to call concurrently.
-	produce(context.Context) export.Metrics
+	produce(context.Context) (export.Metrics, error)
 }

@@ -74,8 +74,13 @@ func (mr *ManualReader) Collect(ctx context.Context) (export.Metrics, error) {
 	if mr.shutdown {
 		return export.Metrics{}, ErrReaderShutdown
 	}
-	return mr.producer.produce(ctx), nil
+	return mr.producer.produce(ctx)
 }
 
+// ErrReaderNotRegistered is returned if Collect or Shutdown are called before
+// the reader is registered with a MeterProvider
 var ErrReaderNotRegistered = fmt.Errorf("reader is not registered")
+
+// ErrReaderShutdown is returned if Collect or Shutdown are called after a
+// reader has been Shutdown once.
 var ErrReaderShutdown = fmt.Errorf("reader is shutdown")

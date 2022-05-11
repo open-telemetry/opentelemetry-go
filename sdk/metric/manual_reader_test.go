@@ -37,8 +37,8 @@ var testMetrics = export.Metrics{
 	// TODO: test with actual data.
 }
 
-func (p testProducer) produce(context.Context) export.Metrics {
-	return testMetrics
+func (p testProducer) produce(context.Context) (export.Metrics, error) {
+	return testMetrics, nil
 }
 
 func TestManualReaderProducer(t *testing.T) {
