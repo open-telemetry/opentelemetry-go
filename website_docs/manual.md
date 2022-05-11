@@ -194,6 +194,50 @@ Events can also have attributes of their own -
 span.AddEvent("Cancelled wait due to external signal", trace.WithAttributes(attribute.Int("pid", 4328), attribute.String("signal", "SIGHUP")))
 ```
 
+### Set span status
+
+A status can be set on a span, typically used to specify that there was an error in the operation a span is tracking - .`Error`.
+
+```go
+import (
+	// ...
+	"go.opentelemetry.io/otel/codes"
+	// ...
+)
+
+// ...
+
+result, err := operationThatCouldFail()
+if err != nil {
+	span.SetStatus(codes.Error, "operationThatCouldFail failed")
+}
+```
+
+By default, the status for all spans is `Unset`. In rare cases, you may also wish to set the status to `Ok`. This should generally not be necessary, though.
+
+### Record errors
+
+If you have an operation that failed and you wish to capture the error it produced, you can record that error.
+
+```go
+import (
+	// ...
+	"go.opentelemetry.io/otel/codes"
+	// ...
+)
+
+// ...
+
+result, err := operationThatCouldFail()
+if err != nil {
+	span.SetStatus(codes.Error, "operationThatCouldFail failed")
+	span.RecordError(err)
+}
+```
+
+It is highly recommended that you also set a span's status to `Error` when using `RecordError`, unless you do not wish to consider the span tracking a failed operation as an error span.
+The `RecordError` function does **not** automatically set a span status when called.
+
 ## Creating Metrics
 
 The metrics API is currently unstable, documentation TBA.
