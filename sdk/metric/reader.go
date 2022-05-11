@@ -35,8 +35,7 @@ import (
 // themselves, since they read on demand.
 type Reader interface {
 	// register registers a Reader with a MeterProvider.
-	// The producer argument allows the Reader to signal
-	// back to the MeterProvider it is registered with to collect
+	// The producer argument allows the Reader to signal the sdk to collect
 	// and send aggregated metric measurements.
 	register(producer)
 

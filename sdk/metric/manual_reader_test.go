@@ -25,7 +25,7 @@ import (
 )
 
 func TestManualReaderNotRegistered(t *testing.T) {
-	rdr := &ManualReader{}
+	rdr := &manualReader{}
 
 	_, err := rdr.Collect(context.Background())
 	require.ErrorIs(t, err, ErrReaderNotRegistered)
@@ -42,7 +42,7 @@ func (p testProducer) produce(context.Context) (export.Metrics, error) {
 }
 
 func TestManualReaderProducer(t *testing.T) {
-	rdr := &ManualReader{}
+	rdr := &manualReader{}
 	rdr.register(testProducer{})
 
 	m, err := rdr.Collect(context.Background())
@@ -51,22 +51,24 @@ func TestManualReaderProducer(t *testing.T) {
 }
 
 func TestManualReaderCollectAfterShutdown(t *testing.T) {
-	rdr := &ManualReader{}
+	rdr := &manualReader{}
 	rdr.register(testProducer{})
-	_ = rdr.Shutdown(context.Background())
+	err := rdr.Shutdown(context.Background())
+	require.NoError(t, err)
 
 	m, err := rdr.Collect(context.Background())
-	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrReaderShutdown)
 	assert.Equal(t, export.Metrics{}, m)
 }
+
 func TestManualReaderShutdown(t *testing.T) {
-	rdr := &ManualReader{}
+	rdr := &manualReader{}
 	rdr.register(testProducer{})
 
 	err := rdr.Shutdown(context.Background())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = rdr.Shutdown(context.Background())
-	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrReaderShutdown)
 
 }

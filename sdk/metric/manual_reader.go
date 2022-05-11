@@ -22,38 +22,37 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
-// ManualReader is a a simple Reader that allows an application to
-// read metrics on demand.  It simply stores the Producer interface
-// provided through registration.  Flush and Shutdown are no-ops.
-type ManualReader struct {
+// manualReader is a a simple Reader that allows an application to
+// read metrics on demand.
+type manualReader struct {
 	lock     sync.Mutex
 	producer producer
 	shutdown bool
 }
 
-var _ Reader = &ManualReader{}
+// Compile time check the manualReader implements Reader.
+var _ Reader = &manualReader{}
 
-// NewManualReader returns an Reader that stores the Producer for
-// manual use and returns a configurable `name` as its String(),
-func NewManualReader() *ManualReader {
-	return &ManualReader{}
+// NewManualReader returns a Reader which is directly called to collect metrics.
+func NewManualReader() Reader {
+	return &manualReader{}
 }
 
-// Register stores the Producer which enables the caller to read
+// register stores the Producer which enables the caller to read
 // metrics on demand.
-func (mr *ManualReader) register(p producer) {
+func (mr *manualReader) register(p producer) {
 	mr.lock.Lock()
 	defer mr.lock.Unlock()
 	mr.producer = p
 }
 
-// ForceFlush is a no-op, always returns nil.
-func (mr *ManualReader) ForceFlush(context.Context) error {
+// ForceFlush is a no-op, it always returns nil.
+func (mr *manualReader) ForceFlush(context.Context) error {
 	return nil
 }
 
 // Shutdown closes any connections and frees any resources used by the reader.
-func (mr *ManualReader) Shutdown(context.Context) error {
+func (mr *manualReader) Shutdown(context.Context) error {
 	mr.lock.Lock()
 	defer mr.lock.Unlock()
 	if mr.shutdown {
@@ -65,7 +64,7 @@ func (mr *ManualReader) Shutdown(context.Context) error {
 
 // Collect gathers all metrics from the SDK, calling any callbacks necessary.
 // Collect will return an error if called after shutdown.
-func (mr *ManualReader) Collect(ctx context.Context) (export.Metrics, error) {
+func (mr *manualReader) Collect(ctx context.Context) (export.Metrics, error) {
 	mr.lock.Lock()
 	defer mr.lock.Unlock()
 	if mr.producer == nil {
