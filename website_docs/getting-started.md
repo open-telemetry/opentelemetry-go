@@ -12,17 +12,25 @@ library](https://github.com/open-telemetry/opentelemetry-go-contrib/tree/main/in
 
 ## Installation
 
-To begin, you'll want to install OpenTelemetry and the `net/http`
-instrumentation package:
+To begin, create a new go module in a fresh directory:
+
+```
+mkdir otel-getting-started
+cd otel-getting-started
+go mod init main
+```
+
+Next, you'll want to install OpenTelemetry and the `net/http` instrumentation
+package:
 
 ```
 go get go.opentelemetry.io/otel \
   go.opentelemetry.io/otel/trace \
   go.opentelemetry.io/otel/sdk \
   go.opentelemetry.io/otel/exporters/otlp/otlptrace \
+  go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp \
   go.opentelemetry.io/otel/exporters/stdout/stdouttrace \
   go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp \
-  go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp
 ```
 
 ## Create the sample HTTP Server
@@ -55,15 +63,20 @@ func main() {
 }
 ```
 
-When run, this will launch an HTTP server that does a "dice roll" whenever the
-`/rolldice` route is accessed.
+When run, this will launch an HTTP server that does a "dice roll" and writes its
+value to the response whenever the `/rolldice` route is accessed. For example,
+accessing `http://localhost:8080/rolldice` in your browser will show the result
+of a single "dice roll".
 
-## Add HTTP Server instrumentation
+## Initialize tracing and add HTTP server instrumentation
 
 [Instrumentation libraries]({{< relref "libraries" >}}) are used to create
 instrumentation on your behalf. In this case, you can install OpenTelemetry and
 the `net/http` instrumentation library so that calls to the server will start a
 trace that contains data about the HTTP call.
+
+To use the instrumentation library for `net/http`, you'll need to initialize
+tracing and wrap the previously-defined HTTP handler.
 
 Replace the contents of `main.go` with the following:
 
@@ -162,16 +175,26 @@ func main() {
 }
 ```
 
-This will initialize tracing and wrap the HTTP handler so that tracing data can
-be generated for it automatically. It may seem like quite a bit of code, but the
-good news is that very little needs to change when you add more instrumentation
-later.
+There's several things going on here:
+
+* Creating an exporter that writes telemetry data to standard out
+* Ensuring the right `Resource` attributes are initialized
+* Initializing a `TracerProvider` and handling its shutdown
+* Initializing the `net/http` instrumentation library and wrapping the HTTP
+  handler
+
+You can learn more about this in [Initializing Tracing]({{< relref
+"manual#initializing-tracing" >}}).
+
+It may seem like quite a bit of code, but the good news is that very little
+needs to change when you add more instrumentation later.
 
 ## Run the instrumented HTTP Server
 
-When you run the app and access the `/rolldice` route, you'll see telemetry data
-printed to the server process's standard out. The telemetry generated is a
-single span that covers the lifetime of handling the request.
+When you run the app and access the `/rolldice` route, you'll see the same "dice
+roll" values as before in the method you accessed it (browser, `curl`, etc.) and
+telemetry data printed to the server process's standard out. The telemetry
+generated is a single span that covers the lifetime of handling the request.
 
 <details>
 <summary>View example output</summary>
@@ -623,7 +646,8 @@ collector in production deployments.
 
 ### Configure and run a local collector
 
-First, write the following collector configuration code into `/tmp/`:
+First, write the following collector configuration code into the `/tmp/`
+directory on your local machine:
 
 ```yaml
 # /tmp/otel-collector-config.yaml
@@ -645,8 +669,8 @@ service:
             processors: [batch]
 ```
 
-Then run the docker command to acquire and run the collector based on this
-configuration:
+Then in a separate terminal window, run the docker command to acquire and run
+the collector based on this configuration:
 
 ```
 docker run -p 4318:4318 \
@@ -660,18 +684,9 @@ You will now have an OpenTelemetry Collector instance running locally.
 ### Modify the code to export spans via OTLP
 
 The next step is to modify the code to send spans to the Collector via OTLP
-instead of the console.
-
-To do this, install the OTLP exporter packages:
-
-```
-go get go.opentelemetry.io/otel/exporters/otlp/otlptrace \
-  go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp \
-```
-
-Next, change the code to create an OTLP exporter, replacing the console exporter
-from before with an OTLP HTTP exporter that talks to the local endpoint the
-collector is listening on.
+instead of the console. Change the code to create an OTLP exporter, replacing
+the console exporter from before with an OTLP HTTP exporter that talks to the
+local endpoint the collector is listening on.
 
 ```go
 exp, err :=
@@ -793,8 +808,8 @@ func main() {
 }
 ```
 
-This will emit a log showing the same trace as before, but now from the
-collector process.
+When you run this server and access the `/rolldice` route, the collector process
+will emit a log showing the two spans created from the request:
 
 <details>
 
@@ -897,3 +912,11 @@ the OpenTelemetry API you can use, see [Manual Instrumentation]({{< relref
 Finally, there are several options for exporting your telemetry data with
 OpenTelemetry. To learn how to export your data to a preferred backend, see
 [Processing and Exporting Data]({{< relref "exporting_data" >}}).
+
+
+```
+docker run -p 4318:4318 \
+    -v /otel-collector-config.yaml:/etc/otel-collector-config.yaml \
+    otel/opentelemetry-collector:latest \
+    --config=/etc/otel-collector-config.yaml
+```
