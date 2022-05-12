@@ -33,7 +33,8 @@ In order to get OpenTracing spans properly into the OpenTelemetry context, so th
 When you have started an OpenTracing Span, make sure the OpenTelemetry knows about it like this:
 
 ```go
-    contextWithOtSpan := span.ToContext(currentContext)
-    contextWithOtelBridgeSpan := bridgeTracer.ContextWithSpanHook(contextWithOtSpan, span.span)
-    // use the contextWithOtelBridgeSpan instance for calls that need to have the span propagated
+	ctxWithOTSpan := opentracing.ContextWithSpan(ctx, otSpan)
+	ctxWithOTAndOTelSpan := bridgeTracer.ContextWithSpanHook(ctxWithOTSpan, otSpan)
+	// Propagate the otSpan to both OpenTracing and OpenTelemetry
+	// instrumentation by using the ctxWithOTAndOTelSpan context.
 ```
