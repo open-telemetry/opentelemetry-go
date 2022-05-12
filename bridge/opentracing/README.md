@@ -7,17 +7,23 @@
 Assuming you have configured an OpenTelemetry TracerProvider, these will be the steps to follow to wire up the bridge:
 
 ```go
-  import {
-    "go.opentelemetry.io/otel"
-    otelBridge "go.opentelemetry.io/otel/bridge/opentracing"
-  }
-  
-  ...
+import (
+	"go.opentelemetry.io/otel"
+	otelBridge "go.opentelemetry.io/otel/bridge/opentracing"
+)
 
-  otelTracer := tracerProvider.Tracer("tracer_name")
-  // use the bridgeTracer as your ot tracer, and the wrapperTracerProvider for otel instrumentation.
-  bridgeTracer, wrapperTracerProvider := otelBridge.NewTracerPair(otelTracer)
-  otel.SetTracerProvider(wrapperTracerProvider)
+func main() {
+	/* Create tracerProvider and configure OpenTelemetry ... */
+	
+	otelTracer := tracerProvider.Tracer("tracer_name")
+	// Use the bridgeTracer as your OpenTracing tracer.
+	bridgeTracer, wrapperTracerProvider := otelBridge.NewTracerPair(otelTracer)
+	// Set the wrapperTracerProvider as the global OpenTelemetry
+	// TracerProvider so instrumentation will use it by default.
+	otel.SetTracerProvider(wrapperTracerProvider)
+
+	/* ... */
+}
 ```
 
 ## Interop from ot -> otel
