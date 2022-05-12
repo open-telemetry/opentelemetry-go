@@ -28,7 +28,7 @@ func main() {
 
 ## Interop from ot -> otel
 
-In order to get ot spans properly into the otel context, so they can be propagated (both internally, and externally), you will need to explicitly use the `BridgeTracer` for creating your ot spans, rather than a bare ot `Tracer` instance.
+In order to get OpenTracing spans properly into the OpenTelemetry context, so they can be propagated (both internally, and externally), you will need to explicitly use the `BridgeTracer` for creating your OpenTracing spans, rather than a bare OpenTracing `Tracer` instance.
 
 When you have started an OpenTracing Span, make sure the OpenTelemetry knows about it like this:
 
