@@ -30,7 +30,7 @@ func main() {
 
 In order to get ot spans properly into the otel context, so they can be propagated (both internally, and externally), you will need to explicitly use the `BridgeTracer` for creating your ot spans, rather than a bare ot `Tracer` instance.
 
-When you have started an ot Span, make sure the otel knows about it like this:
+When you have started an OpenTracing Span, make sure the OpenTelemetry knows about it like this:
 
 ```go
     contextWithOtSpan := span.ToContext(currentContext)
