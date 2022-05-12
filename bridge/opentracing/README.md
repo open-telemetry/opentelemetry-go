@@ -4,7 +4,7 @@
 
 `go get go.opentelemetry.io/otel/bridge/opentracing`
 
-Assuming you have configured an OpenTelemetry TracerProvider, these will be the steps to follow to wire up the bridge:
+Assuming you have configured an OpenTelemetry `TracerProvider`, these will be the steps to follow to wire up the bridge:
 
 ```go
 import (
