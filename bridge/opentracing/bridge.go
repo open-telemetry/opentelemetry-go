@@ -497,8 +497,8 @@ func otTagsToOTelAttributesKindAndError(tags map[string]interface{}) ([]attribut
 	for k, v := range tags {
 		switch k {
 		case string(otext.SpanKind):
-			if s, ok := v.(string); ok {
-				switch strings.ToLower(s) {
+			if s, ok := v.(otext.SpanKindEnum); ok {
+				switch strings.ToLower(string(s)) {
 				case "client":
 					kind = trace.SpanKindClient
 				case "server":
