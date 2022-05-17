@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	ot "github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -637,7 +638,7 @@ func runOtelOTOtel(t *testing.T, ctx context.Context, name string, callback func
 
 func runOTOtelOT(t *testing.T, ctx context.Context, name string, callback func(*testing.T, context.Context) context.Context) {
 	tr := otel.Tracer("")
-	span, ctx := ot.StartSpanFromContext(ctx, fmt.Sprintf("%s_OT_OtelOT", name), ot.Tag{Key: "span.kind", Value: "client"})
+	span, ctx := ot.StartSpanFromContext(ctx, fmt.Sprintf("%s_OT_OtelOT", name), ot.Tag{Key: "span.kind", Value: ext.SpanKindRPCClient.Value})
 	defer span.Finish()
 	ctx = callback(t, ctx)
 	func(ctx2 context.Context) {

@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 	"sync"
 
@@ -497,8 +498,9 @@ func otTagsToOTelAttributesKindAndError(tags map[string]interface{}) ([]attribut
 	for k, v := range tags {
 		switch k {
 		case string(otext.SpanKind):
-			if s, ok := v.(otext.SpanKindEnum); ok {
-				switch strings.ToLower(string(s)) {
+			refValue := reflect.ValueOf(v)
+			if refValue.Kind() == reflect.String {
+				switch strings.ToLower(refValue.String()) {
 				case "client":
 					kind = trace.SpanKindClient
 				case "server":
