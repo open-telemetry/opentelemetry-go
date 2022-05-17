@@ -127,13 +127,13 @@ type periodicReader struct {
 	shutdownOnce sync.Once
 }
 
+// newTicker allows testing override.
+var newTicker = time.NewTicker
+
 // run continuously collects and exports metric data for the specified
 // interval. This will run until ctx is canceled or times out.
 func (r *periodicReader) run(ctx context.Context, interval time.Duration) {
-	r.wg.Add(1)
-	defer r.wg.Done()
-
-	ticker := time.NewTicker(interval)
+	ticker := newTicker(interval)
 	defer func() { ticker.Stop() }()
 
 	for {
