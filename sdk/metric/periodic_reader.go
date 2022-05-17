@@ -52,10 +52,10 @@ type PeriodicReaderOption interface {
 	apply(periodicReaderConfig) periodicReaderConfig
 }
 
-// periodicReaderOptionFunc applies a set of options to a config.
+// periodicReaderOptionFunc applies a set of options to a periodicReaderConfig.
 type periodicReaderOptionFunc func(periodicReaderConfig) periodicReaderConfig
 
-// apply returns a config with option(s) applied.
+// apply returns a periodicReaderConfig with option(s) applied.
 func (o periodicReaderOptionFunc) apply(conf periodicReaderConfig) periodicReaderConfig {
 	return o(conf)
 }
