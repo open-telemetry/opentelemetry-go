@@ -141,7 +141,9 @@ func (r *periodicReader) run(ctx context.Context, interval time.Duration) {
 		case <-ticker.C:
 			m, err := r.Collect(ctx)
 			if err == nil {
-				err = r.exporter.Export(ctx, m)
+				c, cancel := context.WithTimeout(ctx, r.timeout)
+				err = r.exporter.Export(c, m)
+				cancel()
 			}
 			if err != nil {
 				otel.Handle(err)
