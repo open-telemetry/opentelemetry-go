@@ -104,7 +104,13 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) Reade
 		exporter: exporter,
 		cancel:   cancel,
 	}
-	go r.run(ctx, conf.interval)
+
+	r.wg.Add(1)
+	go func() {
+		defer r.wg.Done()
+		r.run(ctx, conf.interval)
+	}()
+
 	return r
 }
 
