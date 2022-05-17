@@ -190,7 +190,7 @@ func (r *periodicReader) Shutdown(ctx context.Context) error {
 	r.shutdownOnce.Do(func() {
 		// Stop the run loop.
 		r.cancel()
-		r.wg.Done()
+		r.wg.Wait()
 
 		// Any future call to Collect will now return ErrReaderShutdown.
 		r.producer.Store(produceHolder{
