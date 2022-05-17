@@ -48,9 +48,8 @@ type Reader interface {
 	// and send aggregated metric measurements.
 	register(producer)
 
-	// Collect gathers all metrics from the SDK, calling any callbacks necessary.
-	// TODO: How does this impact Push exporters?
-	// Collect will return an error if called after shutdown.
+	// Collect gathers and returns all metric data related to the Reader from
+	// the SDK. An error is returned if this is called after Shutdown.
 	Collect(context.Context) (export.Metrics, error)
 
 	// ForceFlush flushes all metric measurements held in an export pipeline.
