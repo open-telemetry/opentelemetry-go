@@ -16,7 +16,6 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"go.opentelemetry.io/otel/sdk/metric/export"
@@ -75,11 +74,3 @@ func (mr *manualReader) Collect(ctx context.Context) (export.Metrics, error) {
 	}
 	return mr.producer.produce(ctx)
 }
-
-// ErrReaderNotRegistered is returned if Collect or Shutdown are called before
-// the reader is registered with a MeterProvider
-var ErrReaderNotRegistered = fmt.Errorf("reader is not registered")
-
-// ErrReaderShutdown is returned if Collect or Shutdown are called after a
-// reader has been Shutdown once.
-var ErrReaderShutdown = fmt.Errorf("reader is shutdown")

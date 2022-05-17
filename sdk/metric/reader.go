@@ -16,9 +16,18 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
+	"fmt"
 
 	"go.opentelemetry.io/otel/sdk/metric/export"
 )
+
+// ErrReaderNotRegistered is returned if Collect or Shutdown are called before
+// the reader is registered with a MeterProvider
+var ErrReaderNotRegistered = fmt.Errorf("reader is not registered")
+
+// ErrReaderShutdown is returned if Collect or Shutdown are called after a
+// reader has been Shutdown once.
+var ErrReaderShutdown = fmt.Errorf("reader is shutdown")
 
 // Reader is the interface used between the SDK and an
 // exporter.  Control flow is bi-directional through the
