@@ -25,6 +25,7 @@ import (
 	otext "github.com/opentracing/opentracing-go/ext"
 	otlog "github.com/opentracing/opentracing-go/log"
 
+	"github.com/opentracing/opentracing-go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
@@ -639,21 +640,40 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 	if !bridgeSC.otelSpanContext.IsValid() {
 		return ot.ErrInvalidSpanContext
 	}
-	if builtinFormat, ok := format.(ot.BuiltinFormat); !ok || builtinFormat != ot.HTTPHeaders {
+
+	builtinFormat, ok := format.(ot.BuiltinFormat)
+	if !ok {
 		return ot.ErrUnsupportedFormat
 	}
-	hhcarrier, ok := carrier.(ot.HTTPHeadersCarrier)
-	if !ok {
-		return ot.ErrInvalidCarrier
+
+	var textCarrier propagation.TextMapCarrier
+
+	switch builtinFormat {
+	case ot.HTTPHeaders:
+		hhcarrier, ok := carrier.(ot.HTTPHeadersCarrier)
+		if !ok {
+			return ot.ErrInvalidCarrier
+		}
+
+		textCarrier = propagation.HeaderCarrier(hhcarrier)
+	case ot.TextMap:
+		if textCarrier, ok = carrier.(propagation.TextMapCarrier); !ok {
+			var err error
+			if textCarrier, err = NewTextMapWrapperForInject(carrier); err != nil {
+				return err
+			}
+		}
+	default:
+		return ot.ErrUnsupportedFormat
 	}
-	header := http.Header(hhcarrier)
+
 	fs := fakeSpan{
 		Span: noopSpan,
 		sc:   bridgeSC.otelSpanContext,
 	}
 	ctx := trace.ContextWithSpan(context.Background(), fs)
 	ctx = baggage.ContextWithBaggage(ctx, bridgeSC.bag)
-	t.getPropagator().Inject(ctx, propagation.HeaderCarrier(header))
+	t.getPropagator().Inject(ctx, textCarrier)
 	return nil
 }
 
@@ -662,15 +682,33 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 //
 // Currently only the HTTPHeaders format is supported.
 func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.SpanContext, error) {
-	if builtinFormat, ok := format.(ot.BuiltinFormat); !ok || builtinFormat != ot.HTTPHeaders {
+	builtinFormat, ok := format.(ot.BuiltinFormat)
+	if !ok {
 		return nil, ot.ErrUnsupportedFormat
 	}
-	hhcarrier, ok := carrier.(ot.HTTPHeadersCarrier)
-	if !ok {
-		return nil, ot.ErrInvalidCarrier
+
+	var textCarrier propagation.TextMapCarrier
+
+	switch builtinFormat {
+	case ot.HTTPHeaders:
+		hhcarrier, ok := carrier.(ot.HTTPHeadersCarrier)
+		if !ok {
+			return nil, ot.ErrInvalidCarrier
+		}
+
+		textCarrier = propagation.HeaderCarrier(hhcarrier)
+	case ot.TextMap:
+		if textCarrier, ok = carrier.(propagation.TextMapCarrier); !ok {
+			var err error
+			if textCarrier, err = NewTextMapWrapperForInject(carrier); err != nil {
+				return nil, err
+			}
+		}
+	default:
+		return nil, ot.ErrUnsupportedFormat
 	}
-	header := http.Header(hhcarrier)
-	ctx := t.getPropagator().Extract(context.Background(), propagation.HeaderCarrier(header))
+
+	ctx := t.getPropagator().Extract(context.Background(), textCarrier)
 	baggage := baggage.FromContext(ctx)
 	bridgeSC := &bridgeSpanContext{
 		bag:             baggage,
@@ -687,4 +725,98 @@ func (t *BridgeTracer) getPropagator() propagation.TextMapPropagator {
 		return t.propagator
 	}
 	return otel.GetTextMapPropagator()
+}
+
+type textMapWrapper struct {
+	opentracing.TextMapWriter
+	opentracing.TextMapReader
+	readerMap map[string]string
+}
+
+func (t *textMapWrapper) Get(key string) string {
+	if t.readerMap == nil {
+		t.loadMap()
+	}
+
+	return t.readerMap[key]
+}
+
+func (t *textMapWrapper) Set(key string, value string) {
+	t.TextMapWriter.Set(key, value)
+}
+
+func (t *textMapWrapper) Keys() []string {
+	if t.readerMap == nil {
+		t.loadMap()
+	}
+
+	str := make([]string, 0, len(t.readerMap))
+	for key := range t.readerMap {
+		str = append(str, key)
+	}
+
+	return str
+}
+
+func (t *textMapWrapper) loadMap() {
+	t.readerMap = make(map[string]string)
+
+	_ = t.ForeachKey(func(key, val string) error {
+		t.readerMap[key] = val
+		return nil
+	})
+}
+
+func NewTextMapWrapperForExtract(carrier interface{}) (*textMapWrapper, error) {
+	t := &textMapWrapper{}
+
+	reader, ok := carrier.(opentracing.TextMapReader)
+	if !ok {
+		return nil, ot.ErrInvalidCarrier
+	}
+
+	t.TextMapReader = reader
+
+	writer, ok := carrier.(opentracing.TextMapWriter)
+	if ok {
+		t.TextMapWriter = writer
+	} else {
+		t.TextMapWriter = &textMapWriter{}
+	}
+
+	return t, nil
+}
+
+func NewTextMapWrapperForInject(carrier interface{}) (*textMapWrapper, error) {
+	t := &textMapWrapper{}
+
+	writer, ok := carrier.(opentracing.TextMapWriter)
+	if !ok {
+		return nil, ot.ErrInvalidCarrier
+	}
+
+	t.TextMapWriter = writer
+
+	reader, ok := carrier.(opentracing.TextMapReader)
+	if ok {
+		t.TextMapReader = reader
+	} else {
+		t.TextMapReader = &textMapReader{}
+	}
+
+	return t, nil
+}
+
+type textMapWriter struct {
+}
+
+func (t *textMapWriter) Set(key string, value string) {
+	return // maybe print a warning log
+}
+
+type textMapReader struct {
+}
+
+func (t *textMapReader) ForeachKey(handler func(key, val string) error) error {
+	return nil // maybe print a warning log
 }
