@@ -140,7 +140,7 @@ var newTicker = time.NewTicker
 // interval. This will run until ctx is canceled or times out.
 func (r *periodicReader) run(ctx context.Context, interval time.Duration) {
 	ticker := newTicker(interval)
-	defer func() { ticker.Stop() }()
+	defer ticker.Stop()
 
 	for {
 		select {
