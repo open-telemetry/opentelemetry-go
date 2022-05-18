@@ -162,7 +162,8 @@ func (r *periodicReader) run(ctx context.Context, interval time.Duration) {
 
 // register registers p as the producer of this reader.
 func (r *periodicReader) register(p producer) {
-	r.producer.Store(produceHolder{produce: p.produce})
+	// Only register once. If producer is already set, do nothing.
+	r.producer.CompareAndSwap(nil, produceHolder{produce: p.produce})
 }
 
 // Collect gathers and returns all metric data related to the Reader from
