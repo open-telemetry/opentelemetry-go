@@ -35,7 +35,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -46,15 +46,22 @@ func newExporter(ctx context.Context)  /* (someExporter.Exporter, error) */ {
 }
 
 func newTraceProvider(exp sdktrace.SpanExporter) *sdktrace.TracerProvider {
-    // The service.name attribute is required.
-	resource := resource.NewWithAttributes(
-		semconv.SchemaURL,
-		semconv.ServiceNameKey.String("ExampleService"),
+	// Ensure default SDK resources and the required service name are set.
+	r, err := resource.Merge(
+		resource.Default(),
+		resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceNameKey.String("ExampleService"),
+		)
 	)
+	
+	if err != nil {
+		panic(err)
+	}
 
 	return sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exp),
-		sdktrace.WithResource(resource),
+		sdktrace.WithResource(r),
 	)
 }
 
@@ -162,7 +169,7 @@ span.SetAttributes(myKey.String("a value"))
 
 #### Semantic Attributes
 
-Semantic Attributes are attributes that are defined by the [OpenTelemetry Specification][] in order to provide a shared set of attribute keys across multiple languages, frameworks, and runtimes for common concepts like HTTP methods, status codes, user agents, and more. These attributes are available in the `go.opentelemetry.io/otel/semconv/v1.7.0` package.
+Semantic Attributes are attributes that are defined by the [OpenTelemetry Specification][] in order to provide a shared set of attribute keys across multiple languages, frameworks, and runtimes for common concepts like HTTP methods, status codes, user agents, and more. These attributes are available in the `go.opentelemetry.io/otel/semconv/v1.10.0` package.
 
 For details, see [Trace semantic conventions][].
 
@@ -186,6 +193,50 @@ Events can also have attributes of their own -
 ```go
 span.AddEvent("Cancelled wait due to external signal", trace.WithAttributes(attribute.Int("pid", 4328), attribute.String("signal", "SIGHUP")))
 ```
+
+### Set span status
+
+A status can be set on a span, typically used to specify that there was an error in the operation a span is tracking - .`Error`.
+
+```go
+import (
+	// ...
+	"go.opentelemetry.io/otel/codes"
+	// ...
+)
+
+// ...
+
+result, err := operationThatCouldFail()
+if err != nil {
+	span.SetStatus(codes.Error, "operationThatCouldFail failed")
+}
+```
+
+By default, the status for all spans is `Unset`. In rare cases, you may also wish to set the status to `Ok`. This should generally not be necessary, though.
+
+### Record errors
+
+If you have an operation that failed and you wish to capture the error it produced, you can record that error.
+
+```go
+import (
+	// ...
+	"go.opentelemetry.io/otel/codes"
+	// ...
+)
+
+// ...
+
+result, err := operationThatCouldFail()
+if err != nil {
+	span.SetStatus(codes.Error, "operationThatCouldFail failed")
+	span.RecordError(err)
+}
+```
+
+It is highly recommended that you also set a span's status to `Error` when using `RecordError`, unless you do not wish to consider the span tracking a failed operation as an error span.
+The `RecordError` function does **not** automatically set a span status when called.
 
 ## Creating Metrics
 

@@ -214,7 +214,7 @@ func (a *App) Poll(ctx context.Context) (uint, error) {
 	a.l.Print("What Fibonacci number would you like to know: ")
 
 	var n uint
-	_, err := fmt.Fscanf(a.r, "%d", &n)
+	_, err := fmt.Fscanf(a.r, "%d\n", &n)
 
 	// Store n as a string to not overflow an int64.
 	nStr := strconv.FormatUint(uint64(n), 10)
@@ -458,7 +458,7 @@ func (a *App) Poll(ctx context.Context) (uint, error) {
 	a.l.Print("What Fibonacci number would you like to know: ")
 
 	var n uint
-	_, err := fmt.Fscanf(a.r, "%d", &n)
+	_, err := fmt.Fscanf(a.r, "%d\n", &n)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())

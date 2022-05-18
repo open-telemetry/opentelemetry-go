@@ -35,7 +35,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -146,7 +146,7 @@ func TestExporterExportSpan(t *testing.T) {
 	assert.Equal(t, tagVal, uploadedBatch.GetProcess().GetTags()[0].GetVStr())
 }
 
-func Test_spanSnapshotToThrift(t *testing.T) {
+func TestSpanSnapshotToThrift(t *testing.T) {
 	now := time.Now()
 	traceID, _ := trace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
 	spanID, _ := trace.SpanIDFromHex("0102030405060708")

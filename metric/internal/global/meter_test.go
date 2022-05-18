@@ -27,7 +27,6 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
-	"go.opentelemetry.io/otel/metric/nonrecording"
 )
 
 func TestMeterProviderRace(t *testing.T) {
@@ -44,7 +43,7 @@ func TestMeterProviderRace(t *testing.T) {
 		}
 	}()
 
-	mp.setDelegate(nonrecording.NewNoopMeterProvider())
+	mp.setDelegate(metric.NewNoopMeterProvider())
 	close(finish)
 
 }
@@ -84,7 +83,7 @@ func TestMeterRace(t *testing.T) {
 	}()
 
 	wg.Wait()
-	mtr.setDelegate(nonrecording.NewNoopMeterProvider())
+	mtr.setDelegate(metric.NewNoopMeterProvider())
 	close(finish)
 }
 
