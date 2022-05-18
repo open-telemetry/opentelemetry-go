@@ -631,7 +631,7 @@ func (s fakeSpan) SpanContext() trace.SpanContext {
 // Inject is a part of the implementation of the OpenTracing Tracer
 // interface.
 //
-// Currently only the HTTPHeaders format is supported.
+// Currently only the HTTPHeaders and TextMap format is supported.
 func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier interface{}) error {
 	bridgeSC, ok := sm.(*bridgeSpanContext)
 	if !ok {
@@ -659,7 +659,7 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 	case ot.TextMap:
 		if textCarrier, ok = carrier.(propagation.TextMapCarrier); !ok {
 			var err error
-			if textCarrier, err = NewTextMapWrapperForInject(carrier); err != nil {
+			if textCarrier, err = newTextMapWrapperForInject(carrier); err != nil {
 				return err
 			}
 		}
@@ -680,7 +680,7 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 // Extract is a part of the implementation of the OpenTracing Tracer
 // interface.
 //
-// Currently only the HTTPHeaders format is supported.
+// Currently only the HTTPHeaders and TextMap format is supported.
 func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.SpanContext, error) {
 	builtinFormat, ok := format.(ot.BuiltinFormat)
 	if !ok {
@@ -700,7 +700,7 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 	case ot.TextMap:
 		if textCarrier, ok = carrier.(propagation.TextMapCarrier); !ok {
 			var err error
-			if textCarrier, err = NewTextMapWrapperForInject(carrier); err != nil {
+			if textCarrier, err = newTextMapWrapperForExtract(carrier); err != nil {
 				return nil, err
 			}
 		}
@@ -727,6 +727,13 @@ func (t *BridgeTracer) getPropagator() propagation.TextMapPropagator {
 	return otel.GetTextMapPropagator()
 }
 
+// textMapWrapper Provides opentracing.TextMapWriter and opentracing.TextMapReader to
+// propagation.TextMapCarrier compatibility.
+// Usually, Inject method will only use the write-related interface.
+// Extract method will only use the reade-related interface.
+// To avoid panic,
+// when the carrier implements only one of the interfaces,
+// it provides a default implementation of the other interface (textMapWriter and textMapReader).
 type textMapWrapper struct {
 	opentracing.TextMapWriter
 	opentracing.TextMapReader
@@ -767,7 +774,7 @@ func (t *textMapWrapper) loadMap() {
 	})
 }
 
-func NewTextMapWrapperForExtract(carrier interface{}) (*textMapWrapper, error) {
+func newTextMapWrapperForExtract(carrier interface{}) (*textMapWrapper, error) {
 	t := &textMapWrapper{}
 
 	reader, ok := carrier.(opentracing.TextMapReader)
@@ -787,7 +794,7 @@ func NewTextMapWrapperForExtract(carrier interface{}) (*textMapWrapper, error) {
 	return t, nil
 }
 
-func NewTextMapWrapperForInject(carrier interface{}) (*textMapWrapper, error) {
+func newTextMapWrapperForInject(carrier interface{}) (*textMapWrapper, error) {
 	t := &textMapWrapper{}
 
 	writer, ok := carrier.(opentracing.TextMapWriter)
