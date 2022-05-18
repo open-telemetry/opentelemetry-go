@@ -16,6 +16,7 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric/reader"
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -78,6 +79,37 @@ func testReaderHarness(t *testing.T, f readerFactory) {
 
 		// Ensure Reader is allowed clean up attempt.
 		_ = r.Shutdown(ctx)
+	})
+
+	// Requires the race-detector (a default test option for the project).
+	t.Run("MethodConcurrency", func(t *testing.T) {
+		// All reader methods should be concurrent-safe.
+		r := f()
+		r.register(testProducer{})
+		ctx := context.Background()
+
+		var wg sync.WaitGroup
+		const threads = 2
+		for i := 0; i < threads; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				_, _ = r.Collect(ctx)
+			}()
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				_ = r.ForceFlush(ctx)
+			}()
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				_ = r.Shutdown(ctx)
+			}()
+		}
+		wg.Wait()
 	})
 }
 
