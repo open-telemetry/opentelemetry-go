@@ -20,11 +20,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
-const twoSec = time.Second * 2
+const testDur = time.Second * 2
 
 func TestWithTimeout(t *testing.T) {
 	test := func(d time.Duration) time.Duration {
@@ -32,7 +33,7 @@ func TestWithTimeout(t *testing.T) {
 		return newPeriodicReaderConfig(opts).timeout
 	}
 
-	assert.Equal(t, twoSec, test(twoSec))
+	assert.Equal(t, testDur, test(testDur))
 	assert.Equal(t, defaultTimeout, newPeriodicReaderConfig(nil).timeout)
 	assert.Equal(t, defaultTimeout, test(time.Duration(0)), "invalid timeout should use default")
 	assert.Equal(t, defaultTimeout, test(time.Duration(-1)), "invalid timeout should use default")
@@ -44,7 +45,7 @@ func TestWithInterval(t *testing.T) {
 		return newPeriodicReaderConfig(opts).interval
 	}
 
-	assert.Equal(t, twoSec, test(twoSec))
+	assert.Equal(t, testDur, test(testDur))
 	assert.Equal(t, defaultInterval, newPeriodicReaderConfig(nil).interval)
 	assert.Equal(t, defaultInterval, test(time.Duration(0)), "invalid interval should use default")
 	assert.Equal(t, defaultInterval, test(time.Duration(-1)), "invalid interval should use default")
