@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
+// Default periodic reader timing.
 const (
 	defaultTimeout  = time.Millisecond * 30000
 	defaultInterval = time.Millisecond * 60000
@@ -36,6 +37,8 @@ type periodicReaderConfig struct {
 	timeout  time.Duration
 }
 
+// newPeriodicReaderConfig returns a periodicReaderConfig configured with
+// options.
 func newPeriodicReaderConfig(options []PeriodicReaderOption) periodicReaderConfig {
 	c := periodicReaderConfig{
 		interval: defaultInterval,
@@ -91,11 +94,14 @@ func WithInterval(d time.Duration) PeriodicReaderOption {
 }
 
 // NewPeriodicReader returns a Reader that collects and exports metric data to
-// the exporter at the defined interval.
+// the exporter at a defined interval. By default, the returned Reader will
+// collect and export data every 60 seconds, and will cancel export attempts
+// that exceed 30 seconds. The export time is not counted towards the interval
+// between attempts.
 //
 // The Collect method of the returned Reader continues to gather and return
 // metric data to the user. It will not automatically send that data to the
-// exporter.
+// exporter. That is left to the user to accomplish.
 func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) Reader {
 	conf := newPeriodicReaderConfig(options)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -130,7 +136,7 @@ type periodicReader struct {
 // newTicker allows testing override.
 var newTicker = time.NewTicker
 
-// run continuously collects and exports metric data for the specified
+// run continuously collects and exports metric data at the specified
 // interval. This will run until ctx is canceled or times out.
 func (r *periodicReader) run(ctx context.Context, interval time.Duration) {
 	ticker := newTicker(interval)
@@ -160,7 +166,10 @@ func (r *periodicReader) register(p producer) {
 }
 
 // Collect gathers and returns all metric data related to the Reader from
-// the SDK. An error is returned if this is called after Shutdown.
+// the SDK. The returned metric data is not exported to the configured
+// exporter, it is left to the caller to handle that if desired.
+//
+// An error is returned if this is called after Shutdown.
 func (r *periodicReader) Collect(ctx context.Context) (export.Metrics, error) {
 	p := r.producer.Load()
 	if p == nil {
