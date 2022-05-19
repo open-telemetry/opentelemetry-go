@@ -12,21 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-<<<<<<<< HEAD:sdk/metric/manual_reader_test.go
-package metric // import "go.opentelemetry.io/otel/sdk/metric/reader"
-
-import (
-	"testing"
-)
-
-func TestManualReader(t *testing.T) {
-	testReaderHarness(t, func() Reader { return NewManualReader() })
-}
-========
 package semconv // import "go.opentelemetry.io/otel/semconv/v1.10.0"
 
 const (
 	// ExceptionEventName is the name of the Span event representing an exception.
 	ExceptionEventName = "exception"
 )
->>>>>>>> main:semconv/v1.10.0/exception.go
