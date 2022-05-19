@@ -118,14 +118,12 @@ func testReaderHarness(t *testing.T, f readerFactory) {
 	t.Run("ShutdownBeforeRegister", func(t *testing.T) {
 		r := f()
 
-		err := r.Shutdown(context.Background())
-		require.NoError(t, err)
-
-		// Registering after the reader is shutdown, while not expected user
-		// behavior, needs to be not reset the reader to not be shutdown.
+		ctx := context.Background()
+		require.NoError(t, r.Shutdown(ctx))
+		// Registering after shutdown should not revert the shutdown.
 		r.register(testProducer{})
 
-		m, err := r.Collect(context.Background())
+		m, err := r.Collect(ctx)
 		assert.ErrorIs(t, err, ErrReaderShutdown)
 		assert.Equal(t, export.Metrics{}, m)
 	})
