@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"sync"
 
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
@@ -43,6 +44,11 @@ func NewManualReader() Reader {
 func (mr *manualReader) register(p producer) {
 	mr.lock.Lock()
 	defer mr.lock.Unlock()
+	if mr.producer != nil {
+		msg := "did not register manualReader"
+		global.Error(errDuplicateRegister, msg)
+		return
+	}
 	mr.producer = p
 }
 

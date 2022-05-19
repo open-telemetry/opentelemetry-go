@@ -16,9 +16,14 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
+	"fmt"
 
 	"go.opentelemetry.io/otel/sdk/metric/export"
 )
+
+// errDuplicateRegister is logged by a Reader when an attempt to registered it
+// more than once occurs.
+var errDuplicateRegister = fmt.Errorf("duplicate reader registration")
 
 // Reader is the interface used between the SDK and an
 // exporter.  Control flow is bi-directional through the

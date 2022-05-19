@@ -79,14 +79,42 @@ func testReaderHarness(t *testing.T, f readerFactory) {
 		// Ensure Reader is allowed clean up attempt.
 		_ = r.Shutdown(ctx)
 	})
+
+	t.Run("MultipleRegister", func(t *testing.T) {
+		p0 := testProducer{
+			produceFunc: func(ctx context.Context) (export.Metrics, error) {
+				// Differentiate this producer from the second by returning an
+				// error.
+				return testMetrics, assert.AnError
+			},
+		}
+		p1 := testProducer{}
+
+		r := f()
+		r.register(p0)
+		// This should be ignored.
+		r.register(p1)
+
+		ctx := context.Background()
+		_, err := r.Collect(ctx)
+		assert.Equal(t, assert.AnError, err)
+
+		// Ensure Reader is allowed clean up attempt.
+		_ = r.Shutdown(ctx)
+	})
 }
 
 var testMetrics = export.Metrics{
 	// TODO: test with actual data.
 }
 
-type testProducer struct{}
+type testProducer struct {
+	produceFunc func(context.Context) (export.Metrics, error)
+}
 
-func (p testProducer) produce(context.Context) (export.Metrics, error) {
+func (p testProducer) produce(ctx context.Context) (export.Metrics, error) {
+	if p.produceFunc != nil {
+		return p.produceFunc(ctx)
+	}
 	return testMetrics, nil
 }
