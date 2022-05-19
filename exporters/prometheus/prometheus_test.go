@@ -111,7 +111,7 @@ func TestPrometheusExporter(t *testing.T) {
 	require.NoError(t, err)
 	counter, err := meter.SyncFloat64().Counter("counter")
 	require.NoError(t, err)
-	histogram, err := meter.SyncFloat64().Histogram("histogram")
+	hist, err := meter.SyncFloat64().Histogram("histogram")
 	require.NoError(t, err)
 
 	attrs := []attribute.KeyValue{
@@ -137,10 +137,10 @@ func TestPrometheusExporter(t *testing.T) {
 
 	expected = append(expected, expectGauge("intgaugeobserver", `intgaugeobserver{A="B",C="D",R="V"} 1`))
 
-	histogram.Record(ctx, -0.6, attrs...)
-	histogram.Record(ctx, -0.4, attrs...)
-	histogram.Record(ctx, 0.6, attrs...)
-	histogram.Record(ctx, 20, attrs...)
+	hist.Record(ctx, -0.6, attrs...)
+	hist.Record(ctx, -0.4, attrs...)
+	hist.Record(ctx, 0.6, attrs...)
+	hist.Record(ctx, 20, attrs...)
 
 	expected = append(expected, expectHistogram("histogram",
 		`histogram_bucket{A="B",C="D",R="V",le="-0.5"} 1`,

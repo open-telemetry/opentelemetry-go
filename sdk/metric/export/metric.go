@@ -93,7 +93,7 @@ type AggregatorSelector interface {
 	// Note: This is context-free because the aggregator should
 	// not relate to the incoming context.  This call should not
 	// block.
-	AggregatorFor(descriptor *sdkapi.Descriptor, aggregator ...*aggregator.Aggregator)
+	AggregatorFor(descriptor *sdkapi.Descriptor, agg ...*aggregator.Aggregator)
 }
 
 // Checkpointer is the interface used by a Controller to coordinate
@@ -141,7 +141,7 @@ type Exporter interface {
 	//
 	// The InstrumentationLibraryReader interface refers to the
 	// Processor that just completed collection.
-	Export(ctx context.Context, resource *resource.Resource, reader InstrumentationLibraryReader) error
+	Export(ctx context.Context, res *resource.Resource, reader InstrumentationLibraryReader) error
 
 	// TemporalitySelector is an interface used by the Processor
 	// in deciding whether to compute Delta or Cumulative
@@ -232,13 +232,13 @@ func (m Metadata) Attributes() *attribute.Set {
 // Accumulations to send to Processors. The Descriptor, attributes, and
 // Aggregator represent aggregate metric events received over a single
 // collection period.
-func NewAccumulation(descriptor *sdkapi.Descriptor, attrs *attribute.Set, aggregator aggregator.Aggregator) Accumulation {
+func NewAccumulation(descriptor *sdkapi.Descriptor, attrs *attribute.Set, agg aggregator.Aggregator) Accumulation {
 	return Accumulation{
 		Metadata: Metadata{
 			descriptor: descriptor,
 			attrs:      attrs,
 		},
-		aggregator: aggregator,
+		aggregator: agg,
 	}
 }
 
@@ -251,13 +251,13 @@ func (r Accumulation) Aggregator() aggregator.Aggregator {
 // NewRecord allows Processor implementations to construct export records.
 // The Descriptor, attributes, and Aggregator represent aggregate metric
 // events received over a single collection period.
-func NewRecord(descriptor *sdkapi.Descriptor, attrs *attribute.Set, aggregation aggregation.Aggregation, start, end time.Time) Record {
+func NewRecord(descriptor *sdkapi.Descriptor, attrs *attribute.Set, agg aggregation.Aggregation, start, end time.Time) Record {
 	return Record{
 		Metadata: Metadata{
 			descriptor: descriptor,
 			attrs:      attrs,
 		},
-		aggregation: aggregation,
+		aggregation: agg,
 		start:       start,
 		end:         end,
 	}

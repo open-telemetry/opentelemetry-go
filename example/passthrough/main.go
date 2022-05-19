@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -32,7 +33,10 @@ func main() {
 	ctx := context.Background()
 
 	initPassthroughGlobals()
-	tp := nonGlobalTracer()
+	tp, err := nonGlobalTracer()
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer func() { _ = tp.Shutdown(ctx) }()
 
 	// make an initial http request
@@ -74,16 +78,15 @@ func initPassthroughGlobals() {
 
 // nonGlobalTracer creates a trace provider instance for testing, but doesn't
 // set it as the global tracer provider.
-func nonGlobalTracer() *sdktrace.TracerProvider {
-	var err error
+func nonGlobalTracer() (*sdktrace.TracerProvider, error) {
 	exp, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
 	if err != nil {
-		log.Panicf("failed to initialize stdouttrace exporter %v\n", err)
+		return nil, fmt.Errorf("failed to initialize stdouttrace exporter: %w", err)
 	}
 	bsp := sdktrace.NewBatchSpanProcessor(exp)
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithSpanProcessor(bsp),
 	)
-	return tp
+	return tp, nil
 }
