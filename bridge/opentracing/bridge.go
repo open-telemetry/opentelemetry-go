@@ -31,9 +31,16 @@ import (
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 	"go.opentelemetry.io/otel/codes"
 	iBaggage "go.opentelemetry.io/otel/internal/baggage"
-	"go.opentelemetry.io/otel/internal/trace/noop"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+)
+
+var (
+	noopTracer = trace.NewNoopTracerProvider().Tracer("")
+	noopSpan   = func() trace.Span {
+		_, s := noopTracer.Start(context.Background(), "")
+		return s
+	}()
 )
 
 type bridgeSpanContext struct {
@@ -122,7 +129,7 @@ func (s *bridgeSpan) logRecord(record ot.LogRecord) {
 	s.otelSpan.AddEvent(
 		"",
 		trace.WithTimestamp(record.Timestamp),
-		trace.WithAttributes(otLogFieldsToOTelLabels(record.Fields)...),
+		trace.WithAttributes(otLogFieldsToOTelAttrs(record.Fields)...),
 	)
 }
 
@@ -153,7 +160,7 @@ func (s *bridgeSpan) SetTag(key string, value interface{}) ot.Span {
 			s.otelSpan.SetStatus(codes.Error, "")
 		}
 	default:
-		s.otelSpan.SetAttributes(otTagToOTelLabel(key, value))
+		s.otelSpan.SetAttributes(otTagToOTelAttr(key, value))
 	}
 	return s
 }
@@ -161,7 +168,7 @@ func (s *bridgeSpan) SetTag(key string, value interface{}) ot.Span {
 func (s *bridgeSpan) LogFields(fields ...otlog.Field) {
 	s.otelSpan.AddEvent(
 		"",
-		trace.WithAttributes(otLogFieldsToOTelLabels(fields)...),
+		trace.WithAttributes(otLogFieldsToOTelAttrs(fields)...),
 	)
 }
 
@@ -216,10 +223,10 @@ func (e *bridgeFieldEncoder) EmitLazyLogger(value otlog.LazyLogger) {
 }
 
 func (e *bridgeFieldEncoder) emitCommon(key string, value interface{}) {
-	e.pairs = append(e.pairs, otTagToOTelLabel(key, value))
+	e.pairs = append(e.pairs, otTagToOTelAttr(key, value))
 }
 
-func otLogFieldsToOTelLabels(fields []otlog.Field) []attribute.KeyValue {
+func otLogFieldsToOTelAttrs(fields []otlog.Field) []attribute.KeyValue {
 	encoder := &bridgeFieldEncoder{}
 	for _, field := range fields {
 		field.Marshal(encoder)
@@ -321,7 +328,7 @@ var _ ot.TracerContextWithSpanExtension = &BridgeTracer{}
 func NewBridgeTracer() *BridgeTracer {
 	return &BridgeTracer{
 		setTracer: bridgeSetTracer{
-			otelTracer: noop.Tracer,
+			otelTracer: noopTracer,
 		},
 		warningHandler: func(msg string) {},
 		propagator:     nil,
@@ -507,13 +514,13 @@ func otTagsToOTelAttributesKindAndError(tags map[string]interface{}) ([]attribut
 				err = true
 			}
 		default:
-			pairs = append(pairs, otTagToOTelLabel(k, v))
+			pairs = append(pairs, otTagToOTelAttr(k, v))
 		}
 	}
 	return pairs, kind, err
 }
 
-// otTagToOTelLabel converts given key-value into attribute.KeyValue.
+// otTagToOTelAttr converts given key-value into attribute.KeyValue.
 // Note that some conversions are not obvious:
 // - int -> int64
 // - uint -> string
@@ -521,8 +528,8 @@ func otTagsToOTelAttributesKindAndError(tags map[string]interface{}) ([]attribut
 // - uint32 -> int64
 // - uint64 -> string
 // - float32 -> float64
-func otTagToOTelLabel(k string, v interface{}) attribute.KeyValue {
-	key := otTagToOTelLabelKey(k)
+func otTagToOTelAttr(k string, v interface{}) attribute.KeyValue {
+	key := otTagToOTelAttrKey(k)
 	switch val := v.(type) {
 	case bool:
 		return key.Bool(val)
@@ -549,7 +556,7 @@ func otTagToOTelLabel(k string, v interface{}) attribute.KeyValue {
 	}
 }
 
-func otTagToOTelLabelKey(k string) attribute.Key {
+func otTagToOTelAttrKey(k string) attribute.Key {
 	return attribute.Key(k)
 }
 
@@ -641,7 +648,7 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 	}
 	header := http.Header(hhcarrier)
 	fs := fakeSpan{
-		Span: noop.Span,
+		Span: noopSpan,
 		sc:   bridgeSC.otelSpanContext,
 	}
 	ctx := trace.ContextWithSpan(context.Background(), fs)
