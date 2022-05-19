@@ -22,33 +22,3 @@ replace go.opentelemetry.io/otel/exporters/otlp/otlptrace => ../../exporters/otl
 replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc => ../../exporters/otlp/otlptrace/otlptracegrpc
 
 replace go.opentelemetry.io/otel/exporters/otlp/internal/retry => ../../exporters/otlp/internal/retry
-
-replace go.opentelemetry.io/otel/bridge/opentracing => ../../bridge/opentracing
-
-replace go.opentelemetry.io/otel/example/fib => ../fib
-
-replace go.opentelemetry.io/otel/example/jaeger => ../jaeger
-
-replace go.opentelemetry.io/otel/example/namedtracer => ../namedtracer
-
-replace go.opentelemetry.io/otel/example/otel-collector => ./
-
-replace go.opentelemetry.io/otel/example/passthrough => ../passthrough
-
-replace go.opentelemetry.io/otel/example/zipkin => ../zipkin
-
-replace go.opentelemetry.io/otel/exporters/jaeger => ../../exporters/jaeger
-
-replace go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp => ../../exporters/otlp/otlptrace/otlptracehttp
-
-replace go.opentelemetry.io/otel/exporters/stdout/stdouttrace => ../../exporters/stdout/stdouttrace
-
-replace go.opentelemetry.io/otel/exporters/zipkin => ../../exporters/zipkin
-
-replace go.opentelemetry.io/otel/internal/tools => ../../internal/tools
-
-replace go.opentelemetry.io/otel/metric => ../../metric
-
-replace go.opentelemetry.io/otel/schema => ../../schema
-
-replace go.opentelemetry.io/otel/sdk/metric => ../../sdk/metric
