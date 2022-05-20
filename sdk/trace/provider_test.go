@@ -53,7 +53,7 @@ func TestShutdownTraceProvider(t *testing.T) {
 
 	_ = stp.Shutdown(context.Background())
 
-	if sp.running != false {
+	if sp.running {
 		t.Errorf("Error shutdown basicSpanProcesor\n")
 	}
 }

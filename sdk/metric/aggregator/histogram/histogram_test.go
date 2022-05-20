@@ -193,7 +193,6 @@ func TestHistogramNotSet(t *testing.T) {
 // checkHistogram ensures the correct aggregated state between `all`
 // (test aggregator) and `agg` (code under test).
 func checkHistogram(t *testing.T, all aggregatortest.Numbers, profile aggregatortest.Profile, agg *histogram.Aggregator) {
-
 	all.Sort()
 
 	asum, err := agg.Sum()

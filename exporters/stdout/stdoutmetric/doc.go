@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package stdout contains an OpenTelemetry exporter for metric telemetry
-// to be written to an output destination as JSON.
+// Package stdoutmetric contains an OpenTelemetry exporter for metric
+// telemetry to be written to an output destination as JSON.
 //
 // This package is currently in a pre-GA phase. Backwards incompatible changes
 // may be introduced in subsequent minor version releases as we work to track

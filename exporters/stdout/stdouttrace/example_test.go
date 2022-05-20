@@ -16,6 +16,7 @@ package stdouttrace_test
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"go.opentelemetry.io/otel"
@@ -63,10 +64,10 @@ func Resource() *resource.Resource {
 	)
 }
 
-func InstallExportPipeline(ctx context.Context) func() {
+func InstallExportPipeline(ctx context.Context) (func(context.Context) error, error) {
 	exporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
 	if err != nil {
-		log.Fatalf("creating stdout exporter: %v", err)
+		return nil, fmt.Errorf("creating stdout exporter: %w", err)
 	}
 
 	tracerProvider := sdktrace.NewTracerProvider(
@@ -75,19 +76,22 @@ func InstallExportPipeline(ctx context.Context) func() {
 	)
 	otel.SetTracerProvider(tracerProvider)
 
-	return func() {
-		if err := tracerProvider.Shutdown(ctx); err != nil {
-			log.Fatalf("stopping tracer provider: %v", err)
-		}
-	}
+	return tracerProvider.Shutdown, nil
 }
 
 func Example() {
 	ctx := context.Background()
 
 	// Registers a tracer Provider globally.
-	cleanup := InstallExportPipeline(ctx)
-	defer cleanup()
+	shutdown, err := InstallExportPipeline(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		if err := shutdown(ctx); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	log.Println("the answer is", add(ctx, multiply(ctx, multiply(ctx, 2, 2), 10), 2))
 }

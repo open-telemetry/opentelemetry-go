@@ -75,7 +75,6 @@ func InstrumentationLibraryReader(ctx context.Context, temporalitySelector aggre
 	var sms []*metricpb.ScopeMetrics
 
 	err := ilmr.ForEach(func(lib instrumentation.Library, mr export.Reader) error {
-
 		records, errc := source(ctx, temporalitySelector, mr)
 
 		// Start a fixed number of goroutines to transform records.
@@ -194,7 +193,6 @@ func sink(ctx context.Context, in <-chan result) ([]*metricpb.Metric, error) {
 		if !ok {
 			grouped[mID] = res.Metric
 			continue
-
 		}
 		// Note: There is extra work happening in this code that can be
 		// improved when the work described in #2119 is completed. The SDK has

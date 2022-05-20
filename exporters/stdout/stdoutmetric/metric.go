@@ -53,7 +53,6 @@ func (e *metricExporter) Export(_ context.Context, res *resource.Resource, reade
 	var aggError error
 	var batch []line
 	aggError = reader.ForEach(func(lib instrumentation.Library, mr export.Reader) error {
-
 		var instAttrs []attribute.KeyValue
 		if name := lib.Name; name != "" {
 			instAttrs = append(instAttrs, attribute.String("instrumentation.name", name))
@@ -101,20 +100,20 @@ func (e *metricExporter) Export(_ context.Context, res *resource.Resource, reade
 
 			var sb strings.Builder
 
-			sb.WriteString(desc.Name())
+			_, _ = sb.WriteString(desc.Name())
 
 			if len(encodedAttrs) > 0 || len(encodedResource) > 0 || len(encodedInstAttrs) > 0 {
-				sb.WriteRune('{')
-				sb.WriteString(encodedResource)
+				_, _ = sb.WriteRune('{')
+				_, _ = sb.WriteString(encodedResource)
 				if len(encodedInstAttrs) > 0 && len(encodedResource) > 0 {
-					sb.WriteRune(',')
+					_, _ = sb.WriteRune(',')
 				}
-				sb.WriteString(encodedInstAttrs)
+				_, _ = sb.WriteString(encodedInstAttrs)
 				if len(encodedAttrs) > 0 && (len(encodedInstAttrs) > 0 || len(encodedResource) > 0) {
-					sb.WriteRune(',')
+					_, _ = sb.WriteRune(',')
 				}
-				sb.WriteString(encodedAttrs)
-				sb.WriteRune('}')
+				_, _ = sb.WriteString(encodedAttrs)
+				_, _ = sb.WriteRune('}')
 			}
 
 			expose.Name = sb.String()

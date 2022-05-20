@@ -81,6 +81,8 @@ type Controller struct {
 var _ export.InstrumentationLibraryReader = &Controller{}
 var _ metric.MeterProvider = &Controller{}
 
+// Meter returns a new Meter defined by instrumentationName and configured
+// with opts.
 func (c *Controller) Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter {
 	cfg := metric.NewMeterConfig(opts...)
 	library := instrumentation.Library{
@@ -310,7 +312,7 @@ func (c *Controller) checkpointSingleAccumulator(ctx context.Context, ac *accumu
 
 // export calls the exporter with a read lock on the Reader,
 // applying the configured export timeout.
-func (c *Controller) export(ctx context.Context) error {
+func (c *Controller) export(ctx context.Context) error { // nolint:revive  // method name shadows import.
 	if c.pushTimeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, c.pushTimeout)

@@ -155,7 +155,7 @@ func (t *MockTracer) getRandSpanID() trace.SpanID {
 	defer t.randLock.Unlock()
 
 	sid := trace.SpanID{}
-	t.rand.Read(sid[:])
+	_, _ = t.rand.Read(sid[:])
 
 	return sid
 }
@@ -165,7 +165,7 @@ func (t *MockTracer) getRandTraceID() trace.TraceID {
 	defer t.randLock.Unlock()
 
 	tid := trace.TraceID{}
-	t.rand.Read(tid[:])
+	_, _ = t.rand.Read(tid[:])
 
 	return tid
 }

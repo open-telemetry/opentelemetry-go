@@ -125,7 +125,7 @@ func TestHandlerTestSuite(t *testing.T) {
 
 func TestHandlerRace(t *testing.T) {
 	go SetErrorHandler(&errLogger{log.New(os.Stderr, "", 0)})
-	go Handle(errors.New("Error"))
+	go Handle(errors.New("error"))
 }
 
 func BenchmarkErrorHandler(b *testing.B) {
@@ -135,7 +135,7 @@ func BenchmarkErrorHandler(b *testing.B) {
 
 	globalErrorHandler.setDelegate(primary)
 
-	err := errors.New("BenchmarkErrorHandler")
+	err := errors.New("benchmark error handler")
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -184,7 +184,7 @@ func BenchmarkDefaultErrorHandlerHandle(b *testing.B) {
 	)
 
 	eh := GetErrorHandler()
-	err := errors.New("BenchmarkDefaultErrorHandlerHandle")
+	err := errors.New("benchmark default error handler handle")
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -198,7 +198,7 @@ func BenchmarkDefaultErrorHandlerHandle(b *testing.B) {
 func BenchmarkDelegatedErrorHandlerHandle(b *testing.B) {
 	eh := GetErrorHandler()
 	SetErrorHandler(&errLogger{l: log.New(ioutil.Discard, "", 0)})
-	err := errors.New("BenchmarkDelegatedErrorHandlerHandle")
+	err := errors.New("benchmark delegated error handler handle")
 
 	b.ReportAllocs()
 	b.ResetTimer()

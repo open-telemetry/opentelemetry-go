@@ -16,6 +16,7 @@ package stdoutmetric_test
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -60,10 +61,10 @@ func multiply(ctx context.Context, x, y int64) int64 {
 	return x * y
 }
 
-func InstallExportPipeline(ctx context.Context) func() {
+func InstallExportPipeline(ctx context.Context) (func(context.Context) error, error) {
 	exporter, err := stdoutmetric.New(stdoutmetric.WithPrettyPrint())
 	if err != nil {
-		log.Fatalf("creating stdoutmetric exporter: %v", err)
+		return nil, fmt.Errorf("creating stdoutmetric exporter: %w", err)
 	}
 
 	pusher := controller.New(
@@ -89,19 +90,22 @@ func InstallExportPipeline(ctx context.Context) func() {
 		log.Fatalf("creating instrument: %v", err)
 	}
 
-	return func() {
-		if err := pusher.Stop(ctx); err != nil {
-			log.Fatalf("stopping push controller: %v", err)
-		}
-	}
+	return pusher.Stop, nil
 }
 
 func Example() {
 	ctx := context.Background()
 
 	// TODO: Registers a meter Provider globally.
-	cleanup := InstallExportPipeline(ctx)
-	defer cleanup()
+	shutdown, err := InstallExportPipeline(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		if err := shutdown(ctx); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	log.Println("the answer is", add(ctx, multiply(ctx, multiply(ctx, 2, 2), 10), 2))
 }
