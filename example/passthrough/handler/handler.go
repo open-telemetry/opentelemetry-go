@@ -44,7 +44,7 @@ func New(next func(r *http.Request)) *Handler {
 	}
 }
 
-// HandleHTTPReq mimics what an instrumented http server does
+// HandleHTTPReq mimics what an instrumented http server does.
 func (h *Handler) HandleHTTPReq(r *http.Request) {
 	ctx := h.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
 	var span trace.Span
@@ -58,7 +58,7 @@ func (h *Handler) HandleHTTPReq(r *http.Request) {
 	h.makeOutgoingRequest(ctx)
 }
 
-// makeOutgoingRequest mimics what an instrumented http client does
+// makeOutgoingRequest mimics what an instrumented http client does.
 func (h *Handler) makeOutgoingRequest(ctx context.Context) {
 	// make a new http request
 	r, err := http.NewRequest("", "", nil)

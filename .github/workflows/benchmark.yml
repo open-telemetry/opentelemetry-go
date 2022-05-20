@@ -29,5 +29,5 @@ jobs:
           output-file-path: output.txt
           external-data-json-path: ./benchmarks/data.json
           auto-push: false
-          fail-on-alert: true
+          fail-on-alert: false
           alert-threshold: "400%"

@@ -25,7 +25,7 @@ import (
 // that code provides built-in instrumentation. If the instrumentationName is
 // empty, then a implementation defined default name will be used instead.
 //
-// This is short for MeterProvider().Meter(name)
+// This is short for MeterProvider().Meter(name).
 func Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter {
 	return MeterProvider().Meter(instrumentationName, opts...)
 }

@@ -16,13 +16,13 @@ package zipkin // import "go.opentelemetry.io/otel/exporters/zipkin"
 
 import "os"
 
-// Environment variable names
+// Environment variable names.
 const (
-	// Endpoint for Zipkin collector
+	// Endpoint for Zipkin collector.
 	envEndpoint = "OTEL_EXPORTER_ZIPKIN_ENDPOINT"
 )
 
-// envOr returns an env variable's value if it is exists or the default if not
+// envOr returns an env variable's value if it is exists or the default if not.
 func envOr(key, defaultValue string) string {
 	if v, ok := os.LookupEnv(key); ok && v != "" {
 		return v

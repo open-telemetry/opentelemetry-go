@@ -28,7 +28,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/jaeger/internal/third_party/thrift/lib/go/thrift"
 )
 
-// batchUploader send a batch of spans to Jaeger
+// batchUploader send a batch of spans to Jaeger.
 type batchUploader interface {
 	upload(context.Context, *gen.Batch) error
 	shutdown(context.Context) error
