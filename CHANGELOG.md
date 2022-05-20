@@ -8,11 +8,49 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- The `crosslink` make target has been updated to use the `go.opentelemetry.io/build-tools/crosslink` package. (#2886)
+
+## [1.7.0/0.30.0] - 2022-04-28
+
+### Added
+
+- Add the `go.opentelemetry.io/otel/semconv/v1.8.0` package.
+  The package contains semantic conventions from the `v1.8.0` version of the OpenTelemetry specification. (#2763)
+- Add the `go.opentelemetry.io/otel/semconv/v1.9.0` package.
+  The package contains semantic conventions from the `v1.9.0` version of the OpenTelemetry specification. (#2792)
+- Add the `go.opentelemetry.io/otel/semconv/v1.10.0` package.
+  The package contains semantic conventions from the `v1.10.0` version of the OpenTelemetry specification. (#2842)
+- Added an in-memory exporter to metrictest to aid testing with a full SDK. (#2776)
+
 ### Fixed
 
-- Delegated instruments are unwrapped before delegating Callbacks. (#2784)
-- Resolve supply-chain failure for the markdown-link-checker GitHub action by calling the CLI directly. (#2834)
-- Remove import of `testing` package in non-tests builds. (#2786)
+- Globally delegated instruments are unwrapped before delegating asynchronous callbacks. (#2784)
+- Remove import of `testing` package in non-tests builds of the `go.opentelemetry.io/otel` package. (#2786)
+
+### Changed
+
+- The `WithLabelEncoder` option from the `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric` package is renamed to `WithAttributeEncoder`. (#2790)
+- The `LabelFilterSelector` interface from `go.opentelemetry.io/otel/sdk/metric/processor/reducer` is renamed to `AttributeFilterSelector`.
+  The method included in the renamed interface also changed from `LabelFilterFor` to `AttributeFilterFor`. (#2790)
+- The `Metadata.Labels` method from the `go.opentelemetry.io/otel/sdk/metric/export` package is renamed to `Metadata.Attributes`.
+  Consequentially, the `Record` type from the same package also has had the embedded method renamed. (#2790)
+- Move metric no-op implementation form `nonrecording` to `metric` package. (#2866)
+
+### Deprecated
+
+- The `Iterator.Label` method in the `go.opentelemetry.io/otel/attribute` package is deprecated.
+  Use the equivalent `Iterator.Attribute` method instead. (#2790)
+- The `Iterator.IndexedLabel` method in the `go.opentelemetry.io/otel/attribute` package is deprecated.
+  Use the equivalent `Iterator.IndexedAttribute` method instead. (#2790)
+- The `MergeIterator.Label` method in the `go.opentelemetry.io/otel/attribute` package is deprecated.
+  Use the equivalent `MergeIterator.Attribute` method instead. (#2790)
+
+### Removed
+
+- Removed the `Batch` type from the `go.opentelemetry.io/otel/sdk/metric/metrictest` package. (#2864)
+- Removed the `Measurement` type from the `go.opentelemetry.io/otel/sdk/metric/metrictest` package. (#2864)
 
 ## [0.29.0] - 2022-04-11
 
@@ -1819,7 +1857,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/metric/v0.29.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.7.0...HEAD
+[1.7.0/0.30.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.7.0
 [0.29.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/metric/v0.29.0
 [1.6.3]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.6.3
 [1.6.2]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.6.2
