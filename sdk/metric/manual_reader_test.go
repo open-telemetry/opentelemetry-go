@@ -16,8 +16,10 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric/reader"
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/suite"
 )
 
 func TestManualReader(t *testing.T) {
-	testReaderHarness(t, func() Reader { return NewManualReader() })
+	suite.Run(t, &readerTestSuite{Factory: NewManualReader})
 }
