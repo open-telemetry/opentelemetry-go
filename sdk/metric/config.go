@@ -26,7 +26,7 @@ import (
 // config contains configuration options for a MeterProvider.
 type config struct {
 	res     *resource.Resource
-	readers map[Reader]view.Config
+	readers map[Reader][]view.Config
 }
 
 // readerSignals returns a force-flush and shutdown function for a
@@ -116,18 +116,21 @@ func WithResource(res *resource.Resource) Option {
 	})
 }
 
-// WithReader associates a Reader with a MeterProvider. Any passed view
-// options will be used to associate a view with the Reader. If no options are
-// passed the default view will be use for the Reader.
+// WithReader associates a Reader with a MeterProvider. Any passed view config
+// will be used to associate a view with the Reader. If no configs are passed
+// the default view will be use for the Reader.
+//
+// Passing this option multiple times for the same Reader will overwrite. The
+// last option passed will be the one used for that Reader.
 //
 // By default, if this option is not used, the MeterProvider will perform no
 // operations; no data will be exported without a Reader.
-func WithReader(r Reader, opts ...view.Option) Option {
+func WithReader(r Reader, confs ...view.Config) Option {
 	return optionFunc(func(cfg config) config {
 		if cfg.readers == nil {
-			cfg.readers = make(map[Reader]view.Config)
+			cfg.readers = make(map[Reader][]view.Config)
 		}
-		cfg.readers[r] = view.New(opts...)
+		cfg.readers[r] = confs
 		return cfg
 	})
 }
