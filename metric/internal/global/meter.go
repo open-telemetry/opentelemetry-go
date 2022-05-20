@@ -201,7 +201,7 @@ func unwrapInstruments(instruments []instrument.Asynchronous) []instrument.Async
 	return out
 }
 
-// SyncInt64 is the namespace for the Synchronous Integer instruments
+// SyncInt64 is the namespace for the Synchronous Integer instruments.
 func (m *meter) SyncInt64() syncint64.InstrumentProvider {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.SyncInt64()
@@ -209,7 +209,7 @@ func (m *meter) SyncInt64() syncint64.InstrumentProvider {
 	return (*siInstProvider)(m)
 }
 
-// SyncFloat64 is the namespace for the Synchronous Float instruments
+// SyncFloat64 is the namespace for the Synchronous Float instruments.
 func (m *meter) SyncFloat64() syncfloat64.InstrumentProvider {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.SyncFloat64()

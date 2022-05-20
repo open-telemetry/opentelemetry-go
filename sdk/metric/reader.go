@@ -25,7 +25,7 @@ import (
 )
 
 // ErrReaderNotRegistered is returned if Collect or Shutdown are called before
-// the reader is registered with a MeterProvider
+// the reader is registered with a MeterProvider.
 var ErrReaderNotRegistered = fmt.Errorf("reader is not registered")
 
 // ErrReaderShutdown is returned if Collect or Shutdown are called after a
