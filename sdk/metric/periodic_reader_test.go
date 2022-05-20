@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/metric/export"
@@ -83,31 +84,46 @@ func (e *fnExporter) Shutdown(ctx context.Context) error {
 	return nil
 }
 
+type periodicReaderTestSuite struct {
+	*readerTestSuite
+
+	ErrReader Reader
+}
+
+func (ts *periodicReaderTestSuite) SetupTest() {
+	ts.readerTestSuite.SetupTest()
+
+	e := &fnExporter{
+		exportFunc:   func(context.Context, export.Metrics) error { return assert.AnError },
+		flushFunc:    func(context.Context) error { return assert.AnError },
+		shutdownFunc: func(context.Context) error { return assert.AnError },
+	}
+
+	ts.ErrReader = NewPeriodicReader(e)
+}
+
+func (ts *periodicReaderTestSuite) TearDownTest() {
+	ts.readerTestSuite.TearDownTest()
+
+	_ = ts.ErrReader.Shutdown(context.Background())
+}
+
+func (ts *periodicReaderTestSuite) TestForceFlushPropagated() {
+	ts.Equal(assert.AnError, ts.ErrReader.ForceFlush(context.Background()))
+}
+
+func (ts *periodicReaderTestSuite) TestShutdownPropagated() {
+	ts.Equal(assert.AnError, ts.ErrReader.Shutdown(context.Background()))
+}
+
 func TestPeriodicReader(t *testing.T) {
-	testReaderHarness(t, func() Reader {
-		return NewPeriodicReader(new(fnExporter))
+	suite.Run(t, &periodicReaderTestSuite{
+		readerTestSuite: &readerTestSuite{
+			Factory: func() Reader {
+				return NewPeriodicReader(new(fnExporter))
+			},
+		},
 	})
-}
-
-func TestPeriodicReaderForceFlushPropagated(t *testing.T) {
-	exp := &fnExporter{
-		flushFunc: func(ctx context.Context) error { return assert.AnError },
-	}
-	r := NewPeriodicReader(exp)
-	ctx := context.Background()
-	assert.Equal(t, assert.AnError, r.ForceFlush(ctx))
-
-	// Ensure Reader is allowed clean up attempt.
-	_ = r.Shutdown(ctx)
-}
-
-func TestPeriodicReaderShutdownPropagated(t *testing.T) {
-	exp := &fnExporter{
-		shutdownFunc: func(ctx context.Context) error { return assert.AnError },
-	}
-	r := NewPeriodicReader(exp)
-	ctx := context.Background()
-	assert.Equal(t, assert.AnError, r.Shutdown(ctx))
 }
 
 type chErrorHandler struct {

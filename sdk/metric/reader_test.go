@@ -20,113 +20,104 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric/reader"
 import (
 	"context"
 	"sync"
-	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 
 	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
-type readerFactory func() Reader
+type readerTestSuite struct {
+	suite.Suite
 
-func testReaderHarness(t *testing.T, f readerFactory) {
-	t.Run("ErrorForNotRegistered", func(t *testing.T) {
-		r := f()
-		ctx := context.Background()
+	Factory func() Reader
+	Reader  Reader
+}
 
-		_, err := r.Collect(ctx)
-		require.ErrorIs(t, err, ErrReaderNotRegistered)
+func (ts *readerTestSuite) SetupTest() {
+	ts.Reader = ts.Factory()
+}
 
-		// Ensure Reader is allowed clean up attempt.
-		_ = r.Shutdown(ctx)
-	})
+func (ts *readerTestSuite) TearDownTest() {
+	// Ensure Reader is allowed attempt to clean up.
+	_ = ts.Reader.Shutdown(context.Background())
+}
 
-	t.Run("Producer", func(t *testing.T) {
-		r := f()
-		r.register(testProducer{})
-		ctx := context.Background()
+func (ts *readerTestSuite) TestErrorForNotRegistered() {
+	_, err := ts.Reader.Collect(context.Background())
+	ts.ErrorIs(err, ErrReaderNotRegistered)
+}
 
-		m, err := r.Collect(ctx)
-		assert.NoError(t, err)
-		assert.Equal(t, testMetrics, m)
+func (ts *readerTestSuite) TestProducer() {
+	ts.Reader.register(testProducer{})
+	m, err := ts.Reader.Collect(context.Background())
+	ts.NoError(err)
+	ts.Equal(testMetrics, m)
+}
 
-		// Ensure Reader is allowed clean up attempt.
-		_ = r.Shutdown(ctx)
-	})
+func (ts *readerTestSuite) TestCollectAfterShutdown() {
+	ctx := context.Background()
+	ts.Reader.register(testProducer{})
+	ts.Require().NoError(ts.Reader.Shutdown(ctx))
 
-	t.Run("CollectAfterShutdown", func(t *testing.T) {
-		r := f()
-		r.register(testProducer{})
-		require.NoError(t, r.Shutdown(context.Background()))
+	m, err := ts.Reader.Collect(ctx)
+	ts.ErrorIs(err, ErrReaderShutdown)
+	ts.Equal(export.Metrics{}, m)
+}
 
-		m, err := r.Collect(context.Background())
-		assert.ErrorIs(t, err, ErrReaderShutdown)
-		assert.Equal(t, export.Metrics{}, m)
-	})
+func (ts *readerTestSuite) TestShutdownTwice() {
+	ctx := context.Background()
+	ts.Reader.register(testProducer{})
+	ts.Require().NoError(ts.Reader.Shutdown(ctx))
+	ts.ErrorIs(ts.Reader.Shutdown(ctx), ErrReaderShutdown)
+}
 
-	t.Run("ShutdownTwice", func(t *testing.T) {
-		r := f()
-		r.register(testProducer{})
-		require.NoError(t, r.Shutdown(context.Background()))
+func (ts *readerTestSuite) TestMultipleForceFlush() {
+	ctx := context.Background()
+	ts.Reader.register(testProducer{})
+	ts.Require().NoError(ts.Reader.ForceFlush(ctx))
+	ts.NoError(ts.Reader.ForceFlush(ctx))
+}
 
-		assert.ErrorIs(t, r.Shutdown(context.Background()), ErrReaderShutdown)
-	})
-
-	t.Run("MultipleForceFlush", func(t *testing.T) {
-		r := f()
-		r.register(testProducer{})
-		ctx := context.Background()
-		require.NoError(t, r.ForceFlush(ctx))
-		assert.NoError(t, r.ForceFlush(ctx))
-
-		// Ensure Reader is allowed clean up attempt.
-		_ = r.Shutdown(ctx)
-	})
-
+func (ts *readerTestSuite) TestMethodConcurrency() {
 	// Requires the race-detector (a default test option for the project).
-	t.Run("MethodConcurrency", func(t *testing.T) {
-		// All reader methods should be concurrent-safe.
-		r := f()
-		r.register(testProducer{})
-		ctx := context.Background()
 
-		var wg sync.WaitGroup
-		const threads = 2
-		for i := 0; i < threads; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				_, _ = r.Collect(ctx)
-			}()
+	// All reader methods should be concurrent-safe.
+	ts.Reader.register(testProducer{})
+	ctx := context.Background()
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				_ = r.ForceFlush(ctx)
-			}()
+	var wg sync.WaitGroup
+	const threads = 2
+	for i := 0; i < threads; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, _ = ts.Reader.Collect(ctx)
+		}()
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				_ = r.Shutdown(ctx)
-			}()
-		}
-		wg.Wait()
-	})
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = ts.Reader.ForceFlush(ctx)
+		}()
 
-	t.Run("ShutdownBeforeRegister", func(t *testing.T) {
-		r := f()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = ts.Reader.Shutdown(ctx)
+		}()
+	}
+	wg.Wait()
+}
 
-		ctx := context.Background()
-		require.NoError(t, r.Shutdown(ctx))
-		// Registering after shutdown should not revert the shutdown.
-		r.register(testProducer{})
+func (ts *readerTestSuite) TestShutdownBeforeRegister() {
+	ctx := context.Background()
+	ts.Require().NoError(ts.Reader.Shutdown(ctx))
+	// Registering after shutdown should not revert the shutdown.
+	ts.Reader.register(testProducer{})
 
-		m, err := r.Collect(ctx)
-		assert.ErrorIs(t, err, ErrReaderShutdown)
-		assert.Equal(t, export.Metrics{}, m)
-	})
+	m, err := ts.Reader.Collect(ctx)
+	ts.ErrorIs(err, ErrReaderShutdown)
+	ts.Equal(export.Metrics{}, m)
 }
 
 var testMetrics = export.Metrics{
