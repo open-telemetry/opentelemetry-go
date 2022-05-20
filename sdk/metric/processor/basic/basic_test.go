@@ -36,7 +36,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
-	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -138,7 +137,7 @@ func testProcessor(
 
 	// Note: this selector uses the instrument name to dictate
 	// aggregation kind.
-	selector := processorTest.AggregatorSelector()
+	selector := processortest.AggregatorSelector()
 
 	labs1 := []attribute.KeyValue{attribute.String("L1", "V")}
 	labs2 := []attribute.KeyValue{attribute.String("L2", "V")}
@@ -152,7 +151,6 @@ func testProcessor(
 		desc2 := metrictest.NewDescriptor(fmt.Sprint("inst2", instSuffix), mkind, nkind)
 
 		for nc := 0; nc < nCheckpoint; nc++ {
-
 			// The input is 10 per update, scaled by
 			// the number of checkpoints for
 			// cumulative instruments:
@@ -188,7 +186,7 @@ func testProcessor(
 				}
 
 				// Test the final checkpoint state.
-				records1 := processorTest.NewOutput(attribute.DefaultEncoder())
+				records1 := processortest.NewOutput(attribute.DefaultEncoder())
 				require.NoError(t, reader.ForEach(aggregation.ConstantTemporalitySelector(aggTemp), records1.AddRecord))
 
 				if !expectConversion {
@@ -274,19 +272,19 @@ func (bogusExporter) Export(context.Context, export.Reader) error {
 
 func TestBasicInconsistent(t *testing.T) {
 	// Test double-start
-	b := basic.New(processorTest.AggregatorSelector(), aggregation.StatelessTemporalitySelector())
+	b := basic.New(processortest.AggregatorSelector(), aggregation.StatelessTemporalitySelector())
 
 	b.StartCollection()
 	b.StartCollection()
 	require.Equal(t, basic.ErrInconsistentState, b.FinishCollection())
 
 	// Test finish without start
-	b = basic.New(processorTest.AggregatorSelector(), aggregation.StatelessTemporalitySelector())
+	b = basic.New(processortest.AggregatorSelector(), aggregation.StatelessTemporalitySelector())
 
 	require.Equal(t, basic.ErrInconsistentState, b.FinishCollection())
 
 	// Test no finish
-	b = basic.New(processorTest.AggregatorSelector(), aggregation.StatelessTemporalitySelector())
+	b = basic.New(processortest.AggregatorSelector(), aggregation.StatelessTemporalitySelector())
 
 	b.StartCollection()
 	require.Equal(
@@ -299,14 +297,14 @@ func TestBasicInconsistent(t *testing.T) {
 	)
 
 	// Test no start
-	b = basic.New(processorTest.AggregatorSelector(), aggregation.StatelessTemporalitySelector())
+	b = basic.New(processortest.AggregatorSelector(), aggregation.StatelessTemporalitySelector())
 
 	desc := metrictest.NewDescriptor("inst", sdkapi.CounterInstrumentKind, number.Int64Kind)
 	accum := export.NewAccumulation(&desc, attribute.EmptySet(), aggregatortest.NoopAggregator{})
 	require.Equal(t, basic.ErrInconsistentState, b.Process(accum))
 
 	// Test invalid kind:
-	b = basic.New(processorTest.AggregatorSelector(), aggregation.StatelessTemporalitySelector())
+	b = basic.New(processortest.AggregatorSelector(), aggregation.StatelessTemporalitySelector())
 	b.StartCollection()
 	require.NoError(t, b.Process(accum))
 	require.NoError(t, b.FinishCollection())
@@ -316,13 +314,12 @@ func TestBasicInconsistent(t *testing.T) {
 		func(export.Record) error { return nil },
 	)
 	require.True(t, errors.Is(err, basic.ErrInvalidTemporality))
-
 }
 
 func TestBasicTimestamps(t *testing.T) {
 	beforeNew := time.Now()
 	time.Sleep(time.Nanosecond)
-	b := basic.New(processorTest.AggregatorSelector(), aggregation.StatelessTemporalitySelector())
+	b := basic.New(processortest.AggregatorSelector(), aggregation.StatelessTemporalitySelector())
 	time.Sleep(time.Nanosecond)
 	afterNew := time.Now()
 
@@ -372,7 +369,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 	aggTempSel := aggregation.CumulativeTemporalitySelector()
 
 	desc := metrictest.NewDescriptor("inst.sum", sdkapi.CounterInstrumentKind, number.Int64Kind)
-	selector := processorTest.AggregatorSelector()
+	selector := processortest.AggregatorSelector()
 
 	processor := basic.New(selector, aggTempSel, basic.WithMemory(false))
 	reader := processor.Reader()
@@ -383,7 +380,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 		require.NoError(t, processor.FinishCollection())
 
 		// Verify zero elements
-		records := processorTest.NewOutput(attribute.DefaultEncoder())
+		records := processortest.NewOutput(attribute.DefaultEncoder())
 		require.NoError(t, reader.ForEach(aggTempSel, records.AddRecord))
 		require.EqualValues(t, map[string]float64{}, records.Map())
 
@@ -393,7 +390,7 @@ func TestStatefulNoMemoryCumulative(t *testing.T) {
 		require.NoError(t, processor.FinishCollection())
 
 		// Verify one element
-		records = processorTest.NewOutput(attribute.DefaultEncoder())
+		records = processortest.NewOutput(attribute.DefaultEncoder())
 		require.NoError(t, reader.ForEach(aggTempSel, records.AddRecord))
 		require.EqualValues(t, map[string]float64{
 			"inst.sum/A=B/": float64(i * 10),
@@ -413,7 +410,7 @@ func TestMultiObserverSum(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			aggTempSel := test.TemporalitySelector
 			desc := metrictest.NewDescriptor("observe.sum", sdkapi.CounterObserverInstrumentKind, number.Int64Kind)
-			selector := processorTest.AggregatorSelector()
+			selector := processortest.AggregatorSelector()
 
 			processor := basic.New(selector, aggTempSel, basic.WithMemory(false))
 			reader := processor.Reader()
@@ -427,7 +424,7 @@ func TestMultiObserverSum(t *testing.T) {
 				require.NoError(t, processor.FinishCollection())
 
 				// Verify one element
-				records := processorTest.NewOutput(attribute.DefaultEncoder())
+				records := processortest.NewOutput(attribute.DefaultEncoder())
 				if test.expectProcessErr == nil {
 					require.NoError(t, reader.ForEach(aggTempSel, records.AddRecord))
 					require.EqualValues(t, map[string]float64{
@@ -446,7 +443,7 @@ func TestCounterObserverEndToEnd(t *testing.T) {
 	ctx := context.Background()
 	eselector := aggregation.CumulativeTemporalitySelector()
 	proc := basic.New(
-		processorTest.AggregatorSelector(),
+		processortest.AggregatorSelector(),
 		eselector,
 	)
 	accum := sdk.NewAccumulator(proc)

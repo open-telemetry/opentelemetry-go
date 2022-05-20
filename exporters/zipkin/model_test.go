@@ -37,7 +37,7 @@ import (
 )
 
 func TestModelConversion(t *testing.T) {
-	resource := resource.NewSchemaless(
+	res := resource.NewSchemaless(
 		semconv.ServiceNameKey.String("model-test"),
 		semconv.ServiceVersionKey.String("0.1.0"),
 		attribute.Int64("resource-attr1", 42),
@@ -82,7 +82,7 @@ func TestModelConversion(t *testing.T) {
 				Code:        codes.Error,
 				Description: "404, file not found",
 			},
-			Resource: resource,
+			Resource: res,
 		},
 		// span data with no parent (same as typical, but has
 		// invalid parent)
@@ -117,7 +117,7 @@ func TestModelConversion(t *testing.T) {
 				Code:        codes.Error,
 				Description: "404, file not found",
 			},
-			Resource: resource,
+			Resource: res,
 		},
 		// span data of unspecified kind
 		{
@@ -155,7 +155,7 @@ func TestModelConversion(t *testing.T) {
 				Code:        codes.Error,
 				Description: "404, file not found",
 			},
-			Resource: resource,
+			Resource: res,
 		},
 		// span data of internal kind
 		{
@@ -193,7 +193,7 @@ func TestModelConversion(t *testing.T) {
 				Code:        codes.Error,
 				Description: "404, file not found",
 			},
-			Resource: resource,
+			Resource: res,
 		},
 		// span data of client kind
 		{
@@ -234,7 +234,7 @@ func TestModelConversion(t *testing.T) {
 				Code:        codes.Error,
 				Description: "404, file not found",
 			},
-			Resource: resource,
+			Resource: res,
 		},
 		// span data of producer kind
 		{
@@ -272,7 +272,7 @@ func TestModelConversion(t *testing.T) {
 				Code:        codes.Error,
 				Description: "404, file not found",
 			},
-			Resource: resource,
+			Resource: res,
 		},
 		// span data of consumer kind
 		{
@@ -310,7 +310,7 @@ func TestModelConversion(t *testing.T) {
 				Code:        codes.Error,
 				Description: "404, file not found",
 			},
-			Resource: resource,
+			Resource: res,
 		},
 		// span data with no events
 		{
@@ -335,7 +335,7 @@ func TestModelConversion(t *testing.T) {
 				Code:        codes.Error,
 				Description: "404, file not found",
 			},
-			Resource: resource,
+			Resource: res,
 		},
 		// span data with an "error" attribute set to "false"
 		{
@@ -368,7 +368,7 @@ func TestModelConversion(t *testing.T) {
 					Attributes: nil,
 				},
 			},
-			Resource: resource,
+			Resource: res,
 		},
 	}.Snapshots()
 

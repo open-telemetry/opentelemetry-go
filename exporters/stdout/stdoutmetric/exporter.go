@@ -16,6 +16,8 @@ package stdoutmetric // import "go.opentelemetry.io/otel/exporters/stdout/stdout
 
 import "go.opentelemetry.io/otel/sdk/metric/export"
 
+// Exporter is an OpenTelemetry metric exporter that transmits telemetry to
+// the local STDOUT.
 type Exporter struct {
 	metricExporter
 }

@@ -95,6 +95,8 @@ type testFactory struct {
 	encoder  attribute.Encoder
 }
 
+// NewCheckpointerFactory returns a new CheckpointerFactory for the selector
+// and encoder pair.
 func NewCheckpointerFactory(selector export.AggregatorSelector, encoder attribute.Encoder) export.CheckpointerFactory {
 	return testFactory{
 		selector: selector,
@@ -102,6 +104,7 @@ func NewCheckpointerFactory(selector export.AggregatorSelector, encoder attribut
 	}
 }
 
+// NewCheckpointer returns a new Checkpointer for Processor p.
 func NewCheckpointer(p *Processor) export.Checkpointer {
 	return &testCheckpointer{
 		Processor: p,
@@ -179,7 +182,6 @@ func AggregatorSelector() export.AggregatorSelector {
 
 // AggregatorFor implements export.AggregatorSelector.
 func (testAggregatorSelector) AggregatorFor(desc *sdkapi.Descriptor, aggPtrs ...*aggregator.Aggregator) {
-
 	switch {
 	case strings.HasSuffix(desc.Name(), ".disabled"):
 		for i := range aggPtrs {
@@ -240,10 +242,12 @@ func (o *Output) AddRecord(rec export.Record) error {
 	return o.AddRecordWithResource(rec, resource.Empty())
 }
 
+// AddRecordWithResource merges rec into this Output.
 func (o *Output) AddInstrumentationLibraryRecord(_ instrumentation.Library, rec export.Record) error {
 	return o.AddRecordWithResource(rec, resource.Empty())
 }
 
+// AddRecordWithResource merges rec into this Output scoping it with res.
 func (o *Output) AddRecordWithResource(rec export.Record, res *resource.Resource) error {
 	key := mapKey{
 		desc:     rec.Descriptor(),
@@ -331,6 +335,7 @@ func New(selector aggregation.TemporalitySelector, encoder attribute.Encoder) *E
 	}
 }
 
+// Export records all the measurements aggregated in ckpt for res.
 func (e *Exporter) Export(_ context.Context, res *resource.Resource, ckpt export.InstrumentationLibraryReader) error {
 	e.output.Lock()
 	defer e.output.Unlock()
@@ -374,6 +379,8 @@ func (e *Exporter) Reset() {
 	e.exportCount = 0
 }
 
+// OneInstrumentationLibraryReader returns an InstrumentationLibraryReader for
+// a single instrumentation library.
 func OneInstrumentationLibraryReader(l instrumentation.Library, r export.Reader) export.InstrumentationLibraryReader {
 	return oneLibraryReader{l, r}
 }
@@ -387,6 +394,8 @@ func (o oneLibraryReader) ForEach(readerFunc func(instrumentation.Library, expor
 	return readerFunc(o.library, o.reader)
 }
 
+// MultiInstrumentationLibraryReader returns an InstrumentationLibraryReader
+// for a group of records that came from multiple instrumentation libraries.
 func MultiInstrumentationLibraryReader(records map[instrumentation.Library][]export.Record) export.InstrumentationLibraryReader {
 	return instrumentationLibraryReader{records: records}
 }

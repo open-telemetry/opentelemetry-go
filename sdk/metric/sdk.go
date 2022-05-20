@@ -128,6 +128,8 @@ var (
 	// ErrUninitializedInstrument is returned when an instrument is used when uninitialized.
 	ErrUninitializedInstrument = fmt.Errorf("use of an uninitialized instrument")
 
+	// ErrBadInstrument is returned when an instrument from another SDK is
+	// attempted to be registered with this SDK.
 	ErrBadInstrument = fmt.Errorf("use of a instrument from another SDK")
 )
 
@@ -146,7 +148,6 @@ func (s *syncInstrument) Implementation() interface{} {
 // acquireHandle gets or creates a `*record` corresponding to `kvs`,
 // the input attributes.
 func (b *baseInstrument) acquireHandle(kvs []attribute.KeyValue) *record {
-
 	// This memory allocation may not be used, but it's
 	// needed for the `sortSlice` field, to avoid an
 	// allocation while sorting.
@@ -263,6 +264,7 @@ func (m *Accumulator) NewAsyncInstrument(descriptor sdkapi.Descriptor) (sdkapi.A
 	return a, nil
 }
 
+// RegisterCallback registers f to be called for insts.
 func (m *Accumulator) RegisterCallback(insts []instrument.Asynchronous, f func(context.Context)) error {
 	cb := &callback{
 		insts: map[*asyncInstrument]struct{}{},
@@ -418,5 +420,4 @@ func (m *Accumulator) fromAsync(async sdkapi.AsyncImpl) (*asyncInstrument, error
 		return nil, ErrBadInstrument
 	}
 	return inst, nil
-
 }

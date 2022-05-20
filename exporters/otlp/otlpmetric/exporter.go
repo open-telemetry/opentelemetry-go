@@ -74,7 +74,6 @@ func (e *Exporter) Start(ctx context.Context) error {
 
 // Shutdown flushes all exports and closes all connections to the receiving endpoint.
 func (e *Exporter) Shutdown(ctx context.Context) error {
-
 	e.mu.RLock()
 	started := e.started
 	e.mu.RUnlock()
@@ -95,6 +94,7 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	return err
 }
 
+// TemporalityFor returns the accepted temporality for a metric measurment.
 func (e *Exporter) TemporalityFor(descriptor *sdkapi.Descriptor, kind aggregation.Kind) aggregation.Temporality {
 	return e.temporalitySelector.TemporalityFor(descriptor, kind)
 }

@@ -88,7 +88,7 @@ type Config struct {
 
 // New returns a new Prometheus exporter using the configured metric
 // controller.  See controller.New().
-func New(config Config, controller *controller.Controller) (*Exporter, error) {
+func New(config Config, ctrl *controller.Controller) (*Exporter, error) {
 	if config.Registry == nil {
 		config.Registry = prometheus.NewRegistry()
 	}
@@ -105,7 +105,7 @@ func New(config Config, controller *controller.Controller) (*Exporter, error) {
 		handler:    promhttp.HandlerFor(config.Gatherer, promhttp.HandlerOpts{}),
 		registerer: config.Registerer,
 		gatherer:   config.Gatherer,
-		controller: controller,
+		controller: ctrl,
 	}
 
 	c := &collector{
@@ -176,7 +176,6 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 	err := ctrl.ForEach(func(_ instrumentation.Library, reader export.Reader) error {
 		return reader.ForEach(c.exp, func(record export.Record) error {
-
 			agg := record.Aggregation()
 			numberKind := record.Descriptor().NumberKind()
 			instrumentKind := record.Descriptor().InstrumentKind()
@@ -186,23 +185,26 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 			desc := c.toDesc(record, attrKeys)
 
-			if hist, ok := agg.(aggregation.Histogram); ok {
-				if err := c.exportHistogram(ch, hist, numberKind, desc, attrs); err != nil {
+			switch v := agg.(type) {
+			case aggregation.Histogram:
+				if err := c.exportHistogram(ch, v, numberKind, desc, attrs); err != nil {
 					return fmt.Errorf("exporting histogram: %w", err)
 				}
-			} else if sum, ok := agg.(aggregation.Sum); ok && instrumentKind.Monotonic() {
-				if err := c.exportMonotonicCounter(ch, sum, numberKind, desc, attrs); err != nil {
-					return fmt.Errorf("exporting monotonic counter: %w", err)
+			case aggregation.Sum:
+				if instrumentKind.Monotonic() {
+					if err := c.exportMonotonicCounter(ch, v, numberKind, desc, attrs); err != nil {
+						return fmt.Errorf("exporting monotonic counter: %w", err)
+					}
+				} else {
+					if err := c.exportNonMonotonicCounter(ch, v, numberKind, desc, attrs); err != nil {
+						return fmt.Errorf("exporting non monotonic counter: %w", err)
+					}
 				}
-			} else if sum, ok := agg.(aggregation.Sum); ok && !instrumentKind.Monotonic() {
-				if err := c.exportNonMonotonicCounter(ch, sum, numberKind, desc, attrs); err != nil {
-					return fmt.Errorf("exporting non monotonic counter: %w", err)
-				}
-			} else if lastValue, ok := agg.(aggregation.LastValue); ok {
-				if err := c.exportLastValue(ch, lastValue, numberKind, desc, attrs); err != nil {
+			case aggregation.LastValue:
+				if err := c.exportLastValue(ch, v, numberKind, desc, attrs); err != nil {
 					return fmt.Errorf("exporting last value: %w", err)
 				}
-			} else {
+			default:
 				return fmt.Errorf("%w: %s", ErrUnsupportedAggregator, agg.Kind())
 			}
 			return nil

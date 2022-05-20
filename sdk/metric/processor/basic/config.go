@@ -23,6 +23,7 @@ type config struct {
 	Memory bool
 }
 
+// Option configures a basic processor configuration.
 type Option interface {
 	applyProcessor(config) config
 }
