@@ -12,15 +12,15 @@ library](https://github.com/open-telemetry/opentelemetry-go-contrib/tree/main/in
 
 ## Installation
 
-To begin, create a new go module in a fresh directory:
+Create a new go module in a fresh directory:
 
-```
+```shell
 mkdir otel-getting-started
 cd otel-getting-started
 go mod init main
 ```
 
-Next, you'll want to install OpenTelemetry and the `net/http` instrumentation
+Next, install OpenTelemetry and the `net/http` instrumentation
 package:
 
 ```
@@ -64,8 +64,8 @@ func main() {
 ```
 
 When run, this will launch an HTTP server that does a "dice roll" and writes its
-value to the response whenever the `/rolldice` route is accessed. For example,
-accessing `http://localhost:8080/rolldice` in your browser will show the result
+value to the response whenever the `/rolldice` path is accessed. For example,
+accessing <http://localhost:8080/rolldice> in your browser will show the result
 of a single "dice roll".
 
 ## Initialize tracing and add HTTP server instrumentation
@@ -101,7 +101,7 @@ import (
 )
 
 // Initialize a Tracerprovider, which is necessary to generate traces
-// and export them to the console (or somewhere else)
+// and export them to the console.
 func newTracerProvider() *sdktrace.TracerProvider {
 	exp, err :=
 		stdouttrace.New(
@@ -183,7 +183,7 @@ There's several things going on here:
 * Initializing the `net/http` instrumentation library and wrapping the HTTP
   handler
 
-You can learn more about this in [Initializing Tracing]({{< relref
+For details, see [Initializing Tracing]({{< relref
 "manual#initializing-tracing" >}}).
 
 It may seem like quite a bit of code, but the good news is that very little
@@ -191,7 +191,7 @@ needs to change when you add more instrumentation later.
 
 ## Run the instrumented HTTP Server
 
-When you run the app and access the `/rolldice` route, you'll see the same "dice
+When you run the app and access the `/rolldice` path, you'll see the same "dice
 roll" values as before in the method you accessed it (browser, `curl`, etc.) and
 telemetry data printed to the server process's standard out. The telemetry
 generated is a single span that covers the lifetime of handling the request.
@@ -387,7 +387,7 @@ generated is a single span that covers the lifetime of handling the request.
 
 Automatic instrumentation captures telemetry at the edges of your systems, such
 as inbound and outbound HTTP requests, but it doesn’t capture what’s going on in
-your application. For that you’ll need to write some [manual
+your application. For that, you’ll need to write some [manual
 instrumentation]({{< relref "manual" >}}). Here’s how you can easily link up
 manual instrumentation with automatic instrumentation.
 
@@ -534,7 +534,7 @@ func main() {
 }
 ```
 
-Now run the app again, and when you access the route you'll see similar output
+Now run the app again, and when you access the path you'll see similar output
 as before, but this time with a span representing the manually-created one at
 the top:
 
@@ -808,7 +808,7 @@ func main() {
 }
 ```
 
-When you run this server and access the `/rolldice` route, the collector process
+When you run this server and access the `/rolldice` path, the collector process
 will emit a log showing the two spans created from the request:
 
 <details>
@@ -913,8 +913,7 @@ Finally, there are several options for exporting your telemetry data with
 OpenTelemetry. To learn how to export your data to a preferred backend, see
 [Processing and Exporting Data]({{< relref "exporting_data" >}}).
 
-
-```
+```shell
 docker run -p 4318:4318 \
     -v /otel-collector-config.yaml:/etc/otel-collector-config.yaml \
     otel/opentelemetry-collector:latest \
