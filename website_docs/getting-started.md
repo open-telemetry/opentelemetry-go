@@ -20,8 +20,7 @@ cd otel-getting-started
 go mod init main
 ```
 
-Next, install OpenTelemetry and the `net/http` instrumentation
-package:
+Next, install OpenTelemetry and the `net/http` instrumentation package:
 
 ```
 go get go.opentelemetry.io/otel \
@@ -70,10 +69,10 @@ of a single "dice roll".
 
 ## Initialize tracing and add HTTP server instrumentation
 
-[Instrumentation libraries]({{< relref "libraries" >}}) are used to create
-instrumentation on your behalf. In this case, you can install OpenTelemetry and
-the `net/http` instrumentation library so that calls to the server will start a
-trace that contains data about the HTTP call.
+[Instrumentation libraries](libraries.md) are used to create instrumentation on
+your behalf. In this case, you can install OpenTelemetry and the `net/http`
+instrumentation library so that calls to the server will start a trace that
+contains data about the HTTP call.
 
 To use the instrumentation library for `net/http`, you'll need to initialize
 tracing and wrap the previously-defined HTTP handler.
@@ -183,8 +182,7 @@ There's several things going on here:
 * Initializing the `net/http` instrumentation library and wrapping the HTTP
   handler
 
-For details, see [Initializing Tracing]({{< relref
-"manual#initializing-tracing" >}}).
+For details, see [Initializing Tracing](manual.md#initiallizing-a-new-tracer).
 
 It may seem like quite a bit of code, but the good news is that very little
 needs to change when you add more instrumentation later.
@@ -388,8 +386,8 @@ generated is a single span that covers the lifetime of handling the request.
 Automatic instrumentation captures telemetry at the edges of your systems, such
 as inbound and outbound HTTP requests, but it doesn’t capture what’s going on in
 your application. For that, you’ll need to write some [manual
-instrumentation]({{< relref "manual" >}}). Here’s how you can easily link up
-manual instrumentation with automatic instrumentation.
+instrumentation](manual.md). Here’s how you can easily link up manual
+instrumentation with automatic instrumentation.
 
 Add a `Tracer` at the top level. Note that a `serviceName` and `serviceVersion`
 are also added, since it is generally a good ideal to centralize constants like
@@ -534,9 +532,9 @@ func main() {
 }
 ```
 
-Now run the app again, and when you access the path you'll see similar output
-as before, but this time with a span representing the manually-created one at
-the top:
+Now run the app again, and when you access the path you'll see similar output as
+before, but this time with a span representing the manually-created one at the
+top:
 
 <details>
 <summary>View example output</summary>
@@ -812,6 +810,7 @@ When you run this server and access the `/rolldice` path, the collector process
 will emit a log showing the two spans created from the request:
 
 <details>
+<summary>View example output</summary>
 
 ```
 2022-05-10T16:20:09.715Z        INFO    loggingexporter/logging_exporter.go:41   TracesExporter  {"#spans": 2}
@@ -901,21 +900,13 @@ STRING(GET) -> http.target: STRING(/rolldice) -> http.server_name:
 ## Next steps
 
 There are several options available for automatic instrumentation and Go. See
-[Using instrumentation libraries]({{< relref "libraries" >}}) to learn about
-them and how to configure them.
+[Using instrumentation libraries](libraries.md) to learn about them and how to
+configure them.
 
 There’s a lot more to manual instrumentation than just creating a child span. To
 learn details about initializing manual instrumentation and many more parts of
-the OpenTelemetry API you can use, see [Manual Instrumentation]({{< relref
-"manual" >}}).
+the OpenTelemetry API you can use, see [Manual Instrumentation](manual.md).
 
 Finally, there are several options for exporting your telemetry data with
 OpenTelemetry. To learn how to export your data to a preferred backend, see
-[Processing and Exporting Data]({{< relref "exporting_data" >}}).
-
-```shell
-docker run -p 4318:4318 \
-    -v /otel-collector-config.yaml:/etc/otel-collector-config.yaml \
-    otel/opentelemetry-collector:latest \
-    --config=/etc/otel-collector-config.yaml
-```
+[Processing and Exporting Data](exporting_data.md).
