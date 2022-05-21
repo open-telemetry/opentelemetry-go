@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build go1.17
+// +build go1.17
+
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
@@ -24,6 +27,14 @@ import (
 // errDuplicateRegister is logged by a Reader when an attempt to registered it
 // more than once occurs.
 var errDuplicateRegister = fmt.Errorf("duplicate reader registration")
+
+// ErrReaderNotRegistered is returned if Collect or Shutdown are called before
+// the reader is registered with a MeterProvider.
+var ErrReaderNotRegistered = fmt.Errorf("reader is not registered")
+
+// ErrReaderShutdown is returned if Collect or Shutdown are called after a
+// reader has been Shutdown once.
+var ErrReaderShutdown = fmt.Errorf("reader is shutdown")
 
 // Reader is the interface used between the SDK and an
 // exporter.  Control flow is bi-directional through the
@@ -44,9 +55,8 @@ type Reader interface {
 	// and send aggregated metric measurements.
 	register(producer)
 
-	// Collect gathers all metrics from the SDK, calling any callbacks necessary.
-	// TODO: How does this impact Push exporters?
-	// Collect will return an error if called after shutdown.
+	// Collect gathers and returns all metric data related to the Reader from
+	// the SDK. An error is returned if this is called after Shutdown.
 	Collect(context.Context) (export.Metrics, error)
 
 	// ForceFlush flushes all metric measurements held in an export pipeline.

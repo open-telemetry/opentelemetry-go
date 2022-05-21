@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build go1.17
+// +build go1.17
+
 // TODO: NOTE this is a temporary space, it may be moved following the
 // discussion of #2813, or #2841
 
