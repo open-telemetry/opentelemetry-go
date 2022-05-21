@@ -21,6 +21,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // MeterProvider handles the creation and coordination of Meters. All Meters
@@ -28,7 +29,9 @@ import (
 // the same Views applied to them, and have their produced metric telemetry
 // passed to the configured Readers.
 type MeterProvider struct {
-	// TODO (#2820): implement.
+	res *resource.Resource
+
+	forceFlush, shutdown func(context.Context) error
 }
 
 // Compile-time check MeterProvider implements metric.MeterProvider.
@@ -41,8 +44,15 @@ var _ metric.MeterProvider = (*MeterProvider)(nil)
 // created. This means the returned MeterProvider, one created with no
 // Readers, will be perform no operations.
 func NewMeterProvider(options ...Option) *MeterProvider {
-	// TODO (#2820): implement.
-	return &MeterProvider{}
+	conf := newConfig(options)
+
+	flush, sdown := conf.readerSignals()
+
+	return &MeterProvider{
+		res:        conf.res,
+		forceFlush: flush,
+		shutdown:   sdown,
+	}
 }
 
 // Meter returns a Meter with the given name and configured with options.
@@ -74,8 +84,9 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 //
 // This method is safe to call concurrently.
 func (mp *MeterProvider) ForceFlush(ctx context.Context) error {
-	// TODO (#2820): implement.
-	// TODO: test this is concurrent safe.
+	if mp.forceFlush != nil {
+		return mp.forceFlush(ctx)
+	}
 	return nil
 }
 
@@ -83,7 +94,8 @@ func (mp *MeterProvider) ForceFlush(ctx context.Context) error {
 // releasing any held computational resources.
 //
 // This call is idempotent. The first call will perform all flush and
-// releasing operations. Subsequent calls will perform no action.
+// releasing operations. Subsequent calls will perform no action and will
+// return an error stating this.
 //
 // Measurements made by instruments from meters this MeterProvider created
 // will not be exported after Shutdown is called.
@@ -95,7 +107,8 @@ func (mp *MeterProvider) ForceFlush(ctx context.Context) error {
 //
 // This method is safe to call concurrently.
 func (mp *MeterProvider) Shutdown(ctx context.Context) error {
-	// TODO (#2820): implement.
-	// TODO: test this is concurrent safe.
+	if mp.shutdown != nil {
+		return mp.shutdown(ctx)
+	}
 	return nil
 }
