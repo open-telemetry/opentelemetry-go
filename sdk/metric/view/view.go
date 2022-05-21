@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build go1.17
+// +build go1.17
+
 package view // import "go.opentelemetry.io/otel/sdk/metric/view"
 
 // Config contains configuration options for a view.

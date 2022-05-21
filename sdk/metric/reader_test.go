@@ -12,11 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build go1.17
+// +build go1.17
+
 package metric // import "go.opentelemetry.io/otel/sdk/metric/reader"
 
 import (
 	"context"
+	"sync"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
 	"go.opentelemetry.io/otel/sdk/metric/export"
@@ -74,12 +79,77 @@ func (ts *readerTestSuite) TestMultipleForceFlush() {
 	ts.NoError(ts.Reader.ForceFlush(ctx))
 }
 
+func (ts *readerTestSuite) TestMultipleRegister() {
+	p0 := testProducer{
+		produceFunc: func(ctx context.Context) (export.Metrics, error) {
+			// Differentiate this producer from the second by returning an
+			// error.
+			return testMetrics, assert.AnError
+		},
+	}
+	p1 := testProducer{}
+
+	ts.Reader.register(p0)
+	// This should be ignored.
+	ts.Reader.register(p1)
+
+	_, err := ts.Reader.Collect(context.Background())
+	ts.Equal(assert.AnError, err)
+}
+
+func (ts *readerTestSuite) TestMethodConcurrency() {
+	// Requires the race-detector (a default test option for the project).
+
+	// All reader methods should be concurrent-safe.
+	ts.Reader.register(testProducer{})
+	ctx := context.Background()
+
+	var wg sync.WaitGroup
+	const threads = 2
+	for i := 0; i < threads; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, _ = ts.Reader.Collect(ctx)
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = ts.Reader.ForceFlush(ctx)
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = ts.Reader.Shutdown(ctx)
+		}()
+	}
+	wg.Wait()
+}
+
+func (ts *readerTestSuite) TestShutdownBeforeRegister() {
+	ctx := context.Background()
+	ts.Require().NoError(ts.Reader.Shutdown(ctx))
+	// Registering after shutdown should not revert the shutdown.
+	ts.Reader.register(testProducer{})
+
+	m, err := ts.Reader.Collect(ctx)
+	ts.ErrorIs(err, ErrReaderShutdown)
+	ts.Equal(export.Metrics{}, m)
+}
+
 var testMetrics = export.Metrics{
 	// TODO: test with actual data.
 }
 
-type testProducer struct{}
+type testProducer struct {
+	produceFunc func(context.Context) (export.Metrics, error)
+}
 
-func (p testProducer) produce(context.Context) (export.Metrics, error) {
+func (p testProducer) produce(ctx context.Context) (export.Metrics, error) {
+	if p.produceFunc != nil {
+		return p.produceFunc(ctx)
+	}
 	return testMetrics, nil
 }
