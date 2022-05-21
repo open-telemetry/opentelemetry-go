@@ -130,6 +130,7 @@ func (u *UniqueInstrumentMeterImpl) NewAsyncInstrument(descriptor sdkapi.Descrip
 	return asyncInst, nil
 }
 
+// RegisterCallback registers callback with insts.
 func (u *UniqueInstrumentMeterImpl) RegisterCallback(insts []instrument.Asynchronous, callback func(context.Context)) error {
 	u.lock.Lock()
 	defer u.lock.Unlock()

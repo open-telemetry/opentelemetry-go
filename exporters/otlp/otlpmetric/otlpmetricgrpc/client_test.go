@@ -249,7 +249,6 @@ func TestNewExporterWithTimeout(t *testing.T) {
 
 	for _, tt := range tts {
 		t.Run(tt.name, func(t *testing.T) {
-
 			mc := runMockCollector(t)
 			if tt.delay {
 				mc.metricSvc.delay = time.Second * 10

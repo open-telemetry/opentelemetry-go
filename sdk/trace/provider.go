@@ -70,6 +70,8 @@ func (cfg tracerProviderConfig) MarshalLog() interface{} {
 	}
 }
 
+// TracerProvider is an OpenTelemetry TracerProvider. It provides Tracers to
+// instrumentation so it can trace operational flow through a system.
 type TracerProvider struct {
 	mu             sync.Mutex
 	namedTracer    map[instrumentation.Library]*tracer
@@ -261,6 +263,7 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 	return nil
 }
 
+// TracerProviderOption configures a TracerProvider.
 type TracerProviderOption interface {
 	apply(tracerProviderConfig) tracerProviderConfig
 }

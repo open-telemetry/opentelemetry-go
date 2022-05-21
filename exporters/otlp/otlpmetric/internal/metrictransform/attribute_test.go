@@ -168,7 +168,6 @@ func TestArrayAttributes(t *testing.T) {
 				assertExpectedArrayValues(t, expected.Values, actual.Values)
 			}
 		}
-
 	}
 }
 

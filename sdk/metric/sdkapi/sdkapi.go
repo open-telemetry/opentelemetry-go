@@ -58,7 +58,7 @@ type SyncImpl interface {
 	instrument.Synchronous
 
 	// RecordOne captures a single synchronous metric event.
-	RecordOne(ctx context.Context, number number.Number, attrs []attribute.KeyValue)
+	RecordOne(ctx context.Context, n number.Number, attrs []attribute.KeyValue)
 }
 
 // AsyncImpl is an implementation-level interface to an
@@ -68,7 +68,7 @@ type AsyncImpl interface {
 	instrument.Asynchronous
 
 	// ObserveOne captures a single synchronous metric event.
-	ObserveOne(ctx context.Context, number number.Number, attrs []attribute.KeyValue)
+	ObserveOne(ctx context.Context, n number.Number, attrs []attribute.KeyValue)
 }
 
 // AsyncRunner is expected to convert into an AsyncSingleRunner or an
@@ -105,10 +105,10 @@ type AsyncBatchRunner interface {
 
 // NewMeasurement constructs a single observation, a binding between
 // an asynchronous instrument and a number.
-func NewMeasurement(instrument SyncImpl, number number.Number) Measurement {
+func NewMeasurement(inst SyncImpl, n number.Number) Measurement {
 	return Measurement{
-		instrument: instrument,
-		number:     number,
+		instrument: inst,
+		number:     n,
 	}
 }
 
@@ -134,10 +134,10 @@ func (m Measurement) Number() number.Number {
 
 // NewObservation constructs a single observation, a binding between
 // an asynchronous instrument and a number.
-func NewObservation(instrument AsyncImpl, number number.Number) Observation {
+func NewObservation(inst AsyncImpl, n number.Number) Observation {
 	return Observation{
-		instrument: instrument,
-		number:     number,
+		instrument: inst,
+		number:     n,
 	}
 }
 

@@ -223,8 +223,8 @@ func TestSpanIsRecording(t *testing.T) {
 		} {
 			tp := NewTracerProvider(WithSampler(tc.sampler))
 			_, span := tp.Tracer(name).Start(context.Background(), "StartSpan")
-			defer span.End()
 			got := span.IsRecording()
+			span.End()
 			assert.Equal(t, got, tc.want, name)
 		}
 	})
@@ -425,8 +425,8 @@ func TestSamplerAttributesLocalChildSpan(t *testing.T) {
 	tp := NewTracerProvider(WithSampler(sampler), WithSyncer(te), WithResource(resource.Empty()))
 
 	ctx := context.Background()
-	ctx, span := startLocalSpan(tp, ctx, "SpanOne", "span0")
-	_, spanTwo := startLocalSpan(tp, ctx, "SpanTwo", "span1")
+	ctx, span := startLocalSpan(ctx, tp, "SpanOne", "span0")
+	_, spanTwo := startLocalSpan(ctx, tp, "SpanTwo", "span1")
 
 	spanTwo.End()
 	span.End()
@@ -950,7 +950,7 @@ func startNamedSpan(tp *TracerProvider, trName, name string, args ...trace.SpanS
 // passed name and with the passed context. The context is returned
 // along with the span so this parent can be used to create child
 // spans.
-func startLocalSpan(tp *TracerProvider, ctx context.Context, trName, name string, args ...trace.SpanStartOption) (context.Context, trace.Span) {
+func startLocalSpan(ctx context.Context, tp *TracerProvider, trName, name string, args ...trace.SpanStartOption) (context.Context, trace.Span) {
 	ctx, span := tp.Tracer(trName).Start(
 		ctx,
 		name,
@@ -970,10 +970,10 @@ func startLocalSpan(tp *TracerProvider, ctx context.Context, trName, name string
 // It also clears spanID in the to make the comparison easier.
 func endSpan(te *testExporter, span trace.Span) (*snapshot, error) {
 	if !span.IsRecording() {
-		return nil, fmt.Errorf("IsRecording: got false, want true")
+		return nil, fmt.Errorf("method IsRecording: got false, want true")
 	}
 	if !span.SpanContext().IsSampled() {
-		return nil, fmt.Errorf("IsSampled: got false, want true")
+		return nil, fmt.Errorf("method IsSampled: got false, want true")
 	}
 	span.End()
 	if te.Len() != 1 {
@@ -1172,10 +1172,10 @@ func TestCustomStartEndTime(t *testing.T) {
 		t.Fatalf("got %d exported spans, want one span", te.Len())
 	}
 	got := te.Spans()[0]
-	if got.StartTime() != startTime {
+	if !got.StartTime().Equal(startTime) {
 		t.Errorf("expected start time to be %s, got %s", startTime, got.StartTime())
 	}
-	if got.EndTime() != endTime {
+	if !got.EndTime().Equal(endTime) {
 		t.Errorf("expected end time to be %s, got %s", endTime, got.EndTime())
 	}
 }
@@ -1630,7 +1630,6 @@ func TestReadWriteSpan(t *testing.T) {
 	// Verify the span can be written to.
 	rw.SetName("bar")
 	assert.Equal(t, "bar", rw.Name())
-
 	// NOTE: This function tests ReadWriteSpan which is an interface which
 	// embeds trace.Span and ReadOnlySpan. Since both of these interfaces have
 	// their own tests, there is no point in testing all the possible methods
@@ -1902,7 +1901,6 @@ func TestSamplerTraceState(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 type testIDGenerator struct {

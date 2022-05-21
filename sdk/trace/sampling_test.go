@@ -177,7 +177,6 @@ func TestParentBasedDefaultDescription(t *testing.T) {
 			sampler.Description(),
 		)
 	}
-
 }
 
 // TraceIDRatioBased sampler requirements state

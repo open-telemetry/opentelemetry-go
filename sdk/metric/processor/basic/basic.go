@@ -28,6 +28,7 @@ import (
 )
 
 type (
+	// Processor is a basic metric processor.
 	Processor struct {
 		aggregation.TemporalitySelector
 		export.AggregatorSelector
@@ -129,6 +130,7 @@ type factory struct {
 	config    config
 }
 
+// NewFactory returns a new basic CheckpointerFactory.
 func NewFactory(aselector export.AggregatorSelector, tselector aggregation.TemporalitySelector, opts ...Option) export.CheckpointerFactory {
 	var config config
 	for _, opt := range opts {
@@ -156,7 +158,6 @@ func (f factory) NewCheckpointer() export.Checkpointer {
 		},
 	}
 	return p
-
 }
 
 // Process implements export.Processor.

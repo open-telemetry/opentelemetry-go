@@ -165,7 +165,6 @@ func TestSumFloatDataPoints(t *testing.T) {
 			}}}, m.GetSum())
 		assert.Nil(t, m.GetHistogram())
 		assert.Nil(t, m.GetSummary())
-
 	}
 }
 
@@ -231,13 +230,13 @@ func (t *testAgg) Aggregation() aggregation.Aggregation {
 
 // None of these three are used:
 
-func (t *testAgg) Update(ctx context.Context, number number.Number, descriptor *sdkapi.Descriptor) error {
+func (t *testAgg) Update(context.Context, number.Number, *sdkapi.Descriptor) error {
 	return nil
 }
-func (t *testAgg) SynchronizedMove(destination aggregator.Aggregator, descriptor *sdkapi.Descriptor) error {
+func (t *testAgg) SynchronizedMove(aggregator.Aggregator, *sdkapi.Descriptor) error {
 	return nil
 }
-func (t *testAgg) Merge(aggregator aggregator.Aggregator, descriptor *sdkapi.Descriptor) error {
+func (t *testAgg) Merge(aggregator.Aggregator, *sdkapi.Descriptor) error {
 	return nil
 }
 

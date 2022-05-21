@@ -55,7 +55,6 @@ func newConfig(options ...Option) (config, error) {
 	}
 	for _, opt := range options {
 		cfg = opt.apply(cfg)
-
 	}
 	return cfg, nil
 }

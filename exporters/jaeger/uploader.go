@@ -34,6 +34,7 @@ type batchUploader interface {
 	shutdown(context.Context) error
 }
 
+// EndpointOption configures a Jaeger endpoint.
 type EndpointOption interface {
 	newBatchUploader() (batchUploader, error)
 }
@@ -75,6 +76,7 @@ func WithAgentEndpoint(options ...AgentEndpointOption) EndpointOption {
 	})
 }
 
+// AgentEndpointOption configures a Jaeger agent endpoint.
 type AgentEndpointOption interface {
 	apply(agentEndpointConfig) agentEndpointConfig
 }
@@ -175,6 +177,7 @@ func WithCollectorEndpoint(options ...CollectorEndpointOption) EndpointOption {
 	})
 }
 
+// CollectorEndpointOption configures a Jaeger collector endpoint.
 type CollectorEndpointOption interface {
 	apply(collectorEndpointConfig) collectorEndpointConfig
 }
@@ -306,7 +309,9 @@ func (c *collectorUploader) upload(ctx context.Context, batch *gen.Batch) error 
 	}
 
 	_, _ = io.Copy(ioutil.Discard, resp.Body)
-	resp.Body.Close()
+	if err = resp.Body.Close(); err != nil {
+		return err
+	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("failed to upload traces; HTTP status code: %d", resp.StatusCode)
