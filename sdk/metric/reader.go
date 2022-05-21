@@ -24,6 +24,10 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
+// errDuplicateRegister is logged by a Reader when an attempt to registered it
+// more than once occurs.
+var errDuplicateRegister = fmt.Errorf("duplicate reader registration")
+
 // ErrReaderNotRegistered is returned if Collect or Shutdown are called before
 // the reader is registered with a MeterProvider.
 var ErrReaderNotRegistered = fmt.Errorf("reader is not registered")

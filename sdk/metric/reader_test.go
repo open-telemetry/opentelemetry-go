@@ -21,6 +21,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
 	"go.opentelemetry.io/otel/sdk/metric/export"
@@ -78,6 +79,24 @@ func (ts *readerTestSuite) TestMultipleForceFlush() {
 	ts.NoError(ts.Reader.ForceFlush(ctx))
 }
 
+func (ts *readerTestSuite) TestMultipleRegister() {
+	p0 := testProducer{
+		produceFunc: func(ctx context.Context) (export.Metrics, error) {
+			// Differentiate this producer from the second by returning an
+			// error.
+			return testMetrics, assert.AnError
+		},
+	}
+	p1 := testProducer{}
+
+	ts.Reader.register(p0)
+	// This should be ignored.
+	ts.Reader.register(p1)
+
+	_, err := ts.Reader.Collect(context.Background())
+	ts.Equal(assert.AnError, err)
+}
+
 func (ts *readerTestSuite) TestMethodConcurrency() {
 	// Requires the race-detector (a default test option for the project).
 
@@ -124,8 +143,13 @@ var testMetrics = export.Metrics{
 	// TODO: test with actual data.
 }
 
-type testProducer struct{}
+type testProducer struct {
+	produceFunc func(context.Context) (export.Metrics, error)
+}
 
-func (p testProducer) produce(context.Context) (export.Metrics, error) {
+func (p testProducer) produce(ctx context.Context) (export.Metrics, error) {
+	if p.produceFunc != nil {
+		return p.produceFunc(ctx)
+	}
 	return testMetrics, nil
 }
