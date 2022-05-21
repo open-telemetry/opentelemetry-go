@@ -46,14 +46,10 @@ func (c config) readerSignals() (forceFlush, shutdown func(context.Context) erro
 	return unify(fFuncs), unifyShutdown(sFuncs)
 }
 
-// unify unifies calling all of funcs into a single function call. It will
-// return nil if funcs is empty. All errors returned from calls to funcs will
-// be unify into a single error return value.
+// unify unifies calling all of funcs into a single function call. All errors
+// returned from calls to funcs will be unify into a single error return
+// value.
 func unify(funcs []func(context.Context) error) func(context.Context) error {
-	if len(funcs) == 0 {
-		return func(context.Context) error { return nil }
-	}
-
 	return func(ctx context.Context) error {
 		var errs []error
 		for _, f := range funcs {
