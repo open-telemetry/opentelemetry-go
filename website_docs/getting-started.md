@@ -102,7 +102,7 @@ import (
 // Initialize a Tracerprovider, which is necessary to generate traces
 // and export them to the console.
 func newTracerProvider() *sdktrace.TracerProvider {
-	exp, err :=
+	exporter, err :=
 		stdouttrace.New(
 			stdouttrace.WithPrettyPrint(),
 			stdouttrace.WithoutTimestamps(),
@@ -112,7 +112,15 @@ func newTracerProvider() *sdktrace.TracerProvider {
 		panic(err)
 	}
 
-	r, rErr :=
+        // This includes the following resources:
+        //
+        // - sdk.language, sdk.version
+        // - service.name, service.version, environment
+        //
+        // Including these resources is a good practice because it is commonly
+        // used by various tracing backends to let you more accurately 
+        // analyze your telemetry data.
+	resource, rErr :=
 		resource.Merge(
 			resource.Default(),
 			resource.NewWithAttributes(
@@ -128,8 +136,8 @@ func newTracerProvider() *sdktrace.TracerProvider {
 	}
 
 	return sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exp),
-		sdktrace.WithResource(r),
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(resource),
 	)
 }
 
@@ -181,6 +189,10 @@ There's several things going on here:
 * Initializing a `TracerProvider` and handling its shutdown
 * Initializing the `net/http` instrumentation library and wrapping the HTTP
   handler
+
+A `Resource` is useful metadata included in every trace. A `TracerProvider` is used to
+create traces by letting you create a `Tracer`. You'll create your own `Tracer`
+later in this article.
 
 For details, see [Initializing Tracing](manual.md#initiallizing-a-new-tracer).
 
@@ -425,6 +437,8 @@ set up context propagation:
 tracer = tp.Tracer(serviceName)
 ```
 
+Creating a `Tracer` from a `TracerProvider` is necessary to let you create trace spans manually.
+
 The full sample code looks like this:
 
 ```go
@@ -455,7 +469,7 @@ var (
 )
 
 func newTraceProvider() *sdktrace.TracerProvider {
-	exp, err :=
+	exporter, err :=
 		stdouttrace.New(
 			stdouttrace.WithPrettyPrint(),
 			stdouttrace.WithoutTimestamps(),
@@ -465,7 +479,15 @@ func newTraceProvider() *sdktrace.TracerProvider {
 		panic(err)
 	}
 
-	r, rErr :=
+        // This includes the following resources:
+        //
+        // - sdk.language, sdk.version
+        // - service.name, service.version, environment
+        //
+        // Including these resources is a good practice because it is commonly
+        // used by various tracing backends to let you more accurately 
+        // analyze your telemetry data.
+	resource, rErr :=
 		resource.Merge(
 			resource.Default(),
 			resource.NewWithAttributes(
@@ -481,8 +503,8 @@ func newTraceProvider() *sdktrace.TracerProvider {
 	}
 
 	return sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exp),
-		sdktrace.WithResource(r),
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(resource),
 	)
 }
 
@@ -727,7 +749,7 @@ var (
 )
 
 func newTraceProvider(ctx context.Context) *sdktrace.TracerProvider {
-	exp, err :=
+	exporter, err :=
 		otlptracehttp.New(ctx,
 			// WithInsecure lets us use http instead of https.
 			// This is just for local development.
@@ -739,7 +761,15 @@ func newTraceProvider(ctx context.Context) *sdktrace.TracerProvider {
 		panic(err)
 	}
 
-	r, rErr :=
+        // This includes the following resources:
+        //
+        // - sdk.language, sdk.version
+        // - service.name, service.version, environment
+        //
+        // Including these resources is a good practice because it is commonly
+        // used by various tracing backends to let you more accurately 
+        // analyze your telemetry data.
+	resource, rErr :=
 		resource.Merge(
 			resource.Default(),
 			resource.NewWithAttributes(
@@ -755,8 +785,8 @@ func newTraceProvider(ctx context.Context) *sdktrace.TracerProvider {
 	}
 
 	return sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exp),
-		sdktrace.WithResource(r),
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(resource),
 	)
 }
 
