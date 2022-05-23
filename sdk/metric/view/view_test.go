@@ -20,6 +20,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/internal/instrument"
 )
@@ -169,15 +170,84 @@ func TestConfig_Transform(t *testing.T) {
 			require.NoError(t, err)
 
 			t.Run("match", func(t *testing.T) {
-				got := cfg.Transform(matchInstrument)
+				got, match := cfg.TransformInstrument(matchInstrument)
 				assert.Equal(t, tt.match, got)
+				assert.True(t, match)
 
 			})
 			t.Run("does not match", func(t *testing.T) {
 
-				got := cfg.Transform(noMatchInstrument)
+				got, match := cfg.TransformInstrument(noMatchInstrument)
 				assert.Equal(t, tt.notMatch, got)
+				assert.False(t, match)
 			})
+		})
+	}
+}
+
+func TestConfig_TransformAttributes(t *testing.T) {
+
+	inputSet := attribute.NewSet(
+		attribute.String("foo", "bar"),
+		attribute.Int("power-level", 9001),
+		attribute.Float64("lifeUniverseEverything", 42.0),
+	)
+
+	tests := []struct {
+		name   string
+		filter []attribute.Key
+		want   attribute.Set
+	}{
+		{
+			name:   "empty should match all",
+			filter: []attribute.Key{},
+			want:   inputSet,
+		},
+		{
+			name: "Match 1",
+			filter: []attribute.Key{
+				attribute.Key("power-level"),
+			},
+			want: attribute.NewSet(
+				attribute.Int("power-level", 9001),
+			),
+		},
+		{
+			name: "Match 2",
+			filter: []attribute.Key{
+				attribute.Key("foo"),
+				attribute.Key("lifeUniverseEverything"),
+			},
+			want: attribute.NewSet(
+				attribute.Float64("lifeUniverseEverything", 42.0),
+				attribute.String("foo", "bar"),
+			),
+		},
+		{
+			name: "Don't match",
+			filter: []attribute.Key{
+				attribute.Key("nothing"),
+			},
+			want: attribute.NewSet(),
+		},
+		{
+			name: "Match some",
+			filter: []attribute.Key{
+				attribute.Key("power-level"),
+				attribute.Key("nothing"),
+			},
+			want: attribute.NewSet(
+				attribute.Int("power-level", 9001),
+			),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg, err := New(WithKeyFilter(tt.filter...))
+			require.NoError(t, err)
+
+			got := cfg.TransformAttributes(inputSet)
+			assert.Equal(t, got.Equivalent(), tt.want.Equivalent())
 		})
 	}
 }
