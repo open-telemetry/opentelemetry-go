@@ -178,3 +178,9 @@ func TestPeriodicReaderRun(t *testing.T) {
 	// Ensure Reader is allowed clean up attempt.
 	_ = r.Shutdown(context.Background())
 }
+
+func BenchmarkPeriodicReader(b *testing.B) {
+	b.Run("Collect", benchReaderCollectFunc(
+		NewPeriodicReader(new(fnExporter)),
+	))
+}
