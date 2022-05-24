@@ -27,7 +27,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
-	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/processortest"
 	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -58,9 +57,9 @@ func generateTestData(t *testing.T, proc export.Processor) {
 func TestProcessorTesting(t *testing.T) {
 	// Test the Processor test helper using a real Accumulator to
 	// generate Accumulations.
-	checkpointer := processorTest.NewCheckpointer(
-		processorTest.NewProcessor(
-			processorTest.AggregatorSelector(),
+	checkpointer := processortest.NewCheckpointer(
+		processortest.NewProcessor(
+			processortest.AggregatorSelector(),
 			attribute.DefaultEncoder(),
 		),
 	)
@@ -75,7 +74,7 @@ func TestProcessorTesting(t *testing.T) {
 	}
 
 	// Export the data and validate it again.
-	exporter := processorTest.New(
+	exporter := processortest.New(
 		aggregation.StatelessTemporalitySelector(),
 		attribute.DefaultEncoder(),
 	)

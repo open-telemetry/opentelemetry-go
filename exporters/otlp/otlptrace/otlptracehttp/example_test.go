@@ -16,6 +16,7 @@ package otlptracehttp_test
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"go.opentelemetry.io/otel"
@@ -64,11 +65,11 @@ func newResource() *resource.Resource {
 	)
 }
 
-func installExportPipeline(ctx context.Context) func() {
+func installExportPipeline(ctx context.Context) (func(context.Context) error, error) {
 	client := otlptracehttp.NewClient()
 	exporter, err := otlptrace.New(ctx, client)
 	if err != nil {
-		log.Fatalf("creating OTLP trace exporter: %v", err)
+		return nil, fmt.Errorf("creating OTLP trace exporter: %w", err)
 	}
 
 	tracerProvider := sdktrace.NewTracerProvider(
@@ -77,18 +78,21 @@ func installExportPipeline(ctx context.Context) func() {
 	)
 	otel.SetTracerProvider(tracerProvider)
 
-	return func() {
-		if err := tracerProvider.Shutdown(ctx); err != nil {
-			log.Fatalf("stopping tracer provider: %v", err)
-		}
-	}
+	return tracerProvider.Shutdown, nil
 }
 
 func Example() {
 	ctx := context.Background()
 	// Registers a tracer Provider globally.
-	cleanup := installExportPipeline(ctx)
-	defer cleanup()
+	shutdown, err := installExportPipeline(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		if err := shutdown(ctx); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	log.Println("the answer is", add(ctx, multiply(ctx, multiply(ctx, 2, 2), 10), 2))
 }

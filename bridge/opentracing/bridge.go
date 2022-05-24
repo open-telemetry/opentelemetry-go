@@ -349,10 +349,14 @@ func (t *BridgeTracer) SetOpenTelemetryTracer(tracer trace.Tracer) {
 	t.setTracer.isSet = true
 }
 
+// SetTextMapPropagator sets propagator as the TextMapPropagator to use by the
+// BridgeTracer.
 func (t *BridgeTracer) SetTextMapPropagator(propagator propagation.TextMapPropagator) {
 	t.propagator = propagator
 }
 
+// NewHookedContext returns a Context that has ctx as its parent and is
+// wrapped to handle baggage set and get operations.
 func (t *BridgeTracer) NewHookedContext(ctx context.Context) context.Context {
 	ctx = iBaggage.ContextWithSetHook(ctx, t.baggageSetHook)
 	ctx = iBaggage.ContextWithGetHook(ctx, t.baggageGetHook)
@@ -671,9 +675,9 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 	}
 	header := http.Header(hhcarrier)
 	ctx := t.getPropagator().Extract(context.Background(), propagation.HeaderCarrier(header))
-	baggage := baggage.FromContext(ctx)
+	bag := baggage.FromContext(ctx)
 	bridgeSC := &bridgeSpanContext{
-		bag:             baggage,
+		bag:             bag,
 		otelSpanContext: trace.SpanContextFromContext(ctx),
 	}
 	if !bridgeSC.otelSpanContext.IsValid() {

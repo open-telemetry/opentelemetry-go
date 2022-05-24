@@ -104,9 +104,9 @@ func (g *Aggregator) SynchronizedMove(oa aggregator.Aggregator, _ *sdkapi.Descri
 }
 
 // Update atomically sets the current "last" value.
-func (g *Aggregator) Update(_ context.Context, number number.Number, desc *sdkapi.Descriptor) error {
+func (g *Aggregator) Update(_ context.Context, n number.Number, desc *sdkapi.Descriptor) error {
 	ngd := &lastValueData{
-		value:     number,
+		value:     n,
 		timestamp: time.Now(),
 	}
 	atomic.StorePointer(&g.value, unsafe.Pointer(ngd))

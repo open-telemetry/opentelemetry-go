@@ -56,7 +56,6 @@ func TestEmptyIterator(t *testing.T) {
 }
 
 func TestMergedIterator(t *testing.T) {
-
 	type inputs struct {
 		name   string
 		keys1  []string

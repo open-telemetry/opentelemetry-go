@@ -612,7 +612,7 @@ func TestBaggageMembers(t *testing.T) {
 		},
 	}
 
-	baggage := Baggage{list: baggage.List{
+	bag := Baggage{list: baggage.List{
 		"foo": {
 			Value: "1",
 			Properties: []baggage.Property{
@@ -626,13 +626,13 @@ func TestBaggageMembers(t *testing.T) {
 		},
 	}}
 
-	assert.ElementsMatch(t, members, baggage.Members())
+	assert.ElementsMatch(t, members, bag.Members())
 }
 
 func TestBaggageMember(t *testing.T) {
-	baggage := Baggage{list: baggage.List{"foo": {Value: "1"}}}
-	assert.Equal(t, Member{key: "foo", value: "1"}, baggage.Member("foo"))
-	assert.Equal(t, Member{}, baggage.Member("bar"))
+	bag := Baggage{list: baggage.List{"foo": {Value: "1"}}}
+	assert.Equal(t, Member{key: "foo", value: "1"}, bag.Member("foo"))
+	assert.Equal(t, Member{}, bag.Member("bar"))
 }
 
 func TestMemberKey(t *testing.T) {

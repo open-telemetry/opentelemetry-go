@@ -64,7 +64,7 @@ func (e *Expectation) NotToBeNil() {
 func (e *Expectation) ToBeTrue() {
 	switch a := e.actual.(type) {
 	case bool:
-		if e.actual == false {
+		if !a {
 			e.fail(fmt.Sprintf("Expected\n\t%v\nto be true", e.actual))
 		}
 	default:
@@ -75,7 +75,7 @@ func (e *Expectation) ToBeTrue() {
 func (e *Expectation) ToBeFalse() {
 	switch a := e.actual.(type) {
 	case bool:
-		if e.actual == true {
+		if a {
 			e.fail(fmt.Sprintf("Expected\n\t%v\nto be false", e.actual))
 		}
 	default:
@@ -253,30 +253,31 @@ func (e *Expectation) ToMatchInAnyOrder(expected interface{}) {
 
 func (e *Expectation) ToBeTemporally(matcher TemporalMatcher, compareTo interface{}) {
 	if actual, ok := e.actual.(time.Time); ok {
-		if ct, ok := compareTo.(time.Time); ok {
-			switch matcher {
-			case Before:
-				if !actual.Before(ct) {
-					e.fail(fmt.Sprintf("Expected\n\t%v\nto be temporally before\n\t%v", e.actual, compareTo))
-				}
-			case BeforeOrSameTime:
-				if actual.After(ct) {
-					e.fail(fmt.Sprintf("Expected\n\t%v\nto be temporally before or at the same time as\n\t%v", e.actual, compareTo))
-				}
-			case After:
-				if !actual.After(ct) {
-					e.fail(fmt.Sprintf("Expected\n\t%v\nto be temporally after\n\t%v", e.actual, compareTo))
-				}
-			case AfterOrSameTime:
-				if actual.Before(ct) {
-					e.fail(fmt.Sprintf("Expected\n\t%v\nto be temporally after or at the same time as\n\t%v", e.actual, compareTo))
-				}
-			default:
-				e.fail("Cannot compare times with unexpected temporal matcher")
-			}
-		} else {
+		ct, ok := compareTo.(time.Time)
+		if !ok {
 			e.fail(fmt.Sprintf("Cannot compare to non-temporal value\n\t%v", compareTo))
 			return
+		}
+
+		switch matcher {
+		case Before:
+			if !actual.Before(ct) {
+				e.fail(fmt.Sprintf("Expected\n\t%v\nto be temporally before\n\t%v", e.actual, compareTo))
+			}
+		case BeforeOrSameTime:
+			if actual.After(ct) {
+				e.fail(fmt.Sprintf("Expected\n\t%v\nto be temporally before or at the same time as\n\t%v", e.actual, compareTo))
+			}
+		case After:
+			if !actual.After(ct) {
+				e.fail(fmt.Sprintf("Expected\n\t%v\nto be temporally after\n\t%v", e.actual, compareTo))
+			}
+		case AfterOrSameTime:
+			if actual.Before(ct) {
+				e.fail(fmt.Sprintf("Expected\n\t%v\nto be temporally after or at the same time as\n\t%v", e.actual, compareTo))
+			}
+		default:
+			e.fail("Cannot compare times with unexpected temporal matcher")
 		}
 
 		return

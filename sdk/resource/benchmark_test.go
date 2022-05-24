@@ -45,7 +45,6 @@ func makeAttrs(n int) (_, _ *resource.Resource) {
 		} else {
 			l2[i] = attribute.String(k, fmt.Sprint("v", rand.Intn(1000000000)))
 		}
-
 	}
 	return resource.NewSchemaless(l1...), resource.NewSchemaless(l2...)
 }

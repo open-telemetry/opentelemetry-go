@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/go-logr/stdr"
@@ -38,12 +39,10 @@ var (
 var tp *sdktrace.TracerProvider
 
 // initTracer creates and registers trace provider instance.
-func initTracer() {
-	var err error
+func initTracer() error {
 	exp, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
 	if err != nil {
-		log.Panicf("failed to initialize stdouttrace exporter %v\n", err)
-		return
+		return fmt.Errorf("failed to initialize stdouttrace exporter: %w", err)
 	}
 	bsp := sdktrace.NewBatchSpanProcessor(exp)
 	tp = sdktrace.NewTracerProvider(
@@ -51,6 +50,7 @@ func initTracer() {
 		sdktrace.WithSpanProcessor(bsp),
 	)
 	otel.SetTracerProvider(tp)
+	return nil
 }
 
 func main() {
@@ -58,7 +58,9 @@ func main() {
 	stdr.SetVerbosity(5)
 
 	// initialize trace provider.
-	initTracer()
+	if err := initTracer(); err != nil {
+		log.Panic(err)
+	}
 
 	// Create a named tracer with package path as its name.
 	tracer := tp.Tracer("example/namedtracer/main")

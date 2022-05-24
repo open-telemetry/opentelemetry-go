@@ -219,9 +219,9 @@ func (c *Aggregator) clearState() {
 }
 
 // Update adds the recorded measurement to the current data set.
-func (c *Aggregator) Update(_ context.Context, number number.Number, desc *sdkapi.Descriptor) error {
+func (c *Aggregator) Update(_ context.Context, n number.Number, desc *sdkapi.Descriptor) error {
 	kind := desc.NumberKind()
-	asFloat := number.CoerceToFloat64(kind)
+	asFloat := n.CoerceToFloat64(kind)
 
 	bucketID := len(c.boundaries)
 	for i, boundary := range c.boundaries {
@@ -246,7 +246,7 @@ func (c *Aggregator) Update(_ context.Context, number number.Number, desc *sdkap
 	defer c.lock.Unlock()
 
 	c.state.count++
-	c.state.sum.AddNumber(kind, number)
+	c.state.sum.AddNumber(kind, n)
 	c.state.bucketCounts[bucketID]++
 
 	return nil

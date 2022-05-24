@@ -209,7 +209,6 @@ func TestSDKAttrsDeduplication(t *testing.T) {
 
 	allExpect := map[string]float64{}
 	for numKeys := 0; numKeys < maxKeys; numKeys++ {
-
 		var kvsA []attribute.KeyValue
 		var kvsB []attribute.KeyValue
 		for r := 0; r < repeats; r++ {
@@ -240,7 +239,6 @@ func TestSDKAttrsDeduplication(t *testing.T) {
 			counter.Add(ctx, 1, kvsB...)
 			allExpect[format(expectB)] += 2
 		}
-
 	}
 
 	sdk.Collect(ctx)

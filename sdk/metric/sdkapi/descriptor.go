@@ -31,13 +31,13 @@ type Descriptor struct {
 }
 
 // NewDescriptor returns a Descriptor with the given contents.
-func NewDescriptor(name string, ikind InstrumentKind, nkind number.Kind, description string, unit unit.Unit) Descriptor {
+func NewDescriptor(name string, ikind InstrumentKind, nkind number.Kind, description string, u unit.Unit) Descriptor {
 	return Descriptor{
 		name:           name,
 		instrumentKind: ikind,
 		numberKind:     nkind,
 		description:    description,
-		unit:           unit,
+		unit:           u,
 	}
 }
 

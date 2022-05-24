@@ -26,7 +26,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/resource"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
 	"go.opentelemetry.io/otel/trace"
@@ -160,8 +159,8 @@ func toZipkinAnnotations(events []tracesdk.Event) []zkmodel.Annotation {
 
 func attributesToJSONMapString(attributes []attribute.KeyValue) string {
 	m := make(map[string]interface{}, len(attributes))
-	for _, attribute := range attributes {
-		m[(string)(attribute.Key)] = attribute.Value.AsInterface()
+	for _, a := range attributes {
+		m[(string)(a.Key)] = a.Value.AsInterface()
 	}
 	// if an error happens, the result will be an empty string
 	jsonBytes, _ := json.Marshal(m)
@@ -173,17 +172,17 @@ func attributeToStringPair(kv attribute.KeyValue) (string, string) {
 	switch kv.Value.Type() {
 	// For slice attributes, serialize as JSON list string.
 	case attribute.BOOLSLICE:
-		json, _ := json.Marshal(kv.Value.AsBoolSlice())
-		return (string)(kv.Key), (string)(json)
+		data, _ := json.Marshal(kv.Value.AsBoolSlice())
+		return (string)(kv.Key), (string)(data)
 	case attribute.INT64SLICE:
-		json, _ := json.Marshal(kv.Value.AsInt64Slice())
-		return (string)(kv.Key), (string)(json)
+		data, _ := json.Marshal(kv.Value.AsInt64Slice())
+		return (string)(kv.Key), (string)(data)
 	case attribute.FLOAT64SLICE:
-		json, _ := json.Marshal(kv.Value.AsFloat64Slice())
-		return (string)(kv.Key), (string)(json)
+		data, _ := json.Marshal(kv.Value.AsFloat64Slice())
+		return (string)(kv.Key), (string)(data)
 	case attribute.STRINGSLICE:
-		json, _ := json.Marshal(kv.Value.AsStringSlice())
-		return (string)(kv.Key), (string)(json)
+		data, _ := json.Marshal(kv.Value.AsStringSlice())
+		return (string)(kv.Key), (string)(data)
 	default:
 		return (string)(kv.Key), kv.Value.Emit()
 	}
@@ -245,7 +244,7 @@ var remoteEndpointKeyRank = map[attribute.Key]int{
 	semconv.DBNameKey:      6,
 }
 
-func toZipkinRemoteEndpoint(data sdktrace.ReadOnlySpan) *zkmodel.Endpoint {
+func toZipkinRemoteEndpoint(data tracesdk.ReadOnlySpan) *zkmodel.Endpoint {
 	// Should be set only for client or producer kind
 	if sk := data.SpanKind(); sk != trace.SpanKindClient && sk != trace.SpanKindProducer {
 		return nil
