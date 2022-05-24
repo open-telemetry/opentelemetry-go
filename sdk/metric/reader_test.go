@@ -20,6 +20,7 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric/reader"
 import (
 	"context"
 	"sync"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -152,4 +153,28 @@ func (p testProducer) produce(ctx context.Context) (export.Metrics, error) {
 		return p.produceFunc(ctx)
 	}
 	return testMetrics, nil
+}
+
+func benchReaderCollectFunc(r Reader) func(*testing.B) {
+	ctx := context.Background()
+	r.register(testProducer{})
+
+	// Store bechmark results in a closure to prevent the compiler from
+	// inlining and skipping the function.
+	var (
+		collectedMetrics export.Metrics
+		err              error
+	)
+
+	return func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for n := 0; n < b.N; n++ {
+			collectedMetrics, err = r.Collect(ctx)
+			if collectedMetrics != testMetrics || err != nil {
+				b.Errorf("unexpected Collect response: (%#v, %v)", collectedMetrics, err)
+			}
+		}
+	}
 }
