@@ -22,9 +22,11 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
@@ -33,6 +35,10 @@ type readerTestSuite struct {
 
 	Factory func() Reader
 	Reader  Reader
+}
+
+func (ts *readerTestSuite) SetupSuite() {
+	otel.SetLogger(testr.New(ts.T()))
 }
 
 func (ts *readerTestSuite) SetupTest() {
