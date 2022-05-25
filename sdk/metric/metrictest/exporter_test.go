@@ -61,7 +61,6 @@ func TestSyncInstruments(t *testing.T) {
 		require.NoError(t, err)
 		assert.InDelta(t, 3.0, out.Sum.AsFloat64(), 0.0001)
 		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
-
 	})
 
 	t.Run("Float Histogram", func(t *testing.T) {
@@ -94,7 +93,6 @@ func TestSyncInstruments(t *testing.T) {
 		require.NoError(t, err)
 		assert.EqualValues(t, 22, out.Sum.AsInt64())
 		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
-
 	})
 	t.Run("Int UpDownCounter", func(t *testing.T) {
 		iudcnt, err := meter.SyncInt64().UpDownCounter("iUDCount")
@@ -109,10 +107,8 @@ func TestSyncInstruments(t *testing.T) {
 		require.NoError(t, err)
 		assert.EqualValues(t, 23, out.Sum.AsInt64())
 		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
-
 	})
 	t.Run("Int Histogram", func(t *testing.T) {
-
 		ihis, err := meter.SyncInt64().Histogram("iHist")
 		require.NoError(t, err)
 
@@ -163,7 +159,6 @@ func TestSyncDeltaInstruments(t *testing.T) {
 		require.NoError(t, err)
 		assert.InDelta(t, 3.0, out.Sum.AsFloat64(), 0.0001)
 		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
-
 	})
 
 	t.Run("Float Histogram", func(t *testing.T) {
@@ -196,7 +191,6 @@ func TestSyncDeltaInstruments(t *testing.T) {
 		require.NoError(t, err)
 		assert.EqualValues(t, 22, out.Sum.AsInt64())
 		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
-
 	})
 	t.Run("Int UpDownCounter", func(t *testing.T) {
 		iudcnt, err := meter.SyncInt64().UpDownCounter("iUDCount")
@@ -211,10 +205,8 @@ func TestSyncDeltaInstruments(t *testing.T) {
 		require.NoError(t, err)
 		assert.EqualValues(t, 23, out.Sum.AsInt64())
 		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
-
 	})
 	t.Run("Int Histogram", func(t *testing.T) {
-
 		ihis, err := meter.SyncInt64().Histogram("iHist")
 		require.NoError(t, err)
 
@@ -349,7 +341,6 @@ func TestAsyncInstruments(t *testing.T) {
 		require.NoError(t, err)
 		assert.EqualValues(t, 23, out.Sum.AsInt64())
 		assert.Equal(t, aggregation.SumKind, out.AggregationKind)
-
 	})
 	t.Run("Int Gauge", func(t *testing.T) {
 		meter := mp.Meter("go.opentelemetry.io/otel/sdk/metric/metrictest/exporter_TestAsyncCounter_IntGauge")
@@ -373,7 +364,6 @@ func TestAsyncInstruments(t *testing.T) {
 		assert.EqualValues(t, 25, out.LastValue.AsInt64())
 		assert.Equal(t, aggregation.LastValueKind, out.AggregationKind)
 	})
-
 }
 
 func ExampleExporter_GetByName() {

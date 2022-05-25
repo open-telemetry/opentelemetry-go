@@ -45,9 +45,9 @@ func TestStringDetectorErrors(t *testing.T) {
 		{
 			desc: "explicit error from func should be returned",
 			s: resource.StringDetector("", attribute.Key("K"), func() (string, error) {
-				return "", fmt.Errorf("K-IS-MISSING")
+				return "", fmt.Errorf("k-is-missing")
 			}),
-			errContains: "K-IS-MISSING",
+			errContains: "k-is-missing",
 		},
 		{
 			desc: "empty key is an invalid",
@@ -74,5 +74,4 @@ func TestStringDetectorErrors(t *testing.T) {
 		}
 		require.EqualValues(t, map[string]string{"A": "B"}, m)
 	}
-
 }

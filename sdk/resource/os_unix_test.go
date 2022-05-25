@@ -39,7 +39,7 @@ func fakeUnameProvider(buf *unix.Utsname) error {
 }
 
 func fakeUnameProviderWithError(buf *unix.Utsname) error {
-	return fmt.Errorf("Error invoking uname(2)")
+	return fmt.Errorf("error invoking uname(2)")
 }
 
 func TestUname(t *testing.T) {

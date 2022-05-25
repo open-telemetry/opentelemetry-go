@@ -60,7 +60,7 @@ func (f *fileReader) readFile(filename string) ([]byte, error) {
 	if b, ok := (*f)[filename]; ok {
 		return b, nil
 	}
-	return nil, errors.New("File not found")
+	return nil, errors.New("file not found")
 }
 
 func TestConfigs(t *testing.T) {

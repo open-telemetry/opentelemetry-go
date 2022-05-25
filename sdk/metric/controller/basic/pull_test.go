@@ -118,5 +118,4 @@ func TestPullWithCollect(t *testing.T) {
 	require.EqualValues(t, map[string]float64{
 		"counter.sum/A=B/": 20,
 	}, records.Map())
-
 }

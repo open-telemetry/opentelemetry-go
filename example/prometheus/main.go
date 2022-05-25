@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"sync"
 	"time"
 
@@ -37,7 +39,7 @@ var (
 	lemonsKey = attribute.Key("ex.com/lemons")
 )
 
-func initMeter() {
+func initMeter() error {
 	config := prometheus.Config{
 		DefaultHistogramBoundaries: []float64{1, 2, 5, 10, 20, 50},
 	}
@@ -52,7 +54,7 @@ func initMeter() {
 	)
 	exporter, err := prometheus.New(config, c)
 	if err != nil {
-		log.Panicf("failed to initialize prometheus exporter %v", err)
+		return fmt.Errorf("failed to initialize prometheus exporter: %w", err)
 	}
 
 	global.SetMeterProvider(exporter.MeterProvider())
@@ -63,10 +65,13 @@ func initMeter() {
 	}()
 
 	fmt.Println("Prometheus server running on :2222")
+	return nil
 }
 
 func main() {
-	initMeter()
+	if err := initMeter(); err != nil {
+		log.Fatal(err)
+	}
 
 	meter := global.Meter("ex.com/basic")
 
@@ -86,7 +91,7 @@ func main() {
 		gaugeObserver.Observe(ctx, value, attrs...)
 	})
 
-	histogram, err := meter.SyncFloat64().Histogram("ex.com.two")
+	hist, err := meter.SyncFloat64().Histogram("ex.com.two")
 	if err != nil {
 		log.Panicf("failed to initialize instrument: %v", err)
 	}
@@ -98,14 +103,15 @@ func main() {
 	commonAttrs := []attribute.KeyValue{lemonsKey.Int(10), attribute.String("A", "1"), attribute.String("B", "2"), attribute.String("C", "3")}
 	notSoCommonAttrs := []attribute.KeyValue{lemonsKey.Int(13)}
 
-	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
 
 	(*observerLock).Lock()
 	*observerValueToReport = 1.0
 	*observerAttrsToReport = commonAttrs
 	(*observerLock).Unlock()
 
-	histogram.Record(ctx, 2.0, commonAttrs...)
+	hist.Record(ctx, 2.0, commonAttrs...)
 	counter.Add(ctx, 12.0, commonAttrs...)
 
 	time.Sleep(5 * time.Second)
@@ -114,7 +120,7 @@ func main() {
 	*observerValueToReport = 1.0
 	*observerAttrsToReport = notSoCommonAttrs
 	(*observerLock).Unlock()
-	histogram.Record(ctx, 2.0, notSoCommonAttrs...)
+	hist.Record(ctx, 2.0, notSoCommonAttrs...)
 	counter.Add(ctx, 22.0, notSoCommonAttrs...)
 
 	time.Sleep(5 * time.Second)
@@ -123,10 +129,10 @@ func main() {
 	*observerValueToReport = 13.0
 	*observerAttrsToReport = commonAttrs
 	(*observerLock).Unlock()
-	histogram.Record(ctx, 12.0, commonAttrs...)
+	hist.Record(ctx, 12.0, commonAttrs...)
 	counter.Add(ctx, 13.0, commonAttrs...)
 
 	fmt.Println("Example finished updating, please visit :2222")
 
-	select {}
+	<-ctx.Done()
 }

@@ -41,7 +41,7 @@ func TestExporterExportSpan(t *testing.T) {
 	traceState, _ := trace.ParseTraceState("key=val")
 	keyValue := "value"
 	doubleValue := 123.456
-	resource := resource.NewSchemaless(attribute.String("rk1", "rv11"))
+	res := resource.NewSchemaless(attribute.String("rk1", "rv11"))
 
 	ss := tracetest.SpanStub{
 		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
@@ -65,7 +65,7 @@ func TestExporterExportSpan(t *testing.T) {
 			Code:        codes.Error,
 			Description: "interesting",
 		},
-		Resource: resource,
+		Resource: res,
 	}
 
 	tests := []struct {

@@ -27,7 +27,6 @@ import (
 )
 
 func TestDetect(t *testing.T) {
-
 	cases := []struct {
 		name             string
 		schema1, schema2 string

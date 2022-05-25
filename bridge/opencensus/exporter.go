@@ -37,7 +37,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-var errConversion = errors.New("Unable to convert from OpenCensus to OpenTelemetry")
+var errConversion = errors.New("unable to convert from OpenCensus to OpenTelemetry")
 
 // NewMetricExporter returns an OpenCensus exporter that exports to an
 // OpenTelemetry exporter.

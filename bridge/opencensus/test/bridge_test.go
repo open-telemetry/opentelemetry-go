@@ -137,7 +137,6 @@ func TestToFromContext(t *testing.T) {
 		// Get the opentelemetry span using the OpenCensus FromContext, and end it
 		otSpan2 := octrace.FromContext(ctx)
 		defer otSpan2.End()
-
 	}()
 
 	spans := sr.Ended()

@@ -198,7 +198,7 @@ func logStoreLogger(s *logStore) *log.Logger {
 }
 
 func TestExportSpans(t *testing.T) {
-	resource := resource.NewSchemaless(
+	res := resource.NewSchemaless(
 		semconv.ServiceNameKey.String("exporter-test"),
 		semconv.ServiceVersionKey.String("0.1.0"),
 	)
@@ -220,7 +220,7 @@ func TestExportSpans(t *testing.T) {
 				Code:        codes.Error,
 				Description: "404, file not found",
 			},
-			Resource: resource,
+			Resource: res,
 		},
 		// child
 		{
@@ -242,7 +242,7 @@ func TestExportSpans(t *testing.T) {
 				Code:        codes.Error,
 				Description: "403, forbidden",
 			},
-			Resource: resource,
+			Resource: res,
 		},
 	}.Snapshots()
 	models := []zkmodel.SpanModel{
