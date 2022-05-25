@@ -87,3 +87,17 @@ type producer interface {
 	// This method is safe to call concurrently.
 	produce(context.Context) (export.Metrics, error)
 }
+
+// produceHolder is used as an atomic.Value to wrap the non-concrete producer
+// type.
+type produceHolder struct {
+	produce func(context.Context) (export.Metrics, error)
+}
+
+// shutdownProducer produces an ErrReaderShutdown error always.
+type shutdownProducer struct{}
+
+// produce returns an ErrReaderShutdown error.
+func (p shutdownProducer) produce(context.Context) (export.Metrics, error) {
+	return export.Metrics{}, ErrReaderShutdown
+}

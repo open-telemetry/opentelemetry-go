@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
@@ -166,7 +167,10 @@ func (r *periodicReader) run(ctx context.Context, interval time.Duration) {
 // register registers p as the producer of this reader.
 func (r *periodicReader) register(p producer) {
 	// Only register once. If producer is already set, do nothing.
-	r.producer.CompareAndSwap(nil, produceHolder{produce: p.produce})
+	if !r.producer.CompareAndSwap(nil, produceHolder{produce: p.produce}) {
+		msg := "did not register periodic reader"
+		global.Error(errDuplicateRegister, msg)
+	}
 }
 
 // Collect gathers and returns all metric data related to the Reader from
@@ -213,18 +217,4 @@ func (r *periodicReader) Shutdown(ctx context.Context) error {
 		err = r.exporter.Shutdown(ctx)
 	})
 	return err
-}
-
-// produceHolder is used as an atomic.Value to wrap the non-concrete producer
-// type.
-type produceHolder struct {
-	produce func(context.Context) (export.Metrics, error)
-}
-
-// shutdownProducer produces an ErrReaderShutdown error always.
-type shutdownProducer struct{}
-
-// produce returns an ErrReaderShutdown error.
-func (p shutdownProducer) produce(context.Context) (export.Metrics, error) {
-	return export.Metrics{}, ErrReaderShutdown
 }
