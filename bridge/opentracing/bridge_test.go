@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+	"net/http"
 	"strings"
 	"testing"
 )
@@ -181,29 +182,6 @@ func (t *textMapCarrier) Keys() []string {
 	return str
 }
 
-// opentracingTextMap  Implemented opentracing.TextMapReader and opentracing.TextMapWriter interface
-type opentracingTextMapCarrier struct {
-	m map[string]string
-}
-
-func newOpentracingTextMapCarrier() *opentracingTextMapCarrier {
-	return &opentracingTextMapCarrier{m: map[string]string{}}
-}
-
-func (o *opentracingTextMapCarrier) Set(key, val string) {
-	o.m[key] = val
-}
-
-func (o *opentracingTextMapCarrier) ForeachKey(handler func(key string, val string) error) error {
-	for key, val := range o.m {
-		if err := handler(key, val); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // testTextMapReader only implemented opentracing.TextMapReader interface
 type testTextMapReader struct {
 	m *map[string]string
@@ -241,8 +219,9 @@ func TestBridgeTracer_ExtractAndInject(t *testing.T) {
 	bridge.SetTextMapPropagator(new(testTextMapPropagator))
 
 	tmc := newTextCarrier()
-	otmc := newOpentracingTextMapCarrier()
 	shareMap := map[string]string{}
+	otTextMap := ot.TextMapCarrier{}
+	httpHeader := ot.HTTPHeadersCarrier(http.Header{})
 
 	testCases := []struct {
 		name           string
@@ -259,8 +238,14 @@ func TestBridgeTracer_ExtractAndInject(t *testing.T) {
 		{
 			name:           "support for opentracing.TextMapReader and opentracing.TextMapWriter",
 			carrierType:    ot.TextMap,
-			extractCarrier: otmc,
-			injectCarrier:  otmc,
+			extractCarrier: otTextMap,
+			injectCarrier:  otTextMap,
+		},
+		{
+			name:           "support for HTTPHeaders",
+			carrierType:    ot.HTTPHeaders,
+			extractCarrier: httpHeader,
+			injectCarrier:  httpHeader,
 		},
 		{
 			name:           "support for opentracing.TextMapReader and opentracing.TextMapWriter,non-same instance",

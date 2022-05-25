@@ -635,7 +635,7 @@ func (s fakeSpan) SpanContext() trace.SpanContext {
 // Inject is a part of the implementation of the OpenTracing Tracer
 // interface.
 //
-// Currently only the HTTPHeaders format is supported.
+// Currently only the HTTPHeaders and TextMap format are supported.
 func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier interface{}) error {
 	bridgeSC, ok := sm.(*bridgeSpanContext)
 	if !ok {
@@ -644,28 +644,47 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 	if !bridgeSC.otelSpanContext.IsValid() {
 		return ot.ErrInvalidSpanContext
 	}
-	if builtinFormat, ok := format.(ot.BuiltinFormat); !ok || builtinFormat != ot.HTTPHeaders {
+
+	builtinFormat, ok := format.(ot.BuiltinFormat)
+	if !ok {
 		return ot.ErrUnsupportedFormat
 	}
-	hhcarrier, ok := carrier.(ot.HTTPHeadersCarrier)
-	if !ok {
-		return ot.ErrInvalidCarrier
+
+	var textCarrier propagation.TextMapCarrier
+
+	switch builtinFormat {
+	case ot.HTTPHeaders:
+		hhcarrier, ok := carrier.(ot.HTTPHeadersCarrier)
+		if !ok {
+			return ot.ErrInvalidCarrier
+		}
+
+		textCarrier = propagation.HeaderCarrier(hhcarrier)
+	case ot.TextMap:
+		if textCarrier, ok = carrier.(propagation.TextMapCarrier); !ok {
+			var err error
+			if textCarrier, err = newTextMapWrapperForInject(carrier); err != nil {
+				return err
+			}
+		}
+	default:
+		return ot.ErrUnsupportedFormat
 	}
-	header := http.Header(hhcarrier)
+
 	fs := fakeSpan{
 		Span: noopSpan,
 		sc:   bridgeSC.otelSpanContext,
 	}
 	ctx := trace.ContextWithSpan(context.Background(), fs)
 	ctx = baggage.ContextWithBaggage(ctx, bridgeSC.bag)
-	t.getPropagator().Inject(ctx, propagation.HeaderCarrier(header))
+	t.getPropagator().Inject(ctx, textCarrier)
 	return nil
 }
 
 // Extract is a part of the implementation of the OpenTracing Tracer
 // interface.
 //
-// Currently only the HTTPHeaders format is supported.
+// Currently only the HTTPHeaders and TextMap format are supported.
 func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.SpanContext, error) {
 	builtinFormat, ok := format.(ot.BuiltinFormat)
 	if !ok {
