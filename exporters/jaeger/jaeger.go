@@ -263,8 +263,8 @@ func keyValueToTag(keyValue attribute.KeyValue) *gen.Tag {
 		attribute.INT64SLICE,
 		attribute.FLOAT64SLICE,
 		attribute.STRINGSLICE:
-		json, _ := json.Marshal(keyValue.Value.AsInterface())
-		a := (string)(json)
+		data, _ := json.Marshal(keyValue.Value.AsInterface())
+		a := (string)(data)
 		tag = &gen.Tag{
 			Key:   string(keyValue.Key),
 			VStr:  &a,

@@ -56,10 +56,10 @@ var (
 
 var (
 	fakeExecutablePathProviderWithError = func() (string, error) {
-		return "", fmt.Errorf("Unable to get process executable")
+		return "", fmt.Errorf("unable to get process executable")
 	}
 	fakeOwnerProviderWithError = func() (*user.User, error) {
-		return nil, fmt.Errorf("Unable to get process user")
+		return nil, fmt.Errorf("unable to get process user")
 	}
 )
 

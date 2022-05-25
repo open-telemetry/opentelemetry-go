@@ -45,7 +45,6 @@ func TestMeterProviderRace(t *testing.T) {
 
 	mp.setDelegate(metric.NewNoopMeterProvider())
 	close(finish)
-
 }
 
 func TestMeterRace(t *testing.T) {
@@ -88,7 +87,6 @@ func TestMeterRace(t *testing.T) {
 }
 
 func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (syncfloat64.Counter, asyncfloat64.Counter) {
-
 	afcounter, err := m.AsyncFloat64().Counter("test_Async_Counter")
 	require.NoError(t, err)
 	_, err = m.AsyncFloat64().UpDownCounter("test_Async_UpDownCounter")
@@ -142,7 +140,6 @@ func testCollect(t *testing.T, m metric.Meter) {
 }
 
 func TestMeterProviderDelegatesCalls(t *testing.T) {
-
 	// The global MeterProvider should directly call the underlying MeterProvider
 	// if it is set prior to Meter() being called.
 
@@ -184,7 +181,6 @@ func TestMeterProviderDelegatesCalls(t *testing.T) {
 }
 
 func TestMeterDelegatesCalls(t *testing.T) {
-
 	// The global MeterProvider should directly provide a Meter instance that
 	// can be updated.  If the SetMeterProvider is called after a Meter was
 	// obtained, but before instruments only the instrument should be generated
@@ -227,7 +223,6 @@ func TestMeterDelegatesCalls(t *testing.T) {
 }
 
 func TestMeterDefersDelegations(t *testing.T) {
-
 	// If SetMeterProvider is called after instruments are registered, the
 	// instruments should be recreated with the new meter.
 

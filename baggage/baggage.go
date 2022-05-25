@@ -68,6 +68,9 @@ type Property struct {
 	hasData bool
 }
 
+// NewKeyProperty returns a new Property for key.
+//
+// If key is invalid, an error will be returned.
 func NewKeyProperty(key string) (Property, error) {
 	if !keyRe.MatchString(key) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
@@ -77,6 +80,9 @@ func NewKeyProperty(key string) (Property, error) {
 	return p, nil
 }
 
+// NewKeyValueProperty returns a new Property for key with value.
+//
+// If key or value are invalid, an error will be returned.
 func NewKeyValueProperty(key, value string) (Property, error) {
 	if !keyRe.MatchString(key) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
