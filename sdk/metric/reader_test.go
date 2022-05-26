@@ -20,10 +20,13 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric/reader"
 import (
 	"context"
 	"sync"
+	"testing"
 
+	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
@@ -32,6 +35,10 @@ type readerTestSuite struct {
 
 	Factory func() Reader
 	Reader  Reader
+}
+
+func (ts *readerTestSuite) SetupSuite() {
+	otel.SetLogger(testr.New(ts.T()))
 }
 
 func (ts *readerTestSuite) SetupTest() {
@@ -152,4 +159,28 @@ func (p testProducer) produce(ctx context.Context) (export.Metrics, error) {
 		return p.produceFunc(ctx)
 	}
 	return testMetrics, nil
+}
+
+func benchReaderCollectFunc(r Reader) func(*testing.B) {
+	ctx := context.Background()
+	r.register(testProducer{})
+
+	// Store bechmark results in a closure to prevent the compiler from
+	// inlining and skipping the function.
+	var (
+		collectedMetrics export.Metrics
+		err              error
+	)
+
+	return func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for n := 0; n < b.N; n++ {
+			collectedMetrics, err = r.Collect(ctx)
+			if collectedMetrics != testMetrics || err != nil {
+				b.Errorf("unexpected Collect response: (%#v, %v)", collectedMetrics, err)
+			}
+		}
+	}
 }

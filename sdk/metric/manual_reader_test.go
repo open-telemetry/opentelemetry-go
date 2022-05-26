@@ -26,3 +26,7 @@ import (
 func TestManualReader(t *testing.T) {
 	suite.Run(t, &readerTestSuite{Factory: NewManualReader})
 }
+
+func BenchmarkManualReader(b *testing.B) {
+	b.Run("Collect", benchReaderCollectFunc(NewManualReader()))
+}

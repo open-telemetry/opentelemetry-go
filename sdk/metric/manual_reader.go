@@ -19,7 +19,9 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
+	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric/export"
@@ -28,9 +30,8 @@ import (
 // manualReader is a a simple Reader that allows an application to
 // read metrics on demand.
 type manualReader struct {
-	lock     sync.Mutex
-	producer producer
-	shutdown bool
+	producer     atomic.Value
+	shutdownOnce sync.Once
 }
 
 // Compile time check the manualReader implements Reader.
@@ -44,14 +45,11 @@ func NewManualReader() Reader {
 // register stores the Producer which enables the caller to read
 // metrics on demand.
 func (mr *manualReader) register(p producer) {
-	mr.lock.Lock()
-	defer mr.lock.Unlock()
-	if mr.producer != nil {
-		msg := "did not register manualReader"
+	// Only register once. If producer is already set, do nothing.
+	if !mr.producer.CompareAndSwap(nil, produceHolder{produce: p.produce}) {
+		msg := "did not register manual reader"
 		global.Error(errDuplicateRegister, msg)
-		return
 	}
-	mr.producer = p
 }
 
 // ForceFlush is a no-op, it always returns nil.
@@ -61,25 +59,33 @@ func (mr *manualReader) ForceFlush(context.Context) error {
 
 // Shutdown closes any connections and frees any resources used by the reader.
 func (mr *manualReader) Shutdown(context.Context) error {
-	mr.lock.Lock()
-	defer mr.lock.Unlock()
-	if mr.shutdown {
-		return ErrReaderShutdown
-	}
-	mr.shutdown = true
-	return nil
+	err := ErrReaderShutdown
+	mr.shutdownOnce.Do(func() {
+		// Any future call to Collect will now return ErrReaderShutdown.
+		mr.producer.Store(produceHolder{
+			produce: shutdownProducer{}.produce,
+		})
+		err = nil
+	})
+	return err
 }
 
 // Collect gathers all metrics from the SDK, calling any callbacks necessary.
 // Collect will return an error if called after shutdown.
 func (mr *manualReader) Collect(ctx context.Context) (export.Metrics, error) {
-	mr.lock.Lock()
-	defer mr.lock.Unlock()
-	if mr.producer == nil {
+	p := mr.producer.Load()
+	if p == nil {
 		return export.Metrics{}, ErrReaderNotRegistered
 	}
-	if mr.shutdown {
-		return export.Metrics{}, ErrReaderShutdown
+
+	ph, ok := p.(produceHolder)
+	if !ok {
+		// The atomic.Value is entirely in the periodicReader's control so
+		// this should never happen. In the unforeseen case that this does
+		// happen, return an error instead of panicking so a users code does
+		// not halt in the processes.
+		err := fmt.Errorf("manual reader: invalid producer: %T", p)
+		return export.Metrics{}, err
 	}
-	return mr.producer.produce(ctx)
+	return ph.produce(ctx)
 }
