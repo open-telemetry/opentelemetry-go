@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-FROM golang:1.16-alpine
+FROM golang:1.17-alpine
 COPY . /go/src/github.com/open-telemetry/opentelemetry-go/
 WORKDIR /go/src/github.com/open-telemetry/opentelemetry-go/example/zipkin/
 RUN go install ./main.go
