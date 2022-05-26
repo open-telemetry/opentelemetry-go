@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The `crosslink` make target has been updated to use the `go.opentelemetry.io/build-tools/crosslink` package. (#2886)
 
+### Removed
+
+- Support for go1.16. Support is now only for go1.17 and go1.18 (#2917)
+
 ## [1.7.0/0.30.0] - 2022-04-28
 
 ### Added
