@@ -17,6 +17,8 @@ package propagation // import "go.opentelemetry.io/otel/propagation"
 import (
 	"context"
 	"net/http"
+	"os"
+	"strings"
 )
 
 // TextMapCarrier is the storage medium used by a TextMapPropagator.
@@ -85,6 +87,36 @@ func (hc HeaderCarrier) Keys() []string {
 	for k := range hc {
 		keys = append(keys, k)
 	}
+	return keys
+}
+
+// EnvironmentCarrier is a TextMapCarrier that uses the process environment as a
+// storage medium for propagated key/value pairs
+type EnvironmentCarrier struct{}
+
+var _ TextMapCarrier = EnvironmentCarrier{}
+
+// Get returns the value associated with the passed key.
+func (etmc EnvironmentCarrier) Get(key string) string {
+	return os.Getenv(key)
+}
+
+// Set stores the key-value pair.
+func (etmc EnvironmentCarrier) Set(key string, value string) {
+	_ = os.Setenv(key, value)
+}
+
+// Keys lists the keys stored in this carrier.
+func (etmc EnvironmentCarrier) Keys() []string {
+	env := os.Environ()
+	keys := make([]string, len(env))
+	for _, envar := range env {
+		key, _, ok := strings.Cut(envar, "=")
+		if ok {
+			keys = append(keys, key)
+		}
+	}
+
 	return keys
 }
 

@@ -16,6 +16,7 @@ package propagation_test
 
 import (
 	"context"
+	"os"
 	"sort"
 	"strings"
 	"testing"
@@ -134,4 +135,28 @@ func TestMapCarrierKeys(t *testing.T) {
 	keys := carrier.Keys()
 	sort.Strings(keys)
 	assert.Equal(t, []string{"baz", "foo"}, keys)
+}
+
+func TestEnvironmentCarrierGet(t *testing.T) {
+	t.Setenv("foo", "bar")
+	t.Setenv("baz", "qux")
+
+	assert.Equal(t, propagation.EnvironmentCarrier{}.Get("foo"), "bar")
+	assert.Equal(t, propagation.EnvironmentCarrier{}.Get("baz"), "qux")
+}
+
+func TestEnvironmentCarrierSet(t *testing.T) {
+	propagation.EnvironmentCarrier{}.Set("foo", "bar")
+
+	assert.Equal(t, "bar", os.Getenv("foo"))
+}
+
+func TestEnvironmentCarrierKeys(t *testing.T) {
+	t.Setenv("foo", "bar")
+	t.Setenv("baz", "qux")
+
+	keys := propagation.EnvironmentCarrier{}.Keys()
+
+	assert.Contains(t, keys, "foo")
+	assert.Contains(t, keys, "baz")
 }
