@@ -96,14 +96,16 @@ type EnvironmentCarrier struct{}
 
 var _ TextMapCarrier = EnvironmentCarrier{}
 
+const envCarrierNamespace = "OTEL_CARRIER_"
+
 // Get returns the value associated with the passed key.
 func (etmc EnvironmentCarrier) Get(key string) string {
-	return os.Getenv(key)
+	return os.Getenv(envCarrierNamespace + key)
 }
 
 // Set stores the key-value pair.
 func (etmc EnvironmentCarrier) Set(key string, value string) {
-	_ = os.Setenv(key, value)
+	_ = os.Setenv(envCarrierNamespace+key, value)
 }
 
 // Keys lists the keys stored in this carrier.
@@ -113,10 +115,10 @@ func (etmc EnvironmentCarrier) Keys() []string {
 	for _, envar := range env {
 		key, _, ok := strings.Cut(envar, "=")
 		if ok {
-			keys = append(keys, key)
+			keyWithoutNamespace := strings.TrimPrefix(key, envCarrierNamespace)
+			keys = append(keys, keyWithoutNamespace)
 		}
 	}
-
 	return keys
 }
 
