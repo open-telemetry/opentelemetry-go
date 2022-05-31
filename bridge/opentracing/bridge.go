@@ -730,7 +730,7 @@ func (t *BridgeTracer) getPropagator() propagation.TextMapPropagator {
 	return otel.GetTextMapPropagator()
 }
 
-// textMapWrapper Provides ot.TextMapWriter and ot.TextMapReader to
+// textMapWrapper Provides operating.TextMapWriter and operating.TextMapReader to
 // propagation.TextMapCarrier compatibility.
 // Usually, Inject method will only use the write-related interface.
 // Extract method will only use the reade-related interface.
