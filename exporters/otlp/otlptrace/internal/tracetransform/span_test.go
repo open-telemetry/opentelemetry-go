@@ -175,7 +175,6 @@ func TestStatus(t *testing.T) {
 		expected := &tracepb.Status{Code: test.otlpStatus, Message: test.message}
 		assert.Equal(t, expected, status(test.code, test.message))
 	}
-
 }
 
 func TestNilSpan(t *testing.T) {

@@ -100,7 +100,7 @@ const (
 // Sentinel errors for Aggregation interface.
 var (
 	ErrNegativeInput    = fmt.Errorf("negative value is out of range for this instrument")
-	ErrNaNInput         = fmt.Errorf("NaN value is an invalid input")
+	ErrNaNInput         = fmt.Errorf("invalid input value: NaN")
 	ErrInconsistentType = fmt.Errorf("inconsistent aggregator types")
 
 	// ErrNoCumulativeToDelta is returned when requesting delta

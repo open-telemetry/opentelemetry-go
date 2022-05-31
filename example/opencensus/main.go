@@ -62,7 +62,9 @@ func main() {
 		log.Fatal(fmt.Errorf("error creating metric exporter: %w", err))
 	}
 	tracing(traceExporter)
-	monitoring(metricsExporter)
+	if err := monitoring(metricsExporter); err != nil {
+		log.Fatal(err)
+	}
 }
 
 // tracing demonstrates overriding the OpenCensus DefaultTracer to send spans
@@ -100,18 +102,18 @@ func tracing(otExporter sdktrace.SpanExporter) {
 // monitoring demonstrates creating an IntervalReader using the OpenTelemetry
 // exporter to send metrics to the exporter by using either an OpenCensus
 // registry or an OpenCensus view.
-func monitoring(otExporter export.Exporter) {
+func monitoring(otExporter export.Exporter) error {
 	log.Println("Using the OpenTelemetry stdoutmetric exporter to export OpenCensus metrics.  This allows routing telemetry from both OpenTelemetry and OpenCensus to a single exporter.")
 	ocExporter := opencensus.NewMetricExporter(otExporter)
 	intervalReader, err := metricexport.NewIntervalReader(&metricexport.Reader{}, ocExporter)
 	if err != nil {
-		log.Fatalf("Failed to create interval reader: %v\n", err)
+		return fmt.Errorf("failed to create interval reader: %w", err)
 	}
 	intervalReader.ReportingInterval = 10 * time.Second
 	log.Println("Emitting metrics using OpenCensus APIs.  These should be printed out using the OpenTelemetry stdoutmetric exporter.")
 	err = intervalReader.Start()
 	if err != nil {
-		log.Fatalf("Failed to start interval reader: %v\n", err)
+		return fmt.Errorf("failed to start interval reader: %w", err)
 	}
 	defer intervalReader.Stop()
 
@@ -126,20 +128,20 @@ func monitoring(otExporter export.Exporter) {
 		}),
 	)
 	if err != nil {
-		log.Fatalf("Failed to add gauge: %v\n", err)
+		return fmt.Errorf("failed to add gauge: %w", err)
 	}
 	entry, err := gauge.GetEntry()
 	if err != nil {
-		log.Fatalf("Failed to get gauge entry: %v\n", err)
+		return fmt.Errorf("failed to get gauge entry: %w", err)
 	}
 
 	log.Println("Registering a cumulative metric using an OpenCensus view.")
 	if err := view.Register(countView); err != nil {
-		log.Fatalf("Failed to register views: %v", err)
+		return fmt.Errorf("failed to register views: %w", err)
 	}
 	ctx, err := tag.New(context.Background(), tag.Insert(keyType, "view"))
 	if err != nil {
-		log.Fatalf("Failed to set tag: %v\n", err)
+		return fmt.Errorf("failed to set tag: %w", err)
 	}
 	for i := int64(1); true; i++ {
 		// update stats for our gauge
@@ -148,4 +150,5 @@ func monitoring(otExporter export.Exporter) {
 		stats.Record(ctx, countMeasure.M(1))
 		time.Sleep(time.Second)
 	}
+	return nil
 }

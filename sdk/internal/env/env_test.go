@@ -114,7 +114,6 @@ func TestEnvParse(t *testing.T) {
 					require.NoError(t, os.Setenv(key, invalid))
 					assert.Equal(t, defVal, tc.f(defVal), "invalid value")
 				})
-
 			}
 		})
 	}

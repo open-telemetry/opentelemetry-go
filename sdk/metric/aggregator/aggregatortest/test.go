@@ -32,14 +32,19 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
 )
 
+// Magnitude is the upper-bound of random numbers used in profile tests.
 const Magnitude = 1000
 
+// Profile is an aggregator test profile.
 type Profile struct {
 	NumberKind number.Kind
 	Random     func(sign int) number.Number
 }
 
+// NoopAggregator is an aggregator that performs no operations.
 type NoopAggregator struct{}
+
+// NoopAggregation is an aggregation that performs no operations.
 type NoopAggregation struct{}
 
 var _ aggregator.Aggregator = NoopAggregator{}
@@ -63,11 +68,13 @@ func newProfiles() []Profile {
 	}
 }
 
+// NewAggregatorTest returns a descriptor for mkind and nkind.
 func NewAggregatorTest(mkind sdkapi.InstrumentKind, nkind number.Kind) *sdkapi.Descriptor {
 	desc := sdkapi.NewDescriptor("test.name", mkind, nkind, "", "")
 	return &desc
 }
 
+// RunProfiles runs all test profile against the factory function f.
 func RunProfiles(t *testing.T, f func(*testing.T, Profile)) {
 	for _, profile := range newProfiles() {
 		t.Run(profile.NumberKind.String(), func(t *testing.T) {
@@ -85,44 +92,54 @@ func TestMain(m *testing.M) {
 		},
 	}
 	if !ottest.Aligned8Byte(fields, os.Stderr) {
+		// nolint:revive  // this is a main func, allow Exit.
 		os.Exit(1)
 	}
 
+	// nolint:revive  // this is a main func, allow Exit.
 	os.Exit(m.Run())
 }
 
+// Numbers are a collection of measured data point values.
 type Numbers struct {
 	// numbers has to be aligned for 64-bit atomic operations.
 	numbers []number.Number
 	kind    number.Kind
 }
 
+// NewNumbers returns a new Numbers for the passed kind.
 func NewNumbers(kind number.Kind) Numbers {
 	return Numbers{
 		kind: kind,
 	}
 }
 
+// Append appends v to the numbers n.
 func (n *Numbers) Append(v number.Number) {
 	n.numbers = append(n.numbers, v)
 }
 
+// Sort sorts all the numbers contained in n.
 func (n *Numbers) Sort() {
 	sort.Sort(n)
 }
 
+// Less returns if the number at index i is less than the number at index j.
 func (n *Numbers) Less(i, j int) bool {
 	return n.numbers[i].CompareNumber(n.kind, n.numbers[j]) < 0
 }
 
+// Len returns number of data points Numbers contains.
 func (n *Numbers) Len() int {
 	return len(n.numbers)
 }
 
+// Swap swaps the location of the numbers at index i and j.
 func (n *Numbers) Swap(i, j int) {
 	n.numbers[i], n.numbers[j] = n.numbers[j], n.numbers[i]
 }
 
+// Sum returns the sum of all data points.
 func (n *Numbers) Sum() number.Number {
 	var sum number.Number
 	for _, num := range n.numbers {
@@ -131,65 +148,78 @@ func (n *Numbers) Sum() number.Number {
 	return sum
 }
 
+// Count returns the number of data points Numbers contains.
 func (n *Numbers) Count() uint64 {
 	return uint64(len(n.numbers))
 }
 
+// Min returns the min number.
 func (n *Numbers) Min() number.Number {
 	return n.numbers[0]
 }
 
+// Max returns the max number.
 func (n *Numbers) Max() number.Number {
 	return n.numbers[len(n.numbers)-1]
 }
 
+// Points returns the slice of number for all data points.
 func (n *Numbers) Points() []number.Number {
 	return n.numbers
 }
 
 // CheckedUpdate performs the same range test the SDK does on behalf of the aggregator.
-func CheckedUpdate(t *testing.T, agg aggregator.Aggregator, number number.Number, descriptor *sdkapi.Descriptor) {
+func CheckedUpdate(t *testing.T, agg aggregator.Aggregator, n number.Number, descriptor *sdkapi.Descriptor) {
 	ctx := context.Background()
 
 	// Note: Aggregator tests are written assuming that the SDK
 	// has performed the RangeTest. Therefore we skip errors that
 	// would have been detected by the RangeTest.
-	err := aggregator.RangeTest(number, descriptor)
+	err := aggregator.RangeTest(n, descriptor)
 	if err != nil {
 		return
 	}
 
-	if err := agg.Update(ctx, number, descriptor); err != nil {
+	if err := agg.Update(ctx, n, descriptor); err != nil {
 		t.Error("Unexpected Update failure", err)
 	}
 }
 
+// CheckedMerge verifies aggFrom merges into aggInto with the scope of
+// descriptor.
 func CheckedMerge(t *testing.T, aggInto, aggFrom aggregator.Aggregator, descriptor *sdkapi.Descriptor) {
 	if err := aggInto.Merge(aggFrom, descriptor); err != nil {
 		t.Error("Unexpected Merge failure", err)
 	}
 }
 
+// Kind returns a Noop aggregation Kind.
 func (NoopAggregation) Kind() aggregation.Kind {
 	return aggregation.Kind("Noop")
 }
 
+// Aggregation returns a NoopAggregation.
 func (NoopAggregator) Aggregation() aggregation.Aggregation {
 	return NoopAggregation{}
 }
 
+// Update performs no operation.
 func (NoopAggregator) Update(context.Context, number.Number, *sdkapi.Descriptor) error {
 	return nil
 }
 
+// SynchronizedMove performs no operation.
 func (NoopAggregator) SynchronizedMove(aggregator.Aggregator, *sdkapi.Descriptor) error {
 	return nil
 }
 
+// Merge performs no operation.
 func (NoopAggregator) Merge(aggregator.Aggregator, *sdkapi.Descriptor) error {
 	return nil
 }
 
+// SynchronizedMoveResetTest tests SynchronizedMove behavior for an aggregator
+// during resets.
 func SynchronizedMoveResetTest(t *testing.T, mkind sdkapi.InstrumentKind, nf func(*sdkapi.Descriptor) aggregator.Aggregator) {
 	t.Run("reset on nil", func(t *testing.T) {
 		// Ensures that SynchronizedMove(nil, descriptor) discards and
@@ -272,8 +302,6 @@ func SynchronizedMoveResetTest(t *testing.T, mkind sdkapi.InstrumentKind, nf fun
 				require.Equal(t, input, v)
 				require.NoError(t, err)
 			}
-
 		})
 	})
-
 }

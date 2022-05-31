@@ -39,7 +39,7 @@ func fakeUnameProvider(buf *unix.Utsname) error {
 }
 
 func fakeUnameProviderWithError(buf *unix.Utsname) error {
-	return fmt.Errorf("Error invoking uname(2)")
+	return fmt.Errorf("error invoking uname(2)")
 }
 
 func TestUname(t *testing.T) {
@@ -62,30 +62,6 @@ func TestUnameError(t *testing.T) {
 	require.Error(t, err)
 
 	resource.SetDefaultUnameProvider()
-}
-
-func TestCharsToString(t *testing.T) {
-	tt := []struct {
-		Name     string
-		Bytes    []byte
-		Expected string
-	}{
-		{"Nil array", nil, ""},
-		{"Empty array", []byte{}, ""},
-		{"Empty string (null terminated)", []byte{0x00}, ""},
-		{"Nonempty string (null terminated)", []byte{0x31, 0x32, 0x33, 0x00}, "123"},
-		{"Nonempty string (non-null terminated)", []byte{0x31, 0x32, 0x33}, "123"},
-		{"Nonempty string with values after null", []byte{0x31, 0x32, 0x33, 0x00, 0x34}, "123"},
-	}
-
-	for _, tc := range tt {
-		tc := tc
-
-		t.Run(tc.Name, func(t *testing.T) {
-			result := resource.CharsToString(tc.Bytes)
-			require.EqualValues(t, tc.Expected, result)
-		})
-	}
 }
 
 func TestGetFirstAvailableFile(t *testing.T) {
