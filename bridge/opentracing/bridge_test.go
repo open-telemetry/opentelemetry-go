@@ -3,13 +3,15 @@ package opentracing
 import (
 	"context"
 	"errors"
-	ot "github.com/opentracing/opentracing-go"
-	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/trace"
 	"net/http"
 	"strings"
 	"testing"
+
+	ot "github.com/opentracing/opentracing-go"
+	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type testOnlyTextMapReader struct {
@@ -36,8 +38,6 @@ func newTestOnlyTextMapWriter() *testOnlyTextMapWriter {
 
 func (t *testOnlyTextMapWriter) Set(key, val string) {
 	t.m[key] = val
-
-	return
 }
 
 type testTextMapReaderAndWriter struct {
@@ -127,7 +127,6 @@ type testTextMapPropagator struct {
 }
 
 func (t testTextMapPropagator) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
-
 	carrier.Set(testHeader, strings.Join([]string{traceID.String(), spanID.String()}, ":"))
 }
 
@@ -155,7 +154,7 @@ func (t testTextMapPropagator) Fields() []string {
 	return []string{"test"}
 }
 
-// textMapCarrier  Implemented propagation.TextMapCarrier interface
+// textMapCarrier  Implemented propagation.TextMapCarrier interface.
 type textMapCarrier struct {
 	m map[string]string
 }
@@ -182,7 +181,7 @@ func (t *textMapCarrier) Keys() []string {
 	return str
 }
 
-// testTextMapReader only implemented opentracing.TextMapReader interface
+// testTextMapReader only implemented opentracing.TextMapReader interface.
 type testTextMapReader struct {
 	m *map[string]string
 }
@@ -201,7 +200,7 @@ func (t *testTextMapReader) ForeachKey(handler func(key string, val string) erro
 	return nil
 }
 
-// testTextMapWriter only implemented opentracing.TextMapWriter interface
+// testTextMapWriter only implemented opentracing.TextMapWriter interface.
 type testTextMapWriter struct {
 	m *map[string]string
 }
@@ -273,5 +272,4 @@ func TestBridgeTracer_ExtractAndInject(t *testing.T) {
 			assert.Equal(t, traceID.String(), bsc.otelSpanContext.TraceID().String())
 		})
 	}
-
 }

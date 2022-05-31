@@ -25,7 +25,6 @@ import (
 	otext "github.com/opentracing/opentracing-go/ext"
 	otlog "github.com/opentracing/opentracing-go/log"
 
-	"github.com/opentracing/opentracing-go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
@@ -731,7 +730,7 @@ func (t *BridgeTracer) getPropagator() propagation.TextMapPropagator {
 	return otel.GetTextMapPropagator()
 }
 
-// textMapWrapper Provides opentracing.TextMapWriter and opentracing.TextMapReader to
+// textMapWrapper Provides ot.TextMapWriter and ot.TextMapReader to
 // propagation.TextMapCarrier compatibility.
 // Usually, Inject method will only use the write-related interface.
 // Extract method will only use the reade-related interface.
@@ -739,8 +738,8 @@ func (t *BridgeTracer) getPropagator() propagation.TextMapPropagator {
 // when the carrier implements only one of the interfaces,
 // it provides a default implementation of the other interface (textMapWriter and textMapReader).
 type textMapWrapper struct {
-	opentracing.TextMapWriter
-	opentracing.TextMapReader
+	ot.TextMapWriter
+	ot.TextMapReader
 	readerMap map[string]string
 }
 
@@ -774,6 +773,7 @@ func (t *textMapWrapper) loadMap() {
 
 	_ = t.ForeachKey(func(key, val string) error {
 		t.readerMap[key] = val
+
 		return nil
 	})
 }
@@ -781,14 +781,14 @@ func (t *textMapWrapper) loadMap() {
 func newTextMapWrapperForExtract(carrier interface{}) (*textMapWrapper, error) {
 	t := &textMapWrapper{}
 
-	reader, ok := carrier.(opentracing.TextMapReader)
+	reader, ok := carrier.(ot.TextMapReader)
 	if !ok {
 		return nil, ot.ErrInvalidCarrier
 	}
 
 	t.TextMapReader = reader
 
-	writer, ok := carrier.(opentracing.TextMapWriter)
+	writer, ok := carrier.(ot.TextMapWriter)
 	if ok {
 		t.TextMapWriter = writer
 	} else {
@@ -801,14 +801,14 @@ func newTextMapWrapperForExtract(carrier interface{}) (*textMapWrapper, error) {
 func newTextMapWrapperForInject(carrier interface{}) (*textMapWrapper, error) {
 	t := &textMapWrapper{}
 
-	writer, ok := carrier.(opentracing.TextMapWriter)
+	writer, ok := carrier.(ot.TextMapWriter)
 	if !ok {
 		return nil, ot.ErrInvalidCarrier
 	}
 
 	t.TextMapWriter = writer
 
-	reader, ok := carrier.(opentracing.TextMapReader)
+	reader, ok := carrier.(ot.TextMapReader)
 	if ok {
 		t.TextMapReader = reader
 	} else {
@@ -822,12 +822,12 @@ type textMapWriter struct {
 }
 
 func (t *textMapWriter) Set(key string, value string) {
-	return // maybe print a warning log
+	// maybe print a warning log.
 }
 
 type textMapReader struct {
 }
 
 func (t *textMapReader) ForeachKey(handler func(key, val string) error) error {
-	return nil // maybe print a warning log
+	return nil // maybe print a warning log.
 }
