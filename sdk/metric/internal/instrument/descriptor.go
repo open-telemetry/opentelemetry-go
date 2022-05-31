@@ -22,5 +22,3 @@ type Description struct {
 	InstrumentName        string
 	InstrumentDescription string
 }
-
-var EmptyDescription = Description{}

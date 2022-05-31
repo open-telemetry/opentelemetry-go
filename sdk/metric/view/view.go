@@ -64,7 +64,7 @@ func (cfg Config) TransformInstrument(desc instrument.Description) (outputDesc i
 		!cfg.matchLibraryName(desc.Library.Name) ||
 		!cfg.matchLibrarySchemaURL(desc.Library.SchemaURL) ||
 		!cfg.matchLibraryVersion(desc.Library.Version) {
-		return instrument.EmptyDescription, false
+		return instrument.Description{}, false
 	}
 	if cfg.viewName != "" {
 		desc.InstrumentName = cfg.viewName
@@ -88,7 +88,7 @@ func (cfg Config) TransformAttributes(input attribute.Set) attribute.Set {
 	return out
 }
 
-// TODO: Provide Transfrom* for AggregationKind (#2816)
+// TODO: Provide Transform* for AggregationKind (#2816)
 
 func (cfg Config) matchName(name string) bool {
 	if cfg.instrumentNameRegexp != nil {
@@ -96,12 +96,15 @@ func (cfg Config) matchName(name string) bool {
 	}
 	return cfg.instrumentName == "" || name == cfg.instrumentName
 }
+
 func (cfg Config) matchLibraryName(name string) bool {
 	return cfg.library.Name == "" || name == cfg.library.Name
 }
+
 func (cfg Config) matchLibraryVersion(version string) bool {
 	return cfg.library.Version == "" || version == cfg.library.Version
 }
+
 func (cfg Config) matchLibrarySchemaURL(schemaURL string) bool {
 	return cfg.library.SchemaURL == "" || schemaURL == cfg.library.SchemaURL
 }
@@ -127,9 +130,9 @@ func MatchInstrumentName(name string) Option {
 	})
 }
 
-// Match MatchInstrumentNameRegexp will match any instrument with the provided
+// MatchInstrumentNameRegexp will match any instrument with the provided
 // regexp.
-// Not compatible with MatchInstrumentName or WithName
+// Not compatible with MatchInstrumentName or WithName.
 func MatchInstrumentNameRegexp(re *regexp.Regexp) Option {
 	return optionFunc(func(cfg Config) Config {
 		cfg.instrumentNameRegexp = re

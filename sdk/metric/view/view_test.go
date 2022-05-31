@@ -20,6 +20,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/internal/instrument"
@@ -44,11 +45,9 @@ var noMatchInstrument = instrument.Description{
 	InstrumentDescription: "",
 }
 
-func TestConfig_Transform(t *testing.T) {
+var emptyDescription = instrument.Description{}
 
-	type args struct {
-		desc instrument.Description
-	}
+func TestConfig_Transform(t *testing.T) {
 	tests := []struct {
 		name     string
 		options  []Option
@@ -61,7 +60,7 @@ func TestConfig_Transform(t *testing.T) {
 				MatchInstrumentName("foo"),
 			},
 			match:    matchInstrument,
-			notMatch: instrument.EmptyDescription,
+			notMatch: emptyDescription,
 		},
 		{
 			name: "Library name",
@@ -71,7 +70,7 @@ func TestConfig_Transform(t *testing.T) {
 				}),
 			},
 			match:    matchInstrument,
-			notMatch: instrument.EmptyDescription,
+			notMatch: emptyDescription,
 		},
 		{
 			name: "Library version",
@@ -82,7 +81,7 @@ func TestConfig_Transform(t *testing.T) {
 			},
 
 			match:    matchInstrument,
-			notMatch: instrument.EmptyDescription,
+			notMatch: emptyDescription,
 		},
 		{
 			name: "Library SchemaURL",
@@ -92,7 +91,7 @@ func TestConfig_Transform(t *testing.T) {
 				}),
 			},
 			match:    matchInstrument,
-			notMatch: instrument.EmptyDescription,
+			notMatch: emptyDescription,
 		},
 		{
 			name: "Regex",
@@ -100,7 +99,7 @@ func TestConfig_Transform(t *testing.T) {
 				MatchInstrumentNameRegexp(regexp.MustCompile("^f.*")),
 			},
 			match:    matchInstrument,
-			notMatch: instrument.EmptyDescription,
+			notMatch: emptyDescription,
 		},
 		{
 			name: "composite literal name",
@@ -113,7 +112,7 @@ func TestConfig_Transform(t *testing.T) {
 				}),
 			},
 			match:    matchInstrument,
-			notMatch: instrument.EmptyDescription,
+			notMatch: emptyDescription,
 		},
 		{
 			name: "composite regex name",
@@ -126,7 +125,7 @@ func TestConfig_Transform(t *testing.T) {
 				}),
 			},
 			match:    matchInstrument,
-			notMatch: instrument.EmptyDescription,
+			notMatch: emptyDescription,
 		},
 
 		{
@@ -144,7 +143,7 @@ func TestConfig_Transform(t *testing.T) {
 				InstrumentName:        "baz",
 				InstrumentDescription: "",
 			},
-			notMatch: instrument.EmptyDescription,
+			notMatch: emptyDescription,
 		},
 		{
 			name: "rename",
@@ -161,7 +160,7 @@ func TestConfig_Transform(t *testing.T) {
 				InstrumentName:        "foo",
 				InstrumentDescription: "descriptive stuff",
 			},
-			notMatch: instrument.EmptyDescription,
+			notMatch: emptyDescription,
 		},
 	}
 	for _, tt := range tests {
@@ -173,10 +172,9 @@ func TestConfig_Transform(t *testing.T) {
 				got, match := cfg.TransformInstrument(matchInstrument)
 				assert.Equal(t, tt.match, got)
 				assert.True(t, match)
-
 			})
-			t.Run("does not match", func(t *testing.T) {
 
+			t.Run("does not match", func(t *testing.T) {
 				got, match := cfg.TransformInstrument(noMatchInstrument)
 				assert.Equal(t, tt.notMatch, got)
 				assert.False(t, match)
@@ -186,7 +184,6 @@ func TestConfig_Transform(t *testing.T) {
 }
 
 func TestConfig_TransformAttributes(t *testing.T) {
-
 	inputSet := attribute.NewSet(
 		attribute.String("foo", "bar"),
 		attribute.Int("power-level", 9001),
