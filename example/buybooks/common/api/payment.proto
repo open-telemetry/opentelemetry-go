@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+option go_package = "github.com/Julian-Chu/tracing-go/services/paymentservice/api1";
+
+package api;
+
+// The greeting service definition.
+service Payment {
+  // Sends a greeting
+  rpc Charge (ChargeRequest) returns (ChargeReply) {}
+}
+
+// The request message containing the user's name.
+message ChargeRequest {
+  string bookID = 1;
+}
+
+// The response message containing the greetings
+message ChargeReply {
+  int32 amount = 1;
+}

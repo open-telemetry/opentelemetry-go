@@ -1,0 +1,87 @@
+version: '3'
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:1.16
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+
+  nsqlookupd:
+    image: nsqio/nsq
+    command: /nsqlookupd
+    ports:
+      - "4160:4160"
+      - "4161:4161"
+  nsqd:
+    container_name: nsqd
+    image: nsqio/nsq
+    #    command: /nsqd --lookupd-tcp-address=nsqlookupd:4160 -broadcast-address=127.0.0.1
+    command: /nsqd --lookupd-tcp-address=nsqlookupd:4160 -broadcast-address=nsqd
+    depends_on:
+      - nsqlookupd
+    ports:
+      - "4150:4150"
+      - "4151:4151"
+  nsqadmin:
+    image: nsqio/nsq
+    command: /nsqadmin --lookupd-http-address=nsqlookupd:4161
+    depends_on:
+      - nsqlookupd
+    ports:
+      - "4171:4171"
+
+  shippingservice:
+    build:
+      context: .
+      dockerfile: shippingservice/Dockerfile
+    command: "go run ./shippingservice/..."
+    environment:
+      - jaeger=http://jaeger:14268
+      - nsqlookupd=nsqlookupd:4161
+    depends_on:
+      - jaeger
+      - nsqd
+
+  paymentservice:
+    build:
+      context: .
+      dockerfile: ./paymentservice/Dockerfile
+    command: "go run ./paymentservice/..."
+    environment:
+      - jaeger=http://jaeger:14268
+    depends_on:
+      - jaeger
+
+  bookstore:
+    build:
+      context: .
+      dockerfile: ./bookstore/Dockerfile
+    command: "go run ./bookstore/..."
+    environment:
+      - jaeger=http://jaeger:14268
+      - paymentservice=paymentservice:8080
+      - nsqd=nsqd:4150
+    depends_on:
+      - jaeger
+      - nsqd
+      - paymentservice
+      - shippingservice
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthcheck" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  client:
+    build:
+      context: .
+      dockerfile: ./client/Dockerfile
+    command: "go run ./client/..."
+    environment:
+      - jaeger=http://jaeger:14268
+      - bookstore=http://bookstore:8080
+    depends_on:
+      - bookstore
+    restart: on-failure
