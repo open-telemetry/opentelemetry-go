@@ -67,13 +67,15 @@ func newUDPConn() (net.PacketConn, *net.UDPConn, error) {
 
 	addr, err := net.ResolveUDPAddr("udp", mockServer.LocalAddr().String())
 	if err != nil {
-		mockServer.Close()
+		// Best effort.
+		_ = mockServer.Close()
 		return nil, nil, err
 	}
 
 	conn, err := net.DialUDP("udp", nil, addr)
 	if err != nil {
-		mockServer.Close()
+		// Best effort.
+		_ = mockServer.Close()
 		return nil, nil, err
 	}
 
