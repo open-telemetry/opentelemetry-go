@@ -32,6 +32,7 @@ import (
 type MeterProvider struct {
 	res *resource.Resource
 
+	//nolint:structcheck,unused //This will be used by the MP to produce for a reader, and for the Meters to do proper view filtering
 	readers map[Reader][]view.View
 
 	forceFlush, shutdown func(context.Context) error
