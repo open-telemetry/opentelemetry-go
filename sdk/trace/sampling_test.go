@@ -209,6 +209,16 @@ func TestTraceIdRatioSamplesInclusively(t *testing.T) {
 	}
 }
 
+func TestTraceIdRatioHighBit(t *testing.T) {
+	traceID, err := trace.TraceIDFromHex("fffffff0000000000000000000000000")
+	require.NoError(t, err)
+
+	sampler := TraceIDRatioBased(.9999999999999)
+	params := SamplingParameters{TraceID: traceID}
+	require.Equal(t, RecordAndSample, sampler.ShouldSample(params).Decision,
+		"%s did not sample %s", sampler.Description(), traceID)
+}
+
 func TestTracestateIsPassed(t *testing.T) {
 	testCases := []struct {
 		name    string

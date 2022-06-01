@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"math"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -113,7 +114,7 @@ func TraceIDRatioBased(fraction float64) Sampler {
 	}
 
 	return &traceIDRatioSampler{
-		traceIDUpperBound: uint64(fraction * (1 << 63)),
+		traceIDUpperBound: uint64(fraction * math.MaxUint64),
 		description:       fmt.Sprintf("TraceIDRatioBased{%g}", fraction),
 	}
 }

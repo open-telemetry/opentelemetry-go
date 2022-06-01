@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- The `TraceIDRatioBased` sampler now correctly uses `math.MaxUint64` as its upper bound. (#2936)
+
 ### Changed
 
 - The `crosslink` make target has been updated to use the `go.opentelemetry.io/build-tools/crosslink` package. (#2886)
