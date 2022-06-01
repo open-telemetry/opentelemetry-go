@@ -29,7 +29,7 @@ import (
 // config contains configuration options for a MeterProvider.
 type config struct {
 	res     *resource.Resource
-	readers map[Reader][]view.Config
+	readers map[Reader][]view.View
 }
 
 // readerSignals returns a force-flush and shutdown function for a
@@ -124,12 +124,16 @@ func WithResource(res *resource.Resource) Option {
 //
 // By default, if this option is not used, the MeterProvider will perform no
 // operations; no data will be exported without a Reader.
-func WithReader(r Reader, confs ...view.Config) Option {
+func WithReader(r Reader, views ...view.View) Option {
 	return optionFunc(func(cfg config) config {
 		if cfg.readers == nil {
-			cfg.readers = make(map[Reader][]view.Config)
+			cfg.readers = make(map[Reader][]view.View)
 		}
-		cfg.readers[r] = confs
+		if len(views) == 0 {
+			views = []view.View{view.View{}}
+		}
+
+		cfg.readers[r] = views
 		return cfg
 	})
 }

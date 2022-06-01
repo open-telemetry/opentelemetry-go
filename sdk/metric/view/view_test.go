@@ -240,7 +240,7 @@ func TestConfig_TransformAttributes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, err := New(WithKeyFilter(tt.filter...))
+			cfg, err := New(WithAttributeFilter(tt.filter...))
 			require.NoError(t, err)
 
 			got := cfg.TransformAttributes(inputSet)

@@ -26,12 +26,19 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/internal/instrument"
 )
 
-// Config contains Configuration options for a view. An empty config will match
-// all instruments, and do no modifications.
-type Config struct {
+// View provides users with the flexibility to customize the metrics that are
+// output by the SDK. A View can be used to:
+//
+// * Ignore Instruments.
+// * Change the name of an Instrument.
+// * Change the aggregation of an Instrument.
+// * Customize which attribute(s) are to be reported by the Instrument.
+//
+// An empty config will match all instruments, and do no modifications.
+type View struct {
 	instrumentName       string
 	instrumentNameRegexp *regexp.Regexp
-	library              instrumentation.Library
+	scope                instrumentation.Library
 
 	filterKeys  map[attribute.Key]struct{}
 	viewName    string
@@ -40,49 +47,46 @@ type Config struct {
 }
 
 // New returns a new configured view Config.
-func New(opts ...Option) (Config, error) {
-	cfg := Config{}
+func New(opts ...Option) (View, error) {
+	v := View{}
 
 	for _, opt := range opts {
-		cfg = opt.apply(cfg)
+		v = opt.apply(v)
 	}
 
-	if cfg.instrumentName != "" && cfg.instrumentNameRegexp != nil {
-		return Config{}, fmt.Errorf("can not use name selector and name regex in the same view")
-	}
-	if cfg.instrumentNameRegexp != nil && cfg.viewName != "" {
-		return Config{}, fmt.Errorf("can not use name regex with a view name")
+	if v.instrumentName == "" && v.viewName != "" {
+		return View{}, fmt.Errorf("must use an instrument name with a view name")
 	}
 
-	return cfg, nil
+	return v, nil
 }
 
 // TransformInstrument will check if an instrument description matches this view
 // and will convert it if it does.
-func (cfg Config) TransformInstrument(desc instrument.Description) (outputDesc instrument.Description, match bool) {
-	if !cfg.matchName(desc.InstrumentName) ||
-		!cfg.matchLibraryName(desc.Library.Name) ||
-		!cfg.matchLibrarySchemaURL(desc.Library.SchemaURL) ||
-		!cfg.matchLibraryVersion(desc.Library.Version) {
+func (v View) TransformInstrument(desc instrument.Description) (outputDesc instrument.Description, match bool) {
+	if !v.matchName(desc.InstrumentName) ||
+		!v.matchLibraryName(desc.Library.Name) ||
+		!v.matchLibrarySchemaURL(desc.Library.SchemaURL) ||
+		!v.matchLibraryVersion(desc.Library.Version) {
 		return instrument.Description{}, false
 	}
-	if cfg.viewName != "" {
-		desc.InstrumentName = cfg.viewName
+	if v.viewName != "" {
+		desc.InstrumentName = v.viewName
 	}
-	if cfg.description != "" {
-		desc.InstrumentDescription = cfg.description
+	if v.description != "" {
+		desc.InstrumentDescription = v.description
 	}
 	return desc, true
 }
 
 // TransformAttributes filters an attribute set to the keys in the config. If no
 // filter was provided the original set is returned.
-func (cfg Config) TransformAttributes(input attribute.Set) attribute.Set {
-	if len(cfg.filterKeys) == 0 {
+func (v View) TransformAttributes(input attribute.Set) attribute.Set {
+	if len(v.filterKeys) == 0 {
 		return input
 	}
 	out, _ := input.Filter(attribute.Filter(func(kv attribute.KeyValue) bool {
-		_, ok := cfg.filterKeys[kv.Key]
+		_, ok := v.filterKeys[kv.Key]
 		return ok
 	}))
 	return out
@@ -90,43 +94,44 @@ func (cfg Config) TransformAttributes(input attribute.Set) attribute.Set {
 
 // TODO: Provide Transform* for AggregationKind (#2816)
 
-func (cfg Config) matchName(name string) bool {
-	if cfg.instrumentNameRegexp != nil {
-		return cfg.instrumentNameRegexp.MatchString(name)
+func (v View) matchName(name string) bool {
+	if v.instrumentNameRegexp != nil {
+		return v.instrumentNameRegexp.MatchString(name)
 	}
-	return cfg.instrumentName == "" || name == cfg.instrumentName
+	return v.instrumentName == "" || name == v.instrumentName
 }
 
-func (cfg Config) matchLibraryName(name string) bool {
-	return cfg.library.Name == "" || name == cfg.library.Name
+func (v View) matchLibraryName(name string) bool {
+	return v.scope.Name == "" || name == v.scope.Name
 }
 
-func (cfg Config) matchLibraryVersion(version string) bool {
-	return cfg.library.Version == "" || version == cfg.library.Version
+func (v View) matchLibraryVersion(version string) bool {
+	return v.scope.Version == "" || version == v.scope.Version
 }
 
-func (cfg Config) matchLibrarySchemaURL(schemaURL string) bool {
-	return cfg.library.SchemaURL == "" || schemaURL == cfg.library.SchemaURL
+func (v View) matchLibrarySchemaURL(schemaURL string) bool {
+	return v.scope.SchemaURL == "" || schemaURL == v.scope.SchemaURL
 }
 
 // Option applies a Configuration option value to a view Config. All options
 // will be used together to determine match and transforms.
 type Option interface {
-	apply(Config) Config
+	apply(View) View
 }
 
-type optionFunc func(Config) Config
+type optionFunc func(View) View
 
-func (f optionFunc) apply(cfg Config) Config {
-	return f(cfg)
+func (f optionFunc) apply(v View) View {
+	return f(v)
 }
 
 // MatchInstrumentName will do an exact match of the name of the instrument.
 // Not compatible with MatchInstrumentNameRegexp.
 func MatchInstrumentName(name string) Option {
-	return optionFunc(func(cfg Config) Config {
-		cfg.instrumentName = name
-		return cfg
+	return optionFunc(func(v View) View {
+		v.instrumentName = name
+		v.instrumentNameRegexp = nil
+		return v
 	})
 }
 
@@ -134,33 +139,34 @@ func MatchInstrumentName(name string) Option {
 // regexp.
 // Not compatible with MatchInstrumentName or WithName.
 func MatchInstrumentNameRegexp(re *regexp.Regexp) Option {
-	return optionFunc(func(cfg Config) Config {
-		cfg.instrumentNameRegexp = re
-		return cfg
+	return optionFunc(func(v View) View {
+		v.instrumentNameRegexp = re
+		v.instrumentName = ""
+		return v
 	})
 }
 
 // TODO: Implement when InstrumentKind and NumberKind are defined
 // func MatchInstrumentKind(k sdkinstrument.Kind) Option {
-// 	return optionFunc(func(cfg Config) Config {
-// 		cfg.instrumentKind = k
-// 		return cfg
+// 	return optionFunc(func(v Config) Config {
+// 		v.instrumentKind = k
+// 		return v
 // 	})
 // }
 
 // func MatchNumberKind(k number.Kind) Option {
-// 	return optionFunc(func(cfg Config) Config {
-// 		cfg.numberKind = k
-// 		return cfg
+// 	return optionFunc(func(v Config) Config {
+// 		v.numberKind = k
+// 		return v
 // 	})
 // }
 
 // MatchInstrumentationLibrary will do an exact match on any
 // instrumentation.Library field that is not blank ("").
 func MatchInstrumentationLibrary(lib instrumentation.Library) Option {
-	return optionFunc(func(cfg Config) Config {
-		cfg.library = lib
-		return cfg
+	return optionFunc(func(v View) View {
+		v.scope = lib
+		return v
 	})
 }
 
@@ -168,46 +174,39 @@ func MatchInstrumentationLibrary(lib instrumentation.Library) Option {
 // instrument name will not be changed. Not compatible with
 // MatchInstrumentNameRegexp.
 func WithName(name string) Option {
-	return optionFunc(func(cfg Config) Config {
-		cfg.viewName = name
-		return cfg
+	return optionFunc(func(v View) View {
+		v.viewName = name
+		return v
 	})
 }
 
 // WithDescription will change the description of the instruments the view
 // matches. If not used or empty the description will not be changed.
 func WithDescription(desc string) Option {
-	return optionFunc(func(cfg Config) Config {
-		cfg.description = desc
-		return cfg
+	return optionFunc(func(v View) View {
+		v.description = desc
+		return v
 	})
 }
 
-// WithKeyFilter will select attributes that have a matching key.  If not used
+// WithAttributeFilter will select attributes that have a matching key.  If not used
 // or empty no filter will be applied.
-func WithKeyFilter(keys ...attribute.Key) Option {
-	return optionFunc(func(cfg Config) Config {
-		if cfg.filterKeys == nil {
-			cfg.filterKeys = map[attribute.Key]struct{}{}
+func WithAttributeFilter(keys ...attribute.Key) Option {
+	return optionFunc(func(v View) View {
+		if v.filterKeys == nil {
+			v.filterKeys = map[attribute.Key]struct{}{}
 		}
 		for _, key := range keys {
-			cfg.filterKeys[key] = struct{}{}
+			v.filterKeys[key] = struct{}{}
 		}
-		return cfg
+		return v
 	})
 }
 
 // TODO: Implement when Aggregations and Temporalities are defined
 // func WithAggregation(kind aggregation.Kind) Option {
-// 	return optionFunc(func(cfg Config) Config {
-// 		cfg.aggregation = kind
-// 		return cfg
-// 	})
-// }
-
-// func WithTemporality(tempo aggregation.Temporality) Option {
-// 	return optionFunc(func(cfg Config) Config {
-// 		cfg.temporality = tempo
-// 		return cfg
+// 	return optionFunc(func(v Config) Config {
+// 		v.aggregation = kind
+// 		return v
 // 	})
 // }

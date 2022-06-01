@@ -21,6 +21,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk/metric/view"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -30,6 +31,8 @@ import (
 // passed to the configured Readers.
 type MeterProvider struct {
 	res *resource.Resource
+
+	readers map[Reader][]view.View
 
 	forceFlush, shutdown func(context.Context) error
 }
