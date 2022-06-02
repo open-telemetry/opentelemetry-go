@@ -19,11 +19,10 @@ package view // import "go.opentelemetry.io/otel/sdk/metric/view"
 
 import (
 	"fmt"
-	"regexp"
+	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/internal/instrument"
 )
 
 // View provides users with the flexibility to customize the metrics that are
@@ -36,9 +35,9 @@ import (
 //
 // An empty config will match all instruments, and do no modifications.
 type View struct {
-	instrumentName       string
-	instrumentNameRegexp *regexp.Regexp
-	scope                instrumentation.Library
+	instrumentName string
+	expandEnd      bool
+	scope          instrumentation.Library
 
 	filterKeys  map[attribute.Key]struct{}
 	viewName    string
@@ -48,14 +47,22 @@ type View struct {
 
 // New returns a new configured view Config.
 func New(opts ...Option) (View, error) {
-	v := View{}
+	v := View{
+		filterKeys: map[attribute.Key]struct{}{},
+	}
 
 	for _, opt := range opts {
 		v = opt.apply(v)
 	}
 
-	if v.instrumentName == "" && v.viewName != "" {
-		return View{}, fmt.Errorf("must use an instrument name with a view name")
+	emptyLibrary := instrumentation.Library{}
+	if v.instrumentName == "" &&
+		!v.expandEnd && v.scope == emptyLibrary {
+		return View{}, fmt.Errorf("must provide at least 1 match option")
+	}
+
+	if v.expandEnd && v.viewName != "" {
+		return View{}, fmt.Errorf("can not use view name with a wildcard match")
 	}
 
 	return v, nil
@@ -63,12 +70,12 @@ func New(opts ...Option) (View, error) {
 
 // TransformInstrument will check if an instrument description matches this view
 // and will convert it if it does.
-func (v View) TransformInstrument(desc instrument.Description) (outputDesc instrument.Description, match bool) {
+func (v View) TransformInstrument(desc Instrument) (outputDesc Instrument, match bool) {
 	if !v.matchName(desc.InstrumentName) ||
-		!v.matchLibraryName(desc.Library.Name) ||
-		!v.matchLibrarySchemaURL(desc.Library.SchemaURL) ||
-		!v.matchLibraryVersion(desc.Library.Version) {
-		return instrument.Description{}, false
+		!v.matchLibraryName(desc.Scope.Name) ||
+		!v.matchLibrarySchemaURL(desc.Scope.SchemaURL) ||
+		!v.matchLibraryVersion(desc.Scope.Version) {
+		return Instrument{}, false
 	}
 	if v.viewName != "" {
 		desc.InstrumentName = v.viewName
@@ -95,8 +102,8 @@ func (v View) TransformAttributes(input attribute.Set) attribute.Set {
 // TODO: Provide Transform* for AggregationKind (#2816)
 
 func (v View) matchName(name string) bool {
-	if v.instrumentNameRegexp != nil {
-		return v.instrumentNameRegexp.MatchString(name)
+	if v.expandEnd {
+		return strings.HasPrefix(name, v.instrumentName)
 	}
 	return v.instrumentName == "" || name == v.instrumentName
 }
@@ -129,19 +136,8 @@ func (f optionFunc) apply(v View) View {
 // Not compatible with MatchInstrumentNameRegexp.
 func MatchInstrumentName(name string) Option {
 	return optionFunc(func(v View) View {
-		v.instrumentName = name
-		v.instrumentNameRegexp = nil
-		return v
-	})
-}
-
-// MatchInstrumentNameRegexp will match any instrument with the provided
-// regexp.
-// Not compatible with MatchInstrumentName or WithName.
-func MatchInstrumentNameRegexp(re *regexp.Regexp) Option {
-	return optionFunc(func(v View) View {
-		v.instrumentNameRegexp = re
-		v.instrumentName = ""
+		v.instrumentName = strings.TrimRight(name, "*")
+		v.expandEnd = strings.HasSuffix(name, "*")
 		return v
 	})
 }
@@ -193,9 +189,6 @@ func WithDescription(desc string) Option {
 // or empty no filter will be applied.
 func WithAttributeFilter(keys ...attribute.Key) Option {
 	return optionFunc(func(v View) View {
-		if v.filterKeys == nil {
-			v.filterKeys = map[attribute.Key]struct{}{}
-		}
 		for _, key := range keys {
 			v.filterKeys[key] = struct{}{}
 		}

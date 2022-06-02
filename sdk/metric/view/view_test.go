@@ -15,7 +15,6 @@
 package view
 
 import (
-	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -94,9 +93,9 @@ func TestConfig_Transform(t *testing.T) {
 			notMatch: emptyDescription,
 		},
 		{
-			name: "Regex",
+			name: "Expands *",
 			options: []Option{
-				MatchInstrumentNameRegexp(regexp.MustCompile("^f.*")),
+				MatchInstrumentName("f*"),
 			},
 			match:    matchInstrument,
 			notMatch: emptyDescription,
@@ -105,19 +104,6 @@ func TestConfig_Transform(t *testing.T) {
 			name: "composite literal name",
 			options: []Option{
 				MatchInstrumentName("foo"),
-				MatchInstrumentationLibrary(instrumentation.Library{
-					Name:      "bar",
-					Version:   "v1.0.0",
-					SchemaURL: "stuff.test/",
-				}),
-			},
-			match:    matchInstrument,
-			notMatch: emptyDescription,
-		},
-		{
-			name: "composite regex name",
-			options: []Option{
-				MatchInstrumentNameRegexp(regexp.MustCompile("^f.*")),
 				MatchInstrumentationLibrary(instrumentation.Library{
 					Name:      "bar",
 					Version:   "v1.0.0",
@@ -165,17 +151,17 @@ func TestConfig_Transform(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, err := New(tt.options...)
+			v, err := New(tt.options...)
 			require.NoError(t, err)
 
 			t.Run("match", func(t *testing.T) {
-				got, match := cfg.TransformInstrument(matchInstrument)
+				got, match := v.TransformInstrument(matchInstrument)
 				assert.Equal(t, tt.match, got)
 				assert.True(t, match)
 			})
 
 			t.Run("does not match", func(t *testing.T) {
-				got, match := cfg.TransformInstrument(noMatchInstrument)
+				got, match := v.TransformInstrument(noMatchInstrument)
 				assert.Equal(t, tt.notMatch, got)
 				assert.False(t, match)
 			})
@@ -240,11 +226,49 @@ func TestConfig_TransformAttributes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, err := New(WithAttributeFilter(tt.filter...))
+			v, err := New(
+				MatchInstrumentName("*"),
+				WithAttributeFilter(tt.filter...),
+			)
 			require.NoError(t, err)
 
-			got := cfg.TransformAttributes(inputSet)
+			got := v.TransformAttributes(inputSet)
 			assert.Equal(t, got.Equivalent(), tt.want.Equivalent())
+		})
+	}
+}
+
+func TestNew_fail(t *testing.T) {
+	tests := []struct {
+		name    string
+		options []Option
+	}{
+		{
+			name:    "No Match Option",
+			options: []Option{},
+		},
+		{
+			name: "Match * with view name",
+			options: []Option{
+				MatchInstrumentName("*"),
+				WithName("newName"),
+			},
+		},
+		{
+			name: "Match expand * with view name",
+			options: []Option{
+				MatchInstrumentName("old*"),
+				WithName("newName"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := New(tt.options...)
+
+			assert.Equal(t, View{}, got)
+			assert.Error(t, err)
 		})
 	}
 }
