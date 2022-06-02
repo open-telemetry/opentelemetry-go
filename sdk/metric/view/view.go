@@ -130,8 +130,9 @@ func (f optionFunc) apply(v View) View {
 	return f(v)
 }
 
-// MatchInstrumentName will do an exact match of the name of the instrument.
-// Not compatible with MatchInstrumentNameRegexp.
+// MatchInstrumentName will match an instrument based on the instruments name.
+// This will accept wildcards of * for zero or more characters, and ? for
+// exactly one character. A name of "*" (default) will match all instruments.
 func MatchInstrumentName(name string) Option {
 	return optionFunc(func(v View) View {
 		if strings.ContainsAny(name, "*?") {
@@ -162,7 +163,8 @@ func MatchInstrumentName(name string) Option {
 // }
 
 // MatchInstrumentationLibrary will do an exact match on any
-// instrumentation.Library field that is not blank ("").
+// instrumentation.Library field that is not blank (""). Default is to match all
+// InstrumentationLibraries.
 func MatchInstrumentationLibrary(lib instrumentation.Library) Option {
 	return optionFunc(func(v View) View {
 		v.scope = lib
@@ -171,8 +173,8 @@ func MatchInstrumentationLibrary(lib instrumentation.Library) Option {
 }
 
 // WithName will rename the instrument the view matches. If not used or empty the
-// instrument name will not be changed. Not compatible with
-// MatchInstrumentNameRegexp.
+// instrument name will not be changed. Must be used with a non-wildcart
+// instrument name match. Default does no change.
 func WithName(name string) Option {
 	return optionFunc(func(v View) View {
 		v.viewName = name
