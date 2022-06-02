@@ -19,6 +19,7 @@ package view // import "go.opentelemetry.io/otel/sdk/metric/view"
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -35,8 +36,8 @@ import (
 //
 // An empty config will match all instruments, and do no modifications.
 type View struct {
-	instrumentName string
-	expandEnd      bool
+	instrumentName *regexp.Regexp
+	hasWildcard    bool
 	scope          instrumentation.Library
 
 	filterKeys  map[attribute.Key]struct{}
@@ -56,12 +57,12 @@ func New(opts ...Option) (View, error) {
 	}
 
 	emptyLibrary := instrumentation.Library{}
-	if v.instrumentName == "" &&
-		!v.expandEnd && v.scope == emptyLibrary {
+	if v.instrumentName == nil &&
+		v.scope == emptyLibrary {
 		return View{}, fmt.Errorf("must provide at least 1 match option")
 	}
 
-	if v.expandEnd && v.viewName != "" {
+	if v.hasWildcard && v.viewName != "" {
 		return View{}, fmt.Errorf("can not use view name with a wildcard match")
 	}
 
@@ -102,10 +103,7 @@ func (v View) TransformAttributes(input attribute.Set) attribute.Set {
 // TODO: Provide Transform* for AggregationKind (#2816)
 
 func (v View) matchName(name string) bool {
-	if v.expandEnd {
-		return strings.HasPrefix(name, v.instrumentName)
-	}
-	return v.instrumentName == "" || name == v.instrumentName
+	return v.instrumentName == nil || v.instrumentName.MatchString(name)
 }
 
 func (v View) matchLibraryName(name string) bool {
@@ -136,8 +134,14 @@ func (f optionFunc) apply(v View) View {
 // Not compatible with MatchInstrumentNameRegexp.
 func MatchInstrumentName(name string) Option {
 	return optionFunc(func(v View) View {
-		v.instrumentName = strings.TrimRight(name, "*")
-		v.expandEnd = strings.HasSuffix(name, "*")
+		if strings.ContainsAny(name, "*?") {
+			v.hasWildcard = true
+		}
+		name = regexp.QuoteMeta(name)
+		name = "^" + name + "$"
+		name = strings.ReplaceAll(name, "\\?", ".")
+		name = strings.ReplaceAll(name, "\\*", ".*")
+		v.instrumentName = regexp.MustCompile(name)
 		return v
 	})
 }

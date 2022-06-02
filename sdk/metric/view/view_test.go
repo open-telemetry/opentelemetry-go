@@ -22,11 +22,10 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/internal/instrument"
 )
 
-var matchInstrument = instrument.Description{
-	Library: instrumentation.Library{
+var matchInstrument = Instrument{
+	Scope: instrumentation.Library{
 		Name:      "bar",
 		Version:   "v1.0.0",
 		SchemaURL: "stuff.test/",
@@ -34,8 +33,8 @@ var matchInstrument = instrument.Description{
 	InstrumentName:        "foo",
 	InstrumentDescription: "",
 }
-var noMatchInstrument = instrument.Description{
-	Library: instrumentation.Library{
+var noMatchInstrument = Instrument{
+	Scope: instrumentation.Library{
 		Name:      "notfoo",
 		Version:   "v0.x.0",
 		SchemaURL: "notstuff.test/",
@@ -44,14 +43,14 @@ var noMatchInstrument = instrument.Description{
 	InstrumentDescription: "",
 }
 
-var emptyDescription = instrument.Description{}
+var emptyDescription = Instrument{}
 
 func TestConfig_Transform(t *testing.T) {
 	tests := []struct {
 		name     string
 		options  []Option
-		match    instrument.Description
-		notMatch instrument.Description
+		match    Instrument
+		notMatch Instrument
 	}{
 		{
 			name: "instrument name",
@@ -120,8 +119,8 @@ func TestConfig_Transform(t *testing.T) {
 				MatchInstrumentName("foo"),
 				WithName("baz"),
 			},
-			match: instrument.Description{
-				Library: instrumentation.Library{
+			match: Instrument{
+				Scope: instrumentation.Library{
 					Name:      "bar",
 					Version:   "v1.0.0",
 					SchemaURL: "stuff.test/",
@@ -137,8 +136,8 @@ func TestConfig_Transform(t *testing.T) {
 				MatchInstrumentName("foo"),
 				WithDescription("descriptive stuff"),
 			},
-			match: instrument.Description{
-				Library: instrumentation.Library{
+			match: Instrument{
+				Scope: instrumentation.Library{
 					Name:      "bar",
 					Version:   "v1.0.0",
 					SchemaURL: "stuff.test/",
@@ -165,6 +164,81 @@ func TestConfig_Transform(t *testing.T) {
 				assert.Equal(t, tt.notMatch, got)
 				assert.False(t, match)
 			})
+		})
+	}
+}
+
+func TestView_matchName(t *testing.T) {
+	tests := []struct {
+		name        string
+		matchName   string
+		matches     []string
+		notMatches  []string
+		hasWildcard bool
+	}{
+		{
+			name:        "exact",
+			matchName:   "foo",
+			matches:     []string{"foo"},
+			notMatches:  []string{"foobar", "barfoo", "barfoobaz"},
+			hasWildcard: false,
+		},
+		{
+			name:        "*",
+			matchName:   "*",
+			matches:     []string{"foo", "foobar", "barfoo", "barfoobaz"},
+			notMatches:  []string{},
+			hasWildcard: true,
+		},
+		{
+			name:        "front ?",
+			matchName:   "?foo",
+			matches:     []string{"1foo", "afoo"},
+			notMatches:  []string{"foo", "foobar", "barfoo", "barfoobaz"},
+			hasWildcard: true,
+		},
+		{
+			name:        "back ?",
+			matchName:   "foo?",
+			matches:     []string{"foo1", "fooz"},
+			notMatches:  []string{"foo", "foobar", "barfoo", "barfoobaz"},
+			hasWildcard: true,
+		},
+		{
+			name:        "front *",
+			matchName:   "*foo",
+			matches:     []string{"foo", "barfoo"},
+			notMatches:  []string{"foobar", "barfoobaz"},
+			hasWildcard: true,
+		},
+		{
+			name:        "back *",
+			matchName:   "foo*",
+			matches:     []string{"foo", "foobar"},
+			notMatches:  []string{"barfoo", "barfoobaz"},
+			hasWildcard: true,
+		},
+		{
+			name:        "both *",
+			matchName:   "*foo*",
+			matches:     []string{"foo", "foobar", "barfoo", "barfoobaz"},
+			notMatches:  []string{"baz"},
+			hasWildcard: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v, err := New(MatchInstrumentName(tt.matchName))
+			require.NoError(t, err)
+
+			t.Log(v.instrumentName.String())
+			assert.Equal(t, tt.hasWildcard, v.hasWildcard)
+			for _, name := range tt.matches {
+				assert.True(t, v.matchName(name), "name: %s", name)
+			}
+			for _, name := range tt.notMatches {
+				assert.False(t, v.matchName(name), "name: %s", name)
+			}
 		})
 	}
 }
