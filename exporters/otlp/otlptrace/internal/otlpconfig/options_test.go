@@ -20,6 +20,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"go.opentelemetry.io/otel/exporters/otlp/internal/envconfig"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
@@ -66,6 +68,14 @@ func (f *fileReader) readFile(filename string) ([]byte, error) {
 func TestConfigs(t *testing.T) {
 	tlsCert, err := otlpconfig.CreateTLSConfig([]byte(WeakCertificate))
 	assert.NoError(t, err)
+
+	var testDialOpts = []grpc.DialOption{
+		// the values here don't matter - we just need _some_ values to test for
+		// equality
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithAuthority("xyz"),
+		grpc.WithBlock(),
+	}
 
 	tests := []struct {
 		name       string
@@ -379,6 +389,22 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *otlpconfig.Config, grpcOption bool) {
 				assert.Equal(t, c.Traces.Timeout, 5*time.Second)
+			},
+		},
+		{
+			name: "Test GPRC DialOptions ends up as suffix",
+			opts: []otlpconfig.GenericOption{
+				otlpconfig.NewGenericOption(func(c otlpconfig.Config) otlpconfig.Config {
+					c.DialOptions = testDialOpts
+					return c
+				}),
+			},
+			asserts: func(t *testing.T, c *otlpconfig.Config, grpcOption bool) {
+				assert.GreaterOrEqual(t, len(c.DialOptions), len(testDialOpts))
+				assert.Equal(t,
+					testDialOpts,
+					c.DialOptions[len(c.DialOptions)-len(testDialOpts):],
+				)
 			},
 		},
 	}

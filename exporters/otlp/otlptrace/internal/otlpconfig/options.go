@@ -103,33 +103,32 @@ func NewGRPCConfig(opts ...GRPCOption) Config {
 		cfg = opt.ApplyGRPCOption(cfg)
 	}
 
+	dialOptsPrefix := []grpc.DialOption{}
 	if cfg.ServiceConfig != "" {
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithDefaultServiceConfig(cfg.ServiceConfig))
+		dialOptsPrefix = append(dialOptsPrefix, grpc.WithDefaultServiceConfig(cfg.ServiceConfig))
 	}
 	// Priroritize GRPCCredentials over Insecure (passing both is an error).
 	if cfg.Traces.GRPCCredentials != nil {
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(cfg.Traces.GRPCCredentials))
+		dialOptsPrefix = append(dialOptsPrefix, grpc.WithTransportCredentials(cfg.Traces.GRPCCredentials))
 	} else if cfg.Traces.Insecure {
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		dialOptsPrefix = append(dialOptsPrefix, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	} else {
 		// Default to using the host's root CA.
 		creds := credentials.NewTLS(nil)
 		cfg.Traces.GRPCCredentials = creds
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(creds))
+		dialOptsPrefix = append(dialOptsPrefix, grpc.WithTransportCredentials(creds))
 	}
 	if cfg.Traces.Compression == GzipCompression {
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
-	}
-	if len(cfg.DialOptions) != 0 {
-		cfg.DialOptions = append(cfg.DialOptions, cfg.DialOptions...)
+		dialOptsPrefix = append(dialOptsPrefix, grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
 	}
 	if cfg.ReconnectionPeriod != 0 {
 		p := grpc.ConnectParams{
 			Backoff:           backoff.DefaultConfig,
 			MinConnectTimeout: cfg.ReconnectionPeriod,
 		}
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithConnectParams(p))
+		dialOptsPrefix = append(dialOptsPrefix, grpc.WithConnectParams(p))
 	}
+	cfg.DialOptions = append(dialOptsPrefix, cfg.DialOptions...)
 
 	return cfg
 }
