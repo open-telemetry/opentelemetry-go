@@ -40,17 +40,16 @@ type View struct {
 	hasWildcard    bool
 	scope          instrumentation.Library
 
-	filterKeys  map[attribute.Key]struct{}
-	viewName    string
+	filter      attribute.Filter
+	name        string
 	description string
 	// TODO: Aggregation selection
 }
 
-// New returns a new configured view Config.
+// New returns a new configured View. If there are any duplicate Options passed,
+// the last one passed will take precedence.
 func New(opts ...Option) (View, error) {
-	v := View{
-		filterKeys: map[attribute.Key]struct{}{},
-	}
+	v := View{}
 
 	for _, opt := range opts {
 		v = opt.apply(v)
@@ -62,8 +61,8 @@ func New(opts ...Option) (View, error) {
 		return View{}, fmt.Errorf("must provide at least 1 match option")
 	}
 
-	if v.hasWildcard && v.viewName != "" {
-		return View{}, fmt.Errorf("can not use view name with a wildcard match")
+	if v.hasWildcard && v.name != "" {
+		return View{}, fmt.Errorf("invalid view: view name specified for multiple instruments")
 	}
 
 	return v, nil
@@ -71,32 +70,26 @@ func New(opts ...Option) (View, error) {
 
 // TransformInstrument will check if an instrument description matches this view
 // and will convert it if it does.
-func (v View) TransformInstrument(desc Instrument) (outputDesc Instrument, match bool) {
-	if !v.matchName(desc.InstrumentName) ||
-		!v.matchLibraryName(desc.Scope.Name) ||
-		!v.matchLibrarySchemaURL(desc.Scope.SchemaURL) ||
-		!v.matchLibraryVersion(desc.Scope.Version) {
+func (v View) TransformInstrument(inst Instrument) (transformed Instrument, match bool) {
+	if !v.match(inst) {
 		return Instrument{}, false
 	}
-	if v.viewName != "" {
-		desc.InstrumentName = v.viewName
+	if v.name != "" {
+		inst.Name = v.name
 	}
 	if v.description != "" {
-		desc.InstrumentDescription = v.description
+		inst.Description = v.description
 	}
-	return desc, true
+	return inst, true
 }
 
-// TransformAttributes filters an attribute set to the keys in the config. If no
+// TransformAttributes filters an attribute set to the keys in the View. If no
 // filter was provided the original set is returned.
 func (v View) TransformAttributes(input attribute.Set) attribute.Set {
-	if len(v.filterKeys) == 0 {
+	if v.filter == nil {
 		return input
 	}
-	out, _ := input.Filter(attribute.Filter(func(kv attribute.KeyValue) bool {
-		_, ok := v.filterKeys[kv.Key]
-		return ok
-	}))
+	out, _ := input.Filter(v.filter)
 	return out
 }
 
@@ -118,7 +111,14 @@ func (v View) matchLibrarySchemaURL(schemaURL string) bool {
 	return v.scope.SchemaURL == "" || schemaURL == v.scope.SchemaURL
 }
 
-// Option applies a Configuration option value to a view Config. All options
+func (v View) match(i Instrument) bool {
+	return v.matchName(i.Name) &&
+		v.matchLibraryName(i.Scope.Name) &&
+		v.matchLibrarySchemaURL(i.Scope.SchemaURL) &&
+		v.matchLibraryVersion(i.Scope.Version)
+}
+
+// Option applies a Configuration option value to a View. All options
 // will be used together to determine match and transforms.
 type Option interface {
 	apply(View) View
@@ -130,7 +130,7 @@ func (f optionFunc) apply(v View) View {
 	return f(v)
 }
 
-// MatchInstrumentName will match an instrument based on the instruments name.
+// MatchInstrumentName will match an instrument based on the its name.
 // This will accept wildcards of * for zero or more characters, and ? for
 // exactly one character. A name of "*" (default) will match all instruments.
 func MatchInstrumentName(name string) Option {
@@ -147,24 +147,12 @@ func MatchInstrumentName(name string) Option {
 	})
 }
 
-// TODO: Implement when InstrumentKind and NumberKind are defined
-// func MatchInstrumentKind(k sdkinstrument.Kind) Option {
-// 	return optionFunc(func(v Config) Config {
-// 		v.instrumentKind = k
-// 		return v
-// 	})
-// }
-
-// func MatchNumberKind(k number.Kind) Option {
-// 	return optionFunc(func(v Config) Config {
-// 		v.numberKind = k
-// 		return v
-// 	})
-// }
+// TODO (#2813): Implement MatchInstrumentKind when InstrumentKind is defined.
+// TODO (#2813): Implement MatchNumberKind when NumberKind is defined.
 
 // MatchInstrumentationLibrary will do an exact match on any
-// instrumentation.Library field that is not blank (""). Default is to match all
-// InstrumentationLibraries.
+// instrumentation.Scope field that is non-empty (""). The default is to match all
+// instrumentation scopes.
 func MatchInstrumentationLibrary(lib instrumentation.Library) Option {
 	return optionFunc(func(v View) View {
 		v.scope = lib
@@ -173,17 +161,17 @@ func MatchInstrumentationLibrary(lib instrumentation.Library) Option {
 }
 
 // WithName will rename the instrument the view matches. If not used or empty the
-// instrument name will not be changed. Must be used with a non-wildcart
-// instrument name match. Default does no change.
+// instrument name will not be changed. Must be used with a non-wildcard
+// instrument name match. The default does not change the instrument name.
 func WithName(name string) Option {
 	return optionFunc(func(v View) View {
-		v.viewName = name
+		v.name = name
 		return v
 	})
 }
 
 // WithDescription will change the description of the instruments the view
-// matches. If not used or empty the description will not be changed.
+// matches to desc. If not used or empty the description will not be changed.
 func WithDescription(desc string) Option {
 	return optionFunc(func(v View) View {
 		v.description = desc
@@ -191,21 +179,24 @@ func WithDescription(desc string) Option {
 	})
 }
 
-// WithAttributeFilter will select attributes that have a matching key.  If not used
+// WithAttributes will select attributes that have a matching key.  If not used
 // or empty no filter will be applied.
-func WithAttributeFilter(keys ...attribute.Key) Option {
+func WithAttributes(keys ...attribute.Key) Option {
 	return optionFunc(func(v View) View {
-		for _, key := range keys {
-			v.filterKeys[key] = struct{}{}
+		if len(keys) == 0 {
+			return v
 		}
+		filterKeys := map[attribute.Key]struct{}{}
+		for _, key := range keys {
+			filterKeys[key] = struct{}{}
+		}
+
+		v.filter = attribute.Filter(func(kv attribute.KeyValue) bool {
+			_, ok := filterKeys[kv.Key]
+			return ok
+		})
 		return v
 	})
 }
 
-// TODO: Implement when Aggregations and Temporalities are defined
-// func WithAggregation(kind aggregation.Kind) Option {
-// 	return optionFunc(func(v Config) Config {
-// 		v.aggregation = kind
-// 		return v
-// 	})
-// }
+// TODO (#2816): Implement when WithAggregation when Aggregations are defined

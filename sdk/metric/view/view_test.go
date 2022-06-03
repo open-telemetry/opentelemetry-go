@@ -30,22 +30,23 @@ var matchInstrument = Instrument{
 		Version:   "v1.0.0",
 		SchemaURL: "stuff.test/",
 	},
-	InstrumentName:        "foo",
-	InstrumentDescription: "",
+	Name:        "foo",
+	Description: "",
 }
+
 var noMatchInstrument = Instrument{
 	Scope: instrumentation.Library{
 		Name:      "notfoo",
 		Version:   "v0.x.0",
 		SchemaURL: "notstuff.test/",
 	},
-	InstrumentName:        "notstuff",
-	InstrumentDescription: "",
+	Name:        "notstuff",
+	Description: "",
 }
 
 var emptyDescription = Instrument{}
 
-func TestConfig_Transform(t *testing.T) {
+func TestViewTransformInstrument(t *testing.T) {
 	tests := []struct {
 		name     string
 		options  []Option
@@ -112,7 +113,6 @@ func TestConfig_Transform(t *testing.T) {
 			match:    matchInstrument,
 			notMatch: emptyDescription,
 		},
-
 		{
 			name: "rename",
 			options: []Option{
@@ -125,13 +125,13 @@ func TestConfig_Transform(t *testing.T) {
 					Version:   "v1.0.0",
 					SchemaURL: "stuff.test/",
 				},
-				InstrumentName:        "baz",
-				InstrumentDescription: "",
+				Name:        "baz",
+				Description: "",
 			},
 			notMatch: emptyDescription,
 		},
 		{
-			name: "rename",
+			name: "change description",
 			options: []Option{
 				MatchInstrumentName("foo"),
 				WithDescription("descriptive stuff"),
@@ -142,8 +142,8 @@ func TestConfig_Transform(t *testing.T) {
 					Version:   "v1.0.0",
 					SchemaURL: "stuff.test/",
 				},
-				InstrumentName:        "foo",
-				InstrumentDescription: "descriptive stuff",
+				Name:        "foo",
+				Description: "descriptive stuff",
 			},
 			notMatch: emptyDescription,
 		},
@@ -168,7 +168,7 @@ func TestConfig_Transform(t *testing.T) {
 	}
 }
 
-func TestView_matchName(t *testing.T) {
+func TestViewMatchName(t *testing.T) {
 	tests := []struct {
 		name        string
 		matchName   string
@@ -186,7 +186,7 @@ func TestView_matchName(t *testing.T) {
 		{
 			name:        "*",
 			matchName:   "*",
-			matches:     []string{"foo", "foobar", "barfoo", "barfoobaz"},
+			matches:     []string{"foo", "foobar", "barfoo", "barfoobaz", ""},
 			notMatches:  []string{},
 			hasWildcard: true,
 		},
@@ -225,6 +225,62 @@ func TestView_matchName(t *testing.T) {
 			notMatches:  []string{"baz"},
 			hasWildcard: true,
 		},
+		{
+			name:        "front **",
+			matchName:   "**foo",
+			matches:     []string{"foo", "barfoo", "1foo", "afoo"},
+			notMatches:  []string{"foobar", "barfoobaz", "baz", "foo1", "fooz"},
+			hasWildcard: true,
+		},
+		{
+			name:        "back **",
+			matchName:   "foo**",
+			matches:     []string{"foo", "foobar", "foo1", "fooz"},
+			notMatches:  []string{"barfoo", "barfoobaz", "baz", "1foo", "afoo"},
+			hasWildcard: true,
+		},
+		{
+			name:        "front *?",
+			matchName:   "*?foo",
+			matches:     []string{"barfoo", "1foo", "afoo"},
+			notMatches:  []string{"foo", "foobar", "barfoobaz", "baz", "foo1", "fooz"},
+			hasWildcard: true,
+		},
+		{
+			name:        "front ?*",
+			matchName:   "*?foo",
+			matches:     []string{"barfoo", "1foo", "afoo"},
+			notMatches:  []string{"foo", "foobar", "barfoobaz", "baz", "foo1", "fooz"},
+			hasWildcard: true,
+		},
+		{
+			name:        "back *?",
+			matchName:   "foo*?",
+			matches:     []string{"foobar", "foo1", "fooz"},
+			notMatches:  []string{"foo", "barfoo", "barfoobaz", "baz", "1foo", "afoo"},
+			hasWildcard: true,
+		},
+		{
+			name:        "back ?*",
+			matchName:   "foo?*",
+			matches:     []string{"foobar", "foo1", "fooz"},
+			notMatches:  []string{"foo", "barfoo", "barfoobaz", "baz", "1foo", "afoo"},
+			hasWildcard: true,
+		},
+		{
+			name:        "middle *",
+			matchName:   "foo*bar",
+			matches:     []string{"foobar", "foo1bar", "foomanybar"},
+			notMatches:  []string{"foo", "barfoo", "barfoobaz", "baz", "1foo", "afoo", "foo1", "fooz"},
+			hasWildcard: true,
+		},
+		{
+			name:        "middle ?",
+			matchName:   "foo?bar",
+			matches:     []string{"foo1bar", "fooabar"},
+			notMatches:  []string{"foobar", "foo", "barfoo", "barfoobaz", "baz", "1foo", "afoo", "foo1", "fooz", "foomanybar"},
+			hasWildcard: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -234,16 +290,16 @@ func TestView_matchName(t *testing.T) {
 			t.Log(v.instrumentName.String())
 			assert.Equal(t, tt.hasWildcard, v.hasWildcard)
 			for _, name := range tt.matches {
-				assert.True(t, v.matchName(name), "name: %s", name)
+				assert.Truef(t, v.matchName(name), "name: %s", name)
 			}
 			for _, name := range tt.notMatches {
-				assert.False(t, v.matchName(name), "name: %s", name)
+				assert.Falsef(t, v.matchName(name), "name: %s", name)
 			}
 		})
 	}
 }
 
-func TestConfig_TransformAttributes(t *testing.T) {
+func TestViewTransformAttributes(t *testing.T) {
 	inputSet := attribute.NewSet(
 		attribute.String("foo", "bar"),
 		attribute.Int("power-level", 9001),
@@ -302,7 +358,7 @@ func TestConfig_TransformAttributes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			v, err := New(
 				MatchInstrumentName("*"),
-				WithAttributeFilter(tt.filter...),
+				WithAttributes(tt.filter...),
 			)
 			require.NoError(t, err)
 
@@ -312,7 +368,7 @@ func TestConfig_TransformAttributes(t *testing.T) {
 	}
 }
 
-func TestNew_fail(t *testing.T) {
+func TestNewErrors(t *testing.T) {
 	tests := []struct {
 		name    string
 		options []Option

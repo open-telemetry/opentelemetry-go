@@ -19,10 +19,10 @@ package view // import "go.opentelemetry.io/otel/sdk/metric/view"
 
 import "go.opentelemetry.io/otel/sdk/instrumentation"
 
-// Instrument is a struct that uniquely identifies an instrument within a meter.
+// Instrument uniquely identifies an instrument within a meter.
 type Instrument struct {
 	Scope instrumentation.Library
 
-	InstrumentName        string
-	InstrumentDescription string
+	Name        string
+	Description string
 }
