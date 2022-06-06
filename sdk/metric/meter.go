@@ -19,6 +19,7 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
+	"sync"
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
@@ -26,14 +27,74 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
 	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
+
+// meterRegistry keeps a record of initialized meters for instrumentation
+// libraries. A meter is unique to an instrumentation library and if multiple
+// requests for that meter are made a meterRegistry ensure the same instance
+// is used.
+//
+// The zero meterRegistry is empty and ready for use. A meterRegistry must not
+// be copied after first use.
+type meterRegistry struct {
+	sync.Mutex
+
+	ordered []*meter
+	indexed map[instrumentation.Library]*meter
+}
+
+// Get returns a registered meter matching the instrumentation library if it
+// exists in the meterRegistry. Otherwise, a new meter configured for the
+// instrumentation library is registered and then returned.
+//
+// The returned found bool is true if the returned meter already existed in
+// the registry and false if a new meter was created.
+func (r *meterRegistry) Get(l instrumentation.Library) (m *meter, found bool) {
+	r.Lock()
+	defer r.Unlock()
+
+	if r.indexed == nil {
+		r.indexed = make(map[instrumentation.Library]*meter, 1)
+	}
+
+	m, ok := r.indexed[l]
+	if ok {
+		return m, true
+	}
+
+	m = &meter{Library: l}
+	r.indexed[l] = m
+	r.ordered = append(r.ordered, m)
+
+	return m, false
+}
+
+// Range calls f sequentially for each meter present in the meterRegistry (in
+// the order they were added to the registry). If f returns false, the
+// iteration is stopped.
+func (r *meterRegistry) Range(f func(*meter) bool) {
+	r.Lock()
+	defer r.Unlock()
+
+	for _, m := range r.ordered {
+		if !f(m) {
+			return
+		}
+	}
+}
 
 // meter handles the creation and coordination of all metric instruments. A
 // meter represents a single instrumentation scope; all metric telemetry
 // produced by an instrumentation scope will use metric instruments from a
 // single meter.
 type meter struct {
-	// TODO (#2821, #2815, 2814): implement.
+	instrumentation.Library
+
+	// provider is the MeterProvider that created this meter.
+	provider *MeterProvider
+
+	// TODO (#2815, 2814): implement.
 }
 
 // Compile-time check meter implements metric.Meter.

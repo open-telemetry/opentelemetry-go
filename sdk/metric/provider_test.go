@@ -24,6 +24,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestMeterConcurrentSafe(t *testing.T) {
+	const name = "TestMeterConcurrentSafe meter"
+	mp := NewMeterProvider()
+
+	go func() {
+		_ = mp.Meter(name)
+	}()
+
+	_ = mp.Meter(name)
+}
+
 func TestForceFlushConcurrentSafe(t *testing.T) {
 	mp := NewMeterProvider()
 
@@ -42,6 +53,11 @@ func TestShutdownConcurrentSafe(t *testing.T) {
 	}()
 
 	_ = mp.Shutdown(context.Background())
+}
+
+func TestMeterDoesNotPanicForEmptyMeterProvider(t *testing.T) {
+	mp := MeterProvider{}
+	assert.NotPanics(t, func() { _ = mp.Meter("") })
 }
 
 func TestForceFlushDoesNotPanicForEmptyMeterProvider(t *testing.T) {
