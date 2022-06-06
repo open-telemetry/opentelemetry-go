@@ -117,7 +117,7 @@ func TestViewTransformInstrument(t *testing.T) {
 			name: "rename",
 			options: []Option{
 				MatchInstrumentName("foo"),
-				WithName("baz"),
+				WithRename("baz"),
 			},
 			match: Instrument{
 				Scope: instrumentation.Library{
@@ -248,7 +248,7 @@ func TestViewMatchName(t *testing.T) {
 		},
 		{
 			name:        "front ?*",
-			matchName:   "*?foo",
+			matchName:   "?*foo",
 			matches:     []string{"barfoo", "1foo", "afoo"},
 			notMatches:  []string{"foo", "foobar", "barfoobaz", "baz", "foo1", "fooz"},
 			hasWildcard: true,
@@ -280,6 +280,13 @@ func TestViewMatchName(t *testing.T) {
 			matches:     []string{"foo1bar", "fooabar"},
 			notMatches:  []string{"foobar", "foo", "barfoo", "barfoobaz", "baz", "1foo", "afoo", "foo1", "fooz", "foomanybar"},
 			hasWildcard: true,
+		},
+		{
+			name:        "meta chars",
+			matchName:   ".+()|[]{}^$-_",
+			matches:     []string{".+()|[]{}^$-_"}, // Note this is not a valid name.
+			notMatches:  []string{"foobar", "foo", "barfoo", "barfoobaz", "baz", "1foo", "afoo", "foo1", "fooz", "foomanybar", "foo1bar", "fooabar"},
+			hasWildcard: false,
 		},
 	}
 	for _, tt := range tests {
@@ -358,7 +365,7 @@ func TestViewTransformAttributes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			v, err := New(
 				MatchInstrumentName("*"),
-				WithAttributes(tt.filter...),
+				WithFilterAttributes(tt.filter...),
 			)
 			require.NoError(t, err)
 
@@ -381,14 +388,14 @@ func TestNewErrors(t *testing.T) {
 			name: "Match * with view name",
 			options: []Option{
 				MatchInstrumentName("*"),
-				WithName("newName"),
+				WithRename("newName"),
 			},
 		},
 		{
 			name: "Match expand * with view name",
 			options: []Option{
 				MatchInstrumentName("old*"),
-				WithName("newName"),
+				WithRename("newName"),
 			},
 		},
 	}

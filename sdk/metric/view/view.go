@@ -68,7 +68,7 @@ func New(opts ...Option) (View, error) {
 	return v, nil
 }
 
-// TransformInstrument will check if an instrument description matches this view
+// TransformInstrument will check if an instrument matches this view
 // and will convert it if it does.
 func (v View) TransformInstrument(inst Instrument) (transformed Instrument, match bool) {
 	if !v.match(inst) {
@@ -160,10 +160,10 @@ func MatchInstrumentationLibrary(lib instrumentation.Library) Option {
 	})
 }
 
-// WithName will rename the instrument the view matches. If not used or empty the
+// WithRename will rename the instrument the view matches. If not used or empty the
 // instrument name will not be changed. Must be used with a non-wildcard
 // instrument name match. The default does not change the instrument name.
-func WithName(name string) Option {
+func WithRename(name string) Option {
 	return optionFunc(func(v View) View {
 		v.name = name
 		return v
@@ -179,9 +179,9 @@ func WithDescription(desc string) Option {
 	})
 }
 
-// WithAttributes will select attributes that have a matching key.  If not used
+// WithFilterAttributes will select attributes that have a matching key.  If not used
 // or empty no filter will be applied.
-func WithAttributes(keys ...attribute.Key) Option {
+func WithFilterAttributes(keys ...attribute.Key) Option {
 	return optionFunc(func(v View) View {
 		if len(keys) == 0 {
 			return v
