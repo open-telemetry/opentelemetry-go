@@ -27,7 +27,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add the `go.opentelemetry.io/otel/semconv/v1.10.0` package.
   The package contains semantic conventions from the `v1.10.0` version of the OpenTelemetry specification. (#2842)
 - Added an in-memory exporter to metrictest to aid testing with a full SDK. (#2776)
-- The bridge package supported extract and injection of opentracing.TextMap type. (#2911) 
+- The bridge package supported extract and injection of opentracing.TextMap type. (#2911)
 
 ### Fixed
 

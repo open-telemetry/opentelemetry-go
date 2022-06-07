@@ -1,3 +1,17 @@
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package opentracing
 
 import (
@@ -128,6 +142,10 @@ type testTextMapPropagator struct {
 
 func (t testTextMapPropagator) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	carrier.Set(testHeader, strings.Join([]string{traceID.String(), spanID.String()}, ":"))
+
+	// Test for panic
+	_ = carrier.Get("test")
+	_ = carrier.Keys()
 }
 
 func (t testTextMapPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
@@ -135,6 +153,20 @@ func (t testTextMapPropagator) Extract(ctx context.Context, carrier propagation.
 
 	str := strings.Split(traces, ":")
 	if len(str) != 2 {
+		return ctx
+	}
+
+	var exist = false
+
+	for _, key := range carrier.Keys() {
+		if key == testHeader {
+			exist = true
+
+			break
+		}
+	}
+
+	if !exist {
 		return ctx
 	}
 
@@ -146,6 +178,9 @@ func (t testTextMapPropagator) Extract(ctx context.Context, carrier propagation.
 			SpanID:  spanID,
 		})
 	)
+
+	// Test for panic
+	carrier.Set("key", "val")
 
 	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
@@ -223,34 +258,82 @@ func TestBridgeTracer_ExtractAndInject(t *testing.T) {
 	httpHeader := ot.HTTPHeadersCarrier(http.Header{})
 
 	testCases := []struct {
-		name           string
-		carrierType    ot.BuiltinFormat
-		extractCarrier interface{}
-		injectCarrier  interface{}
+		name               string
+		injectCarrierType  ot.BuiltinFormat
+		extractCarrierType ot.BuiltinFormat
+		extractCarrier     interface{}
+		injectCarrier      interface{}
+		extractErr         error
+		injectErr          error
 	}{
 		{
-			name:           "support for propagation.TextMapCarrier",
-			carrierType:    ot.TextMap,
-			extractCarrier: tmc,
-			injectCarrier:  tmc,
+			name:               "support for propagation.TextMapCarrier",
+			injectCarrierType:  ot.TextMap,
+			injectCarrier:      tmc,
+			extractCarrierType: ot.TextMap,
+			extractCarrier:     tmc,
 		},
 		{
-			name:           "support for opentracing.TextMapReader and opentracing.TextMapWriter",
-			carrierType:    ot.TextMap,
-			extractCarrier: otTextMap,
-			injectCarrier:  otTextMap,
+			name:               "support for opentracing.TextMapReader and opentracing.TextMapWriter",
+			injectCarrierType:  ot.TextMap,
+			injectCarrier:      otTextMap,
+			extractCarrierType: ot.TextMap,
+			extractCarrier:     otTextMap,
 		},
 		{
-			name:           "support for HTTPHeaders",
-			carrierType:    ot.HTTPHeaders,
-			extractCarrier: httpHeader,
-			injectCarrier:  httpHeader,
+			name:               "support for HTTPHeaders",
+			injectCarrierType:  ot.HTTPHeaders,
+			injectCarrier:      httpHeader,
+			extractCarrierType: ot.HTTPHeaders,
+			extractCarrier:     httpHeader,
 		},
 		{
-			name:           "support for opentracing.TextMapReader and opentracing.TextMapWriter,non-same instance",
-			carrierType:    ot.TextMap,
-			extractCarrier: newTestTextMapReader(&shareMap),
-			injectCarrier:  newTestTextMapWriter(&shareMap),
+			name:               "support for opentracing.TextMapReader and opentracing.TextMapWriter,non-same instance",
+			injectCarrierType:  ot.TextMap,
+			injectCarrier:      newTestTextMapWriter(&shareMap),
+			extractCarrierType: ot.TextMap,
+			extractCarrier:     newTestTextMapReader(&shareMap),
+		},
+		{
+			name:              "inject: format type is HTTPHeaders, but carrier is not HTTPHeadersCarrier",
+			injectCarrierType: ot.HTTPHeaders,
+			injectCarrier:     struct{}{},
+			injectErr:         ot.ErrInvalidCarrier,
+		},
+		{
+			name:               "extract: format type is HTTPHeaders, but carrier is not HTTPHeadersCarrier",
+			injectCarrierType:  ot.HTTPHeaders,
+			injectCarrier:      httpHeader,
+			extractCarrierType: ot.HTTPHeaders,
+			extractCarrier:     struct{}{},
+			extractErr:         ot.ErrInvalidCarrier,
+		},
+		{
+			name:              "inject: format type is TextMap, but carrier is cannot be wrapped into propagation.TextMapCarrier",
+			injectCarrierType: ot.TextMap,
+			injectCarrier:     struct{}{},
+			injectErr:         ot.ErrInvalidCarrier,
+		},
+		{
+			name:               "extract: format type is TextMap, but carrier is cannot be wrapped into propagation.TextMapCarrier",
+			injectCarrierType:  ot.TextMap,
+			injectCarrier:      otTextMap,
+			extractCarrierType: ot.TextMap,
+			extractCarrier:     struct{}{},
+			extractErr:         ot.ErrInvalidCarrier,
+		},
+		{
+			name:              "inject: unsupported format type",
+			injectCarrierType: ot.Binary,
+			injectErr:         ot.ErrUnsupportedFormat,
+		},
+		{
+			name:               "extract: unsupported format type",
+			injectCarrierType:  ot.TextMap,
+			injectCarrier:      otTextMap,
+			extractCarrierType: ot.Binary,
+			extractCarrier:     struct{}{},
+			extractErr:         ot.ErrUnsupportedFormat,
 		},
 	}
 
@@ -259,17 +342,22 @@ func TestBridgeTracer_ExtractAndInject(t *testing.T) {
 			err := bridge.Inject(newBridgeSpanContext(trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID: [16]byte{byte(1)},
 				SpanID:  [8]byte{byte(2)},
-			}), nil), tc.carrierType, tc.injectCarrier)
-			assert.NoError(t, err)
+			}), nil), tc.injectCarrierType, tc.injectCarrier)
+			assert.Equal(t, tc.injectErr, err)
 
-			spanContext, err := bridge.Extract(tc.carrierType, tc.extractCarrier)
-			assert.NoError(t, err)
+			if tc.injectErr == nil {
+				spanContext, err := bridge.Extract(tc.injectCarrierType, tc.extractCarrier)
+				assert.Equal(t, tc.extractErr, err)
 
-			bsc, ok := spanContext.(*bridgeSpanContext)
-			assert.True(t, ok)
+				if tc.extractErr == nil {
+					bsc, ok := spanContext.(*bridgeSpanContext)
+					assert.True(t, ok)
 
-			assert.Equal(t, spanID.String(), bsc.otelSpanContext.SpanID().String())
-			assert.Equal(t, traceID.String(), bsc.otelSpanContext.TraceID().String())
+					assert.Equal(t, spanID.String(), bsc.otelSpanContext.SpanID().String())
+					assert.Equal(t, traceID.String(), bsc.otelSpanContext.TraceID().String())
+				}
+
+			}
 		})
 	}
 }
