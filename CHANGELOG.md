@@ -18,7 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
--  Avoid overriding explicitly set gRPC dial options in `go.opentelemetry.io/otel/exporters/otlptrace` (#2942)
+- Avoid overriding explicitly set gRPC dial options in `go.opentelemetry.io/otel/exporters/otlptrace` (#2942)
 
 ## [1.7.0/0.30.0] - 2022-04-28
 
