@@ -14,5 +14,5 @@
 
 package otlpconfig
 
-// NewGenericOption exposes otlpconfig.newGenericOption for tests
+// NewGenericOption exposes otlpconfig.newGenericOption for tests.
 var NewGenericOption = newGenericOption
