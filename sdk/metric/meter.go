@@ -35,8 +35,11 @@ import (
 // requests for that meter are made a meterRegistry ensure the same instance
 // is used.
 //
-// The zero meterRegistry is empty and ready for use. A meterRegistry must not
-// be copied after first use.
+// The zero meterRegistry is empty and ready for use.
+//
+// A meterRegistry must not be copied after first use.
+//
+// All methods of a meterRegistry are safe to call concurrently.
 type meterRegistry struct {
 	sync.Mutex
 
@@ -50,6 +53,8 @@ type meterRegistry struct {
 //
 // The returned found bool is true if the returned meter already existed in
 // the registry and false if a new meter was created.
+//
+// Get is safe to call concurrently.
 func (r *meterRegistry) Get(l instrumentation.Library) (m *meter, found bool) {
 	r.Lock()
 	defer r.Unlock()
@@ -73,6 +78,8 @@ func (r *meterRegistry) Get(l instrumentation.Library) (m *meter, found bool) {
 // Range calls f sequentially for each meter present in the meterRegistry (in
 // the order they were added to the registry). If f returns false, the
 // iteration is stopped.
+//
+// Range is safe to call concurrently.
 func (r *meterRegistry) Range(f func(*meter) bool) {
 	r.Lock()
 	defer r.Unlock()
