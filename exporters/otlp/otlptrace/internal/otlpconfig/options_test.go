@@ -392,10 +392,12 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		{
-			name: "Test GPRC DialOptions ends up as suffix",
+			name: "Test GPRC DialOptions end up as suffix",
 			opts: []otlpconfig.GenericOption{
 				otlpconfig.NewGenericOption(func(c otlpconfig.Config) otlpconfig.Config {
 					c.DialOptions = testDialOpts
+					c.ServiceConfig = "{}"
+					c.ReconnectionPeriod = 1 * time.Second
 					return c
 				}),
 			},
