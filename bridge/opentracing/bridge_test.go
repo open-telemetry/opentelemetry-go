@@ -88,12 +88,12 @@ func TestTextMapWrapper_New(t *testing.T) {
 
 func TestTextMapWrapper_action(t *testing.T) {
 	testExtractFunc := func(carrier propagation.TextMapCarrier) {
-		assert.Equal(t, carrier.Get("key1"), "val1")
-		assert.Equal(t, carrier.Get("key2"), "val2")
-
 		str := carrier.Keys()
 		assert.Len(t, str, 2)
 		assert.Contains(t, str, "key1", "key2")
+
+		assert.Equal(t, carrier.Get("key1"), "val1")
+		assert.Equal(t, carrier.Get("key2"), "val2")
 	}
 
 	testInjectFunc := func(carrier propagation.TextMapCarrier) {
@@ -159,7 +159,7 @@ func (t testTextMapPropagator) Extract(ctx context.Context, carrier propagation.
 	var exist = false
 
 	for _, key := range carrier.Keys() {
-		if key == testHeader {
+		if strings.EqualFold(testHeader, key) {
 			exist = true
 
 			break
@@ -346,7 +346,7 @@ func TestBridgeTracer_ExtractAndInject(t *testing.T) {
 			assert.Equal(t, tc.injectErr, err)
 
 			if tc.injectErr == nil {
-				spanContext, err := bridge.Extract(tc.injectCarrierType, tc.extractCarrier)
+				spanContext, err := bridge.Extract(tc.extractCarrierType, tc.extractCarrier)
 				assert.Equal(t, tc.extractErr, err)
 
 				if tc.extractErr == nil {
