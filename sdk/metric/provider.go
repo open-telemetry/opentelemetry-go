@@ -73,14 +73,12 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 // This method is safe to call concurrently.
 func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metric.Meter {
 	c := metric.NewMeterConfig(options...)
-	m, ok := mp.meters.Get(instrumentation.Library{
+	m, existing := mp.meters.Get(instrumentation.Library{
 		Name:      name,
 		Version:   c.InstrumentationVersion(),
 		SchemaURL: c.SchemaURL(),
 	})
-	if !ok {
-		// Initialized the new meter to have this MeterProvider as its
-		// provider.
+	if !existing {
 		m.provider = mp
 	}
 	return m
