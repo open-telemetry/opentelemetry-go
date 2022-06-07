@@ -35,20 +35,37 @@ func TestMeterRegistry(t *testing.T) {
 
 	r := meterRegistry{}
 	m0, ok := r.Get(il0)
-	assert.Falsef(t, ok, "meter was in registry: %v", il0)
+	t.Run("ZeroValueGet", func(t *testing.T) {
+		assert.Falsef(t, ok, "meter was in registry: %v", il0)
+	})
 
 	m01, ok := r.Get(il0)
-	assert.Truef(t, ok, "meter was not in registry: %v", il0)
-	assert.Samef(t, m0, m01, "returned different meters: %v", il0)
+	t.Run("GetSameMeter", func(t *testing.T) {
+		assert.Truef(t, ok, "meter was not in registry: %v", il0)
+		assert.Samef(t, m0, m01, "returned different meters: %v", il0)
+	})
 
 	m1, ok := r.Get(il1)
-	assert.Falsef(t, ok, "meter was in registry: %v", il1)
-	assert.NotSamef(t, m0, m1, "returned same meters: %v", il1)
-
-	var got []*meter
-	r.Range(func(m *meter) bool {
-		got = append(got, m)
-		return true
+	t.Run("GetDifferentMeter", func(t *testing.T) {
+		assert.Falsef(t, ok, "meter was in registry: %v", il1)
+		assert.NotSamef(t, m0, m1, "returned same meters: %v", il1)
 	})
-	assert.Equal(t, []*meter{m0, m1}, got)
+
+	t.Run("RangeOrdered", func(t *testing.T) {
+		var got []*meter
+		r.Range(func(m *meter) bool {
+			got = append(got, m)
+			return true
+		})
+		assert.Equal(t, []*meter{m0, m1}, got)
+	})
+
+	t.Run("RangeStopIteration", func(t *testing.T) {
+		var i int
+		r.Range(func(m *meter) bool {
+			i++
+			return false
+		})
+		assert.Equal(t, 1, i, "iteration not stopped after first flase return")
+	})
 }
