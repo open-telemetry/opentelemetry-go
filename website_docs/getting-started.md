@@ -190,9 +190,9 @@ There's several things going on here:
 * Initializing the `net/http` instrumentation library and wrapping the HTTP
   handler
 
-A `Resource` is useful metadata included in every trace. A `TracerProvider` is used to
-create traces by letting you create a `Tracer`. You'll create your own `Tracer`
-later in this article.
+A `Resource` is useful metadata included in every trace. A `TracerProvider` is
+used to create traces by letting you create a `Tracer`. You'll create your own
+`Tracer` later in this article.
 
 For details, see [Initializing Tracing](manual.md#initiallizing-a-new-tracer).
 
@@ -406,6 +406,12 @@ are also added, since it is generally a good ideal to centralize constants like
 this.
 
 ```go
+import (
+        //...
+        "go.opentelemetry.io/otel"
+        //...
+)
+//...
 var (
 	tracer         trace.Tracer
 	serviceName    string = "diceroller-service"
@@ -437,9 +443,10 @@ set up context propagation:
 tracer = tp.Tracer(serviceName)
 ```
 
-Creating a `Tracer` from a `TracerProvider` is necessary to let you create trace spans manually.
+Creating a `Tracer` from a `TracerProvider` is necessary to let you create trace
+spans manually.
 
-The full sample code looks like this:
+The full code sample, with additional required imports, looks like this:
 
 ```go
 package main
@@ -709,7 +716,12 @@ the console exporter from before with an OTLP HTTP exporter that talks to the
 local endpoint the collector is listening on.
 
 ```go
-exp, err :=
+import (
+        //...
+	"context"
+        //..
+)
+exporter, err :=
 	otlptracehttp.New(ctx,
 		// WithInsecure lets us use http instead of https.
 		// This is just for local development.
@@ -718,7 +730,7 @@ exp, err :=
 	)
 ```
 
-The full code sample looks like this:
+The full code sample, with additional required imports, looks like this:
 
 ```go
 package main
