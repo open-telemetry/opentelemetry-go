@@ -170,9 +170,9 @@ func WithRename(name string) Option {
 	})
 }
 
-// WithDescription will change the description of the instruments the view
+// WithSetDescription will change the description of the instruments the view
 // matches to desc. If not used or empty the description will not be changed.
-func WithDescription(desc string) Option {
+func WithSetDescription(desc string) Option {
 	return optionFunc(func(v View) View {
 		v.description = desc
 		return v

@@ -134,7 +134,7 @@ func TestViewTransformInstrument(t *testing.T) {
 			name: "change description",
 			options: []Option{
 				MatchInstrumentName("foo"),
-				WithDescription("descriptive stuff"),
+				WithSetDescription("descriptive stuff"),
 			},
 			match: Instrument{
 				Scope: instrumentation.Library{
