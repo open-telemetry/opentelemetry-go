@@ -52,13 +52,13 @@ func TestMeterRegistry(t *testing.T) {
 		assert.NotSamef(t, m0, m1, "returned same meters: %v", il1)
 	})
 
-	t.Run("RangeOrdered", func(t *testing.T) {
+	t.Run("RangeComplete", func(t *testing.T) {
 		var got []*meter
 		r.Range(func(m *meter) bool {
 			got = append(got, m)
 			return true
 		})
-		assert.Equal(t, []*meter{m0, m1}, got)
+		assert.ElementsMatch(t, []*meter{m0, m1}, got)
 	})
 
 	t.Run("RangeStopIteration", func(t *testing.T) {
