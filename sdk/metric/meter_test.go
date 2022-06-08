@@ -25,30 +25,24 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
-func TestMeterRegistryGetDoesNotPanicForZeroValue(t *testing.T) {
-	r := meterRegistry{}
-	assert.NotPanics(t, func() { _, _ = r.Get(instrumentation.Library{}) })
-}
-
 func TestMeterRegistry(t *testing.T) {
 	il0 := instrumentation.Library{Name: "zero"}
 	il1 := instrumentation.Library{Name: "one"}
 
 	r := meterRegistry{}
-	m0, ok := r.Get(il0)
-	t.Run("ZeroValueGet", func(t *testing.T) {
-		assert.Falsef(t, ok, "meter was in registry: %v", il0)
+	var m0 *meter
+	t.Run("ZeroValueGetDoesNotPanic", func(t *testing.T) {
+		assert.NotPanics(t, func() { m0 = r.Get(il0) })
+		assert.Equal(t, il0, m0.Library, "uninitialized meter returned")
 	})
 
-	m01, ok := r.Get(il0)
+	m01 := r.Get(il0)
 	t.Run("GetSameMeter", func(t *testing.T) {
-		assert.Truef(t, ok, "meter was not in registry: %v", il0)
 		assert.Samef(t, m0, m01, "returned different meters: %v", il0)
 	})
 
-	m1, ok := r.Get(il1)
+	m1 := r.Get(il1)
 	t.Run("GetDifferentMeter", func(t *testing.T) {
-		assert.Falsef(t, ok, "meter was in registry: %v", il1)
 		assert.NotSamef(t, m0, m1, "returned same meters: %v", il1)
 	})
 

@@ -50,28 +50,25 @@ type meterRegistry struct {
 // exists in the meterRegistry. Otherwise, a new meter configured for the
 // instrumentation library is registered and then returned.
 //
-// The returned found bool is true if the returned meter already existed in
-// the registry and false if a new meter was created.
-//
 // Get is safe to call concurrently.
-func (r *meterRegistry) Get(l instrumentation.Library) (m *meter, found bool) {
+func (r *meterRegistry) Get(l instrumentation.Library) *meter {
 	r.Lock()
 	defer r.Unlock()
 
 	if r.meters == nil {
-		m = &meter{Library: l}
+		m := &meter{Library: l}
 		r.meters = map[instrumentation.Library]*meter{l: m}
-		return m, false
+		return m
 	}
 
 	m, ok := r.meters[l]
 	if ok {
-		return m, true
+		return m
 	}
 
 	m = &meter{Library: l}
 	r.meters[l] = m
-	return m, false
+	return m
 }
 
 // Range calls f sequentially for each meter present in the meterRegistry. If
@@ -95,9 +92,6 @@ func (r *meterRegistry) Range(f func(*meter) bool) {
 // single meter.
 type meter struct {
 	instrumentation.Library
-
-	// provider is the MeterProvider that created this meter.
-	provider *MeterProvider
 
 	// TODO (#2815, 2814): implement.
 }

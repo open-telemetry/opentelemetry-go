@@ -73,15 +73,11 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 // This method is safe to call concurrently.
 func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metric.Meter {
 	c := metric.NewMeterConfig(options...)
-	m, existing := mp.meters.Get(instrumentation.Library{
+	return mp.meters.Get(instrumentation.Library{
 		Name:      name,
 		Version:   c.InstrumentationVersion(),
 		SchemaURL: c.SchemaURL(),
 	})
-	if !existing {
-		m.provider = mp
-	}
-	return m
 }
 
 // ForceFlush flushes all pending telemetry.
