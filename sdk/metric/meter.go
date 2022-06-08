@@ -43,8 +43,7 @@ import (
 type meterRegistry struct {
 	sync.Mutex
 
-	ordered []*meter
-	indexed map[instrumentation.Library]*meter
+	meters map[instrumentation.Library]*meter
 }
 
 // Get returns a registered meter matching the instrumentation library if it
@@ -59,32 +58,31 @@ func (r *meterRegistry) Get(l instrumentation.Library) (m *meter, found bool) {
 	r.Lock()
 	defer r.Unlock()
 
-	if r.indexed == nil {
-		r.indexed = make(map[instrumentation.Library]*meter, 1)
+	if r.meters == nil {
+		m = &meter{Library: l}
+		r.meters = map[instrumentation.Library]*meter{l: m}
+		return m, false
 	}
 
-	m, ok := r.indexed[l]
+	m, ok := r.meters[l]
 	if ok {
 		return m, true
 	}
 
 	m = &meter{Library: l}
-	r.indexed[l] = m
-	r.ordered = append(r.ordered, m)
-
+	r.meters[l] = m
 	return m, false
 }
 
-// Range calls f sequentially for each meter present in the meterRegistry (in
-// the order they were added to the registry). If f returns false, the
-// iteration is stopped.
+// Range calls f sequentially for each meter present in the meterRegistry. If
+// f returns false, the iteration is stopped.
 //
 // Range is safe to call concurrently.
 func (r *meterRegistry) Range(f func(*meter) bool) {
 	r.Lock()
 	defer r.Unlock()
 
-	for _, m := range r.ordered {
+	for _, m := range r.meters {
 		if !f(m) {
 			return
 		}
