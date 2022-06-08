@@ -32,14 +32,19 @@ import (
 type manualReader struct {
 	producer     atomic.Value
 	shutdownOnce sync.Once
+
+	temporalitySelector func(InstrumentKind) Temporality
 }
 
 // Compile time check the manualReader implements Reader.
 var _ Reader = &manualReader{}
 
 // NewManualReader returns a Reader which is directly called to collect metrics.
-func NewManualReader() Reader {
-	return &manualReader{}
+func NewManualReader(opts ...ManualReaderOption) Reader {
+	cfg := newManualReaderConfig(opts)
+	return &manualReader{
+		temporalitySelector: cfg.temporalitySelector,
+	}
 }
 
 // register stores the Producer which enables the caller to read
@@ -50,6 +55,11 @@ func (mr *manualReader) register(p producer) {
 		msg := "did not register manual reader"
 		global.Error(errDuplicateRegister, msg)
 	}
+}
+
+// temporality reports the Temporality for the instrument kind provided.
+func (mr *manualReader) temporality(kind InstrumentKind) Temporality {
+	return mr.temporalitySelector(kind)
 }
 
 // ForceFlush is a no-op, it always returns nil.
@@ -88,4 +98,25 @@ func (mr *manualReader) Collect(ctx context.Context) (export.Metrics, error) {
 		return export.Metrics{}, err
 	}
 	return ph.produce(ctx)
+}
+
+// manualReaderConfig contains configuration options for a ManualReader.
+type manualReaderConfig struct {
+	temporalitySelector func(InstrumentKind) Temporality
+}
+
+// newManualReaderConfig returns a manualReaderConfig configured with options.
+func newManualReaderConfig(opts []ManualReaderOption) manualReaderConfig {
+	cfg := manualReaderConfig{
+		temporalitySelector: defaultTemporalitySelector,
+	}
+	for _, opt := range opts {
+		cfg = opt.applyManual(cfg)
+	}
+	return cfg
+}
+
+// ManualReaderOption applies a configuration option value to a ManualReader.
+type ManualReaderOption interface {
+	applyManual(manualReaderConfig) manualReaderConfig
 }

@@ -15,18 +15,20 @@
 //go:build go1.17
 // +build go1.17
 
-package metric // import "go.opentelemetry.io/otel/sdk/metric/reader"
+package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
-import (
-	"testing"
+// InstrumentKind describes the a kind of instrument.
+type InstrumentKind uint8
 
-	"github.com/stretchr/testify/suite"
+// The following represent the different kind of instruments that can be
+// created by the SDK.
+const (
+	//nolint:deadcode,varcheck
+	undefinedInstrument InstrumentKind = iota
+	SyncCounter
+	SyncUpDownCounter
+	SyncHistogram
+	AsyncCounter
+	AsyncUpDownCounter
+	AsyncGauge
 )
-
-func TestManualReader(t *testing.T) {
-	suite.Run(t, &readerTestSuite{Factory: func() Reader { return NewManualReader() }})
-}
-
-func BenchmarkManualReader(b *testing.B) {
-	b.Run("Collect", benchReaderCollectFunc(NewManualReader()))
-}

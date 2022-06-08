@@ -55,6 +55,9 @@ type Reader interface {
 	// and send aggregated metric measurements.
 	register(producer)
 
+	// temporality reports the Temporality for the instrument kind provided.
+	temporality(InstrumentKind) Temporality
+
 	// Collect gathers and returns all metric data related to the Reader from
 	// the SDK. An error is returned if this is called after Shutdown.
 	Collect(context.Context) (export.Metrics, error)
@@ -100,4 +103,11 @@ type shutdownProducer struct{}
 // produce returns an ErrReaderShutdown error.
 func (p shutdownProducer) produce(context.Context) (export.Metrics, error) {
 	return export.Metrics{}, ErrReaderShutdown
+}
+
+// ReaderOption applies a configuration option value to either a ManualReader or
+// a PeriodicReader.
+type ReaderOption interface {
+	ManualReaderOption
+	PeriodicReaderOption
 }
