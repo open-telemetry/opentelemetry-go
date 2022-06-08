@@ -21,6 +21,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/view"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -32,6 +33,7 @@ import (
 type MeterProvider struct {
 	res *resource.Resource
 
+	meters meterRegistry
 	//nolint:structcheck,unused //This will be used by the MP to produce for a reader, and for the Meters to do proper view filtering
 	readers map[Reader][]view.View
 
@@ -73,10 +75,12 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 //
 // This method is safe to call concurrently.
 func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metric.Meter {
-	// TODO (#2821): ensure this is concurrent safe.
-	// TODO: test this is concurrent safe.
-	// TODO (#2821): register and track the created Meter.
-	return &meter{}
+	c := metric.NewMeterConfig(options...)
+	return mp.meters.Get(instrumentation.Library{
+		Name:      name,
+		Version:   c.InstrumentationVersion(),
+		SchemaURL: c.SchemaURL(),
+	})
 }
 
 // ForceFlush flushes all pending telemetry.
