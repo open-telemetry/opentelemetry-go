@@ -22,6 +22,7 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/view"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -33,6 +34,8 @@ type MeterProvider struct {
 	res *resource.Resource
 
 	meters meterRegistry
+	//nolint:structcheck,unused //This will be used by the MP to produce for a reader, and for the Meters to do proper view filtering
+	readers map[Reader][]view.View
 
 	forceFlush, shutdown func(context.Context) error
 }
