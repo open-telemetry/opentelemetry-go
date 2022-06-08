@@ -356,7 +356,6 @@ func TestBridgeTracer_ExtractAndInject(t *testing.T) {
 					assert.Equal(t, spanID.String(), bsc.otelSpanContext.SpanID().String())
 					assert.Equal(t, traceID.String(), bsc.otelSpanContext.TraceID().String())
 				}
-
 			}
 		})
 	}
